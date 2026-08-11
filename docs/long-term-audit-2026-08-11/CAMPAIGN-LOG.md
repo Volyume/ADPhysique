@@ -146,13 +146,27 @@ triage carries every open item; nothing is silently decided.
   campaign6.relationship.test.js (12 behavioural invariants under
   the five promises + FREE-PRO; walker/jargon guards referenced in
   their existing suites).
-- IN FLIGHT (agents, opus, read-only): Phases 25-31 →
-  AUDIT-RETURN-AND-HISTORY.md and Phases 32-38 →
-  AUDIT-REINSTALL-SYNC-OFFLINE.md. Recovery: if either dies, the
-  partial audit file (if any) is lead-reviewed against the order's
-  phase text and the lane relaunched with the same brief; no src
-  changes are expected from either - any found are discarded after
-  lead review confirms they are agent overreach.
+- Phases 25-31 (AUDIT-RETURN-AND-HISTORY.md, 29 findings) and 32-38
+  (AUDIT-REINSTALL-SYNC-OFFLINE.md, 24 findings) — DELIVERED and
+  LANDED; rulings recorded as D97-22/D97-23 after hands-on lead
+  verification of every load-bearing claim. **R-1 FIXED** at
+  1e90ae09 (clock-anchored weigh-in window; stale series → honest
+  data hold, null delta; fixtures re-anchored same-meaning).
+  **MIGRATION-RELEASE-GATES.md CORRECTED: 135 is defective as
+  written and HELD** (S-14 receipt deletion + S-15 permanent batch
+  poison, proven in a scratch cluster); revised order 134→132→133.
+  FOUNDER-FACING: S-1 (ED flag has no cloud writer anywhere -
+  Section 2 stop-and-ask before implementing the push path), R-3
+  (buildWeighInSeries still uncalled), 135 replacement design,
+  FR-C4-2/FR-C4-3 with new consequence evidence.
+- RULED, NEXT FIX BATCHES (D97-22/23): R-2 (Progress trend card
+  date-window), R-4 (unearned recovery week on return), R-5 ("Your
+  body's ready" at unbounded overdue), R-7 (per-user churn key),
+  R-8 (weigh-in editability), R-10 (streak pause window), S-2/S-3
+  (guarded-pref stamps for reminder/quiet-hours keys, tombstones -
+  narrow, no consolidation), S-5 (offline delete queue), corrected
+  135 SQL + client re-id migration (written, NOT run). Remaining
+  LATENT/LOW → Phase 57 triage.
 - NEXT: agent pairs for 25-31 (weight/lapse/streak/win-back/
   progress/edits) and 32-38 (reinstall/migration contracts/sync/
   offline); then 39-43 + 45-46 + 48-49, PLUS
