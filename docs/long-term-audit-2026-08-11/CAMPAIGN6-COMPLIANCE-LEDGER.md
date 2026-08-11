@@ -81,10 +81,10 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 54 | Review B (returning user) | NOT STARTED | Fresh agent, exact commissioned questions |
 | 55 | Review C (reinstall/two devices) | NOT STARTED | Fresh agent, exact commissioned questions |
 | 56 | Review D (product truth) | NOT STARTED | Fresh agent, exact commissioned question |
-| 57 | Open debt triage | NOT STARTED | Every carried item: evidence/severity/consequence/recommendation/blocker?/founder? |
+| 57 | Open debt triage | COMPLETE-AUDIT | TRIAGE-2026-08-11.md: every carried item with the six fields; the complete founder queue; final migration release table |
 | 58 | H4 release blocker | BLOCKED-FOUNDER | Stays open until founder confirms live store listings changed; repository copy is not proof |
-| 59 | Legal copy review gate | IN PROGRESS | Must verify FQ-5 approval from the decision record; if unprovable → founder release gate |
-| 60 | Migration release table | COMPLETE-AUDIT | MIGRATION-RELEASE-GATES.md + D97-23 correction banner (135 HELD) |
+| 59 | Legal copy review gate | COMPLETE-AUDIT | FQ-5 approval PROVEN from DECISIONS-2026-07-09.md:2697-2699 ('Approve all', stamp-only landing 2026-08-10); C6 changed no consent/legal copy |
+| 60 | Migration release table | COMPLETE-AUDIT | Final table in TRIAGE-2026-08-11.md (134 → 132 → 133; repaired 135 after the v72 build; 049 HELD) + MIGRATION-RELEASE-GATES.md history |
 | 61 | Campaign 6 test suites | IN PROGRESS | sixBlock 24, longitudinal 27, longTerm 27, applyRepeat 11, nutrition 10, lapse90 11, athlete180 11, relationship 12 + fix-batch pins; grows with remaining fixes |
 | 62 | Quality gates | NOT STARTED | Final full-campaign regression + no-change laws + jargon + identity, then merged-main rerun |
 
