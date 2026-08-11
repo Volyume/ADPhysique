@@ -77,6 +77,14 @@ const SOURCE_CLAUSE = Object.freeze({
 const RESEARCH_SOURCES = new Set(['template', 'seed_profile', 'seed_research']);
 const RESEARCH_START_LINE =
   'Not enough personal history yet, so this block starts from research-based guidance. As blocks finish, each muscle\'s starting point comes from how it actually responded.';
+// C6 P9-06 (D97): the line above is FALSE for a mature user whose new
+// block is template-seeded after a plan switch or wizard rebuild - they
+// have plenty of personal history; this block simply did not use it
+// (activation paths outside Continue-with-adjustments seed from the
+// template; D97-9 carries whether they should). The mature variant makes
+// the same honest research claim without denying the history exists.
+const RESEARCH_START_LINE_MATURE =
+  'This block starts from research-based guidance for this plan. Your block history picks up again as its blocks finish.';
 
 /**
  * Group written planned rows into { [muscle]: { week1, peak, peakWeek,
@@ -175,7 +183,7 @@ function changeAgainstPrevious(v, prevEntry) {
  * the muscles the cap drops are counted rather than silently lost.
  * Without it, ordering and wording are exactly as they were.
  */
-export function buildBlockStartLines({ summary = {}, limit = 3, previous = null } = {}) {
+export function buildBlockStartLines({ summary = {}, limit = 3, previous = null, hadPriorBlocks = false } = {}) {
   const prev = previous && typeof previous === 'object' ? previous : null;
   const personalised = Object.entries(summary)
     .filter(([, v]) => v && SOURCE_CLAUSE[v.source] && v.week1 != null && v.peak != null);
@@ -193,7 +201,8 @@ export function buildBlockStartLines({ summary = {}, limit = 3, previous = null 
     const entries = Object.values(summary).filter(Boolean);
     const allResearch = entries.some((v) => v.week1 != null)
       && entries.every((v) => RESEARCH_SOURCES.has(v.source));
-    return allResearch ? [RESEARCH_START_LINE] : [];
+    // C6 P9-06: a user with judged block history gets the mature variant.
+    return allResearch ? [hadPriorBlocks ? RESEARCH_START_LINE_MATURE : RESEARCH_START_LINE] : [];
   }
   const changes = new Map(
     personalised.map(([muscle, v]) => [muscle, changeAgainstPrevious(v, prev?.[muscle])]),

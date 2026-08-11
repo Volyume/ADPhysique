@@ -1233,7 +1233,17 @@ export default function HomeScreen({ navigation, route }) {
               }
             } catch (_e) { previous = null; }
           }
-          setBlockSeedLines(buildBlockStartLines({ summary, previous }));
+          // C6 P9-06 (D97): does this user have ANY judged block history?
+          // A template-seeded block after a plan switch must not tell a
+          // block-eight user "not enough personal history yet".
+          let hadPriorBlocks = false;
+          try {
+            // eslint-disable-next-line global-require
+            const { getAllMesocyclesForUser } = require('../lib/database');
+            const all = await getAllMesocyclesForUser(user.id);
+            hadPriorBlocks = all.some((m) => m.id !== week.mesocycleId && m.blockLedger);
+          } catch (_e) { hadPriorBlocks = false; }
+          setBlockSeedLines(buildBlockStartLines({ summary, previous, hadPriorBlocks }));
         } catch (_e) { setBlockSeedLines([]); }
       }
 

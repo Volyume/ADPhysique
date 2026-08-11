@@ -160,9 +160,20 @@ export default function FreeStarterScreen({ navigation, route }) {
       // recommendation". The name check survives ONLY for legacy copies made
       // before the stamp existed (their provenance is null), where the
       // name-collision residual is accepted and recorded.
-      const existing = existingPlans.find(p => p.sourceProgrammeId === recommendation.id)
+      let existing = existingPlans.find(p => p.sourceProgrammeId === recommendation.id)
         ?? existingPlans.find(p => !p.sourceProgrammeId && p.name === recommendation.name)
         ?? null;
+      // C6 P44-12 (D97): an ARCHIVED copy is still this user's copy - the
+      // quiz used to re-copy it because the dedup read excludes archived
+      // rows. Reuse it: activation unarchives (P44-02's setActivePlan law).
+      if (!existing) {
+        try {
+          // eslint-disable-next-line global-require
+          const { getArchivedPlansForUser } = require('../lib/database');
+          const archived = await getArchivedPlansForUser(user.id);
+          existing = archived.find(p => p.sourceProgrammeId === recommendation.id) ?? null;
+        } catch (_) { /* best effort */ }
+      }
       let planId = existing?.id ?? null;
       if (!planId) {
         const copy = await copyPlanFromLibrary(recommendation.id, user.id);

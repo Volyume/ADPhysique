@@ -286,7 +286,10 @@ describe('D2 programmes: plan activation crosses devices under last-write-wins',
     const [sql, params] = conn.runAsync.mock.calls[0];
     expect(sql).toMatch(/UPDATE programmes/);
     expect(params[4]).toBe(1);     // is_active now crosses devices
-    expect(params[6]).toBe(T_NEW); // honest timestamp, not now()
+    // C6 P44-03 (D97) re-anchor, same meaning: is_archived joined the
+    // synced columns at index 5, shifting the timestamp to index 7.
+    expect(params[5]).toBe(0);     // is_archived crosses devices too
+    expect(params[7]).toBe(T_NEW); // honest timestamp, not now()
   });
 
   test('a stale cloud row cannot deactivate a plan activated locally', async () => {

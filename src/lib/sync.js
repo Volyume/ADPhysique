@@ -778,6 +778,11 @@ async function _pushProgrammes(sb, supabaseUserId, localUserId) {
       id: p.id, user_id: supabaseUserId,
       name: p.name, description: p.description ?? null,
       is_library: !!p.isLibrary, is_active: !!p.isActive,
+      // C6 P44-03 (D97): the archived flag finally travels. The cloud
+      // column has existed since migrate_012; it was simply never pushed
+      // or pulled, so a reinstall resurrected every plan the user ever
+      // archived (eight wizard re-runs = eight "My plans" rows).
+      is_archived: !!p.isArchived,
       source_programme_id: p.sourceProgrammeId ?? null,
       // folder_id (plan_folders, migration 089): carry the plan's folder so the
       // My Plans organisation survives a device change. Nullable; an unfiled

@@ -319,8 +319,44 @@ export async function getAchievedWeeklyPeaks(userId) {
  * ledger is computed (and persisted) on demand. Returns
  * { version, intent, sourceMesocycleId, ranges } or null on failure.
  */
+/**
+ * C6 P9-01 (D97): recover the evidence of blocks the user LEFT by
+ * switching plans instead of by the decision card. A switched-away
+ * block was deactivated with no ledger ever computed, and no caller
+ * ever reached it again (the story path computes only for the ACTIVE
+ * block; this builder selects only the newest meso) - so five weeks of
+ * real per-muscle evidence went permanently unread. The training data
+ * itself was never lost, only never judged; this computes the missing
+ * ledgers lazily at consumption time. Every existing protection
+ * composes: computeAndStoreBlockLedger's own finished-state
+ * precondition (getBlockStatus is DATE-derived, so an abandoned block
+ * becomes judgeable once its calendar runs out), the adherence and
+ * exposure gates (a week-2 abandonment classifies INSUFFICIENT_DATA
+ * honestly), and the >= 4-week stale-evidence hold (weeksOverdue is
+ * real at backfill time, so old evidence cannot climb). Idempotent by
+ * the stored-ledger version guard; bounded by the user's meso count.
+ */
+export async function backfillMissingBlockLedgers(userId, { userProfile = null, tier = 'free' } = {}) {
+  try {
+    const mesos = await getAllMesocyclesForUser(userId);
+    for (const m of mesos) {
+      if (m.blockLedger) continue;
+      const start = toMs(m.startDate);
+      if (start == null) continue;
+      const weeks = m.plannedWeeks ?? m.durationWeeks ?? 5;
+      if (!getBlockStatus(start, weeks).awaitingDecision) continue;
+      // Sequential and best-effort: one bad block never blocks the rest.
+      // eslint-disable-next-line no-await-in-loop
+      await computeAndStoreBlockLedger(userId, m.id, { userProfile, tier }).catch(() => null);
+    }
+  } catch (_e) { /* best effort: consumption falls back to stored state */ }
+}
+
 export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', userProfile = null, tier = 'free' } = {}) {
   try {
+    // C6 P9-01 (D97): judge any switched-away finished blocks first, so
+    // the replay below reads the user's WHOLE history.
+    await backfillMissingBlockLedgers(userId, { userProfile, tier });
     const mesos = await getAllMesocyclesForUser(userId);
     // The block being decided on: the most recent one with a start date,
     // and only when it is genuinely FINISHED (awaitingDecision) — a

@@ -3681,8 +3681,11 @@ export async function updateRoutinePosition(id, newPosition) {
 
 export async function getActivePlan(userId) {
   const d = await db();
+  // C6 P9-08 (D97): deterministic tiebreak, matching getActiveBlock's
+  // Campaign 1 hardening - should a sync ever leave two actives, the
+  // newest wins rather than SQL row order.
   const row = await d.getFirstAsync(
-    'SELECT * FROM programmes WHERE user_id = ? AND is_active = 1 AND (is_library = 0 OR is_library IS NULL) LIMIT 1',
+    'SELECT * FROM programmes WHERE user_id = ? AND is_active = 1 AND (is_library = 0 OR is_library IS NULL) ORDER BY updated_at DESC LIMIT 1',
     [userId],
   );
   return rowToCamel(row);
@@ -3691,15 +3694,24 @@ export async function getActivePlan(userId) {
 export async function setActivePlan(userId, planId) {
   const d = await db();
   const now = Date.now();
-  await d.runAsync(
-    'UPDATE programmes SET is_active = 0, updated_at = ? WHERE user_id = ?',
-    [now, userId],
-  );
-  if (planId) {
+  // C6 P44-02 + P9-08 (D97): one transaction (two interleaved activations
+  // could leave two is_active programmes - the same interleave RB-3 closed
+  // for mesocycles), and activation UNARCHIVES - "Set active" was reachable
+  // on an archived plan and left it active and archived simultaneously,
+  // breaking the active/archived partition every list read assumes.
+  await runInTransaction(d, async () => {
     await d.runAsync(
-      'UPDATE programmes SET is_active = 1, updated_at = ? WHERE id = ?',
-      [now, planId],
+      'UPDATE programmes SET is_active = 0, updated_at = ? WHERE user_id = ?',
+      [now, userId],
     );
+    if (planId) {
+      await d.runAsync(
+        'UPDATE programmes SET is_active = 1, is_archived = 0, updated_at = ? WHERE id = ?',
+        [now, planId],
+      );
+    }
+  });
+  if (planId) {
     // LB-8: a plan was activated (onboarding success / re-engagement). Only
     // on a real activation, not the planId=null deactivate-all path.
     _trackEvent(userId, 'plan_activated', null);
@@ -3740,6 +3752,16 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   // One transaction closes that for every caller. No nested
   // runInTransaction runs inside (both statements are plain runAsync).
   await runInTransaction(d, async () => {
+    // C6 P44-05 (D97): an abandoned block's end_date was written once at
+    // creation and never truncated, so "Past blocks" showed overlapping
+    // ranges and a block left in week 2 read as a full six weeks. A block
+    // whose planned end is still ahead ends TODAY when the user switches
+    // away; finished blocks keep their real dates.
+    await d.runAsync(
+      `UPDATE mesocycles SET end_date = date('now'), updated_at = ?
+        WHERE user_id = ? AND is_active = 1 AND end_date > date('now')`,
+      [now, userId],
+    );
     await d.runAsync(
       'UPDATE mesocycles SET is_active = 0, updated_at = ? WHERE user_id = ?',
       [now, userId],
@@ -3865,6 +3887,7 @@ export async function archivePlan(planId) {
     'UPDATE programmes SET is_active = 0, is_archived = 1, updated_at = ? WHERE id = ?',
     [Date.now(), planId],
   );
+  _scheduleSync(); // C6 P44-03 (D97): archived state travels now
 }
 
 export async function unarchivePlan(planId) {
@@ -3873,6 +3896,7 @@ export async function unarchivePlan(planId) {
     'UPDATE programmes SET is_archived = 0, updated_at = ? WHERE id = ?',
     [Date.now(), planId],
   );
+  _scheduleSync(); // C6 P44-03 (D97)
 }
 
 export async function getArchivedPlansForUser(userId) {
@@ -3901,6 +3925,7 @@ export async function archiveOtherUserPlans(userId, keepPlanId) {
        AND (is_archived = 0 OR is_archived IS NULL)`,
     [Date.now(), userId, keepPlanId],
   );
+  _scheduleSync(); // C6 P44-03 (D97)
 }
 
 export async function duplicatePlan(planId, userId) {
@@ -3910,6 +3935,13 @@ export async function duplicatePlan(planId, userId) {
   const newPlan = await createProgramme(userId, `Copy of ${plan.name}`, plan.description, 0);
 
   const d = await db();
+  // C6 P44-11 (D97): a duplicate carries provenance like a library copy
+  // does (RB-6), so a renamed duplicate still identifies its source and
+  // can never be mistaken for an unrelated hand-built plan.
+  await d.runAsync(
+    'UPDATE programmes SET source_programme_id = ?, updated_at = ? WHERE id = ?',
+    [planId, Date.now(), newPlan.id],
+  );
   const routineRows = await d.getAllAsync(
     `SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL)
      ORDER BY (position IS NULL), position ASC, created_at ASC`,
@@ -7078,9 +7110,11 @@ export async function insertProgrammeFromCloud(userId, p) {
   // (setActivePlan flips is_active) could NEVER reach a device that
   // already held the row - so the two devices disagreed about which
   // plan is active, permanently. A newer cloud row now updates the
-  // synced columns in place; local-only columns (folder_id, tags,
-  // split_type, is_archived, next_workout_index, difficulty,
-  // deleted_at) survive untouched because the UPDATE never names them.
+  // synced columns in place; local-only columns (tags, split_type,
+  // next_workout_index, difficulty, deleted_at) survive untouched
+  // because the UPDATE never names them. C6 P44-03 (D97): is_archived
+  // now SYNCS (push + both pull branches) - the old local-only list
+  // here wrongly named folder_id too, which has synced since 089.
   const cloudUpdated = tsMs(p.updated_at);
   const existing = await d.getFirstAsync(
     'SELECT updated_at FROM programmes WHERE id = ?', [p.id],
@@ -7094,12 +7128,13 @@ export async function insertProgrammeFromCloud(userId, p) {
     await d.runAsync(
       `UPDATE programmes SET
         user_id = ?, name = ?, description = ?, is_library = ?, is_active = ?,
-        source_programme_id = ?, updated_at = ?
+        is_archived = ?, source_programme_id = ?, updated_at = ?
        WHERE id = ?`,
       [
         userId, p.name, p.description ?? null,
         p.is_library ? 1 : 0,
         p.is_active ? 1 : 0,
+        p.is_archived ? 1 : 0,
         p.source_programme_id ?? null,
         cloudUpdated, p.id,
       ],
@@ -7108,12 +7143,13 @@ export async function insertProgrammeFromCloud(userId, p) {
   }
   await d.runAsync(
     `INSERT OR IGNORE INTO programmes
-      (id, user_id, name, description, is_library, is_active, source_programme_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (id, user_id, name, description, is_library, is_active, is_archived, source_programme_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       p.id, userId, p.name, p.description ?? null,
       p.is_library ? 1 : 0,
       p.is_active ? 1 : 0,
+      p.is_archived ? 1 : 0,
       p.source_programme_id ?? null,
       createdAt,
       cloudUpdated ?? createdAt,

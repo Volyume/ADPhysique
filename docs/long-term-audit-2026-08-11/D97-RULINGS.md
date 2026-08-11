@@ -157,3 +157,56 @@ redirect case), preserving the intended Coached cycle exactly; older
 outputs keep their manual Apply buttons with every clamp intact. The
 D16 safety-hold confirm-first gate stays ahead of the age gate,
 pinned.
+
+## D97-11..17 (Phases 9 + 44) — the plan-lifecycle batch, FIXED
+
+From AUDIT-PLAN-LIFECYCLE.md (7 DEFECT / 7 LATENT / 8 CLEAN):
+
+- **D97-11 (P9-01, HIGH).** A block left by switching plans never had
+  its ledger computed and no caller could ever reach it again - five
+  weeks of real evidence permanently unread. KEY FACT: the evidence
+  was never destroyed, only never judged. backfillMissingBlockLedgers
+  now judges switched-away finished blocks lazily at consumption time
+  (seed building; BlockReflection computes-if-absent). Every existing
+  protection composes: the runner's finished-state precondition
+  (status is DATE-derived, so abandoned blocks become judgeable when
+  their calendar runs out), the adherence/exposure gates (a week-2
+  abandonment classifies INSUFFICIENT_DATA honestly), and the
+  >= 4-week stale hold (weeksOverdue is real at backfill time, so old
+  evidence cannot climb). Idempotent, bounded, best-effort.
+- **D97-12 (P44-02, HIGH + P9-08).** setActivePlan now unarchives on
+  activation and runs its deactivate/activate pair in one transaction;
+  getActivePlan gains the deterministic newest-wins tiebreak. The
+  active/archived partition is a partition again.
+- **D97-13 (P44-03, MED-HIGH).** is_archived now syncs both ways (the
+  cloud column existed since migrate_012 - no migration needed) and
+  archivePlan/unarchivePlan/archiveOtherUserPlans schedule pushes.
+  Reinstall no longer resurrects every archived plan. The stale
+  local-only comment corrected. Campaign 1 positional pin re-anchored
+  same-meaning with the new column asserted.
+- **D97-14 (P9-04).** PlanDetailScreen gains the RB-3 synchronous
+  guard on both activation paths (the one entry point the pin missed).
+- **D97-15 (P44-05).** An abandoned block's end_date truncates to the
+  switch day (only when its planned end is still ahead), so Past
+  blocks stops showing overlapping six-week ranges for two-week
+  blocks. Status remains start-derived; display truth only.
+- **D97-16 (P9-06).** buildBlockStartLines gains hadPriorBlocks: a
+  mature user's template-seeded block now reads "This block starts
+  from research-based guidance for this plan..." instead of falsely
+  claiming they lack personal history. First-use copy unchanged.
+- **D97-17 (P9-07 + P44-11/12).** The recovery-week and open-decision
+  switches get their own honest dialogues (the blanket silent pass
+  and its false "about to roll over anyway" rationale removed);
+  duplicatePlan stamps source provenance; the free-starter dedup
+  reuses an archived copy instead of duplicating it.
+- **Accepted/no-action:** P9-10 (set-count edits teaching
+  achievedPeak) - ruled NOT a defect: user-ADDED sets are performed
+  work the muscle genuinely handled; the manual exclusion is for
+  landmark OVERRIDES, not for training actually done. P44-13
+  (next_workout_index not synced) - the cloud column does not exist,
+  so the fix needs a migration; recorded for the Phase 57 triage
+  rather than written mid-campaign. P9-09 (pre/post-transaction gaps
+  in activatePlanWithBlock) - recorded; full closure needs the
+  week-generation calls inside the transaction, a deeper change
+  carried to the triage. P9-14: this batch adds the missing
+  planSwitch behaviour pins via campaign6.longTerm.

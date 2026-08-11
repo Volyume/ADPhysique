@@ -163,3 +163,66 @@ describe('ADDENDUM: anti-anthropomorphism and anti-manipulative retention (D97)'
     }
   });
 });
+
+describe('PHASES 9 + 44: plan lifecycle laws (D97-11..17)', () => {
+  test('P44-02: activation unarchives, inside one transaction with a deterministic tiebreak', () => {
+    const src = read('lib/database.js');
+    const fn = src.slice(src.indexOf('export async function setActivePlan'));
+    expect(fn.slice(0, 1400)).toMatch(/runInTransaction\(d, async \(\) => \{/);
+    expect(fn.slice(0, 1400)).toMatch(/is_active = 1, is_archived = 0/);
+    const get = src.slice(src.indexOf('export async function getActivePlan'));
+    expect(get.slice(0, 700)).toMatch(/ORDER BY updated_at DESC LIMIT 1/);
+  });
+
+  test('P44-03: the archived flag syncs in both directions and archive writes schedule a push', () => {
+    expect(read('lib/sync.js')).toMatch(/is_archived: !!p\.isArchived,/);
+    const db = read('lib/database.js');
+    const ins = db.slice(db.indexOf('export async function insertProgrammeFromCloud'));
+    expect(ins.slice(0, 2600)).toMatch(/is_archived = \?/);
+    expect(ins.slice(0, 3600)).toMatch(/is_library, is_active, is_archived, source_programme_id/);
+    for (const fn of ['archivePlan', 'unarchivePlan', 'archiveOtherUserPlans']) {
+      const f = db.slice(db.indexOf(`export async function ${fn}`));
+      expect(f.slice(0, 800)).toMatch(/_scheduleSync\(\)/);
+    }
+  });
+
+  test('P9-01: switched-away finished blocks are judged at consumption time', () => {
+    const runner = read('lib/blockLedgerRunner.js');
+    expect(runner).toMatch(/export async function backfillMissingBlockLedgers/);
+    const seed = runner.slice(runner.indexOf('export async function buildSeedRangesForNextBlock'));
+    expect(seed.slice(0, 700)).toMatch(/await backfillMissingBlockLedgers\(userId/);
+    expect(read('screens/BlockReflectionScreen.js')).toMatch(/computeAndStoreBlockLedger\(user\.id, mesocycleId/);
+  });
+
+  test('P9-07: recovery-week and open-decision switches get their own honest dialogue', () => {
+    const src = read('lib/planSwitch.js');
+    expect(src).toMatch(/Switch during your recovery week\?/);
+    expect(src).toMatch(/Skip the open block decision\?/);
+    expect(stripComments(src)).not.toMatch(/about to roll over anyway/);
+  });
+
+  test('P9-04: PlanDetail holds the RB-3 synchronous guard on both activation paths', () => {
+    const src = read('screens/PlanDetailScreen.js');
+    expect((src.match(/if \(activatingRef\.current\) return;/g) || []).length).toBe(2);
+  });
+
+  test('P44-05: an abandoned block ends the day the user switches away', () => {
+    const src = read('lib/database.js');
+    const act = src.slice(src.indexOf('export async function activatePlanWithBlock'));
+    expect(act.slice(0, 2200)).toMatch(/SET end_date = date\('now'\)/);
+  });
+
+  test('P9-06: a mature user is never told they lack personal history', () => {
+    const src = read('lib/blockExplain.js');
+    expect(src).toMatch(/RESEARCH_START_LINE_MATURE/);
+    expect(src).toMatch(/hadPriorBlocks \? RESEARCH_START_LINE_MATURE : RESEARCH_START_LINE/);
+    expect(read('screens/HomeScreen.js')).toMatch(/hadPriorBlocks = all\.some\(\(m\) => m\.id !== week\.mesocycleId && m\.blockLedger\)/);
+  });
+
+  test('P44-11/12: duplicates carry provenance and archived copies are reused, not re-copied', () => {
+    const db = read('lib/database.js');
+    const dup = db.slice(db.indexOf('export async function duplicatePlan'));
+    expect(dup.slice(0, 1200)).toMatch(/SET source_programme_id = \?/);
+    expect(read('screens/FreeStarterScreen.js')).toMatch(/archived\.find\(p => p\.sourceProgrammeId === recommendation\.id\)/);
+  });
+});

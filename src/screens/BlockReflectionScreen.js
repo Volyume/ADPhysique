@@ -150,6 +150,20 @@ export default function BlockReflectionScreen({ navigation, route }) {
         const { getAllMesocyclesForUser } = require('../lib/database');
         // eslint-disable-next-line global-require
         const { buildLedgerReflectionRows } = require('../lib/blockExplain');
+        // C6 P9-01 (D97): a block the user switched away from never had
+        // its ledger computed, so this summary showed no rows for ever.
+        // Compute-if-absent; idempotent, refuses unfinished blocks, and
+        // the stale-evidence hold applies at the real gap.
+        try {
+          // eslint-disable-next-line global-require
+          const { computeAndStoreBlockLedger } = require('../lib/blockLedgerRunner');
+          // eslint-disable-next-line global-require
+          const store = require('../store/useAppStore').default;
+          const st = store.getState();
+          await computeAndStoreBlockLedger(user.id, mesocycleId, {
+            userProfile: st.userProfile ?? null, tier: st.tier ?? 'free',
+          }).catch(() => null);
+        } catch (_) { /* best effort */ }
         const mesos = await getAllMesocyclesForUser(user.id);
         const meso = mesos.find((m) => m.id === mesocycleId);
         const ledger = meso?.blockLedger ? JSON.parse(meso.blockLedger) : null;

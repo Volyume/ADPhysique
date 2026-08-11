@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,6 +47,9 @@ export default function PlanDetailScreen({ navigation, route }) {
     tier: s.tier,
   })));
   const toast = useToast();
+  // C6 P9-04 (D97): the one activation entry point RB-3 missed - the
+  // same synchronous guard as PlansScreen/PlanLibrary/ManualBuilder.
+  const activatingRef = useRef(false);
   const [plan, setPlan] = useState(null);
   const [workouts, setWorkouts] = useState([]);
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -133,21 +136,27 @@ export default function PlanDetailScreen({ navigation, route }) {
         {
           text: 'Add and start this plan',
           onPress: async () => {
-            let copy;
+            if (activatingRef.current) return;
+            activatingRef.current = true;
             try {
-              copy = await copyPlanFromLibrary(planId, user.id);
-            } catch (_e) {
-              toast.show('Could not copy plan. Try again.', { variant: 'error' });
-              return;
+              let copy;
+              try {
+                copy = await copyPlanFromLibrary(planId, user.id);
+              } catch (_e) {
+                toast.show('Could not copy plan. Try again.', { variant: 'error' });
+                return;
+              }
+              const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
+              if (!ok) { navigation.goBack(); return; }
+              await activatePlanWithBlock(user.id, copy.id, plan?.name ?? 'Training Plan');
+              // C5-P10-05 (D96): every activation entry point confirms
+              // identically. This one used to be a silent goBack(), the same
+              // transition "Save for later" makes.
+              toast.show(`"${plan?.name}" is now your active plan`, { variant: 'success' });
+              navigation.goBack();
+            } finally {
+              activatingRef.current = false;
             }
-            const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
-            if (!ok) { navigation.goBack(); return; }
-            await activatePlanWithBlock(user.id, copy.id, plan?.name ?? 'Training Plan');
-            // C5-P10-05 (D96): every activation entry point confirms
-            // identically. This one used to be a silent goBack(), the same
-            // transition "Save for later" makes.
-            toast.show(`"${plan?.name}" is now your active plan`, { variant: 'success' });
-            navigation.goBack();
           },
         },
       ],
@@ -155,6 +164,8 @@ export default function PlanDetailScreen({ navigation, route }) {
   }
 
   async function handleSetActive() {
+    if (activatingRef.current) return; // C6 P9-04 (D97)
+    activatingRef.current = true;
     try {
       const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
       if (!ok) return;
@@ -164,6 +175,8 @@ export default function PlanDetailScreen({ navigation, route }) {
     } catch (e) {
       logError('PlanDetailScreen.handleSetActive', e, { userId: user?.id, planId });
       toast.show("Couldn't activate plan, try again", { variant: 'error' });
+    } finally {
+      activatingRef.current = false;
     }
   }
 
