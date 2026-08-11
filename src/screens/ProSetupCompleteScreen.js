@@ -20,6 +20,7 @@ import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates'
 import { getActivePlan, getRoutinesForPlan, getMorningWeightsLast14Days, getOpenEdPatternFlag } from '../lib/database';
 import { getNotificationPermissionStatus } from '../lib/notifications/permissions';
 import { firstReviewUnlockDate } from '../lib/trialActivation';
+import { trialEndsLabel } from '../lib/payments/cascade';
 import { formatUnlockDate } from '../lib/coachLedger';
 import { planNextWeek } from '../lib/food/mealPlanService';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
@@ -264,6 +265,17 @@ export default function ProSetupCompleteScreen({ navigation }) {
               <Ionicons name="barbell-outline" size={15} color={t.colors.primary} />
               <Text style={[styles.readyText, live.readyText]}>{hasPlan ? 'Plan ready' : 'Plan pending'}</Text>
             </View>
+            {/* RA-10 (D96, Review A): the user tapped "Start your 14 days"
+                and nothing ever confirmed the trial began. Rendered ONLY
+                when the entitlement genuinely resolves an active trial end
+                (FQ-6.2's single source), so a direct subscriber or an
+                unresolved grant never sees a false claim. */}
+            {trialEndsLabel(userProfile) ? (
+              <View style={[styles.readyItem, live.readyItem]}>
+                <Ionicons name="time-outline" size={15} color={t.colors.primary} />
+                <Text style={[styles.readyText, live.readyText]}>Your 14 days run to {trialEndsLabel(userProfile)}</Text>
+              </View>
+            ) : null}
             <TouchableOpacity
               style={[styles.readyItem, live.readyItem]}
               onPress={notifPermissionGranted ? undefined : () => navigation.navigate('NotificationSettings')}
@@ -297,16 +309,127 @@ export default function ProSetupCompleteScreen({ navigation }) {
           </Card>
           </Animated.View>
 
-          {/* 2. Hit your calorie + macro targets */}
+
+          {/* 2. Train your split (RA-5: moved above the button, renumbered) */}
+          <Animated.View entering={stage(2)}>
+          <TouchableOpacity
+            style={[styles.routineCard, live.routineCard, planOpen && [styles.routineCardOpen, live.routineCardOpen]]}
+            onPress={() => setPlanOpen(v => !v)}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityState={{ expanded: hasPlan ? planOpen : undefined }}
+            accessibilityLabel="Train your split"
+          >
+            <View style={styles.routineHeader}>
+              <View style={[styles.routineIconWrap, live.routineIconWrap]}>
+                <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.routineTitle, live.routineTitle]}>2. Train your split</Text>
+                {hasPlan ? (
+                  <>
+                    <Text style={[styles.routineBody, live.routineBody]}>
+                      {planName ?? 'Your plan'} - {planRoutines.length} workout{planRoutines.length !== 1 ? 's' : ''} per week
+                    </Text>
+                    {/* C5-P10-01 (D96, wave C carry-over): setup generated
+                        and activated a plan, so a training block is already
+                        running, and nothing on the hand-off said so. The
+                        user met "Week 1 of 6" days later for something they
+                        never knowingly started. Same canonical sentence as
+                        every activation decision point, outside the collapse
+                        so it is read without a tap. */}
+                    <Text style={[styles.routineBody, live.routineBody]}>
+                      {BLOCK_START_SENTENCE}
+                    </Text>
+                  </>
+                ) : (
+                  <Text style={[styles.routineBody, live.routineBody]}>
+                    Create or choose a routine before your first session.
+                  </Text>
+                )}
+              </View>
+              {hasPlan && (
+                <Ionicons
+                  name={planOpen ? 'chevron-up' : 'chevron-down'}
+                  size={18}
+                  color={t.colors.textMuted}
+                />
+              )}
+            </View>
+            {hasPlan && planOpen && (
+              <View style={[styles.splitList, live.splitList]}>
+                {/* The richer engine rationale supersedes the one-line split
+                    note when it's available. */}
+                {!whyThis && planRoutines[0]?.split_type ? (
+                  <Text style={[styles.splitWhy, live.splitWhy]}>{getSplitRationale(planRoutines[0].split_type)}</Text>
+                ) : null}
+                {planRoutines.map((r, i) => (
+                  <View key={r.id} style={[styles.splitRow, i < planRoutines.length - 1 && [styles.splitRowBorder, live.splitRowBorder]]}>
+                    <View style={[styles.splitBadge, live.splitBadge]}>
+                      <Text style={[styles.splitBadgeText, live.splitBadgeText]}>{i + 1}</Text>
+                    </View>
+                    <Text style={[styles.splitName, live.splitName]}>{r.name}</Text>
+                  </View>
+                ))}
+                {whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
+                  <View style={[styles.whyPlanWrap, live.whyPlanWrap]}>
+                    <SectionLabel>Why this plan, for you</SectionLabel>
+                    {WHY_ORDER.filter(k => whyThis[k]).map(k => (
+                      <View key={k} style={styles.whyPlanItem}>
+                        <View style={[styles.whyPlanBullet, live.whyPlanBullet]} />
+                        <Text style={[styles.whyPlanText, live.whyPlanText]}>{whyThis[k]}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
+              </View>
+            )}
+          </TouchableOpacity>
+          </Animated.View>
+
+
+        </View>
+
+        {/* RA-5 (D96, Review A): the hand-off taught the whole product
+            before use - ~300 words, four lessons and three onward
+            navigations ahead of the primary button, against the
+            campaign's second law. Nothing is deleted: the two cards a
+            user needs BEFORE the first session (morning weight, the
+            split and its block sentence) stay above Start training;
+            the daily-targets and weekly check-in cards now follow the
+            button, read when they become relevant. */}
+        {/* FQ-1(c) (D96, founder-approved wording): the one first-run mention
+            of calm coaching. A quiet pointer, not a step: no choice is asked,
+            Standard stays the normal default, and the canonical editor
+            remains Settings → Coaching (named, not navigated - this stack has
+            no tabs yet, so a live link would be the silent-drop class C5
+            closed). Neutral by design: it must never imply Standard is
+            unsafe or that safety rules differ between modes. */}
+        <Text style={[styles.calmPointer, live.calmPointer]}>
+          Prefer gentler coaching? You can switch to Calm anytime in Settings, under Coaching.
+        </Text>
+
+        <Animated.View entering={(reduceMotion || motionSuppressed) ? undefined : FadeInUp.duration(motion.enter).delay(5 * motion.micro)}>
+          <Button
+            title="Start training"
+            trailingIcon="arrow-forward"
+            size="lg"
+            onPress={handleStart}
+            style={styles.startBtn}
+          />
+        </Animated.View>
+
+        <View style={styles.mainBlock}>
+          {/* 3. Hit your calorie + macro targets */}
           {nutritionSummary?.targetKcal ? (
-            <Animated.View entering={stage(2)}>
+            <Animated.View entering={stage(3)}>
             <Card style={[styles.routineCardChrome, live.routineCardChrome]}>
               <View style={styles.routineHeader}>
                 <View style={[styles.routineIconWrap, live.routineIconWrap]}>
                   <Ionicons name="flame-outline" size={18} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.routineTitle, live.routineTitle]}>2. Hit your daily targets</Text>
+                  <Text style={[styles.routineTitle, live.routineTitle]}>3. Hit your daily targets</Text>
                 </View>
               </View>
               {/* Wave A B5: the primer is offered BEFORE the numbers. Most
@@ -407,83 +530,6 @@ export default function ProSetupCompleteScreen({ navigation }) {
             </Animated.View>
           ) : null}
 
-          {/* 3. Training split, collapsible */}
-          <Animated.View entering={stage(3)}>
-          <TouchableOpacity
-            style={[styles.routineCard, live.routineCard, planOpen && [styles.routineCardOpen, live.routineCardOpen]]}
-            onPress={() => setPlanOpen(v => !v)}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: hasPlan ? planOpen : undefined }}
-            accessibilityLabel="Train your split"
-          >
-            <View style={styles.routineHeader}>
-              <View style={[styles.routineIconWrap, live.routineIconWrap]}>
-                <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.routineTitle, live.routineTitle]}>3. Train your split</Text>
-                {hasPlan ? (
-                  <>
-                    <Text style={[styles.routineBody, live.routineBody]}>
-                      {planName ?? 'Your plan'} - {planRoutines.length} workout{planRoutines.length !== 1 ? 's' : ''} per week
-                    </Text>
-                    {/* C5-P10-01 (D96, wave C carry-over): setup generated
-                        and activated a plan, so a training block is already
-                        running, and nothing on the hand-off said so. The
-                        user met "Week 1 of 6" days later for something they
-                        never knowingly started. Same canonical sentence as
-                        every activation decision point, outside the collapse
-                        so it is read without a tap. */}
-                    <Text style={[styles.routineBody, live.routineBody]}>
-                      {BLOCK_START_SENTENCE}
-                    </Text>
-                  </>
-                ) : (
-                  <Text style={[styles.routineBody, live.routineBody]}>
-                    Create or choose a routine before your first session.
-                  </Text>
-                )}
-              </View>
-              {hasPlan && (
-                <Ionicons
-                  name={planOpen ? 'chevron-up' : 'chevron-down'}
-                  size={18}
-                  color={t.colors.textMuted}
-                />
-              )}
-            </View>
-            {hasPlan && planOpen && (
-              <View style={[styles.splitList, live.splitList]}>
-                {/* The richer engine rationale supersedes the one-line split
-                    note when it's available. */}
-                {!whyThis && planRoutines[0]?.split_type ? (
-                  <Text style={[styles.splitWhy, live.splitWhy]}>{getSplitRationale(planRoutines[0].split_type)}</Text>
-                ) : null}
-                {planRoutines.map((r, i) => (
-                  <View key={r.id} style={[styles.splitRow, i < planRoutines.length - 1 && [styles.splitRowBorder, live.splitRowBorder]]}>
-                    <View style={[styles.splitBadge, live.splitBadge]}>
-                      <Text style={[styles.splitBadgeText, live.splitBadgeText]}>{i + 1}</Text>
-                    </View>
-                    <Text style={[styles.splitName, live.splitName]}>{r.name}</Text>
-                  </View>
-                ))}
-                {whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
-                  <View style={[styles.whyPlanWrap, live.whyPlanWrap]}>
-                    <SectionLabel>Why this plan, for you</SectionLabel>
-                    {WHY_ORDER.filter(k => whyThis[k]).map(k => (
-                      <View key={k} style={styles.whyPlanItem}>
-                        <View style={[styles.whyPlanBullet, live.whyPlanBullet]} />
-                        <Text style={[styles.whyPlanText, live.whyPlanText]}>{whyThis[k]}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
-              </View>
-            )}
-          </TouchableOpacity>
-          </Animated.View>
-
           {/* 4. Check in once a week */}
           <Animated.View entering={stage(4)}>
           <Card style={[styles.routineCardChrome, live.routineCardChrome]}>
@@ -540,29 +586,8 @@ export default function ProSetupCompleteScreen({ navigation }) {
             </TouchableOpacity>
           </Card>
           </Animated.View>
-
         </View>
 
-        {/* FQ-1(c) (D96, founder-approved wording): the one first-run mention
-            of calm coaching. A quiet pointer, not a step: no choice is asked,
-            Standard stays the normal default, and the canonical editor
-            remains Settings → Coaching (named, not navigated - this stack has
-            no tabs yet, so a live link would be the silent-drop class C5
-            closed). Neutral by design: it must never imply Standard is
-            unsafe or that safety rules differ between modes. */}
-        <Text style={[styles.calmPointer, live.calmPointer]}>
-          Prefer gentler coaching? You can switch to Calm anytime in Settings, under Coaching.
-        </Text>
-
-        <Animated.View entering={(reduceMotion || motionSuppressed) ? undefined : FadeInUp.duration(motion.enter).delay(5 * motion.micro)}>
-          <Button
-            title="Start training"
-            trailingIcon="arrow-forward"
-            size="lg"
-            onPress={handleStart}
-            style={styles.startBtn}
-          />
-        </Animated.View>
       </ScrollView>
     </SafeAreaView>
   );

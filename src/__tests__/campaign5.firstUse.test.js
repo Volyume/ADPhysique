@@ -760,7 +760,10 @@ describe('BLOCK DECISION: both options, advice that cannot gate, entitlement fro
   test('PRO: the ledger rows render with the decision, whichever option is favoured (FB-19)', () => {
     // The rows used to be gated on the recommendation itself, so the one
     // case where the ledger was thrown away was a block that went well.
-    expect(plans).toMatch(/rows: tier === 'pro' \? buildLedgerReflectionRows\(ledger\)\.slice\(0, 4\) : \[\]/);
+    // (RA-2 re-anchor, same meaning: the rows are built once as allRows so
+    // the unjudged check can see every entry, then sliced for display.)
+    expect(plans).toMatch(/const allRows = buildLedgerReflectionRows\(ledger\)/);
+    expect(plans).toMatch(/rows: tier === 'pro' \? allRows\.slice\(0, 4\) : \[\]/);
     expect(stripComments(plans)).not.toMatch(/recommendation === 'adjust'/);
     // And with both options on the card, the forward claims say which
     // option applies them.
@@ -1039,10 +1042,14 @@ describe('DENSITY: the wizard explains each step once (C5-P36-01/02/03, D96)', (
     ]) {
       expect(src).not.toContain(dupe);
     }
-    // The QuestionGroup icon+title stays: it does real structural work.
-    for (const title of ['title="Required details"', 'title="Plan fit"', 'title="Goal and targets"']) {
+    // The QuestionGroup icon+title stays where it does real structural
+    // work (multi-group steps). RA-7 (Review A, D96): step 2 has exactly
+    // one group, so "Required details" grouped nothing, restated the
+    // header a third time, and after RA-4 sat above an optional field.
+    for (const title of ['title="Plan fit"', 'title="Goal and targets"']) {
       expect(src).toContain(title);
     }
+    expect(src).not.toContain('title="Required details"');
     // Every header sub, and therefore every step's purpose, is still stated.
     for (const sub of [
       'These details let the app set a safe starting baseline without guessing.',
@@ -1065,8 +1072,11 @@ describe('DENSITY: the wizard explains each step once (C5-P36-01/02/03, D96)', (
 
   test('no field, gate or safety hint was removed with the duplication', () => {
     const src = read('screens/ProOnboardingScreen.js');
+    // RA-4 (Review A, D96): the name left the required list - it is
+    // presentation only, the same rationale C5-P1-09 recorded for Free.
+    // Every SAFETY-bearing required field keeps its hint.
     for (const hint of [
-      'Complete your name, sex, age, height and body weight to continue.',
+      'Complete your sex, age, height and body weight to continue.',
       'Choose your experience and equipment to continue.',
       'Enter your best current estimate or a measured value.',
       'Be honest here. This sets how much volume your plan includes, so it can protect your recovery.',
@@ -1633,5 +1643,108 @@ describe('HOME: the recovery suggestion acknowledges the block it is arguing wit
 
   test('the deload maths itself is untouched', () => {
     expect(read('lib/algorithms.js')).not.toMatch(/scheduledRecoveryAhead|PM-08/);
+  });
+});
+
+describe('REVIEW A: the brand-new-user findings stay fixed (RA-1..RA-10, D96)', () => {
+  test('RA-2: an INSUFFICIENT_DATA hold is never narrated as "a dose that worked"', () => {
+    const ranges = {
+      chest: { startSets: 10, peakSets: 14 },
+      back: { startSets: 12, peakSets: 16 },
+    };
+    const mk = (classification) => ({
+      entries: [
+        { muscle: 'chest', classification, observed: { startSets: 10, plannedPeak: 14 }, rationale: 'r' },
+        { muscle: 'back', classification, observed: { startSets: 12, plannedPeak: 16 }, rationale: 'r' },
+      ],
+    });
+    const unjudged = buildSeedReceipt({ ranges, ledger: mk('INSUFFICIENT_DATA') });
+    expect(unjudged.held).toBe(2);
+    expect(unjudged.heldUnjudged).toBe(2);
+    expect(unjudged.heldLine).toMatch(/did not log enough recovery feedback/);
+    expect(unjudged.heldLine).not.toMatch(/dose that worked/);
+    // A judged hold keeps the FB-27 sentence.
+    const judged = buildSeedReceipt({ ranges, ledger: mk('RESPONSIVE') });
+    expect(judged.heldUnjudged).toBe(0);
+    expect(judged.heldLine).toMatch(/Keeping a dose that worked is a decision too/);
+    // Mixed states both, judged first.
+    const mixed = buildSeedReceipt({
+      ranges,
+      ledger: {
+        entries: [
+          { muscle: 'chest', classification: 'RESPONSIVE', observed: { startSets: 10, plannedPeak: 14 }, rationale: 'r' },
+          { muscle: 'back', classification: 'INSUFFICIENT_DATA', observed: { startSets: 12, plannedPeak: 16 }, rationale: 'r' },
+        ],
+      },
+    });
+    expect(mixed.heldLine).toMatch(/dose that worked[\s\S]*did not log enough recovery feedback/);
+  });
+
+  test('RA-2: the receipt sheet and decision card stop claiming change or difference that does not exist', () => {
+    const plans = read('screens/PlansScreen.js');
+    // Subtitle is conditional on rows actually having changed.
+    expect(plans).toMatch(/No targets moved this time/);
+    // A fully unjudged ledger stops the framing line describing the two
+    // options as producing different targets.
+    expect(plans).toMatch(/allUnjudged:\s*allRows\.length > 0/);
+    expect(plans).toMatch(/both options start the next block from the same targets/);
+  });
+
+  test('RA-1: a days answer the starter library cannot honour is acknowledged, not ignored', () => {
+    const src = read('screens/FreeStarterScreen.js');
+    expect(src).toMatch(/answers\.days !== recDays/);
+    expect(src).toMatch(/This plan runs \$\{recDays\} days a week/);
+  });
+
+  test('RA-9: sets and reps are glossed at their likeliest first exposure', () => {
+    const src = read('screens/FreeStarterScreen.js');
+    expect(src).toMatch(/InfoTooltip text=\{`\$\{GLOSSARY\.set\} \$\{GLOSSARY\.rep\}`\}/);
+  });
+
+  test('RA-3: the wizard neither paints the finished sign-in step nor counts it', () => {
+    const src = read('screens/ProOnboardingScreen.js');
+    expect(src).toMatch(/useState\(\(\) => \(user && !user\.isLocal \? 2 : 1\)\)/);
+    expect(src).toMatch(/displayStepOf/);
+    expect(src).not.toMatch(/Step \{step\} of \{TOTAL_STEPS\}/);
+  });
+
+  test('RA-4: the first name gates nothing and never overwrites a stored name with a blank', () => {
+    const src = read('screens/ProOnboardingScreen.js');
+    expect(stripComments(src)).not.toMatch(/canContinue\s*=\s*!!firstName/);
+    expect(src).toMatch(/First name \(optional\)/);
+    expect(src).toMatch(/if \(firstName\.trim\(\)\) merged\.firstName = firstName\.trim\(\);/);
+    // The sex gate is untouched (founder 2026-07-01).
+    expect(src).toMatch(/\(sex === 'male' \|\| sex === 'female'\)/);
+  });
+
+  test('RA-5: the first session needs stand above Start training; the rest follow it', () => {
+    const src = read('screens/ProSetupCompleteScreen.js');
+    const a = src.indexOf('>2. Train your split<');
+    const b = src.indexOf('title="Start training"');
+    const c = src.indexOf('>3. Hit your daily targets<');
+    const d = src.indexOf('>4. Check in once a week<');
+    expect(a).toBeGreaterThan(-1);
+    expect(b).toBeGreaterThan(a);
+    expect(c).toBeGreaterThan(b);
+    expect(d).toBeGreaterThan(c);
+  });
+
+  test('RA-10: the trial confirmation chip renders only from the resolved entitlement', () => {
+    const src = read('screens/ProSetupCompleteScreen.js');
+    expect(src).toMatch(/\{trialEndsLabel\(userProfile\) \? \(/);
+    expect(src).toMatch(/Your 14 days run to \{trialEndsLabel\(userProfile\)\}/);
+  });
+
+  test('RA-6: the block decision glosses the term the whole choice rests on', () => {
+    const src = read('screens/PlansScreen.js');
+    const i = src.indexOf('Both options are open.');
+    expect(i).toBeGreaterThan(-1);
+    expect(src.slice(i, i + 300)).toMatch(/InfoTooltip text=\{GLOSSARY\.volume\}/);
+  });
+
+  test('RA-8: the pro_signup sign-in screen carries the trial thread', () => {
+    const src = read('screens/LoginScreen.js');
+    expect(src).toMatch(/intent === 'pro_signup' \? \(/);
+    expect(src).toMatch(/Your 14-day free trial starts once your account is set up\./);
   });
 });

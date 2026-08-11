@@ -278,6 +278,11 @@ export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {
   const byMuscle = new Map(entries.filter((e) => e?.muscle).map((e) => [e.muscle, e]));
   const changed = [];
   let held = 0;
+  // RA-2 (D96, Review A): a hold from INSUFFICIENT_DATA is not a judgement.
+  // With null session ratings now the default (C5-P17-01/02), a first block
+  // can end with every muscle unjudged, and "Keeping a dose that worked"
+  // asserted exactly the verdict the ledger had just declined to give.
+  let heldUnjudged = 0;
   for (const [muscle, r] of Object.entries(ranges && typeof ranges === 'object' ? ranges : {})) {
     const observed = byMuscle.get(muscle)?.observed;
     const prevStart = num(observed?.startSets, null);
@@ -289,7 +294,11 @@ export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {
     if (prevStart == null || start == null) continue;
     const ds = start - prevStart;
     const dp = prevPeak != null && peak != null ? peak - prevPeak : 0;
-    if (ds === 0 && dp === 0) { held += 1; continue; }
+    if (ds === 0 && dp === 0) {
+      held += 1;
+      if (byMuscle.get(muscle)?.classification === 'INSUFFICIENT_DATA') heldUnjudged += 1;
+      continue;
+    }
     const bits = [];
     if (ds !== 0) bits.push(`week 1 ${ds > 0 ? 'up' : 'down'} from ${prevStart} to ${start} sets`);
     if (dp !== 0) bits.push(`peak ${dp > 0 ? 'up' : 'down'} from ${prevPeak} to ${peak} sets`);
@@ -305,14 +314,29 @@ export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {
   }
   changed.sort((a, b) => b.magnitude - a.magnitude);
   const capped = changed.slice(0, Math.max(0, limit));
+  // FB-27: retention is a decision, so it gets said out loud - but only for
+  // muscles the ledger actually judged. RA-2: an INSUFFICIENT_DATA hold gets
+  // the honest sentence instead, and a mixed receipt states both.
+  const heldJudged = held - heldUnjudged;
+  const groupNoun = (n) => `muscle group${n === 1 ? '' : 's'}`;
+  const stayedVerb = (n) => (n === 1 ? 'it was' : 'they were');
+  let heldLine = null;
+  if (held > 0) {
+    const parts = [];
+    if (heldJudged > 0) {
+      parts.push(`${heldJudged} other ${groupNoun(heldJudged)} stayed where ${stayedVerb(heldJudged)}. Keeping a dose that worked is a decision too.`);
+    }
+    if (heldUnjudged > 0) {
+      parts.push(`${heldUnjudged} ${heldJudged > 0 ? 'more ' : 'other '}${groupNoun(heldUnjudged)} stayed where ${stayedVerb(heldUnjudged)}: this block did not log enough recovery feedback to judge ${heldUnjudged === 1 ? 'it' : 'them'}, so nothing was moved on a guess.`);
+    }
+    heldLine = parts.join(' ');
+  }
   return {
     changed: capped,
     moreChanged: Math.max(0, changed.length - capped.length),
     held,
-    // FB-27: retention is a decision, so it gets said out loud.
-    heldLine: held > 0
-      ? `${held} other muscle group${held === 1 ? '' : 's'} stayed where ${held === 1 ? 'it was' : 'they were'}. Keeping a dose that worked is a decision too.`
-      : null,
+    heldUnjudged,
+    heldLine,
   };
 }
 

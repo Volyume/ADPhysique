@@ -33,6 +33,8 @@ import { getBlockAdvice, buildNextBlockOptions } from '../lib/blockAdvisor';
 import { ProBadge } from '../components/ProGate';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, buildSeedReceipt } from '../lib/blockExplain';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import useAppStore from '../store/useAppStore';
@@ -269,8 +271,15 @@ export default function PlansScreen({ navigation }) {
             if (req !== ledgerLoadRef.current) return;
             // FB-24: hold the record for the transition receipt.
             ledgerRecordRef.current = ledger;
+            const allRows = buildLedgerReflectionRows(ledger);
             setLedgerStory({
-              rows: tier === 'pro' ? buildLedgerReflectionRows(ledger).slice(0, 4) : [],
+              rows: tier === 'pro' ? allRows.slice(0, 4) : [],
+              // RA-2 (D96, Review A): judged on EVERY entry, not the sliced
+              // four. When the whole ledger is INSUFFICIENT_DATA the two
+              // options produce the same targets, and the framing line must
+              // not describe a difference that does not exist.
+              allUnjudged: allRows.length > 0
+                && allRows.every((r) => r.classification === 'INSUFFICIENT_DATA'),
               recoveryLine: recoveryProposalLine(ledger),
             });
           } catch (_e) { setLedgerStory(null); }
@@ -936,7 +945,9 @@ export default function PlansScreen({ navigation }) {
                       ))}
                       {ledgerStory.rows?.length ? (
                         <Text style={[styles.ledgerStoryLine, live.nextBlockBody]}>
-                          These apply if you continue with adjustments. Running the plan again keeps the same targets as last time.
+                          {ledgerStory.allUnjudged
+                            ? 'This block did not log enough recovery feedback to judge these, so this time both options start the next block from the same targets.'
+                            : 'These apply if you continue with adjustments. Running the plan again keeps the same targets as last time.'}
                         </Text>
                       ) : null}
                       {ledgerStory.recoveryLine ? (
@@ -981,8 +992,13 @@ export default function PlansScreen({ navigation }) {
                 {blockAdvice.action === 'post_recovery' && (
                   <View style={styles.blockDecision}>
                     {reachableOptions.length > 1 ? (
+                      // RA-6 (D96, Review A): the entire difference between
+                      // the two options rests on "weekly set targets", a
+                      // term unglossed at the most consequential decision
+                      // in the app. GLOSSARY.volume defines it plainly.
                       <Text style={[styles.nextBlockBody, live.nextBlockBody]}>
-                        Both options are open. Whichever you choose, the new block starts today.
+                        Both options are open. Whichever you choose, the new block starts today.{' '}
+                        <InfoTooltip text={GLOSSARY.volume} size={13} />
                       </Text>
                     ) : null}
 
@@ -1489,8 +1505,12 @@ export default function PlansScreen({ navigation }) {
         accessibilityLabel="What changed in your next block"
       >
         <Text style={[styles.receiptTitle, live.receiptTitle]}>Your next block is set</Text>
+        {/* RA-2 (D96, Review A): "Here is what your last block changed"
+            above zero changed rows was a false note. */}
         <Text style={[styles.receiptSub, live.receiptSub]}>
-          Same workouts. Here is what your last block changed.
+          {(seedReceipt?.changed?.length ?? 0) > 0
+            ? 'Same workouts. Here is what your last block changed.'
+            : 'Same workouts. No targets moved this time.'}
         </Text>
         {(seedReceipt?.changed ?? []).map((row) => (
           <View key={row.muscle} style={styles.receiptRow}>

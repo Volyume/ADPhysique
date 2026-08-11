@@ -211,13 +211,23 @@ function fmt12(h) {
 // ProOnboardingScreen), so its own useTheme() call is cleaner than
 // threading two extra props through every call site. Same shared
 // buildLiveStyles(t) as the wizard screen itself.
+// RA-3 (D96, Review A): the wizard's first visible screen was labelled
+// "Step 2 of 6". Step 1 is the account leg, which every real user completes
+// before this stack renders (and no producer of user.isLocal exists), so the
+// visible steps are renumbered 1..5. The internal `step` state is untouched:
+// gates, draft clamps and the sex gate all keep their numbering.
+const displayStepOf = (step) => (step > 1
+  ? { n: step - 1, total: TOTAL_STEPS - 1 }
+  : { n: step, total: TOTAL_STEPS });
+
 function ProOnboardingProgressBar({ step }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   // Endowed Progress Effect: the bar opens with a small amount already filled
   // rather than empty, so step 1 doesn't read as "0% done, long way to go".
   const BASE = 0.12;
-  const advanced = TOTAL_STEPS > 1 ? (step - 1) / (TOTAL_STEPS - 1) : 1;
+  const d = displayStepOf(step);
+  const advanced = d.total > 1 ? (d.n - 1) / (d.total - 1) : 1;
   const filled = Math.round((BASE + (1 - BASE) * advanced) * 100);
   return (
     <View style={[styles.progressTrack, live.progressTrack]}>
@@ -251,7 +261,7 @@ function ProOnboardingHeader({ step, title, sub, onBack }) {
         </View>
       </View>
       <ProOnboardingProgressBar step={step} />
-      <Text style={[styles.stepCount, live.stepCount]}>Step {step} of {TOTAL_STEPS} - {stepLabel}</Text>
+      <Text style={[styles.stepCount, live.stepCount]}>Step {displayStepOf(step).n} of {displayStepOf(step).total} - {stepLabel}</Text>
       <Text style={[styles.stepTitle, live.stepTitle]}>{title}</Text>
       {sub ? <Text style={[styles.stepSub, live.stepSub]}>{sub}</Text> : null}
       {outcomes.length ? (
@@ -281,7 +291,9 @@ function QuestionGroup({ icon, title, sub, children }) {
           <Ionicons name={icon} size={18} color={t.colors.primary} />
         </View>
         <View style={styles.questionGroupCopy}>
-          <Text style={[styles.questionGroupTitle, live.questionGroupTitle]}>{title}</Text>
+          {/* RA-7 (D96, Review A): title optional. On a step with exactly
+              one group it grouped nothing and restated the header. */}
+          {title ? <Text style={[styles.questionGroupTitle, live.questionGroupTitle]}>{title}</Text> : null}
           {sub ? <Text style={[styles.questionGroupSub, live.questionGroupSub]}>{sub}</Text> : null}
         </View>
       </View>
@@ -313,7 +325,11 @@ export default function ProOnboardingScreen({ navigation }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
 
-  const [step, setStep] = useState(1);
+  // RA-3 (D96, Review A): lazy initialiser. The advance-past-step-1 effect
+  // below runs AFTER the first paint, so an already-signed-in user (every
+  // real user: nothing in src/ produces isLocal) saw the sign-in step they
+  // had just completed flash for a frame before landing on step 2.
+  const [step, setStep] = useState(() => (user && !user.isLocal ? 2 : 1));
 
   // A4 (pre-release sweep 2026-07-27): feet/inches and stone/lbs are both
   // numeric-pad pairs (no Return key on iOS, so returnKeyType/
@@ -459,7 +475,9 @@ export default function ProOnboardingScreen({ navigation }) {
   // removed (founder 2026-07-01) because email confirmation was flaky. OAuth
   // completes the account inside handleOAuthOnboarding, which sets
   // accountCreated and advances to step 2; there is no signup/signin mode.
-  const [accountCreated, setAccountCreated] = useState(false);
+  // RA-3: initialised alongside `step` above, for the same reason - a
+  // signed-in user starts at step 2 with the account leg already done.
+  const [accountCreated, setAccountCreated] = useState(() => !!(user && !user.isLocal));
 
   const [busy, setBusy] = useState(false);
   const oauthInFlightRef = useRef(false);
@@ -707,10 +725,10 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   function advanceFrom2() {
-    if (!firstName.trim()) {
-      appAlert('Your name', 'Please enter your first name to continue.');
-      return;
-    }
+    // RA-4 (D96, Review A): the first name no longer gates the step. It is
+    // presentation only, no engine reads it, and the 'there' fallback covers
+    // every surface that greets by name - the rationale C5-P1-09 already
+    // recorded when the free path made it optional.
     // Biological sex is REQUIRED (founder 2026-07-01): it sets the ED calorie
     // floor and BMR, and must never be left to a silent default.
     if (sex !== 'male' && sex !== 'female') {
@@ -1026,7 +1044,6 @@ export default function ProOnboardingScreen({ navigation }) {
       const isDeficit = trainingPhase === 'cut';
       const merged = {
         ...(userProfile || {}),
-        firstName: firstName.trim(),
         units: localUnits,
         bodyWeightUnits: localBWUnits,
         sex,
@@ -1056,6 +1073,11 @@ export default function ProOnboardingScreen({ navigation }) {
         // instead of defaulting to lean_gain.
         goal: phaseToNutritionKey(trainingPhase),
       };
+      // RA-4 (D96, Review A): the name is optional now (presentation only,
+      // no engine reads it - the same rationale C5-P1-09 recorded for the
+      // free path). An empty field leaves any stored name intact rather
+      // than writing a blank over it.
+      if (firstName.trim()) merged.firstName = firstName.trim();
 
       if (user?.id) await saveLocalProfile(user.id, merged);
 
@@ -1302,8 +1324,7 @@ export default function ProOnboardingScreen({ navigation }) {
     // shared helper advanceFrom2 uses so the button and the gate can never drift.
     const step2HeightCm = resolveHeightCm(localHeightUnits, heightCm, heightFt, heightIn);
     const canContinue =
-      !!firstName.trim()
-      && (sex === 'male' || sex === 'female')
+      (sex === 'male' || sex === 'female')
       && !!step2BwKg && !Number.isNaN(step2BwKg) && step2BwKg >= 30 && step2BwKg <= 300
       && !Number.isNaN(step2Age) && step2Age >= 13 && step2Age <= 100
       && isValidHeightCm(step2HeightCm);
@@ -1320,18 +1341,21 @@ export default function ProOnboardingScreen({ navigation }) {
             {/* C5-P36-01 (D96): every wizard step stated its purpose twice
                 before the first field - a header title and sub, then a group
                 title and sub saying the same thing five lines later. The
-                header sub is kept as the single carrier (it sits with the
-                step counter and frames the whole screen); the QuestionGroup
-                keeps its icon and title, which do real structural work
-                grouping the fields. No field, gate, validation or safety
-                hint is removed anywhere. */}
-            <QuestionGroup
-              icon="person-outline"
-              title="Required details"
-            >
+                header sub is kept as the single carrier. RA-7 (Review A)
+                then dropped this group's TITLE too: step 2 has exactly one
+                group, so "Required details" grouped nothing, restated the
+                header a third time, and (after RA-4) sat above a field that
+                is not required. The icon keeps the visual grouping; steps
+                with real multi-group structure keep their titles. No field,
+                gate, validation or safety hint is removed anywhere. */}
+            <QuestionGroup icon="person-outline">
               <View style={styles.section}>
-                <Text style={[styles.fieldLabel, live.fieldLabel]}>First name</Text>
-                <TextField accessibilityLabel="First name"
+                {/* RA-4 (D96, Review A): the one field in the block with no
+                    stated reason, because there is none an engine could
+                    give - so it is optional and says what it is for. */}
+                <Text style={[styles.fieldLabel, live.fieldLabel]}>First name (optional)</Text>
+                <Text style={[styles.fieldHint, live.fieldHint]}>Only used to greet you.</Text>
+                <TextField accessibilityLabel="First name, optional"
                   ref={nameRef}
                   fieldStyle={styles.inputField}
                   inputStyle={styles.input}
@@ -1515,7 +1539,7 @@ export default function ProOnboardingScreen({ navigation }) {
             </QuestionGroup>
 
             {!canContinue ? (
-              <Text style={[styles.continueHint, live.continueHint]}>Complete your name, sex, age, height and body weight to continue.</Text>
+              <Text style={[styles.continueHint, live.continueHint]}>Complete your sex, age, height and body weight to continue.</Text>
             ) : null}
 
             <Button

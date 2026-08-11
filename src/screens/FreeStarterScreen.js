@@ -20,6 +20,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { logError, logWarn } from '../lib/errorLog';
 import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 
 // B2, the FREE guided beginner on-ramp (founder decision 4a: this is free).
 // Three plain questions -> one difficulty-0 library plan, installed and
@@ -244,9 +246,14 @@ export default function FreeStarterScreen({ navigation, route }) {
               <Ionicons name="checkmark-circle" size={32} color={t.colors.primary} />
             </View>
             <Text style={[styles.resultTitle, live.resultTitle]}>Your starter plan</Text>
+            {/* RA-9 (D96, Review A): this result card is the likeliest
+                first exposure to "sets" and "reps" in the whole product
+                (a never-lifted free beginner), and the glosses lived one
+                screen later behind the session overflow sheet. */}
             <Text style={[styles.resultIntro, live.resultIntro]}>
               Built for people starting out. Every session tells you exactly what to do:
-              the exercises, the sets, and the reps.
+              the exercises, the sets, and the reps.{' '}
+              <InfoTooltip text={`${GLOSSARY.set} ${GLOSSARY.rep}`} size={13} />
             </Text>
             <Card style={[styles.resultCard, live.resultCard]}>
               <View style={[styles.resultBadge, live.resultBadge]}>
@@ -263,6 +270,19 @@ export default function FreeStarterScreen({ navigation, route }) {
                 ].filter(Boolean).join(' - ')}
               </Text>
             </Card>
+            {/* RA-1 (D96, Review A): the quiz asks how many days you can
+                train, but every current starter runs three, so the answer
+                visibly went nowhere. Until a 2- or 4-day starter exists in
+                the library, the mismatch is acknowledged honestly instead
+                of silently handing over a plan that asks for more (or
+                less) than the user just said. */}
+            {recDays != null && typeof answers.days === 'number' && answers.days !== recDays ? (
+              <Text style={[styles.resultFootnote, live.resultFootnote]}>
+                {answers.days < recDays
+                  ? `This plan runs ${recDays} days a week. You said ${answers.days}, and that still works: do the sessions in order and take longer over each week.`
+                  : `This plan runs ${recDays} days a week. You said ${answers.days}: ${recDays} good sessions are plenty to start with, and you can add a day once you build your own plan.`}
+              </Text>
+            ) : null}
             {/* C5-P10-01 (D96, wave C carry-over): this is a first-plan
                 activation decision point and it said nothing about what
                 activating does. Same canonical sentence as every other

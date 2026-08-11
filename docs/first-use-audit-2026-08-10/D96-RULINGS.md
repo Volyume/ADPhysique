@@ -585,3 +585,69 @@ consolidation case is strengthened by C5-P28-02 (the dual-family
 drift now demonstrably loses onboarding prefs across devices — the
 wave D fix uses the existing dual-write pattern, the architecture
 question stays open).
+
+## Review A (Phase 42, brand-new user) — lead rulings on findings
+
+Report: `REVIEW-A-new-user.md` (4 DEFECT, 6 IMPROVEMENT, 5 CLEAN). All
+ten findings judged genuine and actioned (D33: best-for-user, effort
+irrelevant). Rulings and shape of each fix:
+
+- **RA-1 (defect).** The free quiz's days answer went nowhere (all
+  difficulty-0 starters are 3-day). Ruled: honest acknowledgement line
+  on the result card whenever answer != plan days, in both directions;
+  the question STAYS (it binds the moment a 2/4-day starter lands, and
+  the equipment sibling already binds). No scoring change.
+- **RA-2 (defect).** With null ratings the default (C5-P17-01/02), a
+  first block can end all-INSUFFICIENT_DATA, and the FB-24 receipt
+  claimed "a dose that worked" — the judgement the ledger refused.
+  Ruled: buildSeedReceipt now counts heldUnjudged (classification
+  INSUFFICIENT_DATA) and splits heldLine (judged wording / honest
+  "not enough recovery feedback... nothing was moved on a guess" /
+  both when mixed); receipt subtitle stops saying "what your last
+  block changed" over zero rows; the decision card's framing line
+  states that a fully unjudged ledger gives both options the same
+  targets (computed over ALL entries, not the displayed four).
+  Advisor option labels stay constant per FQ-2.
+- **RA-3 (defect).** Wizard opened "Step 2 of 6" after a one-frame
+  flash of the completed sign-in step. Ruled: lazy initialiser
+  (step/accountCreated start at 2/true for any signed-in non-local
+  user) kills the flash; visible numbering drops the account leg
+  (displayStepOf: "Step 1 of 5"). Internal step state, gates, draft
+  clamp and sex gate untouched.
+- **RA-4 (defect).** First name was the only required wizard field
+  with no stated reason, opposite to the free path's C5-P1-09 ruling.
+  Ruled: optional on Pro too, same rationale (presentation only, no
+  engine reads it, 'there' fallback everywhere); label says optional
+  ("Only used to greet you"); an empty field never overwrites a
+  stored name. Sex gate and every safety field unchanged.
+- **RA-5 (improvement).** The hand-off taught the whole product
+  before use (~300 words, 4 lessons, 3 navigations pre-button).
+  Ruled: reorder, delete nothing. Cards needed before the first
+  session (1. weight, 2. split + block sentence) and the FQ-1 calm
+  pointer stay above Start training; daily targets (now 3.) and
+  check-in (4.) follow the button. C5-P21-01 provenance, B3 trial
+  arc, D15 line, B5 primer-before-numbers all intact inside their
+  cards.
+- **RA-6/RA-9 (improvements).** GLOSSARY.volume tooltip on the block
+  decision's "Both options are open" line; GLOSSARY.set+rep tooltip
+  at the free result card (their likeliest first exposure).
+- **RA-7 (improvement).** QuestionGroup title made optional; step 2's
+  "Required details" dropped (single group, restated the header, and
+  after RA-4 sat above an optional field). Multi-group steps keep
+  titles; C5-P36-01 pin re-anchored with this rationale.
+- **RA-8 (improvement).** pro_signup sign-in screen now carries one
+  trial line ("Your 14-day free trial starts once your account is set
+  up."); grant timing unchanged.
+- **RA-10 (improvement).** readyGrid chip "Your 14 days run to
+  {date}", rendered ONLY when FQ-6.2's trialEndsLabel resolves, so a
+  direct subscriber or unresolved grant never sees a false claim.
+- **Declined:** the report's side note to reorder two FQ-5 consent
+  paragraphs (Volyume Score terms before their gloss). The consent
+  wording was founder-approved verbatim ("Approve all"); it is not
+  edited on a review note. Carried as a candidate for the next
+  founder wording pass.
+
+Pins: campaign5.firstUse.test.js "REVIEW A" describe (10 tests);
+re-anchors: FB-19 rows pin (allRows), C5-P36-01 title list,
+"Complete your name..." hint, screen-mount C5-P29-01 "Step 1 of 5 -
+Baseline".

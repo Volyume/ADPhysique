@@ -280,6 +280,14 @@ export default function LoginScreen({ navigation, route }) {
           <Text style={[styles.whyAccount, live.whyAccount]}>
             Sign in once so your plan, weight history and coaching updates can be restored if you change device.
           </Text>
+          {/* RA-8 (D96, Review A): "Start your 14 days" landed on a screen
+              that never mentioned the trial again. One line carries the
+              thread; the grant itself still happens at consent. */}
+          {route?.params?.intent === 'pro_signup' ? (
+            <Text style={[styles.whyAccount, live.whyAccount]}>
+              Your 14-day free trial starts once your account is set up.
+            </Text>
+          ) : null}
 
           {/* ── OAuth sign-in ──
               Apple on iOS, Google on Android (see OAuthButtons for the
