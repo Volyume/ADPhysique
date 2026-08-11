@@ -2681,3 +2681,42 @@ console verification (beside H4), 6.4 approved (truthful platform
 subscription management replaces the fake local switch) · FQ-7(a)
 first qualifying exposure per exercise is baseline, PRs from later
 comparable exposures · FQ-8(b) wizard structure unchanged.
+
+## D96 — Campaign 5: first-use, onboarding and first-block journey (CLOSED 2026-08-11)
+
+Campaign complete and merged to main. Full record:
+docs/first-use-audit-2026-08-10/ — CAMPAIGN-LOG.md (stage log with
+every landing SHA), D96-RULINGS.md (every ruling with rationale:
+audit-phase rulings, the founder's FQ-1..FQ-8 block, and the lead's
+Review A/B/C rulings), twelve audit evidence files,
+REVIEW-A-new-user.md / REVIEW-B-state.md / REVIEW-C-experienced.md,
+RELEASE-TRUTH-2026-08-11.md.
+
+Supplements the interim block above:
+
+- FQ-5 wording was subsequently APPROVED IN FULL by the founder
+  ("Approve all") and landed (consent version stamp 2026-08-10,
+  stamp-only, no re-gating). FQ-6.3 was RESOLVED by founder console
+  confirmation (14-day in-app trial + 7-day store intro offer in BOTH
+  consoles; permanent record in docs/rules/billing.md, never re-ask).
+  FQ-6.1/6.2/6.4 landed with a written billing test plan
+  (fq6.billing.test.js).
+- Reviews A/B/C (Phases 42-44) each produced genuine findings; all
+  were lead-ruled under D33 and actioned same-day (RA-1..RA-10,
+  RB-1..RB-12 with two recorded residuals, RC-1..RC-9 including the
+  tier-visible RC-1 ruling restoring Edit plan to Pro). Rationale per
+  finding in D96-RULINGS.md.
+- Phase 41's deterministic synthetic first user
+  (campaign5.syntheticJourney.test.js, 29 tests incl. all ordered
+  variants) and the first-use matrix (campaign5.firstUse.test.js,
+  172 tests) are the campaign's permanent regression contract.
+- Phase 45 release-truth audit: all six checks verified; H4 (store
+  listings still promise cardio) remains OPEN and founder-side.
+- Unchanged, confirmed at close: Article 9 gate, ED safety, D92-11,
+  billing architecture and product IDs, no cardio, no AI, no new
+  social scope, no auto block transitions, ONBOARDING_QUIZ_FIRST dark
+  with rollback infra intact, migrations 132-135 written-unapplied,
+  049 HELD, no EAS build. No new telemetry was added.
+
+WORK IS STOPPED per the order — no returning-user work. Founder-side
+actions and carried FR items: docs/TASKBOARD.md §3.

@@ -1,7 +1,25 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ FRESH SESSION START HERE (2026-08-10, Campaign 5: first use) ★
+## ★ FRESH SESSION START HERE (2026-08-11, after Campaign 5) ★
+
+**Campaigns 1-5 are ALL COMPLETE and merged to main (D92/D93/D94/D95/
+D96). Campaign 5 (first-use, onboarding and first-block journey)
+closed 2026-08-11: record in docs/first-use-audit-2026-08-10/
+(CAMPAIGN-LOG.md = the authoritative stage log, D96-RULINGS.md = every
+ruling with rationale, twelve audit files, REVIEW-A/B/C reports,
+RELEASE-TRUTH-2026-08-11.md), register block D96 in
+DECISIONS-2026-07-09.md. The FQ-1..FQ-8 founder rulings are landed and
+pinned; Reviews A/B/C actioned in full; the synthetic journey suite
+(campaign5.syntheticJourney.test.js) and the first-use matrix
+(campaign5.firstUse.test.js) are the campaign's regression contract.
+WORK IS STOPPED per the founder's order — no returning-user work, no
+migrations (132-135 unapplied, 049 HELD), no builds. Founder-side
+actions (H4 store listings above all) + FR items: docs/TASKBOARD.md
+§3. The block below is the superseded Campaign 5 in-flight record.**
+
+===============================================================================
+## ★ SUPERSEDED (2026-08-10, Campaign 5: first use) ★
 
 **Campaign 5 (first-use, onboarding and first-block journey) is IN
 FLIGHT on `claude/campaign5-first-use` from main `1665f4ba`. Live

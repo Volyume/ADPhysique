@@ -1684,8 +1684,16 @@ workflow survives as a fallback.
   Campaign 4 (no onboarding restructuring, no long-term-user work).
   40-item final handover.
 - CAMPAIGN 5: FIRST-USE, ONBOARDING AND FIRST-BLOCK JOURNEY
-  (2026-08-10, founder order) - IN FLIGHT on claude/campaign5-first-use
-  (from main 1665f4ba). NOT a feature campaign: make INSTALL → ACCOUNT
+  (2026-08-10, founder order) - COMPLETE 2026-08-11, merged to main.
+  All 45 phases delivered; FQ-1..FQ-8 founder rulings integrated;
+  Reviews A (10 findings), B (5 defects + 9 latents), C (9 findings)
+  actioned; Phase 41 synthetic journey + Phase 45 release-truth audit
+  landed; gates green (full suite, lint, campaigns 1-5, jargon,
+  identity). State: docs/first-use-audit-2026-08-10/CAMPAIGN-LOG.md;
+  rulings D96 (D96-RULINGS.md + DECISIONS-2026-07-09.md); H4 remains
+  the founder-side release blocker (§3). The 64-item final handover
+  was delivered in-session per the order.
+  Original order (for the record): NOT a feature campaign: make INSTALL → ACCOUNT
   → CONSENT → SETUP → FIRST PLAN → FIRST WORKOUT → FIRST WEEK → FIRST
   CHECK-IN → FIRST RECOVERY WEEK → FIRST BLOCK COMPLETION → FIRST
   PERSONALISED NEXT BLOCK exceptionally clear. Three first-use laws:
