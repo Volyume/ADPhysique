@@ -29,6 +29,19 @@ const HIGH_SORENESS = 3;
 // disagree about what counts as "fatigue building".
 const FATIGUE_TREND_THRESHOLD = 3.5;
 
+const FATIGUE_RECENCY_MS = 14 * 86400000;
+// C6 RB6-4 (D97-25): 'fatigue has been building' and the 10%-reduction
+// advice are PRESENT-TENSE claims from the last two rated sessions - at
+// ANY age. After months away they narrated ancient sessions as current
+// fatigue (the same class R-6 closed for the sibling caution). A rated
+// session only counts here when it is inside the 14-day detraining
+// boundary; undated rows cannot prove recency and are skipped.
+const _recentRated = (rows, nowMs) => (rows ?? [])
+  .filter((r) => {
+    const t = Number(r?.startedAt ?? r?.started_at);
+    return Number.isFinite(t) && (nowMs - t) <= FATIGUE_RECENCY_MS;
+  });
+
 function joinNatural(words) {
   if (words.length === 1) return words[0];
   if (words.length === 2) return `${words[0]} and ${words[1]}`;
@@ -60,8 +73,16 @@ export function buildReadinessSummary({
 
   // Priority 1: the plan itself has scheduled a deload this week. The most
   // concrete signal there is, since it does not depend on interpreting data.
+  // C6 RB6-3 (D97-25): "pull effort back" implies effort was being spent -
+  // an unearned calendar recovery week after a gap must state the calendar
+  // fact instead, matching the R-4 advisor ruling. Recency is judged from
+  // the same last-session evidence priority 3 uses.
   if (currentMesoWeek.isDeload) {
-    return { tone: 'recover', line: 'Recovery week, pull effort back.' };
+    const trainedRecently = Number.isFinite(Number(lastSession?.startedAt))
+      && (nowMs - Number(lastSession.startedAt)) <= 14 * 86400000;
+    return trainedRecently
+      ? { tone: 'recover', line: 'Recovery week, pull effort back.' }
+      : { tone: 'recover', line: 'Recovery week on the calendar. Ease back in whenever suits you.' };
   }
 
   // Priority 2: the training-data-driven suggestion (shouldDeload). Worded
@@ -96,7 +117,7 @@ export function buildReadinessSummary({
   // Campaign 1 P0-7 D11: average RATED sessions only - the old ?? 0
   // dragged the mean toward zero on unrated sessions and suppressed the
   // caution. Requires two rated sessions before the rule speaks.
-  const rated = fatigueHistory
+  const rated = _recentRated(fatigueHistory, nowMs)
     .map((r) => r.fatigueLevel ?? r.fatigue_level ?? null)
     .filter((v) => v != null);
   if (rated.length >= 2) {

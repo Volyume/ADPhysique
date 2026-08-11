@@ -461,3 +461,41 @@ describe('T-lane fixes (D97-24): clock, caps, partner truth, photo honesty', () 
     expect(src).toMatch(/The one exception is progress photo and scan image files/);
   });
 });
+
+describe('RB6 fixes (D97-25): the return experience holds under adversarial review', () => {
+  test('RB6-1: the trend card needs a reading inside 14 days, not just inside 90', () => {
+    const src = read('hooks/useWeightTrend.js');
+    expect(src).toMatch(/if \(!\(newestMs >= Date\.now\(\) - 14 \* 86400000\)\) windowed = \[\];/);
+  });
+
+  test('RB6-2 claim half: gap-spanning deltas are never worded as weekly', () => {
+    const src = read('lib/weeklyCoach.js');
+    expect(src).toMatch(/since you last logged regularly/);
+    expect(src).toMatch(/across the gap/);
+    // The safety half (s1 / rapid-loss behaviour) is FOUNDER-GATED and
+    // deliberately untouched: the s1 feeder carries the fork note.
+    const fn = src.slice(src.indexOf('export function computeWeeklyTrendPct'));
+    expect(fn.slice(0, 1200)).toMatch(/FOUNDER-GATED/);
+    expect(fn.slice(0, 1200)).not.toMatch(/weeklyComparatorFresh\(morningWeights, nowMs\)\) return null/);
+  });
+
+  test('RB6-3: the Home chip states the calendar fact for an unearned recovery week', () => {
+    const src = read('lib/readinessSummary.js');
+    expect(src).toMatch(/Recovery week on the calendar\. Ease back in whenever suits you\./);
+  });
+
+  test('RB6-4: both fatigue composers bound their claims to recent sessions', () => {
+    expect(read('lib/readinessSummary.js')).toMatch(/_recentRated\(fatigueHistory, nowMs\)/);
+    expect(read('lib/homeCoachBrief.js')).toMatch(/\(Date\.now\(\) - t\) <= 14 \* 86400000/);
+  });
+
+  test('RB6-6: the win-back keys are guarded and every write stamps', () => {
+    expect(read('lib/sync.js')).toMatch(/\/\^@volyume_winback_\//);
+    const st = read('lib/payments/winbackState.js');
+    expect((st.match(/_stamp\(_keyFor\(/g) || []).length).toBeGreaterThanOrEqual(5);
+  });
+
+  test('RB6-8: the overdue headline rolls to months at scale', () => {
+    expect(read('lib/blockAdvisor.js')).toMatch(/months ago/);
+  });
+});

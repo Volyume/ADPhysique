@@ -457,8 +457,12 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
     const overdueWeeks = blockStatus.weeksOverdue;
     return {
       action: 'post_recovery',
+      // C6 RB6-8 (D97-25): week counts read oddly at scale ("passed 25
+      // weeks ago"); from two months the headline rolls over to months.
       headline: overdueWeeks > 0
-        ? `Recovery week passed ${overdueWeeks} week${overdueWeeks > 1 ? 's' : ''} ago`
+        ? (overdueWeeks >= 9
+          ? `Recovery week passed about ${Math.round(overdueWeeks / 4.345)} months ago`
+          : `Recovery week passed ${overdueWeeks} week${overdueWeeks > 1 ? 's' : ''} ago`)
         : 'Block finished',
       // Stage 1 honesty (2026-08-09): this state begins the week AFTER the
       // recovery week, so the old "take your recovery week" line described

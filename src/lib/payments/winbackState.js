@@ -55,6 +55,14 @@ const _keyFor = (base) => {
   const uid = _uid();
   return uid ? `${base}_${uid}` : base;
 };
+// C6 RB6-6 (D97-25): guarded prefs - every real write stamps so the
+// freshest user-state wins sync conflicts, not push order.
+const _stamp = (key) => {
+  try {
+    // eslint-disable-next-line global-require
+    require('../sync').notePrefWrite(key);
+  } catch (_) { /* best-effort */ }
+};
 /** Read base's per-user key, migrating any legacy device-global value. */
 async function _getMigrated(base) {
   const key = _keyFor(base);
@@ -125,6 +133,7 @@ export async function openEpisode(lapseAt = Date.now()) {
     const existing = await getEpisode();
     if (existing) return { episode: existing, opened: false };
     const episode = { lapseAt, reasonCaptured: false, winbackLaid: false };
+    _stamp(_keyFor(EPISODE_KEY));
     await AsyncStorage.setItem(_keyFor(EPISODE_KEY), JSON.stringify(episode));
     return { episode, opened: true };
   } catch (_) {
@@ -146,6 +155,7 @@ export async function markLapseSheetShown() {
     const ep = await getEpisode();
     if (!ep || ep.lapseSheetShown) return;
     ep.lapseSheetShown = true;
+    _stamp(_keyFor(EPISODE_KEY));
     await AsyncStorage.setItem(_keyFor(EPISODE_KEY), JSON.stringify(ep));
   } catch (_) { /* tolerate */ }
 }
@@ -155,6 +165,7 @@ export async function markReasonCaptured() {
     const ep = await getEpisode();
     if (!ep || ep.reasonCaptured) return;
     ep.reasonCaptured = true;
+    _stamp(_keyFor(EPISODE_KEY));
     await AsyncStorage.setItem(_keyFor(EPISODE_KEY), JSON.stringify(ep));
   } catch (_) { /* tolerate */ }
 }
@@ -164,10 +175,12 @@ export async function markWinbackLaid(now = Date.now()) {
     const ep = await getEpisode();
     if (ep && !ep.winbackLaid) {
       ep.winbackLaid = true;
+      _stamp(_keyFor(EPISODE_KEY));
       await AsyncStorage.setItem(_keyFor(EPISODE_KEY), JSON.stringify(ep));
     }
     // Record the cross-episode floor regardless, so the 180-day rule holds even
     // if the episode is later cleared by a return to Pro.
+    _stamp(_keyFor(LAST_FIRED_KEY));
     await AsyncStorage.setItem(_keyFor(LAST_FIRED_KEY), String(now));
   } catch (_) { /* tolerate */ }
 }
@@ -202,7 +215,8 @@ export async function clearEpisode() {
 export async function setStatedReturn(key) {
   try {
     if (key && STATED_RETURN_DELAY_DAYS[key] != null) {
-      await AsyncStorage.setItem(_keyFor(STATED_RETURN_KEY), key);
+      _stamp(_keyFor(STATED_RETURN_KEY));
+    await AsyncStorage.setItem(_keyFor(STATED_RETURN_KEY), key);
     }
   } catch (_) { /* tolerate */ }
 }

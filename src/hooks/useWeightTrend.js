@@ -50,9 +50,18 @@ export default function useWeightTrend(userId) {
       // count, so a returning user's card drops to the honest sparse or
       // building state instead of narrating the gap as a live trend.
       const windowStart = Date.now() - 90 * 86400000;
-      const windowed = (weights || []).filter(
+      let windowed = (weights || []).filter(
         (w) => Number.isFinite(Number(w?.loggedAt)) && Number(w.loggedAt) >= windowStart,
       );
+      // C6 RB6-1 (D97-25): the 90-day window alone still rendered a full
+      // present-tense trend at a 2-week or 1-month return (pre-gap rows
+      // are inside the window), while the coach on the SAME rows said
+      // "Log morning weight" - the exact divergence R-2 was ruled to
+      // remove. The card now also requires a reading inside the 14-day
+      // detraining boundary; without one it drops to its honest early
+      // state until the user weighs in again.
+      const newestMs = windowed.reduce((m, w) => Math.max(m, Number(w.loggedAt)), 0);
+      if (!(newestMs >= Date.now() - 14 * 86400000)) windowed = [];
       const ewmaData = computeEWMA(windowed);
       const weeklyChange = computeWeeklyWeightChange(ewmaData);
 

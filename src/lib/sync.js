@@ -1420,6 +1420,11 @@ const GUARDED_PREF_PATTERNS = [
   // founder's FR-C4-2 architecture question - no wholesale consolidation.
   /^@volyume_notification_prefs$/,
   /^@volyume_quiet_hours_v1$/,
+  // C6 RB6-6 (D97-25): the churn episode, its 180-day floor and the
+  // stated return became per-user under R-7 but still rode the
+  // unguarded cloud-wins path, so a stale device could reset the
+  // single-shot state. Every winbackState write stamps.
+  /^@volyume_winback_/,
 ];
 
 export function isGuardedPref(key) {

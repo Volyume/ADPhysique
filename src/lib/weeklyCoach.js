@@ -73,12 +73,34 @@ export function getLatestEwma(weights, alpha = 0.1) {
  */
 export function computeWeeklyTrendPct(morningWeights, currentBodyweightKg = null, nowMs = Date.now()) {
   if (!morningWeights || morningWeights.length < 4) return null;
+  // C6 RB6-2: the comparator can be a pre-gap point, so this value can
+  // describe a longer-than-weekly change. Whether the ED s1 signal and
+  // the rapid-loss flag should be bounded to genuine weekly comparisons
+  // is an ED-safety behaviour change and is FOUNDER-GATED (the three-way
+  // fork is recorded in REVIEW-B-returning.md and the triage); nothing
+  // here was altered. The CLAIM wording is bounded separately below.
   const ewmaNow = getLatestEwma(morningWeights);
   const ewmaPrior = getEwmaSevenDaysAgo(morningWeights, 0.1, nowMs);
   if (ewmaNow == null || ewmaPrior == null) return null;
   const reference = currentBodyweightKg || ewmaNow;
   if (!reference) return null;
   return ((ewmaNow - ewmaPrior) / reference) * 100;
+}
+
+/**
+ * C6 RB6-2 (D97-25): is the week-over-week comparator itself recent?
+ * The comparator is the most recent timed point at or before nowMs - 7d;
+ * a genuine weekly comparison requires it within the 14-day detraining
+ * boundary. Exported for the pins.
+ */
+export function weeklyComparatorFresh(morningWeights, nowMs) {
+  const cutoff = nowMs - 7 * 86400000;
+  let comparatorMs = null;
+  for (const w of (Array.isArray(morningWeights) ? morningWeights : [])) {
+    const t = Number(w?.loggedAt);
+    if (Number.isFinite(t) && t <= cutoff && (comparatorMs == null || t > comparatorMs)) comparatorMs = t;
+  }
+  return comparatorMs != null && comparatorMs >= nowMs - 14 * 86400000;
 }
 
 /**
@@ -812,6 +834,12 @@ export function runWeeklyCoach(inputs) {
     return timed.length ? Math.max(...timed) : null;
   })();
   const weekHasReadings = latestWeighInMs != null && latestWeighInMs >= nowMs - 7 * 86400000;
+  // C6 RB6-2 (D97-25): the OTHER end of the comparison must be recent
+  // too - on the first weigh-ins back the comparator was a pre-gap point
+  // and a months-long change was spoken (and safety-flagged) as "this
+  // week". Both guards feed every consumer downstream: display, the
+  // rapid-loss flag (via actualRatePct) and the decision trend below.
+  const comparatorFresh = weeklyComparatorFresh(morningWeights, nowMs);
 
   const weightDelta  = (weekHasReadings && ewma7Today != null && ewma7LastWk != null)
     ? Math.round((ewma7Today - ewma7LastWk) * 100) / 100
@@ -867,13 +895,22 @@ export function runWeeklyCoach(inputs) {
     ? (weightDelta >= 0 ? `+${Math.abs(weightDelta)}${u}` : `-${Math.abs(weightDelta)}${u}`)
     : null;
 
+  // C6 RB6-2 CLAIM half (D97-25, lead-ruled; the safety half is
+  // founder-gated): when the week-over-week comparator is a pre-gap
+  // point, the change is real but it is NOT "this week" and NOT a
+  // "/wk" rate - a six-month loss was being narrated in per-week
+  // vocabulary on the surface that decides about food. Wording only;
+  // every numeric consumer is untouched pending the founder's fork.
   const deltaLabel = displayDelta
-    ? `${displayDelta} this week`
+    ? (comparatorFresh ? `${displayDelta} this week` : `${displayDelta} since you last logged regularly`)
     : enoughWeightData ? 'Calculating…' : 'Log morning weight';
 
   const rateLabel = weightDelta != null
-    ? (weightDelta > 0.01 ? `gaining ${Math.abs(weightDelta)}${u}/wk` :
-       weightDelta < -0.01 ? `losing ${Math.abs(weightDelta)}${u}/wk` : 'stable')
+    ? (comparatorFresh
+      ? (weightDelta > 0.01 ? `gaining ${Math.abs(weightDelta)}${u}/wk` :
+         weightDelta < -0.01 ? `losing ${Math.abs(weightDelta)}${u}/wk` : 'stable')
+      : (Math.abs(weightDelta) <= 0.01 ? 'little change across the gap'
+        : `${weightDelta > 0 ? 'up' : 'down'} ${Math.abs(weightDelta)}${u} across the gap`))
     : null;
 
   // ── Week label ────────────────────────────────────────────────────────────

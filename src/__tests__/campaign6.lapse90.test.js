@@ -92,19 +92,43 @@ describe('LAPSE E2E: stale evidence cannot climb, and D91-25 stays unimplemented
 
 describe('LAPSE E2E: the coach answers conservatively, with no shame and no fake recency', () => {
   test('the first weekly run after the gap proposes no confident change', () => {
+    // Re-anchored under D97-25 RB6-5 (Review B, test integrity): the old
+    // fixture stamped weigh-ins with createdAt - a field the engine
+    // ignores (it reads loggedAt) - so gap and no-gap runs were
+    // byte-identical and the assertion read a confidence field that does
+    // not exist on trend. The fixture now genuinely exercises the gap
+    // (21 pre-gap daily rows on loggedAt) and asserts the REAL protective
+    // outcome: the clock-anchored weigh-in gate (R-1) holds the run.
+    const preGap = [];
+    for (let i = 0; i < 21; i += 1) {
+      preGap.push({ weightKg: 80 + i * 0.02, loggedAt: NOW - GAP_90 - (21 - i) * DAY });
+    }
     const out = runWeeklyCoach({
       nowMs: NOW,
       checkin: { energyScore: 3, sorenessScore: 3, calsAdherence: 'in_range', sleepHours: 7, notes: '' },
-      morningWeights: [
-        { weightKg: 80, createdAt: NOW - GAP_90 - 3 * DAY },
-        { weightKg: 80.4, createdAt: NOW - GAP_90 - 1 * DAY },
-      ],
+      morningWeights: preGap,
       sessionsCompleted: 1, sessionsPlanned: 4, prsThisWeek: 0,
       goalPhase: 'lean_gain', weeksInPhase: 14,
       currentCalTarget: 2800, bodyweightKg: 80.4, units: 'kg', scoffPositive: false,
     });
-    expect(out.trend?.confidence ?? 'low').toBe('low');
-    expect(out.adjustments?.calories?.change ?? 0).toBe(0);
+    expect(out.hasEnoughData).toBe(false);
+    expect(out.confidence).toBe('data_hold');
+    expect(out.adjustments?.calories ?? null).toBeNull();
+    // And nothing about the stale series is narrated as current.
+    expect(out.trend?.deltaLabel).not.toMatch(/this week/);
+
+    // The falsifiability proof the old fixture lacked: the SAME series
+    // ending now (no gap) must coach, so the hold above is genuinely the
+    // gap's doing.
+    const noGap = runWeeklyCoach({
+      nowMs: NOW,
+      checkin: { energyScore: 3, sorenessScore: 3, calsAdherence: 'in_range', sleepHours: 7, notes: '' },
+      morningWeights: preGap.map((w, i) => ({ ...w, loggedAt: NOW - (21 - i) * DAY })),
+      sessionsCompleted: 1, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'lean_gain', weeksInPhase: 14,
+      currentCalTarget: 2800, bodyweightKg: 80.4, units: 'kg', scoffPositive: false,
+    });
+    expect(noGap.confidence).not.toBe('data_hold');
   });
 
   test('the comparative training verdicts are refused: the calendar prior week is empty', () => {
