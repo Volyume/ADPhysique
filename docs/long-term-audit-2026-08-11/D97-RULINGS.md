@@ -429,14 +429,23 @@ From AUDIT-RETURN-AND-HISTORY.md (29 findings, lead-verified):
 
 From AUDIT-REINSTALL-SYNC-OFFLINE.md (24 findings, key items
 lead-verified hands-on):
-- **S-1 (HIGH) FOUNDER QUESTION (ED-safety, Section 2 "stop and
-  ask")**: the ED-pattern flag has NO cloud writer anywhere (client
-  pull_only; the handler comment claiming the server writes it is
-  false; partner-cheer and migrate_123 READ the never-written table,
-  so their cloud-side ED suppressions can never fire). Verified
-  hands-on. Recommended design: a client push path on raise/clear,
-  fail-open on none... NO - fail CLOSED semantics preserved locally;
-  cloud becomes restorable. Not implemented without founder sign-off.
+- **S-1 (HIGH) = D92-11, UNCHANGED (compliance correction
+  2026-08-11)**: this finding is the already-known D92-11 issue
+  (open ED-pattern/safety state does not propagate cross-device),
+  and the Campaign 6 order explicitly holds D92-11 UNCHANGED and
+  forbids adding cross-device ED propagation. Therefore NOT built in
+  this campaign - an implementation briefly drafted in-session was
+  reverted uncommitted the moment the boundary was re-confirmed.
+  NEW EVIDENCE recorded under D92-11, raising its stakes for the
+  founder's separate decision: the flag has NO cloud writer anywhere
+  (client pull_only; the handler comment claiming the server writes
+  it is false), and TWO cloud-side consumers read the never-written
+  table - partner-cheer's ED downgrade (functions/partner-cheer
+  /index.ts:149-161) and migrate_123's suppressed_wellbeing
+  retention-email contract - so those suppressions cannot operate as
+  designed, and a reinstall silently loses an open flag. If the
+  founder later authorises the architecture, it is separately
+  commissioned work, not Campaign 6.
 - **S-14 + S-15 (HIGH) VERIFIED - migration 135 is DEFECTIVE AS
   WRITTEN and must NOT be run**: its tie-break deletes the applied
   receipt when the merely-viewed duplicate is newer, and after its
