@@ -2098,6 +2098,24 @@ const SCHEMA_MIGRATIONS = [
      )`,
     'CREATE UNIQUE INDEX IF NOT EXISTS idx_coach_outputs_user_week ON coach_outputs(user_id, week_start)',
   ],
+  [
+    // v72 (C6 S-15, D97-23): re-id legacy coach_outputs rows to the
+    // deterministic co_<week_start>_<user_id> form saveCoachOutput mints,
+    // so every device's cloud upsert converges on ONE (user_id, id) per
+    // week. Without this, a device holding a legacy uid() id for a week
+    // whose surviving cloud row has a different id would - after the
+    // corrected cloud migration 135's unique index - poison its entire
+    // 200-row batch upsert with 23505 for ever. Safe by construction:
+    // v71's unique index guarantees one row per (user_id, week_start), so
+    // the target id can never collide; updated_at is NOT bumped (honest
+    // timestamps, F5) - the full-history push carries the new id anyway,
+    // and a stale cloud copy under the old id arriving later hits the
+    // applier's INSERT OR IGNORE against the v71 index and is dropped.
+    // Idempotent: rows already deterministic do not match the WHERE.
+    `UPDATE coach_outputs
+        SET id = 'co_' || week_start || '_' || user_id
+      WHERE id <> 'co_' || week_start || '_' || user_id`,
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {

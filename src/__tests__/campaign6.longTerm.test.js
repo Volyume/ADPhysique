@@ -389,3 +389,24 @@ describe('S-2 (D97-23): reminder and quiet-hours prefs are guarded, stamped at e
     }
   });
 });
+
+describe('S-14/S-15 (D97-23): the corrected 135 contract and its client half', () => {
+  test('the cloud tie-break puts APPLIED first, and survivors converge on the deterministic id', () => {
+    const fs2 = require('fs');
+    const sql = fs2.readFileSync(require('path').join(__dirname, '..', '..', 'supabase', 'migrate_135_coach_outputs_week_unique.sql'), 'utf8');
+    const del = sql.slice(sql.indexOf('DELETE FROM public.coach_outputs'));
+    const tuple = del.slice(0, del.indexOf(');'));
+    // applied::int leads the comparison tuple - an applied row can never
+    // lose to a merely-viewed newer duplicate.
+    expect(tuple.indexOf('applied::int')).toBeGreaterThan(-1);
+    expect(tuple.indexOf('applied::int')).toBeLessThan(tuple.indexOf('COALESCE(w.updated_at'));
+    expect(sql).toMatch(/SET id = 'co_' \|\| week_start::text \|\| '_' \|\| user_id::text/);
+    expect(sql).toMatch(/ONLY AFTER the v72 client build is live/);
+  });
+
+  test('local v72 re-ids legacy rows to the same deterministic form saveCoachOutput mints', () => {
+    const db = read('lib/database.js');
+    expect(db).toMatch(/UPDATE coach_outputs\s*\n\s*SET id = 'co_' \|\| week_start \|\| '_' \|\| user_id\s*\n\s*WHERE id <> 'co_' \|\| week_start \|\| '_' \|\| user_id/);
+    expect(db).toMatch(/const id = `co_\$\{data\.weekStart\}_\$\{userId\}`;/);
+  });
+});

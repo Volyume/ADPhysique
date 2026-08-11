@@ -15,6 +15,19 @@
 > tie-break (an applied row wins outright; newest among applied) PLUS a
 > client-side re-id migration shipped in the same build. The founder
 > must not be given "run against production" for 135 as written.
+>
+> **REPAIR COMPLETE (2026-08-11, D97-23, route A+C):** migrate_135 is
+> corrected in place (never applied anywhere tracked): the APPLIED row
+> now wins the dedup outright (recency splits only same-applied pairs),
+> survivors are re-idded to the deterministic co_<week>_<user> form, and
+> local migration v72 re-ids legacy device rows to match, so every
+> device's upsert converges. Proven in an isolated scratch cluster:
+> S-14's applied receipt survives, zero non-deterministic ids remain,
+> and a re-run is a no-op. Release condition: 135 runs ONLY after the
+> v72 build ships (a pre-v72 client's coach-output batch would 23505
+> until it upgrades; self-heals on upgrade). 135 rejoins the batch
+> under that condition: 134 → 132 → 133 now eligible; 135 after the
+> Campaign 6 build is live.
 
 NO migration was run in this campaign. Table derived from the migration
 file headers and the live client code on this branch. Cloud migrations
