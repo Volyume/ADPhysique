@@ -1853,7 +1853,14 @@ export default function CoachOutputScreen({ navigation, route }) {
         // Founder decision 2026-07-02 (Wave-3 review): the food-diary
         // stand-in needs a completed check-in within 14 days. Most recent
         // first from getRecentCheckins; created_at is the completion time.
-        lastCheckinAt: recentCheckins[0]?.createdAt ?? recentCheckins[0]?.weekStart ?? null,
+        // C6 P-4 (D97-20): COMPLETED means a row with check-in answers -
+        // the sleep-only row a workout summary writes is no evidence and
+        // must not hold the recalibration gate open.
+        lastCheckinAt: (() => {
+          const completed = recentCheckins.find((ci) =>
+            ci.energyScore != null || ci.sorenessScore != null || ci.calsAdherence != null);
+          return completed?.createdAt ?? completed?.weekStart ?? null;
+        })(),
         goalLockAdvanced,
         edPatternOpen,
         // Move #4 differential paywall inputs. Tier comes from

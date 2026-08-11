@@ -207,4 +207,34 @@ describe('B1 stand-in window (Wave-3 review, founder decision 2026-07-02)', () =
     }));
     expect(out.adjustments?.calories?.change ?? 0).toBeLessThan(0);
   });
+
+  // C6 P-4 (D97-20): "completed" means a row with check-in ANSWERS. The
+  // sleep-only row a workout summary writes (tier-blind: Free users
+  // generate them by training) is not wellbeing capture, so it can
+  // neither stand as this week's check-in nor hold the 14-day window
+  // open - a never-checked-in upgrader with a rich food diary stays
+  // FROZEN until they complete a real check-in. Stricter only.
+  test('P-4: a sleep-only "this week" row cannot bypass the window', () => {
+    const out = runWeeklyCoach(baseCoachInputs({
+      checkin: {
+        weekStart: NOW - 1 * DAY, sleepHours: 7,
+        energyScore: null, sorenessScore: null, calsAdherence: null,
+      },
+      recentIntakeAvgKcal: 2350, recentIntakeDaysLogged: 6,
+    }));
+    expect(out.adjustments?.calories ?? null).toBeNull();
+  });
+
+  test('P-4: a sleep-only row inside the 14-day window does not keep the stand-in alive either', () => {
+    // The caller (CoachOutputScreen) now derives lastCheckinAt from rows
+    // WITH answers, so a sleep-only history supplies null - identical to
+    // the fails-toward-the-freeze case above. Pinned at the source level
+    // because the filter lives at the caller.
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'screens', 'CoachOutputScreen.js'), 'utf8',
+    );
+    expect(src).toMatch(/const completed = recentCheckins\.find\(\(ci\) =>\s*ci\.energyScore != null \|\| ci\.sorenessScore != null \|\| ci\.calsAdherence != null\)/);
+  });
 });

@@ -968,7 +968,16 @@ export function runWeeklyCoach(inputs) {
   // recalibration while the wellbeing capture has not gone dark. One skipped
   // week still adjusts (B1's point); a user with no completed check-in in the
   // last 14 days returns to the old freeze. This week's own check-in counts.
-  const checkinRecentEnough = !!checkin
+  // C6 P-4 (D97-20): "completed check-in" means a row with check-in
+  // ANSWERS. The sleep-only row a workout summary writes is not wellbeing
+  // capture (same evidence rule as the recovery counters and FB-36), so it
+  // can neither stand as this week's check-in here nor - via the caller's
+  // lastCheckinAt - hold the 14-day gate open. Stricter only: without a
+  // real check-in the recalibration freeze stands, exactly the founder
+  // decision's stated intent.
+  const checkinCompleted = !!checkin
+    && (checkin.energyScore != null || checkin.sorenessScore != null || checkin.calsAdherence != null);
+  const checkinRecentEnough = checkinCompleted
     || (Number.isFinite(lastCheckinAt) && (nowMs - lastCheckinAt) <= 14 * 86400000);
   const foodDiaryStandsIn = recentIntakeDaysLogged >= 5
     && Number(recentIntakeAvgKcal) > 0
