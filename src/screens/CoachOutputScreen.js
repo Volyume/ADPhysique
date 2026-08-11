@@ -1603,6 +1603,18 @@ export default function CoachOutputScreen({ navigation, route }) {
 
       // Compute consecutivePoorRecoveryWeeks from recent check-ins
       const recentCheckins = await getRecentCheckins(user.id, 4);
+      // C6 Phase 26 (D97): "consecutive" means adjacent CALENDAR weeks.
+      // These runs used to iterate ROWS, so a months-long gap chained an
+      // ancient week onto today's and a returning user's first hard week
+      // counted as the "second consecutive" - false certainty in both
+      // directions (lapse-is-not-failure law). A row joins the run only
+      // when it is the expected next-older week; a gap ends the run.
+      // consecutiveGrade3RecoveryWeeks below is deliberately NOT
+      // adjacency-gated: it certifies the ABSENCE of persistent fatigue,
+      // and an unknown gap must keep withholding that certification.
+      const WEEK_STEP_MS = 7 * 86400000;
+      const isAdjacent = (expected, ws) =>
+        expected == null || (ws != null && Math.abs(ws - expected) <= 86400000);
       const consecutivePoorRecoveryWeeks = (() => {
         // Campaign 1 P0-7 D2: a row with NO recorded scores is no evidence
         // and must not terminate the run - the old ?? 3 defaults made a
@@ -1610,7 +1622,12 @@ export default function CoachOutputScreen({ navigation, route }) {
         // silently reset this counter to 0, and matrixDeload hard-gates on
         // it. Only recorded values count or end the run.
         let count = 0;
+        let expected = null;
         for (const ci of recentCheckins) {
+          const ws = ci.weekStart ?? null;
+          if (!isAdjacent(expected, ws)) break; // a calendar gap ends the run
+          expected = ws != null ? ws - WEEK_STEP_MS
+            : (expected != null ? expected - WEEK_STEP_MS : null);
           const e = ci.energyScore;
           const s = ci.sorenessScore;
           if (e == null && s == null) continue; // no evidence: skip, never break
@@ -1643,9 +1660,18 @@ export default function CoachOutputScreen({ navigation, route }) {
         return count;
       })();
 
-      // Compute consecutiveOffTargetWeeks from recent coach outputs
+      // Compute consecutiveOffTargetWeeks from recent coach outputs.
+      // C6 Phase 26 (D97): chain only when the last output is the
+      // immediately previous week - getLatestCoachOutput has no age
+      // bound, so a six-month-old off-target output used to increment on
+      // the first run after a return, as though the absent months were
+      // consecutive off-target weeks. (The sibling
+      // lastCalAdjustmentWeeksAgo below already counts real elapsed
+      // weeks; this brings the counter to the same standard.)
       const lastOutput = await getLatestCoachOutput(user.id);
-      const consecutiveOffTargetWeeks = lastOutput?.trend?.onTarget === false
+      const lastOutputAdjacent = lastOutput?.weekStart != null
+        && Math.abs(weekStart - lastOutput.weekStart - WEEK_STEP_MS) <= 86400000;
+      const consecutiveOffTargetWeeks = lastOutputAdjacent && lastOutput?.trend?.onTarget === false
         ? (lastOutput?.consecutiveOffTargetWeeks ?? 0) + 1
         : 0;
 
@@ -1657,7 +1683,15 @@ export default function CoachOutputScreen({ navigation, route }) {
       // over-performance case), not a newly invented metric.
       const consecutiveExceededWeeks = (() => {
         let count = 0;
+        let expected = null;
         for (const ci of recentCheckins) {
+          const ws = ci.weekStart ?? null;
+          // C6 Phase 26 (D97): same adjacency rule - ancient "exceeded"
+          // weeks chained across a gap fed the D15 faster-update path
+          // with false upward evidence.
+          if (!isAdjacent(expected, ws)) break;
+          expected = ws != null ? ws - WEEK_STEP_MS
+            : (expected != null ? expected - WEEK_STEP_MS : null);
           if (ci.trainingPerformance === 'exceeded') count++;
           else break;
         }

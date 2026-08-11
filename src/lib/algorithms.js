@@ -1039,6 +1039,11 @@ const _UTC_WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', '
 const _defaultFormatDay = (ts) => (ts == null ? null : _UTC_WEEKDAYS[new Date(ts).getUTCDay()]);
 const HOURS_72 = 72 * 60 * 60 * 1000;
 const DAYS_4 = 4 * 24 * 60 * 60 * 1000;
+// C6 Phase 12 (D97): the engine's existing detraining boundary (the PR
+// rebound window's REBOUND_GAP_MAX_DAYS in blockLedgerGather.js uses the
+// same 14 days: "a longer gap is detraining, not rebound"). Session
+// feedback older than this cannot certify readiness for MORE volume.
+const DAYS_14 = 14 * 24 * 60 * 60 * 1000;
 
 /**
  * @param {object} input
@@ -1154,7 +1159,18 @@ export function computeSessionAdjustments({
       reasonCode = SESSION_REASON_CODES.HOLD_STALE_SORENESS;
     } else {
       // R4 / R5: well-recovered, under-stimulated → consider +1.
+      // C6 Phase 12 (D97): the feedback feeding this branch must be
+      // RECENT. lastFeedback carries no date of its own and the soreness
+      // branches are age-gated, so this was the one branch that survived
+      // a long absence - a six-month-old "easy, mild pump" session read
+      // as readiness for more volume on the first session back (absence
+      // converted into evidence). Feedback older than the engine's
+      // 14-day detraining boundary now certifies nothing; the branch
+      // simply does not fire. Conservative only: no new adds, ever.
+      const feedbackRecent = lastTrainedAt != null
+        && (now - lastTrainedAt) <= DAYS_14 && (now - lastTrainedAt) >= 0;
       const stimulusReady =
+        feedbackRecent &&
         lastPerformance <= 2 &&
         lastPump <= 2 &&
         projectedPlanned < mav &&

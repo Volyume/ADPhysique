@@ -76,3 +76,29 @@ describe('D91-24 / D91-25 remain deferred, not implemented (D97)', () => {
     expect(src).toMatch(/if \(w !== deloadWeekIndex\) weeks\.push\(w\);/);
   });
 });
+
+describe('PHASES 12 + 26: absence is never converted into evidence (D97)', () => {
+  test('the session +1 branch requires feedback within the 14-day detraining boundary', () => {
+    const src = read('lib/algorithms.js');
+    const block = src.slice(src.indexOf('const stimulusReady =') - 800, src.indexOf('const stimulusReady =') + 300);
+    expect(block).toMatch(/const feedbackRecent = lastTrainedAt != null/);
+    expect(block).toMatch(/stimulusReady =\s*\n\s*feedbackRecent &&/);
+  });
+
+  test('the consecutive-week counters chain only across ADJACENT calendar weeks', () => {
+    const src = read('screens/CoachOutputScreen.js');
+    expect(src).toMatch(/const isAdjacent = \(expected, ws\) =>/);
+    // Off-target chains only from the immediately previous week's output.
+    expect(src).toMatch(/lastOutputAdjacent && lastOutput\?\.trend\?\.onTarget === false/);
+    // Poor-recovery and exceeded both break on a calendar gap.
+    const poor = src.slice(src.indexOf('const consecutivePoorRecoveryWeeks'));
+    expect(poor.slice(0, 1200)).toMatch(/if \(!isAdjacent\(expected, ws\)\) break;/);
+    const exceeded = src.slice(src.indexOf('const consecutiveExceededWeeks'));
+    expect(exceeded.slice(0, 900)).toMatch(/if \(!isAdjacent\(expected, ws\)\) break;/);
+    // The grade-3 counter is deliberately NOT adjacency-gated: it
+    // certifies the ABSENCE of persistent fatigue, and an unknown gap
+    // must keep withholding that upward-leaning certification.
+    const grade3 = src.slice(src.indexOf('const consecutiveGrade3RecoveryWeeks'));
+    expect(grade3.slice(0, 1400)).not.toMatch(/isAdjacent/);
+  });
+});

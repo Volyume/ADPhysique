@@ -57,3 +57,31 @@ campaign6.longitudinal.test.js.
   across arbitrary gaps with no week-adjacency test (the sibling
   lastCalAdjustmentWeeksAgo counts real elapsed weeks) — to be
   verified and ruled in the Phase 26 lapse lane.
+
+## D97-4 (Phase 12) — stimulusReady age gate, FIXED conservative-only
+
+The session-adjustment +1 branch read lastFeedback (performance/pump)
+of unbounded age: the soreness branches are age-gated (72h/4d) but the
+one branch that ADDS a set survived any absence, so a six-month-old
+"easy, mild pump" session read as readiness for more volume on the
+first session back. Gated on the engine's EXISTING 14-day detraining
+boundary (the same constant blockLedgerGather's rebound window uses:
+"a longer gap is detraining, not rebound") - no new semantics, no
+decay, strictly conservative (the branch simply does not fire on stale
+feedback; no behaviour became more aggressive). Verified against the
+full engine suites.
+
+## D97-5 (Phase 26) — consecutive-week counters gain calendar adjacency, FIXED
+
+consecutiveOffTargetWeeks chained +1 from a coach output of any age;
+consecutivePoorRecoveryWeeks and consecutiveExceededWeeks counted
+unbroken ROW runs, so a months-long gap chained an ancient week onto
+today's ("second consecutive poor week" on the first week back -
+false certainty, lapse-is-not-failure law; ancient "exceeded" weeks
+fed the D15 faster-update path with false upward evidence). All three
+now require adjacent CALENDAR weeks (the standard the sibling
+lastCalAdjustmentWeeksAgo already meets). Deliberately NOT changed:
+consecutiveGrade3RecoveryWeeks - it certifies the ABSENCE of
+persistent fatigue to unlock an upward-leaning softening, and an
+unknown gap must keep withholding that certification (adjacency there
+would have weakened conservatism). Pinned with the asymmetry named.
