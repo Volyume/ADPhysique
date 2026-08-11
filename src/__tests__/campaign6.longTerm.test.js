@@ -50,6 +50,21 @@ describe('PHASE 7: stale history is never called recent (D97)', () => {
   });
 });
 
+describe('PHASE 2 finding: the adaptive bands read the genuinely most recent sessions (D97)', () => {
+  test('the landmark history feeder returns oldest-first so slice(-8) is the last 8, not the oldest 8', () => {
+    // The query is ORDER BY started_at DESC; without the reverse, a
+    // mature user\'s adapted MAV was computed from the OLDEST eight
+    // sessions inside the 200-row window and barely moved as new
+    // evidence arrived - the opposite of the function\'s own "last 8
+    // data points" contract.
+    const src = read('lib/database.js');
+    const fn = src.slice(src.indexOf('export async function getAdaptiveLandmarkHistory'));
+    const ret = fn.slice(0, fn.indexOf('export async function', 10));
+    expect(ret).toMatch(/\}\)\)\.reverse\(\);/);
+    expect(ret).toMatch(/ORDER BY w\.started_at DESC/);
+  });
+});
+
 describe('D91-24 / D91-25 remain deferred, not implemented (D97)', () => {
   test('no freshness/decay algorithm exists in the learned range', () => {
     const src = stripComments(read('lib/learnedRange.js'));

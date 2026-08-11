@@ -5409,6 +5409,15 @@ export async function getAdaptiveLandmarkHistory(userId) {
     const PUMP_MAP    = [1, 2, 4]; // overall_pump 1→1, 2→2, 3→4
     const SORENESS_MAP = [2, 3, 4]; // soreness_24h_before 1→2, 2→3, 3→4
 
+    // C6-P2 (D97, Campaign 6 maturity audit): computeAdaptiveLandmarks
+    // treats its input as CHRONOLOGICAL and takes entries.slice(-8) as
+    // "the last 8 data points". This query is ORDER BY started_at DESC,
+    // so without the reverse the adapted bands were computed from the
+    // OLDEST eight sessions inside the 200-row window - for a mature
+    // user, months-old evidence presented as current, barely moving as
+    // new sessions arrived. Returned oldest-first so the slice reads the
+    // genuinely most recent sessions. The trend derivation above is
+    // per-muscle-constant and unaffected by return order.
     return rows.map(row => ({
       muscle: row.muscle,
       pumpScore:       PUMP_MAP[(row.overall_pump || 2) - 1]     ?? 3,
@@ -5418,7 +5427,7 @@ export async function getAdaptiveLandmarkHistory(userId) {
       performanceTrend: trendKey[`${row.workout_id}_${row.muscle}`] ?? 0,
       prFrequency:     0,
       missedReps:      Math.round((row.avg_missed || 0) * 10) / 10,
-    }));
+    })).reverse();
   } catch (_e) {
     return [];
   }
