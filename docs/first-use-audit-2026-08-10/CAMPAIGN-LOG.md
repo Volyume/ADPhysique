@@ -124,10 +124,17 @@ redesign. FR-1..5, FR-C4-1..11, FR-PW-1, H4 carried unresolved
     with the first-lift acknowledgement re-keyed on exposure;
     dedicated twelve-pin test plan (computeSetTargets.fq3.test.js);
     six fixtures + three guards re-anchored same-meaning.
-  - NEXT: FQ-4 (Apply wiring, lead), FQ-6.1/6.2/6.4 (lead billing);
-    then Phase 40/41 synthetic journey + test matrix completion,
-    Reviews A/B/C, release-truth audit, gates, close, 64-item
-    handover.
+  - FQ-4 - LANDED at a3780afd (lead hands-on): pure allocator
+    computeWeeklySessionAllocation carries this week's persisted
+    planned_muscle_volume into session set counts (identity when rows
+    absent); session assembly + logger + readiness trim all read the
+    allocated base; unapplied proposals' volumeSignal gated on a
+    persisted coach row for the week (safetyHold stays automatic);
+    applyWiring.fq4.test.js pins the full law.
+  - NEXT: FQ-6.1/6.2/6.4 (lead billing, each with its written test
+    plan); then Phase 40/41 synthetic journey + test matrix
+    completion, Reviews A/B/C, release-truth audit, gates, close,
+    64-item handover.
   - FQ-5: APPROVED IN FULL by the founder ("Approve all") and LANDED
     by the lead - all six items as proposed, item 3 Option A, consent
     version stamp 2026-08-10 (stamp-only, no re-gating), locked
