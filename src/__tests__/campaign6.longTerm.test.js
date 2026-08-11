@@ -439,10 +439,19 @@ describe('T-lane fixes (D97-24): clock, caps, partner truth, photo honesty', () 
     expect(src).toMatch(/const camelKey = _camelKey\(key\);/);
   });
 
-  test('T-13: the four watermarked pulls order ascending and cap, so truncation becomes catch-up', () => {
+  // Re-anchored under RC6-7 (D97-25): Review C proved the interim
+  // order+cap route skipped rows sharing one updated_at at the cap
+  // boundary for ever, and the audit's original fetchAllRows direction
+  // was quietly downgraded. The four pulls now page with fetchAllRows
+  // within one cycle; this pin holds them there.
+  test('T-13/RC6-7: the four watermarked pulls page with fetchAllRows (no cap, no equal-timestamp skip)', () => {
     const src = read('lib/sync.js');
+    for (const fn of ['_pullProgrammes', '_pullMesocycles', '_pullCoachOutputs', '_pullExerciseUserNotes']) {
+      expect(src).toMatch(new RegExp(`fetchAllRows\\(\\s*'sync\\.${fn}'`));
+    }
+    // The old capped shape must not return on these tables.
     const hits = (src.match(/\.order\('updated_at', \{ ascending: true \}\)\.limit\(1000\)/g) || []).length;
-    expect(hits).toBeGreaterThanOrEqual(4);
+    expect(hits).toBe(0);
   });
 
   test('T-12: partner cheers pull newest-first with a cap', () => {

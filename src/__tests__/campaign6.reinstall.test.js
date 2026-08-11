@@ -42,6 +42,9 @@ jest.mock('../lib/dbCrypto', () => {
   return { openEncryptedDb: async () => ({ db: adapt, encrypted: true }), __raw: raw };
 });
 jest.mock('expo-sqlite');
+// saveCoachOutput schedules a push after every save; the harness has no
+// transport, so the scheduler is a no-op here.
+jest.mock('../lib/sync', () => ({ scheduleSync: () => {} }));
 
 const {
   db,
@@ -157,14 +160,40 @@ test('morning weights restore, and a local tombstone is never resurrected by an 
 });
 
 test('the applied coach receipt survives restore, on the deterministic identity (S-16/v72)', async () => {
+  // C6 RC6-2 (D97-25): this test previously FED applied: true into the
+  // applier and asserted it back - a false positive, because no local
+  // path ever wrote the applied column, so no production cloud row
+  // could carry true. It now drives the REAL mechanism: a REAL apply
+  // (markApplied -> saveCoachOutput) must set the column, deriving it
+  // from the JSON receipt.
+  const { saveCoachOutput } = require('../lib/database');
+  const { markApplied } = require('../lib/coachApply');
   const detId = `co_${WEEK}_${U}`;
+  const output = { weekStart: WEEK, weekLabel: 'Week 4 · Mild cut', adjustments: { calories: { change: -100 } } };
+  await saveCoachOutput(U, output);
+  const beforeApply = await conn.getFirstAsync('SELECT applied FROM coach_outputs WHERE id = ?', [detId]);
+  expect(beforeApply.applied).toBe(0); // saved but not yet applied
+  await saveCoachOutput(U, markApplied(output, 'calories', { newKcal: 2400 }));
+  const row = await conn.getFirstAsync('SELECT applied, output_json FROM coach_outputs WHERE id = ?', [detId]);
+  expect(row.applied).toBe(1); // derived from the JSON receipt (RC6-2)
+  expect(JSON.parse(row.output_json).appliedAdjustments.calories.newKcal).toBe(2400);
+
+  // C6 RC6-1 (D97-25): the receipt RATCHET. The other device merely
+  // VIEWED the week - its on-view save pushed a NEWER row with no
+  // receipt. The pull must not clear the local receipt or re-arm Apply.
+  // The on-view save stamps REAL wall-clock time, so the viewing
+  // device's row must be newer than this device's real apply stamp.
   await insertCoachOutputFromCloud(U, {
-    id: detId, week_start: WEEK, applied: true,
-    output_json: JSON.stringify({ weekLabel: 'Week 4 · Mild cut', appliedAdjustments: { calories: -100 } }),
-    created_at: iso(WEEK), updated_at: iso(WEEK + 3600000),
+    id: detId, week_start: WEEK, applied: false,
+    output_json: JSON.stringify({ weekStart: WEEK, weekLabel: 'Week 4 · Mild cut', adjustments: { calories: { change: -100 } }, consecutiveOffTargetWeeks: 2 }),
+    created_at: iso(WEEK), updated_at: iso(Date.now() + 3600000),
   });
-  const row = await conn.getFirstAsync('SELECT applied FROM coach_outputs WHERE id = ?', [detId]);
-  expect(row.applied).toBe(1);
+  const afterPull = await conn.getFirstAsync('SELECT applied, output_json FROM coach_outputs WHERE id = ?', [detId]);
+  expect(afterPull.applied).toBe(1); // still applied
+  const merged = JSON.parse(afterPull.output_json);
+  expect(merged.appliedAdjustments.calories.newKcal).toBe(2400); // receipt survived
+  expect(merged.consecutiveOffTargetWeeks).toBe(2); // the newer content still landed
+
   // An OLDER unapplied cloud duplicate under a legacy id cannot take the
   // week back: the v71 unique index drops it at INSERT OR IGNORE.
   await insertCoachOutputFromCloud(U, {
@@ -175,10 +204,81 @@ test('the applied coach receipt survives restore, on the deterministic identity 
   expect(all).toEqual([{ id: detId, applied: 1 }]);
 });
 
+test('a tombstoned cloud weigh-in lands DELETED, not alive (RC6-3): the applier no longer depends on its caller\'s filter', async () => {
+  await insertMorningWeightFromCloud(U, {
+    id: 'mw-b', weight_kg: 81.0, logged_at: iso(WEEK - 5 * 86400000),
+    created_at: iso(WEEK - 5 * 86400000), updated_at: iso(WEEK - 5 * 86400000),
+  });
+  expect((await getMorningWeights(U, 10)).map((w) => w.id)).toContain('mw-b');
+  // A genuinely newer cloud copy carrying the tombstone: deleted_at now
+  // travels through the INSERT OR REPLACE instead of resetting to NULL.
+  await insertMorningWeightFromCloud(U, {
+    id: 'mw-b', weight_kg: 81.0, logged_at: iso(WEEK - 5 * 86400000),
+    created_at: iso(WEEK - 5 * 86400000), updated_at: iso(WEEK - 4 * 86400000),
+    deleted_at: iso(WEEK - 4 * 86400000),
+  });
+  expect((await getMorningWeights(U, 10)).map((w) => w.id)).not.toContain('mw-b');
+});
+
+test('a newer cloud mesocycle with a SAME-VERSION ledger cannot replace the local judgement (RC6-4)', async () => {
+  const richLocal = JSON.stringify({ version: 1, entries: [{ muscle: 'chest', classification: 'RESPONSIVE' }] });
+  const poorCloud = JSON.stringify({ version: 1, entries: [{ muscle: 'chest', classification: 'INSUFFICIENT_DATA' }] });
+  await insertMesocycleFromCloud(U, {
+    id: 'meso-rc64', programme_id: 'plan-1', name: 'Block 2', start_date: '2026-06-15',
+    planned_weeks: 6, duration_weeks: 6, is_active: false, block_ledger: richLocal,
+    created_at: iso(WEEK - 20 * 86400000), updated_at: iso(WEEK - 20 * 86400000),
+  });
+  await insertMesocycleFromCloud(U, {
+    id: 'meso-rc64', programme_id: 'plan-1', name: 'Block 2', start_date: '2026-06-15',
+    planned_weeks: 6, duration_weeks: 6, is_active: false, block_ledger: poorCloud,
+    created_at: iso(WEEK - 20 * 86400000), updated_at: iso(WEEK - 19 * 86400000),
+  });
+  const row = await conn.getFirstAsync('SELECT block_ledger FROM mesocycles WHERE id = ?', ['meso-rc64']);
+  expect(row.block_ledger).toBe(richLocal); // same version: local judgement holds
+  // A DIFFERENT (newer-rules) version still replaces.
+  const v2Cloud = JSON.stringify({ version: 2, entries: [{ muscle: 'chest', classification: 'RESPONSIVE' }] });
+  await insertMesocycleFromCloud(U, {
+    id: 'meso-rc64', programme_id: 'plan-1', name: 'Block 2', start_date: '2026-06-15',
+    planned_weeks: 6, duration_weeks: 6, is_active: false, block_ledger: v2Cloud,
+    created_at: iso(WEEK - 20 * 86400000), updated_at: iso(WEEK - 18 * 86400000),
+  });
+  const row2 = await conn.getFirstAsync('SELECT block_ledger FROM mesocycles WHERE id = ?', ['meso-rc64']);
+  expect(row2.block_ledger).toBe(v2Cloud);
+});
+
+test('an established device keeps its richer provenance against a newer provenance-less echo (RC6-5)', async () => {
+  await insertOrUpdatePlannedMuscleVolumeFromCloud(U, {
+    id: 'pmv_rc65_chest', mesocycle_week_id: 'mw-1', muscle: 'chest',
+    planned_sets: 14, mev: 8, mav: 18, mrv: 26, source: 'ledger',
+    created_at: iso(WEEK - 10 * 86400000), updated_at: iso(WEEK - 10 * 86400000),
+  });
+  // A stale device's echo comes back NEWER but with no band columns
+  // (pre-132 shape). The local band and label must survive; the
+  // incoming planned_sets and timestamp land.
+  await insertOrUpdatePlannedMuscleVolumeFromCloud(U, {
+    id: 'pmv_rc65_chest', mesocycle_week_id: 'mw-1', muscle: 'chest',
+    planned_sets: 15,
+    created_at: iso(WEEK - 10 * 86400000), updated_at: iso(WEEK - 9 * 86400000),
+  });
+  const row = await conn.getFirstAsync('SELECT planned_sets, mev, mav, mrv, source FROM planned_muscle_volume WHERE id = ?', ['pmv_rc65_chest']);
+  expect(row).toEqual({ planned_sets: 15, mev: 8, mav: 18, mrv: 26, source: 'ledger' });
+});
+
+test('a timestamp-less cloud nutrition row cannot overwrite live calorie targets (RC6-9)', async () => {
+  const before = await getNutritionTargets(U);
+  expect(before?.targetKcal ?? before?.target_kcal).toBe(2600);
+  await insertNutritionTargetsFromCloud(U, {
+    id: 'nt-ghost', target_kcal: 1200, protein_g: 90, carbs_g: 100, fat_g: 40,
+    // no updated_at, no created_at: unprovable
+  });
+  const after = await getNutritionTargets(U);
+  expect(after?.targetKcal ?? after?.target_kcal).toBe(2600); // refused
+});
+
 test('mesocycles read back for the account (the decision surfaces have their history)', async () => {
   const mesos = await getAllMesocyclesForUser(U);
-  expect(mesos.map((m) => m.id)).toEqual(['meso-1']);
-  expect(mesos[0].blockLedger).toBeTruthy();
+  expect(mesos.map((m) => m.id)).toEqual(expect.arrayContaining(['meso-1', 'meso-rc64']));
+  expect(mesos.find((m) => m.id === 'meso-1').blockLedger).toBeTruthy();
 });
 
 test('photos and scans have NO cloud applier at all (local-only, as promised)', () => {

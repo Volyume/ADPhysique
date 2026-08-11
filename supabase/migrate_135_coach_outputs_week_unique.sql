@@ -35,6 +35,27 @@
 -- coach-output batch until it upgrades (that table's push only; it
 -- self-heals on upgrade when v72 re-ids and the next push converges).
 --
+-- SECOND RELEASE CONDITION (Campaign 6 Review C, RC6-2, D97-25): the
+-- applied COLUMN had no local writer until the RC6-2 client fix
+-- (saveCoachOutput now derives it from the JSON receipt), so every
+-- pre-fix production row carries applied = false and the corrected
+-- S-14 predicate below would degenerate to pure recency - re-opening
+-- the exact defect it was corrected to remove. Do NOT run this file
+-- until the client build carrying BOTH v72 AND the RC6-2 applied
+-- writer is live, and receipts have had a sync cycle to re-push.
+--
+-- PREFLIGHT (Campaign 6 Review C, RC6-6, D97-25): setup_complete.sql
+-- already declares UNIQUE(user_id, week_start) on this table at
+-- creation. Whether that constraint is LIVE in production decides
+-- whether this file's DELETE finds anything AND whether S-15's 23505
+-- batch poisoning is already happening today (which would make v72
+-- urgent standalone). Before the founder is asked for "run against
+-- production" on this batch, run the read-only check and record the
+-- answer in MIGRATION-RELEASE-GATES.md:
+--   SELECT conname, contype, pg_get_constraintdef(oid)
+--     FROM pg_constraint
+--    WHERE conrelid = 'public.coach_outputs'::regclass;
+--
 -- Proven 2026-08-11 in an isolated scratch cluster (never any remote):
 -- the applied row survives a newer merely-viewed duplicate; all
 -- survivors deterministic; second run is a byte-identical no-op.

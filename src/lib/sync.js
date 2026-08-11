@@ -1686,6 +1686,27 @@ export async function pullFromCloud(supabaseUserId) {
     // about to clear — so this is the most important late check.
     if (bailForWipe('user_prefs')) return workoutCount;
     const prefCount = await _pullUserPrefs(sb, supabaseUserId);
+    // C6 RC6-8 (D97-25): on a reinstall the launch-time
+    // restoreNotifications call runs BEFORE this pull delivers the
+    // notification-prefs blob, so the first session ran with no
+    // reminders at all until the next cold launch (D97-6 fixed the
+    // call never running; this is the ordering residual it did not
+    // cover). When this pull actually delivered prefs, re-lay once:
+    // every scheduler inside self-gates on permission, tier, toggles,
+    // push budget and the ED flag, so this changes no policy - the
+    // same argument D97-6 recorded. Best effort, never blocks the pull.
+    if (prefCount > 0) {
+      try {
+        // eslint-disable-next-line global-require
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
+        if (raw) {
+          // eslint-disable-next-line global-require
+          const { restoreNotifications } = require('./notifications/scheduler');
+          restoreNotifications(JSON.parse(raw), supabaseUserId).catch(() => {});
+        }
+      } catch (_) { /* best effort */ }
+    }
     // notification_preferences moved to src/lib/sync/transport.js
     // (registry-driven per-table pull). The runner now calls
     // transport.pullTable('notification_preferences', ...) directly
@@ -1824,16 +1845,23 @@ async function _pullUserInsights(sb, supabaseUserId) {
 async function _pullExerciseUserNotes(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'exercise_user_notes');
-    let q = sb.from('exercise_user_notes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
-      .order('updated_at', { ascending: true }).limit(1000);
-    // C6 T-13 (D97-24): ascending order + a page cap turn PostgREST's
-    // silent 1000-row truncation into honest incremental catch-up - the
-    // watermark only ever advances to the max RECEIVED updated_at, and
-    // with ascending order every undelivered row sits ABOVE it, so the
-    // next cycle collects it instead of skipping it for ever.
-    if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
-    const { data, error } = await q;
-    if (error) { logPgErr('sync._pullExerciseUserNotes', error); return 0; }
+    // C6 T-13 (D97-24) + RC6-7 (D97-25): the pull now pages with
+    // fetchAllRows (offset pagination within ONE cycle), the audit's
+    // original direction. The interim order+cap route left two holes
+    // Review C proved: rows sharing one updated_at at the cap boundary
+    // were skipped for ever (the watermark could not advance past
+    // them), and a large restore stayed partial across cycles. Offset
+    // pagination has neither; a mid-pagination error throws so the
+    // outer catch holds the watermark and the next pull retries.
+    const data = await fetchAllRows(
+      'sync._pullExerciseUserNotes',
+      () => {
+        let q = sb.from('exercise_user_notes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
+    );
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
     const { insertOrUpdateExerciseUserNoteFromCloud } = require('./database');
@@ -2093,16 +2121,23 @@ async function _pullUserPrefs(sb, supabaseUserId) {
 async function _pullProgrammes(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'programmes');
-    let q = sb.from('programmes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
-      .order('updated_at', { ascending: true }).limit(1000);
-    // C6 T-13 (D97-24): ascending order + a page cap turn PostgREST's
-    // silent 1000-row truncation into honest incremental catch-up - the
-    // watermark only ever advances to the max RECEIVED updated_at, and
-    // with ascending order every undelivered row sits ABOVE it, so the
-    // next cycle collects it instead of skipping it for ever.
-    if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
-    const { data, error } = await q;
-    if (error) { logWarn('sync._pullProgrammes', error.message); return 0; }
+    // C6 T-13 (D97-24) + RC6-7 (D97-25): the pull now pages with
+    // fetchAllRows (offset pagination within ONE cycle), the audit's
+    // original direction. The interim order+cap route left two holes
+    // Review C proved: rows sharing one updated_at at the cap boundary
+    // were skipped for ever (the watermark could not advance past
+    // them), and a large restore stayed partial across cycles. Offset
+    // pagination has neither; a mid-pagination error throws so the
+    // outer catch holds the watermark and the next pull retries.
+    const data = await fetchAllRows(
+      'sync._pullProgrammes',
+      () => {
+        let q = sb.from('programmes').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
+    );
     let n = 0;
     let failures = 0;
     let firstErr = null;
@@ -2176,16 +2211,23 @@ async function _pullRoutinesAndExercises(sb, supabaseUserId) {
 async function _pullMesocycles(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'mesocycles');
-    let mq = sb.from('mesocycles').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
-      .order('updated_at', { ascending: true }).limit(1000);
-    // C6 T-13 (D97-24): ascending order + a page cap turn PostgREST's
-    // silent 1000-row truncation into honest incremental catch-up - the
-    // watermark only ever advances to the max RECEIVED updated_at, and
-    // with ascending order every undelivered row sits ABOVE it, so the
-    // next cycle collects it instead of skipping it for ever.
-    if (wm > 0) mq = mq.gte('updated_at', isoFromMs(wm));
-    const { data: mesos, error: mErr } = await mq;
-    if (mErr) { logWarn('sync._pullMesocycles', mErr.message); return 0; }
+    // C6 T-13 (D97-24) + RC6-7 (D97-25): the pull now pages with
+    // fetchAllRows (offset pagination within ONE cycle), the audit's
+    // original direction. The interim order+cap route left two holes
+    // Review C proved: rows sharing one updated_at at the cap boundary
+    // were skipped for ever (the watermark could not advance past
+    // them), and a large restore stayed partial across cycles. Offset
+    // pagination has neither; a mid-pagination error throws so the
+    // outer catch holds the watermark and the next pull retries.
+    const mesos = await fetchAllRows(
+      'sync._pullMesocycles',
+      () => {
+        let mq = sb.from('mesocycles').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) mq = mq.gte('updated_at', isoFromMs(wm));
+        return mq;
+      },
+    );
     let n = 0;
     let mesoFailures = 0;
     for (const m of mesos ?? []) {
@@ -2235,16 +2277,23 @@ async function _pullMorningWeights(sb, supabaseUserId) {
 async function _pullCoachOutputs(sb, supabaseUserId) {
   try {
     const wm = await getPullWatermark(supabaseUserId, 'coach_outputs');
-    let q = sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
-      .order('updated_at', { ascending: true }).limit(1000);
-    // C6 T-13 (D97-24): ascending order + a page cap turn PostgREST's
-    // silent 1000-row truncation into honest incremental catch-up - the
-    // watermark only ever advances to the max RECEIVED updated_at, and
-    // with ascending order every undelivered row sits ABOVE it, so the
-    // next cycle collects it instead of skipping it for ever.
-    if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
-    const { data, error } = await q;
-    if (error) { logWarn('sync._pullCoachOutputs', error.message); return 0; }
+    // C6 T-13 (D97-24) + RC6-7 (D97-25): the pull now pages with
+    // fetchAllRows (offset pagination within ONE cycle), the audit's
+    // original direction. The interim order+cap route left two holes
+    // Review C proved: rows sharing one updated_at at the cap boundary
+    // were skipped for ever (the watermark could not advance past
+    // them), and a large restore stayed partial across cycles. Offset
+    // pagination has neither; a mid-pagination error throws so the
+    // outer catch holds the watermark and the next pull retries.
+    const data = await fetchAllRows(
+      'sync._pullCoachOutputs',
+      () => {
+        let q = sb.from('coach_outputs').select('*').eq('user_id', supabaseUserId).is('deleted_at', null)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
+    );
     let n = 0;
     let failures = 0;
     for (const co of data ?? []) {

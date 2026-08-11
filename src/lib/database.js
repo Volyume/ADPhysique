@@ -6914,7 +6914,7 @@ export async function saveCoachOutput(userId, data) {
       `UPDATE coach_outputs SET
         goal_phase = ?, volume_signal = ?, load_signal = ?, recovery_flag = ?,
         calorie_change = ?, steps_target = ?, why_this = ?, output_json = ?,
-        updated_at = ?
+        applied = ?, updated_at = ?
        WHERE id = ?`,
       [
         data.goalPhase ?? null, data.volumeSignal ?? null, data.loadSignal ?? null,
@@ -6924,7 +6924,16 @@ export async function saveCoachOutput(userId, data) {
         // Campaign 1 P0-8 D7: write updated_at on every save. It was never
         // set, so the push stamped now() each cycle (laundering age) and
         // an applied receipt could not win a cross-device comparison.
-        data.whyThisWeek ?? null, JSON.stringify(toStore), now, existing.id,
+        // C6 RC6-2 (D97-25): the applied COLUMN is derived from the JSON
+        // receipt on every save - it previously had NO local writer at
+        // all, so every production cloud row carried applied = false and
+        // v71's tiebreak, migrate_135's corrected S-14 predicate and the
+        // reinstall E2E's receipt assertion were all inert. Deriving it
+        // here (never set independently) means the column and the JSON
+        // can never disagree.
+        data.whyThisWeek ?? null, JSON.stringify(toStore),
+        toStore?.appliedAdjustments && Object.keys(toStore.appliedAdjustments).length ? 1 : 0,
+        now, existing.id,
       ],
     );
     _scheduleSync();
@@ -6941,15 +6950,18 @@ export async function saveCoachOutput(userId, data) {
   await d.runAsync(
     `INSERT INTO coach_outputs
       (id, user_id, week_start, goal_phase, volume_signal, load_signal, recovery_flag,
-       calorie_change, steps_target, why_this, output_json, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       calorie_change, steps_target, why_this, output_json, applied, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, data.weekStart,
       data.goalPhase ?? null, data.volumeSignal ?? null, data.loadSignal ?? null,
       data.recoveryFlag ?? null,
       data.adjustments?.calories?.change ?? null,
       data.adjustments?.steps?.target ?? null,
-      data.whyThisWeek ?? null, json, now,
+      data.whyThisWeek ?? null, json,
+      // C6 RC6-2 (D97-25): applied derived from the JSON at birth too.
+      data?.appliedAdjustments && Object.keys(data.appliedAdjustments).length ? 1 : 0,
+      now,
     ],
   );
   // Campaign 1 P0-8 D7: stamp updated_at at birth too (same honest-age
@@ -7404,15 +7416,23 @@ export async function insertMorningWeightFromCloud(userId, w) {
   // (preserves the old non-destructive behaviour until 060 enables real LWW).
   if (existing && (cloudMs == null || (localMs != null && localMs >= cloudMs))) return;
   const createdAt = toMs(w.created_at) ?? Date.now();
+  // C6 RC6-3 (D97-25): carry deleted_at through the applier like the
+  // sibling appliers do (peak_week_plans under D95, workout_notes) -
+  // INSERT OR REPLACE without it returned the column to NULL, so any
+  // newer cloud copy resurrected a locally tombstoned weigh-in and the
+  // deletion depended entirely on the caller's .is('deleted_at', null)
+  // filter holding cloud-side. Morning weights feed the rapid-loss and
+  // max-safe-loss gates, so a resurrected row re-enters that series.
   await d.runAsync(
-    `INSERT OR REPLACE INTO morning_weights (id, user_id, weight_kg, logged_at, notes, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT OR REPLACE INTO morning_weights (id, user_id, weight_kg, logged_at, notes, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       w.id, userId, w.weight_kg,
       toMs(w.logged_at) ?? Date.now(),
       w.notes ?? null,
       createdAt,
       cloudMs ?? createdAt,
+      toMs(w.deleted_at) ?? null,
     ],
   );
 }
@@ -7485,12 +7505,27 @@ export async function insertCoachOutputFromCloud(userId, co) {
   };
   const cloudUpdated = tsMs(co.updated_at) ?? tsMs(co.created_at) ?? Date.now();
   const existing = await d.getFirstAsync(
-    'SELECT updated_at FROM coach_outputs WHERE id = ?', [co.id],
+    'SELECT updated_at, output_json FROM coach_outputs WHERE id = ?', [co.id],
   ).catch(() => null);
   if (existing && Number(existing.updated_at ?? 0) >= cloudUpdated) return;
   let parsed = null;
   try { parsed = co.output_json ? JSON.parse(co.output_json) : null; } catch (_) { parsed = null; }
   if (existing) {
+    // C6 RC6-1 (D97-25): the applied-receipt RATCHET. A newer cloud row
+    // that carries no appliedAdjustments (the other device merely VIEWED
+    // the week - the on-view save re-stamps updated_at) must never clear
+    // a local receipt: without this, the device that applied re-armed
+    // its own Apply buttons on the next pull and the change could be
+    // applied twice. Same one-way posture as the calm ratchet and the
+    // insight-dismissal ratchet (D97-19 F5), reusing the already-pinned
+    // preserveAppliedAdjustments merge. The applied column is derived
+    // from the merged JSON (RC6-2) so the two can never disagree.
+    const merged = parsed
+      ? preserveAppliedAdjustments(existing.output_json, parsed)
+      : parsed;
+    const mergedJson = merged ? JSON.stringify(merged) : co.output_json;
+    const appliedFlag = merged?.appliedAdjustments && Object.keys(merged.appliedAdjustments).length
+      ? 1 : (co.applied ? 1 : 0);
     await d.runAsync(
       `UPDATE coach_outputs SET
         output_json = ?, applied = ?, updated_at = ?,
@@ -7503,7 +7538,7 @@ export async function insertCoachOutputFromCloud(userId, co) {
         why_this = COALESCE(?, why_this)
        WHERE id = ?`,
       [
-        co.output_json, co.applied ? 1 : 0, cloudUpdated,
+        mergedJson, appliedFlag, cloudUpdated,
         parsed?.goalPhase ?? null,
         parsed?.volumeSignal ?? null,
         parsed?.loadSignal ?? null,
@@ -7516,7 +7551,7 @@ export async function insertCoachOutputFromCloud(userId, co) {
     );
     return;
   }
-  await d.runAsync(
+  const inserted = await d.runAsync(
     `INSERT OR IGNORE INTO coach_outputs
       (id, user_id, week_start, output_json, applied,
        goal_phase, volume_signal, load_signal, recovery_flag,
@@ -7536,6 +7571,16 @@ export async function insertCoachOutputFromCloud(userId, co) {
       cloudUpdated,
     ],
   );
+  // C6 RC6-10 (D97-25): a v71 unique-index collision here (a legacy
+  // uid() row already holds this user-week) silently discarded the
+  // cloud row AND its receipt with no trace. v72 re-ids the known
+  // population; this line makes any escapee diagnosable from Debug
+  // logs instead of invisible. Observability only, no behaviour change.
+  if ((inserted?.changes ?? 1) === 0) {
+    logWarn('database.insertCoachOutputFromCloud', 'cloud coach output discarded by unique index', {
+      id: co.id, weekStart: co.week_start,
+    });
+  }
 }
 
 // Upserts nutrition_targets from a cloud row. Local table has one row
@@ -7543,9 +7588,18 @@ export async function insertCoachOutputFromCloud(userId, co) {
 // user already has a local row and the cloud copy is newer.
 export async function insertNutritionTargetsFromCloud(userId, t) {
   const d = await db();
-  const updatedAt = typeof t.updated_at === 'string'
+  // C6 RC6-9 (D97-25): a cloud row with NO updated_at used to be
+  // stamped Date.now() and therefore always won, so an unprovable row
+  // could overwrite live calorie targets. Three sibling appliers
+  // (morning weights, mesocycles, coach outputs) explicitly refuse in
+  // that case; this is a calorie surface, so it gets the same rule:
+  // when a local row exists and the cloud copy cannot prove it is
+  // newer, keep the local row. A first restore with no local row still
+  // lands the cloud copy.
+  const cloudStampMs = typeof t.updated_at === 'string'
     ? new Date(t.updated_at).getTime()
-    : (t.updated_at ?? Date.now());
+    : (t.updated_at ?? null);
+  const updatedAt = Number.isFinite(cloudStampMs) ? cloudStampMs : Date.now();
   const createdAt = typeof t.created_at === 'string'
     ? new Date(t.created_at).getTime()
     : (t.created_at ?? updatedAt);
@@ -7558,6 +7612,7 @@ export async function insertNutritionTargetsFromCloud(userId, t) {
     [userId],
   );
   if (existing) {
+    if (!Number.isFinite(cloudStampMs)) return; // unprovable: keep local (RC6-9)
     if ((existing.updated_at ?? 0) >= updatedAt) return;
     await d.runAsync(
       `UPDATE nutrition_targets SET
@@ -7686,6 +7741,29 @@ export async function insertMesocycleFromCloud(userId, m) {
   // stamping updated_at laundered old content as fresh on the next push.
   const createdAt = tsMs(m.created_at) ?? (Number(existing?.created_at) || Date.now());
   const updatedAt = cloudUpdated ?? Date.now();
+  // C6 RC6-4 (D97-25): a newer cloud row must not replace a local Block
+  // Ledger of the SAME LEDGER_VERSION - the runner's idempotency is
+  // per-device, so the device that pulled less of the block's evidence
+  // could classify INSUFFICIENT_DATA where this one judged RESPONSIVE,
+  // and whichever wrote last would seed the next block from the poorer
+  // judgement. Same-version means same rules over this block; the
+  // deterministic engine makes same-evidence ledgers identical, so
+  // keeping the local one costs nothing when the devices agree and
+  // protects this device's fuller judgement when they do not. A cloud
+  // ledger of a DIFFERENT version (newer rules) still replaces.
+  const incomingLedger = m.block_ledger != null
+    ? (typeof m.block_ledger === 'string' ? m.block_ledger : JSON.stringify(m.block_ledger))
+    : null;
+  let ledgerToStore = incomingLedger ?? (existing?.block_ledger ?? null);
+  if (incomingLedger && existing?.block_ledger) {
+    try {
+      const localVersion = JSON.parse(existing.block_ledger)?.version;
+      const cloudVersion = JSON.parse(incomingLedger)?.version;
+      if (localVersion != null && localVersion === cloudVersion) {
+        ledgerToStore = existing.block_ledger;
+      }
+    } catch (_) { /* unreadable JSON: fall through to the incoming copy */ }
+  }
   await d.runAsync(
     `INSERT OR REPLACE INTO mesocycles
       (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks,
@@ -7713,9 +7791,9 @@ export async function insertMesocycleFromCloud(userId, m) {
       m.deload_week ?? m.planned_weeks ?? m.duration_weeks ?? null,
       // jsonb arrives as an OBJECT from supabase-js; the local column is
       // TEXT, so stringify on the way in (and keep a plain string as-is).
-      m.block_ledger != null
-        ? (typeof m.block_ledger === 'string' ? m.block_ledger : JSON.stringify(m.block_ledger))
-        : (existing?.block_ledger ?? null),
+      // Resolution above (RC6-4): cloud-null preserves local; same
+      // LEDGER_VERSION keeps local; a different version replaces.
+      ledgerToStore,
       createdAt, updatedAt,
     ],
   );
@@ -8064,14 +8142,18 @@ export async function insertOrUpdateUserInsightFromCloud(userId, row) {
 export async function insertOrUpdateExerciseUserNoteFromCloud(userId, row) {
   if (!row?.id) return;
   const d = await db();
+  // C6 RC6-3 (D97-25): carry deleted_at, same rationale as the sibling
+  // appliers (the local table has the column; INSERT OR REPLACE without
+  // it resurrected a soft-deleted note on every pull).
   await d.runAsync(
     `INSERT OR REPLACE INTO exercise_user_notes
-      (id, user_id, exercise_id, note, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+      (id, user_id, exercise_id, note, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id, userId, row.exercise_id, row.note,
       _tsToMs(row.created_at) ?? Date.now(),
       _tsToMs(row.updated_at) ?? Date.now(),
+      _tsToMs(row.deleted_at) ?? null,
     ],
   );
 }
@@ -8163,6 +8245,32 @@ export async function insertOrUpdatePlannedMuscleVolumeFromCloud(userId, row) {
   let mav = Number.isFinite(Number(row.mav)) ? Number(row.mav) : null;
   let mrv = Number.isFinite(Number(row.mrv)) ? Number(row.mrv) : null;
   let source = typeof row.source === 'string' && row.source ? row.source : null;
+  const incomingUpdated = _tsToMs(row.updated_at) ?? Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT updated_at, mev, mav, mrv, source FROM planned_muscle_volume WHERE id = ?', [row.id],
+  );
+  if (existing && Number(existing.updated_at ?? 0) >= incomingUpdated) return;
+  if (mev == null || mav == null || mrv == null) {
+    // C6 RC6-5 (D97-25): the comment above promised a stale push "can
+    // never overwrite richer local provenance", but the degrade branch
+    // replaced wholesale - so an ESTABLISHED device holding
+    // source='ledger' bands was downgraded to research + 'template' by
+    // any newer provenance-less echo (Review C proved it: mrv 26 ->
+    // 22). When the LOCAL row already carries a full band, MERGE
+    // instead: keep the local band and label, take the incoming
+    // planned_sets and timestamp. A fresh device with no local
+    // provenance still degrades honestly, which is what the reinstall
+    // E2E pins (S-11's recorded behaviour is unchanged there).
+    const localMev = Number.isFinite(Number(existing?.mev)) ? Number(existing.mev) : null;
+    const localMav = Number.isFinite(Number(existing?.mav)) ? Number(existing.mav) : null;
+    const localMrv = Number.isFinite(Number(existing?.mrv)) ? Number(existing.mrv) : null;
+    if (localMev != null && localMav != null && localMrv != null) {
+      mev = mev ?? localMev;
+      mav = mav ?? localMav;
+      mrv = mrv ?? localMrv;
+      source = source ?? (typeof existing.source === 'string' && existing.source ? existing.source : null);
+    }
+  }
   if (mev == null || mav == null || mrv == null) {
     // eslint-disable-next-line global-require
     const { VOLUME_LANDMARKS } = require('./algorithms');
@@ -8173,11 +8281,6 @@ export async function insertOrUpdatePlannedMuscleVolumeFromCloud(userId, row) {
     mrv = mrv ?? research.mrv;
     source = source ?? 'template';
   }
-  const incomingUpdated = _tsToMs(row.updated_at) ?? Date.now();
-  const existing = await d.getFirstAsync(
-    'SELECT updated_at FROM planned_muscle_volume WHERE id = ?', [row.id],
-  );
-  if (existing && Number(existing.updated_at ?? 0) >= incomingUpdated) return;
   await d.runAsync(
     `INSERT OR REPLACE INTO planned_muscle_volume
       (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)

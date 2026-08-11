@@ -689,3 +689,64 @@ separately below as they land.
   only averages check-ins inside the 14-day window (D97-8's own
   boundary applied to the sibling read); with none, the no-data
   default lands on the conservative repeat branch. Pinned both ways.
+
+**Review C (reinstall/two devices), all thirteen dispositioned:**
+- **RC6-1 FIXED (option a, the review's own architectural match)**: the
+  coach-output pull applier now runs preserveAppliedAdjustments against
+  the local row, so a newer merely-viewed cloud row can never clear a
+  local applied receipt (the calm-ratchet / F5-ratchet posture, third
+  instance). The newer row's other content still lands. Pinned in the
+  rebuilt reinstall E2E.
+- **RC6-2 FIXED (option a)**: saveCoachOutput derives the applied
+  COLUMN from the JSON receipt in both branches - the column previously
+  had NO local writer, which made v71's tiebreak, migrate_135's
+  corrected S-14 predicate AND reinstall E2E test 7 all inert or false.
+  Test 7 REBUILT on the real apply path (markApplied → saveCoachOutput)
+  with a not-yet-applied control. migrate_135's header + the release
+  gates now carry the SECOND release condition: 135 only after the
+  build with v72 + this writer is live.
+- **RC6-3 FIXED**: morning_weights and exercise_user_notes appliers
+  carry deleted_at through INSERT OR REPLACE (the D95 sibling pattern),
+  so a tombstone can no longer be silently reset to NULL by any newer
+  cloud copy; morning weights feed the rapid-loss gates, so this is
+  safety-adjacent hygiene. Pinned.
+- **RC6-4 FIXED (option a)**: a cloud mesocycle row carrying a ledger
+  of the SAME LEDGER_VERSION keeps the local ledger (the runner's
+  idempotency rule extended across devices); a different version still
+  replaces. Pinned both ways.
+- **RC6-5 FIXED (option a)**: when the incoming planned-volume row has
+  no band and the local row does, the applier merges (keeps local
+  band + label, takes incoming planned_sets + timestamp) - making its
+  own "can never overwrite richer local provenance" comment true. The
+  fresh-device honest degrade (S-11, E2E test 4) is byte-identical.
+  Pinned.
+- **RC6-6 RECORDED AS RELEASE PREFLIGHT**: whether setup_complete's
+  UNIQUE(user_id, week_start) is live in production decides the whole
+  135 storyline (live → S-15 poisoning is happening TODAY and v72 is
+  urgent standalone; not live → unrecorded schema drift). The read-only
+  pg_constraint query is written into migrate_135's header and
+  MIGRATION-RELEASE-GATES.md; it MUST be run and recorded before the
+  founder is asked for "run against production" on this batch. No
+  cloud command was issued this session.
+- **RC6-7 FIXED (the audit's original direction)**: the four order+cap
+  pulls (programmes, mesocycles, coach_outputs, exercise_user_notes)
+  now page with fetchAllRows within one cycle - closing the
+  equal-timestamp permanent skip and the multi-cycle partial restore,
+  and honouring T-13's own recommended route whose quiet downgrade the
+  review correctly flagged as an unrecorded lighter option.
+- **RC6-8 FIXED (option a)**: pullFromCloud re-lays notifications once
+  when the pref pull actually delivered rows, so the first
+  post-reinstall session has its reminders (D97-6's ordering residual);
+  every scheduler self-gates, no policy change.
+- **RC6-9 FIXED**: insertNutritionTargetsFromCloud refuses a
+  timestamp-less cloud row when a local row exists (the three siblings'
+  rule, applied to the calorie surface). First restore still lands.
+  Pinned.
+- **RC6-10 FIXED**: the applier's INSERT OR IGNORE now logs a warning
+  when the unique index discards a cloud row, so an escapee from v72 is
+  diagnosable instead of invisible.
+- **RC6-11/12/13**: the review's own FALSE-ALARM-CHECKED verdicts,
+  accepted with their evidence.
+- Matrices corrected: REINSTALL-MATRIX receipt row and
+  MULTI-DEVICE-MATRIX receipt + ledger rows now state the fixed
+  mechanisms and name the pre-fix falsity.
