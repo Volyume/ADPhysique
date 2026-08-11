@@ -1,5 +1,21 @@
 # Campaign 6 — Phase 60: migration release analysis
 
+> **CORRECTION (2026-08-11, D97-23 — supersedes the order and the 135
+> verdict below):** the Phases 32-38 audit proved, in an isolated
+> scratch cluster, that **migrate_135 is DEFECTIVE AS WRITTEN and must
+> NOT be run** (AUDIT-REINSTALL-SYNC-OFFLINE.md S-14/S-15): its
+> newest-updated_at tie-break DELETES the applied receipt whenever the
+> merely-viewed duplicate is newer (the exact Apply-resurrection it
+> exists to close), and after its unique index a device still holding a
+> legacy coach-output id permanently poisons its entire 200-row batch
+> upsert (atomic) with 23505 - including the current week's output.
+> Also corrected: legacy pairs do NOT "restore as duplicates" locally
+> (S-16) - the local v71 index keeps an arbitrary one. Revised
+> recommendation: **134 → 132 → 133 now; 135 HELD** pending a corrected
+> tie-break (an applied row wins outright; newest among applied) PLUS a
+> client-side re-id migration shipped in the same build. The founder
+> must not be given "run against production" for 135 as written.
+
 NO migration was run in this campaign. Table derived from the migration
 file headers and the live client code on this branch. Cloud migrations
 are applied MANUALLY by the founder with the exact phrase
