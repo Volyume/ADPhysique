@@ -156,6 +156,10 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
     // week; the advisor's absolute thresholds keep the full formula.
     const sleepFreeReadiness = (c) => {
       if (!c) return null;
+      // FB-36 guard (C6 P-3, D97-20): the sleep-only row a completed
+      // workout writes answers neither energy nor soreness — that is no
+      // reading, not a neutral 50, and must not shape the slope.
+      if (c.energyScore == null && c.sorenessScore == null) return null;
       const energy = (((c.energyScore ?? 3) - 1) / 4) * 100;
       const soreness = (1 - ((c.sorenessScore ?? 3) - 1) / 4) * 100;
       return energy * 0.5 + soreness * 0.5;

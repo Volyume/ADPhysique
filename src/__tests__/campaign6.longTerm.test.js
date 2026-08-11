@@ -251,3 +251,25 @@ describe('PHASES 10 + 11: the mature record system (D97-18)', () => {
     expect(screen).not.toMatch(/getWorkoutSetsForExercise\(exerciseId, user\.id, 200\)/);
   });
 });
+
+describe('PHASES 18-21: tier and trial transitions (D97-20)', () => {
+  test('P-3: the ledger readiness slope treats a sleep-only row as no reading, not a neutral 50', () => {
+    // FB-36 alignment: WorkoutSummaryScreen writes a tier-blind
+    // weekly_checkins row answering only sleep. blockAdvisor's reader got
+    // the guard in D96; the ledger's sleep-free slope input now holds the
+    // same rule, so evidence-free rows cannot flatten or manufacture a
+    // strain trend across a block.
+    const src = read('lib/blockLedgerRunner.js');
+    const fn = src.slice(src.indexOf('const sleepFreeReadiness'));
+    expect(fn.slice(0, 600)).toMatch(/if \(c\.energyScore == null && c\.sorenessScore == null\) return null;/);
+    // The guard sits BEFORE the ?? 3 defaults, so it wins.
+    const guardAt = fn.indexOf('c.energyScore == null');
+    const defaultAt = fn.indexOf('c.energyScore ?? 3');
+    expect(guardAt).toBeGreaterThan(-1);
+    expect(defaultAt).toBeGreaterThan(guardAt);
+    // And the slope helper it feeds discards nulls rather than zeroing them.
+    const gather = read('lib/blockLedgerGather.js');
+    const slope = gather.slice(gather.indexOf('export function computeReadinessSlope'));
+    expect(slope.slice(0, 300)).toMatch(/\.filter\(\(v\) => v != null\)/);
+  });
+});
