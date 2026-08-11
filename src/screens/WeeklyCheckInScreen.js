@@ -877,6 +877,8 @@ export default function WeeklyCheckInScreen({ navigation }) {
           // this push with its week intact after a quiet-hours edit or a
           // DST reschedule. Without the stamp the push died silently until
           // the next check-in.
+          // eslint-disable-next-line global-require
+          try { require('../lib/sync').notePrefWrite(NOTIF_PREFS_KEY); } catch (_) {} // C6 S-2 (D97-23)
           await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify({
             ...(prefs || {}),
             coachReady: { ...(prefs?.coachReady || {}), weekStart: weekStart.getTime() },

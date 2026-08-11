@@ -374,3 +374,18 @@ describe('R-11 (D97-22): the streak blob is a guarded pref', () => {
     expect(save.slice(0, 600)).toMatch(/notePrefWrite\(KEY\(userId\)\)/);
   });
 });
+
+describe('S-2 (D97-23): reminder and quiet-hours prefs are guarded, stamped at every writer', () => {
+  test('both keys are registered and every writer stamps before the write', () => {
+    const sync = read('lib/sync.js');
+    expect(sync).toMatch(/\/\^@volyume_notification_prefs\$\//);
+    expect(sync).toMatch(/\/\^@volyume_quiet_hours_v1\$\//);
+    expect(read('lib/notifications/quietHours.js')).toMatch(/notePrefWrite\(QUIET_HOURS_KEY\)/);
+    for (const f of ['screens/CoachingRemindersScreen.js', 'screens/NotificationSettingsScreen.js', 'screens/ProOnboardingScreen.js', 'screens/WeeklyCheckInScreen.js']) {
+      const src = read(f);
+      const writes = (src.match(/AsyncStorage\.setItem\(NOTIF_PREFS_KEY/g) || []).length;
+      const stamps = (src.match(/notePrefWrite\(NOTIF_PREFS_KEY\)/g) || []).length;
+      expect({ f, stamps }).toEqual({ f, stamps: writes });
+    }
+  });
+});

@@ -1407,6 +1407,14 @@ const GUARDED_PREF_PATTERNS = [
   // "cloud wins" push discarded pauses (re-breaking runs retroactively)
   // and re-fired milestones. saveStreakState stamps every write.
   /^@volyume_streak_v1_/,
+  // C6 S-2 (D97-23): the notification-pref blob and quiet hours are
+  // explicit user choices; unguarded they were LAST-SYNCER-wins (push
+  // stamps push time), so a stale device's routine sync reverted a
+  // reminder or quiet-hours change on BOTH devices. Every writer stamps.
+  // The deletion/tombstone half of the family (S-3) stays with the
+  // founder's FR-C4-2 architecture question - no wholesale consolidation.
+  /^@volyume_notification_prefs$/,
+  /^@volyume_quiet_hours_v1$/,
 ];
 
 export function isGuardedPref(key) {

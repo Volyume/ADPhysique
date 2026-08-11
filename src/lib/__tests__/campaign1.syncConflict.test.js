@@ -470,11 +470,20 @@ describe('D10/D11 guarded prefs: the local write stamps never sync', () => {
     expect(shouldSyncPref('@volyume_wellbeing_mode')).toBe(true);
   });
 
-  test('isGuardedPref names exactly the two safety-relevant families', () => {
+  test('isGuardedPref names exactly the guarded families and nothing else', () => {
+    // Re-anchored: the family has grown by ruling since Campaign 1 -
+    // D97-19 F4 (profile blob), D97-22 R-11 (streak blob) and D97-23 S-2
+    // (notification prefs + quiet hours) each joined explicitly. Near-miss
+    // keys still never match.
     expect(isGuardedPref('@volyume_landmarks_u1')).toBe(true);
     expect(isGuardedPref('@volyume_wellbeing_mode')).toBe(true);
-    expect(isGuardedPref('@volyume_quiet_hours_v1')).toBe(false);
+    expect(isGuardedPref('@volyume_user_profile_u1')).toBe(true);
+    expect(isGuardedPref('@volyume_streak_v1_u1')).toBe(true);
+    expect(isGuardedPref('@volyume_notification_prefs')).toBe(true);
+    expect(isGuardedPref('@volyume_quiet_hours_v1')).toBe(true);
     expect(isGuardedPref('@volyume_wellbeing_mode_extra')).toBe(false);
+    expect(isGuardedPref('@volyume_quiet_hours_v1_extra')).toBe(false);
+    expect(isGuardedPref('@volyume_notification_prefs_x')).toBe(false);
   });
 });
 

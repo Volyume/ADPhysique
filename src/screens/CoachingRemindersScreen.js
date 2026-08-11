@@ -126,6 +126,8 @@ async function applyScheduled(prefs, permissionStatus) {
     const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
     if (raw) existing = JSON.parse(raw) ?? {};
   } catch (_) {}
+  // eslint-disable-next-line global-require
+  try { require('../lib/sync').notePrefWrite(NOTIF_PREFS_KEY); } catch (_) {} // C6 S-2 (D97-23)
   await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify({
     ...existing,
     ...prefs,
