@@ -39,7 +39,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 jest.mock('../../lib/database', () => ({
   getExerciseById: jest.fn(),
-  getWorkoutSetsForExercise: jest.fn(),
+  getCompletedSetHistoryForExercise: jest.fn(),
   getAllExercises: jest.fn(),
   getExerciseGoal: jest.fn(),
   saveExerciseGoal: jest.fn(),

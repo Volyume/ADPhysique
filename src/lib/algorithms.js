@@ -612,16 +612,35 @@ export function computeSetTargets(prevSets, repMin, repMax, units = 'kg', option
 }
 
 // Algorithm 3: PR Detection
+/**
+ * C6 P11-1 (D97-18): rows whose actual_reps is NOT a rep count are
+ * ineligible for estimated-max records. A cluster commit (myo-reps /
+ * rest-pause) stores the SUM of every effort in one row, so Epley on it
+ * fabricates a huge estimate from a light load (50kg x "27" out-scores a
+ * genuine 62.5kg x 6) and the inflated value then owns the records wall
+ * for months. Warm-ups were already excluded by callers; this is the
+ * shared eligibility read for every e1RM surface. High-rep fidelity for
+ * ORDINARY sets is a separate founder question and is NOT touched here.
+ */
+export function isE1rmEligibleRow(row) {
+  const t = row?.setType ?? row?.set_type ?? 'straight';
+  return t !== 'warmup' && t !== 'myo_reps' && t !== 'rest_pause';
+}
+
 export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
   const prs = [];
   const weight = newSet.weight || 0;
   const reps = newSet.actualReps || newSet.actual_reps || 0;
 
   if (!weight || !reps) return prs;
+  // C6 P11-1 (D97-18): a cluster row can neither set nor seed an
+  // estimated-max record - its rep count is a sum of efforts.
+  if (!isE1rmEligibleRow(newSet)) return prs;
 
   const new1RM = calculate1RM(weight, reps);
 
   const best1RM = historicalSets.reduce((best, s) => {
+    if (!isE1rmEligibleRow(s)) return best;
     const est = calculate1RM(s.weight || 0, s.actualReps || s.actual_reps || 0);
     return est > best ? est : best;
   }, 0);

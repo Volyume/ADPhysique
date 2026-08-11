@@ -2992,6 +2992,25 @@ export async function getRoutineWorkoutTonnages(userId, routineId, sinceMs, excl
   return rows.map(rowToCamel);
 }
 
+// C6 P10-1 (D97-18): the records surface's fetch. A "Personal records"
+// wall may never truncate: the old 200-row window meant the wall showed
+// the best of a rolling ~50 sessions under an all-time heading, included
+// rows from incomplete workouts, and the marker replay treated the
+// oldest in-window session as a first exposure (falsely marking its
+// second set a PR). Completed workouts only, no cap - the LiftProgress
+// pattern.
+export async function getCompletedSetHistoryForExercise(exerciseId, userId) {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT ws.* FROM workout_sets ws
+      JOIN workouts w ON w.id = ws.workout_id
+     WHERE ws.exercise_id = ? AND ws.user_id = ? AND w.is_completed = 1
+     ORDER BY ws.created_at DESC`,
+    [exerciseId, userId],
+  );
+  return rows.map(rowToCamel);
+}
+
 export async function getWorkoutSetsForExercise(exerciseId, userId, limit = 100) {
   const d = await db();
   const rows = await d.getAllAsync(

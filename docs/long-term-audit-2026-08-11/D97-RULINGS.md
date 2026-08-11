@@ -235,3 +235,25 @@ invariants):
 - Remaining P10/P11 findings: to be ruled with the implementation
   batch (this entry is the recovery anchor if the session dies
   mid-batch; the full findings live in the audit file).
+
+## D97-18 completion — the three HIGH record defects, FIXED
+
+- P11-1: isE1rmEligibleRow shared eligibility - a cluster row (myo-reps
+  / rest-pause, whose actual_reps is a SUM of efforts) can neither set
+  nor seed an estimated-max record in detectPR. The high-rep Epley
+  fidelity question for ORDINARY sets goes to the founder (Phase 57),
+  untouched here.
+- P11-2: computePRsPerWeek mirrors the live detector - first exposure
+  is a baseline (FQ-7), warm-ups and clusters excluded, non-weight
+  exercises excluded (the unused exerciseMap now read). The pinned
+  test that enshrined the first-set-is-a-record defect is re-anchored
+  CORRECTED with FQ-7 named, plus new gate pins.
+- P10-1: the records wall reads getCompletedSetHistoryForExercise
+  (completed-only join, unbounded) - a records surface may never
+  derive from a rolling 200-row window; incomplete-workout rows and
+  the false window-edge first-exposure marker go with it. Mount-test
+  mocks re-anchored to the new fetch.
+- Remaining P10/P11 MED/LOW findings and the LiftProgress/strength-
+  standing cluster-eligibility wiring: carried on the audit file for
+  the next batch; the record WRITER (detectPR) is closed, so no new
+  inflated records can be created from clusters anywhere.

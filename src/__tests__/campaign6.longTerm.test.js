@@ -226,3 +226,28 @@ describe('PHASES 9 + 44: plan lifecycle laws (D97-11..17)', () => {
     expect(read('screens/FreeStarterScreen.js')).toMatch(/archived\.find\(p => p\.sourceProgrammeId === recommendation\.id\)/);
   });
 });
+
+describe('PHASES 10 + 11: the mature record system (D97-18)', () => {
+  test('P11-1: cluster rows can neither set nor seed an estimated-max record', () => {
+    const src = read('lib/algorithms.js');
+    expect(src).toMatch(/export function isE1rmEligibleRow/);
+    const fn = src.slice(src.indexOf('export function detectPR'));
+    expect(fn.slice(0, 900)).toMatch(/if \(!isE1rmEligibleRow\(newSet\)\) return prs;/);
+    expect(fn.slice(0, 1400)).toMatch(/if \(!isE1rmEligibleRow\(s\)\) return best;/);
+  });
+
+  test('P11-2: the progress PR tile mirrors the live detector (baseline, warm-ups, exercise type)', () => {
+    const src = read('hooks/useProgressData.js');
+    expect(src).toMatch(/const isBaseline = runningMax === 0;/);
+    expect(src).toMatch(/if \(!isBaseline && at >= windowStart\)/);
+    expect(src).toMatch(/if \(exType !== 'weight_reps'\) continue;/);
+  });
+
+  test('P10-1: the records wall derives from all completed history, never a rolling window', () => {
+    const db = read('lib/database.js');
+    expect(db).toMatch(/export async function getCompletedSetHistoryForExercise/);
+    const screen = read('screens/ExerciseDetailScreen.js');
+    expect(screen).toMatch(/getCompletedSetHistoryForExercise\(exerciseId, user\.id\)/);
+    expect(screen).not.toMatch(/getWorkoutSetsForExercise\(exerciseId, user\.id, 200\)/);
+  });
+});

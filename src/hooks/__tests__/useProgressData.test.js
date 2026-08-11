@@ -81,13 +81,40 @@ describe('computePRsPerWeek', () => {
     expect(computePRsPerWeek([], {}, 7, NOW)).toEqual([0]);
   });
 
-  test('a single best today lands in the most recent week slot', () => {
+  // C6 P11-2 (D97-18) re-anchor, CORRECTED meaning: the old pin asserted
+  // that a single (first-ever) set counts as a record - the exact claim
+  // FQ-7 exists to prevent. The first qualifying exposure is a BASELINE;
+  // only a later set that beats it is a record.
+  test('a first-ever set is a baseline, never a record (FQ-7)', () => {
     const sets = [{ exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: NOW }];
+    expect(computePRsPerWeek(sets, {}, 30, NOW)).toEqual([0, 0, 0, 0, 0]);
+  });
+
+  test('a later set beating the baseline lands in the most recent week slot', () => {
+    const sets = [
+      { exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: NOW - 10 * DAY },
+      { exerciseId: 'e1', weight: 105, actualReps: 5, createdAt: NOW },
+    ];
     expect(computePRsPerWeek(sets, {}, 30, NOW)).toEqual([0, 0, 0, 0, 1]);
   });
 
+  test('warm-ups, cluster rows and non-weight exercises never produce record events', () => {
+    const sets = [
+      { exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: NOW - 10 * DAY },
+      { exerciseId: 'e1', weight: 120, actualReps: 5, createdAt: NOW, setType: 'warmup' },
+      { exerciseId: 'e1', weight: 60, actualReps: 27, createdAt: NOW, setType: 'myo_reps' },
+      { exerciseId: 'run', weight: 5000, actualReps: 1, createdAt: NOW },
+      { exerciseId: 'run', weight: 6000, actualReps: 1, createdAt: NOW },
+    ];
+    const map = { run: { type: 'distance' } };
+    expect(computePRsPerWeek(sets, map, 30, NOW)).toEqual([0, 0, 0, 0, 0]);
+  });
+
   test('a best set entirely outside the window is not counted', () => {
-    const sets = [{ exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: NOW - 40 * DAY }];
+    const sets = [
+      { exerciseId: 'e1', weight: 90, actualReps: 5, createdAt: NOW - 50 * DAY },
+      { exerciseId: 'e1', weight: 100, actualReps: 5, createdAt: NOW - 40 * DAY },
+    ];
     expect(computePRsPerWeek(sets, {}, 30, NOW)).toEqual([0, 0, 0, 0, 0]);
   });
 
