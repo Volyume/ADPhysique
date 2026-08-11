@@ -348,6 +348,67 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
   };
 }
 
+/**
+ * C8 Work 1 (RA6-8 / RA6-9): re-decide the next-block recommendation
+ * from the evidence that ACTUALLY seeds the adjusted block.
+ *
+ * buildNextBlockRecommendation above chooses between Repeat and Adjust
+ * from check-in readiness, which says nothing about what the adjusted
+ * block would prescribe. Review A proved both failure directions: a
+ * user who earned a climb in every muscle could be recommended Repeat,
+ * and on the retention default the two options produce identical
+ * numbers while the card still implies adaptation.
+ *
+ * This applies the ledger-derived preview (nextBlockPreview) over the
+ * base recommendation, so the recommendation and the explanation come
+ * from ONE source (requirement D). It is pure and additive:
+ *
+ *  - the consider_rebuild branch is NEVER overridden (persistent
+ *    fatigue outranks a volume delta);
+ *  - Free is never touched (recommendation stays null, no coaching);
+ *  - with no preview the base recommendation is returned unchanged, so
+ *    every existing caller behaves exactly as before;
+ *  - FQ-2 is untouched: this marks a recommendation, it never gates or
+ *    hides either option (buildNextBlockOptions is not involved).
+ *
+ * @param {object|null} nextBlock  buildNextBlockRecommendation output
+ * @param {object|null} preview    buildAdjustPreview output
+ * @param {object} [opts] { finished }
+ */
+export function applyAdjustEvidence(nextBlock, preview, { finished = true } = {}) {
+  if (!nextBlock || !preview) return nextBlock;
+  // Free has no coaching: nothing to re-decide.
+  if (!nextBlock.coached) return nextBlock;
+  // Persistent fatigue keeps its own advice.
+  if (nextBlock.recommendation === 'consider_rebuild') return nextBlock;
+
+  if (preview.meaningful) {
+    const dir = preview.climbs > 0 && preview.reductions === 0
+      ? 'Some muscle groups start higher next block'
+      : preview.reductions > 0 && preview.climbs === 0
+        ? 'Some muscle groups start lower next block'
+        : 'Some muscle groups start higher and some lower next block';
+    return {
+      ...nextBlock,
+      recommendation: 'adjust',
+      headline: 'Same plan, adjusted where the evidence moved',
+      body: finished
+        ? `${dir}, based on how this block actually went. The changes are listed below; everything else stays where it is.`
+        : `After your recovery week, ${dir.charAt(0).toLowerCase()}${dir.slice(1)}, based on how this block actually went. The changes are listed below; everything else stays where it is.`,
+    };
+  }
+
+  // Honest equivalence (requirement C): no manufactured difference.
+  return {
+    ...nextBlock,
+    recommendation: 'repeat',
+    headline: 'Go again: the same targets still fit',
+    body: finished
+      ? 'Your current set targets are still supported by the evidence, so there are no meaningful training changes to apply. Either option gives you the same training week.'
+      : 'Your recovery week does its job, then the same set targets still fit: the evidence supports them, so there are no meaningful training changes to apply. Either option gives you the same training week.',
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Main export
 // ---------------------------------------------------------------------------

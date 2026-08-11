@@ -29,7 +29,8 @@ import {
   archivePlan, unarchivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
   getPlanFolders, createPlanFolder, renamePlanFolder, deletePlanFolder, setPlanFolder,
 } from '../lib/database';
-import { getBlockAdvice, buildNextBlockOptions } from '../lib/blockAdvisor';
+import { getBlockAdvice, buildNextBlockOptions, applyAdjustEvidence } from '../lib/blockAdvisor';
+import { adjustPreviewLines } from '../lib/nextBlockPreview';
 import { ProBadge } from '../components/ProGate';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, buildSeedReceipt } from '../lib/blockExplain';
@@ -139,6 +140,8 @@ export default function PlansScreen({ navigation }) {
   const [blockAdvice, setBlockAdvice] = useState(null);
   // Stage 8: the finished block's ledger story for the decision card.
   const [ledgerStory, setLedgerStory] = useState(null);
+  // C8 Work 1: the adjust-vs-repeat delta preview for the decision card.
+  const [adjustPreview, setAdjustPreview] = useState(null);
   // FB-24 (D96): the post-transition receipt, held until the user closes it.
   const [seedReceipt, setSeedReceipt] = useState(null);
   // FB-15 (D96): the active block's id, for the decision card's summary link.
@@ -282,6 +285,27 @@ export default function PlansScreen({ navigation }) {
             // FB-24: hold the record for the transition receipt.
             ledgerRecordRef.current = ledger;
             const allRows = buildLedgerReflectionRows(ledger);
+            // C8 Work 1 (RA6-8/RA6-9): the decision card must show the
+            // REAL Repeat-vs-Adjust difference, and the recommendation
+            // must be decided by that same evidence rather than by
+            // check-in readiness alone. Build the adjust-intent seed
+            // ranges the "Continue with adjustments" button would
+            // actually use, diff them against what Repeat gives (the
+            // block's observed numbers), and keep both the lines and
+            // the evidence. Pro only: this IS coaching output.
+            let preview = null;
+            if (tier === 'pro') {
+              try {
+                // eslint-disable-next-line global-require
+                const { buildSeedRangesForNextBlock } = require('../lib/blockLedgerRunner');
+                // eslint-disable-next-line global-require
+                const { buildAdjustPreview } = require('../lib/nextBlockPreview');
+                const seeded = await buildSeedRangesForNextBlock(user.id, { intent: 'adjust', userProfile, tier });
+                if (req !== ledgerLoadRef.current) return;
+                preview = buildAdjustPreview({ ranges: seeded?.ranges ?? null, ledger });
+              } catch (_) { preview = null; }
+            }
+            setAdjustPreview(preview);
             setLedgerStory({
               rows: tier === 'pro' ? allRows.slice(0, 4) : [],
               // RA-2 (D96, Review A): judged on EVERY entry, not the sliced
@@ -292,9 +316,10 @@ export default function PlansScreen({ navigation }) {
                 && allRows.every((r) => r.classification === 'INSUFFICIENT_DATA'),
               recoveryLine: recoveryProposalLine(ledger),
             });
-          } catch (_e) { setLedgerStory(null); }
+          } catch (_e) { setLedgerStory(null); setAdjustPreview(null); }
         } else {
           setLedgerStory(null);
+          setAdjustPreview(null);
         }
 
         // Any non-continue advice, heads_up included, respects the 7-day
@@ -760,9 +785,19 @@ export default function PlansScreen({ navigation }) {
   // recommendation can only MARK one of them (blockAdvisor.buildNextBlockOptions).
   // Which options a user can reach comes from the real entitlement, never
   // from what the advisor decided or what check-in rows happen to exist.
-  const nextBlockOptions = blockAdvice?.nextBlock
+  // C8 Work 1 (RA6-8/RA6-9): the recommendation is re-decided from the
+  // evidence that actually seeds the adjusted block, so the mark on the
+  // options, the headline/body and the delta lines all agree. With no
+  // preview this is the base recommendation, unchanged. FQ-2 is intact:
+  // buildNextBlockOptions still receives only a MARK, never a gate.
+  const nextBlockDecided = blockAdvice?.nextBlock
+    ? applyAdjustEvidence(blockAdvice.nextBlock, adjustPreview, {
+        finished: blockAdvice.action === 'post_recovery',
+      })
+    : null;
+  const nextBlockOptions = nextBlockDecided
     ? buildNextBlockOptions({
-        recommendation: blockAdvice.nextBlock.recommendation,
+        recommendation: nextBlockDecided.recommendation,
         isPro: tier === 'pro',
       })
     : [];
@@ -940,8 +975,10 @@ export default function PlansScreen({ navigation }) {
                 {blockAdvice.action === 'in_recovery' && (
                   <Text style={[styles.nextBlockPreLabel, live.nextBlockPreLabel]}>After your recovery week</Text>
                 )}
-                <Text style={[styles.nextBlockHeadline, live.nextBlockHeadline]}>{blockAdvice.nextBlock.headline}</Text>
-                <Text style={[styles.nextBlockBody, live.nextBlockBody]}>{blockAdvice.nextBlock.body}</Text>
+                {/* C8 Work 1: recommendation and explanation come from ONE
+                    source - the same seed evidence the lines below show. */}
+                <Text style={[styles.nextBlockHeadline, live.nextBlockHeadline]}>{nextBlockDecided.headline}</Text>
+                <Text style={[styles.nextBlockBody, live.nextBlockBody]}>{nextBlockDecided.body}</Text>
 
                 {/* Stage 8 (§3.6): the block-end story, muscle by muscle,
                     each line the ledger's own delta-composed rationale.
@@ -967,12 +1004,39 @@ export default function PlansScreen({ navigation }) {
                           {row.rationale}
                         </Text>
                       ))}
+                      {/* C8 Work 1 (RA6-8/RA6-9): the REAL difference between
+                          the two options, computed from the seed ranges the
+                          adjust intent would actually use. When there is no
+                          meaningful difference the preview says so plainly
+                          rather than implying adaptation. Falls back to the
+                          previous framing line only when the preview could
+                          not be built. */}
                       {ledgerStory.rows?.length ? (
-                        <Text style={[styles.ledgerStoryLine, live.nextBlockBody]}>
-                          {ledgerStory.allUnjudged
-                            ? 'This block did not log enough recovery feedback to judge these, so this time both options start the next block from the same targets.'
-                            : 'These apply if you continue with adjustments. Running the plan again keeps the same targets as last time.'}
-                        </Text>
+                        adjustPreview ? (
+                          <>
+                            <Text style={[styles.ledgerStoryLabel, live.ledgerStoryLabel]}>
+                              {adjustPreview.meaningful
+                                ? 'What continuing with adjustments would change'
+                                : 'What continuing with adjustments would change: nothing'}
+                            </Text>
+                            {adjustPreviewLines(adjustPreview).map((line, i) => (
+                              <Text key={String(i)} style={[styles.ledgerStoryLine, live.nextBlockBody]}>
+                                {line}
+                              </Text>
+                            ))}
+                            <Text style={[styles.ledgerStoryLine, live.nextBlockBody]}>
+                              {adjustPreview.meaningful
+                                ? 'Running the plan again keeps the same targets as last time.'
+                                : 'Either option gives you the same training week.'}
+                            </Text>
+                          </>
+                        ) : (
+                          <Text style={[styles.ledgerStoryLine, live.nextBlockBody]}>
+                            {ledgerStory.allUnjudged
+                              ? 'This block did not log enough recovery feedback to judge these, so this time both options start the next block from the same targets.'
+                              : 'These apply if you continue with adjustments. Running the plan again keeps the same targets as last time.'}
+                          </Text>
+                        )
                       ) : null}
                       {ledgerStory.recoveryLine ? (
                         <Text style={[styles.ledgerStoryLine, live.nextBlockBody]}>
@@ -1069,7 +1133,7 @@ export default function PlansScreen({ navigation }) {
                       onPress={() => {
                         if (tier === 'pro') { navigation.navigate('PlanUpdate'); return; }
                         navigation.navigate(
-                          blockAdvice.nextBlock.recommendation === 'consider_rebuild'
+                          nextBlockDecided.recommendation === 'consider_rebuild'
                             ? 'ProUpgrade'
                             : 'PlanLibrary',
                         );
