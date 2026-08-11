@@ -115,3 +115,51 @@ describe('PHASE 16/26: old proposals are never resurrected by Coached mode (D97)
     expect(holdAt).toBeLessThan(ageAt);
   });
 });
+
+describe('ADDENDUM: anti-anthropomorphism and anti-manipulative retention (D97)', () => {
+  const fs2 = require('fs');
+  const path2 = require('path');
+  const walk = (dir) => fs2.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const p = path2.join(dir, e.name);
+    if (e.isDirectory()) return e.name === '__tests__' ? [] : walk(p);
+    return e.name.endsWith('.js') ? [p] : [];
+  });
+
+  test('no app-voice surface claims feelings, human understanding, or manipulative retention', () => {
+    // The app's own voice must never imply emotions, consciousness or
+    // human observation, threaten loss, or invent personalisation
+    // percentages. The ONE legitimate "proud" in the tree is the
+    // partner cheer set (lib/partners/acknowledgements.js): a HUMAN
+    // partner's words to a human, founder-authored, closed enum - a
+    // person may be proud; the engine may not.
+    const BANNED = [
+      /we're proud of you/i, /i'm proud of you/i, /i know you\b/i,
+      /i missed you/i, /we know your body/i, /your body loves/i,
+      /your body told/i, /figured you out/i, /optimal for you/i,
+      /perfect for you/i, /we understand you\b/i,
+      /don't lose what we've learned/i, /journey needs you/i,
+      /crushing it/i, /been through a lot together/i,
+      /\d+% personalised/i,
+    ];
+    const roots = ['screens', 'components', 'lib'].map((d) => path2.join(__dirname, '..', d));
+    for (const root of roots) {
+      for (const file of walk(root)) {
+        if (file.endsWith('partners/acknowledgements.js')) continue;
+        const src = fs2.readFileSync(file, 'utf8')
+          .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+        for (const re of BANNED) {
+          if (re.test(src)) {
+            throw new Error(`${file} matches banned relationship copy: ${re}`);
+          }
+        }
+      }
+    }
+  });
+
+  test('the boast words stay banned in app copy (campaign 5 law carried forward)', () => {
+    for (const f of ['lib/blockExplain.js', 'lib/coachRegister.js', 'lib/coachResponse.js', 'lib/whyThisTemplates.js']) {
+      const src = stripComments(read(f));
+      expect(src).not.toMatch(/optimal|perfected|we've figured/i);
+    }
+  });
+});
