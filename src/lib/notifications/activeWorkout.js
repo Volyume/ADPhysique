@@ -46,6 +46,10 @@ const REST_CHANNEL_ID = 'rest-timer';
 // crash no longer exists, but a shortService (~3 min) cannot host a
 // session-length notification anyway. If the session surface is ever
 // revived, it needs its own service-type decision.
+// C7 release audit: android.permission.FOREGROUND_SERVICE was REMOVED
+// from app.json while this flag is false (Play Health policy requires
+// unused permissions gone). Flipping this flag back on REQUIRES
+// re-adding that permission plus a foregroundServiceType declaration.
 const USE_FOREGROUND_SERVICE = false;
 
 // Lazy require of the native module. The require itself is cheap on
