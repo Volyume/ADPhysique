@@ -210,3 +210,28 @@ From AUDIT-PLAN-LIFECYCLE.md (7 DEFECT / 7 LATENT / 8 CLEAN):
   week-generation calls inside the transaction, a deeper change
   carried to the triage. P9-14: this batch adds the missing
   planSwitch behaviour pins via campaign6.longTerm.
+
+## D97-18 (Phases 10 + 11) — exercise/PR audit ruling directions (implementation in progress)
+
+From AUDIT-EXERCISE-PR-HISTORY.md (10 DEFECT / 7 LATENT, 16 verified
+invariants):
+
+- **P11-1 (HIGH), split ruling.** Cluster-committed rows (myo-reps /
+  rest-pause) store actual_reps as the SUM of every effort - not a rep
+  count - so they are EXCLUDED from estimated-max record candidacy
+  everywhere (eligibility truth, not maths tuning). The separate
+  high-rep Epley fidelity question (20-rep sets out-estimating heavy
+  fives on ORDINARY sets) is PR maths for real sets and goes to the
+  FOUNDER (Phase 57) - not changed here.
+- **P11-2 (HIGH), fix.** computePRsPerWeek mirrors the live detector's
+  gates (no first-exposure records - FQ-7; warm-ups excluded;
+  weight-reps exercises only). The pinned test that enshrined the
+  defect is re-anchored same-meaning-corrected with FQ-7 named.
+- **P10-1 (HIGH), fix.** The records wall derives from ALL completed
+  history: completed-workouts join and the LiftProgress unbounded
+  pattern replace the 200-row window (a records surface may not
+  truncate; the replay's first-exposure semantics need the true
+  beginning of history).
+- Remaining P10/P11 findings: to be ruled with the implementation
+  batch (this entry is the recovery anchor if the session dies
+  mid-batch; the full findings live in the audit file).
