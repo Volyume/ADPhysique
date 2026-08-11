@@ -75,6 +75,18 @@ describe('summariseSeededPlan (the plan as written, never the request)', () => {
 });
 
 describe('block-start lines (§3.6): personalised sources only', () => {
+  // FB-25/FB-28 (D96): the builder may append up to two NON-muscle lines
+  // after the per-muscle ones -- the research-remainder statement (a mixed
+  // block seeds some muscles from the ledger and leaves the rest on the
+  // research prior, and silence in a personalised-looking list read as "all
+  // of this is personalised") and, when a previous-block comparison is
+  // supplied, the count of muscles the cap dropped. The pins below that
+  // speak about the MUSCLE lines filter to them explicitly; their rules are
+  // otherwise unchanged.
+  const muscleLines = (lines) => lines.filter((l) => !l.startsWith('Plus ')
+    && !l.startsWith('The rest still start')
+    && !l.startsWith('Not enough personal history'));
+
   const summary = {
     chest: { week1: 11, peak: 17, peakWeek: 4, deload: 10, source: 'seed_ledger' },
     back: { week1: 12, peak: 18, peakWeek: 4, deload: 10, source: 'seed_learned' },
@@ -97,7 +109,7 @@ describe('block-start lines (§3.6): personalised sources only', () => {
   });
 
   test('REVIEW #8: the peak week is NAMED — never "the final week", which is the recovery week', () => {
-    for (const line of buildBlockStartLines({ summary, limit: 5 })) {
+    for (const line of muscleLines(buildBlockStartLines({ summary, limit: 5 }))) {
       expect(line).not.toContain('final week');
       expect(line).toContain('then a recovery week');
     }
@@ -120,8 +132,12 @@ describe('block-start lines (§3.6): personalised sources only', () => {
 
   test('respects the limit, largest peaks first', () => {
     const lines = buildBlockStartLines({ summary, limit: 1 });
-    expect(lines.length).toBe(1);
-    expect(lines[0]).toContain('Back'); // peak 18 outranks chest 17
+    const muscles = muscleLines(lines);
+    expect(muscles.length).toBe(1);
+    expect(muscles[0]).toContain('Back'); // peak 18 outranks chest 17
+    // FB-28 (D96): the cap's remainder count needs the previous-block
+    // comparison to be meaningful, so it is stated only when one is given.
+    expect(lines.some((l) => l.startsWith('Plus '))).toBe(false);
   });
 
   // D93 (Campaign 2, Phase 7): re-anchored from "returns [] with nothing

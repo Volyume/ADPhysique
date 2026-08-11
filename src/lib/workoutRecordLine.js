@@ -9,7 +9,9 @@
  * THE CONTRACT THAT MATTERS: this reuses detectPR, the same function
  * ActiveWorkoutScreen calls on log to fire the PR celebration, over the same
  * history shape (all-time sets for the exercise plus this session's sets,
- * warm-ups included, exactly as prHistory is assembled in handleCompleteSet).
+ * WORKING sets only since C5-P15-01/D96, exactly as prHistory is assembled
+ * in handleCompleteSet -- a warm-up is not a record attempt, and must not be
+ * one either side of a comparison).
  * The screen must never promise a record it then fails to award, so the two
  * can only ever agree by construction. If detectPR's rules change, this line
  * changes with them and no edit here is needed.

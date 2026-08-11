@@ -325,6 +325,7 @@ function TrainingNextWeekCard({
   deloadSuggested, deloadNote, onApplyDeload, hero, navigation,
   blockFinished = false,
   nextWeekIsDeload = false,
+  currentWeekIsDeload = false,
   rampLine = null,
 }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
@@ -340,8 +341,12 @@ function TrainingNextWeekCard({
   // Stage 4: an upward apply never targets a recovery week's rows, and
   // the row must not read as an addable "+N sets" when it cannot be.
   const upwardBlocked = signal > 0 && nextWeekIsDeload;
+  // FB-06 (D96): the same honesty inside the recovery week the user is
+  // already in. Copy gate only -- applyable is already false here (there is
+  // no next week in the block for canApply to resolve).
+  const upwardInRecovery = signal > 0 && currentWeekIsDeload;
   const label =
-    upwardBlocked ? 'Hold through your recovery week'
+    (upwardBlocked || upwardInRecovery) ? 'Hold through your recovery week'
     : signal > 0 ? `Add ${mag} ${setWord} to each muscle group`
     : signal < 0 ? `Pull back ${mag} ${setWord} per muscle group`
     : 'Hold your current volume';
@@ -404,11 +409,21 @@ function TrainingNextWeekCard({
             <Text style={[styles.planNoteText, live.planNoteText]}>
               {blockFinished
                 ? 'This block has finished, so volume changes have nowhere to land yet. Choose your next block on the Train tab first.'
-                : upwardBlocked
-                  ? 'Next week is your recovery week, so the coach will not add sets to it. Recovery weeks stay light on purpose.'
-                  : rampLine
-                    ? `${rampLine} This is next week's starting point; each session still fine-tunes as you train.`
-                    : "This is next week's starting point. Each session still fine-tunes as you train."}
+                // FB-06 (D96): the third honest branch, checked before the
+                // next-week one so the copy names the week the user is
+                // actually in. Inside the scheduled recovery week there is
+                // no next week in this block at all, so the note used to
+                // fall through to "This is next week's starting point"
+                // beside a row reading "Add 2 sets to each muscle group".
+                // Copy gate only: weeklyCoach's numbers are unchanged and
+                // the Apply button was already absent (canApply is false).
+                : currentWeekIsDeload
+                  ? 'This is your recovery week, so nothing is added to it. Volume changes start again with your next block.'
+                  : upwardBlocked
+                    ? 'Next week is your recovery week, so the coach will not add sets to it. Recovery weeks stay light on purpose.'
+                    : rampLine
+                      ? `${rampLine} This is next week's starting point; each session still fine-tunes as you train.`
+                      : "This is next week's starting point. Each session still fine-tunes as you train."}
             </Text>
           </View>
           {/* CO-2: this card said what changed ("N updated") but never linked
@@ -1023,6 +1038,13 @@ export default function CoachOutputScreen({ navigation, route }) {
   // recovery week's rows — a deload is light on purpose, and the peak-week
   // push would otherwise write extra sets straight into it.
   const [nextWeekIsDeload, setNextWeekIsDeload] = useState(false);
+  // FB-06 (D96): whether the week the user is IN is the scheduled recovery
+  // week. In week 6 of 6 there is no next row, so nextWeekIsDeload is false
+  // and blockAwaitingDecision is false too (the block is in 'recovery', not
+  // 'completed_awaiting_decision'), which left the card's note falling
+  // through to the generic "This is next week's starting point" beside a
+  // row reading "Add 2 sets to each muscle group". There is no next week.
+  const [currentWeekIsDeload, setCurrentWeekIsDeload] = useState(false);
   // Stage 8: the live block position for the training card's ramp line.
   const [blockWeekForRamp, setBlockWeekForRamp] = useState(null);
   // Five-part coach response inputs (Theme A): weigh-ins inside the
@@ -1963,10 +1985,13 @@ export default function CoachOutputScreen({ navigation, route }) {
         setBlockAwaitingDecision(!!cur?.awaitingDecision);
         // getNextMesocycleWeek returns the raw row (snake_case is_deload).
         setNextWeekIsDeload(next?.is_deload === 1);
+        // FB-06: the signal was already loaded here, just never read.
+        setCurrentWeekIsDeload(!!cur?.isDeload && !cur?.awaitingDecision);
       } catch (_e) {
         setNextTrainingWeekId(null);
         setBlockAwaitingDecision(false);
         setNextWeekIsDeload(false);
+        setCurrentWeekIsDeload(false);
       }
 
       // Load the last 5 outputs; skip the first (current week) for the history shelf
@@ -2295,6 +2320,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       canApply={!!nextTrainingWeekId}
       blockFinished={blockAwaitingDecision}
       nextWeekIsDeload={nextWeekIsDeload}
+      currentWeekIsDeload={currentWeekIsDeload}
       // Stage 8 (§3.6): ramp position; the coach clause appears only for
       // an APPLIED delta that actually changed rows (review #6), and the
       // climb claim only from the written weekly totals (review #7).

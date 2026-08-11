@@ -11,6 +11,23 @@
 // Mesocycle schedule constants
 // ---------------------------------------------------------------------------
 
+/**
+ * C5-P11-01 (D96): the length of the block the app ACTUALLY creates.
+ *
+ * `activatePlanWithBlock` (database.js) writes one shape for everyone:
+ * BLOCK_PLANNED_WEEKS weeks, the last of them the recovery week. The
+ * planEngine's "Why this plan" narrative used to derive its own week
+ * count from the user's experience level and told beginners and
+ * intermediates "The plan spans 5 weeks" while every other surface said
+ * "Week 1 of 6" over six dots. Experience never reaches the block
+ * writer, so there was no 5-week block to describe.
+ *
+ * Both the writer and every sentence about it now read these two
+ * constants, so the explanation cannot drift from the block again.
+ */
+export const BLOCK_PLANNED_WEEKS = 6;
+export const BLOCK_DELOAD_WEEK = BLOCK_PLANNED_WEEKS; // the last week is the recovery week
+
 const MESO_SCHEDULE = {
   // beginner / intermediate: 4 accumulation + 1 recovery = 5 weeks
   standard: [

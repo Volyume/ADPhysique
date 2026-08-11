@@ -75,6 +75,7 @@ import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload } from '../lib/algorithms';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { buildReadinessSummary } from '../lib/readinessSummary';
+import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -1154,7 +1155,41 @@ export default function HomeScreen({ navigation, route }) {
           const { summariseSeededPlan, buildBlockStartLines } = require('../lib/blockExplain');
           const blockRows = await getPlannedMuscleVolumeForBlock(week.mesocycleId);
           const summary = summariseSeededPlan(blockRows, week.plannedWeeks);
-          setBlockSeedLines(buildBlockStartLines({ summary }));
+          // FB-27/FB-28 (D96): what the PREVIOUS block actually ran, so the
+          // lines can be ordered by what moved (sorting by peak buried the
+          // one muscle whose peak came down, because a reduction sorts last
+          // by construction), retention reads as a decision rather than an
+          // absence, and the muscles the three-line cap drops are counted.
+          // Only fetched when this block carries a personalised seed, so a
+          // first block (the first-use case) pays nothing for it, and only
+          // best-effort: without it the lines render exactly as before.
+          let previous = null;
+          const personalisedSeed = Object.values(summary)
+            .some((v) => typeof v?.source === 'string' && v.source.startsWith('seed_')
+              && v.source !== 'seed_profile' && v.source !== 'seed_research');
+          if (personalisedSeed) {
+            try {
+              // eslint-disable-next-line global-require
+              const { getAllMesocyclesForUser } = require('../lib/database');
+              const all = await getAllMesocyclesForUser(user.id);
+              const prior = all
+                .filter((m) => m.id !== week.mesocycleId && m.blockLedger)
+                .sort((a, b) => String(b.startDate ?? '').localeCompare(String(a.startDate ?? '')))[0];
+              const record = prior?.blockLedger ? JSON.parse(prior.blockLedger) : null;
+              const entries = Array.isArray(record?.entries) ? record.entries : [];
+              if (entries.length > 0) {
+                previous = {};
+                for (const e of entries) {
+                  if (!e?.muscle || !e.observed) continue;
+                  previous[e.muscle] = {
+                    startSets: e.observed.startSets ?? null,
+                    peakSets: e.observed.plannedPeak ?? null,
+                  };
+                }
+              }
+            } catch (_e) { previous = null; }
+          }
+          setBlockSeedLines(buildBlockStartLines({ summary, previous }));
         } catch (_e) { setBlockSeedLines([]); }
       }
 
@@ -1478,7 +1513,17 @@ export default function HomeScreen({ navigation, route }) {
   // two voices never say the same thing (a "don't repeat yourself" rule,
   // kept as-is; unrelated to the stack-size cap below).
   const trialBannerEligible = !!trialBanner && !trialBannerDismissed && !showCoachingNudge;
-  const deloadBannerEligible = !!deloadSuggestion && !deloadDismissed;
+  // FB-02 (D96): display gate only, no change to shouldDeload's maths or
+  // thresholds. Inside a SCHEDULED recovery week the user is following the
+  // app's own prescription of roughly half the reps, which drops the
+  // rolling four-week rep average enough to score the banner -- so Home
+  // reported the app's own reduction back as a performance problem, right
+  // above a chip already saying "Recovery week, pull effort back", and
+  // taps through to advice to reduce sets by a third during the week that
+  // IS the reduction. A finished block awaiting its decision holds at
+  // recovery-week volume for the same reason.
+  const inScheduledRecovery = !!currentMesoWeek?.isDeload || !!currentMesoWeek?.awaitingDecision;
+  const deloadBannerEligible = !!deloadSuggestion && !deloadDismissed && !inScheduledRecovery;
   const phaseBannerEligible = !!phaseMismatch && !phaseBannerDismissed;
   // B3 lift plateau banner: below deload and phase, recovery and targets
   // outrank a single lift's stall, dismissible per exercise + week.
@@ -1616,13 +1661,17 @@ export default function HomeScreen({ navigation, route }) {
           <AttentionCard
             variant="trial"
             trialBanner={trialBanner}
-            onTrialPress={() => {
-              if (trialBanner.variant === 'S3') {
-                scrollRef.current?.scrollTo({ y: 0, animated: true });
-              } else {
-                navigateCrossTab(navigation, 'ProfileTab', 'WeeklyCheckIn');
-              }
-            }}
+            // C5-P12-01 (D96): the S3 variant is exactly the zero-history
+            // state (selectTrialVariant returns it whenever completed
+            // sessions <= 0), and this card is the FIRST element after the
+            // header, so scrollTo({ y: 0 }) took a day-0 user nowhere -- or
+            // further away from the hero it should lead to. It reads
+            // "One session starts your first coaching review", so it now
+            // leads to that session. No trial copy and no billing logic is
+            // touched: this is the press handler only.
+            onTrialPress={trialBanner.variant === 'S3'
+              ? (activePlan && nextWorkout ? () => handleStartNextWorkout(false) : null)
+              : () => navigateCrossTab(navigation, 'ProfileTab', 'WeeklyCheckIn')}
             onTrialDismiss={dismissTrialBanner}
             onMethodology={() => navigateCrossTab(navigation, 'ProfileTab', 'Methodology', { source: 'trial_banner' })}
           />
@@ -1935,7 +1984,9 @@ export default function HomeScreen({ navigation, route }) {
               <EmptyState
                 icon="barbell-outline"
                 title="No active plan yet"
-                text="If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile."
+                /* C5-P10-01 (D96): the Pro "Start with a plan" action
+                   creates a training block too, so it says so first. */
+                text={`If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile. ${BLOCK_START_SENTENCE}`}
                 actionLabel="Start with a plan"
                 onAction={async () => {
                   const result = await generateAndSavePlan(user.id, userProfile);

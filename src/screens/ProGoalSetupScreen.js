@@ -34,6 +34,7 @@ import {
 import { computeEWMA } from '../lib/weeklyCoach';
 import { formatBodyWeightShort } from '../lib/units';
 import { generateAndSavePlan } from '../lib/planAutoGen';
+import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 
 const APPROACH_SHORT = {
   standard:  'Enough for consistent training. Easy to sustain day to day.',
@@ -208,6 +209,16 @@ export default function ProGoalSetupScreen({ navigation }) {
       toast.show('Show date needs the format YYYY-MM-DD, for example 2026-09-19', { variant: 'warning' });
       return;
     }
+
+    // C5-P30-04 (D96): saving here rebuilds the plan and starts a NEW
+    // six-week block (generateAndSavePlan -> activatePlanWithBlock), which
+    // deactivates the block in progress. The only explanation was
+    // GoalChangeSummary, navigated to AFTER the write. This is the same
+    // confirm every other plan-replacing path already runs, in its usual
+    // position: before the write, with the rebuild wording, and silent in
+    // week 1 or once the block is past its training weeks (nothing to lose).
+    const proceed = await confirmPlanSwitchMidBlock(user?.id, { mode: 'rebuild' });
+    if (!proceed) return;
 
     const goalPhase = phaseToCoachingKey(selectedPhase);
 

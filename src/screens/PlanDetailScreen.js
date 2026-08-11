@@ -16,7 +16,9 @@ import {
   updateRoutinePosition,
 } from '../lib/database';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
-import { planHeadingName } from '../lib/planDisplay';
+import { planHeadingName, planEquipmentLabel } from '../lib/planDisplay';
+import { getPlanDays } from '../lib/onboarding/freeStarter';
+import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE } from '../lib/blockExplain';
 import Button from '../components/Button';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
@@ -108,9 +110,13 @@ export default function PlanDetailScreen({ navigation, route }) {
     // C4: one decision, one dialog. Both choices copy the plan; only what
     // happens after the copy differs, so each button owns its own copy call
     // and error handling (matches the copy-failure toast either way).
+    // C5-P10-01 / C5-P10-08 (D96): the same tier-blind pair of sentences
+    // every activation decision point now states -- activation creates a
+    // training block, and this is what else changes.
     appAlert(
       'Add this plan?',
-      `Copy "${plan?.name}" into your plans. Make it active now, or just add it for later.`,
+      `Copy "${plan?.name}" into your plans. Make it active now, or just add it for later.`
+      + `\n\n${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -137,6 +143,10 @@ export default function PlanDetailScreen({ navigation, route }) {
             const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
             if (!ok) { navigation.goBack(); return; }
             await activatePlanWithBlock(user.id, copy.id, plan?.name ?? 'Training Plan');
+            // C5-P10-05 (D96): every activation entry point confirms
+            // identically. This one used to be a silent goBack(), the same
+            // transition "Save for later" makes.
+            toast.show(`"${plan?.name}" is now your active plan`, { variant: 'success' });
             navigation.goBack();
           },
         },
@@ -275,6 +285,8 @@ export default function PlanDetailScreen({ navigation, route }) {
     (sum, w) => sum + (setCounts[w.id] || (exerciseCounts[w.id] || 0) * 3),
     0,
   );
+  // C5-P10-02 (D96): days a week, read from the plan's existing days:N tag.
+  const planDays = getPlanDays(plan);
 
   if (!plan) {
     // Mirror the loaded layout (header block, primary button, workout rows)
@@ -327,12 +339,29 @@ export default function PlanDetailScreen({ navigation, route }) {
                 <Text style={[styles.featuredBadgeText, live.featuredBadgeText]}>Featured</Text>
               </View>
             )}
+            {/* C5-P10-04 (D96): equipment was never rendered on this screen
+                either, so "what do I need to run this?" could not be
+                answered before adding the plan. Same derivation as the
+                library card, from the tags the plans already carry. */}
+            <View style={[styles.libraryBadge, live.libraryBadge]}>
+              <Text style={[styles.libraryBadgeText, live.libraryBadgeText]}>{planEquipmentLabel(plan)}</Text>
+            </View>
           </View>
           <Text style={[styles.planName, live.planName]}>{planHeadingName(plan.name)}</Text>
           {plan.description ? (
             <Text style={[styles.planDesc, live.planDesc]}>{plan.description}</Text>
           ) : null}
           <View style={styles.planStats}>
+            {/* C5-P10-02 (D96): days per week, from the plan's own days:N
+                tag via the existing getPlanDays() helper. The library used
+                to state a workout COUNT and never a frequency, and the
+                heading strips the "3×/Week" the seed name carries. */}
+            {planDays != null && (
+              <View style={styles.planStat}>
+                <Text style={[styles.planStatValue, live.planStatValue]}>{planDays}</Text>
+                <Text style={[styles.planStatLabel, live.planStatLabel]}>Days a week</Text>
+              </View>
+            )}
             <View style={styles.planStat}>
               <Text style={[styles.planStatValue, live.planStatValue]}>{workouts.length}</Text>
               <Text style={[styles.planStatLabel, live.planStatLabel]}>Workouts</Text>

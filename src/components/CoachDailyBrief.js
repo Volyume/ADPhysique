@@ -59,7 +59,17 @@ export default function CoachDailyBrief({ ledger = null }) {
   return (
     <View style={[styles.wrap, live.wrap]}>
       <View style={styles.runway}>
-        <Text style={[styles.runwayTitle, live.runwayTitle]}>Since your check-in</Text>
+        {/* C5-P12-04 (D96): the fixed title "Since your check-in"
+            presupposed a check-in that may never have happened -- on day 0
+            only the unrelated trial-banner gate kept it off screen, so any
+            Pro user outside the trial stage (a subscriber reinstalling
+            before local history restores) could read it with zero
+            check-ins behind them. The ledger already authors its own
+            honest title for the state it is in, so it is reused rather
+            than a new string invented; the rows were always honest. */}
+        <Text style={[styles.runwayTitle, live.runwayTitle]}>
+          {ledger?.title ?? 'What your coach is reading'}
+        </Text>
         {countdown ? <Text style={[styles.countdown, live.countdown]}>{countdown}</Text> : null}
         {runwayRows.map((row) => (
           <View key={row.key} style={styles.row}>

@@ -26,11 +26,44 @@
  * (COACHING_VOICE_SYNTHESIS_LOCKED).
  */
 import { muscleDisplayName } from './algorithms';
+import { BLOCK_PLANNED_WEEKS } from './mesocycle';
 
 const num = (v, fallback) => {
   const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
   return Number.isFinite(n) ? n : fallback;
 };
+
+const NUMBER_WORDS = Object.freeze({
+  3: 'three', 4: 'four', 5: 'five', 6: 'six', 7: 'seven', 8: 'eight', 9: 'nine', 10: 'ten',
+});
+const numberWord = (n) => NUMBER_WORDS[n] ?? String(n);
+
+/**
+ * C5-P10-01 / C5-P11-02 (D96): the one sentence every activation decision
+ * point states, for free and Pro alike.
+ *
+ * Activating ANY plan creates a training block with a fixed effort ladder
+ * and a scheduled recovery week (activatePlanWithBlock), and no first-use
+ * path said so: the two strings that did were gated on being Pro WITH an
+ * existing plan, or on already being past week 1. A first-time user met
+ * "Week 1 of 6" days later for something they never knowingly started.
+ *
+ * Derived from BLOCK_PLANNED_WEEKS so it can never describe a block length
+ * the writer does not create.
+ */
+export const BLOCK_START_SENTENCE =
+  `This starts a ${numberWord(BLOCK_PLANNED_WEEKS)}-week training block: `
+  + `${numberWord(BLOCK_PLANNED_WEEKS - 1)} weeks that build, then a lighter recovery week.`;
+
+/**
+ * C5-P10-08 (D96): what activation actually changes, in one sentence.
+ * Pairs with BLOCK_START_SENTENCE at the same decision points: activation
+ * was never described anywhere, only named by its own verb ("Set active",
+ * "Make it active now"), so nothing told the user which session becomes
+ * next or that Today then leads with this plan.
+ */
+export const ACTIVATION_MEANING_SENTENCE =
+  'Today then leads with this plan, and you can still change the workouts afterwards.';
 
 const SOURCE_CLAUSE = Object.freeze({
   seed_ledger: 'set by how your last block went',
@@ -90,6 +123,41 @@ export function summariseSeededPlan(plannedRows = [], deloadWeekIndex = null) {
   return summary;
 }
 
+// FB-25 (D96): a mixed block seeds SOME muscles from the ledger and leaves
+// the rest on the research/profile prior. The personalised lines used to be
+// the only thing on the surface, so three confident "set by how your last
+// block went" lines read as "all of this is personalised". This names the
+// remainder without mislabelling it.
+const RESEARCH_REMAINDER_LINE =
+  'The rest still start from research-based guidance, until they have a block behind them.';
+
+/**
+ * FB-27/FB-28 (D96): how this muscle's numbers moved against the block
+ * that just finished. Returns null when there is nothing to compare
+ * against, so the line falls back to its previous wording unchanged.
+ */
+function changeAgainstPrevious(v, prevEntry) {
+  if (!prevEntry) return null;
+  const prevStart = num(prevEntry.startSets, null);
+  const prevPeak = num(prevEntry.peakSets, null);
+  if (prevStart == null && prevPeak == null) return null;
+  const ds = prevStart != null && v.week1 != null ? v.week1 - prevStart : 0;
+  const dp = prevPeak != null && v.peak != null ? v.peak - prevPeak : 0;
+  // FB-27: keeping a dose is a judgement the coach made from the block, not
+  // an absence of one, so it is stated rather than left silent.
+  if (ds === 0 && dp === 0) return { magnitude: 0, suffix: ', kept where it was' };
+  if (ds !== 0) {
+    return {
+      magnitude: Math.abs(ds) + Math.abs(dp),
+      suffix: `, ${ds > 0 ? 'up' : 'down'} from ${prevStart} in week 1`,
+    };
+  }
+  return {
+    magnitude: Math.abs(dp),
+    suffix: `, peak ${dp > 0 ? 'up' : 'down'} from ${prevPeak}`,
+  };
+}
+
 /**
  * Up to `limit` block-start lines, personalised sources only, largest
  * peaks first. [] when nothing was personalised — no line is better
@@ -97,8 +165,18 @@ export function summariseSeededPlan(plannedRows = [], deloadWeekIndex = null) {
  * week" pointed at the recovery week the sentence then contradicted)
  * and a flat ramp is never called a climb. The muscle name takes a
  * colon, not a verb (review #18: most display names are plural).
+ *
+ * `previous` (FB-27/FB-28, D96) is an optional
+ * { [muscle]: { startSets, peakSets } } map of what the finished block
+ * actually ran. When supplied, the lines are ordered by how much each
+ * muscle MOVED rather than by which has the biggest numbers (sorting by
+ * peak buried the one muscle whose peak came down, because a reduction
+ * sorts last by construction), retention is stated as a decision, and
+ * the muscles the cap drops are counted rather than silently lost.
+ * Without it, ordering and wording are exactly as they were.
  */
-export function buildBlockStartLines({ summary = {}, limit = 3 } = {}) {
+export function buildBlockStartLines({ summary = {}, limit = 3, previous = null } = {}) {
+  const prev = previous && typeof previous === 'object' ? previous : null;
   const personalised = Object.entries(summary)
     .filter(([, v]) => v && SOURCE_CLAUSE[v.source] && v.week1 != null && v.peak != null);
   // D93 (Campaign 2, Phase 7): a fully research/profile-seeded block used
@@ -117,16 +195,37 @@ export function buildBlockStartLines({ summary = {}, limit = 3 } = {}) {
       && entries.every((v) => RESEARCH_SOURCES.has(v.source));
     return allResearch ? [RESEARCH_START_LINE] : [];
   }
-  const rows = personalised
-    .sort((a, b) => (b[1].peak ?? 0) - (a[1].peak ?? 0))
-    .slice(0, Math.max(0, limit));
-  return rows.map(([muscle, v]) => {
-    const clause = SOURCE_CLAUSE[v.source];
-    if (v.peak > v.week1 && v.peakWeek != null) {
-      return `${muscleDisplayName(muscle)}: ${v.week1} sets in week 1, building to ${v.peak} by week ${v.peakWeek}, then a recovery week (${clause}).`;
-    }
-    return `${muscleDisplayName(muscle)}: ${v.week1} sets a week, held steady, then a recovery week (${clause}).`;
+  const changes = new Map(
+    personalised.map(([muscle, v]) => [muscle, changeAgainstPrevious(v, prev?.[muscle])]),
+  );
+  const ordered = personalised.slice().sort((a, b) => {
+    const ma = changes.get(a[0])?.magnitude ?? null;
+    const mb = changes.get(b[0])?.magnitude ?? null;
+    // FB-28: whatever moved most leads; unchanged entries fall to the back.
+    // With no comparison available the original peak ordering stands.
+    if (ma != null && mb != null && ma !== mb) return mb - ma;
+    return (b[1].peak ?? 0) - (a[1].peak ?? 0);
   });
+  const rows = ordered.slice(0, Math.max(0, limit));
+  const lines = rows.map(([muscle, v]) => {
+    const clause = SOURCE_CLAUSE[v.source];
+    const move = changes.get(muscle)?.suffix ?? '';
+    if (v.peak > v.week1 && v.peakWeek != null) {
+      return `${muscleDisplayName(muscle)}: ${v.week1} sets in week 1, building to ${v.peak} by week ${v.peakWeek}, then a recovery week (${clause}${move}).`;
+    }
+    return `${muscleDisplayName(muscle)}: ${v.week1} sets a week, held steady, then a recovery week (${clause}${move}).`;
+  });
+  // FB-28: the cap is real, so say how much it hid. Only stated when the
+  // comparison ran, since that is what makes the ordering meaningful.
+  const dropped = ordered.length - rows.length;
+  if (prev && dropped > 0) {
+    lines.push(`Plus ${dropped} more muscle group${dropped === 1 ? '' : 's'}, set the same way.`);
+  }
+  // FB-25: name the research-seeded remainder beside the personalised lines.
+  const anyResearch = Object.values(summary)
+    .some((v) => v && RESEARCH_SOURCES.has(v.source) && v.week1 != null);
+  if (anyResearch) lines.push(RESEARCH_REMAINDER_LINE);
+  return lines;
 }
 
 const CLASS_ORDER = Object.freeze({
@@ -152,6 +251,69 @@ export function buildLedgerReflectionRows(ledger) {
       rationale: e.rationale,
     }))
     .sort((a, b) => (CLASS_ORDER[a.classification] ?? 9) - (CLASS_ORDER[b.classification] ?? 9));
+}
+
+/**
+ * FB-24 (D96): the receipt for a "Continue with adjustments" transition.
+ *
+ * Confirming the next block used to end in silence: the decision card
+ * vanished, the Train tab showed "Week 1 of 6", and the only explanation
+ * lived behind a Home chip and carried no comparison at all. This composes
+ * that comparison from data already in hand at the moment of the write —
+ * the resolved seed ranges plus the finished block's stored ledger — so no
+ * new computation and no new query is involved.
+ *
+ * `changed` rows carry the ledger's own delta-composed rationale verbatim
+ * (the Stage 2 remediation makes it agree with the numbers by
+ * construction). `held` counts the muscles the coach deliberately kept
+ * where they were, which on a first transition is nearly all of them.
+ *
+ * @param {object} args
+ * @param {object|null} args.ranges  resolveSeedRange output, per muscle
+ * @param {object|null} args.ledger  the finished block's stored ledger
+ * @param {number} args.limit        max rows returned
+ */
+export function buildSeedReceipt({ ranges = null, ledger = null, limit = 4 } = {}) {
+  const entries = Array.isArray(ledger?.entries) ? ledger.entries : [];
+  const byMuscle = new Map(entries.filter((e) => e?.muscle).map((e) => [e.muscle, e]));
+  const changed = [];
+  let held = 0;
+  for (const [muscle, r] of Object.entries(ranges && typeof ranges === 'object' ? ranges : {})) {
+    const observed = byMuscle.get(muscle)?.observed;
+    const prevStart = num(observed?.startSets, null);
+    const prevPeak = num(observed?.plannedPeak, null);
+    const start = num(r?.startSets, null);
+    const peak = num(r?.peakSets, null);
+    // No previous numbers means this muscle had no judged block behind it,
+    // so there is no change to claim either way.
+    if (prevStart == null || start == null) continue;
+    const ds = start - prevStart;
+    const dp = prevPeak != null && peak != null ? peak - prevPeak : 0;
+    if (ds === 0 && dp === 0) { held += 1; continue; }
+    const bits = [];
+    if (ds !== 0) bits.push(`week 1 ${ds > 0 ? 'up' : 'down'} from ${prevStart} to ${start} sets`);
+    if (dp !== 0) bits.push(`peak ${dp > 0 ? 'up' : 'down'} from ${prevPeak} to ${peak} sets`);
+    changed.push({
+      muscle,
+      label: muscleDisplayName(muscle),
+      change: bits.join(', '),
+      rationale: typeof byMuscle.get(muscle)?.rationale === 'string'
+        ? byMuscle.get(muscle).rationale
+        : null,
+      magnitude: Math.abs(ds) + Math.abs(dp),
+    });
+  }
+  changed.sort((a, b) => b.magnitude - a.magnitude);
+  const capped = changed.slice(0, Math.max(0, limit));
+  return {
+    changed: capped,
+    moreChanged: Math.max(0, changed.length - capped.length),
+    held,
+    // FB-27: retention is a decision, so it gets said out loud.
+    heldLine: held > 0
+      ? `${held} other muscle group${held === 1 ? '' : 's'} stayed where ${held === 1 ? 'it was' : 'they were'}. Keeping a dose that worked is a decision too.`
+      : null,
+  };
 }
 
 /**

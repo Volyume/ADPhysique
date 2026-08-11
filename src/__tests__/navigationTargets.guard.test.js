@@ -68,13 +68,24 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
     expect(meso).not.toMatch(/navigation\.navigate\(\s*['"]BlockReflection['"]/);
 
     // Rows 2-4: BlockReflection (ProfileStack) -> RecapStory (ProgressStack)
-    // and MesocycleBuilder (PlansStack), twice.
+    // and the Train tab (PlansStack), twice.
+    //
+    // Re-anchored under FB-18 (D96): both of BlockReflection's outbound
+    // block CTAs used to target MesocycleBuilder, which is READ-ONLY -- its
+    // only button is "View block summary" and there is no create action
+    // anywhere in that file -- so a button named "Start a new block" landed
+    // on a screen from which no block can be started. They now target the
+    // Train tab's block decision card, the same destination the Home block
+    // sheet's "Choose your next block" already uses. The pinned RULE -- both
+    // hops use the cross-tab form, never a bare in-stack navigate that
+    // resolves against ProfileStack and dies -- is unchanged.
     const reflection = read('src/screens/BlockReflectionScreen.js');
     expect(reflection).toMatch(/navigateCrossTab\(navigation,\s*'ProgressTab',\s*'RecapStory'/);
     expect(reflection).not.toMatch(/navigation\.navigate\(\s*['"]RecapStory['"]/);
-    expect(reflection.match(/navigateCrossTab\(navigation,\s*'PlansTab',\s*'MesocycleBuilder'\)/g) ?? [])
+    expect(reflection.match(/navigateCrossTab\(navigation,\s*'PlansTab',\s*'Plans'\)/g) ?? [])
       .toHaveLength(2);
     expect(reflection).not.toMatch(/navigation\.navigate\(\s*['"]MesocycleBuilder['"]/);
+    expect(reflection).not.toMatch(/navigateCrossTab\(navigation,\s*'PlansTab',\s*'MesocycleBuilder'\)/);
 
     // Row 6: ProUpgrade is registered in all five tab stacks, SubscriptionPolicy
     // in ProfileStack only, so the policy link died in four of five entries.

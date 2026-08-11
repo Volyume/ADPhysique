@@ -21,8 +21,17 @@ import {
 
 const BAD_PR = { exerciseName: 'Barbell bench press', value: 'corrupt', reps: 5 };
 
+// FB-16 (D96) re-anchor: the BLOCK deck's list is no longer headed
+// "Personal records". Its rows are the best estimated max per exercise
+// WITHIN the block, never compared against a prior block or any record
+// store, so on a first block every row is a first-ever performance -- the
+// exact set the logger deliberately refuses to call a record. The month and
+// week decks already used the honest subline; the block deck now uses the
+// honest headline too. This helper matches either heading, so the pinned
+// NaN rule still covers all four builders.
+const PB_HEADLINES = new Set(['Personal records', 'Your best lifts']);
 function personalBestsRows(cards) {
-  const card = cards.find(c => c.headline === 'Personal records');
+  const card = cards.find(c => PB_HEADLINES.has(c.headline));
   return card ? card.rows : null;
 }
 

@@ -211,6 +211,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // The summary is reached with routineId but not the name, so fetch it.
   const [routineName, setRoutineName] = useState('');
   const [weeklyVolume, setWeeklyVolume] = useState({});
+  // C5-P16-01 (D96): how far through the session's own week this is, so the
+  // volume card can state a week in progress instead of delivering a
+  // finished-week verdict after session one.
+  const [weekProgress, setWeekProgress] = useState({ logged: 0, planned: null, inProgress: false });
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [completedWorkoutCount, setCompletedWorkoutCount] = useState(null);
@@ -263,6 +267,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // routine / no prior history to compare to (a one-off session is also
   // an "n/a" case).
   const [comparison, setComparison] = useState(null);
+  // C5-P16-02 (D96): the next planned session in the plan's rotation.
+  const [nextSessionName, setNextSessionName] = useState('');
 
   const feedbackDebounceRef = useRef(null);
 
@@ -273,8 +279,19 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           const activePlan = await getActivePlan(user.id);
           if (activePlan) {
             const planRoutines = await getRoutinesForPlan(activePlan.id);
-            if (planRoutines.some(r => r.id === routineId)) {
+            const idx = planRoutines.findIndex(r => r.id === routineId);
+            if (idx >= 0) {
               await advancePlanNextWorkout(activePlan.id, planRoutines.length);
+              // C5-P16-02 (D96): what happens next. The first summary
+              // answered every question except that one -- the only
+              // forward-looking copy on a first session was the "Notes for
+              // next time" placeholder, and the "What's next" sentence
+              // lives inside the block-completion card, which cannot
+              // render on session one. The plan rotation has just been
+              // advanced here, so the next session's name is already in
+              // hand; no new query, no new card.
+              const next = planRoutines[(idx + 1) % planRoutines.length];
+              if (next?.name) setNextSessionName(next.name);
             }
           }
         } catch (_e) {}
@@ -466,12 +483,25 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         const wk = await getCurrentMesocycleWeek(user.id);
         if (cancelled || !wk) return;
         setMesoWeek(wk);
-        // Stage 1 (2026-08-09): celebrate the completion moment (the final
-        // week's sessions) once. A finished block awaiting the next-block
-        // decision must not re-fire the gold card after every session in
-        // limbo; that state is carried by the BlockShapeCard strip below.
-        if (wk.mesocycleId && wk.plannedWeeks > 0 && wk.weekIndex >= wk.plannedWeeks && !wk.awaitingDecision) {
-          setBlockStory({ mesocycleId: wk.mesocycleId, name: wk.mesoName });
+        // FB-03 (D96): "Block finished. 6 weeks completed, including your
+        // recovery week." used to fire on `weekIndex >= plannedWeeks &&
+        // !awaitingDecision`, which is precisely the recovery week ITSELF,
+        // not the state after it -- so a user training four days in their
+        // recovery week saw it four times, the first on day 35 with five
+        // days of the block still to run. The state that genuinely means
+        // finished is awaitingDecision, and the in-file comment already
+        // said the intent was to celebrate it ONCE, so a seen key makes
+        // that true. The block story route and share artefact are
+        // untouched.
+        if (wk.mesocycleId && wk.awaitingDecision) {
+          const seenKey = `@volyume_block_finished_seen_${wk.mesocycleId}`;
+          const seen = await AsyncStorage.getItem(seenKey).catch(() => null);
+          if (cancelled) return;
+          if (!seen) {
+            await AsyncStorage.setItem(seenKey, 'true').catch(() => {});
+            if (cancelled) return;
+            setBlockStory({ mesocycleId: wk.mesocycleId, name: wk.mesoName });
+          }
         }
       } catch (_e) {}
     })();
@@ -577,6 +607,38 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
     const volume = calculateWeeklyVolume(recentSets, exerciseMap);
     setWeeklyVolume(volume);
+
+    // C5-P16-01 (D96): is this week finished, or still in progress?
+    //
+    // The window above is correct and deliberate (the session's own week to
+    // date), but one session's sets were then judged against a FULL week's
+    // landmarks, so after session 1 of a 4-session week every muscle read
+    // "Below target · below the minimum for growth" and the explanation
+    // told the user to add sets next week -- sets their plan already covers
+    // on Wednesday and Friday. The card contradicted the app's own
+    // prescription at the most trust-sensitive moment in the product.
+    // getVolumeStatus, the landmarks and the colours are untouched; only
+    // the advice waits until the week can actually be judged.
+    const sessionsThisWeek = allWorkouts.filter(w => w.isCompleted
+      && workoutDayMs({ startedAt: w.startedAt, endedAt: w.endedAt }) >= sessionWeekStart
+      && workoutDayMs({ startedAt: w.startedAt, endedAt: w.endedAt }) < sessionWeekEnd).length;
+    let plannedSessions = null;
+    try {
+      const plan = await getActivePlan(user.id);
+      if (plan?.id) {
+        const planRoutines = await getRoutinesForPlan(plan.id);
+        if (planRoutines?.length) plannedSessions = planRoutines.length;
+      }
+    } catch (_e) { /* best-effort: without it the week reads as complete */ }
+    const weekOver = Date.now() >= sessionWeekEnd;
+    setWeekProgress({
+      logged: sessionsThisWeek,
+      planned: plannedSessions,
+      // In progress only while the week is still running AND the plan says
+      // more sessions are due. A read failure or an unplanned session
+      // resolves to "complete", which keeps today's behaviour.
+      inProgress: !weekOver && plannedSessions != null && sessionsThisWeek < plannedSessions,
+    });
 
     const fourWeeksAgo = Date.now() - 28 * 24 * 60 * 60 * 1000;
     const completed = allWorkouts.filter(w => w.isCompleted && w.startedAt >= fourWeeksAgo);
@@ -1269,6 +1331,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 finished={!!mesoWeek.awaitingDecision}
                 compact
               />
+              {/* C5-P16-02 (D96): one plain sentence naming the next
+                  planned session, on the card that already knows where
+                  this session sits in the block. */}
+              {nextSessionName ? (
+                <Text style={[styles.blockArcName, live.blockArcName]}>
+                  Next up: {nextSessionName}. It is ready on Today whenever you are.
+                </Text>
+              ) : null}
             </Card>
           </RevealSection>
         )}
@@ -1398,6 +1468,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   : 'These ranges are research-based starting points. With enough logged sessions they adjust to your response, and you can set them by hand with Edit volume targets on the Volume screen.')
               } />
             </View>
+            {/* C5-P16-01 (D96): the week-in-progress statement, so the
+                counts below read as a week under way rather than a verdict
+                on a finished one. */}
+            {!readOnly && weekProgress.inProgress && weekProgress.planned != null ? (
+              <Text style={[styles.volumeInsightText, live.volumeInsightText]}>
+                Week in progress: {weekProgress.logged} of {weekProgress.planned} sessions logged.
+              </Text>
+            ) : null}
             {/* D3: one compressed card, hairline dividers between muscles,
                 instead of a stack of same-weight bordered cards. */}
             <Card padding="none" style={styles.volumeCard}>
@@ -1411,8 +1489,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               // status -> tone mapping as the legacy singleton (kept for
               // VolumeHeatmapScreen.js/AnalyticsScreen.js, unmigrated).
               const color = buildVolumeStatusColor(t.colors)(status);
-              const insight = getVolumeInsight(muscle, data.workingSets, status);
-              const why = getVolumeWhy(muscle, data.workingSets, status);
+              // C5-P16-01 (D96): mid-week, the verdict copy and its
+              // "add a couple of sets next week" explanation are withheld
+              // in favour of the neutral count line this card already has
+              // as its fallback branch. The status badge, its colour and
+              // the landmarks are unchanged; only the advice waits until
+              // the week is one that can be judged.
+              const weekJudgeable = readOnly || !weekProgress.inProgress;
+              const insight = weekJudgeable ? getVolumeInsight(muscle, data.workingSets, status) : null;
+              const why = weekJudgeable ? getVolumeWhy(muscle, data.workingSets, status) : null;
               const isExpanded = expandedVolumeWhy === muscle;
               return (
                 <View key={muscle} style={[styles.volumeRow, live.volumeRow, mi === musclesWorked.length - 1 && styles.volumeRowLast]}>
@@ -1426,7 +1511,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                     <Text style={[styles.volumeInsightText, live.volumeInsightText]}>{insight}</Text>
                   ) : (
                     <Text style={[styles.volumeInsightText, live.volumeInsightText]}>
-                      {Math.round(data.workingSets)} sets this week
+                      {Math.round(data.workingSets)} sets {weekJudgeable ? 'this week' : 'so far this week'}
                     </Text>
                   )}
                   {why && (
@@ -1556,6 +1641,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               <Text style={[styles.optionalLabel, live.optionalLabel]}>optional</Text>
             </View>
             <Text style={[styles.coachZoneSubHeading, live.coachZoneSubHeading]}>How did the session feel?</Text>
+            {/* C5-P17-03 (D96): the purpose sentence sat INSIDE the
+                expander, so the user had to decide to rate before being
+                told why rating matters. That is the opposite order to the
+                pre-session prompt, which leads with its purpose line before
+                any control. Same sentence, same words, moved above the
+                toggle. */}
+            <Text style={[styles.feedbackPurpose, live.feedbackPurpose]}>
+              Your answers shape how your recovery is read and, when coaching is active, whether next session's workload still makes sense. Skip anything you're not sure about.
+            </Text>
             <TouchableOpacity
               style={[styles.feedbackToggleBtn, live.feedbackToggleBtn]}
               onPress={() => setFeedbackExpanded(e => !e)}
@@ -1582,10 +1676,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 {/* D93 (Campaign 2, Phase 6): purpose at the point of asking,
                     no direction taught. "Skip anything you're not sure about"
                     is load-bearing: unanswered saves as null and the engine
-                    holds on insufficient feedback rather than guessing. */}
-                <Text style={[styles.feedbackPurpose, live.feedbackPurpose]}>
-                  Your answers shape how your recovery is read and, when coaching is active, whether next session's workload still makes sense. Skip anything you're not sure about.
-                </Text>
+                    holds on insufficient feedback rather than guessing.
+                    C5-P17-03 (D96): the sentence itself now renders above
+                    the expander toggle, so it is read BEFORE the decision to
+                    rate, not after it. */}
                 {/* C5-P17-02 (D96): a row shows a selection only when a REAL
                     answer exists (touched this visit or stored). The form
                     used to open with "Moderate" / "None" pre-selected -

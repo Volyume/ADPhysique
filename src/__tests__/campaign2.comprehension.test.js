@@ -44,10 +44,19 @@ describe('TRAINING comprehension', () => {
   });
 
   test('Repeat, Continue with adjustments and the fresh-look CTA are unmistakably different', () => {
+    // Re-anchored under FB-32 (D96): the repeat branch's label moved from
+    // 'Continue this plan' to 'Run this plan again, unchanged'. The pinned
+    // RULE is unchanged -- three recommendations, three unmistakably
+    // different CTAs, and the fresh-look card never shares the plain
+    // continue wording -- and the new label states the branch's true
+    // behaviour (a true repeat that discards the ledger proposals), which
+    // is the same honesty precedent 'Repeat this plan anyway' set.
     const src = read('lib/blockAdvisor.js');
-    expect(src).toContain("'Continue this plan'");
+    expect(src).toContain("'Run this plan again, unchanged'");
     expect(src).toContain("'Continue with adjustments'");
     expect(src).toContain("'Repeat this plan anyway'");
+    // No branch may present the repeat as a plain "continue".
+    expect(stripComments(src)).not.toContain("actionLabel: 'Continue this plan'");
     // The fresh-look recommendation must never share the plain continue CTA.
     const rebuildBlock = stripComments(src.slice(src.indexOf("consider_rebuild")));
     expect(rebuildBlock).toContain("'Repeat this plan anyway'");
@@ -107,7 +116,16 @@ describe('PR comprehension', () => {
     expect(GLOSSARY.pr).toMatch(/estimated max/);
     expect(GLOSSARY.pr).toMatch(/never needs a one-rep max attempt/);
     expect(read('screens/ExerciseDetailScreen.js')).toContain('GLOSSARY.pr');
-    expect(read('screens/BlockReflectionScreen.js')).toContain('GLOSSARY.pr');
+    // Re-anchored under FB-16 (D96): BlockReflection's list is no longer
+    // presented as records. Its rows are the best estimated max per
+    // exercise WITHIN the block -- never compared against a prior block or
+    // any record store -- so glossing them with the PR definition ("the
+    // clearest sign your training is working") taught the wrong meaning,
+    // and on a first block every row is a first-ever performance. The rows
+    // are unchanged; they now carry the definition of what they are.
+    const reflection = read('screens/BlockReflectionScreen.js');
+    expect(reflection).toContain('GLOSSARY.estMax');
+    expect(reflection).not.toContain('Records set this block');
   });
 
   test('the record-type labels are canonical everywhere: Est. max / Heaviest weight / Most reps', () => {

@@ -7,6 +7,11 @@
 import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, PHASE_OVERLAYS } from './coachingGoals';
 import { VOLUME_LANDMARKS } from './algorithms';
 import { generatePoolFromLibrary, deriveParamKey } from './poolGenerator';
+// C5-P11-01 (D96): the block length the app actually creates. mesocycle.js
+// is a pure module (no I/O), so reading the constant here keeps planEngine
+// pure and deterministic; only a narrative string uses it, never a
+// prescribed set, rep or landmark value.
+import { BLOCK_PLANNED_WEEKS } from './mesocycle';
 
 // ---------------------------------------------------------------------------
 // Public label maps
@@ -2303,7 +2308,13 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   result.experience = expMap[experience] ?? `Experience level: ${experience}.`;
 
   // progression (always)
-  const weeks = (experience === 'advanced' || experience === 'competitive') ? 6 : 5;
+  // C5-P11-01 (D96): this used to derive the week count from `experience`
+  // (5 for beginner/intermediate, 6 for advanced/competitive) while
+  // activatePlanWithBlock creates the SAME six-week block for everyone.
+  // Beginners and intermediates read "The plan spans 5 weeks" beside a Home
+  // chip saying "Week 1 of 6". The number now comes from the block writer's
+  // own constant, so the explanation is true of the block that exists.
+  const weeks = BLOCK_PLANNED_WEEKS;
   result.progression = `The plan spans ${weeks} weeks. You start at the sets shown here and add roughly one to two sets per muscle group per week across the first ${weeks - 1} weeks. The final week drops to about half the volume. This is not a lost week. Your muscles use the easier week to fully repair and come back stronger before the next block.`;
 
   // equipment

@@ -47,9 +47,6 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext, 
           isDeload={currentMesoWeek?.isDeload}
           finished={!!currentMesoWeek?.awaitingDecision}
         />
-        {seedLines.length > 0 ? seedLines.map((line) => (
-          <Text key={line} style={[styles.sheetDefn, live.sheetDefn]}>{line}</Text>
-        )) : null}
         {/* U-E-1/U-D-3: the chip is whole-tappable, so the plain-English
             definitions of its terms live here, in the sheet it opens.
             D93 (Campaign 2, Phase 4): this sheet is the block's education
@@ -57,10 +54,21 @@ function HomeBlockShapeSheet({ visible, onClose, currentMesoWeek, onChooseNext, 
             authored gloss its call site) and the one place the climb's WHY
             is stated. The next-block claim is the system's standing
             behaviour (ledger review runs on every finished block), not a
-            promise about any one muscle's data. */}
+            promise about any one muscle's data.
+            C5-P11-06 (D96): the definition now comes BEFORE the provenance
+            lines. A first-time user used to read why their block was not
+            personalised ("Not enough personal history yet...") before
+            being told what a block is. */}
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.mesocycle}</Text>
+        {seedLines.length > 0 ? seedLines.map((line) => (
+          <Text key={line} style={[styles.sheetDefn, live.sheetDefn]}>{line}</Text>
+        )) : null}
+        {/* C5-P11-05 (D96): "nothing rolls over automatically" was stated
+            on no block-start surface anywhere. The decision is real and
+            correctly manual (PlansScreen requires an explicit confirm), but
+            the user was not told until they arrived there in week 7. */}
         <Text style={[styles.sheetDefn, live.sheetDefn]}>
-          Effort builds a little each week so your body keeps adapting, then the recovery week lets it catch up. How each muscle responds can shape where your next block starts.
+          Effort builds a little each week so your body keeps adapting, then the recovery week lets it catch up. When the block finishes, you choose what comes next; nothing starts on its own. How each muscle responds can shape where your next block starts.
         </Text>
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.deload}</Text>
         <Text style={[styles.sheetDefn, live.sheetDefn]}>{GLOSSARY.rir}</Text>

@@ -184,7 +184,16 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
       body: finished
         ? "Pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block."
         : "Your recovery week does its job, then you pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block.",
-      actionLabel: 'Continue this plan',
+      // FB-32 (D96, COPY ONLY): this branch runs a TRUE repeat -- the next
+      // block is seeded with the finished block's own observed start and
+      // planned peak, discarding every ledger proposal (blockSeed.js's
+      // intent === 'repeat'). "Continue this plan" reads as "carry on,
+      // including the learning", which is the opposite of what it does. The
+      // sibling consider_rebuild branch already found the honest wording
+      // ("Repeat this plan anyway") for exactly this reason. No branch
+      // logic, no tier reachability and no seedIntent mapping changes here:
+      // the decision architecture itself is founder question FQ-2.
+      actionLabel: 'Run this plan again, unchanged',
       secondaryLabel: 'Build a new plan',
     };
   }

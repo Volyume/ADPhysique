@@ -126,14 +126,20 @@ describe('buildReadinessSummary', () => {
     expect(result.tone).toBe('caution');
   });
 
-  test('default block-phase read matches the chip copy shown before this change', () => {
+  // Re-anchored under C5-P12-02 (D96): the default read now names what it
+  // counts ("Block week 2 of 4"). The hero renders this chip two lines
+  // below the plan eyebrow's "Day 1 of 2", and neither counter carried a
+  // noun, so the two positions read as two different mental models of the
+  // same plan. Structure, tone, priority order and the RIR clause are
+  // unchanged; only the missing noun was added.
+  test('default block-phase read names the block it counts', () => {
     const result = buildReadinessSummary({
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(result).toEqual({ tone: 'go', line: 'Week 2 of 4 - stop 2 short of failure' });
+    expect(result).toEqual({ tone: 'go', line: 'Block week 2 of 4 - stop 2 short of failure' });
   });
 
   test('default block-phase read tolerates a missing planned-weeks / rir target', () => {
@@ -143,7 +149,7 @@ describe('buildReadinessSummary', () => {
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(result).toEqual({ tone: 'go', line: 'Week 1 of -' });
+    expect(result).toEqual({ tone: 'go', line: 'Block week 1 of -' });
   });
 
   test('deterministic: identical inputs produce an identical result', () => {

@@ -419,7 +419,13 @@ describe('ManualBuilderScreen — Save & Activate uses the current name (PLAN-00
       n => n.props && n.props.children === 'Original Name',
     ).length).toBe(0);
 
-    press(tree, 'Go to Train');
+    // Re-anchored under C5-P10-06 (D96): the button was labelled "Go to
+    // Train" while navigating to HomeTab, the tab titled "Today" -- and the
+    // same screen's Save draft goes to PlansTab, the tab titled "Train", so
+    // one word meant two destinations. The label was corrected rather than
+    // the route: Today is where the freshly activated plan's next session
+    // waits. The pinned RULE (this button lands on HomeTab) is unchanged.
+    press(tree, 'Go to Today');
     expect(nav.navigate).toHaveBeenCalledWith('HomeTab');
   });
 

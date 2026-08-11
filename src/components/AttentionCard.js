@@ -65,18 +65,24 @@ export default function AttentionCard({
     freeCoachLineText: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.textPrimary },
   };
   if (variant === 'trial' && trialBanner) {
+    // C5-P12-01 (D96): the card is a button with a chevron, so it must lead
+    // somewhere. When the caller has nowhere honest to send it (no session
+    // to start yet), it renders as a plain informational card instead --
+    // no chevron, no button role -- and its "How Precision Coaching works"
+    // button stays the only action. Copy and trial architecture unchanged.
+    const Wrapper = onTrialPress ? TouchableOpacity : View;
+    const wrapperProps = onTrialPress
+      ? { onPress: onTrialPress, activeOpacity: 0.85, accessibilityRole: 'button', accessibilityLabel: trialBanner.line }
+      : {};
     return (
-      <TouchableOpacity
+      <Wrapper
         style={[styles.trialBanner, live.trialBanner]}
-        onPress={onTrialPress}
-        activeOpacity={0.85}
-        accessibilityRole="button"
-        accessibilityLabel={trialBanner.line}
+        {...wrapperProps}
       >
         <View style={styles.trialBannerTopRow}>
           <Ionicons name="checkmark-done-outline" size={18} color={t.colors.primary} />
           <Text style={[styles.trialBannerText, live.trialBannerText]} numberOfLines={2}>{trialBanner.line}</Text>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
+          {onTrialPress ? <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} /> : null}
           <TouchableOpacity
             onPress={onTrialDismiss}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -116,7 +122,7 @@ export default function AttentionCard({
           accessibilityLabel="How Precision Coaching works"
           style={styles.trialMethodologyButton}
         />
-      </TouchableOpacity>
+      </Wrapper>
     );
   }
 

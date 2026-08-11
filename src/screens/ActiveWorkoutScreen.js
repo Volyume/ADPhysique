@@ -76,6 +76,11 @@ import { shareSessionName } from '../lib/sessionShareData';
 
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
 
+// C5-P15-01 (D96): a warm-up is not a record attempt, and must not be one
+// either side of a comparison. Tolerates both the camelCase session shape
+// and the snake_case rows getAllCompletedSetsForExercise returns.
+const isWorkingSetRow = (s) => (s?.setType ?? s?.set_type ?? 'straight') !== 'warmup';
+
 // Founder fix (2026-07-10): "the next exercise button ... doesn't always
 // happen, it goes on and adds more and more sets". Root cause: targetSets
 // below used to be adjustedSetCount ALONE, which resolves to undefined
@@ -245,6 +250,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const live = buildLiveStyles(t);
 
   const [currentSet, setCurrentSet] = useState({ ...DEFAULT_SET });
+  // C5-P13-02 (D96): the weight/reps the entry was last SEEDED with, so
+  // "is there unsaved work in here" can compare against the values the app
+  // itself put there rather than against the module default. Written at
+  // every programmatic seed below; never written when the user types, taps
+  // a suggestion chip, or a saved draft is restored.
+  const seededEntryRef = useRef({ weight: DEFAULT_SET.weight, reps: DEFAULT_SET.reps });
   const [prevSets, setPrevSets] = useState([]);
   const [allTimeSets, setAllTimeSets] = useState([]);
   const [loggedSets, setLoggedSets] = useState([]);
@@ -789,6 +800,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       ...DEFAULT_SET,
       reps: newRepMax || DEFAULT_SET.reps,
     });
+    seededEntryRef.current = { weight: DEFAULT_SET.weight, reps: newRepMax || DEFAULT_SET.reps };
     setGhostSet(null);
     setCluster(null);
     setClusterReps('');
@@ -828,12 +840,31 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // not-yet-logged set, a cluster mid-way through its mini-sets, or an
   // unsaved note. Shared by handleCancelWorkout (widens its confirm gate)
   // and handleFinishWorkout (names the set in its existing confirm copy).
+  //
+  // C5-P13-02 (D96): this compared against the MODULE CONSTANT, so it was
+  // true in almost every ordinary state with no user input at all. A
+  // zero-history exercise seeds reps from recommendedRepsMax (the seeded
+  // plans use 10, 12, 25, 30), so `reps !== DEFAULT_SET.reps` was true
+  // before anything was typed; and the carry-forward after any logged set
+  // puts a number in `weight`, so `weight !== ''` was true for the rest of
+  // the session. Consequences: a first-time user who opened a session and
+  // touched nothing got the "Discard workout?" modal, and a user who
+  // finished a complete session was told "You also have an unlogged set
+  // for X that will be lost" about the carried-forward copy of the set
+  // they had just saved. The comparison is now against the entry's own
+  // resolved baseline (seededEntryRef, written at every programmatic seed:
+  // plan/history prefill, ghost, carry-forward, deload prescription), so
+  // "unchanged since seeding" is not in progress. A restored draft is
+  // deliberately NOT a seed -- that IS unsaved user work. The cluster,
+  // perSide and noteText clauses are unchanged.
   function hasInProgressSetEntry() {
+    const seed = seededEntryRef.current;
+    const sameWeight = String(currentSet.weight ?? '') === String(seed?.weight ?? '');
+    const sameReps = currentSet.reps === seed?.reps;
     return !!cluster
       || !!perSide
-      || (currentSet.weight !== '' && currentSet.weight != null)
-      || currentSet.reps !== DEFAULT_SET.reps
-      || noteText.trim().length > 0;
+      || noteText.trim().length > 0
+      || !(sameWeight && sameReps);
   }
 
   function handleCancelWorkout() {
@@ -1158,6 +1189,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setPrevSets([]);
     setAllTimeSets([]);
     setCurrentSet({ ...DEFAULT_SET });
+    seededEntryRef.current = { weight: DEFAULT_SET.weight, reps: DEFAULT_SET.reps };
     setGhostSet(null);
     setNoteText('');
     // An unfinished cluster belongs to the exercise it was started on;
@@ -1232,17 +1264,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const currentWorkingCount = allLoggedForExercise.filter(s => s.setType !== 'warmup').length;
       const lastActual = getBestAnchorSet(prev, currentWorkingCount) || prev[prev.length - 1] || null;
       if (lastActual && (lastActual.weight ?? 0) > 0) {
-        setCurrentSet({
-          ...DEFAULT_SET,
+        const seeded = {
           weight: lastActual.weight,
           reps: lastActual.actualReps ?? lastActual.actual_reps ?? DEFAULT_SET.reps,
-        });
+        };
+        setCurrentSet({ ...DEFAULT_SET, ...seeded });
+        seededEntryRef.current = seeded;
       } else {
-        setCurrentSet({
-          ...DEFAULT_SET,
+        const seeded = {
           weight: routineExercise?.startingWeight ?? '',
           reps: routineExercise?.recommendedRepsMax || DEFAULT_SET.reps,
-        });
+        };
+        setCurrentSet({ ...DEFAULT_SET, ...seeded });
+        seededEntryRef.current = seeded;
       }
 
       // Ghost pre-fill: if the computed weight is 0 or empty, apply ghost values
@@ -1250,13 +1284,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         setCurrentSet(cs => {
           const w = parseFloat(cs.weight) || 0;
           if (w === 0) {
-            return {
+            const next = {
               ...cs,
               weight: ghostCandidate.weight,
               reps: ghostCandidate.actualReps ?? ghostCandidate.actual_reps ?? cs.reps,
               rir: ghostCandidate.rir ?? cs.rir,
               isGhost: true,
             };
+            // C5-P13-02: a ghost is the app's own suggestion, not typed
+            // work; losing it loses nothing.
+            seededEntryRef.current = { weight: next.weight, reps: next.reps };
+            return next;
           }
           return cs;
         });
@@ -1291,6 +1329,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   reps: firstDeload.reps,
                   rir: firstDeload.rir,
                 }));
+                // C5-P13-02: the deload prescription is a seed too.
+                seededEntryRef.current = { weight: firstDeload.weight, reps: firstDeload.reps };
                 // Store deload targets in setTargets shape so the inline chip renders them
                 setSetTargets(deloadTargets.map(t => ({
                   weight: t.weight,
@@ -1500,15 +1540,29 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // PR Detection, check BEFORE adding current set to the session ref so it
       // can never match itself.  sessionSetsRef is a plain ref so it's never stale
       // the way React state can be between renders.
+      //
+      // C5-P15-01 (D96): WORKING sets only, both sides of the comparison.
+      // The honest-first-lift guard below keys on prHistory being empty, and
+      // warm-ups used to enter that history from both sources (the session
+      // ref appended unconditionally, and getAllCompletedSetsForExercise has
+      // no set_type filter). So a user who logged a 20kg warm-up spent the
+      // quiet "logged as your starting point" acknowledgement on it, and
+      // their first working set ever was then celebrated with the full gold
+      // "New estimated max lift" for beating their own warm-up, and reached
+      // the summary as "1 new PR". A warm-up is by definition not a record
+      // attempt (buildRecordLine already returns null for one). detectPR's
+      // maths and Campaign 2's PR definition are untouched: this changes
+      // only which sets are eligible to be, or to be beaten by, a record.
       const prHistory = [
-        ...allTimeSets,
-        ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id),
+        ...allTimeSets.filter(isWorkingSetRow),
+        ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && isWorkingSetRow(s)),
       ];
       sessionSetsRef.current = [...sessionSetsRef.current, setData];
       // PR detection runs ONLY for weight-based schemas. duration/distance
       // reuse the weight field for time/distance, so running the weight x reps
       // 1RM/heaviest detector over them would report meaningless "PRs".
-      const prs = isWeightReps ? detectPR(setData, prHistory, exercise, units) : [];
+      // A warm-up never runs it at all (C5-P15-01).
+      const prs = isWeightReps && !isWarmupSet ? detectPR(setData, prHistory, exercise, units) : [];
       if (prs.length > 0 && prHistory.length === 0) {
         // Wave A A1: the first-ever set of an exercise beats nothing,
         // detectPR compares against empty history, so "PERSONAL RECORD"
@@ -1546,6 +1600,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // target. The target chip still shows the progression suggestion.
       if (currentSet.setType !== 'warmup') {
         setCurrentSet(cs => ({ ...cs, weight: setData.weight, reps: setData.actualReps }));
+        // C5-P13-02: the carry-forward is the app seeding the next set, not
+        // unsaved work. This is the state that made the finish confirm
+        // claim an unlogged set for the whole rest of every session.
+        seededEntryRef.current = { weight: setData.weight, reps: setData.actualReps };
       }
 
       // Update last activity timestamp
@@ -1655,12 +1713,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             weight: firstTarget.weight,
             reps: prefillReps,
           }));
+          // C5-P13-02: the auto-switch to the first working set is a seed.
+          seededEntryRef.current = { weight: firstTarget.weight, reps: prefillReps };
         } else {
-          setCurrentSet(cs => ({
-            ...cs,
-            setType: 'straight',
-            reps: routineExercise?.recommendedRepsMin || 8,
-          }));
+          setCurrentSet(cs => {
+            const next = { ...cs, setType: 'straight', reps: routineExercise?.recommendedRepsMin || 8 };
+            // Idempotent: the entry is being seeded for the first working
+            // set, carrying whatever weight the warm-up left in it.
+            seededEntryRef.current = { weight: next.weight, reps: next.reps };
+            return next;
+          });
         }
       }
     } catch (e) {
@@ -1773,9 +1835,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         s.id === editingSet.id ? { ...s, weight, actualReps } : s
       ));
       if (validation.isWeightReps) {
+        // C5-P15-01 (D96): the same working-sets-only history as the
+        // log-time detection, so an edited set can never be celebrated for
+        // beating a warm-up either.
         const editPrHistory = [
-          ...allTimeSets,
-          ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && s.id !== editingSet.id),
+          ...allTimeSets.filter(isWorkingSetRow),
+          ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && s.id !== editingSet.id && isWorkingSetRow(s)),
         ];
         const editedPrs = detectPR({ weight, actualReps }, editPrHistory, exercise, units);
         if (editedPrs.length > 0 && editPrHistory.length > 0) {
@@ -2442,7 +2507,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const recordLine = useMemo(() => buildRecordLine({
     weight: currentSet.weight,
     reps: currentSet.reps,
-    historySets: [...allTimeSets, ...loggedSets],
+    // C5-P15-01 (D96): the D87 agreement contract requires this history to
+    // be the SAME shape handleCompleteSet assembles as prHistory, so the
+    // line can never promise a record the log then withholds. Both now
+    // exclude warm-ups.
+    historySets: [...allTimeSets, ...loggedSets].filter(isWorkingSetRow),
     units,
     isWarmup: currentSet.setType === 'warmup',
     exerciseType: activeExerciseType,
@@ -2681,7 +2750,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel="Dismiss recovery week banner"
                     >
-                      <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Skip</Text>
+                      {/* FB-05 (D96): "Skip" on the one banner telling the
+                          user this week is deliberately lighter reads as
+                          "skip the recovery week". Every sibling in this
+                          strip already says "Got it"; behaviour unchanged
+                          (it still just dismisses the banner). */}
+                      <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Got it</Text>
                     </TouchableOpacity>
                   </View>
                 ),

@@ -185,7 +185,11 @@ describe('single-resolver guard: no surface computes block week independently', 
     const src = read('screens/MesocycleBuilderScreen.js');
     expect(src).not.toMatch(/import\s*\{\s*differenceInWeeks/);
     expect(src).not.toMatch(/differenceInWeeks\(new Date\(\)/);
-    expect(src).toContain("import { getBlockStatus } from '../lib/mesocycle'");
+    // C5-P11-01 (D96): the import now also pulls BLOCK_PLANNED_WEEKS (the
+    // block length the writer actually creates) for this screen's block
+    // copy. The pinned RULE -- the week figure resolves through the shared
+    // mesocycle resolver, never a local date calculation -- is unchanged.
+    expect(src).toMatch(/import \{[^}]*getBlockStatus[^}]*\} from '\.\.\/lib\/mesocycle'/);
   });
 
   test('useProgressData no longer computes mesoCurrentWeek from raw ms against durationWeeks', () => {

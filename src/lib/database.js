@@ -10,7 +10,7 @@ import { createActivityRepository } from './database/activity';
 import { createBodyMetricsRepository } from './database/bodyMetrics';
 import { createPlanFoldersRepository } from './database/planFolders';
 import { MICRO_COLUMNS, microColumnsCreateFragment } from './food/micronutrients';
-import { getCurrentBlockWeekIndex, getBlockStatus } from './mesocycle';
+import { getCurrentBlockWeekIndex, getBlockStatus, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK } from './mesocycle';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
@@ -3727,19 +3727,26 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   // end_date is required by the cloud schema (NOT NULL). Without it the
   // push silently drops the row and a fresh-install sign-in lands with
   // an active plan but no training block.
-  const endDate = new Date(Date.now() + 6 * 7 * 24 * 60 * 60 * 1000)
+  const endDate = new Date(Date.now() + BLOCK_PLANNED_WEEKS * 7 * 24 * 60 * 60 * 1000)
     .toISOString().slice(0, 10);
   // 6 weeks: 5 accumulation (RIR 3→2→1→0→0) + 1 deload (RIR 4). deload_week
   // is written (X19, Wave 2 audit 2026-07-30) so MesocycleBuilderScreen's
   // deload highlighting -- previously always NULL/dead for every real
   // block -- has a real value; week 6 is always the deload week here,
   // matching generateMesocycleWeeks' own rule (last week = deload).
+  // C5-P11-01 (D96): the three week counts now come from mesocycle.js's
+  // BLOCK_PLANNED_WEEKS/BLOCK_DELOAD_WEEK, which the planEngine narrative
+  // reads too, so no surface can describe a block length this writer does
+  // not create. The written values are byte-identical to the constants
+  // that stood here.
   await d.runAsync(
     `INSERT INTO mesocycles
       (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks, deload_week, focus,
        block_type, rir_ladder, is_active, auto_regulation_enabled, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 6, 6, 6, ?, ?, ?, 1, 1, ?, ?)`,
-    [id, userId, planName, startDate, endDate, 'hypertrophy', 'offseason_hypertrophy', '[3,2,1,0,0,4]', now, now],
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)`,
+    [id, userId, planName, startDate, endDate,
+      BLOCK_PLANNED_WEEKS, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK,
+      'hypertrophy', 'offseason_hypertrophy', '[3,2,1,0,0,4]', now, now],
   );
 
   await generateMesocycleWeeks(id);
@@ -6577,10 +6584,29 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     const w = workouts.find(w2 => w2.id === s.workout_id);
     return w && w.started_at < firstWeekCutoff;
   });
-  const lastWeekCutoff = endMs - 7 * 86400000;
+  // FB-17 (D96): compare like for like. `end_date` is start + plannedWeeks,
+  // so the old `endMs - 7 days` window WAS the recovery week: the block's
+  // headline progress figure always measured a full build week against the
+  // deliberately halved deload, so the honest climb line was unreachable
+  // and a user who added weight every week was told they lifted less at the
+  // end than the start. The deload week is stored on the row
+  // (deload_week, written by activatePlanWithBlock), so the comparison uses
+  // the last ACCUMULATION week instead. Falls back to the old window only
+  // when the block carries no deload week (legacy rows).
+  const deloadWeek = Number(meso.deload_week);
+  const plannedWeeks = Number(meso.planned_weeks ?? meso.duration_weeks);
+  const lastAccumWeek = Number.isFinite(deloadWeek) && deloadWeek > 1
+    ? deloadWeek - 1
+    : (Number.isFinite(plannedWeeks) && plannedWeeks > 1 ? plannedWeeks - 1 : null);
+  const lastWeekStart = lastAccumWeek != null
+    ? startMs + (lastAccumWeek - 1) * 7 * 86400000
+    : endMs - 7 * 86400000;
+  const lastWeekEnd = lastAccumWeek != null
+    ? lastWeekStart + 7 * 86400000
+    : Number.POSITIVE_INFINITY;
   const lastWeekSets = sets.filter(s => {
     const w = workouts.find(w2 => w2.id === s.workout_id);
-    return w && w.started_at >= lastWeekCutoff;
+    return w && w.started_at >= lastWeekStart && w.started_at < lastWeekEnd;
   });
   const firstTonnage = firstWeekSets.reduce((t, s) => t + s.weight * s.actual_reps, 0);
   const lastTonnage = lastWeekSets.reduce((t, s) => t + s.weight * s.actual_reps, 0);

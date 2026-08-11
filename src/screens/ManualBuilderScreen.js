@@ -29,6 +29,8 @@ import {
 import { MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
 import { classifySupersetPair } from '../lib/planEngine';
+import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
+import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import { logError } from '../lib/errorLog';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { swapAdjacentBlocks } from '../lib/reorder';
@@ -777,6 +779,15 @@ export default function ManualBuilderScreen({ navigation, route }) {
 
   async function handleSaveAndActivate() {
     if (!validate(true)) return;
+    // C5-P10-10 (D96): this was the ONE activation path that skipped
+    // confirmPlanSwitchMidBlock, so a user who built their own plan in week
+    // 3 silently restarted their block and never saw the one dialogue that
+    // explains what activation does to it. Same call, same position
+    // (before the write) as PlanLibrary, PlanDetail and PlansScreen.
+    const ok = await confirmPlanSwitchMidBlock(user.id, {
+      newPlanName: editablePlanName.trim() || planName.trim() || 'My Plan',
+    });
+    if (!ok) return;
     setSaving(true);
     try {
       // A rename on this final builder page lives in editablePlanName, not
@@ -1283,7 +1294,13 @@ export default function ManualBuilderScreen({ navigation, route }) {
         </View>
         <Text style={[styles.successTitle, live.successTitle]}>Plan activated</Text>
         <Text style={[styles.successName, live.successName]}>{savedPlanName}</Text>
-        <Text style={[styles.successSub, live.successSub]}>Your plan is set as active and ready to use.</Text>
+        {/* C5-P10-01 (D96): "Your plan is set as active and ready to use"
+            never mentioned that a training block had just been created,
+            with a fixed effort ladder and a scheduled recovery week. Same
+            tier-blind sentence the other activation paths state. */}
+        <Text style={[styles.successSub, live.successSub]}>
+          Your plan is set as active and ready to use. {BLOCK_START_SENTENCE}
+        </Text>
         <View style={styles.successActions}>
           <Button
             title="Stay here"
@@ -1294,14 +1311,20 @@ export default function ManualBuilderScreen({ navigation, route }) {
             onPress={() => setSuccessModal(false)}
             accessibilityLabel="Stay here"
           />
+          {/* C5-P10-06 (D96): this button was labelled "Go to Train" and
+              navigated to HomeTab, the tab titled "Today", while the same
+              screen's Save draft goes to PlansTab, the tab titled "Train".
+              One word meant two destinations. The label is corrected rather
+              than the route: Today is where the freshly activated plan's
+              next session waits, which is the useful landing. */}
           <Button
-            title="Go to Train"
+            title="Go to Today"
             icon="home"
             fullWidth={false}
             style={styles.successPrimary}
             textStyle={[styles.successPrimaryText, live.successPrimaryText]}
             onPress={() => { setSuccessModal(false); navigation.navigate('HomeTab'); }}
-            accessibilityLabel="Go to Train"
+            accessibilityLabel="Go to Today"
           />
         </View>
       </BottomSheet>

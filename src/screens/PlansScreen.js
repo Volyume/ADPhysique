@@ -31,6 +31,9 @@ import {
 } from '../lib/database';
 import { getBlockAdvice } from '../lib/blockAdvisor';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
+import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, buildSeedReceipt } from '../lib/blockExplain';
+import { generateAndSavePlan } from '../lib/planAutoGen';
+import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -131,6 +134,10 @@ export default function PlansScreen({ navigation }) {
   const [blockAdvice, setBlockAdvice] = useState(null);
   // Stage 8: the finished block's ledger story for the decision card.
   const [ledgerStory, setLedgerStory] = useState(null);
+  // FB-24 (D96): the post-transition receipt, held until the user closes it.
+  const [seedReceipt, setSeedReceipt] = useState(null);
+  // FB-15 (D96): the active block's id, for the decision card's summary link.
+  const [activeBlockId, setActiveBlockId] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
   const [loaded, setLoaded] = useState(false);
   // EP-09/P-06 (Codex end-user-polish audit): whether the most recent
@@ -152,6 +159,11 @@ export default function PlansScreen({ navigation }) {
   // (two rapid focuses racing across the ledger await) cannot overwrite
   // the newest request's block-end story.
   const ledgerLoadRef = useRef(0);
+  // FB-24 (D96): the finished block's ledger record itself, kept so the
+  // transition can compose its receipt from the same rationales the
+  // decision card showed. loadData() re-runs immediately after the write
+  // and clears the story state, so a ref is what survives the reload.
+  const ledgerRecordRef = useRef(null);
   useScrollToTop(scrollRef);
 
   useEffect(() => {
@@ -193,6 +205,9 @@ export default function PlansScreen({ navigation }) {
         getPlanFolders(user.id),
       ]);
       setActivePlanData(active || null);
+      // FB-15 (D96): the finished block's id, so the decision card can offer
+      // the summary that informs the decision.
+      setActiveBlockId(block?.id ?? null);
       setMyPlans(all.filter(p => !active || p.id !== active.id));
       setFolders(folderRows || []);
       setArchivedPlans(archived || []);
@@ -228,6 +243,8 @@ export default function PlansScreen({ navigation }) {
             // Review #21: this await widens the race window between two
             // rapid focuses; only the newest request may set the story.
             if (req !== ledgerLoadRef.current) return;
+            // FB-24: hold the record for the transition receipt.
+            ledgerRecordRef.current = ledger;
             setLedgerStory({
               rows: advice?.nextBlock?.recommendation === 'adjust'
                 ? buildLedgerReflectionRows(ledger).slice(0, 4)
@@ -285,13 +302,23 @@ export default function PlansScreen({ navigation }) {
   // observability so the seam is live, not decorative.
   async function handleRestartPlan(intent = null) {
     if (!activePlan) return;
+    // FB-26 (D96): this alert was byte-identical for both intents. At the
+    // single moment the app asks the user to confirm its most consequential
+    // training decision, "Restart this plan? A new training block starts
+    // today with the same workouts" described a repeat to someone who had
+    // just tapped "Continue with adjustments". The intent is already this
+    // function's own argument, so each path now describes what it does.
+    // The seedIntent mapping below is untouched.
+    const isAdjust = intent === 'adjust';
     appAlert(
-      'Restart this plan?',
-      "A new training block starts today with the same workouts. Aim to match or improve on last time's weights.",
+      isAdjust ? 'Start your next block?' : 'Run this plan again?',
+      isAdjust
+        ? 'A new training block starts today with the same workouts. The weekly set targets start from what your last block showed, muscle by muscle.'
+        : "A new training block starts today with the same workouts and the same set targets as last time. Aim to match or improve on last time's weights.",
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Start new block',
+          text: isAdjust ? 'Start next block' : 'Start new block',
           onPress: async () => {
             // Stage 6 review #11: the seed build is real work; a
             // re-confirmed alert must never run two activations.
@@ -305,8 +332,8 @@ export default function PlansScreen({ navigation }) {
               // range. Intent maps from the LABEL semantics (review
               // blocker #2): only the 'adjust' recommendation — the
               // "Continue with adjustments" button — applies the full
-              // ledger; 'repeat' AND 'consider_rebuild' (both labelled
-              // "Continue this programme") are true repeats. A null seed
+              // ledger; 'repeat' AND 'consider_rebuild' (whose labels both
+              // state a plain repeat) are true repeats. A null seed
               // result falls back to the template ramp unchanged.
               // eslint-disable-next-line global-require
               const { buildSeedRangesForNextBlock, recordSeedOutcome } = require('../lib/blockLedgerRunner');
@@ -324,8 +351,22 @@ export default function PlansScreen({ navigation }) {
                   intent: seedIntent, ranges: seedRanges.ranges,
                 }).catch(() => {});
               }
+              // FB-24 (D96): the receipt. Confirming used to end in silence
+              // -- no toast, no summary, and the card the user was reading
+              // simply vanished when loadData() re-ran, leaving "Week 1 of
+              // 6" and no statement of what the app changed or why. This is
+              // composed from data already in hand (the resolved seed
+              // ranges plus the finished block's stored ledger, captured
+              // before the reload clears it), so it adds no computation and
+              // claims nothing the write did not do.
+              const receipt = seedIntent === 'adjust'
+                ? buildSeedReceipt({ ranges: seedRanges?.ranges, ledger: ledgerRecordRef.current })
+                : null;
               await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY).catch(() => {});
               await loadData();
+              if (receipt && (receipt.changed.length > 0 || receipt.held > 0)) {
+                setSeedReceipt(receipt);
+              }
             } catch (e) {
               logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id, intent });
               toast.show("Couldn't restart plan, try again", { variant: 'error' });
@@ -368,11 +409,36 @@ export default function PlansScreen({ navigation }) {
   }
 
   async function handleSetActive(plan) {
+    // C5-P10-01 / C5-P10-08 (D96): "Set as active" was a bare verb. It
+    // creates a training block, so it says so before it runs, in the same
+    // wording every other activation entry point uses, free and Pro alike.
+    // Only on a FIRST activation: once a plan is active, switching already
+    // has its own explanation (confirmPlanSwitchMidBlock names the block it
+    // restarts), and two dialogues in a row would be the noise Campaign 5
+    // is removing. In week 1 that confirm passes silently by design, which
+    // is why a first-time user could never be told.
+    if (!activePlan) {
+      const confirmed = await new Promise((resolve) => {
+        appAlert(
+          'Make this your active plan?',
+          `${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+            { text: 'Set as active', onPress: () => resolve(true) },
+          ],
+          { cancelable: true, onDismiss: () => resolve(false) },
+        );
+      });
+      if (!confirmed) return;
+    }
     try {
       const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
       if (!ok) return;
       await activatePlanWithBlock(user.id, plan.id, planHeadingName(plan.name));
       await loadData();
+      // C5-P10-05 (D96): the same success confirmation the other activation
+      // paths give; this one used to toast on failure only.
+      toast.show(`"${planHeadingName(plan.name)}" is now your active plan`, { variant: 'success' });
     } catch (e) {
       logError('PlansScreen.handleSetActive', e, { userId: user?.id, planId: plan?.id });
       toast.show("Couldn't set active plan, try again", { variant: 'error' });
@@ -616,6 +682,12 @@ export default function PlansScreen({ navigation }) {
     blockAdvice.action !== 'continue' &&
     !blockSnoozed;
 
+  // FB-04 (D96): exactly the week the advisor's dead 'continue' body is a
+  // real warning -- the last accumulation week, with the recovery week next.
+  const showPeakWeekNote = blockAdvice?.action === 'continue'
+    && blockAdvice.blockStatus
+    && (blockAdvice.blockStatus.recoveryWeek - blockAdvice.blockStatus.currentWeek) === 1;
+
   const isProWithPlan = tier === 'pro' && !!activePlan;
   // Two card sets cover three audiences:
   //   * Pro with an active plan → switch framings (update goals / library / manual)
@@ -802,6 +874,25 @@ export default function PlansScreen({ navigation }) {
                     </View>
                   ) : null}
 
+                {/* FB-15 (D96): the block summary, reachable AT the decision
+                    it exists to inform. A finished block keeps is_active = 1
+                    until the next one is created, so it appeared in neither
+                    "Past blocks" nor MesocycleBuilder's "View block summary"
+                    button for the entire awaiting-decision window -- the one
+                    screen that answers "what did this block show" was
+                    reachable only after the decision had been made. */}
+                {blockAdvice.action === 'post_recovery' && activeBlockId && (
+                  <Button
+                    variant="tertiary"
+                    size="sm"
+                    fullWidth={false}
+                    icon="document-text-outline"
+                    title="See what this block showed"
+                    onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'BlockReflection', { mesocycleId: activeBlockId })}
+                    accessibilityLabel="See what this block showed"
+                  />
+                )}
+
                 {/* CTAs only shown when block is complete and recovery is done */}
                 {blockAdvice.action === 'post_recovery' && (
                   <View style={styles.blockCardActions}>
@@ -939,6 +1030,18 @@ export default function PlansScreen({ navigation }) {
                   Week {blockAdvice.blockStatus.currentWeek} of {blockAdvice.blockStatus.totalWeeks}
                 </Text>
               )}
+              {/* FB-04 (D96): the only forward warning in the product --
+                  "One more week before your recovery week. Push hard this
+                  week. It's your peak." -- was composed by the advisor's
+                  'continue' branch and then never rendered, because the
+                  block card is hidden on 'continue'. It is surfaced here in
+                  the week it is true, so a first-time user meets the
+                  recovery week having been told it is coming. The other
+                  'continue' bodies ("Training is going well. Stay on plan.")
+                  stay unrendered: they add nothing this card does not say. */}
+              {blockAdvice?.action === 'continue' && showPeakWeekNote && (
+                <Text style={[styles.proCoachNote, live.proCoachNote]}>{blockAdvice.body}</Text>
+              )}
               {tier === 'pro' && (
                 <Text style={[styles.proCoachNote, live.proCoachNote]}>
                   Your coach adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
@@ -980,12 +1083,33 @@ export default function PlansScreen({ navigation }) {
             secondaryAccessibilityLabel="Browse the plan library"
           />
         ) : (
-          <Card style={styles.noActivePlanRow}>
-            <Ionicons name="calendar-outline" size={16} color={t.colors.textMuted} />
-            <Text style={[styles.noActivePlanText, live.noActivePlanText]}>
-              No active plan · Start with a plan, browse the library, or create your own.
-            </Text>
-          </Card>
+          /* C5-P10-09 (D96): the Pro no-plan state used to be an inert Card
+             naming an action it did not offer ("Start with a plan" is the
+             FREE path's route to the starter quiz; there was no Pro
+             affordance with that name, no onPress and no button). It gets
+             the same real two-CTA EmptyState shape the free branch has,
+             with the coach-built plan Home's Pro branch already offers, so
+             the verb and the action finally agree. */
+          <EmptyState
+            icon="barbell-outline"
+            title="No active plan yet"
+            text={`Start with a plan and we'll build one from your profile, or browse the library and pick one yourself. ${BLOCK_START_SENTENCE}`}
+            actionLabel="Start with a plan"
+            onAction={async () => {
+              const result = await generateAndSavePlan(user.id, userProfile);
+              if (result.ok) {
+                await loadData();
+                toast.show('Your plan is active', { variant: 'success' });
+              } else {
+                logError('PlansScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
+                toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+              }
+            }}
+            actionAccessibilityLabel="Start with a plan built from your profile"
+            secondaryLabel="Browse plans"
+            onSecondary={() => navigation.navigate('PlanLibrary')}
+            secondaryAccessibilityLabel="Browse the plan library"
+          />
         )}
 
         {/* Folders are only shown when they already exist. Folder creation is
@@ -1201,6 +1325,12 @@ export default function PlansScreen({ navigation }) {
           <SectionLabel>
             {isProWithPlan ? 'Switch your plan' : 'Start with a plan'}
           </SectionLabel>
+          {/* C5-P10-01 (D96): this sentence was the only place in the
+              product that said activation starts a block, and it was gated
+              on already BEING Pro with an active plan, so no first-time
+              user could ever read it. The gate stays (it is the switching
+              audience's note), and the first-use paths now carry the same
+              fact at their own activation decision points. */}
           {isProWithPlan && (
             <Text style={[styles.sectionSubtitle, live.sectionSubtitle]}>
               Your check-ins, PRs, and coach output keep working whichever plan you choose. Activating a new plan starts a fresh training block.
@@ -1239,6 +1369,47 @@ export default function PlansScreen({ navigation }) {
 
       </ScrollView>
       <PeekMenu ref={peekRef} />
+
+      {/* FB-24 (D96): the receipt for "Continue with adjustments". Every
+          line is composed from the ledger the decision card already showed
+          plus the seed ranges the write actually used, so it can only ever
+          describe what happened. Retention is stated as a decision
+          (FB-27) rather than left as an absence. */}
+      <BottomSheet
+        visible={!!seedReceipt}
+        onClose={() => setSeedReceipt(null)}
+        accessibilityLabel="What changed in your next block"
+      >
+        <Text style={[styles.receiptTitle, live.receiptTitle]}>Your next block is set</Text>
+        <Text style={[styles.receiptSub, live.receiptSub]}>
+          Same workouts. Here is what your last block changed.
+        </Text>
+        {(seedReceipt?.changed ?? []).map((row) => (
+          <View key={row.muscle} style={styles.receiptRow}>
+            <Text style={[styles.receiptRowTitle, live.receiptRowTitle]}>
+              {row.label}: {row.change}
+            </Text>
+            {row.rationale ? (
+              <Text style={[styles.receiptRowBody, live.receiptRowBody]}>{row.rationale}</Text>
+            ) : null}
+          </View>
+        ))}
+        {seedReceipt?.moreChanged > 0 ? (
+          <Text style={[styles.receiptRowBody, live.receiptRowBody]}>
+            Plus {seedReceipt.moreChanged} more muscle group{seedReceipt.moreChanged === 1 ? '' : 's'} that moved.
+          </Text>
+        ) : null}
+        {seedReceipt?.heldLine ? (
+          <Text style={[styles.receiptRowBody, live.receiptRowBody]}>{seedReceipt.heldLine}</Text>
+        ) : null}
+        <Button
+          variant="primary"
+          title="Got it"
+          onPress={() => setSeedReceipt(null)}
+          accessibilityLabel="Got it"
+          style={styles.receiptBtn}
+        />
+      </BottomSheet>
 
       {/* Folder name prompt, shared by create + rename. */}
       {/* R9 (D70): the folder create/rename prompt moves off its hand-rolled
@@ -1346,6 +1517,13 @@ const styles = StyleSheet.create({
   // R9 (D70): folderModalFill/backdrop/folderSheet deleted - the shared
   // BottomSheet owns scrim and panel chrome now.
   folderSheetTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  // FB-24 (D96): the next-block receipt sheet.
+  receiptTitle: { ...type.h3, color: colors.textPrimary, marginBottom: spacing.xs },
+  receiptSub: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.lg },
+  receiptRow: { marginBottom: spacing.md, gap: spacing.xs },
+  receiptRowTitle: { ...type.bodyStrong, color: colors.textPrimary },
+  receiptRowBody: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
+  receiptBtn: { marginTop: spacing.md },
   folderInputField: { borderRadius: radius.md },
   folderInput: {
     paddingHorizontal: spacing.md,
@@ -1573,6 +1751,10 @@ function buildLiveStyles(t) {
     folderBody: { borderTopColor: t.colors.border },
     folderEmpty: { ...t.type.caption, color: t.colors.textMuted },
     folderSheetTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    receiptTitle: { ...t.type.h3, color: t.colors.textPrimary },
+    receiptSub: { ...t.type.bodySm, color: t.colors.textMuted },
+    receiptRowTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    receiptRowBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     folderInput: { fontSize: t.fontSize.md },
     folderSheetCancel: { ...t.type.label, color: t.colors.textSecondary },
     folderSheetSave: { ...t.type.label },

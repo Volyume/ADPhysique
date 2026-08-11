@@ -48,7 +48,10 @@ export default function BlockShapeCard({ weekIndex, plannedWeeks, isDeload = fal
   } else if (current === n - 2) {
     line = `Week ${current + 1} of ${n} · Push. Your hardest week of the block. Recovery week next.`;
   } else {
-    line = `Week ${current + 1} of ${n} · ${word}. Recovery week in ${weeksToRecovery}.`;
+    // C5-P11-07 (D96): "Recovery week in 5" carried no unit noun. The dot
+    // row supplies the context, but the sentence alone did not say five
+    // what.
+    line = `Week ${current + 1} of ${n} · ${word}. Recovery week in ${weeksToRecovery} ${weeksToRecovery === 1 ? 'week' : 'weeks'}.`;
   }
 
   return (

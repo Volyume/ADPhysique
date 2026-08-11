@@ -199,12 +199,13 @@ describe('CP-10 stage 3 (Coach half): flips live, no remount', () => {
     });
     let tree;
     act(() => { tree = create(<CoachDailyBrief ledger={ledger} />); });
-    const title = tree.root.findByProps({ children: 'Since your check-in' });
+    // C5-P12-04 (D96): the runway heading is the ledger's own title now.
+    const title = tree.root.findByProps({ children: ledger.title });
     const darkColor = flat(title).color;
     expect(darkColor).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textMuted);
 
     setTheme('light');
-    const lightColor = flat(tree.root.findByProps({ children: 'Since your check-in' })).color;
+    const lightColor = flat(tree.root.findByProps({ children: ledger.title })).color;
     expect(lightColor).not.toBe(darkColor);
     expect(lightColor).toBe(theme.resolveTheme({ theme: 'light' }).colors.textMuted);
     act(() => { tree.unmount(); });

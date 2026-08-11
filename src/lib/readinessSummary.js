@@ -95,10 +95,18 @@ export function buildReadinessSummary({
     }
   }
 
-  // Priority 5: default block-phase read, today's chip text unchanged.
+  // Priority 5: default block-phase read.
+  // C5-P12-02 / C5-P11-02 (D96): the noun. The hero shows two unlabelled
+  // "N of M" counters two lines apart with different meanings -- "Day 1 of
+  // 2" (position in the plan's workout rotation) and this one (position in
+  // the block) -- so a first-time user could reasonably read them as two
+  // mental models of the same plan. Naming the block here also makes the
+  // chip an invitation to the block sheet it opens, which was otherwise
+  // advertised only in the accessibility label a sighted user never sees.
+  // Priority 1 to 4 wordings are deliberately untouched.
   const rirBit = currentMesoWeek.rirTarget != null ? ` - stop ${currentMesoWeek.rirTarget} short of failure` : '';
   return {
     tone: 'go',
-    line: `Week ${currentMesoWeek.weekIndex} of ${currentMesoWeek.plannedWeeks ?? '-'}${rirBit}`,
+    line: `Block week ${currentMesoWeek.weekIndex} of ${currentMesoWeek.plannedWeeks ?? '-'}${rirBit}`,
   };
 }
