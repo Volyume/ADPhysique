@@ -41,7 +41,19 @@ export default function useWeightTrend(userId) {
         getLatestCoachOutput(userId).catch(() => null),
       ]);
 
-      const ewmaData = computeEWMA(weights || []);
+      // C6 R-2 (D97-22): getMorningWeights(90) is ninety ROWS of any age,
+      // not ninety days, so after a long absence the card rendered a
+      // months-old trend as current ("-0.42 kg/week ... From 8 weeks of
+      // data") while the coach - clock-anchored since R-1 - held for lack
+      // of recent data. The display surface now shares the decision
+      // surface's truth: only weigh-ins from the real trailing 90 days
+      // count, so a returning user's card drops to the honest sparse or
+      // building state instead of narrating the gap as a live trend.
+      const windowStart = Date.now() - 90 * 86400000;
+      const windowed = (weights || []).filter(
+        (w) => Number.isFinite(Number(w?.loggedAt)) && Number(w.loggedAt) >= windowStart,
+      );
+      const ewmaData = computeEWMA(windowed);
       const weeklyChange = computeWeeklyWeightChange(ewmaData);
 
       const prescribedKcal = targets?.targetKcal ?? null;

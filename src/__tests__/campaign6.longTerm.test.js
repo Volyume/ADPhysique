@@ -286,3 +286,12 @@ describe('PHASES 25-31: return and history laws (D97-22)', () => {
     expect(src).toContain("Whenever you're ready, the next step is choosing your next block.");
   });
 });
+
+describe('R-2 (D97-22): the displayed trend shares the decision trend\'s clock', () => {
+  test('the trend hook date-windows its rows before deriving state or rate', () => {
+    const src = read('hooks/useWeightTrend.js');
+    expect(src).toMatch(/const windowStart = Date\.now\(\) - 90 \* 86400000;/);
+    expect(src).toMatch(/Number\(w\.loggedAt\) >= windowStart/);
+    expect(src).toMatch(/const ewmaData = computeEWMA\(windowed\);/);
+  });
+});
