@@ -49,20 +49,20 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 22 | Nutrition personalisation 90-180d | COMPLETE-IMPL | campaign6.nutrition.test.js (0e672a9a) |
 | 23 | Nutrition phase changes | COMPLETE-IMPL | Same suite (phase-change baseline re-entry pins) |
 | 24 | Nutrition lapses | COMPLETE-IMPL | Same suite + campaign6.lapse90 + R-1 fix |
-| 25 | Weight history over time | IN PROGRESS | AUDIT-RETURN-AND-HISTORY.md; R-1 landed; R-19/R-20 clean; REMAINING: R-14 (kg-only coach line), R-18 (stale FFM weight) disposition |
-| 26 | Lapse/return experience | IN PROGRESS | Audit + R-5, R-6 landed; R-29 clean; REMAINING: R-16 (prompt stand-down), R-12 (unopened week as rest week) |
+| 25 | Weight history over time | COMPLETE-IMPL | R-1, R-14 landed; R-19/R-20 clean; R-18 BLOCKED-FOUNDER (floor input, Section 2; recommendation (a) recorded); R-3 BLOCKED-FOUNDER (proof complete: dd67bbf4 + pinned guard forbid the merge) |
+| 26 | Lapse/return experience | COMPLETE-IMPL | R-5, R-6, R-12 landed; R-29 clean; R-16 BLOCKED-FOUNDER (new notification policy under NOTIFICATIONS_LOCKED + FR-5, recommendation recorded) |
 | 27 | Block state during absence | COMPLETE-IMPL | R-21/R-22 clean; R-4 landed (recovery week only claimed live when trained within 14 days; option (c) clock pause = triage founder item) |
-| 28 | Streaks and lapses | IN PROGRESS | R-26/R-27 clean; R-10 landed (0dddb9ad); REMAINING: R-11 (unguarded blob sync) |
+| 28 | Streaks and lapses | COMPLETE-IMPL | R-26/R-27 clean; R-10 landed (+key-format correction on lead re-review); R-11 landed (guarded blob) |
 | 29 | Win-back surfaces | COMPLETE-IMPL | R-28 clean; R-7 landed; R-17 landed (storage-only claim + calm gate on the lay) |
-| 30 | Progress history at scale | IN PROGRESS | R-24/R-25 clean; R-2 landed; REMAINING: R-13 (measured perf improvement) disposition, R-15 |
-| 31 | Old record edits/deletions | IN PROGRESS | R-23 clean (records derive at read time); REMAINING: R-8 (uneditable Home weigh-in), R-9 (ledger rebuild; attached to D97-3) |
+| 30 | Progress history at scale | IN PROGRESS | R-24/R-25 clean; R-2, R-15 landed; R-13 carried to the Phase 40 measure-first lane |
+| 31 | Old record edits/deletions | COMPLETE-IMPL | R-23 clean; R-8 landed (morning_weights update/soft-delete pair, tombstone syncs); R-9 carried with D97-3 (one founder decision) |
 | 32 | Reinstall same account | IN PROGRESS | AUDIT-REINSTALL-SYNC-OFFLINE.md; S-9/S-23/S-24 clean; F4 fixed (D97-19); REMAINING: Phase 52 E2E + REINSTALL-MATRIX.md |
 | 33 | Migration 132 contract | COMPLETE-AUDIT | S-10/S-11 proven in scratch cluster; hard release gate confirmed; NOT run |
-| 34 | Migrations 134/135 contract | IN PROGRESS | S-12/S-13/S-14/S-15/S-16 proven; 135 DEFECTIVE AS WRITTEN; REMAINING: the commissioned local repair analysis (route A/B/C/D) + compatibility tests, NOT applied |
+| 34 | Migrations 134/135 contract | COMPLETE-IMPL | S-12/S-13 proven; 135 REPAIRED unapplied (route A+C: corrected tie-break + deterministic re-id + local v72; scratch-cluster and behavioural proofs; release condition recorded) |
 | 35 | adaptation_events restore (FR-C4-3) | COMPLETE-AUDIT | S-4: product consequence proven (revert memory, add-frequency cap, Engine Log); carried to founder under FR-C4-3 with evidence |
-| 36 | Notification pref multi-device (FR-C4-2) | IN PROGRESS | S-2/S-3/S-8 proven; REMAINING: the narrow in-architecture stamp fix + tombstone decision split (safe part vs founder part) |
+| 36 | Notification pref multi-device (FR-C4-2) | COMPLETE-IMPL | S-2 landed (guarded stamps, all writers); S-3 tombstones + the dual-family architecture stay with FR-C4-2 (founder) |
 | 37 | Two-device training | IN PROGRESS | S-12/S-18/S-19/S-20 + campaign1.syncConflict; REMAINING: MULTI-DEVICE-MATRIX.md (commissioned doc) |
-| 38 | Offline for weeks | IN PROGRESS | S-21/S-22 clean; REMAINING: S-5 (parked delete resurrection) |
+| 38 | Offline for weeks | COMPLETE-IMPL | S-21/S-22 clean; S-5 landed (offline never spends the delete budget) |
 | 39 | Timezone/DST/clock | NOT STARTED | R-20 (DST-safe morning rows) is partial evidence only; dedicated audit required |
 | 40 | Data scale/performance | NOT STARTED | R-13 provides one measurement; commissioned measure-first audit required |
 | 41 | Row cap/pagination | NOT STARTED | P10-1 fixed one window; dedicated 1000-row/default-cap sweep required |

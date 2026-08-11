@@ -517,3 +517,31 @@ enumeration, not session memory.
 - **R-13 CARRIED to Phase 40**: the ~20-rescan Progress landing cost
   is the commissioned measure-first performance lane's first
   measurement, actioned there, not ad hoc.
+
+## D97-23 dispositions completed under the compliance recovery order
+
+- **S-2 FIXED**: notification-pref blob + quiet hours join
+  GUARDED_PREF_PATTERNS; all six writers stamp. S-3's
+  deletion/tombstone half stays with FR-C4-2 (founder architecture).
+- **S-5 FIXED (ruling (b))**: network-shaped failures never spend the
+  delete retry budget; the delete workers rethrow transport errors so
+  the scheduler sees the real shape; definitive refusals still park.
+  Behavioural pins both ways.
+- **S-14/S-15 FIXED, UNAPPLIED (route A+C)**: migrate_135 corrected
+  in place (applied wins outright; survivors re-idded deterministic)
+  + local v72 re-ids legacy device rows. Proven in a scratch cluster
+  (S-14 receipt survives; zero non-deterministic ids; idempotent) and
+  behaviourally (v72 runs the real pipeline on real SQLite). Release
+  condition recorded: 135 only after the v72 build is live. NOT run.
+- **R-3 BLOCKED-FOUNDER, proof complete**: buildWeighInSeries has NO
+  production caller (test-only); Body Metrics weights never reach the
+  rapid-loss/max-safe-loss/ED s1 signal, which reads morning_weights
+  exclusively. The locked record answers the wiring question the
+  OTHER way: dd67bbf4 explicitly REVERTED this exact merge as
+  crossing an ED-safety inviolable, and
+  CoachOutputScreen.morningWeightsSource.guard.test.js pins the
+  current wiring so a silent merge fails CI. Wiring it is therefore a
+  FOUNDER decision by standing law. Consequence for that decision:
+  the gap is false-negative shaped (a user weighing in only via Body
+  Metrics gets no rapid-loss protection); R-8's fix narrows the gap's
+  edge (Home rows now correctable) but does not close it.
