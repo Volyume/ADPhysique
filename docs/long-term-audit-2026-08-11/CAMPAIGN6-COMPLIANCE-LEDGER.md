@@ -86,7 +86,7 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 59 | Legal copy review gate | COMPLETE-AUDIT | FQ-5 approval PROVEN from DECISIONS-2026-07-09.md:2697-2699 ('Approve all', stamp-only landing 2026-08-10); C6 changed no consent/legal copy |
 | 60 | Migration release table | COMPLETE-AUDIT | Final table in TRIAGE-2026-08-11.md (134 → 132 → 133; repaired 135 after the v72 build; 049 HELD) + MIGRATION-RELEASE-GATES.md history |
 | 61 | Campaign 6 test suites | COMPLETE-IMPL | Twelve permanent suites: sixBlock 24, longitudinal 27, longTerm 44, applyRepeat 11, nutrition 10, lapse90 11, athlete180 11, relationship 12, reinstall 9, evidencedClaims 11, pendingCascade.flush 6, coachOutputReid 3 - plus the fix pins in existing suites (handover item 77) |
-| 62 | Quality gates | NOT STARTED | Final full-campaign regression + no-change laws + jargon + identity, then merged-main rerun |
+| 62 | Quality gates | COMPLETE-IMPL | Branch gates green 2026-08-11: campaigns 1-6 suites 423/423; identity invariant clean; lint clean; full bar 830 suites / 10,161 passed (parallel) and 10,161 passed (--runInBand rerun); the one intermittent failure class is hermetically closed (RE6-5) with the residual recorded as a WATCH item in D97-RULINGS; merged-main rerun follows the merge and its counts land in handover items 1-2 |
 
 ## B. First addendum (Personalisation Dividend) requirements
 
@@ -109,7 +109,7 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | Six-block + 180-day relationship sections | COMPLETE-IMPL | 392fa136 + ATHLETE-180-REPORT.md (nine-question framing to be corrected as superseded) |
 | Relationship invariant tests | COMPLETE-IMPL | campaign6.relationship.test.js (12) |
 | Anti-anthropomorphism + anti-manipulation audits | COMPLETE-IMPL | Repo walkers landed (abefab54 + relationship suite); formal handover answers at items 93/94 |
-| Handover items 81-96 | IN PROGRESS | 15 of 16 answered explicitly in CAMPAIGN6-FINAL-HANDOVER.md; item 95 fills from Review E on its return |
+| Handover items 81-96 | COMPLETE-IMPL | All 16 answered explicitly in CAMPAIGN6-FINAL-HANDOVER.md; item 95 filled from the actioned Review E; item 96 answers the nine-month loyalty question from shipping behaviour |
 
 ## D. Fix/disposition queue derived from the audits (all in-scope → FIX NOW)
 
