@@ -74,7 +74,12 @@ describe('share copy polish', () => {
     // the contained neutral chrome this test pins. Same rule, enforced
     // through the variant choice instead of byte-pinned local pill styles.
     expect(upgrade).toMatch(/variant="outline"[\s\S]{0,300}accessibilityLabel="Restore purchases"/);
-    expect(upgrade).toMatch(/variant="outline"[\s\S]{0,300}accessibilityLabel="Subscription terms"/);
+    // Re-anchored under C7: the button still uses the contained neutral
+    // outline chrome, but its accessibility label now names what it
+    // actually opens (a feature-downgrade explainer). "Subscription
+    // terms" moved to the real Terms of use link added beside it.
+    expect(upgrade).toMatch(/variant="outline"[\s\S]{0,300}accessibilityLabel="What stays if you switch back to Free later"/);
+    expect(upgrade).toMatch(/accessibilityLabel="Terms of use"/);
     expect(upgrade).not.toContain('secondaryLinkText');
     expect(upgrade).not.toContain("textDecorationLine: 'underline'");
 

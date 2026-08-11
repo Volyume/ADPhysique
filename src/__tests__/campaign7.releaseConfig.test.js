@@ -16,12 +16,20 @@ describe('C7 release-config laws', () => {
     expect(expo.scheme).toBe('volyume');
   });
 
-  test('no dead Android permissions: FOREGROUND_SERVICE and SCHEDULE_EXACT_ALARM stay out while unused', () => {
-    // Play's Health policy requires unused permissions removed; the
-    // foreground-service seam (USE_FOREGROUND_SERVICE=false) documents
-    // that re-enabling requires the permission back plus a service type.
-    expect(expo.android.permissions).not.toContain('android.permission.FOREGROUND_SERVICE');
-    expect(expo.android.permissions).not.toContain('android.permission.SCHEDULE_EXACT_ALARM');
+  test('the E6A rest-timer permissions stay declared (they are NOT dead)', () => {
+    // C7 correction, caught by e6aRestSurvival.guard: the audit lane
+    // called these dead because the SESSION sticky flag
+    // (USE_FOREGROUND_SERVICE=false) is off - but modules/rest-timer-live
+    // hosts a live shortService foreground service whose own manifest
+    // relies on the app-level FOREGROUND_SERVICE declaration, and it
+    // upgrades the end-of-rest alarm to setExactAndAllowWhileIdle behind
+    // canScheduleExactAlarms(). Removing either would break the shipped
+    // rest timer. Both founder-approved E6A (2026-07-02).
+    expect(expo.android.permissions).toContain('android.permission.FOREGROUND_SERVICE');
+    expect(expo.android.permissions).toContain('android.permission.SCHEDULE_EXACT_ALARM');
+    // The RESTRICTED alarm permission must never creep in (Play limits it
+    // to alarm-clock/calendar apps).
+    expect(expo.android.permissions).not.toContain('android.permission.USE_EXACT_ALARM');
   });
 
   test('no cardio/health permission or module ships', () => {

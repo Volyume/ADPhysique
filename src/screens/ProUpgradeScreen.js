@@ -763,7 +763,10 @@ const styles = StyleSheet.create({
   laterBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
   // C7: the paywall's legal links row (terms of use + privacy policy).
   legalRow: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
-  legalLink: { fontSize: fontSize.xs, color: colors.textMuted, textDecorationLine: 'underline' },
+  // No underline: this screen's contained-neutral-chrome rule bans
+  // textDecorationLine (shareCopyPolish.guard). The links read as links
+  // from their placement, colour and accessibilityRole.
+  legalLink: { fontSize: fontSize.xs, color: colors.textSecondary, paddingVertical: spacing.xs },
   legalDot: { fontSize: fontSize.xs, color: colors.textMuted },
   laterText: { fontSize: fontSize.sm, color: colors.textMuted },
 
@@ -805,7 +808,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    legalLink: { color: t.colors.textMuted },
+    legalLink: { color: t.colors.textSecondary },
     legalDot: { color: t.colors.textMuted },
     iconWrap: { backgroundColor: t.colors.primaryBg },
     title: { fontSize: t.fontSize.xxxl, color: t.colors.textPrimary },
