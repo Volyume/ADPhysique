@@ -4105,6 +4105,18 @@ export async function setMesocycleWeekDeload(weekId, { isDeload = true, rirTarge
   _scheduleSync();
 }
 
+/** One mesocycle week row by id (FQ-4: the session allocation resolves its
+ * block through the workout's mesocycle_week_id). */
+export async function getMesocycleWeekById(weekId) {
+  if (!weekId) return null;
+  try {
+    const d = await db();
+    return await d.getFirstAsync('SELECT * FROM mesocycle_weeks WHERE id = ?', [weekId]);
+  } catch (_e) {
+    return null;
+  }
+}
+
 export async function getNextMesocycleWeek(currentWeekId) {
   try {
     const d = await db();

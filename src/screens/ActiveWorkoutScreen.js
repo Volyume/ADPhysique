@@ -70,7 +70,7 @@ import { GLOSSARY } from '../lib/coachGlossary';
 import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
-import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets } from '../lib/sessionAdjustments';
+import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets, getSessionWeeklyAllocation } from '../lib/sessionAdjustments';
 import { DEFAULT_BAR_KG } from '../lib/warmupRamp';
 import { warmupRamp } from '../lib/warmupRamp';
 import { shareSessionName } from '../lib/sessionShareData';
@@ -406,6 +406,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // survives screen remounts and the WK-1 crash restore, the a11y copy
   // promises "Applies to the whole session" and now means it.
   const readinessDismissed = !!activeWorkout?.readinessDismissed;
+  // FQ-4 (D96): exerciseId -> this week's allocated working-set base, from
+  // the persisted planned_muscle_volume rows. Null until resolved (or when
+  // the session has no mesocycle week / no rows), in which case every
+  // consumer falls back to the routine's static counts.
+  const [weeklyAllocation, setWeeklyAllocation] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    getSessionWeeklyAllocation({ workout: activeWorkout, exercises: workoutExercises })
+      .then(({ allocation }) => { if (!cancelled) setWeeklyAllocation(allocation); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  // The allocation depends only on the workout's week and the exercise list
+  // identity, both fixed for the life of a session.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorkout?.id]);
   // Ghost pre-fill bookkeeping. The value itself is no longer rendered (the
   // ghost chip went in COMP-001; the muted input colour carries the state),
   // but the setter still arms/clears the pre-fill in loadHistory/onChange.
@@ -521,9 +536,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const sessionAdjustment = (tier === 'pro' && exercise?.id)
     ? (sessionAdjustments || []).find(a => a.exerciseId === exercise.id && !a.reverted) ?? null
     : null;
+  // FQ-4 (D96): the session's working-set BASE is the week's persisted
+  // volume allocation (the routine's static count scaled to this week's
+  // planned_muscle_volume for the muscle) - the wire that makes an applied
+  // coach change, the weekly ramp and the recovery week's per-muscle
+  // reductions actually reach the next session. Null allocation (no
+  // mesocycle, no rows, read failure) falls back to the routine's static
+  // count, byte-identical to the pre-wiring behaviour. A session adjustment
+  // (±1) already composes with the allocated base upstream
+  // (sessionAdjustments feeds the allocator's output in as plannedSets).
   const comp015SetCount = (sessionAdjustment && sessionAdjustment.setDelta !== 0)
     ? sessionAdjustment.adjustedSets
-    : routineExercise?.recommendedSets;
+    : (weeklyAllocation?.[exercise?.id] ?? routineExercise?.recommendedSets);
 
   // B2: readiness-informed, downward-only tweak from the intent-sheet answer.
   // Pure rule table (lib/sessionAdjustments.js); a presented suggestion applied
@@ -542,7 +566,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // so the combined surface can only ever move DOWN from the plan (a COMP-015
   // add is superseded on a below-par day; two drops never double-count).
   const readinessSetCount = readinessReduces
-    ? applyReadinessToSets(routineExercise?.recommendedSets, readinessTweak)
+    // FQ-4: the readiness trim starts from the same allocated base as every
+    // other session surface, so the two layers compose on one number.
+    ? applyReadinessToSets(weeklyAllocation?.[exercise?.id] ?? routineExercise?.recommendedSets, readinessTweak)
     : null;
   const adjustedSetCount = (Number.isFinite(readinessSetCount) && Number.isFinite(comp015SetCount))
     ? Math.min(comp015SetCount, readinessSetCount)

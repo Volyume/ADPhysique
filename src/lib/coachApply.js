@@ -362,3 +362,44 @@ export function computeVolumeApply(plannedRows, volumeDelta) {
   }
   return changes;
 }
+
+/**
+ * FQ-4 (D96, founder ruling 2026-08-10): the pure allocator that carries the
+ * week's PERSISTED per-muscle volume allocation into actual session set
+ * counts - the missing link in COACH PROPOSAL → APPLY → PERSISTED TARGET →
+ * VOLUME ALLOCATION → SET TARGETS → ACTUAL NEXT SESSION. Until this landed,
+ * planned_muscle_volume was display-only: the weekly ramp, the recovery
+ * week's per-muscle reductions and every confirmed Apply changed a number no
+ * session ever read.
+ *
+ * Deterministic and identity-safe: each exercise's baseline set count is
+ * scaled by (this week's planned sets / the block's week-1 planned sets) for
+ * its primary muscle, rounded to the nearest whole set, floored at one
+ * working set. A muscle with no row in either week, a zero baseline, or a
+ * missing week resolves to factor 1, so legacy blocks and ad-hoc sessions
+ * are byte-identical to the pre-wiring behaviour. Nothing here consults the
+ * UNAPPLIED coach output: only persisted rows move a session, which is the
+ * confirm-then-apply law end-to-end.
+ *
+ * @param {Array<{exerciseId:string, primaryMuscle:string, recommendedSets:number}>} exercises
+ * @param {Object<string, number>} weekPlannedByMuscle    this week's planned_sets per muscle
+ * @param {Object<string, number>} baselinePlannedByMuscle week-1 planned_sets per muscle
+ * @returns {Object<string, number>} exerciseId -> allocated working-set count
+ */
+export function computeWeeklySessionAllocation(exercises, weekPlannedByMuscle, baselinePlannedByMuscle) {
+  const out = {};
+  if (!Array.isArray(exercises)) return out;
+  const week = weekPlannedByMuscle || {};
+  const base = baselinePlannedByMuscle || {};
+  for (const ex of exercises) {
+    const id = ex?.exerciseId;
+    const sets = Number(ex?.recommendedSets);
+    if (!id || !Number.isFinite(sets) || sets < 1) continue;
+    const m = ex?.primaryMuscle;
+    const w = Number(week[m]);
+    const b = Number(base[m]);
+    const factor = Number.isFinite(w) && Number.isFinite(b) && b > 0 && w > 0 ? w / b : 1;
+    out[id] = Math.max(1, Math.round(sets * factor));
+  }
+  return out;
+}

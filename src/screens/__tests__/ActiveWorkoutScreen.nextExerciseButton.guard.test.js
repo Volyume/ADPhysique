@@ -202,7 +202,10 @@ describe('target-set fallback matrix: targetSets always resolves to a real numbe
     // in via comp015SetCount when there is no active session adjustment —
     // this fix only adds what happens when adjustedSetCount is falsy.
     expect(SRC).toContain('const comp015SetCount = (sessionAdjustment && sessionAdjustment.setDelta !== 0)');
-    expect(SRC).toContain('recommendedSets;');
+    // FQ-4 (D96): the no-adjustment base is the week's allocated count with
+    // the routine's static count as its identity fallback - same resolution
+    // law, one wire earlier.
+    expect(SRC).toContain('(weeklyAllocation?.[exercise?.id] ?? routineExercise?.recommendedSets);');
     // handleConfirmSwap deliberately keeps the slot's planned set count
     // (rebuiltRoutineEx spreads prevRoutineEx), so a swapped-in exercise
     // still carries a routineExercise with recommendedSets.
