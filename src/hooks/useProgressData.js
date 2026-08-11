@@ -325,9 +325,20 @@ export default function useProgressData() {
             const at = s.createdAt ?? 0;
             return at >= start && at < end;
           });
+          // C6 R-12 (D97-22): an untrained week is NOT "a rest week the
+          // user took" (absence converted into evidence, campaign law 1) -
+          // it is the boundary of continuous accumulation: fatigue cannot
+          // have been accumulating across a week with no training, so the
+          // scan ends here with the accumulation span measured so far.
+          // Outcome identical to before (deload stays suppressed after a
+          // gap - the returning user IS rested), but the rule the code
+          // expresses is now the true one, and the polarity is pinned so
+          // an inversion (a gap ever COUNTING toward accumulation or
+          // triggering deloads) fails the suite.
+          if (wkSets.length === 0) return wk; // accumulation boundary, not a rest week
           const vol = calculateWeeklyVolume(wkSets, exMap);
           const totalSets = Object.values(vol).reduce((sum, v) => sum + v.workingSets, 0);
-          if (totalSets < 15) return wk;  // found a low-volume / rest week
+          if (totalSets < 15) return wk;  // a genuinely trained lighter week
         }
         return 12; // no lighter week found in last 12 weeks
       })();

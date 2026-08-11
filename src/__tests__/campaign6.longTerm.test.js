@@ -320,3 +320,31 @@ describe('R-17 (D97-22): the win-back claims storage only, and calm mode gates t
     expect(gate).toMatch(/if \(isCalm\(mode\)\) \{ await cancelWinbackNotification\(\); return; \}/);
   });
 });
+
+describe('R-12 (D97-22): a gap week is an accumulation boundary, never fatigue evidence', () => {
+  test('the lighter-week scan ends at an untrained week and cannot invert polarity', () => {
+    const src = read('hooks/useProgressData.js');
+    const fn = src.slice(src.indexOf('const weeksSinceLighter = (() => {'));
+    const scan = fn.slice(0, fn.indexOf('})();'));
+    // The empty-week branch returns the span measured so far (wk), and it
+    // sits BEFORE the volume threshold so a gap can never read as heavy
+    // training (returning 12 here would fabricate fatigue from absence).
+    expect(scan).toMatch(/if \(wkSets\.length === 0\) return wk;/);
+    const emptyAt = scan.indexOf('wkSets.length === 0');
+    const thresholdAt = scan.indexOf('totalSets < 15');
+    expect(emptyAt).toBeGreaterThan(-1);
+    expect(emptyAt).toBeLessThan(thresholdAt);
+    expect(scan).not.toMatch(/wkSets\.length === 0\) return 12/);
+  });
+});
+
+describe('R-14 (D97-22): the coach weight chip honours the body-weight unit', () => {
+  test('the chip formats from the raw kg delta per bodyWeightUnits; maths stays kg', () => {
+    const src = read('screens/CoachOutputScreen.js');
+    const fn = src.slice(src.indexOf('const weightChipValue = (() => {'));
+    const chip = fn.slice(0, fn.indexOf('})();'));
+    expect(chip).toMatch(/const bwu = bodyWeightUnits \|\| 'st';/);
+    expect(chip).toMatch(/2\.2046226218/);
+    expect(chip).toMatch(/if \(bwu === 'kg'\) return trend\.deltaLabel/);
+  });
+});

@@ -990,10 +990,11 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [redirectWeekStart, setRedirectWeekStart] = useState(null);
   const weekStart = redirectWeekStart ?? route.params?.weekStart ?? localWeekStartMs();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, userProfile, units, saveLocalProfile, tier: storeTier, energyUnit, reduceMotion } = useAppStore(useShallow(s => ({
+  const { user, userProfile, units, bodyWeightUnits, saveLocalProfile, tier: storeTier, energyUnit, reduceMotion } = useAppStore(useShallow(s => ({
     user: s.user,
     userProfile: s.userProfile,
     units: s.units,
+    bodyWeightUnits: s.bodyWeightUnits,
     saveLocalProfile: s.saveLocalProfile,
     tier: s.tier,
     // NU-6: kJ display preference, same read as the food domain screens.
@@ -2365,10 +2366,20 @@ export default function CoachOutputScreen({ navigation, route }) {
   // NU-5: the chip's caption names the number a "7-day trend" (the check-in's
   // vocabulary), so the old "this week" suffix comes off the value here.
   // Display-only; the engine label is untouched.
-  const weightChipValue =
-    trend.deltaLabel && trend.delta !== null
-      ? trend.deltaLabel.replace(/ this week$/, '')
-      : 'No weights logged';
+  // C6 R-14 (D97-22): the engine's delta label is kg-only (its `units`
+  // input is the immutable kg gym unit), so stone/lbs users read their
+  // weekly change in kg on the one screen that decides from it while
+  // every other body-weight surface honours bodyWeightUnits. Display-only
+  // reformat here from the raw kg delta: stone users read weekly deltas
+  // in lbs (the UK convention for changes); the maths and every stored
+  // value stay kg.
+  const weightChipValue = (() => {
+    if (trend.delta == null || !trend.deltaLabel) return 'No weights logged';
+    const bwu = bodyWeightUnits || 'st';
+    if (bwu === 'kg') return trend.deltaLabel.replace(/ this week$/, '');
+    const lbs = Math.round(Math.abs(trend.delta) * 2.2046226218 * 10) / 10;
+    return `${trend.delta >= 0 ? '+' : '-'}${lbs} lb${lbs === 1 ? '' : 's'}`;
+  })();
 
   // Five-part coach response (Theme A, OPP-C01/C02/C06), rendered in the
   // user's register (C1, founder decision #2): tone preference wins, else
