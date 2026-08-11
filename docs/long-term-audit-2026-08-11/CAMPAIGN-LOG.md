@@ -117,6 +117,14 @@ triage carries every open item; nothing is silently decided.
 - ADDENDUM progress: anti-anthropomorphism/manipulation copy guards
   LANDED (abefab54, tree clean); six-block RELATIONSHIP report LANDED
   (392fa136).
+- Phase 51 (90-day lapse E2E) — LANDED 6700a9f7:
+  campaign6.lapse90.test.js (11 tests).
+- Phase 50 (180-day E2E athlete) — LANDED 517c2cc3:
+  campaign6.athlete180.test.js (11 tests; repeat transition, exercise
+  change, manual, calm, nutrition thread with weigh-in gap; full
+  thesis asserted).
+- IN FLIGHT (agents): Phases 18-21 (AUDIT-TIER-TRANSITIONS.md) and
+  the addendum lanes (CHOICE-MEMORY.md + RELATIONSHIP-MOMENTS.md).
 - NEXT: land the in-flight audit pair (lead-review, action findings);
   then agent pairs for 15-21 (modes/tier/trial), 25-31 (weight/lapse/
   streak/win-back/progress/edits), 32-38 (reinstall/migration
