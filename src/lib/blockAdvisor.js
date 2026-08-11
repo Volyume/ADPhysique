@@ -46,6 +46,18 @@ import { getBlockStatus } from './mesocycle';
 // readiness values through THIS formula rather than forking its own.
 export function checkinReadiness(c) {
   if (!c) return null;
+  // FB-36 (FQ-2, D96): a row that answers NONE of the readiness questions is
+  // not a readiness reading. WorkoutSummaryScreen writes a weekly_checkins
+  // row carrying only sleepQuality (a different column from sleepHours, and
+  // one this formula never reads) whenever the pre-workout sleep question is
+  // answered, tier-blind. Under the old defaults that empty row scored
+  // exactly 50 - energy and soreness both defaulted to 3 - and 50 was enough
+  // to flip the next-block branch, so whether the app offered the adaptive
+  // path turned on the presence of a placeholder row rather than on anything
+  // the user reported. An evidence-free row now counts as no reading at all,
+  // exactly as unknown sleep already does ("unknowns never count"). Any row
+  // that answers even one of the three is scored precisely as before.
+  if (c.energyScore == null && c.sorenessScore == null && c.sleepHours == null) return null;
   const energy  = (((c.energyScore  ?? 3) - 1) / 4) * 100;           // 0–100
   const soreness = (1 - ((c.sorenessScore ?? 3) - 1) / 4) * 100;     // inverted 0–100
   // Campaign 1 P0-7 D10: sleepHours is OPTIONAL on the check-in, and the
@@ -150,6 +162,58 @@ function detectSignals(checkins) {
 }
 
 // ---------------------------------------------------------------------------
+// The next-block decision: two options, always both
+// ---------------------------------------------------------------------------
+
+/**
+ * FQ-2 (D96, founder ruling 2026-08-10): "At block completion PRO always
+ * sees BOTH Repeat and Continue-with-adjustments as side-by-side legitimate
+ * choices; the advisor may recommend and explain but never hides, gates or
+ * forces ... FREE does not receive adaptive next-block coaching; if the
+ * option renders for Free at all it is truthfully Pro-gated through the
+ * existing entitlement UX."
+ *
+ * So the two options are a CONSTANT of the surface, not a function of the
+ * advisor's branch. `buildNextBlockOptions` always returns both, always in
+ * the same order, and the advisor's recommendation only sets `recommended`
+ * on one of them. It can never remove, reorder or gate the other.
+ *
+ * Tier eligibility comes from the real entitlement (`store.tier === 'pro'`,
+ * threaded in as `isPro`), never from the presence or absence of check-in
+ * rows - that accidental entitlement was FB-36 and it is gone.
+ */
+export const NEXT_BLOCK_OPTION_LABELS = {
+  repeat: 'Run this plan again, unchanged',
+  adjust: 'Continue with adjustments',
+};
+
+export function buildNextBlockOptions({ recommendation = null, isPro = false } = {}) {
+  return [
+    {
+      intent: 'repeat',
+      label: NEXT_BLOCK_OPTION_LABELS.repeat,
+      // A true repeat: the next block is seeded with this block's own
+      // observed start and planned peak (blockSeed's intent === 'repeat').
+      detail: 'Same workouts, and the same weekly set targets as last time.',
+      // Running your plan again is training, not coaching: free on both tiers.
+      requiresPro: false,
+      locked: false,
+      recommended: isPro && recommendation === 'repeat',
+    },
+    {
+      intent: 'adjust',
+      label: NEXT_BLOCK_OPTION_LABELS.adjust,
+      detail: isPro
+        ? 'Same workouts, with next block\'s weekly set targets starting from what this block showed, muscle by muscle.'
+        : 'Part of Pro. Your next block\'s weekly set targets start from what this block showed, muscle by muscle.',
+      requiresPro: true,
+      locked: !isPro,
+      recommended: isPro && recommendation === 'adjust',
+    },
+  ];
+}
+
+// ---------------------------------------------------------------------------
 // Next-block recommendation (post-recovery hierarchy)
 // ---------------------------------------------------------------------------
 
@@ -158,6 +222,14 @@ function detectSignals(checkins) {
  * Default is always: same programme, go again.
  * Changes only triggered by sustained signals over multiple blocks.
  *
+ * FQ-2: this is ADVICE. It marks one of the two options as recommended and
+ * explains why in its headline/body; it never decides which options exist.
+ * The three coached branches therefore no longer carry an `actionLabel` -
+ * there is no single CTA left for one branch to own (the button labels are
+ * NEXT_BLOCK_OPTION_LABELS above, identical on every branch, which is also
+ * what retires FB-33's "Repeat this plan anyway": with both options offered
+ * as equals, no option has to be framed as going against advice).
+ *
  * @param {Array}  checkins    - recent weekly check-ins
  * @param {Object} userProfile - { experience, goal }
  * @param {Array}  signals     - detected signals
@@ -165,11 +237,32 @@ function detectSignals(checkins) {
  *   ahead or live; 'finished' once the block is completed_awaiting_decision
  *   (Stage 1: the wording must never place the recovery week in the future
  *   when it has already passed).
- * @returns {{ recommendation, headline, body, actionLabel, secondaryLabel }}
+ * @param {boolean} isPro      - the REAL entitlement. Free receives no
+ *   adaptive next-block coaching at all (founder tier law, D96: "FREE DOES
+ *   NOT HAVE COACHING"), so no recommendation is computed for it and none of
+ *   the adaptive narrative is composed.
+ * @returns {{ recommendation, coached, headline, body, secondaryLabel }}
  */
-function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'recovery') {
+function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'recovery', isPro = false) {
   const highSignals = signals.filter(s => s.severity === 'high');
   const finished = phase === 'finished';
+
+  // ── Free: no adaptive coaching, and no branch that check-in rows can move ─
+  // The card still states the choice honestly (repeat is core training and
+  // stays reachable); the adjusted path renders Pro-marked and routes through
+  // the normal entitlement UX, so the tier boundary is declared rather than
+  // accidental.
+  if (!isPro) {
+    return {
+      recommendation: null,
+      coached: false,
+      headline: 'Your next block',
+      body: finished
+        ? 'You can run this plan again whenever you are ready. Same workouts, same set targets as last time.'
+        : 'Once your recovery week is done you can run this plan again. Same workouts, same set targets as last time.',
+      secondaryLabel: 'Build a new plan',
+    };
+  }
 
   // Count persistent performance/fatigue signals
   // Simplified: if this block had consistently poor readiness, suggest minor adjustment
@@ -180,20 +273,18 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
   if (highSignals.length === 0 && avgReadiness >= 60) {
     return {
       recommendation: 'repeat',
+      coached: true,
       headline: 'Go again: same plan',
       body: finished
         ? "Pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block."
         : "Your recovery week does its job, then you pick up where you left off. Same exercises, same structure. You'll come back a little stronger each block.",
-      // FB-32 (D96, COPY ONLY): this branch runs a TRUE repeat -- the next
-      // block is seeded with the finished block's own observed start and
-      // planned peak, discarding every ledger proposal (blockSeed.js's
-      // intent === 'repeat'). "Continue this plan" reads as "carry on,
-      // including the learning", which is the opposite of what it does. The
-      // sibling consider_rebuild branch already found the honest wording
-      // ("Repeat this plan anyway") for exactly this reason. No branch
-      // logic, no tier reachability and no seedIntent mapping changes here:
-      // the decision architecture itself is founder question FQ-2.
-      actionLabel: 'Run this plan again, unchanged',
+      // FB-32 (D96): this branch suggests a TRUE repeat -- the next block is
+      // seeded with the finished block's own observed start and planned peak,
+      // discarding every ledger proposal (blockSeed.js's intent ===
+      // 'repeat'). The button that does it says exactly that
+      // (NEXT_BLOCK_OPTION_LABELS.repeat). FQ-2: recommending the repeat no
+      // longer removes the adjusted option from the card, and the ledger the
+      // block just produced is shown either way.
       secondaryLabel: 'Build a new plan',
     };
   }
@@ -202,6 +293,7 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
   if (highSignals.length <= 1 || avgReadiness >= 50) {
     return {
       recommendation: 'adjust',
+      coached: true,
       headline: 'Same plan, slightly adjusted',
       // Stage 6 (2026-08-09): the promise is finally TRUE. The restart
       // path builds the Block Ledger and seeds each muscle's next-block
@@ -212,7 +304,6 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
       body: finished
         ? "The structure is working. Your next block starts from what this block showed, muscle by muscle."
         : "The structure is working. After your recovery week, your next block starts from what this block showed, muscle by muscle.",
-      actionLabel: 'Continue with adjustments',
       secondaryLabel: 'Build a new plan',
     };
   }
@@ -220,17 +311,20 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
   // Suggest rebuild only when signals are consistently poor
   return {
     recommendation: 'consider_rebuild',
+    coached: true,
     headline: 'Might be worth a fresh look',
     body: finished
       ? "Fatigue ran consistently high this block. It's worth reviewing whether the plan's volume or exercise selection still fits where you are. The coach can help rebuild it."
       : "Fatigue has been consistently high this block. After your recovery week, it's worth reviewing whether the plan's volume or exercise selection still fits where you are. The coach can help rebuild it.",
-    // D93 (Campaign 2, Phase 12): this card RECOMMENDS a fresh look, so
-    // its primary button cannot share 'Continue this plan' with the card
-    // that recommends continuing - two opposite recommendations, one CTA
-    // label. 'Repeat this plan anyway' states the true behaviour (a true
-    // repeat, PlansScreen seedIntent 'repeat') and owns that it goes
-    // against the headline, per the D91-2 button-honesty precedent.
-    actionLabel: 'Repeat this plan anyway',
+    // D93 (Campaign 2, Phase 12) required this card's primary button not to
+    // share 'Continue this plan' with the card that recommends continuing,
+    // and settled on 'Repeat this plan anyway'. FQ-2 (D96) supersedes the
+    // label while KEEPING the honesty rule that produced it: no branch owns
+    // a CTA any more, both options carry their own true labels on every
+    // branch, and this branch simply marks NEITHER of them as recommended -
+    // its own suggestion is the fresh look below. That also resolves FB-33:
+    // "anyway" framed repeating as going against advice, and there is no
+    // longer any need to frame either option as the wrong one.
     secondaryLabel: 'Review with coach',
   };
 }
@@ -245,6 +339,10 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
  * @param {string} userId
  * @param {Object|null} activeBlock  - from getActiveBlock(); has startDate, plannedWeeks, etc.
  * @param {Object} userProfile       - from useAppStore; { experience, goal, firstName }
+ * @param {Object} [options]
+ * @param {boolean} [options.isPro]  - FQ-2 (D96): the REAL entitlement, from
+ *   the store's tier. Defaults to false, so a caller that forgets it gets the
+ *   uncoached advice rather than Pro coaching by accident (fails closed).
  * @returns {Promise<BlockAdvice>}
  *
  * BlockAdvice shape:
@@ -253,13 +351,13 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
  *   headline:  string, short coaching statement
  *   body:      string, plain English, uses user's own data
  *   signals:   [{ type, severity, label }]
- *   nextBlock: null | { recommendation, headline, body, actionLabel, secondaryLabel }
+ *   nextBlock: null | { recommendation, coached, headline, body, secondaryLabel }
  *   blockStatus: null | { status: 'active' | 'recovery' |
  *     'completed_awaiting_decision', awaitingDecision, currentWeek,
  *     totalWeeks, weeksOverdue, ... }
  * }
  */
-export async function getBlockAdvice(userId, activeBlock, userProfile) {
+export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro = false } = {}) {
   // Campaign 1 P0-7 D2: a FAILED check-in read must not masquerade as "no
   // signals detected" - the old catch(() => []) made a read error produce
   // a confident healthy-block advice with the heads-up and early-deload
@@ -290,7 +388,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
 
   // ── In recovery week ──────────────────────────────────────────────────────
   if (blockStatus?.status === 'recovery') {
-    const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals);
+    const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals, 'recovery', isPro);
     return {
       action: 'in_recovery',
       headline: 'Recovery week is active',
@@ -303,7 +401,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
 
   // ── Block finished, awaiting the user's next-block decision ──────────────
   if (blockStatus?.status === 'completed_awaiting_decision') {
-    const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals, 'finished');
+    const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals, 'finished', isPro);
     const overdueWeeks = blockStatus.weeksOverdue;
     return {
       action: 'post_recovery',
@@ -343,7 +441,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile) {
   const hasSustainedFatigue = signals.some(s => s.type === 'sustained_fatigue');
   const hasEnoughHistory = checkins.length >= 2 && (blockStatus?.currentWeek ?? 1) >= 2;
   if (hasEnoughHistory && (highSignals.length >= deloadHighThreshold || hasSustainedFatigue)) {
-    const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals);
+    const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals, 'recovery', isPro);
     return {
       action: 'early_deload',
       headline: 'Your body is asking for a lighter week',

@@ -29,7 +29,8 @@ import {
   archivePlan, unarchivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
   getPlanFolders, createPlanFolder, renamePlanFolder, deletePlanFolder, setPlanFolder,
 } from '../lib/database';
-import { getBlockAdvice } from '../lib/blockAdvisor';
+import { getBlockAdvice, buildNextBlockOptions } from '../lib/blockAdvisor';
+import { ProBadge } from '../components/ProGate';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, buildSeedReceipt } from '../lib/blockExplain';
 import { generateAndSavePlan } from '../lib/planAutoGen';
@@ -190,6 +191,19 @@ export default function PlansScreen({ navigation }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cloudSyncVersion]);
 
+  // FQ-2 (D96): the block-completion decision reads the real entitlement, so
+  // a tier change while this screen is open (a trial starting, an
+  // entitlement lapsing mid-session) rebuilds the card rather than leaving
+  // one composed for the other tier on screen. First run is the focus load
+  // above, not this.
+  const tierRef = useRef(tier);
+  useEffect(() => {
+    if (tierRef.current === tier) return;
+    tierRef.current = tier;
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tier]);
+
   async function loadData() {
     if (!user?.id) return;
     const req = ++ledgerLoadRef.current;
@@ -216,7 +230,11 @@ export default function PlansScreen({ navigation }) {
       setExerciseCounts(exc);
 
       if (block) {
-        const advice = await getBlockAdvice(user.id, block, userProfile).catch(() => null);
+        // FQ-2 (D96): the entitlement travels with the request, from the
+        // store's real tier. Free receives no adaptive next-block coaching;
+        // nothing about that decision reads check-in rows any more.
+        const advice = await getBlockAdvice(user.id, block, userProfile, { isPro: tier === 'pro' })
+          .catch(() => null);
         setBlockAdvice(advice);
 
         // Stage 8 (§3.6): the block-end story on the decision card. The
@@ -225,12 +243,18 @@ export default function PlansScreen({ navigation }) {
         // user-confirmed longer-recovery proposal when the ledger made
         // one. Best-effort: the card renders without it.
         //
-        // Review blocker #3: the rationale rows make forward claims
-        // ("the next block starts 1 set higher") that only the 'adjust'
-        // recommendation's button actually applies — 'repeat' and
-        // 'consider_rebuild' both run a TRUE repeat. So the rows render
-        // only above the button that honours them; the full reflection
-        // stays one tap away on BlockReflection for every intent. The
+        // Review blocker #3 (Stage 8) gated these rows on the 'adjust'
+        // recommendation, because the rationales make forward claims ("the
+        // next block starts 1 set higher") that only the adjust button
+        // applies. FQ-2 (D96) resolves that differently and correctly: a Pro
+        // user is now ALWAYS offered "Continue with adjustments" beside the
+        // repeat, so the rows always sit above a button that honours them,
+        // and the card states which option they describe (see the framing
+        // line in the render). That kills FB-19's core defect -- a block that
+        // went well was the one case where the app threw its own ledger away.
+        // The rows are the coaching decision's evidence, so they are Pro;
+        // the ledger itself stays tier-blind (it is workout evidence, and
+        // BlockReflection remains the full reflection for any intent). The
         // longer-recovery line is a user-call proposal, honest under any
         // button, so it renders for all post_recovery cards.
         if (advice?.action === 'post_recovery') {
@@ -246,9 +270,7 @@ export default function PlansScreen({ navigation }) {
             // FB-24: hold the record for the transition receipt.
             ledgerRecordRef.current = ledger;
             setLedgerStory({
-              rows: advice?.nextBlock?.recommendation === 'adjust'
-                ? buildLedgerReflectionRows(ledger).slice(0, 4)
-                : [],
+              rows: tier === 'pro' ? buildLedgerReflectionRows(ledger).slice(0, 4) : [],
               recoveryLine: recoveryProposalLine(ledger),
             });
           } catch (_e) { setLedgerStory(null); }
@@ -302,6 +324,14 @@ export default function PlansScreen({ navigation }) {
   // observability so the seam is live, not decorative.
   async function handleRestartPlan(intent = null) {
     if (!activePlan) return;
+    // FQ-2 (D96): the adjusted path is Pro. The card already renders it
+    // Pro-marked for a free user and sends the tap to the upgrade flow; this
+    // is the second lock, so no route (a stale card, a re-render mid-lapse)
+    // can reach the adaptive seed without the entitlement.
+    if (intent === 'adjust' && tier !== 'pro') {
+      navigation.navigate('ProUpgrade', { source: 'block_decision' });
+      return;
+    }
     // FB-26 (D96): this alert was byte-identical for both intents. At the
     // single moment the app asks the user to confirm its most consequential
     // training decision, "Restart this plan? A new training block starts
@@ -337,7 +367,11 @@ export default function PlansScreen({ navigation }) {
               // result falls back to the template ramp unchanged.
               // eslint-disable-next-line global-require
               const { buildSeedRangesForNextBlock, recordSeedOutcome } = require('../lib/blockLedgerRunner');
-              const seedIntent = intent === 'adjust' ? 'adjust' : 'repeat';
+              // FQ-2 (D96): the mapping's SEMANTICS are unchanged -- only the
+              // 'adjust' option applies the full ledger, everything else is a
+              // true repeat. It now also carries the entitlement, so an
+              // adjust intent without Pro can never seed adaptively.
+              const seedIntent = intent === 'adjust' && tier === 'pro' ? 'adjust' : 'repeat';
               const seedRanges = await buildSeedRangesForNextBlock(user.id, {
                 intent: seedIntent,
                 userProfile,
@@ -688,6 +722,30 @@ export default function PlansScreen({ navigation }) {
     && blockAdvice.blockStatus
     && (blockAdvice.blockStatus.recoveryWeek - blockAdvice.blockStatus.currentWeek) === 1;
 
+  // FQ-2 (D96): the block-completion decision. The two options are constants
+  // of this surface, always both, always in this order; the advisor's
+  // recommendation can only MARK one of them (blockAdvisor.buildNextBlockOptions).
+  // Which options a user can reach comes from the real entitlement, never
+  // from what the advisor decided or what check-in rows happen to exist.
+  const nextBlockOptions = blockAdvice?.nextBlock
+    ? buildNextBlockOptions({
+        recommendation: blockAdvice.nextBlock.recommendation,
+        isPro: tier === 'pro',
+      })
+    : [];
+  const reachableOptions = nextBlockOptions.filter((o) => !o.locked);
+  const anyRecommended = nextBlockOptions.some((o) => o.recommended);
+  function optionVariant(opt) {
+    if (opt.locked) return 'secondary';
+    if (opt.recommended) return 'primary';
+    // With nothing recommended and only one option reachable (a free user,
+    // whose repeat is simply the action this card offers), that option
+    // carries the card. Two reachable options stay visually equal unless the
+    // advisor has actually suggested one.
+    if (!anyRecommended && reachableOptions.length === 1) return 'primary';
+    return 'secondary';
+  }
+
   const isProWithPlan = tier === 'pro' && !!activePlan;
   // Two card sets cover three audiences:
   //   * Pro with an active plan → switch framings (update goals / library / manual)
@@ -854,18 +912,33 @@ export default function PlansScreen({ navigation }) {
 
                 {/* Stage 8 (§3.6): the block-end story, muscle by muscle,
                     each line the ledger's own delta-composed rationale.
-                    Rows are pre-gated to the 'adjust' recommendation in
-                    loadData (review blocker #3); the recovery proposal
-                    line is a user-call statement and renders for any
-                    post_recovery card. */}
+                    FQ-2 (D96): the rows render with the decision whatever
+                    the advisor favours -- a well-run block never silently
+                    discards its own ledger again (FB-19) -- gated only on
+                    the Pro entitlement in loadData, since they are the
+                    coaching decision's evidence. The framing line below
+                    keeps the forward claims honest now that both options
+                    are on the card. The recovery proposal line is a
+                    user-call statement and renders for any post_recovery
+                    card. */}
                 {blockAdvice.action === 'post_recovery'
                   && (ledgerStory?.rows?.length || ledgerStory?.recoveryLine) ? (
                     <View style={styles.ledgerStory}>
+                      {ledgerStory.rows?.length ? (
+                        <Text style={[styles.ledgerStoryLabel, live.ledgerStoryLabel]}>
+                          What this block showed
+                        </Text>
+                      ) : null}
                       {(ledgerStory.rows || []).map((row) => (
                         <Text key={row.muscle} style={[styles.ledgerStoryLine, live.nextBlockBody]}>
                           {row.rationale}
                         </Text>
                       ))}
+                      {ledgerStory.rows?.length ? (
+                        <Text style={[styles.ledgerStoryLine, live.nextBlockBody]}>
+                          These apply if you continue with adjustments. Running the plan again keeps the same targets as last time.
+                        </Text>
+                      ) : null}
                       {ledgerStory.recoveryLine ? (
                         <Text style={[styles.ledgerStoryLine, live.nextBlockBody]}>
                           {ledgerStory.recoveryLine}
@@ -893,21 +966,57 @@ export default function PlansScreen({ navigation }) {
                   />
                 )}
 
-                {/* CTAs only shown when block is complete and recovery is done */}
+                {/* CTAs only shown when block is complete and recovery is done.
+                    FQ-2 (D96): BOTH next-block options render, side by side as
+                    equally reachable choices. Before this, the advisor returned
+                    ONE object and the screen rendered ONE primary button, so
+                    the other path was unreachable from the only decision
+                    surface in the app (FB-31) and which one you got turned on
+                    weekly check-in readiness (FB-19/FB-36). The advisor is now
+                    advice: it may mark one option "Suggested" and explains why
+                    in the headline/body above, and it can neither hide nor
+                    pre-select away the other. Every option still goes through
+                    handleRestartPlan's explicit confirm (FB-34/35 unchanged:
+                    nothing transitions on its own). */}
                 {blockAdvice.action === 'post_recovery' && (
-                  <View style={styles.blockCardActions}>
-                    {/* R9 (D70): blockRestartBtn/blockNewBtn -> shared Button
-                        primary/secondary (matching their former filled/
-                        bordered look). Primary fires its own selection()
-                        tick, so no manual haptic here. */}
-                    <Button
-                      variant="primary"
-                      icon="refresh-outline"
-                      title={blockAdvice.nextBlock.actionLabel}
-                      onPress={() => handleRestartPlan(blockAdvice.nextBlock.recommendation)}
-                      accessibilityLabel={blockAdvice.nextBlock.actionLabel}
-                      style={styles.blockCtaButton}
-                    />
+                  <View style={styles.blockDecision}>
+                    {reachableOptions.length > 1 ? (
+                      <Text style={[styles.nextBlockBody, live.nextBlockBody]}>
+                        Both options are open. Whichever you choose, the new block starts today.
+                      </Text>
+                    ) : null}
+
+                    {nextBlockOptions.map((opt) => (
+                      <View key={opt.intent} style={styles.blockOption}>
+                        {/* R9 (D70): the shared Button primitive. Primary
+                            fires its own selection() tick, so no manual
+                            haptic here. */}
+                        <Button
+                          variant={optionVariant(opt)}
+                          icon={opt.intent === 'repeat' ? 'refresh-outline' : 'trending-up-outline'}
+                          title={opt.label}
+                          // A locked option is truthful, not silent: it routes
+                          // to the same upgrade flow every other Pro surface
+                          // uses. handleRestartPlan holds the second lock.
+                          onPress={() => (opt.locked
+                            ? navigation.navigate('ProUpgrade', { source: 'block_decision' })
+                            : handleRestartPlan(opt.intent))}
+                          accessibilityLabel={opt.locked ? `${opt.label}. Part of Pro.` : opt.label}
+                        />
+                        {(opt.locked || opt.recommended) ? (
+                          <View style={styles.blockOptionTags}>
+                            {opt.locked ? <ProBadge size="sm" /> : null}
+                            {opt.recommended ? (
+                              <Text style={[styles.blockOptionFlag, live.blockOptionFlag]}>Suggested</Text>
+                            ) : null}
+                          </View>
+                        ) : null}
+                        <Text style={[styles.blockOptionDetail, live.blockOptionDetail]}>
+                          {opt.detail}
+                        </Text>
+                      </View>
+                    ))}
+
                     <Button
                       variant="secondary"
                       title={blockAdvice.nextBlock.secondaryLabel}
@@ -926,7 +1035,6 @@ export default function PlansScreen({ navigation }) {
                         );
                       }}
                       accessibilityLabel={blockAdvice.nextBlock.secondaryLabel}
-                      style={styles.blockCtaButton}
                     />
                   </View>
                 )}
@@ -1721,7 +1829,21 @@ const styles = StyleSheet.create({
   },
   // Stage 8: the block-end ledger story under the decision body.
   ledgerStory: { marginTop: spacing.sm, gap: spacing.xs },
+  ledgerStoryLabel: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted,
+  },
   ledgerStoryLine: { ...type.bodySm, color: colors.textSecondary },
+
+  // FQ-2 (D96): the two next-block options, stacked so each carries its own
+  // one-line description (and, where it applies, its Pro mark or the
+  // advisor's "Suggested" flag) instead of two bare side-by-side buttons.
+  blockDecision: { marginTop: spacing.xs, gap: spacing.md },
+  blockOption: { gap: spacing.xs },
+  blockOptionTags: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  blockOptionFlag: {
+    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
+  },
+  blockOptionDetail: { ...type.caption, color: colors.textSecondary },
 
   // Block card action buttons
   blockCardActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.xs },
@@ -1802,6 +1924,10 @@ function buildLiveStyles(t) {
     nextBlockPreLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     nextBlockHeadline: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     nextBlockBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    ledgerStoryLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
+    // FQ-2 (D96): the two next-block options' flag and description lines.
+    blockOptionFlag: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    blockOptionDetail: { ...t.type.caption, color: t.colors.textSecondary },
     // R9 (D70): blockRestartBtn/blockRestartBtnText/blockNewBtn/
     // blockNewBtnText live twins deleted alongside their frozen styles - the
     // shared Button primitive resolves its own live theme internally.

@@ -13,6 +13,7 @@
 import fs from 'fs';
 import path from 'path';
 import { BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK } from '../lib/mesocycle';
+import { buildNextBlockOptions, checkinReadiness } from '../lib/blockAdvisor';
 import { buildBlockStartLines, buildSeedReceipt, BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import { buildReadinessSummary } from '../lib/readinessSummary';
 import { getQuizRecommendation } from '../screens/PlanLibraryScreen';
@@ -573,15 +574,18 @@ describe('BLOCK: the first block explains itself and never advances on its own (
   });
 
   test('the two next-block confirms describe their own actions, and the repeat label says repeat', () => {
-    // FB-26 / FB-32 (copy only: no branch logic, no tier reachability, and
-    // the two options are still never rendered side by side -- that is FQ-2).
+    // FB-26 / FB-32. Re-anchored under FQ-2 (D96): the repeat label moved
+    // from the advisor's repeat BRANCH to the option constant both branches
+    // now render (NEXT_BLOCK_OPTION_LABELS), and the seed mapping gained the
+    // entitlement. Same meanings: the repeat button says the plan runs again
+    // unchanged, each confirm describes its own action, and only 'adjust'
+    // applies the ledger.
     const advisor = read('lib/blockAdvisor.js');
-    expect(advisor).toContain("actionLabel: 'Run this plan again, unchanged'");
+    expect(advisor).toContain("repeat: 'Run this plan again, unchanged'");
     const plans = read('screens/PlansScreen.js');
     expect(plans).toMatch(/The weekly set targets start from what your last block showed/);
     expect(plans).toMatch(/the same set targets as last time/);
-    // The seed mapping is untouched.
-    expect(plans).toMatch(/const seedIntent = intent === 'adjust' \? 'adjust' : 'repeat';/);
+    expect(plans).toMatch(/const seedIntent = intent === 'adjust' && tier === 'pro' \? 'adjust' : 'repeat';/);
   });
 
   test('continuing with adjustments leaves a receipt naming what changed and what held', () => {
@@ -686,6 +690,135 @@ describe('BLOCK: the first block explains itself and never advances on its own (
         expect(literal).not.toMatch(/\b(mesocycle|periodisation|hypertrophy|deload)\b/i);
       }
     }
+  });
+});
+
+// ───────────────────────────────────────────────────────────────────────
+// FQ-2 (D96, founder ruling 2026-08-10): the next-block decision.
+//
+// "At block completion PRO always sees BOTH Repeat and
+// Continue-with-adjustments as side-by-side legitimate choices; the
+// advisor may recommend and explain but never hides, gates or forces;
+// Continue-with-adjustments consumes the Block Ledger (a successful block
+// never silently discards it). FREE does not receive adaptive next-block
+// coaching; if the option renders for Free at all it is truthfully
+// Pro-gated through the existing entitlement UX. The accidental
+// entitlement logic MUST GO ... tier eligibility comes from the real
+// Free/Pro entitlement system."
+//
+// Fixes FB-19 (the decision was made from check-in readiness and a
+// well-run block discarded its own ledger), FB-31 (the two options were
+// never presented together), FB-33 ("anyway") and FB-36 (a placeholder
+// weekly_checkins row decided tier reachability). Preserves FB-34/35: an
+// explicit confirm in front of every transition, and a true repeat.
+// ───────────────────────────────────────────────────────────────────────
+
+describe('BLOCK DECISION: both options, advice that cannot gate, entitlement from tier (FQ-2, D96)', () => {
+  const advisor = read('lib/blockAdvisor.js');
+  const plans = read('screens/PlansScreen.js');
+
+  test('PRO: both options exist under every recommendation, in a fixed order', () => {
+    for (const recommendation of ['repeat', 'adjust', 'consider_rebuild', null]) {
+      const options = buildNextBlockOptions({ recommendation, isPro: true });
+      expect(options.map((o) => o.intent)).toEqual(['repeat', 'adjust']);
+      expect(options.map((o) => o.locked)).toEqual([false, false]);
+    }
+  });
+
+  test('PRO: a repeat recommendation still leaves Continue with adjustments reachable', () => {
+    // FB-31 + FB-19's perverse case: a block that went WELL scored
+    // avgReadiness >= 60, was recommended 'repeat', and the adaptive path
+    // simply did not exist on the card. The recommendation is advice now.
+    const [repeat, adjust] = buildNextBlockOptions({ recommendation: 'repeat', isPro: true });
+    expect(repeat.label).toBe('Run this plan again, unchanged');
+    expect(repeat.recommended).toBe(true);
+    expect(adjust.label).toBe('Continue with adjustments');
+    expect(adjust.recommended).toBe(false);
+    expect(adjust.locked).toBe(false);
+  });
+
+  test('PRO: an adjust recommendation still leaves the plain repeat reachable', () => {
+    const [repeat, adjust] = buildNextBlockOptions({ recommendation: 'adjust', isPro: true });
+    expect(adjust.recommended).toBe(true);
+    expect(repeat.recommended).toBe(false);
+    expect(repeat.locked).toBe(false);
+  });
+
+  test('PRO: the fresh-look branch marks neither option, and removes neither', () => {
+    const options = buildNextBlockOptions({ recommendation: 'consider_rebuild', isPro: true });
+    expect(options.some((o) => o.recommended)).toBe(false);
+    expect(options.every((o) => !o.locked)).toBe(true);
+  });
+
+  test('PRO: the ledger rows render with the decision, whichever option is favoured (FB-19)', () => {
+    // The rows used to be gated on the recommendation itself, so the one
+    // case where the ledger was thrown away was a block that went well.
+    expect(plans).toMatch(/rows: tier === 'pro' \? buildLedgerReflectionRows\(ledger\)\.slice\(0, 4\) : \[\]/);
+    expect(stripComments(plans)).not.toMatch(/recommendation === 'adjust'/);
+    // And with both options on the card, the forward claims say which
+    // option applies them.
+    expect(plans).toContain('These apply if you continue with adjustments.');
+    expect(plans).toContain('What this block showed');
+  });
+
+  test('PRO: the adjust path consumes the ledger; the repeat path stays a true repeat', () => {
+    expect(plans).toMatch(/const seedIntent = intent === 'adjust' && tier === 'pro' \? 'adjust' : 'repeat';/);
+    expect(plans).toMatch(/buildSeedRangesForNextBlock\(user\.id, \{\s*\n\s*intent: seedIntent,/);
+    expect(plans).toMatch(/recordSeedOutcome\(user\.id, seedRanges\.sourceMesocycleId, \{\s*\n\s*intent: seedIntent/);
+    expect(plans).toMatch(/const receipt = seedIntent === 'adjust'/);
+  });
+
+  test('FREE: the adjusted path is Pro-marked and locked; the repeat is not', () => {
+    // "Free's repeat path (run the plan again) keeps working -- that is core
+    // training, not coaching."
+    const [repeat, adjust] = buildNextBlockOptions({ recommendation: 'adjust', isPro: false });
+    expect(repeat.locked).toBe(false);
+    expect(repeat.requiresPro).toBe(false);
+    expect(adjust.locked).toBe(true);
+    expect(adjust.requiresPro).toBe(true);
+    expect(adjust.detail).toContain('Part of Pro');
+    // No advisor recommendation reaches a free user at all.
+    expect(repeat.recommended).toBe(false);
+    expect(adjust.recommended).toBe(false);
+  });
+
+  test('FREE: entitlement is the tier, never the presence of a check-in row (FB-36)', () => {
+    // The old accidental entitlement: a weekly_checkins row carrying only
+    // sleepQuality scored exactly 50 and flipped the branch to 'adjust',
+    // while no rows at all defaulted to 70 and produced 'repeat'.
+    expect(checkinReadiness({ sleepQuality: 3 })).toBeNull();
+    expect(checkinReadiness({})).toBeNull();
+    // A row that answers even one question is scored exactly as before.
+    expect(checkinReadiness({ energyScore: 3, sorenessScore: 3, sleepHours: null })).toBe(50);
+    expect(checkinReadiness({ energyScore: 5, sorenessScore: 1, sleepHours: 9 })).toBe(100);
+    // A placeholder row cannot change what a free user can reach.
+    const withPlaceholderAdvice = buildNextBlockOptions({ recommendation: 'adjust', isPro: false });
+    const withNoAdvice = buildNextBlockOptions({ recommendation: null, isPro: false });
+    expect(withPlaceholderAdvice.map((o) => o.locked)).toEqual(withNoAdvice.map((o) => o.locked));
+    // The entitlement travels explicitly, from the store's real tier.
+    expect(plans).toMatch(/getBlockAdvice\(user\.id, block, userProfile, \{ isPro: tier === 'pro' \}\)/);
+    expect(advisor).toMatch(/export async function getBlockAdvice\(userId, activeBlock, userProfile, \{ isPro = false \} = \{\}\)/);
+  });
+
+  test('FREE: no adaptive coaching applied, and the locked tap goes to the upgrade flow', () => {
+    // The screen renders the option Pro-marked (the app-wide entitlement UX)
+    // and the handler holds a second lock, so no route reaches the adaptive
+    // seed without Pro.
+    expect(plans).toContain('<ProBadge size="sm" />');
+    expect(plans).toMatch(/navigation\.navigate\('ProUpgrade', \{ source: 'block_decision' \}\)/);
+    expect(plans).toMatch(/if \(intent === 'adjust' && tier !== 'pro'\) \{/);
+    // And the advisor composes no adaptive narrative for a free user.
+    const free = stripComments(advisor);
+    expect(free).toMatch(/if \(!isPro\) \{\s*\n\s*return \{\s*\n\s*recommendation: null,/);
+  });
+
+  test('the explicit confirm and the no-auto-transition guards survive the new options (FB-34/35)', () => {
+    expect(plans).toMatch(/appAlert\(\s*\n?\s*isAdjust \? 'Start your next block\?' : 'Run this plan again\?'/);
+    expect(plans).toMatch(/if \(restartingRef\.current\) return;/);
+    expect(advisor).not.toMatch(/autoStart|automaticTransition/);
+    // Every option press still goes through the confirming handler (or, when
+    // locked, to the upgrade flow) -- nothing activates a block directly.
+    expect(plans).toMatch(/: handleRestartPlan\(opt\.intent\)\)/);
   });
 });
 
