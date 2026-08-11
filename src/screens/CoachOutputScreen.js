@@ -25,6 +25,7 @@ import {
   saveCoachOutput,
   getLatestCoachOutput,
   getCoachOutputHistory,
+  getCoachOutputWeekStartsSince,
   getOpenEdPatternFlag,
   raiseEdPatternFlag,
   clearEdPatternFlag,
@@ -456,7 +457,7 @@ function TrainingNextWeekCard({
 // NU-4: the button drops the old "week" claim (the write has no expiry) and
 // the card states the post-tap absolute + honest duration before the tap.
 // NU-3: a tap-time null renders its reason (notice) instead of silence.
-function DietBreakCard({ weeksInDeficit, applied, onApply, applyState, onApplySettled, energyUnit, previewKcal, notice, hero }) {
+function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, onApply, applyState, onApplySettled, energyUnit, previewKcal, notice, hero }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
   // block) for why.
@@ -476,9 +477,13 @@ function DietBreakCard({ weeksInDeficit, applied, onApply, applyState, onApplySe
         )}
       </View>
       <Text style={[styles.dietBreakBody, live.dietBreakBody]}>
-        {weeksInDeficit >= 8
-          ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
-          : 'You have been in a calorie deficit for over eight weeks. '}
+        {!continuityEvidenced
+          // C6 P-2 (D97-20): after a coaching gap, claim only the provable
+          // set-age of the cut, never continuous deficit eating.
+          ? `This cut has been set for ${weeksInDeficit} weeks. `
+          : weeksInDeficit >= 8
+            ? `You have been in a calorie deficit for ${weeksInDeficit} weeks. `
+            : 'You have been in a calorie deficit for over eight weeks. '}
         {'A short diet break, returning to maintenance calories for one to two weeks, can help your body settle back to its normal calorie burn and improve long-term fat loss. Consider taking a break before your next phase.'}
       </Text>
       <Text style={[styles.dietBreakFootnote, live.dietBreakFootnote]}>
@@ -1600,6 +1605,13 @@ export default function CoachOutputScreen({ navigation, route }) {
       const weeksInPhase = phaseStartedAt
         ? Math.max(1, Math.floor((Date.now() - phaseStartedAt) / (7 * 86400000)) + 1)
         : 1;
+      // C6 P-2 (D97-20): distinct phase weeks with a saved weekly run,
+      // plus the week being run now. Bounds the engine's CLAIM copy (week
+      // label, diet-break wording) so months away are never narrated as
+      // continuously coached months; the phase clock above is untouched.
+      const evidencedWeeksInPhase = phaseStartedAt
+        ? new Set([...(await getCoachOutputWeekStartsSince(user.id, phaseStartedAt)), weekStart]).size
+        : 1;
 
       // Compute consecutivePoorRecoveryWeeks from recent check-ins
       const recentCheckins = await getRecentCheckins(user.id, 4);
@@ -1813,6 +1825,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         goalPhase: userProfile?.goalPhase ?? 'maint',
         trainingGoal: userProfile?.trainingGoal ?? null,
         weeksInPhase,
+        evidencedWeeksInPhase,
         goalStartDate: userProfile?.goalStartDate ?? null,
         consecutiveOffTargetWeeks,
         consecutivePoorRecoveryWeeks,
@@ -2502,6 +2515,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   const dietBreakCardEl = dietBreakSuggested ? (
     <DietBreakCard
       weeksInDeficit={dietBreakWeeksInDeficit}
+      continuityEvidenced={output?.dietBreakContinuityEvidenced !== false}
       applied={isApplied(output, 'dietBreak')}
       onApply={applyDisabled ? undefined : handleApplyDietBreak}
       applyState={applyStateFor('dietBreak')}

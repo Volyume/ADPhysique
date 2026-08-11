@@ -486,6 +486,9 @@ export function mapCalsAdherence(raw, avgKcal = null, targetKcal = null) {
  * @param {number}        inputs.prsThisWeek
  * @param {string}        inputs.goalPhase                  - 'mild_cut'|'recomp'|'maint'|'mild_bulk'|'mod_bulk' (or the 'bulk' alias)
  * @param {number}        inputs.weeksInPhase               - weeks since phase was set
+ * @param {number|null}   inputs.evidencedWeeksInPhase      - C6 P-2 (D97-20): distinct weeks in this
+ *   phase with a saved weekly run, caller-derived. Bounds CLAIM copy only (week label, diet-break
+ *   wording); never the phase clock, gates or triggers. Null = claims behave as before.
  * @param {number}        inputs.consecutiveOffTargetWeeks  - weeks trend has been off-target same direction
  * @param {number}        inputs.consecutivePoorRecoveryWeeks
  * @param {number}        inputs.consecutiveExceededWeeks   - D15 (founder ruling 2026-07-09): consecutive
@@ -526,6 +529,14 @@ export function runWeeklyCoach(inputs) {
     goalPhase = 'maint',
     trainingGoal = null,
     weeksInPhase: _weeksInPhaseRaw = 1,
+    // C6 P-2 (D97-20): distinct weeks in this phase with real coached
+    // evidence (saved weekly runs), caller-derived like the consecutive-week
+    // counters. The phase CLOCK is untouched (gates, deload and diet-break
+    // triggers still read wall-clock weeksInPhase); this input only bounds
+    // the CLAIMS the run makes about the user's past, so months away can
+    // never be narrated as continuously coached months. Null (every legacy
+    // caller) keeps claims byte-identical to before.
+    evidencedWeeksInPhase: _evidencedWeeksRaw = null,
     goalStartDate = null,
     consecutiveOffTargetWeeks = 0,
     consecutivePoorRecoveryWeeks = 0,
@@ -661,6 +672,19 @@ export function runWeeklyCoach(inputs) {
   const sessionsPlanned = _safeInt(_sessionsPlannedRaw, 3);
   const prsThisWeek = _safeInt(_prsThisWeekRaw, 0);
   const weeksInPhase = Number.isFinite(_weeksInPhaseRaw) ? Math.max(1, Math.round(_weeksInPhaseRaw)) : 1;
+  // C6 P-2 (D97-20): evidence-bounded phase claims. weeksInPhase stays the
+  // wall-clock phase clock for every gate and trigger (NOT reset, NOT
+  // decayed - D91-25 untouched). But copy that asserts what the user has
+  // been doing ("Week N", "below maintenance for N weeks") must not count
+  // weeks with no coached evidence. A one-week tolerance absorbs the
+  // boundary week either side of a phase start, so a continuously coached
+  // user's numbers are unchanged; a genuine gap switches the claims to the
+  // evidenced count and to set-age wording that asserts only provable facts.
+  const evidencedWeeksInPhase = Number.isFinite(_evidencedWeeksRaw)
+    ? Math.max(1, Math.min(weeksInPhase, Math.round(_evidencedWeeksRaw)))
+    : null;
+  const phaseClaimGap = evidencedWeeksInPhase != null && evidencedWeeksInPhase < weeksInPhase - 1;
+  const claimedWeeksInPhase = phaseClaimGap ? evidencedWeeksInPhase : weeksInPhase;
 
   // ── DATA CONFIDENCE ───────────────────────────────────────────────────────
   // F10 (EN-8): "this week's weigh-ins" counts DISTINCT local calendar days,
@@ -705,7 +729,7 @@ export function runWeeklyCoach(inputs) {
       // with the main-card return.
       photoCorroborationApplied: false,
       photoCorroborationBlocked: true,
-      weekLabel: `Week ${Number.isFinite(weeksInPhase) ? Math.round(weeksInPhase) : 1} · ${phaseConfig(goalPhase).label}`,
+      weekLabel: `Week ${Number.isFinite(claimedWeeksInPhase) ? Math.round(claimedWeeksInPhase) : 1} · ${phaseConfig(goalPhase).label}`,
       trend: { ewma7: ewmaNow, delta: null, onTarget: false, deltaLabel: 'Log morning weight', rateLabel: null },
       whatWorking: ['Check-in saved.'],
       adjustments: { training: { signal: 'hold', note: 'Plan unchanged. A few more weigh-ins needed to act on.' }, calories: null, steps: null },
@@ -835,7 +859,7 @@ export function runWeeklyCoach(inputs) {
 
   // ── Week label ────────────────────────────────────────────────────────────
   const weekLabel = [
-    Number.isFinite(weeksInPhase) && weeksInPhase >= 1 ? `Week ${Math.round(weeksInPhase)}` : null,
+    Number.isFinite(claimedWeeksInPhase) && claimedWeeksInPhase >= 1 ? `Week ${Math.round(claimedWeeksInPhase)}` : null,
     phase.label,
   ].filter(Boolean).join(' · ');
 
@@ -1282,17 +1306,24 @@ export function runWeeklyCoach(inputs) {
       if (dietBreakResult.suggest) {
         dietBreakSuggested = true;
         dietBreakWeeksInDeficit = dietBreakResult.weeksInDeficit;
-        dietBreakNote = dietBreakResult.weeksInDeficit >= 12
-          ? `You have been eating below maintenance for ${dietBreakResult.weeksInDeficit} weeks. A full week at maintenance will help your body reset before continuing.`
-          : 'Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch more effective.';
+        // C6 P-2 (D97-20): with a phase-continuity gap the suggestion stays
+        // (it is protective) but the claim may only state the provable fact
+        // - when the cut was SET - never what the user has been eating.
+        dietBreakNote = phaseClaimGap
+          ? `This cut has been set for ${dietBreakResult.weeksInDeficit} weeks. A full week at maintenance will help your body reset before continuing.`
+          : dietBreakResult.weeksInDeficit >= 12
+            ? `You have been eating below maintenance for ${dietBreakResult.weeksInDeficit} weeks. A full week at maintenance will help your body reset before continuing.`
+            : 'Eight or more consecutive weeks eating below maintenance is a long time. One week at your full calorie need helps your body reset and makes the next stretch more effective.';
       }
     } else if (weeksInPhase >= 8) {
       // Fallback when goalStartDate is not stored (older profiles).
       dietBreakSuggested = true;
       dietBreakWeeksInDeficit = weeksInPhase;
-      dietBreakNote = weeksInPhase >= 12
-        ? `You've been eating below maintenance for ${weeksInPhase} weeks. A full week at maintenance will let your body reset before continuing.`
-        : 'Eight or more consecutive weeks below maintenance is a long stretch. A week at your full calorie need lets your body reset and makes the next stretch more effective.';
+      dietBreakNote = phaseClaimGap
+        ? `This cut has been set for ${weeksInPhase} weeks. A full week at maintenance will let your body reset before continuing.`
+        : weeksInPhase >= 12
+          ? `You've been eating below maintenance for ${weeksInPhase} weeks. A full week at maintenance will let your body reset before continuing.`
+          : 'Eight or more consecutive weeks below maintenance is a long stretch. A week at your full calorie need lets your body reset and makes the next stretch more effective.';
     }
   }
 
@@ -1741,6 +1772,11 @@ export function runWeeklyCoach(inputs) {
     dietBreakSuggested,
     dietBreakNote,
     dietBreakWeeksInDeficit,
+    // C6 P-2 (D97-20): false when a phase-continuity gap means "in a
+    // deficit for N weeks" cannot be claimed; the card then states the
+    // cut's set-age instead. True for every continuously coached user
+    // and every legacy caller.
+    dietBreakContinuityEvidenced: !phaseClaimGap,
     macroCycle,
     refeed,
     heldDecisions,

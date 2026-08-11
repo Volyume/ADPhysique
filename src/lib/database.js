@@ -4379,6 +4379,26 @@ export async function getDeloadSuggestedWeekStarts(userId, fromMs, toMs) {
   }
 }
 
+/**
+ * Distinct week starts of saved coach outputs on/after sinceMs. C6 P-2
+ * (D97-20): evidence for how many phase weeks were actually coached, so
+ * claim copy never counts months away as coached months. Fail-quiet []
+ * (the engine then treats evidence as absent, never inflated).
+ */
+export async function getCoachOutputWeekStartsSince(userId, sinceMs) {
+  try {
+    const d = await db();
+    const rows = await d.getAllAsync(
+      `SELECT DISTINCT week_start FROM coach_outputs
+       WHERE user_id = ? AND week_start >= ? AND deleted_at IS NULL`,
+      [userId, sinceMs],
+    );
+    return rows.map((r) => r.week_start).filter((v) => v != null);
+  } catch (_e) {
+    return [];
+  }
+}
+
 /** Exercise rows (seeded + this user's custom), raw, keyed by id. */
 export async function getExerciseRowsById(userId) {
   try {
