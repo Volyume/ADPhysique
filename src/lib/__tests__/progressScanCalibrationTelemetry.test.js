@@ -95,9 +95,13 @@ describe('scan calibration telemetry row', () => {
     expect(build({ physiqueAssessment: null, abstentionReasons: [] })).toBeNull();
   });
 
-  test('vision debug attaches ONLY for allow-listed founder accounts, never for users (D83)', () => {
+  test('vision debug attaches ONLY for allow-listed founder accounts, never for users (D83)', async () => {
     // __DEV__ short-circuits the allow-list in dev builds; force the
     // production path so the email gate itself is what is under test.
+    // Re-anchored under C7 F-12: the allow-list is digest-based and
+    // async-cached now, so the founder path warms the cache first (the
+    // cold-cache read fails CLOSED, which the user assertion also proves).
+    const { warmCalibrationAccess } = require('../progressScanCalibrationAccess');
     const devDescriptor = Object.getOwnPropertyDescriptor(global, '__DEV__');
     // eslint-disable-next-line no-global-assign
     global.__DEV__ = false;
@@ -108,6 +112,10 @@ describe('scan calibration telemetry row', () => {
       expect(JSON.stringify(userRow)).not.toMatch(/rgbBase64|maskBase64|vision_debug/);
 
       global.__mockUserEmail = 'allansdouglas1983@gmail.com';
+      // Cold cache fails CLOSED - no debug even for the founder...
+      expect(withFounderVisionDebug(build()).vision_debug).toBeUndefined();
+      // ...and attaches once the digest has resolved.
+      await warmCalibrationAccess({ email: 'allansdouglas1983@gmail.com' });
       const founderRow = withFounderVisionDebug(build());
       expect(founderRow.vision_debug.front.rgbBase64).toBe('QUJD');
     } finally {

@@ -215,6 +215,11 @@ async function ensureRestChannel() {
   try {
     await Notifications.setNotificationChannelAsync(REST_CHANNEL_ID, {
       name: 'Rest timer',
+      // C7 release audit F9: this second creation site used to omit the
+      // description channels.js gives the same channel, and re-creating
+      // an existing channel with no description WIPES it in the OS
+      // settings screen. Kept byte-identical with channels.js.
+      description: 'Live countdown shown while a rest timer is running',
       importance: Notifications.AndroidImportance.LOW,
       sound: null,
       vibrationPattern: [0],

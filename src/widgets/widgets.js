@@ -2,7 +2,9 @@
  * COMP-019 Stage 2 — Android home-screen widgets (react-native-android-widget).
  *
  * Widgets are DUMB renderers of the snapshot (the logic lives in
- * src/lib/widgets/snapshot.js / writer.js, OTA-patchable). These build the
+ * src/lib/widgets/snapshot.js / writer.js, shipped with the JS bundle -
+ * NOT OTA-patchable: this app has no OTA channel, every change ships as
+ * a store release; C7 F-11). These build the
  * RemoteViews via the library's JSX primitives. Free tier; NEVER weight,
  * calories or body data (the home screen is semi-public).
  *

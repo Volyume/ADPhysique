@@ -119,9 +119,17 @@ export default function SettingsAboutScreen({ navigation }) {
             debugShareTimer = setTimeout(() => {
               debugShareTimer = null;
               const v = Constants.expoConfig?.version ?? '1.2.0';
-              const code = Platform.OS === 'ios'
-                ? Constants.expoConfig?.ios?.buildNumber
-                : Constants.expoConfig?.android?.versionCode;
+              // C7 release audit F-6: the config buildNumber is INERT on
+              // iOS (EAS appVersionSource=remote governs real builds) and
+              // was ~4 versions stale here. nativeBuildVersion is the
+              // build the user is actually running, on both platforms.
+              let Application = null;
+              // eslint-disable-next-line global-require
+              try { Application = require('expo-application'); } catch (_) { /* fall back to config */ }
+              const code = Application?.nativeBuildVersion
+                ?? (Platform.OS === 'ios'
+                  ? Constants.expoConfig?.ios?.buildNumber
+                  : Constants.expoConfig?.android?.versionCode);
               const env = __DEV__ ? 'dev' : 'release';
               const id = `Volyume v${v} (${Platform.OS} ${code ?? '?'}, ${env})`;
               Share.share({ message: id }).catch(() => {});

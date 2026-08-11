@@ -98,7 +98,8 @@
           "data": [
             {
               "scheme": "https",
-              "host": "volyume.app"
+              "host": "volyume.app",
+              "pathPrefix": "/partner"
             }
           ],
           "category": [
@@ -181,7 +182,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Volyume uses the camera so you can line up and take your progress photos. Your photos stay on this device and are never uploaded.",
+          "cameraPermission": "Volyume uses the camera to scan barcodes, read nutrition labels, and take progress photos. Progress photos stay on this device and are never uploaded.",
           "recordAudioAndroid": false
         }
       ],
@@ -208,19 +209,19 @@
               ],
               "intent": [
                 {
-                  "action": "android.intent.action.SENDTO",
+                  "action": "SENDTO",
                   "data": {
                     "scheme": "smsto"
                   }
                 },
                 {
-                  "action": "android.intent.action.SENDTO",
+                  "action": "SENDTO",
                   "data": {
                     "scheme": "mailto"
                   }
                 },
                 {
-                  "action": "android.intent.action.VIEW",
+                  "action": "VIEW",
                   "data": {
                     "scheme": "sms"
                   }

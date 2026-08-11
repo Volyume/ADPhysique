@@ -31,6 +31,21 @@ export const COACHING_REMINDERS_CHANNEL = 'coaching-reminders';
  */
 export async function ensureNotifChannels() {
   try {
+    // C7 release audit F2: the send-push Edge Function targets
+    // channelId 'default', which no client code created - those pushes
+    // (partner cheers and siblings) landed on expo's unbranded
+    // fallback channel. Creating the channel the server already names
+    // is the repo-side half that needs no server deploy: partner and
+    // other server-sent updates now appear under a named channel in
+    // the OS settings.
+    await Notifications.setNotificationChannelAsync('default', {
+      name: 'Updates',
+      description: 'Partner cheers and other Volyume updates',
+      importance: Notifications.AndroidImportance.DEFAULT,
+      sound: 'default',
+      enableVibrate: true,
+      showBadge: true,
+    });
     await Notifications.setNotificationChannelAsync(TRAINING_REMINDERS_CHANNEL, {
       name: 'Training reminders',
       description: 'Reminders on your scheduled training days',

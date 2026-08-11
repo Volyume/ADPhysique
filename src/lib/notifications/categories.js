@@ -201,6 +201,12 @@ export function categoryForDataType(type) {
     case 'trial_day3': return CATEGORY.TRIAL_DAY3;
     case 'winback': return CATEGORY.WINBACK;
     case 'partner_cheer': return CATEGORY.PARTNER_CHEER;
+    // C7 release audit F3: these two server pushes carried data.type
+    // values with no enum mapping, so the daily/weekly event budget
+    // never saw them and the 2/day cap could be exceeded. They are the
+    // same partner surface with the same tier and controls.
+    case 'partner_streak': return CATEGORY.PARTNER_CHEER;
+    case 'partner_joined': return CATEGORY.PARTNER_CHEER;
     case 'checkin_missed': return CATEGORY.CHECKIN_MISSED;
     case 'activation_nudge': return CATEGORY.ACTIVATION_NUDGE;
     case 'planned_meal_confirm': return CATEGORY.PLANNED_MEAL_CONFIRM;
