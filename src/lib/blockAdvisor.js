@@ -431,8 +431,13 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
       // Stage 1 honesty (2026-08-09): this state begins the week AFTER the
       // recovery week, so the old "take your recovery week" line described
       // a week that had already passed.
+      // C6 R-5 (D97-22): weeksOverdue is unbounded, so this line used to
+      // fire at 20+ weeks with urgency copy plus a physiological claim
+      // ("Your body's ready") nothing can support after an absence. The
+      // lapse law bans both; the honest line states the fact and the next
+      // step, at any age, with no pressure and no readiness claim.
       body: overdueWeeks > 0
-        ? `Your recovery week has been and gone. The sooner you start the next block the better. Your body's ready.`
+        ? `Your recovery week has been and gone. Whenever you're ready, the next step is choosing your next block.`
         : `You've finished this block, recovery week included. The next step is choosing your next block.`,
       signals,
       nextBlock,

@@ -277,3 +277,12 @@ describe('PHASES 18-21: tier and trial transitions (D97-20)', () => {
     expect(slope.slice(0, 300)).toMatch(/\.filter\(\(v\) => v != null\)/);
   });
 });
+
+describe('PHASES 25-31: return and history laws (D97-22)', () => {
+  test('R-5: the overdue block line never claims readiness or applies urgency', () => {
+    const src = stripComments(read('lib/blockAdvisor.js'));
+    expect(src).not.toMatch(/body's ready|body is ready/i);
+    expect(src).not.toMatch(/sooner you start/i);
+    expect(src).toContain("Whenever you're ready, the next step is choosing your next block.");
+  });
+});
