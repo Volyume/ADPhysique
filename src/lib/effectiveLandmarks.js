@@ -93,6 +93,13 @@ export async function getEffectiveLandmarks(userId, { tier = 'free' } = {}) {
  */
 export function isManualEdit(entry, research) {
   if (!entry) return false;
+  // C8 Work 3 (RA6-6): explicit intent is RECORDED, never inferred from
+  // the number. A user who deliberately saved a muscle at the research
+  // value meant it, and the value comparison below could not tell that
+  // from an untouched default. The editor stamps `explicit` on any
+  // muscle it actually touched; legacy blobs carry no flag and keep the
+  // old value-comparison behaviour exactly.
+  if (entry.explicit === true) return true;
   if (!research) return true;
   const n = (v) => {
     const x = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;

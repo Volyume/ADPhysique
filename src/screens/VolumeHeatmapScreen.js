@@ -97,6 +97,13 @@ export default function VolumeHeatmapScreen() {
   const [resolvedSource, setResolvedSource] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState({});
+  // C8 Work 3 (RA6-6): which muscles the user actually TOUCHED in this
+  // editing session. A deliberate save is user intent even when the
+  // chosen number equals the research default, and intent must never be
+  // inferred from the number - but simply opening the editor and
+  // tapping Save must NOT mark every muscle manual (that was the
+  // Stage 6 blocker that disabled adaptation body-wide).
+  const touchedMusclesRef = useRef(new Set());
   const [trendData, setTrendData] = useState([]);
   const [lastTrainedMap, setLastTrainedMap] = useState({});
   const [hasAnyCompletedSets, setHasAnyCompletedSets] = useState(false);
@@ -274,13 +281,23 @@ export default function VolumeHeatmapScreen() {
         mrv: parseInt(vals.mrv) || 0,
       };
       const research = VOLUME_LANDMARKS[muscle];
-      const edited = !research
+      const differs = !research
         || entry.mev !== research.mev || entry.mav !== research.mav || entry.mrv !== research.mrv;
-      if (edited) map[muscle] = entry;
+      // C8 Work 3 (RA6-6): a muscle the user deliberately edited in this
+      // session is THEIR setting even when they landed back on the
+      // research value. `explicit` records the intent so no reader has
+      // to infer it from the number (isManualEdit honours the flag);
+      // muscles that already carried explicit intent keep it.
+      const wasExplicit = customLandmarks?.[muscle]?.explicit === true;
+      const touched = touchedMusclesRef.current.has(muscle);
+      if (differs || touched || wasExplicit) {
+        map[muscle] = (touched || wasExplicit) ? { ...entry, explicit: true } : entry;
+      }
     }
     const key = `@volyume_landmarks_${user.id}`;
     if (Object.keys(map).length === 0) {
       // Everything back at defaults: same semantics as a reset.
+      touchedMusclesRef.current = new Set(); // C8 RA6-6: reset clears intent
       await AsyncStorage.removeItem(key);
       // Campaign 1 P0-8 D10: stamp the local write so a stale cloud copy
       // of the landmark blob cannot be applied back over this edit.
@@ -700,10 +717,13 @@ export default function VolumeHeatmapScreen() {
                         ref={el => { editFieldRefs.current[`${muscle}:${key}`] = el; }}
                         label={label}
                         value={String(editValues[muscle]?.[key] ?? '')}
-                        onChangeText={v => setEditValues(prev => ({
-                          ...prev,
-                          [muscle]: { ...prev[muscle], [key]: v },
-                        }))}
+                        onChangeText={v => {
+                          touchedMusclesRef.current.add(muscle); // C8 RA6-6
+                          setEditValues(prev => ({
+                            ...prev,
+                            [muscle]: { ...prev[muscle], [key]: v },
+                          }));
+                        }}
                         keyboardType="number-pad"
                         selectTextOnFocus
                         accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${label}`}
