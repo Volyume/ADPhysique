@@ -1233,15 +1233,27 @@ export default function HomeScreen({ navigation, route }) {
               }
             } catch (_e) { previous = null; }
           }
-          // C6 P9-06 (D97): does this user have ANY judged block history?
+          // C6 P9-06 (D97): does this user have ANY prior block history?
           // A template-seeded block after a plan switch must not tell a
           // block-eight user "not enough personal history yet".
+          // C6 P-5 (D97-20): "history" means blocks TRAINED, not blocks
+          // judged - ledgers only exist where a decision surface computed
+          // one, so a mature Free upgrader (or anyone who switched plans
+          // past the decision card) had real ended blocks and zero
+          // ledgers, and was handed beginner copy. An ended prior block
+          // now counts alongside a stored ledger.
           let hadPriorBlocks = false;
           try {
             // eslint-disable-next-line global-require
             const { getAllMesocyclesForUser } = require('../lib/database');
             const all = await getAllMesocyclesForUser(user.id);
-            hadPriorBlocks = all.some((m) => m.id !== week.mesocycleId && m.blockLedger);
+            const endedMs = (m) => {
+              const t = m.endDate == null ? NaN
+                : (typeof m.endDate === 'number' ? m.endDate : new Date(m.endDate).getTime());
+              return Number.isFinite(t) ? t : null;
+            };
+            hadPriorBlocks = all.some((m) => m.id !== week.mesocycleId
+              && (m.blockLedger || (endedMs(m) != null && endedMs(m) <= Date.now())));
           } catch (_e) { hadPriorBlocks = false; }
           setBlockSeedLines(buildBlockStartLines({ summary, previous, hadPriorBlocks }));
         } catch (_e) { setBlockSeedLines([]); }

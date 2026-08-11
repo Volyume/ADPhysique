@@ -216,7 +216,11 @@ describe('PHASES 9 + 44: plan lifecycle laws (D97-11..17)', () => {
     const src = read('lib/blockExplain.js');
     expect(src).toMatch(/RESEARCH_START_LINE_MATURE/);
     expect(src).toMatch(/hadPriorBlocks \? RESEARCH_START_LINE_MATURE : RESEARCH_START_LINE/);
-    expect(read('screens/HomeScreen.js')).toMatch(/hadPriorBlocks = all\.some\(\(m\) => m\.id !== week\.mesocycleId && m\.blockLedger\)/);
+    // Re-anchored under C6 P-5 (D97-20): "history" means blocks TRAINED,
+    // not blocks judged - an ended prior block counts even when no
+    // decision surface ever computed its ledger (the mature Free
+    // upgrader / plan-switcher case).
+    expect(read('screens/HomeScreen.js')).toMatch(/hadPriorBlocks = all\.some\(\(m\) => m\.id !== week\.mesocycleId\s*&& \(m\.blockLedger \|\| \(endedMs\(m\) != null && endedMs\(m\) <= Date\.now\(\)\)\)\)/);
   });
 
   test('P44-11/12: duplicates carry provenance and archived copies are reused, not re-copied', () => {
