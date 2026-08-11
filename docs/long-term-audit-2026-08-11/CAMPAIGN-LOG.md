@@ -99,8 +99,24 @@ triage carries every open item; nothing is silently decided.
 - Phases 16+26 partial (Coached auto-apply age gate) — LANDED
   ee5d7789 (D97-10): the coached auto-walk is bounded to the current
   cycle; old outputs keep manual Apply buttons.
-- IN FLIGHT (agents): Phases 9+44 (AUDIT-PLAN-LIFECYCLE.md) and
-  Phases 10+11 (AUDIT-EXERCISE-PR-HISTORY.md).
+- Phases 9+44 (plan lifecycle) — DELIVERED and ACTIONED at 4ef410c3
+  (D97-11..17): ledger backfill for switched-away blocks, archive
+  partition + transaction + tiebreak, is_archived sync both ways,
+  PlanDetail RB-3 guard, abandoned end_date truncation, mature
+  research line, recovery/decision switch dialogues, duplicate
+  provenance, archived-copy reuse. Accepted/no-action: P9-10
+  (performed sets ARE evidence), P44-13 + P9-09 carried to triage.
+- Phases 10+11 (exercise/PR) — DELIVERED and ACTIONED at 49b3f253
+  (D97-18): cluster rows excluded from e1RM records (writer closed),
+  the Progress PR tile mirrors the live detector (FQ-7 baseline,
+  pinned-defect test re-anchored corrected), the records wall reads
+  all completed history. CARRIED: high-rep Epley fidelity = founder
+  question (Phase 57); remaining MED/LOW findings + LiftProgress/
+  strength-standing cluster wiring on the audit file for a next
+  batch.
+- ADDENDUM progress: anti-anthropomorphism/manipulation copy guards
+  LANDED (abefab54, tree clean); six-block RELATIONSHIP report LANDED
+  (392fa136).
 - NEXT: land the in-flight audit pair (lead-review, action findings);
   then agent pairs for 15-21 (modes/tier/trial), 25-31 (weight/lapse/
   streak/win-back/progress/edits), 32-38 (reinstall/migration
