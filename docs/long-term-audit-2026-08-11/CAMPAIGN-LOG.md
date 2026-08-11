@@ -159,7 +159,9 @@ triage carries every open item; nothing is silently decided.
   Section 2 stop-and-ask before implementing the push path), R-3
   (buildWeighInSeries still uncalled), 135 replacement design,
   FR-C4-2/FR-C4-3 with new consequence evidence.
-- RULED, NEXT FIX BATCHES (D97-22/23): R-2 (Progress trend card
+- FIX QUEUE COMPLETE (see ledger + D97-22/23 dispositions). 
+- IN FLIGHT (agents, opus, read-only): Phases 39-43 → AUDIT-CLOCK-SCALE-LOCAL-PARTNER.md and Phases 45-46+48-49 → AUDIT-MATURITY-AND-SIX-MONTHS.md. Recovery: partial file lead-reviewed against the order's phase text, lane relaunched with the same brief; agents write only their own file.
+- SUPERSEDED (queue done): RULED, NEXT FIX BATCHES (D97-22/23): R-2 (Progress trend card
   date-window), R-4 (unearned recovery week on return), R-5 ("Your
   body's ready" at unbounded overdue), R-7 (per-user churn key),
   R-8 (weigh-in editability), R-10 (streak pause window), S-2/S-3
