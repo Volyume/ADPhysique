@@ -66,14 +66,20 @@ triage carries every open item; nothing is silently decided.
   campaign6.applyRepeat.test.js (11 tests).
 - Phases 22-24 + 47(nutrition) — LANDED 0e672a9a:
   campaign6.nutrition.test.js (10 tests, 26-week athlete).
+- Phase 60 (migration release table) — LANDED c0ecd6c2:
+  MIGRATION-RELEASE-GATES.md (verdicts: 134 strongest gate, order
+  134-135-132-133; 049 stays HELD).
+- Phases 16+26 partial (Coached auto-apply age gate) — LANDED
+  ee5d7789 (D97-10): the coached auto-walk is bounded to the current
+  cycle; old outputs keep manual Apply buttons.
 - IN FLIGHT (agents): Phases 9+44 (AUDIT-PLAN-LIFECYCLE.md) and
   Phases 10+11 (AUDIT-EXERCISE-PR-HISTORY.md).
-- NEXT: Phase 60 migration analysis (lead), then agent pairs for
-  15-21 (modes/tier/trial), 25-31 (weight/lapse/streak/win-back/
-  progress/edits), 32-38 (reinstall/migration contracts/sync/
-  offline), 39-43 + 45-46 + 48-49; then E2Es (50-52), Reviews A-D
-  (53-56), debt triage (57), H4/legal (58-59), campaign6 gates (62),
-  docs close, merge to main, 80-item handover.
+- NEXT: land the in-flight audit pair (lead-review, action findings);
+  then agent pairs for 15-21 (modes/tier/trial), 25-31 (weight/lapse/
+  streak/win-back/progress/edits), 32-38 (reinstall/migration
+  contracts/sync/offline), 39-43 + 45-46 + 48-49; then E2Es (50-52),
+  Reviews A-D (53-56), debt triage (57), H4/legal (58-59), campaign6
+  gates (62), docs close, merge to main, 80-item handover.
 
 ## Wave recovery paths
 
