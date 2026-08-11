@@ -143,3 +143,17 @@ one path with no staleness guard (computeLearnedRange has no clock).
 So the exact D91-25 case (multi-month absence, return to the same
 plan) routes around the >= 4-week ledger hold. Carried with D97-3 to
 the founder triage; characterised only.
+
+## D97-10 (Phases 16 + 26) — Coached auto-apply bounded to the current cycle, FIXED
+
+The Coached-mode auto-walk fired on whatever output the screen
+displayed, and the no-check-in-this-week redirect (correct for the
+normal Monday flow) has no age bound - so a returning Coached user's
+months-old reviewed-but-unapplied output was executed into TODAY's
+block the moment the Coach tab opened (an old proposal resurrected;
+Phase 26's question 7). The walk now requires the displayed output's
+week to be the live week or the immediately previous one (the Monday
+redirect case), preserving the intended Coached cycle exactly; older
+outputs keep their manual Apply buttons with every clamp intact. The
+D16 safety-hold confirm-first gate stays ahead of the age gate,
+pinned.

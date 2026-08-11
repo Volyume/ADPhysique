@@ -102,3 +102,16 @@ describe('PHASES 12 + 26: absence is never converted into evidence (D97)', () =>
     expect(grade3.slice(0, 1400)).not.toMatch(/isAdjacent/);
   });
 });
+
+describe('PHASE 16/26: old proposals are never resurrected by Coached mode (D97)', () => {
+  test('the coached auto-walk is bounded to the current cycle', () => {
+    const src = read('screens/CoachOutputScreen.js');
+    const walk = src.slice(src.indexOf("if (coachAutonomy !== 'coached') return;"));
+    expect(walk.slice(0, 1600)).toMatch(/liveWeek - outWeek > 7 \* 86400000\) return;/);
+    // The safety-hold confirm-first gate stays ahead of it.
+    const holdAt = walk.indexOf('autoApplyHoldActive');
+    const ageAt = walk.indexOf('liveWeek - outWeek');
+    expect(holdAt).toBeGreaterThan(-1);
+    expect(holdAt).toBeLessThan(ageAt);
+  });
+});

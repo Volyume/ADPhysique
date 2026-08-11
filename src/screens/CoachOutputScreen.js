@@ -2164,6 +2164,19 @@ export default function CoachOutputScreen({ navigation, route }) {
     if (!output || !user?.id) return;
     if (applyingKey) return;
     if (output.autoApplyHoldActive) return; // D16: hold forces confirm-first
+    // C6 Phases 16 + 26 (D97): auto-apply executes the CURRENT cycle's
+    // decision only - this week's output, or the immediately reviewed
+    // week the Monday redirect lands on. The redirect itself has no age
+    // bound (it opens the latest completed decision), so a returning
+    // Coached user's months-old reviewed-but-unapplied output would
+    // otherwise be executed into TODAY's block the moment the tab
+    // opened. An older output keeps its manual Apply buttons; resuming
+    // is the user's tap, never a resurrection.
+    {
+      const liveWeek = localWeekStartMs();
+      const outWeek = Number(output?.weekStart ?? weekStart);
+      if (Number.isFinite(outWeek) && liveWeek - outWeek > 7 * 86400000) return;
+    }
 
     // Deload supersedes the incremental training-volume push for the week
     // (TrainingNextWeekCard shows one or the other, never both); Coached
