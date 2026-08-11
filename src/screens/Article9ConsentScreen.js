@@ -142,18 +142,22 @@ export default function Article9ConsentScreen({ navigation }) {
         // re-renders on healthConsentGranted; otherwise a new user briefly
         // flashes the free setup before the cloud catches up. Failure is
         // tolerated: they proceed and can upgrade later.
-        await cascade.startCascade().catch((e) => {
-          logError('Article9.consent.startCascade', e, { uid: user?.id });
-          // FQ-6.1 (D96): a transient failure here must not permanently cost
-          // a new user their trial. Network-shaped failures queue a retry
-          // that the sync runner drains (pendingCascade, the pendingConsent
-          // shape); a definitive server answer is not queued. The tier is
-          // never touched locally - the grant lands when the RPC confirms.
+        // C6 P-1 (D97-20): startCascade NEVER rejects - _call converts
+        // every failure into a resolved { ok: false, error } - so the old
+        // .catch queue path was dead code and the FQ-6.1 retry never
+        // armed. Queue on the RESULT. The law is unchanged: a
+        // network-shaped failure must not permanently cost a new user
+        // their trial; a definitive server answer is not queued; the tier
+        // is never touched locally.
+        const grant = await cascade.startCascade().catch((e) => ({ ok: false, error: e?.message ?? 'threw' }));
+        if (grant && grant.ok === false) {
+          const err = new Error(String(grant.error ?? 'unknown'));
+          logError('Article9.consent.startCascade', err, { uid: user?.id });
           try {
             // eslint-disable-next-line global-require
-            require('../lib/payments/pendingCascade').queuePendingCascade(user?.id, e).catch(() => {});
+            require('../lib/payments/pendingCascade').queuePendingCascade(user?.id, err).catch(() => {});
           } catch (_) { /* best-effort */ }
-        });
+        }
       } catch (e) {
         logError('Article9.consent.startCascade.require', e);
       }
