@@ -42,20 +42,29 @@ re-anchored. Nothing was committed, pushed or stashed. No migration and no
 Supabase or cloud command was issued. The repo suite was run unmodified,
 read-only.
 
-**Tree state observed.** `npx jest` over the settled tree, run twice:
-`Test Suites: 2 failed, 1 skipped, 827 passed, 829 of 830 total` /
-`Tests: 2 failed, 10 skipped, ~10105-10112 passed`. The two are
-`src/lib/widgets/__tests__/storage.test.js` and
-`src/lib/__tests__/blockLifecycle.stage1.test.js`, and **both pass in
-isolation** (14/14 and 4/4) and in small combinations — the failures are
-parallel-ordering-dependent cross-suite state leakage (the widget one is a
-`Platform.OS` mutation from a sibling suite), not return-lane defects, and
-neither reproduces the behaviour any finding below rests on. Recorded so
-the next lane does not read them as return-lane regressions; both are
-outside this brief and neither is claimed as a finding. Worth one line to
-the lead regardless: `blockLifecycle.stage1` is a Section-2-adjacent
-lifecycle guard, and a guard that fails only in the full run is a guard
-whose signal cannot be trusted.
+**Tree state observed — the lead should see this before the next landing.**
+The suite was run unmodified three times over the settled tree.
+
+- `npx jest` (parallel, twice): `Test Suites: 2 failed, 1 skipped, 827
+  passed, 829 of 830` / `Tests: 2 failed, 10 skipped, ~10105-10112 passed`.
+  The two are `src/lib/widgets/__tests__/storage.test.js` and
+  `src/lib/__tests__/blockLifecycle.stage1.test.js`.
+- `npx jest --runInBand` — the form `release:quality` runs, i.e. the CI
+  arbiter: `Test Suites: 1 failed, 1 skipped, 828 passed, 829 of 830` /
+  `Tests: 1 failed, 10 skipped, 10113 passed, 10124 total`. The one is
+  `src/lib/widgets/__tests__/storage.test.js`.
+- Both suites **pass in isolation** (4/4 and 14/14) and in small
+  combinations.
+
+So this is cross-suite state leakage under a full run (the widget one is a
+`Platform.OS` mutation from a sibling suite), not a return-lane defect, and
+neither failure touches any behaviour a finding below rests on — every
+probe here drives the modules directly. It is recorded rather than filed as
+a finding because it is outside this brief, but it is not cosmetic: the
+storage failure reproduces under `--runInBand`, which means `release:check`
+is red on the current tree, and `blockLifecycle.stage1` is a Section-2
+lifecycle guard whose signal cannot be trusted while it fails only in
+company.
 
 **Deliberately NOT re-litigated** (cited where adjacent, never re-reported
 as new): D97-3 and its addendum, D97-9, R-3, **R-16 (FOUNDER-BLOCKED —
@@ -328,7 +337,7 @@ not carried anywhere. Recorded as RB6-9 (LOW).
 Yes, at every window, and nothing blocks. The active plan and its rotation
 survive; `getCurrentMesocycleWeek` clamps to the final row and reports
 `awaitingDecision` rather than fabricating a live week
-(`database.js:4153-4200`); the workout start path never gates on block
+(`database.js:4153-4191`); the workout start path never gates on block
 state; ActiveWorkoutScreen states the honest reason when the block is
 finished ("Block finished: targets hold at recovery-week volume until you
 choose your next block", `ActiveWorkoutScreen.js:1461-1463`); nothing prunes workouts, ledgers or
@@ -567,7 +576,7 @@ pay off". Rows 2 and 3 above are the residual.
 (calendar recovery week, no recent training):
 
 ```
-readinessSummary.js:63-66
+readinessSummary.js:63-65
   if (currentMesoWeek.isDeload) {
     return { tone: 'recover', line: 'Recovery week, pull effort back.' };
   }
@@ -575,7 +584,7 @@ readinessSummary.js:63-66
 
 Priority 1, no evidence input at all — and `isDeload` comes from
 `getCurrentMesocycleWeek`, a pure calendar derivation
-(`database.js:4153-4200`). And the live session:
+(`database.js:4153-4191`). And the live session:
 
 ```
 ActiveWorkoutScreen.js:1438-1463
