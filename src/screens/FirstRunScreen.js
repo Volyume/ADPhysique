@@ -39,6 +39,18 @@ export default function FirstRunScreen({ navigation }) {
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
   const [busy, setBusy] = useState(false);
   const nameRef = useRef(null);
+  // FQ-6.1 (D96): true only when a network-failed trial grant is queued for
+  // retry (pendingCascade). Read once on mount; best-effort.
+  const [trialPending, setTrialPending] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) return undefined;
+    // eslint-disable-next-line global-require
+    require('../lib/payments/pendingCascade').hasPendingCascade(user.id)
+      .then((v) => { if (!cancelled) setTrialPending(!!v); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.id]);
   const hasName = firstName.trim().length > 0;
 
   useEffect(() => {
@@ -80,6 +92,17 @@ export default function FirstRunScreen({ navigation }) {
         <Text style={[styles.subtitle, live.subtitle]}>
           Add your name if you like, then a few quick questions to get you set up.
         </Text>
+
+        {/* FQ-6.1 (D96): a new user only lands on this FREE path with a
+            queued trial when the grant call failed on the network at
+            consent. Say so calmly - the sync runner retries and the
+            navigator moves them to the Pro setup when it lands. Never
+            renders otherwise; never claims the trial is active. */}
+        {trialPending ? (
+          <Text style={[styles.trialPendingNote, live.trialPendingNote]}>
+            Your 14-day trial could not be set up yet because the connection dropped. It will finish setting up automatically when you are back online.
+          </Text>
+        ) : null}
 
         <TextField
           ref={nameRef}
@@ -125,6 +148,10 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl, gap: spacing.lg, flexGrow: 1 },
   title: { ...type.h2, color: colors.textPrimary, marginTop: spacing.lg },
   subtitle: { ...type.bodySm, color: colors.textSecondary },
+  trialPendingNote: {
+    ...type.bodySm, color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
   nameField: { marginTop: spacing.md },
   inputActive: { borderColor: colors.primary },
   // backgroundColor/borderRadius/padding/border now come from Card
@@ -149,6 +176,7 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     title: { ...t.type.h2, color: t.colors.textPrimary },
     subtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
+    trialPendingNote: { ...t.type.bodySm, color: t.colors.textSecondary },
     inputActive: { borderColor: t.colors.primary },
     hintText: { ...t.type.captionTight, color: t.colors.textSecondary },
     hintBold: { color: t.colors.textPrimary },

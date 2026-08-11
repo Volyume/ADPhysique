@@ -152,7 +152,7 @@ export default function SubscriptionPolicyScreen() {
             <Strong>Deleting is different to switching back to Free.</Strong> It erases everything: your data on this phone, your backup, the account itself.
           </Body>
           <Body>
-            Use it if you're leaving the app for good. If you only want to stop paying for Pro, use Switch to Free instead. That keeps your history.
+            Use it if you're leaving the app for good. If you only want to stop paying for Pro, use Manage subscription in Settings instead: cancelling stops the next renewal, Pro stays until your current period ends, and your history stays.
           </Body>
         </Section>
 

@@ -164,6 +164,13 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
         // eslint-disable-next-line global-require
         require('../consent/pendingConsent').flushPendingConsent().catch(() => {});
       } catch (_) { /* tolerate */ }
+      // FQ-6.1 (D96): the trial-grant retry rides the same trigger, in the
+      // same shape - queue on network failure at consent, flush on sync.
+      // Idempotent server-side; never touches the tier from here.
+      try {
+        // eslint-disable-next-line global-require
+        require('../payments/pendingCascade').flushPendingCascade(userId).catch(() => {});
+      } catch (_) { /* tolerate */ }
       // Two-track push/pull. The registry-driven transport.js owns
       // every table listed in MIGRATED_TABLES; everything else still
       // lives inside bulkUploadLocalData / pullFromCloud in

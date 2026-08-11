@@ -476,17 +476,34 @@ export function canStillTrial(profile) {
  * trial (already paid, free, or never started). Rounds down so
  * "1 day remaining" stays accurate until the cutover instant.
  */
-export function daysRemaining(profile, nowMs = Date.now()) {
+/**
+ * FQ-6.2 (D96): the ONE authoritative trial end instant, in epoch ms, or
+ * null when no trial is active. Every surface that names the end date reads
+ * this - never a second derivation, so two screens can never disagree.
+ */
+export function trialEndsAtMs(profile) {
   const ts = profile?.trialState ?? profile?.trial_state ?? 'unstarted';
-  let endsAt = null;
-  if (ts === 'pro_trial_active' || ts === 'complete_trial_active' /* legacy */) {
-    endsAt = profile?.proTrialEndsAt ?? profile?.pro_trial_ends_at
-      ?? profile?.completeTrialEndsAt ?? profile?.complete_trial_ends_at
-      ?? null;
-  }
+  if (ts !== 'pro_trial_active' && ts !== 'complete_trial_active' /* legacy */) return null;
+  const endsAt = profile?.proTrialEndsAt ?? profile?.pro_trial_ends_at
+    ?? profile?.completeTrialEndsAt ?? profile?.complete_trial_ends_at
+    ?? null;
   if (!endsAt) return null;
   const endMs = typeof endsAt === 'number' ? endsAt : Date.parse(endsAt);
-  if (!Number.isFinite(endMs)) return null;
+  return Number.isFinite(endMs) ? endMs : null;
+}
+
+/** The same instant as a short user-facing date ("24 Aug"), or null. */
+export function trialEndsLabel(profile) {
+  const endMs = trialEndsAtMs(profile);
+  if (endMs == null) return null;
+  try {
+    return new Date(endMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  } catch (_) { return null; }
+}
+
+export function daysRemaining(profile, nowMs = Date.now()) {
+  const endMs = trialEndsAtMs(profile);
+  if (endMs == null) return null;
   const diffMs = endMs - nowMs;
   if (diffMs <= 0) return 0;
   return Math.floor(diffMs / (24 * 60 * 60 * 1000));

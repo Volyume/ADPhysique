@@ -43,7 +43,7 @@ import {
   getMorningWeightsLast14Days, getOpenEdPatternFlag,
   getRecentCheckins, getNutritionTargets, getLatestCheckin,
 } from '../lib/database';
-import { stageOf, canStillTrial } from '../lib/payments/cascade';
+import { stageOf, canStillTrial, trialEndsLabel } from '../lib/payments/cascade';
 import {
   trialStartFromEndsAt,
   selectTrialVariant,
@@ -566,10 +566,14 @@ export default function HomeScreen({ navigation, route }) {
 
       const variant = selectTrialVariant({ completedSessions, weighIns7d });
       const unlock = firstReviewUnlockDate(firstWeightAt, checkinDay);
-      const line = trialBannerLine({
+      let line = trialBannerLine({
         variant, completedSessions, weighIns7d,
         unlockDayName: dayName(unlock), trialDay, edFlagOpen: !!edFlag,
       });
+      // FQ-6.2 (D96): the banner names the authoritative trial end date -
+      // one source (cascade.trialEndsLabel), so no surface can disagree.
+      const endsLabel = trialEndsLabel(useAppStore.getState().userProfile);
+      if (line && endsLabel) line = `${line} Your free trial runs to ${endsLabel}.`;
       // A3: the "what your coach is reading" ledger, live counts vs the
       // published thresholds, from the same inputs as the banner line. Under
       // an open ED flag it is the neutral variant with no weigh-in counts.

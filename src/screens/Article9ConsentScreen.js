@@ -144,6 +144,15 @@ export default function Article9ConsentScreen({ navigation }) {
         // tolerated: they proceed and can upgrade later.
         await cascade.startCascade().catch((e) => {
           logError('Article9.consent.startCascade', e, { uid: user?.id });
+          // FQ-6.1 (D96): a transient failure here must not permanently cost
+          // a new user their trial. Network-shaped failures queue a retry
+          // that the sync runner drains (pendingCascade, the pendingConsent
+          // shape); a definitive server answer is not queued. The tier is
+          // never touched locally - the grant lands when the RPC confirms.
+          try {
+            // eslint-disable-next-line global-require
+            require('../lib/payments/pendingCascade').queuePendingCascade(user?.id, e).catch(() => {});
+          } catch (_) { /* best-effort */ }
         });
       } catch (e) {
         logError('Article9.consent.startCascade.require', e);
