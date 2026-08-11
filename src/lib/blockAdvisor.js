@@ -145,7 +145,13 @@ function detectSignals(checkins) {
     if (z <= -1.5) {
       signals.push({ type: 'readiness_drop', severity: 'high', label: 'Readiness well below your personal baseline', data: Math.round(z * 10) / 10 });
     } else if (z <= -1.0) {
-      signals.push({ type: 'readiness_drop', severity: 'medium', label: 'Readiness a bit below your recent average', data: Math.round(z * 10) / 10 });
+      // C6 Phase 7 (D97): the baseline is the last 8 check-in ROWS
+      // (getRecentCheckins), not a dated window - for a returning user
+      // those rows can be months old, so the label must not call them
+      // "recent". "Personal baseline" is what the maths actually is (the
+      // high-severity sibling already says so). Copy only; the z-score
+      // and thresholds are untouched.
+      signals.push({ type: 'readiness_drop', severity: 'medium', label: 'Readiness a bit below your personal baseline', data: Math.round(z * 10) / 10 });
     }
   }
 

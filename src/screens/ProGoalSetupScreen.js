@@ -657,8 +657,13 @@ export default function ProGoalSetupScreen({ navigation }) {
         {displayWeightKg ? (
           <View style={styles.footerNote}>
             <Ionicons name="scale-outline" size={15} color={t.colors.textMuted} />
+            {/* C6 Phase 7 (D97): displayWeightKg is the LAST logged
+                weigh-in (or the profile weight) at any age - after months
+                away, "your recent weight trend" was a false recency claim.
+                "Last logged weight" is true at any age, like "last block".
+                Copy only; the value and the calculation are untouched. */}
             <Text style={[styles.footerNoteText, live.footerNoteText]}>
-              Targets use your recent weight trend, {formatBodyWeightShort(displayWeightKg, userProfile?.bodyWeightUnits ?? 'st')}. Log a new weigh-in on Today.
+              Targets use your last logged weight, {formatBodyWeightShort(displayWeightKg, userProfile?.bodyWeightUnits ?? 'st')}. Log a new weigh-in on Today.
             </Text>
           </View>
         ) : null}
