@@ -377,3 +377,19 @@ insight calls sleep rows "weekly check-ins"), P-10 (offline-expired
 trial shows stale Subscription copy) and P-11 (ledger frozen with
 computing tier, no tier provenance) carried to Phase 57 triage with
 severities as recorded in AUDIT-TIER-TRANSITIONS.md.
+
+## D97-21 (addendum: 180-day relationship report) — the nine questions derived
+
+The addendum requires the 180-day report to answer "the nine
+questions" (line 134-135) but enumerates none, anywhere in either
+source document (both read end-to-end; the six-block seven ARE
+enumerated at line 131-132). Lead ruling (D33) rather than a silent
+guess or a parked deliverable: Q1-Q5 = the five permanent promises
+applied to the 180-day arc; Q6-Q8 = the three campaign laws plus the
+safety inviolables; Q9 = the honest continuity/loyalty verdict
+(handover item 96). Derivation stated in the report header
+(ATHLETE-180-REPORT.md) and FLAGGED FOR FOUNDER CONFIRMATION in the
+final handover; if the founder's intended nine differ, the section is
+re-answered against them. Rationale: the mapping uses only the
+addendum's own stated frameworks, adds nothing, and keeps the
+deliverable auditable against its source.
