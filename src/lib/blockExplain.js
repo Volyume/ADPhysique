@@ -249,6 +249,20 @@ const CLASS_ORDER = Object.freeze({
  * The block-end story: one row per ledger entry, ordered by what needs
  * attention, each carrying its entry's rationale verbatim.
  */
+// C6 closeout B2 (founder ruling: cause-agnostic ONLY). When the ledger
+// recorded that an EARNED climb was deliberately withheld
+// (upwardCarryPrevented, the M-6 truth flag), the user may see the
+// CONSEQUENCE - a deliberate hold - and never the cause. The sentence
+// must not name, hint at or vary by ED state, calm mode, staleness or
+// any detector: one fixed clause for every cause, so the copy can never
+// become a side channel into the safety classification.
+const HELD_DELIBERATELY_CLAUSE = ' This one is deliberately kept steady rather than increased this block.';
+
+/**
+ * The block-end story: one row per ledger entry, ordered by what needs
+ * attention, each carrying its entry's rationale verbatim (plus the B2
+ * cause-agnostic hold clause when the entry recorded a prevented climb).
+ */
 export function buildLedgerReflectionRows(ledger) {
   const entries = Array.isArray(ledger?.entries) ? ledger.entries : [];
   return entries
@@ -257,7 +271,9 @@ export function buildLedgerReflectionRows(ledger) {
       muscle: e.muscle,
       label: muscleDisplayName(e.muscle),
       classification: e.classification ?? null,
-      rationale: e.rationale,
+      rationale: e.upwardCarryPrevented
+        ? `${e.rationale}${HELD_DELIBERATELY_CLAUSE}`
+        : e.rationale,
     }))
     .sort((a, b) => (CLASS_ORDER[a.classification] ?? 9) - (CLASS_ORDER[b.classification] ?? 9));
 }

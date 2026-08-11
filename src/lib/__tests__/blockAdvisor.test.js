@@ -26,7 +26,10 @@ test('a STALE latest check-in produces no current signals (C6 seam 2, D97)', asy
     { weekStart: Date.now() - 127 * 86400000, energyScore: 1, sorenessScore: 5, sleepHours: 4 },
   ]);
   getBlockStatus.mockReturnValue(activeStatus(3));
-  const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
+  // isPro: true (closeout P-8 re-anchor) - this pin is about RECENCY on
+  // the coaching path, so it runs entitled; the tier gate has its own
+  // describe below.
+  const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' }, { isPro: true });
   expect(advice.action).toBe('continue');
 });
 
@@ -41,7 +44,7 @@ test('a single low-energy check-in in week 1 does NOT surface a recovery card', 
   // The reported bug: one stray check-in produced "Keep an eye on recovery".
   getRecentCheckins.mockResolvedValue([{ weekStart: Date.now() - 3 * 86400000, energyScore: 1, sorenessScore: 3, sleepHours: 7 }]);
   getBlockStatus.mockReturnValue(activeStatus(1));
-  const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
+  const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' }, { isPro: true });
   expect(advice.action).toBe('continue');
 });
 
@@ -56,7 +59,9 @@ test('a real pattern (>=2 check-ins, week >=2) still surfaces a heads-up', async
     { weekStart: Date.now() - 3 * 86400000, energyScore: 4, sorenessScore: 2, sleepHours: 8 },
   ]);
   getBlockStatus.mockReturnValue(activeStatus(2));
-  const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
+  // isPro: true (closeout P-8): recovery coaching is Pro; PlansScreen
+  // threads the real entitlement.
+  const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' }, { isPro: true });
   expect(advice.action).toBe('heads_up');
 });
 
@@ -225,4 +230,43 @@ test('RA6-11 control: fresh sub-60 readiness still chooses adjust exactly as bef
   getBlockStatus.mockReturnValue(finishedStatus);
   const advice = await getBlockAdvice('u1', block, {}, { isPro: true });
   expect(advice.nextBlock.recommendation).toBe('adjust');
+});
+
+// C6 closeout P-8 (FREE HAS NO COACHING): the recovery-coaching branches
+// (early_deload, heads_up, signal chips) are entitlement-gated like the
+// next-block narrative always was. For up to 14 days after tier loss a
+// Free user's Pro-era check-ins still passed the recency gate and kept
+// coaching cards live; now the signals require isPro too.
+describe('C6 closeout P-8: recovery coaching does not survive tier loss', () => {
+  const proEraCheckins = () => ([
+    // Fresh, genuinely alarming check-ins (would fire early_deload on Pro).
+    { weekStart: Date.now() - 2 * 86400000, energyScore: 1, sorenessScore: 5, sleepHours: 4 },
+    { weekStart: Date.now() - 9 * 86400000, energyScore: 1, sorenessScore: 5, sleepHours: 4 },
+  ]);
+
+  test('Pro -> Free: a recent Pro-era check-in renders NO coaching card as current advice', async () => {
+    getRecentCheckins.mockResolvedValue(proEraCheckins());
+    getBlockStatus.mockReturnValue(activeStatus(3));
+    const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' }, { isPro: false });
+    expect(advice.action).toBe('continue'); // no early_deload, no heads_up
+    expect(advice.signals ?? []).toEqual([]); // no coaching chips either
+  });
+
+  test('returning to Pro restores legitimate live coaching from the SAME rows immediately', async () => {
+    getRecentCheckins.mockResolvedValue(proEraCheckins());
+    getBlockStatus.mockReturnValue(activeStatus(3));
+    const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' }, { isPro: true });
+    expect(advice.action).not.toBe('continue'); // the deload/heads-up path is live again
+    expect(advice.signals.length).toBeGreaterThan(0);
+  });
+
+  test('historical rows are read, never deleted: the gate is display-side only', async () => {
+    const rows = proEraCheckins();
+    getRecentCheckins.mockResolvedValue(rows);
+    getBlockStatus.mockReturnValue(activeStatus(3));
+    await getBlockAdvice('u1', block, { experience: 'intermediate' }, { isPro: false });
+    // The advisor only ever reads; the mock rows are untouched.
+    expect(rows).toHaveLength(2);
+    expect(getRecentCheckins).toHaveBeenCalled();
+  });
 });

@@ -106,7 +106,7 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md (ten questions per candidate; verdict A/B/C/D; DO NOT BUILD) | COMPLETE-AUDIT | Delivered: five candidates scored on the ten questions; VERDICT C with recorded revisit trigger; nothing built |
 | PERSONALISATION-DIVIDEND.md | COMPLETE-IMPL | Delivered with the computed counterfactual, A-E input classification, nutrition dividend, honest weaknesses |
 | REVIEW-E-relationship.md (nine-month payer, the EXACT twelve questions) | COMPLETE-ACTIONED | REVIEW-E-relationship.md landed (twelve verdicts: 7 STRONG, 4 ADEQUATE, 1 WEAK on visibility); ALL FIVE findings dispositioned under D97-25: RE6-1/3/4/5 FIXED with pins, RE6-2 recorded as magnitude evidence on the D97-3 founder question |
-| Six-block + 180-day relationship sections | COMPLETE-IMPL | 392fa136 + ATHLETE-180-REPORT.md (nine-question framing to be corrected as superseded) |
+| Six-block + 180-day relationship sections | COMPLETE-IMPL | 392fa136 + ATHLETE-180-REPORT.md; the superseded nine-question framing is closed - Review E ran the EXACT TWELVE commissioned questions (REVIEW-E-relationship.md) and the report carries the RE6-3 correction |
 | Relationship invariant tests | COMPLETE-IMPL | campaign6.relationship.test.js (12) |
 | Anti-anthropomorphism + anti-manipulation audits | COMPLETE-IMPL | Repo walkers landed (abefab54 + relationship suite); formal handover answers at items 93/94 |
 | Handover items 81-96 | COMPLETE-IMPL | All 16 answered explicitly in CAMPAIGN6-FINAL-HANDOVER.md; item 95 filled from the actioned Review E; item 96 answers the nine-month loyalty question from shipping behaviour |
@@ -131,7 +131,9 @@ AUDIT-* extras retained (do not substitute).
 
 ## F. Standing confirmations (verified this date)
 
-No production migration run; 132-135 unapplied (135 HELD defective);
+No production migration run; 132-134 unapplied; 135 REPAIRED but
+UNAPPLIED, release-sequenced behind the v72 + RC6-2 applied-writer
+client build with the RC6-6 read-only preflight required first;
 049 HELD. D92-11 unchanged (drafted push path REVERTED uncommitted).
 D91-25 not implemented; D91-24 not stealth-fixed. ED thresholds
 unchanged; Article 9 unchanged. Free has no coaching. Trial law

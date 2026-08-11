@@ -111,7 +111,15 @@ export function computeRecoveryTrendInsight(checkins, nowMs = Date.now()) {
   // it in the same insight slot rather than on a card of its own, so the
   // leaned Consistency surface doesn't grow another chart.
   if (lowSleepWeeks >= 3) {
-    return { type: 'warning', text: `Sleep has been rated low for ${lowSleepWeeks} weekly check-ins in a row, which is worth paying attention to.` };
+    // C6 closeout P-9 (evidence-naming law): sleepQuality is a
+    // dual-source column - the workout summary writes it tier-blind
+    // from the pre-workout sleep question - so calling these rows
+    // "weekly check-ins" manufactured check-ins that never occurred
+    // for a newly upgraded user. "Weeks running" is what the RD6-7
+    // adjacency walk actually proves, whichever surface supplied the
+    // rating. The energy/soreness sentences keep their noun: those
+    // columns are only ever written by a real check-in.
+    return { type: 'warning', text: `Sleep has been rated low for ${lowSleepWeeks} weeks running, which is worth paying attention to.` };
   }
   if (highEnergyWeeks >= 3) {
     return { type: 'good', text: `Energy has been consistently high across the last ${highEnergyWeeks} weekly check-ins, which is a good sign.` };

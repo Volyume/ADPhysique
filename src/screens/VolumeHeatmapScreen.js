@@ -90,6 +90,11 @@ export default function VolumeHeatmapScreen() {
   // still seeds from the MANUAL layer only: editing starts from what the
   // user set, and a saved manual value beats adaptation from then on.
   const [resolvedLandmarks, setResolvedLandmarks] = useState(null);
+  // C6 closeout B1 (founder-approved): the per-muscle source map, kept
+  // beside the resolved table so each row can say WHERE its band came
+  // from. Until now three of the four consumers discarded .source and
+  // the engine's strongest per-muscle statement never reached the user.
+  const [resolvedSource, setResolvedSource] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState({});
   const [trendData, setTrendData] = useState([]);
@@ -210,8 +215,16 @@ export default function VolumeHeatmapScreen() {
         try { parsed = JSON.parse(stored); } catch (_) {}
       }
       getEffectiveLandmarks(user.id, { tier })
-        .then((r) => { if (isCurrentRequest()) setResolvedLandmarks(r?.table ?? null); })
-        .catch(() => { if (isCurrentRequest()) setResolvedLandmarks(null); });
+        .then((r) => {
+          if (!isCurrentRequest()) return;
+          setResolvedLandmarks(r?.table ?? null);
+          setResolvedSource(r?.source ?? null); // B1: per-muscle provenance
+        })
+        .catch(() => {
+          if (!isCurrentRequest()) return;
+          setResolvedLandmarks(null);
+          setResolvedSource(null);
+        });
       if (parsed) {
         setCustomLandmarks(parsed);
         // The stored table now holds ONLY edited muscles (Stage 6 review
@@ -569,7 +582,19 @@ export default function VolumeHeatmapScreen() {
             // (styles.muscleRow.minHeight below), with a single label carrying
             // name, volume and status -- matches the BlockProgressCard.js row
             // precedent (accessibilityRole="text" + one combined label).
-            const rowA11yLabel = `${MUSCLE_DISPLAY_NAMES[muscle]}: ${sets} of ${mrv} weekly sets, ${statusLabel}`
+            // C6 closeout B1 (founder-approved restrained provenance):
+            // each row names which of the three bands it is showing, in
+            // the same vocabulary the block-start lines already use -
+            // the user's own setting, a band adjusted from their logged
+            // training, or the research starting point. No percentages,
+            // no engine terms, no capacity claims; the research caption
+            // makes no learning promise (free-safe, RD6-10).
+            const provenance = resolvedSource?.[muscle] === 'manual'
+              ? 'Your own targets'
+              : resolvedSource?.[muscle] === 'adapted'
+                ? 'Adjusted from your logged training'
+                : 'Research starting point';
+            const rowA11yLabel = `${MUSCLE_DISPLAY_NAMES[muscle]}: ${sets} of ${mrv} weekly sets, ${statusLabel}, ${provenance}`
               + (freshnessMetaEntry ? `, ${freshnessMetaEntry.label}, ${lastTrainedText}` : '');
 
             return (
@@ -585,7 +610,10 @@ export default function VolumeHeatmapScreen() {
                   rowOffsets.current[muscle] = (rowOffsets.current.__cardY || 0) + rowY;
                 }}
               >
-                <Text style={[styles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+                <View style={styles.muscleNameCol}>
+                  <Text style={[styles.muscleName, live.muscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+                  <Text style={[styles.provenanceCaption, live.provenanceCaption]}>{provenance}</Text>
+                </View>
                 <View style={[styles.barTrack, live.barTrack]}>
                   <View
                     style={[
@@ -915,8 +943,15 @@ const styles = StyleSheet.create({
   },
   muscleName: {
     ...type.label,
-    width: 90,
     color: colors.textSecondary,
+  },
+  // B1: the name column holds the name plus its provenance caption.
+  muscleNameCol: {
+    width: 90,
+  },
+  provenanceCaption: {
+    fontSize: fontSize.xs,
+    color: colors.textMuted,
   },
   barTrack: {
     flex: 1,
@@ -1025,6 +1060,7 @@ function buildLiveStyles(t) {
     windowNoteText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     heatmapCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     muscleName: { ...t.type.label, color: t.colors.textSecondary },
+    provenanceCaption: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     barTrack: { backgroundColor: t.colors.surface3 },
     landmark: { backgroundColor: t.colors.border },
     setsCount: { fontSize: t.fontSize.sm, fontVariant: ['tabular-nums'] },

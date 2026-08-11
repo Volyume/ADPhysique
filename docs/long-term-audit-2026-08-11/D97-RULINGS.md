@@ -850,3 +850,47 @@ observed repeatedly but the intermittency is not fully root-caused.
   earned-start memory, naming the gap in the layoff line, stating how
   long a refusal stands) stay recorded in REVIEW-E-relationship.md;
   none built, none proposed as work (addendum law).
+
+## D97-26 (final closeout, founder order 2026-08-11) — the bounded corrections
+
+The founder's closeout order corrected three queue classifications and
+ruled B1/B2/B4:
+- **P-7 reclassified IN-SCOPE (FQ-6.1 already decides it) and FIXED**:
+  startCascade requires the RPC's own confirmation payload (a string
+  trial_state) before any local mirror - {ok:true,data:null} no longer
+  invents 'pro_trial_active'. An unconfirmed success returns a
+  NON-network-shaped failure, so the FQ-6.1 queue does not retry it and
+  no duplicate/extended trial is possible; refreshTierFromCloud
+  reconciles if the server did start one. Trial architecture untouched.
+  Behavioural tests in cascade.lifecycle.test.js.
+- **P-8 reclassified IN-SCOPE (the tier law already decides it) and
+  FIXED**: detectSignals output now requires the entitlement as well as
+  currency, so the early_deload/heads_up branches and signal chips
+  cannot render for Free from Pro-era check-ins. History preserved;
+  return to Pro restores live coaching immediately. Pinned three ways.
+- **P-9 reclassified IN-SCOPE (evidence-naming law) and FIXED**: the
+  sleep run sentence says "weeks running" (what the adjacency walk
+  proves) instead of "weekly check-ins" (an event the dual-source
+  sleepQuality column cannot attest). Energy/soreness keep their noun -
+  those columns only ever come from a real check-in.
+- **B1/B4 APPROVED AND LANDED**: per-muscle provenance captions on the
+  volume screen rows (own targets / adjusted from your logged training
+  / research starting point - free-safe, no learning promise on the
+  research caption) and the calorie hero's calibrated-vs-day-0
+  provenance fork (selected on a REAL applied calorie change; the
+  claim is about the applied target, never the maintenance estimate).
+- **B2 APPROVED CAUSE-AGNOSTIC AND LANDED**: one fixed clause in the
+  block-end story ("This one is deliberately kept steady rather than
+  increased this block") whenever upwardCarryPrevented is recorded;
+  pinned that the clause is identical for every cause and contains no
+  detector vocabulary.
+- **Review E visibility recheck** (that question only): WEAK ->
+  **ADEQUATE**, honestly not STRONG - the cumulative arc statement
+  remains a recorded, unbuilt idea. Recorded in
+  REVIEW-E-relationship.md with the reasoning.
+- **Doc truth**: the ledger's stale "nine-question framing to be
+  corrected" row and "135 HELD defective" standing confirmation now
+  state current truth (twelve-question Review E ran; 135 is REPAIRED /
+  UNAPPLIED / RELEASE-SEQUENCED). Historical records untouched.
+- Everything else in the founder queue remains OPEN and untouched, per
+  the order's explicit list.

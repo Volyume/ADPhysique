@@ -180,8 +180,10 @@ describe('VolumeHeatmapScreen states', () => {
     await act(async () => { newSets.resolve(chestSets(11)); });
     await flush();
     text = flattenText(tree.toJSON());
-    expect(text).toContain('Chest11/22');
-    expect(text).not.toContain('Chest3/22');
+    // Re-anchored under closeout B1: the name column now carries the
+    // provenance caption between the name and the counts.
+    expect(text).toContain('ChestResearch starting point11/22');
+    expect(text).not.toContain('ChestResearch starting point3/22');
   });
 });
 
@@ -211,7 +213,7 @@ describe('AX-04 (launch accessibility audit): muscle rows are the accessible + o
 
     const chestRow = rows.find((r) => r.props.accessibilityLabel.startsWith('Chest:'));
     expect(chestRow).toBeTruthy();
-    expect(chestRow.props.accessibilityLabel).toBe('Chest: 11 of 22 weekly sets, Good range');
+    expect(chestRow.props.accessibilityLabel).toBe('Chest: 11 of 22 weekly sets, Good range, Research starting point');
 
     // >=44dp target (minHeight 44 on the row style).
     expect(chestRow.props.style.minHeight).toBeGreaterThanOrEqual(44);

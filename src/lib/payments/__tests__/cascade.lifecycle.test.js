@@ -121,3 +121,46 @@ describe('cascade pure read helpers', () => {
     expect(daysRemaining({ trialState: 'unstarted' }, now)).toBeNull();
   });
 });
+
+describe('C6 closeout P-7 (FQ-6.1): startCascade fails CLOSED on an unconfirmed response', () => {
+  const { startCascade } = require('../cascade');
+  const { isNetworkShapedError } = require('../pendingCascade');
+
+  test('{ok:true, data:null} grants NOTHING locally and returns a non-retryable failure', async () => {
+    mockRpc.mockResolvedValue({ data: null, error: null });
+    const r = await startCascade();
+    expect(r.ok).toBe(false);
+    expect(r.error).toBe('unconfirmed_response');
+    // The old path invented 'pro_trial_active' and set the local tier;
+    // nothing may be written now (the store mock's setTier is absent, so
+    // any grant attempt would throw into the tolerate branch - assert
+    // via the returned failure and the untouched optimistic hook).
+    expect(mockSetOptimisticPaid).not.toHaveBeenCalled();
+    // An empty success is NOT the retryable network class: the FQ-6.1
+    // queue must treat it as definitive, never hammer the RPC.
+    expect(isNetworkShapedError(new Error(r.error))).toBe(false);
+  });
+
+  test('a data object WITHOUT trial_state is equally unprovable', async () => {
+    mockRpc.mockResolvedValue({ data: { something: true }, error: null });
+    const r = await startCascade();
+    expect(r).toMatchObject({ ok: false, error: 'unconfirmed_response' });
+  });
+
+  test('a confirmed payload still starts the trial exactly as before', async () => {
+    mockRpc.mockResolvedValue({
+      data: { trial_state: 'pro_trial_active', tier: 'pro', pro_trial_ends_at: '2026-08-25T00:00:00Z' },
+      error: null,
+    });
+    const r = await startCascade();
+    expect(r.ok).toBe(true);
+    expect(r.data.trial_state).toBe('pro_trial_active');
+  });
+
+  test('a genuine network failure keeps its retryable shape (queue law unchanged)', async () => {
+    mockRpc.mockRejectedValue(new Error('Network request failed'));
+    const r = await startCascade();
+    expect(r.ok).toBe(false);
+    expect(isNetworkShapedError(new Error(r.error))).toBe(true);
+  });
+});

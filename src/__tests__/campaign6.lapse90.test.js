@@ -165,7 +165,7 @@ describe('LAPSE E2E: the documented protections hold at the session level', () =
   test('the 14-day gates from D97-4/5/8/10 are all present (absence is never evidence)', () => {
     expect(read('lib/algorithms.js')).toMatch(/feedbackRecent &&/);
     expect(read('screens/CoachOutputScreen.js')).toMatch(/isAdjacent/);
-    expect(read('lib/blockAdvisor.js')).toMatch(/latestIsCurrent \? detectSignals\(checkins\) : \[\]/);
+    expect(read('lib/blockAdvisor.js')).toMatch(/\(isPro && latestIsCurrent\) \? detectSignals\(checkins\) : \[\]/);
     expect(read('screens/CoachOutputScreen.js')).toMatch(/liveWeek - outWeek > 7 \* 86400000\) return;/);
   });
 

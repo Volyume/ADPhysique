@@ -104,6 +104,21 @@ function _trackTransition({ reason, sourceSurface, targetTier, paymentRef }) {
 
 export async function startCascade() {
   const r = await _call('start_cascade', {});
+  // C6 closeout P-7 (FQ-6.1, fail CLOSED): {ok:true, data:null} is NOT
+  // authoritative confirmation. The mirror below used to invent
+  // 'pro_trial_active' from a null body and grant the local tier, i.e.
+  // a transport-succeeded-but-empty response created an entitlement the
+  // server never confirmed. A grant now requires the RPC's own
+  // confirmation payload (a string trial_state); anything else returns
+  // ok:false with a NON-network-shaped error, so the FQ-6.1 queue does
+  // not retry it (an empty success is not the retryable class) and no
+  // local trial state is written - refreshTierFromCloud reconciles on
+  // the next authoritative read if the server did start one. Trial
+  // architecture (14-day cardless, 7-day store intro) untouched.
+  if (r.ok && !(r.data && typeof r.data === 'object' && typeof r.data.trial_state === 'string')) {
+    logWarn('payments.cascade.startCascade', 'ok response without confirmation payload; no local grant', {});
+    return { ok: false, error: 'unconfirmed_response', data: r.data ?? null };
+  }
   if (r.ok) {
     // Reflect the trial in the local store straight away. RootNavigator
     // routes onboarding on store.tier and ProGate unlocks on it, but the
@@ -119,7 +134,9 @@ export async function startCascade() {
       const useAppStore = require('../../store/useAppStore').default;
       // eslint-disable-next-line global-require
       const { _resolveTier } = require('../proGate');
-      const ts = r.data?.trial_state ?? 'pro_trial_active';
+      // P-7: trial_state is guaranteed by the confirmation gate above -
+      // no invented fallback.
+      const ts = r.data.trial_state;
       const nextTier = r.data?.tier ?? _resolveTier(ts, false);
       const st = useAppStore.getState();
       if (nextTier === 'pro') {

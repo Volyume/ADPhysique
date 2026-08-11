@@ -415,7 +415,17 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
   const latestCheckinAt = checkins[0]?.weekStart ?? null;
   const latestIsCurrent = latestCheckinAt != null
     && (Date.now() - latestCheckinAt) <= 14 * 86400000;
-  const signals = latestIsCurrent ? detectSignals(checkins) : [];
+  // C6 closeout P-8 (tier law: FREE HAS NO COACHING): the early_deload /
+  // heads_up branches and the signal chips are coaching output derived
+  // from check-in data, but only the next-block narrative was
+  // entitlement-gated - so for up to 14 days after a trial expiry a
+  // Free user could still be told "Your body is asking for a lighter
+  // week" from Pro-era check-ins whose recency gate they still passed.
+  // Signals now require the entitlement as well as currency. Historical
+  // rows are untouched (nothing is deleted; the Coach history surfaces
+  // keep their own rules); returning to Pro restores live signals from
+  // the same data immediately.
+  const signals = (isPro && latestIsCurrent) ? detectSignals(checkins) : [];
   const highSignals   = signals.filter(s => s.severity === 'high');
   const mediumSignals = signals.filter(s => s.severity === 'medium');
 

@@ -73,11 +73,16 @@ prescriptions themselves differ.
   times; repeat means repeat (P-6).
 - **SHOW ME WHY**: every seed source has a voice (SOURCE_CLAUSE +
   research lines, mature variant D97-16/P-5); consequences never
-  internals (jargon guards); the two under-communication candidates
-  (B1 per-muscle band provenance, B4 nutrition provenance constant)
-  are DELIBERATELY not sprayed - saturation restraint - and stand as
-  the recorded implementation candidates for a future founder-approved
-  pass; B2 stays founder-gated (calm/ED ORing must not be exposed).
+  internals (jargon guards). CLOSEOUT UPDATE (2026-08-11, founder
+  approved): **B1 and B4 are LANDED** - the volume screen names each
+  muscle band's provenance on the row itself (own targets / adjusted
+  from logged training / research starting point), and the calorie
+  hero's provenance sentence forks once a calorie change has genuinely
+  been applied from the user's own evidence. **B2 is LANDED
+  cause-agnostic**: a deliberately withheld climb is stated as a
+  deliberate hold in the block-end story, with the cause (calm/ED
+  ORing) never exposed - pinned. The remaining restraint is the
+  cumulative-comparison line (recorded idea, not built).
 
 ## 4. The nutrition dividend
 
@@ -110,7 +115,9 @@ genuine change (D97-7); no goal-memory system was added.
 1. After heavy disruption the numeric dividend can be zero (disrupted
    chest) - by design, and the receipts say why; a user who wants the
    number back earns it in one good block.
-2. The strongest communication of the dividend (per-muscle provenance
-   at block start, nutrition provenance) is deliberately restrained
-   pending the founder's copy pass (B1/B4).
+2. CLOSEOUT UPDATE: B1/B4 are now landed (per-muscle provenance on the
+   volume screen; calibrated-vs-day-0 nutrition sentence). The honest
+   residual weakness is that the CUMULATIVE arc (Block 6 start vs Day 1)
+   is still never stated anywhere - it remains a recorded idea, and the
+   Review E recheck verdict on visibility is ADEQUATE, not STRONG.
 3. Cross-device provenance still release-gates on migration 132.

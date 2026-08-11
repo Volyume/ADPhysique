@@ -27,7 +27,11 @@ describe('computeRecoveryTrendInsight', () => {
     ];
     const out = computeRecoveryTrendInsight(series(checkins), NOW);
     expect(out?.type).toBe('warning');
-    expect(out?.text).toMatch(/Sleep has been rated low for 3 weekly check-ins/);
+    // Re-anchored under closeout P-9: sleepQuality is dual-source
+    // (session answers write it too), so the sentence claims only the
+    // adjacency-proven "weeks running", never a check-in event.
+    expect(out?.text).toMatch(/Sleep has been rated low for 3 weeks running/);
+    expect(out?.text).not.toMatch(/weekly check-ins/);
   });
 
   test('low energy outranks poor sleep (energy is the primary read)', () => {

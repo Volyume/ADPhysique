@@ -138,6 +138,40 @@ can show, and it is not close.
 
 **Verdict: WEAK.**
 
+> **CLOSEOUT RECHECK (2026-08-11, after the founder approved and landed
+> B1/B4/B2).** This question — and only this question — was re-examined
+> once the visibility pass shipped. What changed on the surfaces this
+> verdict rested on:
+> - **B1 landed**: the volume screen (the manual-override editor, the
+>   one screen this review said it would actually ask the question on)
+>   now carries a per-muscle provenance caption on every row — "Your
+>   own targets" / "Adjusted from your logged training" / "Research
+>   starting point" — from the same source map that was previously
+>   discarded. The per-muscle distinction is visible without a tap.
+> - **B4 landed**: the calorie hero's provenance sentence forks on a
+>   REAL applied change — once the user's own evidence has moved the
+>   target, the line says so ("this target has since been adjusted from
+>   your own weigh-ins and logging"); day 0 is unchanged.
+> - **B2 landed (cause-agnostic)**: a deliberately withheld climb is now
+>   stated in the block-end story ("This one is deliberately kept
+>   steady rather than increased this block"), with the cause never
+>   named.
+> - RE6-1's fix also means the "learned" claim can no longer render on
+>   an unmoved band, so what IS visible is now reliably true.
+>
+> **Re-verdict: ADEQUATE, honestly not STRONG.** The user can now see
+> per-muscle provenance where the question is asked, nutrition
+> calibration where the number lives, and the deliberate hold at block
+> end. What remains unstated is the CUMULATIVE arc itself — the +5
+> starting sets against Day 1, the calves peak coming down 6 — which is
+> still delivered only as a sequence of per-block +1s inside the
+> bottom-sheet placement this section describes. That residual is the
+> recorded cumulative-comparison idea (not built, per the addendum's
+> saturation rule) and the discoverability caveat at
+> RELATIONSHIP-MOMENTS A1. A STRONG here would require the cumulative
+> statement to exist somewhere; it does not, and this recheck does not
+> pretend otherwise.
+
 ---
 
 ### 3. When I give feedback, do I later see evidence that it mattered?

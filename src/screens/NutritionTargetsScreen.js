@@ -246,6 +246,28 @@ export default function NutritionTargetsScreen({ navigation }) {
   // huge screen. Selecting just the two fields we read means we only
   // re-render when those change.
   const { user, userProfile, energyUnit } = useAppStore(useShallow(s => ({ user: s.user, userProfile: s.userProfile, energyUnit: s.accessibility?.energyUnit ?? 'kcal' })));
+  // C6 closeout B4 (founder-approved): whether ANY calorie change has
+  // ever been applied from the user's own evidence. Selects between the
+  // two provenance sentences under the calorie hero - the architecture
+  // fact this must respect (RELATIONSHIP-MOMENTS B4) is that the APPLIED
+  // TARGET learns while the stored maintenance estimate does not, so the
+  // calibrated wording speaks about the target only. Best-effort: a read
+  // failure keeps the honest day-0 sentence.
+  const [calorieEverApplied, setCalorieEverApplied] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!user?.id) return;
+        // eslint-disable-next-line global-require
+        const { getCoachOutputHistory } = require('../lib/database');
+        const history = await getCoachOutputHistory(user.id, 52);
+        const applied = (history ?? []).some((o) => o?.appliedAdjustments?.calories);
+        if (!cancelled) setCalorieEverApplied(applied);
+      } catch (_) { /* keep day-0 wording */ }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   // ── Form state ────────────────────────────────────────────────────────────────
   const [sex,            setSex]            = useState('male');
@@ -1020,8 +1042,16 @@ export default function NutritionTargetsScreen({ navigation }) {
                         register the audit asks for: profile plus research
                         now, learned from your own data over time. It claims
                         no learned history, so it is honest on day 0. */}
+                    {/* C6 closeout B4: two variants of the same sentence,
+                        selected on whether a calorie change has ever been
+                        APPLIED. Day-0 wording unchanged; the calibrated
+                        variant claims only what is true - the target has
+                        been adjusted from the user's own evidence - with
+                        no counts, no percentages, no precision claims. */}
                     <Text style={[styles.heroProvenance, live.heroProvenance]}>
-                      Worked out from your profile and the research, then adjusted as your own evidence arrives.
+                      {calorieEverApplied
+                        ? 'Started from your profile and the research; this target has since been adjusted from your own weigh-ins and logging.'
+                        : 'Worked out from your profile and the research, then adjusted as your own evidence arrives.'}
                     </Text>
                   </Card>
                 );

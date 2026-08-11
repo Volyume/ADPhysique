@@ -508,3 +508,24 @@ describe('RB6 fixes (D97-25): the return experience holds under adversarial revi
     expect(read('lib/blockAdvisor.js')).toMatch(/months ago/);
   });
 });
+
+describe('C6 closeout B1/B4 (founder-approved visibility pass)', () => {
+  test('B1: the volume screen names each muscle band\'s provenance, in the three-state vocabulary', () => {
+    const src = read('screens/VolumeHeatmapScreen.js');
+    expect(src).toMatch(/Your own targets/);
+    expect(src).toMatch(/Adjusted from your logged training/);
+    expect(src).toMatch(/Research starting point/);
+    // The research caption stays free-safe: no learning promise on it.
+    expect(src).not.toMatch(/Research starting point until/);
+  });
+
+  test('B4: the calorie hero provenance forks on a REAL applied change; day-0 wording unchanged', () => {
+    const src = read('screens/NutritionTargetsScreen.js');
+    expect(src).toMatch(/calorieEverApplied/);
+    expect(src).toMatch(/Worked out from your profile and the research, then adjusted as your own evidence arrives\./);
+    expect(src).toMatch(/this target has since been adjusted from your own weigh-ins and logging\./);
+    // The calibrated claim is about the TARGET, never the maintenance
+    // estimate (the stored TDEE does not learn - RELATIONSHIP-MOMENTS B4).
+    expect(src).not.toMatch(/maintenance estimate has (learned|adjusted)/);
+  });
+});

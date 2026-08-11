@@ -258,6 +258,18 @@ closed on a read error. The manual goal is never auto-raised by a plan.
 Six. For each: the exact value, where it is computed, and the precise line
 at which it stops travelling.
 
+> **CLOSEOUT STATUS (2026-08-11): B1, B2 (cause-agnostic only) and B4
+> are FOUNDER-APPROVED and LANDED.** B1: the volume screen's per-muscle
+> rows carry a provenance caption (own targets / adjusted from your
+> logged training / research starting point) from the source map this
+> section records as previously discarded. B2: upwardCarryPrevented now
+> surfaces as one fixed cause-agnostic clause in the block-end story
+> ("deliberately kept steady rather than increased this block"), with
+> detector provenance pinned hidden. B4: the calorie hero's provenance
+> sentence forks on whether a calorie change has genuinely been applied.
+> The adapted `note` strings remain unsurfaced, as this section advised.
+> B3, B5, B6 remain deliberately unactioned (D91-25/D97-3 territory).
+
 ### B1 — Per-muscle adapted-band provenance collapses to one whole-body boolean
 
 **The data.** `computeAdaptiveLandmarks` produces, per muscle:
