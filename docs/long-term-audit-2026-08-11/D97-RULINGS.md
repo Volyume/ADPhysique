@@ -576,3 +576,116 @@ AUDIT-CLOCK-SCALE-LOCAL-PARTNER.md (30 findings), lead-verified:
 - T-17 (backup restores scan rows with dead URIs) and the remaining
   T LATENT/IMPROVEMENT rows → triage register. Phase 42's copy gap is
   closed by T-16; the rest of the local-only inventory came back CLEAN.
+
+## D97-25 (Phases 53-54) — Review A and Review B actioned
+
+Lead rulings on REVIEW-A-six-month.md (11 findings + 3 false-alarm
+notes) and REVIEW-B-returning.md (9 findings), every finding
+hand-verified against the tree before ruling. Reviews C/D/E are ruled
+separately below as they land.
+
+**Review B (returning user), all nine dispositioned:**
+- **RB6-1 FIXED**: useWeightTrend now also requires a weigh-in inside
+  the 14-day boundary before rendering a present-tense trend (the
+  90-day window alone let pre-gap rows render a live trend at a 2-week
+  return while the coach on the SAME rows held).
+- **RB6-2 SPLIT**: the CLAIM half is fixed - weeklyComparatorFresh
+  gates the "this week" label; a stale comparator gets "since you last
+  logged regularly" and the rate label names the gap. The SAFETY half
+  (whether computeWeeklyTrendPct / rapid-loss / robust deltas should
+  gate on comparator freshness) is ED-adjacent and stands FOUNDER-GATED
+  with a three-way fork recorded in the s1 feeder comment - deliberately
+  NOT ruled under D33 (ED thresholds are Section 2, not delegable).
+- **RB6-3 FIXED**: an unearned calendar recovery week after a gap says
+  "Recovery week on the calendar. Ease back in whenever suits you"
+  instead of "pull effort back".
+- **RB6-4 FIXED**: the fatigue-trend caution only counts rated sessions
+  inside 14 days (same class as R-6, sibling read).
+- **RB6-5 FIXED**: campaign6.lapse90's first-run-back test rebuilt on
+  loggedAt so it actually exercises the gap (it previously anchored to
+  row indices and passed vacuously); falsifiability control added.
+- **RB6-6 FIXED**: winback state keys guarded + stamped
+  (GUARDED_PREF_PATTERNS) so a cloud pull can never resurrect a
+  dismissed win-back.
+- **RB6-7 RECORDED**: widening R-16's scope (paused-streak copy on
+  return) would extend a founder-blocked item; stays with R-16 in the
+  founder queue.
+- **RB6-8 FIXED**: the overdue headline rolls to months at >= 9 weeks.
+- **RB6-9 FIXED**: a reviewed decision older than its own week now
+  carries one line of provenance under its date range ("This decision
+  covers the dates above and has not been updated since"); the manual
+  Apply buttons stay live - resuming is deliberately the user's tap
+  (decisionAgeNote in coachOutput/viewCopy.js, pinned both ways).
+
+**Review A (six-month athlete), all eleven dispositioned:**
+- **RA6-1 FIXED**: mergeLandmarkPrecedence now requires isManualEdit
+  before accepting a manual entry, so a legacy full-table save of
+  untouched research defaults no longer disables the Pro adapted layer
+  on four screens + the ledger frame while claiming "your own setting".
+  Pinned; PERSONALISATION-MATURITY.md §4 corrected to record that its
+  original claim was false until this fix.
+- **RA6-2 SPLIT THREE WAYS**: (i) VOICE FIXED - when neither per-muscle
+  term (late soreness / joint) contributed to the excessive cost, the
+  OVERREACHED rationale names the block-level cause ("recovery ran high
+  across the block as a whole") instead of attributing a systemic cost
+  to a muscle that reported nothing local; pinned, including a
+  production-shaped mirror pin. (ii) SIM FIDELITY PINNED - a
+  runner-shaped test (one systemic value mirrored into every muscle)
+  now exists; the sixBlock/athlete180 per-muscle systemic scripts stand
+  as classifier coverage, which the pin's comment states. (iii) The
+  THRESHOLD question (should classification require any per-muscle
+  contribution?) is FOUNDER-GATED: raising the bar makes the engine
+  less conservative, which Section 2 posture disfavours - not ruled.
+- **RA6-3 FIXED (option a, lead-ruled under D33)**: an upward learned-
+  ceiling step must now be corroborated by the block in front of it
+  (target capped at achievedPeak + CEILING_STEP_MAX), so intermittent
+  responsive blocks can no longer re-inflate a strain-reduced ceiling
+  toward an ancient all-time maximum with no recent evidence.
+  Strictly conservative; downward handled-peak steps untouched; the
+  founder's non-erasure rule pinned to still hold (a lighter
+  responsive block holds the ceiling, never erodes it). Chosen over
+  (b) reset-on-strain (coarser memory loss) and (c) status quo (the
+  probe RA6-A arc prescribes 19 sets on seven blocks of no evidence -
+  worse for users; effort is not a criterion under D33).
+- **RA6-4 PART-FIXED, REST RECORDED**: the contradictory sentence class
+  is closed by RA6-5's function form (the ceiling clause now states the
+  true cause when the direction reverses). The fuller "top week came in
+  around N of the M planned" provenance copy belongs to the B1
+  founder-gated per-muscle provenance pass (recorded there); upward
+  PROBING (deliberate above-ceiling test weeks) is new coaching
+  behaviour -> FOUNDER QUEUE, per the review's own framing.
+- **RA6-5 FIXED**: the non-earned RESPONSIVE branch uses the same
+  direction-aware function form as the earned branch; "responded well
+  at this dose, so the next block starts lower" can no longer be
+  produced. Both arms pinned.
+- **RA6-6 RECORDED (founder queue)**: a deliberate "pin this muscle to
+  research" manual save is indistinguishable from an untouched legacy
+  default in the stored format and is discarded by the isManualEdit
+  rule; any real fix adds an explicit saved-marker to the guarded
+  manual blob (format change to an S-2-guarded pref + editor change) -
+  a product decision, not silently buildable. Current behaviour pinned.
+- **RA6-7 FIXED**: PERSONALISATION-DIVIDEND.md's provenance corrected
+  (header now names campaign6.dividend.test.js as the table's pin
+  home; §2 row 3 re-attributed from the STRAINED/OVERREACHED fold to
+  the RESPONSIVE handled-peak rule; §1 row 4's "research peak of 21"
+  corrected to the profile-adjusted MAV). campaign6.dividend.test.js
+  ADDED: pins all four §1 arcs including the no-history
+  counterfactuals and the mechanism truths (no strained block in the
+  calves arc; 21 > research MAV).
+- **RA6-8 RECORDED (founder queue)**: whether the recommendation
+  should track ledger evidence (recommend adjust when the block earned
+  a climb/reduction) sits directly on the FQ-2 founder ruling's
+  ground; options (a)/(b)/(c) recorded verbatim in the review. The
+  repeat body's "come back a little stronger" is true on loads under
+  double progression, so no copy change was forced meanwhile.
+- **RA6-9 RECORDED (founder queue)**: surfacing the adjust-vs-repeat
+  per-muscle delta on the decision card (via the existing seed
+  receipt) is a new UI composition on the next-block card - same card
+  as RA6-8's fork, queued with it so the founder rules once.
+- **RA6-10 CHARACTERISED + PINNED**: the seed/learn confidence
+  asymmetry is now a recorded deliberate characterisation with pins
+  ("a sub-bar entry may seed a retention but may never seed a climb").
+- **RA6-11 FIXED**: avgReadiness in buildNextBlockRecommendation now
+  only averages check-ins inside the 14-day window (D97-8's own
+  boundary applied to the sibling read); with none, the no-data
+  default lands on the conservative repeat branch. Pinned both ways.

@@ -77,10 +77,10 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | 50 | 180-day athlete E2E | COMPLETE-IMPL | campaign6.athlete180.test.js (11 tests, 517c2cc3) - deterministic, real chain, all commissioned beats; ATHLETE-180-REPORT.md reconciled to it |
 | 51 | 90-day lapse E2E | COMPLETE-IMPL | campaign6.lapse90.test.js (11 tests, 6700a9f7) |
 | 52 | Reinstall E2E | COMPLETE-IMPL | campaign6.reinstall.test.js: real fresh DB via real init (full schema + 72 migrations on real SQLite), real appliers, 9 pins incl. tombstones, receipts, ledger protection, photo local-only |
-| 53 | Review A (six-month athlete) | IN PROGRESS | Fresh opus agent IN FLIGHT on the exact ten commissioned questions → REVIEW-A-six-month.md; findings actioned on return |
-| 54 | Review B (returning user) | IN PROGRESS | Fresh opus agent IN FLIGHT on the exact eight questions x five return windows → REVIEW-B-returning.md |
-| 55 | Review C (reinstall/two devices) | IN PROGRESS | Fresh opus agent IN FLIGHT on the ten targets x six failure classes → REVIEW-C-sync.md |
-| 56 | Review D (product truth) | IN PROGRESS | Fresh opus agent IN FLIGHT on the commissioned question over the ten claim families → REVIEW-D-truth.md |
+| 53 | Review A (six-month athlete) | COMPLETE-ACTIONED | REVIEW-A-six-month.md landed (11 findings + 3 false alarms); ALL ELEVEN dispositioned under D97-25: RA6-1/2(voice)/3/5/7/10/11 FIXED with pins (incl. new campaign6.dividend.test.js), RA6-2(threshold)/4(probing)/6/8/9 founder queue with rationale - see D97-RULINGS.md D97-25 |
+| 54 | Review B (returning user) | COMPLETE-ACTIONED | REVIEW-B-returning.md landed (9 findings); ALL NINE dispositioned under D97-25: RB6-1/3/4/5/6/8/9 FIXED with pins, RB6-2 split (claim half fixed; safety half FOUNDER-GATED, ED-adjacent), RB6-7 founder queue with R-16 - see D97-RULINGS.md D97-25 |
+| 55 | Review C (reinstall/two devices) | IN PROGRESS | REVIEW-C-sync.md LANDED (8 defects incl. RC6-1/RC6-2 HIGH on coach-receipt sync + RC6-6 constraint question inverting the 135 release order); actioning under way |
+| 56 | Review D (product truth) | IN PROGRESS | REVIEW-D-truth.md LANDED (14 findings: 12 DEFECT, 2 LATENT; 3 HIGH); actioning under way |
 | 57 | Open debt triage | COMPLETE-AUDIT | TRIAGE-2026-08-11.md: every carried item with the six fields; the complete founder queue; final migration release table |
 | 58 | H4 release blocker | BLOCKED-FOUNDER | Stays open until founder confirms live store listings changed; repository copy is not proof |
 | 59 | Legal copy review gate | COMPLETE-AUDIT | FQ-5 approval PROVEN from DECISIONS-2026-07-09.md:2697-2699 ('Approve all', stamp-only landing 2026-08-10); C6 changed no consent/legal copy |
@@ -105,7 +105,7 @@ BLOCKED-LAW (explicit campaign law forbids change).
 | RELATIONSHIP-MOMENTS.md | COMPLETE-AUDIT | Landed; B1/B4 candidates recorded, B2 founder copy question |
 | WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md (ten questions per candidate; verdict A/B/C/D; DO NOT BUILD) | COMPLETE-AUDIT | Delivered: five candidates scored on the ten questions; VERDICT C with recorded revisit trigger; nothing built |
 | PERSONALISATION-DIVIDEND.md | COMPLETE-IMPL | Delivered with the computed counterfactual, A-E input classification, nutrition dividend, honest weaknesses |
-| REVIEW-E-relationship.md (nine-month payer, the EXACT twelve questions) | IN PROGRESS | Fresh opus agent IN FLIGHT on the twelve verbatim questions |
+| REVIEW-E-relationship.md (nine-month payer, the EXACT twelve questions) | IN PROGRESS | REVIEW-E-relationship.md LANDED (twelve verdicts: 7 STRONG, 4 ADEQUATE, 1 WEAK; 5 findings RE6-1..5); actioning under way |
 | Six-block + 180-day relationship sections | COMPLETE-IMPL | 392fa136 + ATHLETE-180-REPORT.md (nine-question framing to be corrected as superseded) |
 | Relationship invariant tests | COMPLETE-IMPL | campaign6.relationship.test.js (12) |
 | Anti-anthropomorphism + anti-manipulation audits | COMPLETE-IMPL | Repo walkers landed (abefab54 + relationship suite); formal handover answers at items 93/94 |
@@ -124,7 +124,7 @@ Landed already: P-1..P-6, R-1, R-2, R-5, R-7, R-10, F4/F5/F8.
 CURRENT-LONG-TERM-JOURNEYS.md YES · PERSONALISATION-MATURITY.md YES ·
 SIX-BLOCK-SIMULATION.md YES · LAPSE-MATRIX.md YES ·
 REINSTALL-MATRIX.md YES · MULTI-DEVICE-MATRIX.md YES ·
-MIGRATION-RELEASE-GATES.md YES · REVIEW-A/B/C/D/E **MISSING** ·
+MIGRATION-RELEASE-GATES.md YES · REVIEW-A/B/C/D/E YES (all five landed) ·
 PERSONALISATION-DIVIDEND.md YES · CHOICE-MEMORY.md YES ·
 RELATIONSHIP-MOMENTS.md YES · WHAT-VOLYUME-HAS-LEARNED-FEASIBILITY.md YES · CAMPAIGN6-COMPLIANCE-LEDGER.md YES (this file) ·
 AUDIT-* extras retained (do not substitute).
