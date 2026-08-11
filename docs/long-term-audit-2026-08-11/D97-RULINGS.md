@@ -469,3 +469,15 @@ lead-verified hands-on):
   this evidence. **S-5 (offline delete queue parks + resurrection)**:
   fix ruled, NEXT batch. S-6/S-7/S-17/S-19 + S-16's correction to
   the gates record: recorded; triage.
+
+## D97-21 CORRECTION (compliance recovery, 2026-08-11)
+
+D97-21's premise was false: the addendum DOES enumerate Review E's
+twelve questions - the session scratchpad capture had compressed them
+to a count. The derived nine-question framework is superseded as a
+commissioned requirement (retained in ATHLETE-180-REPORT.md as a
+marked lead-derived analysis structure only). Review E runs on the
+exact twelve questions from the founder's restatement. Root cause
+(compressed addendum captures) recorded in the compliance ledger;
+every subsequent requirement check runs against the recovery order's
+enumeration, not session memory.

@@ -4,19 +4,20 @@ Campaign 6, Phase 50 + the founder addendum's 180-DAY RELATIONSHIP
 REPORT requirement ("RELATIONSHIP/CONTINUITY VERDICT section with the
 nine questions", addendum line 134-135).
 
-**Authority and derivation note (D97-21).** The addendum names "the
-nine questions" for this report but enumerates none (the six-block
-report's seven ARE enumerated inline at line 131-132; the nine are
-not, anywhere in the order or the addendum - both read end-to-end).
-Rather than guess silently or park the deliverable, the lead ruled
-(D33) a transparent derivation: questions 1-5 are the addendum's five
-permanent promises applied to the 180-day arc; questions 6-8 are the
-campaign's three binding laws (memory-not-trap, provenance,
-lapse-is-not-failure) plus the safety inviolables; question 9 is the
-honest continuity/loyalty verdict the handover's item 96 requires.
-The derivation is flagged for founder confirmation in the final
-handover; if the founder's intended nine differ, this section is
-re-answered against them.
+**CORRECTION (2026-08-11, compliance recovery — supersedes D97-21's
+framing).** The earlier claim that the addendum "enumerates no
+questions" was WRONG: the session's scratchpad capture of the addendum
+was itself compressed, and the founder's original message enumerates
+ADVERSARIAL REVIEW E's TWELVE questions verbatim (they are now on
+record in the recovery order and are used, exactly, in
+REVIEW-E-relationship.md). The nine-question framework below is
+therefore a LEAD-DERIVED analysis structure, not a commissioned
+requirement; it is retained because its evidence-backed answers are
+real audit content, and the commissioned requirements this report
+serves are (a) the deterministic 180-day E2E, which exists and runs
+(campaign6.athlete180.test.js, 11 tests), and (b) the
+relationship/continuity verdict, which Q9 below answers and item 96
+of the final handover answers again in the commissioned form.
 
 **Evidence base.** The permanent E2E `src/__tests__/campaign6.athlete180.test.js`
 (11 tests, landed 517c2cc3) running the REAL pure chain
