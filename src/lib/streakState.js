@@ -53,17 +53,34 @@ function normalise(raw) {
  * The set of week keys covered by any pause span. Operates over the resolver's
  * ordered (oldest-first, consecutive-Monday) week-key list, so a span starting
  * at `startKey` covers that week plus the next `weeks-1` in the list — no date
- * arithmetic, no drift. (A pause whose start predates the window is out of
- * scope for v1; pauses are created "now", inside the window.)
+ * arithmetic, no drift.
+ *
+ * C6 R-10 (D97-22): a pause whose START has scrolled out of the visible
+ * window used to lose its ENTIRE span (indexOf -1 -> continue), so weeks
+ * the user explicitly paused reverted to "Quiet week" and the run broke
+ * retroactively - a chosen pause silently converted into a lapse. A span
+ * that starts before the window now still covers the weeks of it that
+ * fall inside: the elapsed pre-window weeks are counted off the span
+ * (7-day steps between the ISO Monday keys, the resolver's own grid).
  */
 export function pausedWeekKeys(pauses, orderedWeekKeys) {
   const set = new Set();
   if (!pauses?.length || !orderedWeekKeys?.length) return set;
   for (const p of pauses) {
-    const start = orderedWeekKeys.indexOf(p.startKey);
-    if (start < 0) continue;
     const span = Math.max(1, p.weeks || 1);
-    for (let i = start; i < start + span && i < orderedWeekKeys.length; i++) {
+    let start = orderedWeekKeys.indexOf(p.startKey);
+    let remaining = span;
+    if (start < 0) {
+      const startMs = Date.parse(p.startKey);
+      const windowStartMs = Date.parse(orderedWeekKeys[0]);
+      if (!Number.isFinite(startMs) || !Number.isFinite(windowStartMs)) continue;
+      if (startMs > windowStartMs) continue; // future/off-grid key: unchanged
+      const elapsed = Math.round((windowStartMs - startMs) / (7 * 86400000));
+      remaining = span - elapsed;
+      if (remaining <= 0) continue; // the span genuinely ended pre-window
+      start = 0;
+    }
+    for (let i = start; i < start + remaining && i < orderedWeekKeys.length; i++) {
       set.add(orderedWeekKeys[i]);
     }
   }
