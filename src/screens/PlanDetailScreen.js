@@ -530,9 +530,20 @@ export default function PlanDetailScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Manage actions, free tier only. Pro users manage their plan
-            through the goal-change wizard in Athlete Hub. */}
-        {!isLibrary && tier !== 'pro' && (
+        {/* RC-1 (D96, Review C): this whole block was gated tier !== 'pro',
+            with a rationale ("Pro users manage their plan through the
+            goal-change wizard") that is untrue of that wizard - PlanUpdate
+            REBUILDS from answers, it does not edit, and past week 1 it
+            restarts the block. handleEditPlan is the only navigation in the
+            app that opens ManualBuilder on an existing plan, so a paying
+            user could never add a day, reorder days or create a superset on
+            the plan the wizard built for them, while RoutineDetail points
+            them at "the plan builder" for exactly that. The builder is a
+            FREE feature (SubscriptionPolicy lists it), so showing Edit and
+            Archive to every tier moves no free/pro boundary; Duplicate
+            keeps its own recorded free-only rationale (Pro runs one
+            always-active plan). */}
+        {!isLibrary && (
           <View style={styles.section}>
             <SectionLabel>Manage</SectionLabel>
             <Card padding="none" style={styles.manageCard}>
@@ -541,11 +552,13 @@ export default function PlanDetailScreen({ navigation, route }) {
                 <Text style={[styles.manageRowText, live.manageRowText]}>Edit plan</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
+              {tier !== 'pro' && (
               <TouchableOpacity style={[styles.manageRow, live.manageRow]} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate plan">
                 <Ionicons name="copy-outline" size={18} color={t.colors.primary} />
                 <Text style={[styles.manageRowText, live.manageRowText]}>Duplicate plan</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
+              )}
               {!isActive && (
                 <TouchableOpacity style={[styles.manageRow, live.manageRow, styles.manageRowLast]} onPress={handleArchive} accessibilityRole="button" accessibilityLabel="Archive plan">
                   <Ionicons name="archive-outline" size={18} color={t.colors.error} />

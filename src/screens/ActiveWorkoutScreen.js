@@ -117,6 +117,14 @@ const DEFAULT_FREEFORM_TARGET_SETS = 3;
 // just below and DiaryScreen's hints.
 const UNILATERAL_WALKTHROUGH_SEEN_KEY = '@volyume_seen_unilateral_walkthrough';
 
+// RC-3 (D96, Review C): the superset walkthrough joins the same once-ever
+// convention. It was gated on a per-mount ref only, so the four-step lesson
+// fired up to twice per session, for ever - and assignSupersets excludes
+// beginners, so its only audience was experienced lifters. First exposure
+// keeps the full sheet; afterwards the StatusStrip's superset chip carries
+// the announcement.
+const SUPERSET_WALKTHROUGH_SEEN_KEY = '@volyume_seen_superset_walkthrough';
+
 // B8: keep-awake tag so this screen's activate/deactivate can never release
 // a keep-awake hold some other surface owns. Per-INSTANCE suffix because the
 // screen is registered in three stacks (Home, FirstRun, ProOnboarding) and
@@ -316,6 +324,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // show it once per pair so the user can grab both stations before
   // starting. Set, not array, for O(1) membership checks.
   const acknowledgedSupersetsRef = useRef(new Set());
+  const supersetWalkthroughSeenRef = useRef(false);
   const [supersetHeadsUp, setSupersetHeadsUp] = useState(null);
   // shape: { groupId, memberNames: string[] } | null (2+ members: pair or giant set)
   const [saving, setSaving] = useState(false);
@@ -953,11 +962,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       loadUnilateralExercises(),
       loadUnilateralAsked(),
       AsyncStorage.getItem(UNILATERAL_WALKTHROUGH_SEEN_KEY).catch(() => null),
-    ]).then(([on, asked, seen]) => {
+      AsyncStorage.getItem(SUPERSET_WALKTHROUGH_SEEN_KEY).catch(() => null),
+    ]).then(([on, asked, seen, supersetSeen]) => {
       if (!active) return;
       setUnilateralExercises(on);
       setUnilateralAsked(asked);
       unilateralWalkthroughSeenRef.current = seen === 'true';
+      supersetWalkthroughSeenRef.current = supersetSeen === 'true';
       setUnilateralPrefsLoaded(true);
     }).catch(() => { if (active) setUnilateralPrefsLoaded(true); });
     return () => { active = false; };
@@ -1014,12 +1025,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   useEffect(() => {
     if (currentSGI == null) return;
+    // RC-3: once the walkthrough has ever been seen, the chip is enough.
+    if (supersetWalkthroughSeenRef.current) return;
     if (acknowledgedSupersetsRef.current.has(currentSGI)) return;
     if (!pairedExerciseName) return; // safety
     if (unilateralSheetOpenRef.current) return; // C5-P37-02: defer, do not stack
     // Tag as acknowledged immediately so navigating away+back doesn't re-fire
     // before the user dismisses.
     acknowledgedSupersetsRef.current.add(currentSGI);
+    // RC-3: persist at fire time (the modal owns the screen from here), so
+    // the lesson shows exactly once across the account's whole life.
+    supersetWalkthroughSeenRef.current = true;
+    AsyncStorage.setItem(SUPERSET_WALKTHROUGH_SEEN_KEY, 'true').catch(() => {});
     supersetSheetOpenRef.current = true;
     setSupersetHeadsUp({
       groupId: currentSGI,
@@ -2713,7 +2730,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   fires the same setShowExecution(true) handler the removed
                   overflow row used. */}
               <TouchableOpacity
-                onPress={() => setShowExecution(true)}
+                onPress={() => {
+                  // RC-9 (D96, Review C): anyone opening exercise info is
+                  // not looking for "what is a set", so this tap retires
+                  // the novice Help pulse too - it otherwise animated on
+                  // every exercise of every session until the overflow
+                  // itself was opened. Novice path untouched.
+                  if (showInfoTipPulse) {
+                    infoPulseLoop.current?.stop();
+                    infoPulseAnim.setValue(1);
+                    setShowInfoTipPulse(false);
+                    AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
+                  }
+                  setShowExecution(true);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Exercise info"
                 style={styles.exerciseNameTap}

@@ -258,8 +258,13 @@ export default function FreeStarterScreen({ navigation, route }) {
                 first exposure to "sets" and "reps" in the whole product
                 (a never-lifted free beginner), and the glosses lived one
                 screen later behind the session overflow sheet. */}
+            {/* RC-6 (D96, Review C): describe the PLAN, not the reader. A
+                new account is not a new lifter, and this screen told a
+                ten-year veteran four times that they are a beginner. The
+                honest "Beginner friendly" badge stays on the plan card,
+                where it describes the plan. */}
             <Text style={[styles.resultIntro, live.resultIntro]}>
-              Built for people starting out. Every session tells you exactly what to do:
+              A simple plan you can run as written. Every session gives you
               the exercises, the sets, and the reps.{' '}
               <InfoTooltip text={`${GLOSSARY.set} ${GLOSSARY.rep}`} size={13} />
             </Text>
@@ -305,8 +310,10 @@ export default function FreeStarterScreen({ navigation, route }) {
               onPress={handleStartPlan}
               accessibilityLabel={`Start with ${recommendation.name}`}
             />
+            {/* RC-6: conditional, so it never presumes the reader is new
+                to lifting. */}
             <Text style={[styles.resultFootnote, live.resultFootnote]}>
-              The first couple of weeks are for learning the movements. That counts as progress.
+              New to these movements? The first couple of weeks are for learning them, and that counts as progress.
             </Text>
           </>
         ) : (

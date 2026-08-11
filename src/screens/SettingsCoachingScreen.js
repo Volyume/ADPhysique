@@ -158,7 +158,12 @@ export default function SettingsCoachingScreen() {
             ? (tier === 'pro'
               ? 'Asks how you are feeling before each session, so sessions can adjust to it.'
               : 'Asks how you are feeling before each session and keeps it with your training history.')
-            : 'Off. Sessions start straight away.'}
+            // RC-4 (D96, Review C): the off state names its SECOND
+            // consequence too - these answers are the block ledger's main
+            // recovery evidence, so leaving them off keeps next-block set
+            // targets where they are. Stated once, on the control that
+            // causes it, never as a nag.
+            : 'Off. Sessions start straight away. Without these answers, your next block\'s set targets stay where they are rather than moving on what the block showed.'}
           showArrow={false}
           rightElement={
             <Switch
@@ -251,8 +256,14 @@ export default function SettingsCoachingScreen() {
             <SettingRow
               icon="flask-outline"
               label="Show the science"
+              // RC-5 (D96, Review C): the old sub promised plural "terms"
+              // on plural "explanations"; the layer's one live mapping is
+              // the weight-trend term. Say what it does. (No live coach
+              // sentence states a "weekly target range" today, so the
+              // doc-example MEV/MRV pair has nothing to attach to; wiring
+              // it stays recorded in the register for the day one does.)
               sub={showScience
-                ? 'On. Technical terms appear in brackets after the plain ones on coaching explanations.'
+                ? 'On. The technical name appears in brackets where the coach reports your weight trend.'
                 : 'Off. Everything stays in plain English.'}
               showArrow={false}
               rightElement={

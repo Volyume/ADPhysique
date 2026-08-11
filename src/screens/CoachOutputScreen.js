@@ -1219,7 +1219,11 @@ export default function CoachOutputScreen({ navigation, route }) {
         // to experience), so the coach never mixes tones on one screen.
         const register = resolveRegister({
           coachTone: userProfile?.coachTone ?? 'automatic',
-          experienceLevel: userProfile?.experienceLevel ?? null,
+          // RC-2 (D96, Review C): the wizard writes `experience`;
+          // `experienceLevel` has no producer anywhere, so Automatic
+          // resolved to the beginner register for EVERY user, including
+          // those who answered "Competitive - 5+ years". Read both keys.
+          experienceLevel: userProfile?.experienceLevel ?? userProfile?.experience ?? null,
           trainingAgeYears: userProfile?.trainingAgeYears ?? null,
         });
         const { change: planChange } = await applyCoachAdjustmentToActivePlan(user.id, { adjustmentKcal: change });
@@ -2314,7 +2318,9 @@ export default function CoachOutputScreen({ navigation, route }) {
     checkinDayName,
     weekStartMs: weekStart,
     coachTone: userProfile?.coachTone ?? 'automatic',
-    experienceLevel: userProfile?.experienceLevel ?? null,
+    // RC-2 (D96, Review C): same dual-key read as the plan-edit
+    // narration above - `experience` is the key the profile actually has.
+    experienceLevel: userProfile?.experienceLevel ?? userProfile?.experience ?? null,
     trainingAgeYears: userProfile?.trainingAgeYears ?? null,
     // T15 (comprehension-trust audit 2026-08-06): the "Show the science"
     // toggle finally reaches the copy it always claimed to change.

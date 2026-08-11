@@ -130,10 +130,17 @@ export default function FirstRunScreen({ navigation }) {
 
         <Card radius="md" padding="md" style={styles.hintCard}>
           <Ionicons name="information-circle-outline" size={16} color={t.colors.textMuted} />
+          {/* RC-8 (D96, Review C): the old line promised "skip and browse
+              the library instead", but skipping from first run completes
+              first run and lands on Home (the in-quiz library link is
+              deliberately hidden in this context; Home's no-plan card
+              offers both routes). Say what skipping actually does - a
+              cross-remount navigate to honour the old sentence would be
+              exactly the C5-P29 interruption class this campaign closed. */}
           <Text style={[styles.hintText, live.hintText]}>
             Next, three quick questions and we'll suggest a starter plan.{' '}
             Prefer to pick your own? You can <Text style={[styles.hintBold, live.hintBold]}>skip</Text>{' '}
-            and browse the library instead.
+            and choose from the plan library on Home.
           </Text>
         </Card>
       </ScrollView>

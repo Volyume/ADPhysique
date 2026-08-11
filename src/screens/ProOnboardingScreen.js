@@ -1602,7 +1602,8 @@ export default function ProOnboardingScreen({ navigation }) {
               // careful framing the Volyume Score's own surfaces use. Both
               // sentences are deleted; the header sub and the field hint
               // below already answer the screen's question honestly.
-              title="Starting body composition"
+              // RC-7 (D96, Review C): the title too - the step has exactly
+              // one group, so it grouped nothing and restated the header.
             >
               <View style={styles.sectionLast}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Body fat estimate % (optional)</Text>
@@ -1674,7 +1675,7 @@ export default function ProOnboardingScreen({ navigation }) {
             <QuestionGroup
               icon="barbell-outline"
               // C5-P36-01 (D96): the header sub above is the single carrier.
-              title="Plan fit"
+              // RC-7 (D96, Review C): single-group step, so no group title.
             >
               <View style={styles.section}>
                 <Dropdown
@@ -1801,7 +1802,7 @@ export default function ProOnboardingScreen({ navigation }) {
               // C5-P36-01 (D96): the header sub above is the single carrier.
               // The optional-refinements point is already made by the fields
               // themselves, each of which is labelled optional.
-              title="Goal and targets"
+              // RC-7 (D96, Review C): single-group step, so no group title.
             >
               <View style={styles.section}>
                 <Dropdown

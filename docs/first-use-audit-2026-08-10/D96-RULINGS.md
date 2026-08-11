@@ -718,3 +718,64 @@ Pins: campaign5.firstUse.test.js "REVIEW B" describe (6 tests);
 re-anchors named in place: proOnboardingDraft clear-semantics test
 (RB-1), weightKg shape (RB-7), the C5-P29-02 provenance dedup pin and
 the C5-P29-07 weight-gate pin.
+
+## Review C (Phase 44, experienced user) — lead rulings on findings
+
+Report: `REVIEW-C-experienced.md` (4 DEFECT, 5 IMPROVEMENT, 2 CLEAN
+questions). Rulings (D33):
+
+- **RC-1 (defect) — ACTIONED as the flagged fork, lead-ruled.** The
+  review flagged this STOP-AND-ASK because it is tier-visible. Ruled
+  in-lead: PlanDetail's Manage block was hiding a FREE feature (the
+  plan builder — SubscriptionPolicy lists it under what stays free)
+  from PRO users, on a rationale ("Pro manages via the goal-change
+  wizard") that is untrue of that wizard (it rebuilds, not edits, and
+  restarts the block past week 1). Restoring Edit (and Archive) to
+  every tier moves NO free/pro monetisation boundary — it removes a
+  Pro degradation; Pro remains a superset of Free, which is the
+  Section 2 model. Duplicate keeps its own recorded free-only
+  rationale. NOT escalated to the founder because no Section 2
+  boundary moves; recorded here so the founder can reverse it if the
+  hidden-Edit state was ever intentional.
+- **RC-2 (defect) — ACTIONED.** The coach register keyed on
+  userProfile.experienceLevel, which nothing writes; both call sites
+  now read `experienceLevel ?? experience`, so Automatic genuinely
+  matches wording to the experience answer for every existing user
+  (reader-side fix; retroactive, no migration).
+- **RC-3 (defect) — ACTIONED.** The superset walkthrough joins the
+  once-ever '@volyume_seen_*' convention (persisted at fire time);
+  afterwards the StatusStrip chip carries the announcement. First
+  exposure keeps the full sheet verbatim.
+- **RC-4 (defect) — ACTIONED, copy only.** Both readiness opt-out
+  surfaces now name the second consequence (next-block set targets
+  stay put without recovery evidence) once, on the control that
+  causes it — the FM-02 disclosure discipline, no nag, no gate.
+- **RC-5 (improvement) — ACTIONED, truthful-copy direction.** No live
+  coach sentence states a "weekly target range", so the doc-example
+  MEV/MRV pair has nothing to attach to; the Settings row now says
+  exactly what the layer does (the weight-trend term). Wiring the
+  pair stays open for whenever a real volume sentence exists.
+- **RC-6 (improvement) — ACTIONED.** The free result card describes
+  the plan, not the reader; the beginner-friendly badge stays on the
+  plan card; the movements line is conditional ("New to these
+  movements?").
+- **RC-7 (improvement) — ACTIONED.** RA-7's criterion applied to its
+  three single-group siblings (steps 3/4/5); every wizard step has
+  exactly one group, so all four group titles are gone. The RA-7 pin
+  was re-anchored (my Review A landing wrongly called steps 4/5
+  multi-group; Review C corrected that).
+- **RC-8 (improvement) — ACTIONED, copy direction.** The first-run
+  hint now says what skipping does (Home, plan library from there).
+  The alternative (navigating to the library across the
+  completeFirstRun navigator remount) is exactly the interruption
+  class C5-P29 closed, so it was not introduced at campaign close.
+- **RC-9 (improvement) — ACTIONED.** The exercise-info tap retires
+  the novice Help pulse (same flag), since anyone opening exercise
+  info is not looking for "what is a set". Novice path untouched.
+- The report's Q3/Q6 CLEAN passes (advanced-path reachability,
+  coaching-mode controls) and its recorded non-findings (build-dwell,
+  MesocycleBuilder naming, autonomy discoverability) are accepted as
+  recorded.
+
+Pins: campaign5.firstUse.test.js "REVIEW C" describe (8 tests); the
+RA-7 group-title pin re-anchored to all-four-absent with RC-7 named.

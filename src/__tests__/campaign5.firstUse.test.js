@@ -1050,14 +1050,16 @@ describe('DENSITY: the wizard explains each step once (C5-P36-01/02/03, D96)', (
     ]) {
       expect(src).not.toContain(dupe);
     }
-    // The QuestionGroup icon+title stays where it does real structural
-    // work (multi-group steps). RA-7 (Review A, D96): step 2 has exactly
-    // one group, so "Required details" grouped nothing, restated the
-    // header a third time, and after RA-4 sat above an optional field.
-    for (const title of ['title="Plan fit"', 'title="Goal and targets"']) {
-      expect(src).toContain(title);
+    // RA-7 + RC-7 (Reviews A and C, D96): every wizard step has exactly
+    // one QuestionGroup, so a group title grouped nothing and restated
+    // the header. All four are gone; the icon keeps the visual grouping
+    // and the header sub stays the single purpose carrier (C5-P36-01).
+    for (const title of [
+      'title="Required details"', 'title="Starting body composition"',
+      'title="Plan fit"', 'title="Goal and targets"',
+    ]) {
+      expect(src).not.toContain(title);
     }
-    expect(src).not.toContain('title="Required details"');
     // Every header sub, and therefore every step's purpose, is still stated.
     for (const sub of [
       'These details let the app set a safe starting baseline without guessing.',
@@ -1829,5 +1831,61 @@ describe('REVIEW B: the interruption and state findings stay fixed (RB-1..RB-12,
     const armAt = from6.indexOf('submittingRef.current = true;');
     expect(from6.slice(armAt, armAt + 700)).toMatch(/setBusy\(true\);/);
     expect(from6.slice(armAt, armAt + 1200)).toMatch(/clearTimeout\(draftTimerRef\.current\)/);
+  });
+});
+
+describe('REVIEW C: the experienced-user findings stay fixed (RC-1..RC-9, D96)', () => {
+  test('RC-1: every tier can open the editor on its own plan; Duplicate stays free-only', () => {
+    const src = read('screens/PlanDetailScreen.js');
+    expect(stripComments(src)).not.toMatch(/!isLibrary && tier !== 'pro' &&/);
+    const manage = src.slice(src.indexOf('<SectionLabel>Manage</SectionLabel>'));
+    const editAt = manage.indexOf('Edit plan');
+    const dupGateAt = manage.indexOf("{tier !== 'pro' && (");
+    expect(editAt).toBeGreaterThan(-1);
+    expect(dupGateAt).toBeGreaterThan(editAt); // Edit renders before, and outside, the free-only gate
+    expect(manage.indexOf('Duplicate plan')).toBeGreaterThan(dupGateAt);
+  });
+
+  test('RC-2: the coach register reads the experience key the profile actually has', () => {
+    const src = read('screens/CoachOutputScreen.js');
+    const matches = src.match(/experienceLevel: userProfile\?\.experienceLevel \?\? userProfile\?\.experience \?\? null,/g) || [];
+    expect(matches.length).toBe(2);
+  });
+
+  test('RC-3: the superset walkthrough is once ever, on the sibling persisted-key pattern', () => {
+    const src = read('screens/ActiveWorkoutScreen.js');
+    expect(src).toMatch(/SUPERSET_WALKTHROUGH_SEEN_KEY = '@volyume_seen_superset_walkthrough'/);
+    expect(src).toMatch(/if \(supersetWalkthroughSeenRef\.current\) return;/);
+    expect(src).toMatch(/AsyncStorage\.setItem\(SUPERSET_WALKTHROUGH_SEEN_KEY, 'true'\)/);
+  });
+
+  test('RC-4: both readiness opt-out surfaces name the block-ledger consequence', () => {
+    expect(read('screens/HomeScreen.js')).toMatch(/next block's set targets stay where they are rather than moving on what this block showed/);
+    expect(read('screens/SettingsCoachingScreen.js')).toMatch(/set targets stay where they are rather than moving on what the block showed/);
+  });
+
+  test('RC-5: "Show the science" describes exactly what it does', () => {
+    const src = read('screens/SettingsCoachingScreen.js');
+    expect(src).toMatch(/where the coach reports your weight trend/);
+    expect(src).not.toContain('Technical terms appear in brackets after the plain ones on coaching explanations.');
+  });
+
+  test('RC-6: the free result describes the plan, never the reader', () => {
+    const src = stripComments(read('screens/FreeStarterScreen.js'));
+    expect(src).not.toContain('Built for people starting out');
+    expect(src).toMatch(/New to these movements\?/);
+  });
+
+  test('RC-8: the first-run skip line says what skipping does', () => {
+    const src = stripComments(read('screens/FirstRunScreen.js'));
+    expect(src).not.toContain('browse the library instead');
+    expect(src).toMatch(/choose from the plan library on Home/);
+  });
+
+  test('RC-9: opening exercise info retires the novice Help pulse too', () => {
+    const src = read('screens/ActiveWorkoutScreen.js');
+    const tap = src.slice(src.indexOf('accessibilityLabel="Exercise info"') - 1200, src.indexOf('accessibilityLabel="Exercise info"'));
+    expect(tap).toMatch(/@volyume_seen_workout_info/);
+    expect(tap).toMatch(/setShowExecution\(true\)/);
   });
 });

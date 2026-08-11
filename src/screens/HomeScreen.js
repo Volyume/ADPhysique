@@ -2368,7 +2368,7 @@ export default function HomeScreen({ navigation, route }) {
         >
           <Text style={[styles.intentOptOutText, live.intentOptOutText]}>Don't ask before each session</Text>
           <Text style={[styles.intentOptOutSub, live.intentOptOutSub]}>
-            Without it, sessions are not adjusted to how you're feeling. Turn it back on any time in Settings, Coaching.
+            Without it, sessions are not adjusted to how you're feeling, and your next block's set targets stay where they are rather than moving on what this block showed. Turn it back on any time in Settings, Coaching.
           </Text>
         </TouchableOpacity>
       </BottomSheet>
