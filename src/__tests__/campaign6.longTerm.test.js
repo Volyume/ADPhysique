@@ -304,3 +304,19 @@ describe('R-15 (D97-22): the year recap cannot headline an inflated cluster-row 
     expect(src).toMatch(/import \{ calculate1RM, allocateExerciseVolume, isE1rmEligibleRow \} from '\.\/algorithms';/);
   });
 });
+
+describe('R-17 (D97-22): the win-back claims storage only, and calm mode gates the lay', () => {
+  test('no claim that analysis continued during the absence', () => {
+    const src = stripComments(read('lib/notifications/winbackContent.js'));
+    expect(src).not.toMatch(/never stopped/);
+    expect(src).toContain('Your training history is all saved');
+  });
+
+  test('the lay gate checks calm mode alongside the ED flag', () => {
+    const src = read('lib/notifications/scheduler.js');
+    const fn = src.slice(src.indexOf('export async function scheduleWinbackNotification'));
+    const gate = fn.slice(0, fn.indexOf('const statedReturn'));
+    expect(gate).toMatch(/getOpenEdPatternFlag/);
+    expect(gate).toMatch(/if \(isCalm\(mode\)\) \{ await cancelWinbackNotification\(\); return; \}/);
+  });
+});
