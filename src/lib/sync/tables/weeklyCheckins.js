@@ -72,7 +72,9 @@ export async function pushWeeklyCheckins(sb, { userId, localUserId } = {}) {
       // column is nullable BOOLEAN); !! used to launder null into false.
       joint_pain: c.jointPain == null ? null : !!c.jointPain,
       sore_muscles: c.soreMuscles ?? null,
-      cycle_override: !!c.cycleOverride,
+      // C5-P20-01 tri-state: unanswered travels as null (the cloud column is
+      // a nullable BOOLEAN); !! used to launder null into false.
+      cycle_override: c.cycleOverride == null ? null : !!c.cycleOverride,
       notes: c.notes ?? null,
       updated_at: _toIso(c.updatedAt) ?? nowIso,
     }));

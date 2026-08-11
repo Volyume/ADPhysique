@@ -43,15 +43,29 @@ describe('TRAINING comprehension', () => {
     expect(GLOSSARY.deload).toMatch(/lighter planned week so you recover/i);
   });
 
-  test('Repeat, Continue with adjustments and the fresh-look CTA are unmistakably different', () => {
+  test('Repeat and Continue with adjustments are unmistakably different, and neither is framed as the wrong one', () => {
+    // Re-anchored under FQ-2 (D96, founder ruling 2026-08-10), same meaning.
+    // The two options are now a CONSTANT of the decision surface
+    // (NEXT_BLOCK_OPTION_LABELS) instead of one CTA owned by whichever
+    // branch the advisor picked, so the pinned RULE moved with them: the
+    // choices stay unmistakably different and each states its true
+    // behaviour. D93's button-honesty precedent is intact -- the repeat
+    // label still says the plan runs again unchanged. What is deliberately
+    // gone is 'Repeat this plan anyway': with both options offered as
+    // equals, no option has to be framed as going against advice (FB-33).
     const src = read('lib/blockAdvisor.js');
-    expect(src).toContain("'Continue this plan'");
-    expect(src).toContain("'Continue with adjustments'");
-    expect(src).toContain("'Repeat this plan anyway'");
-    // The fresh-look recommendation must never share the plain continue CTA.
-    const rebuildBlock = stripComments(src.slice(src.indexOf("consider_rebuild")));
-    expect(rebuildBlock).toContain("'Repeat this plan anyway'");
-    expect(rebuildBlock.slice(0, rebuildBlock.indexOf('secondaryLabel'))).not.toContain("'Continue this plan'");
+    expect(src).toContain("repeat: 'Run this plan again, unchanged'");
+    expect(src).toContain("adjust: 'Continue with adjustments'");
+    const stripped = stripComments(src);
+    // No branch may present the repeat as a plain "continue", and no branch
+    // owns a CTA at all any more.
+    expect(stripped).not.toContain("actionLabel: 'Continue this plan'");
+    expect(stripped).not.toMatch(/actionLabel:/);
+    expect(stripped).not.toContain('anyway');
+    // The fresh-look recommendation keeps its own suggestion as the
+    // secondary action, and marks NEITHER option as recommended.
+    const rebuildBlock = stripped.slice(stripped.indexOf('consider_rebuild'));
+    expect(rebuildBlock).toContain("secondaryLabel: 'Review with coach'");
   });
 
   test('a retained dose never reads as an increase; an increase names its evidence', () => {
@@ -107,7 +121,16 @@ describe('PR comprehension', () => {
     expect(GLOSSARY.pr).toMatch(/estimated max/);
     expect(GLOSSARY.pr).toMatch(/never needs a one-rep max attempt/);
     expect(read('screens/ExerciseDetailScreen.js')).toContain('GLOSSARY.pr');
-    expect(read('screens/BlockReflectionScreen.js')).toContain('GLOSSARY.pr');
+    // Re-anchored under FB-16 (D96): BlockReflection's list is no longer
+    // presented as records. Its rows are the best estimated max per
+    // exercise WITHIN the block -- never compared against a prior block or
+    // any record store -- so glossing them with the PR definition ("the
+    // clearest sign your training is working") taught the wrong meaning,
+    // and on a first block every row is a first-ever performance. The rows
+    // are unchanged; they now carry the definition of what they are.
+    const reflection = read('screens/BlockReflectionScreen.js');
+    expect(reflection).toContain('GLOSSARY.estMax');
+    expect(reflection).not.toContain('Records set this block');
   });
 
   test('the record-type labels are canonical everywhere: Est. max / Heaviest weight / Most reps', () => {

@@ -6,7 +6,7 @@
 jest.mock('../database', () => ({ getRecentCheckins: jest.fn() }));
 jest.mock('../mesocycle', () => ({ getBlockStatus: jest.fn() }));
 
-import { getBlockAdvice } from '../blockAdvisor';
+import { getBlockAdvice, buildNextBlockOptions, checkinReadiness } from '../blockAdvisor';
 import { getRecentCheckins } from '../database';
 import { getBlockStatus } from '../mesocycle';
 
@@ -42,4 +42,102 @@ test('a real pattern (>=2 check-ins, week >=2) still surfaces a heads-up', async
   getBlockStatus.mockReturnValue(activeStatus(2));
   const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
   expect(advice.action).toBe('heads_up');
+});
+
+// ───────────────────────────────────────────────────────────────────────
+// FQ-2 (D96, founder ruling 2026-08-10): the next-block decision.
+//
+// The advisor's recommendation is ADVICE. It may mark one of the two
+// options and explain why; it can no longer decide which options exist,
+// and it never decides tier reachability - that comes from the real
+// entitlement, threaded in as isPro. Free receives no adaptive next-block
+// coaching at all ("FREE DOES NOT HAVE COACHING").
+// ───────────────────────────────────────────────────────────────────────
+
+const finishedStatus = {
+  status: 'completed_awaiting_decision', currentWeek: 6, totalWeeks: 6,
+  recoveryWeek: 6, weeksOverdue: 0, awaitingDecision: true,
+};
+const goodWeek = { energyScore: 4, sorenessScore: 2, sleepHours: 8 };
+// FB-36's placeholder: WorkoutSummaryScreen writes a weekly_checkins row
+// carrying only sleepQuality (a column the readiness formula never reads)
+// on any session where the pre-workout sleep question was answered,
+// tier-blind. It used to score exactly 50 and flip the branch.
+const placeholderRow = { sleepQuality: 3 };
+
+test('PRO: a finished block that went well still reaches BOTH options', async () => {
+  getRecentCheckins.mockResolvedValue([goodWeek, goodWeek]);
+  getBlockStatus.mockReturnValue(finishedStatus);
+  const advice = await getBlockAdvice('u1', block, {}, { isPro: true });
+  expect(advice.action).toBe('post_recovery');
+  // The advisor still says what it thinks (FB-19's case: good readiness).
+  expect(advice.nextBlock.recommendation).toBe('repeat');
+  expect(advice.nextBlock.coached).toBe(true);
+  // But it cannot gate: the adjusted option is there, unlocked.
+  const options = buildNextBlockOptions({
+    recommendation: advice.nextBlock.recommendation, isPro: true,
+  });
+  expect(options.map((o) => o.intent)).toEqual(['repeat', 'adjust']);
+  expect(options.every((o) => !o.locked)).toBe(true);
+  expect(options.find((o) => o.intent === 'adjust').recommended).toBe(false);
+});
+
+test('FREE: a finished block gets no adaptive coaching, whatever the check-ins say', async () => {
+  // Real check-in rows from a lapsed Pro user would previously produce the
+  // 'adjust' narrative ("your next block starts from what this block
+  // showed") on a free phone, for a path free cannot take.
+  getRecentCheckins.mockResolvedValue([
+    { energyScore: 2, sorenessScore: 4, sleepHours: 6 },
+    { energyScore: 2, sorenessScore: 4, sleepHours: 6 },
+  ]);
+  getBlockStatus.mockReturnValue(finishedStatus);
+  const advice = await getBlockAdvice('u1', block, {}, { isPro: false });
+  expect(advice.nextBlock.recommendation).toBeNull();
+  expect(advice.nextBlock.coached).toBe(false);
+  expect(advice.nextBlock.body).not.toMatch(/muscle by muscle|slightly adjusted/);
+  const options = buildNextBlockOptions({
+    recommendation: advice.nextBlock.recommendation, isPro: false,
+  });
+  expect(options.find((o) => o.intent === 'repeat').locked).toBe(false);
+  expect(options.find((o) => o.intent === 'adjust').locked).toBe(true);
+});
+
+test('a caller that forgets the entitlement fails closed to no coaching', async () => {
+  getRecentCheckins.mockResolvedValue([goodWeek]);
+  getBlockStatus.mockReturnValue(finishedStatus);
+  const advice = await getBlockAdvice('u1', block, {});
+  expect(advice.nextBlock.coached).toBe(false);
+});
+
+test('FB-36: a sleepQuality-only placeholder row changes nothing for either tier', async () => {
+  getBlockStatus.mockReturnValue(finishedStatus);
+
+  getRecentCheckins.mockResolvedValue([]);
+  const proNoRows = await getBlockAdvice('u1', block, {}, { isPro: true });
+  getRecentCheckins.mockResolvedValue([placeholderRow]);
+  const proPlaceholder = await getBlockAdvice('u1', block, {}, { isPro: true });
+  // The row carries no readiness evidence, so it is no longer a reading:
+  // the advice is identical to having no rows at all (it used to flip from
+  // 'repeat' to 'adjust').
+  expect(proPlaceholder.nextBlock.recommendation).toBe(proNoRows.nextBlock.recommendation);
+  expect(checkinReadiness(placeholderRow)).toBeNull();
+
+  getRecentCheckins.mockResolvedValue([]);
+  const freeNoRows = await getBlockAdvice('u1', block, {}, { isPro: false });
+  getRecentCheckins.mockResolvedValue([placeholderRow]);
+  const freePlaceholder = await getBlockAdvice('u1', block, {}, { isPro: false });
+  // And for free it never decided anything in the first place any more.
+  expect(freePlaceholder.nextBlock).toEqual(freeNoRows.nextBlock);
+  expect(buildNextBlockOptions({ recommendation: freePlaceholder.nextBlock.recommendation, isPro: false })
+    .map((o) => o.locked))
+    .toEqual(buildNextBlockOptions({ recommendation: freeNoRows.nextBlock.recommendation, isPro: false })
+      .map((o) => o.locked));
+});
+
+test('a row that answers even one question is scored exactly as before', () => {
+  // The evidence gate must not soften any real reading.
+  expect(checkinReadiness({ energyScore: 1, sorenessScore: 5, sleepHours: 4 })).toBe(0);
+  expect(checkinReadiness({ energyScore: 3, sorenessScore: 3, sleepHours: 7 })).toBeCloseTo(52, 5);
+  expect(checkinReadiness({ sorenessScore: 1 })).toBe(75);
+  expect(checkinReadiness(null)).toBeNull();
 });

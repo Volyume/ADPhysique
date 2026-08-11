@@ -48,8 +48,12 @@ const FAQ_ITEMS = [
     a: `Through ${storeName()}, any time. You keep Pro until the end of the period you have already paid for.`,
   },
   {
+    // C5-P7-09 (D96): four surfaces published four different answers to
+    // "what does Free include", and this one silently dropped the plan
+    // library and training blocks. It stays a short answer, but it is now
+    // an honest subset that names the canonical full list below.
     q: 'What stays free forever?',
-    a: 'Workout logging, building your own plans, the exercise library, personal records and your progress stats. None of it is ever taken away.',
+    a: 'Workout logging, the plan library, building your own plans, training blocks, the exercise library, personal records and your progress stats. None of it is ever taken away. The full list is under "What stays if you switch back to Free later".',
   },
   {
     q: 'How does the 14-day trial work?',
@@ -554,8 +558,14 @@ export default function ProUpgradeScreen({ navigation, route }) {
             </>
           ) : (
             <>
+              {/* C5-P8-05 (D96): this branch is unreachable in the shipped
+                  app (the route is registered only inside the five signed-in
+                  tab stacks), legacy from the removed local-user era. It is
+                  kept as the defensive branch it is, but its copy repeated
+                  C5-P7-03's error: it framed the account as something Pro
+                  needs, when every user has one and sync reads no tier. */}
               <Text style={[styles.accountNote, live.accountNote]}>
-                Pro needs a free account so your plan and progress are backed up and your access carries over across devices.
+                Volyume needs a free account, whichever tier you are on, so your plan and progress are backed up and carry over across devices. Sign in to continue.
               </Text>
 
               {/* Keep account creation in lockstep with Login and Pro onboarding.

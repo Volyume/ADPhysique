@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
@@ -9,6 +9,7 @@ import Button from '../components/Button';
 import Card from '../components/Card';
 import {
   getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock,
+  getAllPlansForUser,
 } from '../lib/database';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import {
@@ -18,6 +19,9 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { logError, logWarn } from '../lib/errorLog';
+import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
+import InfoTooltip from '../components/InfoTooltip';
+import { GLOSSARY } from '../lib/coachGlossary';
 
 // B2, the FREE guided beginner on-ramp (founder decision 4a: this is free).
 // Three plain questions -> one difficulty-0 library plan, installed and
@@ -40,6 +44,8 @@ export default function FreeStarterScreen({ navigation, route }) {
   const [plans, setPlans] = useState([]);
   const [workoutCounts, setWorkoutCounts] = useState({});
   const [busy, setBusy] = useState(false);
+  // Synchronous double-tap guard for the two writing paths (C5-P29-02).
+  const startingRef = useRef(false);
   // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -80,17 +86,36 @@ export default function FreeStarterScreen({ navigation, route }) {
     else navigation.goBack();
   }
 
+  // C5-P1-05 / C5-P30-02 (D96): the on-screen chevron stepped back one
+  // question, but this is a PUSHED route, so Android's hardware Back popped
+  // the whole screen, unmounted the component and discarded every answer. Two
+  // Backs on one screen did different things. Hardware Back mirrors the
+  // chevron now: it steps back a question while there is one, and at question
+  // one it returns false so the default pop runs, which is what the chevron
+  // does there too.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (busy) return true;
+      if (step > 0) { setStep(s => s - 1); return true; }
+      return false;
+    });
+    return () => sub.remove();
+  }, [step, busy]);
+
   // "Skip, I'll choose myself": from first run this finishes onboarding and
   // lands on Home, where the no-plan card offers both this quiz and the
   // library. From Home/Plans it simply returns.
   async function handleSkip() {
-    if (busy) return;
+    if (busy || startingRef.current) return;
     if (fromFirstRun) {
+      startingRef.current = true;
       setBusy(true);
       try {
         await completeFirstRun();
       } catch (e) {
         logError('FreeStarter.handleSkip', e, { userId: user?.id });
+        startingRef.current = false;
         setBusy(false);
       }
       return;
@@ -107,15 +132,50 @@ export default function FreeStarterScreen({ navigation, route }) {
 
   async function handleStartPlan() {
     if (!recommendation || busy) return;
+    // C5-P29-02 route 2 (D96): `busy` is React state and does not take effect
+    // until the next render, so a fast second tap fired a second copy through
+    // the same cycle. A ref is synchronous, the guard ProOnboardingScreen's
+    // advanceFrom6 already uses against exactly this.
+    if (startingRef.current) return;
     if (!user?.id) {
       toast.show('Setting up your profile, try again in a second', { variant: 'info' });
       return;
     }
+    startingRef.current = true;
     setBusy(true);
     try {
-      const copy = await copyPlanFromLibrary(recommendation.id, user.id);
-      if (!copy?.id) throw new Error('Copy failed.');
-      await activatePlanWithBlock(user.id, copy.id, recommendation.name);
+      // C5-P29-02 route 1 (D96): a kill between activation and
+      // completeFirstRun leaves firstRunComplete false, so the navigator
+      // replays the whole quiz. This handler then copied the same library
+      // plan a SECOND time and inserted a second mesocycle that deactivated
+      // the first, so the user landed on Home with two identical plans and a
+      // block that thought it started today. Reuse the copy this user already
+      // has instead: copyPlanFromLibrary carries the library name across
+      // verbatim, so the name identifies the copy, and a copy that is already
+      // active needs no second block at all. Replay is a no-op now.
+      const existingPlans = await getAllPlansForUser(user.id).catch(() => []);
+      // RB-6 (D96, Review B): provenance first - copyPlanFromLibrary stamps
+      // sourceProgrammeId, so a renamed copy still dedups and a hand-built
+      // plan that merely shares the library name is never adopted as "the
+      // recommendation". The name check survives ONLY for legacy copies made
+      // before the stamp existed (their provenance is null), where the
+      // name-collision residual is accepted and recorded.
+      const existing = existingPlans.find(p => p.sourceProgrammeId === recommendation.id)
+        ?? existingPlans.find(p => !p.sourceProgrammeId && p.name === recommendation.name)
+        ?? null;
+      let planId = existing?.id ?? null;
+      if (!planId) {
+        const copy = await copyPlanFromLibrary(recommendation.id, user.id);
+        if (!copy?.id) throw new Error('Copy failed.');
+        planId = copy.id;
+      }
+      if (existing?.isActive) {
+        // Already the active plan with its block running: touching nothing is
+        // the honest outcome, restarting the block would lose its start date.
+        if (!fromFirstRun) toast.show('That plan is already your active plan', { variant: 'info' });
+      } else {
+        await activatePlanWithBlock(user.id, planId, recommendation.name);
+      }
       if (fromFirstRun) {
         // Flips the navigator into MainTabs; Home loads the active plan and
         // the hero answers "what do I do today" with the first session.
@@ -126,6 +186,7 @@ export default function FreeStarterScreen({ navigation, route }) {
     } catch (e) {
       logError('FreeStarter.handleStartPlan', e, { userId: user?.id, planId: recommendation?.id });
       toast.show("Couldn't set up your plan, try again", { variant: 'error' });
+      startingRef.current = false;
       setBusy(false);
     }
   }
@@ -193,9 +254,19 @@ export default function FreeStarterScreen({ navigation, route }) {
               <Ionicons name="checkmark-circle" size={32} color={t.colors.primary} />
             </View>
             <Text style={[styles.resultTitle, live.resultTitle]}>Your starter plan</Text>
+            {/* RA-9 (D96, Review A): this result card is the likeliest
+                first exposure to "sets" and "reps" in the whole product
+                (a never-lifted free beginner), and the glosses lived one
+                screen later behind the session overflow sheet. */}
+            {/* RC-6 (D96, Review C): describe the PLAN, not the reader. A
+                new account is not a new lifter, and this screen told a
+                ten-year veteran four times that they are a beginner. The
+                honest "Beginner friendly" badge stays on the plan card,
+                where it describes the plan. */}
             <Text style={[styles.resultIntro, live.resultIntro]}>
-              Built for people starting out. Every session tells you exactly what to do:
-              the exercises, the sets, and the reps.
+              A simple plan you can run as written. Every session gives you
+              the exercises, the sets, and the reps.{' '}
+              <InfoTooltip text={`${GLOSSARY.set} ${GLOSSARY.rep}`} size={13} />
             </Text>
             <Card style={[styles.resultCard, live.resultCard]}>
               <View style={[styles.resultBadge, live.resultBadge]}>
@@ -212,6 +283,26 @@ export default function FreeStarterScreen({ navigation, route }) {
                 ].filter(Boolean).join(' - ')}
               </Text>
             </Card>
+            {/* RA-1 (D96, Review A): the quiz asks how many days you can
+                train, but every current starter runs three, so the answer
+                visibly went nowhere. Until a 2- or 4-day starter exists in
+                the library, the mismatch is acknowledged honestly instead
+                of silently handing over a plan that asks for more (or
+                less) than the user just said. */}
+            {recDays != null && typeof answers.days === 'number' && answers.days !== recDays ? (
+              <Text style={[styles.resultFootnote, live.resultFootnote]}>
+                {answers.days < recDays
+                  ? `This plan runs ${recDays} days a week. You said ${answers.days}, and that still works: do the sessions in order and take longer over each week.`
+                  : `This plan runs ${recDays} days a week. You said ${answers.days}: ${recDays} good sessions are plenty to start with, and you can add a day once you build your own plan.`}
+              </Text>
+            ) : null}
+            {/* C5-P10-01 (D96, wave C carry-over): this is a first-plan
+                activation decision point and it said nothing about what
+                activating does. Same canonical sentence as every other
+                activation point, stated BEFORE the decision, tier-blind. */}
+            <Text style={[styles.resultFootnote, live.resultFootnote]}>
+              {BLOCK_START_SENTENCE}
+            </Text>
             <Button
               title="Start with this plan"
               size="lg"
@@ -219,8 +310,10 @@ export default function FreeStarterScreen({ navigation, route }) {
               onPress={handleStartPlan}
               accessibilityLabel={`Start with ${recommendation.name}`}
             />
+            {/* RC-6: conditional, so it never presumes the reader is new
+                to lifting. */}
             <Text style={[styles.resultFootnote, live.resultFootnote]}>
-              The first couple of weeks are for learning the movements. That counts as progress.
+              New to these movements? The first couple of weeks are for learning them, and that counts as progress.
             </Text>
           </>
         ) : (

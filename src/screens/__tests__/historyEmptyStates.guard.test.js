@@ -19,8 +19,12 @@ describe('history empty states', () => {
 
   test('CoachHeldHistoryScreen uses shared EmptyState for the no-history state', () => {
     expect(coachHistory).toMatch(/import EmptyState from '\.\.\/components\/EmptyState';/);
+    // Same-meaning re-anchor (C5-P35-06, D96): the text gained the sentence
+    // that states the unlock condition, in place of the CTA that bounced off
+    // the check-in's own data gate. This suite pins the shared primitive and
+    // the empty state's identity, both unchanged.
     expect(coachHistory).toMatch(
-      /<EmptyState[\s\S]*icon="book-outline"[\s\S]*title="No entries yet"[\s\S]*text="After your first weekly check-in, decisions and holds will appear here\."[\s\S]*compact/,
+      /<EmptyState[\s\S]*icon="book-outline"[\s\S]*title="No entries yet"[\s\S]*text="After your first weekly check-in, decisions and holds will appear here\.[^"]*"[\s\S]*compact/,
     );
     expect(coachHistory).not.toMatch(/styles\.empty(?:Card|Title|Body)/);
   });

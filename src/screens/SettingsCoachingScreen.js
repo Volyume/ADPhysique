@@ -122,10 +122,20 @@ export default function SettingsCoachingScreen() {
   return (
     <SettingsPage title="Coaching">
       <View style={[settingsStyles.section, live.section]}>
+        {/* W-3 / W-4 (D96, wording only): the row was described in nine
+            words for a mode that changes behaviour on a dozen surfaces, and
+            "coaching never pushes for more WHILE IT'S ON" invited exactly
+            the inference the Phase 4 question asks about - that the safety
+            rules differ between modes. They do not: the calorie floors, the
+            FFM floor, the rapid-loss gate and the ED-flag suppressions are
+            mode-blind and tier-blind (proGate.js, CLAUDE.md Section 2). Two
+            consequence clauses and one true statement about existing
+            behaviour. No gate, no threshold, no detector text, and no
+            detector mechanics exposed. */}
         <SettingRow
           icon="heart-outline"
           label="Calmer coaching"
-          sub="Quieter progress prompts, and coaching never pushes for more while it's on."
+          sub="Quieter progress prompts, and coaching never pushes for more while it's on. Celebrations, streaks and progress comparisons go quiet; your plan and your numbers do not change. The safety limits on calories and training load are always on, in both modes."
           showArrow={false}
           rightElement={
             <Switch
@@ -148,7 +158,12 @@ export default function SettingsCoachingScreen() {
             ? (tier === 'pro'
               ? 'Asks how you are feeling before each session, so sessions can adjust to it.'
               : 'Asks how you are feeling before each session and keeps it with your training history.')
-            : 'Off. Sessions start straight away.'}
+            // RC-4 (D96, Review C): the off state names its SECOND
+            // consequence too - these answers are the block ledger's main
+            // recovery evidence, so leaving them off keeps next-block set
+            // targets where they are. Stated once, on the control that
+            // causes it, never as a nag.
+            : 'Off. Sessions start straight away. Without these answers, your next block\'s set targets stay where they are rather than moving on what the block showed.'}
           showArrow={false}
           rightElement={
             <Switch
@@ -241,8 +256,14 @@ export default function SettingsCoachingScreen() {
             <SettingRow
               icon="flask-outline"
               label="Show the science"
+              // RC-5 (D96, Review C): the old sub promised plural "terms"
+              // on plural "explanations"; the layer's one live mapping is
+              // the weight-trend term. Say what it does. (No live coach
+              // sentence states a "weekly target range" today, so the
+              // doc-example MEV/MRV pair has nothing to attach to; wiring
+              // it stays recorded in the register for the day one does.)
               sub={showScience
-                ? 'On. Technical terms appear in brackets after the plain ones on coaching explanations.'
+                ? 'On. The technical name appears in brackets where the coach reports your weight trend.'
                 : 'Off. Everything stays in plain English.'}
               showArrow={false}
               rightElement={

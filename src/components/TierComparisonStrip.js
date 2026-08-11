@@ -56,7 +56,14 @@ export default function TierComparisonStrip({
       ]}
     >
       <Text style={[styles.colHeader, live.colHeader]}>Free</Text>
-      <Text style={[styles.colPrice, live.colPrice]}>£0</Text>
+      {/* C5-P8-01 (D96): this slot rendered a hardcoded "£0" beside the Pro
+          column's store-localised price, so a user in Ireland or the US read
+          "£0" next to "$4.99" - a currency the app does not charge in,
+          undermining the price it does. PLAY-002's own rule (catalogue.js)
+          forbids exactly this. The tier word carries the same meaning with
+          no currency at all. No price, product ID or purchase path is
+          touched. */}
+      <Text style={[styles.colPrice, live.colPrice]}>Free</Text>
       {/* COMP-007: empty cadence spacer keeps Free's rows aligned with Pro's
           (only Pro shows a real "per year/month" line). */}
       <Text style={[styles.colCadence, live.colCadence]}> </Text>

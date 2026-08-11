@@ -10,6 +10,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   draftKey, buildDraft, parseDraft, saveDraft, loadDraft, clearDraft,
+  buildKey, parseBuildProgress, loadBuildProgress, markBuildProgress,
+  clearBuildProgress,
 } from '../proOnboardingDraft';
 
 beforeEach(async () => {
@@ -105,5 +107,69 @@ describe('AsyncStorage persistence', () => {
   test('an invalid step is never written', async () => {
     await saveDraft('user-a', 1, { firstName: 'Sam' });
     expect(await loadDraft('user-a')).toBeNull();
+  });
+});
+
+/**
+ * C5-P29-07 (D96): a kill inside the final build left the draft at step 6, so
+ * the retry replayed every write — a second enrolment body-metric row and a
+ * second generated plan that archived the first and took the "Your plan 2"
+ * name. The build record is what makes that replay idempotent.
+ */
+describe('build progress (C5-P29-07)', () => {
+  test('is per user id, and keyless without one', () => {
+    expect(buildKey('user-a')).toBe('@volyume_pro_onboarding_build_user-a');
+    expect(buildKey(null)).toBeNull();
+    expect(buildKey('')).toBeNull();
+  });
+
+  test('marks merge, so each step of the build records itself without erasing the last', async () => {
+    await markBuildProgress('user-a', { weightLoggedAt: 1000 });
+    await markBuildProgress('user-a', { planId: 'prog-1', planSignature: '["intermediate",4]' });
+    expect(await loadBuildProgress('user-a')).toEqual({
+      weightLoggedAt: 1000,
+      weightKg: null,
+      planId: 'prog-1',
+      planSignature: '["intermediate",4]',
+    });
+  });
+
+  test('no record, no user id, or a corrupt value all read as "nothing was built yet"', async () => {
+    expect(await loadBuildProgress('user-none')).toBeNull();
+    expect(await loadBuildProgress(null)).toBeNull();
+    await AsyncStorage.setItem(buildKey('user-x'), '{corrupt');
+    expect(await loadBuildProgress('user-x')).toBeNull();
+    // A missing record must mean "run the build in full", never "skip it".
+    expect(parseBuildProgress(null)).toBeNull();
+    expect(parseBuildProgress('[]')).toBeNull();
+    expect(parseBuildProgress('42')).toBeNull();
+  });
+
+  test('malformed fields degrade to null rather than a truthy skip signal', () => {
+    const parsed = parseBuildProgress(JSON.stringify({
+      weightLoggedAt: 'yesterday', weightKg: -3, planId: 42, planSignature: {},
+    }));
+    expect(parsed).toEqual({ weightLoggedAt: null, weightKg: null, planId: null, planSignature: null });
+  });
+
+  test('clearDraft leaves the build record; clearBuildProgress removes it (RA/RB re-anchor)', async () => {
+    // RB-1 (D96, Review B): the record must SURVIVE the end of advanceFrom6
+    // (where clearDraft runs) because first run is not over until the
+    // hand-off's Start training - clearing early let a back-out replay the
+    // whole build. completeFirstRun/resetFirstRun own the record's removal
+    // via clearBuildProgress, so a stale record still never suppresses a
+    // deliberate later rebuild.
+    await saveDraft('user-a', 6, { recoveryRating: 'good' });
+    await markBuildProgress('user-a', { planId: 'prog-1' });
+    await clearDraft('user-a');
+    expect(await loadDraft('user-a')).toBeNull();
+    expect((await loadBuildProgress('user-a'))?.planId).toBe('prog-1');
+    await clearBuildProgress('user-a');
+    expect(await loadBuildProgress('user-a')).toBeNull();
+  });
+
+  test('records are per user, so one account cannot suppress another account\'s build', async () => {
+    await markBuildProgress('user-a', { planId: 'prog-a' });
+    expect(await loadBuildProgress('user-b')).toBeNull();
   });
 });

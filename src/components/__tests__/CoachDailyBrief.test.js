@@ -57,9 +57,15 @@ describe('CoachDailyBrief: the runway (full variant)', () => {
     now: WED,
   });
 
+  // Re-anchored under C5-P12-04 (D96): the heading was the fixed string
+  // "Since your check-in", which asserted a past event that may never have
+  // happened. It now renders the ledger's own authored title, honest in
+  // every state. The pinned RULE -- a section heading plus the countdown --
+  // is unchanged.
   test('shows the section heading and the countdown', () => {
     const r = create(<CoachDailyBrief ledger={ledger} />);
-    expect(has(r, 'Since your check-in')).toBe(true);
+    expect(has(r, ledger.title)).toBe(true);
+    expect(has(r, 'Since your check-in')).toBe(false);
     expect(has(r, '4 days to your next check-in')).toBe(true);
   });
 
@@ -79,7 +85,7 @@ describe('CoachDailyBrief: the runway (full variant)', () => {
 
   test('renders the runway as the whole component (no one-liner path)', () => {
     const r = create(<CoachDailyBrief ledger={ledger} />);
-    expect(has(r, 'Since your check-in')).toBe(true);
+    expect(has(r, ledger.title)).toBe(true);
   });
 });
 

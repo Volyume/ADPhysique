@@ -46,20 +46,34 @@ export default function SubscriptionPolicyScreen() {
               rule - the app requires an account (Apple/Google sign-in, no
               anonymous mode, IDENTITY_AND_OWNERSHIP_LOCKED.md). Title
               aligned with the Welcome screen's card. */}
+          {/* C5-P7-09 (D96): this is the CANONICAL "what stays free" list.
+              The shorter lists on Welcome, the paywall FAQ and the tier
+              strip are honest subsets of it and point here for the full
+              answer. */}
+          {/* C5-P7-03 (D96): the old line said "your training data stays on
+              your phone", which paired with the Pro account bullet below to
+              imply Free is device-only. Your device is the source of truth
+              for everyone, and cloud backup reads no tier. */}
           <Body>
-            The core logbook is free on every account, and your training data stays on your phone.
+            The core logbook is free on every account. Your phone holds your training, and it is backed up to your account whatever tier you are on.
           </Body>
           <Bullet>Full workout logger with rest timer, beeps and haptics.</Bullet>
           <Bullet>400+ exercise library with form notes.</Bullet>
           <Bullet>31 ready-made plans you can pick from.</Bullet>
           <Bullet>Create your own routines from scratch.</Bullet>
-          <Bullet>Workout history kept on your phone.</Bullet>
+          <Bullet>Training blocks, with a lighter recovery week built in.</Bullet>
+          <Bullet>Workout history kept on your phone and backed up to your account.</Bullet>
           <Bullet>Personal records and strength standing.</Bullet>
           <Bullet>Weekly muscle-group volume targets.</Bullet>
           <Bullet>Year of Lifts: a shareable review of your training year.</Bullet>
-          <Bullet>Plate calculator.</Bullet>
+          {/* C5-P7-02 (D96): the "Plate calculator" bullet is deleted. The
+              feature is REJECTED and gone (D14/D57, pinned dead by
+              campaign4.boundaries and gymBasics.guard), so the screen the
+              paywall nominates as the honest answer was selling something
+              that does not exist. */}
           <Bullet>Training reminders.</Bullet>
           <Bullet>Export your training history to CSV anytime.</Bullet>
+          <Bullet>Your safety checks and calmer coaching.</Bullet>
         </Section>
 
         <Section
@@ -76,7 +90,12 @@ export default function SubscriptionPolicyScreen() {
           <Bullet>Nutrition guidance tied to what you're working on right now.</Bullet>
           <Bullet>Body measurements: waist, chest, arms, legs and the rest.</Bullet>
           <Bullet>Morning weight log and the trend that drives your weekly check-in.</Bullet>
-          <Bullet>An account so your data is backed up and follows you across phones.</Bullet>
+          {/* C5-P7-03 (D96): "An account so your data is backed up and follows
+              you across phones" was sold here as something Pro adds. An
+              account is mandatory for everyone (no anonymous mode,
+              IDENTITY_AND_OWNERSHIP_LOCKED) and sync reads no tier, so the
+              bullet now names the Pro-specific truth it was reaching for. */}
+          <Bullet>Your coaching history and targets follow you across phones with everything else.</Bullet>
         </Section>
 
         <Section
@@ -93,11 +112,19 @@ export default function SubscriptionPolicyScreen() {
           <Body>
             What changes on Free:
           </Body>
+          {/* C5-P7-04 (D96): two bullets promised more than the guards keep.
+              WeeklyCheckIn and NutritionTargets are hard withProGuard locks
+              (RootNavigator), not view-only ones, so the promise "stays
+              viewable" was broken on the day a user is most likely to feel
+              the product took something back. The read-only lapse decision
+              (founder 2026-07-02) covers exactly three screens: body metrics,
+              progress photos and the food diary. The copy now names what is
+              genuinely readable. Tier scope is unchanged. */}
           <Bullet>Past coaching write-ups stay readable in your history.</Bullet>
-          <Bullet>Past check-ins stay viewable; you just can't run new ones.</Bullet>
           <Bullet>Plans you built on Pro stay viewable; you can re-use them, but you won't get new coaching changes week to week.</Bullet>
-          <Bullet>Nutrition targets last set on Pro stay visible; they just won't auto-update.</Bullet>
-          <Bullet>Body measurements you've logged stay there; only new entries pause.</Bullet>
+          <Bullet>Body measurements, progress photos and your food diary stay viewable; only new entries pause.</Bullet>
+          <Bullet>Weekly check-ins and nutrition targets pause with the rest of coaching, and are there again if you come back to Pro.</Bullet>
+          <Bullet>Your whole training log, personal records and blocks stay fully usable, exactly as they were.</Bullet>
         </Section>
 
         <Section
@@ -125,7 +152,7 @@ export default function SubscriptionPolicyScreen() {
             <Strong>Deleting is different to switching back to Free.</Strong> It erases everything: your data on this phone, your backup, the account itself.
           </Body>
           <Body>
-            Use it if you're leaving the app for good. If you only want to stop paying for Pro, use Switch to Free instead. That keeps your history.
+            Use it if you're leaving the app for good. If you only want to stop paying for Pro, use Manage subscription in Settings instead: cancelling stops the next renewal, Pro stays until your current period ends, and your history stays.
           </Body>
         </Section>
 

@@ -92,7 +92,11 @@ function buildDecisionRows(week, pairs = []) {
   return rows;
 }
 
-export default function CoachHeldHistoryScreen({ navigation }) {
+// C5-P35-06 (D96): the screen no longer navigates anywhere of its own (the
+// empty state's guaranteed-bounce check-in CTA is gone), so the navigation
+// prop is unused. Kept in the signature, underscored, because the navigator
+// still passes it and a later surface may need it again.
+export default function CoachHeldHistoryScreen({ navigation: _navigation }) {
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -195,13 +199,17 @@ export default function CoachHeldHistoryScreen({ navigation }) {
           </View>
         )}
 
+        {/* C5-P35-06 (D96): the "Start check-in" CTA was a guaranteed bounce
+            on day 0 - the first check-in needs five days of data, so the tap
+            always landed on the check-in's own "needs more data" gate,
+            contradicting the sentence directly above it. The empty state now
+            states the unlock condition instead of routing to a gate. The
+            check-in gate itself is untouched. */}
         {isEmpty && (
           <EmptyState
             icon="book-outline"
             title="No entries yet"
-            text="After your first weekly check-in, decisions and holds will appear here."
-            actionLabel="Start check-in"
-            onAction={() => navigation?.navigate('WeeklyCheckIn')}
+            text="After your first weekly check-in, decisions and holds will appear here. Your first check-in opens once your coach has a few days of training and weigh-ins to read."
             compact
           />
         )}

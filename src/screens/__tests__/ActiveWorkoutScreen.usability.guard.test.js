@@ -110,7 +110,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
 
     expect(swapWindow).toContain('cancelAutoAdvance();');
     expect(swapWindow).toContain('setCurrentSet({');
-    expect(swapWindow).toContain('reps: newRepMax || DEFAULT_SET.reps');
+    // Same-meaning re-anchor (C5-P14-02, D96). What this line pins is that a
+    // swap reseeds the reps stepper from the NEW exercise's own rep band and
+    // never inherits the outgoing exercise's numbers. A swapped-in exercise
+    // is a zero-history first-ever set, so it now seeds the bottom of that
+    // band, exactly like the loader's zero-history branch: a prefilled number
+    // reads as an instruction, and the top of the band is the hardest end of
+    // a range at a weight nobody knows yet.
+    expect(swapWindow).toContain('reps: newRepMin || DEFAULT_SET.reps');
+    expect(swapWindow).not.toContain('reps: newRepMax');
     expect(swapWindow).toContain('setGhostSet(null);');
     expect(swapWindow).toContain('setCluster(null);');
     expect(swapWindow).toContain("setClusterReps('');");

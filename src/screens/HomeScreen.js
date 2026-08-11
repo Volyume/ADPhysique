@@ -31,6 +31,8 @@ import BottomSheet from '../components/BottomSheet';
 import Chip from '../components/Chip';
 import * as haptics from '../lib/haptics';
 import { buildCoachBrief } from '../lib/homeCoachBrief';
+import { isCompletedCoachDecision } from '../lib/coachDecision';
+import { isEnrolmentSeedWeight } from '../lib/checkinDerive';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
@@ -39,9 +41,9 @@ import {
   getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback, getLatestCoachOutput,
   getMorningWeightsLast14Days, getOpenEdPatternFlag,
-  getRecentCheckins, getNutritionTargets,
+  getRecentCheckins, getNutritionTargets, getLatestCheckin,
 } from '../lib/database';
-import { stageOf, canStillTrial } from '../lib/payments/cascade';
+import { stageOf, canStillTrial, trialEndsLabel } from '../lib/payments/cascade';
 import {
   trialStartFromEndsAt,
   selectTrialVariant,
@@ -75,6 +77,7 @@ import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload } from '../lib/algorithms';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { buildReadinessSummary } from '../lib/readinessSummary';
+import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -289,6 +292,8 @@ export default function HomeScreen({ navigation, route }) {
   const [blockSeedLines, setBlockSeedLines] = useState([]);
   const [showBlockShape, setShowBlockShape] = useState(false); // COMP-010 meso chip tap-through
   const [latestCoachOutput, setLatestCoachOutput] = useState(null);
+  // PM-06: is that output a real, check-in-backed decision (see coachDecision).
+  const [latestCoachDecisionComplete, setLatestCoachDecisionComplete] = useState(false);
   // COMP-023: day-3 trial value banner. { line, variant } when in-window, else
   // null. Computed from live counters in loadTrialBanner.
   const [trialBanner, setTrialBanner] = useState(null);
@@ -466,6 +471,16 @@ export default function HomeScreen({ navigation, route }) {
     try {
       const out = await getLatestCoachOutput(user.id);
       setLatestCoachOutput(out);
+      // PM-06 (D96): Home advertised "this week's decision" on hasEnoughData
+      // plus a freshness window alone, while the Coach tab applied the
+      // stricter completed-decision predicate. The two surfaces could
+      // disagree, and the one saying yes was the one that could be wrong.
+      try {
+        const outCheckin = out?.weekStart
+          ? await getLatestCheckin(user.id, out.weekStart)
+          : null;
+        setLatestCoachDecisionComplete(isCompletedCoachDecision(out, outCheckin));
+      } catch (_) { setLatestCoachDecisionComplete(false); }
       const dismissedKey = out ? `@volyume_coach_banner_dismissed_${out.weekStart}` : null;
       if (dismissedKey) {
         const v = await AsyncStorage.getItem(dismissedKey);
@@ -514,7 +529,17 @@ export default function HomeScreen({ navigation, route }) {
         // on a read error (matches the siblings at :470/:521/:737/:794).
         getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
       ]);
-      if (coachOut) { setTrialBanner(null); return; }
+      // PM-03 (D96): retirement keys on a COMPLETED decision, not on the mere
+      // existence of a persisted row. Any visit to the Coach screen used to
+      // write an output (PM-01), and that row permanently deleted the
+      // week-one ledger -- the one surface built to make the coaching loop
+      // visible before the first review. The predicate is the same one the
+      // Coach tab already applies: the check-in that produced the output must
+      // exist for the same week.
+      if (coachOut?.weekStart) {
+        const outCheckin = await getLatestCheckin(user.id, coachOut.weekStart).catch(() => null);
+        if (isCompletedCoachDecision(coachOut, outCheckin)) { setTrialBanner(null); return; }
+      }
 
       const completedSessions = workouts.filter(w => w.isCompleted && (w.startedAt ?? 0) >= trialStart).length;
       // X11 (cross-surface consistency audit 2026-07-30): was a rolling
@@ -541,10 +566,14 @@ export default function HomeScreen({ navigation, route }) {
 
       const variant = selectTrialVariant({ completedSessions, weighIns7d });
       const unlock = firstReviewUnlockDate(firstWeightAt, checkinDay);
-      const line = trialBannerLine({
+      let line = trialBannerLine({
         variant, completedSessions, weighIns7d,
         unlockDayName: dayName(unlock), trialDay, edFlagOpen: !!edFlag,
       });
+      // FQ-6.2 (D96): the banner names the authoritative trial end date -
+      // one source (cascade.trialEndsLabel), so no surface can disagree.
+      const endsLabel = trialEndsLabel(useAppStore.getState().userProfile);
+      if (line && endsLabel) line = `${line} Your free trial runs to ${endsLabel}.`;
       // A3: the "what your coach is reading" ledger, live counts vs the
       // published thresholds, from the same inputs as the banner line. Under
       // an open ED flag it is the neutral variant with no weigh-in counts.
@@ -946,7 +975,16 @@ export default function HomeScreen({ navigation, route }) {
   async function loadTodayWeight() {
     try {
       const entry = await getMorningWeightToday(user.id);
-      setTodayWeight(entry?.weightKg ?? null);
+      // C5-P22-01 (D96): Pro enrolment seeds today's row from the body weight
+      // the user TYPED during setup, so day 0 read "Morning weight 84.0 kg -
+      // Logged" beside a green tick for a weigh-in that never happened. The
+      // seeded row is marked at the write, and the strip treats it as
+      // un-logged: the empty state, its Log button and the why-line show
+      // instead. The value is still the prefill (recentWeights below reads
+      // the same series), and what counts toward the check-in gate is
+      // deliberately unchanged. A real weigh-in overwrites the row and
+      // clears the marker.
+      setTodayWeight(isEnrolmentSeedWeight(entry) ? null : (entry?.weightKg ?? null));
       // Recent weights feed the "last known weight" prefill when today's
       // weight is not logged yet.
       try {
@@ -1035,7 +1073,14 @@ export default function HomeScreen({ navigation, route }) {
                 ? Math.floor((Date.now() - firstAt) / 86400000)
                 : 0;
               const weekAgo = Date.now() - 7 * 86400000;
-              const weighIns7d = weights.filter(w => (w.loggedAt ?? 0) >= weekAgo).length;
+              // C5-P22-02 (D96): DISTINCT mornings, matching the gate this
+              // nudge mirrors and the D93 ledger 500 lines above. Raw rows
+              // let two devices' copies of one morning read as two.
+              const weighIns7d = new Set(
+                weights
+                  .filter(w => Number.isFinite(Number(w.loggedAt)) && Number(w.loggedAt) >= weekAgo)
+                  .map(w => localDayKey(Number(w.loggedAt)))
+              ).size;
               if (daysOfData >= FIRST_CHECKIN_MIN_DAYS && weighIns7d >= MIN_WEIGH_INS) {
                 setShowCoachingNudge(true);
               }
@@ -1154,7 +1199,41 @@ export default function HomeScreen({ navigation, route }) {
           const { summariseSeededPlan, buildBlockStartLines } = require('../lib/blockExplain');
           const blockRows = await getPlannedMuscleVolumeForBlock(week.mesocycleId);
           const summary = summariseSeededPlan(blockRows, week.plannedWeeks);
-          setBlockSeedLines(buildBlockStartLines({ summary }));
+          // FB-27/FB-28 (D96): what the PREVIOUS block actually ran, so the
+          // lines can be ordered by what moved (sorting by peak buried the
+          // one muscle whose peak came down, because a reduction sorts last
+          // by construction), retention reads as a decision rather than an
+          // absence, and the muscles the three-line cap drops are counted.
+          // Only fetched when this block carries a personalised seed, so a
+          // first block (the first-use case) pays nothing for it, and only
+          // best-effort: without it the lines render exactly as before.
+          let previous = null;
+          const personalisedSeed = Object.values(summary)
+            .some((v) => typeof v?.source === 'string' && v.source.startsWith('seed_')
+              && v.source !== 'seed_profile' && v.source !== 'seed_research');
+          if (personalisedSeed) {
+            try {
+              // eslint-disable-next-line global-require
+              const { getAllMesocyclesForUser } = require('../lib/database');
+              const all = await getAllMesocyclesForUser(user.id);
+              const prior = all
+                .filter((m) => m.id !== week.mesocycleId && m.blockLedger)
+                .sort((a, b) => String(b.startDate ?? '').localeCompare(String(a.startDate ?? '')))[0];
+              const record = prior?.blockLedger ? JSON.parse(prior.blockLedger) : null;
+              const entries = Array.isArray(record?.entries) ? record.entries : [];
+              if (entries.length > 0) {
+                previous = {};
+                for (const e of entries) {
+                  if (!e?.muscle || !e.observed) continue;
+                  previous[e.muscle] = {
+                    startSets: e.observed.startSets ?? null,
+                    peakSets: e.observed.plannedPeak ?? null,
+                  };
+                }
+              }
+            } catch (_e) { previous = null; }
+          }
+          setBlockSeedLines(buildBlockStartLines({ summary, previous }));
         } catch (_e) { setBlockSeedLines([]); }
       }
 
@@ -1460,7 +1539,11 @@ export default function HomeScreen({ navigation, route }) {
   // adjustments start after week 2"), and advertising it as a ready review with
   // "what changed and why" was telling users coaching was live when it wasn't
   // (founder 2026-06-21).
-  const showCoachBanner = tier === 'pro' && !!latestCoachOutput && latestCoachOutput.hasEnoughData
+  // PM-06 (D96): the completed-decision predicate, shared with the Coach tab,
+  // replaces the bare hasEnoughData test. hasEnoughData is still required (it
+  // is inside the predicate), so the founder's 2026-06-21 rule that the
+  // baseline weeks never advertise a ready review is unchanged.
+  const showCoachBanner = tier === 'pro' && !!latestCoachOutput && latestCoachDecisionComplete
     && !coachBannerDismissed
     && (Date.now() - (latestCoachOutput.weekStart ?? 0) < 7 * 86400000);
   // T2 (world-class-audit-2026-07-03/05-cohesion.md #4): today this signal
@@ -1478,7 +1561,31 @@ export default function HomeScreen({ navigation, route }) {
   // two voices never say the same thing (a "don't repeat yourself" rule,
   // kept as-is; unrelated to the stack-size cap below).
   const trialBannerEligible = !!trialBanner && !trialBannerDismissed && !showCoachingNudge;
-  const deloadBannerEligible = !!deloadSuggestion && !deloadDismissed;
+  // FB-02 (D96): display gate only, no change to shouldDeload's maths or
+  // thresholds. Inside a SCHEDULED recovery week the user is following the
+  // app's own prescription of roughly half the reps, which drops the
+  // rolling four-week rep average enough to score the banner -- so Home
+  // reported the app's own reduction back as a performance problem, right
+  // above a chip already saying "Recovery week, pull effort back", and
+  // taps through to advice to reduce sets by a third during the week that
+  // IS the reduction. A finished block awaiting its decision holds at
+  // recovery-week volume for the same reason.
+  const inScheduledRecovery = !!currentMesoWeek?.isDeload || !!currentMesoWeek?.awaitingDecision;
+  const deloadBannerEligible = !!deloadSuggestion && !deloadDismissed && !inScheduledRecovery;
+  // PM-08 / FM-07 (D96): OUTSIDE a scheduled recovery week the signal is
+  // legitimate, but the banner said "Recovery week suggested" with no
+  // reference to the block the user is in, and the four-week summary passes
+  // weeksSinceLastDeload: 99 ("unknown: conservative") so the block's own
+  // recovery week never suppresses it. The suggestion stands; it now
+  // acknowledges the scheduled week when the block has one still to come, so
+  // the app is not silently arguing with its own plan. Tier-blind, like the
+  // banner: a Free user has no Apply mechanism, so naming the week already in
+  // their plan is the honest thing either way. Display only, no change to
+  // shouldDeload's maths or thresholds.
+  const scheduledRecoveryWeekIndex = currentMesoWeek?.plannedWeeks ?? null;
+  const scheduledRecoveryAhead = Number.isFinite(Number(scheduledRecoveryWeekIndex))
+    && Number.isFinite(Number(currentMesoWeek?.weekIndex))
+    && Number(currentMesoWeek.weekIndex) < Number(scheduledRecoveryWeekIndex);
   const phaseBannerEligible = !!phaseMismatch && !phaseBannerDismissed;
   // B3 lift plateau banner: below deload and phase, recovery and targets
   // outrank a single lift's stall, dismissible per exercise + week.
@@ -1616,13 +1723,17 @@ export default function HomeScreen({ navigation, route }) {
           <AttentionCard
             variant="trial"
             trialBanner={trialBanner}
-            onTrialPress={() => {
-              if (trialBanner.variant === 'S3') {
-                scrollRef.current?.scrollTo({ y: 0, animated: true });
-              } else {
-                navigateCrossTab(navigation, 'ProfileTab', 'WeeklyCheckIn');
-              }
-            }}
+            // C5-P12-01 (D96): the S3 variant is exactly the zero-history
+            // state (selectTrialVariant returns it whenever completed
+            // sessions <= 0), and this card is the FIRST element after the
+            // header, so scrollTo({ y: 0 }) took a day-0 user nowhere -- or
+            // further away from the hero it should lead to. It reads
+            // "One session starts your first coaching review", so it now
+            // leads to that session. No trial copy and no billing logic is
+            // touched: this is the press handler only.
+            onTrialPress={trialBanner.variant === 'S3'
+              ? (activePlan && nextWorkout ? () => handleStartNextWorkout(false) : null)
+              : () => navigateCrossTab(navigation, 'ProfileTab', 'WeeklyCheckIn')}
             onTrialDismiss={dismissTrialBanner}
             onMethodology={() => navigateCrossTab(navigation, 'ProfileTab', 'Methodology', { source: 'trial_banner' })}
           />
@@ -1645,6 +1756,9 @@ export default function HomeScreen({ navigation, route }) {
                 <Text style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week suggested</Text>
                 <Text style={[styles.deloadBannerBody, live.deloadBannerBody]}>
                   {deloadSuggestion.reasons?.[0] ?? 'Your recent training signals it is time for a lighter week.'}
+                  {scheduledRecoveryAhead
+                    ? ` Your block already has a recovery week scheduled at week ${scheduledRecoveryWeekIndex}, and you are in week ${currentMesoWeek.weekIndex}.`
+                    : ''}
                 </Text>
               </View>
             </View>
@@ -1828,9 +1942,12 @@ export default function HomeScreen({ navigation, route }) {
             that points at the start action below, never duplicate buttons, so it
             orients without competing with the hero / starter cards. Research:
             docs competitive-mastery (Cronometer drip-one-pointer) + NN/G empty
-            states. No weight/calorie line here (ED-safety). */}
+            states. No weight/calorie line here (ED-safety).
+            C5-P7-05 / C5-P1-08 (D96): the card's second step promised a coach
+            to every tier. The tier is read here, where it already lives, so
+            the card can tell each user the truth. */}
         {!initialLoading && totalSessions === 0 && !welcomeDismissed && activePlan && nextWorkout && (
-          <HomeWelcomeCard onDismiss={dismissWelcome} />
+          <HomeWelcomeCard onDismiss={dismissWelcome} isPro={tier === 'pro'} />
         )}
 
         {/* ── Primary workout area ── */}
@@ -1877,7 +1994,13 @@ export default function HomeScreen({ navigation, route }) {
                 style={[styles.mesoBriefChip, live.mesoBriefChip]}
                 onPress={() => { haptics.selection(); setShowBlockShape(true); }}
                 accessibilityRole="button"
-                accessibilityLabel="See the shape of your training block"
+                /* C5-P34-04 (D96): the chip is where "stop 2 short of
+                   failure" is defined, but its label named only the block,
+                   so a screen-reader user heard an offer to explain
+                   something else entirely and had no reason to open the one
+                   sheet that answers the phrase they just heard. The
+                   definition stays exactly one tap away. */
+                accessibilityLabel="See the shape of your training block and what the effort target means"
               >
                 <Ionicons
                   name={READINESS_ICON[readinessSummary.tone] ?? READINESS_ICON.go}
@@ -1935,7 +2058,9 @@ export default function HomeScreen({ navigation, route }) {
               <EmptyState
                 icon="barbell-outline"
                 title="No active plan yet"
-                text="If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile."
+                /* C5-P10-01 (D96): the Pro "Start with a plan" action
+                   creates a training block too, so it says so first. */
+                text={`If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile. ${BLOCK_START_SENTENCE}`}
                 actionLabel="Start with a plan"
                 onAction={async () => {
                   const result = await generateAndSavePlan(user.id, userProfile);
@@ -2243,7 +2368,7 @@ export default function HomeScreen({ navigation, route }) {
         >
           <Text style={[styles.intentOptOutText, live.intentOptOutText]}>Don't ask before each session</Text>
           <Text style={[styles.intentOptOutSub, live.intentOptOutSub]}>
-            Without it, sessions are not adjusted to how you're feeling. Turn it back on any time in Settings, Coaching.
+            Without it, sessions are not adjusted to how you're feeling, and your next block's set targets stay where they are rather than moving on what this block showed. Turn it back on any time in Settings, Coaching.
           </Text>
         </TouchableOpacity>
       </BottomSheet>

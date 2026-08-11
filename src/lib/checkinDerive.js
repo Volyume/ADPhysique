@@ -25,10 +25,28 @@ export function formatWeekRange(weekStart) {
   return `${fmt(weekStart)} – ${fmt(sun)}`;
 }
 
+// C5-P22-01 (D96): Pro enrolment writes the typed body weight into
+// morning_weights so the check-in gate can count enrolment day
+// (ProOnboardingScreen). That row is a STARTING POINT the user typed, not a
+// morning the user weighed, and it is marked as such at the write. Surfaces
+// that speak about the user's own weigh-in behaviour ("Logged", "not yet
+// today") must not count it; the gate's MIN_WEIGH_INS count deliberately
+// still does, because tightening that gate would be a worse defect than the
+// disclosure gap (see the note at WeeklyCheckInScreen's trailing-7-day
+// window).
+export const ENROLMENT_WEIGHT_NOTE = 'enrolment';
+
+export function isEnrolmentSeedWeight(row) {
+  if (!row) return false;
+  const notes = row.notes ?? row.note ?? null;
+  return typeof notes === 'string' && notes.trim() === ENROLMENT_WEIGHT_NOTE;
+}
+
 export function hasLoggedToday(weights) {
   if (!weights || weights.length === 0) return false;
   const todayStr = todayLocalKey(); // TZ-1: local "today", matches weight buckets
   return weights.some((w) => {
+    if (isEnrolmentSeedWeight(w)) return false;
     const ts = w.loggedAt ?? w.logged_at ?? w.createdAt ?? w.created_at;
     return ts && localDayKey(new Date(ts).getTime()) === todayStr;
   });
@@ -51,11 +69,29 @@ export function earliestWeightTs(weights) {
 // stagnation or decline, not just attendance. volDeltaPct is the fractional
 // change in working sets vs last week (e.g. 0.08 = +8%), or null when there
 // is no prior week to compare. Returns null when there is no session data.
-export function deriveTrainingPerformance({ completed, planned, prs, volDeltaPct }) {
+// hasPriorWeek says whether there is an earlier completed week to compare
+// against. Default true so existing callers are unchanged.
+export function deriveTrainingPerformance({ completed, planned, prs, volDeltaPct, hasPriorWeek = true }) {
   if (!planned || completed === 0) return null;
   const ratio = completed / planned;
   const volUp = volDeltaPct != null && volDeltaPct >= 0.05;     // clearly more work
   const volDown = volDeltaPct != null && volDeltaPct <= -0.10;  // clear drop-off
+  // C5-P19-01 (D96): week 1. Every verdict the app speaks back on the
+  // downgrade side ("a bit below your usual", "well down on your usual",
+  // "Performance dropped") asserts a personal baseline the user does not have
+  // yet, and the two upgrade paths that would avoid the fall-through
+  // (a week-over-week volume rise, a PR) are structurally unavailable in a
+  // first week: volDeltaPct is null with no prior week and a first-ever lift
+  // is deliberately not a PR (database.js detectPR). So a first week derives
+  // only the two NON-comparative reads, and anything else stays unselected -
+  // the neutral "How did your sessions go compared to what you expected?"
+  // subtitle shows and the user says how the week went. The plain session and
+  // PR counts are unchanged, so the user still sees exactly what the app read.
+  if (!hasPriorWeek) {
+    if (ratio >= 1.0 && (prs > 0 || volUp)) return 'exceeded';
+    if (ratio >= 0.9) return 'hit';
+    return null;
+  }
   if (ratio < 0.5) return 'dropped';                       // missed most sessions
   if (ratio >= 1.0 && (prs > 0 || volUp)) return 'exceeded'; // full + improving
   if (volDown) return 'struggled';                          // volume fell away

@@ -32,9 +32,25 @@ export default function FirstRunScreen({ navigation }) {
   const live = buildLiveStyles(t);
   // Gym weights are kg-only (UK). No unit choice.
   const localUnits = 'kg';
-  const [firstName, setFirstName] = useState('');
+  // C5-P29-03 (D96): prefilled from the saved profile, the same source and
+  // the same shape the Pro wizard uses (ProOnboardingScreen's firstName
+  // state). A free user killed mid-quiz walks this screen again, and it used
+  // to ask for a name the app had already stored and written.
+  const [firstName, setFirstName] = useState(userProfile?.firstName || '');
   const [busy, setBusy] = useState(false);
   const nameRef = useRef(null);
+  // FQ-6.1 (D96): true only when a network-failed trial grant is queued for
+  // retry (pendingCascade). Read once on mount; best-effort.
+  const [trialPending, setTrialPending] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) return undefined;
+    // eslint-disable-next-line global-require
+    require('../lib/payments/pendingCascade').hasPendingCascade(user.id)
+      .then((v) => { if (!cancelled) setTrialPending(!!v); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [user?.id]);
   const hasName = firstName.trim().length > 0;
 
   useEffect(() => {
@@ -43,11 +59,16 @@ export default function FirstRunScreen({ navigation }) {
   }, []);
 
   async function finish() {
-    if (!hasName) return;
     setBusy(true);
     try {
       if (setUnits) setUnits(localUnits);
-      const merged = { ...(userProfile || {}), units: localUnits, firstName: firstName.trim() };
+      // C5-P1-09 (D96): the name is presentation only, no engine reads it, and
+      // a neutral fallback already exists everywhere it is shown (Home's
+      // greeting drops it, ProSetupComplete says "there"). It no longer gates
+      // the whole free journey. An empty field leaves any stored name intact
+      // rather than writing a blank over it.
+      const merged = { ...(userProfile || {}), units: localUnits };
+      if (hasName) merged.firstName = firstName.trim();
       if (user?.id) await saveLocalProfile(user.id, merged);
       // B2: hand over to the starter micro-quiz. It calls completeFirstRun
       // itself, after a plan is installed or the user skips.
@@ -69,19 +90,30 @@ export default function FirstRunScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, live.title]}>You&apos;re almost set up.</Text>
         <Text style={[styles.subtitle, live.subtitle]}>
-          Just your name, then a few quick questions to get you set up.
+          Add your name if you like, then a few quick questions to get you set up.
         </Text>
+
+        {/* FQ-6.1 (D96): a new user only lands on this FREE path with a
+            queued trial when the grant call failed on the network at
+            consent. Say so calmly - the sync runner retries and the
+            navigator moves them to the Pro setup when it lands. Never
+            renders otherwise; never claims the trial is active. */}
+        {trialPending ? (
+          <Text style={[styles.trialPendingNote, live.trialPendingNote]}>
+            Your 14-day trial could not be set up yet because the connection dropped. It will finish setting up automatically when you are back online.
+          </Text>
+        ) : null}
 
         <TextField
           ref={nameRef}
-          label="What should we call you?"
+          label="What should we call you? (optional)"
           containerStyle={styles.nameField}
           fieldStyle={hasName && [styles.inputActive, live.inputActive]}
           size="lg"
           value={firstName}
           onChangeText={setFirstName}
           placeholder="First name"
-          accessibilityLabel="First name"
+          accessibilityLabel="First name, optional"
           autoCapitalize="words"
           autoCorrect={false}
           returnKeyType="go"
@@ -93,16 +125,22 @@ export default function FirstRunScreen({ navigation }) {
           trailingIcon="arrow-forward"
           size="lg"
           loading={busy}
-          disabled={!hasName}
           onPress={finish}
         />
 
         <Card radius="md" padding="md" style={styles.hintCard}>
           <Ionicons name="information-circle-outline" size={16} color={t.colors.textMuted} />
+          {/* RC-8 (D96, Review C): the old line promised "skip and browse
+              the library instead", but skipping from first run completes
+              first run and lands on Home (the in-quiz library link is
+              deliberately hidden in this context; Home's no-plan card
+              offers both routes). Say what skipping actually does - a
+              cross-remount navigate to honour the old sentence would be
+              exactly the C5-P29 interruption class this campaign closed. */}
           <Text style={[styles.hintText, live.hintText]}>
             Next, three quick questions and we'll suggest a starter plan.{' '}
             Prefer to pick your own? You can <Text style={[styles.hintBold, live.hintBold]}>skip</Text>{' '}
-            and browse the library instead.
+            and choose from the plan library on Home.
           </Text>
         </Card>
       </ScrollView>
@@ -117,6 +155,10 @@ const styles = StyleSheet.create({
   content: { padding: spacing.xl, gap: spacing.lg, flexGrow: 1 },
   title: { ...type.h2, color: colors.textPrimary, marginTop: spacing.lg },
   subtitle: { ...type.bodySm, color: colors.textSecondary },
+  trialPendingNote: {
+    ...type.bodySm, color: colors.textSecondary,
+    marginBottom: spacing.md,
+  },
   nameField: { marginTop: spacing.md },
   inputActive: { borderColor: colors.primary },
   // backgroundColor/borderRadius/padding/border now come from Card
@@ -141,6 +183,7 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     title: { ...t.type.h2, color: t.colors.textPrimary },
     subtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
+    trialPendingNote: { ...t.type.bodySm, color: t.colors.textSecondary },
     inputActive: { borderColor: t.colors.primary },
     hintText: { ...t.type.captionTight, color: t.colors.textSecondary },
     hintBold: { color: t.colors.textPrimary },

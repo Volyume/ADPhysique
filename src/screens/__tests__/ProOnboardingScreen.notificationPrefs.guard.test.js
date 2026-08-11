@@ -44,8 +44,13 @@ describe('ProOnboardingScreen notification-prefs writer (#13, #14)', () => {
   });
 
   test('#14: the blob write reads-merges-writes, matching every other writer', () => {
+    // C5-P27-02 (D96) re-anchor, same meaning: the reminder block moved out of
+    // advanceFrom6 into applyReminderPreferences (so the OS permission dialog
+    // no longer lands under the build animation), which changed its
+    // INDENTATION only. Matched indentation-agnostically now, so the pin
+    // survives a future move as well.
     const block = SOURCE.slice(
-      SOURCE.indexOf('const prefs = {\n          ...existingPrefs,'),
+      SOURCE.search(/const prefs = \{\s*\n\s*\.\.\.existingPrefs,/),
       SOURCE.indexOf('await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs))') + 100,
     );
     expect(block).toContain('...existingPrefs,');

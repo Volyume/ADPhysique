@@ -48,9 +48,13 @@ describe('no-plan / start-plan copy', () => {
     // became the shared EmptyState primitive, so the slice anchors moved to
     // the EmptyState's icon prop. The pinned copy inside the block is
     // unchanged -- that copy contract is what this guard exists for.
+    // Re-anchored under C5-P10-09 (D96): the Pro no-plan branch below is no
+    // longer an inert `noActivePlanRow` Card, so the free block's end
+    // anchor moved to the Pro branch's own EmptyState icon. The pinned copy
+    // contract inside the free block is unchanged.
     const start = PLANS.indexOf('icon="compass-outline"');
     expect(start).toBeGreaterThan(-1);
-    const block = PLANS.slice(start, PLANS.indexOf('<Card style={styles.noActivePlanRow}>'));
+    const block = PLANS.slice(start, PLANS.indexOf('icon="barbell-outline"'));
     expect(block).toContain('No active plan yet');
     expect(block).toContain('Start with a plan');
     expect(block).toContain('Browse plans');
@@ -63,9 +67,16 @@ describe('no-plan / start-plan copy', () => {
     expect(PLANS).not.toContain('Start or build a plan');
   });
 
-  test('PlansScreen Pro no-plan row uses the same verb', () => {
-    const block = PLANS.slice(PLANS.indexOf('<Card style={styles.noActivePlanRow}>'), PLANS.indexOf('{/* Folders'));
+  test('PlansScreen Pro no-plan state uses the same verb and offers a real action', () => {
+    // Re-anchored under C5-P10-09 (D96): the Pro branch was an inert Card
+    // that NAMED "Start with a plan" while offering no Pro affordance at
+    // all (no onPress, no button) -- the free branch two lines above got a
+    // full two-CTA EmptyState. Same shared verb, now attached to the
+    // coach-built plan action Home's Pro branch already offers.
+    const block = PLANS.slice(PLANS.indexOf('icon="barbell-outline"'), PLANS.indexOf('{/* Folders'));
     expect(block).toContain('Start with a plan');
+    expect(block).toContain('Browse plans');
+    expect(block).toContain('generateAndSavePlan');
     expect(block).not.toContain('Build one');
   });
 

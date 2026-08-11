@@ -70,11 +70,15 @@ function buildNarrative(data) {
     lines.push(`Your average session lasted ${avgDuration} minutes.`);
   }
 
+  // FB-17 (D96): the comparison now runs first week vs last BUILD week
+  // (database.getBlockReflectionData), so the climb line is reachable and
+  // the down branch no longer hedges ("likely a recovery week") about a
+  // week the app knows for certain was the deload.
   if (tonnageDelta !== null) {
     if (tonnageDelta > 5) {
-      lines.push(`The weight you lifted each week climbed ${tonnageDelta}% from the first week to the last.`);
+      lines.push(`The weight you lifted each week climbed ${tonnageDelta}% from your first week to your last training week.`);
     } else if (tonnageDelta < -5) {
-      lines.push(`You lifted less in the final week than the first, likely a recovery week.`);
+      lines.push(`Your last training week was lighter than your first, which can happen after a hard stretch.`);
     } else {
       lines.push(`Total lifted stayed consistent across the block.`);
     }
@@ -207,8 +211,10 @@ export default function BlockReflectionScreen({ navigation, route }) {
             icon="calendar-outline"
             title="No data found"
             text="This block doesn't have any logged sessions yet."
-            actionLabel="Start a new block"
-            onAction={() => navigateCrossTab(navigation, 'PlansTab', 'MesocycleBuilder')}
+            // FB-18 (D96): MesocycleBuilder cannot start a block; the Train
+            // tab's block card is the only place that decision lives.
+            actionLabel="Choose your next block"
+            onAction={() => navigateCrossTab(navigation, 'PlansTab', 'Plans')}
             compact
           />
         )}
@@ -253,11 +259,19 @@ export default function BlockReflectionScreen({ navigation, route }) {
             {data.prs?.length > 0 && (
               <View style={[styles.section, live.section]}>
                 <View style={styles.sectionHeader}>
-                  <Ionicons name="trophy-outline" size={16} color={t.colors.primary} />
-                  <SectionLabel accessibilityRole="header">Records set this block</SectionLabel>
-                  {/* D93 (Phase 3): same PR definition as the exercise
-                      records surfaces - one meaning everywhere. */}
-                  <InfoTooltip text={GLOSSARY.pr} size={12} />
+                  <Ionicons name="barbell-outline" size={16} color={t.colors.primary} />
+                  {/* FB-16 (D96): these rows are the best estimated max per
+                      exercise WITHIN this block (database.js's
+                      blockBestByExercise), never compared against a prior
+                      block, a prior best or any record store. On a first
+                      block every row is by construction a first-ever
+                      performance -- the same set the logger deliberately
+                      refuses to call a record ("logged as your starting
+                      point", Wave A A1). Heading and gloss now say what the
+                      rows are; the month and week variants of the block
+                      story already got this right. No PR maths touched. */}
+                  <SectionLabel accessibilityRole="header">Your best estimated max per lift</SectionLabel>
+                  <InfoTooltip text={GLOSSARY.estMax} size={12} />
                 </View>
                 {data.prs.map((pr, i) => {
                   const recordType = pr.recordType ?? pr.record_type;
@@ -309,22 +323,31 @@ export default function BlockReflectionScreen({ navigation, route }) {
               </View>
             )}
 
-            {/* What's next */}
+            {/* What's next.
+                FB-18 (D96): the old copy told the user to "take a few days
+                of lighter activity to recover" on the day they finished a
+                recovery week as the block's final week -- the Train tab
+                says "recovery week included" on the same screen-day. And
+                both CTAs routed to MesocycleBuilder, which is read-only and
+                has no create action anywhere in the file, so a button named
+                "Start a new block" landed where no block can be started.
+                The decision lives on the Train tab's block card, which is
+                where the Home block sheet already sends it. */}
             <View style={[styles.nextSection, live.nextSection]}>
               <Text style={[styles.nextTitle, live.nextTitle]} accessibilityRole="header">What's next</Text>
               <Text style={[styles.nextBody, live.nextBody]}>
-                Take a few days of lighter activity to recover, then start your next block. That recovery is when your progress takes hold.
+                Your recovery week is done, so the next step is choosing your next block. Nothing starts on its own.
               </Text>
               <Button
-                title="Start a new block"
+                title="Choose your next block"
                 variant="tertiary"
-                icon="add-circle-outline"
+                icon="arrow-forward-circle-outline"
                 fullWidth={false}
                 onPress={() => {
                   navigation.goBack();
-                  setTimeout(() => navigateCrossTab(navigation, 'PlansTab', 'MesocycleBuilder'), 300);
+                  setTimeout(() => navigateCrossTab(navigation, 'PlansTab', 'Plans'), 300);
                 }}
-                accessibilityLabel="Start a new block"
+                accessibilityLabel="Choose your next block"
               />
             </View>
           </>

@@ -391,6 +391,13 @@ export default function YouScreen({ navigation }) {
               <Text style={[styles.profileName, live.profileName]} numberOfLines={1}>{displayName}</Text>
               {isPro ? <ProBadge size="sm" /> : null}
             </View>
+            {/* C5-P7-10 (D96): a Free user was never told which tier they
+                were on. The first tier signal in the whole product was
+                hitting a lock. One calm line, stated where Pro already
+                states itself with a badge. No CTA, no upsell, no price. */}
+            {!isPro ? (
+              <Text style={[styles.profileStat, live.profileStat]}>You&apos;re on Free</Text>
+            ) : null}
             {sessions != null ? (
               <Text style={[styles.profileStat, live.profileStat]}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
             ) : user?.id ? (
@@ -442,9 +449,14 @@ export default function YouScreen({ navigation }) {
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </View>
             <Text style={[styles.statusBody, live.statusBody]}>
+              {/* C5-P7-08 (D96): for a Free user this tab is named "Coach"
+                  and the pitch described a coach in the present tense, as
+                  though it were reading their logs already. It now says what
+                  the tab BECOMES on Pro, and what is here either way. Copy
+                  only: no gating, no IA and no tier scope changes. */}
               {isPro
                 ? 'What changed, what was held, and the exact signals behind it.'
-                : 'Your coach reads your logs, applies safety limits, and explains every decision.'}
+                : 'On Pro this tab carries your weekly check-in, the decision your coach made and the reason for it. Your profile and safety checks stay here either way.'}
             </Text>
           </Card>
         ) : null}
@@ -551,23 +563,34 @@ export default function YouScreen({ navigation }) {
           />
         </View>
 
-        {isPro ? (
-          <View style={styles.section}>
-            <SectionLabel>Safety checks</SectionLabel>
-            <NavRow
-              icon="shield-checkmark-outline"
-              label="Goal lock"
-              sub="Set the conservative limit for cutting goals."
-              onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
-            />
-            <NavRow
-              icon="heart-outline"
-              label="Wellbeing check"
-              sub="Update the questions that shape your coaching."
-              onPress={() => navigation.navigate('WellbeingCheck')}
-            />
-          </View>
-        ) : null}
+        {/* W-8 / C5-P7-07 (D96): this section used to sit inside the isPro
+            branch, and YouScreen is the ONLY route to WellbeingCheckScreen in
+            the whole app, so a Free user could never take or update the
+            self-report screening, nor reach the Beat UK signpost it shows.
+            Both screens are registered ungated (RootNavigator) and both rows
+            are guardrail INPUTS, not Pro features: the wellbeing check writes
+            the SCOFF score the tier-blind safety system reads, and Goal lock
+            sets the ED-pattern detector's threshold. CLAUDE.md Section 2 and
+            proGate.js are explicit that guardrails never consult tier, so the
+            section is tier-blind here too. No screen, question, score,
+            threshold, flag or floor is changed by this move. */}
+        <View style={styles.section}>
+          <SectionLabel>Safety checks</SectionLabel>
+          <NavRow
+            icon="shield-checkmark-outline"
+            label="Goal lock"
+            sub="Set the conservative limit for cutting goals."
+            onPress={() => navigation.navigate('GoalLockConsent', { editMode: true })}
+          />
+          <NavRow
+            icon="heart-outline"
+            label="Wellbeing check"
+            // Tier-blind wording now the row is (W-8): the answers shape the
+            // safety checks every account gets, whether or not coaching is on.
+            sub="Update the questions behind your safety checks."
+            onPress={() => navigation.navigate('WellbeingCheck')}
+          />
+        </View>
 
       </ScrollView>
     </SafeAreaView>

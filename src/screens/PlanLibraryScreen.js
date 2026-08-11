@@ -15,7 +15,9 @@ import useTheme from '../hooks/useTheme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
-import { planHeadingName } from '../lib/planDisplay';
+import { planHeadingName, planEquipmentLabel } from '../lib/planDisplay';
+import { getPlanDays } from '../lib/onboarding/freeStarter';
+import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE } from '../lib/blockExplain';
 import { SkeletonCard } from '../components/Skeleton';
 import SearchBar from '../components/SearchBar';
 import Card from '../components/Card';
@@ -146,11 +148,34 @@ function sortBeginnerFirst(list) {
   });
 }
 
-function getQuizRecommendation(answers, plans) {
+// C5-P10-03 (D96): equipment is a hard FILTER, not a score bump.
+//
+// The scorer below gave a matching equipment tag +4, which a division plan
+// clears on goal alone (+5 for stage_prep), so a "Home / no equipment" user
+// answering "Get on stage" was handed a five-day advanced full-gym division
+// plan under the heading "Here's our suggestion". This is the same
+// predicate shape freeStarter.isStarterCandidate already encodes ("someone
+// training at home is never handed a barbell plan they cannot do"), applied
+// to the library quiz's own answer keys. An emptied pool falls through to
+// the screen's existing "No exact match found" branch.
+function quizEquipmentAllows(plan, equipment) {
+  if (equipment === 'bodyweight') return hasTag(plan, 'equipment:bodyweight');
+  if (equipment === 'dumbbell') {
+    return hasTag(plan, 'equipment:dumbbell') || hasTag(plan, 'equipment:bodyweight');
+  }
+  return true; // full gym, or no answer: everything is performable
+}
+
+// Exported for the C5-P10-03 pin: the equipment filter is a behavioural
+// rule, not a copy one, so it is asserted against the real scorer (the same
+// pattern YearOfLiftsScreen's card builders already use).
+export function getQuizRecommendation(answers, plans) {
   const { goal, equipment } = answers;
   if (!plans.length) return null;
+  const performable = plans.filter(p => quizEquipmentAllows(p, equipment));
+  if (!performable.length) return null;
 
-  const scored = plans.map(p => {
+  const scored = performable.map(p => {
     let score = 0;
     if (hasTag(p, 'category:division') && goal !== 'stage_prep') score -= 5;
     if (goal === 'build_muscle'  && hasTag(p, 'goal:build_muscle'))  score += 3;
@@ -268,6 +293,10 @@ export default function PlanLibraryScreen({ navigation }) {
   const [activeCollection, setActiveCollection] = useState('all');
   const [selectedDivision, setSelectedDivision] = useState(null);
   const listRef = useRef(null);
+  // RB-3 (D96, Review B): appAlert queues, so two taps on a plan card used
+  // to queue two dialogs and run two copies + two activations. One
+  // synchronous guard across the whole add flow.
+  const addingRef = useRef(false);
   const [refreshing, setRefreshing] = useState(false);
   const [loaded, setLoaded] = useState(false);
   // FF-004: distinguish a real load/init failure from a genuinely empty library
@@ -330,6 +359,8 @@ export default function PlanLibraryScreen({ navigation }) {
       toast.show('Setting up your profile, try again in a second', { variant: 'info' });
       return;
     }
+    if (addingRef.current) return;
+    addingRef.current = true;
     // C4: one decision, one dialog. Both choices copy the plan; only what
     // happens after the copy differs, so each button owns its own copy call
     // and error handling (matches the copy-failure toast either way).
@@ -340,11 +371,17 @@ export default function PlanLibraryScreen({ navigation }) {
     // caller anywhere passed the param, and the two onboarding stacks that
     // registered this screen never reached it. Removed under D95
     // (AUDIT-ROUTES 5.7); the surviving path is the one that always ran.
+    // C5-P10-01 / C5-P10-08 (D96): "Make it active now" was the entire
+    // explanation of activation. Nothing on any first-plan path said that
+    // activating creates a six-week training block with a scheduled
+    // recovery week, or what else changes. Both sentences are tier-blind
+    // and shared with every other activation decision point.
     appAlert(
       'Add this plan?',
-      `Copy "${planHeadingName(plan.name)}" into your plans. Make it active now, or just add it for later.`,
+      `Copy "${planHeadingName(plan.name)}" into your plans. Make it active now, or just add it for later.`
+      + `\n\n${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'Cancel', style: 'cancel', onPress: () => { addingRef.current = false; } },
         {
           text: 'Save for later',
           onPress: async () => {
@@ -354,24 +391,37 @@ export default function PlanLibraryScreen({ navigation }) {
               navigation.goBack();
             } catch (_e) {
               toast.show("Couldn't copy plan, try again", { variant: 'error' });
+            } finally {
+              addingRef.current = false;
             }
           },
         },
         {
           text: 'Add and start this plan',
           onPress: async () => {
-            let copy;
+            // RB-5 (D96, Review B): the try used to end after the copy, so
+            // an activation throw rejected an async onPress with no
+            // handler - no toast, no navigation, no active plan, and a
+            // stray copied programme left behind. The whole path is now
+            // wrapped, like every sibling activation path.
             try {
-              copy = await copyPlanFromLibrary(plan.id, user.id);
+              const copy = await copyPlanFromLibrary(plan.id, user.id);
               if (!copy?.id) throw new Error('Copy failed.');
+              const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
+              if (!ok) { navigation.goBack(); return; }
+              await activatePlanWithBlock(user.id, copy.id, planHeadingName(plan.name));
+              // C5-P10-05 (D96): activation used to end in a bare goBack(),
+              // visually identical to "Save for later" -- a user who saw no
+              // change tapped a second plan and silently replaced the block
+              // created seconds earlier. Same confirmation shape every other
+              // activation entry point uses.
+              toast.show(`"${planHeadingName(plan.name)}" is now your active plan`, { variant: 'success' });
+              navigation.goBack();
             } catch (_e) {
-              toast.show("Couldn't copy plan, try again", { variant: 'error' });
-              return;
+              toast.show("Couldn't set active plan, try again", { variant: 'error' });
+            } finally {
+              addingRef.current = false;
             }
-            const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: planHeadingName(plan.name) });
-            if (!ok) { navigation.goBack(); return; }
-            await activatePlanWithBlock(user.id, copy.id, planHeadingName(plan.name));
-            navigation.goBack();
           },
         },
       ],
@@ -556,6 +606,14 @@ export default function PlanLibraryScreen({ navigation }) {
           const isWomen = hasTag(plan, 'gender:women');
           const isMen = hasTag(plan, 'gender:men');
           const wc = workoutCounts[plan.id];
+          // C5-P10-02 (D96): days per week was never stated in the library.
+          // The card's meta line is a workout count, and planHeadingName
+          // strips the "3×/Week" suffix the seed name carries, so the one
+          // place the frequency appeared was removed for display. The
+          // days:N tag and getPlanDays() already exist; this renders them
+          // in the wording FreeStarter already ships.
+          const days = getPlanDays(plan);
+          const equipmentLabel = planEquipmentLabel(plan);
 
           return (
             <Card padding="none" style={styles.planCard}>
@@ -567,6 +625,8 @@ export default function PlanLibraryScreen({ navigation }) {
                 accessibilityLabel={[
                   planHeadingName(plan.name),
                   plan.difficulty != null ? (DIFFICULTY_LABELS[plan.difficulty] ?? 'Intermediate') : null,
+                  equipmentLabel,
+                  days != null ? `${days} days a week` : null,
                   wc ? `${wc} workout${wc !== 1 ? 's' : ''}` : null,
                 ].filter(Boolean).join(', ')}
                 accessibilityHint="Opens plan preview"
@@ -581,10 +641,15 @@ export default function PlanLibraryScreen({ navigation }) {
                     {plan.difficulty != null && (
                       <PlanBadge label={DIFFICULTY_LABELS[plan.difficulty] ?? 'Intermediate'} />
                     )}
+                    {/* C5-P10-04 (D96): what you need to run this plan,
+                        answered before adding it rather than after. */}
+                    <PlanBadge label={equipmentLabel} />
                   </View>
-                  {wc ? (
+                  {wc || days != null ? (
                     <Text style={[styles.workoutCount, live.workoutCount]}>
-                      {wc} workout{wc !== 1 ? 's' : ''}
+                      {days != null ? `${days} days a week` : ''}
+                      {days != null && wc ? ' · ' : ''}
+                      {wc ? `${wc} workout${wc !== 1 ? 's' : ''}` : ''}
                     </Text>
                   ) : null}
                 </View>
@@ -685,12 +750,18 @@ export default function PlanLibraryScreen({ navigation }) {
                   {quizResult.description ? (
                     <Text style={[styles.quizResultDesc, live.quizResultDesc]} numberOfLines={3}>{quizResult.description}</Text>
                   ) : null}
-                  {quizResult.difficulty != null && (
-                    <Text style={[styles.quizResultMeta, live.quizResultMeta]}>
-                      {DIFFICULTY_LABELS[quizResult.difficulty] ?? 'Intermediate'}
-                      {workoutCounts[quizResult.id] ? ` - ${workoutCounts[quizResult.id]} workouts` : ''}
-                    </Text>
-                  )}
+                  {/* C5-P10-02/04 (D96): the suggestion states what it asks
+                      of you (equipment, days a week) before "Add this plan". */}
+                  <Text style={[styles.quizResultMeta, live.quizResultMeta]}>
+                    {[
+                      quizResult.difficulty != null
+                        ? (DIFFICULTY_LABELS[quizResult.difficulty] ?? 'Intermediate')
+                        : null,
+                      planEquipmentLabel(quizResult),
+                      getPlanDays(quizResult) != null ? `${getPlanDays(quizResult)} days a week` : null,
+                      workoutCounts[quizResult.id] ? `${workoutCounts[quizResult.id]} workouts` : null,
+                    ].filter(Boolean).join(' · ')}
+                  </Text>
                 </Card>
                 <Button
                   title="Add this plan"

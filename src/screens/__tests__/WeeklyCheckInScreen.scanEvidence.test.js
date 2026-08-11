@@ -157,13 +157,25 @@ async function render({ suppressed = false, scan = null, note = undefined, sessi
 // exit 1, the main-CI red). Tolerant of a test that already unmounted.
 let _mountedTree = null;
 
+// C5-P20-02 (D96) re-anchor, same meaning: on a FIRST check-in (no saved
+// coach output, which is what getLatestCoachOutput returns in this fixture)
+// the submit CTA names the baseline outcome instead of promising "this
+// week's coaching", because the first review can be a baseline hold. The
+// submit path itself is unchanged.
+const SUBMIT_TITLE = 'See my first review';
+
+
 // Forces the full wizard (no auto-derived training performance, so
 // fastEligible is false) and steps from step 0 to step 1 ("This week's
 // data"), where the full evidence block (headline/detail/confidence chip)
 // renders -- distinct from the Fast Check-In's one compact summary row.
 async function renderWizardStep1(opts = {}) {
   const tree = await render({ ...opts, sessions: { completed: 0, planned: 0 } });
-  const energy = findPressable(tree, '3 Normal')[0];
+  // C5-P20-04 (D96) re-anchor, same meaning: the rating chip's accessibility
+  // label now leads with the word and follows with the number ("Normal, 3 of
+  // 5"), because the digit-first form read as a clinical intake scale. The
+  // chip, its value and this drive are otherwise unchanged.
+  const energy = findPressable(tree, 'Normal, 3 of 5')[0];
   expect(energy).toBeTruthy();
   await act(async () => { energy.props.onPress(); });
   const next = tree.root.findAll((n) => n.props?.title === 'Next' && typeof n.props.onPress === 'function');
@@ -336,13 +348,17 @@ describe('WeeklyCheckInScreen submit is unaffected by scan state', () => {
   test('submitting with no scan succeeds and writes no scan-related field', async () => {
     const tree = await render({ scan: null });
     // Fast Check-In requires energy + soreness; select both via the ChipRow.
-    const energy = findPressable(tree, '3 Normal')[0];
-    const soreness = findPressable(tree, '1 None')[0];
+    // C5-P20-04 (D96) re-anchor, same meaning: the rating chip's
+    // accessibility label now leads with the word and follows with the
+    // number ("Normal, 3 of 5"), because the digit-first form read as a
+    // clinical intake scale. The chip and its stored value are unchanged.
+    const energy = findPressable(tree, 'Normal, 3 of 5')[0];
+    const soreness = findPressable(tree, 'None, 1 of 5')[0];
     expect(energy).toBeTruthy();
     expect(soreness).toBeTruthy();
     await act(async () => { energy.props.onPress(); });
     await act(async () => { soreness.props.onPress(); });
-    const submitBtn = tree.root.findAll((n) => n.props?.title === "See this week's coaching" && typeof n.props.onPress === 'function');
+    const submitBtn = tree.root.findAll((n) => n.props?.title === SUBMIT_TITLE && typeof n.props.onPress === 'function');
     expect(submitBtn.length).toBeGreaterThan(0);
     await act(async () => { submitBtn[0].props.onPress(); });
     await flush();

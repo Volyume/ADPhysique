@@ -135,7 +135,10 @@ describe('L07-F2 contract 2: the screen wires edit/delete back into PR state', (
     expect(window).toContain('sessionSetsRef.current = sessionSetsRef.current.map(s => (');
     expect(window).toContain('s.id === editingSet.id ? { ...s, weight, actualReps } : s');
     expect(window).toContain('s.exerciseId === exercise.id && s.id !== editingSet.id');
-    expect(window).toContain('const editedPrs = detectPR({ weight, actualReps }, editPrHistory, exercise, units);');
+    // FQ-7 (D96): the edit path carries the same per-exercise baseline rule
+    // as the log path - detectPR is consulted only after a prior exposure.
+    expect(window).toContain('const editedPrs = editHadPriorExposure');
+    expect(window).toContain('? detectPR({ weight, actualReps }, editPrHistory, exercise, units) : [];');
   });
 
   test('editing mirrors the log-time first-lift exclusion (empty history never celebrates or joins the PR list)', () => {

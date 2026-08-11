@@ -14,7 +14,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Switch,
+  View, Text, StyleSheet, ScrollView, Switch, TouchableOpacity, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -38,6 +38,7 @@ import BackHeader from '../components/BackHeader';
 import SectionLabel from '../components/SectionLabel';
 import Chip from '../components/Chip';
 import { setPreference as setPrefRow } from '../lib/notifications/preferences';
+import { getQuietHours, shiftHourMinuteOutOfQuietHours } from '../lib/notifications/quietHours';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
 
@@ -199,7 +200,13 @@ export default function CoachingRemindersScreen() {
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const [morningHour, setMorningHour] = useState(7);
   const [morningMinute, setMorningMinute] = useState(0);
-  const [checkinDay, setCheckinDay] = useState(1); // Mon
+  // PM-05 (D96): Sunday, matching the eight other readers of this preference
+  // (WeeklyCheckInScreen's gate, scheduler.js, coachLedger, HomeScreen,
+  // YouScreen). This screen alone defaulted to Monday, so a user whose prefs
+  // blob has no checkinDay was told two different check-in days by two
+  // screens, and touching any control here silently moved their check-in day
+  // to Monday.
+  const [checkinDay, setCheckinDay] = useState(0); // Sun
   const [checkinHour, setCheckinHour] = useState(18);
   const [checkinMinute, setCheckinMinute] = useState(0);
   const [lastCheckinMs, setLastCheckinMs] = useState(0);
@@ -214,6 +221,11 @@ export default function CoachingRemindersScreen() {
   // already reads as enabled).
   const [partnerCheerEnabled, setPartnerCheerEnabled] = useState(true);
   const [permissionStatus, setPermissionStatus] = useState(null);
+  // C5-P28-01 (D96): quiet hours (default 22:00 -> 07:00) silently shift a 5 AM
+  // or 6 AM weigh-in reminder to 07:00 at schedule time, while this screen kept
+  // rendering "Notification at 5 AM". The rule is locked and unchanged; what
+  // changes is that the screen states the time the reminder actually arrives.
+  const [quietHours, setQuietHoursState] = useState(null);
   const [saved, setSaved] = useState(false);
   const debounceTimer = useRef(null);
   const savedTimer = useRef(null);
@@ -249,6 +261,17 @@ export default function CoachingRemindersScreen() {
           if (latest?.weekStart) setLastCheckinMs(latest.weekStart);
         }
       } catch (_) {}
+
+      // C5-P27-01 (D96) considered and deliberately NOT changed here: the
+      // ruling covers Settings > Notifications, which prompts a user who
+      // arrived only to look. This screen is reached by choosing "Coaching
+      // reminders", so the intent is present, and it is the ONLY place a Pro
+      // user with an undetermined status can grant permission for the two
+      // reminders it owns. Removing the prompt would leave them no way in.
+      try {
+        const q = await getQuietHours();
+        setQuietHoursState(q);
+      } catch (_) { /* the effective-time note simply does not render */ }
 
       try {
         const status = await requestNotificationPermissions();
@@ -374,6 +397,9 @@ export default function CoachingRemindersScreen() {
     }
   }
 
+  const morningShift = quietHours
+    ? shiftHourMinuteOutOfQuietHours(morningHour, morningMinute, quietHours)
+    : { shifted: false };
   const nextFire = computeNextCheckinFireDate(checkinDay, checkinHour, checkinMinute, lastCheckinMs, 7);
   const lastFire = lastCheckinMs > 0 ? new Date(lastCheckinMs) : null;
   const gapDays = lastFire ? Math.round((nextFire.getTime() - lastFire.getTime()) / (24 * 60 * 60 * 1000)) : 0;
@@ -387,12 +413,25 @@ export default function CoachingRemindersScreen() {
           These reminders keep the weekly coaching loop accurate. Pick times that fit your normal routine.
         </Text>
 
+        {/* C5-P27-04 (D96): the Campaign 3 Open Settings pattern. This banner
+            stated the instruction with no way to get there, one tap from the
+            NotificationSettings banner that does carry the control. */}
         {permissionStatus === 'denied' && (
           <View style={[styles.warningBox, live.warningBox]}>
-            <Ionicons name="warning" size={18} color={t.colors.warning} />
-            <Text style={[styles.warningText, live.warningText]}>
-              Notifications are disabled at the system level. Enable them in your device settings for these reminders to fire.
-            </Text>
+            <View style={styles.warningRow}>
+              <Ionicons name="warning" size={18} color={t.colors.warning} />
+              <Text style={[styles.warningText, live.warningText]}>
+                Notifications are disabled at the system level. Enable them in your device settings for these reminders to fire.
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => Linking.openSettings()}
+              style={styles.warningAction}
+              accessibilityRole="button"
+              accessibilityLabel="Open Settings"
+            >
+              <Text style={[styles.warningActionText, live.warningActionText]}>Open Settings</Text>
+            </TouchableOpacity>
           </View>
         )}
 
@@ -413,10 +452,25 @@ export default function CoachingRemindersScreen() {
             formatter={formatHour}
             accessibilityName="Morning weight hour"
           />
-          <Text style={[styles.scheduleText, live.scheduleText]}>Notification at {formatHour(morningHour)}</Text>
+          <Text style={[styles.scheduleText, live.scheduleText]}>
+            {morningShift.shifted
+              ? `Notification at ${formatHour(morningShift.hour)}`
+              : `Notification at ${formatHour(morningHour)}`}
+          </Text>
+          {morningShift.shifted ? (
+            <Text style={[styles.scheduleSubText, live.scheduleSubText]}>
+              Quiet hours currently run to {formatHour(morningShift.hour)}, so a {formatHour(morningHour)} reminder waits until then. You can change quiet hours in Settings, Notifications.
+            </Text>
+          ) : null}
           <View style={[styles.helperBlock, live.helperBlock]}>
             <Text style={[styles.helperText, live.helperText]}>
               Body weight shifts naturally each day with fluid, food, and hormones. Logging every other day at minimum gives Volyume enough readings to see the trend. Three or more readings per week opens up the weekly check-in.
+            </Text>
+            {/* C5-P28-03 (D96): the 19:30 backstop rides this same reminder
+                and was named on no screen the user could reach. Disclosure
+                only; what is scheduled, and its ED gates, are unchanged. */}
+            <Text style={[styles.helperText, live.helperText]}>
+              If the morning gets away from you, a quiet backstop at 7.30 pm offers one more chance that day. It goes quiet as soon as the weight is logged, and it turns off with this reminder.
             </Text>
           </View>
         </Card>
@@ -541,11 +595,19 @@ const styles = StyleSheet.create({
   scroll: { padding: spacing.lg, paddingBottom: spacing.xxl, gap: spacing.lg },
   intro: { ...type.bodySm, color: colors.textSecondary },
   warningBox: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
+    gap: spacing.sm,
     backgroundColor: colors.warningBg, borderRadius: radius.md,
     padding: spacing.md, borderWidth: 1, borderColor: colors.warning,
   },
+  warningRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   warningText: { ...type.captionTight, flex: 1, color: colors.warning },
+  // Mirrors NotificationSettingsScreen's bannerAction pair (the Campaign 3
+  // Open Settings affordance), so the two banners read as one pattern.
+  warningAction: { alignSelf: 'flex-start' },
+  warningActionText: {
+    ...type.bodySm, fontWeight: fontWeight.semibold,
+    color: colors.warning, textDecorationLine: 'underline',
+  },
   sectionLabelSpacing: { marginTop: spacing.md, marginBottom: -spacing.xs },
   // Intentional settings/list-style card: secondary surface (surface2),
   // vertical-only padding (children own their horizontal padding) and the
@@ -608,6 +670,7 @@ function buildLiveStyles(t) {
     intro: { ...t.type.bodySm, color: t.colors.textSecondary },
     warningBox: { backgroundColor: t.colors.warningBg, borderColor: t.colors.warning },
     warningText: { ...t.type.captionTight, color: t.colors.warning },
+    warningActionText: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.warning },
     card: { backgroundColor: t.colors.surface2 },
     iconWrap: { backgroundColor: t.colors.primaryBg },
     cardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },

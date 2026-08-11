@@ -80,9 +80,20 @@ describe('D14: banner stack is priority-ranked and capped to exactly one', () =>
     // Coach is rank 1: it is BANNER_PRIORITY[0] whenever eligible (nothing
     // outranks it), so its own render flag is simply its own trigger,
     // verified unchanged, not re-gated through shownBannerKey.
+    // PM-06 (D96) re-anchor, same meaning: the eligibility test now runs
+    // through the shared completed-decision predicate
+    // (src/lib/coachDecision.js), which REQUIRES hasEnoughData and also
+    // requires the check-in that produced the output to exist for the same
+    // week -- the predicate the Coach tab already applied. The rank-1
+    // property this test pins is unchanged: showCoachBanner is still its own
+    // trigger, not re-gated through shownBannerKey, and the dismissal and
+    // 7-day freshness terms are untouched.
     expect(HOME).toMatch(
-      /const showCoachBanner = tier === 'pro' && !!latestCoachOutput && latestCoachOutput\.hasEnoughData\s*\n\s*&& !coachBannerDismissed\s*\n\s*&& \(Date\.now\(\) - \(latestCoachOutput\.weekStart \?\? 0\) < 7 \* 86400000\);/,
+      /const showCoachBanner = tier === 'pro' && !!latestCoachOutput && latestCoachDecisionComplete\s*\n\s*&& !coachBannerDismissed\s*\n\s*&& \(Date\.now\(\) - \(latestCoachOutput\.weekStart \?\? 0\) < 7 \* 86400000\);/,
     );
+    // ... and the predicate itself still requires hasEnoughData.
+    expect(fs.readFileSync(require.resolve('../../lib/coachDecision.js'), 'utf8'))
+      .toContain('output.hasEnoughData === false');
   });
 
   test('there is no "reveal the rest" affordance left in the JSX', () => {

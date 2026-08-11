@@ -39,6 +39,7 @@ import {
   Platform,
   StyleSheet,
   useWindowDimensions,
+  Linking,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -391,6 +392,23 @@ export default function ProgressGhostCapture({
             accessibilityLabel="Add a photo from your library"
           >
             <Text style={[styles.fallbackBtnLabel, live.fallbackBtnLabel]}>Use your photo library</Text>
+          </Pressable>
+        ) : null}
+        {/* C5-P27-03 (D96): the copy above says camera access can be turned
+            on in Settings and this screen had no way to get there, exactly
+            the gap Campaign 3's F8 was raised to close. Same tap-through the
+            sibling camera surfaces already ship (ScanBarcodeScreen,
+            ScanLabelScreen). Only on the permanently-denied branch: with no
+            camera module there is nothing a Settings trip could fix. */}
+        {!noModule ? (
+          <Pressable
+            style={styles.fallbackClose}
+            onPress={() => Linking.openSettings()}
+            hitSlop={hitSlop}
+            accessibilityRole="button"
+            accessibilityLabel="Open Settings"
+          >
+            <Text style={[styles.fallbackCloseLabel, live.fallbackCloseLabel]}>Open Settings</Text>
           </Pressable>
         ) : null}
         <Pressable

@@ -65,6 +65,23 @@ export async function handlePotentialLapse(result, userId = null) {
     if (!isAuthoritativeLapse(result)) return { lapsed: false, opened: false };
 
     const { opened } = await openEpisode(Date.now());
+    // C5-P28-04 (D96): the two daily coaching WEIGHT prompts were laid on day
+    // 0 as OS triggers, and nothing stood them down when the entitlement went
+    // away. The only screen that can change them is Pro-gated, so a lapsed
+    // user kept two audible weight prompts a day with no in-app off-switch.
+    // NOTIFICATIONS_LOCKED's unsubscribe principle is the authority: when the
+    // thing a reminder serves is gone, the reminder goes with it. This is the
+    // moment the transition is observed, so it is cancelled here rather than
+    // waiting for a launch path that may not run. restoreNotifications re-lays
+    // them for Pro only, so a user who returns gets them back and a user who
+    // does not never hears them again. The quiet-hours rule, the ED gates and
+    // the check-in reminder are untouched.
+    try {
+      // eslint-disable-next-line global-require
+      const { cancelMorningNotification, cancelEveningWeightReminder } = require('../notifications/scheduler');
+      await cancelMorningNotification();
+      await cancelEveningWeightReminder();
+    } catch (_) { /* best-effort */ }
     // Lay the single win-back. The scheduler self-guards (no-op when there's no
     // episode, when ED-suppressed, when the floor hasn't cleared, or when the
     // fire date has passed).

@@ -24,7 +24,11 @@ response plan can scope correctly:
 - Energy and recovery scores from check-ins
 - Adherence to calorie targets (under/hit/over)
 - ED-pattern detection signals and flag state
-- SCOFF screener responses at onboarding
+- SCOFF screener responses from the wellbeing check (Coach → Safety
+  checks; corrected 2026-08-10, FQ-1/FQ-5 — onboarding does not ask
+  the screener, and there is no dedicated first-run wellbeing screen:
+  first-run setup points at the calm-coaching setting, whose canonical
+  editor is Settings → Coaching)
 - Photo progress images (on-device only, never synced)
 - Volyume Score local metadata and derived outputs: photo quality, result
   confidence, visual leanness band/score and progress change. This is
@@ -35,7 +39,15 @@ response plan can scope correctly:
 ## The Article 9 consent screen
 
 Appears at onboarding, between sign-in and the basic stats step. Cannot
-be skipped. Locked copy:
+be skipped.
+
+**Locked 2026-05-23; revised 2026-07-04 (progress-photos programme +
+D81 calibration blocks shipped on screen without this record being
+updated); reconciled 2026-08-10 under the FQ-5 founder ruling: the
+SHIPPED SCREEN IS THE CANONICAL RECORD, this document prints it
+verbatim, and `Article9ConsentScreen.js`'s `CONSENT_VERSION =
+'2026-08-10'` stamps exactly this text into the consent audit trail.**
+Locked copy:
 
 > **Health and nutrition data consent**
 >
@@ -55,12 +67,29 @@ be skipped. Locked copy:
 >   confidence, leanness band, Volyume Score and progress change when
 >   you use photo analysis
 >
+> Volyume Score is a simple progress read, not a medical measure,
+> DEXA scan, diagnosis, or medical advice. It may abstain or ask for
+> a retake when photo quality is poor.
+>
+> What leaves your phone:
+>
+> - Anonymous measurement numbers from photo analysis (never the
+>   photos, never your name or account) to keep scoring accurate for
+>   every body type
+>
 > What we never do with it:
 >
 > - Never sell it
 > - Never share it with advertisers
 > - Never use your photos or health data for advertising or third-party
 >   model training
+>
+> A safety check that runs in the background:
+>
+> Volyume checks your weight trend, energy, and food logs together for
+> signs of under-fuelling or disordered eating. If a concerning
+> pattern shows up, it pauses your calorie changes and points you to
+> support.
 >
 > Where it lives:
 >
@@ -75,7 +104,25 @@ be skipped. Locked copy:
 > [ ] I agree to Volyume using my health and nutrition data to
 > coach me.
 >
+> You can withdraw this consent at any time in Settings > Privacy and
+> legal. Because Volyume cannot run health-data coaching without it,
+> withdrawing means closing your account and deleting your data, the
+> same as the choice below.
+>
 > [ Continue ]   [ Read the full privacy policy ]
+> [ What if I don't agree? — expander: sign out, or delete the
+>   account and any data already stored ]
+
+Why the three 2026-07-04 blocks exist (FQ-5 item 2 record): the
+Volyume Score bound, the background safety check disclosure and the
+calibration-numbers bullet all describe real founder-approved shipped
+behaviour (progress-photos programme 2026-07-03; D81 calibration
+telemetry 2026-07-13; the ED safety system). The 2026-08-10 revision
+additionally: names the withdrawal consequence before consent
+(Art 7(3) consistency with the decline path), moves the
+calibration-numbers bullet under a truthful "What leaves your phone"
+heading, and orders the blocks looks-at → leaves-phone → never-do →
+safety check. No sentence was removed.
 
 The Continue button is disabled until the box is ticked. Tapping the
 policy link opens the in-app native `PrivacyPolicyScreen`

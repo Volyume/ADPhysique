@@ -38,9 +38,34 @@ export function routeForNotificationType(type, data = {}) {
       // (the 'day14' content is the generic "trial winding down" copy).
       return { tab: 'ProfileTab', screen: 'CascadeGate', params: { variant: 'day14' } };
     case 'weekly_coach_ready':
-      // Same destination as the You-tab "Precision Coaching" row, which opens
-      // CoachOutput with no weekStart (current week).
-      return { tab: 'ProfileTab', screen: 'CoachOutput' };
+      // PM-01(b) (D96): the Monday 09:00 push is laid when a check-in is
+      // submitted, so it is about THAT week's review. It used to carry no
+      // params, and CoachOutput defaults to the CURRENT week, so on Monday
+      // morning the tap opened a week nine hours old with no check-in in it.
+      // The reviewed week is baked into `data` at schedule time and passed
+      // through here, exactly as the day-3 trial variant already is.
+      return data?.weekStart != null && Number.isFinite(Number(data.weekStart))
+        ? { tab: 'ProfileTab', screen: 'CoachOutput', params: { weekStart: Number(data.weekStart) } }
+        : { tab: 'ProfileTab', screen: 'CoachOutput' };
+    case 'morning_weight':
+    case 'evening_weight':
+      // PM-04 (D96): the two most frequent Pro pushes of the month had no
+      // route at all, so the tap landed on whatever screen was last open.
+      // The destination already exists and is already used by the check-in
+      // gate's "Log my weight first": the Today strip's weight input on Home.
+      // The param is minted per tap (RootNavigator passes params straight
+      // through, and HomeScreen keys the open on a fresh value).
+      return { tab: 'HomeTab', screen: 'Home', params: { openWeightLog: Date.now() } };
+    case 'training_reminder':
+      // FM-08 (D96): a Free-tier push with no route. Home is where the
+      // session hero and "Start workout" live, which is what the reminder is
+      // about.
+      return { tab: 'HomeTab', screen: 'Home' };
+    case 'activation_nudge':
+      // FM-08 (D96): the nudge exists to restart a stalled user, and the
+      // in-app banner version of it already routes to the next workout on
+      // Home. Same destination, so the two cannot disagree.
+      return { tab: 'HomeTab', screen: 'Home' };
     case 'winback':
       // COMP-025-A: the +30-day win-back. Lands on the Subscription screen,
       // which shows the returning offer when one is store-eligible (§4c).

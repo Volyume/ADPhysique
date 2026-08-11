@@ -64,16 +64,24 @@ describe('CoachHeldHistoryScreen fail-closed loading', () => {
     expect(flattenText(tree.toJSON())).toContain('No entries yet');
   });
 
-  test('empty history offers a weekly check-in action', async () => {
+  // Same-meaning re-anchor (C5-P35-06, D96). The empty state used to offer a
+  // "Start check-in" CTA that, on day 0, ALWAYS landed on the check-in's own
+  // "needs more data" gate (the first check-in requires five days of data),
+  // contradicting the sentence directly above it for the whole period the
+  // empty state is visible. The property worth pinning is that the empty
+  // state is not a dead end: it states what unlocks the screen. It now does
+  // that in copy instead of routing to a gate.
+  test('empty history states what unlocks it and never routes to a gate that will bounce', async () => {
     const navigation = { navigate: jest.fn() };
     let tree;
     await act(async () => { tree = create(<CoachHeldHistoryScreen navigation={navigation} />); });
     await flush();
 
-    expect(flattenText(tree.toJSON())).toContain('Start check-in');
-    const action = tree.root.findByProps({ accessibilityLabel: 'Start check-in' });
-    await act(async () => { action.props.onPress(); });
-    expect(navigation.navigate).toHaveBeenCalledWith('WeeklyCheckIn');
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('After your first weekly check-in');
+    expect(text).toMatch(/opens once your coach has a few days of training and weigh-ins to read/);
+    expect(text).not.toContain('Start check-in');
+    expect(navigation.navigate).not.toHaveBeenCalled();
   });
 
   test('load failure clears history and renders the empty state', async () => {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking, AccessibilityInfo,
 } from 'react-native';
@@ -9,6 +9,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { runWeeklyCoach, mapCalsAdherence, corroborateConfidenceLevel } from '../lib/weeklyCoach';
 import { buildRampPositionLine } from '../lib/blockExplain';
 import { buildHoldReceipt } from '../lib/coachLedger';
+import { isCompletedCoachDecision } from '../lib/coachDecision';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getLatestCheckin,
@@ -325,6 +326,7 @@ function TrainingNextWeekCard({
   deloadSuggested, deloadNote, onApplyDeload, hero, navigation,
   blockFinished = false,
   nextWeekIsDeload = false,
+  currentWeekIsDeload = false,
   rampLine = null,
 }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
@@ -340,8 +342,12 @@ function TrainingNextWeekCard({
   // Stage 4: an upward apply never targets a recovery week's rows, and
   // the row must not read as an addable "+N sets" when it cannot be.
   const upwardBlocked = signal > 0 && nextWeekIsDeload;
+  // FB-06 (D96): the same honesty inside the recovery week the user is
+  // already in. Copy gate only -- applyable is already false here (there is
+  // no next week in the block for canApply to resolve).
+  const upwardInRecovery = signal > 0 && currentWeekIsDeload;
   const label =
-    upwardBlocked ? 'Hold through your recovery week'
+    (upwardBlocked || upwardInRecovery) ? 'Hold through your recovery week'
     : signal > 0 ? `Add ${mag} ${setWord} to each muscle group`
     : signal < 0 ? `Pull back ${mag} ${setWord} per muscle group`
     : 'Hold your current volume';
@@ -404,11 +410,21 @@ function TrainingNextWeekCard({
             <Text style={[styles.planNoteText, live.planNoteText]}>
               {blockFinished
                 ? 'This block has finished, so volume changes have nowhere to land yet. Choose your next block on the Train tab first.'
-                : upwardBlocked
-                  ? 'Next week is your recovery week, so the coach will not add sets to it. Recovery weeks stay light on purpose.'
-                  : rampLine
-                    ? `${rampLine} This is next week's starting point; each session still fine-tunes as you train.`
-                    : "This is next week's starting point. Each session still fine-tunes as you train."}
+                // FB-06 (D96): the third honest branch, checked before the
+                // next-week one so the copy names the week the user is
+                // actually in. Inside the scheduled recovery week there is
+                // no next week in this block at all, so the note used to
+                // fall through to "This is next week's starting point"
+                // beside a row reading "Add 2 sets to each muscle group".
+                // Copy gate only: weeklyCoach's numbers are unchanged and
+                // the Apply button was already absent (canApply is false).
+                : currentWeekIsDeload
+                  ? 'This is your recovery week, so nothing is added to it. Volume changes start again with your next block.'
+                  : upwardBlocked
+                    ? 'Next week is your recovery week, so the coach will not add sets to it. Recovery weeks stay light on purpose.'
+                    : rampLine
+                      ? `${rampLine} This is next week's starting point; each session still fine-tunes as you train.`
+                      : "This is next week's starting point. Each session still fine-tunes as you train."}
             </Text>
           </View>
           {/* CO-2: this card said what changed ("N updated") but never linked
@@ -960,7 +976,14 @@ export default function CoachOutputScreen({ navigation, route }) {
   // window (0 sessions), weekRangeLabel render an Invalid Date, and the screen
   // fall through to the baseline view, the "building baseline" screen the user
   // saw on tapping the notification.
-  const weekStart = route.params?.weekStart ?? localWeekStartMs();
+  // PM-01(a) (D96): the week this screen is scoped to. `redirectWeekStart` is
+  // set once, by the loader, when the resolved week has NO check-in but a
+  // completed decision exists for an earlier week: the screen then opens that
+  // decision instead of computing a fresh verdict for a week the user has not
+  // lived yet. The screen already accepted a weekStart param, so this is a
+  // redirect, not new machinery.
+  const [redirectWeekStart, setRedirectWeekStart] = useState(null);
+  const weekStart = redirectWeekStart ?? route.params?.weekStart ?? localWeekStartMs();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user, userProfile, units, saveLocalProfile, tier: storeTier, energyUnit, reduceMotion } = useAppStore(useShallow(s => ({
     user: s.user,
@@ -1004,6 +1027,13 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [coachHistory, setCoachHistory] = useState([]);
   const [_adaptiveTDEE, setAdaptiveTDEE] = useState(null);
   const [applyingKey, setApplyingKey] = useState(null);
+  // RB-10 (D96, Review B): applyingKey is state, so the guard in each Apply
+  // handler is one render behind a same-frame double tap. Today both
+  // invocations converge (every handler re-reads its base and writes
+  // absolute values), but that is convergence by accident of shape; this
+  // ref makes the entry guard synchronous, the same pattern the wizard and
+  // the activation paths use.
+  const applyingRef = useRef(false);
   // Food-level receipt after a calorie apply edits an active meal plan
   // ({ headline, body, deepLink, floorNote } from planExplain, or null).
   const [planEditNote, setPlanEditNote] = useState(null);
@@ -1023,6 +1053,13 @@ export default function CoachOutputScreen({ navigation, route }) {
   // recovery week's rows — a deload is light on purpose, and the peak-week
   // push would otherwise write extra sets straight into it.
   const [nextWeekIsDeload, setNextWeekIsDeload] = useState(false);
+  // FB-06 (D96): whether the week the user is IN is the scheduled recovery
+  // week. In week 6 of 6 there is no next row, so nextWeekIsDeload is false
+  // and blockAwaitingDecision is false too (the block is in 'recovery', not
+  // 'completed_awaiting_decision'), which left the card's note falling
+  // through to the generic "This is next week's starting point" beside a
+  // row reading "Add 2 sets to each muscle group". There is no next week.
+  const [currentWeekIsDeload, setCurrentWeekIsDeload] = useState(false);
   // Stage 8: the live block position for the training card's ramp line.
   const [blockWeekForRamp, setBlockWeekForRamp] = useState(null);
   // Five-part coach response inputs (Theme A): weigh-ins inside the
@@ -1131,9 +1168,10 @@ export default function CoachOutputScreen({ navigation, route }) {
   // twice. Current targets are re-read at tap time so we never scale
   // from a stale snapshot.
   async function handleApplyCalories() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'calories')) return;
     setPlanEditNote(null); // clear any stale receipt before re-applying
+    applyingRef.current = true;
     setApplyingKey('calories');
     try {
       const current = await getNutritionTargets(user.id);
@@ -1181,7 +1219,11 @@ export default function CoachOutputScreen({ navigation, route }) {
         // to experience), so the coach never mixes tones on one screen.
         const register = resolveRegister({
           coachTone: userProfile?.coachTone ?? 'automatic',
-          experienceLevel: userProfile?.experienceLevel ?? null,
+          // RC-2 (D96, Review C): the wizard writes `experience`;
+          // `experienceLevel` has no producer anywhere, so Automatic
+          // resolved to the beginner register for EVERY user, including
+          // those who answered "Competitive - 5+ years". Read both keys.
+          experienceLevel: userProfile?.experienceLevel ?? userProfile?.experience ?? null,
           trainingAgeYears: userProfile?.trainingAgeYears ?? null,
         });
         const { change: planChange } = await applyCoachAdjustmentToActivePlan(user.id, { adjustmentKcal: change });
@@ -1196,6 +1238,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyCalories', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 
@@ -1206,13 +1249,14 @@ export default function CoachOutputScreen({ navigation, route }) {
   // so it's distinguishable from the template ramp and the per-session
   // adaptive writes.
   async function handleApplyTraining() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'training')) return;
     const delta = output.volumeSignal ?? 0;
     if (!delta || !nextTrainingWeekId) return;
     // Stage 4: never add sets to a recovery week (the card explains this
     // instead of offering the button; this guard is the backstop).
     if (delta > 0 && nextWeekIsDeload) return;
+    applyingRef.current = true;
     setApplyingKey('training');
     try {
       const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
@@ -1236,6 +1280,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyTraining', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 
@@ -1249,9 +1294,10 @@ export default function CoachOutputScreen({ navigation, route }) {
   // re-evaluates each week. blockAdvisor only advises, it never writes,
   // so there is nothing to reconcile against on the write side.
   async function handleApplyDeload() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'deload')) return;
     if (!nextTrainingWeekId) return;
+    applyingRef.current = true;
     setApplyingKey('deload');
     try {
       await setMesocycleWeekDeload(nextTrainingWeekId);
@@ -1292,6 +1338,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyDeload', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 
@@ -1302,8 +1349,9 @@ export default function CoachOutputScreen({ navigation, route }) {
   // every diary surface that reads the targets. Re-reads current targets
   // at tap time so it never scales from a stale snapshot.
   async function handleApplyDietBreak() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'dietBreak')) return;
+    applyingRef.current = true;
     setApplyingKey('dietBreak');
     try {
       const current = await getNutritionTargets(user.id);
@@ -1332,6 +1380,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyDietBreak', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 
@@ -1342,10 +1391,11 @@ export default function CoachOutputScreen({ navigation, route }) {
   // being viewed. Re-reads current targets at tap time and recomputes
   // so the persisted split never scales from a stale snapshot.
   async function handleApplyMacroCycle() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'macroCycle')) return;
     const trainingDays = output.macroCycle?.trainingDaysPerWeek;
     if (!trainingDays) return;
+    applyingRef.current = true;
     setApplyingKey('macroCycle');
     try {
       const current = await getNutritionTargets(user.id);
@@ -1380,6 +1430,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyMacroCycle', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 
@@ -1391,8 +1442,9 @@ export default function CoachOutputScreen({ navigation, route }) {
   // current targets at tap time so the refeed never scales from a stale
   // snapshot.
   async function handleApplyRefeed() {
-    if (applyingKey || !user?.id || !output) return;
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
     if (isApplied(output, 'refeed')) return;
+    applyingRef.current = true;
     setApplyingKey('refeed');
     try {
       const current = await getNutritionTargets(user.id);
@@ -1421,12 +1473,41 @@ export default function CoachOutputScreen({ navigation, route }) {
       logError('CoachOutputScreen.handleApplyRefeed', e, { userId: user?.id });
     } finally {
       setApplyingKey(null);
+      applyingRef.current = false;
     }
   }
 
   useEffect(() => {
     async function load() {
       const checkin = await getLatestCheckin(user.id, weekStart);
+      // PM-01(a) / PM-03 (D96): a week with no check-in is not a week the
+      // coach has reviewed. Running the engine on it produced the
+      // low-adherence verdict from an empty week ("get back to your full
+      // plan", on a Monday morning), PERSISTED it, and Home then advertised
+      // it as this week's decision -- while the Coach tab, using the
+      // completed-decision predicate, correctly said nothing. It also
+      // permanently retired the week-one trial ledger, the one surface built
+      // to make the loop visible before the first review.
+      //
+      // A real weekly check-in always sets an energy score (step 0 is
+      // required), so that is the "this week was reviewed" signal, exactly as
+      // WeeklyCheckInScreen's own alreadyDone test uses it. With no check-in
+      // for this week, open the latest COMPLETED decision instead; if there
+      // is none, the screen still renders (the hold receipt / baseline view
+      // below) but nothing is written. No engine change: weeklyCoach and
+      // coachApply are untouched.
+      const weekWasCheckedIn = checkin?.energyScore != null;
+      if (!weekWasCheckedIn && redirectWeekStart == null) {
+        const latestOutput = await getLatestCoachOutput(user.id).catch(() => null);
+        const latestWeek = Number(latestOutput?.weekStart);
+        if (Number.isFinite(latestWeek) && latestWeek < weekStart) {
+          const latestCheckin = await getLatestCheckin(user.id, latestWeek).catch(() => null);
+          if (isCompletedCoachDecision(latestOutput, latestCheckin)) {
+            setRedirectWeekStart(latestWeek);
+            return; // the effect re-runs against the reviewed week
+          }
+        }
+      }
       // COMP-026 (A): the adaptive-TDEE resize needs ~4+ weeks of weight to
       // reach 'high' confidence and size the calorie change from real energy
       // balance instead of the blunt fixed step. A 14-day window capped
@@ -1886,7 +1967,15 @@ export default function CoachOutputScreen({ navigation, route }) {
       // record from state, so a missing field there would wipe it on the
       // first tap of Apply.
       const persistedResult = { ...result, consecutiveOffTargetWeeks, lastCalAdjustmentWeekStart };
-      await saveCoachOutput(user.id, { weekStart, ...persistedResult });
+      // PM-01(a) / PM-03: persist only a week the user actually checked in
+      // for. This save used to run on EVERY load, so merely opening the
+      // screen (the Monday push, the volyume://coach deep link) manufactured
+      // a stored "decision" for a week with no evidence in it. The apply
+      // handlers still re-save from state, and they can only run on a real
+      // review.
+      if (weekWasCheckedIn) {
+        await saveCoachOutput(user.id, { weekStart, ...persistedResult });
+      }
 
       setOutput(persistedResult);
 
@@ -1963,10 +2052,13 @@ export default function CoachOutputScreen({ navigation, route }) {
         setBlockAwaitingDecision(!!cur?.awaitingDecision);
         // getNextMesocycleWeek returns the raw row (snake_case is_deload).
         setNextWeekIsDeload(next?.is_deload === 1);
+        // FB-06: the signal was already loaded here, just never read.
+        setCurrentWeekIsDeload(!!cur?.isDeload && !cur?.awaitingDecision);
       } catch (_e) {
         setNextTrainingWeekId(null);
         setBlockAwaitingDecision(false);
         setNextWeekIsDeload(false);
+        setCurrentWeekIsDeload(false);
       }
 
       // Load the last 5 outputs; skip the first (current week) for the history shelf
@@ -2012,8 +2104,10 @@ export default function CoachOutputScreen({ navigation, route }) {
       setLoadError(true);
       setLoading(false);
     });
+  // PM-01(a): redirectWeekStart is in the dependency list so the one-shot
+  // redirect to the reviewed week re-runs the load against it.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, reloadKey]);
+  }, [user?.id, reloadKey, redirectWeekStart]);
 
   // Ultimate-Audit item 11 (D16, founder ruling 2026-07-10,
   // pass3-v2-founder-decisions.md:166 + NA-coaching-10, pass4-blueprints-
@@ -2224,7 +2318,9 @@ export default function CoachOutputScreen({ navigation, route }) {
     checkinDayName,
     weekStartMs: weekStart,
     coachTone: userProfile?.coachTone ?? 'automatic',
-    experienceLevel: userProfile?.experienceLevel ?? null,
+    // RC-2 (D96, Review C): same dual-key read as the plan-edit
+    // narration above - `experience` is the key the profile actually has.
+    experienceLevel: userProfile?.experienceLevel ?? userProfile?.experience ?? null,
     trainingAgeYears: userProfile?.trainingAgeYears ?? null,
     // T15 (comprehension-trust audit 2026-08-06): the "Show the science"
     // toggle finally reaches the copy it always claimed to change.
@@ -2295,6 +2391,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       canApply={!!nextTrainingWeekId}
       blockFinished={blockAwaitingDecision}
       nextWeekIsDeload={nextWeekIsDeload}
+      currentWeekIsDeload={currentWeekIsDeload}
       // Stage 8 (§3.6): ramp position; the coach clause appears only for
       // an APPLIED delta that actually changed rows (review #6), and the
       // climb claim only from the written weekly totals (review #7).

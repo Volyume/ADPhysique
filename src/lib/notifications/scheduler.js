@@ -160,12 +160,18 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
 // pattern). Re-laid on every launch (restoreNotifications), so it comes back the
 // moment a flag clears.
 
+// C5-P22-03 (D96): this is the weigh-in copy a first-week user reads most
+// often, and it invited an evening reading into a series the app labels and
+// consumes as MORNING weights. Two of the four rotating lines now name the
+// trade-off, so a user who takes the backstop still learns the rule. Copy
+// only: the ED schedule gate, the delivery stand-down, the toggle and the
+// timing are untouched (Campaign 1 notification integrity).
 function eveningCopies(name) {
   return [
     { title: `Evening${name}`, body: 'If you haven\'t caught today\'s weight yet, there\'s still time. No worries either way.' },
-    { title: `Before the day\'s out${name}`, body: 'A gentle nudge to log today\'s weight if you haven\'t already.' },
+    { title: `Before the day\'s out${name}`, body: 'A gentle nudge to log today\'s weight if you haven\'t already. Tomorrow morning is the reading the trend uses best.' },
     { title: `Quick one${name}`, body: 'If you haven\'t weighed in today, there\'s still time whenever it suits you.' },
-    { title: `Evening${name}`, body: 'Still time to pop on the scales today if you fancy it. That\'s all for now.' },
+    { title: `Evening${name}`, body: 'Still time to pop on the scales today if you fancy it, though a morning reading is the one the trend uses best.' },
   ];
 }
 
@@ -261,6 +267,14 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30) {
 // "you haven't logged", no "you're behind", no streak. The body just offers a
 // gentle reminder. Default OFF; added in Notification settings. Quiet hours are
 // respected. Each reminder is { id, label, hour, minute, enabled }.
+//
+// FM-01 (D96): PRO ONLY. The food diary these reminders point at is Pro
+// (DiaryScreen is read-only for every other tier), so a Free user who switched
+// them on was nudged to log breakfast, lunch and dinner every day into a
+// feature they cannot use -- a Pro feature failing silently on their phone,
+// which Phase 31 forbids. The gate lives in scheduleMealReminders itself as
+// well as at the offer (NotificationSettingsScreen), so the launch re-lay in
+// restoreNotifications and any future caller inherit it.
 const NOTIF_ID_MEAL_PREFIX = 'volyume_meal_reminder_';
 
 // Campaign 1 P0-5: the meal-reminder preference key lives HERE (single
@@ -288,6 +302,13 @@ export async function scheduleMealReminders(reminders = []) {
   if (Platform.OS === 'web') return;
   try {
     await cancelMealReminders();
+    // FM-01 (D96): Pro-gated, like schedulePlannedMealConfirm. See the note
+    // above this function for why. Fail closed on an unreadable store.
+    try {
+      // eslint-disable-next-line global-require
+      const store = require('../../store/useAppStore').default;
+      if (store.getState()?.tier !== 'pro') return;
+    } catch (_) { return; }
     // Campaign 1 review BLOCKER 2 (ED-safety): meal-log reminders are
     // weight/food-adjacent and were the ONE such category with no ED-flag
     // gate - largely masked while the launch wipe kept them from firing,
@@ -1099,6 +1120,13 @@ const COACH_READY_COPY = {
  *
  * @param {number} hour    0-23, default 9 (09:00 local)
  * @param {number} minute  0-59, default 0
+ * @param {object} [opts]
+ * @param {number} [opts.weekStart] epoch ms of the week this push is about
+ *   (PM-01(b), D96). The push is laid when a check-in is submitted, so it is
+ *   about THAT week's review; carrying the week in `data` means the tap opens
+ *   the reviewed week instead of the current one, which on a Monday morning
+ *   is a week that has barely started. Omitted (legacy callers) the route
+ *   falls back to its old no-params behaviour.
  *
  * This is laid only when the user submits a check-in
  * (WeeklyCheckInScreen.handleSubmit), so the "your plan is ready" notification
@@ -1109,7 +1137,7 @@ const COACH_READY_COPY = {
  * "building baseline" screen. One-off + re-laid each check-in fixes that.
  * Re-running cancels and re-lays, so it stays idempotent.
  */
-export async function scheduleWeeklyCoachReady(hour = 9, minute = 0) {
+export async function scheduleWeeklyCoachReady(hour = 9, minute = 0, { weekStart = null } = {}) {
   if (Platform.OS === 'web') return;
   try {
     await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_COACH_READY).catch(() => {});
@@ -1126,7 +1154,9 @@ export async function scheduleWeeklyCoachReady(hour = 9, minute = 0) {
       content: {
         title: COACH_READY_COPY.title,
         body: COACH_READY_COPY.body,
-        data: { type: 'weekly_coach_ready' },
+        data: weekStart != null && Number.isFinite(Number(weekStart))
+          ? { type: 'weekly_coach_ready', weekStart: Number(weekStart) }
+          : { type: 'weekly_coach_ready' },
         sound: false,
       },
       trigger: {
@@ -1244,6 +1274,25 @@ export async function restoreNotifications(prefs, userId = null) {
     );
   }
 
+  // RB-2 (D96, Review B): the Monday "coaching ready" push was the ONE
+  // family this restore did not re-lay, so a quiet-hours edit or a DST
+  // reschedule (both call this) silently destroyed it along with its
+  // PM-01(b) weekStart param, which only the NEXT check-in could rebuild.
+  // The check-in submit stamps coachReady.weekStart into the prefs blob;
+  // re-lay only a push a check-in actually laid, and only while its own
+  // Monday (the one after the reviewed week) is still ahead - later, the
+  // schedule call would aim the push at the wrong week. Pro-only, like the
+  // check-in reminder above; not weight- or food-adjacent.
+  if (isPro && prefs?.coachReady?.enabled !== false) {
+    const ws = Number(prefs?.coachReady?.weekStart);
+    const crHour = prefs?.coachReady?.hour ?? 9;
+    const crMinute = prefs?.coachReady?.minute ?? 0;
+    if (Number.isFinite(ws)
+      && Date.now() < ws + 7 * 86400000 + crHour * 3600000 + crMinute * 60000) {
+      await scheduleWeeklyCoachReady(crHour, crMinute, { weekStart: ws });
+    }
+  }
+
   // cancelAllNotifications above wiped the trial-window pushes too. They were
   // previously laid once at startCascade and never restored, so on the next app
   // launch the cascade-gate pushes (legacy ids _19/_21, which fire at trial
@@ -1314,6 +1363,20 @@ export async function restoreNotifications(prefs, userId = null) {
       await scheduleMealReminders(reminders);
     }
   } catch (_) { /* meal-reminder re-lay is best-effort */ }
+
+  // FM-03 (D96): training reminders were wiped by the cancelAllNotifications
+  // above on EVERY launch and never re-laid -- the same historic wipe pattern
+  // that lost the cascade, win-back and meal reminders. They came back only
+  // after the user's NEXT completed workout, i.e. after the session the
+  // missing reminder was meant to prompt. scheduleTrainingReminders
+  // self-guards (preference off, permission absent or no habit-derived
+  // schedule all no-op and cancel), so this re-lay is idempotent and can
+  // never invent a schedule. Tier-blind, like the reminder itself.
+  try {
+    // eslint-disable-next-line global-require
+    const { scheduleTrainingReminders } = require('./trainingReminders');
+    await scheduleTrainingReminders();
+  } catch (_) { /* training-reminder re-lay is best-effort */ }
 }
 
 // ─── Year of Lifts unlock ─────────────────────────────────────────────────────

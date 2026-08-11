@@ -36,7 +36,7 @@ import NowCard from '../components/workout/NowCard';
 import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllCompletedSetsForExercise, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet } from '../lib/database';
+import { getAllCompletedSetsForExercise, getWorkoutById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet } from '../lib/database';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -67,14 +67,27 @@ import {
 } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import { GLOSSARY } from '../lib/coachGlossary';
+import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
-import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets } from '../lib/sessionAdjustments';
+import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets, getSessionWeeklyAllocation } from '../lib/sessionAdjustments';
 import { DEFAULT_BAR_KG } from '../lib/warmupRamp';
 import { warmupRamp } from '../lib/warmupRamp';
 import { shareSessionName } from '../lib/sessionShareData';
 
-const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 2 };
+// FQ-3 (D96): rir defaults to NULL. The per-set RIR picker is permanently
+// removed (D14/D19), so no set carries a genuine per-set effort rating, and
+// the old `rir: 2` default stamped a fabricated one onto every logged set -
+// which defeated the engine's own novice-overload guard. Per-set effort is
+// unknown unless genuinely known; the progression engine now reads the
+// SESSION-level difficulty rating instead (computeSetTargets'
+// prevSessionDifficulty).
+const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: null };
+
+// C5-P15-01 (D96): a warm-up is not a record attempt, and must not be one
+// either side of a comparison. Tolerates both the camelCase session shape
+// and the snake_case rows getAllCompletedSetsForExercise returns.
+const isWorkingSetRow = (s) => (s?.setType ?? s?.set_type ?? 'straight') !== 'warmup';
 
 // Founder fix (2026-07-10): "the next exercise button ... doesn't always
 // happen, it goes on and adds more and more sets". Root cause: targetSets
@@ -103,6 +116,14 @@ const DEFAULT_FREEFORM_TARGET_SETS = 3;
 // same '@volyume_seen_*' once-ever convention as '@volyume_seen_workout_info'
 // just below and DiaryScreen's hints.
 const UNILATERAL_WALKTHROUGH_SEEN_KEY = '@volyume_seen_unilateral_walkthrough';
+
+// RC-3 (D96, Review C): the superset walkthrough joins the same once-ever
+// convention. It was gated on a per-mount ref only, so the four-step lesson
+// fired up to twice per session, for ever - and assignSupersets excludes
+// beginners, so its only audience was experienced lifters. First exposure
+// keeps the full sheet; afterwards the StatusStrip's superset chip carries
+// the announcement.
+const SUPERSET_WALKTHROUGH_SEEN_KEY = '@volyume_seen_superset_walkthrough';
 
 // B8: keep-awake tag so this screen's activate/deactivate can never release
 // a keep-awake hold some other surface owns. Per-INSTANCE suffix because the
@@ -245,6 +266,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const live = buildLiveStyles(t);
 
   const [currentSet, setCurrentSet] = useState({ ...DEFAULT_SET });
+  // C5-P13-02 (D96): the weight/reps the entry was last SEEDED with, so
+  // "is there unsaved work in here" can compare against the values the app
+  // itself put there rather than against the module default. Written at
+  // every programmatic seed below; never written when the user types, taps
+  // a suggestion chip, or a saved draft is restored.
+  const seededEntryRef = useRef({ weight: DEFAULT_SET.weight, reps: DEFAULT_SET.reps });
   const [prevSets, setPrevSets] = useState([]);
   const [allTimeSets, setAllTimeSets] = useState([]);
   const [loggedSets, setLoggedSets] = useState([]);
@@ -297,6 +324,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // show it once per pair so the user can grab both stations before
   // starting. Set, not array, for O(1) membership checks.
   const acknowledgedSupersetsRef = useRef(new Set());
+  const supersetWalkthroughSeenRef = useRef(false);
   const [supersetHeadsUp, setSupersetHeadsUp] = useState(null);
   // shape: { groupId, memberNames: string[] } | null (2+ members: pair or giant set)
   const [saving, setSaving] = useState(false);
@@ -373,12 +401,35 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // isDeloadWeek alone would claim a live "Recovery week" for ever. The
   // targets legitimately hold at that row's volume; only the copy changes.
   const [blockFinished, setBlockFinished] = useState(false);
+  // C5-P13-01 (D96): the block week's reps-in-reserve target. The product
+  // published its effort instruction on the HOME chip and in a Home sheet,
+  // and then said nothing at all in the one place a set is actually
+  // performed, so a novice had to have opened a sheet two screens away,
+  // translated it, and carried it into a session that never mentions it
+  // again. This is that same number, on the session header, in the same
+  // words Home uses. One line, no tutorial, no new control.
+  const [weekRirTarget, setWeekRirTarget] = useState(null);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   // B2 (Wave-3 review): the session-wide dismissal of the readiness tweak
   // lives ON the active workout (store action dismissReadinessTweak) so it
   // survives screen remounts and the WK-1 crash restore, the a11y copy
   // promises "Applies to the whole session" and now means it.
   const readinessDismissed = !!activeWorkout?.readinessDismissed;
+  // FQ-4 (D96): exerciseId -> this week's allocated working-set base, from
+  // the persisted planned_muscle_volume rows. Null until resolved (or when
+  // the session has no mesocycle week / no rows), in which case every
+  // consumer falls back to the routine's static counts.
+  const [weeklyAllocation, setWeeklyAllocation] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    getSessionWeeklyAllocation({ workout: activeWorkout, exercises: workoutExercises })
+      .then(({ allocation }) => { if (!cancelled) setWeeklyAllocation(allocation); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  // The allocation depends only on the workout's week and the exercise list
+  // identity, both fixed for the life of a session.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeWorkout?.id]);
   // Ghost pre-fill bookkeeping. The value itself is no longer rendered (the
   // ghost chip went in COMP-001; the muted input colour carries the state),
   // but the setter still arms/clears the pre-fill in loadHistory/onChange.
@@ -494,9 +545,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const sessionAdjustment = (tier === 'pro' && exercise?.id)
     ? (sessionAdjustments || []).find(a => a.exerciseId === exercise.id && !a.reverted) ?? null
     : null;
+  // FQ-4 (D96): the session's working-set BASE is the week's persisted
+  // volume allocation (the routine's static count scaled to this week's
+  // planned_muscle_volume for the muscle) - the wire that makes an applied
+  // coach change, the weekly ramp and the recovery week's per-muscle
+  // reductions actually reach the next session. Null allocation (no
+  // mesocycle, no rows, read failure) falls back to the routine's static
+  // count, byte-identical to the pre-wiring behaviour. A session adjustment
+  // (±1) already composes with the allocated base upstream
+  // (sessionAdjustments feeds the allocator's output in as plannedSets).
   const comp015SetCount = (sessionAdjustment && sessionAdjustment.setDelta !== 0)
     ? sessionAdjustment.adjustedSets
-    : routineExercise?.recommendedSets;
+    : (weeklyAllocation?.[exercise?.id] ?? routineExercise?.recommendedSets);
 
   // B2: readiness-informed, downward-only tweak from the intent-sheet answer.
   // Pure rule table (lib/sessionAdjustments.js); a presented suggestion applied
@@ -515,7 +575,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // so the combined surface can only ever move DOWN from the plan (a COMP-015
   // add is superseded on a below-par day; two drops never double-count).
   const readinessSetCount = readinessReduces
-    ? applyReadinessToSets(routineExercise?.recommendedSets, readinessTweak)
+    // FQ-4: the readiness trim starts from the same allocated base as every
+    // other session surface, so the two layers compose on one number.
+    ? applyReadinessToSets(weeklyAllocation?.[exercise?.id] ?? routineExercise?.recommendedSets, readinessTweak)
     : null;
   const adjustedSetCount = (Number.isFinite(readinessSetCount) && Number.isFinite(comp015SetCount))
     ? Math.min(comp015SetCount, readinessSetCount)
@@ -785,10 +847,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setPrevSets([]);
     setAllTimeSets([]);
     setLoggedSets([]);
+    // C5-P14-02 (D96): a swapped-in exercise is a zero-history first-ever
+    // set (handleConfirmSwap deliberately clears prevSets/allTimeSets and
+    // nulls startingWeight), so it seeds from the same end of the band as the
+    // zero-history branch in the exercise loader. seededEntryRef follows.
     setCurrentSet({
       ...DEFAULT_SET,
-      reps: newRepMax || DEFAULT_SET.reps,
+      reps: newRepMin || DEFAULT_SET.reps,
     });
+    seededEntryRef.current = { weight: DEFAULT_SET.weight, reps: newRepMin || DEFAULT_SET.reps };
     setGhostSet(null);
     setCluster(null);
     setClusterReps('');
@@ -828,12 +895,31 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // not-yet-logged set, a cluster mid-way through its mini-sets, or an
   // unsaved note. Shared by handleCancelWorkout (widens its confirm gate)
   // and handleFinishWorkout (names the set in its existing confirm copy).
+  //
+  // C5-P13-02 (D96): this compared against the MODULE CONSTANT, so it was
+  // true in almost every ordinary state with no user input at all. A
+  // zero-history exercise seeds reps from recommendedRepsMax (the seeded
+  // plans use 10, 12, 25, 30), so `reps !== DEFAULT_SET.reps` was true
+  // before anything was typed; and the carry-forward after any logged set
+  // puts a number in `weight`, so `weight !== ''` was true for the rest of
+  // the session. Consequences: a first-time user who opened a session and
+  // touched nothing got the "Discard workout?" modal, and a user who
+  // finished a complete session was told "You also have an unlogged set
+  // for X that will be lost" about the carried-forward copy of the set
+  // they had just saved. The comparison is now against the entry's own
+  // resolved baseline (seededEntryRef, written at every programmatic seed:
+  // plan/history prefill, ghost, carry-forward, deload prescription), so
+  // "unchanged since seeding" is not in progress. A restored draft is
+  // deliberately NOT a seed -- that IS unsaved user work. The cluster,
+  // perSide and noteText clauses are unchanged.
   function hasInProgressSetEntry() {
+    const seed = seededEntryRef.current;
+    const sameWeight = String(currentSet.weight ?? '') === String(seed?.weight ?? '');
+    const sameReps = currentSet.reps === seed?.reps;
     return !!cluster
       || !!perSide
-      || (currentSet.weight !== '' && currentSet.weight != null)
-      || currentSet.reps !== DEFAULT_SET.reps
-      || noteText.trim().length > 0;
+      || noteText.trim().length > 0
+      || !(sameWeight && sameReps);
   }
 
   function handleCancelWorkout() {
@@ -876,11 +962,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       loadUnilateralExercises(),
       loadUnilateralAsked(),
       AsyncStorage.getItem(UNILATERAL_WALKTHROUGH_SEEN_KEY).catch(() => null),
-    ]).then(([on, asked, seen]) => {
+      AsyncStorage.getItem(SUPERSET_WALKTHROUGH_SEEN_KEY).catch(() => null),
+    ]).then(([on, asked, seen, supersetSeen]) => {
       if (!active) return;
       setUnilateralExercises(on);
       setUnilateralAsked(asked);
       unilateralWalkthroughSeenRef.current = seen === 'true';
+      supersetWalkthroughSeenRef.current = supersetSeen === 'true';
       setUnilateralPrefsLoaded(true);
     }).catch(() => { if (active) setUnilateralPrefsLoaded(true); });
     return () => { active = false; };
@@ -915,13 +1003,41 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // group id per workout, dismissing acknowledges; unlinking removes the
   // whole group; swap opens the swap UI for the current exercise. Works for a
   // pair (two members) or a giant set (3+).
+  // C5-P37-02 (D96): the two auto-firing instructional sheets on this screen
+  // (this one and the unilateral walkthrough below) keyed off the same
+  // exercise with no mutual guard, so an exercise that satisfied both
+  // conditions opened both at once and the later-declared one covered the
+  // other. Generated plans really do pair unilateral accessories into
+  // supersets (planEngine assignSupersets excludes beginners only), so the
+  // first session of an intermediate or advanced user was the exposed case.
+  // The refs below are set synchronously beside each setState so the guard
+  // holds within the SAME commit, where the state has not landed yet;
+  // whichever sheet is relevant first wins and the other defers to its next
+  // natural moment (the effects re-run when the open sheet closes, because
+  // the other's state is in their dependency lists). Both sheets, both copy
+  // blocks and both one-time persistence rules are untouched.
+  const supersetSheetOpenRef = useRef(false);
+  const unilateralSheetOpenRef = useRef(false);
+  useEffect(() => {
+    if (!supersetHeadsUp) supersetSheetOpenRef.current = false;
+    if (!unilateralSuggest) unilateralSheetOpenRef.current = false;
+  }, [supersetHeadsUp, unilateralSuggest]);
+
   useEffect(() => {
     if (currentSGI == null) return;
+    // RC-3: once the walkthrough has ever been seen, the chip is enough.
+    if (supersetWalkthroughSeenRef.current) return;
     if (acknowledgedSupersetsRef.current.has(currentSGI)) return;
     if (!pairedExerciseName) return; // safety
+    if (unilateralSheetOpenRef.current) return; // C5-P37-02: defer, do not stack
     // Tag as acknowledged immediately so navigating away+back doesn't re-fire
     // before the user dismisses.
     acknowledgedSupersetsRef.current.add(currentSGI);
+    // RC-3: persist at fire time (the modal owns the screen from here), so
+    // the lesson shows exactly once across the account's whole life.
+    supersetWalkthroughSeenRef.current = true;
+    AsyncStorage.setItem(SUPERSET_WALKTHROUGH_SEEN_KEY, 'true').catch(() => {});
+    supersetSheetOpenRef.current = true;
     setSupersetHeadsUp({
       groupId: currentSGI,
       // Every member in session order (a pair is just two; a giant set 3+).
@@ -930,8 +1046,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     hapticsVocab.selection();
     // groupMemberNames is derived from currentSGI + workoutExercises and only
     // read once, behind the acknowledged-ref gate, so it needn't re-trigger.
+    // unilateralSuggest is in the list so a deferred heads-up re-fires the
+    // moment the unilateral sheet closes (C5-P37-02).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentSGI, pairedExerciseName, exercise?.name]);
+  }, [currentSGI, pairedExerciseName, exercise?.name, unilateralSuggest]);
 
   // D9: metadata-flagged unilateral exercises (exercise.laterality, finally
   // read here - exerciseMetadata.js's deriveLaterality was computed and
@@ -952,6 +1070,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (exercise.laterality !== 'unilateral') return;
     if (unilateralAsked.has(exercise.id)) return;
     if (acknowledgedUnilateralRef.current.has(exercise.id)) return;
+    if (supersetSheetOpenRef.current) return; // C5-P37-02: defer, do not stack
     acknowledgedUnilateralRef.current.add(exercise.id);
     hapticsVocab.selection();
     if (unilateralWalkthroughSeenRef.current) {
@@ -964,10 +1083,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         ],
       );
     } else {
+      unilateralSheetOpenRef.current = true;
       setUnilateralSuggest({ exerciseId: exercise.id, exerciseName: exercise.name });
     }
+  // supersetHeadsUp is in the list so a deferred walkthrough fires the moment
+  // the superset sheet closes (C5-P37-02).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked]);
+  }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp]);
 
   // First-use info tip: pulse the Info button until tapped. The pulse itself
   // is suppressed under Reduce Motion (the static badge still shows so the
@@ -1158,6 +1280,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setPrevSets([]);
     setAllTimeSets([]);
     setCurrentSet({ ...DEFAULT_SET });
+    seededEntryRef.current = { weight: DEFAULT_SET.weight, reps: DEFAULT_SET.reps };
     setGhostSet(null);
     setNoteText('');
     // An unfinished cluster belongs to the exercise it was started on;
@@ -1185,6 +1308,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const prevPrev = lastN[1] || [];
       setPrevSets(prev);
       setAllTimeSets(allTime);
+      // FQ-3 (D96): the previous session's post-workout difficulty rating is
+      // the session-level effort evidence the progression engine consults at
+      // the top of the rep band. Null when the user skipped the rating (the
+      // engine then holds conservatively) - and thanks to C5-P17-01, a
+      // skipped rating IS stored as null, never as a fabricated 'moderate'.
+      let prevSessionDifficulty = null;
+      const prevWorkoutId = prev[0]?.workoutId ?? prev[0]?.workout_id ?? null;
+      if (prevWorkoutId) {
+        const prevWorkout = await getWorkoutById(prevWorkoutId).catch(() => null);
+        if (cancelled) return;
+        const rawSd = Number(prevWorkout?.sessionDifficulty ?? prevWorkout?.session_difficulty);
+        prevSessionDifficulty = Number.isFinite(rawSd) && rawSd >= 1 ? rawSd : null;
+      }
 
       // Ghost pre-fill: use the matching set index from last session
       const allLoggedAtLoad = workoutExercises[currentExerciseIndex]?.sets || [];
@@ -1219,6 +1355,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           incrementKg: exercise?.incrementKg || exercise?.increment_kg || null,
           prevPrevSets: prevPrev,
           layoffMultiplier,
+          prevSessionDifficulty,
         },
       );
       setSetTargets(computed);
@@ -1232,17 +1369,30 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const currentWorkingCount = allLoggedForExercise.filter(s => s.setType !== 'warmup').length;
       const lastActual = getBestAnchorSet(prev, currentWorkingCount) || prev[prev.length - 1] || null;
       if (lastActual && (lastActual.weight ?? 0) > 0) {
-        setCurrentSet({
-          ...DEFAULT_SET,
+        const seeded = {
           weight: lastActual.weight,
           reps: lastActual.actualReps ?? lastActual.actual_reps ?? DEFAULT_SET.reps,
-        });
+        };
+        setCurrentSet({ ...DEFAULT_SET, ...seeded });
+        seededEntryRef.current = seeded;
       } else {
-        setCurrentSet({
-          ...DEFAULT_SET,
+        // C5-P14-02 (D96): the zero-history seed used the TOP of the rep
+        // band, so on an 8-12 plan the card said "8-12 reps", the prefill row
+        // said "First time - Target 8-12 reps", and the stepper sat on 12. A
+        // novice reads a prefilled number as an instruction, so the app was
+        // simultaneously saying "we do not know your strength" (blank weight)
+        // and pre-selecting the hardest end of the range. The bottom of the
+        // band is the honest starting point, and matches the seed the
+        // warm-up auto-switch below already uses. Nothing else moves: the
+        // history-anchored branch and the carry-forward are untouched, and
+        // seededEntryRef follows this seed so C5-P13-02's "unlogged set"
+        // baseline stays exact.
+        const seeded = {
           weight: routineExercise?.startingWeight ?? '',
-          reps: routineExercise?.recommendedRepsMax || DEFAULT_SET.reps,
-        });
+          reps: routineExercise?.recommendedRepsMin || DEFAULT_SET.reps,
+        };
+        setCurrentSet({ ...DEFAULT_SET, ...seeded });
+        seededEntryRef.current = seeded;
       }
 
       // Ghost pre-fill: if the computed weight is 0 or empty, apply ghost values
@@ -1250,13 +1400,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         setCurrentSet(cs => {
           const w = parseFloat(cs.weight) || 0;
           if (w === 0) {
-            return {
+            const next = {
               ...cs,
               weight: ghostCandidate.weight,
               reps: ghostCandidate.actualReps ?? ghostCandidate.actual_reps ?? cs.reps,
               rir: ghostCandidate.rir ?? cs.rir,
               isGhost: true,
             };
+            // C5-P13-02: a ghost is the app's own suggestion, not typed
+            // work; losing it loses nothing.
+            seededEntryRef.current = { weight: next.weight, reps: next.reps };
+            return next;
           }
           return cs;
         });
@@ -1276,6 +1430,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         if (currentWeek) {
           setIsDeloadWeek(!!currentWeek.isDeload);
           setBlockFinished(!!currentWeek.awaitingDecision);
+          // C5-P13-01: the block's own effort target, for the session header
+          // line below. Read from the same row Home's readiness chip reads.
+          setWeekRirTarget(currentWeek.rirTarget ?? null);
 
           // If this is a deload week, generate deload prescription from week-1 sets
           if (currentWeek.isDeload && currentWeek.mesocycleId && exercise?.id) {
@@ -1291,6 +1448,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   reps: firstDeload.reps,
                   rir: firstDeload.rir,
                 }));
+                // C5-P13-02: the deload prescription is a seed too.
+                seededEntryRef.current = { weight: firstDeload.weight, reps: firstDeload.reps };
                 // Store deload targets in setTargets shape so the inline chip renders them
                 setSetTargets(deloadTargets.map(t => ({
                   weight: t.weight,
@@ -1461,16 +1620,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const newLoggedSets = [...loggedSets, setData];
       setLoggedSets(newLoggedSets);
       addSetToCurrentExercise(setData);
-      // The first-time hint has done its job the moment a set lands. Persist
-      // the same seen-flag the overflow tap writes, so the hint (and the info
-      // pulse) never come back on later sessions or new exercises. The
-      // overflow menu itself stays put, so form guidance remains one tap away.
-      if (showInfoTipPulse) {
-        infoPulseLoop.current?.stop();
-        infoPulseAnim.setValue(1);
-        setShowInfoTipPulse(false);
-        AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
-      }
+      // C5-P13-03 (D96): logging a set used to extinguish the info pulse and
+      // write the once-ever seen flag, whether or not the user had ever
+      // opened the menu behind it. So the ONE cue pointing at the only place
+      // "set", "rep", "working set" and "warm-up" are defined was destroyed
+      // by the very action it exists to explain, and never returned on any
+      // exercise in any later session. The cue is now retired only by an
+      // actual overflow open (the tap handler already does exactly that), so
+      // it survives until it has been used once. Nothing is added to the set
+      // card, and the flag stays once-ever after that first open.
       audit('workout.set.logged', {
         exerciseId: exercise.id,
         setType: setData.setType,
@@ -1500,23 +1658,49 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // PR Detection, check BEFORE adding current set to the session ref so it
       // can never match itself.  sessionSetsRef is a plain ref so it's never stale
       // the way React state can be between renders.
+      //
+      // C5-P15-01 (D96): WORKING sets only, both sides of the comparison.
+      // The honest-first-lift guard below keys on prHistory being empty, and
+      // warm-ups used to enter that history from both sources (the session
+      // ref appended unconditionally, and getAllCompletedSetsForExercise has
+      // no set_type filter). So a user who logged a 20kg warm-up spent the
+      // quiet "logged as your starting point" acknowledgement on it, and
+      // their first working set ever was then celebrated with the full gold
+      // "New estimated max lift" for beating their own warm-up, and reached
+      // the summary as "1 new PR". A warm-up is by definition not a record
+      // attempt (buildRecordLine already returns null for one). detectPR's
+      // maths and Campaign 2's PR definition are untouched: this changes
+      // only which sets are eligible to be, or to be beaten by, a record.
       const prHistory = [
-        ...allTimeSets,
-        ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id),
+        ...allTimeSets.filter(isWorkingSetRow),
+        ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && isWorkingSetRow(s)),
       ];
       sessionSetsRef.current = [...sessionSetsRef.current, setData];
+      // FQ-7 (D96, founder ruling 2026-08-10): the first qualifying exposure
+      // to an exercise establishes the BASELINE, per exercise; records begin
+      // from the next comparable exposure. Without this, set 2 beating set 1
+      // inside the very first session was celebrated as a full personal
+      // record - a record against a baseline minutes old. Prior exposure
+      // means completed WORKING sets from a previous session (allTimeSets
+      // excludes this workout by id, and a swapped-in exercise loads its own
+      // history, so substitution can never inherit an unrelated baseline).
+      // The rule holds for a veteran account meeting a brand-new exercise.
+      // detectPR's maths and the three record types are untouched.
+      const hadPriorExposure = allTimeSets.some(isWorkingSetRow);
       // PR detection runs ONLY for weight-based schemas. duration/distance
       // reuse the weight field for time/distance, so running the weight x reps
       // 1RM/heaviest detector over them would report meaningless "PRs".
-      const prs = isWeightReps ? detectPR(setData, prHistory, exercise, units) : [];
-      if (prs.length > 0 && prHistory.length === 0) {
-        // Wave A A1: the first-ever set of an exercise beats nothing,
-        // detectPR compares against empty history, so "PERSONAL RECORD"
-        // would be a false claim in the very session that builds trust.
-        // Acknowledge the first honestly and quietly instead (PRCelebration
-        // renders its calm first-lift toast), and it never joins the
-        // session's PR list. detectPR itself is untouched: this set still
-        // becomes the baseline every later comparison uses.
+      // A warm-up never runs it at all (C5-P15-01).
+      const prs = isWeightReps && !isWarmupSet && hadPriorExposure
+        ? detectPR(setData, prHistory, exercise, units) : [];
+      if (isWeightReps && !isWarmupSet && !hadPriorExposure && prHistory.length === 0) {
+        // Wave A A1 (re-keyed under FQ-7): the first working set of a first
+        // exposure beats nothing, so "PERSONAL RECORD" would be a false
+        // claim in the very session that builds trust. Acknowledge it
+        // honestly and quietly instead (PRCelebration renders its calm
+        // first-lift toast), and it never joins the session's PR list.
+        // Later sets of this same first exposure are silent baseline
+        // material - records begin from the next comparable exposure.
         showPRCelebration({
           type: 'first_lift',
           weight: setData.weight,
@@ -1546,6 +1730,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // target. The target chip still shows the progression suggestion.
       if (currentSet.setType !== 'warmup') {
         setCurrentSet(cs => ({ ...cs, weight: setData.weight, reps: setData.actualReps }));
+        // C5-P13-02: the carry-forward is the app seeding the next set, not
+        // unsaved work. This is the state that made the finish confirm
+        // claim an unlogged set for the whole rest of every session.
+        seededEntryRef.current = { weight: setData.weight, reps: setData.actualReps };
       }
 
       // Update last activity timestamp
@@ -1655,12 +1843,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             weight: firstTarget.weight,
             reps: prefillReps,
           }));
+          // C5-P13-02: the auto-switch to the first working set is a seed.
+          seededEntryRef.current = { weight: firstTarget.weight, reps: prefillReps };
         } else {
-          setCurrentSet(cs => ({
-            ...cs,
-            setType: 'straight',
-            reps: routineExercise?.recommendedRepsMin || 8,
-          }));
+          setCurrentSet(cs => {
+            const next = { ...cs, setType: 'straight', reps: routineExercise?.recommendedRepsMin || 8 };
+            // Idempotent: the entry is being seeded for the first working
+            // set, carrying whatever weight the warm-up left in it.
+            seededEntryRef.current = { weight: next.weight, reps: next.reps };
+            return next;
+          });
         }
       }
     } catch (e) {
@@ -1773,11 +1965,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         s.id === editingSet.id ? { ...s, weight, actualReps } : s
       ));
       if (validation.isWeightReps) {
+        // C5-P15-01 (D96): the same working-sets-only history as the
+        // log-time detection, so an edited set can never be celebrated for
+        // beating a warm-up either.
         const editPrHistory = [
-          ...allTimeSets,
-          ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && s.id !== editingSet.id),
+          ...allTimeSets.filter(isWorkingSetRow),
+          ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && s.id !== editingSet.id && isWorkingSetRow(s)),
         ];
-        const editedPrs = detectPR({ weight, actualReps }, editPrHistory, exercise, units);
+        // FQ-7 (D96): the same per-exercise baseline rule as the log path -
+        // no record inside a first exposure, edited or not.
+        const editHadPriorExposure = allTimeSets.some(isWorkingSetRow);
+        const editedPrs = editHadPriorExposure
+          ? detectPR({ weight, actualReps }, editPrHistory, exercise, units) : [];
         if (editedPrs.length > 0 && editPrHistory.length > 0) {
           showPRCelebration({ ...editedPrs[0], exerciseName: exercise.name });
         }
@@ -2442,7 +2641,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const recordLine = useMemo(() => buildRecordLine({
     weight: currentSet.weight,
     reps: currentSet.reps,
-    historySets: [...allTimeSets, ...loggedSets],
+    // C5-P15-01 (D96): the D87 agreement contract requires this history to
+    // be the SAME shape handleCompleteSet assembles as prHistory, so the
+    // line can never promise a record the log then withholds. Both now
+    // exclude warm-ups.
+    historySets: [...allTimeSets, ...loggedSets].filter(isWorkingSetRow),
     units,
     isWarmup: currentSet.setType === 'warmup',
     exerciseType: activeExerciseType,
@@ -2527,7 +2730,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   fires the same setShowExecution(true) handler the removed
                   overflow row used. */}
               <TouchableOpacity
-                onPress={() => setShowExecution(true)}
+                onPress={() => {
+                  // RC-9 (D96, Review C): anyone opening exercise info is
+                  // not looking for "what is a set", so this tap retires
+                  // the novice Help pulse too - it otherwise animated on
+                  // every exercise of every session until the overflow
+                  // itself was opened. Novice path untouched.
+                  if (showInfoTipPulse) {
+                    infoPulseLoop.current?.stop();
+                    infoPulseAnim.setValue(1);
+                    setShowInfoTipPulse(false);
+                    AsyncStorage.setItem('@volyume_seen_workout_info', 'true').catch(() => {});
+                  }
+                  setShowExecution(true);
+                }}
                 accessibilityRole="button"
                 accessibilityLabel="Exercise info"
                 style={styles.exerciseNameTap}
@@ -2536,7 +2752,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.overflowBtn, live.overflowBtn]}
+                style={[styles.overflowBtn, live.overflowBtn, showInfoTipPulse && styles.overflowBtnHinted]}
                 onPress={() => {
                   if (showInfoTipPulse) {
                     infoPulseLoop.current?.stop();
@@ -2549,9 +2765,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityRole="button"
-                accessibilityLabel="Exercise options"
+                // C5-P13-03 (D96): while the first-use cue is live the button
+                // also says what is behind it. A bare pulsing "..." labelled
+                // "Exercise options" gave a novice no reason to think it held
+                // the only definitions of "set" and "rep" in the product. One
+                // short word, one time; it goes with the pulse the first time
+                // the sheet is opened.
+                accessibilityLabel={showInfoTipPulse ? 'Exercise options, including how logging works' : 'Exercise options'}
               >
-                <Animated.View style={showInfoTipPulse ? { transform: [{ scale: infoPulseAnim }] } : null}>
+                <Animated.View style={[styles.overflowGlyphRow, showInfoTipPulse ? { transform: [{ scale: infoPulseAnim }] } : null]}>
+                  {showInfoTipPulse ? (
+                    <Text style={[styles.overflowHintLabel, live.overflowHintLabel]}>Help</Text>
+                  ) : null}
                   <Ionicons name="ellipsis-horizontal" size={20} color={t.colors.textSecondary} />
                 </Animated.View>
               </TouchableOpacity>
@@ -2559,6 +2784,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             {/* Muscle line deleted (COMP-001): primary muscle and equipment
                 already show in the exercise info sheet. Superset chip moved
                 into the collapsed "N notes" rail (U-A-1). */}
+            {/* C5-P13-01 (D96): the session's effort target, in the exact
+                wording Home's readiness chip already publishes, with the
+                existing GLOSSARY.rir gloss one tap away for the novice who
+                does not know what "short of failure" means. Suppressed in a
+                recovery week, where the Recovery banner above already says
+                the week is deliberately easy. Derived from the block row, so
+                it can never state an effort the block does not prescribe. */}
+            {weekRirTarget != null && !isDeloadWeek ? (
+              <View style={styles.effortLineRow}>
+                <Text style={[styles.effortLineText, live.effortLineText]}>
+                  {`This week: stop ${weekRirTarget} short of failure`}
+                </Text>
+                <InfoTooltip text={GLOSSARY.rir} size={13} />
+              </View>
+            ) : null}
           </View>
 
           {/* D43 S2: the "N notes" accordion is retired. Content-labelled
@@ -2681,7 +2921,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                       accessibilityRole="button"
                       accessibilityLabel="Dismiss recovery week banner"
                     >
-                      <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Skip</Text>
+                      {/* FB-05 (D96): "Skip" on the one banner telling the
+                          user this week is deliberately lighter reads as
+                          "skip the recovery week". Every sibling in this
+                          strip already says "Got it"; behaviour unchanged
+                          (it still just dismisses the banner). */}
+                      <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Got it</Text>
                     </TouchableOpacity>
                   </View>
                 ),
@@ -3383,16 +3628,51 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 const working = (entryIsWorking && Number.isFinite(entryWeight) && entryWeight > 0)
                   ? entryWeight
                   : rampAnchorRef.current;
+                const isBarbellLift = BARBELL_EQUIPMENT.test(exercise?.equipment || '');
+                const barKg = barWeight || DEFAULT_BAR_KG;
                 if (!Number.isFinite(working) || working <= 0) {
+                  // C5-P13-04 (D96): this branch used to be a dead end -
+                  // "Enter your working weight first, then come back" - aimed
+                  // squarely at the one user who most needs a warm-up: the
+                  // first-timer, whose weight IS blank, on the zero-history
+                  // path. B8 stands (warm-ups are still never suggested
+                  // automatically, and nothing auto-appears); this is the
+                  // pulled sheet answering honestly instead of refusing. For
+                  // a barbell lift the empty bar is a warm-up that needs no
+                  // working weight, and it is the same first row warmupRamp
+                  // itself produces, so nothing new is invented.
                   return (
-                    <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
-                      Enter your working weight first, then come back for warm-up sets.
-                    </Text>
+                    <>
+                      <Text style={[styles.sheetExplainer, live.sheetExplainer]}>
+                        {isBarbellLift
+                          ? `No working weight yet. Start with the empty bar, then set your working weight and come back for the rest of the ramp. Warm-ups are saved but not counted in your working-set target.`
+                          : `Set your working weight on the set card and your warm-up sets appear here. Warm-ups are saved but not counted in your working-set target.`}
+                      </Text>
+                      {isBarbellLift ? (
+                        <TouchableOpacity
+                          style={[styles.sheetOption, live.sheetOption]}
+                          onPress={() => {
+                            hapticsVocab.selection();
+                            setGhostSet(null);
+                            setCurrentSet(s => ({ ...s, weight: barKg, reps: 10, setType: 'warmup', isGhost: false }));
+                            setShowWarmupRamp(false);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`Empty bar, ${barKg} ${units}, 10 reps. Load as a warm-up set.`}
+                        >
+                          <View style={styles.overflowOptionRow}>
+                            <Ionicons name="flame-outline" size={16} color={t.colors.warning} />
+                            <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{`${barKg} ${units} x 10`}</Text>
+                          </View>
+                          <Text style={[styles.rampBarTag, live.rampBarTag]}>Empty bar</Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </>
                   );
                 }
                 const rows = warmupRamp(working, {
-                  isBarbell: BARBELL_EQUIPMENT.test(exercise?.equipment || ''),
-                  barKg: barWeight || DEFAULT_BAR_KG,
+                  isBarbell: isBarbellLift,
+                  barKg,
                 });
                 if (rows.length === 0) {
                   return (
@@ -4026,6 +4306,10 @@ const styles = StyleSheet.create({
   // notesExpanded) is retired -- StatusStrip (src/components/workout/
   // StatusStrip.js) owns the equivalent chip-row styling now.
   exerciseHeader: { gap: spacing.xs },
+  // C5-P13-01: the session effort line, quiet caption weight so it orients
+  // without competing with the exercise title above it.
+  effortLineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  effortLineText: { ...type.caption, color: colors.textSecondary },
   // R2-4 (2026-07-11): a consistent row height (the options button's own
   // 44dp) with centre alignment so the exercise title and the "..." options
   // button share one row and align on their centres at any title length.
@@ -4261,6 +4545,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  // C5-P13-03: the one-time hinted state. The button widens to fit the
+  // label rather than cropping it inside the fixed square, and returns to
+  // the plain square the moment the cue retires.
+  overflowBtnHinted: { width: 'auto', paddingHorizontal: spacing.sm },
+  overflowGlyphRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  overflowHintLabel: { ...type.captionStrong, color: colors.textSecondary },
   overflowOptionRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   supersetChip: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -4473,6 +4763,7 @@ function buildLiveStyles(t) {
     navTabBadge: { backgroundColor: t.colors.primaryFill },
     navTabBadgeText: { ...t.type.caption, color: t.colors.onPrimary, fontSize: t.fontSize.micro },
     exerciseName: { ...t.type.title, color: t.colors.textPrimary },
+    effortLineText: { ...t.type.caption, color: t.colors.textSecondary },
     swapSafe: { backgroundColor: t.colors.background },
     swapHeader: { borderBottomColor: t.colors.borderSubtle },
     swapTitle: { ...t.type.title, color: t.colors.textPrimary },
@@ -4523,6 +4814,7 @@ function buildLiveStyles(t) {
     clusterCancel: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     clusterCancelText: { ...t.type.label, color: t.colors.textPrimary },
     overflowBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    overflowHintLabel: { ...t.type.captionStrong, color: t.colors.textSecondary },
     // R2-3: contained note-corner button chrome, live-mirrored.
     noteCornerBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     supersetChip: { backgroundColor: t.colors.primaryBg },

@@ -223,11 +223,21 @@ describe('buildBlockCards', () => {
     expect(climb.caption).toMatch(/climb is the block working/);
   });
 
-  test('deload-ending (negative delta) reads rest-positive', () => {
+  // Re-anchored under FB-17 (D96): the figure this slide renders is no
+  // longer first week vs the RECOVERY week. `end_date` is start +
+  // plannedWeeks, so the old comparison window always was the deliberately
+  // halved deload -- the climb branch was effectively unreachable and a
+  // user who added weight every week met a gold trending-up card reading a
+  // large negative. The comparison now runs first week vs last BUILD week,
+  // so a negative here is a genuine drop in training volume and must not be
+  // explained away as "the plan working". The pinned RULE -- a negative
+  // delta reads calmly, never as failure -- is unchanged.
+  test('a negative delta reads calmly, never as a failure', () => {
     const cards = buildBlockCards({ ...block, tonnageDelta: -12 }, 'kg');
     const climb = find(cards, c => c.unit === 'weekly total lifted');
     expect(climb.value).toBe('-12%');
-    expect(climb.caption).toMatch(/plan working/);
+    expect(climb.caption).toMatch(/lighter than your first/);
+    expect(climb.caption).not.toMatch(/failed|behind|worse/i);
   });
 
   test('null tonnageDelta drops the climb slide', () => {

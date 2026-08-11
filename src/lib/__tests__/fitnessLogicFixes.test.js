@@ -23,8 +23,8 @@ import {
 describe('computeSetTargets jump cap (P4)', () => {
   test('a 5 kg set at the top of the range adds a small step, not the full increment', () => {
     const { targets } = computeSetTargets(
-      [{ weight: 5, actualReps: 12, rir: 2 }],
-      8, 12, 'kg', { exerciseCategory: 'isolation' },
+      [{ weight: 5, actualReps: 12 }],
+      8, 12, 'kg', { exerciseCategory: 'isolation', prevSessionDifficulty: 2 }, // FQ-3
     );
     expect(targets[0].action).toBe('increase');
     // 5% of 5 = 0.25; the previous code disabled the cap below 10 units and
@@ -35,8 +35,8 @@ describe('computeSetTargets jump cap (P4)', () => {
 
   test('a heavy set is still bounded at ~5%', () => {
     const { targets } = computeSetTargets(
-      [{ weight: 100, actualReps: 12, rir: 2 }],
-      8, 12, 'kg', { exerciseCategory: 'compound' },
+      [{ weight: 100, actualReps: 12 }],
+      8, 12, 'kg', { exerciseCategory: 'compound', prevSessionDifficulty: 2 }, // FQ-3
     );
     expect(targets[0].weight).toBeGreaterThan(100);
     expect(targets[0].weight).toBeLessThanOrEqual(105);

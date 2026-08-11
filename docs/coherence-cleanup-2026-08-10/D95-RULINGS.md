@@ -43,6 +43,25 @@ Execute all F/G removals. H rulings:
 
 ## Peak week (AUDIT-PEAKWEEK-SYNC)
 
+> **WORDING RECONCILIATION (2026-08-10, Campaign 5 opening; verified
+> against code, no behaviour change).** Two Campaign 4 summaries read
+> as conflicting ("CLASS A LIVE" vs "no user feature"). Both are true
+> about DIFFERENT things. The precise product truth:
+> - The `peak_week_plans` TABLE is live product state: it stores a
+>   competitor's SHOW DATE. Two shipping screens consume it -
+>   ProGoalSetupScreen pre-fills the show-date field from
+>   `getActivePeakWeekPlan` (and writes via `setPeakWeekShowDate`),
+>   and CoachOutputScreen renders the B4 contest countdown from it
+>   (suppressed under calm mode / an open ED flag).
+> - The PEAK WEEK PRESCRIPTION PRODUCT (automatic peak-week protocols
+>   - carb/sodium/water manipulation plans) was removed by founder
+>   direction 2026-05-25 ("peak week needs a human eye, not numbers")
+>   and DOES NOT EXIST. The table's prep columns are retained legacy
+>   storage with no reader.
+> So: contest-countdown data LIVE; automatic Peak Week prescription
+> product ABSENT; migration 049 HELD because dropping the table would
+> break the live countdown (FR-PW-1 owns any retirement design).
+
 - **peak_week_plans is CLASS A LIVE** (B4 contest countdown). ORDER
   PREMISE CORRECTED; nothing removed. Migration 049's false rationale
   and stale cleanup list: header corrected to name the B4 consumers and

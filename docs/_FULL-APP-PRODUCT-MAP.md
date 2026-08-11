@@ -1,5 +1,49 @@
 # VOLYUME — FULL PRODUCT + SYSTEM MAP
 
+> **CAMPAIGN 5 ADDENDUM (2026-08-11).** The body below is NOT
+> regenerated; this block names what Campaign 5 (first-use, onboarding
+> and first-block journey — D96) changed and points at the authorities.
+>
+> 1. **Authority.** D96: `docs/first-use-audit-2026-08-10/`
+>    (CAMPAIGN-LOG.md stage log, D96-RULINGS.md rulings, twelve audit
+>    files, the three REVIEW reports, RELEASE-TRUTH-2026-08-11.md) and
+>    the D96 blocks in `DECISIONS-2026-07-09.md`. The journey itself is
+>    mapped in `docs/first-use-audit-2026-08-10/CURRENT-FIRST-USE-JOURNEY.md`,
+>    which supersedes this map's onboarding sections.
+> 2. **First-use truth that changed.** The Pro wizard's visible steps
+>    are renumbered 1..5 (the account leg is no longer counted or
+>    painted, RA-3); first name is OPTIONAL on both tiers (RA-4 /
+>    C5-P1-09); every wizard QuestionGroup title is gone (RA-7/RC-7);
+>    the hand-off's daily-targets and check-in cards sit BELOW Start
+>    training (RA-5); the free starter result acknowledges a days
+>    mismatch honestly (RA-1) and describes the plan, not the reader
+>    (RC-6). Session ratings default to null and the whole downstream
+>    chain (ledger INSUFFICIENT_DATA, receipt wording, decision-card
+>    framing) is honest about unjudged blocks (C5-P17, RA-2).
+> 3. **Tier truth that changed.** FQ-2's law: FREE DOES NOT HAVE
+>    COACHING; both next-block options always render for Pro, adjust
+>    is truthfully Pro-locked for Free. RC-1 restored Edit plan (and
+>    Archive) on PlanDetail to every tier — the builder is and was a
+>    free feature; Duplicate stays free-only.
+> 4. **Coaching-surface truth that changed.** The session-difficulty
+>    rating is the ONLY effort input to the overload decision (FQ-3;
+>    per-set RIR is never fabricated); Apply now reaches session
+>    prescriptions through planned_muscle_volume (FQ-4); the coach
+>    register genuinely matches experience (RC-2); the superset
+>    walkthrough is once-ever (RC-3); the readiness opt-out names its
+>    block-ledger consequence (RC-4).
+> 5. **Billing-surface truth that changed (architecture unchanged).**
+>    FQ-6: network-failed trial grants queue and retry via the sync
+>    runner (pendingCascade); ONE authoritative trial end date
+>    (cascade.trialEndsAtMs) feeds Account, the Home banner and the
+>    hand-off chip; "Manage subscription" (platform surface, real
+>    expiry semantics) replaced the fake local "Switch to Free".
+>    The 14-day in-app trial + 7-day store intro offer is
+>    founder-verified in `docs/rules/billing.md` — never re-ask.
+> 6. **Regression contract.** `campaign5.firstUse.test.js` (172 pins)
+>    and `campaign5.syntheticJourney.test.js` (29 tests) pin all of
+>    the above; read them as the enforcement layer for this addendum.
+
 > **CAMPAIGN 2 ADDENDUM (2026-08-10).** Wording/reachability truth has
 > materially changed since this map was built: the D93 terminology canon
 > renamed rendered vocabulary (volume=sets everywhere, Total lifted for kg,

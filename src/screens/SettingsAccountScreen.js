@@ -1,16 +1,19 @@
-import { View } from 'react-native';
+import { View, Linking, Platform } from 'react-native';
 import { appAlert } from '../components/AppAlert';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import useAccountActions from '../hooks/useAccountActions';
+import { trialEndsLabel } from '../lib/payments/cascade';
 import { SettingsPage, SectionHeader, SettingRow, settingsStyles as styles, useSettingsStyles } from '../components/SettingsPrimitives';
 
 // Account: identity, plan, upgrade/downgrade, and the two destructive
 // account actions (sign out, delete) kept together at the bottom.
 export default function SettingsAccountScreen({ navigation }) {
-  const { user, tier, setTier } = useAppStore(
-    useShallow(s => ({ user: s.user, tier: s.tier, setTier: s.setTier })),
+  const { user, tier, userProfile } = useAppStore(
+    useShallow(s => ({ user: s.user, tier: s.tier, userProfile: s.userProfile })),
   );
+  // FQ-6.2 (D96): the one authoritative trial end date (cascade.trialEndsLabel).
+  const trialEnds = trialEndsLabel(userProfile);
   const { signingOut, deletingAccount, handleSignOut, handleDeleteAccount } = useAccountActions();
   // CP-10 stage 3: live theme override, see SettingsPrimitives.js.
   const live = useSettingsStyles();
@@ -22,7 +25,7 @@ export default function SettingsAccountScreen({ navigation }) {
         <SettingRow
           icon="person-circle-outline"
           label={user?.email || 'Signed in'}
-          sub={tier === 'pro' ? 'Volyume Pro' : 'Free plan'}
+          sub={tier === 'pro' ? (trialEnds ? `Volyume Pro · free trial runs to ${trialEnds}` : 'Volyume Pro') : 'Free plan'}
           showArrow={false}
         />
         <SettingRow
@@ -41,17 +44,36 @@ export default function SettingsAccountScreen({ navigation }) {
         )}
         {tier === 'pro' && (
           <SettingRow
-            icon="arrow-down-circle-outline"
-            label="Switch to Free"
+            icon="settings-outline"
+            label="Manage subscription"
+            // FQ-6.4 (D96, founder-approved semantics): the old "Switch to
+            // Free" wrote tier='free' LOCALLY and cancelled nothing - the
+            // subscription kept renewing and the next cloud tier refresh
+            // restored Pro, so the switch was a fiction both ways. The
+            // truthful flow is the platform's own subscription surface:
+            // cancellation stops renewal through the store, Pro stays until
+            // the paid or trial entitlement expires, and the account
+            // returns to Free when the authoritative entitlement does. The
+            // local tier is never forged; product IDs, pricing and the
+            // trial length are untouched.
             onPress={() =>
               appAlert(
-                'Switch to Free?',
-                'Everything you\'ve logged stays. Past coach decisions, check-ins, training blocks and PRs remain readable. You just won\'t get new weekly coaching adjustments until you re-enable Pro.',
+                'Manage subscription',
+                // C5-P7-04 (D96): names only what the guards actually keep
+                // readable. Cancelling stops renewal through your app
+                // store; Pro stays active until your current paid or trial
+                // period ends, then the account returns to Free.
+                'Your plan is managed by your app store. Cancelling there stops the next renewal; Pro stays active until your current period ends, and everything you\'ve logged stays. Past coach decisions, training blocks and PRs remain readable, and your body measurements, photos and food diary stay viewable on Free.',
                 [
-                  { text: 'Keep Pro', style: 'cancel' },
+                  { text: 'Not now', style: 'cancel' },
                   {
-                    text: 'Switch to Free',
-                    onPress: async () => { await setTier('free', 'SettingsScreen.switchToFree'); },
+                    text: 'Open my app store',
+                    onPress: () => {
+                      const url = Platform.OS === 'ios'
+                        ? 'https://apps.apple.com/account/subscriptions'
+                        : 'https://play.google.com/store/account/subscriptions';
+                      Linking.openURL(url).catch(() => {});
+                    },
                   },
                 ],
               )

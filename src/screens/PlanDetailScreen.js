@@ -16,7 +16,9 @@ import {
   updateRoutinePosition,
 } from '../lib/database';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
-import { planHeadingName } from '../lib/planDisplay';
+import { planHeadingName, planEquipmentLabel } from '../lib/planDisplay';
+import { getPlanDays } from '../lib/onboarding/freeStarter';
+import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE } from '../lib/blockExplain';
 import Button from '../components/Button';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import BackHeader from '../components/BackHeader';
@@ -108,9 +110,13 @@ export default function PlanDetailScreen({ navigation, route }) {
     // C4: one decision, one dialog. Both choices copy the plan; only what
     // happens after the copy differs, so each button owns its own copy call
     // and error handling (matches the copy-failure toast either way).
+    // C5-P10-01 / C5-P10-08 (D96): the same tier-blind pair of sentences
+    // every activation decision point now states -- activation creates a
+    // training block, and this is what else changes.
     appAlert(
       'Add this plan?',
-      `Copy "${plan?.name}" into your plans. Make it active now, or just add it for later.`,
+      `Copy "${plan?.name}" into your plans. Make it active now, or just add it for later.`
+      + `\n\n${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -137,6 +143,10 @@ export default function PlanDetailScreen({ navigation, route }) {
             const ok = await confirmPlanSwitchMidBlock(user.id, { newPlanName: plan?.name });
             if (!ok) { navigation.goBack(); return; }
             await activatePlanWithBlock(user.id, copy.id, plan?.name ?? 'Training Plan');
+            // C5-P10-05 (D96): every activation entry point confirms
+            // identically. This one used to be a silent goBack(), the same
+            // transition "Save for later" makes.
+            toast.show(`"${plan?.name}" is now your active plan`, { variant: 'success' });
             navigation.goBack();
           },
         },
@@ -275,6 +285,8 @@ export default function PlanDetailScreen({ navigation, route }) {
     (sum, w) => sum + (setCounts[w.id] || (exerciseCounts[w.id] || 0) * 3),
     0,
   );
+  // C5-P10-02 (D96): days a week, read from the plan's existing days:N tag.
+  const planDays = getPlanDays(plan);
 
   if (!plan) {
     // Mirror the loaded layout (header block, primary button, workout rows)
@@ -327,12 +339,29 @@ export default function PlanDetailScreen({ navigation, route }) {
                 <Text style={[styles.featuredBadgeText, live.featuredBadgeText]}>Featured</Text>
               </View>
             )}
+            {/* C5-P10-04 (D96): equipment was never rendered on this screen
+                either, so "what do I need to run this?" could not be
+                answered before adding the plan. Same derivation as the
+                library card, from the tags the plans already carry. */}
+            <View style={[styles.libraryBadge, live.libraryBadge]}>
+              <Text style={[styles.libraryBadgeText, live.libraryBadgeText]}>{planEquipmentLabel(plan)}</Text>
+            </View>
           </View>
           <Text style={[styles.planName, live.planName]}>{planHeadingName(plan.name)}</Text>
           {plan.description ? (
             <Text style={[styles.planDesc, live.planDesc]}>{plan.description}</Text>
           ) : null}
           <View style={styles.planStats}>
+            {/* C5-P10-02 (D96): days per week, from the plan's own days:N
+                tag via the existing getPlanDays() helper. The library used
+                to state a workout COUNT and never a frequency, and the
+                heading strips the "3×/Week" the seed name carries. */}
+            {planDays != null && (
+              <View style={styles.planStat}>
+                <Text style={[styles.planStatValue, live.planStatValue]}>{planDays}</Text>
+                <Text style={[styles.planStatLabel, live.planStatLabel]}>Days a week</Text>
+              </View>
+            )}
             <View style={styles.planStat}>
               <Text style={[styles.planStatValue, live.planStatValue]}>{workouts.length}</Text>
               <Text style={[styles.planStatLabel, live.planStatLabel]}>Workouts</Text>
@@ -501,9 +530,20 @@ export default function PlanDetailScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Manage actions, free tier only. Pro users manage their plan
-            through the goal-change wizard in Athlete Hub. */}
-        {!isLibrary && tier !== 'pro' && (
+        {/* RC-1 (D96, Review C): this whole block was gated tier !== 'pro',
+            with a rationale ("Pro users manage their plan through the
+            goal-change wizard") that is untrue of that wizard - PlanUpdate
+            REBUILDS from answers, it does not edit, and past week 1 it
+            restarts the block. handleEditPlan is the only navigation in the
+            app that opens ManualBuilder on an existing plan, so a paying
+            user could never add a day, reorder days or create a superset on
+            the plan the wizard built for them, while RoutineDetail points
+            them at "the plan builder" for exactly that. The builder is a
+            FREE feature (SubscriptionPolicy lists it), so showing Edit and
+            Archive to every tier moves no free/pro boundary; Duplicate
+            keeps its own recorded free-only rationale (Pro runs one
+            always-active plan). */}
+        {!isLibrary && (
           <View style={styles.section}>
             <SectionLabel>Manage</SectionLabel>
             <Card padding="none" style={styles.manageCard}>
@@ -512,11 +552,13 @@ export default function PlanDetailScreen({ navigation, route }) {
                 <Text style={[styles.manageRowText, live.manageRowText]}>Edit plan</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
+              {tier !== 'pro' && (
               <TouchableOpacity style={[styles.manageRow, live.manageRow]} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate plan">
                 <Ionicons name="copy-outline" size={18} color={t.colors.primary} />
                 <Text style={[styles.manageRowText, live.manageRowText]}>Duplicate plan</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
+              )}
               {!isActive && (
                 <TouchableOpacity style={[styles.manageRow, live.manageRow, styles.manageRowLast]} onPress={handleArchive} accessibilityRole="button" accessibilityLabel="Archive plan">
                   <Ionicons name="archive-outline" size={18} color={t.colors.error} />

@@ -10,7 +10,7 @@ import { createActivityRepository } from './database/activity';
 import { createBodyMetricsRepository } from './database/bodyMetrics';
 import { createPlanFoldersRepository } from './database/planFolders';
 import { MICRO_COLUMNS, microColumnsCreateFragment } from './food/micronutrients';
-import { getCurrentBlockWeekIndex, getBlockStatus } from './mesocycle';
+import { getCurrentBlockWeekIndex, getBlockStatus, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK } from './mesocycle';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
@@ -3717,30 +3717,43 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
 
   const d = await db();
   const now = Date.now();
-  await d.runAsync(
-    'UPDATE mesocycles SET is_active = 0, updated_at = ? WHERE user_id = ?',
-    [now, userId],
-  );
-
   const id = uid();
   const startDate = new Date().toISOString().slice(0, 10);
   // end_date is required by the cloud schema (NOT NULL). Without it the
   // push silently drops the row and a fresh-install sign-in lands with
   // an active plan but no training block.
-  const endDate = new Date(Date.now() + 6 * 7 * 24 * 60 * 60 * 1000)
+  const endDate = new Date(Date.now() + BLOCK_PLANNED_WEEKS * 7 * 24 * 60 * 60 * 1000)
     .toISOString().slice(0, 10);
   // 6 weeks: 5 accumulation (RIR 3→2→1→0→0) + 1 deload (RIR 4). deload_week
   // is written (X19, Wave 2 audit 2026-07-30) so MesocycleBuilderScreen's
   // deload highlighting -- previously always NULL/dead for every real
   // block -- has a real value; week 6 is always the deload week here,
   // matching generateMesocycleWeeks' own rule (last week = deload).
-  await d.runAsync(
-    `INSERT INTO mesocycles
-      (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks, deload_week, focus,
-       block_type, rir_ladder, is_active, auto_regulation_enabled, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, 6, 6, 6, ?, ?, ?, 1, 1, ?, ?)`,
-    [id, userId, planName, startDate, endDate, 'hypertrophy', 'offseason_hypertrophy', '[3,2,1,0,0,4]', now, now],
-  );
+  // C5-P11-01 (D96): the three week counts now come from mesocycle.js's
+  // BLOCK_PLANNED_WEEKS/BLOCK_DELOAD_WEEK, which the planEngine narrative
+  // reads too, so no surface can describe a block length this writer does
+  // not create. The written values are byte-identical to the constants
+  // that stood here.
+  // RB-3 (D96, Review B): deactivate-all and insert-new used to be two
+  // awaited statements, so two overlapping activations could interleave as
+  // A.UPDATE, B.UPDATE, A.INSERT, B.INSERT and leave TWO is_active rows.
+  // One transaction closes that for every caller. No nested
+  // runInTransaction runs inside (both statements are plain runAsync).
+  await runInTransaction(d, async () => {
+    await d.runAsync(
+      'UPDATE mesocycles SET is_active = 0, updated_at = ? WHERE user_id = ?',
+      [now, userId],
+    );
+    await d.runAsync(
+      `INSERT INTO mesocycles
+        (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks, deload_week, focus,
+         block_type, rir_ladder, is_active, auto_regulation_enabled, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)`,
+      [id, userId, planName, startDate, endDate,
+        BLOCK_PLANNED_WEEKS, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK,
+        'hypertrophy', 'offseason_hypertrophy', '[3,2,1,0,0,4]', now, now],
+    );
+  });
 
   await generateMesocycleWeeks(id);
   const { VOLUME_LANDMARKS } = await import('./algorithms');
@@ -3815,6 +3828,15 @@ export async function copyPlanFromLibrary(libraryPlanId, userId) {
   if (!libPlan) throw new Error('Plan not found');
 
   const newPlan = await createProgramme(userId, libPlan.name, libPlan.description, 0);
+  // RB-6 (D96, Review B): stamp which library plan this copy came from, so
+  // consumers can identify the copy by provenance instead of by name (a
+  // rename used to defeat the FreeStarter dedup, and an unrelated user plan
+  // sharing the name was silently adopted as "the recommendation"). The
+  // column already exists and syncs; it was simply never written here.
+  await d.runAsync(
+    'UPDATE programmes SET source_programme_id = ?, updated_at = ? WHERE id = ?',
+    [libraryPlanId, Date.now(), newPlan.id],
+  );
 
   const libRoutineRows = await d.getAllAsync(
     `SELECT * FROM routines WHERE programme_id = ? AND (is_active = 1 OR is_active IS NULL)
@@ -3834,7 +3856,7 @@ export async function copyPlanFromLibrary(libraryPlanId, userId) {
     );
   }
 
-  return newPlan;
+  return { ...newPlan, sourceProgrammeId: libraryPlanId };
 }
 
 export async function archivePlan(planId) {
@@ -4096,6 +4118,18 @@ export async function setMesocycleWeekDeload(weekId, { isDeload = true, rirTarge
     [isDeload ? 1 : 0, rirTarget, Date.now(), weekId],
   );
   _scheduleSync();
+}
+
+/** One mesocycle week row by id (FQ-4: the session allocation resolves its
+ * block through the workout's mesocycle_week_id). */
+export async function getMesocycleWeekById(weekId) {
+  if (!weekId) return null;
+  try {
+    const d = await db();
+    return await d.getFirstAsync('SELECT * FROM mesocycle_weeks WHERE id = ?', [weekId]);
+  } catch (_e) {
+    return null;
+  }
 }
 
 export async function getNextMesocycleWeek(currentWeekId) {
@@ -5945,7 +5979,16 @@ export async function saveWeeklyCheckin(userId, data) {
     ['stepsAdherence', 'steps_adherence', (v) => v],
     ['cardioAdherence', 'cardio_adherence', (v) => v],
     ['stepsAvg', 'steps_avg', (v) => v],
-    ['cycleOverride', 'cycle_override', (v) => (v ? 1 : 0)],
+    // C5-P20-01 (D96): tri-state, exactly like joint_pain below. null =
+    // never asked (the Fast Check-In does not render the question, and the
+    // wizard's row is skippable), 0 = the user's explicit "not this week",
+    // 1 = flagged. The old (v ? 1 : 0) stored an unasked question as a
+    // genuine "no", which is the PERMISSIVE direction in the engine (every
+    // calorie branch is gated on !cycleOverride). The engine's own read is
+    // !!checkin.cycleOverride, so null behaves exactly as the old 0 did for
+    // coaching; what changes is that "unasked" is no longer recorded as an
+    // answer the user did not give.
+    ['cycleOverride', 'cycle_override', (v) => (v == null ? null : (v ? 1 : 0))],
     ['notes', 'notes', (v) => v],
     ['trainingPerformance', 'training_performance', (v) => v],
     // Campaign 1 P0-4: tri-state. null = unanswered (no evidence), 0 = the
@@ -6577,10 +6620,29 @@ export async function getBlockReflectionData(userId, mesocycleId) {
     const w = workouts.find(w2 => w2.id === s.workout_id);
     return w && w.started_at < firstWeekCutoff;
   });
-  const lastWeekCutoff = endMs - 7 * 86400000;
+  // FB-17 (D96): compare like for like. `end_date` is start + plannedWeeks,
+  // so the old `endMs - 7 days` window WAS the recovery week: the block's
+  // headline progress figure always measured a full build week against the
+  // deliberately halved deload, so the honest climb line was unreachable
+  // and a user who added weight every week was told they lifted less at the
+  // end than the start. The deload week is stored on the row
+  // (deload_week, written by activatePlanWithBlock), so the comparison uses
+  // the last ACCUMULATION week instead. Falls back to the old window only
+  // when the block carries no deload week (legacy rows).
+  const deloadWeek = Number(meso.deload_week);
+  const plannedWeeks = Number(meso.planned_weeks ?? meso.duration_weeks);
+  const lastAccumWeek = Number.isFinite(deloadWeek) && deloadWeek > 1
+    ? deloadWeek - 1
+    : (Number.isFinite(plannedWeeks) && plannedWeeks > 1 ? plannedWeeks - 1 : null);
+  const lastWeekStart = lastAccumWeek != null
+    ? startMs + (lastAccumWeek - 1) * 7 * 86400000
+    : endMs - 7 * 86400000;
+  const lastWeekEnd = lastAccumWeek != null
+    ? lastWeekStart + 7 * 86400000
+    : Number.POSITIVE_INFINITY;
   const lastWeekSets = sets.filter(s => {
     const w = workouts.find(w2 => w2.id === s.workout_id);
-    return w && w.started_at >= lastWeekCutoff;
+    return w && w.started_at >= lastWeekStart && w.started_at < lastWeekEnd;
   });
   const firstTonnage = firstWeekSets.reduce((t, s) => t + s.weight * s.actual_reps, 0);
   const lastTonnage = lastWeekSets.reduce((t, s) => t + s.weight * s.actual_reps, 0);
@@ -7214,7 +7276,8 @@ export async function insertWeeklyCheckinFromCloud(userId, c) {
       c.energy_score ?? null, c.soreness_score ?? null, c.stress_score ?? null,
       c.sleep_hours ?? null, c.cals_adherence ?? null, c.steps_adherence ?? null,
       c.cardio_adherence ?? null, c.steps_avg ?? null,
-      c.cycle_override ? 1 : 0, c.notes ?? null,
+      // C5-P20-01 tri-state: a cloud null stays null (never asked).
+      c.cycle_override == null ? null : (c.cycle_override ? 1 : 0), c.notes ?? null,
       c.training_performance ?? null,
       // Campaign 1 P0-4 tri-state: a cloud null stays null (unanswered).
       c.joint_pain == null ? null : (c.joint_pain ? 1 : 0),

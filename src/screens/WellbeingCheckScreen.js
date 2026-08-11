@@ -10,7 +10,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { saveUserBodyProfile } from '../lib/database';
+import { saveUserBodyProfile, getUserBodyProfile } from '../lib/database';
 import { logError } from '../lib/errorLog';
 
 const SCOFF_QUESTIONS = [
@@ -74,13 +74,21 @@ export default function WellbeingCheckScreen({ navigation }) {
         // for gating, but a swallowed cloud write left no trail (audit F-007). Log
         // the failure so a split-brain (UI says "noted" but the body-profile write
         // failed) is diagnosable. Still non-blocking: the local write governs.
-        await saveUserBodyProfile(user.id, { scoffScore: score })
+        // C5-P5-03 (D96): saveUserBodyProfile writes the WHOLE row, so the
+        // payload must merge the existing row first - the same shape every
+        // SettingsProfileScreen caller uses. Passing only { scoffScore }
+        // NULLed sex, date of birth and height on the canonical body
+        // profile (and synced the nulls), silently degrading the
+        // sex-specific safety inputs the moment someone completed the
+        // wellbeing check. SCOFF scoring itself is unchanged.
+        await getUserBodyProfile(user.id)
+          .then((existing) => saveUserBodyProfile(user.id, { ...(existing || {}), scoffScore: score }))
           .catch(e => logError('WellbeingCheck.saveScoffScore', e, { uid: user?.id }));
       }
       if (score >= 2) {
         appAlert(
           'Thank you for sharing that',
-          "Some of your answers suggest it may be worth speaking to your GP or a registered dietitian alongside your training. We've noted this so your coaching focuses on performance and support rather than restriction.",
+          "Some of your answers suggest it may be worth speaking to your GP or a registered dietitian alongside your training. We've noted this so Volyume focuses on performance and support rather than restriction.",
           [{ text: 'Got it', onPress: () => navigation.goBack() }],
         );
       } else {
@@ -99,7 +107,7 @@ export default function WellbeingCheckScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
 
         <Text style={[styles.intro, live.intro]}>
-          Five questions about your relationship with food and eating. Your answers are private, stored only on this device, and help shape how your coaching is approached.
+          Five questions about your relationship with food and eating. Your answers are private, stored only on this device, and help shape how Volyume approaches you.
         </Text>
 
         <View style={styles.list}>
@@ -164,8 +172,12 @@ export default function WellbeingCheckScreen({ navigation }) {
           </Text>
         ) : null}
 
+        {/* FQ-5 item 6 (D96, founder-approved wording): the raw answers stay
+            local; the derived result syncs with the account so coaching
+            survives a phone change. The old line claimed device-only storage
+            for both, which was untrue of the synced result. */}
         <Text style={[styles.privacy, live.privacy]}>
-          Your answers are stored on this device and never shared without your permission.
+          Your answers stay on this device. Only the overall result is saved to your account, so your coaching stays adjusted if you change phones. Neither is ever shared outside Volyume.
         </Text>
       </ScrollView>
     </SafeAreaView>

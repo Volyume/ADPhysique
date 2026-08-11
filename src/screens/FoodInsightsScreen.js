@@ -576,6 +576,9 @@ export default function FoodInsightsScreen({ navigation }) {
               <AdherenceRow label="Fibre"    hit={adherence.fibreDays} total={adherence.logged} />
               <Text style={[styles.cardFootnote, live.cardFootnote]}>
                 Out of {adherence.logged} {adherence.logged === 1 ? 'day' : 'days'} logged. Hit = within target range.
+                {adherence.logged < MIN_DAYS_FOR_ADHERENCE_BAR
+                  ? ' The bars fill in once there are a few days to read a pattern from.'
+                  : ''}
               </Text>
               <Text style={[styles.cardFootnote, live.cardFootnote]}>
                 Fibre counts on days you reached {FIBRE_AIM_G} g or more. More is fine.
@@ -656,6 +659,14 @@ export default function FoodInsightsScreen({ navigation }) {
   );
 }
 
+// C5-P21-02 (D96): below this many logged days the bar TRACK is drawn but not
+// filled. A full bar is a strong visual claim, and a single logged day drew
+// five of them at 100%. The per-day figures ("1/1", "Out of 1 day logged")
+// stay visible throughout, so nothing is hidden; only the claim the bar makes
+// waits until there is a pattern to claim. No change to adherence.js
+// tolerances or to what counts as a hit.
+const MIN_DAYS_FOR_ADHERENCE_BAR = 3;
+
 function AdherenceRow({ label, hit, total }) {
   // CP-10 batch E (2026-07-10): sibling function-component scope (not
   // prop-drilled `live`/`t` from FoodInsightsScreen, matching
@@ -663,12 +674,15 @@ function AdherenceRow({ label, hit, total }) {
   // useTheme() call and shared buildLiveStyles(t).
   const t = useTheme();
   const live = buildLiveStyles(t);
+  const enoughDays = total >= MIN_DAYS_FOR_ADHERENCE_BAR;
   const pct = total > 0 ? Math.round((hit / total) * 100) : 0;
   return (
     <View style={styles.adherenceRow} accessible accessibilityLabel={`${label}, hit ${hit} of ${total} days`}>
       <Text style={[styles.adherenceLabel, live.adherenceLabel]}>{label}</Text>
       <View style={[styles.adherenceTrack, live.adherenceTrack]}>
-        <View style={[styles.adherenceFill, live.adherenceFill, { width: `${pct}%` }]} />
+        {enoughDays ? (
+          <View style={[styles.adherenceFill, live.adherenceFill, { width: `${pct}%` }]} />
+        ) : null}
       </View>
       <Text style={[styles.adherenceValue, live.adherenceValue]}>{hit}/{total}</Text>
     </View>

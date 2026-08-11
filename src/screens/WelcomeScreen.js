@@ -70,6 +70,10 @@ export default function WelcomeScreen({ navigation }) {
       navigation.navigate('QuizTraining');
       return;
     }
+    // E-1 (D96): the intent is READ now (LoginScreen opens its email form in
+    // create-account mode for it), so the sign-up CTA no longer lands on a
+    // form whose primary button says "Sign in". The "Already have an account?"
+    // link below navigates without it and still opens sign-in.
     navigation.navigate('Login', { intent: 'pro_signup' });
   }
 
@@ -105,8 +109,14 @@ export default function WelcomeScreen({ navigation }) {
                 <View key={b} style={styles.bulletRow}>
                   <Ionicons name="checkmark-circle" size={15} color={t.colors.primary} />
                   <Text style={[styles.bulletText, live.bulletText]}>{b}</Text>
-                  {/* U-E-1: inline gloss for the coach term on first appearance. */}
-                  {b.includes('Coach') && (
+                  {/* U-E-1: inline gloss for the coach term on first appearance.
+                      C5-P34-01 (D96): the gate was `b.includes('Coach')` and
+                      String.includes is case-sensitive, so the one bullet
+                      carrying the word ("Your coach explains what changed...")
+                      never matched and the gloss never rendered on the app's
+                      first screen. Lower-cased comparison, same gloss, same
+                      bullet, no copy change. */}
+                  {b.toLowerCase().includes('coach') && (
                     <InfoTooltip text={GLOSSARY.precisionCoaching} size={13} />
                   )}
                 </View>

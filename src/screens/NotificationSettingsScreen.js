@@ -7,12 +7,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
-import { requestNotificationPermissions } from '../lib/notifications';
+import { requestNotificationPermissions, getNotificationPermissionStatus } from '../lib/notifications';
 import {
   scheduleTrainingReminders,
   cancelTrainingReminders,
   REMINDER_PREF_KEY,
   REMINDER_TIME_KEY,
+  SCHEDULE_KEY,
 } from '../lib/notifications/trainingReminders';
 import {
   setPreference as setPrefRow,
@@ -101,6 +102,22 @@ export default function NotificationSettingsScreen({ navigation }) {
   }, []);
   const [trainingHour, setTrainingHour] = useState(8);
   const [trainingMinute, setTrainingMinute] = useState(0);
+  // FM-02 / C5-P18-05 (D96): null while unread, false when no habit-derived
+  // schedule exists yet (so nothing can fire), true once one does. Read-only:
+  // this decides one sentence of copy, never what is scheduled.
+  const [trainingScheduleReady, setTrainingScheduleReady] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    AsyncStorage.getItem(SCHEDULE_KEY)
+      .then((raw) => {
+        if (cancelled) return;
+        let days = [];
+        try { days = JSON.parse(raw)?.days ?? []; } catch (_) { days = []; }
+        setTrainingScheduleReady(Array.isArray(days) && days.length > 0);
+      })
+      .catch(() => { if (!cancelled) setTrainingScheduleReady(null); });
+    return () => { cancelled = true; };
+  }, []);
   const [mealReminders, setMealReminders] = useState(DEFAULT_MEAL_REMINDERS);
   const [permissionStatus, setPermissionStatus] = useState(null);
 
@@ -270,8 +287,18 @@ export default function NotificationSettingsScreen({ navigation }) {
         }
       } catch (_) {}
 
+      // C5-P27-01 (D96): a mount-time STATUS read, never a prompt.
+      // requestNotificationPermissions() returns early only when the status is
+      // already granted and otherwise shows the OS dialog, so a Free user who
+      // opened this screen just to look met "Allow Volyume to send you
+      // notifications?" before touching a control, with nothing on screen
+      // explaining why. permissions.js exports the non-prompting sibling for
+      // exactly this (ProSetupCompleteScreen already uses it). Every
+      // user-action path below still prompts as it did: the meal toggle
+      // requests on switch-on, and the training toggle still refuses politely
+      // when permission is absent.
       try {
-        const status = await requestNotificationPermissions();
+        const status = await getNotificationPermissionStatus();
         setPermissionStatus(status);
       } catch (_) {
         setPermissionStatus('denied');
@@ -590,10 +617,19 @@ export default function NotificationSettingsScreen({ navigation }) {
             </View>
           )}
 
-          {/* Helper text */}
+          {/* Helper text. FM-02 / C5-P18-05 (D96): the schedule is derived
+              from at least two FULL weeks of logged sessions
+              (trainingHabitSchedule.MIN_HISTORY_WEEKS), so a week-1 user could
+              switch this on, pick a time, see a persistent "Reminder time"
+              row and receive nothing for a fortnight with nothing on screen
+              saying why. The warm-up is stated, in the same shape as the
+              denied-permission line the meal reminders already carry. No
+              behaviour change and no new state: the honest "nothing is
+              scheduled yet" signal is the absence of a derived schedule. */}
           <View style={[styles.helperRow, live.helperRow]}>
             <Text style={[styles.helperText, live.helperText]}>
               Pick the time. Volyume learns the days you usually train from your recent workouts, and reminds you then.
+              {trainingScheduleReady === false ? ' It needs a couple of weeks of logged sessions before it can tell which days those are, so these start once it can.' : ''}
             </Text>
           </View>
         </Card>
@@ -622,7 +658,16 @@ export default function NotificationSettingsScreen({ navigation }) {
           </View>
         </Card>
 
-        {/* Meal-log reminders (opt-in, gap #4): convenience-only, never a streak. */}
+        {/* Meal-log reminders (opt-in, gap #4): convenience-only, never a
+            streak. FM-01 (D96): Pro only. The diary these point at is Pro
+            (DiaryScreen sets readOnly for every other tier), so offering them
+            to Free scheduled a daily nudge into a feature the user cannot
+            use -- a Pro feature failing silently, which Phase 31 forbids. The
+            same gate is enforced inside scheduleMealReminders, so the launch
+            re-lay cannot put them back either. Matches the tier gates the
+            sibling schedulers already carry. */}
+        {isPro && (
+        <>
         <SectionLabel style={styles.sectionLabel}>Meal reminders</SectionLabel>
         <Card style={styles.card}>
           {mealReminders.map((r, i) => (
@@ -670,6 +715,8 @@ export default function NotificationSettingsScreen({ navigation }) {
             </Text>
           </View>
         </Card>
+        </>
+        )}
 
         {/* Quiet hours (E2.2): the window every reminder respects. */}
         <SectionLabel style={styles.sectionLabel}>Quiet hours</SectionLabel>

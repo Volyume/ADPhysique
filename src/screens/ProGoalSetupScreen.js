@@ -34,6 +34,7 @@ import {
 import { computeEWMA } from '../lib/weeklyCoach';
 import { formatBodyWeightShort } from '../lib/units';
 import { generateAndSavePlan } from '../lib/planAutoGen';
+import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 
 const APPROACH_SHORT = {
   standard:  'Enough for consistent training. Easy to sustain day to day.',
@@ -209,6 +210,16 @@ export default function ProGoalSetupScreen({ navigation }) {
       return;
     }
 
+    // C5-P30-04 (D96): saving here rebuilds the plan and starts a NEW
+    // six-week block (generateAndSavePlan -> activatePlanWithBlock), which
+    // deactivates the block in progress. The only explanation was
+    // GoalChangeSummary, navigated to AFTER the write. This is the same
+    // confirm every other plan-replacing path already runs, in its usual
+    // position: before the write, with the rebuild wording, and silent in
+    // week 1 or once the block is past its training weeks (nothing to lose).
+    const proceed = await confirmPlanSwitchMidBlock(user?.id, { mode: 'rebuild' });
+    if (!proceed) return;
+
     const goalPhase = phaseToCoachingKey(selectedPhase);
 
     // Capture the previous state for the change-summary screen.
@@ -302,10 +313,24 @@ export default function ProGoalSetupScreen({ navigation }) {
       }
     } catch (_) {}
 
-    const safeWeightKg = (typeof latestWeightKg === 'number' && latestWeightKg > 0) ? latestWeightKg : 80;
-    const safeHeightCm = (typeof wp.heightCm === 'number' && wp.heightCm > 0) ? wp.heightCm : 175;
-    const safeAge      = (typeof wp.age === 'number' && wp.age > 0) ? wp.age : 28;
-    const safeSex      = wp.sex === 'female' ? 'female' : 'male';
+    // C5-P5-02 (D96): no invented biology. This block used to substitute
+    // 80kg / 175cm / 28y and default a missing sex to MALE, which computed
+    // and PERSISTED nutrition targets from a fabricated body - and hid the
+    // exact enforcement gap buildNutritionEngineInputs' sexMissing guard
+    // exists to catch (sex is a REQUIRED blocking field, founder
+    // 2026-07-01, and drives the sacred calorie floor). When any required
+    // field is missing the recalculation is SKIPPED - the stored targets
+    // stay (stale-but-real beats fabricated) - and the user is told where
+    // to complete the profile instead of being silently defaulted.
+    const hasWeight = typeof latestWeightKg === 'number' && latestWeightKg > 0;
+    const hasHeight = typeof wp.heightCm === 'number' && wp.heightCm > 0;
+    const hasAge    = typeof wp.age === 'number' && wp.age > 0;
+    const hasSex    = wp.sex === 'male' || wp.sex === 'female';
+    const biologyComplete = hasWeight && hasHeight && hasAge && hasSex;
+    const safeWeightKg = latestWeightKg;
+    const safeHeightCm = wp.heightCm;
+    const safeAge      = wp.age;
+    const safeSex      = wp.sex;
 
     // Body composition for the BMR formula. Prefer the profile (what onboarding
     // stored), and for users who onboarded before the profile carried body fat,
@@ -338,6 +363,13 @@ export default function ProGoalSetupScreen({ navigation }) {
 
     let nextTargets = null;
     try {
+      if (!biologyComplete) {
+        // Stale-but-real beats fabricated: the stored targets stay and the
+        // user is told where to complete the profile. The goal save itself
+        // proceeds; only the nutrition recalculation is withheld.
+        toast.show('Goal saved, but calorie targets were not updated. Complete sex, age and height in your profile, then open Nutrition Targets to refresh', { variant: 'warning', duration: 5000 });
+        throw Object.assign(new Error('profile biology incomplete'), { _handled: true });
+      }
       nextTargets = calculateNutritionTargets(buildNutritionEngineInputs({
         sex: safeSex,
         age: safeAge,
@@ -357,8 +389,11 @@ export default function ProGoalSetupScreen({ navigation }) {
       }
     } catch (_e) {
       // Don't block the goal save if the recalc fails. Surface to the user
-      // so they know targets weren't updated this time.
-      toast.show("Goal saved, but targets didn't recalculate. Open Nutrition Targets to refresh", { variant: 'warning', duration: 5000 });
+      // so they know targets weren't updated this time. The incomplete-
+      // biology skip above already showed its own specific message.
+      if (!_e?._handled) {
+        toast.show("Goal saved, but targets didn't recalculate. Open Nutrition Targets to refresh", { variant: 'warning', duration: 5000 });
+      }
     }
 
     // Persist the body composition we calculated from, so a value recovered

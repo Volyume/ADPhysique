@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { appAlert } from '../components/AppAlert';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Platform, KeyboardAvoidingView, Animated, AccessibilityInfo, BackHandler } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -19,6 +19,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
   logBodyMetric, logMorningWeight, saveNutritionTargets, saveUserBodyProfile,
+  getProgrammeById,
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
@@ -29,6 +30,9 @@ import {
   scheduleEveningWeightReminder,
   scheduleCheckinReminder,
 } from '../lib/notifications';
+import { setPreference as setPrefRow } from '../lib/notifications/preferences';
+import { getQuietHours, shiftHourMinuteOutOfQuietHours } from '../lib/notifications/quietHours';
+import { ENROLMENT_WEIGHT_NOTE } from '../lib/checkinDerive';
 import {
   PHYSIQUE_GOALS,
   TRAINING_PHASES,
@@ -40,7 +44,9 @@ import {
   buildNutritionEngineInputs,
 } from '../lib/coachingGoals';
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
-import { saveDraft, loadDraft, clearDraft, DRAFT_DEBOUNCE_MS } from '../lib/proOnboardingDraft';
+import {
+  saveDraft, loadDraft, clearDraft, loadBuildProgress, markBuildProgress, DRAFT_DEBOUNCE_MS,
+} from '../lib/proOnboardingDraft';
 import { dateOfBirthFromAgeYears } from '../lib/profileAge';
 import { FIRST_CHECKIN_MIN_DAYS } from '../lib/trialActivation';
 
@@ -205,13 +211,23 @@ function fmt12(h) {
 // ProOnboardingScreen), so its own useTheme() call is cleaner than
 // threading two extra props through every call site. Same shared
 // buildLiveStyles(t) as the wizard screen itself.
+// RA-3 (D96, Review A): the wizard's first visible screen was labelled
+// "Step 2 of 6". Step 1 is the account leg, which every real user completes
+// before this stack renders (and no producer of user.isLocal exists), so the
+// visible steps are renumbered 1..5. The internal `step` state is untouched:
+// gates, draft clamps and the sex gate all keep their numbering.
+const displayStepOf = (step) => (step > 1
+  ? { n: step - 1, total: TOTAL_STEPS - 1 }
+  : { n: step, total: TOTAL_STEPS });
+
 function ProOnboardingProgressBar({ step }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   // Endowed Progress Effect: the bar opens with a small amount already filled
   // rather than empty, so step 1 doesn't read as "0% done, long way to go".
   const BASE = 0.12;
-  const advanced = TOTAL_STEPS > 1 ? (step - 1) / (TOTAL_STEPS - 1) : 1;
+  const d = displayStepOf(step);
+  const advanced = d.total > 1 ? (d.n - 1) / (d.total - 1) : 1;
   const filled = Math.round((BASE + (1 - BASE) * advanced) * 100);
   return (
     <View style={[styles.progressTrack, live.progressTrack]}>
@@ -245,7 +261,7 @@ function ProOnboardingHeader({ step, title, sub, onBack }) {
         </View>
       </View>
       <ProOnboardingProgressBar step={step} />
-      <Text style={[styles.stepCount, live.stepCount]}>Step {step} of {TOTAL_STEPS} - {stepLabel}</Text>
+      <Text style={[styles.stepCount, live.stepCount]}>Step {displayStepOf(step).n} of {displayStepOf(step).total} - {stepLabel}</Text>
       <Text style={[styles.stepTitle, live.stepTitle]}>{title}</Text>
       {sub ? <Text style={[styles.stepSub, live.stepSub]}>{sub}</Text> : null}
       {outcomes.length ? (
@@ -275,7 +291,9 @@ function QuestionGroup({ icon, title, sub, children }) {
           <Ionicons name={icon} size={18} color={t.colors.primary} />
         </View>
         <View style={styles.questionGroupCopy}>
-          <Text style={[styles.questionGroupTitle, live.questionGroupTitle]}>{title}</Text>
+          {/* RA-7 (D96, Review A): title optional. On a step with exactly
+              one group it grouped nothing and restated the header. */}
+          {title ? <Text style={[styles.questionGroupTitle, live.questionGroupTitle]}>{title}</Text> : null}
           {sub ? <Text style={[styles.questionGroupSub, live.questionGroupSub]}>{sub}</Text> : null}
         </View>
       </View>
@@ -307,7 +325,11 @@ export default function ProOnboardingScreen({ navigation }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
 
-  const [step, setStep] = useState(1);
+  // RA-3 (D96, Review A): lazy initialiser. The advance-past-step-1 effect
+  // below runs AFTER the first paint, so an already-signed-in user (every
+  // real user: nothing in src/ produces isLocal) saw the sign-in step they
+  // had just completed flash for a frame before landing on step 2.
+  const [step, setStep] = useState(() => (user && !user.isLocal ? 2 : 1));
 
   // A4 (pre-release sweep 2026-07-27): feet/inches and stone/lbs are both
   // numeric-pad pairs (no Return key on iOS, so returnKeyType/
@@ -432,13 +454,30 @@ export default function ProOnboardingScreen({ navigation }) {
   // Step 4, recovery + reminders
   const [recoveryRating, setRecoveryRating] = useState(null);
   const [morningHour, setMorningHour] = useState(7);
+  // C5-P28-01 (D96): quiet hours default to 22:00 -> 07:00, so a 5 AM or 6 AM
+  // pick is shifted to 07:00 at schedule time while every display kept showing
+  // the picked hour. The rule itself is locked and unchanged; the picker now
+  // states the time the reminder will actually arrive.
+  const [quietHours, setQuietHoursState] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    getQuietHours()
+      .then((q) => { if (!cancelled) setQuietHoursState(q); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  const morningShift = quietHours
+    ? shiftHourMinuteOutOfQuietHours(morningHour, 0, quietHours)
+    : { shifted: false };
   const [checkinDay, setCheckinDay] = useState(0);
 
   // Step 1, account. OAuth only (Apple/Google), the email + password path was
   // removed (founder 2026-07-01) because email confirmation was flaky. OAuth
   // completes the account inside handleOAuthOnboarding, which sets
   // accountCreated and advances to step 2; there is no signup/signin mode.
-  const [accountCreated, setAccountCreated] = useState(false);
+  // RA-3: initialised alongside `step` above, for the same reason - a
+  // signed-in user starts at step 2 with the account leg already done.
+  const [accountCreated, setAccountCreated] = useState(() => !!(user && !user.isLocal));
 
   const [busy, setBusy] = useState(false);
   const oauthInFlightRef = useRef(false);
@@ -473,10 +512,15 @@ export default function ProOnboardingScreen({ navigation }) {
         setStep(2);
         return;
       }
-      // Otherwise an existing account is being restored and the
-      // navigator is about to send the user to MainTabs. A hydrated
-      // userProfile means don't flash Step 2 before it catches up.
-      if (userProfile) return;
+      // Any OTHER authenticated non-local user advances too. Step 1 exists
+      // only to create an account, and this stack only mounts when the
+      // navigator has already decided the user belongs in the wizard
+      // (firstRunComplete false). The old `if (userProfile) return;` guard
+      // here assumed a hydrated profile meant "restored account about to be
+      // sent to MainTabs" - false in two deterministic live states (the
+      // Free-to-Pro upgrade via resetFirstRun, and a relaunch after a kill
+      // on the hand-off screen), where it trapped a signed-in user on an
+      // OAuth-only screen with no forward or back (C5-P29-01, D96).
       setAccountCreated(true);
       setStep(2);
     }
@@ -575,6 +619,28 @@ export default function ProOnboardingScreen({ navigation }) {
     setStep(s => s - 1);
   }
 
+  // C5-P1-04 / C5-P30-01 (D96): the whole six-step wizard is ONE registered
+  // screen, so React Navigation had nothing to pop and Android's Back button
+  // closed the app from any step. The on-screen chevron (steps 3-6) and the
+  // hardware button did different things on the same screen, and the exit read
+  // as a crash. Hardware Back now mirrors the chevron exactly: it steps the
+  // wizard back where a legal previous step exists, and returns false at steps
+  // 1-2 so the fail-closed exit stands. Step 2 is the required-safe baseline
+  // (sex, age, height, weight) and step 1 the account, so neither can be
+  // reached past backwards, and the consent gate lives in a different stack
+  // entirely (pins C5-P30-05/06 unchanged). Mid-build, the sequence overlay
+  // owns the screen and Back must not unwind a running plan generation.
+  useEffect(() => {
+    if (Platform.OS !== 'android') return undefined;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (submittingRef.current) return true;
+      if (step > 2) { goBack(); return true; }
+      return false;
+    });
+    return () => sub.remove();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, accountCreated]);
+
   async function handleOAuthOnboarding(provider) {
     // OAuth happens inside the in-app browser sheet, the Supabase session
     // callback is handled by App.js's deep-link handler. We just need to
@@ -638,8 +704,19 @@ export default function ProOnboardingScreen({ navigation }) {
   // E7.2 activation funnel: a forward advance through the wizard. `n` is the
   // step just completed (1..4). Counts only, no answers. Lazy-required so the
   // test env that mocks the store/telemetry does not pull the supabase client.
+  //
+  // C5-P38-05 (D96): the emit was unconditional inside each advanceFromN and
+  // the wizard allows stepping back from 3 onwards, so any back-and-forward
+  // round trip re-fired the step's event and a raw count of
+  // "onboarding_step_completed {step: 4}" over-stated how many users had
+  // completed step 4. The order's contract for this event is "fires exactly
+  // once", so a seen-set makes it once per wizard run. No new event, no new
+  // payload field, no catalogue or allow-list change.
+  const emittedStepsRef = useRef(new Set());
   function emitStepDone(n) {
     if (!user?.id) return;
+    if (emittedStepsRef.current.has(n)) return;
+    emittedStepsRef.current.add(n);
     try {
       // eslint-disable-next-line global-require
       const { track } = require('../lib/engineTelemetry');
@@ -648,10 +725,10 @@ export default function ProOnboardingScreen({ navigation }) {
   }
 
   function advanceFrom2() {
-    if (!firstName.trim()) {
-      appAlert('Your name', 'Please enter your first name to continue.');
-      return;
-    }
+    // RA-4 (D96, Review A): the first name no longer gates the step. It is
+    // presentation only, no engine reads it, and the 'there' fallback covers
+    // every surface that greets by name - the rationale C5-P1-09 already
+    // recorded when the free path made it optional.
     // Biological sex is REQUIRED (founder 2026-07-01): it sets the ED calorie
     // floor and BMR, and must never be left to a silent default.
     if (sex !== 'male' && sex !== 'female') {
@@ -781,6 +858,93 @@ export default function ProOnboardingScreen({ navigation }) {
   // Tidy the stage timers if the screen unmounts mid-sequence.
   useEffect(() => cancelSequenceTimers, []);
 
+  // The reminder half of finishing setup: the preference blob, the SQLite
+  // mirror, the OS permission prompt and the day-0 schedules. Extracted from
+  // advanceFrom6 under C5-P27-02 (D96) so it can run BEFORE the build
+  // animation; the body and its order are otherwise unchanged.
+  async function applyReminderPreferences() {
+    // Flat schema: CoachingReminders, WeeklyCheckIn and the Coach tab
+    // all read these top-level keys. The coaching loop needs both
+    // reminders, so onboarding matches Settings > Coaching reminders:
+    // users pick times, not on/off switches.
+    //
+    // #13: checkinHour is fixed at 18 (not user-picked here, only the
+    // day is), matching CoachingRemindersScreen's own picker default
+    // (CoachingRemindersScreen.js:177/202). It used to be 12, which
+    // sits outside that screen's HOURS_EVENING range [14..21], so a
+    // normally-onboarded user opened Coaching reminders and saw no
+    // hour chip selected even though the reminder really was scheduled
+    // for 12:00 (finding 13).
+    //
+    // #14: read-merge-write, matching every other writer of this blob
+    // (NotificationSettingsScreen, CoachingRemindersScreen). This was
+    // previously a wholesale replace; blast radius was low (onboarding
+    // is normally the first write to this key) but it was the one
+    // non-merging writer of a key several screens share (finding 14).
+    let existingPrefs = {};
+    try {
+      const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) existingPrefs = JSON.parse(raw) ?? {};
+    } catch (_) {}
+    const prefs = {
+      ...existingPrefs,
+      morningEnabled: true,
+      checkinEnabled: true,
+      morningHour,
+      morningMinute: 0,
+      checkinDay,
+      checkinHour: 18,
+      checkinMinute: 0,
+    };
+    // OB-2: the chosen check-in day is a preference, not a notification,
+    // so it persists whatever the permission dialog returns. Denying the
+    // permission used to silently discard the day picked here, then the
+    // check-in gate told the user to come back on the default Sunday.
+    await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
+    // C5-P28-02 (D96): onboarding wrote ONLY the device-local AsyncStorage
+    // blob, never the per-category SQLite rows, and those rows are the only
+    // thing the registry push ships to the cloud notification_preferences
+    // table. A user who onboarded on their phone and signed in on a tablet
+    // saw the Sunday defaults instead of the day they picked. This is the
+    // same dual-write CoachingRemindersScreen.applyScheduled already
+    // performs, with the same categories and the same time_pref encoding.
+    // No schema change, no migration; the dual-family architecture question
+    // (FR-C4-2) is untouched and still open.
+    try {
+      if (user?.id) {
+        const morningTime = `${String(morningHour).padStart(2, '0')}:00`;
+        const dow = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'][checkinDay] ?? 'sun';
+        await setPrefRow(user.id, 'morning_weight', { enabled: true, time_pref: morningTime });
+        await setPrefRow(user.id, 'weekly_checkin_reminder', {
+          enabled: true,
+          time_pref: `${dow}_18:00`,
+        });
+      }
+    } catch (_) { /* tolerate; the blob write already succeeded */ }
+    const status = await requestNotificationPermissions();
+    if (status === 'granted') {
+      await scheduleMorningWeightNotification(morningHour, 0);
+      await scheduleEveningWeightReminder();
+      // Audit finding 2 (2026-07-13): the first check-in unlocks only
+      // after FIRST_CHECKIN_MIN_DAYS of data, so the first reminder must
+      // never fire before then -- a day-0 schedule could invite a brand
+      // new user into a locked "wait a few days" screen.
+      await scheduleCheckinReminder(checkinDay, 18, 0, {
+        earliestMs: Date.now() + FIRST_CHECKIN_MIN_DAYS * 86400000,
+      });
+      // OPP-C03: pre-lay the missed check-in follow-up pair for the
+      // first check-in cycle (reads the prefs blob just saved; the
+      // helper self-guards on tier, toggle and ED flag).
+      try {
+        // eslint-disable-next-line global-require
+        const { scheduleMissedCheckinFollowups } = require('../lib/notifications');
+        // eslint-disable-next-line global-require
+        const { default: store } = require('../store/useAppStore');
+        await scheduleMissedCheckinFollowups(store.getState().user?.id ?? null);
+      } catch (_) {}
+    }
+  }
+
   async function advanceFrom6() {
     if (!recoveryRating) {
       appAlert('Recovery rating', 'Please select your recovery level to continue.');
@@ -788,6 +952,28 @@ export default function ProOnboardingScreen({ navigation }) {
     }
     if (submittingRef.current) return;
     submittingRef.current = true;
+    // RB-12 (D96, Review B): from this line hardware Back is swallowed, but
+    // no busy state rendered until startSequence, so a slow permission
+    // dialog left an idle-looking, Back-dead step 6. The spinner now shows
+    // for the whole guarded window (the sequence overlay covers it later).
+    setBusy(true);
+    // RB-9 (D96, Review B): a draft save debounced within the last 600ms
+    // would otherwise fire mid-build and re-save a step-6 draft, racing the
+    // clearDraft below. The guard in the save effect reads this ref at
+    // effect-run time only, so kill the pending timer at the source.
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+
+    // C5-P27-02 (D96): the reminder preferences and the OS permission dialog
+    // are settled BEFORE the build animation starts. They used to run after
+    // startSequence(), so the system dialog appeared over a running
+    // "Building your first plan" overlay whose stage timers kept advancing
+    // behind it. Nothing about what is written or scheduled changes, and the
+    // OB-2 order inside the block (preference first, prompt second) is
+    // preserved. Wrapped in its own try so a permission throw cannot skip
+    // the build below, exactly as the surrounding try did before.
+    try {
+      await applyReminderPreferences();
+    } catch (_) { /* reminders are best-effort; setup continues */ }
 
     // Reduce Motion keeps the plain button spinner; everyone else gets the
     // staged sequence. The real work below is identical either way.
@@ -797,70 +983,11 @@ export default function ProOnboardingScreen({ navigation }) {
     else setBusy(true);
 
     let planFailed = false;
+    // C5-P29-07 (D96): what an interrupted earlier run of this same build
+    // already wrote. Null on a first run and on any storage failure, in which
+    // case every write below runs exactly as it always did.
+    const priorBuild = user?.id ? await loadBuildProgress(user.id) : null;
     try {
-      {
-        // Flat schema: CoachingReminders, WeeklyCheckIn and the Coach tab
-        // all read these top-level keys. The coaching loop needs both
-        // reminders, so onboarding matches Settings > Coaching reminders:
-        // users pick times, not on/off switches.
-        //
-        // #13: checkinHour is fixed at 18 (not user-picked here, only the
-        // day is), matching CoachingRemindersScreen's own picker default
-        // (CoachingRemindersScreen.js:177/202). It used to be 12, which
-        // sits outside that screen's HOURS_EVENING range [14..21], so a
-        // normally-onboarded user opened Coaching reminders and saw no
-        // hour chip selected even though the reminder really was scheduled
-        // for 12:00 (finding 13).
-        //
-        // #14: read-merge-write, matching every other writer of this blob
-        // (NotificationSettingsScreen, CoachingRemindersScreen). This was
-        // previously a wholesale replace; blast radius was low (onboarding
-        // is normally the first write to this key) but it was the one
-        // non-merging writer of a key several screens share (finding 14).
-        let existingPrefs = {};
-        try {
-          const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
-          if (raw) existingPrefs = JSON.parse(raw) ?? {};
-        } catch (_) {}
-        const prefs = {
-          ...existingPrefs,
-          morningEnabled: true,
-          checkinEnabled: true,
-          morningHour,
-          morningMinute: 0,
-          checkinDay,
-          checkinHour: 18,
-          checkinMinute: 0,
-        };
-        // OB-2: the chosen check-in day is a preference, not a notification,
-        // so it persists whatever the permission dialog returns. Denying the
-        // permission used to silently discard the day picked here, then the
-        // check-in gate told the user to come back on the default Sunday.
-        await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify(prefs)).catch(() => {});
-        const status = await requestNotificationPermissions();
-        if (status === 'granted') {
-          await scheduleMorningWeightNotification(morningHour, 0);
-          await scheduleEveningWeightReminder();
-          // Audit finding 2 (2026-07-13): the first check-in unlocks only
-          // after FIRST_CHECKIN_MIN_DAYS of data, so the first reminder must
-          // never fire before then -- a day-0 schedule could invite a brand
-          // new user into a locked "wait a few days" screen.
-          await scheduleCheckinReminder(checkinDay, 18, 0, {
-            earliestMs: Date.now() + FIRST_CHECKIN_MIN_DAYS * 86400000,
-          });
-          // OPP-C03: pre-lay the missed check-in follow-up pair for the
-          // first check-in cycle (reads the prefs blob just saved; the
-          // helper self-guards on tier, toggle and ED flag).
-          try {
-            // eslint-disable-next-line global-require
-            const { scheduleMissedCheckinFollowups } = require('../lib/notifications');
-            // eslint-disable-next-line global-require
-            const { default: store } = require('../store/useAppStore');
-            await scheduleMissedCheckinFollowups(store.getState().user?.id ?? null);
-          } catch (_) {}
-        }
-      }
-
       if (setUnits) setUnits(localUnits);
       if (setBodyWeightUnits) setBodyWeightUnits(localBWUnits);
 
@@ -927,7 +1054,6 @@ export default function ProOnboardingScreen({ navigation }) {
       const isDeficit = trainingPhase === 'cut';
       const merged = {
         ...(userProfile || {}),
-        firstName: firstName.trim(),
         units: localUnits,
         bodyWeightUnits: localBWUnits,
         sex,
@@ -957,25 +1083,58 @@ export default function ProOnboardingScreen({ navigation }) {
         // instead of defaulting to lean_gain.
         goal: phaseToNutritionKey(trainingPhase),
       };
+      // RA-4 (D96, Review A): the name is optional now (presentation only,
+      // no engine reads it - the same rationale C5-P1-09 recorded for the
+      // free path). An empty field leaves any stored name intact rather
+      // than writing a blank over it.
+      if (firstName.trim()) merged.firstName = firstName.trim();
 
       if (user?.id) await saveLocalProfile(user.id, merged);
 
       // (Health Connect / Apple Health connect-on-enrolment was removed with the
       // step-target feature, founder 2026-06-30.)
 
+      // C5-P29-07: the enrolment body-metric row is INSERT-only (unlike the
+      // profile and targets upserts beside it), so a retry after a mid-build
+      // kill used to leave two rows for one enrolment. It is written once per
+      // build; the weight itself still reaches the profile and the morning
+      // series (which dedups by local day) on every run.
       if (user?.id && !isNaN(bwKg) && bwKg > 0) {
-        await logBodyMetric(user.id, {
-          weightKg: bwKg,
-          bodyFatPercent: bfNum,
-          bodyFatSource: baselineBfSource,
-          loggedAt: Date.now(),
-        });
+        // RB-7 (D96, Review B): a mid-build kill, a step back to change the
+        // weight, and a resubmit used to keep the FIRST weight in the
+        // enrolment row forever while the profile and morning series carried
+        // the new one. The record stores the weight it logged, so an edited
+        // weight re-logs and the enrolment row agrees with its siblings.
+        if (!priorBuild?.weightLoggedAt || (Number.isFinite(priorBuild?.weightKg) && priorBuild.weightKg !== bwKg)) {
+          await logBodyMetric(user.id, {
+            weightKg: bwKg,
+            bodyFatPercent: bfNum,
+            bodyFatSource: baselineBfSource,
+            loggedAt: Date.now(),
+          });
+          await markBuildProgress(user.id, { weightLoggedAt: Date.now(), weightKg: bwKg });
+        }
         // Also seed the morning weights series so the weekly check-in
         // gate (needs 3 readings in the last 7 days) counts enrolment
         // day. Without this, a user who enrols on their chosen check-in
         // day and tries to check in is told "0 readings this week" even
         // though they just typed a weight two screens ago.
-        await logMorningWeight(user.id, { weightKg: bwKg, loggedAt: Date.now() }).catch((e) => {
+        //
+        // C5-P22-01 (D96): the row is MARKED as the enrolment starting
+        // point rather than passing as a morning the user weighed. It is a
+        // figure typed from memory, possibly in the evening, possibly
+        // clothed, so surfaces that speak about the user's own weigh-in
+        // behaviour (Home's "Logged" tick, the check-in's "not yet today")
+        // read the marker and treat today as un-weighed. What counts toward
+        // the check-in gate is deliberately unchanged: tightening that gate
+        // would be a worse defect than the disclosure gap. A real weigh-in
+        // on the same day overwrites this row (logMorningWeight upserts per
+        // local day) and clears the marker with it.
+        await logMorningWeight(user.id, {
+          weightKg: bwKg,
+          loggedAt: Date.now(),
+          notes: ENROLMENT_WEIGHT_NOTE,
+        }).catch((e) => {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('ProOnboarding.logMorningWeight', e, { uid: user?.id }); } catch (_) {}
         });
@@ -1032,8 +1191,33 @@ export default function ProOnboardingScreen({ navigation }) {
           recoveryRating,
         };
         let planResult = { ok: false, error: 'not attempted' };
-        try { planResult = await generateAndSavePlan(user.id, planProfile); }
-        catch (e) { planResult = { ok: false, error: e?.message ?? 'unknown' }; }
+        // C5-P29-07: a retry after a kill used to build a SECOND plan, which
+        // archived the first and took the "Your plan 2" name. If the earlier
+        // run already built a plan from these exact answers, that plan IS the
+        // result of this build, so it is adopted rather than rebuilt. Edited
+        // answers produce a different signature and generate as before.
+        const planSignature = JSON.stringify([
+          experience, daysPerWeek, sessionLengthMinutes, equipment,
+          trainingGoal, trainingPhase, planWeakPoints, recoveryRating,
+        ]);
+        const reusablePlanId = priorBuild?.planId && priorBuild.planSignature === planSignature
+          ? priorBuild.planId
+          : null;
+        const priorPlan = reusablePlanId
+          ? await getProgrammeById(reusablePlanId).catch(() => null)
+          : null;
+        // Reused only while it is still the one active, unarchived plan the
+        // earlier run left behind. Anything else regenerates, so first-run
+        // always ends on exactly one valid active plan and block.
+        if (priorPlan && priorPlan.isActive && !priorPlan.isArchived) {
+          planResult = { ok: true, programmeId: priorPlan.id };
+        } else {
+          try { planResult = await generateAndSavePlan(user.id, planProfile); }
+          catch (e) { planResult = { ok: false, error: e?.message ?? 'unknown' }; }
+          if (planResult.ok && planResult.programmeId) {
+            await markBuildProgress(user.id, { planId: planResult.programmeId, planSignature });
+          }
+        }
         if (!planResult.ok) {
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan', planResult.error, { userId: user.id }); } catch (_) {}
@@ -1155,8 +1339,7 @@ export default function ProOnboardingScreen({ navigation }) {
     // shared helper advanceFrom2 uses so the button and the gate can never drift.
     const step2HeightCm = resolveHeightCm(localHeightUnits, heightCm, heightFt, heightIn);
     const canContinue =
-      !!firstName.trim()
-      && (sex === 'male' || sex === 'female')
+      (sex === 'male' || sex === 'female')
       && !!step2BwKg && !Number.isNaN(step2BwKg) && step2BwKg >= 30 && step2BwKg <= 300
       && !Number.isNaN(step2Age) && step2Age >= 13 && step2Age <= 100
       && isValidHeightCm(step2HeightCm);
@@ -1170,14 +1353,24 @@ export default function ProOnboardingScreen({ navigation }) {
               sub="These details let the app set a safe starting baseline without guessing."
             />
 
-            <QuestionGroup
-              icon="person-outline"
-              title="Required details"
-              sub="Name, sex, age, height and body weight are the minimum safe inputs for your first targets."
-            >
+            {/* C5-P36-01 (D96): every wizard step stated its purpose twice
+                before the first field - a header title and sub, then a group
+                title and sub saying the same thing five lines later. The
+                header sub is kept as the single carrier. RA-7 (Review A)
+                then dropped this group's TITLE too: step 2 has exactly one
+                group, so "Required details" grouped nothing, restated the
+                header a third time, and (after RA-4) sat above a field that
+                is not required. The icon keeps the visual grouping; steps
+                with real multi-group structure keep their titles. No field,
+                gate, validation or safety hint is removed anywhere. */}
+            <QuestionGroup icon="person-outline">
               <View style={styles.section}>
-                <Text style={[styles.fieldLabel, live.fieldLabel]}>First name</Text>
-                <TextField accessibilityLabel="First name"
+                {/* RA-4 (D96, Review A): the one field in the block with no
+                    stated reason, because there is none an engine could
+                    give - so it is optional and says what it is for. */}
+                <Text style={[styles.fieldLabel, live.fieldLabel]}>First name (optional)</Text>
+                <Text style={[styles.fieldHint, live.fieldHint]}>Only used to greet you.</Text>
+                <TextField accessibilityLabel="First name, optional"
                   ref={nameRef}
                   fieldStyle={styles.inputField}
                   inputStyle={styles.input}
@@ -1361,7 +1554,7 @@ export default function ProOnboardingScreen({ navigation }) {
             </QuestionGroup>
 
             {!canContinue ? (
-              <Text style={[styles.continueHint, live.continueHint]}>Complete your name, sex, age, height and body weight to continue.</Text>
+              <Text style={[styles.continueHint, live.continueHint]}>Complete your sex, age, height and body weight to continue.</Text>
             ) : null}
 
             <Button
@@ -1399,8 +1592,18 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <QuestionGroup
               icon="analytics-outline"
-              title="Starting body composition"
-              sub="Your best current estimate helps the first plan. Progress Photos can refine physique change later with your Volyume Score."
+              // C5-P36-01 + C5-P36-03 (D96): this sub said the same thing as
+              // the header sub five lines above it ("An honest estimate
+              // sharpens your first plan"), and then advertised two features
+              // the user has not reached, cannot open from here and does not
+              // need in order to answer an optional body-fat field - exactly
+              // the onboarding-as-advertising the order names as a non-goal,
+              // taught weeks before it is relevant, and carrying none of the
+              // careful framing the Volyume Score's own surfaces use. Both
+              // sentences are deleted; the header sub and the field hint
+              // below already answer the screen's question honestly.
+              // RC-7 (D96, Review C): the title too - the step has exactly
+              // one group, so it grouped nothing and restated the header.
             >
               <View style={styles.sectionLast}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Body fat estimate % (optional)</Text>
@@ -1471,8 +1674,8 @@ export default function ProOnboardingScreen({ navigation }) {
 
             <QuestionGroup
               icon="barbell-outline"
-              title="Plan fit"
-              sub="These answers choose the starting split, exercise pool and weekly workload."
+              // C5-P36-01 (D96): the header sub above is the single carrier.
+              // RC-7 (D96, Review C): single-group step, so no group title.
             >
               <View style={styles.section}>
                 <Dropdown
@@ -1596,8 +1799,10 @@ export default function ProOnboardingScreen({ navigation }) {
                 weak-point spec, and strength-size emphasis. */}
             <QuestionGroup
               icon="flag-outline"
-              title="Goal and targets"
-              sub="Start with the broad goal. Competitive category and weak points are optional refinements."
+              // C5-P36-01 (D96): the header sub above is the single carrier.
+              // The optional-refinements point is already made by the fields
+              // themselves, each of which is labelled optional.
+              // RC-7 (D96, Review C): single-group step, so no group title.
             >
               <View style={styles.section}>
                 <Dropdown
@@ -1792,7 +1997,18 @@ export default function ProOnboardingScreen({ navigation }) {
           <ProOnboardingHeader
             step={step}
             title="Recovery and reminders"
-            sub="Recovery affects your plan volume. Reminders keep coaching consistent."
+            // C5-P36-02 (D96): this screen stated one idea four times in a
+            // single scroll - this sub, the coach card, the field hint and a
+            // tooltip the source comment below says is deliberately SHARED by
+            // the hint and this sub, because the header has no field label to
+            // anchor one to. That shared anchor was the symptom: two
+            // explanation layers competing for one idea. The volume clause is
+            // deleted here, where it had no anchor, and kept on the field
+            // hint an inch below, which states it more usefully and owns the
+            // tooltip outright. The coach card, the reminder copy and the
+            // tooltip all stay; nothing about the recovery question, what it
+            // drives, or the write-before-prompt reminder ordering changes.
+            sub="Reminders keep coaching consistent."
             onBack={goBack}
           />
 
@@ -1809,12 +2025,14 @@ export default function ProOnboardingScreen({ navigation }) {
           </View>
 
           <View style={styles.section}>
-            {/* U-E-1/A6: glosses "volume" for both this field's hint AND the
-                Header sub above ("Recovery affects your plan volume..."),
-                the Header carries no field label of its own to anchor a
-                tooltip to, so it shares this one on the field immediately
-                below it, per the existing bodyFatMethod/phase/division/
-                proteinTier pattern. */}
+            {/* U-E-1/A6: glosses "volume" on this field's hint, per the
+                existing bodyFatMethod/phase/division/proteinTier pattern.
+                C5-P36-02 (D96): the tooltip used to stand in for the Header
+                sub above as well, because that sub also said "volume" with
+                no field label to anchor a tooltip to. That sub's volume
+                clause is now deleted, so this is the only "volume" site on
+                the step and the tooltip anchors to its own field, as
+                everywhere else. */}
             <Dropdown
               label="How's your recovery?"
               hint="Be honest here. This sets how much volume your plan includes, so it can protect your recovery."
@@ -1828,7 +2046,12 @@ export default function ProOnboardingScreen({ navigation }) {
 
           <View style={styles.section}>
             <Text style={[styles.fieldLabel, live.fieldLabel]}>Coaching reminders</Text>
-            <Text style={[styles.fieldHint, live.fieldHint]}>Pick a morning time and weekly check-in day. Change them any time in your coaching reminder settings.</Text>
+            {/* C5-P27-02 (D96): the tap that leaves this step reads as
+                "finish setup", and nothing said the phone was about to ask
+                for notification permission. One clause, so the OS dialog
+                arrives as the expected consequence of a choice already
+                explained above it. */}
+            <Text style={[styles.fieldHint, live.fieldHint]}>Pick a morning time and weekly check-in day. Your phone will ask to allow notifications when you continue. Change them any time in your coaching reminder settings.</Text>
 
             <View style={[styles.notifSection, live.notifSection]}>
               <View style={styles.notifHeader}>
@@ -1837,8 +2060,13 @@ export default function ProOnboardingScreen({ navigation }) {
                 </View>
                 <View style={styles.notifCopy}>
                   <Text style={[styles.notifTitle, live.notifTitle]}>Morning weight reminder</Text>
+                  {/* C5-P28-03 (D96): a second daily weight prompt (19:30) is
+                      laid alongside this one and was named on no screen the
+                      user could reach. It is named here, where the morning
+                      prompt is chosen. Nothing about what is scheduled
+                      changes. */}
                   <Text style={[styles.notifSub, live.notifSub]}>
-                    A quick morning weigh-in gives a cleaner trend than occasional scale checks.
+                    A quick morning weigh-in gives a cleaner trend than occasional scale checks. If the morning gets away from you, a quiet backstop at 7.30 pm offers one more chance that day.
                   </Text>
                 </View>
                 {/* FR-4/D7: "Required" softened to "Part of your coaching" -
@@ -1875,6 +2103,12 @@ export default function ProOnboardingScreen({ navigation }) {
                 </ScrollView>
                 </View>
               </View>
+              {/* C5-P28-01 (D96): the effective time, not just the picked one. */}
+              {morningShift.shifted ? (
+                <Text style={[styles.notifSub, live.notifSub]}>
+                  Quiet hours currently run to {fmt12(morningShift.hour)}, so this reminder will arrive then. You can change quiet hours in Settings, Notifications.
+                </Text>
+              ) : null}
             </View>
 
             <View style={[styles.notifSection, live.notifSection]}>

@@ -9,11 +9,27 @@ const SOURCE = fs.readFileSync(
 describe('ProOnboardingScreen premium polish guards', () => {
   test('final setup copy stays plain, British and rule-based', () => {
     expect(SOURCE).toContain('Volyume uses your morning weigh-ins and weekly check-in to shape coaching.');
-    expect(SOURCE).toContain('Recovery affects your plan volume. Reminders keep coaching consistent.');
+    // Same-meaning re-anchor (C5-P36-02, D96): step 6 stated the
+    // recovery-drives-volume idea four times in one scroll, and the header
+    // sub was the copy with no tooltip anchor of its own. The clause is
+    // deleted there and kept on the recovery field's own hint, which states
+    // it more usefully and owns the tooltip. The reminders half is unchanged.
+    expect(SOURCE).toContain('Reminders keep coaching consistent.');
+    expect(SOURCE).not.toContain('Recovery affects your plan volume.');
+    expect(SOURCE).toContain('This sets how much volume your plan includes, so it can protect your recovery.');
   });
 
   test('optional body composition can seed the first plan while staying honest about certainty', () => {
-    expect(SOURCE).toContain('Your best current estimate helps the first plan.');
+    // Same-meaning re-anchor (C5-P36-01 + C5-P36-03, D96): the group sub that
+    // carried "Your best current estimate helps the first plan" repeated the
+    // header sub five lines above it and then advertised Progress Photos and
+    // the Volyume Score inside a body-fat question (onboarding-as-advertising,
+    // an explicit non-goal, and body-image adjacent with none of the framing
+    // those surfaces carry). The honest-about-certainty promise this test
+    // exists to pin now rests on the header sub and the field hint, both of
+    // which are stronger carriers of it.
+    expect(SOURCE).toContain('An honest estimate sharpens your first plan. Skip this if you are not sure.');
+    expect(SOURCE).not.toContain('Progress Photos can refine physique change later');
     expect(SOURCE).toContain('Enter your best current estimate or a measured value.');
     expect(SOURCE).toContain('const BODY_FAT_SOURCE_OPTIONS = [');
     expect(SOURCE).toContain("{ label: 'Best estimate', value: 'visual' }");

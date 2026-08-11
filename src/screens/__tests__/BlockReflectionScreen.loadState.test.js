@@ -92,10 +92,16 @@ describe('BlockReflectionScreen load states', () => {
 
     const text = flattenText(tree.toJSON());
     expect(text).toContain('No data found');
-    expect(text).toContain('Start a new block');
-    const start = tree.root.findByProps({ accessibilityLabel: 'Start a new block' });
+    // Re-anchored under FB-18 (D96): the empty state's CTA was "Start a new
+    // block" pointing at MesocycleBuilder, which is read-only and has no
+    // create action, so the button could not do what it said. The decision
+    // lives on the Train tab's block card. The pinned RULE -- a genuine
+    // no-data state with a working cross-tab CTA, never a dead in-stack
+    // navigate -- is unchanged.
+    expect(text).toContain('Choose your next block');
+    const start = tree.root.findByProps({ accessibilityLabel: 'Choose your next block' });
     await act(async () => { start.props.onPress(); });
-    expect(parent.navigate).toHaveBeenCalledWith('PlansTab', { screen: 'MesocycleBuilder', initial: false });
+    expect(parent.navigate).toHaveBeenCalledWith('PlansTab', { screen: 'Plans', initial: false });
     // The bare in-stack form is the dead tap this replaced: it resolved
     // against ProfileStack, where MesocycleBuilder is not registered.
     expect(navigation.navigate).not.toHaveBeenCalled();

@@ -383,19 +383,29 @@ export function buildBlockCards(data, units) {
   if (startMs && endMs) shapeBits.push(`${fmtDate(startMs)} to ${fmtDate(endMs)}`);
   cards.push({ type: 'intro', icon: 'sparkles', tone: 'gold', headline: name, subline: shapeBits.join(' - ') });
 
+  // FB-17 (D96): the figure now compares the first week with the last
+  // BUILD week, not with the deliberately halved recovery week, so a gold
+  // stat card with an upward arrow can no longer show a large negative.
   if (data.tonnageDelta != null) {
     const up = data.tonnageDelta >= 0;
     cards.push({
       type: 'stat', icon: 'trending-up', tone: 'success',
       value: `${up ? '+' : ''}${data.tonnageDelta}%`, unit: 'weekly total lifted',
-      caption: up ? 'From the first week to the last, that climb is the block working.' : 'Your final week was lighter, and that\'s the plan working.',
+      caption: up
+        ? 'From your first week to your last training week, that climb is the block working.'
+        : 'Your last training week was lighter than your first, which can happen after a hard stretch.',
     });
   }
 
+  // FB-16 (D96): these are the best estimated max per exercise within this
+  // block, never compared against a prior block or any record store, so on
+  // a first block every row is a first-ever performance. The month and week
+  // decks above already use the honest subline; only this one claimed
+  // records. Same rows, same maths, honest label.
   if (data.prs?.length > 0) {
     cards.push({
-      type: 'list', icon: 'trophy', tone: 'gold',
-      headline: 'Personal records', subline: 'Set this block',
+      type: 'list', icon: 'barbell', tone: 'primary',
+      headline: 'Your best lifts', subline: 'Estimated max lifts this block',
       rows: data.prs.slice(0, 5).map(pr => ({ primary: pr.exerciseName ?? pr.exercise_name, secondary: `${safeToFixed(pr.value, 1)}${units}` })),
     });
   }
@@ -407,9 +417,13 @@ export function buildBlockCards(data, units) {
     caption: `${data.totalSets.toLocaleString('en-GB')} sets - ${data.tonnage.toLocaleString('en-GB')} kg moved.`,
   });
 
+  // FB-23 (D96): "Recover well, then go again" told a user who had just
+  // finished their recovery week to recover, and "Your full block summary
+  // is inside" pointed at a screen this deck does not link to (the link
+  // runs the other way, from BlockReflection into the story).
   cards.push({
     type: 'outro', icon: 'checkmark-circle', tone: 'gold',
-    headline: 'That block is done. Recover well, then go again.', subline: 'Your full block summary is inside.',
+    headline: 'That block is done, recovery week included.', subline: 'Choosing your next block is the next step, on the Train tab.',
   });
   return cards;
 }

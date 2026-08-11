@@ -48,6 +48,14 @@ Day 21:      First charge.
 Never change the 14-day server-side duration, the 7-day store trial offer,
 the day-14 paywall trigger, or the pricing.
 
+FOUNDER-VERIFIED CONSOLE FACT (2026-08-10, repeated confirmation - do
+NOT re-raise this): the 7-day introductory store offer IS configured in
+BOTH Google Play Console and App Store Connect. The in-app trial is 14
+days cardless, then the first 7 days of a store subscription are free
+through Apple and Google. Audits and reviews must treat this as
+verified; the consoles are outside the repo, and this line is the
+record that the founder has checked them. (Closed FQ-6.3, Campaign 5.)
+
 ---
 
 ## PRICING — NEVER CHANGE

@@ -22,15 +22,55 @@ import {
   getWeeklyVolumeByMuscle,
   getRecentAdaptationEvents,
   createAdaptationEvent,
+  getPlannedMuscleVolumeForBlock,
+  getMesocycleWeekById,
 } from './database';
 import {
   buildSessionAdjustmentInput,
   computeSessionAdjustments,
   computeAdaptiveLandmarks,
 } from './algorithms';
+import { computeWeeklySessionAllocation } from './coachApply';
 import { logWarn } from './errorLog';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
+ * FQ-4 (D96): resolve this session's per-exercise WORKING-SET base from the
+ * week's persisted volume allocation. Reads the block's planned_muscle_volume
+ * rows, splits them into this week's and the block's first week (the
+ * baseline the routines were generated against), and scales through the pure
+ * allocator. Returns { allocation, weekRows } - allocation is null when the
+ * session has no mesocycle week or the rows are absent/unreadable, in which
+ * case every caller falls back to the routine's static counts (identity).
+ * Never throws.
+ */
+export async function getSessionWeeklyAllocation({ workout, exercises }) {
+  const none = { allocation: null, weekRows: [] };
+  try {
+    if (!workout?.mesocycleWeekId) return none;
+    const week = await getMesocycleWeekById(workout.mesocycleWeekId).catch(() => null);
+    const mesocycleId = week?.mesocycle_id ?? week?.mesocycleId ?? null;
+    if (!mesocycleId) return none;
+    const rows = await getPlannedMuscleVolumeForBlock(mesocycleId).catch(() => []);
+    if (!rows?.length) return none;
+    const weekRows = rows.filter(r => r.mesocycle_week_id === workout.mesocycleWeekId);
+    if (!weekRows.length) return none;
+    const firstIndex = Math.min(...rows.map(r => Number(r.week_index)).filter(Number.isFinite));
+    const baselineRows = rows.filter(r => Number(r.week_index) === firstIndex);
+    const toMap = (list) => Object.fromEntries(list.map(r => [r.muscle, r.planned_sets]));
+    const todays = (exercises || []).map(e => ({
+      exerciseId: e?.exercise?.id ?? e?.exerciseId ?? null,
+      primaryMuscle: e?.exercise?.primaryMuscle ?? e?.primaryMuscle ?? null,
+      recommendedSets: e?.routineExercise?.recommendedSets ?? e?.recommendedSets ?? null,
+    }));
+    const allocation = computeWeeklySessionAllocation(todays, toMap(weekRows), toMap(baselineRows));
+    return { allocation: Object.keys(allocation).length ? allocation : null, weekRows };
+  } catch (e) {
+    logWarn('sessionAdjustments.weeklyAllocation', e?.message);
+    return none;
+  }
+}
 
 /**
  * Compute this session's adjustments and log them. Returns the decision list
@@ -49,11 +89,20 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
     // v1: require an active mesocycle week (see header).
     if (!workout.mesocycleWeekId) return [];
 
+    // FQ-4 (D96): this week's persisted volume allocation is the session's
+    // per-exercise BASE - the routine's static count scaled to the week's
+    // planned_muscle_volume for its muscle. Identity when no rows exist.
+    // The session-layer ±1 tweaks below then apply on top of the allocated
+    // base, so an applied coach change (or the recovery week's per-muscle
+    // reductions) and the readiness tweaks compose instead of competing.
+    const { allocation, weekRows } = await getSessionWeeklyAllocation({ workout, exercises });
+
     const todaysExercises = (exercises || [])
       .map(e => ({
         exerciseId: e?.exercise?.id ?? null,
         primaryMuscle: e?.exercise?.primaryMuscle ?? null,
-        plannedSets: e?.routineExercise?.recommendedSets ?? null,
+        plannedSets: allocation?.[e?.exercise?.id]
+          ?? e?.routineExercise?.recommendedSets ?? null,
       }))
       .filter(e => e.exerciseId && e.primaryMuscle && Number.isFinite(e.plannedSets) && e.plannedSets >= 1);
     if (todaysExercises.length === 0) return []; // ad-hoc / empty session → silent
@@ -85,13 +134,27 @@ export async function computeAndLogSessionAdjustments({ userId, workout, exercis
     const weekStartMs = lastWeek?.weekStart ?? (now - WEEK_MS);
     const sessionEvents = (recentEvents || []).filter(e => String(e.decision ?? '').startsWith('session_'));
 
+    // FQ-4 (D96): confirm-then-apply, end to end. The raw volumeSignal on
+    // the LATEST STORED coach output used to reach the session engine
+    // whether or not the user ever tapped Apply - so an unapplied "pull
+    // back" proposal silently suppressed the session +1 path (the inverted
+    // half of PM-02). An ordinary proposal now only influences a session
+    // once it is a PERSISTED APPLIED TARGET: this week's rows carrying
+    // source 'coach'. safetyHold is NOT gated - it is hard safety behaviour
+    // explicitly defined as automatic, exactly the exception the founder
+    // ruling names.
+    const appliedGovernsWeek = (weekRows || []).some(r => r.source === 'coach');
+    const gatedCoachOutput = coachOutput
+      ? { ...coachOutput, volumeSignal: appliedGovernsWeek ? coachOutput.volumeSignal : 0 }
+      : coachOutput;
+
     const input = buildSessionAdjustmentInput({
       todaysExercises,
       perMuscle: signals.perMuscle,
       checkin: signals.checkin,
       presessionSoreness: workout.soreness24hBefore ?? null,
       presessionIntent: workout.preWorkoutIntent ?? null,
-      coachOutput,
+      coachOutput: gatedCoachOutput,
       isDeload: !!mesoWeek?.isDeload,
       weeklyVolumeByMuscle: doneThisWeekByMuscle,
       landmarks,

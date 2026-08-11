@@ -6,7 +6,7 @@ import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { safeDate, safeFormatDate } from '../lib/safeFormat';
-import { getBlockStatus } from '../lib/mesocycle';
+import { getBlockStatus, BLOCK_PLANNED_WEEKS } from '../lib/mesocycle';
 import SvgBarSparkline from '../components/SvgBarSparkline';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -183,17 +183,28 @@ export default function MesocycleBuilderScreen({ navigation }) {
                 <View style={styles.planCardHead}>
                   <Ionicons name="barbell" size={18} color={t.colors.primary} />
                   <Text style={[styles.planCardTag, live.planCardTag]}>Your active plan</Text>
+                  {/* C5-P11-03 / C5-P11-05 / FB-20 (D96): this was the one
+                      place on the Train side that defined a block, and it
+                      described a product that does not exist -- an
+                      "optional layer you add on top", archived "in Past
+                      blocks below" as soon as it ends. Activation always
+                      creates a block (activatePlanWithBlock), there is no
+                      control for one, and a finished block stays active
+                      until the NEXT one is created, which is why it is
+                      missing from Past blocks during the decision window.
+                      The two facts worth keeping (your plan keeps going;
+                      you start the next block) are kept. */}
                   <InfoTooltip
                     size={14}
                     text={
-                      'A training block is a structured period, usually 4 to 8 weeks, ' +
-                      'where your weekly sets gradually increase, then drop back during a lighter recovery week to let your body absorb the work.\n\n' +
-                      'Your plan (the workouts and exercises) lives independently. A block is an ' +
-                      'optional layer you add on top to track week-by-week progress across those weeks.\n\n' +
-                      'After the block ends:\n' +
-                      '• The block is archived in Past blocks below\n' +
+                      'A training block is the multi-week shape of your training: your weekly sets climb for a few weeks, ' +
+                      'then drop back for a lighter recovery week so your body can absorb the work.\n\n' +
+                      `Your plan is the workouts and exercises. Making a plan active also starts a block of ${BLOCK_PLANNED_WEEKS} weeks, ` +
+                      'the last of them the recovery week. There is nothing to set up.\n\n' +
+                      'When the block finishes:\n' +
                       '• Your plan keeps going. The workouts are still there.\n' +
-                      '• Start a new block to begin the next training phase'
+                      '• Nothing rolls into a new block on its own. You choose what comes next\n' +
+                      '• The finished block moves to Past blocks once your next block starts'
                     }
                   />
                 </View>
@@ -226,14 +237,39 @@ export default function MesocycleBuilderScreen({ navigation }) {
                           />
                         ))}
                       </View>
+                      {/* FB-15 (D96): a finished block stays is_active = 1
+                          until the NEXT block is created, so it is neither
+                          in Past blocks nor offered the "View block
+                          summary" button below -- the one screen that
+                          answers "what did this block show" was unreachable
+                          for the whole decision window it exists to inform.
+                          isBlockFinished is the same predicate the label
+                          above already uses. */}
+                      {finished && (
+                        <Button
+                          title="View block summary"
+                          icon="document-text-outline"
+                          variant="tertiary"
+                          size="sm"
+                          fullWidth={false}
+                          onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'BlockReflection', { mesocycleId: activeMeso.id })}
+                          style={[styles.summaryBtn, live.summaryBtn]}
+                          textStyle={[styles.summaryBtnText, live.summaryBtnText]}
+                          accessibilityLabel={`View summary of ${activeMeso.name ?? 'this block'}`}
+                        />
+                      )}
                     </View>
                   );
                 })()}
+                {/* C5-P11-03 (D96): the old note told the user to "set a
+                    start date, duration and recovery week" -- three
+                    controls that do not exist anywhere in the app. The
+                    block is created with the plan, at a fixed length. */}
                 {!activeStats?.active && (
                   <Text style={[styles.planCardNote, live.planCardNote]}>
-                    This is the training your coach built. A training block is an
-                    optional multi-week layer on top of it. Set a start date,
-                    duration and recovery week to track periodised progress.
+                    This is the training your coach built. Making a plan active also starts
+                    a training block of {BLOCK_PLANNED_WEEKS} weeks, the last of them a lighter
+                    recovery week. There is nothing to set up.
                   </Text>
                 )}
               </View>
@@ -300,8 +336,11 @@ export default function MesocycleBuilderScreen({ navigation }) {
                         `This block runs for ${totalWeeks} weeks` +
                         (meso.deloadWeek ? `. Week ${meso.deloadWeek} is your lighter recovery week.` : '.') +
                         '\n\nEach week your sets increase slightly until the recovery week, where the load drops so your body can absorb all the progress you have been making.\n\n' +
-                        `When Week ${totalWeeks} is complete, the block closes and moves to Past blocks below. ` +
-                        'Your plan keeps running. Start a new block to begin the next training phase.'
+                        // FB-20 (D96): it does NOT move to Past blocks when
+                        // the last week completes; it waits, still active,
+                        // until the next block is created.
+                        `When Week ${totalWeeks} is complete, the block is finished and waits for your decision. ` +
+                        'Your plan keeps running. It moves to Past blocks once your next block starts.'
                       }
                     />
                   </View>

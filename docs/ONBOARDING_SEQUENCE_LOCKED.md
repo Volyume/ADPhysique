@@ -3,6 +3,19 @@
 The screens a new user sees from app open to first useful screen, in
 order. Locked 2026-05-23.
 
+> **⚠ STATUS (2026-08-10, Campaign 5 / FQ-1):** the sequence below is
+> the 2026-05-23 DESIGN record; the shipped flow has since diverged
+> and the live journey is mapped from code in
+> `docs/first-use-audit-2026-08-10/CURRENT-FIRST-USE-JOURNEY.md`.
+> Corrections a reader needs today: there is NO dedicated first-run
+> wellbeing/calm question and NO SCOFF screener in onboarding - the
+> screener lives in Coach → Safety checks, calm coaching's canonical
+> editor is Settings → Coaching, and first-run setup points at it
+> with one quiet line on the hand-off screen (FQ-1(c), founder
+> ruling). The `src/screens/onboarding/*` file layout named below
+> was never built; the live flow is RootNavigator's state machine
+> plus ProOnboardingScreen/FirstRunScreen/FreeStarterScreen.
+
 ## Principle
 
 Onboarding is **information collection plus consent**, not feature

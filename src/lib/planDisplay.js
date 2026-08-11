@@ -57,6 +57,19 @@ export function planHeadingName(planName) {
   return out || name;
 }
 
+// C5-P10-04 (D96): the equipment a library plan is built for, in one word
+// the browse and preview surfaces can render. Every seeded plan carries an
+// equipment:* tag (or none, which means the barbell/machine default), but
+// nothing rendered it anywhere, so "what do I need for this?" could not be
+// answered before activating. Derived from the same tags the library quiz
+// and the "Dumbbells only" collection already read; no new data.
+export function planEquipmentLabel(plan) {
+  const tags = plan && typeof plan.tags === 'string' ? plan.tags.toLowerCase() : '';
+  if (tags.includes('equipment:bodyweight')) return 'No equipment';
+  if (tags.includes('equipment:dumbbell')) return 'Dumbbells only';
+  return 'Full gym';
+}
+
 export function dayDescriptor(dayIndex, totalDays) {
   const day = (Number.isFinite(dayIndex) ? dayIndex : 0) + 1;
   const total = Math.max(1, Number.isFinite(totalDays) ? totalDays : 1);

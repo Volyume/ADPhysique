@@ -1,8 +1,11 @@
 // Wellbeing mode, a single, user-controlled signal that softens the app
 // for anyone who has experienced or is in recovery from an eating disorder
-// or body-image condition. Asked once during first run, changeable anytime
-// in Settings. Stored in AsyncStorage for consistency with the app's other
-// preferences (the flag is not a secret).
+// or body-image condition. The canonical editor is Settings → Coaching
+// (both tiers); first-run setup POINTS at it from the hand-off screen but
+// never asks a mandatory question (FQ-1(c), D96 - this header used to say
+// "asked once during first run", which no shipped flow ever did). Stored
+// in AsyncStorage for consistency with the app's other preferences (the
+// flag is not a secret).
 //
 // Values:
 //   'calm'       , user asked for a calmer experience
