@@ -410,3 +410,12 @@ describe('S-14/S-15 (D97-23): the corrected 135 contract and its client half', (
     expect(db).toMatch(/const id = `co_\$\{data\.weekStart\}_\$\{userId\}`;/);
   });
 });
+
+describe('M-13 (D97-24): the reflection ledger story is Pro-gated like its PlansScreen sibling', () => {
+  test('Free receives no adaptive rationale rows on BlockReflection', () => {
+    const src = read('screens/BlockReflectionScreen.js');
+    expect(src).toMatch(/setLedgerRows\(tierNow === 'pro' \? buildLedgerReflectionRows\(ledger\) : \[\]\)/);
+    // And the sibling gate it mirrors stays in place.
+    expect(read('screens/PlansScreen.js')).toMatch(/rows: tier === 'pro' \? allRows\.slice\(0, 4\) : \[\]/);
+  });
+});

@@ -223,7 +223,7 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
     return `${cause}, so ${clause}.`;
   };
 
-  const finish = (classification, startTarget, peakTarget, stimulusChange, why) => {
+  const finish = (classification, startTarget, peakTarget, stimulusChange, why, vetoedClimb = false) => {
     let start = clampInt(startTarget, mev, peakCeiling);
     let peak = clampInt(Math.max(peakTarget, start), mev, peakCeiling);
     // §3.8 / D15: no upward carry-over under suppression, and none from
@@ -243,6 +243,13 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
       peak = Math.max(Math.min(peak, Math.max(plannedPeak, start)), start);
       upwardCarryPrevented = start < preHoldStart || peak < preHoldPeak;
     }
+    // C6 M-6 (D97-24): the flagship suppressed-responsive case vetoes the
+    // earned +1 UPSTREAM (the `earned` gate zeroes the climb before this
+    // clamp runs), so the clamp never bites and the flag read false on
+    // exactly the case it exists for - the safety hold then collapsed
+    // into the retain-dose voice. The branch now reports the veto
+    // explicitly; numbers are untouched (this is provenance truth only).
+    if (vetoedClimb) upwardCarryPrevented = true;
     return {
       muscle: input.muscle,
       classification,
@@ -340,9 +347,13 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
     // silent ramp-top reset to MAV is exactly the evidence-free increase
     // the retention rule forbids.
     const dr = performance.doseResponse;
-    const earned = !!(dr?.lateProgression && dr?.lateRecoveryOk)
-      && !suppressed && weeksSinceBlockEnd < STALE_EVIDENCE_WEEKS
+    // C6 M-6 (D97-24): split the evidence question from the safety veto,
+    // so the veto can be reported truthfully. pairEarned is what the
+    // EVIDENCE supports; earned is what may actually be applied.
+    const pairEarned = !!(dr?.lateProgression && dr?.lateRecoveryOk)
       && confidence >= CONFIDENCE_FLOOR;
+    const earned = pairEarned
+      && !suppressed && weeksSinceBlockEnd < STALE_EVIDENCE_WEEKS;
     let start = previousStart + (earned ? 1 : 0);
     // Blueprint caps: never above learned ceiling - 2, never above MAV.
     if (learnedCeiling != null) start = Math.min(start, learnedCeiling - 2);
@@ -354,7 +365,10 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
         ? (ds) => (ds > 0
           ? `${name} responded well and kept progressing in the higher-volume weeks with recovery to spare`
           : `${name} responded well, and its learned volume ceiling sets where the next block can safely sit`)
-        : `${name} responded well at this dose`);
+        : `${name} responded well at this dose`,
+      // The evidence earned a climb but suppression/staleness vetoed it:
+      // that IS an upward carry prevented, reported truthfully (M-6).
+      pairEarned && !earned);
   }
 
   // STALE: flat (or falling with good recovery). Volume holds; the lever

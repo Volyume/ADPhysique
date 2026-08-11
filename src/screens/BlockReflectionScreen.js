@@ -112,7 +112,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
   const { user, units } = useAppStore(useShallow(s => ({
     user: s.user,
     units: s.units,
-  })));
+})));
   const [data, setData] = useState(null);
   // Stage 8: the stored Block Ledger's per-muscle story.
   const [ledgerRows, setLedgerRows] = useState([]);
@@ -167,7 +167,13 @@ export default function BlockReflectionScreen({ navigation, route }) {
         const mesos = await getAllMesocyclesForUser(user.id);
         const meso = mesos.find((m) => m.id === mesocycleId);
         const ledger = meso?.blockLedger ? JSON.parse(meso.blockLedger) : null;
-        if (isCurrentRequest()) setLedgerRows(buildLedgerReflectionRows(ledger));
+        // C6 M-13 (D97-24): the adaptive ledger rationales are COACHING
+        // output and the identical rows are deliberately Pro-gated on
+        // PlansScreen - Free must not read them here either (free/pro
+        // gating is binary, Section 2). Free keeps the reflection's
+        // training facts; the coach's per-muscle story is Pro's.
+        const tierNow = require('../store/useAppStore').default.getState().tier;
+        if (isCurrentRequest()) setLedgerRows(tierNow === 'pro' ? buildLedgerReflectionRows(ledger) : []);
       } catch (_e) { if (isCurrentRequest()) setLedgerRows([]); }
     } catch (_) {
       if (!isCurrentRequest()) return;

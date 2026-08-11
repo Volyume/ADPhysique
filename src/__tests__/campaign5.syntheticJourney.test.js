@@ -316,7 +316,10 @@ describe('NEXT BLOCK: both options open, the receipt tells the truth (FQ-2 / RA-
     expect(receipt.changed).toHaveLength(0);
     expect(receipt.held).toBe(3);
     expect(receipt.heldUnjudged).toBe(3);
-    expect(receipt.heldLine).toMatch(/did not log enough recovery feedback/);
+    // Re-anchored under D97-24 M-8: the wording is cause-agnostic now (the
+    // old sentence named recovery feedback even for discontinuity/confidence
+    // causes); the meaning - honest unjudged hold, no guessed move - is the same.
+    expect(receipt.heldLine).toMatch(/wasn't enough clear evidence this block/);
     expect(receipt.heldLine).not.toMatch(/dose that worked/);
   });
 });

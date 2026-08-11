@@ -663,3 +663,51 @@ describe('purity and safety posture', () => {
     expect(LEDGER_VERSION).toBe(1);
   });
 });
+
+describe('C6 M-6 (D97-24): the suppression veto is reported truthfully', () => {
+  const { classifyMuscleBlock, BLOCK_CLASS } = require('../interBlock');
+  const base = () => ({
+    muscle: 'chest',
+    landmarks: { mev: 6, mav: 23, mrv: 24 },
+    researchMev: 6,
+    learnedCeiling: null,
+    manualOverride: false,
+    previousStart: 10, plannedPeak: 16, achievedPeak: 16,
+    priorFlatBlocks: 0,
+    adherence: { plannedSets: 70, completedSets: 64 },
+    performance: {
+      e1rmSlopePct: 3, prDensity: 0.2, rawPrCount: 2, eligibleExposures: 10,
+      confidence: 0.9, discontinuity: false,
+      doseResponse: { lateProgression: true, lateRecoveryOk: true },
+    },
+    recovery: {
+      sorenessLateAvg: 2, jointDiscomfortAvg: 1, readinessSlope: 0,
+      sleepFlaggedWeeks: 0, deloadFlagFired: false, deloadFlagMidBlock: false,
+      dataPoints: 8,
+    },
+  });
+
+  test('a suppressed block that EARNED a climb reports upwardCarryPrevented, with identical numbers', () => {
+    const open = classifyMuscleBlock(base(), { suppressed: false, weeksSinceBlockEnd: 0 });
+    expect(open.classification).toBe(BLOCK_CLASS.RESPONSIVE);
+    expect(open.proposal.startSets).toBe(11); // the earned +1
+    expect(open.upwardCarryPrevented).toBe(false);
+
+    const held = classifyMuscleBlock(base(), { suppressed: true, weeksSinceBlockEnd: 0 });
+    expect(held.proposal.startSets).toBe(10); // no climb under suppression
+    expect(held.upwardCarryPrevented).toBe(true); // and the hold SAYS SO now
+  });
+
+  test('a stale-evidence veto of an earned climb reports too; an unearned block never does', () => {
+    const stale = classifyMuscleBlock(base(), { suppressed: false, weeksSinceBlockEnd: 6 });
+    expect(stale.proposal.startSets).toBe(10);
+    expect(stale.upwardCarryPrevented).toBe(true);
+
+    const unearned = base();
+    unearned.performance.doseResponse = null;
+    const held = classifyMuscleBlock(unearned, { suppressed: true, weeksSinceBlockEnd: 0 });
+    expect(held.proposal.startSets).toBe(10);
+    // Nothing was earned, so nothing was prevented: the flag stays honest.
+    expect(held.upwardCarryPrevented).toBe(false);
+  });
+});

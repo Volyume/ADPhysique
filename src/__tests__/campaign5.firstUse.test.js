@@ -1671,7 +1671,8 @@ describe('REVIEW A: the brand-new-user findings stay fixed (RA-1..RA-10, D96)', 
     const unjudged = buildSeedReceipt({ ranges, ledger: mk('INSUFFICIENT_DATA') });
     expect(unjudged.held).toBe(2);
     expect(unjudged.heldUnjudged).toBe(2);
-    expect(unjudged.heldLine).toMatch(/did not log enough recovery feedback/);
+    // Re-anchored under D97-24 M-8 (cause-agnostic honest wording, same meaning).
+    expect(unjudged.heldLine).toMatch(/wasn't enough clear evidence this block/);
     expect(unjudged.heldLine).not.toMatch(/dose that worked/);
     // A judged hold keeps the FB-27 sentence.
     const judged = buildSeedReceipt({ ranges, ledger: mk('RESPONSIVE') });
@@ -1687,7 +1688,8 @@ describe('REVIEW A: the brand-new-user findings stay fixed (RA-1..RA-10, D96)', 
         ],
       },
     });
-    expect(mixed.heldLine).toMatch(/dose that worked[\s\S]*did not log enough recovery feedback/);
+    // Re-anchored under D97-24 M-8 (cause-agnostic honest wording, same meaning).
+    expect(mixed.heldLine).toMatch(/dose that worked[\s\S]*wasn't enough clear evidence this block/);
   });
 
   test('RA-2: the receipt sheet and decision card stop claiming change or difference that does not exist', () => {
