@@ -702,8 +702,15 @@ export function runWeeklyCoach(inputs) {
     const timed = rows.filter((w) => Number.isFinite(Number(w.loggedAt)));
     const untimed = rows.length - timed.length;
     if (!timed.length) return untimed;
-    const latestMs = Math.max(...timed.map((w) => Number(w.loggedAt)));
-    const weekWindowStartMs = latestMs - 7 * 86400000;
+    // C6 R-1 (D97-22): the week window is anchored on nowMs, the engine's
+    // one injected clock - NOT on the newest row. Data-anchoring meant a
+    // user whose last seven weigh-ins were six months ago scored a full
+    // week of "this week's" data, cleared the hold at high confidence and
+    // could be cut on a trend that was never measured. Clock-anchoring is
+    // strictly more conservative: the count can only fall, so the data
+    // hold can only fire MORE often, never less. Purity is unchanged
+    // (nowMs is already a pure input; every sibling window uses it).
+    const weekWindowStartMs = nowMs - 7 * 86400000;
     const distinctDays = new Set(
       timed
         .filter((w) => Number(w.loggedAt) >= weekWindowStartMs)
@@ -794,7 +801,19 @@ export function runWeeklyCoach(inputs) {
   const ewma7LastWk  = morningWeights.length >= 3 ? getEwmaSevenDaysAgo(morningWeights, 0.1, nowMs) : null;
   const bwRef        = bodyweightKg ?? ewma7Today ?? null;
 
-  const weightDelta  = (ewma7Today != null && ewma7LastWk != null)
+  // C6 R-1 (D97-22): when every weigh-in predates the seven-day window,
+  // "today's" EWMA and "last week's" EWMA are the SAME stale point and the
+  // delta degenerates to 0 - which read as "+0kg this week" / "stable"
+  // about a week with no readings. A week with no readings has no delta:
+  // null, so deltaLabel falls back to its honest 'Log morning weight'.
+  const latestWeighInMs = (() => {
+    const timed = (Array.isArray(morningWeights) ? morningWeights : [])
+      .map((w) => Number(w?.loggedAt)).filter(Number.isFinite);
+    return timed.length ? Math.max(...timed) : null;
+  })();
+  const weekHasReadings = latestWeighInMs != null && latestWeighInMs >= nowMs - 7 * 86400000;
+
+  const weightDelta  = (weekHasReadings && ewma7Today != null && ewma7LastWk != null)
     ? Math.round((ewma7Today - ewma7LastWk) * 100) / 100
     : null;
 

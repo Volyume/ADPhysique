@@ -72,6 +72,11 @@ function checkin(overrides = {}) {
 
 function baseInputs(overrides = {}) {
   return {
+    // Re-anchored under D97-22 (C6 R-1): the weigh-in week window is now
+    // clock-anchored, so fixtures built against the fixed NOW must run
+    // against that same clock (nowMs was always an injectable input; the
+    // fixtures' meaning - "weights ending now, judged now" - is unchanged).
+    nowMs: NOW,
     checkin: checkin(),
     morningWeights: [],
     sessionsCompleted: 4,
@@ -102,6 +107,7 @@ describe('adaptive TDEE sizes the calorie change when confident (#9)', () => {
   const inputs = (maint) => baseInputs({
     goalPhase: 'mild_cut',
     morningWeights: trendSharp(85, -0.15),
+    nowMs: Date.now(), // trendSharp anchors to the live clock (D97-22 re-anchor)
     consecutiveOffTargetWeeks: 2,
     lastCalAdjustmentWeeksAgo: 2,
     currentCalTarget: 2260,
@@ -129,6 +135,7 @@ describe('adaptive TDEE sizes the calorie change when confident (#9)', () => {
     const out = runWeeklyCoach(baseInputs({
       goalPhase: 'mild_cut',
       morningWeights: trendSharp(85, -0.15),
+      nowMs: Date.now(), // trendSharp anchors to the live clock (D97-22 re-anchor)
       consecutiveOffTargetWeeks: 2,
       lastCalAdjustmentWeeksAgo: 2,
       currentCalTarget: 2260,
@@ -284,6 +291,7 @@ describe('off-target threshold gating', () => {
       // delta to less than half the requested rate and was the
       // reason this test sat failing in the suite.
       morningWeights: trendSharp(85, -1.3), // -1.5%/wk for 85kg, way over target
+      nowMs: Date.now(), // trendSharp anchors to the live clock (D97-22 re-anchor)
       weeksInPhase: 5,
       consecutiveOffTargetWeeks: 2,
       lastCalAdjustmentWeeksAgo: 99,
@@ -296,6 +304,7 @@ describe('off-target threshold gating', () => {
     const out = runWeeklyCoach(baseInputs({
       goalPhase: 'mild_bulk',
       morningWeights: trendSharp(80, 0.6),
+      nowMs: Date.now(), // trendSharp anchors to the live clock (D97-22 re-anchor)
       bodyweightKg: 80,
       currentCalTarget: 3000,
       weeksInPhase: 5,
@@ -557,7 +566,7 @@ describe('refeed gating and cadence', () => {
       morningWeights: trend(85, -1.0),
       goalPhase: 'mild_cut',
       trainingGoal: 'bikini',
-      lastRefeedAt: Date.now() - 3 * DAY,
+      lastRefeedAt: NOW - 3 * DAY, // D97-22 re-anchor: judged at the injected NOW clock
     }));
     expect(out.refeed).toBeNull();
   });
@@ -566,7 +575,7 @@ describe('refeed gating and cadence', () => {
     // Competitor: weekly. 8 days ago is due.
     const out = runWeeklyCoach(baseInputs({
       ...nut, ...compCut,
-      lastRefeedAt: Date.now() - 8 * DAY,
+      lastRefeedAt: NOW - 8 * DAY, // D97-22 re-anchor: judged at the injected NOW clock
     }));
     expect(out.refeed).not.toBeNull();
   });

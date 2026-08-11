@@ -132,3 +132,45 @@ describe('continuously coached users and legacy callers are unchanged', () => {
     expect(out.weekLabel).toBe('Week 4 · Mild cut');
   });
 });
+
+describe('C6 R-1 (D97-22): stale weigh-ins are never read as this week\'s data', () => {
+  const staleWeights = (endDaysAgo, nowMs, count = 21) => {
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      out.push({
+        loggedAt: nowMs - (endDaysAgo + count - 1 - i) * DAY,
+        weightKg: 82 - i * 0.05,
+      });
+    }
+    return out;
+  };
+
+  test('a 180-day-old weigh-in series produces the data hold, never a high-confidence cut', () => {
+    const nowMs = Date.now();
+    const out = runWeeklyCoach(baseInputs({
+      nowMs,
+      weeksInPhase: 30,
+      morningWeights: staleWeights(180, nowMs),
+      consecutiveOffTargetWeeks: 2,
+      lastCalAdjustmentWeeksAgo: 12,
+    }));
+    expect(out.hasEnoughData).toBe(false);
+    expect(out.confidence).toBe('data_hold');
+    expect(out.adjustments?.calories ?? null).toBeNull();
+    // And no fabricated "this week" reading is spoken about the absence.
+    expect(out.trend?.deltaLabel).not.toMatch(/this week/);
+    expect(out.trend?.rateLabel ?? null).toBeNull();
+  });
+
+  test('the same series ending this week still coaches (the hold is about staleness, not shape)', () => {
+    const nowMs = Date.now();
+    const out = runWeeklyCoach(baseInputs({
+      nowMs,
+      morningWeights: staleWeights(0, nowMs),
+      consecutiveOffTargetWeeks: 2,
+      lastCalAdjustmentWeeksAgo: 12,
+    }));
+    expect(out.hasEnoughData).toBe(true);
+    expect(out.confidence).not.toBe('data_hold');
+  });
+});
