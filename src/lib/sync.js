@@ -1037,6 +1037,10 @@ async function _pushMorningWeights(sb, supabaseUserId, localUserId) {
       // the pull-side preservation has something honest to preserve.
       created_at: new Date(w.createdAt ?? Date.now()).toISOString(),
       updated_at: new Date(w.updatedAt ?? w.loggedAt ?? Date.now()).toISOString(), // F5 Phase A
+      // C6 R-8: the soft-delete tombstone rides too, so a deletion made
+      // here reaches the cloud (whose pulls filter deleted_at IS NULL)
+      // and therefore every other device.
+      deleted_at: w.deletedAt != null ? new Date(w.deletedAt).toISOString() : null,
     })).filter(r => r.logged_at && r.weight_kg != null);
     for (let i = 0; i < rows.length; i += 200) {
       const { error } = await sb.from('morning_weights').upsert(

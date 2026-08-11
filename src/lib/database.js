@@ -5544,7 +5544,7 @@ export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now()
   const dayStart = startLocalDay(loggedAt);
   const dayEnd = nextLocalDay(loggedAt);
   const existing = await d.getFirstAsync(
-    'SELECT id FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ?',
+    'SELECT id FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ? AND deleted_at IS NULL',
     [userId, dayStart, dayEnd],
   );
   let savedId = id;
@@ -5572,11 +5572,53 @@ export async function logMorningWeight(userId, { weightKg, loggedAt = Date.now()
   return savedId;
 }
 
+/**
+ * C6 R-8 (D97-22): a Home weigh-in had no owner anywhere - Body Metrics
+ * withheld its actions (a no-op button is worse than none) and no
+ * update/delete existed, so a mistyped weigh-in from any previous day was
+ * permanent and kept feeding the trend, the ED-safety rapid-loss signal
+ * and the FFM-floor last-weigh-in step for ever. Correcting or removing a
+ * row can only make the evidence MORE truthful; deletion is a soft
+ * tombstone so it propagates to the cloud and other devices, and every
+ * product reader filters it out. No gate, threshold or floor changes.
+ */
+export async function updateMorningWeightById(userId, id, { weightKg, notes = undefined } = {}) {
+  if (!userId || !id) return false;
+  if (!Number.isFinite(weightKg) || weightKg <= 0) {
+    throw new Error(`updateMorningWeightById: weightKg must be a positive finite number, got ${weightKg}`);
+  }
+  const d = await db();
+  const now = Date.now();
+  const res = notes === undefined
+    ? await d.runAsync(
+      'UPDATE morning_weights SET weight_kg = ?, updated_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+      [weightKg, now, id, userId],
+    )
+    : await d.runAsync(
+      'UPDATE morning_weights SET weight_kg = ?, notes = ?, updated_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+      [weightKg, notes, now, id, userId],
+    );
+  _scheduleSync();
+  return (res?.changes ?? 0) > 0;
+}
+
+export async function deleteMorningWeightById(userId, id) {
+  if (!userId || !id) return false;
+  const d = await db();
+  const now = Date.now();
+  const res = await d.runAsync(
+    'UPDATE morning_weights SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL',
+    [now, now, id, userId],
+  );
+  _scheduleSync();
+  return (res?.changes ?? 0) > 0;
+}
+
 export async function getMorningWeightsLast14Days(userId) {
   const d = await db();
   const since = Date.now() - 14 * 86400000;
   const rows = await d.getAllAsync(
-    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? ORDER BY logged_at ASC',
+    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND deleted_at IS NULL ORDER BY logged_at ASC',
     [userId, since],
   );
   return rows.map(rowToCamel);
@@ -5585,7 +5627,7 @@ export async function getMorningWeightsLast14Days(userId) {
 export async function getMorningWeights(userId, limit = 90) {
   const d = await db();
   const rows = await d.getAllAsync(
-    'SELECT * FROM morning_weights WHERE user_id = ? ORDER BY logged_at DESC LIMIT ?',
+    'SELECT * FROM morning_weights WHERE user_id = ? AND deleted_at IS NULL ORDER BY logged_at DESC LIMIT ?',
     [userId, limit],
   );
   return rows.map(rowToCamel).reverse();
@@ -5599,7 +5641,7 @@ export async function getMorningWeightToday(userId) {
   // TZ-2: next local midnight, not +86400000 (DST-safe; see logMorningWeight).
   const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
   const row = await d.getFirstAsync(
-    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ?',
+    'SELECT * FROM morning_weights WHERE user_id = ? AND logged_at >= ? AND logged_at < ? AND deleted_at IS NULL',
     [userId, dayStart, dayEnd],
   );
   return rowToCamel(row);
@@ -6933,6 +6975,9 @@ export async function getAllMesocycleWeeksForUser(userId) {
 
 export async function getAllMorningWeightsForUser(userId) {
   const d = await db();
+  // C6 R-8: deliberately INCLUDES soft-deleted rows - this is the sync
+  // push's reader, and a deletion must propagate to the cloud tombstone.
+  // Every product reader filters deleted_at IS NULL.
   const rows = await d.getAllAsync('SELECT * FROM morning_weights WHERE user_id = ?', [userId]);
   return rows.map(rowToCamel);
 }

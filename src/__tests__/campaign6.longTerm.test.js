@@ -348,3 +348,19 @@ describe('R-14 (D97-22): the coach weight chip honours the body-weight unit', ()
     expect(chip).toMatch(/if \(bwu === 'kg'\) return trend\.deltaLabel/);
   });
 });
+
+describe('R-8 (D97-22): a Home weigh-in can be corrected and removed', () => {
+  test('morning_weights has an update/soft-delete pair; every product reader filters the tombstone', () => {
+    const db = read('lib/database.js');
+    expect(db).toMatch(/export async function updateMorningWeightById/);
+    expect(db).toMatch(/export async function deleteMorningWeightById/);
+    // Soft delete, never a hard DELETE (the tombstone must sync).
+    const del = db.slice(db.indexOf('export async function deleteMorningWeightById'));
+    expect(del.slice(0, 600)).toMatch(/SET deleted_at = \?, updated_at = \?/);
+    expect(del.slice(0, 600)).not.toMatch(/DELETE FROM/);
+    // The four product readers exclude tombstoned rows; the sync push
+    // reader deliberately keeps them so deletions propagate.
+    expect((db.match(/FROM morning_weights WHERE user_id = \?[^']*deleted_at IS NULL/g) || []).length).toBeGreaterThanOrEqual(4);
+    expect(read('lib/sync.js')).toMatch(/deleted_at: w\.deletedAt != null \? new Date\(w\.deletedAt\)\.toISOString\(\) : null,/);
+  });
+});
