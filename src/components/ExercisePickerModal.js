@@ -17,7 +17,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontWeight, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
-import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds } from '../lib/database';
+import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds, getActiveBlock, clearExerciseIntent } from '../lib/database';
+import { loadExerciseIntentState, isEligible, intentFor } from '../lib/exercise/intent';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
 import { fuzzySearch } from '../lib/exerciseFuzzySearch';
 import useAppStore from '../store/useAppStore';
@@ -69,6 +70,9 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     pickerClose: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     pickerExName: { ...t.type.label, color: t.colors.textPrimary },
     pickerMuscle: { ...t.type.caption, color: t.colors.textMuted },
+    pickerSetAside: { ...t.type.caption, color: t.colors.textMuted },
+    pickerAllowAgain: { ...t.type.caption, color: t.colors.primary },
+    showExcludedText: { ...t.type.caption, color: t.colors.textMuted },
     pickerEmptyText: { ...t.type.body, color: t.colors.textMuted },
     separator: { backgroundColor: t.colors.borderSubtle },
     createNewBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
@@ -90,6 +94,10 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   const [allExercises, setAll] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [recentIds, setRecentIds] = useState([]);
+  // C9: the user's exercise intent, and whether they have asked to see
+  // what they have set aside.
+  const [intentState, setIntentState] = useState(null);
+  const [showExcluded, setShowExcluded] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createMuscle, setCreateMuscle] = useState('');
@@ -138,6 +146,22 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     } else {
       setRecentIds([]);
     }
+    // C9 Work 2/7: this picker is the shared entry point for the workout
+    // builder, the plan builder, the routine editor and the swap
+    // fall-through, so honouring exercise intent HERE covers all of them
+    // at once. Set aside exercises are hidden from the browse list by
+    // default and reachable behind an explicit "Show set aside" toggle,
+    // where they are clearly marked and can be allowed again. Restoration
+    // must never be obscure.
+    setShowExcluded(false);
+    if (userId) {
+      getActiveBlock(userId)
+        .then(block => loadExerciseIntentState(userId, { activeMesocycleId: block?.id ?? null }))
+        .then(setIntentState)
+        .catch(() => setIntentState(null));
+    } else {
+      setIntentState(null);
+    }
   }, [visible, isSwapAction, userId]);
 
   // Recents are an entry point into an untouched browse, not another filter:
@@ -153,10 +177,13 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     // out of order (e.g. "bul garian" finds "Bulgarian Split Squat").
     const base = allExercises.filter(e =>
       matchesMuscleFilter(e, muscleFilter) &&
-      matchesEquipmentFilter(e, equipmentFilter),
+      matchesEquipmentFilter(e, equipmentFilter) &&
+      // Hidden from SUGGESTIONS, never from the user: the toggle below
+      // brings them back, marked, with an "Allow again" action.
+      (showExcluded || !intentState || isEligible(intentState, e.id)),
     );
     setFiltered(fuzzySearch(base, query, e => e.name));
-  }, [query, muscleFilter, equipmentFilter, allExercises]);
+  }, [query, muscleFilter, equipmentFilter, allExercises, intentState, showExcluded]);
 
   async function handleCreate() {
     if (!createName.trim()) {
@@ -394,6 +421,22 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               </View>
             ) : null}
 
+            {/* C9 Work 2: restoration must not be obscure. The toggle only
+                appears when the user actually has something set aside. */}
+            {intentState && [...intentState.intents.keys()].length > 0 ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={showExcluded ? 'Hide exercises you have set aside' : 'Show exercises you have set aside'}
+                onPress={() => setShowExcluded(v => !v)}
+                style={styles.showExcludedRow}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={[styles.showExcludedText, live.showExcludedText]}>
+                  {showExcluded ? 'Hide what you have set aside' : 'Show what you have set aside'}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
+
             {modalShown && showBrowseFilters ? (
               <>
                 {/* Browse filters are for adding exercises. Swap mode stays
@@ -458,21 +501,50 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               keyExtractor={e => String(e.id)}
               keyboardShouldPersistTaps="handled"
               contentContainerStyle={styles.pickerList}
-              renderItem={({ item }) => (
-                <TouchableOpacity accessibilityRole="button"
-                  accessibilityLabel={`${isSwapAction ? 'Swap in' : 'Add'} ${item.name}`}
-                  style={styles.pickerRow}
-                  onPress={() => { haptics.selection(); onSelect(item); onClose(); }}
-                >
-                  <View style={styles.pickerRowContent}>
-                    <Text style={[styles.pickerExName, live.pickerExName]}>{item.name}</Text>
-                    {item.primaryMuscle ? (
-                      <Text style={[styles.pickerMuscle, live.pickerMuscle]}>{item.primaryMuscle}</Text>
-                    ) : null}
-                  </View>
-                  <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle-outline'} size={20} color={t.colors.textSecondary} />
-                </TouchableOpacity>
-              )}
+              renderItem={({ item }) => {
+                // C9: a set-aside exercise is only reachable here when the
+                // user asked to see them. It says so plainly and offers the
+                // way back, so restoring is never a hunt.
+                const setAside = intentState ? !isEligible(intentState, item.id) : false;
+                return (
+                  <TouchableOpacity accessibilityRole="button"
+                    accessibilityLabel={`${isSwapAction ? 'Swap in' : 'Add'} ${item.name}${setAside ? ', set aside' : ''}`}
+                    style={styles.pickerRow}
+                    onPress={() => { haptics.selection(); onSelect(item); onClose(); }}
+                  >
+                    <View style={styles.pickerRowContent}>
+                      <Text style={[styles.pickerExName, live.pickerExName]}>{item.name}</Text>
+                      {setAside ? (
+                        <Text style={[styles.pickerSetAside, live.pickerSetAside]}>
+                          {intentFor(intentState, item.id)?.kind === 'avoided_block'
+                            ? 'Set aside for this block'
+                            : 'You asked Volyume not to suggest this'}
+                        </Text>
+                      ) : item.primaryMuscle ? (
+                        <Text style={[styles.pickerMuscle, live.pickerMuscle]}>{item.primaryMuscle}</Text>
+                      ) : null}
+                    </View>
+                    {setAside ? (
+                      <TouchableOpacity
+                        accessibilityRole="button"
+                        accessibilityLabel={`Allow ${item.name} again`}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        onPress={async () => {
+                          try {
+                            await clearExerciseIntent(userId, item.id);
+                            const block = await getActiveBlock(userId).catch(() => null);
+                            setIntentState(await loadExerciseIntentState(userId, { activeMesocycleId: block?.id ?? null }));
+                          } catch (_) { /* best effort */ }
+                        }}
+                      >
+                        <Text style={[styles.pickerAllowAgain, live.pickerAllowAgain]}>Allow again</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Ionicons name={isSwapAction ? 'swap-horizontal' : 'add-circle-outline'} size={20} color={t.colors.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
               ItemSeparatorComponent={() => <View style={[styles.separator, live.separator]} />}
               ListFooterComponent={!isSwapAction ? (
                 // Always offer "create custom", with or without a query, so the
@@ -535,6 +607,11 @@ const styles = StyleSheet.create({
   pickerRowContent: { flex: 1, gap: spacing.xxs },
   pickerExName: { ...type.label, color: colors.textPrimary },
   pickerMuscle: { ...type.caption, color: colors.textMuted, textTransform: 'capitalize' },
+  // C9: a set-aside row states its own status and offers the way back.
+  pickerSetAside: { ...type.caption, color: colors.textMuted },
+  pickerAllowAgain: { ...type.caption, color: colors.primary },
+  showExcludedRow: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  showExcludedText: { ...type.caption, color: colors.textMuted },
   pickerEmpty: { alignItems: 'center', paddingTop: spacing.xxxl, gap: spacing.lg, paddingHorizontal: spacing.xl },
   pickerEmptyText: { ...type.body, color: colors.textMuted },
   separator: { height: 1, backgroundColor: colors.borderSubtle },
