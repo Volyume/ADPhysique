@@ -989,9 +989,15 @@ export default function App() {
         // their quiet-hours-shifted hour is recomputed. No-op when unchanged.
         try {
           // eslint-disable-next-line global-require
-          const { rescheduleForTimezoneIfChanged } = require('./src/lib/notifications');
+          const { rescheduleForTimezoneIfChanged, refreshWeighInHorizonIfStale } = require('./src/lib/notifications');
           const uid = useAppStore.getState().user?.id ?? null;
           rescheduleForTimezoneIfChanged(uid).catch(() => {});
+          // C8 Work 5 review D6: the weigh-in prompts now run on a bounded
+          // 14-day horizon, so an app that stays resident for weeks would
+          // run out mid-use. Top it up at most once a week on foreground.
+          // Self-guarding and best-effort; every tier/permission/ED gate
+          // still applies (it goes through restoreNotifications).
+          refreshWeighInHorizonIfStale(uid).catch(() => {});
           // D17: refresh the habit-derived training-reminder schedule on
           // every foreground, alongside the timezone re-lay above (both are
           // "catch this up now the app is active again" refreshes). Self-

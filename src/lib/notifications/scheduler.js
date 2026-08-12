@@ -139,6 +139,11 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
   if (Platform.OS === 'web') return;
   try {
     await cancelMorningNotification();
+    // Review D6: stamp the horizon whenever this runs to a decision, so
+    // the weekly foreground top-up knows how fresh the schedule is. A
+    // withheld lay counts: there is nothing to top up while a flag is
+    // open, and the ED-clear path re-lays immediately when it closes.
+    await AsyncStorage.setItem(WEIGH_IN_LAID_KEY, String(Date.now())).catch(() => {});
     // ED-flag schedule gate (Q1): now that the morning nudge fires with sound,
     // it is also withheld while an ED flag is open, matching the evening
     // backstop. cancelMorningNotification above already cleared both prompts.
@@ -1275,6 +1280,39 @@ export async function cancelAllNotifications() {
 // recomputed for the new zone. Gated on the offset so a normal foreground does
 // no work.
 const TZ_OFFSET_KEY = '@volyume_notif_tz_offset';
+const WEIGH_IN_LAID_KEY = '@volyume_weighin_laid_at';
+
+/**
+ * C8 Work 5, review D6: keep the bounded weigh-in horizon topped up for a
+ * user who IS active.
+ *
+ * The horizon only covers 14 days, and the re-lay paths are all cold
+ * start, the settings screen, and an ED-flag clear. An app that stays
+ * resident (a phone with plenty of memory, foregrounded daily, never
+ * restarted) would therefore run out mid-use and stop prompting a user
+ * who never stopped turning up - the opposite of the intent, which was
+ * to stop chasing people who left.
+ *
+ * So: on foreground, if the prompts were last laid more than a week ago,
+ * lay them again. Well inside the 14-day horizon, once a week at most,
+ * and it re-lays nothing on its own - it goes through restoreNotifications,
+ * which keeps every tier gate, permission gate and ED gate exactly as
+ * they are. A user who has stopped opening the app never reaches it.
+ */
+const WEIGH_IN_REFRESH_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+
+export async function refreshWeighInHorizonIfStale(userId = null) {
+  if (Platform.OS === 'web') return;
+  try {
+    const raw = await AsyncStorage.getItem(WEIGH_IN_LAID_KEY);
+    const last = raw == null ? null : Number(raw);
+    const now = Date.now();
+    if (Number.isFinite(last) && now - last < WEIGH_IN_REFRESH_AFTER_MS) return;
+    const prefsRaw = await AsyncStorage.getItem('@volyume_notification_prefs');
+    if (!prefsRaw) return;
+    await restoreNotifications(JSON.parse(prefsRaw), userId);
+  } catch (_) { /* tolerate: the cold-start re-lay still covers this */ }
+}
 
 export async function rescheduleForTimezoneIfChanged(userId = null) {
   if (Platform.OS === 'web') return;

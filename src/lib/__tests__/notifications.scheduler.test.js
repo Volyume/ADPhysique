@@ -214,6 +214,47 @@ describe('scheduleEveningWeightReminder', () => {
     }
   });
 
+  // Review D6: the bounded horizon only covers 14 days, and the re-lay
+  // paths are all cold start / settings / ED-flag clear. An app that
+  // stays resident for weeks would run dry for a user who never stopped
+  // turning up - the opposite of the intent.
+  test('refreshWeighInHorizonIfStale tops the horizon up, at most weekly', async () => {
+    // It goes through restoreNotifications, so every gate still applies -
+    // including the Pro gate on the weigh-in prompts.
+    mockGetState.mockImplementation(() => ({ user: { id: 'user-1' }, tier: 'pro' }));
+    await AsyncStorage.setItem('@volyume_notification_prefs', JSON.stringify({
+      morningEnabled: true, morningHour: 7, morningMinute: 0,
+    }));
+    // Laid a moment ago: nothing to do.
+    await AsyncStorage.setItem('@volyume_weighin_laid_at', String(Date.now()));
+    await scheduler.refreshWeighInHorizonIfStale('user-1');
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+
+    // Laid over a week ago: re-lay, well inside the 14-day horizon.
+    await AsyncStorage.setItem('@volyume_weighin_laid_at', String(Date.now() - 8 * 24 * 60 * 60 * 1000));
+    await scheduler.refreshWeighInHorizonIfStale('user-1');
+    expect(mockScheduleAsync).toHaveBeenCalled();
+    expect(mockScheduleAsync.mock.calls.map((c) => c[0]?.identifier))
+      .toEqual(expect.arrayContaining(['volyume_morning_weight_1']));
+  });
+
+  test('the top-up keeps the Free gate: it never re-lays coaching prompts', async () => {
+    mockGetState.mockImplementation(() => ({ user: { id: 'user-1' }, tier: 'free' }));
+    await AsyncStorage.setItem('@volyume_notification_prefs', JSON.stringify({
+      morningEnabled: true, morningHour: 7, morningMinute: 0,
+    }));
+    await AsyncStorage.setItem('@volyume_weighin_laid_at', String(Date.now() - 30 * 24 * 60 * 60 * 1000));
+    await scheduler.refreshWeighInHorizonIfStale('user-1');
+    const ids = mockScheduleAsync.mock.calls.map((c) => c[0]?.identifier);
+    expect(ids.filter((id) => /morning|evening/.test(id || ''))).toEqual([]);
+  });
+
+  test('the top-up is a no-op for a user with no notification prefs at all', async () => {
+    await AsyncStorage.setItem('@volyume_weighin_laid_at', String(Date.now() - 30 * 24 * 60 * 60 * 1000));
+    await scheduler.refreshWeighInHorizonIfStale('user-1');
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
   test('open ED flag -> does NOT lay a second daily weight prompt', async () => {
     mockGetOpenEdFlag.mockResolvedValue({ id: 'flag-1', status: 'open' });
     await scheduler.scheduleEveningWeightReminder();
