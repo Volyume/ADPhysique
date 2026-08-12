@@ -284,11 +284,15 @@ describe('PHASE 8 (D91-24 characterisation): early deload weeks stay in accumula
   // deload week's light sessions drag the late soreness average below every
   // per-signal threshold). RA6-2 rules that a block-level flag may not
   // classify a muscle by itself, so that compensation is gone: this muscle
-  // now reads as unproven rather than strained. D91-24's own behaviour -
-  // which weeks the aggregates treat as accumulation - is UNCHANGED and is
-  // still pinned by the next test. The residual gap is genuine debt,
-  // reported at the close of Campaign 10I, not fixed here: the founder
-  // ruled the flag's weight, not the dilution.
+  // now reads as unproven rather than strained.
+  //
+  // FOLLOW-UP (Campaign 10J): the dilution that made this fixture's numbers
+  // possible is fixed at source - an applied early-deload week's rows no
+  // longer enter the aggregates at all. This test keeps its diluted values
+  // because it feeds classifyMuscleBlock DIRECTLY, so it still pins the
+  // classifier half of the law: whatever the aggregates say, a flag with no
+  // corroborating per-muscle cost is not a per-muscle verdict. The gather
+  // half is pinned in campaign10j.earlyDeloadEvidence.test.js.
   test('RA6-2: the fired flag alone no longer classifies the muscle, so the D91-24 dilution is no longer masked', () => {
     const e = classifyMuscleBlock({
       muscle: 'quads', landmarks: PRIOR, researchMev: RESEARCH_MEV,
@@ -336,9 +340,13 @@ describe('PHASE 8 (D91-24 characterisation): early deload weeks stay in accumula
     expect(e.proposal.startSets).toBeLessThan(12);
   });
 
-  test('the deferral itself is unchanged: accumulation weeks exclude only the PLANNED deload week', () => {
-    // D91-24 pinned as CURRENT behaviour, not fixed: the week list used
-    // by the aggregates has no knowledge of applied early deloads.
+  test('the week LIST still excludes only the PLANNED deload week (C10J: chronology is not re-indexed)', () => {
+    // Was "D91-24 pinned as CURRENT behaviour, not fixed". D91-24 IS now
+    // fixed (Campaign 10J), but this assertion survives unchanged and is
+    // load-bearing for the opposite reason: the fix excludes an applied
+    // early-deload week's ROWS, never the week itself. accumulationWeeks
+    // must keep describing the PLANNED structure so the early/late split
+    // cannot shift and quietly promote an earlier normal week into "late".
     const src = read('lib/blockLedgerGather.js');
     expect(src).toMatch(/function accumulationWeeks\(blockWeeks, deloadWeekIndex\) \{[\s\S]{0,200}if \(w !== deloadWeekIndex\) weeks\.push\(w\);/);
   });
