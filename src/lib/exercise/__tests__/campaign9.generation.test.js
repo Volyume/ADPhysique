@@ -362,3 +362,31 @@ describe('when exclusions leave a slot unfillable, the plan says so', () => {
     });
   });
 });
+
+// ─── Red-team Q1: leak paths into builders ──────────────────────────────────
+// Every surface that CHOOSES an exercise must consult the canonical layer.
+// The shared picker covers the manual builders; these pin the two generators
+// that build a session or plan without going through it.
+describe('no builder or generator can reinstate a set-aside exercise', () => {
+  const read = (p) => require('fs').readFileSync(require('path').resolve(__dirname, '../../../', p), 'utf8');
+
+  test('travel mode filters the library before resolving exercise names', () => {
+    const SRC = read('screens/BuildWorkoutScreen.js');
+    const fn = SRC.slice(SRC.indexOf('async function applyTravelMode'), SRC.indexOf('function formatRest'));
+    expect(fn).toMatch(/filterLibraryForGeneration\(all, state\)\.library/);
+    // And a name that survives only in the UNFILTERED catalogue is dropped,
+    // never rebuilt through the unmatched-name placeholder.
+    expect(fn).toMatch(/if \(!match && findIn\(all\)\) return null;/);
+    expect(fn).toMatch(/newItems\.filter\(Boolean\)/);
+  });
+
+  test('initial plan generation filters the library and guards name resolution', () => {
+    const SRC = read('lib/planAutoGen.js');
+    expect(SRC).toMatch(/filterLibraryForGeneration/);
+  });
+
+  test('the shared picker honours intent, which covers every manual builder', () => {
+    const SRC = read('components/ExercisePickerModal.js');
+    expect(SRC).toMatch(/showExcluded \|\| !intentState \|\| isEligible\(intentState, e\.id\)/);
+  });
+});

@@ -151,10 +151,27 @@ evidence-based.
    production BEFORE any build carrying this push ships (the migrate_129
    precedent). Until then intent is device-local: the app works, nothing is
    lost, it simply does not cross devices.
-2. **`ManualBuilderScreen` and `BuildWorkoutScreen` do not yet consult the
-   canonical layer.** Hand-authoring can still add an excluded exercise
-   deliberately — arguably correct for a manual builder — but neither marks
-   it as set aside. Genuinely unfinished, not a ruling.
+2. **CLOSED after the red-team pass.** `ManualBuilderScreen` and
+   `BuildWorkoutScreen` never select an exercise themselves: both go
+   through `ExercisePickerModal`, which now filters on intent, marks a
+   set-aside row and offers "Allow again". Fixing the shared picker covered
+   all four manual surfaces at once.
+
+2b. **Travel mode was a genuine leak, found by the red-team pass and
+   fixed.** `BuildWorkoutScreen.applyTravelMode` builds a session from
+   `travelMode.generateTravelPlan` and resolved the engine's exercise NAMES
+   against the unfiltered catalogue, so a set-aside exercise came straight
+   back. It now filters the library first, and a name that resolves only in
+   the unfiltered catalogue drops its slot rather than being rebuilt through
+   the unmatched-name placeholder.
+
+2c. **Copying a LIBRARY plan does not filter on intent.** `copyPlanFromLibrary`
+   clones the seeded plan's exercises verbatim, so a set-aside exercise can
+   enter a plan the user chose by name. Arguably correct — the user picked
+   that specific published plan, and Volyume is not suggesting anything —
+   but it sits on the line the founder drew between "generation may avoid"
+   and "never silently mutate". Left as it is, and flagged: this one needs a
+   founder ruling rather than an engineering guess.
 3. **The blocked-slot signal has no UI yet.** `blockedSlots` is returned and
    tested; no screen renders it, so today a fully blocked rebuild surfaces
    as the existing calm failure toast.
