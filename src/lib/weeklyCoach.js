@@ -18,7 +18,7 @@ import {
   computeEWMA as nutritionComputeEWMA,
 } from './nutritionEngine';
 import { localDayKey } from './dayKey';
-import { robustTrackingLatest, robustTrackingSevenDaysAgo } from './robustTrend';
+import { robustTrackingLatest, robustTrackingSevenDaysAgoPoint } from './robustTrend';
 import { computeMacroCycle, computeRefeedDay } from './coachApply';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
@@ -906,12 +906,26 @@ export function runWeeklyCoach(inputs) {
   // -1.5 below), the +calorie boost magnitude, and the ED detector
   // (computeWeeklyTrendPct) all read the plain trend, never this robust read.
   const robustNow = morningWeights.length >= 3 ? robustTrackingLatest(morningWeights) : null;
-  const robustPrior = morningWeights.length >= 3 ? robustTrackingSevenDaysAgo(morningWeights, {}, nowMs) : null;
+  const robustPriorPoint = morningWeights.length >= 3
+    ? robustTrackingSevenDaysAgoPoint(morningWeights, {}, nowMs) : null;
+  const robustPrior = robustPriorPoint?.ewmaKg ?? null;
   const robustWeightDelta = (robustNow != null && robustPrior != null)
     ? Math.round((robustNow - robustPrior) * 100) / 100
     : null;
+  // C10B: this rate is compared against phase.goalRatePct, which is stated
+  // PER WEEK, so the elapsed span has to be divided out here too. The
+  // sub-week direction was already guarded (robustTrackingSevenDaysAgo
+  // returns null rather than scaling a 2-4 day span up); the super-week
+  // direction was not, so a comparator months old had its whole change
+  // read as one week's. That is the DECISION read: it drives onTarget and
+  // offTargetDirection, and through them the calorie adjustment - a 4%
+  // loss across 90 days read as -4%/week flipped the verdict from
+  // "slower than target" to "faster than target" and moved calories the
+  // wrong way. Same helper as the safety path, so the two cannot disagree
+  // about how long a gap was; no threshold or policy is touched.
+  const robustWeeks = elapsedWeeksSinceComparator(robustPriorPoint?.loggedAt ?? null, nowMs) ?? 1;
   const robustRatePct = (robustWeightDelta != null && bwRef)
-    ? (robustWeightDelta / bwRef) * 100
+    ? ((robustWeightDelta / bwRef) * 100) / robustWeeks
     : null;
   // Fall back to the plain rate when there isn't enough data for the robust read.
   const decisionRatePct = robustRatePct != null ? robustRatePct : actualRatePct;
