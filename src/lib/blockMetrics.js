@@ -47,6 +47,20 @@
  *   soreness AND joint answers on at least half the late sessions, all
  *   calm. Missing or self-selected feedback reads false, never fine.
  *
+ * MID-BLOCK USE (C10G F-6). The ledger calls this only for a FINISHED
+ * block, but the computation itself never assumes the block ended: every
+ * window comes from the PLAN (start, planned weeks, deload index) and
+ * every point from rows actually logged. Called part-way through, an
+ * exercise simply fails the stability test until it has appeared in both
+ * halves of the accumulation phase across >= 3 block weeks, so the result
+ * is `confidence: 0` (no reading yet), never a false flat — see
+ * `effectiveBlockSlopePct` below, which drops exactly those. And because
+ * the slope is TOTAL change across the observed span, a part-block span
+ * accumulates less of it than the full block would, so a fixed threshold
+ * reads conservatively mid-block. What it cannot do mid-block is judge a
+ * finished block's dose-response; `doseResponse` and `prDensity` stay
+ * block-END evidence and the live caller reads neither.
+ *
  * Known model properties (lead-ruled, D91): rep-count progression at a
  * fixed load raises e1RM by design — that is the app's single strength
  * model (calculate1RM, X4 ruling) and the same semantics the live PR
@@ -389,4 +403,39 @@ export function computeBlockPerformance({
     discontinuity,
     doseResponse: { lateProgression, lateRecoveryOk },
   };
+}
+
+/**
+ * C10G F-6: collapse several muscles' block slopes into the ONE number
+ * weeklyCoach's `blockE1rmSlopePct` seam takes (D91-9: "a caller-supplied
+ * block e1RM slope >= 1.5%" as the alternative route to the top
+ * performance grade). No second slope FORMULA is defined here — every
+ * value combined is `computeBlockPerformance`'s own Theil-Sen output,
+ * unchanged.
+ *
+ * Two rules, both conservative, because the only thing this number can do
+ * downstream is EARN a bigger volume push:
+ *
+ * 1. A muscle with `confidence === 0` is DROPPED, not read as 0%. Above,
+ *    `e1rmSlopePct` is 0 exactly when `totalWeight === 0` (no exercise
+ *    produced a usable fit) — and `confidence > 0` holds exactly then too,
+ *    since confidence only credits exercises with weight > 0. So confidence
+ *    is the honest "is this a real reading?" flag, and a placeholder 0
+ *    never dilutes a real one. All muscles unusable => null => the engine
+ *    keeps its legacy PR-only read, byte-identical to no caller at all.
+ * 2. The survivors combine by MEDIAN, the same robust combiner the
+ *    per-exercise fit already uses (Theil-Sen). A session-weighted mean
+ *    would double-count compound work (one bench session is evidence for
+ *    chest, front delts and triceps), and a max would let a single lucky
+ *    muscle buy a whole-body top grade.
+ *
+ * @param {Array} perMuscle - computeBlockPerformance results
+ * @returns {number|null} the effective block slope %, or null for no evidence
+ */
+export function effectiveBlockSlopePct(perMuscle = []) {
+  const usable = (Array.isArray(perMuscle) ? perMuscle : [])
+    .filter((p) => p && Number.isFinite(p.e1rmSlopePct) && Number(p.confidence) > 0)
+    .map((p) => p.e1rmSlopePct);
+  if (usable.length === 0) return null;
+  return median(usable);
 }

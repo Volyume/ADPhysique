@@ -567,8 +567,9 @@ export function mapCalsAdherence(raw, avgKcal = null, targetKcal = null) {
  * @param {number|null}   inputs.blockWeekIndex             - Stage 4: live block week (1-based); null when
  *   no live block (including completed_awaiting_decision).
  * @param {number|null}   inputs.blockAccumWeeks            - Stage 4: accumulation weeks (plannedWeeks - 1).
- * @param {number|null}   inputs.blockE1rmSlopePct          - Stage 4 seam: block-so-far e1RM slope from
- *   blockMetrics (Stage 6 wires it); an alternative strong-performance route to PR density.
+ * @param {number|null}   inputs.blockE1rmSlopePct          - Block-so-far e1RM slope (%) from
+ *   blockMetrics; an alternative strong-performance route to PR density. Wired C10G (F-6) via
+ *   blockLedgerRunner.computeLiveBlockSlopePct; null means no reading, never "flat".
  * @param {string|null}   inputs.lastCalAdjustmentDirection - 'up'|'down'|null
  * @param {number}        inputs.lastCalAdjustmentWeeksAgo  - weeks since last cal change (cooldown)
  * @param {number|null}   inputs.currentCalTarget           - kcal/day, or null if not set
@@ -624,9 +625,12 @@ export function runWeeklyCoach(inputs) {
     // decision), which keeps the engine byte-identical to before.
     blockWeekIndex = null,
     blockAccumWeeks = null,
-    // Stage 4 seam: a caller-supplied block-so-far e1RM slope (%) from
-    // blockMetrics.computeBlockPerformance; Stage 6 wires it. Null keeps
-    // the legacy PR-only performance read.
+    // A caller-supplied block-so-far e1RM slope (%) from
+    // blockMetrics.computeBlockPerformance, combined across the live
+    // block's trained muscles by blockMetrics.effectiveBlockSlopePct and
+    // supplied by CoachOutputScreen (C10G F-6 wired this; it had been an
+    // unused seam since Stage 4). Null keeps the legacy PR-only
+    // performance read, so every other caller is unchanged.
     blockE1rmSlopePct = null,
     // Stage 4 review remediation: consecutive prior weeks whose check-in
     // soreness was already grade-3 territory (sorenessScore >= 3),
