@@ -40,6 +40,18 @@
  *   nor the 30-set backstop — except where that would breach the anchor,
  *   in which case the anchor wins; the floor always sits at least 2
  *   below the ceiling.
+ * - establishedStart (C11 job 1): the THIRD concept. floor is "the lowest
+ *   volume this history has demonstrated can work"; establishedStart is
+ *   "the most recent evidence-backed starting prescription the athlete had
+ *   earned". They are different questions and the floor was answering both,
+ *   which is why a mature athlete starting at 12 for three blocks still
+ *   seeded from research MEV whenever the newest block could not be judged
+ *   (D97-3, characterised in Campaign 10N). It replays the ledger's OWN
+ *   conclusion - proposal.startSets - rather than recomputing a start from
+ *   raw sets, a regression or a highest-ever. It is NOT a ratchet: a later
+ *   STRAINED/OVERREACHED block whose proposal starts lower moves it down.
+ *   A suppressed block may hold or lower it, never raise it, and never
+ *   establishes one from nothing.
  * - min evidence: only entries with confidence >= 0.6, a real
  *   classification, usable observed numbers, and no manual override
  *   fold; the range is only isLearned once at least one block qualified.
@@ -113,6 +125,8 @@ export function computeLearnedRange({
   let floor = priorMev;
   let ceiling = priorMav;
   let evidenceBlocks = 0;
+  // C11 job 1. Null until a legitimate judged block states a start.
+  let establishedStart = null;
   // Running extremes over qualifying evidence (review #2/#3): the ceiling
   // targets the HIGHEST handled peak ever seen; the floor targets the
   // lowest progressing start, and only ever moves down toward it.
@@ -195,8 +209,47 @@ export function computeLearnedRange({
       }
     }
 
+    // C11 job 1: replay the ESTABLISHED START. Every gate above has already
+    // run, so reaching here means the entry legitimately teaches — the same
+    // qualification the floor and ceiling obey (INSUFFICIENT_DATA,
+    // deferred-to-manual, low confidence and unusable observations are all
+    // filtered out before this point). The value is the ledger's own
+    // conclusion, never a recomputation.
+    const proposedStart = num(raw.proposal?.startSets, null);
+    if (proposedStart != null && proposedStart > 0) {
+      if (!entrySuppressed) {
+        // The most RECENT legitimate prescription wins, up or down: this is
+        // "where the evidence currently supports starting", not a
+        // highest-ever ratchet.
+        establishedStart = proposedStart;
+      } else if (establishedStart != null) {
+        // §3.8 binds the memory: a calm-mode or ED-flagged block may hold or
+        // lower the established start, never raise it, and never create one
+        // where none existed.
+        establishedStart = Math.min(establishedStart, proposedStart);
+      }
+    }
+
     clampAll();
   }
 
-  return { floor, ceiling, isLearned: evidenceBlocks > 0, evidenceBlocks };
+  // The start lives INSIDE the range; it never distorts the bounds to fit.
+  if (establishedStart != null) {
+    establishedStart = Math.round(Math.min(Math.max(establishedStart, floor), ceiling));
+  }
+
+  return {
+    floor,
+    ceiling,
+    // C11: null when no legitimate judged block has stated a start (legacy
+    // history included), so callers keep their existing safe fallback rather
+    // than fabricating one.
+    establishedStart,
+    // C11 job 3: the hard cap the ceiling itself obeys, exposed so a capacity
+    // probe can be refused when the learned ceiling is already at it. Reused,
+    // not re-derived — raising MRV to permit testing is forbidden.
+    ceilingCap: Math.round(ceilingCap),
+    isLearned: evidenceBlocks > 0,
+    evidenceBlocks,
+  };
 }

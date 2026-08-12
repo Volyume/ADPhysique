@@ -4388,7 +4388,13 @@ export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks,
             deloadSets: seed.deloadSets ?? mev,
           })
           : null;
-        const source = seeded ? `seed_${seed.source}` : 'template';
+        // C11 job 3: a seed carrying a capacity PROBE gets its own source, so
+        // the explanation layer can keep the learned claim for the start and
+        // the demonstrated ceiling while marking the one extra set at the top
+        // as a test rather than as proven history.
+        const source = seeded
+          ? (seed.probed ? 'seed_learned_probe' : `seed_${seed.source}`)
+          : 'template';
         // Stage 6 review #7: the row's [mev, mrv] is computeVolumeApply's
         // clamp band. A seed can legitimately sit above the research MRV
         // (its ceiling is the learned/adapted band, capped at 30), so the

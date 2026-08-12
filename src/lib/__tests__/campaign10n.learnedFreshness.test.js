@@ -95,28 +95,34 @@ describe('C10N finding 1: an insufficient block neither erases nor changes learn
     expect(withIt.source).toBe('learned');
   });
 
-  test('CHARACTERISED: the start comes from the learned FLOOR, which never rises', () => {
-    // The real cause of the audit's "6". The athlete started at 12 for three
-    // blocks; the learned floor is still the research MEV, because
-    // computeLearnedRange's floor is monotone-down-only by design.
+  // RESOLVED by Campaign 11 job 1. This test characterised the defect: the
+  // start came from the learned FLOOR, which is monotone-down-only, so a
+  // mature athlete seeded from research MEV. The band now carries a third
+  // concept, establishedStart, and the floor law is unchanged.
+  test('the floor is STILL monotone-down-only, but no longer the prescription', () => {
     const learned = learnedFrom(MATURE);
-    expect(learned.floor).toBe(RESEARCH.mev);       // 6, not 12
-    expect(learned.ceiling).toBeGreaterThan(PRIOR.mav); // the CEILING did learn
+    expect(learned.floor).toBe(RESEARCH.mev);            // 6: the floor law stands
+    expect(learned.ceiling).toBeGreaterThan(PRIOR.mav);  // the ceiling learned
+    expect(learned.establishedStart).toBe(12);           // and now so does the start
     const s = seed({ history: MATURE });
-    expect(s.startSets).toBe(learned.floor);
+    expect(s.startSets).toBe(12);                        // was learned.floor (6)
     expect(s.peakSets).toBe(learned.ceiling);
-    // So the mature START is carried by the LEDGER proposal, not the band.
+    // The ledger proposal still speaks first when it can.
     const viaLedger = seed({ history: MATURE, ledgerEntry: judged(12, 16) });
     expect(viaLedger.source).toBe('ledger');
     expect(viaLedger.startSets).toBe(12);
   });
 
   test('the insufficient block cannot earn upward volume or manufacture a proposal', () => {
-    const s = seed({ history: [...MATURE, INSUFFICIENT], ledgerEntry: INSUFFICIENT });
+    const withIt = seed({ history: [...MATURE, INSUFFICIENT], ledgerEntry: INSUFFICIENT });
     // Its own proposal numbers are never used: it is not a recommendation.
-    expect(s.source).not.toBe('ledger');
-    expect(s.startSets).toBeLessThanOrEqual(learnedFrom(MATURE).floor);
-    expect(s.peakSets).toBeLessThanOrEqual(learnedFrom(MATURE).ceiling);
+    expect(withIt.source).not.toBe('ledger');
+    // C11: the bound is now what the LEGITIMATE history established, and the
+    // insufficient block moved neither end of it.
+    const base = learnedFrom(MATURE);
+    expect(withIt.startSets).toBe(base.establishedStart);
+    expect(withIt.peakSets).toBeLessThanOrEqual(base.ceiling);
+    expect(withIt).toEqual(seed({ history: MATURE, ledgerEntry: null }));
   });
 
   test('it cannot move the learned floor or ceiling in either direction', () => {
@@ -280,10 +286,15 @@ describe('C10N: 10I-10L and Campaign 8 laws are untouched', () => {
     expect(LEDGER_ALGORITHM_VERSION).toBe(2);
   });
 
-  test('Campaign 8 activation carry still applies the same boundary', () => {
+  // C11 job 2 consolidated the two implementations into one helper, so the
+  // pin moves from "activation has its own matching line" to "both call the
+  // same decision".
+  test('Adjust and activation share ONE actionability decision', () => {
     const SRC = read('lib/blockLedgerRunner.js');
-    expect(SRC).toMatch(/const fresh = recent != null && recent\.weeksOverdue < STALE_EVIDENCE_WEEKS;/);
+    expect(SRC).toMatch(/function learnedActionability\(freshnessByMuscle, muscle\)/);
+    expect((SRC.match(/learnedActionability\(/g) || []).length).toBe(3); // def + 2 callers
     expect(SRC).toMatch(/learnedRange: \(learned\.isLearned && fresh\) \? learned : null/);
+    expect(SRC).toMatch(/learnedRange: \(learned\.isLearned && learnedFresh\) \? learned : null/);
   });
 
   test('the 10I/10J/10K/10L engine laws are where they were', () => {

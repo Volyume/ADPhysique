@@ -53,8 +53,15 @@ const range = (history, over = {}) => computeLearnedRange({
 });
 
 describe('prior and no-evidence behaviour', () => {
+  // C11 added two read-only fields to the return: establishedStart (the
+  // third learned concept) and ceilingCap (the cap the ceiling already
+  // obeyed, exposed so a capacity probe can be refused at it). Neither
+  // changes floor/ceiling/isLearned/evidenceBlocks, which is what these two
+  // cases exist to pin, so they now assert the unchanged fields explicitly
+  // plus the honest null start.
   test('no history returns the profile-adjusted prior, unlearned', () => {
-    expect(range([])).toEqual({ floor: 10, ceiling: 14, isLearned: false, evidenceBlocks: 0 });
+    expect(range([])).toMatchObject({ floor: 10, ceiling: 14, isLearned: false, evidenceBlocks: 0 });
+    expect(range([]).establishedStart).toBeNull();
   });
 
   test('low-confidence and INSUFFICIENT_DATA entries are skipped entirely', () => {
@@ -63,7 +70,9 @@ describe('prior and no-evidence behaviour', () => {
       entry(BLOCK_CLASS.INSUFFICIENT_DATA),
       entry(BLOCK_CLASS.RESPONSIVE, { top: { observed: null } }),
     ]);
-    expect(out).toEqual({ floor: 10, ceiling: 14, isLearned: false, evidenceBlocks: 0 });
+    expect(out).toMatchObject({ floor: 10, ceiling: 14, isLearned: false, evidenceBlocks: 0 });
+    // C11: an entry that cannot teach the range cannot teach the start either.
+    expect(out.establishedStart).toBeNull();
   });
 
   test('junk history rows are tolerated', () => {

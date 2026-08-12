@@ -47,7 +47,14 @@ const num = (v, fallback) => {
  *   research table entry; also the absolute floor/ceiling anchor.
  * @param {boolean} input.suppressed - calm mode OR open ED flag.
  * @param {'repeat'|'adjust'} input.intent - the advisor button tapped.
- * @returns {{startSets:number, peakSets:number, source:'manual'|'ledger'|'learned'|'profile'|'research'}}
+ * @param {boolean} [input.capacityProbe] - C11 job 3 (RA6-4). The CALLER
+ *   proves eligibility from the latest judged evidence; this function only
+ *   applies the bounded consequence, so the evidence rules live in one
+ *   place. Adds exactly +1 to the PEAK of a learned seed, never to the
+ *   start, never above learnedRange.ceilingCap, and never on any other
+ *   source or under suppression.
+ * @returns {{startSets:number, peakSets:number,
+ *   source:'manual'|'ledger'|'learned'|'profile'|'research', probed?:true}}
  */
 export function resolveSeedRange({
   manual = null,
@@ -57,6 +64,7 @@ export function resolveSeedRange({
   research = null,
   suppressed = false,
   intent = 'adjust',
+  capacityProbe = false,
 } = {}) {
   const researchMev = num(research?.mev, null);
   const clamp = (start, peak) => {
@@ -175,7 +183,23 @@ export function resolveSeedRange({
     const floor = num(learnedRange.floor, null);
     const ceiling = num(learnedRange.ceiling, null);
     if (floor != null && ceiling != null) {
-      const { s, p } = clamp(floor, ceiling);
+      // C11 job 1: START from the established start when the history has
+      // earned one. The floor is the lower BOUND ("this much has been shown
+      // to work"), never the default prescription — seeding from it sent a
+      // mature athlete back to research MEV every time a block could not be
+      // judged (D97-3). Legacy history with no established start keeps the
+      // previous behaviour rather than inventing one.
+      const established = num(learnedRange.establishedStart, null);
+      const startFrom = established != null ? established : floor;
+      // C11 job 3: a bounded capacity probe raises the PEAK by exactly one
+      // set, never the start, and only when the caller has proven the
+      // existing positive dose-response posture. It is refused outright when
+      // the learned ceiling already sits at the hard cap the ceiling itself
+      // obeys — MRV is never raised to permit testing.
+      const cap = num(learnedRange.ceilingCap, null);
+      const probing = capacityProbe === true && cap != null && ceiling < cap;
+      const peakFrom = probing ? Math.min(ceiling + 1, cap) : ceiling;
+      const { s, p } = clamp(startFrom, peakFrom);
       // C6 RE6-1 (D97-25): isLearned means "evidence exists", not "a
       // bound moved" - the floor is monotone-down-only and the ceiling
       // stops at the prior MAV, so a purely-progressing user's band can
@@ -187,10 +211,19 @@ export function resolveSeedRange({
       const priorMev = num(profileAdjusted?.mev, null);
       const priorMav = num(profileAdjusted?.mav, null);
       if (priorMev != null && priorMav != null
-        && floor === priorMev && ceiling === priorMav) {
+        && floor === priorMev && ceiling === priorMav
+        // C11: an established start ABOVE the prior's MEV is genuine
+        // personalisation even when the bounds are untouched, so it must
+        // not be relabelled as the profile default.
+        && (established == null || established === priorMev)
+        && !probing) {
         return { startSets: s, peakSets: p, source: 'profile' };
       }
-      return { startSets: s, peakSets: p, source: 'learned' };
+      // C11 job 3: `probed` lets the explanation layer distinguish the one
+      // TEST set from learned capacity. The extra set is specifically NOT
+      // proven, so no surface may narrate it as "what your past blocks
+      // showed".
+      return { startSets: s, peakSets: p, source: 'learned', ...(probing ? { probed: true } : {}) };
     }
   }
 

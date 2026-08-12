@@ -11,8 +11,8 @@
  *   from the seed map that was merely requested, so a skipped insert can
  *   never be narrated as applied.
  * - Block-start lines speak only for the personalised sources
- *   (seed_ledger / seed_learned / seed_manual); a template or
- *   research/profile ramp earns no "learned" claim.
+ *   (seed_ledger / seed_learned / seed_learned_probe / seed_manual); a
+ *   template or research/profile ramp earns no "learned" claim.
  * - The block-end rows reuse each ledger entry's rationale VERBATIM: it
  *   was delta-composed from the final clamped numbers (Stage 2 review
  *   remediation), so it already agrees with the proposal it shipped with.
@@ -68,6 +68,13 @@ export const ACTIVATION_MEANING_SENTENCE =
 const SOURCE_CLAUSE = Object.freeze({
   seed_ledger: 'set by how your last block went',
   seed_learned: 'set by what past blocks have shown',
+  // C11 job 3 (RA6-4): a capacity probe puts ONE set at the top of the block
+  // that the athlete has NOT yet handled, so this muscle may not claim the
+  // whole ramp was learned. The start and the demonstrated ceiling keep the
+  // learned claim; the extra set is named as a test. No threshold, classifier
+  // or internal term is exposed, and it never says optimal, maximum
+  // recoverable, or that we know they can handle it.
+  seed_learned_probe: 'set by what past blocks have shown, with one extra set at the top being tested',
   seed_manual: 'your own setting',
 });
 
