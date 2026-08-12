@@ -85,7 +85,10 @@ const CONFIDENCE_FLOOR = 0.6;   // composite confidence (perf x recovery data)
 
 // Evidence staleness: an overdue block's data no longer supports an
 // increase once the gap could have deconditioned the muscle.
-const STALE_EVIDENCE_WEEKS = 4;
+// Exported (C8 closeout, D10) so the ACTIVATION carry can apply the
+// same law it already applies here: memory persists, but stale memory
+// alone must not authorise a fresh upward prescription.
+export const STALE_EVIDENCE_WEEKS = 4;
 
 // Finite-number coercion: strings that survive a JSON round-trip ('12')
 // become numbers; anything non-finite becomes the fallback. Without this
