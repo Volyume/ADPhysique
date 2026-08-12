@@ -1100,6 +1100,14 @@ This section carries the reconciliations and the highest-stakes items.
 - **F-6. blockE1rmSlopePct documented as wired, has no caller (A2 U1).**
   D91-9 says "wired in Stage 6"; no production call site exists.
   PLANNED-DOCUMENTED-ONLY. (High.)
+  **RESOLVED 2026-08-12 (Campaign 10G, ruling C10G-1).** Wired:
+  `blockLedgerRunner.computeLiveBlockSlopePct` reads the LIVE block
+  through the existing `blockMetrics.computeBlockPerformance` and combines
+  the usable per-muscle readings with `effectiveBlockSlopePct` (median of
+  muscles with `confidence > 0`; unusable muscles dropped, never read as
+  0%); `CoachOutputScreen` supplies it beside `blockWeekIndex`. No second
+  slope formula, and null on any no-evidence/read-failure path keeps the
+  legacy PR-only performance read.
 - **F-7. Steps coaching dark (B1 U8).** The step-prescription block is
   fully built but its only caller passes nulls; data path syncs, coaching
   path dead. (High.)
@@ -1109,6 +1117,15 @@ This section carries the reconciliations and the highest-stakes items.
 - **F-9. Joint-discomfort "no data" reads as 0 in the gather (A2 U2).**
   Protected by the 4-point minimum, but a soreness-only block carries
   jointDiscomfortAvg=0; posture inconsistency with blockMetrics. (High.)
+  **ALREADY RESOLVED — the finding was stale when written.** Campaign 1
+  P0-4 (`19c109dd`, 2026-08-10) changed the gather to return `null`, and
+  `blockLedgerRunner` passes it through with no `?? 0`. Re-verified end to
+  end on 2026-08-12 (Campaign 10G): the null survives the ledger JSON and
+  the sync/restore round-trip, `classifyMuscleBlock` reads it as zero
+  strain WEIGHT (never manufactured pain), and the only positive-recovery
+  gate that unlocks the RESPONSIVE +1 (`blockMetrics.lateRecoveryOk`)
+  requires real answers for BOTH signals. Now pinned behaviourally as well
+  as by source comment in `campaign10g.blockEvidence.test.js`.
 - **F-10. iOS universal links unproven (A1 U-2); widget tap default
   (A1 U-3/C2 U2); `volyume://active-workout` unregistered (C2 U3);
   send-push channelId 'default' not a registered channel (C2 U7).**
@@ -4165,6 +4182,12 @@ Classification: **AUTOMATIC** (pure computation).
 - `e1rmSlopePct = Σ(slopePct × weight) / Σweight`, or `0` when `Σweight == 0`.
   **Raw e1RM values are never averaged across exercises** — only slopes are
   combined.
+- Across MUSCLES (Campaign 10G, `effectiveBlockSlopePct`, for the weekly
+  coach's single `blockE1rmSlopePct`): muscles with `confidence === 0` are
+  **dropped** (that 0% is a placeholder, not a reading), and the survivors
+  combine by **median** — the same robust combiner Theil-Sen already uses.
+  All dropped ⇒ `null`. A session-weighted mean would double-count compound
+  work; a max would let one muscle buy a whole-body top grade.
 - `confidenceWeight = Σ(weight > 0 ? rawSessions × discount : 0)`;
   `confidence = confidenceWeight / totalRawSessions`. A stable lift with no
   measurable load (bodyweight-only) or an unusable fit contributes **zero**
@@ -4454,10 +4477,12 @@ session count is supplied (legacy binary `prsThisWeek > 0` otherwise), and
 Grade 4 at `'dropped'` or adherence `< 0.5`; grade 3 at `'struggled'` or
 `< 0.75`; else grade 2.
 
-`blockE1rmSlopePct` is **PLANNED-DOCUMENTED-ONLY**: grep over `src/screens` and
-`src/lib` finds no caller supplying it. `CoachOutputScreen` passes
-`blockWeekIndex`, `blockAccumWeeks`, `consecutiveGrade3RecoveryWeeks` but not
-the slope. See UNCERTAINTIES U1.
+`blockE1rmSlopePct` is supplied by `CoachOutputScreen` beside `blockWeekIndex`,
+`blockAccumWeeks` and `consecutiveGrade3RecoveryWeeks` (Campaign 10G, ruling C10G-1),
+from `blockLedgerRunner.computeLiveBlockSlopePct`. It is `null` — the legacy
+PR-only read — when there is no live block, when the block has yet to produce a
+usable strength series, or when the read fails. It was PLANNED-DOCUMENTED-ONLY
+from Stage 4 until 2026-08-12; see UNCERTAINTIES U1.
 
 ### C5.3 Peak-week fatigue context
 
@@ -5994,6 +6019,15 @@ remains by design.
 `getPerformanceScore` uses it (`>= 1.5%` ⇒ top grade), but no screen supplies
 it. D91-9 describes it as "wired in Stage 6"; grep shows no production caller.
 See UNCERTAINTIES U1.
+**No longer a limitation (2026-08-12, Campaign 10G, ruling C10G-1):** wired via
+`blockLedgerRunner.computeLiveBlockSlopePct` →
+`CoachOutputScreen` → `runWeeklyCoach({ blockE1rmSlopePct })`. Recorded here
+because the ruling is still in the register. The residual property, stated
+plainly: the reading is absent for roughly the first half of every block (no
+exercise can be stable until it has appeared in both halves of the
+accumulation phase across ≥ 3 block weeks), so the alternative route to the
+top grade opens late in a block, not early. That is evidence accruing, not a
+defect.
 
 **J6. Interim CTA honesty is now resolved.** D91-2 held "Continue with
 adjustments" back until the behaviour was real; Stage 6 restored it
@@ -6019,6 +6053,9 @@ occurrences**. `CoachOutputScreen.js:1701-1705` supplies `blockWeekIndex`,
 `blockAccumWeeks` and `consecutiveGrade3RecoveryWeeks` but not the slope.
 Classified **PLANNED-DOCUMENTED-ONLY**. I did not determine whether this is an
 intentional deferral or an omission; not guessed.
+**CLOSED 2026-08-12 (Campaign 10G).** It was an omission, not a deferral:
+nothing in the Stage 6 work or the register records a decision to hold it
+back. Now wired (see LIMITATIONS J5 and CAMPAIGN10-DECISIONS.md C10G-1).
 
 **U2. Soreness/joint "no data" defaults.**
 `computeMuscleRecoveryAggregates` returns `sorenessLateAvg: null` but
@@ -6032,6 +6069,12 @@ a block with 4+ points that answered **only** soreness would carry
 demonstrably true of `blockMetrics.lateRecoveryOk` (which requires both answers)
 but **not** of `blockLedgerGather.jointDiscomfortAvg`. Whether the two were
 intended to have the same posture is not recorded anywhere I found.
+**CLOSED 2026-08-12 (Campaign 10G): the uncertainty was already out of date.**
+Campaign 1 P0-4 (`19c109dd`, 2026-08-10) made the gather return `null`, so
+both surfaces now hold the same posture — absent joint feedback is UNKNOWN,
+which adds no strain weight and can never satisfy a positive-recovery
+requirement. Verified through the ledger JSON and the sync/restore
+round-trip.
 
 **U3. `RECOVERY_WINDOW_DAYS` vs the block engine.** `src/lib/muscleRecovery.js`
 declares itself "display heuristics, not training prescriptions", and I found no

@@ -1797,6 +1797,18 @@ export default function CoachOutputScreen({ navigation, route }) {
       }
       setBlockWeekForRamp(rampWeek);
 
+      // C10G F-6: the block-so-far strength slope, the alternative route to
+      // the top performance grade (D91-9). Only for a LIVE block, and only
+      // ever a real reading: a read failure or a block with no usable
+      // strength series passes null, which leaves the engine's legacy
+      // PR-only performance read exactly as it was.
+      let blockSlopePct = null;
+      if (liveBlockWeek) {
+        // eslint-disable-next-line global-require
+        const { computeLiveBlockSlopePct } = require('../lib/blockLedgerRunner');
+        blockSlopePct = await computeLiveBlockSlopePct(user.id).catch(() => null);
+      }
+
       const result = runWeeklyCoach({
         checkin: engineCheckin,
         morningWeights: weights,
@@ -1807,6 +1819,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         blockAccumWeeks: liveBlockWeek && Number.isFinite(liveBlockWeek.plannedWeeks) && liveBlockWeek.plannedWeeks > 1
           ? liveBlockWeek.plannedWeeks - 1
           : null,
+        blockE1rmSlopePct: blockSlopePct,
         consecutiveGrade3RecoveryWeeks,
         // Calorie safety + adherence sizing inputs (food log + body comp).
         recentIntakeAvgKcal: intake.avgKcal,

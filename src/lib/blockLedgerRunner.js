@@ -38,7 +38,7 @@ import {
   storeBlockLedger,
 } from './database';
 import { buildBlockLedger, LEDGER_VERSION, STALE_EVIDENCE_WEEKS } from './interBlock';
-import { computeBlockPerformance } from './blockMetrics';
+import { computeBlockPerformance, effectiveBlockSlopePct } from './blockMetrics';
 import {
   computeMuscleRecoveryAggregates,
   computeReadinessSlope,
@@ -312,6 +312,68 @@ export async function getAchievedWeeklyPeaks(userId) {
     return peaks;
   } catch (e) {
     logError('blockLedgerRunner.getAchievedWeeklyPeaks', e, { userId });
+    return null;
+  }
+}
+
+/**
+ * C10G F-6: the LIVE block's effective e1RM slope so far — weeklyCoach's
+ * `blockE1rmSlopePct` seam (D91-9), which until now had no caller and so
+ * never once fired. Returns a percentage, or null when there is no live
+ * block or the block has not yet produced a usable strength series.
+ *
+ * No new metric: this reads `blockMetrics.computeBlockPerformance` — the
+ * app's ONE strength-slope law — per trained muscle and combines the
+ * usable readings through `effectiveBlockSlopePct`. See the MID-BLOCK USE
+ * note in blockMetrics.js for why a part-elapsed block is honest here.
+ *
+ * Deliberately NOT read: `doseResponse` and `prDensity`, which are
+ * block-END evidence. Nothing is written — a live block never freezes a
+ * premature ledger (the Stage 6 review #14 precondition is untouched).
+ */
+export async function computeLiveBlockSlopePct(userId) {
+  try {
+    const mesos = await getAllMesocyclesForUser(userId);
+    // Same canonical active-block resolution as getAchievedWeeklyPeaks
+    // above (review #15): soft-deleted rows out, newest wins.
+    const active = mesos
+      .filter((m) => !m.deletedAt && (m.isActive === 1 || m.isActive === true))
+      .sort((a, b) => (toMs(b.createdAt) ?? 0) - (toMs(a.createdAt) ?? 0))[0] ?? null;
+    const blockStart = toMs(active?.startDate);
+    if (!active || blockStart == null) return null;
+    const blockWeeks = active.plannedWeeks ?? active.durationWeeks ?? 5;
+    if (!(blockWeeks >= 2)) return null;
+    // A finished block's strength evidence belongs to the ledger, which
+    // judges it once and freezes it; the weekly run must not re-narrate it.
+    if (getBlockStatus(blockStart, blockWeeks).awaitingDecision) return null;
+    const deloadWeekIndex = active.deloadWeek ?? blockWeeks;
+
+    const [training, priorSets, exercisesById] = await Promise.all([
+      getBlockTrainingData(userId, active.id),
+      getPriorCompletedSets(userId, blockStart, blockStart - PRIOR_WINDOW_DAYS * 24 * 60 * 60 * 1000),
+      getExerciseRowsById(userId),
+    ]);
+
+    // Only muscles actually trained in the block so far can carry strength
+    // evidence; a planned-but-untrained muscle would return confidence 0
+    // and be dropped anyway, so it costs a read for nothing.
+    const perMuscle = Object.keys(VOLUME_LANDMARKS)
+      .filter((muscle) => sumCompletedSets(training.sets, exercisesById, muscle) > 0)
+      .map((muscle) => computeBlockPerformance({
+        muscle,
+        sets: training.sets,
+        exercisesById,
+        priorSets,
+        blockStart,
+        blockWeeks,
+        deloadWeekIndex,
+        // PR density is not read here, so the rebound windows it alone
+        // discounts are not gathered.
+        reboundWindowsMs: [],
+      }));
+    return effectiveBlockSlopePct(perMuscle);
+  } catch (e) {
+    logError('blockLedgerRunner.computeLiveBlockSlopePct', e, { userId });
     return null;
   }
 }
