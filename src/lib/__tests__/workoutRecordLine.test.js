@@ -13,7 +13,13 @@
 import { buildRecordLine } from '../workoutRecordLine';
 import { detectPR } from '../algorithms';
 
-// A history where the best set is 90kg x 12 (est. max ~128kg).
+// A history where the best set is 90kg x 12 (est. max ~126kg).
+// C10L re-anchor: this bar was ~128kg while calculate1RM blended Epley and
+// Brzycki above 10 reps. The canonical model now uses Epley alone there, so
+// the SAME raw history derives 90 x 1.4 = 126. Nothing about this suite's
+// subject changed - the numbers are read-time derivations of unchanged set
+// history, and the founder ruled that such surfaces may legitimately move
+// rather than carry fabricated compatibility values.
 const HISTORY = [
   { weight: 80, actualReps: 10 },
   { weight: 90, actualReps: 12 },
@@ -24,7 +30,7 @@ const base = { historySets: HISTORY, units: 'kg', exerciseType: 'weight_reps' };
 
 describe('the bar to beat', () => {
   test('names the best set by estimated max, not merely the heaviest', () => {
-    // 90x12 (est ~128) beats 85x8 and 80x10, and is also the heaviest here.
+    // 90x12 (est ~126) beats 85x8 and 80x10, and is also the heaviest here.
     expect(buildRecordLine({ ...base, weight: 90, reps: 12 }).bestLabel).toBe('Best 90kg × 12');
   });
 
@@ -75,7 +81,8 @@ describe('each record type is named, never a bare "PR"', () => {
   });
 
   test('a heavier weight for fewer reps is a heaviest-weight record and says so, WITHOUT claiming an estimated-max record it does not have', () => {
-    // 92.5x10 -> est ~123kg, which does NOT beat the 128kg best.
+    // 92.5x10 -> est ~123kg (10 reps, so unchanged by C10L), which still
+    // does NOT beat the 126kg best.
     const line = buildRecordLine({ ...base, weight: 92.5, reps: 10 });
     expect(line.isRecord).toBe(true);
     const joined = line.reasons.join(' · ');
@@ -85,7 +92,7 @@ describe('each record type is named, never a bare "PR"', () => {
 
   test('a genuinely bigger set names the estimated-max record with both numbers', () => {
     const line = buildRecordLine({ ...base, weight: 95, reps: 12 });
-    expect(line.reasons.join(' · ')).toMatch(/Est\. max ~\d+kg beats 128kg/);
+    expect(line.reasons.join(' · ')).toMatch(/Est\. max ~\d+kg beats 126kg/);
   });
 
   test('the spoken label carries the headline and every reason', () => {

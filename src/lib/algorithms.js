@@ -109,14 +109,30 @@ export function calculate1RM(weight, reps) {
   // runs towards its pole as reps climb, so a 25-30 rep set used to return a
   // wildly inflated estimate (≈5x the weight at 30 reps) that fired spurious
   // 1RM PRs. Clamp the rep count the formula sees at 20: above that we plateau
-  // at the 20-rep estimate rather than extrapolate into nonsense. Behaviour for
-  // 1-20 reps is unchanged. (A2-040.)
+  // at the 20-rep estimate rather than extrapolate into nonsense. (A2-040.)
   const r = Math.min(reps0, 20);
   const epley = w * (1 + r / 30);
   const brzycki = w / (1.0278 - 0.0278 * r);
 
+  // C10L (founder ruling): the 20-rep clamp already conceded that high-rep
+  // 1RM prediction loses fidelity, but between 11 and 20 reps Brzycki still
+  // carried HALF the weight, so the estimate inherited more and more of that
+  // inflation on the way to the clamp. A lighter high-rep set could then
+  // manufacture an Est. max PR, a steeper block e1RM slope and (since C10G
+  // wired the slope into runWeeklyCoach) stronger weekly performance
+  // evidence than its quality warranted. Above 10 reps the estimate is now
+  // Epley alone.
+  //
+  // Why this is the minimal correction rather than a new model: at 10 reps
+  // the two estimators have all but converged (Epley 1.3333x load, Brzycki
+  // 1.3337x - 0.03% apart), so dropping Brzycki ABOVE 10 introduces no
+  // downward step. Epley(11) = 1.3667x still exceeds the blended 10-rep
+  // 1.3335x, the whole 1-10 range is untouched, high-rep progress stays
+  // measurable, and no new published-named formula is claimed. No
+  // sex-specific, exercise-specific, bodyweight, RIR or velocity term is
+  // introduced; that would be a different modelling project.
   if (r <= 10) return epley * 0.6 + brzycki * 0.4;
-  return (epley + brzycki) / 2;
+  return epley;
 }
 
 // Algorithm 9: Tonnage

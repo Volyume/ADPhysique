@@ -6497,7 +6497,8 @@ export async function getFirstWorkoutDateOnOrAfter(userId, sinceMs) {
 // plain-Epley e1RM (weight * (1 + reps/30)) in SQL, with no rep clamp, no
 // reps=1 special case and a zero margin -- a different verdict from the live
 // in-session PR detector (detectPR/calculate1RM, algorithms.js), which blends
-// Epley/Brzycki, clamps the rep count the formula sees at 20, special-cases
+// Epley/Brzycki up to 10 reps and uses Epley alone above that (C10L),
+// clamps the rep count the formula sees at 20, special-cases
 // reps=1 (returns the raw weight) and requires the new estimate to beat the
 // prior best by more than 0.1%. Worked divergence the audit found: a prior
 // best of 94kg x 2 vs 60kg x 20 this week fires a PR under the blended
@@ -6601,7 +6602,7 @@ export async function getBestLiftThisWeek(userId, weekStart) {
   );
   if (!weekSets.length) return null;
 
-  // X4: prior-best e1RM must use the SAME blended/clamped formula as the
+  // X4: prior-best e1RM must use the SAME canonical/clamped formula as the
   // live PR detector, so raw sets are fetched and reduced to a per-exercise
   // max with calculate1RM in JS, rather than aggregated with a plain-Epley
   // MAX() in SQL (that formula's conditional/clamped shape doesn't translate
