@@ -1985,12 +1985,22 @@ async function _pullAdaptationEvents(sb, supabaseUserId) {
     );
     if (!data?.length) return 0;
     // eslint-disable-next-line global-require
-    const { insertOrUpdateAdaptationEventFromCloud } = require('./database');
+    const { insertOrUpdateAdaptationEventFromCloud, runAdaptationEventBatch } = require('./database');
     let n = 0;
-    for (const row of data) {
-      try { await insertOrUpdateAdaptationEventFromCloud(supabaseUserId, row); n++; }
-      catch (e) { logWarn('sync._pullAdaptationEvents', 'insert failed', { id: row?.id, error: e?.message }); }
-    }
+    // C8 Work 4 review D9: this pull is unwatermarked and full-table, and
+    // Work 4 doubled the writes per row (sync mirror + authoritative log).
+    // One transaction around the loop keeps a multi-year user's restore
+    // at roughly its previous cost instead of paying for every row twice.
+    // Falls back to the plain loop if the batch helper cannot run, so a
+    // failure here can never lose the restore.
+    const applyAll = async () => {
+      for (const row of data) {
+        try { await insertOrUpdateAdaptationEventFromCloud(supabaseUserId, row); n++; }
+        catch (e) { logWarn('sync._pullAdaptationEvents', 'insert failed', { id: row?.id, error: e?.message }); }
+      }
+    };
+    try { await runAdaptationEventBatch(applyAll); }
+    catch (e) { logWarn('sync._pullAdaptationEvents', 'batch failed, applying row-by-row', e?.message); n = 0; await applyAll(); }
     return n;
   } catch (e) { logWarn('sync._pullAdaptationEvents', e?.message); return 0; }
 }
