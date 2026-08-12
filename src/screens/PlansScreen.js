@@ -414,7 +414,8 @@ export default function PlansScreen({ navigation }) {
               // "Continue with adjustments" button — applies the full
               // ledger; 'repeat' AND 'consider_rebuild' (whose labels both
               // state a plain repeat) are true repeats. A null seed
-              // result falls back to the template ramp unchanged.
+              // result on a repeat falls back to the template ramp
+              // unchanged (allowLearnedCarry false, below).
               // eslint-disable-next-line global-require
               const { buildSeedRangesForNextBlock, recordSeedOutcome } = require('../lib/blockLedgerRunner');
               // FQ-2 (D96): the mapping's SEMANTICS are unchanged -- only the
@@ -427,7 +428,13 @@ export default function PlansScreen({ navigation }) {
                 userProfile,
                 tier,
               }).catch(() => null);
-              await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), { ledger: seedRanges });
+              // Review D5: on a repeat intent the activation must never
+              // reach for the learned carry if this seed build failed --
+              // the alert promised the same targets as last time.
+              await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), {
+                ledger: seedRanges,
+                allowLearnedCarry: seedIntent !== 'repeat',
+              });
               // Provenance: record on the finished block's ledger how its
               // recommendation was actually used (best-effort).
               if (seedRanges?.sourceMesocycleId) {

@@ -1801,9 +1801,10 @@ describe('REVIEW B: the interruption and state findings stay fixed (RB-1..RB-12,
     // And the data layer closes the two-active-blocks interleave for all.
     const db = read('lib/database.js');
     const act = db.slice(db.indexOf('export async function activatePlanWithBlock'));
-    // Window widened for the C8 Work 2 activation seed, which sits above the
-    // transaction. The pin is unchanged: the two writes stay in ONE transaction.
-    expect(act.slice(0, 3500)).toMatch(/runInTransaction\(d, async \(\) => \{/);
+    // Window widened for the C8 Work 2 activation seed and its review-D5
+    // gate, which sit above the transaction. The pin is unchanged: the two
+    // writes stay in ONE transaction.
+    expect(act.slice(0, 4200)).toMatch(/runInTransaction\(d, async \(\) => \{/);
   });
 
   test('RB-4: only the newest PlansScreen load may paint any of its state', () => {

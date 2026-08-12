@@ -145,7 +145,8 @@ describe('honest copy while awaiting the decision', () => {
 describe("the 'Continue with adjustments' seam exists for the Stage 6 ledger", () => {
   test('activatePlanWithBlock accepts and threads a ledger option', () => {
     const SRC = read('lib/database.js');
-    expect(SRC).toMatch(/export async function activatePlanWithBlock\(userId, planId, planName, \{ ledger = null \} = \{\}\)/);
+    // Review D5 added the allowLearnedCarry gate beside the ledger option.
+    expect(SRC).toMatch(/export async function activatePlanWithBlock\(userId, planId, planName, \{ ledger = null, allowLearnedCarry = true \} = \{\}\)/);
     const fn = SRC.slice(SRC.indexOf('export async function activatePlanWithBlock'), SRC.indexOf('export async function activatePlanWithBlock') + 5700 /* window widened for the T-2 comment and the C8 Work 2 activation seed */);
     // C8 Work 2 (D97-9): the seam now threads `effectiveLedger` — the caller's
     // explicit ledger when there is one, otherwise the learned carry built at

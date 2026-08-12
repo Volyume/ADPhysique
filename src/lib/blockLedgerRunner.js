@@ -374,9 +374,18 @@ export async function backfillMissingBlockLedgers(userId, { userProfile = null, 
  * Every existing constraint therefore still wins: a manual override
  * outranks it, suppression skips the learned band entirely, research
  * MEV stays the floor anchor, and a band with no qualifying evidence
- * (isLearned false) simply is not used. Muscles the new plan does not
- * train are never written by the ramp writer, so an incompatible
- * context costs nothing.
+ * (isLearned false) simply is not used.
+ *
+ * Review D1/D8: the map returned here contains ONLY the muscles that
+ * genuinely carried something (a learned band or the user's own manual
+ * setting). A muscle whose chain fell through to the profile prior or
+ * to research is omitted, and generateInitialPlannedVolume leaves any
+ * omitted muscle on the static template ramp. This matters most under
+ * suppression, where the learned band is skipped for every muscle: a
+ * single unrelated manual override must not hand the whole body a
+ * profile-prior ramp (measured at 6->21 sets against a 6->14 template)
+ * during calm mode or an open ED flag. Carrying only what was actually
+ * learned also means an incompatible new plan costs nothing.
  *
  * Pro only: FREE HAS NO COACHING, so a free activation keeps the
  * template ramp exactly as before. Using the user's own past blocks as
@@ -397,7 +406,6 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
     const nowMs = Date.now();
 
     const ranges = {};
-    let learnedAny = false;
     for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
       const research = VOLUME_LANDMARKS[muscle];
       const history = priorLedgerEntries(mesos, nowMs, muscle);
@@ -418,12 +426,15 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
         suppressed,
         intent: 'adjust',
       });
-      if (resolved?.source === 'learned' || resolved?.source === 'manual') learnedAny = true;
-      ranges[muscle] = resolved;
+      // Per-muscle, never body-wide: only a genuinely carried muscle is
+      // written. Everything else stays on the template ramp.
+      if (resolved?.source === 'learned' || resolved?.source === 'manual') {
+        ranges[muscle] = resolved;
+      }
     }
     // Nothing was actually carried forward: let the caller keep the
     // honest template ramp rather than relabel research as learned.
-    if (!learnedAny) return null;
+    if (Object.keys(ranges).length === 0) return null;
     return { version: 1, intent: 'activation', sourceMesocycleId: null, ranges };
   } catch (e) {
     logError('blockLedgerRunner.buildLearnedSeedRangesForActivation', e, { userId });

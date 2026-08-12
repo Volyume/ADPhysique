@@ -3777,7 +3777,7 @@ export async function setActivePlan(userId, planId) {
 // Stage 1 seam (2026-08-09): `ledger` is the Block Ledger result the Stage 6
 // build threads into seeding. Accepted now so the "Continue with
 // adjustments" path has a real parameter to carry it; unused until Stage 6.
-export async function activatePlanWithBlock(userId, planId, planName, { ledger = null } = {}) {
+export async function activatePlanWithBlock(userId, planId, planName, { ledger = null, allowLearnedCarry = true } = {}) {
   await setActivePlan(userId, planId);
 
   // C8 Work 2 (D97-9): muscle-level learned evidence survives a
@@ -3793,8 +3793,14 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   // suppression, research floors and evidence sufficiency all keep
   // winning, and an activation with nothing to carry keeps the honest
   // template ramp. Best-effort: activation must never fail on this.
+  //
+  // Review D5: a caller that MEANT a repeat passes allowLearnedCarry
+  // false. Its seed build can return null on a transient read failure,
+  // and "the same set targets as last time" must then fall back to the
+  // template ramp as it always did - never to the learned band, which
+  // would break P-6 behind an alert promising the opposite.
   let effectiveLedger = ledger;
-  if (!effectiveLedger) {
+  if (!effectiveLedger && allowLearnedCarry) {
     try {
       // eslint-disable-next-line global-require
       const store = require('../store/useAppStore').default.getState();
@@ -8579,6 +8585,21 @@ export async function insertOrUpdateAdaptationEventFromCloud(userId, row) {
       ],
     );
   } catch (_) { /* mirror already written; the log is best-effort */ }
+}
+
+/**
+ * C8 Work 4 review D9: run a whole adaptation-event restore inside one
+ * transaction. The pull is unwatermarked and full-table, and Work 4
+ * added a second write per row (the authoritative log beside the sync
+ * mirror), so a user with years of session decisions was paying for
+ * thousands of unbatched writes on the launch path.
+ *
+ * The caller keeps its own per-row error handling, so a single bad row
+ * still cannot abort the restore.
+ */
+export async function runAdaptationEventBatch(task) {
+  const d = await db();
+  return runInTransaction(d, task);
 }
 
 // ─── Exercise User Notes ──────────────────────────────────────────────────────
