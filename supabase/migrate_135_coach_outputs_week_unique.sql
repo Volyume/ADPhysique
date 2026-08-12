@@ -57,11 +57,10 @@
 --
 -- The ordering conditions below are retained as the historical record of
 -- what was believed at authoring time; the founder overruled them.
--- Ordering: after migrate_134, and ONLY AFTER the v72 client build is
--- live: a pre-v72 client still holding legacy ids would hit the new
--- unique index on its coach-output batch until it upgrades (that table's
--- push only; it self-heals on upgrade when v72 re-ids and the next push
--- converges).
+-- Ordering: after migrate_134, and ONLY AFTER the v72 client build is live: a
+-- pre-v72 client still holding legacy ids would hit the new unique index on
+-- its coach-output batch until it upgrades (that table's push only; it
+-- self-heals on upgrade when v72 re-ids and the next push converges).
 --
 -- SECOND RELEASE CONDITION (Campaign 6 Review C, RC6-2, D97-25): the
 -- applied COLUMN had no local writer until the RC6-2 client fix

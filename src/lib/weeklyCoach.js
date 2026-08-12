@@ -876,6 +876,43 @@ export function runWeeklyCoach(inputs) {
   const ewma7LastWk  = morningWeights.length >= 3 ? getEwmaSevenDaysAgo(morningWeights, 0.1, nowMs) : null;
   const bwRef        = bodyweightKg ?? ewma7Today ?? null;
 
+  // ── C10I: ONE resolved safety weight per coach run ────────────────────────
+  // PRODUCT LAW (founder, Campaign 10I): one run -> one resolved safety
+  // weight -> one FFM-floor context -> every FFM-floor consumer reads that
+  // same truth. The adaptive calorie path and the senior final clamp used to
+  // call resolveFfmFloorWeightKg separately, each deriving `lastWeighInKg`
+  // its own way: the adaptive path took the last element of a copy sorted
+  // ascending by loggedAt, the gate ran a `>` scan for the maximum. Those
+  // agree on ordinary data and DISAGREE on tied loggedAt values - Array
+  // .prototype.sort is stable so the sorted copy ends on the LAST tied row in
+  // input order, while a strict `>` scan keeps the FIRST. Two weigh-ins
+  // sharing a timestamp could therefore give the adaptive clamp one floor and
+  // the enforcing gate another inside a single run.
+  //
+  // Resolving once here removes that by construction, and removes the standing
+  // risk that two copies of a fallback drift apart in future. Campaign 10A's
+  // precedence is untouched: resolveFfmFloorWeightKg still reads
+  // EWMA today -> last valid weigh-in -> profile, and FFM_FLOOR_KCAL_PER_KG,
+  // the sex floors and the rapid-loss thresholds are not touched here.
+  //
+  // Tie rule: most recent loggedAt wins; a tie keeps the LAST such row in
+  // input order (>=), which is what the adaptive path - the one that actually
+  // sized the calorie change - already did. Ties are a data anomaly either
+  // way; what matters is that both consumers now see the same one.
+  const lastValidWeighInKg = (() => {
+    let best = null;
+    for (const w of Array.isArray(morningWeights) ? morningWeights : []) {
+      if (!w || !Number.isFinite(Number(w.weightKg)) || Number(w.weightKg) <= 0 || w.loggedAt == null) continue;
+      if (best == null || w.loggedAt >= best.loggedAt) best = w;
+    }
+    return best ? Number(best.weightKg) : null;
+  })();
+  const ffmSafetyWeightKg = resolveFfmFloorWeightKg({
+    profileWeightKg: bodyweightKg,
+    ewmaTodayKg: ewma7Today,
+    lastWeighInKg: lastValidWeighInKg,
+  });
+
   // C6 R-1 (D97-22): when every weigh-in predates the seven-day window,
   // "today's" EWMA and "last week's" EWMA are the SAME stale point and the
   // delta degenerates to 0 - which read as "+0kg this week" / "stable"
@@ -1222,18 +1259,13 @@ export function runWeeklyCoach(inputs) {
     // F3 (EN-6): the FFM-floor context only forms around a genuinely positive
     // weight; otherwise it is omitted (the floor simply doesn't evaluate,
     // which holds the status quo rather than throwing).
-    // Campaign 1 P0-6: BOTH floor evaluations in this run now resolve their
-    // weight through the one canonical resolver, so the adaptive context and
-    // the enforcing gate below can never compute different floors for the
-    // same user state (profile -> EWMA today -> last valid weigh-in).
-    const ffmWeightKg = resolveFfmFloorWeightKg({
-      profileWeightKg: bodyweightKg,
-      ewmaTodayKg: ewma7Today,
-      lastWeighInKg: series[series.length - 1]?.weightKg,
-    });
-    const ffmFloorContext = (recentIntakeAvgKcal != null && recentIntakeDaysLogged >= 5 && ffmWeightKg != null)
+    // Campaign 1 P0-6 routed both evaluations through the one canonical
+    // resolver; C10I removes the second RESOLUTION as well - this reads the
+    // run's single ffmSafetyWeightKg (see the block by ewma7Today above), the
+    // same value the enforcing gate below uses.
+    const ffmFloorContext = (recentIntakeAvgKcal != null && recentIntakeDaysLogged >= 5 && ffmSafetyWeightKg != null)
       ? {
-        weightKg: ffmWeightKg,
+        weightKg: ffmSafetyWeightKg,
         recentIntakeAvgKcal, recentIntakeDaysLogged, bodyFatPercent, bodyFatSource, sex,
       }
       : null;
@@ -1357,33 +1389,19 @@ export function runWeeklyCoach(inputs) {
   // Wave-3 review blocker fix (2026-07-02): the gate used to require a
   // profile bodyweightKg with no fallback, so a null profile weight let a
   // cut through while intake sat at or below the floor.
-  // Campaign 1 P0-6: the gate now uses the SAME canonical resolver as the
-  // adaptive floor context above (profile -> EWMA today -> last valid
-  // weigh-in), so the floor a user is shown is the floor that gates them,
-  // and a 1-2-weigh-in user (no EWMA yet) keeps floor protection via the
-  // last-weigh-in step instead of losing it.
-  const lastValidWeighInKg = (() => {
-    // Input order is not guaranteed (the adaptive block above sorts its own
-    // copy), so find the most recent VALID weigh-in explicitly - the same
-    // value the adaptive context's sorted series ends on.
-    let best = null;
-    for (const w of Array.isArray(morningWeights) ? morningWeights : []) {
-      if (!w || !Number.isFinite(Number(w.weightKg)) || Number(w.weightKg) <= 0 || w.loggedAt == null) continue;
-      if (best == null || w.loggedAt > best.loggedAt) best = w;
-    }
-    return best ? Number(best.weightKg) : null;
-  })();
-  const ffmGateWeightKg = resolveFfmFloorWeightKg({
-    profileWeightKg: bodyweightKg,
-    ewmaTodayKg: ewma7Today,
-    lastWeighInKg: lastValidWeighInKg,
-  });
+  // Campaign 1 P0-6 gave the gate the same canonical RESOLVER as the adaptive
+  // floor context; C10I gives it the same canonical RESOLVED VALUE. There is
+  // exactly one ffmSafetyWeightKg per run (resolved by ewma7Today above), so
+  // the floor a user is shown is necessarily the floor that gates them - not
+  // by two code paths agreeing, but by there being one path. A
+  // 1-2-weigh-in user (no EWMA yet) still keeps floor protection through the
+  // resolver's last-weigh-in step.
   if (
-    ffmGateWeightKg != null &&
+    ffmSafetyWeightKg != null &&
     Number.isFinite(recentIntakeAvgKcal) &&
     recentIntakeDaysLogged >= 5
   ) {
-    const floor = computeFFMFloor(ffmGateWeightKg, {
+    const floor = computeFFMFloor(ffmSafetyWeightKg, {
       bodyFatPercent,
       bodyFatSource,
       sex,
@@ -1392,6 +1410,10 @@ export function runWeeklyCoach(inputs) {
       floorKcal: floor.floorKcal,
       ffmKg: floor.ffmKg,
       source: floor.source,
+      // C10I: the run's single resolved safety weight, surfaced so the law
+      // "one run -> one weight -> one floor" is assertable from outside the
+      // engine rather than only by reading the file.
+      weightKg: ffmSafetyWeightKg,
       recentIntakeAvgKcal,
       recentIntakeDaysLogged,
     };

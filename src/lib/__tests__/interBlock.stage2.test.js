@@ -578,9 +578,25 @@ describe('gate boundaries (review #7: every constant pinned at its edge)', () =>
     expect(flat.proposal.stimulusChange).toBeNull();
   });
 
-  test('a single soreness signal (weight 1) stays RESPONSIVE; the lone deload flag (weight 2) reads OVERREACHED', () => {
+  // RE-ANCHORED by RA6-2 (founder ruling, Campaign 10I). This test used to
+  // pin the lone deload flag at weight 2 reading OVERREACHED. That was the
+  // defect: a BLOCK-level fact was classifying every MUSCLE individually.
+  // The flag now weighs 1, so both single signals stay RESPONSIVE and the
+  // flag needs corroboration. The soreness half is unchanged.
+  test('any single recovery signal (weight 1) stays RESPONSIVE - including the lone deload flag', () => {
     expect(classifyMuscleBlock(muscle({ recovery: { sorenessLateAvg: 4.5 } }), CTX).classification).toBe(BLOCK_CLASS.RESPONSIVE);
-    expect(classifyMuscleBlock(muscle({ recovery: { deloadFlagFired: true } }), CTX).classification).toBe(BLOCK_CLASS.OVERREACHED);
+    expect(classifyMuscleBlock(muscle({ recovery: { deloadFlagFired: true } }), CTX).classification).toBe(BLOCK_CLASS.RESPONSIVE);
+  });
+
+  test('the deload flag PLUS any one other signal is excessive (corroboration, not veto)', () => {
+    for (const corroborator of [
+      { sorenessLateAvg: 4 }, { jointDiscomfortAvg: 3 },
+      { readinessSlope: -0.3 }, { sleepFlaggedWeeks: 2 },
+    ]) {
+      expect(classifyMuscleBlock(
+        muscle({ recovery: { deloadFlagFired: true, ...corroborator } }), CTX,
+      ).classification).toBe(BLOCK_CLASS.OVERREACHED);
+    }
   });
 
   test('joint 3 + readiness -0.3 = excessive; just inside both = fine', () => {
@@ -774,12 +790,19 @@ describe('C6 RA6-2 (D97-25): production-shaped systemic mirroring (runner fideli
   // terms is unreachable in production (the earlier arcs above script
   // them per muscle as CLASSIFIER coverage, which is legal for a pure
   // function but not a production shape). This pin exercises the real
-  // shape: one fired deload flag reclassifies every progressing muscle
-  // together, and each speaks the block-level cause unless it also has
-  // local (soreness/joint) evidence.
+  // shape: one fired deload flag reaches every muscle's recovery input.
+  //
+  // RE-ANCHORED by RA6-2 (founder ruling, Campaign 10I). This test used to
+  // assert that the lone flag moved every progressing muscle to OVERREACHED
+  // together, with the muscle that reported nothing local voiced as
+  // "recovery ran high across the block as a whole". That sentence was the
+  // tell: the model was making a PER-MUSCLE claim it had no per-muscle
+  // evidence for. The flag now weighs 1 and needs corroboration, so a
+  // muscle with local evidence is still OVERREACHED and one without is not
+  // - and the untrue sentence is gone with the untrue verdict.
   const systemic = { readinessSlope: 0, sleepFlaggedWeeks: 0, deloadFlagFired: true };
 
-  test('one block-level flag moves every progressing muscle together, each voiced truthfully', () => {
+  test('the flag alone no longer overreaches a muscle; a muscle with its own evidence still is', () => {
     const ledger = buildBlockLedger({
       muscles: [
         muscle({ muscle: 'chest', recovery: { ...systemic } }),
@@ -791,11 +814,35 @@ describe('C6 RA6-2 (D97-25): production-shaped systemic mirroring (runner fideli
     });
     const chest = ledger.entries.find((e) => e.muscle === 'chest');
     const quads = ledger.entries.find((e) => e.muscle === 'quads');
-    expect(chest.classification).toBe(BLOCK_CLASS.OVERREACHED);
+    // Chest reported nothing local: the block-level flag is not a verdict
+    // about chest.
+    expect(chest.classification).toBe(BLOCK_CLASS.RESPONSIVE);
+    // Quads carried its own late soreness: corroborated, so still OVERREACHED.
     expect(quads.classification).toBe(BLOCK_CLASS.OVERREACHED);
-    // Chest reported nothing local: the block-level cause is named.
-    expect(chest.rationale).toMatch(/recovery ran high across the block as a whole/);
-    // Quads carried its own late soreness: the muscle voice is earned.
     expect(quads.rationale).toMatch(/ran high late in the block/);
+    // RATIONALE TRUTH: no muscle may claim a recovery cost it cannot evidence.
+    expect(chest.rationale).not.toMatch(/recovery ran high/);
+    expect(chest.rationale).not.toMatch(/recovery cost/);
+    expect(chest.rationale).toMatch(/responded well/);
+  });
+
+  test('the block-level consequence is untouched: deloadFlagFired still counts toward the 10-day proposal', () => {
+    // The global fact keeps speaking for itself, from its own count in
+    // buildBlockLedger - it never needed to borrow a per-muscle verdict.
+    const sys = { readinessSlope: -0.4, sleepFlaggedWeeks: 0, deloadFlagFired: true };
+    const ledger = buildBlockLedger({
+      muscles: [muscle({
+        muscle: 'quads',
+        performance: { e1rmSlopePct: 0 },   // flat, so it can strain
+        recovery: { ...sys },
+      })],
+      systemic: sys,
+      suppressed: false,
+      weeksSinceBlockEnd: 0,
+    });
+    // deload flag (1) + readiness slope (1) = 2: corroborated, still STRAINED...
+    expect(ledger.entries[0].classification).toBe(BLOCK_CLASS.STRAINED);
+    // ...and persistent >= 2 (readiness + deload) still stretches recovery.
+    expect(ledger.proposedRecoveryDays).toBe(10);
   });
 });

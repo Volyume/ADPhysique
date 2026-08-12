@@ -173,8 +173,13 @@ describe('the synthetic athlete: one block, six muscles, six outcomes', () => {
   });
 
   test('the strain-scaled recovery week is muscle-specific: strained QUADS gets the smallest share', () => {
-    // quads recovery_cost_weight = 3 (soreness 1 + deload flag 2) -> 45%.
-    expect(seedFor(ledger, 'quads').deloadSets).toBe(7); // round(min(16,16) x 45 / 100)
+    // RA6-2 (Campaign 10I): the deload flag's per-muscle weight went 2 -> 1,
+    // so quads' recovery_cost_weight = 2 (soreness 1 + deload flag 1), and
+    // deloadSharePct (60 - 5 x points) reads 50% instead of 45%. Quads is
+    // still STRAINED on its own corroborated evidence and still takes its
+    // start reduction (pinned below); only the flag's share of the recovery
+    // week shrank with its weight, proportionally and by design.
+    expect(seedFor(ledger, 'quads').deloadSets).toBe(8); // round(min(16,16) x 50 / 100)
     // back/chest ran clean (weight 0) -> 60%.
     expect(seedFor(ledger, 'back').deloadSets).toBe(10); // round(min(17,20) x 60 / 100)
     expect(seedFor(ledger, 'chest').deloadSets).toBe(8); // round(min(14,14) x 60 / 100)
@@ -192,7 +197,7 @@ describe('the synthetic athlete: one block, six muscles, six outcomes', () => {
     };
     expect(ramp('back')).toEqual([13, 15, 18, 20, 10]);
     expect(ramp('chest')).toEqual([10, 11, 13, 14, 8]);
-    expect(ramp('quads')).toEqual([14, 15, 15, 16, 7]);
+    expect(ramp('quads')).toEqual([14, 15, 15, 16, 8]); // RA6-2: 50% share, see above
     expect(ramp('hamstrings')).toEqual([10, 11, 11, 12, 7]);
     expect(ramp('calves', 6)).toEqual([7, 8, 10, 11, 6]); // learned band, MEV-style deload passed by the writer
     expect(ramp('side_delts', 8)).toEqual([9, 11, 13, 15, 8]);
