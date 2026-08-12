@@ -15,7 +15,9 @@ import Stepper from '../components/Stepper';
 import TextField from '../components/TextField';
 import BottomSheet from '../components/BottomSheet';
 import Chip from '../components/Chip';
-import { getAllExercises, createWorkout } from '../lib/database';
+import { getAllExercises, createWorkout, getActiveBlock } from '../lib/database';
+import { loadExerciseIntentState } from '../lib/exercise/intent';
+import { filterLibraryForGeneration } from '../lib/exercise/generation';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
 import { parseDecimalInput, parseIntegerInput } from '../lib/parseDecimalInput';
@@ -197,12 +199,30 @@ export default function BuildWorkoutScreen({ navigation }) {
     setShowTravelModal(false);
     const all = allExercises.length > 0 ? allExercises : await getAllExercises();
     if (allExercises.length === 0) setAllExercises(all);
+    // C9 Work 7: travel mode BUILDS a session, so it is generation and must
+    // respect exercise intent like every other generator. It resolves the
+    // engine's exercise NAMES against the library, so the intent filter is
+    // applied to the library before the match - a set-aside exercise then
+    // simply has nothing to match against and the slot is dropped rather
+    // than silently reinstated.
+    let library = all;
+    try {
+      const block = user?.id ? await getActiveBlock(user.id) : null;
+      const state = await loadExerciseIntentState(user?.id, { activeMesocycleId: block?.id ?? null });
+      library = filterLibraryForGeneration(all, state).library;
+    } catch (_) { /* additive: an intent read failure leaves the library whole */ }
     const plan = generateTravelPlan({ equipment: travelEquipment, daysPerWeek: 4, splitType: 'full_body' });
     const session = plan.sessions[0];
     const newItems = session.exercises.map(ex => {
       const nameLower = ex.exerciseName.toLowerCase();
-      const match = all.find(e => e.name.toLowerCase() === nameLower)
-        ?? all.find(e => e.name.toLowerCase().includes(nameLower.split(' ')[0]));
+      const findIn = (list) => list.find(e => e.name.toLowerCase() === nameLower)
+        ?? list.find(e => e.name.toLowerCase().includes(nameLower.split(' ')[0]));
+      const match = findIn(library);
+      // Present in the catalogue but gone from the filtered library means
+      // the user set it aside. Drop the slot rather than reinstating it
+      // through the unmatched-name placeholder below, which would put the
+      // exercise back under its own name.
+      if (!match && findIn(all)) return null;
       const exercise = match ?? {
         id: `travel-${Date.now()}-${Math.random()}`,
         name: ex.exerciseName,
@@ -219,7 +239,7 @@ export default function BuildWorkoutScreen({ navigation }) {
         startingWeight: 0,
       };
     });
-    setExercises(newItems);
+    setExercises(newItems.filter(Boolean));
   }
 
   function formatRest(secs) {

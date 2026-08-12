@@ -13,7 +13,10 @@ describe('ExercisePickerModal accessibility labels', () => {
   });
 
   test('labels exercise selection rows with the selected exercise name', () => {
-    expect(source).toContain("accessibilityLabel={`${isSwapAction ? 'Swap in' : 'Add'} ${item.name}`}");
+    // C9: the label now also states when a row is one the user has set
+    // aside, so a screen-reader user hears the status a sighted user sees.
+    expect(source).toContain("accessibilityLabel={`${isSwapAction ? 'Swap in' : 'Add'} ${item.name}${setAside ? ', set aside' : ''}`}");
+    expect(source).toContain('accessibilityLabel={`Allow ${item.name} again`}');
     expect(source).toContain("name={isSwapAction ? 'swap-horizontal' : 'add-circle-outline'}");
   });
 

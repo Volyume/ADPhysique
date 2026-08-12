@@ -42,6 +42,8 @@
  * 2026-08-09 (Stage 6, adaptive mesocycle build): v69 appends
  * mesocycles.block_ledger, shifting this file's last-N window by one
  * again — every runLastMigrations count below is bumped accordingly.
+ * v73 (Campaign 9, the three exercise-intent tables) has now landed after
+ * v72, so every count below is bumped by one again.
  */
 
 const { DatabaseSync } = require('node:sqlite');
@@ -149,7 +151,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('tags long_head, short_head and brachialis exercises correctly', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 8);
+    await runLastMigrations(raw, 9);
 
     expect(subregionOf(raw, 'ex-1')).toBe('long_head');
     expect(subregionOf(raw, 'ex-2')).toBe('long_head');
@@ -162,7 +164,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('is exactly scoped to biceps rows: a non-biceps exercise, and a same-named exercise on a different muscle, are never touched', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 8);
+    await runLastMigrations(raw, 9);
 
     expect(subregionOf(raw, 'ex-7')).toBeNull(); // Barbell Bench Press / chest
     expect(subregionOf(raw, 'ex-8')).toBeNull(); // Barbell Curl / forearms (name collision, wrong muscle)
@@ -171,7 +173,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
   test('is idempotent: running the migration a second time leaves the tags unchanged and errors on neither run', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    const total = await runLastMigrations(raw, 8);
+    const total = await runLastMigrations(raw, 9);
 
     raw.exec(`PRAGMA user_version = ${total - 1}`);
     const d = adapt(raw);
@@ -202,7 +204,7 @@ describe('SCHEMA_MIGRATIONS v64: biceps subregion tags', () => {
     const raw = freshExercisesDb();
     raw.prepare('INSERT INTO exercises (id, name, primary_muscle, subregion) VALUES (?, ?, ?, ?)')
       .run('ex-1', 'Incline Dumbbell Curl', 'biceps', 'short_head');
-    await runLastMigrations(raw, 8);
+    await runLastMigrations(raw, 9);
     expect(subregionOf(raw, 'ex-1')).toBe('long_head');
   });
 });

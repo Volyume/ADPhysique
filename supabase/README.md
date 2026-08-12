@@ -218,6 +218,7 @@ themselves; add a row here whenever a migration is added.
 | 133 | `migrate_133_delete_privacy_pref_rows.sql` | Deletes `@volyume_privacy_prefs` rows that should never have been transmitted (Campaign 1 P0-2). | **NO - awaiting "run against production"** |
 | 134 | `migrate_134_stale_write_triggers.sql` | Refuse-stale-write triggers on the nine unguarded coaching-state tables (Campaign 1 P0-8). | **NO - awaiting "run against production"** |
 | 135 | `migrate_135_coach_outputs_week_unique.sql` | De-duplicates `coach_outputs` per user-week, then a unique index (Campaign 1 review finding 10). | **NO - awaiting "run against production"** |
+| 136 | `migrate_136_exercise_intent.sql` | `exercise_intent`, `exercise_swaps`, `exercise_slot_defaults` - the cloud half of the Campaign 9 exercise-intent layer (local schema v73). Must land BEFORE a build carrying their sync push ships. | **NO - awaiting "run against production"** |
 
 > Date note: the 2026-08-09 block near the top of this file describes 129 and
 > 130 as "already applied 2026-08-08", while both migration headers record

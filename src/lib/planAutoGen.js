@@ -25,10 +25,13 @@ import {
   runInTransaction,
   deleteProgrammeCascade,
   deleteProgrammeCascadeInTx,
+  getActiveBlock,
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generatePlan } from './planEngine';
 import { phaseToNutritionKey } from './coachingGoals';
+import { loadExerciseIntentState } from './exercise/intent';
+import { filterLibraryForGeneration, generationBlockFor } from './exercise/generation';
 
 // Where the per-plan rationale ("Why this plan?") is cached so the
 // enrollment reveal and the plan view can explain why the routine, sets,
@@ -116,9 +119,77 @@ export function planShortfallNote(missedCount) {
 }
 
 /**
+ * Campaign 9: load what this user has said about exercises, so generation
+ * can avoid seeding something they have excluded.
+ *
+ * Block-scoped avoidance ("avoid for this block") is compared against the
+ * CURRENT block, so the active mesocycle id is read here and handed to the
+ * intent layer. getActiveBlock is the single resolver for that
+ * (database.js getActiveBlock, mesocycles WHERE is_active = 1).
+ *
+ * Best-effort throughout, and deliberately so: an intent read that fails
+ * must never stop a plan generating. A failure means no known intent, which
+ * is exactly the pre-Campaign-9 behaviour.
+ */
+async function loadGenerationIntent(userId) {
+  let activeMesocycleId = null;
+  try {
+    const block = await getActiveBlock(userId);
+    activeMesocycleId = block?.id ?? null;
+  } catch (_) { /* no current block resolved: block-scoped avoidance simply doesn't apply */ }
+  try {
+    return await loadExerciseIntentState(userId, { activeMesocycleId });
+  } catch (_) {
+    return null;
+  }
+}
+
+/**
+ * The engine picked `exerciseName`; may it actually be seeded?
+ *
+ * The engine resolves names against the FULL library (so an equipment miss
+ * still reads as an equipment miss), but planEngine falls back to its
+ * hand-written POOL for any muscle the filtered library now covers thinly,
+ * and that POOL can re-emit a filtered-out exercise BY NAME. This is the
+ * gate that stops it being written back into the plan.
+ *
+ * @returns {{dbEx: object|null, blockedReason: string|null}}
+ */
+function resolveSeed(exerciseMap, filteredLibrary, exerciseName) {
+  const dbEx = exerciseMap[exerciseName?.toLowerCase()] ?? null;
+  if (!dbEx) return { dbEx: null, blockedReason: null };
+  return { dbEx, blockedReason: generationBlockFor(filteredLibrary, dbEx, exerciseName) };
+}
+
+/**
+ * Attach the blocked-slot report to a result object, if there is one.
+ *
+ * `partial` / `missedCount` / `missedExercises` keep their exact FF-003
+ * meaning (moves that could not be matched to the user's EQUIPMENT), because
+ * two live screens render equipment-specific copy from them. A slot left
+ * empty by the user's own exclusion is a different fact and gets its own
+ * fields, so nothing existing starts saying the wrong thing.
+ */
+function attachBlockedSlots(result, blockedSlots) {
+  if (!blockedSlots?.length) return result;
+  result.blockedByIntent = true;
+  result.needsChoice = true;
+  result.blockedCount = blockedSlots.length;
+  result.blockedSlots = blockedSlots;
+  return result;
+}
+
+/**
  * Generate a plan and persist it. Activates it as the user's current
  * mesocycle. Returns { ok, programmeId, error } so callers can react. On a
  * partial match it also returns { partial: true, missedCount, missedExercises }.
+ *
+ * Campaign 9: when the user's own exclusions leave a slot with nothing valid
+ * in it, the result also carries { blockedByIntent: true, needsChoice: true,
+ * blockedCount, blockedSlots }. The exclusion is never ignored and the
+ * exercise is never silently restored; the slot is reported so the user can
+ * choose. If EVERY slot is blocked that way, the plan is not saved at all and
+ * the error is 'plan_blocked_by_exclusions'.
  */
 export async function generateAndSavePlan(userId, profile) {
   if (!userId) return { ok: false, error: 'No user' };
@@ -138,9 +209,16 @@ export async function generateAndSavePlan(userId, profile) {
     allExercises = await getAllExercises();
   } catch (_) { /* engine falls back to its built-in pool */ }
 
+  // Campaign 9: seed only from what the user has not excluded. This is not an
+  // exercise CHANGE (nothing has been replaced yet), so it needs no
+  // confirmation. filterLibraryForGeneration returns the SAME array when the
+  // user has no intent stored, so generation is unchanged for those users.
+  const intentState = await loadGenerationIntent(userId);
+  const filteredLibrary = filterLibraryForGeneration(allExercises, intentState);
+
   let plan;
   try {
-    plan = generatePlan({ ...inputs, exerciseLibrary: allExercises });
+    plan = generatePlan({ ...inputs, exerciseLibrary: filteredLibrary.library });
   } catch (e) {
     // C1 (pre-release sweep 2026-07-27, LANE C): the raw e.message used to be
     // interpolated straight into a user-facing toast (PlanUpdateScreen). The
@@ -173,7 +251,9 @@ export async function generateAndSavePlan(userId, profile) {
 
       let totalWritten = 0;
       let totalRequested = 0;
+      let missedCount = 0;
       const missedNames = [];
+      const blockedSlots = [];
       for (const workout of plan.workouts) {
         const routine = await createRoutine(
           userId, workout.name, null, plan.splitType, 0, null, prog.id, false, false,
@@ -181,9 +261,23 @@ export async function generateAndSavePlan(userId, profile) {
         for (let i = 0; i < workout.exercises.length; i++) {
           const ex = workout.exercises[i];
           totalRequested++;
-          const dbEx = exerciseMap[ex.exerciseName?.toLowerCase()];
+          const { dbEx, blockedReason } = resolveSeed(exerciseMap, filteredLibrary, ex.exerciseName);
           if (!dbEx) {
+            missedCount++;
             if (missedNames.length < 5 && ex.exerciseName) missedNames.push(ex.exerciseName);
+            continue;
+          }
+          if (blockedReason) {
+            // The engine's POOL fallback re-emitted something this user
+            // excluded. Do not write it, do not silently swap it: leave the
+            // slot empty and report it so the user chooses.
+            blockedSlots.push({
+              exerciseId: dbEx.id,
+              exerciseName: dbEx.name ?? ex.exerciseName ?? null,
+              reason: blockedReason,
+              workoutName: workout.name ?? null,
+              position: i,
+            });
             continue;
           }
           await addExerciseToRoutine(
@@ -202,14 +296,24 @@ export async function generateAndSavePlan(userId, profile) {
         // the queue, so the raw InTx variant is used on the same handle.
         // No sync scheduling: the programme never becomes visible.
         await deleteProgrammeCascadeInTx(d, prog.id);
-        return { zeroMatch: true, prog, totalWritten, totalRequested, missedNames };
+        return { zeroMatch: true, prog, totalWritten, totalRequested, missedCount, missedNames, blockedSlots };
       }
-      return { zeroMatch: false, prog, totalWritten, totalRequested, missedNames };
+      return { zeroMatch: false, prog, totalWritten, totalRequested, missedCount, missedNames, blockedSlots };
     });
     if (writeResult.zeroMatch) {
+      // Nothing could be written. If the user's own exclusions are why, say
+      // so with its own code: "no exercises matched the library" would be a
+      // lie, and quietly restoring the excluded exercise to fill the plan is
+      // exactly what the founder's rule forbids.
+      if (writeResult.blockedSlots.length > 0) {
+        return attachBlockedSlots(
+          { ok: false, error: 'plan_blocked_by_exclusions' },
+          writeResult.blockedSlots,
+        );
+      }
       return { ok: false, error: 'Plan created but no exercises matched the library' };
     }
-    const { prog, totalWritten, totalRequested, missedNames } = writeResult;
+    const { prog, totalWritten, totalRequested, missedCount, missedNames, blockedSlots } = writeResult;
     // Soft warning when the engine wanted exercises we couldn't fulfil
     // (typically a bodyweight-only user where the engine picked a barbell
     // movement). The plan is still usable but visibly thinner than asked
@@ -235,14 +339,15 @@ export async function generateAndSavePlan(userId, profile) {
       trackFirst(userId, 'first_plan_generated').catch(() => {});
     } catch (_) { /* tolerate test env without telemetry */ }
     const result = { ok: true, programmeId: prog.id };
-    if (totalWritten < totalRequested) {
+    if (missedCount > 0) {
       // FF-003: surface the shortfall to the caller so onboarding / rebuild can
-      // tell the user the plan is thinner than requested.
+      // tell the user the plan is thinner than requested. EQUIPMENT only, see
+      // attachBlockedSlots: the copy this drives names equipment.
       result.partial = true;
-      result.missedCount = totalRequested - totalWritten;
+      result.missedCount = missedCount;
       result.missedExercises = missedNames;
     }
-    return result;
+    return attachBlockedSlots(result, blockedSlots);
   } catch (e) {
     if (programmeId) {
       try {
@@ -266,7 +371,10 @@ export async function generateAndSavePlan(userId, profile) {
  * the persistence seam — no createProgramme / createRoutine / activate.
  *
  * Returns { ok, plan, sessionLengthMinutes, partial?, missedCount?,
- * missedExercises? } or { ok:false, error }.
+ * missedExercises? } or { ok:false, error }. Campaign 9: it also mirrors the
+ * commit's blocked-slot report ({ blockedByIntent, needsChoice, blockedCount,
+ * blockedSlots }), so the preview shows the same "this slot needs your
+ * choice" facts the commit would produce.
  */
 export async function generatePlanDryRun(userId, profile) {
   if (!userId) return { ok: false, error: 'No user' };
@@ -278,9 +386,14 @@ export async function generatePlanDryRun(userId, profile) {
     allExercises = await getAllExercises();
   } catch (_) { /* engine falls back to its built-in pool */ }
 
+  // Campaign 9: the same intent filter the commit applies, so the preview
+  // cannot show an exercise the commit would refuse to seed.
+  const intentState = await loadGenerationIntent(userId);
+  const filteredLibrary = filterLibraryForGeneration(allExercises, intentState);
+
   let plan;
   try {
-    plan = generatePlan({ ...inputs, exerciseLibrary: allExercises });
+    plan = generatePlan({ ...inputs, exerciseLibrary: filteredLibrary.library });
   } catch (e) {
     // C1 (pre-release sweep 2026-07-27, LANE C): same fix as
     // generateAndSavePlan's engine-failure branch above, the read-only
@@ -297,15 +410,27 @@ export async function generatePlanDryRun(userId, profile) {
   // equals the committed shortfall.
   const exerciseMap = {};
   for (const ex of allExercises) exerciseMap[ex.name.toLowerCase()] = ex;
-  let totalRequested = 0;
   let totalWritten = 0;
+  let missedCount = 0;
   const missedNames = [];
+  const blockedSlots = [];
   for (const workout of plan.workouts) {
-    for (const ex of workout.exercises) {
-      totalRequested++;
-      const dbEx = exerciseMap[ex.exerciseName?.toLowerCase()];
+    for (let i = 0; i < workout.exercises.length; i++) {
+      const ex = workout.exercises[i];
+      const { dbEx, blockedReason } = resolveSeed(exerciseMap, filteredLibrary, ex.exerciseName);
       if (!dbEx) {
+        missedCount++;
         if (missedNames.length < 5 && ex.exerciseName) missedNames.push(ex.exerciseName);
+        continue;
+      }
+      if (blockedReason) {
+        blockedSlots.push({
+          exerciseId: dbEx.id,
+          exerciseName: dbEx.name ?? ex.exerciseName ?? null,
+          reason: blockedReason,
+          workoutName: workout.name ?? null,
+          position: i,
+        });
         continue;
       }
       totalWritten++;
@@ -316,14 +441,20 @@ export async function generatePlanDryRun(userId, profile) {
   // plan the commit would refuse to save (the diff must not lie — blueprint
   // ULTIMATE-PLANDIFF-01 EDGE: dry-run must match what commit produces).
   if (totalWritten === 0) {
+    if (blockedSlots.length > 0) {
+      return attachBlockedSlots(
+        { ok: false, error: 'plan_blocked_by_exclusions' },
+        blockedSlots,
+      );
+    }
     return { ok: false, error: 'No exercises matched your equipment' };
   }
 
   const result = { ok: true, plan, sessionLengthMinutes: inputs.sessionLengthMinutes };
-  if (totalWritten < totalRequested) {
+  if (missedCount > 0) {
     result.partial = true;
-    result.missedCount = totalRequested - totalWritten;
+    result.missedCount = missedCount;
     result.missedExercises = missedNames;
   }
-  return result;
+  return attachBlockedSlots(result, blockedSlots);
 }

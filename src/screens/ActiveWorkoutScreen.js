@@ -36,7 +36,8 @@ import NowCard from '../components/workout/NowCard';
 import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getAllCompletedSetsForExercise, getWorkoutById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet } from '../lib/database';
+import { getAllCompletedSetsForExercise, getWorkoutById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, recordExerciseSwap, getActiveBlock } from '../lib/database';
+import { loadExerciseIntentState, rankPersonalised } from '../lib/exercise/intent';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -805,8 +806,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   async function handleOpenSwap() {
     const allExercises = await getAllExercises();
     const alreadyInWorkout = workoutExercises.map(e => e.exercise?.id).filter(Boolean);
-    const ranked = rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 8, excludeAssisted: !isBeginner });
-    setSwapCandidates(ranked);
+    // C9 Work 3: ask for a wider structural slate than we show, then let the
+    // personal layer re-order inside it and drop anything the user has
+    // excluded. Structural suitability still decides who is a candidate.
+    const ranked = rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 20, excludeAssisted: !isBeginner });
+    let ordered = ranked.slice(0, 8);
+    try {
+      const block = user?.id ? await getActiveBlock(user.id) : null;
+      const state = await loadExerciseIntentState(user?.id, { activeMesocycleId: block?.id ?? null });
+      ordered = rankPersonalised(state, ranked, {
+        fromExerciseId: exercise?.id,
+        routineId: activeWorkout?.routineId ?? null,
+      }).slice(0, 8);
+    } catch (_) { /* personalisation is additive: the structural list stands */ }
+    setSwapCandidates(ordered);
     setShowSwapModal(true);
   }
 
@@ -841,6 +854,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       sets: [],
     };
     store.setWorkoutExercises(updatedExercises);
+    // C9 Work 3: a session swap is a deliberate choice, so it is evidence
+    // too - even though it deliberately does NOT change the plan (the sheet
+    // says so). Recorded with the routine it happened in, so the preference
+    // stays contextual. Best-effort: this must never fail the swap.
+    if (user?.id && exercise?.id && newExercise?.id) {
+      recordExerciseSwap(user.id, exercise.id, newExercise.id, {
+        routineId: activeWorkout?.routineId ?? null, explicit: true,
+      }).catch(() => {});
+    }
     cancelAutoAdvance();
     setSwapCandidates([]);
     setShowSwapModal(false);
@@ -4134,6 +4156,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   </View>
                   <View style={styles.swapItemCopy}>
                     <Text style={[styles.swapItemName, live.swapItemName]}>{item.exercise.name}</Text>
+                    {/* C9 Work 5: why this one sits here, in one short line,
+                        and only when it is genuinely true of this user. */}
+                    {item.personal?.tag ? (
+                      <Text style={[styles.swapItemTag, live.swapItemTag]}>{item.personal.tag}</Text>
+                    ) : null}
                     <Text style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -4373,6 +4400,8 @@ const styles = StyleSheet.create({
   swapItemCopy: { flex: 1, minWidth: 0 },
   swapItemName: { ...type.label, color: colors.textPrimary, marginBottom: spacing.xxs },
   swapItemReason: { ...type.caption, color: colors.textMuted, lineHeight: 16 },
+  // C9: the personal reason, in the app's accent, above the structural one.
+  swapItemTag: { ...type.caption, color: colors.primary, lineHeight: 16 },
   swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, marginTop: spacing.md, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface },
   swapBrowseText: { ...type.label, color: colors.textPrimary },
   swapEmpty: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.xs },
@@ -4774,6 +4803,7 @@ function buildLiveStyles(t) {
     swapItemIcon: { backgroundColor: t.colors.surface2 },
     swapItemName: { ...t.type.label, color: t.colors.textPrimary },
     swapItemReason: { ...t.type.caption, color: t.colors.textMuted },
+    swapItemTag: { ...t.type.caption, color: t.colors.primary },
     swapBrowseBtn: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
     swapBrowseText: { ...t.type.label, color: t.colors.textPrimary },
     swapEmptyTitle: { ...t.type.label, color: t.colors.textPrimary },

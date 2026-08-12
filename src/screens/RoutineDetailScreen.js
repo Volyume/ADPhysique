@@ -16,7 +16,12 @@ import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
   updateRoutineExerciseExercise, updateRoutineExerciseOrder, getActivePlan,
+  recordExerciseSwap, setExerciseIntent, clearExerciseIntent, setExerciseSlotDefault,
+  getActiveBlock, EXERCISE_INTENT,
 } from '../lib/database';
+import {
+  loadExerciseIntentState, rankPersonalised, repeatedDefaultCandidate, intentFor,
+} from '../lib/exercise/intent';
 import { computeDivisionDiff, divisionFingerprintLine, planWearsDivision } from '../lib/divisionDiff';
 import { buildPlanInputs } from '../lib/planAutoGen';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -133,6 +138,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [editStartWeight, setEditStartWeight] = useState('');
   const [swapState, setSwapState] = useState(null);
   const [swapCandidates, setSwapCandidates] = useState([]);
+  // C9: the canonical intent state for this screen's swap sheet, and the
+  // "you usually choose X here" offer, if the evidence has earned one.
+  const [intentState, setIntentState] = useState(null);
+  const [defaultProposal, setDefaultProposal] = useState(null);
   const [showSwapPicker, setShowSwapPicker] = useState(false);
   // iOS cannot present a second native modal while the first is still up, so
   // the ranked swap sheet must fully dismiss BEFORE the full-library picker is
@@ -152,8 +161,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
 
   useEffect(() => {
     if (routineId) loadRoutine();
+    // C9: seed the intent state so a row already under an exclusion offers
+    // "Allow again" straight away rather than only after a swap sheet opens.
+    refreshIntentState();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [routineId]);
+  }, [routineId, user?.id]);
 
   async function loadRoutine() {
     const r = await getRoutineById(routineId);
@@ -289,12 +301,114 @@ export default function RoutineDetailScreen({ navigation, route }) {
     const otherIds = exercises
       .map(({ exercise: ex }) => ex?.id)
       .filter(id => id && id !== exercise?.id);
+    // C9 Work 3: structural suitability still decides WHICH exercises are
+    // valid replacements - that judgement stays in swapEngine. The personal
+    // layer only re-orders inside that list and explains the order, so no
+    // amount of history can promote a structurally wrong exercise. Ask for
+    // a wider slate than we show, since the personal pass may drop
+    // excluded ones.
     const ranked = rankSwaps(exercise, all, {
       excludeIds: otherIds,
-      numResults: 12,
+      numResults: 24,
     });
-    setSwapCandidates(ranked);
+    let ordered = ranked.slice(0, 12);
+    let proposal = null;
+    try {
+      const block = user?.id ? await getActiveBlock(user.id) : null;
+      const state = await loadExerciseIntentState(user?.id, { activeMesocycleId: block?.id ?? null });
+      ordered = rankPersonalised(state, ranked, {
+        fromExerciseId: exercise?.id, routineId,
+      }).slice(0, 12);
+      // Work 6: only OFFER a default once the same deliberate choice has
+      // repeated. Never automatic, never after one swap.
+      proposal = repeatedDefaultCandidate(state, exercise?.id, { routineId });
+      setIntentState(state);
+    } catch (_) { /* personalisation is additive: the structural list stands */ }
+    setSwapCandidates(ordered);
+    setDefaultProposal(proposal);
     setSwapState({ routineExerciseId: routineExercise.id, exercise });
+  }
+
+  /**
+   * The two avoidance strengths, plus "allow again" when the exercise is
+   * already under an intent. Restoration is offered in the same place the
+   * exclusion was set, so it is never hard to find.
+   */
+  function openAvoidSheet(routineExercise, exercise) {
+    const current = intentState ? intentFor(intentState, exercise?.id) : null;
+    if (current) {
+      appAlert(
+        `${exercise.name} is set aside`,
+        'Volyume is leaving it out of suggestions. Your logged sets, records and progress for it are untouched.',
+        [
+          { text: 'Close', style: 'cancel' },
+          {
+            text: 'Allow again',
+            onPress: async () => {
+              try {
+                await clearExerciseIntent(user.id, exercise.id);
+                await refreshIntentState();
+                toast.show(`Volyume can suggest ${exercise.name} again.`, { variant: 'success' });
+              } catch (_) { /* best effort */ }
+            },
+          },
+        ],
+      );
+      return;
+    }
+    appAlert(
+      `Stop suggesting ${exercise.name}?`,
+      'Your logged sets, records and progress for it stay exactly as they are. This only changes what Volyume offers you.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Avoid for this block',
+          onPress: () => handleExcludeExercise(routineExercise, exercise, EXERCISE_INTENT.AVOIDED_BLOCK),
+        },
+        {
+          text: "Don't suggest it",
+          onPress: () => handleExcludeExercise(routineExercise, exercise, EXERCISE_INTENT.EXCLUDED),
+        },
+      ],
+    );
+  }
+
+  async function refreshIntentState() {
+    try {
+      const block = user?.id ? await getActiveBlock(user.id) : null;
+      setIntentState(await loadExerciseIntentState(user?.id, { activeMesocycleId: block?.id ?? null }));
+    } catch (_) { /* additive */ }
+  }
+
+  /**
+   * C9 Work 2: record what the user asked for, and - because this exercise
+   * is already IN the plan - ask before touching the plan itself. Excluding
+   * never mutates a plan on its own (founder law 5).
+   */
+  async function handleExcludeExercise(routineExercise, exercise, kind) {
+    if (!user?.id || !exercise?.id) return;
+    try {
+      const block = kind === EXERCISE_INTENT.AVOIDED_BLOCK ? await getActiveBlock(user.id) : null;
+      await setExerciseIntent(user.id, exercise.id, kind, {
+        scopeMesocycleId: block?.id ?? null,
+      });
+      const label = kind === EXERCISE_INTENT.EXCLUDED
+        ? `Volyume will stop suggesting ${exercise.name}.`
+        : `Volyume will leave ${exercise.name} out for this block.`;
+      await refreshIntentState();
+      appAlert(
+        label,
+        'It is still in this plan. Replace it here too?',
+        [
+          { text: 'Keep current plan', style: 'cancel' },
+          { text: 'Choose replacement', onPress: () => handleOpenSwap(routineExercise, exercise) },
+        ],
+      );
+      await loadRoutine();
+    } catch (e) {
+      logError('RoutineDetailScreen.handleExcludeExercise', e, { userId: user?.id });
+      toast.show('That did not save. Please try again.', { variant: 'error' });
+    }
   }
 
   // R9 (D70): the swap commits immediately with an undo toast (swapping
@@ -308,11 +422,38 @@ export default function RoutineDetailScreen({ navigation, route }) {
     const rowId = swapState.routineExerciseId;
     haptics.selection();
     await updateRoutineExerciseExercise(rowId, newExercise.id);
+    // C9 Work 3: the swap IS the evidence. Recorded with its context (which
+    // exercise it replaced, in which routine) so preference stays
+    // contextual - "usually chosen instead of A here", never "the user
+    // prefers B". Only real actions write here; ranking never does.
+    if (user?.id && originalId) {
+      recordExerciseSwap(user.id, originalId, newExercise.id, { routineId, explicit: true })
+        .catch(() => {}); // best-effort: a failed record must not fail the swap
+    }
+    const proposal = defaultProposal;
     setSwapState(null);
     setSwapCandidates([]);
+    setDefaultProposal(null);
     setShowSwapPicker(false);
     setPendingSwapPicker(false);
     await loadRoutine();
+    // Work 6: after a repeatedly-chosen replacement, OFFER to make it the
+    // default. Never automatic, and the user can decline or change it later.
+    if (proposal && originalId && proposal.exerciseId === newExercise.id) {
+      appAlert(
+        `You usually choose ${newExercise.name} here.`,
+        'Use it as the default when this exercise comes up?',
+        [
+          { text: 'Keep current', style: 'cancel' },
+          {
+            text: 'Use it',
+            onPress: () => setExerciseSlotDefault(user.id, originalId, newExercise.id, { routineId })
+              .catch(() => {}),
+          },
+        ],
+      );
+      return;
+    }
     toast.show(`${originalName} swapped for ${newExercise.name} in future sessions.`, {
       variant: 'undo',
       action: {
@@ -618,6 +759,19 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 >
                   <Ionicons name="swap-horizontal" size={20} color={t.colors.textMuted} />
                 </TouchableOpacity>
+                {/* C9 Work 2: tell Volyume to stop offering this exercise.
+                    Distinct from Remove, which only takes it out of this
+                    routine: this is a durable preference that every builder
+                    and suggestion surface respects. It never deletes any
+                    training history. */}
+                <TouchableOpacity
+                  onPress={() => openAvoidSheet(routineExercise, exercise)}
+                  hitSlop={hitSlop}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Stop suggesting ${exercise.name}`}
+                >
+                  <Ionicons name="eye-off-outline" size={20} color={t.colors.textMuted} />
+                </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => removeExercise(routineExercise, exercise.name)}
                   hitSlop={hitSlop}
@@ -841,6 +995,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
               >
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.swapItemName, live.swapItemName]}>{item.exercise.name}</Text>
+                  {/* C9 Work 5: one short line, and only when the personal
+                      layer has something true to say about why this row sits
+                      where it does. Otherwise the structural reason stands.
+                      No score, no percentage, no claim about growth. */}
+                  {item.personal?.tag ? (
+                    <Text style={[styles.swapItemTag, live.swapItemTag]}>{item.personal.tag}</Text>
+                  ) : null}
                   <Text style={[styles.swapItemReason, live.swapItemReason]}>{item.reason}</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
@@ -1053,6 +1214,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxs,
   },
   swapItemReason: { ...type.captionTight, color: colors.textMuted },
+  // C9: the personal reason sits above the structural one and reads as the
+  // app's own voice, not as a badge shouting for attention.
+  swapItemTag: { ...type.captionTight, color: colors.primary },
   swapSearchAll: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     paddingVertical: spacing.lg, marginTop: spacing.sm,
@@ -1141,6 +1305,7 @@ function buildLiveStyles(t) {
     swapNote: { ...t.type.caption, color: t.colors.textMuted },
     swapItemName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     swapItemReason: { ...t.type.captionTight, color: t.colors.textMuted },
+    swapItemTag: { ...t.type.captionTight, color: t.colors.primary },
     swapSearchAllText: { ...t.type.label, color: t.colors.primary },
   };
 }
