@@ -26,6 +26,27 @@
  * feeds `morningWeights` into runWeeklyCoach) so a future refactor that
  * silently merges the two series, or that adds a cache in front of either
  * read, gets caught here rather than assumed away.
+ *
+ * THE CANONICAL LAW (R-3, closed 2026-08-12; supersedes the reading that
+ * Body Metrics weights are excluded from rapid-loss safety):
+ *
+ *   RAPID-LOSS SAFETY READS THE CANONICAL `morning_weights` SERIES.
+ *   A DELIBERATE POSITIVE WEIGHT ENTERED THROUGH BODY METRICS IS
+ *   INTENTIONALLY WRITTEN THROUGH INTO THAT CANONICAL SERIES AT ENTRY
+ *   TIME (D90, 2026-08-06, c569e00c - src/lib/database/bodyMetrics.js,
+ *   injected at database.js:104).
+ *
+ * So the two facts this guard could look like it is asserting are
+ * different things, and both are true: the body_metric_log TABLE is not a
+ * second rapid-loss evidence source, AND a valid Body Metrics weight
+ * still reaches the gate - normalised into the canonical series when it
+ * is written, not merged in when it is read. Measurements-only entries
+ * are bypassed; non-positive, invalid and deleted entries stay excluded
+ * by the existing readers; the rapid-loss threshold is untouched.
+ *
+ * Open and deliberately not actioned: a Body Metrics weight entry does not
+ * by itself prove morning/fasted measurement conditions. That is a
+ * measurement-provenance/UX question for its own decision.
  */
 const fs = require('fs');
 const path = require('path');

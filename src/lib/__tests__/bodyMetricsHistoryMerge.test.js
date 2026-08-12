@@ -97,16 +97,18 @@ describe('mergeMorningWeightsIntoHistory (BUG-WEIGHT-HISTORY fix)', () => {
 /**
  * X3 (cross-surface audit 2026-07-30): buildWeighInSeries.
  *
- * The ED-safety rapid-loss / max-safe-loss gates and the FFM floor evaluate
- * whatever weigh-in series they are handed. That series came from
- * `getMorningWeights` ONLY, so every reading logged through BodyMetricsScreen's
- * own form (which writes body_metric_log) was invisible to the gates -- while
- * the SAME readings were plotted in the trend the user reads on that screen.
+ * This function is NOT the safety path and must never be wired into it.
+ * X3 was closed by the D90 write-through (2026-08-06, c569e00c): a
+ * deliberate positive weight entered through Body Metrics is written into
+ * the canonical `morning_weights` series at entry time, so the rapid-loss
+ * gate already sees it without `body_metric_log` becoming a second
+ * evidence source. The merge-at-read approach was reverted (dd67bbf4).
  *
- * These pin the input, not the gates: no floor or threshold is asserted here,
- * only that the series is complete, deduped by day, and ordered.
+ * These pin the merge helper's own behaviour for history/trend use: no
+ * floor, gate or threshold is asserted here, only that the series is
+ * complete, deduped by day, and ordered.
  */
-describe('buildWeighInSeries feeds the safety path every weigh-in (X3)', () => {
+describe('buildWeighInSeries merges weigh-in history (X3, non-safety use)', () => {
   // eslint-disable-next-line global-require
   const { buildWeighInSeries } = require('../bodyMetricsHistoryMerge');
 

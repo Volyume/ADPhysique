@@ -45,26 +45,39 @@ export function morningWeightToEntry(row) {
  * The canonical weigh-in series, in the `{ weightKg, loggedAt }` shape the
  * coaching engine consumes.
  *
- * WHY THIS EXISTS (cross-surface audit 2026-07-30, finding X3). The ED-safety
- * rapid-loss and max-safe-loss gates, and the FFM floor, evaluate whatever
- * series `runWeeklyCoach` is handed. That series came from `getMorningWeights`
- * ONLY -- so every weigh-in a user logged through BodyMetricsScreen's own "Log
- * weight" form (which writes `body_metric_log`) was invisible to the gate,
- * while the SAME readings were plotted in the trend the user reads on that
- * screen. A user who logs exclusively from that form had the gate assessing an
- * almost-empty series.
+ * NOT THE SAFETY PATH. Do not wire this into the rapid-loss reader.
  *
- * The table split is accidental, not a measurement-conditions distinction:
- * Home's quick weigh-in writes `morning_weights`, the Body Metrics form writes
- * `body_metric_log`, and `getLatestBodyWeight` already reads BOTH for the
- * current weight shown around the app. Both are the user weighing themselves.
+ * It was written for finding X3 (cross-surface audit 2026-07-30), when a
+ * weigh-in logged through BodyMetricsScreen's own form was invisible to the
+ * ED-safety gates. Merging the two tables into the gate's input was tried,
+ * and REVERTED (dd67bbf4) for crossing an ED-safety inviolable.
+ *
+ * That finding was then closed a different way, and the canonical law is:
+ *
+ *   RAPID-LOSS SAFETY READS THE CANONICAL `morning_weights` SERIES.
+ *   A DELIBERATE POSITIVE WEIGHT ENTERED THROUGH BODY METRICS IS WRITTEN
+ *   THROUGH INTO THAT CANONICAL SERIES AT ENTRY TIME.
+ *
+ * The write-through is the D90 founder ruling of 2026-08-06 (c569e00c),
+ * live in `src/lib/database/bodyMetrics.js` and injected at
+ * `database.js:104`. So the gate already sees every legitimate Body
+ * Metrics weigh-in, WITHOUT `body_metric_log` becoming a second evidence
+ * source. Measurements-only entries are bypassed; non-positive, invalid
+ * and deleted entries stay excluded by the existing readers.
+ *
+ * Reading both tables HERE would therefore double-count nothing today but
+ * would re-create the dual-source shape the revert and the source guard
+ * (`CoachOutputScreen.morningWeightsSource.guard.test.js`) exist to
+ * prevent. This function survives for non-safety history/trend use only.
+ *
+ * Open, deliberately NOT actioned (recorded 2026-08-12): a Body Metrics
+ * weight entry does not by itself prove morning/fasted measurement
+ * conditions. That is a measurement-provenance and UX question for its
+ * own targeted decision, not something to resolve here.
  *
  * Dedupe is by calendar day, inherited from mergeMorningWeightsIntoHistory, so
  * a day recorded in both tables contributes once. Non-positive and
  * soft-deleted rows are dropped, matching computeEWMA's own guard.
- *
- * This changes the INPUT only. No floor, gate or threshold is altered -- the
- * gates simply now see the readings the user can already see.
  *
  * @param {Array} bodyMetricEntries - rowToEntry-shaped, from getBodyMetricLog
  * @param {Array} morningRows       - raw getMorningWeights() output
