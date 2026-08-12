@@ -524,7 +524,10 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   // R2-4: reps row + its Est. max caption line as one block.
-  repsBlock: { gap: spacing.xxs },
+  // The 2px gap left the caption touching the stepper's bottom edge on a
+  // real device, so the two read as one control. A full step of separation
+  // lets the caption read as what it is: a note about the row above it.
+  repsBlock: { gap: spacing.sm },
   // R2-4: the Est. max caption sits on its own full-width line under the
   // reps row, right-aligned beneath the value it is derived from, so it
   // never wraps under the Reps label or collides with the stepper.
