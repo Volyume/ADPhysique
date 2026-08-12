@@ -679,12 +679,35 @@ export function kcalFloorForSex(sex) {
  * today's EWMA for the enforcing gate), so with no profile weight and a
  * volatile morning weigh-in the two safety floors could disagree - the
  * user could be shown one floor while a different one actually gated the
- * adjustment. One resolver, one order, both sites:
- *   1. profile bodyweight (the user's own stated truth)
- *   2. today's 7-day EWMA of the weigh-in series (smoothed, needs >= 3)
- *   3. the most recent valid weigh-in (so a 1-2-weigh-in user still gets
- *      floor protection instead of losing it - strictly more coverage
- *      than the old gate, never less)
+ * adjustment. One resolver, one order, both sites.
+ *
+ * C10A R-18 (founder-commissioned): the order was profile FIRST, and
+ * `users_profile.weightKg` is set at onboarding and never refreshed by a
+ * weigh-in - logMorningWeight writes `morning_weights` and touches no
+ * profile row. So for every user who states a weight at enrolment, the
+ * FFM floor was computed from that enrolment weight for ever, no matter
+ * how many times they weighed in afterwards. The freshest evidence the
+ * product already treats as current bodyweight now speaks first:
+ *
+ *   1. today's 7-day EWMA of the weigh-in series (smoothed, needs >= 3)
+ *   2. the most recent valid weigh-in (so a 1-2-weigh-in user is still
+ *      covered rather than falling back to enrolment)
+ *   3. profile bodyweight - the user's own stated truth, and the only
+ *      source for someone who has never weighed in
+ *
+ * "Freshest" is not "newest row": both weigh-in inputs come from
+ * getMorningWeights, which already excludes soft-deleted rows, and
+ * computeEWMA already drops non-positive values - so a deleted or
+ * unusable newest entry cannot become the floor's input. This resolver
+ * only orders what those readers already validated.
+ *
+ * The FORMULA and the 30 kcal/kg threshold are untouched. Note the
+ * direction honestly: for a user who has lost weight since enrolment the
+ * floor now computes from the lower, real weight, so it is lower than the
+ * stale figure produced before. That is the floor being correct rather
+ * than being loosened - it is 30 kcal/kg of the lean mass the user
+ * actually carries, not of a body they no longer have.
+ *
  * Returns null only when NO positive weight exists anywhere; callers
  * hold the status quo in that case rather than inventing a floor.
  */
@@ -694,7 +717,7 @@ export function resolveFfmFloorWeightKg({
   lastWeighInKg = null,
 } = {}) {
   const pos = (v) => (Number.isFinite(Number(v)) && Number(v) > 0 ? Number(v) : null);
-  return pos(profileWeightKg) ?? pos(ewmaTodayKg) ?? pos(lastWeighInKg);
+  return pos(ewmaTodayKg) ?? pos(lastWeighInKg) ?? pos(profileWeightKg);
 }
 
 // Preventive low-energy-availability caution lines (U3, founder 2026-07-01).

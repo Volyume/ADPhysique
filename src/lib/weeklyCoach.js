@@ -73,18 +73,57 @@ export function getLatestEwma(weights, alpha = 0.1) {
  */
 export function computeWeeklyTrendPct(morningWeights, currentBodyweightKg = null, nowMs = Date.now()) {
   if (!morningWeights || morningWeights.length < 4) return null;
-  // C6 RB6-2: the comparator can be a pre-gap point, so this value can
-  // describe a longer-than-weekly change. Whether the ED s1 signal and
-  // the rapid-loss flag should be bounded to genuine weekly comparisons
-  // is an ED-safety behaviour change and is FOUNDER-GATED (the three-way
-  // fork is recorded in REVIEW-B-returning.md and the triage); nothing
-  // here was altered. The CLAIM wording is bounded separately below.
+  // C10A RB6-2 (founder-commissioned): the comparator can be a pre-gap
+  // point, so the raw difference can describe months of change. This
+  // returns a PER-WEEK rate, which is what every consumer's threshold is
+  // stated in, so the elapsed span is divided out. No reading is dropped
+  // and no threshold moved; a long gap simply stops being read as though
+  // both weights were taken a week apart.
   const ewmaNow = getLatestEwma(morningWeights);
   const ewmaPrior = getEwmaSevenDaysAgo(morningWeights, 0.1, nowMs);
   if (ewmaNow == null || ewmaPrior == null) return null;
   const reference = currentBodyweightKg || ewmaNow;
   if (!reference) return null;
-  return ((ewmaNow - ewmaPrior) / reference) * 100;
+  const weeks = elapsedWeeksSinceComparator(weeklyComparatorMs(morningWeights, nowMs), nowMs) ?? 1;
+  return (((ewmaNow - ewmaPrior) / reference) * 100) / weeks;
+}
+
+/**
+ * C10A RB6-2: the timestamp of the comparator the weekly rate is measured
+ * against - the most recent EWMA point at or before nowMs - 7d. Exported
+ * so the rate can be normalised by the time that actually elapsed.
+ */
+export function weeklyComparatorMs(morningWeights, nowMs = Date.now()) {
+  const cutoff = nowMs - 7 * 86400000;
+  let comparatorMs = null;
+  for (const w of (Array.isArray(morningWeights) ? morningWeights : [])) {
+    const t = Number(w?.loggedAt);
+    if (Number.isFinite(t) && t <= cutoff && (comparatorMs == null || t > comparatorMs)) comparatorMs = t;
+  }
+  return comparatorMs;
+}
+
+/**
+ * C10A RB6-2: how many weeks actually separate the comparator from now.
+ *
+ * The rapid-loss and max-safe-loss thresholds are stated PER WEEK. The
+ * comparator, however, is only guaranteed to be at or before seven days
+ * ago - after a long gap it can be months old, and the raw difference was
+ * being handed to a per-week threshold as though the two readings were a
+ * week apart. A 6% loss across 180 days was read as -6%/week and tripped
+ * a -1.5%/week gate that the true rate (about -0.23%/week) does not.
+ *
+ * Dividing by the elapsed span is the whole fix: it keeps every reading
+ * (so a genuine large loss is never discarded, which is what a freshness
+ * cut-off would have risked), invents no new duration, and leaves the
+ * threshold itself untouched. Floored at 1 so a comparator exactly seven
+ * days old behaves exactly as it always has.
+ */
+export function elapsedWeeksSinceComparator(comparatorMs, nowMs = Date.now()) {
+  if (!Number.isFinite(comparatorMs)) return null;
+  const days = (nowMs - comparatorMs) / 86400000;
+  if (!Number.isFinite(days) || days <= 0) return null;
+  return Math.max(1, days / 7);
 }
 
 /**
@@ -845,8 +884,15 @@ export function runWeeklyCoach(inputs) {
     ? Math.round((ewma7Today - ewma7LastWk) * 100) / 100
     : null;
 
+  // C10A RB6-2: same normalisation as computeWeeklyTrendPct, and it must
+  // be the same or the rapid-loss flag and the ED detector would read the
+  // same weigh-ins as two different rates. weightDelta is measured against
+  // the comparator found below, so the span is divided out here too.
+  const comparatorWeeks = elapsedWeeksSinceComparator(
+    weeklyComparatorMs(morningWeights, nowMs), nowMs,
+  ) ?? 1;
   const actualRatePct = (weightDelta != null && bwRef)
-    ? (weightDelta / bwRef) * 100
+    ? ((weightDelta / bwRef) * 100) / comparatorWeeks
     : null;
 
   // COMP-024 decision-promotion: the off-target DECISION reads (onTarget /
