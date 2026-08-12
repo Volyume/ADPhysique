@@ -1386,6 +1386,66 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
   };
 }
 
+/**
+ * Campaign 9 closeout: progression consistency for ONE exercise.
+ *
+ * This is deliberately detectPlateau's mirror image, not a new formula.
+ * It reuses that function's comparable-exposure model exactly - the same
+ * newest-first session list, the same four-session window (three adjacent
+ * comparisons), the same session-average arithmetic and the same
+ * ±0.01kg / ±0.5rep thresholds - so the app can never say a muscle is
+ * both progressing and plateaued from the same data.
+ *
+ * One thing is STRICTER than detectPlateau: only e1RM-eligible sets count
+ * (isE1rmEligibleRow), so warm-ups, myo-reps and rest-pause rows cannot
+ * manufacture a gain. Cluster sets store summed reps and would read as a
+ * jump that never happened.
+ *
+ * WHAT THIS MEANS, AND WHAT IT DOES NOT
+ *
+ * 'progressing' says: this user has been able to add load or reps on this
+ * exercise, recently, across enough sessions to mean something. That is an
+ * observation about them and this movement.
+ *
+ * It is NOT a claim that the exercise produces more hypertrophy than any
+ * other, and nothing may present it as one. Ordinary training logs cannot
+ * support that construct.
+ *
+ * @param {Array<Array<object>>} exerciseSessions newest-first, one array of
+ *   sets per session, all for the SAME exercise.
+ * @returns {{status:'progressing'|'holding'|'insufficient', gains:number, comparisons:number}}
+ */
+export function detectProgressionConsistency(exerciseSessions = []) {
+  const eligible = (Array.isArray(exerciseSessions) ? exerciseSessions : [])
+    .map((sets) => (Array.isArray(sets) ? sets.filter(isE1rmEligibleRow) : []))
+    .filter((sets) => sets.length > 0);
+  // Same observation floor as detectPlateau: fewer than three sessions is
+  // not a trend, it is a couple of data points.
+  if (eligible.length < 3) return { status: 'insufficient', gains: 0, comparisons: 0 };
+
+  const recent = eligible.slice(0, 4);
+  let gains = 0;
+  let comparisons = 0;
+  for (let i = 0; i < recent.length - 1; i++) {
+    const currSets = recent[i];
+    const prevSets = recent[i + 1];
+    if (!currSets?.length || !prevSets?.length) continue;
+    const avg = (sets, pick) => sets.reduce((s, set) => s + (pick(set) || 0), 0) / sets.length;
+    const currAvgWeight = avg(currSets, (s) => s.weight);
+    const prevAvgWeight = avg(prevSets, (s) => s.weight);
+    const currAvgReps = avg(currSets, (s) => s.actualReps ?? s.actual_reps);
+    const prevAvgReps = avg(prevSets, (s) => s.actualReps ?? s.actual_reps);
+    comparisons += 1;
+    const loadGain = currAvgWeight > prevAvgWeight + 0.01;
+    const repGain = currAvgReps > prevAvgReps + 0.5;
+    if (loadGain || repGain) gains += 1;
+  }
+  if (comparisons < 2) return { status: 'insufficient', gains, comparisons };
+  // A majority of the recent comparisons moved. Anything less is honest
+  // "holding", never a negative claim about the exercise.
+  return { status: gains >= Math.ceil(comparisons / 2) ? 'progressing' : 'holding', gains, comparisons };
+}
+
 // RP-classic deload prescription
 // prevSets: last session's working sets for this exercise (to anchor week-1 loads)
 // isFirstHalf: true = first 2 sessions of deload week (week-1 load, 50% reps)

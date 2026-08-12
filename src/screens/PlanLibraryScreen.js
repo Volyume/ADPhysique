@@ -12,7 +12,9 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock } from '../lib/database';
+import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock, getActiveBlock, updateRoutineExerciseExercise } from '../lib/database';
+import { loadExerciseIntentState, findPlanIntentConflicts } from '../lib/exercise/intent';
+import ExerciseConflictSheet from '../components/ExerciseConflictSheet';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import { planHeadingName, planEquipmentLabel } from '../lib/planDisplay';
@@ -211,6 +213,7 @@ const DIFFICULTY_LABELS = ['Beginner', 'Intermediate', 'Advanced'];
 function PlanBadge({ label, amber }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
+
   return (
     <View style={[styles.badge, live.badge, amber && [styles.badgeAmber, live.badgeAmber]]}>
       <Text style={[styles.badgeText, live.badgeText, amber && [styles.badgeTextAmber, live.badgeTextAmber]]}>{label}</Text>
@@ -288,6 +291,10 @@ export default function PlanLibraryScreen({ navigation }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
 
   const [plans, setPlans] = useState([]);
+  // C9 closeout item 3: a copied published plan may contain exercises the
+  // user has set aside. Both facts stand, so they choose.
+  const [planConflicts, setPlanConflicts] = useState(null);
+  const [conflictIntentState, setConflictIntentState] = useState(null);
   const [workoutCounts, setWorkoutCounts] = useState({});
   const [query, setQuery] = useState('');
   const [activeCollection, setActiveCollection] = useState('all');
@@ -388,6 +395,7 @@ export default function PlanLibraryScreen({ navigation }) {
             try {
               const copy = await copyPlanFromLibrary(plan.id, user.id);
               if (!copy?.id) throw new Error('Copy failed.');
+              if (await surfaceConflicts(copy.id)) return;
               navigation.goBack();
             } catch (_e) {
               toast.show("Couldn't copy plan, try again", { variant: 'error' });
@@ -416,6 +424,7 @@ export default function PlanLibraryScreen({ navigation }) {
               // created seconds earlier. Same confirmation shape every other
               // activation entry point uses.
               toast.show(`"${planHeadingName(plan.name)}" is now your active plan`, { variant: 'success' });
+              if (await surfaceConflicts(copy.id)) return;
               navigation.goBack();
             } catch (_e) {
               toast.show("Couldn't set active plan, try again", { variant: 'error' });
@@ -491,6 +500,36 @@ export default function PlanLibraryScreen({ navigation }) {
   const showDivisionGrid = !queryLower && activeCollection === 'division';
 
   // ─── Render ──────────────────────────────────────────────────────────────────
+
+
+  /**
+   * C9 closeout item 3. Returns true when a conflict sheet was opened, so
+   * the caller holds the screen rather than navigating away from a
+   * decision the user has not made yet.
+   */
+  async function surfaceConflicts(planId) {
+    try {
+      const block = await getActiveBlock(user.id).catch(() => null);
+      const state = await loadExerciseIntentState(user.id, { activeMesocycleId: block?.id ?? null });
+      const conflicts = await findPlanIntentConflicts(planId, state);
+      if (!conflicts.length) return false;
+      setConflictIntentState(state);
+      setPlanConflicts({ planId, conflicts });
+      return true;
+    } catch (_) {
+      // Never block the user's own plan choice on this.
+      return false;
+    }
+  }
+
+  async function handleConflictReplacement(conflict, picked) {
+    // Replace it in THIS plan only. The global exclusion is untouched.
+    try {
+      if (conflict?.routineExerciseId && picked?.id) {
+        await updateRoutineExerciseExercise(conflict.routineExerciseId, picked.id);
+      }
+    } catch (_) { /* best effort */ }
+  }
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
@@ -796,7 +835,18 @@ export default function PlanLibraryScreen({ navigation }) {
               </>
             )}
       </BottomSheet>
-    </SafeAreaView>
+    <ExerciseConflictSheet
+        visible={!!planConflicts}
+        mode="plan"
+        conflicts={planConflicts?.conflicts ?? []}
+        userId={user?.id ?? null}
+        intentState={conflictIntentState}
+        onChooseReplacement={handleConflictReplacement}
+        onKeep={() => { /* explicit exception for this plan only; the global exclusion stands */ }}
+        onDone={() => { setPlanConflicts(null); navigation.goBack(); }}
+        onClose={() => { setPlanConflicts(null); navigation.goBack(); }}
+      />
+          </SafeAreaView>
   );
 }
 

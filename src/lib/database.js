@@ -5139,6 +5139,13 @@ export const WIPE_DIRECT_TABLES = [
   // every user boundary so a deleted account or wiped photo set also clears
   // its derived classification history.
   'progress_scan_classification_history',
+  // Campaign 9 closeout: the exercise-intelligence tables. All three carry
+  // a user_id column and DELETE cleanly by it. Without them a deleted
+  // account left its exclusions, swap history and approved defaults on the
+  // device, and the next account on a shared phone would inherit somebody
+  // else's preferences - the same ownership leak the entries above were
+  // added to close.
+  'exercise_intent', 'exercise_swaps', 'exercise_slot_defaults',
 ];
 
 export const FATAL_LOCAL_WIPE_TABLES = new Set([
@@ -8873,6 +8880,53 @@ export async function getExerciseUsageStats(userId) {
       GROUP BY s.exercise_id`,
     [userId],
   ).catch(() => []);
+}
+
+/**
+ * Campaign 9 closeout: recent sessions per exercise, for progression
+ * evidence. Bounded by construction - the caller passes the handful of
+ * exercise ids actually on screen, and only completed workouts count.
+ *
+ * Sets come back grouped per session, newest session first, which is the
+ * exact shape detectPlateau and detectProgressionConsistency consume. Set
+ * type is carried through so the shared e1RM eligibility rule can reject
+ * warm-ups, myo-reps and rest-pause rows in the pure layer rather than
+ * here.
+ */
+export async function getExerciseProgressionSessions(userId, exerciseIds = [], { sessionsPerExercise = 4 } = {}) {
+  if (!userId || !Array.isArray(exerciseIds) || exerciseIds.length === 0) return new Map();
+  const d = await db();
+  const ids = exerciseIds.filter(Boolean).slice(0, 40);
+  if (ids.length === 0) return new Map();
+  const holes = ids.map(() => '?').join(',');
+  const rows = await d.getAllAsync(
+    `SELECT s.exercise_id AS exerciseId, s.workout_id AS workoutId,
+            s.weight AS weight, s.actual_reps AS actualReps, s.set_type AS setType,
+            w.started_at AS startedAt
+       FROM workout_sets s
+       JOIN workouts w ON w.id = s.workout_id
+      WHERE w.user_id = ? AND w.is_completed = 1 AND s.exercise_id IN (${holes})
+      ORDER BY s.exercise_id ASC, w.started_at DESC`,
+    [userId, ...ids],
+  ).catch(() => []);
+
+  const byExercise = new Map();
+  for (const r of rows ?? []) {
+    if (!byExercise.has(r.exerciseId)) byExercise.set(r.exerciseId, new Map());
+    const sessions = byExercise.get(r.exerciseId);
+    if (!sessions.has(r.workoutId)) {
+      // Newest-first is guaranteed by the ORDER BY, so once this exercise
+      // has its window we stop adding older sessions.
+      if (sessions.size >= sessionsPerExercise) continue;
+      sessions.set(r.workoutId, []);
+    }
+    sessions.get(r.workoutId).push({
+      weight: r.weight, actualReps: r.actualReps, setType: r.setType,
+    });
+  }
+  const out = new Map();
+  for (const [exerciseId, sessions] of byExercise) out.set(exerciseId, [...sessions.values()]);
+  return out;
 }
 
 // ─── Exercise User Notes ──────────────────────────────────────────────────────

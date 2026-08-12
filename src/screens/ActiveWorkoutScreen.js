@@ -813,7 +813,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     let ordered = ranked.slice(0, 8);
     try {
       const block = user?.id ? await getActiveBlock(user.id) : null;
-      const state = await loadExerciseIntentState(user?.id, { activeMesocycleId: block?.id ?? null });
+      const state = await loadExerciseIntentState(user?.id, {
+        activeMesocycleId: block?.id ?? null,
+        // Progression evidence is loaded only for the candidates on screen.
+        progressionForIds: ranked.map((c) => c.exercise?.id).filter(Boolean),
+      });
       ordered = rankPersonalised(state, ranked, {
         fromExerciseId: exercise?.id,
         routineId: activeWorkout?.routineId ?? null,

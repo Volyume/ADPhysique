@@ -35,7 +35,9 @@ import {
   getExerciseSwaps,
   getExerciseSlotDefaults,
   getExerciseUsageStats,
+  getExerciseProgressionSessions,
 } from '../database';
+import { detectProgressionConsistency } from '../algorithms';
 
 export { EXERCISE_INTENT };
 
@@ -46,28 +48,44 @@ export const REPEATED_SWAP_MIN = 3;
  * Load everything the selecting surfaces need, once.
  *
  * @param {string} userId
- * @param {{activeMesocycleId?: string|null}} [opts] the CURRENT block's id.
- *   Block-scoped avoidance is compared against this rather than against a
- *   calendar duration, so "avoid for this block" expires exactly when the
- *   block does and not a day either side of it.
+ * @param {{activeMesocycleId?: string|null, progressionForIds?: string[]}} [opts]
+ *   activeMesocycleId is the CURRENT block's id. Block-scoped avoidance is
+ *   compared against this rather than against a calendar duration, so
+ *   "avoid for this block" expires exactly when the block does and not a
+ *   day either side of it.
+ *
+ *   progressionForIds bounds the progression read to the exercises actually
+ *   on screen. Progression evidence needs per-session history, which is far
+ *   too expensive to load for the whole catalogue; callers that do not need
+ *   it simply omit the list and every exercise reports 'insufficient'.
  */
-export async function loadExerciseIntentState(userId, { activeMesocycleId = null } = {}) {
+export async function loadExerciseIntentState(userId, { activeMesocycleId = null, progressionForIds = null } = {}) {
   const empty = {
-    intents: new Map(), swaps: [], defaults: [], usage: new Map(), activeMesocycleId,
+    intents: new Map(), swaps: [], defaults: [], usage: new Map(),
+    progression: new Map(), activeMesocycleId,
   };
   if (!userId) return empty;
   try {
-    const [intents, swaps, defaults, usage] = await Promise.all([
+    const [intents, swaps, defaults, usage, sessions] = await Promise.all([
       getExerciseIntents(userId),
       getExerciseSwaps(userId),
       getExerciseSlotDefaults(userId),
       getExerciseUsageStats(userId),
+      Array.isArray(progressionForIds) && progressionForIds.length
+        ? getExerciseProgressionSessions(userId, progressionForIds)
+        : Promise.resolve(new Map()),
     ]);
+    // Judged here, once, by the shared law - never re-derived per screen.
+    const progression = new Map();
+    for (const [exerciseId, perSession] of (sessions ?? new Map())) {
+      progression.set(exerciseId, detectProgressionConsistency(perSession));
+    }
     return {
       intents: new Map((intents ?? []).filter((r) => r?.exerciseId).map((r) => [r.exerciseId, r])),
       swaps: swaps ?? [],
       defaults: defaults ?? [],
       usage: new Map((usage ?? []).filter((r) => r?.exerciseId).map((r) => [r.exerciseId, r])),
+      progression,
       activeMesocycleId,
     };
   } catch (_e) {
@@ -76,6 +94,47 @@ export async function loadExerciseIntentState(userId, { activeMesocycleId = null
     // excluded, nor invent a preference. No state means no intent, which
     // is exactly the pre-Campaign-9 behaviour.
     return empty;
+  }
+}
+
+/**
+ * Campaign 9 closeout item 3: which exercises in a plan the user has set
+ * aside. Used after copying a published plan, where the exercise list
+ * comes from the plan's author rather than from Volyume suggesting
+ * anything.
+ *
+ * Reports the conflict; resolves nothing. Both facts stand - the user
+ * chose this plan, AND they told Volyume to stop suggesting this
+ * exercise - so the choice is theirs to make.
+ */
+export async function findPlanIntentConflicts(planId, state) {
+  if (!planId || !state?.intents?.size) return [];
+  try {
+    // eslint-disable-next-line global-require
+    const { getRoutinesForPlan, getRoutineExercisesWithDetails } = require('../database');
+    const routines = await getRoutinesForPlan(planId);
+    const conflicts = [];
+    const seen = new Set();
+    for (const routine of routines ?? []) {
+      // eslint-disable-next-line no-await-in-loop
+      const rows = await getRoutineExercisesWithDetails(routine.id).catch(() => []);
+      for (const row of rows ?? []) {
+        const id = row?.exercise?.id;
+        if (!id || seen.has(id) || isEligible(state, id)) continue;
+        seen.add(id);
+        conflicts.push({
+          exerciseId: id,
+          exerciseName: row.exercise?.name ?? null,
+          routineId: routine.id,
+          routineExerciseId: row.id ?? row.routineExercise?.id ?? null,
+          workoutName: routine.name ?? null,
+        });
+      }
+    }
+    return conflicts;
+  } catch (_e) {
+    // A read failure must not block the user's own plan choice.
+    return [];
   }
 }
 
@@ -196,6 +255,13 @@ export function previouslyUsedBefore(state, exerciseId) {
  *    be manufacturing evidence. Reported as `tolerance: 'not_tracked'`
  *    rather than guessed.
  *
+ * `progression` is the closeout's separate dimension, judged by
+ * algorithms.detectProgressionConsistency - detectPlateau's mirror, over
+ * eligible sets only. 'progressing' means this user has been adding load
+ * or reps on this movement. It is NOT a claim that the exercise builds
+ * more muscle than another, and no copy may present it as one. Without a
+ * loaded session window it is 'insufficient', never an optimistic guess.
+ *
  * @returns {{
  *   sessions: number, lastTrainedMs: number|null, trainedRecently: boolean,
  *   repeatedChoice: number, retained: boolean, swappedAway: number,
@@ -221,6 +287,8 @@ export function exerciseEvidence(state, exerciseId, { fromExerciseId = null, rec
     retained: chosen > 0 && sessions > 0 && away < chosen,
     swappedAway: away,
     tolerance: 'not_tracked',
+    // Separate and observable, never fused into the other dimensions.
+    progression: state?.progression?.get(exerciseId)?.status ?? 'insufficient',
     // A brand-new exercise must be allowed to say so. One session is a
     // try, not a preference.
     sufficient: sessions >= 2 || chosen >= REPEATED_SWAP_MIN,
@@ -297,6 +365,13 @@ export function rankPersonalised(state, candidates, { fromExerciseId, routineId 
         tier = RANK_TIER.RECENT_REPLACEMENT; tag = 'Last used here';
       } else if (ev && ev.count >= 2) {
         tier = RANK_TIER.REPEATED_REPLACEMENT; tag = "You've chosen this replacement several times";
+      } else if (facts.progression === 'progressing') {
+        // Same tier as other personal evidence, deliberately: it can
+        // reorder structurally valid alternatives and nothing more. It
+        // never outranks an exclusion, an approved default or a
+        // deliberate swap history, and it can never introduce a
+        // candidate the structural engine did not already accept.
+        tier = RANK_TIER.PERSONAL_EVIDENCE; tag = 'Progressing consistently';
       } else if (facts.trainedRecently && facts.sufficient) {
         tier = RANK_TIER.PERSONAL_EVIDENCE; tag = 'Used recently';
       } else if (previous && id === previous) {
