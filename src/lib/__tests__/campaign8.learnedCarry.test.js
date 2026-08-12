@@ -138,22 +138,46 @@ describe('Work 2: learned evidence survives a legitimate activation', () => {
     expect(seeded[0]).toBeGreaterThan(template[0]);
   });
 
-  // The learned FLOOR law is untouched by the ruling: the band still
-  // cannot raise a start on its own. Proven behaviourally - when the
-  // recent block cannot be judged, there is no activation seed, and the
-  // band alone puts week 1 back on the research floor.
-  test('the learned floor law is unchanged: the band alone still cannot raise a start', async () => {
+  // RE-ANCHORED by Campaign 11 (jobs 1 and 2). This used to assert that an
+  // unjudgeable newest block put week 1 back on the research floor, because
+  // the learned band could only ever seed its FLOOR. Two laws changed that,
+  // deliberately:
+  //
+  //  - job 1 gave the band an establishedStart, so a mature history no
+  //    longer forgets the dose it earned whenever a block cannot be judged;
+  //  - job 2 made freshness judged-only and shared between this path and
+  //    Adjust, so an INSUFFICIENT_DATA block no longer restarts the clock.
+  //
+  // In THIS fixture the blocks sit 180/120/60/0 days apart, so once the
+  // newest is unjudgeable the last LEGITIMATE evidence is ~9 weeks old -
+  // beyond STALE_EVIDENCE_WEEKS. The campaign's stated outcome for exactly
+  // that shape is "insufficient activity inside the window while the last
+  // judged evidence is stale -> non-actionable everywhere", so nothing
+  // carries and the honest template ramp stands.
+  test('an unjudgeable newest block over STALE prior evidence carries nothing', async () => {
     const blocks = maturityFor('chest');
     const newest = JSON.parse(blocks[blocks.length - 1].blockLedger);
     newest.entries[0].classification = 'INSUFFICIENT_DATA';
     blocks[blocks.length - 1].blockLedger = JSON.stringify(newest);
     mockGetAllMesocyclesForUser.mockResolvedValue(blocks);
     const out = await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' });
-    expect(out.ranges.chest.source).toBe('learned');
-    expect(out.ranges.chest.startSets).toBe(VOLUME_LANDMARKS.chest.mev);
-    // The durable ceiling still carries - that half never depended on
-    // the proposal.
-    expect(out.ranges.chest.peakSets).toBe(20);
+    expect(out).toBeNull();
+  });
+
+  // The other half of the same law: when the prior JUDGED evidence is still
+  // fresh, an unjudgeable newest block cannot erase it - the earlier
+  // legitimate memory bridges, which is the whole point of D97-3.
+  test('an unjudgeable newest block over FRESH prior evidence uses the earlier memory', async () => {
+    const recent = Date.now() - 10 * DAY;
+    const blocks = [42, 0].map((d, i) => block(recent - d * DAY, 'chest', { start: 12 + i, peak: 20 }));
+    const newest = JSON.parse(blocks[blocks.length - 1].blockLedger);
+    newest.entries[0].classification = 'INSUFFICIENT_DATA';
+    blocks[blocks.length - 1].blockLedger = JSON.stringify(newest);
+    mockGetAllMesocyclesForUser.mockResolvedValue(blocks);
+    const out = await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' });
+    expect(out?.ranges?.chest).toBeTruthy();
+    // NOT the research floor any more: the earned start is remembered.
+    expect(out.ranges.chest.startSets).toBeGreaterThan(VOLUME_LANDMARKS.chest.mev);
   });
 
   test('a phase change carries it too: the evidence is muscle-level, not phase-level', async () => {

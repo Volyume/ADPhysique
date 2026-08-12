@@ -111,6 +111,54 @@ function judgedEvidenceAgeByMuscle(mesos, nowMs) {
   return byMuscle;
 }
 
+/**
+ * C11 job 2: THE canonical learned-memory actionability decision. Both entry
+ * points — the Adjust/next-block seeding and the plan-activation carry — call
+ * this, so the same athlete, muscle, history and moment can never get two
+ * different answers depending on which screen they reached. Campaign 10N
+ * closed the missing gate on Adjust but left activation with its own inline
+ * age read that counted an INSUFFICIENT_DATA entry as recent; that divergence
+ * is what this replaces.
+ *
+ * Returns { recent, fresh } where `recent` is the newest JUDGED entry for the
+ * muscle (or null) and `fresh` is whether it sits inside the one existing
+ * STALE_EVIDENCE_WEEKS boundary. No new constant, no decay.
+ */
+function learnedActionability(freshnessByMuscle, muscle) {
+  const recent = freshnessByMuscle.get(muscle) ?? null;
+  return { recent, fresh: recent != null && recent.weeksOverdue < STALE_EVIDENCE_WEEKS };
+}
+
+/**
+ * C11 job 3 (RA6-4): may this muscle be offered a bounded capacity probe?
+ *
+ * EVIDENCE SHAPE, stated because it constrains the answer. A stored ledger
+ * entry does NOT retain doseResponse — `finish()` records muscle,
+ * classification, confidence, evidence, observed, upwardCarryPrevented,
+ * proposal and rationale, and the evidence array carries slope, PR density,
+ * PR count, recovery cost and adherence. lateProgression / lateRecoveryOk are
+ * not among them, so they cannot be read back.
+ *
+ * They can, however, be PROVEN rather than reconstructed. In interBlock's
+ * RESPONSIVE branch the +1 is applied only when
+ *   earned = lateProgression && lateRecoveryOk && confidence >= CONFIDENCE_FLOOR
+ *            && !suppressed && weeksSinceBlockEnd < STALE_EVIDENCE_WEEKS
+ * so a proposal that starts ABOVE the block's own observed start is a
+ * recorded conclusion that every one of those held. The deduction runs one
+ * way only — an equal start proves nothing, because the clamps can absorb an
+ * earned +1 — which is exactly the conservative direction for granting a
+ * probe. Nothing is guessed and no threshold is lowered.
+ */
+function probeEligible({ recent, fresh, suppressed, manualControls }) {
+  if (!fresh || suppressed || manualControls) return false;
+  const entry = recent?.entry;
+  if (!entry || entry.classification !== BLOCK_CLASS.RESPONSIVE) return false;
+  const proposed = Number(entry.proposal?.startSets);
+  const observed = Number(entry.observed?.startSets);
+  if (!Number.isFinite(proposed) || !Number.isFinite(observed)) return false;
+  return proposed > observed;
+}
+
 /** Calm mode OR open ED flag, fail closed on any read failure. */
 async function readSuppression(userId) {
   const edFlag = await getOpenEdPatternFlag(userId).catch(() => 'read_failed');
@@ -561,26 +609,15 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
     const nowMs = Date.now();
 
     // D10 + the option (b) ruling: per MUSCLE, what is the most recent
-    // judged entry, and how long ago did the block carrying it finish?
-    // Derived with the same getBlockStatus weeksOverdue the classifier
-    // is given, so the two can never disagree about staleness. Blocks
-    // are walked oldest-first so the newest entry per muscle wins.
-    // Fails toward stale: an unreadable date records nothing at all.
-    const recentByMuscle = new Map();
-    const dated = mesos
-      .filter((m) => m?.blockLedger && toMs(m.startDate) != null)
-      .sort((a, b) => toMs(a.startDate) - toMs(b.startDate));
-    for (const m of dated) {
-      const overdue = getBlockStatus(
-        toMs(m.startDate), m.plannedWeeks ?? m.durationWeeks ?? 5, nowMs,
-      ).weeksOverdue;
-      if (!Number.isFinite(overdue)) continue;
-      try {
-        for (const e of JSON.parse(m.blockLedger)?.entries ?? []) {
-          if (e?.muscle) recentByMuscle.set(e.muscle, { entry: e, weeksOverdue: overdue });
-        }
-      } catch (_e) { /* unparseable prior ledger: no evidence */ }
-    }
+    // JUDGED entry, and how long ago did the block carrying it finish?
+    //
+    // C11 job 2: this used to be an inline copy that accepted ANY entry,
+    // including an INSUFFICIENT_DATA one — so a block we could not judge
+    // restarted the clock here while Campaign 10N's Adjust gate correctly
+    // ignored it, and the same memory read as fresh on one path and stale on
+    // the other. Both now consume judgedEvidenceAgeByMuscle +
+    // learnedActionability, one law with one boundary.
+    const recentByMuscle = judgedEvidenceAgeByMuscle(mesos, nowMs);
 
     const ranges = {};
     for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
@@ -597,8 +634,7 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
       // Stale evidence cannot authorise a fresh upward prescription. The
       // band and the entries are untouched memory; they are simply not
       // consulted here until a fresh block is finished.
-      const recent = recentByMuscle.get(muscle) ?? null;
-      const fresh = recent != null && recent.weeksOverdue < STALE_EVIDENCE_WEEKS;
+      const { recent, fresh } = learnedActionability(recentByMuscle, muscle);
       const resolved = resolveSeedRange({
         manual: isManualEdit(manualEntry, research) ? manualEntry : null,
         // The RECENT ACTIVATION SEED. Withheld entirely under
@@ -689,16 +725,20 @@ export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', u
       // are simply not consulted to prescribe until a fresh judged block
       // exists. An INSUFFICIENT_DATA block cannot supply that freshness, so
       // it neither refreshes nor erases what earlier blocks established.
-      const recent = freshnessByMuscle.get(muscle) ?? null;
-      const learnedFresh = recent != null && recent.weeksOverdue < STALE_EVIDENCE_WEEKS;
+      const { recent, fresh: learnedFresh } = learnedActionability(freshnessByMuscle, muscle);
+      const manualControls = isManualEdit(manualEntry, research);
       ranges[muscle] = resolveSeedRange({
-        manual: isManualEdit(manualEntry, research) ? manualEntry : null,
+        manual: manualControls ? manualEntry : null,
         ledgerEntry: ledger?.entries?.find?.((e) => e.muscle === muscle) ?? null,
         learnedRange: (learned.isLearned && learnedFresh) ? learned : null,
         profileAdjusted: profileAdjustedPrior(muscle, userProfile),
         research,
         suppressed,
         intent,
+        // A probe belongs to the evidence-based Adjust path only; Repeat
+        // stays exactly the block the user ran.
+        capacityProbe: intent !== 'repeat'
+          && probeEligible({ recent, fresh: learnedFresh, suppressed, manualControls }),
       });
     }
     return { version: 1, intent, sourceMesocycleId: ledger ? current.id : null, ranges };
