@@ -1091,12 +1091,29 @@ This section carries the reconciliations and the highest-stakes items.
   is not in PREF_EXCLUDE_PATTERNS, so the bulk pref push appears to ship
   it, contradicting its module contract ("never goes through pref sync").
   (Medium-high; needs a runtime confirm.)
+  **ALREADY RESOLVED — the finding was stale when written.** Campaign 1
+  P0-2 (`19c109dd`, 2026-08-10) added `/^@volyume_privacy_prefs$/` to
+  `PREF_EXCLUDE_PATTERNS`, which closes push AND pull (one predicate,
+  `shouldSyncPref`). The runtime confirm the finding asked for was done on
+  2026-08-12 (Campaign 10H) and is now a behavioural pin.
 - **F-4. Allergen stamp dropped (B2 U4).** `mealPlanExcludeTags` is
   stamped but absent from PROFILE_FIELDS_TRACKED, so the stamp appears
   silently dropped - the exact failure the split exists to prevent;
   safety-adjacent (allergens). (Medium-high.)
+  **ALREADY RESOLVED — the finding was stale when written.** Campaign 1
+  P0-3 (`19c109dd`, 2026-08-10) added `'mealPlanExcludeTags'` to
+  `PROFILE_FIELDS_TRACKED`, so the stamp reaches `column_updates_at` and
+  the per-column merge can defend it. Verified behaviourally 2026-08-12
+  (Campaign 10H), including the counterfactual that without the stamp an
+  older cloud pull silently removes a newer exclusion.
 - **F-5. Meal reminders wiped on launch (C2 U4).** `restoreNotifications`
   cancels all and re-lays eight surfaces but not meal reminders. (Medium.)
+  **ALREADY RESOLVED — the finding was stale when written.** Campaign 1
+  P0-5 (`19c109dd`, 2026-08-10) re-lays them through the authoritative
+  `scheduleMealReminders`. Verified behaviourally 2026-08-12 (Campaign
+  10H): times preserved, disabled stay disabled, repeated restore does not
+  duplicate, and the Pro gate, ED fail-closed gate and quiet hours all
+  still apply on the launch path.
 - **F-6. blockE1rmSlopePct documented as wired, has no caller (A2 U1).**
   D91-9 says "wired in Stage 6"; no production call site exists.
   PLANNED-DOCUMENTED-ONLY. (High.)
