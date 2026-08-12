@@ -30,6 +30,12 @@ import {
   getAllMorningWeightsForUser,
   getAllCoachOutputsForUser,
   getAllExerciseUserNotesForUser,
+  // Campaign 9 exercise-intent layer (local schema v73, cloud
+  // migrate_136). Full-history readers: they include tombstones so an
+  // "allow this again" reaches the user's other devices.
+  getAllExerciseIntentsForUser,
+  getAllExerciseSwapsForUser,
+  getAllExerciseSlotDefaultsForUser,
   // Newly-syncing tables (migration 012)
   getUserBodyProfile,
   getAllUserInsightsForUser,
@@ -742,6 +748,12 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     await _pushUserBodyProfile(sb, supabaseUserId, localUserId);
     await _pushUserInsights(sb, supabaseUserId, localUserId);
     await _pushExerciseUserNotes(sb, supabaseUserId, localUserId);
+    // Campaign 9 exercise-intent layer. Free-tier safe: a user who has
+    // never excluded or swapped anything has zero rows and each helper
+    // returns immediately.
+    await _pushExerciseIntent(sb, supabaseUserId, localUserId);
+    await _pushExerciseSwaps(sb, supabaseUserId, localUserId);
+    await _pushExerciseSlotDefaults(sb, supabaseUserId, localUserId);
     await _pushWorkoutNotes(sb, supabaseUserId, localUserId);
     await _pushExerciseGoals(sb, supabaseUserId, localUserId);
     await _pushPeakWeekPlans(sb, supabaseUserId, localUserId);
@@ -1101,6 +1113,90 @@ async function _pushExerciseUserNotes(sb, supabaseUserId, localUserId) {
       if (error) logPgErr('sync._pushExerciseUserNotes', error);
     }
   } catch (e) { logBulkWarn('sync._pushExerciseUserNotes', e?.message); }
+}
+
+// ─── Campaign 9: the exercise-intent layer ────────────────────────────────
+// exercise_intent / exercise_swaps / exercise_slot_defaults. Same shape as
+// the sibling helpers above: 200-row chunks, onConflict 'user_id,id',
+// failures logged and swallowed so one table cannot stop the rest.
+//
+// All three push tombstones as well as live rows. "Allow this exercise
+// again" is recorded as deleted_at rather than a delete precisely so the
+// restore travels; dropping tombstones from the payload would leave the
+// user's other device suppressing an exercise they had un-excluded.
+//
+// Every timestamp is the ROW's own edit time (never now()), the honest-
+// updated_at contract migrate_134 depends on: a device that has been
+// offline must not stamp the freshest timestamp in the account onto its
+// stale copy and win the last-write-wins comparison with it.
+
+async function _pushExerciseIntent(sb, supabaseUserId, localUserId) {
+  try {
+    const rows = await getAllExerciseIntentsForUser(localUserId);
+    if (!rows?.length) return;
+    const payload = rows.map(r => ({
+      id: r.id, user_id: supabaseUserId,
+      exercise_id: r.exerciseId,
+      kind: r.kind,
+      scope_mesocycle_id: r.scopeMesocycleId ?? null,
+      reason: r.reason ?? null,
+      created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
+      updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
+      deleted_at: r.deletedAt != null ? new Date(r.deletedAt).toISOString() : null,
+    })).filter(r => r.exercise_id && r.kind);
+    for (let i = 0; i < payload.length; i += 200) {
+      const { error } = await sb.from('exercise_intent').upsert(
+        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
+      );
+      if (error) logPgErr('sync._pushExerciseIntent', error);
+    }
+  } catch (e) { logBulkWarn('sync._pushExerciseIntent', e?.message); }
+}
+
+async function _pushExerciseSwaps(sb, supabaseUserId, localUserId) {
+  try {
+    const rows = await getAllExerciseSwapsForUser(localUserId);
+    if (!rows?.length) return;
+    const payload = rows.map(r => ({
+      id: r.id, user_id: supabaseUserId,
+      from_exercise_id: r.fromExerciseId,
+      to_exercise_id: r.toExerciseId,
+      routine_id: r.routineId ?? null,
+      mesocycle_id: r.mesocycleId ?? null,
+      explicit: !!r.explicit,
+      created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
+      updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
+      deleted_at: r.deletedAt != null ? new Date(r.deletedAt).toISOString() : null,
+    })).filter(r => r.from_exercise_id && r.to_exercise_id);
+    for (let i = 0; i < payload.length; i += 200) {
+      const { error } = await sb.from('exercise_swaps').upsert(
+        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
+      );
+      if (error) logPgErr('sync._pushExerciseSwaps', error);
+    }
+  } catch (e) { logBulkWarn('sync._pushExerciseSwaps', e?.message); }
+}
+
+async function _pushExerciseSlotDefaults(sb, supabaseUserId, localUserId) {
+  try {
+    const rows = await getAllExerciseSlotDefaultsForUser(localUserId);
+    if (!rows?.length) return;
+    const payload = rows.map(r => ({
+      id: r.id, user_id: supabaseUserId,
+      from_exercise_id: r.fromExerciseId,
+      routine_id: r.routineId ?? null,
+      exercise_id: r.exerciseId,
+      created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
+      updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
+      deleted_at: r.deletedAt != null ? new Date(r.deletedAt).toISOString() : null,
+    })).filter(r => r.from_exercise_id && r.exercise_id);
+    for (let i = 0; i < payload.length; i += 200) {
+      const { error } = await sb.from('exercise_slot_defaults').upsert(
+        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
+      );
+      if (error) logPgErr('sync._pushExerciseSlotDefaults', error);
+    }
+  } catch (e) { logBulkWarn('sync._pushExerciseSlotDefaults', e?.message); }
 }
 
 async function _pushUserBodyProfile(sb, supabaseUserId, localUserId) {
@@ -1676,6 +1772,12 @@ export async function pullFromCloud(supabaseUserId) {
     const insightCount = await _pullUserInsights(sb, supabaseUserId);
     if (bailForWipe('notes_goals')) return workoutCount;
     const exerciseNoteCount = await _pullExerciseUserNotes(sb, supabaseUserId);
+    // Campaign 9 exercise-intent layer. Runs AFTER _pullExercises (well
+    // above), so the dedupe-by-name remap has already reconciled the two
+    // devices' exercise ids and these rows land on ids that resolve.
+    const intentCount = await _pullExerciseIntent(sb, supabaseUserId);
+    const swapCount = await _pullExerciseSwaps(sb, supabaseUserId);
+    const slotDefaultCount = await _pullExerciseSlotDefaults(sb, supabaseUserId);
     const workoutNoteCount = await _pullWorkoutNotes(sb, supabaseUserId);
     const goalCount = await _pullExerciseGoals(sb, supabaseUserId);
     const peakWeekCount = await _pullPeakWeekPlans(sb, supabaseUserId);
@@ -1742,6 +1844,9 @@ export async function pullFromCloud(supabaseUserId) {
       bodyProfile: bodyProfileFound ? 1 : 0,
       insights: insightCount,
       exerciseNotes: exerciseNoteCount,
+      exerciseIntent: intentCount,
+      exerciseSwaps: swapCount,
+      exerciseSlotDefaults: slotDefaultCount,
       workoutNotes: workoutNoteCount,
       exerciseGoals: goalCount,
       customExercises: customExerciseCount,
@@ -1781,11 +1886,18 @@ export async function pullFromCloud(supabaseUserId) {
  *   - Cloud row's id matches a local id → skip (already present)
  *   - Cloud row's name matches a local exercise of a different id
  *     → rewrite all local refs (routine_exercises / workout_sets /
- *       exercise_user_notes / exercise_goals) from the local id to
- *       the cloud id, then leave the local row at the cloud id.
+ *       exercise_user_notes / exercise_goals, plus the Campaign 9
+ *       intent layer: exercise_intent.exercise_id,
+ *       exercise_swaps.from_exercise_id + .to_exercise_id, and
+ *       exercise_slot_defaults.from_exercise_id + .exercise_id)
+ *       from the local id to the cloud id, then leave the local row
+ *       at the cloud id.
  *       This is how an install whose deterministic canonical IDs
  *       differ from a sibling install (e.g. different app versions)
- *       gets the two devices' worlds joined up cleanly.
+ *       gets the two devices' worlds joined up cleanly. Anything
+ *       keyed by exercise id that is NOT in that list is orphaned by
+ *       the merge, which is why the intent layer had to join it: an
+ *       exclusion pointing at a dead id silently stops working.
  *   - No match by id or name → INSERT as a new local exercise
  *     (custom or new canonical from a build the local app hasn't
  *     seeded yet).
@@ -1874,6 +1986,98 @@ async function _pullExerciseUserNotes(sb, supabaseUserId) {
     if (failures === 0) await setPullWatermark(supabaseUserId, 'exercise_user_notes', nextWatermark(wm, data));
     return n;
   } catch (e) { logWarn('sync._pullExerciseUserNotes', e?.message); return 0; }
+}
+
+// ─── Campaign 9: the exercise-intent layer (pull side) ────────────────────
+// Watermarked delta pulls with fetchAllRows pagination, the pattern
+// _pullExerciseUserNotes settled on (C6 T-13 / RC6-7): offset pagination
+// within one cycle, and the watermark only advances when every row in the
+// page applied cleanly, so a transport failure retries rather than skipping
+// rows for ever.
+//
+// These pulls deliberately DO NOT filter `deleted_at IS NULL`, unlike their
+// older siblings. A tombstone here is the user's "allow this exercise
+// again", and it is the only carrier of that instruction: filter it out and
+// the second device keeps suppressing an exercise the user restored on the
+// first. The appliers are the safety net, not the query -- each refuses any
+// cloud row that is not strictly newer than what it already holds.
+
+async function _pullExerciseIntent(sb, supabaseUserId) {
+  try {
+    const wm = await getPullWatermark(supabaseUserId, 'exercise_intent');
+    const data = await fetchAllRows(
+      'sync._pullExerciseIntent',
+      () => {
+        let q = sb.from('exercise_intent').select('*').eq('user_id', supabaseUserId)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
+    );
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateExerciseIntentFromCloud } = require('./database');
+    let n = 0;
+    let failures = 0;
+    for (const row of data) {
+      try { await insertOrUpdateExerciseIntentFromCloud(supabaseUserId, row); n++; }
+      catch (e) { failures++; logWarn('sync._pullExerciseIntent', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    if (failures === 0) await setPullWatermark(supabaseUserId, 'exercise_intent', nextWatermark(wm, data));
+    return n;
+  } catch (e) { logWarn('sync._pullExerciseIntent', e?.message); return 0; }
+}
+
+async function _pullExerciseSwaps(sb, supabaseUserId) {
+  try {
+    const wm = await getPullWatermark(supabaseUserId, 'exercise_swaps');
+    const data = await fetchAllRows(
+      'sync._pullExerciseSwaps',
+      () => {
+        let q = sb.from('exercise_swaps').select('*').eq('user_id', supabaseUserId)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
+    );
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateExerciseSwapFromCloud } = require('./database');
+    let n = 0;
+    let failures = 0;
+    for (const row of data) {
+      try { await insertOrUpdateExerciseSwapFromCloud(supabaseUserId, row); n++; }
+      catch (e) { failures++; logWarn('sync._pullExerciseSwaps', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    if (failures === 0) await setPullWatermark(supabaseUserId, 'exercise_swaps', nextWatermark(wm, data));
+    return n;
+  } catch (e) { logWarn('sync._pullExerciseSwaps', e?.message); return 0; }
+}
+
+async function _pullExerciseSlotDefaults(sb, supabaseUserId) {
+  try {
+    const wm = await getPullWatermark(supabaseUserId, 'exercise_slot_defaults');
+    const data = await fetchAllRows(
+      'sync._pullExerciseSlotDefaults',
+      () => {
+        let q = sb.from('exercise_slot_defaults').select('*').eq('user_id', supabaseUserId)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
+    );
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateExerciseSlotDefaultFromCloud } = require('./database');
+    let n = 0;
+    let failures = 0;
+    for (const row of data) {
+      try { await insertOrUpdateExerciseSlotDefaultFromCloud(supabaseUserId, row); n++; }
+      catch (e) { failures++; logWarn('sync._pullExerciseSlotDefaults', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    if (failures === 0) await setPullWatermark(supabaseUserId, 'exercise_slot_defaults', nextWatermark(wm, data));
+    return n;
+  } catch (e) { logWarn('sync._pullExerciseSlotDefaults', e?.message); return 0; }
 }
 
 async function _pullWorkoutNotes(sb, supabaseUserId) {

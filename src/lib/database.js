@@ -8128,6 +8128,11 @@ export async function insertOrUpdateExerciseFromCloud(e) {
       'UPDATE exercise_goals SET exercise_id = ? WHERE exercise_id = ?',
       [e.id, sameName.id],
     ).catch(() => {});
+    // Campaign 9: the intent layer's three tables reference exercises too
+    // (five id columns between them). Remapped in one helper at the end of
+    // this file so an exclusion, a remembered swap or an approved default
+    // is not orphaned when two devices' canonical ids merge.
+    await remapExerciseIdInIntentTables(d, sameName.id, e.id);
     // Remove the duplicate-by-name local row; the upsert below puts
     // the cloud row in its place.
     await d.runAsync('DELETE FROM exercises WHERE id = ?', [sameName.id]);
@@ -9287,4 +9292,241 @@ export async function diagnoseSyncConflicts(currentSessionUid) {
   }
   report.summary.distinctForeignUids = Array.from(report.summary.distinctForeignUids);
   return report;
+}
+
+// ─── Campaign 9: cross-device persistence for the exercise-intent layer ──────
+// Sync-side readers and cloud appliers for exercise_intent, exercise_swaps
+// and exercise_slot_defaults (local schema: SCHEMA_MIGRATIONS v73). Kept at
+// the end of the file, away from the concurrently-edited sections above.
+//
+// Nothing here is training history. These rows record what the user asked
+// the app to STOP suggesting; workouts, sets and PRs are untouched by any
+// of it, on this device or any other.
+
+/**
+ * Every exercise_intent row for the user, INCLUDING tombstones.
+ *
+ * Deliberately unfiltered on deleted_at, the same rule
+ * getAllRoutineExercisesForUser and getAllMorningWeightsForUser follow:
+ * this is the sync PUSH's reader, and "allow this exercise again" is
+ * recorded as a tombstone (clearExerciseIntent). If the push skipped
+ * tombstones the restore would never leave the device, and the user's
+ * other phone would keep suppressing an exercise they un-excluded.
+ * Every product reader filters deleted_at IS NULL.
+ */
+export async function getAllExerciseIntentsForUser(userId) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM exercise_intent WHERE user_id = ?', [userId],
+  ).catch(() => []);
+  return rows.map(rowToCamel);
+}
+
+/** Every exercise_swaps row for the user, including tombstones (see above). */
+export async function getAllExerciseSwapsForUser(userId) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM exercise_swaps WHERE user_id = ?', [userId],
+  ).catch(() => []);
+  return rows.map(rowToCamel);
+}
+
+/** Every exercise_slot_defaults row for the user, including tombstones. */
+export async function getAllExerciseSlotDefaultsForUser(userId) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM exercise_slot_defaults WHERE user_id = ?', [userId],
+  ).catch(() => []);
+  return rows.map(rowToCamel);
+}
+
+/**
+ * Apply one cloud exercise_intent row.
+ *
+ * CONFLICT RULE: newer updated_at wins, and a tie is kept by the LOCAL row
+ * (SQLite is device truth; the cloud is the backup). A cloud row can
+ * therefore never overwrite a strictly newer local intent, which is the
+ * property that matters: the newest thing the user explicitly said about
+ * an exercise is the thing that stands, whether that was "don't suggest
+ * this" or "allow it again". Because both states live in the same row
+ * (the restore is a tombstone, not a delete), one comparison covers both
+ * directions.
+ *
+ * The local table carries UNIQUE(user_id, exercise_id), so the incoming row
+ * is matched by id OR by that natural key: two devices that each minted
+ * their own id for the same exercise must collapse to one row rather than
+ * fail the insert.
+ */
+export async function insertOrUpdateExerciseIntentFromCloud(userId, row) {
+  if (!userId || !row?.id || !row?.exercise_id) return;
+  const d = await db();
+  const cloudUpdated = _tsToMs(row.updated_at) ?? Date.now();
+  const existing = await d.getFirstAsync(
+    `SELECT id, updated_at FROM exercise_intent
+      WHERE (id = ? OR (user_id = ? AND exercise_id = ?))
+      ORDER BY updated_at DESC LIMIT 1`,
+    [row.id, userId, row.exercise_id],
+  ).catch(() => null);
+  if (existing && Number(existing.updated_at ?? 0) >= cloudUpdated) return;
+  // Clear any duplicate-by-natural-key row first: it has already lost the
+  // comparison above, and leaving it would break UNIQUE(user_id, exercise_id).
+  await d.runAsync(
+    'DELETE FROM exercise_intent WHERE user_id = ? AND exercise_id = ? AND id != ?',
+    [userId, row.exercise_id, row.id],
+  );
+  await d.runAsync(
+    `INSERT OR REPLACE INTO exercise_intent
+      (id, user_id, exercise_id, kind, scope_mesocycle_id, reason,
+       created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId, row.exercise_id, row.kind ?? EXERCISE_INTENT.EXCLUDED,
+      row.scope_mesocycle_id ?? null, row.reason ?? null,
+      _tsToMs(row.created_at) ?? cloudUpdated,
+      cloudUpdated,
+      _tsToMs(row.deleted_at) ?? null,
+    ],
+  );
+}
+
+/**
+ * Apply one cloud exercise_swaps row.
+ *
+ * CONFLICT RULE: none, by design. The swap log is an APPEND-ONLY record of
+ * events that happened; an event cannot be edited, only added. INSERT OR
+ * IGNORE on the primary key means a re-pull (or an overlapping watermark
+ * window, which the delta pull deliberately allows) can never duplicate an
+ * event and inflate how often the user "chose" a replacement.
+ */
+export async function insertOrUpdateExerciseSwapFromCloud(userId, row) {
+  if (!userId || !row?.id || !row?.from_exercise_id || !row?.to_exercise_id) return;
+  const d = await db();
+  const created = _tsToMs(row.created_at) ?? Date.now();
+  await d.runAsync(
+    `INSERT OR IGNORE INTO exercise_swaps
+      (id, user_id, from_exercise_id, to_exercise_id, routine_id, mesocycle_id,
+       explicit, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId, row.from_exercise_id, row.to_exercise_id,
+      row.routine_id ?? null, row.mesocycle_id ?? null,
+      row.explicit === false || row.explicit === 0 ? 0 : 1,
+      created,
+      _tsToMs(row.updated_at) ?? created,
+      _tsToMs(row.deleted_at) ?? null,
+    ],
+  );
+}
+
+/**
+ * Apply one cloud exercise_slot_defaults row.
+ *
+ * CONFLICT RULE: identical to exercise_intent, newer updated_at wins and a
+ * tie stays local. The natural key is (user_id, from_exercise_id,
+ * routine_id) and routine_id is nullable, so the lookup uses `IS` rather
+ * than `=` (SQLite treats NULL = NULL as unknown, which would miss the
+ * plan-wide default row every time).
+ */
+export async function insertOrUpdateExerciseSlotDefaultFromCloud(userId, row) {
+  if (!userId || !row?.id || !row?.from_exercise_id || !row?.exercise_id) return;
+  const d = await db();
+  const routineId = row.routine_id ?? null;
+  const cloudUpdated = _tsToMs(row.updated_at) ?? Date.now();
+  const existing = await d.getFirstAsync(
+    `SELECT id, updated_at FROM exercise_slot_defaults
+      WHERE (id = ? OR (user_id = ? AND from_exercise_id = ? AND routine_id IS ?))
+      ORDER BY updated_at DESC LIMIT 1`,
+    [row.id, userId, row.from_exercise_id, routineId],
+  ).catch(() => null);
+  if (existing && Number(existing.updated_at ?? 0) >= cloudUpdated) return;
+  await d.runAsync(
+    `DELETE FROM exercise_slot_defaults
+      WHERE user_id = ? AND from_exercise_id = ? AND routine_id IS ? AND id != ?`,
+    [userId, row.from_exercise_id, routineId, row.id],
+  );
+  await d.runAsync(
+    `INSERT OR REPLACE INTO exercise_slot_defaults
+      (id, user_id, from_exercise_id, routine_id, exercise_id,
+       created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId, row.from_exercise_id, routineId, row.exercise_id,
+      _tsToMs(row.created_at) ?? cloudUpdated,
+      cloudUpdated,
+      _tsToMs(row.deleted_at) ?? null,
+    ],
+  );
+}
+
+/**
+ * Rewrite every Campaign 9 reference to `fromId` so it points at `toId`.
+ *
+ * Called from insertOrUpdateExerciseFromCloud's dedupe-by-name path, which
+ * already remaps routine_exercises, workout_sets, exercise_user_notes and
+ * exercise_goals. Without this the three intent tables would be left
+ * pointing at an exercise id that no longer exists, so every exclusion,
+ * every remembered swap and every approved default the user set would be
+ * silently orphaned the first time two devices' canonical ids met.
+ *
+ * All FIVE id columns move, not just exercise_id: a swap references both
+ * ends of the pair, and a slot default references both the slot it
+ * replaces and the exercise that replaces it.
+ *
+ * exercise_intent and exercise_slot_defaults carry UNIQUE natural keys, so
+ * the user may legitimately hold a row under BOTH ids. The loser (the
+ * older updated_at) is dropped first; UPDATE OR REPLACE then covers the
+ * tie. Everything is best-effort: on an install whose local schema predates
+ * v73 the tables are absent and the remap is a no-op.
+ */
+export async function remapExerciseIdInIntentTables(d, fromId, toId) {
+  if (!d || !fromId || !toId || fromId === toId) return;
+  // exercise_intent, keyed UNIQUE(user_id, exercise_id).
+  await d.runAsync(
+    `DELETE FROM exercise_intent
+      WHERE exercise_id = ?
+        AND EXISTS (SELECT 1 FROM exercise_intent b
+                     WHERE b.user_id = exercise_intent.user_id
+                       AND b.exercise_id = ?
+                       AND b.updated_at >= exercise_intent.updated_at)`,
+    [fromId, toId],
+  ).catch(() => {});
+  await d.runAsync(
+    'UPDATE OR REPLACE exercise_intent SET exercise_id = ? WHERE exercise_id = ?',
+    [toId, fromId],
+  ).catch(() => {});
+  // exercise_swaps, append-only and unconstrained beyond its primary key.
+  await d.runAsync(
+    'UPDATE exercise_swaps SET from_exercise_id = ? WHERE from_exercise_id = ?',
+    [toId, fromId],
+  ).catch(() => {});
+  await d.runAsync(
+    'UPDATE exercise_swaps SET to_exercise_id = ? WHERE to_exercise_id = ?',
+    [toId, fromId],
+  ).catch(() => {});
+  // exercise_slot_defaults: exercise_id is the replacement and sits outside
+  // the natural key, so it moves plainly. from_exercise_id is part of
+  // UNIQUE(user_id, from_exercise_id, routine_id) and needs the same
+  // loser-first treatment as intent (routine_id compared with IS, it is
+  // nullable).
+  await d.runAsync(
+    'UPDATE exercise_slot_defaults SET exercise_id = ? WHERE exercise_id = ?',
+    [toId, fromId],
+  ).catch(() => {});
+  await d.runAsync(
+    `DELETE FROM exercise_slot_defaults
+      WHERE from_exercise_id = ?
+        AND EXISTS (SELECT 1 FROM exercise_slot_defaults b
+                     WHERE b.user_id = exercise_slot_defaults.user_id
+                       AND b.from_exercise_id = ?
+                       AND b.routine_id IS exercise_slot_defaults.routine_id
+                       AND b.updated_at >= exercise_slot_defaults.updated_at)`,
+    [fromId, toId],
+  ).catch(() => {});
+  await d.runAsync(
+    'UPDATE OR REPLACE exercise_slot_defaults SET from_exercise_id = ? WHERE from_exercise_id = ?',
+    [toId, fromId],
+  ).catch(() => {});
 }
