@@ -948,6 +948,22 @@ export function runWeeklyCoach(inputs) {
   // eager to declare off-target. Rapid-loss safety reads the plain trend
   // separately and is unaffected. D1 #6.
   const onTargetBand = Math.max(0.2 * Math.abs(phase.goalRatePct) + 0.05, 0.15);
+  // C10F: the number shown as evidence for the coaching decision must be
+  // the rate the decision actually used. `rateLabel` below is built from
+  // the plain-EWMA weightDelta, while onTarget/offTargetDirection come
+  // from decisionRatePct (the robust read, time-normalised by C10B), so
+  // the chip could show one figure while the verdict beside it was
+  // reached from another. This is that same effective rate, rounded for
+  // display only - no second trend is calculated.
+  const coachingRatePct = decisionRatePct != null
+    ? Math.round(decisionRatePct * 100) / 100
+    : null;
+  const coachingRateLabel = coachingRatePct == null
+    ? null
+    : (coachingRatePct > 0.01 ? `gaining ${Math.abs(coachingRatePct)}%/wk`
+      : coachingRatePct < -0.01 ? `losing ${Math.abs(coachingRatePct)}%/wk`
+        : 'holding steady');
+
   const onTarget = (decisionRatePct != null)
     ? Math.abs(decisionRatePct - phase.goalRatePct) <= onTargetBand
     : null;
@@ -1027,6 +1043,30 @@ export function runWeeklyCoach(inputs) {
   const peakWeekContextApplied = recoveryForPush !== recoveryScore;
   const matrix = autoregulationMatrix(recoveryScore, performanceScore, recoveryForPush);
 
+  // C10F: did the user's reported STRESS actually change the training
+  // decision? getRecoveryScore lets high life stress worsen the recovery
+  // read (never improve it), and that downgrade was silent: a user could
+  // report high stress, have it hold their training back, and never be
+  // told it counted.
+  //
+  // Materiality is measured, not assumed - the same principle as C10E.
+  // Both functions are pure, so the counterfactual is just a second call
+  // with stress omitted. If the matrix lands on the same signal either
+  // way, stress changed nothing and nothing is claimed. No threshold,
+  // mapping or delta is touched; this only observes.
+  const stressDowngradeMaterial = (() => {
+    const st = Number(stressScore);
+    if (!Number.isFinite(st) || st < 4) return false;
+    const withoutStress = getRecoveryScore(energyScore, sorenessScore, null);
+    if (withoutStress === recoveryScore) return false;
+    const withoutPush = contextAdjustedRecovery(withoutStress, {
+      blockWeekIndex, blockAccumWeeks, consecutivePoorRecoveryWeeks,
+      consecutiveGrade3RecoveryWeeks, sorenessScore, energyScore, stressScore,
+    });
+    const alt = autoregulationMatrix(withoutStress, performanceScore, withoutPush);
+    return alt.trainingSignal !== matrix.trainingSignal || alt.volumeDelta !== matrix.volumeDelta;
+  })();
+
   let volumeSignal = matrix.volumeDelta;
   let trainingSignal = matrix.trainingSignal;
   const matrixDeload = matrix.deloadFlag && consecutivePoorRecoveryWeeks >= 1;
@@ -1080,7 +1120,16 @@ export function runWeeklyCoach(inputs) {
   // is guaranteed null at that point) and recomputes it from the same
   // getTrainingNote helper with the escalated volumeSignal, never hand-rolling
   // new copy.
-  let trainingNote = safetyHoldNote ? `${safetyHoldNote} ${baseTrainingNote}` : baseTrainingNote;
+  // C10F: when the stress downgrade genuinely moved the decision, say so,
+  // using the user's own answer as the provenance. No grade number, no
+  // matrix cell, no threshold - just the consequence and where it came
+  // from. A safety hold is the stronger reason and keeps the front of the
+  // line; stress is not credited on top of it.
+  const stressNote = (stressDowngradeMaterial && !safetyHoldNote)
+    ? 'Kept training steady because you reported high stress this week.'
+    : null;
+  const leadNote = safetyHoldNote ?? stressNote;
+  let trainingNote = leadNote ? `${leadNote} ${baseTrainingNote}` : baseTrainingNote;
 
   // ── CALORIE ADJUSTMENT ────────────────────────────────────────────────────
   let calorieAdjustment = null;
@@ -1762,8 +1811,10 @@ export function runWeeklyCoach(inputs) {
     whatWorking.push('Your recovery was in range.');
   }
 
-  if (onTarget && weightDelta != null) {
-    whatWorking.push(`Your weight trend is on target (${rateLabel}).`);
+  if (onTarget && coachingRateLabel != null) {
+    // Quotes the coaching rate, not the scale delta: the verdict and the
+    // number beside it now come from the same evidence.
+    whatWorking.push(`Your weight trend is on target (${coachingRateLabel}).`);
   }
 
   // Fallback, only when literally nothing to say
@@ -1917,6 +1968,12 @@ export function runWeeklyCoach(inputs) {
       onTarget: onTarget ?? false,
       deltaLabel,
       rateLabel,
+      // C10F: the rate the DECISION used, exposed so the surface that
+      // shows the verdict can show the evidence behind it. `delta` and
+      // `rateLabel` above stay the scale reading, unchanged, for the
+      // surfaces that legitimately want it.
+      coachingRatePct,
+      coachingRateLabel,
     },
     // U4: cycle-phase water-rise reassurance (or null). Additive; see cyclePhase.js.
     cyclePhaseNote,

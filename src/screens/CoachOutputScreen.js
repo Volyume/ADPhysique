@@ -2723,9 +2723,24 @@ export default function CoachOutputScreen({ navigation, route }) {
             // The free-tier trend surfaces keep the plain gloss (no coach
             // claim belongs there), and no smoother is named.
             tooltip={trend.delta !== null
-              ? `${GLOSSARY.ewma} The weekly decision reads direction from a sturdier version of this trend that ignores one-off spikes, so its verdict can differ slightly from this exact number.`
+              ? `${GLOSSARY.ewma} This is the scale reading. The weekly decision is made from the coaching trend shown beside it, which ignores one-off spikes and accounts for how long ago you last logged.`
               : undefined}
           />
+          {/* C10F: the rate the DECISION was actually made from. The chip
+              above is the scale reading; this is the evidence behind the
+              on-target verdict, so the number and the verdict a user reads
+              together now come from the same place. Shown only when there
+              is a decision rate to show. */}
+          {trend.coachingRateLabel ? (
+            <StatChip
+              icon="analytics-outline"
+              iconColor={trendColor}
+              value={trend.coachingRateLabel}
+              label="Coaching trend"
+              valueColor={t.colors.textPrimary}
+              tooltip={'The rate this week\'s decision was made from. It smooths out one-off spikes and measures across the time that actually passed since your last regular weigh-ins, so it can differ a little from the raw scale reading.'}
+            />
+          ) : null}
           <StatChip
             icon="barbell-outline"
             iconColor={t.colors.primary}
