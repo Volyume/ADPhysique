@@ -70,17 +70,57 @@ export function remapSoreness13to15(v) {
  * Per-muscle recovery aggregates over the block's accumulation window.
  * rows: [{ at, soreness13, joint }] — the muscle's block sessions'
  * feedback (soreness_24h_before, joint_discomfort).
+ *
+ * D91-24, FIXED in Campaign 10J (founder ruling): an APPLIED EARLY-DELOAD
+ * WEEK IS NOT A NORMAL ACCUMULATION-DOSAGE WEEK. Its sessions are
+ * deliberately light, so the low soreness/joint they produce say nothing
+ * about how the muscle recovered from the normal dose — but they used to
+ * land in these averages as ordinary observations and drag them down.
+ *
+ * That error was tolerated while deloadFlagFired contributed 2 to
+ * recoveryCostWeight, because the flag alone then reached
+ * RECOVERY_EXCESSIVE_WEIGHT and the block still classified conservatively.
+ * Campaign 10I correctly reduced that contribution to 1 (a block-level
+ * event is not a per-muscle verdict), which removed the containment and
+ * left the dilution able to sink a genuinely strained muscle below its
+ * threshold. So the dilution is fixed at source here.
+ *
+ * WHAT THIS DOES NOT DO. The accumulation set and the early/late split are
+ * still derived from the PLANNED block structure, before any exclusion —
+ * so removing a week's ROWS never re-indexes the block or promotes an
+ * earlier normal week into "late". Calendar identity stays calendar
+ * identity. The deload EVENT keeps speaking through deloadFlagFired /
+ * deloadFlagMidBlock and its Campaign 10I weight of 1, and the week after
+ * an early deload keeps its existing rebound treatment
+ * (computeReboundWindows, untouched). Nothing here lowers an evidence
+ * requirement: excluded rows are simply not evidence, so a muscle left
+ * without enough legitimate feedback falls to the existing
+ * insufficient-data posture rather than to an invented "recovered well".
+ *
+ * @param {number[]} [appliedEarlyDeloadWeekIndices] the SAME list the
+ *   runner already derives for deload-flag and rebound-window work
+ *   (mesocycle_weeks rows flagged is_deload outside the planned deload
+ *   week). Not a second source of truth — threaded through, not re-derived.
  */
 export function computeMuscleRecoveryAggregates({
   rows = [],
   blockStart,
   blockWeeks,
   deloadWeekIndex = blockWeeks,
+  appliedEarlyDeloadWeekIndices = [],
 } = {}) {
+  // Planned structure first, and only the planned structure: the split that
+  // decides which weeks are "late" must not notice the exclusion below.
   const accum = accumulationWeeks(blockWeeks, deloadWeekIndex);
   const splitAt = Math.ceil(accum.length / 2);
   const lateWeeks = new Set(accum.slice(splitAt));
   const accumSet = new Set(accum);
+  // Applied early deloads exclude ROWS, never weeks-from-the-chronology.
+  const earlyDeloadWeeks = new Set(
+    (Array.isArray(appliedEarlyDeloadWeekIndices) ? appliedEarlyDeloadWeekIndices : [])
+      .map((w) => num(w, null))
+      .filter((w) => w != null && w !== deloadWeekIndex),
+  );
 
   let dataPoints = 0;
   const lateSoreness = [];
@@ -90,6 +130,10 @@ export function computeMuscleRecoveryAggregates({
     if (at == null) continue;
     const w = weekOf(blockStart, at);
     if (!accumSet.has(w)) continue;
+    // ONE coherent exclusion rule, applied before anything is counted, so
+    // sorenessLateAvg, jointDiscomfortAvg and dataPoints all describe the
+    // same population: the muscle's response to the NORMAL dose.
+    if (earlyDeloadWeeks.has(w)) continue;
     const soreness = remapSoreness13to15(row.soreness13);
     const joint = num(row.joint, null);
     if (soreness != null || joint != null) dataPoints += 1;

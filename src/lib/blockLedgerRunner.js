@@ -202,6 +202,12 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
       });
       const agg = computeMuscleRecoveryAggregates({
         rows: recoveryRows, blockStart, blockWeeks, deloadWeekIndex,
+        // C10J (D91-24): the SAME list already derived above for the deload
+        // flags and the rebound windows, threaded through rather than
+        // re-derived. An applied early-deload week's deliberately light
+        // sessions must not dilute the muscle's response to the normal
+        // accumulation dose.
+        appliedEarlyDeloadWeekIndices,
       });
       const week1Planned = planned
         .filter((p) => p.muscle === muscle && p.week_index === 1)
