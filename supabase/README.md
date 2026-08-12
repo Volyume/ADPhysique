@@ -63,10 +63,43 @@ contract must not delegate its authority to a superseded audit.
 - **HELD: 049 only.** `migrate_049_drop_peak_week_plans.sql` is
   destructive and its client-side prerequisites have not landed. It must
   not be applied. See its own header and the row below.
-- **Written but NOT applied: 132, 133, 134, 135.** All four are awaiting
-  the founder's exact phrase "run against production" and say so in their
-  own headers. They are Campaign 1 items and ship with their client-side
-  counterparts.
+- **132-136 APPLIED 2026-08-12** (founder order, Claude-run, project
+  `sujrylzzxcqxxfygptns`, eu-west-1). Every object verified read-only
+  after the apply:
+  - **132** `planned_muscle_volume` gained `mev, mav, mrv` (integer) and
+    `source` (text). Verified present.
+  - **133** no-op in practice: production held **0**
+    `@volyume_privacy_prefs` rows in `user_prefs` before the DELETE ran.
+    The client-side exclusion (P0-2) had already stopped the leak, and
+    nothing had accumulated. 0 rows after.
+  - **134** all nine target tables now carry a `touch_updated_at` trigger
+    (`mesocycles, mesocycle_weeks, coach_outputs, nutrition_targets,
+    user_body_profile, programmes, routines, routine_exercises,
+    planned_muscle_volume`), joining the eight guarded since 047.
+  - **135** the DELETE was a no-op (0 duplicate week groups). The real
+    work was step 2: all 4 `coach_outputs` rows now carry the
+    deterministic `co_<week_start>_<user_id>` id (0 non-deterministic
+    ids), 4 rows before and after — nothing lost. **See the defect note
+    on step 3 below.**
+  - **136** all three tables created with RLS enabled and one
+    "Users manage own …" policy each; `delete_user_data()` re-created and
+    confirmed to cover all three. Posture is identical to the existing
+    `weekly_checkins_v2` (RLS on, one policy, the default `anon` grants
+    that RLS blocks), so no new exposure. migrate_130's revoke survived:
+    `delete_user_data` ACL is `postgres, authenticated, service_role`
+    only — no `anon`, no `PUBLIC` — because `CREATE OR REPLACE` preserves
+    an existing ACL.
+- **DEFECT FOUND IN 135 (2026-08-12, recorded not fixed).** Step 3 is
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_coach_outputs_user_week`, but
+  production already had a **non-unique** index of that exact name
+  (`(user_id, week_start DESC)`). `IF NOT EXISTS` matches by NAME, so the
+  statement was a **silent no-op** and created no unique index. It did no
+  harm here — `coach_outputs_user_id_week_start_key UNIQUE (user_id,
+  week_start)` has enforced the invariant since table creation
+  (`setup_complete.sql`), which is also why the DELETE found nothing — but
+  on any environment lacking that constraint the file would silently fail
+  to create the structure it exists to create. The name collision must be
+  resolved before this file is trusted on a fresh project.
 - **059 IS APPLIED.** Every "059 is drafted / pending / held" line that
   survives further down this file is stale and is corrected in place. The
   live CHECK on `food_entries.meal_slot` carries the `meal_[0-9]+`

@@ -28,12 +28,40 @@
 --
 -- Applied locally: local counterparts are database.js SCHEMA_MIGRATIONS
 -- v71 (dedup + unique index) and v72 (deterministic re-id), shipping in
--- the same client build. Applied remotely: NO - awaiting the founder's
--- explicit "run against production" for this batch. Ordering: after
--- migrate_134, and ONLY AFTER the v72 client build is live: a pre-v72
--- client still holding legacy ids would hit the new unique index on its
--- coach-output batch until it upgrades (that table's push only; it
--- self-heals on upgrade when v72 re-ids and the next push converges).
+-- the same client build.
+--
+-- Applied remotely: YES - EU-Dublin production 2026-08-12 on the
+-- founder's order (Claude-run; the founder ruled the ordering conditions
+-- below do not gate the apply: "it runs when I tell you to"). Result,
+-- verified read-only before and after:
+--   * step 1 DELETE: NO-OP. Zero duplicate (user_id, week_start) groups
+--     existed, because coach_outputs_user_id_week_start_key UNIQUE
+--     (user_id, week_start) has been live since table creation
+--     (setup_complete.sql) - which is the RC6-6 preflight question,
+--     now answered. 4 rows before, 4 rows after; nothing was deleted.
+--   * step 2 UPDATE: the real work. All 4 rows now carry the
+--     deterministic co_<week_start>_<user_id> id (0 non-deterministic).
+--   * step 3: SILENTLY DID NOTHING - see the defect below.
+--
+-- DEFECT IN THIS FILE (found 2026-08-12 during the apply, recorded not
+-- fixed): step 3's CREATE UNIQUE INDEX IF NOT EXISTS
+-- idx_coach_outputs_user_week collides with a pre-existing NON-UNIQUE
+-- index of that exact name, CREATE INDEX idx_coach_outputs_user_week ON
+-- public.coach_outputs (user_id, week_start DESC). IF NOT EXISTS matches
+-- by NAME, not by definition, so the statement was a no-op and no unique
+-- index was created. Harmless here (the constraint above already enforces
+-- the invariant, and no redundant index was added either) but on a fresh
+-- project lacking that constraint this file would silently fail to make
+-- the identity structural. Resolve the name collision before trusting
+-- this file anywhere else.
+--
+-- The ordering conditions below are retained as the historical record of
+-- what was believed at authoring time; the founder overruled them.
+-- Ordering: after migrate_134, and ONLY AFTER the v72 client build is
+-- live: a pre-v72 client still holding legacy ids would hit the new
+-- unique index on its coach-output batch until it upgrades (that table's
+-- push only; it self-heals on upgrade when v72 re-ids and the next push
+-- converges).
 --
 -- SECOND RELEASE CONDITION (Campaign 6 Review C, RC6-2, D97-25): the
 -- applied COLUMN had no local writer until the RC6-2 client fix
