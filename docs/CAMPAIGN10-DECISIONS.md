@@ -103,3 +103,40 @@ Re-verified end to end on 2026-08-12 rather than taken on trust:
 The last point had been pinned only by a source-comment guard. It is now
 pinned behaviourally too, in
 `src/lib/__tests__/campaign10g.blockEvidence.test.js`.
+
+---
+
+## C10H-1 — F-3, F-4 and F-5 were all already fixed; the campaign became verification
+
+No ruling was needed on any of the three. All were closed by Campaign 1 on
+2026-08-10 in the same commit, `19c109dd`:
+
+| Item | Fix | Where |
+|---|---|---|
+| F-3 analytics opt-out entering pref sync | P0-2 | `/^@volyume_privacy_prefs$/` in `PREF_EXCLUDE_PATTERNS` (`src/lib/sync.js`) |
+| F-4 dropped allergen stamp | P0-3 | `'mealPlanExcludeTags'` in `PROFILE_FIELDS_TRACKED` (`src/store/useAppStore.js`) |
+| F-5 meal reminders wiped on launch | P0-5 | meal re-lay in `restoreNotifications` (`src/lib/notifications/scheduler.js`) |
+
+The audit findings in `docs/_FULL-APP-PRODUCT-MAP.md` predate that commit
+and have been marked stale.
+
+**What was genuinely missing, and what this campaign did.** All three were
+pinned mostly by SOURCE guards — `fs.readFileSync` plus a regex over the
+fix site. A source guard proves the line is still written; it does not
+prove the behaviour still holds when the machinery around it changes. So
+10H converted them into behavioural pins that run the real predicate, the
+real merge and the real appliers:
+
+- `src/lib/__tests__/campaign10h.userChoice.test.js` — privacy exclusion
+  and the allergen profile merge, including the counterfactual that proves
+  the stamp is what defends the exclusion.
+- `src/store/__tests__/campaign10h.choiceWriters.test.js` — the two
+  writers: `setAllergenExcludes` and the analytics toggle.
+- `src/lib/notifications/__tests__/campaign10h.mealReminderRestore.test.js`
+  — the real `restoreNotifications` against a stored preference, plus the
+  Pro gate, the ED fail-closed gate and quiet hours on the launch path.
+
+**No production code changed.** Nothing in the ED-safety system, the
+allergen tag tables, the filtering rules, the meal-generation maths, the
+notification copy or the tier gates was touched, and no migration was
+written or run.
