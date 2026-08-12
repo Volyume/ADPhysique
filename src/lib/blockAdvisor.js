@@ -383,11 +383,15 @@ export function applyAdjustEvidence(nextBlock, preview, { finished = true } = {}
   if (nextBlock.recommendation === 'consider_rebuild') return nextBlock;
 
   if (preview.meaningful) {
-    const dir = preview.climbs > 0 && preview.reductions === 0
-      ? 'Some muscle groups start higher next block'
-      : preview.reductions > 0 && preview.climbs === 0
-        ? 'Some muscle groups start lower next block'
-        : 'Some muscle groups start higher and some lower next block';
+    // Review D7: the headline speaks about where the block STARTS, so a
+    // ceiling-only move must not be described as a higher start.
+    const dir = preview.climbs === 0 && preview.reductions === 0
+      ? 'Some muscle groups build to a different peak next block'
+      : preview.climbs > 0 && preview.reductions === 0
+        ? 'Some muscle groups start higher next block'
+        : preview.reductions > 0 && preview.climbs === 0
+          ? 'Some muscle groups start lower next block'
+          : 'Some muscle groups start higher and some lower next block';
     return {
       ...nextBlock,
       recommendation: 'adjust',
@@ -399,13 +403,20 @@ export function applyAdjustEvidence(nextBlock, preview, { finished = true } = {}
   }
 
   // Honest equivalence (requirement C): no manufactured difference.
+  // Review D3: a recovery week that IS sized differently is a real, if
+  // small, difference, so the "same training week" claim is dropped and
+  // the actual difference is named instead. It does not flip the
+  // recommendation: the training weeks themselves are identical.
+  const sameWeek = preview.recoveryWeekDiffers
+    ? 'The training weeks are the same either way; continuing with adjustments would size your recovery week to the work you actually did.'
+    : 'Either option gives you the same training week.';
   return {
     ...nextBlock,
     recommendation: 'repeat',
     headline: 'Go again: the same targets still fit',
     body: finished
-      ? 'Your current set targets are still supported by the evidence, so there are no meaningful training changes to apply. Either option gives you the same training week.'
-      : 'Your recovery week does its job, then the same set targets still fit: the evidence supports them, so there are no meaningful training changes to apply. Either option gives you the same training week.',
+      ? `Your current set targets are still supported by the evidence, so there are no meaningful training changes to apply. ${sameWeek}`
+      : `Your recovery week does its job, then the same set targets still fit: the evidence supports them, so there are no meaningful training changes to apply. ${sameWeek}`,
   };
 }
 
