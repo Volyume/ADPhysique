@@ -37,7 +37,7 @@ import {
   getOpenEdPatternFlag,
   storeBlockLedger,
 } from './database';
-import { buildBlockLedger, LEDGER_VERSION, STALE_EVIDENCE_WEEKS } from './interBlock';
+import { buildBlockLedger, BLOCK_CLASS, LEDGER_VERSION, STALE_EVIDENCE_WEEKS } from './interBlock';
 import { computeBlockPerformance, effectiveBlockSlopePct } from './blockMetrics';
 import {
   computeMuscleRecoveryAggregates,
@@ -73,6 +73,43 @@ const toMs = (v) => {
   const n = typeof v === 'number' ? v : new Date(v).getTime();
   return Number.isFinite(n) ? n : null;
 };
+
+/**
+ * C10N: how long ago the most recent LEGITIMATE per-muscle block evidence
+ * finished, keyed by muscle. One clock for one product concept — the
+ * activation carry (D10, Campaign 8) and the Adjust decision both read this,
+ * so they can never disagree about when memory stops being actionable.
+ *
+ * "Legitimate" is the load-bearing word. An INSUFFICIENT_DATA entry is a
+ * block we could not judge, so it contributes nothing and must NOT restart
+ * the clock; neither may reading a stored ledger, syncing, restarting the
+ * app, opening a screen or choosing Repeat, none of which produce evidence.
+ * Only a newly judged compatible block can make memory fresh again.
+ *
+ * Blocks are walked oldest-first so the newest judged entry per muscle wins.
+ * Fails toward STALE: an unreadable date or an unparseable ledger records
+ * nothing, so the muscle reads as having no recent evidence.
+ */
+function judgedEvidenceAgeByMuscle(mesos, nowMs) {
+  const byMuscle = new Map();
+  const dated = (Array.isArray(mesos) ? mesos : [])
+    .filter((m) => m?.blockLedger && toMs(m.startDate) != null)
+    .sort((a, b) => toMs(a.startDate) - toMs(b.startDate));
+  for (const m of dated) {
+    const overdue = getBlockStatus(
+      toMs(m.startDate), m.plannedWeeks ?? m.durationWeeks ?? 5, nowMs,
+    ).weeksOverdue;
+    if (!Number.isFinite(overdue)) continue;
+    try {
+      for (const e of JSON.parse(m.blockLedger)?.entries ?? []) {
+        if (!e?.muscle) continue;
+        if (e.classification === BLOCK_CLASS.INSUFFICIENT_DATA) continue;
+        byMuscle.set(e.muscle, { entry: e, weeksOverdue: overdue });
+      }
+    } catch (_e) { /* unparseable prior ledger: no evidence */ }
+  }
+  return byMuscle;
+}
 
 /** Calm mode OR open ED flag, fail closed on any read failure. */
 async function readSuppression(userId) {
@@ -624,6 +661,16 @@ export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', u
       ? toMs(current.startDate) + (current.plannedWeeks ?? current.durationWeeks ?? 5) * WEEK_MS
       : null;
 
+    // C10N: the Adjust decision had NO freshness gate. Campaign 8 (D10) gave
+    // one to the activation carry, so a returning user's memory expired
+    // there — but the very same user pressing Adjust on the decision card
+    // still received the full learned band, however old the evidence behind
+    // it was. That is the stored-ledger asymmetry D97-3 named, surviving on
+    // the other path: whether stale memory prescribed depended on WHICH
+    // screen the user reached. The same STALE_EVIDENCE_WEEKS boundary now
+    // governs both. Memory persists; actionability expires.
+    const freshnessByMuscle = judgedEvidenceAgeByMuscle(mesosForReplay, Date.now());
+
     const ranges = {};
     for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
       const research = VOLUME_LANDMARKS[muscle];
@@ -638,10 +685,16 @@ export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', u
         muscle,
       });
       const manualEntry = manualTable?.[muscle] ?? null;
+      // The band and every entry behind it stay untouched in storage; they
+      // are simply not consulted to prescribe until a fresh judged block
+      // exists. An INSUFFICIENT_DATA block cannot supply that freshness, so
+      // it neither refreshes nor erases what earlier blocks established.
+      const recent = freshnessByMuscle.get(muscle) ?? null;
+      const learnedFresh = recent != null && recent.weeksOverdue < STALE_EVIDENCE_WEEKS;
       ranges[muscle] = resolveSeedRange({
         manual: isManualEdit(manualEntry, research) ? manualEntry : null,
         ledgerEntry: ledger?.entries?.find?.((e) => e.muscle === muscle) ?? null,
-        learnedRange: learned.isLearned ? learned : null,
+        learnedRange: (learned.isLearned && learnedFresh) ? learned : null,
         profileAdjusted: profileAdjustedPrior(muscle, userProfile),
         research,
         suppressed,
