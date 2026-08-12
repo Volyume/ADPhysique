@@ -43,6 +43,7 @@ export default function SettingsWorkoutScreen() {
     defaultRestSeconds, setDefaultRestSeconds,
     autoStartRestTimer, setAutoStartRestTimer,
     restEndAlertEnabled, setRestEndAlertEnabled,
+    restSoundsEnabled, setRestSoundsEnabled,
     workoutPrefsLoaded, loadWorkoutPrefs,
   } = useAppStore(useShallow(s => ({
     bodyWeightUnits: s.bodyWeightUnits,
@@ -52,6 +53,8 @@ export default function SettingsWorkoutScreen() {
     autoStartRestTimer: s.autoStartRestTimer,
     setAutoStartRestTimer: s.setAutoStartRestTimer,
     restEndAlertEnabled: s.restEndAlertEnabled,
+    restSoundsEnabled: s.restSoundsEnabled,
+    setRestSoundsEnabled: s.setRestSoundsEnabled,
     setRestEndAlertEnabled: s.setRestEndAlertEnabled,
     workoutPrefsLoaded: s.workoutPrefsLoaded,
     loadWorkoutPrefs: s.loadWorkoutPrefs,
@@ -172,6 +175,25 @@ export default function SettingsWorkoutScreen() {
               onValueChange={v => { haptics.selection(); setRestEndAlertEnabled(v); }}
               trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
               thumbColor={restEndAlertEnabled ? t.colors.primary : t.colors.textMuted}
+            />
+          }
+        />
+
+        {/* C10C: the in-app cues, separate from the lock-screen alert above.
+            A user training with the app open may want silence without
+            losing the alert that reaches them when the phone is locked, or
+            the other way round, so neither switch touches the other. */}
+        <SettingRow
+          icon="volume-high-outline"
+          label="Rest timer sounds"
+          sub="Countdown pips and the end-of-rest tone while the app is open. The timer and its vibration keep working either way."
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={!!restSoundsEnabled}
+              onValueChange={v => { haptics.selection(); setRestSoundsEnabled(v); }}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={restSoundsEnabled ? t.colors.primary : t.colors.textMuted}
             />
           }
         />

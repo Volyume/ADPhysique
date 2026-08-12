@@ -1700,6 +1700,13 @@ const useAppStore = create((set, get) => ({
   defaultRestSeconds: 90,
   autoStartRestTimer: true,
   restEndAlertEnabled: true,
+  // C10C: the in-app rest-timer countdown pips and the end-of-rest tone.
+  // Deliberately SEPARATE from restEndAlertEnabled above, which governs the
+  // OS lock-screen alert: one is what you hear with the app open, the other
+  // is what reaches you with the phone locked, and a user may reasonably
+  // want either without the other. Defaults ON, so existing behaviour is
+  // unchanged for everyone who never opens the setting.
+  restSoundsEnabled: true,
   workoutPrefsLoaded: false,
   loadWorkoutPrefs: async () => {
     try {
@@ -1710,6 +1717,7 @@ const useAppStore = create((set, get) => ({
         if (Number.isFinite(parsed.defaultRestSeconds)) next.defaultRestSeconds = parsed.defaultRestSeconds;
         if (typeof parsed.autoStartRestTimer === 'boolean') next.autoStartRestTimer = parsed.autoStartRestTimer;
         if (typeof parsed.restEndAlertEnabled === 'boolean') next.restEndAlertEnabled = parsed.restEndAlertEnabled;
+        if (typeof parsed.restSoundsEnabled === 'boolean') next.restSoundsEnabled = parsed.restSoundsEnabled;
         set({ ...next, workoutPrefsLoaded: true });
         if (next.restEndAlertEnabled === false) {
           // A rest started BEFORE this hydration ran scheduled its end-of-rest
@@ -1735,6 +1743,7 @@ const useAppStore = create((set, get) => ({
         defaultRestSeconds: get().defaultRestSeconds,
         autoStartRestTimer: get().autoStartRestTimer,
         restEndAlertEnabled: get().restEndAlertEnabled,
+        restSoundsEnabled: get().restSoundsEnabled,
       }));
     } catch (_) { /* offline-friendly: tolerate */ }
   },
@@ -1746,6 +1755,12 @@ const useAppStore = create((set, get) => ({
   },
   setAutoStartRestTimer: async (value) => {
     set({ autoStartRestTimer: !!value });
+    await get()._persistWorkoutPrefs();
+  },
+  // C10C: purely a mute for the in-app cues. It schedules and cancels
+  // nothing, so it cannot touch the OS alert, the timer, or the haptics.
+  setRestSoundsEnabled: async (value) => {
+    set({ restSoundsEnabled: !!value });
     await get()._persistWorkoutPrefs();
   },
   setRestEndAlertEnabled: async (value) => {
