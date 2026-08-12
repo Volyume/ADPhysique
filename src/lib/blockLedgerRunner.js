@@ -410,6 +410,36 @@ export async function backfillMissingBlockLedgers(userId, { userProfile = null, 
  *
  * A manual override is NOT evidence and is not gated by this: it is
  * the user's own setting, and manual intent outranks inferred intent.
+ *
+ * FOUNDER RULING (C8 final closeout, option (b)): the learned band can
+ * never raise a STARTING prescription - its floor is monotone downward
+ * by construction, and that law is deliberate and unchanged. So a
+ * mature user switching plan or phase used to reset to the Day-1
+ * research start (measured: chest week 1 of 6, exactly what a brand-new
+ * user gets) even though nothing about their training had changed. The
+ * ruling separates the two things the band was being asked to be:
+ *
+ *   DURABLE LEARNED RANGE  - all judged history, no clock, used for the
+ *     ceiling. Untouched: computeLearnedRange still sees everything.
+ *   RECENT ACTIVATION SEED - the most recent judged block's PROPOSAL,
+ *     supplied as activation evidence so the mature start survives a
+ *     change of plan identity.
+ *
+ * This is not a blind copy of a previous programme. The proposal goes
+ * through resolveSeedRange like any other, so every existing mechanism
+ * still applies with no new algorithm added:
+ *   - manual precedence     - step 1 returns before the entry is read
+ *   - safety suppression    - no entry is supplied at all under it
+ *   - evidence sufficiency  - the resolver rejects INSUFFICIENT_DATA,
+ *                             deferredToManual and non-numeric proposals
+ *   - research/hard bounds  - the resolver's clamp keeps research MEV as
+ *                             the floor and the absolute weekly ceiling
+ *   - compatibility         - per MUSCLE: a muscle the previous plan
+ *                             never trained has no entry, so nothing is
+ *                             transplanted into it
+ *   - recency               - the SAME STALE_EVIDENCE_WEEKS boundary
+ *
+ * Memory persists; actionability expires.
  */
 export async function buildLearnedSeedRangesForActivation(userId, { userProfile = null, tier = 'free' } = {}) {
   if (!userId || tier !== 'pro') return null;
@@ -421,19 +451,27 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
     const suppressed = await readSuppression(userId);
     const nowMs = Date.now();
 
-    // D10: how long ago did the user's most recent JUDGED block finish?
-    // Same derivation the classifier is given (getBlockStatus's
-    // weeksOverdue), so the two can never disagree about staleness.
-    // Fails toward stale: an unreadable date carries nothing.
-    let weeksSinceLastBlock = Infinity;
-    for (const m of mesos) {
-      if (!m?.blockLedger) continue;
-      const start = toMs(m.startDate);
-      if (start == null) continue;
-      const overdue = getBlockStatus(start, m.plannedWeeks ?? m.durationWeeks ?? 5, nowMs).weeksOverdue;
-      if (Number.isFinite(overdue)) weeksSinceLastBlock = Math.min(weeksSinceLastBlock, overdue);
+    // D10 + the option (b) ruling: per MUSCLE, what is the most recent
+    // judged entry, and how long ago did the block carrying it finish?
+    // Derived with the same getBlockStatus weeksOverdue the classifier
+    // is given, so the two can never disagree about staleness. Blocks
+    // are walked oldest-first so the newest entry per muscle wins.
+    // Fails toward stale: an unreadable date records nothing at all.
+    const recentByMuscle = new Map();
+    const dated = mesos
+      .filter((m) => m?.blockLedger && toMs(m.startDate) != null)
+      .sort((a, b) => toMs(a.startDate) - toMs(b.startDate));
+    for (const m of dated) {
+      const overdue = getBlockStatus(
+        toMs(m.startDate), m.plannedWeeks ?? m.durationWeeks ?? 5, nowMs,
+      ).weeksOverdue;
+      if (!Number.isFinite(overdue)) continue;
+      try {
+        for (const e of JSON.parse(m.blockLedger)?.entries ?? []) {
+          if (e?.muscle) recentByMuscle.set(e.muscle, { entry: e, weeksOverdue: overdue });
+        }
+      } catch (_e) { /* unparseable prior ledger: no evidence */ }
     }
-    const evidenceStale = !(weeksSinceLastBlock < STALE_EVIDENCE_WEEKS);
 
     const ranges = {};
     for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
@@ -447,13 +485,18 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
         muscle,
       });
       const manualEntry = manualTable?.[muscle] ?? null;
+      // Stale evidence cannot authorise a fresh upward prescription. The
+      // band and the entries are untouched memory; they are simply not
+      // consulted here until a fresh block is finished.
+      const recent = recentByMuscle.get(muscle) ?? null;
+      const fresh = recent != null && recent.weeksOverdue < STALE_EVIDENCE_WEEKS;
       const resolved = resolveSeedRange({
         manual: isManualEdit(manualEntry, research) ? manualEntry : null,
-        ledgerEntry: null, // no current-block proposal on this path
-        // D10: stale evidence cannot authorise a fresh upward
-        // prescription. The band itself is untouched memory; it is
-        // simply not consulted here until a fresh block is finished.
-        learnedRange: (learned.isLearned && !evidenceStale) ? learned : null,
+        // The RECENT ACTIVATION SEED. Withheld entirely under
+        // suppression: a flagged or calm user's activation must never
+        // start above the ramp they would otherwise have been given.
+        ledgerEntry: (fresh && !suppressed) ? recent.entry : null,
+        learnedRange: (learned.isLearned && fresh) ? learned : null,
         profileAdjusted: profileAdjustedPrior(muscle, userProfile),
         research,
         suppressed,
@@ -461,7 +504,7 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
       });
       // Per-muscle, never body-wide: only a genuinely carried muscle is
       // written. Everything else stays on the template ramp.
-      if (resolved?.source === 'learned' || resolved?.source === 'manual') {
+      if (resolved?.source === 'ledger' || resolved?.source === 'learned' || resolved?.source === 'manual') {
         ranges[muscle] = resolved;
       }
     }
