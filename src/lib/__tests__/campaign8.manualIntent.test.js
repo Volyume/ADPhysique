@@ -57,4 +57,16 @@ describe('the editor records intent only for muscles it actually touched', () =>
   test('reset clears recorded intent', () => {
     expect(SRC).toMatch(/touchedMusclesRef\.current = new Set\(\); \/\/ C8 RA6-6: reset clears intent/);
   });
+
+  // Review D4: an abandoned edit is not intent. Without this, typing into
+  // a muscle then cancelling, then saving a DIFFERENT muscle later in the
+  // same visit, stamped the abandoned one as an explicit manual override -
+  // permanent, suppression-proof, and it disables adaptive learning for
+  // that muscle.
+  test('cancel discards both the typed values and the recorded intent', () => {
+    const cancel = SRC.slice(SRC.indexOf("title=\"Cancel\""), SRC.indexOf("title=\"Save\""));
+    expect(cancel).toMatch(/touchedMusclesRef\.current = new Set\(\);/);
+    expect(cancel).toMatch(/setEditValues\(buildEditValues\(customLandmarks\)\)/);
+    expect(cancel).toMatch(/setEditing\(false\)/);
+  });
 });

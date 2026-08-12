@@ -63,6 +63,18 @@ const WINDOW_OPTIONS = [
   { weeks: 4, label: '4 weeks' },
 ];
 
+// The editor shows every muscle, but the stored table holds only the
+// edited ones, so the fields are the saved entries merged over the
+// research defaults. Used to restore the fields when an edit is
+// cancelled (review D4).
+function buildEditValues(stored) {
+  const out = {};
+  for (const [m, v] of Object.entries(VOLUME_LANDMARKS)) {
+    out[m] = { mev: v.mev, mav: v.mav, mrv: v.mrv, ...(stored?.[m] ?? {}) };
+  }
+  return out;
+}
+
 export default function VolumeHeatmapScreen() {
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user, userProfile, tier } = useAppStore(useShallow(s => ({
@@ -743,7 +755,17 @@ export default function VolumeHeatmapScreen() {
                 title="Cancel"
                 variant="secondary"
                 size="sm"
-                onPress={() => setEditing(false)}
+                onPress={() => {
+                  // Review D4: an abandoned edit is not intent. Cancel
+                  // discards both the typed values and the record of
+                  // which muscles were touched, so a later save in the
+                  // same visit cannot stamp them as the user's own
+                  // setting (which would be permanent and outrank
+                  // everything, including adaptive learning).
+                  touchedMusclesRef.current = new Set();
+                  setEditValues(buildEditValues(customLandmarks));
+                  setEditing(false);
+                }}
                 accessibilityLabel="Cancel"
                 style={styles.editActionButton}
               />
