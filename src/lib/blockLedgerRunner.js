@@ -196,6 +196,10 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
         blockWeeks,
         deloadWeekIndex,
         reboundWindowsMs,
+        // C10K: same list as the deload flags, the rebound windows and the
+        // C10J recovery gather. Scopes ONLY lateRecoveryOk's evidence
+        // population; performance terms are unaffected.
+        appliedEarlyDeloadWeekIndices,
       });
       const recoveryRows = collectMuscleSessionRows({
         sets: training.sets, workouts: training.workouts, exercisesById, muscle,

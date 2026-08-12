@@ -46,6 +46,10 @@
  *   exercises; lateRecoveryOk needs POSITIVE late-window evidence —
  *   soreness AND joint answers on at least half the late sessions, all
  *   calm. Missing or self-selected feedback reads false, never fine.
+ *   C10K: sessions from an APPLIED EARLY-DELOAD week are not part of that
+ *   population at all — a deliberately reduced dose cannot prove the normal
+ *   dose was recovered from. They leave the numerator and the denominator
+ *   together, so their removal can never make thin evidence look sufficient.
  *
  * MID-BLOCK USE (C10G F-6). The ledger calls this only for a FINISHED
  * block, but the computation itself never assumes the block ended: every
@@ -147,6 +151,12 @@ function theilSenSlopePct(points) {
  *   passes through to the same default (never "no deload week")
  * @param {Array}  [input.reboundWindowsMs] - [{ start, end }] windows that
  *   sit immediately after a deload; PR events inside them weigh 0.25
+ * @param {number[]} [input.appliedEarlyDeloadWeekIndices] - C10K: block week
+ *   indices the user actually deloaded mid-block, the SAME list the runner
+ *   already derives from mesocycle_weeks for the deload flags, the rebound
+ *   windows and (C10J) the recovery gather. Used ONLY to drop reduced-dose
+ *   sessions from the lateRecoveryOk evidence population; every performance
+ *   term still counts them.
  * @returns {{ e1rmSlopePct: number, prDensity: number, rawPrCount: number,
  *   eligibleExposures: number, confidence: number, discontinuity: boolean,
  *   doseResponse: { lateProgression: boolean, lateRecoveryOk: boolean } }}
@@ -161,6 +171,7 @@ export function computeBlockPerformance({
   blockWeeks,
   deloadWeekIndex = null,
   reboundWindowsMs = [],
+  appliedEarlyDeloadWeekIndices = [],
 } = {}) {
   const empty = {
     e1rmSlopePct: 0,
@@ -365,6 +376,31 @@ export function computeBlockPerformance({
   let lateRecoveryOk = false;
   if (workoutsById) {
     // Late-window sessions featuring the muscle, with their dates.
+    //
+    // C10K (founder ruling): an APPLIED EARLY-DELOAD WEEK IS A REDUCED-DOSE
+    // INTERVENTION. Feedback collected while the dose was deliberately cut
+    // says nothing about whether the NORMAL dose was recovered from well
+    // enough to earn more volume, so those sessions are not evidence for
+    // this question and are dropped here — from the population itself, so
+    // they leave the numerator and the `required` denominator TOGETHER.
+    // Excluding them from the answered count while leaving them in the
+    // denominator would read as missing feedback and be a different (also
+    // wrong) answer.
+    //
+    // The late window is still decided by the PLANNED structure above
+    // (accumWeeks -> splitAt -> lateWeeks) BEFORE any session is dropped,
+    // so this cannot promote an earlier week into the late half. Same law
+    // as C10J: an early deload does not rewrite calendar chronology.
+    //
+    // Deliberately scoped to the RECOVERY half only. e1rmSlopePct,
+    // eligibleExposures, prDensity, lateProgression, stability and
+    // discontinuity all still see these sessions — they were real training
+    // and remain real performance evidence.
+    const earlyDeloadWeeks = new Set(
+      (Array.isArray(appliedEarlyDeloadWeekIndices) ? appliedEarlyDeloadWeekIndices : [])
+        .map((w) => num(w, null))
+        .filter((w) => w != null && w !== dwi),
+    );
     const lateSessionKeys = [];
     for (const key of exposureKeys) {
       let at = null;
@@ -372,11 +408,15 @@ export function computeBlockPerformance({
         const sess = sessions.get(key);
         if (sess) { at = sess.at; break; }
       }
-      if (at != null && lateWeeks.has(weekOf(at))) lateSessionKeys.push(key);
+      if (at == null) continue;
+      const w = weekOf(at);
+      if (!lateWeeks.has(w)) continue;
+      if (earlyDeloadWeeks.has(w)) continue; // reduced dose: not evidence
+      lateSessionKeys.push(key);
     }
     // Positive evidence only: BOTH soreness and joint answered, on at
-    // least half the late sessions (self-selected scraps of feedback are
-    // not an evidence base), all calm.
+    // least half the LEGITIMATE late sessions (self-selected scraps of
+    // feedback are not an evidence base), all calm.
     const rows = [];
     for (const key of lateSessionKeys) {
       const wk = lookup(workoutsById, key);
