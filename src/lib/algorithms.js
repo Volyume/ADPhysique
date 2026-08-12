@@ -1346,7 +1346,27 @@ export function buildSessionAdjustmentInput({
 // exerciseSessions: array of sessions newest-first, each an array of sets for that exercise.
 // Returns { plateau, consecutiveStalls, resolution }
 export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) {
-  if (!exerciseSessions || exerciseSessions.length < 3) {
+  // C10D RD6-3 (detection-basis half): only rows the app already accepts as
+  // comparable progression evidence may decide this. isE1rmEligibleRow is
+  // that existing law - the same one detectProgressionConsistency uses -
+  // and it rejects warm-ups, myo-reps and rest-pause rows. Cluster sets
+  // store SUMMED reps, so an unfiltered session average could invent a rep
+  // jump that never happened (erasing a real plateau) or collapse one into
+  // existence; a warm-up added or dropped between sessions could do the
+  // same. Bad evidence must not decide that a lift is plateaued, in either
+  // direction.
+  //
+  // Nothing else moves: the four-session window, the three adjacent
+  // comparisons, the session-average basis, the +-0.01kg/+-0.5rep
+  // thresholds and the 2/3-stall resolutions are all untouched. Sessions
+  // left with no eligible rows drop out rather than counting as a stalled
+  // comparison, and if fewer than three sessions survive the existing
+  // insufficient/no-plateau state is returned - never a compensating
+  // relaxation of the evidence requirement.
+  const eligibleSessions = (Array.isArray(exerciseSessions) ? exerciseSessions : [])
+    .map((sets) => (Array.isArray(sets) ? sets.filter(isE1rmEligibleRow) : []))
+    .filter((sets) => sets.length > 0);
+  if (eligibleSessions.length < 3) {
     return { plateau: false, consecutiveStalls: 0, resolution: null };
   }
 
@@ -1354,7 +1374,7 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
   // run of 3 consecutive stalls can actually be detected. The previous
   // slice(0, 3) only ever yielded 2 comparisons, capping consecutiveStalls
   // at 2, which made the "3+ stalls -> swap_exercise" resolution dead code.
-  const recent = exerciseSessions.slice(0, 4);
+  const recent = eligibleSessions.slice(0, 4);
   let consecutiveStalls = 0;
 
   for (let i = 0; i < recent.length - 1; i++) {

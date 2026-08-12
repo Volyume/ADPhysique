@@ -60,6 +60,7 @@ import { confidenceChipLabel } from '../lib/progressScanResultsContract';
 // drift between the hook and this screen.
 import { isPhotoSuppressed } from '../hooks/usePhotoSuppression';
 import { isCompetitionGoal } from '../lib/coachingGoals';
+import { getCycleTracking } from '../lib/cyclePrefs';
 import { contestCountdown, parseShowDate } from '../lib/contestCountdown';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
@@ -1821,6 +1822,10 @@ export default function CoachOutputScreen({ navigation, route }) {
         // profile's onboarding-enforced value, as the display path already
         // does.
         sex: bodyProfile?.sex ?? userProfile?.sex ?? null,
+        // C10D: the extra cycle opt-in, read fresh. Without it the engine
+        // defaults to OFF and performs no cycle-specific interpretation,
+        // including on a menstrual flag parsed from the free-text note.
+        cycleTrackingEnabled: await getCycleTracking().catch(() => false),
         // Step targets are not part of the shipped coaching product.
         dailyStepsSeries: null,
         stepsTodayKey: null,
