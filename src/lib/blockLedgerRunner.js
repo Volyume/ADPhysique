@@ -37,7 +37,7 @@ import {
   getOpenEdPatternFlag,
   storeBlockLedger,
 } from './database';
-import { buildBlockLedger, LEDGER_VERSION } from './interBlock';
+import { buildBlockLedger, LEDGER_VERSION, STALE_EVIDENCE_WEEKS } from './interBlock';
 import { computeBlockPerformance } from './blockMetrics';
 import {
   computeMuscleRecoveryAggregates,
@@ -394,6 +394,22 @@ export async function backfillMissingBlockLedgers(userId, { userProfile = null, 
  *
  * No backfill here (unlike the next-block builder): activation must
  * stay fast, and only ALREADY-JUDGED blocks count as evidence.
+ *
+ * D10 (C8 closeout): the learned band is memory and has no clock, so
+ * before this an eight-month-lapsed user activating a plan was ramped
+ * straight back to the ceiling they last held. The engine already
+ * answers this: classifyMuscleBlock refuses an increase once a block
+ * ended STALE_EVIDENCE_WEEKS ago, "once the gap could have
+ * deconditioned the muscle" (interBlock.js). The activation carry now
+ * applies that same law, measured with the same getBlockStatus
+ * weeksOverdue the classifier is fed. Nothing new is invented: no
+ * decay curve, no percentage, no second duration. Memory persists
+ * untouched - the ledgers and the band are not modified, and the
+ * moment the user finishes a fresh block the carry is live again -
+ * it simply cannot authorise a fresh upward prescription on its own.
+ *
+ * A manual override is NOT evidence and is not gated by this: it is
+ * the user's own setting, and manual intent outranks inferred intent.
  */
 export async function buildLearnedSeedRangesForActivation(userId, { userProfile = null, tier = 'free' } = {}) {
   if (!userId || tier !== 'pro') return null;
@@ -404,6 +420,20 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
     const adaptedTable = await getAdaptedLandmarks(userId, { tier }).catch(() => null);
     const suppressed = await readSuppression(userId);
     const nowMs = Date.now();
+
+    // D10: how long ago did the user's most recent JUDGED block finish?
+    // Same derivation the classifier is given (getBlockStatus's
+    // weeksOverdue), so the two can never disagree about staleness.
+    // Fails toward stale: an unreadable date carries nothing.
+    let weeksSinceLastBlock = Infinity;
+    for (const m of mesos) {
+      if (!m?.blockLedger) continue;
+      const start = toMs(m.startDate);
+      if (start == null) continue;
+      const overdue = getBlockStatus(start, m.plannedWeeks ?? m.durationWeeks ?? 5, nowMs).weeksOverdue;
+      if (Number.isFinite(overdue)) weeksSinceLastBlock = Math.min(weeksSinceLastBlock, overdue);
+    }
+    const evidenceStale = !(weeksSinceLastBlock < STALE_EVIDENCE_WEEKS);
 
     const ranges = {};
     for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
@@ -420,7 +450,10 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
       const resolved = resolveSeedRange({
         manual: isManualEdit(manualEntry, research) ? manualEntry : null,
         ledgerEntry: null, // no current-block proposal on this path
-        learnedRange: learned.isLearned ? learned : null,
+        // D10: stale evidence cannot authorise a fresh upward
+        // prescription. The band itself is untouched memory; it is
+        // simply not consulted here until a fresh block is finished.
+        learnedRange: (learned.isLearned && !evidenceStale) ? learned : null,
         profileAdjusted: profileAdjustedPrior(muscle, userProfile),
         research,
         suppressed,

@@ -25,6 +25,7 @@
  * hand the whole body a profile-prior ramp.
  */
 import { VOLUME_LANDMARKS } from '../algorithms';
+import { buildSeededWeeklyTargets } from '../blockLedgerGather';
 
 const mockGetAllMesocyclesForUser = jest.fn();
 const mockGetOpenEdPatternFlag = jest.fn();
@@ -84,9 +85,15 @@ function block(startMs, muscle, { start, peak, classification = 'RESPONSIVE' } =
 }
 
 const DAY = 24 * 60 * 60 * 1000;
-function maturityFor(muscle, { start, peak } = {}) {
-  const base = Date.now() - 400 * DAY;
-  return [0, 60, 120, 180].map((d, i) => block(base + d * DAY, muscle, {
+
+/**
+ * Four judged blocks whose LAST one finished recently. A block runs six
+ * weeks, so the newest block starts 45 days back and is a few days past
+ * its recovery week - fresh evidence by the engine's own reckoning.
+ */
+function maturityFor(muscle, { start, peak, lastEndedDaysAgo = 3 } = {}) {
+  const newestStart = Date.now() - (42 + lastEndedDaysAgo) * DAY;
+  return [180, 120, 60, 0].map((d, i) => block(newestStart - d * DAY, muscle, {
     start: start ?? 12 + i, peak: peak ?? 20,
   }));
 }
@@ -113,6 +120,41 @@ describe('Work 2: learned evidence survives a legitimate activation', () => {
     expect(out.ranges.chest.peakSets).toBe(20);
     expect(out.ranges.chest.peakSets).toBeGreaterThan(VOLUME_LANDMARKS.chest.mav);
     expect(out.ranges.chest.startSets).toBe(VOLUME_LANDMARKS.chest.mev);
+  });
+
+  // C8 closeout, issue 1. The continuity is REAL but PARTIAL, and this
+  // records exactly where the line falls, so no later reader can mistake
+  // "the ceiling survived" for "the mature prescription survived".
+  //
+  // The learned band's floor is monotone DOWNWARD by construction
+  // (learnedRange.js: "a rising floor would be upward volume pressure"),
+  // so no amount of history can raise week 1 above the research start.
+  // Only a current-block proposal does that, and the activation path
+  // deliberately has none. Week 1 after a compatible switch is therefore
+  // the same number a brand-new user gets; the ramp above it is not.
+  test('CONTINUITY IS PARTIAL: the proven ceiling carries, the mature START does not', async () => {
+    mockGetAllMesocyclesForUser.mockResolvedValue(maturityFor('chest'));
+    const out = await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' });
+    const carried = out.ranges.chest;
+    // The last block ran 15 -> 20. The ceiling survives the switch.
+    expect(carried.peakSets).toBe(20);
+    // The start does NOT: it is the same Day-1 research floor.
+    expect(carried.startSets).toBe(VOLUME_LANDMARKS.chest.mev);
+    expect(carried.startSets).toBe(6);
+    // Weeks 2-5 do diverge from the template, so the block as a whole is
+    // genuinely personalised even though its first week is not.
+    const seeded = buildSeededWeeklyTargets({
+      startSets: carried.startSets, peakSets: carried.peakSets, accumWeeks: 5,
+      deloadSets: VOLUME_LANDMARKS.chest.mev,
+    });
+    expect(seeded).toEqual([6, 10, 13, 17, 20, 6]);
+    const template = [0, 1, 2, 3, 4].map((i) => Math.round(
+      VOLUME_LANDMARKS.chest.mev
+      + (VOLUME_LANDMARKS.chest.mav - VOLUME_LANDMARKS.chest.mev) * (i / 4),
+    ));
+    expect(template).toEqual([6, 8, 10, 12, 14]);
+    expect(seeded[0]).toBe(template[0]);      // week 1: identical
+    expect(seeded[4]).toBeGreaterThan(template[4]); // week 5: not
   });
 
   test('a phase change carries it too: the band is muscle-level, not phase-level', async () => {
@@ -178,6 +220,51 @@ describe('Work 2: learned evidence survives a legitimate activation', () => {
 // and "the same set targets as last time" would then have been served
 // from the learned band - breaking P-6 behind an alert promising the
 // opposite.
+// C8 closeout, D10. The carry consumes a band that has no clock, so an
+// eight-month-lapsed user activating a plan was ramped straight back to
+// the ceiling they last held. The engine already refuses an increase
+// once a block ended STALE_EVIDENCE_WEEKS ago ("once the gap could have
+// deconditioned the muscle", interBlock.js); the carry now applies that
+// same existing law rather than inventing a decay.
+describe('D10: stale memory alone cannot authorise a fresh upward prescription', () => {
+  test('an eight-month lapse carries nothing: the template ramp stands', async () => {
+    mockGetAllMesocyclesForUser.mockResolvedValue(maturityFor('chest', { lastEndedDaysAgo: 240 }));
+    expect(await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' })).toBeNull();
+  });
+
+  test('the very same history, freshly finished, DOES carry', async () => {
+    mockGetAllMesocyclesForUser.mockResolvedValue(maturityFor('chest', { lastEndedDaysAgo: 3 }));
+    const out = await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' });
+    expect(out?.ranges?.chest?.source).toBe('learned');
+    expect(out.ranges.chest.peakSets).toBe(20);
+  });
+
+  test('memory PERSISTS: a fresh block after the lapse makes the carry live again', async () => {
+    // The stale history is untouched; one newly finished block joins it.
+    const stale = maturityFor('chest', { lastEndedDaysAgo: 240 });
+    const fresh = block(Date.now() - 45 * DAY, 'chest', { start: 15, peak: 20 });
+    mockGetAllMesocyclesForUser.mockResolvedValue([...stale, fresh]);
+    const out = await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' });
+    expect(out?.ranges?.chest?.source).toBe('learned');
+  });
+
+  test('an unreadable block date fails toward stale, never toward a carry', async () => {
+    mockGetAllMesocyclesForUser.mockResolvedValue([
+      { ...maturityFor('chest')[0], startDate: 'not a date' },
+    ]);
+    expect(await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' })).toBeNull();
+  });
+
+  test('a manual setting is NOT evidence and survives the staleness gate', async () => {
+    mockGetAllMesocyclesForUser.mockResolvedValue(maturityFor('chest', { lastEndedDaysAgo: 240 }));
+    mockManual.mockResolvedValue({ chest: { mev: 9, mav: 14, mrv: 19, explicit: true } });
+    const out = await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' });
+    // The user's own setting carries; the stale learned band does not.
+    expect(Object.keys(out.ranges)).toEqual(['chest']);
+    expect(out.ranges.chest.source).toBe('manual');
+  });
+});
+
 describe('Review D5: a repeat never falls through to the learned carry', () => {
   const read = (p) => require('fs').readFileSync(require('path').resolve(__dirname, '../../', p), 'utf8');
 
