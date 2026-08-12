@@ -23,6 +23,7 @@ import { computeMacroCycle, computeRefeedDay } from './coachApply';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
 import { cycleTrendAnnotation } from './cyclePhase';
+import { shouldShowCycleQuestion } from './cyclePrefs';
 
 // ─── EWMA ────────────────────────────────────────────────────────────────────
 
@@ -682,6 +683,11 @@ export function runWeeklyCoach(inputs) {
     bodyFatPercent = null,
     bodyFatSource = null,
     sex = null,
+    // C10D: cycle awareness is an EXTRA opt-in above Article 9 consent and
+    // defaults OFF. Defaulting false here means any caller that has not
+    // explicitly passed it gets no cycle-specific interpretation - the
+    // permission fails closed, as a privacy opt-in must.
+    cycleTrackingEnabled = false,
     recentIntakeAvgKcal = null,
     recentIntakeDaysLogged = 0,
     // Campaign 1 P0-7 D1: true when the intake read THREW (as opposed to a
@@ -1820,9 +1826,18 @@ export function runWeeklyCoach(inputs) {
   // U4 (additive, no maths changed): a reassuring note when a female user who
   // flagged their period this week shows a small water-plausible rise. Never
   // fires on a loss, never alters a target/floor/threshold — annotation only.
+  // C10D: the menstrual flag can also arrive from parseNoteFlags reading
+  // the user's free-text note, and that path bypassed the opt-in entirely -
+  // so a user who never enabled cycle awareness could still be shown a
+  // cycle-specific reading of her own words. The opt-in governs the
+  // INTERPRETATION regardless of which surface supplied the information.
+  // Same predicate the check-in question uses, not a second notion of
+  // permission. The note itself is untouched and the preference is never
+  // written to from here.
+  const cycleInterpretationAllowed = shouldShowCycleQuestion(sex, cycleTrackingEnabled);
   const cyclePhaseNote = cycleTrendAnnotation({
     sex,
-    menstrual: noteFlags?.menstrual,
+    menstrual: cycleInterpretationAllowed ? noteFlags?.menstrual : false,
     trendPctPerWeek: computeWeeklyTrendPct(morningWeights, bodyweightKg, nowMs),
   });
 

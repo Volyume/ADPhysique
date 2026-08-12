@@ -155,15 +155,23 @@ export default function SettingsCoachingScreen() {
             // promise it (comprehension-trust audit 2026-08-06, T16). Free
             // answers ARE kept: they write to the workout row and feed the
             // Home readiness line.
+            // C10D: the ON copy names the DIRECTION, matching the
+            // pre-session sheet: poor recovery can ease the session, and a
+            // good answer never adds work above the plan. Free still gets
+            // no promise of session adjustment - that stays Pro-only.
             ? (tier === 'pro'
-              ? 'Asks how you are feeling before each session, so sessions can adjust to it.'
+              ? 'Asks how you are feeling before each session. Poor sleep or heavy soreness can ease that session; answering well never adds work above the plan.'
               : 'Asks how you are feeling before each session and keeps it with your training history.')
             // RC-4 (D96, Review C): the off state names its SECOND
             // consequence too - these answers are the block ledger's main
             // recovery evidence, so leaving them off keeps next-block set
             // targets where they are. Stated once, on the control that
             // causes it, never as a nag.
-            : 'Off. Sessions start straight away. Without these answers, your next block\'s set targets stay where they are rather than moving on what the block showed.'}
+            // C10D: "Sessions start straight away" described the UI
+            // consequence but not the behavioural one - turning this off
+            // removes the input used to EASE a session after poor
+            // recovery. Both consequences are now named.
+            : 'Off. Sessions start straight away. When coaching is active that also means no readiness answers to ease a session after poor recovery, and your next block\'s set targets stay where they are rather than moving on what the block showed.'}
           showArrow={false}
           rightElement={
             <Switch
