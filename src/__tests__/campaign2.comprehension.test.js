@@ -175,7 +175,15 @@ describe('NUTRITION comprehension', () => {
   });
 
   test('the displayed trend never claims to be the decision metric', () => {
-    expect(read('screens/CoachOutputScreen.js')).toMatch(/reads direction from a sturdier version of this trend/);
+    // D93 required the scale chip to disclose that the decision used a
+    // different number. C10F went further and SHOWS that number, so the
+    // requirement is now met by a labelled "Coaching trend" chip beside
+    // it rather than by a disclaimer alone. Both halves are pinned: the
+    // scale chip says what it is, and the decision rate is on screen.
+    const src = read('screens/CoachOutputScreen.js');
+    expect(src).toMatch(/This is the scale reading\./);
+    expect(src).toMatch(/label="Coaching trend"/);
+    expect(src).toMatch(/value=\{trend\.coachingRateLabel\}/);
   });
 
   test('Methodology never publishes the absolute calorie floors', () => {
