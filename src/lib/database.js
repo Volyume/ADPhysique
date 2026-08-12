@@ -2132,6 +2132,72 @@ const SCHEMA_MIGRATIONS = [
         SET id = 'co_' || week_start || '_' || user_id
       WHERE id <> 'co_' || week_start || '_' || user_id`,
   ],
+  // ── v73: Campaign 9, exercise intent + swap memory ─────────────────────
+  // Purpose: durable, user-owned state about EXERCISES, which the app had
+  // none of. Three tables, each keyed by (user_id, exercise_id) or the
+  // swap pair, so every selecting surface can ask one layer the same
+  // questions instead of re-deriving preference per screen:
+  //   exercise_intent        - "don't suggest this" (indefinite) and
+  //                            "avoid for this block" (scoped to one
+  //                            mesocycle id, so it expires at the block
+  //                            boundary rather than on a calendar timer).
+  //                            `reason` is OPTIONAL free context; it is
+  //                            never read as a diagnosis.
+  //   exercise_swaps         - the A->B event log with its context, so
+  //                            repeated deliberate choices can outrank
+  //                            alphabetical ordering. `explicit` records
+  //                            that a human chose it.
+  //   exercise_slot_defaults - a user-APPROVED default replacement for a
+  //                            source exercise in a plan. Stronger than
+  //                            any inferred preference.
+  // Applied: LOCALLY via this user_version bump. Cloud counterpart is
+  // supabase/migrate_136_exercise_intent.sql - written, NOT applied;
+  // it is founder-gated and must run against production BEFORE a build
+  // carrying the sync push of these tables ships (migrate_129 precedent).
+  // Additive: yes (three new tables + indexes, nothing altered). Safe to
+  // re-run: yes (IF NOT EXISTS throughout). Rollback: drop the three
+  // tables; every reader treats their absence as "no intent recorded",
+  // which is the pre-Campaign-9 behaviour exactly.
+  [
+    `CREATE TABLE IF NOT EXISTS exercise_intent (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      exercise_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      scope_mesocycle_id TEXT,
+      reason TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER,
+      UNIQUE(user_id, exercise_id)
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_exercise_intent_user ON exercise_intent(user_id, exercise_id)',
+    `CREATE TABLE IF NOT EXISTS exercise_swaps (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      from_exercise_id TEXT NOT NULL,
+      to_exercise_id TEXT NOT NULL,
+      routine_id TEXT,
+      mesocycle_id TEXT,
+      explicit INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_exercise_swaps_user_from ON exercise_swaps(user_id, from_exercise_id)',
+    `CREATE TABLE IF NOT EXISTS exercise_slot_defaults (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      from_exercise_id TEXT NOT NULL,
+      routine_id TEXT,
+      exercise_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER,
+      UNIQUE(user_id, from_exercise_id, routine_id)
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_exercise_slot_defaults_user ON exercise_slot_defaults(user_id, from_exercise_id)',
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -8600,6 +8666,208 @@ export async function insertOrUpdateAdaptationEventFromCloud(userId, row) {
 export async function runAdaptationEventBatch(task) {
   const d = await db();
   return runInTransaction(d, task);
+}
+
+// ─── Exercise intent, swap memory and approved defaults (Campaign 9) ─────────
+// The durable half of the canonical exercise-intent layer (src/lib/exercise/
+// intent.js holds every DECISION; this file only reads and writes rows).
+//
+// Nothing here deletes training history. Excluding an exercise records a
+// preference about FUTURE suggestions; workouts, sets, PRs and progression
+// are untouched and stay visible.
+
+export const EXERCISE_INTENT = Object.freeze({
+  EXCLUDED: 'excluded',        // "Don't suggest this exercise" - indefinite
+  AVOIDED_BLOCK: 'avoided_block', // "Avoid for this block" - one mesocycle
+});
+
+/**
+ * Record (or replace) the user's intent for one exercise. Upsert on
+ * (user_id, exercise_id): a muscle can only be in one state at a time, and
+ * re-excluding something already avoided simply promotes it.
+ *
+ * @param {string} userId
+ * @param {string} exerciseId
+ * @param {'excluded'|'avoided_block'} kind
+ * @param {{scopeMesocycleId?: string|null, reason?: string|null}} [opts]
+ *   reason is OPTIONAL lightweight context the user may skip entirely. It is
+ *   never interpreted: "discomfort" records that the user said so, never that
+ *   the exercise injures them.
+ */
+export async function setExerciseIntent(userId, exerciseId, kind, { scopeMesocycleId = null, reason = null } = {}) {
+  if (!userId || !exerciseId) return null;
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    'SELECT id FROM exercise_intent WHERE user_id = ? AND exercise_id = ?',
+    [userId, exerciseId],
+  );
+  if (existing?.id) {
+    await d.runAsync(
+      `UPDATE exercise_intent
+          SET kind = ?, scope_mesocycle_id = ?, reason = ?, updated_at = ?, deleted_at = NULL
+        WHERE id = ?`,
+      [kind, scopeMesocycleId, reason, now, existing.id],
+    );
+    _scheduleSync();
+    return existing.id;
+  }
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO exercise_intent
+       (id, user_id, exercise_id, kind, scope_mesocycle_id, reason, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, exerciseId, kind, scopeMesocycleId, reason, now, now],
+  );
+  _scheduleSync();
+  return id;
+}
+
+/**
+ * "Allow again". Tombstoned rather than hard-deleted so the restore itself
+ * propagates to the user's other devices - a hard delete would let a stale
+ * cloud copy of the exclusion arrive later and silently re-suppress the
+ * exercise the user just restored.
+ */
+export async function clearExerciseIntent(userId, exerciseId) {
+  if (!userId || !exerciseId) return;
+  const d = await db();
+  await d.runAsync(
+    'UPDATE exercise_intent SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND exercise_id = ?',
+    [Date.now(), Date.now(), userId, exerciseId],
+  );
+  _scheduleSync();
+}
+
+/** Every live intent row for the user. Tombstones excluded. */
+export async function getExerciseIntents(userId) {
+  if (!userId) return [];
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT exercise_id AS exerciseId, kind, scope_mesocycle_id AS scopeMesocycleId,
+            reason, created_at AS createdAt, updated_at AS updatedAt
+       FROM exercise_intent
+      WHERE user_id = ? AND deleted_at IS NULL`,
+    [userId],
+  ).catch(() => []);
+}
+
+/**
+ * Record an A->B replacement. Append-only: the log IS the evidence, and a
+ * later swap away from B does not erase that B was once chosen.
+ */
+export async function recordExerciseSwap(userId, fromExerciseId, toExerciseId, { routineId = null, mesocycleId = null, explicit = true } = {}) {
+  if (!userId || !fromExerciseId || !toExerciseId) return null;
+  if (fromExerciseId === toExerciseId) return null;
+  const d = await db();
+  const now = Date.now();
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO exercise_swaps
+       (id, user_id, from_exercise_id, to_exercise_id, routine_id, mesocycle_id, explicit, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, fromExerciseId, toExerciseId, routineId, mesocycleId, explicit ? 1 : 0, now, now],
+  );
+  _scheduleSync();
+  return id;
+}
+
+/** The user's swap history, newest first. `limit` bounds the read, not the truth. */
+export async function getExerciseSwaps(userId, { fromExerciseId = null, limit = 200 } = {}) {
+  if (!userId) return [];
+  const d = await db();
+  const args = [userId];
+  let sql = `SELECT from_exercise_id AS fromExerciseId, to_exercise_id AS toExerciseId,
+                    routine_id AS routineId, mesocycle_id AS mesocycleId,
+                    explicit, created_at AS createdAt
+               FROM exercise_swaps
+              WHERE user_id = ? AND deleted_at IS NULL`;
+  if (fromExerciseId) { sql += ' AND from_exercise_id = ?'; args.push(fromExerciseId); }
+  sql += ' ORDER BY created_at DESC LIMIT ?';
+  args.push(limit);
+  return d.getAllAsync(sql, args).catch(() => []);
+}
+
+/**
+ * The user's APPROVED default replacement for a source exercise. Explicit
+ * intent, so it outranks anything inferred from the swap log.
+ */
+export async function setExerciseSlotDefault(userId, fromExerciseId, exerciseId, { routineId = null } = {}) {
+  if (!userId || !fromExerciseId || !exerciseId) return null;
+  const d = await db();
+  const now = Date.now();
+  const existing = await d.getFirstAsync(
+    `SELECT id FROM exercise_slot_defaults
+      WHERE user_id = ? AND from_exercise_id = ? AND routine_id IS ?`,
+    [userId, fromExerciseId, routineId],
+  );
+  if (existing?.id) {
+    await d.runAsync(
+      'UPDATE exercise_slot_defaults SET exercise_id = ?, updated_at = ?, deleted_at = NULL WHERE id = ?',
+      [exerciseId, now, existing.id],
+    );
+    _scheduleSync();
+    return existing.id;
+  }
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO exercise_slot_defaults
+       (id, user_id, from_exercise_id, routine_id, exercise_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, fromExerciseId, routineId, exerciseId, now, now],
+  );
+  _scheduleSync();
+  return id;
+}
+
+/** Undo an approved default. Tombstoned, for the same reason as intent. */
+export async function clearExerciseSlotDefault(userId, fromExerciseId, { routineId = null } = {}) {
+  if (!userId || !fromExerciseId) return;
+  const d = await db();
+  const now = Date.now();
+  await d.runAsync(
+    `UPDATE exercise_slot_defaults SET deleted_at = ?, updated_at = ?
+      WHERE user_id = ? AND from_exercise_id = ? AND routine_id IS ?`,
+    [now, now, userId, fromExerciseId, routineId],
+  );
+  _scheduleSync();
+}
+
+/** Every live approved default for the user. */
+export async function getExerciseSlotDefaults(userId) {
+  if (!userId) return [];
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT from_exercise_id AS fromExerciseId, routine_id AS routineId,
+            exercise_id AS exerciseId, updated_at AS updatedAt
+       FROM exercise_slot_defaults
+      WHERE user_id = ? AND deleted_at IS NULL`,
+    [userId],
+  ).catch(() => []);
+}
+
+/**
+ * Per-exercise training evidence, in ONE query: how many completed sessions
+ * featured the exercise and when it was last trained. Warm-ups excluded, the
+ * same rule getRecentlyUsedExerciseIds already applies.
+ *
+ * This is deliberately a COUNT and a DATE, not a score. Nothing here ranks
+ * exercises by how well they build muscle - ordinary training logs cannot
+ * support that claim.
+ */
+export async function getExerciseUsageStats(userId) {
+  if (!userId) return [];
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT s.exercise_id AS exerciseId,
+            COUNT(DISTINCT s.workout_id) AS sessions,
+            MAX(w.started_at) AS lastTrainedMs
+       FROM workout_sets s
+       JOIN workouts w ON w.id = s.workout_id
+      WHERE w.user_id = ? AND w.is_completed = 1 AND s.set_type != 'warmup'
+      GROUP BY s.exercise_id`,
+    [userId],
+  ).catch(() => []);
 }
 
 // ─── Exercise User Notes ──────────────────────────────────────────────────────
