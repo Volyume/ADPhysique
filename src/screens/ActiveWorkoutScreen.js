@@ -3056,7 +3056,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 };
               } else if (prev) {
                 prefill = {
-                  label: 'Last:',
+                  // "Last" alone read ambiguously mid-workout: it could mean
+                  // the previous SET. This is the matching set from the most
+                  // recent completed workout (getLastNWorkoutSets), so say so.
+                  label: 'Last session:',
                   valueLabel: `${prev.weight}${units} x ${prev.actualReps}`,
                   onUse: () => {
                     hapticsVocab.setLogged();
