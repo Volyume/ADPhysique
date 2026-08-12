@@ -263,8 +263,15 @@ describe('P0-5: restoreNotifications re-lays the opt-in meal reminders', () => {
 // ─── P0-6: one canonical FFM floor weight ───────────────────────────────
 
 describe('P0-6: a single canonical FFM-floor weight resolution', () => {
-  test('resolution order: profile -> EWMA today -> last valid weigh-in', () => {
-    expect(resolveFfmFloorWeightKg({ profileWeightKg: 80, ewmaTodayKg: 78, lastWeighInKg: 77 })).toBe(80);
+  // C10A R-18: the order was profile FIRST, which pinned the floor to the
+  // enrolment weight for ever (nothing refreshes users_profile.weightKg on
+  // a weigh-in). The founder ruled the freshest legitimate evidence speaks
+  // first. P0-6's actual requirement - ONE resolver, one order, both call
+  // sites - is unchanged and still pinned below.
+  test('resolution order: EWMA today -> last valid weigh-in -> profile', () => {
+    expect(resolveFfmFloorWeightKg({ profileWeightKg: 80, ewmaTodayKg: 78, lastWeighInKg: 77 })).toBe(78);
+    expect(resolveFfmFloorWeightKg({ profileWeightKg: 80, ewmaTodayKg: null, lastWeighInKg: 77 })).toBe(77);
+    expect(resolveFfmFloorWeightKg({ profileWeightKg: 80, ewmaTodayKg: null, lastWeighInKg: null })).toBe(80);
     expect(resolveFfmFloorWeightKg({ profileWeightKg: null, ewmaTodayKg: 78, lastWeighInKg: 77 })).toBe(78);
     expect(resolveFfmFloorWeightKg({ profileWeightKg: null, ewmaTodayKg: null, lastWeighInKg: 77 })).toBe(77);
     expect(resolveFfmFloorWeightKg({})).toBeNull();

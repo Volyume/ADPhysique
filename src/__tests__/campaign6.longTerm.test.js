@@ -481,11 +481,17 @@ describe('RB6 fixes (D97-25): the return experience holds under adversarial revi
     const src = read('lib/weeklyCoach.js');
     expect(src).toMatch(/since you last logged regularly/);
     expect(src).toMatch(/across the gap/);
-    // The safety half (s1 / rapid-loss behaviour) is FOUNDER-GATED and
-    // deliberately untouched: the s1 feeder carries the fork note.
+    // C10A: the safety half was FOUNDER-GATED here and has since been
+    // ruled on and implemented - the rate is normalised by the elapsed
+    // span rather than the comparator being dropped. The original
+    // requirement this test protects is UNCHANGED and now strengthened:
+    // a gap-spanning delta must never be spoken, or counted, as weekly.
     const fn = src.slice(src.indexOf('export function computeWeeklyTrendPct'));
-    expect(fn.slice(0, 1200)).toMatch(/FOUNDER-GATED/);
+    expect(fn.slice(0, 1200)).toMatch(/PER-WEEK rate/);
+    // The fix must remain time-normalisation, never a freshness cut-off
+    // that would discard the only evidence of a genuine large loss.
     expect(fn.slice(0, 1200)).not.toMatch(/weeklyComparatorFresh\(morningWeights, nowMs\)\) return null/);
+    expect(fn.slice(0, 1200)).toMatch(/elapsedWeeksSinceComparator/);
   });
 
   test('RB6-3: the Home chip states the calendar fact for an unearned recovery week', () => {

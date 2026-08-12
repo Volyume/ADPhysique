@@ -88,9 +88,14 @@ describe('runWeeklyCoach: FFM-floor safety integration', () => {
       recentIntakeDaysLogged: 7,
     }));
     expect(out.ffmFloorHeld).toBe(true);
+    // C10A R-18: the floor is computed from the freshest weigh-in evidence
+    // (this fixture's series ends near 80.4 kg, EWMA ~80.2) rather than the
+    // static profile weight of 80 kg it used before. Formula and the
+    // 30 kcal/kg threshold are unchanged - only the weight fed in is now
+    // the user's current one.
     expect(out.ffmFloorContext).toMatchObject({
-      floorKcal: 2040,
-      ffmKg: 68.0,
+      floorKcal: 2045,
+      ffmKg: 68.2,
       source: 'katch_mcardle',
       recentIntakeAvgKcal: 1900,
       recentIntakeDaysLogged: 7,
@@ -158,7 +163,7 @@ describe('runWeeklyCoach: FFM-floor safety integration', () => {
     const ffmDecision = out.heldDecisions.find(d => d.type === 'ffm_floor');
     expect(ffmDecision).toBeDefined();
     expect(ffmDecision.reason).toMatch(/1800/);
-    expect(ffmDecision.reason).toMatch(/2040/);
+    expect(ffmDecision.reason).toMatch(/2045/); // C10A R-18: fresh weight, same formula
     expect(ffmDecision.reason).not.toMatch(/together|let's work|let's decide/i);
     expect(ffmDecision.reason).not.toMatch(/you should|you must/i);
   });
