@@ -3777,8 +3777,44 @@ export async function setActivePlan(userId, planId) {
 // Stage 1 seam (2026-08-09): `ledger` is the Block Ledger result the Stage 6
 // build threads into seeding. Accepted now so the "Continue with
 // adjustments" path has a real parameter to carry it; unused until Stage 6.
-export async function activatePlanWithBlock(userId, planId, planName, { ledger = null } = {}) {
+export async function activatePlanWithBlock(userId, planId, planName, { ledger = null, allowLearnedCarry = true } = {}) {
   await setActivePlan(userId, planId);
+
+  // C8 Work 2 (D97-9): muscle-level learned evidence survives a
+  // legitimate activation. Only "Continue with adjustments" ever passed
+  // `ledger`, so a plan switch, copied routine, phase rebuild or
+  // post-upgrade wizard build gave the ramp writer nothing and a mature
+  // user re-ramped from research values. When no explicit seed was
+  // handed in, derive one from the user's own judged block history.
+  //
+  // Conservative by construction: the helper is Pro-only (FREE HAS NO
+  // COACHING), has no current-block proposal to apply, and returns null
+  // unless something was genuinely carried - so manual overrides,
+  // suppression, research floors and evidence sufficiency all keep
+  // winning, and an activation with nothing to carry keeps the honest
+  // template ramp. Best-effort: activation must never fail on this.
+  //
+  // Review D5: a caller that MEANT a repeat passes allowLearnedCarry
+  // false. Its seed build can return null on a transient read failure,
+  // and "the same set targets as last time" must then fall back to the
+  // template ramp as it always did - never to the learned band, which
+  // would break P-6 behind an alert promising the opposite.
+  let effectiveLedger = ledger;
+  if (!effectiveLedger && allowLearnedCarry) {
+    try {
+      // eslint-disable-next-line global-require
+      const store = require('../store/useAppStore').default.getState();
+      const tier = store?.tier ?? 'free';
+      if (tier === 'pro') {
+        // eslint-disable-next-line global-require
+        const { buildLearnedSeedRangesForActivation } = require('./blockLedgerRunner');
+        effectiveLedger = await buildLearnedSeedRangesForActivation(userId, {
+          userProfile: store?.userProfile ?? null,
+          tier,
+        });
+      }
+    } catch (_) { effectiveLedger = null; /* honest template ramp */ }
+  }
 
   const d = await db();
   const now = Date.now();
@@ -3835,7 +3871,7 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
 
   await generateMesocycleWeeks(id);
   const { VOLUME_LANDMARKS } = await import('./algorithms');
-  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS, ledger);
+  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS, effectiveLedger);
 
   // C12: refresh the weekly training reminders so their copy names the plan
   // that just became active. Read the name back from the persisted active plan
@@ -8505,6 +8541,65 @@ export async function insertOrUpdateAdaptationEventFromCloud(userId, row) {
       row.deleted_at ? _tsToMs(row.deleted_at) : null,
     ],
   );
+
+  // C8 Work 4 (FR-C4-3 / S-4): the restore above lands in the SYNC
+  // MIRROR, which no product code reads - so a reinstall silently lost
+  // the Engine Log's continuity, the twice-declined/revert memory that
+  // puts a muscle on hold, and the same-week add-frequency caps. The
+  // cloud row already carries every field the authoritative table
+  // needs (sync.js's push mapper writes decision/delta/muscle/
+  // exercise_id/reason_code/reason_text/signals into `payload`), so
+  // this is purely a wrong-destination defect: no new cloud data, no
+  // new consent, no migration.
+  //
+  // Safety posture: INSERT OR IGNORE, so a restored historical event can
+  // never overwrite a newer local one, and adaptation_events is a
+  // read-only LOG (deload triggers, revert memory, frequency caps) that
+  // nothing replays as an action - restoring it cannot re-apply
+  // anything. Tombstoned rows are skipped, and rows missing any NOT NULL
+  // column are skipped rather than invented.
+  if (row.deleted_at) return;
+  try {
+    const payload = typeof row.payload === 'string'
+      ? JSON.parse(row.payload)
+      : (row.payload && typeof row.payload === 'object' ? row.payload : null);
+    const weekId = row.mesocycle_week_id ?? null;
+    const decision = payload?.decision ?? null;
+    const reasonCode = payload?.reason_code ?? null;
+    if (!weekId || !decision || !reasonCode) return;
+    const signalsJson = payload?.signals == null
+      ? '{}'
+      : (typeof payload.signals === 'string' ? payload.signals : JSON.stringify(payload.signals));
+    await d.runAsync(
+      `INSERT OR IGNORE INTO adaptation_events
+        (id, mesocycle_week_id, muscle, exercise_id, decision, delta,
+         reason_code, reason_text, signals_json, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        row.id, weekId,
+        payload?.muscle ?? null, payload?.exercise_id ?? null,
+        decision, payload?.delta ?? null,
+        reasonCode, payload?.reason_text ?? null,
+        signalsJson,
+        _tsToMs(row.recorded_at) ?? _tsToMs(row.created_at) ?? Date.now(),
+      ],
+    );
+  } catch (_) { /* mirror already written; the log is best-effort */ }
+}
+
+/**
+ * C8 Work 4 review D9: run a whole adaptation-event restore inside one
+ * transaction. The pull is unwatermarked and full-table, and Work 4
+ * added a second write per row (the authoritative log beside the sync
+ * mirror), so a user with years of session decisions was paying for
+ * thousands of unbatched writes on the launch path.
+ *
+ * The caller keeps its own per-row error handling, so a single bad row
+ * still cannot abort the restore.
+ */
+export async function runAdaptationEventBatch(task) {
+  const d = await db();
+  return runInTransaction(d, task);
 }
 
 // ─── Exercise User Notes ──────────────────────────────────────────────────────

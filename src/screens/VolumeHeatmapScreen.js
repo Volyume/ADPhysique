@@ -63,6 +63,18 @@ const WINDOW_OPTIONS = [
   { weeks: 4, label: '4 weeks' },
 ];
 
+// The editor shows every muscle, but the stored table holds only the
+// edited ones, so the fields are the saved entries merged over the
+// research defaults. Used to restore the fields when an edit is
+// cancelled (review D4).
+function buildEditValues(stored) {
+  const out = {};
+  for (const [m, v] of Object.entries(VOLUME_LANDMARKS)) {
+    out[m] = { mev: v.mev, mav: v.mav, mrv: v.mrv, ...(stored?.[m] ?? {}) };
+  }
+  return out;
+}
+
 export default function VolumeHeatmapScreen() {
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
   const { user, userProfile, tier } = useAppStore(useShallow(s => ({
@@ -97,6 +109,13 @@ export default function VolumeHeatmapScreen() {
   const [resolvedSource, setResolvedSource] = useState(null);
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState({});
+  // C8 Work 3 (RA6-6): which muscles the user actually TOUCHED in this
+  // editing session. A deliberate save is user intent even when the
+  // chosen number equals the research default, and intent must never be
+  // inferred from the number - but simply opening the editor and
+  // tapping Save must NOT mark every muscle manual (that was the
+  // Stage 6 blocker that disabled adaptation body-wide).
+  const touchedMusclesRef = useRef(new Set());
   const [trendData, setTrendData] = useState([]);
   const [lastTrainedMap, setLastTrainedMap] = useState({});
   const [hasAnyCompletedSets, setHasAnyCompletedSets] = useState(false);
@@ -274,13 +293,23 @@ export default function VolumeHeatmapScreen() {
         mrv: parseInt(vals.mrv) || 0,
       };
       const research = VOLUME_LANDMARKS[muscle];
-      const edited = !research
+      const differs = !research
         || entry.mev !== research.mev || entry.mav !== research.mav || entry.mrv !== research.mrv;
-      if (edited) map[muscle] = entry;
+      // C8 Work 3 (RA6-6): a muscle the user deliberately edited in this
+      // session is THEIR setting even when they landed back on the
+      // research value. `explicit` records the intent so no reader has
+      // to infer it from the number (isManualEdit honours the flag);
+      // muscles that already carried explicit intent keep it.
+      const wasExplicit = customLandmarks?.[muscle]?.explicit === true;
+      const touched = touchedMusclesRef.current.has(muscle);
+      if (differs || touched || wasExplicit) {
+        map[muscle] = (touched || wasExplicit) ? { ...entry, explicit: true } : entry;
+      }
     }
     const key = `@volyume_landmarks_${user.id}`;
     if (Object.keys(map).length === 0) {
       // Everything back at defaults: same semantics as a reset.
+      touchedMusclesRef.current = new Set(); // C8 RA6-6: reset clears intent
       await AsyncStorage.removeItem(key);
       // Campaign 1 P0-8 D10: stamp the local write so a stale cloud copy
       // of the landmark blob cannot be applied back over this edit.
@@ -700,10 +729,13 @@ export default function VolumeHeatmapScreen() {
                         ref={el => { editFieldRefs.current[`${muscle}:${key}`] = el; }}
                         label={label}
                         value={String(editValues[muscle]?.[key] ?? '')}
-                        onChangeText={v => setEditValues(prev => ({
-                          ...prev,
-                          [muscle]: { ...prev[muscle], [key]: v },
-                        }))}
+                        onChangeText={v => {
+                          touchedMusclesRef.current.add(muscle); // C8 RA6-6
+                          setEditValues(prev => ({
+                            ...prev,
+                            [muscle]: { ...prev[muscle], [key]: v },
+                          }));
+                        }}
                         keyboardType="number-pad"
                         selectTextOnFocus
                         accessibilityLabel={`${MUSCLE_DISPLAY_NAMES[muscle]} ${label}`}
@@ -723,7 +755,17 @@ export default function VolumeHeatmapScreen() {
                 title="Cancel"
                 variant="secondary"
                 size="sm"
-                onPress={() => setEditing(false)}
+                onPress={() => {
+                  // Review D4: an abandoned edit is not intent. Cancel
+                  // discards both the typed values and the record of
+                  // which muscles were touched, so a later save in the
+                  // same visit cannot stamp them as the user's own
+                  // setting (which would be permanent and outrank
+                  // everything, including adaptive learning).
+                  touchedMusclesRef.current = new Set();
+                  setEditValues(buildEditValues(customLandmarks));
+                  setEditing(false);
+                }}
                 accessibilityLabel="Cancel"
                 style={styles.editActionButton}
               />

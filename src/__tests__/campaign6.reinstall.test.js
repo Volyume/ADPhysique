@@ -48,6 +48,7 @@ jest.mock('../lib/sync', () => ({ scheduleSync: () => {} }));
 
 const {
   db,
+  insertOrUpdateAdaptationEventFromCloud,
   insertProgrammeFromCloud,
   insertMesocycleFromCloud,
   insertMesocycleWeekFromCloud,
@@ -289,4 +290,50 @@ test('photos and scans have NO cloud applier at all (local-only, as promised)', 
   expect(src).not.toMatch(/insertProgressScan\w*FromCloud/);
   const registry = fs.readFileSync(path.join(__dirname, '..', 'lib', 'sync', 'registry.js'), 'utf8');
   expect(registry).not.toMatch(/progress_photo/);
+});
+
+test('C8 Work 4 (FR-C4-3/S-4): adaptation events restore into the table the app actually READS', async () => {
+  // Before this fix the applier wrote only adaptation_events_sync, a
+  // mirror no product code reads - so a reinstall lost the Engine Log,
+  // the twice-declined revert memory and the same-week frequency caps.
+  await insertOrUpdateAdaptationEventFromCloud(U, {
+    id: 'ae-1', mesocycle_week_id: 'mw-1', event_type: 'session_adjustment',
+    payload: JSON.stringify({
+      decision: 'add_set', delta: 1, muscle: 'chest', exercise_id: null,
+      reason_code: 'session_add_under_stimulus', reason_text: 'why', signals: { pump: 1 },
+    }),
+    recorded_at: iso(WEEK - 2 * 86400000),
+    created_at: iso(WEEK - 2 * 86400000), updated_at: iso(WEEK - 2 * 86400000),
+  });
+  const real = await conn.getFirstAsync('SELECT * FROM adaptation_events WHERE id = ?', ['ae-1']);
+  expect(real).toBeTruthy();
+  expect(real.decision).toBe('add_set');
+  expect(real.reason_code).toBe('session_add_under_stimulus');
+  expect(real.muscle).toBe('chest');
+  // The sync mirror is still written (watermarks depend on it).
+  const mirror = await conn.getFirstAsync('SELECT id FROM adaptation_events_sync WHERE id = ?', ['ae-1']);
+  expect(mirror).toBeTruthy();
+});
+
+test('C8 Work 4: a restored event can never overwrite newer local state, and a tombstone never lands', async () => {
+  // A locally-recorded event with the same id wins: INSERT OR IGNORE.
+  await conn.runAsync(
+    `INSERT INTO adaptation_events (id, mesocycle_week_id, muscle, decision, reason_code, signals_json, created_at)
+     VALUES ('ae-2', 'mw-1', 'quads', 'local_decision', 'local_reason', '{}', 1)`,
+  );
+  await insertOrUpdateAdaptationEventFromCloud(U, {
+    id: 'ae-2', mesocycle_week_id: 'mw-1', event_type: 'session_adjustment',
+    payload: JSON.stringify({ decision: 'cloud_decision', reason_code: 'cloud_reason', signals: {} }),
+    recorded_at: iso(WEEK), created_at: iso(WEEK), updated_at: iso(WEEK),
+  });
+  const kept = await conn.getFirstAsync('SELECT decision FROM adaptation_events WHERE id = ?', ['ae-2']);
+  expect(kept.decision).toBe('local_decision');
+
+  await insertOrUpdateAdaptationEventFromCloud(U, {
+    id: 'ae-3', mesocycle_week_id: 'mw-1', event_type: 'session_adjustment',
+    payload: JSON.stringify({ decision: 'add_set', reason_code: 'x', signals: {} }),
+    recorded_at: iso(WEEK), created_at: iso(WEEK), updated_at: iso(WEEK),
+    deleted_at: iso(WEEK),
+  });
+  expect(await conn.getFirstAsync('SELECT id FROM adaptation_events WHERE id = ?', ['ae-3'])).toBeNull();
 });

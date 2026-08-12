@@ -356,6 +356,92 @@ export async function backfillMissingBlockLedgers(userId, { userProfile = null, 
   } catch (_e) { /* best effort: consumption falls back to stored state */ }
 }
 
+/**
+ * C8 Work 2 (D97-9): muscle-level learned evidence for an activation
+ * that is NOT "Continue with adjustments".
+ *
+ * Only the adjust path ever passed seed ranges to activatePlanWithBlock,
+ * so a plan switch, a copied routine, a phase rebuild or a post-upgrade
+ * wizard build handed the writer NOTHING and every muscle got the
+ * static research template ramp - a block-eight user re-ramping from
+ * Day-1-like values. The founder's ruling: muscle-level learning does
+ * not belong to one plan ID.
+ *
+ * This is deliberately WEAKER than the adjust path. There is no current
+ * block proposal here (no `ledgerEntry`), so resolveSeedRange can only
+ * fall through its existing chain:
+ *   manual override -> learned band -> profile-adjusted -> research.
+ * Every existing constraint therefore still wins: a manual override
+ * outranks it, suppression skips the learned band entirely, research
+ * MEV stays the floor anchor, and a band with no qualifying evidence
+ * (isLearned false) simply is not used.
+ *
+ * Review D1/D8: the map returned here contains ONLY the muscles that
+ * genuinely carried something (a learned band or the user's own manual
+ * setting). A muscle whose chain fell through to the profile prior or
+ * to research is omitted, and generateInitialPlannedVolume leaves any
+ * omitted muscle on the static template ramp. This matters most under
+ * suppression, where the learned band is skipped for every muscle: a
+ * single unrelated manual override must not hand the whole body a
+ * profile-prior ramp (measured at 6->21 sets against a 6->14 template)
+ * during calm mode or an open ED flag. Carrying only what was actually
+ * learned also means an incompatible new plan costs nothing.
+ *
+ * Pro only: FREE HAS NO COACHING, so a free activation keeps the
+ * template ramp exactly as before. Using the user's own past blocks as
+ * prior evidence claims only that those blocks happened - never that
+ * Volyume coached them.
+ *
+ * No backfill here (unlike the next-block builder): activation must
+ * stay fast, and only ALREADY-JUDGED blocks count as evidence.
+ */
+export async function buildLearnedSeedRangesForActivation(userId, { userProfile = null, tier = 'free' } = {}) {
+  if (!userId || tier !== 'pro') return null;
+  try {
+    const mesos = await getAllMesocyclesForUser(userId);
+    if (!Array.isArray(mesos) || mesos.length === 0) return null;
+    const manualTable = await getManualLandmarks(userId);
+    const adaptedTable = await getAdaptedLandmarks(userId, { tier }).catch(() => null);
+    const suppressed = await readSuppression(userId);
+    const nowMs = Date.now();
+
+    const ranges = {};
+    for (const muscle of Object.keys(VOLUME_LANDMARKS)) {
+      const research = VOLUME_LANDMARKS[muscle];
+      const history = priorLedgerEntries(mesos, nowMs, muscle);
+      const learned = computeLearnedRange({
+        prior: profileAdjustedPrior(muscle, userProfile),
+        researchMev: research?.mev ?? 0,
+        adaptedMrv: adaptedTable?.[muscle]?.isAdapted ? adaptedTable[muscle].mrv : null,
+        ledgerHistory: history,
+        muscle,
+      });
+      const manualEntry = manualTable?.[muscle] ?? null;
+      const resolved = resolveSeedRange({
+        manual: isManualEdit(manualEntry, research) ? manualEntry : null,
+        ledgerEntry: null, // no current-block proposal on this path
+        learnedRange: learned.isLearned ? learned : null,
+        profileAdjusted: profileAdjustedPrior(muscle, userProfile),
+        research,
+        suppressed,
+        intent: 'adjust',
+      });
+      // Per-muscle, never body-wide: only a genuinely carried muscle is
+      // written. Everything else stays on the template ramp.
+      if (resolved?.source === 'learned' || resolved?.source === 'manual') {
+        ranges[muscle] = resolved;
+      }
+    }
+    // Nothing was actually carried forward: let the caller keep the
+    // honest template ramp rather than relabel research as learned.
+    if (Object.keys(ranges).length === 0) return null;
+    return { version: 1, intent: 'activation', sourceMesocycleId: null, ranges };
+  } catch (e) {
+    logError('blockLedgerRunner.buildLearnedSeedRangesForActivation', e, { userId });
+    return null;
+  }
+}
+
 export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', userProfile = null, tier = 'free' } = {}) {
   try {
     // C6 P9-01 (D97): judge any switched-away finished blocks first, so

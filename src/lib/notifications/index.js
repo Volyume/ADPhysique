@@ -62,6 +62,7 @@ export {
   cancelAllNotifications,
   restoreNotifications,
   rescheduleForTimezoneIfChanged,
+  refreshWeighInHorizonIfStale,
   checkYearOfLiftsUnlock,
   checkMonthlyRecapReady,
 } from './scheduler';

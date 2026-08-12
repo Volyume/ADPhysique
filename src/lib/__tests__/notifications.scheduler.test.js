@@ -91,34 +91,36 @@ beforeEach(async () => {
 // ─── scheduleMorningWeightNotification ─────────────────────────────
 
 describe('scheduleMorningWeightNotification', () => {
-  test('default 07:00 schedules a WEEKLY trigger per weekday at 7:00 (NOTIF-4 rotation)', async () => {
+  // Re-anchored under C8 Work 5 (R-16): the prompts are no longer an
+  // INDEFINITE weekly repeat. They are a bounded 14-day run of one-shot
+  // DATE triggers, re-laid on every launch, so a user who stops opening
+  // the app stops being prompted instead of accruing months of them.
+  test('default 07:00 lays a BOUNDED 14-day run of 07:00 one-shots, not an endless weekly repeat', async () => {
     await scheduler.scheduleMorningWeightNotification(); // defaults 7, 0
     expect(mockCancelAsync).toHaveBeenCalledWith('volyume_morning_weight');
-    // One WEEKLY trigger per weekday so the copy rotates instead of freezing.
-    expect(mockScheduleAsync).toHaveBeenCalledTimes(7);
+    expect(mockScheduleAsync).toHaveBeenCalledTimes(14);
     const args = mockScheduleAsync.mock.calls.map((c) => c[0]);
-    expect(args.map((a) => a.identifier).sort()).toEqual([
-      'volyume_morning_weight_1', 'volyume_morning_weight_2', 'volyume_morning_weight_3',
-      'volyume_morning_weight_4', 'volyume_morning_weight_5', 'volyume_morning_weight_6',
-      'volyume_morning_weight_7',
-    ]);
-    args.forEach((a, i) => {
+    expect(args[0].identifier).toBe('volyume_morning_weight_1');
+    expect(args[13].identifier).toBe('volyume_morning_weight_14');
+    args.forEach((a) => {
       expect(a.content.data).toEqual({ type: 'morning_weight' });
-      expect(a.trigger).toEqual({
-        channelId: 'coaching-reminders',
-        type: SCHEDULE_INPUT_TYPES.WEEKLY,
-        weekday: i + 1,
-        hour: 7,
-        minute: 0,
-      });
+      expect(a.trigger.channelId).toBe('coaching-reminders');
+      expect(a.trigger.type).toBe(SCHEDULE_INPUT_TYPES.DATE);
+      // Every one-shot is in the future, at the (quiet-hours-shifted) time.
+      expect(a.trigger.date.getHours()).toBe(7);
+      expect(a.trigger.date.getMinutes()).toBe(0);
+      expect(a.trigger.date.getTime()).toBeGreaterThan(Date.now());
     });
+    // The horizon really is bounded: nothing beyond ~14 days.
+    const last = args[args.length - 1].trigger.date.getTime();
+    expect(last - Date.now()).toBeLessThan(15 * 86400000);
   });
 
   test('23:00 inside default quiet window shifts to 07:00', async () => {
     await scheduler.scheduleMorningWeightNotification(23, 0);
     const arg = mockScheduleAsync.mock.calls[0][0];
-    expect(arg.trigger.hour).toBe(7);
-    expect(arg.trigger.minute).toBe(0);
+    expect(arg.trigger.date.getHours()).toBe(7);
+    expect(arg.trigger.date.getMinutes()).toBe(0);
   });
 
   test('respects a custom quiet-hours window persisted in AsyncStorage', async () => {
@@ -127,7 +129,7 @@ describe('scheduleMorningWeightNotification', () => {
       JSON.stringify({ enabled: true, startHour: 12, startMinute: 0, endHour: 14, endMinute: 0 }),
     );
     await scheduler.scheduleMorningWeightNotification(13, 0);
-    expect(mockScheduleAsync.mock.calls[0][0].trigger.hour).toBe(14);
+    expect(mockScheduleAsync.mock.calls[0][0].trigger.date.getHours()).toBe(14);
   });
 
   test('disabled quiet hours: trigger passes through unchanged', async () => {
@@ -136,7 +138,7 @@ describe('scheduleMorningWeightNotification', () => {
       JSON.stringify({ enabled: false, startHour: 22, startMinute: 0, endHour: 7, endMinute: 0 }),
     );
     await scheduler.scheduleMorningWeightNotification(23, 0);
-    expect(mockScheduleAsync.mock.calls[0][0].trigger.hour).toBe(23);
+    expect(mockScheduleAsync.mock.calls[0][0].trigger.date.getHours()).toBe(23);
   });
 
   test('failure -> notification_failed telemetry fires with morning_weight category', async () => {
@@ -162,7 +164,7 @@ describe('scheduleMorningWeightNotification', () => {
   test('Q1: morning nudge now fires with sound on (was silent)', async () => {
     await scheduler.scheduleMorningWeightNotification(7, 0);
     const args = mockScheduleAsync.mock.calls.map((c) => c[0]);
-    expect(args.length).toBe(7);
+    expect(args.length).toBe(14);
     args.forEach((a) => expect(a.content.sound).toBe(true));
   });
 
@@ -179,34 +181,78 @@ describe('scheduleMorningWeightNotification', () => {
 // ─── scheduleEveningWeightReminder (Q1) ─────────────────────────────
 
 describe('scheduleEveningWeightReminder', () => {
-  test('default lays a WEEKLY evening trigger per weekday, sound on, type evening_weight', async () => {
+  // C8 Work 5 (R-16): the evening backstop is bounded like the morning
+  // nudge. A user who stops opening the app stops being prompted once the
+  // 14-day horizon runs out, instead of being nudged twice a day forever.
+  test('default lays a BOUNDED 14-day run of 19:30 one-shots, not an endless weekly repeat', async () => {
     await scheduler.scheduleEveningWeightReminder(); // defaults 19:30
-    // 7 weekly triggers, one per weekday.
-    expect(mockScheduleAsync).toHaveBeenCalledTimes(7);
+    expect(mockScheduleAsync).toHaveBeenCalledTimes(14);
     const args = mockScheduleAsync.mock.calls.map((c) => c[0]);
-    expect(args.map((a) => a.identifier).sort()).toEqual([
-      'volyume_evening_weight_1', 'volyume_evening_weight_2', 'volyume_evening_weight_3',
-      'volyume_evening_weight_4', 'volyume_evening_weight_5', 'volyume_evening_weight_6',
-      'volyume_evening_weight_7',
-    ]);
-    args.forEach((a, i) => {
+    expect(args.map((a) => a.identifier)).toEqual(
+      Array.from({ length: 14 }, (_, i) => `volyume_evening_weight_${i + 1}`),
+    );
+    args.forEach((a) => {
       expect(a.content.data).toEqual({ type: 'evening_weight' });
       expect(a.content.sound).toBe(true);
-      expect(a.trigger).toEqual({
-        channelId: 'coaching-reminders',
-        type: SCHEDULE_INPUT_TYPES.WEEKLY,
-        weekday: i + 1,
-        hour: 19,
-        minute: 30,
-      });
+      expect(a.trigger.channelId).toBe('coaching-reminders');
+      expect(a.trigger.type).toBe(SCHEDULE_INPUT_TYPES.DATE);
+      expect(a.trigger.date.getHours()).toBe(19);
+      expect(a.trigger.date.getMinutes()).toBe(30);
+      // No weekly repeat smuggled in alongside the date.
+      expect(a.trigger.weekday).toBeUndefined();
+      expect(a.trigger.repeats).toBeFalsy();
     });
+    // The horizon really is bounded: the last prompt is inside 15 days.
+    const last = args[args.length - 1].trigger.date.getTime();
+    expect(last - Date.now()).toBeLessThan(15 * 24 * 60 * 60 * 1000);
   });
 
-  test('cancels its 7 ids before re-laying', async () => {
+  test('cancels its whole horizon of ids before re-laying', async () => {
     await scheduler.scheduleEveningWeightReminder();
-    for (let w = 1; w <= 7; w += 1) {
+    for (let w = 1; w <= 14; w += 1) {
       expect(mockCancelAsync).toHaveBeenCalledWith(`volyume_evening_weight_${w}`);
     }
+  });
+
+  // Review D6: the bounded horizon only covers 14 days, and the re-lay
+  // paths are all cold start / settings / ED-flag clear. An app that
+  // stays resident for weeks would run dry for a user who never stopped
+  // turning up - the opposite of the intent.
+  test('refreshWeighInHorizonIfStale tops the horizon up, at most weekly', async () => {
+    // It goes through restoreNotifications, so every gate still applies -
+    // including the Pro gate on the weigh-in prompts.
+    mockGetState.mockImplementation(() => ({ user: { id: 'user-1' }, tier: 'pro' }));
+    await AsyncStorage.setItem('@volyume_notification_prefs', JSON.stringify({
+      morningEnabled: true, morningHour: 7, morningMinute: 0,
+    }));
+    // Laid a moment ago: nothing to do.
+    await AsyncStorage.setItem('@volyume_weighin_laid_at', String(Date.now()));
+    await scheduler.refreshWeighInHorizonIfStale('user-1');
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+
+    // Laid over a week ago: re-lay, well inside the 14-day horizon.
+    await AsyncStorage.setItem('@volyume_weighin_laid_at', String(Date.now() - 8 * 24 * 60 * 60 * 1000));
+    await scheduler.refreshWeighInHorizonIfStale('user-1');
+    expect(mockScheduleAsync).toHaveBeenCalled();
+    expect(mockScheduleAsync.mock.calls.map((c) => c[0]?.identifier))
+      .toEqual(expect.arrayContaining(['volyume_morning_weight_1']));
+  });
+
+  test('the top-up keeps the Free gate: it never re-lays coaching prompts', async () => {
+    mockGetState.mockImplementation(() => ({ user: { id: 'user-1' }, tier: 'free' }));
+    await AsyncStorage.setItem('@volyume_notification_prefs', JSON.stringify({
+      morningEnabled: true, morningHour: 7, morningMinute: 0,
+    }));
+    await AsyncStorage.setItem('@volyume_weighin_laid_at', String(Date.now() - 30 * 24 * 60 * 60 * 1000));
+    await scheduler.refreshWeighInHorizonIfStale('user-1');
+    const ids = mockScheduleAsync.mock.calls.map((c) => c[0]?.identifier);
+    expect(ids.filter((id) => /morning|evening/.test(id || ''))).toEqual([]);
+  });
+
+  test('the top-up is a no-op for a user with no notification prefs at all', async () => {
+    await AsyncStorage.setItem('@volyume_weighin_laid_at', String(Date.now() - 30 * 24 * 60 * 60 * 1000));
+    await scheduler.refreshWeighInHorizonIfStale('user-1');
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
   });
 
   test('open ED flag -> does NOT lay a second daily weight prompt', async () => {
@@ -217,8 +263,8 @@ describe('scheduleEveningWeightReminder', () => {
 
   test('19:30 outside the default quiet window passes through unshifted', async () => {
     await scheduler.scheduleEveningWeightReminder(19, 30);
-    expect(mockScheduleAsync.mock.calls[0][0].trigger.hour).toBe(19);
-    expect(mockScheduleAsync.mock.calls[0][0].trigger.minute).toBe(30);
+    expect(mockScheduleAsync.mock.calls[0][0].trigger.date.getHours()).toBe(19);
+    expect(mockScheduleAsync.mock.calls[0][0].trigger.date.getMinutes()).toBe(30);
   });
 
   test('a time inside quiet hours is shifted out', async () => {
@@ -227,7 +273,7 @@ describe('scheduleEveningWeightReminder', () => {
       JSON.stringify({ enabled: true, startHour: 19, startMinute: 0, endHour: 21, endMinute: 0 }),
     );
     await scheduler.scheduleEveningWeightReminder(19, 30);
-    expect(mockScheduleAsync.mock.calls[0][0].trigger.hour).toBe(21);
+    expect(mockScheduleAsync.mock.calls[0][0].trigger.date.getHours()).toBe(21);
   });
 
   test('web platform: no-op', async () => {
