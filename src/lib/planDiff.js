@@ -27,15 +27,39 @@ const uniqueSorted = (names) =>
 
 /**
  * Normalise a prospective dry-run plan (planEngine output) into a summary.
+ *
+ * Campaign 9 cosmetic patch: the dry run keeps blocked entries inside its
+ * raw positional plan, because the plan-diff indices are derived from that
+ * structure and removing them would desynchronise it. That is correct for
+ * the DATA and wrong for the PREVIEW - an exercise the user has set aside
+ * was appearing in "moves" as though Volyume intended to prescribe it,
+ * when the commit will not write it at all.
+ *
+ * So the presentation summary drops those names and counts them instead.
+ * `plan` itself is never touched: positional indices, and everything the
+ * commit path reads, are byte-identical. The diff algorithm is unchanged
+ * too; it simply stops being handed a name that was never going to be
+ * prescribed, which makes it more accurate rather than less.
+ *
  * @param {{ splitType?: string, workouts?: Array }} plan
  * @param {number|null} sessionLengthMinutes
+ * @param {{ blockedSlots?: Array<{exerciseName?: string|null}> }} [opts]
+ *   the dry run's own blockedSlots, when it reported any.
  */
-export function summariseProspectivePlan(plan, sessionLengthMinutes = null) {
+export function summariseProspectivePlan(plan, sessionLengthMinutes = null, { blockedSlots = null } = {}) {
   const workouts = Array.isArray(plan?.workouts) ? plan.workouts : [];
+  const blockedNames = new Set(
+    (Array.isArray(blockedSlots) ? blockedSlots : [])
+      .map((b) => (b?.exerciseName ? String(b.exerciseName).toLowerCase() : null))
+      .filter(Boolean),
+  );
   const moves = [];
+  let blockedCount = 0;
   for (const w of workouts) {
     for (const ex of (Array.isArray(w?.exercises) ? w.exercises : [])) {
-      if (ex?.exerciseName) moves.push(ex.exerciseName);
+      if (!ex?.exerciseName) continue;
+      if (blockedNames.has(String(ex.exerciseName).toLowerCase())) { blockedCount += 1; continue; }
+      moves.push(ex.exerciseName);
     }
   }
   return {
@@ -43,6 +67,9 @@ export function summariseProspectivePlan(plan, sessionLengthMinutes = null) {
     split: plan?.splitType ?? null,
     sessionLengthMinutes: sessionLengthMinutes ?? null,
     moves: uniqueSorted(moves),
+    // Presentation only. The screen renders the blocked state instead of
+    // naming an exercise it is not going to prescribe.
+    blockedCount,
   };
 }
 

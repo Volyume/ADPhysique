@@ -36,14 +36,17 @@ describe('summariseProspectivePlan', () => {
         { exercises: [{ exerciseName: 'Squat' }, { exerciseName: 'Row' }] },
       ],
     };
+    // C9 cosmetic patch added blockedCount; with no blocked slots it is 0
+    // and every other field is exactly as before.
     expect(summariseProspectivePlan(plan, 60)).toEqual({
       days: 2, split: 'ppl', sessionLengthMinutes: 60,
       moves: ['Bench Press', 'Row', 'Squat'],
+      blockedCount: 0,
     });
   });
   test('malformed plan → zero days, empty moves', () => {
     expect(summariseProspectivePlan(null, null)).toEqual({
-      days: 0, split: null, sessionLengthMinutes: null, moves: [],
+      days: 0, split: null, sessionLengthMinutes: null, moves: [], blockedCount: 0,
     });
   });
 });

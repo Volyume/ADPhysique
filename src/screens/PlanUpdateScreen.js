@@ -164,9 +164,19 @@ export default function PlanUpdateScreen({ navigation }) {
         return;
       }
       const nowSummary = await readCurrentPlanSummary();
-      const afterSummary = summariseProspectivePlan(dry.plan, dry.sessionLengthMinutes);
+      // C9 cosmetic patch: hand the summariser the dry run's own blocked
+      // list so the preview never names an exercise the user set aside as
+      // though it were about to be prescribed.
+      const afterSummary = summariseProspectivePlan(dry.plan, dry.sessionLengthMinutes, {
+        blockedSlots: dry.blockedSlots ?? null,
+      });
       setDiff(diffPlans(nowSummary, afterSummary));
-      setStaged({ profile: updatedProfile, partial: !!dry.partial, missedCount: dry.missedCount ?? 0 });
+      setStaged({
+        profile: updatedProfile,
+        partial: !!dry.partial,
+        missedCount: dry.missedCount ?? 0,
+        blockedCount: afterSummary.blockedCount ?? 0,
+      });
     } catch (e) {
       logError('PlanUpdateScreen.reviewRebuild', e, { userId: user?.id });
       toast.show(REBUILD_FAILED_MESSAGE, { variant: 'error', duration: 5000 });
@@ -388,6 +398,18 @@ export default function PlanUpdateScreen({ navigation }) {
                 ) : null}
                 {staged?.partial ? (
                   <Text style={[styles.diffShortfall, live.diffShortfall]}>{planShortfallNote(staged.missedCount)}</Text>
+                ) : null}
+                {/* C9 cosmetic patch: a slot whose candidates the user has
+                    set aside shows its real state instead of naming the
+                    exercise. Resolving it stays the job of the existing
+                    conflict flow; nothing is chosen or restored here. */}
+                {staged?.blockedCount > 0 ? (
+                  <Text style={[styles.diffShortfall, live.diffShortfall]}>
+                    {staged.blockedCount === 1 ? 'Exercise choice needed' : `Exercise choice needed for ${staged.blockedCount} slots`}
+                    {'. '}
+                    You have set aside the exercises that would normally fill
+                    {staged.blockedCount === 1 ? ' this slot.' : ' these slots.'}
+                  </Text>
                 ) : null}
               </>
             )}
