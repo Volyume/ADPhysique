@@ -2321,7 +2321,14 @@ export default function HomeScreen({ navigation, route }) {
         scroll
       >
         <Text style={[styles.intentTitle, live.intentTitle]}>How are you feeling today?</Text>
-        <Text style={[styles.intentSub, live.intentSub]}>Takes a second. Your answers shape how your sessions are read and, when coaching is active, whether today's planned workload still makes sense.</Text>
+        {/* C10C: the old line said the answers "shape how your sessions are
+            read" without ever saying WHICH WAY. The direction is the part
+            that matters to a user deciding whether to answer honestly: a
+            rough night can ease the session, and a good one never adds to
+            it. "Can" and "when coaching is active" keep it truthful - not
+            every answer changes something, and the easing only happens
+            where coaching is actually available. */}
+        <Text style={[styles.intentSub, live.intentSub]}>Takes a second. When coaching is active, poor sleep or heavy soreness can ease today's session. Answering well never makes it harder than planned.</Text>
         {/* R2-10 (founder decision "Reorder", 2026-07-11): the optional
             readiness rows sit ABOVE the intent options, compacted to one
             aligned line each, because the intent tap below starts the

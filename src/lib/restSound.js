@@ -151,8 +151,28 @@ async function preload() {
  * synchronously from any UI handler, fires off the preload + replay
  * asynchronously and never throws.
  */
+/**
+ * C10C: the single mute point for the in-app cues. Gating HERE rather than
+ * at each call site means every pip and the end tone are covered by one
+ * check, and nothing about the timer, its haptics or its display can be
+ * affected by the setting - this function only ever produced sound.
+ *
+ * Fails OPEN: if the store cannot be read, the beep plays. A preference
+ * that silently mutes itself on an unrelated error would be worse than
+ * the sound.
+ */
+function restSoundsMuted() {
+  try {
+    // eslint-disable-next-line global-require
+    return require('../store/useAppStore').default.getState().restSoundsEnabled === false;
+  } catch (_) {
+    return false;
+  }
+}
+
 export function playRestBeep(key) {
   if (!Audio) return; // build doesn't have expo-av, silent fallback
+  if (restSoundsMuted()) return;
   (async () => {
     try {
       if (!soundsCache) await preload();

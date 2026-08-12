@@ -179,7 +179,11 @@ export function assessDataConfidence({ weigh_ins, adherenceKnown, weeksInPhase, 
   if (weigh_ins < 3) {
     return {
       level: 'data_hold',
-      reasons: ['Fewer than 3 weigh-ins this week'],
+      // C10C: the gate counts DISTINCT calendar days (weighInDayCount
+      // above), so "3 weigh-ins" was incomplete - three readings on one
+      // morning do not satisfy it. The holdMessage already said so; this
+      // reason line now matches it.
+      reasons: ['Morning weights on fewer than 3 different days this week'],
       holdMessage: "Need morning weights from at least 3 different days for a reliable trend. Calories held this week. Log daily and the next check-in has clean data to act on.",
     };
   }

@@ -170,6 +170,15 @@ export function weakPointSetForGoal(goal) {
 // aggressive cuts are the norm) OR the recomp phase at an advanced
 // experience level. Maps the locked spec's "physique_competition"
 // and "advanced_recomp" to the actual values in this codebase.
+// C10C: womens_physique was the one supported competition division
+// missing here, while every sibling - including womens_bodybuilding -
+// was present. It is treated as a competition division everywhere else
+// that matters (ADVANCED_PROTEIN_GOALS in nutritionEngine, the plan
+// engine's division matrix, subregion emphasis and superset allowlist),
+// so its absence made the goal-lock prompt and the competitor-only
+// high-day/low-day macro cycle behave differently from figure, wellness
+// and bikini for no stated physiological or product reason. Parity only:
+// no formula, threshold or female-specific rule is altered by adding it.
 const _GOAL_LOCK_COMPETITION_VALUES = new Set([
   'mens_physique',
   'classic_physique',
@@ -177,6 +186,7 @@ const _GOAL_LOCK_COMPETITION_VALUES = new Set([
   'bikini',
   'figure',
   'wellness',
+  'womens_physique',
   'womens_bodybuilding',
 ]);
 

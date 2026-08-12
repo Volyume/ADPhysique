@@ -145,16 +145,26 @@ describe('PR comprehension', () => {
 
 describe('READINESS comprehension', () => {
   test('both subjective-input surfaces state their purpose', () => {
-    expect(read('screens/HomeScreen.js')).toMatch(/when coaching is active, whether today's planned workload still makes sense/);
+    // C10C sharpened the PRE-SESSION line: it now names the direction of
+    // effect, which was the part a user needed in order to answer
+    // honestly. Both surfaces still say what the answers are for, and both
+    // still keep the "when coaching is active" truthfulness caveat.
+    expect(read('screens/HomeScreen.js')).toMatch(/When coaching is active, poor sleep or heavy soreness can ease today's session/);
     expect(read('screens/WorkoutSummaryScreen.js')).toMatch(/when coaching is active, whether next session's workload still makes sense/);
   });
 
   test('the purpose lines never teach direction (no set-count rewards revealed)', () => {
-    const home = read('screens/HomeScreen.js').match(/Your answers shape how your sessions[^<]*/)[0];
+    // "Direction" here means the MECHANICS a user could game - set counts
+    // and loads - never the honest statement that poor recovery can ease a
+    // session. C10C requires that statement; this still forbids the
+    // mechanics, on both surfaces.
+    const home = read('screens/HomeScreen.js').match(/Takes a second\.[^<]*/)[0];
     const summary = read('screens/WorkoutSummaryScreen.js').match(/Your answers shape how your recovery[^<]*/)[0];
     for (const s of [home, summary]) {
       expect(s).not.toMatch(/fewer sets|more sets|adds? a set|extra set/i);
     }
+    // And the pre-session line must never imply good answers earn more.
+    expect(home).toMatch(/never makes it harder than planned/);
   });
 });
 
