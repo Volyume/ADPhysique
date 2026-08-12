@@ -11,7 +11,7 @@
  *           plain, CLOSABLE info - an info glyph, the sentence, and a
  *           dismiss X. It never navigates anywhere (the old chevron opened
  *           the exercise form guide; founder-killed).
- *   Prefill one compact "Last: 80kg x 8 - Use" row when history exists;
+ *   Prefill one compact "Last session: 80kg x 8 - Use" row when history exists;
  *           first-time sessions get a quiet non-tappable target line.
  *   Inputs  the proven SetEntry stepper block, untouched.
  *   Note    a collapsed "Add a note" row that expands into the input. The
