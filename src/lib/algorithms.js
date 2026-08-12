@@ -1112,6 +1112,15 @@ export function computeSessionAdjustments({
 
   // Add-frequency cap (this week) and revert memory (this meso), both derived
   // from adaptation_events — no new state.
+  //
+  // C10B (F9 trace): "revert expiry" was carried as undefined product law.
+  // It is not undefined in the code. The caller passes a SIX-WEEK window
+  // (sessionAdjustments: getRecentAdaptationEvents(userId, 6), a rolling
+  // created_at >= now - 6 weeks), so a muscle suppressed by two reverts
+  // becomes proposable again once those events age out - roughly one
+  // mesocycle, an existing lifecycle boundary rather than an invented
+  // duration. Reinstall does not resurrect it either: restored events keep
+  // their true recorded_at, so an old revert stays outside the window.
   const addedThisWeek = new Set();
   const revertCounts = {};
   for (const ev of recentSessionEvents) {

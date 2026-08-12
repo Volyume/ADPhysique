@@ -7187,8 +7187,23 @@ export async function getAllUserInsightsForUser(userId) {
 export async function getAllWorkoutNotesForUser(userId) {
   const d = await db();
   // workout_notes_v2 is the sync-aware table introduced in migration v19.
-  // Older notes in the original workout_notes table are migrated lazily
-  // on first read by the WorkoutSummary screen; we only sync v2 rows.
+  //
+  // C10B (F3 trace): this table has NO local writer. The lazy migration
+  // from the v1 table that an earlier version of this comment described
+  // does not exist - WorkoutSummaryScreen never touches it - so this read
+  // returns an empty set on every device and the push below is a no-op.
+  // It is left in place because the pull applier must keep accepting rows
+  // from any older client that did write them.
+  //
+  // The two note features that DO exist, and why neither is broken:
+  //   - the session note a user types on the workout summary is
+  //     `workouts.notes`, a column on the workouts row. It syncs with the
+  //     workout (pushed in sync.js _pushWorkouts, pulled with a
+  //     do-not-clobber-newer-local guard), so it survives reinstall and
+  //     reaches a second device.
+  //   - "next time" notes are the v1 `workout_notes` table: routine
+  //     prompts that expire by shown_count/expires_after_uses. They are
+  //     deliberately device-local and ephemeral, not durable user data.
   try {
     const rows = await d.getAllAsync(
       'SELECT * FROM workout_notes_v2 WHERE user_id = ?', [userId],

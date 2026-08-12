@@ -226,13 +226,27 @@ export function robustTrackingLatest(weights, opts = {}) {
  * F10 (EN-5): injectable `nowMs` (default Date.now()) — see robustSevenDaysAgo.
  */
 export function robustTrackingSevenDaysAgo(weights, opts = {}, nowMs = Date.now()) {
+  return robustTrackingSevenDaysAgoPoint(weights, opts, nowMs)?.ewmaKg ?? null;
+}
+
+/**
+ * The comparator itself - value AND the timestamp it was taken at.
+ *
+ * C10B: the caller turns this into a rate per WEEK, and the comparator is
+ * only guaranteed to be at or before seven days ago. After a lapse it can
+ * be months old, so the caller needs its date to divide by the span that
+ * actually elapsed. Returning the point rather than a second lookup keeps
+ * the value and its date provably from the same entry.
+ *
+ * F3 (EN-1): null on sub-week data — never scale a 2-4 day span as a weekly
+ * rate. This is the DECISION read (weeklyCoach decisionRatePct), so the old
+ * earliest-reading fallback could manufacture an on/off-target verdict the
+ * safety read (plain EWMA, already fixed) correctly refused to give.
+ */
+export function robustTrackingSevenDaysAgoPoint(weights, opts = {}, nowMs = Date.now()) {
   const series = robustTrackingEwma(weights, opts);
   if (series.length < 2) return null;
   const cutoff = nowMs - 7 * 86400000;
   const older = [...series].reverse().find((e) => e.loggedAt <= cutoff);
-  // F3 (EN-1): null on sub-week data — never scale a 2-4 day span as a weekly
-  // rate. This is the DECISION read (weeklyCoach decisionRatePct), so the old
-  // earliest-reading fallback could manufacture an on/off-target verdict the
-  // safety read (plain EWMA, already fixed) correctly refused to give.
-  return older?.ewmaKg ?? null;
+  return older ? { ewmaKg: older.ewmaKg, loggedAt: older.loggedAt } : null;
 }
