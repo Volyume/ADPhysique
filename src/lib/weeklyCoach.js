@@ -1041,11 +1041,29 @@ export function runWeeklyCoach(inputs) {
   const safetyHold = jointPainFlagged || noteFlags.injury || noteFlags.illness;
   let safetyHoldNote = null;
   if (safetyHold && trainingSignal !== 'reduce') {
+    // C10E: MATERIALITY. Read whether this hold actually changes anything
+    // BEFORE mutating. The branch can run when volume was already flat and
+    // the signal was not a push, in which case the flag altered nothing and
+    // claiming "your note held this back" would be a false cause.
+    const holdChangedDecision = volumeSignal > 0 || trainingSignal === 'push';
     if (volumeSignal > 0) volumeSignal = 0;
     if (trainingSignal === 'push') trainingSignal = 'hold';
-    safetyHoldNote = jointPainFlagged
-      ? 'You flagged joint pain, so the plan holds rather than adding work. Ease the load on the sore movement or swap it for a pain-free variation.'
-      : 'You flagged feeling unwell or hurt this week, so the plan holds rather than adding work until it settles.';
+    // C10E: PROVENANCE, attributed to its real source. The note-derived
+    // flags say what the user MENTIONED - never that they are ill or
+    // injured, which is a diagnosis their own words do not support - and
+    // only when the flag actually changed the outcome. Parser names, flag
+    // names and every other internal state stay unmentioned.
+    if (jointPainFlagged) {
+      // Unchanged behaviour. Joint pain is the EXPLICIT question, not a
+      // parsed note, so it always says the plan is respecting what the
+      // user answered - the materiality rule below governs free-text
+      // provenance only.
+      safetyHoldNote = 'You flagged joint pain, so the plan holds rather than adding work. Ease the load on the sore movement or swap it for a pain-free variation.';
+    } else if (holdChangedDecision) {
+      safetyHoldNote = noteFlags.injury
+        ? 'Kept steady because you mentioned an injury in this check-in, rather than adding work until it settles.'
+        : 'Kept steady because you mentioned feeling unwell in this check-in, rather than adding work until it settles.';
+    }
   }
 
   const recoveryFlag = matrixDeload ? 'deload_suggested' : ((poorRecovery || safetyHold) ? 'concerned' : 'normal');
