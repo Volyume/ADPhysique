@@ -13,8 +13,10 @@
 -- reinstall and cross-device restore.
 --
 -- Applied locally: n/a (the local schema has carried these columns since
--- the adaptive build). Applied remotely: NO - awaiting the founder's
--- explicit "run against production" for this batch.
+-- the adaptive build). Applied remotely: YES - applied to EU-Dublin
+-- production 2026-08-12 on the founder's order (Claude-run). Verified:
+-- mev/mav/mrv (integer) and source (text) present on
+-- public.planned_muscle_volume.
 -- RELEASE NOTE: NOT a hard gate for shipping the client fix - the push
 -- retries without these columns until the migration lands (rows keep
 -- syncing set counts exactly as today) - but cross-device provenance

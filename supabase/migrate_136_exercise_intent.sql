@@ -305,7 +305,12 @@ order by table_name;
 -- plus three guarded DELETEs, which is exactly what 096 itself did to the
 -- 062 body. Nothing else in the function changes.
 --
--- Applied remotely: NO. Founder-gated with the rest of this migration.
+-- Applied remotely: YES - EU-Dublin production 2026-08-12 on the
+-- founder's order (Claude-run). Verified after the apply that
+-- migrate_130's posture survived: delete_user_data's ACL is
+-- postgres/authenticated/service_role only, no anon and no PUBLIC,
+-- because CREATE OR REPLACE preserves an existing ACL rather than
+-- resetting it to the implicit PUBLIC grant a DROP + CREATE would.
 -- Safe to re-run: yes (CREATE OR REPLACE, and every DELETE is guarded
 --   against undefined_table).
 -- Rollback: re-run migrate_096 to restore the previous body.

@@ -97,10 +97,12 @@
 --                              state tables, closing the cloud
 --                              half of P0-8 D1/D2/D3/D9/D14.
 --   - Applied locally:         n/a (no local dev Supabase project)
---   - Applied remotely:        NO - awaiting the founder's exact
---                              phrase "run against production"
---                              per supabase/README. Claude must
---                              not run this file.
+--   - Applied remotely:        YES - applied to EU-Dublin
+--                              production 2026-08-12 on the
+--                              founder's order (Claude-run).
+--                              Verified: all nine target tables
+--                              carry a *_touch_updated_at trigger,
+--                              joining the eight guarded since 047.
 --   - Safe to re-run:          yes (ADD COLUMN IF NOT EXISTS +
 --                              CREATE OR REPLACE FUNCTION +
 --                              DROP TRIGGER IF EXISTS / CREATE

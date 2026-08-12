@@ -10,10 +10,12 @@
 -- have been transmitted.
 --
 -- Applied locally: n/a (cloud-only data hygiene).
--- Applied remotely: NO - awaiting the founder's explicit
--- "run against production" for this batch. NOT a release gate for the
--- next build (the client exclusion alone is sufficient for correctness);
--- it is contract hygiene and should run at the next migration batch.
+-- Applied remotely: YES - applied to EU-Dublin production 2026-08-12 on
+-- the founder's order (Claude-run). It was a NO-OP: a read-only count
+-- immediately before the apply found ZERO '@volyume_privacy_prefs' rows
+-- in user_prefs, and zero after. Either the bulk push never landed one or
+-- they had already gone. The client-side exclusion (P0-2) remains the
+-- thing that actually closes the contract; this file is now spent.
 --
 -- Additive/idempotent: the DELETE is idempotent (re-run deletes nothing).
 -- Safe to re-run: yes. Rollback: none needed - the rows are client-owned
