@@ -80,14 +80,18 @@ describe('P0-2: the analytics opt-out is device-local and fails privacy-closed',
     expect(SRC).toMatch(/if \(readFailed\) \{\s*\n\s*applyTelemetryEnabled\(false\);/);
   });
 
-  test('the cloud cleanup migration exists and is founder-gated', () => {
+  // RE-ANCHORED 2026-08-12: the migration was applied to production on the
+  // founder's order, so its header no longer says it awaits the gate phrase.
+  // What still matters is that the file is the right file and records its
+  // applied state honestly.
+  test('the cloud cleanup migration exists and records its applied state', () => {
     const SQL = fs.readFileSync(
       path.resolve(__dirname, '..', '..', '..', 'supabase', 'migrate_133_delete_privacy_pref_rows.sql'),
       'utf8',
     );
     expect(SQL).toMatch(/DELETE FROM public\.user_prefs/);
     expect(SQL).toMatch(/@volyume_privacy_prefs/);
-    expect(SQL).toMatch(/run against production/);
+    expect(SQL).toMatch(/Applied remotely: YES/);
   });
 });
 
@@ -284,11 +288,24 @@ describe('P0-6: a single canonical FFM-floor weight resolution', () => {
     expect(resolveFfmFloorWeightKg({ profileWeightKg: '82.5' })).toBe(82.5);
   });
 
-  test('BOTH weekly-coach evaluations resolve through the canonical helper', () => {
+  // STRENGTHENED by Campaign 10I. P0-6 pinned that BOTH floor evaluations
+  // CALL the canonical helper (two calls). That stopped the fallback ORDER
+  // diverging but still left two independent RESOLUTIONS, each deriving its
+  // own lastWeighInKg - which disagreed on tied loggedAt values. 10I resolves
+  // once per run, so the honest pin is now ONE call, not two: consistency by
+  // construction rather than by two code paths agreeing.
+  test('the weekly coach resolves the FFM safety weight EXACTLY ONCE per run', () => {
     const SRC = read('lib/weeklyCoach.js');
     const calls = SRC.match(/resolveFfmFloorWeightKg\(\{/g) || [];
-    expect(calls.length).toBe(2);
-    // The old divergent fallbacks are gone.
+    expect(calls.length).toBe(1);
+    // Both consumers read that one resolved value...
+    expect(SRC).toMatch(/const ffmSafetyWeightKg = resolveFfmFloorWeightKg\(\{/);
+    expect(SRC).toMatch(/weightKg: ffmSafetyWeightKg,/);       // adaptive context
+    expect(SRC).toMatch(/computeFFMFloor\(ffmSafetyWeightKg,/); // senior clamp
+    // ...and neither re-derives a weight of its own.
+    expect(SRC).not.toMatch(/lastWeighInKg: series\[series\.length - 1\]/);
+    expect(SRC).not.toMatch(/const ffmGateWeightKg/);
+    // The old divergent fallbacks are still gone.
     expect(SRC).not.toMatch(/Number\(series\[series\.length - 1\]\?\.weightKg\) > 0/);
     expect(SRC).not.toMatch(/\(Number\.isFinite\(ewma7Today\) && ewma7Today > 0\) \? ewma7Today : null/);
   });
@@ -340,7 +357,8 @@ describe('P0-1: planned_muscle_volume restores into the primary table with prove
     );
     expect(SQL).toMatch(/ADD COLUMN IF NOT EXISTS mev integer/);
     expect(SQL).toMatch(/ADD COLUMN IF NOT EXISTS source text/);
-    expect(SQL).toMatch(/run against production/);
+    // RE-ANCHORED 2026-08-12: applied to production on the founder's order.
+    expect(SQL).toMatch(/Applied remotely: YES/);
   });
 });
 
@@ -623,7 +641,12 @@ describe('adversarial review: every genuine finding is closed', () => {
       'utf8',
     );
     expect(SQL).toMatch(/CREATE UNIQUE INDEX IF NOT EXISTS idx_coach_outputs_user_week/);
-    expect(SQL).toMatch(/run against production/);
+    // RE-ANCHORED 2026-08-12: applied to production on the founder's order.
+    // The header now also records that this statement was a silent no-op
+    // there (the index NAME already existed as a non-unique index), which is
+    // debt against the FILE, not against the deterministic-id law this test
+    // exists to pin.
+    expect(SQL).toMatch(/Applied remotely: YES/);
   });
 
   test('F11: a diet change flags a stored plan (vegan vs a meat plan)', () => {

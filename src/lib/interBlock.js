@@ -67,10 +67,28 @@ export const BLOCK_CLASS = Object.freeze({
 const PERF_UP_PCT = 1.5;
 const PERF_DOWN_PCT = -1.5;
 
-// Recovery cost: weighted persistent signals. The advisor's early-deload
-// flag weighs double because it only fires on accumulated evidence
-// (masters-adjusted thresholds in blockAdvisor.js). Cost is "excessive"
-// at weight >= 2, matching the §3.7 worked examples exactly.
+// Recovery cost: weighted persistent signals. Cost is "excessive" at
+// weight >= 2, matching the §3.7 worked examples exactly.
+//
+// RA6-2 (founder ruling, Campaign 10I). The advisor's early-deload flag
+// used to weigh 2, which is the excessive threshold itself - so the flag
+// ALONE made recoveryPoor true for EVERY muscle in the block, and any
+// muscle with flat performance was labelled STRAINED and any with rising
+// performance OVERREACHED, on no evidence of its own. The flag is a
+// BLOCK-level fact ("this block needed a deload"); it is not a per-muscle
+// fact ("this muscle was overreached"). It now weighs 1, so it remains
+// conservative evidence but must be corroborated by at least one other
+// existing signal below before it can cross the threshold. No threshold
+// moved and no signal was added.
+//
+// The block-level consequence is untouched and is deliberately computed
+// somewhere else: buildBlockLedger's 10-day recovery proposal reads
+// deloadFlagFired directly in its own `persistent` count, so "the block
+// needed a deload" still speaks for itself without borrowing a per-muscle
+// verdict. (It cannot regress either: persistent >= 2 requires two of
+// readiness/sleep/deload, and the caller mirrors those same systemic
+// signals into every muscle's recovery input, so the per-muscle cost is
+// >= 2 in exactly those cases.)
 const SORENESS_HIGH = 4;        // weeks 3+ mean, 1-5 scale
 const JOINT_HIGH = 3;
 const READINESS_SLOPE_POOR = -0.3;
@@ -105,7 +123,9 @@ function recoveryCostWeight(recovery) {
   if (num(recovery.jointDiscomfortAvg, 0) >= JOINT_HIGH) weight += 1;
   if (num(recovery.readinessSlope, 0) <= READINESS_SLOPE_POOR) weight += 1;
   if (num(recovery.sleepFlaggedWeeks, 0) >= SLEEP_FLAG_WEEKS) weight += 1;
-  if (recovery.deloadFlagFired) weight += 2;
+  // RA6-2: 1, not 2 - see the block comment on RECOVERY_EXCESSIVE_WEIGHT.
+  // A global deload flag cannot reach the excessive threshold on its own.
+  if (recovery.deloadFlagFired) weight += 1;
   return weight;
 }
 

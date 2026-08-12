@@ -116,9 +116,14 @@ describe('account deletion removes every piece of exercise-intelligence state', 
     expect((sql.match(/ON DELETE CASCADE/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
 
-  test('migration 136 is still marked UNAPPLIED', () => {
+  // RE-ANCHORED 2026-08-12: 136 was applied to EU-Dublin production on the
+  // founder's order. This test existed to stop the file drifting into
+  // "applied" without a real apply; now that the apply has happened the
+  // honest pin is the reverse - the header must record it, and must record
+  // the migrate_130 posture check that was run afterwards.
+  test('migration 136 records its production apply and the ACL check that followed', () => {
     const sql = readRepo('supabase/migrate_136_exercise_intent.sql');
-    expect(sql).toMatch(/Applied remotely:\s+NO/);
-    expect(sql).not.toMatch(/Applied remotely:\s+YES/);
+    expect(sql).toMatch(/Applied remotely: YES/);
+    expect(sql).toMatch(/no anon and no PUBLIC/);
   });
 });

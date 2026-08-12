@@ -277,13 +277,19 @@ describe('PHASE 8 (D91-24 characterisation): early deload weeks stay in accumula
     expect(flags).toEqual({ deloadFlagFired: true, deloadFlagMidBlock: true });
   });
 
-  test('the fired flag ALONE crosses the excessive-cost threshold, so diluted soreness averages cannot mask strain', () => {
-    // D91-24's accepted consequence: the early-deload week's light,
-    // low-soreness sessions dilute the late-block soreness average. The
-    // conservative bias survives because deloadFlagFired carries weight
-    // 2 by itself (interBlock.recoveryCostWeight), which alone reaches
-    // RECOVERY_EXCESSIVE_WEIGHT - the muscle still classifies on the
-    // strained/overreached side rather than being read as recovered.
+  // RE-ANCHORED by RA6-2 (founder ruling, Campaign 10I), and the
+  // interaction is recorded rather than smoothed over. This test used to
+  // pin that the fired flag ALONE reached RECOVERY_EXCESSIVE_WEIGHT, which
+  // is what compensated for D91-24's known dilution artefact (an early
+  // deload week's light sessions drag the late soreness average below every
+  // per-signal threshold). RA6-2 rules that a block-level flag may not
+  // classify a muscle by itself, so that compensation is gone: this muscle
+  // now reads as unproven rather than strained. D91-24's own behaviour -
+  // which weeks the aggregates treat as accumulation - is UNCHANGED and is
+  // still pinned by the next test. The residual gap is genuine debt,
+  // reported at the close of Campaign 10I, not fixed here: the founder
+  // ruled the flag's weight, not the dilution.
+  test('RA6-2: the fired flag alone no longer classifies the muscle, so the D91-24 dilution is no longer masked', () => {
     const e = classifyMuscleBlock({
       muscle: 'quads', landmarks: PRIOR, researchMev: RESEARCH_MEV,
       previousStart: 12, plannedPeak: 16, achievedPeak: 14,
@@ -295,6 +301,32 @@ describe('PHASE 8 (D91-24 characterisation): early deload weeks stay in accumula
       recovery: {
         // Diluted by the light week: below every per-signal threshold.
         sorenessLateAvg: 2, jointDiscomfortAvg: 1, readinessSlope: -0.1,
+        sleepFlaggedWeeks: 0,
+        deloadFlagFired: true, deloadFlagMidBlock: true,
+        dataPoints: 8,
+      },
+    }, { suppressed: false, weeksSinceBlockEnd: 0 });
+    // No corroborating per-muscle recovery cost, and flat performance: the
+    // honest verdict is "not proven", not "strained".
+    expect(e.classification).not.toBe(BLOCK_CLASS.STRAINED);
+    // And it must not become an upward carry either - the dose holds.
+    expect(e.proposal.startSets).toBeLessThanOrEqual(12);
+  });
+
+  test('RA6-2: the SAME block with real per-muscle soreness is still STRAINED and still cut', () => {
+    // The dilution artefact is a measurement problem, not a licence: when
+    // the muscle's own late soreness does clear its threshold, the
+    // corroborated verdict and its reduction are exactly as before.
+    const e = classifyMuscleBlock({
+      muscle: 'quads', landmarks: PRIOR, researchMev: RESEARCH_MEV,
+      previousStart: 12, plannedPeak: 16, achievedPeak: 14,
+      adherence: { plannedSets: 60, completedSets: 50 },
+      performance: {
+        e1rmSlopePct: 0.5, prDensity: 0, rawPrCount: 0, eligibleExposures: 8,
+        confidence: 0.9, discontinuity: false, doseResponse: null,
+      },
+      recovery: {
+        sorenessLateAvg: 4, jointDiscomfortAvg: 1, readinessSlope: -0.1,
         sleepFlaggedWeeks: 0,
         deloadFlagFired: true, deloadFlagMidBlock: true,
         dataPoints: 8,
@@ -326,18 +358,30 @@ describe('PHASE 8 (D91-24 characterisation): early deload weeks stay in accumula
         dataPoints: 8,
       },
     };
+    // RA6-2 re-anchor: the systemic read must be MIRRORED into the muscle,
+    // which is what blockLedgerRunner actually does (it computes one
+    // systemic triple and passes it to every muscle). The old fixture left
+    // the muscle on its own weaker numbers and still got STRAINED, because
+    // the flag alone carried it - exactly the defect. With mirroring, the
+    // corroborated case reaches STRAINED on real corroboration and the
+    // uncorroborated case does not, which is the behaviour this test is
+    // actually about.
+    const withSystemic = (sys) => ({ ...strainedMuscle, recovery: { ...strainedMuscle.recovery, ...sys } });
+    const aloneSys = { readinessSlope: -0.1, sleepFlaggedWeeks: 0, deloadFlagFired: true };
     const alone = buildBlockLedger({
-      muscles: [strainedMuscle],
-      systemic: { readinessSlope: -0.1, sleepFlaggedWeeks: 0, deloadFlagFired: true },
+      muscles: [withSystemic(aloneSys)],
+      systemic: aloneSys,
       suppressed: false, weeksSinceBlockEnd: 0,
     });
     // One persistent signal only: normal 7 days.
     expect(alone.proposedRecoveryDays).toBe(7);
+    const corroboratedSys = { readinessSlope: -0.4, sleepFlaggedWeeks: 2, deloadFlagFired: true };
     const corroborated = buildBlockLedger({
-      muscles: [strainedMuscle],
-      systemic: { readinessSlope: -0.4, sleepFlaggedWeeks: 2, deloadFlagFired: true },
+      muscles: [withSystemic(corroboratedSys)],
+      systemic: corroboratedSys,
       suppressed: false, weeksSinceBlockEnd: 0,
     });
+    expect(corroborated.entries[0].classification).toBe(BLOCK_CLASS.STRAINED);
     expect(corroborated.proposedRecoveryDays).toBe(10);
   });
 });
