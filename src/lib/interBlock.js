@@ -53,7 +53,16 @@ export const LEDGER_VERSION = 1;
 // idempotent reuse of a stored ledger; the algorithm version records
 // WHICH rules produced it, so a future rule change can be told apart
 // from a schema change when debugging an old block's decisions.
-export const LEDGER_ALGORITHM_VERSION = 1;
+// 1 -> 2 (C10L, 2026-08-12): the canonical strength model changed. Above 10
+// reps calculate1RM is now Epley alone rather than a 50/50 Epley/Brzycki
+// blend, so every e1RM-derived term a FUTURE ledger computes (the block
+// slope, PR replay, the dose-response peaks) is produced under different
+// rules. The SCHEMA is untouched, so LEDGER_VERSION deliberately stays 1:
+// stored ledgers keep their recorded algorithmVersion, remain readable, and
+// are still reused idempotently. Reuse is gated on LEDGER_VERSION only - an
+// algorithmVersion mismatch must NEVER force an old block to recompute,
+// because that would rewrite a historical decision the user already acted on.
+export const LEDGER_ALGORITHM_VERSION = 2;
 
 export const BLOCK_CLASS = Object.freeze({
   RESPONSIVE: 'RESPONSIVE',

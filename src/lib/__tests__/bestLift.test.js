@@ -42,21 +42,29 @@ describe('D-2 e1RM consolidation', () => {
     expect(pickBestLift(sets, prior)).toEqual(pickBestLift(sets, prior, calculate1RM));
   });
 
-  // T-2.2 (regression on the live path). This fixture is chosen so the two
-  // formulas pick DIFFERENT hero lifts: under the blended/clamped estimate a
-  // 60 kg x 20 set (113.6) beats a 100 kg single (100.0); under plain Epley
-  // the single (103.3) beats the high-rep set (100.0). The live path must
-  // keep picking the blended winner.
+  // T-2.2 (regression on the live path). The fixture must make the canonical
+  // formula and plain Epley pick DIFFERENT hero lifts, so that a silent
+  // return of the private plain-Epley default would be caught.
+  //
+  // RE-ANCHORED by C10L. The old pair leaned on the >10-rep Epley/Brzycki
+  // blend (60 kg x 20 read 113.6 canonically vs 100.0 under plain Epley).
+  // That inflation is exactly what C10L removed, so the pair now TIES at
+  // 100.0 and no longer discriminates. The divergence used here instead is
+  // the 20-rep CLAMP plus the reps === 1 special case, neither of which C10L
+  // touches:
+  //   60 kg x 30  -> canonical 100.0 (clamped at 20) | plain Epley 120.0
+  //   105 kg x 1  -> canonical 105.0 (raw weight)    | plain Epley 108.5
+  // Canonical crowns the single; plain Epley crowns the high-rep set.
   const DIVERGENT_SETS = [
-    set('squat', 'Back Squat', 60, 20),
-    set('bench', 'Bench Press', 100, 1),
+    set('squat', 'Back Squat', 60, 30),
+    set('bench', 'Bench Press', 105, 1),
   ];
 
-  test('the live path (calculate1RM injected) features the blended winner', () => {
+  test('the live path (calculate1RM injected) features the CANONICAL winner', () => {
     const best = pickBestLift(DIVERGENT_SETS, new Map(), calculate1RM);
-    expect(best.exerciseName).toBe('Back Squat');
-    expect(best.weight).toBe(60);
-    expect(best.reps).toBe(20);
+    expect(best.exerciseName).toBe('Bench Press');
+    expect(best.weight).toBe(105);
+    expect(best.reps).toBe(1);
   });
 
   test('the default picks the same hero lift as the live path', () => {
