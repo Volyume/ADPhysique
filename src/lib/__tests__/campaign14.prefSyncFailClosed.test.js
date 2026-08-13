@@ -114,7 +114,7 @@ describe('C14-1 every deliberately-synced user choice is still allowlisted', () 
     '@volyume_meals_per_day',
     '@volyume_water_target_ml',
     '@volyume_nutrition_targets',
-    '@volyume_perday_target_offsets_abc123',
+    '@volyume_perday_target_offsets',
     '@volyume_landmarks_abc123',
     '@volyume_progress_scan_hide_exact_numbers',
     '@volyume_progress_scan_timer_seconds',

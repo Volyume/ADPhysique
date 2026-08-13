@@ -13,6 +13,8 @@ import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { dumpAllTables, restoreAllTables } from './database';
+import { photoDir } from './progressPhotos';
+import { logInfo } from './errorLog';
 
 const BACKUP_FORMAT = 'volyume-backup';
 const BACKUP_FORMAT_VERSION = 1;
@@ -45,6 +47,197 @@ async function restorePrefs(prefs) {
     .filter(([k]) => isRestorablePref(k))
     .map(([k, v]) => [k, v == null ? '' : String(v)]);
   if (entries.length) await AsyncStorage.multiSet(entries);
+}
+
+// ─── Local-file integrity on restore (T-17) ─────────────────────────────────
+//
+// A backup is JSON. It carries SQLite rows and preferences, never the private
+// image files: progress photos and profile pictures live in the app's own
+// document directory and deliberately never travel (progressPhotos.js header,
+// device-local by design). A backup restored onto a clean install therefore
+// lands rows whose file references point at nothing.
+//
+// PRODUCT LAW: a restore must never create a reference to a file that does not
+// exist. No dead image URI, no broken thumbnail, no tap-to-open of a missing
+// file. So every persisted file reference this restore can write is checked
+// against the real filesystem BEFORE the write. A reference that resolves is
+// kept exactly as it was. One that does not is either cleared (where the rest
+// of the row stands on its own) or its row is left out (where the row exists
+// only to point at that file). Nothing here creates a placeholder file, and
+// nothing tells the user an image came back: an image file that was not in the
+// backup is simply not on the device, which is the documented outcome.
+//
+// The restore-time verdict per reference, and why:
+//  - progress_scan_assets.uri / .photo_name  ROW NOT RESTORED when the file is
+//    absent. Both columns are NOT NULL and the row exists only to point at one
+//    photo; every consumer of an asset row renders it (a thumbnail plus a
+//    tap-to-open in ProgressScanHistoryCard, a compare cell in
+//    ProgressScanCompare), so there is no image-free remainder worth keeping.
+//    Its per-photo quality numbers are already summarised into the session's
+//    signals_json.
+//  - progress_photo_meta.name  ROW NOT RESTORED when the file is absent. The
+//    filename IS the key, and takenAt/pose/the weigh-in snapshot/the note all
+//    describe that one image. Every consumer looks the row up by a name it has
+//    just read off the filesystem (getPhotoMetaMap over listProgressPhotos), so
+//    a row for a missing file is a reference to a file that does not exist and
+//    unreachable data at the same time.
+//  - custom_foods.photo_url  CLEARED when it names a local file that is absent.
+//    The column is nullable and the food row (name, serving, macros) is
+//    complete without it, so the food is kept and only the dead reference goes.
+//    Remote values are left alone: they are not files on this device.
+//  - '@volyume_user_profile_*' avatarUri (a preference blob, same restore path)
+//    CLEARED when the local file is absent. ProfileAvatarMark falls back to the
+//    chosen Volyume avatar or the initial, so no broken image is shown.
+//  - progress_scan_sessions  RESTORED UNCHANGED. The row holds no file
+//    reference at all: captured-at, consent version, the estimates, quality,
+//    trend and signals are numbers that stand on their own, and every
+//    production read of a session already runs without assets (rowToScan
+//    builds the whole view model from columns; listProgressScans,
+//    getProgressScanCoachSummary and getPreviousAnalysedProgressScans never
+//    join assets). The UI guards its photo strip on `scan.assets.length > 0`
+//    and shows "Not taken" for an absent pose, so the numeric scan history the
+//    backup deliberately preserves survives with no image affordance behind it.
+
+// Profile blobs are the one preference that carries a local file path
+// (avatarUri, written by saveLocalProfile in the store).
+const PROFILE_PREF_PREFIX = '@volyume_user_profile_';
+
+// Whether a value names a file on this device. http(s) and data values are not
+// local files, so they are out of scope here and left untouched.
+function isLocalFileRef(value) {
+  if (typeof value !== 'string') return false;
+  const v = value.trim();
+  if (!v) return false;
+  if (/^(?:https?|data):/i.test(v)) return false;
+  return v.startsWith('file://') || v.startsWith('content://') || v.startsWith('/');
+}
+
+// Existence probe with a per-restore cache (one backup can reference the same
+// file from several rows). A probe that throws counts as ABSENT: unreadable and
+// missing look identical to every consumer, so this fails closed.
+function makeFileProbe() {
+  const cache = new Map();
+  return async function fileExists(uri) {
+    if (typeof uri !== 'string' || !uri) return false;
+    if (cache.has(uri)) return cache.get(uri);
+    let exists = false;
+    try {
+      const info = await FileSystem.getInfoAsync(uri);
+      exists = info?.exists === true;
+    } catch (_) {
+      // Treated as absent on purpose, see above.
+      exists = false;
+    }
+    cache.set(uri, exists);
+    return exists;
+  };
+}
+
+// Where a progress photo file lives for its owner. photoDir() falls back to the
+// shared legacy directory for a null user id, which is exactly where a
+// pre-per-user row's photo sits.
+function photoPathFor(userId, name) {
+  if (!name) return null;
+  return `${photoDir(userId ?? null)}${name}`;
+}
+
+// A composite key for the (owner, filename) pair. JSON rather than a
+// delimiter: a filename cannot collide with another owner's through a
+// separator that happens to appear in it, and the source file stays
+// plain text (a raw NUL would make git treat this module as binary and
+// stop showing its diff in review).
+function photoKey(userId, name) {
+  return JSON.stringify([userId ?? null, name ?? null]);
+}
+
+// Returns { tables, dropped } where `tables` is safe to write: no row in it
+// references a file that is not on this device.
+async function verifyTableFileReferences(tables, fileExists) {
+  const out = { ...(tables || {}) };
+  const dropped = {};
+
+  const keptPhotos = new Set();
+  if (Array.isArray(out.progress_scan_assets)) {
+    const kept = [];
+    for (const row of out.progress_scan_assets) {
+      const stored = typeof row?.uri === 'string' ? row.uri : null;
+      // The absolute uri is baked in at capture time. If it no longer resolves
+      // but the photo IS still in this user's own photo directory under the
+      // same filename (an iOS container path changes between installs), point
+      // the row at the file that genuinely exists rather than drop history.
+      // Never a guess across accounts: photoDir is scoped to the row's own
+      // user_id.
+      const byName = photoPathFor(row?.user_id, row?.photo_name);
+      let resolved = null;
+      // eslint-disable-next-line no-await-in-loop
+      if (stored && await fileExists(stored)) resolved = stored;
+      // eslint-disable-next-line no-await-in-loop
+      else if (byName && byName !== stored && await fileExists(byName)) resolved = byName;
+      if (!resolved) continue;
+      kept.push(resolved === row.uri ? row : { ...row, uri: resolved });
+      keptPhotos.add(photoKey(row?.user_id, row?.photo_name));
+    }
+    dropped.progress_scan_assets = out.progress_scan_assets.length - kept.length;
+    out.progress_scan_assets = kept;
+  }
+
+  if (Array.isArray(out.progress_photo_meta)) {
+    const kept = [];
+    for (const row of out.progress_photo_meta) {
+      const path = photoPathFor(row?.user_id, row?.name);
+      // A kept scan asset has already proved that same file exists.
+      if (keptPhotos.has(photoKey(row?.user_id, row?.name))) {
+        kept.push(row);
+        continue;
+      }
+      // eslint-disable-next-line no-await-in-loop
+      if (path && await fileExists(path)) kept.push(row);
+    }
+    dropped.progress_photo_meta = out.progress_photo_meta.length - kept.length;
+    out.progress_photo_meta = kept;
+  }
+
+  if (Array.isArray(out.custom_foods)) {
+    let cleared = 0;
+    const rows = [];
+    for (const row of out.custom_foods) {
+      if (!isLocalFileRef(row?.photo_url)) {
+        rows.push(row);
+        continue;
+      }
+      // eslint-disable-next-line no-await-in-loop
+      if (await fileExists(row.photo_url)) {
+        rows.push(row);
+        continue;
+      }
+      cleared += 1;
+      rows.push({ ...row, photo_url: null });
+    }
+    dropped.custom_foods_photo_url = cleared;
+    out.custom_foods = rows;
+  }
+
+  return { tables: out, dropped };
+}
+
+// The same law over the preference half of a backup: the profile blob's
+// avatarUri is a path into the app's private avatar directory.
+async function verifyPrefFileReferences(prefs, fileExists) {
+  if (!prefs || typeof prefs !== 'object') return { prefs, cleared: 0 };
+  const out = { ...prefs };
+  let cleared = 0;
+  for (const [key, value] of Object.entries(out)) {
+    if (!key.startsWith(PROFILE_PREF_PREFIX) || typeof value !== 'string') continue;
+    let profile = null;
+    try { profile = JSON.parse(value); } catch (_) { continue; } // not a blob we can read; leave as-is
+    if (!profile || typeof profile !== 'object' || Array.isArray(profile)) continue;
+    if (!isLocalFileRef(profile.avatarUri)) continue;
+    // eslint-disable-next-line no-await-in-loop
+    if (await fileExists(profile.avatarUri)) continue;
+    out[key] = JSON.stringify({ ...profile, avatarUri: null });
+    cleared += 1;
+  }
+  return { prefs: out, cleared };
 }
 
 // Builds the backup object, writes it to a JSON file in the cache directory
@@ -128,12 +321,28 @@ export async function importBackup() {
     );
   }
 
-  await restoreAllTables({ tables: parsed.sqlite });
-  await restorePrefs(parsed.prefs);
+  // T-17: nothing that names a missing file reaches the database or the
+  // preferences. This runs BEFORE the write, not as a clean-up afterwards,
+  // so there is no window in which a dead reference exists at all.
+  const fileExists = makeFileProbe();
+  const { tables: safeTables, dropped } = await verifyTableFileReferences(
+    parsed.sqlite, fileExists,
+  );
+  const { prefs: safePrefs, cleared: avatarsCleared } = await verifyPrefFileReferences(
+    parsed.prefs, fileExists,
+  );
 
+  await restoreAllTables({ tables: safeTables });
+  await restorePrefs(safePrefs);
+
+  // Counts report what was actually RESTORED, not what the file contained,
+  // so nothing downstream can tell the user an image came back when it did
+  // not. `dropped` states the difference plainly for the same reason.
   const counts = {};
-  for (const [t, rows] of Object.entries(parsed.sqlite)) {
+  for (const [t, rows] of Object.entries(safeTables)) {
     counts[t] = Array.isArray(rows) ? rows.length : 0;
   }
-  return { restored: true, counts, exportedAt: parsed.exportedAt };
+  const missingFiles = { ...dropped, profile_avatar_uri: avatarsCleared };
+  logInfo('dataBackup.importBackup.done', 'restore complete', { missingFiles });
+  return { restored: true, counts, missingFiles, exportedAt: parsed.exportedAt };
 }
