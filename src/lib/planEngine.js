@@ -7,6 +7,10 @@
 import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, PHASE_OVERLAYS } from './coachingGoals';
 import { VOLUME_LANDMARKS } from './algorithms';
 import { generatePoolFromLibrary, deriveParamKey } from './poolGenerator';
+// C16 job 2: bodybuilding canonicality for AUTOMATIC selection. The
+// library is unchanged and manual search still reaches everything; this
+// only governs what the generator may pick on the user's behalf.
+import { isAutoEligible, tierRank, TIER_RANK, AUTO_TIER } from './exercise/canonicality';
 // C5-P11-01 (D96): the block length the app actually creates. mesocycle.js
 // is a pure module (no I/O), so reading the constant here keeps planEngine
 // pure and deterministic; only a narrative string uses it, never a
@@ -589,7 +593,13 @@ export const POOL = {
     { n: 'Cable Pull-Through',        sub: 'activator', p: 'isolation',    eq: ['full_gym', 'machines_cables'], secondary: ['hamstrings'] },
     { n: 'Glute Bridge',              sub: 'activator', p: 'mod_compound', eq: ['bodyweight'], secondary: ['hamstrings'] },
     { n: 'Step-Up (Dumbbell)',        sub: 'stretcher', p: 'mod_compound', eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['quads'] },
-    { n: 'Abductor Machine',          sub: 'pumper',    p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
+    // C16: was 'Abductor Machine', a name that exists in NO library entry.
+    // The fallback pool is matched to the library by NAME at persistence, so
+    // this one drifted entry was generated, counted in the plan's volume
+    // summary, and then silently dropped when the plan was saved - a
+    // glute-signature division lost 3 sets between preview and reality.
+    // Corrected to the seeded library's own name for the same machine.
+    { n: 'Abduction Machine',         sub: 'pumper',    p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
     { n: 'Cable Hip Abduction',       sub: 'pumper',    p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
   ],
   calves: [
@@ -1219,6 +1229,42 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
   let available = filterPool(muscle, equipment, goal);
   if (available.length === 0) return [];
 
+  // C16 job 2: NEVER_AUTO is a hard filter, not a preference. These are
+  // conditioning and Olympic movements that are not hypertrophy work,
+  // lifts whose risk profile no automatic plan should assign unprompted,
+  // and competition/skill lifts. They stay searchable and manually
+  // selectable; the generator simply cannot reach them.
+  //
+  // No never-starve guard here, deliberately, unlike the difficulty and
+  // assisted gates below. Those trade a preference for coverage; this one
+  // would be trading the reason the exercise is banned. An empty slot is
+  // the better failure.
+  available = available.filter(e => isAutoEligible(e.n));
+  if (available.length === 0) return [];
+
+  // C16 job 2 (FOUNDER RULING: staples first, common as filler). A NICHE
+  // exercise must not beat a valid STAPLE or COMMON candidate, and a
+  // SPECIALIST needs a programming reason.
+  //
+  // This is a GATE rather than a scoring nudge, and that distinction is
+  // load-bearing. Scoring alone could not express the law, because
+  // compound-before-isolation legitimately outranks popularity: JM Press
+  // is a heavy compound, so any tie-break small enough to respect the
+  // programming order was also small enough to let a powerlifting press
+  // beat a rope pushdown. The gate says what the ruling actually says -
+  // reach past the recognisable movements only when they cannot cover the
+  // muscle.
+  //
+  // Same never-starve shape as the difficulty and assisted gates below:
+  // the preference applies only while enough recognisable options remain
+  // to fill the session. When they do not, SPECIALIST and NICHE come back
+  // and coverage wins - which IS the programming reason, in the only form
+  // a generator can check.
+  const recognisable = available.filter(e => tierRank(e.n) <= TIER_RANK[AUTO_TIER.COMMON]);
+  if (recognisable.length >= Math.max(2, numExHint(sessionTarget))) {
+    available = recognisable;
+  }
+
   // Difficulty gating (founder decision: gate, but never starve coverage).
   // Beginners don't get advanced (difficulty 3) lifts in generated plans,
   // but only drop them if enough options remain to cover the muscle; if
@@ -1280,7 +1326,19 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
       // small enough to act only as a tiebreak within the same param tier.
       goalBonus = -(e.sfr / 10);
     }
-    return reqBonus + paramBonus + divBonus + goalBonus + idx;
+    // C16 job 2: bodybuilding canonicality. Staples first, common as
+    // filler, specialist only when it wins on the terms ABOVE this one.
+    //
+    // Its weight is deliberate and sits exactly where the founder's
+    // priority list puts it: two points per tier is heavier than the SFR
+    // and division nudges below, so a recognisable movement beats an
+    // obscure one on a straight tie, and far lighter than the required-
+    // subregion (100) and compound-first (10) terms above, so canonicality
+    // can never drag the plan away from the programming job the slot
+    // exists to do. Popularity compares legitimate candidates for the SAME
+    // job; it does not decide what the job is.
+    const canonBonus = tierRank(e.n) * 2;
+    return reqBonus + paramBonus + divBonus + goalBonus + canonBonus + idx;
   }
 
   const sorted = available
@@ -2582,161 +2640,20 @@ export function classifySupersetPair(exA, exB) {
   };
 }
 
-// Goal families that benefit most from supersets (volume + pump emphasis).
-// Keyed off `internalGoal` (legacy IDs), the strength_size phase deliberately
-// stays OUT of this set so compound work isn't rushed under fatigue.
-const SUPERSET_GOAL_ALLOWLIST = new Set([
-  'general', 'general_hypertrophy', 'weak_point_spec',
-  'mens_physique', 'classic_physique', 'bodybuilding',
-  'bikini', 'wellness', 'figure', 'womens_physique',
-]);
-
-// Tiered PRACTICAL superset matcher (replaces the old greedy first-adjacent
-// walk). For every eligible accessory pair it scores, in priority order:
-//   1. Relationship quality  (relationshipTier: antagonist > compound->isolation
-//      > non-competing filler; synergists and same-muscle junk rejected).
-//   2. Equipment/location    (modalityProximity: same zone > adjacent zone;
-//      cross-gym pairs rejected outright).
-//   3. Safety                (every existing gate kept: opener protected, no
-//      restSec >= 150 member, <= 2 pairs/workout, quads+hams once, beginners
-//      and strength goals excluded, and no member that pre-fatigues a later
-//      compound of the same muscle).
-// Great-or-nothing: if no pair clears the bar, the slot gets NO superset.
-// Deterministic: candidate pairs are ranked by a fixed key and stable index
-// order, no randomness.
-function assignSupersets(exercises, { goal, experience, sessionLengthMinutes }) {
-  if (!Array.isArray(exercises) || exercises.length < 4) return;
-  // Gate: skip if beginner (form takes priority over time efficiency)
-  if (experience === 'beginner') return;
-  // Gate: skip if goal isn't volume/pump-focused AND the user has a generous
-  // session window. Short sessions (≤ 50 min) get supersets regardless of
-  // goal because the time saving outweighs the strength trade.
-  const goalAllows = SUPERSET_GOAL_ALLOWLIST.has(goal);
-  const timeConstrained = (sessionLengthMinutes ?? 60) <= 50;
-  if (!goalAllows && !timeConstrained) return;
-
-  // Find the start of the accessory portion: skip leading exercises that look
-  // like heavy compounds (long rest period >= 150s indicates main lift).
-  let accessoryStart = 0;
-  while (
-    accessoryStart < exercises.length &&
-    (exercises[accessoryStart].restSec ?? 0) >= 150
-  ) accessoryStart++;
-  // Always leave at least the first exercise alone, even if rest is short.
-  if (accessoryStart === 0) accessoryStart = 1;
-
-  // For the pre-fatigue guard: the latest position at which each muscle appears
-  // as a compound (restSec >= 150). A candidate whose muscle is trained by a
-  // compound LATER in the session must not be pre-fatigued by a superset.
-  const lastCompoundPos = new Map();
-  for (let k = 0; k < exercises.length; k++) {
-    if ((exercises[k].restSec ?? 0) >= 150 && exercises[k]._muscle) {
-      lastCompoundPos.set(exercises[k]._muscle, k);
-    }
-  }
-  function preFatiguesLaterCompound(ex, pos) {
-    const last = lastCompoundPos.get(ex._muscle);
-    return last != null && last > pos;
-  }
-
-  // Eligible accessory indices: past the opener, short rest, not a compound.
-  const eligible = [];
-  for (let k = accessoryStart; k < exercises.length; k++) {
-    if ((exercises[k].restSec ?? 0) < 150) eligible.push(k);
-  }
-
-  const MAX_PAIRS_PER_WORKOUT = 2;
-  const paired = new Set();       // indices already assigned to a pair
-  const assignedPairs = [];       // { first, second } in intended session order
-  let quadsHamsPairAlreadyUsed = false;
-
-  const proximityRank = { same: 0, adjacent: 1 };
-
-  for (let n = 0; n < MAX_PAIRS_PER_WORKOUT; n++) {
-    let best = null; // { i, j, tier, prox, first, second }
-    for (let ai = 0; ai < eligible.length; ai++) {
-      const i = eligible[ai];
-      if (paired.has(i)) continue;
-      for (let bj = ai + 1; bj < eligible.length; bj++) {
-        const j = eligible[bj];
-        if (paired.has(j)) continue;
-        const a = exercises[i];
-        const b = exercises[j];
-
-        // Relationship quality bar.
-        const tier = relationshipTier(a, b);
-        if (tier == null) continue;
-
-        // Equipment/location practicality bar (reject cross-gym pairs).
-        const prox = modalityProximity(supersetModality(a), supersetModality(b));
-        if (prox === 'far') continue;
-
-        // Safety: never pre-fatigue a later compound of the same muscle.
-        if (preFatiguesLaterCompound(a, i) || preFatiguesLaterCompound(b, j)) continue;
-
-        // Safety: quads+hams antagonist pair at most once per workout.
-        const isQuadsHamsPair =
-          (a._muscle === 'quads' && b._muscle === 'hamstrings') ||
-          (a._muscle === 'hamstrings' && b._muscle === 'quads');
-        if (isQuadsHamsPair && quadsHamsPairAlreadyUsed) continue;
-
-        // Intended order: for a compound->isolation set, the compound (machine)
-        // leads; otherwise keep session order (earlier index first).
-        let first = i;
-        let second = j;
-        if (tier === 2 && supersetParam(a) === 'isolation') {
-          first = j;
-          second = i;
-        }
-
-        const candidate = {
-          i, j, first, second, isQuadsHamsPair,
-          tier,
-          proxRank: proximityRank[prox] ?? 2,
-          indexSum: i + j,
-        };
-        // Rank: relationship tier, then proximity, then earliest indices.
-        if (best == null
-            || candidate.tier < best.tier
-            || (candidate.tier === best.tier && candidate.proxRank < best.proxRank)
-            || (candidate.tier === best.tier && candidate.proxRank === best.proxRank
-                && candidate.indexSum < best.indexSum)) {
-          best = candidate;
-        }
-      }
-    }
-
-    if (best == null) break; // no pair clears the bar: great-or-nothing.
-
-    const groupId = `sg_${best.first}_${n}`;
-    exercises[best.first].supersetGroupId = groupId;
-    exercises[best.second].supersetGroupId = groupId;
-    paired.add(best.i);
-    paired.add(best.j);
-    if (best.isQuadsHamsPair) quadsHamsPairAlreadyUsed = true;
-    assignedPairs.push({ first: best.first, second: best.second });
-  }
-
-  if (assignedPairs.length === 0) return;
-
-  // Reorder so paired members sit adjacently (first member then its partner),
-  // preserving the relative order of everything else. The live session and the
-  // persisted routine key off supersetGroupId, but keeping partners adjacent
-  // keeps the plan readable and matches long-standing behaviour.
-  const partnerAfter = new Map(); // firstIdx -> secondIdx
-  const skip = new Set();         // secondIdx (emitted next to its first)
-  for (const p of assignedPairs) {
-    partnerAfter.set(p.first, p.second);
-    skip.add(p.second);
-  }
-  const reordered = [];
-  for (let k = 0; k < exercises.length; k++) {
-    if (skip.has(k)) continue;
-    reordered.push(exercises[k]);
-    if (partnerAfter.has(k)) reordered.push(exercises[partnerAfter.get(k)]);
-  }
-  exercises.splice(0, exercises.length, ...reordered);
-}
+// C16 job 4 (FOUNDER RULING): the AUTOMATIC superset pairer that used to
+// live here is gone, along with the goal allowlist that gated it. Nothing
+// in Volyume now creates a superset the user did not ask for.
+//
+// What remains, deliberately: classifySupersetPair above and the helpers it
+// uses (supersetParam, supersetModality, relationshipTier,
+// modalityProximity). Those are the MANUAL feature - ManualBuilderScreen
+// calls classifySupersetPair to tell a user whether a pair they are
+// building themselves is practical - and ActiveWorkout still runs supersets
+// and giant sets. The user's own supersets are untouched.
+//
+// The auto-pairer was removed rather than left unused because a dead
+// generator sitting beside a live one is how a future change quietly turns
+// it back on.
 
 export function generatePlan(inputs) {
   // Point selection at a library-generated pool for the duration of this
@@ -2882,12 +2799,29 @@ function _generatePlanInner(inputs) {
   const workouts = rawWorkouts.map(w => {
     const deduped  = deduplicateExercises(w.exercises);
     const trimmed  = trimToTimeBudget(deduped, sessionLengthMinutes, equipment, structuralFloors);
-    // Assign superset pairings while we still have the internal _muscle tag
-    // available. Function mutates entries in place adding `supersetGroupId`.
-    assignSupersets(trimmed, { goal, experience, sessionLengthMinutes });
-    // Strip internal-only tags (_m, _req used by trimming; _muscle, _paramKey,
-    // _eq, _equipmentCategory by assignSupersets). supersetGroupId is public
-    // and survives the strip.
+    // C16 job 4 (FOUNDER RULING): auto-generated plans contain NO supersets.
+    //
+    // Volyume cannot know station proximity or what is free in the user's gym
+    // at that moment, so a pair that is valid on paper can be absurd in the
+    // room - two plate-loaded machines at opposite ends, or a squat rack the
+    // user would have to abandon and re-queue for. assignSupersets was
+    // deliberately conservative and still could not know that, because the
+    // missing information is not in the plan.
+    //
+    // The function and every helper it uses are KEPT, not deleted: manual
+    // supersets remain a supported user feature, ActiveWorkout still runs
+    // them, and this is the only caller that created one without the user
+    // asking. Removing the call is the whole change.
+    //
+    // No time-budget consequence, verified rather than assumed: the trim
+    // above and the duration stamped below both run through
+    // estimateSessionMinutes, which has always costed straight sets (full
+    // rest between every set, one transition per exercise) and never read
+    // supersetGroupId. The estimate was already honest; it simply now
+    // matches what the plan tells the user to do.
+    //
+    // Strip internal-only tags (_m, _req used by trimming; _muscle,
+    // _paramKey, _eq, _equipmentCategory were read by assignSupersets).
     const clean = trimmed.map(({ _m, _req, _muscle, _paramKey, _eq, _equipmentCategory, ...rest }) => rest);
     const dur = Math.ceil(estimateSessionMinutes(clean, equipment));
     const out = { name: w.name, exercises: clean, estimatedDurationMinutes: dur };

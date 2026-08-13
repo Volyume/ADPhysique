@@ -136,8 +136,15 @@ function allGeneratedPairs() {
 describe('tiered practical superset matcher', () => {
   const pairs = allGeneratedPairs();
 
-  test('the matcher still fires across physique profiles', () => {
-    expect(pairs.length).toBeGreaterThan(0);
+  // C16 job 4 re-anchor (FOUNDER RULING): generated plans contain no
+  // supersets, so the automatic matcher no longer fires anywhere - not
+  // because the classifier got worse, but because Volyume cannot know
+  // station proximity or what is free in the user's gym, and a pair that
+  // is valid on paper can be absurd in the room. The classifier itself is
+  // still live and still tested below: ManualBuilderScreen calls it to
+  // tell a user whether a pair THEY are building is practical.
+  test('the automatic matcher no longer fires for any physique profile', () => {
+    expect(pairs.length).toBe(0);
   });
 
   test('every pair is a coach-logical relationship (antagonist, compound->isolation, or non-competing) and never a synergist', () => {
