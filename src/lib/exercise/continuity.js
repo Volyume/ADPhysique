@@ -47,7 +47,7 @@
  * "is there a reason to change". Absent a reason, the answer is keep.
  */
 
-import { SLOT_VERDICT, SLOT_REASON, slotVerdict } from '../programmeEpoch';
+import { SLOT_VERDICT, slotVerdict } from '../programmeEpoch';
 
 /** Why a generated slot ended up with the exercise it has. */
 export const SLOT_OUTCOME = Object.freeze({
@@ -168,22 +168,17 @@ export function applyContinuity({
         return ex;
       }
 
-      // The generator re-picked the incumbent anyway. Still a retention:
-      // the user's history is intact and the receipt should say so.
-      if (incumbent.exerciseId === ex.exerciseId) {
-        used.add(incumbent.exerciseId);
-        decisions.push({
-          workout: w.name ?? null,
-          exerciseId: ex.exerciseId ?? null,
-          exerciseName: ex.exerciseName ?? null,
-          previousExerciseId: incumbent.exerciseId,
-          previousExerciseName: incumbent.exerciseName ?? null,
-          outcome: SLOT_OUTCOME.RETAINED,
-          reason: SLOT_REASON.NO_REASON_TO_CHANGE,
-        });
-        return ex;
-      }
-
+      // The verdict is ALWAYS consulted, including when the generator
+      // happened to re-pick the incumbent itself.
+      //
+      // This used to short-circuit to a retention with a hardcoded "no
+      // reason to change", which was wrong twice over: it reported the
+      // wrong reason for an exercise that was actually still productive,
+      // and - the real defect - it meant an exercise the user had EXCLUDED
+      // could survive a rebuild simply because the generator offered it
+      // back. Generation filters exclusions upstream, so that was unlikely
+      // rather than impossible, and "unlikely" is not a guarantee.
+      const samePick = incumbent.exerciseId === ex.exerciseId;
       const { verdict, reason } = slotVerdict(evidenceFor(incumbent.exerciseId) ?? {}, context);
       const keeps = verdict === SLOT_VERDICT.KEEP
         || verdict === SLOT_VERDICT.KEEP_WITH_PRESCRIPTION_CHANGE;
@@ -216,9 +211,11 @@ export function applyContinuity({
         outcome: SLOT_OUTCOME.RETAINED,
         reason,
         // What the generator would have chosen, kept for the receipt so
-        // "why is this still here" can be answered honestly.
-        insteadOfId: ex.exerciseId ?? null,
-        insteadOfName: ex.exerciseName ?? null,
+        // "why is this still here" can be answered honestly. Null when the
+        // generator picked the same exercise: there was no alternative on
+        // the table and saying otherwise would invent one.
+        insteadOfId: samePick ? null : (ex.exerciseId ?? null),
+        insteadOfName: samePick ? null : (ex.exerciseName ?? null),
       });
       return {
         ...ex,

@@ -1544,6 +1544,13 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
     const matches = e => familySatisfiesRole(muscle, role, e.sub) && !usedNames.has(e.n);
     const candidate = sorted.find(matches) ?? coverageFallback.find(matches);
     if (candidate) {
+      // C16 job 10: the reason is recorded WHEN the choice is made. The
+      // founder's rule is explicit - "Do not reverse-engineer explanations
+      // from names after generation" - and an explanation derived later
+      // from the finished plan would be a guess dressed as a reason.
+      candidate._why = sorted.includes(candidate)
+        ? SELECTION_REASON.REQUIRED_ROLE
+        : SELECTION_REASON.COVERAGE_FALLBACK;
       chosen.push(candidate);
       covered.add(role);
       usedNames.add(candidate.n);
@@ -1569,6 +1576,9 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
         if (e.n === 'Stiff-Leg Deadlift' && hasRdl) continue;
         if (e.n === 'Romanian Deadlift (Barbell)' && hasSldl) continue;
       }
+      e._why = allowSameSub
+        ? SELECTION_REASON.VOLUME_FILL
+        : SELECTION_REASON.FAMILY_DIVERSITY;
       chosen.push(e);
       usedNames.add(e.n);
       chosenSubs.add(e.sub);
@@ -1579,7 +1589,9 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
 
   // Fallback: if still empty, allow an already-used pick (vary by slot)
   if (chosen.length === 0 && sorted.length > 0) {
-    chosen.push(sorted[slot % sorted.length]);
+    const only = sorted[slot % sorted.length];
+    only._why = SELECTION_REASON.ONLY_OPTION;
+    chosen.push(only);
   }
 
   // D8 R2/R3 growth loop: if the exercises actually chosen can't hold
@@ -1676,11 +1688,36 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
     // Internal-only: read by buildSession's running session-fatigue tally
     // (C16 quality law 4) and stripped before output with the other tags.
     exObj._fatigue = entry.fatigue ?? null;
+    // C16 job 10: survives to the output, deliberately. This is the
+    // machine-readable half of "why this plan" and the copy layer maps it;
+    // no screen may compose its own explanation from the exercise name.
+    exObj.selectionReason = entry._why ?? SELECTION_REASON.VOLUME_FILL;
     result.push(exObj);
   }
 
   return result;
 }
+
+/**
+ * C16 job 10: WHY an exercise is in the plan, decided at the moment it is
+ * chosen.
+ *
+ * Emitted by selection, mapped to copy by planRationale.js. Deliberately a
+ * small closed set: these are the only reasons the selector actually has,
+ * and inventing a richer vocabulary here would mean inventing reasons.
+ */
+export const SELECTION_REASON = Object.freeze({
+  /** Covers a movement role the muscle's week must contain. */
+  REQUIRED_ROLE: 'required_role',
+  /** Adds a family the session does not have yet. */
+  FAMILY_DIVERSITY: 'family_diversity',
+  /** Delivers the remaining sets the muscle's target needs. */
+  VOLUME_FILL: 'volume_fill',
+  /** The only exercise able to cover a required role for this user. */
+  COVERAGE_FALLBACK: 'coverage_fallback',
+  /** The only option the equipment and exclusions left. */
+  ONLY_OPTION: 'only_option',
+});
 
 // C16 quality law 4. `fatigueCost` is the library's own 1-5 systemic-demand
 // rating. 4+ is a genuinely taxing movement (heavy squat, deadlift, barbell
