@@ -316,6 +316,20 @@ export function slotVerdict(evidence = {}, { epochBlocks = 0, goalChanged = fals
   return verdict(SLOT_VERDICT.KEEP, SLOT_REASON.NO_REASON_TO_CHANGE);
 }
 
+// C16 phase C. Two separate ideas, deliberately given separate names.
+//
+// REBUILD_MIN_CHANGED_SLOTS is the founder's rule stated directly: one or
+// two changed slots is a refinement, never a rebuild, whatever proportion
+// of a small programme they represent.
+//
+// REBUILD_CHURN_RATIO is the proportion above which "refinement" stops
+// being an honest word. It is a product heuristic, not a scientific
+// threshold, and it is NOT EPOCH_CONTINUITY_SIMILARITY - that constant
+// answers a different question (does the epoch counter continue?) and must
+// not acquire a second meaning.
+const REBUILD_MIN_CHANGED_SLOTS = 3;
+const REBUILD_CHURN_RATIO = 0.4;
+
 // ─── Programme verdict ────────────────────────────────────────────────────
 
 /**
@@ -362,11 +376,31 @@ export function programmeVerdict({
   }
 
   // Enough of the programme no longer fits that calling it a refinement
-  // would be untrue. A two-exercise change is never a rebuild.
+  // would be untrue.
+  //
+  // C16 phase C: this used to be a churn RATIO alone, and the ratio reused
+  // EPOCH_CONTINUITY_SIMILARITY. Two problems, both now fixed:
+  //
+  //   1. The comment above promised "a two-exercise change is never a
+  //      rebuild" and the code did not enforce it - on a four-slot upper
+  //      day, two changes is 50% churn and was reported as a rebuild. The
+  //      founder's instruction is explicit: "Do not call something
+  //      REBUILD_PROGRAMME if only one/two slots changed." It is now an
+  //      absolute floor, checked before the ratio, so a small programme
+  //      cannot reach a rebuild by arithmetic.
+  //   2. EPOCH_CONTINUITY_SIMILARITY decides whether the epoch COUNTER
+  //      continues and nothing else. Borrowing it here quietly gave it a
+  //      second meaning, which is exactly what its own documentation says
+  //      it must not have. Churn has its own named constant.
+  //
+  // A material structural change (days, equipment, session length, goal)
+  // returned above and is unaffected: that is a rebuild however few
+  // exercises move, because it changes what the programme IS.
   const churn = total > 0 ? changed.length / total : 0;
+  const enoughSlotsToRebuild = changed.length >= REBUILD_MIN_CHANGED_SLOTS;
   const verdict = changed.length === 0
     ? PROGRAMME_VERDICT.CONTINUE_STRUCTURE
-    : (churn > (1 - EPOCH_CONTINUITY_SIMILARITY)
+    : (enoughSlotsToRebuild && churn > REBUILD_CHURN_RATIO
       ? PROGRAMME_VERDICT.REBUILD_PROGRAMME
       : PROGRAMME_VERDICT.REFINE_PROGRAMME);
 

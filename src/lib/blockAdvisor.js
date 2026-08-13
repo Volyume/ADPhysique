@@ -448,6 +448,89 @@ export function applyAdjustEvidence(nextBlock, preview, { finished = true } = {}
  *     totalWeeks, weeksOverdue, ... }
  * }
  */
+/**
+ * C16 phase C: assemble the programme review for a finished block.
+ *
+ * Reads the CURRENT plan, the user's exercise intelligence and the block
+ * history, and hands them to the pure engine. Every decision is made in
+ * programmeEpoch; this only gathers.
+ *
+ * Best-effort by construction. A read failure returns null and the caller
+ * simply shows the existing volume recommendation without the structural
+ * half - which is the behaviour that shipped before this existed.
+ */
+async function buildProgrammeReview(userId, activeBlock) {
+  // eslint-disable-next-line global-require
+  const {
+    getActivePlan, getRoutinesForPlan, getRoutineExercisesWithDetails, getAllMesocycles,
+  } = require('./database');
+  // eslint-disable-next-line global-require
+  const { loadExerciseIntentState, exerciseEvidence, isExcluded, isAvoidedThisBlock,
+    swappedAwayCount, EVIDENCE_MATURITY } = require('./exercise/intent');
+  // eslint-disable-next-line global-require
+  const { isAutoEligible } = require('./exercise/canonicality');
+  // eslint-disable-next-line global-require
+  const { proposeNextBlock, verdictCopy } = require('./blockReview');
+
+  const plan = await getActivePlan(userId);
+  if (!plan?.id) return null;
+  const routines = await getRoutinesForPlan(plan.id);
+  const slots = [];
+  const structure = [];
+  for (const r of routines ?? []) {
+    // eslint-disable-next-line no-await-in-loop
+    const rows = await getRoutineExercisesWithDetails(r.id);
+    const exercises = [];
+    for (const row of rows ?? []) {
+      const ex = row.exercise ?? {};
+      if (!ex.id) continue;
+      slots.push({ exerciseId: ex.id, exerciseName: ex.name ?? null, workout: r.name ?? null });
+      exercises.push({ exerciseId: ex.id });
+    }
+    structure.push({ name: r.name, exercises });
+  }
+  if (slots.length === 0) return null;
+
+  const intentState = await loadExerciseIntentState(userId, {
+    activeMesocycleId: activeBlock?.id ?? null,
+    progressionForIds: slots.map(s => s.exerciseId),
+  });
+
+  const evidenceFor = (exerciseId) => {
+    const facts = exerciseEvidence(intentState, exerciseId);
+    return {
+      excluded: isExcluded(intentState, exerciseId) || isAvoidedThisBlock(intentState, exerciseId),
+      swappedAwayCount: swappedAwayCount(intentState, exerciseId),
+      autoEligible: undefined,
+      sessions: facts.sessions,
+      progressing: facts.progression === 'progressing',
+      plateau: facts.progression === 'plateau',
+      establishedPersonalFit: facts.maturity === EVIDENCE_MATURITY.ESTABLISHED,
+      // Elective variation is offered only once the epoch has the history
+      // for it; the engine gates that itself and refuses it outright for a
+      // still-progressing movement.
+      systematicCandidate: facts.progression !== 'progressing',
+    };
+  };
+
+  let history = [];
+  try {
+    history = (await getAllMesocycles(userId)) ?? [];
+  } catch (_) { history = []; }
+
+  const proposal = proposeNextBlock({
+    slots,
+    evidenceFor,
+    history: history.map(() => ({ structure: { workouts: structure }, completed: true })),
+    currentStructure: { workouts: structure },
+  });
+  // isAutoEligible is imported for the evidence shape's completeness and is
+  // deliberately not applied here: at a block boundary an exercise the user
+  // is already running is not made invalid by a curation tier change.
+  void isAutoEligible;
+  return { ...proposal, copy: verdictCopy(proposal.verdict, { changedCount: proposal.changedCount }) };
+}
+
 export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro = false } = {}) {
   // Campaign 1 P0-7 D2: a FAILED check-in read must not masquerade as "no
   // signals detected" - the old catch(() => []) made a read error produce
@@ -549,9 +632,29 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
   // ── Block finished, awaiting the user's next-block decision ──────────────
   if (blockStatus?.status === 'completed_awaiting_decision') {
     const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals, 'finished', isPro);
+    // C16 phase C: the programme-level verdict, from the epoch engine.
+    //
+    // This closes the mismatch the founder named: the branch was labelled
+    // `consider_rebuild` while its primary action still effectively
+    // repeated the programme. A rebuild is now only ever called a rebuild
+    // when the STRUCTURE has a reason to change - never because one or two
+    // slots did, and never because fatigue ran high for a fortnight.
+    //
+    // Pro only, and best-effort: the verdict is additive information beside
+    // the existing recommendation. Free receives no coaching (D96), and a
+    // failure here must not cost the user their block-complete card.
+    let programmeReview = null;
+    if (isPro) {
+      try {
+        programmeReview = await buildProgrammeReview(userId, activeBlock);
+      } catch (_) { programmeReview = null; }
+    }
     const overdueWeeks = blockStatus.weeksOverdue;
     return {
       action: 'post_recovery',
+      // C16 phase C: the persistent decision surface shows the programme
+      // verdict in user language beside the volume recommendation.
+      programmeReview,
       // C6 RB6-8 (D97-25): week counts read oddly at scale ("passed 25
       // weeks ago"); from two months the headline rolls over to months.
       headline: overdueWeeks > 0
