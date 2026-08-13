@@ -2,11 +2,23 @@
  * Pure mapping from a notification's `data.type` to a navigation target.
  *
  * Kept separate from RootNavigator so it can be unit-tested without the
- * navigator: the navigator owns only "given this target, navigate". Every
- * type the scheduler sets (`src/lib/notifications/scheduler.js`) must have a
- * route here, or tapping that notification dead-ends. The day-14 trial gate
- * (`cascade_gate`) dead-ending is the bug this closes: with the beta override
- * off, that tap is the conversion moment.
+ * navigator: the navigator owns only "given this target, navigate". The day-14
+ * trial gate (`cascade_gate`) dead-ending is the bug this module first closed:
+ * with the beta override off, that tap is the conversion moment.
+ *
+ * ROUTING TRUTH (Campaign 14 job 5, founder ruling). Every LIVE notification
+ * type gets exactly one of two treatments, and nothing else:
+ *
+ *   A. a meaningful existing destination -- a screen that a navigator really
+ *      registers AND that genuinely represents what the notification said, or
+ *   B. an intentionally non-navigating notification -- an explicit `case`
+ *      returning null, so the tap simply opens the app.
+ *
+ * A route string is never used merely because it exists, and no screen is
+ * created merely to satisfy navigation. Where no screen can truthfully carry
+ * the notification's subject, B is preferred over a false deep link. The
+ * `notification_tapped` open event fires in `listeners.js` before and
+ * independently of this mapping, so choosing B never costs the open telemetry.
  *
  * Returns `{ tab, screen, params? }` or `null` for an unknown / no-op type.
  * `tab` is the bottom-tab route; `screen` is the screen inside that tab's
@@ -73,9 +85,61 @@ export function routeForNotificationType(type, data = {}) {
       // win-back Play offer is preferred (inert if none is configured).
       return { tab: 'ProfileTab', screen: 'Subscription', params: { fromWinback: true } };
     case 'partner_cheer':
-      // NEW-002: a partner sent a cheer. Lands on the Progress consistency
-      // screen, where the partner row hosts the cheer caption + reciprocity.
-      return { tab: 'ProgressTab', screen: 'Consistency' };
+    case 'partner_streak':
+    case 'partner_joined':
+      // Campaign 14 job 5 (routing truth). All three live partner beats
+      // (partnerBeats.js: cheerPush / streakKeptPush / joinPush) land on the
+      // Partner surface, the ONLY screen that shows partner state: the pair
+      // card, the shared-streak run, the cheer/moment row and the newly
+      // joined pair.
+      //
+      // partner_cheer used to land on ProgressTab/Consistency on the claim
+      // that "the partner row hosts the cheer caption". That row was removed
+      // from Consistency on the founder device-walk of 2026-07-03 and its
+      // absence is now PINNED (partnerPlacementSpine.guard.test.js), so the
+      // tap opened a screen with no partner content at all. partner_streak
+      // and partner_joined had no mapping, so their taps dead-ended on
+      // whatever screen was last open.
+      //
+      // The Partner route is registered in ProgressStack as the Pro-guarded
+      // GatedPartner, exactly as the Coach-tab row and the Progress tile
+      // reach it; navigating here never bypasses that gate. `source` mirrors
+      // those two entry points so the surface-view telemetry can attribute a
+      // notification-driven open. No pairId is passed: PartnerScreen reads
+      // route.params.pairId only as a share target.
+      return { tab: 'ProgressTab', screen: 'Partner', params: { source: 'notification' } };
+    case 'meal_log_reminder':
+      // Campaign 14 job 5: the opt-in meal-log nudge (scheduler.js
+      // scheduleMealReminders, Pro-gated and ED-flag gated at both schedule
+      // and delivery time) had no mapping, so "a gentle reminder to log it"
+      // dead-ended. The Diary IS the thing it names, and it is the same
+      // destination the planned-meal confirm nudge already uses. DiaryScreen
+      // is registered as the Pro-guarded GatedDiary, so the tier gate is
+      // unchanged.
+      return { tab: 'DiaryTab', screen: 'Diary' };
+    case 'subscription_payment_failure':
+      // Campaign 14 job 5: the server-sent billing push (Edge Functions
+      // play-billing-rtdn + _shared/appStore) had no mapping. Its body tells
+      // the user to update their billing to keep Pro; the Subscription screen
+      // is where the plan state and the "open subscription settings" route to
+      // the store live. Navigation only, no billing behaviour is touched.
+      return { tab: 'ProfileTab', screen: 'Subscription' };
+    case 'rest_timer':
+    case 'rest_end':
+      // Campaign 14 job 5: INTENTIONALLY non-navigating, listed explicitly so
+      // it reads as a decision rather than an accidental fall-through.
+      //
+      // Both are live-workout notifications. rest_timer is a silent ongoing
+      // sticky whose real controls are its action buttons (handled in
+      // listeners.js before onTap ever runs); rest_end is the one-shot "Rest
+      // done" alert. A body tap on either happens while the user is mid
+      // session, so the OS restores the app exactly where they left it: the
+      // Active Workout screen. Pushing an ActiveWorkout route on top of that
+      // would duplicate the screen when a workout is live, and land on an
+      // empty one when the notification is stale. The tap therefore just
+      // opens the app; the notification_tapped telemetry still fires in
+      // listeners.js, which runs before and independently of this mapping.
+      return null;
     case 'checkin_missed':
       // OPP-C03 ghost prevention. The same-evening nudge lands on the
       // check-in wizard (it is still the user's check-in day); the +48h

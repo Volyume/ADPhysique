@@ -31,6 +31,7 @@ import {
   cancelPlannedMealConfirm,
   cancelMorningNotification,
   cancelCheckinNotification,
+  cancelEveningWeightReminder,
   requestNotificationPermissions,
 } from '../lib/notifications';
 import Card from '../components/Card';
@@ -38,6 +39,8 @@ import BackHeader from '../components/BackHeader';
 import SectionLabel from '../components/SectionLabel';
 import Chip from '../components/Chip';
 import { setPreference as setPrefRow } from '../lib/notifications/preferences';
+import { setCategoryEnabled, pushCategoryPrefsNow } from '../lib/notifications/categoryPrefs';
+import { CATEGORY } from '../lib/notifications/categories';
 import { getQuietHours, shiftHourMinuteOutOfQuietHours } from '../lib/notifications/quietHours';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
@@ -97,8 +100,15 @@ function formatNextFire(date) {
   return `${dayNames[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} at ${formatHour(h)}${m === '00' ? '' : ':' + m}`;
 }
 
-async function applyScheduled(prefs, permissionStatus) {
-  // Always cancels and reschedules BOTH coaching reminders (no toggles).
+async function applyScheduled(prefs, permissionStatus, { userInitiated = false } = {}) {
+  // Cancels and re-lays each coaching reminder ACCORDING TO THE USER'S
+  // CHOICE. C14 job 4: both were previously forced on with no way off,
+  // on the reasoning that the coach needs the inputs. That confused the
+  // input with the prompt. Turning the reminder off does not stop the
+  // user logging a weight or filling in a check-in, and Volyume must not
+  // send a recurring optional notification a user has no way to stop.
+  // The data the coach needs is unchanged; only the nudge is optional.
+  //
   // Training reminders are independent and managed by NotificationSettings.
   //
   // Cancel ONLY the two notifications this screen owns (morning weight +
@@ -108,16 +118,31 @@ async function applyScheduled(prefs, permissionStatus) {
   // the historic wipe-bug class NotificationSettingsScreen already fixed.
   // Each schedule* helper self-cancels its own ID too, so the explicit
   // cancels here only matter for the permission-not-granted case.
+  const morningOn = prefs.morningEnabled !== false;
+  const checkinOn = prefs.checkinEnabled !== false;
   await cancelMorningNotification();
   await cancelCheckinNotification();
   if (permissionStatus === 'granted') {
-    await scheduleMorningWeightNotification(prefs.morningHour, prefs.morningMinute);
-    // Q1: evening weigh-in backstop rides the same toggle (self-gates on ED flag).
-    await scheduleEveningWeightReminder();
-    await scheduleCheckinReminder(
-      prefs.checkinDay, prefs.checkinHour, prefs.checkinMinute,
-      { lastCheckinMs: prefs.lastCheckinMs ?? 0, minGapDays: 7 },
-    );
+    if (morningOn) {
+      // C14 lead ruling (D33): switching the reminder ON here is an
+      // explicit, present-tense request, so it is honoured immediately
+      // rather than held by the three-week inactivity stand-down. Every
+      // other gate (ED flag, tier, quiet hours, permission) still applies.
+      await scheduleMorningWeightNotification(
+        prefs.morningHour, prefs.morningMinute, { userInitiated },
+      );
+      // Q1: evening weigh-in backstop rides the same toggle (self-gates on ED flag).
+      await scheduleEveningWeightReminder(prefs.eveningHour ?? 19, prefs.eveningMinute ?? 30, { userInitiated });
+    } else {
+      // The backstop rides the same switch, as the screen copy says it does.
+      await cancelEveningWeightReminder();
+    }
+    if (checkinOn) {
+      await scheduleCheckinReminder(
+        prefs.checkinDay, prefs.checkinHour, prefs.checkinMinute,
+        { lastCheckinMs: prefs.lastCheckinMs ?? 0, minGapDays: 7 },
+      );
+    }
   }
   // Merge over the existing blob so keys this screen doesn't own
   // (missedCheckinEnabled, coachReady, training) survive a save here.
@@ -131,8 +156,8 @@ async function applyScheduled(prefs, permissionStatus) {
   await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify({
     ...existing,
     ...prefs,
-    morningEnabled: true,
-    checkinEnabled: true,
+    morningEnabled: morningOn,
+    checkinEnabled: checkinOn,
   }));
   // Mirror into the per-category SQLite rows so the registry-driven sync
   // push (src/lib/sync/tables/notificationPreferences.js) has a fresh
@@ -153,9 +178,9 @@ async function applyScheduled(prefs, permissionStatus) {
       const checkinTime =
         (prefs.checkinHour ?? 18).toString().padStart(2, '0')
         + ':' + (prefs.checkinMinute ?? 0).toString().padStart(2, '0');
-      await setPrefRow(userId, 'morning_weight', { enabled: true, time_pref: morningTime });
+      await setPrefRow(userId, 'morning_weight', { enabled: morningOn, time_pref: morningTime });
       await setPrefRow(userId, 'weekly_checkin_reminder', {
-        enabled: true,
+        enabled: checkinOn,
         time_pref: `${dow}_${checkinTime}`,
       });
     }
@@ -200,6 +225,10 @@ export default function CoachingRemindersScreen() {
   // Memoised: this screen renders mapped ChipRow options.
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
+  // C14 job 4: both coaching reminders are optional now. Default ON, so
+  // nothing changes for an existing user who never touches the switch.
+  const [morningEnabled, setMorningEnabled] = useState(true);
+  const [checkinEnabled, setCheckinEnabled] = useState(true);
   const [morningHour, setMorningHour] = useState(7);
   const [morningMinute, setMorningMinute] = useState(0);
   // PM-05 (D96): Sunday, matching the eight other readers of this preference
@@ -252,6 +281,12 @@ export default function CoachingRemindersScreen() {
           if (prefs.partnerCheerEnabled !== undefined) {
             setPartnerCheerEnabled(prefs.partnerCheerEnabled !== false);
           }
+          if (prefs.morningEnabled !== undefined) {
+            setMorningEnabled(prefs.morningEnabled !== false);
+          }
+          if (prefs.checkinEnabled !== undefined) {
+            setCheckinEnabled(prefs.checkinEnabled !== false);
+          }
         }
       } catch (_) {}
 
@@ -290,18 +325,20 @@ export default function CoachingRemindersScreen() {
     if (savedTimer.current) clearTimeout(savedTimer.current);
   }, []);
 
-  function scheduleApply(next) {
+  function scheduleApply(next, { userInitiated = false } = {}) {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(async () => {
       try {
         await applyScheduled({
+          morningEnabled: next.morningEnabled ?? morningEnabled,
+          checkinEnabled: next.checkinEnabled ?? checkinEnabled,
           morningHour: next.morningHour ?? morningHour,
           morningMinute: next.morningMinute ?? morningMinute,
           checkinDay: next.checkinDay ?? checkinDay,
           checkinHour: next.checkinHour ?? checkinHour,
           checkinMinute: next.checkinMinute ?? checkinMinute,
           lastCheckinMs,
-        }, permissionStatus);
+        }, permissionStatus, { userInitiated });
         // Existing inline "Saved" indicator stays for users who prefer
         // explicit on-screen confirmation; toast is the modern overlay
         // for users scrolling away from the section.
@@ -315,26 +352,30 @@ export default function CoachingRemindersScreen() {
     }, 400);
   }
 
+  // C14 job 4: the real off switches. They go through the same debounced
+  // apply as the time pickers, so the schedule and the stored choice can
+  // never disagree, and applyScheduled cancels what it must.
+  function handleMorningToggle(value) {
+    setMorningEnabled(value);
+    // Switching it ON is an explicit request, so it is not held back by the
+    // three-week inactivity stand-down (C14 lead ruling under D33).
+    scheduleApply({ morningEnabled: value }, { userInitiated: value });
+  }
+
+  function handleCheckinToggle(value) {
+    setCheckinEnabled(value);
+    scheduleApply({ checkinEnabled: value });
+  }
+
   async function handleMissedToggle(value) {
     setMissedEnabled(value);
     try {
-      // Merge-write the blob so the schedule keys saved by applyScheduled
-      // survive the toggle.
-      let blob = {};
-      try {
-        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
-        if (raw) blob = JSON.parse(raw) ?? {};
-      } catch (_) {}
-      await AsyncStorage.setItem(
-        NOTIF_PREFS_KEY,
-        JSON.stringify({ ...blob, missedCheckinEnabled: value }),
-      );
-      // Mirror into the per-category SQLite row so the registry-driven
-      // sync carries the preference cross-device (migration 044 pattern).
+      // C14 job 3: ONE write path. setCategoryEnabled merges over the
+      // existing blob (so the schedule keys applyScheduled saved survive)
+      // and writes the per-category projection row in the same call, so a
+      // toggle can no longer land in one and not the other.
       const userId = useAppStore.getState().user?.id;
-      if (userId) {
-        await setPrefRow(userId, 'checkin_missed', { enabled: value, time_pref: null });
-      }
+      await setCategoryEnabled(userId, CATEGORY.CHECKIN_MISSED, value);
       if (value) {
         await scheduleMissedCheckinFollowups(userId ?? null);
       } else {
@@ -349,19 +390,8 @@ export default function CoachingRemindersScreen() {
   async function handlePlannedConfirmToggle(value) {
     setPlannedConfirmEnabled(value);
     try {
-      let blob = {};
-      try {
-        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
-        if (raw) blob = JSON.parse(raw) ?? {};
-      } catch (_) {}
-      await AsyncStorage.setItem(
-        NOTIF_PREFS_KEY,
-        JSON.stringify({ ...blob, plannedMealConfirmEnabled: value }),
-      );
       const userId = useAppStore.getState().user?.id;
-      if (userId) {
-        await setPrefRow(userId, 'planned_meal_confirm', { enabled: value, time_pref: null });
-      }
+      await setCategoryEnabled(userId, CATEGORY.PLANNED_MEAL_CONFIRM, value);
       if (value) {
         await schedulePlannedMealConfirm(userId ?? null);
       } else {
@@ -380,19 +410,14 @@ export default function CoachingRemindersScreen() {
   async function handlePartnerCheerToggle(value) {
     setPartnerCheerEnabled(value);
     try {
-      let blob = {};
-      try {
-        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
-        if (raw) blob = JSON.parse(raw) ?? {};
-      } catch (_) {}
-      await AsyncStorage.setItem(
-        NOTIF_PREFS_KEY,
-        JSON.stringify({ ...blob, partnerCheerEnabled: value }),
-      );
       const userId = useAppStore.getState().user?.id;
-      if (userId) {
-        await setPrefRow(userId, 'partner_cheer', { enabled: value, time_pref: null });
-      }
+      await setCategoryEnabled(userId, CATEGORY.PARTNER_CHEER, value);
+      // C14 job 4: partner cheers are the one live category the SERVER can
+      // send. The partner-cheer Edge Function reads the projection row
+      // before delivering, so an opt-out that waited for the next
+      // background sync would keep letting pushes through in the meantime.
+      // Push it now; best-effort, the ordinary sync still carries it.
+      await pushCategoryPrefsNow(userId);
       toast.show(value ? 'Partner cheers on' : 'Partner cheers off', { variant: 'success' });
     } catch (_) {
       toast.show('Could not save that change', { variant: 'error' });
@@ -444,26 +469,38 @@ export default function CoachingRemindersScreen() {
             <View style={[styles.iconWrap, live.iconWrap]}>
               <Ionicons name="scale-outline" size={18} color={t.colors.primary} />
             </View>
-            <Text style={[styles.cardTitle, live.cardTitle]}>Morning weight reminder</Text>
+            <Text style={[styles.cardTitle, styles.toggleTitle]}>Morning weight reminder</Text>
+            <Switch
+              value={morningEnabled}
+              onValueChange={handleMorningToggle}
+              trackColor={{ false: t.colors.surface3, true: t.colors.primaryBg }}
+              thumbColor={t.colors.primary}
+              ios_backgroundColor={t.colors.surface3}
+              accessibilityLabel="Morning weight reminder toggle"
+            />
           </View>
-          <Text style={[styles.pickerLabel, live.pickerLabel]}>Hour</Text>
-          <ChipRow
-            items={HOURS_MORNING}
-            selected={morningHour}
-            onSelect={(h) => { setMorningHour(h); scheduleApply({ morningHour: h }); }}
-            formatter={formatHour}
-            accessibilityName="Morning weight hour"
-          />
-          <Text style={[styles.scheduleText, live.scheduleText]}>
-            {morningShift.shifted
-              ? `Notification at ${formatHour(morningShift.hour)}`
-              : `Notification at ${formatHour(morningHour)}`}
-          </Text>
-          {morningShift.shifted ? (
-            <Text style={[styles.scheduleSubText, live.scheduleSubText]}>
-              Quiet hours currently run to {formatHour(morningShift.hour)}, so a {formatHour(morningHour)} reminder waits until then. You can change quiet hours in Settings, Notifications.
-            </Text>
-          ) : null}
+          {morningEnabled && (
+            <>
+              <Text style={[styles.pickerLabel, live.pickerLabel]}>Hour</Text>
+              <ChipRow
+                items={HOURS_MORNING}
+                selected={morningHour}
+                onSelect={(h) => { setMorningHour(h); scheduleApply({ morningHour: h }); }}
+                formatter={formatHour}
+                accessibilityName="Morning weight hour"
+              />
+              <Text style={[styles.scheduleText, live.scheduleText]}>
+                {morningShift.shifted
+                  ? `Notification at ${formatHour(morningShift.hour)}`
+                  : `Notification at ${formatHour(morningHour)}`}
+              </Text>
+              {morningShift.shifted ? (
+                <Text style={[styles.scheduleSubText, live.scheduleSubText]}>
+                  Quiet hours currently run to {formatHour(morningShift.hour)}, so a {formatHour(morningHour)} reminder waits until then. You can change quiet hours in Settings, Notifications.
+                </Text>
+              ) : null}
+            </>
+          )}
           <View style={[styles.helperBlock, live.helperBlock]}>
             <Text style={[styles.helperText, live.helperText]}>
               Body weight shifts naturally each day with fluid, food, and hormones. Logging every other day at minimum gives Volyume enough readings to see the trend. Three or more readings per week opens up the weekly check-in.
@@ -484,28 +521,40 @@ export default function CoachingRemindersScreen() {
             <View style={[styles.iconWrap, live.iconWrap]}>
               <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
             </View>
-            <Text style={[styles.cardTitle, live.cardTitle]}>Weekly check-in reminder</Text>
+            <Text style={[styles.cardTitle, styles.toggleTitle]}>Weekly check-in reminder</Text>
+            <Switch
+              value={checkinEnabled}
+              onValueChange={handleCheckinToggle}
+              trackColor={{ false: t.colors.surface3, true: t.colors.primaryBg }}
+              thumbColor={t.colors.primary}
+              ios_backgroundColor={t.colors.surface3}
+              accessibilityLabel="Weekly check-in reminder toggle"
+            />
           </View>
-          <Text style={[styles.pickerLabel, live.pickerLabel]}>Day</Text>
-          <ChipRow
-            items={DAYS.map((d, i) => ({ value: i, label: d }))}
-            selected={checkinDay}
-            onSelect={(d) => { setCheckinDay(d); scheduleApply({ checkinDay: d }); }}
-            accessibilityName="Check-in day"
-          />
-          <Text style={[styles.pickerLabel, live.pickerLabel]}>Hour</Text>
-          <ChipRow
-            items={HOURS_EVENING}
-            selected={checkinHour}
-            onSelect={(h) => { setCheckinHour(h); scheduleApply({ checkinHour: h }); }}
-            formatter={formatHour}
-            accessibilityName="Check-in hour"
-          />
-          <Text style={[styles.scheduleText, live.scheduleText]}>Reminder every {formatDayHour(checkinDay, checkinHour)}</Text>
-          {lastCheckinMs > 0 && (
-            <Text style={[styles.scheduleSubText, live.scheduleSubText]}>
-              Your next check-in will be {formatNextFire(nextFire)}{bumped ? ', so the coach has a full week of fresh data to act on' : ''}.
-            </Text>
+          {checkinEnabled && (
+            <>
+              <Text style={[styles.pickerLabel, live.pickerLabel]}>Day</Text>
+              <ChipRow
+                items={DAYS.map((d, i) => ({ value: i, label: d }))}
+                selected={checkinDay}
+                onSelect={(d) => { setCheckinDay(d); scheduleApply({ checkinDay: d }); }}
+                accessibilityName="Check-in day"
+              />
+              <Text style={[styles.pickerLabel, live.pickerLabel]}>Hour</Text>
+              <ChipRow
+                items={HOURS_EVENING}
+                selected={checkinHour}
+                onSelect={(h) => { setCheckinHour(h); scheduleApply({ checkinHour: h }); }}
+                formatter={formatHour}
+                accessibilityName="Check-in hour"
+              />
+              <Text style={[styles.scheduleText, live.scheduleText]}>Reminder every {formatDayHour(checkinDay, checkinHour)}</Text>
+              {lastCheckinMs > 0 && (
+                <Text style={[styles.scheduleSubText, live.scheduleSubText]}>
+                  Your next check-in will be {formatNextFire(nextFire)}{bumped ? ', so the coach has a full week of fresh data to act on' : ''}.
+                </Text>
+              )}
+            </>
           )}
           <View style={[styles.helperBlock, live.helperBlock]}>
             <Text style={[styles.helperText, live.helperText]}>

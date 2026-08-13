@@ -30,13 +30,24 @@ describe('D2: readiness ask opt-out never fabricates coaching input', () => {
     const site = HOME.indexOf("Don't ask before each session");
     expect(site).toBeGreaterThan(-1);
     const window = HOME.slice(Math.max(0, site - 800), site + 400);
-    expect(window).toMatch(/setItem\('@volyume_intent_prompt_off',\s*'true'\)/);
+    // C14 job 2 re-anchor: the same write, through the one path that also
+    // stamps the edit and pushes it. What this pins is unchanged - the
+    // modal opt-out persists the flag before starting as Skip.
+    expect(window).toMatch(/setUserPref\(user\?\.id, '@volyume_intent_prompt_off', 'true'\)/);
     expect(window).toMatch(/confirmStart\(null,/);
   });
 
+  // C14 job 2 re-anchor. The toggle still drives the same one key both
+  // ways and is still reversible - that is what this pins and it has not
+  // changed. What changed is that it no longer reaches AsyncStorage
+  // directly: turning the ask back ON deletes the key, and a delete that
+  // happened only locally was undone by the next pull, because the cloud
+  // still held 'true'. Both branches now go through the delete/set pair,
+  // which writes or removes locally AND tombstones or pushes the cloud
+  // copy, so the prompt can no longer switch itself back off.
   test('Settings, Coaching drives the same key both ways and is reversible', () => {
-    expect(SETTINGS).toMatch(/setItem\('@volyume_intent_prompt_off',\s*'true'\)/);
-    expect(SETTINGS).toMatch(/removeItem\('@volyume_intent_prompt_off'\)/);
+    expect(SETTINGS).toMatch(/setUserPref\(user\?\.id, '@volyume_intent_prompt_off', 'true'\)/);
+    expect(SETTINGS).toMatch(/deleteUserPref\(user\?\.id, '@volyume_intent_prompt_off'\)/);
     expect(SETTINGS).toContain('Session readiness check');
   });
 

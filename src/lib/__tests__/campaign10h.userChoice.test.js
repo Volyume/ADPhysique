@@ -67,9 +67,13 @@ describe('F-3: the privacy opt-out can never enter generic preference sync', () 
       // has quietly become transmissible again.
       if (key === '@volyume_privacy_prefs') expect(shouldSyncPref(key)).toBe(false);
     }
-    // The exclusion is anchored (^...$), so a rename is a DELIBERATE act
-    // that must re-decide the contract rather than inheriting it silently.
-    expect(shouldSyncPref('@volyume_privacy_prefs_v2')).toBe(true);
+    // RE-ANCHORED by C14 job 1. Under the old FAIL-OPEN model a renamed key
+    // inherited sync by default, and this asserted that: the anchored
+    // exclusion deliberately did not cover '@volyume_privacy_prefs_v2'.
+    // Sync is now FAIL-CLOSED, so an unclassified key - renamed, new, or
+    // simply forgotten - does not sync at all. Strictly better for exactly
+    // the contract this test defends.
+    expect(shouldSyncPref('@volyume_privacy_prefs_v2')).toBe(false);
   });
 
   test('the exclusion did not over-reach: unrelated preferences still sync', () => {

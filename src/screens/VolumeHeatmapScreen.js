@@ -333,6 +333,41 @@ export default function VolumeHeatmapScreen() {
     toast.show('Volume targets saved', { variant: 'success' });
   }
 
+  // C14 job 7 (RA6-6): a muscle is Volyume-managed when the user holds no
+  // saved override for it AND has not touched it in this editing session.
+  // The control only appears when there is something to hand back.
+  function isMuscleManaged(muscle) {
+    return !customLandmarks?.[muscle] && !touchedMusclesRef.current.has(muscle);
+  }
+
+  // Hand ONE muscle back to the adaptive layer. Drops its saved entry
+  // (explicit marker and all) and the session's record that it was
+  // touched, then writes the remaining table through the same path a save
+  // uses, so the cloud copy cannot ride the next pull back in and undo it.
+  // An empty table is a full reset, which is what removing the last
+  // override means; the reader treats a falsy stored value as "use the
+  // research defaults".
+  async function clearMuscleOverride(muscle) {
+    const next = { ...(customLandmarks || {}) };
+    delete next[muscle];
+    touchedMusclesRef.current.delete(muscle);
+    const key = `@volyume_landmarks_${user.id}`;
+    const empty = Object.keys(next).length === 0;
+    try {
+      if (empty) await AsyncStorage.removeItem(key);
+      else await AsyncStorage.setItem(key, JSON.stringify(next));
+      notePrefWrite(key).catch(() => {});
+      syncUserPref(user.id, key, empty ? '' : JSON.stringify(next)).catch(() => {});
+    } catch (e) {
+      logError('VolumeHeatmapScreen.clearMuscleOverride', e, { muscle });
+      toast.show("Couldn't save that change", { variant: 'error' });
+      return;
+    }
+    setCustomLandmarks(empty ? null : next);
+    setEditValues(buildEditValues(empty ? null : next));
+    toast.show(`${MUSCLE_DISPLAY_NAMES[muscle]} back to Volyume's targets`, { variant: 'success' });
+  }
+
   async function resetToDefaults() {
     appAlert('Reset volume targets?', 'This will restore the default recommended values.', [
       { text: 'Cancel', style: 'cancel' },
@@ -719,7 +754,29 @@ export default function VolumeHeatmapScreen() {
             </Text>
             {muscles.map(muscle => (
               <View key={muscle} style={[styles.editRow, live.editRow]}>
-                <Text style={[styles.editMuscleName, live.editMuscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+                <View style={styles.editRowHeader}>
+                  <Text style={[styles.editMuscleName, live.editMuscleName]}>{MUSCLE_DISPLAY_NAMES[muscle]}</Text>
+                  {/* C14 job 7 (RA6-6): the distinct "hand this one back"
+                      action. Explicit intent is a CHOICE, so it can only be
+                      undone by another choice - and until now the only way
+                      out was Reset to defaults, which hands back every
+                      muscle at once. A user with several hand-set muscles
+                      had to discard the lot to release one. Clearing here
+                      returns this muscle to Volyume-managed values and
+                      drops its explicit marker, without the user having to
+                      move a number away from the research value and back
+                      again to prove they meant it. */}
+                  {isMuscleManaged(muscle) ? null : (
+                    <TouchableOpacity
+                      onPress={() => clearMuscleOverride(muscle)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Let Volyume manage ${MUSCLE_DISPLAY_NAMES[muscle]}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Text style={[styles.editRowClear, live.editRowClear]}>Let Volyume manage this</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
                 <View style={styles.editInputs}>
                   {[['mev', 'Min'], ['mav', 'Target'], ['mrv', 'Max']].map(([key, label], idx, arr) => {
                     const nextKey = arr[idx + 1]?.[0];
@@ -1074,6 +1131,13 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   editMuscleName: { ...type.label, color: colors.textSecondary },
+  editRowHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
+  editRowClear: { ...type.caption, color: colors.primary },
   editInputs: { flexDirection: 'row', gap: spacing.sm },
   editInputGroup: { flex: 1, gap: spacing.xs },
   editInputLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
@@ -1116,6 +1180,7 @@ function buildLiveStyles(t) {
     editSubtitle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     editRow: { borderBottomColor: t.colors.border },
     editMuscleName: { ...t.type.label, color: t.colors.textSecondary },
+    editRowClear: { ...t.type.caption, color: t.colors.primary },
     editInputLabel: { ...t.type.caption, color: t.colors.textMuted },
   };
 }

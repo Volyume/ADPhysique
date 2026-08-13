@@ -1469,9 +1469,95 @@ const PREF_EXCLUDE_PATTERNS = [
   /^@volyume_pref_written_at_/,
 ];
 
+// ─── C14 job 1: FAIL-CLOSED preference sync ──────────────────────────────
+//
+// The model used to be "@volyume_* syncs unless somebody remembers to
+// exclude it". That is backwards for privacy and user control: a new
+// device-local, sensitive, ephemeral or implementation-only key became
+// cross-device state simply by using the normal namespace, and the only
+// defence was a human remembering to extend a blocklist. Campaign 10H
+// closed one such leak by name and recorded the architecture as still
+// fail-open.
+//
+// Now an UNKNOWN key does not sync. A preference reaches the cloud only by
+// being classified here, deliberately, as cross-device user state.
+//
+// The classification behind the list (kept as code, not a prose document):
+//   A SYNCED USER CHOICE      - listed below; follows the signed-in user
+//   B DEVICE-LOCAL CHOICE     - camera facing, palette order, tz offset
+//   C PRIVACY / SAFETY LOCAL  - privacy prefs, SCOFF answers, cycle tracking
+//   D EPHEMERAL / CACHE       - crash logs, widget snapshot, seen-flags,
+//                               dismissals, migration receipts, drafts,
+//                               sync cursors, in-progress workout snapshot
+//   E OWN SYNC MECHANISM      - anything with its own table/registry entry
+//   F LEGACY / DEAD           - no live writer or reader
+//
+// Only A is listed. Everything else is refused by omission, which is the
+// point: forgetting to classify a new key now fails SAFE.
+const SYNCED_PREF_PATTERNS = [
+  // Core account-level choices.
+  /^@volyume_units$/,
+  /^@volyume_a11y_prefs$/,
+  /^@volyume_workout_prefs$/,
+  /^@volyume_schedule_v1$/,
+  /^@volyume_intent_prompt_off$/,
+  /^@volyume_physique_tracking_enabled$/,
+  // The profile blob and its per-field write stamps travel together: the
+  // blob carries coachTone, coachAutonomy, showScience, bodyWeightUnits and
+  // the meal-plan prefs, none of which exist as cloud columns.
+  /^@volyume_user_profile_/,
+  // Notification choices (the guarded family: every writer stamps).
+  /^@volyume_notification_prefs$/,
+  /^@volyume_quiet_hours_v1$/,
+  /^@volyume_meal_reminders$/,
+  /^@volyume_reminder_enabled_v1$/,
+  /^@volyume_reminder_time_v1$/,
+  // Nutrition/diary choices the user sets explicitly.
+  /^@volyume_meal_labels$/,
+  /^@volyume_meals_per_day$/,
+  /^@volyume_water_target_ml$/,
+  /^@volyume_nutrition_targets$/,
+  /^@volyume_perday_target_offsets/,
+  // Training-volume intent: manual landmarks are guarded, never clobbered.
+  /^@volyume_landmarks_/,
+  // Progress-scan display choices (what the user wants shown, not scans).
+  /^@volyume_scan_skip_name$/,
+  /^@volyume_progress_scan_hide_exact_numbers$/,
+  /^@volyume_progress_scan_timer_seconds$/,
+  // Exercise-level user choices.
+  /^@volyume_unilateral_exercises$/,
+  /^@volyume_unilateral_asked_exercises$/,
+  // Chart lens choices: which metric/window the user prefers to see.
+  /^@volyume_chart_window_/,
+  /^@volyume_chart_metric_detail$/,
+  // Streak state carries explicit choices (manual goal, pauses) plus the
+  // retro-shrink guard; guarded, and already synced.
+  /^@volyume_streak_v1_/,
+  // Win-back episode state: single-shot, guarded, already synced.
+  /^@volyume_winback_/,
+  // PRE-EXISTING and deliberately unchanged: calm mode already syncs as a
+  // guarded pref, because calm is the STRICTER state and a device that
+  // knows less must not be able to turn it off. C14 preserves that exactly
+  // and does NOT broaden anything else wellbeing-adjacent. D92-11
+  // (cross-device ED/wellbeing propagation) remains a separate founder
+  // decision and is untouched here.
+  /^@volyume_wellbeing_mode$/,
+];
+
+/**
+ * The ONE classification governing both directions of generic pref sync.
+ * Push filters with it, pull filters with it, so a key can never be
+ * uploadable but not downloadable (or the reverse).
+ *
+ * Unknown key -> false. Known local/sensitive key -> false (the exclusion
+ * list is retained as a deliberate second gate, so the privacy families
+ * Campaign 10H named stay refused even if someone later widens the
+ * allowlist by mistake).
+ */
 export function shouldSyncPref(key) {
-  if (!key.startsWith(PREF_PREFIX)) return false;
-  return !PREF_EXCLUDE_PATTERNS.some(re => re.test(key));
+  if (typeof key !== 'string' || !key.startsWith(PREF_PREFIX)) return false;
+  if (PREF_EXCLUDE_PATTERNS.some(re => re.test(key))) return false;
+  return SYNCED_PREF_PATTERNS.some(re => re.test(key));
 }
 
 // ─── Guarded prefs (Campaign 1 P0-8 D10/D11) ─────────────────────────────
@@ -1521,6 +1607,16 @@ const GUARDED_PREF_PATTERNS = [
   // unguarded cloud-wins path, so a stale device could reset the
   // single-shot state. Every winbackState write stamps.
   /^@volyume_winback_/,
+  // C14 job 2: these two store "off" by DELETING the key, so their
+  // deletion has to survive a stale device. An unguarded key is
+  // cloud-wins on pull and blind-upsert on push, which cannot express
+  // "the delete is newer" in either direction - the stale device simply
+  // re-uploads the old value and the setting turns itself back on. Every
+  // write on both paths stamps (setUserPref / deleteUserPref), so the
+  // freshest real user action wins. Any future key with a delete path
+  // belongs here for the same reason.
+  /^@volyume_intent_prompt_off$/,
+  /^@volyume_scan_skip_name$/,
 ];
 
 export function isGuardedPref(key) {
@@ -1566,6 +1662,110 @@ async function _guardedPrefUpdatedAt(key) {
 }
 
 /**
+ * The "this preference has no value" sentinel, in both directions.
+ */
+export const PREF_TOMBSTONE = '';
+
+/**
+ * C14 job 2: turn a synced preference OFF everywhere, not just here.
+ *
+ * The bulk push ships the keys AsyncStorage currently holds. A key the
+ * user deleted is simply absent from that push, so the cloud row survives
+ * untouched and the next pull — another device, or this one after a
+ * reinstall — writes the old value straight back. The user turns a setting
+ * off, and it comes back on. Several controls store "off" by removing the
+ * key rather than writing a falsy value, so this was the normal path
+ * through them, not an edge case.
+ *
+ * There is no pref-delete RPC and adding one would be a schema change for
+ * a problem an existing convention already solves: the landmark reset has
+ * pushed an empty value as the "no value" sentinel since Campaign 1. This
+ * generalises that. Local removal, a guarded-pref stamp so the delete has
+ * an honest edit time and cannot be undone by an older cloud copy, then
+ * the tombstone push. The pull side removes the key on a tombstone rather
+ * than writing an empty string, so both devices land in the same state.
+ *
+ * Best-effort and never throws: a failed push defers to the next bulk
+ * sync, which re-ships the tombstone because it is a real stored row.
+ */
+export async function deleteUserPref(supabaseUserId, key) {
+  if (!key) return;
+  try { await AsyncStorage.removeItem(key); } catch (_) { /* tolerate */ }
+  await notePrefWrite(key).catch(() => {});
+  try { await syncUserPref(supabaseUserId, key, PREF_TOMBSTONE); } catch (_) { /* tolerate */ }
+}
+
+/**
+ * C14 job 2: the other half of the pair. Write a synced preference
+ * locally, stamp it as a real user edit, and push it.
+ *
+ * Symmetry is the point: a key whose "off" is a delete needs an honest
+ * edit time on BOTH transitions, or the guard protects the delete and not
+ * the re-enable. Callers that set and clear a preference should use this
+ * pair rather than reaching for AsyncStorage plus a bare syncUserPref, so
+ * the stamp cannot be forgotten on one branch of a toggle.
+ */
+export async function setUserPref(supabaseUserId, key, value) {
+  if (!key) return;
+  const stored = value == null ? '' : String(value);
+  try { await AsyncStorage.setItem(key, stored); } catch (_) { /* tolerate */ }
+  await notePrefWrite(key).catch(() => {});
+  try { await syncUserPref(supabaseUserId, key, stored); } catch (_) { /* tolerate */ }
+}
+
+/**
+ * C14 job 2: drop the guarded rows a stale device must not upload.
+ *
+ * The pull side has honoured edit times since Campaign 1, but the push
+ * side was a blind upsert: whatever this device holds overwrites the
+ * cloud row regardless of which edit is actually newer. That is invisible
+ * for ordinary keys (they push at now(), so the cloud is never ahead) and
+ * wrong for the guarded families, which carry the VALUE's edit time. It
+ * is what let a stale device re-upload a preference the user had just
+ * deleted or changed elsewhere: the delete survived on the device that
+ * made it, but the cloud went backwards and every other device kept the
+ * dead value.
+ *
+ * So: read the cloud's updated_at for the guarded keys about to be
+ * pushed, and drop any row whose own edit time is older. Now the newest
+ * real user action wins in BOTH directions, which is what a deletion
+ * needs to be durable.
+ *
+ * Fails OPEN. If the read fails we push as before rather than silently
+ * dropping the user's data; the pull-side guard still protects the value
+ * that matters.
+ */
+async function _dropStaleGuardedPushes(sb, supabaseUserId, rows) {
+  const guarded = rows.filter(r => isGuardedPref(r.key));
+  if (!guarded.length) return rows;
+  let cloud;
+  try {
+    const { data, error } = await sb.from('user_prefs')
+      .select('key,updated_at')
+      .eq('user_id', supabaseUserId)
+      .in('key', guarded.map(r => r.key));
+    if (error) return rows;
+    cloud = data;
+  } catch (_) { return rows; }
+  if (!cloud?.length) return rows;
+  const cloudAt = new Map();
+  for (const r of cloud) {
+    const ms = timeToMs(r?.updated_at);
+    if (Number.isFinite(ms)) cloudAt.set(r.key, ms);
+  }
+  return rows.filter((r) => {
+    if (!isGuardedPref(r.key)) return true;
+    const theirs = cloudAt.get(r.key);
+    if (!Number.isFinite(theirs)) return true;
+    const mine = timeToMs(r.updated_at);
+    if (!Number.isFinite(mine)) return true;
+    // Equal timestamps push: re-writing the identical row is harmless and
+    // repairs a row whose value was lost while the timestamp survived.
+    return mine >= theirs;
+  });
+}
+
+/**
  * Push one preference key to the cloud. Idempotent, upsert on
  * (user_id, key). Called from the store whenever a synced
  * preference changes so the cloud copy stays current.
@@ -1577,12 +1777,16 @@ export async function syncUserPref(supabaseUserId, key, value) {
   // push, so a dead session defers with no queue entry and no data loss.
   if (await _blockedByDeadSession('sync.syncUserPref')) return;
   try {
-    const { error } = await sb.from('user_prefs').upsert({
+    const row = {
       user_id: supabaseUserId, key,
       value: value == null ? '' : String(value),
       // Finding 5: honest edit time for guarded keys, push time otherwise.
       updated_at: await _guardedPrefUpdatedAt(key),
-    }, { onConflict: 'user_id,key' });
+    };
+    // C14 job 2: never push a guarded value over a newer cloud edit.
+    const keep = await _dropStaleGuardedPushes(sb, supabaseUserId, [row]);
+    if (!keep.length) return;
+    const { error } = await sb.from('user_prefs').upsert(row, { onConflict: 'user_id,key' });
     if (error) logPgErr('sync.syncUserPref', error);
   } catch (e) { logWarn('sync.syncUserPref', e?.message, { key }); }
 }
@@ -1609,11 +1813,15 @@ async function _pushAllUserPrefs(sb, supabaseUserId) {
     // Finding 5: guarded keys carry the value's honest edit time so a
     // stale device's routine bulk push can no longer make its old blob
     // look freshest and defeat the pull-side stamp rule.
-    const rows = await Promise.all(pairs.map(async ([k, v]) => ({
+    const all = await Promise.all(pairs.map(async ([k, v]) => ({
       user_id: supabaseUserId, key: k,
       value: v == null ? '' : String(v),
       updated_at: await _guardedPrefUpdatedAt(k),
     })));
+    // C14 job 2: a stale device's routine bulk push must not walk the
+    // cloud backwards over a newer edit (or a deletion) made elsewhere.
+    const rows = await _dropStaleGuardedPushes(sb, supabaseUserId, all);
+    if (!rows.length) return;
     for (let i = 0; i < rows.length; i += 200) {
       const { error } = await sb.from('user_prefs').upsert(
         rows.slice(i, i + 200), { onConflict: 'user_id,key' },
@@ -2305,9 +2513,23 @@ async function _pullUserPrefs(sb, supabaseUserId) {
     // device can never silently discard a manual override or turn calm
     // mode back off.
     const kept = await filterGuardedPulledPrefs(AsyncStorage, rows);
-    const entries = kept.map(r => [r.key, r.value == null ? '' : String(r.value)]);
-    if (!entries.length) return 0;
-    try { await AsyncStorage.multiSet(entries); } catch (_) {}
+    // C14 job 2: a tombstone row DELETES the key locally, it does not write
+    // an empty string. There is no pref-delete RPC, so an empty value has
+    // always been the "no value" sentinel (the landmark reset has written it
+    // since Campaign 1). Writing '' back only worked for readers that treat
+    // a falsy stored value as absent; removing the key is what the deleting
+    // device actually did, so every reader now sees the same state either
+    // way and the delete cannot be half-applied.
+    const entries = [];
+    const tombstoned = [];
+    for (const r of kept) {
+      const value = r.value == null ? '' : String(r.value);
+      if (value === '') tombstoned.push(r.key);
+      else entries.push([r.key, value]);
+    }
+    if (!entries.length && !tombstoned.length) return 0;
+    if (entries.length) { try { await AsyncStorage.multiSet(entries); } catch (_) {} }
+    if (tombstoned.length) { try { await AsyncStorage.multiRemove(tombstoned); } catch (_) {} }
     // Finding 5: an applied guarded value carries its cloud edit time into
     // THIS device's stamp, so when this device later bulk-pushes the value
     // it ships the honest provenance rather than re-laundering it as new.
@@ -2322,7 +2544,7 @@ async function _pullUserPrefs(sb, supabaseUserId) {
         .filter(Boolean);
       if (stampEntries.length) await AsyncStorage.multiSet(stampEntries);
     } catch (_) { /* best-effort: the pull guard fails closed without it */ }
-    return entries.length;
+    return entries.length + tombstoned.length;
   } catch (e) { logWarn('sync._pullUserPrefs', e?.message); return 0; }
 }
 

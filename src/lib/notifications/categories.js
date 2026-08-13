@@ -210,6 +210,13 @@ export function categoryForDataType(type) {
     case 'checkin_missed': return CATEGORY.CHECKIN_MISSED;
     case 'activation_nudge': return CATEGORY.ACTIVATION_NUDGE;
     case 'planned_meal_confirm': return CATEGORY.PLANNED_MEAL_CONFIRM;
+    // Campaign 14 job 5 (routing truth, telemetry clause): the meal-log
+    // reminder baked this data.type (scheduleMealReminders) but had no entry
+    // here, so trackNotificationTapped resolved no category and returned
+    // early -- the tap opened the app and recorded NOTHING. Same omission
+    // class as the partner_streak / partner_joined gap the C7 audit closed
+    // just above. The enum value and its channel entry already existed.
+    case 'meal_log_reminder': return CATEGORY.MEAL_LOG_REMINDER;
     case 'rest_timer': return CATEGORY.REST_TIMER;
     case 'rest_end': return CATEGORY.REST_TIMER; // A2: the end-of-rest alert
 

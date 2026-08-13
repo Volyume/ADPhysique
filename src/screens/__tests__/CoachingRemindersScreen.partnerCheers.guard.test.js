@@ -42,19 +42,37 @@ describe('CoachingRemindersScreen: Partner cheers toggle (#12)', () => {
     expect(SOURCE).toContain('accessibilityLabel="Partner cheers toggle"');
   });
 
-  test('the handler merge-writes the blob key, same as the sibling toggles', () => {
+  // C14 job 3 re-anchor. The handler used to do its own read-modify-write
+  // of the blob AND its own setPrefRow call, which is how a toggle could
+  // land in one representation and not the other. Both now happen inside
+  // setCategoryEnabled, the single write path for every notification
+  // category, so what these two pin is unchanged in substance: the blob
+  // field moves and the per-category projection row moves, together.
+  test('the handler writes through the single category write path', () => {
     const fn = SOURCE.slice(SOURCE.indexOf('async function handlePartnerCheerToggle'));
     const body = fn.slice(0, fn.indexOf('\n  }\n'));
     expect(body).toContain('setPartnerCheerEnabled(value);');
-    // merge, not replace: reads the existing blob before writing
-    expect(body).toMatch(/const raw = await AsyncStorage\.getItem\(NOTIF_PREFS_KEY\);/);
-    expect(body).toContain('JSON.stringify({ ...blob, partnerCheerEnabled: value })');
+    expect(body).toContain('await setCategoryEnabled(userId, CATEGORY.PARTNER_CHEER, value);');
   });
 
-  test('the handler mirrors into the SQLite row with the registered category name', () => {
+  test('the single write path owns both the blob field and the projection row', () => {
+    const PREFS = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'lib', 'notifications', 'categoryPrefs.js'),
+      'utf8',
+    );
+    // The blob field name the scheduler reads.
+    expect(PREFS).toContain("blobField: 'partnerCheerEnabled'");
+    // The projection row, written under the registered category name.
+    expect(PREFS).toMatch(/setPreference\(userId, category, \{ enabled: !!enabled, time_pref: timePref \}\)/);
+  });
+
+  test('the opt-out is pushed to the cloud immediately, not at the next sync', () => {
+    // C14 job 4: partner cheers are sent by the server, which reads the
+    // projection row before delivering. An opt-out that waited for the
+    // next background sync would keep letting pushes through.
     const fn = SOURCE.slice(SOURCE.indexOf('async function handlePartnerCheerToggle'));
     const body = fn.slice(0, fn.indexOf('\n  }\n'));
-    expect(body).toContain("await setPrefRow(userId, 'partner_cheer', { enabled: value, time_pref: null });");
+    expect(body).toContain('await pushCategoryPrefsNow(userId);');
   });
 
   test('sub-copy describes all three partner-cheer sends truthfully (cheer, streak, join)', () => {

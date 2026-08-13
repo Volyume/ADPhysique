@@ -125,9 +125,19 @@ export async function scheduleTrainingReminders(planNameArg) {
   if (Platform.OS === 'web') return;
 
   try {
-    // 1. Check if reminders are enabled
-    const enabledRaw = await AsyncStorage.getItem(REMINDER_PREF_KEY);
-    const enabled = enabledRaw === 'true';
+    // 1. Check if reminders are enabled.
+    // C14 job 3: through the single authority (categoryPrefs), not the
+    // dedicated key directly. The Settings screen read the per-category
+    // SQLite row while this read '@volyume_reminder_enabled_v1', and the
+    // two sync by different mechanisms with different conflict rules, so
+    // after a cross-device conflict the switch could show OFF while these
+    // reminders kept arriving. The legacy key is still written and is
+    // still the fallback for an install that pre-dates the blob field.
+    // eslint-disable-next-line global-require
+    const { isCategoryEnabled } = require('./categoryPrefs');
+    // eslint-disable-next-line global-require
+    const { CATEGORY } = require('./categories');
+    const enabled = await isCategoryEnabled(CATEGORY.TRAINING_REMINDER);
     if (!enabled) {
       await cancelTrainingReminders();
       return;

@@ -160,6 +160,43 @@ serve(async (req: Request) => {
     return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
   }
 
+  // C14 job 4 (FR-5 / FR-C4-8): the recipient's partner-cheer opt-out,
+  // enforced HERE, before the send.
+  //
+  // The toggle in Settings > Coaching reminders wrote a device-local
+  // value and a synced notification_preferences row, and this function
+  // read neither. A push originating on the server ignored it entirely,
+  // so switching partner cheers off silenced nothing a partner actually
+  // sent. A switch that governs only the local scheduler while the remote
+  // path keeps delivering is not an unsubscribe.
+  //
+  // No schema change: notification_preferences (migration 044, category
+  // enum extended by 125) already carries a partner_cheer row and the
+  // client already pushes it. This just reads the truth that was already
+  // there. A device-local value is never a server-side input for this:
+  // the server cannot see one and must not pretend to.
+  //
+  // Absent row means the user has never touched the toggle, which is
+  // consent by default for an opt-out control, so the cheer goes. A
+  // FAILED read is different: we cannot show the user opted in, so we
+  // decline to push. The cheer is still recorded and still appears
+  // in-app, which makes a missed push recoverable and a push at someone
+  // who opted out not.
+  const { data: cheerPref, error: cheerPrefErr } = await admin
+    .from('notification_preferences')
+    .select('enabled')
+    .eq('user_id', recipientId)
+    .eq('category', 'partner_cheer')
+    .maybeSingle()
+
+  if (cheerPrefErr) {
+    console.error('[partner-cheer] preference read failed, holding push', cheerPrefErr)
+    return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
+  }
+  if (cheerPref && cheerPref.enabled === false) {
+    return jsonResponse({ ok: true, delivered: 'in_app' }, 200)
+  }
+
   // Sender's first name for the push title.
   const { data: senderProfile } = await admin
     .from('users_profile')

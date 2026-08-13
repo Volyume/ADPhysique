@@ -28,9 +28,19 @@ jest.mock('../../lib/database', () => ({
 }));
 jest.mock('../../lib/coachReport', () => ({ exportCoachReportPdf: jest.fn() }));
 jest.mock('../../lib/dataBackup', () => ({ exportBackup: jest.fn(), importBackup: jest.fn() }));
+// C14 job 2 re-anchor: the toggle no longer reaches AsyncStorage itself.
+// Clearing a synced preference locally was undone by the next pull (the
+// cloud still held 'true'), so the switch turned itself back on. Both
+// branches now go through the one delete/set pair, which removes or writes
+// locally AND tombstones or pushes the cloud copy. The original intent of
+// this suite is unchanged: off must CLEAR the key (not write a falsy
+// value, which ScanLabelScreen.getInitialStep would still not treat as
+// "skip"), and on must set it the same way "Skip name" does.
 jest.mock('../../lib/sync', () => ({
   getStatus: jest.fn(() => Promise.resolve(null)),
   syncAll: jest.fn(),
+  deleteUserPref: jest.fn(() => Promise.resolve()),
+  setUserPref: jest.fn(() => Promise.resolve()),
 }));
 jest.mock('../../lib/syncStatusLabel', () => ({ formatLastSynced: jest.fn(() => 'Last synced a moment ago') }));
 jest.mock('../../components/SettingsPrimitives', () => {
@@ -59,6 +69,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { deleteUserPref, setUserPref } from '../../lib/sync';
 import useAppStore from '../../store/useAppStore';
 import SettingsDataScreen from '../SettingsDataScreen';
 
@@ -110,7 +121,10 @@ describe('SettingsDataScreen "Skip name on label scans" toggle (L05-SL1)', () =>
     await act(async () => { sw.props.onValueChange(false); });
     await flush();
 
-    expect(AsyncStorage.removeItem).toHaveBeenCalledWith(SCAN_SKIP_NAME_KEY);
+    // deleteUserPref removes the key locally and tombstones the cloud row,
+    // so the clear survives the next pull instead of being reverted by it.
+    expect(deleteUserPref).toHaveBeenCalledWith('u1', SCAN_SKIP_NAME_KEY);
+    expect(setUserPref).not.toHaveBeenCalled();
     expect(AsyncStorage.setItem).not.toHaveBeenCalledWith(SCAN_SKIP_NAME_KEY, expect.anything());
   });
 
@@ -124,6 +138,7 @@ describe('SettingsDataScreen "Skip name on label scans" toggle (L05-SL1)', () =>
     await act(async () => { sw.props.onValueChange(true); });
     await flush();
 
-    expect(AsyncStorage.setItem).toHaveBeenCalledWith(SCAN_SKIP_NAME_KEY, 'true');
+    expect(setUserPref).toHaveBeenCalledWith('u1', SCAN_SKIP_NAME_KEY, 'true');
+    expect(deleteUserPref).not.toHaveBeenCalled();
   });
 });

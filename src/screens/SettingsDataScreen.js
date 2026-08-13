@@ -14,7 +14,7 @@ import { getSupabaseClient } from '../lib/supabase';
 import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
 import { exportCoachReportPdf } from '../lib/coachReport';
 import { exportBackup, importBackup } from '../lib/dataBackup';
-import { getStatus as getSyncStatus, syncAll } from '../lib/sync';
+import { getStatus as getSyncStatus, syncAll, deleteUserPref, setUserPref } from '../lib/sync';
 import { formatLastSynced } from '../lib/syncStatusLabel';
 import { withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -66,8 +66,11 @@ export default function SettingsDataScreen({ navigation }) {
     haptics.selection();
     setScanSkipName(value);
     try {
-      if (value) await AsyncStorage.setItem(SCAN_SKIP_NAME_KEY, 'true');
-      else await AsyncStorage.removeItem(SCAN_SKIP_NAME_KEY);
+      // C14 job 2: off clears the key, and a local-only clear is undone by
+      // the next pull (the cloud still holds 'true'), so the toggle turns
+      // itself back on. deleteUserPref tombstones the cloud copy too.
+      if (value) await setUserPref(user?.id, SCAN_SKIP_NAME_KEY, 'true');
+      else await deleteUserPref(user?.id, SCAN_SKIP_NAME_KEY);
     } catch (_) { /* the scan screen re-reads the flag fresh each mount */ }
   }
 

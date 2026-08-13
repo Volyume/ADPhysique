@@ -19,6 +19,8 @@ import {
   setPreference as setPrefRow,
   migrateFromLegacyBlob,
 } from '../lib/notifications/preferences';
+import { setCategoryEnabled, isCategoryEnabled } from '../lib/notifications/categoryPrefs';
+import { CATEGORY } from '../lib/notifications/categories';
 import { scheduleMealReminders, scheduleActivationNudge, cancelActivationNudge, MEAL_REMINDERS_KEY } from '../lib/notifications/scheduler';
 import { restoreNotifications } from '../lib/notifications';
 import {
@@ -297,6 +299,16 @@ export default function NotificationSettingsScreen({ navigation }) {
       // user-action path below still prompts as it did: the meal toggle
       // requests on switch-on, and the training toggle still refuses politely
       // when permission is absent.
+      // C14 job 3: last word on the training toggle goes to the ONE
+      // authority, after the legacy reads above have had their chance to
+      // seed the time. This screen used to let the per-category SQLite row
+      // decide, while the scheduler decided from a different key, so the
+      // switch could read OFF while reminders kept arriving. Whatever this
+      // shows is now exactly what scheduleTrainingReminders will do.
+      try {
+        setTrainingEnabled(await isCategoryEnabled(CATEGORY.TRAINING_REMINDER));
+      } catch (_) { /* leave the value the reads above produced */ }
+
       try {
         const status = await getNotificationPermissionStatus();
         setPermissionStatus(status);
@@ -334,29 +346,22 @@ export default function NotificationSettingsScreen({ navigation }) {
     };
   }
 
+  // C14 job 3: ONE write path. setCategoryEnabled owns the authority (the
+  // prefs blob), the legacy '@volyume_reminder_enabled_v1' mirror and the
+  // per-category projection row, so a save can no longer land in two of
+  // the three and leave them disagreeing. It merges over the existing
+  // blob, so keys this screen does not own (missedCheckinEnabled from
+  // Coaching reminders, coachReady) still survive a training save.
   async function persistTrainingPreference(nextPrefs) {
     try {
-      // Merge over the existing blob so keys this screen doesn't own
-      // (missedCheckinEnabled from Coaching reminders, coachReady) are not
-      // dropped by a training-reminder save.
-      let existing = {};
-      try {
-        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
-        if (raw) existing = JSON.parse(raw) ?? {};
-      } catch (_) {}
-      // eslint-disable-next-line global-require
-      try { require('../lib/sync').notePrefWrite(NOTIF_PREFS_KEY); } catch (_) {} // C6 S-2 (D97-23)
-      await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify({ ...existing, ...nextPrefs }));
       const userId = useAppStore.getState().user?.id;
-      if (userId) {
-        const trainingTime =
-          (nextPrefs.trainingHour ?? 8).toString().padStart(2, '0')
-          + ':' + (nextPrefs.trainingMinute ?? 0).toString().padStart(2, '0');
-        await setPrefRow(userId, 'training_reminder', {
-          enabled: !!nextPrefs.trainingEnabled,
-          time_pref: trainingTime,
-        });
-      }
+      const trainingTime =
+        (nextPrefs.trainingHour ?? 8).toString().padStart(2, '0')
+        + ':' + (nextPrefs.trainingMinute ?? 0).toString().padStart(2, '0');
+      await setCategoryEnabled(userId, CATEGORY.TRAINING_REMINDER, !!nextPrefs.trainingEnabled, {
+        timePref: trainingTime,
+        extraBlob: nextPrefs,
+      });
     } catch (_) {}
   }
 
@@ -371,7 +376,9 @@ export default function NotificationSettingsScreen({ navigation }) {
     const nextPrefs = getPrefs({ te: value });
     setTrainingEnabled(value);
     try {
-      await AsyncStorage.setItem(REMINDER_PREF_KEY, value ? 'true' : 'false');
+      // C14 job 3: the legacy key is written by persistTrainingPreference
+      // now, alongside the authority and the projection, so this no longer
+      // writes it separately and cannot half-apply the change.
       await persistTrainingPreference(nextPrefs);
       if (value) {
         await scheduleTrainingReminders();
@@ -384,17 +391,12 @@ export default function NotificationSettingsScreen({ navigation }) {
   async function handleActivationNudgeToggle(value) {
     setActivationNudgeEnabled(value);
     try {
-      // Merge-write the blob so other schedule keys survive the toggle. The
-      // scheduler reads activationNudgeEnabled from this blob.
-      let blob = {};
-      try {
-        const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
-        if (raw) blob = JSON.parse(raw) ?? {};
-      } catch (_) {}
-      // eslint-disable-next-line global-require
-      try { require('../lib/sync').notePrefWrite(NOTIF_PREFS_KEY); } catch (_) {} // C6 S-2 (D97-23)
-      await AsyncStorage.setItem(NOTIF_PREFS_KEY, JSON.stringify({ ...blob, activationNudgeEnabled: value }));
+      // C14 job 3: setCategoryEnabled merges over the existing blob, so
+      // the other schedule keys survive the toggle without this screen
+      // doing its own read-modify-write. The scheduler still reads
+      // activationNudgeEnabled from that blob.
       const userId = useAppStore.getState().user?.id;
+      await setCategoryEnabled(userId, CATEGORY.ACTIVATION_NUDGE, value);
       if (value) {
         await scheduleActivationNudge(userId ?? null);
       } else {
