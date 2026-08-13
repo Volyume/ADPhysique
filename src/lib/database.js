@@ -4127,7 +4127,13 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   });
 
   await generateMesocycleWeeks(id);
-  const { VOLUME_LANDMARKS } = await import('./algorithms');
+  // Lazy require, not a dynamic import: every other deferred dependency in
+  // this file uses require, and `await import()` cannot be driven under the
+  // test runner without --experimental-vm-modules, which meant plan
+  // activation - and therefore the block's planned volume - could not be
+  // covered by a test at all (C16 job 6).
+  // eslint-disable-next-line global-require
+  const { VOLUME_LANDMARKS } = require('./algorithms');
   await generateInitialPlannedVolume(id, VOLUME_LANDMARKS, effectiveLedger);
 
   // C12: refresh the weekly training reminders so their copy names the plan
