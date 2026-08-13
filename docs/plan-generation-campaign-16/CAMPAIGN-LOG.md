@@ -385,3 +385,114 @@ ONE full suite: **888 suites, 11,458 tests, 0 failures**.
 A bodyweight or machines-only two-day physique plan lands one set below
 the glute maintenance floor (3 vs 4). It is an equipment reality, the
 muscle is still trained, and it is pinned as such rather than hidden.
+
+---
+
+## Closure addendum 2, 2026-08-13: the three founder additions
+
+Folded into the post-handover correction as ordered, not spun out as a
+Campaign 16B. Three additions, all landed on main.
+
+### A. Intelligent training availability and onboarding plan-fit guidance
+
+BEFORE: Pro onboarding defaulted `daysPerWeek` to 4 and never required an
+answer, then fed that guess to the split, the weekly volume and the calorie
+target. It offered 3-6, so the two-day support Campaign 16 had just landed
+was unreachable from the wizard. Nothing anywhere told an athlete whether
+the time they had could carry the plan they were about to receive, and
+`plan.timeConstraint` - the structured result the correction built - was
+rendered by no screen at all.
+
+AFTER: `src/lib/planFit.js` answers by RUNNING the generator. It is pure and
+deterministic, so asking "what would you build at 3 x 45?" is free and its
+answer is exactly what the athlete would get. Four states: room to spare,
+fits, fits with lower-priority work started lighter, and cannot be done
+without the sessions running long. Every alternative offered is generated
+and checked at that schedule before it is offered.
+
+No lookup table and no minutes-per-day rule, because there is no scientific
+basis for one, and the matrix proves it: at four sessions the base profile
+needs 75 minutes, a competitive athlete 90, and a Bikini competitor fits
+inside 60. Same day count, three different answers, all derived from the
+athlete's own prescription.
+
+`assessScheduleFit` in planAutoGen.js is the ONE resolver. Onboarding and
+Update Your Plan both call it, so the two surfaces cannot disagree about the
+same week. It reads the catalogue and the athlete's exercise intent and
+writes nothing.
+
+Onboarding now requires an explicit 2-6 selection and assesses fit at the
+END of the wizard, after division, weak points and recovery are known -
+three of those four inputs are missing at the schedule question, so a
+confident answer there would have been fake precision. The panel appears
+only when the schedule cannot carry the plan comfortably, decorates every
+session length with what it means for THIS athlete, and keeps "start with
+what I chose" first-class and honestly worded: where sessions will overrun,
+it says how long they will take.
+
+`constraintChoiceCopy` deleted. No screen called it, and its wording ("the
+full target") would have failed the plain-English law the moment one did.
+
+### B. Plain English by default
+
+Applied to the Campaign 16 surfaces and pinned by
+`campaign16.plainEnglish.test.js`, which calls every copy producer on those
+surfaces with every code it accepts and reads what comes out: no banned
+term, no leaked SCREAMING_SNAKE reason code, no em dash, no US spelling, no
+shame or command voice, no first line longer than a sentence. The engine
+stays technical; nothing the athlete reads does.
+
+### C. Division-specific shape and exercise intelligence
+
+Research first. `DIVISION-EVIDENCE-REGISTER.md` quotes the current NPC and
+IFBB Pro League criteria verbatim with sources, and reads three primary
+papers in full: PMID 34743671 (equal volume, different exercise, different
+regional growth), PMID 41379528 (leg extension grows rectus femoris, back
+squat grows the distal vastus lateralis, which IS the sweep) and PMID
+35438660 (systematic variation on an anatomical construct helps; random
+rotation and redundant stimuli hurt). The last is the evidence basis for the
+founder's own rule: personal evidence may pick the exercise for a role, but
+must not erase the role.
+
+BEFORE: division character was written down in four places - multipliers in
+coachingGoals, pool rules and subregion bias in two planEngine tables, split
+character in an inline goal list, and the glute ceiling in a fourth. Six of
+nine divisions had a bias entry; three had none.
+
+AFTER: `src/lib/division/profile.js` is the one model, all nine divisions,
+each carrying its criteria and the register section that quotes them. Roles
+are ORDERED, because the criteria are not one role deep. Figure gets back
+depth AND width plus the quad sweep its published criteria name in writing
+and it never had. Both Bodybuilding divisions and Women's Physique get both
+roles of every two-role muscle. Bikini gets the round glute, the tie-in, and
+lat width with no waist-thickening work. General invents nothing.
+
+Two live defects found and fixed:
+- **A specialisation block suspended the division.** A weak-point or
+  strength-size block rewrites the goal to a legacy ID before selection, so
+  every division rule keyed off it vanished for the whole block: a Bikini
+  athlete on a weak-point block was being given barbell bench press, back
+  squat and bent-over rows - the three things her criteria exclude. A phase
+  is not a division.
+- **The per-session trim did not know about division priorities.** It
+  protected structural floors only, so the clock could take its cut out of
+  the judged muscle while discretionary work sat untouched earlier in the
+  session. Both trims now read the same list, unioned with the division's
+  own rather than inferred from an arithmetic side effect.
+
+### Gates
+
+lint clean. New suites: planFit 32, planFitResolver 7, plainEnglish 6,
+division 34. ONE full suite: **892 suites, 11,547 tests, 1 failure** -
+`src/lib/widgets/__tests__/storage.test.js` "never touches the iOS bridge on
+Android", which passes in isolation and fails identically on a clean tree
+with this work stashed. Pre-existing cross-suite pollution, unrelated;
+mentioned rather than fixed, per the no-drive-by rule.
+
+### Residual, surfaced not parked
+
+At 45 minutes over four days, an extreme squeeze, the judged muscle can give
+up marginally more than the plan average once every discretionary entry has
+already reached its floor - it is simply the only place left with sets to
+give. Protection is an ORDER, not an exemption. Pinned at "keeps at least
+75% of its work" rather than hidden behind a softer assertion.
