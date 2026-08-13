@@ -66,15 +66,23 @@ export const CATEGORY_PREFS = Object.freeze({
     legacyKey: '@volyume_reminder_enabled_v1',
     defaultEnabled: false,
   },
+  // These two default OFF, and that is not the same as "opted out". The
+  // field is seeded to true by Pro onboarding (ProOnboardingScreen), so
+  // every set-up Pro user carries a real value; absent means the user has
+  // not been through that yet. Every live gate already reads it this way
+  // (restoreNotifications lays the weigh-in family only when the field is
+  // truthy), and the authority must say what the app actually does - a
+  // registry that answered "on" while the schedulers answered "off" would
+  // be the second disagreeing authority this module exists to remove.
   [CATEGORY.MORNING_WEIGHT]: {
     blobField: 'morningEnabled',
     legacyKey: null,
-    defaultEnabled: true,
+    defaultEnabled: false,
   },
   [CATEGORY.WEEKLY_CHECKIN_REMINDER]: {
     blobField: 'checkinEnabled',
     legacyKey: null,
-    defaultEnabled: true,
+    defaultEnabled: false,
   },
   [CATEGORY.CHECKIN_MISSED]: {
     blobField: 'missedCheckinEnabled',

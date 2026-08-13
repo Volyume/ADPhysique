@@ -2412,7 +2412,13 @@ export default function HomeScreen({ navigation, route }) {
           style={styles.intentOptOut}
           onPress={() => {
             haptics.selection();
-            AsyncStorage.setItem('@volyume_intent_prompt_off', 'true').catch(() => {});
+            // C14 job 2: the same one write path Settings uses, so this
+            // opt-out is stamped and pushed rather than sitting locally
+            // until something else happens to sync. The key is guarded now
+            // (its "off" state is a delete), and an unstamped write there
+            // is what lets a stale device's copy win a conflict.
+            // eslint-disable-next-line global-require
+            require('../lib/sync').setUserPref(user?.id, '@volyume_intent_prompt_off', 'true').catch(() => {});
             confirmStart(null, { soreness24hBefore: null, sleepQuality: null, energyScore: null });
           }}
           accessibilityRole="button"

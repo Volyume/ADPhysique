@@ -135,7 +135,7 @@ function weighInHorizonDates(hour, minute, days = WEIGH_IN_HORIZON_DAYS) {
   return out;
 }
 
-export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
+export async function scheduleMorningWeightNotification(hour = 7, minute = 0, { userInitiated = false } = {}) {
   if (Platform.OS === 'web') return;
   try {
     await cancelMorningNotification();
@@ -152,7 +152,7 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
     // above has already cleared anything laid, so returning here leaves the
     // user with no routine weigh-in prompts until a completed session returns
     // them. Their stored preference is untouched (see weighInStandDown).
-    if (await weighInStandDown()) return;
+    if (!userInitiated && await weighInStandDown()) return;
     const quiet = await getQuietHours();
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
     const name = greetName();
@@ -281,6 +281,15 @@ async function weighInEdFlagOpen() {
 // prompt. That is the opposite direction of travel from weighInEdFlagOpen
 // above, which fails CLOSED, and deliberately so: the ED gate protects a
 // flagged user, this gate only restrains volume.
+//
+// One deliberate exemption, `userInitiated` (C14 lead ruling under D33). A
+// user who goes to Settings and switches weigh-in reminders ON right now is
+// making an explicit, present-tense request, and swallowing it would be the
+// one case where this gate overrides a live user instruction rather than
+// restraining unasked prompting. Their choice wins; the stand-down resumes
+// on its own at the next ordinary re-lay if the training loop stays quiet.
+// It exempts NOTHING else: the ED gate, the tier gate, quiet hours and the
+// permission check all still run ahead of it on that path.
 export const WEIGH_IN_STAND_DOWN_DAYS = 21; // three full weeks
 
 // Local midnight, `days` LOCAL calendar days ago. Calendar arithmetic rather
@@ -336,7 +345,7 @@ export async function cancelEveningWeightReminder() {
  * @param {number} hour    0-23, default 19 (19:30 local)
  * @param {number} minute  0-59, default 30
  */
-export async function scheduleEveningWeightReminder(hour = 19, minute = 30) {
+export async function scheduleEveningWeightReminder(hour = 19, minute = 30, { userInitiated = false } = {}) {
   if (Platform.OS === 'web') return;
   try {
     await cancelEveningWeightReminder();
@@ -347,7 +356,7 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30) {
     // C14 J6 (R-16): the same three-week inactivity stand-down as the morning
     // nudge. cancelEveningWeightReminder above has already cleared anything
     // laid; the user's stored preference is untouched.
-    if (await weighInStandDown()) return;
+    if (!userInitiated && await weighInStandDown()) return;
     const quiet = await getQuietHours();
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
     const name = greetName();
@@ -411,8 +420,18 @@ export async function relayWeighInAfterTrainingReturn() {
   try {
     const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
     const prefs = raw ? JSON.parse(raw) : null;
-    // Reads the preference; never writes it.
-    if (!prefs?.morningEnabled) return;
+    // Reads the preference through the ONE authority (C14 job 3), never
+    // writes it. Reading prefs.morningEnabled directly would be stricter
+    // than the authority is: a user who has never opened the reminders
+    // screen has no such field and IS enabled by default, and would have
+    // been skipped by the return path while every other path scheduled
+    // for them - the exact two-answers-to-one-question defect job 3 exists
+    // to remove.
+    // eslint-disable-next-line global-require
+    const { isCategoryEnabled } = require('./categoryPrefs');
+    // eslint-disable-next-line global-require
+    const { CATEGORY: CAT } = require('./categories');
+    if (!(await isCategoryEnabled(CAT.MORNING_WEIGHT))) return;
     // eslint-disable-next-line global-require
     const { getNotificationPermissionStatus } = require('./permissions');
     const status = await getNotificationPermissionStatus();
@@ -423,8 +442,8 @@ export async function relayWeighInAfterTrainingReturn() {
       isPro = require('../../store/useAppStore').default.getState()?.tier === 'pro';
     } catch (_) { /* store unavailable: fail closed (no coaching re-lay) */ }
     if (!isPro) return;
-    await scheduleMorningWeightNotification(prefs.morningHour ?? 7, prefs.morningMinute ?? 0);
-    await scheduleEveningWeightReminder(prefs.eveningHour ?? 19, prefs.eveningMinute ?? 30);
+    await scheduleMorningWeightNotification(prefs?.morningHour ?? 7, prefs?.morningMinute ?? 0);
+    await scheduleEveningWeightReminder(prefs?.eveningHour ?? 19, prefs?.eveningMinute ?? 30);
   } catch (_) { /* best-effort: the next launch re-lay covers this */ }
 }
 

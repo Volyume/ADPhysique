@@ -148,11 +148,21 @@ describe('C14-4 a real off switch exists for every optional category (12, 13, 14
     expect(src).toMatch(/} else \{\s*\n\s*\/\/ The backstop rides the same switch[\s\S]*?await cancelEveningWeightReminder\(\);/);
   });
 
-  test('defaults are unchanged, so no existing user is silently switched off', async () => {
-    expect(CATEGORY_PREFS[CATEGORY.MORNING_WEIGHT].defaultEnabled).toBe(true);
-    expect(CATEGORY_PREFS[CATEGORY.WEEKLY_CHECKIN_REMINDER].defaultEnabled).toBe(true);
+  test('defaults match what the schedulers already do, so nobody moves', async () => {
+    // The opt-outs default on: an absent flag has always read as enabled.
     expect(CATEGORY_PREFS[CATEGORY.PARTNER_CHEER].defaultEnabled).toBe(true);
+    expect(CATEGORY_PREFS[CATEGORY.CHECKIN_MISSED].defaultEnabled).toBe(true);
     expect(await isCategoryEnabled(CATEGORY.PARTNER_CHEER)).toBe(true);
+    // The two coaching reminders default OFF because their field is seeded
+    // by Pro onboarding, so absent means "not set up", exactly as
+    // restoreNotifications has always read it. The authority must say what
+    // the app does, not what would be tidier.
+    expect(CATEGORY_PREFS[CATEGORY.MORNING_WEIGHT].defaultEnabled).toBe(false);
+    expect(CATEGORY_PREFS[CATEGORY.WEEKLY_CHECKIN_REMINDER].defaultEnabled).toBe(false);
+    expect(await isCategoryEnabled(CATEGORY.MORNING_WEIGHT)).toBe(false);
+    // A set-up user is unaffected.
+    mockStore.set(NOTIF_PREFS_KEY, JSON.stringify({ morningEnabled: true }));
+    expect(await isCategoryEnabled(CATEGORY.MORNING_WEIGHT)).toBe(true);
   });
 
   test('the REMOTE partner-cheer path enforces the recipient’s opt-out (13)', () => {
@@ -201,6 +211,51 @@ describe('C14-4 a real off switch exists for every optional category (12, 13, 14
     expect(registered).not.toContain(CATEGORY.SUBSCRIPTION_PAYMENT_FAILURE);
     expect(registered).not.toContain(CATEGORY.CASCADE_GATE);
     expect(registered).not.toContain(CATEGORY.ED_PATTERN_LOCKOUT);
+  });
+});
+
+describe('C14 the live matrix — a new category cannot slip through unclassified', () => {
+  // Every category in the enum must be a deliberate one of two things:
+  // user-controlled (registered in CATEGORY_PREFS, so it has an authority,
+  // a projection and a switch) or not user-controlled, for a stated
+  // reason. Adding a category to categories.js without deciding which
+  // fails HERE, which is the point: the old failure mode was a
+  // notification shipping with a reader, no writer and no way off.
+  const NOT_USER_CONTROLLED = {
+    // Mandatory transactional / account integrity. No opt-out by policy.
+    [CATEGORY.SUBSCRIPTION_PAYMENT_FAILURE]: 'transactional: a failed charge',
+    [CATEGORY.SUBSCRIPTION_EXPIRING]: 'transactional: the subscription is ending',
+    [CATEGORY.CASCADE_GATE]: 'account integrity: entitlement change',
+    [CATEGORY.COACH_TRIAL_ENDING]: 'transactional: the trial is ending',
+    [CATEGORY.TRIAL_DAY3]: 'trial lifecycle, single-shot',
+    // Safety surfaces. In-app only by policy; a switch would be a way to
+    // turn safety off, which is never offered.
+    [CATEGORY.ED_PATTERN_LOCKOUT]: 'safety, in-app only',
+    [CATEGORY.FFM_FLOOR_HOLD]: 'safety, in-app only',
+    // Diagnostics and in-session UI, not recurring engagement.
+    [CATEGORY.SYNC_ERROR]: 'in-app diagnostic',
+    [CATEGORY.REST_TIMER]: 'live in-session timer the user started',
+    // Single-shot or self-limiting, driven by an action the user took.
+    [CATEGORY.YEAR_OF_LIFTS_UNLOCK]: 'one-off unlock',
+    [CATEGORY.MONTHLY_RECAP]: 'periodic recap, no live scheduler switch',
+    [CATEGORY.WINBACK]: 'single-shot per episode, floored at 180 days',
+    [CATEGORY.WEEKLY_COACH_READY]: 'the coach run the user asked for',
+    [CATEGORY.DAILY_CHECKIN_REMINDER]: 'legacy: no live scheduler',
+    [CATEGORY.EVENING_WEIGHT]: 'rides the morning weigh-in switch',
+    // Own dedicated preference structure, not a single on/off flag.
+    [CATEGORY.MEAL_LOG_REMINDER]: 'per-meal array, its own control',
+  };
+
+  test('every category is either user-controlled or explicitly not', () => {
+    const unclassified = Object.values(CATEGORY).filter(
+      c => !CATEGORY_PREFS[c] && !NOT_USER_CONTROLLED[c],
+    );
+    expect(unclassified).toEqual([]);
+  });
+
+  test('nothing is classified both ways', () => {
+    const both = Object.keys(NOT_USER_CONTROLLED).filter(c => CATEGORY_PREFS[c]);
+    expect(both).toEqual([]);
   });
 });
 

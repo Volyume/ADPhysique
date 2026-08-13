@@ -100,7 +100,7 @@ function formatNextFire(date) {
   return `${dayNames[date.getDay()]} ${date.getDate()} ${months[date.getMonth()]} at ${formatHour(h)}${m === '00' ? '' : ':' + m}`;
 }
 
-async function applyScheduled(prefs, permissionStatus) {
+async function applyScheduled(prefs, permissionStatus, { userInitiated = false } = {}) {
   // Cancels and re-lays each coaching reminder ACCORDING TO THE USER'S
   // CHOICE. C14 job 4: both were previously forced on with no way off,
   // on the reasoning that the coach needs the inputs. That confused the
@@ -124,9 +124,15 @@ async function applyScheduled(prefs, permissionStatus) {
   await cancelCheckinNotification();
   if (permissionStatus === 'granted') {
     if (morningOn) {
-      await scheduleMorningWeightNotification(prefs.morningHour, prefs.morningMinute);
+      // C14 lead ruling (D33): switching the reminder ON here is an
+      // explicit, present-tense request, so it is honoured immediately
+      // rather than held by the three-week inactivity stand-down. Every
+      // other gate (ED flag, tier, quiet hours, permission) still applies.
+      await scheduleMorningWeightNotification(
+        prefs.morningHour, prefs.morningMinute, { userInitiated },
+      );
       // Q1: evening weigh-in backstop rides the same toggle (self-gates on ED flag).
-      await scheduleEveningWeightReminder();
+      await scheduleEveningWeightReminder(prefs.eveningHour ?? 19, prefs.eveningMinute ?? 30, { userInitiated });
     } else {
       // The backstop rides the same switch, as the screen copy says it does.
       await cancelEveningWeightReminder();
@@ -319,7 +325,7 @@ export default function CoachingRemindersScreen() {
     if (savedTimer.current) clearTimeout(savedTimer.current);
   }, []);
 
-  function scheduleApply(next) {
+  function scheduleApply(next, { userInitiated = false } = {}) {
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
     debounceTimer.current = setTimeout(async () => {
       try {
@@ -332,7 +338,7 @@ export default function CoachingRemindersScreen() {
           checkinHour: next.checkinHour ?? checkinHour,
           checkinMinute: next.checkinMinute ?? checkinMinute,
           lastCheckinMs,
-        }, permissionStatus);
+        }, permissionStatus, { userInitiated });
         // Existing inline "Saved" indicator stays for users who prefer
         // explicit on-screen confirmation; toast is the modern overlay
         // for users scrolling away from the section.
@@ -351,7 +357,9 @@ export default function CoachingRemindersScreen() {
   // never disagree, and applyScheduled cancels what it must.
   function handleMorningToggle(value) {
     setMorningEnabled(value);
-    scheduleApply({ morningEnabled: value });
+    // Switching it ON is an explicit request, so it is not held back by the
+    // three-week inactivity stand-down (C14 lead ruling under D33).
+    scheduleApply({ morningEnabled: value }, { userInitiated: value });
   }
 
   function handleCheckinToggle(value) {

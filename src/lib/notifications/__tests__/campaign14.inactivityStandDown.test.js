@@ -225,7 +225,7 @@ describe('(24) three full weeks with no completed session', () => {
     );
     for (const body of [morning, evening]) {
       expect(body).toMatch(/if \(await weighInEdFlagOpen\(\)\) return;/);
-      expect(body).toMatch(/if \(await weighInStandDown\(\)\) return;/);
+      expect(body).toMatch(/if \(!userInitiated && await weighInStandDown\(\)\) return;/);
       // The ED gate is never displaced by the new one.
       expect(body.indexOf('weighInEdFlagOpen()'))
         .toBeLessThan(body.indexOf('weighInStandDown()'));
