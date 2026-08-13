@@ -4457,6 +4457,41 @@ export async function getMesocycleWeeks(mesocycleId) {
 // column), and blockMetrics tolerates both shapes.
 
 /** The block's completed training: workout feedback rows + their sets. */
+/**
+ * C13 job 4: which of these blocks still have ANY completed training rows?
+ *
+ * A stored Block Ledger is an immutable historical coaching decision and is
+ * never rebuilt or rewritten when the user edits or deletes history. But
+ * deleted evidence must not keep compounding into NEW personalisation for
+ * ever: a block whose raw training data the user has entirely removed should
+ * stop TEACHING the learned replay, while remaining perfectly readable as
+ * the historical record of what was concluded at the time.
+ *
+ * "Raw evidence exists vs raw evidence deleted" is the only distinction that
+ * is provable today, so it is the only one implemented — no material-edit
+ * threshold is invented. Returns a Set of mesocycle ids that still hold at
+ * least one completed set. Fails OPEN (every id returned) on a read error,
+ * so a transient failure can never silently strip a user's learned history.
+ */
+export async function getBlocksWithTrainingEvidence(userId, mesocycleIds = []) {
+  const ids = (Array.isArray(mesocycleIds) ? mesocycleIds : []).filter(Boolean);
+  if (!userId || ids.length === 0) return new Set(ids);
+  try {
+    const d = await db();
+    const holes = ids.map(() => '?').join(',');
+    const rows = await d.getAllAsync(
+      `SELECT DISTINCT w.mesocycle_id AS mesocycleId
+         FROM workout_sets ws
+         JOIN workouts w ON w.id = ws.workout_id
+        WHERE w.user_id = ? AND w.is_completed = 1 AND w.mesocycle_id IN (${holes})`,
+      [userId, ...ids],
+    );
+    return new Set((rows ?? []).map((r) => r.mesocycleId).filter(Boolean));
+  } catch (_e) {
+    return new Set(ids); // fail open: never strip history on a read failure
+  }
+}
+
 export async function getBlockTrainingData(userId, mesocycleId) {
   try {
     const d = await db();

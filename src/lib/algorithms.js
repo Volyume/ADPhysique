@@ -1478,13 +1478,35 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
   // The stalled run is the consecutiveStalls + 1 sessions ending at the
   // newest. Every date question below is answered with the app's DST-safe
   // local helpers, never by dividing milliseconds by a week constant.
+  //
+  // C13 job 2 separates two different questions that were sharing one
+  // window. QUALIFICATION - "is there a current plateau at all?" - stays on
+  // the recent four-session window, which is all it ever needed. DURATION -
+  // "how far back does this stall actually reach?" - is a different
+  // question, and answering it from the same four sessions under-reported a
+  // genuine ten-week stall as three or four weeks. Once qualified, the run
+  // is extended backwards through the FULL eligible history while the same
+  // two laws keep holding: no progression, and no gap beyond the existing
+  // 14-day continuity boundary.
   const run = recent.slice(0, consecutiveStalls + 1).map(sessionAt).filter((t) => t > 0);
   if (run.length < consecutiveStalls + 1) return { ...NONE, consecutiveStalls };
+  for (let i = consecutiveStalls + 1; i < eligibleSessions.length; i++) {
+    const olderAt = sessionAt(eligibleSessions[i]);
+    if (!(olderAt > 0)) break;                       // undated: stop, never guess
+    const gap = localDaysElapsed(olderAt, run[run.length - 1]);
+    if (gap > PLATEAU_MAX_GAP_DAYS) break;           // the stall is not continuous here
+    const older = sessionBestE1rm(eligibleSessions[i]);
+    const newer = sessionBestE1rm(eligibleSessions[i - 1]);
+    if (!(older > 0) || !(newer > 0)) break;
+    if (newer > older * E1RM_PROGRESS_MARGIN) break; // real progression ends the stall
+    run.push(olderAt);
+  }
   const newest = run[0];
   const oldest = run[run.length - 1];
 
   // (a) at least three DISTINCT local calendar weeks. Mon/Wed/Fri in one
-  //     week is three sessions, not a three-week plateau.
+  //     week is three sessions, not a three-week plateau. Measured over the
+  //     EXTENDED run, so a longer continuous stall only ever helps.
   const distinctWeeks = new Set(run.map((t) => localWeekStartMs(t))).size;
   // (b) at least a fortnight of local days end to end.
   const spanDays = localDaysElapsed(oldest, newest);
@@ -1501,19 +1523,21 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
     return { ...NONE, consecutiveStalls };
   }
 
-  // C12 job 2: the DISPLAYED span comes from the dates, never from the
-  // session count. It is the number of distinct LOCAL calendar weeks the
-  // stalled evidence actually appears in, which is exactly what "hasn't
-  // moved across N weeks" claims. A genuinely longer run says the longer
-  // number; nothing rounds a span up to reach three, because the gate above
-  // already refused anything under three.
-  const weeks = distinctWeeks;
+  // C13 job 2: `weeks` now means ELAPSED duration, not a count of calendar
+  // buckets touched. The old meaning called a 24-day stall "3 weeks" because
+  // its evidence happened to fall in three calendar weeks; the two are
+  // reported separately now so neither name is misleading. calendarWeeks is
+  // retained because it is what the QUALIFICATION gate above tests.
+  const durationWeeks = Math.max(1, Math.round(spanDays / 7));
 
   return {
     plateau: true,
     consecutiveStalls,
     sessions: run.length,
-    weeks,
+    // Elapsed duration of the continuous stall, in whole weeks.
+    weeks: durationWeeks,
+    durationWeeks,
+    calendarWeeks: distinctWeeks,
     spanDays,
     resolution: consecutiveStalls >= 3
       ? 'swap_exercise'      // 3+ stalls: substitute this exercise for 4-6 weeks
@@ -1525,25 +1549,34 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
     // It still invites a look rather than prescribing, and carries no
     // guilt language: nothing here says stuck, failing, behind or should.
     message: consecutiveStalls >= 3
-      ? `Your best set here hasn't moved across ${weeks} weeks. Worth a look: a different exercise for this muscle for 4-6 weeks is a solid reset.`
-      : `Your best set here hasn't moved across ${weeks} weeks. Worth a look: a higher rep range (15-20) for a few weeks can restart progress.`,
+      ? `Your best set here hasn't moved in about ${durationWeeks} weeks. Worth a look: a different exercise for this muscle for 4-6 weeks is a solid reset.`
+      : `Your best set here hasn't moved in about ${durationWeeks} weeks. Worth a look: a higher rep range (15-20) for a few weeks can restart progress.`,
   };
 }
 
 /**
  * Campaign 9 closeout: progression consistency for ONE exercise.
  *
- * This is deliberately detectPlateau's mirror image, not a new formula.
- * It reuses that function's comparable-exposure model exactly - the same
+ * This is deliberately detectPlateau's mirror image, not a new formula. It
+ * reuses that function's comparable-exposure model exactly: the same
  * newest-first session list, the same four-session window (three adjacent
- * comparisons), the same session-average arithmetic and the same
- * ±0.01kg / ±0.5rep thresholds - so the app can never say a muscle is
- * both progressing and plateaued from the same data.
+ * comparisons), the same canonical eligibility (isE1rmEligibleRow, C10D) and
+ * - since C13 job 1 - the same SESSION REPRESENTATIVE and the same progress
+ * margin, so the app can never say a muscle is both progressing and
+ * plateaued from the same data.
  *
- * One thing is STRICTER than detectPlateau: only e1RM-eligible sets count
- * (isE1rmEligibleRow), so warm-ups, myo-reps and rest-pause rows cannot
- * manufacture a gain. Cluster sets store summed reps and would read as a
- * jump that never happened.
+ * C13 job 1: that mirror was BROKEN by Campaign 12. Plateau moved to the
+ * best canonical eligible e1RM per session while this function kept
+ * comparing session AVERAGE weight and AVERAGE reps, so one exercise history
+ * could read 'progressing' for Campaign 9's ranking and 'plateaued' for the
+ * user at the same moment - purely because the two summarised a session
+ * differently. Both now call sessionBestE1rm and both call a gain
+ * `curr > prev * E1RM_PROGRESS_MARGIN`.
+ *
+ * The question this answers is therefore "does this exercise's best
+ * demonstrated strength performance show a consistent improving pattern?",
+ * not "did the average set in the workout get heavier?" - a mean moves when
+ * back-off sets are added or dropped without the athlete changing at all.
  *
  * WHAT THIS MEANS, AND WHAT IT DOES NOT
  *
@@ -1571,18 +1604,12 @@ export function detectProgressionConsistency(exerciseSessions = []) {
   let gains = 0;
   let comparisons = 0;
   for (let i = 0; i < recent.length - 1; i++) {
-    const currSets = recent[i];
-    const prevSets = recent[i + 1];
-    if (!currSets?.length || !prevSets?.length) continue;
-    const avg = (sets, pick) => sets.reduce((s, set) => s + (pick(set) || 0), 0) / sets.length;
-    const currAvgWeight = avg(currSets, (s) => s.weight);
-    const prevAvgWeight = avg(prevSets, (s) => s.weight);
-    const currAvgReps = avg(currSets, (s) => s.actualReps ?? s.actual_reps);
-    const prevAvgReps = avg(prevSets, (s) => s.actualReps ?? s.actual_reps);
+    // C13 job 1: the SAME representative and margin detectPlateau uses.
+    const curr = sessionBestE1rm(recent[i]);
+    const prev = sessionBestE1rm(recent[i + 1]);
+    if (!(curr > 0) || !(prev > 0)) continue;
     comparisons += 1;
-    const loadGain = currAvgWeight > prevAvgWeight + 0.01;
-    const repGain = currAvgReps > prevAvgReps + 0.5;
-    if (loadGain || repGain) gains += 1;
+    if (curr > prev * E1RM_PROGRESS_MARGIN) gains += 1;
   }
   if (comparisons < 2) return { status: 'insufficient', gains, comparisons };
   // A majority of the recent comparisons moved. Anything less is honest

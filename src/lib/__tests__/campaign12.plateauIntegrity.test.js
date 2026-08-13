@@ -141,21 +141,30 @@ describe('C12 job 2: a plateau must span real local calendar time', () => {
     expect(detectPlateau(sparse).plateau).toBe(false);
   });
 
+  // RE-ANCHORED by C13 job 2: `weeks` now means ELAPSED duration, not the
+  // number of calendar buckets the evidence touched. 21 days is 3 weeks of
+  // stall even though it falls in 4 calendar weeks, and both figures are
+  // reported separately so neither name misleads.
   test('POSITIVE CONTROL: three-plus contiguous weeks qualify', () => {
     const flat = [session(100, 0), session(100, 1), session(100, 2), session(100, 3)];
     const r = detectPlateau(flat);
     expect(r.plateau).toBe(true);
-    expect(r.weeks).toBe(4);          // four distinct local weeks
-    expect(r.sessions).toBe(4);
     expect(r.spanDays).toBe(21);
+    expect(r.weeks).toBe(3);          // elapsed
+    expect(r.durationWeeks).toBe(3);
+    expect(r.calendarWeeks).toBe(4);  // the qualification measure
+    expect(r.sessions).toBe(4);
   });
 
   test('exactly three weekly sessions is the boundary and qualifies', () => {
     const three = [session(100, 0), session(100, 1), session(100, 2)];
     const r = detectPlateau(three);
     expect(r.plateau).toBe(true);
-    expect(r.weeks).toBe(3);
     expect(r.spanDays).toBe(14);
+    // C13 job 2 display law: 14 days is "around 2 weeks" of elapsed stall,
+    // even though the qualification needed 3 distinct calendar weeks.
+    expect(r.weeks).toBe(2);
+    expect(r.calendarWeeks).toBe(3);
   });
 
   test('the span is computed from DATES, not from the session count', () => {
@@ -322,12 +331,17 @@ describe('C12: Home selection is deterministic and says when it chose', () => {
     expect(plateauBannerLine('Bench Press', 4, 4, 2)).not.toMatch(/most sets|most recent|tie/i);
   });
 
-  test('three-week wording cannot render without three-week evidence', () => {
-    // The only route to the banner is a qualifying verdict, and the verdict's
-    // gate is >= 3 distinct weeks - so weeks is never below 3 when a plateau
-    // exists.
+  test('a duration claim cannot render without qualifying evidence', () => {
+    // The only route to the banner is a qualifying verdict, whose gate is
+    // >= 3 distinct calendar weeks AND >= 14 days. C13 job 2: the DURATION
+    // reported is elapsed time, so a minimum-qualifying plateau honestly
+    // says two weeks rather than inflating itself to three.
     const flat = [session(100, 0), session(100, 1), session(100, 2)];
-    expect(detectPlateau(flat).weeks).toBeGreaterThanOrEqual(3);
+    const r = detectPlateau(flat);
+    expect(r.calendarWeeks).toBeGreaterThanOrEqual(3);
+    expect(r.spanDays).toBeGreaterThanOrEqual(14);
+    expect(r.weeks).toBe(2);
+    // No plateau at all means no duration to render.
     const sameWeek = [0, 2, 4, 6].map((d) => [set(100, 8, T0 - d * DAY)]);
     expect(detectPlateau(sameWeek).weeks).toBeNull();
   });
