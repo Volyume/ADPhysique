@@ -37,7 +37,9 @@ import { loadExerciseIntentState } from './exercise/intent';
 import { filterLibraryForGeneration, generationBlockFor } from './exercise/generation';
 import { applyContinuity, slotKey, summariseDecisions } from './exercise/continuity';
 import { movementFamily } from './exercise/movementFamily';
-import { exerciseEvidence, isExcluded, isAvoidedThisBlock, swappedAwayCount } from './exercise/intent';
+import {
+  exerciseEvidence, isExcluded, isAvoidedThisBlock, swappedAwayCount, EVIDENCE_MATURITY,
+} from './exercise/intent';
 import { isAutoEligible } from './exercise/canonicality';
 
 // Where the per-plan rationale ("Why this plan?") is cached so the
@@ -261,6 +263,11 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
       // Positive evidence protects a movement at any age (amendment: there
       // is no maximum exercise lifetime).
       progressing: facts.progression === 'progressing',
+      // C16 quality laws 3 and 6: an established personal fit is a POSITIVE
+      // reason to retain, recorded as such rather than as the absence of a
+      // reason to change. Gated on maturity so a brand-new replacement
+      // cannot claim it (law 2).
+      establishedPersonalFit: facts.maturity === EVIDENCE_MATURITY.ESTABLISHED,
       plateau: facts.progression === 'plateau',
       // `prescriptionFix` and `systematicCandidate` are deliberately NOT set
       // here. The first is a decision about which intervention to try and

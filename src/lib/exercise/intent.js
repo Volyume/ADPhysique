@@ -37,9 +37,14 @@ import {
   getExerciseUsageStats,
   getExerciseProgressionSessions,
 } from '../database';
+import { SWAP_SCOPE } from './swapScope';
+// C16 quality law 3: the GENERIC judgement of what makes a sensible
+// default, used as the baseline that personal evidence has to earn its way
+// past.
+import { tierRank } from './canonicality';
 import { detectProgressionConsistency } from '../algorithms';
 
-export { EXERCISE_INTENT };
+export { EXERCISE_INTENT, SWAP_SCOPE };
 
 /** Repeated means repeated: one swap is a choice, not a pattern. */
 export const REPEATED_SWAP_MIN = 3;
@@ -223,9 +228,39 @@ export function swapEvidenceFor(state, fromExerciseId, { routineId = null } = {}
   return [...byTarget.values()].sort((a, b) => b.count - a.count || b.lastMs - a.lastMs);
 }
 
-/** How often has the user swapped AWAY from this exercise? */
+/**
+ * How often has the user deliberately swapped this exercise OUT OF THEIR
+ * PROGRAMME? The negative-preference signal.
+ *
+ * C16 quality law 1: only `programme`-scoped swaps count. A substitution
+ * made during a workout because the machine was busy is not a statement
+ * about the exercise, and it used to be indistinguishable from editing the
+ * exercise out of the plan - two busy-machine days reached the threshold
+ * and the exercise was proposed for removal.
+ *
+ * Rows recorded before scope existed are NULL and are NOT counted. That
+ * asymmetry is deliberate and it favours the user: under-counting costs one
+ * more deliberate swap before Volyume acts, over-counting silently removes
+ * an exercise they like.
+ */
 export function swappedAwayCount(state, exerciseId) {
-  return (state?.swaps ?? []).filter((r) => r.fromExerciseId === exerciseId).length;
+  return (state?.swaps ?? []).filter(
+    (r) => r.fromExerciseId === exerciseId && r.scope === SWAP_SCOPE.PROGRAMME,
+  ).length;
+}
+
+/**
+ * How often has the user substituted this exercise FOR ONE SESSION?
+ *
+ * Exposed separately and deliberately never used as negative preference.
+ * It is a real observation - "this one is often unavailable when you train"
+ * - and a future surface may want it, but it must never reach a
+ * replace decision.
+ */
+export function sessionSubstitutionCount(state, exerciseId) {
+  return (state?.swaps ?? []).filter(
+    (r) => r.fromExerciseId === exerciseId && r.scope === SWAP_SCOPE.SESSION,
+  ).length;
 }
 
 /**
@@ -292,7 +327,73 @@ export function exerciseEvidence(state, exerciseId, { fromExerciseId = null, rec
     // A brand-new exercise must be allowed to say so. One session is a
     // try, not a preference.
     sufficient: sessions >= 2 || chosen >= REPEATED_SWAP_MIN,
+    // C16 quality laws 2 and 3: how much this user's own history is worth
+    // YET. Reported as a named level, never as a confidence percentage,
+    // because a percentage would imply a precision ordinary training logs
+    // cannot support.
+    maturity: evidenceMaturity({ sessions, repeatedChoice: chosen }),
   };
+}
+
+// ─── Evidence maturity (C16 quality laws 2 and 3) ────────────────────────────
+
+/**
+ * How established is this user's evidence about an exercise?
+ *
+ * FOUNDER LAW 3: "Exercise Intelligence must expose evidence
+ * maturity/confidence so generic canonicality dominates when evidence is
+ * weak and legitimate personal evidence increasingly dominates as it
+ * becomes established."
+ *
+ * FOUNDER LAW 2: "New/replacement exercises begin with insufficient
+ * personal evidence. Do not transfer confidence or working load from the
+ * exercise they replaced."
+ *
+ * The levels are exposures, not a score:
+ *
+ *   NONE         never performed. Whatever the user did on the exercise
+ *                this one replaced belongs to that exercise, not this one.
+ *   EMERGING     performed once or twice, or chosen repeatedly as a
+ *                replacement. Real, and not yet enough to overrule the
+ *                generic judgement about what a good default is.
+ *   ESTABLISHED  performed enough times that this user's own history is
+ *                the better guide.
+ *
+ * The thresholds are a product heuristic and are written down as one. They
+ * are not a claim about how many sessions make an exercise "work".
+ */
+export const EVIDENCE_MATURITY = Object.freeze({
+  NONE: 'none',
+  EMERGING: 'emerging',
+  ESTABLISHED: 'established',
+});
+
+/** Sessions at which a user's own history outranks the generic default. */
+export const ESTABLISHED_SESSIONS = 4;
+
+export function evidenceMaturity({ sessions = 0, repeatedChoice = 0 } = {}) {
+  if (sessions >= ESTABLISHED_SESSIONS || repeatedChoice >= REPEATED_SWAP_MIN) {
+    return EVIDENCE_MATURITY.ESTABLISHED;
+  }
+  if (sessions >= 1 || repeatedChoice >= 1) return EVIDENCE_MATURITY.EMERGING;
+  return EVIDENCE_MATURITY.NONE;
+}
+
+/**
+ * How much weight personal evidence may carry at this maturity.
+ *
+ * Zero at NONE is the whole point of law 3: with no exposures there is
+ * nothing personal to weigh, so the generic judgement about what makes a
+ * sensible default decides on its own.
+ */
+export const MATURITY_WEIGHT = Object.freeze({
+  [EVIDENCE_MATURITY.NONE]: 0,
+  [EVIDENCE_MATURITY.EMERGING]: 0.5,
+  [EVIDENCE_MATURITY.ESTABLISHED]: 1,
+});
+
+export function maturityWeight(maturity) {
+  return MATURITY_WEIGHT[maturity] ?? 0;
 }
 
 /**
@@ -387,13 +488,33 @@ export function rankPersonalised(state, candidates, { fromExerciseId, routineId 
       } else if (previous && id === previous) {
         tier = RANK_TIER.PREVIOUSLY_USED; tag = 'Previously used';
       }
-      return { ...c, personal: { tier, tag, evidence: facts }, _i: i };
+      // C16 quality law 3: how far this tier is allowed to move the
+      // candidate depends on how established the evidence behind it is.
+      //
+      // APPROVED_DEFAULT is exempt and stays at full weight: it is INTENT,
+      // not evidence. The user pressed a button to say "this is my default
+      // here", and that does not need exposures to be believed.
+      //
+      // Everything else is scaled. At NONE the weight is zero, so a
+      // candidate with no exposures ranks purely on the generic judgement
+      // below - which is exactly the law: generic canonicality dominates
+      // when personal evidence is weak, and personal evidence increasingly
+      // dominates as it becomes established.
+      const isIntent = tier === RANK_TIER.APPROVED_DEFAULT;
+      const weighted = isIntent ? tier : tier * maturityWeight(facts.maturity);
+      return {
+        ...c,
+        personal: { tier, tag, evidence: facts, maturity: facts.maturity, weighted },
+        _i: i,
+      };
     });
 
-  // Tier first, then the structural score the engine already computed, then
-  // the engine's own order (which is alphabetical inside equal scores). So
-  // ordering is fully deterministic and never random.
-  decorated.sort((a, b) => b.personal.tier - a.personal.tier
+  // Weighted personal standing first, then the GENERIC judgement about what
+  // makes a sensible default (staples before obscure movements), then the
+  // structural score the engine already computed, then the engine's own
+  // order. Fully deterministic, never random.
+  decorated.sort((a, b) => b.personal.weighted - a.personal.weighted
+    || tierRank(a?.exercise?.name) - tierRank(b?.exercise?.name)
     || (b.score ?? 0) - (a.score ?? 0)
     || a._i - b._i);
   return decorated.map(({ _i, ...rest }) => rest);

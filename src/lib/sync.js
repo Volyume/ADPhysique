@@ -1164,6 +1164,10 @@ async function _pushExerciseSwaps(sb, supabaseUserId, localUserId) {
       routine_id: r.routineId ?? null,
       mesocycle_id: r.mesocycleId ?? null,
       explicit: !!r.explicit,
+      // C16 quality law 1: 'session' vs 'programme'. Null on rows recorded
+      // before the column existed, and the receiving device treats null as
+      // unknown, which the negative-preference reading never counts.
+      scope: r.scope ?? null,
       created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
       updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
       deleted_at: r.deletedAt != null ? new Date(r.deletedAt).toISOString() : null,

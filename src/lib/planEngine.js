@@ -1318,7 +1318,7 @@ const ASSISTED_RE = /\bassisted\b/i;
 // decides them, unconfounded by the separate, pre-existing MRV safety clamp
 // that runs later in generatePlan and may legitimately trim delivered volume
 // for unrelated reasons).
-export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, usedNames, weeklyTotalSets, landmarks, experience, nutritionPhase) {
+export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal, slot, usedNames, weeklyTotalSets, landmarks, experience, nutritionPhase, sessionFatigue = null) {
   if (sessionTarget < 2) return [];
 
   let available = filterPool(muscle, equipment, goal);
@@ -1477,7 +1477,20 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
     // exists to do. Popularity compares legitimate candidates for the SAME
     // job; it does not decide what the job is.
     const canonBonus = tierRank(e.n) * 2;
-    return reqBonus + paramBonus + divBonus + goalBonus + canonBonus + idx;
+    // C16 quality law 4: whole-session fatigue compatibility. Once a session
+    // already holds enough very demanding movements, a further high-fatigue
+    // candidate is nudged behind an equally valid gentler one.
+    //
+    // A NUDGE, at the same weight as canonicality and an order of magnitude
+    // below the required-coverage and compound-first terms, because the
+    // founder's wording is "avoid UNNECESSARILY stacking... when EQUALLY
+    // VALID supported bodybuilding choices can deliver the target
+    // stimulus". It compares candidates for the same job; it never changes
+    // what the job is, and it can never leave a slot uncovered. Unknown
+    // fatigue (the hand-written fallback pool) is never penalised.
+    const stacking = sessionFatigue && sessionFatigue.high >= HIGH_FATIGUE_STACK_LIMIT;
+    const fatiguePenalty = (stacking && e.fatigue != null && e.fatigue >= HIGH_FATIGUE_COST) ? 3 : 0;
+    return reqBonus + paramBonus + divBonus + goalBonus + canonBonus + fatiguePenalty + idx;
   }
 
   const rank = list => list
@@ -1660,11 +1673,24 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
     exObj._paramKey = entry.p;
     exObj._eq = Array.isArray(entry.eq) ? entry.eq : [];
     exObj._equipmentCategory = entry.equipmentCategory ?? null;
+    // Internal-only: read by buildSession's running session-fatigue tally
+    // (C16 quality law 4) and stripped before output with the other tags.
+    exObj._fatigue = entry.fatigue ?? null;
     result.push(exObj);
   }
 
   return result;
 }
+
+// C16 quality law 4. `fatigueCost` is the library's own 1-5 systemic-demand
+// rating. 4+ is a genuinely taxing movement (heavy squat, deadlift, barbell
+// row); the limit is the number of those a single session may accumulate
+// before a further one is nudged behind an equally valid alternative. Two is
+// a product heuristic, written down as one: a real session can carry a
+// couple of very demanding lifts, and a third is usually the point at which
+// the session is being built around fatigue rather than stimulus.
+const HIGH_FATIGUE_COST = 4;
+const HIGH_FATIGUE_STACK_LIMIT = 2;
 
 // ---------------------------------------------------------------------------
 // Split selection
@@ -1722,6 +1748,12 @@ function selectSplit(experience, effectiveDays, goal) {
 function buildSession(name, muscles, sessionsPerMuscle, weeklyTargets, equipment, goal, slot, usedNamesByMuscle, experience, nutritionPhase, landmarks) {
   const exercises = [];
 
+  // C16 quality law 4: what this session has already committed to, so a
+  // later muscle's selection can see the whole session rather than only its
+  // own slot. Counted as exercises chosen, not sets, because the concern is
+  // how many separately demanding movements the session asks for.
+  const sessionFatigue = { high: 0 };
+
   for (const muscle of muscles) {
     const wTarget = weeklyTargets[muscle] ?? 0;
     const sessions = sessionsPerMuscle[muscle] ?? 1;
@@ -1741,7 +1773,7 @@ function buildSession(name, muscles, sessionsPerMuscle, weeklyTargets, equipment
     const usedNames = usedNamesByMuscle[muscle] ?? new Set();
     const exs = selectExercisesForMuscle(
       muscle, sessionTarget, equipment, goal, slot,
-      usedNames, wTarget, landmarks, experience, nutritionPhase
+      usedNames, wTarget, landmarks, experience, nutritionPhase, sessionFatigue
     );
     usedNamesByMuscle[muscle] = usedNames;
     // Tag each emitted exercise with the muscle it was picked for so the
@@ -1750,6 +1782,7 @@ function buildSession(name, muscles, sessionsPerMuscle, weeklyTargets, equipment
     // writing to the DB.
     for (const ex of exs) {
       if (ex._muscle == null) ex._muscle = muscle;
+      if (ex._fatigue != null && ex._fatigue >= HIGH_FATIGUE_COST) sessionFatigue.high += 1;
     }
     exercises.push(...exs);
   }
@@ -1876,13 +1909,29 @@ function buildWeightedUpperLower(weeklyTargets, landmarks, equipment, goal, expe
   const upperSessions = Array.from({ length: upperDays }, (_, i) =>
     buildSession(`Upper ${String.fromCharCode(65 + i)}`, upperMuscles, sessionsPerMuscle, weeklyTargets, equipment, goal, i, usedByMuscle, experience, nutritionPhase, landmarks));
 
-  // Interleave lower-first so the priority work lands on fresh days.
+  // Interleave so the priority work lands on fresh days AND no two
+  // consecutive sessions repeat the same demand.
+  //
+  // C16 quality law 5: "Generated routine ordering must be sensible even
+  // though Volyume does not control calendar rest days. Avoid unnecessarily
+  // placing highly overlapping muscle/systemic demands in consecutive
+  // planned sessions."
+  //
+  // The old loop pushed lower-then-upper until the shorter list ran out and
+  // then emptied the remainder, so a 5-day balanced split (3 upper, 2
+  // lower) produced Lower, Upper, Lower, Upper, UPPER - two identical
+  // upper days back to back at the end of the week. Spreading the MORE
+  // numerous type and slotting the other between its entries alternates
+  // fully in every case, and where the counts are equal or lower-heavy the
+  // order is byte-identical to before, so the lower-focus divisions that
+  // relied on lower-first are untouched.
+  const lowerLeads = lowerSessions.length >= upperSessions.length;
+  const major = lowerLeads ? lowerSessions : upperSessions;
+  const minor = lowerLeads ? upperSessions : lowerSessions;
   const out = [];
-  let l = 0;
-  let u = 0;
-  while (out.length < effectiveDays && (l < lowerSessions.length || u < upperSessions.length)) {
-    if (l < lowerSessions.length) out.push(lowerSessions[l++]);
-    if (u < upperSessions.length) out.push(upperSessions[u++]);
+  for (let i = 0; i < major.length && out.length < effectiveDays; i++) {
+    out.push(major[i]);
+    if (i < minor.length && out.length < effectiveDays) out.push(minor[i]);
   }
   return out;
 }
@@ -3002,7 +3051,7 @@ function _generatePlanInner(inputs) {
     //
     // Strip internal-only tags (_m, _req used by trimming; _muscle,
     // _paramKey, _eq, _equipmentCategory were read by assignSupersets).
-    const clean = trimmed.map(({ _m, _req, _muscle, _paramKey, _eq, _equipmentCategory, ...rest }) => rest);
+    const clean = trimmed.map(({ _m, _req, _muscle, _paramKey, _eq, _equipmentCategory, _fatigue, ...rest }) => rest);
     const dur = Math.ceil(estimateSessionMinutes(clean, equipment));
     const out = { name: w.name, exercises: clean, estimatedDurationMinutes: dur };
     // A session that the time-trim left meaningfully over the preferred length

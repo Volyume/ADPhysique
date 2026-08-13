@@ -76,8 +76,12 @@ export const SLOT_REASON = Object.freeze({
   PLATEAU: 'plateau',
   // Variation for its own sake, allowed only after the review threshold.
   SYSTEMATIC_VARIATION: 'systematic_variation',
-  // Kept.
+  // Kept. C16 quality law 6: "KEEP is a first-class intelligent decision.
+  // At block review, explicitly record positive reasons for retaining
+  // productive exercises rather than treating unchanged slots as absence of
+  // a decision." Every KEEP below names WHY it was kept.
   STILL_PRODUCTIVE: 'still_productive',
+  PERSONAL_FIT_KEEP: 'personal_fit_keep',
   INSUFFICIENT_HISTORY: 'insufficient_history',
   NO_REASON_TO_CHANGE: 'no_reason_to_change',
 });
@@ -295,8 +299,17 @@ export function slotVerdict(evidence = {}, { epochBlocks = 0, goalChanged = fals
     return verdict(SLOT_VERDICT.REPLACE, SLOT_REASON.SYSTEMATIC_VARIATION);
   }
 
-  // 6. Keep, and say why.
+  // 6. Keep, and say why. C16 quality law 6: a retained slot is a decision
+  // that was made, not a decision that was skipped, so every branch here
+  // returns a reason rather than falling through silently.
   if (evidence.progressing) return verdict(SLOT_VERDICT.KEEP, SLOT_REASON.STILL_PRODUCTIVE);
+  // Established personal fit: the user has chosen this movement for
+  // themselves, repeatedly, and kept training it. That is a positive
+  // reason to retain it in its own right, distinct from "nothing is wrong
+  // with it".
+  if (evidence.establishedPersonalFit) {
+    return verdict(SLOT_VERDICT.KEEP, SLOT_REASON.PERSONAL_FIT_KEEP);
+  }
   if (!epochReviewDue(epochBlocks)) {
     return verdict(SLOT_VERDICT.KEEP, SLOT_REASON.INSUFFICIENT_HISTORY);
   }
