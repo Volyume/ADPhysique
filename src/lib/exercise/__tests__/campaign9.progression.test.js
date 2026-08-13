@@ -67,10 +67,18 @@ describe('detectProgressionConsistency: the law, and its limits', () => {
   });
 
   test('it cannot contradict detectPlateau on the same data', () => {
-    const flat = [sets(70, 8), sets(70, 8), sets(70, 8), sets(70, 8)];
+    // C12 job 2: detectPlateau now also requires the run to span real local
+    // calendar time, so the shared fixtures are dated a week apart
+    // (newest-first). detectProgressionConsistency has no time law of its
+    // own and ignores the dates; adding them only lets the plateau half of
+    // this cross-check reach its verdict, which is what the test is about.
+    const WEEK = 7 * 24 * 60 * 60 * 1000;
+    const T0 = new Date(2026, 4, 20, 18, 0, 0).getTime();
+    const dated = (rows, i) => rows.map((r) => ({ ...r, createdAt: T0 - i * WEEK }));
+    const flat = [sets(70, 8), sets(70, 8), sets(70, 8), sets(70, 8)].map(dated);
     expect(detectPlateau(flat).plateau).toBe(true);
     expect(detectProgressionConsistency(flat).status).not.toBe('progressing');
-    const rising = [sets(80, 8), sets(75, 8), sets(70, 8), sets(65, 8)];
+    const rising = [sets(80, 8), sets(75, 8), sets(70, 8), sets(65, 8)].map(dated);
     expect(detectPlateau(rising).plateau).toBe(false);
     expect(detectProgressionConsistency(rising).status).toBe('progressing');
   });

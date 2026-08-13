@@ -45,10 +45,17 @@ describe('computeSetTargets jump cap (P4)', () => {
 
 // ── P10: the "3+ stalls -> swap exercise" resolution must be reachable ──
 describe('detectPlateau swap-exercise branch (P10)', () => {
-  const flatSession = () => [{ weight: 100, actualReps: 8 }];
+  // C12 job 2: a plateau must now also span real local calendar time, so
+  // these fixtures carry weekly dates (newest-first). The timing is valid in
+  // both cases, so each test still checks exactly what it was written for:
+  // the stall count and the resolution split.
+  const PLATEAU_WEEK = 7 * 24 * 60 * 60 * 1000;
+  const PLATEAU_T0 = new Date(2026, 4, 20, 18, 0, 0).getTime();
+  const flatSession = (i = 0) =>
+    [{ weight: 100, actualReps: 8, createdAt: PLATEAU_T0 - i * PLATEAU_WEEK }];
 
   test('three consecutive stalls (4 sessions) resolves to swap_exercise', () => {
-    const sessions = [flatSession(), flatSession(), flatSession(), flatSession()];
+    const sessions = [flatSession(0), flatSession(1), flatSession(2), flatSession(3)];
     const r = detectPlateau(sessions, 6, 12);
     expect(r.plateau).toBe(true);
     expect(r.consecutiveStalls).toBeGreaterThanOrEqual(3);
@@ -56,7 +63,7 @@ describe('detectPlateau swap-exercise branch (P10)', () => {
   });
 
   test('two stalls (3 sessions) still resolves to change_rep_range', () => {
-    const sessions = [flatSession(), flatSession(), flatSession()];
+    const sessions = [flatSession(0), flatSession(1), flatSession(2)];
     const r = detectPlateau(sessions, 6, 12);
     expect(r.plateau).toBe(true);
     expect(r.consecutiveStalls).toBe(2);

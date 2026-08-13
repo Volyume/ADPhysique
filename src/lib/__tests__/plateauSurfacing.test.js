@@ -38,8 +38,12 @@ describe('selectPlateauForBanner', () => {
     expect(picked).not.toBeNull();
     expect(picked.exerciseId).toBe('ex_bench');
     expect(picked.consecutiveStalls).toBe(3);
-    // 4 weekly sessions: the stalled run spans 21 days -> 3 weeks.
-    expect(picked.weeks).toBe(3);
+    // C12: the span is the number of distinct LOCAL calendar weeks the
+    // stalled evidence appears in. Four weekly sessions touch four weeks,
+    // which is what "hasn't moved across 4 weeks" claims. This used to read
+    // 3 because the module divided the raw millisecond span by a week
+    // constant - a second definition that also drifted across DST.
+    expect(picked.weeks).toBe(4);
     expect(picked.latestSessionAt).toBe(NOW - DAY);
   });
 
@@ -80,13 +84,18 @@ describe('selectPlateauForBanner', () => {
     expect(selectPlateauForBanner(sets, { now: NOW }).exerciseId).toBe('ex_main_lift');
   });
 
-  test('a dense stalled run inside one week reports 1 week, never 0', () => {
+  // RE-ANCHORED by C12 job 2. This used to assert that three flat sessions
+  // two days apart surfaced a "1 week" plateau. Three sessions inside one
+  // week is three sessions, not a multi-week stall, and the banner claimed
+  // time the data had not earned. A plateau now needs evidence in >= 3
+  // distinct local weeks spanning >= 14 local days, so this shape correctly
+  // surfaces nothing at all - and nothing is shown to the user about it.
+  test('a dense stalled run inside one week is NOT a plateau', () => {
     const picked = selectPlateauForBanner(
       flatSessions('ex_curl', 3, { spacingDays: 2 }),
       { now: NOW },
     );
-    expect(picked).not.toBeNull();
-    expect(picked.weeks).toBe(1);
+    expect(picked).toBeNull();
   });
 
   test('snake_case rows are tolerated (algorithms.js convention)', () => {
@@ -111,23 +120,33 @@ describe('selectPlateauForBanner', () => {
 // count, instead of asserting "has plateaued" from a mean that a moved
 // top set contradicts.
 describe('plateauBannerLine', () => {
+  // RE-ANCHORED by C12 job 1: the measured quantity is the BEST eligible set
+  // per session, not the session average, so the sentence says so.
   test('the exact calm sentence, with density and pluralised span', () => {
     expect(plateauBannerLine('Bench Press', 3, 4))
-      .toBe("Bench Press's session average hasn't moved across your last 4 sessions (3 weeks). Tap to take a look.");
+      .toBe("Bench Press's best set hasn't moved across 3 weeks across your last 4 sessions. Tap to take a look.");
   });
 
-  test('singular week, no session count falls back to span-only wording', () => {
-    expect(plateauBannerLine('Seated Row', 1))
-      .toBe("Seated Row's session average hasn't moved in about 1 week. Tap to take a look.");
+  test('no session count falls back to span-only wording', () => {
+    expect(plateauBannerLine('Seated Row', 3))
+      .toBe("Seated Row's best set hasn't moved across 3 weeks. Tap to take a look.");
   });
 
-  test('never claims a verdict the mean cannot support', () => {
-    expect(plateauBannerLine('Bench Press', 3, 4)).not.toMatch(/has plateaued|No progress/);
+  test('never claims a verdict the evidence cannot support, and never shames', () => {
+    const line = plateauBannerLine('Bench Press', 3, 4);
+    expect(line).not.toMatch(/has plateaued|No progress/);
+    expect(line).not.toMatch(/stuck|failing|behind|should be|optimal/i);
+  });
+
+  test('C12: Home explains a SELECTION only when one actually happened', () => {
+    expect(plateauBannerLine('Bench Press', 3, 4, 2)).toContain('Your longest current stall.');
+    expect(plateauBannerLine('Bench Press', 3, 4, 1)).not.toContain('longest current stall');
+    expect(plateauBannerLine('Bench Press', 3, 4)).not.toContain('longest current stall');
   });
 
   test('no em dash, and a broken weeks value never renders below 1', () => {
     const line = plateauBannerLine('Deadlift', 0);
-    expect(line).toBe("Deadlift's session average hasn't moved in about 1 week. Tap to take a look.");
+    expect(line).toBe("Deadlift's best set hasn't moved across 1 week. Tap to take a look.");
     expect(line).not.toContain('\u2014');
   });
 });

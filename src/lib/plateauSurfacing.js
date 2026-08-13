@@ -13,8 +13,6 @@
 
 import { detectPlateau } from './algorithms';
 
-const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-
 // Only surface a plateau on a lift the user is still training. A lift last
 // touched more than a fortnight ago is a dropped lift, not a plateau, and
 // nagging about it is exactly the risk the audit entry flags.
@@ -48,6 +46,7 @@ export function selectPlateauForBanner(sets = [], { now = Date.now(), maxStalene
   }
 
   let best = null;
+  let qualifying = 0;
   for (const [exerciseId, byWorkout] of byExercise) {
     // detectPlateau needs 3+ sessions; skip cheaply before sorting.
     if (byWorkout.size < 3) continue;
@@ -64,17 +63,17 @@ export function selectPlateauForBanner(sets = [], { now = Date.now(), maxStalene
     const result = detectPlateau(sessions.map(s => s.sets));
     if (!result.plateau) continue;
 
-    // The stalled run spans consecutiveStalls + 1 sessions ending at the
-    // newest; its calendar span gives the honest "for {n} weeks" figure.
-    const run = sessions.slice(0, result.consecutiveStalls + 1);
-    const spanMs = run[0].at - run[run.length - 1].at;
-    const weeks = Math.max(1, Math.round(spanMs / WEEK_MS));
+    // C12 job 3: ONE verdict. The span and session count come from the
+    // detector, which derives them from LOCAL calendar dates. This module
+    // used to recompute weeks itself as `spanMs / WEEK_MS`, a second
+    // definition that also drifted by an hour across a DST boundary.
     const totalSets = [...byWorkout.values()].reduce((t, g) => t + g.length, 0);
 
     const candidate = {
       exerciseId,
       consecutiveStalls: result.consecutiveStalls,
-      weeks,
+      weeks: result.weeks,
+      sessions: result.sessions,
       totalSets,
       latestSessionAt: sessions[0].at,
     };
@@ -89,11 +88,19 @@ export function selectPlateauForBanner(sets = [], { now = Date.now(), maxStalene
     ) {
       best = candidate;
     }
+    qualifying += 1;
   }
 
   if (!best) return null;
   const { totalSets: _ignored, ...picked } = best;
-  return picked;
+  // C12 job 3: the map recorded a comprehension gap - Home can pick ONE
+  // plateau from several but told the user only the lift and the duration,
+  // never that a choice had been made. `selectedFrom` lets the banner add one
+  // restrained clause when a selection actually happened. It stays absent
+  // when only one lift qualified, because then nothing was selected and any
+  // explanation would be noise. The tie-break rules themselves are never
+  // exposed.
+  return { ...picked, selectedFrom: qualifying };
 }
 
 // The banner line. Calm, specific, actionable; British English, no em dash
@@ -107,11 +114,19 @@ export function selectPlateauForBanner(sets = [], { now = Date.now(), maxStalene
 // line now states the measured quantity and carries the density it
 // rests on (sessions AND span), inviting a look instead of asserting a
 // verdict the tap-through detail lets the user judge for themselves.
-export function plateauBannerLine(exerciseName, weeks, sessions = null) {
+// C12: the measured quantity is now the BEST eligible set per session, not
+// the session average, and job 2 guarantees the time claim, so the line says
+// what it means. The span is whatever the run really was - "across 3 weeks",
+// "across 5 weeks" - never derived from the session count. `selectedFrom`
+// adds one restrained clause when Home genuinely chose between several
+// current plateaus; the tie-break itself is never described.
+export function plateauBannerLine(exerciseName, weeks, sessions = null, selectedFrom = 1) {
   const n = Math.max(1, Math.round(weeks ?? 1));
   const unit = n === 1 ? 'week' : 'weeks';
   const sc = Number.isFinite(sessions) && sessions >= 2 ? sessions : null;
-  return sc
-    ? `${exerciseName}'s session average hasn't moved across your last ${sc} sessions (${n} ${unit}). Tap to take a look.`
-    : `${exerciseName}'s session average hasn't moved in about ${n} ${unit}. Tap to take a look.`;
+  const density = sc ? ` across your last ${sc} sessions` : '';
+  const chosen = Number.isFinite(selectedFrom) && selectedFrom > 1
+    ? ' Your longest current stall.'
+    : '';
+  return `${exerciseName}'s best set hasn't moved across ${n} ${unit}${density}.${chosen} Tap to take a look.`;
 }
