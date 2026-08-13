@@ -26,12 +26,19 @@ import {
   deleteProgrammeCascade,
   deleteProgrammeCascadeInTx,
   getActiveBlock,
+  getActivePlan,
+  getRoutinesForPlan,
+  getRoutineExercisesWithDetails,
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generatePlan } from './planEngine';
 import { phaseToNutritionKey } from './coachingGoals';
 import { loadExerciseIntentState } from './exercise/intent';
 import { filterLibraryForGeneration, generationBlockFor } from './exercise/generation';
+import { applyContinuity, slotKey, summariseDecisions } from './exercise/continuity';
+import { movementFamily } from './exercise/movementFamily';
+import { exerciseEvidence, isExcluded, isAvoidedThisBlock, swappedAwayCount } from './exercise/intent';
+import { isAutoEligible } from './exercise/canonicality';
 
 // Where the per-plan rationale ("Why this plan?") is cached so the
 // enrollment reveal and the plan view can explain why the routine, sets,
@@ -190,6 +197,81 @@ export function buildExerciseIndex(allExercises) {
   return { byId, byName, byLowerName };
 }
 
+/**
+ * C16 job 5: the user's CURRENT plan, flattened into the muscle/family
+ * slots continuity matches on.
+ *
+ * Best-effort, and deliberately so: a read failure means no incumbents,
+ * which degrades to the stateless behaviour that shipped before this
+ * existed. A rebuild that loses continuity is a worse plan; a rebuild that
+ * fails to generate is no plan at all.
+ */
+async function loadIncumbentSlots(userId) {
+  try {
+    const plan = await getActivePlan(userId);
+    if (!plan?.id) return [];
+    const routines = await getRoutinesForPlan(plan.id);
+    const out = [];
+    for (const r of routines ?? []) {
+      const rows = await getRoutineExercisesWithDetails(r.id);
+      for (const row of rows ?? []) {
+        const ex = row.exercise ?? {};
+        if (!ex.id || !ex.primaryMuscle) continue;
+        out.push({
+          exerciseId: ex.id,
+          exerciseName: ex.name ?? null,
+          muscle: ex.primaryMuscle,
+          family: movementFamily(ex.name, ex.primaryMuscle, ex.subregion ?? null),
+        });
+      }
+    }
+    return out;
+  } catch (_) {
+    return [];
+  }
+}
+
+/**
+ * C16 job 5: assemble the evidence programmeEpoch's slotVerdict needs for
+ * one incumbent exercise.
+ *
+ * Every field is an OBSERVATION, not a judgement. Anything the app cannot
+ * honestly observe is left undefined so slotVerdict falls through to its
+ * own defaults rather than acting on a guess. Joint discomfort in
+ * particular is not inferred: the app has no per-exercise tolerance signal
+ * (exerciseEvidence reports `tolerance: 'not_tracked'`), and manufacturing
+ * one would be inventing a safety fact.
+ */
+function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
+  return (exerciseId) => {
+    const row = exercisesById.get(exerciseId) ?? null;
+    const facts = intentState
+      ? exerciseEvidence(intentState, exerciseId)
+      : { sessions: 0, progression: 'insufficient', sufficient: false };
+    return {
+      excluded: intentState
+        ? (isExcluded(intentState, exerciseId) || isAvoidedThisBlock(intentState, exerciseId))
+        : false,
+      swappedAwayCount: intentState ? swappedAwayCount(intentState, exerciseId) : 0,
+      // The exercise is no longer reachable with the equipment the user
+      // now says they have, so the slot is not valid regardless of history.
+      equipmentLost: !currentLibraryIds.has(exerciseId),
+      autoEligible: row?.name ? isAutoEligible(row.name) : undefined,
+      sessions: facts.sessions,
+      // Positive evidence protects a movement at any age (amendment: there
+      // is no maximum exercise lifetime).
+      progressing: facts.progression === 'progressing',
+      plateau: facts.progression === 'plateau',
+      // `prescriptionFix` and `systematicCandidate` are deliberately NOT set
+      // here. The first is a decision about which intervention to try and
+      // belongs to the next-block review, not to a plan rebuild; the second
+      // is elective variation, which a rebuild triggered by a profile change
+      // has no business initiating. Both left undefined so slotVerdict takes
+      // its own default rather than acting on something invented here.
+    };
+  };
+}
+
 /** Every canonical name on this device, for the engine's fallback-pool gate. */
 function canonicalNameSet(allExercises) {
   const names = new Set();
@@ -197,6 +279,51 @@ function canonicalNameSet(allExercises) {
     if (ex?.name && !(ex.isCustom === 1 || ex.isCustom === true)) names.add(ex.name);
   }
   return names.size > 0 ? names : null;
+}
+
+/**
+ * C16 job 5: run the continuity pass for a rebuild, using the same
+ * resolution the rest of this module uses.
+ *
+ * Returns the generated workouts with retained exercises substituted back
+ * in, plus the machine-readable decision list the change receipt renders.
+ * Best-effort: any failure returns the generated plan untouched, because a
+ * rebuild that loses continuity is worse than the previous behaviour but a
+ * rebuild that fails is worse than both.
+ */
+async function withContinuity(userId, plan, allExercises, intentState, filteredLibrary) {
+  try {
+    const incumbents = await loadIncumbentSlots(userId);
+    if (incumbents.length === 0) {
+      return { workouts: plan.workouts, decisions: [], isRebuild: false };
+    }
+    const exercisesById = new Map((allExercises ?? []).map(e => [e.id, e]));
+    // "Still reachable with the equipment the user now has" is decided from
+    // the library the engine was actually given, so an equipment change is
+    // read as equipment loss rather than as a preference.
+    const currentLibraryIds = new Set(
+      (filteredLibrary?.library ?? allExercises ?? []).map(e => e.id).filter(Boolean),
+    );
+    const familyOf = (id) => {
+      const row = exercisesById.get(id);
+      if (!row?.primaryMuscle) return null;
+      return slotKey(row.primaryMuscle, movementFamily(row.name, row.primaryMuscle, row.subregion ?? null));
+    };
+    const { workouts, decisions } = applyContinuity({
+      generated: plan.workouts,
+      incumbents,
+      evidenceFor: buildSlotEvidence(intentState, currentLibraryIds, exercisesById),
+      familyOf,
+      // A plan rebuild is not a block boundary, so no epoch history is
+      // claimed here. That keeps elective variation switched off: this path
+      // must not initiate a refresh nobody asked for.
+      context: { epochBlocks: 0 },
+      isRebuild: true,
+    });
+    return { workouts, decisions, isRebuild: true };
+  } catch (_) {
+    return { workouts: plan.workouts, decisions: [], isRebuild: false };
+  }
 }
 
 /**
@@ -330,6 +457,14 @@ export async function generateAndSavePlan(userId, profile) {
     await AsyncStorage.setItem(PLAN_WHYTHIS_KEY(userId), JSON.stringify(plan.whyThis ?? {}));
   } catch (_) { /* non-fatal */ }
 
+  // C16 job 5: continuity runs BEFORE the write transaction, because it
+  // reads the plan that is about to be replaced. Doing it inside would be
+  // reading the state the same transaction is in the middle of superseding.
+  const continuity = await withContinuity(
+    userId, plan, allExercises, intentState, filteredLibrary,
+  );
+  const planForWrite = { ...plan, workouts: continuity.workouts };
+
   const baseName = plan.name ?? 'Your plan';
   const planName = await makeUniquePlanName(userId, baseName);
   let programmeId = null;
@@ -347,7 +482,7 @@ export async function generateAndSavePlan(userId, profile) {
       const {
         workouts: resolvedWorkouts, totalRequested, totalResolved: totalWritten,
         missedCount, missedNames, blockedSlots,
-      } = resolvePlanAgainstLibrary(plan, buildExerciseIndex(allExercises), filteredLibrary);
+      } = resolvePlanAgainstLibrary(planForWrite, buildExerciseIndex(allExercises), filteredLibrary);
 
       for (const workout of resolvedWorkouts) {
         const routine = await createRoutine(
@@ -412,7 +547,15 @@ export async function generateAndSavePlan(userId, profile) {
       const { trackFirst } = require('./telemetry/firsts');
       trackFirst(userId, 'first_plan_generated').catch(() => {});
     } catch (_) { /* tolerate test env without telemetry */ }
-    const result = { ok: true, programmeId: prog.id };
+    const result = {
+      ok: true,
+      programmeId: prog.id,
+      continuity: {
+        isRebuild: continuity.isRebuild,
+        decisions: continuity.decisions,
+        summary: summariseDecisions(continuity.decisions),
+      },
+    };
     if (missedCount > 0) {
       // FF-003: surface the shortfall to the caller so onboarding / rebuild can
       // tell the user the plan is thinner than requested. EQUIPMENT only, see
@@ -488,10 +631,17 @@ export async function generatePlanDryRun(userId, profile) {
   // loop and the preview kept the engine's unresolved exercises in the plan
   // it returned, so a user could be shown - and have counted into the
   // weekly volume summary - work the commit was about to drop.
+  // C16 job 5: the preview must show the plan continuity produced, or the
+  // user would be shown replacements the commit is not going to make.
+  const continuity = await withContinuity(
+    userId, plan, allExercises, intentState, filteredLibrary,
+  );
+  const planForWrite = { ...plan, workouts: continuity.workouts };
+
   const {
     workouts: resolvedWorkouts, totalResolved: totalWritten,
     missedCount, missedNames, blockedSlots,
-  } = resolvePlanAgainstLibrary(plan, buildExerciseIndex(allExercises), filteredLibrary);
+  } = resolvePlanAgainstLibrary(planForWrite, buildExerciseIndex(allExercises), filteredLibrary);
 
   // Mirror generateAndSavePlan's zero-match guard so the preview never offers a
   // plan the commit would refuse to save (the diff must not lie — blueprint
@@ -514,6 +664,14 @@ export async function generatePlanDryRun(userId, profile) {
     ok: true,
     plan: { ...plan, workouts: resolvedWorkouts },
     sessionLengthMinutes: inputs.sessionLengthMinutes,
+    // C16 jobs 5 and 11: the machine-readable change receipt. Copy renders
+    // these reasons; it never reverse-engineers an explanation from the
+    // exercise names after the fact.
+    continuity: {
+      isRebuild: continuity.isRebuild,
+      decisions: continuity.decisions,
+      summary: summariseDecisions(continuity.decisions),
+    },
   };
   if (missedCount > 0) {
     result.partial = true;

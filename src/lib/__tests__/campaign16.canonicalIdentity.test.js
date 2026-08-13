@@ -188,8 +188,12 @@ describe('C16-9 the dry run and the commit agree, by construction', () => {
     // One definition, two callers. If a second matching loop reappears, the
     // two sides can drift again - which is exactly how this defect lived.
     expect(src.match(/function resolvePlanAgainstLibrary/g)).toHaveLength(1);
-    const callSites = src.match(/(?<!function )resolvePlanAgainstLibrary\(plan,/g);
+    const callSites = src.match(/(?<!function )resolvePlanAgainstLibrary\(\w+,/g);
     expect(callSites).toHaveLength(2);
+    // And both sides run the SAME continuity pass before resolving, or the
+    // preview would show replacements the commit is not going to make.
+    expect(src.match(/function withContinuity/g)).toHaveLength(1);
+    expect(src.match(/(?<!function )withContinuity\(\s*\n?\s*userId,/g)).toHaveLength(2);
   });
 
   test('the preview contains exactly the exercises the commit writes, with the same ids', async () => {
