@@ -6,6 +6,11 @@ import {
   CHECKIN_MUSCLE_MAP,
   getSessionAdjustmentMessage,
 } from './whyThisTemplates';
+// C12: DST-safe local calendar helpers. Both modules are import-free, so
+// there is no cycle. Plateau time claims are made in LOCAL weeks and days,
+// never by dividing milliseconds by a week constant.
+import { localWeekStartMs } from './dayKey';
+import { localDaysElapsed } from './mesocycle';
 
 // Weekly set landmarks per muscle group. Single source of truth, imported by planEngine too.
 //
@@ -1358,9 +1363,67 @@ export function buildSessionAdjustmentInput({
   };
 }
 
+/**
+ * C12 job 1: ONE session's strength performance, as a single number.
+ *
+ * The BEST canonical eligible estimated max in the session — the same law
+ * buildExerciseMetricSeries already uses for the Lift Progress e1RM chart
+ * (`Math.max(..., calculate1RM(weight, reps))`), so the two surfaces cannot
+ * describe the same history differently. Shared here rather than duplicated;
+ * liftProgress calls this too.
+ *
+ * It is deliberately the BEST set, not the average. A plateau must answer
+ * "has this exercise's best demonstrated performance stopped progressing?",
+ * and workout STRUCTURE legitimately moves a mean without the athlete
+ * changing: adding back-off sets, adding hypertrophy work, or shifting the
+ * rep-range distribution all drag a session average around while the top set
+ * climbs, and dropping back-offs lifts the average while nothing improved.
+ *
+ * Eligibility is the canonical law (isE1rmEligibleRow, C10D): warm-ups,
+ * myo-rep and rest-pause rows are refused, because cluster rows store SUMMED
+ * reps. The estimator is the canonical calculate1RM (C10L). Returns 0 when
+ * the session holds no eligible loaded work.
+ */
+export function sessionBestE1rm(sets = []) {
+  let best = 0;
+  for (const s of Array.isArray(sets) ? sets : []) {
+    if (!isE1rmEligibleRow(s)) continue;
+    const weight = Number(s?.weight) || 0;
+    const reps = Number(s?.actualReps ?? s?.actual_reps) || 0;
+    if (weight <= 0 || reps <= 0) continue;
+    const est = calculate1RM(weight, reps);
+    if (est > best) best = est;
+  }
+  return best;
+}
+
+// C12 job 1: "did this session beat the last one?" uses the app's EXISTING
+// definition of a better estimated max — detectPR's 0.1% margin — rather than
+// a new plateau-specific threshold.
+const E1RM_PROGRESS_MARGIN = 1.001;
+
+// C12 job 2: a plateau claims TIME, so the evidence must span time. Three
+// sessions in one week is not a three-week plateau, and three sessions
+// scattered across ten weeks is not one continuous stall. Reuses the existing
+// 14-day plateau staleness concept as the maximum gap between consecutive
+// pieces of evidence rather than introducing a second constant.
+const PLATEAU_MIN_WEEKS = 3;
+const PLATEAU_MIN_SPAN_DAYS = 14;
+const PLATEAU_MAX_GAP_DAYS = 14;
+
+/** Newest-first session timestamp: the latest set in the session. */
+function sessionAt(sets = []) {
+  let at = 0;
+  for (const s of Array.isArray(sets) ? sets : []) {
+    const t = Number(s?.createdAt ?? s?.created_at) || 0;
+    if (t > at) at = t;
+  }
+  return at;
+}
+
 // Plateau detection for a specific exercise across sessions.
 // exerciseSessions: array of sessions newest-first, each an array of sets for that exercise.
-// Returns { plateau, consecutiveStalls, resolution }
+// Returns { plateau, consecutiveStalls, resolution, weeks, sessions, spanDays }
 export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) {
   // C10D RD6-3 (detection-basis half): only rows the app already accepts as
   // comparable progression evidence may decide this. isE1rmEligibleRow is
@@ -1379,12 +1442,11 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
   // comparison, and if fewer than three sessions survive the existing
   // insufficient/no-plateau state is returned - never a compensating
   // relaxation of the evidence requirement.
+  const NONE = { plateau: false, consecutiveStalls: 0, resolution: null, weeks: null, sessions: 0, spanDays: 0 };
   const eligibleSessions = (Array.isArray(exerciseSessions) ? exerciseSessions : [])
     .map((sets) => (Array.isArray(sets) ? sets.filter(isE1rmEligibleRow) : []))
     .filter((sets) => sets.length > 0);
-  if (eligibleSessions.length < 3) {
-    return { plateau: false, consecutiveStalls: 0, resolution: null };
-  }
+  if (eligibleSessions.length < 3) return NONE;
 
   // Look at up to the 4 most recent sessions (3 adjacent comparisons), so a
   // run of 3 consecutive stalls can actually be detected. The previous
@@ -1394,40 +1456,77 @@ export function detectPlateau(exerciseSessions = [], _repMin = 6, _repMax = 12) 
   let consecutiveStalls = 0;
 
   for (let i = 0; i < recent.length - 1; i++) {
-    const currSets = recent[i];
-    const prevSets = recent[i + 1];
-    if (!currSets?.length || !prevSets?.length) continue;
-
-    const currAvgWeight = currSets.reduce((s, set) => s + (set.weight || 0), 0) / currSets.length;
-    const currAvgReps   = currSets.reduce((s, set) => s + (set.actualReps || set.actual_reps || 0), 0) / currSets.length;
-    const prevAvgWeight = prevSets.reduce((s, set) => s + (set.weight || 0), 0) / prevSets.length;
-    const prevAvgReps   = prevSets.reduce((s, set) => s + (set.actualReps || set.actual_reps || 0), 0) / prevSets.length;
-
-    const noLoadGain = currAvgWeight <= prevAvgWeight + 0.01;
-    const noRepGain  = currAvgReps  <= prevAvgReps  + 0.5;
-
-    if (noLoadGain && noRepGain) consecutiveStalls++;
-    else consecutiveStalls = 0;
+    // C12 job 1: compare each session's BEST eligible estimated max against
+    // the previous session's. The old basis was the session AVERAGE weight
+    // and average reps, which measured workout structure as much as
+    // performance: three back-off sets added to an improving top set pulled
+    // the mean down and read as a stall, and dropping back-offs lifted the
+    // mean and read as progress.
+    const curr = sessionBestE1rm(recent[i]);
+    const prev = sessionBestE1rm(recent[i + 1]);
+    if (!(curr > 0) || !(prev > 0)) continue;
+    // "Progressed" is the app's existing better-estimated-max test.
+    if (curr > prev * E1RM_PROGRESS_MARGIN) consecutiveStalls = 0;
+    else consecutiveStalls++;
   }
 
   if (consecutiveStalls < 2) {
-    return { plateau: false, consecutiveStalls, resolution: null };
+    return { ...NONE, consecutiveStalls };
   }
+
+  // ── C12 job 2: the run must span real time, in LOCAL weeks ──────────────
+  // The stalled run is the consecutiveStalls + 1 sessions ending at the
+  // newest. Every date question below is answered with the app's DST-safe
+  // local helpers, never by dividing milliseconds by a week constant.
+  const run = recent.slice(0, consecutiveStalls + 1).map(sessionAt).filter((t) => t > 0);
+  if (run.length < consecutiveStalls + 1) return { ...NONE, consecutiveStalls };
+  const newest = run[0];
+  const oldest = run[run.length - 1];
+
+  // (a) at least three DISTINCT local calendar weeks. Mon/Wed/Fri in one
+  //     week is three sessions, not a three-week plateau.
+  const distinctWeeks = new Set(run.map((t) => localWeekStartMs(t))).size;
+  // (b) at least a fortnight of local days end to end.
+  const spanDays = localDaysElapsed(oldest, newest);
+  // (c) no hole bigger than the existing 14-day plateau staleness boundary:
+  //     week 1 / week 7 / week 10 is sparse history, not one current stall.
+  let biggestGap = 0;
+  for (let i = 0; i < run.length - 1; i++) {
+    const gap = localDaysElapsed(run[i + 1], run[i]);
+    if (gap > biggestGap) biggestGap = gap;
+  }
+  if (distinctWeeks < PLATEAU_MIN_WEEKS
+    || spanDays < PLATEAU_MIN_SPAN_DAYS
+    || biggestGap > PLATEAU_MAX_GAP_DAYS) {
+    return { ...NONE, consecutiveStalls };
+  }
+
+  // C12 job 2: the DISPLAYED span comes from the dates, never from the
+  // session count. It is the number of distinct LOCAL calendar weeks the
+  // stalled evidence actually appears in, which is exactly what "hasn't
+  // moved across N weeks" claims. A genuinely longer run says the longer
+  // number; nothing rounds a span up to reach three, because the gate above
+  // already refused anything under three.
+  const weeks = distinctWeeks;
 
   return {
     plateau: true,
     consecutiveStalls,
+    sessions: run.length,
+    weeks,
+    spanDays,
     resolution: consecutiveStalls >= 3
       ? 'swap_exercise'      // 3+ stalls: substitute this exercise for 4-6 weeks
       : 'change_rep_range',  // 2 stalls: try a different rep range (e.g. 15-20) for 3 weeks
-    // C6 RD6-3 (D97-25): the message states the measured quantity (the
-    // session AVERAGE across all sets) rather than asserting "no
-    // progress" - a claim the mean cannot support when a top set moved
-    // - and invites a look instead of prescribing from a coarse signal.
-    // Thresholds, windows and the resolution codes are untouched.
+    // C6 RD6-3 (D97-25) named the measured quantity because the session
+    // AVERAGE could not support a "no progress" claim. C12 changed the
+    // measurement to the BEST set, which CAN support it, and job 2
+    // guarantees the time span, so the sentence now states both honestly.
+    // It still invites a look rather than prescribing, and carries no
+    // guilt language: nothing here says stuck, failing, behind or should.
     message: consecutiveStalls >= 3
-      ? 'Your session average here has not moved for 3 sessions in a row. Worth a look: if the top sets have stalled too, a different exercise for this muscle for 4-6 weeks is a solid reset.'
-      : 'Your session average here has not moved for 2 sessions. Worth a look: a higher rep range (15-20) for a few weeks can restart progress.',
+      ? `Your best set here hasn't moved across ${weeks} weeks. Worth a look: a different exercise for this muscle for 4-6 weeks is a solid reset.`
+      : `Your best set here hasn't moved across ${weeks} weeks. Worth a look: a higher rep range (15-20) for a few weeks can restart progress.`,
   };
 }
 

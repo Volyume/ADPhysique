@@ -822,7 +822,10 @@ export default function HomeScreen({ navigation, route }) {
         exerciseId: picked.exerciseId,
         // RD6-4 (D97-25): the line carries the run's session count so
         // the claim states its own density.
-        line: plateauBannerLine(ex.name, picked.weeks, picked.consecutiveStalls + 1),
+        // C12: session count and span both come from the canonical verdict;
+        // selectedFrom adds the "longest current stall" clause only when Home
+        // actually chose between several qualifying plateaus.
+        line: plateauBannerLine(ex.name, picked.weeks, picked.sessions, picked.selectedFrom),
       });
       // NAV-4: the picked plateau ({ exerciseId, weeks }) doubles as the
       // stalled-lift context for the differential loader.

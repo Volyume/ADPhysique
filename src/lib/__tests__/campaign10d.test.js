@@ -11,17 +11,29 @@ import { cycleTrendAnnotation } from '../cyclePhase';
 
 const read = (rel) => require('fs').readFileSync(require('path').resolve(__dirname, '../../', rel), 'utf8');
 
-/** Working sets at a fixed load/reps. */
-const work = (weight, reps, n = 2) =>
-  Array.from({ length: n }, () => ({ weight, actualReps: reps, setType: 'straight' }));
+// C12: detectPlateau now also requires the stalled run to span real local
+// calendar time (>= 3 distinct weeks, >= 14 days, no gap over 14 days), so
+// fixtures carry dates. `sessionIdx` is newest-first, matching the argument
+// order, and spaces sessions a week apart - the timing is deliberately valid
+// in every case here so these tests keep testing exactly what they were
+// written to test: ROW ELIGIBILITY, not the time law.
+const WEEK = 7 * 24 * 60 * 60 * 1000;
+const T0 = new Date(2026, 4, 20, 18, 0, 0).getTime();
+const atFor = (sessionIdx) => T0 - sessionIdx * WEEK;
+
+/** Working sets at a fixed load/reps, dated a week apart newest-first. */
+const work = (weight, reps, n = 2, sessionIdx = 0) =>
+  Array.from({ length: n }, () => ({
+    weight, actualReps: reps, setType: 'straight', createdAt: atFor(sessionIdx),
+  }));
 
 // ─── 1. RD6-3 ────────────────────────────────────────────────────────────────
 
 describe('RD6-3: only legitimate progression evidence decides a plateau', () => {
   // Four flat sessions, newest-first: a genuine plateau.
-  const flat = [work(100, 8), work(100, 8), work(100, 8), work(100, 8)];
+  const flat = [work(100, 8, 2, 0), work(100, 8, 2, 1), work(100, 8, 2, 2), work(100, 8, 2, 3)];
   // Four rising sessions: genuinely progressing.
-  const rising = [work(115, 8), work(110, 8), work(105, 8), work(100, 8)];
+  const rising = [work(115, 8, 2, 0), work(110, 8, 2, 1), work(105, 8, 2, 2), work(100, 8, 2, 3)];
 
   test('normal eligible working sets keep the existing behaviour', () => {
     expect(detectPlateau(flat).plateau).toBe(true);
@@ -34,8 +46,8 @@ describe('RD6-3: only legitimate progression evidence decides a plateau', () => 
     // Genuinely rising working sets, with a flat warm-up bolted on. The
     // warm-up used to drag the session average toward "no change".
     const withWarmups = rising.map((sets) => [
-      { weight: 20, actualReps: 15, setType: 'warmup' },
-      { weight: 20, actualReps: 15, setType: 'warmup' },
+      { weight: 20, actualReps: 15, setType: 'warmup', createdAt: sets[0].createdAt },
+      { weight: 20, actualReps: 15, setType: 'warmup', createdAt: sets[0].createdAt },
       ...sets,
     ]);
     expect(detectPlateau(withWarmups).plateau).toBe(false);
@@ -43,7 +55,7 @@ describe('RD6-3: only legitimate progression evidence decides a plateau', () => 
 
   test('changing only warm-up performance cannot BREAK a genuine plateau', () => {
     const flatWithMovingWarmups = flat.map((sets, i) => [
-      { weight: 20 + i * 10, actualReps: 15 + i * 3, setType: 'warmup' },
+      { weight: 20 + i * 10, actualReps: 15 + i * 3, setType: 'warmup', createdAt: sets[0].createdAt },
       ...sets,
     ]);
     expect(detectPlateau(flatWithMovingWarmups).plateau).toBe(true);
@@ -53,14 +65,14 @@ describe('RD6-3: only legitimate progression evidence decides a plateau', () => 
     // Cluster rows store SUMMED reps, so they look like huge jumps.
     const flatWithClusters = flat.map((sets, i) => [
       ...sets,
-      { weight: 100, actualReps: 20 + i * 5, setType: 'myo_reps' },
-      { weight: 100, actualReps: 25 + i * 5, setType: 'rest_pause' },
+      { weight: 100, actualReps: 20 + i * 5, setType: 'myo_reps', createdAt: sets[0].createdAt },
+      { weight: 100, actualReps: 25 + i * 5, setType: 'rest_pause', createdAt: sets[0].createdAt },
     ]);
     expect(detectPlateau(flatWithClusters).plateau).toBe(true);
 
     const risingWithClusters = rising.map((sets) => [
       ...sets,
-      { weight: 100, actualReps: 30, setType: 'rest_pause' },
+      { weight: 100, actualReps: 30, setType: 'rest_pause', createdAt: sets[0].createdAt },
     ]);
     expect(detectPlateau(risingWithClusters).plateau).toBe(false);
   });
@@ -72,9 +84,9 @@ describe('RD6-3: only legitimate progression evidence decides a plateau', () => 
       [{ weight: 20, actualReps: 15, setType: 'warmup' }],
       [{ weight: 20, actualReps: 15, setType: 'warmup' }],
     ];
-    expect(detectPlateau(warmupsOnly)).toEqual({ plateau: false, consecutiveStalls: 0, resolution: null });
+    expect(detectPlateau(warmupsOnly)).toMatchObject({ plateau: false, consecutiveStalls: 0, resolution: null });
     // Two eligible sessions is still below the existing floor.
-    expect(detectPlateau([work(100, 8), work(100, 8)]).plateau).toBe(false);
+    expect(detectPlateau([work(100, 8, 2, 0), work(100, 8, 2, 1)]).plateau).toBe(false);
   });
 
   test('plateau and progression consistency agree on ROW eligibility, and stay separate decisions', () => {
@@ -103,15 +115,27 @@ describe('RD6-3: only legitimate progression evidence decides a plateau', () => 
     expect(isE1rmEligibleRow({ setType: 'straight' })).toBe(true);
   });
 
-  test('the plateau model itself is unchanged', () => {
+  // RE-ANCHORED by C12 job 1. C10D's own scope was ROW ELIGIBILITY, and it
+  // pinned the surrounding model as untouched at the time - including the
+  // session-AVERAGE epsilons. C12 replaced that basis: a session is now
+  // represented by its BEST eligible estimated max, because a mean measures
+  // workout structure (back-off sets, added hypertrophy work) as much as
+  // performance. The window, the stall threshold and the resolution split
+  // are still unchanged, and that is what this pin now guards.
+  test('the window, threshold and resolution split are unchanged', () => {
     const src = read('lib/algorithms.js');
     const from = src.indexOf('export function detectPlateau');
-    const fn = src.slice(from, src.indexOf('\n// RP-classic deload prescription', from));
+    // detectPlateau ONLY: its mirror (detectProgressionConsistency) follows
+    // in the same file and keeps its own arithmetic - see the C12 debt note.
+    const fn = src.slice(from, src.indexOf('\n/**\n * Campaign 9 closeout: progression consistency', from));
     expect(fn).toMatch(/slice\(0, 4\)/);           // window
     expect(fn).toMatch(/consecutiveStalls < 2/);    // threshold
-    expect(fn).toMatch(/prevAvgWeight \+ 0\.01/);   // load epsilon
-    expect(fn).toMatch(/prevAvgReps  \+ 0\.5/);     // rep epsilon
     expect(fn).toMatch(/consecutiveStalls >= 3/);   // resolution split
+    // The average-based epsilons are gone, replaced by the app's existing
+    // better-estimated-max margin rather than a new plateau threshold.
+    expect(fn).not.toMatch(/prevAvgWeight/);
+    expect(fn).not.toMatch(/prevAvgReps/);
+    expect(fn).toMatch(/curr > prev \* E1RM_PROGRESS_MARGIN/);
   });
 });
 

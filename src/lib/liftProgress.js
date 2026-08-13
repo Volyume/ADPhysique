@@ -7,7 +7,7 @@
 // screen owns loading (getCompletedWorkoutSets + getAllExercises) and
 // rendering; this owns the maths.
 
-import { calculate1RM } from './algorithms';
+import { calculate1RM, isE1rmEligibleRow } from './algorithms';
 
 // A "session" is one workout. We group an exercise's sets by workout_id
 // and take the best estimated 1RM in that session as the session's point,
@@ -131,7 +131,16 @@ export function buildExerciseMetricSeries(sets, exerciseTypeById = null) {
     }
     const sess = sessions.get(sessionId);
     sess.at = Math.max(sess.at, at);
-    sess.e1rm = Math.max(sess.e1rm, calculate1RM(weight, reps));
+    // C12 job 1 (cross-metric consistency): the e1RM series and the plateau
+    // detector must not describe the same history differently. Both now take
+    // the best CANONICALLY ELIGIBLE estimate per session — this filter used
+    // to drop warm-ups only, so a myo-rep or rest-pause row (whose reps are a
+    // SUM of efforts) could spike the strength chart while the plateau
+    // detector, which has refused those rows since C10D, saw no such jump.
+    // Every other series (heaviest, reps, volume) keeps its existing rows.
+    if (isE1rmEligibleRow(s)) {
+      sess.e1rm = Math.max(sess.e1rm, calculate1RM(weight, reps));
+    }
     sess.heaviest = Math.max(sess.heaviest, weight);
     sess.reps += reps;
     sess.volume += weight * reps;
