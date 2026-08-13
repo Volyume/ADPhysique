@@ -1,7 +1,86 @@
 # Campaign 16 — plan generation and bodybuilding programming closeout
 
-Live log. Baseline `31c67b59`. Everything below that says LANDED is on
-`main` and green; nothing is sitting on a branch.
+Live log. Baseline `31c67b59`. Continuation session resumed from
+`6a130d15`. Everything below that says LANDED is on `main` and green;
+nothing is sitting on a branch.
+
+## PHASE A — exercise and plan representation (COMPLETE)
+
+| Job | State | Where |
+|---|---|---|
+| 3 movement/regional coverage | LANDED | `src/lib/exercise/movementFamily.js`, migration v74 |
+| 9 canonical exercise identity | LANDED | `src/lib/exercise/canonicalId.js`, `resolvePlanAgainstLibrary` |
+| 7 rep/rest/load prescription | LANDED | `src/lib/exercise/prescription.js` |
+
+### Job 3 — what changed and why
+
+FAMILY (are these the same movement?) is now separate from ROLE (does the
+plan cover the job?). Back gained `vertical_pull`, `horizontal_lat`,
+`upper_mid_row`, `shoulder_extension` plus `spinal_erector` for the hinge
+work that was hiding in `lower_lat`. Quads gained `squat_press` vs
+`knee_extension`.
+
+Defects corrected, each of which was live in selection:
+
+- straight-arm pulldown and pullover were tagged `vertical_pull`, so a plan
+  could report a covered vertical pull with no pulldown or chin-up in it;
+- `lower_lat` held the deadlift family and back extensions, could satisfy a
+  lat slot, and generated copy telling users a deadlift builds their
+  V-taper;
+- `sweep` held BOTH knee-forward squats and the leg extension, so quad
+  coverage of "both families" was satisfiable by two squats;
+- `V-Bar Pulldown` was untagged and defaulted to the back muscle default,
+  `horizontal_row`, so a pulldown counted as a row.
+
+Also found: the generated pool and the hardcoded fallback POOL DISAGREED
+with each other (Cable High Row, straight-arm pulldown). Which taxonomy a
+plan obeyed depended on whether the user's library was thin enough to
+trigger the fallback. Both now normalise through one authority at
+`buildEffectivePool`.
+
+Two regressions surfaced while landing it, both fixed rather than left:
+
+- the hard-cap trim could drop a muscle's ONLY exercise on the stated
+  grounds that it was "still trained on the split's OTHER day(s)" - which
+  was assumed, not checked. Figure 5-day with arm weak points delivered
+  chest = 0. Now computed across the assembled week.
+- the canonicality gate could remove the only remaining exercise able to
+  cover a required role, so a second leg session took a redundant squat,
+  which cost the time the trim then took from a glute exercise. Coverage
+  now falls back past the preference.
+
+Rulings recorded: triceps `pushdown` is `whenVolumePermits` (14+ weekly),
+not a hard requirement, because forcing it displaced a whole muscle. The
+`Glute-Ham Raise Machine` retag was REVERTED and recorded as contested: it
+is the only machine-profile hip-extension hamstring movement in the
+library, so reclassifying it starves machines-only users.
+
+### Job 9 — what changed and why
+
+Identity is stamped at generation (`makeEx` carries `exerciseId`), the
+fallback pool may only offer names the FULL catalogue has, and the dry run
+and commit resolve through ONE function (`resolvePlanAgainstLibrary`). The
+preview now returns the RESOLVED plan, so what is previewed is what is
+written.
+
+The catalogue gate is on the full catalogue, NOT the intent-filtered
+library, deliberately: an excluded exercise still exists, and Campaign 9
+requires that slot to be reported so the user chooses rather than silently
+refilled. Gating on the filtered library would have swallowed that report.
+
+### Job 7 — what changed and why
+
+`heavy_compound` hypertrophy range 5-9 -> 6-10 (not 8-12; the tiers must
+keep expressing how heavy the movement is). One exercise-specific override
+only, the deadlift family at 5-8, with its reasoning stated - a
+per-exercise rep table would be the micro-targeting the campaign was told
+to avoid.
+
+Second defect, worse than the logged one: a plan-level swap changed the
+exercise and left the previous exercise's reps, rest AND STARTING WEIGHT on
+the row. Load is now always cleared. Reps and rest are recalibrated only
+when the row still carries the outgoing tier's default AND the tier
+changes, so a user's own tuning is never overwritten.
 
 ## Founder amendment (programme epochs) — status
 
@@ -39,15 +118,15 @@ Key design decisions worth knowing before continuing:
 
 | Job | State | Where |
 |---|---|---|
-| 1 trace + baseline harness | PARTIAL | trace done, `campaign16.helpers.js` landed; the formal dry-run/commit identity suite is NOT written |
+| 1 dry-run/commit/activation identity | PARTIAL | dry-run vs commit identity PINNED by `campaign16.canonicalIdentity`; activation leg outstanding |
 | 2 exercise canonicality | LANDED | `src/lib/exercise/canonicality.js`, wired into `selectExercisesForMuscle` |
-| 3 movement/regional coverage | NOT STARTED | current taxonomy traced in full below |
+| 3 movement/regional coverage | LANDED | `src/lib/exercise/movementFamily.js` + migration v74 |
 | 4 remove auto supersets | LANDED | `planEngine` finalise step, seeded-plan copy |
 | 5 initial vs rebuild continuity | NOT STARTED | |
-| 6 volume delivery integrity | PARTIAL | one real defect found and fixed (see below); no dedicated suite |
-| 7 rep/rest/load prescription | NOT STARTED | one observation recorded below |
+| 6 volume delivery integrity | PARTIAL | two real defects found and fixed; dedicated suite outstanding |
+| 7 rep/rest/load prescription | LANDED | `src/lib/exercise/prescription.js` |
 | 8 split/days/session matrix | NOT STARTED | |
-| 9 canonical exercise identity | PARTIAL | the silent-drop defect is FIXED for the one live case; the name-matching architecture is unchanged |
+| 9 canonical exercise identity | LANDED | `src/lib/exercise/canonicalId.js`, one resolution seam |
 | 10 structured why-this-plan | NOT STARTED | |
 | 11 explain the rebuild | NOT STARTED | |
 | 12 product matrix | NOT STARTED | |
