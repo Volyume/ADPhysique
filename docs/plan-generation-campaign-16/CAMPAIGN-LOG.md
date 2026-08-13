@@ -3,6 +3,38 @@
 Live log. Baseline `31c67b59`. Everything below that says LANDED is on
 `main` and green; nothing is sitting on a branch.
 
+## Founder amendment (programme epochs) — status
+
+| Item | State |
+|---|---|
+| Epoch model + verdicts (engine) | LANDED `src/lib/programmeEpoch.js` |
+| Required tests 1-16 | LANDED, 39 cases incl. longitudinal A-H |
+| Required tests 17-20 (UX copy/notification) | NOT STARTED - needs the screens |
+| Wiring epoch verdicts into the real next-block flow | NOT STARTED |
+| Recovery-week in-app heads-up | NOT STARTED |
+| Next-block review screen (verdict, stays/changes/why) | NOT STARTED |
+| Block-complete push via existing category | NOT STARTED |
+| Repeat bypasses elective refresh | NOT WIRED (law encoded, not yet enforced at the call site) |
+
+The engine layer is complete and pure: `structureSignature`,
+`countEpochBlocks`, `slotVerdict`, `programmeVerdict`, `epochContinues`.
+What remains is consuming it in `blockAdvisor` / `buildSeedRangesForNextBlock`
+and rendering it.
+
+Key design decisions worth knowing before continuing:
+
+- The structural signature excludes sets, ramps, recovery, rep ranges,
+  rest AND the programme database id. Volume changes therefore cannot
+  reset the epoch, and a copied plan does not fake a new one.
+- `EPOCH_CONTINUITY_SIMILARITY` (0.6) decides only whether the epoch
+  counter continues. It is NOT a refresh-eligibility threshold and
+  nothing consults it to decide whether an exercise may change.
+- Exactly one reason is gated on the 3-block threshold
+  (SYSTEMATIC_VARIATION). `isEarlyTrigger()` exports that law so it is
+  checkable rather than implicit in the ordering.
+- `EPOCH_REVIEW_BLOCKS = 3` is documented in code as a product heuristic,
+  explicitly not as a scientific claim.
+
 ## Status by job
 
 | Job | State | Where |
