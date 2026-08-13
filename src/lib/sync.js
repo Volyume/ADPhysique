@@ -1469,9 +1469,94 @@ const PREF_EXCLUDE_PATTERNS = [
   /^@volyume_pref_written_at_/,
 ];
 
+// ─── C14 job 1: FAIL-CLOSED preference sync ──────────────────────────────
+//
+// The model used to be "@volyume_* syncs unless somebody remembers to
+// exclude it". That is backwards for privacy and user control: a new
+// device-local, sensitive, ephemeral or implementation-only key became
+// cross-device state simply by using the normal namespace, and the only
+// defence was a human remembering to extend a blocklist. Campaign 10H
+// closed one such leak by name and recorded the architecture as still
+// fail-open.
+//
+// Now an UNKNOWN key does not sync. A preference reaches the cloud only by
+// being classified here, deliberately, as cross-device user state.
+//
+// The classification behind the list (kept as code, not a prose document):
+//   A SYNCED USER CHOICE      - listed below; follows the signed-in user
+//   B DEVICE-LOCAL CHOICE     - camera facing, palette order, tz offset
+//   C PRIVACY / SAFETY LOCAL  - privacy prefs, SCOFF answers, cycle tracking
+//   D EPHEMERAL / CACHE       - crash logs, widget snapshot, seen-flags,
+//                               dismissals, migration receipts, drafts,
+//                               sync cursors, in-progress workout snapshot
+//   E OWN SYNC MECHANISM      - anything with its own table/registry entry
+//   F LEGACY / DEAD           - no live writer or reader
+//
+// Only A is listed. Everything else is refused by omission, which is the
+// point: forgetting to classify a new key now fails SAFE.
+const SYNCED_PREF_PATTERNS = [
+  // Core account-level choices.
+  /^@volyume_units$/,
+  /^@volyume_a11y_prefs$/,
+  /^@volyume_workout_prefs$/,
+  /^@volyume_schedule_v1$/,
+  /^@volyume_intent_prompt_off$/,
+  /^@volyume_physique_tracking_enabled$/,
+  // The profile blob and its per-field write stamps travel together: the
+  // blob carries coachTone, coachAutonomy, showScience, bodyWeightUnits and
+  // the meal-plan prefs, none of which exist as cloud columns.
+  /^@volyume_user_profile_/,
+  // Notification choices (the guarded family: every writer stamps).
+  /^@volyume_notification_prefs$/,
+  /^@volyume_quiet_hours_v1$/,
+  /^@volyume_meal_reminders$/,
+  /^@volyume_reminder_enabled_v1$/,
+  /^@volyume_reminder_time_v1$/,
+  // Nutrition/diary choices the user sets explicitly.
+  /^@volyume_meal_labels$/,
+  /^@volyume_meals_per_day$/,
+  /^@volyume_water_target_ml$/,
+  /^@volyume_nutrition_targets$/,
+  /^@volyume_perday_target_offsets/,
+  // Training-volume intent: manual landmarks are guarded, never clobbered.
+  /^@volyume_landmarks_/,
+  // Progress-scan display choices (what the user wants shown, not scans).
+  /^@volyume_progress_scan_hide_exact_numbers$/,
+  /^@volyume_progress_scan_timer_seconds$/,
+  // Exercise-level user choices.
+  /^@volyume_unilateral_exercises$/,
+  /^@volyume_unilateral_asked_exercises$/,
+  // Chart lens choices: which metric/window the user prefers to see.
+  /^@volyume_chart_window_/,
+  /^@volyume_chart_metric_detail$/,
+  // Streak state carries explicit choices (manual goal, pauses) plus the
+  // retro-shrink guard; guarded, and already synced.
+  /^@volyume_streak_v1_/,
+  // Win-back episode state: single-shot, guarded, already synced.
+  /^@volyume_winback_/,
+  // PRE-EXISTING and deliberately unchanged: calm mode already syncs as a
+  // guarded pref, because calm is the STRICTER state and a device that
+  // knows less must not be able to turn it off. C14 preserves that exactly
+  // and does NOT broaden anything else wellbeing-adjacent. D92-11
+  // (cross-device ED/wellbeing propagation) remains a separate founder
+  // decision and is untouched here.
+  /^@volyume_wellbeing_mode$/,
+];
+
+/**
+ * The ONE classification governing both directions of generic pref sync.
+ * Push filters with it, pull filters with it, so a key can never be
+ * uploadable but not downloadable (or the reverse).
+ *
+ * Unknown key -> false. Known local/sensitive key -> false (the exclusion
+ * list is retained as a deliberate second gate, so the privacy families
+ * Campaign 10H named stay refused even if someone later widens the
+ * allowlist by mistake).
+ */
 export function shouldSyncPref(key) {
-  if (!key.startsWith(PREF_PREFIX)) return false;
-  return !PREF_EXCLUDE_PATTERNS.some(re => re.test(key));
+  if (typeof key !== 'string' || !key.startsWith(PREF_PREFIX)) return false;
+  if (PREF_EXCLUDE_PATTERNS.some(re => re.test(key))) return false;
+  return SYNCED_PREF_PATTERNS.some(re => re.test(key));
 }
 
 // ─── Guarded prefs (Campaign 1 P0-8 D10/D11) ─────────────────────────────
