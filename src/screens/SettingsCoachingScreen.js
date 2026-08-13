@@ -10,6 +10,7 @@ import * as haptics from '../lib/haptics';
 import { getUserBodyProfile } from '../lib/database';
 import { getWellbeingMode, setWellbeingMode } from '../lib/wellbeing';
 import { getCycleTracking, setCycleTracking } from '../lib/cyclePrefs';
+import { deleteUserPref, setUserPref } from '../lib/sync';
 import { SettingsPage, SettingRow, settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
 import Chip from '../components/Chip';
 
@@ -93,8 +94,12 @@ export default function SettingsCoachingScreen() {
     haptics.selection();
     setReadinessAsk(value);
     try {
-      if (value) await AsyncStorage.removeItem('@volyume_intent_prompt_off');
-      else await AsyncStorage.setItem('@volyume_intent_prompt_off', 'true');
+      // C14 job 2: turning the ask back ON deletes the key, and a delete
+      // that only happens locally is undone by the next pull - the cloud
+      // still holds 'true', so the prompt silently switches itself off
+      // again. deleteUserPref tombstones the cloud copy too.
+      if (value) await deleteUserPref(user?.id, '@volyume_intent_prompt_off');
+      else await setUserPref(user?.id, '@volyume_intent_prompt_off', 'true');
     } catch (_) { /* the Home start path re-reads each session */ }
   }
 

@@ -63,6 +63,19 @@ const _stamp = (key) => {
     require('../sync').notePrefWrite(key);
   } catch (_) { /* best-effort */ }
 };
+// C14 job 2: delete a synced pref everywhere (local remove + cloud
+// tombstone), not just on this device. Lazy require for the same
+// import-cycle reason as _stamp; degrades to a local removal if the sync
+// layer is unavailable, which is the pre-C14 behaviour.
+async function _deleteSyncedPref(key) {
+  try {
+    // eslint-disable-next-line global-require
+    await require('../sync').deleteUserPref(_uid(), key);
+  } catch (_) {
+    try { await AsyncStorage.removeItem(key); } catch (__) { /* tolerate */ }
+  }
+}
+
 /** Read base's per-user key, migrating any legacy device-global value. */
 async function _getMigrated(base) {
   const key = _keyFor(base);
@@ -202,8 +215,15 @@ export async function getLastFiredAt() {
  */
 export async function clearEpisode() {
   try {
-    await AsyncStorage.removeItem(_keyFor(EPISODE_KEY));
-    await AsyncStorage.removeItem(_keyFor(STATED_RETURN_KEY));
+    // C14 job 2: the per-user keys are synced guarded prefs, so removing
+    // them locally is not enough - the cloud still holds the closed
+    // episode, and the next pull writes it back. A returning subscriber
+    // would carry a closed episode into their fresh slate and could be
+    // refused their next legitimate win-back by the single-shot rule.
+    // deleteUserPref removes locally, stamps the edit and tombstones the
+    // cloud copy. The legacy global keys never synced, so they just go.
+    await _deleteSyncedPref(_keyFor(EPISODE_KEY));
+    await _deleteSyncedPref(_keyFor(STATED_RETURN_KEY));
     // The legacy global copies clear too, so a pre-migration episode
     // cannot resurface for the next signed-in user on this device.
     await AsyncStorage.removeItem(EPISODE_KEY);
