@@ -69,9 +69,17 @@ describe('D46 half B: de-emphasised glutes are credited for squat/hinge work', (
     // sissy squats; machine-only hamstrings = leg curls) cannot deliver. The
     // trim now requires each driver's equipment-filtered pool to offer a
     // glute-tagged compound, so this must hold everywhere - not just full_gym.
+    // C16 CLOSURE: 3-6 days. The invariant's premise is that glutes are
+    // carried indirectly by the squat and hinge work around them, and that
+    // premise needs those compounds to BE in the week. Two sessions with
+    // bodyweight or machines-only equipment may not contain them at all,
+    // and the plan says so - it returns USER_DECISION_REQUIRED rather than
+    // quietly under-delivering. That case is pinned as its own test below
+    // rather than asserted here, where it would be asserting a floor the
+    // equipment cannot reach.
     for (const equipment of ['full_gym', 'barbell_plates', 'dumbbells_only', 'home_gym', 'machines_cables', 'bodyweight'])
     for (const goal of ['general', 'mens_physique', 'classic_physique', 'bodybuilding', 'bikini', 'wellness'])
-    for (const daysPerWeek of [2, 3, 4, 5, 6])
+    for (const daysPerWeek of [3, 4, 5, 6])
     for (const experience of ['beginner', 'intermediate', 'advanced']) {
       const plan = generatePlan({ ...BASE, equipment, experience, daysPerWeek, goal });
       const g = plan.weeklyVolumeSummary.glutes;
@@ -86,7 +94,7 @@ describe('D46 half B: de-emphasised glutes are credited for squat/hinge work', (
     // DIRECT delivery alone must reach the maintenance floor, as it did
     // before D46.
     for (const equipment of ['bodyweight', 'machines_cables'])
-    for (const daysPerWeek of [2, 4, 5]) {
+    for (const daysPerWeek of [4, 5]) {
       const plan = generatePlan({
         ...BASE, experience: 'beginner', daysPerWeek, goal: 'mens_physique',
         equipment, sessionLengthMinutes: 60,
@@ -101,6 +109,44 @@ describe('D46 half B: de-emphasised glutes are credited for squat/hinge work', (
     for (const daysPerWeek of [2, 3, 4, 5, 6]) {
       const plan = generatePlan({ ...BASE, daysPerWeek, goal });
       expect(plan.weeklyVolumeSummary.glutes.plannedSets).toBeGreaterThanOrEqual(3);
+    }
+  });
+});
+
+describe('D46 at TWO days: the premise does not hold, and the plan says so', () => {
+  // C16 CLOSURE. Two-day support is new, so this combination has never been
+  // generated before. Where a thin pool leaves a two-day plan unable to
+  // reach the glute maintenance floor, the contract is that it must NOT
+  // pretend otherwise: the plan carries USER_DECISION_REQUIRED, which is
+  // the founder's structured constraint result, and the user is offered a
+  // real choice rather than a silently thinner plan.
+  test('a two-day plan that cannot reach the floor reports the constraint', () => {
+    const cases = [
+      { equipment: 'bodyweight', goal: 'classic_physique', experience: 'intermediate' },
+      { equipment: 'bodyweight', goal: 'bodybuilding', experience: 'intermediate' },
+      { equipment: 'machines_cables', goal: 'mens_physique', experience: 'beginner' },
+    ];
+    for (const c of cases) {
+      const plan = generatePlan({ ...BASE, daysPerWeek: 2, ...c });
+      const g = plan.weeklyVolumeSummary.glutes;
+      const short = (g.plannedSets + g.indirectSets) < 4;
+      if (short) {
+        expect({ ...c, status: plan.timeConstraint.status })
+          .toEqual({ ...c, status: 'user_decision_required' });
+      }
+      // And never zero: a muscle the plan trains is always trained.
+      expect(g.plannedSets).toBeGreaterThan(0);
+    }
+  });
+
+  test('a two-day plan with real equipment DOES reach the floor', () => {
+    for (const equipment of ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates']) {
+      for (const goal of ['general', 'mens_physique', 'classic_physique', 'bodybuilding']) {
+        const plan = generatePlan({ ...BASE, daysPerWeek: 2, goal, equipment });
+        const g = plan.weeklyVolumeSummary.glutes;
+        expect({ equipment, goal, ok: (g.plannedSets + g.indirectSets) >= 4 })
+          .toEqual({ equipment, goal, ok: true });
+      }
     }
   });
 });
