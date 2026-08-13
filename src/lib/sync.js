@@ -1467,6 +1467,11 @@ const PREF_EXCLUDE_PATTERNS = [
   // import another device's clock and defeat the guard they exist for
   // (exactly the failure the cursor/watermark exclusions above fix).
   /^@volyume_pref_written_at_/,
+  // C15 job 4: the per-day offsets write clock, excluded by name as the
+  // second gate. Same class as the stamps above: it records when THIS
+  // device last wrote the offsets, so importing another device's value
+  // defeats the push gate it feeds. The offsets PAYLOAD still syncs.
+  /^@volyume_perday_target_offsets_updated_at$/,
 ];
 
 // ─── C14 job 1: FAIL-CLOSED preference sync ──────────────────────────────
@@ -1516,8 +1521,54 @@ const SYNCED_PREF_PATTERNS = [
   /^@volyume_meal_labels$/,
   /^@volyume_meals_per_day$/,
   /^@volyume_water_target_ml$/,
+  // ── C15 job 4: generic-vs-dedicated ownership, ruled 2026-08-13 ──────────
+  // Both keys below ALSO have a dedicated cloud table, so C14 left them here
+  // conservatively without proving the dedicated round-trip. Both were then
+  // re-traced end to end against the rule "one user state must not have two
+  // independent cross-device authorities". They land DIFFERENTLY, and both
+  // stay, for reasons that are specific rather than cautious. The proof is
+  // kept as code here and pinned in campaign15.syncOwnership.test.js.
+  //
+  // @volyume_nutrition_targets - SPLIT OWNERSHIP, not a duplicate authority.
+  //   The dedicated `nutrition_targets` table (registry entry + handler
+  //   sync/tables/nutritionTargets.js) owns the ENGINE row in SQLite and
+  //   restores it via insertNutritionTargetsFromCloud, which writes SQLite
+  //   and ONLY SQLite. It never writes this AsyncStorage key.
+  //   This key is a separate DISPLAY mirror with its own readers (the Home
+  //   phase-mismatch banner, the setup-complete kcal and macro summary, the
+  //   Body Metrics nutrition card), and it carries at least one field the
+  //   cloud row has no column for: maintenanceKcal, written by
+  //   ProOnboardingScreen and read by BodyMetricsScreen's TDEE estimate.
+  //   Generic pref sync is therefore the ONLY thing that restores the mirror
+  //   on a fresh install; dropping this entry would leave those surfaces
+  //   blank after a reinstall for no gain.
+  //   The two mechanisms cannot race, because they write different stores:
+  //   _pullUserPrefs only ever writes AsyncStorage, and the dedicated pull
+  //   only ever writes SQLite. Neither can overwrite the other's copy, and
+  //   neither can move an engine value or a safety floor.
   /^@volyume_nutrition_targets$/,
-  /^@volyume_perday_target_offsets/,
+  // @volyume_perday_target_offsets - the dedicated `perday_target_offsets`
+  //   table IS the designed authority (bidirectional, with a real
+  //   last-write-wins gate in applyPerDayOffsetsFromCloud), and it does
+  //   restore on a fresh install. It is NOT yet a COMPLETE carrier, which is
+  //   the only reason this entry survives: pushPerDayTargetOffsets skips the
+  //   upload entirely when the local write clock is 0, and offsets last saved
+  //   by any build older than that sync handler have the payload key but no
+  //   clock. For those users generic pref sync is the only thing carrying
+  //   their offsets, so removing this would silently lose a live Pro setting.
+  //   A live data path is not removed for architecture neatness.
+  //   The pattern is ANCHORED (lead ruling, C15). Unanchored it also matched
+  //   the sibling @volyume_perday_target_offsets_updated_at, which is THIS
+  //   device's write provenance - the same class as the
+  //   @volyume_pref_written_at_ stamps excluded above - and it is not a
+  //   guarded pref, so the pull's unconditional multiSet imported another
+  //   device's clock straight over the gate that clock exists to feed.
+  //   Anchoring costs nothing: there are exactly two keys and neither is
+  //   per-user, so the payload still rides generic sync. A fresh install that
+  //   restores offsets without a clock behaves exactly as a pre-sync user
+  //   already does (the dedicated push skips until this device writes), which
+  //   is why no backfill is needed to make this correct.
+  /^@volyume_perday_target_offsets$/,
   // Training-volume intent: manual landmarks are guarded, never clobbered.
   /^@volyume_landmarks_/,
   // Progress-scan display choices (what the user wants shown, not scans).
