@@ -1,0 +1,61 @@
+-- migrate_137_exercise_swap_scope.sql
+--
+-- Purpose:           add `scope` to public.exercise_swaps, so a temporary
+--                    session substitution is distinguishable from a
+--                    permanent programme replacement.
+--
+--                    Campaign 16 additional quality law 1: "Distinguish
+--                    temporary session swaps from persistent programme
+--                    replacements and explicit Don't Suggest. A one-day
+--                    equipment-availability substitution must not teach
+--                    negative exercise preference."
+--
+--                    The defect this closes, precisely: ActiveWorkoutScreen
+--                    recorded a swap made DURING a workout - on a sheet
+--                    that explicitly tells the user the plan is unchanged,
+--                    usually because the machine was busy - in exactly the
+--                    same shape RoutineDetailScreen used for a permanent
+--                    plan edit. Both fed one counter, and two busy-machine
+--                    days reached the threshold at which Volyume proposes
+--                    removing the exercise from the user's programme.
+--
+--                    Values: 'session' | 'programme'. NULL means the row
+--                    predates the column and its kind is genuinely unknown.
+--                    The client's NEGATIVE reading counts only 'programme',
+--                    so an unknown row can never cost a user an exercise;
+--                    the POSITIVE reading (this was chosen as a
+--                    replacement) still counts every row, because choosing
+--                    something is a positive signal whatever its scope.
+--
+--                    Not health data and not training history, exactly as
+--                    migrate_136 records for the table itself: this is a
+--                    preference about FUTURE suggestions. No RLS, index or
+--                    grant changes are needed - the column joins an
+--                    existing user-scoped table whose policies already
+--                    cover it.
+--
+-- Applied locally:   YES (src/lib/database.js SCHEMA_MIGRATIONS v75).
+-- Applied remotely:  NO. Founder-gated. Requires the exact phrase
+--                    "run against production" before it is applied.
+--
+--                    Ship order does NOT matter for this one, unlike
+--                    migrate_136: the client's push sends `scope` as an
+--                    additional column, and a build may ship before this
+--                    runs. Until it does, the column is simply absent
+--                    remotely and swap rows round-trip without it, which
+--                    the client already treats as unknown.
+--
+-- Additive:          YES. One nullable column on an existing table. No
+--                    data is rewritten, no row is added or removed, and no
+--                    existing column changes type or nullability.
+-- Safe to re-run:    YES. `add column if not exists` throughout.
+-- Rollback:          alter table public.exercise_swaps drop column if exists scope;
+--                    Dropping it returns every row to "unknown", which the
+--                    client reads as not-negative-preference. Nothing else
+--                    depends on the column.
+
+alter table public.exercise_swaps
+  add column if not exists scope text;
+
+comment on column public.exercise_swaps.scope is
+  'session | programme | null(unknown). Only ''programme'' counts as negative exercise preference; a session substitution (busy machine) must never teach dislike. See Campaign 16 quality law 1.';

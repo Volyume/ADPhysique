@@ -36,6 +36,7 @@ import NowCard from '../components/workout/NowCard';
 import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
+import { SWAP_SCOPE } from '../lib/exercise/swapScope';
 import { getAllCompletedSetsForExercise, getWorkoutById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, recordExerciseSwap, getActiveBlock } from '../lib/database';
 import { loadExerciseIntentState, rankPersonalised } from '../lib/exercise/intent';
 import { enqueueSyncOp } from '../lib/syncQueue';
@@ -862,9 +863,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // too - even though it deliberately does NOT change the plan (the sheet
     // says so). Recorded with the routine it happened in, so the preference
     // stays contextual. Best-effort: this must never fail the swap.
+    //
+    // C16 quality law 1: recorded as SESSION scope. Substituting here
+    // because the machine was busy must never teach Volyume that the user
+    // dislikes the exercise - before this it was indistinguishable from
+    // editing the exercise out of the programme, and two busy-machine days
+    // were enough to have it proposed for removal.
     if (user?.id && exercise?.id && newExercise?.id) {
       recordExerciseSwap(user.id, exercise.id, newExercise.id, {
         routineId: activeWorkout?.routineId ?? null, explicit: true,
+        scope: SWAP_SCOPE.SESSION,
       }).catch(() => {});
     }
     cancelAutoAdvance();

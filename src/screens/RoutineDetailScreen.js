@@ -12,6 +12,7 @@ import Card from '../components/Card';
 import { Skeleton, SkeletonCard } from '../components/Skeleton';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
+import { SWAP_SCOPE } from '../lib/exercise/swapScope';
 import {
   getRoutineById, getRoutineExercisesWithDetails, getAllExercises,
   addExerciseToRoutine, removeExerciseFromRoutine, createWorkout, updateRoutineExercise,
@@ -431,7 +432,12 @@ export default function RoutineDetailScreen({ navigation, route }) {
     // contextual - "usually chosen instead of A here", never "the user
     // prefers B". Only real actions write here; ranking never does.
     if (user?.id && originalId) {
-      recordExerciseSwap(user.id, originalId, newExercise.id, { routineId, explicit: true })
+      // C16 quality law 1: PROGRAMME scope. This one really did edit the
+      // plan, so it is the kind of swap that may legitimately count as
+      // negative preference.
+      recordExerciseSwap(user.id, originalId, newExercise.id, {
+        routineId, explicit: true, scope: SWAP_SCOPE.PROGRAMME,
+      })
         .catch(() => {}); // best-effort: a failed record must not fail the swap
     }
     const proposal = defaultProposal;

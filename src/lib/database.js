@@ -2180,6 +2180,7 @@ const SCHEMA_MIGRATIONS = [
       routine_id TEXT,
       mesocycle_id TEXT,
       explicit INTEGER NOT NULL DEFAULT 1,
+      scope TEXT,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       deleted_at INTEGER
@@ -2197,6 +2198,37 @@ const SCHEMA_MIGRATIONS = [
       UNIQUE(user_id, from_exercise_id, routine_id)
     )`,
     'CREATE INDEX IF NOT EXISTS idx_exercise_slot_defaults_user ON exercise_slot_defaults(user_id, from_exercise_id)',
+  ],
+  // v75, swap SCOPE (Campaign 16 additional quality law 1). A swap made
+  // during a workout because the machine was busy is NOT the same fact as
+  // deliberately editing the exercise out of the programme, and it is not
+  // remotely the same fact as "don't suggest this again". Before this they
+  // were one undifferentiated event: ActiveWorkoutScreen recorded a session
+  // substitution - on a sheet that explicitly says it does not change the
+  // plan - in exactly the shape RoutineDetailScreen used for a permanent
+  // plan edit. Two busy-machine days therefore reached the >= 2
+  // swapped-away threshold and the exercise was proposed for removal from
+  // the user's programme.
+  //
+  // `scope` is 'session' or 'programme'. Rows written before this migration
+  // are left NULL, because which kind they were is genuinely unknown, and
+  // the NEGATIVE reading (intent.swappedAwayCount) counts only 'programme'.
+  // That asymmetry is deliberate: under-counting costs a user one more
+  // deliberate swap before Volyume acts, over-counting silently removes an
+  // exercise they like. POSITIVE evidence (this was chosen as a
+  // replacement) still counts every row, because choosing something is a
+  // positive signal whatever the scope.
+  //
+  // Applied: LOCALLY via this user_version bump. Cloud counterpart is
+  // supabase/migrate_137_exercise_swap_scope.sql - written, NOT applied,
+  // founder-gated. The push tolerates the column's absence in the cloud
+  // (the row still carries every other field), so a build can ship before
+  // that migration runs without losing swap history.
+  // Additive: yes (one nullable column). Safe to re-run: yes (the runner
+  // treats a duplicate-column error as benign). Rollback: the column can be
+  // left in place and ignored; readers treat NULL as unknown.
+  [
+    'ALTER TABLE exercise_swaps ADD COLUMN scope TEXT',
   ],
   // v74, movement-family taxonomy correction (Campaign 16 job 3,
   // src/lib/exercise/movementFamily.js). The seeded library's back and quad
@@ -9022,7 +9054,7 @@ export async function getExerciseIntents(userId) {
  * Record an A->B replacement. Append-only: the log IS the evidence, and a
  * later swap away from B does not erase that B was once chosen.
  */
-export async function recordExerciseSwap(userId, fromExerciseId, toExerciseId, { routineId = null, mesocycleId = null, explicit = true } = {}) {
+export async function recordExerciseSwap(userId, fromExerciseId, toExerciseId, { routineId = null, mesocycleId = null, explicit = true, scope = null } = {}) {
   if (!userId || !fromExerciseId || !toExerciseId) return null;
   if (fromExerciseId === toExerciseId) return null;
   const d = await db();
@@ -9030,9 +9062,9 @@ export async function recordExerciseSwap(userId, fromExerciseId, toExerciseId, {
   const id = uid();
   await d.runAsync(
     `INSERT INTO exercise_swaps
-       (id, user_id, from_exercise_id, to_exercise_id, routine_id, mesocycle_id, explicit, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, userId, fromExerciseId, toExerciseId, routineId, mesocycleId, explicit ? 1 : 0, now, now],
+       (id, user_id, from_exercise_id, to_exercise_id, routine_id, mesocycle_id, explicit, scope, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, fromExerciseId, toExerciseId, routineId, mesocycleId, explicit ? 1 : 0, scope, now, now],
   );
   _scheduleSync();
   return id;
@@ -9045,7 +9077,7 @@ export async function getExerciseSwaps(userId, { fromExerciseId = null, limit = 
   const args = [userId];
   let sql = `SELECT from_exercise_id AS fromExerciseId, to_exercise_id AS toExerciseId,
                     routine_id AS routineId, mesocycle_id AS mesocycleId,
-                    explicit, created_at AS createdAt
+                    explicit, scope, created_at AS createdAt
                FROM exercise_swaps
               WHERE user_id = ? AND deleted_at IS NULL`;
   if (fromExerciseId) { sql += ' AND from_exercise_id = ?'; args.push(fromExerciseId); }
@@ -9716,12 +9748,13 @@ export async function insertOrUpdateExerciseSwapFromCloud(userId, row) {
   await d.runAsync(
     `INSERT OR IGNORE INTO exercise_swaps
       (id, user_id, from_exercise_id, to_exercise_id, routine_id, mesocycle_id,
-       explicit, created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       explicit, scope, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id, userId, row.from_exercise_id, row.to_exercise_id,
       row.routine_id ?? null, row.mesocycle_id ?? null,
       row.explicit === false || row.explicit === 0 ? 0 : 1,
+      row.scope ?? null,
       created,
       _tsToMs(row.updated_at) ?? created,
       _tsToMs(row.deleted_at) ?? null,

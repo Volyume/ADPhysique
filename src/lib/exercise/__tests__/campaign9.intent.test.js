@@ -15,7 +15,7 @@
 import {
   loadExerciseIntentState,
   isExcluded, isAvoidedThisBlock, isEligible, filterEligible,
-  approvedDefaultFor, swapEvidenceFor, swappedAwayCount, previouslyUsedBefore,
+  approvedDefaultFor, swapEvidenceFor, swappedAwayCount, sessionSubstitutionCount, previouslyUsedBefore,
   exerciseEvidence, repeatedDefaultCandidate, rankPersonalised,
   EXERCISE_INTENT, RANK_TIER, REPEATED_SWAP_MIN,
 } from '../intent';
@@ -126,9 +126,31 @@ describe('swap memory is contextual, not global', () => {
     expect(top).toEqual(expect.objectContaining({ exerciseId: 'cs-row', count: 2 }));
   });
 
-  test('swapped-away frequency is counted honestly', () => {
-    expect(swappedAwayCount(s, 'bb-row')).toBe(3);
+  // RE-ANCHORED, C16 quality law 1. This used to count every swap row.
+  // Since scope exists, only a PROGRAMME swap is negative preference: a
+  // substitution made mid-workout because the machine was busy must not
+  // teach Volyume that the user dislikes the exercise. The fixture rows
+  // predate scope and are therefore unknown, which is exactly the case the
+  // law says must not count.
+  test('swapped-away frequency counts programme swaps only', () => {
+    expect(swappedAwayCount(s, 'bb-row')).toBe(0);
     expect(swappedAwayCount(s, 'cs-row')).toBe(0);
+
+    const scoped = stateOf({
+      swaps: [
+        { fromExerciseId: 'bb-row', toExerciseId: 'cs-row', explicit: 1, createdAt: 300, scope: 'programme' },
+        { fromExerciseId: 'bb-row', toExerciseId: 'cs-row', explicit: 1, createdAt: 200, scope: 'session' },
+        { fromExerciseId: 'bb-row', toExerciseId: 'lat-pull', explicit: 1, createdAt: 100, scope: 'programme' },
+      ],
+    });
+    expect(swappedAwayCount(scoped, 'bb-row')).toBe(2);
+    expect(sessionSubstitutionCount(scoped, 'bb-row')).toBe(1);
+  });
+
+  test('the positive reading still counts EVERY swap, whatever its scope', () => {
+    // Choosing something is a positive signal however it happened. Only the
+    // negative reading is scope-gated.
+    expect(swapEvidenceFor(s, 'bb-row').map((e) => e.count)).toEqual([2, 1]);
   });
 
   test('the previous exercise stays findable after a second swap', () => {

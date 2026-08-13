@@ -121,6 +121,12 @@ export function toPoolEntry(ex) {
     // read, so this stays shape-compatible with the hand-written POOL.
     difficulty: ex.difficulty ?? null,
     sfr: ex.stimulusToFatigueRatio ?? null,
+    // C16 quality law 4: systemic fatigue cost (1-5), so selection can
+    // avoid stacking several very demanding movements in one session when
+    // an equally valid option would deliver the same stimulus. Null for the
+    // hand-written fallback pool, which is treated as unknown and never
+    // penalised.
+    fatigue: ex.fatigueCost ?? null,
     equipmentCategory: ex.equipmentCategory ?? null,
     // Secondary (synergist) muscles, primary-muscle vocab. Carried for indirect
     // volume modelling (spec phase 3e): each secondary counts a fractional set.
