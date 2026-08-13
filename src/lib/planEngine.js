@@ -16,6 +16,7 @@ import {
 } from './exercise/movementFamily';
 import { canonicalExerciseId } from './exercise/canonicalId';
 import { repRangeFor, restFor } from './exercise/prescription';
+import { fitToTimeBudget, FIT_STATUS, TIME_TOLERANCE_MIN } from './timeConstraint';
 // C5-P11-01 (D96): the block length the app actually creates. mesocycle.js
 // is a pure module (no I/O), so reading the constant here keeps planEngine
 // pure and deterministic; only a narrative string uses it, never a
@@ -362,6 +363,7 @@ function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPoin
     if (mult != null && mult >= 1.0) t[m] = Math.max(t[m] ?? 0, lm.MEV);
   }
 
+
   // Bikini/Wellness arms: not a judged priority, but at 5-6 days the upper body
   // should read "smaller, not absent" (Manion). Floor biceps/triceps to a token
   // 4 sets so a long lower-focused week still shows some arm tone, rather than
@@ -409,6 +411,15 @@ function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPoin
     );
     if (credit <= 0) return;
     const deEmphasised = overlay[muscle] != null && overlay[muscle] < 1.0;
+    // C16 CLOSURE: the indirect credit assumes the driver compounds are
+    // actually IN the week. A two-day plan holds far fewer exercises per
+    // muscle, so that assumption stops being reliable: a bodyweight
+    // two-day physique plan had its glutes trimmed on credit from squat
+    // and hinge work the plan did not end up containing, and delivered
+    // three effective sets against a maintenance floor of four. Skipping
+    // the trim below three days leaves every existing day count
+    // byte-identical and stops the credit being spent before it is earned.
+    if (effectiveDays < 3) return;
     let floor = lm.MEV + INDIRECT_TRIM_BUFFER;
     if (opts.structuralMaintenance && deEmphasised) {
       floor = Math.max(3, maint - credit);
@@ -465,6 +476,25 @@ function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPoin
     t.side_delts = Math.round(sd * scale);
     t.rear_delts = Math.round(rd * scale);
     t.front_delts = Math.round(fd * scale);
+  }
+
+  // C16 CLOSURE: at TWO days, glutes are floored to the maintenance floor.
+  //
+  // Glutes carry a landmark MEV of 0 because every division expects them to
+  // be fed INDIRECTLY by the squat and hinge work around them. Across three
+  // or more days that holds, and the indirect-credit trim above models it
+  // explicitly. Two sessions hold far fewer exercises, so those driver
+  // compounds may simply not be in the plan: a bodyweight two-day physique
+  // plan delivered three glute sets and no indirect credit at all, against
+  // a maintenance floor of four.
+  //
+  // Applied LAST, deliberately. Every earlier position was undone by
+  // something downstream - the division overlay scales it back, and the
+  // indirect-credit trim lowers the floor it enforces. Three-plus-day plans
+  // are untouched, and a division that already programmes glutes heavily
+  // (Bikini, Wellness) is far above this floor.
+  if (effectiveDays < 3) {
+    t.glutes = Math.max(t.glutes ?? 0, maint);
   }
 
   return t;
@@ -969,7 +999,7 @@ const MAX_EXERCISES_PER_SESSION = 8;
 const MAX_WORKING_SETS_PER_SESSION = 25;
 const sessionSetTotal = (list) => list.reduce((s, e) => s + (e.sets || 0), 0);
 
-function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structuralFloors = {}, soleSessionMuscles = null) {
+function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structuralFloors = {}, sessionsRemaining = null) {
   // The time budget is optional (0/null = no clock limit), but the per-session
   // exercise and working-set ceilings are ALWAYS enforced. `budget` is
   // Infinity when no length is set, so only the count/set caps bite then.
@@ -1101,13 +1131,17 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structural
     // muscle to ZERO for the week. Found in the wild: figure, 5 days,
     // biceps+triceps weak points, chest delivered 0 sets.
     //
-    // soleSessionMuscles is computed across the assembled week before any
-    // trimming, so the reasoning is now checked rather than believed. The
-    // caps stay hard - the pass simply prefers any other exercise first,
-    // and only refuses when the alternative is erasing a muscle.
+    // sessionsRemaining is a LIVE count across the assembled week, shared by
+    // every session's trim and decremented as muscles are dropped, so the
+    // reasoning is checked rather than believed. A snapshot was not enough:
+    // two sessions each reading "trained elsewhere" both dropped the same
+    // muscle and it reached zero for the week. The caps stay hard - the pass
+    // simply prefers any other exercise first, and only refuses when the
+    // alternative is erasing a muscle.
     const wouldEraseMuscle = (i) => {
       const m = result[i]._m;
-      if (!m || !soleSessionMuscles?.has(m)) return false;
+      if (!m) return false;
+      if ((sessionsRemaining?.[m] ?? 2) > 1) return false;
       return result.filter(x => x._m === m).length <= 1;
     };
     let dropIdx = -1;
@@ -1120,7 +1154,12 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structural
       }
     }
     if (dropIdx === -1) break; // every remaining entry is some muscle's only week
+    const droppedMuscle = result[dropIdx]._m;
     result.splice(dropIdx, 1);
+    // This session no longer trains that muscle: tell the rest of the week.
+    if (droppedMuscle && !result.some(x => x._m === droppedMuscle) && sessionsRemaining) {
+      sessionsRemaining[droppedMuscle] = Math.max(0, (sessionsRemaining[droppedMuscle] ?? 1) - 1);
+    }
   }
   // With <= 8 exercises at the 3-set floor a session is <= 24 sets, so this only
   // shaves the higher-set (structural/weak-point) entries back toward the floor;
@@ -1185,6 +1224,26 @@ function computeStructuralFloors(rawWorkouts, adjustedTargets, landmarks, effect
     const mev = landmarks[m]?.MEV ?? target;
     const reference = Math.min(target, Math.max(mev, maint));
     floors[m] = Math.min(STRUCTURAL_SESSION_FLOOR_CAP, Math.max(3, Math.round(reference / freq)));
+  }
+
+  // C16 CLOSURE: glutes get a floor at TWO days.
+  //
+  // Glutes are not in STRUCTURAL_MUSCLES, so the clock-trim had no floor to
+  // respect for them and shaved a two-day plan's single glute entry from
+  // four sets back to three - undoing the weekly floor applied upstream for
+  // exactly this case. Across three or more days the indirect credit from
+  // squat and hinge work covers the difference; two sessions cannot promise
+  // those compounds are present.
+  if (effectiveDays < 3) {
+    let freq = 0;
+    for (const w of rawWorkouts) {
+      if (w.exercises.some(ex => ex._m === 'glutes')) freq++;
+    }
+    const target = adjustedTargets.glutes ?? 0;
+    if (freq > 0 && target > 0) {
+      const reference = Math.min(target, maint);
+      floors.glutes = Math.max(floors.glutes ?? 0, Math.round(reference / freq));
+    }
   }
   return floors;
 }
@@ -1744,6 +1803,18 @@ function selectSplit(experience, effectiveDays, goal) {
   // the default non-competitor experience is unchanged.
   const legJudgedBalanced = (goal === 'bodybuilding' || goal === 'classic_physique'
     || goal === 'figure' || goal === 'womens_physique' || goal === 'womens_bodybuilding');
+  // C16 CLOSURE: two days is full body, for everyone.
+  //
+  // Two sessions cannot carry a split - an upper/lower at two days trains
+  // each half once a week, and a PPL at two days simply omits a third of
+  // the body. A whole-programme distribution across the two sessions is
+  // the only structure that covers the user's programme, which is the
+  // founder's ruling: "Do not squash a 3/4/5-day split into two labels."
+  //
+  // TWO DAYS MEANS TWO WORKOUTS IN THE SEQUENCE, never two named weekdays.
+  // Nothing here or downstream assigns a calendar day; the user performs
+  // the next workout whenever they train.
+  if (effectiveDays === 2) return 'full_body';
   if (effectiveDays === 3) {
     if (lowerFocus) return 'full_body';
     return (experience === 'advanced' || experience === 'competitive') ? 'ppl' : 'full_body';
@@ -2896,6 +2967,31 @@ export function classifySupersetPair(exA, exB) {
 // generator sitting beside a live one is how a future change quietly turns
 // it back on.
 
+/**
+ * C16 CLOSURE: classify the finished week against the requested length.
+ *
+ * Computed from the STAMPED durations, after every trim has run, because
+ * the status describes what the user actually receives. Reading the
+ * resolver's own intermediate view instead made plans report
+ * USER_DECISION_REQUIRED when the later per-session trim had already
+ * brought them inside the budget - crying wolf, which is its own kind of
+ * dishonesty.
+ */
+function buildTimeConstraintResult(workouts, sessionLengthMinutes, trimmed) {
+  const requested = Number(sessionLengthMinutes) || 0;
+  if (!requested) {
+    return { status: FIT_STATUS.FIT, requestedSessionMinutes: null, over: [] };
+  }
+  const ceiling = requested + TIME_TOLERANCE_MIN;
+  const over = (workouts ?? [])
+    .filter(w => (w.estimatedDurationMinutes ?? 0) > ceiling)
+    .map(w => ({ name: w.name, minutes: w.estimatedDurationMinutes }));
+  const status = over.length > 0
+    ? FIT_STATUS.USER_DECISION_REQUIRED
+    : (trimmed ? FIT_STATUS.CONSTRAINED_BUT_VALID : FIT_STATUS.FIT);
+  return { status, requestedSessionMinutes: requested, over };
+}
+
 export function generatePlan(inputs) {
   // Point selection at a library-generated pool for the duration of this
   // run when the caller supplies the library, then always restore POOL so
@@ -2941,13 +3037,22 @@ function _generatePlanInner(inputs) {
   const weakPointKeys    = resolveWeakPointKeys(safeWeakPointsUI);
   _weakPointKeys = weakPointKeys;  // visible to buildSession / buildFromMatrix
 
-  // Clamp to the supported 3-6 split range. selectSplit and DIVISION_MATRIX
-  // only define splits for 3-6 days; an out-of-range value (1, 2 or 7, e.g.
-  // from imported data) previously fell through selectSplit to a 6-day
-  // ppl_ab, so a user who asked for 2 days got six sessions. The rebuild spec
-  // assumes the caller clamps; do it here so the engine is safe on any input.
+  // Clamp to the supported 2-6 split range.
+  //
+  // C16 CLOSURE (founder ruling: "VOLYUME SUPPORTS REAL 2-DAY TRAINING. Do
+  // NOT silently clamp 2 -> 3"). The floor was 3, so a user who explicitly
+  // chose two sessions in the quiz received three and was never told. The
+  // original reason for the floor was real - an out-of-range value used to
+  // fall through selectSplit to a six-day ppl_ab, so 2 produced SIX
+  // sessions - but the fix for that is a defined 2-day split, not a silent
+  // upgrade to 3. selectSplit now returns full_body for 2, and
+  // buildFullBodyWorkouts already distributes muscles across whatever
+  // session count it is given.
+  //
+  // 1 and 7+ are still clamped: neither is offered anywhere in the app, and
+  // an imported or corrupted value must land on something defined.
   const requestedDays = Number.isFinite(daysPerWeek) ? Math.round(daysPerWeek) : 4;
-  const clampedDays = Math.min(6, Math.max(3, requestedDays));
+  const clampedDays = Math.min(6, Math.max(2, requestedDays));
   // Beginners capped at 4 days
   const effectiveDays = (experience === 'beginner' && clampedDays > 4) ? 4 : clampedDays;
 
@@ -3049,21 +3154,60 @@ function _generatePlanInner(inputs) {
   // entry on the stated grounds that the muscle is trained on another day;
   // for these muscles that is false, and the drop would zero them for the
   // week. Computed here because only the assembled week knows it.
-  const sessionsPerMuscle = {};
+  // Recomputed AFTER the time-constraint resolver, and LIVE rather than a
+  // snapshot.
+  //
+  // This was a Set of muscles trained in exactly one session, computed once.
+  // The per-session trim then ran independently on each session, so dropping
+  // a muscle from session A never told session B that it was now the only
+  // one left - and both dropped it, taking the muscle to zero for the week.
+  // A two-day machines-only plan lost its glutes entirely that way. The map
+  // is decremented as sessions are trimmed, so the protection sees the week
+  // as it actually is.
+  const sessionsRemaining = {};
   for (const w of rawWorkouts) {
     for (const m of new Set(w.exercises.map(e => e._m).filter(Boolean))) {
-      sessionsPerMuscle[m] = (sessionsPerMuscle[m] ?? 0) + 1;
+      sessionsRemaining[m] = (sessionsRemaining[m] ?? 0) + 1;
     }
   }
-  const soleSessionMuscles = new Set(
-    Object.keys(sessionsPerMuscle).filter(m => sessionsPerMuscle[m] === 1),
-  );
+
+  // C16 CLOSURE: the requested session length is a CONSTRAINT.
+  //
+  // This runs BEFORE the per-session trim and before the weekly volume
+  // summary is built, so the summary is recounted from what actually
+  // survived - the founder's step 8, made structural rather than a step
+  // that could be forgotten. It sees the whole week, which the per-session
+  // trim cannot, and that is what lets it lower a muscle's FREQUENCY
+  // (dropping one of its two days) instead of being stuck because every
+  // exercise is some muscle's only one in that session.
+  //
+  // It is handed the engine's own estimator, so the plan is optimised
+  // against exactly the number the user is shown.
+  const fitted = fitToTimeBudget(rawWorkouts, {
+    sessionLengthMinutes,
+    estimate: list => estimateSessionMinutes(list, equipment),
+    weakPointKeys,
+    structuralFloors,
+    // Each muscle's own weekly minimum: its MEV, or the maintenance floor
+    // where that is higher. A single number for the whole body let biceps
+    // (MEV 8) be trimmed to a general maintenance floor of 4.
+    weeklyFloors: Object.fromEntries(Object.keys(landmarks).map(m => [
+      m, Math.max(landmarks[m]?.MEV ?? 0, maintenanceFloor(effectiveDays)),
+    ])),
+    // Muscles the DIVISION deliberately emphasises. A Bikini athlete's
+    // glutes are the point of the plan; trimming them for the clock
+    // produces a different plan, not a shorter one.
+    priorityMuscles: Object.keys(adjustedTargets).filter(
+      m => (adjustedTargets[m] ?? 0) > (landmarks[m]?.MAVlow ?? Infinity),
+    ),
+  });
+  rawWorkouts = fitted.workouts;
 
   // Finalise: deduplicate, trim to time budget, assign supersets, stamp duration
   const workouts = rawWorkouts.map(w => {
     const deduped  = deduplicateExercises(w.exercises);
     const trimmed  = trimToTimeBudget(
-      deduped, sessionLengthMinutes, equipment, structuralFloors, soleSessionMuscles,
+      deduped, sessionLengthMinutes, equipment, structuralFloors, sessionsRemaining,
     );
     // C16 job 4 (FOUNDER RULING): auto-generated plans contain NO supersets.
     //
@@ -3185,6 +3329,15 @@ function _generatePlanInner(inputs) {
     estimatedSessionMinutes: sessionLengthMinutes,
     workouts:                validWorkouts,
     weeklyVolumeSummary,
+    // C16 CLOSURE: the structured constraint result. FIT means everything
+    // fits; CONSTRAINED_BUT_VALID means a legitimate lower-volume plan was
+    // built inside the time the user has; USER_DECISION_REQUIRED means we
+    // cannot honestly satisfy both the requested time and the minimum
+    // programme, and the user is owed a choice rather than an 80-minute
+    // session presented as a 45-minute one.
+    timeConstraint: buildTimeConstraintResult(
+      validWorkouts, sessionLengthMinutes, fitted.trimmed,
+    ),
     personalisationSummary,
     whyThis,
     warnings,
