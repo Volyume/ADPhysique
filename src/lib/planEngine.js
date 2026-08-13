@@ -7,6 +7,10 @@
 import { GOAL_LABELS as _GOAL_LABELS, GOAL_OVERLAYS, PHASE_OVERLAYS } from './coachingGoals';
 import { VOLUME_LANDMARKS } from './algorithms';
 import { generatePoolFromLibrary, deriveParamKey } from './poolGenerator';
+// C16 job 2: bodybuilding canonicality for AUTOMATIC selection. The
+// library is unchanged and manual search still reaches everything; this
+// only governs what the generator may pick on the user's behalf.
+import { isAutoEligible, tierRank, TIER_RANK, AUTO_TIER } from './exercise/canonicality';
 // C5-P11-01 (D96): the block length the app actually creates. mesocycle.js
 // is a pure module (no I/O), so reading the constant here keeps planEngine
 // pure and deterministic; only a narrative string uses it, never a
@@ -589,7 +593,13 @@ export const POOL = {
     { n: 'Cable Pull-Through',        sub: 'activator', p: 'isolation',    eq: ['full_gym', 'machines_cables'], secondary: ['hamstrings'] },
     { n: 'Glute Bridge',              sub: 'activator', p: 'mod_compound', eq: ['bodyweight'], secondary: ['hamstrings'] },
     { n: 'Step-Up (Dumbbell)',        sub: 'stretcher', p: 'mod_compound', eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['quads'] },
-    { n: 'Abductor Machine',          sub: 'pumper',    p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
+    // C16: was 'Abductor Machine', a name that exists in NO library entry.
+    // The fallback pool is matched to the library by NAME at persistence, so
+    // this one drifted entry was generated, counted in the plan's volume
+    // summary, and then silently dropped when the plan was saved - a
+    // glute-signature division lost 3 sets between preview and reality.
+    // Corrected to the seeded library's own name for the same machine.
+    { n: 'Abduction Machine',         sub: 'pumper',    p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
     { n: 'Cable Hip Abduction',       sub: 'pumper',    p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
   ],
   calves: [
@@ -1219,6 +1229,42 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
   let available = filterPool(muscle, equipment, goal);
   if (available.length === 0) return [];
 
+  // C16 job 2: NEVER_AUTO is a hard filter, not a preference. These are
+  // conditioning and Olympic movements that are not hypertrophy work,
+  // lifts whose risk profile no automatic plan should assign unprompted,
+  // and competition/skill lifts. They stay searchable and manually
+  // selectable; the generator simply cannot reach them.
+  //
+  // No never-starve guard here, deliberately, unlike the difficulty and
+  // assisted gates below. Those trade a preference for coverage; this one
+  // would be trading the reason the exercise is banned. An empty slot is
+  // the better failure.
+  available = available.filter(e => isAutoEligible(e.n));
+  if (available.length === 0) return [];
+
+  // C16 job 2 (FOUNDER RULING: staples first, common as filler). A NICHE
+  // exercise must not beat a valid STAPLE or COMMON candidate, and a
+  // SPECIALIST needs a programming reason.
+  //
+  // This is a GATE rather than a scoring nudge, and that distinction is
+  // load-bearing. Scoring alone could not express the law, because
+  // compound-before-isolation legitimately outranks popularity: JM Press
+  // is a heavy compound, so any tie-break small enough to respect the
+  // programming order was also small enough to let a powerlifting press
+  // beat a rope pushdown. The gate says what the ruling actually says -
+  // reach past the recognisable movements only when they cannot cover the
+  // muscle.
+  //
+  // Same never-starve shape as the difficulty and assisted gates below:
+  // the preference applies only while enough recognisable options remain
+  // to fill the session. When they do not, SPECIALIST and NICHE come back
+  // and coverage wins - which IS the programming reason, in the only form
+  // a generator can check.
+  const recognisable = available.filter(e => tierRank(e.n) <= TIER_RANK[AUTO_TIER.COMMON]);
+  if (recognisable.length >= Math.max(2, numExHint(sessionTarget))) {
+    available = recognisable;
+  }
+
   // Difficulty gating (founder decision: gate, but never starve coverage).
   // Beginners don't get advanced (difficulty 3) lifts in generated plans,
   // but only drop them if enough options remain to cover the muscle; if
@@ -1280,7 +1326,19 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
       // small enough to act only as a tiebreak within the same param tier.
       goalBonus = -(e.sfr / 10);
     }
-    return reqBonus + paramBonus + divBonus + goalBonus + idx;
+    // C16 job 2: bodybuilding canonicality. Staples first, common as
+    // filler, specialist only when it wins on the terms ABOVE this one.
+    //
+    // Its weight is deliberate and sits exactly where the founder's
+    // priority list puts it: two points per tier is heavier than the SFR
+    // and division nudges below, so a recognisable movement beats an
+    // obscure one on a straight tie, and far lighter than the required-
+    // subregion (100) and compound-first (10) terms above, so canonicality
+    // can never drag the plan away from the programming job the slot
+    // exists to do. Popularity compares legitimate candidates for the SAME
+    // job; it does not decide what the job is.
+    const canonBonus = tierRank(e.n) * 2;
+    return reqBonus + paramBonus + divBonus + goalBonus + canonBonus + idx;
   }
 
   const sorted = available
