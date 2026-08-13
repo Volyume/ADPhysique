@@ -3805,8 +3805,30 @@ export async function updateRoutineExercise(id, data) {
 }
 
 /**
- * Plan-level exercise swap: replaces the exercise referenced by a routine_exercises row,
- * leaving set/rep/rest/starting-weight targets unchanged.
+ * Plan-level exercise swap: replaces the exercise referenced by a
+ * routine_exercises row. Set count and slot position are preserved.
+ *
+ * C16 job 7. This used to leave set/rep/rest AND STARTING WEIGHT unchanged,
+ * which meant a replacement inherited the previous exercise's load. Swapping
+ * a 100 kg barbell bench for a dumbbell press left 100 kg on the row: a
+ * prescription for a movement nobody had ever performed, on a plan the user
+ * is meant to be able to follow.
+ *
+ * Two rules now apply, and they are deliberately different:
+ *
+ *   LOAD is always cleared. It belongs to the exercise, not the slot. There
+ *   is no honest way to carry a barbell number onto a machine, and an empty
+ *   field asks the user rather than inventing a number.
+ *
+ *   REPS AND REST are recalibrated only when the row still carries the
+ *   DEFAULT prescription for the outgoing exercise's tier and the incoming
+ *   exercise sits in a different tier. A user who tuned their own rep range
+ *   keeps it; an untouched slot that has gone from a heavy compound to an
+ *   isolation stops asking for three minutes' rest at 6-10 reps.
+ *
+ * Best-effort throughout: if the tier cannot be resolved the swap still
+ * happens and only the load is cleared, because refusing to swap would be a
+ * worse outcome than an unrecalibrated rep range.
  */
 export async function updateRoutineExerciseExercise(routineExerciseId, newExerciseId) {
   const d = await db();
@@ -3816,15 +3838,63 @@ export async function updateRoutineExerciseExercise(routineExerciseId, newExerci
   // exercise_name in sync with the FK so future syncs ship the
   // correct name and other devices' LEFT JOIN fallback resolves
   // correctly.
-  let newName = null;
+  let newRow = null;
   try {
-    const exRow = await d.getFirstAsync('SELECT name FROM exercises WHERE id = ?', [newExerciseId]);
-    newName = exRow?.name ?? null;
+    newRow = await d.getFirstAsync(
+      'SELECT name, equipment_category, compound_isolation FROM exercises WHERE id = ?',
+      [newExerciseId],
+    );
   } catch (_) { /* tolerate */ }
-  await d.runAsync(
-    'UPDATE routine_exercises SET exercise_id = ?, exercise_name = ?, updated_at = ? WHERE id = ?',
-    [newExerciseId, newName, now, routineExerciseId],
-  );
+  const newName = newRow?.name ?? null;
+
+  let repMin = null;
+  let repMax = null;
+  let restSec = null;
+  let recalibrate = false;
+  try {
+    // eslint-disable-next-line global-require
+    const { deriveParamKey } = require('./poolGenerator');
+    // eslint-disable-next-line global-require
+    const { repRangeFor, restFor, isDefaultPrescription } = require('./exercise/prescription');
+    const row = await d.getFirstAsync(
+      `SELECT re.recommended_reps_min AS repMin, re.recommended_reps_max AS repMax,
+              re.rest_seconds AS restSec, e.equipment_category AS eq,
+              e.compound_isolation AS ci
+         FROM routine_exercises re
+         LEFT JOIN exercises e ON e.id = re.exercise_id
+        WHERE re.id = ?`,
+      [routineExerciseId],
+    );
+    if (row && newRow && row.eq) {
+      const oldParam = deriveParamKey(row.eq, row.ci);
+      const newParam = deriveParamKey(newRow.equipment_category, newRow.compound_isolation);
+      if (oldParam !== newParam && isDefaultPrescription(oldParam, row)) {
+        const rr = repRangeFor(newName, newParam, false);
+        repMin = rr.repMin;
+        repMax = rr.repMax;
+        restSec = restFor(newParam, false);
+        recalibrate = true;
+      }
+    }
+  } catch (_) { /* leave the prescription alone; the load is still cleared */ }
+
+  if (recalibrate) {
+    await d.runAsync(
+      `UPDATE routine_exercises
+          SET exercise_id = ?, exercise_name = ?, starting_weight = NULL,
+              recommended_reps_min = ?, recommended_reps_max = ?, rest_seconds = ?,
+              updated_at = ?
+        WHERE id = ?`,
+      [newExerciseId, newName, repMin, repMax, restSec, now, routineExerciseId],
+    );
+  } else {
+    await d.runAsync(
+      `UPDATE routine_exercises
+          SET exercise_id = ?, exercise_name = ?, starting_weight = NULL, updated_at = ?
+        WHERE id = ?`,
+      [newExerciseId, newName, now, routineExerciseId],
+    );
+  }
   _scheduleSync();
 }
 
