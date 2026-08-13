@@ -2198,6 +2198,127 @@ const SCHEMA_MIGRATIONS = [
     )`,
     'CREATE INDEX IF NOT EXISTS idx_exercise_slot_defaults_user ON exercise_slot_defaults(user_id, from_exercise_id)',
   ],
+  // v74, movement-family taxonomy correction (Campaign 16 job 3,
+  // src/lib/exercise/movementFamily.js). The seeded library's back and quad
+  // subregion tags were carrying three separate defects, each of which
+  // changed what a generated plan believed it had covered:
+  //
+  //   1. `lower_lat` actually held the deadlift family and back extensions.
+  //      That is hip hinge and spinal erector work, not lat selection, and
+  //      it could satisfy a lat slot. It also produced user-facing copy
+  //      telling people a deadlift "emphasises the lower portion of the
+  //      back that creates the V-shape taper" (whyThisTemplates.js).
+  //   2. The shoulder-extension family (straight-arm pulldown, cable
+  //      pullover) was tagged `vertical_pull`, so a plan could believe it
+  //      had a vertical pull while containing no pulldown or chin-up.
+  //   3. `horizontal_row` held every row there is, so a lat-biased row and
+  //      an upper-back row were indistinguishable and the anti-redundancy
+  //      rule had nothing to read. Quads had the same shape of fault:
+  //      `sweep` contained BOTH knee-forward squats and the leg extension,
+  //      so required coverage of both quad families was satisfiable by two
+  //      squats with no knee-extension work in the week.
+  //
+  // seedExercises.js's SUBREGION_MAP now carries the corrected families, but
+  // the seed early-returns once any rows exist, so a SUBREGION_MAP change
+  // alone never reaches a device that seeded before this landed. Same
+  // reasoning and same mechanism as v64 (biceps tags).
+  //
+  // The GENERATOR does not depend on this migration: planEngine resolves
+  // families by name through movementFamily.js, so plan quality is correct
+  // on every device the moment the build lands. This migration exists for
+  // the surfaces that read the stored row instead - the exercise detail
+  // screen's subregion chip, swapEngine's same-subregion preference, and
+  // the why-this copy on a saved routine.
+  //
+  // Applied: LOCALLY only, via this user_version bump. There is NO cloud
+  // counterpart: the canonical exercise catalogue (user_id NULL rows) is
+  // seeded locally per device and is never pushed to or pulled from
+  // Supabase (sync.js only pulls `exercises` rows scoped to this user, i.e.
+  // legacy custom exercises), so there is nothing to correct in EU-Dublin.
+  // Additive: yes - metadata only, no schema change, no row added or
+  // removed. Safe to re-run: yes (setting an already-correct row to the
+  // same value is a no-op; every statement is scoped by primary_muscle so
+  // it can never touch a same-named exercise in another muscle, and the
+  // quads sweep-up names every seeded squat/press row explicitly rather
+  // than using NOT IN, so a user's own custom quad exercise is never
+  // retagged by a rule written for the seeded catalogue).
+  // Rollback: UPDATE exercises SET subregion = NULL WHERE primary_muscle IN
+  // ('back', 'quads') - restores the untagged state, after which
+  // movementFamily.js still classifies correctly by name. Not recommended;
+  // kept for the mandated rollback note.
+  [
+    `UPDATE exercises SET subregion = 'vertical_pull'
+     WHERE primary_muscle = 'back' AND name IN (
+       'Lat Pulldown (Wide Grip)', 'Lat Pulldown (Close Grip)',
+       'Lat Pulldown (Neutral Grip)', 'Pull-Up', 'Weighted Pull-Up',
+       'Chin-Up', 'Neutral Grip Pull-Up', 'Assisted Pull-Up',
+       'Single-Arm Lat Pulldown', 'Plate-Loaded Lat Pulldown',
+       'Iso-Lateral Front Pulldown', 'Band Lat Pulldown',
+       'Band Assisted Pull-Up', 'Wide-Grip Pull-Up',
+       'Cable Reverse-Grip Pulldown', 'V-Bar Pulldown'
+     )`,
+    `UPDATE exercises SET subregion = 'horizontal_lat'
+     WHERE primary_muscle = 'back' AND name IN (
+       'Barbell Row (Supinated)', 'Dumbbell Row',
+       'Single-Arm Dumbbell Row (Supported)', 'T-Bar Row',
+       'Chest-Supported T-Bar Row', 'Seated Cable Row', 'Landmine Row',
+       'Single-Arm Landmine Row', 'Single-Arm Cable Row', 'Meadows Row',
+       'Kroc Row', 'Machine Row (Hammer Strength)',
+       'Machine Row (Chest Supported)', 'Helms Row',
+       'Plate-Loaded Low Row', 'Half-Kneeling Cable Row',
+       'Smith Machine Row'
+     )`,
+    `UPDATE exercises SET subregion = 'upper_mid_row'
+     WHERE primary_muscle = 'back' AND name IN (
+       'Barbell Row (Bent Over)', 'Pendlay Row', 'Seal Row',
+       'Inverted Row', 'TRX Row', 'Cable High Row',
+       'Cable Row (Wide Grip)', 'Wide-Grip Cable Row',
+       'Seated Machine Row (Wide)', 'Chest-Supported Row (Dumbbell)',
+       'Chest-Supported Row (Barbell)', 'Plate-Loaded Row',
+       'Plate-Loaded High Row', 'Band Row', 'Batwing Row',
+       'Renegade Row', 'Barbell Upright Row (Wide)',
+       'Cable Face Pull (Upper Back)'
+     )`,
+    `UPDATE exercises SET subregion = 'shoulder_extension'
+     WHERE primary_muscle = 'back' AND name IN (
+       'Cable Straight-Arm Pulldown', 'Cable Lat Pullover',
+       'Cable Rope Straight-Arm Pulldown (Single-Arm)'
+     )`,
+    `UPDATE exercises SET subregion = 'spinal_erector'
+     WHERE primary_muscle = 'back' AND name IN (
+       'Conventional Deadlift', 'Sumo Deadlift', 'Rack Pull',
+       'Trap Bar Deadlift', 'Snatch Grip Deadlift', 'Deficit Deadlift',
+       'Hyperextension (Back Extension)', 'Reverse Hyperextension',
+       'Back Extension (Weighted)'
+     )`,
+    `UPDATE exercises SET subregion = 'knee_extension'
+     WHERE primary_muscle = 'quads' AND name IN (
+       'Leg Extension', 'Terminal Knee Extension', 'Sissy Squat',
+       'Sissy Squat Machine', 'Spanish Squat', 'Reverse Nordic Curl',
+       'Wall Sit'
+     )`,
+    `UPDATE exercises SET subregion = 'squat_press'
+     WHERE primary_muscle = 'quads' AND name IN (
+       'Anderson Squat', 'Assault Bike', 'Band Squat',
+       'Barbell Back Squat', 'Barbell Front Squat', 'Barbell Lunge',
+       'Belt Squat', 'Bodyweight Bulgarian Split Squat', 'Box Squat',
+       'Broad Jump', 'Bulgarian Split Squat', 'Cable Squat (Standing)',
+       'Cambered Bar Squat', 'Curtsy Lunge', 'Cycling (Stationary)',
+       'Cyclist Squat', 'Depth Jump', 'Dumbbell Lunge',
+       'Front Squat (Dumbbell)', 'Goblet Squat', 'Hack Squat Machine',
+       'Hatfield Squat', 'Heel-Elevated Squat', 'Jefferson Squat',
+       'Jump Squat', 'Kneeling Squat', 'Landmine Squat', 'Leg Press',
+       'Leg Press (High Foot)', 'Leg Press (Narrow Stance)',
+       'Pause Squat', 'Pendulum Squat', 'Pin Squat', 'Reverse Lunge',
+       'SSB Squat', 'Safety Bar Squat', 'Single Leg Press',
+       'Skater Squat', 'Sled Push', 'Smith Machine Front Squat',
+       'Smith Machine Squat', 'Split Squat', 'Stair Running',
+       'Step-Up (Barbell)', 'Step-Up (Dumbbell)', 'Step-Up (Weighted)',
+       'Sumo Squat', 'Walking Lunge', 'Wall Ball Squat', 'Zercher Squat'
+     )`,
+    `UPDATE exercises SET subregion = 'hip_extension'
+     WHERE primary_muscle = 'hamstrings' AND subregion = 'lower_lat'`,
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {

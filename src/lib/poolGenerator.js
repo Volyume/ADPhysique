@@ -10,6 +10,8 @@
 // engine owns the fallback to its built-in POOL when generation is thin;
 // this module just builds.
 
+import { movementFamily, CLASSIFIED_MUSCLES } from './exercise/movementFamily';
+
 // ── paramKey ────────────────────────────────────────────────────────────
 // planEngine keys rep ranges, rest and min-sets off four paramKeys. Derive
 // from the granular equipment category and compound/isolation so a generated
@@ -37,7 +39,11 @@ const SUBREGION_TRANSLATION = {
   quads:      { sweep: 'sweep' },
   side_delts: { lateral_raise: 'side', overhead_press: 'press' },
   rear_delts: { face_pull: 'face_pull', horiz_abduction: 'horiz_abduction' },
-  triceps:    { overhead: 'overhead', pushdown: 'lateral' },
+  // C16 job 3: was `pushdown: 'lateral'`. The library, the copy layer
+  // (whyThisTemplates) and the exercise detail screen all say `pushdown`;
+  // only the hardcoded POOL said `lateral`. One vocabulary, and the one
+  // already visible to users wins.
+  triceps:    { overhead: 'overhead', pushdown: 'pushdown' },
   // D8 residue fix (2026-07-09): seedExercises.js now tags biceps exercises
   // with the same long_head/short_head/brachialis vocab planEngine's
   // hand-written POOL already uses for biceps (planEngine.js POOL biceps
@@ -64,7 +70,7 @@ const DEFAULT_SUBREGION = {
   rear_delts: 'horiz_abduction',
   front_delts: 'press',
   biceps: 'short_head',
-  triceps: 'lateral',
+  triceps: 'pushdown',
   quads: 'vasti',
   hamstrings: 'hip_extension',
   glutes: 'activator',
@@ -74,7 +80,16 @@ const DEFAULT_SUBREGION = {
   adductors: 'adductor',
 };
 
-export function translateSubregion(muscle, librarySubregion) {
+export function translateSubregion(muscle, librarySubregion, name = null) {
+  // C16 job 3: back and quads resolve by NAME through the one movement-family
+  // authority, because their library tags were the defective ones - the
+  // deadlift family sitting in `lower_lat`, the pullover satisfying a
+  // vertical pull, the leg extension sharing `sweep` with the front squat.
+  // Every other muscle keeps its existing vocabulary, which is correct and
+  // is shared with the database, the swap engine and the copy layer.
+  if (CLASSIFIED_MUSCLES.includes(muscle)) {
+    return movementFamily(name, muscle, librarySubregion);
+  }
   const table = SUBREGION_TRANSLATION[muscle];
   if (table && librarySubregion && table[librarySubregion]) {
     return table[librarySubregion];
@@ -98,7 +113,7 @@ function parseProfiles(ex) {
 export function toPoolEntry(ex) {
   return {
     n: ex.name,
-    sub: translateSubregion(ex.primaryMuscle, ex.subregion),
+    sub: translateSubregion(ex.primaryMuscle, ex.subregion, ex.name),
     p: deriveParamKey(ex.equipmentCategory, ex.compoundIsolation),
     eq: parseProfiles(ex),
     // Carried for goal bias and difficulty gating in selection (06 sections

@@ -11,6 +11,9 @@ import { generatePoolFromLibrary, deriveParamKey } from './poolGenerator';
 // library is unchanged and manual search still reaches everything; this
 // only governs what the generator may pick on the user's behalf.
 import { isAutoEligible, tierRank, TIER_RANK, AUTO_TIER } from './exercise/canonicality';
+import {
+  movementFamily, familySatisfiesRole, isSweepBiased, CLASSIFIED_MUSCLES,
+} from './exercise/movementFamily';
 // C5-P11-01 (D96): the block length the app actually creates. mesocycle.js
 // is a pure module (no I/O), so reading the constant here keeps planEngine
 // pure and deterministic; only a narrative string uses it, never a
@@ -493,21 +496,21 @@ export const POOL = {
     { n: 'Pull-Up',                        sub: 'vertical_pull',   p: 'mod_compound',   eq: ['bodyweight'], secondary: ['biceps'] },
     { n: 'Lat Pulldown (Close Grip)',      sub: 'vertical_pull',   p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
     { n: 'Single-Arm Lat Pulldown',        sub: 'vertical_pull',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
-    { n: 'Cable High Row',                 sub: 'vertical_pull',   p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
-    { n: 'Barbell Row (Bent Over)',        sub: 'horizontal_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['biceps', 'rear_delts'] },
-    { n: 'T-Bar Row',                      sub: 'horizontal_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
-    { n: 'Seated Cable Row',               sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
-    { n: 'Dumbbell Row',                   sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['biceps'] },
-    { n: 'Machine Row (Chest Supported)',  sub: 'horizontal_row',  p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
-    { n: 'Chest-Supported Row (Dumbbell)',sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['biceps'] },
-    { n: 'Inverted Row',                   sub: 'horizontal_row',  p: 'mod_compound',   eq: ['bodyweight'], secondary: ['biceps'] },
-    { n: 'Pendlay Row',                    sub: 'horizontal_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
-    { n: 'Seal Row',                       sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
-    { n: 'Landmine Row',                   sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
-    { n: 'Seated Machine Row (Wide)',      sub: 'horizontal_row',  p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
-    { n: 'Single-Arm Cable Row',           sub: 'horizontal_row',  p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
-    { n: 'Cable Straight-Arm Pulldown',   sub: 'lower_lat',       p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
-    { n: 'Cable Lat Pullover',             sub: 'lower_lat',       p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
+    { n: 'Cable High Row',                 sub: 'upper_mid_row',   p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Barbell Row (Bent Over)',        sub: 'upper_mid_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['biceps', 'rear_delts'] },
+    { n: 'T-Bar Row',                      sub: 'horizontal_lat',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
+    { n: 'Seated Cable Row',               sub: 'horizontal_lat',  p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Dumbbell Row',                   sub: 'horizontal_lat',  p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['biceps'] },
+    { n: 'Machine Row (Chest Supported)',  sub: 'horizontal_lat',  p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Chest-Supported Row (Dumbbell)',sub: 'upper_mid_row',  p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['biceps'] },
+    { n: 'Inverted Row',                   sub: 'upper_mid_row',  p: 'mod_compound',   eq: ['bodyweight'], secondary: ['biceps'] },
+    { n: 'Pendlay Row',                    sub: 'upper_mid_row',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
+    { n: 'Seal Row',                       sub: 'upper_mid_row',  p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
+    { n: 'Landmine Row',                   sub: 'horizontal_lat',  p: 'mod_compound',   eq: ['full_gym', 'barbell_plates'], secondary: ['biceps'] },
+    { n: 'Seated Machine Row (Wide)',      sub: 'upper_mid_row',  p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Single-Arm Cable Row',           sub: 'horizontal_lat',  p: 'mod_compound',   eq: ['full_gym', 'machines_cables'], secondary: ['biceps'] },
+    { n: 'Cable Straight-Arm Pulldown',   sub: 'shoulder_extension',       p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
+    { n: 'Cable Lat Pullover',             sub: 'shoulder_extension',       p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
   ],
   side_delts: [
     { n: 'Cable Lateral Raise',    sub: 'side', p: 'isolation', eq: ['full_gym', 'machines_cables'] },
@@ -554,26 +557,26 @@ export const POOL = {
     { n: 'JM Press',                        sub: 'overhead', p: 'mod_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['chest'] },
     { n: 'Lying Tricep Extension',          sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
     { n: 'Decline Skull Crusher',           sub: 'overhead', p: 'isolation',    eq: ['full_gym', 'barbell_plates'] },
-    { n: 'Rope Pushdown',                   sub: 'lateral',  p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
-    { n: 'Cable Pushdown (Straight Bar)',   sub: 'lateral',  p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
-    { n: 'Machine Tricep Extension',        sub: 'lateral',  p: 'machine',      eq: ['full_gym', 'machines_cables'] },
-    { n: 'Close-Grip Bench Press',          sub: 'lateral',  p: 'mod_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['chest', 'front_delts'] },
-    { n: 'Diamond Push-Up',                 sub: 'lateral',  p: 'mod_compound', eq: ['bodyweight'], secondary: ['chest'] },
-    { n: 'Tate Press',                      sub: 'lateral',  p: 'isolation',    eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
+    { n: 'Rope Pushdown',                   sub: 'pushdown', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
+    { n: 'Cable Pushdown (Straight Bar)',   sub: 'pushdown', p: 'isolation',    eq: ['full_gym', 'machines_cables'] },
+    { n: 'Machine Tricep Extension',        sub: 'pushdown', p: 'machine',      eq: ['full_gym', 'machines_cables'] },
+    { n: 'Close-Grip Bench Press',          sub: 'pushdown', p: 'mod_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['chest', 'front_delts'] },
+    { n: 'Diamond Push-Up',                 sub: 'pushdown', p: 'mod_compound', eq: ['bodyweight'], secondary: ['chest'] },
+    { n: 'Tate Press',                      sub: 'pushdown', p: 'isolation',    eq: ['full_gym', 'dumbbells_only', 'home_gym'] },
   ],
   quads: [
-    { n: 'Barbell Back Squat',      sub: 'vasti',   p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['glutes', 'hamstrings'] },
-    { n: 'Leg Press',               sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes', 'hamstrings'] },
-    { n: 'Hack Squat Machine',      sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes'] },
-    { n: 'Pendulum Squat',          sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes'] },
-    { n: 'Barbell Front Squat',     sub: 'sweep',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['glutes'] },
-    { n: 'Bulgarian Split Squat',   sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'], secondary: ['glutes'] },
-    { n: 'Smith Machine Squat',     sub: 'vasti',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes'] },
-    { n: 'Goblet Squat',            sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['glutes'] },
-    { n: 'Dumbbell Lunge',          sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['glutes'] },
-    { n: 'Walking Lunge',           sub: 'vasti',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['glutes', 'hamstrings'] },
-    { n: 'Leg Extension',           sub: 'sweep',  p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
-    { n: 'Sissy Squat',             sub: 'sweep',  p: 'isolation',      eq: ['full_gym', 'bodyweight', 'home_gym'] },
+    { n: 'Barbell Back Squat',      sub: 'squat_press',   p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['glutes', 'hamstrings'] },
+    { n: 'Leg Press',               sub: 'squat_press',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes', 'hamstrings'] },
+    { n: 'Hack Squat Machine',      sub: 'squat_press',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes'] },
+    { n: 'Pendulum Squat',          sub: 'squat_press',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes'] },
+    { n: 'Barbell Front Squat',     sub: 'squat_press',  p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['glutes'] },
+    { n: 'Bulgarian Split Squat',   sub: 'squat_press',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym', 'barbell_plates'], secondary: ['glutes'] },
+    { n: 'Smith Machine Squat',     sub: 'squat_press',   p: 'machine',        eq: ['full_gym', 'machines_cables'], secondary: ['glutes'] },
+    { n: 'Goblet Squat',            sub: 'squat_press',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['glutes'] },
+    { n: 'Dumbbell Lunge',          sub: 'squat_press',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['glutes'] },
+    { n: 'Walking Lunge',           sub: 'squat_press',   p: 'mod_compound',   eq: ['full_gym', 'dumbbells_only', 'home_gym'], secondary: ['glutes', 'hamstrings'] },
+    { n: 'Leg Extension',           sub: 'knee_extension',  p: 'isolation',      eq: ['full_gym', 'machines_cables'] },
+    { n: 'Sissy Squat',             sub: 'knee_extension',  p: 'isolation',      eq: ['full_gym', 'bodyweight', 'home_gym'] },
   ],
   hamstrings: [
     { n: 'Romanian Deadlift (Barbell)',    sub: 'hip_extension', p: 'heavy_compound', eq: ['full_gym', 'barbell_plates'], secondary: ['glutes', 'back'] },
@@ -657,16 +660,48 @@ let _weakPointKeys = [];
 // that muscle; below this we fall back to POOL's hand-written entries.
 const MIN_GENERATED_PER_MUSCLE = 3;
 
+// C16 job 3: one taxonomy, applied to whichever pool is live.
+//
+// The generated pool and the hardcoded fallback POOL disagreed with each
+// other about the same exercise: POOL called Cable High Row a vertical pull
+// while the library called it a row, and POOL called the straight-arm
+// pulldown lower_lat while the library called it a vertical pull. Which
+// taxonomy a user's plan obeyed therefore depended on whether their library
+// was thin enough to trigger the fallback.
+//
+// Normalising HERE, at the one point both pools pass through, is what makes
+// that class of divergence structurally impossible rather than merely fixed
+// twice. Muscles outside CLASSIFIED_MUSCLES pass through untouched: their
+// vocabularies are already correct and are shared with the database, the
+// swap engine and the copy layer.
+function normaliseFamilies(pool) {
+  const out = {};
+  for (const [muscle, entries] of Object.entries(pool)) {
+    if (!CLASSIFIED_MUSCLES.includes(muscle) || !Array.isArray(entries)) {
+      out[muscle] = entries;
+      continue;
+    }
+    out[muscle] = entries.map((e) => {
+      const family = movementFamily(e.n, muscle, e.sub);
+      return family === e.sub ? e : { ...e, sub: family };
+    });
+  }
+  return out;
+}
+
+// POOL is a module constant, so its normalised form is too.
+const NORMALISED_POOL = normaliseFamilies(POOL);
+
 function buildEffectivePool(exerciseLibrary) {
-  if (!exerciseLibrary || exerciseLibrary.length === 0) return POOL;
-  const generated = generatePoolFromLibrary(exerciseLibrary);
+  if (!exerciseLibrary || exerciseLibrary.length === 0) return NORMALISED_POOL;
+  const generated = normaliseFamilies(generatePoolFromLibrary(exerciseLibrary));
   // Start from the generated pool, then for any muscle POOL knows about that
   // the library covers thinly, keep POOL's entries. This never leaves a
   // muscle worse-covered than today.
   const merged = { ...generated };
-  for (const muscle of Object.keys(POOL)) {
+  for (const muscle of Object.keys(NORMALISED_POOL)) {
     if ((merged[muscle]?.length ?? 0) < MIN_GENERATED_PER_MUSCLE) {
-      merged[muscle] = POOL[muscle];
+      merged[muscle] = NORMALISED_POOL[muscle];
     }
   }
   return merged;
@@ -676,7 +711,16 @@ function buildEffectivePool(exerciseLibrary) {
 // Subregion coverage requirements (weekly-level)
 // ---------------------------------------------------------------------------
 
+// C16 job 3: these entries are COVERAGE ROLES, not families and not doses.
+// `required` names the jobs a muscle's week must cover; movementFamily.js
+// decides which families honestly satisfy each job. There are deliberately
+// no per-family set targets here - volume is set per MUSCLE by the
+// landmarks, and families only decide which exercises deliver it.
 export const SUBREGION_REQUIREMENTS = {
+  // Back needs actual vertical pulling AND actual horizontal rowing. The
+  // row role accepts either row family (lat-biased or upper/mid-back);
+  // the vertical-pull role accepts only a true overhead pull, so a
+  // straight-arm pulldown can no longer stand in for a pulldown.
   back:       { minSets: 6,  required: ['vertical_pull', 'horizontal_row'] },
   hamstrings: { minSets: 6,  required: ['hip_extension', 'knee_flexion'] },
   // Glutes: Contreras split-by-type. Once volume is glute-led (Bikini/Wellness
@@ -685,19 +729,30 @@ export const SUBREGION_REQUIREMENTS = {
   // a bonus, not required, because the program's hip-hinge already loads the
   // glute in the lengthened position.
   glutes:     { minSets: 16, required: ['activator', 'pumper'] },
-  // Quads: once volume is quad-emphasis (>= 14 weekly, Classic/Wellness/BB),
-  // spread across a sweep-biased lift (knee-forward) and a general mass squat
-  // so the two weekly sessions use different patterns (spec phase 3 benchmark).
-  // Quads: spread across a sweep-biased lift and a general mass squat once the
-  // muscle is trained at MEV+ (8). This was minSets 14, which the systemic-cap-
-  // scaled quad target rarely reached, so quads got one exercise/session and
-  // under-delivered next to hamstrings (whose hip-extension+knee-flexion
-  // requirement triggers at 6). Lowered to 8 so quads and hams spread
-  // symmetrically and a mass division's quads reach parity with its hams.
-  quads:      { minSets: 8,  required: ['sweep', 'vasti'] },
+  // Quads: a loaded squat/press pattern AND direct knee extension, once the
+  // muscle is trained at MEV+ (8). The threshold was lowered from 14 because
+  // the systemic-cap-scaled quad target rarely reached it, so quads got one
+  // exercise per session and under-delivered next to hamstrings (whose
+  // requirement triggers at 6). At 8 the two spread symmetrically.
+  //
+  // C16 job 3 CORRECTION: this used to require ['sweep', 'vasti'], where
+  // `sweep` contained the front squat, the hack squat AND the leg extension.
+  // Both "families" were therefore satisfiable by two squats, and a week
+  // could contain no knee-extension work at all while reporting full quad
+  // coverage. Sweep is an emphasis, not a family, and is applied as a
+  // division scoring nudge below instead.
+  quads:      { minSets: 8,  required: ['squat_press', 'knee_extension'] },
   chest:      { minSets: 10, required: ['incline', 'flat'] },  // flat covers flat+lower
   rear_delts: { minSets: 6,  required: ['face_pull', 'horiz_abduction'] },
-  triceps:    { minSets: 8,  required: ['overhead'] },
+  // Triceps: the long head is only loaded in the lengthened position an
+  // overhead movement provides, so `overhead` is the role that must always
+  // be covered. The pushdown/press role is `whenVolumePermits` - the
+  // founder's own wording - because forcing a second required role at the
+  // same threshold made a second triceps entry trim-protected and, in a
+  // Figure 5-day with arm weak points, that protection displaced the only
+  // chest exercise in the week. A coverage preference must never cost a
+  // muscle. At 14+ weekly sets there is genuinely room for both.
+  triceps:    { minSets: 8,  required: ['overhead'], whenVolumePermits: { pushdown: 14 } },
   calves:     { minSets: 10, required: ['gastro', 'soleus'] },
   abs:        { minSets: 10, required: ['flexion', 'anti_extension'] },
   // Biceps (D8, 2026-07-09): the pool already tags three real angle heads
@@ -903,7 +958,7 @@ const MAX_EXERCISES_PER_SESSION = 8;
 const MAX_WORKING_SETS_PER_SESSION = 25;
 const sessionSetTotal = (list) => list.reduce((s, e) => s + (e.sets || 0), 0);
 
-function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structuralFloors = {}) {
+function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structuralFloors = {}, soleSessionMuscles = null) {
   // The time budget is optional (0/null = no clock limit), but the per-session
   // exercise and working-set ceilings are ALWAYS enforced. `budget` is
   // Infinity when no length is set, so only the count/set caps bite then.
@@ -1026,11 +1081,34 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structural
   while (result.length > MAX_EXERCISES_PER_SESSION && result.length > 3 && capSafety-- > 0) {
     // Prefer a droppable (non-required) entry, lowest priority first; fall back
     // to the last non-opener entry so the cap always converges.
+    //
+    // C16 job 3/6: the justification above - "it is still trained on the
+    // split's OTHER day(s)" - was ASSUMED, and it is not always true. A
+    // division whose split has no day for a muscle (a Figure 5-day with no
+    // push session) carries that muscle as a single tail exercise in one
+    // session. Dropping it there does not lower frequency; it takes the
+    // muscle to ZERO for the week. Found in the wild: figure, 5 days,
+    // biceps+triceps weak points, chest delivered 0 sets.
+    //
+    // soleSessionMuscles is computed across the assembled week before any
+    // trimming, so the reasoning is now checked rather than believed. The
+    // caps stay hard - the pass simply prefers any other exercise first,
+    // and only refuses when the alternative is erasing a muscle.
+    const wouldEraseMuscle = (i) => {
+      const m = result[i]._m;
+      if (!m || !soleSessionMuscles?.has(m)) return false;
+      return result.filter(x => x._m === m).length <= 1;
+    };
     let dropIdx = -1;
     for (let i = result.length - 1; i >= 1; i--) {
-      if (!result[i]._req) { dropIdx = i; break; }
+      if (!result[i]._req && !wouldEraseMuscle(i)) { dropIdx = i; break; }
     }
-    if (dropIdx === -1) dropIdx = result.length - 1;
+    if (dropIdx === -1) {
+      for (let i = result.length - 1; i >= 1; i--) {
+        if (!wouldEraseMuscle(i)) { dropIdx = i; break; }
+      }
+    }
+    if (dropIdx === -1) break; // every remaining entry is some muscle's only week
     result.splice(dropIdx, 1);
   }
   // With <= 8 exercises at the 3-set floor a session is <= 24 sets, so this only
@@ -1121,12 +1199,18 @@ function computeStructuralFloors(rawWorkouts, adjustedTargets, landmarks, effect
 // machine-only user is never starved (same philosophy as difficulty gating).
 const DIVISION_POOL_RULES = {
   bikini: {
-    // Lat-WIDTH only for the X-frame: vertical pulls and straight-arm/pullover
-    // (both tagged vertical_pull). No heavy rows and no deadlifts (deadlifts
-    // build erector/trap thickness that widens the waist and blunts the taper,
-    // working against the judged outcome). An allow-list, not a deny-list, so a
-    // mis-tagged hinge (e.g. a deadlift tagged lower_lat) cannot leak in.
-    back:        { allowSubs: ['vertical_pull'] },
+    // Lat-WIDTH only for the X-frame: vertical pulls and straight-arm/pullover.
+    // No heavy rows and no deadlifts (deadlifts build erector/trap thickness
+    // that widens the waist and blunts the taper, working against the judged
+    // outcome). An allow-list, not a deny-list, so a hinge can never leak in.
+    //
+    // C16 job 3: straight-arm pulldown and pullover used to share the
+    // `vertical_pull` tag, so one entry allowed both. Now that shoulder
+    // extension is its own family it must be named explicitly, or this rule
+    // would silently drop the two lat-width isolations it was written to
+    // keep. The deadlift family is now honestly `spinal_erector` and is
+    // excluded by the same allow-list that always intended to exclude it.
+    back:        { allowSubs: ['vertical_pull', 'shoulder_extension'] },
     quads:       { denyParams: ['heavy_compound'] },
     chest:       { denyParams: ['heavy_compound'] },
     // Round delts via lateral raises, not pressing (spec L152). Drop overhead
@@ -1260,6 +1344,21 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
   // to fill the session. When they do not, SPECIALIST and NICHE come back
   // and coverage wins - which IS the programming reason, in the only form
   // a generator can check.
+  //
+  // C16 job 3: the gated-away candidates are kept, not discarded. The gate
+  // is a PREFERENCE between exercises that can do the same job; it must
+  // never be the reason a required movement family goes missing. Pass 1
+  // falls back to this wider list when no recognisable exercise can cover a
+  // required role - which is the "programming reason" the ruling asks for,
+  // in the only form a generator can check.
+  //
+  // This was found in the wild, not theorised. Leg Extension is the only
+  // COMMON-or-better knee-extension movement in the fallback pool, so once
+  // one leg session had used it, the second leg session could not cover
+  // knee extension at all and took a second squat instead. That redundant
+  // squat then cost the session enough time for the trim to drop a glute
+  // exercise, so a taxonomy preference silently became lost glute volume.
+  const coverageFallbackPool = available;
   const recognisable = available.filter(e => tierRank(e.n) <= TIER_RANK[AUTO_TIER.COMMON]);
   if (recognisable.length >= Math.max(2, numExHint(sessionTarget))) {
     available = recognisable;
@@ -1293,7 +1392,17 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
 
   // Determine subregion priority
   const req = SUBREGION_REQUIREMENTS[muscle];
-  const requiredSubs = req && weeklyTotalSets >= req.minSets ? req.required : [];
+  // C16 job 3: `whenVolumePermits` roles join the required set only once the
+  // muscle's weekly volume genuinely supports another exercise. Below that
+  // they are ordinary candidates - still selectable by the diversity pass,
+  // simply not protected coverage that could displace another muscle.
+  let requiredSubs = [];
+  if (req && weeklyTotalSets >= req.minSets) {
+    requiredSubs = [...req.required];
+    for (const [role, threshold] of Object.entries(req.whenVolumePermits ?? {})) {
+      if (weeklyTotalSets >= threshold) requiredSubs.push(role);
+    }
+  }
 
   // Goal-aware selection bias (06 section 2). A scoring nudge, not a hard
   // filter, so a machine-only or thin-library user still gets a plan.
@@ -1307,14 +1416,33 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
   // the previous so the established priority order is preserved.
   const divBias = DIVISION_SUBREGION_BIAS[goal];
   const preferredSub = divBias ? divBias[muscle] : null;
+
+  // C16 job 3: required entries are ROLES. A role may be satisfied by more
+  // than one family (back's horizontal_row accepts a lat-biased row or an
+  // upper-back row), and for every already-correct muscle it is a plain
+  // family match. Both readings go through one helper so the two-taxonomy
+  // divergence cannot come back through a second code path.
+  const satisfiesAnyRequiredRole = e =>
+    requiredSubs.some(role => familySatisfiesRole(muscle, role, e.sub));
+  const roleSatisfiedBy = e =>
+    requiredSubs.find(role => familySatisfiesRole(muscle, role, e.sub)) ?? null;
   function sortScore(e, idx) {
-    const reqBonus   = requiredSubs.includes(e.sub) ? 0 : 100;
+    const reqBonus   = satisfiesAnyRequiredRole(e) ? 0 : 100;
     const paramOrder = { heavy_compound: 0, mod_compound: 1, machine: 2, isolation: 3 };
     const paramBonus = (paramOrder[e.p] ?? 3) * 10;
     // Division subregion nudge: half a param tier, enough to favour the judged
     // subregion (e.g. incline chest for Men's Physique) without overriding the
     // required-coverage or compound-first ordering.
-    const divBonus = (preferredSub && e.sub === preferredSub) ? -5 : 0;
+    //
+    // C16 job 3: `sweep` is the one emphasis token that is NOT a family. A
+    // hack squat and a back squat are both squat/press, so a sweep-judged
+    // division is nudged toward the knee-forward lift without that nudge
+    // counting as separate coverage - which is precisely the confusion that
+    // let two squats pass as two quad families.
+    const matchesBias = preferredSub === 'sweep'
+      ? isSweepBiased(e.n)
+      : e.sub === preferredSub;
+    const divBonus = (preferredSub && matchesBias) ? -5 : 0;
     let goalBonus = 0;
     if (isStrengthGoal) {
       // Strength: nudge barbell/landmine compounds up a little.
@@ -1341,10 +1469,19 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
     return reqBonus + paramBonus + divBonus + goalBonus + canonBonus + idx;
   }
 
-  const sorted = available
+  const rank = list => list
     .map((e, idx) => ({ e, score: sortScore(e, idx) }))
     .sort((a, b) => a.score - b.score)
     .map(x => x.e);
+
+  const sorted = rank(available);
+  // Same ordering, over the candidates the canonicality gate set aside.
+  // Only pass 1 reads it, and only when a required role is otherwise
+  // uncoverable, so an obscure lift can still never win a slot a
+  // recognisable one could have filled.
+  const coverageFallback = available === coverageFallbackPool
+    ? sorted
+    : rank(coverageFallbackPool);
 
   // Determine how many exercises this session can hold for this muscle
   // (D8 R2): ceiling-driven from the 4/3 per-exercise cap rather than a
@@ -1378,12 +1515,13 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
       subsToCover.push(requiredSubs[(slot + k) % requiredSubs.length]);
     }
   }
-  for (const sub of subsToCover) {
+  for (const role of subsToCover) {
     if (chosen.length >= numEx) break;
-    const candidate = sorted.find(e => e.sub === sub && !usedNames.has(e.n));
+    const matches = e => familySatisfiesRole(muscle, role, e.sub) && !usedNames.has(e.n);
+    const candidate = sorted.find(matches) ?? coverageFallback.find(matches);
     if (candidate) {
       chosen.push(candidate);
-      covered.add(sub);
+      covered.add(role);
       usedNames.add(candidate.n);
     }
   }
@@ -1496,8 +1634,14 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
     const exObj = makeEx(entry.n, entry.p, s, experience, nutritionPhase, goal, null);
     // Internal-only tags consumed by trimToTimeBudget, stripped before output.
     exObj._m = muscle;                              // owning muscle
-    const isReq = covered.has(entry.sub) && requiredSubs.includes(entry.sub) && !reqCredited.has(entry.sub);
-    if (isReq) reqCredited.add(entry.sub);
+    // C16 job 3: credited per ROLE, not per family. A lat row and an
+    // upper-back row both satisfy back's horizontal_row role, so only the
+    // first of them is protected from the time trim - the second is honestly
+    // a bonus exercise, which is the same rule that already applied to two
+    // entries sharing one family.
+    const entryRole = roleSatisfiedBy(entry);
+    const isReq = entryRole != null && covered.has(entryRole) && !reqCredited.has(entryRole);
+    if (isReq) reqCredited.add(entryRole);
     exObj._req = isReq; // FIRST entry covering a required subregion (see reqCredited above)
     // Internal-only tags read by assignSupersets: the param tier (compound vs
     // machine vs isolation) and the equipment-modality proximity proxy. Both
@@ -2795,10 +2939,27 @@ function _generatePlanInner(inputs) {
   // from the post-clamp placements so it reflects real per-muscle frequency.
   const structuralFloors = computeStructuralFloors(rawWorkouts, adjustedTargets, landmarks, effectiveDays);
 
+  // C16 job 3/6: muscles this week trains in exactly ONE session. The
+  // hard-cap backstop inside trimToTimeBudget may drop a muscle's sole
+  // entry on the stated grounds that the muscle is trained on another day;
+  // for these muscles that is false, and the drop would zero them for the
+  // week. Computed here because only the assembled week knows it.
+  const sessionsPerMuscle = {};
+  for (const w of rawWorkouts) {
+    for (const m of new Set(w.exercises.map(e => e._m).filter(Boolean))) {
+      sessionsPerMuscle[m] = (sessionsPerMuscle[m] ?? 0) + 1;
+    }
+  }
+  const soleSessionMuscles = new Set(
+    Object.keys(sessionsPerMuscle).filter(m => sessionsPerMuscle[m] === 1),
+  );
+
   // Finalise: deduplicate, trim to time budget, assign supersets, stamp duration
   const workouts = rawWorkouts.map(w => {
     const deduped  = deduplicateExercises(w.exercises);
-    const trimmed  = trimToTimeBudget(deduped, sessionLengthMinutes, equipment, structuralFloors);
+    const trimmed  = trimToTimeBudget(
+      deduped, sessionLengthMinutes, equipment, structuralFloors, soleSessionMuscles,
+    );
     // C16 job 4 (FOUNDER RULING): auto-generated plans contain NO supersets.
     //
     // Volyume cannot know station proximity or what is free in the user's gym

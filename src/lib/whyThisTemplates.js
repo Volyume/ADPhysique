@@ -96,10 +96,25 @@ function clean(str) {
 // ---------------------------------------------------------------------------
 
 const EXERCISE_WHY_TEMPLATES = {
-  // Back subregions
-  vertical_pull:    (name) => `${name} pulls the elbows down towards your hips, which is the best position for back width and shoulder-blade retraction.`,
+  // Back movement families (C16 job 3). These replace the old three-tag set,
+  // one of which was actively wrong: `lower_lat` held the deadlift family and
+  // back extensions, so the app told people a deadlift "emphasises the lower
+  // portion of the back that creates the V-shape taper". The old keys are
+  // kept below so a device that has not yet run the tag migration still gets
+  // sensible copy instead of the generic fallback.
+  vertical_pull:      (name) => `${name} pulls your elbows down from overhead, which is the position that builds back width.`,
+  horizontal_lat:     (name) => `${name} pulls your elbow back close to your body, so the lats do the work through a long range.`,
+  upper_mid_row:      (name) => `${name} pulls your elbows out and back, squeezing the shoulder blades together. This is where mid-back thickness comes from.`,
+  shoulder_extension: (name) => `${name} works the lats with a straight arm, so the biceps cannot take over. A useful addition to pulling, not a replacement for it.`,
+  spinal_erector:     (name) => `${name} loads the hips and the muscles either side of your spine. It builds the thickness that holds a heavy posture together.`,
+
+  // Superseded back tags, kept for devices still holding the old values.
   horizontal_row:   (name) => `${name} pulls the elbows back along your body. This angle is where your mid-back and rear shoulders work hardest.`,
-  lower_lat:        (name) => `${name} emphasises the lower portion of the back that creates the V-shape taper from shoulders to waist.`,
+  lower_lat:        (name) => `${name} loads the hips and the lower back together, building the thickness that supports every heavy lift.`,
+
+  // Quad movement families (C16 job 3)
+  squat_press:      (name) => `${name} bends the hip and knee together under load. This is the pattern that builds most of your leg size.`,
+  knee_extension:   (name) => `${name} straightens the knee with the hip held still, so the quads work without the hips and back sharing the load.`,
 
   // Chest subregions
   incline:          (name) => `${name} works your upper chest: the part most people under-train, and the one that gives the chest a full, 3D look.`,

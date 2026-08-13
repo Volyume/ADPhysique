@@ -6,6 +6,7 @@ import {
   findThinMuscles,
 } from '../poolGenerator';
 import { deriveExerciseMetadata } from '../exerciseMetadata';
+import { familySatisfiesRole } from '../exercise/movementFamily';
 import { generatePlan } from '../planEngine';
 
 describe('deriveParamKey', () => {
@@ -32,17 +33,33 @@ describe('translateSubregion', () => {
     expect(translateSubregion('chest', 'decline')).toBe('lower');
     expect(translateSubregion('chest', 'incline')).toBe('incline');
   });
-  test('maps triceps pushdown to POOL lateral, keeps overhead', () => {
-    expect(translateSubregion('triceps', 'pushdown')).toBe('lateral');
+  // RE-ANCHORED C16 job 3. This used to pin the translation of library
+  // `pushdown` to POOL `lateral`. That rename was the whole defect: the
+  // library, the exercise detail screen and the why-this copy all said
+  // `pushdown`, so a triceps coverage requirement written in the visible
+  // vocabulary could never match a generated pool entry. The pin stays,
+  // pointed at the single surviving vocabulary rather than deleted.
+  test('triceps subregions pass through unchanged, in the library vocabulary', () => {
+    expect(translateSubregion('triceps', 'pushdown')).toBe('pushdown');
     expect(translateSubregion('triceps', 'overhead')).toBe('overhead');
   });
   test('maps side_delts lateral_raise to POOL side', () => {
     expect(translateSubregion('side_delts', 'lateral_raise')).toBe('side');
   });
   test('untagged exercise falls back to the per-muscle default', () => {
-    expect(translateSubregion('quads', null)).toBe('vasti');
     expect(translateSubregion('biceps', undefined)).toBe('short_head');
     expect(translateSubregion('adductors', null)).toBe('adductor');
+  });
+
+  // RE-ANCHORED C16 job 3. Quads used to fall back to `vasti` for anything
+  // the library had not tagged `sweep`. Quads are now name-classified, and
+  // an untagged quad exercise is a loaded squat or press pattern unless it
+  // is one of the listed knee-extension movements - which is why the
+  // fallback for quads is a family, not a default bucket.
+  test('quads classify by name, not by an untagged default', () => {
+    expect(translateSubregion('quads', null, 'Barbell Back Squat')).toBe('squat_press');
+    expect(translateSubregion('quads', 'sweep', 'Leg Extension')).toBe('knee_extension');
+    expect(translateSubregion('quads', 'sweep', 'Barbell Front Squat')).toBe('squat_press');
   });
 
   // D8 residue fix (2026-07-09): biceps had no SUBREGION_TRANSLATION entry
@@ -179,13 +196,20 @@ describe('generated pool over the real seed library', () => {
     expect((pool.adductors?.length ?? 0)).toBeGreaterThanOrEqual(3);
   });
 
-  test('the subregions SUBREGION_REQUIREMENTS needs are present in the pool', () => {
+  // RE-ANCHORED C16 job 3. The entries in SUBREGION_REQUIREMENTS are
+  // COVERAGE ROLES now, not families: back's `horizontal_row` role is
+  // satisfied by either row family, so asserting a literal `horizontal_row`
+  // sub exists in the pool would be asserting the defect this job removed.
+  // The guarantee itself is unchanged and is what still matters - every
+  // required role must have at least one real option in the generated pool.
+  test('every required coverage role is satisfiable from the pool', () => {
     const REQUIRED = {
       back: ['vertical_pull', 'horizontal_row'],
       hamstrings: ['hip_extension', 'knee_flexion'],
+      quads: ['squat_press', 'knee_extension'],
       chest: ['incline', 'flat'],
       rear_delts: ['face_pull', 'horiz_abduction'],
-      triceps: ['overhead'],
+      triceps: ['overhead', 'pushdown'],
       calves: ['gastro', 'soleus'],
       abs: ['flexion', 'anti_extension'],
       // D8 residue fix (2026-07-09): biceps now carries real tags in
@@ -194,11 +218,29 @@ describe('generated pool over the real seed library', () => {
       biceps: ['long_head', 'short_head'],
     };
     const missing = [];
-    for (const [muscle, subs] of Object.entries(REQUIRED)) {
-      const present = new Set((pool[muscle] ?? []).map(e => e.sub));
-      for (const s of subs) if (!present.has(s)) missing.push(`${muscle}/${s}`);
+    for (const [muscle, roles] of Object.entries(REQUIRED)) {
+      const families = (pool[muscle] ?? []).map(e => e.sub);
+      for (const role of roles) {
+        if (!families.some(f => familySatisfiesRole(muscle, role, f))) {
+          missing.push(`${muscle}/${role}`);
+        }
+      }
     }
     expect(missing).toEqual([]);
+  });
+
+  // The roles must stay satisfiable by DISTINCT families, or "covered"
+  // becomes a word without content: this is the exact failure the old quads
+  // taxonomy had, where `sweep` and `vasti` were both satisfiable by a squat.
+  test('back vertical pull and rowing are covered by genuinely different families', () => {
+    const backFamilies = new Set((pool.back ?? []).map(e => e.sub));
+    expect(backFamilies.has('vertical_pull')).toBe(true);
+    expect(backFamilies.has('horizontal_lat') || backFamilies.has('upper_mid_row')).toBe(true);
+    // The straight-arm family exists and is NOT a vertical pull.
+    expect(backFamilies.has('shoulder_extension')).toBe(true);
+    // The hinge work is out of the lat families entirely.
+    expect(backFamilies.has('spinal_erector')).toBe(true);
+    expect(backFamilies.has('lower_lat')).toBe(false);
   });
 
   // ── D8 residue fix (2026-07-09): biceps subregion tag completeness ────────
