@@ -38,12 +38,11 @@ describe('selectPlateauForBanner', () => {
     expect(picked).not.toBeNull();
     expect(picked.exerciseId).toBe('ex_bench');
     expect(picked.consecutiveStalls).toBe(3);
-    // C12: the span is the number of distinct LOCAL calendar weeks the
-    // stalled evidence appears in. Four weekly sessions touch four weeks,
-    // which is what "hasn't moved across 4 weeks" claims. This used to read
-    // 3 because the module divided the raw millisecond span by a week
-    // constant - a second definition that also drifted across DST.
-    expect(picked.weeks).toBe(4);
+    // C13 job 2: `weeks` is ELAPSED duration of the continuous stall. Four
+    // weekly sessions span 21 local days, so the honest figure is 3 - even
+    // though the evidence touches 4 calendar weeks, which is what the
+    // QUALIFICATION gate measures separately.
+    expect(picked.weeks).toBe(3);
     expect(picked.latestSessionAt).toBe(NOW - DAY);
   });
 

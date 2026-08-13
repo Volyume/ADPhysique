@@ -27,6 +27,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getAllMesocyclesForUser,
+  getBlocksWithTrainingEvidence,
   getBlockTrainingData,
   getPriorCompletedSets,
   getPlannedMuscleVolumeForBlock,
@@ -157,6 +158,36 @@ function probeEligible({ recent, fresh, suppressed, manualControls }) {
   const observed = Number(entry.observed?.startSets);
   if (!Number.isFinite(proposed) || !Number.isFinite(observed)) return false;
   return proposed > observed;
+}
+
+/**
+ * C13 job 4: drop ledgers whose RAW EVIDENCE the user has deleted.
+ *
+ * A stored Block Ledger stays exactly as written - it is the historical
+ * record of what Volyume concluded when that block finished, and nothing
+ * here rebuilds, rewrites or removes it. What it stops doing is TEACHING:
+ * deliberately deleted training history must not keep compounding into new
+ * personalisation (establishedStart, the learned ceiling, probe eligibility,
+ * future Adjust seeding) for ever merely because a derived record survives.
+ *
+ * Only the provable distinction is applied - the block retains completed
+ * training rows, or it does not. No material-edit threshold is invented, so
+ * correcting a typo changes nothing. Fails OPEN on a read error.
+ */
+async function replayableMesos(userId, mesos) {
+  try {
+    const withLedger = (Array.isArray(mesos) ? mesos : []).filter((m) => m?.blockLedger && m?.id);
+    if (withLedger.length === 0) return mesos;
+    if (typeof getBlocksWithTrainingEvidence !== 'function') return mesos;
+    const alive = await getBlocksWithTrainingEvidence(userId, withLedger.map((m) => m.id));
+    // Fail OPEN on anything unexpected: a transient read failure, or a build
+    // where the helper is absent, must never silently strip a user's learned
+    // history. Only a definite "this block has no training rows" removes one.
+    if (!(alive instanceof Set)) return mesos;
+    return mesos.filter((m) => !m?.blockLedger || !m?.id || alive.has(m.id));
+  } catch (_e) {
+    return mesos;
+  }
 }
 
 /** Calm mode OR open ED flag, fail closed on any read failure. */
@@ -601,8 +632,11 @@ export async function backfillMissingBlockLedgers(userId, { userProfile = null, 
 export async function buildLearnedSeedRangesForActivation(userId, { userProfile = null, tier = 'free' } = {}) {
   if (!userId || tier !== 'pro') return null;
   try {
-    const mesos = await getAllMesocyclesForUser(userId);
-    if (!Array.isArray(mesos) || mesos.length === 0) return null;
+    const allMesos = await getAllMesocyclesForUser(userId);
+    if (!Array.isArray(allMesos) || allMesos.length === 0) return null;
+    // C13 job 4: ledgers whose raw evidence the user deleted stay stored and
+    // renderable, but stop teaching future prescriptions.
+    const mesos = await replayableMesos(userId, allMesos);
     const manualTable = await getManualLandmarks(userId);
     const adaptedTable = await getAdaptedLandmarks(userId, { tier }).catch(() => null);
     const suppressed = await readSuppression(userId);
@@ -668,7 +702,11 @@ export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', u
     // C6 P9-01 (D97): judge any switched-away finished blocks first, so
     // the replay below reads the user's WHOLE history.
     await backfillMissingBlockLedgers(userId, { userProfile, tier });
-    const mesos = await getAllMesocyclesForUser(userId);
+    const allMesos = await getAllMesocyclesForUser(userId);
+    // C13 job 4: same law on the Adjust path. The just-finished block is
+    // re-spliced below with its fresh ledger, and it necessarily still has
+    // its training rows, so a live decision is never affected.
+    const mesos = await replayableMesos(userId, allMesos);
     // The block being decided on: the most recent one with a start date,
     // and only when it is genuinely FINISHED (awaitingDecision) — a
     // mid-block restart seeds without a ledger (review #14).

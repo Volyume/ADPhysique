@@ -23,6 +23,12 @@ const stateOf = ({ intents = [], swaps = [], defaults = [], usage = [], progress
   activeMesocycleId: 'block-1',
 });
 const cand = (id, name, score) => ({ exercise: { id, name }, score, reason: 'similar' });
+// C13 job 6: a 'progressing' READING is now only allowed to make a CURRENT
+// ranking claim when the lift was also trained recently (Campaign 9's own
+// existing 45-day recency window). Fixtures whose subject is the ranking
+// therefore give the exercise recent usage; the recency gate itself is
+// pinned separately below.
+const recentUsage = (exerciseId) => ({ exerciseId, sessions: 3, lastTrainedMs: Date.now() - 3 * 24 * 60 * 60 * 1000 });
 
 describe('detectProgressionConsistency: the law, and its limits', () => {
   test('adding load across recent sessions reads as progressing', () => {
@@ -100,11 +106,28 @@ describe('progression as an evidence dimension', () => {
 
 describe('progression in the ranking: it may reorder, never introduce or override', () => {
   test('it reorders structurally valid alternatives', () => {
-    const s = stateOf({ progression: [{ exerciseId: 'b', status: 'progressing' }] });
+    const s = stateOf({
+      progression: [{ exerciseId: 'b', status: 'progressing' }],
+      usage: [recentUsage('b')],
+    });
     const ranked = rankPersonalised(s, [cand('a', 'A', 90), cand('b', 'B', 90)], { fromExerciseId: 'x' });
     expect(ranked[0].exercise.id).toBe('b');
     expect(ranked[0].personal.tag).toBe('Progressing consistently');
     expect(ranked[0].personal.tier).toBe(RANK_TIER.PERSONAL_EVIDENCE);
+  });
+
+  // C13 job 6: memory persists, actionability expires. The dimension stays
+  // observable; what it may no longer do is drive a CURRENT recommendation.
+  test('months-old progression cannot make a current ranking claim', () => {
+    const stale = stateOf({
+      progression: [{ exerciseId: 'b', status: 'progressing' }],
+      usage: [{ exerciseId: 'b', sessions: 3, lastTrainedMs: Date.now() - 90 * 24 * 60 * 60 * 1000 }],
+    });
+    const ranked = rankPersonalised(stale, [cand('a', 'A', 90), cand('b', 'B', 90)], { fromExerciseId: 'x' });
+    expect(ranked[0].personal.tag).not.toBe('Progressing consistently');
+    // The observation itself is untouched and still readable.
+    expect(exerciseEvidence(stale, 'b').progression).toBe('progressing');
+    expect(exerciseEvidence(stale, 'b').trainedRecently).toBe(false);
   });
 
   test('it can NEVER introduce a candidate the structural engine rejected', () => {
@@ -157,7 +180,10 @@ describe('what progression copy may never claim', () => {
   });
 
   test('the user-facing tag states the observation, not a verdict', () => {
-    const s = stateOf({ progression: [{ exerciseId: 'b', status: 'progressing' }] });
+    const s = stateOf({
+      progression: [{ exerciseId: 'b', status: 'progressing' }],
+      usage: [recentUsage('b')],
+    });
     const tag = rankPersonalised(s, [cand('b', 'B', 90)], { fromExerciseId: 'x' })[0].personal.tag;
     expect(tag).toBe('Progressing consistently');
     expect(tag).not.toMatch(/best|effective|optimal|growth|muscle/i);

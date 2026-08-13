@@ -365,12 +365,22 @@ export function rankPersonalised(state, candidates, { fromExerciseId, routineId 
         tier = RANK_TIER.RECENT_REPLACEMENT; tag = 'Last used here';
       } else if (ev && ev.count >= 2) {
         tier = RANK_TIER.REPEATED_REPLACEMENT; tag = "You've chosen this replacement several times";
-      } else if (facts.progression === 'progressing') {
+      } else if (facts.progression === 'progressing' && facts.trainedRecently) {
         // Same tier as other personal evidence, deliberately: it can
         // reorder structurally valid alternatives and nothing more. It
         // never outranks an exclusion, an approved default or a
         // deliberate swap history, and it can never introduce a
         // candidate the structural engine did not already accept.
+        //
+        // C13 job 6: the recency guard is new. getExerciseProgressionSessions
+        // reads the four most recent sessions with NO age bound, so a lift
+        // last trained a year ago still reported 'progressing' - and this
+        // branch turned that into a CURRENT recommendation claim, tagged
+        // "Progressing consistently", ahead of the trainedRecently branch
+        // below that would otherwise have judged its age. Memory persists;
+        // actionability expires. The dimension itself is untouched and stays
+        // observable on the evidence object, and the recency window is
+        // Campaign 9's existing one rather than a new constant.
         tier = RANK_TIER.PERSONAL_EVIDENCE; tag = 'Progressing consistently';
       } else if (facts.trainedRecently && facts.sufficient) {
         tier = RANK_TIER.PERSONAL_EVIDENCE; tag = 'Used recently';
