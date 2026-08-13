@@ -1,7 +1,83 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ FRESH SESSION START HERE (2026-08-11, Campaign 6: long-term) ★
+## ★ FRESH SESSION START HERE (2026-08-13, after Campaign 14) ★
+
+**Campaigns 1-14 are CLOSED. Main is `268ad4d4`** (merge commit
+"Merge Campaign 14: preferences, notifications and user-control
+closeout"), gates green: `npm run lint` clean, identity invariant
+clean, full suite 868 suites / 11,050 tests with one failure that was
+a superseded source guard, re-anchored and re-run green. Neither known
+flake (widgets/storage iOS bridge, shareCard/drawShareCard) fired.
+
+**What Campaign 14 changed, in one line each:**
+
+1. Generic preference sync is FAIL-CLOSED. `SYNCED_PREF_PATTERNS` in
+   `src/lib/sync.js` is now an allowlist; an unknown `@volyume_*` key
+   does not sync in either direction. The exclusion list is retained as
+   a second gate evaluated FIRST, so the Campaign 10H privacy families
+   stay refused even if the allowlist is later widened by mistake.
+2. Deleting a synced preference sticks. `deleteUserPref` /
+   `setUserPref` are the pair; the empty-value sentinel the landmark
+   reset has used since Campaign 1 is now the general tombstone; the
+   pull REMOVES a tombstoned key rather than writing `''`; and the push
+   no longer walks a guarded row backwards over a newer cloud edit
+   (`_dropStaleGuardedPushes`, fails open).
+3. Every live notification category has ONE authority
+   (`src/lib/notifications/categoryPrefs.js`): the prefs blob decides,
+   the per-category `notification_preferences` row is an outbound
+   PROJECTION never read back on device, the legacy dedicated key is a
+   derived mirror. Nothing was deleted, only subordinated.
+4. Real unsubscribes. The morning weigh-in and weekly check-in
+   reminders gained genuine off switches (they were forced on with no
+   way off). Partner cheers are enforced SERVER-side in the
+   `partner-cheer` Edge Function. **The one BLOCKED subitem in the
+   whole campaign: that function still needs deploying — see TASKBOARD
+   section 3, "C14-J4 BLOCKED". No migration is outstanding.**
+5. Notification routing tells the truth: the three partner types now
+   reach Partner (partner_cheer previously opened Consistency, which
+   has had no partner content since 2026-07-03); meal_log_reminder and
+   subscription_payment_failure no longer dead-end; rest_timer and
+   rest_end are explicitly non-navigating; meal_log_reminder's missing
+   telemetry category is restored so a non-navigating tap still records
+   an open.
+6. Three full local weeks with no completed session stands the weigh-in
+   reminders down, without touching the user's stored preference. A
+   completed session re-lays silently from the workout-finish flow.
+   Lead ruling under D33: an explicit Settings toggle ON is honoured
+   immediately rather than held by the stand-down.
+7. Manual "pin to research" was already recorded (Campaign 8 stamps
+   `explicit`); Campaign 14 added the missing per-muscle release
+   ("Let Volyume manage this") so intent can be handed back without a
+   whole-table reset. Manual blocks still do not teach the engine.
+
+**Regression family:** `campaign14.prefSyncFailClosed`,
+`campaign14.prefDeletion`, `campaign14.manualIntent` (src/lib/__tests__),
+`campaign14.categoryOwnership`, `campaign14.routingTruth`,
+`campaign14.inactivityStandDown` (src/lib/notifications/__tests__).
+The category suite carries the live matrix: every value in `CATEGORY`
+must be either user-controlled or explicitly classified as not, so a new
+notification cannot ship without a routing and ownership decision.
+
+**Superseded guards re-anchored, never deleted, each with the reason in
+a comment:** `intentPromptOptOut.guard`,
+`SettingsDataScreen.skipNameToggle`,
+`CoachingRemindersScreen.partnerCheers.guard`, `notificationRoute`, and
+one Campaign 10H pin that had asserted the old fail-open behaviour.
+
+**Process note on record:** a `git add -A` mid-campaign swept two
+concurrent lanes' in-progress work into a commit before it had been
+lead-reviewed. Nothing reached main unreviewed — the review happened
+before the merge and corrected three things (the return path now reads
+the one authority; that authority's default for the two coaching
+reminders is `false`, matching what `restoreNotifications` has always
+done; and two of the lead's own first corrections were themselves wrong
+and were reverted). Stage agent work with explicit paths, not `-A`.
+
+The Campaign 6 block below is the previous entry.
+
+===============================================================================
+## ★ SUPERSEDED (2026-08-11, Campaign 6: long-term) ★
 
 **Campaign 6 (returning users, long-term personalisation, lapses,
 reinstall, multi-block) is IN FLIGHT on `claude/campaign6-long-term`

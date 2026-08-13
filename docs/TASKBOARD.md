@@ -1400,6 +1400,27 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **C14-J4 BLOCKED: deploy the `partner-cheer` Edge Function.** Campaign 14
+  made the recipient's partner-cheer opt-out real by enforcing it
+  SERVER-side: the function now reads the recipient's own
+  `notification_preferences` row and downgrades to in-app only when it
+  says `enabled = false`. The code is on main
+  (`supabase/functions/partner-cheer/index.ts`), pinned by
+  `src/lib/notifications/__tests__/campaign14.categoryOwnership.test.js`.
+  NO MIGRATION IS OUTSTANDING - the table (044) and the `partner_cheer`
+  category (125) have been in production since 2026-07-27, and the client
+  already pushes the row. Until the function is redeployed, the toggle
+  silences the local path only and a partner's cheer still pushes.
+  EXACT ACTION: `supabase functions deploy partner-cheer` (needs the
+  auto-populated SUPABASE_URL + SERVICE_ROLE_KEY + ANON_KEY).
+  Why Claude did not do it: the Supabase connector is not authorised in
+  this session, so there was no deploy path and no way to verify against
+  production. Verification once deployed: with two paired test accounts,
+  switch partner cheers OFF on the recipient, send a cheer from the
+  other device, and confirm the response is `{ ok: true, delivered:
+  'in_app' }` with no push on the recipient's phone; switch it back ON
+  and confirm the push arrives.
+
 - **H4 IS NOW A PRODUCT-TRUTH RELEASE BLOCKER (elevated by the
   Campaign 5 order, 2026-08-10).** The published Play/App Store
   listings still promise cardio logging, which no longer exists. The
