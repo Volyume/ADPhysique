@@ -19,7 +19,10 @@ import {
   PHYSIQUE_GOALS,
   GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
 } from '../lib/coachingGoals';
-import { generateAndSavePlan, generatePlanDryRun, planShortfallNote } from '../lib/planAutoGen';
+import {
+  generateAndSavePlan, generatePlanDryRun, planShortfallNote, assessScheduleFit,
+} from '../lib/planAutoGen';
+import { PLAN_FIT, fitCopy, alternativeCopy } from '../lib/planFit';
 import { getActivePlan, getRoutinesForPlan, getRoutineExercisesWithDetails } from '../lib/database';
 import { diffPlans, summariseProspectivePlan, summariseCurrentPlan } from '../lib/planDiff';
 import BottomSheet from '../components/BottomSheet';
@@ -34,7 +37,10 @@ const EXPERIENCE_OPTIONS = [
   { value: 'competitive',  label: 'Competitive',  sub: '5+ years, training for physique or performance' },
 ];
 
-const DAYS_OPTIONS = [3, 4, 5, 6];
+// Two sessions is a real, supported week: the engine builds a full-body plan
+// for it rather than quietly rounding the athlete up to three. Kept identical
+// to the onboarding list so the two schedule questions offer the same answers.
+const DAYS_OPTIONS = [2, 3, 4, 5, 6];
 
 const SESSION_LENGTH_OPTIONS = [
   { label: '45 min', value: 45 },
@@ -170,12 +176,22 @@ export default function PlanUpdateScreen({ navigation }) {
       const afterSummary = summariseProspectivePlan(dry.plan, dry.sessionLengthMinutes, {
         blockedSlots: dry.blockedSlots ?? null,
       });
+      // The SAME schedule-fit resolver onboarding uses (founder law: one
+      // resolver, so the two surfaces cannot give the athlete different
+      // answers about the same schedule). Advisory here: the preview says
+      // how the new schedule fits, and the athlete still decides.
+      const fit = await assessScheduleFit(updatedProfile, {
+        userId: user.id,
+        durationOptions: SESSION_LENGTH_OPTIONS.map(o => o.value),
+        dayOptions: DAYS_OPTIONS,
+      }).catch(() => null);
       setDiff(diffPlans(nowSummary, afterSummary));
       setStaged({
         profile: updatedProfile,
         partial: !!dry.partial,
         missedCount: dry.missedCount ?? 0,
         blockedCount: afterSummary.blockedCount ?? 0,
+        fit: fit?.ok ? fit : null,
       });
     } catch (e) {
       logError('PlanUpdateScreen.reviewRebuild', e, { userId: user?.id });
@@ -411,6 +427,30 @@ export default function PlanUpdateScreen({ navigation }) {
                     {staged.blockedCount === 1 ? ' this slot.' : ' these slots.'}
                   </Text>
                 ) : null}
+                {/* Schedule fit, from the shared resolver. Only surfaced
+                    when the new schedule cannot carry the plan comfortably:
+                    telling someone their week works every single time they
+                    rebuild is noise, not guidance. */}
+                {staged?.fit
+                  && (staged.fit.state === PLAN_FIT.VALID_TIME_CONSTRAINED
+                    || staged.fit.state === PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN) ? (
+                    <View style={styles.diffMoves}>
+                      <Text style={[styles.diffMovesLabel, live.diffMovesLabel]}>
+                        {fitCopy(staged.fit.state, staged.fit).title}
+                      </Text>
+                      <Text style={[styles.diffShortfall, live.diffShortfall]}>
+                        {fitCopy(staged.fit.state, staged.fit).body}
+                      </Text>
+                      {(staged.fit.alternatives ?? []).map((alt) => (
+                        <Text
+                          key={`${alt.kind}-${alt.daysPerWeek}-${alt.sessionLengthMinutes}`}
+                          style={[styles.diffMoveText, live.diffMoveText]}
+                        >
+                          {alternativeCopy(alt).label}: {alternativeCopy(alt).detail}
+                        </Text>
+                      ))}
+                    </View>
+                  ) : null}
               </>
             )}
 

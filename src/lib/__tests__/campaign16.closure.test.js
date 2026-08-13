@@ -21,8 +21,11 @@ const fs = require('fs');
 const path = require('path');
 const { generatePlan } = require('../planEngine');
 const {
-  fitToTimeBudget, constraintChoiceCopy, FIT_STATUS, TIME_TOLERANCE_MIN,
+  fitToTimeBudget, FIT_STATUS, TIME_TOLERANCE_MIN,
 } = require('../timeConstraint');
+const {
+  assessPlanFit, fitCopy, alternativeCopy, PLAN_FIT,
+} = require('../planFit');
 const { LIBRARY, inputs, planExercises } = require('./campaign16.helpers');
 
 const BY_NAME = new Map(LIBRARY.map(e => [e.name, e]));
@@ -199,20 +202,29 @@ describe('C16-CLOSURE duration: the request is honoured or the truth is told', (
   });
 
   test('the infeasible-constraint message offers a real choice and adds no day (17)', () => {
-    const copy = constraintChoiceCopy({
-      sessionLengthMinutes: 45, daysPerWeek: 3,
-      over: [{ name: 'Full Body A', minutes: 62 }], canAddDay: true,
+    // Re-pinned on the LIVE copy path: planFit is what the Plan Fit panel and
+    // the Update Your Plan preview actually render. The old assertion pinned
+    // a helper in timeConstraint.js that no screen ever called, and its
+    // wording ("the full target") would have failed the plain-English law the
+    // moment anything rendered it.
+    const fit = assessPlanFit({
+      inputs: inputs({ sessionLengthMinutes: 45, daysPerWeek: 3 }),
+      generate: i => generatePlan({ ...i, exerciseLibrary: LIBRARY }),
     });
-    expect(copy.body).toMatch(/cannot fit the full target into 45-minute sessions/);
-    expect(copy.body).toMatch(/around 62 minutes/);
-    const ids = copy.options.map(o => o.id);
-    expect(ids).toContain('keep_length');
-    expect(ids).toContain('allow_longer');
-    // An extra day is an OPTION, never something Volyume does itself.
-    expect(ids).toContain('consider_extra_day');
-    expect(copy.options.find(o => o.id === 'consider_extra_day').detail)
-      .toMatch(/Only you can decide/);
-    for (const o of copy.options) expect(o.detail).not.toMatch(/—/);
+    expect(fit.state).toBe(PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN);
+    const copy = fitCopy(fit.state, fit);
+    expect(copy.body).toMatch(/3 workouts of 45 minutes/);
+    // Every alternative was CALCULATED by running the generator at it, and
+    // every one of them genuinely resolves the problem.
+    for (const alt of fit.alternatives) {
+      expect([PLAN_FIT.FULL_TARGET_FIT, PLAN_FIT.EXTRA_HEADROOM]).toContain(alt.state);
+      expect(alternativeCopy(alt).detail).not.toMatch(/—/);
+    }
+    // An extra day is an OPTION, never something Volyume does itself: no
+    // alternative may reduce the athlete's chosen days, and the assessment
+    // itself never changes them.
+    for (const alt of fit.alternatives) expect(alt.daysPerWeek).toBeGreaterThanOrEqual(3);
+    expect(fit.daysPerWeek).toBe(3);
   });
 
   test('a plan that fits is not trimmed for the sake of it', () => {

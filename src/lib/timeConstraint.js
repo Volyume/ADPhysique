@@ -286,38 +286,9 @@ export function fitToTimeBudget(workouts, {
   return { workouts: result, status, over, trimmed };
 }
 
-/**
- * The honest message for a constraint that could not be met.
- *
- * Offers a real choice and never resolves it on the user's behalf. Adding a
- * training day is presented as an OPTION only, and only when it would
- * genuinely help; Volyume never increases the day count itself.
- */
-export function constraintChoiceCopy({
-  sessionLengthMinutes, daysPerWeek, over = [], canAddDay = false,
-} = {}) {
-  const worst = over.reduce((a, b) => (b.minutes > (a?.minutes ?? 0) ? b : a), null);
-  const body = worst
-    ? `Your current setup cannot fit the full target into ${sessionLengthMinutes}-minute sessions. The longest session comes out around ${worst.minutes} minutes.`
-    : `Your current setup cannot fit the full target into ${sessionLengthMinutes}-minute sessions.`;
-  const options = [
-    {
-      id: 'keep_length',
-      label: `Keep ${sessionLengthMinutes} minutes`,
-      detail: 'Use the best lower-volume plan that fits the time you have.',
-    },
-    {
-      id: 'allow_longer',
-      label: 'Allow longer sessions',
-      detail: 'Keep the full training target and accept the longer session.',
-    },
-  ];
-  if (canAddDay) {
-    options.push({
-      id: 'consider_extra_day',
-      label: 'Consider another training day',
-      detail: `A ${daysPerWeek + 1}th session would give the same work more room. Only you can decide if that fits your week.`,
-    });
-  }
-  return { body, options };
-}
+// The user-facing side of an unmet constraint lives in `planFit.js`, which
+// computes the alternatives by RUNNING the generator at each of them rather
+// than describing them in the abstract, and writes them in plain English.
+// A second copy helper here, offering options nothing had verified and
+// wording no screen rendered, was exactly the dead-helper architecture this
+// campaign was told not to leave behind, so it is gone.

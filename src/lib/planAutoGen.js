@@ -32,6 +32,7 @@ import {
 } from './database';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { generatePlan } from './planEngine';
+import { assessPlanFit, assessDurationOptions } from './planFit';
 import { phaseToNutritionKey } from './coachingGoals';
 import { loadExerciseIntentState } from './exercise/intent';
 import { filterLibraryForGeneration, generationBlockFor } from './exercise/generation';
@@ -114,6 +115,76 @@ export function buildPlanInputs(profile) {
     recoveryRating: migrated.recoveryRating ?? 'average',
     nutritionPhase: phaseToNutritionKey(phase),
   };
+}
+
+/**
+ * THE single schedule-fit resolver. Onboarding and Update Your Plan both call
+ * THIS - a second implementation is how the two flows started disagreeing
+ * about the plan itself, and a fit answer that differs between the two
+ * surfaces is the same defect wearing a different hat.
+ *
+ * FOUNDER LAW: the recommendation is derived from the athlete's ACTUAL
+ * prescription, so it runs the real generator over the real catalogue with
+ * the real profile - goal, division, weak points, recovery, equipment and
+ * experience all included. There is no lookup table and no minutes-per-day
+ * rule of thumb anywhere in this path.
+ *
+ * READ-ONLY. It loads the catalogue and the user's exercise intent, runs the
+ * pure engine, and writes nothing: no programme, no routine, no draft, no
+ * AsyncStorage. Calling it can never change what the athlete has.
+ *
+ * @param {object} profile  the same profile shape generateAndSavePlan takes
+ * @param {object} [opts]
+ * @param {string|null} [opts.userId]  when known, respects the user's
+ *   exercise exclusions so the fit answer matches the plan they would get
+ * @param {number[]} [opts.durationOptions]  the durations the UI offers
+ * @param {number[]} [opts.dayOptions]       the session counts the UI offers
+ */
+export async function assessScheduleFit(profile, {
+  userId = null, durationOptions, dayOptions,
+} = {}) {
+  const inputs = buildPlanInputs(profile);
+  if (!inputs) return { ok: false, error: 'Profile incomplete' };
+
+  let allExercises = [];
+  try {
+    allExercises = await getAllExercises();
+  } catch (_) { /* engine falls back to its built-in pool */ }
+
+  let library = allExercises;
+  if (userId) {
+    try {
+      const intentState = await loadGenerationIntent(userId);
+      library = filterLibraryForGeneration(allExercises, intentState).library;
+    } catch (_) { library = allExercises; }
+  }
+  const canonicalNames = canonicalNameSet(allExercises);
+
+  // generatePlan is pure and deterministic, which is what makes asking it
+  // hypothetical questions legitimate - but it is not free, and the
+  // assessment and the per-duration decoration ask about overlapping
+  // schedules. Memoised on the only two fields either of them varies.
+  const cache = new Map();
+  const generate = (i) => {
+    const key = `${i.daysPerWeek}|${i.sessionLengthMinutes}`;
+    if (!cache.has(key)) {
+      cache.set(key, generatePlan({ ...i, exerciseLibrary: library, canonicalNames }));
+    }
+    return cache.get(key);
+  };
+
+  try {
+    const fit = assessPlanFit({ inputs, generate, durationOptions, dayOptions });
+    return {
+      ok: true,
+      ...fit,
+      durations: assessDurationOptions({ inputs, generate, durationOptions }),
+    };
+  } catch (e) {
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logError('plan.fit.engineFailed', e, { inputs }); } catch (_) {}
+    return { ok: false, error: 'plan_fit_error' };
+  }
 }
 
 /**

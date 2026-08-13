@@ -23,7 +23,10 @@ import {
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
-import { generateAndSavePlan, planShortfallNote } from '../lib/planAutoGen';
+import { generateAndSavePlan, planShortfallNote, assessScheduleFit } from '../lib/planAutoGen';
+import {
+  PLAN_FIT, fitCopy, alternativeCopy, keepChoiceCopy,
+} from '../lib/planFit';
 import {
   requestNotificationPermissions,
   scheduleMorningWeightNotification,
@@ -109,9 +112,11 @@ const STAGE_DWELL_MS = 800;
 const SEQUENCE_TOTAL_MS = STAGE_DWELL_MS * 4;
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Default days per week, used for nutrition calc without asking the user.
-const DEFAULT_DAYS_PER_WEEK = 4;
-
+// FOUNDER LAW (2026-08-13): there is NO default number of training days.
+// This screen used to start everyone on four, which then fed the plan, the
+// split, the volume landmarks and the calorie target - a load-bearing answer
+// nobody had given. The athlete chooses, from two upwards, and the step will
+// not advance until they have.
 function daysToFreqBucket(daysPerWeek) {
   if (daysPerWeek <= 3) return '2-3';
   if (daysPerWeek <= 5) return '4-5';
@@ -175,7 +180,9 @@ const SESSION_LENGTH_OPTIONS = [
   { label: '90 min', value: 90 },
 ];
 
-const DAYS_PER_WEEK_OPTIONS = [3, 4, 5, 6];
+// Two is a real answer, not a rounding error: the engine builds a genuine
+// full-body week at two sessions and no longer quietly promotes it to three.
+const DAYS_PER_WEEK_OPTIONS = [2, 3, 4, 5, 6];
 
 const EQUIPMENT_OPTIONS = [
   { value: 'full_gym',        label: 'Full Gym',          sub: 'Barbells, cables, machines, dumbbells' },
@@ -395,7 +402,9 @@ export default function ProOnboardingScreen({ navigation }) {
   // Step 2, training setup (all dropdowns / segments)
   const [experience, setExperience] = useState(null);
   const [sessionLengthMinutes, setSessionLengthMinutes] = useState(60);
-  const [daysPerWeek, setDaysPerWeek] = useState(DEFAULT_DAYS_PER_WEEK);
+  // No default: an unanswered schedule stays unanswered until the athlete
+  // answers it. See DAYS_PER_WEEK_OPTIONS above.
+  const [daysPerWeek, setDaysPerWeek] = useState(null);
   const [equipment, setEquipment] = useState(null);
   // Defaults to 'general' (not competing). Users tap into the optional
   // "Competing in a category?" dropdown to pick a physique category.
@@ -481,6 +490,25 @@ export default function ProOnboardingScreen({ navigation }) {
 
   const [busy, setBusy] = useState(false);
   const oauthInFlightRef = useRef(false);
+
+  // ── Schedule fit ──────────────────────────────────────────────────────────
+  // The fit answer is computed from the athlete's REAL prescription, which is
+  // not fully known until the last question is answered: the division sets
+  // which muscles are prioritised, the weak points add volume on top, and the
+  // recovery rating scales the whole week. So the assessment runs at the END
+  // of the wizard, after step 6, rather than beside the schedule controls in
+  // step 4 where three of its four inputs would still be missing. Assessing
+  // early and calling the result a recommendation would be fake precision.
+  const [fitReview, setFitReview] = useState(null);
+  const [fitBusy, setFitBusy] = useState(false);
+  // Set once the athlete has seen the fit panel and made their call. Their
+  // decision is then honoured without being asked again - Volyume recommends,
+  // it does not nag.
+  const [fitAccepted, setFitAccepted] = useState(false);
+  const fitResumeRef = useRef(false);
+  // Synchronous twin of fitBusy: two fast taps both read the state flag as
+  // false before either render lands, and would each start an assessment.
+  const fitInFlightRef = useRef(false);
 
   const nameRef = useRef(null);
   useEffect(() => {
@@ -616,6 +644,11 @@ export default function ProOnboardingScreen({ navigation }) {
   function goBack() {
     if (step === 1) return;
     if (step === 2 && accountCreated) return; // can't go back past completed registration
+    // Going back means an answer may change, and every answer behind this
+    // screen feeds the fit assessment. A stale acceptance would let a
+    // re-edited schedule skip the check it was never run against.
+    setFitAccepted(false);
+    setFitReview(null);
     setStep(s => s - 1);
   }
 
@@ -779,7 +812,10 @@ export default function ProOnboardingScreen({ navigation }) {
     // Step 4 is logistics only (experience, session length, days, kit). The
     // goal/phase questions live in step 5 so neither step carries more than a
     // handful of fields (the 3-5-per-step rule).
-    if (!experience || !sessionLengthMinutes || !equipment) {
+    // daysPerWeek is gated HERE, not defaulted above it. It drives the split,
+    // the weekly volume, the calorie target and the whole schedule-fit
+    // assessment, so a tap-through would be a guess dressed as an answer.
+    if (!experience || !sessionLengthMinutes || !daysPerWeek || !equipment) {
       appAlert('Complete all fields', 'Please fill out your training setup to continue.');
       return;
     }
@@ -947,10 +983,112 @@ export default function ProOnboardingScreen({ navigation }) {
     }
   }
 
+  /**
+   * The exact profile the build will use.
+   *
+   * Extracted so the schedule-fit assessment and the plan it describes can
+   * never be computed from different answers - a fit answer derived from a
+   * second, slightly different profile is worse than no fit answer at all.
+   */
+  function planProfileNow(overrides = {}) {
+    return {
+      experience,
+      daysPerWeek,
+      sessionLengthMinutes,
+      equipment,
+      trainingGoal,
+      trainingPhase,
+      planWeakPoints,
+      recoveryRating,
+      ...overrides,
+    };
+  }
+
+  /**
+   * Ask the engine what it would actually build at a given schedule.
+   *
+   * Read-only: assessScheduleFit runs the pure generator and persists
+   * nothing, so this can be called as often as the athlete taps.
+   */
+  async function runFitAssessment(overrides = {}) {
+    if (fitInFlightRef.current) return null;
+    fitInFlightRef.current = true;
+    setFitBusy(true);
+    try {
+      const fit = await assessScheduleFit(planProfileNow(overrides), {
+        userId: user?.id ?? null,
+        durationOptions: SESSION_LENGTH_OPTIONS.map(o => o.value),
+        dayOptions: DAYS_PER_WEEK_OPTIONS,
+      });
+      return fit?.ok ? fit : null;
+    } catch (e) {
+      // A fit answer is guidance. If it cannot be computed, setup continues
+      // exactly as it did before this existed rather than blocking the build.
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('ProOnboarding.assessScheduleFit', e, { userId: user?.id }); } catch (_) {}
+      return null;
+    } finally {
+      fitInFlightRef.current = false;
+      setFitBusy(false);
+    }
+  }
+
+  /**
+   * Resume the build after the athlete has answered the fit panel.
+   *
+   * Via an effect rather than a direct call, because choosing an alternative
+   * sets the day count and the session length first; calling straight back
+   * into the build would read the previous render's values and build the plan
+   * they just chose to move away from.
+   */
+  useEffect(() => {
+    if (!fitResumeRef.current || !fitAccepted || fitReview) return;
+    fitResumeRef.current = false;
+    advanceFrom6();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fitAccepted, fitReview, daysPerWeek, sessionLengthMinutes]);
+
+  /**
+   * Try a different session length from the fit panel and show what the
+   * engine says about it. The athlete's pick is honoured whatever the label
+   * says - "Too tight" is information, not a refusal.
+   */
+  async function chooseDuration(minutes) {
+    if (!minutes || minutes === fitReview?.sessionLengthMinutes) return;
+    setSessionLengthMinutes(minutes);
+    const fit = await runFitAssessment({ sessionLengthMinutes: minutes });
+    if (fit) setFitReview(fit);
+  }
+
+  /** Take the athlete's answer to the fit panel and carry on. */
+  function acceptFit(alternative) {
+    if (alternative) {
+      setDaysPerWeek(alternative.daysPerWeek);
+      setSessionLengthMinutes(alternative.sessionLengthMinutes);
+    }
+    setFitReview(null);
+    setFitAccepted(true);
+    fitResumeRef.current = true;
+  }
+
   async function advanceFrom6() {
     if (!recoveryRating) {
       appAlert('Recovery rating', 'Please select your recovery level to continue.');
       return;
+    }
+    // Schedule fit, checked ONCE, with every answer in hand. A schedule that
+    // carries the plan is never interrupted; one that does not gets the
+    // athlete a real choice instead of a silently shortened plan or a
+    // 45-minute session that runs to 70.
+    if (!fitAccepted) {
+      if (fitInFlightRef.current) return;
+      const fit = await runFitAssessment();
+      if (fit && (fit.state === PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN
+        || fit.state === PLAN_FIT.VALID_TIME_CONSTRAINED)) {
+        setFitReview(fit);
+        return;
+      }
+      setFitAccepted(true);
     }
     if (submittingRef.current) return;
     submittingRef.current = true;
@@ -1182,16 +1320,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // Auto-generate the training plan so the user lands on a ready-to-train
       // home screen rather than a "build me a plan" empty state.
       if (user?.id) {
-        const planProfile = {
-          experience,
-          daysPerWeek,
-          sessionLengthMinutes,
-          equipment,
-          trainingGoal,
-          trainingPhase,
-          planWeakPoints,
-          recoveryRating,
-        };
+        const planProfile = planProfileNow();
         let planResult = { ok: false, error: 'not attempted' };
         // C5-P29-07: a retry after a kill used to build a SECOND plan, which
         // archived the first and took the "Your plan 2" name. If the earlier
@@ -1661,7 +1790,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // ── Step 4, Training setup (logistics) ──────────────────────────────────────
 
   if (step === 4) {
-    const canContinue = !!experience && !!sessionLengthMinutes && !!equipment;
+    const canContinue = !!experience && !!sessionLengthMinutes && !!daysPerWeek && !!equipment;
 
     return (
       <SafeAreaView key="step-4" style={[styles.safe, live.safe]}>
@@ -1704,7 +1833,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
               <View style={styles.section}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Training days per week</Text>
-                <Text style={[styles.fieldHint, live.fieldHint]}>Choose the number of days you can repeat most weeks.</Text>
+                <Text style={[styles.fieldHint, live.fieldHint]}>Choose the number of days you can repeat most weeks. Two is enough to train everything, so pick the honest number rather than the ambitious one.</Text>
                 <SegmentedControl
                   options={DAYS_PER_WEEK_OPTIONS.map(d => ({ label: String(d), value: d }))}
                   value={daysPerWeek}
@@ -1726,7 +1855,7 @@ export default function ProOnboardingScreen({ navigation }) {
             </QuestionGroup>
 
             {!canContinue ? (
-              <Text style={[styles.continueHint, live.continueHint]}>Choose your experience and equipment to continue.</Text>
+              <Text style={[styles.continueHint, live.continueHint]}>Choose your experience, training days and equipment to continue.</Text>
             ) : null}
 
             <Button
@@ -1940,6 +2069,113 @@ export default function ProOnboardingScreen({ navigation }) {
 
   if (step === 6) {
     const canContinue = !!recoveryRating;
+
+    // ── Plan fit ────────────────────────────────────────────────────────────
+    // Shown only when the athlete's schedule cannot carry the plan we would
+    // build for them, and only once. Everything on it is calculated from
+    // their own answers by the real generator; nothing here is a rule of
+    // thumb, and no length is called optimal, because no length is.
+    if (fitReview) {
+      const copy = fitCopy(fitReview.state, fitReview);
+      const keep = keepChoiceCopy(fitReview);
+      const moreSessions = (fitReview.alternatives ?? [])
+        .find(a => a.kind === 'more_sessions');
+      const moreCopy = moreSessions ? alternativeCopy(moreSessions) : null;
+
+      return (
+        <SafeAreaView key="step-6-fit" style={[styles.safe, live.safe]}>
+          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+            <ProOnboardingHeader
+              step={step}
+              title="Plan fit"
+              sub="Here is how your week looks against the plan we would build for you."
+              onBack={() => setFitReview(null)}
+            />
+
+            <View style={[styles.coachCard, live.coachCard]}>
+              <View style={styles.coachCardHead}>
+                <View style={[styles.notifIconWrap, live.notifIconWrap]}>
+                  <Ionicons name="time-outline" size={18} color={t.colors.primary} />
+                </View>
+                <Text style={[styles.coachCardTitle, live.coachCardTitle]}>{copy.title}</Text>
+              </View>
+              <Text style={[styles.coachCardBody, live.coachCardBody]}>{copy.body}</Text>
+            </View>
+
+            <View style={styles.section}>
+              <Text style={[styles.fieldLabel, live.fieldLabel]}>Session length</Text>
+              <Text style={[styles.fieldHint, live.fieldHint]}>
+                These are worked out from your own plan, so they will not match someone else's.
+              </Text>
+              <View style={styles.proteinOptions}>
+                {(fitReview.durations ?? []).map((d) => {
+                  const active = d.minutes === fitReview.sessionLengthMinutes;
+                  return (
+                    <TouchableOpacity
+                      key={d.minutes}
+                      style={[styles.proteinOpt, live.proteinOpt, active && [styles.proteinOptActive, live.proteinOptActive]]}
+                      onPress={() => chooseDuration(d.minutes)}
+                      disabled={fitBusy}
+                      accessibilityRole="radio"
+                      accessibilityState={{ checked: active, disabled: fitBusy }}
+                      accessibilityLabel={`${d.minutes} minute sessions, ${d.label}`}
+                    >
+                      <View style={styles.proteinOptionCopy}>
+                        <View style={styles.proteinOptTop}>
+                          <Text style={[styles.proteinOptLabel, live.proteinOptLabel]}>{d.minutes} min</Text>
+                          {d.label ? (
+                            <View style={[styles.recBadge, live.recBadge]}>
+                              <Text style={[styles.recBadgeText, live.recBadgeText]}>{d.label}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+                      </View>
+                      {active ? (
+                        <Ionicons name="checkmark-circle" size={20} color={t.colors.primary} />
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            {/* An extra training day is offered as an OPTION and never taken
+                on the athlete's behalf. Only shown when it would genuinely
+                help, because it was calculated, not assumed. */}
+            {moreCopy ? (
+              <View style={styles.section}>
+                <Text style={[styles.fieldLabel, live.fieldLabel]}>Another option</Text>
+                <TouchableOpacity
+                  style={[styles.proteinOpt, live.proteinOpt]}
+                  onPress={() => acceptFit(moreSessions)}
+                  disabled={fitBusy}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${moreCopy.label}. ${moreCopy.detail}`}
+                >
+                  <View style={styles.proteinOptionCopy}>
+                    <Text style={[styles.proteinOptLabel, live.proteinOptLabel]}>{moreCopy.label}</Text>
+                    <Text style={[styles.proteinOptDesc, live.proteinOptDesc]}>{moreCopy.detail}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={t.colors.textMuted} />
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            <Text style={[styles.continueHint, live.continueHint]}>{keep.detail}</Text>
+            <Button
+              title={`Build my plan: ${keep.label}`}
+              trailingIcon="arrow-forward"
+              style={[styles.primaryBtn, fitBusy && styles.primaryBtnDisabled]}
+              onPress={fitBusy ? undefined : () => acceptFit(null)}
+              disabled={fitBusy}
+              loading={fitBusy}
+              textStyle={[styles.primaryBtnText, live.primaryBtnText]}
+              accessibilityLabel={`Build my plan, ${keep.label}`}
+            />
+          </ScrollView>
+        </SafeAreaView>
+      );
+    }
 
     // COMP-013: the staged setup sequence replaces the dead
     // button spinner. Same header furniture (brand row + a now-full progress
@@ -2168,10 +2404,10 @@ export default function ProOnboardingScreen({ navigation }) {
           <Button
             title="Continue"
             trailingIcon="arrow-forward"
-            style={[styles.primaryBtn, (!canContinue || busy) && styles.primaryBtnDisabled]}
-            onPress={canContinue && !busy ? advanceFrom6 : undefined}
-            disabled={!canContinue || busy}
-            loading={busy}
+            style={[styles.primaryBtn, (!canContinue || busy || fitBusy) && styles.primaryBtnDisabled]}
+            onPress={canContinue && !busy && !fitBusy ? advanceFrom6 : undefined}
+            disabled={!canContinue || busy || fitBusy}
+            loading={busy || fitBusy}
             textStyle={[styles.primaryBtnText, live.primaryBtnText]}
             accessibilityLabel="Continue"
           />

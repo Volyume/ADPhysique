@@ -1054,11 +1054,19 @@ describe('DENSITY: the wizard explains each step once (C5-P36-01/02/03, D96)', (
     // one QuestionGroup, so a group title grouped nothing and restated
     // the header. All four are gone; the icon keeps the visual grouping
     // and the header sub stays the single purpose carrier (C5-P36-01).
-    for (const title of [
-      'title="Required details"', 'title="Starting body composition"',
-      'title="Plan fit"', 'title="Goal and targets"',
-    ]) {
-      expect(src).not.toContain(title);
+    //
+    // Pinned on the QuestionGroup props themselves rather than on the four
+    // title strings. "Plan fit" returned in 2026-08 as the HEADER title of
+    // the schedule-fit panel, which is the opposite of the defect: its own
+    // screen, its own purpose, and no group underneath restating it. A
+    // string match could not tell the two apart; this can.
+    for (const tag of (stripComments(src).match(/<QuestionGroup[^>]*>/g) ?? [])) {
+      for (const title of [
+        'title="Required details"', 'title="Starting body composition"',
+        'title="Plan fit"', 'title="Goal and targets"',
+      ]) {
+        expect(tag).not.toContain(title);
+      }
     }
     // Every header sub, and therefore every step's purpose, is still stated.
     for (const sub of [
@@ -1087,7 +1095,9 @@ describe('DENSITY: the wizard explains each step once (C5-P36-01/02/03, D96)', (
     // Every SAFETY-bearing required field keeps its hint.
     for (const hint of [
       'Complete your sex, age, height and body weight to continue.',
-      'Choose your experience and equipment to continue.',
+      // Training days joined the gate in 2026-08: the wizard no longer
+      // defaults anyone to four sessions, so the hint names it too.
+      'Choose your experience, training days and equipment to continue.',
       'Enter your best current estimate or a measured value.',
       'Be honest here. This sets how much volume your plan includes, so it can protect your recovery.',
     ]) {
