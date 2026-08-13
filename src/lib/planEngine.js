@@ -14,6 +14,14 @@ import { isAutoEligible, tierRank, TIER_RANK, AUTO_TIER } from './exercise/canon
 import {
   movementFamily, familySatisfiesRole, isSweepBiased, CLASSIFIED_MUSCLES,
 } from './exercise/movementFamily';
+// C16 DIVISION: the canonical division model. What a division is judged on,
+// which within-muscle roles that implies, and what its criteria exclude, all
+// live in ONE place with each rule traced to the rulebook line behind it
+// (docs/plan-generation-campaign-16/DIVISION-EVIDENCE-REGISTER.md).
+import {
+  divisionRoles, divisionPoolRule, divisionPriorityMuscles,
+  divisionLegCharacter, hasRaisedGluteCeiling, LEG_CHARACTER, SWEEP,
+} from './division/profile';
 import { canonicalExerciseId } from './exercise/canonicalId';
 import { repRangeFor, restFor } from './exercise/prescription';
 import { fitToTimeBudget, FIT_STATUS, TIME_TOLERANCE_MIN } from './timeConstraint';
@@ -326,7 +334,11 @@ const INDIRECT_SET_FRACTION = 0.5;
 // MRV of 16. Shared by the floor/cap pass and the weak-point overlay so a
 // weak-pointed glute is not clamped to 16 in a division that allows 30.
 function divisionMRV(muscle, goal, lm) {
-  if (muscle === 'glutes' && (goal === 'bikini' || goal === 'wellness')) return 30;
+  // C16 DIVISION: which divisions carry the raised ceiling is a property of
+  // the division, so it is read from the profile rather than repeated as an
+  // inline goal list here - this was the fourth separate place a division's
+  // character was written down.
+  if (muscle === 'glutes' && hasRaisedGluteCeiling(goal)) return 30;
   return lm.MRV;
 }
 
@@ -368,7 +380,9 @@ function enforceWeeklyFloorsAndCaps(weeklyTargets, goal, effectiveDays, weakPoin
   // should read "smaller, not absent" (Manion). Floor biceps/triceps to a token
   // 4 sets so a long lower-focused week still shows some arm tone, rather than
   // literal zero. Documented decision, not an accident.
-  if ((goal === 'bikini' || goal === 'wellness') && effectiveDays >= 5) {
+  // C16 DIVISION: "the lower-led divisions" is the profile's own leg
+  // character, not a goal list repeated for the fifth time.
+  if (divisionLegCharacter(goal) === LEG_CHARACTER.LOWER_LED && effectiveDays >= 5) {
     t.biceps = Math.max(t.biceps ?? 0, 4);
     t.triceps = Math.max(t.triceps ?? 0, 4);
   }
@@ -999,7 +1013,10 @@ const MAX_EXERCISES_PER_SESSION = 8;
 const MAX_WORKING_SETS_PER_SESSION = 25;
 const sessionSetTotal = (list) => list.reduce((s, e) => s + (e.sets || 0), 0);
 
-function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structuralFloors = {}, sessionsRemaining = null) {
+function trimToTimeBudget(
+  exercises, sessionLengthMinutes, equipment, structuralFloors = {},
+  sessionsRemaining = null, priorityMuscles = [],
+) {
   // The time budget is optional (0/null = no clock limit), but the per-session
   // exercise and working-set ceilings are ALWAYS enforced. `budget` is
   // Infinity when no length is set, so only the count/set caps bite then.
@@ -1042,9 +1059,18 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structural
     while (overBudget(result) && safety-- > 0) {
       let trimmed = false;
       // Tier 1: non-structural entries (protected structural deferred to tier 2).
+      //
+      // C16 DIVISION: a muscle the athlete's DIVISION is judged on is
+      // deferred to tier 2 alongside the structural movers. Without this,
+      // a Bikini glute exercise sitting late in a session was shaved before
+      // discretionary work sitting earlier in it, and the plan the clock
+      // returned was a different physique rather than a shorter session.
+      // The floors still bind; this only changes the ORDER in which the
+      // clock takes its cut.
       for (let i = result.length - 1; i >= 1; i--) {
         const ex = result[i];
         if (floorFor(ex._m, desperate) > 0) continue;
+        if (priorityMuscles.includes(ex._m)) continue;
         if (ex.sets > 3) { ex.sets--; trimmed = true; break; }
       }
       // Tier 2: structural entries, never below the muscle's protected floor.
@@ -1052,7 +1078,7 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structural
         for (let i = result.length - 1; i >= 1; i--) {
           const ex = result[i];
           const floor = floorFor(ex._m, desperate);
-          if (floor <= 0) continue;
+          if (floor <= 0 && !priorityMuscles.includes(ex._m)) continue;
           if (ex.sets > 3 && muscleTotal(ex._m) > floor) { ex.sets--; trimmed = true; break; }
         }
       }
@@ -1072,15 +1098,21 @@ function trimToTimeBudget(exercises, sessionLengthMinutes, equipment, structural
     let safety2 = 60;
     while (overBudget(result) && result.length > 3 && safety2-- > 0) {
       let removeIdx = -1;
-      for (let i = result.length - 1; i >= 1; i--) {
-        const ex = result[i];
-        if (ex._req) continue;
-        const muscleCount = result.filter(x => x._m === ex._m).length;
-        if (muscleCount <= 1) continue; // sole exercise for its muscle, protect
-        const floor = floorFor(ex._m, desperate);
-        if (floor > 0 && muscleTotal(ex._m) - ex.sets < floor) continue; // structural floor
-        removeIdx = i;
-        break;
+      // C16 DIVISION: two sweeps, so a judged muscle's second exercise is
+      // only dropped once nothing discretionary is left to give.
+      for (const sparePriority of [false, true]) {
+        for (let i = result.length - 1; i >= 1; i--) {
+          const ex = result[i];
+          if (ex._req) continue;
+          if (!sparePriority && priorityMuscles.includes(ex._m)) continue;
+          const muscleCount = result.filter(x => x._m === ex._m).length;
+          if (muscleCount <= 1) continue; // sole exercise for its muscle, protect
+          const floor = floorFor(ex._m, desperate);
+          if (floor > 0 && muscleTotal(ex._m) - ex.sets < floor) continue; // structural floor
+          removeIdx = i;
+          break;
+        }
+        if (removeIdx !== -1) break;
       }
       if (removeIdx === -1) break;
       result.splice(removeIdx, 1);
@@ -1252,53 +1284,53 @@ function computeStructuralFloors(rawWorkouts, adjustedTargets, landmarks, effect
 // Exercise selection helpers
 // ---------------------------------------------------------------------------
 
-// Division-specific pool restrictions (rebuild spec phase 3, division pools).
-// Unlike DIVISION_SUBREGION_BIAS (a soft scoring nudge), these are the spec's
-// HARD pool rules: a division must not select certain lifts for a muscle.
-//  - denySubs: sub-regions the division's judging criteria exclude.
-//  - denyParams: movement classes the division excludes (e.g. shape-only legs
-//    drop heavy_compound).
-// Each rule is attributed to an explicit spec line, not a judgement call:
-//  - Bikini back "width, NOT heavy traps/rows" (spec L152, anti-pattern L238):
-//    drop horizontal_row.
-//  - Bikini quads "shape only, no heavy" (spec L152, L157): drop heavy_compound.
-//  - Bikini "never bench" (spec L152): chest is MV via machine/incline only.
-//  - Men's Physique "legs maintenance: leg press, RDL, leg curl, calf"
-//    (spec L116): quads drop heavy_compound (no back/front squat).
+// Division-specific pool restrictions.
+//
+// C16 DIVISION (2026-08-13): the table that stood here MOVED, unchanged, to
+// the canonical division profile `src/lib/division/profile.js`, where every
+// rule is re-attributed to the judging-criteria line that produced it in
+// docs/plan-generation-campaign-16/DIVISION-EVIDENCE-REGISTER.md. It sat here
+// as one of four separate places a division's character was written down,
+// which is how the one division whose published criteria name quad sweep in
+// writing ended up as the division not getting it.
+//
+// These are HARD rules, unlike the ordered role bias below: a division must
+// not select certain lifts for a muscle.
+//  - allowSubs: the only sub-regions the division's criteria permit.
+//  - denySubs:  sub-regions the criteria exclude.
+//  - denyParams: movement classes the criteria exclude.
 // SAFETY: applied only when enough lifts survive, so a thin library or a
 // machine-only user is never starved (same philosophy as difficulty gating).
-const DIVISION_POOL_RULES = {
-  bikini: {
-    // Lat-WIDTH only for the X-frame: vertical pulls and straight-arm/pullover.
-    // No heavy rows and no deadlifts (deadlifts build erector/trap thickness
-    // that widens the waist and blunts the taper, working against the judged
-    // outcome). An allow-list, not a deny-list, so a hinge can never leak in.
-    //
-    // C16 job 3: straight-arm pulldown and pullover used to share the
-    // `vertical_pull` tag, so one entry allowed both. Now that shoulder
-    // extension is its own family it must be named explicitly, or this rule
-    // would silently drop the two lat-width isolations it was written to
-    // keep. The deadlift family is now honestly `spinal_erector` and is
-    // excluded by the same allow-list that always intended to exclude it.
-    back:        { allowSubs: ['vertical_pull', 'shoulder_extension'] },
-    quads:       { denyParams: ['heavy_compound'] },
-    chest:       { denyParams: ['heavy_compound'] },
-    // Round delts via lateral raises, not pressing (spec L152). Drop overhead
-    // press from both delt buckets: side delts (the Bikini priority) keep the
-    // lateral-raise variants, front delts (MEV 0, not judged) keep isolation.
-    side_delts:  { denySubs: ['press'] },
-    front_delts: { denySubs: ['press'] },
-  },
-  mens_physique: {
-    quads: { denyParams: ['heavy_compound'] },
-  },
-};
+
+/**
+ * The athlete's DIVISION, recovered from the goal the selection layer was
+ * handed.
+ *
+ * C16 DIVISION, and a live defect this work uncovered: a weak-point or
+ * strength-size block rewrites `goal` to the legacy IDs 'weak_point_spec'
+ * and 'strength_hypertrophy' before selection (see internalGoal in
+ * _generatePlanInner - a deliberate, contained mapping for rep ranges, rest
+ * and labels). Every division rule keyed off that goal therefore vanished
+ * for the whole block: a Bikini athlete on a weak-point block was being
+ * given barbell bench press, back squat and bent-over rows, which are the
+ * three things her division's published criteria exclude.
+ *
+ * A phase is not a division. The athlete competing in Bikini is still
+ * competing in Bikini during a specialisation block, so the division is
+ * recovered here and the founder's rule - weak points COMPOSE with the
+ * division rather than replacing it - actually holds.
+ */
+let _divisionGoal = 'general';
+function divisionGoalFor(goal) {
+  if (goal === 'weak_point_spec' || goal === 'strength_hypertrophy') return _divisionGoal;
+  return goal;
+}
 
 function filterPool(muscle, equipment, goal) {
   const pool = _effectivePool[muscle] ?? [];
   const byEquip = pool.filter(e => e.eq.includes(equipment));
 
-  const rule = DIVISION_POOL_RULES[goal]?.[muscle];
+  const rule = divisionPoolRule(divisionGoalFor(goal), muscle);
   if (!rule) return byEquip;
 
   const restricted = byEquip.filter(e => {
@@ -1315,19 +1347,21 @@ function filterPool(muscle, equipment, goal) {
 }
 
 // Division-aware exercise priority (coach-plan audit 2026-06-01, stage 3).
-// A scoring nudge (not a hard filter) that favours the subregion the division
-// is judged on, within the muscle's existing volume. Width-judged divisions
-// favour incline (upper chest) and vertical pulls (lat width); the glute-led
-// divisions favour the glute-max (hip-thrust/hinge) pattern. Side-delt and
-// hamstring pools are already movement-specific, so they need no nudge.
-const DIVISION_SUBREGION_BIAS = {
-  mens_physique:    { chest: 'incline', back: 'vertical_pull' },
-  figure:           { chest: 'incline', back: 'vertical_pull' },
-  classic_physique: { back: 'vertical_pull', quads: 'sweep' },
-  womens_physique:  { back: 'vertical_pull' },
-  bikini:           { glutes: 'activator' },
-  wellness:         { glutes: 'activator', quads: 'sweep' },
-};
+//
+// A scoring nudge, not a hard filter: it favours the within-muscle ROLE the
+// division is judged on, inside the muscle's existing volume.
+//
+// C16 DIVISION (2026-08-13): this was a one-role-per-muscle table covering
+// six of the nine divisions. It is now an ORDERED LIST of roles read from
+// the canonical profile, because the published criteria are not one role
+// deep: Figure is judged on "rounded delts, sweep to the quads, back depth,
+// and width" in a single sentence, so back wants a vertical pull AND a row,
+// and quads want the sweep the old table never gave them.
+//
+// Order carries meaning. The first role is the most judged, and gets the
+// larger nudge, so a two-role division fills its primary role first and its
+// secondary role next without either becoming a hard requirement that could
+// starve a small session.
 
 // Per-exercise set caps (D8, founder ruling 2026-07-09,
 // docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md §D8, and the
@@ -1484,8 +1518,8 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
   // Sort: required subregion first → compound before isolation → goal bias
   // → SFR tiebreak → pool index. Each term is an order of magnitude below
   // the previous so the established priority order is preserved.
-  const divBias = DIVISION_SUBREGION_BIAS[goal];
-  const preferredSub = divBias ? divBias[muscle] : null;
+  // The division's ordered within-muscle roles, most judged first.
+  const preferredRoles = divisionRoles(divisionGoalFor(goal), muscle);
 
   // C16 job 3: required entries are ROLES. A role may be satisfied by more
   // than one family (back's horizontal_row accepts a lat-biased row or an
@@ -1509,10 +1543,16 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
     // division is nudged toward the knee-forward lift without that nudge
     // counting as separate coverage - which is precisely the confusion that
     // let two squats pass as two quad families.
-    const matchesBias = preferredSub === 'sweep'
-      ? isSweepBiased(e.n)
-      : e.sub === preferredSub;
-    const divBonus = (preferredSub && matchesBias) ? -5 : 0;
+    //
+    // C16 DIVISION: roles are ORDERED. The primary judged role keeps the
+    // original -5 (half a param tier, enough to favour the judged role
+    // without overriding required coverage or compound-first ordering);
+    // each later role gets proportionally less, so a division that is
+    // judged on two roles fills the more-judged one first.
+    const roleIndex = preferredRoles.findIndex(
+      role => (role === SWEEP ? isSweepBiased(e.n) : e.sub === role),
+    );
+    const divBonus = roleIndex === -1 ? 0 : -5 / (roleIndex + 1);
     let goalBonus = 0;
     if (isStrengthGoal) {
       // Strength: nudge barbell/landmine compounds up a little.
@@ -1797,12 +1837,18 @@ function selectSplit(experience, effectiveDays, goal) {
   // stage 2). Full body at 3 days already exposes legs every session;
   // upper/lower at 4 already runs 2 lower days; 5-6 days route to the
   // lower-focus split (3 lower days).
-  const lowerFocus = (goal === 'bikini' || goal === 'wellness');
+  //
+  // C16 DIVISION: both of these were inline goal lists, which is why adding a
+  // division meant remembering four files. They now read the leg character
+  // the canonical profile records, which is itself a rulebook fact: Men's
+  // Physique is judged in board shorts, so its legs are not presented;
+  // Bikini and Wellness are judged on the lower body.
+  const legs = divisionLegCharacter(goal);
+  const lowerFocus = legs === LEG_CHARACTER.LOWER_LED;
   // Divisions whose legs are fully judged need two leg days at 5 days (the PPL
   // 5-day gives one). Men's Physique stays upper-weighted; general keeps PPL so
   // the default non-competitor experience is unchanged.
-  const legJudgedBalanced = (goal === 'bodybuilding' || goal === 'classic_physique'
-    || goal === 'figure' || goal === 'womens_physique' || goal === 'womens_bodybuilding');
+  const legJudgedBalanced = legs === LEG_CHARACTER.FULLY_JUDGED;
   // C16 CLOSURE: two days is full body, for everyone.
   //
   // Two sessions cannot carry a split - an upper/lower at two days trains
@@ -3036,6 +3082,10 @@ function _generatePlanInner(inputs) {
   const safeWeakPointsUI = weakPoints.slice(0, 3);
   const weakPointKeys    = resolveWeakPointKeys(safeWeakPointsUI);
   _weakPointKeys = weakPointKeys;  // visible to buildSession / buildFromMatrix
+  // The athlete's DIVISION for this run, kept beside the weak-point keys and
+  // for the same reason: the selection layer is handed a legacy goal ID on a
+  // weak-point or strength-size block, and the division must survive it.
+  _divisionGoal = goal;
 
   // Clamp to the supported 2-6 split range.
   //
@@ -3149,6 +3199,25 @@ function _generatePlanInner(inputs) {
   // from the post-clamp placements so it reflects real per-muscle frequency.
   const structuralFloors = computeStructuralFloors(rawWorkouts, adjustedTargets, landmarks, effectiveDays);
 
+  // Muscles the DIVISION deliberately emphasises. A Bikini athlete's glutes
+  // are the point of the plan; trimming them for the clock produces a
+  // different plan, not a shorter one.
+  //
+  // C16 DIVISION: the numeric test alone (is this muscle carrying more than
+  // its MAV-low?) misses a judged muscle whose landmarks are high enough
+  // that the overlay never pushes it past that line - the muscle is still
+  // what the athlete is judged on. The division's own priority list is
+  // unioned in, so protection follows the rulebook rather than an arithmetic
+  // side effect. BOTH trims read this: the weekly resolver above and the
+  // per-session trim below, which previously knew only about structural
+  // floors and so took its cut out of the judged muscle.
+  const priorityMuscles = [...new Set([
+    ...Object.keys(adjustedTargets).filter(
+      m => (adjustedTargets[m] ?? 0) > (landmarks[m]?.MAVlow ?? Infinity),
+    ),
+    ...divisionPriorityMuscles(goal).filter(m => adjustedTargets[m] != null),
+  ])];
+
   // C16 job 3/6: muscles this week trains in exactly ONE session. The
   // hard-cap backstop inside trimToTimeBudget may drop a muscle's sole
   // entry on the stated grounds that the muscle is trained on another day;
@@ -3197,9 +3266,14 @@ function _generatePlanInner(inputs) {
     // Muscles the DIVISION deliberately emphasises. A Bikini athlete's
     // glutes are the point of the plan; trimming them for the clock
     // produces a different plan, not a shorter one.
-    priorityMuscles: Object.keys(adjustedTargets).filter(
-      m => (adjustedTargets[m] ?? 0) > (landmarks[m]?.MAVlow ?? Infinity),
-    ),
+    //
+    // C16 DIVISION: the numeric test alone (is this muscle carrying more
+    // than its MAV-low?) misses a judged muscle whose landmarks are high
+    // enough that the overlay never pushes it past that line - the muscle
+    // is still what the athlete is judged on. The division's own priority
+    // list is unioned in, so protection follows the rulebook rather than an
+    // arithmetic side effect.
+    priorityMuscles,
   });
   rawWorkouts = fitted.workouts;
 
@@ -3208,6 +3282,7 @@ function _generatePlanInner(inputs) {
     const deduped  = deduplicateExercises(w.exercises);
     const trimmed  = trimToTimeBudget(
       deduped, sessionLengthMinutes, equipment, structuralFloors, sessionsRemaining,
+      priorityMuscles,
     );
     // C16 job 4 (FOUNDER RULING): auto-generated plans contain NO supersets.
     //
