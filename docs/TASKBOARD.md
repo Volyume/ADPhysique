@@ -1400,6 +1400,15 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **STILL BLOCKED after Campaign 15: deploy the `partner-cheer` Edge
+  Function.** Retried at the start of C15 and the reason is now precise:
+  the Supabase connector is authorised at ORG level but is toggled OFF for
+  this chat (`enabledInChat: false`), so no Supabase tool loads and there
+  is no deploy path at all. There is also no Supabase CLI in the
+  environment. FIX: enable the Supabase connector for the session in
+  claude.ai connector settings, or deploy it yourself with the command
+  below. Details unchanged:
+
 - **C14-J4 BLOCKED: deploy the `partner-cheer` Edge Function.** Campaign 14
   made the recipient's partner-cheer opt-out real by enforcing it
   SERVER-side: the function now reads the recipient's own

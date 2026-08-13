@@ -1,7 +1,72 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ FRESH SESSION START HERE (2026-08-13, after Campaign 14) ★
+## ★ FRESH SESSION START HERE (2026-08-13, after Campaign 15) ★
+
+**Campaigns 1-15 are CLOSED. Main is `0f7f0775`** (merge commit "Merge
+Campaign 15: cross-device, reinstall and recovery closeout"). Gates:
+`npm run lint` clean, identity invariant clean, full suite green on the
+FIRST run - 875 suites, 11,142 tests, zero failures, and neither known
+flake fired.
+
+**Campaign 15 covered cross-device, reinstall, backup/restore, offline
+recovery and state rehydration. What changed, and what was only proven:**
+
+1. **partner-cheer deploy: STILL BLOCKED**, and now for a precise reason -
+   the Supabase connector is authorised at org level but toggled OFF for
+   the chat, so no Supabase tool loads and there is no CLI in the
+   environment either. TASKBOARD section 3 carries the command and the
+   verification steps. NO migration is outstanding for it.
+2. **adaptation_events restore was ALREADY correct** (Campaign 8 Work 4
+   pointed it at the authoritative table). Verified end to end rather than
+   taken on trust, and now pinned THROUGH the live readers: the Engine Log
+   and the session engine share `getRecentAdaptationEvents`, and restored
+   revert memory and same-week caps really do suppress an add the engine
+   would otherwise make.
+3. **Mature-athlete reinstall equivalence** is proven by running the real
+   `buildSeedRangesForNextBlock` on an established account and on the same
+   rows restored through the real appliers, comparing whole maps.
+4. **Sync ownership ruled** for the two keys C14 left conservative. Both
+   STAY, for different reasons (split ownership vs incomplete dedicated
+   carrier). The trace found a real defect: the per-day pattern was
+   unanchored and also matched the device write clock. Anchored, and the
+   clock excluded by name.
+5. **Backup restore can no longer create a dead file reference.** Checked
+   before the write, not cleaned up after. Rows that stand alone keep
+   their data with the reference cleared; rows that exist only to point at
+   a file are not restored; a relocated file is re-pointed within the same
+   user's directory.
+6. **Startup ordering verified and pinned** rather than changed - the
+   re-lay cancels before it schedules, so a category disabled elsewhere is
+   genuinely undone.
+7. **Offline convergence** exercises six laws together in one stale-device
+   sequence, and pins both halves of the distinction: a newer explicit
+   deletion wins, a failed cloud read never erases local state.
+8. **The state contract is now executable** (`campaign15.stateContract`),
+   with a completeness guard that immediately caught five backed-up tables
+   nobody had classified.
+
+**New regression family:** `campaign15.reinstallContract`,
+`campaign15.staleDeviceConvergence`, `campaign15.matureAthleteRestore`,
+`campaign15.stateContract` (src/__tests__), plus
+`campaign15.syncOwnership` and `campaign15.backupFileIntegrity`
+(src/lib/__tests__).
+
+**Process note.** Both delegated lanes died mid-task on an account session
+limit, leaving partial work in the tree - one had written helpers but had
+NOT wired them into `importBackup`, so the fix was dead code that looked
+finished. Both were reviewed and completed by hand. Staging was explicit
+per file throughout, per the founder's process law; no `git add -A`.
+
+**Genuine remaining debt in this area** is listed in the Campaign 15
+handover: the Edge Function deploy, and the claim in
+`src/lib/sync/tables/perDayTargetOffsets.js` that cloud migration 110 is
+not yet applied, which could not be checked without the connector.
+
+The Campaign 14 block below is the previous entry.
+
+===============================================================================
+## ★ SUPERSEDED (2026-08-13, after Campaign 14) ★
 
 **Campaigns 1-14 are CLOSED. Main is `268ad4d4`** (merge commit
 "Merge Campaign 14: preferences, notifications and user-control
