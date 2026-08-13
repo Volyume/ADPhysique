@@ -82,6 +82,69 @@ the row. Load is now always cleared. Reps and rest are recalibrated only
 when the row still carries the outgoing tier's default AND the tier
 changes, so a user's own tuning is never overwritten.
 
+## PHASE B — generation quality (COMPLETE)
+
+| Job | State | Where |
+|---|---|---|
+| 5 initial vs rebuild continuity | LANDED | `src/lib/exercise/continuity.js` |
+| 8 split/days/session matrix | LANDED | `campaign16.splitMatrix` (20 property tests) |
+| 6 volume delivery integrity | LANDED | `src/lib/exercise/volumeAudit.js` + 16 tests |
+| 1 dry-run/commit/activation identity | LANDED | `campaign16.canonicalIdentity` + volume suite |
+
+Job 5 matches slots by MUSCLE + MOVEMENT FAMILY, not position, so a rebuild
+that changes split/days/length still recognises the slot. The decision is
+made by `programmeEpoch.slotVerdict`, not re-implemented. Continuity can
+never override an exclusion, resurrect lost equipment, keep an
+auto-ineligible exercise, or change a slot's sets/reps/rest. A test caught
+a real defect: an incumbent the generator had already placed elsewhere was
+being substituted into a second slot, duplicating it in one session.
+
+Job 6 counts volume INDEPENDENTLY (against the catalogue, not the
+generation pool) and names anything unresolvable instead of counting it as
+zero. All four stages pinned. The block's planned volume is deliberately
+NOT asserted equal to delivered sets - it is a per-week ramp - but every
+trained muscle must have a real non-zero target.
+
+Job 8 asserts plan QUALITY across experience x days x length x equipment x
+division x weak points x recovery. Found no further defects: split suits
+days, ceilings hold, equipment is honoured, overruns self-declare,
+determinism holds.
+
+Incidental fix: plan activation used `await import()` where the file uses
+lazy `require` everywhere else, which made activation untestable.
+
+## ADDITIONAL QUALITY LAWS 1-6 (LANDED)
+
+Folded into the existing decision/reason system per the founder's
+instruction, not a separate campaign.
+
+1. **Session vs programme swaps.** LIVE DEFECT: `ActiveWorkoutScreen`
+   recorded a mid-workout substitution - on a sheet that says the plan is
+   unchanged, usually a busy machine - identically to a permanent plan
+   edit. Two busy-machine days reached the >= 2 threshold and the exercise
+   was proposed for removal. Swaps now carry `scope`; only `programme`
+   counts as negative preference. Unknown (pre-migration) rows are NOT
+   counted - under-counting costs one more swap, over-counting deletes
+   something the user likes. Local v75, cloud `migrate_137` (NOT applied,
+   founder-gated; ship order does not matter for this one).
+2. **Replacements start empty.** Load already cleared (job 7); confidence
+   cannot transfer because maturity derives from the exercise's own
+   exposures.
+3. **Evidence maturity.** NONE / EMERGING / ESTABLISHED, a named level
+   never a percentage. Personal standing is weighted by maturity with
+   canonicality as the baseline it must earn past. An approved default is
+   exempt - intent, not evidence.
+4. **Fatigue compatibility.** Library `fatigueCost` reaches the pool; a
+   session already holding two high-fatigue movements nudges further ones
+   behind equally valid alternatives. A nudge, an order of magnitude below
+   required coverage, so coverage always wins. Unknown = never penalised.
+5. **Session ordering.** LIVE DEFECT: the 5-day balanced split emitted
+   Lower, Upper, Lower, Upper, UPPER. Now spreads the more numerous type;
+   lower-focus divisions are byte-identical.
+6. **KEEP is a decision.** Every KEEP names a positive reason;
+   `PERSONAL_FIT_KEEP` added so an established fit is not reported as
+   "nothing was wrong".
+
 ## Founder amendment (programme epochs) — status
 
 | Item | State |
