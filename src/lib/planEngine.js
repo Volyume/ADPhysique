@@ -15,6 +15,7 @@ import {
   movementFamily, familySatisfiesRole, isSweepBiased, CLASSIFIED_MUSCLES,
 } from './exercise/movementFamily';
 import { canonicalExerciseId } from './exercise/canonicalId';
+import { repRangeFor, restFor } from './exercise/prescription';
 // C5-P11-01 (D96): the block length the app actually creates. mesocycle.js
 // is a pure module (no I/O), so reading the constant here keeps planEngine
 // pure and deterministic; only a narrative string uses it, never a
@@ -795,12 +796,6 @@ export const SUBREGION_REQUIREMENTS = {
 // Session time parameters
 // ---------------------------------------------------------------------------
 
-const REST_SEC = {
-  heavy_compound: 180,
-  mod_compound:   150,
-  machine:        120,
-  isolation:       75,
-};
 
 const TRANS_SEC = {
   full_gym:       120,
@@ -815,26 +810,8 @@ const TRANS_SEC = {
 // makeEx, build one exercise entry
 // ---------------------------------------------------------------------------
 
-const REP_RANGES = {
-  heavy_compound: { repMin: 5,  repMax: 9  },
-  mod_compound:   { repMin: 8,  repMax: 12 },
-  machine:        { repMin: 8,  repMax: 15 },
-  isolation:      { repMin: 10, repMax: 20 },
-};
 
-const STRENGTH_REP_RANGES = {
-  heavy_compound: { repMin: 4,  repMax: 6  },
-  mod_compound:   { repMin: 5,  repMax: 8  },
-  machine:        { repMin: 8,  repMax: 12 },
-  isolation:      { repMin: 10, repMax: 15 },
-};
 
-const STRENGTH_REST = {
-  heavy_compound: 210,
-  mod_compound:   180,
-  machine:        120,
-  isolation:       75,
-};
 
 function baseRir(experience) {
   if (experience === 'beginner')     return 3;
@@ -844,10 +821,12 @@ function baseRir(experience) {
 
 function makeEx(name, paramKey, sets, experience, nutritionPhase, goal = null, notes = null) {
   const isStrength = goal === 'strength_hypertrophy';
-  const rr = isStrength ? (STRENGTH_REP_RANGES[paramKey] ?? STRENGTH_REP_RANGES.isolation)
-                        : (REP_RANGES[paramKey] ?? REP_RANGES.isolation);
-  const rest = isStrength ? (STRENGTH_REST[paramKey] ?? REST_SEC[paramKey] ?? 75)
-                          : (REST_SEC[paramKey] ?? 75);
+  // C16 job 7: the tables live in exercise/prescription.js so the plan
+  // EDITOR resolves a prescription the same way the generator does. A
+  // plan-level swap used to leave the previous exercise's reps, rest and
+  // starting weight on the row.
+  const rr = repRangeFor(name, paramKey, isStrength);
+  const rest = restFor(paramKey, isStrength);
   let rir = baseRir(experience);
   const cutPhases = ['mild_cut', 'aggressive_cut'];
   if (cutPhases.includes(nutritionPhase)) rir = Math.min(rir + 1, 4);
