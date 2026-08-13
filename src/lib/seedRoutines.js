@@ -389,7 +389,7 @@ const LIBRARY_PLANS = [
   // ── 9. Upper / Lower Express (4 × 40 min) ────────────────────────────────
   {
     name: 'Upper / Lower Express 4×/Week',
-    description: 'Four 40-minute sessions per week using a tight exercise selection and short rest periods. Built on the upper/lower structure with each session trimmed to its highest-value exercises. Suitable for lifters with 12 months or more of training who have a busy schedule and want each muscle trained twice a week without long sessions. Add reps, then weight, on all compound movements. Optional supersets (pairing exercises that do not compete for the same muscles) can shave a further 10 minutes off each session. Stop 1 to 2 reps before failure on each set.',
+    description: 'Four 40-minute sessions per week using a tight exercise selection and short rest periods. Built on the upper/lower structure with each session trimmed to its highest-value exercises. Suitable for lifters with 12 months or more of training who have a busy schedule and want each muscle trained twice a week without long sessions. Add reps, then weight, on all compound movements. Stop 1 to 2 reps before failure on each set.',
     tags: 'upper_lower short gender:all goal:build_muscle days:4',
     difficulty: 1,
     workouts: [
@@ -397,7 +397,7 @@ const LIBRARY_PLANS = [
         name: 'Upper A',
         exercises: [
           { name: 'Barbell Bench Press',      sets: 3, repsMin: 6,  repsMax: 10, rest: 90,  notes: 'Primary push.' },
-          { name: 'Seated Cable Row',         sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Primary pull: superset with bench optional.' },
+          { name: 'Seated Cable Row',         sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Primary pull.' },
           { name: 'Dumbbell Shoulder Press',  sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Front delt compound.' },
           { name: 'Dumbbell Lateral Raise',   sets: 2, repsMin: 15, repsMax: 25, rest: 45,  notes: 'Side delts. Shoulder press does not cover these adequately.' },
           { name: 'EZ Bar Curl',              sets: 2, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Bicep finisher.' },

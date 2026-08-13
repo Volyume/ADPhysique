@@ -37,14 +37,20 @@ describe('superset assignment, gating rules', () => {
     }
   });
 
-  test('intermediate physique goal with generous session gets some supersets', () => {
+  // C16 job 4 re-anchor (FOUNDER RULING): this used to assert that a
+  // generous-session physique profile DID get supersets. Volyume no longer
+  // creates a superset the user did not ask for, in any profile, because
+  // it cannot know whether the two stations are next to each other or even
+  // free. The gating rules this suite covers are now moot for generation
+  // and the honest pin is the absence itself.
+  test('a generous-session physique profile gets NO generated supersets', () => {
     const plan = generatePlan({
       experience: 'intermediate', daysPerWeek: 4, sessionLengthMinutes: 60,
       equipment: 'full_gym', goal: 'general_hypertrophy', phase: 'maintain',
       weakPoints: [], recoveryRating: 'average', nutritionPhase: 'maintain',
     });
     const totalPairs = plan.workouts.reduce((s, w) => s + getPairs(w).length, 0);
-    expect(totalPairs).toBeGreaterThan(0);
+    expect(totalPairs).toBe(0);
   });
 
   test('strength goal with generous session gets no supersets', () => {
