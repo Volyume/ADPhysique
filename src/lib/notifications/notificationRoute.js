@@ -49,6 +49,13 @@ export function routeForNotificationType(type, data = {}) {
       // The in-app trial-ending gate. Variant default matches the 14+7 trial
       // (the 'day14' content is the generic "trial winding down" copy).
       return { tab: 'ProfileTab', screen: 'CascadeGate', params: { variant: 'day14' } };
+    case 'block_ready_to_review':
+      // C16 phase C: the block-complete review. The decision card - the
+      // programme verdict, what stays, what changes and the next-block
+      // options - lives on the Plans surface, so that is where the push
+      // opens. It carries no params: the card reads the active block
+      // itself, and a stale id in a notification would be worse than none.
+      return { tab: 'PlansTab', screen: 'Plans' };
     case 'weekly_coach_ready':
       // PM-01(b) (D96): the Monday 09:00 push is laid when a check-in is
       // submitted, so it is about THAT week's review. It used to carry no

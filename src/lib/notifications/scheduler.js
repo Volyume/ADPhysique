@@ -1377,6 +1377,90 @@ export async function cancelWeeklyCoachReady() {
   try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_COACH_READY); } catch {}
 }
 
+// ─── Block complete, ready to review (C16 phase C) ───────────────────────────
+
+const NOTIF_ID_BLOCK_READY = 'volyume_block_ready';
+
+/**
+ * C16 phase C: one push when a block finishes and its next-block proposal
+ * is ready to review.
+ *
+ * The founder's constraints, each honoured here rather than assumed:
+ *
+ *   EXISTING CATEGORY. WEEKLY_COACH_READY is the coaching/review category
+ *   and this is a coaching review. A new category would need a new opt-out
+ *   the user has never seen, and Campaign 14 made every category's
+ *   ownership explicit precisely so new pushes stop inventing one.
+ *
+ *   AT MOST ONE. A fixed identifier, cancelled and re-laid, so a block that
+ *   is evaluated more than once cannot stack pushes.
+ *
+ *   OPT-OUT, QUIET HOURS, PERMISSION, BUDGET. All inherited by going
+ *   through the same path the weekly coach push uses:
+ *   isCategoryEnabled gates it, quiet hours shift it, and the push budget
+ *   can refuse it.
+ *
+ *   NEVER "YOUR PROGRAMME HAS CHANGED". The body comes from
+ *   blockReview.blockReadyNotificationBody, which only mentions changes
+ *   when a proposal actually has some, and never says anything has already
+ *   happened.
+ *
+ * @param {object|null} proposal blockReview.proposeNextBlock output, or null
+ * @param {Date|number} when     when to fire; defaults to now + 1 minute
+ */
+export async function scheduleBlockReadyToReview(proposal = null, when = null) {
+  if (Platform.OS === 'web') return;
+  try {
+    await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_BLOCK_READY).catch(() => {});
+    // Campaign 14: the user's own opt-out for this category decides.
+    // eslint-disable-next-line global-require
+    const { isCategoryEnabled } = require('./categoryPrefs');
+    const enabled = await isCategoryEnabled(CATEGORY.WEEKLY_COACH_READY);
+    if (!enabled) return;
+
+    // eslint-disable-next-line global-require
+    const { blockReadyNotificationBody } = require('../blockReview');
+    const base = when instanceof Date ? when : new Date(Number(when) || (Date.now() + 60000));
+    const quiet = await getQuietHours();
+    const { hour, minute } = shiftHourMinuteOutOfQuietHours(
+      base.getHours(), base.getMinutes(), quiet,
+    );
+    const fireAt = new Date(base);
+    fireAt.setHours(hour, minute, 0, 0);
+    if (fireAt.getTime() <= Date.now()) fireAt.setTime(Date.now() + 60000);
+
+    const slot = await requestEventPushSlot({
+      category: CATEGORY.WEEKLY_COACH_READY, fireDate: fireAt,
+    });
+    if (!slot.allowed) return;
+
+    await Notifications.scheduleNotificationAsync({
+      identifier: NOTIF_ID_BLOCK_READY,
+      content: {
+        title: 'Your next block is ready',
+        body: blockReadyNotificationBody(proposal),
+        data: { type: 'block_ready_to_review' },
+        sound: false,
+      },
+      trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: fireAt,
+      },
+    });
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.WEEKLY_COACH_READY,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+  }
+}
+
+export async function cancelBlockReadyToReview() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_BLOCK_READY); } catch {}
+}
+
 // ─── Cancel helpers ───────────────────────────────────────────────────────────
 
 export async function cancelMorningNotification() {

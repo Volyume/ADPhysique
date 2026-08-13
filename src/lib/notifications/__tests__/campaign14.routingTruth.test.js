@@ -143,6 +143,12 @@ const DECISIONS = {
     tab: 'ProfileTab', screen: 'CoachOutput',
     file: 'src/screens/CoachOutputScreen.js', marker: /weekStart/,
   },
+  // C16 phase C: the block-complete review opens the surface that carries
+  // the decision card, not a generic screen.
+  block_ready_to_review: {
+    tab: 'PlansTab', screen: 'Plans',
+    file: 'src/screens/PlansScreen.js', marker: /programmeReview/,
+  },
   cascade_gate: {
     tab: 'ProfileTab', screen: 'CascadeGate',
     file: 'src/screens/CascadeGateScreen.js', marker: /params\?\.variant/,
@@ -245,6 +251,7 @@ describe('live notification type inventory is derived, not assumed', () => {
   test('the inventory matches the traced set (a new emitter forces a re-trace)', () => {
     expect(LIVE_TYPES).toEqual([
       'activation_nudge',
+      'block_ready_to_review',
       'cascade_gate',
       'checkin_missed',
       'evening_weight',

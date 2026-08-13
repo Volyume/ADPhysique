@@ -153,16 +153,24 @@ describe('C16-C REPEAT means repeat', () => {
     expect(src).toMatch(/allowLearnedCarry: seedIntent !== 'repeat'/);
   });
 
-  test('no elective refinement can leak into it: the review is never called on that path', () => {
-    // The structural half is computed for the DECISION SURFACE, and the
-    // repeat action takes the user's existing plan untouched. Nothing in
-    // the repeat path may consult the proposal.
+  test('no elective refinement can leak into it: the ACTION never consults the proposal', () => {
+    // The distinction that matters. The screen may RENDER the verdict -
+    // that is the decision surface, and hiding it would be the opposite of
+    // the amendment. What must never happen is the repeat action reading
+    // it, because Repeat means repeat.
     const src = fs.readFileSync(path.resolve(__dirname, '../../screens/PlansScreen.js'), 'utf8');
-    expect(src).not.toMatch(/proposeNextBlock|programmeReview/);
+    // The activation call and everything it is built from.
+    const action = src.slice(src.indexOf('const seedIntent'), src.indexOf('allowLearnedCarry') + 200);
+    expect(action).not.toMatch(/programmeReview|proposeNextBlock|slotVerdict|changes/);
+    // And the screen never rewrites exercises from a proposal at all.
+    expect(src).not.toMatch(/programmeReview[\s\S]{0,200}updateRoutineExerciseExercise/);
+  });
+
+  test('the review is information only: nothing in the path writes a plan', () => {
     const advisor = fs.readFileSync(path.resolve(__dirname, '../blockAdvisor.js'), 'utf8');
-    // The review is built only on the finished-block branch, and it is
-    // information; it never rewrites a plan.
     expect(advisor).not.toMatch(/addExerciseToRoutine|updateRoutineExerciseExercise/);
+    const review = fs.readFileSync(path.resolve(__dirname, '../blockReview.js'), 'utf8');
+    expect(review).not.toMatch(/addExerciseToRoutine|updateRoutineExerciseExercise|createRoutine/);
   });
 
   test('the proposal is inert data: it mutates nothing', () => {

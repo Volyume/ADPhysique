@@ -963,6 +963,31 @@ export default function PlansScreen({ navigation }) {
 
             <Text style={[styles.blockCardBody, live.blockCardBody]}>{blockAdvice.body}</Text>
 
+            {/* C16 phase C: the recovery-week heads-up. It says a review is
+                coming and what it will consider. It promises no changes,
+                because none have been decided yet. */}
+            {blockAdvice.reviewHeadsUp && (
+              <Text style={[styles.blockReviewHeadsUp, live.blockReviewHeadsUp]}>
+                {blockAdvice.reviewHeadsUp}
+              </Text>
+            )}
+
+            {/* C16 phase C: the programme verdict, in user language, on the
+                persistent decision surface. Shown beside the volume
+                recommendation, never instead of it: a block boundary always
+                evaluates volume, and structure only when there is history
+                for it. Nothing here has happened yet. */}
+            {blockAdvice.programmeReview?.copy && (
+              <View style={[styles.programmeVerdict, live.programmeVerdict]}>
+                <Text style={[styles.programmeVerdictTitle, live.programmeVerdictTitle]}>
+                  {blockAdvice.programmeReview.copy.title}
+                </Text>
+                <Text style={[styles.programmeVerdictBody, live.programmeVerdictBody]}>
+                  {blockAdvice.programmeReview.copy.body}
+                </Text>
+              </View>
+            )}
+
             {/* Signal chips, shown for early_deload and heads_up */}
             {blockAdvice.signals?.filter(s => s.severity !== 'info').length > 0 && (
               <View style={styles.signalRow}>
@@ -1907,6 +1932,17 @@ const styles = StyleSheet.create({
     ...type.bodySm, color: colors.textSecondary,
   },
 
+  // C16 phase C: block-boundary review surfaces.
+  blockReviewHeadsUp: {
+    ...type.bodySm, color: colors.textSecondary, marginTop: spacing.sm,
+  },
+  programmeVerdict: {
+    marginTop: spacing.md, paddingTop: spacing.md,
+    borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.xxs,
+  },
+  programmeVerdictTitle: { ...type.labelSm, color: colors.textPrimary },
+  programmeVerdictBody: { ...type.bodySm, color: colors.textSecondary },
+
   // Signal chips
   signalRow: {
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs,
@@ -2031,6 +2067,10 @@ function buildLiveStyles(t) {
     blockCardIconWrap: { backgroundColor: t.colors.surface2 },
     blockCardTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     blockCardBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    blockReviewHeadsUp: { ...t.type.bodySm, color: t.colors.textSecondary },
+    programmeVerdict: { borderTopColor: t.colors.border },
+    programmeVerdictTitle: { ...t.type.labelSm, color: t.colors.textPrimary },
+    programmeVerdictBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     signalChip: { backgroundColor: t.colors.surface2, borderColor: withAlpha(t.colors.warning, alpha.mid) },
     signalChipHigh: { borderColor: withAlpha(t.colors.error, alpha.strong), backgroundColor: withAlpha(t.colors.error, alpha.ghost) },
     signalChipText: { fontSize: t.fontSize.xs, color: t.colors.warning },

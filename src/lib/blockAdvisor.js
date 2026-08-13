@@ -609,9 +609,23 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
     const trainedRecently = Number.isFinite(recentTrainingAt)
       && (Date.now() - recentTrainingAt) <= 14 * 86400000;
     const nextBlock = buildNextBlockRecommendation(checkins, userProfile, signals, 'recovery', isPro);
+    // C16 phase C: the recovery-week heads-up. It INFORMS that a review is
+    // coming and what the review will consider; it promises no changes,
+    // because none have been decided. Pro only (Free receives no coaching)
+    // and best-effort - a failed epoch read simply omits the line.
+    let reviewHeadsUp = null;
+    if (isPro) {
+      try {
+        // eslint-disable-next-line global-require
+        const { recoveryHeadsUp } = require('./blockReview');
+        const review = await buildProgrammeReview(userId, activeBlock);
+        reviewHeadsUp = recoveryHeadsUp({ epochBlocks: review?.epochBlocks ?? 0 }).body;
+      } catch (_) { reviewHeadsUp = null; }
+    }
     if (!trainedRecently) {
       return {
         action: 'in_recovery',
+        reviewHeadsUp,
         headline: 'Recovery week on the calendar',
         body: `This block's recovery week has arrived, but you haven't trained recently, so there's nothing to recover from yet. Pick up wherever suits you: ease back in with lighter sessions, and the next-block choice opens when this week ends.`,
         signals,
@@ -621,6 +635,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
     }
     return {
       action: 'in_recovery',
+      reviewHeadsUp,
       headline: 'Recovery week is active',
       body: `Keep sessions lighter. Roughly half the sets, same exercises, easy effort. This isn't stepping back; it's letting the last few weeks of work pay off. You'll come back to full training next week.`,
       signals,
