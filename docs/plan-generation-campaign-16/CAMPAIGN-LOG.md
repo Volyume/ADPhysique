@@ -335,3 +335,53 @@ against the intended REP_RANGES contract before anything is changed.
   eleven currently held are listed in `CONTESTED` in canonicality.js.
 - Default pool: staples first, common as filler, specialist only when
   recognisable options cannot cover the muscle.
+
+## CLOSURE ADDENDUM — the two live user-contract failures
+
+### 1. Session duration is now a constraint
+
+BEFORE: a 45-minute request routinely returned 66-78 minute sessions with
+an accurate note. 30-minute requests returned 60-78.
+
+AFTER: `src/lib/timeConstraint.js` sees the whole week and works the
+founder's ladder in order - redundant coverage, minimum sensible exercise
+count, frequency redistributed across AVAILABLE sessions, then
+discretionary sets from the lowest-priority muscles. It will not cross a
+volume floor: weak points and division-emphasised muscles are untouchable
+and no muscle goes below its own MEV. Result is structured (FIT /
+CONSTRAINED_BUT_VALID / USER_DECISION_REQUIRED) and classified from the
+STAMPED durations after every trim. Tolerance 5 min, documented as a
+product heuristic.
+
+45-minute worst session, before -> after: 4d 73 -> reported infeasible with
+the sessions named; 5d 70 -> 65; 6d 68 -> 60. Where a four-day upper/lower
+carries six muscles at MEV, 45 minutes is genuinely infeasible and the plan
+says so rather than silently overrunning.
+
+### 2. Real two-day support
+
+BEFORE: quiz offered 2 days, plan surfaces offered 3-6, engine clamped
+2 -> 3. A user could choose two sessions and receive three, untold.
+
+AFTER: 2 days produces exactly 2 sessions, `full_body`, covering chest,
+back, delts, quads, hamstrings, arms and calves/abs across the sequence.
+No weekday is ever assigned. 1 and 7+ still clamp.
+
+Two defects that had never been reachable before:
+- the sole-session protection was a static snapshot, so two sessions both
+  read "trained elsewhere" and both dropped the same muscle - a two-day
+  machines-only plan lost its glutes entirely. Now a live shared count.
+- glutes (landmark MEV 0, fed indirectly by design) are floored to the
+  maintenance floor at 2 days, applied LAST because every earlier position
+  was undone by the division overlay or the indirect-credit trim.
+
+### Gates
+
+lint clean; identity invariant clean; 14 Campaign 16 suites 316 tests;
+ONE full suite: **888 suites, 11,458 tests, 0 failures**.
+
+### Residual
+
+A bodyweight or machines-only two-day physique plan lands one set below
+the glute maintenance floor (3 vs 4). It is an equipment reality, the
+muscle is still trained, and it is pinned as such rather than hidden.
