@@ -145,6 +145,51 @@ instruction, not a separate campaign.
    `PERSONAL_FIT_KEEP` added so an established fit is not reported as
    "nothing was wrong".
 
+## PHASE C — longitudinal intelligence (COMPLETE)
+
+`src/lib/blockReview.js` is the assembly point and the epoch engine's first
+production consumer. `getBlockAdvice` builds it on the finished-block
+branch (Pro-only, best-effort) and returns `programmeReview`;
+`PlansScreen` renders the verdict on the decision card and the
+recovery-week heads-up on the recovery card. The block-ready push goes
+through the EXISTING `WEEKLY_COACH_READY` category, one fixed identifier,
+routed to `PlansTab/Plans`.
+
+Two real defects found while wiring:
+
+- `programmeVerdict` promised in its own comment that "a two-exercise
+  change is never a rebuild" and did not enforce it (2/4 slots = 50% churn
+  = REBUILD). Now an absolute floor of 3 changed slots, checked before any
+  ratio. This closes the `consider_rebuild` mismatch the founder named.
+- That ratio reused `EPOCH_CONTINUITY_SIMILARITY`, giving it a second
+  meaning its own docs forbid. Churn now has `REBUILD_CHURN_RATIO`.
+- `proposeNextBlock` passed plan objects to `countEpochBlocks`, which
+  compares SIGNATURES. It matched nothing and reported a zero-block epoch
+  for a mature programme, which would have suppressed structural review
+  forever.
+
+The routing-truth guard caught a push with no destination.
+
+## PHASE D — explanation (COMPLETE)
+
+`SELECTION_REASON` is emitted BY THE SELECTOR at the moment of choice;
+`planRationale.js` only translates, and returns null for an unmapped code
+rather than inventing prose. A test pins that no implementation word
+reaches the user (it caught one).
+
+`campaign16.longitudinal` runs the named scenarios and found a real defect:
+when the generator re-picked the incumbent, continuity short-circuited to
+RETAINED **without consulting the verdict**, so an excluded exercise could
+survive a rebuild.
+
+## CAMPAIGN CLOSE — gates
+
+- `npm run lint`: clean
+- identity invariant: clean
+- 13 Campaign 16 suites: 291 passed
+- ONE full suite: **887 suites, 11,430 tests, 0 failures** (both known
+  flakes passed)
+
 ## Founder amendment (programme epochs) — status
 
 | Item | State |
@@ -181,18 +226,18 @@ Key design decisions worth knowing before continuing:
 
 | Job | State | Where |
 |---|---|---|
-| 1 dry-run/commit/activation identity | PARTIAL | dry-run vs commit identity PINNED by `campaign16.canonicalIdentity`; activation leg outstanding |
+| 1 dry-run/commit/activation identity | LANDED | identity + volume-integrity suites |
 | 2 exercise canonicality | LANDED | `src/lib/exercise/canonicality.js`, wired into `selectExercisesForMuscle` |
 | 3 movement/regional coverage | LANDED | `src/lib/exercise/movementFamily.js` + migration v74 |
 | 4 remove auto supersets | LANDED | `planEngine` finalise step, seeded-plan copy |
-| 5 initial vs rebuild continuity | NOT STARTED | |
-| 6 volume delivery integrity | PARTIAL | two real defects found and fixed; dedicated suite outstanding |
+| 5 initial vs rebuild continuity | LANDED | `exercise/continuity.js` |
+| 6 volume delivery integrity | LANDED | `exercise/volumeAudit.js` |
 | 7 rep/rest/load prescription | LANDED | `src/lib/exercise/prescription.js` |
-| 8 split/days/session matrix | NOT STARTED | |
+| 8 split/days/session matrix | LANDED | `campaign16.splitMatrix` |
 | 9 canonical exercise identity | LANDED | `src/lib/exercise/canonicalId.js`, one resolution seam |
-| 10 structured why-this-plan | NOT STARTED | |
-| 11 explain the rebuild | NOT STARTED | |
-| 12 product matrix | NOT STARTED | |
+| 10 structured why-this-plan | LANDED | `SELECTION_REASON` + `planRationale.js` |
+| 11 explain the rebuild | LANDED | `buildChangeReceipt` |
+| 12 product matrix | LANDED | `campaign16.longitudinal` |
 
 ## The baseline, captured before any change
 
