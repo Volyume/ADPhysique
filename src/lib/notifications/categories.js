@@ -223,6 +223,10 @@ export function categoryForDataType(type) {
     case 'subscription_payment_failure': return CATEGORY.SUBSCRIPTION_PAYMENT_FAILURE;
     case 'subscription_expiring': return CATEGORY.SUBSCRIPTION_EXPIRING;
     case 'weekly_coach_ready': return CATEGORY.WEEKLY_COACH_READY;
+    // C16 phase C: the block-complete review shares the coaching/review
+    // category, so its opt-out, budget rank and telemetry are the ones the
+    // user already knows rather than a new surface they have never seen.
+    case 'block_ready_to_review': return CATEGORY.WEEKLY_COACH_READY;
     default: return null;
   }
 }
