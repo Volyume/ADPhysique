@@ -14,6 +14,7 @@ import { isAutoEligible, tierRank, TIER_RANK, AUTO_TIER } from './exercise/canon
 import {
   movementFamily, familySatisfiesRole, isSweepBiased, CLASSIFIED_MUSCLES,
 } from './exercise/movementFamily';
+import { canonicalExerciseId } from './exercise/canonicalId';
 // C5-P11-01 (D96): the block length the app actually creates. mesocycle.js
 // is a pure module (no I/O), so reading the constant here keeps planEngine
 // pure and deterministic; only a narrative string uses it, never a
@@ -692,16 +693,41 @@ function normaliseFamilies(pool) {
 // POOL is a module constant, so its normalised form is too.
 const NORMALISED_POOL = normaliseFamilies(POOL);
 
-function buildEffectivePool(exerciseLibrary) {
+function buildEffectivePool(exerciseLibrary, canonicalNames = null) {
   if (!exerciseLibrary || exerciseLibrary.length === 0) return NORMALISED_POOL;
   const generated = normaliseFamilies(generatePoolFromLibrary(exerciseLibrary));
+
+  // C16 job 9: the fallback POOL may only offer exercises the CATALOGUE
+  // actually contains.
+  //
+  // The generated pool is built from the library, so its names always
+  // resolve. The hand-written POOL is not, and a name that has drifted out
+  // of the catalogue used to generate, get previewed, be counted in the
+  // plan's weekly volume, and then vanish at save time - the exercise was
+  // matched to a row by name only at the persistence seam. `Abductor
+  // Machine` did exactly that, and Bikini users previewed glute sets they
+  // never received.
+  //
+  // Gated on the FULL catalogue, deliberately, not on the intent-filtered
+  // library. An exercise the user has EXCLUDED is a different fact: it
+  // still exists, and Campaign 9 requires that slot to be reported so the
+  // user chooses rather than silently refilled. Filtering here on the
+  // filtered library would swallow that report. This gate removes only
+  // names that are not exercises at all.
+  const gate = pool => (canonicalNames
+    ? Object.fromEntries(Object.entries(pool)
+      .map(([m, entries]) => [m, (entries ?? []).filter(e => canonicalNames.has(e.n))]))
+    : pool);
+  const fallback = gate(NORMALISED_POOL);
+
   // Start from the generated pool, then for any muscle POOL knows about that
   // the library covers thinly, keep POOL's entries. This never leaves a
   // muscle worse-covered than today.
   const merged = { ...generated };
-  for (const muscle of Object.keys(NORMALISED_POOL)) {
-    if ((merged[muscle]?.length ?? 0) < MIN_GENERATED_PER_MUSCLE) {
-      merged[muscle] = NORMALISED_POOL[muscle];
+  for (const muscle of Object.keys(fallback)) {
+    if ((merged[muscle]?.length ?? 0) < MIN_GENERATED_PER_MUSCLE
+      && (fallback[muscle]?.length ?? 0) > 0) {
+      merged[muscle] = fallback[muscle];
     }
   }
   return merged;
@@ -829,6 +855,12 @@ function makeEx(name, paramKey, sets, experience, nutritionPhase, goal = null, n
   const minSets = (paramKey === 'heavy_compound' || paramKey === 'mod_compound') ? 3 : 2;
   return {
     exerciseName: name,
+    // C16 job 9: canonical identity travels WITH the exercise from the moment
+    // it is generated, so the dry run and the commit refer to the same thing
+    // and neither has to re-derive it from a lowercased string. The hash is
+    // the same one the seed uses to mint row IDs, so this matches the seeded
+    // row on any device without a database read.
+    exerciseId: canonicalExerciseId(name),
     sets: Math.max(minSets, sets),
     repMin: rr.repMin,
     repMax: rr.repMax,
@@ -2806,7 +2838,15 @@ export function generatePlan(inputs) {
   // No library (every existing unit test) means _effectivePool stays POOL.
   const prevPool = _effectivePool;
   const prevWeakPoints = _weakPointKeys;
-  _effectivePool = buildEffectivePool(inputs?.exerciseLibrary);
+  // C16 job 9: `canonicalNames` is the FULL catalogue of exercise names that
+  // exist on this device, used only to stop the hand-written fallback pool
+  // offering a name the catalogue does not have. Optional: without it the
+  // engine behaves exactly as before, which keeps every existing unit test
+  // driving the engine directly unchanged.
+  _effectivePool = buildEffectivePool(
+    inputs?.exerciseLibrary,
+    inputs?.canonicalNames ?? null,
+  );
   try {
     return _generatePlanInner(inputs);
   } finally {
