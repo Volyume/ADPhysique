@@ -60,9 +60,15 @@ describe('routeForNotificationType', () => {
     });
   });
 
-  test('NEW-002: a partner cheer lands on the Progress consistency screen', () => {
+  // Campaign 14 job 5 (routing truth) RE-ANCHOR: this test used to pin
+  // partner_cheer -> ProgressTab/Consistency. The partner row was removed from
+  // ConsistencyScreen on the founder device-walk of 2026-07-03 and its absence
+  // is pinned by partnerPlacementSpine.guard.test.js, so that destination had
+  // no partner content of any kind. All three partner beats now land on the
+  // Partner surface. Full coverage lives in campaign14.routingTruth.test.js.
+  test('NEW-002: a partner cheer lands on the Partner surface', () => {
     expect(routeForNotificationType('partner_cheer')).toEqual({
-      tab: 'ProgressTab', screen: 'Consistency',
+      tab: 'ProgressTab', screen: 'Partner', params: { source: 'notification' },
     });
   });
 

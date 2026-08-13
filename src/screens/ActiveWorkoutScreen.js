@@ -2480,6 +2480,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // blocks the finish flow.
           // eslint-disable-next-line global-require
           require('../lib/notifications/trainingHabitSchedule').refreshHabitDerivedTrainingSchedule(uid2).catch(() => {});
+          // C14 J6 (R-16): a genuine completed-training return re-lays the
+          // weigh-in reminders that the three-week inactivity stand-down held
+          // back. Silent: nothing is sent about the return, and the user's
+          // stored preference was never changed by the stand-down. Self-
+          // guarding (permission, Pro, their own toggle, quiet hours and the
+          // ED gates all still apply) and best-effort; never blocks the
+          // finish flow. A no-op for the everyday user whose reminders are
+          // already laid, beyond re-laying the same schedule.
+          // eslint-disable-next-line global-require
+          require('../lib/notifications/scheduler').relayWeighInAfterTrainingReturn().catch(() => {});
         }
       } catch (_) { /* tolerate */ }
       // Push to cloud IMMEDIATELY on finish. Previously the

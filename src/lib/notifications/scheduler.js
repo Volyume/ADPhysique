@@ -148,6 +148,11 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0) {
     // it is also withheld while an ED flag is open, matching the evening
     // backstop. cancelMorningNotification above already cleared both prompts.
     if (await weighInEdFlagOpen()) return;
+    // C14 J6 (R-16): three-week inactivity stand-down. cancelMorningNotification
+    // above has already cleared anything laid, so returning here leaves the
+    // user with no routine weigh-in prompts until a completed session returns
+    // them. Their stored preference is untouched (see weighInStandDown).
+    if (await weighInStandDown()) return;
     const quiet = await getQuietHours();
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
     const name = greetName();
@@ -247,6 +252,73 @@ async function weighInEdFlagOpen() {
   }
 }
 
+// ─── C14 J6 (R-16): three-week inactivity stand-down ─────────────────────────
+// Founder ruling (Campaign 14, Job 6, verbatim): "After THREE FULL WEEKS with
+// no completed training session: routine weigh-in reminder scheduling stands
+// down. This is not punishment and not a user-facing 'you disappeared' event.
+// It simply stops repeated weight-adjacent prompting when the user is no
+// longer actively using the training loop."
+//
+// What this is NOT: it is not "the setting was disabled". Nothing here writes,
+// clears or downgrades the user's stored preference, so the Coaching reminders
+// screen keeps showing their real choice. The state is: enabled, but
+// temporarily inactive because the training loop went quiet.
+//
+// RETURN is automatic and silent. Every path that re-lays the weigh-in family
+// re-evaluates this gate (restoreNotifications at launch / timezone change /
+// the weekly foreground top-up, the reminders screen, and
+// relayWeighInAfterTrainingReturn below, which the workout-finish flow calls),
+// so a genuine completed session simply restores the existing schedule. No
+// "welcome back to weighing" notification is sent, and the user never has to
+// toggle the setting off and on again.
+//
+// It FAILS OPEN, deliberately, in both unknowable cases:
+//   - the history read failed: behave exactly as before this change;
+//   - no completed session exists at all: a brand-new user who set the
+//     reminder up in onboarding and has not trained yet is owned by the
+//     early-activation lever (activationNudge.js), not by this one.
+// Silently suppressing a reminder the user asked for is worse than one extra
+// prompt. That is the opposite direction of travel from weighInEdFlagOpen
+// above, which fails CLOSED, and deliberately so: the ED gate protects a
+// flagged user, this gate only restrains volume.
+export const WEIGH_IN_STAND_DOWN_DAYS = 21; // three full weeks
+
+// Local midnight, `days` LOCAL calendar days ago. Calendar arithmetic rather
+// than days * 86400000 so a DST transition inside the window cannot move the
+// boundary by an hour, matching weighInHorizonDates above and dayKey.js.
+function localMidnightDaysAgo(days, nowMs = Date.now()) {
+  const now = new Date(Number.isFinite(nowMs) ? nowMs : Date.now());
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate() - days).getTime();
+}
+
+async function weighInStandDown() {
+  try {
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    const uid = useAppStore.getState()?.user?.id;
+    if (!uid) return false; // nobody to read history for: behave as before
+    // The canonical "when was the last COMPLETED training session" read: the
+    // existing bounded recent-completed page, ordered by
+    // COALESCE(ended_at, started_at, created_at) DESC, asked for one row --
+    // exactly how blockAdvisor.js:521 already asks this same question. No new
+    // query, and no is_completed definition of its own.
+    // eslint-disable-next-line global-require
+    const { getRecentCompletedWorkouts } = require('../database');
+    const recent = await getRecentCompletedWorkouts(uid, 1);
+    const last = Array.isArray(recent) ? recent[0] : null;
+    const lastMs = Number(last?.endedAt ?? last?.startedAt ?? last?.createdAt);
+    if (!Number.isFinite(lastMs)) return false; // no history on record: fail open
+    // Stand down only once the whole of the last WEIGH_IN_STAND_DOWN_DAYS local
+    // days has passed without a completed session. A session ON the boundary
+    // day still counts as training, so the boundary itself fails open too.
+    return lastMs < localMidnightDaysAgo(WEIGH_IN_STAND_DOWN_DAYS);
+  } catch (_) {
+    // Fail OPEN: a history-read failure must never silently suppress a
+    // reminder the user opted into.
+    return false;
+  }
+}
+
 export async function cancelEveningWeightReminder() {
   // C8 Work 5: covers the old 7 weekly ids and the bounded one-shots.
   for (let w = 1; w <= WEIGH_IN_HORIZON_DAYS; w += 1) {
@@ -272,6 +344,10 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30) {
     // is open. Re-laid by restoreNotifications on the next launch/foreground
     // after the flag clears (and by clearEdPatternFlag's caller at clear time).
     if (await weighInEdFlagOpen()) return;
+    // C14 J6 (R-16): the same three-week inactivity stand-down as the morning
+    // nudge. cancelEveningWeightReminder above has already cleared anything
+    // laid; the user's stored preference is untouched.
+    if (await weighInStandDown()) return;
     const quiet = await getQuietHours();
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
     const name = greetName();
@@ -306,6 +382,50 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30) {
       logWarn('notifications.scheduleEveningWeight', e?.message);
     }
   }
+}
+
+/**
+ * C14 J6 (R-16): the silent RETURN path for the inactivity stand-down.
+ *
+ * Called from the workout-finish flow once a completed session has landed in
+ * the DB (ActiveWorkoutScreen). It re-lays the user's EXISTING weigh-in
+ * schedule and nothing else: standing down never touched their stored
+ * preference, so there is nothing to restore and nothing to tell them. No
+ * notification is sent about the return, and no new copy exists for it.
+ *
+ * Deliberately narrow rather than a call to restoreNotifications: that path
+ * cancels ALL scheduled notifications first, which would wipe already-laid
+ * one-shots (partner beats, the activation nudge) whose own watermarks would
+ * then refuse to lay them again. So it re-lays only the weigh-in family, and
+ * carries the same three gates restoreNotifications applies to that family --
+ * OS permission, the E10-F4 Pro tier gate, and the user's own morningEnabled
+ * toggle (a user who opted out stays opted out). Quiet hours, the ED-flag
+ * schedule gate and the stand-down gate itself are applied by the two
+ * schedulers below, exactly as on every other path.
+ *
+ * Best-effort and never throws; if it cannot run, the next launch re-lay
+ * (restoreNotifications) covers the same ground.
+ */
+export async function relayWeighInAfterTrainingReturn() {
+  if (Platform.OS === 'web') return;
+  try {
+    const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+    const prefs = raw ? JSON.parse(raw) : null;
+    // Reads the preference; never writes it.
+    if (!prefs?.morningEnabled) return;
+    // eslint-disable-next-line global-require
+    const { getNotificationPermissionStatus } = require('./permissions');
+    const status = await getNotificationPermissionStatus();
+    if (status !== 'granted') return;
+    let isPro = false;
+    try {
+      // eslint-disable-next-line global-require
+      isPro = require('../../store/useAppStore').default.getState()?.tier === 'pro';
+    } catch (_) { /* store unavailable: fail closed (no coaching re-lay) */ }
+    if (!isPro) return;
+    await scheduleMorningWeightNotification(prefs.morningHour ?? 7, prefs.morningMinute ?? 0);
+    await scheduleEveningWeightReminder(prefs.eveningHour ?? 19, prefs.eveningMinute ?? 30);
+  } catch (_) { /* best-effort: the next launch re-lay covers this */ }
 }
 
 // ─── Meal-log reminders (gap #4) ───────────────────────────────────────────────
