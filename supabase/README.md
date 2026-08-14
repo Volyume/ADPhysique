@@ -108,21 +108,27 @@ contract must not delegate its authority to a superseded audit.
   `MealNamesScreen.js` shipped; were 059 unapplied, every diary push would
   fail the old fixed-list CHECK.
 - **137 IS AUTHORISED AND STILL PENDING (2026-08-14).** The founder gave the
-  exact phrase. It was not executed because the Supabase connector's tools
-  were not loaded in that chat. The connector is **installed and
-  authenticated** on the account (`installState: connected`,
-  `connected: true`) but `enabledInChat: false`, so nothing in the session
-  could reach EU-Dublin: no connector tools, no Supabase CLI on the box, no
-  connection string. The fix is a per-chat toggle in the founder's
-  connector settings, not a re-authorisation. **The deploy-migrations
-  workflow is not a substitute.** It applies every file absent from
+  exact phrase. It was not executed because the Supabase MCP server was not
+  attached to that session's runtime. The connector was installed,
+  authenticated AND fully permitted (all 29 tools set to Always in the
+  founder's connector settings) - the server simply dropped part-way
+  through a long session and does not re-attach mid-session, so nothing in
+  it could reach EU-Dublin: no connector tools, no Supabase CLI on the box,
+  no connection string.
+
+  Two distinct layers, and confusing them wasted a round trip:
+  `ListConnectors` reports `enabledInChat`, which reads like a per-chat
+  SETTING but reflects the runtime LOAD state; `ListMcpResourcesTool` is
+  the honest check - it listed only the `github` and Spotify servers.
+  **The fix is a fresh session**, not a settings change.
+  **The deploy-migrations workflow is not a substitute.** It applies every file absent from
   `claude_schema_migrations`, and that tracking table has never been
   populated by the connector-run and SQL-Editor-run applies that actually
   put 060-136 into production - so dispatching it would attempt to re-run
   roughly seventy-six migrations against the live database, with no way to
   verify production truth first. The founder authorised one migration, not
-  that. It waits for the connector to be enabled in the chat, where the
-  apply can be followed by the read-only verification this playbook
+  that. It waits for a session with the Supabase server actually attached,
+  where the apply can be followed by the read-only verification this playbook
   requires: a column check on `exercise_swaps.scope` expecting one row,
   type `text`, nullable `YES`.
 - **Client impact while it waits:** none that loses data. The push tolerates
@@ -277,7 +283,7 @@ themselves; add a row here whenever a migration is added.
 | 134 | `migrate_134_stale_write_triggers.sql` | Refuse-stale-write triggers on the nine unguarded coaching-state tables (Campaign 1 P0-8). | **NO - awaiting "run against production"** |
 | 135 | `migrate_135_coach_outputs_week_unique.sql` | De-duplicates `coach_outputs` per user-week, then a unique index (Campaign 1 review finding 10). | **NO - awaiting "run against production"** |
 | 136 | `migrate_136_exercise_intent.sql` | `exercise_intent`, `exercise_swaps`, `exercise_slot_defaults` - the cloud half of the Campaign 9 exercise-intent layer (local schema v73). Must land BEFORE a build carrying their sync push ships. | **YES - applied 2026-08-12, verified** (this row said "awaiting the phrase" until 2026-08-14; corrected against the CURRENT STATUS block above, which is the authority) |
-| 137 | `migrate_137_exercise_swap_scope.sql` | `exercise_swaps.scope` ('session' \| 'programme'), so a temporary in-workout substitution is distinguishable from a permanent programme replacement. Campaign 16 quality law 1. NULL means the row predates the column; the client's NEGATIVE reading counts only 'programme', so an unknown row can never cost a user an exercise. Local schema v75. | **NO - PENDING.** Authorised by the founder 2026-08-14 with the exact phrase. NOT executed: the Supabase connector is authenticated but was not enabled in that chat, so no route to EU-Dublin existed. One per-chat toggle away - see the note below. |
+| 137 | `migrate_137_exercise_swap_scope.sql` | `exercise_swaps.scope` ('session' \| 'programme'), so a temporary in-workout substitution is distinguishable from a permanent programme replacement. Campaign 16 quality law 1. NULL means the row predates the column; the client's NEGATIVE reading counts only 'programme', so an unknown row can never cost a user an exercise. Local schema v75. | **NO - PENDING.** Authorised by the founder 2026-08-14 with the exact phrase. NOT executed: the Supabase MCP server was not attached to that session's runtime (connector installed, authenticated and fully permitted; the server dropped mid-session). Needs a fresh session - see the note below. |
 
 > Date note: the 2026-08-09 block near the top of this file describes 129 and
 > 130 as "already applied 2026-08-08", while both migration headers record
