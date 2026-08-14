@@ -28,6 +28,7 @@ import { resolveComponent } from './curatedFoods';
 import { mealTotals } from './curatedMeals';
 import { roleOf } from './foodRoles';
 import { solveGramsForKcal } from './gramSolve';
+import { FOOD_REASON } from './mealRationale';
 
 const r0 = (n) => Math.round(n);
 const r1 = (n) => Math.round(n * 10) / 10;
@@ -208,7 +209,15 @@ export function applyMacroDeltaToPlan({ plan, adjustmentKcal = 0, floorKcal = 0 
       const gramsOut = g;
       if (gramsOut === st.g) continue;
       if (kcalDelta === 0) continue;
-      const slot = candidate;
+      // Campaign 17B job 5: the portion moved to meet a changed target, and
+      // the plate should be able to say so. Stamped as a CODE on the exact
+      // component that moved, at the moment the reason is known.
+      const slot = {
+        ...candidate,
+        components: candidate.components.map((c, i) => (
+          i === st.compIdx ? { ...c, foodReason: FOOD_REASON.TARGET_CHANGE } : c
+        )),
+      };
       slots[st.slotIdx] = slot;
       remaining -= kcalDelta;
       edits.push({

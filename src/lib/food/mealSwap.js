@@ -32,8 +32,10 @@ import {
   swapAlternativesOf,
   keysForRole,
   stateOf,
+  foodExcluded,
 } from './foodRoles';
 import { clampRoundGrams } from './gramSolve';
+import { FOOD_REASON } from './mealRationale';
 
 const ROLE_DISTANCE_FAT_WEIGHT = 2;
 
@@ -137,6 +139,55 @@ export function findRoleAlternatives(foodKey, prefs, { limit = 6 } = {}) {
     .map((x) => x.k);
 
   return [...curated, ...rest].slice(0, limit);
+}
+
+/**
+ * The same-role alternatives that were LEFT OUT, and why.
+ *
+ * CAMPAIGN 17B JOB 5, the founder's fourth question: "why isn't that food
+ * appearing?" `findRoleAlternatives` above silently drops everything the
+ * user's preferences forbid, which is correct behaviour and a poor
+ * explanation - the user sees a short list and cannot tell whether the app
+ * has nothing else or is honouring something they asked for.
+ *
+ * The reason is read from the SAME predicates that did the excluding, never
+ * inferred from a name. The user's own do-not-suggest list is reported first,
+ * because that is the reason that means something to them; allergen tags
+ * second.
+ *
+ * NO DIET REASON IS EVER GIVEN HERE, deliberately. Curated MEALS carry a
+ * `diet` tag; curated FOODS do not, and no field anywhere says chicken is not
+ * vegan (the same limit planPreferences.savedMealAllowed is built around). A
+ * food dropped for any other cause is simply not listed, rather than being
+ * given a reason the data cannot support.
+ *
+ * Pure. Returns [] when nothing was excluded, so a caller renders nothing.
+ *
+ * @returns {Array<{foodKey, name, excludedByUser, excludedByAllergen}>}
+ */
+export function excludedRoleAlternatives(foodKey, prefs, { limit = 6 } = {}) {
+  const p = normalisePreferences(prefs);
+  const role = roleOf(foodKey);
+  if (!role || !CURATED_FOODS[foodKey]) return [];
+  // The same candidate set findRoleAlternatives works from, with the
+  // exclusions taken OFF, so the difference is exactly what they removed.
+  const open = { ...p, excludeFoodKeys: [], excludeTags: [] };
+  const allowed = new Set(findRoleAlternatives(foodKey, p, { limit }));
+  const out = [];
+  for (const k of [...swapAlternativesOf(foodKey), ...keysForRole(role, open)]) {
+    if (k === foodKey || allowed.has(k) || out.some((x) => x.foodKey === k)) continue;
+    const byUser = (p.excludeFoodKeys || []).includes(k);
+    const byAllergen = !byUser && foodExcluded(k, { excludeTags: p.excludeTags });
+    if (!byUser && !byAllergen) continue; // dropped on macro fit, not on a rule
+    out.push({
+      foodKey: k,
+      name: CURATED_FOODS[k]?.name ?? k,
+      excludedByUser: byUser,
+      excludedByAllergen: byAllergen,
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
 }
 
 /**
@@ -275,7 +326,13 @@ export function applyStandingReplacements(day, { replacements, prefs } = {}) {
     return {
       ...slot,
       name: res.name ?? slot.name,
-      components: res.components,
+      // Campaign 17B job 5: stamp WHY this food is here, as a code, at the
+      // moment the reason is actually known. The user asked for this exact
+      // food; the plate should be able to say so without anyone later
+      // guessing it from the name.
+      components: res.components.map((c) => (
+        c.food === rules[hit.food] ? { ...c, foodReason: FOOD_REASON.PERSISTENT_REPLACEMENT } : c
+      )),
       items: res.items,
       totals: res.totals,
     };

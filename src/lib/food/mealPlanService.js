@@ -31,7 +31,10 @@ import {
   getDislikes,
 } from './db';
 import { assembleDayPlanBestOf, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
-import { swapFoodInMeal, swapMealInPlan, findRoleAlternatives, applyStandingReplacements } from './mealSwap';
+import {
+  swapFoodInMeal, swapMealInPlan, findRoleAlternatives, excludedRoleAlternatives,
+  applyStandingReplacements,
+} from './mealSwap';
 import { loadFoodIntentState, persistentReplacements } from './intent';
 import {
   reconcilePlanToTarget, reconcileDayToTarget, decideContinuity,
@@ -975,4 +978,4 @@ export async function restoreUnbankedPlannedFood(userId, { perDayDeltaKcal, star
   }
 }
 
-export { swapFoodInMeal, swapMealInPlan, findRoleAlternatives };
+export { swapFoodInMeal, swapMealInPlan, findRoleAlternatives, excludedRoleAlternatives };

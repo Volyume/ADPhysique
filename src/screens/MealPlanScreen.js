@@ -41,7 +41,7 @@ import { shiftDate } from '../lib/food/diaryDates';
 // Campaign 17B job 4: stated vs observed, from CONFIRMED intake only.
 import { mealCountObservation } from '../lib/food/habits';
 // Campaign 17B job 5: why these meals, from the codes stamped at generation.
-import { explainMeal, explainDay } from '../lib/food/mealRationale';
+import { explainMeal, explainDay, explainFood, explainAbsence } from '../lib/food/mealRationale';
 import { getNutritionTargets } from '../lib/database';
 
 // How far back the meal-count observation looks. Four weeks is long enough to
@@ -61,6 +61,7 @@ import {
   swapMealInPlan,
   swapFoodInMeal,
   findRoleAlternatives,
+  excludedRoleAlternatives,
 } from '../lib/food/mealPlanService';
 import {
   updateMealPlan, getFoodEntriesForDay, clearPlannedDay, recordFoodSwap,
@@ -670,7 +671,13 @@ export default function MealPlanScreen({ navigation, route }) {
       toast.show('No close match for that food with your preferences.', { variant: 'info' });
       return;
     }
-    setFoodSwapSheet({ slotKey, foodKeyOut: foodKey, foodOutName, options, pending: null });
+    // Campaign 17B job 5, "why isn't that food appearing?" The list above is
+    // silently narrowed by the user's own rules; the sheet now says so, from
+    // the same predicates that did the narrowing.
+    const absent = excludedRoleAlternatives(foodKey, plan.prefs)
+      .map((x) => ({ ...x, why: explainAbsence(x) }))
+      .filter((x) => x.why);
+    setFoodSwapSheet({ slotKey, foodKeyOut: foodKey, foodOutName, options, absent, pending: null });
   }, [user?.id, record, plan, day, busy, toast]);
 
   // Apply the chosen food alternative (the highlighted closest match or any
@@ -1259,6 +1266,11 @@ export default function MealPlanScreen({ navigation, route }) {
                       // macros never change when it's set.
                       const nativeWeightState = foodKey ? defaultWeightStateFor(foodKey) : null;
                       const weightState = it.weightState ?? nativeWeightState;
+                      // Campaign 17B job 5, "why did you use this food": read
+                      // from the CODE the engine stamped on the component that
+                      // changed, never inferred from the food's name. Items and
+                      // components are the same list in the same order.
+                      const foodWhy = explainFood(slot.components?.[i]?.foodReason);
                       return (
                         <View key={`${it.foodRef}-${i}`}>
                           <TouchableOpacity
@@ -1273,6 +1285,9 @@ export default function MealPlanScreen({ navigation, route }) {
                             <Text style={[styles.itemLine, live.itemLine]} numberOfLines={1} ellipsizeMode="tail">{`${formatNumber(it.quantityG)} g ${it.name}`}</Text>
                             {canSwap ? <Ionicons name="swap-horizontal-outline" size={13} color={t.colors.textSecondary} /> : null}
                           </TouchableOpacity>
+                          {foodWhy ? (
+                            <Text style={[styles.foodReason, live.foodReason]}>{foodWhy}</Text>
+                          ) : null}
                           {nativeWeightState ? (
                             <View style={styles.weightChoiceRow}>
                               <Text style={[styles.weightChoiceLabel, live.weightChoiceLabel]}>Weighed</Text>
@@ -1602,6 +1617,19 @@ export default function MealPlanScreen({ navigation, route }) {
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
+                {/* Campaign 17B job 5: the foods that are NOT here, and why.
+                    Only ever the user's own instructions - a food left out on
+                    macro fit is simply not mentioned, because there is no
+                    honest reason to give. */}
+                {(foodSwapSheet.absent || []).length ? (
+                  <View style={styles.absentWrap}>
+                    {foodSwapSheet.absent.map((a) => (
+                      <Text key={a.foodKey} style={[styles.absentLine, live.absentLine]}>
+                        {`${a.name}: ${a.why}`}
+                      </Text>
+                    ))}
+                  </View>
+                ) : null}
               </>
             )}
           </>
@@ -1996,6 +2024,10 @@ const styles = StyleSheet.create({
   // Campaign 17B job 5: the plan's own explanations.
   dayReason: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
   mealReason: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs },
+  // Campaign 17B job 5: why this food, and which foods are absent and why.
+  foodReason: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs, marginLeft: spacing.xs },
+  absentWrap: { marginTop: spacing.sm, gap: spacing.xxs },
+  absentLine: { ...type.caption, color: colors.textMuted },
   // Campaign 17A job 3: the "back to the food list" row on the intent step.
   swapBackRow: { alignSelf: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
   // D2 #15: 360 is the base/fallback cap; the component overrides maxHeight
@@ -2056,6 +2088,8 @@ function buildLiveStyles(t) {
     habitCard: { backgroundColor: t.colors.surface2 },
     dayReason: { ...t.type.bodySm, color: t.colors.textSecondary },
     mealReason: { ...t.type.bodySm, color: t.colors.textMuted },
+    foodReason: { ...t.type.caption, color: t.colors.textMuted },
+    absentLine: { ...t.type.caption, color: t.colors.textMuted },
     habitQuestion: { ...t.type.body, color: t.colors.textPrimary },
     habitDetail: { ...t.type.bodySm, color: t.colors.textSecondary },
     emptyIcon: { backgroundColor: t.colors.primaryBg },
