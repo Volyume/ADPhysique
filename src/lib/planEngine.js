@@ -3135,6 +3135,12 @@ function _generatePlanInner(inputs) {
     nutritionPhase    = null,
     nutritionContext  = null,
     age               = null,
+    // CAMPAIGN 18 JOB C: the split this athlete has demonstrated across
+    // completed blocks, already filtered by programmeStructureMemory against
+    // their CURRENT availability. Null for a new athlete and for anyone whose
+    // history does not fit today's constraints, which keeps every existing
+    // caller byte-identical.
+    demonstratedSplit = null,
   } = inputs;
 
   // Cap weak points at 3 for determinism
@@ -3185,9 +3191,25 @@ function _generatePlanInner(inputs) {
   const matrixCell = DIVISION_MATRIX[goal]
     ? DIVISION_MATRIX[goal][effectiveDays]
     : null;
+  // CAMPAIGN 18 JOB C. A mature athlete's own demonstrated structure is the
+  // starting point when a structure is being CHOSEN.
+  //
+  // DIVISION INTENT REMAINS SENIOR (job C5). Where a specialised division's
+  // matrix decides the split, that is a rulebook requirement about how the
+  // athlete is judged, and personal history does not get to erase it. Memory
+  // applies only on the general/bodybuilding path, which is exactly where the
+  // choice was previously a pure day-count lookup.
+  //
+  // `demonstratedSplit` is supplied by the caller from
+  // programmeStructureMemory (which has already refused anything that does
+  // not fit today's availability), and is ignored unless it is a split this
+  // engine can actually build.
+  const memorySplit = (!matrixCell && demonstratedSplit && SPLIT_LABELS[demonstratedSplit])
+    ? demonstratedSplit
+    : null;
   const splitType = matrixCell
     ? DIVISION_MATRIX[goal].label
-    : selectSplit(experience, effectiveDays, internalGoal);
+    : (memorySplit ?? selectSplit(experience, effectiveDays, internalGoal));
 
   // Compute adjusted landmarks
   const landmarks = computeLandmarks(experience, recoveryRating, nutritionPhase, age);

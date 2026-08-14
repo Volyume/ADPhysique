@@ -140,6 +140,50 @@ export function buildPlanInputs(profile) {
  * @param {number[]} [opts.durationOptions]  the durations the UI offers
  * @param {number[]} [opts.dayOptions]       the session counts the UI offers
  */
+/**
+ * CAMPAIGN 18 JOB C. The athlete's demonstrated programme structure, or null.
+ *
+ * Gathers from the blocks they have COMPLETED, using the programme signature
+ * Campaign 16 already stores on each mesocycle's ledger - no second history,
+ * no new authority. Adherence decides whether a block counts at all, on the
+ * same law as everywhere else in Campaign 18: a block that was not run says
+ * nothing about the structure it was written on.
+ *
+ * `structuralProblem` is deliberately conservative. "The athlete missed
+ * Tuesday" is not evidence that upper/lower failed them, so only a block that
+ * was run AND whose sessions repeatedly overran the time they had is counted
+ * against the structure.
+ */
+export async function readDemonstratedStructure(userId, daysPerWeek) {
+  if (!userId) return null;
+  // eslint-disable-next-line global-require
+  const { getAllMesocycles, getBlockTrainingData } = require('./database');
+  // eslint-disable-next-line global-require
+  const { structureEvidence, demonstratedStructure } = require('./programmeStructureMemory');
+  const mesocycles = await getAllMesocycles(userId).catch(() => []);
+  const blocks = [];
+  for (const m of mesocycles ?? []) {
+    let ledger = null;
+    try { ledger = JSON.parse(m?.blockLedger ?? 'null'); } catch (_) { ledger = null; }
+    const signature = ledger?.programmeSignature ?? null;
+    if (!signature) continue;
+    const weeks = Number(m?.plannedWeeks ?? m?.durationWeeks) || null;
+    const days = Number(signature?.dayCount) || null;
+    // eslint-disable-next-line no-await-in-loop
+    const { workouts } = await getBlockTrainingData(userId, m?.id ?? null).catch(() => ({ workouts: [] }));
+    const planned = weeks && days ? weeks * days : null;
+    blocks.push({
+      signature,
+      completed: m?.completedAt != null || m?.status === 'completed',
+      adherenceRatio: planned ? (workouts?.length ?? 0) / planned : null,
+      productive: ledger?.productive === true,
+      structuralProblem: ledger?.structuralProblem === true,
+      recoveryAcceptable: ledger?.recoveryAcceptable !== false,
+    });
+  }
+  return demonstratedStructure(structureEvidence(blocks), { daysPerWeek });
+}
+
 export async function assessScheduleFit(profile, {
   userId = null, durationOptions, dayOptions,
 } = {}) {
@@ -549,10 +593,26 @@ export async function generateAndSavePlan(userId, profile, {
   const replacementIds = reviewedReplacementIds(continuityProposal);
   const generationLibrary = libraryForReviewedProposal(filteredLibrary, replacementIds);
 
+  // CAMPAIGN 18 JOB C. What has this athlete actually demonstrated works?
+  //
+  // Read from the blocks they have completed, and already filtered against
+  // TODAY's availability by demonstratedStructure - so a four-day structure
+  // that went well is simply not returned to someone who now trains three.
+  // Null for a new athlete, which leaves generation exactly as it was.
+  //
+  // Best-effort: a read failure means no memory, never a blocked rebuild.
+  let demonstratedSplit = null;
+  let structureMemory = null;
+  try {
+    structureMemory = await readDemonstratedStructure(userId, inputs.daysPerWeek);
+    demonstratedSplit = structureMemory?.splitType ?? null;
+  } catch (_) { demonstratedSplit = null; }
+
   let plan;
   try {
     plan = generatePlan({
       ...inputs,
+      demonstratedSplit,
       exerciseLibrary: generationLibrary,
       canonicalNames: canonicalNameSet(allExercises, replacementIds),
     });
@@ -735,10 +795,20 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
   const replacementIds = reviewedReplacementIds(continuityProposal);
   const generationLibrary = libraryForReviewedProposal(filteredLibrary, replacementIds);
 
+  // CAMPAIGN 18 JOB C: the PREVIEW must be the plan they will actually get,
+  // so it reads the same structure memory the commit does. A preview built
+  // from a default while the commit used the athlete's history would be a
+  // preview of a different programme.
+  let structureMemory = null;
+  try {
+    structureMemory = await readDemonstratedStructure(userId, inputs.daysPerWeek);
+  } catch (_) { structureMemory = null; }
+
   let plan;
   try {
     plan = generatePlan({
       ...inputs,
+      demonstratedSplit: structureMemory?.splitType ?? null,
       exerciseLibrary: generationLibrary,
       canonicalNames: canonicalNameSet(allExercises, replacementIds),
     });
@@ -791,6 +861,10 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
     ok: true,
     plan: { ...plan, workouts: resolvedWorkouts },
     sessionLengthMinutes: inputs.sessionLengthMinutes,
+    // CAMPAIGN 18 JOB C: whether this athlete's own history shaped the
+    // structure, so the review can SAY so rather than presenting a
+    // personalised programme as a template one. Null for a new athlete.
+    structureMemory,
     // C16 jobs 5 and 11: the machine-readable change receipt. Copy renders
     // these reasons; it never reverse-engineers an explanation from the
     // exercise names after the fact.

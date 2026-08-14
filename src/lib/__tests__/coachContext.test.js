@@ -17,7 +17,7 @@ import {
   TRAINING_EXECUTION_POOR, MIN_INTAKE_DAYS, MIN_WEIGH_INS, CHECKIN_FRESH_DAYS,
   trainingExecutionFact, trainingProgressFact, systemicRecoveryFact,
   intakeCoverageFact, intakeAdherenceFact, proteinAdherenceFact,
-  weightTrendFact, intentFacts, volumeIsUserManaged,
+  weightTrendFact, intentFacts,
   buildCoachContext, contextFacts,
 } from '../coachContext';
 
@@ -204,14 +204,13 @@ describe('INTENT is an instruction, not a signal', () => {
 
   test('a lane the user manages is visible to every consumer', () => {
     const ctx = buildCoachContext({ intent: { manualVolumeMuscles: ['chest'] } });
-    expect(volumeIsUserManaged(ctx, 'chest')).toBe(true);
-    expect(volumeIsUserManaged(ctx, 'back')).toBe(false);
+    expect(ctx.intent.manualVolumeMuscles).toContain('chest');
+    expect(ctx.intent.manualVolumeMuscles).not.toContain('back');
   });
 
   test('a RELEASED choice is simply absent, not remembered as a lingering preference', () => {
     const ctx = buildCoachContext({ intent: { manualVolumeMuscles: [] } });
     expect(ctx.intent.manualVolumeMuscles).toEqual([]);
-    expect(volumeIsUserManaged(ctx, 'chest')).toBe(false);
   });
 });
 

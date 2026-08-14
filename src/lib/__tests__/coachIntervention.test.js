@@ -21,8 +21,7 @@ import {
   INTERVENTION_KIND, OUTCOME, OBSERVE,
   buildInterventionRecord, interventionsFromHistory,
   observationWindowMet, classifyOutcome,
-  recentUnjudgedIntervention, wouldReverseRecent,
-  outcomeEvidence, outcomeCopy,
+  recentUnjudgedIntervention, wouldReverseRecent, outcomeCopy,
 } from '../coachIntervention';
 
 const DAY = 86_400_000;
@@ -281,24 +280,6 @@ describe('THE REAL ENGINE REFUSES THE OSCILLATION', () => {
 });
 
 describe('FUTURE DECISION USE IS EVIDENCE, NOT AUTHORITY (rule E)', () => {
-  test('a tally of what happened, with confounded counted separately', () => {
-    const records = [
-      calorieRecord({ appliedAtMs: NOW - 60 * DAY }),
-      calorieRecord({ appliedAtMs: NOW - 90 * DAY }),
-    ];
-    const ev = outcomeEvidence(records, { after: ctx({ weight: 'good' }), nowMs: NOW });
-    expect(ev.judged).toBe(2);
-    expect(ev.improved).toBe(2);
-    expect(ev.lastJudged.outcome).toBe(OUTCOME.IMPROVED);
-  });
-
-  test('confounded results never inflate the judged count', () => {
-    const records = [calorieRecord({ appliedAtMs: NOW - 60 * DAY })];
-    const ev = outcomeEvidence(records, { after: ctx({ weight: 'unknown' }), nowMs: NOW });
-    expect(ev.judged).toBe(0);
-    expect(ev.confounded).toBe(1);
-  });
-
   test('IT DECIDES NOTHING: the module contains no rule that repeats a change', () => {
     // eslint-disable-next-line global-require
     const src = require('fs').readFileSync(
@@ -306,8 +287,9 @@ describe('FUTURE DECISION USE IS EVIDENCE, NOT AUTHORITY (rule E)', () => {
       require('path').resolve(__dirname, '../coachIntervention.js'), 'utf8',
     );
     const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
-    // No prescription: it returns observations, never a change or a magnitude.
-    expect(code).not.toMatch(/adjustmentKcal|newTarget|recommend|shouldApply|doItAgain/i);
+    // No prescription: it returns observations and a bounded multiplier,
+    // never a change or a target.
+    expect(code).not.toMatch(/newTarget|recommend|shouldApply|doItAgain/i);
   });
 });
 

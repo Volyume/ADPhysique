@@ -172,19 +172,21 @@ export function suppressedByDecline({ declines = [], domain, kind, direction, si
 export function returningCopy(decline, because) {
   if (!decline) return null;
   const reasons = {
-    goal_changed: 'your goal has changed since then',
+    goal_changed: 'your goal has changed',
     weight_worsened: 'your weight has moved further from where we want it',
     intake_worsened: 'your logged intake has moved away from your target',
     coverage_worsened: 'there is less to go on than there was',
-    training_worsened: 'your training has dropped off since then',
-    recovery_worsened: 'your recovery has got harder since then',
-    weight_now_known: 'we can read your weight trend now',
-    intake_now_known: 'we can read your intake now',
-    coverage_now_known: 'you have logged enough for us to read it now',
-    training_now_known: 'we can see your training now',
-    recovery_now_known: 'we can see your recovery now',
-    rate_moved_materially: 'your weight has moved on since then',
+    training_worsened: 'your training has dropped off',
+    recovery_worsened: 'your recovery has got harder',
+    weight_now_known: 'we can read your weight trend',
+    intake_now_known: 'we can read your intake',
+    coverage_now_known: 'you have logged enough for us to read it',
+    training_now_known: 'we can see your training',
+    recovery_now_known: 'we can see your recovery',
+    rate_moved_materially: 'your weight has moved on',
   };
+  // Each clause slots into "Since then ..." below, so none of them may carry
+  // its own "since then" - which is how the sentence came out saying it twice.
   const why = reasons[because];
   if (!why) return null;
   return `You chose to keep this as it was last time. Since then ${why}, so we are suggesting it again.`;

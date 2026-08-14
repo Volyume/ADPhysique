@@ -15,6 +15,9 @@ import Chip from '../components/Chip';
 import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
 import { logError, logWarn } from '../lib/errorLog';
+// Campaign 18 job C: naming the athlete's own history when it shaped the plan.
+import { structureMemoryCopy } from '../lib/programmeStructureMemory';
+import { SPLIT_LABELS } from '../lib/planEngine';
 import {
   PHYSIQUE_GOALS,
   GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
@@ -250,6 +253,14 @@ export default function PlanUpdateScreen({ navigation }) {
     if (planResult.partial) {
       // FF-003: the plan generated but couldn't fulfil every requested move.
       toast.show(planShortfallNote(planResult.missedCount), { variant: 'warning', duration: 6000 });
+    } else if (planResult.structureMemory) {
+      // CAMPAIGN 18 JOB C: when the athlete's OWN completed blocks shaped the
+      // structure, say so. A personalised programme presented as a template
+      // one is the individualisation gap the scorecard named.
+      toast.show(
+        structureMemoryCopy(planResult.structureMemory, SPLIT_LABELS[planResult.plan?.splitType] ?? planResult.plan?.splitType),
+        { variant: 'success', duration: 6000 },
+      );
     } else {
       toast.show('Plan rebuilt around your new training setup', { variant: 'success' });
     }

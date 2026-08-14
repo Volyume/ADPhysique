@@ -277,35 +277,6 @@ export function wouldReverseRecent(records, domain, proposedDirection, { nowMs =
 // ─── FUTURE DECISION USE (founder rule E) ───────────────────────────────────
 
 /**
- * What the record of past changes legitimately supports, as EVIDENCE.
- *
- * Deliberately returns observations rather than instructions. A caller may
- * weigh these; nothing here tells it what to do, because "it worked last
- * time" is not a coaching principle.
- *
- * @returns {{ judged, improved, unchanged, worsened, confounded, lastJudged }}
- */
-export function outcomeEvidence(records = [], { kind = null, after = null, nowMs = null } = {}) {
-  const relevant = (Array.isArray(records) ? records : [])
-    .filter((r) => !kind || r.kind === kind);
-  const tally = {
-    judged: 0, improved: 0, unchanged: 0, worsened: 0, confounded: 0, lastJudged: null,
-  };
-  for (const r of relevant) {
-    const windowMet = observationWindowMet(r, { nowMs });
-    const { outcome } = classifyOutcome(r, { after, windowMet });
-    if (outcome === OUTCOME.INSUFFICIENT_EVIDENCE) continue;
-    if (outcome === OUTCOME.CONFOUNDED) { tally.confounded += 1; continue; }
-    tally.judged += 1;
-    if (outcome === OUTCOME.IMPROVED) tally.improved += 1;
-    if (outcome === OUTCOME.UNCHANGED) tally.unchanged += 1;
-    if (outcome === OUTCOME.WORSENED) tally.worsened += 1;
-    if (!tally.lastJudged) tally.lastJudged = { ...r, outcome };
-  }
-  return tally;
-}
-
-/**
  * DOSE LEARNING (founder job A2). May the athlete's own response to a
  * previous change resize the next one?
  *
@@ -385,11 +356,19 @@ export function holdReinforcement({ records = [], after = null, nowMs = null, on
     if (outcome !== OUTCOME.IMPROVED) return null;
     return {
       because: 'previous_change_worked_and_still_is',
-      text: `The last change to your calorie target did what we wanted, and it is still working. We are leaving it alone.`,
+      text: 'The last change to your calorie target did what we wanted, and it is still working. We are leaving it alone.',
     };
   }
   return null;
 }
+
+// NOTE ON A DELETED HELPER. An `outcomeEvidence` tally used to live here,
+// designed as the feed for future dose decisions. `doseEscalation` and
+// `holdReinforcement` above turned out to be the honest shape of that feed -
+// they read the records directly and answer a specific question - which left
+// the tally with no purpose. A product-intended helper with no consumer is
+// not "test-only by design", it is unfinished, so it is gone rather than
+// dressed up.
 
 /**
  * Plain English for what happened after a change, or null.

@@ -364,11 +364,6 @@ export function intentFacts({
   };
 }
 
-/** Is this muscle's volume the user's own decision rather than the engine's? */
-export function volumeIsUserManaged(context, muscle) {
-  return (context?.intent?.manualVolumeMuscles ?? []).includes(muscle);
-}
-
 // ─── THE CONTEXT ────────────────────────────────────────────────────────────
 
 /**

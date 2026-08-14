@@ -213,6 +213,8 @@ describe('JOB B: Volyume remembers being told no', () => {
     const out = week({ kgPerWeek: 0, declines: [declineOf(stale)] });
     expect(out.adjustments.calories).toBeTruthy();
     expect(out.returningAfterDecline).toMatch(/You chose to keep this as it was last time\. Since then/);
+    // And the clause slots in cleanly: no doubled "since then".
+    expect(out.returningAfterDecline.match(/since then/gi)).toHaveLength(1);
   });
 
   test('a changed GOAL always makes it a different conversation', () => {
