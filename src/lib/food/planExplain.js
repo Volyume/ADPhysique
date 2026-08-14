@@ -137,3 +137,99 @@ function joinList(arr) {
   if (arr.length === 2) return `${arr[0]} and ${arr[1]}`;
   return `${arr.slice(0, -1).join(', ')} and ${arr[arr.length - 1]}`;
 }
+
+// ─── The continuity change receipt (Campaign 17A jobs 4 and 5) ───────────────
+
+/**
+ * The full plain-English receipt for a target change that was reconciled
+ * through the continuity ladder (planContinuity.reconcilePlanToTarget).
+ *
+ * FOUNDER LAW: "The user should see concise plain-English truth", with the
+ * founder's own example as the shape:
+ *
+ *   "Your daily target has gone up slightly.
+ *    Breakfast and lunch stay the same.
+ *    We've added more rice to dinner and a little more cereal to your evening
+ *    snack.
+ *    Your protein target hasn't changed."
+ *
+ * Every line here is built from what ACTUALLY changed - the real slots, the
+ * real foods, the real grams - never reverse-engineered generic copy. The
+ * "what stays" line comes first because that is the point of continuity: the
+ * user should recognise their plan before they are told what moved.
+ *
+ * `buildPlanEditNarration` above is the coach's one-paragraph version for the
+ * weekly decision card and stays as it is; this is the fuller receipt for the
+ * surface where the user confirms.
+ *
+ * @param {object} result   a reconcilePlanToTarget result
+ * @param {object} [opts]   { proteinChanged: boolean }
+ * @returns {{ headline, stays, changes, added, protein, lines, unresolved }|null}
+ */
+export function buildContinuityReceipt(result, { proteinChanged = false } = {}) {
+  if (!result) return null;
+  const edits = result.edits || [];
+  const foodChanges = result.foodChanges || [];
+  const mealChanges = result.mealChanges || [];
+  const nothingMoved = !edits.length && !foodChanges.length && !mealChanges.length;
+
+  const before = Number(result.beforeKcal) || 0;
+  const after = Number(result.afterKcal) || 0;
+  const delta = Math.round(after - before);
+
+  if (nothingMoved) {
+    // "A stable target and successful meal plan may remain broadly stable for
+    // months." Saying so is a real answer, not an empty state.
+    return {
+      headline: 'Your meals stay as they are.',
+      stays: 'Your plan already matches your target, so nothing needs to change.',
+      changes: [],
+      added: null,
+      protein: null,
+      lines: ['Your meals stay as they are.', 'Your plan already matches your target, so nothing needs to change.'],
+      unresolved: null,
+    };
+  }
+
+  const size = Math.abs(delta) < 100 ? 'a little' : 'a bit';
+  const headline = delta === 0
+    ? 'Your plan has been brought back in line with your target.'
+    : delta > 0
+      ? `Your daily target has gone up ${size}.`
+      : `Your daily target has come down ${size}.`;
+
+  // What stays. Named, so the user recognises the plan they already run.
+  const keptNames = (result.kept || []).map((k) => slotLabel(k.slot));
+  const stays = keptNames.length
+    ? `${capitalise(joinList(keptNames))} ${keptNames.length === 1 ? 'stays' : 'stay'} the same.`
+    : null;
+
+  // What moved, in real food. Portions first (the least disruptive), then any
+  // food that was swapped, then a meal that was replaced.
+  const changes = [];
+  for (const e of edits) changes.push(describeEdit(e, { withGrams: true }));
+  for (const f of foodChanges) {
+    changes.push(`${f.foodInName.toLowerCase()} instead of ${f.foodOutName.toLowerCase()} at ${slotLabel(f.slot)}`);
+  }
+  for (const m of mealChanges) {
+    changes.push(`${m.toName.toLowerCase()} instead of ${m.fromName.toLowerCase()} at ${slotLabel(m.slot)}`);
+  }
+  const added = changes.length ? `${capitalise(joinList(changes))}.` : null;
+
+  // The protein line. The founder's law: when calories move and the protein
+  // target does not, say so plainly, because that is the reassurance the
+  // user actually wants.
+  const protein = proteinChanged
+    ? 'Your protein target has changed too, and your plan matches it.'
+    : 'Your protein target has not changed.';
+
+  // Honest when the ladder could not get all the way there. Never silent.
+  const unresolved = result.cannotReach && !result.floorHeld
+    ? 'This is as close as your current meals can get. Build a new plan if you want a closer match.'
+    : result.floorHeld
+      ? 'That is as far as it goes. Your safe minimum holds the rest.'
+      : null;
+
+  const lines = [headline, stays, added, protein, unresolved].filter(Boolean);
+  return { headline, stays, changes, added, protein, lines, unresolved };
+}

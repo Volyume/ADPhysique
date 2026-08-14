@@ -31,7 +31,7 @@ import {
 import { assembleDayPlanBestOf, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
 import { swapFoodInMeal, swapMealInPlan, findRoleAlternatives, applyStandingReplacements } from './mealSwap';
 import { loadFoodIntentState, persistentReplacements } from './intent';
-import { applyMacroDeltaToPlan } from './planEdit';
+import { reconcilePlanToTarget, decideContinuity, CONTINUITY_ACTION, REBUILD_REASON } from './planContinuity';
 import { bankedPlanDayEdits } from './calorieBank';
 import { normalisePreferences } from './planPreferences';
 import { foodExcluded } from './foodRoles';
@@ -404,37 +404,173 @@ export async function repeatPlanDayOnActivePlan(userId, { fromIndex, toIndex } =
 
 /**
  * Apply a coach calorie adjustment to the active plan at the food level,
- * persist it, and return { plan, change } (the change record drives the
- * gram-level narration via planExplain). No-ops to { change: null } when
- * there is no active plan.
+ * persist it, and return the material both narrations need.
+ *
+ * CONTINUITY FIRST (Campaign 17A jobs 4 and 5). This used to run ONE rung of
+ * the ladder - rescale portions - and stop. When portions could not absorb the
+ * whole change (every carb staple already at the bottom of its sane range,
+ * say) the residual was silently dropped and the plan quietly stopped matching
+ * the target: the founder's named failure, "new target = 2650, meal plan still
+ * = old 2450 plan with no useful reconciliation".
+ *
+ * It now climbs planContinuity's ladder, and only as far as it must: keep,
+ * then portions, then a small number of foods, then one meal. It still never
+ * rebuilds - a coach nudge is not a reason to hand someone a new diet - and
+ * when even rung 4 cannot reach the target the result says so honestly
+ * (`cannotReach`) rather than pretending.
+ *
+ * @returns {{
+ *   plan, change, receipt, appliedToDays
+ * }} `change` is the planEdit record the existing coach narration reads;
+ *    `receipt` is the fuller continuity result for the confirm surface.
+ *    Both are null when there is no active plan.
  */
 export async function applyCoachAdjustmentToActivePlan(userId, { adjustmentKcal } = {}) {
   const active = await getActiveMealPlan(userId);
   if (!active || !Array.isArray(active.plan?.days) || active.plan.days.length === 0) {
-    return { change: null };
+    return { change: null, receipt: null };
   }
   const snap = active.plan.targetSnapshot || {};
   // SAFETY: a floored target IS the floor (belt-and-braces for snapshots
   // stored before storedTargetToEngineTarget raised kcalMin on floored
-  // targets). Never hand planEdit a floor below the floored target.
+  // targets). Never hand the editor a floor below the floored target.
   const floorKcal = targetWasFloored(snap)
     ? (snap.targetKcal || 0)
     : (snap.kcalMin || Math.round((snap.targetKcal || 0) * 0.9));
 
-  // A weekly coach delta applies to EVERY day of the week plan (each day
-  // routes through its own floor clamp) — editing one day while six stay
-  // stale would realise a seventh of the coach's intent and leave the
-  // plan disagreeing with itself.
-  let firstChange = null;
-  const days = active.plan.days.map((day) => {
-    const { plan: editedDay, change } = applyMacroDeltaToPlan({ plan: day, adjustmentKcal, floorKcal });
-    if (!firstChange && change && (change.edits.length > 0 || change.floorHeld)) firstChange = change;
-    return editedDay;
+  const rep = active.plan.days.find((d) => (d?.slots ?? []).length) ?? active.plan.days[0];
+  const newTargetKcal = Math.round((rep?.totals?.kcal ?? 0) + (Number(adjustmentKcal) || 0));
+
+  // The coach delta applies to EVERY day of the week plan (each day routes
+  // through its own floor clamp): editing one day while six stay stale would
+  // realise a seventh of the coach's intent and leave the plan disagreeing
+  // with itself.
+  const result = reconcilePlanToTarget({
+    plan: active.plan,
+    newTarget: { targetKcal: newTargetKcal },
+    prefs: active.plan.prefs,
+    floorKcal,
   });
-  const nextPlan = { ...active.plan, days, lastEditType: 'macro_adjustment' };
-  await updateMealPlan(userId, active.id, nextPlan);
-  return { plan: nextPlan, change: firstChange, appliedToDays: days.length };
+
+  // The existing coach narration reads a planEdit change record. Build one
+  // from the reconciliation so that surface is unchanged, while the fuller
+  // receipt carries the food and meal changes the ladder may also have made.
+  const change = (result.edits.length || result.floorHeld) ? {
+    adjustmentKcalRequested: Math.round(Number(adjustmentKcal) || 0),
+    adjustmentKcalApplied: Math.round(result.afterKcal - result.beforeKcal),
+    floorHeld: result.floorHeld,
+    belowFloor: false,
+    edits: result.edits,
+    macroDelta: {
+      kcal: Math.round(result.afterKcal - result.beforeKcal),
+      carbs: 0, fat: 0, protein: 0,
+    },
+    lastEditType: 'macro_adjustment',
+  } : null;
+
+  await updateMealPlan(userId, active.id, result.plan);
+  return {
+    plan: result.plan,
+    change,
+    receipt: result,
+    appliedToDays: result.plan.days.length,
+  };
 }
+
+/**
+ * Reconcile the active meal plan to a target the user changed DIRECTLY (the
+ * Nutrition targets screen), and return the receipt for them to confirm.
+ *
+ * Campaign 17A job 5. This path did not exist: saving a new target wrote the
+ * number and nothing else, so a user who moved from 2,450 to 2,650 kcal was
+ * left running a 2,450 kcal plan with no reconciliation at all - the founder's
+ * named failure, in its most direct form.
+ *
+ * NOTHING IS PERSISTED HERE. It is a dry run: the caller shows the receipt,
+ * the user confirms, and `commitReconciledPlan` writes it. "Do not silently
+ * rewrite the whole diet without explanation" cuts both ways - the user sees
+ * the real food changes before they happen.
+ *
+ * `decideContinuity` rules the fork first, so a structural change (meals per
+ * day, diet, exclusions) or a target that has moved a long way is reported as
+ * a REBUILD with its reason, rather than the old plan being stretched out of
+ * shape to reach a number it was never built for.
+ *
+ * @returns {{
+ *   action, reason, receipt, plan, planId, targetDeltaKcal, proteinChanged
+ * }} or { error } / { action: 'keep' } when there is nothing to do.
+ */
+export async function reviewTargetChangeAgainstActivePlan(userId, newTarget, profile) {
+  const active = await getActiveMealPlan(userId);
+  if (!active || !Array.isArray(active.plan?.days) || active.plan.days.length === 0) {
+    return { error: 'no_plan' };
+  }
+  const prefs = preferencesFromProfile(profile);
+  if (!prefs) return { error: 'no_profile' };
+
+  const decision = decideContinuity({ plan: active.plan, newTarget, prefs });
+  const oldProtein = Number(active.plan.targetSnapshot?.proteinG) || 0;
+  const newProtein = Number(newTarget?.proteinG) || 0;
+  const proteinChanged = oldProtein > 0 && newProtein > 0 && oldProtein !== newProtein;
+
+  if (decision.action === CONTINUITY_ACTION.REBUILD) {
+    return {
+      action: CONTINUITY_ACTION.REBUILD,
+      reason: decision.reason,
+      receipt: null,
+      plan: null,
+      planId: active.id,
+      targetDeltaKcal: decision.targetDeltaKcal,
+      proteinChanged,
+    };
+  }
+  if (decision.action === CONTINUITY_ACTION.KEEP) {
+    return {
+      action: CONTINUITY_ACTION.KEEP,
+      reason: null,
+      receipt: null,
+      plan: null,
+      planId: active.id,
+      targetDeltaKcal: decision.targetDeltaKcal,
+      proteinChanged,
+    };
+  }
+
+  // SAFETY: a floored target IS the floor. Same belt-and-braces as the coach
+  // path; the reconciliation can never take a day below it.
+  const floorKcal = targetWasFloored(newTarget)
+    ? (newTarget.targetKcal || 0)
+    : (newTarget.kcalMin || Math.round((newTarget.targetKcal || 0) * 0.9));
+
+  const result = reconcilePlanToTarget({
+    plan: active.plan, newTarget, prefs, floorKcal,
+  });
+  return {
+    action: result.action,
+    reason: null,
+    receipt: result,
+    // Carry the new target snapshot so a committed plan describes the target
+    // it was actually built for, not the one it replaced.
+    plan: { ...result.plan, targetSnapshot: newTarget },
+    planId: active.id,
+    targetDeltaKcal: decision.targetDeltaKcal,
+    proteinChanged,
+  };
+}
+
+/**
+ * Persist a plan the user reviewed and confirmed
+ * (reviewTargetChangeAgainstActivePlan). Separate from the review so nothing
+ * is written until they say yes.
+ */
+export async function commitReconciledPlan(userId, planId, plan) {
+  if (!userId || !planId || !plan) return { error: 'no_plan' };
+  await updateMealPlan(userId, planId, plan);
+  return { plan };
+}
+
+/** The rebuild reasons, re-exported so screens need not import two modules. */
+export { CONTINUITY_ACTION, REBUILD_REASON };
 
 /**
  * Map a plan slot key to the diary's slot vocabulary. Pure. The plan uses

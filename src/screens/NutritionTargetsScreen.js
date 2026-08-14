@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   KeyboardAvoidingView, Platform,
@@ -23,6 +23,14 @@ import { useToast } from '../components/Toast';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
 import { daysToActivityLevel } from '../lib/coachingGoals';
+// Campaign 17A job 5: a target change has to reach the user's actual FOOD, and
+// they have to see what it does before it does it.
+import BottomSheet from '../components/BottomSheet';
+import {
+  reviewTargetChangeAgainstActivePlan, commitReconciledPlan,
+  CONTINUITY_ACTION, REBUILD_REASON, regenerateActiveMealPlan,
+} from '../lib/food/mealPlanService';
+import { buildContinuityReceipt } from '../lib/food/planExplain';
 import { hydrateLoadedTargets, getRecommendedMeals } from '../lib/nutritionTargetsView';
 import { isValidBodyWeightKg, isValidBodyFatPercent } from '../lib/bodyMetricValidate';
 import useAppStore from '../store/useAppStore';
@@ -226,6 +234,9 @@ const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
 export default function NutritionTargetsScreen({ navigation }) {
   const toast = useToast();
+  // Campaign 17A job 5: the dry-run plan reconciliation awaiting the user's yes.
+  const [planReview, setPlanReview] = useState(null);
+  const [planUpdating, setPlanUpdating] = useState(false);
   // CP-10 batch E (2026-07-10): live theme (src/hooks/useTheme.js). This
   // screen renders its rows via plain .map() inside a ScrollView (no
   // FlatList/FlashList/SectionList), so an unmemoised call matches
@@ -557,6 +568,19 @@ export default function NutritionTargetsScreen({ navigation }) {
         } catch (_e) {}
       }
 
+      // Campaign 17A job 5: the target has changed, so the user's PLAN has to
+      // change with it. Reviewed, never silently applied: the sheet shows the
+      // real food changes and they confirm. Best-effort - a user with no meal
+      // plan, or a review that fails, still keeps the target they just saved.
+      if (user?.id) {
+        try {
+          const review = await reviewTargetChangeAgainstActivePlan(user.id, targets, userProfile);
+          if (!review?.error && review.action !== CONTINUITY_ACTION.KEEP) {
+            setPlanReview(review);
+          }
+        } catch (_) { /* off-plan is the common, silent case */ }
+      }
+
       // Auto-enable physique tracking
       AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'true').catch(() => {});
       // Collapse form to show results prominently
@@ -569,6 +593,54 @@ export default function NutritionTargetsScreen({ navigation }) {
       setCalculating(false);
     }
   }
+
+  // ── Campaign 17A job 5: target change -> real food change ──────────────────
+  //
+  // The whole point of this block is one founder sentence: "The user must not
+  // end up with new target = 2650, meal plan still = old 2450 plan with no
+  // useful reconciliation." Before it, saving a target on this screen wrote a
+  // number and touched nothing else.
+  //
+  // The review is a DRY RUN. Nothing is persisted until the user reads the
+  // receipt and taps Update, because the other half of the same law is "do not
+  // silently rewrite the whole diet without explanation".
+  const handleConfirmPlanReview = useCallback(async () => {
+    if (!planReview || !user?.id || planUpdating) return;
+    setPlanUpdating(true);
+    try {
+      if (planReview.action === CONTINUITY_ACTION.REBUILD) {
+        const res = await regenerateActiveMealPlan(user.id, userProfile);
+        if (res?.error) {
+          toast.show("Couldn't rebuild your meals. Open your meal plan and try again.", { variant: 'error' });
+          return;
+        }
+        toast.show('Your meals have been rebuilt around your new target.', { variant: 'success' });
+      } else {
+        await commitReconciledPlan(user.id, planReview.planId, planReview.plan);
+        toast.show('Your meals now match your new target.', { variant: 'success' });
+      }
+      setPlanReview(null);
+    } catch (_) {
+      toast.show("Couldn't update your meals. Try again.", { variant: 'error' });
+    } finally {
+      setPlanUpdating(false);
+    }
+  }, [planReview, user?.id, userProfile, planUpdating, toast]);
+
+  const planReviewReceipt = planReview?.receipt
+    ? buildContinuityReceipt(planReview.receipt, { proteinChanged: planReview.proteinChanged })
+    : null;
+
+  // Why a fresh plan is the honest answer, in the user's words rather than the
+  // engine's. Each maps to one REBUILD_REASON.
+  const REBUILD_COPY = {
+    [REBUILD_REASON.MAJOR_TARGET_MOVE]: 'Your target has moved a long way, so stretching your current meals would leave you with odd portions. A fresh plan will fit properly.',
+    [REBUILD_REASON.MEAL_COUNT_CHANGED]: 'You have changed how many meals you eat, so your plan needs building around the new shape.',
+    [REBUILD_REASON.DIET_CHANGED]: 'You have changed your diet, so your plan needs building again around it.',
+    [REBUILD_REASON.EXCLUSIONS_CHANGED]: 'You have changed the foods you leave out, so your plan needs building again around them.',
+    [REBUILD_REASON.CANNOT_REACH_TARGET]: 'Your current meals cannot reach the new target sensibly, so a fresh plan is the better fit.',
+    [REBUILD_REASON.USER_REQUESTED]: 'A fresh plan will be built around your new target.',
+  };
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
@@ -1552,6 +1624,48 @@ export default function NutritionTargetsScreen({ navigation }) {
           <View style={{ height: spacing.xxl }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Campaign 17A job 5: the change receipt. Real slots, real foods, real
+          grams - never reverse-engineered generic copy - and nothing is
+          written until the user taps Update. The "what stays" line leads,
+          because the point of continuity is that they recognise their plan
+          before they are told what moved. */}
+      <BottomSheet
+        visible={!!planReview}
+        onClose={() => setPlanReview(null)}
+        accessibilityLabel="Update your meals to match your new target"
+      >
+        {planReview ? (
+          <View style={styles.planReviewSheet}>
+            <Text style={[styles.planReviewTitle, live.planReviewTitle]}>Your meals and your new target</Text>
+            {planReview.action === CONTINUITY_ACTION.REBUILD ? (
+              <Text style={[styles.planReviewLine, live.planReviewLine]}>
+                {REBUILD_COPY[planReview.reason] ?? REBUILD_COPY[REBUILD_REASON.USER_REQUESTED]}
+              </Text>
+            ) : (
+              (planReviewReceipt?.lines ?? []).map((line, i) => (
+                <Text key={`receipt-${i}`} style={[styles.planReviewLine, live.planReviewLine]}>{line}</Text>
+              ))
+            )}
+            <Button
+              title={planReview.action === CONTINUITY_ACTION.REBUILD ? 'Build a new plan' : 'Update my meals'}
+              onPress={handleConfirmPlanReview}
+              disabled={planUpdating}
+              style={styles.planReviewCta}
+              accessibilityLabel={planReview.action === CONTINUITY_ACTION.REBUILD
+                ? 'Build a new meal plan around your new target'
+                : 'Update your meals to match your new target'}
+            />
+            <Button
+              title="Not now"
+              variant="ghost"
+              onPress={() => setPlanReview(null)}
+              disabled={planUpdating}
+              accessibilityLabel="Leave your meals as they are for now"
+            />
+          </View>
+        ) : null}
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -1563,6 +1677,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  // Campaign 17A job 5: the target-change receipt sheet.
+  planReviewSheet: { gap: spacing.sm },
+  planReviewTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+  },
+  planReviewLine: { ...type.body, color: colors.textSecondary },
+  planReviewCta: { marginTop: spacing.md },
   content: {
     padding: spacing.lg,
     gap: spacing.lg,
@@ -2304,6 +2428,8 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
+    planReviewTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    planReviewLine: { ...t.type.body, color: t.colors.textSecondary },
     eduCard: { borderLeftColor: t.colors.border },
     fastTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     fastSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
