@@ -37,6 +37,15 @@ import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type, circle } 
 import useTheme from '../hooks/useTheme';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { todayLocalKey, parseLocalDay } from '../lib/dayKey';
+import { shiftDate } from '../lib/food/diaryDates';
+// Campaign 17B job 4: stated vs observed, from CONFIRMED intake only.
+import { mealCountObservation } from '../lib/food/habits';
+import { getNutritionTargets } from '../lib/database';
+
+// How far back the meal-count observation looks. Four weeks is long enough to
+// see a real pattern and short enough that a habit the user has since changed
+// stops counting. A product heuristic, written down as one.
+const MEAL_HABIT_WINDOW_DAYS = 28;
 import {
   loadActiveMealPlan,
   generateAndSaveDayPlan,
@@ -51,7 +60,10 @@ import {
   swapFoodInMeal,
   findRoleAlternatives,
 } from '../lib/food/mealPlanService';
-import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay, recordFoodSwap } from '../lib/food/db';
+import {
+  updateMealPlan, getFoodEntriesForDay, clearPlannedDay, recordFoodSwap,
+  getFoodEntriesForRange, getRollupsForRange,
+} from '../lib/food/db';
 // Campaign 17A job 3: what a food swap MEANS, in the user's own words.
 import { FOOD_SWAP_SCOPE, isFoodSwapScope } from '../lib/food/foodSwapScope';
 import { defaultWeightStateFor } from '../lib/food/foodRoles';
@@ -210,7 +222,10 @@ function PrefRow({
 
 function MealPreferencesControls({
   prefs, busy, onSetPref, dietSummary, onOpenDietary,
+  mealCountAsk, onAcceptMealCount, onDismissMealCount,
 }) {
+  const t = useTheme();
+  const live = buildLiveStyles(t);
   return (
     <>
       {/* Dietary needs: opens the inline dietarySheet, which renders the
@@ -225,6 +240,35 @@ function MealPreferencesControls({
         sub={dietSummary}
         onPress={onOpenDietary}
       />
+      {/* Campaign 17B job 4: STATED vs OBSERVED. The user chose a number; we
+          have watched what they actually log on COMPLETE days. When those
+          disagree and the evidence is established, we ASK. We never silently
+          change the number they chose. */}
+      {mealCountAsk ? (
+        <View style={[styles.habitCard, live.habitCard]}>
+          <Text style={[styles.habitQuestion, live.habitQuestion]}>{mealCountAsk.question}</Text>
+          <Text style={[styles.habitDetail, live.habitDetail]}>{mealCountAsk.detail}</Text>
+          <View style={styles.habitActions}>
+            <Button
+              title={`Use ${mealCountAsk.observedCount} meals`}
+              size="sm"
+              fullWidth={false}
+              onPress={() => onAcceptMealCount(mealCountAsk.observedCount)}
+              disabled={busy}
+              accessibilityLabel={`Build future meal plans with ${mealCountAsk.observedCount} meals a day`}
+            />
+            <Button
+              title="No, keep mine"
+              variant="ghost"
+              size="sm"
+              fullWidth={false}
+              onPress={() => onDismissMealCount(mealCountAsk.observedCount)}
+              disabled={busy}
+              accessibilityLabel="Keep the number of meals you chose"
+            />
+          </View>
+        </View>
+      ) : null}
       <PrefRow
         label="Meals per day"
         help="Choose how many meals Volyume should build before snacks or pre-workout extras."
@@ -770,6 +814,74 @@ export default function MealPlanScreen({ navigation, route }) {
     }
   }, [user?.id, userProfile, plan, busy, setMealPlanPrefs, load, toast]);
 
+  // ── Campaign 17B job 4: stated vs observed meal count ──────────────────────
+  //
+  // The user chose a number of meals. We watch what they actually log on
+  // COMPLETE days (partly-logged days say nothing and are excluded), and when
+  // those disagree with an established margin we ASK. Nothing here changes a
+  // preference on its own: "Do not silently overwrite user preferences."
+  //
+  // A declined question is an answer. The declined count is remembered so the
+  // card does not reappear every time the screen opens.
+  const [mealCountAsk, setMealCountAsk] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!user?.id || !userProfile) return;
+      try {
+        const end = todayLocalKey();
+        const start = shiftDate(end, -MEAL_HABIT_WINDOW_DAYS);
+        const [entries, rollups, targetsRow] = await Promise.all([
+          getFoodEntriesForRange(user.id, start, end).catch(() => []),
+          getRollupsForRange(user.id, start, end).catch(() => []),
+          getNutritionTargets(user.id).catch(() => null),
+        ]);
+        const targetKcal = Number(targetsRow?.targetKcal) || 0;
+        if (!targetKcal) return;
+        // Group CONFIRMED entries into days and slots. getFoodEntriesForRange
+        // already excludes planned rows (17A job 2), so a staged meal plan can
+        // never teach a habit.
+        const byDay = new Map();
+        for (const e of entries) {
+          if (!byDay.has(e.entry_date)) byDay.set(e.entry_date, new Map());
+          const slots = byDay.get(e.entry_date);
+          slots.set(e.meal_slot, (slots.get(e.meal_slot) ?? 0) + (Number(e.kcal) || 0));
+        }
+        const loggedByDay = new Map((rollups || []).map((r) => [r.entry_date, Number(r.kcal_total) || 0]));
+        const days = [...byDay.entries()].map(([date, slots]) => ({
+          date,
+          targetKcal,
+          loggedKcal: loggedByDay.get(date) ?? 0,
+          slots: [...slots.entries()].map(([slot, kcal]) => ({ slot, kcal })),
+        }));
+        const ask = mealCountObservation({
+          statedMealsPerDay: userProfile?.mealPlanMealsPerDay ?? 4,
+          days,
+          dismissedForCount: userProfile?.mealCountAskDismissedFor ?? null,
+        });
+        if (active) setMealCountAsk(ask);
+      } catch (_) { /* an observation is never worth an error */ }
+    })();
+    return () => { active = false; };
+  }, [user?.id, userProfile]);
+
+  const handleAcceptMealCount = useCallback(async (count) => {
+    if (!user?.id || busy) return;
+    setMealCountAsk(null);
+    // This IS a preference change and a structural one, so it goes through the
+    // ordinary handler that rebuilds - the 17A law says meal count changing is
+    // a genuine rebuild trigger.
+    await handleSetPref({ mealPlanMealsPerDay: count });
+  }, [user?.id, busy, handleSetPref]);
+
+  const handleDismissMealCount = useCallback(async (count) => {
+    if (!user?.id) return;
+    setMealCountAsk(null);
+    // Remembered so we ask once, not every time they open the screen.
+    await setMealPlanPrefs({ mealCountAskDismissedFor: count }).catch(() => {});
+  }, [user?.id, setMealPlanPrefs]);
+
   // Campaign 17A closeout: "Keep this meal".
   //
   // A pin is a NARROW instruction - keep this one - so it deliberately does
@@ -947,7 +1059,7 @@ export default function MealPlanScreen({ navigation, route }) {
             <Text style={[styles.preferencesHint, live.preferencesHint]}>Set these first. The plan uses them for today or the week.</Text>
           </View>
           <View style={[styles.prefsPanel, live.prefsPanel]}>
-            <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} dietSummary={dietSummary} onOpenDietary={handleOpenDietary} />
+            <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} dietSummary={dietSummary} onOpenDietary={handleOpenDietary} mealCountAsk={mealCountAsk} onAcceptMealCount={handleAcceptMealCount} onDismissMealCount={handleDismissMealCount} />
           </View>
 
           <Card style={styles.planOption}>
@@ -1087,7 +1199,7 @@ export default function MealPlanScreen({ navigation, route }) {
           </View>
           {prefsOpen ? (
             <View style={[styles.prefsPanel, live.prefsPanel]}>
-              <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} dietSummary={dietSummary} onOpenDietary={handleOpenDietary} />
+              <MealPreferencesControls prefs={prefs} busy={busy} onSetPref={handleSetPref} dietSummary={dietSummary} onOpenDietary={handleOpenDietary} mealCountAsk={mealCountAsk} onAcceptMealCount={handleAcceptMealCount} onDismissMealCount={handleDismissMealCount} />
             </View>
           ) : null}
 
@@ -1850,6 +1962,17 @@ const styles = StyleSheet.create({
   swapSheetSub: { ...type.bodySm, color: colors.textSecondary, marginTop: -spacing.xs },
   // Campaign 17A closeout: Swap and Keep sit side by side on a meal card.
   mealActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
+  // Campaign 17B job 4: the stated-vs-observed question.
+  habitCard: {
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+  },
+  habitQuestion: { ...type.body, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  habitDetail: { ...type.bodySm, color: colors.textSecondary },
+  habitActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap', marginTop: spacing.xs },
   // Campaign 17A job 3: the "back to the food list" row on the intent step.
   swapBackRow: { alignSelf: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
   // D2 #15: 360 is the base/fallback cap; the component overrides maxHeight
@@ -1907,6 +2030,9 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
+    habitCard: { backgroundColor: t.colors.surface2 },
+    habitQuestion: { ...t.type.body, color: t.colors.textPrimary },
+    habitDetail: { ...t.type.bodySm, color: t.colors.textSecondary },
     emptyIcon: { backgroundColor: t.colors.primaryBg },
     emptyTitle: { color: t.colors.textPrimary, fontSize: t.fontSize.xl },
     emptyBody: { ...t.type.body, color: t.colors.textSecondary },

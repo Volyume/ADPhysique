@@ -1919,7 +1919,11 @@ const useAppStore = create((set, get) => ({
     // the per-field timestamp is stamped; an unstamped write here would
     // never push and could be silently reverted by the next pull.
     const allowed = ['mealPlanMealsPerDay', 'mealPlanVariety', 'mealPlanFatConvention',
-      'mealPlanPeriWorkout', 'mealPlanPinnedMeals'];
+      'mealPlanPeriWorkout', 'mealPlanPinnedMeals',
+      // Campaign 17B job 4: the meal-count observation the user DECLINED. A
+      // declined question is an answer, so it is remembered and not asked
+      // again for that same count. It changes no target and no plan.
+      'mealCountAskDismissedFor'];
     const patch = {};
     for (const k of allowed) if (k in partial) patch[k] = partial[k];
     if (Object.keys(patch).length === 0) return;
