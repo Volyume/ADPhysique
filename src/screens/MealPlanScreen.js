@@ -50,7 +50,9 @@ import {
   swapFoodInMeal,
   findRoleAlternatives,
 } from '../lib/food/mealPlanService';
-import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay } from '../lib/food/db';
+import { updateMealPlan, getFoodEntriesForDay, clearPlannedDay, recordFoodSwap } from '../lib/food/db';
+// Campaign 17A job 3: what a food swap MEANS, in the user's own words.
+import { FOOD_SWAP_SCOPE, isFoodSwapScope } from '../lib/food/foodSwapScope';
 import { defaultWeightStateFor } from '../lib/food/foodRoles';
 import { buildGroceryList, formatGroceryListForShare } from '../lib/food/groceryList';
 import { getMealAdditions, filterAdditionsForProfile, ADDITIONS_INTRO } from '../lib/food/mealAdditions';
@@ -602,11 +604,16 @@ export default function MealPlanScreen({ navigation, route }) {
       return;
     }
     const candidates = findRoleAlternatives(foodKey, plan.prefs);
+    // The outgoing food's real name, for the intent step's copy ("instead of
+    // chicken breast"). Taken from the first solve so it is the same label the
+    // user is looking at, never a raw key.
+    let foodOutName = foodKey;
     const options = candidates
       .map((foodIn) => {
         const res = swapFoodInMeal({
           components: slot.components, foodKeyOut: foodKey, prefs: plan.prefs, preferKey: foodIn,
         });
+        if (res?.swap?.foodOutName) foodOutName = res.swap.foodOutName;
         return (res && res.swap?.foodIn === foodIn)
           ? { foodIn, name: res.swap.foodInName, totals: res.totals }
           : null;
@@ -616,13 +623,19 @@ export default function MealPlanScreen({ navigation, route }) {
       toast.show('No close match for that food with your preferences.', { variant: 'info' });
       return;
     }
-    setFoodSwapSheet({ slotKey, foodKeyOut: foodKey, options });
+    setFoodSwapSheet({ slotKey, foodKeyOut: foodKey, foodOutName, options, pending: null });
   }, [user?.id, record, plan, day, busy, toast]);
 
   // Apply the chosen food alternative (the highlighted closest match or any
   // option in the sheet) to the slot, persist it, and close the sheet. Same
   // persistence path the old immediate swap used before.
-  const applyFoodChoice = useCallback(async (slotKey, foodKeyOut, foodKeyIn) => {
+  //
+  // Campaign 17A job 3: the swap now carries the user's INTENT. `scope` is
+  // FOOD_SWAP_SCOPE.JUST_THIS_TIME (this meal only, teaches nothing) or
+  // PERSISTENT (a standing replacement future plans honour). Recording is
+  // best-effort and never blocks the swap the user asked for: the plan edit
+  // is the thing they wanted, the memory is a bonus.
+  const applyFoodChoice = useCallback(async (slotKey, foodKeyOut, foodKeyIn, scope) => {
     if (!user?.id || !record || !day || busy) return;
     const slot = day.slots.find((s) => s.slot === slotKey);
     if (!slot?.components) return;
@@ -647,9 +660,15 @@ export default function MealPlanScreen({ navigation, route }) {
       // Guard the receipt fields: a missing swap object must not throw AFTER a
       // successful write and surface a false "couldn't swap" error (food review U-M10).
       const { swap } = res;
+      if (isFoodSwapScope(scope)) {
+        await recordFoodSwap(user.id, foodKeyOut, foodKeyIn, scope).catch(() => {});
+      }
+      const persistent = scope === FOOD_SWAP_SCOPE.PERSISTENT;
       toast.show(
-        swap ? `Swapped in ${swap.gramsIn} g ${swap.foodInName} for ${swap.foodOutName}.`
-          : 'Food swapped.',
+        persistent && swap
+          ? `We will use ${swap.foodInName} instead of ${swap.foodOutName} from now on.`
+          : swap ? `Swapped in ${swap.gramsIn} g ${swap.foodInName} for ${swap.foodOutName}.`
+            : 'Food swapped.',
         { variant: 'success' },
       );
     } catch (_) {
@@ -1300,34 +1319,94 @@ export default function MealPlanScreen({ navigation, route }) {
       >
         {foodSwapSheet ? (
           <>
-            <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Swap this food</Text>
-            <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
-              Pick any one. Grams are solved to match, so the meal stays close to target; the first is the closest match.
-            </Text>
-            <ScrollView
-              style={[styles.swapList, { maxHeight: swapListMaxHeight }]}
-              contentContainerStyle={styles.swapListContent}
-              showsVerticalScrollIndicator
-            >
-              {foodSwapSheet.options.map(({ foodIn, name, totals }, i) => (
+            {foodSwapSheet.pending ? (
+              /* Campaign 17A job 3, step 2. A swap can mean two completely
+                 different things and the app cannot tell them apart by
+                 watching: "there's none in the house tonight" must never
+                 teach that the user dislikes it, and "use this from now on"
+                 must not be forgotten the moment the plan regenerates. So we
+                 ask, in one tap, in plain words. */
+              <>
+                <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Just this once, or from now on?</Text>
+                <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
+                  {`You picked ${foodSwapSheet.pending.name}.`}
+                </Text>
                 <TouchableOpacity
-                  key={foodIn}
-                  style={[styles.swapOption, live.swapOption, i === 0 && [styles.swapOptionOn, live.swapOptionOn]]}
-                  onPress={() => applyFoodChoice(foodSwapSheet.slotKey, foodSwapSheet.foodKeyOut, foodIn)}
+                  style={[styles.swapOption, live.swapOption, styles.swapOptionOn, live.swapOptionOn]}
+                  onPress={() => applyFoodChoice(
+                    foodSwapSheet.slotKey, foodSwapSheet.foodKeyOut,
+                    foodSwapSheet.pending.foodIn, FOOD_SWAP_SCOPE.JUST_THIS_TIME,
+                  )}
                   disabled={busy}
                   accessibilityRole="button"
-                  accessibilityLabel={`${name}, ${formatEnergy(totals.kcal, energyUnit)} ${energyWord}, ${totals.protein} grams protein${i === 0 ? '. Closest match.' : ''}`}
+                  accessibilityLabel="Just this meal. Nothing changes about what we suggest in future."
                 >
                   <View style={styles.swapOptionMain}>
-                    <Text style={[styles.swapOptionName, live.swapOptionName]}>{name}</Text>
-                    {i === 0 ? <Text style={[styles.swapOptionTag, live.swapOptionTag]}>Closest match</Text> : null}
+                    <Text style={[styles.swapOptionName, live.swapOptionName]}>Just this meal</Text>
                   </View>
                   <Text style={[styles.swapOptionMacros, live.swapOptionMacros]}>
-                    {`${formatEnergy(totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${totals.protein} g`}
+                    Nothing changes about what we suggest in future.
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </ScrollView>
+                <TouchableOpacity
+                  style={[styles.swapOption, live.swapOption]}
+                  onPress={() => applyFoodChoice(
+                    foodSwapSheet.slotKey, foodSwapSheet.foodKeyOut,
+                    foodSwapSheet.pending.foodIn, FOOD_SWAP_SCOPE.PERSISTENT,
+                  )}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Use ${foodSwapSheet.pending.name} from now on, instead of ${foodSwapSheet.foodOutName}, in future plans.`}
+                >
+                  <View style={styles.swapOptionMain}>
+                    <Text style={[styles.swapOptionName, live.swapOptionName]}>{`Use ${foodSwapSheet.pending.name} from now on`}</Text>
+                  </View>
+                  <Text style={[styles.swapOptionMacros, live.swapOptionMacros]}>
+                    {`We will use it instead of ${foodSwapSheet.foodOutName} in your future plans.`}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.swapBackRow}
+                  onPress={() => setFoodSwapSheet((sh) => (sh ? { ...sh, pending: null } : sh))}
+                  disabled={busy}
+                  accessibilityRole="button"
+                  accessibilityLabel="Back to the list of foods"
+                >
+                  <Text style={[styles.swapSheetSub, live.swapSheetSub]}>Back</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.swapSheetTitle, live.swapSheetTitle]}>Swap this food</Text>
+                <Text style={[styles.swapSheetSub, live.swapSheetSub]}>
+                  Pick any one. Grams are solved to match, so the meal stays close to target; the first is the closest match.
+                </Text>
+                <ScrollView
+                  style={[styles.swapList, { maxHeight: swapListMaxHeight }]}
+                  contentContainerStyle={styles.swapListContent}
+                  showsVerticalScrollIndicator
+                >
+                  {foodSwapSheet.options.map(({ foodIn, name, totals }, i) => (
+                    <TouchableOpacity
+                      key={foodIn}
+                      style={[styles.swapOption, live.swapOption, i === 0 && [styles.swapOptionOn, live.swapOptionOn]]}
+                      onPress={() => setFoodSwapSheet((sh) => (sh ? { ...sh, pending: { foodIn, name } } : sh))}
+                      disabled={busy}
+                      accessibilityRole="button"
+                      accessibilityLabel={`${name}, ${formatEnergy(totals.kcal, energyUnit)} ${energyWord}, ${totals.protein} grams protein${i === 0 ? '. Closest match.' : ''}`}
+                    >
+                      <View style={styles.swapOptionMain}>
+                        <Text style={[styles.swapOptionName, live.swapOptionName]}>{name}</Text>
+                        {i === 0 ? <Text style={[styles.swapOptionTag, live.swapOptionTag]}>Closest match</Text> : null}
+                      </View>
+                      <Text style={[styles.swapOptionMacros, live.swapOptionMacros]}>
+                        {`${formatEnergy(totals.kcal, energyUnit)} ${energyUnitLabel(energyUnit)} - P ${totals.protein} g`}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </>
+            )}
           </>
         ) : null}
       </BottomSheet>
@@ -1704,6 +1783,8 @@ const styles = StyleSheet.create({
   reviewSub: { ...type.bodySm, color: colors.textSecondary, lineHeight: 19 },
   swapSheetTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
   swapSheetSub: { ...type.bodySm, color: colors.textSecondary, marginTop: -spacing.xs },
+  // Campaign 17A job 3: the "back to the food list" row on the intent step.
+  swapBackRow: { alignSelf: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
   // D2 #15: 360 is the base/fallback cap; the component overrides maxHeight
   // inline with Math.min(360, windowHeight * 0.6) via useWindowDimensions, so a
   // long swap / grocery list does not clip on small screens.

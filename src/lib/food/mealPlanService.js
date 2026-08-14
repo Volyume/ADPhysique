@@ -29,7 +29,8 @@ import {
   clearPlannedDay,
 } from './db';
 import { assembleDayPlanBestOf, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
-import { swapFoodInMeal, swapMealInPlan, findRoleAlternatives } from './mealSwap';
+import { swapFoodInMeal, swapMealInPlan, findRoleAlternatives, applyStandingReplacements } from './mealSwap';
+import { loadFoodIntentState, persistentReplacements } from './intent';
 import { applyMacroDeltaToPlan } from './planEdit';
 import { bankedPlanDayEdits } from './calorieBank';
 import { normalisePreferences } from './planPreferences';
@@ -201,6 +202,42 @@ export function repeatPlanDay({ plan, fromIndex, toIndex } = {}) {
 // ─── Async orchestration (the only impure surface) ──────────────────────
 
 /**
+ * The user's STANDING food replacements, ready to apply to a generated plan.
+ *
+ * Campaign 17A job 3. Read once per generation and passed to
+ * mealSwap.applyStandingReplacements, which re-solves each affected slot
+ * through the ordinary macro-preserving swap so the day stays on target.
+ *
+ * Best-effort by design: an intent read that fails yields no rules, which is
+ * exactly the pre-17A behaviour (a generic plan). It must never block or fail
+ * a generation - a user with no chicken preference and a user whose intent
+ * read hiccuped both simply get the generic plan.
+ */
+async function standingReplacementsFor(userId, prefs) {
+  try {
+    const state = await loadFoodIntentState(userId, prefs);
+    return persistentReplacements(state);
+  } catch (_) {
+    return {};
+  }
+}
+
+/**
+ * Apply the standing replacements across every day of an assembled week.
+ * Returns { days, changed } where `changed` lists the food-level substitutions
+ * actually made, so a caller can explain them.
+ */
+function applyStandingReplacementsToDays(days, { replacements, prefs }) {
+  const changed = [];
+  const out = (days || []).map((d, i) => {
+    const res = applyStandingReplacements(d, { replacements, prefs });
+    res.changed.forEach((c) => changed.push({ dayIndex: i, ...c }));
+    return res.day;
+  });
+  return { days: out, changed };
+}
+
+/**
  * Generate a fresh plan from the user's committed target + profile prefs
  * and SAVE it as the active plan. Returns { id, plan } or
  * { error: 'no_target' } when the user has no nutrition target yet.
@@ -223,8 +260,15 @@ export async function generateAndSaveMealPlan(userId, profile, { seed = Date.now
     seed,
     savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
   });
-  emitPlanMetrics(userId, 'week', week.days);
-  const plan = buildPlanSnapshot({ week, engineTarget, prefs });
+  // Campaign 17A job 3: what the user has actually TOLD us to use instead.
+  // Applied after assembly through the same macro-preserving swap their own
+  // manual swap uses, so the week stays on target and no second engine exists.
+  const replacements = await standingReplacementsFor(userId, prefs);
+  const applied = applyStandingReplacementsToDays(week.days, { replacements, prefs });
+  emitPlanMetrics(userId, 'week', applied.days);
+  const plan = buildPlanSnapshot({
+    week: { ...week, days: applied.days }, engineTarget, prefs,
+  });
   const id = await saveActiveMealPlan(userId, plan);
   return { id, plan };
 }
@@ -284,8 +328,11 @@ export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now(
     // (ED-safety), consistent with the week path (see assembleDayPlan).
     targetFloored: targetWasFloored(engineTarget),
   });
-  emitPlanMetrics(userId, 'day', [day]);
-  const plan = buildDayPlanSnapshot({ day, engineTarget, prefs });
+  // Campaign 17A job 3, the same standing replacements as the week path.
+  const replacements = await standingReplacementsFor(userId, prefs);
+  const { day: finalDay } = applyStandingReplacements(day, { replacements, prefs });
+  emitPlanMetrics(userId, 'day', [finalDay]);
+  const plan = buildDayPlanSnapshot({ day: finalDay, engineTarget, prefs });
   const id = await saveActiveMealPlan(userId, plan);
   return { id, plan };
 }

@@ -79,7 +79,7 @@ test('v72 re-ids legacy uid() rows to the deterministic form, without touching u
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('co_1734000000000_user-1', 'user-1', 1734000000000, 0, 90, 90);
-  return runLast(raw, 5).then(() => { // +v73 (Campaign 9), +v74 (C16 job 3), +v75/v76
+  return runLast(raw, 6).then(() => { // +v73 (Campaign 9), +v74 (C16 job 3), +v75/v76, +v77 (C17A job 3)
     const after = rows(raw);
     expect(after).toEqual([
       // Already deterministic: byte-identical.
@@ -94,7 +94,7 @@ test('v72 is idempotent: a second run changes nothing', async () => {
   const raw = freshDb();
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
-  await runLast(raw, 5); // +v73 (Campaign 9), +v74 (C16 job 3), +v75/v76
+  await runLast(raw, 6); // +v73 (Campaign 9), +v74 (C16 job 3), +v75/v76
   const once = rows(raw);
   raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 5}`);
   await runMigrations(adapt(raw));

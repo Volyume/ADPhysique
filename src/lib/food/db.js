@@ -17,6 +17,7 @@ import { isValidEntryGrams } from './servingEntry';
 import { todayLocalKey, localDayKey, parseLocalDay } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
 import { generateUUID as uid } from '../uuid';
+import { FOOD_SWAP_SCOPE, isFoodSwapScope } from './foodSwapScope';
 
 // ─── food_entries (the diary) ────────────────────────────────────────────
 
@@ -513,6 +514,123 @@ export async function getAllCustomFoods(userId) {
     `SELECT * FROM custom_foods WHERE user_id = ? AND deleted_at IS NULL ORDER BY lower(name)`,
     [userId]
   );
+}
+
+// ─── food_swaps (Campaign 17A job 3: food/meal intent memory) ────────────
+//
+// The A->B food replacement event log, with the SCOPE that says what the
+// user meant by it (src/lib/food/foodSwapScope.js). Append-only: there is no
+// later version of an event that happened, so nothing here updates a row.
+//
+// The three actions this table exists to keep apart:
+//   just_this_time  "no chicken in the house tonight" - the current plan
+//                   occurrence and nothing else, never a preference;
+//   persistent      "use turkey instead of chicken from now on" - real
+//                   personalisation evidence;
+//   (elsewhere)     "never suggest this" is standing intent about ONE food
+//                   and lives on the profile's mealPlanExcludeFoods.
+//
+// Reading is food/intent.js's job. This module only writes and fetches.
+
+/**
+ * Record one food replacement. Returns the new row id, or null when there is
+ * nothing to record (missing ids, a food replaced by itself, or a scope the
+ * schema does not recognise - an unrecognised scope is REFUSED rather than
+ * stored, because a row whose meaning is unknown is worse than no row).
+ */
+export async function recordFoodSwap(userId, fromFoodKey, toFoodKey, scope) {
+  if (!userId || !fromFoodKey || !toFoodKey) return null;
+  if (fromFoodKey === toFoodKey) return null;
+  if (!isFoodSwapScope(scope)) return null;
+  const d = await db();
+  const now = Date.now();
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO food_swaps
+       (id, user_id, from_food_key, to_food_key, scope, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, fromFoodKey, toFoodKey, scope, now, now],
+  );
+  _scheduleSync();
+  return id;
+}
+
+/** The user's food-swap history, newest first. `limit` bounds the read, not the truth. */
+export async function getFoodSwaps(userId, { fromFoodKey = null, limit = 400 } = {}) {
+  if (!userId) return [];
+  const d = await db();
+  const args = [userId];
+  let sql = `SELECT from_food_key AS fromFoodKey, to_food_key AS toFoodKey,
+                    scope, created_at AS createdAt
+               FROM food_swaps
+              WHERE user_id = ? AND deleted_at IS NULL`;
+  if (fromFoodKey) { sql += ' AND from_food_key = ?'; args.push(fromFoodKey); }
+  sql += ' ORDER BY created_at DESC LIMIT ?';
+  args.push(limit);
+  return d.getAllAsync(sql, args).catch(() => []);
+}
+
+/**
+ * Undo a standing replacement: soft-delete every PERSISTENT row from this
+ * food. Just-this-time rows are left alone - they are history of what
+ * happened, not a rule, and deleting them would rewrite the past. Returns the
+ * number of rules withdrawn.
+ */
+export async function clearPersistentFoodReplacement(userId, fromFoodKey) {
+  if (!userId || !fromFoodKey) return 0;
+  const d = await db();
+  const now = Date.now();
+  const res = await d.runAsync(
+    `UPDATE food_swaps SET deleted_at = ?, updated_at = ?
+      WHERE user_id = ? AND from_food_key = ? AND scope = ? AND deleted_at IS NULL`,
+    [now, now, userId, fromFoodKey, FOOD_SWAP_SCOPE.PERSISTENT],
+  );
+  _scheduleSync();
+  return res?.changes ?? 0;
+}
+
+/**
+ * Every food_swaps row for the user, including tombstones, for the sync push.
+ * Aliased to camelCase like every other sync reader, so the push mapper reads
+ * the ROW's own timestamps rather than the clock (sync.legacyForwardCompat).
+ */
+export async function getAllFoodSwapsSince(userId, sinceMs = 0) {
+  const d = await db();
+  return d.getAllAsync(
+    `SELECT id, from_food_key AS fromFoodKey, to_food_key AS toFoodKey, scope,
+            created_at AS createdAt, updated_at AS updatedAt, deleted_at AS deletedAt
+       FROM food_swaps WHERE user_id = ? AND updated_at > ?`,
+    [userId, sinceMs],
+  ).catch(() => []);
+}
+
+/**
+ * Apply one pulled cloud row. INSERT OR IGNORE, exactly like the exercise
+ * swap applier: the table is an append-only event log, so a re-pull must
+ * never duplicate an event and inflate how often a replacement was chosen.
+ */
+export async function insertOrUpdateFoodSwapFromCloud(userId, row) {
+  if (!userId || !row?.id || !row?.from_food_key || !row?.to_food_key) return;
+  if (!isFoodSwapScope(row.scope)) return;
+  const d = await db();
+  const ms = (v) => (v == null ? null : (typeof v === 'number' ? v : Date.parse(v) || null));
+  await d.runAsync(
+    `INSERT OR IGNORE INTO food_swaps
+       (id, user_id, from_food_key, to_food_key, scope, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      row.id, userId, row.from_food_key, row.to_food_key, row.scope,
+      ms(row.created_at) ?? Date.now(), ms(row.updated_at) ?? Date.now(), ms(row.deleted_at),
+    ],
+  );
+  // A withdrawn rule must propagate: the IGNORE above keeps the original
+  // event row, so the tombstone is applied separately.
+  if (row.deleted_at) {
+    await d.runAsync(
+      'UPDATE food_swaps SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ?',
+      [ms(row.deleted_at), ms(row.updated_at) ?? Date.now(), row.id, userId],
+    );
+  }
 }
 
 // ─── daily_intake_rollups (trigger-equivalent, client-side) ──────────────

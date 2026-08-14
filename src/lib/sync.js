@@ -754,6 +754,8 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     await _pushExerciseIntent(sb, supabaseUserId, localUserId);
     await _pushExerciseSwaps(sb, supabaseUserId, localUserId);
     await _pushExerciseSlotDefaults(sb, supabaseUserId, localUserId);
+    // Campaign 17A food-intent layer, the same posture as the exercise one.
+    await _pushFoodSwaps(sb, supabaseUserId, localUserId);
     await _pushWorkoutNotes(sb, supabaseUserId, localUserId);
     await _pushExerciseGoals(sb, supabaseUserId, localUserId);
     await _pushPeakWeekPlans(sb, supabaseUserId, localUserId);
@@ -1179,6 +1181,48 @@ async function _pushExerciseSwaps(sb, supabaseUserId, localUserId) {
       if (error) logPgErr('sync._pushExerciseSwaps', error);
     }
   } catch (e) { logBulkWarn('sync._pushExerciseSwaps', e?.message); }
+}
+
+/**
+ * Campaign 17A job 3: the food-intent layer's event log.
+ *
+ * Free-tier safe (a user who has never swapped a food has zero rows). The
+ * cloud table is migrate_138_food_swaps.sql, founder-gated: until it is
+ * applied the upsert errors, which is logged and tolerated exactly like every
+ * other push, and the rows stay device-local. Nothing a user did is lost -
+ * the local table is the truth and the push retries every sync.
+ */
+async function _pushFoodSwaps(sb, supabaseUserId, localUserId) {
+  // The local read is deliberately OUTSIDE the push's error accounting: having
+  // nothing to send (or being unable to read the table on an older device) is
+  // not a push failure, and counting it as one would make a clean sync report
+  // an error it did not have.
+  let rows = [];
+  try {
+    // eslint-disable-next-line global-require
+    const { getAllFoodSwapsSince } = require('./food/db');
+    rows = await getAllFoodSwapsSince(localUserId, 0);
+  } catch (_) { return; }
+  if (!rows?.length) return;
+  try {
+    const payload = rows.map(r => ({
+      id: r.id, user_id: supabaseUserId,
+      from_food_key: r.fromFoodKey,
+      to_food_key: r.toFoodKey,
+      // NOT NULL in the schema: every row is written by a client that already
+      // knows what the user meant, so "unknown" is not a state that occurs.
+      scope: r.scope,
+      created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
+      updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
+      deleted_at: r.deletedAt != null ? new Date(r.deletedAt).toISOString() : null,
+    })).filter(r => r.from_food_key && r.to_food_key && r.scope);
+    for (let i = 0; i < payload.length; i += 200) {
+      const { error } = await sb.from('food_swaps').upsert(
+        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
+      );
+      if (error) logPgErr('sync._pushFoodSwaps', error);
+    }
+  } catch (e) { logBulkWarn('sync._pushFoodSwaps', e?.message); }
 }
 
 async function _pushExerciseSlotDefaults(sb, supabaseUserId, localUserId) {
@@ -2041,6 +2085,8 @@ export async function pullFromCloud(supabaseUserId) {
     const intentCount = await _pullExerciseIntent(sb, supabaseUserId);
     const swapCount = await _pullExerciseSwaps(sb, supabaseUserId);
     const slotDefaultCount = await _pullExerciseSlotDefaults(sb, supabaseUserId);
+    // Campaign 17A food-intent layer.
+    await _pullFoodSwaps(sb, supabaseUserId);
     const workoutNoteCount = await _pullWorkoutNotes(sb, supabaseUserId);
     const goalCount = await _pullExerciseGoals(sb, supabaseUserId);
     const peakWeekCount = await _pullPeakWeekPlans(sb, supabaseUserId);
@@ -2315,6 +2361,37 @@ async function _pullExerciseSwaps(sb, supabaseUserId) {
     if (failures === 0) await setPullWatermark(supabaseUserId, 'exercise_swaps', nextWatermark(wm, data));
     return n;
   } catch (e) { logWarn('sync._pullExerciseSwaps', e?.message); return 0; }
+}
+
+/**
+ * Campaign 17A job 3. Applied with INSERT OR IGNORE on the far side (an
+ * append-only event log must not duplicate on a re-pull), with the tombstone
+ * applied separately so a withdrawn standing replacement propagates.
+ */
+async function _pullFoodSwaps(sb, supabaseUserId) {
+  try {
+    const wm = await getPullWatermark(supabaseUserId, 'food_swaps');
+    const data = await fetchAllRows(
+      'sync._pullFoodSwaps',
+      () => {
+        let q = sb.from('food_swaps').select('*').eq('user_id', supabaseUserId)
+          .order('updated_at', { ascending: true });
+        if (wm > 0) q = q.gte('updated_at', isoFromMs(wm));
+        return q;
+      },
+    );
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateFoodSwapFromCloud } = require('./food/db');
+    let n = 0;
+    let failures = 0;
+    for (const row of data) {
+      try { await insertOrUpdateFoodSwapFromCloud(supabaseUserId, row); n++; }
+      catch (e) { failures++; logWarn('sync._pullFoodSwaps', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    if (failures === 0) await setPullWatermark(supabaseUserId, 'food_swaps', nextWatermark(wm, data));
+    return n;
+  } catch (e) { logWarn('sync._pullFoodSwaps', e?.message); return 0; }
 }
 
 async function _pullExerciseSlotDefaults(sb, supabaseUserId) {

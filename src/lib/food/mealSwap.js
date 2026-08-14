@@ -216,6 +216,94 @@ export function swapFoodInMeal({ components, foodKeyOut, prefs, preferKey = null
 }
 
 /**
+ * Apply the user's STANDING replacements to an assembled day.
+ *
+ * Campaign 17A job 3. "Use turkey instead of chicken in future" is a
+ * deliberate statement, so a plan generated afterwards should honour it: every
+ * slot that still carries the replaced food is re-solved through the ordinary
+ * macro-preserving food swap, at the grams that hold the role's dominant
+ * macro. The day therefore stays on target by construction - this is the same
+ * engine the user's own manual swap uses, not a second path.
+ *
+ * WHAT THIS DELIBERATELY DOES NOT DO
+ *  - It never reads a JUST_THIS_TIME swap. Callers pass a map already
+ *    filtered to persistent rules (food/intent.persistentReplacements), and a
+ *    one-off swap must never become a standing rule.
+ *  - It never forces a replacement that the preferences forbid. The swap goes
+ *    through `swapFoodInMeal`, which checks `foodAllowed` on the incoming
+ *    food, so an allergen, a diet conflict or an exclusion refuses the swap
+ *    and the slot is left exactly as generated. A rule the user set can never
+ *    override a rule about their safety.
+ *  - It never chains. A -> B where B -> C applies A -> B only, because each
+ *    slot is solved once against the ORIGINAL component list. Chasing chains
+ *    would let two old statements combine into a food the user never named.
+ *  - It never changes the day's target, and it changes no slot it cannot
+ *    solve in tolerance.
+ *
+ * Pure. Returns a new day object, or the SAME object when nothing applied, so
+ * callers can cheaply tell whether anything changed.
+ *
+ * @param {object} day        an assembled day ({ slots, totals, ... })
+ * @param {object} params
+ * @param {Record<string,string>} params.replacements  { fromFoodKey: toFoodKey }
+ * @param {object} params.prefs
+ * @returns {{ day: object, changed: Array<{slot: string, swap: object}> }}
+ */
+export function applyStandingReplacements(day, { replacements, prefs } = {}) {
+  const rules = replacements && typeof replacements === 'object' ? replacements : null;
+  const slots = (day && Array.isArray(day.slots)) ? day.slots : null;
+  if (!rules || !slots || !Object.keys(rules).length) return { day, changed: [] };
+
+  const changed = [];
+  const nextSlots = slots.map((slot) => {
+    if (!slot?.components) return slot;
+    // One rule per slot per pass: solve against the components as generated,
+    // so two rules cannot compound into an unrecognisable plate.
+    const hit = slot.components.find((c) => c?.food && rules[c.food]);
+    if (!hit) return slot;
+    const res = swapFoodInMeal({
+      components: slot.components,
+      foodKeyOut: hit.food,
+      prefs,
+      preferKey: rules[hit.food],
+    });
+    // A swap that landed on something OTHER than what the user named is not
+    // their standing replacement, so it is refused: they asked for turkey, not
+    // for whatever else happened to fit.
+    if (!res || res.swap?.foodIn !== rules[hit.food]) return slot;
+    changed.push({ slot: slot.slot, swap: res.swap });
+    return {
+      ...slot,
+      name: res.name ?? slot.name,
+      components: res.components,
+      items: res.items,
+      totals: res.totals,
+    };
+  });
+
+  if (!changed.length) return { day, changed: [] };
+  const totals = nextSlots.reduce((acc, s) => ({
+    kcal: acc.kcal + (s.totals?.kcal || 0),
+    protein: acc.protein + (s.totals?.protein || 0),
+    carbs: acc.carbs + (s.totals?.carbs || 0),
+    fat: acc.fat + (s.totals?.fat || 0),
+  }), { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+  return {
+    day: {
+      ...day,
+      slots: nextSlots,
+      totals: {
+        kcal: Math.round(totals.kcal),
+        protein: Math.round(totals.protein * 10) / 10,
+        carbs: Math.round(totals.carbs * 10) / 10,
+        fat: Math.round(totals.fat * 10) / 10,
+      },
+    },
+    changed,
+  };
+}
+
+/**
  * Swap a whole meal in an assembled day. Ranks slot-eligible curated
  * meals for SIMILARITY to the outgoing plate's macros (so the swap is a
  * like-for-like, keeping the day close to target when it was on target

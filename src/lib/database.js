@@ -2381,6 +2381,50 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE routine_exercises ADD COLUMN selection_reason TEXT',
   ],
+  // v77, FOOD/MEAL INTENT MEMORY (Campaign 17A job 3, 2026-08-14).
+  //
+  // WHAT WAS MISSING. The food domain had no way to tell three completely
+  // different user actions apart. Swapping the chicken out of tonight's
+  // dinner because there is none in the house, saying "use turkey instead of
+  // chicken from now on", and saying "never show me chicken again" were, in
+  // the data, either nothing at all (the first two left no trace beyond the
+  // edited plan) or the same blunt exclusion (the third). The exercise domain
+  // solved exactly this in Campaign 16 (exercise_swaps.scope,
+  // src/lib/exercise/swapScope.js); this is its food counterpart.
+  //
+  // `scope` is 'just_this_time' or 'persistent' (src/lib/food/foodSwapScope.js).
+  // A one-off swap affects the current plan occurrence and NOTHING else - it
+  // must never teach that the user dislikes the food they swapped away from.
+  // A persistent replacement is a deliberate statement and legitimately
+  // steers future generation. "Never suggest this" is stronger still and
+  // stays where it already lives, on the profile's mealPlanExcludeFoods.
+  //
+  // Food keys are curated-food keys (src/lib/food/curatedFoods.js), the same
+  // vocabulary mealSwap and the exclusion list already speak.
+  //
+  // Applied: LOCALLY via this user_version bump. Cloud counterpart is
+  // supabase/migrate_138_food_swaps.sql - written, NOT applied, founder-gated
+  // (the founder applies cloud migrations by hand; the app never runs them).
+  // Until it is applied the table is device-local, which degrades to exactly
+  // the pre-17A behaviour on a second device: no remembered replacements, no
+  // wrong ones either.
+  // Additive: yes (a new table plus its index; nothing existing is touched).
+  // Safe to re-run: yes (IF NOT EXISTS throughout). Rollback: drop the table;
+  // every reader treats an absent row as "no intent recorded", which is the
+  // behaviour before this migration.
+  [
+    `CREATE TABLE IF NOT EXISTS food_swaps (
+      id            TEXT PRIMARY KEY,
+      user_id       TEXT NOT NULL,
+      from_food_key TEXT NOT NULL,
+      to_food_key   TEXT NOT NULL,
+      scope         TEXT NOT NULL,
+      created_at    INTEGER NOT NULL,
+      updated_at    INTEGER NOT NULL,
+      deleted_at    INTEGER
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_food_swaps_user_from ON food_swaps(user_id, from_food_key)',
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -5417,6 +5461,10 @@ export const WIPE_DIRECT_TABLES = [
   'recipes', 'recipe_ingredients',
   'daily_water', 'food_favourites', 'daily_intake_rollups',
   'food_frequents',
+  // Campaign 17A job 3: what the user has said about FOODS (standing
+  // replacements and one-off swaps). Same ownership rule as every other
+  // user-scoped table - it must never survive sign-out onto the next account.
+  'food_swaps',
   // Generated meal plan (deep-audit Theme G): carries user_id + a calorie-
   // target snapshot (health data) — must never survive sign-out/delete.
   'meal_plans',
