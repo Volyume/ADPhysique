@@ -137,11 +137,26 @@ contract must not delegate its authority to a superseded audit.
   can never cost a user an exercise. What is deferred is cross-device
   fidelity of the session-versus-programme distinction, not the local
   behaviour.
-- **138 IS WRITTEN AND PENDING (2026-08-14).** `migrate_138_food_swaps.sql`,
+- **138 IS AUTHORISED AND STILL PENDING (2026-08-14).** `migrate_138_food_swaps.sql`,
   the cloud half of the Campaign 17A job 3 food-intent layer (one new table,
-  `food_swaps`, local schema v77). NOT authorised yet: it has never been
-  given the exact phrase, and it should be applied in the SAME batch as 137
-  when a session with the Supabase server attached comes along.
+  `food_swaps`, local schema v77). The founder authorised it in the 17A
+  closeout: "run migrate_138_food_swaps.sql against production".
+
+  **NOT EXECUTED. The exact blocker, checked once and not retried:** this
+  session has no route to EU-Dublin at all. Three checks, all negative:
+  `ListMcpResourcesTool` lists only the `github` and Spotify servers (no
+  Supabase MCP server attached); a tool search for Supabase/SQL/migration
+  tooling returns nothing; and while `psql` is on the box, no connection
+  string exists in the environment (no `SUPABASE_*`, no `DATABASE_URL`, no
+  `supabase` CLI). There is nothing to authenticate with and nothing to
+  connect to.
+
+  Same cause as 137 and the same fix: **a session with the Supabase server
+  actually attached**, where the apply can be followed by the read-only
+  verification this playbook requires. Apply 137 and 138 in the SAME batch.
+  Verification for 138: the table exists, RLS is enabled, one
+  "Users manage own food_swaps" policy is present, and `scope` is `text`,
+  `NOT NULL`.
   **Client impact while it waits:** none that loses data. The table is
   device-local until it runs; the push finds no remote table, the slice is
   skipped and retries every sync, and a second device simply has no
@@ -296,7 +311,7 @@ themselves; add a row here whenever a migration is added.
 | 135 | `migrate_135_coach_outputs_week_unique.sql` | De-duplicates `coach_outputs` per user-week, then a unique index (Campaign 1 review finding 10). | **NO - awaiting "run against production"** |
 | 136 | `migrate_136_exercise_intent.sql` | `exercise_intent`, `exercise_swaps`, `exercise_slot_defaults` - the cloud half of the Campaign 9 exercise-intent layer (local schema v73). Must land BEFORE a build carrying their sync push ships. | **YES - applied 2026-08-12, verified** (this row said "awaiting the phrase" until 2026-08-14; corrected against the CURRENT STATUS block above, which is the authority) |
 | 137 | `migrate_137_exercise_swap_scope.sql` | `exercise_swaps.scope` ('session' \| 'programme'), so a temporary in-workout substitution is distinguishable from a permanent programme replacement. Campaign 16 quality law 1. NULL means the row predates the column; the client's NEGATIVE reading counts only 'programme', so an unknown row can never cost a user an exercise. Local schema v75. | **NO - PENDING.** Authorised by the founder 2026-08-14 with the exact phrase. NOT executed: the Supabase MCP server was not attached to that session's runtime (connector installed, authenticated and fully permitted; the server dropped mid-session). Needs a fresh session - see the note below. |
-| 138 | `migrate_138_food_swaps.sql` | `food_swaps` - the cloud half of the Campaign 17A job 3 food-intent layer (local schema v77). `scope` is `just_this_time` or `persistent`, NOT NULL: a one-off swap ("no chicken in the house tonight") must never teach food dislike, while a standing replacement ("use turkey from now on") legitimately steers future plans. Ship order does not matter; until it runs the table is device-local. | **NO - awaiting "run against production"** |
+| 138 | `migrate_138_food_swaps.sql` | `food_swaps` - the cloud half of the Campaign 17A job 3 food-intent layer (local schema v77). `scope` is `just_this_time` or `persistent`, NOT NULL: a one-off swap ("no chicken in the house tonight") must never teach food dislike, while a standing replacement ("use turkey from now on") legitimately steers future plans. Ship order does not matter; until it runs the table is device-local. | **NO - PENDING.** Authorised by the founder 2026-08-14 in the 17A closeout. NOT executed: no route to EU-Dublin from that session (no Supabase MCP server attached, no CLI, no connection string). Apply in the same batch as 137. |
 
 > Date note: the 2026-08-09 block near the top of this file describes 129 and
 > 130 as "already applied 2026-08-08", while both migration headers record
