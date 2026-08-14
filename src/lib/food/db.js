@@ -231,6 +231,12 @@ export async function getFoodEntriesForDay(userId, entryDate) {
  * Recent days (before asOfDate) that have live food logged, for the "copy a
  * previous day" picker (food audit F-3). Returns the most recent `limit` days,
  * each with how many items and the day's calories so the user can recognise it.
+ *
+ * PLANNED IS NOT EATEN (Campaign 17A Job 2): `is_planned = 0`. Without it a day
+ * holding nothing but unconfirmed meal-plan scaffolding appeared in the picker
+ * as a logged day, and its planned calories were counted into the day's total
+ * the user recognises it by. Copying such a day would then write food they
+ * never ate into another day as an actual.
  */
 export async function getRecentLoggedDays(userId, asOfDate, limit = 14) {
   if (!userId || !asOfDate) return [];
@@ -238,7 +244,7 @@ export async function getRecentLoggedDays(userId, asOfDate, limit = 14) {
   return d.getAllAsync(
     `SELECT entry_date, COUNT(*) AS count, SUM(kcal) AS kcal
      FROM food_entries
-     WHERE user_id = ? AND deleted_at IS NULL AND entry_date < ?
+     WHERE user_id = ? AND deleted_at IS NULL AND is_planned = 0 AND entry_date < ?
      GROUP BY entry_date
      ORDER BY entry_date DESC
      LIMIT ?`,
@@ -376,11 +382,22 @@ export async function getRecentFoodEntries(userId, limit = 25) {
   );
 }
 
+/**
+ * Every ACTUAL entry in a date range.
+ *
+ * PLANNED IS NOT EATEN (Campaign 17A Job 2): `is_planned = 0`. Both callers
+ * describe eaten food - the weekly micronutrient card and the diary CSV/PDF
+ * export - and the export in particular is a document a user may hand to a
+ * coach or a clinician. Unconfirmed meal-plan scaffolding must never appear in
+ * it as intake. (WeeklyMicronutrientsCard also filters client-side; that stays
+ * as defence in depth, not because this query needs it.)
+ */
 export async function getFoodEntriesForRange(userId, startDate, endDate) {
   const d = await db();
   return d.getAllAsync(
     `SELECT * FROM food_entries
      WHERE user_id = ? AND entry_date BETWEEN ? AND ? AND deleted_at IS NULL
+       AND is_planned = 0
      ORDER BY entry_date, meal_slot, logged_at`,
     [userId, startDate, endDate]
   );
@@ -1535,15 +1552,23 @@ export async function applyRecipeToDiary(userId, recipeId, { mealSlot, entryDate
 }
 
 /**
- * Distinct meal slots that already have (live) entries for a day. Used
- * to work out how many meals are still to come today when sizing a
- * suggestion to one meal's share of the remaining macros.
+ * Distinct meal slots that have actually been EATEN on a day. Used to work out
+ * how many meals are still to come today when sizing a suggestion to one
+ * meal's share of the remaining macros.
+ *
+ * PLANNED IS NOT EATEN (Campaign 17A Job 2): `is_planned = 0`. This is the
+ * meal-count reader the founder law names directly - a planned row must not
+ * "teach meal-count behaviour". Without the filter, staging a meal plan into
+ * the diary made the app believe those meals were already eaten, so it sized
+ * the next suggestion against too few remaining meals. It also disagreed with
+ * the rollup the same screen reads for `consumed`, which has always excluded
+ * planned rows: the two halves of one calculation described different days.
  */
 export async function getLoggedMealSlotsForDay(userId, entryDate) {
   const d = await db();
   const rows = await d.getAllAsync(
     `SELECT DISTINCT meal_slot FROM food_entries
-     WHERE user_id = ? AND entry_date = ? AND deleted_at IS NULL`,
+     WHERE user_id = ? AND entry_date = ? AND deleted_at IS NULL AND is_planned = 0`,
     [userId, entryDate]
   );
   return (rows || []).map(r => r.meal_slot).filter(Boolean);
