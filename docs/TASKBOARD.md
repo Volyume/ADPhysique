@@ -1935,7 +1935,10 @@ return paths carry `context` + `limiters`), `blockAdvisor.buildProgrammeReview`,
 `programmeEpoch.slotVerdict`, `blockReview.proposeNextBlock`,
 `CoachOutputScreen` (renders the story).
 
-**NOT DONE — carry into the next Campaign 18 session, in this order:**
+**PHASE E/F COMPLETED 2026-08-14 (see the Campaign 18 closeout block below).
+The list that follows was the state at the part-landing and is superseded.**
+
+**WAS NOT DONE at the part-landing:**
 1. Job 6 recovery-consumer trace (interBlock, blockLedgerGather, blockSeed vs
    the weekly card) - scope LANGUAGE is delivered, the consumer trace is not.
 2. Job 7 broader weight-evidence audit. The four roles are documented in
@@ -1961,3 +1964,26 @@ symbol is DEAD or COMPUTED-BUT-DISCARDED.
 ("never touches the iOS bridge on Android") fails roughly one full-suite run
 in three under parallel load and passes 6/6 in isolation. Reproduced on the
 pre-Campaign-18 tree; not caused by this work. Not fixed - out of scope.
+
+
+## CAMPAIGN 18 CLOSEOUT (2026-08-14) — phases E and F. LANDED on main at `791de30e`.
+
+- `4655bdaa` outcome follow-up: intervention records, five outcome states,
+  anti-oscillation
+- `b09daa7f` jobs 6/7/9/13/15/19 traced and pinned; two real defects fixed
+- `791de30e` job 20 adversarial pass; three real defects fixed
+
+New module `src/lib/coachIntervention.js`. Consumers: `CoachOutputScreen`
+(writes the record on both Apply taps, reads it back before the run, renders
+the outcome line), `weeklyCoach.runWeeklyCoach` (anti-oscillation gate).
+
+**Job 19 ruling: NO NEW NOTIFICATION REQUIRED.** `WEEKLY_COACH_READY` already
+covers both the weekly review and the block review, and nothing Campaign 18
+built schedules anything of its own. Pinned in `coachMealChain.test.js`.
+
+**Renamed:** `coachStory.buildWeeklyStory` -> `buildCoachStory`, because
+`src/lib/weeklyStory.js` already owns that export name for the four-chapter
+WeeklyStoryScreen recap.
+
+Gates at closeout: lint clean, identity invariant clean, full suite
+**917 suites / 12,190 passed, 10 skipped, 0 failed**.
