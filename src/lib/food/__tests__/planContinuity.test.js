@@ -258,13 +258,11 @@ describe('ED-SAFETY: the floor is never crossed to reach a target', () => {
       day, targetKcal: day.totals.kcal - 800, prefs: PREFS, floorKcal,
     });
     expect(res.floorHeld).toBe(true);
-    // PRE-EXISTING ROUNDING, recorded not hidden: planEdit clamps the cut to
-    // `before.kcal - floorKcal`, but the gram solver rounds to whole grams, so
-    // the realised plan can land a couple of kcal under the clamp. It is a
-    // plan-level presentation floor; the SACRED engine floor is the stored
-    // nutrition target, which nothing in this path touches. Asserted with the
-    // rounding allowance rather than pretending the clamp is exact.
-    expect(res.day.totals.kcal).toBeGreaterThanOrEqual(floorKcal - 5);
+    // Campaign 17A closeout: exact, with no rounding allowance. planEdit now
+    // bounds the cumulative spend by the FLOOR DISTANCE and hands grams back
+    // rather than crossing it, so the realised plan is at or above the floor -
+    // never a kcal under it.
+    expect(res.day.totals.kcal).toBeGreaterThanOrEqual(floorKcal);
   });
 
   test('a cut with NO floor is a hold, never an unbounded reduction', () => {

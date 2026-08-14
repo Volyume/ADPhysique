@@ -31,9 +31,12 @@ import {
 import { assembleDayPlanBestOf, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
 import { swapFoodInMeal, swapMealInPlan, findRoleAlternatives, applyStandingReplacements } from './mealSwap';
 import { loadFoodIntentState, persistentReplacements } from './intent';
-import { reconcilePlanToTarget, decideContinuity, CONTINUITY_ACTION, REBUILD_REASON } from './planContinuity';
+import {
+  reconcilePlanToTarget, reconcileDayToTarget, decideContinuity,
+  CONTINUITY_ACTION, REBUILD_REASON,
+} from './planContinuity';
 import { bankedPlanDayEdits } from './calorieBank';
-import { normalisePreferences } from './planPreferences';
+import { normalisePreferences, mealAllowed, savedMealAllowed } from './planPreferences';
 import { foodExcluded } from './foodRoles';
 import { CURATED_MEALS, dietAllows } from './curatedMeals';
 import { todayLocalKey, parseLocalDay, localDayKey } from '../dayKey';
@@ -492,6 +495,131 @@ export async function applyCoachAdjustmentToActivePlan(userId, { adjustmentKcal 
     change,
     receipt: result,
     appliedToDays: result.plan.days.length,
+  };
+}
+
+/**
+ * Pin or unpin a meal on the ACTIVE plan.
+ *
+ * Campaign 17A closeout, founder order: "A pin is a narrow explicit
+ * instruction: KEEP THIS MEAL. It is not: GIVE ME A NEW WEEK OF FOOD."
+ *
+ * Before this the only writer of the pin preference was the meal-plan screen's
+ * generic preference handler, which regenerates the whole plan for ANY
+ * preference change - so the one instruction that means "keep" would have
+ * thrown the week away. (In practice no control wrote it at all: the assembler
+ * honoured `pinnedMealIds` at generation and the store allowed the field, but
+ * nothing set it. The pin existed as a mechanism and not as a product.)
+ *
+ * THE HIERARCHY, in the founder's order:
+ *   1. preserve the newly pinned meal
+ *   2. preserve every other still-valid existing meal
+ *   3. re-solve portions around the pin where that is sufficient
+ *   4. modify other meals only where necessary to reconcile the target
+ *   5. rebuild broader structure only if the pinned choice genuinely makes the
+ *      existing structure impossible
+ *
+ * In the ordinary case - pinning a meal that is already on the plan, or
+ * unpinning anything - rungs 1 and 2 are the whole answer and NOTHING changes.
+ * The pin is recorded and takes effect at the next generation, where the
+ * assembler already places pins first.
+ *
+ * Placing a meal that is NOT on the plan (pinning a saved meal or a recipe
+ * from elsewhere) is the case that needs work: it takes one slot, every other
+ * meal stays, and the day is re-solved through the same continuity ladder.
+ *
+ * ALLERGEN AND DIET RULES STILL OUTRANK THE PIN. A pinned meal the user's own
+ * exclusions forbid is refused with a truthful conflict, never placed. "Do not
+ * break the user's rule" applies to their own instruction too.
+ *
+ * @param {string} userId
+ * @param {object} profile   the user's profile, carrying the UPDATED pin list
+ * @param {object} params
+ * @param {string} params.mealId   the meal being pinned or unpinned
+ * @param {boolean} params.pinned  true to pin, false to unpin
+ * @param {object} [params.meal]   the meal itself, when it is not on the plan
+ * @returns {{ plan, action, changed, conflict }} `conflict` is a code, never
+ *   a silently-forbidden plan: 'not_allowed' | 'no_slot'.
+ */
+export async function setMealPinOnActivePlan(userId, profile, { mealId, pinned, meal = null } = {}) {
+  const active = await getActiveMealPlan(userId);
+  if (!active || !Array.isArray(active.plan?.days) || active.plan.days.length === 0) {
+    return { error: 'no_plan' };
+  }
+  const prefs = preferencesFromProfile(profile);
+  if (!prefs) return { error: 'no_profile' };
+
+  const onPlan = active.plan.days.some((d) => (d?.slots ?? []).some((sl) => sl.mealId === mealId));
+
+  // Unpinning, and pinning something already on the plan, are both pure
+  // record-keeping. "Unpin does not arbitrarily regenerate the week."
+  if (!pinned || onPlan) {
+    return { plan: active.plan, action: CONTINUITY_ACTION.KEEP, changed: false, conflict: null };
+  }
+
+  if (!meal) return { plan: active.plan, action: CONTINUITY_ACTION.KEEP, changed: false, conflict: 'no_slot' };
+
+  // The user's own rules come first, even over their own pin.
+  const allowed = Array.isArray(meal.components)
+    ? mealAllowed(meal, prefs)
+    : savedMealAllowed(meal, prefs);
+  if (!allowed) {
+    return { plan: active.plan, action: CONTINUITY_ACTION.KEEP, changed: false, conflict: 'not_allowed' };
+  }
+
+  const snap = active.plan.targetSnapshot || {};
+  const targetKcal = Number(snap.targetKcal) || 0;
+  const floorKcal = targetWasFloored(snap)
+    ? (snap.targetKcal || 0)
+    : (snap.kcalMin || Math.round(targetKcal * 0.9));
+
+  let placedAnywhere = false;
+  const days = active.plan.days.map((day) => {
+    const slots = day?.slots ?? [];
+    if (!slots.length) return day;
+    // Take the slot whose current meal is CLOSEST in calories to the pinned
+    // one: displacing the nearest match keeps the rest of the day valid and
+    // keeps the reconciliation that follows as small as possible.
+    const wanted = Number(meal.totals?.kcal) || 0;
+    let best = null;
+    slots.forEach((sl, i) => {
+      const miss = Math.abs((sl.totals?.kcal ?? 0) - wanted);
+      if (!best || miss < best.miss) best = { i, miss };
+    });
+    if (!best) return day;
+    placedAnywhere = true;
+    const nextSlots = slots.map((sl, i) => (i === best.i
+      ? { ...meal, slot: sl.slot }
+      : sl));
+    const withPin = {
+      ...day,
+      slots: nextSlots,
+      totals: nextSlots.reduce((a, sl) => ({
+        kcal: Math.round(a.kcal + (sl.totals?.kcal || 0)),
+        protein: Math.round((a.protein + (sl.totals?.protein || 0)) * 10) / 10,
+        carbs: Math.round((a.carbs + (sl.totals?.carbs || 0)) * 10) / 10,
+        fat: Math.round((a.fat + (sl.totals?.fat || 0)) * 10) / 10,
+      }), { kcal: 0, protein: 0, carbs: 0, fat: 0 }),
+    };
+    // Rungs 3 and 4: re-solve portions around the pin, and touch another meal
+    // only if that is not enough. The pinned meal has no component list of its
+    // own when it is a saved meal, so the editor leaves it alone by
+    // construction - which is exactly what a pin means.
+    if (!targetKcal) return withPin;
+    const res = reconcileDayToTarget({
+      day: withPin, targetKcal, prefs, floorKcal,
+    });
+    return res.day;
+  });
+
+  if (!placedAnywhere) {
+    return { plan: active.plan, action: CONTINUITY_ACTION.KEEP, changed: false, conflict: 'no_slot' };
+  }
+
+  const nextPlan = { ...active.plan, days, lastEditType: 'meal_pin' };
+  await updateMealPlan(userId, active.id, nextPlan);
+  return {
+    plan: nextPlan, action: CONTINUITY_ACTION.ADJUST_PORTIONS, changed: true, conflict: null,
   };
 }
 

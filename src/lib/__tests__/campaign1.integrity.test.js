@@ -455,11 +455,11 @@ describe('P0-7: permissive-default defects are closed', () => {
     // A sparse-but-present profile still normalises.
     expect(preferencesFromProfile({})).not.toBeNull();
     const SRC = read('lib/food/mealPlanService.js');
-    // Three planning entry points now refuse without a profile: the week
-    // generator, the day generator, and (Campaign 17A job 5) the target-change
-    // review. The count is the pin - a NEW entry point that plans
-    // allergen-blind would leave it at the old number and fail here.
-    expect((SRC.match(/return \{ error: 'no_profile' \}/g) || []).length).toBe(3);
+    // Four planning entry points now refuse without a profile: the week
+    // generator, the day generator, the target-change review (17A job 5) and
+    // the meal pin (17A closeout). The count is the pin - a NEW entry point
+    // that plans allergen-blind would leave it at the old number and fail here.
+    expect((SRC.match(/return \{ error: 'no_profile' \}/g) || []).length).toBe(4);
   });
 
   test('source pins: the remaining closures cannot silently revert', () => {

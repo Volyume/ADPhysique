@@ -126,6 +126,25 @@ export function applyMacroDeltaToPlan({ plan, adjustmentKcal = 0, floorKcal = 0 
   let slots = slotsIn.map((s) => ({ ...s }));
   let remaining = budget; // signed kcal still to realise
   const edits = [];
+  // FLOOR-SAFE QUANTISATION (Campaign 17A closeout, founder order).
+  //
+  // `budget` above is already floor-clamped, but the solver works in WHOLE
+  // GRAMS and resolveComponent rounds the resulting kcal, so the realised cut
+  // could land a kcal or two past the clamp and put the plan under the floor.
+  // Small, and still a contradiction of this module's own hard rule: "a
+  // food-level edit can never realise a cut the engine itself refused."
+  //
+  // So on a cut, each staple's proposed grams are checked against the REALISED
+  // day total, and grams are handed back one at a time until the plan is at or
+  // above the floor - rounding fails toward the safe side. A tiny positive
+  // residual (a slightly smaller cut than asked) is fine; a negative one is
+  // not. No fractional grams are introduced to hit an exact number: a plan has
+  // to be weighable.
+  //
+  // With no floor a cut is already a hold (see the clamp above), and the
+  // ADDING path is untouched - overshooting upward moves away from the floor
+  // and is bounded by each food's own sane range regardless.
+
 
   // Spend the budget on carbs first, then fat. (Adding: same order — grow
   // carbs first.) Protein staples are never in either list.
@@ -140,10 +159,56 @@ export function applyMacroDeltaToPlan({ plan, adjustmentKcal = 0, floorKcal = 0 
       // grams needed to realise the remaining kcal on this food (shared solver)
       const gNew = solveGramsForKcal({ currentG: st.g, per100Kcal, kcalResidual: remaining, foodKey: st.food });
       if (gNew === st.g) continue;
-      const itemNew = resolveComponent(st.food, gNew);
-      const kcalDelta = itemNew.kcal - item.kcal;
+      let g = gNew;
+      let itemNew = resolveComponent(st.food, g);
+      let kcalDelta = itemNew.kcal - item.kcal;
+      // FLOOR-SAFE QUANTISATION (Campaign 17A closeout, founder order).
+      //
+      // The budget above is already floor-clamped, but the solver works in
+      // WHOLE GRAMS and resolveComponent rounds the resulting kcal, so a
+      // single staple could realise slightly MORE cut than the budget allowed
+      // and land the plan a kcal or two under the floor. Small, but it
+      // contradicts this module's own hard rule: "a food-level edit can never
+      // realise a cut the engine itself refused."
+      //
+      // So on a CUT, rounding fails toward the SAFE side: grams are handed
+      // back one at a time until the realised change is within budget. A tiny
+      // positive residual (a slightly smaller cut than asked for) is fine; a
+      // negative one is not. No fractional grams are introduced to hit an
+      // exact number - a plan has to be weighable.
+      //
+      // The ADDING path is untouched: overshooting upward moves away from the
+      // floor, and it is bounded by each food's own sane range regardless.
+      // The bound is the FLOOR, not the requested budget. That distinction is
+      // the whole design: an ordinary cut is still free to land a kcal or two
+      // either side of what was asked for, exactly as it always did, so normal
+      // behaviour is unchanged. What can never happen is the plan crossing the
+      // floor.
+      //
+      // Measured on the REALISED DAY TOTAL, not on the per-item kcal delta.
+      // Each slot's total is itself a rounded sum (mealTotals), so item-level
+      // arithmetic can be a kcal out from what the plan actually says - and
+      // "what the plan actually says" is the number that must respect the
+      // floor. Handing grams back one at a time is deterministic and bounded
+      // by the gap the solver proposed.
+      let candidate = applyGramChange(slots[st.slotIdx], st.compIdx, g).slot;
+      if (remaining < 0 && floorKcal > 0) {
+        const dayWith = (sl) => dayTotals(slots.map((x, i) => (i === st.slotIdx ? sl : x))).kcal;
+        while (g < st.g && dayWith(candidate) < floorKcal) {
+          g += 1;
+          candidate = applyGramChange(slots[st.slotIdx], st.compIdx, g).slot;
+        }
+        // Handing grams back can land on no change at all; that is a real
+        // answer (this staple cannot help without crossing the floor), not an
+        // edit.
+        if (dayWith(candidate) < floorKcal) continue;
+        itemNew = resolveComponent(st.food, g);
+        kcalDelta = itemNew.kcal - item.kcal;
+      }
+      const gramsOut = g;
+      if (gramsOut === st.g) continue;
       if (kcalDelta === 0) continue;
-      const { slot } = applyGramChange(slots[st.slotIdx], st.compIdx, gNew);
+      const slot = candidate;
       slots[st.slotIdx] = slot;
       remaining -= kcalDelta;
       edits.push({
@@ -151,7 +216,7 @@ export function applyMacroDeltaToPlan({ plan, adjustmentKcal = 0, floorKcal = 0 
         name: item.name,
         slot: st.slot,
         gramsBefore: st.g,
-        gramsAfter: gNew,
+        gramsAfter: gramsOut,
         kcalDelta,
       });
       // recompute the per-staple list is unnecessary; each staple touched once

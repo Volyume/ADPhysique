@@ -41,6 +41,7 @@ import {
   loadActiveMealPlan,
   generateAndSaveDayPlan,
   generateAndSaveMealPlan,
+  setMealPinOnActivePlan,
   regenerateActiveMealPlan,
   planConflictsWithExclusions,
   applyPlanDayToDiary,
@@ -769,6 +770,49 @@ export default function MealPlanScreen({ navigation, route }) {
     }
   }, [user?.id, userProfile, plan, busy, setMealPlanPrefs, load, toast]);
 
+  // Campaign 17A closeout: "Keep this meal".
+  //
+  // A pin is a NARROW instruction - keep this one - so it deliberately does
+  // NOT go through handleSetPref above, which regenerates the whole plan for
+  // any preference change. Pinning a meal that is already on the plan changes
+  // nothing at all: the pin is recorded, the week stays exactly as it is, and
+  // the assembler honours it at the next generation. Unpinning is the same in
+  // reverse. That is the whole point of the fix.
+  const pinnedMealIds = useMemo(
+    () => (Array.isArray(userProfile?.mealPlanPinnedMeals) ? userProfile.mealPlanPinnedMeals : []),
+    [userProfile?.mealPlanPinnedMeals],
+  );
+
+  const handleTogglePin = useCallback(async (mealId, mealName) => {
+    if (!user?.id || !mealId || busy) return;
+    const pinned = !pinnedMealIds.includes(mealId);
+    setBusy(true);
+    try {
+      const next = pinned
+        ? [...pinnedMealIds, mealId]
+        : pinnedMealIds.filter((id) => id !== mealId);
+      await setMealPlanPrefs({ mealPlanPinnedMeals: next });
+      // The service preserves the week; it only does real work when the pinned
+      // meal is not already on the plan.
+      const res = await setMealPinOnActivePlan(
+        user.id, { ...userProfile, mealPlanPinnedMeals: next }, { mealId, pinned },
+      );
+      if (res?.conflict === 'not_allowed') {
+        toast.show("That meal does not fit your dietary needs, so it cannot be kept.", { variant: 'info' });
+        return;
+      }
+      if (res?.changed) await load();
+      toast.show(
+        pinned ? `${mealName} will stay in your plan.` : `${mealName} is no longer kept.`,
+        { variant: 'success' },
+      );
+    } catch (_) {
+      toast.show("Couldn't update. Try again.", { variant: 'error' });
+    } finally {
+      setBusy(false);
+    }
+  }, [user?.id, userProfile, pinnedMealIds, busy, setMealPlanPrefs, load, toast]);
+
   // Energy DISPLAY unit (kcal | kj): display-only. All `totals.kcal` values stay
   // kcal (the engine/stored unit); only the rendered energy number + label and
   // the spoken a11y word convert (energyWord) at the point of display.
@@ -1163,18 +1207,39 @@ export default function MealPlanScreen({ navigation, route }) {
                     })()}
                   </View>
                 ) : null}
-                <Button
-                  title="Swap"
-                  icon="swap-horizontal"
-                  onPress={() => handleSwapMeal(slot.slot)}
-                  disabled={busy}
-                  variant="secondary"
-                  size="sm"
-                  fullWidth={false}
-                  style={[styles.swapBtn, live.swapBtn]}
-                  textStyle={[styles.swapText, live.swapText]}
-                  accessibilityLabel={`Swap ${slot.name} for something else`}
-                />
+                <View style={styles.mealActions}>
+                  <Button
+                    title="Swap"
+                    icon="swap-horizontal"
+                    onPress={() => handleSwapMeal(slot.slot)}
+                    disabled={busy}
+                    variant="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    style={[styles.swapBtn, live.swapBtn]}
+                    textStyle={[styles.swapText, live.swapText]}
+                    accessibilityLabel={`Swap ${slot.name} for something else`}
+                  />
+                  {/* Campaign 17A closeout: the live pin. "Keep" is a narrow
+                      instruction about THIS meal and never regenerates the
+                      week. */}
+                  {slot.mealId ? (
+                    <Button
+                      title={pinnedMealIds.includes(slot.mealId) ? 'Kept' : 'Keep'}
+                      icon={pinnedMealIds.includes(slot.mealId) ? 'bookmark' : 'bookmark-outline'}
+                      onPress={() => handleTogglePin(slot.mealId, slot.name)}
+                      disabled={busy}
+                      variant={pinnedMealIds.includes(slot.mealId) ? 'primary' : 'secondary'}
+                      size="sm"
+                      fullWidth={false}
+                      style={[styles.swapBtn, live.swapBtn]}
+                      textStyle={[styles.swapText, live.swapText]}
+                      accessibilityLabel={pinnedMealIds.includes(slot.mealId)
+                        ? `${slot.name} is kept in your plan. Tap to stop keeping it.`
+                        : `Keep ${slot.name} in your plan`}
+                    />
+                  ) : null}
+                </View>
               </Card>
             );
           })}
@@ -1783,6 +1848,8 @@ const styles = StyleSheet.create({
   reviewSub: { ...type.bodySm, color: colors.textSecondary, lineHeight: 19 },
   swapSheetTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
   swapSheetSub: { ...type.bodySm, color: colors.textSecondary, marginTop: -spacing.xs },
+  // Campaign 17A closeout: Swap and Keep sit side by side on a meal card.
+  mealActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
   // Campaign 17A job 3: the "back to the food list" row on the intent step.
   swapBackRow: { alignSelf: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
   // D2 #15: 360 is the base/fallback cap; the component overrides maxHeight

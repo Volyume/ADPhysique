@@ -248,3 +248,168 @@ describe('buildPlanEditNarration', () => {
     expect(all).not.toMatch(/\bcalories?\b.*z|optimize|color/i);
   });
 });
+
+// ─── FLOOR-SAFE QUANTISATION (Campaign 17A closeout, founder order) ──────────
+//
+// The rule this section pins, in the founder's words: "When an edit is
+// constrained by a minimum calorie floor, quantisation / gram rounding must
+// fail toward the safe side: realised meal-plan calories >= applicable floor.
+// A tiny positive residual is acceptable. A negative residual below the floor
+// is not."
+//
+// Before this, the budget was floor-clamped correctly but the solver worked in
+// whole grams and resolveComponent rounded the kcal, so a single staple could
+// realise slightly MORE cut than allowed and land the plan a kcal or two under
+// the floor. Small, and still a contradiction of this module's own hard rule
+// that a food-level edit can never realise a cut the engine refused.
+describe('floor-safe quantisation: rounding never crosses the floor downward', () => {
+  const plan = makePlan();
+  const startKcal = plan.totals.kcal;
+
+  test('EXACT BOUNDARY: a floor equal to the plan total realises no cut at all', () => {
+    const { plan: out, change } = applyMacroDeltaToPlan({
+      plan, adjustmentKcal: -300, floorKcal: startKcal,
+    });
+    expect(change.floorHeld).toBe(true);
+    expect(change.belowFloor).toBe(true);
+    expect(out.totals.kcal).toBe(startKcal);
+    expect(out.totals.kcal).toBeGreaterThanOrEqual(startKcal);
+  });
+
+  test('THE ROUNDING BOUNDARY: 1-3 kcal of headroom never overshoots', () => {
+    // The exact case the closeout names. With only a kcal or two to spend,
+    // whole-gram rounding used to spend more than it had.
+    for (const headroom of [1, 2, 3]) {
+      const floorKcal = startKcal - headroom;
+      const { plan: out, change } = applyMacroDeltaToPlan({
+        plan, adjustmentKcal: -300, floorKcal,
+      });
+      expect(out.totals.kcal).toBeGreaterThanOrEqual(floorKcal);
+      expect(change.adjustmentKcalApplied).toBeGreaterThanOrEqual(-headroom);
+    }
+  });
+
+  test('a SWEEP of headrooms: the realised plan is never below the floor', () => {
+    for (let headroom = 0; headroom <= 60; headroom += 1) {
+      const floorKcal = startKcal - headroom;
+      const { plan: out } = applyMacroDeltaToPlan({
+        plan, adjustmentKcal: -500, floorKcal,
+      });
+      expect(out.totals.kcal).toBeGreaterThanOrEqual(floorKcal);
+    }
+  });
+
+  test('the residual is POSITIVE-or-zero, never negative', () => {
+    // "A tiny positive residual is acceptable. A negative residual below the
+    // floor is not." Residual = how far above the floor the plan landed.
+    for (let headroom = 0; headroom <= 40; headroom += 1) {
+      const floorKcal = startKcal - headroom;
+      const { plan: out } = applyMacroDeltaToPlan({
+        plan, adjustmentKcal: -500, floorKcal,
+      });
+      expect(out.totals.kcal - floorKcal).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  test('A LARGER NORMAL CUT IS UNCHANGED: away from the floor, nothing is clamped', () => {
+    // This fixture is a 1,709 kcal day. With the floor far below it, a -300
+    // request still lands where it always did: -320, OVERSHOOTING the request
+    // by 20 kcal, because the solver works in whole grams. That freedom is the
+    // pre-existing behaviour and the safety rule must not take it away - the
+    // rule bounds the FLOOR distance, never the request.
+    const { plan: out, change } = applyMacroDeltaToPlan({
+      plan, adjustmentKcal: -300, floorKcal: 100,
+    });
+    expect(change.floorHeld).toBe(false);
+    expect(change.adjustmentKcalApplied).toBe(-320);
+    expect(change.adjustmentKcalApplied).toBeLessThan(-300); // still free to overshoot
+    expect(change.edits.length).toBeGreaterThan(0);
+    expect(out.totals.kcal).toBe(startKcal - 320);
+  });
+
+  test('a floor-CLAMPED cut now lands exactly ON the floor, not under it', () => {
+    // The defect, and its fix, in one assertion. 1,709 kcal day, floor 1,500:
+    // 209 kcal of headroom, a -300 request. It spends the headroom and stops
+    // on the floor. Before this change, whole-gram rounding could carry it a
+    // kcal or two past.
+    const { plan: out, change } = applyMacroDeltaToPlan({
+      plan, adjustmentKcal: -300, floorKcal: 1500,
+    });
+    expect(change.floorHeld).toBe(true);
+    expect(out.totals.kcal).toBe(1500);
+    expect(out.totals.kcal).toBeGreaterThanOrEqual(1500);
+    expect(change.adjustmentKcalApplied).toBe(-209);
+  });
+
+  test('the smaller cut the older suite pins is unaffected', () => {
+    const { change } = applyMacroDeltaToPlan({ plan, adjustmentKcal: -200, floorKcal: 100 });
+    expect(Math.abs(change.adjustmentKcalApplied - (-200))).toBeLessThanOrEqual(60);
+  });
+
+  test('THE INCREASE PATH IS UNCHANGED: adding still adds', () => {
+    // Overshooting upward moves AWAY from the floor, so the clamp does not
+    // apply there and must not have changed the adding behaviour.
+    const { plan: out, change } = applyMacroDeltaToPlan({
+      plan, adjustmentKcal: 300, floorKcal: 1500,
+    });
+    expect(change.adjustmentKcalApplied).toBeGreaterThan(0);
+    expect(Math.abs(change.adjustmentKcalApplied - 300)).toBeLessThanOrEqual(60);
+    expect(out.totals.kcal).toBeGreaterThan(startKcal);
+  });
+
+  test('PROTEIN PROTECTION IS UNCHANGED at the boundary', () => {
+    for (const headroom of [0, 1, 2, 3, 25]) {
+      const { plan: out } = applyMacroDeltaToPlan({
+        plan, adjustmentKcal: -500, floorKcal: startKcal - headroom,
+      });
+      expect(proteinSourcesUnchanged(plan, out)).toBe(true);
+    }
+  });
+
+  test('every reported edit is a WHOLE number of grams', () => {
+    // "Do not introduce fractional grams merely to hit an exact number."
+    const { change } = applyMacroDeltaToPlan({
+      plan, adjustmentKcal: -37, floorKcal: startKcal - 40,
+    });
+    for (const e of change.edits) {
+      expect(Number.isInteger(e.gramsBefore)).toBe(true);
+      expect(Number.isInteger(e.gramsAfter)).toBe(true);
+    }
+  });
+
+  test('the reported edit grams match the plan the user actually gets', () => {
+    // A receipt that disagrees with the plate would be its own defect; the
+    // hand-back loop rewrites the grams, so this pins that both moved together.
+    const { plan: out, change } = applyMacroDeltaToPlan({
+      plan, adjustmentKcal: -300, floorKcal: startKcal - 20,
+    });
+    for (const e of change.edits) {
+      const slot = out.slots.find((sl) => sl.slot === e.slot);
+      const comp = slot.components.find((c) => c.food === e.food);
+      expect(comp.g).toBe(e.gramsAfter);
+    }
+  });
+});
+
+// The same rule, through the LIVE reconciliation path rather than the editor
+// alone: after the continuity ladder has climbed, the plan is still at or
+// above the floor. This is the assertion the 17A handover had to soften.
+describe('floor holds after food-level reconciliation (planContinuity)', () => {
+  // eslint-disable-next-line global-require
+  const { reconcileDayToTarget } = require('../planContinuity');
+  const plan = makePlan();
+
+  test('the reconciled day is never below the floor, across a sweep', () => {
+    for (let headroom = 0; headroom <= 40; headroom += 2) {
+      const floorKcal = plan.totals.kcal - headroom;
+      const res = reconcileDayToTarget({
+        day: plan,
+        targetKcal: plan.totals.kcal - 800,
+        prefs: { diet: 'omnivore', mealsPerDay: 3 },
+        floorKcal,
+      });
+      expect(res.floorHeld).toBe(true);
+      expect(res.day.totals.kcal).toBeGreaterThanOrEqual(floorKcal);
+    }
+  });
+});
