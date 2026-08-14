@@ -141,6 +141,13 @@ function joinList(arr) {
 // ─── The continuity change receipt (Campaign 17A jobs 4 and 5) ───────────────
 
 /**
+ * The smallest portion change worth putting in a sentence. Below this the
+ * user cannot act on it with a kitchen scale, and listing it buries the
+ * changes they can. A COPY threshold only: the plan carries the exact grams.
+ */
+const MIN_LISTED_GRAMS = 5;
+
+/**
  * The full plain-English receipt for a target change that was reconciled
  * through the continuity ladder (planContinuity.reconcilePlanToTarget).
  *
@@ -206,8 +213,20 @@ export function buildContinuityReceipt(result, { proteinChanged = false } = {}) 
 
   // What moved, in real food. Portions first (the least disruptive), then any
   // food that was swapped, then a meal that was replaced.
+  //
+  // Largest first, and sub-5 g adjustments dropped from the SENTENCE when
+  // there is anything bigger to say. The gram solver rebalances across
+  // staples, so a 200 kcal rise can carry a "1 g less porridge oats" along
+  // with it - true, but not a thing anyone can act on with a kitchen scale,
+  // and it makes the honest changes harder to read. The plan itself still
+  // carries every exact gram; this is the summary, not the audit.
+  const ordered = [...edits].sort(
+    (a, b) => Math.abs(b.gramsAfter - b.gramsBefore) - Math.abs(a.gramsAfter - a.gramsBefore),
+  );
+  const meaningful = ordered.filter((e) => Math.abs(e.gramsAfter - e.gramsBefore) >= MIN_LISTED_GRAMS);
+  const listed = meaningful.length ? meaningful : ordered;
   const changes = [];
-  for (const e of edits) changes.push(describeEdit(e, { withGrams: true }));
+  for (const e of listed) changes.push(describeEdit(e, { withGrams: true }));
   for (const f of foodChanges) {
     changes.push(`${f.foodInName.toLowerCase()} instead of ${f.foodOutName.toLowerCase()} at ${slotLabel(f.slot)}`);
   }

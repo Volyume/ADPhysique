@@ -407,6 +407,15 @@ describe('the change receipt is real food, in plain English', () => {
     }
   });
 
+  test('the listed changes are largest first, and sub-5 g noise is left out', () => {
+    // The gram solver rebalances across staples, so a rise can carry a "1 g
+    // less oats" with it. True, but not actionable, and it buries the changes
+    // the user can act on. A COPY rule only - the plan keeps every exact gram.
+    const grams = receipt.changes.map((c) => Number(/(\d+) g/.exec(c)?.[1] ?? 0));
+    for (const g of grams) expect(g).toBeGreaterThanOrEqual(5);
+    for (let i = 1; i < grams.length; i += 1) expect(grams[i]).toBeLessThanOrEqual(grams[i - 1]);
+  });
+
   test('the protein line says plainly that protein has not changed', () => {
     expect(receipt.protein).toBe('Your protein target has not changed.');
   });
