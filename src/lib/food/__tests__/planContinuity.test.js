@@ -335,6 +335,57 @@ describe('the whole plan moves together, and the receipt describes ONE day', () 
   });
 });
 
+describe('every rebuild reason the founder listed is actually PRODUCIBLE', () => {
+  // A constant that exists but is never produced is the "module exists !=
+  // delivered" trap. Five reasons come from decideContinuity; the sixth
+  // ("current foods cannot reach target sensibly") can only be known by
+  // trying, so it is ruled after the ladder has climbed. This pins that every
+  // one of the six can actually reach a user.
+  test('the five up-front reasons are produced by decideContinuity', () => {
+    const day = realDay();
+    const produced = new Set();
+    const cases = [
+      { newTarget: { targetKcal: Math.round(TARGET.targetKcal * 1.4) }, prefs: PREFS },
+      { newTarget: { targetKcal: TARGET.targetKcal }, prefs: { ...PREFS, mealsPerDay: 6 } },
+      { newTarget: { targetKcal: TARGET.targetKcal }, prefs: { ...PREFS, diet: 'vegan' } },
+      { newTarget: { targetKcal: TARGET.targetKcal }, prefs: { ...PREFS, excludeTags: ['milk'] } },
+      { newTarget: { targetKcal: TARGET.targetKcal }, prefs: PREFS, userRequested: true },
+    ];
+    for (const c of cases) {
+      produced.add(decideContinuity({ plan: planWith(day), ...c }).reason);
+    }
+    expect(produced).toEqual(new Set([
+      REBUILD_REASON.MAJOR_TARGET_MOVE,
+      REBUILD_REASON.MEAL_COUNT_CHANGED,
+      REBUILD_REASON.DIET_CHANGED,
+      REBUILD_REASON.EXCLUSIONS_CHANGED,
+      REBUILD_REASON.USER_REQUESTED,
+    ]));
+  });
+
+  test('the sixth is produced by the service, after the ladder has tried', () => {
+    // Source-level, because the escalation lives in the async service path:
+    // an unreachable target becomes a REBUILD offer, and a floor hold never
+    // does (rebuilding would re-attempt a cut the floor refused).
+    // eslint-disable-next-line global-require
+    const src = require('fs').readFileSync(
+      // eslint-disable-next-line global-require
+      require('path').resolve(__dirname, '../mealPlanService.js'), 'utf8',
+    );
+    expect(src).toMatch(/if \(result\.cannotReach && !result\.floorHeld\)/);
+    expect(src).toMatch(/reason: REBUILD_REASON\.CANNOT_REACH_TARGET/);
+  });
+
+  test('a reachable target never escalates to a rebuild', () => {
+    const day = realDay();
+    const res = reconcilePlanToTarget({
+      plan: planWith(day), newTarget: { targetKcal: day.totals.kcal + 150 },
+      prefs: PREFS, floorKcal: 1500,
+    });
+    expect(res.cannotReach).toBe(false);
+  });
+});
+
 describe('the change receipt is real food, in plain English', () => {
   const day = realDay();
   const plan = planWith(day);

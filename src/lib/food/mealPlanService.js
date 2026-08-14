@@ -563,6 +563,30 @@ export async function reviewTargetChangeAgainstActivePlan(userId, newTarget, pro
   const result = reconcilePlanToTarget({
     plan: active.plan, newTarget, prefs, floorKcal,
   });
+
+  // The founder's sixth rebuild trigger: "current foods cannot reach target
+  // sensibly". It is the one trigger that cannot be ruled BEFORE the work,
+  // because whether these meals can stretch that far is only knowable by
+  // trying. So it is ruled here, after the ladder has climbed as far as it
+  // goes: a fresh plan is the honest offer, rather than telling the user their
+  // plan is as close as it gets and leaving them to find the rebuild
+  // themselves.
+  //
+  // A FLOOR HOLD IS NOT AN INABILITY and never escalates here. The ladder
+  // stopped because a safety floor refused the cut; rebuilding would be
+  // attempting the same refused cut by another route.
+  if (result.cannotReach && !result.floorHeld) {
+    return {
+      action: CONTINUITY_ACTION.REBUILD,
+      reason: REBUILD_REASON.CANNOT_REACH_TARGET,
+      receipt: null,
+      plan: null,
+      planId: active.id,
+      targetDeltaKcal: decision.targetDeltaKcal,
+      proteinChanged,
+    };
+  }
+
   return {
     action: result.action,
     reason: null,
