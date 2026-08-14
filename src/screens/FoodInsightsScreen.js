@@ -42,6 +42,9 @@ import { getNutritionTargets } from '../lib/database';
 import { exportDiaryCsv, exportDiaryPdf } from '../lib/food/csvExport';
 import { ADHERENCE_TOLERANCE, pctLabel, within } from '../lib/food/adherence';
 import { summariseNutrients, NUTRIENT_ROWS } from '../lib/food/nutrientSummary';
+// Campaign 17B job 7: insights that answer "so what", and that say plainly
+// when the diary does not cover enough of the window to support a claim.
+import { loggingCoverage, buildInsights } from '../lib/food/insights';
 import WeeklyMicronutrientsCard from '../components/food/WeeklyMicronutrientsCard';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -208,6 +211,17 @@ export default function FoodInsightsScreen({ navigation }) {
     const windowRollups = days.map((d) => rollupByDate.get(d)).filter(Boolean);
     return summariseNutrients(windowRollups);
   }, [days, rollupByDate]);
+
+  // Campaign 17B job 7. Every figure below this point is drawn from the days
+  // that were actually logged, so the screen has to say how many that was
+  // before it says anything else. "If diary coverage is incomplete: say so.
+  // Do not create false adherence or nutrient conclusions."
+  const coverage = useMemo(() => loggingCoverage(days, rollupByDate), [days, rollupByDate]);
+  const insights = useMemo(() => buildInsights({
+    coverage,
+    rollups: days.map((d) => rollupByDate.get(d)).filter(Boolean),
+    targets,
+  }), [coverage, days, rollupByDate, targets]);
 
   // Calories chart rows. 7/14-day windows render one bar per day; 30/90-day
   // windows aggregate into weekly bars (avg kcal/day of the LOGGED days that
@@ -391,6 +405,29 @@ export default function FoodInsightsScreen({ navigation }) {
           />
         ) : (
         <>
+        {/* Campaign 17B job 7: what we can honestly say, and what we cannot.
+            First on the screen because everything below it has to be read in
+            this light. Facts about the DIARY, never a judgement of the person:
+            no score, no streak, no nagging to log more. */}
+        {insights.length > 0 ? (
+          <>
+            <SectionLabel style={styles.sectionLabelSpacing}>WHAT WE CAN SEE</SectionLabel>
+            <Card style={styles.card}>
+              {insights.map((ins, i) => (
+                <View
+                  key={ins.key}
+                  style={i > 0 ? styles.insightRowSpaced : null}
+                  accessible
+                  accessibilityLabel={`${ins.headline} ${ins.body}`}
+                >
+                  <Text style={[styles.insightHeadline, live.insightHeadline]}>{ins.headline}</Text>
+                  <Text style={[styles.insightBody, live.insightBody]}>{ins.body}</Text>
+                </View>
+              ))}
+            </Card>
+          </>
+        ) : null}
+
         {/* Period-average summary: avg kcal/day over the selected window + a
             neutral, factual "vs the period before" delta (no good/bad
             colour). Above the chart so the headline number reads first. */}
@@ -719,6 +756,11 @@ const styles = StyleSheet.create({
 
   // Weekly-average summary: headline numeral always textPrimary, delta neutral
   // (textSecondary), never a good/bad valence colour (locked coaching voice).
+  // Campaign 17B job 7: an observation and its "so what", nothing louder.
+  insightRowSpaced: { marginTop: spacing.md },
+  insightHeadline: { ...type.body, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  insightBody: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xxs },
+
   summaryValue: { ...type.title, color: colors.textPrimary },
   summaryCaption: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   summaryDelta: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold, marginTop: spacing.sm },
@@ -780,6 +822,8 @@ function buildLiveStyles(t) {
     cardFootnoteLink: { color: t.colors.primary },
     proteinHeadline: { ...t.type.title, color: t.colors.textPrimary },
     emptyText: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
+    insightHeadline: { ...t.type.body, color: t.colors.textPrimary },
+    insightBody: { ...t.type.bodySm, color: t.colors.textMuted },
     summaryValue: { ...t.type.title, color: t.colors.textPrimary },
     summaryCaption: { ...t.type.caption, color: t.colors.textMuted },
     summaryDelta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
