@@ -1071,13 +1071,40 @@ export function runWeeklyCoach(inputs) {
   ].filter(Boolean).join(' · ');
 
   // ── PRE-FILTERS ───────────────────────────────────────────────────────────
+  //
+  // CAMPAIGN 18. The pre-filter returns get a context too, and they get it
+  // from this ONE builder rather than each assembling its own. These are the
+  // thinnest-evidence weeks in the product - too few weigh-ins, or half the
+  // sessions missed - and they are exactly the weeks a consumer most needs to
+  // be told WHAT is unknown. A return shape that sometimes carries a context
+  // would force every reader to special-case the case job 8 is about.
+  const preFilterContext = () => buildCoachContext({
+    nowMs,
+    training: { sessionsCompleted, sessionsPlanned, prsThisWeek, blockE1rmSlopePct },
+    recovery: {
+      hasCheckin: !!checkin && (checkin.energyScore != null || checkin.sorenessScore != null
+        || checkin.calsAdherence != null),
+      energyScore: checkin?.energyScore ?? null,
+      sorenessScore: checkin?.sorenessScore ?? null,
+      consecutivePoorRecoveryWeeks, lastCheckinAt,
+    },
+    nutrition: {
+      targetKcal: currentCalTarget, recentIntakeAvgKcal, recentIntakeDaysLogged,
+      intakeReadFailed, calsAdherence: checkin?.calsAdherence ?? null,
+    },
+    // No trend is claimed on these paths: `hasEnoughData` is false, or the
+    // week was not trained enough to read. UNKNOWN is the honest answer and
+    // the one the pre-filter itself already reached.
+    weight: { ratePctPerWeek: null, weighInCount: morningWeights.length, goalPhase, onTarget: null },
+    intent: { goalPhase, trainingGoal },
+  });
 
   // Not enough data yet
   if (!hasEnoughData) {
     const dataNote = weeksInPhase < 2
       ? 'Keep logging. Adjustments start after your second week.'
       : 'Log your morning weight at least 4 days this week to get trend coaching.';
-    return _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget });
+    return _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget, context: preFilterContext() });
   }
 
   // Adherence gate (Andy Morgan rule): < 50% sessions → stabilise first.
@@ -1086,7 +1113,7 @@ export function runWeeklyCoach(inputs) {
   // protective plannedSets > 0 ? ... : 0 posture.
   const sessionAdherence = sessionsPlanned > 0 ? sessionsCompleted / sessionsPlanned : 0;
   if (sessionAdherence < 0.5) {
-    return _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, weekSeed, onTarget });
+    return _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, weekSeed, onTarget, context: preFilterContext() });
   }
 
   // ── RECOVERY & PERFORMANCE SIGNALS (autoregulation matrix) ─────────────
@@ -2147,10 +2174,14 @@ export function runWeeklyCoach(inputs) {
 
 // ─── Helper output builders ───────────────────────────────────────────────────
 
-function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget }) {
+function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget, context = null }) {
   return {
     hasEnoughData: false,
     dataNote,
+    // Campaign 18: every return shape carries the context (see the pre-filter
+    // builder above for why this path in particular must).
+    context,
+    limiters: context ? classifyLimiters(context) : null,
     weekLabel,
     trend: { ewma7: ewma7Today, delta: weightDelta, onTarget: onTarget ?? false, deltaLabel, rateLabel },
     whatWorking: ['Logging consistently. The data is building.'],
@@ -2184,10 +2215,12 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
   };
 }
 
-function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, weekSeed, onTarget }) {
+function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, weekSeed, onTarget, context = null }) {
   return {
     hasEnoughData: true,
     dataNote: null,
+    context,
+    limiters: context ? classifyLimiters(context) : null,
     weekLabel,
     trend: { ewma7: ewma7Today, delta: weightDelta, onTarget: onTarget ?? false, deltaLabel, rateLabel },
     whatWorking: ['Showing up, even partially, keeps the habit alive.'],

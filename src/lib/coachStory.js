@@ -32,7 +32,7 @@
  * PURE. No I/O, no clock.
  */
 import { SIGNAL } from './coachContext';
-import { LIMITER } from './coachPrecedence';
+import { LIMITER, chooseInterventions, nutritionQualifier } from './coachPrecedence';
 
 /** Vocabulary that may never reach the user from this module. */
 export const BANNED_TERMS = Object.freeze([
@@ -120,6 +120,24 @@ export function whatItMeans(context, limiters) {
     out.push(line('The programme is working, so it is worth leaving alone.', 'training.progress'));
   }
 
+  // MAY WE SAY ANYTHING ABOUT FOOD HERE? (job 5). Only where the evidence
+  // genuinely exists. The qualifier returns 'unknown' whenever the diary
+  // cannot support a claim, and that renders as SILENCE rather than as a
+  // hedge - "we don't know about your food" beside a training stall reads as
+  // an insinuation, which is worse than saying nothing.
+  //
+  // Even when it CAN be said, it is said as a co-observation and explicitly
+  // not as a cause. Volyume sees a correlation; it does not see a mechanism.
+  if (tr?.limiter === LIMITER.PLAN && !tr.progressing) {
+    const q = nutritionQualifier(context);
+    if (q.state === 'qualifies') {
+      out.push(line(
+        'Your logged intake was away from your target this week as well. Worth knowing alongside, though not something we can call the reason.',
+        'nutrition.intake',
+      ));
+    }
+  }
+
   return out;
 }
 
@@ -185,8 +203,32 @@ export function whatStaysTheSame(context, limiters, changes = {}) {
 
   if (kcal === 0) out.push(line('Your daily food target stays the same.', 'nutrition.coverage'));
   if (!trainingChanged) out.push(line('Your programme and your exercises stay as they are.', 'training.execution'));
+
+  // MINIMUM EFFECTIVE INTERVENTION, SAID OUT LOUD (job 11). A domain that was
+  // deliberately held is different from one that simply had nothing to do,
+  // and the user cannot tell the two apart unless we say which it was. The
+  // precedence layer decides; this only reports its holds.
+  const plan = chooseInterventions(context, limiters);
+  for (const hold of plan.holds) {
+    const text = HOLD_COPY[hold.reason];
+    if (text) out.push(line(text, hold.domain === 'nutrition' ? 'nutrition.intake' : 'training.execution'));
+  }
   return out;
 }
+
+/**
+ * Why a domain was deliberately left alone. Only the reasons a user can act
+ * on or understand; an unmapped reason renders nothing rather than a code.
+ */
+const HOLD_COPY = Object.freeze({
+  target_not_eaten: 'We are leaving your target where it is until it has had a fair run.',
+  sessions_missed: 'We are leaving your programme alone until there are enough sessions to judge it.',
+  intake_coverage_unknown: 'We are leaving your target where it is until there is enough logging to read it.',
+  intake_unknown: 'We are leaving your target where it is until there is enough to read.',
+  weight_trend_unknown: 'We are leaving your target where it is until the weight trend is clearer.',
+  execution_unknown: 'We are leaving your programme alone until there is a full week to judge.',
+  progress_unknown: 'We are leaving your programme alone until there is more to go on.',
+});
 
 /**
  * What Volyume will watch next (elite-coach bar item 13).

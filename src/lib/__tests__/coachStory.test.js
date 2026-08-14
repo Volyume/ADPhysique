@@ -209,6 +209,34 @@ describe('THE CROSS-DOMAIN RECEIPT (job 12)', () => {
   });
 });
 
+describe('A NUTRITION CO-OBSERVATION IS NOT A CAUSE (job 5)', () => {
+  const stalled = (nutrition) => storyOf({
+    ...GOING_WELL,
+    training: { sessionsCompleted: 4, sessionsPlanned: 4, blockE1rmSlopePct: -0.6 },
+    nutrition,
+  });
+
+  test('with real coverage and a real miss, it is mentioned - as a co-observation', () => {
+    const text = storyLines(stalled({ recentIntakeDaysLogged: 6, recentIntakeAvgKcal: 2400, targetKcal: 3000 }))
+      .join(' ');
+    expect(text).toMatch(/logged intake was away from your target this week as well/i);
+    expect(text).toMatch(/not something we can call the reason/i);
+  });
+
+  test('THE GUARD: with a thin diary it is SILENT, not hedged', () => {
+    const text = storyLines(stalled({ recentIntakeDaysLogged: 2, targetKcal: 3000 })).join(' ');
+    expect(text).not.toMatch(/logged intake was away/i);
+    // And no insinuation in its place.
+    expect(text).not.toMatch(/we do not know what you ate|your food might/i);
+  });
+
+  test('and when they DID eat the target, nothing is implied at all', () => {
+    const text = storyLines(stalled({ recentIntakeDaysLogged: 6, recentIntakeAvgKcal: 2980, targetKcal: 3000 }))
+      .join(' ');
+    expect(text).not.toMatch(/logged intake was away/i);
+  });
+});
+
 describe('RECOVERY SCOPE IS TRUTHFUL (job 6)', () => {
   test('a systemic recovery hold says it is about recovery OVERALL', () => {
     const story = storyOf({
