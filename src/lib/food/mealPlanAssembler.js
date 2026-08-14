@@ -622,7 +622,27 @@ export function assembleDayPlan({
           // candidate must carry a matching tag. Untagged (saved) meals do
           // not slip into Meal 1 just because they claim nothing.
           if (Array.isArray(matchKind)) {
-            if (!Array.isArray(cand.slots) || cand.slots.length === 0) return;
+            // The untagged guard exists for the curry-for-breakfast fix: a
+            // curated meal that claims no character must not slip into a
+            // character slot just because it claims nothing.
+            //
+            // FIRST-CLASS PERSONAL MEALS (Campaign 17B job 3). It also made the
+            // user's OWN saved meals and recipes structurally unplaceable -
+            // every slot character is an array, and a saved meal carries no
+            // tags, so the guard rejected it from every slot on every day.
+            // Being in the candidate pool meant nothing; a user who had built
+            // their own dinners still got a plan assembled entirely from the
+            // curated library.
+            //
+            // So a meal the user built themselves passes the guard, EXCEPT at
+            // a breakfast-only slot. They know what their meal is; we do not,
+            // and putting their chilli at Meal 1 would be the very thing the
+            // original fix prevents.
+            const untagged = !Array.isArray(cand.slots) || cand.slots.length === 0;
+            if (untagged) {
+              const breakfastOnly = matchKind.length === 1 && matchKind[0] === 'breakfast';
+              if (cand.source !== 'saved' || breakfastOnly) return;
+            }
           }
           if (!slotMatches(cand.slots, matchKind)) return;
         }
@@ -636,6 +656,15 @@ export function assembleDayPlan({
         }
         // 3-3-3 rotation pool: a soft pull towards the user's chosen staples.
         score += 0.15 * poolAffinity(cand, prefs.rotationPool);
+        // FIRST-CLASS PERSONAL MEALS (Campaign 17B job 3). A meal the user
+        // built themselves - a saved meal or one of their own recipes - is a
+        // strong candidate, not a last resort: they should not have to
+        // rebuild their own dinner from ingredients every week. Bounded and
+        // small on purpose, so it nudges between meals that ALREADY fit
+        // rather than dragging a badly-fitting one into the day, and applied
+        // AFTER the preference filters, so it can never reach a meal the
+        // user's dietary rules exclude.
+        if (cand.source === 'saved') score += PERSONAL_MEAL_BONUS;
         // Peri-workout slot character (audit §15 item 5: RP-style timing
         // WITHOUT RP rigidity — a soft candidate-pick nudge, not a rule): low
         // fat going in; protein AND carbs out (the comment always said "carbs
@@ -948,6 +977,13 @@ export function assembleDayPlanBestOf(args = {}, attempts = LOCAL_SEARCH_ATTEMPT
 }
 
 // ─── The week assembler ─────────────────────────────────────────────────
+
+// How much a meal the user built themselves is preferred over a curated one
+// that fits the arithmetic slightly better. A PRODUCT HEURISTIC, written down
+// as one: "Realistic continuity > mathematically prettier churn" (Campaign 17B
+// job 3). Deliberately of the same order as the rotation-pool nudge above, so
+// it competes with other soft preferences and never with a hard rule.
+export const PERSONAL_MEAL_BONUS = 0.2;
 
 // A plan week is seven days. It is a plan LENGTH, not a training schedule:
 // every day carries the same target (one-daily-truth law, Campaign 17A).

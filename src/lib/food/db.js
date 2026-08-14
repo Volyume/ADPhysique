@@ -1132,6 +1132,90 @@ export async function listRecipesWithTotals(userId) {
 }
 
 /**
+ * The user's recipes, shaped for MEAL-PLAN GENERATION.
+ *
+ * Campaign 17B job 3: "A mature user's own saved meals and recipes should be
+ * strong candidates in quick logging, meal-plan generation, continuity,
+ * replacement and personal suggestions." Saved meals already reached the
+ * assembler's pool; recipes never did, so a user who had built their own
+ * dinners still had every plan assembled from the curated library.
+ *
+ * RECIPE DEFINITION vs AMOUNT EATEN. A recipe defines a whole dish over
+ * `total_servings`; what a plan places in a meal slot is ONE SERVING. So the
+ * totals here are per serving, and `totalServings` rides along so a caller
+ * that needs more or less food can change the SERVINGS rather than rewriting
+ * the recipe. Nothing in this path mutates a recipe.
+ *
+ * `items` carries each ingredient's food_ref so the exclusion gate
+ * (planPreferences.savedMealAllowed) can judge the recipe exactly as it judges
+ * a saved meal - by what is actually in it.
+ */
+export async function listRecipesForPlanning(userId) {
+  if (!userId) return [];
+  const recipes = await listRecipes(userId).catch(() => []);
+  if (!recipes.length) return [];
+  const d = await db();
+  const ids = recipes.map((r) => r.id);
+  const placeholders = ids.map(() => '?').join(',');
+  const ingredientRows = await d.getAllAsync(
+    `SELECT recipe_id, food_ref, quantity_g
+     FROM recipe_ingredients
+     WHERE user_id = ? AND recipe_id IN (${placeholders}) AND deleted_at IS NULL`,
+    [userId, ...ids],
+  ).catch(() => []);
+  const byRecipe = new Map();
+  for (const r of ingredientRows) {
+    if (!byRecipe.has(r.recipe_id)) byRecipe.set(r.recipe_id, []);
+    byRecipe.get(r.recipe_id).push(r);
+  }
+  const foodCache = new Map();
+  const resolveCached = async (ref) => {
+    if (foodCache.has(ref)) return foodCache.get(ref);
+    const food = await resolveFoodRef(userId, ref).catch(() => null);
+    foodCache.set(ref, food);
+    return food;
+  };
+  const round1 = (n) => Math.round(n * 10) / 10;
+  const out = [];
+  for (const recipe of recipes) {
+    const ingredients = byRecipe.get(recipe.id) || [];
+    if (!ingredients.length) continue;
+    let kcal = 0; let protein = 0; let carbs = 0; let fat = 0;
+    const items = [];
+    for (const ing of ingredients) {
+      // eslint-disable-next-line no-await-in-loop
+      const food = await resolveCached(ing.food_ref);
+      items.push({ foodRef: ing.food_ref, name: food?.name ?? ing.food_ref });
+      if (!food) continue;
+      const factor = (Number(ing.quantity_g) || 0) / 100;
+      kcal += (Number(food.kcal_100g) || 0) * factor;
+      protein += (Number(food.protein_100g) || 0) * factor;
+      carbs += (Number(food.carbs_100g) || 0) * factor;
+      fat += (Number(food.fat_100g) || 0) * factor;
+    }
+    const servings = Math.max(1, Number(recipe.total_servings) || 1);
+    // A recipe with no resolvable macros at all cannot be planned around; it
+    // stays perfectly usable for manual logging, it just is not a candidate.
+    if (kcal <= 0) continue;
+    out.push({
+      id: `recipe:${recipe.id}`,
+      recipeId: recipe.id,
+      name: recipe.name,
+      totalServings: servings,
+      items,
+      // ONE SERVING, the amount a meal slot actually holds.
+      totals: {
+        kcal: Math.round(kcal / servings),
+        protein: round1(protein / servings),
+        carbs: round1(carbs / servings),
+        fat: round1(fat / servings),
+      },
+    });
+  }
+  return out;
+}
+
+/**
  * Recipe header + ingredients in order. Returns null when the recipe
  * doesn't exist or has been deleted.
  */

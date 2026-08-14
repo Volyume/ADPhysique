@@ -43,6 +43,7 @@ import { applyMacroDeltaToPlan } from './planEdit';
 import { swapFoodInMeal, swapMealInPlan, findRoleAlternatives } from './mealSwap';
 import { normalisePreferences } from './planPreferences';
 import { roleOf } from './foodRoles';
+import { CURATED_MEALS } from './curatedMeals';
 
 /**
  * The rungs, in order of increasing disruption. The order IS the law; a
@@ -371,17 +372,39 @@ function swapOneStapleTowards(day, needKcal, prefs) {
 }
 
 /**
+ * Is this slot holding a meal the USER built, rather than a curated one?
+ *
+ * Campaign 17B job 3. A recipe carries a `recipe:` id; a saved meal carries
+ * its own row id, which is never a curated meal id. Judged by identity, not by
+ * name - the same rule the search layer follows.
+ */
+function isUserOwnMeal(slot) {
+  const id = slot?.mealId;
+  if (typeof id !== 'string' || !id) return false;
+  if (id.startsWith('recipe:')) return true;
+  return !CURATED_MEALS.some((m) => m.id === id);
+}
+
+/**
  * Replace the single meal furthest from its fair share of the target, using
- * the existing like-for-like meal swap. Returns null when nothing eligible
- * exists, which again is a real answer.
+ * the existing like-for-like meal swap. A meal the user built themselves is
+ * protected: see isUserOwnMeal. Returns null when nothing eligible exists,
+ * which again is a real answer.
  */
 function replaceWorstMeal(day, targetKcal, prefs) {
   const slots = day.slots || [];
   const composable = slots.filter((s) => s.mealId);
   if (!composable.length) return null;
+  // REALISTIC CONTINUITY BEATS PRETTIER CHURN (Campaign 17B job 3). A meal the
+  // user built themselves - a saved meal or one of their own recipes - is not
+  // interchangeable with a curated one that happens to fit the arithmetic a
+  // little better. So the generic meals are offered up first, and a personal
+  // one is only ever replaced when there is no generic slot to take instead.
+  const generic = composable.filter((s) => !isUserOwnMeal(s));
+  const pool = generic.length ? generic : composable;
   const share = targetKcal / slots.length;
   let worst = null;
-  for (const s of composable) {
+  for (const s of pool) {
     const miss = Math.abs((s.totals?.kcal ?? 0) - share);
     if (!worst || miss > worst.miss) worst = { slot: s.slot, miss, name: s.name };
   }

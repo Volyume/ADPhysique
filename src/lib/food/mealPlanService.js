@@ -24,6 +24,7 @@ import {
   saveActiveMealPlan,
   updateMealPlan,
   listSavedMeals,
+  listRecipesForPlanning,
   logFoodEntry,
   getFoodEntriesForDay,
   clearPlannedDay,
@@ -264,9 +265,13 @@ function applyStandingReplacementsToDays(days, { replacements, prefs }) {
  * { error: 'no_target' } when the user has no nutrition target yet.
  */
 export async function generateAndSaveMealPlan(userId, profile, { seed = Date.now() % 100000 } = {}) {
-  const [row, savedMeals] = await Promise.all([
+  const [row, savedMeals, recipes] = await Promise.all([
     getNutritionTargets(userId),
     listSavedMeals(userId).catch(() => []),
+    // Campaign 17B job 3: the user's own recipes are candidates too, at ONE
+    // SERVING each. Best-effort - a read failure yields a plan built from the
+    // curated library, which is the pre-17B behaviour.
+    listRecipesForPlanning(userId).catch(() => []),
   ]);
   const engineTarget = storedTargetToEngineTarget(row);
   if (!engineTarget) return { error: 'no_target' };
@@ -279,7 +284,7 @@ export async function generateAndSaveMealPlan(userId, profile, { seed = Date.now
     engineTarget,
     prefs,
     seed,
-    savedMeals: savedMeals.map(toPoolSavedMeal),
+    savedMeals: [...savedMeals.map(toPoolSavedMeal), ...recipes],
   });
   // Campaign 17A job 3: what the user has actually TOLD us to use instead.
   // Applied after assembly through the same macro-preserving swap their own
@@ -324,9 +329,13 @@ export async function regenerateActiveMealPlan(userId, profile, { seed = Date.no
  * with kind:'day'.
  */
 export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now() % 100000 } = {}) {
-  const [row, savedMeals] = await Promise.all([
+  const [row, savedMeals, recipes] = await Promise.all([
     getNutritionTargets(userId),
     listSavedMeals(userId).catch(() => []),
+    // Campaign 17B job 3: the user's own recipes are candidates too, at ONE
+    // SERVING each. Best-effort - a read failure yields a plan built from the
+    // curated library, which is the pre-17B behaviour.
+    listRecipesForPlanning(userId).catch(() => []),
   ]);
   const engineTarget = storedTargetToEngineTarget(row);
   if (!engineTarget) return { error: 'no_target' };
@@ -344,7 +353,7 @@ export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now(
     band: { kcalMin: engineTarget.kcalMin, kcalMax: engineTarget.kcalMax },
     prefs,
     seed,
-    savedMeals: savedMeals.map(toPoolSavedMeal),
+    savedMeals: [...savedMeals.map(toPoolSavedMeal), ...recipes],
     // Thread the floor flag so per-meal balance degrades gracefully near a floor
     // (ED-safety), consistent with the week path (see assembleDayPlan).
     targetFloored: targetWasFloored(engineTarget),
@@ -560,9 +569,12 @@ export async function setMealPinOnActivePlan(userId, profile, { mealId, pinned, 
   if (!meal) return { plan: active.plan, action: CONTINUITY_ACTION.KEEP, changed: false, conflict: 'no_slot' };
 
   // The user's own rules come first, even over their own pin.
+  // chosenByUser: pinning is the user naming their own meal, so a restricted
+  // diet does not block it (see savedMealAllowed). Allergen tags and explicit
+  // exclusions still do.
   const allowed = Array.isArray(meal.components)
     ? mealAllowed(meal, prefs)
-    : savedMealAllowed(meal, prefs);
+    : savedMealAllowed(meal, prefs, { chosenByUser: true });
   if (!allowed) {
     return { plan: active.plan, action: CONTINUITY_ACTION.KEEP, changed: false, conflict: 'not_allowed' };
   }

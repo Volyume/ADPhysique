@@ -147,21 +147,38 @@ export function mealAllowed(meal, prefs) {
  *
  * Meal shape: { items: [{ foodRef, name }] }. Pure.
  */
-export function savedMealAllowed(meal, prefs) {
+export function savedMealAllowed(meal, prefs, { chosenByUser = false } = {}) {
   if (!meal) return false;
   const p = normalisePreferences(prefs);
   const items = Array.isArray(meal.items) ? meal.items : null;
-  // A safety rule is live when the user has named an allergen or set a diet
-  // that is not "anything goes".
-  const safetyRuleLive = (p.excludeTags?.length || 0) > 0 || (p.diet && p.diet !== 'omnivore');
-  // No item list at all is the same problem as an unjudgeable item, and the
-  // same answer: fine on its own, refused when a safety rule is live.
-  if (!items || items.length === 0) return !safetyRuleLive;
+  const hasAllergenRule = (p.excludeTags?.length || 0) > 0;
+  const restrictedDiet = !!p.diet && p.diet !== 'omnivore';
+
+  // DIET CANNOT BE PROVEN FROM FOOD DATA (Campaign 17B job 3). Curated MEALS
+  // carry a `diet` tag; curated FOODS do not, and there is no field anywhere
+  // that says chicken is not vegan. So for a meal the user assembled from
+  // arbitrary logged food, the app genuinely cannot verify diet compatibility.
+  //
+  // The honest split is by WHO IS CHOOSING:
+  //   - GENERATING a plan is the app choosing. Under a restricted diet it must
+  //     not place a meal it cannot verify, so saved meals and recipes are not
+  //     auto-placed. They stay fully usable for logging, and for pinning.
+  //   - PINNING is the user choosing, by name. Diet is a preference they are
+  //     asserting about their own meal, so it does not block them.
+  // Allergen tags bind in BOTH cases: those are a safety matter and they ARE
+  // judgeable on curated refs.
+  if (restrictedDiet && !chosenByUser) return false;
+
+  // An ingredient the app cannot see inside (a barcode item, a custom food)
+  // carries no tag data. With an allergen named, placing a meal we cannot
+  // inspect would be taking a risk on the user's behalf.
+  const opaqueIsUnsafe = hasAllergenRule;
+  if (!items || items.length === 0) return !opaqueIsUnsafe;
   for (const it of items) {
     const ref = typeof it?.foodRef === 'string' ? it.foodRef : '';
     if (ref.startsWith('curated:')) {
       if (!foodAllowed(ref.slice('curated:'.length), p)) return false;
-    } else if (safetyRuleLive) {
+    } else if (opaqueIsUnsafe) {
       return false;
     }
   }
