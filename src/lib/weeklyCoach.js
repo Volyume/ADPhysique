@@ -1967,10 +1967,19 @@ export function runWeeklyCoach(inputs) {
     whatWorking.push('You hit your calorie target.');
   }
 
+  // CAMPAIGN 18 JOB 6. SCOPE IS PART OF THE CLAIM. This reading is SYSTEMIC -
+  // it comes from the check-in's energy/soreness/stress answers about the
+  // whole athlete. A muscle-scoped recovery cost is a different question with
+  // a different answer, and interBlock legitimately reduces one muscle's
+  // start sets on it. Unqualified, "your recovery was in range" sitting beside
+  // "chest holds because the recovery cost ran high" reads as the app
+  // contradicting itself. Naming the scope makes both sentences true at once,
+  // which is the founder's own resolution: "that is not a contradiction if
+  // the UI says so accurately."
   if (excellentRec) {
-    whatWorking.push('Your energy and recovery were strong.');
+    whatWorking.push('Your energy and overall recovery were strong.');
   } else if (!poorRecovery && energyScore != null) {
-    whatWorking.push('Your recovery was in range.');
+    whatWorking.push('Your recovery overall was in range.');
   }
 
   if (onTarget && coachingRateLabel != null) {

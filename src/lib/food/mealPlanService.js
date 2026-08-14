@@ -533,7 +533,16 @@ export async function applyCoachAdjustmentToActivePlan(userId, { adjustmentKcal 
     : (snap.kcalMin || Math.round((snap.targetKcal || 0) * 0.9));
 
   const rep = active.plan.days.find((d) => (d?.slots ?? []).length) ?? active.plan.days[0];
-  const newTargetKcal = Math.round((rep?.totals?.kcal ?? 0) + (Number(adjustmentKcal) || 0));
+  // CAMPAIGN 18 JOB 13 HARDENING. `?? 0` on a missing day total silently made
+  // the new target the adjustment ALONE - so a stored plan whose day totals
+  // were absent would be handed a target of 250 kcal and cut to its floor.
+  // The floor clamp caught it, which is why this never shipped as a visible
+  // bug, but "safety caught it" is not the same as "we did the right thing".
+  // A day whose total cannot be read is a plan we cannot adjust: refuse,
+  // rather than compute from a number we do not have.
+  const baseKcal = Number(rep?.totals?.kcal);
+  if (!Number.isFinite(baseKcal) || baseKcal <= 0) return { change: null, receipt: null };
+  const newTargetKcal = Math.round(baseKcal + (Number(adjustmentKcal) || 0));
 
   // The coach delta applies to EVERY day of the week plan (each day routes
   // through its own floor clamp): editing one day while six stay stale would
