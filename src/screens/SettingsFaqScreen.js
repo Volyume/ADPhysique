@@ -54,7 +54,7 @@ export const FAQS = [
   {
     key: 'dietary-needs',
     q: 'Can Volyume work around allergies or foods I want to avoid?',
-    a: 'Yes. Set your diet type and the FSA allergen categories you need to avoid in Settings > Dietary needs, and every suggestion respects them. If a specific food keeps turning up in a meal plan you do not want, choose "never show this again" on it directly, and it is added to your avoid list from then on.',
+    a: 'Yes. Set your diet type and the FSA allergen categories you need to avoid in Settings > Dietary needs, and every suggestion respects them. If a specific food keeps turning up in a meal plan you do not want, choose "don\'t suggest it" on it directly, and it is left out from then on. The food stays in your search and your diary; only the suggestions change.',
   },
   {
     key: 'barcode-scan',

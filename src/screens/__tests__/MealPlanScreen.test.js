@@ -599,7 +599,7 @@ describe('MealPlanScreen — dietary needs chip on the primary surface (campaign
     // so the hint renders.
     mockGetItem.mockImplementation(() => Promise.resolve(null));
     const firstTree = await mountLoadedWithProfile({});
-    expect(JSON.stringify(firstTree.toJSON())).toContain('Tap to set your diet and foods to avoid.');
+    expect(JSON.stringify(firstTree.toJSON())).toContain('Tap to set your diet, your allergens, and foods you do not want suggested.');
     expect(mockGetItem).toHaveBeenCalledWith('@volyume_seen_mealplan_dietary_chip');
 
     // Dismissing persists the flag, same '@volyume_seen_*' once-ever idiom
@@ -613,7 +613,7 @@ describe('MealPlanScreen — dietary needs chip on the primary surface (campaign
     // app open would read: the hint must not render again.
     mockGetItem.mockImplementation(() => Promise.resolve('true'));
     const secondTree = await mountLoadedWithProfile({});
-    expect(JSON.stringify(secondTree.toJSON())).not.toContain('Tap to set your diet and foods to avoid.');
+    expect(JSON.stringify(secondTree.toJSON())).not.toContain('Tap to set your diet, your allergens, and foods you do not want suggested.');
   });
 
   test('guard: source uses the @volyume_seen_* once-ever convention and theme tokens only for the new chip/hint styles', () => {
@@ -634,7 +634,7 @@ describe('MealPlanScreen — dietary needs chip on the primary surface (campaign
     expect(dietaryChipRowBlock).not.toMatch(/#[0-9a-fA-F]{3,8}/);
     expect(dietaryChipRowBlock).not.toMatch(/rgba?\(/);
     // No em dash anywhere in the new hint copy.
-    expect(source).toContain('Tap to set your diet and foods to avoid.');
+    expect(source).toContain('Tap to set your diet, your allergens, and foods you do not want suggested.');
     expect(source).not.toMatch(/Tap to set your diet[^"']*—/);
   });
 });

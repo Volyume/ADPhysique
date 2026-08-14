@@ -725,18 +725,23 @@ export default function MealPlanScreen({ navigation, route }) {
     }
   }, [user?.id, record, plan, day, dayIndex, busy, toast]);
 
-  // "Never show me this" (R1): persist the exclusion to the profile, then
+  // "Don't suggest this" (R1): persist the exclusion to the profile, then
   // swap the food out of the current plan honouring the new exclusion so
   // it cannot return through the alternative either.
+  //
+  // Campaign 17B job 8: the wording is now the same instruction the food row
+  // in Food Search gives, because it IS the same instruction. It also says
+  // what does NOT happen - the food stays in search and in the diary - since
+  // "never show this again" read as though the history would disappear too.
   const handleFlagFood = useCallback((slotKey, foodKey, foodName) => {
     if (!user?.id || !record || !day || busy) return;
     appAlert(
-      'Never show this again?',
-      `${foodName} will be left out of your plans from now on, and swapped out of this one.`,
+      'Stop suggesting this?',
+      `${foodName} will be left out of your plans and suggestions from now on, and swapped out of this one. You can still search for it and log it whenever you like.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Leave it out',
+          text: "Don't suggest it",
           onPress: async () => {
             setBusy(true);
             try {
@@ -758,7 +763,7 @@ export default function MealPlanScreen({ navigation, route }) {
                 await updateMealPlan(user.id, record.id, nextPlan);
                 setRecord({ ...record, plan: nextPlan });
               }
-              toast.show(`${foodName} left out from now on.`, { variant: 'success' });
+              toast.show(`We will not suggest ${foodName} from now on.`, { variant: 'success' });
             } catch (_) {
               toast.show("Couldn't update. Try again.", { variant: 'error' });
             } finally {
@@ -1180,7 +1185,7 @@ export default function MealPlanScreen({ navigation, route }) {
           </View>
           {showDietaryChipHint ? (
             <HintCaption
-              text="Tap to set your diet and foods to avoid."
+              text="Tap to set your diet, your allergens, and foods you do not want suggested."
               onDismiss={dismissDietaryChipHint}
               style={styles.dietaryChipHint}
             />

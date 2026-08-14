@@ -28,7 +28,9 @@ export function kcalForServing(food) {
   return Math.round((food.kcal_100g ?? 0) * servingGrams(food) / 100);
 }
 
-// `preference`: 'fav' | 'dislike' | null. When dislike, the row
+// `preference`: 'fav' | 'dislike' | null. 'dislike' is the user's
+// "don't suggest this" instruction (Campaign 17B job 8: one name for it
+// across Diary, Search and Meal Plan). When set, the row
 // renders muted text + a small cross-circle next to the name to
 // signal "you've said you don't eat this". Tapping still works
 // (the user can deliberately log a disliked food); it only
@@ -59,7 +61,7 @@ export default function FoodRow({
   const pref = preference ?? (isFav ? 'fav' : null);
   const isDislike = pref === 'dislike';
   const a11yPref = pref === 'fav' ? 'Favourited.'
-    : pref === 'dislike' ? 'Excluded from suggestions.'
+    : pref === 'dislike' ? 'Not suggested.'
     : '';
   return (
     <TouchableOpacity

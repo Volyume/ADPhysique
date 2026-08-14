@@ -21,7 +21,7 @@ const DIET_LABELS = {
 
 const DIET_OPTIONS = DIETS.map((value) => ({ value, label: DIET_LABELS[value] || value }));
 
-// A longer avoid list narrows what the meal engine can suggest from; this is
+// A longer do-not-suggest list narrows what the meal engine can suggest from; this is
 // a quiet nudge, not a limit (founder decision 2026-07-09: tier-blind, no
 // cap, never mentions weight or calories).
 const AVOID_LIST_NUDGE_THRESHOLD = 15;
@@ -153,17 +153,17 @@ export default function DietaryPreferencesEditor() {
             <Ionicons name="close-circle-outline" size={18} color={t.colors.primary} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Foods you avoid</Text>
-            <Text style={[settingsStyles.settingSub, live.settingSub]}>Individual foods you have flagged from a meal plan.</Text>
+            <Text style={[settingsStyles.settingLabel, live.settingLabel]}>Foods we will not suggest</Text>
+            <Text style={[settingsStyles.settingSub, live.settingSub]}>Foods you have told us not to suggest. You can still search for them and log them whenever you like.</Text>
           </View>
         </View>
         {excludedFoods.length > AVOID_LIST_NUDGE_THRESHOLD ? (
           <Text style={[styles.caption, liveText.caption]}>
-            A longer avoid list narrows what Volyume can suggest. Keep it to foods you really won't eat.
+            A longer list narrows what Volyume can suggest. Keep it to foods you really won't eat.
           </Text>
         ) : null}
         {excludedFoods.length === 0 ? (
-          <Text style={[styles.emptyRow, liveText.emptyRow]}>Nothing on your avoid list. You can flag a food from any meal plan.</Text>
+          <Text style={[styles.emptyRow, liveText.emptyRow]}>Nothing here yet. You can tell us not to suggest a food from any meal plan.</Text>
         ) : (
           excludedFoods.map((foodKey) => {
             const name = CURATED_FOODS[foodKey]?.name ?? foodKey;
@@ -174,7 +174,7 @@ export default function DietaryPreferencesEditor() {
                   label="Remove"
                   onPress={() => removeFood(foodKey)}
                   accessibilityRole="button"
-                  accessibilityLabel={`Remove ${name} from your avoid list`}
+                  accessibilityLabel={`Suggest ${name} again`}
                   style={styles.removeChip}
                   labelStyle={[styles.removeChipText, liveText.removeChipText]}
                 />

@@ -85,7 +85,7 @@ describe('DietaryPreferencesEditor — single source of truth (same store action
     let tree;
     act(() => { tree = create(<DietaryPreferencesEditor />); });
 
-    const removeBtn = buttons(tree).find((b) => b.props.accessibilityLabel === 'Remove Peanut butter from your avoid list');
+    const removeBtn = buttons(tree).find((b) => b.props.accessibilityLabel === 'Suggest Peanut butter again');
     expect(removeBtn).toBeTruthy();
     act(() => removeBtn.props.onPress());
 
@@ -94,12 +94,12 @@ describe('DietaryPreferencesEditor — single source of truth (same store action
     act(() => { tree.unmount(); });
   });
 
-  test('an empty avoid list renders the calm empty-state copy, not a blank panel', () => {
+  test('an empty do-not-suggest list renders the calm empty-state copy, not a blank panel', () => {
     setStore({ userProfile: { dietPreference: 'omnivore', mealPlanExcludeTags: [], mealPlanExcludeFoods: [] } });
     let tree;
     act(() => { tree = create(<DietaryPreferencesEditor />); });
     const text = JSON.stringify(tree.toJSON());
-    expect(text).toContain('Nothing on your avoid list. You can flag a food from any meal plan.');
+    expect(text).toContain('Nothing here yet. You can tell us not to suggest a food from any meal plan.');
     act(() => { tree.unmount(); });
   });
 });
@@ -119,7 +119,7 @@ describe('DietaryPreferencesEditor — ED-safe soft exclusion nudge (tier-blind,
     let tree;
     act(() => { tree = create(<DietaryPreferencesEditor />); });
     const text = JSON.stringify(tree.toJSON());
-    expect(text).not.toContain('A longer avoid list narrows what Volyume can suggest.');
+    expect(text).not.toContain('A longer list narrows what Volyume can suggest.');
     act(() => { tree.unmount(); });
   });
 
@@ -128,7 +128,7 @@ describe('DietaryPreferencesEditor — ED-safe soft exclusion nudge (tier-blind,
     let tree;
     act(() => { tree = create(<DietaryPreferencesEditor />); });
     const text = JSON.stringify(tree.toJSON());
-    expect(text).toContain("A longer avoid list narrows what Volyume can suggest. Keep it to foods you really won't eat.");
+    expect(text).toContain("A longer list narrows what Volyume can suggest. Keep it to foods you really won't eat.");
     expect(text.toLowerCase()).not.toContain('weight');
     expect(text.toLowerCase()).not.toContain('calorie');
     act(() => { tree.unmount(); });

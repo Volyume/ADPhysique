@@ -186,8 +186,14 @@ export function justThisTimeCount(state, foodKey) {
  */
 export function isFoodExcluded(state, foodKey) {
   if (!state || !foodKey) return false;
-  return state.excludedFoodKeys?.has(foodKey) === true
-    || state.dislikes?.has(foodKey) === true;
+  if (state.excludedFoodKeys?.has(foodKey) === true) return true;
+  // Campaign 17B job 8. Dislikes are stored as food REFS (`curated:oats`,
+  // `off:<barcode>`, `custom:<id>`) because they can be set on any logged
+  // food, while this function is asked about a curated KEY. Checking the raw
+  // key alone silently never matched a curated dislike, so a food the user
+  // had told us not to suggest kept being suggested. Both forms are checked.
+  if (state.dislikes?.has(foodKey) === true) return true;
+  return state.dislikes?.has(`curated:${foodKey}`) === true;
 }
 
 /** The opposite question, for readability at call sites that select. */

@@ -28,6 +28,7 @@ import {
   logFoodEntry,
   getFoodEntriesForDay,
   clearPlannedDay,
+  getDislikes,
 } from './db';
 import { assembleDayPlanBestOf, assembleWeekPlan, targetWasFloored } from './mealPlanAssembler';
 import { swapFoodInMeal, swapMealInPlan, findRoleAlternatives, applyStandingReplacements } from './mealSwap';
@@ -116,6 +117,60 @@ export function preferencesFromProfile(profile) {
     rotationPool: p.mealPlanRotationPool,
     pinnedMealIds: p.mealPlanPinnedMeals,
   });
+}
+
+/**
+ * Fold the user's "don't suggest this" foods into a generation preference set.
+ *
+ * CAMPAIGN 17B JOB 8. Volyume had two ways to say the same thing and only one
+ * of them was obeyed. The avoid list on the profile (set from a meal plan)
+ * reached generation; a food marked "don't suggest" on its own row in Food
+ * Search did not, so the meal plan went on putting it in front of someone who
+ * had already told us twice not to. One instruction, one behaviour.
+ *
+ * The founder's own line on the other half of this: "search/history may still
+ * show the historical food where appropriate, but generated suggestions/plans
+ * must not recommend it. Do not hide history to make the UI look consistent."
+ * So this is applied ONLY where the app is CHOOSING food. Nothing here touches
+ * what search returns, what the diary shows, or what Insights counts.
+ *
+ * Refs are stored as `curated:<key>` / `off:<barcode>` / `custom:<id>`; both
+ * the whole ref and the bare curated key are added, because the exclusion
+ * predicates are asked in both currencies (foodExcluded takes a key,
+ * foodRefExcluded takes a ref).
+ *
+ * Pure.
+ *
+ * @param {object|null} prefs      normalised preferences, or null
+ * @param {Array} dislikeRefs      rows or refs the user marked "don't suggest"
+ */
+export function withDoNotSuggest(prefs, dislikeRefs = []) {
+  if (!prefs) return prefs;
+  const refs = (Array.isArray(dislikeRefs) ? dislikeRefs : [])
+    .map((r) => (typeof r === 'string' ? r : r?.food_ref))
+    .filter((r) => typeof r === 'string' && r.length > 0);
+  if (!refs.length) return prefs;
+  const out = new Set(Array.isArray(prefs.excludeFoodKeys) ? prefs.excludeFoodKeys : []);
+  for (const ref of refs) {
+    out.add(ref);
+    if (ref.startsWith('curated:')) out.add(ref.slice('curated:'.length));
+  }
+  return { ...prefs, excludeFoodKeys: [...out] };
+}
+
+/**
+ * The same thing, read from the database. Best-effort by design: a read
+ * failure yields the profile's exclusions alone, which is the pre-17B
+ * behaviour, rather than refusing to plan. (A FAILED read must never invent an
+ * exclusion either - it cannot, since this only ever adds.)
+ */
+export async function doNotSuggestRefs(userId) {
+  if (!userId) return [];
+  try {
+    return await getDislikes(userId);
+  } catch (_) {
+    return [];
+  }
 }
 
 /**
@@ -276,7 +331,10 @@ export async function generateAndSaveMealPlan(userId, profile, { seed = Date.now
   const engineTarget = storedTargetToEngineTarget(row);
   if (!engineTarget) return { error: 'no_target' };
 
-  const prefs = preferencesFromProfile(profile);
+  // Campaign 17B job 8: one instruction, one behaviour. A food the user
+  // marked "don't suggest" on its own row counts exactly as one flagged
+  // from a meal plan.
+  const prefs = withDoNotSuggest(preferencesFromProfile(profile), await doNotSuggestRefs(userId));
   // Campaign 1 P0-7 D14: no profile means no exclusion data - refusing to
   // plan is the correct failure for an allergen-bearing surface.
   if (!prefs) return { error: 'no_profile' };
@@ -340,7 +398,10 @@ export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now(
   const engineTarget = storedTargetToEngineTarget(row);
   if (!engineTarget) return { error: 'no_target' };
 
-  const prefs = preferencesFromProfile(profile);
+  // Campaign 17B job 8: one instruction, one behaviour. A food the user
+  // marked "don't suggest" on its own row counts exactly as one flagged
+  // from a meal plan.
+  const prefs = withDoNotSuggest(preferencesFromProfile(profile), await doNotSuggestRefs(userId));
   // Campaign 1 P0-7 D14: same refusal as the week generator.
   if (!prefs) return { error: 'no_profile' };
   const day = assembleDayPlanBestOf({
@@ -555,7 +616,10 @@ export async function setMealPinOnActivePlan(userId, profile, { mealId, pinned, 
   if (!active || !Array.isArray(active.plan?.days) || active.plan.days.length === 0) {
     return { error: 'no_plan' };
   }
-  const prefs = preferencesFromProfile(profile);
+  // Campaign 17B job 8: one instruction, one behaviour. A food the user
+  // marked "don't suggest" on its own row counts exactly as one flagged
+  // from a meal plan.
+  const prefs = withDoNotSuggest(preferencesFromProfile(profile), await doNotSuggestRefs(userId));
   if (!prefs) return { error: 'no_profile' };
 
   const onPlan = active.plan.days.some((d) => (d?.slots ?? []).some((sl) => sl.mealId === mealId));
@@ -663,7 +727,10 @@ export async function reviewTargetChangeAgainstActivePlan(userId, newTarget, pro
   if (!active || !Array.isArray(active.plan?.days) || active.plan.days.length === 0) {
     return { error: 'no_plan' };
   }
-  const prefs = preferencesFromProfile(profile);
+  // Campaign 17B job 8: one instruction, one behaviour. A food the user
+  // marked "don't suggest" on its own row counts exactly as one flagged
+  // from a meal plan.
+  const prefs = withDoNotSuggest(preferencesFromProfile(profile), await doNotSuggestRefs(userId));
   if (!prefs) return { error: 'no_profile' };
 
   const decision = decideContinuity({ plan: active.plan, newTarget, prefs });

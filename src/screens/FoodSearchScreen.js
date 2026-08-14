@@ -11,7 +11,7 @@
  * tab shows its own list. Suggested lists curated meals, not food rows.
  *
  * Tap a row -> ServingPicker sheet -> "Add to diary". Long-press a row
- * to cycle its preference (favourite / dislike). Custom-food creation
+ * to cycle its preference (favourite / "don't suggest"). Custom-food creation
  * lives on the Custom tab and as a fallback under the search results.
  *
  * Voice rules from COACHING_VOICE_SYNTHESIS_LOCKED.md.
@@ -40,6 +40,9 @@ import {
 import { getNutritionTargets } from '../lib/database';
 import { getCuratedCandidates } from '../lib/food/curatedMeals';
 import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
+// Campaign 17B job 8: one "don't suggest" instruction, obeyed everywhere the
+// app chooses food for the user.
+import { withDoNotSuggest } from '../lib/food/mealPlanService';
 import { refreshFrequentsIfStale } from '../lib/food/frequents';
 import {
   SEARCH_TABS, selectTabRows, rankByPersonalHistory, mergePersonalMatches,
@@ -330,11 +333,22 @@ export default function FoodSearchScreen({ navigation, route }) {
       // Dietary-needs build 2026-07-09: suggestions share the plan layer's
       // hard exclusions (avoid list + allergens). The user's own saved
       // foods/meals are deliberately not filtered: their history is theirs.
+      //
+      // Campaign 17B job 8: and a food marked "don't suggest" on its own row
+      // counts here too. The curated meals were filtered by the profile's
+      // avoid list only, so a curated meal could reintroduce the very food
+      // the user had just told us not to suggest. Search RESULTS and history
+      // are untouched - this is the choosing path, not the looking path.
       const candidates = getCuratedCandidates({
         diet,
         slot: mealSlot,
-        excludeFoodKeys: userProfile?.mealPlanExcludeFoods,
-        excludeTags: userProfile?.mealPlanExcludeTags,
+        ...withDoNotSuggest(
+          {
+            excludeFoodKeys: userProfile?.mealPlanExcludeFoods,
+            excludeTags: userProfile?.mealPlanExcludeTags,
+          },
+          [...dislikeRefs],
+        ),
       });
       const { suggestions: ranked, remaining, perMeal } = rankSuggestions({
         targets, consumed, savedMeals: candidates, foods: suggestFoodCandidates, slot: mealSlot, mealsLeft, limit: 12,
@@ -347,7 +361,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     } finally {
       setSuggestLoading(false);
     }
-  }, [userId, userProfile, entryDate, mealSlot, suggestFoodCandidates]);
+  }, [userId, userProfile, entryDate, mealSlot, suggestFoodCandidates, dislikeRefs]);
 
   useFocusEffect(useCallback(() => { loadBrowse(); }, [loadBrowse]));
   useEffect(() => { if (activeTab === 'frequents') loadFrequents(); }, [activeTab, loadFrequents]);
@@ -729,8 +743,10 @@ export default function FoodSearchScreen({ navigation, route }) {
       });
       // The long-press preference cycle is otherwise invisible; confirm
       // the new state so the gesture has feedback.
+      // Campaign 17B job 8: the same words the meal plan uses for the same
+      // instruction, and the reassurance that the food itself is still here.
       const msg = next === 'fav' ? 'Added to favourites'
-        : next === 'dislike' ? 'Hidden from suggestions'
+        : next === 'dislike' ? 'We will not suggest this. It stays in your search and diary.'
         : 'Preference cleared';
       toast.show(msg);
       loadBrowse();

@@ -40,7 +40,10 @@ import { getCuratedCandidates } from '../lib/food/curatedMeals';
 import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
 import { safeDayFloorKcal, displayBankedDelta } from '../lib/food/calorieBank';
 import { resolveEffectiveTargets, dayTypeLabel } from '../lib/food/effectiveTargets';
-import { resyncBankedPlannedFood, restoreUnbankedPlannedFood } from '../lib/food/mealPlanService';
+import {
+  resyncBankedPlannedFood, restoreUnbankedPlannedFood,
+  withDoNotSuggest, doNotSuggestRefs,
+} from '../lib/food/mealPlanService';
 // Campaign 17B job 6: the bank receipt, in the user's words and real numbers.
 import { bankHeadline, bankPlanLine } from '../lib/food/calorieBank';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
@@ -727,9 +730,12 @@ export default function DiaryScreen({ navigation, route }) {
     let active = true;
     (async () => {
       try {
-        const [targetsRow, rollup] = await Promise.all([
+        const [targetsRow, rollup, dontSuggest] = await Promise.all([
           getNutritionTargets(userId),
           getRollupForDay(userId, selectedDate),
+          // Campaign 17B job 8: a food the user marked "don't suggest" on its
+          // own row must not come back through a curated peri-workout meal.
+          doNotSuggestRefs(userId),
         ]);
         if (!targetsRow) { if (active) setSlotMealSuggestion({}); return; }
         const targets = {
@@ -746,8 +752,10 @@ export default function DiaryScreen({ navigation, route }) {
           const candidates = getCuratedCandidates({
             diet: dietPreference,
             slot: slot.key,
-            excludeFoodKeys: mealPlanExcludeFoods,
-            excludeTags: mealPlanExcludeTags,
+            ...withDoNotSuggest(
+              { excludeFoodKeys: mealPlanExcludeFoods, excludeTags: mealPlanExcludeTags },
+              dontSuggest,
+            ),
           });
           const { suggestions } = rankSuggestions({
             targets, consumed, savedMeals: candidates, foods: [], slot: slot.key, mealsLeft, limit: 1,
