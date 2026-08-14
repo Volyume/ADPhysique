@@ -1917,3 +1917,47 @@ statement of intent at that moment, not a verification - it must not be read
 as evidence of the current production state, and no session should turn a
 missing connector into a claim of non-application. Verify with the connector
 before acting. `049` stays HELD; never apply it.
+
+## CAMPAIGN 18 (2026-08-14) — whole-athlete coaching intelligence. PART-LANDED on main.
+
+Branch `claude/codebase-audit-docs-pv6mjd`, rebased onto `7a618d70` and merged
+to main at `c05d7e86`. Commits, oldest first:
+
+- `1d7199ed` coachContext + coachPrecedence: one shared reading of the evidence
+- `26809d4b` the two "do not judge a plan that was not run" gates
+- `e61c834b` coachStory: the week as one account, on CoachOutputScreen
+- `c05d7e86` seven longitudinal athletes A-G
+
+**LIVE with production consumers:** jobs 1, 2, 3, 4, 5, 8, 10, 11, 12, 14, 16,
+17, 18. New modules `src/lib/coachContext.js`, `src/lib/coachPrecedence.js`,
+`src/lib/coachStory.js`. Consumers: `weeklyCoach.runWeeklyCoach` (all five
+return paths carry `context` + `limiters`), `blockAdvisor.buildProgrammeReview`,
+`programmeEpoch.slotVerdict`, `blockReview.proposeNextBlock`,
+`CoachOutputScreen` (renders the story).
+
+**NOT DONE — carry into the next Campaign 18 session, in this order:**
+1. Job 6 recovery-consumer trace (interBlock, blockLedgerGather, blockSeed vs
+   the weekly card) - scope LANGUAGE is delivered, the consumer trace is not.
+2. Job 7 broader weight-evidence audit. The four roles are documented in
+   `coachContext.js`; the product-wide trace for conflicting "latest weight"
+   definitions has NOT been run.
+3. Job 9 release/tombstone trace for explicit user choices.
+4. Job 13 meal builder <-> nutrition target chain.
+5. Job 15 planned != eaten re-verification across domains.
+6. Job 19 notification/attention policy.
+7. Job 20 systematic adversarial pass over every new user-facing claim.
+8. Elite-coach scorecard (founder addendum 2026-08-14) - 18 dimensions.
+9. Outcome follow-up (elite-coach bar item 11): previous coaching decisions
+   becoming evidence for future ones. NOT BUILT. `coachOutcome.js` and
+   `coachLedger.js` exist and were not assessed this session.
+
+**Test-only by design (audited, none product-critical):** `contextFacts`,
+`conflictOutcome`, `storyLines`, `volumeIsUserManaged`. Their underlying
+behaviour is live via `buildCoachContext` / `classifyLimiters` /
+`chooseInterventions`; these four are inspection helpers. No Campaign 18
+symbol is DEAD or COMPUTED-BUT-DISCARDED.
+
+**Known unrelated flake:** `src/lib/widgets/__tests__/storage.test.js`
+("never touches the iOS bridge on Android") fails roughly one full-suite run
+in three under parallel load and passes 6/6 in isolation. Reproduced on the
+pre-Campaign-18 tree; not caused by this work. Not fixed - out of scope.
