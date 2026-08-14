@@ -40,7 +40,7 @@ describe('DiaryScreen EP-07/UI-02 load try/catch/finally wiring', () => {
   test('load() wraps its body in try/catch/finally', () => {
     const start = SRC.indexOf('const load = useCallback(async () => {');
     expect(start).toBeGreaterThan(-1);
-    const end = SRC.indexOf('}, [userId, selectedDate, macroCycle, refeed, sex, readOnly]);', start);
+    const end = SRC.indexOf('}, [userId, selectedDate, sex, readOnly]);', start);
     expect(end).toBeGreaterThan(start);
     const body = SRC.slice(start, end);
     expect(body).toMatch(/if \(!userId\) return;\s*\n\s*const loadToken = loadGuardRef\.current\.next\(\);\s*\n[\s\S]*?\n\s*try \{/);

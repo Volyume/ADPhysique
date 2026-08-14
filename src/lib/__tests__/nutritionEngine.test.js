@@ -515,41 +515,35 @@ describe('getPlanNutritionContext', () => {
     expect(result.volumeCeiling).toBe('low');
   });
 
-  test('refeedRecommendation is set for aggressive_cut', () => {
-    const result = getPlanNutritionContext({
-      ...baseTargets,
-      targetKcal: 1800,
-      maintenanceKcal: 2500,
-      goal: 'aggressive_cut',
+  // ONE DAILY TRUTH (Campaign 17A, founder law): `refeedRecommendation` is
+  // gone from getPlanNutritionContext. Nothing ever read it, and a scheduled
+  // higher day is now forbidden outright - the athlete's only per-day movement
+  // is their own calorie bank. Pinned as an absence.
+  test('ONE DAILY TRUTH: no refeed recommendation is returned, on any goal', () => {
+    const cut = getPlanNutritionContext({
+      ...baseTargets, targetKcal: 1800, maintenanceKcal: 2500, goal: 'aggressive_cut',
     });
-    expect(result.refeedRecommendation).not.toBeNull();
-    expect(result.refeedRecommendation.type).toBe('refeed');
-  });
-
-  test('refeedRecommendation is null for lean_gain phase', () => {
-    const result = getPlanNutritionContext(baseTargets);
-    expect(result.refeedRecommendation).toBeNull();
+    expect(cut.refeedRecommendation).toBeUndefined();
+    expect('refeedRecommendation' in cut).toBe(false);
+    expect(getPlanNutritionContext(baseTargets).refeedRecommendation).toBeUndefined();
   });
 
   test('proteinG is capped at PROTEIN_MAX_GKGBW × bodyweightKg when body fat is unknown', () => {
-    // The capped protein is not returned directly, but an aggressive_cut refeed
-    // derives its carbs from it (refeedCarbsKcal = maintenance - proteinG*4 -
-    // fatG*9), so the cap IS observable via refeedRecommendation.refeedCarbsG.
-    // Cap = 2.2 × 80 = 176 g. We prove the clamp behaviourally, not by shape.
+    // Cap = 2.2 × 80 = 176 g. The cap used to be observable only through an
+    // aggressive_cut refeed's carb figure; the refeed is gone under the
+    // one-daily-truth law (Campaign 17A), so the capped protein is now
+    // returned directly and asserted directly.
     const opts = { bodyweightKg: 80, bodyFatPercent: null };
     const atCap    = { targetKcal: 2000, maintenanceKcal: 2300, goal: 'aggressive_cut', proteinG: 176, fatG: 70 };
     const overCap  = { ...atCap, proteinG: 240 }; // 240 > 176 → must clamp to 176
     const underCap = { ...atCap, proteinG: 150 }; // below cap → left as-is
 
-    const atCapCarbs    = getPlanNutritionContext(atCap, opts).refeedRecommendation.refeedCarbsG;
-    const overCapCarbs  = getPlanNutritionContext(overCap, opts).refeedRecommendation.refeedCarbsG;
-    const underCapCarbs = getPlanNutritionContext(underCap, opts).refeedRecommendation.refeedCarbsG;
-
-    // 240 g clamps to the 176 g cap → identical refeed carbs to the at-cap case.
-    expect(overCapCarbs).toBe(atCapCarbs);
-    // 150 g is below the cap → not clamped → different refeed carbs. (Guards
-    // against the assertion passing vacuously if the cap were removed.)
-    expect(underCapCarbs).not.toBe(atCapCarbs);
+    expect(getPlanNutritionContext(atCap, opts).proteinG).toBe(176);
+    // 240 g clamps to the 176 g cap.
+    expect(getPlanNutritionContext(overCap, opts).proteinG).toBe(176);
+    // 150 g is below the cap, so it is left as-is. (Guards against the
+    // assertion passing vacuously if the cap were removed.)
+    expect(getPlanNutritionContext(underCap, opts).proteinG).toBe(150);
   });
 
   test('returns deloadFrequencyWeeks as a positive integer', () => {

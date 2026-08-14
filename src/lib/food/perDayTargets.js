@@ -1,36 +1,32 @@
 /**
- * food/perDayTargets.js — per-day-of-week calorie planning offsets (gap #13).
+ * food/perDayTargets.js — STORAGE ONLY. Retired as a product feature.
  *
- * A PLANNING layer, not a coaching one. A user who eats more at weekends (or
- * trims midweek) can set a kcal offset per weekday; the diary then shows that
- * day's target shifted by the offset. It is display-only and additive:
+ * ONE DAILY TRUTH (Campaign 17A, founder law): "VOLYUME HAS THE SAME BASE
+ * CALORIE AND MACRO TARGET EVERY DAY... The user's training days are not fixed
+ * calendar days. They train whenever life allows. Nutrition must not depend on
+ * knowing which weekday they train."
  *
- *   - The engine's stored nutrition target is NEVER written or changed. The
- *     coach's 7-day rolling average, the rapid-loss gate and the ED-pattern
- *     detector all keep seeing the real stored target — this layer only changes
- *     the number the diary DISPLAYS for the day (resolveEffectiveTargets).
- *   - Every offset is HARD-clamped so a day can never display below the safe
- *     floor (max sex floor 1500/1200, FFM floor). The clamp lives in
- *     resolveEffectiveTargets where the floor is known; this module is the pure
- *     store + weekday maths.
- *   - It applies ONLY on an otherwise-plain day. A refeed, carb cycle or banked
- *     day takes precedence, so the planning offset never fights a coaching-driven
- *     adjustment (effectiveTargets precedence).
+ * This module used to back a Pro control (the deleted PerDayTargetsScreen)
+ * where an athlete set a kcal offset per weekday, which the diary then applied
+ * to that day's displayed target. Both the screen and the application are
+ * gone: nothing in the app reads these offsets into a target any more, and
+ * there is no hidden setting left that could move one.
  *
- * Offsets are kcal deltas (… −200, 0, +300 …), so they auto-track changes to the
- * base target instead of going stale like an absolute goal would. Stored device-
- * local in AsyncStorage, like the meals-per-day and meal-reminder prefs.
+ * WHY THE MODULE SURVIVES. Deleting it would destroy numbers real users
+ * entered, locally and in the `perday_target_offsets` cloud table. The founder
+ * order is to stop APPLYING retired per-day state, not to delete it
+ * ("preserve data only where deletion would be destructive"). So the store and
+ * its sync handler stay, the rows keep round-tripping untouched, and nothing
+ * consumes them. If per-day planning ever returns as a deliberate product
+ * decision, the athlete's own numbers are still there.
  *
- * Sync (design-usability audit 2026-07-09, L05-PDT1): the offsets were
- * device-local only and lost on reinstall/device change, below the
- * portability bar CLAUDE.md sets for a Pro feature. `loadPerDayOffsetsForSync`
- * / `applyPerDayOffsetsFromCloud` back the new `perday_target_offsets` cloud
- * table (src/lib/sync/tables/perDayTargetOffsets.js, registry entry, cloud
- * migration 110 — founder-run, not yet applied). A second AsyncStorage key
- * tracks when the offsets were last WRITTEN LOCALLY (ms epoch) so the sync
- * handler has a last-write-wins clock without changing the existing
- * `loadPerDayOffsets`/`savePerDayOffsets` contract every screen already uses.
- * Nothing here feeds the engine or a floor; see the module header above.
+ * Offsets are kcal deltas (… −200, 0, +300 …) keyed Monday-first, stored
+ * device-local in AsyncStorage with a separate last-write-wins clock
+ * (ms epoch) that backs the cloud table in
+ * src/lib/sync/tables/perDayTargetOffsets.js.
+ *
+ * The one day an athlete CAN still move is a banked day - and only because
+ * they banked it themselves (src/lib/food/calorieBank.js).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 

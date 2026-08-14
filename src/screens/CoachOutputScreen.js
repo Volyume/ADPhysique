@@ -70,15 +70,13 @@ import { track as trackEngineEvent } from '../lib/engineTelemetry';
 // screen, so the render was dead. It now lives in HomeScreen's banner stack.
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
-import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, deloadShare, computeDietBreakTargets, computeMacroCycle, computeRefeedDay, markApplied, isApplied } from '../lib/coachApply';
+import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, deloadShare, computeDietBreakTargets, markApplied, isApplied } from '../lib/coachApply';
 // A1 (NU-3/4/6): pure display classifiers + row strings for honest Apply rows.
 // They only CALL coachApply's real policy functions; nothing is recomputed.
 import {
   classifyCalorieApply,
-  classifyMacroCycleApply,
   floorHoldLine,
   floorClampLine,
-  macroCycleHoldLine,
   preTapTargetLine,
   signedEnergyChange,
 } from '../lib/coachApplyView';
@@ -101,8 +99,8 @@ import BackHeader from '../components/BackHeader';
 import EmptyState from '../components/EmptyState';
 // L04-11: the jargon-translation layer (InfoTooltip + the single static,
 // founder-signed-off glossary) already ships on 26 other files; this screen
-// carries the coach's own vocabulary (deload, refeed, macro cycle, training
-// volume, the smoothed weight trend) and had none of it wired in.
+// carries the coach's own vocabulary (deload, training volume, the smoothed
+// weight trend) and had none of it wired in.
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 // M4 (audit 03b §3.3b): the Apply rows ride the Button primitive's
@@ -518,130 +516,12 @@ function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, on
   );
 }
 
-// High-day / low-day carb cycle as a confirm-then-apply card (GAP row
-// 6). Shows the training-day and rest-day targets side by side; one
-// Apply sets the whole split. Only rendered for advanced cuts and
-// physique competitors (the coach gates it). Applying writes the split
-// to userProfile.macroCycle, which the Diary reads to show the right
-// target for the day.
-function MacroCycleCard({ macroCycle, applied, onApply, applyState, onApplySettled, energyUnit, holdNote, holdArrived }) {
-  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
-  // See buildLiveStyles' header comment (defined below the frozen `styles`
-  // block) for why.
-  const t = useTheme();
-  const live = buildLiveStyles(t);
-  const { trainingDay, restDay } = macroCycle;
-  const unitLabel = energyUnitLabel(energyUnit);
-  const settling = applyState === 'success';
-  return (
-    <Card style={styles.card}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-        <SectionHeader title="Carbs by day" tooltip={GLOSSARY.macroCycle} />
-        {applied && !settling && (
-          <View style={[styles.appliedChip, live.appliedChip, { marginBottom: spacing.xs }]}>
-            <Ionicons name="checkmark" size={10} color={t.colors.success} />
-            <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.macroCycleRow}>
-        <View style={[styles.macroCycleCol, live.macroCycleCol]}>
-          <Text style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Training days</Text>
-          <Text style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(trainingDay.kcal, energyUnit)} {unitLabel}</Text>
-          <Text style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{trainingDay.carbsG}g carbs</Text>
-        </View>
-        <View style={[styles.macroCycleCol, live.macroCycleCol]}>
-          <Text style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Rest days</Text>
-          <Text style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(restDay.kcal, energyUnit)} {unitLabel}</Text>
-          <Text style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{restDay.carbsG}g carbs</Text>
-        </View>
-      </View>
-      <Text style={[styles.adjustmentNote, live.adjustmentNote]}>{macroCycle.note}</Text>
-      {!applied && holdNote ? (
-        <HoldEnter live={holdArrived}>
-          <Text style={[styles.adjustmentHold, live.adjustmentHold]}>{holdNote}</Text>
-        </HoldEnter>
-      ) : null}
-      {((!applied && onApply && !holdNote) || settling) && (
-        <ApplyExit style={styles.applySlotStart}>
-          <Button
-            title="Use this split"
-            variant="outline"
-            size="sm"
-            fullWidth={false}
-            state={applyState}
-            onSettled={onApplySettled}
-            onPress={onApply}
-            style={styles.applyPill}
-            accessibilityLabel="Use this training-day and rest-day carb split"
-          />
-        </ApplyExit>
-      )}
-    </Card>
-  );
-}
-
-// Refeed day as a confirm-then-apply card (GAP row 7). Shows the
-// single-day maintenance target (carbs lifted, protein + fat held) with
-// one Apply. Only rendered for aggressive cuts and physique competitors
-// on the coach's cadence. Applying schedules it onto the next training
-// day via userProfile.refeed, which the Diary reads.
-function RefeedCard({ refeed, applied, onApply, applyState, onApplySettled, energyUnit, holdNote }) {
-  // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
-  // See buildLiveStyles' header comment (defined below the frozen `styles`
-  // block) for why.
-  const t = useTheme();
-  const live = buildLiveStyles(t);
-  const settling = applyState === 'success';
-  return (
-    <Card style={styles.card}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexWrap: 'wrap' }}>
-        <SectionHeader title="Refeed day" tooltip={GLOSSARY.refeed} />
-        {applied && !settling && (
-          <View style={[styles.appliedChip, live.appliedChip, { marginBottom: spacing.xs }]}>
-            <Ionicons name="checkmark" size={10} color={t.colors.success} />
-            <Text style={[styles.appliedChipText, live.appliedChipText]}>Applied</Text>
-          </View>
-        )}
-      </View>
-      <View style={styles.macroCycleRow}>
-        <View style={[styles.macroCycleCol, live.macroCycleCol]}>
-          <Text style={[styles.macroCycleColLabel, live.macroCycleColLabel]}>Refeed target</Text>
-          <Text style={[styles.macroCycleColKcal, live.macroCycleColKcal]}>{formatEnergy(refeed.kcal, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
-          <Text style={[styles.macroCycleColCarbs, live.macroCycleColCarbs]}>{refeed.carbsG}g carbs</Text>
-        </View>
-      </View>
-      <Text style={[styles.adjustmentNote, live.adjustmentNote]}>{refeed.note}</Text>
-      {/* NU-4: this write is genuinely one day (the Diary resolves it onto the
-          single next training day), so the duration says exactly that. Gated
-          on the absence of the failure notice (holdNote) so "Applies to your
-          next training day only." never stacks under "nothing was applied". */}
-      {!applied && !holdNote ? (
-        <Text style={[styles.adjustmentDetail, live.adjustmentDetail]}>Applies to your next training day only.</Text>
-      ) : null}
-      {!applied && holdNote ? (
-        <HoldEnter live>
-          <Text style={[styles.adjustmentHold, live.adjustmentHold]}>{holdNote}</Text>
-        </HoldEnter>
-      ) : null}
-      {((!applied && onApply && !holdNote) || settling) && (
-        <ApplyExit style={styles.applySlotStart}>
-          <Button
-            title="Schedule refeed"
-            variant="outline"
-            size="sm"
-            fullWidth={false}
-            state={applyState}
-            onSettled={onApplySettled}
-            onPress={onApply}
-            style={styles.applyPill}
-            accessibilityLabel="Schedule a refeed on the next training day"
-          />
-        </ApplyExit>
-      )}
-    </Card>
-  );
-}
+// ONE DAILY TRUTH (Campaign 17A, founder law). `MacroCycleCard` (the
+// training-day / rest-day carb split) and `RefeedCard` (a single day raised
+// to maintenance) used to be rendered here as confirm-then-apply cards. Both
+// are gone, along with the coach output that fed them: a Volyume athlete
+// trains whenever life allows, so a target that depends on knowing which
+// calendar day they train is a guess. There is ONE base daily target.
 
 function HeldDecisionsCard({ decisions, history, onSeeAll, onLearnMore, energyUnit }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
@@ -992,19 +872,16 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [redirectWeekStart, setRedirectWeekStart] = useState(null);
   const weekStart = redirectWeekStart ?? route.params?.weekStart ?? localWeekStartMs();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, userProfile, units, bodyWeightUnits, saveLocalProfile, tier: storeTier, energyUnit, reduceMotion } = useAppStore(useShallow(s => ({
+  const { user, userProfile, units, bodyWeightUnits, tier: storeTier, energyUnit, reduceMotion } = useAppStore(useShallow(s => ({
     user: s.user,
     userProfile: s.userProfile,
     units: s.units,
     bodyWeightUnits: s.bodyWeightUnits,
-    saveLocalProfile: s.saveLocalProfile,
     tier: s.tier,
     // NU-6: kJ display preference, same read as the food domain screens.
     energyUnit: s.accessibility?.energyUnit ?? 'kcal',
     reduceMotion: !!s.accessibility?.reduceMotion,
   })));
-  const latestProfile = () => useAppStore.getState().userProfile || userProfile || {};
-
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
   // block) for why. Memoised on `t` (this screen is large and re-renders
@@ -1392,99 +1269,6 @@ export default function CoachOutputScreen({ navigation, route }) {
     }
   }
 
-  // Confirm-then-apply for the high-day / low-day macro cycle (GAP row
-  // 6). Applying stores the split on userProfile.macroCycle, a
-  // local-profile field. The Diary
-  // reads it and shows the training-day or rest-day target for the day
-  // being viewed. Re-reads current targets at tap time and recomputes
-  // so the persisted split never scales from a stale snapshot.
-  async function handleApplyMacroCycle() {
-    if (applyingRef.current || applyingKey || !user?.id || !output) return;
-    if (isApplied(output, 'macroCycle')) return;
-    const trainingDays = output.macroCycle?.trainingDaysPerWeek;
-    if (!trainingDays) return;
-    applyingRef.current = true;
-    setApplyingKey('macroCycle');
-    try {
-      const current = await getNutritionTargets(user.id);
-      // F3 (EN-2): sex drives the per-day floor inside computeMacroCycle, the
-      // same read the calorie Apply uses (body profile first, profile fallback).
-      const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
-      const sex = bodyProfile?.sex ?? latestProfile()?.sex ?? null;
-      const split = computeMacroCycle(current, trainingDays, { sex });
-      if (!split) {
-        // NU-3: name the floor when the floor is what refused the split.
-        const check = classifyMacroCycleApply(current, trainingDays, sex);
-        setApplyNotice(n => ({
-          ...n,
-          macroCycle: check.kind === 'floor_hold'
-            ? macroCycleHoldLine(check.floorKcal, energyUnit)
-            : 'This split no longer fits your current targets.',
-        }));
-        return;
-      }
-      await saveLocalProfile(user.id, {
-        ...latestProfile(),
-        macroCycle: { ...split, appliedAt: Date.now() },
-      });
-      const updated = markApplied(output, 'macroCycle', {
-        trainingDayCarbs: split.trainingDay.carbsG,
-        restDayCarbs: split.restDay.carbsG,
-      });
-      await saveCoachOutput(user.id, { weekStart, ...updated });
-      setOutput(updated);
-      setApplySettling(s => ({ ...s, macroCycle: true }));
-    } catch (e) {
-      logError('CoachOutputScreen.handleApplyMacroCycle', e, { userId: user?.id });
-    } finally {
-      setApplyingKey(null);
-      applyingRef.current = false;
-    }
-  }
-
-  // Confirm-then-apply for a refeed day (GAP row 7). Applying records
-  // the refeed target on userProfile.refeed with the confirm timestamp;
-  // the Diary resolves it onto the next training day on or after that
-  // timestamp and shows the maintenance / high-carb target there. Same
-  // local-profile destination pattern as the macro cycle. Re-reads
-  // current targets at tap time so the refeed never scales from a stale
-  // snapshot.
-  async function handleApplyRefeed() {
-    if (applyingRef.current || applyingKey || !user?.id || !output) return;
-    if (isApplied(output, 'refeed')) return;
-    applyingRef.current = true;
-    setApplyingKey('refeed');
-    try {
-      const current = await getNutritionTargets(user.id);
-      const target = computeRefeedDay(current);
-      if (!target) {
-        // NU-3: a refeed null means no deficit to refeed up to. Never silent.
-        setApplyNotice(n => ({
-          ...n,
-          refeed: 'Nothing to schedule. Your target already sits at or above maintenance.',
-        }));
-        return;
-      }
-      await saveLocalProfile(user.id, {
-        ...latestProfile(),
-        refeed: {
-          ...target,
-          frequencyWeeks: output.refeed?.frequencyWeeks ?? null,
-          appliedAt: Date.now(),
-        },
-      });
-      const updated = markApplied(output, 'refeed', { kcal: target.kcal, carbsG: target.carbsG });
-      await saveCoachOutput(user.id, { weekStart, ...updated });
-      setOutput(updated);
-      setApplySettling(s => ({ ...s, refeed: true }));
-    } catch (e) {
-      logError('CoachOutputScreen.handleApplyRefeed', e, { userId: user?.id });
-    } finally {
-      setApplyingKey(null);
-      applyingRef.current = false;
-    }
-  }
-
   useEffect(() => {
     async function load() {
       const checkin = await getLatestCheckin(user.id, weekStart);
@@ -1861,7 +1645,6 @@ export default function CoachOutputScreen({ navigation, route }) {
         currentCarbsG: nutrition?.carbsG ?? null,
         currentFatG: nutrition?.fatG ?? null,
         currentMaintenanceKcal: nutrition?.tdee ?? null,
-        lastRefeedAt: userProfile?.refeed?.appliedAt ?? null,
         currentStepsTarget: 0,
         stepsEnabled: false,
         bodyweightKg: userProfile?.weightKg ?? null,
@@ -2244,13 +2027,6 @@ export default function CoachOutputScreen({ navigation, route }) {
       handleApplyDietBreak();
       return;
     }
-    if (output.macroCycle && !isApplied(output, 'macroCycle')) {
-      handleApplyMacroCycle();
-      return;
-    }
-    if (output.refeed && !isApplied(output, 'refeed')) {
-      handleApplyRefeed();
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coachAutonomy, output, applyingKey, nextTrainingWeekId, user?.id]);
 
@@ -2310,8 +2086,6 @@ export default function CoachOutputScreen({ navigation, route }) {
     deloadNote,
     dietBreakSuggested,
     dietBreakWeeksInDeficit,
-    macroCycle,
-    refeed,
     heldDecisions,
     rapidWeightLossFlag,
     confidence,
@@ -2460,11 +2234,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // applyable decision (output.primary); the rest collapse under "More
   // adjustments"; the safety blocks (rapid-loss, diet-break-as-safety, held)
   // are rendered in an always-visible group below and are NEVER collapsed.
-  const zones = selectCoachOutputZones(output, {
-    dietBreakSuggested,
-    hasMacro: !!macroCycle,
-    hasRefeed: !!refeed,
-  });
+  const zones = selectCoachOutputZones(output, { dietBreakSuggested });
 
   // A1 (NU-3/NU-4): pre-tap classification of each nutrition apply against
   // the CURRENT targets, so a row the floor would hold explains itself
@@ -2477,10 +2247,6 @@ export default function CoachOutputScreen({ navigation, route }) {
   const dietBreakPreviewKcal = dietBreakSuggested && !isApplied(output, 'dietBreak') && currentTargets
     ? (computeDietBreakTargets(currentTargets, profileSex)?.newKcal ?? null)
     : null;
-  const macroCyclePreview = macroCycle && !isApplied(output, 'macroCycle')
-    ? classifyMacroCycleApply(currentTargets, macroCycle.trainingDaysPerWeek, profileSex)
-    : null;
-
   const trainingCardEl = (
     <TrainingNextWeekCard
       output={output}
@@ -2522,33 +2288,6 @@ export default function CoachOutputScreen({ navigation, route }) {
       heroRow="calories"
     />
   );
-  const macroCardEl = macroCycle ? (
-    <MacroCycleCard
-      macroCycle={macroCycle}
-      applied={isApplied(output, 'macroCycle') || !!userProfile?.macroCycle}
-      onApply={applyDisabled ? undefined : handleApplyMacroCycle}
-      applyState={applyStateFor('macroCycle')}
-      onApplySettled={() => onApplySettled('macroCycle')}
-      energyUnit={energyUnit}
-      holdNote={
-        macroCyclePreview?.kind === 'floor_hold'
-          ? macroCycleHoldLine(macroCyclePreview.floorKcal, energyUnit)
-          : (applyNotice.macroCycle ?? null)
-      }
-      holdArrived={!!applyNotice.macroCycle}
-    />
-  ) : null;
-  const refeedCardEl = refeed ? (
-    <RefeedCard
-      refeed={refeed}
-      applied={isApplied(output, 'refeed')}
-      onApply={applyDisabled ? undefined : handleApplyRefeed}
-      applyState={applyStateFor('refeed')}
-      onApplySettled={() => onApplySettled('refeed')}
-      energyUnit={energyUnit}
-      holdNote={applyNotice.refeed ?? null}
-    />
-  ) : null;
   const dietBreakCardEl = dietBreakSuggested ? (
     <DietBreakCard
       weeksInDeficit={dietBreakWeeksInDeficit}
@@ -2566,8 +2305,6 @@ export default function CoachOutputScreen({ navigation, route }) {
   const CARD_BY_KIND = {
     training: trainingCardEl,
     nutrition: nutritionCardEl,
-    macro: macroCardEl,
-    refeed: refeedCardEl,
   };
   const heroCardEl = zones.heroKind === 'dietBreak'
     ? dietBreakCardEl
@@ -2882,9 +2619,6 @@ export default function CoachOutputScreen({ navigation, route }) {
             <Text style={[styles.coachNoteText, live.coachNoteText]}>{cyclePhaseNote.note}</Text>
           </View>
         ) : null}
-
-        {/* (Carb-cycle + refeed cards moved into the "More adjustments"
-            secondary zone above, U-B-1 §3.) */}
 
         {/* 6. Why */}
         {whyThisWeek ? <WhyBlock text={whyThisWeek} onLearnMore={() => navigation.navigate('Methodology', { source: 'why_block' })} /> : null}
@@ -3353,35 +3087,6 @@ const styles = StyleSheet.create({
   applySlot: { alignSelf: 'center' },
   applySlotStart: { alignSelf: 'flex-start', marginTop: spacing.md },
 
-  // Carb cycle (row 6): training-day vs rest-day targets side by side
-  macroCycleRow: {
-    flexDirection: 'row',
-    gap: spacing.md,
-  },
-  macroCycleCol: {
-    flex: 1,
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    gap: spacing.xxs,
-  },
-  macroCycleColLabel: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
-    color: colors.textMuted,
-  },
-  macroCycleColKcal: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.textPrimary,
-    fontVariant: ['tabular-nums'],
-  },
-  macroCycleColCarbs: {
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
-    color: colors.textSecondary,
-  },
-
   // Why this week
   planNote: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs,
@@ -3625,8 +3330,8 @@ const styles = StyleSheet.create({
 
 // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): the shared
 // "frozen base + live override" map for this screen's many function-component
-// scopes (AdjustmentRow, TrainingNextWeekCard, DietBreakCard, MacroCycleCard,
-// RefeedCard, HeldDecisionsCard, EdPatternLockoutBlock, EdPatternClearedBlock,
+// scopes (AdjustmentRow, TrainingNextWeekCard, DietBreakCard,
+// HeldDecisionsCard, EdPatternLockoutBlock, EdPatternClearedBlock,
 // RapidLossCorrectedBlock, InsufficientDataView, LoadErrorView, and the
 // default-exported CoachOutputScreen) -- each calls
 // `const t = useTheme(); const live = buildLiveStyles(t);` (the default
@@ -3685,10 +3390,6 @@ function buildLiveStyles(t) {
     adjustmentNote: { ...t.type.bodySm, color: t.colors.textSecondary },
     adjustmentDetail: { ...t.type.bodySm, color: t.colors.textPrimary },
     adjustmentHold: { ...t.type.bodySm, color: t.colors.textPrimary },
-    macroCycleCol: { backgroundColor: t.colors.surface2 },
-    macroCycleColLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    macroCycleColKcal: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
-    macroCycleColCarbs: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     planNote: { borderTopColor: t.colors.border },
     planNoteText: { ...t.type.caption, color: t.colors.textMuted },
     confidenceCaption: { ...t.type.caption, color: t.colors.textMuted },

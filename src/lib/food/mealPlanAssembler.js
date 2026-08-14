@@ -4,20 +4,19 @@
  * The deterministic day/week meal-plan assembler (deep-audit Theme G,
  * blueprint bp-meal-plan-generator §3.3). Builds a day of real curated
  * meals that lands the engine's calorie/macro target within the engine's
- * own ±10% band, then a week with training/non-training day variants and
+ * own ±10% band, then a week of days on that same target and
  * seeded, reproducible variety.
  *
  * SAFETY BY CONSTRUCTION (§3.6): this module never computes a calorie
  * target. It consumes `calculateNutritionTargets` output, whose floors
  * (sex floor, FFM floor, rapid-loss compression) are already applied
- * upstream. Day variants only ever move calories BETWEEN days inside the
- * engine's published [kcalMin, kcalMax] band with the weekly total
- * preserved, and variant cycling disables itself entirely when the engine
- * raised the target to a floor. When preferences make the target
+ * upstream. Under the one-daily-truth law (Campaign 17A) it does not move
+ * calories between days either: every day of a plan carries the SAME engine
+ * target, and only the FOOD varies. When preferences make the target
  * unreachable the day is returned flagged `withinTolerance: false` with
  * the residual: the plan never silently under-feeds to "make it fit".
  *
- * Determinism: same (target, prefs, schedule, seed) in, same plan out.
+ * Determinism: same (target, prefs, seed) in, same plan out.
  * The seed drives a tiny ranking jitter so "regenerate" gives a
  * different-but-reproducible plan; ties break on meal id.
  */
@@ -28,14 +27,6 @@ import { normalisePreferences, filterMealsByPreferences } from './planPreference
 import { roleOf, gramRangeOf } from './foodRoles';
 import { solveGramsForKcal } from './gramSolve';
 import { within, ADHERENCE_TOLERANCE } from './adherence';
-
-const KCAL_C = 4;
-const KCAL_F = 9;
-
-// Largest day-to-day calorie swing the cycle will create (round-2 item 1:
-// coaching convention is a 300-600 kcal rest-day reduction; we start at the
-// conservative end and the engine band clamps it further).
-const MAX_CYCLE_DELTA_KCAL = 300;
 
 const r0 = (n) => Math.round(n);
 const r1 = (n) => Math.round(n * 10) / 10;
@@ -65,78 +56,12 @@ export function targetWasFloored(target) {
     /below safe minimum|raising to floor|hard gate|raised to limit loss|rapid|capped/i.test(String(w)));
 }
 
-/**
- * Derive the training-day / rest-day variant targets from ONE engine
- * target (round-2 item 1). Protein identical on both. Carbs are the
- * lever. Fat follows prefs.fatConvention: 'equalised' (modern RP, default)
- * keeps fat constant; 'higher_rest_day' (the founder-coach convention)
- * gives ~25% of the rest-day reduction back as fat, cutting carbs deeper.
- *
- * Both variants stay inside the engine's [kcalMin, kcalMax]; the weekly
- * total is preserved exactly for the given schedule mix; and when the
- * engine floored the target (or the schedule has no mix of day types)
- * both variants equal the engine target untouched.
- */
-export function dayVariantTargets(target, { trainingDays = 0, restDays = 0, fatConvention = 'equalised', allowCycling = true } = {}) {
-  const t = target || {};
-  const base = {
-    kcal: Number(t.targetKcal) || 0,
-    proteinG: Number(t.proteinG) || 0,
-    carbsG: Number(t.carbsG) || 0,
-    fatG: Number(t.fatG) || 0,
-  };
-  const flat = { training: { ...base }, rest: { ...base }, cycleDeltaKcal: 0 };
-  // Gated upstream to match the coach: only advanced cutters and physique
-  // competitors cycle calories between training and rest days; everyone else
-  // gets a flat daily target (coachingGoals.dayCalorieCyclingAllowed).
-  if (!allowCycling) return flat;
-  if (!base.kcal || trainingDays <= 0 || restDays <= 0) return flat;
-  if (targetWasFloored(t)) return flat;
-
-  const kcalMin = Number(t.kcalMin) || r0(base.kcal * 0.9);
-  const kcalMax = Number(t.kcalMax) || r0(base.kcal * 1.1);
-
-  // Rest-day reduction, clamped to the engine band; the training-day rise
-  // preserves the weekly total and is clamped to the band too (which may
-  // shrink the reduction in turn).
-  let down = Math.min(MAX_CYCLE_DELTA_KCAL, base.kcal - kcalMin);
-  let up = (down * restDays) / trainingDays;
-  if (base.kcal + up > kcalMax) {
-    up = kcalMax - base.kcal;
-    down = (up * trainingDays) / restDays;
-  }
-  down = Math.max(0, Math.floor(down));
-  up = Math.max(0, Math.floor((down * restDays) / trainingDays));
-  // A cycle below this is presentation noise, not a carb cycle: when the
-  // engine band leaves too little room (e.g. 1 training day to 6 rest
-  // days), be honestly flat rather than show a fake 8 kcal "cycle".
-  const MIN_MEANINGFUL_CYCLE_KCAL = 50;
-  if (down < MIN_MEANINGFUL_CYCLE_KCAL || up === 0) return flat;
-
-  const rest = { ...base };
-  const training = { ...base };
-
-  if (fatConvention === 'higher_rest_day') {
-    // A quarter of the rest-day cut comes back as fat, so carbs cut deeper.
-    const fatBackKcal = r0(down * 0.25);
-    rest.fatG = base.fatG + r0(fatBackKcal / KCAL_F);
-    rest.carbsG = Math.max(0, base.carbsG - r0((down + fatBackKcal) / KCAL_C));
-  } else {
-    rest.carbsG = Math.max(0, base.carbsG - r0(down / KCAL_C));
-  }
-  training.carbsG = base.carbsG + r0(up / KCAL_C);
-
-  // Keep each variant's kcal consistent with the macro grams it actually
-  // carries (food review E-M2): derive the kcal change from the carb/fat grams
-  // moved, not the raw down/up kcal, so the band check and the per-meal macro
-  // share describe the SAME day rather than two ~1% different ones. Clamp to
-  // the engine band so a rounding nudge can never push a variant out of band.
-  const clampK = (k) => Math.min(kcalMax, Math.max(kcalMin, r0(k)));
-  rest.kcal = clampK(base.kcal + KCAL_C * (rest.carbsG - base.carbsG) + KCAL_F * (rest.fatG - base.fatG));
-  training.kcal = clampK(base.kcal + KCAL_C * (training.carbsG - base.carbsG));
-
-  return { training, rest, cycleDeltaKcal: down };
-}
+// ONE DAILY TRUTH (Campaign 17A, founder law). `dayVariantTargets` derived a
+// training-day and a rest-day target from one engine target, moving carbs
+// between them so the weekly total held. It is gone, along with
+// MAX_CYCLE_DELTA_KCAL: a Volyume athlete trains whenever life allows, so a
+// plan built around which weekday they train is guessing, and the guess moved
+// their calories. Every day of a plan now carries the SAME engine target.
 
 // ─── Candidate preparation ──────────────────────────────────────────────
 
@@ -189,15 +114,22 @@ function poolAffinity(candidate, rotationPool) {
 
 /**
  * The day's slot list. Numbered meals (the diary's flexible model), plus
- * pre/post-workout slots on training days when enabled. Intra-workout is
+ * pre/post-workout slots when the athlete has asked for them. Intra-workout is
  * deliberately NOT a default slot (round-2 item 2): it earns a place only
  * for fasted or very long sessions, which is a presentation-layer add-on,
  * never assembled food.
+ *
+ * The workout slots used to appear only on days the plan GUESSED were training
+ * days. Under the one-daily-truth law (Campaign 17A) there is no such guess:
+ * the athlete trains whenever life allows, so if they want food placed around
+ * a session, every day carries the slots and they eat them on the days they
+ * train. The day's calorie and macro total is identical either way - these
+ * slots redistribute within the day, they never change it.
  */
-export function buildSlotList({ mealsPerDay, periWorkout = false, variant = 'rest' }) {
+export function buildSlotList({ mealsPerDay, periWorkout = false }) {
   const slots = [];
   for (let i = 1; i <= mealsPerDay; i += 1) slots.push({ key: `meal_${i}`, kind: 'meal' });
-  if (periWorkout && variant === 'training') {
+  if (periWorkout) {
     slots.splice(Math.max(1, mealsPerDay - 2), 0, { key: 'pre_workout', kind: 'pre_workout' });
     slots.splice(Math.max(2, mealsPerDay - 1), 0, { key: 'post_workout', kind: 'post_workout' });
   }
@@ -352,8 +284,8 @@ const PER_MEAL_BALANCE = Object.freeze({
 // PERI-WORKOUT COMPOSITION TIMING (audit §15 item 5, founder-specified: RP-style
 // nutrient timing WITHOUT RP's rigid ratios). This app has no workout-clock
 // signal to time meals against; the pre_workout/post_workout slot — opt-in via
-// prefs.periWorkoutSlots, and only ever present on a 'training' variant day
-// (see buildSlotList) — is the best existing proxy, so it is the only anchor
+// prefs.periWorkoutSlots (see buildSlotList) — is the best existing proxy, so
+// it is the only anchor
 // this table keys off. It lifts the carb/protein FLOOR the per-meal solver
 // gives those specific meals above the flat even-share floor every other meal
 // gets, so the day's carbs/protein lean toward the workout-adjacent plate
@@ -368,10 +300,9 @@ const PER_MEAL_BALANCE = Object.freeze({
 // far under the day total for any mealsPerDay in [3,6] — the day-level solve
 // still targets the SAME want.kcal/protein/carbs/fat, so any extra grams
 // pulled into the workout meal are drawn from the other meals' free range,
-// never from the day's target or a floor. A rest day (or a training day with
-// peri-workout slots switched off) never creates a pre_workout/post_workout
-// slot at all, so this table is never consulted there and the day stays
-// exactly as evenly balanced as before this change.
+// never from the day's target or a floor. With peri-workout slots switched
+// off no pre_workout/post_workout slot is created at all, so this table is
+// never consulted and the day stays exactly as evenly balanced as before.
 const PERI_WORKOUT_FLOOR_LIFT = Object.freeze({
   post_workout: { carbFactor: 1.3, proteinFactor: 1.25 },
   pre_workout: { carbFactor: 1.15, proteinFactor: 1.0 },
@@ -581,11 +512,11 @@ function solvePlacedStaples({ placed, consumed, want, perMeal, balance = PER_MEA
 // ─── The day assembler ──────────────────────────────────────────────────
 
 /**
- * Assemble one day variant. Returns:
- * { variant, target, slots: [{ slot, mealId, name, source, items, totals }],
+ * Assemble one day. Returns:
+ * { target, slots: [{ slot, mealId, name, source, items, totals }],
  *   totals, residual, withinTolerance, seed }
  *
- * @param target  ONE day-variant target { kcal, proteinG, carbsG, fatG }
+ * @param target  the day's target { kcal, proteinG, carbsG, fatG }
  *                plus band { kcalMin, kcalMax } taken from the engine
  *                target via the band ratio (passed in `band`).
  * @param targetFloored  did the engine raise this target to a safety floor?
@@ -599,7 +530,6 @@ export function assembleDayPlan({
   target,
   band,
   prefs: rawPrefs,
-  variant = 'rest',
   seed = 1,
   recentlyUsed = new Map(),
   savedMeals = [],
@@ -616,7 +546,6 @@ export function assembleDayPlan({
   const slots = buildSlotList({
     mealsPerDay: prefs.mealsPerDay,
     periWorkout: prefs.periWorkoutSlots,
-    variant,
   });
 
   const want = {
@@ -916,7 +845,6 @@ export function assembleDayPlan({
   });
 
   return {
-    variant,
     target: want,
     slots: placed,
     totals: {
@@ -1014,32 +942,31 @@ export function assembleDayPlanBestOf(args = {}, attempts = LOCAL_SEARCH_ATTEMPT
 
 // ─── The week assembler ─────────────────────────────────────────────────
 
+// A plan week is seven days. It is a plan LENGTH, not a training schedule:
+// every day carries the same target (one-daily-truth law, Campaign 17A).
+export const DAYS_PER_PLAN_WEEK = 7;
+
 /**
- * Assemble a week: TD/NTD variant targets from the engine target + the
- * training schedule, per-day seeded assembly, anti-repetition shared
- * across the week (scaled by the variety dial; variety 0 repeats one day
- * per variant — the meal-prep mode elite competitors actually run).
+ * Assemble a week: per-day seeded assembly against ONE target, with
+ * anti-repetition shared across the week (scaled by the variety dial;
+ * variety 0 assembles a single day and repeats it - the meal-prep mode elite
+ * competitors actually run).
+ *
+ * ONE DAILY TRUTH (Campaign 17A): every day of the week carries the SAME
+ * engine target. What varies across the week is the FOOD, never the calories
+ * or macros. There is no training/rest schedule input any more, because the
+ * app does not know - and must not guess - which weekdays the athlete trains.
  *
  * @param engineTarget the calculateNutritionTargets output, verbatim
- * @param schedule     seven entries: 'training' | 'rest'
  */
-export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, schedule, seed = 1, savedMeals = [], allowDayCycling = true } = {}) {
+export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, seed = 1, savedMeals = [] } = {}) {
   const prefs = normalisePreferences(rawPrefs);
-  const week = Array.isArray(schedule) && schedule.length === 7
-    ? schedule.map((d) => (d === 'training' ? 'training' : 'rest'))
-    : ['training', 'rest', 'training', 'rest', 'training', 'rest', 'rest'];
-
-  const trainingDays = week.filter((d) => d === 'training').length;
-  const restDays = 7 - trainingDays;
-  const variants = dayVariantTargets(engineTarget, {
-    trainingDays,
-    restDays,
-    fatConvention: prefs.fatConvention,
-    // A meal-prep repeat (variety 0) is always a flat daily target: choosing
-    // "Repeat" means eating the same food every day, so training/rest calorie
-    // cycling does not apply.
-    allowCycling: allowDayCycling && prefs.variety !== 0,
-  });
+  const dayTarget = {
+    kcal: Number(engineTarget?.targetKcal) || 0,
+    proteinG: Number(engineTarget?.proteinG) || 0,
+    carbsG: Number(engineTarget?.carbsG) || 0,
+    fatG: Number(engineTarget?.fatG) || 0,
+  };
   const band = { kcalMin: engineTarget?.kcalMin, kcalMax: engineTarget?.kcalMax };
   // Thread the engine's floor flag so per-meal balance degrades gracefully near a
   // floor (ED-safety); the day flags it for Fable's review (see assembleDayPlan).
@@ -1047,32 +974,29 @@ export function assembleWeekPlan({ engineTarget, prefs: rawPrefs, schedule, seed
 
   const days = [];
   if (prefs.variety === 0) {
-    // Repeat / meal-prep: a PRECISE repeat — assemble ONE day on the flat daily
-    // target (variants is flat for variety 0, see above) and eat it every day.
-    // The previous code assembled separate training and rest days with
+    // Repeat / meal-prep: a PRECISE repeat — assemble ONE day and eat it every
+    // day. The previous code assembled separate training and rest days with
     // different seeds, so identical-calorie days came out with the SAME meals
     // in a DIFFERENT ORDER — confusing, and not a repeat.
     const oneDay = assembleDayPlanBestOf({
-      target: variants.rest, band, prefs, variant: 'rest', seed, savedMeals, targetFloored,
+      target: dayTarget, band, prefs, seed, savedMeals, targetFloored,
     });
-    week.forEach(() => days.push(oneDay));
+    for (let i = 0; i < DAYS_PER_PLAN_WEEK; i += 1) days.push(oneDay);
   } else {
     const recentlyUsed = new Map(); // mealId -> days since used
-    week.forEach((v, i) => {
+    for (let i = 0; i < DAYS_PER_PLAN_WEEK; i += 1) {
       const day = assembleDayPlanBestOf({
-        target: variants[v], band, prefs, variant: v, seed: seed + i * 7919, recentlyUsed, savedMeals, targetFloored,
+        target: dayTarget, band, prefs, seed: seed + i * 7919, recentlyUsed, savedMeals, targetFloored,
       });
       days.push(day);
       recentlyUsed.forEach((age, id) => recentlyUsed.set(id, age + 1));
       day.slots.forEach((s) => recentlyUsed.set(s.mealId, 1));
-    });
+    }
   }
 
   return {
     days,
-    schedule: week,
-    variants,
-    cycleDeltaKcal: variants.cycleDeltaKcal,
+    dayTarget,
     seed,
     withinTolerance: days.every((d) => d.withinTolerance),
   };

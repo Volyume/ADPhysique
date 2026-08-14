@@ -6,7 +6,6 @@
  */
 import { calculateNutritionTargets } from '../../nutritionEngine';
 import {
-  dayVariantTargets,
   targetWasFloored,
   buildSlotList,
   assembleDayPlan,
@@ -99,64 +98,18 @@ describe('assembleDayPlanBestOf — local search by restart (P-3)', () => {
   });
 });
 
-describe('dayVariantTargets', () => {
-  test('protein is identical on both variants; carbs are the lever', () => {
-    const v = dayVariantTargets(TARGET, { trainingDays: 4, restDays: 3 });
-    expect(v.training.proteinG).toBe(TARGET.proteinG);
-    expect(v.rest.proteinG).toBe(TARGET.proteinG);
-    expect(v.training.carbsG).toBeGreaterThan(TARGET.carbsG);
-    expect(v.rest.carbsG).toBeLessThan(TARGET.carbsG);
-    expect(v.training.fatG).toBe(TARGET.fatG); // equalised default
-  });
-
-  test('weekly total is preserved for the schedule mix', () => {
-    const v = dayVariantTargets(TARGET, { trainingDays: 4, restDays: 3 });
-    const weekly = v.training.kcal * 4 + v.rest.kcal * 3;
-    expect(Math.abs(weekly - TARGET.targetKcal * 7)).toBeLessThanOrEqual(7); // rounding only
-  });
-
-  test('variant kcal matches the macro grams it carries (food review E-M2)', () => {
-    // kcal change from base must equal the kcal of the carb/fat grams moved,
-    // so the band check and the per-meal macro share describe the same day.
-    const v = dayVariantTargets(TARGET, { trainingDays: 4, restDays: 3 });
-    const kcalFromMacro = (x) => TARGET.targetKcal
-      + 4 * (x.carbsG - TARGET.carbsG) + 9 * (x.fatG - TARGET.fatG);
-    expect(Math.abs(v.training.kcal - kcalFromMacro(v.training))).toBeLessThanOrEqual(1);
-    expect(Math.abs(v.rest.kcal - kcalFromMacro(v.rest))).toBeLessThanOrEqual(1);
-  });
-
-  test('both variants stay inside the engine band', () => {
-    [[1, 6], [3, 4], [6, 1]].forEach(([td, rd]) => {
-      const v = dayVariantTargets(TARGET, { trainingDays: td, restDays: rd });
-      expect(v.rest.kcal).toBeGreaterThanOrEqual(TARGET.kcalMin);
-      expect(v.training.kcal).toBeLessThanOrEqual(TARGET.kcalMax);
-    });
-  });
-
-  test('higher_rest_day convention raises rest-day fat and cuts carbs deeper', () => {
-    const eq = dayVariantTargets(TARGET, { trainingDays: 4, restDays: 3, fatConvention: 'equalised' });
-    const hi = dayVariantTargets(TARGET, { trainingDays: 4, restDays: 3, fatConvention: 'higher_rest_day' });
-    expect(hi.rest.fatG).toBeGreaterThan(eq.rest.fatG);
-    expect(hi.rest.carbsG).toBeLessThan(eq.rest.carbsG);
-    expect(hi.rest.kcal).toBe(eq.rest.kcal); // same day calories either way
-  });
-
-  test('no day-type mix means no cycling', () => {
-    const v = dayVariantTargets(TARGET, { trainingDays: 0, restDays: 7 });
-    expect(v.training.kcal).toBe(TARGET.targetKcal);
-    expect(v.rest.kcal).toBe(TARGET.targetKcal);
-    expect(v.cycleDeltaKcal).toBe(0);
-  });
-
-  test('allowCycling:false forces a flat day even on a cycle-worthy mix', () => {
-    // Same inputs that DO cycle by default (the first test above) must go flat
-    // once the upstream gate says this user does not cycle calories.
-    const v = dayVariantTargets(TARGET, { trainingDays: 4, restDays: 3, allowCycling: false });
-    expect(v.training.kcal).toBe(TARGET.targetKcal);
-    expect(v.rest.kcal).toBe(TARGET.targetKcal);
-    expect(v.training.carbsG).toBe(TARGET.carbsG);
-    expect(v.rest.carbsG).toBe(TARGET.carbsG);
-    expect(v.cycleDeltaKcal).toBe(0);
+// ONE DAILY TRUTH (Campaign 17A, founder law). The `dayVariantTargets`
+// describe block that stood here pinned a training-day / rest-day carb split
+// derived from one engine target. The founder retired day-type cycling
+// outright: "VOLYUME HAS THE SAME BASE CALORIE AND MACRO TARGET EVERY DAY...
+// The user's training days are not fixed calendar days." The helper is gone,
+// and this pin proves it cannot come back through the module's exports.
+describe('ONE DAILY TRUTH: no day-variant target helper exists', () => {
+  test('the assembler exports no dayVariantTargets', () => {
+    // eslint-disable-next-line global-require
+    const mod = require('../mealPlanAssembler');
+    expect(mod.dayVariantTargets).toBeUndefined();
+    expect(Object.keys(mod)).not.toContain('dayVariantTargets');
   });
 });
 
@@ -203,21 +156,24 @@ describe('FLOOR-ROUTING INVARIANT (the test that matters)', () => {
     expect(targetWasFloored(floored)).toBe(true);
   });
 
-  test('a floored target NEVER cycles: both variants equal the engine target', () => {
-    const v = dayVariantTargets(floored, { trainingDays: 4, restDays: 3 });
-    expect(v.training.kcal).toBe(floored.targetKcal);
-    expect(v.rest.kcal).toBe(floored.targetKcal);
-    expect(v.cycleDeltaKcal).toBe(0);
+  test('ONE DAILY TRUTH: a floored target plates at the engine target on every day', () => {
+    // The old pin said a floored target "never cycles". Nothing cycles now, so
+    // the stronger claim is asserted against the REAL week assembler: every
+    // day of a floored user's week carries the engine target exactly.
+    const week = assembleWeekPlan({
+      engineTarget: floored, prefs: { mealsPerDay: 4, variety: 0.5 }, seed: 3,
+    });
+    expect(week.dayTarget.kcal).toBe(floored.targetKcal);
+    week.days.forEach((d) => expect(d.target.kcal).toBe(floored.targetKcal));
   });
 
-  test('no variant target ever sits below the engine kcalMin, across schedules', () => {
-    for (let td = 0; td <= 7; td += 1) {
-      [TARGET, floored].forEach((t) => {
-        const v = dayVariantTargets(t, { trainingDays: td, restDays: 7 - td });
-        expect(v.rest.kcal).toBeGreaterThanOrEqual(Math.min(t.kcalMin, t.targetKcal));
-        expect(v.training.kcal).toBeGreaterThanOrEqual(Math.min(t.kcalMin, t.targetKcal));
+  test('no day target ever sits below the engine kcalMin', () => {
+    [TARGET, floored].forEach((t) => {
+      const week = assembleWeekPlan({ engineTarget: t, prefs: { mealsPerDay: 4 }, seed: 4 });
+      week.days.forEach((d) => {
+        expect(d.target.kcal).toBeGreaterThanOrEqual(Math.min(t.kcalMin, t.targetKcal));
       });
-    }
+    });
   });
 
   test('an unreachable target is FLAGGED, never silently under-delivered', () => {
@@ -240,14 +196,26 @@ describe('FLOOR-ROUTING INVARIANT (the test that matters)', () => {
 });
 
 describe('buildSlotList', () => {
-  test('numbered meals; peri-workout slots only on enabled training days', () => {
+  test('numbered meals; peri-workout slots when the athlete asked for them', () => {
     expect(buildSlotList({ mealsPerDay: 4 }).map((s) => s.key))
       .toEqual(['meal_1', 'meal_2', 'meal_3', 'meal_4']);
-    const td = buildSlotList({ mealsPerDay: 4, periWorkout: true, variant: 'training' });
-    expect(td.map((s) => s.kind)).toContain('pre_workout');
-    expect(td.map((s) => s.kind)).toContain('post_workout');
-    const rest = buildSlotList({ mealsPerDay: 4, periWorkout: true, variant: 'rest' });
-    expect(rest.map((s) => s.kind)).not.toContain('pre_workout');
+    const on = buildSlotList({ mealsPerDay: 4, periWorkout: true });
+    expect(on.map((s) => s.kind)).toContain('pre_workout');
+    expect(on.map((s) => s.kind)).toContain('post_workout');
+    const off = buildSlotList({ mealsPerDay: 4, periWorkout: false });
+    expect(off.map((s) => s.kind)).not.toContain('pre_workout');
+    expect(off.map((s) => s.kind)).not.toContain('post_workout');
+  });
+
+  // ONE DAILY TRUTH (Campaign 17A): the workout slots used to appear only on
+  // days the plan GUESSED were training days. The athlete trains whenever life
+  // allows, so there is no such guess: with the preference on, EVERY day
+  // carries the slots and they eat them on the days they train. A stray
+  // `variant` argument must not resurrect the old gate.
+  test('a legacy variant argument cannot suppress the workout slots', () => {
+    const asRest = buildSlotList({ mealsPerDay: 4, periWorkout: true, variant: 'rest' });
+    expect(asRest.map((s) => s.kind)).toContain('pre_workout');
+    expect(asRest.map((s) => s.kind)).toContain('post_workout');
   });
 });
 
@@ -511,7 +479,7 @@ describe('peri-workout composition timing (audit §15 item 5 — RP-style timing
   test('(a) the day total is unchanged: slot totals sum back to the day total', () => {
     [1, 5, 9, 20].forEach((seed) => {
       const day = assembleDayPlan({
-        target: dayTarget(), band: BAND, prefs: periPrefs, variant: 'training', seed,
+        target: dayTarget(), band: BAND, prefs: periPrefs, seed,
       });
       const summed = sumSlots(day);
       expect(summed.kcal).toBeCloseTo(day.totals.kcal, 0);
@@ -521,17 +489,17 @@ describe('peri-workout composition timing (audit §15 item 5 — RP-style timing
     });
   });
 
-  test('(b) a training day weights the post-workout slot above the flat even share; a rest day has no such slot at all', () => {
+  test('(b) the post-workout slot is weighted above the flat even share; with the preference off there is no such slot at all', () => {
     const seeds = [1, 5, 9, 20, 33, 47, 58, 61];
     let trainingSkewSum = 0;
     let restMaxSkewSum = 0;
 
     seeds.forEach((seed) => {
       const training = assembleDayPlan({
-        target: dayTarget(), band: BAND, prefs: periPrefs, variant: 'training', seed,
+        target: dayTarget(), band: BAND, prefs: periPrefs, seed,
       });
       const rest = assembleDayPlan({
-        target: dayTarget(), band: BAND, prefs: periPrefs, variant: 'rest', seed,
+        target: dayTarget(), band: BAND, prefs: { mealsPerDay: 4, periWorkoutSlots: false }, seed,
       });
 
       const post = training.slots.find((s) => s.slot === 'post_workout');
@@ -544,8 +512,8 @@ describe('peri-workout composition timing (audit §15 item 5 — RP-style timing
       expect(post.totals.carbs).toBeGreaterThan(evenCarbTraining);
       expect(post.totals.protein).toBeGreaterThan(evenProteinTraining);
 
-      // A rest day never creates a pre_workout/post_workout slot at all
-      // (buildSlotList): the mechanism has no anchor there, so it never fires.
+      // With the preference off, no pre_workout/post_workout slot is created at
+      // all (buildSlotList): the mechanism has no anchor, so it never fires.
       expect(rest.slots.map((s) => s.slot)).not.toContain('post_workout');
       expect(rest.slots.map((s) => s.slot)).not.toContain('pre_workout');
 
@@ -594,30 +562,54 @@ describe('peri-workout composition timing (audit §15 item 5 — RP-style timing
 });
 
 describe('assembleWeekPlan', () => {
-  const schedule = ['training', 'rest', 'training', 'rest', 'training', 'training', 'rest'];
-
-  test('seven days following the schedule, deterministic end to end', () => {
-    const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.7 }, schedule, seed: 11 });
+  test('seven days on ONE target, deterministic end to end', () => {
+    const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.7 }, seed: 11 });
     expect(week.days.length).toBe(7);
-    week.days.forEach((d, i) => expect(d.variant).toBe(schedule[i]));
-    const again = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.7 }, schedule, seed: 11 });
+    // ONE DAILY TRUTH (Campaign 17A): every day carries the same target.
+    expect(week.dayTarget.kcal).toBe(TARGET.targetKcal);
+    week.days.forEach((d) => {
+      expect(d.target.kcal).toBe(TARGET.targetKcal);
+      expect(d.target.protein).toBe(TARGET.proteinG);
+    });
+    const again = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.7 }, seed: 11 });
     expect(again).toEqual(week);
   });
 
+  test('ONE DAILY TRUTH: no day of a generated week differs in calories or macros', () => {
+    [1, 11, 23, 37].forEach((seed) => {
+      const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 1 }, seed });
+      const first = week.days[0].target;
+      week.days.forEach((d) => expect(d.target).toEqual(first));
+    });
+  });
+
+  test('ONE DAILY TRUTH: the plan carries no training/rest schedule or variants', () => {
+    const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4 }, seed: 11 });
+    expect(week.schedule).toBeUndefined();
+    expect(week.variants).toBeUndefined();
+    expect(week.cycleDeltaKcal).toBeUndefined();
+    week.days.forEach((d) => expect(d.variant).toBeUndefined());
+  });
+
+  test('a legacy schedule argument cannot reintroduce day types', () => {
+    const withSchedule = assembleWeekPlan({
+      engineTarget: TARGET,
+      prefs: { mealsPerDay: 4, variety: 0.7 },
+      seed: 11,
+      schedule: ['training', 'rest', 'training', 'rest', 'training', 'training', 'rest'],
+    });
+    const without = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.7 }, seed: 11 });
+    expect(withSchedule).toEqual(without);
+  });
+
   test('variety 0 is a PRECISE repeat: ALL seven days identical, same meals in the same order', () => {
-    // The schedule alternates training/rest, but Repeat/meal-prep is flat — so
-    // every day must be byte-for-byte the same plate in the same slot order.
-    // (Regression: the old code assembled training and rest separately, so the
-    // same meals came out in a different order on alternating days.)
-    const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0 }, schedule, seed: 2 });
+    const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0 }, seed: 2 });
     const firstOrder = week.days[0].slots.map((s) => s.mealId);
     week.days.forEach((d) => expect(d.slots.map((s) => s.mealId)).toEqual(firstOrder));
-    // And a meal-prep repeat never calorie-cycles, so no training/rest split shows.
-    expect(week.cycleDeltaKcal).toBe(0);
   });
 
   test('variety 1 rotates: the week uses more distinct meals than one day', () => {
-    const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 1 }, schedule, seed: 2 });
+    const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 1 }, seed: 2 });
     const all = new Set();
     week.days.forEach((d) => d.slots.forEach((s) => all.add(s.mealId)));
     expect(all.size).toBeGreaterThan(4);
@@ -628,7 +620,7 @@ describe('assembleWeekPlan', () => {
     // plenty of in-band omnivore meals; the anti-repetition penalty must be
     // strong enough that no plate carries over from one day to the next.
     [2, 11, 23, 37].forEach((seed) => {
-      const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 1 }, schedule, seed });
+      const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 1 }, seed });
       for (let i = 1; i < week.days.length; i++) {
         const prev = new Set(week.days[i - 1].slots.map((s) => s.mealId));
         const dupes = week.days[i].slots.map((s) => s.mealId).filter((id) => prev.has(id));
@@ -638,20 +630,20 @@ describe('assembleWeekPlan', () => {
   });
 
   test('the weekly calorie average tracks the engine target', () => {
-    const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.5 }, schedule, seed: 6 });
+    const week = assembleWeekPlan({ engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.5 }, seed: 6 });
     const avg = week.days.reduce((a, d) => a + d.totals.kcal, 0) / 7;
     expect(Math.abs(avg - TARGET.targetKcal)).toBeLessThanOrEqual(TARGET.targetKcal * 0.1);
   });
 
-  test('allowDayCycling:false plates the same flat target every day', () => {
-    const week = assembleWeekPlan({
-      engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.5 }, schedule, seed: 6, allowDayCycling: false,
+  test('a legacy allowDayCycling flag changes nothing (the gate is gone)', () => {
+    const flagged = assembleWeekPlan({
+      engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.5 }, seed: 6, allowDayCycling: false,
     });
-    expect(week.cycleDeltaKcal).toBe(0);
-    expect(week.variants.training.kcal).toBe(TARGET.targetKcal);
-    expect(week.variants.rest.kcal).toBe(TARGET.targetKcal);
-    // every day — training or rest — carries the identical engine target
-    week.days.forEach((d) => expect(d.target.kcal).toBe(TARGET.targetKcal));
+    const plain = assembleWeekPlan({
+      engineTarget: TARGET, prefs: { mealsPerDay: 4, variety: 0.5 }, seed: 6,
+    });
+    expect(flagged).toEqual(plain);
+    flagged.days.forEach((d) => expect(d.target.kcal).toBe(TARGET.targetKcal));
   });
 });
 
@@ -664,11 +656,9 @@ describe('vegan breakfast variety (M-3, content-quality audit 2026-07-04)', () =
   // against the REAL assembler rather than just counting library entries:
   // across seeds 1-50 the observed floor is 4 distinct breakfasts in 7 days
   // (most seeds land on 5-6); seed 5 below is a representative mid-range case.
-  const schedule = ['training', 'rest', 'training', 'rest', 'training', 'rest', 'rest'];
-
   test('a generated vegan week rotates at least 4 distinct breakfasts across 7 days', () => {
     const week = assembleWeekPlan({
-      engineTarget: TARGET, prefs: { diet: 'vegan', mealsPerDay: 4, variety: 1 }, schedule, seed: 5,
+      engineTarget: TARGET, prefs: { diet: 'vegan', mealsPerDay: 4, variety: 1 }, seed: 5,
     });
     const breakfastIds = week.days.map((d) => d.slots.find((s) => s.slot === 'meal_1')?.mealId);
     expect(new Set(breakfastIds).size).toBeGreaterThanOrEqual(4);
@@ -676,7 +666,7 @@ describe('vegan breakfast variety (M-3, content-quality audit 2026-07-04)', () =
 
   test('every meal placed in a generated vegan week is an actually-vegan curated meal', () => {
     const week = assembleWeekPlan({
-      engineTarget: TARGET, prefs: { diet: 'vegan', mealsPerDay: 4, variety: 1 }, schedule, seed: 5,
+      engineTarget: TARGET, prefs: { diet: 'vegan', mealsPerDay: 4, variety: 1 }, seed: 5,
     });
     week.days.forEach((d) => d.slots.forEach((s) => {
       const meal = CURATED_MEALS.find((m) => m.id === s.mealId);

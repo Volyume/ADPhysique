@@ -131,7 +131,6 @@ describe('Progress Scan safety-floor isolation', () => {
       path.join(root, 'lib', 'weeklyCoach.js'),
       path.join(root, 'lib', 'food', 'calorieBank.js'),
       path.join(root, 'screens', 'DiaryScreen.js'),
-      path.join(root, 'screens', 'PerDayTargetsScreen.js'),
     ];
     for (const file of files) {
       const source = fs.readFileSync(file, 'utf8');

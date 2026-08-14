@@ -64,10 +64,9 @@ describe('EN-5: injectable nowMs makes runWeeklyCoach deterministic', () => {
     expect(JSON.stringify(b)).toBe(JSON.stringify(a));
   });
 
-  test('two runs with the same fixed nowMs are JSON-identical on the refeed-eligible path too', () => {
+  test('two runs with the same fixed nowMs are JSON-identical on the competition path too', () => {
     const inputs = () => baseInputs({
-      trainingGoal: 'bodybuilding', // competition goal: the only refeed-eligible path since EN-4
-      lastRefeedAt: NOW - 5 * DAY,
+      trainingGoal: 'bodybuilding',
       goalStartDate: NOW - 70 * DAY, // long cut: exercises the diet-break clock read
     });
     const a = runWeeklyCoach(inputs());
@@ -75,25 +74,21 @@ describe('EN-5: injectable nowMs makes runWeeklyCoach deterministic', () => {
     expect(JSON.stringify(b)).toBe(JSON.stringify(a));
   });
 
-  test('a different nowMs may change the output (refeed cadence flips from not-due to due)', () => {
-    // Re-anchored under D97-22 (C6 R-1): the weigh-in window is now
-    // clock-anchored, so the shifted-clock run must also carry weigh-ins
-    // from ITS week - otherwise the honest data hold fires and hides the
-    // refeed this test is about. The weights shift with the clock; the
-    // refeed gap (12 days since lastRefeedAt) is unchanged.
+  // ONE DAILY TRUTH (Campaign 17A): this test used the refeed cadence as its
+  // clock-sensitive output. Refeeds are gone, so it now uses the diet-break
+  // clock - the same property under test (a different nowMs may change the
+  // output), against a decision that still exists.
+  test('a different nowMs may change the output (the diet-break clock advances)', () => {
     const inputs = (nowMs, shiftMs = 0) => baseInputs({
-      trainingGoal: 'bodybuilding',
-      lastRefeedAt: NOW - 5 * DAY,
+      goalPhase: 'mild_cut',
+      goalStartDate: NOW - 55 * DAY,
       morningWeights: dailyWeights().map((w) => ({ ...w, loggedAt: w.loggedAt + shiftMs })),
       nowMs,
     });
-    // Competition refeed cadence is weekly. 5 days since the last refeed ->
-    // not due; a clock 7 days later (12 days since) -> due.
-    const notDue = runWeeklyCoach(inputs(NOW));
-    const due = runWeeklyCoach(inputs(NOW + 7 * DAY, 7 * DAY));
-    expect(notDue.refeed ?? null).toBeNull();
-    expect(due.refeed).toBeTruthy();
-    expect(JSON.stringify(due)).not.toBe(JSON.stringify(notDue));
+    const early = runWeeklyCoach(inputs(NOW));
+    const later = runWeeklyCoach(inputs(NOW + 28 * DAY, 28 * DAY));
+    expect(later.dietBreakWeeksInDeficit).toBeGreaterThan(early.dietBreakWeeksInDeficit);
+    expect(JSON.stringify(later)).not.toBe(JSON.stringify(early));
   });
 });
 

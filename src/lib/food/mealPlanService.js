@@ -18,8 +18,7 @@
  * stored engine target verbatim, exactly like the assembler.
  */
 
-import { getNutritionTargets, getGoalLockAdvanced } from '../database';
-import { dayCalorieCyclingAllowed } from '../coachingGoals';
+import { getNutritionTargets } from '../database';
 import {
   getActiveMealPlan,
   saveActiveMealPlan,
@@ -110,32 +109,14 @@ export function preferencesFromProfile(profile) {
     periWorkoutSlots: p.mealPlanPeriWorkout,
     variety: p.mealPlanVariety,
     rotationPool: p.mealPlanRotationPool,
-    fatConvention: p.mealPlanFatConvention,
     pinnedMealIds: p.mealPlanPinnedMeals,
   });
-}
-
-/** Default training schedule from days/week (deterministic spread). Pure. */
-export function defaultSchedule(daysPerWeek = 4) {
-  // Number.isFinite guard, NOT `|| 4`: 0 is a valid (rest-week) input that
-  // `||` would wrongly coerce to the default.
-  const raw = Number.isFinite(Number(daysPerWeek)) ? Math.round(Number(daysPerWeek)) : 4;
-  const n = Math.min(Math.max(raw, 0), 7);
-  // Spread training days across the week as evenly as possible.
-  const week = new Array(7).fill('rest');
-  if (n <= 0) return week;
-  if (n >= 7) return new Array(7).fill('training');
-  const step = 7 / n;
-  for (let i = 0; i < n; i += 1) week[Math.round(i * step) % 7] = 'training';
-  return week;
 }
 
 /**
  * Wrap a single assembled day into the stored plan object (Feature A — "Plan
  * my day"). kind:'day' with a one-entry days[] so the screen renders one day,
- * no picker, no week shopping list. Calorie cycling is a weekly construct and
- * belongs to "Plan my week" (Feature B), so a day plan uses the flat daily
- * target. Pure.
+ * no picker, no week shopping list. Pure.
  */
 export function buildDayPlanSnapshot({ day, engineTarget, prefs }) {
   return {
@@ -143,9 +124,6 @@ export function buildDayPlanSnapshot({ day, engineTarget, prefs }) {
     createdAtMs: Date.now(),
     kind: 'day',
     days: [day],
-    schedule: [day.variant ?? 'rest'],
-    variants: null,
-    cycleDeltaKcal: 0,
     withinTolerance: day.withinTolerance,
     seed: day.seed,
     prefs,
@@ -157,15 +135,12 @@ export function buildDayPlanSnapshot({ day, engineTarget, prefs }) {
  * Wrap an assembled week + the snapshots needed to re-solve later (swaps,
  * coach edits) into the stored plan object. Pure.
  */
-export function buildPlanSnapshot({ week, engineTarget, prefs, schedule }) {
+export function buildPlanSnapshot({ week, engineTarget, prefs }) {
   return {
     schemaVersion: PLAN_SCHEMA_VERSION,
     createdAtMs: Date.now(),
     kind: 'week',
     days: week.days,
-    schedule: week.schedule ?? schedule,
-    variants: week.variants,
-    cycleDeltaKcal: week.cycleDeltaKcal,
     withinTolerance: week.withinTolerance,
     seed: week.seed,
     prefs,
@@ -173,62 +148,18 @@ export function buildPlanSnapshot({ week, engineTarget, prefs, schedule }) {
   };
 }
 
-/**
- * Re-variant ONE day of a stored plan from the user's per-day "Training
- * today?" answer (meal-plan rethink §3.2: the day's TD/NTD variant follows
- * the answer, never a generated Mon-Sun spread). Pure.
- *
- * Reuses the plan's stored variant targets and band verbatim — no calorie
- * number is computed or lowered here, so a floored target's raised kcalMin
- * (set at generation) keeps holding. Other days are left untouched: the
- * answer is about today, not a reshuffle of the week.
- *
- * Returns { plan, changed }: changed=false when the answer matches the
- * day's existing variant or the input is invalid.
- */
-export function answerDayTraining({ plan, dayIndex, training, seed = 1, savedMeals = [] } = {}) {
-  const idx = Number(dayIndex);
-  if (
-    !plan || !Array.isArray(plan.days) || !Number.isInteger(idx)
-    || idx < 0 || idx >= plan.days.length || !plan.variants
-  ) {
-    return { plan, changed: false };
-  }
-  const variant = training ? 'training' : 'rest';
-  const schedule = Array.isArray(plan.schedule) ? [...plan.schedule] : [];
-  if (schedule[idx] === variant) return { plan, changed: false };
-
-  const target = plan.variants[variant];
-  if (!target) return { plan, changed: false };
-  const snap = plan.targetSnapshot || {};
-  const band = { kcalMin: snap.kcalMin, kcalMax: snap.kcalMax };
-  const day = assembleDayPlanBestOf({
-    target, band, prefs: plan.prefs, variant, seed, savedMeals, targetFloored: targetWasFloored(snap),
-  });
-
-  const days = plan.days.map((d, i) => (i === idx ? day : d));
-  schedule[idx] = variant;
-  return {
-    plan: {
-      ...plan,
-      days,
-      schedule,
-      lastEditType: 'day_training_answer',
-      withinTolerance: days.every((d) => d.withinTolerance),
-    },
-    changed: true,
-  };
-}
+// ONE DAILY TRUTH (Campaign 17A, founder law). `answerDayTraining` and its
+// async wrapper `answerTrainingTodayOnActivePlan` re-varianted a day of the
+// stored plan from a "Training today?" answer, swapping in the training-day or
+// rest-day target. Both are gone with the variants themselves: every day now
+// carries the same target, so there is nothing for the answer to change.
 
 /**
  * Repeat ONE day's already-assembled meals onto another day of the SAME
  * plan (audit §15 item 6 "repeat a day"). An explicit copy that reuses the
  * source day's plan data verbatim — same slots, food and totals as
  * generated — so this never re-generates or recomputes a calorie/macro
- * number. The source day's variant travels with the copy (so a rest day
- * copied onto a training slot really does make that slot a rest day), and
- * the plan's schedule marker for the target index is updated to match, so
- * schedule/day.variant never disagree after the copy. Only meaningful on a
+ * number. Only meaningful on a
  * multi-day (kind:'week') plan: a single-day plan has nowhere else to copy
  * to. Pure.
  *
@@ -255,14 +186,11 @@ export function repeatPlanDay({ plan, fromIndex, toIndex } = {}) {
   // (swaps, food flags) never mutate the source day it was copied from.
   const copiedDay = { ...sourceDay, slots: sourceDay.slots.map((s) => ({ ...s })) };
   const days = plan.days.map((d, i) => (i === to ? copiedDay : d));
-  const schedule = Array.isArray(plan.schedule) ? [...plan.schedule] : [];
-  if (schedule.length > to && copiedDay.variant) schedule[to] = copiedDay.variant;
 
   return {
     plan: {
       ...plan,
       days,
-      schedule,
       lastEditType: 'day_repeat',
       withinTolerance: days.every((d) => d.withinTolerance),
     },
@@ -277,11 +205,10 @@ export function repeatPlanDay({ plan, fromIndex, toIndex } = {}) {
  * and SAVE it as the active plan. Returns { id, plan } or
  * { error: 'no_target' } when the user has no nutrition target yet.
  */
-export async function generateAndSaveMealPlan(userId, profile, { schedule, seed = Date.now() % 100000, daysPerWeek } = {}) {
-  const [row, savedMeals, goalLockAdvanced] = await Promise.all([
+export async function generateAndSaveMealPlan(userId, profile, { seed = Date.now() % 100000 } = {}) {
+  const [row, savedMeals] = await Promise.all([
     getNutritionTargets(userId),
     listSavedMeals(userId).catch(() => []),
-    getGoalLockAdvanced(userId).catch(() => false),
   ]);
   const engineTarget = storedTargetToEngineTarget(row);
   if (!engineTarget) return { error: 'no_target' };
@@ -290,28 +217,14 @@ export async function generateAndSaveMealPlan(userId, profile, { schedule, seed 
   // Campaign 1 P0-7 D14: no profile means no exclusion data - refusing to
   // plan is the correct failure for an allergen-bearing surface.
   if (!prefs) return { error: 'no_profile' };
-  const sched = schedule
-    || defaultSchedule(daysPerWeek ?? profile?.trainingDaysPerWeek ?? 4);
-
-  // Same gate as the coach (coachingGoals.dayCalorieCyclingAllowed): only
-  // advanced cutters and physique competitors cycle calories between training
-  // and rest days; everyone else gets a flat daily target.
-  const allowDayCycling = dayCalorieCyclingAllowed({
-    goalPhase: profile?.goalPhase ?? 'maint',
-    goalLockAdvanced,
-    trainingGoal: profile?.trainingGoal ?? null,
-  });
-
   const week = assembleWeekPlan({
     engineTarget,
     prefs,
-    schedule: sched,
     seed,
     savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
-    allowDayCycling,
   });
   emitPlanMetrics(userId, 'week', week.days);
-  const plan = buildPlanSnapshot({ week, engineTarget, prefs, schedule: sched });
+  const plan = buildPlanSnapshot({ week, engineTarget, prefs });
   const id = await saveActiveMealPlan(userId, plan);
   return { id, plan };
 }
@@ -336,8 +249,7 @@ export async function regenerateActiveMealPlan(userId, profile, { seed = Date.no
   const existing = await getActiveMealPlan(userId);
   // A day plan regenerates a day; a week plan regenerates a week (same kind).
   if (existing?.plan?.kind === 'day') return generateAndSaveDayPlan(userId, profile, { seed });
-  const schedule = existing?.plan?.schedule;
-  return generateAndSaveMealPlan(userId, profile, { schedule, seed });
+  return generateAndSaveMealPlan(userId, profile, { seed });
 }
 
 /**
@@ -427,26 +339,6 @@ export function planConflictsWithExclusions(plan, exclude = {}) {
     }
   }
   return Array.from(conflicts);
-}
-
-/**
- * Answer "Training today?" on the active plan and persist the re-varianted
- * day (rethink §3.2). Returns { plan, changed } or { error: 'no_plan' }.
- */
-export async function answerTrainingTodayOnActivePlan(userId, { dayIndex, training, seed = Date.now() % 100000 } = {}) {
-  const active = await getActiveMealPlan(userId);
-  if (!active?.plan) return { error: 'no_plan' };
-  const savedMeals = await listSavedMeals(userId).catch(() => []);
-  const { plan, changed } = answerDayTraining({
-    plan: active.plan,
-    dayIndex,
-    training,
-    seed,
-    savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
-  });
-  if (!changed) return { plan: active.plan, changed: false };
-  await updateMealPlan(userId, active.id, plan);
-  return { plan, changed: true };
 }
 
 /**

@@ -3,9 +3,6 @@ import {
   computeCalorieTargets,
   computeDietBreakTargets,
   computeDeloadVolume,
-  computeMacroCycle,
-  MACRO_CYCLE_REST_DAY_CARB_CUT,
-  computeRefeedDay,
   markApplied,
   isApplied,
   computeVolumeApply,
@@ -272,116 +269,20 @@ describe('computeVolumeApply', () => {
   });
 });
 
-describe('computeMacroCycle', () => {
-  const base = { targetKcal: 2400, proteinG: 200, carbsG: 280, fatG: 70 };
-
-  test('returns null without a target or carbs to split', () => {
-    expect(computeMacroCycle(null, 4)).toBeNull();
-    expect(computeMacroCycle({}, 4)).toBeNull();
-    expect(computeMacroCycle({ targetKcal: 2400 }, 4)).toBeNull();
-    expect(computeMacroCycle({ carbsG: 280 }, 4)).toBeNull();
-  });
-
-  test('returns null outside 1..6 training days (need both day types)', () => {
-    expect(computeMacroCycle(base, 0)).toBeNull();
-    expect(computeMacroCycle(base, 7)).toBeNull();
-    expect(computeMacroCycle(base, -2)).toBeNull();
-  });
-
-  test('holds protein and fat on both day types', () => {
-    const out = computeMacroCycle(base, 4);
-    expect(out.trainingDay.proteinG).toBe(200);
-    expect(out.restDay.proteinG).toBe(200);
-    expect(out.trainingDay.fatG).toBe(70);
-    expect(out.restDay.fatG).toBe(70);
-  });
-
-  test('training days carry more carbs (and kcal) than rest days', () => {
-    const out = computeMacroCycle(base, 4);
-    expect(out.trainingDay.carbsG).toBeGreaterThan(out.restDay.carbsG);
-    expect(out.trainingDay.kcal).toBeGreaterThan(out.restDay.kcal);
-    expect(out.trainingDaysPerWeek).toBe(4);
-  });
-
-  test('rest-day carbs are cut by the configured fraction of baseline', () => {
-    const out = computeMacroCycle(base, 4);
-    expect(out.restDay.carbsG).toBe(Math.round(280 * (1 - MACRO_CYCLE_REST_DAY_CARB_CUT)));
-  });
-
-  test('weekly average kcal stays at the current target', () => {
-    for (const T of [1, 2, 3, 4, 5, 6]) {
-      const out = computeMacroCycle(base, T);
-      const weeklyKcal = T * out.trainingDay.kcal + (7 - T) * out.restDay.kcal;
-      // Per-day gram rounding drifts the weekly average by at most a
-      // couple of kcal; it must stay within that noise of the target.
-      expect(Math.abs(weeklyKcal / 7 - base.targetKcal)).toBeLessThanOrEqual(5);
-    }
-  });
-
-  test('weekly carb total is preserved (carbs only cycle, never created)', () => {
-    for (const T of [1, 3, 5, 6]) {
-      const out = computeMacroCycle(base, T);
-      const weeklyCarbs = T * out.trainingDay.carbsG + (7 - T) * out.restDay.carbsG;
-      expect(Math.round(weeklyCarbs / 7)).toBe(base.carbsG);
-    }
-  });
-
-  test('day kcal tracks the carb delta at 4 kcal/g', () => {
-    const out = computeMacroCycle(base, 4);
-    expect(out.trainingDay.kcal).toBe(2400 + (out.trainingDay.carbsG - 280) * 4);
-    expect(out.restDay.kcal).toBe(2400 + (out.restDay.carbsG - 280) * 4);
-  });
-
-  test('rest-day carbs never go below zero even with six training days', () => {
-    const out = computeMacroCycle(base, 6);
-    expect(out.restDay.carbsG).toBeGreaterThanOrEqual(0);
-    expect(out.trainingDay.carbsG).toBeGreaterThan(out.restDay.carbsG);
-  });
-
-  test('passes protein and fat through as null when not set', () => {
-    const out = computeMacroCycle({ targetKcal: 2000, carbsG: 200 }, 3);
-    expect(out.trainingDay.proteinG).toBeNull();
-    expect(out.trainingDay.fatG).toBeNull();
-    expect(out.restDay.proteinG).toBeNull();
-  });
-});
-
-describe('computeRefeedDay', () => {
-  const base = { targetKcal: 2000, tdee: 2600, proteinG: 200, fatG: 60 };
-
-  test('returns null without a target or maintenance', () => {
-    expect(computeRefeedDay(null)).toBeNull();
-    expect(computeRefeedDay({})).toBeNull();
-    expect(computeRefeedDay({ targetKcal: 2000 })).toBeNull();
-    expect(computeRefeedDay({ tdee: 2600 })).toBeNull();
-  });
-
-  test('returns null when already at or above maintenance (not cutting)', () => {
-    expect(computeRefeedDay({ targetKcal: 2600, tdee: 2600, proteinG: 200, fatG: 60 })).toBeNull();
-    expect(computeRefeedDay({ targetKcal: 2700, tdee: 2600, proteinG: 200, fatG: 60 })).toBeNull();
-  });
-
-  test('raises kcal to maintenance and holds protein + fat', () => {
-    const out = computeRefeedDay(base);
-    expect(out.kcal).toBe(2600);
-    expect(out.proteinG).toBe(200); // held
-    expect(out.fatG).toBe(60);      // held
-  });
-
-  test('carbs fill the gap to maintenance after protein and fat', () => {
-    const out = computeRefeedDay(base);
-    // (2600 - 200*4 - 60*9) / 4 = (2600 - 800 - 540) / 4 = 1260 / 4 = 315
-    expect(out.carbsG).toBe(315);
-    // and the macros add back up to maintenance
-    expect(out.proteinG * 4 + out.carbsG * 4 + out.fatG * 9).toBeCloseTo(2600, 0);
-  });
-
-  test('passes protein and fat through as null when unset, still hits maintenance via carbs', () => {
-    const out = computeRefeedDay({ targetKcal: 1800, tdee: 2400 });
-    expect(out.kcal).toBe(2400);
-    expect(out.proteinG).toBeNull();
-    expect(out.fatG).toBeNull();
-    expect(out.carbsG).toBe(Math.round(2400 / 4)); // 600
+// ONE DAILY TRUTH (Campaign 17A, founder law). The `computeMacroCycle` and
+// `computeRefeedDay` describe blocks that stood here pinned a training-day /
+// rest-day carb split and a single day raised to maintenance. Both helpers are
+// gone: "VOLYUME HAS THE SAME BASE CALORIE AND MACRO TARGET EVERY DAY. There
+// are no automatic training-day targets, rest-day targets, weekday-specific
+// targets... workout-day carb boosts, rest-day carb cuts." The athlete's only
+// per-day movement is their own calorie bank.
+describe('ONE DAILY TRUTH: no day-cycling apply helpers exist', () => {
+  test('coachApply exports no carb cycle and no refeed', () => {
+    // eslint-disable-next-line global-require
+    const mod = require('../coachApply');
+    expect(mod.computeMacroCycle).toBeUndefined();
+    expect(mod.computeRefeedDay).toBeUndefined();
+    expect(mod.MACRO_CYCLE_REST_DAY_CARB_CUT).toBeUndefined();
   });
 });
 

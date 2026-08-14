@@ -1203,25 +1203,12 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
   };
   const explanation = explanations[goal] ?? 'Set up for your current phase.';
 
-  // --- Refeed and diet break recommendations ---
-  // Evidence: MATADOR study (2017, Int J Obesity), 2-week diet breaks produced 50% more fat
-  // loss than continuous restriction at equal total deficit time. Refeeds (1-2 days at
-  // maintenance via carbs) partially restore leptin and preserve RMR.
-  // Source: PMC7739314 (2020); multiple RCTs on intermittent energy restriction.
-  let refeedRecommendation = null;
-  if (goal === 'aggressive_cut') {
-    const refeedProteinKcal = (proteinG ?? 0) * 4;
-    const refeedFatKcal     = (targets.fatG ?? 0) * 9;
-    const refeedCarbsKcal   = Math.max(0, maintenanceKcal - refeedProteinKcal - refeedFatKcal);
-    refeedRecommendation = {
-      type: 'refeed',
-      frequencyWeeks: 2,
-      durationDays: 2,
-      caloricTargetKcal: maintenanceKcal,
-      refeedCarbsG: Math.round(refeedCarbsKcal / 4),
-      notes: 'Return to maintenance calories for 1-2 days, primarily via carbohydrates. Keep protein constant. This helps maintain metabolic rate and hormonal balance during a long deficit.',
-    };
-  }
+  // ONE DAILY TRUTH (Campaign 17A, founder law). A `refeedRecommendation`
+  // field was returned here (maintenance for 1-2 days via carbs, on the dead
+  // 'aggressive_cut' goal). Nothing has ever read it, and a scheduled higher
+  // day is now forbidden outright: the athlete's only per-day movement is
+  // their own calorie bank. No floor, gate or detector reads this function's
+  // output, so removing the field changes no safety behaviour.
 
   // Diet-break recommendations for the contest-prep phase were removed with that
   // (unreachable) phase; the live diet-break path is shouldSuggestDietBreak +
@@ -1254,12 +1241,15 @@ export function getPlanNutritionContext(targets, { bodyMetricsData = [], adheren
 
   return {
     phaseType,
+    // The 2.2 g/kg BW protein cap applied above, surfaced so it stays
+    // observable. Its only previous observer was the refeed's carb figure,
+    // which went with the refeed (one-daily-truth law, Campaign 17A).
+    proteinG,
     recoveryModifier: parseFloat(recoveryModifier.toFixed(2)),
     volumeCeiling,
     failureExposureLevel,
     deloadFrequencyWeeks,
     explanation,
-    refeedRecommendation,
     dietBreakRecommendation,
     ewmaCurrentKg,
     weeklyWeightChange,

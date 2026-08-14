@@ -106,108 +106,14 @@ export function computeDietBreakTargets(nutrition, sex) {
   return computeCalorieTargets(nutrition, Math.round(maintenance - current), sex);
 }
 
-// Fraction of baseline carbs pulled off each rest day. The freed carbs
-// are spread across the training days, so the weekly carb total (and so
-// the weekly average kcal) is preserved. 0.25 is a moderate cycle:
-// noticeable on the plate without starving rest days.
-export const MACRO_CYCLE_REST_DAY_CARB_CUT = 0.25;
-
-/**
- * Compute a high-day / low-day macro split for a carb cycle (GAP row 6).
- *
- * Protein and fat are held constant every day. Only carbs move: each
- * rest day is cut by MACRO_CYCLE_REST_DAY_CARB_CUT of baseline, and the
- * freed carbs are spread evenly across the training days. The weekly
- * carb total is preserved, so the weekly average kcal stays at the
- * current target. Each day's kcal is the current target plus the carb
- * delta from baseline (4 kcal/g), which keeps the day kcal consistent
- * with its own macros and the week consistent with the target.
- *
- * @param {object} nutrition  current targets (targetKcal, proteinG, carbsG, fatG)
- * @param {number} trainingDaysPerWeek  clamped to 1..6
- * @param {object} [opts]     { sex } — drives the sacred per-day calorie floor
- * @returns {null | { trainingDaysPerWeek, trainingDay, restDay }}
- *   null when there is nothing to cycle: no current target or carbs to
- *   split, fewer than 1 or more than 6 training days (no rest day to
- *   pull from, or no training day to push to), the split rounds to a
- *   no-op, or a cycled day would land below the sex calorie floor.
- */
-export function computeMacroCycle(nutrition, trainingDaysPerWeek, { sex = null } = {}) {
-  const targetKcal = nutrition?.targetKcal;
-  const baselineCarbs = nutrition?.carbsG;
-  if (!targetKcal || !baselineCarbs) return null;
-  const T = Math.round(trainingDaysPerWeek);
-  if (!Number.isFinite(T) || T < 1 || T > 6) return null;
-  const R = 7 - T;
-
-  const weeklyCarbs = baselineCarbs * 7;
-  const restDayCarbs = Math.round(baselineCarbs * (1 - MACRO_CYCLE_REST_DAY_CARB_CUT));
-  const trainingDayCarbs = Math.round((weeklyCarbs - R * restDayCarbs) / T);
-  if (trainingDayCarbs === restDayCarbs) return null;
-
-  const proteinG = nutrition.proteinG ?? null;
-  const fatG = nutrition.fatG ?? null;
-  const restDayKcal = Math.round(targetKcal + (restDayCarbs - baselineCarbs) * 4);
-  const trainingDayKcal = Math.round(targetKcal + (trainingDayCarbs - baselineCarbs) * 4);
-
-  // F3 (audit EN-2): the sacred sex calorie floor applies to EVERY SERVED
-  // DAY, not just the weekly average. A target at or near the floor cannot
-  // fund a rest-day carb cut — the meal-plan path already refuses to cycle a
-  // floored target (mealPlanAssembler returns flat) and this path must agree
-  // with it. No cycle is proposed rather than serving a sub-floor day;
-  // clamping the day up instead would silently break the "weekly average
-  // preserved" contract the note copy promises.
-  const floorKcal = kcalFloorForSex(sex);
-  if (restDayKcal < floorKcal || trainingDayKcal < floorKcal) return null;
-
-  return {
-    trainingDaysPerWeek: T,
-    trainingDay: {
-      kcal: trainingDayKcal,
-      proteinG,
-      carbsG: trainingDayCarbs,
-      fatG,
-    },
-    restDay: {
-      kcal: restDayKcal,
-      proteinG,
-      carbsG: restDayCarbs,
-      fatG,
-    },
-  };
-}
-
-/**
- * Compute the targets for a single refeed day (GAP row 7). This is the
- * live wiring of the refeed math that previously sat dead in
- * nutritionEngine.getPlanNutritionContext: raise the day to maintenance
- * by adding carbohydrate, holding protein and fat. Maintenance is the
- * stored tdee, the same source the diet break uses (there is no
- * separate maintenance column).
- *
- * Carbs fill the gap to maintenance after protein and fat are paid for,
- * so the day's kcal lands on maintenance exactly.
- *
- * @returns {null | { kcal, proteinG, carbsG, fatG }}
- *   null when there is no maintenance figure, no current target, or the
- *   current target already sits at or above maintenance (not in a
- *   deficit, so there is nothing to refeed up to).
- */
-export function computeRefeedDay(nutrition) {
-  const current = nutrition?.targetKcal;
-  const maintenance = nutrition?.tdee;
-  if (!current || !maintenance) return null;
-  if (maintenance <= current) return null;
-  const proteinG = nutrition.proteinG ?? null;
-  const fatG = nutrition.fatG ?? null;
-  const carbsKcal = Math.max(0, maintenance - (proteinG ?? 0) * 4 - (fatG ?? 0) * 9);
-  return {
-    kcal: maintenance,
-    proteinG,
-    carbsG: Math.round(carbsKcal / 4),
-    fatG,
-  };
-}
+// ONE DAILY TRUTH (Campaign 17A, founder law). `MACRO_CYCLE_REST_DAY_CARB_CUT`,
+// `computeMacroCycle` (the training-day / rest-day carb split) and
+// `computeRefeedDay` (a single day raised to maintenance) used to live here.
+// All three are gone. They made a day's calorie and macro target depend on
+// which calendar day the athlete trained, and a Volyume athlete trains
+// whenever life allows. There is now ONE base daily target; the only thing
+// that moves a single day is the athlete's own calorie bank, which they set
+// themselves and which holds the weekly total.
 
 // Stage 7 (§3.4, founder order 2026-08-09): the strain-scaled deload
 // share. 60% of the achieved peak on a fresh block, stepping down five

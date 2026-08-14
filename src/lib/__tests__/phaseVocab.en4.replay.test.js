@@ -18,7 +18,7 @@
  * diet break, macro cycling), whatever entitlements the user holds.
  */
 import { runWeeklyCoach } from '../weeklyCoach';
-import { isCutPhase, phaseToCoachingKey, dayCalorieCyclingAllowed } from '../coachingGoals';
+import { isCutPhase, phaseToCoachingKey } from '../coachingGoals';
 
 const DAY = 86400000;
 const NOW = Date.UTC(2026, 5, 22, 8, 0, 0); // fixed clock (EN-5 injectable nowMs)
@@ -132,14 +132,21 @@ describe('EN-4 replay — live phases [must never drift]', () => {
     expect(out.trend.onTarget).toBe(true);
   });
 
-  test('V9 competition-goal cut keeps the weekly refeed', () => {
+  // ONE DAILY TRUTH (Campaign 17A, founder law). V9 pinned that a
+  // competition-goal cut kept its weekly refeed. Refeeds are gone for
+  // everyone, competitors included: a scheduled higher day depends on knowing
+  // which day they train, and they train whenever life allows. The replay
+  // keeps the case and inverts the expectation, so the deletion is recorded
+  // rather than quietly dropped.
+  test('V9 competition-goal cut gets NO refeed [changed in 17A]', () => {
     const out = runWeeklyCoach(coachInputs({
       goalPhase: 'mild_cut', trainingGoal: 'bikini', morningWeights: series(0.045),
-      currentCalTarget: 2000, currentMaintenanceKcal: 2600, currentProteinG: 170, currentFatG: 60,
-      lastRefeedAt: null,
+      currentCalTarget: 2000, currentMaintenanceKcal: 2600,
     }));
-    expect(out.refeed).toBeTruthy();
-    expect(out.refeed.frequencyWeeks).toBe(1);
+    expect(out.refeed).toBeUndefined();
+    expect(out.macroCycle).toBeUndefined();
+    // The cut itself is untouched: the phase still reads as a cut.
+    expect(out.weekLabel).toMatch(/cut/i);
   });
 });
 
@@ -147,11 +154,10 @@ describe('EN-4 replay — dead vocabulary deleted (founder ruling b)', () => {
   test('V10 direct agg_cut input: the deleted key falls back to maintenance with no refeed', () => {
     const out = runWeeklyCoach(coachInputs({
       goalPhase: 'agg_cut', morningWeights: series(0.12),
-      currentCalTarget: 2000, currentMaintenanceKcal: 2600, currentProteinG: 170, currentFatG: 60,
-      lastRefeedAt: null,
+      currentCalTarget: 2000, currentMaintenanceKcal: 2600,
     }));
     expect(out.weekLabel).toBe('Week 5 · Maintenance'); // [changed in phase 2: unknown key falls back to maintenance]
-    expect(out.refeed ?? null).toBeNull();              // [changed in phase 2: the non-competition refeed died with agg_cut]
+    expect(out.refeed ?? null).toBeNull();              // [changed in 17A: refeeds are gone entirely]
   });
 
   test('V11 direct mod_cut input: the deleted key falls back to maintenance', () => {
@@ -171,7 +177,9 @@ describe('EN-4 replay — dead vocabulary deleted (founder ruling b)', () => {
     expect(isCutPhase('mild_cut')).toBe(true);                          // [must never drift]
     expect(['agg_cut', 'mod_cut'].some(isCutPhase)).toBe(false);        // [changed in phase 2: deleted keys are not cuts]
     expect(['recomp', 'maint', 'mild_bulk', 'mod_bulk', 'bulk'].some(isCutPhase)).toBe(false); // [must never drift]
-    expect(dayCalorieCyclingAllowed({ goalPhase: 'mild_cut', goalLockAdvanced: true })).toBe(true); // [must never drift]
-    expect(dayCalorieCyclingAllowed({ goalPhase: 'recomp', goalLockAdvanced: true, trainingGoal: 'mens_physique' })).toBe(false); // [must never drift]
+    // [changed in 17A: dayCalorieCyclingAllowed is gone - nobody cycles
+    // calories by day type, so the gate it guarded no longer exists]
+    // eslint-disable-next-line global-require
+    expect(require('../coachingGoals').dayCalorieCyclingAllowed).toBeUndefined();
   });
 });

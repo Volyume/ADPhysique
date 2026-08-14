@@ -49,10 +49,18 @@ describe('SETTINGS ownership', () => {
 });
 
 describe('CONTEXTUAL shortcuts navigate to the canonical owner', () => {
-  test('the Diary offset row links to PerDayTargets and renders only when an offset applies', () => {
+  // ONE DAILY TRUTH (Campaign 17A, founder law): the per-weekday calorie
+  // offset is retired and its screen deleted, so the Diary disclosure row that
+  // linked to it is gone too. The founder's instruction was explicit: "remove/
+  // hide live controls that promise behaviour we no longer support" and "do
+  // not leave a hidden setting that still modifies targets". Pinned as an
+  // absence so no shortcut can point at a route that no longer exists.
+  test('the Diary carries no per-day offset row and no PerDayTargets route', () => {
     const src = read('screens/DiaryScreen.js');
-    expect(src).toMatch(/appliedOffsetKcal !== 0 \?/);
-    expect(src).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'PerDayTargets'\)/);
+    expect(src).not.toMatch(/appliedOffsetKcal/);
+    expect(src).not.toMatch(/PerDayTargets/);
+    expect(read('navigation/RootNavigator.js')).not.toMatch(/PerDayTargets/);
+    expect(read('screens/SettingsScreen.js')).not.toMatch(/PerDayTargets/);
   });
 
   test('the Coach tab routes to the volume-target editor', () => {

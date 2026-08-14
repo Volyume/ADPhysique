@@ -468,132 +468,50 @@ describe('robustness to missing fields', () => {
   });
 });
 
-// ── High-day / low-day macro cycle gating (GAP row 6) ──────────────────────
+// ── ONE DAILY TRUTH (Campaign 17A, founder law) ────────────────────────────
+// The 'macro cycle gating' and 'refeed gating and cadence' describe blocks
+// that stood here pinned two coach outputs: a training-day / rest-day carb
+// split, and a single day raised to maintenance. The founder retired both:
+// "VOLYUME HAS THE SAME BASE CALORIE AND MACRO TARGET EVERY DAY... The user's
+// training days are not fixed calendar days. They train whenever life allows."
+// These pins replace them, asserting the coach can no longer emit either -
+// including for the exact users who used to receive them.
 
-describe('macro cycle gating', () => {
-  // Current daily macros, supplied by the caller from nutrition_targets.
+describe('ONE DAILY TRUTH: the coach emits no day-cycling proposal', () => {
   const macros = { currentCalTarget: 2400, currentProteinG: 200, currentCarbsG: 280, currentFatG: 70 };
-  const onCut = { morningWeights: trend(85, -0.35), goalPhase: 'mild_cut' };
-
-  test('fires on an advanced cut', () => {
-    const out = runWeeklyCoach(baseInputs({ ...macros, ...onCut, goalLockAdvanced: true }));
-    expect(out.macroCycle).not.toBeNull();
-    expect(out.macroCycle.trainingDay.carbsG).toBeGreaterThan(out.macroCycle.restDay.carbsG);
-    expect(out.macroCycle.trainingDaysPerWeek).toBe(4); // sessionsPlanned default
-  });
-
-  test('fires for a physique competitor on a cut', () => {
-    const out = runWeeklyCoach(baseInputs({ ...macros, ...onCut, trainingGoal: 'mens_physique' }));
-    expect(out.macroCycle).not.toBeNull();
-  });
-
-  test('stays flat for a non-advanced, non-competition cut', () => {
-    const out = runWeeklyCoach(baseInputs({
-      ...macros, ...onCut, trainingGoal: 'build_muscle', goalLockAdvanced: false,
-    }));
-    expect(out.macroCycle).toBeNull();
-  });
-
-  test('does not fire outside a cut even for an advanced competitor', () => {
-    const out = runWeeklyCoach(baseInputs({
-      ...macros,
-      morningWeights: trend(80, 0.5),
-      goalPhase: 'mild_bulk',
-      trainingGoal: 'mens_physique',
-      goalLockAdvanced: true,
-    }));
-    expect(out.macroCycle).toBeNull();
-  });
-
-  test('holds the weekly average kcal at the current target', () => {
-    const out = runWeeklyCoach(baseInputs({ ...macros, ...onCut, goalLockAdvanced: true }));
-    const T = out.macroCycle.trainingDaysPerWeek;
-    const weekly = T * out.macroCycle.trainingDay.kcal + (7 - T) * out.macroCycle.restDay.kcal;
-    expect(Math.abs(weekly / 7 - 2400)).toBeLessThanOrEqual(5);
-  });
-
-  test('note is in voice (no em dash, no AI tells)', () => {
-    const out = runWeeklyCoach(baseInputs({ ...macros, ...onCut, goalLockAdvanced: true }));
-    expect(out.macroCycle.note).not.toMatch(/—/);
-    expect(out.macroCycle.note).not.toMatch(/let me|I'll|ensure|leverage|seamless|utilise/i);
-  });
-});
-
-// ── Refeed wiring + cadence (GAP row 7) ────────────────────────────────────
-
-describe('refeed gating and cadence', () => {
-  const DAY = 86_400_000;
-  // Maintenance well above target so there is a deficit to refeed up to.
   const nut = { currentCalTarget: 2000, currentMaintenanceKcal: 2600, currentProteinG: 200, currentFatG: 60 };
-  // EN-4: refeeds are competition-only now — the fortnightly agg_cut cadence
-  // died with the dead agg_cut vocabulary (it was unreachable in production).
-  const compCut = { morningWeights: trend(85, -1.0), goalPhase: 'mild_cut', trainingGoal: 'bikini' };
 
-  test('fires for a physique competitor with no prior refeed, at maintenance kcal', () => {
-    const out = runWeeklyCoach(baseInputs({ ...nut, ...compCut, lastRefeedAt: null }));
-    expect(out.refeed).not.toBeNull();
-    expect(out.refeed.kcal).toBe(2600);
-    expect(out.refeed.frequencyWeeks).toBe(1);
+  test('an advanced cutter - who used to get the carb cycle - gets no macroCycle', () => {
+    const out = runWeeklyCoach(baseInputs({
+      ...macros, morningWeights: trend(85, -0.35), goalPhase: 'mild_cut', goalLockAdvanced: true,
+    }));
+    expect(out.macroCycle).toBeUndefined();
   });
 
-  test('fires weekly for a physique competitor', () => {
+  test('a physique competitor on a cut - who used to get a refeed - gets none', () => {
     const out = runWeeklyCoach(baseInputs({
-      ...nut,
-      morningWeights: trend(85, -1.0),
-      goalPhase: 'mild_cut',
-      trainingGoal: 'bikini',
+      ...nut, morningWeights: trend(85, -1.0), goalPhase: 'mild_cut', trainingGoal: 'bikini',
       lastRefeedAt: null,
     }));
-    expect(out.refeed).not.toBeNull();
-    expect(out.refeed.frequencyWeeks).toBe(1); // competitor cadence
+    expect(out.refeed).toBeUndefined();
   });
 
-  test('does not fire for a non-aggressive, non-competition cut', () => {
-    const out = runWeeklyCoach(baseInputs({
-      ...nut,
-      morningWeights: trend(85, -0.5),
-      goalPhase: 'mild_cut',
-      trainingGoal: 'build_muscle',
-      lastRefeedAt: null,
+  test('a legacy lastRefeedAt input cannot revive the cadence', () => {
+    const DAY = 86_400_000;
+    const withGap = runWeeklyCoach(baseInputs({
+      ...nut, morningWeights: trend(85, -1.0), goalPhase: 'mild_cut', trainingGoal: 'bikini',
+      lastRefeedAt: NOW - 30 * DAY,
     }));
-    expect(out.refeed).toBeNull();
+    expect(withGap.refeed).toBeUndefined();
+    expect(withGap.macroCycle).toBeUndefined();
   });
 
-  test('holds off when a refeed was taken inside the cadence window', () => {
-    // Competitor: weekly cadence. A refeed 3 days ago is not yet due.
+  test('no coach output field mentions a training-day or rest-day target', () => {
     const out = runWeeklyCoach(baseInputs({
-      ...nut,
-      morningWeights: trend(85, -1.0),
-      goalPhase: 'mild_cut',
-      trainingGoal: 'bikini',
-      lastRefeedAt: NOW - 3 * DAY, // D97-22 re-anchor: judged at the injected NOW clock
+      ...macros, ...nut, morningWeights: trend(85, -0.35), goalPhase: 'mild_cut',
+      goalLockAdvanced: true, trainingGoal: 'bikini',
     }));
-    expect(out.refeed).toBeNull();
-  });
-
-  test('fires again once the cadence window has passed', () => {
-    // Competitor: weekly. 8 days ago is due.
-    const out = runWeeklyCoach(baseInputs({
-      ...nut, ...compCut,
-      lastRefeedAt: NOW - 8 * DAY, // D97-22 re-anchor: judged at the injected NOW clock
-    }));
-    expect(out.refeed).not.toBeNull();
-  });
-
-  test('does not fire outside a cut', () => {
-    const out = runWeeklyCoach(baseInputs({
-      ...nut,
-      morningWeights: trend(80, 0.5),
-      goalPhase: 'mild_bulk',
-      trainingGoal: 'bikini',
-      lastRefeedAt: null,
-    }));
-    expect(out.refeed).toBeNull();
-  });
-
-  test('note is in voice (no em dash, no AI tells)', () => {
-    const out = runWeeklyCoach(baseInputs({ ...nut, ...compCut, lastRefeedAt: null }));
-    expect(out.refeed.note).not.toMatch(/—/);
-    expect(out.refeed.note).not.toMatch(/let me|I'll|ensure|leverage|seamless|utilise/i);
+    const json = JSON.stringify(out);
+    expect(json).not.toMatch(/training day|rest day|refeed|carb cycle/i);
   });
 });

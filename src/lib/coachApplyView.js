@@ -23,7 +23,7 @@
  * preference is honoured (NU-6). All stored and engine values stay kcal;
  * the conversion is display-only.
  */
-import { computeCalorieTargets, computeMacroCycle, kcalFloorForSex } from './coachApply';
+import { computeCalorieTargets, kcalFloorForSex } from './coachApply';
 import { formatEnergy, energyUnitLabel } from './format';
 
 /**
@@ -55,32 +55,6 @@ export function classifyCalorieApply(nutrition, change, sex) {
   return { kind: 'ok', floorKcal, newKcal: computed.newKcal };
 }
 
-/**
- * Classify what applying the carb cycle to the CURRENT targets would do.
- *
- * Distinguishes "the sacred floor blocks the cycle" from a structurally
- * impossible cycle WITHOUT recomputing the split maths: re-run the same
- * real function with the target lifted far above any floor. If the cycle
- * works up there, the floor was the only thing stopping it down here.
- *
- * @returns {{ kind: 'ok'|'floor_hold'|'unavailable', floorKcal: number, split?: object }}
- */
-export function classifyMacroCycleApply(nutrition, trainingDaysPerWeek, sex) {
-  const floorKcal = kcalFloorForSex(sex);
-  const split = computeMacroCycle(nutrition, trainingDaysPerWeek, { sex });
-  if (split) return { kind: 'ok', floorKcal, split };
-  const target = nutrition?.targetKcal;
-  if (target) {
-    const lifted = computeMacroCycle(
-      { ...nutrition, targetKcal: target + 100000 },
-      trainingDaysPerWeek,
-      { sex },
-    );
-    if (lifted) return { kind: 'floor_hold', floorKcal };
-  }
-  return { kind: 'unavailable', floorKcal };
-}
-
 // ── Row strings (NU-3 / NU-4) ────────────────────────────────────────────────
 // Calm, plain register; no em dash (lint-enforced); energy figures honour the
 // kJ display preference.
@@ -93,16 +67,6 @@ export function floorHoldLine(floorKcal, energyUnit = 'kcal') {
 /** The floor caught the change part-way: the applied row must say so. */
 export function floorClampLine(newKcal, energyUnit = 'kcal') {
   return `Applied to your safe minimum, ${formatEnergy(newKcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`;
-}
-
-/**
- * The floor blocked the CARB CYCLE: attribute the hold correctly. The weekly
- * target is not itself held at the floor; the cycle's rest-day serving is
- * what would dip below it, so the generic "Held at your safe minimum" line
- * misstates where the floor bit.
- */
-export function macroCycleHoldLine(floorKcal, energyUnit = 'kcal') {
-  return `Held: a rest day would fall below your safe minimum of ${formatEnergy(floorKcal, energyUnit)} ${energyUnitLabel(energyUnit)}.`;
 }
 
 /**

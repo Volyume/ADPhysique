@@ -35,9 +35,14 @@ describe('selectCoachOutputZones (U-B-1 §3/§6)', () => {
     expect(z.secondaryKinds).not.toContain('training');
   });
 
-  test('macro/refeed are always secondary, never the hero', () => {
+  // ONE DAILY TRUTH (Campaign 17A, founder law): the carb-cycle and refeed
+  // cards are gone, so the 'macro' and 'refeed' zone kinds are gone with them.
+  // A caller still passing the old flags must not conjure a card back.
+  test('legacy hasMacro/hasRefeed flags produce no zone kinds', () => {
     const z = selectCoachOutputZones(out('calories'), { hasMacro: true, hasRefeed: true });
-    expect(z.secondaryKinds).toEqual(expect.arrayContaining(['training', 'macro', 'refeed']));
+    expect(z.secondaryKinds).toEqual(['training']);
+    expect(z.secondaryKinds).not.toContain('macro');
+    expect(z.secondaryKinds).not.toContain('refeed');
   });
 
   test('primary:null (on-target/holding) → no hero, no empty expander assumptions', () => {
