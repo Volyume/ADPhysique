@@ -18,7 +18,7 @@ import fs from 'fs';
 import path from 'path';
 import { SIGNAL, buildCoachContext, systemicRecoveryFact } from '../coachContext';
 import { classifyTrainingLimiter, LIMITER } from '../coachPrecedence';
-import { buildWeeklyStory, storyLines } from '../coachStory';
+import { buildCoachStory, storyLines } from '../coachStory';
 import { classifyMuscleBlock } from '../interBlock';
 import { slotVerdict, SLOT_REASON, SLOT_VERDICT } from '../programmeEpoch';
 import { resolveFfmFloorWeightKg } from '../nutritionEngine';
@@ -77,7 +77,7 @@ describe('JOB 6: recovery means one thing per scope, and the scope is stated', (
       weight: { ratePctPerWeek: 0.3, weighInCount: 12, onTarget: true },
     });
     const limiters = { training: classifyTrainingLimiter(context), nutrition: { limiter: LIMITER.PLAN, onTarget: true } };
-    const text = storyLines(buildWeeklyStory({ context, limiters })).join(' ');
+    const text = storyLines(buildCoachStory({ context, limiters })).join(' ');
     expect(text).toMatch(/Recovery overall/);
     expect(text).toMatch(/rather than the exercises themselves/);
   });

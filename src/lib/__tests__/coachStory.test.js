@@ -15,12 +15,12 @@
  */
 import { buildCoachContext } from '../coachContext';
 import { classifyLimiters } from '../coachPrecedence';
-import { buildWeeklyStory, storyLines, BANNED_TERMS } from '../coachStory';
+import { buildCoachStory, storyLines, BANNED_TERMS } from '../coachStory';
 
 const ctxOf = (o) => buildCoachContext(o);
 const storyOf = (o, changes = {}) => {
   const context = ctxOf(o);
-  return buildWeeklyStory({ context, limiters: classifyLimiters(context), changes });
+  return buildCoachStory({ context, limiters: classifyLimiters(context), changes });
 };
 
 /** The founder's first example: everything working, nothing to change. */
@@ -260,7 +260,7 @@ describe('THE USER ACTUALLY SEES IT', () => {
 
   test('the screen builds the story from the ENGINE\'s own context, not a second read', () => {
     expect(SCREEN).toMatch(/context: coachCtx,\s*\n\s*limiters: coachLimiters,/);
-    expect(SCREEN).toMatch(/const weeklyStory = buildWeeklyStory\(\{/);
+    expect(SCREEN).toMatch(/const weeklyStory = buildCoachStory\(\{/);
   });
 
   test('the changes it reports are the ones the engine actually made', () => {

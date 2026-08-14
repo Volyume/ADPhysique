@@ -31,6 +31,10 @@
  * neither carries weight/rate numbers, so nothing to strip there.
  */
 
+// Campaign 18: the ONE definition of how many logged days it takes before an
+// intake reading may be compared to a target.
+import { MIN_INTAKE_DAYS } from './coachContext';
+
 function chapter(key, icon, heading, body, empty = false) {
   return { key, icon, heading, body, empty };
 }
@@ -56,7 +60,20 @@ function buildEatingChapter({ intake, targetKcal }) {
     return chapter('eating', 'nutrition-outline', 'Eating', 'No meals logged in the last 7 days.', true);
   }
   let body = `You logged food on ${daysLogged} of the last 7 days, averaging ${avgKcal} kcal a day.`;
-  if (Number.isFinite(targetKcal) && targetKcal > 0) {
+  // CAMPAIGN 18 JOB 20 (question 7: "is another consumer capable of saying the
+  // opposite?"). It was. On two logged days this chapter said "that's below
+  // your 3000 kcal target" while the coaching screen, reading the same week,
+  // said there was not enough logging to judge intake at all. Both sentences
+  // were about the same seven days and they contradicted each other.
+  //
+  // The average itself stays - it is an honest statement about the days that
+  // WERE logged. What needs the coverage is the CONCLUSION drawn from it, so
+  // the above/below verdict now uses the same MIN_INTAKE_DAYS the coaching
+  // context uses. One idea of "enough", shared, rather than two.
+  const enoughToJudge = daysLogged >= MIN_INTAKE_DAYS;
+  if (!enoughToJudge) {
+    body += ' That is not enough days to compare against your target yet.';
+  } else if (Number.isFinite(targetKcal) && targetKcal > 0) {
     const diff = avgKcal - targetKcal;
     // Within 5% of target reads as "close to" rather than a hair-splitting
     // over/under, matching the adherence-neutral voice used elsewhere

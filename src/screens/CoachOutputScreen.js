@@ -8,7 +8,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { runWeeklyCoach, mapCalsAdherence, corroborateConfidenceLevel } from '../lib/weeklyCoach';
 // Campaign 18: the week as one account, written from the engine's own context.
-import { buildWeeklyStory } from '../lib/coachStory';
+import { buildCoachStory } from '../lib/coachStory';
 // Campaign 18 outcome follow-up: what changed, why, and what happened after.
 import {
   buildInterventionRecord, INTERVENTION_KIND, interventionsFromHistory,
@@ -2158,7 +2158,7 @@ export default function CoachOutputScreen({ navigation, route }) {
   // the same week - so the story cannot describe a decision the engine did
   // not take. `changes` carries only what the engine actually produced.
   // Not memoised, deliberately: this destructure sits AFTER the screen's
-  // early returns, so a hook here would be called conditionally. buildWeeklyStory
+  // early returns, so a hook here would be called conditionally. buildCoachStory
   // is a pure string assembly over an object the run already produced - the
   // same reasoning the file's own buildLiveStyles(t) call documents above.
   // CAMPAIGN 18 OUTCOME FOLLOW-UP, at the surface. The most recent accepted
@@ -2176,7 +2176,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     ? outcomeCopy(lastIntervention, lastOutcome.outcome)
     : null;
 
-  const weeklyStory = buildWeeklyStory({
+  const weeklyStory = buildCoachStory({
     context: coachCtx,
     limiters: coachLimiters,
     outcome: lastOutcomeLine ? { text: lastOutcomeLine, state: lastOutcome.outcome } : null,

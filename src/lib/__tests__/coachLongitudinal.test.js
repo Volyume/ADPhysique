@@ -24,7 +24,7 @@
 import { runWeeklyCoach } from '../weeklyCoach';
 import { LIMITER } from '../coachPrecedence';
 import { SIGNAL } from '../coachContext';
-import { buildWeeklyStory, storyLines } from '../coachStory';
+import { buildCoachStory, storyLines } from '../coachStory';
 import { slotVerdict, SLOT_REASON, SLOT_VERDICT } from '../programmeEpoch';
 
 const DAY = 86_400_000;
@@ -66,7 +66,7 @@ function week({
   });
 }
 
-const story = (out, changes = {}) => buildWeeklyStory({
+const story = (out, changes = {}) => buildCoachStory({
   context: out.context, limiters: out.limiters,
   changes: { calorieKcal: out.adjustments?.calories?.change ?? 0, ...changes },
 });

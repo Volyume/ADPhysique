@@ -71,7 +71,9 @@ export function whatHappened(context) {
   else if (w?.signal === SIGNAL.POOR) out.push(line('Your weight is not moving the way we intended.', 'weight.trend'));
   else if (w?.signal === SIGNAL.UNKNOWN) out.push(line('There are not enough weigh-ins to read a trend yet.', 'weight.trend'));
 
-  if (n?.signal === SIGNAL.GOOD) out.push(line(`You logged ${n.detail}.`, 'nutrition.coverage'));
+  // The coverage fact's own detail already reads "6 of 7 days logged", so the
+  // sentence carries the count and not a second "logged".
+  if (n?.signal === SIGNAL.GOOD) out.push(line(`You logged food on ${n.value} of the last 7 days.`, 'nutrition.coverage'));
   else if (n?.signal === SIGNAL.UNKNOWN) out.push(line('There is not enough food logging this week to judge your intake.', 'nutrition.coverage'));
 
   if (r?.signal === SIGNAL.POOR) out.push(line('Recovery was harder than usual this week.', 'recovery.systemic'));
@@ -104,6 +106,12 @@ export function whatItMeans(context, limiters) {
     ));
   } else if (nut?.onTarget === true) {
     out.push(line('Your food target is doing its job.', 'weight.trend'));
+  } else if (nut?.limiter === LIMITER.PLAN) {
+    // The week where the target IS changing had no line here at all, so the
+    // most consequential decision on the screen was the one the account said
+    // least about. Stated within the nutrition domain only - the evidence is
+    // that the target was eaten and the scale still did not follow.
+    out.push(line('Your target has had a fair run and your weight still is not moving as planned.', 'nutrition.intake'));
   }
 
   if (tr?.limiter === LIMITER.EXECUTION) {
@@ -118,6 +126,8 @@ export function whatItMeans(context, limiters) {
     out.push(line('There is not enough training evidence yet to change anything.', 'training.execution'));
   } else if (tr?.progressing) {
     out.push(line('The programme is working, so it is worth leaving alone.', 'training.progress'));
+  } else if (tr?.limiter === LIMITER.PLAN) {
+    out.push(line('You have run the programme and recovered from it, so the lifts not moving is about the training itself.', 'training.progress'));
   }
 
   // MAY WE SAY ANYTHING ABOUT FOOD HERE? (job 5). Only where the evidence
@@ -270,7 +280,13 @@ export function whatWeWatchNext(context, limiters, changes = {}) {
  * @param {object} args { context, limiters, changes }
  * @returns {{ happened, means, changing, staying, watching, isQuietWeek }}
  */
-export function buildWeeklyStory({ context = null, limiters = null, changes = {}, outcome = null } = {}) {
+// NAMED buildCoachStory, not buildWeeklyStory. `weeklyStory.js` already owns
+// that name for a different surface (the four-chapter train/eat/weigh/decision
+// recap on WeeklyStoryScreen). Two exported functions with one name, producing
+// two different "weekly stories", is exactly the confusion this campaign
+// exists to remove - so this one is named for what it is: the coaching
+// decision account.
+export function buildCoachStory({ context = null, limiters = null, changes = {}, outcome = null } = {}) {
   if (!context) return null;
   const changing = whatIsChanging(context, limiters, changes);
   return {
