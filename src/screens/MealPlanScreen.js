@@ -40,6 +40,8 @@ import { todayLocalKey, parseLocalDay } from '../lib/dayKey';
 import { shiftDate } from '../lib/food/diaryDates';
 // Campaign 17B job 4: stated vs observed, from CONFIRMED intake only.
 import { mealCountObservation } from '../lib/food/habits';
+// Campaign 17B job 5: why these meals, from the codes stamped at generation.
+import { explainMeal, explainDay } from '../lib/food/mealRationale';
 import { getNutritionTargets } from '../lib/database';
 
 // How far back the meal-count observation looks. Four weeks is long enough to
@@ -994,6 +996,8 @@ export default function MealPlanScreen({ navigation, route }) {
   const isDayPlan = plan?.kind === 'day' || (plan?.days?.length === 1);
   const activeDayLabel = isDayPlan ? (planStartDate === todayLocalKey() ? 'Today' : planStartLabel) : (dayLabels[dayIndex]?.date || `Day ${dayIndex + 1}`);
 
+  const dayReason = useMemo(() => explainDay(day?.slots), [day]);
+
   const honestyLine = useMemo(() => {
     if (!day || day.withinTolerance) return null;
     // L05-A1/A2 (2026-07-09 design audit): use the engine's own diagnosis
@@ -1130,6 +1134,10 @@ export default function MealPlanScreen({ navigation, route }) {
               </Text>
             ) : null}
           </View>
+          {/* Campaign 17B job 5: WHY THESE MEALS, in one line, from the
+              reason codes stamped as the plan was built. Never inferred from
+              the meal names. */}
+          {dayReason ? <Text style={[styles.dayReason, live.dayReason]}>{dayReason}</Text> : null}
           {honestyLine ? <Text style={[styles.honesty, live.honesty]}>{honestyLine}</Text> : null}
 
           {/* Campaign 1 P0-3: dietary-needs staleness notice. Renders only
@@ -1293,6 +1301,13 @@ export default function MealPlanScreen({ navigation, route }) {
                     <Text style={[styles.macroLine, live.macroLine]} numberOfLines={1} ellipsizeMode="tail">
                       {`P ${formatNumber(slot.totals.protein)} g - C ${formatNumber(slot.totals.carbs)} g - F ${formatNumber(slot.totals.fat)} g`}
                     </Text>
+                    {/* Campaign 17B job 5: WHY THIS MEAL. Rendered only when a
+                        reason was actually recorded - a meal with none shows
+                        nothing, which is honest, rather than a guess dressed
+                        up as an explanation. */}
+                    {explainMeal(slot.reason) ? (
+                      <Text style={[styles.mealReason, live.mealReason]}>{explainMeal(slot.reason)}</Text>
+                    ) : null}
                     {/* Season to taste: the free additions that suit this meal
                         (e.g. saffron on chicken & rice). Maps by the meal's
                         curated id; falls back to generic savoury/sweet.
@@ -1973,6 +1988,9 @@ const styles = StyleSheet.create({
   habitQuestion: { ...type.body, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   habitDetail: { ...type.bodySm, color: colors.textSecondary },
   habitActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap', marginTop: spacing.xs },
+  // Campaign 17B job 5: the plan's own explanations.
+  dayReason: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
+  mealReason: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs },
   // Campaign 17A job 3: the "back to the food list" row on the intent step.
   swapBackRow: { alignSelf: 'center', paddingVertical: spacing.md, paddingHorizontal: spacing.lg },
   // D2 #15: 360 is the base/fallback cap; the component overrides maxHeight
@@ -2031,6 +2049,8 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     habitCard: { backgroundColor: t.colors.surface2 },
+    dayReason: { ...t.type.bodySm, color: t.colors.textSecondary },
+    mealReason: { ...t.type.bodySm, color: t.colors.textMuted },
     habitQuestion: { ...t.type.body, color: t.colors.textPrimary },
     habitDetail: { ...t.type.bodySm, color: t.colors.textSecondary },
     emptyIcon: { backgroundColor: t.colors.primaryBg },

@@ -27,6 +27,8 @@ import { normalisePreferences, filterMealsByPreferences, filterSavedMealsByPrefe
 import { roleOf, gramRangeOf } from './foodRoles';
 import { solveGramsForKcal } from './gramSolve';
 import { within, ADHERENCE_TOLERANCE } from './adherence';
+// Campaign 17B job 5: structured reasons, stamped as the plan is built.
+import { MEAL_REASON } from './mealRationale';
 
 const r0 = (n) => Math.round(n);
 const r1 = (n) => Math.round(n * 10) / 10;
@@ -562,6 +564,13 @@ export function assembleDayPlan({
     fat: Number(target.fatG) || 0,
   };
 
+  // Campaign 17B job 5: does this user have ANY personal signal for us to have
+  // built around? With none, a curated pick is honestly a sensible starting
+  // choice rather than a personalised one, and the explanation says so.
+  const hasPersonalHistory = savedMeals.length > 0
+    || (prefs.pinnedMealIds || []).length > 0
+    || !!prefs.rotationPool;
+
   let placed = [];
   const usedIds = new Set();
   let consumed = { kcal: 0, protein: 0, carbs: 0, fat: 0 };
@@ -588,7 +597,7 @@ export function assembleDayPlan({
     if (!slot) return;
     pinnedTaken.add(slot.key);
     usedIds.add(cand.id);
-    placed.push({ slot: slot.key, mealId: cand.id, name: cand.name, source: cand.source, items: cand.items, totals: cand.totals, components: cand.components, pinned: true });
+    placed.push({ slot: slot.key, mealId: cand.id, name: cand.name, source: cand.source, items: cand.items, totals: cand.totals, components: cand.components, pinned: true, reason: MEAL_REASON.PINNED });
     consumed = {
       kcal: consumed.kcal + cand.totals.kcal,
       protein: consumed.protein + cand.totals.protein,
@@ -694,7 +703,15 @@ export function assembleDayPlan({
 
     if (best) {
       usedIds.add(best.id);
-      placed.push({ slot: slot.key, mealId: best.id, name: best.name, source: best.source, items: best.items, totals: best.totals, components: best.components });
+      // Campaign 17B job 5: WHY this meal, recorded as a code at the moment
+      // the decision is made. Never inferred later from the meal's name.
+      // Most specific reason wins: a meal that is both the user's own recipe
+      // and a good macro fit is explained as their recipe, because that is
+      // the reason that means something to them.
+      const reason = best.source === 'saved'
+        ? (String(best.id).startsWith('recipe:') ? MEAL_REASON.RECIPE : MEAL_REASON.SAVED_MEAL)
+        : (hasPersonalHistory ? MEAL_REASON.MACRO_FIT : MEAL_REASON.GENERIC_START);
+      placed.push({ slot: slot.key, mealId: best.id, name: best.name, source: best.source, items: best.items, totals: best.totals, components: best.components, reason });
       consumed = {
         kcal: consumed.kcal + best.totals.kcal,
         protein: consumed.protein + best.totals.protein,
