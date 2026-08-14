@@ -1512,8 +1512,14 @@ export function runWeeklyCoach(inputs) {
         : calNote;
       // Campaign 18: the receipt says WHY the step is bigger than last time,
       // in the user's own history rather than in a multiplier.
+      // CAMPAIGN 18. The receipt compares this step to the step we would
+      // ORDINARILY have made, never to the previous one - because it is not
+      // necessarily bigger than the previous one. A +100 that did not work
+      // can be followed by an +83, when +55 was the ordinary call and the
+      // safety cap bound the rest; saying "bigger than last time" there would
+      // be plainly false to anyone reading their own history.
       if (doseEscalated) {
-        note = `${note} Last time we moved it by ${doseEscalated.priorMagnitude ?? 'a smaller amount'} and your weight did not respond, so this step is bigger.`;
+        note = `${note} Your last increase was not enough to move your weight as planned, so this adjustment is larger than we would normally make.`;
       }
       calorieAdjustment = { change, note };
     }

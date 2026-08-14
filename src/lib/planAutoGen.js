@@ -601,18 +601,16 @@ export async function generateAndSavePlan(userId, profile, {
   // Null for a new athlete, which leaves generation exactly as it was.
   //
   // Best-effort: a read failure means no memory, never a blocked rebuild.
-  let demonstratedSplit = null;
   let structureMemory = null;
   try {
     structureMemory = await readDemonstratedStructure(userId, inputs.daysPerWeek);
-    demonstratedSplit = structureMemory?.splitType ?? null;
-  } catch (_) { demonstratedSplit = null; }
+  } catch (_) { structureMemory = null; }
 
   let plan;
   try {
     plan = generatePlan({
       ...inputs,
-      demonstratedSplit,
+      demonstratedStructure: structureMemory,
       exerciseLibrary: generationLibrary,
       canonicalNames: canonicalNameSet(allExercises, replacementIds),
     });
@@ -808,7 +806,7 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
   try {
     plan = generatePlan({
       ...inputs,
-      demonstratedSplit: structureMemory?.splitType ?? null,
+      demonstratedStructure: structureMemory,
       exerciseLibrary: generationLibrary,
       canonicalNames: canonicalNameSet(allExercises, replacementIds),
     });

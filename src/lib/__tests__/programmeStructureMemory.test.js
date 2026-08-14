@@ -108,25 +108,68 @@ describe('THE REAL GENERATOR uses it, and division intent stays senior', () => {
 
   test('CASE I: a new athlete gets the template-derived split', () => {
     const plain = generatePlan({ ...base, goal: 'general' });
-    const nullMemory = generatePlan({ ...base, goal: 'general', demonstratedSplit: null });
+    const nullMemory = generatePlan({ ...base, goal: 'general', demonstratedStructure: null });
     expect(nullMemory.splitType).toBe(plain.splitType);
   });
 
-  test('CASE G: a demonstrated split reaches the ACTUAL generated programme', () => {
-    const plain = generatePlan({ ...base, goal: 'general' });
-    const remembered = generatePlan({ ...base, goal: 'general', demonstratedSplit: 'full_body' });
-    expect(remembered.splitType).toBe('full_body');
-    expect(remembered.splitType).not.toBe(plain.splitType);
-    // And it built a real programme from it, not just a label.
-    expect(remembered.workouts.length).toBeGreaterThan(0);
+  test('CASE G: THE FULL PATH, history -> learned structure -> generated programme', () => {
+    // The athlete's real history: three productive completed blocks on an
+    // upper/lower at FOUR days. They still train four days.
+    const memory = demonstratedStructure(
+      structureEvidence(Array.from({ length: 3 }, () => block('upper_lower', 4))),
+      { daysPerWeek: 4 },
+    );
+    expect(memory).toEqual({
+      splitType: 'upper_lower', dayCount: 4, blocks: 3, productive: 3,
+      because: 'demonstrated_over_completed_blocks',
+    });
+    const built = generatePlan({ ...base, daysPerWeek: 4, goal: 'general', demonstratedStructure: memory });
+    expect(built.splitType).toBe('upper_lower');
+    expect(built.workouts.map((w) => w.name)).toEqual(['Upper A', 'Lower A', 'Upper B', 'Lower B']);
+  });
+
+  test('and the memory is what DECIDES it where the default would differ', () => {
+    // At four days the template default is ALSO upper/lower, so that case
+    // cannot show the memory deciding anything. At three days the default is
+    // full body, so a three-day demonstrated structure is the distinguishing
+    // case - and there the day-count guard is what must hold. Both are
+    // covered: here we prove the memory genuinely changes the outcome, using
+    // a structure that fits the days requested.
+    const plainFive = generatePlan({ ...base, daysPerWeek: 5, goal: 'general' });
+    expect(plainFive.splitType).toBe('balanced_ul');
+    const memory = demonstratedStructure(
+      structureEvidence(Array.from({ length: 3 }, () => block('ppl', 5))),
+      { daysPerWeek: 5 },
+    );
+    const built = generatePlan({ ...base, daysPerWeek: 5, goal: 'general', demonstratedStructure: memory });
+    expect(built.splitType).toBe('ppl');
+    expect(built.splitType).not.toBe(plainFive.splitType);
+    expect(built.workouts.length).toBe(5);
+  });
+
+  test('THE STATED DAYS ARE SENIOR, checked on what was BUILT not on the label', () => {
+    // buildUpperLowerWorkouts writes four sessions whatever it is asked for,
+    // so a bad memory could hand a three-day athlete a four-day programme.
+    // The engine discards the memory rather than overrunning their week.
+    const bad = { splitType: 'upper_lower', dayCount: 3 };
+    const built = generatePlan({ ...base, daysPerWeek: 3, goal: 'general', demonstratedStructure: bad });
+    expect(built.workouts.length).toBe(3);
+    expect(built.splitType).toBe(generatePlan({ ...base, daysPerWeek: 3, goal: 'general' }).splitType);
+  });
+
+  test('and a memory for a DIFFERENT day count never reaches the builder', () => {
+    const fourDay = { splitType: 'ppl', dayCount: 4 };
+    const built = generatePlan({ ...base, daysPerWeek: 5, goal: 'general', demonstratedStructure: fourDay });
+    expect(built.splitType).toBe(generatePlan({ ...base, daysPerWeek: 5, goal: 'general' }).splitType);
   });
 
   test('C5: DIVISION INTENT IS SENIOR - a matrix division ignores the memory', () => {
     const divisions = ['mens_physique', 'bikini', 'classic_physique'];
     for (const goal of divisions) {
       const plain = generatePlan({ ...base, goal });
-      const withMemory = generatePlan({ ...base, goal, demonstratedSplit: 'full_body' });
-      // If this division is matrix-driven, the memory changed nothing.
+      const withMemory = generatePlan({
+        ...base, goal, demonstratedStructure: { splitType: 'full_body', dayCount: 4 },
+      });
       if (plain.splitType !== 'full_body') {
         expect(withMemory.splitType).toBe(plain.splitType);
       }
@@ -135,7 +178,9 @@ describe('THE REAL GENERATOR uses it, and division intent stays senior', () => {
 
   test('a split this engine cannot build is ignored rather than trusted', () => {
     const plain = generatePlan({ ...base, goal: 'general' });
-    const nonsense = generatePlan({ ...base, goal: 'general', demonstratedSplit: 'moon_phase_split' });
+    const nonsense = generatePlan({
+      ...base, goal: 'general', demonstratedStructure: { splitType: 'moon_phase_split', dayCount: 4 },
+    });
     expect(nonsense.splitType).toBe(plain.splitType);
   });
 });
@@ -158,12 +203,12 @@ describe('THE PRODUCTION PATH', () => {
 
   test('and it reaches the real generator call', () => {
     const src = read('../planAutoGen.js');
-    expect(src).toMatch(/plan = generatePlan\(\{\s*\n\s*\.\.\.inputs,\s*\n\s*demonstratedSplit,/);
+    expect(src).toMatch(/plan = generatePlan\(\{\s*\n\s*\.\.\.inputs,\s*\n\s*demonstratedStructure: structureMemory,/);
   });
 
   test('a read failure means NO memory, never a blocked rebuild', () => {
     const src = read('../planAutoGen.js');
-    expect(src).toMatch(/catch \(_\) \{ demonstratedSplit = null; \}/);
+    expect(src).toMatch(/catch \(_\) \{ structureMemory = null; \}/);
   });
 
   test('THE USER IS TOLD their own history shaped it', () => {

@@ -76,10 +76,37 @@ describe('JOB A: a previous response can resize the next dose', () => {
     expect(learned).toBe(Math.min(150, Math.round(plain * DOSE_ESCALATION_MULTIPLIER)));
   });
 
-  test('and the receipt explains it from THEIR history, not from a multiplier', () => {
+  test('THE COPY MAKES NO FALSE COMPARISON: previous 100, ordinary 55, learned 83', () => {
+    // The learned step is larger than the ORDINARY step, and smaller than the
+    // previous one. Claiming it was "bigger than last time" would be a lie
+    // the athlete could check against their own history.
+    const plain = week({}).adjustments.calories.change;
     const out = week({ prior: [oldUnchangedIncrease()] });
-    expect(out.adjustments.calories.note).toMatch(/Last time we moved it by 100 and your weight did not respond/);
-    expect(out.adjustments.calories.note).not.toMatch(/multiplier|1\.5|escalat/i);
+    const learned = out.adjustments.calories.change;
+    expect(oldUnchangedIncrease().magnitude).toBe(100);
+    expect(plain).toBe(55);
+    expect(learned).toBe(83);
+    expect(learned).toBeGreaterThan(plain);
+    expect(learned).toBeLessThan(100);
+
+    const note = out.adjustments.calories.note;
+    expect(note).toMatch(/Your last increase was not enough to move your weight as planned/);
+    expect(note).toMatch(/larger than we would normally make/);
+    // No comparison against the previous step, and no engine vocabulary.
+    expect(note).not.toMatch(/bigger than last time|than last time|than before/i);
+    expect(note).not.toMatch(/multiplier|1\.5|escalat/i);
+    expect(note).not.toContain('—');
+  });
+
+  test('and it stays truthful when the learned step IS larger than the previous one', () => {
+    // Same machinery, a smaller previous dose: 40 previously, 83 now. The
+    // sentence is still true, because it never claimed a relationship to the
+    // previous number in the first place.
+    const out = week({ prior: [oldUnchangedIncrease({ magnitude: 40 })] });
+    const learned = out.adjustments.calories.change;
+    expect(learned).toBe(83);
+    expect(learned).toBeGreaterThan(40);
+    expect(out.adjustments.calories.note).toMatch(/larger than we would normally make/);
   });
 
   test('CASE C: a CONFOUNDED prior teaches nothing - ordinary logic only', () => {

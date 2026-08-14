@@ -3135,12 +3135,12 @@ function _generatePlanInner(inputs) {
     nutritionPhase    = null,
     nutritionContext  = null,
     age               = null,
-    // CAMPAIGN 18 JOB C: the split this athlete has demonstrated across
-    // completed blocks, already filtered by programmeStructureMemory against
-    // their CURRENT availability. Null for a new athlete and for anyone whose
-    // history does not fit today's constraints, which keeps every existing
-    // caller byte-identical.
-    demonstratedSplit = null,
+    // CAMPAIGN 18 JOB C: the structure this athlete has demonstrated across
+    // completed blocks - { splitType, dayCount } - from
+    // programmeStructureMemory. The dayCount travels WITH it because a split
+    // is not day-count-agnostic; see the guard at the selection site. Null for
+    // a new athlete, which keeps every existing caller byte-identical.
+    demonstratedStructure = null,
   } = inputs;
 
   // Cap weak points at 3 for determinism
@@ -3204,12 +3204,25 @@ function _generatePlanInner(inputs) {
   // programmeStructureMemory (which has already refused anything that does
   // not fit today's availability), and is ignored unless it is a split this
   // engine can actually build.
-  const memorySplit = (!matrixCell && demonstratedSplit && SPLIT_LABELS[demonstratedSplit])
-    ? demonstratedSplit
-    : null;
-  const splitType = matrixCell
+  //
+  // THE DAY COUNT IS PART OF THE STRUCTURE, and this guard is why. A split is
+  // not day-count-agnostic: buildUpperLowerWorkouts writes four sessions
+  // whatever it is asked for, so honouring an `upper_lower` memory for an
+  // athlete who now trains three days produced a FOUR-day programme. The
+  // production gatherer already refuses to return a structure that does not
+  // fit today's availability, so this cannot arise through the app - but an
+  // engine that will silently overrun a user's stated days on a bad input is
+  // a seam worth closing, not one to rely on a caller for.
+  const defaultSplit = matrixCell
     ? DIVISION_MATRIX[goal].label
-    : (memorySplit ?? selectSplit(experience, effectiveDays, internalGoal));
+    : selectSplit(experience, effectiveDays, internalGoal);
+  const memoryFitsDays = demonstratedStructure?.dayCount === effectiveDays;
+  const memorySplit = (!matrixCell && memoryFitsDays
+    && demonstratedStructure?.splitType && SPLIT_LABELS[demonstratedStructure.splitType])
+    ? demonstratedStructure.splitType
+    : null;
+  // Provisional: confirmed below, once we can see what it actually builds.
+  let splitType = memorySplit ?? defaultSplit;
 
   // Compute adjusted landmarks
   const landmarks = computeLandmarks(experience, recoveryRating, nutritionPhase, age);
@@ -3227,35 +3240,47 @@ function _generatePlanInner(inputs) {
   const adjustedTargets = enforceWeeklyFloorsAndCaps(overlaidTargets, goal, effectiveDays, weakPointKeys, equipment);
 
   // Build workouts
+  const buildForSplit = (st) => {
+    switch (st) {
+      case 'full_body':
+        return buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
+      case 'upper_lower':
+        return buildUpperLowerWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase);
+      case 'upper_lower_wp':
+        return buildUpperLowerWPWorkouts(adjustedTargets, landmarks, equipment, internalGoal, weakPointKeys, experience, nutritionPhase);
+      case 'lower_focus':
+        return buildWeightedUpperLower(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays, 3);
+      case 'balanced_ul':
+        return buildWeightedUpperLower(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays, Math.floor(effectiveDays / 2));
+      case 'ppl':
+      case 'ppl_ab':
+        return buildPPLWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
+      default:
+        return buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
+    }
+  };
+
   let rawWorkouts;
   if (matrixCell) {
     rawWorkouts = buildFromMatrix(
       matrixCell, adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase,
     );
   } else {
-  switch (splitType) {
-    case 'full_body':
-      rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
-      break;
-    case 'upper_lower':
-      rawWorkouts = buildUpperLowerWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase);
-      break;
-    case 'upper_lower_wp':
-      rawWorkouts = buildUpperLowerWPWorkouts(adjustedTargets, landmarks, equipment, internalGoal, weakPointKeys, experience, nutritionPhase);
-      break;
-    case 'lower_focus':
-      rawWorkouts = buildWeightedUpperLower(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays, 3);
-      break;
-    case 'balanced_ul':
-      rawWorkouts = buildWeightedUpperLower(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays, Math.floor(effectiveDays / 2));
-      break;
-    case 'ppl':
-    case 'ppl_ab':
-      rawWorkouts = buildPPLWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
-      break;
-    default:
-      rawWorkouts = buildFullBodyWorkouts(adjustedTargets, landmarks, equipment, internalGoal, experience, nutritionPhase, effectiveDays);
-  }
+    rawWorkouts = buildForSplit(splitType);
+    // THE ATHLETE'S STATED DAYS ARE SENIOR TO THEIR HISTORY, checked on what
+    // was actually BUILT rather than on the label.
+    //
+    // A split is not day-count-agnostic and the builders do not all honour
+    // effectiveDays: buildUpperLowerWorkouts writes four sessions whatever it
+    // is asked for. So a day-count field on the memory is not enough - only
+    // the produced programme can be trusted, and an athlete who says three
+    // days must never be handed four because a four-day structure once went
+    // well for them. On any mismatch the memory is discarded and the ordinary
+    // selection stands.
+    if (memorySplit && rawWorkouts.length !== effectiveDays) {
+      splitType = defaultSplit;
+      rawWorkouts = buildForSplit(splitType);
+    }
   }
 
   // Strength notes (strength_size phase OR legacy goal)
