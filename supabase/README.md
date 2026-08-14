@@ -108,17 +108,20 @@ contract must not delegate its authority to a superseded audit.
   `MealNamesScreen.js` shipped; were 059 unapplied, every diary push would
   fail the old fixed-list CHECK.
 - **137 IS AUTHORISED AND STILL PENDING (2026-08-14).** The founder gave the
-  exact phrase. It was not executed because this session has no production
-  access: the Supabase connector that made cloud migrations Claude-run is
-  disconnected, there is no Supabase CLI on the box, and no connection
-  string is available to it. **The deploy-migrations workflow is not a
-  substitute.** It applies every file absent from
+  exact phrase. It was not executed because the Supabase connector's tools
+  were not loaded in that chat. The connector is **installed and
+  authenticated** on the account (`installState: connected`,
+  `connected: true`) but `enabledInChat: false`, so nothing in the session
+  could reach EU-Dublin: no connector tools, no Supabase CLI on the box, no
+  connection string. The fix is a per-chat toggle in the founder's
+  connector settings, not a re-authorisation. **The deploy-migrations
+  workflow is not a substitute.** It applies every file absent from
   `claude_schema_migrations`, and that tracking table has never been
   populated by the connector-run and SQL-Editor-run applies that actually
   put 060-136 into production - so dispatching it would attempt to re-run
   roughly seventy-six migrations against the live database, with no way to
   verify production truth first. The founder authorised one migration, not
-  that. It waits for a session with the connector attached, where the
+  that. It waits for the connector to be enabled in the chat, where the
   apply can be followed by the read-only verification this playbook
   requires: a column check on `exercise_swaps.scope` expecting one row,
   type `text`, nullable `YES`.
