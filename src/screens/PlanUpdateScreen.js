@@ -23,6 +23,7 @@ import {
   generateAndSavePlan, generatePlanDryRun, planShortfallNote, assessScheduleFit,
 } from '../lib/planAutoGen';
 import { PLAN_FIT, fitCopy, alternativeCopy } from '../lib/planFit';
+import { buildChangeReceipt } from '../lib/planRationale';
 import { getActivePlan, getRoutinesForPlan, getRoutineExercisesWithDetails } from '../lib/database';
 import { diffPlans, summariseProspectivePlan, summariseCurrentPlan } from '../lib/planDiff';
 import BottomSheet from '../components/BottomSheet';
@@ -192,6 +193,12 @@ export default function PlanUpdateScreen({ navigation }) {
         missedCount: dry.missedCount ?? 0,
         blockedCount: afterSummary.blockedCount ?? 0,
         fit: fit?.ok ? fit : null,
+        // C16 job 11: the reason-coded receipt. Built from the SAME
+        // continuity decisions the commit will act on, so the sheet cannot
+        // describe a change the rebuild is not about to make.
+        receipt: dry.continuity?.decisions?.length
+          ? buildChangeReceipt(dry.continuity.decisions)
+          : null,
       });
     } catch (e) {
       logError('PlanUpdateScreen.reviewRebuild', e, { userId: user?.id });
@@ -401,7 +408,51 @@ export default function PlanUpdateScreen({ navigation }) {
                     changed={diff.sessionLength.changed}
                   />
                 </View>
-                {(diff.movesAdded.length > 0 || diff.movesDropped.length > 0) ? (
+                {/* C16 job 11 (completion pass): the change receipt, built
+                    from the reasons the continuity engine actually recorded.
+                    WHAT STAYED is a section in its own right, not the
+                    leftovers, and every line carries the why. The generic
+                    Added/Dropped list below is the fallback for a rebuild
+                    that produced no decision record (a first plan, or an
+                    engine path that did not run continuity). */}
+                {staged?.receipt ? (
+                  <View style={styles.diffMoves}>
+                    <Text style={[styles.diffMovesLabel, live.diffMovesLabel]}>
+                      {staged.receipt.headline}
+                    </Text>
+                    {staged.receipt.stays.length > 0 ? (
+                      <>
+                        <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>What stays</Text>
+                        {staged.receipt.stays.map(l => (
+                          <Text key={`stay-${l.exerciseName}`} style={[styles.diffMoveText, live.diffMoveText]}>
+                            {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
+                          </Text>
+                        ))}
+                      </>
+                    ) : null}
+                    {staged.receipt.changes.length > 0 ? (
+                      <>
+                        <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>What changes</Text>
+                        {staged.receipt.changes.map(l => (
+                          <Text key={`chg-${l.exerciseName}`} style={[styles.diffMoveText, live.diffMoveText]}>
+                            {l.previousExerciseName ? `${l.previousExerciseName} to ` : ''}{l.exerciseName}
+                            {l.why ? ` - ${l.why}` : ''}
+                          </Text>
+                        ))}
+                      </>
+                    ) : null}
+                    {staged.receipt.added.length > 0 ? (
+                      <>
+                        <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>New in your plan</Text>
+                        {staged.receipt.added.map(l => (
+                          <Text key={`new-${l.exerciseName}`} style={[styles.diffMoveText, live.diffMoveText]}>
+                            {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
+                          </Text>
+                        ))}
+                      </>
+                    ) : null}
+                  </View>
+                ) : (diff.movesAdded.length > 0 || diff.movesDropped.length > 0) ? (
                   <View style={styles.diffMoves}>
                     <Text style={[styles.diffMovesLabel, live.diffMovesLabel]}>Moves changed</Text>
                     {diff.movesAdded.map(m => (
@@ -530,6 +581,7 @@ const styles = StyleSheet.create({
   diffAfterChanged: { fontWeight: fontWeight.bold },
   diffMoves: { marginTop: spacing.md, gap: spacing.xxs },
   diffMovesLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold, textTransform: 'uppercase', letterSpacing: letterSpacing.overline },
+  diffReceiptHead: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, marginTop: spacing.sm, marginBottom: spacing.xxs },
   diffMoveText: { color: colors.textPrimary, fontSize: fontSize.sm },
   diffShortfall: { ...type.bodySm, marginTop: spacing.md, color: colors.textSecondary },
   diffBackBtn: { marginTop: spacing.sm },
@@ -561,6 +613,7 @@ function buildLiveStyles(t) {
     diffNow: { color: t.colors.textMuted },
     diffAfter: { color: t.colors.textPrimary },
     diffMovesLabel: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
+    diffReceiptHead: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
     diffMoveText: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
     diffShortfall: { ...t.type.bodySm, color: t.colors.textSecondary },
     diffBackText: { color: t.colors.textSecondary, ...t.type.bodyStrong },

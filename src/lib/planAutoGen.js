@@ -486,7 +486,9 @@ function attachBlockedSlots(result, blockedSlots) {
  * choose. If EVERY slot is blocked that way, the plan is not saved at all and
  * the error is 'plan_blocked_by_exclusions'.
  */
-export async function generateAndSavePlan(userId, profile) {
+export async function generateAndSavePlan(userId, profile, {
+  ledger = null, allowLearnedCarry = true,
+} = {}) {
   if (!userId) return { ok: false, error: 'No user' };
   const inputs = buildPlanInputs(profile);
   if (!inputs) return { ok: false, error: 'Profile incomplete' };
@@ -574,6 +576,11 @@ export async function generateAndSavePlan(userId, profile) {
             ex.restSec ?? null,
             ex.supersetGroupId ?? null,    // pairing from plan engine
             false,
+            // C16 job 10: the selector's own reason CODE, carried to the row
+            // so a saved plan can still explain itself after a reload. The
+            // engine has always emitted this; until now the write dropped it
+            // and the explanation existed only in memory.
+            ex.selectionReason ?? null,
           );
         }
       }
@@ -611,7 +618,11 @@ export async function generateAndSavePlan(userId, profile) {
         require('./errorLog').logInfo('planAutoGen.partial', `${totalWritten}/${totalRequested} matched`, { missed: missedNames });
       } catch (_) {}
     }
-    await activatePlanWithBlock(userId, prog.id, planName);
+    // C16 phase C (completion pass): the block-boundary caller hands in the
+    // ledger it already resolved, so a refined next programme starts on the
+    // learned volume rather than re-deriving it. Every other caller passes
+    // nothing and behaves exactly as before.
+    await activatePlanWithBlock(userId, prog.id, planName, { ledger, allowLearnedCarry });
     // Pro auto-gen is the "single managed plan" path: rerolling on goal
     // change creates a fresh programme each time, and the previous ones
     // pile up in My plans on the Train tab. Archive everything except

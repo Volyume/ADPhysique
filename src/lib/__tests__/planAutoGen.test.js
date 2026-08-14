@@ -182,7 +182,12 @@ describe('generateAndSavePlan atomic persistence', () => {
       'u1', expect.any(String), expect.any(String), 0, null, null, null, false,
     );
     for (const call of createRoutine.mock.calls) expect(call.at(-1)).toBe(false);
-    for (const call of addExerciseToRoutine.mock.calls) expect(call.at(-1)).toBe(false);
+    // C16 job 10 (2026-08-14): `selectionReason` was appended after
+    // `scheduleSync`, so the suppression flag is no longer the last
+    // argument. Pinned by POSITION, which is what the assertion always
+    // meant - reading it off the end silently started testing the reason
+    // code instead.
+    for (const call of addExerciseToRoutine.mock.calls) expect(call[10]).toBe(false);
     expect(deleteProgrammeCascade).not.toHaveBeenCalled();
   });
 

@@ -25,7 +25,7 @@ import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { generateAndSavePlan, planShortfallNote, assessScheduleFit } from '../lib/planAutoGen';
 import {
-  PLAN_FIT, fitCopy, alternativeCopy, keepChoiceCopy,
+  PLAN_FIT, fitCopy, alternativeCopy, keepChoiceCopy, coverageCopy,
 } from '../lib/planFit';
 import {
   requestNotificationPermissions,
@@ -2101,6 +2101,14 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
               <Text style={[styles.coachCardBody, live.coachCardBody]}>{copy.body}</Text>
             </View>
+
+            {/* C16 DIVISION (completion pass): if this schedule cannot carry
+                the shaping work the athlete's category is judged on, that is
+                part of the fit answer and is said here rather than left for
+                them to discover in the plan. */}
+            {coverageCopy(fitReview) ? (
+              <Text style={[styles.continueHint, live.continueHint]}>{coverageCopy(fitReview)}</Text>
+            ) : null}
 
             <View style={styles.section}>
               <Text style={[styles.fieldLabel, live.fieldLabel]}>Session length</Text>

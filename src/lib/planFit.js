@@ -148,6 +148,11 @@ export function assessPlanFit({
     longestSessionMinutes: longest,
     typicalSessionMinutes: typical,
     alternatives,
+    // C16 DIVISION (completion pass): which of the athlete's division roles
+    // this schedule could actually carry. Plan Fit is where "would this
+    // work?" is answered, so it is also where "and would it still be your
+    // category's plan?" has to be answered honestly.
+    divisionCoverage: plan?.divisionCoverage ?? null,
   };
 }
 
@@ -223,6 +228,25 @@ export function fitCopy(state, ctx = {}) {
           : `We cannot fit everything we would normally include into ${sessions} of ${sessionLengthMinutes} minutes. You can still start here, and your workouts will run a little longer than that.`,
       };
   }
+}
+
+/**
+ * What the schedule costs the athlete's CATEGORY, in plain English.
+ *
+ * Only ever returned when a judged role could not be placed and more time
+ * would plausibly help; equipment gaps are the plan's business, not the
+ * schedule's, and saying "pick 75 minutes" would not fix them.
+ */
+export function coverageCopy(fit) {
+  const unmet = (fit?.divisionCoverage?.unmet ?? []).filter(
+    u => u.importance !== 'optional' && u.cause === 'not_selected',
+  );
+  if (unmet.length === 0) return null;
+  const muscles = [...new Set(unmet.map(u => u.muscle.replace(/_/g, ' ')))];
+  const list = muscles.length === 1
+    ? muscles[0]
+    : `${muscles.slice(0, -1).join(', ')} and ${muscles[muscles.length - 1]}`;
+  return `At this schedule your ${list} work is thinner than your category usually wants. A little more time per session would let us shape it properly.`;
 }
 
 /** Plain-English label for one calculated alternative. */

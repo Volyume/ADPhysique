@@ -494,6 +494,77 @@ describe('C16-DIV personal evidence picks the exercise, never removes the role',
 });
 
 // ---------------------------------------------------------------------------
+// 5b. Role importance, enforcement and the truthfulness report
+// ---------------------------------------------------------------------------
+
+describe('C16-DIV a judged role is enforced when feasible and reported when not', () => {
+  const { ROLE_IMPORTANCE, divisionRoleSpecs } = require('../division/profile');
+
+  test('every role carries an explicit importance', () => {
+    for (const goal of NINE) {
+      for (const muscle of Object.keys(DIVISION_PROFILES[goal].roles)) {
+        for (const spec of divisionRoleSpecs(goal, muscle)) {
+          expect(Object.values(ROLE_IMPORTANCE)).toContain(spec.importance);
+        }
+      }
+    }
+  });
+
+  test('sweep is never compulsory, because it is an emphasis not a family', () => {
+    for (const goal of NINE) {
+      for (const spec of divisionRoleSpecs(goal, 'quads')) {
+        if (spec.role === SWEEP) {
+          expect(spec.importance).not.toBe(ROLE_IMPORTANCE.REQUIRED_WHEN_FEASIBLE);
+        }
+      }
+    }
+  });
+
+  test('a full-gym plan carries every judged role its division requires', () => {
+    for (const goal of NINE) {
+      const p = plan({ goal, daysPerWeek: 4, sessionLengthMinutes: 90 });
+      const requiredUnmet = (p.divisionCoverage?.unmet ?? []).filter(
+        u => u.importance === ROLE_IMPORTANCE.REQUIRED_WHEN_FEASIBLE,
+      );
+      expect(requiredUnmet).toEqual([]);
+    }
+  });
+
+  test('an impossible role is reported with its cause, not silently dropped', () => {
+    // A Bikini athlete training with bodyweight only cannot do the
+    // straight-arm work her division likes. The plan says so.
+    const p = generatePlan({
+      ...inputs({ goal: 'bikini', daysPerWeek: 4, sessionLengthMinutes: 90, equipment: 'bodyweight' }),
+      exerciseLibrary: LIBRARY,
+    });
+    const unmet = p.divisionCoverage?.unmet ?? [];
+    expect(unmet.length).toBeGreaterThan(0);
+    for (const u of unmet) {
+      expect(['not_available', 'not_selected']).toContain(u.cause);
+    }
+    expect(unmet.some(u => u.cause === 'not_available')).toBe(true);
+  });
+
+  test('General has nothing to report, because it claims nothing', () => {
+    const p = plan({ goal: 'general', daysPerWeek: 4, sessionLengthMinutes: 90 });
+    expect(p.divisionCoverage).toEqual({ met: [], unmet: [] });
+  });
+
+  test('the report is what the athlete is told, in plain English', () => {
+    const { divisionCoverageLine } = require('../divisionDiff');
+    const line = divisionCoverageLine('bikini', {
+      met: [],
+      unmet: [{ muscle: 'glutes', role: 'activator', importance: 'required_when_feasible', cause: 'not_available' }],
+    });
+    expect(typeof line).toBe('string');
+    expect(line).not.toMatch(/activator|required_when_feasible|not_available|—/);
+    // Nothing to say when everything is carried.
+    expect(divisionCoverageLine('bikini', { met: [], unmet: [] })).toBeNull();
+    expect(divisionCoverageLine('general', { met: [], unmet: [] })).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // 6. The closure trace the founder asked for, as one test
 // ---------------------------------------------------------------------------
 

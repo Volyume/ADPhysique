@@ -19,8 +19,9 @@ import {
 // live in ONE place with each rule traced to the rulebook line behind it
 // (docs/plan-generation-campaign-16/DIVISION-EVIDENCE-REGISTER.md).
 import {
-  divisionRoles, divisionPoolRule, divisionPriorityMuscles,
-  divisionLegCharacter, hasRaisedGluteCeiling, LEG_CHARACTER, SWEEP,
+  divisionRoleSpecs, divisionRoleList, divisionPoolRule,
+  divisionPriorityMuscles, divisionLegCharacter, hasRaisedGluteCeiling,
+  LEG_CHARACTER, SWEEP, ROLE_IMPORTANCE,
 } from './division/profile';
 import { canonicalExerciseId } from './exercise/canonicalId';
 import { repRangeFor, restFor } from './exercise/prescription';
@@ -1519,7 +1520,24 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
   // → SFR tiebreak → pool index. Each term is an order of magnitude below
   // the previous so the established priority order is preserved.
   // The division's ordered within-muscle roles, most judged first.
-  const preferredRoles = divisionRoles(divisionGoalFor(goal), muscle);
+  const roleSpecs = divisionRoleSpecs(divisionGoalFor(goal), muscle);
+  const preferredRoles = roleSpecs.map(spec => spec.role);
+
+  // C16 DIVISION (completion pass): a REQUIRED_WHEN_FEASIBLE role becomes
+  // REAL coverage, not a ranking nudge - but only when this athlete's own
+  // filtered pool can actually fill it. Equipment, exclusions and a thin
+  // library can all make a judged role impossible, and when they do the
+  // honest answer is to report it (the plan's divisionCoverage), never to
+  // starve the muscle chasing it.
+  //
+  // SWEEP is deliberately excluded: it is an emphasis, not a family, so
+  // requiring it would let two squats pass as two roles - the exact
+  // confusion job 3 removed.
+  for (const spec of roleSpecs) {
+    if (spec.importance !== ROLE_IMPORTANCE.REQUIRED_WHEN_FEASIBLE) continue;
+    if (spec.role === SWEEP || requiredSubs.includes(spec.role)) continue;
+    if (available.some(e => e.sub === spec.role)) requiredSubs.push(spec.role);
+  }
 
   // C16 job 3: required entries are ROLES. A role may be satisfied by more
   // than one family (back's horizontal_row accepts a lat-biased row or an
@@ -1791,6 +1809,10 @@ export function selectExercisesForMuscle(muscle, sessionTarget, equipment, goal,
     // machine-readable half of "why this plan" and the copy layer maps it;
     // no screen may compose its own explanation from the exercise name.
     exObj.selectionReason = entry._why ?? SELECTION_REASON.VOLUME_FILL;
+    // Internal-only: the family/subregion this entry actually fills, so the
+    // division coverage report can answer "did the judged role get filled"
+    // from the assembled week rather than by re-deriving it from names.
+    exObj._sub = entry.sub ?? null;
     result.push(exObj);
   }
 
@@ -3038,6 +3060,43 @@ function buildTimeConstraintResult(workouts, sessionLengthMinutes, trimmed) {
   return { status, requestedSessionMinutes: requested, over };
 }
 
+/**
+ * C16 DIVISION (completion pass): did the finished week actually carry the
+ * division's judged roles, and if not, why not?
+ *
+ * FOUNDER LAW: "The resolver must understand when an important role was lost
+ * due to time, equipment, exclusions or insufficient capacity, and make Plan
+ * Fit / rationale truthful." Without this the app could hold a Bikini
+ * profile, silently fail to place any hip-thrust-family work because the
+ * athlete trains at home, and still present the plan as representing that
+ * physique.
+ *
+ * `cause` is deliberately coarse and honest:
+ *   'not_available'  nothing in the athlete's pool could ever fill it
+ *   'not_selected'   a candidate existed and the plan did not use it
+ * The second covers time, capacity and priority together, because the
+ * generator cannot distinguish them after the fact without guessing, and a
+ * guess in a truthfulness report is worse than a coarse fact.
+ */
+function buildDivisionCoverage(rows, goal, poolFor) {
+  const wanted = divisionRoleList(goal);
+  if (wanted.length === 0) return { met: [], unmet: [] };
+  const met = [];
+  const unmet = [];
+  for (const spec of wanted) {
+    const entries = (rows ?? []).filter(e => e._m === spec.muscle);
+    const filled = entries.some(e => (spec.role === SWEEP
+      ? isSweepBiased(e.exerciseName)
+      : e._sub === spec.role));
+    if (filled) { met.push(spec); continue; }
+    const pool = poolFor(spec.muscle) ?? [];
+    const available = pool.some(e => (spec.role === SWEEP
+      ? isSweepBiased(e.n) : e.sub === spec.role));
+    unmet.push({ ...spec, cause: available ? 'not_selected' : 'not_available' });
+  }
+  return { met, unmet };
+}
+
 export function generatePlan(inputs) {
   // Point selection at a library-generated pool for the duration of this
   // run when the caller supplies the library, then always restore POOL so
@@ -3278,6 +3337,7 @@ function _generatePlanInner(inputs) {
   rawWorkouts = fitted.workouts;
 
   // Finalise: deduplicate, trim to time budget, assign supersets, stamp duration
+  const coverageRows = [];
   const workouts = rawWorkouts.map(w => {
     const deduped  = deduplicateExercises(w.exercises);
     const trimmed  = trimToTimeBudget(
@@ -3307,7 +3367,10 @@ function _generatePlanInner(inputs) {
     //
     // Strip internal-only tags (_m, _req used by trimming; _muscle,
     // _paramKey, _eq, _equipmentCategory were read by assignSupersets).
-    const clean = trimmed.map(({ _m, _req, _muscle, _paramKey, _eq, _equipmentCategory, _fatigue, ...rest }) => rest);
+    // Coverage is read from the tagged rows before they are cleaned: `_m`
+    // and `_sub` are what say which muscle and which role each entry filled.
+    for (const ex of trimmed) coverageRows.push({ ...ex, workout: w.name });
+    const clean = trimmed.map(({ _m, _req, _muscle, _paramKey, _eq, _equipmentCategory, _fatigue, _sub, ...rest }) => rest);
     const dur = Math.ceil(estimateSessionMinutes(clean, equipment));
     const out = { name: w.name, exercises: clean, estimatedDurationMinutes: dur };
     // A session that the time-trim left meaningfully over the preferred length
@@ -3322,6 +3385,15 @@ function _generatePlanInner(inputs) {
 
   // Discard sessions that ended up with no exercises (shouldn't happen but guard it)
   const validWorkouts = workouts.filter(w => w.exercises.length > 0);
+
+  // C16 DIVISION (completion pass): the truthfulness report. Computed from
+  // the FINISHED week - after the time trim, after continuity has not yet
+  // run but after everything the generator itself decides - so it describes
+  // what the athlete receives rather than what was intended.
+  const divisionCoverage = buildDivisionCoverage(
+    coverageRows, divisionGoalFor(goal),
+    muscle => filterPool(muscle, equipment, divisionGoalFor(goal)),
+  );
 
   const warnings              = buildWarnings({ ...inputs, weakPoints: safeWeakPointsUI }, effectiveDays, safeWeakPointsUI);
   // Weak-point already at its division ceiling: a selected weak point that the
@@ -3410,6 +3482,12 @@ function _generatePlanInner(inputs) {
     // cannot honestly satisfy both the requested time and the minimum
     // programme, and the user is owed a choice rather than an 80-minute
     // session presented as a 45-minute one.
+    // C16 DIVISION: which of this division's judged roles the finished plan
+    // actually carries, and which it could not - with the reason. Consumed
+    // by the schedule-fit answer and by the plan's own explanation, so a
+    // plan can never present itself as fully representing a physique whose
+    // judged work it silently failed to place.
+    divisionCoverage,
     timeConstraint: buildTimeConstraintResult(
       validWorkouts, sessionLengthMinutes, fitted.trimmed,
     ),

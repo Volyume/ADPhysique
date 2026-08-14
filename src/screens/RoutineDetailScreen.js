@@ -23,10 +23,14 @@ import {
 import {
   loadExerciseIntentState, rankPersonalised, repeatedDefaultCandidate, intentFor,
 } from '../lib/exercise/intent';
-import { computeDivisionDiff, divisionFingerprintLine, planWearsDivision } from '../lib/divisionDiff';
+import {
+  computeDivisionDiff, divisionFingerprintLine, planWearsDivision,
+  computeDivisionCoverage, divisionCoverageLine,
+} from '../lib/divisionDiff';
 import { buildPlanInputs } from '../lib/planAutoGen';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getExerciseWhyThis, getSplitRationale } from '../lib/whyThisTemplates';
+import { explainSelection } from '../lib/planRationale';
 import { rankSwaps } from '../lib/swapEngine';
 import { swapAdjacentBlocks } from '../lib/reorder';
 import DragReorderList from '../components/DragReorderList';
@@ -156,6 +160,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // A4: division fingerprint line ("Built for Bikini: ..."), set only when
   // this routine belongs to the user's ACTIVE generated division plan.
   const [divisionLine, setDivisionLine] = useState(null);
+  // C16 DIVISION (completion pass): the honest other half of the fingerprint.
+  // Null whenever the plan carries every judged role, which is the norm.
+  const [divisionGapLine, setDivisionGapLine] = useState(null);
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -194,11 +201,17 @@ export default function RoutineDetailScreen({ navigation, route }) {
         const inputs = buildPlanInputs(userProfile);
         const diff = inputs ? computeDivisionDiff({ ...inputs, exerciseLibrary: all }) : null;
         setDivisionLine(diff ? divisionFingerprintLine(goal, diff) : null);
+        const coverage = inputs
+          ? computeDivisionCoverage({ ...inputs, exerciseLibrary: all })
+          : null;
+        setDivisionGapLine(divisionCoverageLine(goal, coverage));
       } else {
         setDivisionLine(null);
+        setDivisionGapLine(null);
       }
     } catch (_) {
       setDivisionLine(null);
+      setDivisionGapLine(null);
     }
   }
 
@@ -625,6 +638,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
         style={styles.startBtn}
       />
       <MuscleTagRow exercises={exercises} />
+      {divisionGapLine ? (
+        <Text style={[styles.divisionLine, live.divisionLine]}>{divisionGapLine}</Text>
+      ) : null}
       {divisionLine ? (
         <Text style={[styles.divisionLine, live.divisionLine]}>{divisionLine}</Text>
       ) : null}
@@ -714,7 +730,17 @@ export default function RoutineDetailScreen({ navigation, route }) {
                   (exercise.primaryMuscle || '').slice(1).replace(/_/g, ' ')}
               </Text>
               {(() => {
-                const why = getExerciseWhyThis(exercise.name, exercise.subregion);
+                // C16 job 10 (completion pass): the reason the SELECTOR
+                // recorded when it chose this exercise, read from the saved
+                // row. It is the honest answer to "why is this here" - the
+                // subregion template below it describes what the movement
+                // does, which is a different question and was previously
+                // the only answer available. The template still covers
+                // plans generated before the reason was persisted, and
+                // manually added exercises, which genuinely have no
+                // engine reason.
+                const chosen = explainSelection(routineExercise.selectionReason);
+                const why = chosen ?? getExerciseWhyThis(exercise.name, exercise.subregion);
                 return why ? <Text style={[styles.exerciseWhy, live.exerciseWhy]}>{why}</Text> : null;
               })()}
             </View>

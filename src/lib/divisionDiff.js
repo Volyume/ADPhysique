@@ -150,3 +150,49 @@ export function divisionFingerprintLine(goal, diff, maxEach = 2) {
   if (capped.length) parts.push(`${capped.map(name).join(' and ')} capped`);
   return `Built for ${label}: ${parts.join(', ')}.`;
 }
+
+/**
+ * C16 DIVISION (completion pass): what the plan could NOT carry of this
+ * division's judged work, in the user's words.
+ *
+ * The fingerprint line above says which muscles this division elevates. That
+ * line is true about VOLUME and says nothing about whether the movements
+ * that shape the division actually made it into the plan - so a Bikini
+ * athlete training at home could be shown a confident division fingerprint
+ * for a plan with no hip-thrust-family work in it at all. This is the other
+ * half of that sentence, and it is only ever shown when there is something
+ * honest to say.
+ *
+ * Returns null when everything the division is judged on is present, which
+ * is the common case: silence is the correct copy for a plan that carries
+ * its division properly.
+ */
+export function divisionCoverageLine(goal, coverage) {
+  if (!hasDivisionOverlay(goal) || !coverage) return null;
+  const notable = (coverage.unmet ?? []).filter(
+    u => u.importance !== 'optional',
+  );
+  if (notable.length === 0) return null;
+  const names = [...new Set(notable.map(u => muscleDisplayName(u.muscle).toLowerCase()))];
+  const list = names.length === 1
+    ? names[0]
+    : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
+  const blocked = notable.every(u => u.cause === 'not_available');
+  return blocked
+    ? `One piece of the ${GOAL_LABELS[goal] ?? goal} look is missing: your equipment has nothing that trains ${list} the way this category is judged. Everything else is here.`
+    : `Your ${list} work is lighter on the shaping side than this category usually wants. More session time, or a different exercise for that slot, would cover it.`;
+}
+
+/**
+ * The coverage report for a prospective plan, from the same generator the
+ * fingerprint uses. Kept separate from computeDivisionDiff so that
+ * function's contract (and its tests) are untouched.
+ */
+export function computeDivisionCoverage(planInputs) {
+  if (!planInputs?.goal) return null;
+  try {
+    return generatePlan(planInputs).divisionCoverage ?? null;
+  } catch (_) {
+    return null;
+  }
+}

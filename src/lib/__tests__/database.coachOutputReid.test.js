@@ -57,6 +57,9 @@ function freshDb() {
   // The window this fixture runs now includes it, so the table it targets has
   // to exist here as it always does on a real device. Empty is enough: the
   // migration is metadata-only and this suite asserts nothing about it.
+  // C16 job 10 (v76) adds a column to routine_exercises, so the fixture has
+  // to declare the table this migration list touches.
+  raw.exec('CREATE TABLE routine_exercises (id TEXT PRIMARY KEY, routine_id TEXT, exercise_id TEXT);');
   raw.exec(`CREATE TABLE exercises (id TEXT PRIMARY KEY, name TEXT, primary_muscle TEXT, subregion TEXT);`);
   return raw;
 }
@@ -76,7 +79,7 @@ test('v72 re-ids legacy uid() rows to the deterministic form, without touching u
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('co_1734000000000_user-1', 'user-1', 1734000000000, 0, 90, 90);
-  return runLast(raw, 4).then(() => { // +v73 (Campaign 9), +v74 (C16 job 3)
+  return runLast(raw, 5).then(() => { // +v73 (Campaign 9), +v74 (C16 job 3), +v75/v76
     const after = rows(raw);
     expect(after).toEqual([
       // Already deterministic: byte-identical.
@@ -91,9 +94,9 @@ test('v72 is idempotent: a second run changes nothing', async () => {
   const raw = freshDb();
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
-  await runLast(raw, 4); // +v73 (Campaign 9), +v74 (C16 job 3)
+  await runLast(raw, 5); // +v73 (Campaign 9), +v74 (C16 job 3), +v75/v76
   const once = rows(raw);
-  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 4}`);
+  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 5}`);
   await runMigrations(adapt(raw));
   expect(rows(raw)).toEqual(once);
 });

@@ -1,8 +1,19 @@
 # Campaign 16 — plan generation and bodybuilding programming closeout
 
 Live log. Baseline `31c67b59`. Continuation session resumed from
-`6a130d15`. Everything below that says LANDED is on `main` and green;
-nothing is sitting on a branch.
+`6a130d15`.
+
+> **STATUS CORRECTION, 2026-08-14 (founder completion pass).** This log
+> twice reported Campaign 16 as delivered while requested PRODUCT behaviour
+> was not live. Jobs 10 and 11 were marked LANDED with an engine and a copy
+> table but no user-facing surface; Phase C was marked COMPLETE while the
+> block-boundary review reached the user as a single sentence and applied no
+> exercise change; the campaign was declared CLOSED with three items in the
+> amendment table still reading NOT STARTED. Those claims were wrong and are
+> corrected below rather than deleted. From this point the standard is the
+> founder's: **module exists, helper exists, test passes and doc says landed
+> are NOT delivery — the live product path is.** Every status below has been
+> re-checked against production code, not against this log.
 
 ## PHASE A — exercise and plan representation (COMPLETE)
 
@@ -145,7 +156,16 @@ instruction, not a separate campaign.
    `PERSONAL_FIT_KEEP` added so an established fit is not reported as
    "nothing was wrong".
 
-## PHASE C — longitudinal intelligence (COMPLETE)
+## PHASE C — longitudinal intelligence (ENGINE COMPLETE 2026-08-11, PRODUCT COMPLETE 2026-08-14)
+
+**What was wrong with the earlier COMPLETE.** The epoch engine and
+`blockReview` were correct and tested, and the verdict sentence reached the
+decision card - but `reviewSections` was computed and discarded, and BOTH
+block-boundary buttons called `activatePlanWithBlock` on the same programme
+id. Continue With Adjustments therefore changed volume and nothing else: no
+exercise the engine judged was ever replaced. Corrected in the completion
+pass (see the closure addendum 3 below).
+
 
 `src/lib/blockReview.js` is the assembly point and the epoch engine's first
 production consumer. `getBlockAdvice` builds it on the finished-block
@@ -182,7 +202,13 @@ when the generator re-picked the incumbent, continuity short-circuited to
 RETAINED **without consulting the verdict**, so an excluded exercise could
 survive a rebuild.
 
-## CAMPAIGN CLOSE — gates
+## CAMPAIGN CLOSE — gates (SUPERSEDED, see closure addendum 3)
+
+This section declared the campaign closed. It was premature: the amendment
+table immediately below it still listed the review screen, the UX tests and
+the Repeat enforcement as NOT STARTED, and Jobs 10 and 11 had no surface.
+The gates themselves were real; the word CLOSE was not.
+
 
 - `npm run lint`: clean
 - identity invariant: clean
@@ -196,17 +222,17 @@ survive a rebuild.
 |---|---|
 | Epoch model + verdicts (engine) | LANDED `src/lib/programmeEpoch.js` |
 | Required tests 1-16 | LANDED, 39 cases incl. longitudinal A-H |
-| Required tests 17-20 (UX copy/notification) | NOT STARTED - needs the screens |
-| Wiring epoch verdicts into the real next-block flow | NOT STARTED |
-| Recovery-week in-app heads-up | NOT STARTED |
-| Next-block review screen (verdict, stays/changes/why) | NOT STARTED |
-| Block-complete push via existing category | NOT STARTED |
-| Repeat bypasses elective refresh | NOT WIRED (law encoded, not yet enforced at the call site) |
+| Required tests 17-20 (UX copy/notification) | LANDED 2026-08-14, `campaign16.liveDelivery.test.js` |
+| Wiring epoch verdicts into the real next-block flow | LANDED 2026-08-14, `PlansScreen.openNextBlockReview` / `runBlockActivation` |
+| Recovery-week in-app heads-up | LANDED 2026-08-11, `blockAdvisor` + `PlansScreen` |
+| Next-block review screen (verdict, stays/changes/why) | LANDED 2026-08-14, the next-block review sheet in `PlansScreen` |
+| Block-complete push via existing category | LANDED 2026-08-11, `WEEKLY_COACH_READY` |
+| Repeat bypasses elective refresh | LANDED 2026-08-14, enforced twice: `refine: false` at the repeat call site AND `mayRefine` in `runBlockActivation` |
 
 The engine layer is complete and pure: `structureSignature`,
-`countEpochBlocks`, `slotVerdict`, `programmeVerdict`, `epochContinues`.
-What remains is consuming it in `blockAdvisor` / `buildSeedRangesForNextBlock`
-and rendering it.
+`countEpochBlocks`, `slotVerdict`, `programmeVerdict`, `epochContinues`. It
+is now consumed in `blockAdvisor.buildProgrammeReview` and applied by
+`PlansScreen.runBlockActivation`.
 
 Key design decisions worth knowing before continuing:
 
@@ -231,12 +257,12 @@ Key design decisions worth knowing before continuing:
 | 3 movement/regional coverage | LANDED | `src/lib/exercise/movementFamily.js` + migration v74 |
 | 4 remove auto supersets | LANDED | `planEngine` finalise step, seeded-plan copy |
 | 5 initial vs rebuild continuity | LANDED | `exercise/continuity.js` |
-| 6 volume delivery integrity | LANDED | `exercise/volumeAudit.js` |
+| 6 volume delivery integrity | LANDED (invariant utility by design; the generator enforces the contract) | `exercise/volumeAudit.js` |
 | 7 rep/rest/load prescription | LANDED | `src/lib/exercise/prescription.js` |
 | 8 split/days/session matrix | LANDED | `campaign16.splitMatrix` |
 | 9 canonical exercise identity | LANDED | `src/lib/exercise/canonicalId.js`, one resolution seam |
-| 10 structured why-this-plan | LANDED | `SELECTION_REASON` + `planRationale.js` |
-| 11 explain the rebuild | LANDED | `buildChangeReceipt` |
+| 10 structured why-this-plan | LANDED (engine 2026-08-11, **product 2026-08-14**) | `SELECTION_REASON` + `planRationale.js`, persisted via local v76 `routine_exercises.selection_reason`, rendered by `RoutineDetailScreen` |
+| 11 explain the rebuild | LANDED (engine 2026-08-11, **product 2026-08-14**) | `buildChangeReceipt`, rendered by `PlanUpdateScreen` and the next-block review sheet |
 | 12 product matrix | LANDED | `campaign16.longitudinal` |
 
 ## The baseline, captured before any change
@@ -496,3 +522,52 @@ up marginally more than the plan average once every discretionary entry has
 already reached its floor - it is simply the only place left with sets to
 give. Protection is an ORDER, not an exemption. Pinned at "keeps at least
 75% of its work" rather than hidden behind a softer assertion.
+
+---
+
+## Closure addendum 3, 2026-08-14: the product completion pass
+
+Ordered after this log's completion accounting was found to be untrue twice.
+Everything here is a PRODUCT change: an engine that already computed the
+right answer, connected to the path a user actually walks.
+
+### The false claims, and what now exists
+
+| Was claimed | What was actually there | What is live now |
+|---|---|---|
+| Job 10 LANDED | `selectionReason` stamped in memory, dropped by the INSERT, no screen | Local migration **v76** adds `routine_exercises.selection_reason`; `addExerciseToRoutine` writes the CODE; `RoutineDetailScreen` renders `explainSelection(...)` per exercise, falling back to the generic template only for plans saved before this and for manually added moves |
+| Job 11 LANDED | `buildChangeReceipt` with no caller; user saw a generic added/dropped list | `PlanUpdateScreen` builds the receipt from the SAME dry-run decisions the commit acts on and renders **What stays / What changes / New in your plan**, each line with its reason |
+| Phase C COMPLETE | verdict sentence on a card; both buttons reactivated the same plan | `openNextBlockReview` dry-runs the real generator, shows a review sheet, and `runBlockActivation` rebuilds the programme through `generateAndSavePlan` **with the resolved ledger** when the proposal contains justified exercise changes |
+| Review screen NOT STARTED | `reviewSections` computed and discarded | A next-block review sheet showing stays, changes, why, set-target moves, and the verdict in plain English - shown BEFORE anything is written |
+| Repeat NOT WIRED | structurally safe, but the promised call-site assertion did not exist | Enforced twice: the repeat route passes `refine: false`, and `runBlockActivation` recomputes `mayRefine` from the seed intent so a repeat cannot refine even if asked |
+| Division roles | ranking nudges only; a judged role could vanish silently | `ROLE_IMPORTANCE` (REQUIRED_WHEN_FEASIBLE / HIGH_PRIORITY / OPTIONAL). A required role becomes real coverage when the athlete's own filtered pool can fill it; when it cannot, `plan.divisionCoverage` reports it with a cause, and both Plan Fit and the routine screen say so |
+
+### Design decisions worth knowing
+
+- **No churn for churn's sake.** The refine branch runs only when the dry
+  run contains an actual exercise change. All-retained decisions reactivate
+  the existing programme exactly as before.
+- **History stays true.** A refinement creates a NEW programme and archives
+  the old one. Past mesocycles keep pointing at the plan the athlete really
+  trained; nothing is mutated in place.
+- **SWEEP is never compulsory.** It is an emphasis, not a family, so making
+  it required would let two squats pass as two roles - the exact confusion
+  job 3 removed. Its absence is reported, never forced.
+- **Coverage causes are coarse on purpose.** `not_available` (nothing in the
+  athlete's pool can fill it) versus `not_selected` (something could and the
+  plan did not). The generator cannot separate time from capacity after the
+  fact without guessing, and a guess inside a truthfulness report is worse
+  than a coarse fact.
+
+### Dead-helper audit, run before declaring anything
+
+| Helper | Classification |
+|---|---|
+| `explainSelection`, `buildPlanExplanation` | LIVE (`RoutineDetailScreen`) |
+| `buildChangeReceipt`, `receiptHeadline`, `explainReason` | LIVE (`PlanUpdateScreen`, next-block review) |
+| `proposeNextBlock`, `verdictCopy`, `recoveryHeadsUp`, `blockReadyNotificationBody` | LIVE (`blockAdvisor`, scheduler) |
+| `reviewSections` | still no consumer: the review sheet renders the receipt from the dry run instead, because that is what the commit acts on. Recorded as a residual, not as delivery |
+| `fitCopy`, `alternativeCopy`, `keepChoiceCopy`, `assessDurationOptions`, `coverageCopy` | LIVE (onboarding, Update Your Plan) |
+| `divisionCoverageLine`, `computeDivisionCoverage` | LIVE (`RoutineDetailScreen`) |
+| `volumeAudit` | TEST-ONLY BY DESIGN - an invariant utility; the generator itself enforces the volume contract it checks |
+| `isWorkable`, `fillsDivisionRole`, `divisionVolumeBias`, `isDivision`, `DIVISION_KEYS` | accessors used by tests and by the model's own readability; no product behaviour depends on them |

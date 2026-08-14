@@ -144,6 +144,11 @@ export default function PlansScreen({ navigation }) {
   const [adjustPreview, setAdjustPreview] = useState(null);
   // FB-24 (D96): the post-transition receipt, held until the user closes it.
   const [seedReceipt, setSeedReceipt] = useState(null);
+  // C16 phase C (completion pass): the next-block review, shown BEFORE the
+  // adjusted block is activated. Holds the exercise decisions (with their
+  // reasons), the volume changes and the programme verdict.
+  const [blockReview, setBlockReview] = useState(null);
+  const [preparingReview, setPreparingReview] = useState(false);
   // FB-15 (D96): the active block's id, for the decision card's summary link.
   const [activeBlockId, setActiveBlockId] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
@@ -376,88 +381,47 @@ export default function PlansScreen({ navigation }) {
       navigation.navigate('ProUpgrade', { source: 'block_decision' });
       return;
     }
-    // FB-26 (D96): this alert was byte-identical for both intents. At the
-    // single moment the app asks the user to confirm its most consequential
-    // training decision, "Restart this plan? A new training block starts
-    // today with the same workouts" described a repeat to someone who had
-    // just tapped "Continue with adjustments". The intent is already this
-    // function's own argument, so each path now describes what it does.
-    // The seedIntent mapping below is untouched.
-    const isAdjust = intent === 'adjust';
-    // RB-3 (D96, Review B): the guard moves to the TOP, before the alert.
-    // appAlert is a queue, so two same-frame taps on the two decision
-    // buttons used to queue two confirms, and the second ran a second
-    // activation after the first's finally released the ref. Checked and
-    // set synchronously here; released on cancel (the backdrop dismiss
-    // resolves through the cancel button too) and in the finally.
+    // RB-3 (D96, Review B): the guard is at the TOP, before anything is
+    // shown. appAlert is a queue, so two same-frame taps on the two decision
+    // buttons used to queue two confirms.
     if (restartingRef.current) return;
     restartingRef.current = true;
+
+    // C16 phase C (completion pass): "Continue with adjustments" now REVIEWS
+    // before it acts. It gathers what the next block would actually be -
+    // the volume the ledger resolved AND the exercise decisions continuity
+    // would make - and shows both before anything is written. The previous
+    // behaviour reactivated the same programme and applied volume only, so
+    // the whole longitudinal engine reached the user as a single sentence
+    // on a card and no exercise it judged was ever changed.
+    if (intent === 'adjust') {
+      try {
+        await openNextBlockReview();
+      } catch (e) {
+        logError('PlansScreen.openNextBlockReview', e, { userId: user?.id, planId: activePlan?.id });
+        toast.show("Couldn't prepare your next block, try again", { variant: 'error' });
+        restartingRef.current = false;
+      }
+      return;
+    }
+
+    // REPEAT MEANS REPEAT. Everything below is the literal path: the same
+    // programme, the same workouts, the same targets. It never calls the
+    // review, never runs the generator and never reaches the refine branch
+    // of runBlockActivation - `refine` is hard-coded false here rather than
+    // derived, so no future edit can make an elective refinement arrive
+    // through a button whose alert promises the opposite.
     appAlert(
-      isAdjust ? 'Start your next block?' : 'Run this plan again?',
-      isAdjust
-        ? 'A new training block starts today with the same workouts. The weekly set targets start from what your last block showed, muscle by muscle.'
-        : "A new training block starts today with the same workouts and the same set targets as last time. Aim to match or improve on last time's weights.",
+      'Run this plan again?',
+      "A new training block starts today with the same workouts and the same set targets as last time. Aim to match or improve on last time's weights.",
       [
         { text: 'Cancel', style: 'cancel', onPress: () => { restartingRef.current = false; } },
         {
-          text: isAdjust ? 'Start next block' : 'Start new block',
+          text: 'Start new block',
           onPress: async () => {
-            // Stage 6 review #11 + RB-3: the ref is already held from the
-            // entry guard above; the try/finally below still owns release.
             try {
               logInfo('PlansScreen.blockRestart', `intent=${intent}`);
-              // Stage 6 (2026-08-09): the ledger seam goes live. The
-              // finished block's ledger is computed (and persisted) and the
-              // founder's fallback chain resolves each muscle's next-block
-              // range. Intent maps from the LABEL semantics (review
-              // blocker #2): only the 'adjust' recommendation — the
-              // "Continue with adjustments" button — applies the full
-              // ledger; 'repeat' AND 'consider_rebuild' (whose labels both
-              // state a plain repeat) are true repeats. A null seed
-              // result on a repeat falls back to the template ramp
-              // unchanged (allowLearnedCarry false, below).
-              // eslint-disable-next-line global-require
-              const { buildSeedRangesForNextBlock, recordSeedOutcome } = require('../lib/blockLedgerRunner');
-              // FQ-2 (D96): the mapping's SEMANTICS are unchanged -- only the
-              // 'adjust' option applies the full ledger, everything else is a
-              // true repeat. It now also carries the entitlement, so an
-              // adjust intent without Pro can never seed adaptively.
-              const seedIntent = intent === 'adjust' && tier === 'pro' ? 'adjust' : 'repeat';
-              const seedRanges = await buildSeedRangesForNextBlock(user.id, {
-                intent: seedIntent,
-                userProfile,
-                tier,
-              }).catch(() => null);
-              // Review D5: on a repeat intent the activation must never
-              // reach for the learned carry if this seed build failed --
-              // the alert promised the same targets as last time.
-              await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), {
-                ledger: seedRanges,
-                allowLearnedCarry: seedIntent !== 'repeat',
-              });
-              // Provenance: record on the finished block's ledger how its
-              // recommendation was actually used (best-effort).
-              if (seedRanges?.sourceMesocycleId) {
-                recordSeedOutcome(user.id, seedRanges.sourceMesocycleId, {
-                  intent: seedIntent, ranges: seedRanges.ranges,
-                }).catch(() => {});
-              }
-              // FB-24 (D96): the receipt. Confirming used to end in silence
-              // -- no toast, no summary, and the card the user was reading
-              // simply vanished when loadData() re-ran, leaving "Week 1 of
-              // 6" and no statement of what the app changed or why. This is
-              // composed from data already in hand (the resolved seed
-              // ranges plus the finished block's stored ledger, captured
-              // before the reload clears it), so it adds no computation and
-              // claims nothing the write did not do.
-              const receipt = seedIntent === 'adjust'
-                ? buildSeedReceipt({ ranges: seedRanges?.ranges, ledger: ledgerRecordRef.current })
-                : null;
-              await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY_FOR(user?.id)).catch(() => {});
-              await loadData();
-              if (receipt && (receipt.changed.length > 0 || receipt.held > 0)) {
-                setSeedReceipt(receipt);
-              }
+              await runBlockActivation({ intent, refine: false });
             } catch (e) {
               logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id, intent });
               toast.show("Couldn't restart plan, try again", { variant: 'error' });
@@ -468,6 +432,133 @@ export default function PlansScreen({ navigation }) {
         },
       ],
     );
+  }
+
+  /**
+   * Build the next-block review and open it.
+   *
+   * Everything shown is what the confirm would ACTUALLY do:
+   *   - the volume half comes from the same `buildSeedRangesForNextBlock`
+   *     the activation passes as its ledger;
+   *   - the exercise half comes from a DRY RUN of the same generator the
+   *     confirm runs, so the stays/changes/why list is the decision record
+   *     the commit will act on rather than a parallel description of it.
+   */
+  async function openNextBlockReview() {
+    // eslint-disable-next-line global-require
+    const { buildSeedRangesForNextBlock } = require('../lib/blockLedgerRunner');
+    // eslint-disable-next-line global-require
+    const { generatePlanDryRun } = require('../lib/planAutoGen');
+    // eslint-disable-next-line global-require
+    const { buildChangeReceipt } = require('../lib/planRationale');
+
+    setPreparingReview(true);
+    try {
+      const seedRanges = await buildSeedRangesForNextBlock(user.id, {
+        intent: 'adjust', userProfile, tier,
+      }).catch(() => null);
+      const dry = await generatePlanDryRun(user.id, userProfile).catch(() => null);
+      const decisions = dry?.ok ? (dry.continuity?.decisions ?? []) : [];
+      const receipt = decisions.length ? buildChangeReceipt(decisions) : null;
+      // Only a genuine exercise change earns a rebuilt programme. When the
+      // decisions are all retentions, confirming reactivates the plan the
+      // user already has: "if only volume changes are justified, do NOT
+      // create needless exercise churn".
+      const exerciseChanges = receipt
+        ? receipt.changes.length + receipt.added.length
+        : 0;
+      setBlockReview({
+        seedRanges,
+        receipt,
+        exerciseChanges,
+        volume: buildSeedReceipt({ ranges: seedRanges?.ranges, ledger: ledgerRecordRef.current }),
+        verdictCopy: blockAdvice?.programmeReview?.copy ?? null,
+        dryFailed: !dry?.ok,
+      });
+    } finally {
+      setPreparingReview(false);
+    }
+  }
+
+  /**
+   * The one activation path for a block boundary.
+   *
+   * `refine` decides whether the next block is a rebuilt programme or the
+   * same one reactivated. It is passed explicitly by each caller rather
+   * than inferred, so the Repeat route cannot acquire a refinement by a
+   * change somewhere else in this file.
+   */
+  async function runBlockActivation({ intent, refine }) {
+    // eslint-disable-next-line global-require
+    const { buildSeedRangesForNextBlock, recordSeedOutcome } = require('../lib/blockLedgerRunner');
+    // FQ-2 (D96): only the 'adjust' option applies the full ledger, and only
+    // with the entitlement; everything else is a true repeat.
+    const seedIntent = intent === 'adjust' && tier === 'pro' ? 'adjust' : 'repeat';
+    // REPEAT MEANS REPEAT, enforced here and not only at the call site: a
+    // repeat intent may never rebuild the programme, whatever it was asked
+    // for. This is the assertion the epoch module's own header promised.
+    const mayRefine = refine === true && seedIntent === 'adjust';
+    const seedRanges = blockReview?.seedRanges ?? await buildSeedRangesForNextBlock(user.id, {
+      intent: seedIntent, userProfile, tier,
+    }).catch(() => null);
+
+    if (mayRefine) {
+      // The refined next programme, built by the REAL generator, so it
+      // carries division intent, movement roles, equipment, session length,
+      // exclusions and continuity exactly as a rebuild does. The finished
+      // block's own programme is left intact and archived, so what the user
+      // actually trained stays true in their history.
+      const result = await generateAndSavePlan(user.id, userProfile, {
+        ledger: seedRanges,
+        allowLearnedCarry: true,
+      });
+      if (!result?.ok) {
+        // The refinement failed. Fall back to the literal reactivation the
+        // user would otherwise have had rather than leaving them with no
+        // new block at all, and say so.
+        logError('PlansScreen.refineNextBlock', result?.error ?? 'unknown', { userId: user?.id });
+        await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), {
+          ledger: seedRanges, allowLearnedCarry: true,
+        });
+        toast.show('Your next block started with your current workouts', { variant: 'warning' });
+      }
+    } else {
+      // Review D5: on a repeat intent the activation must never reach for
+      // the learned carry if the seed build failed.
+      await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), {
+        ledger: seedRanges,
+        allowLearnedCarry: seedIntent !== 'repeat',
+      });
+    }
+
+    if (seedRanges?.sourceMesocycleId) {
+      recordSeedOutcome(user.id, seedRanges.sourceMesocycleId, {
+        intent: seedIntent, ranges: seedRanges.ranges,
+      }).catch(() => {});
+    }
+    const receipt = seedIntent === 'adjust'
+      ? buildSeedReceipt({ ranges: seedRanges?.ranges, ledger: ledgerRecordRef.current })
+      : null;
+    await AsyncStorage.removeItem(BLOCK_SNOOZE_KEY_FOR(user?.id)).catch(() => {});
+    await loadData();
+    if (receipt && (receipt.changed.length > 0 || receipt.held > 0)) {
+      setSeedReceipt(receipt);
+    }
+  }
+
+  /** Confirm the reviewed next block. */
+  async function confirmNextBlockReview() {
+    const refine = (blockReview?.exerciseChanges ?? 0) > 0;
+    setBlockReview(null);
+    try {
+      logInfo('PlansScreen.blockRestart', `intent=adjust refine=${refine}`);
+      await runBlockActivation({ intent: 'adjust', refine });
+    } catch (e) {
+      logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id, intent: 'adjust' });
+      toast.show("Couldn't restart plan, try again", { variant: 'error' });
+    } finally {
+      restartingRef.current = false;
+    }
   }
 
   async function handleSnoozeBlock() {
@@ -1137,6 +1228,11 @@ export default function PlansScreen({ navigation }) {
                           onPress={() => (opt.locked
                             ? navigation.navigate('ProUpgrade', { source: 'block_decision' })
                             : handleRestartPlan(opt.intent))}
+                          // The adjusted route reads the plan and dry-runs the
+                          // generator before it can show the review, so the
+                          // button reports that rather than sitting inert.
+                          loading={preparingReview && opt.intent === 'adjust'}
+                          disabled={preparingReview}
                           accessibilityLabel={opt.locked ? `${opt.label}. Part of Pro.` : opt.label}
                         />
                         {(opt.locked || opt.recommended) ? (
@@ -1656,6 +1752,114 @@ export default function PlansScreen({ navigation }) {
           onPress={() => setSeedReceipt(null)}
           accessibilityLabel="Got it"
           style={styles.receiptBtn}
+        />
+      </BottomSheet>
+
+      {/* C16 phase C + D (completion pass): the NEXT-BLOCK REVIEW. The user
+          sees what stays, what changes, why, the volume moves and any
+          prescription change BEFORE anything is activated. Every line comes
+          from the same dry run and the same resolved ledger the confirm
+          will act on, so the activated plan matches what was shown. Nothing
+          has happened at the point this is on screen. */}
+      <BottomSheet
+        visible={!!blockReview}
+        onClose={() => {
+          if (!restartingRef.current) return;
+          setBlockReview(null);
+          restartingRef.current = false;
+        }}
+        accessibilityLabel="Your next block"
+        scroll
+      >
+        <Text style={[styles.receiptTitle, live.receiptTitle]}>Your next block</Text>
+        {blockReview?.verdictCopy ? (
+          <>
+            <Text style={[styles.receiptRowTitle, live.receiptRowTitle]}>
+              {blockReview.verdictCopy.title}
+            </Text>
+            <Text style={[styles.receiptSub, live.receiptSub]}>{blockReview.verdictCopy.body}</Text>
+          </>
+        ) : (
+          <Text style={[styles.receiptSub, live.receiptSub]}>
+            Here is what your next block would look like. Nothing changes until you confirm.
+          </Text>
+        )}
+
+        {/* WHAT STAYS. A retained exercise is a decision that was made, so
+            it is named with its reason rather than left as the remainder. */}
+        {(blockReview?.receipt?.stays?.length ?? 0) > 0 ? (
+          <View style={styles.receiptRow}>
+            <Text style={[styles.receiptRowTitle, live.receiptRowTitle]}>What stays</Text>
+            {blockReview.receipt.stays.slice(0, 6).map((l) => (
+              <Text key={`rv-stay-${l.exerciseName}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
+                {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
+              </Text>
+            ))}
+            {blockReview.receipt.stays.length > 6 ? (
+              <Text style={[styles.receiptRowBody, live.receiptRowBody]}>
+                Plus {blockReview.receipt.stays.length - 6} more staying as they are.
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* WHAT CHANGES, and why. */}
+        {(blockReview?.receipt?.changes?.length ?? 0) > 0 ? (
+          <View style={styles.receiptRow}>
+            <Text style={[styles.receiptRowTitle, live.receiptRowTitle]}>What changes</Text>
+            {blockReview.receipt.changes.map((l) => (
+              <Text key={`rv-chg-${l.exerciseName}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
+                {l.previousExerciseName ? `${l.previousExerciseName} to ` : ''}{l.exerciseName}
+                {l.why ? ` - ${l.why}` : ''}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+
+        {(blockReview?.receipt?.added?.length ?? 0) > 0 ? (
+          <View style={styles.receiptRow}>
+            <Text style={[styles.receiptRowTitle, live.receiptRowTitle]}>New in your plan</Text>
+            {blockReview.receipt.added.map((l) => (
+              <Text key={`rv-new-${l.exerciseName}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
+                {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+
+        {/* VOLUME. The same numbers the activation seeds. */}
+        {(blockReview?.volume?.changed?.length ?? 0) > 0 ? (
+          <View style={styles.receiptRow}>
+            <Text style={[styles.receiptRowTitle, live.receiptRowTitle]}>Your set targets</Text>
+            {blockReview.volume.changed.map((row) => (
+              <Text key={`rv-vol-${row.muscle}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
+                {row.label}: {row.change}
+              </Text>
+            ))}
+            {blockReview.volume.heldLine ? (
+              <Text style={[styles.receiptRowBody, live.receiptRowBody]}>{blockReview.volume.heldLine}</Text>
+            ) : null}
+          </View>
+        ) : null}
+
+        {blockReview && blockReview.exerciseChanges === 0 ? (
+          <Text style={[styles.receiptRowBody, live.receiptRowBody]}>
+            Your workouts stay exactly as they are. Only your set targets move.
+          </Text>
+        ) : null}
+
+        <Button
+          variant="primary"
+          title="Start next block"
+          onPress={confirmNextBlockReview}
+          accessibilityLabel="Start next block"
+          style={styles.receiptBtn}
+        />
+        <Button
+          variant="tertiary"
+          title="Not yet"
+          onPress={() => { setBlockReview(null); restartingRef.current = false; }}
+          accessibilityLabel="Not yet"
         />
       </BottomSheet>
 

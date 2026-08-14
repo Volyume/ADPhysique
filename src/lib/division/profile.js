@@ -112,6 +112,42 @@ export const LEG_CHARACTER = Object.freeze({
   BALANCED: 'balanced',
 });
 
+/**
+ * How much a division's within-muscle role MATTERS, so the difference
+ * between "this is what the division is judged on" and "this is a nice
+ * touch" is written down rather than implied by list order.
+ *
+ * FOUNDER LAW (2026-08-14): "Do NOT turn every aesthetic preference into a
+ * compulsory exercise slot. But important division intents must not silently
+ * disappear while Volyume still claims the plan fully represents that
+ * physique."
+ */
+export const ROLE_IMPORTANCE = Object.freeze({
+  /**
+   * The division is judged on this. It becomes a real coverage requirement
+   * WHENEVER a candidate exists in the athlete's own filtered pool - so
+   * equipment, exclusions and a thin library can still make it impossible,
+   * and when they do it is REPORTED rather than silently dropped.
+   */
+  REQUIRED_WHEN_FEASIBLE: 'required_when_feasible',
+  /** Strongly preferred within the muscle's existing volume. Never forced. */
+  HIGH_PRIORITY: 'high_priority',
+  /** A refinement. Preferred when there is room, absent without comment. */
+  OPTIONAL: 'optional',
+});
+
+const REQUIRED = ROLE_IMPORTANCE.REQUIRED_WHEN_FEASIBLE;
+const HIGH = ROLE_IMPORTANCE.HIGH_PRIORITY;
+const OPTIONAL = ROLE_IMPORTANCE.OPTIONAL;
+
+/**
+ * SWEEP is never REQUIRED_WHEN_FEASIBLE, and that is a ruling rather than an
+ * oversight (C16 job 3): a hack squat and a back squat are the same movement
+ * family, so treating sweep as coverage would let two squats satisfy two
+ * "roles". It is an emphasis, so it is carried at HIGH_PRIORITY and its
+ * absence is reported, not enforced.
+ */
+
 const REGISTER = 'docs/plan-generation-campaign-16/DIVISION-EVIDENCE-REGISTER.md';
 
 /**
@@ -143,8 +179,8 @@ export const DIVISION_PROFILES = Object.freeze({
     // symmetry is still judged (register §1.1).
     deEmphasised: ['traps', 'quads', 'hamstrings', 'glutes', 'calves', 'abs'],
     roles: {
-      back: [DIVISION_ROLE.BACK_WIDTH],
-      chest: [DIVISION_ROLE.CHEST_UPPER],
+      back: [{ role: DIVISION_ROLE.BACK_WIDTH, importance: REQUIRED }],
+      chest: [{ role: DIVISION_ROLE.CHEST_UPPER, importance: HIGH }],
     },
     poolRules: {
       // No back or front squat for legs nobody will see: the fatigue buys
@@ -164,8 +200,8 @@ export const DIVISION_PROFILES = Object.freeze({
     // Muscular are proportion criteria, not stylistic ones.
     deEmphasised: ['traps', 'abs'],
     roles: {
-      back: [DIVISION_ROLE.BACK_WIDTH],
-      quads: [DIVISION_ROLE.QUAD_SWEEP],
+      back: [{ role: DIVISION_ROLE.BACK_WIDTH, importance: REQUIRED }],
+      quads: [{ role: DIVISION_ROLE.QUAD_SWEEP, importance: HIGH }],
     },
     poolRules: {},
     legs: LEG_CHARACTER.FULLY_JUDGED,
@@ -181,8 +217,10 @@ export const DIVISION_PROFILES = Object.freeze({
     priority: ['chest', 'back', 'side_delts', 'quads', 'calves'],
     deEmphasised: [],
     roles: {
-      back: [DIVISION_ROLE.BACK_WIDTH, DIVISION_ROLE.BACK_DEPTH],
-      quads: [DIVISION_ROLE.QUAD_SWEEP, DIVISION_ROLE.QUAD_RECTUS],
+      back: [{ role: DIVISION_ROLE.BACK_WIDTH, importance: REQUIRED },
+        { role: DIVISION_ROLE.BACK_DEPTH, importance: REQUIRED }],
+      quads: [{ role: DIVISION_ROLE.QUAD_SWEEP, importance: HIGH },
+        { role: DIVISION_ROLE.QUAD_RECTUS, importance: HIGH }],
     },
     poolRules: {},
     legs: LEG_CHARACTER.FULLY_JUDGED,
@@ -200,12 +238,14 @@ export const DIVISION_PROFILES = Object.freeze({
       // "Full round glutes with a slight separation between the hamstring
       // and glute area": the round shape AND the tie-in are both named, so
       // both roles are wanted, round first.
-      glutes: [DIVISION_ROLE.GLUTE_ROUND, DIVISION_ROLE.GLUTE_TIE_IN],
+      glutes: [{ role: DIVISION_ROLE.GLUTE_ROUND, importance: REQUIRED },
+        { role: DIVISION_ROLE.GLUTE_TIE_IN, importance: HIGH }],
       // The hamstring half of that same junction is the hinge, not the curl.
-      hamstrings: [DIVISION_ROLE.HAMSTRING_TIE_IN],
+      hamstrings: [{ role: DIVISION_ROLE.HAMSTRING_TIE_IN, importance: HIGH }],
       // Width only. Judged front and back, and figure-like density is a
       // named fault, so the lats are shaped without thickening the waist.
-      back: [DIVISION_ROLE.BACK_WIDTH, DIVISION_ROLE.BACK_SHOULDER_EXTENSION],
+      back: [{ role: DIVISION_ROLE.BACK_WIDTH, importance: REQUIRED },
+        { role: DIVISION_ROLE.BACK_SHOULDER_EXTENSION, importance: OPTIONAL }],
     },
     poolRules: {
       // An allow-list, not a deny-list, so a hinge can never leak in: rows
@@ -234,9 +274,10 @@ export const DIVISION_PROFILES = Object.freeze({
     priority: ['glutes', 'hamstrings', 'quads', 'adductors'],
     deEmphasised: ['chest', 'abs', 'traps'],
     roles: {
-      glutes: [DIVISION_ROLE.GLUTE_ROUND, DIVISION_ROLE.GLUTE_TIE_IN],
-      hamstrings: [DIVISION_ROLE.HAMSTRING_TIE_IN],
-      quads: [DIVISION_ROLE.QUAD_SWEEP],
+      glutes: [{ role: DIVISION_ROLE.GLUTE_ROUND, importance: REQUIRED },
+        { role: DIVISION_ROLE.GLUTE_TIE_IN, importance: HIGH }],
+      hamstrings: [{ role: DIVISION_ROLE.HAMSTRING_TIE_IN, importance: HIGH }],
+      quads: [{ role: DIVISION_ROLE.QUAD_SWEEP, importance: HIGH }],
     },
     poolRules: {},
     legs: LEG_CHARACTER.LOWER_LED,
@@ -251,10 +292,11 @@ export const DIVISION_PROFILES = Object.freeze({
     deEmphasised: ['traps', 'abs'],
     roles: {
       // The criteria name BOTH in one sentence: "back depth, and width".
-      back: [DIVISION_ROLE.BACK_WIDTH, DIVISION_ROLE.BACK_DEPTH],
-      chest: [DIVISION_ROLE.CHEST_UPPER],
+      back: [{ role: DIVISION_ROLE.BACK_WIDTH, importance: REQUIRED },
+        { role: DIVISION_ROLE.BACK_DEPTH, importance: REQUIRED }],
+      chest: [{ role: DIVISION_ROLE.CHEST_UPPER, importance: HIGH }],
       // "sweep to the quads", verbatim. This is the gap the register found.
-      quads: [DIVISION_ROLE.QUAD_SWEEP],
+      quads: [{ role: DIVISION_ROLE.QUAD_SWEEP, importance: HIGH }],
     },
     poolRules: {},
     legs: LEG_CHARACTER.FULLY_JUDGED,
@@ -268,8 +310,10 @@ export const DIVISION_PROFILES = Object.freeze({
     priority: ['back', 'side_delts', 'quads', 'hamstrings'],
     deEmphasised: ['abs'],
     roles: {
-      back: [DIVISION_ROLE.BACK_WIDTH, DIVISION_ROLE.BACK_DEPTH],
-      quads: [DIVISION_ROLE.QUAD_SWEEP, DIVISION_ROLE.QUAD_RECTUS],
+      back: [{ role: DIVISION_ROLE.BACK_WIDTH, importance: REQUIRED },
+        { role: DIVISION_ROLE.BACK_DEPTH, importance: REQUIRED }],
+      quads: [{ role: DIVISION_ROLE.QUAD_SWEEP, importance: HIGH },
+        { role: DIVISION_ROLE.QUAD_RECTUS, importance: HIGH }],
     },
     poolRules: {},
     legs: LEG_CHARACTER.FULLY_JUDGED,
@@ -283,8 +327,10 @@ export const DIVISION_PROFILES = Object.freeze({
     priority: ['back', 'chest', 'side_delts', 'quads', 'hamstrings'],
     deEmphasised: [],
     roles: {
-      back: [DIVISION_ROLE.BACK_WIDTH, DIVISION_ROLE.BACK_DEPTH],
-      quads: [DIVISION_ROLE.QUAD_SWEEP, DIVISION_ROLE.QUAD_RECTUS],
+      back: [{ role: DIVISION_ROLE.BACK_WIDTH, importance: REQUIRED },
+        { role: DIVISION_ROLE.BACK_DEPTH, importance: REQUIRED }],
+      quads: [{ role: DIVISION_ROLE.QUAD_SWEEP, importance: HIGH },
+        { role: DIVISION_ROLE.QUAD_RECTUS, importance: HIGH }],
     },
     poolRules: {},
     legs: LEG_CHARACTER.FULLY_JUDGED,
@@ -336,7 +382,24 @@ export function divisionDeEmphasised(goal) {
  * exactly as they do for a General user.
  */
 export function divisionRoles(goal, muscle) {
+  return divisionRoleSpecs(goal, muscle).map(spec => spec.role);
+}
+
+/**
+ * The same roles with their IMPORTANCE, for the consumers that must know the
+ * difference between a judged criterion and a refinement: the selector (which
+ * turns a REQUIRED_WHEN_FEASIBLE role into real coverage when the athlete's
+ * pool can fill it) and the coverage report (which says so when it cannot).
+ */
+export function divisionRoleSpecs(goal, muscle) {
   return divisionProfile(goal).roles[muscle] ?? [];
+}
+
+/** Every { muscle, role, importance } this division wants, flattened. */
+export function divisionRoleList(goal) {
+  const roles = divisionProfile(goal).roles ?? {};
+  return Object.entries(roles).flatMap(([muscle, specs]) =>
+    specs.map(spec => ({ muscle, ...spec })));
 }
 
 /** The division's hard pool restriction for a muscle, or null. */

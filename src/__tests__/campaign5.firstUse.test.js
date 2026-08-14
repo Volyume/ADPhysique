@@ -549,7 +549,14 @@ describe('BLOCK: the first block explains itself and never advances on its own (
     expect(read('lib/mesocycle.js')).toMatch(/completed_awaiting_decision/);
     const plans = read('screens/PlansScreen.js');
     expect(plans).toMatch(/if \(restartingRef\.current\) return;/);
-    expect(plans).toMatch(/appAlert\(\s*\n?\s*isAdjust \? 'Start your next block\?' : 'Run this plan again\?'/);
+    // FB-34/35 intent, re-pinned after the C16 completion pass (2026-08-14)
+    // replaced the ADJUSTED route's one-line alert with a full next-block
+    // review sheet. The guarantee is unchanged and, if anything, stronger:
+    // both routes put an explicit user confirmation in front of the block
+    // writer, and neither activates anything by being opened.
+    expect(plans).toMatch(/appAlert\(\s*\n?\s*'Run this plan again\?'/);
+    expect(plans).toMatch(/visible=\{!!blockReview\}/);
+    expect(plans).toMatch(/onPress=\{confirmNextBlockReview\}/);
     expect(read('lib/blockAdvisor.js')).not.toMatch(/autoStart|automaticTransition/);
     // The suggestion banner is suppressed inside a scheduled recovery week
     // (FB-02), a display gate only -- shouldDeload is untouched.
@@ -598,8 +605,13 @@ describe('BLOCK: the first block explains itself and never advances on its own (
     const advisor = read('lib/blockAdvisor.js');
     expect(advisor).toContain("repeat: 'Run this plan again, unchanged'");
     const plans = read('screens/PlansScreen.js');
-    expect(plans).toMatch(/The weekly set targets start from what your last block showed/);
+    // FB-26 intent, re-pinned after the C16 completion pass: each route
+    // still describes its OWN action. Repeat says the targets are the same;
+    // the adjusted route now says it in the review sheet, where it also
+    // shows the actual moves rather than describing them in one line.
     expect(plans).toMatch(/the same set targets as last time/);
+    expect(plans).toContain('Your set targets');
+    expect(plans).toContain('Only your set targets move.');
     expect(plans).toMatch(/const seedIntent = intent === 'adjust' && tier === 'pro' \? 'adjust' : 'repeat';/);
   });
 
@@ -831,7 +843,14 @@ describe('BLOCK DECISION: both options, advice that cannot gate, entitlement fro
   });
 
   test('the explicit confirm and the no-auto-transition guards survive the new options (FB-34/35)', () => {
-    expect(plans).toMatch(/appAlert\(\s*\n?\s*isAdjust \? 'Start your next block\?' : 'Run this plan again\?'/);
+    // FB-34/35 intent, re-pinned after the C16 completion pass (2026-08-14)
+    // replaced the ADJUSTED route's one-line alert with a full next-block
+    // review sheet. The guarantee is unchanged and, if anything, stronger:
+    // both routes put an explicit user confirmation in front of the block
+    // writer, and neither activates anything by being opened.
+    expect(plans).toMatch(/appAlert\(\s*\n?\s*'Run this plan again\?'/);
+    expect(plans).toMatch(/visible=\{!!blockReview\}/);
+    expect(plans).toMatch(/onPress=\{confirmNextBlockReview\}/);
     expect(plans).toMatch(/if \(restartingRef\.current\) return;/);
     expect(advisor).not.toMatch(/autoStart|automaticTransition/);
     // Every option press still goes through the confirming handler (or, when

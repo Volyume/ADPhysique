@@ -2351,6 +2351,35 @@ const SCHEMA_MIGRATIONS = [
     `UPDATE exercises SET subregion = 'hip_extension'
      WHERE primary_muscle = 'hamstrings' AND subregion = 'lower_lat'`,
   ],
+  // v76, structured plan provenance (Campaign 16 job 10, completion pass
+  // 2026-08-14).
+  //
+  // WHAT WAS WRONG. The engine stamped a machine-readable reason on every
+  // exercise it chose (`selectionReason`, planEngine SELECTION_REASON) and
+  // planRationale.js translated those codes into plain English, but the
+  // write path never carried the code to the database. The reason existed
+  // for exactly as long as the in-memory plan object did, so a user who
+  // saved their plan and came back could never be told why an exercise was
+  // there. The campaign recorded job 10 as landed on the strength of the
+  // engine and the copy table; the product behaviour was absent.
+  //
+  // A CODE, NOT PROSE. The column stores the reason CODE. Copy is rendered
+  // at read time from planRationale, so wording can be improved (or
+  // translated) without a migration and without a saved plan carrying a
+  // sentence written by an older build.
+  //
+  // Applied: LOCALLY via this user_version bump. There is NO cloud
+  // counterpart and none is needed: routine_exercises already syncs by
+  // column list, an absent column on the far side is tolerated, and a
+  // missing reason reads exactly like a plan generated before this landed
+  // (no explanation shown, nothing broken).
+  // Additive: yes (one nullable column). Safe to re-run: yes (the runner
+  // treats a duplicate-column error as benign). Rollback: leave the column
+  // in place and ignore it; every reader treats NULL as "no recorded
+  // reason" and renders nothing.
+  [
+    'ALTER TABLE routine_exercises ADD COLUMN selection_reason TEXT',
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -3787,7 +3816,7 @@ export async function getRoutineExercisesWithDetails(routineId) {
   });
 }
 
-export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12, notes = null, sets = 3, startingWeight = null, restSeconds = null, supersetGroupId = null, scheduleSync = true) {
+export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin = 6, repsMax = 12, notes = null, sets = 3, startingWeight = null, restSeconds = null, supersetGroupId = null, scheduleSync = true, selectionReason = null) {
   const d = await db();
   const id = uid();
   const now = Date.now();
@@ -3802,9 +3831,11 @@ export async function addExerciseToRoutine(routineId, exerciseId, order, repsMin
   await d.runAsync(
     `INSERT INTO routine_exercises
       (id, routine_id, exercise_id, exercise_name, order_in_routine, recommended_sets,
-       recommended_reps_min, recommended_reps_max, notes, starting_weight, rest_seconds, superset_group_id, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, routineId, exerciseId, exerciseName, order, sets, repsMin, repsMax, notes, startingWeight, restSeconds, supersetGroupId, now, now],
+       recommended_reps_min, recommended_reps_max, notes, starting_weight, rest_seconds,
+       superset_group_id, selection_reason, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, routineId, exerciseId, exerciseName, order, sets, repsMin, repsMax, notes,
+      startingWeight, restSeconds, supersetGroupId, selectionReason, now, now],
   );
   if (scheduleSync) _scheduleSync();
   return { id, routineId, exerciseId, orderInRoutine: order, supersetGroupId };
