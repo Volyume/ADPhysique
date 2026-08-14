@@ -7,6 +7,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { runWeeklyCoach, mapCalsAdherence, corroborateConfidenceLevel } from '../lib/weeklyCoach';
+// Campaign 18: the week as one account, written from the engine's own context.
+import { buildWeeklyStory } from '../lib/coachStory';
 import { buildRampPositionLine } from '../lib/blockExplain';
 import { buildHoldReceipt } from '../lib/coachLedger';
 import { isCompletedCoachDecision } from '../lib/coachDecision';
@@ -2092,7 +2094,27 @@ export default function CoachOutputScreen({ navigation, route }) {
     prsThisWeek,
     sessionsCompleted,
     sessionsPlanned,
+    // Campaign 18: the very context and classification this run decided from.
+    context: coachCtx,
+    limiters: coachLimiters,
   } = output;
+
+  // CAMPAIGN 18 JOBS 10 + 12. One week, one account, written from the SAME
+  // context object the engine decided on rather than from a second reading of
+  // the same week - so the story cannot describe a decision the engine did
+  // not take. `changes` carries only what the engine actually produced.
+  // Not memoised, deliberately: this destructure sits AFTER the screen's
+  // early returns, so a hook here would be called conditionally. buildWeeklyStory
+  // is a pure string assembly over an object the run already produced - the
+  // same reasoning the file's own buildLiveStyles(t) call documents above.
+  const weeklyStory = buildWeeklyStory({
+    context: coachCtx,
+    limiters: coachLimiters,
+    changes: {
+      calorieKcal: adjustments?.calories?.change ?? 0,
+      volumeNote: adjustments?.training?.signal === 'hold' ? 'Your training volume holds where it is.' : null,
+    },
+  });
 
   // Trend chip: arrow icon + colour. Class B body-data surface (COMP-027):
   // a body-weight trend never wears red. On target reads onTrack; off target
@@ -2620,6 +2642,44 @@ export default function CoachOutputScreen({ navigation, route }) {
           </View>
         ) : null}
 
+        {/* CAMPAIGN 18 JOB 10: your week, as one account rather than as five
+            engines each having a say. Every line is traceable to a fact in
+            the context the decision was made from; a line with no evidence
+            behind it is simply not written. */}
+        {weeklyStory ? (
+          <Card style={styles.storyCard}>
+            <SectionLabel tone="primary">Your week</SectionLabel>
+            {weeklyStory.happened.map((l) => (
+              <Text key={l.text} style={[styles.storyLine, live.storyLine]}>{l.text}</Text>
+            ))}
+            {weeklyStory.means.map((l) => (
+              <Text key={l.text} style={[styles.storyMeans, live.storyMeans]}>{l.text}</Text>
+            ))}
+            {weeklyStory.changing.length ? (
+              <View style={styles.storyBlock}>
+                <Text style={[styles.storyHeading, live.storyHeading]}>What is changing</Text>
+                {weeklyStory.changing.map((c) => (
+                  <View key={c.text} style={styles.storyChange}>
+                    <Text style={[styles.storyLine, live.storyLine]}>{c.text}</Text>
+                    <Text style={[styles.storyWhy, live.storyWhy]}>{c.why}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : null}
+            {weeklyStory.staying.length ? (
+              <View style={styles.storyBlock}>
+                <Text style={[styles.storyHeading, live.storyHeading]}>What stays the same</Text>
+                {weeklyStory.staying.map((l) => (
+                  <Text key={l.text} style={[styles.storyLine, live.storyLine]}>{l.text}</Text>
+                ))}
+              </View>
+            ) : null}
+            {weeklyStory.watching ? (
+              <Text style={[styles.storyWatch, live.storyWatch]}>{weeklyStory.watching.text}</Text>
+            ) : null}
+          </Card>
+        ) : null}
+
         {/* 6. Why */}
         {whyThisWeek ? <WhyBlock text={whyThisWeek} onLearnMore={() => navigation.navigate('Methodology', { source: 'why_block' })} /> : null}
         {/* NU-8: the engine grades every weekly decision's data confidence
@@ -3097,6 +3157,17 @@ const styles = StyleSheet.create({
     ...type.caption, flex: 1, color: colors.textMuted, lineHeight: 17,
   },
   // NU-8: quiet data-confidence line under the Why block.
+  // Campaign 18 job 10: the weekly story. Quiet by design - it is an account,
+  // not a banner.
+  storyCard: { gap: spacing.xs },
+  storyLine: { ...type.body, color: colors.textPrimary },
+  storyMeans: { ...type.bodySm, color: colors.textSecondary },
+  storyBlock: { marginTop: spacing.sm, gap: spacing.xxs },
+  storyHeading: { ...type.caption, color: colors.textMuted, textTransform: 'uppercase' },
+  storyChange: { marginBottom: spacing.xs },
+  storyWhy: { ...type.bodySm, color: colors.textMuted },
+  storyWatch: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.sm },
+
   confidenceCaption: {
     ...type.caption,
     color: colors.textMuted,
@@ -3392,6 +3463,11 @@ function buildLiveStyles(t) {
     adjustmentHold: { ...t.type.bodySm, color: t.colors.textPrimary },
     planNote: { borderTopColor: t.colors.border },
     planNoteText: { ...t.type.caption, color: t.colors.textMuted },
+    storyLine: { ...t.type.body, color: t.colors.textPrimary },
+    storyMeans: { ...t.type.bodySm, color: t.colors.textSecondary },
+    storyHeading: { ...t.type.caption, color: t.colors.textMuted },
+    storyWhy: { ...t.type.bodySm, color: t.colors.textMuted },
+    storyWatch: { ...t.type.bodySm, color: t.colors.textMuted },
     confidenceCaption: { ...t.type.caption, color: t.colors.textMuted },
     dietBreakTitle: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     dietBreakTitleHero: { ...t.type.h3, color: t.colors.textPrimary },
