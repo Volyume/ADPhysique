@@ -1881,3 +1881,33 @@ Order: 90 phases, docs under docs/release-readiness-2026-08-11/, five adversaria
 reviews, 1-124 handover. NO production actions of any kind. Recovery path for all
 agent lanes: each writes ONLY its named docs; on death relaunch from the phase
 list; lead lands all findings hands-on. Ledger: CAMPAIGN7-COMPLIANCE-LEDGER.md.
+
+## CAMPAIGN 17B (2026-08-14) — food logging, search & personal nutrition UX. LANDED on main.
+
+Branch `claude/codebase-audit-docs-pv6mjd`, merged to main at `6908c839`. Eight
+jobs, all delivered through a real app path (the founder's completion law:
+module exists != delivered). Commits, oldest first:
+
+- `34828346` saved meals and recipes are first-class plan candidates (job 3)
+- `16ab3a70` meal-count habit is ASKED, never silently applied (job 4)
+- `1720a872` the plan explains itself from stamped reason codes (job 5)
+- `9e8376ee` calorie bank comprehension copy + real-value receipt (job 6)
+- `56c55e33` Food Insights coverage honesty + "so what" lines (job 7)
+- `6908c839` one "don't suggest" instruction, obeyed everywhere (job 8)
+
+Earlier jobs 1-2 (personal search ranking, fast repeat logging + serving
+memory) landed in the same sequence before `34828346`.
+
+New modules: `src/lib/food/insights.js`, `habits.js`, `mealRationale.js`;
+`searchTabs.js` gained the personal-match merge. New suites:
+`insights.test.js`, `calorieBankUx.test.js`, `coherence.test.js`,
+`habits.test.js`, `mealRationale.test.js`, `searchPersonal.test.js`,
+`personalMealsFirstClass.test.js`.
+
+Gates at landing: `npm run lint` clean, `npm test` 904 suites / 11,821 passed
+(1 suite + 10 tests skipped, pre-existing), identity invariant clean.
+
+**STILL OUTSTANDING (founder-side, unchanged by this campaign):** migrations
+`137` and `138` are authorised ("run against production") but NOT applied -
+this session has no Supabase MCP server attached. `049` stays HELD; never
+apply it.
