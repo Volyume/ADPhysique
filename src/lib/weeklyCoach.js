@@ -26,7 +26,11 @@ import { cycleTrendAnnotation } from './cyclePhase';
 // answer to what is actually limiting progress.
 import { buildCoachContext } from './coachContext';
 import { classifyLimiters, LIMITER } from './coachPrecedence';
-import { wouldReverseRecent } from './coachIntervention';
+import { wouldReverseRecent, doseEscalation, holdReinforcement } from './coachIntervention';
+import {
+  evidenceSignature, suppressedByDecline, heldByDeclineCopy, returningCopy,
+  materialEvidenceChange,
+} from './coachDecline';
 import { shouldShowCycleQuestion } from './cyclePrefs';
 
 // ─── EWMA ────────────────────────────────────────────────────────────────────
@@ -694,6 +698,9 @@ export function runWeeklyCoach(inputs) {
     // ACCEPTED, most-recent-first, from coachIntervention.interventionsFromHistory.
     // Optional; an empty list leaves every existing caller byte-identical.
     priorInterventions = [],
+    // CAMPAIGN 18 job B: recommendations the user has explicitly DECLINED,
+    // most-recent-first, from coachDecline.declinesFromHistory. Optional.
+    priorDeclines = [],
     recentIntakeAvgKcal = null,
     recentIntakeDaysLogged = 0,
     // Campaign 1 P0-7 D1: true when the intake read THREW (as opposed to a
@@ -1231,6 +1238,9 @@ export function runWeeklyCoach(inputs) {
   // ── CALORIE ADJUSTMENT ────────────────────────────────────────────────────
   let calorieAdjustment = null;
   let rapidLossCorrectionApplied = false;
+  // Campaign 18: set when the athlete's own observed response to a previous
+  // change of the same kind resized this one.
+  let doseEscalated = null;
 
   // At low/medium confidence, require an extra week before adjusting
   const offTargetWeeksRequired = confidence.level === 'high' ? 2 : 3;
@@ -1272,6 +1282,54 @@ export function runWeeklyCoach(inputs) {
   const foodDiaryStandsIn = recentIntakeDaysLogged >= 5
     && Number(recentIntakeAvgKcal) > 0
     && checkinRecentEnough;
+  // ── CAMPAIGN 18: THE WHOLE-ATHLETE CONTEXT ───────────────────────────────
+  //
+  // Built HERE, from this run's own inputs, rather than by the screen. The
+  // engine and the receipt then necessarily describe the same week: there is
+  // one context per run and both the decision below and the story the user
+  // reads are derived from it. A screen-built context could drift from the
+  // decision it claims to explain, which is the exact class of defect
+  // Campaign 18 exists to remove.
+  //
+  // It duplicates nothing: every value handed in was already computed above
+  // by the authority that owns it.
+  const coachContext = buildCoachContext({
+    nowMs,
+    training: {
+      sessionsCompleted, sessionsPlanned, prsThisWeek,
+      blockE1rmSlopePct, blockWeekIndex, blockAccumWeeks,
+    },
+    recovery: {
+      hasCheckin: checkinCompleted,
+      energyScore, sorenessScore,
+      consecutivePoorRecoveryWeeks, lastCheckinAt,
+    },
+    nutrition: {
+      targetKcal: currentCalTarget,
+      recentIntakeAvgKcal, recentIntakeDaysLogged, intakeReadFailed,
+      calsAdherence,
+    },
+    weight: {
+      // The ROUNDED coaching rate, which is the C10F rule already in force:
+      // "the number shown as evidence for the coaching decision must be the
+      // rate the decision actually used". Classification is unaffected -
+      // `onTarget` below is computed upstream from the full-precision value -
+      // and the context therefore stays byte-identical across two runs of the
+      // same week, which the raw rate is not when the caller leaves nowMs to
+      // the clock.
+      ratePctPerWeek: coachingRatePct,
+      weighInCount: morningWeights.length,
+      goalPhase,
+      onTarget,
+      // offTargetDirection is sign(actual - goal); the ENERGY the athlete is
+      // short of moves the other way. Negating it once here means the
+      // precedence layer never has to know this engine's sign convention.
+      shortfall: -offTargetDirection,
+    },
+    intent: { goalPhase, trainingGoal },
+  });
+  const coachLimiters = classifyLimiters(coachContext);
+
   const canAdjustCals = (
     !cycleOverride &&
     !scoffPositive &&
@@ -1411,6 +1469,31 @@ export function runWeeklyCoach(inputs) {
       stepTrendApplied = stepModifier.active;
     }
 
+    // ── CAMPAIGN 18 DOSE LEARNING ────────────────────────────────────────
+    //
+    // FOUNDER LAW A2: "the fact that +100 was insufficient may support a
+    // larger next step than blindly repeating +100. But constrain this
+    // heavily." Every one of those constraints lives in doseEscalation, which
+    // returns an inert multiplier unless the previous same-direction change
+    // was accepted, fully observed, in the same goal phase, and came back
+    // UNCHANGED rather than confounded or improved.
+    //
+    // IT CANNOT MANUFACTURE A CHANGE. It only ever multiplies a `change` this
+    // week's own evidence already produced, inside the same `if (change !==
+    // 0)` region, and the ±5% cap below still binds afterwards - so the
+    // learned step is bounded by exactly the same ceiling as an unlearned
+    // one. Never applied on the rapid-loss safety path.
+    if (change !== 0 && !rapidLossOverride) {
+      const dose = doseEscalation({
+        records: priorInterventions, after: coachContext, nowMs,
+        direction: Math.sign(change), goalPhase,
+      });
+      if (dose.escalate) {
+        change = Math.round(change * dose.multiplier);
+        doseEscalated = dose;
+      }
+    }
+
     // Cap at ±5% of current target. The rapid-loss compression has
     // its own absolute +300 cap above; the percentage cap can only
     // tighten it further on smaller targets, never relax it.
@@ -1424,60 +1507,18 @@ export function runWeeklyCoach(inputs) {
       // active step trend, append one sentence (the WHY_LIBRARY receipt
       // pattern). Rides with calorieAdjustment so it disappears too if a senior
       // clamp (FFM floor / ED lockout) later nulls the change.
-      const note = stepTrendApplied
+      let note = stepTrendApplied
         ? `${calNote} Your step trend backed this up, so the change is sized with more confidence.`
         : calNote;
+      // Campaign 18: the receipt says WHY the step is bigger than last time,
+      // in the user's own history rather than in a multiplier.
+      if (doseEscalated) {
+        note = `${note} Last time we moved it by ${doseEscalated.priorMagnitude ?? 'a smaller amount'} and your weight did not respond, so this step is bigger.`;
+      }
       calorieAdjustment = { change, note };
     }
   }
 
-  // ── CAMPAIGN 18: THE WHOLE-ATHLETE CONTEXT ───────────────────────────────
-  //
-  // Built HERE, from this run's own inputs, rather than by the screen. The
-  // engine and the receipt then necessarily describe the same week: there is
-  // one context per run and both the decision below and the story the user
-  // reads are derived from it. A screen-built context could drift from the
-  // decision it claims to explain, which is the exact class of defect
-  // Campaign 18 exists to remove.
-  //
-  // It duplicates nothing: every value handed in was already computed above
-  // by the authority that owns it.
-  const coachContext = buildCoachContext({
-    nowMs,
-    training: {
-      sessionsCompleted, sessionsPlanned, prsThisWeek,
-      blockE1rmSlopePct, blockWeekIndex, blockAccumWeeks,
-    },
-    recovery: {
-      hasCheckin: checkinCompleted,
-      energyScore, sorenessScore,
-      consecutivePoorRecoveryWeeks, lastCheckinAt,
-    },
-    nutrition: {
-      targetKcal: currentCalTarget,
-      recentIntakeAvgKcal, recentIntakeDaysLogged, intakeReadFailed,
-      calsAdherence,
-    },
-    weight: {
-      // The ROUNDED coaching rate, which is the C10F rule already in force:
-      // "the number shown as evidence for the coaching decision must be the
-      // rate the decision actually used". Classification is unaffected -
-      // `onTarget` below is computed upstream from the full-precision value -
-      // and the context therefore stays byte-identical across two runs of the
-      // same week, which the raw rate is not when the caller leaves nowMs to
-      // the clock.
-      ratePctPerWeek: coachingRatePct,
-      weighInCount: morningWeights.length,
-      goalPhase,
-      onTarget,
-      // offTargetDirection is sign(actual - goal); the ENERGY the athlete is
-      // short of moves the other way. Negating it once here means the
-      // precedence layer never has to know this engine's sign convention.
-      shortfall: -offTargetDirection,
-    },
-    intent: { goalPhase, trainingGoal },
-  });
-  const coachLimiters = classifyLimiters(coachContext);
 
   // ── CAMPAIGN 18 JOB 4, CASE B: AN UNTESTED TARGET IS NOT A WRONG ONE ─────
   //
@@ -1516,6 +1557,32 @@ export function runWeeklyCoach(inputs) {
   ) {
     targetNotTestedHeld = true;
     calorieAdjustment = null;
+  }
+
+  // ── CAMPAIGN 18 DECLINE MEMORY (job B) ───────────────────────────────────
+  //
+  // "A user can decline a recommendation but Volyume does not remember the
+  // decline. Therefore the same recommendation may be offered again next week
+  // as though the conversation never happened."
+  //
+  // Withheld only when it is the SAME recommendation, in the SAME direction,
+  // on materially the SAME evidence. The moment the trajectory, the coverage
+  // or the goal moves, it is free to return - and it returns saying why.
+  //
+  // SAFETY IS NOT A RECOMMENDATION, so this never touches the rapid-loss
+  // path, and it sits above the FFM floor / ED lockout gates which run later
+  // and are untouched by it. There is nothing here to decline in those cases.
+  let declineHeld = null;
+  const currentSignature = evidenceSignature(coachContext, { goalPhase });
+  if (calorieAdjustment && !rapidLossOverride) {
+    declineHeld = suppressedByDecline({
+      declines: priorDeclines,
+      domain: 'nutrition',
+      kind: 'calorie_target',
+      direction: Math.sign(calorieAdjustment.change),
+      signature: currentSignature,
+    });
+    if (declineHeld) calorieAdjustment = null;
   }
 
   // ── CAMPAIGN 18 ANTI-OSCILLATION ─────────────────────────────────────────
@@ -1806,6 +1873,15 @@ export function runWeeklyCoach(inputs) {
       reason: intakeDaysForCopy >= MIN_INTAKE_DAYS_FOR_COPY
         ? `Calorie target held. Your logged intake averaged ${Math.round(recentIntakeAvgKcal)} kcal against a ${currentCalTarget} kcal target, so this target has not really been tried yet. Worth giving it a fair run before we change the number.`
         : 'Calorie target held. What you have told us about your eating does not match the target you were given, so this target has not really been tried yet. Worth giving it a fair run before we change the number.',
+    });
+  }
+
+  // Campaign 18 decline memory. Acknowledges their choice rather than
+  // repeating the offer at them.
+  if (declineHeld) {
+    heldDecisions.push({
+      type: 'declined_last_time',
+      reason: heldByDeclineCopy(declineHeld.decline),
     });
   }
 
@@ -2131,6 +2207,27 @@ export function runWeeklyCoach(inputs) {
     // coachStory.buildWeeklyStory on CoachOutputScreen.
     context: coachContext,
     limiters: coachLimiters,
+    // Campaign 18 job A3: a change that worked is a reason to LEAVE THINGS
+    // ALONE, and the athlete is told so in those words. Never a reason to
+    // change anything.
+    // Campaign 18 job B: the signature this week's advice was given in, so a
+    // decline records the circumstances rather than just the fact.
+    evidenceSignature: currentSignature,
+    // And, when a previously declined recommendation has come back, WHY.
+    returningAfterDecline: (calorieAdjustment && !declineHeld)
+      ? (() => {
+        const prior = (priorDeclines ?? []).find((d) => d.domain === 'nutrition'
+          && d.kind === 'calorie_target'
+          && d.direction === Math.sign(calorieAdjustment.change));
+        if (!prior) return null;
+        const moved = materialEvidenceChange(prior.signature, currentSignature);
+        return moved.changed ? returningCopy(prior, moved.because) : null;
+      })()
+      : null,
+    holdReinforcement: holdReinforcement({
+      records: priorInterventions, after: coachContext, nowMs, onTarget: onTarget === true,
+    }),
+    doseEscalated,
     confidence: emittedConfidenceLevel,
     // D18: true only on a run where a strong, already-agreeing scan actually
     // raised the emitted confidence caption one step; false otherwise.

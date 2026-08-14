@@ -330,7 +330,8 @@ describe('THE PRODUCTION PATHS', () => {
 
   test('and the outcome REACHES THE USER in the weekly story', () => {
     expect(SCREEN).toMatch(/const lastOutcome = lastIntervention/);
-    expect(SCREEN).toMatch(/outcome: lastOutcomeLine \? \{ text: lastOutcomeLine/);
+    // Now one of three memory lines, in priority order (job A3 / B3).
+    expect(SCREEN).toMatch(/lastOutcomeLine \? \{ text: lastOutcomeLine, state: lastOutcome\.outcome \}/);
     expect(SCREEN).toMatch(/\{weeklyStory\.outcome\.text\}/);
   });
 

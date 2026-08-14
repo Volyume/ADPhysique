@@ -220,6 +220,27 @@ export function markApplied(output, key, details = {}) {
 }
 
 /**
+ * CAMPAIGN 18 JOB B. Record that the user said no.
+ *
+ * Kept in its OWN map rather than folded into appliedAdjustments, because a
+ * decline is not an apply and `isApplied` must keep meaning exactly what it
+ * has always meant. Persisted in the same coach-output row, so it rides the
+ * existing sync and restore path with no migration.
+ */
+export function markDeclined(output, key, details = {}) {
+  if (!output || !key) return output;
+  const declinedAdjustments = { ...(output.declinedAdjustments || {}) };
+  declinedAdjustments[key] = { declinedAt: Date.now(), ...details };
+  return { ...output, declinedAdjustments };
+}
+
+/** Has this adjustment been explicitly declined? */
+export function isDeclined(output, key) {
+  if (!output || !key) return false;
+  return !!output.declinedAdjustments?.[key];
+}
+
+/**
  * Has this adjustment been applied? Reads the appliedAdjustments map
  * first, falling back to the legacy adjustments[key].applied flag.
  */

@@ -109,6 +109,7 @@ const num = (v) => {
 export function buildInterventionRecord({
   kind, appliedAtMs, direction, magnitude = null,
   because = null, authorisedBy = [], heldConstant = [], baseline = null,
+  goalPhase = null,
 } = {}) {
   if (!INTERVENTION_KIND[String(kind).toUpperCase()] && !Object.values(INTERVENTION_KIND).includes(kind)) {
     return null;
@@ -122,6 +123,9 @@ export function buildInterventionRecord({
     direction: Math.sign(num(direction) ?? 0),
     magnitude: num(magnitude),
     because,
+    // Recorded so a later dose comparison can refuse to read a cutting
+    // response as evidence about a gaining dose.
+    goalPhase,
     authorisedBy: Array.isArray(authorisedBy) ? authorisedBy.filter(Boolean) : [],
     heldConstant: Array.isArray(heldConstant) ? heldConstant.filter(Boolean) : [],
     baseline,
@@ -299,6 +303,92 @@ export function outcomeEvidence(records = [], { kind = null, after = null, nowMs
     if (!tally.lastJudged) tally.lastJudged = { ...r, outcome };
   }
   return tally;
+}
+
+/**
+ * DOSE LEARNING (founder job A2). May the athlete's own response to a
+ * previous change resize the next one?
+ *
+ * THE LAW THIS IS BUILT AROUND: "Outcome history is evidence. It is NOT
+ * automatic authority... may not manufacture an intervention that current
+ * evidence does not justify."
+ *
+ * So this returns a MULTIPLIER and nothing else. The caller has already
+ * decided, on this week's evidence alone, that a change is warranted and in
+ * which direction; all this can do is say the previous dose of the same
+ * medicine was observed, completed its window, and did not move anything -
+ * which is a reason to step rather than to repeat. It cannot create a change,
+ * it cannot reverse one, and every safety clamp still applies afterwards.
+ *
+ * Every one of the founder's conditions is required, and any failure returns
+ * the inert multiplier so the caller falls back to ordinary logic:
+ *
+ *   - the previous intervention was ACCEPTED (only accepted ones have records)
+ *   - it pointed the SAME way as the one now proposed
+ *   - its observation window COMPLETED
+ *   - its outcome was UNCHANGED, never CONFOUNDED and never IMPROVED
+ *   - the goal phase is still the same, so the comparison is meaningful
+ *   - current evidence is reliable (the caller's own gate, re-checked here)
+ *
+ * @returns {{ multiplier, escalate, because, priorMagnitude }}
+ */
+export const DOSE_ESCALATION_MULTIPLIER = 1.5;
+
+export function doseEscalation({
+  records = [], after = null, nowMs = null, direction = 0, goalPhase = null,
+} = {}) {
+  const inert = { multiplier: 1, escalate: false, because: 'no_prior_response', priorMagnitude: null };
+  const dir = Math.sign(Number(direction) || 0);
+  if (!dir || !after) return inert;
+
+  // Reliable CURRENT evidence is a precondition, not an inference from the
+  // past: a response cannot be read against a week we cannot read.
+  if (after?.weight?.trend?.signal === SIGNAL.UNKNOWN) return inert;
+  if (after?.nutrition?.coverage?.signal !== SIGNAL.GOOD) return inert;
+
+  for (const r of Array.isArray(records) ? records : []) {
+    if (r.kind !== INTERVENTION_KIND.CALORIE_TARGET) continue;
+    // A different goal phase is a materially changed circumstance: last
+    // block's cutting response says nothing about this block's gaining dose.
+    if (goalPhase && r.goalPhase && r.goalPhase !== goalPhase) continue;
+    if (r.direction !== dir) continue;
+    const windowMet = observationWindowMet(r, { nowMs });
+    if (!windowMet) return inert; // still being observed: anti-oscillation owns this
+    const { outcome } = classifyOutcome(r, { after, windowMet: true });
+    // CONFOUNDED NEVER TEACHES (rule A5). IMPROVED does not escalate either:
+    // a change that worked is a reason to hold, not to push harder.
+    if (outcome !== OUTCOME.UNCHANGED) return inert;
+    const prior = num(r.magnitude);
+    return {
+      multiplier: DOSE_ESCALATION_MULTIPLIER,
+      escalate: true,
+      because: 'previous_same_direction_change_did_not_move_it',
+      priorMagnitude: prior,
+    };
+  }
+  return inert;
+}
+
+/**
+ * POSITIVE RESPONSE (founder job A3). A change that worked is a reason to
+ * LEAVE THINGS ALONE, and the athlete should be told that in those words.
+ *
+ * Returns a line only where the last judged change genuinely improved things
+ * AND the plan is currently on target. Never used to justify another change.
+ */
+export function holdReinforcement({ records = [], after = null, nowMs = null, onTarget = false } = {}) {
+  if (!onTarget || !after) return null;
+  for (const r of Array.isArray(records) ? records : []) {
+    if (r.kind !== INTERVENTION_KIND.CALORIE_TARGET) continue;
+    if (!observationWindowMet(r, { nowMs })) return null;
+    const { outcome } = classifyOutcome(r, { after, windowMet: true });
+    if (outcome !== OUTCOME.IMPROVED) return null;
+    return {
+      because: 'previous_change_worked_and_still_is',
+      text: `The last change to your calorie target did what we wanted, and it is still working. We are leaving it alone.`,
+    };
+  }
+  return null;
 }
 
 /**

@@ -14,6 +14,8 @@ import {
   buildInterventionRecord, INTERVENTION_KIND, interventionsFromHistory,
   classifyOutcome, observationWindowMet, outcomeCopy,
 } from '../lib/coachIntervention';
+// Campaign 18 job B: remembering that the user said no.
+import { buildDeclineRecord, declinesFromHistory } from '../lib/coachDecline';
 import { contextFacts } from '../lib/coachContext';
 import { buildRampPositionLine } from '../lib/blockExplain';
 import { buildHoldReceipt } from '../lib/coachLedger';
@@ -78,7 +80,7 @@ import { track as trackEngineEvent } from '../lib/engineTelemetry';
 // screen, so the render was dead. It now lives in HomeScreen's banner stack.
 import { SkeletonCard } from '../components/Skeleton';
 import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
-import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, deloadShare, computeDietBreakTargets, markApplied, isApplied } from '../lib/coachApply';
+import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, deloadShare, computeDietBreakTargets, markApplied, isApplied, markDeclined, isDeclined } from '../lib/coachApply';
 // A1 (NU-3/4/6): pure display classifiers + row strings for honest Apply rows.
 // They only CALL coachApply's real policy functions; nothing is recomputed.
 import {
@@ -203,7 +205,10 @@ function HoldEnter({ live, children }) {
 // the Button morph; while it is 'success' the button stays mounted through
 // its checkmark beat (the row is already applied underneath, so the chip
 // waits for onApplySettled to avoid saying "Applied" twice at once).
+// Campaign 18 job B: "Keep it as it is" is a real answer, and giving it a
+// control is what lets Volyume tell a decision from an unopened screen.
 function AdjustmentRow({
+  onDecline, declined = false,
   iconName, label, note, detail, holdNote, holdArrived, applied,
   onApply, applyState = 'idle', onApplySettled, emphasis, tooltip,
 }) {
@@ -241,6 +246,11 @@ function AdjustmentRow({
           </HoldEnter>
         ) : null}
       </View>
+      {declined ? (
+        <Text style={[styles.adjustmentDetail, live.adjustmentDetail]}>
+          You chose to keep this as it is.
+        </Text>
+      ) : null}
       {showApply && (
         <ApplyExit style={styles.applySlot}>
           <Button
@@ -254,6 +264,17 @@ function AdjustmentRow({
             style={styles.applyPill}
             accessibilityLabel={`Apply: ${label}`}
           />
+          {onDecline ? (
+            <Button
+              title="Keep as is"
+              variant="ghost"
+              size="sm"
+              fullWidth={false}
+              onPress={onDecline}
+              style={styles.applyPill}
+              accessibilityLabel={`Keep as is, do not apply: ${label}`}
+            />
+          ) : null}
         </ApplyExit>
       )}
     </View>
@@ -265,6 +286,8 @@ function AdjustmentRow({
 // tap. NU-3: a floor-held computation renders its reason instead of a button.
 function NextWeekCard({
   adjustments, onApplyCalories,
+  // Campaign 18 job B: declining is an action, so it gets a control.
+  onDeclineCalories, declined = false,
   applyStateFor, onApplySettled,
   energyUnit, caloriePreview, calorieNotice, hero, heroRow,
 }) {
@@ -308,10 +331,12 @@ function NextWeekCard({
           holdNote={calorieHold}
           holdArrived={!!calorieNotice}
           applied={!!calories.applied}
-          onApply={caloriesApplyable ? onApplyCalories : undefined}
+          onApply={caloriesApplyable && !declined ? onApplyCalories : undefined}
           applyState={applyStateFor('calories')}
           onApplySettled={() => onApplySettled('calories')}
           emphasis={hero && heroRow === 'calories'}
+          onDecline={caloriesApplyable && !declined ? onDeclineCalories : undefined}
+          declined={declined}
         />
       ) : (
         <AdjustmentRow
@@ -1156,6 +1181,35 @@ export default function CoachOutputScreen({ navigation, route }) {
     }
   }
 
+  // CAMPAIGN 18 JOB B. Declining is a deliberate act, not the absence of a
+  // tap. Without an explicit control Volyume could not tell "they said no"
+  // from "they never opened the screen", and only the first of those is a
+  // decision worth remembering.
+  async function handleDeclineCalories() {
+    if (applyingRef.current || applyingKey || !user?.id || !output) return;
+    if (isApplied(output, 'calories') || isDeclined(output, 'calories')) return;
+    const change = output?.adjustments?.calories?.change;
+    if (!change) return;
+    try {
+      const updated = markDeclined(output, 'calories', {
+        decline: buildDeclineRecord({
+          domain: 'nutrition',
+          kind: 'calorie_target',
+          direction: Math.sign(change),
+          magnitude: Math.abs(change),
+          // The CIRCUMSTANCES, so a later week can tell whether anything has
+          // actually moved since they said no.
+          signature: output?.evidenceSignature ?? null,
+          declinedAtMs: Date.now(),
+        }),
+      });
+      await saveCoachOutput(user.id, { weekStart, ...updated });
+      setOutput(updated);
+    } catch (e) {
+      logError('CoachOutputScreen.handleDeclineCalories', e, { userId: user?.id });
+    }
+  }
+
   // Confirm-then-apply for the weekly training volume signal (founder
   // decision 2026-05-28: the coach owns weekly volume). Apply spreads
   // the signal across every trained muscle in next week's planned
@@ -1643,14 +1697,16 @@ export default function CoachOutputScreen({ navigation, route }) {
       // ACCEPTED, read BEFORE the run so the anti-oscillation gate can see
       // them. Best-effort - a read failure yields no records, which leaves
       // the engine's pre-Campaign-18 behaviour exactly as it was.
-      const priorInterventions = interventionsFromHistory(
-        await getCoachOutputHistory(user.id, 8).catch(() => []),
-      );
+      const coachOutputHistory = await getCoachOutputHistory(user.id, 8).catch(() => []);
+      const priorInterventions = interventionsFromHistory(coachOutputHistory);
       setPriorInterventions(priorInterventions);
+      // CAMPAIGN 18 job B: what the user has already said no to.
+      const priorDeclines = declinesFromHistory(coachOutputHistory);
 
       const result = runWeeklyCoach({
         checkin: engineCheckin,
         priorInterventions,
+        priorDeclines,
         morningWeights: weights,
         sessionsCompleted: sessionStats.completed,
         sessionsPlanned: sessionStats.planned,
@@ -2179,7 +2235,15 @@ export default function CoachOutputScreen({ navigation, route }) {
   const weeklyStory = buildCoachStory({
     context: coachCtx,
     limiters: coachLimiters,
-    outcome: lastOutcomeLine ? { text: lastOutcomeLine, state: lastOutcome.outcome } : null,
+    // CAMPAIGN 18. Three memory lines, in priority order: a recommendation
+    // that has RETURNED says why it has (job B3); a change that worked and is
+    // still working says so (job A3); otherwise the outcome of the last
+    // change. Only one leads the account - three would be a lecture.
+    outcome: output.returningAfterDecline
+      ? { text: output.returningAfterDecline, state: 'returning' }
+      : output.holdReinforcement
+        ? { text: output.holdReinforcement.text, state: 'hold_reinforced' }
+        : lastOutcomeLine ? { text: lastOutcomeLine, state: lastOutcome.outcome } : null,
     changes: {
       calorieKcal: adjustments?.calories?.change ?? 0,
       volumeNote: adjustments?.training?.signal === 'hold' ? 'Your training volume holds where it is.' : null,
@@ -2371,6 +2435,8 @@ export default function CoachOutputScreen({ navigation, route }) {
     <NextWeekCard
       adjustments={adjustments}
       onApplyCalories={applyDisabled ? undefined : handleApplyCalories}
+      onDeclineCalories={applyDisabled ? undefined : handleDeclineCalories}
+      declined={isDeclined(output, 'calories')}
       applyStateFor={applyStateFor}
       onApplySettled={onApplySettled}
       energyUnit={energyUnit}
