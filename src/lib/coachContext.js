@@ -220,7 +220,10 @@ export function intakeCoverageFact({ recentIntakeDaysLogged = 0, intakeReadFaile
   // A read that THREW is not an empty diary. Campaign 1's law, carried here:
   // a failure must never be presented as evidence of anything.
   if (intakeReadFailed) return unknown(SOURCE.FOOD_ROLLUPS, 'could not read the food diary');
-  const days = Number(recentIntakeDaysLogged) || 0;
+  // Sanitised through the same helper every other reading uses: a NaN or an
+  // Infinity is not a day count, and must never reach user-facing copy.
+  // (Caught by engineRobustness.fuzz, which is the guard working.)
+  const days = Math.max(0, Math.min(7, Math.round(num(recentIntakeDaysLogged) ?? 0)));
   if (days < MIN_INTAKE_DAYS) {
     return { ...unknown(SOURCE.FOOD_ROLLUPS, `only ${days} of the last 7 days logged`), value: days };
   }

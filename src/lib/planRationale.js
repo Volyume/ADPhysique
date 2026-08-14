@@ -73,6 +73,11 @@ const REASON_COPY = Object.freeze({
     'Not enough history on this yet to judge it, so it stays for another block.',
   [SLOT_REASON.NO_REASON_TO_CHANGE]:
     'Nothing about this has stopped working, so it stays.',
+  // Campaign 18 job 5. A fact about the BLOCK, not about the exercise and
+  // not about the person: without the sessions there is nothing to judge, so
+  // there is nothing to change either.
+  [SLOT_REASON.INSUFFICIENT_EXECUTION]:
+    'This block was not trained often enough to judge this exercise, so it stays as it is.',
   // Changed, and why.
   [SLOT_REASON.USER_EXCLUDED]:
     'You asked not to be suggested this.',

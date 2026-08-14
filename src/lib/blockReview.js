@@ -70,6 +70,10 @@ export function proposeNextBlock({
   equipmentChanged = false,
   sessionLengthChanged = false,
   goalChanged = false,
+  // CAMPAIGN 18 JOB 5. Whether the finished block was actually run
+  // consistently enough for its results to be a verdict on the prescription.
+  // Defaults TRUE so every existing caller is byte-identical.
+  executionJudgeable = true,
 } = {}) {
   // countEpochBlocks compares SIGNATURES, not plans. Passing a plan object
   // straight through silently matched nothing and reported a zero-block
@@ -89,7 +93,7 @@ export function proposeNextBlock({
   const judged = slots.map((s) => {
     const evidence = evidenceFor(s.exerciseId) ?? {};
     const { verdict, reason } = slotVerdict(evidence, {
-      epochBlocks, goalChanged, sessionLengthChanged,
+      epochBlocks, goalChanged, sessionLengthChanged, executionJudgeable,
     });
     return {
       exerciseId: s.exerciseId,
@@ -124,6 +128,10 @@ export function proposeNextBlock({
   return {
     epochBlocks,
     reviewDue,
+    // Campaign 18 job 5: surfaced so the review copy can say WHY nothing is
+    // being proposed, rather than presenting a run block and an unrun one
+    // with the same silent "no changes".
+    executionJudgeable,
     verdict: verdict?.verdict ?? verdict,
     changedCount: changes.length,
     slots: judged,

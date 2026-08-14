@@ -22,6 +22,10 @@ import { robustTrackingLatest, robustTrackingSevenDaysAgoPoint } from './robustT
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
 import { cycleTrendAnnotation } from './cyclePhase';
+// Campaign 18: one shared reading of the week's evidence, and one shared
+// answer to what is actually limiting progress.
+import { buildCoachContext } from './coachContext';
+import { classifyLimiters, LIMITER } from './coachPrecedence';
 import { shouldShowCycleQuestion } from './cyclePrefs';
 
 // ─── EWMA ────────────────────────────────────────────────────────────────────
@@ -795,8 +799,35 @@ export function runWeeklyCoach(inputs) {
 
   if (confidence.level === 'data_hold') {
     const ewmaNow = morningWeights.length ? getLatestEwma(morningWeights) : null;
+    // CAMPAIGN 18. The context exists on THIS path too, and that is the point
+    // rather than a formality: the data-hold return is precisely the week
+    // where a consumer most needs to be told what is unknown and why. Leaving
+    // it off here would force every reader to special-case the one case job 8
+    // is about, and a missing context would read as an absent problem rather
+    // than as an unanswerable question. The weight and nutrition readings
+    // resolve to UNKNOWN by construction here, because there is not enough to
+    // say - which is the correct answer, not a degraded one.
+    const holdContext = buildCoachContext({
+      nowMs,
+      training: { sessionsCompleted, sessionsPlanned, prsThisWeek },
+      recovery: {
+        hasCheckin: !!checkin && (checkin.energyScore != null || checkin.sorenessScore != null
+          || checkin.calsAdherence != null),
+        energyScore: checkin?.energyScore ?? null,
+        sorenessScore: checkin?.sorenessScore ?? null,
+        lastCheckinAt,
+      },
+      nutrition: {
+        targetKcal: currentCalTarget, recentIntakeAvgKcal, recentIntakeDaysLogged,
+        intakeReadFailed, calsAdherence: checkin?.calsAdherence ?? null,
+      },
+      weight: { ratePctPerWeek: null, weighInCount: morningWeights.length, goalPhase, onTarget: null },
+      intent: { goalPhase, trainingGoal },
+    });
     return {
       hasEnoughData: false,
+      context: holdContext,
+      limiters: classifyLimiters(holdContext),
       dataNote: confidence.holdMessage,
       confidence: confidence.level,
       // D18: a data hold is a safety hold — corroboration can never lift it,
@@ -1368,6 +1399,93 @@ export function runWeeklyCoach(inputs) {
     }
   }
 
+  // ── CAMPAIGN 18: THE WHOLE-ATHLETE CONTEXT ───────────────────────────────
+  //
+  // Built HERE, from this run's own inputs, rather than by the screen. The
+  // engine and the receipt then necessarily describe the same week: there is
+  // one context per run and both the decision below and the story the user
+  // reads are derived from it. A screen-built context could drift from the
+  // decision it claims to explain, which is the exact class of defect
+  // Campaign 18 exists to remove.
+  //
+  // It duplicates nothing: every value handed in was already computed above
+  // by the authority that owns it.
+  const coachContext = buildCoachContext({
+    nowMs,
+    training: {
+      sessionsCompleted, sessionsPlanned, prsThisWeek,
+      blockE1rmSlopePct, blockWeekIndex, blockAccumWeeks,
+    },
+    recovery: {
+      hasCheckin: checkinCompleted,
+      energyScore, sorenessScore,
+      consecutivePoorRecoveryWeeks, lastCheckinAt,
+    },
+    nutrition: {
+      targetKcal: currentCalTarget,
+      recentIntakeAvgKcal, recentIntakeDaysLogged, intakeReadFailed,
+      calsAdherence,
+    },
+    weight: {
+      // The ROUNDED coaching rate, which is the C10F rule already in force:
+      // "the number shown as evidence for the coaching decision must be the
+      // rate the decision actually used". Classification is unaffected -
+      // `onTarget` below is computed upstream from the full-precision value -
+      // and the context therefore stays byte-identical across two runs of the
+      // same week, which the raw rate is not when the caller leaves nowMs to
+      // the clock.
+      ratePctPerWeek: coachingRatePct,
+      weighInCount: morningWeights.length,
+      goalPhase,
+      onTarget,
+      // offTargetDirection is sign(actual - goal); the ENERGY the athlete is
+      // short of moves the other way. Negating it once here means the
+      // precedence layer never has to know this engine's sign convention.
+      shortfall: -offTargetDirection,
+    },
+    intent: { goalPhase, trainingGoal },
+  });
+  const coachLimiters = classifyLimiters(coachContext);
+
+  // ── CAMPAIGN 18 JOB 4, CASE B: AN UNTESTED TARGET IS NOT A WRONG ONE ─────
+  //
+  // FOUNDER LAW: "Weight trend below desired direction + poor nutrition
+  // adherence -> do not reward poor execution with an automatic target
+  // increase. Explain that the current target has not really been tested."
+  //
+  // The gate above already refused to adjust with NO adherence evidence. What
+  // it could not see was adherence evidence that was present and BAD: a user
+  // bulking, not gaining, and eating three hundred calories a day under the
+  // number they were given, had that number raised - so the app moved a
+  // target the athlete had never actually eaten.
+  //
+  // The hold is direction-aware, which is the whole subtlety. It fires only
+  // when the miss points the same way as the shortfall, i.e. when the miss
+  // ALREADY EXPLAINS the outcome. Someone eating at or over target and still
+  // not gaining has genuinely disproved their target, and that change goes
+  // through untouched.
+  //
+  // SAFETY IS SENIOR AND UNTOUCHED. The rapid-loss correction is exempt
+  // outright: a protective increase must never wait for evidence of good
+  // behaviour. The FFM floor, the calorie floors and the ED lockout all sit
+  // below this point in the run and still apply to anything that survives it.
+  // This gate can only ever hold a change back, never create or enlarge one.
+  // Whether the hold's copy may quote a measured average, or must speak only
+  // of what the user reported. Never quote a number the diary cannot support.
+  const MIN_INTAKE_DAYS_FOR_COPY = 5;
+  const intakeDaysForCopy = (!intakeReadFailed && Number.isFinite(Number(recentIntakeAvgKcal)))
+    ? (Number(recentIntakeDaysLogged) || 0)
+    : 0;
+  let targetNotTestedHeld = false;
+  if (
+    calorieAdjustment
+    && !rapidLossOverride
+    && coachLimiters.nutrition.limiter === LIMITER.EXECUTION
+  ) {
+    targetNotTestedHeld = true;
+    calorieAdjustment = null;
+  }
+
   // ── FFM FLOOR SAFETY GATE ────────────────────────────────────────────────
   // Mountjoy 2014/2023 IOC RED-S consensus: 30 kcal/kg fat-free mass per
   // day is the threshold below which sustained intake is "problematic
@@ -1619,6 +1737,19 @@ export function runWeeklyCoach(inputs) {
     heldDecisions.push({
       type: 'ffm_floor',
       reason: `Calorie target held. Your seven-day average intake of ${Math.round(ffmFloorContext.recentIntakeAvgKcal)} kcal is at or below your safety floor of ${ffmFloorContext.floorKcal} kcal. Eating below this level for long stretches can compromise recovery and lean mass.`,
+    });
+  }
+
+  // Campaign 18 job 4 case B. Said in the user's words, and said as a fact
+  // about the TARGET rather than as a judgement of the person: the number has
+  // not been tested yet, so there is nothing to learn from changing it.
+  // Ranked below the safety holds and above the generic ones.
+  if (targetNotTestedHeld) {
+    heldDecisions.push({
+      type: 'target_not_tested',
+      reason: intakeDaysForCopy >= MIN_INTAKE_DAYS_FOR_COPY
+        ? `Calorie target held. Your logged intake averaged ${Math.round(recentIntakeAvgKcal)} kcal against a ${currentCalTarget} kcal target, so this target has not really been tried yet. Worth giving it a fair run before we change the number.`
+        : 'Calorie target held. What you have told us about your eating does not match the target you were given, so this target has not really been tried yet. Worth giving it a fair run before we change the number.',
     });
   }
 
@@ -1919,6 +2050,13 @@ export function runWeeklyCoach(inputs) {
   return {
     hasEnoughData: true,
     dataNote: null,
+    // CAMPAIGN 18. The very context this run decided from, handed out so the
+    // receipt and the weekly story are written from the same object rather
+    // than from a second reading of the same week. Rule Zero: a value
+    // computed and discarded is not delivered, so this is consumed by
+    // coachStory.buildWeeklyStory on CoachOutputScreen.
+    context: coachContext,
+    limiters: coachLimiters,
     confidence: emittedConfidenceLevel,
     // D18: true only on a run where a strong, already-agreeing scan actually
     // raised the emitted confidence caption one step; false otherwise.

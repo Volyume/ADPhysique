@@ -84,6 +84,10 @@ export const SLOT_REASON = Object.freeze({
   PERSONAL_FIT_KEEP: 'personal_fit_keep',
   INSUFFICIENT_HISTORY: 'insufficient_history',
   NO_REASON_TO_CHANGE: 'no_reason_to_change',
+  // Campaign 18 job 5: the block was not run consistently enough for its
+  // results to be a verdict on the prescription. A KEEP, and a decision, not
+  // an absence of one.
+  INSUFFICIENT_EXECUTION: 'insufficient_execution',
 });
 
 /**
@@ -258,7 +262,14 @@ export function epochReviewDue(epochBlocks) {
  * intent first, then structural validity, then evidence about the exercise,
  * and only last, and only after the review threshold, systematic variation.
  */
-export function slotVerdict(evidence = {}, { epochBlocks = 0, goalChanged = false, sessionLengthChanged = false } = {}) {
+export function slotVerdict(evidence = {}, {
+  epochBlocks = 0, goalChanged = false, sessionLengthChanged = false,
+  // CAMPAIGN 18 JOB 5. Whether the block was run consistently enough for its
+  // results to say anything about the prescription. Defaults TRUE so every
+  // existing caller is byte-identical; only a caller that has actually
+  // measured execution and found it wanting passes false.
+  executionJudgeable = true,
+} = {}) {
   const verdict = (v, reason) => ({ verdict: v, reason });
 
   // 1. The user told us. Outranks everything, in any block.
@@ -290,7 +301,16 @@ export function slotVerdict(evidence = {}, { epochBlocks = 0, goalChanged = fals
   // intervention; it does not decide that the intervention is replacement.
   // Changing the prescription is often the smaller and better move, and the
   // amendment is explicit that plateau alone must not always mean REPLACE.
-  if (evidence.plateau) {
+  //
+  // CAMPAIGN 18 JOB 5, THE GUARD. "Poor gym performance + poor training
+  // adherence must NOT immediately mean replace exercises or rebuild the
+  // programme." A flat line produced by absence is not a flat line produced
+  // by effort, and an exercise cannot be judged on sessions that did not
+  // happen. Everything ABOVE this point still fires - explicit exclusions,
+  // repeated swaps, joint discomfort, lost equipment - because those are the
+  // user's own instructions and safety, and neither needs the block to have
+  // been run to be true.
+  if (evidence.plateau && executionJudgeable) {
     return evidence.prescriptionFix
       ? verdict(SLOT_VERDICT.KEEP_WITH_PRESCRIPTION_CHANGE, SLOT_REASON.PLATEAU)
       : verdict(SLOT_VERDICT.REPLACE, SLOT_REASON.PLATEAU);
@@ -301,7 +321,10 @@ export function slotVerdict(evidence = {}, { epochBlocks = 0, goalChanged = fals
   // something being wrong. Positive evidence actively protects a movement:
   // a still-progressing exercise is never rotated out for novelty, at any
   // age. There is no maximum exercise age.
-  if (epochReviewDue(epochBlocks) && evidence.systematicCandidate && !evidence.progressing) {
+  // Also gated on execution: rotating an exercise "for variation" on the
+  // strength of a block nobody ran is churn wearing a rationale.
+  if (epochReviewDue(epochBlocks) && evidence.systematicCandidate
+      && !evidence.progressing && executionJudgeable) {
     return verdict(SLOT_VERDICT.REPLACE, SLOT_REASON.SYSTEMATIC_VARIATION);
   }
 
@@ -309,6 +332,11 @@ export function slotVerdict(evidence = {}, { epochBlocks = 0, goalChanged = fals
   // that was made, not a decision that was skipped, so every branch here
   // returns a reason rather than falling through silently.
   if (evidence.progressing) return verdict(SLOT_VERDICT.KEEP, SLOT_REASON.STILL_PRODUCTIVE);
+  // Campaign 18 job 5: named explicitly rather than folded into
+  // "insufficient history", because they are different facts about different
+  // things. INSUFFICIENT_HISTORY says the exercise is too new to judge;
+  // this says the BLOCK was not run enough to judge anything in it.
+  if (!executionJudgeable) return verdict(SLOT_VERDICT.KEEP, SLOT_REASON.INSUFFICIENT_EXECUTION);
   // Established personal fit: the user has chosen this movement for
   // themselves, repeatedly, and kept training it. That is a positive
   // reason to retain it in its own right, distinct from "nothing is wrong

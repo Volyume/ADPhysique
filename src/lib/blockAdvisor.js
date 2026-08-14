@@ -619,11 +619,40 @@ async function buildProgrammeReview(userId, activeBlock) {
     signatureHistory.push({ completed: true, signature: structureSignature(historicalStructure) });
   }
 
+  // CAMPAIGN 18 JOB 5. Was this block actually run? The same
+  // trainingExecutionFact every other cross-domain decision uses, so the
+  // block review and the weekly card cannot disagree about whether the
+  // programme was tested. A read failure leaves execution UNKNOWN, and
+  // unknown is not judgeable - the conservative direction, since it can only
+  // ever withhold a change.
+  //
+  // Completed sessions come from getBlockTrainingData (the existing block
+  // reader); planned sessions are the block's own weeks times the number of
+  // training days in the plan we just walked. No new authority, no second
+  // definition of "a session".
+  let executionJudgeable = true;
+  try {
+    // eslint-disable-next-line global-require
+    const { getBlockTrainingData } = require('./database');
+    // eslint-disable-next-line global-require
+    const { trainingExecutionFact, SIGNAL } = require('./coachContext');
+    const weeks = Number(activeBlock?.plannedWeeks ?? activeBlock?.durationWeeks) || null;
+    const { workouts } = await getBlockTrainingData(userId, activeBlock?.id ?? null);
+    const fact = trainingExecutionFact({
+      sessionsCompleted: Array.isArray(workouts) ? workouts.length : null,
+      sessionsPlanned: weeks && routines?.length ? weeks * routines.length : null,
+    });
+    executionJudgeable = fact.signal === SIGNAL.GOOD;
+  } catch (_) {
+    executionJudgeable = false;
+  }
+
   const proposal = proposeNextBlock({
     slots,
     evidenceFor,
     history: signatureHistory,
     currentStructure,
+    executionJudgeable,
   });
   // isAutoEligible is imported for the evidence shape's completeness and is
   // deliberately not applied here: at a block boundary an exercise the user
