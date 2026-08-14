@@ -26,6 +26,7 @@ import { cycleTrendAnnotation } from './cyclePhase';
 // answer to what is actually limiting progress.
 import { buildCoachContext } from './coachContext';
 import { classifyLimiters, LIMITER } from './coachPrecedence';
+import { wouldReverseRecent } from './coachIntervention';
 import { shouldShowCycleQuestion } from './cyclePrefs';
 
 // ─── EWMA ────────────────────────────────────────────────────────────────────
@@ -689,6 +690,10 @@ export function runWeeklyCoach(inputs) {
     // explicitly passed it gets no cycle-specific interpretation - the
     // permission fails closed, as a privacy opt-in must.
     cycleTrackingEnabled = false,
+    // CAMPAIGN 18 outcome follow-up: the interventions the user has actually
+    // ACCEPTED, most-recent-first, from coachIntervention.interventionsFromHistory.
+    // Optional; an empty list leaves every existing caller byte-identical.
+    priorInterventions = [],
     recentIntakeAvgKcal = null,
     recentIntakeDaysLogged = 0,
     // Campaign 1 P0-7 D1: true when the intake read THREW (as opposed to a
@@ -1513,6 +1518,30 @@ export function runWeeklyCoach(inputs) {
     calorieAdjustment = null;
   }
 
+  // ── CAMPAIGN 18 ANTI-OSCILLATION ─────────────────────────────────────────
+  //
+  // FOUNDER LAW: "A recent intervention awaiting sufficient evidence should
+  // generally prevent another weakly supported reversal." The forbidden
+  // pattern is +100, one noisy weigh-in, -100.
+  //
+  // Only a REVERSAL is blocked. Continuing in the same direction is a dose
+  // decision, which the two-week cooldown and the off-target counter already
+  // govern. And the observation window is the app's own cooldown, so this
+  // adds no new clock - it adds the DIRECTION test the cooldown never had,
+  // which is what the rapid-loss bypass could otherwise walk straight
+  // through.
+  //
+  // SAFETY OVERRIDES IT, exactly as the founder specified: a rapid-loss
+  // correction is never held, because protecting an athlete losing weight
+  // too fast must never wait for a previous decision to finish being judged.
+  let oscillationHeld = null;
+  if (calorieAdjustment && !rapidLossOverride) {
+    oscillationHeld = wouldReverseRecent(
+      priorInterventions, 'nutrition', Math.sign(calorieAdjustment.change), { nowMs },
+    );
+    if (oscillationHeld) calorieAdjustment = null;
+  }
+
   // ── FFM FLOOR SAFETY GATE ────────────────────────────────────────────────
   // Mountjoy 2014/2023 IOC RED-S consensus: 30 kcal/kg fat-free mass per
   // day is the threshold below which sustained intake is "problematic
@@ -1777,6 +1806,15 @@ export function runWeeklyCoach(inputs) {
       reason: intakeDaysForCopy >= MIN_INTAKE_DAYS_FOR_COPY
         ? `Calorie target held. Your logged intake averaged ${Math.round(recentIntakeAvgKcal)} kcal against a ${currentCalTarget} kcal target, so this target has not really been tried yet. Worth giving it a fair run before we change the number.`
         : 'Calorie target held. What you have told us about your eating does not match the target you were given, so this target has not really been tried yet. Worth giving it a fair run before we change the number.',
+    });
+  }
+
+  // Campaign 18 anti-oscillation, in the user's words. A fact about TIMING,
+  // never about them: the previous change has not finished being read yet.
+  if (oscillationHeld) {
+    heldDecisions.push({
+      type: 'awaiting_last_change',
+      reason: `Calorie target held. We ${oscillationHeld.direction > 0 ? 'raised' : 'lowered'} it recently and that change has not had long enough to show yet. Reversing it now would tell us nothing.`,
     });
   }
 

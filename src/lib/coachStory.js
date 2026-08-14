@@ -270,10 +270,15 @@ export function whatWeWatchNext(context, limiters, changes = {}) {
  * @param {object} args { context, limiters, changes }
  * @returns {{ happened, means, changing, staying, watching, isQuietWeek }}
  */
-export function buildWeeklyStory({ context = null, limiters = null, changes = {} } = {}) {
+export function buildWeeklyStory({ context = null, limiters = null, changes = {}, outcome = null } = {}) {
   if (!context) return null;
   const changing = whatIsChanging(context, limiters, changes);
   return {
+    // CAMPAIGN 18 outcome follow-up. What came of the LAST accepted change
+    // leads the account, because it is the thing the athlete has been waiting
+    // to hear and because it frames everything under it. Null when there is
+    // no accepted change to report - never a placeholder.
+    outcome: outcome?.text ? line(outcome.text, 'intervention.outcome') : null,
     happened: whatHappened(context),
     means: whatItMeans(context, limiters),
     changing,
@@ -291,6 +296,7 @@ export function buildWeeklyStory({ context = null, limiters = null, changes = {}
 export function storyLines(story) {
   if (!story) return [];
   return [
+    ...(story.outcome ? [story.outcome.text] : []),
     ...(story.happened ?? []).map((l) => l.text),
     ...(story.means ?? []).map((l) => l.text),
     ...(story.changing ?? []).flatMap((c) => [c.text, c.why]),

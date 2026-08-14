@@ -9,6 +9,12 @@ import { useShallow } from 'zustand/react/shallow';
 import { runWeeklyCoach, mapCalsAdherence, corroborateConfidenceLevel } from '../lib/weeklyCoach';
 // Campaign 18: the week as one account, written from the engine's own context.
 import { buildWeeklyStory } from '../lib/coachStory';
+// Campaign 18 outcome follow-up: what changed, why, and what happened after.
+import {
+  buildInterventionRecord, INTERVENTION_KIND, interventionsFromHistory,
+  classifyOutcome, observationWindowMet, outcomeCopy,
+} from '../lib/coachIntervention';
+import { contextFacts } from '../lib/coachContext';
 import { buildRampPositionLine } from '../lib/blockExplain';
 import { buildHoldReceipt } from '../lib/coachLedger';
 import { isCompletedCoachDecision } from '../lib/coachDecision';
@@ -912,6 +918,8 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [coachHistory, setCoachHistory] = useState([]);
+  // Campaign 18: accepted interventions awaiting or carrying an outcome.
+  const [priorInterventions, setPriorInterventions] = useState([]);
   const [_adaptiveTDEE, setAdaptiveTDEE] = useState(null);
   const [applyingKey, setApplyingKey] = useState(null);
   // RB-10 (D96, Review B): applyingKey is state, so the guard in each Apply
@@ -1087,9 +1095,28 @@ export default function CoachOutputScreen({ navigation, route }) {
       await AsyncStorage.setItem(
         '@volyume_nutrition_targets', JSON.stringify(computed.targets),
       ).catch(() => {});
+      // CAMPAIGN 18 OUTCOME FOLLOW-UP. The structured truth this change
+      // leaves behind, written only here - on the user's deliberate tap - so
+      // Volyume can never score a change it proposed and they declined.
       const updated = markApplied(output, 'calories', {
         newKcal: computed.newKcal,
         ...(check.kind === 'floor_clamp' ? { clampedToFloor: true } : {}),
+        intervention: buildInterventionRecord({
+          kind: INTERVENTION_KIND.CALORIE_TARGET,
+          appliedAtMs: Date.now(),
+          direction: Math.sign(change),
+          magnitude: Math.abs(change),
+          because: output?.limiters?.nutrition?.because ?? null,
+          // The facts that were GOOD when this was authorised, so a later
+          // read can tell whether it was decided on real evidence.
+          authorisedBy: contextFacts(output?.context)
+            .filter((f) => f.signal === 'good')
+            .map((f) => f.key),
+          heldConstant: (output?.adjustments?.training?.signal === 'hold') ? ['training'] : [],
+          baseline: output?.context?.weight?.trend
+            ? { key: 'weight.trend', value: output.context.weight.trend.value }
+            : null,
+        }),
       });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
@@ -1159,6 +1186,23 @@ export default function CoachOutputScreen({ navigation, route }) {
       }
       const updated = markApplied(output, 'training', {
         volumeDelta: delta, musclesChanged: changes.length,
+        // Campaign 18: same record, training side. Judged on recovery and
+        // performance rather than on the scale, which is what the old
+        // outcome pairing got wrong.
+        intervention: buildInterventionRecord({
+          kind: INTERVENTION_KIND.VOLUME_START,
+          appliedAtMs: Date.now(),
+          direction: Math.sign(delta),
+          magnitude: Math.abs(delta),
+          because: output?.limiters?.training?.because ?? null,
+          authorisedBy: contextFacts(output?.context)
+            .filter((f) => f.signal === 'good')
+            .map((f) => f.key),
+          heldConstant: (output?.adjustments?.calories == null) ? ['nutrition'] : [],
+          baseline: output?.context?.recovery?.systemic
+            ? { key: 'recovery.systemic', value: output.context.recovery.systemic.value }
+            : null,
+        }),
       });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
@@ -1595,8 +1639,18 @@ export default function CoachOutputScreen({ navigation, route }) {
         blockSlopePct = await computeLiveBlockSlopePct(user.id).catch(() => null);
       }
 
+      // CAMPAIGN 18 outcome follow-up: the interventions the user has actually
+      // ACCEPTED, read BEFORE the run so the anti-oscillation gate can see
+      // them. Best-effort - a read failure yields no records, which leaves
+      // the engine's pre-Campaign-18 behaviour exactly as it was.
+      const priorInterventions = interventionsFromHistory(
+        await getCoachOutputHistory(user.id, 8).catch(() => []),
+      );
+      setPriorInterventions(priorInterventions);
+
       const result = runWeeklyCoach({
         checkin: engineCheckin,
+        priorInterventions,
         morningWeights: weights,
         sessionsCompleted: sessionStats.completed,
         sessionsPlanned: sessionStats.planned,
@@ -2107,9 +2161,25 @@ export default function CoachOutputScreen({ navigation, route }) {
   // early returns, so a hook here would be called conditionally. buildWeeklyStory
   // is a pure string assembly over an object the run already produced - the
   // same reasoning the file's own buildLiveStyles(t) call documents above.
+  // CAMPAIGN 18 OUTCOME FOLLOW-UP, at the surface. The most recent accepted
+  // change, classified against the context THIS run produced - so the line
+  // the user reads and the memory a later decision uses are the same
+  // judgement, not two.
+  const lastIntervention = priorInterventions[0] ?? null;
+  const lastOutcome = lastIntervention
+    ? classifyOutcome(lastIntervention, {
+      after: coachCtx,
+      windowMet: observationWindowMet(lastIntervention, { nowMs: Date.now() }),
+    })
+    : null;
+  const lastOutcomeLine = lastOutcome
+    ? outcomeCopy(lastIntervention, lastOutcome.outcome)
+    : null;
+
   const weeklyStory = buildWeeklyStory({
     context: coachCtx,
     limiters: coachLimiters,
+    outcome: lastOutcomeLine ? { text: lastOutcomeLine, state: lastOutcome.outcome } : null,
     changes: {
       calorieKcal: adjustments?.calories?.change ?? 0,
       volumeNote: adjustments?.training?.signal === 'hold' ? 'Your training volume holds where it is.' : null,
@@ -2649,6 +2719,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         {weeklyStory ? (
           <Card style={styles.storyCard}>
             <SectionLabel tone="primary">Your week</SectionLabel>
+            {weeklyStory.outcome ? (
+              <Text style={[styles.storyLine, live.storyLine]}>{weeklyStory.outcome.text}</Text>
+            ) : null}
             {weeklyStory.happened.map((l) => (
               <Text key={l.text} style={[styles.storyLine, live.storyLine]}>{l.text}</Text>
             ))}
