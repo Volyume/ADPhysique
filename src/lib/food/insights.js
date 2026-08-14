@@ -149,7 +149,10 @@ export function buildInsights({ coverage, rollups = [], targets = null } = {}) {
   const out = [];
   const cov = coverageInsight(coverage);
   if (cov) out.push({ key: 'coverage', ...cov });
-  if (!coverage?.enoughToSayAnything) return out;
+  // A handful of logged days is enough to render the coverage fact, but not
+  // to generalise about intake across the window. Nutrient conclusions use
+  // the stronger reliability gate.
+  if (!coverage?.reliable) return out;
   const protein = proteinInsight({ rollups, targetProteinG: targets?.proteinG });
   if (protein) out.push({ key: 'protein', ...protein });
   const kcal = calorieConsistencyInsight({ rollups, targetKcal: targets?.targetKcal });

@@ -35,7 +35,8 @@ jest.mock('@react-navigation/native', () => ({
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: jest.fn() }) }));
 jest.mock('../../components/Skeleton', () => ({ SkeletonRow: () => null }));
 jest.mock('../../components/food/CuratedMealSheet', () => () => null);
-jest.mock('../../components/food/FoodDetailSheet', () => () => null);
+let capturedDetailProps = null;
+jest.mock('../../components/food/FoodDetailSheet', () => (props) => { capturedDetailProps = props; return null; });
 jest.mock('../../components/food/QuickAddSheet', () => () => null);
 jest.mock('../../lib/observability', () => ({ audit: jest.fn() }));
 jest.mock('../../components/food/FoodRow', () => () => null);
@@ -93,11 +94,8 @@ jest.mock('../../lib/food/sources/localCache', () => ({
 
 import useAppStore from '../../store/useAppStore';
 import FoodSearchScreen from '../FoodSearchScreen';
-import HintCaption from '../../components/HintCaption';
 
 const store = { user: { id: 'u1' }, userProfile: {}, accessibility: { energyUnit: 'kcal' } };
-const HINT_TEXT = 'Hold a food to change the portion.';
-const HINT_KEY = '@volyume_seen_diary_food_hint';
 
 function makeNav() {
   return { navigate: jest.fn(), goBack: jest.fn(), replace: jest.fn(), setParams: jest.fn() };
@@ -116,43 +114,48 @@ function mountScreen(route) {
 beforeEach(() => {
   jest.clearAllMocks();
   capturedListProps = null;
+  capturedDetailProps = null;
   mockGetItem.mockResolvedValue(null);
   useAppStore.mockImplementation((selector) => selector(store));
 });
 
-describe('FoodSearchScreen re-log portion-edit hint', () => {
-  test('renders above a populated Recents tab when the flag is unset', async () => {
+describe('FoodSearchScreen repeat-row confirmation', () => {
+  test('does not render a hidden-gesture hint now that tap opens confirmation', async () => {
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
     mountScreen(route);
     await flush();
 
-    expect(mockGetItem).toHaveBeenCalledWith(HINT_KEY);
+    expect(mockGetItem).not.toHaveBeenCalled();
     expect(capturedListProps).toBeTruthy();
-    const header = capturedListProps.ListHeaderComponent;
-    expect(header).toBeTruthy();
-    expect(header.type).toBe(HintCaption);
-    expect(header.props.text).toBe(HINT_TEXT);
+    expect(capturedListProps.ListHeaderComponent).toBeUndefined();
   });
 
-  test('does not render once the flag is already "true"', async () => {
-    mockGetItem.mockResolvedValue('true');
+  test('tapping a recent food opens the detail sheet at its exact remembered portion', async () => {
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
     mountScreen(route);
     await flush();
 
-    expect(capturedListProps.ListHeaderComponent).toBeNull();
+    const row = capturedListProps.renderItem({
+      item: { type: 'row', key: 'recents-off:chicken', food: {
+        food_ref: 'off:chicken', name: 'Chicken breast', kcal_100g: 165, last_quantity_g: 150,
+      } },
+    });
+    await act(async () => { row.props.onPress(); });
+    await flush();
+    expect(capturedDetailProps.food.food_ref).toBe('off:chicken');
+    expect(capturedDetailProps.initialQuantityG).toBe(150);
   });
 
-  test('the re-log row long-press handler is unchanged (still opens the portion picker) and also marks the hint seen', async () => {
+  test('long-press remains a preference action and carries no portion hint', async () => {
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
     mountScreen(route);
     await flush();
 
-    expect(capturedListProps.ListHeaderComponent).toBeTruthy();
+    expect(capturedListProps.ListHeaderComponent).toBeUndefined();
     const row = capturedListProps.renderItem({
       item: { type: 'row', key: 'recents-off:chicken', food: { food_ref: 'off:chicken', name: 'Chicken breast', kcal_100g: 165 } },
     });
-    expect(row.props.longPressHint).toBe('Long-press to change the portion');
+    expect(row.props.longPressHint).toBeUndefined();
     // Tap still one-tap re-logs; long-press still opens the picker (unchanged
     // behaviour — the hint only adds a side-effect, not a new handler).
     expect(typeof row.props.onPress).toBe('function');
@@ -161,21 +164,16 @@ describe('FoodSearchScreen re-log portion-edit hint', () => {
     await act(async () => { row.props.onLongPress(); });
     await flush();
 
-    expect(mockSetItem).toHaveBeenCalledWith(HINT_KEY, 'true');
-    expect(capturedListProps.ListHeaderComponent).toBeNull();
+    expect(mockSetItem).not.toHaveBeenCalled();
+    expect(capturedListProps.ListHeaderComponent).toBeUndefined();
   });
 
-  test('"Got it" dismisses the hint directly, without needing the long-press', async () => {
+  test('there is no hint dismissal state to persist', async () => {
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
     mountScreen(route);
     await flush();
 
-    const header = capturedListProps.ListHeaderComponent;
-    expect(header).toBeTruthy();
-    await act(async () => { header.props.onDismiss(); });
-    await flush();
-
-    expect(mockSetItem).toHaveBeenCalledWith(HINT_KEY, 'true');
-    expect(capturedListProps.ListHeaderComponent).toBeNull();
+    expect(capturedListProps.ListHeaderComponent).toBeUndefined();
+    expect(mockSetItem).not.toHaveBeenCalled();
   });
 });

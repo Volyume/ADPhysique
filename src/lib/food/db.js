@@ -141,11 +141,53 @@ export async function logFoodEntry(userId, entry) {
   return id;
 }
 
+/**
+ * Rebuild one exact serving-memory row from the diary's live ACTUAL evidence.
+ * Planned and deleted rows are excluded in SQL, so a scaffolded meal or an
+ * undone mistake can never teach quantity/frequency. Client-only derived data:
+ * a conservative delete is preferable to retaining evidence we cannot prove.
+ */
+async function _rebuildSlotRecentFromActuals(d, userId, mealSlot, foodRef) {
+  if (!userId || !mealSlot || !foodRef || foodRef.startsWith('quick:')) return;
+  const row = await d.getFirstAsync(
+    `WITH live AS (
+       SELECT quantity_g, logged_at
+       FROM food_entries
+       WHERE user_id = ? AND meal_slot = ? AND food_ref = ?
+         AND deleted_at IS NULL AND is_planned = 0
+     )
+     SELECT COUNT(*) AS log_count,
+            MAX(logged_at) AS last_logged_at,
+            (SELECT quantity_g FROM live ORDER BY logged_at DESC LIMIT 1) AS last_quantity_g
+     FROM live`,
+    [userId, mealSlot, foodRef],
+  );
+  const count = Number(row?.log_count) || 0;
+  if (count <= 0 || !Number.isFinite(Number(row?.last_quantity_g))) {
+    await d.runAsync(
+      'DELETE FROM food_slot_recents WHERE user_id = ? AND meal_slot = ? AND food_ref = ?',
+      [userId, mealSlot, foodRef],
+    );
+    return;
+  }
+  await d.runAsync(
+    `INSERT INTO food_slot_recents
+       (user_id, meal_slot, food_ref, log_count, last_logged_at, last_quantity_g)
+     VALUES (?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id, meal_slot, food_ref) DO UPDATE SET
+       log_count = excluded.log_count,
+       last_logged_at = excluded.last_logged_at,
+       last_quantity_g = excluded.last_quantity_g`,
+    [userId, mealSlot, foodRef, count, Number(row.last_logged_at) || 0, Number(row.last_quantity_g)],
+  );
+}
+
 export async function updateFoodEntry(id, userId, patch) {
   const d = await db();
   const now = Date.now();
   const existing = await d.getFirstAsync(
-    `SELECT entry_date, eaten_at FROM food_entries WHERE id = ? AND user_id = ?`,
+    `SELECT entry_date, meal_slot, food_ref, is_planned, eaten_at
+     FROM food_entries WHERE id = ? AND user_id = ?`,
     [id, userId]
   );
   if (!existing) return false;
@@ -176,6 +218,12 @@ export async function updateFoodEntry(id, userId, patch) {
   if (existing.entry_date !== newDate) {
     await recomputeRollup(userId, existing.entry_date);
   }
+  if (!existing.is_planned) {
+    await _rebuildSlotRecentFromActuals(d, userId, existing.meal_slot, existing.food_ref);
+    if (existing.meal_slot !== patch.mealSlot || existing.food_ref !== patch.foodRef) {
+      await _rebuildSlotRecentFromActuals(d, userId, patch.mealSlot, patch.foodRef);
+    }
+  }
   _scheduleSync();
   return true;
 }
@@ -184,7 +232,8 @@ export async function deleteFoodEntry(id, userId) {
   const d = await db();
   const now = Date.now();
   const existing = await d.getFirstAsync(
-    `SELECT entry_date FROM food_entries WHERE id = ? AND user_id = ?`,
+    `SELECT entry_date, meal_slot, food_ref, is_planned
+     FROM food_entries WHERE id = ? AND user_id = ?`,
     [id, userId]
   );
   if (!existing) return false;
@@ -193,6 +242,9 @@ export async function deleteFoodEntry(id, userId) {
     [now, now, id, userId]
   );
   await recomputeRollup(userId, existing.entry_date);
+  if (!existing.is_planned) {
+    await _rebuildSlotRecentFromActuals(d, userId, existing.meal_slot, existing.food_ref);
+  }
   _scheduleSync();
   return true;
 }
@@ -205,7 +257,8 @@ export async function restoreFoodEntry(id, userId) {
   const d = await db();
   const now = Date.now();
   const existing = await d.getFirstAsync(
-    `SELECT entry_date FROM food_entries WHERE id = ? AND user_id = ?`,
+    `SELECT entry_date, meal_slot, food_ref, is_planned
+     FROM food_entries WHERE id = ? AND user_id = ?`,
     [id, userId]
   );
   if (!existing) return false;
@@ -214,6 +267,9 @@ export async function restoreFoodEntry(id, userId) {
     [now, id, userId]
   );
   await recomputeRollup(userId, existing.entry_date);
+  if (!existing.is_planned) {
+    await _rebuildSlotRecentFromActuals(d, userId, existing.meal_slot, existing.food_ref);
+  }
   _scheduleSync();
   return true;
 }
@@ -301,6 +357,13 @@ export async function hasAnyFoodEntries(userId) {
 export async function confirmPlannedDay(userId, entryDate, mealSlot = null) {
   const d = await db();
   const now = Date.now();
+  // Capture exact identities before the flip. Placement alone teaches
+  // nothing; explicit confirmation is the moment these rows become evidence.
+  const identityParams = [userId, entryDate];
+  let identitySql = `SELECT DISTINCT meal_slot, food_ref FROM food_entries
+     WHERE user_id = ? AND entry_date = ? AND is_planned = 1 AND deleted_at IS NULL`;
+  if (mealSlot) { identitySql += ' AND meal_slot = ?'; identityParams.push(mealSlot); }
+  const confirmedIdentities = await d.getAllAsync(identitySql, identityParams);
   const eatenAt = mealSlot ? now : null;
   const params = [now, eatenAt, now, userId, entryDate];
   let sql = `UPDATE food_entries SET is_planned = 0, logged_at = ?, eaten_at = ?, updated_at = ?
@@ -308,6 +371,12 @@ export async function confirmPlannedDay(userId, entryDate, mealSlot = null) {
   if (mealSlot) { sql += ' AND meal_slot = ?'; params.push(mealSlot); }
   const res = await d.runAsync(sql, params);
   await recomputeRollup(userId, entryDate);
+  if ((res?.changes ?? 0) > 0) {
+    for (const identity of confirmedIdentities || []) {
+      // eslint-disable-next-line no-await-in-loop
+      await _rebuildSlotRecentFromActuals(d, userId, identity.meal_slot, identity.food_ref);
+    }
+  }
   _scheduleSync();
   return res?.changes ?? 0;
 }
@@ -325,7 +394,8 @@ export async function confirmPlannedEntry(userId, entryId) {
   const d = await db();
   const now = Date.now();
   const existing = await d.getFirstAsync(
-    `SELECT entry_date FROM food_entries WHERE id = ? AND user_id = ? AND is_planned = 1 AND deleted_at IS NULL`,
+    `SELECT entry_date, meal_slot, food_ref FROM food_entries
+     WHERE id = ? AND user_id = ? AND is_planned = 1 AND deleted_at IS NULL`,
     [entryId, userId]
   );
   if (!existing) return 0;
@@ -335,6 +405,9 @@ export async function confirmPlannedEntry(userId, entryId) {
     [now, now, now, entryId, userId]
   );
   await recomputeRollup(userId, existing.entry_date);
+  if ((res?.changes ?? 0) > 0) {
+    await _rebuildSlotRecentFromActuals(d, userId, existing.meal_slot, existing.food_ref);
+  }
   _scheduleSync();
   return res?.changes ?? 0;
 }

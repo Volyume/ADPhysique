@@ -87,9 +87,9 @@ describe('the user\'s own meals are candidates the assembler will actually pick'
     expect(day.slots.map((s) => s.mealId)).not.toContain('saved-bad');
   });
 
-  test('but PINNING it is the user choosing, and diet does not block that', () => {
+  test('a current hard diet restriction also outranks an older pin', () => {
     const mine = personalMeal('saved-bad', 600);
-    expect(savedMealAllowed(mine, { diet: 'vegan' }, { chosenByUser: true })).toBe(true);
+    expect(savedMealAllowed(mine, { diet: 'vegan' }, { chosenByUser: true })).toBe(false);
   });
 
   test('an ALLERGEN still binds in both cases, because that is safety', () => {

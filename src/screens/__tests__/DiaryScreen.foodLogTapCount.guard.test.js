@@ -119,17 +119,14 @@ describe('DiaryScreen food-logging tap count (§15 item 10)', () => {
     });
   });
 
-  describe('fast path guard (re-log from Recents/Favourites)', () => {
-    test('re-log tabs still exist (Recents, Favourites, Frequents)', () => {
-      expect(FOOD_SEARCH_SRC).toMatch(/const RELOG_TABS = new Set\(\['recents', 'favourites', 'frequents'\]\)/);
+  describe('repeat-food confirmation guard', () => {
+    test('Recents, Favourites and Frequents still feed the browse rows', () => {
+      expect(FOOD_SEARCH_SRC).toMatch(/lists: \{ recents, favourites: favouriteRows, frequents: frequentRows/);
     });
 
-    test('re-log tabs allow one-tap logging via quickLogRelog (legacy: does not change tap count)', () => {
-      expect(FOOD_SEARCH_SRC).toMatch(/quickLogRelog/);
-      expect(FOOD_SEARCH_SRC).toMatch(/RELOG_TABS\.has\(activeTab\)/);
-      // Re-log path still requires 2 taps total (Add food -> food row), so tap budget
-      // of 3 covers the general path (Add food -> row -> confirm) and is not violated
-      // by the existence of a faster re-log path.
+    test('repeat rows use the same row -> sheet -> confirm contract', () => {
+      expect(FOOD_SEARCH_SRC).not.toMatch(/quickLogRelog/);
+      expect(FOOD_SEARCH_SRC).toMatch(/onPress=\{\(\) => openPicker\(food\)\}/);
     });
   });
 

@@ -109,7 +109,7 @@ beforeEach(() => {
   deleteFoodEntry.mockResolvedValue(true);
 });
 
-describe('MyMealsScreen row tap (C6)', () => {
+describe('MyMealsScreen saved-meal confirmation', () => {
   test('uses the same Saved meals label as the food search entry point', () => {
     expect(SOURCE).toContain('<BackHeader title="Saved meals" />');
     expect(SOURCE).not.toContain('title="My meals"');
@@ -133,18 +133,22 @@ describe('MyMealsScreen row tap (C6)', () => {
     expect(text).not.toContain('Save your go-to meals');
   });
 
-  test('tapping a meal logs it immediately, no confirm dialog', async () => {
+  test('tapping a meal opens confirmation and only Add meal writes it', async () => {
     const nav = makeNav();
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
-    await act(async () => { create(<MyMealsScreen navigation={nav} route={route} />); });
+    let tree;
+    await act(async () => { tree = create(<MyMealsScreen navigation={nav} route={route} />); });
     await flush();
 
     expect(capturedListProps).toBeTruthy();
     const row = capturedListProps.renderItem({ item: MEAL });
 
-    await act(async () => { await row.props.onPress(); });
+    await act(async () => { row.props.onPress(); });
 
     expect(appAlert).not.toHaveBeenCalled();
+    expect(applySavedMealToDiary).not.toHaveBeenCalled();
+    const add = tree.root.findByProps({ title: 'Add meal' });
+    await act(async () => { await add.props.onPress(); });
     expect(applySavedMealToDiary).toHaveBeenCalledWith('u1', 'sm-1', { mealSlot: 'snack', entryDate: '2026-07-03' });
   });
 
@@ -169,11 +173,13 @@ describe('MyMealsScreen row tap (C6)', () => {
   test('a successful log shows a success + Undo toast and returns to the diary', async () => {
     const nav = makeNav();
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
-    await act(async () => { create(<MyMealsScreen navigation={nav} route={route} />); });
+    let tree;
+    await act(async () => { tree = create(<MyMealsScreen navigation={nav} route={route} />); });
     await flush();
 
     const row = capturedListProps.renderItem({ item: MEAL });
-    await act(async () => { await row.props.onPress(); });
+    await act(async () => { row.props.onPress(); });
+    await act(async () => { await tree.root.findByProps({ title: 'Add meal' }).props.onPress(); });
 
     expect(mockToastShow).toHaveBeenCalledWith('Chicken and rice added.', expect.objectContaining({
       variant: 'undo',
@@ -185,11 +191,13 @@ describe('MyMealsScreen row tap (C6)', () => {
   test('Undo deletes every entry the saved meal created, not just the first', async () => {
     const nav = makeNav();
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
-    await act(async () => { create(<MyMealsScreen navigation={nav} route={route} />); });
+    let tree;
+    await act(async () => { tree = create(<MyMealsScreen navigation={nav} route={route} />); });
     await flush();
 
     const row = capturedListProps.renderItem({ item: MEAL });
-    await act(async () => { await row.props.onPress(); });
+    await act(async () => { row.props.onPress(); });
+    await act(async () => { await tree.root.findByProps({ title: 'Add meal' }).props.onPress(); });
 
     const [, opts] = mockToastShow.mock.calls[0];
     await act(async () => { await opts.action.onPress(); });
@@ -203,11 +211,13 @@ describe('MyMealsScreen row tap (C6)', () => {
     applySavedMealToDiary.mockResolvedValue({ logged: 0, entryIds: [] });
     const nav = makeNav();
     const route = { params: { mealSlot: 'snack', entryDate: '2026-07-03' } };
-    await act(async () => { create(<MyMealsScreen navigation={nav} route={route} />); });
+    let tree;
+    await act(async () => { tree = create(<MyMealsScreen navigation={nav} route={route} />); });
     await flush();
 
     const row = capturedListProps.renderItem({ item: MEAL });
-    await act(async () => { await row.props.onPress(); });
+    await act(async () => { row.props.onPress(); });
+    await act(async () => { await tree.root.findByProps({ title: 'Add meal' }).props.onPress(); });
 
     expect(mockToastShow).toHaveBeenCalledWith('This meal has no foods in it.', expect.objectContaining({ variant: 'info' }));
     expect(nav.goBack).not.toHaveBeenCalled();

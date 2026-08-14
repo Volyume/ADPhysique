@@ -35,7 +35,7 @@ import {
   logFoodEntry, deleteFoodEntry, getFavourites,
   getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
   getRollupForDay, getLoggedMealSlotsForDay, applyCuratedMealToDiary,
-  upsertSlotRecent, getSlotRecents, getSlotRecentQuantities, applySavedMealToDiary, resolveSlotRecentRef,
+  upsertSlotRecent, getSlotRecents, getSlotRecentQuantities, resolveSlotRecentRef,
 } from '../lib/food/db';
 import { getNutritionTargets } from '../lib/database';
 import { getCuratedCandidates } from '../lib/food/curatedMeals';
@@ -66,12 +66,10 @@ import CuratedMealSheet from '../components/food/CuratedMealSheet';
 import { ADDITIONS_INTRO } from '../lib/food/mealAdditions';
 import BottomSheet from '../components/BottomSheet';
 import FoodRow from '../components/food/FoodRow';
-import HintCaption from '../components/HintCaption';
 import SearchBar from '../components/SearchBar';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { scaleMacros, resolveServingG } from '../lib/food/macros';
-import { isValidEntryGrams } from '../lib/food/servingEntry';
 import { buildFoodEntryPayload, buildSlotRecentPayload } from '../lib/food/loggingPayloads';
 
 const EMPTY_COPY = {
@@ -85,20 +83,6 @@ const EMPTY_ICON = {
   favourites: 'star-outline',
   frequents: 'repeat-outline',
 };
-
-// The "Add again" re-log tabs (Move #1): a row tap here logs the food in one
-// tap at its remembered portion, the way MFP/Cronometer re-log a recent. The
-// live-search-results list (any 2+ char query) is NOT a re-log surface, a
-// never-logged food has no remembered portion, so it still opens the sheet.
-// Suggested + Custom are handled elsewhere and are not in this set.
-const RELOG_TABS = new Set(['recents', 'favourites', 'frequents']);
-
-// Wave A C7 (2026-07-03): shared with DiaryScreen's meal-list hint, same
-// flag, same caption, because they're the two long-press "hold a food"
-// gestures a user meets across one diary-logging journey (edit the portion
-// here on the add-food picker, multi-select back on the diary's own list).
-// Whichever they meet first teaches both; dismissing either dismisses both.
-const DIARY_FOOD_HINT_KEY = '@volyume_seen_diary_food_hint';
 
 export default function FoodSearchScreen({ navigation, route }) {
   const { user, userProfile, energyUnit } = useAppStore(useShallow((s) => ({
@@ -133,7 +117,6 @@ export default function FoodSearchScreen({ navigation, route }) {
   // returns a single ingredient). Mirrors MacroFactor's fastest workflow.
   const [plate, setPlate] = useState([]);
   const loggingPlateRef = useRef(false); // CALC-3: prevents double-tap double-log
-  const loggingQuickRef = useRef(false); // one-tap re-log: blocks a double-tap double-log
   const [showPlate, setShowPlate] = useState(false);
   const isRecipePick = route?.params?.pickMode === 'recipe';
   const [results, setResults] = useState([]);
@@ -159,22 +142,6 @@ export default function FoodSearchScreen({ navigation, route }) {
   // "add to taste" suggestions). Tapping a meal opens this rather than logging
   // instantly, so the user can see what's in it and what they can add.
   const [mealSheet, setMealSheet] = useState(null);
-
-  // Wave A C7: one-time caption for the "hold a food to edit the portion"
-  // long-press on re-log rows (see isRelogRow below), otherwise invisible to
-  // a sighted user (FoodRow only carried an accessibilityHint).
-  const [showFoodHint, setShowFoodHint] = useState(false);
-  useEffect(() => {
-    let active = true;
-    AsyncStorage.getItem(DIARY_FOOD_HINT_KEY).then((v) => {
-      if (active && v !== 'true') setShowFoodHint(true);
-    }).catch(() => {});
-    return () => { active = false; };
-  }, []);
-  const dismissFoodHint = useCallback(() => {
-    setShowFoodHint(false);
-    AsyncStorage.setItem(DIARY_FOOD_HINT_KEY, 'true').catch(() => {});
-  }, []);
 
   const debounceRef = useRef(null);
   const searchRequestRef = useRef(0);
@@ -441,96 +408,6 @@ export default function FoodSearchScreen({ navigation, route }) {
     setPlate((p) => p.filter((it) => it.key !== key));
   }
 
-  // One-tap re-log (Move #1): on the "Add again" tabs a row tap logs the food
-  // immediately, no sheet, to the slot the search was opened for, at the
-  // remembered portion (last_quantity_g -> serving_g -> 100 g, via
-  // resolveServingG), ROUNDED to whole grams exactly as the detail sheet does.
-  // Same write mechanics as the sheet's onSave (confirmLog): scaleMacros from
-  // per-100g at the resolved grams, logFoodEntry, then the derived slot-recent;
-  // and the long-press sheet now opens at this same remembered portion
-  // (initialServingState honours initialQuantityG), so tap and long-press agree.
-  // The 1–5000 g safety bound the sheet enforces (isValidEntryGrams) binds here
-  // too: a remembered portion outside it can't be silently logged, we open the
-  // sheet instead so the user corrects it. An Undo toast (8s) deletes exactly
-  // the entry just created, the safety net for an accidental tap.
-  async function quickLogRelog(food) {
-    if (!userId || !food?.food_ref) return;
-    // Round to whole grams (the sheet rounds; last_quantity_g is a REAL and can
-    // be fractional) and bind the same 1–5000 g safety bound the sheet enforces.
-    // Out of bounds -> fall back to the sheet rather than write a value the sheet
-    // would refuse; this is the one path that logs without the sheet's gate.
-    const servingG = Math.round(resolveServingG(food));
-    if (!isValidEntryGrams(servingG)) { openPicker(food); return; }
-    // In-flight guard: a fast double-tap must not mint two entries (each
-    // logFoodEntry returns a fresh id, so duplicates can't be deduped). Mirrors
-    // logPlate's loggingPlateRef.
-    if (loggingQuickRef.current) return;
-    loggingQuickRef.current = true;
-    try {
-      audit('food.add', { source: food.source ?? 'unknown', mealSlot, fromScan: false, surface: 'relog' });
-      const entryId = await logFoodEntry(userId, buildFoodEntryPayload({
-        entryDate,
-        mealSlot,
-        foodRef: food.food_ref,
-        quantityG: servingG,
-        food,
-      }));
-      await upsertSlotRecent(userId, buildSlotRecentPayload({
-        mealSlot,
-        foodRef: food.food_ref,
-        quantityG: servingG,
-      })).catch(() => {}); // derived memory only; never fail the log
-      // Mandatory Undo: the action deletes the exact entry just created. Matches
-      // the diary's soft-delete + Undo pattern (DiaryScreen requestDelete).
-      toast.show(`Added ${food.name}.`, {
-        variant: 'undo',
-        action: { label: 'Undo', onPress: async () => { await deleteFoodEntry(entryId, userId); } },
-      });
-    } catch (e) {
-      // eslint-disable-next-line global-require
-      try { require('../lib/errorLog').logError('FoodSearch.quickLogRelog', e, { foodRef: food.food_ref }); } catch (_) {}
-      toast.show("Couldn't add that food, try again.", { variant: 'error', duration: 4000 });
-    } finally {
-      loggingQuickRef.current = false;
-    }
-  }
-
-  // One-tap re-log for a saved meal (T1, world-class audit 2026-07-03): a
-  // frequently-used saved meal earns a place in this same "Add again" list
-  // (see resolveSlotRecentRef), but it fans out into one food_entries row
-  // per item rather than a single scaled entry, so it reuses
-  // applySavedMealToDiary (MyMealsScreen.onLog's exact contract) instead of
-  // quickLogRelog's scaleMacros + single logFoodEntry. Undo removes every
-  // entry the meal created, not just one. Shares loggingQuickRef with
-  // quickLogRelog: only one relog can be in flight from this screen at a time.
-  async function quickLogRelogMeal(food) {
-    if (!userId || !food?.savedMealId || loggingQuickRef.current) return;
-    loggingQuickRef.current = true;
-    try {
-      audit('food.savedMeal', { mealId: food.savedMealId, mealSlot, itemCount: food.itemCount, surface: 'relog' });
-      const { logged, entryIds } = await applySavedMealToDiary(userId, food.savedMealId, { mealSlot, entryDate });
-      if (logged > 0) {
-        toast.show(`${food.name ?? 'Meal'} added.`, {
-          variant: 'undo',
-          action: {
-            label: 'Undo',
-            onPress: async () => {
-              try { await Promise.all(entryIds.map((eid) => deleteFoodEntry(eid, userId))); } catch (_) { /* already gone */ }
-            },
-          },
-        });
-      } else {
-        toast.show('This meal has no foods in it.', { variant: 'info' });
-      }
-    } catch (e) {
-      // eslint-disable-next-line global-require
-      try { require('../lib/errorLog').logError('FoodSearch.quickLogRelogMeal', e, { mealId: food.savedMealId }); } catch (_) {}
-      toast.show("Couldn't add that meal, try again.", { variant: 'error', duration: 4000 });
-    } finally {
-      loggingQuickRef.current = false;
-    }
-  }
-
   const plateKcal = useMemo(() => plate.reduce((s, it) => s + (it.kcal || 0), 0), [plate]);
 
   // Log every plate item to the meal, then return to the diary.
@@ -610,15 +487,19 @@ export default function FoodSearchScreen({ navigation, route }) {
     });
   }
 
-  // Auto-open the detail sheet when arriving from ScanBarcodeScreen.
+  // Auto-open the detail sheet for a scanner result or an exact remembered
+  // food. Both are preselection only: the user still confirms grams, meal and
+  // date in the sheet before anything is written.
   const scannedFood = route?.params?.scannedFood;
+  const preselectedFood = route?.params?.preselectedFood;
   useEffect(() => {
-    if (scannedFood && !picker) {
-      openPicker(scannedFood);
-      navigation.setParams({ scannedFood: undefined });
+    const routedFood = scannedFood ?? preselectedFood;
+    if (routedFood && !picker) {
+      setPicker({ food: routedFood, fromScan: !!scannedFood });
+      navigation.setParams({ scannedFood: undefined, preselectedFood: undefined });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scannedFood]);
+  }, [scannedFood, preselectedFood]);
 
   async function confirmLog({ quantityG, mealSlot: chosenSlot, entryDate: chosenDate, weightState }) {
     if (!picker?.food) return;
@@ -639,7 +520,7 @@ export default function FoodSearchScreen({ navigation, route }) {
     audit('food.add', {
       source: food.source ?? 'unknown',
       mealSlot: chosenSlot,
-      fromScan: !!scannedFood,
+      fromScan: !!picker?.fromScan,
       surface: 'sheet',
     });
     const entryId = await logFoodEntry(userId, buildFoodEntryPayload({
@@ -848,53 +729,32 @@ export default function FoodSearchScreen({ navigation, route }) {
       );
     }
     const food = item.food;
-    // T1 (world-class audit 2026-07-03): a saved meal earns its way into
-    // this same "Add again" list via its own 'meal:<id>' slot-recent row
-    // (resolveSlotRecentRef), but it has none of the single-food affordances
-    // below (no per-100g quantity to edit in the sheet, no plate add, no
-    // favourite/dislike) since logging it means fanning out several
-    // food_entries via applySavedMealToDiary, not scaling one. A recipe's
-    // 'recipe:<id>' ref needs none of this branch: resolveFoodRef already
-    // gives it a normal food shape, so it flows through the existing
-    // single-food path below untouched.
+    // A saved meal has no single-food gram editor. Open its confirmation
+    // surface with the exact meal preselected; never fan it out from a row tap.
     if (typeof food.food_ref === 'string' && food.food_ref.startsWith('meal:')) {
       return (
         <FoodRow
           food={food}
           preference={null}
-          onPress={() => quickLogRelogMeal(food)}
+          onPress={() => navigation.navigate('MyMeals', {
+            mealSlot, entryDate, confirmMealId: food.savedMealId,
+          })}
         />
       );
     }
     const preference = favouriteRefs.has(food.food_ref) ? 'fav'
       : dislikeRefs.has(food.food_ref) ? 'dislike'
       : null;
-    // Move #1: on the "Add again" re-log tabs (recents/favourites/frequents),
-    // with no active search, a tap one-tap-logs at the remembered portion and a
-    // long-press opens the sheet to adjust it. A live search (2+ chars) replaces
-    // the list with results regardless of tab, so those rows are NOT re-log rows
-    // and keep the original behaviour (tap = sheet, long-press = preference
-    // cycle). Recipe pick mode must always open the sheet to set a quantity, so
-    // it is excluded from one-tap re-log.
-    const isRelogRow = !isRecipePick && RELOG_TABS.has(activeTab) && query.trim().length < 2;
     return (
       <FoodRow
         food={food}
         preference={preference}
-        onPress={isRelogRow ? () => quickLogRelog(food) : () => openPicker(food)}
-        onLongPress={isRelogRow ? () => { openPicker(food); dismissFoodHint(); } : () => onLongPress(food)}
-        longPressHint={isRelogRow ? 'Long-press to change the portion' : undefined}
+        onPress={() => openPicker(food)}
+        onLongPress={() => onLongPress(food)}
         onAdd={isRecipePick ? undefined : () => addToPlate(food)}
       />
     );
   }
-
-  // Wave A C7: content-gated so the caption only shows once there's actually
-  // a re-log row to hold (never on an empty tab), and only on the tabs where
-  // long-press means "edit the portion" (isRelogRow's own condition, mirrored
-  // here since it's computed per-row above).
-  const showRelogHint = showFoodHint && !isRecipePick && RELOG_TABS.has(activeTab)
-    && query.trim().length < 2 && tabRows.length > 0;
 
   function renderEmpty() {
     // A live search with no hits: offer the custom-food fallback.
@@ -1067,12 +927,6 @@ export default function FoodSearchScreen({ navigation, route }) {
         renderItem={renderItem}
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: spacing.xxxl }}
-        ListHeaderComponent={showRelogHint ? (
-          <HintCaption
-            text="Hold a food to change the portion."
-            onDismiss={dismissFoodHint}
-          />
-        ) : null}
         ListEmptyComponent={renderEmpty()}
         ListFooterComponent={
           activeTab !== 'custom' && query.trim().length >= 2 && results.length > 0 ? (

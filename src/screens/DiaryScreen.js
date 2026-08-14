@@ -27,7 +27,7 @@ import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   applyCuratedMealToDiary,
   setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
-  getSlotRecents, logFoodEntry, upsertSlotRecent,
+  getSlotRecents,
 } from '../lib/food/db';
 import { isoDate, shiftDate, weekDatesMon, weekdayShort, friendlyDate } from '../lib/food/diaryDates';
 import { createRaceGuard } from '../lib/food/loadRaceGuard';
@@ -72,8 +72,7 @@ import { useToast } from '../components/Toast';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
 import { shouldShowOffConsentCard, dismissOffConsentCard } from '../lib/food/writeback';
 import { buildMealSlots, highestLoggedMeal, inferMealSlotForHour, DEFAULT_MEALS_PER_DAY } from '../lib/food/mealSlots';
-import { scaleMacros, resolveServingG } from '../lib/food/macros';
-import { isValidEntryGrams } from '../lib/food/servingEntry';
+import { scaleMacros } from '../lib/food/macros';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { parseLocalDay } from '../lib/dayKey';
@@ -409,17 +408,22 @@ export default function DiaryScreen({ navigation, route }) {
 
   const applyBank = useCallback(async (bank) => {
     if (!canWrite()) return;
-    await setCalorieBank(bank);
-    setBankSheetVisible(false);
     // CB-1b: move the planned FOOD to match the new per-day targets, not just the
-    // target number, and tell the user exactly what changed (per day).
+    // target number. The food rewrite is the write boundary: a failed rewrite
+    // must not leave an applied target whose visible meals still describe the
+    // ordinary week.
     let perDayChanges = [];
     try {
       const res = await resyncBankedPlannedFood(userId, {
         perDayDeltaKcal: bank?.perDayDeltaKcal, floorKcal, startDate: isoDate(new Date()),
       });
       perDayChanges = res.perDayChanges || [];
-    } catch (_) { /* tolerate: the target shift already applied */ }
+    } catch (_) {
+      toast.show("Couldn't adjust the planned food. Nothing was banked.", { variant: 'error' });
+      return;
+    }
+    await setCalorieBank(bank);
+    setBankSheetVisible(false);
     await load();
     // Campaign 17B job 6: lead with the plain fact, in ACTUAL values, before
     // the per-day detail. "You have moved 300 calories to Saturday. Your
@@ -456,7 +460,10 @@ export default function DiaryScreen({ navigation, route }) {
       await restoreUnbankedPlannedFood(userId, {
         perDayDeltaKcal: calorieBank?.perDayDeltaKcal, startDate: isoDate(new Date()),
       });
-    } catch (_) { /* tolerate */ }
+    } catch (_) {
+      toast.show("Couldn't restore the planned food. The bank is still active.", { variant: 'error' });
+      return;
+    }
     await setCalorieBank(null);
     setBankSheetVisible(false);
     await load();
@@ -635,7 +642,7 @@ export default function DiaryScreen({ navigation, route }) {
     [readOnly, mealSlots, viewEntries],
   );
 
-  // GAP #5: one-tap "usuals" for empty meal slots. Each slot offers up to three
+  // GAP #5: usual-food shortcuts for empty meal slots. Each slot offers up to three
   // of the foods most logged into THAT slot (the same `food_slot_recents`
   // ranking the "Add again" list uses), resolved to current food records, so a
   // regular breakfast is a single tap rather than a search. Only ever shown on a
@@ -657,8 +664,8 @@ export default function DiaryScreen({ navigation, route }) {
             try {
               const food = await resolveFoodRef(userId, row.food_ref);
               if (!food) return null;
-              // Carry the remembered portion so resolveServingG reuses the
-              // user's last logged weight for this food, not a generic 100 g.
+              // Carry the remembered portion into FoodDetailSheet so the user
+              // can confirm their last weight instead of starting from 100 g.
               return { ...food, food_ref: row.food_ref, last_quantity_g: row.last_quantity_g };
             } catch (_) { return null; }
           }));
@@ -671,41 +678,16 @@ export default function DiaryScreen({ navigation, route }) {
     return () => { active = false; };
   }, [userId, readOnly, selectedDate, mealSlots]);
 
-  // One-tap log of a usual. Same write path, rollup trigger and sync as a
-  // search-result add, with an Undo. Guards a double tap (loggingUsualRef) and
-  // an invalid remembered portion (logs nothing rather than a junk weight).
-  const loggingUsualRef = useRef(false);
-  const onLogUsual = useCallback(async (food, slotKey) => {
-    if (!userId || !food || loggingUsualRef.current || !canWrite()) return;
-    const grams = Math.round(resolveServingG(food));
-    if (!isValidEntryGrams(grams)) return;
-    loggingUsualRef.current = true;
-    audit('food.relog', { surface: 'diary_usual', mealSlot: slotKey });
-    try {
-      const m = scaleMacros(food, grams);
-      const id = await logFoodEntry(userId, {
-        entryDate: selectedDate,
-        mealSlot: slotKey,
-        foodRef: food.food_ref,
-        quantityG: grams,
-        kcal: m.kcal,
-        proteinG: m.proteinG,
-        carbsG: m.carbsG,
-        fatG: m.fatG,
-        fibreG: m.fibreG,
-      });
-      await upsertSlotRecent(userId, { mealSlot: slotKey, foodRef: food.food_ref, quantityG: grams });
-      await load();
-      toast.show(`${food.name ?? 'Food'} added.`, {
-        variant: 'undo',
-        action: { label: 'Undo', onPress: async () => { try { await deleteFoodEntry(id, userId); await load(); } catch (_) { /* already gone */ } } },
-      });
-    } catch (_) {
-      toast.show("Couldn't add that. Try again.", { variant: 'error' });
-    } finally {
-      loggingUsualRef.current = false;
-    }
-  }, [canWrite, userId, selectedDate, load, toast]);
+  // A remembered food is only a preselection. The shared detail sheet still
+  // confirms grams, meal and date before its normal write path runs.
+  const onLogUsual = useCallback((food, slotKey) => {
+    if (!userId || !food || !canWrite()) return;
+    navigation.navigate('FoodSearch', {
+      entryDate: selectedDate,
+      mealSlot: slotKey,
+      preselectedFood: food,
+    });
+  }, [canWrite, userId, selectedDate, navigation]);
 
   // Founder must-fix #6 phase 2: a genuine meal suggestion for an empty
   // pre/post-workout slot, not just a visible-but-empty card. Reuses the

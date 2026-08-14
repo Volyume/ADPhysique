@@ -99,6 +99,13 @@ describe('maxApplicableBumpKcal — the UI ceiling matches what plan applies', (
     expect(maxApplicableBumpKcal({})).toBe(0);
     expect(maxApplicableBumpKcal({ perDayBaseKcal: week(2600), bigDayKey: 'nope', floorKcal: 1500, bandMaxKcal: 2860 })).toBe(0);
   });
+
+  test('returns 0 when any base day is already below its floor', () => {
+    expect(maxApplicableBumpKcal({
+      perDayBaseKcal: { mon: 1700, tue: 1700, sat: 1400 },
+      bigDayKey: 'sat', floorKcal: 1500, bandMaxKcal: 2000,
+    })).toBe(0);
+  });
 });
 
 describe('planCalorieBank — refuses unsafe / pointless requests (writes nothing)', () => {

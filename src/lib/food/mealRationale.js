@@ -82,9 +82,9 @@ export function explainFood(reason) {
  * @param {object} ctx { excludedByUser, excludedByAllergen, excludedByDiet }
  */
 export function explainAbsence({ excludedByUser, excludedByAllergen, excludedByDiet } = {}) {
-  if (excludedByUser) return 'You asked us not to suggest this food.';
   if (excludedByAllergen) return 'This does not fit the allergens you avoid.';
   if (excludedByDiet) return 'This does not fit the diet you have chosen.';
+  if (excludedByUser) return 'You asked us not to suggest this food.';
   return null;
 }
 

@@ -635,13 +635,12 @@ export async function setMealPinOnActivePlan(userId, profile, { mealId, pinned, 
 
   if (!meal) return { plan: active.plan, action: CONTINUITY_ACTION.KEEP, changed: false, conflict: 'no_slot' };
 
-  // The user's own rules come first, even over their own pin.
-  // chosenByUser: pinning is the user naming their own meal, so a restricted
-  // diet does not block it (see savedMealAllowed). Allergen tags and explicit
-  // exclusions still do.
+  // The user's current hard rules come first, even over an older pin. A saved
+  // template the app cannot verify under a restricted diet remains available
+  // for manual logging but cannot be inserted into a generated plan.
   const allowed = Array.isArray(meal.components)
     ? mealAllowed(meal, prefs)
-    : savedMealAllowed(meal, prefs, { chosenByUser: true });
+    : savedMealAllowed(meal, prefs);
   if (!allowed) {
     return { plan: active.plan, action: CONTINUITY_ACTION.KEEP, changed: false, conflict: 'not_allowed' };
   }

@@ -87,12 +87,12 @@ describe('INSUFFICIENT DATA IS AN ANSWER', () => {
     expect(out.find((o) => o.key === 'calories')).toBeUndefined();
   });
 
-  test('a partial diary produces figures, but labelled as partial', () => {
+  test('a partial diary states coverage but suppresses unsupported conclusions', () => {
     const { days, rollups, list } = windowOf(14, 6);
     const out = buildInsights({ coverage: loggingCoverage(days, rollups), rollups: list, targets: TARGETS });
     expect(out[0].reliable).toBe(false);
     expect(out[0].body).toMatch(/partial picture/i);
-    expect(out.length).toBeGreaterThan(1);
+    expect(out.map((item) => item.key)).toEqual(['coverage']);
   });
 
   test('a well-logged diary says the coaching can lean on it', () => {

@@ -19,8 +19,6 @@
  */
 import { create, act } from 'react-test-renderer';
 
-const mockToastShow = jest.fn();
-
 jest.mock('../../store/useAppStore', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('zustand/react/shallow', () => ({ useShallow: (fn) => fn }));
 // The screen's renderEmpty() now goes through the shared EmptyState -> Button
@@ -35,7 +33,7 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: (cb) => { const React = require('react'); React.useEffect(() => cb(), [cb]); },
 }));
-jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
+jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: jest.fn() }) }));
 jest.mock('../../components/Skeleton', () => ({ SkeletonRow: () => null }));
 jest.mock('../../components/food/CuratedMealSheet', () => () => null);
 jest.mock('../../components/food/FoodDetailSheet', () => () => null);
@@ -97,7 +95,6 @@ jest.mock('../../lib/food/waterfall', () => ({ searchFoods: jest.fn(() => Promis
 jest.mock('../../lib/food/sources/localCache', () => ({ resolveFoodRef: jest.fn(() => Promise.resolve(null)) }));
 
 import useAppStore from '../../store/useAppStore';
-import { applySavedMealToDiary, deleteFoodEntry } from '../../lib/food/db';
 import FoodSearchScreen from '../FoodSearchScreen';
 
 const store = { user: { id: 'u1' }, userProfile: {}, accessibility: { energyUnit: 'kcal' } };
@@ -119,8 +116,6 @@ function mountScreen(route) {
 beforeEach(() => {
   jest.clearAllMocks();
   capturedListProps = null;
-  applySavedMealToDiary.mockResolvedValue({ logged: 2, entryIds: ['e1', 'e2'] });
-  deleteFoodEntry.mockResolvedValue(undefined);
   useAppStore.mockImplementation((selector) => selector(store));
 });
 
@@ -136,8 +131,8 @@ describe('T1: saved meals join the ranked "Add again" relog pool', () => {
     expect(keys).toEqual(expect.arrayContaining(['recents-off:chicken', 'recents-meal:sm-1']));
   });
 
-  test('tapping the meal row logs it through applySavedMealToDiary (fan-out), not the single-food scale-and-log path', async () => {
-    mountScreen(ROUTE);
+  test('tapping the meal row opens its confirmation surface without logging', async () => {
+    const nav = mountScreen(ROUTE);
     await flush();
 
     const item = capturedListProps.data.find((d) => d.key === 'recents-meal:sm-1');
@@ -147,43 +142,13 @@ describe('T1: saved meals join the ranked "Add again" relog pool', () => {
     expect(row.props.onLongPress).toBeUndefined();
     expect(row.props.onAdd).toBeUndefined();
 
-    await act(async () => { await row.props.onPress(); });
-
-    expect(applySavedMealToDiary).toHaveBeenCalledWith('u1', 'sm-1', { mealSlot: 'dinner', entryDate: '2026-07-03' });
-    expect(mockToastShow).toHaveBeenCalledWith('Go-to dinner added.', expect.objectContaining({
-      variant: 'undo',
-      action: expect.objectContaining({ label: 'Undo', onPress: expect.any(Function) }),
-    }));
-  });
-
-  test('Undo on a saved-meal relog removes every entry the meal created, not just one', async () => {
-    mountScreen(ROUTE);
-    await flush();
-
-    const item = capturedListProps.data.find((d) => d.key === 'recents-meal:sm-1');
-    const row = capturedListProps.renderItem({ item });
-    await act(async () => { await row.props.onPress(); });
-
-    const [, opts] = mockToastShow.mock.calls[0];
-    await act(async () => { await opts.action.onPress(); });
-    expect(deleteFoodEntry).toHaveBeenCalledWith('e1', 'u1');
-    expect(deleteFoodEntry).toHaveBeenCalledWith('e2', 'u1');
-  });
-
-  test('a fast double-tap cannot log the meal twice', async () => {
-    mountScreen(ROUTE);
-    await flush();
-
-    const item = capturedListProps.data.find((d) => d.key === 'recents-meal:sm-1');
-    const row = capturedListProps.renderItem({ item });
-    await act(async () => {
-      await Promise.all([row.props.onPress(), row.props.onPress()]);
+    await act(async () => { row.props.onPress(); });
+    expect(nav.navigate).toHaveBeenCalledWith('MyMeals', {
+      mealSlot: 'dinner', entryDate: '2026-07-03', confirmMealId: 'sm-1',
     });
-
-    expect(applySavedMealToDiary).toHaveBeenCalledTimes(1);
   });
 
-  test('a single-food row (recents/favourites/frequents) keeps its existing one-tap re-log contract unchanged', async () => {
+  test('a single-food repeat row opens the portion confirmation sheet', async () => {
     mountScreen(ROUTE);
     await flush();
 
@@ -192,7 +157,7 @@ describe('T1: saved meals join the ranked "Add again" relog pool', () => {
     const row = capturedListProps.renderItem({ item });
     expect(typeof row.props.onPress).toBe('function');
     expect(typeof row.props.onLongPress).toBe('function');
-    expect(row.props.longPressHint).toBe('Long-press to change the portion');
+    expect(row.props.longPressHint).toBeUndefined();
   });
 
   test('a recipe row (already food-shaped via resolveFoodRef) is not treated as a meal row', async () => {
@@ -207,6 +172,6 @@ describe('T1: saved meals join the ranked "Add again" relog pool', () => {
     const row = capturedListProps.renderItem({ item });
     expect(typeof row.props.onPress).toBe('function');
     expect(typeof row.props.onLongPress).toBe('function');
-    expect(row.props.longPressHint).toBe('Long-press to change the portion');
+    expect(row.props.longPressHint).toBeUndefined();
   });
 });

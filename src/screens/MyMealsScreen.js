@@ -2,8 +2,8 @@
  * MyMealsScreen
  *
  * The user's saved meals. A saved meal is a named
- * bundle of foods logged together; tapping one logs every food in it to
- * the diary at the slot + date the screen was opened with. Reached from
+ * bundle of foods logged together; tapping one opens a confirmation for the
+ * slot + date the screen was opened with. Reached from
  * the food search Saved meals entry, like Recipes.
  *
  * Create happens elsewhere: from the diary multi-select toolbar's "Save
@@ -13,11 +13,9 @@
  * deleteSavedMeal from src/lib/food/db.js. The sync layer keeps the
  * cloud saved_meals table in step (migration 015).
  *
- * C6 (Wave A, 2026-07-03): logging a meal used to gate behind an
- * appAlert confirm dialog. That's gone, tapping a row now logs
- * immediately (optimistic write) and shows a success + Undo toast, the
- * same contract as DiaryScreen's onLogUsual and FoodSearchScreen's
- * confirmLog. A saved meal fans out into MULTIPLE food_entries rows, so
+ * A saved meal shortcut is preselection, not evidence that the remembered
+ * portions were eaten. The in-screen sheet confirms before the write. A saved
+ * meal fans out into MULTIPLE food_entries rows, so
  * Undo must delete every one of them, not just the first; see
  * applySavedMealToDiary's `entryIds`.
  *
@@ -25,7 +23,7 @@
  */
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -71,6 +69,7 @@ export default function MyMealsScreen({ navigation, route }) {
   const [loadError, setLoadError] = useState(false);
   const [renaming, setRenaming] = useState(null); // { id, name } | null
   const [renameText, setRenameText] = useState('');
+  const [confirming, setConfirming] = useState(null); // saved meal | null
   // L05-MM1 (design audit 2026-07-09, decision D6): read-only inspect sheet
   // for a saved meal's contents. Holds the already-loaded list item, so no
   // extra read is needed to open it.
@@ -93,13 +92,22 @@ export default function MyMealsScreen({ navigation, route }) {
 
   useFocusEffect(useCallback(() => { reload(); }, [reload]));
 
-  // C6: one-tap log, no confirm dialog. Optimistic write + a success + Undo
-  // toast, exactly the DiaryScreen.onLogUsual / FoodSearchScreen.confirmLog
-  // contract. loggingRef guards a fast double-tap from minting the meal
-  // twice (mirrors loggingUsualRef / loggingPlateRef elsewhere in food).
+  // A recent-meal shortcut can route here with an exact template identity.
+  // It opens the same confirmation as a row tap and never logs on arrival.
+  useEffect(() => {
+    const id = route?.params?.confirmMealId;
+    if (!id || loading) return;
+    const meal = meals.find((m) => m.id === id);
+    if (meal) setConfirming(meal);
+    navigation.setParams({ confirmMealId: undefined });
+  }, [route?.params?.confirmMealId, loading, meals, navigation]);
+
+  // The explicit sheet action is the write boundary. loggingRef guards a fast
+  // double-tap from minting the meal twice.
   const loggingRef = useRef(null);
-  const onLog = useCallback(async (meal) => {
-    if (!userId || loggingRef.current) return;
+  const confirmLog = useCallback(async () => {
+    const meal = confirming;
+    if (!userId || !meal || loggingRef.current) return;
     loggingRef.current = meal.id;
     audit('food.savedMeal', { mealId: meal.id, mealSlot, itemCount: meal.itemCount });
     try {
@@ -116,6 +124,7 @@ export default function MyMealsScreen({ navigation, route }) {
             },
           },
         });
+        setConfirming(null);
         navigation.goBack();
       } else {
         toast.show('This meal has no foods in it.', { variant: 'info' });
@@ -125,7 +134,7 @@ export default function MyMealsScreen({ navigation, route }) {
     } finally {
       loggingRef.current = null;
     }
-  }, [userId, mealSlot, entryDate, navigation, toast]);
+  }, [confirming, userId, mealSlot, entryDate, navigation, toast]);
 
   function openMenu(meal) {
     appAlert(
@@ -184,18 +193,14 @@ export default function MyMealsScreen({ navigation, route }) {
   }
 
   function renderItem({ item }) {
-    // Haptics completion pass (2026-07-10): the row tap logs the meal
-    // directly (C6, no confirm step), excluded per the campaign's
-    // diary-marking/ED-pattern-detection rule -- left without an added
-    // haptic.
     return (
       <TouchableOpacity
         style={[styles.row, live.row]}
-        onPress={() => onLog(item)}
+        onPress={() => setConfirming(item)}
         onLongPress={() => openMenu(item)}
         accessibilityRole="button"
-        accessibilityLabel={`Log ${item.name}`}
-        accessibilityHint="Use the info button to view what's inside, or the more actions button to rename or delete"
+        accessibilityLabel={`Add ${item.name}`}
+        accessibilityHint="Opens confirmation. Use the info button to view what's inside, or more actions to rename or delete"
       >
         <View style={{ flex: 1 }}>
           <Text style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
@@ -269,6 +274,21 @@ export default function MyMealsScreen({ navigation, route }) {
       )}
 
       <BottomSheet
+        visible={!!confirming}
+        onClose={() => setConfirming(null)}
+        accessibilityLabel="Confirm saved meal"
+      >
+        <Text style={[styles.sheetTitle, live.sheetTitle]}>Add saved meal?</Text>
+        <Text style={[styles.confirmCopy, live.meta]}>
+          {confirming?.name ?? 'This meal'} will use its saved food portions. You can edit the diary entries afterwards.
+        </Text>
+        <View style={styles.sheetActions}>
+          <Button title="Cancel" variant="secondary" onPress={() => setConfirming(null)} fullWidth={false} />
+          <Button title="Add meal" onPress={confirmLog} fullWidth={false} />
+        </View>
+      </BottomSheet>
+
+      <BottomSheet
         visible={!!renaming}
         onClose={() => setRenaming(null)}
         keyboardAvoiding
@@ -312,6 +332,7 @@ const styles = StyleSheet.create({
   },
   name: { ...type.bodyStrong, color: colors.textPrimary },
   meta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
+  confirmCopy: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.sm },
   rowActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginLeft: spacing.md },
   empty: {
     flex: 1, justifyContent: 'center', alignItems: 'center',

@@ -147,7 +147,7 @@ export function mealAllowed(meal, prefs) {
  *
  * Meal shape: { items: [{ foodRef, name }] }. Pure.
  */
-export function savedMealAllowed(meal, prefs, { chosenByUser = false } = {}) {
+export function savedMealAllowed(meal, prefs) {
   if (!meal) return false;
   const p = normalisePreferences(prefs);
   const items = Array.isArray(meal.items) ? meal.items : null;
@@ -159,15 +159,10 @@ export function savedMealAllowed(meal, prefs, { chosenByUser = false } = {}) {
   // that says chicken is not vegan. So for a meal the user assembled from
   // arbitrary logged food, the app genuinely cannot verify diet compatibility.
   //
-  // The honest split is by WHO IS CHOOSING:
-  //   - GENERATING a plan is the app choosing. Under a restricted diet it must
-  //     not place a meal it cannot verify, so saved meals and recipes are not
-  //     auto-placed. They stay fully usable for logging, and for pinning.
-  //   - PINNING is the user choosing, by name. Diet is a preference they are
-  //     asserting about their own meal, so it does not block them.
-  // Allergen tags bind in BOTH cases: those are a safety matter and they ARE
-  // judgeable on curated refs.
-  if (restrictedDiet && !chosenByUser) return false;
+  // Generation is the app choosing, including when it considers a previously
+  // pinned template. Under a restricted diet it must not place a meal it cannot
+  // verify. The historical saved meal stays fully usable for manual logging.
+  if (restrictedDiet) return false;
 
   // An ingredient the app cannot see inside (a barcode item, a custom food)
   // carries no tag data. With an allergen named, placing a meal we cannot
@@ -176,6 +171,9 @@ export function savedMealAllowed(meal, prefs, { chosenByUser = false } = {}) {
   if (!items || items.length === 0) return !opaqueIsUnsafe;
   for (const it of items) {
     const ref = typeof it?.foodRef === 'string' ? it.foodRef : '';
+    // Exact opaque/canonical refs remain valid Don't Suggest identities even
+    // when their diet/allergen metadata is not locally inspectable.
+    if (p.excludeFoodKeys.includes(ref)) return false;
     if (ref.startsWith('curated:')) {
       if (!foodAllowed(ref.slice('curated:'.length), p)) return false;
     } else if (opaqueIsUnsafe) {

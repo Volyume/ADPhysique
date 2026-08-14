@@ -67,6 +67,10 @@ export function planCalorieBank({
   if (keys.some((k) => !isNum(perDayBaseKcal[k]))) return fail('invalid_input');
   if (!isNum(requestedBumpKcal) || requestedBumpKcal <= 0) return fail('too_small');
 
+  // Banking may never legitimise an already-unsafe week. This includes the
+  // chosen big day: adding calories does not make a below-floor base valid.
+  if (keys.some((k) => perDayBaseKcal[k] < floorKcal)) return fail('floor');
+
   const others = keys.filter((k) => k !== bigDayKey);
   const n = others.length;
 
@@ -122,6 +126,7 @@ export function maxApplicableBumpKcal({
   if (keys.length < 2 || !keys.includes(bigDayKey)) return 0;
   if (!isNum(floorKcal) || !isNum(bandMaxKcal) || !isNum(maxBankDelta)) return 0;
   if (keys.some((k) => !isNum(perDayBaseKcal[k]))) return 0;
+  if (keys.some((k) => perDayBaseKcal[k] < floorKcal)) return 0;
 
   const others = keys.filter((k) => k !== bigDayKey);
   const n = others.length;
@@ -224,12 +229,12 @@ export function applyBankToTarget(targets, deltaKcal) {
   if (!targets || !deltaKcal) return targets;
   const baseCarbsG = Number(targets.carbsG) || 0;
   const clampedCarbsG = Math.max(0, Math.round(baseCarbsG + deltaKcal / KCAL_PER_G_CARB));
-  // Shift kcal only by what carbs actually absorbed, so the displayed kcal
-  // stays consistent with protein·4 + carbs·4 + fat·9 when carbs clamp at 0.
-  const effectiveDeltaKcal = (clampedCarbsG - baseCarbsG) * KCAL_PER_G_CARB;
   return {
     ...targets,
-    targetKcal: Math.round((Number(targets.targetKcal) || 0) + effectiveDeltaKcal),
+    // The delta map is the exact weekly contract. The whole-gram carb display
+    // may round (or clamp at zero), but must not rewrite that authoritative
+    // calorie delta and make the displayed weekly total drift.
+    targetKcal: Math.round((Number(targets.targetKcal) || 0) + deltaKcal),
     carbsG: clampedCarbsG,
   };
 }
