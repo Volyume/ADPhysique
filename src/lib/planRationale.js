@@ -125,6 +125,10 @@ export function buildChangeReceipt(decisions = []) {
       workout: d.workout ?? null,
       reason: d.reason ?? null,
       why: explainReason(d.reason),
+      prescriptionChange: d.prescriptionChange ?? null,
+      prescriptionCopy: d.prescriptionChange
+        ? `Rep target changes to ${d.prescriptionChange.repMin}-${d.prescriptionChange.repMax}.`
+        : null,
     };
     if (d.outcome === SLOT_OUTCOME.RETAINED) {
       stays.push({ ...line, insteadOfName: d.insteadOfName ?? null });
@@ -135,7 +139,12 @@ export function buildChangeReceipt(decisions = []) {
     }
   }
 
-  return { stays, changes, added, headline: receiptHeadline(stays.length, changes.length) };
+  const prescriptionCount = stays.filter(s => s.prescriptionChange).length;
+  return {
+    stays, changes, added,
+    prescriptionCount,
+    headline: receiptHeadline(stays.length, changes.length, prescriptionCount),
+  };
 }
 
 /**
@@ -144,8 +153,11 @@ export function buildChangeReceipt(decisions = []) {
  * Never announces that the programme HAS changed: the receipt is shown
  * before the user confirms.
  */
-export function receiptHeadline(stayCount, changeCount) {
+export function receiptHeadline(stayCount, changeCount, prescriptionCount = 0) {
   if (changeCount === 0) {
+    if (prescriptionCount > 0) {
+      return `${prescriptionCount} rep target${prescriptionCount === 1 ? '' : 's'} would change. Your exercises stay.`;
+    }
     return 'Nothing is changing. Your plan is still producing good evidence.';
   }
   const c = `${changeCount} ${changeCount === 1 ? 'exercise' : 'exercises'}`;

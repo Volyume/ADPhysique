@@ -302,7 +302,10 @@ describe('C10L: ledger provenance advances without rewriting history', () => {
     // An algorithmVersion mismatch must not force an old block to recompute:
     // that would rewrite a historical decision the user already acted on.
     const SRC = read('lib/blockLedgerRunner.js');
-    expect(SRC).toMatch(/if \(stored\?\.version === LEDGER_VERSION\) return stored;/);
+    expect(SRC).toMatch(/stored\?\.version === LEDGER_VERSION/);
+    // The current finished block may recompute once to add the immutable
+    // programme signature; historical ledgers still return unchanged.
+    expect(SRC).toMatch(/stored\?\.programmeSignature \|\| !isCurrent/);
     expect(SRC).not.toMatch(/stored\?\.algorithmVersion/);
     // And the sync applier compares the same shape version.
     expect(read('lib/database.js')).not.toMatch(/algorithmVersion !== LEDGER_ALGORITHM_VERSION/);

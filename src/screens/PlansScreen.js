@@ -457,7 +457,10 @@ export default function PlansScreen({ navigation }) {
       const seedRanges = await buildSeedRangesForNextBlock(user.id, {
         intent: 'adjust', userProfile, tier,
       }).catch(() => null);
-      const dry = await generatePlanDryRun(user.id, userProfile).catch(() => null);
+      const programmeProposal = blockAdvice?.programmeReview ?? null;
+      const dry = await generatePlanDryRun(user.id, userProfile, {
+        continuityProposal: programmeProposal,
+      }).catch(() => null);
       const decisions = dry?.ok ? (dry.continuity?.decisions ?? []) : [];
       const receipt = decisions.length ? buildChangeReceipt(decisions) : null;
       // Only a genuine exercise change earns a rebuilt programme. When the
@@ -467,10 +470,13 @@ export default function PlansScreen({ navigation }) {
       const exerciseChanges = receipt
         ? receipt.changes.length + receipt.added.length
         : 0;
+      const prescriptionChanges = receipt?.prescriptionCount ?? 0;
       setBlockReview({
         seedRanges,
+        programmeProposal,
         receipt,
         exerciseChanges,
+        prescriptionChanges,
         volume: buildSeedReceipt({ ranges: seedRanges?.ranges, ledger: ledgerRecordRef.current }),
         verdictCopy: blockAdvice?.programmeReview?.copy ?? null,
         dryFailed: !dry?.ok,
@@ -488,7 +494,7 @@ export default function PlansScreen({ navigation }) {
    * than inferred, so the Repeat route cannot acquire a refinement by a
    * change somewhere else in this file.
    */
-  async function runBlockActivation({ intent, refine }) {
+  async function runBlockActivation({ intent, refine, review = null }) {
     // eslint-disable-next-line global-require
     const { buildSeedRangesForNextBlock, recordSeedOutcome } = require('../lib/blockLedgerRunner');
     // FQ-2 (D96): only the 'adjust' option applies the full ledger, and only
@@ -498,7 +504,7 @@ export default function PlansScreen({ navigation }) {
     // repeat intent may never rebuild the programme, whatever it was asked
     // for. This is the assertion the epoch module's own header promised.
     const mayRefine = refine === true && seedIntent === 'adjust';
-    const seedRanges = blockReview?.seedRanges ?? await buildSeedRangesForNextBlock(user.id, {
+    const seedRanges = review?.seedRanges ?? blockReview?.seedRanges ?? await buildSeedRangesForNextBlock(user.id, {
       intent: seedIntent, userProfile, tier,
     }).catch(() => null);
 
@@ -511,6 +517,7 @@ export default function PlansScreen({ navigation }) {
       const result = await generateAndSavePlan(user.id, userProfile, {
         ledger: seedRanges,
         allowLearnedCarry: true,
+        continuityProposal: review?.programmeProposal ?? blockReview?.programmeProposal ?? null,
       });
       if (!result?.ok) {
         // The refinement failed. Fall back to the literal reactivation the
@@ -548,11 +555,12 @@ export default function PlansScreen({ navigation }) {
 
   /** Confirm the reviewed next block. */
   async function confirmNextBlockReview() {
-    const refine = (blockReview?.exerciseChanges ?? 0) > 0;
+    const reviewed = blockReview;
+    const refine = ((reviewed?.exerciseChanges ?? 0) + (reviewed?.prescriptionChanges ?? 0)) > 0;
     setBlockReview(null);
     try {
       logInfo('PlansScreen.blockRestart', `intent=adjust refine=${refine}`);
-      await runBlockActivation({ intent: 'adjust', refine });
+      await runBlockActivation({ intent: 'adjust', refine, review: reviewed });
     } catch (e) {
       logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id, intent: 'adjust' });
       toast.show("Couldn't restart plan, try again", { variant: 'error' });
@@ -1793,6 +1801,7 @@ export default function PlansScreen({ navigation }) {
             {blockReview.receipt.stays.slice(0, 6).map((l) => (
               <Text key={`rv-stay-${l.exerciseName}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
                 {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
+                {l.prescriptionCopy ? ` ${l.prescriptionCopy}` : ''}
               </Text>
             ))}
             {blockReview.receipt.stays.length > 6 ? (
@@ -1842,11 +1851,21 @@ export default function PlansScreen({ navigation }) {
           </View>
         ) : null}
 
-        {blockReview && blockReview.exerciseChanges === 0 ? (
+        {blockReview
+          && blockReview.exerciseChanges === 0
+          && blockReview.prescriptionChanges === 0 ? (
           <Text style={[styles.receiptRowBody, live.receiptRowBody]}>
             Your workouts stay exactly as they are. Only your set targets move.
           </Text>
         ) : null}
+
+        {blockReview
+          && blockReview.exerciseChanges === 0
+          && blockReview.prescriptionChanges > 0 ? (
+            <Text style={[styles.receiptRowBody, live.receiptRowBody]}>
+              Your exercises stay. The rep target changes shown above will be applied.
+            </Text>
+          ) : null}
 
         <Button
           variant="primary"

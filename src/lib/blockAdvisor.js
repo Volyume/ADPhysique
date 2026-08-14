@@ -29,6 +29,8 @@
 
 import { getRecentCheckins } from './database';
 import { getBlockStatus } from './mesocycle';
+import { planHeadingName } from './planDisplay';
+import { structureSignature } from './programmeEpoch';
 
 // ---------------------------------------------------------------------------
 // Readiness computation
@@ -462,7 +464,8 @@ export function applyAdjustEvidence(nextBlock, preview, { finished = true } = {}
 async function buildProgrammeReview(userId, activeBlock) {
   // eslint-disable-next-line global-require
   const {
-    getActivePlan, getRoutinesForPlan, getRoutineExercisesWithDetails, getAllMesocycles,
+    getActivePlan, getAllProgrammes, getRoutinesForPlan,
+    getRoutineExercisesWithDetails, getAllMesocycles,
   } = require('./database');
   // eslint-disable-next-line global-require
   const { loadExerciseIntentState, exerciseEvidence, isExcluded, isAvoidedThisBlock,
@@ -490,6 +493,10 @@ async function buildProgrammeReview(userId, activeBlock) {
     structure.push({ name: r.name, exercises });
   }
   if (slots.length === 0) return null;
+  const currentStructure = {
+    splitType: routines.find(r => r?.splitType)?.splitType ?? null,
+    workouts: structure,
+  };
 
   const intentState = await loadExerciseIntentState(userId, {
     activeMesocycleId: activeBlock?.id ?? null,
@@ -504,25 +511,119 @@ async function buildProgrammeReview(userId, activeBlock) {
       autoEligible: undefined,
       sessions: facts.sessions,
       progressing: facts.progression === 'progressing',
-      plateau: facts.progression === 'plateau',
+      plateau: facts.plateau === true,
+      // The shared plateau law already decides the smaller sufficient
+      // intervention: two continuous stalls try a rep-range change; three
+      // justify an exercise swap. Carry the exact reviewed prescription so
+      // the writer can apply it rather than reconstructing it from prose.
+      prescriptionFix: facts.plateauResolution === 'change_rep_range',
+      prescriptionChange: facts.plateauResolution === 'change_rep_range'
+        ? { repMin: 15, repMax: 20 }
+        : null,
       establishedPersonalFit: facts.maturity === EVIDENCE_MATURITY.ESTABLISHED,
       // Elective variation is offered only once the epoch has the history
       // for it; the engine gates that itself and refuses it outright for a
       // still-progressing movement.
-      systematicCandidate: facts.progression !== 'progressing',
+      // Insufficient evidence is uncertainty, never a licence for novelty.
+      // 'holding' has the shared model's minimum comparisons and may become
+      // eligible for purposeful variation once the epoch itself is mature.
+      systematicCandidate: facts.progression === 'holding' && facts.sufficient,
     };
   };
 
   let history = [];
+  let programmes = [];
   try {
-    history = (await getAllMesocycles(userId)) ?? [];
-  } catch (_) { history = []; }
+    [history, programmes] = await Promise.all([
+      getAllMesocycles(userId), getAllProgrammes(userId),
+    ]);
+  } catch (_) { history = []; programmes = []; }
+
+  // Build honest, newest-first epoch history. The old production path
+  // stamped the CURRENT structure onto every historical block and marked
+  // every row completed, so an abandoned or unrelated programme inflated
+  // the epoch. New ledgers carry an immutable signature snapshot. Older
+  // rows fall back conservatively to the archived programme whose name and
+  // creation time best match the block; an unknown structure stops the run.
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const asMs = (v) => {
+    const n = typeof v === 'number' ? v : new Date(v).getTime();
+    return Number.isFinite(n) ? n : null;
+  };
+  const activeStatus = getBlockStatus(
+    activeBlock?.startDate ?? activeBlock?.createdAt ?? Date.now(),
+    activeBlock?.plannedWeeks ?? activeBlock?.durationWeeks ?? 5,
+  );
+  const completedPastBlock = (m) => {
+    if (m?.blockLedger) return true;
+    const start = asMs(m?.startDate);
+    const end = asMs(m?.endDate);
+    const weeks = Number(m?.plannedWeeks ?? m?.durationWeeks ?? 0);
+    // One-day tolerance covers local-date storage across a DST boundary.
+    return start != null && end != null && weeks > 0
+      && end >= start + weeks * 7 * DAY_MS - DAY_MS;
+  };
+  const userProgrammes = (programmes ?? []).filter(
+    p => p?.userId === userId && !(p?.isLibrary === 1 || p?.isLibrary === true),
+  );
+  const structureCache = new Map([[plan.id, currentStructure]]);
+  const loadStructure = async (programme) => {
+    if (!programme?.id) return null;
+    if (structureCache.has(programme.id)) return structureCache.get(programme.id);
+    const days = [];
+    const rs = await getRoutinesForPlan(programme.id);
+    for (const r of rs ?? []) {
+      // eslint-disable-next-line no-await-in-loop
+      const rows = await getRoutineExercisesWithDetails(r.id);
+      days.push({
+        name: r.name,
+        exercises: (rows ?? []).map(row => ({ exerciseId: row?.exercise?.id ?? null })),
+      });
+    }
+    const value = days.length ? {
+      splitType: rs.find(r => r?.splitType)?.splitType ?? null,
+      workouts: days,
+    } : null;
+    structureCache.set(programme.id, value);
+    return value;
+  };
+  const signatureHistory = [];
+  for (const m of history ?? []) {
+    if (m?.id === activeBlock?.id) {
+      if (activeStatus?.awaitingDecision) {
+        signatureHistory.push({ completed: true, signature: structureSignature(currentStructure) });
+      }
+      continue;
+    }
+    if (!completedPastBlock(m)) {
+      signatureHistory.push({ completed: false, signature: null });
+      break;
+    }
+    let storedSignature = null;
+    try { storedSignature = JSON.parse(m?.blockLedger ?? 'null')?.programmeSignature ?? null; } catch (_) {}
+    if (storedSignature) {
+      signatureHistory.push({ completed: true, signature: storedSignature });
+      continue;
+    }
+    const blockAt = asMs(m?.createdAt ?? m?.startDate) ?? Infinity;
+    const candidates = userProgrammes
+      .filter(p => (p.name === m?.name || planHeadingName(p.name) === m?.name)
+        && (asMs(p.createdAt) ?? 0) <= blockAt + DAY_MS)
+      .sort((a, b) => (asMs(b.createdAt) ?? 0) - (asMs(a.createdAt) ?? 0));
+    // eslint-disable-next-line no-await-in-loop
+    const historicalStructure = await loadStructure(candidates[0] ?? null);
+    if (!historicalStructure) {
+      signatureHistory.push({ completed: false, signature: null });
+      break;
+    }
+    signatureHistory.push({ completed: true, signature: structureSignature(historicalStructure) });
+  }
 
   const proposal = proposeNextBlock({
     slots,
     evidenceFor,
-    history: history.map(() => ({ structure: { workouts: structure }, completed: true })),
-    currentStructure: { workouts: structure },
+    history: signatureHistory,
+    currentStructure,
   });
   // isAutoEligible is imported for the evidence shape's completeness and is
   // deliberately not applied here: at a block boundary an exercise the user

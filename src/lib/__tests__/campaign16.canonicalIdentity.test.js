@@ -175,7 +175,10 @@ describe('C16-9 the fallback pool cannot offer what the catalogue lacks', () => 
     const fs = require('fs');
     const path = require('path');
     const src = fs.readFileSync(path.resolve(__dirname, '../planAutoGen.js'), 'utf8');
-    expect(src).toMatch(/canonicalNames: canonicalNameSet\(allExercises\)/);
+    // The gate is built from the full catalogue. The optional second
+    // argument removes only ids the user has already reviewed and approved
+    // for replacement; ordinary intent filtering must never become the gate.
+    expect(src).toMatch(/canonicalNames: canonicalNameSet\(allExercises, replacementIds\)/);
     expect(src).not.toMatch(/canonicalNames: canonicalNameSet\(filteredLibrary/);
   });
 });

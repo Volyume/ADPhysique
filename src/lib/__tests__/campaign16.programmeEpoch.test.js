@@ -53,6 +53,16 @@ const ranBlocks = (n, signature = BASE) =>
 const productive = { progressing: true };
 
 describe('C16-E structural identity ignores what a block is allowed to change', () => {
+  test('the real generator/database workouts shape keeps its exercise identity', () => {
+    const productionShape = structureSignature({
+      splitType: programme().splitType,
+      workouts: programme().days,
+    });
+    expect(productionShape).toEqual(BASE);
+    expect(productionShape.exercises).toContain('bench');
+    expect(productionShape.exercises.length).toBeGreaterThan(0);
+  });
+
   test('sets, ramps, recovery and rep ranges are not part of the signature (14)', () => {
     // The amendment is explicit: changing volume must not reset the epoch.
     // The signature never sees these fields, so it cannot.
@@ -106,6 +116,18 @@ describe('C16-E structural identity ignores what a block is allowed to change', 
 });
 
 describe('C16-E the epoch counter counts real repeated exposure', () => {
+  test('an unrelated programme stops the consecutive epoch', () => {
+    const other = structureSignature({
+      splitType: 'push_pull_legs',
+      workouts: [{ name: 'Push', exercises: [{ exerciseId: 'other-press' }] }],
+    });
+    expect(countEpochBlocks(BASE, [
+      { signature: BASE, completed: true },
+      { signature: other, completed: true },
+      { signature: BASE, completed: true },
+    ])).toBe(1);
+  });
+
   test('only COMPLETED blocks count', () => {
     // An abandoned block is not evidence, and counting it would hand
     // someone a structural review they never trained for.

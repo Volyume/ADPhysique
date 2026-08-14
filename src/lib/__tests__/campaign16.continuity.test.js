@@ -34,6 +34,7 @@ const { SLOT_REASON } = require('../programmeEpoch');
 const EX = {
   bench:     { id: 'e-bench',    name: 'Barbell Bench Press', muscle: 'chest', family: 'flat' },
   dbBench:   { id: 'e-dbbench',  name: 'Dumbbell Bench Press', muscle: 'chest', family: 'flat' },
+  incline:   { id: 'e-incline',  name: 'Incline Dumbbell Press', muscle: 'chest', family: 'incline' },
   pulldown:  { id: 'e-pulldown', name: 'Lat Pulldown (Wide Grip)', muscle: 'back', family: 'vertical_pull' },
   chinUp:    { id: 'e-chinup',   name: 'Chin-Up', muscle: 'back', family: 'vertical_pull' },
   row:       { id: 'e-row',      name: 'Barbell Row (Bent Over)', muscle: 'back', family: 'upper_mid_row' },
@@ -238,6 +239,53 @@ describe('C16-5 elective variation is not initiated by a rebuild', () => {
     const path = require('path');
     const src = fs.readFileSync(path.resolve(__dirname, '../planAutoGen.js'), 'utf8');
     expect(src).toMatch(/context: \{ epochBlocks: 0 \}/);
+  });
+
+  test('a reviewed mature-epoch replacement is consumed despite rebuild context zero', () => {
+    const reviewed = {
+      verdict: 'replace', reason: SLOT_REASON.SYSTEMATIC_VARIATION,
+    };
+    const { workouts, decisions } = run(
+      generatedWith(EX.chinUp), [incumbent(EX.pulldown)], productive(),
+      { verdictFor: () => reviewed },
+    );
+    expect(workouts[0].exercises[0].exerciseId).toBe(EX.chinUp.id);
+    expect(decisions[0]).toMatchObject({
+      outcome: SLOT_OUTCOME.REPLACED,
+      reason: SLOT_REASON.SYSTEMATIC_VARIATION,
+    });
+  });
+
+  test('a reviewed replacement survives when generation changes the muscle angle', () => {
+    const reviewed = {
+      verdict: 'replace', reason: SLOT_REASON.SYSTEMATIC_VARIATION,
+    };
+    const { workouts, decisions } = run(
+      generatedWith(EX.incline), [incumbent(EX.bench)], productive(),
+      { verdictFor: () => reviewed },
+    );
+    expect(workouts[0].exercises[0].exerciseId).toBe(EX.incline.id);
+    expect(decisions[0]).toMatchObject({
+      previousExerciseId: EX.bench.id,
+      exerciseId: EX.incline.id,
+      outcome: SLOT_OUTCOME.REPLACED,
+      reason: SLOT_REASON.SYSTEMATIC_VARIATION,
+    });
+  });
+
+  test('a reviewed prescription change reaches the generated row', () => {
+    const { workouts, decisions } = run(
+      generatedWith(EX.dbBench), [incumbent(EX.bench)], productive(),
+      { verdictFor: () => ({
+        verdict: 'keep_with_prescription_change',
+        reason: SLOT_REASON.PLATEAU,
+        prescriptionChange: { repMin: 15, repMax: 20 },
+      }) },
+    );
+    expect(workouts[0].exercises[0]).toMatchObject({
+      exerciseId: EX.bench.id, repMin: 15, repMax: 20,
+    });
+    expect(decisions[0].prescriptionChange).toEqual({ repMin: 15, repMax: 20 });
   });
 });
 

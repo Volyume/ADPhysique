@@ -44,6 +44,20 @@ describe('C16-LIVE job 10: the reason survives the save and reaches a screen', (
     expect(lib('planAutoGen.js')).toMatch(/ex\.selectionReason \?\? null/);
   });
 
+  test('the reason survives cloud backup and fresh-device restore', () => {
+    const sync = lib('sync.js');
+    const db = lib('database.js');
+    expect(sync).toMatch(/selection_reason: re\.selectionReason \?\? null/);
+    expect(sync).toMatch(/withoutSelectionReason/);
+    expect(db).toMatch(/re\.selection_reason \?\? null/);
+    const migration = fs.readFileSync(
+      path.join(__dirname, '..', '..', '..', 'supabase',
+        'migrate_139_routine_exercises_selection_reason.sql'),
+      'utf8',
+    );
+    expect(migration).toMatch(/ADD COLUMN IF NOT EXISTS selection_reason text/);
+  });
+
   test('a code is stored, not a sentence', () => {
     // Prose in the database ages badly and cannot be reworded or translated.
     const db = lib('database.js');
@@ -96,8 +110,11 @@ describe('C16-LIVE phase C: Continue With Adjustments applies its proposal', () 
   test('the review is built from the dry run of the generator the confirm runs', () => {
     // Anything else is a second description of the change, which is how a
     // preview starts lying.
-    expect(s()).toMatch(/generatePlanDryRun\(user\.id, userProfile\)/);
+    expect(s()).toMatch(/generatePlanDryRun\(user\.id, userProfile, \{[\s\S]{0,100}continuityProposal: programmeProposal/);
     expect(s()).toMatch(/buildChangeReceipt\(decisions\)/);
+    // The commit consumes the exact same decision record. Recomputing at
+    // epochBlocks: 0 was the false-delivery defect this audit reproduced.
+    expect(s()).toMatch(/generateAndSavePlan\(user\.id, userProfile, \{[\s\S]{0,180}continuityProposal:/);
   });
 
   test('a justified exercise change rebuilds the programme, with the ledger', () => {
@@ -106,8 +123,16 @@ describe('C16-LIVE phase C: Continue With Adjustments applies its proposal', () 
   });
 
   test('no exercise change means no churn: the same plan is reactivated', () => {
-    expect(s()).toMatch(/const refine = \(blockReview\?\.exerciseChanges \?\? 0\) > 0/);
+    expect(s()).toMatch(/const refine = \(\(reviewed\?\.exerciseChanges \?\? 0\) \+ \(reviewed\?\.prescriptionChanges \?\? 0\)\) > 0/);
     expect(s()).toMatch(/if \(mayRefine\) \{/);
+  });
+
+  test('a reviewed prescription change is applied rather than described only', () => {
+    const t = s();
+    expect(t).toMatch(/prescriptionChanges/);
+    expect(t).toContain('The rep target changes shown above will be applied.');
+    expect(lib('exercise/continuity.js')).toMatch(/repMin: prescriptionChange\.repMin/);
+    expect(lib('exercise/continuity.js')).toMatch(/repMax: prescriptionChange\.repMax/);
   });
 
   test('the finished block\'s own programme is not mutated into the new one', () => {
@@ -117,6 +142,15 @@ describe('C16-LIVE phase C: Continue With Adjustments applies its proposal', () 
     expect(auto).toMatch(/createProgramme/);
     expect(auto).toMatch(/archiveOtherUserPlans/);
     expect(s()).not.toMatch(/deleteProgrammeCascade/);
+  });
+
+  test('production epoch evidence is real, and uncertainty cannot trigger variation', () => {
+    const advisor = lib('blockAdvisor.js');
+    expect(advisor).toMatch(/currentStructure = \{[\s\S]{0,100}workouts: structure/);
+    expect(advisor).not.toMatch(/history\.map\(\(\) => \(\{ structure:/);
+    expect(advisor).toMatch(/systematicCandidate: facts\.progression === 'holding' && facts\.sufficient/);
+    expect(advisor).toMatch(/plateau: facts\.plateau === true/);
+    expect(lib('blockLedgerRunner.js')).toMatch(/programmeSignature/);
   });
 });
 

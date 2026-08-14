@@ -214,7 +214,8 @@ describe('C10N: only a newly judged block can refresh actionability', () => {
 
   test('an already-stored ledger is reused, never recomputed by the passage of time', () => {
     const SRC = read('lib/blockLedgerRunner.js');
-    expect(SRC).toMatch(/if \(stored\?\.version === LEDGER_VERSION\) return stored;/);
+    expect(SRC).toMatch(/stored\?\.version === LEDGER_VERSION/);
+    expect(SRC).toMatch(/stored\?\.programmeSignature \|\| !isCurrent/);
     expect(SRC).not.toMatch(/stored\?\.algorithmVersion/);
   });
 });

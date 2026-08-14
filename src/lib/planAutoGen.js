@@ -351,12 +351,36 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
 }
 
 /** Every canonical name on this device, for the engine's fallback-pool gate. */
-function canonicalNameSet(allExercises) {
+function canonicalNameSet(allExercises, omittedIds = null) {
   const names = new Set();
   for (const ex of allExercises ?? []) {
+    if (omittedIds?.has(ex?.id)) continue;
     if (ex?.name && !(ex.isCustom === 1 || ex.isCustom === true)) names.add(ex.name);
   }
   return names.size > 0 ? names : null;
+}
+
+/** Existing exercise ids the reviewed block proposal requires replacing. */
+function reviewedReplacementIds(proposal) {
+  return new Set(
+    (proposal?.slots ?? [])
+      .filter(s => s?.exerciseId
+        && (s.verdict === 'replace' || s.verdict === 'remove_or_redistribute'))
+      .map(s => s.exerciseId),
+  );
+}
+
+/**
+ * Candidate library for the reviewed next block. A deterministic generator
+ * offered the incumbent again after the epoch engine had said REPLACE, so
+ * the receipt could claim "A to A" and no real change reached the user.
+ * Removing only the already-reviewed ids makes the generator choose the
+ * next valid exercise for the same role; preview and commit call this exact
+ * helper with the same proposal.
+ */
+function libraryForReviewedProposal(filteredLibrary, replacementIds) {
+  if (!replacementIds?.size) return filteredLibrary?.library ?? [];
+  return (filteredLibrary?.library ?? []).filter(ex => !replacementIds.has(ex?.id));
 }
 
 /**
@@ -369,7 +393,9 @@ function canonicalNameSet(allExercises) {
  * rebuild that loses continuity is worse than the previous behaviour but a
  * rebuild that fails is worse than both.
  */
-async function withContinuity(userId, plan, allExercises, intentState, filteredLibrary) {
+async function withContinuity(
+  userId, plan, allExercises, intentState, filteredLibrary, continuityProposal = null,
+) {
   try {
     const incumbents = await loadIncumbentSlots(userId);
     if (incumbents.length === 0) {
@@ -387,10 +413,18 @@ async function withContinuity(userId, plan, allExercises, intentState, filteredL
       if (!row?.primaryMuscle) return null;
       return slotKey(row.primaryMuscle, movementFamily(row.name, row.primaryMuscle, row.subregion ?? null));
     };
+    const reviewedById = new Map(
+      (continuityProposal?.slots ?? [])
+        .filter(s => s?.exerciseId)
+        .map(s => [s.exerciseId, s]),
+    );
     const { workouts, decisions } = applyContinuity({
       generated: plan.workouts,
       incumbents,
       evidenceFor: buildSlotEvidence(intentState, currentLibraryIds, exercisesById),
+      verdictFor: reviewedById.size > 0
+        ? exerciseId => reviewedById.get(exerciseId) ?? null
+        : null,
       familyOf,
       // A plan rebuild is not a block boundary, so no epoch history is
       // claimed here. That keeps elective variation switched off: this path
@@ -487,7 +521,7 @@ function attachBlockedSlots(result, blockedSlots) {
  * the error is 'plan_blocked_by_exclusions'.
  */
 export async function generateAndSavePlan(userId, profile, {
-  ledger = null, allowLearnedCarry = true,
+  ledger = null, allowLearnedCarry = true, continuityProposal = null,
 } = {}) {
   if (!userId) return { ok: false, error: 'No user' };
   const inputs = buildPlanInputs(profile);
@@ -512,13 +546,15 @@ export async function generateAndSavePlan(userId, profile, {
   // user has no intent stored, so generation is unchanged for those users.
   const intentState = await loadGenerationIntent(userId);
   const filteredLibrary = filterLibraryForGeneration(allExercises, intentState);
+  const replacementIds = reviewedReplacementIds(continuityProposal);
+  const generationLibrary = libraryForReviewedProposal(filteredLibrary, replacementIds);
 
   let plan;
   try {
     plan = generatePlan({
       ...inputs,
-      exerciseLibrary: filteredLibrary.library,
-      canonicalNames: canonicalNameSet(allExercises),
+      exerciseLibrary: generationLibrary,
+      canonicalNames: canonicalNameSet(allExercises, replacementIds),
     });
   } catch (e) {
     // C1 (pre-release sweep 2026-07-27, LANE C): the raw e.message used to be
@@ -541,7 +577,7 @@ export async function generateAndSavePlan(userId, profile, {
   // reads the plan that is about to be replaced. Doing it inside would be
   // reading the state the same transaction is in the middle of superseding.
   const continuity = await withContinuity(
-    userId, plan, allExercises, intentState, filteredLibrary,
+    userId, plan, allExercises, intentState, filteredLibrary, continuityProposal,
   );
   const planForWrite = { ...plan, workouts: continuity.workouts };
 
@@ -682,7 +718,7 @@ export async function generateAndSavePlan(userId, profile, {
  * blockedSlots }), so the preview shows the same "this slot needs your
  * choice" facts the commit would produce.
  */
-export async function generatePlanDryRun(userId, profile) {
+export async function generatePlanDryRun(userId, profile, { continuityProposal = null } = {}) {
   if (!userId) return { ok: false, error: 'No user' };
   const inputs = buildPlanInputs(profile);
   if (!inputs) return { ok: false, error: 'Profile incomplete' };
@@ -696,13 +732,15 @@ export async function generatePlanDryRun(userId, profile) {
   // cannot show an exercise the commit would refuse to seed.
   const intentState = await loadGenerationIntent(userId);
   const filteredLibrary = filterLibraryForGeneration(allExercises, intentState);
+  const replacementIds = reviewedReplacementIds(continuityProposal);
+  const generationLibrary = libraryForReviewedProposal(filteredLibrary, replacementIds);
 
   let plan;
   try {
     plan = generatePlan({
       ...inputs,
-      exerciseLibrary: filteredLibrary.library,
-      canonicalNames: canonicalNameSet(allExercises),
+      exerciseLibrary: generationLibrary,
+      canonicalNames: canonicalNameSet(allExercises, replacementIds),
     });
   } catch (e) {
     // C1 (pre-release sweep 2026-07-27, LANE C): same fix as
@@ -723,7 +761,7 @@ export async function generatePlanDryRun(userId, profile) {
   // C16 job 5: the preview must show the plan continuity produced, or the
   // user would be shown replacements the commit is not going to make.
   const continuity = await withContinuity(
-    userId, plan, allExercises, intentState, filteredLibrary,
+    userId, plan, allExercises, intentState, filteredLibrary, continuityProposal,
   );
   const planForWrite = { ...plan, workouts: continuity.workouts };
 

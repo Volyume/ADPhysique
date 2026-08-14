@@ -87,7 +87,8 @@ export function proposeNextBlock({
   const reviewDue = epochReviewDue(epochBlocks);
 
   const judged = slots.map((s) => {
-    const { verdict, reason } = slotVerdict(evidenceFor(s.exerciseId) ?? {}, {
+    const evidence = evidenceFor(s.exerciseId) ?? {};
+    const { verdict, reason } = slotVerdict(evidence, {
       epochBlocks, goalChanged, sessionLengthChanged,
     });
     return {
@@ -96,6 +97,11 @@ export function proposeNextBlock({
       workout: s.workout ?? null,
       verdict,
       reason,
+      // Exact values, produced with the verdict. The consumer applies this
+      // record; it must not reconstruct a prescription from the reason code.
+      prescriptionChange: verdict === SLOT_VERDICT.KEEP_WITH_PRESCRIPTION_CHANGE
+        ? (evidence.prescriptionChange ?? null)
+        : null,
     };
   });
 
@@ -204,6 +210,7 @@ export function reviewSections(proposal) {
       workout: s.workout,
       reason: s.reason,
       prescriptionChange: s.verdict === SLOT_VERDICT.KEEP_WITH_PRESCRIPTION_CHANGE,
+      prescription: s.prescriptionChange ?? null,
     })),
     changes: proposal.changes.map(s => ({
       exerciseId: s.exerciseId,

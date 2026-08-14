@@ -149,7 +149,13 @@ export const EPOCH_REVIEW_BLOCKS = 3;
  * review they have not earned, or hide one they have.
  */
 export function structureSignature(programme) {
-  const days = (programme?.days ?? [])
+  // The pure engine historically called these `days`; the real generator
+  // and database paths call them `workouts`. Accept both at this one
+  // boundary. Production previously passed `{ workouts }`, which collapsed
+  // every programme to an empty signature and made unrelated blocks look
+  // like one long epoch.
+  const sourceDays = programme?.days ?? programme?.workouts ?? [];
+  const days = sourceDays
     .map(d => ({
       name: d?.name ?? '',
       exercises: [...new Set((d?.exercises ?? [])

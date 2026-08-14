@@ -234,10 +234,11 @@ describe('PHASE 6 (D91-25 characterisation): the stored-ledger asymmetry, pinned
     expect(seed.source).toBe('ledger');
   });
 
-  test('the ledger runner is idempotent by version (the stored record is served, not recomputed)', () => {
+  test('the ledger runner preserves historical idempotency by version', () => {
     const src = read('lib/blockLedgerRunner.js');
     expect(src).toMatch(/if \(!force && meso\.blockLedger\)/);
-    expect(src).toMatch(/if \(stored\?\.version === LEDGER_VERSION\) return stored;/);
+    expect(src).toMatch(/stored\?\.version === LEDGER_VERSION/);
+    expect(src).toMatch(/stored\?\.programmeSignature \|\| !isCurrent/);
   });
 
   test('the runner passes the REAL overdue age when it does compute on return', () => {

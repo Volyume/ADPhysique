@@ -90,7 +90,9 @@ describe('no silent mesocycle creation', () => {
         const full = path.join(dir, f);
         if (fs.statSync(full).isDirectory()) { if (!full.includes('__tests__')) walk(full); continue; }
         if (!f.endsWith('.js')) continue;
-        if (pattern.test(fs.readFileSync(full, 'utf8'))) hits.push(path.relative(SRC_ROOT, full));
+        if (pattern.test(fs.readFileSync(full, 'utf8'))) {
+          hits.push(path.relative(SRC_ROOT, full).split(path.sep).join('/'));
+        }
       }
     };
     walk(SRC_ROOT);

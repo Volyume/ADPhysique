@@ -36,6 +36,9 @@ import {
   getCheckinsInRange,
   getMesocycleWeeks,
   getOpenEdPatternFlag,
+  getActivePlan,
+  getRoutinesForPlan,
+  getRoutineExercisesWithDetails,
   storeBlockLedger,
 } from './database';
 import { buildBlockLedger, BLOCK_CLASS, LEDGER_VERSION, STALE_EVIDENCE_WEEKS } from './interBlock';
@@ -62,6 +65,7 @@ import { VOLUME_LANDMARKS } from './algorithms';
 import { localWeekStartMs } from './dayKey';
 import { isCalm, WELLBEING_KEY } from './wellbeing';
 import { logError } from './errorLog';
+import { structureSignature } from './programmeEpoch';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 // §3.1 speaks of "the SAME lifts' previous-block bests"; a bounded prior
@@ -225,7 +229,14 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
     if (!force && meso.blockLedger) {
       try {
         const stored = JSON.parse(meso.blockLedger);
-        if (stored?.version === LEDGER_VERSION) return stored;
+        // Campaign 16 adversarial close: a same-version ledger created by
+        // the earlier build has no programme signature, so returning it
+        // would preserve the very epoch ambiguity this snapshot closes.
+        // Recompute the active finished block once to backfill the snapshot;
+        // future reads remain idempotent.
+        const isCurrent = meso.isActive === 1 || meso.isActive === true;
+        if (stored?.version === LEDGER_VERSION
+          && (stored?.programmeSignature || !isCurrent)) return stored;
       } catch (_e) { /* recompute below */ }
     }
 
@@ -390,10 +401,39 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
     });
     // Provenance (founder Stage 6 order B): enough to answer "why did
     // back start at 14 sets in this new block" from the stored record.
+    // Snapshot the programme structure while this finished block still
+    // points at the active plan. Mesocycles have no programme foreign key;
+    // without this immutable signature a later rebuild leaves the epoch
+    // reader guessing from names, and unrelated programmes can be counted
+    // together. The snapshot lives inside the already-synced ledger JSON,
+    // so it needs no schema or cloud migration.
+    let programmeSignature = null;
+    if (meso.isActive === 1 || meso.isActive === true) {
+      try {
+        const activePlan = await getActivePlan(userId);
+        const routines = activePlan?.id ? await getRoutinesForPlan(activePlan.id) : [];
+        const workouts = [];
+        for (const routine of routines ?? []) {
+          // eslint-disable-next-line no-await-in-loop
+          const rows = await getRoutineExercisesWithDetails(routine.id);
+          workouts.push({
+            name: routine.name,
+            exercises: (rows ?? []).map(row => ({ exerciseId: row?.exercise?.id ?? null })),
+          });
+        }
+        if (workouts.length) {
+          programmeSignature = structureSignature({
+            splitType: routines.find(r => r?.splitType)?.splitType ?? null,
+            workouts,
+          });
+        }
+      } catch (_) { programmeSignature = null; }
+    }
     const record = {
       ...ledger,
       mesocycleId,
       mesocycleName: meso.name ?? null,
+      programmeSignature,
       blockStartDate: meso.startDate ?? null,
       blockEndDate: new Date(blockEnd).toISOString().slice(0, 10),
       computedAt: Date.now(),

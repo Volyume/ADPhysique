@@ -42,7 +42,7 @@ import { SWAP_SCOPE } from './swapScope';
 // default, used as the baseline that personal evidence has to earn its way
 // past.
 import { tierRank } from './canonicality';
-import { detectProgressionConsistency } from '../algorithms';
+import { detectPlateau, detectProgressionConsistency } from '../algorithms';
 
 export { EXERCISE_INTENT, SWAP_SCOPE };
 
@@ -83,7 +83,13 @@ export async function loadExerciseIntentState(userId, { activeMesocycleId = null
     // Judged here, once, by the shared law - never re-derived per screen.
     const progression = new Map();
     for (const [exerciseId, perSession] of (sessions ?? new Map())) {
-      progression.set(exerciseId, detectProgressionConsistency(perSession));
+      const consistency = detectProgressionConsistency(perSession);
+      const plateau = detectPlateau(perSession);
+      progression.set(exerciseId, {
+        ...consistency,
+        plateau: plateau.plateau === true,
+        plateauResolution: plateau.resolution ?? null,
+      });
     }
     return {
       intents: new Map((intents ?? []).filter((r) => r?.exerciseId).map((r) => [r.exerciseId, r])),
@@ -324,6 +330,8 @@ export function exerciseEvidence(state, exerciseId, { fromExerciseId = null, rec
     tolerance: 'not_tracked',
     // Separate and observable, never fused into the other dimensions.
     progression: state?.progression?.get(exerciseId)?.status ?? 'insufficient',
+    plateau: state?.progression?.get(exerciseId)?.plateau === true,
+    plateauResolution: state?.progression?.get(exerciseId)?.plateauResolution ?? null,
     // A brand-new exercise must be allowed to say so. One session is a
     // try, not a preference.
     sufficient: sessions >= 2 || chosen >= REPEATED_SWAP_MIN,

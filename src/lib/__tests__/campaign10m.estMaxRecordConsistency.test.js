@@ -251,9 +251,12 @@ describe('C10M: nothing historical was rewritten', () => {
     const { LEDGER_VERSION, LEDGER_ALGORITHM_VERSION } = require('../interBlock');
     expect(LEDGER_VERSION).toBe(1);
     expect(LEDGER_ALGORITHM_VERSION).toBe(2);
-    // Reuse still gated on the SHAPE version only: no stored ledger rebuilds.
-    expect(read('lib/blockLedgerRunner.js')).toMatch(/if \(stored\?\.version === LEDGER_VERSION\) return stored;/);
-    expect(read('lib/blockLedgerRunner.js')).not.toMatch(/stored\?\.algorithmVersion/);
+    // Reuse remains gated on the SHAPE version only. A current block can
+    // backfill its programme signature once; historical decisions do not move.
+    const runner = read('lib/blockLedgerRunner.js');
+    expect(runner).toMatch(/stored\?\.version === LEDGER_VERSION/);
+    expect(runner).toMatch(/stored\?\.programmeSignature \|\| !isCurrent/);
+    expect(runner).not.toMatch(/stored\?\.algorithmVersion/);
   });
 
   test('Block Reflection derives its Est. max numbers from the block\'s raw sets', () => {

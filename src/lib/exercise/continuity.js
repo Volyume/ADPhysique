@@ -84,6 +84,10 @@ export function slotKey(muscle, family) {
  *   [{ exerciseId, exerciseName, muscle, family }]
  * @param {(id: string) => object} params.evidenceFor
  *   Returns the slotVerdict evidence for an incumbent exercise id.
+ * @param {(id: string) => object|null} [params.verdictFor]
+ *   A verdict already produced by the block-boundary review. When present,
+ *   this exact decision wins so the dry run and commit consume the proposal
+ *   the user reviewed instead of silently recomputing with younger context.
  * @param {(id: string) => string|null} params.familyOf
  *   Muscle-and-family key for a GENERATED exercise id, or null if unknown.
  * @param {object} params.context
@@ -100,6 +104,7 @@ export function applyContinuity({
   generated,
   incumbents = [],
   evidenceFor = () => ({}),
+  verdictFor = null,
   familyOf = () => null,
   context = {},
   isRebuild = true,
@@ -148,11 +153,29 @@ export function applyContinuity({
     exercises: (w.exercises ?? []).map((ex) => {
       const key = familyOf(ex.exerciseId);
       const queue = key ? (byKey.get(key) ?? []) : [];
-      const incumbent = queue.find(
+      let incumbent = queue.find(
         i => !used.has(i.exerciseId)
           // Already placed by the generator elsewhere: nothing to retain.
           && (i.exerciseId === ex.exerciseId || !generatedIds.has(i.exerciseId)),
       );
+
+      // A reviewed REPLACE is the one case where exact-family matching is
+      // not required: the reviewed decision is specifically permission to
+      // change the movement. Once the incumbent id has been removed from the
+      // deterministic generator's library, the valid plan may cover that
+      // muscle with a different angle/family. If we required an exact family
+      // here, the reviewed decision would disappear and the receipt would
+      // report the generated exercise as unrelated "new" work. Match that
+      // explicit replacement to an unused slot for the same muscle; KEEP
+      // decisions remain exact-family only and therefore cannot alter
+      // programme coverage.
+      if (!incumbent && key && verdictFor) {
+        incumbent = incumbents.find(i => {
+          if (used.has(i.exerciseId) || generatedIds.has(i.exerciseId)) return false;
+          if (!key.startsWith(`${i.muscle ?? '?'}::`)) return false;
+          return verdictFor(i.exerciseId)?.verdict === SLOT_VERDICT.REPLACE;
+        });
+      }
 
       // Nothing was doing this job before.
       if (!incumbent) {
@@ -179,7 +202,9 @@ export function applyContinuity({
       // back. Generation filters exclusions upstream, so that was unlikely
       // rather than impossible, and "unlikely" is not a guarantee.
       const samePick = incumbent.exerciseId === ex.exerciseId;
-      const { verdict, reason } = slotVerdict(evidenceFor(incumbent.exerciseId) ?? {}, context);
+      const decided = verdictFor?.(incumbent.exerciseId)
+        ?? slotVerdict(evidenceFor(incumbent.exerciseId) ?? {}, context);
+      const { verdict, reason, prescriptionChange = null } = decided;
       const keeps = verdict === SLOT_VERDICT.KEEP
         || verdict === SLOT_VERDICT.KEEP_WITH_PRESCRIPTION_CHANGE;
 
@@ -192,6 +217,7 @@ export function applyContinuity({
           previousExerciseName: incumbent.exerciseName ?? null,
           outcome: SLOT_OUTCOME.REPLACED,
           reason,
+          prescriptionChange: null,
         });
         used.add(incumbent.exerciseId);
         return ex;
@@ -210,6 +236,7 @@ export function applyContinuity({
         previousExerciseName: incumbent.exerciseName ?? null,
         outcome: SLOT_OUTCOME.RETAINED,
         reason,
+        prescriptionChange,
         // What the generator would have chosen, kept for the receipt so
         // "why is this still here" can be answered honestly. Null when the
         // generator picked the same exercise: there was no alternative on
@@ -221,6 +248,13 @@ export function applyContinuity({
         ...ex,
         exerciseId: incumbent.exerciseId,
         exerciseName: incumbent.exerciseName ?? ex.exerciseName,
+        // KEEP_WITH_PRESCRIPTION_CHANGE is only honest if the reviewed
+        // prescription reaches the saved row. The proposal carries exact
+        // values; continuity applies them without inventing a second rule.
+        ...(prescriptionChange ? {
+          repMin: prescriptionChange.repMin,
+          repMax: prescriptionChange.repMax,
+        } : {}),
       };
     }),
   }));

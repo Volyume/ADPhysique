@@ -14,16 +14,26 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { execSync } from 'child_process';
+import { spawnSync } from 'child_process';
 import * as babel from '@babel/core';
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
 
 function reanimatedFiles() {
-  const out = execSync(
-    "grep -rl 'react-native-reanimated' src/components src/screens src/lib --include=*.js || true",
-    { cwd: ROOT, encoding: 'utf8' },
-  );
+  // Invoke the repository's normal search tool directly. The former shell
+  // string depended on Unix `grep` and `|| true`, so this compiler guard
+  // could never run in the Windows development environment.
+  const result = spawnSync('rg', [
+    '-l', 'react-native-reanimated',
+    'src/components', 'src/screens', 'src/lib',
+    '-g', '*.js',
+  ], { cwd: ROOT, encoding: 'utf8' });
+  if (result.error) throw result.error;
+  // ripgrep status 1 means no matches, not an execution failure.
+  if (result.status !== 0 && result.status !== 1) {
+    throw new Error(result.stderr || `rg exited ${result.status}`);
+  }
+  const out = result.stdout ?? '';
   return out.split('\n').filter((f) => f && !f.includes('__tests__'));
 }
 

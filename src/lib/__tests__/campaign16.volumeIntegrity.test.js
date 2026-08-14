@@ -47,11 +47,14 @@ jest.mock('../dbCrypto', () => {
 jest.mock('expo-sqlite');
 jest.mock('../sync', () => ({ scheduleSync: () => {} }));
 
-const { db, insertExerciseWithId, getAllExercises } = require('../database');
+const {
+  db, insertExerciseWithId, getAllExercises, insertRoutineExerciseFromCloud,
+} = require('../database');
 const { generateAndSavePlan, generatePlanDryRun } = require('../planAutoGen');
 const { generatePlan } = require('../planEngine');
 const { auditPlanVolume, countDeliveredSets, compareStages } = require('../exercise/volumeAudit');
 const { canonicalExerciseId } = require('../exercise/canonicalId');
+const { SLOT_VERDICT, SLOT_REASON } = require('../programmeEpoch');
 const { LIBRARY, inputs } = require('./campaign16.helpers');
 
 /** The catalogue, keyed the way volumeAudit resolves: id first, name second. */
@@ -166,6 +169,116 @@ describe('C16-6 the engine delivers the volume it claims', () => {
 });
 
 describe('C16-6 preview, persisted and activated agree', () => {
+  test('a reviewed replacement changes the real exercise and commit equals preview', async () => {
+    const userId = 'u-vol-reviewed-replacement';
+    const first = await generateAndSavePlan(userId, PROFILES[0].profile);
+    expect(first.ok).toBe(true);
+    const before = await readPersisted(first.programmeId);
+    const incumbent = before.flatMap(w => w.exercises)[0];
+    expect(incumbent?.exerciseId).toBeTruthy();
+    const proposal = {
+      slots: [{
+        exerciseId: incumbent.exerciseId,
+        verdict: SLOT_VERDICT.REPLACE,
+        reason: SLOT_REASON.SYSTEMATIC_VARIATION,
+      }],
+    };
+
+    const preview = await generatePlanDryRun(userId, PROFILES[0].profile, {
+      continuityProposal: proposal,
+    });
+    expect(preview.ok).toBe(true);
+    const reviewedDecision = preview.continuity.decisions.find(
+      d => d.previousExerciseId === incumbent.exerciseId,
+    );
+    expect(reviewedDecision).toMatchObject({
+      outcome: 'replaced', reason: SLOT_REASON.SYSTEMATIC_VARIATION,
+    });
+    expect(reviewedDecision.exerciseId).not.toBe(incumbent.exerciseId);
+
+    const committed = await generateAndSavePlan(userId, PROFILES[0].profile, {
+      continuityProposal: proposal,
+    });
+    expect(committed.ok).toBe(true);
+    const persisted = await readPersisted(committed.programmeId);
+    expect(persisted.flatMap(w => w.exercises.map(e => e.exerciseName)))
+      .toEqual(preview.plan.workouts.flatMap(w => w.exercises.map(e => e.exerciseName)));
+  });
+
+  test('a reviewed prescription change reaches the saved next block', async () => {
+    const userId = 'u-vol-reviewed-prescription';
+    const first = await generateAndSavePlan(userId, PROFILES[0].profile);
+    const before = await readPersisted(first.programmeId);
+    const incumbent = before.flatMap(w => w.exercises)[0];
+    const proposal = {
+      slots: [{
+        exerciseId: incumbent.exerciseId,
+        verdict: SLOT_VERDICT.KEEP_WITH_PRESCRIPTION_CHANGE,
+        reason: SLOT_REASON.PLATEAU,
+        prescriptionChange: { repMin: 15, repMax: 20 },
+      }],
+    };
+    const preview = await generatePlanDryRun(userId, PROFILES[0].profile, {
+      continuityProposal: proposal,
+    });
+    const prescriptionDecision = preview.continuity.decisions.find(
+      d => d.exerciseId === incumbent.exerciseId,
+    );
+    expect(prescriptionDecision?.prescriptionChange).toEqual({ repMin: 15, repMax: 20 });
+    const previewed = preview.plan.workouts.flatMap(w => w.exercises)
+      .find(e => e.exerciseId === incumbent.exerciseId);
+    expect(previewed).toMatchObject({ repMin: 15, repMax: 20 });
+
+    const committed = await generateAndSavePlan(userId, PROFILES[0].profile, {
+      continuityProposal: proposal,
+    });
+    const savedRow = await conn.getFirstAsync(
+      `SELECT re.recommended_reps_min AS lo, re.recommended_reps_max AS hi
+         FROM routine_exercises re
+         JOIN routines r ON r.id = re.routine_id
+        WHERE r.programme_id = ? AND re.exercise_id = ?`,
+      [committed.programmeId, incumbent.exerciseId],
+    );
+    expect(savedRow).toEqual({ lo: 15, hi: 20 });
+  });
+
+  test('selector provenance survives the cloud pull writer', async () => {
+    const userId = 'u-vol-provenance';
+    const saved = await generateAndSavePlan(userId, PROFILES[0].profile);
+    expect(saved.ok).toBe(true);
+    const row = await conn.getFirstAsync(
+      `SELECT re.*, r.id AS routine_id
+         FROM routine_exercises re
+         JOIN routines r ON r.id = re.routine_id
+        WHERE r.programme_id = ? AND re.selection_reason IS NOT NULL
+        LIMIT 1`,
+      [saved.programmeId],
+    );
+    expect(row?.selection_reason).toBeTruthy();
+
+    const cloudReason = 'coverage_fallback';
+    await insertRoutineExerciseFromCloud({
+      id: row.id,
+      routine_id: row.routine_id,
+      exercise_id: row.exercise_id,
+      exercise_name: row.exercise_name,
+      order_in_routine: row.order_in_routine,
+      recommended_sets: row.recommended_sets,
+      recommended_reps_min: row.recommended_reps_min,
+      recommended_reps_max: row.recommended_reps_max,
+      notes: row.notes,
+      starting_weight: row.starting_weight,
+      rest_seconds: row.rest_seconds,
+      superset_group_id: row.superset_group_id,
+      selection_reason: cloudReason,
+      updated_at: new Date(Number(row.updated_at) + 1000).toISOString(),
+    });
+    const restored = await conn.getFirstAsync(
+      'SELECT selection_reason FROM routine_exercises WHERE id = ?', [row.id],
+    );
+    expect(restored.selection_reason).toBe(cloudReason);
+  });
+
   test.each(PROFILES)('$label: every stage delivers the same volume', async ({ profile }) => {
     const userId = `u-vol-${profile.trainingGoal}-${profile.daysPerWeek}-${profile.experience}`;
 

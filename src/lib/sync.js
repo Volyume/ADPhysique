@@ -918,6 +918,10 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
           starting_weight: re.startingWeight ?? null,
           rest_seconds: re.restSeconds ?? null,
           superset_group_id: re.supersetGroupId ?? null,
+          // Campaign 16 job 10 provenance. Optional until migrate_139 is
+          // applied; the retry below removes only this field so the rest of
+          // the routine still syncs on an older cloud schema.
+          selection_reason: re.selectionReason ?? null,
           // F5 Phase A: previously pushed with NO updated_at, so the cloud
           // value never moved on upsert and delta pulls could not see edits.
           updated_at: new Date(re.updatedAt ?? re.createdAt ?? Date.now()).toISOString(),
@@ -941,9 +945,16 @@ async function _pushRoutinesAndExercises(sb, supabaseUserId, localUserId) {
         logInfo('sync._pushRoutinesAndExercises', 'orphan routine_exercises skipped', { orphanCount });
       }
       for (let i = 0; i < rows.length; i += 200) {
-        const { error: reErr } = await sb.from('routine_exercises').upsert(
-          rows.slice(i, i + 200), { onConflict: 'user_id,id' },
+        const slice = rows.slice(i, i + 200);
+        let { error: reErr } = await sb.from('routine_exercises').upsert(
+          slice, { onConflict: 'user_id,id' },
         );
+        if (reErr && /selection_reason/i.test(String(reErr?.message))) {
+          const withoutSelectionReason = slice.map(({ selection_reason: _reason, ...rest }) => rest);
+          ({ error: reErr } = await sb.from('routine_exercises').upsert(
+            withoutSelectionReason, { onConflict: 'user_id,id' },
+          ));
+        }
         if (reErr) logPgErr('sync._pushRoutineExercises', reErr);
       }
     }

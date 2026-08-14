@@ -369,7 +369,12 @@ describe('C13 job 4: current analytics recompute; historical ledgers do not', ()
     const { LEDGER_VERSION, LEDGER_ALGORITHM_VERSION } = require('../interBlock');
     expect(LEDGER_VERSION).toBe(1);
     expect(LEDGER_ALGORITHM_VERSION).toBe(2);
-    expect(read('lib/blockLedgerRunner.js')).toMatch(/if \(stored\?\.version === LEDGER_VERSION\) return stored;/);
+    const runner = read('lib/blockLedgerRunner.js');
+    expect(runner).toMatch(/stored\?\.version === LEDGER_VERSION/);
+    // A current same-version ledger may be recomputed once solely to add
+    // Campaign 16's immutable programme signature. Historical ledgers keep
+    // their replay/idempotency law and are never rewritten for this.
+    expect(runner).toMatch(/stored\?\.programmeSignature \|\| !isCurrent/);
   });
 });
 

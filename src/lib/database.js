@@ -2369,11 +2369,10 @@ const SCHEMA_MIGRATIONS = [
   // translated) without a migration and without a saved plan carrying a
   // sentence written by an older build.
   //
-  // Applied: LOCALLY via this user_version bump. There is NO cloud
-  // counterpart and none is needed: routine_exercises already syncs by
-  // column list, an absent column on the far side is tolerated, and a
-  // missing reason reads exactly like a plan generated before this landed
-  // (no explanation shown, nothing broken).
+  // Applied: LOCALLY via this user_version bump. Cloud counterpart:
+  // supabase/migrate_139_routine_exercises_selection_reason.sql. The sync
+  // writer retries without the optional column until that migration is
+  // applied, so shipping order cannot break the rest of routine sync.
   // Additive: yes (one nullable column). Safe to re-run: yes (the runner
   // treats a duplicate-column error as benign). Rollback: leave the column
   // in place and ignore it; every reader treats NULL as "no recorded
@@ -3810,6 +3809,7 @@ export async function getRoutineExercisesWithDetails(routineId) {
     `SELECT re.*,
             COALESCE(e.name, re.exercise_name) AS resolved_name,
             e.primary_muscle,
+            e.subregion,
             e.secondary_muscles,
             e.equipment,
             e.movement_pattern,
@@ -3834,6 +3834,11 @@ export async function getRoutineExercisesWithDetails(routineId) {
       // When the FK didn't resolve these are all null, coach insights
       // and volume calculations downstream guard on missing muscle.
       primaryMuscle: row.primary_muscle,
+      // Continuity matches incumbents and generated exercises on the same
+      // muscle/family key. Without the stored family tag, pass-through
+      // muscles (for example chest) fell back to a different family and a
+      // retained lift was incorrectly reported as newly selected.
+      subregion: row.subregion,
       secondaryMuscles: (() => { try { return JSON.parse(row.secondary_muscles || '[]'); } catch { return []; } })(),
       equipment: row.equipment,
       movementPattern: row.movement_pattern,
@@ -7840,7 +7845,7 @@ export async function insertRoutineExerciseFromCloud(re) {
         routine_id = ?, exercise_id = ?, exercise_name = ?, order_in_routine = ?,
         recommended_sets = ?, recommended_reps_min = ?, recommended_reps_max = ?,
         notes = ?, starting_weight = ?, rest_seconds = ?, superset_group_id = ?,
-        updated_at = ?, deleted_at = ?
+        selection_reason = ?, updated_at = ?, deleted_at = ?
        WHERE id = ?`,
       [
         re.routine_id, exerciseId, exerciseName,
@@ -7852,6 +7857,7 @@ export async function insertRoutineExerciseFromCloud(re) {
         re.starting_weight ?? null,
         re.rest_seconds ?? null,
         re.superset_group_id ?? null,
+        re.selection_reason ?? null,
         cloudUpdated,
         tsMs(re.deleted_at),
         re.id,
@@ -7863,8 +7869,8 @@ export async function insertRoutineExerciseFromCloud(re) {
     `INSERT OR REPLACE INTO routine_exercises
       (id, routine_id, exercise_id, exercise_name, order_in_routine, recommended_sets,
        recommended_reps_min, recommended_reps_max, notes, starting_weight,
-       rest_seconds, superset_group_id, created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       rest_seconds, superset_group_id, selection_reason, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       re.id, re.routine_id, exerciseId, exerciseName,
       re.order_in_routine ?? 0,
@@ -7875,6 +7881,7 @@ export async function insertRoutineExerciseFromCloud(re) {
       re.starting_weight ?? null,
       re.rest_seconds ?? null,
       re.superset_group_id ?? null,
+      re.selection_reason ?? null,
       createdAt,
       cloudUpdated ?? createdAt,
       // Spelled out rather than routed through tsMs because
@@ -9288,6 +9295,13 @@ export async function getExerciseProgressionSessions(userId, exerciseIds = [], {
     }
     sessions.get(r.workoutId).push({
       weight: r.weight, actualReps: r.actualReps, setType: r.setType,
+      // Plateau qualification is a time claim. The shared detector needs
+      // the real session date to distinguish three sessions in one week
+      // from a continuous stall across three weeks. `startedAt` is selected
+      // above but used to be discarded here, which made a production
+      // plateau impossible even though the same helper worked in isolated
+      // tests that supplied timestamps themselves.
+      createdAt: r.startedAt,
     });
   }
   const out = new Map();
