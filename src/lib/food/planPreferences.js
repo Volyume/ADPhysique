@@ -113,6 +113,66 @@ export function mealAllowed(meal, prefs) {
   return components.every((c) => foodAllowed(c.food, p));
 }
 
+/**
+ * Is a SAVED meal - one the user built themselves out of logged food - allowed
+ * into a GENERATED plan?
+ *
+ * Campaign 17A job 6. This gate did not exist: saved meals went into the
+ * assembler's candidate pool unfiltered, so a meal the user had saved months
+ * ago could be placed straight into a fresh plan even after they added the
+ * allergen it contains. The founder law is explicit: "If a saved meal/recipe
+ * contains a newly excluded ingredient: do not silently serve it unchanged in
+ * a generated future plan... Mark it unavailable/incompatible for generation
+ * as appropriate."
+ *
+ * TWO KINDS OF ITEM, TWO POSTURES.
+ *
+ * A saved meal is a list of LOGGED food items, each with a `foodRef`. Only
+ * `curated:<key>` refs can be judged - a barcode item or a custom food the
+ * user typed in carries no tag data, and pretending otherwise would be a
+ * claim of safety this app cannot make.
+ *
+ *   - A judgeable item that conflicts always refuses the meal. That is the
+ *     ordinary case and it covers the founder's example exactly.
+ *   - An UNJUDGEABLE item refuses the meal too, but ONLY when a safety rule
+ *     is live: an allergen tag exclusion, or a diet the user has set. Under
+ *     those, the app must not place a meal it cannot see inside. Under a
+ *     plain taste exclusion it is not a safety question, so an unjudgeable
+ *     item is left alone rather than silently costing the user a meal they
+ *     like.
+ *
+ * NOTHING IS DELETED. This gates GENERATION only. The saved meal stays in the
+ * user's list and they can still log it themselves; the founder's rule is
+ * "do not silently serve it", not "take it away".
+ *
+ * Meal shape: { items: [{ foodRef, name }] }. Pure.
+ */
+export function savedMealAllowed(meal, prefs) {
+  if (!meal) return false;
+  const p = normalisePreferences(prefs);
+  const items = Array.isArray(meal.items) ? meal.items : null;
+  // A safety rule is live when the user has named an allergen or set a diet
+  // that is not "anything goes".
+  const safetyRuleLive = (p.excludeTags?.length || 0) > 0 || (p.diet && p.diet !== 'omnivore');
+  // No item list at all is the same problem as an unjudgeable item, and the
+  // same answer: fine on its own, refused when a safety rule is live.
+  if (!items || items.length === 0) return !safetyRuleLive;
+  for (const it of items) {
+    const ref = typeof it?.foodRef === 'string' ? it.foodRef : '';
+    if (ref.startsWith('curated:')) {
+      if (!foodAllowed(ref.slice('curated:'.length), p)) return false;
+    } else if (safetyRuleLive) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Saved meals that may be used to BUILD a plan. Stable input order. Pure. */
+export function filterSavedMealsByPreferences(prefs, savedMeals = []) {
+  return (Array.isArray(savedMeals) ? savedMeals : []).filter((m) => savedMealAllowed(m, prefs));
+}
+
 /** All curated meals that pass the preferences. Stable input order. Pure. */
 export function filterMealsByPreferences(prefs, meals = CURATED_MEALS) {
   return meals.filter((m) => mealAllowed(m, prefs));

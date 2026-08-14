@@ -45,6 +45,8 @@ import { SEARCH_TABS, selectTabRows, rankByPersonalHistory } from '../lib/food/s
 import { searchFoods } from '../lib/food/waterfall';
 import NetInfo from '@react-native-community/netinfo';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
+// Campaign 17A job 6: the ONE exclusion predicate, at the food-ref level.
+import { foodRefExcluded } from '../lib/food/foodRoles';
 import { audit } from '../lib/observability';
 import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
@@ -241,6 +243,14 @@ export default function FoodSearchScreen({ navigation, route }) {
   // can appear in more than one list) and with disliked + quick-add refs
   // dropped (a long-pressed "hidden" food must not resurface as a suggestion).
   // Pure mapping of already-loaded rows; no extra fetch, fully deterministic.
+  // The standing exclusions the suggestion list must honour: the user's
+  // "never show me this" foods and their allergen tags, the same two lists
+  // the meal-plan layer reads.
+  const suggestExclusions = useMemo(() => ({
+    excludeFoodKeys: userProfile?.mealPlanExcludeFoods,
+    excludeTags: userProfile?.mealPlanExcludeTags,
+  }), [userProfile?.mealPlanExcludeFoods, userProfile?.mealPlanExcludeTags]);
+
   const suggestFoodCandidates = useMemo(() => {
     const seen = new Set();
     const out = [];
@@ -248,6 +258,13 @@ export default function FoodSearchScreen({ navigation, route }) {
       const ref = f?.food_ref;
       if (!ref || seen.has(ref)) continue;
       if (dislikeRefs.has(ref)) continue;
+      // ALLERGENS AND DIETARY RULES ARE ABSOLUTE (Campaign 17A job 6). This
+      // list is built from the user's OWN favourites, frequents, recents and
+      // custom foods, and it honoured dislikes but not the standing
+      // exclusions - so a food they had loved, then excluded, kept appearing
+      // as a suggestion. "A previously loved food that becomes excluded
+      // disappears from future suggestions/plans immediately."
+      if (foodRefExcluded(ref, suggestExclusions)) continue;
       if (typeof ref === 'string' && ref.startsWith('quick:')) continue; // quick-add has no real macros
       seen.add(ref);
       out.push({
@@ -263,7 +280,7 @@ export default function FoodSearchScreen({ navigation, route }) {
       });
     }
     return out;
-  }, [favouriteRows, frequentRows, recents, customRows, dislikeRefs]);
+  }, [favouriteRows, frequentRows, recents, customRows, dislikeRefs, suggestExclusions]);
 
   // Curated meal suggestions + single-food top-ups, sized to one meal's share
   // of what's left today. Pulls the day's targets + intake, works out how many

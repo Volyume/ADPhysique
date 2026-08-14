@@ -202,6 +202,24 @@ export function repeatPlanDay({ plan, fromIndex, toIndex } = {}) {
 // ─── Async orchestration (the only impure surface) ──────────────────────
 
 /**
+ * Shape a saved meal for the assembler's candidate pool.
+ *
+ * `items` is carried DELIBERATELY (Campaign 17A job 6): the exclusion gate
+ * judges a saved meal on its own ingredients, and this mapper used to drop
+ * them, leaving the assembler unable to tell whether a saved meal contained
+ * an allergen the user had since excluded.
+ */
+function toPoolSavedMeal(m) {
+  return {
+    id: m.id,
+    name: m.name,
+    slots: Array.isArray(m.slots) ? m.slots : [],
+    items: Array.isArray(m.items) ? m.items : [],
+    totals: m.totals,
+  };
+}
+
+/**
  * The user's STANDING food replacements, ready to apply to a generated plan.
  *
  * Campaign 17A job 3. Read once per generation and passed to
@@ -258,7 +276,7 @@ export async function generateAndSaveMealPlan(userId, profile, { seed = Date.now
     engineTarget,
     prefs,
     seed,
-    savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
+    savedMeals: savedMeals.map(toPoolSavedMeal),
   });
   // Campaign 17A job 3: what the user has actually TOLD us to use instead.
   // Applied after assembly through the same macro-preserving swap their own
@@ -323,7 +341,7 @@ export async function generateAndSaveDayPlan(userId, profile, { seed = Date.now(
     band: { kcalMin: engineTarget.kcalMin, kcalMax: engineTarget.kcalMax },
     prefs,
     seed,
-    savedMeals: savedMeals.map((m) => ({ id: m.id, name: m.name, slots: Array.isArray(m.slots) ? m.slots : [], totals: m.totals })),
+    savedMeals: savedMeals.map(toPoolSavedMeal),
     // Thread the floor flag so per-meal balance degrades gracefully near a floor
     // (ED-safety), consistent with the week path (see assembleDayPlan).
     targetFloored: targetWasFloored(engineTarget),

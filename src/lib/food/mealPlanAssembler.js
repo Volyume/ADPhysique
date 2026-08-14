@@ -23,7 +23,7 @@
 
 import { CURATED_MEALS, mealItems, mealTotals } from './curatedMeals';
 import { fitScore, perMealMacros, slotMatches } from './mealSuggest';
-import { normalisePreferences, filterMealsByPreferences } from './planPreferences';
+import { normalisePreferences, filterMealsByPreferences, filterSavedMealsByPreferences } from './planPreferences';
 import { roleOf, gramRangeOf } from './foodRoles';
 import { solveGramsForKcal } from './gramSolve';
 import { within, ADHERENCE_TOLERANCE } from './adherence';
@@ -538,9 +538,16 @@ export function assembleDayPlan({
   const prefs = normalisePreferences(rawPrefs);
   const rng = mulberry32(seed);
 
+  // ALLERGENS AND DIETARY RULES ARE ABSOLUTE (Campaign 17A job 6). Saved
+  // meals used to enter this pool UNFILTERED, so a meal the user built months
+  // ago could be placed into a fresh plan after they added the allergen it
+  // contains. Both halves of the pool now pass the same exclusion rules; the
+  // saved half is judged on its own items (planPreferences.savedMealAllowed),
+  // and a meal whose ingredients cannot be judged is kept out of generation
+  // whenever a safety rule is live.
   const pool = [
     ...filterMealsByPreferences(prefs, CURATED_MEALS).map(curatedCandidate),
-    ...savedMeals.filter(Boolean).map(savedCandidate),
+    ...filterSavedMealsByPreferences(prefs, savedMeals.filter(Boolean)).map(savedCandidate),
   ];
 
   const slots = buildSlotList({

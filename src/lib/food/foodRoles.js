@@ -394,6 +394,35 @@ export function foodExcluded(foodKey, exclude = {}) {
 }
 
 /**
+ * The same predicate at the FOOD REF level, for surfaces that hold logged
+ * food rather than curated keys (the diary's suggestion lists, saved meals).
+ *
+ * Campaign 17A job 6. A ref is one of `curated:<key>`, `off:<barcode>`,
+ * `custom:<id>` or `quick:adhoc`. Two rules, and the difference between them
+ * matters:
+ *
+ *   - The user's explicit "never show me this" list is matched against the
+ *     WHOLE ref as well as the curated key, so a food they long-pressed away
+ *     stays away whatever kind of food it is.
+ *   - Allergen tags can only be judged on `curated:` refs. A barcode item or
+ *     a custom food the user typed in carries no tag data, and claiming to
+ *     have checked it would be a claim of safety this app cannot make. Those
+ *     refs pass here; the surfaces that must be stricter (generating a plan
+ *     the user did not choose, planPreferences.savedMealAllowed) apply their
+ *     own harder rule on top.
+ *
+ * Pure.
+ */
+export function foodRefExcluded(foodRef, exclude = {}) {
+  const ref = typeof foodRef === 'string' ? foodRef : '';
+  if (!ref) return false;
+  const keys = exclude.excludeFoodKeys;
+  if (Array.isArray(keys) && keys.includes(ref)) return true;
+  if (!ref.startsWith('curated:')) return false;
+  return foodExcluded(ref.slice('curated:'.length), exclude);
+}
+
+/**
  * All curated keys of one role, exclusion-aware. `exclude` takes
  * { excludeFoodKeys: string[], excludeTags: string[] } (both optional).
  * Pure; stable alphabetical order for determinism.
