@@ -1907,7 +1907,13 @@ New modules: `src/lib/food/insights.js`, `habits.js`, `mealRationale.js`;
 Gates at landing: `npm run lint` clean, `npm test` 904 suites / 11,821 passed
 (1 suite + 10 tests skipped, pre-existing), identity invariant clean.
 
-**STILL OUTSTANDING (founder-side, unchanged by this campaign):** migrations
-`137` and `138` are authorised ("run against production") but NOT applied -
-this session has no Supabase MCP server attached. `049` stays HELD; never
-apply it.
+**MIGRATIONS 137 / 138 - STATUS UNKNOWN, NOT "not applied".** Both are
+authorised ("run against production") and both are applied LOCALLY (`v75`,
+`v77`). Their production state is **UNKNOWN**: no session since they were
+authored has had the Supabase connector attached, and the founder performs
+production migration work outside these sessions. The `-- Applied remotely: NO`
+line in each file header was written when the file was AUTHORED and is a
+statement of intent at that moment, not a verification - it must not be read
+as evidence of the current production state, and no session should turn a
+missing connector into a claim of non-application. Verify with the connector
+before acting. `049` stays HELD; never apply it.
