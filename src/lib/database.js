@@ -2151,9 +2151,10 @@ const SCHEMA_MIGRATIONS = [
   //                            source exercise in a plan. Stronger than
   //                            any inferred preference.
   // Applied: LOCALLY via this user_version bump. Cloud counterpart is
-  // supabase/migrate_136_exercise_intent.sql - written, NOT applied;
-  // it is founder-gated and must run against production BEFORE a build
-  // carrying the sync push of these tables ships (migrate_129 precedent).
+  // supabase/migrate_136_exercise_intent.sql - APPLIED to EU-Dublin on
+  // 2026-08-12 and verified (this comment read "written, NOT applied"
+  // until 2026-08-14; supabase/README.md CURRENT STATUS is the authority
+  // and the migration's own footer recorded the apply on the day).
   // Additive: yes (three new tables + indexes, nothing altered). Safe to
   // re-run: yes (IF NOT EXISTS throughout). Rollback: drop the three
   // tables; every reader treats their absence as "no intent recorded",

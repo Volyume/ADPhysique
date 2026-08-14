@@ -47,9 +47,22 @@
 --                    exercise intent + swap memory" -- the local SQLite
 --                    tables already exist and are already being written).
 --
--- Applied remotely:  NO -- founder-gated, requires the exact phrase
---                    "run against production" per supabase/README. Claude
---                    must not run this file anywhere.
+-- Applied remotely:  YES -- EU-Dublin production 2026-08-12, on the
+--                    founder's order, Claude-run, project
+--                    sujrylzzxcqxxfygptns (eu-west-1). All three tables
+--                    created with RLS enabled and one "Users manage own"
+--                    policy each; delete_user_data() re-created and
+--                    confirmed to cover all three. See supabase/README.md
+--                    CURRENT STATUS and this file's own footer, which has
+--                    recorded the apply since the day it ran.
+--
+--                    CORRECTED 2026-08-14. This line read "NO -- founder-
+--                    gated" for two days after the migration had already
+--                    been applied and verified, while the footer of this
+--                    same file said YES. A stale header on an applied
+--                    migration is how a second, unnecessary apply gets
+--                    ordered; the tracker in supabase/README.md is the
+--                    authority, and this header now agrees with it.
 --                    ORDER MATTERS (migrate_129 / migrate_131 precedent):
 --                    this must run against production BEFORE a build
 --                    carrying the sync push of these three tables ships,
