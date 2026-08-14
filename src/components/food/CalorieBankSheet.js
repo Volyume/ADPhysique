@@ -20,7 +20,7 @@ import { colors, fontSize, fontWeight, spacing, radius, circle, type } from '../
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
-import { planCalorieBank, maxApplicableBumpKcal } from '../../lib/food/calorieBank';
+import { planCalorieBank, maxApplicableBumpKcal, BANK_RULES } from '../../lib/food/calorieBank';
 
 const BUMP_STEP = 50;
 const DEFAULT_BUMP = 150;
@@ -117,6 +117,13 @@ export default function CalorieBankSheet({
         counts. Your coach looks at the whole week, not any single day, so one
         bigger day balanced by slightly lighter ones keeps you on plan.
       </Text>
+      {/* Campaign 17B job 6: the four things the old copy left the user to
+          assume. Comprehension only - the maths is unchanged. */}
+      <View style={styles.rules}>
+        {BANK_RULES.map((line) => (
+          <Text key={line} style={[styles.ruleLine, live.ruleLine]}>{line}</Text>
+        ))}
+      </View>
 
       {existingBank ? (
         <View style={[styles.activeRow, live.activeRow]}>
@@ -197,6 +204,9 @@ export default function CalorieBankSheet({
 const styles = StyleSheet.create({
   title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
   intro: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs },
+  // Campaign 17B job 6: what the bank is, and what it is not.
+  rules: { marginTop: spacing.sm, gap: spacing.xxs },
+  ruleLine: { ...type.bodySm, color: colors.textMuted },
   activeRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     backgroundColor: colors.surface2, borderRadius: radius.md,
@@ -254,6 +264,7 @@ function buildLiveStyles(t) {
   return {
     title: { color: t.colors.textPrimary },
     intro: { color: t.colors.textMuted },
+    ruleLine: { color: t.colors.textMuted },
     activeRow: { backgroundColor: t.colors.surface2 },
     activeText: { color: t.colors.textSecondary },
     clearText: { color: t.colors.primary },

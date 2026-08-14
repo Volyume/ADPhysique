@@ -41,6 +41,8 @@ import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
 import { safeDayFloorKcal, displayBankedDelta } from '../lib/food/calorieBank';
 import { resolveEffectiveTargets, dayTypeLabel } from '../lib/food/effectiveTargets';
 import { resyncBankedPlannedFood, restoreUnbankedPlannedFood } from '../lib/food/mealPlanService';
+// Campaign 17B job 6: the bank receipt, in the user's words and real numbers.
+import { bankHeadline, bankPlanLine } from '../lib/food/calorieBank';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
 import CalorieBankSheet from '../components/food/CalorieBankSheet';
 import DiaryDatePicker from '../components/food/DiaryDatePicker';
@@ -416,6 +418,15 @@ export default function DiaryScreen({ navigation, route }) {
       perDayChanges = res.perDayChanges || [];
     } catch (_) { /* tolerate: the target shift already applied */ }
     await load();
+    // Campaign 17B job 6: lead with the plain fact, in ACTUAL values, before
+    // the per-day detail. "You have moved 300 calories to Saturday. Your
+    // weekly total has not changed."
+    const bigLabel = friendlyDate(bank?.bigDayKey);
+    const headline = bankHeadline({
+      deltaKcal: bank?.perDayDeltaKcal?.[bank?.bigDayKey],
+      dayLabel: bigLabel,
+      otherDays: Object.keys(bank?.perDayDeltaKcal || {}).length - 1,
+    });
     if (perDayChanges.length > 0) {
       const lines = perDayChanges.map(({ dayKey, change }) => {
         const n = buildPlanEditNarration(change, { register: 'supportive' });
@@ -424,9 +435,12 @@ export default function DiaryScreen({ navigation, route }) {
       });
       appAlert(
         'Your week, adjusted',
-        `${lines.join('\n\n')}\n\nYour weekly total stays the same. Change anything you like.`,
+        [headline, bankPlanLine(bigLabel), '', lines.join('\n\n'), '', 'Change anything you like.']
+          .filter((x) => x !== null && x !== undefined).join('\n'),
         [{ text: 'OK' }],
       );
+    } else if (headline) {
+      appAlert('Your week, adjusted', headline, [{ text: 'OK' }]);
     } else {
       toast.show('Higher-calorie day planned. Your weekly total stays the same.', { variant: 'success' });
     }

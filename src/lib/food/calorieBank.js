@@ -233,3 +233,48 @@ export function applyBankToTarget(targets, deltaKcal) {
     carbsG: clampedCarbsG,
   };
 }
+
+// ─── Plain English (Campaign 17B job 6) ─────────────────────────────────────
+//
+// The maths is live and safety-bounded and is deliberately untouched here.
+// What the user needed was comprehension: that this is THEIR choice, that the
+// weekly total is unchanged, that the calories come from the other days they
+// picked, that the safety floors still apply, that it is temporary, that it
+// does not make that weekday permanently different, and that it has nothing
+// whatever to do with training or rest days.
+
+/**
+ * The headline receipt, with ACTUAL values. The founder's own shape:
+ *
+ *   "You've moved 300 calories to Saturday. Your weekly total hasn't changed."
+ *
+ * @param {object} p { deltaKcal, dayLabel, otherDays }
+ */
+export function bankHeadline({ deltaKcal, dayLabel, otherDays = 0 } = {}) {
+  const n = Math.abs(Math.round(Number(deltaKcal) || 0));
+  if (!n || !dayLabel) return null;
+  const from = otherDays > 0
+    ? ` We have taken it from the other ${otherDays} ${otherDays === 1 ? 'day' : 'days'} you chose.`
+    : '';
+  return `You have moved ${n} calories to ${dayLabel}. Your weekly total has not changed.${from}`;
+}
+
+/** The line that says the food itself moved, not only the number. */
+export function bankPlanLine(dayLabel) {
+  if (!dayLabel) return null;
+  return `We have adjusted ${dayLabel}'s meal portions to match, and taken the difference from the other days.`;
+}
+
+/**
+ * What this is, and just as importantly what it is NOT.
+ *
+ * The four clauses the founder listed that the old copy did not say: the
+ * floors still hold, it is temporary, that weekday does not become permanently
+ * different, and it is nothing to do with training days.
+ */
+export const BANK_RULES = Object.freeze([
+  'Your safe minimum still applies on every day.',
+  'It is a one-off for the week you choose, not a new routine.',
+  'It does not make that day of the week different from now on.',
+  'It has nothing to do with which days you train.',
+]);
