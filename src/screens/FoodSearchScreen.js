@@ -35,13 +35,15 @@ import {
   logFoodEntry, deleteFoodEntry, getFavourites,
   getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
   getRollupForDay, getLoggedMealSlotsForDay, applyCuratedMealToDiary,
-  upsertSlotRecent, getSlotRecents, applySavedMealToDiary, resolveSlotRecentRef,
+  upsertSlotRecent, getSlotRecents, getSlotRecentQuantities, applySavedMealToDiary, resolveSlotRecentRef,
 } from '../lib/food/db';
 import { getNutritionTargets } from '../lib/database';
 import { getCuratedCandidates } from '../lib/food/curatedMeals';
 import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
 import { refreshFrequentsIfStale } from '../lib/food/frequents';
-import { SEARCH_TABS, selectTabRows, rankByPersonalHistory } from '../lib/food/searchTabs';
+import {
+  SEARCH_TABS, selectTabRows, rankByPersonalHistory, mergePersonalMatches,
+} from '../lib/food/searchTabs';
 import { searchFoods } from '../lib/food/waterfall';
 import NetInfo from '@react-native-community/netinfo';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
@@ -133,6 +135,8 @@ export default function FoodSearchScreen({ navigation, route }) {
   const isRecipePick = route?.params?.pickMode === 'recipe';
   const [results, setResults] = useState([]);
   const [recents, setRecents] = useState([]);
+  // food_ref -> last portion used in THIS slot (Campaign 17B job 2).
+  const [slotPortions, setSlotPortions] = useState(() => new Map());
   const [favouriteRows, setFavouriteRows] = useState([]);
   const [favouriteRefs, setFavouriteRefs] = useState(new Set());
   const [dislikeRefs, setDislikeRefs] = useState(new Set());
@@ -200,6 +204,14 @@ export default function FoodSearchScreen({ navigation, route }) {
         if (food) recentResolved.push({ ...food, last_quantity_g: r.last_quantity_g });
       }
       setRecents(recentResolved);
+      // Campaign 17B job 2: the remembered portion for EVERY food in this
+      // slot, not just the ten in the list above. A food reached through
+      // search, favourites, frequents or custom now opens the sheet at the
+      // portion the user actually used for that exact food here last time.
+      // Preselected only - never auto-submitted; the sheet still confirms.
+      getSlotRecentQuantities(userId, mealSlot)
+        .then((m) => setSlotPortions(m))
+        .catch(() => {});
 
       setFavouriteRefs(new Set(favRows.map((f) => f.food_ref)));
       const favResolved = [];
@@ -742,9 +754,35 @@ export default function FoodSearchScreen({ navigation, route }) {
   // food rows; map them to their refs for the membership test.
   const recentRefs = useMemo(() => new Set(recents.map((r) => r.food_ref)), [recents]);
   const frequentRefs = useMemo(() => new Set(frequentRows.map((f) => f.food_ref)), [frequentRows]);
+
+  // Campaign 17B job 1: the ranker above can only re-order what the query
+  // returned, so a mature user's exact food that sat below the result cap was
+  // never promoted - it was simply absent. Their own foods are matched against
+  // the query directly and merged in FIRST, then the same single ranker
+  // decides the order. Exclusions are honoured here for the same reason they
+  // are on the Suggested tab: a food the user asked us never to suggest must
+  // not be re-injected by a helpful shortcut. (It stays findable by typing its
+  // name - the waterfall is untouched - because history is never hidden.)
+  const personalPool = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const f of [...favouriteRows, ...frequentRows, ...recents, ...customRows]) {
+      const ref = f?.food_ref;
+      if (!ref || seen.has(ref)) continue;
+      if (dislikeRefs.has(ref)) continue;
+      if (foodRefExcluded(ref, suggestExclusions)) continue;
+      seen.add(ref);
+      out.push(f);
+    }
+    return out;
+  }, [favouriteRows, frequentRows, recents, customRows, dislikeRefs, suggestExclusions]);
+
   const rankedResults = useMemo(
-    () => rankByPersonalHistory(results, { favouriteRefs, recentRefs, frequentRefs }),
-    [results, favouriteRefs, recentRefs, frequentRefs],
+    () => rankByPersonalHistory(
+      mergePersonalMatches(results, { personal: personalPool, query }),
+      { favouriteRefs, recentRefs, frequentRefs },
+    ),
+    [results, personalPool, query, favouriteRefs, recentRefs, frequentRefs],
   );
 
   const tabRows = useMemo(() => selectTabRows({
@@ -1111,7 +1149,12 @@ export default function FoodSearchScreen({ navigation, route }) {
         visible={!!picker}
         mode="add"
         food={picker?.food}
-        initialQuantityG={picker?.food?.last_quantity_g}
+        // Campaign 17B job 2: the row's own remembered portion when it has
+        // one (the Add-again rows carry it), otherwise the portion this exact
+        // food was last logged at in THIS slot. Keyed on food_ref, so a
+        // portion is never carried across a merely similar food.
+        initialQuantityG={picker?.food?.last_quantity_g
+          ?? (picker?.food?.food_ref ? slotPortions.get(picker.food.food_ref) : undefined)}
         initialMealSlot={mealSlot}
         initialEntryDate={entryDate}
         onSave={confirmLog}

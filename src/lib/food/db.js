@@ -472,6 +472,34 @@ export async function getSlotRecents(userId, mealSlot, limit = 10) {
   );
 }
 
+/**
+ * Every remembered portion for a meal slot, as a Map of food_ref -> grams.
+ *
+ * Campaign 17B job 2. `getSlotRecents` above is the "Add again" LIST and is
+ * capped at ten rows, so a food the user logs regularly but not in their top
+ * ten had its remembered portion effectively lost: reaching that food through
+ * SEARCH, or through Favourites, Frequents or Custom, opened the sheet at a
+ * default serving even though the exact portion for that exact food in that
+ * exact slot was sitting in this table.
+ *
+ * Keyed on the EXACT food_ref, which carries the source, so a portion is never
+ * transferred across merely similar foods. One row per (user, slot, food) and
+ * a primary-key read; cheap enough to load whole.
+ */
+export async function getSlotRecentQuantities(userId, mealSlot) {
+  if (!userId || !mealSlot) return new Map();
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT food_ref, last_quantity_g
+     FROM food_slot_recents
+     WHERE user_id = ? AND meal_slot = ?`,
+    [userId, mealSlot],
+  ).catch(() => []);
+  return new Map((rows || [])
+    .filter((r) => r?.food_ref && Number.isFinite(Number(r.last_quantity_g)))
+    .map((r) => [r.food_ref, Number(r.last_quantity_g)]));
+}
+
 // ─── custom_foods ────────────────────────────────────────────────────────
 
 export async function insertCustomFood(userId, food) {
