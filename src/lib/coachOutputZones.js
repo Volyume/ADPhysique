@@ -7,13 +7,14 @@
 // the zoning is unit-tested directly (no screen mount needed).
 //
 // Card kinds: 'training' (TrainingNextWeekCard — volume or deload row),
-// 'nutrition' (NextWeekCard — calories/steps rows), 'macro'
-// (MacroCycleCard), 'refeed' (RefeedCard), 'dietBreak' (DietBreakCard).
+// 'nutrition' (NextWeekCard — calories/steps rows), 'dietBreak'
+// (DietBreakCard). The 'macro' and 'refeed' kinds were retired with the
+// carb-cycle and refeed cards under the one-daily-truth law (Campaign 17A).
 //
 // DietBreakCard is founder-confirmed as a safety block: it is the hero ONLY when
 // it is the engine's top decision; otherwise the screen renders it in the
 // always-visible safety zone — never in the collapsible secondary.
-export function selectCoachOutputZones(output, { dietBreakSuggested = false, hasMacro = false, hasRefeed = false } = {}) {
+export function selectCoachOutputZones(output, { dietBreakSuggested = false } = {}) {
   const domain = output?.primary?.domain ?? null;
 
   let heroKind = null;
@@ -23,12 +24,10 @@ export function selectCoachOutputZones(output, { dietBreakSuggested = false, has
 
   // The training and nutrition cards always render (they show a held/hold row
   // even when nothing changes), so each is a secondary candidate unless it is
-  // the hero. Macro/refeed appear only when present and are never the hero.
+  // the hero.
   const secondaryKinds = [];
   if (heroKind !== 'training') secondaryKinds.push('training');
   if (heroKind !== 'nutrition') secondaryKinds.push('nutrition');
-  if (hasMacro) secondaryKinds.push('macro');
-  if (hasRefeed) secondaryKinds.push('refeed');
 
   const dietBreakInSafety = dietBreakSuggested && heroKind !== 'dietBreak';
 

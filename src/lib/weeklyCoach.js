@@ -8,7 +8,7 @@
  * and a plain-English rationale.
  */
 
-import { getTrainingNote, isCompetitionGoal, dayCalorieCyclingAllowed } from './coachingGoals';
+import { getTrainingNote } from './coachingGoals';
 import {
   shouldSuggestDietBreak,
   computeFFMFloor,
@@ -19,7 +19,6 @@ import {
 } from './nutritionEngine';
 import { localDayKey } from './dayKey';
 import { robustTrackingLatest, robustTrackingSevenDaysAgoPoint } from './robustTrend';
-import { computeMacroCycle, computeRefeedDay } from './coachApply';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
 import { cycleTrendAnnotation } from './cyclePhase';
@@ -649,20 +648,14 @@ export function runWeeklyCoach(inputs) {
     lastCalAdjustmentDirection: _lastCalAdjustmentDirection = null,
     lastCalAdjustmentWeeksAgo = 99,
     currentCalTarget = null,
-    // Current daily macros, read from nutrition_targets by the caller.
-    // Only used to build the high-day / low-day carb cycle (row 6); the
-    // cycle holds protein and fat and shifts carbs onto training days.
     // PIPE-007 (by design, founder 2026-06-08): weekly coaching decisions run
-    // off total calories and weight trend, not macro adherence. Macros inform
-    // the carb cycle only; protein sufficiency is set at plan time, not policed
-    // weekly here.
-    currentProteinG = null,
-    currentCarbsG = null,
-    currentFatG = null,
-    // Maintenance (tdee) and the timestamp of the last applied refeed,
-    // both read from the caller. Drive the refeed cadence (row 7).
+    // off total calories and weight trend, not macro adherence. Protein
+    // sufficiency is set at plan time, not policed weekly here. (The
+    // currentProteinG/CarbsG/FatG and lastRefeedAt inputs fed the carb cycle
+    // and the refeed cadence; both were retired under the one-daily-truth law
+    // - Campaign 17A - so the coach no longer reads them.)
+    // Maintenance (tdee), read from the caller.
     currentMaintenanceKcal = null,
-    lastRefeedAt = null,
     currentStepsTarget = 8000,
     // Whether a daily step target is in play. DORMANT IN PRODUCTION
     // (comment corrected 2026-08-10, Campaign 4 review; behaviour
@@ -1555,67 +1548,14 @@ export function runWeeklyCoach(inputs) {
     }
   }
 
-  // ── HIGH-DAY / LOW-DAY MACRO CYCLE (GAP row 6) ────────────────────────────
-  // Carb cycle for advanced cutters and physique competitors only.
-  // Beginner / intermediate cuts stay flat (founder decision
-  // 2026-05-27). Protein and fat are held; carbs shift onto training
-  // days so the weekly average kcal is unchanged. The split is computed
-  // here and surfaced as a confirm-then-apply card; nothing writes until
-  // the user taps Apply (CoachOutputScreen.handleApplyMacroCycle).
-  let macroCycle = null;
-  // Shared gate (coachingGoals.dayCalorieCyclingAllowed): the meal-plan
-  // assembler reads the same predicate so the coach card and the plate plan
-  // can never disagree on who gets train/rest cycling.
-  if (dayCalorieCyclingAllowed({ goalPhase, goalLockAdvanced, trainingGoal })) {
-    const trainingDays = Math.max(1, Math.min(6, Math.round(sessionsPlanned)));
-    // F3 (EN-2): sex threads the per-day ED floor through computeMacroCycle so
-    // a floored target can never be offered a sub-floor rest day.
-    const split = computeMacroCycle(
-      { targetKcal: currentCalTarget, proteinG: currentProteinG, carbsG: currentCarbsG, fatG: currentFatG },
-      trainingDays,
-      { sex },
-    );
-    if (split) {
-      const dayWord = trainingDays === 1 ? 'day' : 'days';
-      macroCycle = {
-        ...split,
-        note: `Carbs move onto your ${trainingDays} training ${dayWord}: ${split.trainingDay.carbsG}g on training days, ${split.restDay.carbsG}g on rest days. Protein and fat stay the same and your weekly average holds at ${currentCalTarget} kcal.`,
-      };
-    }
-  }
-
-  // ── REFEED DAY (GAP row 7) ────────────────────────────────────────────────
-  // A single day raised to maintenance via carbs, for physique competitors
-  // on a cut only. The coach proposes it on a weekly cadence and the user
-  // confirms before the swap. Applying schedules it onto the next
-  // training day (CoachOutputScreen.handleApplyRefeed); nothing writes
-  // until then. Builds on row 6's day-level framing. (The fortnightly
-  // agg_cut cadence died with the dead agg_cut vocabulary — EN-4.)
-  let refeed = null;
-  const refeedEligible = phase.isCut && isCompetitionGoal(trainingGoal);
-  if (refeedEligible) {
-    const frequencyWeeks = 1;
-    const weeksSinceRefeed = lastRefeedAt
-      ? Math.floor((nowMs - lastRefeedAt) / (7 * 86400000))
-      : null;
-    const due = weeksSinceRefeed === null || weeksSinceRefeed >= frequencyWeeks;
-    if (due) {
-      const target = computeRefeedDay({
-        targetKcal: currentCalTarget,
-        tdee: currentMaintenanceKcal,
-        proteinG: currentProteinG,
-        fatG: currentFatG,
-      });
-      if (target) {
-        refeed = {
-          ...target,
-          frequencyWeeks,
-          note: `Take a refeed on your next training day. Eat up to ${target.kcal} kcal, lifting carbs to ${target.carbsG}g while protein and fat stay the same. A day at maintenance during a long cut helps protect training and hormones.`,
-        };
-      }
-    }
-  }
-
+  // ── ONE DAILY TRUTH (Campaign 17A, founder law) ───────────────────────────
+  // The high-day/low-day carb cycle (old GAP row 6) and the scheduled refeed
+  // day (old GAP row 7) used to be produced here as confirm-then-apply cards.
+  // Both are gone, and deliberately: they made the athlete's calorie target
+  // depend on knowing which calendar days they train, and a Volyume athlete
+  // trains whenever life allows. The coach now proposes ONE base daily target
+  // and nothing else moves a day except the athlete's own calorie bank.
+  //
   // ── ED-PATTERN DETECTOR (Move #2) ─────────────────────────────────────────
   // Multi-signal harm-prevention check. Reads recent weight trend +
   // weekly history and decides whether to raise an ED-pattern flag
@@ -2022,8 +1962,6 @@ export function runWeeklyCoach(inputs) {
     // cut's set-age instead. True for every continuously coached user
     // and every legacy caller.
     dietBreakContinuityEvidenced: !phaseClaimGap,
-    macroCycle,
-    refeed,
     heldDecisions,
     rapidWeightLossFlag,
     rapidLossCorrectionApplied,

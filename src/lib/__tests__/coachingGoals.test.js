@@ -18,7 +18,6 @@ import {
   getTrainingNote,
   migrateProfileGoals,
   isCutPhase,
-  dayCalorieCyclingAllowed,
 } from '../coachingGoals';
 
 describe('Division-specific weak-point sets', () => {
@@ -249,22 +248,14 @@ describe('day-calorie-cycling gate (single source for coach + meal plan)', () =>
     );
   });
 
-  test('cycling needs a cut AND (advanced lock OR a competition goal)', () => {
-    // Cut + advanced lock
-    expect(dayCalorieCyclingAllowed({ goalPhase: 'mild_cut', goalLockAdvanced: true })).toBe(true);
-    // Cut + competition goal (no advanced lock)
-    expect(dayCalorieCyclingAllowed({ goalPhase: 'mild_cut', trainingGoal: 'mens_physique' })).toBe(true);
-    // Cut but neither qualifier → flat
-    expect(dayCalorieCyclingAllowed({ goalPhase: 'mild_cut', goalLockAdvanced: false, trainingGoal: 'general' })).toBe(false);
-  });
-
-  test('a non-cut phase never cycles, however advanced or competitive', () => {
-    expect(dayCalorieCyclingAllowed({ goalPhase: 'maint', goalLockAdvanced: true, trainingGoal: 'mens_physique' })).toBe(false);
-    expect(dayCalorieCyclingAllowed({ goalPhase: 'mild_bulk', goalLockAdvanced: true })).toBe(false);
-  });
-
-  test('defaults to flat (no args / empty)', () => {
-    expect(dayCalorieCyclingAllowed()).toBe(false);
-    expect(dayCalorieCyclingAllowed({})).toBe(false);
+  // ONE DAILY TRUTH (Campaign 17A, founder law). `dayCalorieCyclingAllowed`
+  // was the single gate deciding who got calories cycled between training and
+  // rest days. Nobody does: "The user's training days are not fixed calendar
+  // days. They train whenever life allows." The gate is gone, and no caller
+  // may reintroduce it.
+  test('ONE DAILY TRUTH: no day-calorie-cycling gate exists', () => {
+    // eslint-disable-next-line global-require
+    const mod = require('../coachingGoals');
+    expect(mod.dayCalorieCyclingAllowed).toBeUndefined();
   });
 });

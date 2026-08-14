@@ -121,7 +121,6 @@ const CRITICAL_PRO_SCREENS = [
   { gated: 'GatedRecipeBuilder', routes: ['RecipeBuilder'] },
   { gated: 'GatedNutritionTargets', routes: ['NutritionTargets'] },
   { gated: 'GatedMealNames', routes: ['MealNames'] },
-  { gated: 'GatedPerDayTargets', routes: ['PerDayTargets'] },
   // BodyMetrics and ProgressPhotos are each registered in more than one tab
   // stack (Home and Progress) so free deep-linking cannot bypass the guard
   // via either entry point -- the regex below matches every occurrence of

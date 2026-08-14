@@ -29,10 +29,16 @@ describe('normalisePreferences', () => {
     expect(normalisePreferences({ variety: 7 }).variety).toBe(1);
     expect(normalisePreferences({ variety: -1 }).variety).toBe(0);
   });
-  test('rejects unknown diets and fat conventions', () => {
+  test('rejects unknown diets', () => {
     expect(normalisePreferences({ diet: 'carnivore' }).diet).toBe('omnivore');
-    expect(normalisePreferences({ fatConvention: 'whatever' }).fatConvention).toBe('equalised');
-    expect(normalisePreferences({ fatConvention: 'higher_rest_day' }).fatConvention).toBe('higher_rest_day');
+  });
+  // ONE DAILY TRUTH (Campaign 17A): `fatConvention` decided how a REST DAY's
+  // fat was handled when calories cycled by day type. Calories no longer cycle
+  // by day type, so the preference is gone from the model entirely - a stored
+  // value must not reappear on a normalised preferences object.
+  test('a stored fatConvention is dropped, not carried', () => {
+    expect(normalisePreferences({ fatConvention: 'higher_rest_day' }).fatConvention).toBeUndefined();
+    expect(normalisePreferences({}).fatConvention).toBeUndefined();
   });
   test('de-duplicates exclusion lists and drops empties', () => {
     const p = normalisePreferences({ excludeFoodKeys: ['oats', 'oats', null] });

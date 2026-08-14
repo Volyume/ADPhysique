@@ -5,7 +5,7 @@
  *   2. in-app rest sounds, independent of the OS rest alert
  *   3. readiness purpose copy + distinct-day weigh-in wording
  */
-import { isCompetitionGoal, shouldShowGoalLockOnboarding, dayCalorieCyclingAllowed } from '../coachingGoals';
+import { isCompetitionGoal, shouldShowGoalLockOnboarding } from '../coachingGoals';
 import { ADVANCED_PROTEIN_GOALS } from '../nutritionEngine';
 import { assessDataConfidence } from '../weeklyCoach';
 
@@ -27,11 +27,14 @@ describe("women's physique gets the same competition treatment as its siblings",
     }
   });
 
-  test('it receives the same day-calorie-cycling eligibility on a cut', () => {
-    const args = { goalPhase: 'mild_cut', goalLockAdvanced: false };
-    expect(dayCalorieCyclingAllowed({ ...args, trainingGoal: 'womens_physique' })).toBe(true);
+  // ONE DAILY TRUTH (Campaign 17A): this test pinned that women's physique got
+  // the same day-calorie-cycling eligibility as its sibling divisions. Nobody
+  // cycles calories by day type any more, so the parity claim moves to the
+  // competition-goal predicate that actually still governs treatment.
+  test('it is a competition goal, exactly like its siblings', () => {
+    expect(isCompetitionGoal('womens_physique')).toBe(true);
     for (const g of SIBLINGS) {
-      expect(dayCalorieCyclingAllowed({ ...args, trainingGoal: g })).toBe(true);
+      expect(isCompetitionGoal(g)).toBe(true);
     }
   });
 

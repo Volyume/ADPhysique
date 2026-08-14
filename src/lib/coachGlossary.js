@@ -16,10 +16,6 @@ export const GLOSSARY = {
     'A lighter planned week so you recover: lighter loads, full recovery, no PRs.',
   maintenanceCalories:
     'The daily calories that keep your weight steady: the starting point a change is measured from.',
-  refeed:
-    'A planned higher-carb day on an aggressive cut, to ease fatigue.',
-  macroCycle:
-    'Alternating higher- and lower-carb days across the week.',
   // C5-P14-03 (D96): the basis clause used to read "worked out from your
   // recent sets", which overstates it on the surface where the term is first
   // met. SetEntry renders Est. max live from the single set currently dialled

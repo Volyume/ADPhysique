@@ -18,17 +18,21 @@
 import { CURATED_MEALS, DIETS, dietAllows } from './curatedMeals';
 import { foodExcluded, mealProteinAnchor } from './foodRoles';
 
-export const FAT_CONVENTIONS = Object.freeze(['equalised', 'higher_rest_day']);
+// ONE DAILY TRUTH (Campaign 17A, founder law). `FAT_CONVENTIONS` and the
+// `fatConvention` preference decided how a REST DAY's fat was handled when
+// calories cycled between training and rest days. Calories no longer cycle by
+// day type, so there is no rest day to convention. The stored profile column
+// is left alone (it harms nobody and deleting it would destroy data); nothing
+// reads it into a plan.
 
 export const DEFAULT_PLAN_PREFERENCES = Object.freeze({
   diet: 'omnivore',            // one of curatedMeals.DIETS (incl. 'pescatarian')
   excludeFoodKeys: [],         // dislikes + anything flagged "never show me this"
   excludeTags: [],             // FSA allergen tags, hard excludes
   mealsPerDay: 4,              // physique norm 4-6; beginners often 3-4
-  periWorkoutSlots: false,     // pre/post-workout slots on training days
+  periWorkoutSlots: false,     // pre/post-workout slots, on every day when on
   variety: 0,                  // 0 = repeat (meal-prep, the default — varied is opt-in), 1 = maximise rotation
   rotationPool: null,          // optional 3-3-3 pool: { protein:[], carb:[], fat:[] }
-  fatConvention: 'equalised',  // rest-day fat handling (round-2 item 1)
   pinnedMealIds: [],           // "always keep my oats breakfast"
 });
 
@@ -43,8 +47,6 @@ export function normalisePreferences(prefs) {
   const p = prefs || {};
   const dedupe = (a) => Array.from(new Set(Array.isArray(a) ? a.filter(Boolean) : []));
   const diet = DIETS.includes(p.diet) ? p.diet : 'omnivore';
-  const fatConvention = FAT_CONVENTIONS.includes(p.fatConvention)
-    ? p.fatConvention : 'equalised';
   const pool = p.rotationPool && typeof p.rotationPool === 'object'
     ? {
       protein: dedupe(p.rotationPool.protein),
@@ -60,7 +62,6 @@ export function normalisePreferences(prefs) {
     periWorkoutSlots: !!p.periWorkoutSlots,
     variety: clamp(Number.isFinite(Number(p.variety)) ? Number(p.variety) : 0, 0, 1),
     rotationPool: pool && (pool.protein.length || pool.carb.length || pool.fat.length) ? pool : null,
-    fatConvention,
     pinnedMealIds: dedupe(p.pinnedMealIds),
   };
 }

@@ -17,10 +17,8 @@ jest.mock('../db', () => ({
 import {
   storedTargetToEngineTarget,
   preferencesFromProfile,
-  defaultSchedule,
   buildPlanSnapshot,
   buildDayPlanSnapshot,
-  answerDayTraining,
   applyPlanDayToDiary,
   applyPlanWeekToDiary,
   planNextWeek,
@@ -137,32 +135,35 @@ describe('preferencesFromProfile', () => {
   });
 });
 
-describe('defaultSchedule', () => {
-  test('spreads N training days across the week', () => {
-    const four = defaultSchedule(4);
-    expect(four.filter((d) => d === 'training').length).toBe(4);
-    expect(four.length).toBe(7);
-  });
-  test('0 and 7 extremes', () => {
-    expect(defaultSchedule(0).every((d) => d === 'rest')).toBe(true);
-    expect(defaultSchedule(7).every((d) => d === 'training')).toBe(true);
-  });
-  test('is deterministic', () => {
-    expect(defaultSchedule(3)).toEqual(defaultSchedule(3));
+// ONE DAILY TRUTH (Campaign 17A, founder law). `defaultSchedule` spread N
+// training days across a calendar week so the plan could give those days a
+// different target. The founder retired the whole idea: the athlete trains
+// whenever life allows, so the app must not assert which weekdays those are.
+describe('ONE DAILY TRUTH: no training-schedule guesser exists', () => {
+  test('the service exports no defaultSchedule and no answerDayTraining', () => {
+    // eslint-disable-next-line global-require
+    const mod = require('../mealPlanService');
+    expect(mod.defaultSchedule).toBeUndefined();
+    expect(mod.answerDayTraining).toBeUndefined();
+    expect(mod.answerTrainingTodayOnActivePlan).toBeUndefined();
   });
 });
 
 describe('buildPlanSnapshot', () => {
   test('wraps the week with the snapshots needed to re-solve', () => {
-    const week = { days: [{ variant: 'training' }], schedule: ['training'], variants: {}, cycleDeltaKcal: 0, withinTolerance: true, seed: 9 };
+    const week = { days: [{}], withinTolerance: true, seed: 9 };
     const engineTarget = { targetKcal: 2600, kcalMin: 2340, kcalMax: 2860, proteinG: 180 };
     const prefs = { diet: 'omnivore' };
-    const snap = buildPlanSnapshot({ week, engineTarget, prefs, schedule: ['training'] });
+    const snap = buildPlanSnapshot({ week, engineTarget, prefs });
     expect(snap.kind).toBe('week');
     expect(snap.targetSnapshot).toEqual(engineTarget);
     expect(snap.prefs).toEqual(prefs);
     expect(snap.days).toBe(week.days);
     expect(snap.schemaVersion).toBe(1);
+    // ONE DAILY TRUTH: a stored plan carries no day-type machinery at all.
+    expect(snap.schedule).toBeUndefined();
+    expect(snap.variants).toBeUndefined();
+    expect(snap.cycleDeltaKcal).toBeUndefined();
   });
 });
 
@@ -240,94 +241,17 @@ describe('planNextWeek (seamless post-check-in setup)', () => {
 });
 
 describe('buildDayPlanSnapshot (Feature A — Plan my day)', () => {
-  test('wraps a single day as a kind:day plan with no cycling', () => {
-    const day = { variant: 'rest', withinTolerance: true, seed: 5, slots: [], totals: { kcal: 2600 } };
+  test('wraps a single day as a kind:day plan carrying no day-type machinery', () => {
+    const day = { withinTolerance: true, seed: 5, slots: [], totals: { kcal: 2600 } };
     const engineTarget = { targetKcal: 2600, kcalMin: 2340, kcalMax: 2860, proteinG: 180 };
     const snap = buildDayPlanSnapshot({ day, engineTarget, prefs: { diet: 'omnivore' } });
     expect(snap.kind).toBe('day');
     expect(snap.days).toEqual([day]);
     expect(snap.days.length).toBe(1);
-    expect(snap.cycleDeltaKcal).toBe(0);
-    expect(snap.variants).toBeNull();
     expect(snap.targetSnapshot).toEqual(engineTarget);
-  });
-});
-
-describe('answerDayTraining (rethink §3.2 — per-day "Training today?")', () => {
-  const engineTarget = {
-    targetKcal: 2400, kcalMin: 2160, kcalMax: 2640,
-    proteinG: 180, carbsG: 250, fatG: 70, warnings: [],
-  };
-  const makePlan = () => {
-    const week = assembleWeekPlan({
-      engineTarget,
-      prefs: { diet: 'omnivore', mealsPerDay: 4 },
-      schedule: ['training', 'rest', 'training', 'rest', 'training', 'rest', 'rest'],
-      seed: 7,
-    });
-    return buildPlanSnapshot({ week, engineTarget, prefs: week.prefs ?? { diet: 'omnivore', mealsPerDay: 4 }, schedule: week.schedule });
-  };
-
-  test('flips a rest day to training: day re-assembled on the TRAINING variant, schedule updated', () => {
-    const plan = makePlan();
-    const { plan: next, changed } = answerDayTraining({ plan, dayIndex: 1, training: true, seed: 11 });
-    expect(changed).toBe(true);
-    expect(next.schedule[1]).toBe('training');
-    expect(next.days[1].variant).toBe('training');
-    // The day now targets the stored TRAINING variant. With exact-fill the
-    // close-out drives each day onto its target rather than just into the ±10%
-    // band, so assert the re-assembled day lands within tolerance of the
-    // training target (was: strictly closer than the rest day + 1 kcal, which
-    // is too tight now both days land on-target within a few kcal).
-    expect(Math.abs(next.days[1].totals.kcal - plan.variants.training.kcal))
-      .toBeLessThanOrEqual(Math.round(plan.variants.training.kcal * 0.02) + 1);
-    expect(next.lastEditType).toBe('day_training_answer');
-  });
-
-  test('answer matching the existing variant is a no-op', () => {
-    const plan = makePlan();
-    const { plan: next, changed } = answerDayTraining({ plan, dayIndex: 0, training: true });
-    expect(changed).toBe(false);
-    expect(next).toBe(plan);
-  });
-
-  test('only the answered day changes — the week is never reshuffled', () => {
-    const plan = makePlan();
-    const { plan: next } = answerDayTraining({ plan, dayIndex: 3, training: true, seed: 5 });
-    next.days.forEach((d, i) => {
-      if (i !== 3) expect(d).toBe(plan.days[i]);
-    });
-    next.schedule.forEach((v, i) => {
-      if (i !== 3) expect(v).toBe(plan.schedule[i]);
-    });
-  });
-
-  test('SAFETY: on a floored target the re-varianted day never drops below the floor', () => {
-    const floored = storedTargetToEngineTarget({
-      target_kcal: 1200, protein_g: 120, carbs_g: 100, fat_g: 35,
-      warnings: ['Target calories (1130 kcal) below safe minimum (1200 kcal). Raising to floor.'],
-    });
-    expect(floored.floorApplied).toBe(true);
-    expect(floored.kcalMin).toBe(1200); // raised to the floor at mapping time
-    const week = assembleWeekPlan({
-      engineTarget: floored,
-      prefs: { diet: 'omnivore', mealsPerDay: 4 },
-      schedule: ['training', 'rest', 'rest', 'rest', 'rest', 'rest', 'rest'],
-      seed: 3,
-    });
-    const plan = buildPlanSnapshot({ week, engineTarget: floored, prefs: { diet: 'omnivore', mealsPerDay: 4 }, schedule: week.schedule });
-    const { plan: next, changed } = answerDayTraining({ plan, dayIndex: 6, training: true, seed: 9 });
-    expect(changed).toBe(true);
-    expect(next.days[6].totals.kcal).toBeGreaterThanOrEqual(1200 * 0.97); // assembler tolerance, never sub-floor by design band
-    // The band handed to the assembler had kcalMin AT the floor:
-    expect(plan.targetSnapshot.kcalMin).toBe(1200);
-  });
-
-  test('invalid input never throws and never mutates', () => {
-    const plan = makePlan();
-    expect(answerDayTraining({ plan, dayIndex: 9, training: true }).changed).toBe(false);
-    expect(answerDayTraining({ plan: null, dayIndex: 0, training: true }).changed).toBe(false);
-    expect(answerDayTraining({ plan, dayIndex: -1, training: false }).changed).toBe(false);
+    expect(snap.schedule).toBeUndefined();
+    expect(snap.variants).toBeUndefined();
+    expect(snap.cycleDeltaKcal).toBeUndefined();
   });
 });
 
@@ -340,10 +264,9 @@ describe('repeatPlanDay (audit §15 item 6 — repeat a day onto another day)', 
     const week = assembleWeekPlan({
       engineTarget,
       prefs: { diet: 'omnivore', mealsPerDay: 4 },
-      schedule: ['training', 'rest', 'training', 'rest', 'training', 'rest', 'rest'],
       seed: 7,
     });
-    return buildPlanSnapshot({ week, engineTarget, prefs: week.prefs ?? { diet: 'omnivore', mealsPerDay: 4 }, schedule: week.schedule });
+    return buildPlanSnapshot({ week, engineTarget, prefs: { diet: 'omnivore', mealsPerDay: 4 } });
   };
 
   test('copies the source day\'s real slots+totals onto the target day, a real write not a label change', () => {
@@ -354,9 +277,6 @@ describe('repeatPlanDay (audit §15 item 6 — repeat a day onto another day)', 
     // source day, not merely "close" — this is a copy, not a re-generation.
     expect(next.days[1].slots.map((s) => s.name)).toEqual(plan.days[0].slots.map((s) => s.name));
     expect(next.days[1].totals).toEqual(plan.days[0].totals);
-    // The variant travels with the copy, so schedule and day.variant agree.
-    expect(next.days[1].variant).toBe(plan.days[0].variant);
-    expect(next.schedule[1]).toBe(plan.days[0].variant);
     expect(next.lastEditType).toBe('day_repeat');
   });
 

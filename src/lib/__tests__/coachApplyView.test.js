@@ -16,14 +16,12 @@
  */
 import {
   classifyCalorieApply,
-  classifyMacroCycleApply,
   floorHoldLine,
   floorClampLine,
-  macroCycleHoldLine,
   preTapTargetLine,
   signedEnergyChange,
 } from '../coachApplyView';
-import { computeCalorieTargets, computeMacroCycle, kcalFloorForSex } from '../coachApply';
+import { computeCalorieTargets, kcalFloorForSex } from '../coachApply';
 
 const targets = (targetKcal, extra = {}) => ({
   targetKcal, proteinG: 150, carbsG: 220, fatG: 65, tdee: 2800, ...extra,
@@ -95,30 +93,16 @@ describe('classifyCalorieApply: floor holds are named, not silent (NU-3)', () =>
   });
 });
 
-describe('classifyMacroCycleApply: the floored split explains itself (NU-3)', () => {
-  test('a floored female target classifies the refused cycle as floor_hold', () => {
-    // The edFloorSeams.f3 case: 1200 kcal, 100 g carbs. The split is
-    // structurally fine but a rest day would serve below the floor.
-    const nut = { targetKcal: 1200, proteinG: 120, carbsG: 100, fatG: 40 };
-    const r = classifyMacroCycleApply(nut, 4, 'female');
-    expect(r.kind).toBe('floor_hold');
-    expect(r.floorKcal).toBe(1200);
-    expect(computeMacroCycle(nut, 4, { sex: 'female' })).toBeNull();
-  });
-
-  test('with real headroom the cycle classifies ok and carries the real split', () => {
-    const nut = { targetKcal: 2400, proteinG: 180, carbsG: 250, fatG: 70 };
-    const r = classifyMacroCycleApply(nut, 4, 'female');
-    expect(r.kind).toBe('ok');
-    expect(r.split).toEqual(computeMacroCycle(nut, 4, { sex: 'female' }));
-  });
-
-  test('a structurally impossible cycle is unavailable, never blamed on the floor', () => {
-    // 7 training days leaves no rest day to pull carbs from at any target.
-    const nut = { targetKcal: 2400, proteinG: 180, carbsG: 250, fatG: 70 };
-    expect(classifyMacroCycleApply(nut, 7, 'female').kind).toBe('unavailable');
-    // No carbs to split at all.
-    expect(classifyMacroCycleApply({ targetKcal: 2400, carbsG: null }, 4, 'female').kind).toBe('unavailable');
+// ONE DAILY TRUTH (Campaign 17A, founder law). `classifyMacroCycleApply` and
+// `macroCycleHoldLine` explained what applying a training/rest carb cycle
+// would do. There is no such apply any more - the cycle itself is gone - so
+// the view helpers went with it.
+describe('ONE DAILY TRUTH: no carb-cycle apply view helpers exist', () => {
+  test('coachApplyView exports no macro-cycle classifier or hold line', () => {
+    // eslint-disable-next-line global-require
+    const mod = require('../coachApplyView');
+    expect(mod.classifyMacroCycleApply).toBeUndefined();
+    expect(mod.macroCycleHoldLine).toBeUndefined();
   });
 });
 
@@ -133,17 +117,6 @@ describe('row strings: exact wording, kJ preference, no em dash (NU-3/NU-4/NU-6)
   test('partial clamp line', () => {
     expect(floorClampLine(1200)).toBe('Applied to your safe minimum, 1,200 kcal.');
     expect(floorClampLine(1200, 'kj')).toBe('Applied to your safe minimum, 5,021 kJ.');
-  });
-
-  test('macro-cycle hold line attributes the hold to the rest day, not the target', () => {
-    // The weekly target is not held at the floor; the cycle's rest-day serving
-    // is what would dip below it. The generic floorHoldLine misstates that.
-    expect(macroCycleHoldLine(1200))
-      .toBe('Held: a rest day would fall below your safe minimum of 1,200 kcal.');
-    expect(macroCycleHoldLine(1500, 'kcal'))
-      .toBe('Held: a rest day would fall below your safe minimum of 1,500 kcal.');
-    expect(macroCycleHoldLine(1200, 'kj'))
-      .toBe('Held: a rest day would fall below your safe minimum of 5,021 kJ.');
   });
 
   test('pre-tap target line states the absolute and the honest duration', () => {
@@ -161,7 +134,7 @@ describe('row strings: exact wording, kJ preference, no em dash (NU-3/NU-4/NU-6)
 
   test('no string ever labels the write "next week", and none carries an em dash', () => {
     const all = [
-      floorHoldLine(1200), floorClampLine(1200), macroCycleHoldLine(1200),
+      floorHoldLine(1200), floorClampLine(1200),
       preTapTargetLine(2350), preTapTargetLine(1200, 'kcal', { clampedToFloor: true }),
       signedEnergyChange(-150),
     ];

@@ -6,7 +6,6 @@ const screenPath = (name) => path.join(__dirname, '..', name);
 describe('latest body composition consumers', () => {
   test.each([
     ['DiaryScreen.js'],
-    ['PerDayTargetsScreen.js'],
   ])('%s reads getLatestBodyComposition camelCase fields', (file) => {
     const src = fs.readFileSync(screenPath(file), 'utf8');
     const computeBlock = src.match(/computeFFMFloor\(bodyWeight\.weightKg,\s*\{[\s\S]*?\}\);/);

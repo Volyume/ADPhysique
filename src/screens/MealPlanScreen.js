@@ -45,7 +45,6 @@ import {
   planConflictsWithExclusions,
   applyPlanDayToDiary,
   applyPlanWeekToDiary,
-  answerTrainingTodayOnActivePlan,
   repeatPlanDayOnActivePlan,
   swapMealInPlan,
   swapFoodInMeal,
@@ -500,25 +499,6 @@ export default function MealPlanScreen({ navigation, route }) {
     }
   }, [user?.id, plan, busy, planStartDate, toast, navigation]);
 
-  // "Training today?" on the day in view (rethink §3.2): the day's
-  // training/rest variant follows the user's answer, never an asserted
-  // weekly spread. Re-variants only this day through the service and
-  // updates state from the returned plan. A no-op answer (already that
-  // variant) and the no-plan case both leave the screen as-is.
-  const handleAnswerTraining = useCallback(async (training) => {
-    if (!user?.id || !record || busy) return;
-    setBusy(true);
-    try {
-      const res = await answerTrainingTodayOnActivePlan(user.id, { dayIndex, training });
-      if (res.error === 'no_plan' || !res.plan) return;
-      setRecord({ ...record, plan: res.plan });
-    } catch (_) {
-      toast.show("Couldn't update the day. Try again.", { variant: 'error' });
-    } finally {
-      setBusy(false);
-    }
-  }, [user?.id, record, dayIndex, busy, toast]);
-
   // "Repeat this day" (audit §15 item 6): copy the day in view onto another
   // day of the same week plan, reusing its already-assembled meals as-is
   // (no re-generation). Opening the picker is one tap; the actual copy is a
@@ -830,12 +810,10 @@ export default function MealPlanScreen({ navigation, route }) {
     dismissDietaryChipHint();
     setDietarySheetOpen(true);
   }, [dismissDietaryChipHint]);
-  const dayTypeLabel = day?.variant === 'training' ? 'Training day' : 'Rest day';
   const hasSwappableFoods = (day?.slots || []).some((slot) => (
     !!slot.components && (slot.items || []).some((it) => (it.foodRef || '').startsWith('curated:'))
   ));
   const target = plan?.targetSnapshot;
-  const cycleOn = (plan?.cycleDeltaKcal || 0) > 0;
   // Feature A "Plan my day": a single-day plan renders without the week picker
   // and adds to today rather than logging an abstract "Day N".
   const isDayPlan = plan?.kind === 'day' || (plan?.days?.length === 1);
@@ -942,67 +920,41 @@ export default function MealPlanScreen({ navigation, route }) {
               contentContainerStyle={[styles.dayRow, live.dayRow]}
               accessibilityRole="tablist"
             >
-              {plan.schedule.map((variant, i) => {
+              {plan.days.map((_d, i) => {
                 const selected = i === dayIndex;
                 return (
                   <TouchableOpacity
-                    key={`${variant}-${i}`}
+                    key={`day-${i}`}
                     style={[styles.dayBtn, selected && [styles.dayBtnOn, live.dayBtnOn]]}
                     onPress={() => setDayIndex(i)}
                     hitSlop={hitSlop}
                     accessibilityRole="tab"
                     accessibilityState={{ selected }}
-                    accessibilityLabel={cycleOn ? `${dayLabels[i]?.accessibility}, ${variant === 'training' ? 'training day' : 'rest day'}` : dayLabels[i]?.accessibility}
+                    accessibilityLabel={dayLabels[i]?.accessibility}
                   >
                     <Text style={[styles.dayLetter, live.dayLetter, selected && [styles.dayLetterOn, live.dayLetterOn]]}>{dayLabels[i]?.tab || `Day ${i + 1}`}</Text>
-                    <View style={[styles.dayDot, live.dayDot, variant === 'training' && cycleOn && [styles.dayDotTrain, live.dayDotTrain]]} />
+                    <View style={[styles.dayDot, live.dayDot]} />
                   </TouchableOpacity>
                 );
               })}
             </ScrollView>
           ) : null}
 
-          {/* Day header: type chip + totals. The training/rest chip only
-              means something when calories cycle; on a flat plan (everyone bar
-              advanced cutters and competitors) it is dropped so the day is just
-              "the whole number, the same every day". */}
+          {/* Day header: totals. There is no day-type chip: under the
+              one-daily-truth law (Campaign 17A) every day carries the same
+              target, so the day is just "the whole number, the same every
+              day". */}
           <View style={styles.dayHeader}>
             <View style={styles.dayTitleGroup}>
               <Text style={[styles.dayLabel, live.dayLabel]}>{activeDayLabel}</Text>
-              {cycleOn ? (
-                <View style={[styles.typeChip, live.typeChip]}>
-                  <Text style={[styles.typeChipText, live.typeChipText]}>{dayTypeLabel}</Text>
-                </View>
-              ) : null}
             </View>
             {day ? (
               <Text style={[styles.dayKcal, live.dayKcal]}>
                 {formatEnergy(day.totals.kcal, energyUnit)} {energyUnitLabel(energyUnit)}
-                {target ? <Text style={[styles.dayKcalTarget, live.dayKcalTarget]}>{`  of ${formatEnergy(day.target?.kcal ?? plan.variants?.[day.variant]?.kcal ?? target.targetKcal, energyUnit)}`}</Text> : null}
+                {target ? <Text style={[styles.dayKcalTarget, live.dayKcalTarget]}>{`  of ${formatEnergy(day.target?.kcal ?? target.targetKcal, energyUnit)}`}</Text> : null}
               </Text>
             ) : null}
           </View>
-          {/* Training today?, per-day input (rethink §3.2). Defaults from
-              the plan's current variant for this day; always overridable.
-              Changing it re-variants only this day. Hidden on a flat plan,
-              where the answer changes nothing. */}
-          {cycleOn ? (
-            <PrefRow
-              label="Training today?"
-              options={[
-                { value: true, label: 'Training' },
-                { value: false, label: 'Rest' },
-              ]}
-              value={day?.variant === 'training'}
-              onSelect={(v) => handleAnswerTraining(v)}
-              busy={busy}
-            />
-          ) : null}
-          {cycleOn ? (
-            <Text style={[styles.cycleNote, live.cycleNote]}>
-              Training days carry more carbs; rest days fewer. Protein never moves.
-            </Text>
-          ) : null}
           {honestyLine ? <Text style={[styles.honesty, live.honesty]}>{honestyLine}</Text> : null}
 
           {/* Campaign 1 P0-3: dietary-needs staleness notice. Renders only

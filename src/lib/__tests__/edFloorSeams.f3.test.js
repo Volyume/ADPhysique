@@ -7,7 +7,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { computeMacroCycle, kcalFloorForSex } from '../coachApply';
+import { kcalFloorForSex } from '../coachApply';
 import { robustSevenDaysAgo, robustTrackingSevenDaysAgo, robustEwma, robustTrackingEwma } from '../robustTrend';
 import { computeEWMA } from '../weeklyCoach';
 import { energyAvailabilityCaution } from '../nutritionEngine';
@@ -15,75 +15,70 @@ import { resolveEffectiveTargets } from '../food/effectiveTargets';
 
 const DAY = 86400000;
 
-// ── EN-2: the coach macro-cycle can never serve a day below the sex floor ────
-describe('computeMacroCycle respects the sacred sex calorie floor (EN-2)', () => {
-  test('a female target AT the 1200 floor proposes NO cycle (rest day would go under)', () => {
-    // 1200 kcal, 100g carbs: a 25% rest-day carb cut would serve ~1100 kcal.
-    const split = computeMacroCycle(
-      { targetKcal: 1200, proteinG: 120, carbsG: 100, fatG: 40 },
-      4,
-      { sex: 'female' },
-    );
-    expect(split).toBeNull();
-  });
-
-  test('a male target near the 1500 floor proposes NO cycle', () => {
-    const split = computeMacroCycle(
-      { targetKcal: 1520, proteinG: 150, carbsG: 120, fatG: 45 },
-      4,
-      { sex: 'male' },
-    );
-    // Rest day would be 1520 - 30g*4 = 1400 < 1500.
-    expect(split).toBeNull();
-  });
-
-  test('unknown sex uses the protective female floor, matching kcalFloorForSex', () => {
-    // Campaign 1 P0-7 D4 re-anchor (D92): unknown sex takes the HIGHER
-    // floor - the old 1200 pin encoded the permissive defect.
-    expect(kcalFloorForSex(null)).toBe(1500);
-    const split = computeMacroCycle(
-      { targetKcal: 1210, proteinG: 120, carbsG: 100, fatG: 40 },
-      4,
-      { sex: null },
-    );
-    expect(split).toBeNull();
-  });
-
-  test('with real headroom the cycle still works and every day clears the floor', () => {
-    const split = computeMacroCycle(
-      { targetKcal: 2400, proteinG: 180, carbsG: 250, fatG: 70 },
-      4,
-      { sex: 'female' },
-    );
-    expect(split).not.toBeNull();
-    expect(split.restDay.kcal).toBeGreaterThanOrEqual(1200);
-    expect(split.trainingDay.kcal).toBeGreaterThanOrEqual(1200);
-  });
-});
-
-// ── EN-2 defence-in-depth: a LEGACY persisted cycle can't render below floor ─
-describe('resolveEffectiveTargets clamps a persisted sub-floor cycle day (EN-2)', () => {
+// ── EN-2 under ONE DAILY TRUTH (Campaign 17A) ────────────────────────────────
+// The two EN-2 seams here pinned that the coach's carb cycle could never
+// PROPOSE a sub-floor rest day, and that a LEGACY persisted cycle could never
+// RENDER one. Both the proposer (computeMacroCycle) and the renderer branch
+// are gone: the founder retired day-type cycling outright.
+//
+// That leaves a live-user question this suite must answer, because it is a
+// real device state today: thousands of profiles still carry a persisted
+// `userProfile.macroCycle` (some with a pre-F3 sub-floor rest day) and a
+// persisted `userProfile.refeed`. The new resolver never reads either, so
+// those days can no longer be served AT ALL - strictly stronger than clamping
+// them to the floor. These tests pin exactly that, using the same pre-F3
+// sub-floor fixture the old seam used.
+describe('EN-2: a legacy persisted cycle can never serve a day, sub-floor or not', () => {
   const targets = { targetKcal: 1200, proteinG: 120, carbsG: 100, fatG: 40 };
   const legacyCycle = {
     trainingDay: { kcal: 1275, proteinG: 120, carbsG: 119, fatG: 40 },
     restDay: { kcal: 1100, proteinG: 120, carbsG: 75, fatG: 40 }, // pre-F3 apply
   };
 
-  test('a rest day persisted below the floor serves the floor, not 1100', () => {
+  test('the pre-F3 sub-floor rest day is not served: the stored target stands', () => {
     const out = resolveEffectiveTargets(targets, {
       macroCycle: legacyCycle, isTrainingDay: false, floorKcal: 1200,
     });
-    expect(out.targetKcal).toBeGreaterThanOrEqual(1200);
-    // The lift is routed through carbs so the day stays self-consistent.
-    expect(out.carbsG).toBeGreaterThan(legacyCycle.restDay.carbsG);
+    expect(out).toBe(targets);
+    expect(out.targetKcal).toBe(1200);
+    expect(out.targetKcal).toBeGreaterThanOrEqual(kcalFloorForSex('female'));
   });
 
-  test('days already at/above the floor are untouched', () => {
+  test('the legacy training day is not served either', () => {
     const out = resolveEffectiveTargets(targets, {
       macroCycle: legacyCycle, isTrainingDay: true, floorKcal: 1200,
     });
-    expect(out.targetKcal).toBe(1275);
-    expect(out.carbsG).toBe(119);
+    expect(out).toBe(targets);
+    expect(out.targetKcal).toBe(1200);
+  });
+
+  test('a legacy persisted refeed cannot raise the day either', () => {
+    const out = resolveEffectiveTargets(targets, {
+      isRefeedDay: true, refeed: { kcal: 1900, proteinG: 120, carbsG: 250, fatG: 40 },
+    });
+    expect(out).toBe(targets);
+  });
+
+  test('the coach can no longer compute a cycle at all', () => {
+    // eslint-disable-next-line global-require
+    const coachApply = require('../coachApply');
+    expect(coachApply.computeMacroCycle).toBeUndefined();
+    expect(coachApply.computeRefeedDay).toBeUndefined();
+  });
+
+  test('SAFETY SWEEP: no legacy cycle day, however low, can ever be rendered', () => {
+    for (const restKcal of [400, 800, 1000, 1100, 1199]) {
+      const out = resolveEffectiveTargets(targets, {
+        macroCycle: {
+          trainingDay: { kcal: 1400, carbsG: 150 },
+          restDay: { kcal: restKcal, carbsG: 40 },
+        },
+        isTrainingDay: false,
+        floorKcal: 1200,
+      });
+      expect(out.targetKcal).toBe(targets.targetKcal);
+      expect(out.targetKcal).toBeGreaterThanOrEqual(1200);
+    }
   });
 });
 

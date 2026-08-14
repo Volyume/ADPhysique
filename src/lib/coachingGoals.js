@@ -197,9 +197,8 @@ export function shouldShowGoalLockOnboarding({ trainingGoal, trainingPhase, expe
 }
 
 // True when the training goal is a physique-competition category. The
-// coach uses this (alongside the advanced goal-lock flag) to gate the
-// high-day / low-day macro cycle, which only fires for competitors and
-// advanced cutters.
+// Competition goals still drive competition-specific coaching elsewhere; they
+// no longer buy any day-by-day calorie cycling (see the note below).
 export function isCompetitionGoal(trainingGoal) {
   return !!trainingGoal && _GOAL_LOCK_COMPETITION_VALUES.has(trainingGoal);
 }
@@ -208,7 +207,7 @@ export function isCompetitionGoal(trainingGoal) {
 // mild_cut is the ONLY cut key since EN-4 deleted the dead agg_cut/mod_cut
 // vocabulary (founder ruling 2026-07-02). recomp maps to its own -0.125 %/wk
 // config but is deliberately NOT a cut: it must never gain the cut levers
-// (macro cycling here, resize/refeed/diet break in weeklyCoach). The sole
+// (resize and diet break in weeklyCoach). The sole
 // phase alias (bulk -> mod_bulk) is not a cut, so a plain membership test is
 // byte-identical to phaseConfig.isCut for every goalPhase the coach passes.
 const _CUT_PHASE_KEYS = new Set(['mild_cut']);
@@ -217,14 +216,11 @@ export function isCutPhase(goalPhase) {
   return _CUT_PHASE_KEYS.has(goalPhase);
 }
 
-// SINGLE SOURCE OF TRUTH for "may calories cycle between training and rest
-// days". Used by BOTH weeklyCoach (the macro-cycle card gate) and the meal-plan
-// assembler so the two can never drift: training/rest calorie (carb) cycling is
-// for advanced cutters and physique competitors only (founder decisions
-// 2026-05-27 and 2026-06-14). Everyone else gets a flat daily target.
-export function dayCalorieCyclingAllowed({ goalPhase = null, goalLockAdvanced = false, trainingGoal = null } = {}) {
-  return isCutPhase(goalPhase) && (!!goalLockAdvanced || isCompetitionGoal(trainingGoal));
-}
+// `dayCalorieCyclingAllowed` lived here: the shared gate that let advanced
+// cutters and physique competitors cycle calories between training and rest
+// days. It is gone under the one-daily-truth law (Campaign 17A, founder):
+// nobody cycles calories by day type, because nobody's training days are a
+// fixed set of weekdays. Everyone gets the same base daily target.
 
 // ─── Training phases (the primary "what are you focused on" question) ──────
 // `nutritionKey` maps to nutritionEngine.js PHASE_ADJUSTMENTS keys

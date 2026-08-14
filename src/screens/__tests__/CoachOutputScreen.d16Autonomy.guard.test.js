@@ -61,8 +61,6 @@ describe('D16: Manual strips every onApply* prop; Coached/Collaborative keep the
       'onApply={applyDisabled ? undefined : handleApplyTraining}',
       'onApplyDeload={applyDisabled ? undefined : handleApplyDeload}',
       'onApplyCalories={applyDisabled ? undefined : handleApplyCalories}',
-      'onApply={applyDisabled ? undefined : handleApplyMacroCycle}',
-      'onApply={applyDisabled ? undefined : handleApplyRefeed}',
       'onApply={applyDisabled ? undefined : handleApplyDietBreak}',
     ];
     for (const line of gatedProps) {
@@ -75,8 +73,6 @@ describe('D16: Manual strips every onApply* prop; Coached/Collaborative keep the
       'onApply={handleApplyTraining}',
       'onApplyDeload={handleApplyDeload}',
       'onApplyCalories={handleApplyCalories}',
-      'onApply={handleApplyMacroCycle}',
-      'onApply={handleApplyRefeed}',
       'onApply={handleApplyDietBreak}',
     ];
     for (const line of unconditional) {
@@ -129,8 +125,6 @@ describe('D16: the Coached auto-apply effect', () => {
       'handleApplyTraining();',
       'handleApplyCalories();',
       'handleApplyDietBreak();',
-      'handleApplyMacroCycle();',
-      'handleApplyRefeed();',
     ]) {
       expect(body).toContain(handler);
     }
@@ -138,7 +132,10 @@ describe('D16: the Coached auto-apply effect', () => {
 
   test('checks isApplied before every handler call (idempotent against re-renders)', () => {
     const body = effectBody();
-    expect(body.match(/!isApplied\(output, '(deload|training|calories|dietBreak|macroCycle|refeed)'\)/g).length).toBe(6);
+    // ONE DAILY TRUTH (Campaign 17A): the macroCycle and refeed applies are
+    // gone with the cards themselves, so the walk is four decisions, not six.
+    expect(body.match(/!isApplied\(output, '(deload|training|calories|dietBreak)'\)/g).length).toBe(4);
+    expect(body).not.toMatch(/macroCycle|refeed/);
   });
 });
 

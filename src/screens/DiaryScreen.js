@@ -33,14 +33,13 @@ import { isoDate, shiftDate, weekDatesMon, weekdayShort, friendlyDate } from '..
 import { createRaceGuard } from '../lib/food/loadRaceGuard';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { resolveFoodRef } from '../lib/food/sources/localCache';
-import { getNutritionTargets, hasWorkoutOnDate, getFirstWorkoutDateOnOrAfter, getOpenEdPatternFlag, getLatestBodyWeight, getLatestBodyComposition, getLatestCoachOutput } from '../lib/database';
+import { getNutritionTargets, getOpenEdPatternFlag, getLatestBodyWeight, getLatestBodyComposition, getLatestCoachOutput } from '../lib/database';
 import { computeFFMFloor } from '../lib/nutritionEngine';
 import { targetWasFloored } from '../lib/food/mealPlanAssembler';
 import { getCuratedCandidates } from '../lib/food/curatedMeals';
 import { rankSuggestions, mealsLeftToday } from '../lib/food/mealSuggest';
 import { safeDayFloorKcal, displayBankedDelta } from '../lib/food/calorieBank';
 import { resolveEffectiveTargets, dayTypeLabel } from '../lib/food/effectiveTargets';
-import { loadPerDayOffsets, offsetForDate, DEFAULT_PERDAY_OFFSETS } from '../lib/food/perDayTargets';
 import { resyncBankedPlannedFood, restoreUnbankedPlannedFood } from '../lib/food/mealPlanService';
 import { buildPlanEditNarration } from '../lib/food/planExplain';
 import CalorieBankSheet from '../components/food/CalorieBankSheet';
@@ -92,12 +91,10 @@ function isValidDayKey(value) {
 export default function DiaryScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const {
-    user, macroCycle, refeed, calorieBank, sex, energyUnit, tier, periWorkoutSlots,
+    user, calorieBank, sex, energyUnit, tier, periWorkoutSlots,
     dietPreference, mealPlanExcludeFoods, mealPlanExcludeTags,
   } = useAppStore(useShallow((s) => ({
     user: s.user,
-    macroCycle: s.userProfile?.macroCycle ?? null,
-    refeed: s.userProfile?.refeed ?? null,
     calorieBank: s.userProfile?.calorieBank ?? null,
     sex: s.userProfile?.sex ?? null,
     energyUnit: s.accessibility?.energyUnit ?? 'kcal',
@@ -114,7 +111,6 @@ export default function DiaryScreen({ navigation, route }) {
     mealPlanExcludeTags: s.userProfile?.mealPlanExcludeTags,
   })));
   const setCalorieBank = useAppStore((s) => s.setCalorieBank);
-  const saveLocalProfile = useAppStore((s) => s.saveLocalProfile);
   const userId = user?.id;
   const toast = useToast();
   // CP-10 batch E (2026-07-10): live theme (src/hooks/useTheme.js). This
@@ -176,12 +172,6 @@ export default function DiaryScreen({ navigation, route }) {
   const [waterMl, setWaterMl] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [targets, setTargets] = useState(null);
-  // Whether the day being viewed is a training day, for the carb cycle
-  // (row 6). Only meaningful when a macro cycle is applied.
-  const [isTrainingDay, setIsTrainingDay] = useState(false);
-  // The resolved refeed day (row 7): the first training day on or after
-  // the refeed was confirmed. Null when no refeed is scheduled.
-  const [refeedDate, setRefeedDate] = useState(null);
   // Open ED-pattern flag disables calorie banking (CB-1 safety carve-out).
   const [edFlagOpen, setEdFlagOpen] = useState(false);
   const [bankSheetVisible, setBankSheetVisible] = useState(false);
@@ -219,13 +209,11 @@ export default function DiaryScreen({ navigation, route }) {
     // failure never wipes entries/rollup/etc already on screen (see catch
     // below); only the try's own success path commits fresh values.
     try {
-      const [es, r, w, targetsRow, trainingDay, resolvedRefeedDate, edFlag, bodyWeight, bodyComp, yEntries, coachOut] = await Promise.all([
+      const [es, r, w, targetsRow, edFlag, bodyWeight, bodyComp, yEntries, coachOut] = await Promise.all([
         getFoodEntriesForDay(userId, selectedDate),
         getRollupForDay(userId, selectedDate),
         getWater(userId, selectedDate),
         getNutritionTargets(userId),
-        macroCycle ? hasWorkoutOnDate(userId, selectedDate) : Promise.resolve(false),
-        refeed?.appliedAt ? getFirstWorkoutDateOnOrAfter(userId, refeed.appliedAt) : Promise.resolve(null),
         // ED-safety, fail CLOSED: a transient flag read maps to the truthy
         // 'read_failed' sentinel (setEdFlagOpen(!!edFlag) below), so the banking
         // carve-out stays DISABLED at a possibly-flagged user rather than opening
@@ -280,8 +268,6 @@ export default function DiaryScreen({ navigation, route }) {
       setRollup(r);
       setWaterMl(w);
       setTargets(targetsRow);
-      setIsTrainingDay(trainingDay);
-      setRefeedDate(resolvedRefeedDate);
       setEdFlagOpen(!!edFlag);
       setFloorKcal(floor);
       setYesterdayHasFood((yEntries?.length ?? 0) > 0);
@@ -299,7 +285,7 @@ export default function DiaryScreen({ navigation, route }) {
       // never leave the skeleton spinning forever (EP-07/UI-02).
       if (loadGuardRef.current.isCurrent(loadToken)) setLoaded(true);
     }
-  }, [userId, selectedDate, macroCycle, refeed, sex, readOnly]);
+  }, [userId, selectedDate, sex, readOnly]);
 
   // Planned scaffolding from a meal plan (adherence model): shown with a
   // confirm banner so it counts towards adherence only once the user says they
@@ -363,80 +349,15 @@ export default function DiaryScreen({ navigation, route }) {
     }
   }, [canWrite, userId, selectedDate, load, toast]);
 
-  const isRefeedDay = !!refeed && !!refeedDate && refeedDate === selectedDate;
-
-  // NU-2: a refeed expires after its resolved day. Without this the applied
-  // refeed lingered on the profile forever, suppressing calorie banking with
-  // no way out. Local profile write only; skipped in read-only (E10 posture).
-  useEffect(() => {
-    if (readOnly || !userId || !refeed || !refeedDate) return;
-    if (isoDate(new Date()) > refeedDate) {
-      saveLocalProfile(userId, { ...(useAppStore.getState().userProfile || {}), refeed: null })
-        .catch(() => {});
-    }
-  }, [readOnly, userId, refeed, refeedDate, saveLocalProfile]);
-
-  // NU-2: the visible exits. Stopping the split / clearing the refeed is a
-  // plain profile write back to the flat targets; confirmed first, calmly.
-  const stopMacroCycle = useCallback(() => {
-    if (!canWrite()) return;
-    appAlert(
-      'Stop the training/rest-day split?',
-      'Your daily target goes back to the same number every day. You can apply a split again from your weekly coaching.',
-      [
-        { text: 'Keep the split', style: 'cancel' },
-        {
-          text: 'Stop the split',
-          onPress: () => {
-            saveLocalProfile(userId, { ...(useAppStore.getState().userProfile || {}), macroCycle: null })
-              .catch(() => toast.show("Couldn't update. Try again.", { variant: 'error' }));
-          },
-        },
-      ],
-    );
-  }, [canWrite, userId, saveLocalProfile, toast]);
-
-  const clearRefeed = useCallback(() => {
-    if (!canWrite()) return;
-    appAlert(
-      'Clear the scheduled refeed?',
-      'The refeed day goes back to your usual target. You can schedule another from your weekly coaching.',
-      [
-        { text: 'Keep it', style: 'cancel' },
-        {
-          text: 'Clear refeed',
-          onPress: () => {
-            saveLocalProfile(userId, { ...(useAppStore.getState().userProfile || {}), refeed: null })
-              .catch(() => toast.show("Couldn't update. Try again.", { variant: 'error' }));
-          },
-        },
-      ],
-    );
-  }, [canWrite, userId, saveLocalProfile, toast]);
-
   // Calorie banking (CB-1) availability: disabled when the target was
-  // floored/compressed, a carb cycle or refeed is active, or an ED-pattern flag
-  // is open. This single gate governs BOTH whether the control appears AND
-  // whether a persisted bank is allowed to display, so a stale bank can never
-  // apply once a carve-out closes banking (review fix #2).
-  const bankingAvailable = !!targets && !targetWasFloored(targets)
-    && !macroCycle && !refeed && !edFlagOpen;
-
-  // Per-day-of-week planning offsets (gap #13). Device-local; re-read on focus so
-  // an edit in the Per-day targets screen is reflected when the diary regains
-  // focus. The offset is applied only on an otherwise-plain day and is
-  // floor-clamped inside resolveEffectiveTargets (declared before effectiveTargets
-  // so it is in scope when that memo runs).
-  const [perDayOffsets, setPerDayOffsets] = useState(DEFAULT_PERDAY_OFFSETS);
-  useFocusEffect(useCallback(() => {
-    let active = true;
-    loadPerDayOffsets().then((o) => { if (active) setPerDayOffsets(o); }).catch(() => {});
-    return () => { active = false; };
-  }, []));
-  const perDayOffsetKcal = useMemo(
-    () => offsetForDate(perDayOffsets, selectedDate),
-    [perDayOffsets, selectedDate],
-  );
+  // floored/compressed or an ED-pattern flag is open. (The carb-cycle and
+  // refeed carve-outs went with those features under the one-daily-truth law,
+  // Campaign 17A: banking is now the ONLY thing that moves a single day, so
+  // there is nothing left for it to collide with.) This single gate governs
+  // BOTH whether the control appears AND whether a persisted bank is allowed
+  // to display, so a stale bank can never apply once a carve-out closes
+  // banking (review fix #2).
+  const bankingAvailable = !!targets && !targetWasFloored(targets) && !edFlagOpen;
 
   // The banked delta to show for the day in view. Zero unless banking is
   // currently allowed, even if a bank is still persisted.
@@ -445,31 +366,15 @@ export default function DiaryScreen({ navigation, route }) {
     [bankingAvailable, calorieBank, selectedDate],
   );
 
-  // The effective macro target for the day. With nothing applied this is
-  // the stored nutrition target. A refeed day (row 7) takes top
-  // precedence and shows the maintenance / high-carb target; a carb cycle
-  // (row 6) swaps in the training-day or rest-day split; otherwise a banked
-  // day shifts kcal via carbs. kcal maps to targetKcal so MacroRings reads it
-  // like the flat target.
+  // The effective macro target for the day: the stored nutrition target,
+  // unless the athlete has banked calories onto (or off) this day themselves.
+  // ONE DAILY TRUTH (Campaign 17A) - nothing else moves it.
   const effectiveTargets = useMemo(
-    () => resolveEffectiveTargets(targets, { isRefeedDay, refeed, macroCycle, isTrainingDay, bankedDelta, perDayOffsetKcal, floorKcal }),
-    [macroCycle, refeed, isRefeedDay, targets, isTrainingDay, bankedDelta, perDayOffsetKcal, floorKcal],
+    () => resolveEffectiveTargets(targets, { bankedDelta }),
+    [targets, bankedDelta],
   );
-  // Review B finding 1 (HIGH): the offset applies only on an otherwise
-  // plain day (effectiveTargets precedence: refeed > carb cycle > banked),
-  // and the floor clamp can zero a downward offset. The disclosure row
-  // must state what actually shaped today's number, so it derives the
-  // APPLIED delta from the resolved target itself: zero whenever another
-  // mode owned the day or the clamp swallowed the offset.
-  const appliedOffsetKcal = useMemo(() => {
-    if (isRefeedDay || macroCycle || bankedDelta) return 0;
-    const base = Number(targets?.targetKcal);
-    const eff = Number(effectiveTargets?.targetKcal);
-    if (!Number.isFinite(base) || !Number.isFinite(eff)) return 0;
-    return Math.round(eff - base);
-  }, [isRefeedDay, macroCycle, bankedDelta, targets, effectiveTargets]);
 
-  const dayTypeChip = dayTypeLabel({ isRefeedDay, macroCycle, isTrainingDay, bankedDelta });
+  const dayTypeChip = dayTypeLabel({ bankedDelta });
 
   // Audit item 6 (coach receipt chip, size S): a quiet "Targets updated" link
   // shown ONLY when the COACH itself changed the calorie target recently, so
@@ -1460,55 +1365,6 @@ export default function DiaryScreen({ navigation, route }) {
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </TouchableOpacity>
           ) : null}
-          {/* D94 (Campaign 3, Phase 9): a per-day offset silently reshapes
-              today's target; the point of consequence must disclose it and
-              link to the one canonical editor. Renders only when an offset
-              is actually applied to the day in view - zero-clutter default. */}
-          {!readOnly && appliedOffsetKcal !== 0 ? (
-            <TouchableOpacity
-              style={styles.targetModeRow}
-              // Review A finding 1: PerDayTargets lives in the ProfileTab
-              // stack; a bare navigate from DiaryTab is the F4 dead-tap
-              // class. The one sanctioned cross-tab route is the helper.
-              onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'PerDayTargets')}
-              accessibilityRole="button"
-              accessibilityLabel={`Today's target includes your ${appliedOffsetKcal > 0 ? 'plus' : 'minus'} ${toEnergy(Math.abs(appliedOffsetKcal), energyUnit)} ${energyUnitLabel(energyUnit)} day adjustment. Edit per-day targets.`}
-            >
-              <Text style={[styles.targetModeText, live.targetModeText]}>
-                {`Includes your ${appliedOffsetKcal > 0 ? '+' : '-'}${toEnergy(Math.abs(appliedOffsetKcal), energyUnit)} ${energyUnitLabel(energyUnit)} day adjustment. Edit`}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
-          {/* NU-2: the applied split/refeed always shows its exit. One quiet
-              row each; the confirm dialogs own the consequence copy.
-              Haptics completion pass (2026-07-10): both rows write straight
-              to the nutrition-target/macro-cycling profile fields the
-              coaching engine reads (macroCycle/refeed), ED-safety-adjacent
-              territory -- left without an added haptic. */}
-          {!readOnly && macroCycle ? (
-            <TouchableOpacity
-              style={styles.targetModeRow}
-              onPress={stopMacroCycle}
-              accessibilityRole="button"
-              accessibilityLabel="Stop the training/rest-day split"
-            >
-              <Ionicons name="swap-horizontal-outline" size={13} color={t.colors.textMuted} />
-              <Text style={[styles.targetModeText, live.targetModeText]}>Training and rest targets active. Tap to use one target.</Text>
-            </TouchableOpacity>
-          ) : null}
-          {!readOnly && refeed ? (
-            <TouchableOpacity
-              style={styles.targetModeRow}
-              onPress={clearRefeed}
-              accessibilityRole="button"
-              accessibilityLabel="Clear the scheduled refeed"
-            >
-              <Ionicons name="restaurant-outline" size={13} color={t.colors.textMuted} />
-              <Text style={[styles.targetModeText, live.targetModeText]}>
-                {isRefeedDay ? 'Refeed day today. Tap to remove it.' : 'Refeed scheduled. Tap to remove it.'}
-              </Text>
-            </TouchableOpacity>
-          ) : null}
         </View>
 
         {showOffCard && !readOnly && selectedDate === isoDate(new Date()) ? (
@@ -1714,7 +1570,7 @@ export default function DiaryScreen({ navigation, route }) {
             below the meals / build-a-plan actions and just above water, so it
             sits with the day's other food actions instead of competing with the
             ring at the top (founder 2026-06-20). Only when banking is allowed
-            (not floored / cycling / refeed / ED flag). */}
+            (not floored / ED flag). */}
         {bankingAvailable && !selectionMode && !readOnly ? (
           <Button
             title="Plan a higher-calorie day"
@@ -1726,19 +1582,6 @@ export default function DiaryScreen({ navigation, route }) {
             accessibilityLabel="Plan a higher-calorie day"
           />
         ) : null}
-        {/* NU-2: when a split or refeed is what closed banking, say so
-            instead of vanishing the row (the old silent disappearance). A
-            floored target explains itself on the targets screen and an open
-            ED flag stays deliberately unnamed here. */}
-        {!bankingAvailable && !selectionMode && !readOnly && !!targets
-          && (macroCycle || refeed) && !edFlagOpen && !targetWasFloored(targets) ? (
-            <Text style={[styles.bankOffNote, live.bankOffNote]}>
-              {macroCycle
-                ? 'Higher-calorie day planning is paused while the training/rest-day split is on.'
-                : 'Higher-calorie day planning is paused while a refeed is scheduled.'}
-            </Text>
-          ) : null}
-
         <WaterRow
           ml={waterMl}
           targetMl={waterTargetMl}

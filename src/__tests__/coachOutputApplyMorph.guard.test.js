@@ -28,11 +28,13 @@ const SCREEN = fs.readFileSync(
   'utf8',
 );
 
-// The six apply keys with a committing button on this screen. The cardio
-// key was removed with the cardio-prescription feature (D95, Campaign 4).
+// The apply keys with a committing button on this screen. The cardio key was
+// removed with the cardio-prescription feature (D95, Campaign 4); macroCycle
+// and refeed were removed with the carb-cycle and refeed cards under the
+// one-daily-truth law (Campaign 17A).
 const APPLY_KEYS = [
   'calories', 'training',
-  'deload', 'dietBreak', 'macroCycle', 'refeed',
+  'deload', 'dietBreak',
 ];
 
 describe('M4 safety contract: a floor hold never becomes a success', () => {
@@ -48,7 +50,7 @@ describe('M4 safety contract: a floor hold never becomes a success', () => {
   test('every hold branch sets the NU-3 notice and never the success marker', () => {
     // Each compute-null branch must speak (setApplyNotice) and must not
     // mark a success beat. Anchored per handler on its notice key.
-    for (const key of ['calories', 'dietBreak', 'macroCycle', 'refeed']) {
+    for (const key of ['calories', 'dietBreak']) {
       const at = SCREEN.indexOf(`${key}: check.kind === 'floor_hold'`) !== -1
         ? SCREEN.indexOf(`${key}: check.kind === 'floor_hold'`)
         : SCREEN.indexOf(`${key}:`, SCREEN.indexOf('setApplyNotice'));
@@ -56,8 +58,10 @@ describe('M4 safety contract: a floor hold never becomes a success', () => {
     }
     // Structural pin: within each `if (!computed/!split/!target)` block the
     // notice is set and the block returns before any settling marker.
+    // ONE DAILY TRUTH (Campaign 17A): the macroCycle and refeed handlers are
+    // gone with their cards, so two hold branches remain, not four.
     const holdBlocks = SCREEN.match(/if \(!(computed|split|target)\) \{[\s\S]*?\n {6}\}/g) || [];
-    expect(holdBlocks.length).toBeGreaterThanOrEqual(4);
+    expect(holdBlocks.length).toBeGreaterThanOrEqual(2);
     for (const block of holdBlocks) {
       expect(block).toMatch(/setApplyNotice/);
       expect(block).toMatch(/return;/);
@@ -87,7 +91,7 @@ describe('M4 data-first order (fit rule 5)', () => {
     // isApplied(output, key) stays the gate in every handler; the morph
     // never becomes the thing standing between a double tap and a write.
     const gates = SCREEN.match(/if \(isApplied\(output, '/g) || [];
-    expect(gates.length).toBeGreaterThanOrEqual(6);
+    expect(gates.length).toBeGreaterThanOrEqual(4);
   });
 });
 
@@ -129,7 +133,6 @@ describe('M4 morph wiring', () => {
     // HoldEnter without `live` is a plain View; the calorie row derives
     // live-ness from the tap-time notice, never the pre-tap classification.
     expect(SCREEN).toMatch(/holdArrived=\{!!calorieNotice\}/);
-    expect(SCREEN).toMatch(/holdArrived=\{!!applyNotice\.macroCycle\}/);
     expect(SCREEN).toMatch(/if \(reduceMotion \|\| !live\) return <View>\{children\}<\/View>;/);
   });
 });

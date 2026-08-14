@@ -208,7 +208,6 @@ function _reconcilePaidEntitlement(userId = null) {
 const GatedWeeklyCheckIn    = lazyScreen(() => withProGuard(require('../screens/WeeklyCheckInScreen').default, 'Weekly check-in'));
 const GatedNutritionTargets = lazyScreen(() => withProGuard(require('../screens/NutritionTargetsScreen').default, 'Nutrition targets'));
 const GatedMealNames = lazyScreen(() => withProGuard(require('../screens/MealNamesScreen').default, 'Meal names'));
-const GatedPerDayTargets = lazyScreen(() => withProGuard(require('../screens/PerDayTargetsScreen').default, 'Per-day targets'));
 // E10 read-only lapse views (founder decision 2026-07-02): these three screens
 // use the history-aware guard. A free user WITH data in the domain sees the
 // screen in its view-only state (the screen itself hides every write affordance
@@ -538,7 +537,6 @@ function ProfileStack({ navigation }) {
           the screen and route stay registered in case meal renaming returns.
           Not a stale registration - do not "clean it up" (D95). */}
       <Stack.Screen name="MealNames" component={GatedMealNames} options={{ headerShown: false }} />
-      <Stack.Screen name="PerDayTargets" component={GatedPerDayTargets} options={{ headerShown: false }} />
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ headerShown: false }} />
       <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />

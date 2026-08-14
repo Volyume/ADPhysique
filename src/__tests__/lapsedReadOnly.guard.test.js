@@ -41,7 +41,7 @@ describe('E10 read-only lapse views: gating posture', () => {
       'ScanLabelScreen', 'MealPlanScreen', 'MyRecipesScreen', 'MyMealsScreen',
       'RecipeBuilderScreen', 'FoodInsightsScreen',
       'WeeklyCheckInScreen', 'NutritionTargetsScreen',
-      'MealNamesScreen', 'PerDayTargetsScreen',
+      'MealNamesScreen',
     ];
     for (const screen of hardLocked) {
       expect(NAV).toMatch(new RegExp(`withProGuard\\(require\\('\\.\\./screens/${screen}'\\)`));

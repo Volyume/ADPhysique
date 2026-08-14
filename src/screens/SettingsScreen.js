@@ -70,14 +70,6 @@ export default function SettingsScreen({ navigation }) {
             renaming ever returns by founder decision. */}
         {tier === 'pro' ? (
           <SettingRow
-            icon="calendar-outline"
-            label="Per-day targets"
-            sub="Plan a different calorie target for each weekday"
-            onPress={() => { haptics.selection(); navigation.navigate('PerDayTargets'); }}
-          />
-        ) : null}
-        {tier === 'pro' ? (
-          <SettingRow
             icon="leaf-outline"
             label="Dietary needs"
             sub="Diet, allergies and foods to avoid"
