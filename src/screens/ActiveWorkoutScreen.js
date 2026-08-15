@@ -419,6 +419,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // that are genuinely true of THIS session.
   const [recoveryState, setRecoveryState] = useState(null);
   const [recoveryDifferences, setRecoveryDifferences] = useState([]);
+  // C18 progression: the required sessions for the athlete's active programme
+  // week, so an ended-early resolution names the right instance.
+  const [progressionSessions, setProgressionSessions] = useState(null);
+  const [progressionWeekId, setProgressionWeekId] = useState(null);
+  const [progressionBlockId, setProgressionBlockId] = useState(null);
   // B2 (Wave-3 review): the session-wide dismissal of the readiness tweak
   // lives ON the active workout (store action dismissReadinessTweak) so it
   // survives screen remounts and the WK-1 crash restore, the a11y copy
@@ -1477,6 +1482,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // week or the coach had eased off mid-block, which told a week-three
           // athlete the hard part of their block had finished.
           setRecoveryState(currentWeek.recoveryState ?? null);
+          // C18: the SAME authoritative position Home and Plans read.
+          try {
+            // eslint-disable-next-line global-require
+            const { resolveProgrammePosition } = require('../lib/programmePosition');
+            const pos = await resolveProgrammePosition(user?.id).catch(() => null);
+            setProgressionSessions(pos?.sessions ?? null);
+            // C18: Train shows the GATED recovery state, so it cannot announce
+            // a recovery week Home is correctly withholding.
+            if (pos?.recoveryState) setRecoveryState(pos.recoveryState);
+            setProgressionWeekId(pos?.activeWeekId ?? null);
+            setProgressionBlockId(pos?.blockId ?? null);
+          } catch (_) { /* progression is best-effort here */ }
           // C5-P13-01: the block's own effort target, for the session header
           // line below. Read from the same row Home's readiness chip reads.
           setWeekRirTarget(currentWeek.rirTarget ?? null);
@@ -2616,6 +2633,68 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const inProgressNote = hasInProgressSetEntry()
       ? ` You also have an unlogged set for ${exercise?.name || 'this exercise'} that will be lost.`
       : '';
+
+    // ── C18 ENDED EARLY ──────────────────────────────────────────────────
+    //
+    // The athlete performed SOME of the planned work and is deliberately
+    // stopping. Both of the obvious outcomes are forbidden: marking the whole
+    // session COMPLETED claims work that never happened, and marking it
+    // SKIPPED erases work that did. So this resolves the required instance as
+    // ENDED_EARLY - progression moves on, the logged sets remain exactly what
+    // they are, and the untouched exercises produce NO evidence rather than
+    // zeros.
+    //
+    // Detected from the real session, not assumed: some exercise has logged
+    // sets and some planned exercise has none. With nothing logged at all
+    // this is not an ended-early session and the existing copy stands.
+    const performed = snapshotExercises.filter((e) => (e.sets?.length ?? 0) > 0);
+    const unperformed = snapshotExercises.filter((e) => (e.sets?.length ?? 0) === 0);
+    const isEndedEarly = performed.length > 0 && unperformed.length > 0;
+
+    if (isEndedEarly) {
+      // eslint-disable-next-line global-require
+      const { endEarlyConfirmation } = require('../lib/blockProgression');
+      const sessions = progressionSessions ?? [];
+      const instance = sessions.find((x) => x.routineId === activeWorkout?.routineId) ?? null;
+      const recoveryNext = !!instance && sessions
+        .filter((x) => x.routineId !== instance.routineId)
+        .every((x) => x.state !== 'outstanding');
+      const copy = endEarlyConfirmation(
+        instance ?? { name: activeWorkout?.name ?? '', order: 0 }, sessions, { recoveryNext },
+      );
+      appAlert(
+        copy.title,
+        `${copy.body}${inProgressNote}`,
+        [
+          { text: copy.cancel, style: 'cancel', onPress: () => { finishingRef.current = false; } },
+          {
+            text: copy.confirm,
+            onPress: async () => {
+              // Recorded BEFORE the finish, so a crash between the two leaves
+              // the instance outstanding rather than silently fully complete.
+              try {
+                if (user?.id && instance && progressionWeekId) {
+                  // eslint-disable-next-line global-require
+                  const { recordSessionResolution } = require('../lib/database');
+                  await recordSessionResolution(user.id, {
+                    mesocycleWeekId: progressionWeekId,
+                    routineId: instance.routineId,
+                    mesocycleId: progressionBlockId,
+                    resolution: 'ended_early',
+                    workoutId: activeWorkout.id,
+                  });
+                }
+              } catch (e) {
+                logError('ActiveWorkoutScreen.endEarly', e, { userId: user?.id });
+              }
+              await runFinish();
+            },
+          },
+        ],
+      );
+      return;
+    }
+
     appAlert(
       'Finish workout?',
       `You've logged ${snapshotExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${snapshotExercises.length} exercises.${inProgressNote}`,

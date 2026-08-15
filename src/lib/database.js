@@ -2425,6 +2425,77 @@ const SCHEMA_MIGRATIONS = [
     )`,
     'CREATE INDEX IF NOT EXISTS idx_food_swaps_user_from ON food_swaps(user_id, from_food_key)',
   ],
+
+  // ── Campaign 18 block-progression amendment ────────────────────────────
+  // Purpose: persist the EXPLICIT non-completion resolutions for a required
+  // session instance. Programme position used to be `programmes.
+  // next_workout_index`, a single integer advanced blindly on any completion,
+  // so training an out-of-order workout moved the pointer PAST an unperformed
+  // required session and consumed it. There was no representation anywhere of
+  // "this required session is still outstanding".
+  //
+  // COMPLETED is deliberately NOT stored here: it is derived from the existing
+  // workout execution rows, so there is exactly one authority for what was
+  // performed and the COMPLETED-plus-OUTSTANDING contradiction cannot arise.
+  // This table holds only what execution cannot prove - that the athlete
+  // deliberately skipped an instance, or deliberately finished one early.
+  //
+  // Identity is (mesocycle_week_id, routine_id), proven sufficient in
+  // requiredSessionIdentity.test.js: a repeated session within one programme
+  // week is written as its own routine row, so names may repeat but ids do
+  // not. The UNIQUE index makes "one current resolution per required
+  // instance" structural rather than conventional.
+  //
+  // Applied: LOCALLY via this user_version bump. Cloud counterpart is
+  // supabase/migrate_137_session_resolutions.sql - founder-gated, and it must
+  // run against production BEFORE a build carrying the sync push ships
+  // (migrate_129/131 precedent). Until then the push is column-tolerant and
+  // simply fails soft, leaving progression correct on-device.
+  // Additive: yes (new table only). Safe to re-run: yes (IF NOT EXISTS
+  // throughout). Rollback: drop the table; every reader treats an absent
+  // resolution as OUTSTANDING, which is the pre-amendment behaviour.
+  // C18 block progression, legacy compatibility. Marks the week from which
+  // per-instance progression authority applies to a block.
+  //
+  // Blocks created BEFORE this amendment ran under the broken pointer, so the
+  // absence of a workout row for an earlier week is genuinely AMBIGUOUS: it may
+  // mean the session was never done, or that the pointer consumed it. Neither
+  // SKIPPED_BY_USER nor COMPLETED may be manufactured for that, and resurrecting
+  // every historical gap would send an established user back several weeks.
+  //
+  // NULL therefore means "legacy": the resolver floors candidate weeks at the
+  // furthest week the athlete has actually trained, so earlier ambiguity is left
+  // alone rather than reinterpreted. New blocks are stamped with 1 at creation
+  // and get the full model with no floor, so the compatibility rule dies with
+  // the blocks that need it and never reaches a new one.
+  //
+  // Applied: LOCALLY via this user_version bump. No cloud counterpart needed -
+  // an absent column reads NULL, which is the conservative branch.
+  // Additive: yes. Safe to re-run: yes. Rollback: inert.
+  [
+    'ALTER TABLE mesocycles ADD COLUMN progression_anchor_week INTEGER',
+  ],
+
+  [
+    `CREATE TABLE IF NOT EXISTS session_resolutions (
+      id                TEXT PRIMARY KEY,
+      user_id           TEXT NOT NULL,
+      mesocycle_week_id TEXT NOT NULL,
+      routine_id        TEXT NOT NULL,
+      mesocycle_id      TEXT,
+      resolution        TEXT NOT NULL,
+      workout_id        TEXT,
+      resolved_at       INTEGER NOT NULL,
+      created_at        INTEGER NOT NULL,
+      updated_at        INTEGER NOT NULL,
+      updated_at_iso    TEXT,
+      deleted_at        INTEGER
+    )`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS idx_session_resolutions_instance
+       ON session_resolutions(mesocycle_week_id, routine_id)`,
+    `CREATE INDEX IF NOT EXISTS idx_session_resolutions_user
+       ON session_resolutions(user_id)`,
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -4232,8 +4303,9 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
     await d.runAsync(
       `INSERT INTO mesocycles
         (id, user_id, name, start_date, end_date, duration_weeks, planned_weeks, deload_week, focus,
-         block_type, rir_ladder, is_active, auto_regulation_enabled, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?)`,
+         block_type, rir_ladder, is_active, auto_regulation_enabled, created_at, updated_at,
+         progression_anchor_week)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, 1, ?, ?, 1)`,
       [id, userId, planName, startDate, endDate,
         BLOCK_PLANNED_WEEKS, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK,
         'hypertrophy', 'offseason_hypertrophy', '[3,2,1,0,0,4]', now, now],
@@ -4300,17 +4372,26 @@ export async function getRoutinesForPlan(planId) {
   return rows.map(rowToCamel);
 }
 
-export async function advancePlanNextWorkout(planId, totalWorkouts) {
-  if (!totalWorkouts || totalWorkouts < 1) return;
-  const d = await db();
-  const plan = await getProgrammeById(planId);
-  if (!plan) return;
-  const currentIndex = plan.nextWorkoutIndex || 0;
-  const nextIndex = (currentIndex + 1) % totalWorkouts;
-  await d.runAsync(
-    'UPDATE programmes SET next_workout_index = ?, updated_at = ? WHERE id = ?',
-    [nextIndex, Date.now(), planId],
-  );
+/**
+ * RETIRED (C18 block-progression amendment). Kept as an explicit tombstone
+ * rather than deleted, because its NAME is the defect and a future maintainer
+ * grepping for it deserves to find the reason.
+ *
+ * This advanced `next_workout_index` by one whatever routine had just been
+ * finished. It never looked at what was performed, so an athlete whose next
+ * required session was Legs, who trained Push & Arms instead, had the pointer
+ * moved PAST Legs: never performed, never marked anything, consumed by a
+ * counter. Programme position is now resolved per required session instance
+ * by `programmePosition.resolveProgrammePosition`, and completing a workout
+ * resolves the instance that was actually performed.
+ *
+ * `next_workout_index` survives as an inert legacy column. Nothing reads it
+ * for progression and nothing may: required-instance truth outranks it
+ * absolutely. This function is a no-op so any unported caller fails loudly in
+ * review rather than silently corrupting position again.
+ */
+export async function advancePlanNextWorkout() {
+  // Intentionally does nothing. See the note above.
 }
 
 export async function copyPlanFromLibrary(libraryPlanId, userId) {
@@ -4602,6 +4683,11 @@ export async function getCurrentMesocycleWeek(userId) {
       awaitingDecision,
       isDeload: row.is_deload === 1,
       deloadWeek,
+      // NOTE (C18): this composition is the CALENDAR-side reading. The
+      // planned-recovery branch is additionally gated on programme position by
+      // `programmePosition.resolveProgrammePosition`, which re-resolves the
+      // state with `recoveryPhaseAllowed` once it knows whether any required
+      // pre-recovery session is still outstanding. Surfaces read the gated one.
       recoveryState: resolveRecoveryState({
         weekIndex: row.week_index,
         plannedWeeks,
@@ -4938,6 +5024,124 @@ export async function getCheckinsInRange(userId, fromMs, toMs) {
   } catch (_e) {
     return [];
   }
+}
+
+// ─── SESSION RESOLUTIONS (C18 block progression) ─────────────────────────────
+//
+// The explicit half of session resolution. COMPLETED is derived from workout
+// rows and never written here; this stores only what execution cannot prove.
+//
+// The id is DERIVED from the instance identity rather than minted per device,
+// so two devices resolving the same required session converge on one row
+// instead of racing two - the same technique the coach_outputs unique-week fix
+// uses. Cross-device conflict then falls to updated_at, and only a genuine
+// timestamp tie reaches the id tie-break.
+
+const sessionResolutionId = (mesocycleWeekId, routineId) =>
+  `sr_${mesocycleWeekId}_${routineId}`;
+
+/**
+ * Record an explicit resolution for ONE required session instance.
+ *
+ * @param {string} resolution  'skipped_by_user' | 'ended_early'
+ * @param {string|null} workoutId  for ended_early, the partially performed
+ *   session, so the actual sets stay unambiguously attached to it.
+ */
+export async function recordSessionResolution(userId, {
+  mesocycleWeekId, routineId, mesocycleId = null, resolution, workoutId = null,
+} = {}) {
+  if (!userId || !mesocycleWeekId || !routineId) return null;
+  if (resolution !== 'skipped_by_user' && resolution !== 'ended_early') return null;
+  const d = await db();
+  const now = Date.now();
+  const id = sessionResolutionId(mesocycleWeekId, routineId);
+  await d.runAsync(
+    `INSERT INTO session_resolutions
+       (id, user_id, mesocycle_week_id, routine_id, mesocycle_id, resolution,
+        workout_id, resolved_at, created_at, updated_at, updated_at_iso, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+     ON CONFLICT(mesocycle_week_id, routine_id) DO UPDATE SET
+       resolution = excluded.resolution,
+       workout_id = excluded.workout_id,
+       resolved_at = excluded.resolved_at,
+       updated_at = excluded.updated_at,
+       updated_at_iso = excluded.updated_at_iso,
+       deleted_at = NULL`,
+    [id, userId, mesocycleWeekId, routineId, mesocycleId, resolution,
+      workoutId, now, now, now, new Date(now).toISOString()],
+  );
+  _scheduleSync();
+  return id;
+}
+
+/** Every live resolution for one programme week. */
+export async function getSessionResolutionsForWeek(userId, mesocycleWeekId) {
+  if (!userId || !mesocycleWeekId) return [];
+  try {
+    const d = await db();
+    const rows = await d.getAllAsync(
+      `SELECT * FROM session_resolutions
+        WHERE user_id = ? AND mesocycle_week_id = ? AND deleted_at IS NULL`,
+      [userId, mesocycleWeekId],
+    );
+    return rows.map(rowToCamel);
+  } catch (_e) { return []; }
+}
+
+/** Every live resolution for the user, for multi-week progression reads. */
+export async function getAllSessionResolutionsForUser(userId) {
+  if (!userId) return [];
+  try {
+    const d = await db();
+    // Deliberately INCLUDES soft-deleted rows: this is the sync push reader,
+    // and a deletion must propagate as a tombstone. Product readers filter.
+    const rows = await d.getAllAsync(
+      'SELECT * FROM session_resolutions WHERE user_id = ?', [userId],
+    );
+    return rows.map(rowToCamel);
+  } catch (_e) { return []; }
+}
+
+/** Live resolutions only, for the progression resolver. */
+export async function getLiveSessionResolutions(userId) {
+  return (await getAllSessionResolutionsForUser(userId))
+    .filter((r) => r.deletedAt == null);
+}
+
+/** Cloud restore. Newer updated_at wins; a tie keeps what is already local. */
+export async function insertOrUpdateSessionResolutionFromCloud(userId, row) {
+  if (!userId || !row?.mesocycle_week_id || !row?.routine_id) return;
+  const d = await db();
+  const incoming = row.updated_at ? Date.parse(row.updated_at) : 0;
+  const existing = await d.getFirstAsync(
+    'SELECT updated_at FROM session_resolutions WHERE mesocycle_week_id = ? AND routine_id = ?',
+    [row.mesocycle_week_id, row.routine_id],
+  );
+  if (existing && Number(existing.updated_at) >= incoming) return;
+  const resolvedAt = row.resolved_at ? Date.parse(row.resolved_at) : incoming;
+  await d.runAsync(
+    `INSERT INTO session_resolutions
+       (id, user_id, mesocycle_week_id, routine_id, mesocycle_id, resolution,
+        workout_id, resolved_at, created_at, updated_at, updated_at_iso, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(mesocycle_week_id, routine_id) DO UPDATE SET
+       resolution = excluded.resolution,
+       workout_id = excluded.workout_id,
+       resolved_at = excluded.resolved_at,
+       updated_at = excluded.updated_at,
+       updated_at_iso = excluded.updated_at_iso,
+       deleted_at = excluded.deleted_at`,
+    [
+      row.id ?? sessionResolutionId(row.mesocycle_week_id, row.routine_id),
+      userId, row.mesocycle_week_id, row.routine_id, row.mesocycle_id ?? null,
+      row.resolution, row.workout_id ?? null,
+      Number.isFinite(resolvedAt) ? resolvedAt : Date.now(),
+      row.created_at ? Date.parse(row.created_at) : Date.now(),
+      Number.isFinite(incoming) ? incoming : Date.now(),
+      row.updated_at ?? null,
+      row.deleted_at ? Date.parse(row.deleted_at) : null,
+    ],
+  );
 }
 
 /** Persist a computed Block Ledger on its finished block's row. */

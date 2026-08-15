@@ -195,6 +195,49 @@ describe('THE RESOLUTION PRECEDENCE TABLE (founder pin)', () => {
   });
 });
 
+describe('INDEPENDENT SEMANTIC REGRESSION (hard-pinned, not table-derived)', () => {
+  // The matrix above drives off RESOLUTION_PRECEDENCE, which proves the table
+  // is complete and the resolver agrees with it - but would keep agreeing if
+  // the table itself were edited wrongly. These expectations are written out
+  // by hand from the founder's semantics and are deliberately NOT derived from
+  // anything production reads.
+  const HARD_PINNED = [
+    { name: 'no resolution + no completion', workouts: [], resolutions: [], state: 'outstanding', conflict: undefined },
+    { name: 'no resolution + full completion', workouts: [done('r_legs')], resolutions: [], state: 'completed', conflict: undefined },
+    {
+      name: 'SKIPPED + no later completion',
+      workouts: [], resolutions: [resolution('r_legs', 'skipped_by_user')],
+      state: 'skipped_by_user', conflict: undefined,
+    },
+    {
+      name: 'SKIPPED + later genuine completion',
+      workouts: [done('r_legs')], resolutions: [resolution('r_legs', 'skipped_by_user')],
+      state: 'completed', conflict: undefined,
+    },
+    {
+      name: 'ENDED_EARLY + its own closed workout',
+      workouts: [done('r_legs', 'w_partial')],
+      resolutions: [resolution('r_legs', 'ended_early', { workoutId: 'w_partial' })],
+      state: 'ended_early', conflict: undefined,
+    },
+    {
+      name: 'ENDED_EARLY + unauthorised later full completion',
+      workouts: [done('r_legs', 'w_partial'), done('r_legs', 'w_later')],
+      resolutions: [resolution('r_legs', 'ended_early', { workoutId: 'w_partial' })],
+      state: 'ended_early', conflict: 'ended_early_with_later_completion',
+    },
+  ];
+
+  test.each(HARD_PINNED)('$name -> $state', (c) => {
+    const legs = resolve({ workouts: c.workouts, resolutions: c.resolutions })
+      .find((s) => s.routineId === 'r_legs');
+    // String literals on purpose: if SESSION_STATE's values were ever changed,
+    // this suite should fail rather than silently follow.
+    expect(legs.state).toBe(c.state);
+    expect(legs.conflict).toBe(c.conflict);
+  });
+});
+
 describe('ONE CURRENT RESOLUTION PER INSTANCE, whatever sync delivers', () => {
   const rows = [
     { id: 'a', resolution: SESSION_STATE.SKIPPED_BY_USER, resolvedAt: 100, mesocycleWeekId: WEEK, routineId: 'r_legs' },

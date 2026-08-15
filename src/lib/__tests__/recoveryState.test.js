@@ -18,7 +18,7 @@
 import {
   RECOVERY_STATE, resolveRecoveryState, plannedRecoveryWeek,
   isLighterTrainingState, recoveryStateCard, nextWorkoutRecoveryLabel,
-  trainRecoveryDetail, reviewRecoveryLine, RECOVERY_WEEK_NOTIFICATION,
+  trainRecoveryDetail, reviewRecoveryLine,
 } from '../recoveryState';
 import { BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK } from '../mesocycle';
 
@@ -193,7 +193,7 @@ describe('COPY LAW', () => {
       resolveRecoveryState(block(3, { isDeload: true })),
       resolveRecoveryState(block(BLOCK_DELOAD_WEEK - 1)),
     ];
-    const out = [RECOVERY_WEEK_NOTIFICATION.title, RECOVERY_WEEK_NOTIFICATION.body];
+    const out = [];
     for (const s of states) {
       const card = recoveryStateCard(s);
       if (card) out.push(card.title, card.compactTitle, card.body, card.next, card.action);
@@ -224,9 +224,16 @@ describe('COPY LAW', () => {
     }
   });
 
-  test('British English, and the notification says what is happening rather than nagging', () => {
-    expect(RECOVERY_WEEK_NOTIFICATION.title).toBe('Your recovery week starts now');
-    expect(RECOVERY_WEEK_NOTIFICATION.body)
-      .toBe('Training is lighter on purpose this week before you move on from this block.');
+  test('THE RECOVERY-WEEK PUSH IS GONE, and no dead copy survives it', () => {
+    // Founder ruling: it could only ever run from HomeScreen, so it could not
+    // tell the athlete anything before they opened Home - and once Home is
+    // open the card already says it. Home, the next-workout label, Train and
+    // the review carry the state instead.
+    // eslint-disable-next-line global-require
+    const src = require('fs').readFileSync(
+      // eslint-disable-next-line global-require
+      require('path').resolve(__dirname, '../recoveryState.js'), 'utf8',
+    );
+    expect(src).not.toMatch(/RECOVERY_WEEK_NOTIFICATION|notification/i);
   });
 });

@@ -90,6 +90,15 @@ export function plannedRecoveryWeek({ plannedWeeks, deloadWeek } = {}) {
 export function resolveRecoveryState({
   weekIndex, plannedWeeks, deloadWeek = null,
   isDeload = false, awaitingDecision = false,
+  // C18 BLOCK PROGRESSION. The planned recovery week is a PROGRAMME position,
+  // not a calendar one: it may not become the active phase while a required
+  // pre-recovery session is still outstanding. Supplied by
+  // programmePosition.resolveProgrammePosition, which owns that question.
+  //
+  // Defaults TRUE so every existing caller stays byte-identical; only a caller
+  // that has actually asked passes false. That default is safe because the
+  // gate can only ever HOLD the structural state back, never create it.
+  recoveryPhaseAllowed = true,
 } = {}) {
   const recoveryWeek = plannedRecoveryWeek({ plannedWeeks, deloadWeek });
   const week = int(weekIndex);
@@ -109,6 +118,18 @@ export function resolveRecoveryState({
   // true on this week either way, so reading it first would collapse the two
   // states again exactly as before.
   if (week >= recoveryWeek) {
+    // The calendar has reached the recovery week, but the programme has not:
+    // an accumulation session is still outstanding, so the athlete is still
+    // in the hard part of the block whatever the dates say. Position beats
+    // calendar - this is the founder-reported failure, where the app tried to
+    // enter recovery with the final hard session unfinished.
+    if (!recoveryPhaseAllowed) {
+      return {
+        ...base,
+        state: RECOVERY_STATE.NORMAL_ACCUMULATION,
+        because: 'accumulation_work_outstanding',
+      };
+    }
     return { ...base, state: RECOVERY_STATE.PLANNED_BLOCK_RECOVERY, because: 'block_recovery_week' };
   }
   // Inside the accumulation portion, the flag can only have been set by the
@@ -275,15 +296,3 @@ export function reviewRecoveryLine(resolved) {
   }
   return null;
 }
-
-/**
- * The ONE notification sent when the planned recovery week actually begins.
- *
- * Not scheduled from the calendar and not sent for the adaptive state, which
- * Home carries instead. The caller owns quiet hours, permissions, category
- * opt-out and the once-per-block guard.
- */
-export const RECOVERY_WEEK_NOTIFICATION = Object.freeze({
-  title: 'Your recovery week starts now',
-  body: 'Training is lighter on purpose this week before you move on from this block.',
-});

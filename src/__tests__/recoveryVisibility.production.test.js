@@ -77,13 +77,16 @@ describe('CHAIN A + B: HOME / TODAY, the primary fix', () => {
   const home = read('screens/HomeScreen.js');
 
   test('Home renders the card from the resolved state, not from a UI boolean of its own', () => {
-    expect(home).toMatch(/<RecoveryStateCard\s*\n\s*recoveryState=\{currentMesoWeek\?\.recoveryState\}/);
+    expect(home).toMatch(/<RecoveryStateCard\s*\n\s*recoveryState=\{gatedRecoveryState\}/);
+    // C18 block progression: the state Home renders is the GATED one, so a
+    // recovery week cannot appear while a required session is outstanding.
+    expect(home).toMatch(/const gatedRecoveryState = programmePosition\?\.recoveryState/);
     // No parallel truth: Home does not decide the state anywhere.
     expect(home).not.toMatch(/isRecoveryWeek\s*=|setIsRecoveryWeek/);
   });
 
   test('THE NEXT-WORKOUT SURFACE names the state too, from the same resolver', () => {
-    expect(home).toMatch(/const recoveryLabel = nextWorkoutRecoveryLabel\(currentMesoWeek\?\.recoveryState\)/);
+    expect(home).toMatch(/const recoveryLabel = nextWorkoutRecoveryLabel\(gatedRecoveryState\)/);
     expect(home).toMatch(/recoveryLabel \? `\$\{recoveryLabel\} · \$\{planProgress\}` : planProgress/);
     expect(nextWorkoutRecoveryLabel(PLANNED)).toBe('Recovery week');
     expect(nextWorkoutRecoveryLabel(ADAPTIVE)).toBe('Recovery-adjusted');
@@ -151,7 +154,7 @@ describe('CHAIN A + B: THE REVIEW', () => {
   const coachOutput = read('screens/CoachOutputScreen.js');
 
   test('the weekly review reads the resolved state rather than the bare flag', () => {
-    expect(coachOutput).toMatch(/setCurrentRecoveryState\(cur\?\.recoveryState \?\? null\)/);
+    expect(coachOutput).toMatch(/setCurrentRecoveryState\(pos\?\.recoveryState \?\? cur\?\.recoveryState \?\? null\)/);
     // And it renders the SHARED sentence rather than a local paraphrase, so
     // this review cannot describe the state differently from Home or Train.
     expect(coachOutput).toMatch(/const recoveryReviewLine = reviewRecoveryLine\(currentRecoveryState\);/);
@@ -176,55 +179,29 @@ describe('CHAIN A + B: THE REVIEW', () => {
   });
 });
 
-describe('THE NOTIFICATION: one, from the real transition, and never required', () => {
-  const scheduler = read('lib/notifications/scheduler.js');
-
-  test('it fires from the RESOLVED PLANNED state, never from a calendar', () => {
-    expect(scheduler).toMatch(/if \(recoveryState\?\.state !== RECOVERY_STATE\.PLANNED_BLOCK_RECOVERY\) return;/);
-    const fn = scheduler.slice(
-      scheduler.indexOf('export async function notifyRecoveryWeekStarted'),
-      scheduler.indexOf('export async function cancelBlockReadyToReview'),
-    );
-    expect(fn).not.toMatch(/weekday|getDay\(\)|Monday/i);
+describe('THE REDUNDANT RECOVERY PUSH IS REMOVED (founder ruling)', () => {
+  test('no scheduler, no route, no category, no marker survives it', () => {
+    // It could only ever run from HomeScreen.loadBlockProgress, so it could
+    // not reach the athlete before they opened Home - and once Home is open
+    // the card already says it. A local push fired while the user is looking
+    // at the card is redundant, and a background scheduler for one
+    // notification is not worth building.
+    expect(read('lib/notifications/scheduler.js')).not.toMatch(/notifyRecoveryWeekStarted|recovery_week/);
+    expect(read('lib/notifications/notificationRoute.js')).not.toMatch(/recovery_week_started/);
+    expect(read('lib/notifications/categories.js')).not.toMatch(/recovery_week_started/);
+    expect(read('screens/HomeScreen.js')).not.toMatch(/notifyRecoveryWeekStarted/);
   });
 
-  test('ONCE PER BLOCK, and the marker is only written after it is genuinely laid', () => {
-    const fn = scheduler.slice(
-      scheduler.indexOf('export async function notifyRecoveryWeekStarted'),
-      scheduler.indexOf('export async function cancelBlockReadyToReview'),
-    );
-    expect(fn).toMatch(/RECOVERY_WEEK_NOTIFIED_KEY\(userId, mesocycleId\)/);
-    expect(fn).toMatch(/if \(already\) return;/);
-    expect(fn.indexOf('scheduleNotificationAsync')).toBeLessThan(fn.indexOf("AsyncStorage.setItem(key, '1')"));
-  });
-
-  test('every existing attention control still governs it', () => {
-    const fn = scheduler.slice(
-      scheduler.indexOf('export async function notifyRecoveryWeekStarted'),
-      scheduler.indexOf('export async function cancelBlockReadyToReview'),
-    );
-    expect(fn).toMatch(/isCategoryEnabled\(CATEGORY\.WEEKLY_COACH_READY\)/);
-    expect(fn).toMatch(/getQuietHours\(\)/);
-    expect(fn).toMatch(/requestEventPushSlot\(/);
-    expect(fn).toMatch(/if \(!slot\.allowed\) return;/);
-  });
-
-  test('NO NEW CATEGORY: it shares the coaching category the athlete already controls', () => {
+  test('and ordinary coaching notifications are undisturbed', () => {
+    const scheduler = read('lib/notifications/scheduler.js');
+    expect(scheduler).toMatch(/export async function scheduleBlockReadyToReview/);
     expect(read('lib/notifications/categories.js'))
-      .toMatch(/case 'recovery_week_started': return CATEGORY\.WEEKLY_COACH_READY;/);
+      .toMatch(/case 'block_ready_to_review': return CATEGORY\.WEEKLY_COACH_READY;/);
   });
 
-  test('NO NOTIFICATION DEPENDENCY: Home calls it best-effort and never waits on it', () => {
-    const home = read('screens/HomeScreen.js');
-    expect(home).toMatch(/notifyRecoveryWeekStarted\(user\.id, week\.recoveryState, week\.mesocycleId\)\s*\n\s*\.catch\(\(\) => \{\}\)/);
-  });
-
-  test('the adaptive state sends nothing: Home carries it instead', () => {
-    const fn = read('lib/notifications/scheduler.js').slice(
-      read('lib/notifications/scheduler.js').indexOf('export async function notifyRecoveryWeekStarted'),
-    );
-    expect(fn).not.toMatch(/ADAPTIVE_RECOVERY_ADJUSTMENT[^)]*\)\s*\{[^}]*scheduleNotificationAsync/);
-    expect(recoveryStateCard(ADAPTIVE)).toBeTruthy();
+  test('IN-APP CARRIES IT ALL: the card is the delivery mechanism', () => {
+    expect(recoveryStateCard(PLANNED).title).toBe('Recovery week');
+    expect(recoveryStateCard(ADAPTIVE).title).toBe('Training is lighter for now');
   });
 });
 

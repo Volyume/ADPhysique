@@ -21,6 +21,12 @@ import WhatsNewSheet from '../components/WhatsNewSheet';
 import { SkeletonCard } from '../components/Skeleton';
 import TodayStrip from '../components/TodayStrip';
 import RecoveryStateCard from '../components/RecoveryStateCard';
+import { appAlert } from '../components/AppAlert';
+import { resolveProgrammePosition } from '../lib/programmePosition';
+import {
+  reEntryCheckDue, reEntryPrompt, reEntryOutcome, RE_ENTRY_ANSWER,
+} from '../lib/reEntryCheck';
+import { sessionDisplayName, skipConfirmation } from '../lib/blockProgression';
 import { nextWorkoutRecoveryLabel, isLighterTrainingState } from '../lib/recoveryState';
 import { useToast } from '../components/Toast';
 import CoachBriefCard, { buildBriefIconColor } from '../components/CoachBriefCard';
@@ -37,6 +43,7 @@ import { isCompletedCoachDecision } from '../lib/coachDecision';
 import { isEnrolmentSeedWeight } from '../lib/checkinDerive';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
+  recordSessionResolution,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
   getWorkoutSetsForWorkout, getExerciseById,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
@@ -186,6 +193,7 @@ export default function HomeScreen({ navigation, route }) {
     readinessChipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     readinessChipTextActive: { color: t.colors.primary },
     intentSkipText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    skipSessionText: { ...t.type.caption, color: t.colors.textMuted },
     intentOptOutText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     intentOptOutSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     coachBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
@@ -350,6 +358,10 @@ export default function HomeScreen({ navigation, route }) {
   // the recovery week of the next block, opens expanded again rather than
   // hiding behind a tap from a fortnight ago.
   const [recoveryRead, setRecoveryRead] = useState(false);
+  // C18: the authoritative programme position, so Home never re-derives it.
+  const [programmePosition, setProgrammePosition] = useState(null);
+  // C18 long-gap re-entry: asked once per return, never on every screen.
+  const [reEntryAsked, setReEntryAsked] = useState(false);
 
   // B3: lift plateau banner. { exerciseId, line } | null. Defaults dismissed
   // so it never flashes before the stored dismissal has been read (the
@@ -1232,23 +1244,22 @@ export default function HomeScreen({ navigation, route }) {
       // THIS block? Best-effort - a read failure shows the card expanded,
       // which is the direction that keeps a consequential coaching state
       // visible rather than hiding it.
-      if (isLighterTrainingState(week.recoveryState)) {
-        const key = recoveryReadKey(user.id, week.mesocycleId, week.recoveryState.state);
+      const gated = (await resolveProgrammePosition(user.id).catch(() => null))?.recoveryState
+        ?? week.recoveryState;
+      if (isLighterTrainingState(gated)) {
+        const key = recoveryReadKey(user.id, week.mesocycleId, gated.state);
         const seen = await AsyncStorage.getItem(key).catch(() => null);
         setRecoveryRead(!!seen);
       } else {
         setRecoveryRead(false);
       }
-      // C18: the ONE recovery-week push, fired by the real block transition
-      // rather than by a calendar. Once per block, planned state only, and
-      // every existing opt-out, quiet-hours and budget rule applies inside.
-      // Best-effort: Home says everything already if this never runs.
-      try {
-        // eslint-disable-next-line global-require
-        const { notifyRecoveryWeekStarted } = require('../lib/notifications/scheduler');
-        notifyRecoveryWeekStarted(user.id, week.recoveryState, week.mesocycleId)
-          .catch(() => {});
-      } catch (_) { /* notifications are supplemental, never required */ }
+      // C18: the recovery-week push was REMOVED (founder ruling). It could
+      // only ever run from here, which means it could not tell the athlete
+      // anything before they opened Home - and once Home is open the recovery
+      // card already says it. A local push scheduled while the user is looking
+      // at the card is redundant, and a background scheduler for one
+      // notification is not worth building. Home, the next-workout label,
+      // Train and the review carry the state.
 
       // Stage 8 (§3.6): the block-start explanation, derived from the
       // WRITTEN plan rows so it can never claim a personalisation the
@@ -1369,12 +1380,104 @@ export default function HomeScreen({ navigation, route }) {
       setPlanAllWorkouts(routines);
       setSelectedWorkoutOverride(null);
       if (routines.length === 0) { setNextWorkout(null); return; }
-      const idx = (plan.nextWorkoutIndex || 0) % routines.length;
+      // C18 BLOCK PROGRESSION. This used to read
+      // `(plan.nextWorkoutIndex || 0) % routines.length` - a single integer
+      // advanced blindly on any completion, so training out of order moved it
+      // past an unperformed required session and Home then offered the wrong
+      // workout every session until the athlete corrected it by hand.
+      //
+      // The next workout is now the first OUTSTANDING required session in
+      // programme order, from the same resolver Plans and Train read, so the
+      // three cannot disagree. A read failure falls back to the plan's first
+      // routine rather than the retired pointer.
+      const position = await resolveProgrammePosition(user.id).catch(() => null);
+      setProgrammePosition(position);
+      maybeAskReEntry(position);
+      const next = position?.nextSession ?? null;
+      const idx = next
+        ? Math.max(0, routines.findIndex((r) => r.id === next.routineId))
+        : 0;
       setNextWorkout({ routine: routines[idx], total: routines.length, idx });
     } catch (_e) {
       setNextWorkout(null);
       setPlanAllWorkouts([]);
       setSelectedWorkoutOverride(null);
+    }
+  }
+
+  // ── C18 ONE-TIME SKIP ────────────────────────────────────────────────────
+  //
+  // Instance-scoped intent, and nothing more. It resolves THIS occurrence of
+  // THIS required session so the programme stops bringing it back. It does not
+  // remove the workout, change the split, exclude any exercise, reduce future
+  // frequency, infer dislike or injury, or count as training. No reason is
+  // asked for, and none is inferred: an unstated reason is UNKNOWN.
+  async function handleSkipThisWorkout() {
+    const position = programmePosition;
+    const session = position?.nextSession;
+    if (!user?.id || !session || !position?.activeWeekId) return;
+    // Only warn about the recovery week when resolving THIS session genuinely
+    // finishes the pre-recovery work, so the sentence is never a guess.
+    const recoveryNext = position.sessions
+      .filter((x) => x.routineId !== session.routineId)
+      .every((x) => x.state !== 'outstanding');
+    const copy = skipConfirmation(session, position.sessions, { recoveryNext });
+    if (!copy) return;
+    appAlert(copy.title, copy.body, [
+      { text: copy.cancel, style: 'cancel' },
+      {
+        text: copy.confirm,
+        onPress: async () => {
+          try {
+            await recordSessionResolution(user.id, {
+              mesocycleWeekId: position.activeWeekId,
+              routineId: session.routineId,
+              mesocycleId: position.blockId,
+              resolution: 'skipped_by_user',
+            });
+            await loadNextWorkout();
+            await loadBlockProgress();
+          } catch (e) {
+            logError('HomeScreen.handleSkipThisWorkout', e, { userId: user?.id });
+            toast.show("Couldn't skip that workout, try again", { variant: 'error' });
+          }
+        },
+      },
+    ]);
+  }
+
+  // ── C18 LONG-GAP RE-ENTRY ────────────────────────────────────────────────
+  //
+  // TIME MAY QUESTION THE PRESCRIPTION. TIME MAY NOT CHANGE THE NEXT WORKOUT.
+  // The outstanding session is untouched by this: Legs is still Legs after
+  // twenty days. All this does is ask, once, before the same peak targets are
+  // handed back, and record what the athlete said.
+  async function maybeAskReEntry(position) {
+    if (!user?.id || reEntryAsked) return;
+    try {
+      const key = `@volyume_reentry_answered_${user.id}`;
+      const answeredFor = await AsyncStorage.getItem(key).catch(() => null);
+      const check = reEntryCheckDue({
+        lastWorkoutAtMs: lastSession?.startedAt ?? null,
+        nowMs: Date.now(),
+        sessionsPerWeek: position?.sessions?.length ?? null,
+        answeredFor,
+      });
+      if (!check) return;
+      setReEntryAsked(true);
+      const prompt = reEntryPrompt(check);
+      const record = async (answer) => {
+        const outcome = reEntryOutcome(answer);
+        try { await AsyncStorage.setItem(key, check.key); } catch (_) { /* asked again next open */ }
+        if (outcome.note) toast.show(outcome.note, { variant: 'info' });
+      };
+      appAlert(prompt.title, prompt.body, [
+        { text: prompt.options[0].label, onPress: () => record(RE_ENTRY_ANSWER.TRAINED_ELSEWHERE) },
+        { text: prompt.options[1].label, onPress: () => record(RE_ENTRY_ANSWER.DID_NOT_TRAIN) },
+        { text: prompt.options[2].label, style: 'cancel', onPress: () => record(RE_ENTRY_ANSWER.CONTINUE) },
+      ]);
+    } catch (e) {
+      logError('HomeScreen.maybeAskReEntry', e, { userId: user?.id });
     }
   }
 
@@ -1567,7 +1670,13 @@ export default function HomeScreen({ navigation, route }) {
   // it. Straight from the block's resolved state - never re-derived here, and
   // never the word "week" on an adaptive reduction, which would claim the hard
   // part of the block had finished when it has not.
-  const recoveryLabel = nextWorkoutRecoveryLabel(currentMesoWeek?.recoveryState);
+  // C18: the GATED state. programmePosition re-resolves recovery knowing
+  // whether any required accumulation session is still outstanding, so the
+  // planned recovery week cannot appear while the athlete still owes work.
+  // The calendar-side reading is the fallback only when position is unreadable.
+  const gatedRecoveryState = programmePosition?.recoveryState
+    ?? currentMesoWeek?.recoveryState ?? null;
+  const recoveryLabel = nextWorkoutRecoveryLabel(gatedRecoveryState);
 
   // Derive how many days since last completed workout (null = no history)
   const lastWorkoutDaysAgo = lastSession
@@ -1934,7 +2043,7 @@ export default function HomeScreen({ navigation, route }) {
             the block finishes, because the resolver returns nothing - the
             state ends with the lifecycle, never with a tap. ── */}
         <RecoveryStateCard
-          recoveryState={currentMesoWeek?.recoveryState}
+          recoveryState={gatedRecoveryState}
           expanded={!recoveryRead}
           onToggle={toggleRecoveryRead}
         />
@@ -2085,7 +2194,17 @@ export default function HomeScreen({ navigation, route }) {
               {recoveryLabel ? `${recoveryLabel} · ${planProgress}` : planProgress}
             </SectionLabel>
             <Text style={[styles.workoutName, live.workoutName]} numberOfLines={2}>
-              {displayWorkout?.routine?.name}
+              {/* C18: where a display name repeats inside one programme week
+                  (the bikini Glute Focus split lists "Glutes" twice) the
+                  session is qualified by its programme position, so the
+                  athlete can tell which occurrence this is. A unique name is
+                  left alone. */}
+              {sessionDisplayName(
+                programmePosition?.nextSession && programmePosition.nextSession.routineId === displayWorkout?.routine?.id
+                  ? programmePosition.nextSession
+                  : { name: displayWorkout?.routine?.name ?? '', order: 0 },
+                programmePosition?.sessions ?? [],
+              ) || displayWorkout?.routine?.name}
             </Text>
             {exerciseCounts[displayWorkout?.routine?.id] ? (
               <Text style={[styles.workoutMeta, live.workoutMeta]}>
@@ -2151,6 +2270,24 @@ export default function HomeScreen({ navigation, route }) {
                 textStyle={[styles.workoutOptionsText, live.workoutOptionsText]}
               />
             </View>
+            {/* ── C18 ONE-TIME SKIP. A quiet SECONDARY action, deliberately not
+                a primary CTA: skipping is a legitimate choice, not the
+                expected one. Shown only when there is genuinely an
+                outstanding required session to skip, so it never appears on a
+                resolved week or when the user is browsing another workout. ── */}
+            {programmePosition?.nextSession
+              && programmePosition.nextSession.routineId === displayWorkout?.routine?.id ? (
+                <TouchableOpacity
+                  onPress={() => { haptics.selection(); handleSkipThisWorkout(); }}
+                  style={styles.skipSessionRow}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Skip ${sessionDisplayName(programmePosition.nextSession, programmePosition.sessions)} this time`}
+                >
+                  <Text style={[styles.skipSessionText, live.skipSessionText]}>
+                    Skip this workout this time
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             {/* S2: the compact consistency echo + one-time forgiveness explainer,
                 same resolver as the Progress strip so the number never disagrees;
                 absent under ED flag / SCOFF / calm mode. */}
@@ -2537,6 +2674,10 @@ const READINESS_ICON = { go: 'trending-up-outline', caution: 'alert-circle-outli
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  // C18 one-time skip: quiet by design. A secondary text action, never a
+  // button competing with Start workout.
+  skipSessionRow: { alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  skipSessionText: { ...type.caption, color: colors.textMuted },
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },

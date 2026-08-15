@@ -61,6 +61,13 @@ function freshDb() {
   // to declare the table this migration list touches.
   raw.exec('CREATE TABLE routine_exercises (id TEXT PRIMARY KEY, routine_id TEXT, exercise_id TEXT);');
   raw.exec(`CREATE TABLE exercises (id TEXT PRIMARY KEY, name TEXT, primary_muscle TEXT, subregion TEXT);`);
+  // C18 block progression widened this window by two, which pulls a migration
+  // touching exercise_swaps into range. Same reasoning as the tables above:
+  // it exists on a real device, and empty is enough because this suite
+  // asserts nothing about it.
+  raw.exec('CREATE TABLE exercise_swaps (id TEXT PRIMARY KEY, user_id TEXT, from_exercise_id TEXT, to_exercise_id TEXT, scope TEXT, created_at INTEGER, updated_at INTEGER, deleted_at INTEGER);');
+  // C18 adds the progression anchor column to mesocycles.
+  raw.exec('CREATE TABLE mesocycles (id TEXT PRIMARY KEY, user_id TEXT, planned_weeks INTEGER, deload_week INTEGER);');
   return raw;
 }
 
@@ -79,7 +86,10 @@ test('v72 re-ids legacy uid() rows to the deterministic form, without touching u
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('co_1734000000000_user-1', 'user-1', 1734000000000, 0, 90, 90);
-  return runLast(raw, 6).then(() => { // +v73 (Campaign 9), +v74 (C16 job 3), +v75/v76, +v77 (C17A job 3)
+  // C18 block progression appended two migrations (the legacy anchor column
+  // and session_resolutions), so this index-relative window widens by two to
+  // keep testing the SAME v72 migration rather than a later pair.
+  return runLast(raw, 8).then(() => {
     const after = rows(raw);
     expect(after).toEqual([
       // Already deterministic: byte-identical.
@@ -94,9 +104,9 @@ test('v72 is idempotent: a second run changes nothing', async () => {
   const raw = freshDb();
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
-  await runLast(raw, 6); // +v73 (Campaign 9), +v74 (C16 job 3), +v75/v76
+  await runLast(raw, 8); // widened by two, C18 block progression
   const once = rows(raw);
-  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 5}`);
+  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 7}`);
   await runMigrations(adapt(raw));
   expect(rows(raw)).toEqual(once);
 });

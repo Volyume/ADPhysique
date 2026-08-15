@@ -734,6 +734,7 @@ export async function bulkUploadLocalData(supabaseUserId, localUserId) {
     await _pushProgrammes(sb, supabaseUserId, localUserId);
     await _pushRoutinesAndExercises(sb, supabaseUserId, localUserId);
     await _pushMesocycles(sb, supabaseUserId, localUserId);
+    await _pushSessionResolutions(sb, supabaseUserId, localUserId);
     await _pushMorningWeights(sb, supabaseUserId, localUserId);
     // weekly_checkins_v2 moved to src/lib/sync/transport.js
     // (registry-driven per-table push). See MIGRATED_TABLES.
@@ -1052,6 +1053,44 @@ async function _pushMesocycles(sb, supabaseUserId, localUserId) {
       }
     }
   } catch (e) { logBulkWarn('sync._pushMesocycles', e?.message, { error: e?.message }); }
+}
+
+async function _pushSessionResolutions(sb, supabaseUserId, localUserId) {
+  try {
+    // eslint-disable-next-line global-require
+    const { getAllSessionResolutionsForUser } = require('./database');
+    const rows = await getAllSessionResolutionsForUser(localUserId);
+    if (!rows?.length) return;
+    // C18 block progression: the EXPLICIT half of session resolution. Skipping
+    // a workout and finishing one early are deliberate user intent, so they
+    // must survive a device change exactly as programme position does - a
+    // restored device that resurrected a skipped session as OUTSTANDING would
+    // be overriding a choice the athlete already made.
+    //
+    // The id is derived from (mesocycle_week_id, routine_id), so two devices
+    // resolving the same instance converge on ONE row rather than racing two,
+    // and conflict then falls to updated_at rather than an arbitrary id.
+    const payload = rows.map(r => ({
+      id: r.id, user_id: supabaseUserId,
+      mesocycle_week_id: r.mesocycleWeekId,
+      routine_id: r.routineId,
+      mesocycle_id: r.mesocycleId ?? null,
+      resolution: r.resolution,
+      workout_id: r.workoutId ?? null,
+      resolved_at: new Date(r.resolvedAt ?? r.createdAt ?? Date.now()).toISOString(),
+      created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
+      updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
+      deleted_at: r.deletedAt ? new Date(r.deletedAt).toISOString() : null,
+    }));
+    for (let i = 0; i < payload.length; i += 200) {
+      const { error } = await sb.from('session_resolutions').upsert(
+        payload.slice(i, i + 200), { onConflict: 'user_id,id' },
+      );
+      // Fails SOFT until migrate_137 is applied: progression is already
+      // correct on-device, so an absent cloud table costs portability only.
+      if (error) logPgErr('sync._pushSessionResolutions', error);
+    }
+  } catch (e) { logBulkWarn('sync._pushSessionResolutions', e?.message); }
 }
 
 async function _pushMorningWeights(sb, supabaseUserId, localUserId) {
@@ -2074,6 +2113,13 @@ export async function pullFromCloud(supabaseUserId) {
     const routineCount = await _pullRoutinesAndExercises(sb, supabaseUserId);
     if (bailForWipe('mesocycles')) return workoutCount;
     const mesoCount = await _pullMesocycles(sb, supabaseUserId);
+    // C18 block progression: pulled straight after the mesocycles they belong
+    // to, so a restored device knows which required sessions the athlete
+    // explicitly skipped or finished early before any surface asks what is
+    // next. Best-effort like its siblings: a failure leaves those instances
+    // reading OUTSTANDING, which is the honest pre-restore answer rather than
+    // a fabricated one.
+    await _pullSessionResolutions(sb, supabaseUserId);
     const weightCount = await _pullMorningWeights(sb, supabaseUserId);
     // weekly_checkins_v2 moved to src/lib/sync/transport.js
     // (registry-driven per-table pull). See MIGRATED_TABLES.
@@ -2829,6 +2875,24 @@ async function _pullMesocycles(sb, supabaseUserId) {
     }
     return n;
   } catch (e) { logWarn('sync._pullMesocycles', e?.message); return 0; }
+}
+
+async function _pullSessionResolutions(sb, supabaseUserId) {
+  try {
+    const data = await fetchAllRows(
+      'sync._pullSessionResolutions',
+      () => sb.from('session_resolutions').select('*').eq('user_id', supabaseUserId).is('deleted_at', null),
+    );
+    if (!data?.length) return 0;
+    // eslint-disable-next-line global-require
+    const { insertOrUpdateSessionResolutionFromCloud } = require('./database');
+    let n = 0;
+    for (const row of data) {
+      try { await insertOrUpdateSessionResolutionFromCloud(supabaseUserId, row); n++; }
+      catch (e) { logWarn('sync._pullSessionResolutions', 'insert failed', { id: row?.id, error: e?.message }); }
+    }
+    return n;
+  } catch (e) { logWarn('sync._pullSessionResolutions', e?.message); return 0; }
 }
 
 async function _pullMorningWeights(sb, supabaseUserId) {

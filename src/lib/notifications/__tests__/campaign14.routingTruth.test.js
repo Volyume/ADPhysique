@@ -149,13 +149,6 @@ const DECISIONS = {
     tab: 'PlansTab', screen: 'Plans',
     file: 'src/screens/PlansScreen.js', marker: /programmeReview/,
   },
-  // C18 recovery-visibility amendment: the recovery-week push and the Home
-  // card describe the same state, so the tap opens the card rather than a
-  // second explanation elsewhere.
-  recovery_week_started: {
-    tab: 'HomeTab', screen: 'Home',
-    file: 'src/screens/HomeScreen.js', marker: /RecoveryStateCard/,
-  },
   cascade_gate: {
     tab: 'ProfileTab', screen: 'CascadeGate',
     file: 'src/screens/CascadeGateScreen.js', marker: /params\?\.variant/,
@@ -269,7 +262,6 @@ describe('live notification type inventory is derived, not assumed', () => {
       'partner_joined',
       'partner_streak',
       'planned_meal_confirm',
-      'recovery_week_started',
       'rest_end',
       'rest_timer',
       'subscription_payment_failure',
