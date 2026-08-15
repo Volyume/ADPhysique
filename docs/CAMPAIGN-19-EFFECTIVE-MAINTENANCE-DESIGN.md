@@ -429,3 +429,255 @@ Everything else is resolved and coherent:
 - the persistence and provenance shape
 
 Give me the bound and this is ready to implement.
+
+
+---
+---
+
+# CORRECTION CHECKPOINT (supersedes the sections it names)
+
+Model C stands. The following seven points are corrected and are the
+authoritative version where they conflict with anything above.
+
+
+## C1. CORRECTED UPDATE EQUATION (supersedes section 4)
+
+CONFIRMED: `computeAdaptiveTDEEAdjustment` returns an INCREMENTAL correction
+(`adjustedTDEE = currentTDEEEstimate + adjustmentKcal`). Once effective
+maintenance becomes `currentTDEEEstimate`, `adjustmentKcal` is NOT the total
+divergence from the formula prior.
+
+THE PERSISTED CANONICAL VALUE IS THE CUMULATIVE RESIDUAL, NOT THE ABSOLUTE
+EFFECTIVE MAINTENANCE.
+
+```
+formulaPrior      = current formula maintenance, recomputed every resolve
+                    from CURRENT bodyweight / activity / profile
+
+currentAnchor     = formulaPrior + storedCumulativeResidual
+                    (cold start: storedCumulativeResidual = 0)
+
+update            = computeAdaptiveTDEEAdjustment({
+                      currentTDEEEstimate: currentAnchor,
+                      ...
+                    })
+
+candidateEM       = update.adjustedTDEE
+                    ( = currentAnchor + update.adjustmentKcal )
+
+cumulativeResidual = candidateEM - formulaPrior      <- PERSIST THIS
+
+effectiveMaintenance = formulaPrior + cumulativeResidual   <- always derived
+```
+
+Why the residual and not the absolute value is canonical: when the athlete's
+bodyweight changes, `formulaPrior` moves. If the absolute EM were stored it
+would be held constant across that change and the learned offset would
+silently inflate. Storing the residual means EM tracks the prior automatically
+while the learned offset persists, which is the behaviour the portability
+matrix already requires.
+
+EXPLICITLY FORBIDDEN, and the failure this prevents:
+
+- `newResidual = storedResidual + update.adjustmentKcal`   (double counts)
+- `newEM = formulaPrior + update.adjustmentKcal`           (resets the residual
+                                                            to the latest
+                                                            increment)
+
+
+## C2. CORRECTED STALE LAW (supersedes the HELD_STALE row in section 5)
+
+REMOVED: "drifts back toward prior". There is NO time-decay coefficient and no
+automatic drift. Staleness changes AUTHORITY, not historical fact.
+
+When evidence is stale:
+
+- the last validated `cumulativeResidual` is RETAINED unchanged;
+- NO new adaptive correction is computed;
+- `source` is `HELD_STALE`, never `athlete_evidence`;
+- it may still be used as a STARTING PRIOR where the context is compatible;
+- athlete evidence becomes CURRENT again only after fresh judgeable evidence
+  revalidates it.
+
+TARGET REGENERATION WHILE HELD_STALE — exact behaviour:
+
+- `effectiveMaintenance = formulaPrior + storedCumulativeResidual`, with
+  `formulaPrior` recomputed at CURRENT bodyweight and activity;
+- `targetKcal = effectiveMaintenance x (1 + phaseAdj)`, phase maths unchanged;
+- the whole existing safety chain applies unchanged;
+- `source = held_stale`, `judgeable = false`, `decision = held`;
+- the residual is NOT recomputed, NOT decayed, NOT zeroed.
+
+Context-incompatible staleness (the residual's `bodyweight_context` or
+`goal_context` no longer describes the athlete) drops to `formulaPrior` alone
+for the emitted number, while STILL retaining the stored residual as history.
+Only an explicit user reset deletes it.
+
+
+## C3. CORRECTED MANUAL-AUTHORITY LAW (supersedes the manual rows in sections 5 and 6)
+
+Manual calorie authority is senior for INTERVENTION only. It does not
+inherently invalidate OBSERVATIONAL evidence: what the athlete ate and what
+their weight did are equally real whoever chose the number.
+
+The discriminator is whether the estimate would depend on a prescribed-target
+proxy.
+
+LEARNING CONTINUES while a manual target is active when BOTH hold:
+
+- `actualIntakeKcal` is available with sufficient diary coverage
+  (the existing B1 path in `computeAdaptiveTDEEAdjustment`, which reads what
+  was eaten rather than prescribed x adherence);
+- robust weight-response evidence is present.
+
+Then: `source = athlete_evidence`, residual updates normally, and Volyume
+STILL NEVER overwrites or silently replaces the manual target. The learned
+maintenance informs provenance and future non-manual regeneration only.
+
+LEARNING HOLDS (`source = held_confounded`) when:
+
+- actual logged intake is unavailable or coverage is poor, so the model would
+  fall back to `prescribedKcal x adherenceFactor` — a proxy for a number the
+  app did not choose, which is not evidence about maintenance.
+
+Portability matrix rows replaced:
+
+| Manual calorie target active | DIRECTLY ACTIONABLE if actual intake coverage is sufficient, else CONFOUNDED |
+| Manual target removed        | DIRECTLY ACTIONABLE if learning continued throughout, else REQUIRES REVALIDATION |
+
+
+## C4. EVIDENCE-SIGNATURE CONTRACT (supersedes step 3 of section 4)
+
+Window bounds plus context is INSUFFICIENT: an edit, delete or correction
+inside the same window leaves the bounds identical while changing the evidence.
+
+The signature must be CONTENT-ADDRESSED over the authoritative rows actually
+consumed.
+
+SAME SIGNATURE MUST MEAN: same relevant evidence + same context + same
+algorithm.
+
+Smallest deterministic form:
+
+```
+signature = hash(
+  sorted[ (foodEntryRowId, updatedAt) ... consumed in window ],
+  sorted[ (weightRowId,    updatedAt) ... consumed in window ],
+  bodyweightContextBand,
+  goalPhase,
+  manualTargetActive,
+  algorithmVersion
+)
+```
+
+Notes:
+
+- `updatedAt` on each row makes an in-place edit change the hash; a soft delete
+  removes the row from the consumed set and therefore also changes it.
+- Sorting by row id makes the hash order-independent, so sync arrival order
+  cannot change it. Same discipline as `pickCurrentResolution`.
+- Only rows the resolver ACTUALLY consumed are included, so an unrelated edit
+  outside the window does not needlessly invalidate the memo.
+- A signature mismatch means RECOMPUTE, never silent reuse and never a guess.
+
+
+## C5. HISTORICAL-RECEIPT CONTRACT (supersedes the "explain old decisions" claim in section 3)
+
+One mutable current snapshot explains the CURRENT number only. A coaching
+decision made three months ago cannot be explained by a row that has since
+been overwritten.
+
+CONTRACT: any historical decision that already carries a receipt must STAMP
+the maintenance provenance used AT DECISION TIME.
+
+- Reuse `coachIntervention.buildInterventionRecord`, which already carries
+  `authorisedBy`, `baseline` and `because`. Add the maintenance provenance
+  reference to the record it already writes.
+- Stamp: `source`, `effectiveMaintenanceKcal`, `formulaPriorKcal`,
+  `cumulativeResidualKcal`, `algorithmVersion`, `asOf`, `evidenceSignature`.
+- That is a handful of fields on a record that is already written.
+
+NO new ledger, no event sourcing, no second history. Decisions that do not
+already carry a receipt do not gain one in Campaign 19.
+
+
+## C6. RESIDUAL-BOUND RULING (supersedes section 11)
+
+The earlier framing was wrong. It treated `formulaPrior` as approximately
+correct and any large divergence as suspect. `formulaPrior` is a PRIOR, not
+ground truth: it carries its own individual error, and cumulative residual
+represents formula error + activity mismatch + logging bias + contextual
+energy differences combined. A hard clamp therefore asserts the formula is
+right when the evidence says otherwise.
+
+Options considered:
+
+- A. HARD CUMULATIVE +/-20% CLAMP.
+  Rejected. It silently overrides the athlete's own demonstrated evidence in
+  exactly the population it matters most for (systematic under-reporters), and
+  the clamp would be invisible in the emitted number.
+
+- B. NO CUMULATIVE CLAMP, relying on judgeability + damping + step limits.
+  Rejected alone. Correct in spirit, but it leaves no signal at all when the
+  divergence is genuinely implausible, which is a real diagnostic loss.
+
+- C. DIVERGENCE / REVALIDATION BOUNDARY.  WINNER.
+  Unusually large divergence raises the EVIDENCE REQUIREMENT rather than
+  declaring the formula correct.
+
+MINIMAL DETERMINISTIC BEHAVIOUR — two bands, no state machine, no new score:
+
+```
+divergence = |cumulativeResidual| / formulaPrior
+
+NORMAL      divergence <= RESIDUAL_REVALIDATION_BAND
+            -> existing judgeability applies unchanged
+
+EXTENDED    divergence >  RESIDUAL_REVALIDATION_BAND
+            -> the SAME judgeability gates apply, but the evidence window
+               required to APPLY a further residual update in the widening
+               direction is doubled
+            -> updates in the NARROWING direction are unaffected
+            -> the value is still emitted, still labelled athlete_evidence
+            -> `bounds.extendedEvidenceRequired = true` in provenance
+```
+
+RESIDUAL_REVALIDATION_BAND = 20%.
+
+Stated explicitly as an ENGINEERING TRUST / DIAGNOSTIC PARAMETER: it marks
+where Volyume asks for more evidence before believing itself further. It is
+NOT a physiological claim, NOT a limit on what a human's maintenance can be,
+and it never clamps the emitted number.
+
+All existing safety remains senior and unchanged: calorie floors, FFM floor,
+rapid-loss, ED/wellbeing, the +/-5% target step, cooldowns.
+
+
+## C7. BASELINE VERIFICATION (new)
+
+The design names `ada99f8075abe255f93e972fc301299882b8f458`; the targeted
+reads were taken from `f42f72d0`.
+
+No re-audit now. IMPLEMENTATION MUST BEGIN WITH:
+
+```
+git diff ada99f80..<implementation baseline> -- \
+  src/lib/nutritionEngine.js \
+  src/lib/weeklyCoach.js \
+  src/lib/nutritionTargetsView.js \
+  src/hooks/useWeightTrend.js \
+  src/lib/database.js
+```
+
+and prove no C19-relevant nutrition path changed between the inspected code
+and the actual implementation baseline. A non-empty relevant diff halts
+implementation and returns here.
+
+
+## REVISED VERDICT
+
+DESIGN READY FOR IMPLEMENTATION.
+
+No open founder decision remains. The residual bound is resolved as an
+evidence-requirement boundary rather than a value clamp, which removes the
+question that previously blocked it.
