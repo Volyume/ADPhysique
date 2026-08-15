@@ -1523,7 +1523,17 @@ export default function HomeScreen({ navigation, route }) {
         // ActiveWorkoutScreen renders them as paired from the start.
         supersetGroupId: routineExercise?.supersetGroupId ?? null,
       }));
-      pendingStartRef.current = { routineId: routine.id, initialExercises, starter, routineName: routine.name };
+      pendingStartRef.current = {
+        routineId: routine.id,
+        initialExercises,
+        starter,
+        routineName: routine.name,
+        // Position, not the wall clock, owns the required-session instance.
+        // This remains the same for a temporary out-of-order selection: that
+        // choice may resolve another routine in this week but cannot move the
+        // workout into the calendar's later week.
+        mesocycleWeekId: programmePosition?.activeWeekId,
+      };
       // D2 (founder decision 2026-07-03, Option A): a user who opted out of
       // the readiness ask starts immediately with NO readiness signal, the
       // exact Skip path, all-null inputs. Coaching input is never fabricated;
@@ -1560,6 +1570,7 @@ export default function HomeScreen({ navigation, route }) {
       const workout = await createWorkout(user.id, pending.routineId, {
         intent,
         ...readinessOverride,
+        mesocycleWeekId: pending.mesocycleWeekId,
       });
       startWorkout(workout, pending.initialExercises);
       // Always pass starterSession explicitly so a normal start can never inherit

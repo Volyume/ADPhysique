@@ -2453,6 +2453,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const snapshotExercises = workoutExercises;
     const snapshotElapsed = elapsedSeconds;
 
+    let pendingSessionResolution = null;
+
     async function doFinish() {
       // WK-2: count from the DB, not the in-memory exercise list, so
       // sets logged on an exercise later swapped out or removed still
@@ -2470,14 +2472,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(allSets);
       const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);
       const sessionName = shareSessionName(null, exerciseNames);
-      await updateWorkout(activeWorkout.id, {
+      const workoutUpdate = {
         endedAt: Date.now(),
         durationMinutes: Math.round(snapshotElapsed / 60),
         isCompleted: true,
         name: sessionName,
         setCount: workingSetCount,
         totalVolume: tonnage,
-      });
+      };
+      if (pendingSessionResolution) {
+        // eslint-disable-next-line global-require
+        const { finishWorkoutWithSessionResolution } = require('../lib/database');
+        await finishWorkoutWithSessionResolution(
+          activeWorkout.id, workoutUpdate, user.id, pendingSessionResolution,
+        );
+      } else {
+        await updateWorkout(activeWorkout.id, workoutUpdate);
+      }
       // LB-8: the core value event. Counts + duration only, no
       // exercise names or loads.
       try {
@@ -2594,7 +2605,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       });
     }
 
-    async function runFinish() {
+    async function runFinish(sessionResolution = null) {
+      pendingSessionResolution = sessionResolution;
       try {
         await doFinish();
       } catch (e) {
@@ -2611,6 +2623,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           'Couldn\'t finish workout',
           'Your sets are still saved, but the workout did not close on your device, so tap Finish workout again.',
         );
+      } finally {
+        pendingSessionResolution = null;
       }
     }
 
@@ -2651,7 +2665,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const unperformed = snapshotExercises.filter((e) => (e.sets?.length ?? 0) === 0);
     const isEndedEarly = performed.length > 0 && unperformed.length > 0;
 
-    if (isEndedEarly) {
+    const endedEarlyWeekId = activeWorkout?.mesocycleWeekId ?? progressionWeekId;
+    const endedEarlyRoutineId = activeWorkout?.routineId ?? null;
+    const canResolveEndedEarly = !!user?.id && !!endedEarlyWeekId && !!endedEarlyRoutineId;
+
+    if (isEndedEarly && canResolveEndedEarly) {
       // eslint-disable-next-line global-require
       const { endEarlyConfirmation } = require('../lib/blockProgression');
       const sessions = progressionSessions ?? [];
@@ -2670,24 +2688,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {
             text: copy.confirm,
             onPress: async () => {
-              // Recorded BEFORE the finish, so a crash between the two leaves
-              // the instance outstanding rather than silently fully complete.
-              try {
-                if (user?.id && instance && progressionWeekId) {
-                  // eslint-disable-next-line global-require
-                  const { recordSessionResolution } = require('../lib/database');
-                  await recordSessionResolution(user.id, {
-                    mesocycleWeekId: progressionWeekId,
-                    routineId: instance.routineId,
-                    mesocycleId: progressionBlockId,
-                    resolution: 'ended_early',
-                    workoutId: activeWorkout.id,
-                  });
-                }
-              } catch (e) {
-                logError('ActiveWorkoutScreen.endEarly', e, { userId: user?.id });
-              }
-              await runFinish();
+              // Workout closure and ENDED_EARLY are one SQLite transaction.
+              // A crash can leave neither or both, never a progressed session
+              // whose workout is still resumable.
+              await runFinish({
+                mesocycleWeekId: endedEarlyWeekId,
+                routineId: endedEarlyRoutineId,
+                mesocycleId: activeWorkout?.mesocycleId ?? progressionBlockId,
+                resolution: 'ended_early',
+                workoutId: activeWorkout.id,
+              });
             },
           },
         ],
@@ -2700,7 +2710,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       `You've logged ${snapshotExercises.reduce((sum, e) => sum + (e.sets?.length ?? 0), 0)} sets across ${snapshotExercises.length} exercises.${inProgressNote}`,
       [
         { text: 'Keep going', style: 'cancel', onPress: () => { finishingRef.current = false; } },
-        { text: 'Finish workout', onPress: runFinish },
+        { text: 'Finish workout', onPress: () => runFinish() },
       ],
     );
   }

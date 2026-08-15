@@ -586,13 +586,16 @@ export default function PlansScreen({ navigation }) {
       // starting from Plans cannot open a different workout from the one Home
       // says is next. The retired `nextWorkoutIndex` is not consulted.
       // eslint-disable-next-line global-require
-      const { resolveNextSession } = require('../lib/programmePosition');
-      const next = await resolveNextSession(user.id).catch(() => null);
+      const { resolveProgrammePosition } = require('../lib/programmePosition');
+      const position = await resolveProgrammePosition(user.id).catch(() => null);
+      const next = position?.nextSession ?? null;
       const idx = next
         ? Math.max(0, routines.findIndex((r) => r.id === next.routineId))
         : 0;
       const routine = routines[idx];
-      const workout = await createWorkout(user.id, routine.id);
+      const workout = await createWorkout(user.id, routine.id, {
+        mesocycleWeekId: position?.activeWeekId,
+      });
       const withExercises = await getRoutineExercisesWithDetails(routine.id);
       const initialExercises = withExercises.map(({ exercise, routineExercise }) => ({
         exercise, routineExercise, sets: [],

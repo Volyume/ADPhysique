@@ -81,7 +81,44 @@ export function isPerformedInFull(state) {
 }
 
 const str = (v) => (typeof v === 'string' && v.length ? v : null);
-const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+
+const timestamp = (v) => {
+  if (v === null || v === undefined || v === '') return 0;
+  if (Number.isFinite(Number(v))) return Number(v);
+  const parsed = Date.parse(v);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const resolutionRank = (v) => {
+  if (v === SESSION_STATE.ENDED_EARLY) return 2;
+  if (v === SESSION_STATE.SKIPPED_BY_USER) return 1;
+  return 0;
+};
+
+/**
+ * Total ordering for two writes to the same required-session instance.
+ *
+ * `updatedAt` is the cross-device authority. The remaining fields exist only
+ * to make an exact clock tie deterministic on the server and every device:
+ * resolvedAt, then explicit-state rank, then workout/id text. A retry of the
+ * exact same mutation compares equal. This ordering is mirrored by the
+ * founder-gated cloud migration's BEFORE UPDATE trigger.
+ */
+export function compareSessionResolutionVersions(a, b) {
+  // IDs are ASCII. Compare code units explicitly so device locale can never
+  // disagree with the migration's C-collation tie-break.
+  const textCompare = (x, y) => {
+    const left = String(x ?? '');
+    const right = String(y ?? '');
+    if (left === right) return 0;
+    return left < right ? -1 : 1;
+  };
+  return timestamp(a?.updatedAt ?? a?.updated_at) - timestamp(b?.updatedAt ?? b?.updated_at)
+    || timestamp(a?.resolvedAt ?? a?.resolved_at) - timestamp(b?.resolvedAt ?? b?.resolved_at)
+    || resolutionRank(a?.resolution) - resolutionRank(b?.resolution)
+    || textCompare(a?.workoutId ?? a?.workout_id, b?.workoutId ?? b?.workout_id)
+    || textCompare(a?.id, b?.id);
+}
 
 /**
  * THE ONE CURRENT RESOLUTION for a required instance.
@@ -97,11 +134,7 @@ export function pickCurrentResolution(rows = []) {
     (r) => r && r.deletedAt == null && EXPLICIT_RESOLUTIONS.includes(r.resolution),
   );
   if (!valid.length) return null;
-  return [...valid].sort((a, b) => (
-    num(b.resolvedAt) - num(a.resolvedAt)
-    || num(b.updatedAt) - num(a.updatedAt)
-    || String(b.id ?? '').localeCompare(String(a.id ?? ''))
-  ))[0];
+  return [...valid].sort((a, b) => compareSessionResolutionVersions(b, a))[0];
 }
 
 /**

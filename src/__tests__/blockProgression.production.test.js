@@ -258,6 +258,55 @@ describe('CASE 15: LEGACY ACTIVE BLOCKS are not sent backwards', () => {
     expect(db.getLiveSessionResolutions).toHaveBeenCalled();
     expect(p.sessions.every((s) => s.state !== SESSION_STATE.SKIPPED_BY_USER)).toBe(true);
   });
+
+  test('NULL with no history starts honestly at week 1; numeric 0/1 are explicit', async () => {
+    setup({ anchor: null, calendarWeekIndex: 4, workouts: [] });
+    const legacy = await resolveProgrammePosition('u1');
+    expect(legacy).toMatchObject({ legacyBlock: true, candidateFloorWeek: 1, activeWeekIndex: 1 });
+    expect(legacy.sessions.every((s) => s.state === SESSION_STATE.OUTSTANDING)).toBe(true);
+
+    setup({ anchor: 0, calendarWeekIndex: 4, workouts: [] });
+    const zero = await resolveProgrammePosition('u1');
+    expect(zero).toMatchObject({ legacyBlock: false, candidateFloorWeek: 1, activeWeekIndex: 1 });
+
+    setup({ anchor: 1, calendarWeekIndex: 4, workouts: [] });
+    const one = await resolveProgrammePosition('u1');
+    expect(one).toMatchObject({ legacyBlock: false, candidateFloorWeek: 1, activeWeekIndex: 1 });
+  });
+
+  test('partial week 1 history preserves its real outstanding sessions', async () => {
+    setup({ anchor: null, calendarWeekIndex: 3, workouts: [done('wk_1', 'r_legs')] });
+    const p = await resolveProgrammePosition('u1');
+    expect(p.activeWeekIndex).toBe(1);
+    expect(p.execution).toMatchObject({ completed: 1, outstanding: 2, skipped: 0 });
+    expect(p.nextSession.name).toBe('Push & Arms');
+  });
+
+  test('out-of-order history floors at its furthest executed week', async () => {
+    setup({
+      anchor: null, calendarWeekIndex: 5,
+      workouts: [done('wk_2', 'r_push'), done('wk_4', 'r_legs'), done('wk_3', 'r_pull')],
+    });
+    const p = await resolveProgrammePosition('u1');
+    expect(p.candidateFloorWeek).toBe(4);
+    expect(p.activeWeekIndex).toBe(4);
+    expect(p.nextSession.name).toBe('Push & Arms');
+  });
+
+  test('a calendar beyond recovery cannot bypass the furthest legacy gap', async () => {
+    setup({ anchor: null, calendarWeekIndex: 99, workouts: [done('wk_5', 'r_legs')] });
+    const p = await resolveProgrammePosition('u1');
+    expect(p.candidateFloorWeek).toBe(5);
+    expect(p.activeWeekIndex).toBe(5);
+    expect(p.preRecoveryOutstanding).toBe(true);
+    expect(p.recoveryState.state).toBe(RECOVERY_STATE.NORMAL_ACCUMULATION);
+  });
+
+  test('a malformed anchor takes the conservative legacy branch', async () => {
+    setup({ anchor: 'not-a-week', calendarWeekIndex: 4, workouts: [done('wk_4', 'r_legs')] });
+    const p = await resolveProgrammePosition('u1');
+    expect(p).toMatchObject({ legacyBlock: true, candidateFloorWeek: 4, activeWeekIndex: 4 });
+  });
 });
 
 describe('CASE 20: adaptive recovery is untouched by the gate', () => {
@@ -336,7 +385,21 @@ describe('THE POINTER IS RETIRED', () => {
 
   test('HOME, PLANS AND TRAIN read ONE authority', () => {
     expect(read('screens/HomeScreen.js')).toMatch(/resolveProgrammePosition\(user\.id\)/);
-    expect(read('screens/PlansScreen.js')).toMatch(/resolveNextSession\(user\.id\)/);
+    expect(read('screens/PlansScreen.js')).toMatch(/resolveProgrammePosition\(user\.id\)/);
     expect(read('screens/ActiveWorkoutScreen.js')).toMatch(/resolveProgrammePosition\(user\?\.id\)/);
+  });
+
+  test('HOME and PLANS stamp the workout with the authoritative programme week', () => {
+    const home = read('screens/HomeScreen.js');
+    const plans = read('screens/PlansScreen.js');
+    expect(home).toMatch(/mesocycleWeekId:\s*programmePosition\?\.activeWeekId/);
+    expect(home).toMatch(/mesocycleWeekId:\s*pending\.mesocycleWeekId/);
+    expect(plans).toMatch(/mesocycleWeekId:\s*position\?\.activeWeekId/);
+  });
+
+  test('ENDED_EARLY closes workout and resolution through one DB operation', () => {
+    const active = read('screens/ActiveWorkoutScreen.js');
+    expect(active).toMatch(/finishWorkoutWithSessionResolution/);
+    expect(active).not.toMatch(/await recordSessionResolution\(user\.id,[\s\S]{0,500}await runFinish/);
   });
 });

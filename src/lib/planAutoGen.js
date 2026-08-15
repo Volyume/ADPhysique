@@ -198,9 +198,10 @@ export async function readDemonstratedStructure(userId, daysPerWeek) {
     const weeks = Number(m?.plannedWeeks ?? m?.durationWeeks) || null;
     const days = Number(signature?.dayCount) || null;
     // eslint-disable-next-line no-await-in-loop
-    const { workouts } = await getBlockTrainingData(userId, m?.id ?? null).catch(() => ({ workouts: [] }));
+    const { fullyCompletedWorkouts } = await getBlockTrainingData(userId, m?.id ?? null)
+      .catch(() => ({ fullyCompletedWorkouts: [] }));
     const execution = trainingExecutionFact({
-      sessionsCompleted: Array.isArray(workouts) ? workouts.length : null,
+      sessionsCompleted: Array.isArray(fullyCompletedWorkouts) ? fullyCompletedWorkouts.length : null,
       sessionsPlanned: weeks && days ? weeks * days : null,
     });
     const outcome = blockOutcomeFromLedger(ledger, {

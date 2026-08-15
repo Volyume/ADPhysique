@@ -16,6 +16,7 @@ import {
   weekProgressionResolved, executionSummary, isResolved, isPerformedInFull,
   requiredSessions, sessionDisplayName, skipConfirmation, endEarlyConfirmation,
   RESOLUTION_PRECEDENCE, precedenceFor, pickCurrentResolution,
+  compareSessionResolutionVersions,
 } from '../blockProgression';
 
 const WEEK = 'week_1';
@@ -260,13 +261,30 @@ describe('ONE CURRENT RESOLUTION PER INSTANCE, whatever sync delivers', () => {
   });
 
   test('and ties break deterministically rather than on arrival', () => {
-    // Same resolvedAt and updatedAt: the id is the final total ordering.
+    // Same resolvedAt and updatedAt: state rank precedes the final text keys,
+    // mirroring the cloud refuse-stale trigger.
     const tied = [
       { id: 'aaa', resolution: SESSION_STATE.SKIPPED_BY_USER, resolvedAt: 5 },
       { id: 'zzz', resolution: SESSION_STATE.ENDED_EARLY, resolvedAt: 5 },
     ];
     expect(pickCurrentResolution(tied).id).toBe('zzz');
     expect(pickCurrentResolution([...tied].reverse()).id).toBe('zzz');
+  });
+
+  test('updated_at beats arrival order; exact retries compare equal', () => {
+    const t1 = {
+      id: 'same', resolution: SESSION_STATE.SKIPPED_BY_USER,
+      resolvedAt: 100, updatedAt: 100,
+    };
+    const t2 = {
+      id: 'same', resolution: SESSION_STATE.ENDED_EARLY,
+      workoutId: 'partial', resolvedAt: 200, updatedAt: 200,
+    };
+    expect(compareSessionResolutionVersions(t2, t1)).toBeGreaterThan(0);
+    expect(compareSessionResolutionVersions(t1, t2)).toBeLessThan(0);
+    expect(compareSessionResolutionVersions(t2, { ...t2 })).toBe(0);
+    expect(pickCurrentResolution([t2, t1])).toEqual(t2);
+    expect(pickCurrentResolution([t1, t2])).toEqual(t2);
   });
 
   test('a duplicate row cannot change the resolved state', () => {

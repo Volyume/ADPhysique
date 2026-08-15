@@ -130,10 +130,10 @@ function storedBlock({
 /** Sessions actually logged, against the block's planned weeks x days. */
 function setHistory(rows, { sessionsPerBlock = BLOCK_WEEKS * 4 - 2 } = {}) {
   mockDb.getAllMesocycles.mockResolvedValue(rows);
-  mockDb.getBlockTrainingData.mockImplementation(async () => ({
-    workouts: Array.from({ length: sessionsPerBlock }, (_, i) => ({ id: `w${i}` })),
-    sets: [],
-  }));
+  mockDb.getBlockTrainingData.mockImplementation(async () => {
+    const workouts = Array.from({ length: sessionsPerBlock }, (_, i) => ({ id: `w${i}` }));
+    return { workouts, fullyCompletedWorkouts: workouts, sets: [] };
+  });
 }
 
 const PRODUCTIVE_BODY = [RESPONSIVE('chest'), RESPONSIVE('back'), RESPONSIVE('quads'), STALE('calves')];

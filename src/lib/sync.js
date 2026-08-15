@@ -1086,7 +1086,7 @@ async function _pushSessionResolutions(sb, supabaseUserId, localUserId) {
       const { error } = await sb.from('session_resolutions').upsert(
         payload.slice(i, i + 200), { onConflict: 'user_id,id' },
       );
-      // Fails SOFT until migrate_137 is applied: progression is already
+      // Fails SOFT until migrate_140 is applied: progression is already
       // correct on-device, so an absent cloud table costs portability only.
       if (error) logPgErr('sync._pushSessionResolutions', error);
     }

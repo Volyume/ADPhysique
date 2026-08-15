@@ -636,9 +636,9 @@ async function buildProgrammeReview(userId, activeBlock) {
     // eslint-disable-next-line global-require
     const { trainingExecutionFact, SIGNAL } = require('./coachContext');
     const weeks = Number(activeBlock?.plannedWeeks ?? activeBlock?.durationWeeks) || null;
-    const { workouts } = await getBlockTrainingData(userId, activeBlock?.id ?? null);
+    const { fullyCompletedWorkouts } = await getBlockTrainingData(userId, activeBlock?.id ?? null);
     const fact = trainingExecutionFact({
-      sessionsCompleted: Array.isArray(workouts) ? workouts.length : null,
+      sessionsCompleted: Array.isArray(fullyCompletedWorkouts) ? fullyCompletedWorkouts.length : null,
       sessionsPlanned: weeks && routines?.length ? weeks * routines.length : null,
     });
     executionJudgeable = fact.signal === SIGNAL.GOOD;

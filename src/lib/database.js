@@ -12,6 +12,7 @@ import { createPlanFoldersRepository } from './database/planFolders';
 import { MICRO_COLUMNS, microColumnsCreateFragment } from './food/micronutrients';
 import { getCurrentBlockWeekIndex, getBlockStatus, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK } from './mesocycle';
 import { resolveRecoveryState } from './recoveryState';
+import { compareSessionResolutionVersions } from './blockProgression';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
@@ -2447,7 +2448,7 @@ const SCHEMA_MIGRATIONS = [
   // instance" structural rather than conventional.
   //
   // Applied: LOCALLY via this user_version bump. Cloud counterpart is
-  // supabase/migrate_137_session_resolutions.sql - founder-gated, and it must
+  // supabase/migrate_140_session_resolutions.sql - founder-gated, and it must
   // run against production BEFORE a build carrying the sync push ships
   // (migrate_129/131 precedent). Until then the push is column-tolerant and
   // simply fails soft, leaving progression correct on-device.
@@ -2983,7 +2984,13 @@ export async function createWorkout(
   // scale (Fresh/Mild/Sore) the adaptive engine + computeRecoveryEMAs read;
   // sleepQuality/energyScore are on the 1-5 domain (the prompt offers 2/3/4).
   // All three are optional: a Skip start passes none and they stay NULL.
-  { intent = null, soreness24hBefore = null, sleepQuality = null, energyScore = null } = {},
+  {
+    intent = null, soreness24hBefore = null, sleepQuality = null, energyScore = null,
+    // When Home/Plans starts the authoritative outstanding session it passes
+    // that exact programme-week identity. Calendar attribution remains the
+    // fallback for free-form/manual sessions whose caller has no position.
+    mesocycleWeekId: authoritativeWeekId = undefined,
+  } = {},
 ) {
   const d = await db();
   // Auto-link to the active mesocycle so tonnage + recovery data flows into the block dashboard
@@ -3009,8 +3016,18 @@ export async function createWorkout(
   // which should always be this row).
   let mesocycleWeekId = null;
   if (mesocycleId) {
-    const currentWeek = await getCurrentMesocycleWeek(userId).catch(() => null);
-    mesocycleWeekId = (currentWeek?.mesocycleId === mesocycleId) ? currentWeek.weekRowId : null;
+    if (authoritativeWeekId !== undefined) {
+      const ownedWeek = authoritativeWeekId
+        ? await d.getFirstAsync(
+          'SELECT id FROM mesocycle_weeks WHERE id = ? AND mesocycle_id = ?',
+          [authoritativeWeekId, mesocycleId],
+        ) : null;
+      if (!ownedWeek) throw new Error('Authoritative programme week is not in the active block');
+      mesocycleWeekId = ownedWeek.id;
+    } else {
+      const currentWeek = await getCurrentMesocycleWeek(userId).catch(() => null);
+      mesocycleWeekId = (currentWeek?.mesocycleId === mesocycleId) ? currentWeek.weekRowId : null;
+    }
   }
   const id = uid();
   const now = Date.now();
@@ -3025,9 +3042,7 @@ export async function createWorkout(
   return { id, userId, routineId, mesocycleId, mesocycleWeekId, startedAt: now, isCompleted: 0, preWorkoutIntent: intent, soreness24hBefore, sleepQuality, energyScore, createdAt: now, updatedAt: now };
 }
 
-export async function updateWorkout(id, data) {
-  const d = await db();
-  const now = Date.now();
+async function _updateWorkoutOnDb(d, id, data, now = Date.now(), identity = null) {
   const fieldMap = {
     endedAt: 'ended_at',
     durationMinutes: 'duration_minutes',
@@ -3055,7 +3070,17 @@ export async function updateWorkout(id, data) {
   if (fields.length === 0) return;
   fields.push('updated_at = ?');
   values.push(now, id);
-  await d.runAsync(`UPDATE workouts SET ${fields.join(', ')} WHERE id = ?`, values);
+  let where = 'id = ?';
+  if (identity) {
+    where += ' AND user_id = ? AND routine_id = ? AND mesocycle_week_id = ?';
+    values.push(identity.userId, identity.routineId, identity.mesocycleWeekId);
+  }
+  return d.runAsync(`UPDATE workouts SET ${fields.join(', ')} WHERE ${where}`, values);
+}
+
+export async function updateWorkout(id, data) {
+  const d = await db();
+  await _updateWorkoutOnDb(d, id, data);
 }
 
 // Hard-delete an incomplete workout and its sets. Used when the user
@@ -4919,9 +4944,21 @@ export async function getBlockTrainingData(userId, mesocycleId) {
        WHERE w.user_id = ? AND w.mesocycle_id = ? AND w.is_completed = 1`,
       [userId, mesocycleId],
     );
-    return { workouts, sets };
+    const endedEarlyRows = await d.getAllAsync(
+      `SELECT workout_id FROM session_resolutions
+        WHERE user_id = ? AND mesocycle_id = ? AND resolution = 'ended_early'
+          AND deleted_at IS NULL AND workout_id IS NOT NULL`,
+      [userId, mesocycleId],
+    );
+    const endedEarlyIds = new Set(endedEarlyRows.map((r) => r.workout_id));
+    // Keep every closed workout + set as execution evidence, but give
+    // adherence/productivity consumers the honest full-completion subset.
+    // ENDED_EARLY closes its workout for durability; closure alone must not
+    // turn a partial session into "completed" coaching truth.
+    const fullyCompletedWorkouts = workouts.filter((w) => !endedEarlyIds.has(w.id));
+    return { workouts, sets, fullyCompletedWorkouts };
   } catch (_e) {
-    return { workouts: [], sets: [] };
+    return { workouts: [], sets: [], fullyCompletedWorkouts: [] };
   }
 }
 
@@ -5040,20 +5077,9 @@ export async function getCheckinsInRange(userId, fromMs, toMs) {
 const sessionResolutionId = (mesocycleWeekId, routineId) =>
   `sr_${mesocycleWeekId}_${routineId}`;
 
-/**
- * Record an explicit resolution for ONE required session instance.
- *
- * @param {string} resolution  'skipped_by_user' | 'ended_early'
- * @param {string|null} workoutId  for ended_early, the partially performed
- *   session, so the actual sets stay unambiguously attached to it.
- */
-export async function recordSessionResolution(userId, {
+async function _upsertSessionResolutionOnDb(d, userId, {
   mesocycleWeekId, routineId, mesocycleId = null, resolution, workoutId = null,
-} = {}) {
-  if (!userId || !mesocycleWeekId || !routineId) return null;
-  if (resolution !== 'skipped_by_user' && resolution !== 'ended_early') return null;
-  const d = await db();
-  const now = Date.now();
+}, now) {
   const id = sessionResolutionId(mesocycleWeekId, routineId);
   await d.runAsync(
     `INSERT INTO session_resolutions
@@ -5070,6 +5096,60 @@ export async function recordSessionResolution(userId, {
     [id, userId, mesocycleWeekId, routineId, mesocycleId, resolution,
       workoutId, now, now, now, new Date(now).toISOString()],
   );
+  return id;
+}
+
+/**
+ * Record an explicit resolution for ONE required session instance.
+ *
+ * @param {string} resolution  'skipped_by_user' | 'ended_early'
+ * @param {string|null} workoutId  for ended_early, the partially performed
+ *   session, so the actual sets stay unambiguously attached to it.
+ */
+export async function recordSessionResolution(userId, {
+  mesocycleWeekId, routineId, mesocycleId = null, resolution, workoutId = null,
+} = {}) {
+  if (!userId || !mesocycleWeekId || !routineId) return null;
+  if (resolution !== 'skipped_by_user' && resolution !== 'ended_early') return null;
+  const d = await db();
+  const now = Date.now();
+  const id = await _upsertSessionResolutionOnDb(d, userId, {
+    mesocycleWeekId, routineId, mesocycleId, resolution, workoutId,
+  }, now);
+  _scheduleSync();
+  return id;
+}
+
+/**
+ * Close an ended-early workout and persist its explicit programme resolution
+ * in one SQLite transaction. A process death can therefore observe either
+ * the still-resumable workout with no resolution, or the closed workout with
+ * ENDED_EARLY; it cannot observe the impossible half-state between them.
+ */
+export async function finishWorkoutWithSessionResolution(
+  workoutId, workoutData, userId, resolutionData,
+) {
+  if (!workoutId || !userId || !resolutionData?.mesocycleWeekId || !resolutionData?.routineId) {
+    throw new Error('Ended-early finalisation requires a required-session identity');
+  }
+  if (resolutionData.resolution !== 'ended_early') {
+    throw new Error('Atomic workout finalisation only accepts ended_early');
+  }
+  const d = await db();
+  const now = Date.now();
+  const id = await runInTransaction(d, async () => {
+    const updateResult = await _updateWorkoutOnDb(d, workoutId, workoutData, now, {
+      userId,
+      routineId: resolutionData.routineId,
+      mesocycleWeekId: resolutionData.mesocycleWeekId,
+    });
+    if (updateResult?.changes !== 1) {
+      throw new Error('Ended-early workout identity did not match one local workout');
+    }
+    return _upsertSessionResolutionOnDb(d, userId, {
+      ...resolutionData, workoutId,
+    }, now);
+  });
   _scheduleSync();
   return id;
 }
@@ -5114,11 +5194,19 @@ export async function insertOrUpdateSessionResolutionFromCloud(userId, row) {
   const d = await db();
   const incoming = row.updated_at ? Date.parse(row.updated_at) : 0;
   const existing = await d.getFirstAsync(
-    'SELECT updated_at FROM session_resolutions WHERE mesocycle_week_id = ? AND routine_id = ?',
+    `SELECT id, resolution, workout_id, resolved_at, updated_at
+       FROM session_resolutions WHERE mesocycle_week_id = ? AND routine_id = ?`,
     [row.mesocycle_week_id, row.routine_id],
   );
-  if (existing && Number(existing.updated_at) >= incoming) return;
   const resolvedAt = row.resolved_at ? Date.parse(row.resolved_at) : incoming;
+  const incomingVersion = {
+    id: row.id ?? sessionResolutionId(row.mesocycle_week_id, row.routine_id),
+    resolution: row.resolution,
+    workoutId: row.workout_id ?? null,
+    resolvedAt,
+    updatedAt: incoming,
+  };
+  if (existing && compareSessionResolutionVersions(incomingVersion, existing) <= 0) return;
   await d.runAsync(
     `INSERT INTO session_resolutions
        (id, user_id, mesocycle_week_id, routine_id, mesocycle_id, resolution,
@@ -6986,19 +7074,25 @@ export async function getWeeklySessionStats(userId, weekStart) {
   // rows. Counting bare is_completed rows let a started-and-abandoned
   // shell inflate "You hit all N sessions" and the streak/widget/partner
   // counts built on this reader.
-  const SESSION_EVIDENCE = `AND EXISTS (
-         SELECT 1 FROM workout_sets ws WHERE ws.workout_id = workouts.id)`;
+  const FULL_SESSION_EVIDENCE = `AND EXISTS (
+         SELECT 1 FROM workout_sets ws WHERE ws.workout_id = workouts.id)
+       AND NOT EXISTS (
+         SELECT 1 FROM session_resolutions sr
+          WHERE sr.user_id = workouts.user_id
+            AND sr.workout_id = workouts.id
+            AND sr.resolution = 'ended_early'
+            AND sr.deleted_at IS NULL)`;
   const row = await d.getFirstAsync(
     `SELECT COUNT(*) AS completed FROM workouts
      WHERE user_id = ? AND is_completed = 1 AND started_at >= ? AND started_at < ?
-       ${SESSION_EVIDENCE}`,
+       ${FULL_SESSION_EVIDENCE}`,
     [userId, weekStartMs, weekEnd],
   );
   const prev4 = await d.getAllAsync(
     `SELECT COUNT(*) AS wk_count FROM workouts
      WHERE user_id = ? AND is_completed = 1
        AND started_at >= ? AND started_at < ?
-       ${SESSION_EVIDENCE}
+       ${FULL_SESSION_EVIDENCE}
      GROUP BY CAST((started_at - ?) / (7 * 86400000) AS INTEGER)`,
     [userId, weekStartMs - 28 * 86400000, weekStartMs, weekStartMs - 28 * 86400000],
   );
