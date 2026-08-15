@@ -25,7 +25,7 @@ import { cycleTrendAnnotation } from './cyclePhase';
 // Campaign 18: one shared reading of the week's evidence, and one shared
 // answer to what is actually limiting progress.
 import { buildCoachContext } from './coachContext';
-import { classifyLimiters, LIMITER } from './coachPrecedence';
+import { classifyLimiters, LIMITER, coordinateChanges } from './coachPrecedence';
 import {
   wouldReverseRecent, doseEscalation, holdReinforcement, volumeDecisionMemory,
 } from './coachIntervention';
@@ -1708,6 +1708,45 @@ export function runWeeklyCoach(inputs) {
     calorieAdjustment = null;
   }
 
+  // ── THE COORDINATION GATE (C18 adversarial closure, job C) ───────────────
+  //
+  // Precedence used to exist only in the STORY: chooseInterventions encoded
+  // the minimum-effective-intervention law and its only consumer was the copy
+  // layer, so the app could describe a discipline it did not practise. This is
+  // where it acquires decision force, over the engines' REAL proposals for
+  // this run rather than over a hypothetical.
+  //
+  // Option 2, deliberately: the domain engines stay authoritative. Every
+  // calorie floor, the FFM energy floor, the ED lockouts and the whole
+  // autoregulation matrix have already run above; this gate sees only what
+  // survived them and can do nothing but withhold. Safety outranks it - the
+  // rapid-loss correction passes untouched, and a volume REDUCTION is never a
+  // coordination question.
+  const coordination = coordinateChanges({
+    context: coachContext,
+    limiters: coachLimiters,
+    proposed: {
+      calorieChange: calorieAdjustment?.change ?? 0,
+      volumeChange: volumeSignal,
+    },
+    safety: { calorie: !!rapidLossOverride },
+  });
+  let coordinationCalorieHeld = null;
+  let coordinationVolumeHeld = null;
+  if (calorieAdjustment && !coordination.allowCalorieChange) {
+    coordinationCalorieHeld = coordination.holds
+      .find((h) => h.domain === 'nutrition')?.reason ?? 'one_change_at_a_time';
+    // targetNotTestedHeld already nulled the untested-target case above, so
+    // anything reaching here is the one-change-at-a-time rule.
+    calorieAdjustment = null;
+  }
+  if (volumeSignal !== 0 && !coordination.allowVolumeChange) {
+    coordinationVolumeHeld = coordination.holds
+      .find((h) => h.domain === 'training')?.reason ?? 'one_change_at_a_time';
+    volumeSignal = 0;
+    trainingNote = getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
+  }
+
   // ── STEPS PRESCRIPTION ────────────────────────────────────────────────────
   let stepsAdjustment = null;
   const band = stepsBand(goalPhase, bwRef);
@@ -1945,6 +1984,27 @@ export function runWeeklyCoach(inputs) {
     });
   }
 
+  // C18 job C: the coordination gate, in the user's words. A fact about
+  // SEQUENCE, never about them - two changes at once would leave neither
+  // readable, so the smaller one goes first.
+  if (coordinationCalorieHeld === 'one_change_at_a_time') {
+    heldDecisions.push({
+      type: 'one_change_at_a_time',
+      reason: 'Calorie target held. Your training volume is changing this week, and changing both at once would leave us unable to tell which one did the work.',
+    });
+  }
+  if (coordinationVolumeHeld) {
+    heldDecisions.push({
+      type: coordinationVolumeHeld === 'one_change_at_a_time'
+        ? 'one_change_at_a_time' : 'training_volume_held',
+      reason: coordinationVolumeHeld === 'sessions_missed'
+        ? 'Training volume held. The sessions already planned have not been run consistently enough this week for adding more to be the answer.'
+        : coordinationVolumeHeld === 'recovery_calls_for_restraint'
+          ? 'Training volume held. Your recovery this week points to easing off rather than adding work.'
+          : 'Training volume held. Your calorie target is changing this week, and we cannot read your gym progress well enough to add work on top of it.',
+    });
+  }
+
   // Campaign 1 P0-7 D1: the intake-read hold explains itself the same way.
   if (intakeReadHeld) {
     heldDecisions.push({
@@ -2055,7 +2115,10 @@ export function runWeeklyCoach(inputs) {
     // C18 job B3: the athlete's own last volume increase either did nothing
     // or cost them, or is still being observed. Escalating a dose on top of
     // that is memoryless repetition, and this step is the discretionary one.
-    !volumeMemory.blockEscalation
+    !volumeMemory.blockEscalation &&
+    // C18 job C: the coordination gate withheld the volume change itself, so
+    // the discretionary step must not resurrect it one line later.
+    !coordinationVolumeHeld
   );
   let exceededEscalationApplied = false;
   if (exceededEscalationEligible && volumeSignal < MATRIX_PUSH_CEILING) {
@@ -2350,6 +2413,14 @@ export function runWeeklyCoach(inputs) {
     // And whether the discretionary D15 step was refused for the same reason,
     // so the explanation layer never claims an escalation that did not happen.
     volumeEscalationBlocked: !!volumeMemory.blockEscalation,
+    // C18 job C: what the shared coordination gate actually withheld this run,
+    // so the story layer reports the precedence that HAPPENED rather than the
+    // precedence it would have chosen on its own.
+    coordination: {
+      calorieHeld: coordinationCalorieHeld,
+      volumeHeld: coordinationVolumeHeld,
+      bothIndependentlyJustified: coordination.both,
+    },
     // D15: true only on the week the bounded one-step escalation actually
     // moved volumeSignal. Drives the exceeded_escalation copy (whyKeys
     // above) and lets the caller persist it into the saved output (so next

@@ -316,6 +316,116 @@ export function chooseInterventions(context, limiters = null) {
   };
 }
 
+// ─── THE COORDINATION GATE (adversarial closure, job C) ─────────────────────
+
+/**
+ * WHAT WAS WRONG, stated plainly. `chooseInterventions` above encodes the
+ * founder's minimum-effective-intervention law, and until now its ONLY
+ * consumer was `coachStory` - the copy layer. So the app could describe a
+ * precedence it did not practise: the sentence said "we changed one thing this
+ * week" while the engines were free to change two. Precedence that exists only
+ * in the story is not precedence.
+ *
+ * THE SHAPE CHOSEN (founder option 2, not option 1). The domain engines stay
+ * authoritative. `nutritionEngine` still owns calorie floors, the FFM energy
+ * floor and the ED lockouts; `weeklyCoach`'s autoregulation still owns the
+ * volume decision; `planEngine` still owns structure. Routing those through a
+ * single chooser would move safety-critical clamps away from the code that
+ * owns them, which is the opposite of what Section 2 requires. Instead this
+ * gate sits ACROSS their real, already-computed proposals and answers one
+ * question: given what each engine actually decided this week, which of those
+ * changes may proceed together?
+ *
+ * IT CAN ONLY EVER WITHHOLD. There is no path here that creates a change,
+ * enlarges one, reverses one or relaxes a clamp. Every safety gate in every
+ * engine still runs, and this runs on what survives them.
+ *
+ * SAFETY IS SENIOR TO PRECEDENCE, exactly as the ladder's own header says. A
+ * change the caller marks as safety-driven (the rapid-loss correction) and any
+ * volume REDUCTION are never withheld: easing an athlete who is not recovering,
+ * or feeding one who is losing weight too fast, must never wait its turn
+ * behind a coordination rule.
+ *
+ * THE THREE RULES:
+ *
+ *   R1 NUTRITION PERMISSION. A target the athlete did not eat has not been
+ *      tested, so the answer is to hold it rather than to pick a new number.
+ *   R2 TRAINING PERMISSION. Volume may not be ADDED to a programme that is
+ *      not being run, or to an athlete whose recovery evidence calls for
+ *      restraint. Reductions are untouched.
+ *   R3 MINIMUM EFFECTIVE INTERVENTION. The founder's law is specific: "do not
+ *      change training AND nutrition simultaneously MERELY BECAUSE BOTH
+ *      ENGINES FOUND WEAK EVIDENCE." So this fires on the weak half, never on
+ *      the pair. When both domains want to move in the same week, whichever
+ *      one could not reach a real verdict on its own evidence
+ *      (INSUFFICIENT_EVIDENCE) is the one that waits, because its change is
+ *      the one nobody could read afterwards. A domain that DID reach PLAN
+ *      keeps its change: two strong independent findings may both act, and the
+ *      receipt explains each on its own.
+ *
+ *      It is deliberately NOT a blanket "smallest rung wins". Ordinary weekly
+ *      autoregulation moves volume most weeks; treating every routine nudge as
+ *      an intervention competing with a calorie decision would withhold
+ *      well-evidenced nutrition changes for no coaching reason.
+ *
+ * @param {object} p
+ * @param {object} p.context    the coach context
+ * @param {object} [p.limiters] classifyLimiters output, if already computed
+ * @param {object} p.proposed   { calorieChange, volumeChange } - the engines'
+ *                              REAL proposals for this run, signed
+ * @param {object} [p.safety]   { calorie: boolean } - proposals that are
+ *                              safety corrections and outrank this gate
+ * @returns {{ allowCalorieChange, allowVolumeChange, holds, both }}
+ */
+export function coordinateChanges({
+  context = null, limiters = null, proposed = {}, safety = {},
+} = {}) {
+  const l = limiters || classifyLimiters(context);
+  const plan = chooseInterventions(context, l);
+  const holds = [];
+
+  const calorieChange = Number(proposed.calorieChange) || 0;
+  const volumeChange = Number(proposed.volumeChange) || 0;
+  const calorieIsSafety = !!safety.calorie;
+  // Easing off is never a coordination question.
+  const volumeIsRestraint = volumeChange < 0;
+
+  let allowCalorieChange = calorieChange !== 0;
+  let allowVolumeChange = volumeChange !== 0;
+
+  // R1.
+  if (allowCalorieChange && !calorieIsSafety
+      && l.nutrition.limiter === LIMITER.EXECUTION) {
+    allowCalorieChange = false;
+    holds.push({ domain: 'nutrition', reason: 'target_not_eaten' });
+  }
+
+  // R2.
+  if (allowVolumeChange && !volumeIsRestraint) {
+    if (l.training.limiter === LIMITER.EXECUTION) {
+      allowVolumeChange = false;
+      holds.push({ domain: 'training', reason: 'sessions_missed' });
+    } else if (l.training.limiter === LIMITER.RECOVERY) {
+      allowVolumeChange = false;
+      holds.push({ domain: 'training', reason: 'recovery_calls_for_restraint' });
+    }
+  }
+
+  // R3. Only reached when both survived their own permission rule.
+  if (allowCalorieChange && allowVolumeChange && !volumeIsRestraint) {
+    if (l.training.limiter === LIMITER.INSUFFICIENT_EVIDENCE) {
+      allowVolumeChange = false;
+      holds.push({ domain: 'training', reason: 'one_change_at_a_time' });
+    } else if (!calorieIsSafety
+        && l.nutrition.limiter === LIMITER.INSUFFICIENT_EVIDENCE) {
+      allowCalorieChange = false;
+      holds.push({ domain: 'nutrition', reason: 'one_change_at_a_time' });
+    }
+  }
+
+  return { allowCalorieChange, allowVolumeChange, holds, both: !!plan.both };
+}
+
 // ─── The conflict matrix (job 16) ───────────────────────────────────────────
 
 /**
