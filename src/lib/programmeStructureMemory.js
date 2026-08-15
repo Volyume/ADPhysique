@@ -63,6 +63,101 @@ export function structureKey(signature) {
 }
 
 /**
+ * A block must have produced a verdict on at least this many muscles before
+ * it is allowed to say anything about the shape of the week.
+ *
+ * Deliberately low. interBlock's own INSUFFICIENT_DATA gates are already
+ * strict (adherence floor, four exposures, four recovery data points, a
+ * confidence floor and an exercise-continuity check), so a muscle that
+ * reaches a classification at all has cleared a real bar. This constant only
+ * rules out the degenerate case: a block that judged nothing, or almost
+ * nothing, is not evidence about anything.
+ */
+export const MIN_JUDGED_MUSCLES = 2;
+
+/**
+ * Campaign 18 adversarial closure, job A2-A4. Turn a STORED Block Ledger
+ * into the three structure-relevant judgements.
+ *
+ * WHY THIS EXISTS. The reader in planAutoGen used to look for
+ * `ledger.productive`, `ledger.structuralProblem` and
+ * `ledger.recoveryAcceptable`. interBlock.buildBlockLedger writes NONE of
+ * them - it writes `entries` (one classified muscle each), `proposedRecovery-
+ * Days`, `suppressed` and `weeksSinceBlockEnd` - so all three read false and
+ * the structure memory could never fire on a real athlete's history. Nothing
+ * here lowers a bar to fix that; it reads the evidence the ledger genuinely
+ * contains, which is Campaign 16's own per-muscle verdicts.
+ *
+ * THE FIVE CLASSIFICATIONS, and what each means for the week's shape:
+ *   RESPONSIVE   performance up, recovery fine        - the dose worked
+ *   OVERREACHED  performance up, recovery cost high   - the dose was too big
+ *   STALE        performance flat, recovery fine      - the dose did nothing
+ *   STRAINED     recovery poor with no return         - the athlete was buried
+ *   INSUFFICIENT_DATA  no verdict; contributes nothing, in either direction
+ *
+ * PRODUCTIVE. More of the judged muscles moved than did not, and at least one
+ * moved cleanly. A product heuristic, stated as one: it is not a claim that
+ * half is the scientifically correct proportion, it is the point at which
+ * "this block worked" stops being true of a minority of the body.
+ *
+ * RECOVERY ACCEPTABLE. Two independent existing authorities, either of which
+ * is enough to say it was not: the ledger's OWN block-level conclusion
+ * (proposedRecoveryDays above the standard seven, which buildBlockLedger only
+ * reaches when a strained muscle is corroborated by two persistent systemic
+ * signals), or a majority of judged muscles carrying excessive recovery cost.
+ *
+ * STRUCTURAL PROBLEM, and the conservatism the founder's C7 rule demands:
+ * "a missed session is NOT attributed to the structure". So this requires the
+ * athlete to have ACTUALLY RUN the block (executionGood, from the same
+ * trainingExecutionFact every other cross-domain decision uses) AND a
+ * majority of judged muscles to have come out STRAINED - buried without a
+ * performance return, on work they genuinely did. OVERREACHED is deliberately
+ * excluded: performance rose, so that is a dose problem, and the volume
+ * engine already owns dose. Nothing else is ever attributed to the split.
+ *
+ * Returns { judgeable: false } when the ledger produced too few verdicts to
+ * mean anything - the caller drops the block from evidence entirely, exactly
+ * as it drops a block that was never run, so an unjudgeable block condemns
+ * nothing and proves nothing.
+ *
+ * Pure. `ledger` is the parsed stored record; `executionGood` is the caller's
+ * already-derived execution signal.
+ */
+export function blockOutcomeFromLedger(ledger, { executionGood = false } = {}) {
+  const entries = Array.isArray(ledger?.entries) ? ledger.entries : [];
+  const judged = entries.filter((e) => {
+    const c = e?.classification;
+    return typeof c === 'string' && c !== 'INSUFFICIENT_DATA';
+  });
+  if (judged.length < MIN_JUDGED_MUSCLES) return { judgeable: false };
+
+  const countOf = (c) => judged.filter((e) => e.classification === c).length;
+  const responsive = countOf('RESPONSIVE');
+  const overreached = countOf('OVERREACHED');
+  const strained = countOf('STRAINED');
+  const total = judged.length;
+
+  const productive = responsive > 0
+    && (responsive + overreached) / total > STRUCTURE_FAILURE_FRACTION;
+
+  const proposedRecoveryDays = num(ledger?.proposedRecoveryDays);
+  const ledgerAskedForLongerRecovery = proposedRecoveryDays != null && proposedRecoveryDays > 7;
+  const recoveryAcceptable = !ledgerAskedForLongerRecovery
+    && (strained + overreached) / total <= STRUCTURE_FAILURE_FRACTION;
+
+  const structuralProblem = executionGood === true
+    && strained / total > STRUCTURE_FAILURE_FRACTION;
+
+  return {
+    judgeable: true,
+    judgedMuscles: total,
+    productive,
+    recoveryAcceptable,
+    structuralProblem,
+  };
+}
+
+/**
  * Group the athlete's completed blocks by the structure they were run on.
  *
  * @param {Array} blocks [{ signature, completed, adherenceRatio, productive, recoveryAcceptable }]

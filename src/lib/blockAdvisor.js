@@ -28,7 +28,7 @@
  */
 
 import { getRecentCheckins } from './database';
-import { getBlockStatus } from './mesocycle';
+import { getBlockStatus, blockCompletionState, BLOCK_COMPLETION } from './mesocycle';
 import { planHeadingName } from './planDisplay';
 import { structureSignature } from './programmeEpoch';
 
@@ -554,15 +554,14 @@ async function buildProgrammeReview(userId, activeBlock) {
     activeBlock?.startDate ?? activeBlock?.createdAt ?? Date.now(),
     activeBlock?.plannedWeeks ?? activeBlock?.durationWeeks ?? 5,
   );
-  const completedPastBlock = (m) => {
-    if (m?.blockLedger) return true;
-    const start = asMs(m?.startDate);
-    const end = asMs(m?.endDate);
-    const weeks = Number(m?.plannedWeeks ?? m?.durationWeeks ?? 0);
-    // One-day tolerance covers local-date storage across a DST boundary.
-    return start != null && end != null && weeks > 0
-      && end >= start + weeks * 7 * DAY_MS - DAY_MS;
-  };
+  // C18 adversarial closure A1: ONE definition of "this historical block was
+  // genuinely completed", shared with the structure memory. It used to accept
+  // any ledger-bearing row, which counted a block the user WALKED AWAY from
+  // (a backfilled ledger is written for any block whose calendar has run out,
+  // abandoned or not) toward the epoch. blockCompletionState reads the
+  // truncated end_date `endActiveMesocycles` writes on a switch-away, so an
+  // abandoned block no longer inflates the epoch counter.
+  const completedPastBlock = (m) => blockCompletionState(m) === BLOCK_COMPLETION.COMPLETED;
   const userProgrammes = (programmes ?? []).filter(
     p => p?.userId === userId && !(p?.isLibrary === 1 || p?.isLibrary === true),
   );

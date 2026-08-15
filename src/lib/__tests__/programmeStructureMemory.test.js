@@ -197,8 +197,27 @@ describe('THE PRODUCTION PATH', () => {
     expect(src).toMatch(/export async function readDemonstratedStructure/);
     expect(src).toMatch(/ledger\?\.programmeSignature/);
     expect(src).toMatch(/getAllMesocycles/);
-    // Adherence decides whether a block counts.
-    expect(src).toMatch(/adherenceRatio: planned \?/);
+  });
+
+  test('AND IT DOES NOT ASK FOR FIELDS NOTHING WRITES', () => {
+    // The adversarial-closure defect, locked shut at source. The reader used
+    // to want `m.completedAt`, `m.status === 'completed'` and three
+    // block-level ledger verdicts, none of which this app ever writes, so the
+    // whole feature was unreachable. Completion, execution and the block
+    // verdict now come from the three existing authorities named here.
+    // Behaviour, including reachability, is pinned in
+    // programmeStructureMemory.production.test.js against real ledgers.
+    const src = read('../planAutoGen.js');
+    const fn = src.slice(
+      src.indexOf('export async function readDemonstratedStructure'),
+      src.indexOf('export async function assessScheduleFit'),
+    );
+    expect(fn).not.toMatch(/m\?\.completedAt/);
+    expect(fn).not.toMatch(/status === 'completed'/);
+    expect(fn).not.toMatch(/ledger\?\.(productive|structuralProblem|recoveryAcceptable)/);
+    expect(fn).toMatch(/blockCompletionState\(m\) === BLOCK_COMPLETION\.COMPLETED/);
+    expect(fn).toMatch(/trainingExecutionFact\(\{/);
+    expect(fn).toMatch(/blockOutcomeFromLedger\(ledger, \{/);
   });
 
   test('and it reaches the real generator call', () => {
