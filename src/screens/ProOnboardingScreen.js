@@ -47,6 +47,7 @@ import {
   buildNutritionEngineInputs,
 } from '../lib/coachingGoals';
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
+import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceService';
 import {
   saveDraft, loadDraft, clearDraft, loadBuildProgress, markBuildProgress, DRAFT_DEBOUNCE_MS,
 } from '../lib/proOnboardingDraft';
@@ -427,6 +428,66 @@ export default function ProOnboardingScreen({ navigation }) {
   const [proteinOpen, setProteinOpen] = useState(false);
   const suggestedApproach = ADVANCED_PROTEIN_GOALS.includes(trainingGoal) ? 'advanced' : 'optimised';
   const proteinApproach = proteinOverride ?? suggestedApproach;
+  const [provisionalKcal, setProvisionalKcal] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function resolveProvisionalTarget() {
+      if (step !== 5 || !trainingPhase || !sex) {
+        setProvisionalKcal(null);
+        return;
+      }
+      setProvisionalKcal(null);
+      try {
+        const bwKg = localBWUnits === 'st'
+          ? stoneLbsToKg(bodyWeightSt, bodyWeightStLbs)
+          : parseBodyWeightToKg(bodyWeight, localBWUnits);
+        const hcm = localHeightUnits === 'imperial'
+          ? (!isNaN(parseInt(heightFt, 10)) ? ftInToCm(heightFt, heightIn) : null)
+          : (parseFloat(heightCm) || null);
+        const ageNum = parseInt(age, 10) || null;
+        if (!Number.isFinite(bwKg) || bwKg <= 0 || !hcm || !ageNum) {
+          if (!cancelled) setProvisionalKcal(null);
+          return;
+        }
+        const bfParsed = parseFloat(bodyFat);
+        const bfNum = bodyFat.trim() && Number.isFinite(bfParsed) && bfParsed > 0 && bfParsed < 60
+          ? bfParsed : null;
+        const inputs = buildNutritionEngineInputs({
+          sex,
+          age: ageNum,
+          heightCm: hcm,
+          weightKg: bwKg,
+          bodyFatPct: bfNum,
+          bodyFatSource: bfNum != null ? normaliseBodyFatSource(bfSource) : null,
+          daysPerWeek,
+          trainingPhase,
+          trainingGoal,
+          proteinApproach,
+          experience,
+        });
+        const authority = user?.id
+          ? await resolveEffectiveMaintenanceForUser(user.id, {
+            ...inputs,
+            dateOfBirth: dateOfBirthFromAgeYears(ageNum),
+          }, { persistRevalidationMarker: false })
+          : null;
+        const targets = calculateNutritionTargets({
+          ...inputs,
+          effectiveMaintenanceResidualKcal: authority?.resolved?.appliedResidualKcal ?? 0,
+        });
+        if (!cancelled) setProvisionalKcal(targets?.targetKcal ?? null);
+      } catch (_) {
+        if (!cancelled) setProvisionalKcal(null);
+      }
+    }
+    resolveProvisionalTarget();
+    return () => { cancelled = true; };
+  }, [
+    step, trainingPhase, trainingGoal, sex, age, localBWUnits, bodyWeightSt,
+    bodyWeightStLbs, bodyWeight, localHeightUnits, heightFt, heightIn, heightCm,
+    bodyFat, bfSource, daysPerWeek, proteinApproach, experience, user?.id,
+  ]);
 
   // COMP-030: prefill the training + goal steps from the pre-account quiz slice
   // (Variant B), so a quiz-first user confirms rather than re-answers. One-shot
@@ -1170,7 +1231,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // Plan can never feed the engine different shapes (the bug that made the
       // two flows disagree). Same values as before, so onboarding output is
       // unchanged.
-      const nutritionTargets = calculateNutritionTargets(buildNutritionEngineInputs({
+      const nutritionInputs = buildNutritionEngineInputs({
         sex,
         age: safeAge,
         heightCm: safeHeightCm,
@@ -1182,7 +1243,8 @@ export default function ProOnboardingScreen({ navigation }) {
         trainingGoal,
         proteinApproach,
         experience,
-      }));
+      });
+      let nutritionTargets = calculateNutritionTargets(nutritionInputs);
 
       const goalPhase = phaseToCoachingKey(trainingPhase);
       const trainingFreqBucket = daysToFreqBucket(daysPerWeek);
@@ -1292,12 +1354,24 @@ export default function ProOnboardingScreen({ navigation }) {
         });
       }
 
+      let maintenanceAuthority = null;
+      if (user?.id) {
+        // First enrolment is a cold formula start. Re-onboarding, interrupted
+        // restore and resumed setup may already have a valid learned memo, so
+        // they must enter the same resolver as every later target regeneration.
+        maintenanceAuthority = await resolveEffectiveMaintenanceForUser(user.id, {
+          ...nutritionInputs,
+          dateOfBirth: dateOfBirthFromAgeYears(ageNum),
+        });
+        nutritionTargets = calculateNutritionTargets({
+          ...nutritionInputs,
+          effectiveMaintenanceResidualKcal: maintenanceAuthority.resolved.appliedResidualKcal,
+        });
+      }
+
       const nutritionData = {
-        targetKcal: nutritionTargets.targetKcal,
-        proteinG: nutritionTargets.proteinG,
-        fatG: nutritionTargets.fatG,
-        carbsG: nutritionTargets.carbsG,
-        maintenanceKcal: nutritionTargets.maintenanceKcal,
+        ...nutritionTargets,
+        maintenanceAuthority: maintenanceAuthority?.resolved ?? null,
       };
       // FF-005: the AsyncStorage copy is what other screens read; the DB save is
       // now awaited (not fire-and-forget) so a failure is logged rather than
@@ -1879,40 +1953,8 @@ export default function ProOnboardingScreen({ navigation }) {
     const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
     const canContinue = !!trainingGoal && !!trainingPhase;
 
-    // A3 (audit 04 §4): the moment a focus is chosen, show the provisional
-    // energy target from the SAME pure engine call the final plan uses.
-    // Display only, nothing persists until the wizard completes; the copy
-    // says "provisionally" because steps 5's inputs can still move it.
-    let provisionalKcal = null;
-    if (trainingPhase && sex) {
-      try {
-        const bwKg = localBWUnits === 'st'
-          ? stoneLbsToKg(bodyWeightSt, bodyWeightStLbs)
-          : parseBodyWeightToKg(bodyWeight, localBWUnits);
-        const hcm = localHeightUnits === 'imperial'
-          ? (!isNaN(parseInt(heightFt, 10)) ? ftInToCm(heightFt, heightIn) : null)
-          : (parseFloat(heightCm) || null);
-        const ageNum = parseInt(age, 10) || null;
-        if (!isNaN(bwKg) && bwKg > 0 && hcm && ageNum) {
-          const bfParsed = parseFloat(bodyFat);
-          const bfNum = bodyFat.trim() && Number.isFinite(bfParsed) && bfParsed > 0 && bfParsed < 60 ? bfParsed : null;
-          const t = calculateNutritionTargets(buildNutritionEngineInputs({
-            sex,
-            age: ageNum,
-            heightCm: hcm,
-            weightKg: bwKg,
-            bodyFatPct: bfNum,
-            bodyFatSource: bfNum != null ? normaliseBodyFatSource(bfSource) : null,
-            daysPerWeek,
-            trainingPhase,
-            trainingGoal,
-            proteinApproach,
-            experience,
-          }));
-          provisionalKcal = t?.targetKcal ?? null;
-        }
-      } catch (_) { provisionalKcal = null; }
-    }
+    // A3 (audit 04 §4): preview and final save share the canonical resolver.
+    // The preview is read-only and never creates a revalidation marker.
 
     return (
       <SafeAreaView key="step-5-goal" style={[styles.safe, live.safe]}>
@@ -2811,4 +2853,3 @@ function buildLiveStyles(t) {
     primaryBtnText: { fontSize: t.fontSize.lg, color: t.colors.onPrimary },
   };
 }
-

@@ -130,9 +130,11 @@ describe('S3: Home coach daily brief + runway (ongoing, post-first-review)', () 
 });
 
 describe('A3: wizard step 4 shows the provisional energy target', () => {
-  test('pure engine call, no persistence', () => {
-    expect(ONBOARD).toMatch(/let provisionalKcal = null;/);
-    expect(ONBOARD).toMatch(/provisionalKcal = t\?\.targetKcal \?\? null;/);
+  test('read-only canonical authority preview, no revalidation-marker persistence', () => {
+    expect(ONBOARD).toMatch(/const \[provisionalKcal, setProvisionalKcal\] = useState\(null\);/);
+    expect(ONBOARD).toMatch(/await resolveEffectiveMaintenanceForUser\(user\.id,[\s\S]*?persistRevalidationMarker: false/);
+    expect(ONBOARD).toMatch(/effectiveMaintenanceResidualKcal: authority\?\.resolved\?\.appliedResidualKcal \?\? 0/);
+    expect(ONBOARD).toMatch(/setProvisionalKcal\(targets\?\.targetKcal \?\? null\);/);
   });
   test('renders as a provisional line under the focus dropdown', () => {
     expect(ONBOARD).toMatch(/Provisionally about \{provisionalKcal\.toLocaleString\('en-GB'\)\} kcal a day/);

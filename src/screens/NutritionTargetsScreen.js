@@ -32,7 +32,7 @@ import {
   CONTINUITY_ACTION, REBUILD_REASON, regenerateActiveMealPlan,
 } from '../lib/food/mealPlanService';
 import { buildContinuityReceipt } from '../lib/food/planExplain';
-import { hydrateLoadedTargets, getRecommendedMeals } from '../lib/nutritionTargetsView';
+import { hydrateLoadedTargetsWithAuthority, getRecommendedMeals } from '../lib/nutritionTargetsView';
 import { isValidBodyWeightKg, isValidBodyFatPercent } from '../lib/bodyMetricValidate';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -368,32 +368,34 @@ export default function NutritionTargetsScreen({ navigation }) {
           if (r) rich = JSON.parse(r);
         } catch (_) {}
 
+        async function hydrateWithCurrentAuthority(raw) {
+          if (!user?.id) {
+            return hydrateLoadedTargetsWithAuthority(raw, userProfile?.weightKg ?? null, null);
+          }
+          const [lw, profile, composition] = await Promise.all([
+            getLatestBodyWeight(user.id).catch(() => null),
+            getUserBodyProfile(user.id).catch(() => null),
+            getLatestBodyComposition(user.id).catch(() => null),
+          ]);
+          const weightKg = lw?.weightKg ?? userProfile?.weightKg ?? null;
+          const authority = await resolveEffectiveMaintenanceForUser(user.id, {
+            sex: profile?.sex ?? userProfile?.sex ?? null,
+            dateOfBirth: profile?.dateOfBirth ?? userProfile?.dateOfBirth ?? null,
+            ageYears: userProfile?.ageYears ?? userProfile?.age ?? null,
+            heightCm: profile?.heightCm ?? userProfile?.heightCm ?? null,
+            weightKg,
+            bodyFatPercent: composition?.bodyFatPercent ?? null,
+            bodyFatSource: composition?.bodyFatSource ?? null,
+            activityLevel: raw.activityLevel ?? userProfile?.activityLevel ?? null,
+            goalPhase: raw.goal ?? userProfile?.goalPhase ?? null,
+          });
+          return hydrateLoadedTargetsWithAuthority(raw, weightKg, authority.resolved);
+        }
+
         if (user?.id) {
           const fromDb = await getNutritionTargets(user.id).catch(() => null);
           if (fromDb?.targetKcal) {
-            const [lw, profile, composition] = await Promise.all([
-              getLatestBodyWeight(user.id).catch(() => null),
-              getUserBodyProfile(user.id).catch(() => null),
-              getLatestBodyComposition(user.id).catch(() => null),
-            ]);
-            const weightKg = lw?.weightKg ?? userProfile?.weightKg ?? null;
-            const hydrated = hydrateLoadedTargets(fromDb, weightKg);
-            const authority = await resolveEffectiveMaintenanceForUser(user.id, {
-              sex: profile?.sex ?? userProfile?.sex ?? null,
-              dateOfBirth: profile?.dateOfBirth ?? userProfile?.dateOfBirth ?? null,
-              ageYears: userProfile?.ageYears ?? userProfile?.age ?? null,
-              heightCm: profile?.heightCm ?? userProfile?.heightCm ?? null,
-              weightKg,
-              bodyFatPercent: composition?.bodyFatPercent ?? null,
-              bodyFatSource: composition?.bodyFatSource ?? null,
-              activityLevel: fromDb.activityLevel ?? userProfile?.activityLevel ?? null,
-              goalPhase: fromDb.goal ?? userProfile?.goalPhase ?? null,
-            });
-            if (authority.resolved.effectiveMaintenanceKcal != null) {
-              hydrated.maintenanceKcal = authority.resolved.effectiveMaintenanceKcal;
-              hydrated.tdee = authority.resolved.effectiveMaintenanceKcal;
-              hydrated.maintenanceAuthority = authority.resolved;
-            }
+            const hydrated = await hydrateWithCurrentAuthority(fromDb);
             if (rich && Number(rich.targetKcal) === Number(hydrated.targetKcal)) {
               if (hydrated.goal == null && rich.goal != null) hydrated.goal = rich.goal;
               if (hydrated.proteinApproach == null && rich.proteinApproach != null) hydrated.proteinApproach = rich.proteinApproach;
@@ -405,7 +407,10 @@ export default function NutritionTargetsScreen({ navigation }) {
           }
         }
         if (rich?.targetKcal) {
-          const hydrated = hydrateLoadedTargets(rich, userProfile?.weightKg ?? null);
+          // The rich mirror can outlive SQLite across reinstall/restore. Its
+          // prescription fields are useful, but its old maintenance value is
+          // never accepted as present-day authority.
+          const hydrated = await hydrateWithCurrentAuthority(rich);
           setResults(hydrated);
           syncFormFromTargets(hydrated);
           setFormCollapsed(true);
@@ -1610,7 +1615,9 @@ export default function NutritionTargetsScreen({ navigation }) {
                   <View style={styles.calcRow}>
                     <Text style={[styles.calcKey, live.calcKey]}>Maintenance source</Text>
                     <Text style={[styles.calcValue, live.calcValue]}>
-                      {results.maintenanceAuthority?.source === 'athlete_history'
+                      {!(Number(results.maintenanceKcal) > 0)
+                        ? 'Unavailable: complete your profile to recalculate'
+                        : results.maintenanceAuthority?.source === 'athlete_history'
                         ? 'Your logged intake and weight trend'
                         : results.maintenanceAuthority?.source === 'held_athlete_history'
                           ? 'Earlier logged history, revalidating'
@@ -1624,8 +1631,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                   <View style={styles.calcRow}>
                     <Text style={[styles.calcKey, live.calcKey]}>Projected weekly change</Text>
                     <Text style={[styles.calcValue, live.calcValue]}>
-                      {results.targetRateKgPerWeek > 0 ? '+' : ''}
-                      {results.targetRateKgPerWeek} kg/week
+                      {results.targetRateKgPerWeek != null && results.targetRateKgPerWeek !== ''
+                        && Number.isFinite(Number(results.targetRateKgPerWeek))
+                        ? `${results.targetRateKgPerWeek > 0 ? '+' : ''}${results.targetRateKgPerWeek} kg/week`
+                        : 'Unavailable'}
                     </Text>
                   </View>
                   <View style={[styles.calcRow, { marginTop: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: t.colors.border }]}>

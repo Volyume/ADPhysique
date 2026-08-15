@@ -3,6 +3,7 @@ import { logSyncError } from '../telemetry';
 import { isMissingTableError } from './_missingTable';
 
 function iso(value) {
+  if (value == null || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) ? new Date(n).toISOString() : null;
 }
@@ -33,6 +34,8 @@ export async function pushEffectiveMaintenance(sb, { userId, localUserId } = {})
       formula_method: memo.formulaMethod ?? null,
       formula_context_signature: memo.formulaContextSignature,
       large_divergence: !!memo.largeDivergence,
+      revalidation_started_at: iso(memo.revalidationStartedAt),
+      revalidation_context_signature: memo.revalidationContextSignature ?? null,
       version_key: memo.versionKey,
       updated_at: iso(memo.updatedAt),
     };
@@ -52,8 +55,9 @@ export async function pushEffectiveMaintenance(sb, { userId, localUserId } = {})
   }
 }
 
-export async function pullEffectiveMaintenance(sb, { userId } = {}) {
+export async function pullEffectiveMaintenance(sb, { userId, localUserId } = {}) {
   if (!sb || !userId) return { count: 0, errors: 0 };
+  const targetLocalUserId = localUserId || userId;
   try {
     const { data, error } = await sb.from('effective_maintenance_memos')
       .select('*').eq('user_id', userId).maybeSingle();
@@ -67,7 +71,7 @@ export async function pullEffectiveMaintenance(sb, { userId } = {}) {
     if (!data) return { count: 0, errors: 0 };
     // eslint-disable-next-line global-require
     const { insertEffectiveMaintenanceMemoFromCloud } = require('../../database');
-    await insertEffectiveMaintenanceMemoFromCloud(userId, data);
+    await insertEffectiveMaintenanceMemoFromCloud(targetLocalUserId, data, { cloudUserId: userId });
     return { count: 1, errors: 0 };
   } catch (e) {
     logSyncError('sync.tables.effectiveMaintenance.pull', e);

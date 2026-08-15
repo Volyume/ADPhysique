@@ -55,6 +55,27 @@ function fnv1a(text, seed) {
   return hash.toString(16).padStart(8, '0');
 }
 
+/** One deterministic weight observation per UTC day, independent of row order. */
+export function canonicalWeightEvidence(weights = []) {
+  const byDay = new Map();
+  for (const row of weights || []) {
+    const loggedAt = Number(row?.loggedAt ?? new Date(row?.date ?? NaN).getTime());
+    const weightKg = finitePositive(row?.weightKg);
+    if (!Number.isFinite(loggedAt) || !weightKg) continue;
+    const day = new Date(loggedAt).toISOString().slice(0, 10);
+    const candidate = { loggedAt, weightKg };
+    const current = byDay.get(day);
+    // A same-day retry/duplicate cannot inflate coverage. If two devices made
+    // distinct same-day observations, the later timestamp wins; an exact-time
+    // conflict converges on the greater numeric value independent of arrival.
+    if (!current || loggedAt > current.loggedAt
+      || (loggedAt === current.loggedAt && weightKg > current.weightKg)) {
+      byDay.set(day, candidate);
+    }
+  }
+  return [...byDay.values()].sort((a, b) => a.loggedAt - b.loggedAt || a.weightKg - b.weightKg);
+}
+
 export function semanticEvidenceSignature({ foodDays = [], weights = [], context = {}, window = {} } = {}) {
   const food = (foodDays || [])
     .map(row => ({
@@ -63,13 +84,10 @@ export function semanticEvidenceSignature({ foodDays = [], weights = [], context
     }))
     .filter(row => /^\d{4}-\d{2}-\d{2}$/.test(row.day) && row.kcal > 0)
     .sort((a, b) => a.day.localeCompare(b.day));
-  const weight = (weights || [])
-    .map(row => ({
-      at: Number(row?.loggedAt ?? new Date(row?.date ?? NaN).getTime()),
-      kg: Math.round(Number(row?.weightKg) * 1000) / 1000,
-    }))
-    .filter(row => Number.isFinite(row.at) && Number.isFinite(row.kg) && row.kg > 0)
-    .sort((a, b) => a.at - b.at);
+  const weight = canonicalWeightEvidence(weights).map(row => ({
+    at: row.loggedAt,
+    kg: Math.round(row.weightKg * 1000) / 1000,
+  }));
   const payload = stableStringify({
     algorithmVersion: EFFECTIVE_MAINTENANCE_ALGORITHM_VERSION,
     food,
@@ -90,20 +108,28 @@ export function semanticEvidenceSignature({ foodDays = [], weights = [], context
 }
 
 export function formulaContextSignature(context = {}) {
-  const payload = stableStringify({
+  const identity = {
     activityLevel: context?.activityLevel ?? null,
     formulaMethod: context?.formulaMethod ?? null,
     sex: context?.sex ?? null,
     heightCm: finitePositive(context?.heightCm),
-    bodyFatPercent: Number.isFinite(Number(context?.bodyFatPercent))
+    bodyFatPercent: context?.bodyFatPercent != null && context.bodyFatPercent !== ''
+      && Number.isFinite(Number(context.bodyFatPercent))
       ? Math.round(Number(context.bodyFatPercent) * 10) / 10 : null,
     bodyFatSource: context?.bodyFatSource ?? null,
-  });
+  };
+  // Date of birth is stable across natural birthdays but changes when the
+  // athlete corrects a formula-driving age input. Omit it when unavailable so
+  // baseline memos that never had the field keep their exact identity.
+  if (typeof context?.dateOfBirth === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(context.dateOfBirth)) {
+    identity.dateOfBirth = context.dateOfBirth;
+  }
+  const payload = stableStringify(identity);
   return `fc1_${fnv1a(payload, 2166136261)}${fnv1a(payload, 3339675911)}`;
 }
 
 export function effectiveMaintenanceVersionKey(memo = {}) {
-  const payload = stableStringify({
+  const identity = {
     algorithmVersion: memo.algorithmVersion,
     asOf: memo.asOf,
     cumulativeResidualKcal: memo.cumulativeResidualKcal,
@@ -121,8 +147,57 @@ export function effectiveMaintenanceVersionKey(memo = {}) {
     status: memo.status,
     reason: memo.reason,
     largeDivergence: !!memo.largeDivergence,
-  });
+  };
+  // Omit absent marker fields so memos produced by the baseline Campaign 19
+  // build keep their exact version identity. Only an actual revalidation
+  // marker extends the key.
+  if (memo.revalidationStartedAt != null || memo.revalidationContextSignature != null) {
+    identity.revalidationStartedAt = memo.revalidationStartedAt ?? null;
+    identity.revalidationContextSignature = memo.revalidationContextSignature ?? null;
+  }
+  const payload = stableStringify(identity);
   return `emv1_${fnv1a(payload, 2166136261)}${fnv1a(payload, 3339675911)}`;
+}
+
+export function revalidationContextSignature(context = {}) {
+  const payload = stableStringify({
+    algorithmVersion: EFFECTIVE_MAINTENANCE_ALGORITHM_VERSION,
+    formulaContextSignature: formulaContextSignature(context),
+  });
+  return `rv1_${fnv1a(payload, 2166136261)}${fnv1a(payload, 3339675911)}`;
+}
+
+/** Fail closed before any stored residual is allowed to become authority. */
+export function isValidEffectiveMaintenanceMemo(memo) {
+  if (!memo || typeof memo !== 'object') return false;
+  const requiredNumbers = [
+    memo.cumulativeResidualKcal, memo.formulaPriorKcalAtDerivation,
+    memo.effectiveMaintenanceKcalAtDerivation, memo.algorithmVersion,
+    memo.asOf, memo.foodDaysLogged, memo.weightPoints,
+  ];
+  if (requiredNumbers.some(value => value == null || value === '')) return false;
+  const residual = Number(memo.cumulativeResidualKcal);
+  const prior = Number(memo.formulaPriorKcalAtDerivation);
+  const effective = Number(memo.effectiveMaintenanceKcalAtDerivation);
+  const algorithm = Number(memo.algorithmVersion);
+  const asOf = Number(memo.asOf);
+  const foodDays = Number(memo.foodDaysLogged);
+  const weightPoints = Number(memo.weightPoints);
+  if (![residual, prior, effective, algorithm, asOf, foodDays, weightPoints].every(Number.isFinite)) return false;
+  if (![residual, prior, effective, algorithm, asOf, foodDays, weightPoints].every(Number.isInteger)) return false;
+  if (prior <= 0 || effective <= 0 || algorithm <= 0 || asOf <= 0 || foodDays < 5 || weightPoints < 14) return false;
+  if (prior + residual !== effective) return false;
+  if (!Object.values(EFFECTIVE_MAINTENANCE_SOURCE).filter(source => source !== EFFECTIVE_MAINTENANCE_SOURCE.FORMULA).includes(memo.source)) return false;
+  if (![EFFECTIVE_MAINTENANCE_STATUS.CURRENT, EFFECTIVE_MAINTENANCE_STATUS.HELD, EFFECTIVE_MAINTENANCE_STATUS.REVALIDATING].includes(memo.status)) return false;
+  if (![memo.reason, memo.evidenceSignature, memo.formulaContextSignature, memo.versionKey]
+    .every(value => typeof value === 'string' && value.length > 0)) return false;
+  if (memo.bodyweightKg != null && !finitePositive(memo.bodyweightKg)) return false;
+  const markerAt = memo.revalidationStartedAt;
+  const markerSignature = memo.revalidationContextSignature;
+  if ((markerAt == null) !== (markerSignature == null)) return false;
+  if (markerAt != null && (!Number.isFinite(Number(markerAt)) || Number(markerAt) <= 0
+    || typeof markerSignature !== 'string' || !markerSignature)) return false;
+  return memo.versionKey === effectiveMaintenanceVersionKey(memo);
 }
 
 export function compareEffectiveMaintenanceVersions(a, b) {
@@ -179,9 +254,9 @@ export function resolveEffectiveMaintenance({
   };
   if (!memo) return base;
 
+  if (!isValidEffectiveMaintenanceMemo(memo)) return base;
   const residual = Number(memo.cumulativeResidualKcal);
   const asOf = Number(memo.asOf);
-  if (!Number.isFinite(residual) || !Number.isFinite(asOf) || !memo.evidenceSignature) return base;
 
   const remembered = {
     ...base,
@@ -189,6 +264,8 @@ export function resolveEffectiveMaintenance({
     asOf,
     evidenceSignature: memo.evidenceSignature,
     largeDivergence: !!memo.largeDivergence,
+    revalidationStartedAt: memo.revalidationStartedAt ?? null,
+    revalidationContextSignature: memo.revalidationContextSignature ?? null,
   };
   const versionMismatch = Number(memo.algorithmVersion) !== EFFECTIVE_MAINTENANCE_ALGORITHM_VERSION;
   const formulaContextChanged = memo.formulaContextSignature
@@ -262,9 +339,7 @@ export function deriveEffectiveMaintenanceMemo({
 } = {}) {
   const formulaPrior = finitePositive(formulaPriorKcal);
   const actual = finitePositive(actualIntakeKcal);
-  const validWeights = (weights || []).filter(
-    row => finitePositive(row?.weightKg) && Number.isFinite(Number(row?.loggedAt ?? new Date(row?.date ?? NaN).getTime())),
-  );
+  const validWeights = canonicalWeightEvidence(weights);
   const hold = reason => ({ updated: false, reason, memo: null });
 
   if (!formulaPrior) return hold('formula_prior_unavailable');
@@ -279,11 +354,22 @@ export function deriveEffectiveMaintenanceMemo({
     latest,
     Number(row?.loggedAt ?? new Date(row?.date ?? NaN).getTime()) || 0,
   ), 0);
-  if (
-    resolved?.status === EFFECTIVE_MAINTENANCE_STATUS.REVALIDATING
-    && ['goal_phase_changed', 'formula_context_changed', 'material_bodyweight_change'].includes(resolved?.reason)
-    && newestWeightAt <= Number(resolved?.asOf)
-  ) return hold('fresh_context_evidence_required');
+  if (resolved?.status === EFFECTIVE_MAINTENANCE_STATUS.REVALIDATING) {
+    if (['formula_context_changed', 'algorithm_version_changed'].includes(resolved?.reason)) {
+      const markerAt = Number(resolved?.revalidationStartedAt);
+      const markerMatches = resolved?.revalidationContextSignature === revalidationContextSignature(context);
+      const freshWeightDays = new Set(validWeights
+        .filter(row => Number(row?.loggedAt ?? new Date(row?.date ?? NaN).getTime()) > markerAt)
+        .map(row => new Date(Number(row?.loggedAt ?? new Date(row?.date ?? NaN).getTime())).toISOString().slice(0, 10)))
+        .size;
+      if (!Number.isFinite(markerAt) || !markerMatches || freshWeightDays < 14) {
+        return hold('fresh_context_evidence_required');
+      }
+    } else if (['goal_phase_changed', 'material_bodyweight_change'].includes(resolved?.reason)
+      && newestWeightAt <= Number(resolved?.asOf)) {
+      return hold('fresh_context_evidence_required');
+    }
+  }
   if (confounded) return hold('evidence_confounded');
   if (adaptiveObservation?.confidence !== 'high') return hold('adaptive_evidence_not_judgeable');
 
@@ -312,6 +398,8 @@ export function deriveEffectiveMaintenanceMemo({
     formulaMethod: context?.formulaMethod ?? null,
     formulaContextSignature: formulaContextSignature(context),
     largeDivergence: Math.abs(residual) / formulaPrior > RESIDUAL_REVALIDATION_FRACTION,
+    revalidationStartedAt: null,
+    revalidationContextSignature: null,
   };
   memo.versionKey = effectiveMaintenanceVersionKey(memo);
   return { updated: true, reason: 'validated', memo, resolvedBefore: resolved ?? null };
@@ -329,5 +417,7 @@ export function effectiveMaintenanceReceipt(resolved) {
     evidenceSignature: resolved.evidenceSignature,
     status: resolved.status,
     reason: resolved.reason,
+    revalidationStartedAt: resolved.revalidationStartedAt ?? null,
+    revalidationContextSignature: resolved.revalidationContextSignature ?? null,
   };
 }

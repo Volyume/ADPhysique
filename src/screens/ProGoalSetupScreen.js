@@ -30,8 +30,9 @@ import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS }
 import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceService';
 import {
   saveNutritionTargets, getNutritionTargets, getMorningWeightsLast14Days,
-  getLatestBodyComposition, getActivePeakWeekPlan, setPeakWeekShowDate,
+  getLatestBodyComposition, getUserBodyProfile, getActivePeakWeekPlan, setPeakWeekShowDate,
 } from '../lib/database';
+import { ageYearsFromDateOfBirth } from '../lib/profileAge';
 import { computeEWMA } from '../lib/weeklyCoach';
 import { formatBodyWeightShort } from '../lib/units';
 import { generateAndSavePlan } from '../lib/planAutoGen';
@@ -308,6 +309,9 @@ export default function ProGoalSetupScreen({ navigation }) {
     // Nutrition widget on Athlete Hub showing stale values.
     const { userProfile: latestProfile } = useAppStore.getState();
     const wp = latestProfile || userProfile || {};
+    const canonicalBodyProfile = user?.id
+      ? await getUserBodyProfile(user.id).catch(() => null)
+      : null;
 
     // The profile's weightKg is the enrolment-day reading and never
     // updates as the user logs morning weights. For nutrition target
@@ -336,14 +340,19 @@ export default function ProGoalSetupScreen({ navigation }) {
     // stay (stale-but-real beats fabricated) - and the user is told where
     // to complete the profile instead of being silently defaulted.
     const hasWeight = typeof latestWeightKg === 'number' && latestWeightKg > 0;
-    const hasHeight = typeof wp.heightCm === 'number' && wp.heightCm > 0;
-    const hasAge    = typeof wp.age === 'number' && wp.age > 0;
-    const hasSex    = wp.sex === 'male' || wp.sex === 'female';
+    const currentAge = canonicalBodyProfile?.dateOfBirth
+      ? ageYearsFromDateOfBirth(canonicalBodyProfile.dateOfBirth)
+      : wp.age;
+    const currentHeight = canonicalBodyProfile?.heightCm ?? wp.heightCm;
+    const currentSex = canonicalBodyProfile?.sex ?? wp.sex;
+    const hasHeight = typeof currentHeight === 'number' && currentHeight > 0;
+    const hasAge    = typeof currentAge === 'number' && currentAge > 0;
+    const hasSex    = currentSex === 'male' || currentSex === 'female';
     const biologyComplete = hasWeight && hasHeight && hasAge && hasSex;
     const safeWeightKg = latestWeightKg;
-    const safeHeightCm = wp.heightCm;
-    const safeAge      = wp.age;
-    const safeSex      = wp.sex;
+    const safeHeightCm = currentHeight;
+    const safeAge      = currentAge;
+    const safeSex      = currentSex;
 
     // Body composition for the BMR formula. Prefer the profile (what onboarding
     // stored), and for users who onboarded before the profile carried body fat,
@@ -396,7 +405,10 @@ export default function ProGoalSetupScreen({ navigation }) {
         proteinApproach,
         experience,
       });
-      const authority = await resolveEffectiveMaintenanceForUser(user.id, engineInputs);
+      const authority = await resolveEffectiveMaintenanceForUser(user.id, {
+        ...engineInputs,
+        dateOfBirth: canonicalBodyProfile?.dateOfBirth ?? null,
+      });
       const calculatedTargets = calculateNutritionTargets({
         ...engineInputs,
         effectiveMaintenanceResidualKcal: authority.resolved.appliedResidualKcal,

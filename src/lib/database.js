@@ -13,7 +13,7 @@ import { MICRO_COLUMNS, microColumnsCreateFragment } from './food/micronutrients
 import { getCurrentBlockWeekIndex, getBlockStatus, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK } from './mesocycle';
 import { resolveRecoveryState } from './recoveryState';
 import { compareSessionResolutionVersions } from './blockProgression';
-import { compareEffectiveMaintenanceVersions } from './effectiveMaintenance';
+import { compareEffectiveMaintenanceVersions, isValidEffectiveMaintenanceMemo } from './effectiveMaintenance';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
@@ -351,6 +351,8 @@ async function _doInit() {
       formula_method TEXT,
       formula_context_signature TEXT NOT NULL,
       large_divergence INTEGER NOT NULL DEFAULT 0,
+      revalidation_started_at INTEGER,
+      revalidation_context_signature TEXT,
       version_key TEXT NOT NULL,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL
@@ -2551,6 +2553,14 @@ const SCHEMA_MIGRATIONS = [
       updated_at INTEGER NOT NULL
     )`,
     'CREATE INDEX IF NOT EXISTS idx_effective_maintenance_updated ON effective_maintenance_memos(updated_at)',
+  ],
+  // v81, Campaign 19 hostile-audit remediation. A durable start line makes
+  // formula-driving context revalidation depend only on post-change evidence.
+  // Appended rather than editing v80 so a device that already ran the audited
+  // Campaign 19 SHA upgrades without losing or recreating its memo.
+  [
+    'ALTER TABLE effective_maintenance_memos ADD COLUMN revalidation_started_at INTEGER',
+    'ALTER TABLE effective_maintenance_memos ADD COLUMN revalidation_context_signature TEXT',
   ],
 ];
 
@@ -5505,26 +5515,23 @@ function effectiveMemoFields(memo) {
     memo.evidenceSignature,
     Math.round(Number(memo.foodDaysLogged)),
     Math.round(Number(memo.weightPoints)),
-    Number.isFinite(Number(memo.bodyweightKg)) ? Number(memo.bodyweightKg) : null,
+    memo.bodyweightKg != null && memo.bodyweightKg !== '' && Number.isFinite(Number(memo.bodyweightKg))
+      ? Number(memo.bodyweightKg) : null,
     memo.goalPhase ?? null,
     memo.activityLevel ?? null,
     memo.formulaMethod ?? null,
     memo.formulaContextSignature,
     memo.largeDivergence ? 1 : 0,
+    memo.revalidationStartedAt != null && memo.revalidationStartedAt !== ''
+      && Number.isFinite(Number(memo.revalidationStartedAt))
+      ? Number(memo.revalidationStartedAt) : null,
+    memo.revalidationContextSignature ?? null,
     memo.versionKey,
   ];
 }
 
 function validateEffectiveMemo(memo) {
-  const requiredNumbers = [
-    memo?.cumulativeResidualKcal, memo?.formulaPriorKcalAtDerivation,
-    memo?.effectiveMaintenanceKcalAtDerivation, memo?.algorithmVersion,
-    memo?.asOf, memo?.foodDaysLogged, memo?.weightPoints,
-  ];
-  if (requiredNumbers.some(v => !Number.isFinite(Number(v)))) throw new Error('Invalid effective-maintenance memo numbers');
-  if (!memo?.evidenceSignature || !memo?.formulaContextSignature || !memo?.versionKey) {
-    throw new Error('Invalid effective-maintenance memo identity');
-  }
+  if (!isValidEffectiveMaintenanceMemo(memo)) throw new Error('Invalid effective-maintenance memo');
 }
 
 export async function saveEffectiveMaintenanceMemo(userId, memo) {
@@ -5539,8 +5546,9 @@ export async function saveEffectiveMaintenanceMemo(userId, memo) {
        effective_maintenance_kcal_at_derivation, source, status, reason,
        algorithm_version, as_of, evidence_signature, food_days_logged,
        weight_points, bodyweight_kg, goal_phase, activity_level, formula_method,
-       formula_context_signature, large_divergence, version_key, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       formula_context_signature, large_divergence, revalidation_started_at,
+       revalidation_context_signature, version_key, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id) DO UPDATE SET
        cumulative_residual_kcal=excluded.cumulative_residual_kcal,
        formula_prior_kcal_at_derivation=excluded.formula_prior_kcal_at_derivation,
@@ -5552,7 +5560,10 @@ export async function saveEffectiveMaintenanceMemo(userId, memo) {
        bodyweight_kg=excluded.bodyweight_kg, goal_phase=excluded.goal_phase,
        activity_level=excluded.activity_level, formula_method=excluded.formula_method,
        formula_context_signature=excluded.formula_context_signature,
-       large_divergence=excluded.large_divergence, version_key=excluded.version_key,
+       large_divergence=excluded.large_divergence,
+       revalidation_started_at=excluded.revalidation_started_at,
+       revalidation_context_signature=excluded.revalidation_context_signature,
+       version_key=excluded.version_key,
        updated_at=excluded.updated_at`,
     [userId, ...values, now, now],
   );
@@ -5563,14 +5574,14 @@ export async function saveEffectiveMaintenanceMemo(userId, memo) {
 // Deterministic LWW: an older arrival never overwrites a newer row. Equal
 // timestamps converge on the lexicographically greater content-derived key,
 // so arrival order cannot affect the final value and exact retries are inert.
-export async function insertEffectiveMaintenanceMemoFromCloud(userId, row) {
-  if (!userId || row?.user_id !== userId) return false;
+export async function insertEffectiveMaintenanceMemoFromCloud(localUserId, row, { cloudUserId = localUserId } = {}) {
+  if (!localUserId || !cloudUserId || row?.user_id !== cloudUserId) return false;
   const incomingUpdated = Date.parse(row.updated_at);
   if (!Number.isFinite(incomingUpdated)) return false;
   const d = await db();
   const local = await d.getFirstAsync(
     'SELECT updated_at, version_key FROM effective_maintenance_memos WHERE user_id = ? LIMIT 1',
-    [userId],
+    [localUserId],
   );
   if (local && compareEffectiveMaintenanceVersions(
     { updatedAt: incomingUpdated, versionKey: row.version_key },
@@ -5593,6 +5604,8 @@ export async function insertEffectiveMaintenanceMemoFromCloud(userId, row) {
     formulaMethod: row.formula_method,
     formulaContextSignature: row.formula_context_signature,
     largeDivergence: !!row.large_divergence,
+    revalidationStartedAt: row.revalidation_started_at == null ? null : Date.parse(row.revalidation_started_at),
+    revalidationContextSignature: row.revalidation_context_signature,
     versionKey: row.version_key,
   };
   validateEffectiveMemo(memo);
@@ -5603,8 +5616,9 @@ export async function insertEffectiveMaintenanceMemoFromCloud(userId, row) {
        effective_maintenance_kcal_at_derivation, source, status, reason,
        algorithm_version, as_of, evidence_signature, food_days_logged,
        weight_points, bodyweight_kg, goal_phase, activity_level, formula_method,
-       formula_context_signature, large_divergence, version_key, created_at, updated_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       formula_context_signature, large_divergence, revalidation_started_at,
+       revalidation_context_signature, version_key, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id) DO UPDATE SET
        cumulative_residual_kcal=excluded.cumulative_residual_kcal,
        formula_prior_kcal_at_derivation=excluded.formula_prior_kcal_at_derivation,
@@ -5616,9 +5630,12 @@ export async function insertEffectiveMaintenanceMemoFromCloud(userId, row) {
        bodyweight_kg=excluded.bodyweight_kg, goal_phase=excluded.goal_phase,
        activity_level=excluded.activity_level, formula_method=excluded.formula_method,
        formula_context_signature=excluded.formula_context_signature,
-       large_divergence=excluded.large_divergence, version_key=excluded.version_key,
+       large_divergence=excluded.large_divergence,
+       revalidation_started_at=excluded.revalidation_started_at,
+       revalidation_context_signature=excluded.revalidation_context_signature,
+       version_key=excluded.version_key,
        updated_at=excluded.updated_at`,
-    [userId, ...values, incomingUpdated, incomingUpdated],
+    [localUserId, ...values, incomingUpdated, incomingUpdated],
   );
   return true;
 }

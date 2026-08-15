@@ -508,7 +508,7 @@ function TrainingNextWeekCard({
 // NU-4: the button drops the old "week" claim (the write has no expiry) and
 // the card states the post-tap absolute + honest duration before the tap.
 // NU-3: a tap-time null renders its reason (notice) instead of silence.
-function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, onApply, applyState, onApplySettled, energyUnit, previewKcal, notice, hero }) {
+function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, onApply, applyState, onApplySettled, energyUnit, previewKcal, notice, allowApplyWithNotice = false, hero }) {
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): live theme.
   // See buildLiveStyles' header comment (defined below the frozen `styles`
   // block) for why.
@@ -548,7 +548,7 @@ function DietBreakCard({ weeksInDeficit, continuityEvidenced = true, applied, on
           <Text style={[styles.adjustmentHold, live.adjustmentHold]}>{notice}</Text>
         </HoldEnter>
       ) : null}
-      {((!applied && onApply && !notice) || settling) && (
+      {((!applied && onApply && (!notice || allowApplyWithNotice)) || settling) && (
         <ApplyExit style={styles.applySlotStart}>
           <Button
             title="Set maintenance calories"
@@ -1022,6 +1022,8 @@ export default function CoachOutputScreen({ navigation, route }) {
   // nutrition_targets so the other rows re-classify against reality. Display
   // classification only; the tap path still re-reads at tap time.
   const [currentTargets, setCurrentTargets] = useState(null);
+  const [liveMaintenanceAuthority, setLiveMaintenanceAuthority] = useState(null);
+  const [dietBreakPreviewChanged, setDietBreakPreviewChanged] = useState(false);
   const [profileSex, setProfileSex] = useState(null);
   // NU-3: tap-time explanation when a compute nulls (a stale-suggestion
   // race); keyed by adjustment. An Apply must never end in silence.
@@ -1407,6 +1409,20 @@ export default function CoachOutputScreen({ navigation, route }) {
           ...n,
           dietBreak: 'Nothing to raise. Your target already sits at or above maintenance.',
         }));
+        setDietBreakPreviewChanged(false);
+        return;
+      }
+      // The visible absolute target is part of consent. If live inputs moved
+      // since the card loaded, refresh the preview and require a second tap
+      // instead of applying a number the athlete was never shown.
+      if (Number(dietBreakPreviewKcal) !== Number(computed.newKcal)) {
+        setCurrentTargets(current);
+        setLiveMaintenanceAuthority(freshAuthority.resolved);
+        setDietBreakPreviewChanged(true);
+        setApplyNotice(n => ({
+          ...n,
+          dietBreak: 'Your maintenance estimate changed. Review the updated target, then tap again.',
+        }));
         return;
       }
       await saveNutritionTargets(user.id, computed.targets);
@@ -1420,6 +1436,8 @@ export default function CoachOutputScreen({ navigation, route }) {
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
       setCurrentTargets(computed.targets);
+      setLiveMaintenanceAuthority(freshAuthority.resolved);
+      setDietBreakPreviewChanged(false);
       setApplySettling(s => ({ ...s, dietBreak: true }));
     } catch (e) {
       logError('CoachOutputScreen.handleApplyDietBreak', e, { userId: user?.id });
@@ -1540,6 +1558,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       setCurrentTargets(nutrition ?? null);
       setProfileSex(bodyProfile?.sex ?? userProfile?.sex ?? null);
       setApplyNotice({});
+      setDietBreakPreviewChanged(false);
 
       // ALGO-004: map the check-in's stored calorie answer
       // ('yes'/'no'/'untracked') onto the engine vocabulary via the single
@@ -1897,6 +1916,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         authority: effectiveMaintenanceReceipt(receiptAuthority),
         learningStatus: learnedMaintenance.updated ? 'persisted' : learnedMaintenance.reason,
       };
+      setLiveMaintenanceAuthority(receiptAuthority);
       const resultEdPatternOpen = edPatternOpen
         || !!result.edPatternFired
         || !!(result.heldDecisions ?? []).some(d => d.type === 'ed_pattern_lockout');
@@ -2494,7 +2514,7 @@ export default function CoachOutputScreen({ navigation, route }) {
     ? (computeDietBreakTargets(
       currentTargets,
       profileSex,
-      output?.effectiveMaintenance?.authority?.effectiveMaintenanceKcal ?? null,
+      liveMaintenanceAuthority?.effectiveMaintenanceKcal ?? null,
     )?.newKcal ?? null)
     : null;
   const trainingCardEl = (
@@ -2552,6 +2572,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       energyUnit={energyUnit}
       previewKcal={dietBreakPreviewKcal}
       notice={applyNotice.dietBreak ?? null}
+      allowApplyWithNotice={dietBreakPreviewChanged}
       hero={zones.heroKind === 'dietBreak'}
     />
   ) : null;

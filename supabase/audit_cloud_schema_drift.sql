@@ -110,6 +110,8 @@ WITH expected (cloud_table, column_name, source) AS (
     ('effective_maintenance_memos', 'formula_method',                           'sync/tables/effectiveMaintenance.js push+pull'),
     ('effective_maintenance_memos', 'formula_context_signature',                'sync/tables/effectiveMaintenance.js push+pull'),
     ('effective_maintenance_memos', 'large_divergence',                         'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'revalidation_started_at',                  'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'revalidation_context_signature',           'sync/tables/effectiveMaintenance.js push+pull'),
     ('effective_maintenance_memos', 'version_key',                              'sync/tables/effectiveMaintenance.js push+pull'),
     ('effective_maintenance_memos', 'created_at',                               'migrate_141 table contract'),
     ('effective_maintenance_memos', 'updated_at',                               'sync/tables/effectiveMaintenance.js push+pull'),

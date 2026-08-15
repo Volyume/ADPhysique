@@ -18,24 +18,29 @@ CREATE TABLE IF NOT EXISTS public.effective_maintenance_memos (
   user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   cumulative_residual_kcal INTEGER NOT NULL,
   formula_prior_kcal_at_derivation INTEGER NOT NULL CHECK (formula_prior_kcal_at_derivation > 0),
-  effective_maintenance_kcal_at_derivation INTEGER NOT NULL CHECK (effective_maintenance_kcal_at_derivation > 0),
+  effective_maintenance_kcal_at_derivation INTEGER NOT NULL
+    CHECK (effective_maintenance_kcal_at_derivation > 0)
+    CHECK (effective_maintenance_kcal_at_derivation = formula_prior_kcal_at_derivation + cumulative_residual_kcal),
   source TEXT NOT NULL CHECK (source IN ('athlete_history', 'held_athlete_history')),
   status TEXT NOT NULL CHECK (status IN ('current', 'held', 'revalidating')),
-  reason TEXT NOT NULL,
+  reason TEXT NOT NULL CHECK (length(reason) > 0),
   algorithm_version INTEGER NOT NULL CHECK (algorithm_version > 0),
   as_of TIMESTAMPTZ NOT NULL,
-  evidence_signature TEXT NOT NULL,
+  evidence_signature TEXT NOT NULL CHECK (length(evidence_signature) > 0),
   food_days_logged INTEGER NOT NULL CHECK (food_days_logged >= 5),
   weight_points INTEGER NOT NULL CHECK (weight_points >= 14),
-  bodyweight_kg NUMERIC,
+  bodyweight_kg NUMERIC CHECK (bodyweight_kg IS NULL OR bodyweight_kg > 0),
   goal_phase TEXT,
   activity_level TEXT,
   formula_method TEXT,
-  formula_context_signature TEXT NOT NULL,
+  formula_context_signature TEXT NOT NULL CHECK (length(formula_context_signature) > 0),
   large_divergence BOOLEAN NOT NULL DEFAULT false,
-  version_key TEXT NOT NULL,
+  revalidation_started_at TIMESTAMPTZ,
+  revalidation_context_signature TEXT,
+  version_key TEXT NOT NULL CHECK (length(version_key) > 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK ((revalidation_started_at IS NULL) = (revalidation_context_signature IS NULL))
 );
 
 CREATE INDEX IF NOT EXISTS idx_effective_maintenance_memos_updated
@@ -56,6 +61,8 @@ BEGIN
   END IF;
   RETURN NEW;
 END $$;
+
+REVOKE ALL ON FUNCTION public._effective_maintenance_memos_refuse_stale() FROM PUBLIC, anon, authenticated;
 
 DROP TRIGGER IF EXISTS effective_maintenance_memos_refuse_stale
   ON public.effective_maintenance_memos;

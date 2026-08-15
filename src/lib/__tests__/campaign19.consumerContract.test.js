@@ -15,7 +15,11 @@ describe('Campaign 19 live consumer chain', () => {
   });
 
   test('goal and target regeneration apply the canonical residual exactly once', () => {
-    for (const file of ['src/screens/NutritionTargetsScreen.js', 'src/screens/ProGoalSetupScreen.js']) {
+    for (const file of [
+      'src/screens/NutritionTargetsScreen.js',
+      'src/screens/ProGoalSetupScreen.js',
+      'src/screens/ProOnboardingScreen.js',
+    ]) {
       const screen = read(file);
       expect(screen).toMatch(/resolveEffectiveMaintenanceForUser/);
       expect(screen).toMatch(/effectiveMaintenanceResidualKcal:/);
@@ -26,6 +30,7 @@ describe('Campaign 19 live consumer chain', () => {
     const screen = read('src/screens/CoachOutputScreen.js');
     expect(screen).toMatch(/const freshAuthority = await resolveEffectiveMaintenanceForUser/);
     expect(screen).toMatch(/freshAuthority\.resolved\.effectiveMaintenanceKcal/);
+    expect(screen).toMatch(/Number\(dietBreakPreviewKcal\) !== Number\(computed\.newKcal\)/);
     expect(read('src/lib/coachIntervention.js')).toMatch(/maintenanceAuthority:/);
   });
 
@@ -35,6 +40,8 @@ describe('Campaign 19 live consumer chain', () => {
     const view = read('src/lib/nutritionTargetsView.js');
     expect(view).toMatch(/raw\.maintenanceKcal \?\? raw\.tdee \?\? null/);
     expect(view).not.toMatch(/targetKcal \|\| null/);
+    const targets = read('src/screens/NutritionTargetsScreen.js');
+    expect(targets).toMatch(/hydrateWithCurrentAuthority\(rich\)/);
   });
 
   test('learning service never writes the nutrition prescription', () => {

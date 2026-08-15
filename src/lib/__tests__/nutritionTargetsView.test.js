@@ -6,6 +6,7 @@
  */
 import {
   hydrateLoadedTargets,
+  hydrateLoadedTargetsWithAuthority,
   getRecommendedMeals,
   KCAL_PER_KG_TISSUE,
 } from '../nutritionTargetsView';
@@ -63,6 +64,33 @@ describe('hydrateLoadedTargets', () => {
     const out = hydrateLoadedTargets({ targetKcal: 0 }, 0);
     expect(out.targetRateKgPerWeek).toBeUndefined();
     expect(out.proteinGPerKg).toBeUndefined();
+  });
+});
+
+describe('hydrateLoadedTargetsWithAuthority', () => {
+  test('replaces a restored target mirror maintenance with current authority', () => {
+    const out = hydrateLoadedTargetsWithAuthority(
+      { targetKcal: 2300, maintenanceKcal: 2800, tdee: 2800, targetRateKgPerWeek: -0.45 },
+      80,
+      { effectiveMaintenanceKcal: 2650, source: 'athlete_history' },
+    );
+    expect(out).toMatchObject({
+      targetKcal: 2300,
+      maintenanceKcal: 2650,
+      tdee: 2650,
+      maintenanceAuthority: { effectiveMaintenanceKcal: 2650, source: 'athlete_history' },
+    });
+    expect(out.targetRateKgPerWeek).toBe(-0.32);
+  });
+
+  test('removes stale mirror maintenance when current authority is unavailable', () => {
+    const out = hydrateLoadedTargetsWithAuthority(
+      { targetKcal: 2300, maintenanceKcal: 2800, tdee: 2800, targetRateKgPerWeek: -0.45 },
+      80,
+      { effectiveMaintenanceKcal: null, status: 'invalid' },
+    );
+    expect(out).toMatchObject({ targetKcal: 2300, maintenanceKcal: null, tdee: null });
+    expect(out.targetRateKgPerWeek).toBeNull();
   });
 });
 

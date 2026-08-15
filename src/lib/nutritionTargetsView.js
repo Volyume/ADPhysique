@@ -58,6 +58,24 @@ export function hydrateLoadedTargets(raw, weightKg) {
 }
 
 /**
+ * Hydrate a stored prescription for display without trusting the stored
+ * maintenance snapshot. AsyncStorage can outlive or restore ahead of SQLite,
+ * so only the current canonical resolver is allowed to supply maintenance.
+ */
+export function hydrateLoadedTargetsWithAuthority(raw, weightKg, authority = null) {
+  if (!raw) return raw;
+  const resolved = Number(authority?.effectiveMaintenanceKcal);
+  const maintenanceKcal = Number.isFinite(resolved) && resolved > 0 ? resolved : null;
+  return hydrateLoadedTargets({
+    ...raw,
+    maintenanceKcal,
+    tdee: maintenanceKcal,
+    maintenanceAuthority: authority,
+    targetRateKgPerWeek: null,
+  }, weightKg);
+}
+
+/**
  * Recommended meal count: the smallest count (clamped 3–6) that keeps per-meal
  * protein at or below the ~0.55 g/kg MPS ceiling, so high daily protein targets
  * split across more feedings rather than overshooting the per-meal ceiling.
