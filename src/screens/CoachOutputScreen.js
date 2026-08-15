@@ -1267,6 +1267,15 @@ export default function CoachOutputScreen({ navigation, route }) {
           baseline: output?.context?.recovery?.systemic
             ? { key: 'recovery.systemic', value: output.context.recovery.systemic.value }
             : null,
+          // C18 adversarial closure job B2: BOTH readings the change will be
+          // judged against, taken at the moment it is applied. Recovery alone
+          // could not tell "the extra work bought progress at a fair cost"
+          // apart from "the extra work bought nothing", which is the whole
+          // question a volume change asks.
+          baselines: {
+            'training.progress': output?.context?.training?.progress?.value ?? null,
+            'recovery.systemic': output?.context?.recovery?.systemic?.value ?? null,
+          },
           goalPhase: output?.goalPhase ?? null,
         }),
       });
@@ -1714,11 +1723,19 @@ export default function CoachOutputScreen({ navigation, route }) {
       setPriorInterventions(priorInterventions);
       // CAMPAIGN 18 job B: what the user has already said no to.
       const priorDeclines = declinesFromHistory(coachOutputHistory);
+      // C18 adversarial closure job B4: the volume dials the athlete holds
+      // themselves. A volume outcome read against a muscle they set by hand
+      // is CONFOUNDED, not a verdict on our change. Best-effort: an empty
+      // list on failure leaves the loop exactly as it was.
+      // eslint-disable-next-line global-require
+      const { getManualVolumeMuscles } = require('../lib/effectiveLandmarks');
+      const manualVolumeMuscles = await getManualVolumeMuscles(user.id).catch(() => []);
 
       const result = runWeeklyCoach({
         checkin: engineCheckin,
         priorInterventions,
         priorDeclines,
+        manualVolumeMuscles,
         morningWeights: weights,
         sessionsCompleted: sessionStats.completed,
         sessionsPlanned: sessionStats.planned,

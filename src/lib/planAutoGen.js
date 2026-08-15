@@ -145,40 +145,75 @@ export function buildPlanInputs(profile) {
  *
  * Gathers from the blocks they have COMPLETED, using the programme signature
  * Campaign 16 already stores on each mesocycle's ledger - no second history,
- * no new authority. Adherence decides whether a block counts at all, on the
- * same law as everywhere else in Campaign 18: a block that was not run says
- * nothing about the structure it was written on.
+ * no new authority.
  *
- * `structuralProblem` is deliberately conservative. "The athlete missed
- * Tuesday" is not evidence that upper/lower failed them, so only a block that
- * was run AND whose sessions repeatedly overran the time they had is counted
- * against the structure.
+ * REWRITTEN IN THE ADVERSARIAL CLOSURE (job A), because the first version
+ * was UNREACHABLE and the tests around it did not notice. It asked each row
+ * for `m.completedAt` and `m.status === 'completed'`, and each ledger for
+ * `productive`, `structuralProblem` and `recoveryAcceptable`. None of those
+ * six things is ever written: `mesocycles` has no completed_at column, its
+ * `status` column is inserted with its DEFAULT 'active' and never updated,
+ * and interBlock.buildBlockLedger writes per-muscle `entries` rather than
+ * block-level verdicts. Every real athlete's history therefore produced
+ * `completed: false, productive: false` and no structure could ever be
+ * demonstrated. The fix does not weaken a single threshold - it reads the
+ * facts the app genuinely records:
+ *
+ *   completed   mesocycle.blockCompletionState - one definition, shared with
+ *               Campaign 16's epoch counter, which knows the difference
+ *               between a block that ran out and one the athlete left.
+ *   execution   coachContext.trainingExecutionFact - the same authority the
+ *               block review and the weekly card use, so they cannot
+ *               disagree about whether the programme was tested.
+ *   the verdict programmeStructureMemory.blockOutcomeFromLedger, over
+ *               Campaign 16's own per-muscle classifications.
+ *
+ * A block the ledger could not judge is DROPPED rather than counted against
+ * the structure, exactly like a block that was never run: it proves nothing
+ * and condemns nothing. Structural blame stays conservative - see
+ * blockOutcomeFromLedger for why only a properly-run, majority-STRAINED
+ * block is ever attributed to the shape of the week.
  */
 export async function readDemonstratedStructure(userId, daysPerWeek) {
   if (!userId) return null;
   // eslint-disable-next-line global-require
   const { getAllMesocycles, getBlockTrainingData } = require('./database');
   // eslint-disable-next-line global-require
-  const { structureEvidence, demonstratedStructure } = require('./programmeStructureMemory');
+  const { structureEvidence, demonstratedStructure, blockOutcomeFromLedger } = require('./programmeStructureMemory');
+  // eslint-disable-next-line global-require
+  const { blockCompletionState, BLOCK_COMPLETION } = require('./mesocycle');
+  // eslint-disable-next-line global-require
+  const { trainingExecutionFact, SIGNAL } = require('./coachContext');
   const mesocycles = await getAllMesocycles(userId).catch(() => []);
   const blocks = [];
   for (const m of mesocycles ?? []) {
     let ledger = null;
     try { ledger = JSON.parse(m?.blockLedger ?? 'null'); } catch (_) { ledger = null; }
     const signature = ledger?.programmeSignature ?? null;
+    // No signature means the block's structure cannot be identified at all
+    // (a pre-Campaign-16 ledger, or one computed after the plan was already
+    // switched away). Unidentifiable history teaches nothing, in either
+    // direction.
     if (!signature) continue;
     const weeks = Number(m?.plannedWeeks ?? m?.durationWeeks) || null;
     const days = Number(signature?.dayCount) || null;
     // eslint-disable-next-line no-await-in-loop
     const { workouts } = await getBlockTrainingData(userId, m?.id ?? null).catch(() => ({ workouts: [] }));
-    const planned = weeks && days ? weeks * days : null;
+    const execution = trainingExecutionFact({
+      sessionsCompleted: Array.isArray(workouts) ? workouts.length : null,
+      sessionsPlanned: weeks && days ? weeks * days : null,
+    });
+    const outcome = blockOutcomeFromLedger(ledger, {
+      executionGood: execution.signal === SIGNAL.GOOD,
+    });
+    if (!outcome.judgeable) continue;
     blocks.push({
       signature,
-      completed: m?.completedAt != null || m?.status === 'completed',
-      adherenceRatio: planned ? (workouts?.length ?? 0) / planned : null,
-      productive: ledger?.productive === true,
-      structuralProblem: ledger?.structuralProblem === true,
-      recoveryAcceptable: ledger?.recoveryAcceptable !== false,
+      completed: blockCompletionState(m) === BLOCK_COMPLETION.COMPLETED,
+      adherenceRatio: execution.value,
+      productive: outcome.productive,
+      structuralProblem: outcome.structuralProblem,
+      recoveryAcceptable: outcome.recoveryAcceptable,
     });
   }
   return demonstratedStructure(structureEvidence(blocks), { daysPerWeek });

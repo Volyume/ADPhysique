@@ -467,6 +467,69 @@ export function applyTimeCrunch(exercises, targetMinutes, estimateFn, options = 
  *     weeksOverdue counts full weeks since the state began (0 in the first
  *     post-recovery week), so copy can say how long the decision has waited.
  */
+/**
+ * Campaign 18 adversarial closure, job A1. THE lifecycle state of a STORED
+ * mesocycle row.
+ *
+ * WHY THIS EXISTS. `getBlockStatus` answers "where is this block in its
+ * calendar", which is the right question for a LIVE block and the wrong one
+ * for history: it cannot see that the user walked away in week two, because
+ * the calendar runs out regardless. Two consumers needed the historical
+ * question and each had grown its own answer:
+ *
+ *   - blockAdvisor's `completedPastBlock` (Campaign 16 epoch counting)
+ *   - planAutoGen's structure memory, which read `m.completedAt` and
+ *     `m.status === 'completed'` — NEITHER OF WHICH EXISTS. `mesocycles` has
+ *     no completed_at column, `status` is written once with its DEFAULT
+ *     'active' and nothing ever updates it. So every historical block read as
+ *     not-completed and the structure memory could never fire. That defect is
+ *     what this function replaces; the answer is derived from what the row
+ *     ACTUALLY records, never from a column nobody writes.
+ *
+ * The three states, and the evidence behind each:
+ *
+ *   ACTIVE     the block's own calendar has not run out yet.
+ *   COMPLETED  it ran to its planned end. A stored end_date at or after the
+ *              planned end is the strongest evidence (one day of tolerance
+ *              for local-date storage across a DST boundary); with no end
+ *              date at all the calendar decides, which is exactly
+ *              getBlockStatus's awaitingDecision.
+ *   ABANDONED  the user left it early. `endActiveMesocycles` truncates the
+ *              live block's end_date to TODAY when they switch away, so an
+ *              end date BEFORE the planned end is a recorded fact about the
+ *              athlete's behaviour, not an inference.
+ *
+ * A soft-deleted or undatable row is ABANDONED: it can never be counted as
+ * evidence, and there is no state in which saying less would be unsafe.
+ *
+ * Pure, like everything else here. `nowMs` is injected.
+ */
+export const BLOCK_COMPLETION = Object.freeze({
+  ACTIVE: 'active',
+  COMPLETED: 'completed',
+  ABANDONED: 'abandoned',
+});
+
+export function blockCompletionState(meso, nowMs = Date.now()) {
+  if (!meso || typeof meso !== 'object') return BLOCK_COMPLETION.ABANDONED;
+  if (meso.deletedAt != null || meso.deleted_at != null) return BLOCK_COMPLETION.ABANDONED;
+  const start = parseBlockStartMs(meso.startDate ?? meso.start_date ?? null);
+  const weeks = Number(meso.plannedWeeks ?? meso.planned_weeks
+    ?? meso.durationWeeks ?? meso.duration_weeks);
+  if (!Number.isFinite(start) || !(weeks > 0)) return BLOCK_COMPLETION.ABANDONED;
+
+  const DAY_MS = 24 * 60 * 60 * 1000;
+  const plannedEnd = start + weeks * 7 * DAY_MS - DAY_MS;
+  const endRaw = meso.endDate ?? meso.end_date ?? null;
+  const end = endRaw == null ? null : parseBlockStartMs(endRaw);
+  if (end != null && Number.isFinite(end)) {
+    return end >= plannedEnd ? BLOCK_COMPLETION.COMPLETED : BLOCK_COMPLETION.ABANDONED;
+  }
+  return getBlockStatus(start, weeks, nowMs).awaitingDecision
+    ? BLOCK_COMPLETION.COMPLETED
+    : BLOCK_COMPLETION.ACTIVE;
+}
+
 export function getBlockStatus(startDateMs, plannedWeeks, nowMs = Date.now()) {
   let start = parseBlockStartMs(startDateMs ?? nowMs);
   // Wave-3 review: mirror getCurrentMesoWeek's CALC-8 guard. An unparseable

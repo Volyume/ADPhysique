@@ -77,9 +77,14 @@ describe('THE RECORD: structured truth, not prose', () => {
 
   test('the observation window is the app\'s OWN calorie cooldown, not a new clock', () => {
     // weeklyCoach already refuses to adjust twice inside two weeks.
-    expect(OBSERVE[INTERVENTION_KIND.CALORIE_TARGET]).toEqual({ unit: 'weeks', min: 2, signal: 'weight.trend' });
+    expect(OBSERVE[INTERVENTION_KIND.CALORIE_TARGET])
+      .toEqual({ unit: 'weeks', min: 2, signals: ['weight.trend'], compare: 'direction' });
     // And the training-side kinds are judged on training evidence, not the scale.
-    expect(OBSERVE[INTERVENTION_KIND.VOLUME_START].signal).toBe('recovery.systemic');
+    // ADVERSARIAL CLOSURE B2: a volume change is judged on BOTH the training
+    // response and the recovery cost. Recovery alone could not tell "the extra
+    // work bought progress at a fair price" from "it bought nothing".
+    expect(OBSERVE[INTERVENTION_KIND.VOLUME_START].signals)
+      .toEqual(['training.progress', 'recovery.systemic']);
     expect(OBSERVE[INTERVENTION_KIND.EXERCISE_REPLACEMENT].unit).toBe('exposures');
   });
 });

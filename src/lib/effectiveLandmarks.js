@@ -126,6 +126,24 @@ export async function getManualLandmarks(userId) {
 }
 
 /**
+ * The muscles whose volume the ATHLETE sets by hand, as a plain list.
+ *
+ * C18 adversarial closure job B4: the weekly coach has to know this to judge
+ * its own volume changes honestly. A change to a dial the user is holding
+ * themselves cannot be read as a response to our decision, so the outcome is
+ * CONFOUNDED rather than scored. One authority - `isManualEdit` still decides
+ * what counts as a genuine edit, so an untouched editor default is not one.
+ *
+ * Fails to an empty list: a read failure must never make an outcome look
+ * confounded and quietly disable the learning loop.
+ */
+export async function getManualVolumeMuscles(userId) {
+  const table = await getManualLandmarks(userId);
+  if (!table || typeof table !== 'object') return [];
+  return Object.keys(table).filter((m) => isManualEdit(table[m], VOLUME_LANDMARKS[m]));
+}
+
+/**
  * The session-grain adapted table (Pro only), or null. Exported (Stage 6)
  * for the runner's adaptedMrv ceiling clamp — same lazy require, same
  * fail-open posture as before.
