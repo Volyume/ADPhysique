@@ -11,6 +11,7 @@ import { createBodyMetricsRepository } from './database/bodyMetrics';
 import { createPlanFoldersRepository } from './database/planFolders';
 import { MICRO_COLUMNS, microColumnsCreateFragment } from './food/micronutrients';
 import { getCurrentBlockWeekIndex, getBlockStatus, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK } from './mesocycle';
+import { resolveRecoveryState } from './recoveryState';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
@@ -4583,6 +4584,15 @@ export async function getCurrentMesocycleWeek(userId) {
     // this index somehow has no row), report nothing rather than a guess.
     if (!row) return null;
 
+    // C18 recovery-visibility amendment: `is_deload` alone cannot say WHY
+    // training is lighter - `generateMesocycleWeeks` sets it on the block's
+    // final week because that week IS the planned recovery week, and
+    // `setMesocycleWeekDeload` sets it on an accumulation week because
+    // recovery evidence justified easing off now. The block's own
+    // `deload_week` is the fact that tells them apart, and it was simply never
+    // returned beside the flag. Both now come out of this ONE resolver, so no
+    // surface has to re-derive the state and none of them can disagree.
+    const deloadWeek = meso.deloadWeek ?? null;
     return {
       id: row.id,
       weekRowId: row.id,
@@ -4591,6 +4601,14 @@ export async function getCurrentMesocycleWeek(userId) {
       weekIndex: row.week_index,
       awaitingDecision,
       isDeload: row.is_deload === 1,
+      deloadWeek,
+      recoveryState: resolveRecoveryState({
+        weekIndex: row.week_index,
+        plannedWeeks,
+        deloadWeek,
+        isDeload: row.is_deload === 1,
+        awaitingDecision,
+      }),
       rirTarget: row.rir_target,
       mesoName: meso.name,
       blockType: meso.blockType,

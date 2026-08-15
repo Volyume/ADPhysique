@@ -52,6 +52,9 @@ import {
   generateDeloadPrescription,
 } from '../lib/algorithms';
 import { buildRecordLine } from '../lib/workoutRecordLine';
+import {
+  nextWorkoutRecoveryLabel, trainRecoveryDetail, describePrescriptionDifferences,
+} from '../lib/recoveryState';
 import { rankSwaps } from '../lib/swapEngine';
 import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from '../lib/clusterSet';
 import {
@@ -412,6 +415,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // words Home uses. One line, no tutorial, no new control.
   const [weekRirTarget, setWeekRirTarget] = useState(null);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
+  // C18 recovery visibility: the resolved state and the prescription changes
+  // that are genuinely true of THIS session.
+  const [recoveryState, setRecoveryState] = useState(null);
+  const [recoveryDifferences, setRecoveryDifferences] = useState([]);
   // B2 (Wave-3 review): the session-wide dismissal of the readiness tweak
   // lives ON the active workout (store action dismissReadinessTweak) so it
   // survives screen remounts and the WK-1 crash restore, the a11y copy
@@ -1464,6 +1471,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         if (currentWeek) {
           setIsDeloadWeek(!!currentWeek.isDeload);
           setBlockFinished(!!currentWeek.awaitingDecision);
+          // C18 recovery visibility: the SAME resolved state Home renders, so
+          // Train is a detail surface rather than a second opinion. It used to
+          // say "Recovery week" whether the block had reached its recovery
+          // week or the coach had eased off mid-block, which told a week-three
+          // athlete the hard part of their block had finished.
+          setRecoveryState(currentWeek.recoveryState ?? null);
           // C5-P13-01: the block's own effort target, for the session header
           // line below. Read from the same row Home's readiness chip reads.
           setWeekRirTarget(currentWeek.rirTarget ?? null);
@@ -1492,6 +1505,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   action: 'deload',
                   isDeload: true,
                 })));
+                // C18: describe what THIS prescription actually changed,
+                // measured against the block's week-1 baseline, rather than
+                // asserting a generic reduction. Today's first-half recovery
+                // prescription keeps the load and halves the reps at RIR 4, so
+                // claiming lighter loads would be untrue on it.
+                setRecoveryDifferences(
+                  describePrescriptionDifferences(week1Sets, deloadTargets),
+                );
                 setTargetReason(currentWeek.awaitingDecision
                   ? 'Block finished: targets hold at recovery-week volume until you choose your next block.'
                   : 'Recovery week: very easy effort, full recovery focus.');
@@ -2954,9 +2975,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   <View key="deload" style={[styles.deloadBanner, live.deloadBanner]}>
                     <View style={styles.deloadBannerLeft}>
                       <Ionicons name="battery-charging-outline" size={18} color={t.colors.warning} />
-                      <View>
-                        <Text style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>{blockFinished ? 'Block finished' : 'Recovery week'}</Text>
-                        <Text style={[styles.deloadBannerSub, live.deloadBannerSub]}>{blockFinished ? 'Holding at recovery-week volume until you choose your next block' : 'Light loads - full recovery - no PRs'}</Text>
+                      <View style={{ flex: 1 }}>
+                        {/* C18: the title comes from the RESOLVED state, so a
+                            mid-block recovery adjustment is never announced as
+                            the block's recovery week, and the sub-line
+                            describes what this session genuinely changed. */}
+                        <Text style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>
+                          {blockFinished
+                            ? 'Block finished'
+                            : (nextWorkoutRecoveryLabel(recoveryState) === 'Recovery-adjusted'
+                              ? 'Recovery-adjusted session'
+                              : 'Recovery week')}
+                        </Text>
+                        <Text style={[styles.deloadBannerSub, live.deloadBannerSub]}>
+                          {blockFinished
+                            ? 'Holding at recovery-week volume until you choose your next block'
+                            : (trainRecoveryDetail(recoveryState, recoveryDifferences)
+                              ?? 'Lighter on purpose. Full recovery, no PRs.')}
+                        </Text>
                       </View>
                     </View>
                     <TouchableOpacity
