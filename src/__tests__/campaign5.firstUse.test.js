@@ -13,6 +13,7 @@
 import fs from 'fs';
 import path from 'path';
 import { BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK } from '../lib/mesocycle';
+import { reviewRecoveryLine, resolveRecoveryState } from '../lib/recoveryState';
 import { buildNextBlockOptions, checkinReadiness } from '../lib/blockAdvisor';
 import { buildBlockStartLines, buildSeedReceipt, BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import { buildReadinessSummary } from '../lib/readinessSummary';
@@ -681,7 +682,22 @@ describe('BLOCK: the first block explains itself and never advances on its own (
     expect(pill.slice(0, 600)).toContain('>Got it<');
     const coach = read('screens/CoachOutputScreen.js');
     expect(coach).toMatch(/const upwardInRecovery = signal > 0 && currentWeekIsDeload;/);
-    expect(coach).toContain('This is your recovery week, so nothing is added to it. Volume changes start again with your next block.');
+    // RE-ANCHORED under the C18 recovery-visibility amendment, SAME MEANING.
+    // FB-06's point is that inside the recovery week this note must name the
+    // week the user is actually in rather than falling through to "This is
+    // next week's starting point" beside a row reading "Add 2 sets". That is
+    // unchanged; what changed is where the state SENTENCE comes from. It used
+    // to be a local string here, which is how this card and Train ended up
+    // describing a mid-block recovery adjustment and the block's own recovery
+    // week in identical words. Both halves are still asserted: this card's own
+    // clause about adding nothing, and the shared sentence from the one
+    // authority every recovery surface now reads.
+    expect(coach).toMatch(/const recoveryReviewLine = reviewRecoveryLine\(currentRecoveryState\);/);
+    expect(coach).toContain('`Nothing is added this week. ${recoveryReviewLine');
+    expect(reviewRecoveryLine(resolveRecoveryState({
+      weekIndex: BLOCK_DELOAD_WEEK, plannedWeeks: BLOCK_PLANNED_WEEKS,
+      deloadWeek: BLOCK_DELOAD_WEEK, isDeload: true,
+    }))).toBe('You are in your recovery week. Training is lighter before you move on from this block, and you will choose what comes next when it is done.');
   });
 
   test('the peak-week warning is reachable in the week it is true', () => {
