@@ -582,7 +582,15 @@ export default function PlansScreen({ navigation }) {
         toast.show('This plan has no workouts yet', { variant: 'warning' });
         return;
       }
-      const idx = (plan.nextWorkoutIndex || 0) % routines.length;
+      // C18 BLOCK PROGRESSION: the same authority Home and Train read, so
+      // starting from Plans cannot open a different workout from the one Home
+      // says is next. The retired `nextWorkoutIndex` is not consulted.
+      // eslint-disable-next-line global-require
+      const { resolveNextSession } = require('../lib/programmePosition');
+      const next = await resolveNextSession(user.id).catch(() => null);
+      const idx = next
+        ? Math.max(0, routines.findIndex((r) => r.id === next.routineId))
+        : 0;
       const routine = routines[idx];
       const workout = await createWorkout(user.id, routine.id);
       const withExercises = await getRoutineExercisesWithDetails(routine.id);

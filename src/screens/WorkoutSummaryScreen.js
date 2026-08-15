@@ -30,7 +30,7 @@ import { useFeedback } from '../components/FeedbackSheet';
 import { shouldPrompt } from '../lib/feedback';
 import {
   getCompletedWorkoutSets, getAllExercises, getAllWorkouts, updateWorkout,
-  getActivePlan, getRoutinesForPlan, advancePlanNextWorkout,
+  getActivePlan, getRoutinesForPlan,
   createAdaptationEvent, getCurrentMesocycleWeek,
   saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
   getRoutineById, getWorkoutById, getOpenEdPatternFlag,
@@ -282,17 +282,34 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             const planRoutines = await getRoutinesForPlan(activePlan.id);
             const idx = planRoutines.findIndex(r => r.id === routineId);
             if (idx >= 0) {
-              await advancePlanNextWorkout(activePlan.id, planRoutines.length);
-              // C5-P16-02 (D96): what happens next. The first summary
-              // answered every question except that one -- the only
-              // forward-looking copy on a first session was the "Notes for
-              // next time" placeholder, and the "What's next" sentence
-              // lives inside the block-completion card, which cannot
-              // render on session one. The plan rotation has just been
-              // advanced here, so the next session's name is already in
-              // hand; no new query, no new card.
-              const next = planRoutines[(idx + 1) % planRoutines.length];
-              if (next?.name) setNextSessionName(next.name);
+              // C18 BLOCK PROGRESSION. The blind increment that used to live
+              // here is GONE. `advancePlanNextWorkout` moved
+              // `next_workout_index` on by one whatever routine had just been
+              // finished, so an athlete whose next required session was Legs,
+              // who trained Push & Arms instead, had the pointer moved PAST
+              // Legs - never performed, never marked anything, simply consumed
+              // by a counter.
+              //
+              // Completing a workout now resolves the instance that was
+              // ACTUALLY performed, because the completed workout row IS the
+              // completion evidence and carries its own (mesocycle_week_id,
+              // routine_id). Nothing needs to be advanced, and out-of-order
+              // training cannot consume anything.
+              // C5-P16-02 (D96): what happens next. Unchanged in intent, but
+              // it now asks the authoritative resolver rather than assuming
+              // the rotation moved on - so after an out-of-order session it
+              // names the workout that is genuinely still outstanding.
+              // eslint-disable-next-line global-require
+              const { resolveNextSession } = require('../lib/programmePosition');
+              // eslint-disable-next-line global-require
+              const { sessionDisplayName } = require('../lib/blockProgression');
+              const nextSession = await resolveNextSession(user.id).catch(() => null);
+              if (nextSession?.name) {
+                // eslint-disable-next-line global-require
+                const { resolveProgrammePosition } = require('../lib/programmePosition');
+                const pos = await resolveProgrammePosition(user.id).catch(() => null);
+                setNextSessionName(sessionDisplayName(nextSession, pos?.sessions ?? []));
+              }
             }
           }
         } catch (_e) {}

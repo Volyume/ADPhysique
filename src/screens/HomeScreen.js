@@ -21,6 +21,9 @@ import WhatsNewSheet from '../components/WhatsNewSheet';
 import { SkeletonCard } from '../components/Skeleton';
 import TodayStrip from '../components/TodayStrip';
 import RecoveryStateCard from '../components/RecoveryStateCard';
+import { appAlert } from '../components/AppAlert';
+import { resolveProgrammePosition } from '../lib/programmePosition';
+import { sessionDisplayName, skipConfirmation } from '../lib/blockProgression';
 import { nextWorkoutRecoveryLabel, isLighterTrainingState } from '../lib/recoveryState';
 import { useToast } from '../components/Toast';
 import CoachBriefCard, { buildBriefIconColor } from '../components/CoachBriefCard';
@@ -37,6 +40,7 @@ import { isCompletedCoachDecision } from '../lib/coachDecision';
 import { isEnrolmentSeedWeight } from '../lib/checkinDerive';
 import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
+  recordSessionResolution,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
   getWorkoutSetsForWorkout, getExerciseById,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
@@ -186,6 +190,7 @@ export default function HomeScreen({ navigation, route }) {
     readinessChipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     readinessChipTextActive: { color: t.colors.primary },
     intentSkipText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    skipSessionText: { ...t.type.caption, color: t.colors.textMuted },
     intentOptOutText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     intentOptOutSub: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     coachBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
@@ -350,6 +355,8 @@ export default function HomeScreen({ navigation, route }) {
   // the recovery week of the next block, opens expanded again rather than
   // hiding behind a tap from a fortnight ago.
   const [recoveryRead, setRecoveryRead] = useState(false);
+  // C18: the authoritative programme position, so Home never re-derives it.
+  const [programmePosition, setProgrammePosition] = useState(null);
 
   // B3: lift plateau banner. { exerciseId, line } | null. Defaults dismissed
   // so it never flashes before the stored dismissal has been read (the
@@ -1369,13 +1376,69 @@ export default function HomeScreen({ navigation, route }) {
       setPlanAllWorkouts(routines);
       setSelectedWorkoutOverride(null);
       if (routines.length === 0) { setNextWorkout(null); return; }
-      const idx = (plan.nextWorkoutIndex || 0) % routines.length;
+      // C18 BLOCK PROGRESSION. This used to read
+      // `(plan.nextWorkoutIndex || 0) % routines.length` - a single integer
+      // advanced blindly on any completion, so training out of order moved it
+      // past an unperformed required session and Home then offered the wrong
+      // workout every session until the athlete corrected it by hand.
+      //
+      // The next workout is now the first OUTSTANDING required session in
+      // programme order, from the same resolver Plans and Train read, so the
+      // three cannot disagree. A read failure falls back to the plan's first
+      // routine rather than the retired pointer.
+      const position = await resolveProgrammePosition(user.id).catch(() => null);
+      setProgrammePosition(position);
+      const next = position?.nextSession ?? null;
+      const idx = next
+        ? Math.max(0, routines.findIndex((r) => r.id === next.routineId))
+        : 0;
       setNextWorkout({ routine: routines[idx], total: routines.length, idx });
     } catch (_e) {
       setNextWorkout(null);
       setPlanAllWorkouts([]);
       setSelectedWorkoutOverride(null);
     }
+  }
+
+  // ── C18 ONE-TIME SKIP ────────────────────────────────────────────────────
+  //
+  // Instance-scoped intent, and nothing more. It resolves THIS occurrence of
+  // THIS required session so the programme stops bringing it back. It does not
+  // remove the workout, change the split, exclude any exercise, reduce future
+  // frequency, infer dislike or injury, or count as training. No reason is
+  // asked for, and none is inferred: an unstated reason is UNKNOWN.
+  async function handleSkipThisWorkout() {
+    const position = programmePosition;
+    const session = position?.nextSession;
+    if (!user?.id || !session || !position?.activeWeekId) return;
+    // Only warn about the recovery week when resolving THIS session genuinely
+    // finishes the pre-recovery work, so the sentence is never a guess.
+    const recoveryNext = position.sessions
+      .filter((x) => x.routineId !== session.routineId)
+      .every((x) => x.state !== 'outstanding');
+    const copy = skipConfirmation(session, position.sessions, { recoveryNext });
+    if (!copy) return;
+    appAlert(copy.title, copy.body, [
+      { text: copy.cancel, style: 'cancel' },
+      {
+        text: copy.confirm,
+        onPress: async () => {
+          try {
+            await recordSessionResolution(user.id, {
+              mesocycleWeekId: position.activeWeekId,
+              routineId: session.routineId,
+              mesocycleId: position.blockId,
+              resolution: 'skipped_by_user',
+            });
+            await loadNextWorkout();
+            await loadBlockProgress();
+          } catch (e) {
+            logError('HomeScreen.handleSkipThisWorkout', e, { userId: user?.id });
+            toast.show("Couldn't skip that workout, try again", { variant: 'error' });
+          }
+        },
+      },
+    ]);
   }
 
   async function handleRefresh() {
@@ -2085,7 +2148,17 @@ export default function HomeScreen({ navigation, route }) {
               {recoveryLabel ? `${recoveryLabel} · ${planProgress}` : planProgress}
             </SectionLabel>
             <Text style={[styles.workoutName, live.workoutName]} numberOfLines={2}>
-              {displayWorkout?.routine?.name}
+              {/* C18: where a display name repeats inside one programme week
+                  (the bikini Glute Focus split lists "Glutes" twice) the
+                  session is qualified by its programme position, so the
+                  athlete can tell which occurrence this is. A unique name is
+                  left alone. */}
+              {sessionDisplayName(
+                programmePosition?.nextSession && programmePosition.nextSession.routineId === displayWorkout?.routine?.id
+                  ? programmePosition.nextSession
+                  : { name: displayWorkout?.routine?.name ?? '', order: 0 },
+                programmePosition?.sessions ?? [],
+              ) || displayWorkout?.routine?.name}
             </Text>
             {exerciseCounts[displayWorkout?.routine?.id] ? (
               <Text style={[styles.workoutMeta, live.workoutMeta]}>
@@ -2151,6 +2224,24 @@ export default function HomeScreen({ navigation, route }) {
                 textStyle={[styles.workoutOptionsText, live.workoutOptionsText]}
               />
             </View>
+            {/* ── C18 ONE-TIME SKIP. A quiet SECONDARY action, deliberately not
+                a primary CTA: skipping is a legitimate choice, not the
+                expected one. Shown only when there is genuinely an
+                outstanding required session to skip, so it never appears on a
+                resolved week or when the user is browsing another workout. ── */}
+            {programmePosition?.nextSession
+              && programmePosition.nextSession.routineId === displayWorkout?.routine?.id ? (
+                <TouchableOpacity
+                  onPress={() => { haptics.selection(); handleSkipThisWorkout(); }}
+                  style={styles.skipSessionRow}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Skip ${sessionDisplayName(programmePosition.nextSession, programmePosition.sessions)} this time`}
+                >
+                  <Text style={[styles.skipSessionText, live.skipSessionText]}>
+                    Skip this workout this time
+                  </Text>
+                </TouchableOpacity>
+              ) : null}
             {/* S2: the compact consistency echo + one-time forgiveness explainer,
                 same resolver as the Progress strip so the number never disagrees;
                 absent under ED flag / SCOFF / calm mode. */}
@@ -2537,6 +2628,10 @@ const READINESS_ICON = { go: 'trending-up-outline', caution: 'alert-circle-outli
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  // C18 one-time skip: quiet by design. A secondary text action, never a
+  // button competing with Start workout.
+  skipSessionRow: { alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  skipSessionText: { ...type.caption, color: colors.textMuted },
   safe: { flex: 1, backgroundColor: colors.background },
   scroll: { flex: 1 },
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxl },
