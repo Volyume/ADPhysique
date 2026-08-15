@@ -24,20 +24,17 @@ export function trendStateFor(entryCount) {
   return 4;
 }
 
-// C6 RD6-8 (D97-25): "From N weeks of data" counted only weigh-in
-// weeks while the estimate's intake half was ASSUMED (adherenceFactor
-// defaults to 1.0 with no diary), so a user who never logged food was
-// told the number rested on "data". The label now names both inputs:
-// what the weigh-ins gave it, and whether logged food informed it or
-// intake was assumed at target. The coach's own evidence bar (5+
-// logged days, weeklyCoach) decides which clause is true. Engine maths
-// untouched - this is label truth only.
-function confidenceLabel(confidence, weeks, intakeDaysLogged = 0) {
+// Campaign 19 only emits a maintenance number after actual food evidence has
+// built the durable memo. Sparse current logging can hold that history, but it
+// must never be relabelled as an estimate that assumed the prescription.
+function confidenceLabel(confidence, weeks, intakeDaysLogged = 0, source = null) {
   const n = Number.isFinite(weeks) ? weeks : 0;
   const plural = n === 1 ? 'week' : 'weeks';
   const intakeBit = Number.isFinite(intakeDaysLogged) && intakeDaysLogged >= 5
     ? ' and your logged food'
-    : ', assuming you ate to target';
+    : source
+      ? ' and earlier logged food history'
+      : ', assuming you ate to target';
   if (confidence === 'high') return `From ${n} ${plural} of weigh-ins${intakeBit}`;
   if (confidence === 'medium') return `Firming up, from ${n} ${plural} of weigh-ins${intakeBit}`;
   return `Early estimate, from ${n} ${plural} of weigh-ins${intakeBit}`;
@@ -142,7 +139,7 @@ export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlag
       dot: 'neutral',
       insight: 'Still building confidence. Keep logging and this sharpens.',
       maintenance: hasMaintenance
-        ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks, intakeDaysLogged), weeks }
+        ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks, intakeDaysLogged, adaptiveBurn?.source), weeks }
         : { building: true },
       edFlagOpen: false,
     };
@@ -152,11 +149,14 @@ export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlag
   // actual-vs-expected rate; the dot caps at 'watch', never 'act' (Class B).
   const actual = adaptiveBurn?.actualKgPerWeek;
   const expected = adaptiveBurn?.expectedKgPerWeek;
+  const hasComparison = Number.isFinite(actual) && Number.isFinite(expected);
   const diverging = isDiverging(actual, expected);
   const above = Number.isFinite(actual) && Number.isFinite(expected) && actual > expected;
 
   let insight;
-  if (!diverging) {
+  if (!hasComparison) {
+    insight = 'Your smoothed weight trend is updated. Maintenance comes from your validated food and weight history.';
+  } else if (!diverging) {
     insight = 'Trending inside your target range. Calories hold.';
   } else if (above) {
     insight = 'Drifting a little above your target range. Nothing to change yet.';
@@ -174,7 +174,7 @@ export function deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlag
     dot: diverging ? 'watch' : 'onTrack',
     insight,
     maintenance: hasMaintenance
-      ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks, intakeDaysLogged), weeks }
+      ? { kcal: adaptiveBurn.adjustedTDEE, label: confidenceLabel(confidence, weeks, intakeDaysLogged, adaptiveBurn?.source), weeks }
       : { building: true },
     stepTrendLine: stepTrendLineFor(stepTrend),
     edFlagOpen: false,

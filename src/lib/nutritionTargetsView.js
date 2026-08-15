@@ -28,7 +28,9 @@ export const KCAL_PER_KG_TISSUE = 7700;
 export function hydrateLoadedTargets(raw, weightKg) {
   if (!raw) return raw;
   const targetKcal = Number(raw.targetKcal) || 0;
-  const maintenanceKcal = raw.maintenanceKcal ?? raw.tdee ?? (targetKcal || null);
+  // Never fabricate maintenance from the prescription. A manual target is
+  // senior user intent, not observational evidence about maintenance.
+  const maintenanceKcal = raw.maintenanceKcal ?? raw.tdee ?? null;
   const bmrKcal = raw.bmrKcal ?? raw.bmr ?? null;
   const bmrFormula = raw.bmrFormula
     ?? (raw.bmrMethod === 'katch' || raw.bmrMethod === 'lbm'

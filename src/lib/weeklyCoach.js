@@ -665,8 +665,11 @@ export function runWeeklyCoach(inputs) {
     // currentProteinG/CarbsG/FatG and lastRefeedAt inputs fed the carb cycle
     // and the refeed cadence; both were retired under the one-daily-truth law
     // - Campaign 17A - so the coach no longer reads them.)
-    // Maintenance (tdee), read from the caller.
-    currentMaintenanceKcal = null,
+    // Campaign 19 canonical authority. Legacy callers may still provide only
+    // currentMaintenanceKcal; production supplies maintenanceAuthority and the
+    // learned residual is never reconstructed from a weekly adjustment.
+    currentMaintenanceKcal: _currentMaintenanceKcal = null,
+    maintenanceAuthority = null,
     currentStepsTarget = 8000,
     // Whether a daily step target is in play. DORMANT IN PRODUCTION
     // (comment corrected 2026-08-10, Campaign 4 review; behaviour
@@ -755,6 +758,10 @@ export function runWeeklyCoach(inputs) {
     dailyStepsSeries = null,
     stepsTodayKey = null,
   } = inputs;
+
+  const currentMaintenanceKcal = maintenanceAuthority
+    ? maintenanceAuthority.effectiveMaintenanceKcal
+    : _currentMaintenanceKcal;
 
   // Defensive sanitisation. These come from DB counts and date math; coerce any
   // non-finite value to a safe integer so it can never leak into user-facing
@@ -872,6 +879,11 @@ export function runWeeklyCoach(inputs) {
       // D16: no adjustments exist on this path (all null above), so there is
       // nothing an autonomous mode could auto-apply either way.
       autoApplyHoldActive: false,
+      effectiveMaintenance: {
+        authority: maintenanceAuthority,
+        adaptiveObservation: null,
+        learningStatus: 'held_for_insufficient_coach_data',
+      },
     };
   }
 
@@ -1385,6 +1397,7 @@ export function runWeeklyCoach(inputs) {
   // +/-5% cap. Before ~4 weeks, or without a maintenance estimate, the fixed
   // steps stand. The rapid-loss safety boost is never overridden.
   let adaptiveCal = { adjustmentKcal: 0, confidence: 'insufficient_data' };
+  let maintenanceObservation = adaptiveCal;
   // COMP-026 (B): computed on every eligible run (for telemetry + the COMP-004
   // line); only feeds the gain back in when it is active. Default-inert.
   let stepModifier = { gain: 0.5, active: false, direction: 0, reason: 'not_evaluated' };
@@ -1431,6 +1444,10 @@ export function runWeeklyCoach(inputs) {
       rapidLossOverride,
     };
     adaptiveCal = computeAdaptiveTDEEAdjustment(adaptiveArgs);
+    // Freeze the observation before step-trend intervention sizing. Steps can
+    // alter how quickly a prescription moves, never what logged intake and
+    // weight history say maintenance is.
+    maintenanceObservation = adaptiveCal;
 
     // COMP-026 (B): a sustained step-level shift that AGREES with the direction
     // the weight trend already chose lets the resize update a little faster
@@ -2447,6 +2464,14 @@ export function runWeeklyCoach(inputs) {
     // lockout can null the change after the resize, in which case it is false).
     stepModifier,
     stepTrendApplied: stepTrendApplied && calorieAdjustment != null,
+    // Observation is emitted independently of whether a senior safety rule or
+    // manual target blocks intervention. The caller may persist it only after
+    // the Campaign 19 actual-intake/fresh-weight judgeability gate.
+    effectiveMaintenance: {
+      authority: maintenanceAuthority,
+      adaptiveObservation: maintenanceObservation,
+      learningStatus: maintenanceObservation.confidence === 'high' ? 'candidate' : 'held',
+    },
   };
 }
 

@@ -32,6 +32,10 @@ import {
   pushNutritionTargets,
   pullNutritionTargets,
 } from './tables/nutritionTargets';
+import {
+  pushEffectiveMaintenance,
+  pullEffectiveMaintenance,
+} from './tables/effectiveMaintenance';
 import { pullEdPatternFlags } from './tables/edPatternFlags';
 import { pullTierHistory } from './tables/tierHistory';
 import {
@@ -85,6 +89,7 @@ export const MIGRATED_TABLES = Object.freeze([
   'body_composition_log',
   'weight_log',
   'nutrition_targets',
+  'effective_maintenance_memos',
   'profiles',
   'ed_pattern_flags',
   'tier_history',
@@ -106,6 +111,7 @@ const PUSH_HANDLERS = {
   body_composition_log: pushBodyComposition,
   weight_log: pushWeightLog,
   nutrition_targets: pushNutritionTargets,
+  effective_maintenance_memos: pushEffectiveMaintenance,
   profiles: pushProfiles,
   recipe_ingredients: pushRecipeIngredients,
   daily_steps: pushDailySteps,
@@ -132,6 +138,7 @@ const PULL_HANDLERS = {
   body_composition_log: pullBodyComposition,
   weight_log: pullWeightLog,
   nutrition_targets: pullNutritionTargets,
+  effective_maintenance_memos: pullEffectiveMaintenance,
   profiles: pullProfiles,
   ed_pattern_flags: pullEdPatternFlags,
   tier_history: pullTierHistory,

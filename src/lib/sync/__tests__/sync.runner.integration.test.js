@@ -40,6 +40,8 @@ jest.mock('../../database', () => ({
   getBodyMetricUpdatedAt: jest.fn().mockResolvedValue(null),
   getNutritionTargets: jest.fn().mockResolvedValue(null),
   insertNutritionTargetsFromCloud: jest.fn().mockResolvedValue(undefined),
+  getEffectiveMaintenanceMemo: jest.fn().mockResolvedValue(null),
+  insertEffectiveMaintenanceMemoFromCloud: jest.fn().mockResolvedValue(undefined),
   upsertEdPatternFlagFromCloud: jest.fn().mockResolvedValue(undefined),
   upsertTierHistoryFromCloud: jest.fn().mockResolvedValue(undefined),
   getAllRecipeIngredientsForUser: jest.fn().mockResolvedValue([]),

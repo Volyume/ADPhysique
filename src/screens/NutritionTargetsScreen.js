@@ -21,6 +21,7 @@ import ConsentCheckboxRow from '../components/ConsentCheckboxRow';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { calculateNutritionTargets, PROTEIN_APPROACHES } from '../lib/nutritionEngine';
+import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceService';
 import { saveNutritionTargets, getNutritionTargets, logBodyMetric, getUserBodyProfile, getLatestBodyWeight, getLatestBodyComposition } from '../lib/database';
 import { daysToActivityLevel } from '../lib/coachingGoals';
 // Campaign 17A job 5: a target change has to reach the user's actual FOOD, and
@@ -257,13 +258,9 @@ export default function NutritionTargetsScreen({ navigation }) {
   // huge screen. Selecting just the two fields we read means we only
   // re-render when those change.
   const { user, userProfile, energyUnit } = useAppStore(useShallow(s => ({ user: s.user, userProfile: s.userProfile, energyUnit: s.accessibility?.energyUnit ?? 'kcal' })));
-  // C6 closeout B4 (founder-approved): whether ANY calorie change has
-  // ever been applied from the user's own evidence. Selects between the
-  // two provenance sentences under the calorie hero - the architecture
-  // fact this must respect (RELATIONSHIP-MOMENTS B4) is that the APPLIED
-  // TARGET learns while the stored maintenance estimate does not, so the
-  // calibrated wording speaks about the target only. Best-effort: a read
-  // failure keeps the honest day-0 sentence.
+  // Whether the athlete has ever accepted a calorie intervention. This is
+  // still target provenance; Campaign 19 maintenance provenance is loaded
+  // separately from the canonical memo below.
   const [calorieEverApplied, setCalorieEverApplied] = useState(false);
   useEffect(() => {
     let cancelled = false;
@@ -374,9 +371,29 @@ export default function NutritionTargetsScreen({ navigation }) {
         if (user?.id) {
           const fromDb = await getNutritionTargets(user.id).catch(() => null);
           if (fromDb?.targetKcal) {
-            const lw = await getLatestBodyWeight(user.id).catch(() => null);
+            const [lw, profile, composition] = await Promise.all([
+              getLatestBodyWeight(user.id).catch(() => null),
+              getUserBodyProfile(user.id).catch(() => null),
+              getLatestBodyComposition(user.id).catch(() => null),
+            ]);
             const weightKg = lw?.weightKg ?? userProfile?.weightKg ?? null;
             const hydrated = hydrateLoadedTargets(fromDb, weightKg);
+            const authority = await resolveEffectiveMaintenanceForUser(user.id, {
+              sex: profile?.sex ?? userProfile?.sex ?? null,
+              dateOfBirth: profile?.dateOfBirth ?? userProfile?.dateOfBirth ?? null,
+              ageYears: userProfile?.ageYears ?? userProfile?.age ?? null,
+              heightCm: profile?.heightCm ?? userProfile?.heightCm ?? null,
+              weightKg,
+              bodyFatPercent: composition?.bodyFatPercent ?? null,
+              bodyFatSource: composition?.bodyFatSource ?? null,
+              activityLevel: fromDb.activityLevel ?? userProfile?.activityLevel ?? null,
+              goalPhase: fromDb.goal ?? userProfile?.goalPhase ?? null,
+            });
+            if (authority.resolved.effectiveMaintenanceKcal != null) {
+              hydrated.maintenanceKcal = authority.resolved.effectiveMaintenanceKcal;
+              hydrated.tdee = authority.resolved.effectiveMaintenanceKcal;
+              hydrated.maintenanceAuthority = authority.resolved;
+            }
             if (rich && Number(rich.targetKcal) === Number(hydrated.targetKcal)) {
               if (hydrated.goal == null && rich.goal != null) hydrated.goal = rich.goal;
               if (hydrated.proteinApproach == null && rich.proteinApproach != null) hydrated.proteinApproach = rich.proteinApproach;
@@ -508,7 +525,7 @@ export default function NutritionTargetsScreen({ navigation }) {
 
     setCalculating(true);
     try {
-      const targets = calculateNutritionTargets({
+      const engineInputs = {
         sex,
         ageYears:           ageNum,
         heightCm:           heightNum,
@@ -525,7 +542,18 @@ export default function NutritionTargetsScreen({ navigation }) {
         customProteinGPerKg: proteinApproach === 'custom' && customProteinGPerKg.trim()
           ? parseFloat(customProteinGPerKg)
           : null,
+      };
+      const authority = user?.id
+        ? await resolveEffectiveMaintenanceForUser(user.id, engineInputs)
+        : null;
+      const calculatedTargets = calculateNutritionTargets({
+        ...engineInputs,
+        effectiveMaintenanceResidualKcal: authority?.resolved?.appliedResidualKcal ?? 0,
       });
+      const targets = {
+        ...calculatedTargets,
+        maintenanceAuthority: authority?.resolved ?? null,
+      };
 
       setResults(targets);
       // Write to both stores: SQLite (primary) + AsyncStorage (read by other screens).
@@ -666,7 +694,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               text={
                 'How calories are calculated:\n' +
                 '• Calorie baseline: a standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a body-fat estimate or measured figure, we can account for your likely lean mass with lower or higher confidence depending on the source.\n' +
-                '• Maintenance: your baseline × an activity multiplier based on how much you move each day.\n' +
+                '• Maintenance: the formula baseline adjusted by validated food and weight history when enough real logging exists. Without that evidence, the formula remains the honest starting point.\n' +
                 '• Target: your maintenance adjusted for your goal (e.g. around +10% for slow muscle building, -13% for steady fat loss). Surplus amounts are scaled to your training experience.\n\n' +
                 'How your targets are calculated:\n' +
                 '• Protein: varies by your chosen approach (1.2 to 3.3 g/kg). Rates rise in deeper deficits to protect muscle. Select your approach in the Protein Target section.\n' +
@@ -1322,8 +1350,10 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const lbmKg = results.proteinBasis === 'lbm' && results.proteinGPerKgLbm > 0
                   ? Math.round(results.proteinG / results.proteinGPerKgLbm * 10) / 10
                   : null;
-                const maintenanceKcal = results.maintenanceKcal ?? results.targetKcal ?? 0;
-                const surplusDelta = Math.round((results.targetKcal ?? 0) - maintenanceKcal);
+                const maintenanceKcal = Number(results.maintenanceKcal) > 0
+                  ? Number(results.maintenanceKcal) : null;
+                const surplusDelta = maintenanceKcal == null
+                  ? null : Math.round((results.targetKcal ?? 0) - maintenanceKcal);
                 const absPct = maintenanceKcal > 0 ? Math.round(Math.abs(surplusDelta / maintenanceKcal) * 100) : 0;
                 const rateAbs = Math.abs(results.targetRateKgPerWeek);
                 const rateDir = results.targetRateKgPerWeek >= 0 ? 'gain' : 'lose';
@@ -1343,7 +1373,9 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const isRecomp   = results.goal === 'recomp';
                 const isMaintain = results.goal === 'maintain';
 
-                const calorieWhy = isGain
+                const calorieWhy = maintenanceKcal == null
+                  ? 'Your saved target is available, but maintenance cannot be verified from the current profile and evidence. Recalculate after confirming your baseline details; we will not invent a maintenance number from the target.'
+                  : isGain
                   ? `Your maintenance is ${formatEnergy(maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${formatEnergy(surplusDelta, energyUnit)} ${energyUnitLabel(energyUnit)}) puts you on track to gain roughly ${rateAbs.toFixed(2)} kg/week. ${rateAbs <= 0.3 ? 'That rate is slow and lean. Most of what you gain will be muscle, with very little fat alongside it.' : rateAbs <= 0.5 ? 'That rate is steady. Some fat alongside the muscle is inevitable, but the ratio stays favourable.' : 'That rate is on the faster side. Muscle gain is quicker but more fat comes along with it.'} Consistency over weeks matters far more than perfection each day.`
                   : isCut
                   ? `Your maintenance is ${formatEnergy(maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. A ${absPct}% deficit (${formatEnergy(Math.abs(surplusDelta), energyUnit)} ${energyUnitLabel(energyUnit)} below maintenance) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while holding onto more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable risk to muscle' : 'aggressive. Protein has been set higher to protect your muscle'}. Consistency over weeks matters far more than perfection each day.`
@@ -1569,7 +1601,21 @@ export default function NutritionTargetsScreen({ navigation }) {
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={[styles.calcKey, live.calcKey]}>Maintenance calories</Text>
-                    <Text style={[styles.calcValue, live.calcValue]}>{formatEnergy(results.maintenanceKcal ?? results.targetKcal ?? 0, energyUnit)} {energyUnitLabel(energyUnit)}</Text>
+                    <Text style={[styles.calcValue, live.calcValue]}>
+                      {Number(results.maintenanceKcal) > 0
+                        ? `${formatEnergy(results.maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}`
+                        : 'Unavailable'}
+                    </Text>
+                  </View>
+                  <View style={styles.calcRow}>
+                    <Text style={[styles.calcKey, live.calcKey]}>Maintenance source</Text>
+                    <Text style={[styles.calcValue, live.calcValue]}>
+                      {results.maintenanceAuthority?.source === 'athlete_history'
+                        ? 'Your logged intake and weight trend'
+                        : results.maintenanceAuthority?.source === 'held_athlete_history'
+                          ? 'Earlier logged history, revalidating'
+                          : 'Formula estimate, building your history'}
+                    </Text>
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={[styles.calcKey, live.calcKey]}>Phase adjustment</Text>

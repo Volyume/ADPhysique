@@ -91,6 +91,29 @@ WITH expected (cloud_table, column_name, source) AS (
     ('nutrition_targets', 'gdpr_consented',  'sync/tables/nutritionTargets.js push+pull'),
     ('nutrition_targets', 'updated_at',      'sync/tables/nutritionTargets.js push+pull'),
 
+    -- ─── effective_maintenance_memos (Campaign 19) ────────────
+    ('effective_maintenance_memos', 'user_id',                                  'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'cumulative_residual_kcal',                 'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'formula_prior_kcal_at_derivation',         'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'effective_maintenance_kcal_at_derivation', 'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'source',                                   'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'status',                                   'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'reason',                                   'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'algorithm_version',                        'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'as_of',                                    'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'evidence_signature',                       'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'food_days_logged',                         'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'weight_points',                            'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'bodyweight_kg',                            'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'goal_phase',                               'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'activity_level',                           'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'formula_method',                           'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'formula_context_signature',                'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'large_divergence',                         'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'version_key',                              'sync/tables/effectiveMaintenance.js push+pull'),
+    ('effective_maintenance_memos', 'created_at',                               'migrate_141 table contract'),
+    ('effective_maintenance_memos', 'updated_at',                               'sync/tables/effectiveMaintenance.js push+pull'),
+
     -- ─── users_profile (registry: profiles) ────────────────────
     ('users_profile', 'id',                 'sync/tables/profiles.js push+pull'),
     ('users_profile', 'first_name',         'sync/tables/profiles.js push+pull'),
@@ -230,7 +253,7 @@ WHERE table_schema = 'public'
   AND table_type   = 'BASE TABLE'
   AND table_name NOT IN (
     'body_metrics', 'weekly_checkins_v2', 'notification_preferences',
-    'nutrition_targets', 'users_profile', 'recipe_ingredients',
+    'nutrition_targets', 'effective_maintenance_memos', 'users_profile', 'recipe_ingredients',
     'ed_pattern_flags', 'tier_history', 'food_entries', 'custom_foods',
     'saved_meals', 'recipes', 'food_favourites', 'daily_water',
     'daily_intake_rollups',

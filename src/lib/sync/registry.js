@@ -174,6 +174,16 @@ export const SYNC_REGISTRY = [
     direction: 'bidirectional',
   },
   {
+    // Campaign 19: a deterministic one-row memo of validated athlete-history
+    // residual, never a prescription or manual target.
+    table: 'effective_maintenance_memos',
+    pk: 'user_id',
+    conflictStrategy: 'last_write_wins',
+    serverAuthoritative: false,
+    softDelete: false,
+    direction: 'bidirectional',
+  },
+  {
     table: 'profiles',
     pk: 'id',
     conflictStrategy: 'merge',

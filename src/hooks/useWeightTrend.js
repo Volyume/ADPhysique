@@ -14,9 +14,13 @@
  */
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { getMorningWeights, getNutritionTargets, getOpenEdPatternFlag, getLatestCoachOutput } from '../lib/database';
+import {
+  getMorningWeights, getNutritionTargets, getOpenEdPatternFlag, getLatestCoachOutput,
+  getUserBodyProfile, getLatestBodyComposition,
+} from '../lib/database';
 import { getRecentIntakeSummary } from '../lib/food/db';
-import { computeEWMA, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
+import { computeEWMA, computeWeeklyWeightChange } from '../lib/nutritionEngine';
+import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceService';
 import { deriveWeightTrend } from '../lib/weightTrend';
 
 const EMPTY = { render: false, state: 0, ewmaData: [], rawData: [], loading: true };
@@ -30,7 +34,7 @@ export default function useWeightTrend(userId) {
       return;
     }
     try {
-      const [weights, targets, recentIntake, edFlag, lastCoach] = await Promise.all([
+      const [weights, targets, recentIntake, edFlag, lastCoach, profile, composition] = await Promise.all([
         getMorningWeights(userId, 90),
         getNutritionTargets(userId).catch(() => null),
         getRecentIntakeSummary(userId).catch(() => null),
@@ -39,6 +43,8 @@ export default function useWeightTrend(userId) {
         // maintenance / step-trend suppression holds on a read error.
         getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
         getLatestCoachOutput(userId).catch(() => null),
+        getUserBodyProfile(userId).catch(() => null),
+        getLatestBodyComposition(userId).catch(() => null),
       ]);
 
       // C6 R-2 (D97-22): getMorningWeights(90) is ninety ROWS of any age,
@@ -65,17 +71,27 @@ export default function useWeightTrend(userId) {
       const ewmaData = computeEWMA(windowed);
       const weeklyChange = computeWeeklyWeightChange(ewmaData);
 
-      const prescribedKcal = targets?.targetKcal ?? null;
-      const currentTDEEEstimate = targets?.tdee ?? targets?.maintenanceKcal ?? null;
-      const adherenceFactor = recentIntake?.avgKcal && prescribedKcal
-        ? recentIntake.avgKcal / prescribedKcal
-        : 1.0;
-
-      // The maintenance estimate needs a TDEE baseline to adjust; without one
-      // the engine returns insufficient_data and the card shows the building
-      // state, which is the correct cold-start behaviour.
-      const adaptiveBurn = currentTDEEEstimate
-        ? computeAdaptiveTDEEAdjustment({ ewmaData, prescribedKcal, currentTDEEEstimate, adherenceFactor })
+      const latestWeight = windowed.slice().sort((a, b) => Number(a.loggedAt) - Number(b.loggedAt)).pop();
+      const authority = await resolveEffectiveMaintenanceForUser(userId, {
+        sex: profile?.sex ?? null,
+        dateOfBirth: profile?.dateOfBirth ?? null,
+        heightCm: profile?.heightCm ?? null,
+        weightKg: latestWeight?.weightKg ?? null,
+        bodyFatPercent: composition?.bodyFatPercent ?? null,
+        bodyFatSource: composition?.bodyFatSource ?? null,
+        activityLevel: targets?.activityLevel ?? null,
+        goalPhase: targets?.goal ?? targets?.phase ?? null,
+      }, { weights: windowed, intake: recentIntake });
+      const resolved = authority.resolved;
+      // The card consumes the canonical memo. It never recomputes a transient
+      // adaptive estimate or substitutes the calorie prescription.
+      const adaptiveBurn = resolved?.source !== 'formula_prior'
+        ? {
+          adjustedTDEE: resolved.effectiveMaintenanceKcal,
+          confidence: resolved.status === 'current' ? 'high' : 'low',
+          source: resolved.source,
+          status: resolved.status,
+        }
         : null;
 
       // COMP-026 (B): surface the step-trend line only in a week the latest

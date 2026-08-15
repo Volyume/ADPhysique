@@ -80,7 +80,11 @@ import { track as trackEngineEvent } from '../lib/engineTelemetry';
 // Its only audience is the free tier, which withProGuard keeps out of this
 // screen, so the render was dead. It now lives in HomeScreen's banner stack.
 import { SkeletonCard } from '../components/Skeleton';
-import { computeEWMA, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
+import {
+  learnEffectiveMaintenanceForUser,
+  resolveEffectiveMaintenanceForUser,
+} from '../lib/effectiveMaintenanceService';
+import { effectiveMaintenanceReceipt, resolveEffectiveMaintenance } from '../lib/effectiveMaintenance';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, deloadShare, computeDietBreakTargets, markApplied, isApplied, markDeclined, isDeclined } from '../lib/coachApply';
 // A1 (NU-3/4/6): pure display classifiers + row strings for honest Apply rows.
 // They only CALL coachApply's real policy functions; nothing is recomputed.
@@ -103,7 +107,7 @@ import {
   scheduleMorningWeightNotification,
   scheduleEveningWeightReminder,
 } from '../lib/notifications';
-import { logError, logWarn } from '../lib/errorLog';
+import { logError } from '../lib/errorLog';
 import CollapsibleSection from '../components/CollapsibleSection';
 import Card from '../components/Card';
 import BackHeader from '../components/BackHeader';
@@ -959,7 +963,6 @@ export default function CoachOutputScreen({ navigation, route }) {
   const [coachHistory, setCoachHistory] = useState([]);
   // Campaign 18: accepted interventions awaiting or carrying an outcome.
   const [priorInterventions, setPriorInterventions] = useState([]);
-  const [_adaptiveTDEE, setAdaptiveTDEE] = useState(null);
   const [applyingKey, setApplyingKey] = useState(null);
   // RB-10 (D96, Review B): applyingKey is state, so the guard in each Apply
   // handler is one render behind a same-frame double tap. Today both
@@ -1163,6 +1166,7 @@ export default function CoachOutputScreen({ navigation, route }) {
             ? { key: 'weight.trend', value: output.context.weight.trend.value }
             : null,
           goalPhase: output?.goalPhase ?? null,
+          maintenanceAuthority: output?.effectiveMaintenance?.authority ?? null,
         }),
       });
       await saveCoachOutput(user.id, { weekStart, ...updated });
@@ -1378,7 +1382,24 @@ export default function CoachOutputScreen({ navigation, route }) {
       const current = await getNutritionTargets(user.id);
       const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
       const sex = bodyProfile?.sex ?? userProfile?.sex ?? null;
-      const computed = computeDietBreakTargets(current, sex);
+      const latestComposition = (await getBodyMetricLog(user.id, 60).catch(() => []))
+        .find(row => row.bodyFatPercent != null) ?? null;
+      const freshAuthority = await resolveEffectiveMaintenanceForUser(user.id, {
+        sex,
+        dateOfBirth: bodyProfile?.dateOfBirth ?? userProfile?.dateOfBirth ?? null,
+        ageYears: userProfile?.ageYears ?? userProfile?.age ?? null,
+        heightCm: bodyProfile?.heightCm ?? userProfile?.heightCm ?? null,
+        weightKg: userProfile?.weightKg ?? null,
+        bodyFatPercent: latestComposition?.bodyFatPercent ?? null,
+        bodyFatSource: latestComposition?.bodyFatSource ?? null,
+        activityLevel: current?.activityLevel ?? userProfile?.activityLevel ?? null,
+        goalPhase: current?.goal ?? userProfile?.goalPhase ?? null,
+      });
+      const computed = computeDietBreakTargets(
+        current,
+        sex,
+        freshAuthority.resolved.effectiveMaintenanceKcal,
+      );
       if (!computed) {
         // NU-3: never a silent no-op. A diet-break null means there is no
         // deficit left to raise (the floor cannot block an increase).
@@ -1392,7 +1413,10 @@ export default function CoachOutputScreen({ navigation, route }) {
       await AsyncStorage.setItem(
         '@volyume_nutrition_targets', JSON.stringify(computed.targets),
       ).catch(() => {});
-      const updated = markApplied(output, 'dietBreak', { newKcal: computed.newKcal });
+      const updated = markApplied(output, 'dietBreak', {
+        newKcal: computed.newKcal,
+        maintenanceAuthority: effectiveMaintenanceReceipt(freshAuthority.resolved),
+      });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
       setCurrentTargets(computed.targets);
@@ -1496,6 +1520,20 @@ export default function CoachOutputScreen({ navigation, route }) {
       const bodyProfile = await getUserBodyProfile(user.id).catch(() => null);
       const latestBf = (await getBodyMetricLog(user.id, 60).catch(() => []))
         .find(m => m.bodyFatPercent != null) ?? null;
+      const latestWeight = weights
+        .filter(row => Number(row?.weightKg) > 0)
+        .slice().sort((a, b) => Number(a.loggedAt) - Number(b.loggedAt)).pop();
+      const maintenanceAuthority = await resolveEffectiveMaintenanceForUser(user.id, {
+        sex: bodyProfile?.sex ?? userProfile?.sex ?? null,
+        dateOfBirth: bodyProfile?.dateOfBirth ?? userProfile?.dateOfBirth ?? null,
+        ageYears: userProfile?.ageYears ?? userProfile?.age ?? null,
+        heightCm: bodyProfile?.heightCm ?? userProfile?.heightCm ?? null,
+        weightKg: latestWeight?.weightKg ?? userProfile?.weightKg ?? null,
+        bodyFatPercent: latestBf?.bodyFatPercent ?? null,
+        bodyFatSource: latestBf?.bodyFatSource ?? null,
+        activityLevel: nutrition?.activityLevel ?? userProfile?.activityLevel ?? null,
+        goalPhase: userProfile?.goalPhase ?? nutrition?.goal ?? 'maint',
+      }, { weights, intake });
 
       // A1 (NU-3/NU-4): keep the just-read targets + sex for the pre-tap
       // Apply-row classification, and clear any stale tap-time notices.
@@ -1801,6 +1839,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         currentCarbsG: nutrition?.carbsG ?? null,
         currentFatG: nutrition?.fatG ?? null,
         currentMaintenanceKcal: nutrition?.tdee ?? null,
+        maintenanceAuthority: maintenanceAuthority.resolved,
         currentStepsTarget: 0,
         stepsEnabled: false,
         bodyweightKg: userProfile?.weightKg ?? null,
@@ -1834,6 +1873,30 @@ export default function CoachOutputScreen({ navigation, route }) {
         userTier: storeTier ?? require('../lib/proGate').isPaidTier(userProfile),
         hasUsedTrial: !require('../lib/payments/cascade').canStillTrial(userProfile),
       });
+      // Learning is observational. An ED/FFM/manual-target intervention hold
+      // cannot erase a valid energy-balance observation; only an evidence
+      // confounder (cycle override or an unusual-event check-in) holds it.
+      const learnedMaintenance = await learnEffectiveMaintenanceForUser(
+        user.id,
+        maintenanceAuthority,
+        result.effectiveMaintenance?.adaptiveObservation,
+        {
+          confounded: !!engineCheckin?.cycleOverride || !!engineCheckin?.notes?.trim(),
+        },
+      );
+      const receiptAuthority = learnedMaintenance.updated
+        ? resolveEffectiveMaintenance({
+          formulaPriorKcal: maintenanceAuthority.formula?.formulaPriorKcal,
+          memo: learnedMaintenance.memo,
+          context: maintenanceAuthority.context,
+          evidenceSignature: maintenanceAuthority.evidenceSignature,
+        })
+        : maintenanceAuthority.resolved;
+      result.effectiveMaintenance = {
+        ...result.effectiveMaintenance,
+        authority: effectiveMaintenanceReceipt(receiptAuthority),
+        learningStatus: learnedMaintenance.updated ? 'persisted' : learnedMaintenance.reason,
+      };
       const resultEdPatternOpen = edPatternOpen
         || !!result.edPatternFired
         || !!(result.heldDecisions ?? []).some(d => d.type === 'ed_pattern_lockout');
@@ -2083,29 +2146,6 @@ export default function CoachOutputScreen({ navigation, route }) {
       // Load the last 5 outputs; skip the first (current week) for the history shelf
       const history = await getCoachOutputHistory(user.id, 5);
       setCoachHistory(history.slice(1, 5));
-
-      // Compute adaptive TDEE insight from long-term morning weight history
-      try {
-        const morningWeights = await getMorningWeights(user.id, 90);
-        const weightPoints = morningWeights
-          .filter(m => m.weightKg)
-          .sort((a, b) => a.loggedAt - b.loggedAt)
-          .map(m => ({ date: m.loggedAt, weightKg: m.weightKg }));
-        if (weightPoints.length >= 14) {
-          const ewma = computeEWMA(weightPoints);
-          const prescribedKcal = userProfile?.targetCalories || userProfile?.targetKcal || 2500;
-          const currentTDEE = userProfile?.tdeeEstimate || prescribedKcal;
-          const tdeeResult = computeAdaptiveTDEEAdjustment({
-            ewmaData: ewma,
-            prescribedKcal,
-            currentTDEEEstimate: currentTDEE,
-            adherenceFactor: 1.0,
-          });
-          setAdaptiveTDEE(tdeeResult);
-        }
-      } catch (e) {
-        logWarn('CoachOutputScreen.adaptiveTDEE', e?.message);
-      }
 
       setLoading(false);
     }
@@ -2451,7 +2491,11 @@ export default function CoachOutputScreen({ navigation, route }) {
     ? classifyCalorieApply(currentTargets, adjustments.calories.change ?? 0, profileSex)
     : null;
   const dietBreakPreviewKcal = dietBreakSuggested && !isApplied(output, 'dietBreak') && currentTargets
-    ? (computeDietBreakTargets(currentTargets, profileSex)?.newKcal ?? null)
+    ? (computeDietBreakTargets(
+      currentTargets,
+      profileSex,
+      output?.effectiveMaintenance?.authority?.effectiveMaintenanceKcal ?? null,
+    )?.newKcal ?? null)
     : null;
   const trainingCardEl = (
     <TrainingNextWeekCard

@@ -21,6 +21,16 @@ jest.mock('../../lib/haptics', () => ({ selection: jest.fn(), press: jest.fn() }
 const mockToastShow = jest.fn();
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 
+jest.mock('../../lib/effectiveMaintenanceService', () => ({
+  resolveEffectiveMaintenanceForUser: jest.fn(async () => ({
+    resolved: {
+      effectiveMaintenanceKcal: null,
+      appliedResidualKcal: 0,
+      source: 'formula_prior',
+    },
+  })),
+}));
+
 const database = require('../../lib/database');
 jest.mock('../../lib/database', () => ({
   saveNutritionTargets: jest.fn(async () => 'row-1'),

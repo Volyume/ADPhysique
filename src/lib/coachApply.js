@@ -98,9 +98,11 @@ export function computeCalorieTargets(nutrition, change, sex) {
  *   null when there is nothing to apply: no current target, no
  *   maintenance figure to raise to, or already at/above maintenance.
  */
-export function computeDietBreakTargets(nutrition, sex) {
+export function computeDietBreakTargets(nutrition, sex, effectiveMaintenanceKcal = undefined) {
   const current = nutrition?.targetKcal;
-  const maintenance = nutrition?.tdee;
+  const maintenance = effectiveMaintenanceKcal === undefined
+    ? nutrition?.tdee
+    : (Number(effectiveMaintenanceKcal) > 0 ? Number(effectiveMaintenanceKcal) : null);
   if (!current || !maintenance) return null;
   if (maintenance <= current) return null;
   return computeCalorieTargets(nutrition, Math.round(maintenance - current), sex);

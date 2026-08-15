@@ -34,7 +34,7 @@ import { useToast } from '../components/Toast';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getMorningWeights, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises, updateMorningWeightById, deleteMorningWeightById } from '../lib/database';
+import { logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getMorningWeights, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises, updateMorningWeightById, deleteMorningWeightById, getUserBodyProfile } from '../lib/database';
 import { appAlert } from '../components/AppAlert';
 import { deriveRecomp, buildRecompShareParams } from '../lib/recompReframe';
 import { localDayKey } from '../lib/dayKey';
@@ -51,7 +51,8 @@ import {
 import { track } from '../lib/engineTelemetry';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { syncAll } from '../lib/sync';
-import { computeEWMA, ewmaValues, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment } from '../lib/nutritionEngine';
+import { computeEWMA, ewmaValues, computeWeeklyWeightChange } from '../lib/nutritionEngine';
+import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceService';
 import { robustValues } from '../lib/robustTrend';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -535,6 +536,7 @@ export default function BodyMetricsScreen() {
   const [exercises, setExercises] = useState([]);
   const [nutritionTargets, setNutritionTargets] = useState(null);
   const [recentIntake, setRecentIntake] = useState(null);
+  const [maintenanceAuthority, setMaintenanceAuthority] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [showMeasurements, setShowMeasurements] = useState(false);
   const [form, setForm] = useState(blankMetricForm());
@@ -557,17 +559,48 @@ export default function BodyMetricsScreen() {
   // are about two weeks of weigh-ins plus targets, which the card renders as an
   // honest cold-start line.
   const adaptiveBurn = useMemo(() => {
-    const prescribedKcal = nutritionTargets?.targetKcal ?? null;
-    const currentTDEEEstimate = nutritionTargets?.tdee ?? nutritionTargets?.maintenanceKcal ?? null;
-    const adherenceFactor =
-      recentIntake?.avgKcal && prescribedKcal ? recentIntake.avgKcal / prescribedKcal : 1.0;
-    return computeAdaptiveTDEEAdjustment({
-      ewmaData,
-      prescribedKcal,
-      currentTDEEEstimate,
-      adherenceFactor,
-    });
-  }, [ewmaData, nutritionTargets, recentIntake]);
+    if (!maintenanceAuthority || maintenanceAuthority.source === 'formula_prior') {
+      return { confidence: 'insufficient_data' };
+    }
+    return {
+      adjustedTDEE: maintenanceAuthority.effectiveMaintenanceKcal,
+      source: maintenanceAuthority.source,
+      confidence: maintenanceAuthority.status === 'current' ? 'high' : 'low',
+      weeks: Math.max(1, Math.floor((maintenanceAuthority.weightPoints ?? 14) / 7)),
+      insight: maintenanceAuthority.status === 'current'
+        ? 'Based on your logged intake and weight trend.'
+        : 'Based on earlier logged history and being revalidated with fresh data.',
+    };
+  }, [maintenanceAuthority]);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (!user?.id || !nutritionTargets) return;
+      const [weights, profile] = await Promise.all([
+        getMorningWeights(user.id, 90).catch(() => []),
+        getUserBodyProfile(user.id).catch(() => null),
+      ]);
+      const latestWeight = weights.slice().sort((a, b) => Number(a.loggedAt) - Number(b.loggedAt)).pop();
+      const latestComposition = history.find(row => Number(row?.body_fat) > 0);
+      const authority = await resolveEffectiveMaintenanceForUser(user.id, {
+        sex: profile?.sex ?? userProfile?.sex ?? null,
+        dateOfBirth: profile?.dateOfBirth ?? userProfile?.dateOfBirth ?? null,
+        ageYears: userProfile?.ageYears ?? userProfile?.age ?? null,
+        heightCm: profile?.heightCm ?? userProfile?.heightCm ?? null,
+        weightKg: latestWeight?.weightKg ?? userProfile?.weightKg ?? null,
+        bodyFatPercent: latestComposition?.body_fat ?? null,
+        bodyFatSource: latestComposition?.body_fat_source ?? null,
+        activityLevel: nutritionTargets?.activityLevel ?? userProfile?.activityLevel ?? null,
+        goalPhase: nutritionTargets?.goal ?? nutritionTargets?.phase ?? null,
+      }, { weights, intake: recentIntake });
+      if (!cancelled) setMaintenanceAuthority({
+        ...authority.resolved,
+        weightPoints: authority.memo?.weightPoints ?? 0,
+      });
+    })().catch(() => { if (!cancelled) setMaintenanceAuthority(null); });
+    return () => { cancelled = true; };
+  }, [user?.id, nutritionTargets, recentIntake, history, userProfile]);
 
   const measurementsWithData = useMemo(() =>
     MEASUREMENTS.filter(m => history.some(e => e[m.key] != null)),
@@ -1191,13 +1224,13 @@ export default function BodyMetricsScreen() {
             {ewmaData.length >= 7 ? (
               <Card radius="md" padding="md" style={styles.burnCard}>
                 <View style={styles.labelTipRow}>
-                  <Text style={[styles.burnLabel, live.burnLabel]}>Estimated daily burn</Text>
+                  <Text style={[styles.burnLabel, live.burnLabel]}>Effective maintenance</Text>
                   {/* U-D-3: one-tap gloss for the adaptive-TDEE concept. */}
                   <InfoTooltip text={GLOSSARY.adaptiveTdee} size={13} />
                 </View>
                 {adaptiveBurn.confidence === 'insufficient_data' ? (
                   <Text style={[styles.burnMuted, live.burnMuted]}>
-                    Your coach estimates your daily burn from your weight trend and what you log. Keep logging your morning weight and meals for about two weeks and it appears here.
+                    This is the logged intake associated with roughly stable weight in your own history, not a direct measurement of metabolism. Keep logging morning weight and meals to build it.
                   </Text>
                 ) : (
                   <>
@@ -1218,7 +1251,7 @@ export default function BodyMetricsScreen() {
                           ? 'High confidence'
                           : adaptiveBurn.confidence === 'medium'
                             ? 'Firming up'
-                            : 'Early estimate'}, from {adaptiveBurn.weeks} {adaptiveBurn.weeks === 1 ? 'week' : 'weeks'} of weigh-ins{(recentIntake?.daysLogged ?? 0) >= 5 ? ' and your logged food' : ', assuming you ate to target'}
+                            : 'Earlier estimate'}, from {adaptiveBurn.weeks} {adaptiveBurn.weeks === 1 ? 'week' : 'weeks'} of weigh-ins and your logged food
                       </Text>
                       <InfoTooltip text="More weeks of consistent weight and food logging tighten this estimate. It settles on its own; nothing to do." />
                     </View>
@@ -1930,4 +1963,3 @@ function buildLiveStyles(t) {
     burnConfidence: { ...t.type.caption, color: t.colors.textSecondary },
   };
 }
-

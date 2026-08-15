@@ -13,6 +13,7 @@ import { MICRO_COLUMNS, microColumnsCreateFragment } from './food/micronutrients
 import { getCurrentBlockWeekIndex, getBlockStatus, BLOCK_PLANNED_WEEKS, BLOCK_DELOAD_WEEK } from './mesocycle';
 import { resolveRecoveryState } from './recoveryState';
 import { compareSessionResolutionVersions } from './blockProgression';
+import { compareEffectiveMaintenanceVersions } from './effectiveMaintenance';
 
 export function weekWindowsEndingAt(anchorMs, weeksBack = 4) {
   return buildWeekWindowsEndingAt(anchorMs, weeksBack);
@@ -331,6 +332,29 @@ async function _doInit() {
       created_at INTEGER,
       updated_at INTEGER
     );
+    CREATE TABLE IF NOT EXISTS effective_maintenance_memos (
+      user_id TEXT PRIMARY KEY,
+      cumulative_residual_kcal INTEGER NOT NULL,
+      formula_prior_kcal_at_derivation INTEGER NOT NULL,
+      effective_maintenance_kcal_at_derivation INTEGER NOT NULL,
+      source TEXT NOT NULL,
+      status TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      algorithm_version INTEGER NOT NULL,
+      as_of INTEGER NOT NULL,
+      evidence_signature TEXT NOT NULL,
+      food_days_logged INTEGER NOT NULL,
+      weight_points INTEGER NOT NULL,
+      bodyweight_kg REAL,
+      goal_phase TEXT,
+      activity_level TEXT,
+      formula_method TEXT,
+      formula_context_signature TEXT NOT NULL,
+      large_divergence INTEGER NOT NULL DEFAULT 0,
+      version_key TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    );
     CREATE TABLE IF NOT EXISTS peak_week_plans (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -389,6 +413,7 @@ async function _doInit() {
       updated_at INTEGER
     );
     CREATE INDEX IF NOT EXISTS idx_nutrition_user ON nutrition_targets(user_id);
+    CREATE INDEX IF NOT EXISTS idx_effective_maintenance_updated ON effective_maintenance_memos(updated_at);
     CREATE INDEX IF NOT EXISTS idx_body_log_user ON body_metric_log(user_id, logged_at);
     CREATE INDEX IF NOT EXISTS idx_insights_user ON user_insights(user_id, dismissed_at, type);
   `);
@@ -2496,6 +2521,36 @@ const SCHEMA_MIGRATIONS = [
        ON session_resolutions(mesocycle_week_id, routine_id)`,
     `CREATE INDEX IF NOT EXISTS idx_session_resolutions_user
        ON session_resolutions(user_id)`,
+  ],
+  // v80, Campaign 19 effective-maintenance memo. One deterministic row per
+  // user stores the validated residual against the current formula prior.
+  // No product target or manual choice is stored here. The cloud counterpart
+  // is migrate_141_effective_maintenance_memos.sql and remains founder-gated.
+  [
+    `CREATE TABLE IF NOT EXISTS effective_maintenance_memos (
+      user_id TEXT PRIMARY KEY,
+      cumulative_residual_kcal INTEGER NOT NULL,
+      formula_prior_kcal_at_derivation INTEGER NOT NULL,
+      effective_maintenance_kcal_at_derivation INTEGER NOT NULL,
+      source TEXT NOT NULL,
+      status TEXT NOT NULL,
+      reason TEXT NOT NULL,
+      algorithm_version INTEGER NOT NULL,
+      as_of INTEGER NOT NULL,
+      evidence_signature TEXT NOT NULL,
+      food_days_logged INTEGER NOT NULL,
+      weight_points INTEGER NOT NULL,
+      bodyweight_kg REAL,
+      goal_phase TEXT,
+      activity_level TEXT,
+      formula_method TEXT,
+      formula_context_signature TEXT NOT NULL,
+      large_divergence INTEGER NOT NULL DEFAULT 0,
+      version_key TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_effective_maintenance_updated ON effective_maintenance_memos(updated_at)',
   ],
 ];
 
@@ -5425,6 +5480,149 @@ export async function getNutritionTargets(userId) {
   return result;
 }
 
+// ─── Effective-maintenance memo (Campaign 19) ─────────────────────────────
+
+export async function getEffectiveMaintenanceMemo(userId) {
+  if (!userId) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM effective_maintenance_memos WHERE user_id = ? LIMIT 1',
+    [userId],
+  );
+  return row ? rowToCamel(row) : null;
+}
+
+function effectiveMemoFields(memo) {
+  return [
+    Math.round(Number(memo.cumulativeResidualKcal)),
+    Math.round(Number(memo.formulaPriorKcalAtDerivation)),
+    Math.round(Number(memo.effectiveMaintenanceKcalAtDerivation)),
+    memo.source,
+    memo.status,
+    memo.reason,
+    Number(memo.algorithmVersion),
+    Number(memo.asOf),
+    memo.evidenceSignature,
+    Math.round(Number(memo.foodDaysLogged)),
+    Math.round(Number(memo.weightPoints)),
+    Number.isFinite(Number(memo.bodyweightKg)) ? Number(memo.bodyweightKg) : null,
+    memo.goalPhase ?? null,
+    memo.activityLevel ?? null,
+    memo.formulaMethod ?? null,
+    memo.formulaContextSignature,
+    memo.largeDivergence ? 1 : 0,
+    memo.versionKey,
+  ];
+}
+
+function validateEffectiveMemo(memo) {
+  const requiredNumbers = [
+    memo?.cumulativeResidualKcal, memo?.formulaPriorKcalAtDerivation,
+    memo?.effectiveMaintenanceKcalAtDerivation, memo?.algorithmVersion,
+    memo?.asOf, memo?.foodDaysLogged, memo?.weightPoints,
+  ];
+  if (requiredNumbers.some(v => !Number.isFinite(Number(v)))) throw new Error('Invalid effective-maintenance memo numbers');
+  if (!memo?.evidenceSignature || !memo?.formulaContextSignature || !memo?.versionKey) {
+    throw new Error('Invalid effective-maintenance memo identity');
+  }
+}
+
+export async function saveEffectiveMaintenanceMemo(userId, memo) {
+  if (!userId) throw new Error('userId is required');
+  validateEffectiveMemo(memo);
+  const d = await db();
+  const now = Date.now();
+  const values = effectiveMemoFields(memo);
+  await d.runAsync(
+    `INSERT INTO effective_maintenance_memos (
+       user_id, cumulative_residual_kcal, formula_prior_kcal_at_derivation,
+       effective_maintenance_kcal_at_derivation, source, status, reason,
+       algorithm_version, as_of, evidence_signature, food_days_logged,
+       weight_points, bodyweight_kg, goal_phase, activity_level, formula_method,
+       formula_context_signature, large_divergence, version_key, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET
+       cumulative_residual_kcal=excluded.cumulative_residual_kcal,
+       formula_prior_kcal_at_derivation=excluded.formula_prior_kcal_at_derivation,
+       effective_maintenance_kcal_at_derivation=excluded.effective_maintenance_kcal_at_derivation,
+       source=excluded.source, status=excluded.status, reason=excluded.reason,
+       algorithm_version=excluded.algorithm_version, as_of=excluded.as_of,
+       evidence_signature=excluded.evidence_signature,
+       food_days_logged=excluded.food_days_logged, weight_points=excluded.weight_points,
+       bodyweight_kg=excluded.bodyweight_kg, goal_phase=excluded.goal_phase,
+       activity_level=excluded.activity_level, formula_method=excluded.formula_method,
+       formula_context_signature=excluded.formula_context_signature,
+       large_divergence=excluded.large_divergence, version_key=excluded.version_key,
+       updated_at=excluded.updated_at`,
+    [userId, ...values, now, now],
+  );
+  _scheduleSync();
+  return getEffectiveMaintenanceMemo(userId);
+}
+
+// Deterministic LWW: an older arrival never overwrites a newer row. Equal
+// timestamps converge on the lexicographically greater content-derived key,
+// so arrival order cannot affect the final value and exact retries are inert.
+export async function insertEffectiveMaintenanceMemoFromCloud(userId, row) {
+  if (!userId || row?.user_id !== userId) return false;
+  const incomingUpdated = Date.parse(row.updated_at);
+  if (!Number.isFinite(incomingUpdated)) return false;
+  const d = await db();
+  const local = await d.getFirstAsync(
+    'SELECT updated_at, version_key FROM effective_maintenance_memos WHERE user_id = ? LIMIT 1',
+    [userId],
+  );
+  if (local && compareEffectiveMaintenanceVersions(
+    { updatedAt: incomingUpdated, versionKey: row.version_key },
+    { updatedAt: local.updated_at, versionKey: local.version_key },
+  ) <= 0) return false;
+
+  const memo = {
+    cumulativeResidualKcal: row.cumulative_residual_kcal,
+    formulaPriorKcalAtDerivation: row.formula_prior_kcal_at_derivation,
+    effectiveMaintenanceKcalAtDerivation: row.effective_maintenance_kcal_at_derivation,
+    source: row.source, status: row.status, reason: row.reason,
+    algorithmVersion: row.algorithm_version,
+    asOf: Date.parse(row.as_of),
+    evidenceSignature: row.evidence_signature,
+    foodDaysLogged: row.food_days_logged,
+    weightPoints: row.weight_points,
+    bodyweightKg: row.bodyweight_kg,
+    goalPhase: row.goal_phase,
+    activityLevel: row.activity_level,
+    formulaMethod: row.formula_method,
+    formulaContextSignature: row.formula_context_signature,
+    largeDivergence: !!row.large_divergence,
+    versionKey: row.version_key,
+  };
+  validateEffectiveMemo(memo);
+  const values = effectiveMemoFields(memo);
+  await d.runAsync(
+    `INSERT INTO effective_maintenance_memos (
+       user_id, cumulative_residual_kcal, formula_prior_kcal_at_derivation,
+       effective_maintenance_kcal_at_derivation, source, status, reason,
+       algorithm_version, as_of, evidence_signature, food_days_logged,
+       weight_points, bodyweight_kg, goal_phase, activity_level, formula_method,
+       formula_context_signature, large_divergence, version_key, created_at, updated_at
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(user_id) DO UPDATE SET
+       cumulative_residual_kcal=excluded.cumulative_residual_kcal,
+       formula_prior_kcal_at_derivation=excluded.formula_prior_kcal_at_derivation,
+       effective_maintenance_kcal_at_derivation=excluded.effective_maintenance_kcal_at_derivation,
+       source=excluded.source, status=excluded.status, reason=excluded.reason,
+       algorithm_version=excluded.algorithm_version, as_of=excluded.as_of,
+       evidence_signature=excluded.evidence_signature,
+       food_days_logged=excluded.food_days_logged, weight_points=excluded.weight_points,
+       bodyweight_kg=excluded.bodyweight_kg, goal_phase=excluded.goal_phase,
+       activity_level=excluded.activity_level, formula_method=excluded.formula_method,
+       formula_context_signature=excluded.formula_context_signature,
+       large_divergence=excluded.large_divergence, version_key=excluded.version_key,
+       updated_at=excluded.updated_at`,
+    [userId, ...values, incomingUpdated, incomingUpdated],
+  );
+  return true;
+}
+
 // ─── Body Metrics ─────────────────────────────────────────────
 
 export async function logBodyMetric(userId, data) {
@@ -5759,7 +5957,7 @@ export const WIPE_DIRECT_TABLES = [
   'workout_sets', 'workouts',
   'routines', 'programmes', 'mesocycles',
   'morning_weights', 'weekly_checkins', 'coach_outputs',
-  'nutrition_targets', 'peak_week_plans',
+  'nutrition_targets', 'effective_maintenance_memos', 'peak_week_plans',
   'body_metric_log', 'user_insights', 'user_body_profile',
   'exercise_user_notes', 'exercise_goals', 'workout_notes',
   'custom_exercises',

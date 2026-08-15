@@ -157,6 +157,7 @@ export function buildInterventionRecord({
   kind, appliedAtMs, direction, magnitude = null,
   because = null, authorisedBy = [], heldConstant = [], baseline = null,
   baselines = null, goalPhase = null, appliedValue = null,
+  maintenanceAuthority = null,
 } = {}) {
   if (!INTERVENTION_KIND[String(kind).toUpperCase()] && !Object.values(INTERVENTION_KIND).includes(kind)) {
     return null;
@@ -180,6 +181,10 @@ export function buildInterventionRecord({
     // Job B2: one reading per observed signal, so a multi-signal record can
     // say which of them moved the wrong way rather than guessing.
     baselines: baselines && typeof baselines === 'object' ? baselines : null,
+    // Campaign 19 receipt: the exact observational authority used when this
+    // prescription was accepted. This never makes the record a second source.
+    maintenanceAuthority: maintenanceAuthority && typeof maintenanceAuthority === 'object'
+      ? { ...maintenanceAuthority } : null,
     observe,
   };
 }

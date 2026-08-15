@@ -1634,9 +1634,10 @@ const SYNCED_PREF_PATTERNS = [
   //   and ONLY SQLite. It never writes this AsyncStorage key.
   //   This key is a separate DISPLAY mirror with its own readers (the Home
   //   phase-mismatch banner, the setup-complete kcal and macro summary, the
-  //   Body Metrics nutrition card), and it carries at least one field the
-  //   cloud row has no column for: maintenanceKcal, written by
-  //   ProOnboardingScreen and read by BodyMetricsScreen's TDEE estimate.
+  //   Body Metrics nutrition card), and richer writers can attach immutable
+  //   presentation context the cloud engine row has no column for, such as
+  //   Campaign 19's maintenanceAuthority receipt. Body Metrics resolves that
+  //   authority afresh; it never treats a target field as maintenance.
   //   Generic pref sync is therefore the ONLY thing that restores the mirror
   //   on a fresh install; dropping this entry would leave those surfaces
   //   blank after a reinstall for no gain.

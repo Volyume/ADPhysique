@@ -864,14 +864,22 @@ export async function getRecentIntakeSummary(userId, asOfDate = null) {
   const rows = await d.getAllAsync(
     `SELECT entry_date, kcal_total
      FROM daily_intake_rollups
-     WHERE user_id = ? AND entry_date BETWEEN ? AND ? AND entries_count > 0`,
+     WHERE user_id = ? AND entry_date BETWEEN ? AND ? AND entries_count > 0
+     ORDER BY entry_date`,
     [userId, startStr, asOf]
   );
-  if (!rows.length) return { avgKcal: null, daysLogged: 0 };
+  if (!rows.length) return { avgKcal: null, daysLogged: 0, days: [] };
   const totalKcal = rows.reduce((acc, r) => acc + r.kcal_total, 0);
   return {
     avgKcal: Math.round(totalKcal / rows.length),
     daysLogged: rows.length,
+    // Semantic evidence consumed by Campaign 19. Row ids and sync timestamps
+    // are deliberately excluded: an edit that leaves the same daily kcal
+    // input leaves the same signature.
+    days: rows.map(row => ({
+      entryDate: row.entry_date,
+      kcalTotal: Math.round(Number(row.kcal_total)),
+    })),
   };
 }
 

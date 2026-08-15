@@ -215,7 +215,7 @@ describe('Matrix coverage', () => {
     const covered = new Set([
       // Non-food bidirectional handlers:
       'notification_preferences', 'weekly_checkins_v2', 'body_composition_log',
-      'nutrition_targets', 'recipe_ingredients', 'profiles',
+      'nutrition_targets', 'effective_maintenance_memos', 'recipe_ingredients', 'profiles',
       // daily_steps (activity store): push/pull covered in the dedicated
       // sync.dailySteps.test.js.
       'daily_steps',

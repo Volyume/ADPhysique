@@ -128,21 +128,21 @@ describe('C15-16 nutrition targets: the mirror and the engine row own different 
     }
   });
 
-  test('the mirror carries a field the cloud row has no column for', () => {
-    // maintenanceKcal is written into the mirror by onboarding and read back
-    // by the Body Metrics TDEE estimate. Neither the local nutrition_targets
-    // schema nor the push row has a column for it, so the dedicated path
-    // cannot carry it at all: the two copies are genuinely not the same state.
-    expect(SRC('../../screens/ProOnboardingScreen.js')).toMatch(/maintenanceKcal/);
-    expect(SRC('../../screens/BodyMetricsScreen.js')).toMatch(/maintenanceKcal/);
+  test('the mirror carries rich presentation context the cloud row has no column for', () => {
+    // Campaign 19 deliberately stopped Body Metrics treating a stored target
+    // field as current maintenance. The mirror is still a distinct, richer
+    // presentation object: goal recalculation writes the immutable canonical
+    // maintenance receipt alongside the targets, while nutrition_targets is
+    // only the engine row and has no column for that receipt.
+    expect(SRC('../../screens/ProGoalSetupScreen.js')).toMatch(/maintenanceAuthority/);
 
     const schema = DB_SRC.slice(
       DB_SRC.indexOf('CREATE TABLE IF NOT EXISTS nutrition_targets'),
       DB_SRC.indexOf('CREATE TABLE IF NOT EXISTS peak_week_plans'),
     );
     expect(schema.length).toBeGreaterThan(0);
-    expect(schema).not.toMatch(/maintenance_kcal/);
-    expect(NUTRITION_TABLE_SRC).not.toMatch(/maintenance_kcal/);
+    expect(schema).not.toMatch(/maintenance_authority/);
+    expect(NUTRITION_TABLE_SRC).not.toMatch(/maintenance_authority/);
   });
 
   test('the mirror is NOT a guarded pref, and does not pretend to be', () => {
@@ -325,7 +325,7 @@ describe('C15-18 neither mechanism can silently overwrite the other', () => {
     expect(block).toMatch(/C15 job 4/);
     expect(block).toMatch(/SPLIT OWNERSHIP/);
     expect(block).toMatch(/ANCHORED/);
-    expect(block).toMatch(/maintenanceKcal/);
+    expect(block).toMatch(/maintenanceAuthority/);
     expect(block).toMatch(/pushPerDayTargetOffsets/);
   });
 });

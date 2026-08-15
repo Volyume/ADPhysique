@@ -37,7 +37,7 @@ export const GLOSSARY = {
   repRegression:
     'Your average reps for a lift have trended down over recent weeks.',
   adaptiveTdee:
-    'Our running estimate of the calories you burn a day, updated from your weight trend.',
+    'The logged daily intake associated with roughly stable weight in your own history. It is an estimate from food and weight logs, not a direct measurement of metabolism.',
   ewma:
     'A smoothed version of your weight that ignores day-to-day noise.',
   mesocycle:

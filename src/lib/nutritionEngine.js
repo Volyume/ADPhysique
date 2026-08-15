@@ -607,6 +607,31 @@ function calcBMR(sex, ageYears, heightCm, weightKg, bodyFatPercent, bodyFatSourc
   return { bmr: base, formula: 'mifflin', lbm: null };
 }
 
+/** Formula-only prior used by the Campaign 19 canonical resolver. */
+export function calculateFormulaMaintenance({
+  sex, ageYears, heightCm, weightKg, bodyFatPercent = null,
+  bodyFatSource = null, activityLevel,
+} = {}) {
+  if (![ageYears, heightCm, weightKg].every(v => Number.isFinite(Number(v)) && Number(v) > 0)) return null;
+  if (!['male', 'female'].includes(sex) || !Object.prototype.hasOwnProperty.call(ACTIVITY_MULTIPLIERS, activityLevel)) {
+    return null;
+  }
+  const safeAge = Math.min(Math.max(Math.round(Number(ageYears)), 13), 100);
+  const safeHeight = Math.min(Math.max(Number(heightCm), 100), 250);
+  const safeWeight = Math.min(Math.max(Number(weightKg), 30), 350);
+  const calculated = calcBMR(
+    sex, safeAge, safeHeight, safeWeight,
+    Number.isFinite(Number(bodyFatPercent)) ? Number(bodyFatPercent) : null,
+    bodyFatSource,
+  );
+  const multiplier = ACTIVITY_MULTIPLIERS[activityLevel] ?? 1.55;
+  return {
+    formulaPriorKcal: Math.round(calculated.bmr * multiplier),
+    bmrKcal: Math.round(calculated.bmr),
+    formulaMethod: calculated.formula,
+  };
+}
+
 /**
  * Compute the FFM-derived energy floor for a user.
  *
@@ -884,6 +909,9 @@ export function calculateNutritionTargets(inputs) {
     proteinApproach: _proteinApproachInput = null,
     customProteinGPerKg = null,
     targetRateKgPerWeek: _targetRateKgPerWeek = null,
+    // Campaign 19: supplied only by the canonical resolver. It is cumulative
+    // history, not the latest weekly adjustment, and is applied exactly once.
+    effectiveMaintenanceResidualKcal: _effectiveResidual = 0,
     experienceLevel = 'intermediate', // 'beginner' | 'intermediate' | 'advanced' | 'competitive'
   } = inputs;
 
@@ -917,7 +945,10 @@ export function calculateNutritionTargets(inputs) {
 
   // --- TDEE / Maintenance ---
   const multiplier = ACTIVITY_MULTIPLIERS[activityLevel] ?? 1.55;
-  const maintenanceKcal = Math.round(bmr * multiplier);
+  const formulaMaintenanceKcal = Math.round(bmr * multiplier);
+  const effectiveResidual = Number.isFinite(Number(_effectiveResidual))
+    ? Math.round(Number(_effectiveResidual)) : 0;
+  const maintenanceKcal = Math.max(1, formulaMaintenanceKcal + effectiveResidual);
 
   // --- Phase calorie adjustment ---
   let phaseAdj = PHASE_ADJUSTMENTS[goal] ?? 0;
@@ -1038,8 +1069,14 @@ export function calculateNutritionTargets(inputs) {
 
   return {
     bmrFormula: formula === 'mifflin' ? 'Standard calorie formula' : 'Lean mass-adjusted formula',
+    bmr: bmrKcal,
     bmrKcal,
+    bmrMethod: formula,
+    activityLevel,
+    tdee: maintenanceKcal,
     maintenanceKcal,
+    formulaMaintenanceKcal,
+    effectiveMaintenanceResidualKcal: effectiveResidual,
     targetKcal: actualTargetKcal,
     kcalMin,
     kcalMax,

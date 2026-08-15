@@ -27,6 +27,7 @@ import {
 } from '../lib/coachingGoals';
 import { parseShowDate } from '../lib/contestCountdown';
 import { calculateNutritionTargets, PROTEIN_APPROACHES, ADVANCED_PROTEIN_GOALS } from '../lib/nutritionEngine';
+import { resolveEffectiveMaintenanceForUser } from '../lib/effectiveMaintenanceService';
 import {
   saveNutritionTargets, getNutritionTargets, getMorningWeightsLast14Days,
   getLatestBodyComposition, getActivePeakWeekPlan, setPeakWeekShowDate,
@@ -382,7 +383,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         toast.show('Goal saved, but calorie targets were not updated. Complete sex, age and height in your profile, then open Nutrition Targets to refresh', { variant: 'warning', duration: 5000 });
         throw Object.assign(new Error('profile biology incomplete'), { _handled: true });
       }
-      nextTargets = calculateNutritionTargets(buildNutritionEngineInputs({
+      const engineInputs = buildNutritionEngineInputs({
         sex: safeSex,
         age: safeAge,
         heightCm: safeHeightCm,
@@ -394,7 +395,13 @@ export default function ProGoalSetupScreen({ navigation }) {
         trainingGoal: selectedGoal,
         proteinApproach,
         experience,
-      }));
+      });
+      const authority = await resolveEffectiveMaintenanceForUser(user.id, engineInputs);
+      const calculatedTargets = calculateNutritionTargets({
+        ...engineInputs,
+        effectiveMaintenanceResidualKcal: authority.resolved.appliedResidualKcal,
+      });
+      nextTargets = { ...calculatedTargets, maintenanceAuthority: authority.resolved };
       await AsyncStorage.setItem(NUTRITION_KEY, JSON.stringify(nextTargets));
       if (user?.id) {
         await saveNutritionTargets(user.id, nextTargets);

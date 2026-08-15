@@ -265,6 +265,7 @@ describe('C15-8 nothing ships without an entry in the contract', () => {
     'food_entries', 'custom_foods', 'saved_meals', 'recipes', 'recipe_ingredients',
     'food_favourites', 'daily_water', 'daily_intake_rollups', 'meal_plans',
     'nutrition_targets', 'perday_target_offsets',      // nutrition, C15 job 4 ruled ownership
+    'effective_maintenance_memos',                     // nutrition authority, Campaign 19
     'weekly_checkins_v2', 'weight_log', 'body_composition_log',
     'daily_steps', 'cardio_log',                        // retired surfaces
     'ed_pattern_flags',                                 // D92-11 holds

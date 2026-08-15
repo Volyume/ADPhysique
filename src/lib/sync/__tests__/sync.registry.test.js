@@ -29,6 +29,7 @@ const EXPECTED_TABLES = [
   'tier_history',
   'body_composition_log',
   'nutrition_targets',
+  'effective_maintenance_memos', // canonical nutrition authority (cloud migration 141)
   'profiles',
   'notification_preferences',
   'partner_signals', // NEW-002 pair-scoped shape (cloud migration 081)
