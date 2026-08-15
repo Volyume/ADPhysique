@@ -199,6 +199,51 @@ export function trainRecoveryDetail(resolved, differences = []) {
   return `${lead} ${sentenceList(real)}`;
 }
 
+/**
+ * What ACTUALLY differs between the session as normally prescribed and the
+ * session as prescribed now.
+ *
+ * Read off the two prescriptions rather than assumed, because the founder's
+ * rule is explicit: do not claim "everything is 50% lighter" unless that is
+ * genuinely what the engine applied. Today's recovery prescription
+ * (`generateDeloadPrescription`, first half) keeps the load and halves the
+ * reps at RIR 4 - so "reduced loading" would be false on it, and saying so
+ * would be the kind of plausible-sounding copy nobody checked.
+ *
+ * Returns plain phrases for `trainRecoveryDetail`, or [] when nothing
+ * measurable changed. Pure; no percentages and no internal multipliers reach
+ * the athlete.
+ */
+export function describePrescriptionDifferences(baselineSets = [], prescribedSets = []) {
+  const base = Array.isArray(baselineSets) ? baselineSets.filter(Boolean) : [];
+  const now = Array.isArray(prescribedSets) ? prescribedSets.filter(Boolean) : [];
+  if (!base.length || !now.length) return [];
+  const out = [];
+
+  const workingBase = base.filter((s) => (s.setType ?? s.set_type ?? 'straight') !== 'warmup');
+  if (workingBase.length && now.length < workingBase.length) out.push('fewer working sets');
+
+  const avg = (rows, pick) => {
+    const vals = rows.map(pick).map(Number).filter((n) => Number.isFinite(n));
+    return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+  };
+  const baseReps = avg(workingBase, (s) => s.actualReps ?? s.actual_reps ?? s.reps);
+  const nowReps = avg(now, (s) => s.reps);
+  if (baseReps != null && nowReps != null && nowReps < baseReps) out.push('fewer reps per set');
+
+  const baseWeight = avg(workingBase, (s) => s.weight);
+  const nowWeight = avg(now, (s) => s.weight);
+  if (baseWeight != null && nowWeight != null && nowWeight < baseWeight) out.push('lighter loads');
+
+  const baseRir = avg(workingBase, (s) => s.rir);
+  const nowRir = avg(now, (s) => s.rir);
+  // A HIGHER RIR is an EASIER target: it stops the set further from failure.
+  if (nowRir != null && (baseRir == null ? nowRir >= 3 : nowRir > baseRir)) {
+    out.push('easier effort targets');
+  }
+  return out;
+}
+
 /** "a, b and c." with no Oxford comma, house voice, no em dash. */
 function sentenceList(items) {
   if (items.length === 1) return `${capitalise(items[0])}.`;

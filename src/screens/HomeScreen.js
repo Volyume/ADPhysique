@@ -20,6 +20,8 @@ import SectionLabel from '../components/SectionLabel';
 import WhatsNewSheet from '../components/WhatsNewSheet';
 import { SkeletonCard } from '../components/Skeleton';
 import TodayStrip from '../components/TodayStrip';
+import RecoveryStateCard from '../components/RecoveryStateCard';
+import { nextWorkoutRecoveryLabel, isLighterTrainingState } from '../lib/recoveryState';
 import { useToast } from '../components/Toast';
 import CoachBriefCard, { buildBriefIconColor } from '../components/CoachBriefCard';
 import HomeWelcomeCard from '../components/HomeWelcomeCard';
@@ -342,6 +344,12 @@ export default function HomeScreen({ navigation, route }) {
   const [teaserInsight, setTeaserInsight] = useState(null);
   const [deloadSuggestion, setDeloadSuggestion] = useState(null);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
+  // C18 recovery visibility. NOT a dismissal: the card only collapses once the
+  // athlete has opened the explanation, and it never disappears while the
+  // state is true. Keyed by block AND state, so a later adaptive reduction, or
+  // the recovery week of the next block, opens expanded again rather than
+  // hiding behind a tap from a fortnight ago.
+  const [recoveryRead, setRecoveryRead] = useState(false);
 
   // B3: lift plateau banner. { exerciseId, line } | null. Defaults dismissed
   // so it never flashes before the stored dismissal has been read (the
@@ -1197,12 +1205,50 @@ export default function HomeScreen({ navigation, route }) {
     } catch (_e) {}
   }
 
+  // Keyed by block AND state so each new coaching state gets its own reading.
+  const recoveryReadKey = (userId, mesocycleId, state) =>
+    `@volyume_recovery_read_${userId}_${mesocycleId}_${state}`;
+
+  async function toggleRecoveryRead() {
+    const state = currentMesoWeek?.recoveryState?.state;
+    if (!state || !user?.id || !currentMesoWeek?.mesocycleId) return;
+    const next = !recoveryRead;
+    setRecoveryRead(next);
+    const key = recoveryReadKey(user.id, currentMesoWeek.mesocycleId, state);
+    try {
+      if (next) await AsyncStorage.setItem(key, '1');
+      else await AsyncStorage.removeItem(key);
+    } catch (_) { /* the card still renders correctly this session */ }
+  }
+
   async function loadBlockProgress() {
     if (!user?.id) return;
     try {
       const week = await getCurrentMesocycleWeek(user.id);
       setCurrentMesoWeek(week);
       if (!week) return;
+
+      // C18 recovery visibility: has this athlete already read THIS state on
+      // THIS block? Best-effort - a read failure shows the card expanded,
+      // which is the direction that keeps a consequential coaching state
+      // visible rather than hiding it.
+      if (isLighterTrainingState(week.recoveryState)) {
+        const key = recoveryReadKey(user.id, week.mesocycleId, week.recoveryState.state);
+        const seen = await AsyncStorage.getItem(key).catch(() => null);
+        setRecoveryRead(!!seen);
+      } else {
+        setRecoveryRead(false);
+      }
+      // C18: the ONE recovery-week push, fired by the real block transition
+      // rather than by a calendar. Once per block, planned state only, and
+      // every existing opt-out, quiet-hours and budget rule applies inside.
+      // Best-effort: Home says everything already if this never runs.
+      try {
+        // eslint-disable-next-line global-require
+        const { notifyRecoveryWeekStarted } = require('../lib/notifications/scheduler');
+        notifyRecoveryWeekStarted(user.id, week.recoveryState, week.mesocycleId)
+          .catch(() => {});
+      } catch (_) { /* notifications are supplemental, never required */ }
 
       // Stage 8 (§3.6): the block-start explanation, derived from the
       // WRITTEN plan rows so it can never claim a personalisation the
@@ -1516,6 +1562,12 @@ export default function HomeScreen({ navigation, route }) {
   const planProgress = displayWorkout
     ? activePlanLine(planHeadingName(activePlan?.name), displayWorkout?.idx ?? 0, nextWorkout?.total ?? 1)
     : null;
+  // C18 recovery visibility: the NEXT-WORKOUT surface names the state too, so
+  // the session the athlete is about to start says what it is before they open
+  // it. Straight from the block's resolved state - never re-derived here, and
+  // never the word "week" on an adaptive reduction, which would claim the hard
+  // part of the block had finished when it has not.
+  const recoveryLabel = nextWorkoutRecoveryLabel(currentMesoWeek?.recoveryState);
 
   // Derive how many days since last completed workout (null = no history)
   const lastWorkoutDaysAgo = lastSession
@@ -1627,7 +1679,10 @@ export default function HomeScreen({ navigation, route }) {
   // banner: a Free user has no Apply mechanism, so naming the week already in
   // their plan is the honest thing either way. Display only, no change to
   // shouldDeload's maths or thresholds.
-  const scheduledRecoveryWeekIndex = currentMesoWeek?.plannedWeeks ?? null;
+  // C18: the block's OWN recovery position, not its length. They coincide on
+  // today's block and would not on a block whose deload_week says otherwise.
+  const scheduledRecoveryWeekIndex = currentMesoWeek?.recoveryState?.recoveryWeek
+    ?? currentMesoWeek?.plannedWeeks ?? null;
   const scheduledRecoveryAhead = Number.isFinite(Number(scheduledRecoveryWeekIndex))
     && Number.isFinite(Number(currentMesoWeek?.weekIndex))
     && Number(currentMesoWeek.weekIndex) < Number(scheduledRecoveryWeekIndex);
@@ -1873,6 +1928,17 @@ export default function HomeScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
 
+        {/* ── C18 RECOVERY STATE (recovery-visibility amendment). The primary
+            fix: a consequential coaching state must not live only inside
+            Train. Renders nothing during normal accumulation and nothing once
+            the block finishes, because the resolver returns nothing - the
+            state ends with the lifecycle, never with a tap. ── */}
+        <RecoveryStateCard
+          recoveryState={currentMesoWeek?.recoveryState}
+          expanded={!recoveryRead}
+          onToggle={toggleRecoveryRead}
+        />
+
         {/* ── S6 activation nudge banner (stall stages only; cold-start is
             welcomeCard's). Taps through to start the next session. ── */}
         {showActivationBanner && (
@@ -2016,7 +2082,7 @@ export default function HomeScreen({ navigation, route }) {
         ) : activePlan && nextWorkout ? (
           <Card surface="surfaceElevated" style={styles.heroCard}>
             <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
-              {planProgress}
+              {recoveryLabel ? `${recoveryLabel} · ${planProgress}` : planProgress}
             </SectionLabel>
             <Text style={[styles.workoutName, live.workoutName]} numberOfLines={2}>
               {displayWorkout?.routine?.name}

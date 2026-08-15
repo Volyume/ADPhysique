@@ -75,6 +75,14 @@ export function routeForNotificationType(type, data = {}) {
       // The param is minted per tap (RootNavigator passes params straight
       // through, and HomeScreen keys the open on a fresh value).
       return { tab: 'HomeTab', screen: 'Home', params: { openWeightLog: Date.now() } };
+    case 'recovery_week_started':
+      // C18 recovery-visibility amendment. The push and the in-app card say
+      // the same thing about the same state, so the tap opens the card rather
+      // than a second explanation somewhere else: Home carries the recovery
+      // state, its detail and what happens next. No params - the card reads
+      // the live block itself, and a stale block id in a notification would
+      // be worse than none.
+      return { tab: 'HomeTab', screen: 'Home' };
     case 'training_reminder':
       // FM-08 (D96): a Free-tier push with no route. Home is where the
       // session hero and "Start workout" live, which is what the reminder is
