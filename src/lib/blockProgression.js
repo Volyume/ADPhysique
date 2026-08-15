@@ -81,6 +81,82 @@ export function isPerformedInFull(state) {
 }
 
 const str = (v) => (typeof v === 'string' && v.length ? v : null);
+const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : 0);
+
+/**
+ * THE ONE CURRENT RESOLUTION for a required instance.
+ *
+ * Storage holds at most one live resolution per instance, but sync can deliver
+ * duplicates or a stale row alongside a newer one, and the answer must not
+ * depend on which arrived first. Ordering is therefore TOTAL: newest
+ * resolvedAt, then newest updatedAt, then the id as a final deterministic
+ * tie-break. Shuffling the input cannot change the result.
+ */
+export function pickCurrentResolution(rows = []) {
+  const valid = (Array.isArray(rows) ? rows : []).filter(
+    (r) => r && r.deletedAt == null && EXPLICIT_RESOLUTIONS.includes(r.resolution),
+  );
+  if (!valid.length) return null;
+  return [...valid].sort((a, b) => (
+    num(b.resolvedAt) - num(a.resolvedAt)
+    || num(b.updatedAt) - num(a.updatedAt)
+    || String(b.id ?? '').localeCompare(String(a.id ?? ''))
+  ))[0];
+}
+
+/**
+ * THE RESOLUTION PRECEDENCE TABLE (founder pin).
+ *
+ * Stated as a table rather than a chain of ifs so the answer can never come to
+ * depend on the order the branches happen to be written in. Each row is the
+ * founder's numbered rule.
+ *
+ *   #  explicit        other completion   result
+ *   1  none            no                 OUTSTANDING
+ *   2  none            yes                COMPLETED
+ *   3  SKIPPED         no                 SKIPPED_BY_USER
+ *   4  SKIPPED         yes                COMPLETED - real performed work is
+ *                                         stronger truth than an earlier
+ *                                         intention to skip
+ *   5  ENDED_EARLY     no                 ENDED_EARLY - the session's own
+ *                                         finished workout row must NOT
+ *                                         relabel it as fully completed
+ *   6  ENDED_EARLY     yes                ENDED_EARLY, flagged as a conflict.
+ *                                         Volyume has no reopen/resume
+ *                                         transition, so this combination is
+ *                                         not reachable by any authorised
+ *                                         path. It is reported as
+ *                                         diagnostically invalid rather than
+ *                                         silently upgraded, because guessing
+ *                                         here would either claim work that
+ *                                         was not authorised as a completion
+ *                                         or discard a real workout row.
+ *
+ * "Other completion" deliberately excludes the ended-early session's OWN
+ * workout row, which always exists and is not evidence of anything further.
+ */
+export const RESOLUTION_PRECEDENCE = Object.freeze([
+  { rule: 1, explicit: null, otherCompletion: false, state: SESSION_STATE.OUTSTANDING, because: 'not_yet_resolved' },
+  { rule: 2, explicit: null, otherCompletion: true, state: SESSION_STATE.COMPLETED, because: 'performed' },
+  { rule: 3, explicit: SESSION_STATE.SKIPPED_BY_USER, otherCompletion: false, state: SESSION_STATE.SKIPPED_BY_USER, because: 'skipped_by_user' },
+  { rule: 4, explicit: SESSION_STATE.SKIPPED_BY_USER, otherCompletion: true, state: SESSION_STATE.COMPLETED, because: 'performed_after_skip' },
+  { rule: 5, explicit: SESSION_STATE.ENDED_EARLY, otherCompletion: false, state: SESSION_STATE.ENDED_EARLY, because: 'ended_early' },
+  { rule: 6, explicit: SESSION_STATE.ENDED_EARLY, otherCompletion: true, state: SESSION_STATE.ENDED_EARLY, because: 'ended_early', conflict: 'ended_early_with_later_completion' },
+]);
+
+/**
+ * Look the answer up in the table. No branch order, no guessing.
+ *
+ * @param {string|null} explicit         the current explicit resolution type
+ * @param {boolean} hasOtherCompletion   a completed workout row that is NOT the
+ *                                       ended-early session's own row
+ */
+export function precedenceFor(explicit, hasOtherCompletion) {
+  return RESOLUTION_PRECEDENCE.find(
+    (row) => row.explicit === (explicit ?? null)
+      && row.otherCompletion === !!hasOtherCompletion,
+  ) ?? RESOLUTION_PRECEDENCE[0];
+}
 
 /**
  * The required sessions for ONE programme week, in programme order.
@@ -147,49 +223,42 @@ export function resolveWeekSessions({
     completedByRoutine.get(rid).push(w);
   }
 
-  const resolutionByRoutine = new Map();
+  // Group the raw resolution rows per instance, THEN pick one deterministically
+  // - so a duplicate or stale row arriving from sync in a different order can
+  // never change the answer.
+  const resolutionRowsByRoutine = new Map();
   for (const r of Array.isArray(resolutions) ? resolutions : []) {
-    if (r?.deletedAt != null) continue;
     if (str(r?.mesocycleWeekId) !== week) continue;
     const rid = str(r?.routineId);
-    if (!rid || !EXPLICIT_RESOLUTIONS.includes(r?.resolution)) continue;
-    // Last write wins on a repeated resolution for the same instance.
-    const prev = resolutionByRoutine.get(rid);
-    if (!prev || (Number(r.resolvedAt) || 0) >= (Number(prev.resolvedAt) || 0)) {
-      resolutionByRoutine.set(rid, r);
-    }
+    if (!rid) continue;
+    if (!resolutionRowsByRoutine.has(rid)) resolutionRowsByRoutine.set(rid, []);
+    resolutionRowsByRoutine.get(rid).push(r);
   }
 
   return required.map((s) => {
     const completions = completedByRoutine.get(s.routineId) ?? [];
-    const resolution = resolutionByRoutine.get(s.routineId) ?? null;
+    const resolution = pickCurrentResolution(resolutionRowsByRoutine.get(s.routineId) ?? []);
+    const explicit = resolution?.resolution ?? null;
 
-    // 1. A full completion that is not the ended-early session itself.
-    const otherCompletion = completions.find(
-      (w) => !(resolution && str(resolution.workoutId) === str(w.id)),
-    );
-    if (otherCompletion && resolution?.resolution !== SESSION_STATE.SKIPPED_BY_USER) {
-      return { ...s, state: SESSION_STATE.COMPLETED, workoutId: otherCompletion.id, because: 'performed' };
-    }
-    if (otherCompletion) {
-      // Skipped, then genuinely trained anyway. Execution wins.
-      return { ...s, state: SESSION_STATE.COMPLETED, workoutId: otherCompletion.id, because: 'performed_after_skip' };
-    }
-    // 2. An explicit resolution.
-    if (resolution) {
-      return {
-        ...s,
-        state: resolution.resolution,
-        workoutId: str(resolution.workoutId),
-        because: resolution.resolution === SESSION_STATE.ENDED_EARLY ? 'ended_early' : 'skipped_by_user',
-      };
-    }
-    // 3. A completed workout row.
-    if (completions.length) {
-      return { ...s, state: SESSION_STATE.COMPLETED, workoutId: completions[0].id, because: 'performed' };
-    }
-    // 4.
-    return { ...s, state: SESSION_STATE.OUTSTANDING, workoutId: null, because: 'not_yet_resolved' };
+    // The ended-early session's OWN workout row is not evidence of anything
+    // further, so it is excluded before the table is consulted.
+    const endedEarlyWorkoutId = explicit === SESSION_STATE.ENDED_EARLY
+      ? str(resolution.workoutId) : null;
+    const otherCompletion = completions.find((w) => str(w.id) !== endedEarlyWorkoutId) ?? null;
+
+    const row = precedenceFor(explicit, !!otherCompletion);
+    const workoutId = row.state === SESSION_STATE.COMPLETED
+      ? (otherCompletion?.id ?? completions[0]?.id ?? null)
+      : (row.state === SESSION_STATE.ENDED_EARLY ? endedEarlyWorkoutId : null);
+
+    return {
+      ...s,
+      state: row.state,
+      workoutId: workoutId ?? null,
+      because: row.because,
+      rule: row.rule,
+      ...(row.conflict ? { conflict: row.conflict } : {}),
+    };
   });
 }
 
