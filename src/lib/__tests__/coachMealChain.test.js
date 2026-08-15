@@ -106,6 +106,20 @@ describe('JOB 13: a target change reaches the actual food', () => {
       .toBeGreaterThan(dayTotals(makePlan().plan.days[0]).kcal);
   });
 
+  test('the authoritative target wins when the meal-plan snapshot is stale', async () => {
+    const authoritative = {
+      targetKcal: 2600, proteinG: 180, carbsG: 320, fatG: 75, warnings: [],
+    };
+    const res = await applyCoachAdjustmentToActivePlan('u1', {
+      adjustmentKcal: 50,
+      targetSnapshot: authoritative,
+      minimumKcal: 1500,
+    });
+    expect(res.plan.targetSnapshot).toMatchObject(authoritative);
+    expect(mockPlanStore.saved.targetSnapshot).toMatchObject(authoritative);
+    expect(res.receipt.afterKcal).toBeCloseTo(2600, -1);
+  });
+
   test('CASE B: -250 kcal comes off the plate', async () => {
     const before = dayTotals(mockPlanStore.active.plan.days[0]).kcal;
     const res = await applyCoachAdjustmentToActivePlan('u1', { adjustmentKcal: -250 });
@@ -196,7 +210,14 @@ describe('JOB 13: the chain is wired to the real Apply tap', () => {
 
   test('applying calories saves the target AND pushes it into the meal plan', () => {
     expect(SCREEN).toMatch(/await saveNutritionTargets\(user\.id, computed\.targets\)/);
-    expect(SCREEN).toMatch(/applyCoachAdjustmentToActivePlan\(user\.id, \{ adjustmentKcal: change \}\)/);
+    expect(SCREEN).toMatch(/const appliedChange = computed\.newKcal - Number\(current\.targetKcal\)/);
+    expect(SCREEN).toMatch(/applyCoachAdjustmentToActivePlan\(user\.id, \{[\s\S]{0,200}?adjustmentKcal: appliedChange,[\s\S]{0,200}?targetSnapshot: computed\.targets/);
+  });
+
+  test('a floor clamp records the change that landed, not the larger request', () => {
+    expect(SCREEN).toMatch(/direction: Math\.sign\(appliedChange\)/);
+    expect(SCREEN).toMatch(/magnitude: Math\.abs\(appliedChange\)/);
+    expect(SCREEN).toMatch(/minimumKcal: check\.floorKcal/);
   });
 
   test('and the food change is narrated to the user, not left silent', () => {
@@ -207,7 +228,7 @@ describe('JOB 13: the chain is wired to the real Apply tap', () => {
   test('THE DAY LAW SURVIVES THE CHAIN: the delta applies to every day equally', () => {
     const svc = read('../food/mealPlanService.js');
     const start = svc.indexOf('export async function applyCoachAdjustmentToActivePlan');
-    const body = svc.slice(start, start + 2000);
+    const body = svc.slice(start, start + 3500);
     expect(body).toMatch(/reconcilePlanToTarget/);
     expect(body).not.toMatch(/trainingDay|restDay|weekday|getDay\(/i);
   });

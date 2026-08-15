@@ -86,8 +86,10 @@ describe('THE RECORD: structured truth, not prose', () => {
 
 describe('ONLY WHAT THE USER ACCEPTED (rule G)', () => {
   test('an applied week yields a record', () => {
-    const history = [{ weekStart: NOW, appliedAdjustments: { calories: { appliedAt: NOW, intervention: calorieRecord() } } }];
-    expect(interventionsFromHistory(history)).toHaveLength(1);
+    const history = [{ weekStart: NOW, appliedAdjustments: { calories: { appliedAt: NOW, newKcal: 3150, intervention: calorieRecord() } } }];
+    const records = interventionsFromHistory(history);
+    expect(records).toHaveLength(1);
+    expect(records[0].appliedValue).toBe(3150);
   });
 
   test('A WEEK THE USER NEVER ACCEPTED YIELDS NOTHING', () => {
@@ -156,6 +158,24 @@ describe('THE FIVE OUTCOMES', () => {
     expect(o.because).toBe('user_changed_it_themselves');
   });
 
+  test('CONFOUNDED: the accepted target no longer matches the authoritative target', () => {
+    const r = calorieRecord({ appliedValue: 3150 });
+    const o = classifyOutcome(r, { after: ctx({}), ...met });
+    expect(o).toEqual({ outcome: OUTCOME.CONFOUNDED, because: 'user_changed_it_themselves' });
+  });
+
+  test('CONFOUNDED: a new goal phase is not a result of the old decision', () => {
+    const after = buildCoachContext({
+      nutrition: { recentIntakeDaysLogged: 7, recentIntakeAvgKcal: 2500, targetKcal: 2500 },
+      weight: { ratePctPerWeek: -0.4, weighInCount: 12, onTarget: true },
+      intent: { goalPhase: 'mild_cut' },
+    });
+    expect(classifyOutcome(calorieRecord({ goalPhase: 'bulk' }), { after, ...met })).toEqual({
+      outcome: OUTCOME.CONFOUNDED,
+      because: 'goal_phase_changed_or_unknown',
+    });
+  });
+
   test('EVERY state has plain-English copy, and none of it claims causation', () => {
     for (const state of Object.values(OUTCOME)) {
       const copy = outcomeCopy(calorieRecord(), state);
@@ -198,6 +218,13 @@ describe('ANTI-OSCILLATION (rule F)', () => {
     expect(wouldReverseRecent(old, 'nutrition', -1, { nowMs: NOW })).toBeNull();
   });
 
+  test('a new goal phase releases an unjudged intervention immediately', () => {
+    const scoped = [calorieRecord({ appliedAtMs: NOW - 3 * DAY, goalPhase: 'bulk' })];
+    expect(wouldReverseRecent(scoped, 'nutrition', -1, {
+      nowMs: NOW, goalPhase: 'mild_cut',
+    })).toBeNull();
+  });
+
   test('it never crosses domains: a training change cannot block a calorie one', () => {
     const vol = [buildInterventionRecord({
       kind: INTERVENTION_KIND.VOLUME_START, appliedAtMs: NOW - 3 * DAY, direction: 1,
@@ -236,7 +263,7 @@ describe('THE REAL ENGINE REFUSES THE OSCILLATION', () => {
 
   test('THE PRODUCT RESULT: a recent INCREASE blocks this week\'s cut', () => {
     const out = run([buildInterventionRecord({
-      kind: INTERVENTION_KIND.CALORIE_TARGET, appliedAtMs: Date.now() - 3 * DAY, direction: 1, magnitude: 150,
+      kind: INTERVENTION_KIND.CALORIE_TARGET, appliedAtMs: Date.now() - 3 * DAY, direction: 1, magnitude: 150, goalPhase: 'bulk',
     })]);
     expect(out.adjustments.calories).toBeNull();
     const held = out.heldDecisions.find((h) => h.type === 'awaiting_last_change');
@@ -247,7 +274,7 @@ describe('THE REAL ENGINE REFUSES THE OSCILLATION', () => {
 
   test('a recent DECREASE does not block a further decrease', () => {
     const out = run([buildInterventionRecord({
-      kind: INTERVENTION_KIND.CALORIE_TARGET, appliedAtMs: Date.now() - 3 * DAY, direction: -1, magnitude: 125,
+      kind: INTERVENTION_KIND.CALORIE_TARGET, appliedAtMs: Date.now() - 3 * DAY, direction: -1, magnitude: 125, goalPhase: 'bulk',
     })]);
     expect(out.adjustments.calories?.change).toBeLessThan(0);
   });
@@ -303,6 +330,11 @@ describe('THE PRODUCTION PATHS', () => {
   test('the record is WRITTEN on the real apply taps, both domains', () => {
     expect(SCREEN).toMatch(/markApplied\(output, 'calories', \{[\s\S]{0,900}?intervention: buildInterventionRecord\(\{/);
     expect(SCREEN).toMatch(/markApplied\(output, 'training', \{[\s\S]{0,900}?intervention: buildInterventionRecord\(\{/);
+  });
+
+  test('the accepted calorie record carries the goal phase that scopes dose learning', () => {
+    const apply = SCREEN.slice(SCREEN.indexOf('async function handleApplyCalories'), SCREEN.indexOf('async function handleDeclineCalories'));
+    expect(apply).toMatch(/goalPhase: output\?\.goalPhase \?\? null/);
   });
 
   test('it is READ back before the run, so the gate can see it', () => {

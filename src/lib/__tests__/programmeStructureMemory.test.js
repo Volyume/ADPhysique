@@ -219,7 +219,7 @@ describe('THE PRODUCTION PATH', () => {
 
   test('and the copy names the evidence, not the algorithm', () => {
     const copy = structureMemoryCopy({ blocks: 4, splitType: 'upper_lower' }, 'Upper / Lower');
-    expect(copy).toBe('You have trained well on a Upper / Lower across 4 blocks, so we have started from that rather than from a default.');
+    expect(copy).toBe('You have trained well with Upper / Lower across 4 blocks, so we have started from that rather than from a default.');
     expect(copy).not.toMatch(/signature|epoch|algorithm|score/i);
     expect(copy).not.toContain('—');
   });

@@ -7371,11 +7371,20 @@ export async function getBlockReflectionData(userId, mesocycleId) {
  * @returns {object} the object to persist
  */
 export function preserveAppliedAdjustments(existingOutputJson, data) {
-  if (data?.appliedAdjustments) return data;
-  let prevApplied = null;
-  try { prevApplied = JSON.parse(existingOutputJson)?.appliedAdjustments ?? null; }
-  catch { prevApplied = null; } // unreadable stored JSON: keep data as-is
-  return prevApplied ? { ...data, appliedAdjustments: prevApplied } : data;
+  let previous = null;
+  try { previous = JSON.parse(existingOutputJson) ?? null; }
+  catch { previous = null; } // unreadable stored JSON: keep data as-is
+  if (!previous) return data;
+
+  // Both maps are deliberate user actions. A routine same-week recompute has
+  // neither, so replacing output_json wholesale must not erase either one.
+  // Preserve them independently: applying one domain must not clear a decline
+  // already recorded for another, and a genuine incoming action still wins.
+  let merged = data;
+  for (const key of ['appliedAdjustments', 'declinedAdjustments']) {
+    if (!data?.[key] && previous?.[key]) merged = { ...merged, [key]: previous[key] };
+  }
+  return merged;
 }
 
 export async function saveCoachOutput(userId, data) {

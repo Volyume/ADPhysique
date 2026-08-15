@@ -109,7 +109,7 @@ const num = (v) => {
 export function buildInterventionRecord({
   kind, appliedAtMs, direction, magnitude = null,
   because = null, authorisedBy = [], heldConstant = [], baseline = null,
-  goalPhase = null,
+  goalPhase = null, appliedValue = null,
 } = {}) {
   if (!INTERVENTION_KIND[String(kind).toUpperCase()] && !Object.values(INTERVENTION_KIND).includes(kind)) {
     return null;
@@ -122,6 +122,7 @@ export function buildInterventionRecord({
     appliedAt: num(appliedAtMs),
     direction: Math.sign(num(direction) ?? 0),
     magnitude: num(magnitude),
+    appliedValue: num(appliedValue),
     because,
     // Recorded so a later dose comparison can refuse to read a cutting
     // response as evidence about a gaining dose.
@@ -150,7 +151,15 @@ export function interventionsFromHistory(historyDesc = []) {
     for (const entry of Object.values(applied)) {
       const rec = entry?.intervention;
       if (!rec || rec.v !== RECORD_VERSION || !rec.kind) continue;
-      out.push({ ...rec, weekStart: num(week.weekStart), appliedAt: rec.appliedAt ?? num(entry.appliedAt) });
+      out.push({
+        ...rec,
+        weekStart: num(week.weekStart),
+        appliedAt: rec.appliedAt ?? num(entry.appliedAt),
+        // Older Campaign 18 rows stored the landed calorie target beside the
+        // record rather than inside it. Preserve that truth when reading so
+        // manual-override detection works across the rollout boundary.
+        appliedValue: rec.appliedValue ?? num(entry.newKcal),
+      });
     }
   }
   return out.sort((a, b) => (b.appliedAt ?? 0) - (a.appliedAt ?? 0));
@@ -194,6 +203,19 @@ export function classifyOutcome(record, { after = null, userOverrode = false, wi
 
   // The user took the wheel. Whatever happened next is not ours to claim.
   if (userOverrode) return { outcome: OUTCOME.CONFOUNDED, because: 'user_changed_it_themselves' };
+  if (record.kind === INTERVENTION_KIND.CALORIE_TARGET) {
+    const landed = num(record.appliedValue);
+    const current = num(after?.nutrition?.targetKcal);
+    if (landed != null && current != null && landed !== current) {
+      return { outcome: OUTCOME.CONFOUNDED, because: 'user_changed_it_themselves' };
+    }
+  }
+  // A result under a different goal is not the result of the old decision.
+  // A missing phase is also not proof of comparability: missing != same.
+  const currentGoalPhase = after?.intent?.goalPhase ?? null;
+  if (record.goalPhase !== currentGoalPhase) {
+    return { outcome: OUTCOME.CONFOUNDED, because: 'goal_phase_changed_or_unknown' };
+  }
 
   const signalKey = record.observe?.signal;
   const fact = readFact(after, signalKey);
@@ -252,9 +274,12 @@ function readFact(context, key) {
  * still inside its observation window, so the caller can refuse to undo it on
  * a single noisy reading.
  */
-export function recentUnjudgedIntervention(records = [], domain, { nowMs = null } = {}) {
+export function recentUnjudgedIntervention(records = [], domain, {
+  nowMs = null, goalPhase = null,
+} = {}) {
   for (const r of Array.isArray(records) ? records : []) {
     if (r.domain !== domain) continue;
+    if (domain === 'nutrition' && r.goalPhase !== goalPhase) continue;
     if (!observationWindowMet(r, { nowMs })) return r;
   }
   return null;
@@ -266,8 +291,10 @@ export function recentUnjudgedIntervention(records = [], domain, { nowMs = null 
  * Only a reversal is blocked. Continuing in the same direction is a dose
  * decision, not an oscillation, and the domain's own gates already govern it.
  */
-export function wouldReverseRecent(records, domain, proposedDirection, { nowMs = null } = {}) {
-  const recent = recentUnjudgedIntervention(records, domain, { nowMs });
+export function wouldReverseRecent(records, domain, proposedDirection, {
+  nowMs = null, goalPhase = null,
+} = {}) {
+  const recent = recentUnjudgedIntervention(records, domain, { nowMs, goalPhase });
   if (!recent) return null;
   const dir = Math.sign(Number(proposedDirection) || 0);
   if (dir === 0 || dir === recent.direction) return null;
@@ -321,7 +348,7 @@ export function doseEscalation({
     if (r.kind !== INTERVENTION_KIND.CALORIE_TARGET) continue;
     // A different goal phase is a materially changed circumstance: last
     // block's cutting response says nothing about this block's gaining dose.
-    if (goalPhase && r.goalPhase && r.goalPhase !== goalPhase) continue;
+    if (r.goalPhase !== goalPhase) continue;
     if (r.direction !== dir) continue;
     const windowMet = observationWindowMet(r, { nowMs });
     if (!windowMet) return inert; // still being observed: anti-oscillation owns this
@@ -347,10 +374,13 @@ export function doseEscalation({
  * Returns a line only where the last judged change genuinely improved things
  * AND the plan is currently on target. Never used to justify another change.
  */
-export function holdReinforcement({ records = [], after = null, nowMs = null, onTarget = false } = {}) {
+export function holdReinforcement({
+  records = [], after = null, nowMs = null, onTarget = false, goalPhase = null,
+} = {}) {
   if (!onTarget || !after) return null;
   for (const r of Array.isArray(records) ? records : []) {
     if (r.kind !== INTERVENTION_KIND.CALORIE_TARGET) continue;
+    if (r.goalPhase !== goalPhase) continue;
     if (!observationWindowMet(r, { nowMs })) return null;
     const { outcome } = classifyOutcome(r, { after, windowMet: true });
     if (outcome !== OUTCOME.IMPROVED) return null;

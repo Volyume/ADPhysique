@@ -19,6 +19,7 @@
 import { preserveAppliedAdjustments } from '../database';
 
 const applied = { calories: { appliedAt: 1_700_000_000_000, newKcal: 2100, change: -100 } };
+const declined = { calories: { declinedAt: 1_700_000_000_000, decline: { v: 1, domain: 'nutrition' } } };
 
 describe('preserveAppliedAdjustments (coach output apply-state)', () => {
   test('carries the stored appliedAdjustments forward when the re-save omits them', () => {
@@ -36,6 +37,20 @@ describe('preserveAppliedAdjustments (coach output apply-state)', () => {
     const incoming = { weekStart: 1, appliedAdjustments: newApply };
     const out = preserveAppliedAdjustments(stored, incoming);
     expect(out.appliedAdjustments).toBe(newApply);
+  });
+
+  test('carries a deliberate decline across the same-week screen recompute', () => {
+    const stored = JSON.stringify({ weekStart: 1, declinedAdjustments: declined });
+    const incoming = { weekStart: 1, adjustments: { calories: { change: -100 } } };
+    expect(preserveAppliedAdjustments(stored, incoming).declinedAdjustments).toEqual(declined);
+  });
+
+  test('preserves applied and declined actions independently', () => {
+    const stored = JSON.stringify({ weekStart: 1, appliedAdjustments: applied, declinedAdjustments: declined });
+    const newApply = { training: { appliedAt: 1_700_000_999_999 } };
+    const out = preserveAppliedAdjustments(stored, { weekStart: 1, appliedAdjustments: newApply });
+    expect(out.appliedAdjustments).toBe(newApply);
+    expect(out.declinedAdjustments).toEqual(declined);
   });
 
   test('no stored applied state: returns the incoming data unchanged', () => {

@@ -1120,6 +1120,11 @@ export default function CoachOutputScreen({ navigation, route }) {
       await AsyncStorage.setItem(
         '@volyume_nutrition_targets', JSON.stringify(computed.targets),
       ).catch(() => {});
+      // The requested step and the step that actually landed can differ at
+      // the calorie floor. Everything downstream must follow the latter or
+      // the accepted-intervention record and meal plan will disagree with the
+      // authoritative nutrition target.
+      const appliedChange = computed.newKcal - Number(current.targetKcal);
       // CAMPAIGN 18 OUTCOME FOLLOW-UP. The structured truth this change
       // leaves behind, written only here - on the user's deliberate tap - so
       // Volyume can never score a change it proposed and they declined.
@@ -1129,8 +1134,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         intervention: buildInterventionRecord({
           kind: INTERVENTION_KIND.CALORIE_TARGET,
           appliedAtMs: Date.now(),
-          direction: Math.sign(change),
-          magnitude: Math.abs(change),
+          direction: Math.sign(appliedChange),
+          magnitude: Math.abs(appliedChange),
+          appliedValue: computed.newKcal,
           because: output?.limiters?.nutrition?.because ?? null,
           // The facts that were GOOD when this was authorised, so a later
           // read can tell whether it was decided on real evidence.
@@ -1141,6 +1147,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           baseline: output?.context?.weight?.trend
             ? { key: 'weight.trend', value: output.context.weight.trend.value }
             : null,
+          goalPhase: output?.goalPhase ?? null,
         }),
       });
       await saveCoachOutput(user.id, { weekStart, ...updated });
@@ -1165,7 +1172,11 @@ export default function CoachOutputScreen({ navigation, route }) {
           experienceLevel: userProfile?.experienceLevel ?? userProfile?.experience ?? null,
           trainingAgeYears: userProfile?.trainingAgeYears ?? null,
         });
-        const { change: planChange } = await applyCoachAdjustmentToActivePlan(user.id, { adjustmentKcal: change });
+        const { change: planChange } = await applyCoachAdjustmentToActivePlan(user.id, {
+          adjustmentKcal: appliedChange,
+          targetSnapshot: computed.targets,
+          minimumKcal: check.floorKcal,
+        });
         const narration = buildPlanEditNarration(planChange, { register });
         setPlanEditNote(narration);
       } catch (e) {
@@ -1256,6 +1267,7 @@ export default function CoachOutputScreen({ navigation, route }) {
           baseline: output?.context?.recovery?.systemic
             ? { key: 'recovery.systemic', value: output.context.recovery.systemic.value }
             : null,
+          goalPhase: output?.goalPhase ?? null,
         }),
       });
       await saveCoachOutput(user.id, { weekStart, ...updated });

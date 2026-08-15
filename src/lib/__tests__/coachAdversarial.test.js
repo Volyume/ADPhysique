@@ -145,7 +145,7 @@ describe('ATTACK: local soreness + good systemic recovery (Q7)', () => {
 describe('ATTACK: recent calorie adjustment + noisy weight (Q10)', () => {
   const prior = [buildInterventionRecord({
     kind: INTERVENTION_KIND.CALORIE_TARGET, appliedAtMs: Date.now() - 4 * DAY,
-    direction: 1, magnitude: 150,
+    direction: 1, magnitude: 150, goalPhase: 'bulk',
   })];
 
   test('one noisy week cannot reverse a change that has not been read yet', () => {
@@ -195,7 +195,7 @@ describe('ATTACK: an intervention confounded by missing execution', () => {
 
   test('the diary went dark, so a calorie change teaches nothing', () => {
     const rec = buildInterventionRecord({
-      kind: INTERVENTION_KIND.CALORIE_TARGET, appliedAtMs: Date.now() - 30 * DAY, direction: 1, magnitude: 150,
+      kind: INTERVENTION_KIND.CALORIE_TARGET, appliedAtMs: Date.now() - 30 * DAY, direction: 1, magnitude: 150, goalPhase: 'bulk',
     });
     const after = week({ kgPerWeek: 0, intakeDays: 1, intakeAvg: null, adherence: 'untracked' }).context;
     expect(classifyOutcome(rec, { after, windowMet: true }).outcome).toBe(OUTCOME.CONFOUNDED);
@@ -203,7 +203,7 @@ describe('ATTACK: an intervention confounded by missing execution', () => {
 
   test('and a confounded result is never counted as a success anywhere', () => {
     const rec = buildInterventionRecord({
-      kind: INTERVENTION_KIND.CALORIE_TARGET, appliedAtMs: Date.now() - 30 * DAY, direction: 1, magnitude: 150,
+      kind: INTERVENTION_KIND.CALORIE_TARGET, appliedAtMs: Date.now() - 30 * DAY, direction: 1, magnitude: 150, goalPhase: 'bulk',
     });
     const after = week({ intakeDays: 1, intakeAvg: null, adherence: 'untracked' }).context;
     const o = classifyOutcome(rec, { after, windowMet: true });
@@ -219,7 +219,7 @@ describe('ATTACK: freshness (Q8)', () => {
 
   test('an intervention still inside its window is INSUFFICIENT, not a result', () => {
     const rec = buildInterventionRecord({
-      kind: INTERVENTION_KIND.CALORIE_TARGET, appliedAtMs: Date.now() - 3 * DAY, direction: 1, magnitude: 150,
+      kind: INTERVENTION_KIND.CALORIE_TARGET, appliedAtMs: Date.now() - 3 * DAY, direction: 1, magnitude: 150, goalPhase: 'bulk',
     });
     expect(observationWindowMet(rec, { nowMs: Date.now() })).toBe(false);
     const o = classifyOutcome(rec, { after: week({ kgPerWeek: 0 }).context, windowMet: false });
@@ -237,7 +237,8 @@ describe('ATTACK: persistence across restore (Q9)', () => {
     // An applied receipt must survive a merge with a device that only VIEWED
     // the week - the existing law, which the intervention record inherits.
     expect(db).toMatch(/appliedAdjustments/);
-    expect(db).toMatch(/prevApplied \? \{ \.\.\.data, appliedAdjustments: prevApplied \} : data/);
+    expect(db).toMatch(/\['appliedAdjustments', 'declinedAdjustments'\]/);
+    expect(db).toMatch(/previous\?\.\[key\]/);
   });
 
   test('and a version-stamped record ignores anything it does not recognise', () => {

@@ -160,6 +160,18 @@ describe('JOB A: a previous response can resize the next dose', () => {
     expect(dose.escalate).toBe(false);
   });
 
+  test('A2: a missing goal phase is not silently treated as comparable', () => {
+    const dose = doseEscalation({
+      records: [oldUnchangedIncrease({ goalPhase: null })],
+      after: buildCoachContext({
+        nutrition: { recentIntakeDaysLogged: 7, recentIntakeAvgKcal: 3010, targetKcal: 3000 },
+        weight: { ratePctPerWeek: 0.0, weighInCount: 12, onTarget: false },
+      }),
+      nowMs: Date.now(), direction: 1, goalPhase: 'bulk',
+    });
+    expect(dose.escalate).toBe(false);
+  });
+
   test('A2: an intervention still inside its window escalates nothing', () => {
     const dose = doseEscalation({
       records: [oldUnchangedIncrease({ appliedAtMs: Date.now() - 3 * DAY })],

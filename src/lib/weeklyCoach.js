@@ -1610,7 +1610,7 @@ export function runWeeklyCoach(inputs) {
   let oscillationHeld = null;
   if (calorieAdjustment && !rapidLossOverride) {
     oscillationHeld = wouldReverseRecent(
-      priorInterventions, 'nutrition', Math.sign(calorieAdjustment.change), { nowMs },
+      priorInterventions, 'nutrition', Math.sign(calorieAdjustment.change), { nowMs, goalPhase },
     );
     if (oscillationHeld) calorieAdjustment = null;
   }
@@ -2231,7 +2231,8 @@ export function runWeeklyCoach(inputs) {
       })()
       : null,
     holdReinforcement: holdReinforcement({
-      records: priorInterventions, after: coachContext, nowMs, onTarget: onTarget === true,
+      records: priorInterventions, after: coachContext, nowMs,
+      onTarget: onTarget === true, goalPhase,
     }),
     doseEscalated,
     confidence: emittedConfidenceLevel,

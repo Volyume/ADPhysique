@@ -519,19 +519,22 @@ export async function repeatPlanDayOnActivePlan(userId, { fromIndex, toIndex } =
  *    `receipt` is the fuller continuity result for the confirm surface.
  *    Both are null when there is no active plan.
  */
-export async function applyCoachAdjustmentToActivePlan(userId, { adjustmentKcal } = {}) {
+export async function applyCoachAdjustmentToActivePlan(userId, {
+  adjustmentKcal, targetSnapshot = null, minimumKcal = null,
+} = {}) {
   const active = await getActiveMealPlan(userId);
   if (!active || !Array.isArray(active.plan?.days) || active.plan.days.length === 0) {
     return { change: null, receipt: null };
   }
   const snap = active.plan.targetSnapshot || {};
+  // When the Apply path has already persisted the authoritative target, use
+  // that exact target rather than independently adding the requested delta to
+  // a possibly stale meal-plan total. Delta-only callers retain the existing
+  // behaviour, but the cross-domain chain now has one final number.
+  const suppliedTarget = storedTargetToEngineTarget(targetSnapshot);
   // SAFETY: a floored target IS the floor (belt-and-braces for snapshots
   // stored before storedTargetToEngineTarget raised kcalMin on floored
   // targets). Never hand the editor a floor below the floored target.
-  const floorKcal = targetWasFloored(snap)
-    ? (snap.targetKcal || 0)
-    : (snap.kcalMin || Math.round((snap.targetKcal || 0) * 0.9));
-
   const rep = active.plan.days.find((d) => (d?.slots ?? []).length) ?? active.plan.days[0];
   // CAMPAIGN 18 JOB 13 HARDENING. `?? 0` on a missing day total silently made
   // the new target the adjustment ALONE - so a stored plan whose day totals
@@ -542,7 +545,22 @@ export async function applyCoachAdjustmentToActivePlan(userId, { adjustmentKcal 
   // rather than compute from a number we do not have.
   const baseKcal = Number(rep?.totals?.kcal);
   if (!Number.isFinite(baseKcal) || baseKcal <= 0) return { change: null, receipt: null };
-  const newTargetKcal = Math.round(baseKcal + (Number(adjustmentKcal) || 0));
+  const newTargetKcal = suppliedTarget?.targetKcal
+    ?? Math.round(baseKcal + (Number(adjustmentKcal) || 0));
+  const nextSnapshot = suppliedTarget ?? {
+    ...snap,
+    targetKcal: newTargetKcal,
+    kcalMin: Math.round(newTargetKcal * 0.9),
+    kcalMax: Math.round(newTargetKcal * 1.1),
+  };
+  const existingFlooredTarget = (targetWasFloored(snap)
+    || (Number(snap.kcalMin) > 0 && Number(snap.kcalMin) >= Number(snap.targetKcal)))
+    ? (snap.targetKcal || 0)
+    : 0;
+  const configuredFloor = targetWasFloored(nextSnapshot)
+    ? (nextSnapshot.targetKcal || 0)
+    : (nextSnapshot.kcalMin || Math.round(newTargetKcal * 0.9));
+  const floorKcal = Math.max(existingFlooredTarget, configuredFloor, Number(minimumKcal) || 0);
 
   // The coach delta applies to EVERY day of the week plan (each day routes
   // through its own floor clamp): editing one day while six stay stale would
@@ -550,7 +568,7 @@ export async function applyCoachAdjustmentToActivePlan(userId, { adjustmentKcal 
   // with itself.
   const result = reconcilePlanToTarget({
     plan: active.plan,
-    newTarget: { targetKcal: newTargetKcal },
+    newTarget: nextSnapshot,
     prefs: active.plan.prefs,
     floorKcal,
   });
@@ -571,12 +589,15 @@ export async function applyCoachAdjustmentToActivePlan(userId, { adjustmentKcal 
     lastEditType: 'macro_adjustment',
   } : null;
 
-  await updateMealPlan(userId, active.id, result.plan);
+  // A refused cut did not change the target, so it must not rewrite the
+  // snapshot to the rejected below-floor number.
+  const savedPlan = { ...result.plan, targetSnapshot: result.floorHeld ? snap : nextSnapshot };
+  await updateMealPlan(userId, active.id, savedPlan);
   return {
-    plan: result.plan,
+    plan: savedPlan,
     change,
     receipt: result,
-    appliedToDays: result.plan.days.length,
+    appliedToDays: savedPlan.days.length,
   };
 }
 
