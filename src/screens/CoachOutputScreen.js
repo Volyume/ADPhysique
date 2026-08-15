@@ -2067,7 +2067,11 @@ export default function CoachOutputScreen({ navigation, route }) {
         setNextWeekIsDeload(next?.is_deload === 1);
         // FB-06: the signal was already loaded here, just never read.
         setCurrentWeekIsDeload(!!cur?.isDeload && !cur?.awaitingDecision);
-        setCurrentRecoveryState(cur?.recoveryState ?? null);
+        // C18: the GATED state, same as Home and Train.
+        // eslint-disable-next-line global-require
+        const { resolveProgrammePosition } = require('../lib/programmePosition');
+        const pos = await resolveProgrammePosition(user.id).catch(() => null);
+        setCurrentRecoveryState(pos?.recoveryState ?? cur?.recoveryState ?? null);
       } catch (_e) {
         setNextTrainingWeekId(null);
         setBlockAwaitingDecision(false);

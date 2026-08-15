@@ -32,10 +32,17 @@ import {
   resolveWeekSessions, nextOutstandingSession, weekProgressionResolved,
   executionSummary, SESSION_STATE,
 } from './blockProgression';
-import { plannedRecoveryWeek } from './recoveryState';
+import { plannedRecoveryWeek, resolveRecoveryState } from './recoveryState';
 import { logError } from './errorLog';
 
-const int = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : null);
+// Number(null) is 0, not NaN, so a bare Number.isFinite check would turn an
+// ABSENT anchor into anchor 0 and silently make every legacy block look like a
+// new one. Null, undefined and '' are absent; everything else is measured.
+const int = (v) => {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.round(n) : null;
+};
 
 /**
  * Workout rows as `getBlockTrainingData` returns them (raw, snake_case),
@@ -189,6 +196,24 @@ export async function resolveProgrammePosition(userId) {
       // phase while any required pre-recovery session is still outstanding.
       preRecoveryOutstanding,
       recoveryPhaseAllowed: !preRecoveryOutstanding,
+      // THE GATED RECOVERY STATE. Every surface reads this one rather than the
+      // calendar-side reading on getCurrentMesocycleWeek, so the planned
+      // recovery week cannot appear while a required accumulation session is
+      // still outstanding. The adaptive branch is untouched: it is evidence
+      // about recovery, not a position in the block.
+      recoveryState: resolveRecoveryState({
+        // The CALENDAR week is the right input here: "have we reached the
+        // recovery week" is a calendar question, and `recoveryPhaseAllowed` is
+        // what stops the answer being acted on while work is outstanding.
+        // Passing the active week instead would silently take the normal
+        // accumulation branch and lose the reason WHY recovery is being held.
+        weekIndex: calendarWeekIndex,
+        plannedWeeks,
+        deloadWeek: block.deloadWeek,
+        isDeload: !!calendarWeek?.isDeload,
+        awaitingDecision: !!calendarWeek?.awaitingDecision,
+        recoveryPhaseAllowed: !preRecoveryOutstanding,
+      }),
       source,
       legacyBlock: legacy,
       candidateFloorWeek: floor,

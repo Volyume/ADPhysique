@@ -23,6 +23,9 @@ import TodayStrip from '../components/TodayStrip';
 import RecoveryStateCard from '../components/RecoveryStateCard';
 import { appAlert } from '../components/AppAlert';
 import { resolveProgrammePosition } from '../lib/programmePosition';
+import {
+  reEntryCheckDue, reEntryPrompt, reEntryOutcome, RE_ENTRY_ANSWER,
+} from '../lib/reEntryCheck';
 import { sessionDisplayName, skipConfirmation } from '../lib/blockProgression';
 import { nextWorkoutRecoveryLabel, isLighterTrainingState } from '../lib/recoveryState';
 import { useToast } from '../components/Toast';
@@ -357,6 +360,8 @@ export default function HomeScreen({ navigation, route }) {
   const [recoveryRead, setRecoveryRead] = useState(false);
   // C18: the authoritative programme position, so Home never re-derives it.
   const [programmePosition, setProgrammePosition] = useState(null);
+  // C18 long-gap re-entry: asked once per return, never on every screen.
+  const [reEntryAsked, setReEntryAsked] = useState(false);
 
   // B3: lift plateau banner. { exerciseId, line } | null. Defaults dismissed
   // so it never flashes before the stored dismissal has been read (the
@@ -1239,23 +1244,22 @@ export default function HomeScreen({ navigation, route }) {
       // THIS block? Best-effort - a read failure shows the card expanded,
       // which is the direction that keeps a consequential coaching state
       // visible rather than hiding it.
-      if (isLighterTrainingState(week.recoveryState)) {
-        const key = recoveryReadKey(user.id, week.mesocycleId, week.recoveryState.state);
+      const gated = (await resolveProgrammePosition(user.id).catch(() => null))?.recoveryState
+        ?? week.recoveryState;
+      if (isLighterTrainingState(gated)) {
+        const key = recoveryReadKey(user.id, week.mesocycleId, gated.state);
         const seen = await AsyncStorage.getItem(key).catch(() => null);
         setRecoveryRead(!!seen);
       } else {
         setRecoveryRead(false);
       }
-      // C18: the ONE recovery-week push, fired by the real block transition
-      // rather than by a calendar. Once per block, planned state only, and
-      // every existing opt-out, quiet-hours and budget rule applies inside.
-      // Best-effort: Home says everything already if this never runs.
-      try {
-        // eslint-disable-next-line global-require
-        const { notifyRecoveryWeekStarted } = require('../lib/notifications/scheduler');
-        notifyRecoveryWeekStarted(user.id, week.recoveryState, week.mesocycleId)
-          .catch(() => {});
-      } catch (_) { /* notifications are supplemental, never required */ }
+      // C18: the recovery-week push was REMOVED (founder ruling). It could
+      // only ever run from here, which means it could not tell the athlete
+      // anything before they opened Home - and once Home is open the recovery
+      // card already says it. A local push scheduled while the user is looking
+      // at the card is redundant, and a background scheduler for one
+      // notification is not worth building. Home, the next-workout label,
+      // Train and the review carry the state.
 
       // Stage 8 (§3.6): the block-start explanation, derived from the
       // WRITTEN plan rows so it can never claim a personalisation the
@@ -1388,6 +1392,7 @@ export default function HomeScreen({ navigation, route }) {
       // routine rather than the retired pointer.
       const position = await resolveProgrammePosition(user.id).catch(() => null);
       setProgrammePosition(position);
+      maybeAskReEntry(position);
       const next = position?.nextSession ?? null;
       const idx = next
         ? Math.max(0, routines.findIndex((r) => r.id === next.routineId))
@@ -1439,6 +1444,41 @@ export default function HomeScreen({ navigation, route }) {
         },
       },
     ]);
+  }
+
+  // ── C18 LONG-GAP RE-ENTRY ────────────────────────────────────────────────
+  //
+  // TIME MAY QUESTION THE PRESCRIPTION. TIME MAY NOT CHANGE THE NEXT WORKOUT.
+  // The outstanding session is untouched by this: Legs is still Legs after
+  // twenty days. All this does is ask, once, before the same peak targets are
+  // handed back, and record what the athlete said.
+  async function maybeAskReEntry(position) {
+    if (!user?.id || reEntryAsked) return;
+    try {
+      const key = `@volyume_reentry_answered_${user.id}`;
+      const answeredFor = await AsyncStorage.getItem(key).catch(() => null);
+      const check = reEntryCheckDue({
+        lastWorkoutAtMs: lastSession?.startedAt ?? null,
+        nowMs: Date.now(),
+        sessionsPerWeek: position?.sessions?.length ?? null,
+        answeredFor,
+      });
+      if (!check) return;
+      setReEntryAsked(true);
+      const prompt = reEntryPrompt(check);
+      const record = async (answer) => {
+        const outcome = reEntryOutcome(answer);
+        try { await AsyncStorage.setItem(key, check.key); } catch (_) { /* asked again next open */ }
+        if (outcome.note) toast.show(outcome.note, { variant: 'info' });
+      };
+      appAlert(prompt.title, prompt.body, [
+        { text: prompt.options[0].label, onPress: () => record(RE_ENTRY_ANSWER.TRAINED_ELSEWHERE) },
+        { text: prompt.options[1].label, onPress: () => record(RE_ENTRY_ANSWER.DID_NOT_TRAIN) },
+        { text: prompt.options[2].label, style: 'cancel', onPress: () => record(RE_ENTRY_ANSWER.CONTINUE) },
+      ]);
+    } catch (e) {
+      logError('HomeScreen.maybeAskReEntry', e, { userId: user?.id });
+    }
   }
 
   async function handleRefresh() {
@@ -1630,7 +1670,13 @@ export default function HomeScreen({ navigation, route }) {
   // it. Straight from the block's resolved state - never re-derived here, and
   // never the word "week" on an adaptive reduction, which would claim the hard
   // part of the block had finished when it has not.
-  const recoveryLabel = nextWorkoutRecoveryLabel(currentMesoWeek?.recoveryState);
+  // C18: the GATED state. programmePosition re-resolves recovery knowing
+  // whether any required accumulation session is still outstanding, so the
+  // planned recovery week cannot appear while the athlete still owes work.
+  // The calendar-side reading is the fallback only when position is unreadable.
+  const gatedRecoveryState = programmePosition?.recoveryState
+    ?? currentMesoWeek?.recoveryState ?? null;
+  const recoveryLabel = nextWorkoutRecoveryLabel(gatedRecoveryState);
 
   // Derive how many days since last completed workout (null = no history)
   const lastWorkoutDaysAgo = lastSession
@@ -1997,7 +2043,7 @@ export default function HomeScreen({ navigation, route }) {
             the block finishes, because the resolver returns nothing - the
             state ends with the lifecycle, never with a tap. ── */}
         <RecoveryStateCard
-          recoveryState={currentMesoWeek?.recoveryState}
+          recoveryState={gatedRecoveryState}
           expanded={!recoveryRead}
           onToggle={toggleRecoveryRead}
         />

@@ -227,11 +227,6 @@ export function categoryForDataType(type) {
     // category, so its opt-out, budget rank and telemetry are the ones the
     // user already knows rather than a new surface they have never seen.
     case 'block_ready_to_review': return CATEGORY.WEEKLY_COACH_READY;
-    // C18 recovery-visibility amendment: the recovery-week transition is a
-    // coaching-state message, so it shares the coaching/review category the
-    // user already controls rather than introducing a surface they have never
-    // opted out of. Same opt-out, same budget rank, same telemetry.
-    case 'recovery_week_started': return CATEGORY.WEEKLY_COACH_READY;
     default: return null;
   }
 }

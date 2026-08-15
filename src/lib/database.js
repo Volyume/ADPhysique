@@ -4683,6 +4683,11 @@ export async function getCurrentMesocycleWeek(userId) {
       awaitingDecision,
       isDeload: row.is_deload === 1,
       deloadWeek,
+      // NOTE (C18): this composition is the CALENDAR-side reading. The
+      // planned-recovery branch is additionally gated on programme position by
+      // `programmePosition.resolveProgrammePosition`, which re-resolves the
+      // state with `recoveryPhaseAllowed` once it knows whether any required
+      // pre-recovery session is still outstanding. Surfaces read the gated one.
       recoveryState: resolveRecoveryState({
         weekIndex: row.week_index,
         plannedWeeks,
