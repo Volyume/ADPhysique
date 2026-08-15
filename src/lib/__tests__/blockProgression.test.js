@@ -15,6 +15,7 @@ import {
   SESSION_STATE, resolveWeekSessions, nextOutstandingSession,
   weekProgressionResolved, executionSummary, isResolved, isPerformedInFull,
   requiredSessions, sessionDisplayName, skipConfirmation, endEarlyConfirmation,
+  RESOLUTION_PRECEDENCE, precedenceFor, pickCurrentResolution,
 } from '../blockProgression';
 
 const WEEK = 'week_1';
@@ -123,6 +124,118 @@ describe('CASE 5: the one-time skip', () => {
     const legs = sessions.find((s) => s.routineId === 'r_legs');
     expect(legs.state).toBe(SESSION_STATE.COMPLETED);
     expect(legs.because).toBe('performed_after_skip');
+  });
+});
+
+describe('THE RESOLUTION PRECEDENCE TABLE (founder pin)', () => {
+  // Driven off the exported table, so the answer can never come to depend on
+  // the order the branches happen to be written in.
+  const CASES = [
+    { rule: 1, explicit: null, other: false, expect: SESSION_STATE.OUTSTANDING },
+    { rule: 2, explicit: null, other: true, expect: SESSION_STATE.COMPLETED },
+    { rule: 3, explicit: SESSION_STATE.SKIPPED_BY_USER, other: false, expect: SESSION_STATE.SKIPPED_BY_USER },
+    { rule: 4, explicit: SESSION_STATE.SKIPPED_BY_USER, other: true, expect: SESSION_STATE.COMPLETED },
+    { rule: 5, explicit: SESSION_STATE.ENDED_EARLY, other: false, expect: SESSION_STATE.ENDED_EARLY },
+    { rule: 6, explicit: SESSION_STATE.ENDED_EARLY, other: true, expect: SESSION_STATE.ENDED_EARLY },
+  ];
+
+  test.each(CASES)('rule $rule: explicit=$explicit + otherCompletion=$other', (c) => {
+    const row = precedenceFor(c.explicit, c.other);
+    expect(row.rule).toBe(c.rule);
+    expect(row.state).toBe(c.expect);
+  });
+
+  test('the table covers every combination exactly once', () => {
+    const keys = RESOLUTION_PRECEDENCE.map((r) => `${r.explicit}|${r.otherCompletion}`);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(keys).toHaveLength(6);
+  });
+
+  test('RULE 6 IS DIAGNOSTIC, NOT A GUESS: no silent upgrade to COMPLETED', () => {
+    // Volyume has no reopen/resume transition, so this combination is not
+    // reachable by any authorised path. Guessing would either claim an
+    // unauthorised completion or discard a real workout row.
+    const row = precedenceFor(SESSION_STATE.ENDED_EARLY, true);
+    expect(row.state).toBe(SESSION_STATE.ENDED_EARLY);
+    expect(row.state).not.toBe(SESSION_STATE.COMPLETED);
+    expect(row.conflict).toBe('ended_early_with_later_completion');
+
+    // And through the real resolver.
+    const sessions = resolve({
+      workouts: [done('r_legs', 'w_partial'), done('r_legs', 'w_later')],
+      resolutions: [resolution('r_legs', SESSION_STATE.ENDED_EARLY, { workoutId: 'w_partial' })],
+    });
+    const legs = sessions.find((s) => s.routineId === 'r_legs');
+    expect(legs.state).toBe(SESSION_STATE.ENDED_EARLY);
+    expect(legs.conflict).toBe('ended_early_with_later_completion');
+  });
+
+  test('RULE 4 IS NOT RULE 6: a skip genuinely is overridden by real work', () => {
+    expect(precedenceFor(SESSION_STATE.SKIPPED_BY_USER, true).state).toBe(SESSION_STATE.COMPLETED);
+    expect(precedenceFor(SESSION_STATE.SKIPPED_BY_USER, true).conflict).toBeUndefined();
+  });
+
+  test('every resolved rule reports the same state through the resolver', () => {
+    // The table and the resolver cannot drift: rule numbers are carried out.
+    const cases = [
+      { workouts: [], resolutions: [], rule: 1 },
+      { workouts: [done('r_legs')], resolutions: [], rule: 2 },
+      { workouts: [], resolutions: [resolution('r_legs', SESSION_STATE.SKIPPED_BY_USER)], rule: 3 },
+      { workouts: [done('r_legs')], resolutions: [resolution('r_legs', SESSION_STATE.SKIPPED_BY_USER)], rule: 4 },
+      {
+        workouts: [done('r_legs', 'w_partial')],
+        resolutions: [resolution('r_legs', SESSION_STATE.ENDED_EARLY, { workoutId: 'w_partial' })],
+        rule: 5,
+      },
+    ];
+    for (const c of cases) {
+      const legs = resolve(c).find((s) => s.routineId === 'r_legs');
+      expect(legs.rule).toBe(c.rule);
+    }
+  });
+});
+
+describe('ONE CURRENT RESOLUTION PER INSTANCE, whatever sync delivers', () => {
+  const rows = [
+    { id: 'a', resolution: SESSION_STATE.SKIPPED_BY_USER, resolvedAt: 100, mesocycleWeekId: WEEK, routineId: 'r_legs' },
+    { id: 'b', resolution: SESSION_STATE.ENDED_EARLY, resolvedAt: 300, mesocycleWeekId: WEEK, routineId: 'r_legs', workoutId: 'w_partial' },
+    { id: 'c', resolution: SESSION_STATE.SKIPPED_BY_USER, resolvedAt: 200, mesocycleWeekId: WEEK, routineId: 'r_legs' },
+  ];
+
+  test('the newest wins, and a deleted row is not a resolution', () => {
+    expect(pickCurrentResolution(rows).id).toBe('b');
+    expect(pickCurrentResolution([{ ...rows[0], deletedAt: 1 }])).toBeNull();
+    expect(pickCurrentResolution([])).toBeNull();
+  });
+
+  test('THE ANSWER DOES NOT DEPEND ON FETCH ORDER', () => {
+    const orders = [
+      [rows[0], rows[1], rows[2]], [rows[2], rows[1], rows[0]],
+      [rows[1], rows[0], rows[2]], [rows[2], rows[0], rows[1]],
+    ];
+    for (const order of orders) expect(pickCurrentResolution(order).id).toBe('b');
+  });
+
+  test('and ties break deterministically rather than on arrival', () => {
+    // Same resolvedAt and updatedAt: the id is the final total ordering.
+    const tied = [
+      { id: 'aaa', resolution: SESSION_STATE.SKIPPED_BY_USER, resolvedAt: 5 },
+      { id: 'zzz', resolution: SESSION_STATE.ENDED_EARLY, resolvedAt: 5 },
+    ];
+    expect(pickCurrentResolution(tied).id).toBe('zzz');
+    expect(pickCurrentResolution([...tied].reverse()).id).toBe('zzz');
+  });
+
+  test('a duplicate row cannot change the resolved state', () => {
+    const dupes = [
+      resolution('r_legs', SESSION_STATE.SKIPPED_BY_USER, { id: 'x' }),
+      resolution('r_legs', SESSION_STATE.SKIPPED_BY_USER, { id: 'y' }),
+    ];
+    const forward = resolve({ resolutions: dupes });
+    const backward = resolve({ resolutions: [...dupes].reverse() });
+    const state = (list) => list.find((s) => s.routineId === 'r_legs').state;
+    expect(state(forward)).toBe(SESSION_STATE.SKIPPED_BY_USER);
+    expect(state(backward)).toBe(state(forward));
   });
 });
 
