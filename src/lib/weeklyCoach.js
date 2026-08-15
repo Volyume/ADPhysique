@@ -26,7 +26,9 @@ import { cycleTrendAnnotation } from './cyclePhase';
 // answer to what is actually limiting progress.
 import { buildCoachContext } from './coachContext';
 import { classifyLimiters, LIMITER } from './coachPrecedence';
-import { wouldReverseRecent, doseEscalation, holdReinforcement } from './coachIntervention';
+import {
+  wouldReverseRecent, doseEscalation, holdReinforcement, volumeDecisionMemory,
+} from './coachIntervention';
 import {
   evidenceSignature, suppressedByDecline, heldByDeclineCopy, returningCopy,
   materialEvidenceChange,
@@ -701,6 +703,12 @@ export function runWeeklyCoach(inputs) {
     // CAMPAIGN 18 job B: recommendations the user has explicitly DECLINED,
     // most-recent-first, from coachDecline.declinesFromHistory. Optional.
     priorDeclines = [],
+    // C18 adversarial closure job B4: the muscles whose volume the ATHLETE
+    // sets by hand (effectiveLandmarks.getManualLandmarks). A volume change
+    // cannot be judged on a dial the user is holding themselves, so this
+    // reaches the context and confounds any volume outcome read against it.
+    // Optional; an empty list leaves every existing caller byte-identical.
+    manualVolumeMuscles = [],
     recentIntakeAvgKcal = null,
     recentIntakeDaysLogged = 0,
     // Campaign 1 P0-7 D1: true when the intake read THREW (as opposed to a
@@ -834,7 +842,7 @@ export function runWeeklyCoach(inputs) {
         intakeReadFailed, calsAdherence: checkin?.calsAdherence ?? null,
       },
       weight: { ratePctPerWeek: null, weighInCount: morningWeights.length, goalPhase, onTarget: null },
-      intent: { goalPhase, trainingGoal },
+      intent: { goalPhase, trainingGoal, manualVolumeMuscles },
     });
     return {
       hasEnoughData: false,
@@ -1108,7 +1116,7 @@ export function runWeeklyCoach(inputs) {
     // week was not trained enough to read. UNKNOWN is the honest answer and
     // the one the pre-filter itself already reached.
     weight: { ratePctPerWeek: null, weighInCount: morningWeights.length, goalPhase, onTarget: null },
-    intent: { goalPhase, trainingGoal },
+    intent: { goalPhase, trainingGoal, manualVolumeMuscles },
   });
 
   // Not enough data yet
@@ -1326,9 +1334,33 @@ export function runWeeklyCoach(inputs) {
       // precedence layer never has to know this engine's sign convention.
       shortfall: -offTargetDirection,
     },
-    intent: { goalPhase, trainingGoal },
+    intent: { goalPhase, trainingGoal, manualVolumeMuscles },
   });
   const coachLimiters = classifyLimiters(coachContext);
+
+  // ── VOLUME OUTCOME MEMORY (C18 adversarial closure, job B1/B3) ────────────
+  // The training half of the learning loop, which did not exist: volume
+  // interventions were recorded at the apply site and read into this run, and
+  // then NOTHING here consulted them. The app could add sets, watch that fail,
+  // and add the same sets again the next week with no memory of having tried.
+  //
+  // It can only WITHHOLD. `holdIncrease` takes a proposed increase to zero;
+  // `blockEscalation` refuses the discretionary D15 step below. Neither can
+  // create a change, enlarge one or reverse one, and a REDUCTION is never
+  // touched - easing an athlete who is not recovering must never wait for a
+  // previous decision to finish being judged. So this composes with every
+  // safety gate above rather than competing with any of them.
+  const volumeMemory = volumeDecisionMemory({
+    records: priorInterventions, after: coachContext, nowMs,
+    proposedDirection: Math.sign(volumeSignal),
+  });
+  let volumeMemoryHeld = null;
+  if (volumeMemory.holdIncrease && volumeSignal > 0) {
+    volumeSignal = 0;
+    volumeMemoryHeld = volumeMemory.because;
+    trainingNote = getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
+  }
+
 
   const canAdjustCals = (
     !cycleOverride &&
@@ -1900,6 +1932,19 @@ export function runWeeklyCoach(inputs) {
     });
   }
 
+  // C18 adversarial closure, job B1. The TRAINING side of the same idea, and
+  // it is a held decision rather than only a sentence: volumeSignal was
+  // genuinely taken to zero above. States what their own history showed and
+  // stops - never that they cannot handle volume.
+  if (volumeMemoryHeld) {
+    heldDecisions.push({
+      type: 'volume_outcome_memory',
+      reason: volumeMemoryHeld === 'last_volume_increase_made_things_worse'
+        ? 'Training volume held. The last time we added work, your recovery and your lifts went the other way, so we are not asking for more of it this week.'
+        : 'Training volume held. We added work recently and that change has not had long enough to show yet, so undoing or repeating it now would tell us nothing.',
+    });
+  }
+
   // Campaign 1 P0-7 D1: the intake-read hold explains itself the same way.
   if (intakeReadHeld) {
     heldDecisions.push({
@@ -2006,7 +2051,11 @@ export function runWeeklyCoach(inputs) {
     !edPatternHeld &&
     !rapidWeightLossFlag &&
     !scoffPositive &&
-    !calmMode
+    !calmMode &&
+    // C18 job B3: the athlete's own last volume increase either did nothing
+    // or cost them, or is still being observed. Escalating a dose on top of
+    // that is memoryless repetition, and this step is the discretionary one.
+    !volumeMemory.blockEscalation
   );
   let exceededEscalationApplied = false;
   if (exceededEscalationEligible && volumeSignal < MATRIX_PUSH_CEILING) {
@@ -2294,6 +2343,13 @@ export function runWeeklyCoach(inputs) {
     volumeSignal,
     loadSignal,
     recoveryFlag,
+    // C18 adversarial closure job B1: the reason code for a volume increase
+    // withheld by the athlete's own outcome history, null when nothing was
+    // withheld. Provenance, not copy - the held-decision row above renders it.
+    volumeMemoryHeld,
+    // And whether the discretionary D15 step was refused for the same reason,
+    // so the explanation layer never claims an escalation that did not happen.
+    volumeEscalationBlocked: !!volumeMemory.blockEscalation,
     // D15: true only on the week the bounded one-step escalation actually
     // moved volumeSignal. Drives the exceeded_escalation copy (whyKeys
     // above) and lets the caller persist it into the saved output (so next
