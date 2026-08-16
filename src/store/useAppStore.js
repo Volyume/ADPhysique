@@ -143,9 +143,30 @@ function _persistActiveWorkout(state) {
       restTimerDuration: state.restTimerDuration ?? null,
       savedAt: Date.now(),
     };
-    AsyncStorage.setItem(ACTIVE_WORKOUT_KEY, JSON.stringify(snapshot)).catch(() => {});
-  } catch (_) {
-    /* offline-friendly: tolerate */
+    AsyncStorage.setItem(ACTIVE_WORKOUT_KEY, JSON.stringify(snapshot)).catch((e) => {
+      // Release-gate fix: this snapshot is the ONLY crash/kill recovery
+      // mechanism for an in-progress workout (see the header comment on
+      // ACTIVE_WORKOUT_KEY above). A write failure here (AsyncStorage full,
+      // Android's ~2MB CursorWindow row limit on a long session's JSON, a
+      // device genuinely out of space) used to be swallowed with no log
+      // call anywhere - a real occurrence would both silently cost the
+      // athlete every set logged that session on the next crash/kill AND
+      // leave Sentry with zero record that it happened. Logging does not
+      // change the tolerate-and-continue behaviour (still best-effort;
+      // this write must never block or fail the workout itself), only its
+      // visibility.
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('activeWorkout.persistFailed', e, {
+        exerciseCount: Array.isArray(state?.workoutExercises) ? state.workoutExercises.length : null,
+      }); } catch (_) { /* logging must never break the app */ }
+    });
+  } catch (e) {
+    // Same visibility fix for a synchronous failure (e.g. JSON.stringify
+    // throwing on a stray non-serialisable value in workoutExercises).
+    // eslint-disable-next-line global-require
+    try { require('../lib/errorLog').logError('activeWorkout.persistFailed', e, {
+      exerciseCount: Array.isArray(state?.workoutExercises) ? state.workoutExercises.length : null,
+    }); } catch (_) { /* logging must never break the app */ }
   }
 }
 
