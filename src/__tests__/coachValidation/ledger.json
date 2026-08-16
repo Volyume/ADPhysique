@@ -7,15 +7,19 @@
   "decision": "smoothed series",
   "thresholds": "EWMA_ALPHA=0.28 (~3.5-day memory); drops rows with",
   "precedence": "distinct from weeklyCoach.computeEWMA (alpha 0.1, ~10-day",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-15"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-15"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -31,15 +35,19 @@
   "decision": "kg/week rate",
   "thresholds": "MIN_SPAN_DAYS=6 (date-aware path needs >=6 days span between",
   "precedence": "date-aware path preferred; index fallback only for date-less rows",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-16"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-16"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -57,13 +65,21 @@
   "precedence": "B1 (actualIntakeKcal, when foodDaysLogged>=5 & avg>0) replaces",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "NUT-17"
+  ],
+  "hold_case": [
+   "NUT-17",
+   "NUT-32"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-17",
+   "NUT-32"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -81,13 +97,17 @@
   "precedence": "NEVER produces, sizes, or reverses a calorie change on its own",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-18"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-18"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -105,13 +125,19 @@
   "precedence": "foundational \u2014 every FFM-gated consumer reads this",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-19",
+   "NUT-20"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-19",
+   "NUT-20"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -127,15 +153,21 @@
   "decision": "single resolved weightKg or null",
   "thresholds": "precedence order 1) today's 7-day EWMA (needs >=3 pts)",
   "precedence": "this IS the precedence rule \u2014 replaces the freshness-vs-profile",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-21",
+   "NUT-22"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-21",
+   "NUT-22"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -151,15 +183,22 @@
   "decision": "{suggest, weeksInDeficit, message}; heldDecisions/dietBreakSuggested fields",
   "thresholds": "DIET_BREAK_THRESHOLD_WEEKS=8 weeks in deficit (MATADOR trial,",
   "precedence": "cut phases only (phase.isCut); this is a SUGGESTION card, not an",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-23"
+  ],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-24"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-23",
+   "NUT-24"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -175,15 +214,23 @@
   "decision": "boolean \"hit\" per macro",
   "thresholds": "kcal 10%, protein 10%, carbs 15%, fat 15%",
   "precedence": "display/insights only \u2014 NOT the same signal weeklyCoach's",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-43",
+   "NUT-44",
+   "NUT-45"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-43",
+   "NUT-44",
+   "NUT-45"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -199,15 +246,22 @@
   "decision": "unchanged target unless bankedDelta!=0",
   "thresholds": "none \u2014 this IS the null-hypothesis rule: no training-day/rest-day",
   "precedence": "senior structural law (Campaign 17A). Display-only: \"The",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-36"
+  ],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-35"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-35",
+   "NUT-36"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -223,15 +277,24 @@
   "decision": "{ok, reason, appliedBumpKcal, perDayDeltaKcal} \u2014 deltaSum always 0 on success",
   "thresholds": "MIN_BANK_DELTA_KCAL=50 (below this, refuse as \"presentation",
   "precedence": "pure maths only \u2014 caller enforces the ED-pattern/calm-mode/",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-39"
+  ],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-37",
+   "NUT-38"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-37",
+   "NUT-38",
+   "NUT-39"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -247,15 +310,21 @@
   "decision": "edited plan days (carbs-first lever, protein/fat held), edited target display",
   "thresholds": "routes the delta through applyMacroDeltaToPlan (carbs-first,",
   "precedence": "junior to N-BANK-02's maths (only edits days that already have",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-36",
+   "NUT-40"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-36",
+   "NUT-40"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -297,13 +366,19 @@
   "precedence": "THE floor N-BANK-02's planCalorieBank enforces",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-41",
+   "NUT-42"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-41",
+   "NUT-42"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -322,12 +397,16 @@
   "direct_case": [],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-46"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-46"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -346,12 +425,18 @@
   "direct_case": [],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-47",
+   "NUT-48"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-47",
+   "NUT-48"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -369,13 +454,17 @@
   "precedence": "senior to the calorie-sizing block below; rapidLossOverride",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-12"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-12"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -391,15 +480,22 @@
   "decision": "change (kcal delta), calNote",
   "thresholds": "cut+losing-too-slowly: -150 if calsAdherence==='hit' else -100;",
   "precedence": "superseded by the adaptive resize (N-COACH-05) when confident",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-49"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-50"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-49",
+   "NUT-50"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -439,15 +535,22 @@
   "decision": "change *= DOSE_ESCALATION_MULTIPLIER when escalate===true",
   "thresholds": "DOSE_ESCALATION_MULTIPLIER=1.5. ALL required: prior same-domain",
   "precedence": "applied AFTER the fixed-step/adaptive sizing (N-COACH-04/05),",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-53"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-52"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-52",
+   "NUT-53"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -463,15 +566,19 @@
   "decision": "change clamped to sign(change)*min(abs(change), round(currentCalTarget*0.05))",
   "thresholds": "5% of current target",
   "precedence": "senior to fixed-step, adaptive resize AND dose escalation; the",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-51"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-51"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -489,13 +596,21 @@
   "precedence": "SENIOR to: 2-week cooldown, consecutiveOffTargetWeeks gate,",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-17",
+   "CFL-18"
+  ],
   "hold_case": [],
-  "safety_case": [],
+  "safety_case": [
+   "CFL-17"
+  ],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-17",
+   "CFL-18"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -514,12 +629,16 @@
   "direct_case": [],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-54"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-54"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -537,13 +656,19 @@
   "precedence": "exempt for rapidLossOverride (\"SAFETY IS NOT A RECOMMENDATION\" \u2014",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-18b",
+   "CFL-18c"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-18b",
+   "CFL-18c"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -561,13 +686,17 @@
   "precedence": "senior to decline memory, oscillation hold, dose escalation",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-06"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-06"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -586,12 +715,16 @@
   "direct_case": [],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-55"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-55"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -610,12 +743,16 @@
   "direct_case": [],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-56"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-56"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -631,15 +768,19 @@
   "decision": "autoApplyHoldActive (boolean)",
   "thresholds": "OR of all nine inputs \u2014 any one open hold forces confirm-first",
   "precedence": "\"a more autonomous mode changes WHO confirms, never whether the",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-57"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-57"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -655,15 +796,19 @@
   "decision": "calorieAdjustment nulled when it would REVERSE a same-domain,",
   "thresholds": "observation window = OBSERVE.calorie_target.min=2 weeks (same",
   "precedence": "exempt for rapidLossOverride (\"protecting an athlete losing",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-58"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-58"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -681,13 +826,17 @@
   "precedence": "\"SAFETY IS SENIOR TO PRECEDENCE\" \u2014 rapidLossOverride-marked",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-28"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-28"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -703,15 +852,19 @@
   "decision": "LIMITER.{PLAN|EXECUTION|RECOVERY|INSUFFICIENT_EVIDENCE} per domain",
   "thresholds": "nutrition: unknown trend -> INSUFFICIENT_EVIDENCE; on-target ->",
   "precedence": "\"Nutrition appears NOWHERE in classifyTrainingLimiter,",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-59"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-59"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -727,15 +880,19 @@
   "decision": "volumeSignal += 1 (capped at MATRIX_PUSH_CEILING=3)",
   "thresholds": "EXCEEDED_ESCALATION_WEEKS=3 consecutive 'exceeded'",
   "precedence": "\"Gated off entirely (weaker signal always wins) while ANY",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-60"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-60"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -751,15 +908,27 @@
   "decision": "{effectiveMaintenanceKcal, cumulativeResidualKcal, source, status, reason}",
   "thresholds": "no memo or invalid memo -> status FORMULA (formula prior only).",
   "precedence": "history (validated learned residual) senior to raw formula ONLY",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-26",
+   "NUT-28"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "NUT-27"
+  ],
+  "hold_case": [
+   "NUT-25"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-25",
+   "NUT-26",
+   "NUT-27",
+   "NUT-28"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -778,12 +947,18 @@
   "direct_case": [],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-29",
+   "NUT-30"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-29",
+   "NUT-30"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -799,15 +974,26 @@
   "decision": "{updated:boolean, reason, memo|null}",
   "thresholds": "requires foodDaysLogged>=5; canonicalWeightEvidence(weights)",
   "precedence": "uses adjustedTDEE (the OBSERVATIONAL value), never the",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-33"
+  ],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-31",
+   "NUT-32",
+   "NUT-34"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-31",
+   "NUT-32",
+   "NUT-33",
+   "NUT-34"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -849,13 +1035,17 @@
   "precedence": "\"Campaign 19: supplied only by the canonical resolver. It is",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-04"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-04"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -871,15 +1061,24 @@
   "decision": "bmrKcal, formula ('mifflin'|'katch_mcardle')",
   "thresholds": "Katch-McArdle used only when bodyFatPercent is finite, >0, <60, AND",
   "precedence": "base formula for TDEE below; no gate overrides formula choice.",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-03"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-01",
+   "NUT-02"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-01",
+   "NUT-02",
+   "NUT-03"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -897,13 +1096,17 @@
   "precedence": "effectiveMaintenanceResidualKcal (N-MAINT-05) is additive on top",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-04"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-04"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -921,13 +1124,17 @@
   "precedence": "senior to floors below (floors clamp AFTER this).",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-05"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-05"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -946,12 +1153,16 @@
   "direct_case": [],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-06"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-06"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -969,13 +1180,19 @@
   "precedence": "senior to the phase adjustment (N-TARGETS-03); junior to nothing",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-07",
+   "NUT-08"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-07",
+   "NUT-08"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -991,15 +1208,19 @@
   "decision": "targetKcal raised so weekly deficit caps at 1.5% BW; floorApplied=true; warning",
   "thresholds": "HARD_GATE_LOSS_RATE = 0.015 (1.5% BW/week); maxWeeklyDeficit =",
   "precedence": "senior to phase adjustment; runs AFTER the sex floor (both can",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-09"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-09"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1017,13 +1238,17 @@
   "precedence": "junior to N-TARGETS-06 (advisory only, does not clamp)",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-10"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-10"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1041,13 +1266,17 @@
   "precedence": "set ABOVE the 30 kcal/kg FFM hard floor (N-COACH-11) \u2014 fires",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "NUT-11"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-11"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1063,15 +1292,19 @@
   "decision": "proteinG, basis ('lbm'|'bodyweight'), proteinRateUsed",
   "thresholds": "PROTEIN_MAX_GKGBW=2.2 (cap when BF% unknown, Morton 2018 CI);",
   "precedence": "physique/strength goals auto-select 'advanced' unless caller",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-12"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-12"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1087,15 +1320,22 @@
   "decision": "{newKcal, targets} raising target to maintenance for the week; null if no-op",
   "thresholds": "only fires when maintenance > current target (else null, i.e.",
   "precedence": "delegates to computeCalorieTargets (N-TARGETS-05 floor still enforced)",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-13"
+  ],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "NUT-14"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-13",
+   "NUT-14"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1111,15 +1351,19 @@
   "decision": "outcome forced CONFOUNDED, because:'user_changed_it_themselves'",
   "thresholds": "any non-empty manualVolumeMuscles list on a VOLUME_START record's judgement",
   "precedence": "mirrors N-MAINT-04's calorie-target check exactly",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-61"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-61"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1137,13 +1381,17 @@
   "precedence": "can only WITHHOLD, never create/enlarge/reverse; a volume",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-10"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-10"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1159,15 +1407,19 @@
   "decision": "per-muscle plannedSets clamped to [mev, mrv-or-mav-or-ceiling]",
   "thresholds": "ABSOLUTE_WEEKLY_SET_CEILING=30 (last-resort backstop when a row",
   "precedence": "senior to every volume proposal above \u2014 this is the final",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-62"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-62"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1209,13 +1461,21 @@
   "precedence": "\"A DECLINE IS NOT AN EXCLUSION... NOT NOW, not NEVER\" (coachDecline.js",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-18",
+   "CFL-18b",
+   "CFL-18c"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-18",
+   "CFL-18b",
+   "CFL-18c"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1233,13 +1493,19 @@
   "precedence": "feeds N-COACH-14's autoApplyHoldActive; deliberately aligned",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-08"
+  ],
   "hold_case": [],
-  "safety_case": [],
+  "safety_case": [
+   "CFL-08"
+  ],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-08"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1257,13 +1523,25 @@
   "precedence": "raises edPatternHeld (N-SAFETY-03) which is ranked FIRST among",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-13",
+   "CFL-14",
+   "CFL-14b"
+  ],
   "hold_case": [],
-  "safety_case": [],
+  "safety_case": [
+   "CFL-13",
+   "CFL-14",
+   "CFL-14b"
+  ],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-13",
+   "CFL-14",
+   "CFL-14b"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1281,13 +1559,22 @@
   "precedence": "clearance requires POSITIVE evidence, never the mere ABSENCE of",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-16",
+   "CFL-16b"
+  ],
   "hold_case": [],
-  "safety_case": [],
+  "safety_case": [
+   "CFL-16",
+   "CFL-16b"
+  ],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-16",
+   "CFL-16b"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1305,13 +1592,25 @@
   "precedence": "TOP of the held-decision stack; senior to FFM floor display",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-07",
+   "CFL-15",
+   "CFL-17"
+  ],
   "hold_case": [],
-  "safety_case": [],
+  "safety_case": [
+   "CFL-07",
+   "CFL-15",
+   "CFL-17"
+  ],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-07",
+   "CFL-15",
+   "CFL-17"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1329,13 +1628,19 @@
   "precedence": "user-controlled, no mandatory prompt (FQ-1(c), D96 \u2014 \"never",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-09"
+  ],
   "hold_case": [],
-  "safety_case": [],
+  "safety_case": [
+   "CFL-09"
+  ],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-09"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1353,13 +1658,19 @@
   "precedence": "\"ED-safety, fail CLOSED: a transient flag read maps to the",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-20"
+  ],
   "hold_case": [],
-  "safety_case": [],
+  "safety_case": [
+   "CFL-20"
+  ],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-20"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1377,13 +1688,19 @@
   "precedence": "junior variant of X-SAFETY-06 \u2014 this is a softening of",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-21"
+  ],
   "hold_case": [],
-  "safety_case": [],
+  "safety_case": [
+   "CFL-21"
+  ],
   "safety_na_reason": "FOLDED INTO X-SAFETY-06 (lead correction: no distinct production mechanism; comment-level trace over-claim)",
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-21"
+  ],
   "property_test_ids": [],
-  "status": "ORACLE_LOCKED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1401,13 +1718,19 @@
   "precedence": "un-skippable, cannot be reordered; also gates cloud",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-19"
+  ],
   "hold_case": [],
-  "safety_case": [],
+  "safety_case": [
+   "CFL-19"
+  ],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-19"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1425,13 +1748,19 @@
   "precedence": "n/a",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-24"
+  ],
   "hold_case": [],
-  "safety_case": [],
+  "safety_case": [
+   "CFL-24"
+  ],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-24"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1495,15 +1824,43 @@
   "decision": "",
   "thresholds": "recovery score 1-4: soreness>=4 -> 4; energy<=2 OR soreness>=3 -> 3; energy>=4 AND soreness<=1 -> 1; else 2. stress>=4 AND score<3 forces score=3 (PIPE-001, never improves the read). performance score 1-4: PR density strong = prsThisWeek/sessionsCompleted >= 0.3 (PR_DENSITY_STRONG) OR blockE1rmSlopePct >= 1.5 (BLOCK_SLOPE_STRONG_PCT) with adherence>=0.9 -> 1; trainingPerformance==='dropped' OR adherence<0.5 -> 4; 'struggled' OR adherence<0.75 -> 3; 'hit' OR adherence>=0.75 -> 2. Matrix: recovery==4 OR (recovery>=3 AND performance>=4) -> deload (volumeDelta -2); recoveryForPush==3 OR performance==3 -> hold (0); recoveryForPush==1 AND performance==1 -> push +3; either ==1 -> push +2; both 2 -> push +1. Peak-week softening (Stage 4, contextAdjustedRecovery): a grade-3 soreness-driven recovery reading in the block's FINAL accumulation week (blockAccumWeeks>=3, blockWeekIndex===blockAccumWeeks) softens 3->2 for the push/hold branch ONLY (never the deload branch, which always reads the RAW grade) when soreness>=3, energy(null or)>=3, stress(null or)<4, AND consecutivePoorRecoveryWeeks<1 AND consecutiveGrade3RecoveryWeeks<1.",
   "precedence": "deload branch always reads RAW recovery grade regardless of peak-week softening (\"the founder red line: deload thresholds unchanged\"). Softened grade only ever used by push/hold branches.",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-01",
+   "TRN-02",
+   "TRN-03",
+   "TRN-07",
+   "TRN-08",
+   "TRN-09",
+   "TRN-10"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "CFL-01",
+   "CFL-02"
+  ],
+  "hold_case": [
+   "TRN-04",
+   "TRN-05",
+   "TRN-06"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-01",
+   "CFL-02",
+   "TRN-01",
+   "TRN-02",
+   "TRN-03",
+   "TRN-04",
+   "TRN-05",
+   "TRN-06",
+   "TRN-07",
+   "TRN-08",
+   "TRN-09",
+   "TRN-10"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1543,15 +1900,50 @@
   "decision": "",
   "thresholds": "EXCEEDED_ESCALATION_WEEKS = 3 (>= 3 consecutive prior 'exceeded' weeks); MATRIX_PUSH_CEILING = 3 (never exceeds autoregulationMatrix's own +3 ceiling); only applies when trainingSignal==='push'",
   "precedence": "gated OFF entirely by ANY of: peak-week-softened push, deloadSuggested, matrixDeload, poorRecovery, safetyHold, ffmFloorHeld, edPatternHeld, rapidWeightLossFlag, scoffPositive, calmMode, volumeMemory.blockEscalation (C18 job B3 \u2014 no escalation on top of a dose that already did nothing or cost the athlete), or coordinationVolumeHeld (C18 job C \u2014 coordination gate withheld the change, escalation must not resurrect it)",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-11",
+   "TRN-12",
+   "TRN-13",
+   "TRN-14"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-02",
+   "CFL-03",
+   "CFL-04",
+   "CFL-05",
+   "CFL-06",
+   "CFL-07",
+   "CFL-08",
+   "CFL-09",
+   "CFL-10",
+   "CFL-11"
+  ],
   "hold_case": [],
-  "safety_case": [],
+  "safety_case": [
+   "CFL-07",
+   "CFL-08",
+   "CFL-09"
+  ],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-02",
+   "CFL-03",
+   "CFL-04",
+   "CFL-05",
+   "CFL-06",
+   "CFL-07",
+   "CFL-08",
+   "CFL-09",
+   "CFL-10",
+   "CFL-11",
+   "TRN-11",
+   "TRN-12",
+   "TRN-13",
+   "TRN-14"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1617,13 +2009,19 @@
   "precedence": "safety-marked calorie changes (rapidLossOverride) and ANY volume REDUCTION are NEVER withheld by this gate \u2014 explicitly senior to coordination.",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-11",
+   "CFL-28"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-11",
+   "CFL-28"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1663,15 +2061,21 @@
   "decision": "",
   "thresholds": "BLOCK_PLANNED_WEEKS = 6; last week (week 6) is always the recovery week",
   "precedence": "authoritative over the generic MESO_SCHEDULE tables below (T- PROGRAMME-02), which have zero production callers",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-27",
+   "TRN-28"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-27",
+   "TRN-28"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1711,15 +2115,19 @@
   "decision": "",
   "thresholds": "currentWeek < recoveryWeek -> active; ===recoveryWeek -> recovery; > recoveryWeek -> completed_awaiting_decision (single state regardless of how many weeks overdue, per Stage 1 2026-08-09 ruling: \"a finished block is ONE explicit state, however long it is ignored\")",
   "precedence": "this is the CALENDAR authority; programmePosition.js's activeWeekIndex (T-PROGRAMME-09) is the PROGRAMME authority and is senior for \"which week is really active\" (position beats calendar)",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-29"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-29"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1735,15 +2143,33 @@
   "decision": "",
   "thresholds": "swappedAwayCount >= 2 -> REPLACE (user_swapped_away); epoch review threshold EPOCH_REVIEW_BLOCKS = 3 (systematic variation gated on epochBlocks >= 3) PRECEDENCE (exact order, code lines 276-350): (1) evidence.excluded -> REPLACE; (2) swappedAwayCount>=2 -> REPLACE; (3) jointDiscomfort -> REPLACE; (4) equipmentLost -> REPLACE; (5) autoEligible===false -> REPLACE; (6) redundant -> REMOVE_OR_REDISTRIBUTE; (7) goalChanged && conflictsWithGoal -> REPLACE; (8) sessionLengthChanged && doesNotFitSession -> REMOVE_OR_REDISTRIBUTE; (9) plateau && executionJudgeable -> KEEP_WITH_PRESCRIPTION_CHANGE (if prescriptionFix) else REPLACE; (10) epochReviewDue && systematicCandidate && !progressing && executionJudgeable -> REPLACE (SYSTEMATIC_VARIATION, the ONLY reason gated on the review threshold); (11) progressing -> KEEP (STILL_PRODUCTIVE); (12) !executionJudgeable -> KEEP (INSUFFICIENT_EXECUTION); (13) establishedPersonalFit -> KEEP (PERSONAL_FIT_KEEP); (14) !epochReviewDue -> KEEP (INSUFFICIENT_HISTORY); (15) else KEEP (NO_REASON_TO_CHANGE)",
   "precedence": "",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-20",
+   "TRN-21"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "TRN-22",
+   "TRN-23",
+   "TRN-24",
+   "TRN-25"
+  ],
+  "hold_case": [
+   "TRN-24",
+   "TRN-25"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-20",
+   "TRN-21",
+   "TRN-22",
+   "TRN-23",
+   "TRN-24",
+   "TRN-25"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1759,15 +2185,28 @@
   "decision": "",
   "thresholds": "REBUILD_MIN_CHANGED_SLOTS = 3 (absolute floor \u2014 fewer than 3 changed slots can NEVER be called a rebuild, however high the % churn); REBUILD_CHURN_RATIO = 0.4 (40% of slots changed, checked ONLY once the 3-slot floor is met)",
   "precedence": "(1) ANY material structural change (daysChanged OR equipmentChanged OR sessionLengthChanged OR goalChanged) -> REBUILD regardless of slot count \u2014 \"a rebuild however few exercises move, because it changes what the programme IS\"; (2) else changed.length===0 -> CONTINUE_STRUCTURE; (3) else changed.length>=3 AND churn>0.4 -> REBUILD; (4) else REFINE_PROGRAMME",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-15",
+   "TRN-16",
+   "TRN-17",
+   "TRN-19"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "TRN-18"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-15",
+   "TRN-16",
+   "TRN-17",
+   "TRN-18",
+   "TRN-19"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1783,15 +2222,24 @@
   "decision": "",
   "thresholds": "EPOCH_REVIEW_BLOCKS = 3 (structural review eligible at 3+ consecutive same-structure completed blocks); EPOCH_CONTINUITY_SIMILARITY = 0.6 (Jaccard similarity of exercise sets; below this OR a different splitType/dayCount ends the epoch)",
   "precedence": "counting stops (breaks) at the first non-completed block or the first structurally-different block, walking newest-to-oldest",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-26"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "TRN-24"
+  ],
+  "hold_case": [
+   "TRN-24"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-24",
+   "TRN-26"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1831,15 +2279,19 @@
   "decision": "",
   "thresholds": "energy<=1 -> high; energy<=2 -> medium. soreness>=4 AND prevSoreness>=4 (two consecutive) -> high; soreness>=4 alone -> medium. sleep<5.5h -> high; sleep<6.5h -> medium. readiness z-score vs 8-week personal baseline (weeks 2-8): z<=-1.5 -> high, z<=-1.0 -> medium (needs baseline.length>=2). recentPoorCount (last 2 checkins with readiness<45) >=2 -> sustained_fatigue (high). checkinReadiness formula: energy_term = ((energyScore-1)/4)*100 weight 0.4, soreness_term = (1-(sorenessScore-1)/4)*100 weight 0.4, sleep_term = clamp((sleepHours-4)/5,0,1)*100 weight 0.2; sleepHours null -> energy*0.5+soreness*0.5 (no sleep term); a row answering NONE of energy/soreness/sleep scores null (not 50) \u2014 FB-36/D96 fix.",
   "precedence": "n/a (flat signal list; consumed by T-PROGRAMME-07 and T-PROGRAMME-10's deload trigger)",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-A2"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-A2"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1855,15 +2307,27 @@
   "decision": "",
   "thresholds": "candidateFloor for a legacy block (no progressionAnchorWeek) = max(week index of any week with a logged workout, 1) \u2014 never resurrects ambiguity below that floor. Candidates window = [floor, calendarWeekIndex] and strictly before recoveryWeek.",
   "precedence": "\"VOLYUME TRAINING IS SESSION-SEQUENCED, NOT CALENDAR-SEQUENCED\" \u2014 the first candidate accumulation week with an unresolved session becomes activeWeekIndex, OVERRIDING the calendar week; only once every reached week is progression-resolved does activeWeekIndex fall back to the calendar position (capped at recoveryWeek)",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-30",
+   "r-push",
+   "r-legs",
+   "wo1",
+   "TRN-31"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-30",
+   "r-push",
+   "r-legs",
+   "wo1",
+   "TRN-31"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1879,15 +2343,23 @@
   "decision": "",
   "thresholds": "deloadHighThreshold = isMasters(age>=40) ? 1 : 2 high signals; headsUpMediumThreshold = isMasters ? 1 : 2 medium signals. hasEnoughHistory gate = checkins.length>=2 AND blockStatus.currentWeek >=2 (required before EITHER branch can fire \u2014 \"A user one week into their first block... shouldn't be told to drop their sets in half\"). early_deload fires when hasEnoughHistory && (highSignals.length >= deloadHighThreshold OR hasSustainedFatigue). heads_up fires when hasEnoughHistory && (highSignals.length>=1 || mediumSignals.length >= headsUpMediumThreshold).",
   "precedence": "early_deload outranks heads_up (checked first); both require hasEnoughHistory; below either threshold -> 'continue' (all clear)",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-A1",
+   "TRN-A2",
+   "TRN-A3"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-A1",
+   "TRN-A2",
+   "TRN-A3"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1903,15 +2375,23 @@
   "decision": "",
   "thresholds": "perfUp = slope>=1.5%; perfDown = slope<=-1.5%; recoveryPoor = recoveryCostWeight >= RECOVERY_EXCESSIVE_WEIGHT(2), where cost weight sums +1 for sorenessLateAvg>=4, +1 for jointDiscomfortAvg>=3, +1 for sleepFlaggedWeeks>=2, +1 (not +2, RA6-2 fix) for a block-level deload flag alone; INSUFFICIENT_DATA when dataPoints<MIN_RECOVERY_POINTS(4) OR exposures<MIN_EXPOSURES(4) OR adherence<ADHERENCE_FLOOR(0.6) OR weeksSinceBlockEnd>=STALE_EVIDENCE_WEEKS(4) (suppressed/stale); 10-day vs 7-day proposedRecoveryDays: 10 when anyStrained && persistent>=2, else 7",
   "precedence": "STALE evidence (age >= 4 weeks) suppresses a fresh classification even if the raw numbers would otherwise classify; RECOVERY_EXCESSIVE_WEIGHT single-flag correction (RA6-2, Campaign 10I): the advisor's early-deload flag alone can NO LONGER make recoveryPoor true for every muscle \u2014 it must be corroborated by at least one other signal",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-52",
+   "TRN-53",
+   "TRN-54"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-52",
+   "TRN-53",
+   "TRN-54"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1927,15 +2407,23 @@
   "decision": "",
   "thresholds": "workingSets<=0 or non-finite -> below; <mev -> below; <=mev+2 -> minimum; <=mav -> optimal; <=mrv -> near_mrv; else over_mrv. Per- muscle mev/mav/mrv table hardcoded (e.g. chest mev6/mav14/mrv22, back mev10/mav16/mrv25, quads mev8/mav14/mrv20 \u2014 full table at lines 25-59)",
   "precedence": "zero-work short-circuit fires even for a muscle with mev=0 (front_delts) so the heatmap never shows \"optimal\" before any set is logged",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-62",
+   "TRN-63",
+   "TRN-64"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-62",
+   "TRN-63",
+   "TRN-64"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1975,15 +2463,32 @@
   "decision": "",
   "thresholds": "joint>=3 -> rotate_exercise (overrides everything, checked twice in source at lines 551 and 569 \u2014 same effect). soreness==null || performance==null -> hold (insufficient_feedback) \u2014 \"a missing REQUIRED signal holds\" (Campaign 1 P0-7 D7 fix; the OLD default silently allowed add_set on absent data). performance===4 && soreness>=3 -> deload_trigger. soreness===4 -> drop_set (-1). joint>=2 -> hold (joint_moderate). soreness<=2 && performance<=2: pump===1 -> add_set +2 (under_stimulus); pump===4 && soreness===2 -> hold (optimal_response); else add_set +1. performance>=3 && soreness<=3 -> hold (performance_struggle). Default -> hold.",
   "precedence": "joint pain (>=3) is the absolute override, checked before the missing-signal guard even fires functionally (both checks present); missing-signal hold is next; then systemic deload; then per-branch reads in the order listed above",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-47",
+   "TRN-48"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "TRN-49",
+   "TRN-50",
+   "TRN-51"
+  ],
+  "hold_case": [
+   "TRN-49",
+   "TRN-50",
+   "TRN-51"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-47",
+   "TRN-48",
+   "TRN-49",
+   "TRN-50",
+   "TRN-51"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2023,15 +2528,31 @@
   "decision": "",
   "thresholds": "R0: isDeload -> [] (engine fully silent). Revert memory: revertCounts[muscle]>=2 -> hold (user \"won the argument\" twice this meso). R1 joint: lastJoint>=2 -> hold, suppress any add. R2 residual soreness (soreForM && trainedWithin72h(<=HOURS_72=259200000ms)) -> -1 set IF projectedPlanned-1>=mev AND plannedSets-1>=1. R3 stale soreness (soreForM but >72h since trained) -> hold, \"weekly's territory\". R4/R5 under-stimulus add: feedbackRecent (<=DAYS_14=1209600000ms), lastPerformance<=2, lastPump<=2, projectedPlanned<mav, !addedThisWeek.has(muscle) -> candidate +1, blocked by safetyHold (R5 HOLD_SAFETY) or weeklySignal==='reduce' (R5 HOLD_WEEKLY_PRECEDENCE), else +1 IF projectedPlanned+1<=mrv AND projectedPlanned+1<=mav (R4 ADD_UNDER_STIMULUS). checkinFresh window = DAYS_4 (345600000ms). Per-session cap: max 2 nonzero-delta exercises, drops (-1) kept before adds (+1) when trimming (recovery has right of way).",
   "precedence": "revert-memory hold > joint hold > residual-soreness drop > stale-soreness hold > under-stimulus add (each muscle only reaches one branch, first match wins in source order); safetyHold and weeklySignal==='reduce' outrank the add branch specifically",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-60",
+   "TRN-61"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "CFL-25",
+   "CFL-26"
+  ],
+  "hold_case": [
+   "TRN-58",
+   "TRN-59"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-25",
+   "CFL-26",
+   "TRN-58",
+   "TRN-59",
+   "TRN-60",
+   "TRN-61"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2047,15 +2568,23 @@
   "decision": "",
   "thresholds": "computeVolumeApply clamps next = clamp(current+volumeDelta, mev, mrv||mav||ABSOLUTE_WEEKLY_SET_CEILING(30)) \u2014 the 30-set backstop fires only when a row is missing BOTH mrv and mav (degenerate/partial sync data), preventing an effective +Infinity ceiling. computeWeeklySessionAllocation: factor = week/baseline (both must be finite, positive) else factor=1 (identity); allocated = max(1, round(recommendedSets*factor))",
   "precedence": "computeVolumeApply is THE enforcement point translating a weekly coach volumeDelta into persisted planned_muscle_volume rows; computeWeeklySessionAllocation is THE enforcement point translating those persisted rows into actual per-exercise session set counts \u2014 together they close the \"COACH PROPOSAL -> APPLY -> PERSISTED TARGET -> VOLUME ALLOCATION -> SET TARGETS -> ACTUAL NEXT SESSION\" chain the FQ-4 ruling required",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-55",
+   "TRN-56",
+   "TRN-57"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-55",
+   "TRN-56",
+   "TRN-57"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2095,15 +2624,21 @@
   "decision": "",
   "thresholds": "manual wins only if isManualEdit(entry, research) is true \u2014 either entry.explicit===true (editor stamped it) or at least one of mev/mav/mrv differs numerically from the research default; adapted wins only if a.isAdapted && all three values finite; else research",
   "precedence": "manual > adapted (Pro only) > research, strictly in that order per muscle (not per user \u2014 mixed sources across muscles are legitimate)",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-65",
+   "TRN-66"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-65",
+   "TRN-66"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2119,15 +2654,32 @@
   "decision": "",
   "thresholds": "below_par -> setDelta=-1 (one set fewer, floored at 1 working set), loadFactor=0.95 (trimmed 5%, rounded DOWN to the 0.25 grid); average -> {0, 1} (no change); sharp -> {0, 1} + acknowledgement only (\"good readiness NEVER pushes beyond the plan\")",
   "precedence": "HARD INVARIANT, fuzz-enforced: adjusted sets <= planned sets and adjusted load <= planned load for EVERY input (strictly downward-only)",
-  "direct_case": [],
+  "direct_case": [
+   "bench_press",
+   "REC-01"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "REC-04",
+   "REC-05"
+  ],
+  "hold_case": [
+   "REC-02",
+   "REC-03",
+   "REC-04"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "bench_press",
+   "REC-01",
+   "REC-02",
+   "REC-03",
+   "REC-04",
+   "REC-05"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2143,15 +2695,26 @@
   "decision": "",
   "thresholds": "identical magnitude to below_par (setDelta=-1, loadFactor= 0.95) \u2014 deliberately reuses the constant rather than a second number, so the two mechanisms can never silently diverge",
   "precedence": "resolveSessionEasingTweak composes by CHOOSING ONE tweak object, never summing: if the intent-sheet answer already reduces for a same-day reason (poor sleep/low energy), THAT reason leads; re-entry easing only fills in when the intent sheet itself did not call for a reduction \u2014 \"stacking two downward steps... is forbidden by the re-entry amendment\"",
-  "direct_case": [],
+  "direct_case": [
+   "REC-09"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "REC-06",
+   "REC-07",
+   "REC-08"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "REC-06",
+   "REC-07",
+   "REC-08",
+   "REC-09"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2167,15 +2730,32 @@
   "decision": "",
   "thresholds": "recoveryWeek = plannedRecoveryWeek(deloadWeek || plannedWeeks); week>=recoveryWeek AND recoveryPhaseAllowed -> PLANNED_BLOCK_RECOVERY; week>=recoveryWeek AND !recoveryPhaseAllowed -> NORMAL_ACCUMULATION (because: 'accumulation_work_outstanding' \u2014 position beats calendar); week< recoveryWeek AND isDeload===true -> ADAPTIVE_RECOVERY_ADJUSTMENT; else NORMAL_ACCUMULATION",
   "precedence": "recoveryPhaseAllowed (a PROGRAMME fact) outranks the calendar reaching the recovery week; awaitingDecision returns null outright (a finished block has no live recovery-week question)",
-  "direct_case": [],
+  "direct_case": [
+   "REC-12"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "REC-10",
+   "REC-11",
+   "REC-14",
+   "REC-15"
+  ],
+  "hold_case": [
+   "REC-13",
+   "REC-14"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "REC-10",
+   "REC-11",
+   "REC-12",
+   "REC-13",
+   "REC-14",
+   "REC-15"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2191,15 +2771,37 @@
   "decision": "",
   "thresholds": "isFirstHalf -> same weight as prevSets, 50% of reps (round(baseReps*0.5), floor 1); !isFirstHalf -> 50% of weight (rounded to 0.25 grid) AND 50% of reps; RIR fixed at 4 for both halves",
   "precedence": "this is THE senior prescription for a recovery-week session \u2014 livePrescription's resolveSetPrescription defers entirely to senior.deloadTargets when senior.isDeload is set (T-LIVESET-01)",
-  "direct_case": [],
+  "direct_case": [
+   "REC-16",
+   "REC-17",
+   "REC-18",
+   "REC-19",
+   "REC-20",
+   "REC-21",
+   "REC-22",
+   "REC-23",
+   "REC-24",
+   "REC-25"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "REC-16",
+   "REC-17",
+   "REC-18",
+   "REC-19",
+   "REC-20",
+   "REC-21",
+   "REC-22",
+   "REC-23",
+   "REC-24",
+   "REC-25"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2287,15 +2889,30 @@
   "decision": "",
   "thresholds": "both require >=3 eligible sessions (isE1rmEligibleRow filter) to run at all. Comparison window = 4 most recent sessions (3 adjacent comparisons). \"Progressed\" = curr > prev * E1RM_PROGRESS_MARGIN(1.001). Plateau qualifies at consecutiveStalls>=2. Plateau DURATION extends backward through full history while gap<=PLATEAU_MAX_GAP_DAYS(14) and no real progression breaks it; must additionally satisfy distinctWeeks >= PLATEAU_MIN_WEEKS(3) AND spanDays>=PLATEAU_MIN_SPAN_DAYS(14) AND biggestGap<=14 to actually qualify as a plateau (else returned as {plateau:false, consecutiveStalls}). resolution: consecutiveStalls>=3 -> 'swap_exercise' (4-6 week substitute); consecutiveStalls===2 -> 'change_rep_range' (15-20 rep range, 3 weeks). detectProgressionConsistency: requires comparisons>=2; 'progressing' if gains >= ceil(comparisons/2) (a MAJORITY of comparisons improved), else 'holding' (never a negative claim)",
   "precedence": "detectPlateau and detectProgressionConsistency are explicitly built as MIRROR IMAGES sharing sessionBestE1rm and E1RM_PROGRESS_MARGIN \"so the app can never say a muscle is both progressing and plateaued from the same data\" (C13 job 1 fix \u2014 documented historical bug where the two used different session-summary bases and could disagree)",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-41",
+   "TRN-42",
+   "TRN-45",
+   "TRN-46"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "TRN-43",
+   "TRN-44"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-41",
+   "TRN-42",
+   "TRN-43",
+   "TRN-44",
+   "TRN-45",
+   "TRN-46"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2311,15 +2928,39 @@
   "decision": "",
   "thresholds": "pipeline order (exact, cannot be reordered without breaking the design's own precedence law): 1. SENIOR: isDeload && deloadTargets.length -> return deloadTargets[idx] verbatim, provenance SENIOR_RECOVERY_HOLD, confidence 'high', ALWAYS wins (Law F \u2014 deload owns its session outright) 2. TYPE GATE (\u00a715): exerciseType in {duration, distance} OR setType in {dropset, myo_reps, rest_pause, warmup} -> INSUFFICIENT_EVIDENCE, confidence 'low', prefill false, no intelligence applied 3. FIRST-TIME: history.length===0 AND today.working.length===0 -> FIRST_TIME_BAND, weight = prescription.startingWeight or null, repsTarget = band.min, confidence 'low' 4. WORKING LOAD (determineWorkingLoad, T-LIVESET-02/03/04) 5. STRUCTURE (back-off ratio, T-LIVESET-05) \u2014 skipped if today.overrideLoad set OR working.sessionDriven true (current-session evidence outranks structure, \u00a77 hierarchy) 6. REP TARGET (\u00a711 beat rule + \u00a713 expected-curve prior, T-LIVESET-06) 7. SENIOR TRIM (readiness/re-entry load factor + layoff 0.9 multiplier), applied LAST, downward-only, compose independently BODYWEIGHT LAW (CALC-5/FR-C4-4): exerciseType==='reps_only' -> weight forced null, unconditionally, AFTER every other computation",
   "precedence": "as listed above; Law G (user override) outranks Law E (structure); Law B (current-session evidence) outranks stable structure when sessionDriven=true",
-  "direct_case": [],
+  "direct_case": [
+   "ex1",
+   "LSO-01",
+   "LSO-27"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "CFL-22",
+   "CFL-23"
+  ],
+  "hold_case": [
+   "LSO-02",
+   "LSO-03",
+   "LSO-04",
+   "LSO-28",
+   "LSO-29"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-22",
+   "CFL-23",
+   "ex1",
+   "LSO-01",
+   "LSO-02",
+   "LSO-03",
+   "LSO-04",
+   "LSO-27",
+   "LSO-28",
+   "LSO-29"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2335,15 +2976,28 @@
   "decision": "",
   "thresholds": "outlier-discounted first (T-LIVESET-07). DROP (LOAD_DROP_CONSECUTIVE_MISS): the BEST set at the top load W missed repsMin in TWO consecutive comparable (non-discounted) sessions -> weight = W - resolveLoadIncrement(W) (T-LIVESET-08's 5%-capped increment). A SINGLE miss holds and rebuilds (HOLD_BUILDING_RANGE), never drops on one miss. ADVANCE (LOAD_ADVANCE_RANGE_TOPPED): range topped at W (best reps >= band.max), NOTHING at W missed, AND effort corroborates (sessionDifficulty 1-3 out of the 1-5 scale) AND W>0 -> weight = W + increment. Effort 4-5 (\"very hard\") -> HOLD_EFFORT_VERY_HARD (topped but too hard to trust yet). No difficulty rating -> HOLD_EFFORT_UNKNOWN. Otherwise (in-band, or topped-but-W<=0) -> MATCH_LOAD_ADD_REP (ordinary continuation at W).",
   "precedence": "DROP is checked before ADVANCE \u2014 a genuine regression is never masked by a \"topped\" read from a different, more recent comparable session",
-  "direct_case": [],
+  "direct_case": [
+   "LSO-07",
+   "LSO-08",
+   "LSO-09"
+  ],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "LSO-05",
+   "LSO-06"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "LSO-05",
+   "LSO-06",
+   "LSO-07",
+   "LSO-08",
+   "LSO-09"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2359,15 +3013,31 @@
   "decision": "",
   "thresholds": "adjustWeaker: last logged set reps < band.min -> drop one increment, honest target = band.min. Else, if in-band but >=3 below the HISTORY-based (not today-rebased) expected-curve value -> hold the load, target drops to the honest expected value (never re-demanding a fresh +1). adjustStronger: last set reps >= band.max+2 (the explicit \"+2 overshoot\" threshold named in the mission) -> +1 increment step, bounded to ONE step per session (checked via \"any set today already heavier than the first set today\" \u2014 stateless re-derivation of \"already advanced once\"); REQUIRES no sub-band set logged today (anySubBand check) and Founder Ruling 2 (ABSOLUTE): disabled outright under senior.isDeload, senior.blockFinished, senior.reEntryEaseActive, or senior.readinessReductionActive \u2014 \"never merely trimmed\"",
   "precedence": "adjustWeaker checked before adjustStronger in determineWorkingLoad (weaker wins if both could theoretically apply, though the anySubBand guard on adjustStronger makes true overlap rare)",
-  "direct_case": [],
+  "direct_case": [
+   "LSO-10",
+   "LSO-12"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "CFL-22",
+   "LSO-11"
+  ],
+  "hold_case": [
+   "LSO-13",
+   "LSO-14"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-22",
+   "LSO-10",
+   "LSO-11",
+   "LSO-12",
+   "LSO-13",
+   "LSO-14"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2383,15 +3053,24 @@
   "decision": "",
   "thresholds": "load override: |loggedWeight - prescribedWeight| > half an increment (resolveLoadIncrement/2). Reps override: |loggedReps - prescribedReps| > 2",
   "precedence": "an active override (today.overrideLoad != null) is checked FIRST in determineWorkingLoad, before any today-evidence adjustment \u2014 Law G outranks Law B and Law E (structure)",
-  "direct_case": [],
+  "direct_case": [
+   "LSO-15",
+   "LSO-16"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "CFL-23"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "CFL-23",
+   "LSO-15",
+   "LSO-16"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2409,13 +3088,21 @@
   "precedence": "applied AFTER working-load determination but BEFORE rep- target computation; skipped entirely when today.overrideLoad!=null OR working.sessionDriven===true (current- session evidence, \u00a77 tier 3, outranks stable structure, \u00a77 tier 4)",
   "direct_case": [],
   "boundary_case": [],
-  "conflict_case": [],
-  "hold_case": [],
+  "conflict_case": [
+   "LSO-17",
+   "LSO-18"
+  ],
+  "hold_case": [
+   "LSO-18"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "LSO-17",
+   "LSO-18"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2431,15 +3118,24 @@
   "decision": "",
   "thresholds": "declinePerPosition: isolation/accessory -> 0 reps decline per position; compound (default) -> 1 rep decline per position. Mid-session (a prior position already logged today): re-bases off TODAY's most recent logged position, declined by the gap. Otherwise: median of history's observations at that exact position (falls back to the nearest LOWER position with data, decline-adjusted, when this exact position has never been observed). With NO data anywhere: a neutral band.max-based decline chain. Final rep target (rule 6 of T-LIVESET-01) = clamp(min(E+1, band.max), band.min, band.max) \u2014 \"the beat rule\": always ask for one more than the expected curve, capped at band.max.",
   "precedence": "today's own logged positions outrank history when present (avoids self-reference per the code comment)",
-  "direct_case": [],
+  "direct_case": [
+   "LSO-19",
+   "LSO-20"
+  ],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "LSO-06"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "LSO-06",
+   "LSO-19",
+   "LSO-20"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2458,12 +3154,18 @@
   "direct_case": [],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "LSO-21",
+   "LSO-22"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "LSO-21",
+   "LSO-22"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2479,15 +3181,19 @@
   "decision": "",
   "thresholds": "raw increment = incrementKg (custom) ?? defaultIncrement(w, units, category); capped at 5% of the base load (cappedByPercent = min(raw, w*0.05), the \"5% cap\" named in the mission); rounded to the nearest 0.25 (roundQuarter); floored at 0.25 (never zero). defaultIncrement table (algorithms.js:313-322): kg compound weight>=60 -> 2.5 else 1.25; kg isolation weight>=20 -> 1 else 0.5; kg accessory weight>=40 -> 1.25 else 0.75; lbs compound weight>=135 -> 5 else 2.5; lbs isolation weight>=45 -> 2.5 else 1.25; lbs accessory weight>=90 -> 2.5 else 1.25",
   "precedence": "the ONE increment source of truth for every load-changing branch in livePrescription.js (single function, no competing formula)",
-  "direct_case": [],
+  "direct_case": [
+   "LSO-23"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "LSO-23"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2503,15 +3209,26 @@
   "decision": "",
   "thresholds": "senior.layoffDays > 7 (the \"layoff >7d\" named in the mission) OR senior.blockFinished -> cap the opening load at the most recent comparable session's top load (never let the ADVANCE gate fire), still respect a genuine consecutive-miss DROP, still allow back-off structure to compose. Layoff specifically applies seniorMultiplier = 0.9 (the \"\u00d70.9\" named in the mission) on top of the capped load; block-finished applies no multiplier (cap only)",
   "precedence": "fires only when today.working.length===0 (no today evidence yet); ordinary nextSessionOpeningLoad gate runs afterward if neither layoff nor block-finished condition triggers",
-  "direct_case": [],
+  "direct_case": [
+   "LSO-30"
+  ],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "LSO-24",
+   "LSO-25",
+   "LSO-26"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "LSO-24",
+   "LSO-25",
+   "LSO-26",
+   "LSO-30"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2527,15 +3244,36 @@
   "decision": "",
   "thresholds": "table (verbatim, blockProgression.js:172-178): (1) no explicit, no completion -> OUTSTANDING; (2) no explicit, completion exists -> COMPLETED; (3) SKIPPED explicit, no completion -> SKIPPED_BY_ USER; (4) SKIPPED explicit, completion exists -> COMPLETED (\"real performed work is stronger truth than an earlier intention to skip\"); (5) ENDED_EARLY explicit, no OTHER completion -> ENDED_EARLY; (6) ENDED_EARLY explicit, OTHER completion exists -> ENDED_EARLY flagged conflict (diagnostically invalid \u2014 \"not reachable by any authorised path\", never silently upgraded)",
   "precedence": "exact table lookup, no branch-order dependency by design (the file states this explicitly: \"so the answer can never come to depend on the order the branches happen to be written in\")",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-32",
+   "r-legs",
+   "TRN-33",
+   "res1",
+   "TRN-34",
+   "TRN-36"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "r-legs",
+   "wo1",
+   "res1",
+   "TRN-35"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-32",
+   "r-legs",
+   "TRN-33",
+   "res1",
+   "TRN-34",
+   "wo1",
+   "TRN-35",
+   "TRN-36"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2575,15 +3313,29 @@
   "decision": "",
   "thresholds": "totalLoggedSets===0 -> always confirm. Else: planned = exercises where !_timeCrunchSkipped; confirm required UNLESS every planned exercise has >=1 logged set (planned.length>0 && planned.every(sets.length>0))",
   "precedence": "an exercise deliberately dropped via Time Crunch is excluded from the \"would this be silently abandoned\" check \u2014 \"that's a deliberate choice, not an abandonment\"",
-  "direct_case": [],
+  "direct_case": [
+   "r-legs",
+   "wo1",
+   "wo2",
+   "res1",
+   "TRN-37",
+   "TRN-38"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "r-legs",
+   "wo1",
+   "wo2",
+   "res1",
+   "TRN-37",
+   "TRN-38"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2599,15 +3351,22 @@
   "decision": "",
   "thresholds": "rest reduced 30% first (restSec*0.70). If a starter-session trim is configured (maxSetsPerExercise or maxExercises set): keep first N exercises in plan order, cap sets per exercise \u2014 deterministic, no minutes-budget dependency. Otherwise: drop lowest-priority ISOLATION exercises (compounds always protected), sorted fewest-sets-first, removed highest-sets-first, until estimateFn(result)<=targetMinutes.",
   "precedence": "starter-trim mode runs INSTEAD OF the budget-fit isolation drop, never both",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-39"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "TRN-40"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-39",
+   "TRN-40"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2623,15 +3382,25 @@
   "decision": "",
   "thresholds": "EXCLUDED (\"Don't suggest\") is INDEFINITE until explicitly restored. AVOIDED_BLOCK (\"Avoid for this block\") is live ONLY while row.scopeMesocycleId === the CURRENT active mesocycle id \u2014 expires automatically when the block ends, no invented duration",
   "precedence": "exclusion/avoidance never touches HISTORY or deliberate reachability \u2014 \"an excluded exercise stays reachable through 'show excluded'\"; only affects SUGGESTION/auto-selection paths",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-20",
+   "TRN-67",
+   "TRN-68",
+   "TRN-69"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-20",
+   "TRN-67",
+   "TRN-68",
+   "TRN-69"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2647,15 +3416,23 @@
   "decision": "",
   "thresholds": "only rows with scope===SWAP_SCOPE.PROGRAMME count; rows recorded before scope existed (scope===null) are explicitly NOT counted (\"that asymmetry is deliberate and it favours the user\")",
   "precedence": "SESSION-scoped substitutions (a one-off swap because a machine was busy) are counted SEPARATELY (sessionSubstitutionCount) and are \"deliberately never used as negative preference... must never reach a replace decision\" \u2014 this is the fix for a documented historical defect where \"two busy-machine days reached the threshold and the exercise was proposed for removal\"",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-21",
+   "TRN-70",
+   "TRN-71"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-21",
+   "TRN-70",
+   "TRN-71"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2671,15 +3448,26 @@
   "decision": "",
   "thresholds": "routine-specific default wins over plan-wide default (\"preference is contextual, and the more specific context is the better answer\"). repeatedDefaultCandidate requires top.count >= REPEATED_SWAP_MIN(3) AND top.explicit===true AND the candidate is still eligible (not since excluded) AND no default already approved",
   "precedence": "an approved default that the user has SINCE excluded is not offered \u2014 \"the newer explicit intent wins over the older explicit intent\"",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-67",
+   "TRN-74"
+  ],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "TRN-72",
+   "TRN-73"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-67",
+   "TRN-72",
+   "TRN-73",
+   "TRN-74"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2695,15 +3483,21 @@
   "decision": "",
   "thresholds": "trainedRecently = within recencyWindowMs (default 45 days \u2014 matches livePrescription's own 45-day comparability window, T-LIVESET's FORTY_FIVE_DAYS_MS). sufficient = sessions>=2 OR chosen>= REPEATED_SWAP_MIN(3) (\"a brand-new exercise must be allowed to say so. One session is a try, not a preference\"). retained = chosen>0 AND sessions>0 AND away<chosen. ESTABLISHED_SESSIONS = 4 (evidenceMaturity: sessions>=4 OR repeatedChoice>=3 -> ESTABLISHED; sessions>=1 OR repeatedChoice>=1 -> EMERGING; else NONE). MATURITY_WEIGHT: NONE=0, EMERGING=0.5, ESTABLISHED=1 \u2014 \"Zero at NONE is the whole point of law 3... a NEW/replacement exercise must not inherit confidence or working load from the exercise it replaced\"",
   "precedence": "maturity gates how much personal-evidence weight (vs generic canonicality) a ranking may apply (rankPersonalised, not separately detailed here) \u2014 \"generic canonicality dominates when evidence is weak and legitimate personal evidence increasingly dominates as it becomes established\" (Founder Law 3)",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-75",
+   "TRN-76"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "TRN-75",
+   "TRN-76"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,

@@ -437,3 +437,10 @@ export const SCENARIOS = [
     restraint: false,
   },
 ];
+
+export const RECOVERY_COVERAGE = [
+  ...SCENARIOS.map((s) => ({
+    id: s.id, family: s.family || 'recovery', rules: s.rules || [],
+    pending: !!s.pending, expectedFail: !!s.expectedFail,
+  })),
+];
