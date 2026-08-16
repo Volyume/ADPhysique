@@ -1136,6 +1136,25 @@ export default function CoachOutputScreen({ navigation, route }) {
         }));
         return;
       }
+      // Release-gate fix (matches handleApplyDietBreak's existing contract
+      // below): the visible absolute target is part of consent. This screen
+      // can stay mounted (tab switch, not unmount) while the athlete's
+      // targets change elsewhere - another screen recalculating them, or a
+      // cross-device sync landing in the background - so the row's
+      // pre-tap preview (caloriePreview, built from the currentTargets
+      // state at last render) can go stale relative to what a fresh read
+      // right now would actually produce. Applying the fresh value
+      // unconditionally would persist and receipt a number the athlete was
+      // never shown. Refresh and require a second tap instead, exactly as
+      // the diet-break row already does.
+      if (Number(caloriePreview?.newKcal) !== Number(computed.newKcal)) {
+        setCurrentTargets(current);
+        setApplyNotice(n => ({
+          ...n,
+          calories: 'Your targets changed. Review the updated amount, then tap again.',
+        }));
+        return;
+      }
       await saveNutritionTargets(user.id, computed.targets);
       await AsyncStorage.setItem(
         '@volyume_nutrition_targets', JSON.stringify(computed.targets),
