@@ -569,6 +569,13 @@ its evidence).
 
 ===============================================================================
 
+### 2026-08-16 — CAMPAIGN 20 PHASE 2 (live set prescription) — IMPLEMENTED, LANDED
+Full implementation landed on main same day (commits d9f8d105 / 4d1f0274 /
+5ebaae41): one authoritative pure resolver (src/lib/livePrescription.js),
+logger wired through it end to end, five legacy authorities deleted, 170+
+new tests, full suite green at landing. Detail: TASKBOARD Campaign 20
+entry. Outstanding: founder Android device retest.
+
 ### 2026-08-16 — CAMPAIGN 20 PHASE 1 (live set prescription) — DESIGN COMPLETE
 Docs-only landing. Design doc + two evidence appendices in
 `docs/live-prescription-campaign-20-2026-08-16/` (see TASKBOARD Campaign 20

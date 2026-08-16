@@ -2016,14 +2016,19 @@ migration, per the campaign brief. Baseline traced: main `9816b601`.
   ordinal "Set 3 = 75 forever" teaching lives in the Last-session reference
   row + ghost + per-ordinal targets; five competing authorities incl. dead
   `getProgressionSuggestion` and unit-blind `stalledAdvice` +2.5 literal.
-- Phase 2 (implementation) IN FLIGHT (2026-08-16, founder order, MODEL:
-  SONNET dispatch under Fable lead review). Branch:
-  `claude/campaign20-live-prescription` off main `4a76e8b7`. Staged landing
-  per design doc §19: (1) resolver module + tests → (2) screen wiring →
-  (3) presentation → (4) retirements + guard re-pins; commit per stage,
-  merge to main when green. RECOVERY PATH: if a session dies mid-stage,
-  `git status` on that branch; uncommitted work is lead-reviewed against
-  design doc §9-§17 + FOUNDER-RULINGS-2026-08-16.md and either landed or
-  the stage relaunched from the last green commit — never blind-committed,
-  never discarded. Agents never commit; every commit on that branch is
-  lead-reviewed.
+- Phase 2 (implementation) COMPLETE and LANDED on main (2026-08-16, same
+  day). Three lead-reviewed stages: `d9f8d105` resolver module + 121-test
+  contract; `4d1f0274` logger wiring (live first-set + next-set
+  re-resolution, override authority, provenance line, six mounted
+  scenario tests, three guard re-pins); `5ebaae41` authority retirement
+  (computeSetTargets, getProgressionSuggestion, getBestAnchorSet,
+  prefillRepsForTarget, applyReadinessToTargets all deleted with
+  grep-proofs; laws migrated onto the resolver suites; FR-C4-4 closed) +
+  Stage 15 restore/replay pins with one directly connected defect fixed
+  (stale ghost after edit/delete) + lead draft-restore fix. Final full
+  suite at landing: 952 suites / 12,733 tests, 0 failures. KNOWN FLAKE
+  (pre-campaign, recorded): src/lib/widgets/__tests__/storage.test.js
+  fails order-dependently in some full parallel runs, passes 4/4 in
+  isolation, reproduced on the pre-campaign baseline; needs its own
+  session. Founder device retest of the new prescription flow is the
+  outstanding action (checklist in the Phase 2 handover message).
