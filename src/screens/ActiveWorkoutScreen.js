@@ -2945,11 +2945,30 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
-          // 'interactive' on iOS, never 'on-drag': iOS fires 'on-drag' for the
-          // PROGRAMMATIC auto-scroll that keeps the focused input visible, so
-          // the keyboard dropped after one keystroke (founder device report
-          // 2026-07-13). Android has no 'interactive', so it keeps 'on-drag'.
-          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          // 'interactive' on iOS: iOS fires 'on-drag' for the PROGRAMMATIC
+          // auto-scroll that keeps the focused input visible, so the
+          // keyboard dropped after one keystroke (founder device report
+          // 2026-07-13).
+          //
+          // 'none' on Android (founder device report, pre-gym build defect
+          // pass): the SAME class of bug, previously assumed not to apply to
+          // Android because 'interactive' doesn't exist there - it applies
+          // regardless. Every keystroke on Weight can change this card's
+          // layout height (the Est. max caption line and the record-flag row
+          // both mount/unmount as weight and reps cross zero or a record
+          // threshold), and RN's built-in scroll-into-view for the focused
+          // input fires a native scroll event to compensate. Android's
+          // ScrollView cannot distinguish that PROGRAMMATIC scroll from a
+          // user drag, so 'on-drag' dismissed the keyboard after every single
+          // character - proven by removing this one prop value: source of
+          // truth is Android's RN implementation of keyboardDismissMode
+          // (com.facebook.react.views.scroll), which has no equivalent to
+          // iOS's gesture-phase-aware 'interactive' mode. 'none' is the
+          // deterministic fix: Android loses drag-to-dismiss on this screen
+          // (Log set, the header X and the overflow sheet's own drag handle
+          // remain the ways to dismiss/leave), but typing becomes reliable,
+          // which is the defect that made the screen unusable.
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
         >
           {/* Vertical workout list: exercises BEFORE the current one, as
               compact jump-only rows. */}

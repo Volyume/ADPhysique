@@ -1904,11 +1904,17 @@ export default function HomeScreen({ navigation, route }) {
         ref={scrollRef}
         style={styles.scroll}
         contentContainerStyle={styles.content}
-        // 'interactive' on iOS, never 'on-drag': iOS fires 'on-drag' for the
-        // PROGRAMMATIC auto-scroll that keeps the focused input visible, so
-        // the keyboard dropped after one keystroke (founder device report
-        // 2026-07-13). Android has no 'interactive', so it keeps 'on-drag'.
-        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+        // 'interactive' on iOS: iOS fires 'on-drag' for the PROGRAMMATIC
+        // auto-scroll that keeps the focused input visible, so the keyboard
+        // dropped after one keystroke (founder device report 2026-07-13).
+        // 'none' on Android (input-focus fix, pre-gym build defect pass):
+        // the same class of bug reaches Android too - see the identical fix
+        // and full root-cause note on ActiveWorkoutScreen.js's own
+        // ScrollView, the screen where it was device-reproduced. Android has
+        // no 'interactive' equivalent, so 'none' is the deterministic
+        // policy; the daily weigh-in field on this screen is the reachable
+        // numeric-entry surface this protects.
+        keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
         // A2 (pre-release sweep 2026-07-27, LANE A): without this, a tap on
         // a button while the daily weigh-in field is focused only dismisses
         // the keyboard -- the user has to tap twice.

@@ -687,11 +687,16 @@ export default function NutritionTargetsScreen({ navigation }) {
         <ScrollView
           contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
-          // 'interactive' on iOS, never 'on-drag': iOS fires 'on-drag' for the
-          // PROGRAMMATIC auto-scroll that keeps the focused input visible, so
-          // the keyboard dropped after one keystroke (founder device report
-          // 2026-07-13). Android has no 'interactive', so it keeps 'on-drag'.
-          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'on-drag'}
+          // 'interactive' on iOS: iOS fires 'on-drag' for the PROGRAMMATIC
+          // auto-scroll that keeps the focused input visible, so the keyboard
+          // dropped after one keystroke (founder device report 2026-07-13).
+          // 'none' on Android (input-focus fix, pre-gym build defect pass):
+          // the same class of bug reaches Android too - see the identical fix
+          // and full root-cause note on ActiveWorkoutScreen.js's own
+          // ScrollView, the screen where it was device-reproduced. This
+          // screen's multiple decimal-pad calorie/macro fields are the same
+          // reachable numeric-entry surface.
+          keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
             <InfoTooltip
