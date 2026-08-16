@@ -94,9 +94,12 @@ describe('row-fill dependents keep flex: 1 (founder photo, build 2608)', () => {
     // WorkoutBottomBar component; the fill contract moved to its two flexed
     // slots (the primary keeps the larger share so it never shrinks into a
     // mis-tap).
+    // RE-ANCHORED again (logger redesign phase 2, single-CTA state
+    // machine): the secondary slot is now the explicit extra-set action
+    // (extraSlot), same 3:2 fill contract.
     const bar = read('components/workout/WorkoutBottomBar.js');
     expect(bar).toMatch(/primarySlot:\s*\{\s*flex:\s*3\s*\}/);
-    expect(bar).toMatch(/advanceSlot:\s*\{\s*flex:\s*2\s*\}/);
+    expect(bar).toMatch(/extraSlot:\s*\{\s*flex:\s*2\s*\}/);
   });
 
   // R7 was the same class: SparkCard is a pressable <Card style={styles.

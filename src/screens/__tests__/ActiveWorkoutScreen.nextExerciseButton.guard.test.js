@@ -1,45 +1,40 @@
 /**
- * Source-level regression guard — "Next exercise" button on target reached.
+ * Source-level regression guard — the single primary CTA state machine.
  *
  * Founder ruling (2026-07-10, verbatim): "After set number of sets it should
  * give a button for next exercise not just show you to do many more sets."
  *
+ * RE-PINNED (logger redesign phase 2, founder-accepted Option B): the bar is
+ * now a SINGLE-primary state machine, replacing D43 S3's additive
+ * primary-beside-advance layout AND the separate floating "Next exercise in
+ * a moment / Stay here" row (the contradictory-CTA state the redesign was
+ * ordered to eliminate). The pinned contract:
+ *
+ *   1. Target not complete: the logging action is the one primary
+ *      (volyume-btn-complete-set). No advance control renders.
+ *   2. Target complete (advance non-null, same gate as ever:
+ *      targetComplete && !extraSetArmed && !perSide): the SAME primary slot
+ *      becomes Next exercise / Finish workout (their pinned testIDs), and
+ *      the 1.8s auto-advance countdown renders as that button's own
+ *      progress track (countdownActive) - never as a second control.
+ *      Tapping it advances immediately (the handler is the same
+ *      handleNextExercise/handleFinishWorkout, whose first act cancels the
+ *      timer): the countdown is a ceiling, not a mandatory delay.
+ *   3. Extra sets stay reachable as the explicit SECONDARY action
+ *      ("Log another set", volyume-btn-extra-set) which arms extraSetArmed
+ *      (CL-6.1 prepare-not-commit) and cancels the countdown, returning the
+ *      bar to state 1 - it never competes as a second primary (D8
+ *      junk-volume: extra sets are the user's call, never a wall).
+ *   4. Auto-advance timing and trigger are UNCHANGED: 1800ms, armed only on
+ *      the justHitTarget edge, cancelled by every pre-existing trigger
+ *      (logging another set, exercise removal, any index change, unmount,
+ *      superset pre-emption) through the single cancelAutoAdvance choke
+ *      point.
+ *
  * ActiveWorkoutScreen.js is a huge screen with a live dependency surface
- * (store, SQLite, notifications, Live Activity, haptics); mounting it is
- * impractical, so — matching this file's existing convention (reorder.guard,
- * supersetRest.guard, unilateral.guard, usability.guard) — these are
- * byte-level checks against the source that pin the exact behaviour:
- *
- *   1. The bottom-bar primary action swaps to "Next exercise" only once the
- *      exercise's planned/adjusted working-set target is reached
- *      (targetComplete = targetSets && workingLogged >= targetSets), and
- *      only while no extra set has been armed. Before target it stays the
- *      ordinary "Log set" action — no button, no auto-navigation.
- *   2. Logging MORE sets than planned stays possible: "Log another set"
- *      (volyume-btn-extra-set) arms extraSetArmed, which flips the bottom
- *      bar straight back to the normal Log set action — the button is an
- *      offer, never a wall (D8 junk-volume: extra sets are the user's call).
- *   3. On the last exercise, the same slot offers "Finish workout" instead,
- *      routed through handleFinishWorkout so its conditional confirm logic
- *      (shouldConfirmBeforeFinish / hasInProgressSetEntry) still applies.
- *   4. Both the button row and the whole bottom bar are hidden while a
- *      cluster or a per-side (D9 unilateral) pair is mid-flight, so a
- *      two-phase per-side set — which logs ONE row for the pair — cannot
- *      show "Next exercise" mid-pair.
- *
- * Founder follow-up (same day): the button "doesn't always happen ... it
- * goes on and adds more and more sets". Root cause: targetSets used to be
- * adjustedSetCount alone, which is undefined for any exercise slot with no
- * routineExercise row - a blank/freeform workout (HomeScreen's "Just want to
- * log? Start a blank workout", startWorkout(workout, [])) and ANY exercise
- * added mid-session via the "+ Add exercise" picker both hit this, because
- * addExerciseToWorkout(exercise, routineExercise = null) in useAppStore.js
- * defaults routineExercise to null and the screen's only call site
- * (handlePickerSelect) passes just the exercise. `undefined && n >= undefined`
- * is always falsy, so targetComplete never fires for those slots and the
- * entry card offers a plain "Log set" forever - exactly the reported
- * behaviour. The fix gives targetSets an explicit, non-silent fallback
- * chain (below) so it always resolves to a real number.
+ * (store, SQLite, notifications, haptics); mounting it is impractical, so -
+ * matching this file's existing convention - these are byte-level checks
+ * against the source.
  */
 const fs = require('fs');
 const path = require('path');
@@ -48,25 +43,6 @@ const SRC = fs.readFileSync(
   path.join(__dirname, '..', 'ActiveWorkoutScreen.js'),
   'utf8',
 );
-
-// The bottom-pinned action bar: from the (cluster || perSide) guard through
-// the closing of that ternary, just before the Exercise Picker Modal comment.
-//
-// CP-10 stage 3 (theming FINAL batch, 2026-07-10): ActiveWorkoutScreen now
-// reads a live theme (src/hooks/useTheme.js), so `styles.bottomBar` gained a
-// `live.bottomBar` neighbour in its style array (frozen `styles` block is
-// byte-identical; only the JSX call site grew).
-//
-// D43 S3: the bar now nests a second bottomBarRow View around the primary +
-// advance-action pair (blueprint 3.7's additive layout), so the old
-// "single-nesting-level" regex no longer matches reliably. Located by
-// anchor strings instead, robust to the exact nesting depth.
-// RE-ANCHORED 2026-07-12 (R3 logger rebuild): the bar is the dedicated
-// WorkoutBottomBar component; the window now spans the screen's call site.
-// The stable-identity invariants are unchanged - the primary renders first
-// and unconditionally INSIDE the component (pinned below against the
-// component source), the advance action is the additive `advance` prop
-// gated by the same condition this suite always pinned.
 const BAR_START = SRC.indexOf('{cluster ? null : (\n          <WorkoutBottomBar');
 const BAR_END = SRC.indexOf('{/* Exercise Picker Modal, shared by Add and Swap', BAR_START);
 const BAR_COMPONENT = fs.readFileSync(
@@ -75,120 +51,128 @@ const BAR_COMPONENT = fs.readFileSync(
 );
 const bottomBarWindow = (BAR_START >= 0 && BAR_END > BAR_START) ? SRC.slice(BAR_START, BAR_END) : '';
 
-// D43 S3 (blueprint 3.7, "Bottom bar — stable identity"): the bar's
-// primary is now UNCONDITIONAL -- Log set / Log warm-up / Start cluster is
-// always present while an exercise is active. Reaching target no longer
-// swaps it out; instead a second, visually distinct advance action (Next
-// exercise / Finish workout) appears BESIDE it, additive, reusing the exact
-// same targetComplete/isLastExercise/handleNextExercise/handleFinishWorkout
-// gating this suite always pinned. The describe blocks below are re-pinned
-// to that new shape; no invariant is dropped, only re-anchored to the new
-// source structure (see each test's D43 S3 comment for what changed).
-describe('target-reached bottom bar gains "Next exercise" / "Finish workout" BESIDE "Log set", never replacing it', () => {
-  test('the advance-action gate is targetComplete && !extraSetArmed, not tied to anything else', () => {
+describe('single primary CTA: Log set until target, then Next exercise / Finish workout in the SAME slot', () => {
+  test('the advance gate is targetComplete && !extraSetArmed && !perSide, unchanged', () => {
     expect(SRC).toContain('const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;');
     expect(SRC).toContain('const workingLogged = countProgressSets(loggedSets);');
     expect(SRC).toContain('const targetComplete = targetSets && workingLogged >= targetSets;');
     expect(bottomBarWindow).toContain('advance={(targetComplete && !extraSetArmed && !perSide)');
   });
 
-  test('reaching target on a non-last exercise shows "Next exercise" ADDITIVELY, wired to the existing handleNextExercise nav', () => {
+  test('when advance is present it IS the primary (variant primary, pinned testIDs); the logging primary does not co-render', () => {
     expect(bottomBarWindow).toContain("label: 'Next exercise', onPress: handleNextExercise, testID: 'volyume-btn-next-exercise'");
-    // R3: the advance action renders on the shared Button's secondary
-    // variant inside WorkoutBottomBar - visually distinct from the filled
-    // primary beside it, same distinctness invariant as before.
-    expect(BAR_COMPONENT).toMatch(/advance\.label[\s\S]{0,400}?testID=\{advance\.testID\}/);
-    expect(BAR_COMPONENT).toContain('variant="secondary"');
-  });
-
-  test('reaching target on the last exercise shows "Finish workout" ADDITIVELY instead, routed through handleFinishWorkout', () => {
-    expect(bottomBarWindow).toContain('isLastExercise');
     expect(bottomBarWindow).toContain("label: 'Finish workout', onPress: handleFinishWorkout, testID: 'volyume-btn-finish-primary'");
+    // Inside the component: the advance branch renders the advance Button on
+    // variant="primary", and the logging Button (volyume-btn-complete-set)
+    // lives in the ELSE branch - one primary at a time by construction.
+    const advanceBranch = BAR_COMPONENT.slice(
+      BAR_COMPONENT.indexOf('{advance ? ('),
+      BAR_COMPONENT.indexOf(') : ('),
+    );
+    expect(advanceBranch).toContain('testID={advance.testID}');
+    expect(advanceBranch).toContain('variant="primary"');
+    expect(advanceBranch).not.toContain('volyume-btn-complete-set');
+    const elseBranch = BAR_COMPONENT.slice(BAR_COMPONENT.indexOf(') : ('));
+    expect(elseBranch).toContain('testID="volyume-btn-complete-set"');
   });
 
-  test('a trailing time-crunch-skipped exercise cannot leave the finish offer unreachable: last means no un-skipped exercise remains after this one', () => {
-    // Product ruling 2026-07-10: handleNextExercise skips _timeCrunchSkipped
-    // slots, so isLastExercise must use the same skip-aware definition or the
-    // second-to-last slot would show a Next button that no-ops.
-    expect(SRC).toContain('const isLastExercise = !workoutExercises.some(');
-    expect(SRC).toContain('(entry, i) => i > currentExerciseIndex && !entry?._timeCrunchSkipped,');
-    expect(SRC).not.toContain('const isLastExercise = currentExerciseIndex === workoutExercises.length - 1;');
+  test('the 1.8s countdown renders ON the primary CTA (countdownActive), never as a separate floating row', () => {
+    // The old contradictory state is gone: no "Stay here" control, no
+    // floating countdown row anywhere in the screen's render.
+    expect(SRC).not.toContain('accessibilityLabel="Stay on this exercise"');
+    expect(SRC).not.toContain('styles.autoAdvanceRow}');
+    // The countdown is a state of the same single primary slot.
+    expect(bottomBarWindow).toContain('countdownActive={autoAdvanceArmed && targetComplete && !extraSetArmed}');
+    expect(BAR_COMPONENT).toContain('countdownMs = 1800');
+    expect(BAR_COMPONENT).toContain('duration: countdownMs');
+    // The track is decorative: hidden from assistive tech, and the button's
+    // accessibilityLabel stays the plain action label (same-string rule).
+    expect(BAR_COMPONENT).toContain('accessibilityElementsHidden');
+    expect(BAR_COMPONENT).toContain('accessibilityLabel={advance.label}');
+    // Screen readers hear the arm exactly once, at the arm site.
+    expect(SRC).toMatch(/setAutoAdvanceArmed\(true\);\s*try \{\s*AccessibilityInfo\.announceForAccessibility\('Next exercise in a moment'\);/);
   });
 
-  test('D43 S3/R3: the Log set primary is UNCONDITIONAL -- WorkoutBottomBar always renders it with the pinned testID; the advance is the gated additive prop', () => {
-    expect(bottomBarWindow).toContain('onPrimary={handleCompleteSetPress}');
-    // The primary carries the Maestro-pinned testID INSIDE the component,
-    // outside any conditional: the advance slot is the only ternary.
-    expect(BAR_COMPONENT).toContain('testID="volyume-btn-complete-set"');
-    const primaryIdx = BAR_COMPONENT.indexOf('testID="volyume-btn-complete-set"');
-    expect(primaryIdx).toBeGreaterThan(-1);
-    // The screen's wiring order: the primary handler precedes the gated
-    // advance prop, mirroring the old primary-first source order.
-    const onPrimaryIdx = bottomBarWindow.indexOf('onPrimary={handleCompleteSetPress}');
-    const gateIdx = bottomBarWindow.indexOf('advance={(targetComplete && !extraSetArmed && !perSide)');
-    expect(onPrimaryIdx).toBeGreaterThanOrEqual(0);
-    expect(gateIdx).toBeGreaterThan(onPrimaryIdx);
+  test('auto-advance timing and trigger are unchanged: 1800ms on the justHitTarget edge, cancelAutoAdvance is the single clearing point', () => {
+    expect(SRC).toContain('const justHitTarget = targetSets && newWorkingCount >= targetSets && workingLogged < targetSets;');
+    expect(SRC).toContain('}, 1800);');
+    expect(SRC).toContain('function cancelAutoAdvance() {');
+    // The pre-existing cancellation triggers all still route through it:
+    // logging another set, removal, next-exercise itself, and the index-
+    // change/unmount backstop effect.
+    expect(SRC).toMatch(/async function handleCompleteSet\(overrides = \{\}\) \{[\s\S]{0,400}?cancelAutoAdvance\(\);/);
+    expect(SRC).toMatch(/function handleNextExercise\(\) \{\s*cancelAutoAdvance\(\);/);
+    expect(SRC).toMatch(/return \(\) => cancelAutoAdvance\(\);/);
   });
 });
 
-describe('extra sets beyond the plan stay loggable (D8 junk-volume: never a wall)', () => {
-  test('D43 S3: the promoted in-scroll "Log another set" button retires -- the permanent bar primary logs the extra set, which arms extraSetArmed on SUCCESS', () => {
-    // The separate arm-then-log round trip is gone: there is no more
-    // standalone "Log another set" control anywhere in source.
-    expect(SRC).not.toContain('testID="volyume-btn-extra-set"');
-    expect(SRC).not.toContain('accessibilityLabel="Log another set"');
-    // L1 review fix (re-anchored): the arm no longer happens on the TAP in
-    // handleCompleteSetPress (an invalid/aborted tap past target must NOT flip
-    // the mode). handleCompleteSetPress must NOT arm extraSetArmed itself...
-    const pressFn = SRC.match(/function handleCompleteSetPress\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
-    expect(pressFn).not.toContain('setExtraSetArmed(true)');
-    // ...instead handleCompleteSet arms it in its SUCCESS path (after the set
-    // is actually created), only for a working set logged with the target
-    // already met -- the extra-set case.
-    expect(SRC).toContain("if (currentSet.setType !== 'warmup' && targetSets && workingLogged >= targetSets && !extraSetArmed) {");
-    expect(SRC).toContain('setExtraSetArmed(true);');
+describe('extra sets beyond the plan stay loggable as an explicit SECONDARY action (D8: never a wall, never a second primary)', () => {
+  test('the bar exposes "Log another set" as the secondary, wired to armExtraSet', () => {
+    expect(bottomBarWindow).toContain('onExtraSet={armExtraSet}');
+    expect(BAR_COMPONENT).toContain('testID="volyume-btn-extra-set"');
+    expect(BAR_COMPONENT).toContain('title="Log another set"');
+    // Visually subordinate: the secondary rides variant="secondary" and the
+    // primary keeps the larger flex share.
+    expect(BAR_COMPONENT).toContain('variant="secondary"');
+    expect(BAR_COMPONENT).toContain('primarySlot: { flex: 3');
+    expect(BAR_COMPONENT).toContain('extraSlot: { flex: 2 }');
   });
 
-  test('arming extraSetArmed flips the bar back to Log-set-only (the advance action gate), exactly as it did before', () => {
-    // extraSetArmed still gates the SAME advance-action ternary; once true,
-    // targetComplete && !extraSetArmed is false and only the (unconditional)
-    // primary remains, same end-state as pre-S3, reached by one tap instead
-    // of two.
+  test('arming cancels the countdown and returns the bar to Log set (prepare-not-commit, CL-6.1)', () => {
+    const fn = SRC.match(/function armExtraSet\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(fn).toContain('cancelAutoAdvance();');
+    expect(fn).toContain('setExtraSetArmed(true);');
+    // extraSetArmed still gates the SAME advance ternary; once true only the
+    // logging primary remains, and it disarms on the next logged set or any
+    // exercise change (the reset effect).
     expect(bottomBarWindow).toContain('advance={(targetComplete && !extraSetArmed && !perSide)');
     expect(SRC).toContain('const [extraSetArmed, setExtraSetArmed] = useState(false);');
+    expect(SRC).toMatch(/setExtraSetArmed\(false\);[\s\S]{0,120}?\}, \[currentExerciseIndex, loggedSets\.length\]\);/);
+  });
+
+  test('an implicit past-target log (keyboard Done) still arms on SUCCESS only, never on the tap', () => {
+    // L1 review fix carried forward: handleCompleteSetPress never arms;
+    // handleCompleteSet's success path does, so an invalid/aborted entry
+    // cannot flip the bar's mode.
+    const pressFn = SRC.match(/function handleCompleteSetPress\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(pressFn).not.toContain('setExtraSetArmed(true)');
+    expect(SRC).toContain("if (currentSet.setType !== 'warmup' && targetSets && workingLogged >= targetSets && !extraSetArmed) {");
   });
 });
 
-describe('the advance action never shows mid-exercise, and never mid a per-side pair', () => {
+describe('the advance state never shows mid-exercise, and never mid a per-side pair', () => {
   test('targetComplete requires the logged working-set count to reach the target, so pre-target never satisfies the gate', () => {
     expect(SRC).toContain('const targetComplete = targetSets && workingLogged >= targetSets;');
   });
 
   test('R4 (D64): the bar hides only for a cluster - mid per-side pair it STAYS, relabelled to commit side two', () => {
-    // Cluster keeps its own in-card controls, so the bar hides there.
     expect(SRC).toMatch(/\{cluster \? null : \(\s*<WorkoutBottomBar/);
-    // Mid-pair the permanent primary IS the side-two control ("Log other
-    // side" -> finishPerSide), and the advance action stays suppressed via
-    // the && !perSide gate pinned above.
     expect(SRC).toContain('if (perSide) return finishPerSide();');
     expect(SRC).toContain("perSide ? 'Log other side'");
   });
 
-  test('no auto-navigation fires on reaching target from this change — advancing is a tap, never automatic', () => {
-    // The pre-existing auto-advance timer (C3) is a separate, cancellable,
-    // visibly-announced countdown ("Next exercise in a moment / Stay here"),
-    // not something this fix adds to or silently extends.
-    expect(SRC).toContain('Next exercise in a moment');
-    expect(SRC).toContain('accessibilityLabel="Stay on this exercise"');
+  test('a trailing time-crunch-skipped exercise cannot leave the finish offer unreachable', () => {
+    expect(SRC).toContain('const isLastExercise = !workoutExercises.some(');
+    expect(SRC).toContain('(entry, i) => i > currentExerciseIndex && !entry?._timeCrunchSkipped,');
+    expect(SRC).not.toContain('const isLastExercise = currentExerciseIndex === workoutExercises.length - 1;');
+  });
+
+  test('superset pre-emption stays senior: the forward jump returns before the auto-advance arm', () => {
+    // In handleCompleteSet the group forward-jump `return`s before the
+    // justHitTarget branch, so a superset transition consumes the moment and
+    // the single-exercise countdown never arms for it.
+    const fn = SRC.match(/async function handleCompleteSet\(overrides = \{\}\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    const jumpIdx = fn.indexOf('announceGroupFocusChange(pairIdx, sgi);');
+    const returnIdx = fn.indexOf('return;', jumpIdx);
+    const armIdx = fn.indexOf('if (justHitTarget && !isLastExercise) {');
+    expect(jumpIdx).toBeGreaterThan(-1);
+    expect(returnIdx).toBeGreaterThan(jumpIdx);
+    expect(armIdx).toBeGreaterThan(returnIdx);
   });
 });
 
 describe('target-set fallback matrix: targetSets always resolves to a real number', () => {
   test('root cause is pinned: addExerciseToWorkout still defaults routineExercise to null', () => {
-    // If this default is ever removed, the fallback chain below is still
-    // correct (harmless no-op), but the root-cause note above would go
-    // stale — this assertion is a tripwire, not a requirement to keep the
-    // default, so update the comment above if it ever changes.
     const STORE = fs.readFileSync(
       path.join(__dirname, '..', '..', 'store', 'useAppStore.js'),
       'utf8',
@@ -197,18 +181,9 @@ describe('target-set fallback matrix: targetSets always resolves to a real numbe
     expect(SRC).toContain('addExerciseToWorkout(ex);');
   });
 
-  test('auto-generated / manual-builder / swapped-in slots (routineExercise present) resolve via adjustedSetCount, unaffected by the new fallback', () => {
-    // adjustedSetCount itself already folds routineExercise?.recommendedSets
-    // in via comp015SetCount when there is no active session adjustment —
-    // this fix only adds what happens when adjustedSetCount is falsy.
+  test('auto-generated / manual-builder / swapped-in slots (routineExercise present) resolve via adjustedSetCount, unaffected by the fallback', () => {
     expect(SRC).toContain('const comp015SetCount = (sessionAdjustment && sessionAdjustment.setDelta !== 0)');
-    // FQ-4 (D96): the no-adjustment base is the week's allocated count with
-    // the routine's static count as its identity fallback - same resolution
-    // law, one wire earlier.
     expect(SRC).toContain('(weeklyAllocation?.[exercise?.id] ?? routineExercise?.recommendedSets);');
-    // handleConfirmSwap deliberately keeps the slot's planned set count
-    // (rebuiltRoutineEx spreads prevRoutineEx), so a swapped-in exercise
-    // still carries a routineExercise with recommendedSets.
     const swapWindow = SRC.match(/function handleConfirmSwap\(newExercise\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
     expect(swapWindow).toContain('const rebuiltRoutineEx = prevRoutineEx');
     expect(swapWindow).toContain('...prevRoutineEx,');
@@ -217,20 +192,10 @@ describe('target-set fallback matrix: targetSets always resolves to a real numbe
   test('a slot with no routineExercise at all falls back to DEFAULT_FREEFORM_TARGET_SETS, never to undefined', () => {
     expect(SRC).toContain('const DEFAULT_FREEFORM_TARGET_SETS = 3;');
     expect(SRC).toContain('const targetSets = adjustedSetCount || routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS;');
-    // Re-pinned for D43 S2: the separate "Target: N sets - X-Y reps" display
-    // line is retired (folded into orientationLabel's own "Set X of
-    // targetSets" text on the Now card's Line 1). targetSets is the single
-    // shared source for that display now, so this pins targetSets itself
-    // being read straight into orientationLabel's set-position text, the
-    // same DEFAULT_FREEFORM_TARGET_SETS fallback chain asserted above.
     expect(SRC).toContain('const pos = targetSets ? `Set ${workingLogged + 1} of ${targetSets}` : `Set ${workingLogged + 1}`;');
   });
 
   test('per-side pairs still count as ONE set toward whatever target resolves', () => {
-    // finishPerSide commits through the single shared handleCompleteSet path
-    // (one workout_sets row per pair), and countProgressSets counts rows —
-    // so a per-side exercise reaches its (now-guaranteed) target after N
-    // pairs, not 2N, whether the exercise is plan-driven or freeform.
     const fn = SRC.match(/async function finishPerSide\(\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
     const calls = fn.match(/handleCompleteSet\(/g) ?? [];
     expect(calls.length).toBe(1);

@@ -2097,7 +2097,14 @@ describe('C3: auto-advance countdown is visible and cancellable', () => {
     };
   }
 
-  test('logging the target-hitting set arms the countdown, and Stay here cancels it', async () => {
+  // RE-PINNED (logger redesign phase 2, founder ruling Option B): the
+  // countdown is now a state of the SINGLE primary CTA. Crossing the target
+  // swaps the same slot to "Next exercise" (its own progress track carries
+  // the 1.8s wait) with "Log another set" as the explicit secondary; the
+  // old floating "Next exercise in a moment / Stay here" row no longer
+  // exists. Choosing the extra set cancels the pending advance - the same
+  // cancellation guarantee "Stay here" used to provide, one honest action.
+  test('logging the target-hitting set swaps the single CTA to Next exercise; Log another set cancels the pending advance', async () => {
     useAppStore.setState(baseState());
     const Screen = require('../screens/ActiveWorkoutScreen').default;
     let tree = null;
@@ -2118,27 +2125,25 @@ describe('C3: auto-advance countdown is visible and cancellable', () => {
           for (let i = 0; i < 20; i++) await Promise.resolve();
         });
 
+        // The SAME primary slot is now the advance; the logging primary and
+        // the retired floating row are both absent.
         const afterLog = collectText(tree.toJSON()).join('  ');
-        expect(afterLog).toMatch(/Next exercise in a moment/);
-        expect(afterLog).toMatch(/Stay here/);
+        expect(afterLog).not.toMatch(/Next exercise in a moment/);
+        expect(afterLog).not.toMatch(/Stay here/);
+        expect(findByTestID(tree, 'volyume-btn-next-exercise').length).toBe(1);
+        expect(findByTestID(tree, 'volyume-btn-complete-set').length).toBe(0);
 
-        const stayButtons = tree.root.findAll(
-          n => n.props
-            && typeof n.props.onPress === 'function'
-            && n.props.accessibilityRole === 'button'
-            && n.props.accessibilityLabel === 'Stay on this exercise',
-        );
-        expect(stayButtons.length).toBeGreaterThan(0);
+        // The explicit secondary extra-set action is present; choosing it
+        // cancels the pending advance and returns the bar to Log set.
+        const extraButtons = findByTestID(tree, 'volyume-btn-extra-set');
+        expect(extraButtons.length).toBe(1);
+        await TestRenderer.act(async () => { extraButtons[0].props.onPress(); });
+        expect(findByTestID(tree, 'volyume-btn-complete-set').length).toBe(1);
+        expect(findByTestID(tree, 'volyume-btn-next-exercise').length).toBe(0);
 
-        // Cancel it: the row disappears immediately.
-        await TestRenderer.act(async () => { stayButtons[0].props.onPress(); });
-        const afterCancel = collectText(tree.toJSON()).join('  ');
-        expect(afterCancel).not.toMatch(/Next exercise in a moment/);
-
-        // Advancing well past the old 1800ms window must NOT move the
-        // screen on: still exercise A's own set-entry state (its two logged
-        // sets), not exercise B's fresh one (both exercise names always show
-        // in the nav strip, so this checks position/state, not just names).
+        // Advancing well past the 1800ms window must NOT move the screen
+        // on: the cancelled countdown stays cancelled, and the entry is
+        // armed for set 3 on exercise A.
         await TestRenderer.act(async () => {
           jest.advanceTimersByTime(2500);
           await Promise.resolve();
@@ -2146,6 +2151,50 @@ describe('C3: auto-advance countdown is visible and cancellable', () => {
         expect(useAppStore.getState().currentExerciseIndex).toBe(0);
         const afterWait = collectText(tree.toJSON()).join('  ');
         expect(afterWait).toMatch(/Set 3 of 2/);
+      } finally {
+        jest.useRealTimers();
+      }
+    } finally {
+      unmountTree(tree);
+    }
+  });
+
+  // Option B's "the timer is a ceiling": tapping the advance CTA during the
+  // countdown moves on immediately, and no second (duplicate) advance fires
+  // when the old timer window later expires.
+  test('tapping Next exercise during the countdown advances immediately with no duplicate fire', async () => {
+    useAppStore.setState(baseState());
+    const Screen = require('../screens/ActiveWorkoutScreen').default;
+    let tree = null;
+    try {
+      const { tree: t } = await mountScreen(Screen);
+      tree = t;
+      const logButtons = findByTestID(tree, 'volyume-btn-complete-set');
+
+      jest.useFakeTimers();
+      try {
+        await TestRenderer.act(async () => {
+          logButtons[0].props.onPress();
+          for (let i = 0; i < 20; i++) await Promise.resolve();
+        });
+
+        const nextButtons = findByTestID(tree, 'volyume-btn-next-exercise');
+        expect(nextButtons.length).toBe(1);
+        await TestRenderer.act(async () => {
+          nextButtons[0].props.onPress();
+          for (let i = 0; i < 10; i++) await Promise.resolve();
+        });
+        expect(useAppStore.getState().currentExerciseIndex).toBe(1);
+
+        // The old timer must have been cancelled by the tap: running the
+        // clock past 1800ms cannot advance again (there is no exercise 3,
+        // and a stray fire would be a no-op advance attempt - the index
+        // must simply hold).
+        await TestRenderer.act(async () => {
+          jest.advanceTimersByTime(2500);
+          await Promise.resolve();
+        });
+        expect(useAppStore.getState().currentExerciseIndex).toBe(1);
       } finally {
         jest.useRealTimers();
       }

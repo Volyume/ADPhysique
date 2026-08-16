@@ -86,6 +86,13 @@ describe('fit rule 4: the JS-thread Animated API is a frozen allowlist', () => {
     'components/RestTimer.js',
     'components/Skeleton.js',
     'components/Toast.js',
+    // Logger redesign phase 2 (founder ruling Option B): the single-CTA
+    // auto-advance countdown track. A one-shot 1.8s width-percentage fill -
+    // percentage width cannot ride the native driver, and it animates at
+    // most once per exercise (never per-frame during logging), so the
+    // JS-thread cost is a single short tween mirroring RestTimer's own
+    // sanctioned drain-bar pattern. Suppressed under reduce-motion.
+    'components/workout/WorkoutBottomBar.js',
     // components/food/MacroRings.js left this list in E15-4 (RollingNumber
     // + UI-thread ring; the Animated.Value listener is retired).
     'navigation/RootNavigator.js',
