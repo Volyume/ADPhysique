@@ -39,6 +39,12 @@ import { NOW, DAY, b } from './harness';
 // record shape that already has a canonical builder.
 import { deriveEffectiveMaintenanceMemo } from '../../lib/effectiveMaintenance';
 import { buildInterventionRecord, INTERVENTION_KIND } from '../../lib/coachIntervention';
+// Reused verbatim (the exported fixture itself, not just its numbers) from
+// scenarios.conflict.data.js's own CFL-06 base case, which already proves
+// this exact fixture isolates ffmFloorHeld with every OTHER autoApplyHold
+// term false -- the canonical FFM-floor-only week for the N-COACH-14 OR-
+// isolation scenarios below.
+import { ffmFloorWeek } from './scenarios.conflict.data';
 
 // ── Shared fixture helpers ────────────────────────────────────────────────────
 
@@ -91,6 +97,24 @@ function moderatePushWeek(overrides = {}) {
     bodyweightKg: 85, units: 'kg', nowMs: NOW,
     ...overrides.top,
   };
+}
+
+/** 35-day flat/trending weight series (mirrors scenarios.conflict.data.js's
+ * own local `flatWeights`, duplicated here per this file's own convention of
+ * re-anchored, verbatim-number local helpers rather than a cross-family data
+ * import). Used only by the rapidWeightLossFlag OR-isolation scenario below,
+ * which needs a genuine >=-1.5%/week rate over enough history to read
+ * cleanly, unlike flatTrend14's short 14-day window. */
+function flatWeights35(startKg, kgPerWeek = 0) {
+  const n = 35;
+  const weeksSpan = (n - 1) / 7;
+  const endKg = startKg + kgPerWeek * weeksSpan;
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const w = startKg + (endKg - startKg) * (i / Math.max(1, n - 1));
+    out.push({ loggedAt: NOW - (n - 1 - i) * DAY, weightKg: Math.round(w * 100) / 100 });
+  }
+  return out;
 }
 
 /** doseEscalation fixture, re-anchored copy of coachLearningLoop.test.js's
@@ -1253,4 +1277,245 @@ export const SCENARIOS = [
     ],
     restraint: false,
   },
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // N-COACH-04: the two BULK-side fixed-step branches (the cut side is
+  // already proven by NUT-49/50; these mirror that exact evidence shape --
+  // >=5 logged days via consecutiveOffTargetWeeks/lastCalAdjustmentWeeksAgo
+  // clearing N-COACH-03's cooldown, no safety hold, confidence sufficient,
+  // adaptive resize disabled by omitting currentMaintenanceKcal so the
+  // fixed-step magnitude is isolated exactly).
+  // ═══════════════════════════════════════════════════════════════════════
+
+  {
+    id: 'NUT-63',
+    family: 'nutrition',
+    why: 'ORACLE N-COACH-04: bulk + gaining-too-slowly (flat weight against a positive goal rate, offTargetDirection<0) fires the fixed +150 kcal step -- mirrors NUT-49\'s cut-side evidence shape (>=5-day-clearing consecutiveOffTargetWeeks/cooldown, no safety hold, confidence sufficient; adaptive resize disabled here by omitting currentMaintenanceKcal, isolating the exact fixed-step magnitude)',
+    rules: ['N-COACH-04'],
+    facts: {
+      checkin: { weekStart: NOW - 7 * DAY, energyScore: 3, sorenessScore: 2, stressScore: 3, calsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false, notes: null },
+      morningWeights: flatTrend14(85, 0), sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'mild_bulk', weeksInPhase: 4, consecutiveOffTargetWeeks: 3, lastCalAdjustmentWeeksAgo: 4,
+      currentCalTarget: 3200, bodyweightKg: 85, nowMs: NOW,
+    },
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'adjustments.calories.change', equals: 150 },
+    ],
+    restraint: false,
+  },
+
+  {
+    id: 'NUT-64',
+    family: 'nutrition',
+    why: 'ORACLE N-COACH-04: bulk + gaining-too-fast (rapid weight gain against a mild positive goal rate, offTargetDirection>0) fires the fixed -125 kcal step -- unlike the cut side, this branch does NOT split on calsAdherence (same magnitude regardless of "hit"/"under"); mirrors NUT-49/50\'s evidence shape, adaptive resize disabled by omitting currentMaintenanceKcal',
+    rules: ['N-COACH-04'],
+    facts: {
+      checkin: { weekStart: NOW - 7 * DAY, energyScore: 3, sorenessScore: 2, stressScore: 3, calsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false, notes: null },
+      morningWeights: flatTrend14(80, 0.8), sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'mild_bulk', weeksInPhase: 4, consecutiveOffTargetWeeks: 3, lastCalAdjustmentWeeksAgo: 4,
+      currentCalTarget: 2800, bodyweightKg: 80, nowMs: NOW,
+    },
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'adjustments.calories.change', equals: -125 },
+    ],
+    restraint: false,
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // N-COACH-14 / T-WEEKLY-04: the nine-way autoApplyHoldActive OR, ISOLATED.
+  // Seven of the nine named booleans (deloadSuggested, matrixDeload,
+  // poorRecovery, safetyHold, ffmFloorHeld, rapidWeightLossFlag, calmMode)
+  // each made true ALONE through runWeeklyCoach's real inputs, every other
+  // term held false. edPatternHeld is already isolated at CFL-15
+  // (scenarios.conflict.data.js) and scoffPositive at NUT-57 above, so
+  // those two are not repeated here.
+  //
+  // rapidWeightLossFlag is a genuine STRUCTURAL exception, not a fixture
+  // gap: its own condition (`actualRatePct<=-1.5 && energyScore<=2 &&
+  // !cycleOverride`, weeklyCoach.js:1847-1852) requires energyScore<=2,
+  // which is EXACTLY poorEnergy's own condition, so poorRecovery
+  // (poorEnergy||highSoreness) is unavoidably co-true whenever
+  // rapidWeightLossFlag is true in production -- there is no real-input
+  // fixture where one fires without the other. CFL-08 documents this same
+  // structural fact for the identical pair ("structurally co-true with
+  // poorRecovery in production since both read energyScore<=2, but named
+  // separately in the oracle and asserted here on its own field"); the
+  // NUT-70 scenario below follows the same honest pattern, asserting
+  // rapidWeightLossFlag on its own returned field rather than claiming a
+  // fixture that cannot exist.
+  // ═══════════════════════════════════════════════════════════════════════
+
+  {
+    id: 'NUT-65',
+    family: 'nutrition',
+    why: 'ORACLE N-COACH-14/T-WEEKLY-04 OR-isolation: deloadSuggested alone (deloadTriggers>=2 via consecutivePoorRecoveryWeeks>=2 AND weeksInPhase>=6 on a cut, with THIS week\'s own checkin reading good recovery so matrixDeload/poorRecovery/safetyHold all stay false) forces autoApplyHoldActive',
+    rules: ['N-COACH-14', 'T-WEEKLY-04'],
+    facts: {
+      checkin: { weekStart: NOW - 7 * DAY, energyScore: 4, sorenessScore: 1, stressScore: 2, calsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false, notes: null },
+      morningWeights: flatWeights35(80, 0), sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'mild_cut', weeksInPhase: 6, consecutivePoorRecoveryWeeks: 2,
+      currentCalTarget: 2400, bodyweightKg: 80, nowMs: NOW,
+    },
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'deloadSuggested', equals: true },
+      { kind: 'equals', path: 'autoApplyHoldActive', equals: true },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' }, // proves matrixDeload false
+      { kind: 'equals', path: 'safetyHold', equals: true },
+      { kind: 'equals', path: 'ffmFloorHeld', equals: true },
+      { kind: 'equals', path: 'rapidWeightLossFlag', equals: true },
+    ],
+    restraint: false,
+  },
+
+  {
+    id: 'NUT-66',
+    family: 'nutrition',
+    why: 'ORACLE N-COACH-14/T-WEEKLY-04 OR-isolation: matrixDeload alone -- recoveryScore forced to 3 by stress>=4 (not by soreness>=4 or energy<=2, so highSoreness/poorEnergy both stay false) combined with a dropped-performance grade 4, with consecutivePoorRecoveryWeeks=1 satisfying the AND-gate\'s second term -- forces autoApplyHoldActive with poorRecovery/safetyHold genuinely false',
+    rules: ['N-COACH-14', 'T-WEEKLY-04'],
+    facts: {
+      checkin: { weekStart: NOW - 7 * DAY, energyScore: 4, sorenessScore: 1, stressScore: 4, calsAdherence: 'hit', trainingPerformance: 'dropped', jointPain: false, notes: null },
+      morningWeights: flatWeights35(85, 0), sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'maint', weeksInPhase: 4, consecutivePoorRecoveryWeeks: 1,
+      currentCalTarget: 2400, bodyweightKg: 85, nowMs: NOW,
+    },
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' }, // matrixDeload true, observed via its own copy/flag consequence
+      { kind: 'equals', path: 'autoApplyHoldActive', equals: true },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'deloadSuggested', equals: true },
+      { kind: 'equals', path: 'safetyHold', equals: true },
+      { kind: 'equals', path: 'ffmFloorHeld', equals: true },
+      { kind: 'equals', path: 'rapidWeightLossFlag', equals: true },
+    ],
+    restraint: false,
+  },
+
+  {
+    id: 'NUT-67',
+    family: 'nutrition',
+    why: 'ORACLE N-COACH-14/T-WEEKLY-04 OR-isolation: poorRecovery alone (energyScore<=2 with soreness/stress otherwise ordinary; recoveryScore forced to 3, but performance grade 2 so the deload OR-clause never fires -- matrixDeload false) forces autoApplyHoldActive; safetyHold confirmed false on its own field',
+    rules: ['N-COACH-14', 'T-WEEKLY-04'],
+    facts: {
+      checkin: { weekStart: NOW - 7 * DAY, energyScore: 2, sorenessScore: 2, stressScore: 2, calsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false, notes: null },
+      morningWeights: flatWeights35(85, 0), sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'maint', weeksInPhase: 4, consecutivePoorRecoveryWeeks: 0,
+      currentCalTarget: 2400, bodyweightKg: 85, nowMs: NOW,
+    },
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'recoveryFlag', equals: 'concerned' },
+      { kind: 'equals', path: 'safetyHold', equals: false },
+      { kind: 'equals', path: 'autoApplyHoldActive', equals: true },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'deloadSuggested', equals: true },
+      { kind: 'equals', path: 'ffmFloorHeld', equals: true },
+      { kind: 'equals', path: 'rapidWeightLossFlag', equals: true },
+    ],
+    restraint: false,
+  },
+
+  {
+    id: 'NUT-68',
+    family: 'nutrition',
+    why: 'ORACLE N-COACH-14/T-WEEKLY-04 OR-isolation: safetyHold alone (jointPain=true with an otherwise good-recovery checkin, energy>2/soreness<4 so poorRecovery stays false) forces autoApplyHoldActive',
+    rules: ['N-COACH-14', 'T-WEEKLY-04'],
+    facts: {
+      checkin: { weekStart: NOW - 7 * DAY, energyScore: 4, sorenessScore: 1, stressScore: 2, calsAdherence: 'hit', trainingPerformance: 'hit', jointPain: true, notes: null },
+      morningWeights: flatWeights35(85, 0), sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'maint', weeksInPhase: 4, consecutivePoorRecoveryWeeks: 0,
+      currentCalTarget: 2400, bodyweightKg: 85, nowMs: NOW,
+    },
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'safetyHold', equals: true },
+      { kind: 'equals', path: 'autoApplyHoldActive', equals: true },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' }, // proves matrixDeload false
+      { kind: 'equals', path: 'deloadSuggested', equals: true },
+      { kind: 'equals', path: 'ffmFloorHeld', equals: true },
+      { kind: 'equals', path: 'rapidWeightLossFlag', equals: true },
+    ],
+    restraint: false,
+  },
+
+  {
+    id: 'NUT-69',
+    family: 'nutrition',
+    why: 'ORACLE N-COACH-14/T-WEEKLY-04 OR-isolation: ffmFloorHeld alone -- CFL-06\'s own base fixture (ffmFloorWeek(), before its consecutiveExceededWeeks override), reused verbatim: rising weight on a cut (poorRecovery/rapidWeightLossFlag false), no joint pain/notes (safetyHold false), recoveryScore 2 throughout (matrixDeload false), weeksInPhase 6 alone giving only one of the two deloadTriggers needed (deloadSuggested false) -- forces autoApplyHoldActive on the FFM floor alone',
+    rules: ['N-COACH-14', 'T-WEEKLY-04'],
+    facts: ffmFloorWeek(),
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'ffmFloorHeld', equals: true },
+      { kind: 'equals', path: 'autoApplyHoldActive', equals: true },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' },
+      { kind: 'equals', path: 'deloadSuggested', equals: true },
+      { kind: 'equals', path: 'safetyHold', equals: true },
+      { kind: 'equals', path: 'rapidWeightLossFlag', equals: true },
+    ],
+    restraint: false,
+  },
+
+  {
+    id: 'NUT-70',
+    family: 'nutrition',
+    why: 'ORACLE N-COACH-14/T-WEEKLY-04 OR-isolation: rapidWeightLossFlag, asserted on its own returned field as close to isolation as production permits -- its own condition (actualRatePct<=-1.5 && energyScore<=2, weeklyCoach.js:1847-1852) STRUCTURALLY requires energyScore<=2, which is poorEnergy\'s own condition, so poorRecovery is unavoidably co-true in any real fixture (the identical structural fact CFL-08 documents for this same pair); safetyHold/ffmFloorHeld/deloadSuggested/matrixDeload are still genuinely isolated false here',
+    rules: ['N-COACH-14', 'T-WEEKLY-04'],
+    facts: {
+      checkin: { weekStart: NOW - 7 * DAY, energyScore: 2, sorenessScore: 2, stressScore: 3, calsAdherence: 'hit', trainingPerformance: 'hit', jointPain: false, notes: null },
+      morningWeights: flatWeights35(85, -1.6), sessionsCompleted: 4, sessionsPlanned: 4, prsThisWeek: 0,
+      goalPhase: 'mild_cut', weeksInPhase: 3, consecutivePoorRecoveryWeeks: 0,
+      currentCalTarget: 2400, bodyweightKg: 85, nowMs: NOW,
+    },
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'rapidWeightLossFlag', equals: true },
+      { kind: 'equals', path: 'autoApplyHoldActive', equals: true },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' },
+      { kind: 'equals', path: 'deloadSuggested', equals: true },
+      { kind: 'equals', path: 'safetyHold', equals: true },
+      { kind: 'equals', path: 'ffmFloorHeld', equals: true },
+    ],
+    restraint: false,
+  },
+
+  {
+    id: 'NUT-71',
+    family: 'nutrition',
+    why: 'ORACLE N-COACH-14/T-WEEKLY-04 OR-isolation: calmMode alone (a clean, otherwise-ordinary moderate push week, the same base ground truth as NUT-57\'s scoffPositive isolation) forces autoApplyHoldActive -- calmMode is a pure caller-supplied input read only at the OR/escalation sites, so no other named term is touched by setting it',
+    rules: ['N-COACH-14', 'T-WEEKLY-04'],
+    facts: { ...moderatePushWeek(), calmMode: true },
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'autoApplyHoldActive', equals: true },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' },
+      { kind: 'equals', path: 'deloadSuggested', equals: true },
+      { kind: 'equals', path: 'safetyHold', equals: true },
+      { kind: 'equals', path: 'ffmFloorHeld', equals: true },
+      { kind: 'equals', path: 'rapidWeightLossFlag', equals: true },
+    ],
+    restraint: false,
+  },
+];
+
+export const NUTRITION_COVERAGE = [
+  ...SCENARIOS.map((s) => ({
+    id: s.id, family: s.family || 'nutrition', rules: s.rules || [],
+    pending: !!s.pending, expectedFail: !!s.expectedFail,
+  })),
 ];

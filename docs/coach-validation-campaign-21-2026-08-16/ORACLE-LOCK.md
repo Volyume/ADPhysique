@@ -125,7 +125,11 @@ MUST_NOT: the deload branch MUST NEVER read the softened grade under any
 BOUNDARIES: soreness>=4/>=3/<=1 grade edges as above; PR_DENSITY_STRONG=0.3,
       BLOCK_SLOPE_STRONG_PCT=1.5, adherence>=0.9/<0.5/<0.75/>=0.75; matrix
       cells -2/0/+1/+2/+3 as above; softening requires all five named
-      conditions simultaneously.
+      conditions simultaneously. HOSTILE-REVIEW CORRECTION: the matrixDeload
+      flag additionally requires consecutivePoorRecoveryWeeks>=1 -
+      weeklyCoach.js:1220 (matrixDeload = matrix.deloadFlag &&
+      consecutivePoorRecoveryWeeks >= 1) - an AND-gate, not the deload
+      branch's own grade-4/recovery>=3+performance>=4 condition alone.
 SOURCE: ARCH — src/lib/weeklyCoach.js:279/344/371 (RP-style autoregulation
       matrix, Stage-4 2026-08-09 constants); the deload-reads-raw-grade
       rule is characterised in-code as "the founder red line", treated

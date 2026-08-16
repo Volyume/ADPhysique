@@ -742,6 +742,96 @@ export const SCENARIOS = [
       { kind: 'within', path: 'weight', min: 80, max: 85 }, // resolves from 44d, 46d discounted
     ],
   },
+
+  // ─ T-LIVESET-03 adjustStronger SENIOR COMPLETENESS (Founder Ruling 2) ────
+  // src/lib/__tests__/livePrescription.properties.test.js:167-190 ("Founder
+  // Ruling 2 (ABSOLUTE): overshoot under a senior state never adds load") is
+  // the canonical per-state pin against this exact production function
+  // (adjustStronger, livePrescription.js:372-393), fuzzed over 15 random
+  // history trials for deload/recovery, re-entry easing and active
+  // readiness reduction. These three C21 scenarios prove the SAME law
+  // through the family seam (harness liveSet -> resolveSetPrescription),
+  // adding blockFinished, the one named senior state the properties suite's
+  // dedicated overshoot describe() block does not itself exercise (it only
+  // appears in that file's separate, non-overshoot aggressiveness fuzz at
+  // properties.test.js:141-163) -- closing that specific gap while citing
+  // the colocated suite as the authority for the shared mechanism.
+
+  {
+    id: 'LSO-31',
+    family: 'liveSet',
+    rules: ['T-LIVESET-03'],
+    why: 'ORACLE T-LIVESET-03 (Founder Ruling 2, ABSOLUTE): an overshoot (repsMax+2) under senior.reEntryEaseActive is hard-disabled outright -- weight stays at the prior session\'s load, never the CURRENT_SESSION_STRONGER add -- the same law src/lib/__tests__/livePrescription.properties.test.js:179-183 pins per-state against this exact function (adjustStronger)',
+    run: 'liveSet',
+    facts: {
+      packet: packet({
+        rawHistory: [hSession(NOW - 7 * DAY, [{ weight: 80, reps: 10 }])],
+        rawToday: [todayRow({ weight: 80, reps: 14, pos: 1 })], // repsMax(12)+2 overshoot
+        senior: { reEntryEaseActive: true },
+      }),
+      position: 2,
+    },
+    must: [
+      { kind: 'equals', path: 'weight', equals: 80 },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'provenance', equals: 'CURRENT_SESSION_STRONGER' },
+    ],
+    restraint: true,
+  },
+
+  {
+    id: 'LSO-32',
+    family: 'liveSet',
+    rules: ['T-LIVESET-03'],
+    why: 'ORACLE T-LIVESET-03 (Founder Ruling 2, ABSOLUTE): an overshoot (repsMax+2) under senior.readinessReductionActive is hard-disabled outright -- no add -- the same law src/lib/__tests__/livePrescription.properties.test.js:185-189 pins per-state against this exact function (adjustStronger)',
+    run: 'liveSet',
+    facts: {
+      packet: packet({
+        rawHistory: [hSession(NOW - 7 * DAY, [{ weight: 80, reps: 10 }])],
+        rawToday: [todayRow({ weight: 80, reps: 14, pos: 1 })],
+        senior: { readinessReductionActive: true },
+      }),
+      position: 2,
+    },
+    must: [
+      { kind: 'equals', path: 'weight', equals: 80 },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'provenance', equals: 'CURRENT_SESSION_STRONGER' },
+    ],
+    restraint: true,
+  },
+
+  {
+    id: 'LSO-33',
+    family: 'liveSet',
+    rules: ['T-LIVESET-03'],
+    why: 'ORACLE T-LIVESET-03 (Founder Ruling 2, ABSOLUTE): an overshoot (repsMax+2) under senior.blockFinished is hard-disabled outright -- no add -- the fourth named senior state, NOT itself exercised by the properties suite\'s dedicated overshoot describe() block (which covers deload/reEntry/readinessReduction at properties.test.js:167-190), so this closes that specific gap while the colocated suite remains the canonical authority for the shared adjustStronger mechanism',
+    run: 'liveSet',
+    facts: {
+      packet: packet({
+        rawHistory: [hSession(NOW - 7 * DAY, [{ weight: 80, reps: 10 }])],
+        rawToday: [todayRow({ weight: 80, reps: 14, pos: 1 })],
+        senior: { blockFinished: true },
+      }),
+      position: 2,
+    },
+    must: [
+      { kind: 'equals', path: 'weight', equals: 80 },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'provenance', equals: 'CURRENT_SESSION_STRONGER' },
+    ],
+    restraint: true,
+  },
+];
+
+export const LIVESET_COVERAGE = [
+  ...SCENARIOS.map((s) => ({
+    id: s.id, family: s.family || 'liveSet', rules: s.rules || [],
+    pending: !!s.pending, expectedFail: !!s.expectedFail,
+  })),
 ];
 
 export default SCENARIOS;

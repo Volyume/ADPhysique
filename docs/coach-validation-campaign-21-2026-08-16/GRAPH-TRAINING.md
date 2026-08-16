@@ -156,6 +156,15 @@ SENIOR_RULES: coordinateChanges (T-WEEKLY-08) can withhold the resulting
 EXCLUSIONS: n/a (always runs post data-confidence gate)
 NOTES: PR_DENSITY_STRONG=0.3, BLOCK_SLOPE_STRONG_PCT=1.5 are Stage-4
   (2026-08-09) constants replacing the old "any PR + adherence" binary.
+  HOSTILE-REVIEW CORRECTION: the matrixDeload flag additionally requires
+  consecutivePoorRecoveryWeeks>=1 - weeklyCoach.js:1220 (matrixDeload =
+  matrix.deloadFlag && consecutivePoorRecoveryWeeks >= 1). A first
+  deload-flag week (grade 4 or the recovery>=3+performance>=4 cell) with
+  consecutivePoorRecoveryWeeks=0 still forces the -2 deload volumeDelta,
+  but matrixDeload itself stays false: recoveryFlag reads 'concerned' (not
+  'deload_suggested') and trainingNote takes the plain reduceNotes copy
+  (not the "Multiple signs are pointing to fatigue" fatigue copy) until a
+  second consecutive poor-recovery week is recorded.
 ```
 
 ```

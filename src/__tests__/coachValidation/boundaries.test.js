@@ -15,7 +15,8 @@
  * over this file only.
  */
 
-import { runScenarios } from './harness';
+import { runScenarios, b } from './harness';
+import { ffmFloorWeek } from './scenarios.conflict.data';
 
 describe('boundaries — threshold edges (triads: below / at / above)', () => {
   describe('ED-SAFETY DOMAIN', () => {
@@ -408,6 +409,191 @@ describe('boundaries — threshold edges (triads: below / at / above)', () => {
           facts: { soreness: 1, performance: null, pump: 3, joint: 0 },
           run: 'adaptive',
           must: [{ kind: 'equals', path: 'decision', equals: 'hold' }],
+        },
+      ];
+      runScenarios(scenarios);
+    });
+  });
+
+  describe('NUTRITION DOMAIN', () => {
+    // ── N-TARGETS-05: sex-based calorie floor comparator (`<`, not `<=`) ────
+    // nutritionEngine.js:1006 `if (targetKcal < kcalFloor)` -- an exact
+    // landing AT the floor is NOT flagged/floored; the fixture below controls
+    // maintenanceKcal precisely via effectiveMaintenanceResidualKcal (a real,
+    // exported calculateNutritionTargets input) against a fixed BMR base, so
+    // the pre-floor targetKcal lands exactly on/one-kcal-under the floor
+    // through real formula composition rather than testing the clamp in
+    // isolation.
+
+    describe('N-TARGETS-05: sex-based calorie floor comparator (< not <=)', () => {
+      const base = { sex: 'male', ageYears: 30, heightCm: 175, weightKg: 70, bodyFatSource: null, activityLevel: 'sedentary', goal: 'recomp' };
+      // bmr = 10*70 + 6.25*175 - 5*30 + 5 = 1648.75; formulaMaintenanceKcal =
+      // round(1648.75*1.2) = 1979. recomp phaseAdj = -0.05 (no experience
+      // scaling, phaseAdj<0). residual -400 -> maintenanceKcal 1579 ->
+      // round(1579*0.95) = 1500 exactly (targetKcal < kcalFloor(1500) is
+      // FALSE at 1500 -- not floored). residual -401 -> maintenanceKcal 1578
+      // -> round(1578*0.95) = 1499 (< 1500 -- floored up to 1500).
+      const scenarios = [
+        {
+          id: 'N-TGT-FLOOR-AT',
+          why: 'targetKcal lands EXACTLY at the male floor (1500 kcal) -- the strict `<` comparator (nutritionEngine.js:1006) means an exact floor landing is NOT flagged or floored (ORACLE N-TARGETS-05)',
+          facts: { inputs: { ...base, effectiveMaintenanceResidualKcal: -400 } },
+          run: 'nutritionTargets',
+          must: [
+            { kind: 'equals', path: 'targetKcal', equals: 1500 },
+            { kind: 'equals', path: 'floorApplied', equals: false },
+          ],
+        },
+        {
+          id: 'N-TGT-FLOOR-BELOW',
+          why: 'one kcal below the floor (targetKcal pre-clamp 1499) triggers the raise-to-floor clamp and the warning (ORACLE N-TARGETS-05)',
+          facts: { inputs: { ...base, effectiveMaintenanceResidualKcal: -401 } },
+          run: 'nutritionTargets',
+          must: [
+            { kind: 'equals', path: 'targetKcal', equals: 1500 },
+            { kind: 'equals', path: 'floorApplied', equals: true },
+            { kind: 'contains', path: 'warnings[0]', contains: 'below safe minimum' },
+          ],
+        },
+      ];
+      runScenarios(scenarios);
+    });
+
+    // ── N-TARGETS-06: 1.5% hard-gate comparator (`>`, strict) ───────────────
+    // nutritionEngine.js:1021 `if (lossFraction > HARD_GATE_LOSS_RATE)` --
+    // exactly 0.015 (1.5% BW/week) does NOT fire; just above does. Fixture
+    // controls maintenanceKcal via the residual against a fixed BMR base and
+    // an aggressive_cut phaseAdj (-0.22, weight chosen as a multiple of 50 so
+    // 0.78*maintenanceKcal lands on an exact integer, no rounding noise).
+    //
+    // DELIBERATE COMPARATOR ASYMMETRY, documented per this closure round's
+    // instructions: this hard gate uses STRICT `>` at 1.5% BW/week
+    // (nutritionEngine.js:1021), while N-COACH-08's rapid-loss override
+    // (weeklyCoach.js:1302, `actualRatePct <= -1.5`) and the ED-pattern
+    // detector's s1 signal (X-SAFETY-02, matching `<=` boundary) both use
+    // INCLUSIVE `<=` at the identical 1.5 value. The two families are not
+    // reconciled to a shared comparator: N-TARGETS-06 is a maths CAP (raises
+    // the target so the modelled rate cannot exceed 1.5%, so landing exactly
+    // AT 1.5% needs no correction), whereas N-COACH-08/X-SAFETY-02 are
+    // SAFETY-SIGNAL TRIGGERS keyed to "at or worse than" the same named
+    // threshold (ORACLE N-COACH-08 SOURCE: "F3/EN-9 alignment... all three
+    // rapid-loss checks aligned to the identical `<=` boundary" -- that
+    // alignment is between N-COACH-08/X-SAFETY-01/X-SAFETY-02 themselves,
+    // and does not extend to this unrelated calorie-maths cap).
+
+    describe('N-TARGETS-06: 1.5% hard-gate comparator (> not >=), vs N-COACH-08\'s <= at the same 1.5 value', () => {
+      const base = { sex: 'male', ageYears: 30, heightCm: 170, weightKg: 100, bodyFatSource: null, activityLevel: 'sedentary', goal: 'aggressive_cut' };
+      // bmr = 10*100 + 6.25*170 - 5*30 + 5 = 1917.5; formulaMaintenanceKcal =
+      // round(1917.5*1.2) = 2301. aggressive_cut phaseAdj = -0.22.
+      // residual 5199 -> maintenanceKcal 7500 (multiple of 50) ->
+      // targetKcal = round(7500*0.78) = 5850 exactly; dailyDelta -1650,
+      // weeklyDelta -11550, rate -1.5kg/wk, lossFraction = 1.5/100 = 0.015
+      // exactly -- NOT > 0.015, gate does not fire, targetKcal stays 5850.
+      // residual 5249 -> maintenanceKcal 7550 -> targetKcal pre-gate =
+      // round(7550*0.78) = 5889; dailyDelta -1661, weeklyDelta -11627, rate
+      // -1.51kg/wk, lossFraction 0.0151 -- > 0.015, gate fires, targetKcal
+      // raised to round(7550 - 1650) = 5900.
+      const scenarios = [
+        {
+          id: 'N-TGT-HARDGATE-AT',
+          why: 'lossFraction lands EXACTLY at 1.5% BW/week -- the strict `>` comparator (nutritionEngine.js:1021) means the hard gate does NOT fire at the boundary itself (ORACLE N-TARGETS-06)',
+          facts: { inputs: { ...base, effectiveMaintenanceResidualKcal: 5199 } },
+          run: 'nutritionTargets',
+          must: [
+            { kind: 'equals', path: 'targetKcal', equals: 5850 },
+            { kind: 'equals', path: 'floorApplied', equals: false },
+          ],
+          mustNot: [
+            { kind: 'contains', path: 'warnings[0]', contains: '1.5 % hard gate' },
+          ],
+        },
+        {
+          id: 'N-TGT-HARDGATE-ABOVE',
+          why: 'lossFraction just above 1.5% BW/week (0.0151) fires the hard gate, raising targetKcal so the modelled rate is capped back at exactly 1.5% (ORACLE N-TARGETS-06)',
+          facts: { inputs: { ...base, effectiveMaintenanceResidualKcal: 5249 } },
+          run: 'nutritionTargets',
+          must: [
+            { kind: 'equals', path: 'targetKcal', equals: 5900 },
+            { kind: 'equals', path: 'floorApplied', equals: true },
+            { kind: 'contains', path: 'warnings[0]', contains: '1.5 % hard gate' },
+          ],
+        },
+      ];
+      runScenarios(scenarios);
+    });
+
+    // ── N-COACH-11: FFM floor recentIntakeDaysLogged >=5 evidence gate ──────
+
+    describe('N-COACH-11: FFM floor recentIntakeDaysLogged >= 5 evidence bar', () => {
+      const scenarios = [
+        {
+          id: 'N-COACH-11-DAYS-AT',
+          why: 'recentIntakeDaysLogged=5 (>=5, at the boundary) with avgKcal at/below the FFM floor and a negative proposed change nulls the change (ORACLE N-COACH-11), reusing CFL-06\'s own ffmFloorWeek fixture (avgKcal 1900 <= the dexa-credible floor 2040)',
+          facts: ffmFloorWeek({ recentIntakeDaysLogged: 5 }),
+          run: 'weeklyCoach',
+          must: [
+            { kind: 'equals', path: 'ffmFloorHeld', equals: true },
+            { kind: 'equals', path: 'adjustments.calories', equals: null },
+          ],
+        },
+        {
+          id: 'N-COACH-11-DAYS-BELOW',
+          // currentCalTarget raised to 3200 (from ffmFloorWeek's default
+          // 1800) so N-COACH-07's separate +/-5%-of-target cap
+          // (round(1800*0.05)=90) does not also clamp the -150 fixed step
+          // and mask the exact magnitude this boundary is isolating.
+          why: 'recentIntakeDaysLogged=4 (below the >=5 evidence bar) is insufficient evidence for the floor to fire, so the ordinary -150 losing-too-slowly step proceeds unheld (ORACLE N-COACH-11 BOUNDARIES)',
+          facts: ffmFloorWeek({ recentIntakeDaysLogged: 4, currentCalTarget: 3200 }),
+          run: 'weeklyCoach',
+          must: [
+            { kind: 'equals', path: 'ffmFloorHeld', equals: false },
+            { kind: 'equals', path: 'adjustments.calories.change', equals: -150 },
+          ],
+        },
+      ];
+      runScenarios(scenarios);
+    });
+
+    // ── N-COACH-02: session adherence < 0.5 (strict), not <= ────────────────
+    // weeklyCoach.js:1170-1171 `sessionAdherence < 0.5`. Both fixtures use a
+    // grade-4 (soreness>=4) deload week, whose -2/'reduce' branch fires from
+    // the raw recovery grade alone regardless of performance/adherence
+    // (T-WEEKLY-03) -- deliberately chosen because a volume REDUCTION is
+    // "never a coordination question" (coachPrecedence.js:391,
+    // volumeIsRestraint bypasses T-WEEKLY-08's R2 entirely), unlike a push,
+    // which a sessionAdherence=0.5 ratio would ALSO separately catch as
+    // TRAINING_EXECUTION_POOR (coachContext.js: ratio<0.6) and withhold via
+    // the unrelated coordination gate -- confounding a push-shaped proof of
+    // this specific boundary. The reduce week isolates N-COACH-02 cleanly.
+
+    describe('N-COACH-02: sessionAdherence < 0.5 (strict) early-return gate', () => {
+      const deloadCheckin = { energyScore: 3, sorenessScore: 4, stressScore: 3, trainingPerformance: 'hit' };
+
+      const scenarios = [
+        {
+          id: 'N-COACH-02-ADHERENCE-AT',
+          why: 'sessionAdherence = 2/4 = 0.5 exactly is NOT < 0.5, so the early-return gate does not fire and the full week is computed (grade-4 deload read: -2/reduce) (ORACLE N-COACH-02 BOUNDARIES)',
+          facts: b.intermediate().maintPhase(4).checkin(deloadCheckin).top({ sessionsCompleted: 2, sessionsPlanned: 4, currentCalTarget: 2400 }).toInputs(),
+          run: 'weeklyCoach',
+          must: [
+            { kind: 'equals', path: 'adjustments.training.signal', equals: 'reduce' },
+            { kind: 'equals', path: 'volumeSignal', equals: -2 },
+          ],
+          mustNot: [
+            { kind: 'equals', path: 'primary.reasonKey', equals: 'stabilise_sessions' },
+          ],
+        },
+        {
+          id: 'N-COACH-02-ADHERENCE-BELOW',
+          why: 'sessionAdherence = 49/100 = 0.49, just below 0.5, fires the early-return hold regardless of how strong the underlying recovery/performance evidence is -- the SAME grade-4 deload checkin as the AT case is overridden entirely, never reaching the matrix (ORACLE N-COACH-02)',
+          facts: b.intermediate().maintPhase(4).checkin(deloadCheckin).top({ sessionsCompleted: 49, sessionsPlanned: 100, currentCalTarget: 2400 }).toInputs(),
+          run: 'weeklyCoach',
+          must: [
+            { kind: 'equals', path: 'adjustments.training.signal', equals: 'hold' },
+            { kind: 'equals', path: 'volumeSignal', equals: 0 },
+            { kind: 'equals', path: 'adjustments.calories', equals: null },
+            { kind: 'equals', path: 'primary.reasonKey', equals: 'stabilise_sessions' },
+          ],
         },
       ];
       runScenarios(scenarios);

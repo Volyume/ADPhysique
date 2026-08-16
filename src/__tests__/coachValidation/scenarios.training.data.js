@@ -1317,6 +1317,111 @@ export const SCENARIOS = [
     run: 'slotIntent',
     must: [{ kind: 'equals', path: 'maturity', equals: 'established' }],
   },
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // T-WEEKLY-03 (HOSTILE-REVIEW CORRECTION): the matrixDeload AND-gate --
+  // matrix.deloadFlag && consecutivePoorRecoveryWeeks>=1 (weeklyCoach.js:1220).
+  // Both scenarios use the SAME deload-triggering recovery week (grade 4 via
+  // soreness>=4) so the ONLY thing that changes between them is the
+  // consecutivePoorRecoveryWeeks counter -- isolating the co-requirement
+  // exactly. The -2 volumeDelta/'reduce' signal fires either way (that half
+  // of the deload branch reads only the raw grade); what flips is the
+  // matrixDeload-DERIVED observables: recoveryFlag and the trainingNote copy
+  // (T-WEEKLY-06's own precedence-1 case). A genuine push-week proof of
+  // T-WEEKLY-05's "!matrixDeload" escalation gate is structurally impossible
+  // for this specific term in isolation: matrix.deloadFlag is ONLY ever true
+  // inside autoregulationMatrix's own reduce branch, so matrixDeload can
+  // never coexist with trainingSignal==='push' -- escalation is already
+  // blocked by trainingSignal!=='push' before the matrixDeload term is even
+  // reached, for either counter value. That is why this pair proves the
+  // AND-gate through its own directly observable copy/flag consequences
+  // instead.
+  // ═════════════════════════════════════════════════════════════════════════
+  {
+    id: 'TRN-77',
+    family: 'training',
+    why: 'HOSTILE-REVIEW CORRECTION to ORACLE T-WEEKLY-03: a first deload-flag week (grade 4 via soreness>=4) with consecutivePoorRecoveryWeeks=0 fires the raw -2/reduce deload branch, but matrixDeload itself stays FALSE (the AND-gate\'s second term unmet) -- recoveryFlag reads the plain \'concerned\' (not \'deload_suggested\') and trainingNote takes the plain reduce copy, never the fatigue copy (ORACLE T-WEEKLY-03 BOUNDARIES correction, weeklyCoach.js:1220)',
+    rules: ['T-WEEKLY-03'],
+    facts: baseWeek({
+      checkin: { sorenessScore: 4, energyScore: 3, stressScore: 3, trainingPerformance: 'hit' },
+      top: { consecutivePoorRecoveryWeeks: 0 },
+    }),
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'adjustments.training.signal', equals: 'reduce' },
+      { kind: 'equals', path: 'volumeSignal', equals: -2 },
+      { kind: 'equals', path: 'recoveryFlag', equals: 'concerned' },
+      { kind: 'contains', path: 'adjustments.training.note', contains: 'Recovery dipped this week' },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' },
+      { kind: 'contains', path: 'adjustments.training.note', contains: 'Multiple signs are pointing to fatigue' },
+    ],
+  },
+  {
+    id: 'TRN-78',
+    family: 'training',
+    why: 'HOSTILE-REVIEW CORRECTION to ORACLE T-WEEKLY-03: the IDENTICAL grade-4 deload week as TRN-77, but with consecutivePoorRecoveryWeeks=1 (the AND-gate\'s second term now met) -- matrixDeload flips TRUE: recoveryFlag reads \'deload_suggested\' and trainingNote switches to the fatigue copy, proving the gate genuinely requires BOTH conditions rather than the deload-flag alone (ORACLE T-WEEKLY-03 BOUNDARIES correction, weeklyCoach.js:1220)',
+    rules: ['T-WEEKLY-03'],
+    facts: baseWeek({
+      checkin: { sorenessScore: 4, energyScore: 3, stressScore: 3, trainingPerformance: 'hit' },
+      top: { consecutivePoorRecoveryWeeks: 1 },
+    }),
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'adjustments.training.signal', equals: 'reduce' },
+      { kind: 'equals', path: 'volumeSignal', equals: -2 },
+      { kind: 'equals', path: 'recoveryFlag', equals: 'deload_suggested' },
+      { kind: 'contains', path: 'adjustments.training.note', contains: 'Multiple signs are pointing to fatigue' },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'recoveryFlag', equals: 'concerned' },
+    ],
+  },
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // T-WEEKLY-03: peak-week softening NEGATIVE gate -- persistence blocks it
+  // ═════════════════════════════════════════════════════════════════════════
+  {
+    id: 'TRN-79',
+    family: 'training',
+    why: 'the SAME qualifying peak week as TRN-10 (grade-3 soreness-driven read, blockAccumWeeks>=3, blockWeekIndex===blockAccumWeeks) is BLOCKED from softening once consecutivePoorRecoveryWeeks>=1 -- the grade stays 3 and the push/hold branch collapses to hold, never the softened push (ORACLE T-WEEKLY-03, "consecutivePoorRecoveryWeeks<1 AND consecutiveGrade3RecoveryWeeks<1" -- persistence gate)',
+    rules: ['T-WEEKLY-03'],
+    restraint: true,
+    facts: baseWeek({
+      checkin: { sorenessScore: 3, energyScore: 3, stressScore: 1, trainingPerformance: 'hit' },
+      top: { blockAccumWeeks: 4, blockWeekIndex: 4, consecutivePoorRecoveryWeeks: 1 },
+    }),
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'peakWeekContextApplied', equals: false },
+      { kind: 'equals', path: 'adjustments.training.signal', equals: 'hold' },
+      { kind: 'equals', path: 'volumeSignal', equals: 0 },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'adjustments.training.signal', equals: 'push' },
+    ],
+  },
+  {
+    id: 'TRN-80',
+    family: 'training',
+    why: 'the SAME qualifying peak week as TRN-10 is BLOCKED from softening once consecutiveGrade3RecoveryWeeks>=1 instead -- either persistence counter alone is sufficient to hold the grade at 3, collapsing to hold (ORACLE T-WEEKLY-03, "EITHER counter (>= 1 prior poor-recovery week or >= 1 prior grade-3 soreness week) means it predates the peak")',
+    rules: ['T-WEEKLY-03'],
+    restraint: true,
+    facts: baseWeek({
+      checkin: { sorenessScore: 3, energyScore: 3, stressScore: 1, trainingPerformance: 'hit' },
+      top: { blockAccumWeeks: 4, blockWeekIndex: 4, consecutiveGrade3RecoveryWeeks: 1 },
+    }),
+    run: 'weeklyCoach',
+    must: [
+      { kind: 'equals', path: 'peakWeekContextApplied', equals: false },
+      { kind: 'equals', path: 'adjustments.training.signal', equals: 'hold' },
+      { kind: 'equals', path: 'volumeSignal', equals: 0 },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'adjustments.training.signal', equals: 'push' },
+    ],
+  },
 ];
 
 // Exported so ledger.coverage.test.js can read this family's rule_id ->
