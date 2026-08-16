@@ -86,20 +86,6 @@ export const GLOSSARY = {
     'A set is a number of reps done one after another, then a rest before the next set.',
   rep:
     'A rep is one full repetition of an exercise, like one push-up or one squat.',
-  // O24 (comprehension-and-trust audit 2026-08-06): the streak criterion
-  // (weekly target, deload weeks counting, the one forgiven week) is only
-  // ever explained by ConsistencyEcho's one-time dismissable explainer, so
-  // it becomes unlearnable after the first dismissal. Grounded in the real
-  // rules in src/lib/streak.js (labelBase, applyRepair) and
-  // src/hooks/useWeeklyStreak.js: a week is 'kept' when completed sessions
-  // meet the target (plan-derived, or the user's own goal); an engine
-  // deload week is 'resting' and keeps the run with zero sessions; a single
-  // missed week is 'repaired' (forgiven) when the week before and the week
-  // after both keep the run, capped at one repair per rolling six weeks.
-  // Shared by ConsistencyEcho and WeeklyStreakStrip so the wording can never
-  // diverge between the two surfaces.
-  streakWeeks:
-    'Your run counts weeks where you hit your weekly session target, from your plan or your own goal. Recovery weeks always count, since recovery is part of training. Miss a week and bounce back, and it is forgiven once every six weeks, so one off week never breaks your run.',
   // O2 (comprehension-and-trust audit 2026-08-06): the Volyume Score's
   // one-time meaning moment (ProgressScanMeaningMoment.js, exact copy in
   // progressScanResultsContract.js's MEANING_MOMENT_BODY) is shown once ever

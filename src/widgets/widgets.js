@@ -16,7 +16,7 @@
  *
  * Two widgets, matching app.json's react-native-android-widget config:
  *   - NextSession: routine name + planned day + week-in-block chip
- *   - WeeklyConsistency: "N of M sessions this week" + weeks running; under an open ED
+ *   - WeeklyConsistency: "N of M sessions this week"; under an open ED
  *     flag the snapshot's consistency is null, so this widget falls back to the
  *     neutral next-session content (COMP-018 suppression rule).
  */
@@ -109,9 +109,10 @@ export function WeeklyConsistencyWidget({ snapshot }) {
       <FlexWidget style={{ flexDirection: 'column' }}>
         <TextWidget text={c.planned != null ? `${c.completed} of ${c.planned}` : `${c.completed}`} style={{ fontSize: 28, fontWeight: 'bold', color: TEXT }} />
         <SessionDots completed={c.completed} planned={c.planned} />
-        {c.streakWeeks > 0
-          ? <TextWidget text={`${c.streakWeeks} ${c.streakWeeks === 1 ? 'week' : 'weeks'} running`} style={{ fontSize: 12, color: AMBER, marginTop: 6 }} />
-          : <TextWidget text="sessions" style={{ fontSize: 12, color: MUTED, marginTop: 6 }} />}
+        {/* Founder ruling (Today truth repair): the "N weeks running" line
+            is REMOVED - the weekly run/streak construct is rejected
+            product-wide. The factual "N of M" count and its dots stay. */}
+        <TextWidget text="sessions" style={{ fontSize: 12, color: MUTED, marginTop: 6 }} />
       </FlexWidget>
     </Shell>
   );

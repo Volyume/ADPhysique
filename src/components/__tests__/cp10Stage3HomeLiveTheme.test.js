@@ -18,7 +18,6 @@ import { create, act } from 'react-test-renderer';
 import { StyleSheet } from 'react-native';
 import useAppStore from '../../store/useAppStore';
 import HomeWelcomeCard from '../HomeWelcomeCard';
-import WeeklyStreakStrip from '../WeeklyStreakStrip';
 import CoachBriefCard from '../CoachBriefCard';
 import AttentionCard from '../AttentionCard';
 import TodayStrip from '../TodayStrip';
@@ -70,21 +69,6 @@ describe('CP-10 stage 3 (Home family): flips live, no remount', () => {
     setTheme('light');
     const lightBg = flat(num).backgroundColor;
     expect(lightBg).not.toBe(darkBg);
-  });
-
-  test('WeeklyStreakStrip: card background and count colour flip live', () => {
-    setTheme('dark');
-    const vm = { render: true, hasTarget: true, suppressed: false, runLength: 3, current: { completed: 3, target: 4, state: 'kept' } };
-    let tree;
-    act(() => { tree = create(<WeeklyStreakStrip vm={vm} />); });
-    const count = tree.root.findByProps({ children: '3 of 4' });
-    const darkColor = flat(count).color;
-    expect(darkColor).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textPrimary);
-
-    setTheme('light');
-    const lightColor = flat(tree.root.findByProps({ children: '3 of 4' })).color;
-    expect(lightColor).not.toBe(darkColor);
-    expect(lightColor).toBe(theme.resolveTheme({ theme: 'light' }).colors.textPrimary);
   });
 
   test('CoachBriefCard: border tone and headline ink flip with the theme', () => {

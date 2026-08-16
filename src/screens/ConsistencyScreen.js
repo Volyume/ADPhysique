@@ -20,7 +20,6 @@ import {
   MuscleFrequencyTable, TrainingCalendar,
 } from '../components/ProgressSections';
 import useProgressData from '../hooks/useProgressData';
-import StreakWeeksSection from '../components/StreakWeeksSection';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -29,8 +28,8 @@ import { useShallow } from 'zustand/react/shallow';
 // session length, how often each muscle gets hit, and the 12-week calendar.
 // Pulled off the Progress landing so the landing reads as a hub, not a wall.
 export default function ConsistencyScreen({ navigation }) {
-  const { user, tier, scoffScore } = useAppStore(useShallow(s => ({
-    user: s.user, tier: s.tier, scoffScore: s.userProfile?.scoffScore,
+  const { user, tier } = useAppStore(useShallow(s => ({
+    user: s.user, tier: s.tier,
   })));
   const {
     activeMeso, mesoTonnage, mesoProgress, mesoCurrentWeek,
@@ -55,9 +54,14 @@ export default function ConsistencyScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />
         }
       >
-        {/* ── Your weeks (COMP-018 consistency streak) ── */}
-        <StreakWeeksSection userId={user?.id} scoffScore={scoffScore} />
-
+        {/* Founder ruling (Today truth repair): the COMP-018 "Your weeks"
+            consistency-run section is REMOVED. The weekly run/streak
+            construct is rejected product-wide - "N weeks running", the
+            longest-run line, the kept/paused glyph strip and the "pause your
+            run" sheet all went with it. The factual training record this
+            screen exists for (training block, recovery signals, workload,
+            session length, frequency, the 12-week training calendar) is
+            untouched. */}
         {/* ── Lighter week banner ── */}
         {deloadAlert && (
           <Card tone="warning" style={styles.deloadBanner}>

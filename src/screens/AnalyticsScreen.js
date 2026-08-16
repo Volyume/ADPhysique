@@ -26,9 +26,6 @@ import useAppStore from '../store/useAppStore';
 import useProgressData from '../hooks/useProgressData';
 import useWeightTrend from '../hooks/useWeightTrend';
 import WeightTrendCard from '../components/WeightTrendCard';
-import useWeeklyStreak from '../hooks/useWeeklyStreak';
-import WeeklyStreakStrip from '../components/WeeklyStreakStrip';
-import { markMilestoneSeen, markPerfectMonthSeen, markLongestRunPbSeen } from '../lib/streakState';
 import { getLifetimeTonnage } from '../lib/database';
 import { pendingTonnageMilestone, loadSeenTonnage, markTonnageMilestoneSeen, formatTonnage } from '../lib/tonnageMilestone';
 import { formatNumber } from '../lib/format';
@@ -38,17 +35,6 @@ import { VOLUME_LANDMARKS, getVolumeStatus, calculateTonnage } from '../lib/algo
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { buildWeeklyLoadSeries, buildWeeklySessionCounts } from '../lib/progressSeries';
 
-// COMP-018 milestone copy (§4.6.8). Weeks of showing up against your own plan,
-// no comparison, no rank. Founder copy review at PR.
-const STREAK_MILESTONE_COPY = {
-  4: '4 weeks of showing up.',
-  12: '12 weeks of showing up. That\'s a habit.',
-  26: 'Half a year of showing up.',
-  // R9/L5 (share-card audit 2026-07-27): "Few do that" compared the user
-  // against other people, on a card family whose stated principle
-  // (greatWeek.js) is never a comparison to others.
-  52: 'A year of showing up.',
-};
 
 // Severity → icon + color mapping (jargon-free UI)
 //
@@ -93,7 +79,6 @@ function recentMonthRecapParams(earliestWorkoutAt) {
 export default function AnalyticsScreen({ navigation, route }) {
   const toast = useToast();
   const user = useAppStore(s => s.user);
-  const userProfile = useAppStore(s => s.userProfile);
   const tier = useAppStore(s => s.tier);
   const bodyWeightUnits = useAppStore(s => s.bodyWeightUnits);
   const units = useAppStore(s => s.units);
@@ -107,103 +92,16 @@ export default function AnalyticsScreen({ navigation, route }) {
   // runs (hooks are unconditional); the card self-hides until there is data.
   const weightTrend = useWeightTrend(tier === 'pro' ? user?.id : null);
 
-  // COMP-018 "This week": training consistency is a free feature, so it runs
-  // for all tiers. Self-hides until the first session; suppressed under an
-  // open ED/wellbeing flag.
-  const weeklyStreak = useWeeklyStreak(user?.id, userProfile?.scoffScore);
-
-  // COMP-018 milestone: when the run crosses 4/12/26/52, the strip shows a
-  // one-line celebration this view, then marks it seen so it fires once (next
-  // focus reload returns null). In-app only, no push, no confetti.
-  const pendingMilestone = weeklyStreak.pendingMilestone;
-  const streakRenders = weeklyStreak.render;
-  useEffect(() => {
-    // Only consume + fire when the strip actually renders, so a milestone is
-    // never marked seen on a view the user couldn't see it on.
-    if (pendingMilestone && streakRenders && user?.id) {
-      markMilestoneSeen(user.id, pendingMilestone).catch(() => {});
-      try { track(user.id, 'streak_milestone_reached', { milestone: pendingMilestone })?.catch?.(() => {}); } catch (_) {}
-    }
-  }, [pendingMilestone, streakRenders, user?.id]);
-
-  // Landmark telemetry fires once per landmark per app run (a render-time event,
-  // deduped here); the "seen" record is written only when the user actually taps
-  // "Create share image", so a share CTA never vanishes before it can be used.
+  // Founder ruling (Today truth repair): the COMP-018 weekly-run view
+  // model, its milestone / perfect-month / longest-run-PB landmarks and
+  // their share-card builders are all REMOVED with the strip they fed. The
+  // lifetime-tonnage landmark below is a genuine training total and is
+  // deliberately untouched, along with fireLandmarkOnce, which it shares.
   const firedLandmarks = useRef(new Set());
   function fireLandmarkOnce(key, userId, event, payload) {
     if (!userId || firedLandmarks.current.has(key)) return;
     firedLandmarks.current.add(key);
     try { track(userId, event, payload)?.catch?.(() => {}); } catch (_) {}
-  }
-
-  // Phase-2 landmark: a perfect month (4 weeks all on target). Keyed off the
-  // month's last week, in-app only, never under ED/calm suppression (the hook
-  // already returns null then).
-  const perfectMonth = weeklyStreak.pendingPerfectMonth;
-  useEffect(() => {
-    if (perfectMonth && streakRenders && user?.id) {
-      fireLandmarkOnce(`pm:${perfectMonth.lastWeekKey}`, user.id, 'perfect_month_reached', { sessions: perfectMonth.sessions });
-    }
-  }, [perfectMonth, streakRenders, user?.id]);
-
-  // S2c landmark: a new longest-run personal best. Same pattern as the perfect
-  // month: telemetry fires once per PB value per app run (counts only, never a
-  // body value); the "seen" record is written only when the user taps Make a
-  // card, so the CTA never vanishes before it can be used. Absent under ED /
-  // SCOFF / calm (the hook returns null then).
-  const longestRunPb = weeklyStreak.longestRunPb;
-  useEffect(() => {
-    if (longestRunPb && streakRenders && user?.id) {
-      fireLandmarkOnce(`pb:${longestRunPb}`, user.id, 'longest_run_pb_reached', { weeks: longestRunPb });
-    }
-  }, [longestRunPb, streakRenders, user?.id]);
-
-  function makeStreakCard(m) {
-    navigation.navigate('ShareCard', {
-      milestoneData: {
-        eyebrow: 'Weeks running',
-        heroValue: String(m),
-        heroUnit: m === 1 ? 'week' : 'weeks',
-        title: STREAK_MILESTONE_COPY[m] || `${m} weeks of showing up.`,
-        caption: '',
-        stats: [],
-      },
-    });
-  }
-
-  function makeLongestRunPbCard() {
-    if (!longestRunPb) return;
-    if (user?.id) markLongestRunPbSeen(user.id, longestRunPb).catch(() => {});
-    navigation.navigate('ShareCard', {
-      milestoneData: {
-        eyebrow: 'Longest run',
-        title: 'A new personal record.',
-        heroValue: String(longestRunPb),
-        heroUnit: longestRunPb === 1 ? 'week' : 'weeks',
-        caption: 'Your longest run of weeks yet. It carries on.',
-        date: Date.now(),
-        stats: [],
-      },
-    });
-  }
-
-  function makePerfectMonthCard() {
-    if (!perfectMonth) return;
-    if (user?.id) markPerfectMonthSeen(user.id, perfectMonth.lastWeekKey).catch(() => {});
-    navigation.navigate('ShareCard', {
-      milestoneData: {
-        eyebrow: 'Month complete',
-        title: 'Textbook Month',
-        heroValue: String(perfectMonth.weeks),
-        heroUnit: 'weeks on target',
-        caption: `${perfectMonth.sessions} sessions over four weeks, every target met.`,
-        date: Date.now(),
-        stats: [
-          { label: 'Weeks', value: String(perfectMonth.weeks) },
-          { label: 'Sessions', value: String(perfectMonth.sessions) },
-        ],
-      },
-    });
   }
 
   // Phase-2 landmark: lifetime tonnage (total weight lifted all-time). A pure
@@ -452,64 +350,13 @@ export default function AnalyticsScreen({ navigation, route }) {
           </AnimatedEntrance>
         )}
 
-        {/* ── This week (COMP-018): the one-glance answer to "am I on
-            track?", sessions this week and the run state, directly under
-            the training-load hero. Free for all tiers; self-hides for a
-            brand-new user and under an open wellbeing flag. ── */}
-        {weeklyStreak.render && (
-          <View style={styles.section}>
-            <WeeklyStreakStrip vm={weeklyStreak} />
-            {pendingMilestone ? (
-              <View style={styles.milestoneRow}>
-                <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
-                <Text style={[styles.milestoneText, live.milestoneText]}>{STREAK_MILESTONE_COPY[pendingMilestone]}</Text>
-                {pendingMilestone >= 12 ? (
-                  // R9 (D70): milestoneCtaButton -> shared Button outline sm.
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    fullWidth={false}
-                    title="Create share image"
-                    onPress={() => makeStreakCard(pendingMilestone)}
-                    accessibilityLabel="Create share image"
-                  />
-                ) : null}
-              </View>
-            ) : null}
-            {perfectMonth ? (
-              <View style={styles.milestoneRow}>
-                <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
-                <Text style={[styles.milestoneText, live.milestoneText]}>A perfect month. Four weeks, every target met.</Text>
-                {/* R9 (D70): milestoneCtaButton -> shared Button outline sm. */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  fullWidth={false}
-                  title="Create share image"
-                  onPress={makePerfectMonthCard}
-                  accessibilityLabel="Create share image"
-                />
-              </View>
-            ) : null}
-            {longestRunPb ? (
-              <View style={styles.milestoneRow}>
-                <Ionicons name="ribbon-outline" size={16} color={t.colors.primary} />
-                <Text style={[styles.milestoneText, live.milestoneText]}>
-                  {`A new personal record. ${longestRunPb} ${longestRunPb === 1 ? 'week' : 'weeks'} running, your longest yet.`}
-                </Text>
-                {/* R9 (D70): milestoneCtaButton -> shared Button outline sm. */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  fullWidth={false}
-                  title="Create share image"
-                  onPress={makeLongestRunPbCard}
-                  accessibilityLabel="Create share image"
-                />
-              </View>
-            ) : null}
-          </View>
-        )}
+        {/* Founder ruling (Today truth repair): the COMP-018 "This week"
+            run strip and its streak celebrations (milestone, perfect month,
+            longest-run personal record, and their share cards) are REMOVED.
+            The weekly run/streak construct is rejected product-wide: it was
+            noise, not trusted as accurate, and unwanted gamification. The
+            lifetime-tonnage landmark below is a genuine training total and
+            is deliberately unaffected. */}
 
         {/* Phase-2 lifetime-tonnage landmark, independent of the streak strip.
             T9 (world-class audit 2026-07-03, identity-copy sweep): matches the

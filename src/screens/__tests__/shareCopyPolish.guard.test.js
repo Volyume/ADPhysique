@@ -37,8 +37,13 @@ describe('share copy polish', () => {
     // c.border }), just resolved by the primitive instead of a screen-local
     // StyleSheet pair. Re-anchored to the Button call sites; the deleted
     // milestoneCtaButton/milestoneCta StyleSheet keys must stay gone.
+    // RE-ANCHORED (Today truth repair): three of these CTAs belonged to the
+    // streak celebrations (run milestone, perfect month, longest-run PB) and
+    // went with the rejected construct. The RULE is unchanged and still
+    // pinned for every CTA that remains: a contained bordered control, never
+    // a loose amber text link.
     const ctaMatches = analytics.match(/<Button\s+variant="outline"[\s\S]{0,220}?title="Create share image"/g);
-    expect(ctaMatches?.length).toBeGreaterThanOrEqual(5);
+    expect(ctaMatches?.length).toBeGreaterThanOrEqual(2);
     expect(analytics).toContain('style={styles.trainingLoadCtaRow}');
     expect(analytics).not.toMatch(/milestoneCtaButton:\s*\{/);
     expect(analytics).not.toMatch(/milestoneCta:\s*\{/);

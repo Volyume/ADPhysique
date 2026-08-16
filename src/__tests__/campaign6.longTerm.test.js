@@ -421,9 +421,13 @@ describe('M-13 (D97-24): the reflection ledger story is Pro-gated like its Plans
 });
 
 describe('T-lane fixes (D97-24): clock, caps, partner truth, photo honesty', () => {
-  test('T-1: the streak week grid normalises every key through the true local Monday', () => {
-    const src = read('hooks/useWeeklyStreak.js');
-    expect(src).toMatch(/localWeekStartMs\(currentWeekStart - i \* WEEK_MS \+ 3 \* 86400000\)/);
+  // RE-PINNED (Today truth repair): T-1 pinned a DST-safe week-key grid
+  // inside the streak resolver, which is DELETED with the rejected weekly
+  // run/streak construct. The DST concern it guarded lives on in the shared
+  // localWeekStartMs helper, which every surviving "this week" count uses;
+  // that helper is pinned by its own suite (dayKey tests).
+  test('T-1: the streak week grid is gone with the construct it served', () => {
+    expect(fs.existsSync(path.join(__dirname, '..', 'hooks/useWeeklyStreak.js'))).toBe(false);
   });
 
   test('T-2: date-only block starts anchor at LOCAL midnight on read and store the LOCAL day on write', () => {

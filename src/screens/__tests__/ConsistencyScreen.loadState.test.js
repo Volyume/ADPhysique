@@ -49,7 +49,6 @@ jest.mock('../../components/FatigueTrendCard', () => () => null);
 jest.mock('../../components/BlockProgressCard', () => () => null);
 jest.mock('../../components/BlockShapeCard', () => () => null);
 jest.mock('../../components/ReadinessCards', () => () => null);
-jest.mock('../../components/StreakWeeksSection', () => () => null);
 jest.mock('../../components/ProgressSections', () => ({
   MesocyclePulseCard: () => null,
   WorkloadCard: () => null,

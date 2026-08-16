@@ -43,7 +43,13 @@ private struct VolyumeNextSessionData: Decodable {
 private struct VolyumeConsistencyData: Decodable {
   let completed: Int
   let planned: Int
-  let streakWeeks: Int
+  // Founder ruling (Today truth repair): the weekly run/streak construct is
+  // rejected product-wide and snapshot.js no longer publishes streakWeeks.
+  // Kept as an OPTIONAL rather than deleted so an older widget binary paired
+  // with newer JSON (or the reverse, across an app update) can still decode
+  // this block instead of dropping the whole consistency widget. It is never
+  // read or rendered.
+  let streakWeeks: Int?
   let label: String
 }
 
@@ -223,15 +229,12 @@ private struct ConsistencyHomeContent: View {
           .font(.system(size: 26, weight: .bold))
           .foregroundColor(TEXT)
         SessionDots(completed: c.completed, planned: c.planned)
-        if c.streakWeeks > 0 {
-          Text("\(c.streakWeeks) \(c.streakWeeks == 1 ? "week" : "weeks") running")
-            .font(.system(size: 12))
-            .foregroundColor(AMBER)
-        } else {
-          Text("sessions")
-            .font(.system(size: 12))
-            .foregroundColor(MUTED)
-        }
+        // Founder ruling (Today truth repair): the "N weeks running" line is
+        // REMOVED here exactly as in src/widgets/widgets.js, so the two
+        // implementations of this widget stay identical.
+        Text("sessions")
+          .font(.system(size: 12))
+          .foregroundColor(MUTED)
         Spacer(minLength: 0)
       }
       .padding(14)
@@ -294,7 +297,7 @@ struct VolyumeConsistencyWidget: Widget {
       VolyumeConsistencyEntryView(entry: entry)
     }
     .configurationDisplayName("Weekly consistency")
-    .description("Sessions done this week and your streak — home screen and Lock Screen.")
+    .description("Sessions done this week — home screen and Lock Screen.")
     .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
   }
 }

@@ -151,27 +151,27 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // Server allow-list: supabase/migrate_077_chart_window_telemetry.sql.
   { name: 'chart_window_changed',            deferred: false, panel: 1 },
 
-  // COMP-018: weekly consistency streak. Derived values only — week state, a
-  // run-length bucket, the target source, a milestone number, a pause-duration
-  // bucket; never any training or body data.
-  // Server allow-list: supabase/migrate_078_streak_telemetry.sql.
-  { name: 'streak_week_resolved',            deferred: false, panel: 1 },
-  { name: 'streak_milestone_reached',        deferred: false, panel: 1 },
-  { name: 'streak_paused',                   deferred: false, panel: 1 },
+  // COMP-018's weekly-consistency streak events (streak_week_resolved,
+  // streak_milestone_reached, streak_paused) are RETIRED with the construct
+  // itself (founder Today-truth-repair ruling: the user-facing weekly
+  // run/streak is rejected product-wide). Nothing emits them any more, so
+  // they leave the catalogue rather than linger as permanently-silent
+  // entries. The server allow-list (supabase/migrate_078_streak_telemetry.sql)
+  // is left in place: it is additive and harmless, and dropping a live
+  // allow-list column is a migration decision, not a client one.
 
   // Share-card landmarks (audit S-011, Sentry VOLYUME-1P). Emitted via
   // fireLandmarkOnce → track() on the Analytics screen; both gate a "Make a
   // card" share CTA. They were wired in the client but never catalogued, so the
   // allow-list dropped them with an "unknown event" warning once per app run.
   //   tonnage_milestone_reached  payload: { milestone } — lifetime-tonnage band
-  //   perfect_month_reached      payload: { sessions }  — a month all on target
-  //   longest_run_pb_reached     payload: { weeks }     — a new longest-run PB (S2c)
-  // Counts/enums only, never training or body data. Suppressed under ED/calm.
-  // Server allow-list: supabase/migrate_093_landmark_telemetry.sql (extended by
-  // supabase/migrate_101_longest_run_pb_telemetry.sql).
+  // Counts/enums only, never training or body data.
+  // Server allow-list: supabase/migrate_093_landmark_telemetry.sql.
+  //
+  // perfect_month_reached and longest_run_pb_reached are RETIRED with the
+  // weekly run/streak construct they measured (see the COMP-018 note above);
+  // the lifetime-tonnage landmark is a genuine training total and stays.
   { name: 'tonnage_milestone_reached',       deferred: false, panel: 1 },
-  { name: 'perfect_month_reached',           deferred: false, panel: 1 },
-  { name: 'longest_run_pb_reached',          deferred: false, panel: 1 },
 
   // COMP-026 (B): step-trend TDEE modifier evaluated on a coach run. Counts and
   // flags only (active/direction/gain bucket, agreement, logged-day counts,

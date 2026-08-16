@@ -35,7 +35,7 @@ function trim(s, max) {
  *
  * @param {object}  input
  * @param {?object} input.nextSession  { name, dayLabel?, weekInBlock?: {week,total} } | null
- * @param {?object} input.consistency  { completed, planned, streakWeeks? } | null
+ * @param {?object} input.consistency  { completed, planned } | null
  * @param {boolean} input.edFlagOpen   true => suppress the consistency block entirely
  * @param {number}  input.now          epoch ms stamped onto the snapshot
  * @returns {{ v:number, nextSession:?object, consistency:?object, computedAt:number }}
@@ -67,13 +67,11 @@ export function buildWidgetSnapshot({ nextSession = null, consistency = null, ed
       ? {
         completed: clampInt(consistency.completed),
         planned: clampInt(consistency.planned),
-        streakWeeks: clampInt(consistency.streakWeeks),
         label: `${clampInt(consistency.completed)} of ${clampInt(consistency.planned)} sessions this week`,
       }
       : {
         completed: clampInt(consistency.completed),
         planned: null,
-        streakWeeks: clampInt(consistency.streakWeeks),
         label: `${clampInt(consistency.completed)} session${clampInt(consistency.completed) === 1 ? '' : 's'} this week`,
       })
     : null;

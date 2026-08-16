@@ -22,7 +22,6 @@ import {
   getWeeklySessionStats, getOpenEdPatternFlag,
 } from '../database';
 import { localWeekStartMs } from '../dayKey';
-import { loadStreakState } from '../streakState';
 import { isCalm, WELLBEING_KEY } from '../wellbeing';
 import { buildWidgetSnapshot, emptyWidgetSnapshot } from './snapshot';
 import { persistWidgetSnapshot } from './storage';
@@ -71,21 +70,13 @@ export async function gatherWidgetInputs(userId) {
   // denominator; the widget falls to its honest plain-count mode.
   const planned = (Array.isArray(routines) && routines.length) ? routines.length : null;
 
-  // T1 (comprehension-trust audit 2026-08-06): streakWeeks was a hardcoded 0,
-  // so the widget's promised streak line could never render. The widget does
-  // NOT re-derive the run (forking useWeeklyStreak's rules -- plan target,
-  // manual goal, pauses, deloads, repairs -- is exactly the cross-surface
-  // divergence this audit exists to kill). It mirrors the persisted
-  // high-water instead: the run the user was actually SHOWN this week,
-  // written by the real computation. Until the run is seen in-app this week
-  // the widget shows its sessions fallback rather than a stale prior-week
-  // number that a lapse could have invalidated.
-  const streakState = await loadStreakState(userId).catch(() => null);
-  const shownRun = streakState?.highWater?.[String(weekStart)] ?? 0;
-
+  // Founder ruling (Today truth repair): the widget no longer carries a
+  // weeks-running figure. The run/streak construct is rejected product-wide,
+  // so there is nothing to mirror here any more; the widget publishes only
+  // the factual session count for the week.
   return {
     nextSession,
-    consistency: { completed: stats?.completed ?? 0, planned, streakWeeks: shownRun },
+    consistency: { completed: stats?.completed ?? 0, planned },
     edFlagOpen: !!edFlag || wellbeing === 'read_failed' || isCalm(wellbeing),
   };
 }

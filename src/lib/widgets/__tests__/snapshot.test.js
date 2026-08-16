@@ -27,9 +27,14 @@ describe('buildWidgetSnapshot', () => {
     expect(snap.nextSession.dayLabel).toBeNull();
   });
 
-  test('consistency block renders the "N of M" label + streak', () => {
+  // RE-PINNED (Today truth repair, founder Ruling 1): the published snapshot
+  // no longer carries a run/streak figure. The factual "N of M sessions this
+  // week" label is the whole contract now, and a stray streakWeeks on the
+  // INPUT must not leak back into the payload.
+  test('consistency block renders the "N of M" label and no streak figure', () => {
     const snap = buildWidgetSnapshot({ consistency: { completed: 2, planned: 3, streakWeeks: 7 } });
-    expect(snap.consistency).toEqual({ completed: 2, planned: 3, streakWeeks: 7, label: '2 of 3 sessions this week' });
+    expect(snap.consistency).toEqual({ completed: 2, planned: 3, label: '2 of 3 sessions this week' });
+    expect(snap.consistency).not.toHaveProperty('streakWeeks');
   });
 
   test('an open ED/wellbeing flag suppresses the consistency block entirely', () => {
@@ -52,7 +57,7 @@ describe('buildWidgetSnapshot', () => {
     expect(snap.nextSession.dayLabel.length).toBeLessThanOrEqual(24);
     expect(snap.consistency.completed).toBe(0);
     expect(snap.consistency.planned).toBeLessThanOrEqual(9999);
-    expect(snap.consistency.streakWeeks).toBe(0);
+    expect(snap.consistency).not.toHaveProperty('streakWeeks');
     expect(Number.isFinite(snap.computedAt)).toBe(true);
     // No weight/calorie/macro keys anywhere in the payload.
     const json = JSON.stringify(snap);
