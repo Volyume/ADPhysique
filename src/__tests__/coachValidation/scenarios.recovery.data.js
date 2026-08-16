@@ -3,15 +3,24 @@
  *
  * Pure scenario definitions + fixture helpers for recovery rules testing.
  * ~25 scenarios covering:
- * - T-RECOVERY-01: Readiness rules (below_par, average, sharp) — mostly pending
- *   as the tweak application is internal to livePrescription/sessionAdjustments
- * - T-RECOVERY-02: Re-entry easing (distinct provenance, no stacking) — pending
- * - T-RECOVERY-03: Recovery state resolution (planned vs adaptive) — pending,
- *   internal to programmePosition/recoveryState
+ * - T-RECOVERY-01: Readiness rules (below_par, average, sharp) — live via the
+ *   `readiness` seam (sessionAdjustments.js getReadinessTweak/
+ *   applyReadinessToLoad, both pure)
+ * - T-RECOVERY-02: Re-entry easing (distinct provenance, no stacking) — live
+ *   via the `readiness` seam (resolveSessionEasingTweak/getReEntryEaseTweak)
+ * - T-RECOVERY-03: Recovery state resolution (planned vs adaptive) — live via
+ *   the `recoveryState` seam (recoveryState.js resolveRecoveryState, pure)
  * - T-RECOVERY-04: Deload prescription (first/second half reps & weight) —
  *   testable via liveSet when senior.deloadTargets are present
  *
  * Authority: ORACLE-LOCK.md T-RECOVERY-01..05 (LEAD-REVIEW: ACCEPTED 2026-08-16)
+ *
+ * Campaign 21 Step 5: the sixteen `pending: true` scenarios (REC-01 through
+ * REC-15, plus REC-19) were converted once the `readiness` and
+ * `recoveryState` harness.js registry seams were added. Fifteen are now
+ * live; REC-19 stays pending (its updated pendingReason cites the exact
+ * lines confirming RIR is genuinely dropped from the returned object, not
+ * merely assumed from the original comment).
  */
 import { b } from './harness';
 
@@ -39,225 +48,253 @@ function deloadPrescriptionInput(baseReps = 10, baseWeight = 80, overrides = {})
   });
 }
 
-/**
- * Build liveSet packet input with readiness tweak applied.
- * The tweak is passed via senior.readinessTweak so resolveSetPrescription applies it.
- */
-function setWithReadinessTweak(readinessTweak = null, overrides = {}) {
-  return b.liveSetPacketInput({
-    exercise: { id: 'squat', exerciseType: 'weight_reps', category: 'compound', incrementKg: 2.5, units: 'kg' },
-    prescription: { repsMin: 8, repsMax: 12, targetSets: 4, startingWeight: 100, goal: null },
-    senior: {
-      isDeload: false,
-      readinessTweak: readinessTweak,
-    },
-    rawHistory: [{ weight: 100, reps: 10, comparable: true, setType: 'straight' }],
-    rawToday: [],
-    ...overrides,
-  });
-}
-
 // ── The declarative scenario list ─────────────────────────────────────────────
 
 export const SCENARIOS = [
   // ─────────────────────────────────────────────────────────────────────────
-  // T-RECOVERY-01: Readiness rules (mostly pending — internal application)
+  // T-RECOVERY-01: Readiness rules (live via the `readiness` seam)
   // ─────────────────────────────────────────────────────────────────────────
 
   {
     id: 'REC-01',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-01: below_par readiness applies loadFactor=0.95 internally (load-trim in resolveSetPrescription)',
+    why: 'ORACLE T-RECOVERY-01: below_par readiness resolves setDelta=-1, loadFactor=0.95, reduces=true (sessionAdjustments.js READINESS_RULES.below_par)',
     rules: ['T-RECOVERY-01'],
-    facts: setWithReadinessTweak({ setDelta: -1, loadFactor: 0.95, reduces: true }),
-    run: 'liveSet',
+    facts: { _fn: 'getReadinessTweak', intent: 'below_par', chips: {} },
+    run: 'readiness',
     must: [
-      // resolveSetPrescription applies the trim but does not return loadFactor explicitly.
-      // We verify indirectly: a below_par tweak with loadFactor 0.95 should produce
-      // weight that is <= the history-based prescription.
+      { kind: 'equals', path: 'setDelta', equals: -1 },
+      { kind: 'equals', path: 'loadFactor', equals: 0.95 },
+      { kind: 'equals', path: 'reduces', equals: true },
     ],
-    pending: true,
-    pendingReason: 'Readiness tweak application is internal; not directly inspectable via prescription return',
+    restraint: false,
   },
 
   {
     id: 'REC-02',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-01: average readiness produces no change (loadFactor=1)',
+    why: 'ORACLE T-RECOVERY-01: average readiness produces no change - setDelta=0, loadFactor=1, reduces=false (HOLD)',
     rules: ['T-RECOVERY-01'],
-    facts: setWithReadinessTweak({ setDelta: 0, loadFactor: 1, reduces: false }),
-    run: 'liveSet',
-    must: [],
-    pending: true,
-    pendingReason: 'Readiness tweak comparison requires control prescription; not exposed by harness',
+    facts: { _fn: 'getReadinessTweak', intent: 'average', chips: {} },
+    run: 'readiness',
+    must: [
+      { kind: 'equals', path: 'setDelta', equals: 0 },
+      { kind: 'equals', path: 'loadFactor', equals: 1 },
+      { kind: 'equals', path: 'reduces', equals: false },
+    ],
+    restraint: true,
   },
 
   {
     id: 'REC-03',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-01: sharp readiness produces no change — good readiness NEVER pushes beyond plan',
+    why: 'ORACLE T-RECOVERY-01: sharp readiness produces no change plus an explicit acknowledgement - good readiness NEVER pushes beyond the plan (HOLD)',
     rules: ['T-RECOVERY-01'],
-    facts: setWithReadinessTweak({ setDelta: 0, loadFactor: 1, reduces: false }),
-    run: 'liveSet',
-    must: [],
-    pending: true,
-    pendingReason: 'Sharp intent never changes targets; not inspectable in return prescription',
+    facts: { _fn: 'getReadinessTweak', intent: 'sharp', chips: {} },
+    run: 'readiness',
+    must: [
+      { kind: 'equals', path: 'setDelta', equals: 0 },
+      { kind: 'equals', path: 'loadFactor', equals: 1 },
+      { kind: 'equals', path: 'reduces', equals: false },
+      { kind: 'contains', path: 'acknowledgement', contains: 'sharp' },
+    ],
+    restraint: true,
   },
 
   {
     id: 'REC-04',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-01: null intent (no tweak) leaves weight unmodified',
+    why: 'ORACLE T-RECOVERY-01: null intent (no answer given) resolves to null - no tweak, no fabricated reading',
     rules: ['T-RECOVERY-01'],
-    facts: setWithReadinessTweak(null),
-    run: 'liveSet',
-    must: [],
-    pending: true,
-    pendingReason: 'Null tweak branch not exposed; internal to resolveSetPrescription',
+    facts: { _fn: 'getReadinessTweak', intent: null, chips: {} },
+    run: 'readiness',
+    must: [
+      { kind: 'equals', path: '', equals: null },
+    ],
+    restraint: true,
   },
 
   {
     id: 'REC-05',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-01: hard invariant — adjusted load <= planned load (downward-only law)',
+    why: 'ORACLE T-RECOVERY-01: HARD INVARIANT - applyReadinessToLoad never returns above the planned load, and a below_par trim rounds DOWN to the 0.25 grid (100kg*0.95=95kg exactly, downward-only)',
     rules: ['T-RECOVERY-01'],
-    facts: setWithReadinessTweak({ setDelta: -1, loadFactor: 0.95, reduces: true }),
-    run: 'liveSet',
+    facts: { _fn: 'applyReadinessToLoad', plannedLoad: 100, tweak: { loadFactor: 0.95 } },
+    run: 'readiness',
     must: [
-      // The invariant is enforced inside resolveSetPrescription (line 964-965).
-      // We cannot directly test it via the return, as the original planned load
-      // is not returned for comparison.
+      { kind: 'equals', path: 'value', equals: 95 },
+      { kind: 'within', path: 'value', min: 1, max: 100 },
     ],
-    pending: true,
-    pendingReason: 'Invariant verification requires comparison with unadjusted prescription; not in return',
+    mustNot: [
+      { kind: 'within', path: 'value', min: 100.0001, max: 999 },
+    ],
+    restraint: false,
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // T-RECOVERY-02: Re-entry easing (pending — requires blockProgression fixture)
+  // T-RECOVERY-02: Re-entry easing (live via the `readiness` seam)
   // ─────────────────────────────────────────────────────────────────────────
 
   {
     id: 'REC-06',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-02: re-entry easing applies identical magnitude to below_par (setDelta=-1, loadFactor=0.95)',
+    why: 'ORACLE T-RECOVERY-02: re-entry easing applies the IDENTICAL magnitude as below_par (setDelta=-1, loadFactor=0.95) when reEntryEaseActive and the intent sheet itself did not reduce, tagged athlete_reentry_choice not below_par',
     rules: ['T-RECOVERY-02'],
-    facts: {},
-    run: 'blockProgression',
-    must: [],
-    pending: true,
-    pendingReason: 'reEntryEaseActive state lives in blockProgression; not exposable via sessionAdjust alone',
+    facts: { _fn: 'resolveSessionEasingTweak', input: { intent: null, chips: {}, reEntryEaseActive: true } },
+    run: 'readiness',
+    must: [
+      { kind: 'equals', path: 'setDelta', equals: -1 },
+      { kind: 'equals', path: 'loadFactor', equals: 0.95 },
+      { kind: 'equals', path: 'because', equals: 'athlete_reentry_choice' },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'intent', equals: 'below_par' },
+    ],
+    restraint: false,
   },
 
   {
     id: 'REC-07',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-02: resolveSessionEasingTweak chooses ONE tweak, NEVER stacks two reductions',
+    why: 'ORACLE T-RECOVERY-02: resolveSessionEasingTweak chooses ONE tweak object, NEVER stacks - a below_par intent WITH reEntryEaseActive still resolves to a single -1 set/0.95 load step, never -2 sets or a doubled load trim',
     rules: ['T-RECOVERY-02'],
-    facts: {},
-    run: 'blockProgression',
-    must: [],
-    pending: true,
-    pendingReason: 'Tweak resolution happens in resolveSessionEasingTweak; internal mechanism, not surfaced by harness',
+    facts: { _fn: 'resolveSessionEasingTweak', input: { intent: 'below_par', chips: {}, reEntryEaseActive: true } },
+    run: 'readiness',
+    must: [
+      { kind: 'equals', path: 'setDelta', equals: -1 },
+      { kind: 'equals', path: 'loadFactor', equals: 0.95 },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'setDelta', equals: -2 },
+      { kind: 'equals', path: 'loadFactor', equals: 0.9025 },
+      { kind: 'absent', path: 'because' },
+    ],
+    restraint: false,
   },
 
   {
     id: 'REC-08',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-02: intent reduction wins over re-entry easing (same-day signal prioritised)',
+    why: 'ORACLE T-RECOVERY-02: intent reduction wins over re-entry easing - a same-day reason (poor sleep) already given leads, so whySets is the sleep-specific line, never the reentry "Welcome back" line',
     rules: ['T-RECOVERY-02'],
-    facts: {},
-    run: 'blockProgression',
-    must: [],
-    pending: true,
-    pendingReason: 'Tweak precedence determined in resolveSessionEasingTweak; internal logic',
+    facts: { _fn: 'resolveSessionEasingTweak', input: { intent: 'below_par', chips: { sleepQuality: 2 }, reEntryEaseActive: true } },
+    run: 'readiness',
+    must: [
+      { kind: 'contains', path: 'whySets', contains: 'Rough night' },
+    ],
+    mustNot: [
+      { kind: 'contains', path: 'whySets', contains: 'Welcome back' },
+      { kind: 'equals', path: 'because', equals: 'athlete_reentry_choice' },
+    ],
+    restraint: false,
   },
 
   {
     id: 'REC-09',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-02: re-entry easing NOT gated to Pro tier (every tier asked)',
+    why: 'ORACLE T-RECOVERY-02: re-entry easing is NOT gated to Pro tier - getReEntryEaseTweak takes no tier parameter at all and always resolves the athlete_reentry_choice tweak, "a question every tier is asked"',
     rules: ['T-RECOVERY-02'],
-    facts: {},
-    run: 'blockProgression',
-    must: [],
-    pending: true,
-    pendingReason: 'Tier gating is application logic; not exercisable via harness entries',
+    facts: { _fn: 'getReEntryEaseTweak' },
+    run: 'readiness',
+    must: [
+      { kind: 'equals', path: 'because', equals: 'athlete_reentry_choice' },
+      { kind: 'equals', path: 'setDelta', equals: -1 },
+      { kind: 'equals', path: 'loadFactor', equals: 0.95 },
+    ],
+    restraint: false,
   },
 
   // ─────────────────────────────────────────────────────────────────────────
-  // T-RECOVERY-03: Recovery state resolution (pending — internal to programmePosition)
+  // T-RECOVERY-03: Recovery state resolution (live via the `recoveryState` seam)
   // ─────────────────────────────────────────────────────────────────────────
 
   {
     id: 'REC-10',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-03: PLANNED_BLOCK_RECOVERY when week>=recoveryWeek AND recoveryPhaseAllowed',
+    why: 'ORACLE T-RECOVERY-03: PLANNED_BLOCK_RECOVERY when week>=recoveryWeek AND recoveryPhaseAllowed - the block\'s own structural recovery week',
     rules: ['T-RECOVERY-03'],
-    facts: {},
-    run: 'blockAdvisor',
-    must: [],
-    pending: true,
-    pendingReason: 'Recovery state computed by programmePosition/recoveryState; not exposed via blockAdvisor entry',
+    facts: { weekIndex: 6, plannedWeeks: 6, deloadWeek: 6, isDeload: false, awaitingDecision: false, recoveryPhaseAllowed: true },
+    run: 'recoveryState',
+    must: [
+      { kind: 'equals', path: 'state', equals: 'planned_block_recovery' },
+      { kind: 'equals', path: 'because', equals: 'block_recovery_week' },
+    ],
+    restraint: false,
   },
 
   {
     id: 'REC-11',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-03: NORMAL_ACCUMULATION when week>=recoveryWeek AND !recoveryPhaseAllowed (position beats calendar)',
+    why: 'ORACLE T-RECOVERY-03: NORMAL_ACCUMULATION when week>=recoveryWeek AND !recoveryPhaseAllowed - position beats calendar, an outstanding accumulation session holds the block in the hard part regardless of the date',
     rules: ['T-RECOVERY-03'],
-    facts: {},
-    run: 'blockAdvisor',
-    must: [],
-    pending: true,
-    pendingReason: 'Position logic (T-PROGRAMME-09) owns recovery phase permission; resolveRecoveryState internal',
+    facts: { weekIndex: 6, plannedWeeks: 6, deloadWeek: 6, isDeload: false, awaitingDecision: false, recoveryPhaseAllowed: false },
+    run: 'recoveryState',
+    must: [
+      { kind: 'equals', path: 'state', equals: 'normal_accumulation' },
+      { kind: 'equals', path: 'because', equals: 'accumulation_work_outstanding' },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'state', equals: 'planned_block_recovery' },
+    ],
+    restraint: false,
   },
 
   {
     id: 'REC-12',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-03: ADAPTIVE_RECOVERY_ADJUSTMENT when week<recoveryWeek AND isDeload===true',
+    why: 'ORACLE T-RECOVERY-03: ADAPTIVE_RECOVERY_ADJUSTMENT when week<recoveryWeek AND isDeload===true - recovery evidence eased an accumulation week, a distinct cause from a planned recovery week',
     rules: ['T-RECOVERY-03'],
-    facts: {},
-    run: 'blockAdvisor',
-    must: [],
-    pending: true,
-    pendingReason: 'Recovery state narrative determination is internal to recoveryState module',
+    facts: { weekIndex: 3, plannedWeeks: 6, deloadWeek: 6, isDeload: true, awaitingDecision: false, recoveryPhaseAllowed: true },
+    run: 'recoveryState',
+    must: [
+      { kind: 'equals', path: 'state', equals: 'adaptive_recovery_adjustment' },
+      { kind: 'equals', path: 'because', equals: 'recovery_evidence' },
+    ],
+    restraint: false,
   },
 
   {
     id: 'REC-13',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-03: NORMAL_ACCUMULATION (default case, neither recovery nor deload branch)',
+    why: 'ORACLE T-RECOVERY-03: NORMAL_ACCUMULATION is the default (neither the recovery-week branch nor the adaptive-deload branch fires) - the ordinary hard-training week',
     rules: ['T-RECOVERY-03'],
-    facts: {},
-    run: 'blockAdvisor',
-    must: [],
-    pending: true,
-    pendingReason: 'Default recovery state not surfaced by any harness entry',
+    facts: { weekIndex: 3, plannedWeeks: 6, deloadWeek: 6, isDeload: false, awaitingDecision: false, recoveryPhaseAllowed: true },
+    run: 'recoveryState',
+    must: [
+      { kind: 'equals', path: 'state', equals: 'normal_accumulation' },
+      { kind: 'equals', path: 'because', equals: 'accumulation_week' },
+    ],
+    restraint: true,
   },
 
   {
     id: 'REC-14',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-03: null when awaitingDecision (block finished, no lighter-training claim)',
+    why: 'ORACLE T-RECOVERY-03: HOLD - null when awaitingDecision (block finished, no lighter-training claim on an undecided block)',
     rules: ['T-RECOVERY-03'],
-    facts: {},
-    run: 'blockAdvisor',
-    must: [],
-    pending: true,
-    pendingReason: 'awaitingDecision short-circuits recovery state determination; internal guard',
+    facts: { weekIndex: 6, plannedWeeks: 6, deloadWeek: 6, isDeload: false, awaitingDecision: true, recoveryPhaseAllowed: true },
+    run: 'recoveryState',
+    must: [
+      { kind: 'equals', path: '', equals: null },
+    ],
+    restraint: true,
   },
 
   {
     id: 'REC-15',
     family: 'recovery',
-    why: 'ORACLE T-RECOVERY-03: MUST show DIFFERENT copy for PLANNED vs ADAPTIVE causes (no false cause)',
+    why: 'ORACLE T-RECOVERY-03: MUST show DIFFERENT copy for PLANNED vs ADAPTIVE causes ("NO FALSE CAUSE") - the adaptive state must never carry the planned-recovery-week cause code, proving the two are structurally distinct, not the same flag read twice',
     rules: ['T-RECOVERY-03'],
-    facts: {},
-    run: 'blockAdvisor',
-    must: [],
-    pending: true,
-    pendingReason: 'Copy distinction enforced in recoveryState.resolveRecoveryState; not testable via harness',
+    facts: { weekIndex: 3, plannedWeeks: 6, deloadWeek: 6, isDeload: true, awaitingDecision: false, recoveryPhaseAllowed: true },
+    run: 'recoveryState',
+    must: [
+      { kind: 'equals', path: 'because', equals: 'recovery_evidence' },
+    ],
+    mustNot: [
+      { kind: 'equals', path: 'because', equals: 'block_recovery_week' },
+      { kind: 'equals', path: 'state', equals: 'planned_block_recovery' },
+    ],
+    restraint: false,
   },
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -317,7 +354,7 @@ export const SCENARIOS = [
       // and returned implicitly through the senior prescription
     ],
     pending: true,
-    pendingReason: 'RIR is set in senior.deloadTargets but not returned in Prescription object',
+    pendingReason: 'CONFIRMED STILL INEXPRESSIBLE (re-read src/lib/livePrescription.js:874-889): the SENIOR_RECOVERY_HOLD branch builds a NEW object {weight, repsTarget, repsBand, provenance, confidence, prefill, reference} from deloadTargets[idx] rather than returning the row verbatim - `rir` is read nowhere in that branch and never reaches the returned Prescription. No harness entry can observe a value the production function itself drops.',
   },
 
   {

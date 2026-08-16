@@ -48,6 +48,7 @@ import {
   markDeclined,
   isDeclined,
   isApplied,
+  computeDietBreakTargets,
 } from '../../lib/coachApply';
 import { materialEvidenceChange, suppressedByDecline, evidenceSignature } from '../../lib/coachDecline';
 // ── TRAINING/PROGRAMME family (Campaign 21 Step 5) new registry seams ──────
@@ -69,6 +70,28 @@ import {
 import { checkinReadiness, applyAdjustEvidence, buildNextBlockOptions } from '../../lib/blockAdvisor';
 import { classifyMuscleBlock } from '../../lib/interBlock';
 import { mergeLandmarkPrecedence, isManualEdit } from '../../lib/effectiveLandmarks';
+// ── NUTRITION/MAINTENANCE family (Campaign 21 Step 5) new registry seams ───
+import {
+  calculateNutritionTargets, calculateFormulaMaintenance, computeFFMFloor,
+  kcalFloorForSex, energyAvailabilityCaution, computeEWMA, computeWeeklyWeightChange,
+  computeAdaptiveTDEEAdjustment, computeStepTrendModifier, resolveFfmFloorWeightKg,
+  shouldSuggestDietBreak, getPlanNutritionContext,
+} from '../../lib/nutritionEngine';
+import {
+  resolveEffectiveMaintenance, deriveEffectiveMaintenanceMemo,
+  isValidEffectiveMaintenanceMemo, canonicalWeightEvidence,
+} from '../../lib/effectiveMaintenance';
+import {
+  planCalorieBank, maxApplicableBumpKcal, safeDayFloorKcal, sexFloorKcal,
+  displayBankedDelta, applyBankToTarget, bankedPlanDayEdits, deltaSum,
+} from '../../lib/food/calorieBank';
+import { resolveEffectiveTargets } from '../../lib/food/effectiveTargets';
+import { within } from '../../lib/food/adherence';
+import {
+  getReadinessTweak, applyReadinessToSets, applyReadinessToLoad,
+  resolveSessionEasingTweak, getReEntryEaseTweak,
+} from '../../lib/sessionAdjustments';
+import { resolveRecoveryState } from '../../lib/recoveryState';
 
 // ─── Deterministic clock ─────────────────────────────────────────────────────
 
@@ -374,6 +397,9 @@ export const ENTRIES = {
     if (fn === 'markDeclined') return markDeclined(scenario.facts.output, scenario.facts.key, scenario.facts.details);
     if (fn === 'isDeclined') return { value: isDeclined(scenario.facts.output, scenario.facts.key) };
     if (fn === 'isApplied') return { value: isApplied(scenario.facts.output, scenario.facts.key) };
+    if (fn === 'computeDietBreakTargets') {
+      return computeDietBreakTargets(scenario.facts.nutrition, scenario.facts.sex, scenario.facts.effectiveMaintenanceKcal);
+    }
     throw new Error(`coachApply: unknown _fn "${fn}"`);
   },
 
@@ -493,6 +519,76 @@ export const ENTRIES = {
     if (fn === 'isManualEdit') return { value: isManualEdit(scenario.facts.entry, scenario.facts.research) };
     throw new Error(`landmarks: unknown _fn "${fn}"`);
   },
+
+  // ── N-TARGETS/N-ADAPTIVE: nutritionEngine.js's pure calculation surface ────
+  nutritionTargets: (scenario) => {
+    const fn = scenario.facts?._fn || 'calculateNutritionTargets';
+    if (fn === 'calculateNutritionTargets') return calculateNutritionTargets(scenario.facts.inputs);
+    if (fn === 'calculateFormulaMaintenance') return calculateFormulaMaintenance(scenario.facts.inputs);
+    if (fn === 'computeFFMFloor') return computeFFMFloor(scenario.facts.weightKg, scenario.facts.opts);
+    if (fn === 'kcalFloorForSex') return { value: kcalFloorForSex(scenario.facts.sex) };
+    if (fn === 'energyAvailabilityCaution') {
+      return energyAvailabilityCaution(scenario.facts.targetKcal, scenario.facts.maintenanceKcal, scenario.facts.opts);
+    }
+    if (fn === 'computeEWMA') return { rows: computeEWMA(scenario.facts.weightData, scenario.facts.alpha) };
+    if (fn === 'computeWeeklyWeightChange') return { value: computeWeeklyWeightChange(scenario.facts.ewmaData) };
+    if (fn === 'computeAdaptiveTDEEAdjustment') return computeAdaptiveTDEEAdjustment(scenario.facts.inputs);
+    if (fn === 'computeStepTrendModifier') return computeStepTrendModifier(scenario.facts.inputs);
+    if (fn === 'resolveFfmFloorWeightKg') return { value: resolveFfmFloorWeightKg(scenario.facts.inputs) };
+    if (fn === 'shouldSuggestDietBreak') {
+      return { value: shouldSuggestDietBreak(scenario.facts.deficitStartDate, scenario.facts.currentDate) };
+    }
+    if (fn === 'getPlanNutritionContext') return getPlanNutritionContext(scenario.facts.targets, scenario.facts.opts);
+    throw new Error(`nutritionTargets: unknown _fn "${fn}"`);
+  },
+
+  // ── N-MAINT: effectiveMaintenance.js's pure Campaign 19 resolver ───────────
+  effectiveMaintenance: (scenario) => {
+    const fn = scenario.facts?._fn || 'resolveEffectiveMaintenance';
+    if (fn === 'resolveEffectiveMaintenance') return resolveEffectiveMaintenance(scenario.facts.inputs);
+    if (fn === 'deriveEffectiveMaintenanceMemo') return deriveEffectiveMaintenanceMemo(scenario.facts.inputs);
+    if (fn === 'isValidEffectiveMaintenanceMemo') return { value: isValidEffectiveMaintenanceMemo(scenario.facts.memo) };
+    if (fn === 'canonicalWeightEvidence') return { rows: canonicalWeightEvidence(scenario.facts.weights) };
+    throw new Error(`effectiveMaintenance: unknown _fn "${fn}"`);
+  },
+
+  // ── N-BANK: food/calorieBank.js's pure redistribution maths ────────────────
+  calorieBank: (scenario) => {
+    const fn = scenario.facts?._fn || 'planCalorieBank';
+    if (fn === 'planCalorieBank') return planCalorieBank(scenario.facts.inputs);
+    if (fn === 'maxApplicableBumpKcal') return { value: maxApplicableBumpKcal(scenario.facts.inputs) };
+    if (fn === 'safeDayFloorKcal') return { value: safeDayFloorKcal(scenario.facts.inputs) };
+    if (fn === 'sexFloorKcal') return { value: sexFloorKcal(scenario.facts.sex) };
+    if (fn === 'displayBankedDelta') return { value: displayBankedDelta(scenario.facts.inputs) };
+    if (fn === 'applyBankToTarget') return applyBankToTarget(scenario.facts.targets, scenario.facts.deltaKcal);
+    if (fn === 'bankedPlanDayEdits') return { edits: bankedPlanDayEdits(scenario.facts.inputs) };
+    if (fn === 'deltaSum') return { value: deltaSum(scenario.facts.perDayDeltaKcal) };
+    if (fn === 'resolveEffectiveTargets') return resolveEffectiveTargets(scenario.facts.targets, scenario.facts.ctx);
+    throw new Error(`calorieBank: unknown _fn "${fn}"`);
+  },
+
+  // ── N-ADHERENCE: food/adherence.js's tolerance-band classifier ─────────────
+  adherence: (scenario) => ({
+    value: within(scenario.facts.value, scenario.facts.target, scenario.facts.tolerance),
+  }),
+
+  // ── T-RECOVERY-01/02: sessionAdjustments.js's pure readiness/re-entry table ─
+  readiness: (scenario) => {
+    const fn = scenario.facts?._fn || 'getReadinessTweak';
+    if (fn === 'getReadinessTweak') return getReadinessTweak(scenario.facts.intent, scenario.facts.chips);
+    if (fn === 'applyReadinessToSets') {
+      return { value: applyReadinessToSets(scenario.facts.plannedSets, scenario.facts.tweak) };
+    }
+    if (fn === 'applyReadinessToLoad') {
+      return { value: applyReadinessToLoad(scenario.facts.plannedLoad, scenario.facts.tweak) };
+    }
+    if (fn === 'resolveSessionEasingTweak') return resolveSessionEasingTweak(scenario.facts.input);
+    if (fn === 'getReEntryEaseTweak') return getReEntryEaseTweak();
+    throw new Error(`readiness: unknown _fn "${fn}"`);
+  },
+
+  // ── T-RECOVERY-03: recoveryState.js's pure PLANNED/ADAPTIVE resolver ───────
+  recoveryState: (scenario) => resolveRecoveryState(scenario.facts),
 };
 
 // ─── Coverage export (ledger.coverage.test.js reads this) ───────────────────
