@@ -449,10 +449,12 @@ describe('HOME: zero history has one clear next action and claims no history (C5
   });
 
   test('no surface presupposes a check-in that has never happened', () => {
-    // C5-P12-04: the runway's fixed title asserted a past event.
-    const brief = read('components/CoachDailyBrief.js');
-    expect(stripComments(brief)).not.toContain('>Since your check-in<');
-    expect(brief).toMatch(/ledger\?\.title \?\? 'What your coach is reading'/);
+    // C5-P12-04 originally fixed the runway's fixed "Since your check-in"
+    // title, which asserted a past event on a day-0 account. RE-PINNED
+    // (Today truth repair): the runway component is DELETED outright, so the
+    // stronger guarantee now holds - no Today surface says it at all.
+    expect(fs.existsSync(SRC('components/CoachDailyBrief.js'))).toBe(false);
+    expect(stripComments(read('screens/HomeScreen.js'))).not.toContain('Since your check-in');
   });
 
   test('the first block cannot claim personal history (standing law, re-pinned)', () => {
@@ -1455,10 +1457,12 @@ describe('CHECK-IN: one rated session is never rendered as a trend (C5-P18-01/02
     expect(computeRecoveryEMAs([])).toEqual({ soreness: null, fatigue: null, joint: null });
   });
 
-  test('the 12-week strip never shows weeks the account did not exist for', () => {
-    const src = read('hooks/useWeeklyStreak.js');
-    expect(src).toMatch(/getCompletedWorkoutStartTimestamps/);
-    expect(src).toMatch(/if \(earliestTrainedWeekStart != null && ws < earliestTrainedWeekStart\) continue;/);
+  // RE-PINNED (Today truth repair): the 12-week glyph strip and its resolver
+  // are DELETED with the weekly run/streak construct, so a strip can no
+  // longer claim weeks the account did not exist for - there is no strip.
+  test('the 12-week streak strip is gone, so it cannot claim weeks the account did not exist for', () => {
+    expect(fs.existsSync(SRC('hooks/useWeeklyStreak.js'))).toBe(false);
+    expect(fs.existsSync(SRC('components/StreakWeeksSection.js'))).toBe(false);
   });
 
   test('"Training is on track" needs two rated sessions, like its sibling voice', () => {

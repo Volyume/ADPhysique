@@ -11,7 +11,6 @@ import { format } from 'date-fns/format';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import ScreenHeader from '../components/ScreenHeader';
-import ConsistencyEcho from '../components/ConsistencyEcho';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
@@ -66,8 +65,6 @@ import {
   FIRST_CHECKIN_MIN_DAYS,
   MIN_WEIGH_INS,
 } from '../lib/trialActivation';
-import { buildCoachLedger } from '../lib/coachLedger';
-import CoachDailyBrief from '../components/CoachDailyBrief';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
 import { buildFreeCoachLine } from '../lib/coachResponse';
 import { activePlanLine, planHeadingName } from '../lib/planDisplay';
@@ -311,10 +308,6 @@ export default function HomeScreen({ navigation, route }) {
   // null. Computed from live counters in loadTrialBanner.
   const [trialBanner, setTrialBanner] = useState(null);
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
-  // S3 (world-class audit): the ongoing "since your check-in" runway, below
-  // the plan card. buildCoachLedger's result ({ variant, rows, unlockDate,
-  // unlockLabel }) or null; computed in loadCoachRunway.
-  const [coachRunway, setCoachRunway] = useState(null);
   // Free-tier weekly one-liner (founder decision 4c): one read-only
   // sentence built from training plus weight direction only. Dismissed
   // per week; defaults dismissed so it never flashes before the stored
@@ -474,7 +467,7 @@ export default function HomeScreen({ navigation, route }) {
         loadBriefDismissal(),
         loadWelcome(),
         loadActivationNudge(), // S6: tier-blind, computes from workouts + account age + ED flag
-        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadTrialBanner(), loadCoachRunway()] : []),
+        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadTrialBanner()] : []),
         ...(tier === 'free' ? [loadFreeCoachLine()] : []),
       ]);
       // NAV-4: the differential paywall's deload and stalled-lift contexts
@@ -534,7 +527,7 @@ export default function HomeScreen({ navigation, route }) {
       const endsAt = userProfile?.proTrialEndsAt ?? userProfile?.pro_trial_ends_at ?? null;
       const trialStart = trialStartFromEndsAt(endsAt);
       if (trialStart == null) { setTrialBanner(null); return; }
-      // A3 (audit OB-4): the ledger runs from day 0, not day 2, week one is
+      // A3 (audit OB-4): the banner runs from day 0, not day 2, week one is
       // exactly when the paid promise is otherwise invisible. It retires when
       // the first review lands (coachOut below) or the trial ends.
       const trialDay = Math.floor((Date.now() - trialStart) / 86400000);
@@ -548,14 +541,14 @@ export default function HomeScreen({ navigation, route }) {
         getMorningWeightsLast14Days(user.id).catch(() => []),
         // ED-safety, fail CLOSED: a transient flag read maps to the truthy
         // 'read_failed' sentinel (edFlagOpen: !!edFlag below), so the trial
-        // banner line + coach ledger use the neutral, no-weigh-in-count variant
-        // on a read error (matches the siblings at :470/:521/:737/:794).
+        // banner line uses the neutral, no-weigh-in-count variant on a read
+        // error (matches the siblings at :470/:521/:737/:794).
         getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
       ]);
       // PM-03 (D96): retirement keys on a COMPLETED decision, not on the mere
       // existence of a persisted row. Any visit to the Coach screen used to
       // write an output (PM-01), and that row permanently deleted the
-      // week-one ledger -- the one surface built to make the coaching loop
+      // week-one banner -- the one surface built to make the coaching loop
       // visible before the first review. The predicate is the same one the
       // Coach tab already applies: the check-in that produced the output must
       // exist for the same week.
@@ -572,8 +565,8 @@ export default function HomeScreen({ navigation, route }) {
       // now shares the same calendar-week boundary (dayKey.js).
       const weekAgoMondayMs = localWeekStartMs();
       // D93 (Campaign 2, review B finding 1): DISTINCT mornings, never raw
-      // rows - the ledger label promises mornings and the engine credits
-      // one weigh-in per local day (weeklyCoach weighInDayCount).
+      // rows - the engine credits one weigh-in per local day (weeklyCoach
+      // weighInDayCount), so the banner's variant selection must too.
       const weighIns7d = new Set(
         weights
           .filter(w => Number.isFinite(Number(w.loggedAt)) && Number(w.loggedAt) >= weekAgoMondayMs)
@@ -597,20 +590,23 @@ export default function HomeScreen({ navigation, route }) {
       // one source (cascade.trialEndsLabel), so no surface can disagree.
       const endsLabel = trialEndsLabel(useAppStore.getState().userProfile);
       if (line && endsLabel) line = `${line} Your free trial runs to ${endsLabel}.`;
-      // A3: the "what your coach is reading" ledger, live counts vs the
-      // published thresholds, from the same inputs as the banner line. Under
-      // an open ED flag it is the neutral variant with no weigh-in counts.
-      const ledger = buildCoachLedger({
-        weighIns7d, completedSessions, firstWeightAt, checkinDay,
-        edFlagOpen: !!edFlag,
-      });
+      // Founder ruling (Today truth repair): the A3 "what your coach is
+      // reading" ledger is no longer built or shown here. Its rows were
+      // first-review THRESHOLD counters, and Today must not present gate
+      // plumbing as current coaching observation - on this card they were
+      // the same Math.min(weighIns7d, MIN_WEIGH_INS) rows the removed daily
+      // brief carried. The trial banner keeps its own line, its dismissal
+      // and its methodology link; trial variant selection, the first-review
+      // thresholds and the unlock-date maths are all untouched, and the
+      // ledger still serves CoachOutputScreen's hold receipt and the You
+      // tab's coach-readiness surface.
 
       // Read the per-trial dismissal BEFORE revealing the banner so a banner the
       // user already dismissed can't flash for a frame while the read resolves.
       const dKey = `@volyume_trial_value_banner_dismissed_${user.id}`;
       const dv = await AsyncStorage.getItem(dKey).catch(() => null);
       setTrialBannerDismissed(dv === 'true');
-      setTrialBanner({ line, variant, ledger });
+      setTrialBanner({ line, variant });
     } catch (_) {
       setTrialBanner(null);
     }
@@ -620,63 +616,6 @@ export default function HomeScreen({ navigation, route }) {
     setTrialBannerDismissed(true);
     if (user?.id) {
       AsyncStorage.setItem(`@volyume_trial_value_banner_dismissed_${user.id}`, 'true').catch(() => {});
-    }
-  }
-
-  // S3 (world-class audit, _SYNTHESIS.md #131-138): the ongoing "since your
-  // check-in" runway below the plan card. Pro only (check-ins are a
-  // Precision Coaching feature). Reuses buildCoachLedger -- the SAME ledger
-  // the trial banner above builds -- fed the same shape of inputs
-  // loadTrialBanner gathers, so the runway can never disagree with the
-  // WeeklyCheckIn gate. Unlike the trial banner (trial-start-anchored, day
-  // 0-14 only), this is meant to run for the whole Pro lifetime, so both
-  // counts use the calendar week (X11, cross-surface consistency audit
-  // 2026-07-30: dayKey.js's Monday-anchored helper, matching the check-in
-  // screen's own weigh-in window and every other "this week" count) rather
-  // than a trial-start anchor.
-  async function loadCoachRunway() {
-    try {
-      if (!user?.id || tier !== 'pro') { setCoachRunway(null); return; }
-      const [workouts, weights, edFlag, wellbeing] = await Promise.all([
-        getAllWorkouts(user.id).catch(() => []),
-        getMorningWeightsLast14Days(user.id).catch(() => []),
-        getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
-        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
-      ]);
-      const weekAgo = localWeekStartMs();
-      // D93 (review B finding 1): distinct mornings, matching the engine's
-      // per-day credit and the ledger label.
-      const weighIns7d = new Set(
-        weights
-          .filter(w => Number.isFinite(Number(w.loggedAt)) && Number(w.loggedAt) >= weekAgo)
-          .map(w => localDayKey(Number(w.loggedAt)))
-      ).size;
-      const completedSessions = workouts.filter(w => w.isCompleted && (w.startedAt ?? 0) >= weekAgo).length;
-      const firstWeightAt = weights.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;
-
-      let checkinDay = 0;
-      try {
-        const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
-        if (raw) { const p = JSON.parse(raw); const d = Number(p?.checkinDay); if (Number.isInteger(d) && d >= 0 && d <= 6) checkinDay = d; }
-      } catch (_) {}
-
-      // ED-safety: mirrors useWeeklyStreak's edSuppressed exactly (open flag,
-      // a positive SCOFF screen, calm mode, or a failed flag/wellbeing read
-      // all fail closed), folded into the ledger's single edFlagOpen lever so
-      // it renders the SAME neutral no-counts variant every other coach
-      // surface uses under any of these four conditions.
-      const edSuppressed = !!edFlag
-        || (Number.isFinite(userProfile?.scoffScore) && userProfile.scoffScore >= 2)
-        || wellbeing === 'read_failed'
-        || isCalm(wellbeing);
-
-      const ledger = buildCoachLedger({
-        weighIns7d, completedSessions, firstWeightAt, checkinDay,
-        edFlagOpen: edSuppressed,
-      });
-      setCoachRunway(ledger);
-    } catch (_) {
-      setCoachRunway(null);
     }
   }
 
@@ -2343,10 +2282,11 @@ export default function HomeScreen({ navigation, route }) {
                   </Text>
                 </TouchableOpacity>
               ) : null}
-            {/* S2: the compact consistency echo + one-time forgiveness explainer,
-                same resolver as the Progress strip so the number never disagrees;
-                absent under ED flag / SCOFF / calm mode. */}
-            <ConsistencyEcho userId={user?.id} scoffScore={userProfile?.scoffScore} />
+            {/* Founder ruling (Today truth repair): the S2 consistency echo
+                ("N weeks running" / "Your run carries on") is REMOVED. The
+                weekly run/streak construct is rejected product-wide - it was
+                noise, not trusted as accurate, and unwanted streak framing.
+                Nothing replaces it here; no content beats low-value filler. */}
           </Card>
         ) : (
           <View style={styles.noPlanSection}>
@@ -2450,14 +2390,17 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* ── S3: daily brief + since-your-check-in runway. A fixed fixture
-            below the plan card (not part of the one-banner priority stack
-            above), per docs/wave-a-build-status-2026-07-03.md Issue 6. The
-            runway is Pro only; the one-liner is tier-agnostic. ── */}
-        {/* Runway suppressed while the trial-value banner is showing (the
-            trial's first-review window) so weigh-ins/sessions are not said in
-            two places at once; the schedule one-liner still shows. */}
-        <CoachDailyBrief ledger={tier === 'pro' && !trialBanner ? coachRunway : null} />
+        {/* Founder ruling (Today truth repair): the S3 "What your coach is
+            reading" daily brief is REMOVED from Today. Its rows were
+            first-review THRESHOLD counters (weigh-ins vs MIN_WEIGH_INS, days
+            vs FIRST_CHECKIN_MIN_DAYS), built with Math.min(weighIns7d,
+            MIN_WEIGH_INS) - so 3, 4, 5, 6 or 7 qualifying mornings all read
+            "3 of 3". That is gate plumbing, not an ongoing description of
+            what the coach understands about the athlete, and Today must not
+            present it as one. The ledger itself is untouched and still
+            serves its legitimate first-review consumers: CoachOutputScreen's
+            insufficient-data hold receipt and the You tab's coach-readiness
+            surface. Nothing replaces this on Today. */}
 
         {/* ── Pro teaser (free tier only, after 3+ sessions) ── now below the
             hero with the same hero-first reorder. */}

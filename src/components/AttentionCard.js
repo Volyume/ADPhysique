@@ -58,9 +58,6 @@ export default function AttentionCard({
   const live = {
     trialBanner: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     trialBannerText: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.textPrimary },
-    trialLedgerTitle: { ...t.type.caption, color: t.colors.textMuted },
-    trialLedgerRowText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    trialLedgerRowTextDone: { color: t.colors.textPrimary },
     freeCoachCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     freeCoachLineText: { ...t.type.bodySm, fontWeight: fontWeight.semibold, color: t.colors.textPrimary },
   };
@@ -92,23 +89,16 @@ export default function AttentionCard({
             <Ionicons name="close" size={15} color={t.colors.textMuted} />
           </TouchableOpacity>
         </View>
-        {trialBanner.ledger?.rows?.length ? (
-          <View style={styles.trialLedger}>
-            <Text style={[styles.trialLedgerTitle, live.trialLedgerTitle]}>{trialBanner.ledger.title}</Text>
-            {trialBanner.ledger.rows.map((row) => (
-              <View key={row.key} style={styles.trialLedgerRow}>
-                <Ionicons
-                  name={row.done ? 'checkmark-circle' : 'ellipse-outline'}
-                  size={14}
-                  color={row.done ? t.colors.success : t.colors.textMuted}
-                />
-                <Text style={[styles.trialLedgerRowText, live.trialLedgerRowText, row.done && [styles.trialLedgerRowTextDone, live.trialLedgerRowTextDone]]}>
-                  {row.label}
-                </Text>
-              </View>
-            ))}
-          </View>
-        ) : null}
+        {/* Founder ruling (Today truth repair): the first-review ledger
+            rows are REMOVED from this card. They were threshold counters
+            (Math.min(weighIns7d, MIN_WEIGH_INS) and the days/sessions
+            gates), which Today must not present as ongoing coaching
+            observation. The trial LINE, the dismissal and the methodology
+            link are unchanged, as is every trial/first-review threshold and
+            the unlock-date maths behind them. The athlete's real
+            first-review progress lives on its dedicated surfaces: the You
+            tab's coach-readiness block and CoachOutputScreen's
+            insufficient-data hold receipt. */}
         {/* Wave A B3: the trial should never be a black box. One quiet link
             to the methodology page, from day 0. */}
         <Button
@@ -174,21 +164,6 @@ const styles = StyleSheet.create({
   trialBannerText: {
     ...type.bodySm,
     flex: 1, fontWeight: fontWeight.semibold,
-    color: colors.textPrimary,
-  },
-  trialLedger: {
-    marginTop: spacing.sm, gap: spacing.xs,
-  },
-  trialLedgerTitle: {
-    ...type.caption, color: colors.textMuted,
-  },
-  trialLedgerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-  },
-  trialLedgerRowText: {
-    ...type.bodySm, color: colors.textSecondary,
-  },
-  trialLedgerRowTextDone: {
     color: colors.textPrimary,
   },
   // R9/D70: box/fill/radius/padding/label now come from the shared <Button

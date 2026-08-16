@@ -95,8 +95,6 @@ import MethodologyScreen from '../MethodologyScreen';
 import BlockReflectionScreen from '../BlockReflectionScreen';
 import CoachReviewScreen from '../CoachReviewScreen';
 import WeeklyCheckInScreen from '../WeeklyCheckInScreen';
-import CoachDailyBrief from '../../components/CoachDailyBrief';
-import { buildCoachLedger } from '../../lib/coachLedger';
 
 function setTheme(themeName, extra = {}) {
   act(() => {
@@ -188,28 +186,6 @@ describe('CP-10 stage 3 (Coach half): flips live, no remount', () => {
     act(() => { tree.unmount(); });
   });
 
-  test('CoachDailyBrief: runway title ink flips live on the same mounted instance', () => {
-    setTheme('dark');
-    const ledger = buildCoachLedger({
-      weighIns7d: 2,
-      completedSessions: 1,
-      firstWeightAt: Date.now() - 200 * 86400000,
-      checkinDay: 0,
-      now: Date.now(),
-    });
-    let tree;
-    act(() => { tree = create(<CoachDailyBrief ledger={ledger} />); });
-    // C5-P12-04 (D96): the runway heading is the ledger's own title now.
-    const title = tree.root.findByProps({ children: ledger.title });
-    const darkColor = flat(title).color;
-    expect(darkColor).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textMuted);
-
-    setTheme('light');
-    const lightColor = flat(tree.root.findByProps({ children: ledger.title })).color;
-    expect(lightColor).not.toBe(darkColor);
-    expect(lightColor).toBe(theme.resolveTheme({ theme: 'light' }).colors.textMuted);
-    act(() => { tree.unmount(); });
-  });
 });
 
 describe('CP-10 stage 3 (Coach half): CoachOutputScreen source guard', () => {

@@ -47,10 +47,14 @@ describe('X5/X11: HomeScreen "this week" counts are Monday-anchored, not rolling
     expect(body).not.toMatch(/Date\.now\(\) - 7 \* 24 \* 60 \* 60 \* 1000/);
   });
 
-  test('loadCoachRunway\'s weigh-in/session counts use the Monday-anchored window, not a rolling one', () => {
-    const body = fnBody(HOME, 'async function loadCoachRunway()');
-    expect(body).toMatch(/const weekAgo = localWeekStartMs\(\);/);
-    expect(body).not.toMatch(/Date\.now\(\) - 7 \* 86400000/);
+  // RE-PINNED (Today truth repair): loadCoachRunway is DELETED - the "what
+  // your coach is reading" runway it fed showed first-review threshold
+  // counters, which Today must not present as ongoing coaching observation.
+  // There is no window left to anchor here; the remaining "this week" counts
+  // are pinned by the sibling tests either side of this one.
+  test('loadCoachRunway is gone, so Home has one fewer "this week" window to keep aligned', () => {
+    expect(HOME).not.toMatch(/loadCoachRunway/);
+    expect(HOME).not.toMatch(/coachRunway/);
   });
 
   test('loadTrialBanner\'s weigh-in count uses the Monday-anchored window, not a rolling one', () => {

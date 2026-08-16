@@ -188,20 +188,20 @@ describe('D14: no banner in this stack is ED-safety/wellbeing/calm-mode, so none
   // is never funnelled through shownBannerKey/BANNER_PRIORITY, so the cap
   // cannot ever hide it. This pins that independence: it renders alongside
   // whichever (if any) attention banner currently holds the one slot.
-  test('ConsistencyEcho (the one ED/wellbeing-adjacent element on Home) is exempt by construction: never gated by shownBannerKey', () => {
-    const site = HOME.indexOf('<ConsistencyEcho');
-    expect(site).toBeGreaterThan(-1);
-    // Its only gating is the surrounding hero card's own activePlan/nextWorkout
-    // condition, established well before the banner stack in the JSX.
-    const before = HOME.slice(Math.max(0, site - 400), site);
-    expect(before).not.toMatch(/shownBannerKey/);
-    expect(before).not.toMatch(/showAttentionSlot/);
-    // ConsistencyEcho itself performs its own ED-flag/SCOFF/calm-mode
-    // suppression (verified in its own component, not duplicated here); this
-    // guard only pins that HomeScreen never wires it into the banner cap.
-    const componentSrc = fs.readFileSync(
-      path.resolve(__dirname, '../../components/ConsistencyEcho.js'), 'utf8',
-    );
-    expect(componentSrc).toMatch(/edFlag|isCalm|scoff/i);
+  // RE-PINNED (Today truth repair): ConsistencyEcho - the element this test
+  // used as its worked example - is DELETED with the weekly run/streak
+  // construct. Home now renders no ED/wellbeing-adjacent element outside the
+  // banner stack at all, so the rule is pinned directly instead: the cap
+  // governs the seven-slot stack and nothing else, and no safety surface has
+  // been funnelled into it.
+  test('the cap governs only the banner stack, and no ED/wellbeing surface was funnelled into it', () => {
+    expect(fs.existsSync(path.resolve(__dirname, '../../components/ConsistencyEcho.js'))).toBe(false);
+    // Every shownBannerKey consumer is one of the declared banner slots.
+    const declared = ['coach', 'trial', 'deload', 'phase', 'plateau', 'activation', 'attention'];
+    const gated = HOME.match(/const show\w+ = shownBannerKey === '(\w+)';/g) || [];
+    expect(gated.length).toBeGreaterThan(0);
+    for (const line of gated) {
+      expect(declared).toContain(line.match(/=== '(\w+)'/)[1]);
+    }
   });
 });

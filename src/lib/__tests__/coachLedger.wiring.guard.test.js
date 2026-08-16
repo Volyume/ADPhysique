@@ -16,21 +16,25 @@ const COACH = read('../../screens/CoachOutputScreen.js');
 const REVEAL = read('../../screens/ProSetupCompleteScreen.js');
 const ONBOARD = read('../../screens/ProOnboardingScreen.js');
 
-describe('A3: Home coach ledger (day 0, pre-first-review)', () => {
-  test('the trial banner builds and carries the ledger', () => {
-    expect(HOME).toMatch(/buildCoachLedger\(\{/);
-    expect(HOME).toMatch(/setTrialBanner\(\{ line, variant, ledger \}\)/);
+describe('A3: Home trial banner (day 0, pre-first-review)', () => {
+  // RE-PINNED (Today truth repair, founder Ruling 2): Home no longer builds
+  // or carries a coach ledger at all. Its rows were first-review THRESHOLD
+  // counters, and Today must not present gate plumbing as ongoing coaching
+  // observation. The banner LINE, its window, its dismissal and its
+  // methodology CTA are unchanged and still pinned below.
+  test('the trial banner carries its line and variant only, never a ledger', () => {
+    expect(HOME).not.toMatch(/buildCoachLedger/);
+    expect(HOME).toMatch(/setTrialBanner\(\{ line, variant \}\)/);
   });
   test('the window runs from day 0 to trial end, not day 2 to 7', () => {
     expect(HOME).toMatch(/trialDay < 0 \|\| trialDay > TRIAL_LENGTH_DAYS/);
     expect(HOME).not.toMatch(/trialDay < 2 \|\| trialDay > 7/);
   });
-  test('ledger rows render with done/open marks', () => {
-    // D3: the trial banner's JSX (ledger rows included) moved into the
-    // merged AttentionCard; Home still owns the slot and passes the banner.
+  test('the attention card renders NO ledger rows, and still renders the banner line', () => {
     const CARD = read('../../components/AttentionCard.js');
-    expect(CARD).toMatch(/trialBanner\.ledger\?\.rows\?\.length/);
-    expect(CARD).toMatch(/row\.done \? 'checkmark-circle' : 'ellipse-outline'/);
+    expect(CARD).not.toMatch(/trialBanner\.ledger/);
+    expect(CARD).not.toMatch(/trialLedger/);
+    expect(CARD).toMatch(/trialBanner\.line/);
     expect(HOME).toMatch(/trialBanner=\{trialBanner\}/);
   });
 
@@ -102,30 +106,27 @@ describe('A3: plan reveal names the actual first-review date (OB-4)', () => {
   });
 });
 
-describe('S3: Home coach daily brief + runway (ongoing, post-first-review)', () => {
-  test('the runway is built from buildCoachLedger, wired into the pro-only load array', () => {
-    expect(HOME).toMatch(/async function loadCoachRunway\(\)/);
-    expect(HOME).toMatch(/buildCoachLedger\(\{\s*\n\s*weighIns7d, completedSessions, firstWeightAt, checkinDay,/);
+describe('S3 RETIRED: the Today runway is removed (founder Ruling 2)', () => {
+  // The "since your check-in" runway rendered buildCoachLedger's rows under
+  // "What your coach is reading". Those rows are threshold counters -
+  // Math.min(weighIns7d, MIN_WEIGH_INS) means 3, 4, 5, 6 or 7 qualifying
+  // mornings all read "3 of 3" - so they described a GATE, not what the
+  // coach currently understands about the athlete. Removed from Today
+  // entirely, with nothing put in its place.
+  test('the runway component, its state and its loader are all gone', () => {
+    expect(HOME).not.toMatch(/CoachDailyBrief/);
+    expect(HOME).not.toMatch(/coachRunway/);
+    expect(HOME).not.toMatch(/loadCoachRunway/);
+    expect(fs.existsSync(path.resolve(__dirname, '../../components/CoachDailyBrief.js'))).toBe(false);
+  });
+  test('the pro-only load array no longer fetches it', () => {
     expect(HOME).toMatch(
-      /\.\.\.\(tier === 'pro' \? \[loadTodayWeight\(\), loadLatestCoachOutput\(\), loadTrialBanner\(\), loadCoachRunway\(\)\] : \[\]\),/,
+      /\.\.\.\(tier === 'pro' \? \[loadTodayWeight\(\), loadLatestCoachOutput\(\), loadTrialBanner\(\)\] : \[\]\),/,
     );
   });
-  test('calm mode / SCOFF / a failed flag-or-wellbeing read fold into the SAME edFlagOpen lever (mirrors useWeeklyStreak)', () => {
-    expect(HOME).toMatch(
-      /const edSuppressed = !!edFlag\s*\n\s*\|\| \(Number\.isFinite\(userProfile\?\.scoffScore\) && userProfile\.scoffScore >= 2\)\s*\n\s*\|\| wellbeing === 'read_failed'\s*\n\s*\|\| isCalm\(wellbeing\);/,
-    );
-    expect(HOME).toMatch(/edFlagOpen: edSuppressed,/);
-  });
-  test('the one-liner mesocycle brief is gone (removed on the founder call 2026-07-03)', () => {
-    // The build-week variant said nothing and duplicated the hero chip's own
-    // deload/build state, so the whole one-liner was removed; the runway is the
-    // component now. Guard against it creeping back.
+  test('the one-liner mesocycle brief stays gone too (founder call 2026-07-03)', () => {
     expect(HOME).not.toMatch(/dailyBriefLine/);
     expect(HOME).not.toMatch(/Training week\. Same targets today\./);
-  });
-  test('CoachDailyBrief is placed below the plan card, runway gated to Pro and hidden during the trial window', () => {
-    expect(HOME).toMatch(/import CoachDailyBrief from '\.\.\/components\/CoachDailyBrief';/);
-    expect(HOME).toMatch(/<CoachDailyBrief ledger=\{tier === 'pro' && !trialBanner \? coachRunway : null\} \/>/);
   });
 });
 
