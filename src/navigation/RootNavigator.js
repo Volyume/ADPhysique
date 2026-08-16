@@ -1193,6 +1193,18 @@ export default function RootNavigator() {
           // bundle reload (dev / Expo Go) would skip the restore + tier + sync.
           if (event === 'SIGNED_OUT') {
             _lastAuthEnter = { uid: null, at: 0 };
+            // Release-gate fix: playBilling.logOut() exists and correctly
+            // removes the purchase/error listeners and ends the store
+            // connection, but nothing in the app has ever called it - so the
+            // signed-out account's listener stayed bound for the life of the
+            // process. ensureBillingForUser tears down on a uid change too,
+            // but doing it here means the window between sign-out and the
+            // next sign-in carries no stale listener at all. Best-effort:
+            // never block or fail a sign-out.
+            try {
+              // eslint-disable-next-line global-require
+              require('../lib/payments/playBilling').logOut?.().catch(() => {});
+            } catch (_) { /* lib not loadable in this env */ }
           }
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logInfo('auth.event', event, { uid: session?.user?.id ?? null, prevLocal: localUserIdBeforeSignIn }); } catch (_) {}
@@ -1359,6 +1371,30 @@ export default function RootNavigator() {
                 // eslint-disable-next-line global-require
                 try { require('../lib/errorLog').logError('RootNavigator.refreshTierFromCloud', e, { userId: session.user.id }); } catch (_) {}
               });
+
+            // Release-gate fix: initialise the store billing provider HERE
+            // too, not only in the cold-launch bootstrap below. initialise()
+            // is what registers the purchase-completion listener, and
+            // purchasePackage() settles its parked promise ONLY from that
+            // listener - so a user who signed up or signed in during THIS
+            // session (no app restart) reached the paywall with no listener
+            // registered: Play still took the payment, but the promise hung
+            // to its 90s timeout, the entitlement grant downstream never
+            // ran, and they were told the purchase failed while already
+            // being charged.
+            //
+            // Safe to call on every auth enter: initialise() early-returns
+            // when already initialised for the SAME appUserID, and
+            // ensureBillingForUser re-initialises (logOut first) when the
+            // uid differs, so a user switch can never leave the previous
+            // account's listener bound. Fire-and-forget with the same shape
+            // as the tier refresh above; the purchase path awaits its own
+            // readiness check rather than depending on this having landed.
+            try {
+              // eslint-disable-next-line global-require
+              const playBilling = require('../lib/payments/playBilling');
+              playBilling.ensureBillingForUser(session.user.id).catch(() => {});
+            } catch (_) { /* lib not loadable in this env */ }
 
             // Bring local-only state up to the cloud and re-key any
             // rows that were owned by the pre-sign-in local UUID. Two

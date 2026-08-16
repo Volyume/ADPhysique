@@ -41,6 +41,11 @@ let _initialised = false;
 let _currentAppUserID = null;
 let _purchaseListener = null;
 let _errorListener = null;
+// Release-gate fix: in-flight ensureBillingForUser attempt, so concurrent
+// callers (the auth-enter hook and a fast paywall tap) share one run instead
+// of racing into two initialise() calls and duplicate purchase listeners.
+let _ensurePromise = null;
+let _ensureForUserID = null;
 
 // C-2: localised display prices per sku, captured from the store at fetch time.
 // Store policy (Apple + Google) requires showing the store's localised price,
@@ -850,6 +855,50 @@ export async function initialise({ apiKey, appUserID }) {
   }
 }
 
+/**
+ * Release-gate fix: the ONE entry point every auth-enter and every purchase
+ * path uses to guarantee this user's purchase listener is registered.
+ *
+ * `initialise()` above is idempotent for the SAME appUserID but deliberately
+ * refuses to switch users ("Switching users requires logOut() first"), and
+ * nothing in the sign-out flow calls `logOut()` - so after A signs out and B
+ * signs in, `_currentAppUserID` is still A and a bare `initialise(B)` would
+ * be a silent no-op leaving A's listener bound to B's purchase. This tears
+ * the old session down first whenever the uid actually changes, then
+ * initialises for the new one.
+ *
+ * Concurrent callers share one in-flight promise, so the auth-enter call and
+ * a fast paywall tap can never race into two initialise() runs (which would
+ * register duplicate listeners and settle a purchase twice).
+ *
+ * Returns true when billing is ready for `appUserID`, false otherwise; never
+ * throws, matching initialise()'s own contract.
+ */
+export async function ensureBillingForUser(appUserID) {
+  if (!appUserID) return false;
+  if (_initialised && _currentAppUserID === appUserID) return true;
+  // Coalesce concurrent callers onto one attempt.
+  if (_ensurePromise && _ensureForUserID === appUserID) return _ensurePromise;
+  _ensureForUserID = appUserID;
+  _ensurePromise = (async () => {
+    try {
+      // A DIFFERENT user was bound: tear their listeners down before binding
+      // this one, or the previous account's listener stays registered.
+      if (_initialised && _currentAppUserID && _currentAppUserID !== appUserID) {
+        await logOut();
+      }
+      return await initialise({ appUserID });
+    } catch (e) {
+      logWarn('payments.playBilling.ensure.failed', e?.message ?? 'unknown', {});
+      return false;
+    } finally {
+      _ensurePromise = null;
+      _ensureForUserID = null;
+    }
+  })();
+  return _ensurePromise;
+}
+
 export async function getCustomerInfo() {
   return _active().getCustomerInfo();
 }
@@ -863,10 +912,41 @@ export async function getCustomerInfo() {
  * feedback at purchase time.
  */
 export async function purchasePackage(skuId, opts = {}) {
+  // Release-gate fix: a purchase must NEVER outrun listener registration.
+  // purchasePackage parks a promise that only the purchase listener settles,
+  // so buying before initialise() has run means Play takes the payment while
+  // the promise hangs to its 90s timeout and the entitlement grant never
+  // runs. Deterministic readiness, not a delay: when the caller supplies the
+  // current uid we await the same coalesced ensure the auth-enter hook uses,
+  // so a tap moments after sign-in waits for that exact in-flight attempt
+  // rather than starting a second one.
+  const uid = opts?.appUserID ?? _currentAppUserID;
+  if (uid) {
+    const ready = await ensureBillingForUser(uid);
+    if (!ready) {
+      // Fail loudly rather than firing a request whose completion nothing is
+      // listening for. The screens' existing catch renders their usual
+      // purchase-failed copy; no charge has been initiated at this point.
+      const e = new Error('billing_not_initialised');
+      e.code = 'E_BILLING_NOT_INITIALISED';
+      throw e;
+    }
+  }
   return _active().purchasePackage(skuId, opts);
 }
 
 export async function restorePurchases() {
+  // Release-gate fix: restore is the athlete's only self-service recovery
+  // path after a failed purchase, so it must not itself be a casualty of the
+  // same gap. On Android getAvailablePurchases() needs the live billing
+  // connection that only initialise() opens (RNIap.initConnection), so an
+  // un-initialised restore throws and a genuinely paying subscriber is told
+  // "couldn't restore". Same coalesced ensure as the purchase path; unlike
+  // purchase we still attempt the restore if it fails, because the provider
+  // may already hold a usable connection and a throw here is surfaced
+  // cleanly by restore.js rather than charging anyone.
+  const uid = _currentAppUserID;
+  if (uid) { await ensureBillingForUser(uid).catch(() => false); }
   return _active().restorePurchases();
 }
 
