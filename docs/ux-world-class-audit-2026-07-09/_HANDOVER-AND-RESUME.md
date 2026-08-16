@@ -569,6 +569,12 @@ its evidence).
 
 ===============================================================================
 
+### 2026-08-16 — CAMPAIGN 20 PHASE 1 (live set prescription) — DESIGN COMPLETE
+Docs-only landing. Design doc + two evidence appendices in
+`docs/live-prescription-campaign-20-2026-08-16/` (see TASKBOARD Campaign 20
+entry for the four open founder rulings). No production code touched.
+Phase 2 implements only after the rulings land.
+
 ===============================================================================
 ===============================================================================
 ## ARCHIVE POINTER + STANDING TOKEN-HYGIENE RULE (D41, founder 2026-07-11)
