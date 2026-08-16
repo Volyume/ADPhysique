@@ -1285,6 +1285,37 @@ const useAppStore = create((set, get) => ({
     _persistActiveWorkout(get());
   },
 
+  // C18 re-entry amendment (Task 1): match this session against a pending
+  // "I haven't trained" decision (reEntryEaseState.js) and, if it binds to
+  // THIS exact (mesocycleWeekId, routineId), stamp the flag onto
+  // activeWorkout - the same pattern as readinessDismissed above, so it
+  // rides the WK-1 snapshot for free and survives a screen remount, a
+  // background/foreground cycle or a crash/kill restore with no extra
+  // plumbing. Async by necessity (AsyncStorage); called fire-and-forget
+  // right after startWorkout/restoreActiveWorkout set activeWorkout, so the
+  // flag lands moments after the first render rather than blocking it -
+  // the same async-fill-in shape sessionAdjustments and weeklyAllocation
+  // already use elsewhere in this session. A mismatch (wrong routine, wrong
+  // week, no pending decision, no active mesocycle) leaves activeWorkout
+  // untouched and the pending decision (if any) untouched too.
+  applyReEntryEaseIfPending: async () => {
+    try {
+      const w = get().activeWorkout;
+      const userId = get().user?.id;
+      if (!w || !userId || w.reEntryEaseApplied || !w.mesocycleWeekId || !w.routineId) return;
+      // eslint-disable-next-line global-require
+      const { getPendingReEntryEase, reEntryEaseMatches } = require('../lib/reEntryEaseState');
+      const pending = await getPendingReEntryEase(userId);
+      if (!reEntryEaseMatches(pending, { mesocycleWeekId: w.mesocycleWeekId, routineId: w.routineId })) return;
+      // Re-check after the await: a fast finish/cancel during the read must
+      // not resurrect flags on a session that has already moved on.
+      const current = get().activeWorkout;
+      if (!current || current.id !== w.id) return;
+      set({ activeWorkout: { ...current, reEntryEaseApplied: true } });
+      _persistActiveWorkout(get());
+    } catch (_) { /* best-effort; matches this file's other IO tails */ }
+  },
+
   setActiveWorkout: (workout) => set({ activeWorkout: workout }),
   setWorkoutExercises: (next) => {
     set((state) => ({
@@ -1465,6 +1496,9 @@ const useAppStore = create((set, get) => ({
       sessionAdjustments: [],
     });
     _persistActiveWorkout(get());
+    // C18 re-entry amendment: fire-and-forget match against any pending
+    // "I haven't trained" decision bound to this exact session.
+    get().applyReEntryEaseIfPending().catch(() => {});
   },
 
   // Rehydrate an in-progress workout after an app kill/crash (WK-1). Only
@@ -1530,6 +1564,12 @@ const useAppStore = create((set, get) => ({
           }
           : {}),
       });
+      // C18 re-entry amendment: the snapshot normally already carries
+      // reEntryEaseApplied if it landed before the crash, but a crash in the
+      // narrow window between startWorkout and the async match completing
+      // would restore without it - re-check so a restored session doesn't
+      // silently lose an ease decision it was owed.
+      get().applyReEntryEaseIfPending().catch(() => {});
       return true;
     } catch (_) {
       return false;

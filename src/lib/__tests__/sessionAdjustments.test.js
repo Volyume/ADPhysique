@@ -26,6 +26,8 @@ import {
   applyReadinessToSets,
   applyReadinessToLoad,
   applyReadinessToTargets,
+  getReEntryEaseTweak,
+  resolveSessionEasingTweak,
 } from '../sessionAdjustments';
 
 // sessionAdjustments.js also exports the COMP-015 IO orchestrator, which pulls
@@ -669,5 +671,83 @@ describe('B2 source guard — the rules are deterministic by construction', () =
     expect(b2Section).not.toMatch(/Math\.random/);
     // and the whole file never reaches for randomness anywhere
     expect(src).not.toMatch(/Math\.random/);
+  });
+});
+
+// ── C18 re-entry amendment: getReEntryEaseTweak / resolveSessionEasingTweak ──
+
+describe('C18 getReEntryEaseTweak — reuses B2 magnitude, distinct provenance', () => {
+  test('same setDelta/loadFactor as below_par, never the string "below_par"', () => {
+    const tweak = getReEntryEaseTweak();
+    expect(tweak.reduces).toBe(true);
+    expect(tweak.setDelta).toBe(READINESS_RULES.below_par.setDelta);
+    expect(tweak.loadFactor).toBe(READINESS_RULES.below_par.loadFactor);
+    expect(tweak.because).toBe('athlete_reentry_choice');
+    expect(tweak.intent).not.toBe('below_par');
+    expect(tweak.because).not.toBe('below_par');
+  });
+
+  test('why copy never claims a below-par reading (sleep/energy) the athlete never gave', () => {
+    const tweak = getReEntryEaseTweak();
+    expect(tweak.whySets.toLowerCase()).not.toMatch(/sleep|energy|below par/);
+  });
+
+  test('obeys the same downward-only guards as any other tweak (floor 1, load never above plan)', () => {
+    const tweak = getReEntryEaseTweak();
+    expect(applyReadinessToSets(1, tweak)).toBe(1); // floored
+    expect(applyReadinessToSets(4, tweak)).toBe(3);
+    expect(applyReadinessToLoad(100, tweak)).toBeLessThanOrEqual(100);
+  });
+
+  test('deterministic — no Date.now, no randomness (same source-guard section)', () => {
+    expect(JSON.stringify(getReEntryEaseTweak())).toBe(JSON.stringify(getReEntryEaseTweak()));
+  });
+});
+
+describe('C18 resolveSessionEasingTweak — composes without ever stacking', () => {
+  test('re-entry alone (no intent reading) produces the re-entry tweak', () => {
+    const tweak = resolveSessionEasingTweak({ intent: null, chips: {}, reEntryEaseActive: true });
+    expect(tweak.because).toBe('athlete_reentry_choice');
+    expect(tweak.setDelta).toBe(READINESS_RULES.below_par.setDelta);
+  });
+
+  test('no re-entry, no reducing intent → no tweak (average/sharp pass through unchanged)', () => {
+    expect(resolveSessionEasingTweak({ intent: 'average', chips: {}, reEntryEaseActive: false }).reduces).toBe(false);
+    expect(resolveSessionEasingTweak({ intent: 'sharp', chips: {}, reEntryEaseActive: false }).reduces).toBe(false);
+    expect(resolveSessionEasingTweak({ intent: null, chips: {}, reEntryEaseActive: false })).toBeNull();
+  });
+
+  test('below_par intent alone (no re-entry) is unchanged from plain getReadinessTweak', () => {
+    const chips = { sleepQuality: 2, energyScore: null };
+    const direct = getReadinessTweak('below_par', chips);
+    const resolved = resolveSessionEasingTweak({ intent: 'below_par', chips, reEntryEaseActive: false });
+    expect(JSON.stringify(resolved)).toBe(JSON.stringify(direct));
+  });
+
+  test('NEVER STACKS: below_par intent + active re-entry still reduces by exactly one step, not two', () => {
+    const chips = { sleepQuality: 2, energyScore: null };
+    const resolved = resolveSessionEasingTweak({ intent: 'below_par', chips, reEntryEaseActive: true });
+    // Single-step magnitude, identical to either source alone - proves the
+    // two never compose into a -2 / double-trimmed-load result.
+    expect(resolved.setDelta).toBe(READINESS_RULES.below_par.setDelta);
+    expect(resolved.loadFactor).toBe(READINESS_RULES.below_par.loadFactor);
+    expect(applyReadinessToSets(4, resolved)).toBe(3); // -1, not -2
+    // The real same-day reason (sleep) leads the copy over the re-entry one.
+    expect(resolved.because).not.toBe('athlete_reentry_choice');
+  });
+
+  test('sharp/average intent + active re-entry: re-entry still applies (one step, not zero)', () => {
+    const resolved = resolveSessionEasingTweak({ intent: 'sharp', chips: {}, reEntryEaseActive: true });
+    expect(resolved.reduces).toBe(true);
+    expect(resolved.because).toBe('athlete_reentry_choice');
+    expect(applyReadinessToSets(4, resolved)).toBe(3);
+  });
+
+  test('is not itself tier-gated — the caller controls that by what it passes as `intent`', () => {
+    // Passing intent: null (as a free-tier caller would, since the intent
+    // sheet is Pro-only) still yields a reducing tweak when re-entry is
+    // active - re-entry easing must never become Pro-only.
+    const resolved = resolveSessionEasingTweak({ intent: null, chips: {}, reEntryEaseActive: true });
+    expect(resolved.reduces).toBe(true);
   });
 });

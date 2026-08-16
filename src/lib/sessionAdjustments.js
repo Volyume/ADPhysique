@@ -302,3 +302,64 @@ export function applyReadinessToTargets(targets, tweak) {
     return { ...t, weight, action: 'decrease' };
   });
 }
+
+// ── C18 re-entry amendment: reuse B2, don't reinvent it ─────────────────────
+//
+// The athlete's explicit "I haven't trained" answer (reEntryCheck.js,
+// reEntryEaseState.js) earns the SAME downward-only step as a below-par
+// readiness answer - one fewer working set where possible, suggested load
+// trimmed 5%, both floored/rounded by the exact guards above. It is NOT
+// built by calling getReadinessTweak('below_par', ...): that would fabricate
+// a below-par reading the athlete never gave for THIS session, and the
+// below_par why-text (sleep/energy) would misattribute a stated fact about a
+// training gap to how they slept last night. The magnitude is read from
+// READINESS_RULES.below_par so the two mechanisms can never silently
+// diverge; only the provenance and copy are distinct and honest about their
+// own cause.
+
+/**
+ * The re-entry tweak, same shape and magnitude as a below-par readiness
+ * tweak, distinct provenance. `because: 'athlete_reentry_choice'` - never
+ * 'below_par' - so nothing downstream (telemetry, adaptation_events, a
+ * future audit) can read this as fabricated readiness evidence.
+ */
+export function getReEntryEaseTweak() {
+  const rule = READINESS_RULES.below_par;
+  return {
+    intent: 'reentry',
+    reduces: true,
+    setDelta: rule.setDelta,
+    loadFactor: rule.loadFactor,
+    whySets: 'Welcome back: one set fewer on each lift today keeps quality up.',
+    whyLoad: rule.whyLoad,
+    acknowledgement: null,
+    because: 'athlete_reentry_choice',
+  };
+}
+
+/**
+ * Resolve the SINGLE tweak a session actually shows, composing the
+ * intent-sheet reading with an active re-entry-ease decision WITHOUT ever
+ * stacking two downward steps. Both mechanisms cap at the identical
+ * below-par magnitude, so applying both in sequence would silently double
+ * the reduction (-2 sets, load trimmed twice) - forbidden by the re-entry
+ * amendment. Composing by choosing ONE tweak object (never summing two)
+ * makes that structurally impossible rather than merely avoided by
+ * convention.
+ *
+ * When the intent sheet already reduces for a real reason given THIS
+ * session (poor sleep, low energy), that reason leads - it is the more
+ * specific, same-day signal. Re-entry easing then only fills in when the
+ * intent sheet itself did not call for a reduction.
+ *
+ * NOT tier-gated here: the caller decides whether the intent-sheet reading
+ * applies (it is a Pro-only surface), but re-entry easing is the athlete's
+ * own explicit answer to a question every tier is asked, and must not
+ * become Pro-only merely because it happens to reuse this machinery.
+ */
+export function resolveSessionEasingTweak({ intent, chips, reEntryEaseActive } = {}) {
+  const intentTweak = getReadinessTweak(intent, chips);
+  if (intentTweak?.reduces) return intentTweak;
+  if (reEntryEaseActive) return getReEntryEaseTweak();
+  return intentTweak;
+}

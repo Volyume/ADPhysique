@@ -26,6 +26,9 @@ import { resolveProgrammePosition } from '../lib/programmePosition';
 import {
   reEntryCheckDue, reEntryPrompt, reEntryOutcome, RE_ENTRY_ANSWER,
 } from '../lib/reEntryCheck';
+import {
+  setPendingReEntryEase, clearPendingReEntryEaseIfMatches,
+} from '../lib/reEntryEaseState';
 import { sessionDisplayName, skipConfirmation } from '../lib/blockProgression';
 import { nextWorkoutRecoveryLabel, isLighterTrainingState } from '../lib/recoveryState';
 import { useToast } from '../components/Toast';
@@ -1392,7 +1395,22 @@ export default function HomeScreen({ navigation, route }) {
       // routine rather than the retired pointer.
       const position = await resolveProgrammePosition(user.id).catch(() => null);
       setProgrammePosition(position);
-      maybeAskReEntry(position);
+      // C18 re-entry race fix: reEntryCheckDue needs the authoritative
+      // last-completed-workout timestamp from THIS load, not the
+      // `lastSession` React state - that state is written by the parallel
+      // loadWeekStats loader in the same loadData() Promise.all batch, and
+      // Promise.all gives no ordering guarantee between concurrently
+      // dispatched loaders, so reading lastSession here raced: it could see
+      // the previous render's value (or null on first load) instead of what
+      // this run actually found. A self-contained read removes the race
+      // outright with no delay - it is one more bounded query already
+      // running inside the same parallel batch, not a new blocking step.
+      const allWorkoutsForReEntry = await getAllWorkouts(user.id).catch(() => []);
+      const lastCompletedAtMs = allWorkoutsForReEntry.reduce(
+        (max, w) => (w.isCompleted && Number(w.startedAt) > max ? Number(w.startedAt) : max),
+        0,
+      ) || null;
+      maybeAskReEntry(position, lastCompletedAtMs);
       const next = position?.nextSession ?? null;
       const idx = next
         ? Math.max(0, routines.findIndex((r) => r.id === next.routineId))
@@ -1435,6 +1453,15 @@ export default function HomeScreen({ navigation, route }) {
               mesocycleId: position.blockId,
               resolution: 'skipped_by_user',
             });
+            // C18 re-entry amendment: skipping the bound session resolves
+            // it without ever starting a workout, so nothing in
+            // ActiveWorkoutScreen would retire a pending ease decision for
+            // it - do that here instead. A decision bound to some other
+            // session is untouched.
+            await clearPendingReEntryEaseIfMatches(user.id, {
+              mesocycleWeekId: position.activeWeekId,
+              routineId: session.routineId,
+            });
             await loadNextWorkout();
             await loadBlockProgress();
           } catch (e) {
@@ -1452,13 +1479,13 @@ export default function HomeScreen({ navigation, route }) {
   // The outstanding session is untouched by this: Legs is still Legs after
   // twenty days. All this does is ask, once, before the same peak targets are
   // handed back, and record what the athlete said.
-  async function maybeAskReEntry(position) {
+  async function maybeAskReEntry(position, lastWorkoutAtMs) {
     if (!user?.id || reEntryAsked) return;
     try {
       const key = `@volyume_reentry_answered_${user.id}`;
       const answeredFor = await AsyncStorage.getItem(key).catch(() => null);
       const check = reEntryCheckDue({
-        lastWorkoutAtMs: lastSession?.startedAt ?? null,
+        lastWorkoutAtMs: lastWorkoutAtMs ?? null,
         nowMs: Date.now(),
         sessionsPerWeek: position?.sessions?.length ?? null,
         answeredFor,
@@ -1466,9 +1493,20 @@ export default function HomeScreen({ navigation, route }) {
       if (!check) return;
       setReEntryAsked(true);
       const prompt = reEntryPrompt(check);
+      // The exact outstanding required session at the moment the athlete
+      // answers - the one and only session an easeReturn answer may bind to.
+      const boundWeekId = position?.activeWeekId ?? null;
+      const boundRoutineId = position?.nextSession?.routineId ?? null;
       const record = async (answer) => {
         const outcome = reEntryOutcome(answer);
         try { await AsyncStorage.setItem(key, check.key); } catch (_) { /* asked again next open */ }
+        // C18 re-entry amendment: persist the actionable ease decision, not
+        // just the "asked" marker. Only when there IS an outstanding
+        // required session to bind it to - with nothing outstanding there
+        // is no next session for "a little easier" to mean anything about.
+        if (outcome.easeReturn && boundWeekId && boundRoutineId) {
+          await setPendingReEntryEase(user.id, { mesocycleWeekId: boundWeekId, routineId: boundRoutineId });
+        }
         if (outcome.note) toast.show(outcome.note, { variant: 'info' });
       };
       appAlert(prompt.title, prompt.body, [

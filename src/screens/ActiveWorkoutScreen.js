@@ -75,7 +75,11 @@ import { GLOSSARY } from '../lib/coachGlossary';
 import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
-import { getReadinessTweak, applyReadinessToSets, applyReadinessToTargets, getSessionWeeklyAllocation } from '../lib/sessionAdjustments';
+import {
+  applyReadinessToSets, applyReadinessToTargets, getSessionWeeklyAllocation,
+  resolveSessionEasingTweak,
+} from '../lib/sessionAdjustments';
+import { clearPendingReEntryEase } from '../lib/reEntryEaseState';
 import { DEFAULT_BAR_KG } from '../lib/warmupRamp';
 import { warmupRamp } from '../lib/warmupRamp';
 import { shareSessionName } from '../lib/sessionShareData';
@@ -572,15 +576,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ? sessionAdjustment.adjustedSets
     : (weeklyAllocation?.[exercise?.id] ?? routineExercise?.recommendedSets);
 
-  // B2: readiness-informed, downward-only tweak from the intent-sheet answer.
+  // B2: readiness-informed, downward-only tweak from the intent-sheet answer
+  // OR an active C18 re-entry ease decision (lib/reEntryEaseState.js via the
+  // store's applyReEntryEaseIfPending, stamped as activeWorkout.reEntryEaseApplied).
   // Pure rule table (lib/sessionAdjustments.js); a presented suggestion applied
   // to this session's TARGET display only. The stored plan and logged sets are
-  // never touched, and the user can dismiss it for the whole session. Silent on
-  // deload weeks, matching COMP-015's R0 (deload owns the session).
-  const readinessTweak = (tier === 'pro' && !isDeloadWeek)
-    ? getReadinessTweak(activeWorkout?.preWorkoutIntent, {
-      sleepQuality: activeWorkout?.sleepQuality,
-      energyScore: activeWorkout?.energyScore,
+  // never touched, and the user can dismiss it for the whole session (the
+  // SAME dismissal, whichever source drove it). Silent on deload weeks,
+  // matching COMP-015's R0 (deload owns the session) - the re-entry
+  // amendment leaves every existing structural authority senior.
+  //
+  // The intent-sheet reading stays Pro-only (unchanged); re-entry easing is
+  // NOT tier-gated - it is the athlete's own explicit answer to a question
+  // asked at every tier, and reusing this machinery must not make it Pro-only.
+  // resolveSessionEasingTweak never stacks the two: at most one downward step
+  // is ever produced.
+  const reEntryEaseActive = !isDeloadWeek && !!activeWorkout?.reEntryEaseApplied;
+  const readinessTweak = !isDeloadWeek
+    ? resolveSessionEasingTweak({
+      intent: tier === 'pro' ? activeWorkout?.preWorkoutIntent : null,
+      chips: { sleepQuality: activeWorkout?.sleepQuality, energyScore: activeWorkout?.energyScore },
+      reEntryEaseActive,
     })
     : null;
   const readinessReduces = !!readinessTweak?.reduces && !readinessDismissed;
@@ -2488,6 +2504,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         );
       } else {
         await updateWorkout(activeWorkout.id, workoutUpdate);
+      }
+      // C18 re-entry amendment: this finish (full completion OR ended-early,
+      // both land here) resolves the required session activeWorkout was
+      // started for. If it consumed a pending re-entry ease decision,
+      // retire it now - one-session-only, and this is the one session it
+      // was for. Best-effort: a failed clear leaves a decision that simply
+      // won't match anything else (wrong session identity), never a wrongly
+      // reapplied ease.
+      if (activeWorkout?.reEntryEaseApplied && user?.id) {
+        clearPendingReEntryEase(user.id).catch(() => {});
       }
       // LB-8: the core value event. Counts + duration only, no
       // exercise names or loads.
