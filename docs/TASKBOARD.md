@@ -2055,18 +2055,18 @@ D37 triage; (2) the ED detector's positional weeklyHistory contract
 known widget-storage full-run flake (pre-Campaign-20, still intermittent,
 needs its own session).
 
-## CAMPAIGN 22 (2026-08-16) — UX/presentation, screen 1: Home/Today. PHASE 1 IN FLIGHT, BLOCKED ON BRIEF.
+## CAMPAIGN 22 (2026-08-16) — UX/presentation, screen 1: Home/Today. PHASE 1 COMPLETE — SPEC AWAITING FOUNDER REVIEW.
 
-Founder order 2026-08-16 (audit + IA + hierarchy + copy contract; NO
-implementation; Fable lead, no Opus). Branch
-`claude/campaign22-home-today-audit` off main `624cf126`. BLOCKER: the
-founder's campaign prompt arrived TRUNCATED mid-way through the CRITICAL
-INTERPRETATION LAW section (cut at the third complaint example, '"3
-weeks'); the complaint list, audit method, deliverable structure and
-verdict format are missing. Surfaced to the founder 2026-08-16; the
-audit's judgement layer waits for the full brief so complaints are read
-narrowly as ordered, not reconstructed. DONE MEANWHILE: mechanical state
-inventory landed (docs/home-today-ux-campaign-22-2026-08-16/
-STATE-INVENTORY.md - 21 sections, 47 state axes, ~120 strings, ~65
-actions, 150-400 realistic configurations). RECOVERY PATH: resume from
-the inventory + the full brief when supplied; no production code touched.
+Founder order 2026-08-16 (full brief received after an initial truncated
+send). Branch `claude/campaign22-home-today-audit` off main `624cf126`.
+NO production code touched. Deliverables in
+docs/home-today-ux-campaign-22-2026-08-16/: STATE-INVENTORY.md (21
+sections, 47 axes, ~120 strings), STATE-MATRIX-AND-DENSITY.md (18
+material states, 4 collisions, 7 duplications, one MEASURED copy
+contradiction: readinessSummary vs recoveryState wording in the same
+render), and HOME-TODAY-UX-SPEC.md - the 25-section authoritative spec.
+Verdict B: three founder rulings open (R1 weight row below hero; R2
+redesigned first-review readiness line returns; R3 everyday trial
+presence leaves the top slot). Phase 2 implements only after the
+rulings. Startup auth-hydration flash: recorded as a SEPARATE bounded
+task (spec section 21), still pending since the input-focus campaign.
