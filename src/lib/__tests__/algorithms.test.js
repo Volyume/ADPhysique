@@ -8,12 +8,16 @@ import {
   getVolumeStatus,
   detectLaggingMuscles,
   defaultIncrement,
-  getProgressionSuggestion,
-  computeSetTargets,
   calculate1RM,
   bestPRPerExercise,
   calculateTonnage,
 } from '../algorithms';
+// Campaign 20 Phase 2 Stage 12: getProgressionSuggestion and computeSetTargets
+// were RETIRED (see algorithms.js's own retirement comment). The unit-aware
+// A2-043 law they proved end-to-end now runs through the resolver's
+// nextSessionOpeningLoad, migrated below rather than deleted (it is the only
+// place any suite exercises the resolver with 'lbs' units end-to-end).
+import { nextSessionOpeningLoad } from '../livePrescription';
 
 // ─── VOLUME_LANDMARKS shape ────────────────────────────────────────────────────
 
@@ -273,82 +277,55 @@ describe('defaultIncrement, unit-aware load steps', () => {
   });
 });
 
-describe('getProgressionSuggestion, unit-aware increments (A2-043)', () => {
-  const prev = (weight) => [{ weight, actualReps: 12, rir: 2, set_type: 'straight' }];
+// getProgressionSuggestion RETIRED (Campaign 20 Phase 2 Stage 12): its
+// CALC-5 bodyweight pin is migrated onto the resolver at
+// livePrescription.test.js's "CALC-5 / FR-C4-4" describe (see also the
+// "numeric edge cases" describe below, whose own CALC-5 test is deleted for
+// the same reason); its other unit-increment coverage duplicates
+// defaultIncrement's own describe above and the migrated describe below.
 
-  test('kg: heavy lift jumps 2.5kg, light lift 1.25kg', () => {
-    expect(getProgressionSuggestion(null, prev(80), 8, 12, 'kg').suggestedWeight).toBe(82.5);
-    expect(getProgressionSuggestion(null, prev(40), 8, 12, 'kg').suggestedWeight).toBe(41.25);
-  });
+// computeSetTargets RETIRED (Campaign 20 Phase 2 Stage 12). Its three
+// former describes here:
+//   - "unit-aware increments (A2-043)": the only suite anywhere that proves
+//     the resolver's increment maths is unit-aware (lbs vs kg) through the
+//     FULL top-of-band advance path, not just defaultIncrement in isolation
+//     - migrated below onto nextSessionOpeningLoad, not deleted.
+//   - "layoff reduction is the final invariant (LS-04/H-13)": genuinely
+//     duplicated - the same law is pinned at livePrescription.test.js's
+//     "§10.5 layoff" describe and livePrescription.scenarios.test.js's
+//     scenario 32 ("Layoff 10 days - MUST skip advance/anchor logic
+//     (LS-04)") - deleted, not migrated.
+//   - "the anchor pass honours the 5% cap at low load (LS-05)": the
+//     per-ordinal-set "anchor pass" this pinned no longer exists in the new
+//     architecture (design §3 authority #1: the flat per-set anchor-to-
+//     session-best pass is AMENDED away entirely, replaced by the back-off-
+//     aware structure detection in §13.1 - there is no longer a second
+//     "raise every lighter set to the session max" pass to cap). The
+//     underlying invariant LS-05 actually protects - the 5% cap is NEVER
+//     disabled at low load - is unconditionally true for every resolver
+//     caller because resolveLoadIncrement is the one increment source
+//     everywhere (§10.2, pinned at livePrescription.test.js: "a tiny 5% cap
+//     still floors at +0.25") - deleted, not migrated.
 
-  test('lbs: heavy lift jumps 5lb, light lift 2.5lb', () => {
-    expect(getProgressionSuggestion(null, prev(185), 8, 12, 'lbs').suggestedWeight).toBe(190);
-    expect(getProgressionSuggestion(null, prev(95), 8, 12, 'lbs').suggestedWeight).toBe(97.5);
-  });
-
-  test('message carries the display-unit label', () => {
-    expect(getProgressionSuggestion(null, prev(185), 8, 12, 'lbs').message).toContain('lbs');
-  });
-});
-
-describe('computeSetTargets, unit-aware increments (A2-043)', () => {
-  // FQ-3 (D96): the top-of-band unlock is session-level difficulty now, not
-  // the (fabricated) per-set rir. The increment laws under test are unchanged.
-  const prev = (weight) => [{ weight, actualReps: 12, set_type: 'straight' }];
+describe('nextSessionOpeningLoad (resolver), unit-aware increments (A2-043, migrated from computeSetTargets)', () => {
+  const BAND = { min: 8, max: 12 };
+  // A topped, comparable, effort-corroborated (difficulty 2) single-session
+  // history - the minimal shape that reaches the ADVANCE gate.
+  const session = (weight, reps) => ({ at: 1, difficulty: 2, band: BAND, working: [{ pos: 1, weight, reps, setType: 'straight' }] });
 
   test('lbs compound adds 5lb at the top of the range', () => {
-    const { targets } = computeSetTargets(prev(185), 8, 12, 'lbs', { exerciseCategory: 'compound', prevSessionDifficulty: 2 });
-    expect(targets[0].weight).toBe(190);
+    const out = nextSessionOpeningLoad([session(185, 12)], BAND, { units: 'lbs', category: 'compound' });
+    expect(out.weight).toBe(190);
   });
 
   test('kg compound adds 2.5kg', () => {
-    const { targets } = computeSetTargets(prev(80), 8, 12, 'kg', { exerciseCategory: 'compound', prevSessionDifficulty: 2 });
-    expect(targets[0].weight).toBe(82.5);
+    const out = nextSessionOpeningLoad([session(80, 12)], BAND, { units: 'kg', category: 'compound' });
+    expect(out.weight).toBe(82.5);
   });
 
   test('explicit incrementKg still overrides the unit default', () => {
-    const { targets } = computeSetTargets(prev(185), 8, 12, 'lbs', { exerciseCategory: 'compound', incrementKg: 2, prevSessionDifficulty: 2 });
-    expect(targets[0].weight).toBe(187);
-  });
-});
-
-describe('computeSetTargets, layoff reduction is the final invariant (LS-04/H-13)', () => {
-  // Codex audit: returning after a >=7-day break, the anchor pass overwrote a
-  // lighter set's layoff-reduced target with the un-reduced session maximum,
-  // so the first set was pushed UP (to 10kg) while the reason still claimed a
-  // 20% cut. The anchor pass must not run under layoff.
-  test('no set is anchored above its own layoff-reduced load', () => {
-    const { targets, reason } = computeSetTargets(
-      [{ weight: 5, actualReps: 8, rir: 2 }, { weight: 10, actualReps: 8, rir: 2 }],
-      6, 12, 'kg', { layoffMultiplier: 0.8 },
-    );
-    // 5 * 0.8 = 4, 10 * 0.8 = 8. The light first set stays reduced, never
-    // anchored up to the 10kg session max.
-    expect(targets[0].weight).toBe(4);
-    expect(targets[1].weight).toBe(8);
-    expect(targets[0].weight).toBeLessThan(targets[1].weight);
-    // Every layoff target is at or below the reduced version of the session max.
-    for (const t of targets) expect(t.weight).toBeLessThanOrEqual(10 * 0.8);
-    // The copy still promises a reduction, and now the loads honour it.
-    expect(reason).toMatch(/reduced/i);
-    expect(targets.some(t => t.anchored)).toBe(false);
-  });
-});
-
-describe('computeSetTargets, the anchor pass honours the 5% cap at low load (LS-05)', () => {
-  // Codex audit: the anchor pass used the superseded (cap > 0.5 ? cap : inc)
-  // form, which disabled the 5% session-over-session cap for loads <= 10 units,
-  // so a light anchored set could jump the full increment (~25%). It must use
-  // the same cap as the main pass.
-  test('anchoring a light set caps the jump at 5% (+0.25 floor), not the full increment', () => {
-    const { targets } = computeSetTargets(
-      [{ weight: 2.5, actualReps: 8 }, { weight: 5, actualReps: 12 }],
-      6, 12, 'kg', { prevSessionDifficulty: 2 }, // FQ-3: session-level unlock
-    );
-    // Set 1 (5kg) hit the top with headroom → 5 + min(inc, 5*0.05=0.25) = 5.25.
-    // Set 0 anchors to that same capped 5.25, NOT to the old 6.25 (25% jump).
-    expect(targets[0].weight).toBe(5.25);
-    expect(targets[0].weight).toBeLessThanOrEqual(5 * 1.05 + 0.001);
+    const out = nextSessionOpeningLoad([session(185, 12)], BAND, { units: 'lbs', category: 'compound', incrementKg: 2 });
+    expect(out.weight).toBe(187);
   });
 });
 
@@ -479,10 +456,14 @@ describe('calculateTonnage excludes non-load exercise types', () => {
   });
 });
 
-// CALC-2/4/5/6/7: numeric edge-case hardening.
-describe('numeric edge cases (CALC-2/4/5/6/7)', () => {
+// CALC-2/4/6/7: numeric edge-case hardening. CALC-5 (bodyweight/all-zero
+// history never suggests a weight increase) moved with getProgressionSuggestion's
+// retirement (Campaign 20 Phase 2 Stage 12) - now pinned at
+// livePrescription.test.js's "CALC-5 / FR-C4-4" describe, against the
+// resolver's own reps_only/zero-weight law, not a standalone function.
+describe('numeric edge cases (CALC-2/4/6/7)', () => {
   const {
-    calculate1RM, getVolumeStatus, getProgressionSuggestion,
+    calculate1RM, getVolumeStatus,
     generateDeloadPrescription,
   } = require('../algorithms');
 
@@ -499,16 +480,6 @@ describe('numeric edge cases (CALC-2/4/5/6/7)', () => {
   test('CALC-4: getVolumeStatus(NaN) is not "over_mrv"', () => {
     const s = getVolumeStatus(NaN, 'chest');
     expect(s.status).not.toBe('over_mrv');
-  });
-
-  test('CALC-5: bodyweight (all-zero) history does not suggest a weight increase', () => {
-    const prev = [
-      { weight: 0, actualReps: 15, rir: 3 },
-      { weight: 0, actualReps: 15, rir: 3 },
-    ];
-    const s = getProgressionSuggestion(prev, prev, 8, 12, 'kg');
-    expect(s.action).not.toBe('increase_weight');
-    expect(s.message).not.toMatch(/kg/);
   });
 
   test('CALC-6: generateDeloadPrescription never prescribes a negative load', () => {

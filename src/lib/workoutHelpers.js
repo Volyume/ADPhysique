@@ -36,40 +36,15 @@ export function setNumberForKind(loggedSets, isWarmup) {
   ).length + 1;
 }
 
-/**
- * The best (heaviest) working anchor set to prefill the next set from.
- * Prefers the set at `workingIdx` among working (non-warm-up) sets, but never
- * suggests a load lighter than the user's heaviest working set so far.
- *
- * @param {Array} sets        prior sets (any kind; warm-ups are ignored)
- * @param {number} workingIdx index among working sets to anchor on
- * @returns {object|null} the chosen anchor set, or null when there is none
- */
-export function getBestAnchorSet(sets, workingIdx) {
-  if (!sets || sets.length === 0) return null;
-  const working = sets.filter(s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup');
-  const indexed = working[workingIdx] ?? null;
-  const best = working.reduce((b, s) => (!b || (s.weight || 0) > (b.weight || 0)) ? s : b, null);
-  if (!indexed || !best || (indexed.weight || 0) >= (best.weight || 0)) return indexed ?? best;
-  return best;
-}
-
-/**
- * Reps to prefill for the next set: beat the anchor by one rep when that still
- * lands inside the target rep range, otherwise fall back to the range minimum.
- * Centralises the beat-rep rule the live session applies both after a working
- * set and on the warm-up → working switch.
- *
- * @param {object|null} anchorSet  the set to try to beat (needs actualReps)
- * @param {{repsMin:number, repsMax:number}} target  the rep-range target
- * @returns {number} the prefill rep count
- */
-export function prefillRepsForTarget(anchorSet, target) {
-  const beatRep = anchorSet ? (anchorSet.actualReps ?? anchorSet.actual_reps) + 1 : null;
-  return (beatRep && beatRep >= target.repsMin && beatRep <= target.repsMax)
-    ? beatRep
-    : target.repsMin;
-}
+// getBestAnchorSet (best-working-set seed) and prefillRepsForTarget
+// (beat-anchor-by-one-rep) were RETIRED in Campaign 20 Phase 2 Stage 12
+// (docs/live-prescription-campaign-20-2026-08-16/
+// CAMPAIGN-20-PHASE-1-DESIGN.md §3, authorities #2 and #3: MERGE). Both had
+// zero production callers once ActiveWorkoutScreen.js was wired through the
+// resolver. Their ideas live on inside src/lib/livePrescription.js: the
+// never-seed-below-session-best rule is the resolver's session-start
+// contract, and the beat-one-rep rule is the resolver's rep-progression
+// micro-rule, applied consistently instead of on one path only.
 
 /**
  * L07-F10: whether finishing the workout right now needs the "Finish

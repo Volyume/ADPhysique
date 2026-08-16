@@ -28,8 +28,16 @@ import {
 } from '../lib/nutritionEngine';
 import { runWeeklyCoach } from '../lib/weeklyCoach';
 import {
-  computeSetTargets, generateDeloadPrescription, VOLUME_LANDMARKS,
+  generateDeloadPrescription, VOLUME_LANDMARKS,
 } from '../lib/algorithms';
+// Campaign 20 Phase 2 Stage 12: computeSetTargets was RETIRED (algorithms.js's
+// own retirement comment). The DAY 1 (empty-history) and DAY 3 (FQ-3 effort
+// gate) journey beats below are re-expressed against the resolver that
+// replaced it, keeping the same journey narrative honest about the
+// Campaign 20 migration.
+import {
+  nextSessionOpeningLoad, resolveSetPrescription, assembleEvidencePacket, PROVENANCE,
+} from '../lib/livePrescription';
 import { computeWeeklySessionAllocation } from '../lib/coachApply';
 import { buildBlockLedger, BLOCK_CLASS } from '../lib/interBlock';
 import { resolveSeedRange } from '../lib/blockSeed';
@@ -118,9 +126,21 @@ describe('DAY 0: the profile produces safe, honest first targets', () => {
 // ── DAY 1: the first workout, zero history ─────────────────────────────
 
 describe('DAY 1: the first workout invents nothing', () => {
-  test('no previous sets means no fabricated prescription', () => {
-    expect(computeSetTargets([], 6, 12, 'kg', {})).toEqual({ targets: [], reason: null });
-    expect(computeSetTargets(null, 6, 12, 'kg', {})).toEqual({ targets: [], reason: null });
+  test('no previous history means no fabricated prescription (INSUFFICIENT_EVIDENCE / FIRST_TIME_BAND)', () => {
+    // The resolver's own empty-history contract, called directly.
+    expect(nextSessionOpeningLoad([], { min: 6, max: 12 }, { units: 'kg' }))
+      .toEqual({ weight: null, provenance: PROVENANCE.INSUFFICIENT_EVIDENCE, sourceAt: null });
+    // And end to end through a genuinely empty packet: the live-logger seed
+    // a brand-new athlete actually sees, never a fabricated weight.
+    const packet = assembleEvidencePacket({
+      exercise: { id: 'ex1', exerciseType: 'weight_reps', category: 'compound', units: 'kg' },
+      prescription: { repsMin: 6, repsMax: 12 },
+      rawHistory: [],
+      now: NOW,
+    });
+    const rx = resolveSetPrescription(packet, 1);
+    expect(rx.provenance).toBe(PROVENANCE.FIRST_TIME_BAND);
+    expect(rx.weight).toBeNull();
   });
 });
 
@@ -132,21 +152,35 @@ const DAY1_TOPPED = [
   { weight: 60, actualReps: 12, setType: 'straight' },
 ];
 
+// The resolver's own evidence-packet shape (§9.1) for the SAME topped-out
+// day-1 session above, one comparable history session at the given
+// post-workout difficulty rating - the equivalent-history construction the
+// design's FQ-3 test plan calls for.
+const DAY1_TOPPED_BAND = { min: 6, max: 12 };
+const day1ToppedSession = (difficulty) => ({
+  at: NOW,
+  difficulty,
+  band: DAY1_TOPPED_BAND,
+  working: DAY1_TOPPED.map((s, i) => ({ pos: i + 1, weight: s.weight, reps: s.actualReps, setType: s.setType })),
+});
+
 describe('DAY 3: overload waits for effort evidence (FQ-3)', () => {
   test('topped range with unknown session effort holds the load and says why', () => {
-    const out = computeSetTargets(DAY1_TOPPED, 6, 12, 'kg', {});
-    for (const t of out.targets) expect(t.weight).toBe(60);
-    expect(out.reason).toMatch(/topped the range/i);
+    const out = nextSessionOpeningLoad([day1ToppedSession(null)], DAY1_TOPPED_BAND, { units: 'kg' });
+    expect(out.weight).toBe(60);
+    expect(out.provenance).toBe(PROVENANCE.HOLD_EFFORT_UNKNOWN);
   });
 
   test('the same session rated easy (difficulty 2) earns the load increase', () => {
-    const out = computeSetTargets(DAY1_TOPPED, 6, 12, 'kg', { prevSessionDifficulty: 2 });
-    expect(out.targets.some((t) => t.weight > 60)).toBe(true);
+    const out = nextSessionOpeningLoad([day1ToppedSession(2)], DAY1_TOPPED_BAND, { units: 'kg' });
+    expect(out.weight).toBeGreaterThan(60);
+    expect(out.provenance).toBe(PROVENANCE.LOAD_ADVANCE_RANGE_TOPPED);
   });
 
   test('rated very hard (difficulty 4) the increase is withheld', () => {
-    const out = computeSetTargets(DAY1_TOPPED, 6, 12, 'kg', { prevSessionDifficulty: 4 });
-    for (const t of out.targets) expect(t.weight).toBe(60);
+    const out = nextSessionOpeningLoad([day1ToppedSession(4)], DAY1_TOPPED_BAND, { units: 'kg' });
+    expect(out.weight).toBe(60);
+    expect(out.provenance).toBe(PROVENANCE.HOLD_EFFORT_VERY_HARD);
   });
 });
 

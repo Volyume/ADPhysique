@@ -14,7 +14,7 @@
  * 45-day recency bound, deload exclusion, eligibility filtering), and Law G's
  * override-detection tolerance + per-session expiry. Each test is written to
  * FAIL if the resolver drifts off the pinned number — the house convention
- * (see computeSetTargets.fq3.test.js, sessionAdjustments.test.js).
+ * (see livePrescription.fq3.test.js, sessionAdjustments.test.js).
  */
 
 const {

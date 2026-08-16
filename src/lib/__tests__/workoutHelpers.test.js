@@ -1,14 +1,22 @@
 /**
  * workoutHelpers — pure live-session set logic extracted from
  * ActiveWorkoutScreen so the screen, Live Activity and watch companion share
- * one derivation and the "Set N of M", anchoring, prefill and 0 kg-guard rules
- * are locked off the 2,679-line screen.
+ * one derivation and the "Set N of M", weight-loggability and 0 kg-guard
+ * rules are locked off the 2,679-line screen.
+ *
+ * getBestAnchorSet and prefillRepsForTarget were RETIRED in Campaign 20
+ * Phase 2 Stage 12 (docs/live-prescription-campaign-20-2026-08-16/
+ * CAMPAIGN-20-PHASE-1-DESIGN.md §3, authorities #2/#3: MERGE) - their ideas
+ * (never-seed-below-session-best, beat-by-one-rep) are now the resolver's
+ * own rules in src/lib/livePrescription.js, pinned by
+ * src/lib/__tests__/livePrescription.test.js and
+ * src/lib/__tests__/livePrescription.fq3.test.js. This describe coverage
+ * was deleted, not migrated: the resolver's tests already pin the same laws
+ * at the authoritative site.
  */
 import {
   countProgressSets,
   setNumberForKind,
-  getBestAnchorSet,
-  prefillRepsForTarget,
   isLoggableWeight,
   parseTimeToSeconds,
   validateSetEntryValue,
@@ -57,77 +65,10 @@ describe('setNumberForKind', () => {
   });
 });
 
-describe('getBestAnchorSet', () => {
-  test('returns null when there are no sets', () => {
-    expect(getBestAnchorSet([], 0)).toBeNull();
-    expect(getBestAnchorSet(null, 0)).toBeNull();
-  });
-
-  test('ignores warm-ups when anchoring', () => {
-    const sets = [{ setType: 'warmup', weight: 999 }, { setType: 'straight', weight: 100 }];
-    expect(getBestAnchorSet(sets, 0)).toEqual({ setType: 'straight', weight: 100 });
-  });
-
-  test('never suggests lighter than the heaviest working set so far', () => {
-    const sets = [
-      { setType: 'straight', weight: 100 },
-      { setType: 'straight', weight: 80 }, // index 1 is lighter
-    ];
-    // Anchoring on the lighter index 1 must still return the heaviest (100).
-    expect(getBestAnchorSet(sets, 1).weight).toBe(100);
-  });
-
-  test('returns the indexed set when it is the heaviest', () => {
-    const sets = [{ setType: 'straight', weight: 80 }, { setType: 'straight', weight: 100 }];
-    expect(getBestAnchorSet(sets, 1).weight).toBe(100);
-  });
-
-  test('falls back to best when the index is out of range', () => {
-    const sets = [{ setType: 'straight', weight: 100 }];
-    expect(getBestAnchorSet(sets, 5).weight).toBe(100);
-  });
-
-  test('a logged warm-up does not shift the working-set mapping (D1 #2)', () => {
-    // set_number collides between warm-up and working (both start at 1), so a
-    // raw previous-session array sorted by set_number puts a warm-up at [0].
-    // Indexing working-set 0 must still land on the FIRST working set, never
-    // the warm-up that sorted ahead of it.
-    const prevSets = [
-      { setType: 'warmup', weight: 40, actualReps: 10 },
-      { setType: 'straight', weight: 100, actualReps: 8 },
-      { setType: 'straight', weight: 100, actualReps: 7 },
-    ];
-    expect(getBestAnchorSet(prevSets, 0).weight).toBe(100);
-    expect(getBestAnchorSet(prevSets, 0).actualReps).toBe(8);
-  });
-});
-
-describe('prefillRepsForTarget', () => {
-  const target = { repsMin: 8, repsMax: 12 };
-
-  test('beats the anchor by one rep when that stays in range', () => {
-    expect(prefillRepsForTarget({ actualReps: 9 }, target)).toBe(10);
-  });
-
-  test('falls back to the range minimum when beating it would exceed the max', () => {
-    expect(prefillRepsForTarget({ actualReps: 12 }, target)).toBe(8);
-  });
-
-  test('falls back to the range minimum when there is no anchor', () => {
-    expect(prefillRepsForTarget(null, target)).toBe(8);
-  });
-
-  test('falls back to the minimum when beat would land below the range', () => {
-    // anchor 6 -> beat 7, still below min 8 -> clamp to min.
-    expect(prefillRepsForTarget({ actualReps: 6 }, target)).toBe(8);
-  });
-
-  test('reads snake_case actual_reps on DB-shaped anchors (D1 #9)', () => {
-    // Previously anchorSet.actualReps + 1 was NaN for a DB-shaped anchor,
-    // silently falling back to repsMin instead of beating last.
-    expect(prefillRepsForTarget({ actual_reps: 9 }, target)).toBe(10);
-  });
-});
+// getBestAnchorSet and prefillRepsForTarget describes: DELETED (see the
+// file header comment) - RETIRED Campaign 20 Phase 2 Stage 12, laws now
+// pinned at src/lib/__tests__/livePrescription.test.js /
+// livePrescription.fq3.test.js.
 
 describe('isLoggableWeight', () => {
   test('bodyweight movements accept any value', () => {

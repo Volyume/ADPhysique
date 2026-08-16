@@ -60,7 +60,7 @@ import {
 // CAMPAIGN-20-PHASE-1-DESIGN.md, FOUNDER-RULINGS-2026-08-16.md): the single
 // authoritative live set prescription resolver, replacing the fragmented
 // authorities traced in the design doc's section 2 (best-anchor seed, ghost
-// decision, computeSetTargets' per-set loop, stalledAdvice).
+// decision, the retired computeSetTargets per-set loop, stalledAdvice).
 import {
   PROVENANCE,
   resolveSetPrescription,
@@ -104,8 +104,8 @@ import { shareSessionName } from '../lib/sessionShareData';
 // the old `rir: 2` default stamped a fabricated one onto every logged set -
 // which defeated the engine's own novice-overload guard. Per-set effort is
 // unknown unless genuinely known; the progression engine now reads the
-// SESSION-level difficulty rating instead (computeSetTargets'
-// prevSessionDifficulty).
+// SESSION-level difficulty rating instead (livePrescription.js's
+// prevSessionDifficulty evidence input, ex-computeSetTargets').
 const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: null };
 
 // C5-P15-01 (D96): a warm-up is not a record attempt, and must not be one
@@ -248,12 +248,12 @@ function WorkoutBottomSheet({
   );
 }
 
-// Returns the set to use as the rep-progression anchor.
-// If the same-indexed set was lighter than the session best, anchor to the best set
-// so the pre-fill targets beating the overall high-water mark, not just that slot's history.
-// getBestAnchorSet + countProgressSets live in src/lib/workoutHelpers.js
+// The rep-progression anchor and never-below-session-best seeding rules now
+// live inside the resolver (src/lib/livePrescription.js, Campaign 20 Phase 2
+// Stage 12 - getBestAnchorSet/prefillRepsForTarget retired, ideas merged per
+// design §3). countProgressSets still lives in src/lib/workoutHelpers.js
 // (COMP-001) so the screen, Live Activity and watch companion share the same
-// counting + anchoring rules, and the rules are unit-tested off the screen.
+// counting rule, unit-tested off the screen.
 
 // D43 S1: LoggedSetRow moved to src/components/workout/LoggedSetRow.js
 // (imported above). Re-exported here so existing `import { LoggedSetRow }
@@ -1735,6 +1735,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               reps: draft.reps ?? cs.reps,
               rir: draft.rir ?? cs.rir,
               setType: draft.setType || cs.setType,
+              // Lead fix (Stage 15 review): a draft is USER-TYPED work from a
+              // previous app run, never the app's own suggestion. Clearing
+              // the ghost flag here keeps the untouched-ghost re-seed effect
+              // (below, near `prescriptions`) from ever overwriting a
+              // restored draft with a recomputed prescription.
+              isGhost: false,
             }));
           }
         }
@@ -3041,6 +3047,35 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     }
     return list;
   }, [packet, targetSets, workingLogged]);
+
+  // Campaign 20 Phase 2 Stage 15 (restore/replay verification): keep the
+  // LIVE (not-yet-logged) box in step with a mid-session edit or delete of
+  // an EARLIER logged set. handleSaveEditedSet/handleDeleteEditedSet already
+  // update loggedSets/workoutExercises, which the packet/prescriptions memo
+  // above already reacts to (the upcoming-preview rows and the provenance
+  // line pick this up for free) - but the box's actual weight/reps VALUE
+  // lives in the separate `currentSet` state, seeded once by loadHistory or
+  // handleCompleteSet and otherwise left alone so a user's own typed entry
+  // is never silently overwritten. An untouched GHOST seed (isGhost: true -
+  // the app's own suggestion, never something the user typed) is not user
+  // input, so re-seeding it whenever the resolver's prescription for this
+  // exact position changes underneath it is safe and correct. Without this,
+  // editing or deleting the set the seed was computed from left the box
+  // showing the pre-edit prescription until the athlete backed out of the
+  // exercise and back in - a directly-connected defect surfaced by the
+  // Stage 15 restore/replay test plan (docs/live-prescription-campaign-20-
+  // 2026-08-16/CAMPAIGN-20-PHASE-1-DESIGN.md §20's replay tests).
+  useEffect(() => {
+    if (!currentSet.isGhost) return;
+    const live = prescriptions[workingLogged];
+    if (!live) return;
+    const w = live.prefill ? (live.weight ?? '') : '';
+    const r = live.repsTarget != null ? live.repsTarget : DEFAULT_SET.reps;
+    if (String(w) === String(currentSet.weight) && r === currentSet.reps) return;
+    setCurrentSet(cs => ({ ...cs, weight: w, reps: r, isGhost: live.prefill && live.weight != null }));
+    seededEntryRef.current = { weight: w, reps: r };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prescriptions, workingLogged]);
 
   // Card-header line 1 (COMP-001): where am I, what kind of set. The whole
   // line opens the set-type picker (it replaced SetEntry's card-foot row).

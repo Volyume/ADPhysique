@@ -25,7 +25,10 @@ import { computeLearnedRange } from '../lib/learnedRange';
 import { classifyMuscleBlock, buildBlockLedger, BLOCK_CLASS } from '../lib/interBlock';
 import { resolveSeedRange } from '../lib/blockSeed';
 import { deriveDeloadFlags } from '../lib/blockLedgerGather';
-import { computeSetTargets } from '../lib/algorithms';
+// Campaign 20 Phase 2 Stage 12: computeSetTargets was RETIRED (algorithms.js's
+// own retirement comment). The PHASE 6 layoff test below now points at the
+// resolver that replaced it.
+import { resolveSetPrescription, PROVENANCE } from '../lib/livePrescription';
 import fs from 'fs';
 import path from 'path';
 
@@ -263,14 +266,37 @@ describe('PHASE 6: the existing session-level re-entry mechanism (what protects 
     expect(engine).toMatch(/seniorMultiplier: isLayoff \? 0\.9 : null/);
   });
 
-  test('under a layoff multiplier the engine reduces every load and never claims an increase', () => {
-    const prev = [
-      { weight: 100, actualReps: 10, setType: 'straight' },
-      { weight: 100, actualReps: 10, setType: 'straight' },
+  test('under a layoff multiplier the resolver reduces the load and never claims an increase', () => {
+    // Re-expressed against resolveSetPrescription (computeSetTargets is
+    // retired). This exact invariant - senior.layoffDays > 7 must never
+    // exceed the un-flagged baseline, over a wide fuzz of history shapes -
+    // is already pinned exhaustively at livePrescription.properties.test.js's
+    // "introducing any senior recovery flag never makes the prescription
+    // MORE aggressive" describe ($label: 'layoffDays>7'). This pin stays as
+    // a narrow, concrete pointer assertion in THIS journey's own fixture
+    // (100kg topped, comparable history) rather than a duplicate fuzz -
+    // genuinely redundant coverage, kept because a broken import here would
+    // otherwise silently mean "calls a deleted function", not "law unproven".
+    const rawHistory = [
+      { at: Date.now() - 7 * 24 * 60 * 60 * 1000, difficulty: 2, sets: [
+        { exerciseId: 'ex1', setType: 'straight', weight: 100, actualReps: 10, setNumber: 1, targetRepsMin: 6, targetRepsMax: 12, createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000 },
+        { exerciseId: 'ex1', setType: 'straight', weight: 100, actualReps: 10, setNumber: 2, targetRepsMin: 6, targetRepsMax: 12, createdAt: Date.now() - 7 * 24 * 60 * 60 * 1000 },
+      ] },
     ];
-    const out = computeSetTargets(prev, 6, 12, 'kg', { layoffMultiplier: 0.9 });
-    for (const t of out.targets) expect(t.weight).toBeLessThan(100);
-    expect(out.reason).toBeTruthy();
+    // eslint-disable-next-line global-require
+    const { assembleEvidencePacket } = require('../lib/livePrescription');
+    const now = Date.now();
+    const baseline = resolveSetPrescription(
+      assembleEvidencePacket({ exercise: { id: 'ex1', exerciseType: 'weight_reps', category: 'compound', units: 'kg' }, prescription: { repsMin: 6, repsMax: 12 }, rawHistory, now }),
+      1,
+    );
+    const flagged = resolveSetPrescription(
+      assembleEvidencePacket({ exercise: { id: 'ex1', exerciseType: 'weight_reps', category: 'compound', units: 'kg' }, prescription: { repsMin: 6, repsMax: 12 }, senior: { layoffDays: 10 }, rawHistory, now }),
+      1,
+    );
+    expect(flagged.weight).toBeLessThan(100);
+    expect(flagged.weight).toBeLessThanOrEqual(baseline.weight);
+    expect(flagged.provenance).not.toBe(PROVENANCE.LOAD_ADVANCE_RANGE_TOPPED);
   });
 });
 

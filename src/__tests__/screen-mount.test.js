@@ -2271,6 +2271,256 @@ describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveW
   });
 });
 
+// ─── Campaign 20 Phase 2 Stage 15: restore/replay verification ────────────
+//
+// docs/live-prescription-campaign-20-2026-08-16/CAMPAIGN-20-PHASE-1-DESIGN.md
+// §20's "Replay / determinism tests" list, exercised at the screen level
+// (there is no persisted prescription state to replay - the resolver is
+// pure and re-derives everything from packetBase/loggedSets each render, so
+// "replay" here means: does every state-changing path that SHOULD feed the
+// packet actually do so). Self-contained helpers (small deliberate
+// duplication of the Campaign 20 Phase 2 describe block above, which scopes
+// its own helpers to its own closure).
+describe('Campaign 20 Phase 2 Stage 15: restore/replay verification', () => {
+  async function actFlush(fn) {
+    await TestRenderer.act(async () => {
+      if (fn) await fn();
+      for (let i = 0; i < 15; i++) await Promise.resolve();
+      await new Promise(r => setImmediate(r));
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+    });
+  }
+
+  function weightInput(tree) { return tree.root.findByProps({ testID: 'volyume-weight-input' }); }
+  function repsInput(tree) { return tree.root.findByProps({ testID: 'volyume-reps-input' }); }
+  function logButton(tree) { return tree.root.findByProps({ testID: 'volyume-btn-complete-set' }); }
+
+  async function typeAndLog(tree, weight, reps) {
+    await actFlush(() => { weightInput(tree).props.onChangeText(String(weight)); });
+    await actFlush(() => { repsInput(tree).props.onChangeText(String(reps)); });
+    await actFlush(() => logButton(tree).props.onPress());
+  }
+
+  function mkEntry({ exerciseId, repsMin, repsMax, sets = 3, loggedSets = [] }) {
+    return {
+      exercise: { id: exerciseId, name: 'Bench Press', equipment: 'Barbell', primaryMuscle: 'chest', exerciseType: 'weight_reps', exerciseCategory: 'compound' },
+      routineExercise: { id: `re-${exerciseId}`, recommendedSets: sets, recommendedRepsMin: repsMin, recommendedRepsMax: repsMax },
+      sets: loggedSets,
+    };
+  }
+
+  function histSets(exerciseId, weight, reps, { at = Date.now() - 3 * 86400000, repsMin = 8, repsMax = 15 } = {}) {
+    return [{ id: `h-${exerciseId}`, exerciseId, workoutId: `histW-${exerciseId}`, setNumber: 1, setType: 'straight', actualReps: reps, weight, createdAt: at, targetRepsMin: repsMin, targetRepsMax: repsMax }];
+  }
+
+  function baseState(entries, currentExerciseIndex = 0) {
+    return {
+      user: { id: 'u-c20s15', isLocal: false },
+      session: { user: { id: 'u-c20s15' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      userProfile: { firstName: 'C', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: { id: 'w-c20s15', userId: 'u-c20s15', routineId: 'r-c20s15', startedAt: Date.now(), isCompleted: false },
+      workoutStartTime: Date.now(),
+      workoutExercises: entries,
+      currentExerciseIndex,
+      restTimerActive: false,
+      accessibility: { reduceMotion: false },
+    };
+  }
+
+  test('(i) exercise jump away and back: the seed re-derives fresh, not stale, from loadHistory\'s evidence pass', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    // exA's history tops out at 80kg (in-band); exB's at 50kg. Distinct
+    // enough that a stale carry-over between the two is unmistakable.
+    database.getLastNWorkoutSets = async (exerciseId) => [histSets(exerciseId, exerciseId === 'exA' ? 80 : 50, 10)];
+    database.getWorkoutById = async (id) => ({ id, startedAt: Date.now() - 3 * 86400000, sessionDifficulty: 2 });
+    database.getAllCompletedSetsForExercise = async () => [];
+    database.getCurrentMesocycleWeek = async () => null;
+    let tree = null;
+    try {
+      useAppStore.setState(baseState([
+        mkEntry({ exerciseId: 'exA', repsMin: 8, repsMax: 15 }),
+        mkEntry({ exerciseId: 'exB', repsMin: 8, repsMax: 15 }),
+      ]));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      expect(weightInput(tree).props.value).toBe('80'); // exA's fresh seed
+
+      await actFlush(() => useAppStore.setState({ currentExerciseIndex: 1 }));
+      expect(weightInput(tree).props.value).toBe('50'); // exB's fresh seed, not exA's 80
+
+      await actFlush(() => useAppStore.setState({ currentExerciseIndex: 0 }));
+      expect(weightInput(tree).props.value).toBe('80'); // back to exA's fresh seed, not exB's 50
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  // LoggedSetRow is React.memo-wrapped; react-test-renderer's findAllByType
+  // matches the memo's INNER function instance, not the outer memo object
+  // this file imports, so type-based lookup silently finds nothing. Every
+  // logged-set row (and its editor, once open) carries a distinctive prop
+  // shape (`onEdit`+`set` when closed, `isEditing`+`onSaveEdit` when open),
+  // so match on that shape instead - robust regardless of memo wrapping.
+  function findLoggedRow(tree, predicate) {
+    return tree.root.findAll(n => n.props && typeof n.props.onEdit === 'function' && n.props.set && predicate(n.props.set))[0];
+  }
+  function findEditingRow(tree) {
+    return tree.root.findAll(n => n.props && n.props.isEditing && typeof n.props.onSaveEdit === 'function')[0];
+  }
+
+  test('(ii) editing a logged set: the live box re-seeds from the edited value, not the pre-edit one', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    database.getLastNWorkoutSets = async () => [];
+    database.getWorkoutById = async () => null;
+    database.getAllCompletedSetsForExercise = async () => [];
+    database.getCurrentMesocycleWeek = async () => null;
+    database.updateWorkoutSet = jest.fn(async () => true);
+    let tree = null;
+    try {
+      useAppStore.setState(baseState([mkEntry({ exerciseId: 'exH', repsMin: 8, repsMax: 12, sets: 3 })]));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+
+      // Log an ordinary, in-band set: no adjustment fires, Set 2's box shows
+      // the plain carry-forward (80).
+      await typeAndLog(tree, 80, 12);
+      expect(weightInput(tree).props.value).toBe('80');
+
+      // Edit that set DOWN to a genuine below-band miss (6 < repsMin 8).
+      let row = findLoggedRow(tree, (s) => s.weight === 80 && s.actualReps === 12);
+      expect(row).toBeTruthy();
+      await actFlush(() => row.props.onEdit(row.props.set));
+
+      row = findEditingRow(tree);
+      expect(row).toBeTruthy();
+      await actFlush(() => row.props.onChangeEditValue({ ...row.props.editValue, reps: 6 }));
+
+      row = findEditingRow(tree);
+      await actFlush(() => row.props.onSaveEdit());
+
+      // Set 2's box (still untouched/ghost) now reflects the EDITED
+      // evidence: a genuine miss drops the load by exactly one increment,
+      // honest reps target at the band minimum - the same law pinned for a
+      // freshly-logged weaker set in test (c) above, now proven for an edit.
+      expect(weightInput(tree).props.value).toBe('77.5');
+      expect(repsInput(tree).props.value).toBe('8');
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  test('(iii) deleting a logged set: the live box re-seeds as if that set never happened', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    database.getLastNWorkoutSets = async () => [];
+    database.getWorkoutById = async () => null;
+    database.getAllCompletedSetsForExercise = async () => [];
+    database.getCurrentMesocycleWeek = async () => null;
+    database.deleteWorkoutSet = jest.fn(async () => true);
+    // handleDeleteEditedSet routes through appAlert's real confirm-then-
+    // remove flow (Cancel/Delete). appAlert is a module-level singleton
+    // queue (src/components/AppAlert.js) shared for this ENTIRE test file -
+    // mounting a real AppAlertHost here would drain (and show, one at a
+    // time) every unrelated alert every earlier test in this file ever
+    // queued without an alert host mounted to consume it, burying this
+    // test's own confirm behind a backlog with no bearing on it. Swap the
+    // exported `appAlert` binding directly instead (same convention this
+    // whole file already uses for `database.*`), auto-pressing the
+    // destructive button exactly as a user tapping "Delete" would.
+    const AppAlertModule = require('../components/AppAlert');
+    const origAppAlert = AppAlertModule.appAlert;
+    AppAlertModule.appAlert = (title, message, buttons) => {
+      const destructive = Array.isArray(buttons) && buttons.find((b) => b.style === 'destructive');
+      destructive?.onPress?.();
+    };
+    let tree = null;
+    try {
+      useAppStore.setState(baseState([mkEntry({ exerciseId: 'exI', repsMin: 8, repsMax: 12, sets: 4 })]));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+
+      // Set 1: first exposure, nothing presented yet to override. Set 2:
+      // logged AT the presented weight (60 - no Law G override) but with a
+      // genuine overshoot (reps >= band.max + 2 = 14) so §12.1's ADD fires
+      // legitimately - Set 3's box becomes 62.5 (60 + one increment), not a
+      // typed literal, so reverting to 60 after the delete below can only
+      // come from the resolver re-deriving off the remaining evidence.
+      await typeAndLog(tree, 60, 10);
+      await typeAndLog(tree, 60, 14);
+      expect(weightInput(tree).props.value).toBe('62.5');
+
+      // Delete the second (60x14, the overshoot) set: open its editor, then
+      // trigger the real confirm-then-remove flow (handleDeleteEditedSet).
+      let row = findLoggedRow(tree, (s) => s.weight === 60 && s.actualReps === 14);
+      expect(row).toBeTruthy();
+      await actFlush(() => row.props.onEdit(row.props.set));
+
+      row = findEditingRow(tree);
+      expect(row).toBeTruthy();
+      await actFlush(() => row.props.onDeleteEdit(row.props.set));
+
+      // Only the 60x10 set remains logged; the next box's carry-forward
+      // must read 60, never the overshoot-driven 62.5.
+      expect(weightInput(tree).props.value).toBe('60');
+    } finally {
+      AppAlertModule.appAlert = origAppAlert;
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  test('(iv) app-restore path: prescription derives from authoritative DB + restored store state, nothing persisted of its own', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    // A comparable history session the resolver has never seen before this
+    // mount, deliberately LIGHTER than the restored today-evidence below -
+    // proves the seed is DERIVED fresh on mount from BOTH sources (not
+    // carried over from whatever a hypothetical persisted snapshot might
+    // have contained), with today's genuinely heavier restored evidence
+    // correctly outranking the older, lighter DB history (Law B).
+    database.getLastNWorkoutSets = async () => [histSets('exJ', 80, 12, { repsMin: 8, repsMax: 15 })];
+    database.getWorkoutById = async (id) => ({ id, startedAt: Date.now() - 3 * 86400000, sessionDifficulty: 2 });
+    database.getAllCompletedSetsForExercise = async () => [];
+    database.getCurrentMesocycleWeek = async () => null;
+    let tree = null;
+    try {
+      // Simulates the shape restoreActiveWorkout leaves in the store after
+      // a crash-recovery snapshot rehydrate (src/store/useAppStore.js
+      // _persistActiveWorkout/restoreActiveWorkout): activeWorkout,
+      // workoutExercises (with a set ALREADY logged this session, as if
+      // restored mid-workout) and currentExerciseIndex, nothing more - no
+      // prescription-shaped field anywhere in that snapshot.
+      useAppStore.setState(baseState([
+        mkEntry({
+          exerciseId: 'exJ', repsMin: 8, repsMax: 15, sets: 4,
+          loggedSets: [{ id: 'restored-1', exerciseId: 'exJ', setType: 'straight', weight: 100, actualReps: 12, setNumber: 1, createdAt: Date.now() - 60000 }],
+        }),
+      ]));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+
+      // Today's restored evidence (100x12, in band) outranks the single
+      // historical top load - Law B's current-session HOLD rule, exactly
+      // as it would for a live-logged set, proving loadHistory + the
+      // resolver ran fresh on this mount rather than trusting stale state.
+      expect(weightInput(tree).props.value).toBe('100');
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+});
+
 // ─── C3 (ultimate-audit 2026-07-03): the auto-advance countdown is visible
 // and cancellable ──────────────────────────────────────────────────────────
 //

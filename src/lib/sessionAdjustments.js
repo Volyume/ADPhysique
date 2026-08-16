@@ -285,23 +285,14 @@ export function applyReadinessToLoad(plannedLoad, tweak) {
   return Math.min(plannedLoad, trimmed);
 }
 
-/**
- * Apply the readiness load trim to a computeSetTargets targets array for
- * display. Non-mutating; reps are untouched; a lowered weight flips the
- * direction to 'decrease' so the beat line's glyph stays honest. Deload
- * prescriptions are never touched (deload owns its session, matching
- * COMP-015's R0).
- */
-export function applyReadinessToTargets(targets, tweak) {
-  if (!Array.isArray(targets) || targets.length === 0) return targets ?? [];
-  if (!tweak || !tweak.reduces) return targets;
-  return targets.map((t) => {
-    if (!t || t.isDeload) return t;
-    const weight = applyReadinessToLoad(t.weight, tweak);
-    if (weight === t.weight) return t;
-    return { ...t, weight, action: 'decrease' };
-  });
-}
+// applyReadinessToTargets (the readiness load trim over a computeSetTargets
+// targets array) was RETIRED in Campaign 20 Phase 2 Stage 12
+// (docs/live-prescription-campaign-20-2026-08-16/
+// CAMPAIGN-20-PHASE-1-DESIGN.md §3, authority #9: KEEP applies to
+// applyReadinessToLoad/Sets only, both untouched above). It had zero
+// production callers once ActiveWorkoutScreen.js was wired through the
+// resolver; the resolver mirrors applyReadinessToLoad internally as a senior
+// override applied AFTER resolution, exactly as before.
 
 // ── C18 re-entry amendment: reuse B2, don't reinvent it ─────────────────────
 //

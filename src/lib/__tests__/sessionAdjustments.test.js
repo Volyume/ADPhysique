@@ -25,10 +25,15 @@ import {
   getReadinessTweak,
   applyReadinessToSets,
   applyReadinessToLoad,
-  applyReadinessToTargets,
   getReEntryEaseTweak,
   resolveSessionEasingTweak,
 } from '../sessionAdjustments';
+// applyReadinessToTargets was RETIRED in Campaign 20 Phase 2 Stage 12
+// (docs/live-prescription-campaign-20-2026-08-16/
+// CAMPAIGN-20-PHASE-1-DESIGN.md §3, authority #9: KEEP applies to
+// applyReadinessToLoad/Sets above only, both still pinned below). It had
+// zero production callers once ActiveWorkoutScreen.js was wired through the
+// resolver, which mirrors it internally as a senior override.
 
 // sessionAdjustments.js also exports the COMP-015 IO orchestrator, which pulls
 // in the SQLite layer. The B2 functions under test are pure; stub the IO deps.
@@ -573,32 +578,11 @@ describe('B2 applyReadinessToLoad — 5 per cent trim, rounded DOWN to 0.25', ()
   });
 });
 
-describe('B2 applyReadinessToTargets — the suggested-load display layer', () => {
-  const poor = getReadinessTweak('below_par', {});
-
-  test('trims weights, marks the direction, and leaves reps alone', () => {
-    const targets = [
-      { weight: 100, repsMin: 8, repsMax: 12, action: 'increase' },
-      { weight: 60, repsMin: 9, repsMax: 12, action: 'add_rep' },
-    ];
-    const out = applyReadinessToTargets(targets, poor);
-    expect(out[0]).toMatchObject({ weight: 95, repsMin: 8, repsMax: 12, action: 'decrease' });
-    expect(out[1]).toMatchObject({ weight: 57, repsMin: 9, repsMax: 12, action: 'decrease' });
-    // input is never mutated
-    expect(targets[0].weight).toBe(100);
-  });
-
-  test('deload prescriptions are never touched', () => {
-    const targets = [{ weight: 40, repsMin: 5, repsMax: 5, action: 'deload', isDeload: true }];
-    expect(applyReadinessToTargets(targets, poor)[0]).toBe(targets[0]);
-  });
-
-  test('a non-reducing tweak returns the same array untouched', () => {
-    const targets = [{ weight: 100, repsMin: 8, repsMax: 12, action: 'maintain' }];
-    expect(applyReadinessToTargets(targets, getReadinessTweak('sharp', {}))).toBe(targets);
-    expect(applyReadinessToTargets(targets, null)).toBe(targets);
-  });
-});
+// "B2 applyReadinessToTargets — the suggested-load display layer" describe:
+// DELETED (see the applyReadinessToTargets import-site comment above) -
+// RETIRED Campaign 20 Phase 2 Stage 12. The resolver mirrors the same
+// downward-only trim internally over applyReadinessToLoad, still pinned
+// below.
 
 describe('B2 HARD INVARIANT — downward-only fuzz over the rule table', () => {
   const intents = ['sharp', 'average', 'below_par', null, undefined, '', 'nonsense'];
@@ -636,27 +620,10 @@ describe('B2 HARD INVARIANT — downward-only fuzz over the rule table', () => {
         expect(Object.is(adjLoad, plannedLoad)).toBe(true);
       }
 
-      // per-set targets: every weight <= plan, reps untouched
-      const targets = Array.from({ length: rint(0, 4) }, () => ({
-        weight: pick([rfloat(0, 250), 0, rfloat(0.05, 1)]),
-        repsMin: rint(1, 15),
-        repsMax: rint(5, 20),
-        action: pick(['increase', 'maintain', 'add_rep', 'decrease']),
-      }));
-      const outTargets = applyReadinessToTargets(targets, tweak);
-      expect(outTargets.length).toBe(targets.length);
-      outTargets.forEach((t, j) => {
-        expect(t.weight).toBeLessThanOrEqual(targets[j].weight);
-        expect(t.repsMin).toBe(targets[j].repsMin);
-        expect(t.repsMax).toBe(targets[j].repsMax);
-      });
-
       // determinism: the same inputs give JSON-identical outputs on a re-run
       expect(JSON.stringify(getReadinessTweak(intent, chips))).toBe(JSON.stringify(tweak ?? null));
       expect(Object.is(applyReadinessToSets(plannedSets, tweak), adjSets)).toBe(true);
       expect(Object.is(applyReadinessToLoad(plannedLoad, tweak), adjLoad)).toBe(true);
-      expect(JSON.stringify(applyReadinessToTargets(targets, tweak)))
-        .toBe(JSON.stringify(outTargets));
     }
   });
 });

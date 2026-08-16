@@ -5,11 +5,9 @@
  * return.
  */
 import {
-  computeSetTargets,
   detectPlateau,
   calculateWeeklyVolume,
   allocateExerciseVolume,
-  getProgressionSuggestion,
 } from '../algorithms';
 import {
   computeWeeklyWeightChange,
@@ -18,28 +16,32 @@ import {
   PROTEIN_CUSTOM_MAX_GKGBW,
   PROTEIN_APPROACHES,
 } from '../nutritionEngine';
+// Campaign 20 Phase 2 Stage 12: computeSetTargets and getProgressionSuggestion
+// were RETIRED (algorithms.js's own retirement comment). The P4 jump-cap law
+// migrates onto resolveLoadIncrement below (the cap maths lives there now,
+// exported, and is the ONE increment source every resolver caller shares -
+// design §10.2). The P1 describe that followed this block in the original
+// file compared getProgressionSuggestion's RIR-gated hold against
+// computeSetTargets' - both functions and the per-set RIR contract itself
+// are gone (FQ-3/D96 replaced per-set RIR with session-level difficulty
+// throughout), so that comparison has no surviving subject and was deleted
+// outright, not migrated.
+import { resolveLoadIncrement } from '../livePrescription';
 
 // ── P4: the 5% session-over-session jump cap must apply on light loads ──
-describe('computeSetTargets jump cap (P4)', () => {
-  test('a 5 kg set at the top of the range adds a small step, not the full increment', () => {
-    const { targets } = computeSetTargets(
-      [{ weight: 5, actualReps: 12 }],
-      8, 12, 'kg', { exerciseCategory: 'isolation', prevSessionDifficulty: 2 }, // FQ-3
-    );
-    expect(targets[0].action).toBe('increase');
+describe('resolveLoadIncrement jump cap (P4, migrated from computeSetTargets)', () => {
+  test('a 5 kg isolation increment is a small step, not the full increment', () => {
+    const inc = resolveLoadIncrement(5, { units: 'kg', category: 'isolation' });
     // 5% of 5 = 0.25; the previous code disabled the cap below 10 units and
-    // would have jumped the full ~1.25 isolation increment (a ~25% jump).
-    expect(targets[0].weight).toBeGreaterThan(5);
-    expect(targets[0].weight).toBeLessThanOrEqual(5.5);
+    // would have jumped the full ~0.5 isolation increment (a ~10% jump).
+    expect(5 + inc).toBeGreaterThan(5);
+    expect(5 + inc).toBeLessThanOrEqual(5.5);
   });
 
-  test('a heavy set is still bounded at ~5%', () => {
-    const { targets } = computeSetTargets(
-      [{ weight: 100, actualReps: 12 }],
-      8, 12, 'kg', { exerciseCategory: 'compound', prevSessionDifficulty: 2 }, // FQ-3
-    );
-    expect(targets[0].weight).toBeGreaterThan(100);
-    expect(targets[0].weight).toBeLessThanOrEqual(105);
+  test('a heavy compound increment is still bounded at ~5%', () => {
+    const inc = resolveLoadIncrement(100, { units: 'kg', category: 'compound' });
+    expect(100 + inc).toBeGreaterThan(100);
+    expect(100 + inc).toBeLessThanOrEqual(105);
   });
 });
 
@@ -125,35 +127,6 @@ describe('allocateExerciseVolume shared model (P1.1)', () => {
     const v = calculateWeeklyVolume(sets, map);
     expect(v.chest).toEqual({ workingSets: 1, reps: 10, tonnage: 600 });
     expect(v.triceps).toEqual({ workingSets: 0.5, reps: 0, tonnage: 0 });
-  });
-});
-
-// ── P1: getProgressionSuggestion shares computeSetTargets' RIR contract ──
-describe('getProgressionSuggestion / computeSetTargets agree on missing RIR (P1)', () => {
-  test('hit top of range but no RIR logged: both hold (no optimistic increase)', () => {
-    const prev = [{ weight: 80, actualReps: 12, set_type: 'straight' }]; // rir not logged
-    const suggestion = getProgressionSuggestion([], prev, 8, 12, 'kg');
-    expect(suggestion.action).toBe('maintain');
-    expect(suggestion.suggestedWeight).toBe(80);
-
-    const { targets } = computeSetTargets(prev, 8, 12, 'kg');
-    expect(targets[0].action).toBe('maintain');
-  });
-
-  test('hit top of range with RIR logged: increases', () => {
-    const prev = [{ weight: 80, actualReps: 12, rir: 2, set_type: 'straight' }];
-    expect(getProgressionSuggestion([], prev, 8, 12, 'kg').action).toBe('increase_weight');
-  });
-
-  test('no configured rep band still progresses on a logged RIR (default 6-12)', () => {
-    const prev = [{ weight: 80, actualReps: 12, rir: 2 }];
-    // Previously the missing-max fallback made an increase impossible.
-    expect(getProgressionSuggestion([], prev, null, null, 'kg').action).toBe('increase_weight');
-  });
-
-  test('grinding below the rep minimum with a low RIR suggests a decrease', () => {
-    const prev = [{ weight: 100, actualReps: 4, rir: 0 }];
-    expect(getProgressionSuggestion([], prev, 8, 12, 'kg').action).toBe('decrease_weight');
   });
 });
 
