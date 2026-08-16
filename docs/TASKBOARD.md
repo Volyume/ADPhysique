@@ -2032,3 +2032,17 @@ migration, per the campaign brief. Baseline traced: main `9816b601`.
   isolation, reproduced on the pre-campaign baseline; needs its own
   session. Founder device retest of the new prescription flow is the
   outstanding action (checklist in the Phase 2 handover message).
+
+## CAMPAIGN 21 (2026-08-16) — coach decision-graph validation & whole-athlete scenario matrix. IN FLIGHT.
+
+Founder order 2026-08-16 (validation + repair, no new features). Branch
+`claude/campaign21-coach-validation` off main `c6eb3cf2`. Fable leads;
+sonnet traces/oracles/reviews; haiku expands mechanics. Campaign folder:
+`docs/coach-validation-campaign-21-2026-08-16/` (decision graph, ledger,
+oracle, coverage). RECOVERY PATH: on session death, `git status` on the
+branch; the ledger + graph docs in the campaign folder are the resume
+point — uncommitted work is lead-reviewed against them and landed or the
+step relaunched from the last green commit. Agents never commit. Steps:
+(1) graph mapping → (2-3) ledger + oracle lock → (4-6) 180+ scenario
+matrix through real seams → (7-11) restraint/precedence/boundary/temporal
++ defect triage → (12-13) hostile review + coverage gate → land.
