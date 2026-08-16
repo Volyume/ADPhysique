@@ -116,11 +116,13 @@ describe('R2-3 RestTimer row cannot clip a control off the right edge', () => {
   });
 
   test('the ±15 and Skip controls never shrink (so they stay on-screen)', () => {
-    // The frozen skipBtn/adjBtn blocks each pin flexShrink: 0 (the live
-    // mirrors carry only colour keys), so both R2-3 markers must be present.
-    expect(REST).toContain('R2-3: never shrink below its label width');
-    expect(REST).toContain('R2-3: keep full size when the row is tight');
+    // Phase 2B re-anchor: the compact strip keeps the R2-3 GUARANTEE (the
+    // readout flexes/shrinks, the controls never do) without the old comment
+    // markers - the frozen skipBtn/adjBtn blocks still pin flexShrink: 0,
+    // and the controls keep their full 44dp height inside the strip.
     expect((REST.match(/flexShrink: 0/g) || []).length).toBeGreaterThanOrEqual(2);
+    expect(REST).toMatch(/timerReadout: \{\s*flex: 1,\s*minWidth: 0,/);
+    expect((REST.match(/minHeight: 44/g) || []).length).toBeGreaterThanOrEqual(2);
   });
 });
 
@@ -134,18 +136,15 @@ describe('R2-3 the set-card note pencil joins the icon-button family', () => {
   });
 });
 
-describe('R2-4 est-max is its own quiet caption line, not cramped under Reps', () => {
-  test('the est-max readout has a dedicated caption row', () => {
-    const b = styleBlock(SETENTRY, 'e1rmCaptionRow');
-    expect(b).toBeTruthy();
-    expect(b).toContain("justifyContent: 'flex-end'");
-    // it renders through that row, and the old in-label-column row is gone
-    expect(SETENTRY).toContain('styles.e1rmCaptionRow');
-    expect(SETENTRY).not.toContain('e1rmRow');
-  });
-
-  test('the est-max readout is tabular (data numeral)', () => {
-    expect(styleBlock(SETENTRY, 'e1rmHint')).toContain("type.num('caption')");
+describe('R2-4 RETIRED (phase 2B): routine est-max copy is gone from the entry card', () => {
+  // Founder ruling (physical-device screenshots, failure 7): "Est. max ~X"
+  // repeated on every surface and read as noise. R2-4's layout concern is
+  // moot - the caption row it laid out no longer exists. The record system
+  // (recordRow) remains the one max-adjacent surface.
+  test('no est-max caption renders in SetEntry', () => {
+    expect(SETENTRY).not.toContain('Est. max');
+    expect(SETENTRY).not.toContain('e1rmCaptionRow');
+    expect(SETENTRY).toContain('recordLine?.isRecord');
   });
 });
 

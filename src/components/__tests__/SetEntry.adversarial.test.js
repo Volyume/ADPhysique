@@ -67,7 +67,13 @@ describe('SetEntry — no bogus Est. max on non-load schemas', () => {
     expect(textContains(tree, 'Est. max')).toBe(false);
   });
 
-  test('control: a weight_reps set DOES show Est. max', () => {
+  // Phase 2B (founder ruling, physical-device screenshots): routine
+  // estimated-max copy is removed from EVERY schema, weight_reps included -
+  // the old control test inverted. The stronger absence law supersedes the
+  // per-schema gating this suite originally attacked: no schema can show a
+  // bogus estimate when none shows one at all. Record detection lives on
+  // through the recordLine/PR system, pinned elsewhere.
+  test('control inverted: a weight_reps set no longer shows routine Est. max either', () => {
     let tree;
     act(() => {
       tree = create(
@@ -75,6 +81,6 @@ describe('SetEntry — no bogus Est. max on non-load schemas', () => {
                   onChange={() => {}} exerciseType="weight_reps" />,
       );
     });
-    expect(textContains(tree, 'Est. max')).toBe(true);
+    expect(textContains(tree, 'Est. max')).toBe(false);
   });
 });

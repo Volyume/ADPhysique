@@ -31,10 +31,12 @@ import StatusStrip from '../components/workout/StatusStrip';
 // dedicated workout components; the old inline chrome is deleted. Contract:
 // docs/logger-rebuild-2026-07-12/BEHAVIOURAL-CONTRACT.md.
 import WorkoutHeader from '../components/workout/WorkoutHeader';
-// Logger redesign phase 2: the horizontal ExerciseNav pill strip is replaced
-// by the vertical workout list (WorkoutExerciseRow per non-current exercise,
-// the current one expanded inline in the same list).
-import WorkoutExerciseRow from '../components/workout/WorkoutExerciseRow';
+// Logger phase 2B (physical-device corrective redesign): the whole session
+// renders as ONE compact outline navigator under the header (WorkoutOutline)
+// with the active exercise workspace below it - replacing the phase-2
+// card-per-exercise vertical list that buried forward navigation beneath the
+// active logger on a real device.
+import WorkoutOutline from '../components/workout/WorkoutOutline';
 import NowCard from '../components/workout/NowCard';
 import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
@@ -319,6 +321,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setExtraSetArmed(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentExerciseIndex, loggedSets.length]);
+  // Phase 2B ACTIVE-SET STABILITY (screenshot failure 1): once three or more
+  // sets are logged, the earlier ones collapse behind one constant-height
+  // line and only the MOST RECENT completed set stays expanded above the
+  // active row - so logging more work never pushes the inputs farther down
+  // the page. Tap the line to expand (edit/delete lives on the expanded
+  // rows); collapses again on every exercise change.
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+  useEffect(() => { setHistoryExpanded(false); }, [currentExerciseIndex]);
   // 'add' opens the picker to append an exercise; 'swap' opens it to replace the
   // current one. Lets the Swap sheet fall through to the full library and the
   // custom-exercise form when the ranked suggestions aren't what the user wants.
@@ -718,6 +728,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (i === currentExerciseIndex) return;
     audit('workout.exercise.jump', { fromIndex: currentExerciseIndex, toIndex: i });
     setCurrentExerciseIndex(i);
+    setTimeout(() => scrollRef.current?.scrollTo({ y: 0, animated: false }), 50);
   }
 
   // D44: the cue for a group-driven focus change (the forward alternation
@@ -2868,30 +2879,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setCurrentSet(next);
   }, [currentSet.isGhost]);
 
-  // Logger redesign phase 2: one compact row per NON-CURRENT exercise in the
-  // vertical workout list. Same done/total/skipped derivation the old
-  // ExerciseNav items mapping used (non-current rows read the routine row's
-  // own recommendedSets; the current exercise's adjusted target lives in its
-  // expanded block). Tap = jump only (handleJumpToExercise); long-press =
-  // the ONE reorder path, the existing block-aware reorder sheet.
-  const renderWorkoutListRow = (entry, i) => {
+  // Logger phase 2B: the outline navigator's rows - the same done/total/
+  // skipped derivation the phase-2 list (and ExerciseNav before it) used;
+  // the current exercise's total honours any session adjustment. Tap = jump
+  // only (handleJumpToExercise); long-press = the ONE reorder path, the
+  // existing block-aware reorder sheet.
+  const outlineItems = workoutExercises.map((entry, i) => {
     const gid = entry.supersetGroupId ?? null;
     const groupSize = gid != null
       ? workoutExercises.filter((e) => (e.supersetGroupId ?? null) === gid).length
       : 0;
-    return (
-      <WorkoutExerciseRow
-        key={keyForWorkoutExercise(entry)}
-        name={entry.exercise?.name ?? ''}
-        done={countProgressSets(entry.sets ?? [])}
-        total={entry.routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS}
-        skipped={!!entry._timeCrunchSkipped}
-        groupLabel={gid != null ? (groupSize > 2 ? 'Giant set' : 'Superset') : null}
-        onPress={() => handleJumpToExercise(i)}
-        onLongPress={workoutExercises.length > 1 ? () => setShowReorderSheet(true) : undefined}
-      />
-    );
-  };
+    return {
+      key: keyForWorkoutExercise(entry),
+      name: entry.exercise?.name ?? '',
+      done: countProgressSets(entry.sets ?? []),
+      total: (i === currentExerciseIndex
+        ? adjustedSetCount
+        : entry.routineExercise?.recommendedSets) || DEFAULT_FREEFORM_TARGET_SETS,
+      skipped: !!entry._timeCrunchSkipped,
+      groupLabel: gid != null ? (groupSize > 2 ? 'Giant set' : 'Superset') : null,
+    };
+  });
 
   if (!exercise) {
     return (
@@ -2932,13 +2940,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {/* COMP-013 starter-session banner moved into the collapsed "N notes"
             rail above the set-entry card (U-A-1). */}
 
-        {/* Logger redesign phase 2: the horizontal pill strip is replaced by
-            the VERTICAL workout list inside the scroll below - every
-            exercise stays visible/reachable; the current one expands inline
-            in place. renderWorkoutListRow builds each compact row; the same
-            done/total/skipped derivation ExerciseNav used, same jump-only
-            tap semantics (onSelect -> handleJumpToExercise), plus long-press
-            opening the existing block-aware reorder sheet. */}
+        {/* Phase 2B: the compact workout outline - the whole session as a
+            quiet navigator FIXED under the header, never buried beneath the
+            active logger. Every exercise is one tap away at all times
+            (failure 5); tap = jump only, long-press = the reorder sheet. */}
+        <WorkoutOutline
+          items={outlineItems}
+          currentIndex={currentExerciseIndex}
+          onSelect={handleJumpToExercise}
+          onReorder={workoutExercises.length > 1 ? () => setShowReorderSheet(true) : undefined}
+        />
 
         <ScrollView
           ref={scrollRef}
@@ -2970,13 +2981,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // which is the defect that made the screen unusable.
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
         >
-          {/* Vertical workout list: exercises BEFORE the current one, as
-              compact jump-only rows. */}
-          {workoutExercises.map((entry, i) => (i < currentExerciseIndex ? renderWorkoutListRow(entry, i) : null))}
-
-          {/* The CURRENT exercise, expanded inline in the same list. */}
-          <View style={[styles.expandedExercise, live.expandedExercise]}>
-
           {/* Exercise Title */}
           <View style={styles.exerciseHeader}>
             <View style={styles.exerciseNameRow}>
@@ -3221,43 +3225,69 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             return <StatusStrip items={items} />;
           })()}
 
-          {/* Rest timer, sits ABOVE the SetEntry card, in the slot vacated
-              by the old weekly-sets calendar row. Stays in the user's
-              eye-line with the inputs but doesn't clutter the card border.
-              The timer only renders when active so this space is normally
-              empty. */}
-          <RestTimer />
-
-          {/* Logger redesign phase 2: ONE continuous set sequence. Completed
-              sets render ABOVE the active entry so the exercise reads top to
-              bottom as set 1, set 2, ... active set, upcoming - one list,
-              not a detached entry card plus a separate history. Rows keep
-              their stable-id keys, in-place editing, long-press delete and
-              PR re-evaluation exactly as before (D43 S4 / L07-F2). */}
-          {loggedSets.length > 0 && (
-            <View style={styles.loggedSection}>
-              {loggedSets.map((s, i) => (
-                <AnimatedRow key={s.id ?? `row-${i}`}>
-                  <LoggedSetRow
-                    set={s}
-                    units={units}
-                    progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
-                    exerciseType={activeExerciseType}
-                    onEdit={openEditSet}
-                    onDelete={openDeleteFromMenu}
-                    isEditing={editingSet != null && editingSet.id === s.id}
-                    editValue={editingSet != null && editingSet.id === s.id ? editValue : null}
-                    onChangeEditValue={setEditValue}
-                    onSaveEdit={handleSaveEditedSet}
-                    onCancelEdit={closeEditSet}
-                    onDeleteEdit={handleDeleteEditedSet}
-                    saving={editingSet != null && editingSet.id === s.id ? saving : false}
-                    weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
-                  />
-                </AnimatedRow>
-              ))}
-            </View>
-          )}
+          {/* ONE continuous set sequence (phase 2B): completed rows above the
+              active entry, upcoming previews below it - and, for ACTIVE-SET
+              STABILITY (screenshot failure 1), once 3+ sets are logged the
+              earlier ones fold behind a single constant-height line with
+              only the most recent set left expanded, so the inputs stop
+              drifting down the page as work accumulates. Rows keep their
+              stable-id keys, in-place editing, long-press delete and PR
+              re-evaluation exactly as before (D43 S4 / L07-F2). */}
+          {loggedSets.length > 0 && (() => {
+            const collapsed = loggedSets.length >= 3 && !historyExpanded;
+            const visible = collapsed ? loggedSets.slice(-1) : loggedSets;
+            const hiddenCount = loggedSets.length - visible.length;
+            return (
+              <View style={styles.loggedSection}>
+                {loggedSets.length >= 3 && (
+                  <TouchableOpacity
+                    style={styles.historyToggle}
+                    onPress={() => { hapticsVocab.selection(); setHistoryExpanded(v => !v); }}
+                    hitSlop={{ top: 4, bottom: 4, left: 8, right: 8 }}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: !collapsed }}
+                    accessibilityLabel={collapsed
+                      ? `Show ${hiddenCount} earlier logged set${hiddenCount === 1 ? '' : 's'}`
+                      : 'Hide earlier logged sets'}
+                  >
+                    <Ionicons
+                      name={collapsed ? 'chevron-down' : 'chevron-up'}
+                      size={13}
+                      color={t.colors.textMuted}
+                    />
+                    <Text style={[styles.historyToggleText, live.historyToggleText]}>
+                      {collapsed
+                        ? `${hiddenCount} earlier set${hiddenCount === 1 ? '' : 's'} logged`
+                        : 'Hide earlier sets'}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {visible.map((s) => {
+                  const i = loggedSets.indexOf(s);
+                  return (
+                    <AnimatedRow key={s.id ?? `row-${i}`}>
+                      <LoggedSetRow
+                        set={s}
+                        units={units}
+                        progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
+                        exerciseType={activeExerciseType}
+                        onEdit={openEditSet}
+                        onDelete={openDeleteFromMenu}
+                        isEditing={editingSet != null && editingSet.id === s.id}
+                        editValue={editingSet != null && editingSet.id === s.id ? editValue : null}
+                        onChangeEditValue={setEditValue}
+                        onSaveEdit={handleSaveEditedSet}
+                        onCancelEdit={closeEditSet}
+                        onDeleteEdit={handleDeleteEditedSet}
+                        saving={editingSet != null && editingSet.id === s.id ? saving : false}
+                        weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
+                      />
+                    </AnimatedRow>
+                  );
+                })}
+              </View>
+            );
+          })()}
 
           {/* R3 rebuild (docs/logger-rebuild-2026-07-12/BEHAVIOURAL-CONTRACT.md
               section 3): the Now card. ONE context line, priority-ordered:
@@ -3489,7 +3519,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   ? `${routineExercise.recommendedRepsMin}-${routineExercise.recommendedRepsMax}`
                   : null);
               rows.push(
-                <View key={`upcoming-${n}`} style={[styles.upcomingSetRow, live.upcomingSetRow]}>
+                <View key={`upcoming-${n}`} style={styles.upcomingSetRow}>
                   <Text style={[styles.upcomingSetNum, live.upcomingSetNum]}>{n}</Text>
                   <Text style={[styles.upcomingSetText, live.upcomingSetText]}>
                     {`Set ${n}${range ? ` - ${range} reps` : ''}`}
@@ -3499,11 +3529,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             }
             return rows.length ? <View style={styles.upcomingSection}>{rows}</View> : null;
           })()}
-
-          </View>
-
-          {/* Vertical workout list: exercises AFTER the current one. */}
-          {workoutExercises.map((entry, i) => (i > currentExerciseIndex ? renderWorkoutListRow(entry, i) : null))}
 
           <View style={{ height: Math.max(spacing.xxl, safeBottom + spacing.lg) }} />
         </ScrollView>
@@ -3529,6 +3554,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {/* D87: primaryIcon carries the record signal through to the moment
             of commitment. Icon only; the label and its spoken twin are
             unchanged (R4/D64 same-string rule). */}
+        {/* Phase 2B: the compact rest strip docks HERE, above the bottom
+            bar and outside the workspace scroll - rest state is glanceable
+            by the thumb without ever pushing the active set down the page
+            (screenshot failure 2). RestTimer self-hides when idle. */}
+        <RestTimer />
+
         {cluster ? null : (
           <WorkoutBottomBar
             primaryLabel={
@@ -4852,25 +4883,25 @@ const styles = StyleSheet.create({
   supersetChipText: { ...type.captionStrong, color: colors.primary },
   loggedSection: { gap: spacing.xs2 },
   loggedTitle: { ...type.captionStrong, color: colors.textMuted },
-  // Logger redesign phase 2: the current exercise's expanded block within
-  // the vertical workout list. Deliberately undecorated - the compact rows
-  // above/below carry borders; the expanded content IS the visual weight
-  // (no nested card shells, per the accepted visual direction).
-  expandedExercise: { marginBottom: spacing.xs },
-  // Upcoming prescribed sets: quiet read-only previews closing the
-  // continuous set sequence under the active entry.
-  upcomingSection: { gap: spacing.xs2, marginTop: spacing.xs },
+  // Upcoming prescribed sets: quiet read-only LINES closing the continuous
+  // sequence - phase 2B retired the dashed bordered cards (an unperformed
+  // future set must never carry the visual mass of the active one).
+  upcomingSection: { gap: 0, marginTop: spacing.xxs },
   upcomingSetRow: {
-    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
-    minHeight: workoutLoggerSize.loggedSetMinHeight,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.borderSubtle,
-    borderStyle: 'dashed',
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs2,
+    minHeight: 26,
+    paddingHorizontal: spacing.sm,
   },
-  upcomingSetNum: { ...type.num('caption'), color: colors.textMuted, minWidth: 16, textAlign: 'center' },
+  upcomingSetNum: { ...type.num('caption'), color: colors.textMuted, minWidth: 22, textAlign: 'center' },
   upcomingSetText: { ...type.caption, color: colors.textMuted },
+  // Phase 2B: the fold line for earlier completed sets (active-set
+  // stability). One quiet row, constant height whatever it hides.
+  historyToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    minHeight: 28,
+    paddingHorizontal: spacing.sm,
+  },
+  historyToggleText: { ...type.caption, color: colors.textMuted },
   // D43 S1: loggedSetRow/loggedSetRowWarmup/loggedSetTextWarmup/setNumBadge/
   // setNumText/loggedSetText/loggedEst1RM (LoggedSetRow-exclusive) and
   // emptyView/emptyContent/emptyTitle/emptySubtitle/addFirstBtn/
@@ -5129,12 +5160,10 @@ function buildLiveStyles(t) {
     supersetChip: { backgroundColor: t.colors.primaryBg },
     supersetChipText: { ...t.type.captionStrong, color: t.colors.primary },
     loggedTitle: { ...t.type.captionStrong, color: t.colors.textMuted },
-    // Logger redesign phase 2: live-theme mirrors for the vertical-list
-    // additions (expandedExercise itself carries no colour).
-    expandedExercise: {},
-    upcomingSetRow: { borderColor: t.colors.borderSubtle },
+    // Phase 2B live-theme mirrors for the sequence additions.
     upcomingSetNum: { ...t.type.num('caption'), color: t.colors.textMuted },
     upcomingSetText: { ...t.type.caption, color: t.colors.textMuted },
+    historyToggleText: { ...t.type.caption, color: t.colors.textMuted },
     // D43 S1: LoggedSetRow-exclusive (loggedSetRow/loggedSetRowWarmup/
     // loggedSetTextWarmup/setNumBadge/setNumText/loggedSetText/loggedEst1RM)
     // and EmptyExerciseView-exclusive (emptyView/emptyTitle/emptySubtitle/

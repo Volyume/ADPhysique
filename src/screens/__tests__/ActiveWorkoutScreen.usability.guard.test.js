@@ -172,11 +172,14 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(SET_ENTRY).toContain("...type.num('bodyStrong')");
     expect(SET_ENTRY).not.toContain('fontWeight: fontWeight.bold');
     expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
-    // R3 rebuild: the Now card is the NowCard component on the house Card
-    // (radius lg / padding lg as props there); position + target fold into
-    // its ONE tappable line; the prefill row keeps a 36 min-height target.
-    expect(NOW_CARD).toContain('radius="lg"');
-    expect(NOW_CARD).toContain('padding="lg"');
+    // Phase 2B (physical-device corrective redesign): the house-Card shell
+    // is retired - the active set renders as the CURRENT ROW of the one
+    // continuous sequence, a light surface with a 3dp left accent, never a
+    // giant detached card. Position + target still fold into its ONE
+    // tappable line; the prefill row keeps a 36 min-height target.
+    expect(NOW_CARD).not.toContain('radius="lg"');
+    expect(NOW_CARD).not.toContain("from '../Card'");
+    expect(NOW_CARD).toContain('borderLeftWidth: 3');
     expect(NOW_CARD).toContain('positionLabel');
     expect(ACTIVE_WORKOUT).toContain('positionLabel={orientationLabel}');
     expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
@@ -188,7 +191,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // src/components/workout/LoggedSetRow.js's own frozen styles.
     expect(LOGGED_SET_ROW).toMatch(/loggedSetRow: \{[\s\S]*minHeight: workoutLoggerSize\.loggedSetMinHeight/);
     expect(ACTIVE_WORKOUT).toContain('numberOfLines={1}');
-    expect(SET_ENTRY).toContain('>Est. max ~{Math.round(live1RM)}{units}</Text>');
+    // Phase 2B (founder ruling, screenshot failure 7): routine estimated-max
+    // copy is REMOVED from the entry card - the record system (recordRow /
+    // recordLine.isRecord) is the only max-adjacent surface left.
+    expect(SET_ENTRY).not.toContain('Est. max');
+    expect(SET_ENTRY).toContain('recordLine?.isRecord');
     expect(SET_ENTRY).not.toContain('>−</Text>');
     expect(SET_ENTRY).not.toContain('Est. max ≈');
   });

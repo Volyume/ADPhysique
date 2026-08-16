@@ -44,9 +44,11 @@ describe('jump is jump: tapping another exercise never skips, reorders or advanc
     expect(fn).not.toContain('handleNextExercise');
   });
 
-  test('rows tap into handleJumpToExercise; long-press opens the existing reorder sheet', () => {
-    expect(SRC).toContain('onPress={() => handleJumpToExercise(i)}');
-    expect(SRC).toContain('onLongPress={workoutExercises.length > 1 ? () => setShowReorderSheet(true) : undefined}');
+  test('the outline taps into handleJumpToExercise; long-press opens the existing reorder sheet', () => {
+    // Phase 2B: the navigator is WorkoutOutline; its onSelect is the jump
+    // handler and its onReorder is the one order-changing path.
+    expect(SRC).toContain('onSelect={handleJumpToExercise}');
+    expect(SRC).toContain('onReorder={workoutExercises.length > 1 ? () => setShowReorderSheet(true) : undefined}');
   });
 
   test('an armed auto-advance countdown cannot outlive a jump: the index-change backstop cancels it', () => {
@@ -62,22 +64,30 @@ describe('jump is jump: tapping another exercise never skips, reorders or advanc
   });
 });
 
-describe('one vertical workout surface: every exercise visible, current expanded inline', () => {
-  test('compact rows render before and after the expanded current exercise', () => {
-    expect(SRC).toContain('{workoutExercises.map((entry, i) => (i < currentExerciseIndex ? renderWorkoutListRow(entry, i) : null))}');
-    expect(SRC).toContain('{workoutExercises.map((entry, i) => (i > currentExerciseIndex ? renderWorkoutListRow(entry, i) : null))}');
-    expect(SRC).toContain("import WorkoutExerciseRow from '../components/workout/WorkoutExerciseRow';");
-    // The horizontal pill strip is retired.
+describe('one workout surface: the outline navigator keeps every exercise reachable (phase 2B)', () => {
+  test('the outline renders FIXED between header and workspace, never buried under the logger', () => {
+    // Failure 5 (founder screenshots): forward exercises must not require
+    // scrolling through the whole active logger. The outline is a sibling of
+    // the ScrollView, not content inside it.
+    const outlineIdx = SRC.indexOf('<WorkoutOutline');
+    const scrollIdx = SRC.indexOf('<ScrollView\n          ref={scrollRef}');
+    expect(outlineIdx).toBeGreaterThan(-1);
+    expect(scrollIdx).toBeGreaterThan(outlineIdx);
+    expect(SRC).toContain("import WorkoutOutline from '../components/workout/WorkoutOutline';");
+    // The horizontal pill strip stays retired, and so does the phase-2
+    // card-per-exercise list.
     expect(SRC).not.toContain('<ExerciseNav');
+    expect(SRC).not.toContain('WorkoutExerciseRow');
   });
 
-  test('row totals use the same derivation the pill strip used (routine count with the freeform fallback)', () => {
-    const fn = SRC.match(/const renderWorkoutListRow = \(entry, i\) => \{[\s\S]*?\n  \};/)?.[0] ?? '';
-    expect(fn).toContain('done={countProgressSets(entry.sets ?? [])}');
-    expect(fn).toContain('total={entry.routineExercise?.recommendedSets || DEFAULT_FREEFORM_TARGET_SETS}');
-    expect(fn).toContain('skipped={!!entry._timeCrunchSkipped}');
-    // Superset members are visibly grouped with the same 2-vs-3+ naming.
-    expect(fn).toContain("groupLabel={gid != null ? (groupSize > 2 ? 'Giant set' : 'Superset') : null}");
+  test('outline totals use the same derivation the pill strip used (adjusted current, freeform fallback)', () => {
+    const fn = SRC.match(/const outlineItems = workoutExercises\.map\(\(entry, i\) => \{[\s\S]*?\n  \}\);/)?.[0] ?? '';
+    expect(fn).toContain('done: countProgressSets(entry.sets ?? [])');
+    expect(fn).toContain('? adjustedSetCount');
+    expect(fn).toContain(': entry.routineExercise?.recommendedSets) || DEFAULT_FREEFORM_TARGET_SETS');
+    expect(fn).toContain('skipped: !!entry._timeCrunchSkipped');
+    // Superset members carry the same 2-vs-3+ naming.
+    expect(fn).toContain("groupLabel: gid != null ? (groupSize > 2 ? 'Giant set' : 'Superset') : null");
   });
 });
 

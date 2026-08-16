@@ -1198,12 +1198,17 @@ describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, 
     expect(read('components/HomeBlockShapeSheet.js')).toContain('GLOSSARY.rir');
   });
 
-  test('Est. max claims only the evidence it has (C5-P14-03)', () => {
-    // SetEntry computes it live from the single set in the stepper, before
-    // that set is logged, so "your recent sets" was false at first exposure.
+  test('Est. max claims only the evidence it has (C5-P14-03, re-pinned for phase 2B)', () => {
+    // C5-P14-03 fixed the gloss's false "your recent sets" claim. Phase 2B
+    // (founder ruling, physical-device screenshots) then removed the routine
+    // est-max caption from SetEntry entirely - the stronger form of the same
+    // honesty law: copy that is not shown can claim nothing. The corrected
+    // gloss text stays pinned for any surface that may cite it.
     expect(read('lib/coachGlossary.js')).not.toContain('worked out from your recent sets');
     expect(read('lib/coachGlossary.js')).toContain('worked out from the weight and reps of a set');
-    expect(read('components/SetEntry.js')).toContain('GLOSSARY.estMax');
+    const entry = read('components/SetEntry.js')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(entry).not.toContain('Est. max');
   });
 });
 

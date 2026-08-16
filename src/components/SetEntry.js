@@ -3,11 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Keyboard, InputAcc
 import * as haptics from '../lib/haptics';
 import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { calculate1RM } from '../lib/algorithms';
 import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import InfoTooltip from './InfoTooltip';
-import { GLOSSARY } from '../lib/coachGlossary';
 import { workoutLoggerSize } from '../styles/layout';
 
 const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
@@ -15,14 +12,13 @@ const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 // D87: `recordLine` is the pure buildRecordLine() result (or null). The
 // caller owns it because the set history lives on the screen; SetEntry only
 // renders it. Absent (the logged-set edit sheet) = today's card, unchanged.
-function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5, recordLine = null }) {
+function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5, recordLine = null }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize/
   // type-bearing keys only.
   const t = useTheme();
   const live = {
     fieldLabel: { ...t.type.label, color: t.colors.textSecondary },
-    e1rmHint: { ...t.type.num('caption'), color: t.colors.textMuted },
     stepper: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     stepBtn: { backgroundColor: t.colors.surface2 },
     valueInput: { ...t.type.bodyStrong, fontVariant: ['tabular-nums'], color: t.colors.textPrimary },
@@ -130,14 +126,11 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
     repeatRef.current = setInterval(() => adjustSecondsFrom(valueRef.current, delta), 200);
   }
 
-  const liveWeight = parseFloat(value.weight);
-  const liveReps = parseInt(value.actualReps || value.reps, 10);
-  // Only weight_reps / weighted_bodyweight have a meaningful Est. 1RM. A
-  // reps_only set carrying a stray weight (e.g. left over from a mid-session
-  // type change) must not surface a bogus estimate.
-  const live1RM = (showWeightReps && liveWeight > 0 && liveReps > 0 && !isWarmup)
-    ? calculate1RM(liveWeight, liveReps)
-    : null;
+  // Phase 2B (founder ruling, screenshot failure 7): the live estimated-max
+  // caption under the reps row is REMOVED - that routine copy repeated on
+  // every surface and read as noise. The RECORD system is untouched:
+  // recordLine.isRecord still renders the gold record flag below, and PR
+  // detection/celebration live in the orchestrator.
 
   return (
     <View style={styles.container}>
@@ -422,23 +415,6 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
           </TouchableOpacity>
         </View>
       </View>
-      {/* R2-4 (2026-07-11): the Est. max readout is its own quiet caption
-          line UNDER the reps row now, not wrapped inside the narrow Reps
-          label column where it cramped and its tail collided with the
-          stepper. On its own full-width line it cannot collide at any font
-          scale. */}
-      {live1RM != null && live1RM > 0 && (
-        <View style={styles.e1rmCaptionRow}>
-          {/* D87: the bar to beat rides the caption that already sits here,
-              so the card gains the reference without gaining a row. */}
-          {recordLine?.bestLabel ? (
-            <Text style={[styles.e1rmHint, live.e1rmHint]}>{recordLine.bestLabel} · </Text>
-          ) : null}
-          <Text style={[styles.e1rmHint, live.e1rmHint]}>Est. max ~{Math.round(live1RM)}{units}</Text>
-          {/* U-F-5: plain-English gloss for the estimated-1RM jargon. */}
-          <InfoTooltip text={GLOSSARY.estMax} size={13} />
-        </View>
-      )}
       </View>
       )}
 
@@ -470,8 +446,7 @@ function SetEntry({ value, onChange, units = 'kg', isWarmup = false, onSubmitCom
 
       {/* Set-type row removed (COMP-001): the card header's orientation
           row in ActiveWorkoutScreen is now the set-type picker's entry
-          point. The duplicate 1RM chip went with it; the inline e1rmHint
-          beside the Reps label is the single in-card estimate. */}
+          point. */}
 
       {/* Done bar over the numeric keypad (iOS only; InputAccessoryView is a
           no-op on Android). Gives the decimal-pad/number-pad fields a
@@ -523,20 +498,10 @@ const styles = StyleSheet.create({
     flexShrink: 0,
     gap: 1,
   },
-  // R2-4: reps row + its Est. max caption line as one block.
-  // The 2px gap left the caption touching the stepper's bottom edge on a
-  // real device, so the two read as one control. A full step of separation
-  // lets the caption read as what it is: a note about the row above it.
+  // Phase 2B: the reps block survives (the record flag renders inside it
+  // when a genuine record is dialled in); the R2-4 est-max caption styles
+  // went with the removed routine copy.
   repsBlock: { gap: spacing.sm },
-  // R2-4: the Est. max caption sits on its own full-width line under the
-  // reps row, right-aligned beneath the value it is derived from, so it
-  // never wraps under the Reps label or collides with the stepper.
-  e1rmCaptionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 4 },
-  e1rmHint: {
-    // R2 numerals sweep: the Est. max readout is data -> tabular figures.
-    ...type.num('caption'),
-    color: colors.textMuted,
-  },
   perSideHint: {
     ...type.caption,
     color: colors.textMuted,

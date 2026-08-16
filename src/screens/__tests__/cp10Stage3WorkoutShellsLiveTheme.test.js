@@ -152,17 +152,21 @@ describe('CP-10 stage 3 (workout shells FINAL batch): flips live, no remount', (
         <LoggedSetRow set={set} units="kg" progressNum={1} exerciseType="weight_reps" onEdit={() => {}} />,
       );
     });
-    const row = tree.root.findByProps({ accessibilityHint: 'Opens a sheet to change or delete this logged set' });
-    const darkBg = flat(row).backgroundColor;
-    expect(darkBg).toBe(theme.resolveTheme({ theme: 'dark' }).colors.surface);
+    // Phase 2B re-anchor: the row's own surface fill is deliberately GONE
+    // (a completed set is a quiet line, not a container), so the live-flip
+    // contract is pinned on the inks that remain: the set text and the
+    // chevron. Same mounted instance, no remount.
+    const rowText = tree.root.findByProps({ numberOfLines: 1 });
+    const darkInk = flat(rowText).color;
+    expect(darkInk).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textPrimary);
     const chevron = tree.root.findByProps({ name: 'chevron-forward' });
     const darkChevron = chevron.props.color;
     expect(darkChevron).toBe(theme.resolveTheme({ theme: 'dark' }).colors.textMuted);
 
     setTheme('light');
-    const lightBg = flat(tree.root.findByProps({ accessibilityHint: 'Opens a sheet to change or delete this logged set' })).backgroundColor;
-    expect(lightBg).not.toBe(darkBg);
-    expect(lightBg).toBe(theme.resolveTheme({ theme: 'light' }).colors.surface);
+    const lightInk = flat(tree.root.findByProps({ numberOfLines: 1 })).color;
+    expect(lightInk).not.toBe(darkInk);
+    expect(lightInk).toBe(theme.resolveTheme({ theme: 'light' }).colors.textPrimary);
     const lightChevron = tree.root.findByProps({ name: 'chevron-forward' }).props.color;
     expect(lightChevron).not.toBe(darkChevron);
     act(() => { tree.unmount(); });

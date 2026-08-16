@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, AppState, Platform, useWindowDimensions, Animated, Easing, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, AppState, Platform, Animated, Easing, AccessibilityInfo } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from './AppAlert';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 // D2: all haptics ride the named vocabulary so the reduce-motion setting
@@ -39,12 +39,9 @@ import {
 // is the Settings row. Keyed device-locally.
 const EXACT_ALARM_PROMPTED_KEY = '@volyume_exact_alarm_prompted';
 
-// Compact variant on short screens (COMP-001 step 6): smaller numeral and a
-// 56pt row so the timer never pushes the set inputs below the fold. U-A-1:
-// recompute on layout change via useWindowDimensions (below), not once at
-// module load, so rotation / split-screen / runtime metric changes are
-// respected (the once-at-load limitation the workout audit flagged).
-const COMPACT_HEIGHT = 700;
+// Phase 2B: the old short-screen COMPACT variant is retired - the strip IS
+// the compact form on every screen now, so there is no taller state left to
+// fall back from.
 
 // Two deltas only (COMP-001): the −30/+30 pair added visual weight without
 // covering anything long-press-repeat can't. Holding ±15 repeats at 200 ms.
@@ -75,25 +72,28 @@ export default function RestTimer() {
   // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize-
   // bearing keys only. Called before every early return below so hook order
   // stays stable across renders.
+  // Phase 2B (physical-device corrective redesign): the timer's NORMAL state
+  // is a COMPACT STRIP - one quiet row plus a 2dp drain line - never the old
+  // bordered card whose ~70dp block was one of the largest elements on the
+  // founder's screenshots (failure 2). Rest is temporary supporting state;
+  // it must not compete with the active set. Every behaviour above this
+  // render (ticks, notification, foreground service, exact-alarm ask, 3-2-1
+  // escalation, catch-up, announcements) is untouched.
   const t = useTheme();
   const live = {
-    container: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    container: { backgroundColor: t.colors.background, borderTopColor: t.colors.borderSubtle },
     timeText: { color: t.colors.textPrimary },
     almostDone: { color: t.colors.warning },
-    countdownNum: { fontSize: t.fontSize.xxl, color: t.colors.warning },
-    countdownNumCompact: { fontSize: t.fontSize.xl },
+    countdownNum: { color: t.colors.warning },
     label: { ...t.type.overline, color: t.colors.textMuted },
-    skipBtn: { borderColor: t.colors.border },
     skipText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    adjBtn: { borderColor: withAlpha(t.colors.primary, alpha.mid), backgroundColor: t.colors.primaryBg },
-    adjBtnNeg: { borderColor: t.colors.border, backgroundColor: t.colors.surface3 },
     adjBtnText: { fontSize: t.fontSize.sm, color: t.colors.primary },
     adjBtnTextNeg: { color: t.colors.textSecondary },
     drainTrack: { backgroundColor: t.colors.surface3 },
     drainFill: { backgroundColor: t.colors.primaryFill },
     drainFillWarm: { backgroundColor: t.colors.warning },
+    doneText: { fontSize: t.fontSize.sm, color: t.colors.onSuccessBg },
     doneContainer: { backgroundColor: t.colors.successBg },
-    doneText: { fontSize: t.fontSize.md, color: t.colors.onSuccessBg },
   };
 
   const intervalRef = useRef(null);
@@ -387,9 +387,6 @@ export default function RestTimer() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restTimerRemaining, restTimerActive, restTimerDuration, reduceMotion]);
 
-  const { height: windowHeight } = useWindowDimensions();
-  const compact = windowHeight < COMPACT_HEIGHT;
-
   const isCountdown = restTimerActive && restTimerRemaining <= 3 && restTimerRemaining > 0;
   const isAlmostDone = restTimerRemaining <= 10 && restTimerActive;
 
@@ -402,7 +399,7 @@ export default function RestTimer() {
   if (showDone && !restTimerActive) {
     return (
       <View style={[styles.doneContainer, live.doneContainer]}>
-        <Ionicons name="checkmark-circle" size={18} color={t.colors.success} />
+        <Ionicons name="checkmark-circle" size={16} color={t.colors.success} />
         <Text style={[styles.doneText, live.doneText]}>Start next set</Text>
       </View>
     );
@@ -410,60 +407,9 @@ export default function RestTimer() {
 
   return (
     <View style={[styles.container, live.container]}>
-      {/* Timer row. Deliberately NOT a live region: TalkBack announces every
-          label change, so a per-second label spoke the whole rest aloud,
-          minute after minute (P9 audit finding 1). The row stays accessible
-          with a current-value label (focus it to hear the time remaining);
-          the spoken edges are "rest started" (effect above) and "rest over"
-          (the 0-tick branch), with beeps + haptics carrying the 3-2-1. */}
-      <View
-        style={[styles.row, compact && styles.rowCompact]}
-      >
-        <View
-          style={styles.timerReadout}
-          accessible
-          accessibilityLabel={isCountdown
-            ? `Rest, ${restTimerRemaining} second${restTimerRemaining === 1 ? '' : 's'} remaining`
-            : `Rest timer, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
-        >
-          <Ionicons name="timer-outline" size={18} color={isAlmostDone ? t.colors.warning : t.colors.primary} />
-          {isCountdown ? (
-            <Text style={[styles.countdownNum, live.countdownNum, compact && [styles.countdownNumCompact, live.countdownNumCompact]]} maxFontSizeMultiplier={1.15}>{restTimerRemaining}</Text>
-          ) : (
-            <Text style={[styles.timeText, live.timeText, compact && styles.timeTextCompact, isAlmostDone && [styles.almostDone, live.almostDone]]} maxFontSizeMultiplier={1.15}>{timeStr}</Text>
-          )}
-          <Text style={[styles.label, live.label]} numberOfLines={1}>{isCountdown ? 'seconds' : 'rest'}</Text>
-        </View>
-        {TIME_ADJUSTMENTS.map(({ delta, label }) => {
-          const isNeg = delta < 0;
-          return (
-            <TouchableOpacity
-              key={delta}
-              style={[styles.adjBtn, live.adjBtn, isNeg && [styles.adjBtnNeg, live.adjBtnNeg]]}
-              onPress={() => handleAdjust(delta)}
-              onLongPress={() => startRepeat(delta)}
-              delayLongPress={300}
-              onPressOut={stopRepeat}
-              hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
-              accessibilityRole="button"
-              accessibilityLabel={isNeg ? 'Remove 15 seconds' : 'Add 15 seconds'}
-            >
-              <Text style={[styles.adjBtnText, live.adjBtnText, isNeg && [styles.adjBtnTextNeg, live.adjBtnTextNeg]]}>{label}</Text>
-            </TouchableOpacity>
-          );
-        })}
-        <TouchableOpacity
-          onPress={stopRestTimer}
-          style={[styles.skipBtn, live.skipBtn]}
-          hitSlop={{ top: 12, bottom: 12, left: 4, right: 8 }}
-          accessibilityLabel="Skip rest timer"
-          accessibilityRole="button"
-        >
-          <Text style={[styles.skipText, live.skipText]}>Skip</Text>
-        </TouchableOpacity>
-      </View>
-      {/* D2: the draining remaining-rest fill. Decorative (the live region
-          above carries the accessible announcement), so hidden from AT. */}
+      {/* D2 (compacted, phase 2B): the draining remaining-rest fill, now a
+          2dp line along the strip's top edge. Decorative (the readout below
+          carries the accessible announcement), so hidden from AT. */}
       <View
         style={[styles.drainTrack, live.drainTrack]}
         accessibilityElementsHidden
@@ -478,34 +424,80 @@ export default function RestTimer() {
           ]}
         />
       </View>
+      {/* Timer row. Deliberately NOT a live region: TalkBack announces every
+          label change, so a per-second label spoke the whole rest aloud,
+          minute after minute (P9 audit finding 1). The row stays accessible
+          with a current-value label (focus it to hear the time remaining);
+          the spoken edges are "rest started" (effect above) and "rest over"
+          (the 0-tick branch), with beeps + haptics carrying the 3-2-1. */}
+      <View style={styles.row}>
+        <View
+          style={styles.timerReadout}
+          accessible
+          accessibilityLabel={isCountdown
+            ? `Rest, ${restTimerRemaining} second${restTimerRemaining === 1 ? '' : 's'} remaining`
+            : `Rest timer, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
+        >
+          <Text style={[styles.label, live.label]} numberOfLines={1}>Rest</Text>
+          {isCountdown ? (
+            <Text style={[styles.timeText, styles.countdownNum, live.countdownNum]} maxFontSizeMultiplier={1.15}>{restTimerRemaining}</Text>
+          ) : (
+            <Text style={[styles.timeText, live.timeText, isAlmostDone && [styles.almostDone, live.almostDone]]} maxFontSizeMultiplier={1.15}>{timeStr}</Text>
+          )}
+        </View>
+        {TIME_ADJUSTMENTS.map(({ delta, label }) => {
+          const isNeg = delta < 0;
+          return (
+            <TouchableOpacity
+              key={delta}
+              style={styles.adjBtn}
+              onPress={() => handleAdjust(delta)}
+              onLongPress={() => startRepeat(delta)}
+              delayLongPress={300}
+              onPressOut={stopRepeat}
+              hitSlop={{ top: 6, bottom: 6, left: 2, right: 2 }}
+              accessibilityRole="button"
+              accessibilityLabel={isNeg ? 'Remove 15 seconds' : 'Add 15 seconds'}
+            >
+              <Text style={[styles.adjBtnText, live.adjBtnText, isNeg && [styles.adjBtnTextNeg, live.adjBtnTextNeg]]}>{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+        <TouchableOpacity
+          onPress={stopRestTimer}
+          style={styles.skipBtn}
+          hitSlop={{ top: 12, bottom: 12, left: 4, right: 8 }}
+          accessibilityLabel="Skip rest timer"
+          accessibilityRole="button"
+        >
+          <Text style={[styles.skipText, live.skipText]}>Skip</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
+// Phase 2B compact-strip styles. The card chrome (border, radius, surface
+// fill, outer margins, 64dp row, hero numeral) is deliberately gone: the
+// strip is a hairline-topped row docked above the bottom bar, so appearing/
+// disappearing never displaces the active set inputs in the workspace
+// scroll. The 44dp control height survives on the buttons themselves.
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginVertical: spacing.sm,
+    backgroundColor: colors.background,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderSubtle,
   },
-  // Single row (COMP-001): numeral left, ±15 and Skip right. Collapsed from
-  // the old two-row layout, recovering ~32pt of vertical space.
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: spacing.sm,
-    minHeight: 64,
+    paddingHorizontal: spacing.lg,
+    gap: spacing.md,
+    minHeight: 44,
   },
-  // R2-3 (2026-07-11, founder build 2684): the readout now absorbs the row's
+  // R2-3 (2026-07-11, founder build 2684): the readout absorbs the row's
   // free space (flex: 1) and may shrink (minWidth: 0) so the ±15 / Skip
-  // controls sit right-aligned and ALWAYS stay on-screen. Before, the readout
-  // was content-sized with no flex and the right controls had no flexShrink,
-  // so on a tight width (the R5 scrollContent md -> lg change removed 8px)
-  // the Skip button overflowed and clipped half off the right screen edge.
+  // controls sit right-aligned and ALWAYS stay on-screen.
   timerReadout: {
     flex: 1,
     minWidth: 0,
@@ -514,74 +506,48 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   timeText: {
-    // eslint-disable-next-line no-restricted-syntax -- rest-timer countdown is a hero numeral
-    fontSize: 26,
-    fontWeight: fontWeight.bold,
+    ...type.num('bodyStrong'),
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
+    // Stable footprint so 9:59 -> 0:03 (or the 3-2-1 single digits) never
+    // jitters the controls beside it.
+    minWidth: 44,
   },
-  rowCompact: { minHeight: 56 },
-  // eslint-disable-next-line no-restricted-syntax -- compact hero numeral on short screens
-  timeTextCompact: { fontSize: 22 },
   almostDone: { color: colors.warning },
-  countdownNum: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.black,
-    color: colors.warning,
-    fontVariant: ['tabular-nums'],
-    minWidth: 40,
-    textAlign: 'center',
-  },
-  countdownNumCompact: { fontSize: fontSize.xl, minWidth: 32 },
+  countdownNum: { color: colors.warning },
   // R5 (D66): the hand-rolled xs/uppercase/tracked combination IS the house
   // overline role - named once in theme.js, used here by name.
   label: {
     ...type.overline,
     color: colors.textMuted,
-    flex: 1,
   },
+  // Quiet text controls (phase 2B): the bordered pill chrome is retired -
+  // the strip's affordances are its labels. Full 44dp tap height retained.
   skipBtn: {
     minHeight: 44,
-    // R2-3: never shrink below its label width, so it can't clip at the edge.
     flexShrink: 0,
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    // R5 (D66): radius.sm -> radius.md, the logger's one small-surface
-    // radius (matches this timer's own container).
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingHorizontal: spacing.sm,
   },
   skipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
   adjBtn: {
     minHeight: 44,
-    // R2-3: keep full size when the row is tight (see timerReadout).
+    minWidth: 44,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    // R5 (D66, review catch): same row as skipBtn - the logger's one
-    // small-surface radius applies to both.
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: withAlpha(colors.primary, alpha.mid),
-    backgroundColor: colors.primaryBg,
-  },
-  adjBtnNeg: {
-    borderColor: colors.border,
-    backgroundColor: colors.surface3,
+    paddingHorizontal: spacing.sm,
   },
   adjBtnText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     color: colors.primary,
+    fontVariant: ['tabular-nums'],
   },
   adjBtnTextNeg: { color: colors.textSecondary },
   drainTrack: {
-    height: 3,
+    height: 2,
     backgroundColor: colors.surface3,
-    borderBottomLeftRadius: radius.md,
-    borderBottomRightRadius: radius.md,
     overflow: 'hidden',
   },
   drainFill: {
@@ -595,13 +561,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.successBg,
-    borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    marginVertical: spacing.sm,
+    minHeight: 36,
   },
   doneText: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
     // AY-2/D7: onSuccessBg is the text-on-tint ink (the flat `success` mark
     // fails 4.5:1 composited on successBg in light theme at every elevation).

@@ -26,9 +26,8 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, TextInput, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import Card from '../Card';
 import SetEntry from '../SetEntry';
-import { spacing, radius, iconSize, withAlpha } from '../../styles/theme';
+import { spacing, radius, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { workoutLoggerSize } from '../../styles/layout';
 
@@ -79,13 +78,22 @@ export default function NowCard({
       : 'pulse-outline';
   const contextColor = context?.kind === 'warmup' ? t.colors.warning : t.colors.primary;
 
+  // Phase 2B (physical-device corrective redesign, screenshot failure 3):
+  // the "huge detached NowCard" is retired. The active set renders as the
+  // CURRENT ROW of the one continuous set sequence - a light surface with a
+  // 3dp accent along its left edge (amber = active, warning = warm-up),
+  // sitting flush between the completed rows above and the upcoming rows
+  // below. Content, testIDs and behaviour are unchanged; only the shell
+  // shrank.
   return (
-    <Card
-      radius="lg"
-      padding="lg"
+    <View
       style={[
         styles.card,
-        isWarmup && { borderColor: withAlpha(t.colors.warning, 0.45) },
+        {
+          backgroundColor: t.colors.surface,
+          borderColor: t.colors.borderSubtle,
+          borderLeftColor: isWarmup ? t.colors.warning : t.colors.primary,
+        },
         flash && { borderColor: t.colors.primary },
       ]}
     >
@@ -224,18 +232,28 @@ export default function NowCard({
           <Text style={{ ...t.type.caption, color: t.colors.textMuted }}>Add a note</Text>
         </TouchableOpacity>
       )}
-    </Card>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing.md },
+  card: {
+    gap: spacing.sm,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderLeftWidth: 3,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
   positionRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
-    minHeight: workoutLoggerSize.primaryActionMinHeight,
+    // Phase 2B: 36dp visual row + the generous hitSlop already on the
+    // touchable, the same loggedSetMinHeight exception the sequence's other
+    // rows use - the 44dp block read as a second header inside the card.
+    minHeight: workoutLoggerSize.loggedSetMinHeight,
   },
   positionText: { flex: 1, minWidth: 0 },
   contextRow: {

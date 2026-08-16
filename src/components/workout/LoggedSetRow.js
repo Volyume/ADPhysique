@@ -6,10 +6,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 // added to weight/nutrition surfaces.
 import SetRowMenu from './SetRowMenu';
 
-import { colors, spacing, radius, fontWeight, type, iconSize, withAlpha } from '../../styles/theme';
+import { colors, spacing, radius, fontWeight, type, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { workoutLoggerSize } from '../../styles/layout';
-import { calculate1RM } from '../../lib/algorithms';
 import { formatPerSide } from '../../lib/unilateral';
 import { formatLoggedSet } from '../../lib/workoutHelpers';
 import SetEntry from '../SetEntry';
@@ -115,10 +114,12 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
   }
 
   // Exercise-type aware: a distance/duration/reps_only set must not print
-  // "{weight}kg × {reps}" (the weight column holds metres/0 for those) nor an
-  // Est. max computed off a non-load value.
+  // "{weight}kg × {reps}" (the weight column holds metres/0 for those).
+  // Phase 2B (founder ruling, screenshot failure 7): the routine per-set
+  // "Est. max ~X" caption is REMOVED from ordinary rows - it repeated on
+  // every logged set and read as noise. PR/record detection is untouched;
+  // a genuine record still surfaces through the existing PR system.
   const fmt = formatLoggedSet(set, units, exerciseType);
-  const est1RM = (!isWarmup && fmt.showE1RM) ? calculate1RM(set.weight, set.actualReps) : null;
   const perSide = formatPerSide(set.leftReps, set.rightReps);
   const spokenSetLabel = [
     isWarmup ? 'Edit warm-up set' : `Edit set ${progressNum}`,
@@ -159,9 +160,6 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
         {perSide ? ` - ${perSide}` : ''}
         {isWarmup ? ' - Warm-up' : ''}
       </Text>
-      {!isWarmup && est1RM > 0 && (
-        <Text style={[styles.loggedEst1RM, live.loggedEst1RM]}>Est. max ~{est1RM.toFixed(0)}{units}</Text>
-      )}
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>
   );
@@ -192,8 +190,11 @@ const styles = StyleSheet.create({
   // R5 (D66): radius.xs -> radius.md, the logger's one small-surface radius
   // (RestTimer container, noteInput, completeBtn all sit on md; the xs
   // corner was the odd one out in the founder's style-mish-mash walk).
-  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, minHeight: workoutLoggerSize.loggedSetMinHeight, backgroundColor: colors.surface, borderRadius: radius.md, paddingVertical: spacing.xxs, paddingHorizontal: spacing.sm, borderWidth: 1, borderColor: colors.border },
-  loggedSetRowWarmup: { borderColor: withAlpha(colors.warning, 0.376), backgroundColor: colors.warningBg || colors.surface },
+  // Phase 2B (screenshot failure 6): the per-set border/surface card is
+  // retired - a completed set is one quiet LINE in the sequence, not a
+  // container. Radius kept for the warm-up tint variant below.
+  loggedSetRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, minHeight: workoutLoggerSize.loggedSetMinHeight, borderRadius: radius.md, paddingVertical: spacing.xxs, paddingHorizontal: spacing.sm },
+  loggedSetRowWarmup: { backgroundColor: colors.warningBg || colors.surface },
   loggedSetTextWarmup: { color: colors.warning },
   setNumBadge: { width: workoutLoggerSize.setNumberBadge, height: workoutLoggerSize.setNumberBadge, borderRadius: radius.lg, backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center' },
   // D43 S5 (D60 call 3): logged-set data numerals (set number, weight x
@@ -205,7 +206,6 @@ const styles = StyleSheet.create({
   // semibold house role; fontWeight.bold restores the original weight).
   setNumText: { ...type.num('captionStrong'), fontWeight: fontWeight.bold, color: colors.textSecondary },
   loggedSetText: { ...type.num('bodySm'), flex: 1, color: colors.textPrimary, minWidth: 0 },
-  loggedEst1RM: { ...type.num('caption'), color: colors.textMuted },
   // D43 S4: in-place editor block, replaces the modal sheet's chrome with a
   // house Card-adjacent surface local to the row -- same radius/border
   // language as loggedSetRow, no new one-off idiom.
@@ -231,13 +231,11 @@ const styles = StyleSheet.create({
 // omitted, there is nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
-    loggedSetRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    loggedSetRowWarmup: { borderColor: withAlpha(t.colors.warning, 0.376), backgroundColor: t.colors.warningBg || t.colors.surface },
+    loggedSetRowWarmup: { backgroundColor: t.colors.warningBg || t.colors.surface },
     loggedSetTextWarmup: { color: t.colors.warning },
     setNumBadge: { backgroundColor: t.colors.surface2 },
     setNumText: { ...t.type.num('captionStrong'), fontWeight: fontWeight.bold, color: t.colors.textSecondary },
     loggedSetText: { ...t.type.num('bodySm'), color: t.colors.textPrimary },
-    loggedEst1RM: { ...t.type.num('caption'), color: t.colors.textMuted },
     editingWrap: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     editingTitle: { ...t.type.label, color: t.colors.textPrimary },
     editingDeleteText: { ...t.type.label, color: t.colors.error },
