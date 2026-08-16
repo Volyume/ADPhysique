@@ -733,7 +733,12 @@ given load are noise and change nothing** (Jukic 2024, §4).
   previous set today reached `repsMax + 2` or more (a genuine overshoot beyond the
   band, outside noise), and no set today has fallen below `repsMin`. At most one
   mid-session step, never compounding. (APRE's overshoot table is the precedent — §4.)
-  Founder-visible aggressiveness choice: §21 ruling 2.
+  **Founder amendment (ruling 2, 2026-08-16): the ADD rule is DISABLED outright —
+  not merely trimmed — whenever a senior recovery state is active: deload/recovery
+  week, re-entry easing, or an active (undismissed) readiness reduction. Those
+  states are senior to any overshoot evidence; under them the resolver may hold or
+  reduce, never add.** (Test plan §20 pins this as an adversarial case: an overshoot
+  set under each senior state MUST NOT produce an add.)
 
 **12.2 Weaker than expected (`adjustWeaker`, CURRENT_SESSION_FATIGUE_ADJUST):**
 - If today's last working set fell BELOW `repsMin` at load `L`: next-set suggestion is
@@ -1074,6 +1079,13 @@ CALC-5 migration, retirement absence guards for `stalledAdvice` and
 
 ## 21. RISKS / FOUNDER RULINGS REQUIRED
 
+> **RESOLVED 2026-08-16, same day:** the founder answered all four rulings —
+> 1: B-plus. 2: overshoot only, AMENDED (no mid-session add under
+> deload/recovery, re-entry easing, or an active readiness reduction — senior;
+> §12.1 updated). 3: one session. 4: ungated. Verbatim answers and Phase 2
+> consequences: `FOUNDER-RULINGS-2026-08-16.md` in this folder. The questions
+> are preserved below as the decision record.
+
 Genuine product forks only; recommendation stated first per house rules — none framed
 on effort.
 
@@ -1128,17 +1140,19 @@ resolver applies (fatigue adjust, senior trims) never consults tier.
 
 ## 22. FINAL VERDICT
 
-**B. DESIGN MOSTLY LOCKED — FOUNDER RULING REQUIRED.**
+**A. DESIGN LOCKED — READY FOR IMPLEMENTATION.**
 
-The trace, laws, evidence hierarchy, comparability contract, resolver algorithm,
-special-type matrix, provenance vocabulary, scenario matrix, implementation and test
-plans are locked and internally consistent. Four genuine product forks (§21: prefill
-contract, mid-session add aggressiveness, advance-confirmation window, tier position)
-need the founder's choice before Phase 2 implements; recommendations are stated for
-each. No research finding argues for keeping the current approach unchanged (verdict
-C fails: the live next-set question has no owner in production), and nothing here
-requires abandoning the sound parts (verdict A fails: the missing resolver is not
-presentational).
+At authoring this stood at B (mostly locked, four founder rulings required — §21).
+The founder ruled on all four the same day (2026-08-16;
+`FOUNDER-RULINGS-2026-08-16.md`): B-plus prefill; overshoot-only mid-session adds
+with the senior-state gate amendment (§12.1); single-session advance window;
+ungated. With those resolved, the trace, laws, evidence hierarchy, comparability
+contract, resolver algorithm, special-type matrix, provenance vocabulary, scenario
+matrix, implementation and test plans are locked and internally consistent — this
+document is the binding Phase 2 specification. No research finding argued for
+keeping the current approach unchanged (the live next-set question had no owner in
+production), and nothing here abandons the sound parts (the next-session engine's
+core, effort gate, and every senior recovery constraint survive).
 
 
 

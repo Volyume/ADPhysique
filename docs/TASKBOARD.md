@@ -1988,7 +1988,14 @@ WeeklyStoryScreen recap.
 Gates at closeout: lint clean, identity invariant clean, full suite
 **917 suites / 12,190 passed, 10 skipped, 0 failed**.
 
-## CAMPAIGN 20 (2026-08-16) — live set prescription & progressive overload intelligence. PHASE 1 (design) COMPLETE, awaiting founder rulings.
+## CAMPAIGN 20 (2026-08-16) — live set prescription & progressive overload intelligence. PHASE 1 COMPLETE; ALL FOUR RULINGS RESOLVED same day — DESIGN LOCKED (verdict A), Phase 2 ready.
+
+**Founder rulings 2026-08-16 (binding, verbatim record in
+`docs/live-prescription-campaign-20-2026-08-16/FOUNDER-RULINGS-2026-08-16.md`):**
+(1) prefill = B-plus; (2) mid-session adds = overshoot only, AMENDED: no add
+under deload/recovery, re-entry easing or active readiness reduction (senior);
+(3) advance window = one session; (4) tier = ungated. Phase 2 implements per
+design doc §19 staged order.
 
 Phase 1 was AUDIT + RESEARCH + DESIGN ONLY — no production code touched, no
 migration, per the campaign brief. Baseline traced: main `9816b601`.
@@ -2000,16 +2007,15 @@ migration, per the campaign brief. Baseline traced: main `9816b601`.
   sweep, per-claim SUPPORTED/INFERENCE/UNSUPPORTED tags),
   `EVIDENCE-COMPETITORS.md` (Hevy/Strong/Alpha/KeyLifts/RP/Boostcamp/Fitbod/
   JuggernautAI, vendor-verbatim; no binaries examined).
-- Verdict: **B — design mostly locked, four founder rulings required** (design
-  doc §21): (1) prefill contract (recommended B-plus: prescription in boxes at
-  confidence, ghost-styled; alt E = Strong-classic empty-box + tick-commits);
-  (2) mid-session load-add aggressiveness; (3) load-advance confirmation
-  window (single-session vs two-session); (4) tier position of the resolver
-  (recommended: ungated, where today's targets live).
+- Verdict: **A — design locked** (was B at authoring; the founder resolved all
+  four §21 rulings the same day — see the rulings block at the top of this
+  entry).
 - Key trace findings now on record: no live next-set prescription exists in
   production (setTargets computed once per exercise load, never updated from
   today's sets); computeSetTargets' target weights render almost nowhere; the
   ordinal "Set 3 = 75 forever" teaching lives in the Last-session reference
   row + ghost + per-ordinal targets; five competing authorities incl. dead
   `getProgressionSuggestion` and unit-blind `stalledAdvice` +2.5 literal.
-- Phase 2 (implementation) starts ONLY after the founder's §21 rulings.
+- Phase 2 (implementation) is UNBLOCKED: rulings resolved, design doc §19 is
+  the staged landing order (resolver module + tests → screen wiring →
+  presentation → retirements + guard re-pins).
