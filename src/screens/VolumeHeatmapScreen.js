@@ -33,29 +33,7 @@ import WindowChips from '../components/WindowChips';
 import VolyumeChart from '../components/VolyumeChart';
 import { VOLUME_WINDOWS, windowByKey, volumeTakeaway } from '../lib/chartWindows';
 import { track } from '../lib/engineTelemetry';
-import { freshnessBand } from '../lib/muscleRecovery';
-
-// Freshness band -> CVD-safe semantic colour + plain-English label. Reuses the
-// shared stateColors grammar (the colour-blind-safe Okabe-Ito tokens) so the
-// recovery layer never invents a new hue that fails CVD. Fully recovered reads
-// as 'onTrack'/success (green = ready to train), mid-recovery as 'watch'/warning.
-// "Recently trained" is the resting state, deliberately 'neutral'/muted, NOT
-// 'act'/error: training a muscle today is normal and expected, so a red dot
-// there wrongly read as a warning and collided with red = "too much volume" on
-// the volume bar. Muted reads as "worked, now resting", with no false alarm.
-//
-// CP-10 batch G (2026-07-11): converted to accept the live theme's colour
-// table on the buildVolumeStatusColor(t.colors) precedent (WorkoutSummaryScreen,
-// stage 3) -- the band -> tone mapping is byte-identical in meaning and
-// rationale (see comment above), only the token SOURCE moved from the frozen
-// stateColors singleton to the live theme.
-function buildFreshnessMeta(c) {
-  return {
-    fresh: { color: c.success, label: 'Fresh' },
-    recovering: { color: c.warning, label: 'Recovering' },
-    fatigued: { color: c.textMuted, label: 'Recently trained' },
-  };
-}
+import { trainingRecency } from '../lib/trainingRecency';
 
 const WINDOW_OPTIONS = [
   { weeks: 1, label: '1 week' },
@@ -87,7 +65,6 @@ export default function VolumeHeatmapScreen() {
   // because this screen renders a muscle-row list and a trend list.
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  const freshnessMeta = useMemo(() => buildFreshnessMeta(t.colors), [t]);
   const [weeklyVolume, setWeeklyVolume] = useState({});
   // NAV-8: first paint showed an empty diagram while sets loaded; skeleton
   // cards cover the read instead. Only the FIRST load gates the render;
@@ -469,12 +446,6 @@ export default function VolumeHeatmapScreen() {
       ? 'Showing sets from the last 2 weeks'
       : 'Showing sets from the last 4 weeks';
 
-  function formatLastTrained(daysAgo) {
-    if (daysAgo === 0) return 'Today';
-    if (daysAgo === 1) return 'Yesterday';
-    return `${daysAgo}d ago`;
-  }
-
   if (loading) {
     return (
       <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
@@ -590,22 +561,6 @@ export default function VolumeHeatmapScreen() {
           } />
         </Card>
 
-        {/* Recovery / freshness legend. A distinct layer from the volume bands
-            above: this reads "how recently was each muscle trained", not "is it
-            at target". Numbers/labels first, calm, a small dot per band. */}
-        <Card padding="md" radius="md" style={styles.legendRow}>
-          <LegendItem color={freshnessMeta.fresh.color} label="Fresh" />
-          <LegendItem color={freshnessMeta.recovering.color} label="Recovering" />
-          <LegendItem color={freshnessMeta.fatigued.color} label="Recently trained" />
-          <InfoTooltip size={11} text={
-            'A second, separate view: how recently each muscle was trained.\n\n' +
-            '  Fresh: outside its typical recovery window\n' + // RD6-11: time-based, never a recovery verdict
-            '  Recovering: part-way through its recovery window\n' +
-            '  Recently trained: trained today\n\n' +
-            'Each muscle has a sensible recovery window, so larger muscles take longer to read as fresh. The dot beside each bar shows its current state.'
-          } />
-        </Card>
-
         {/* Muscle Rows */}
         <View
           ref={heatmapCardRef}
@@ -627,15 +582,15 @@ export default function VolumeHeatmapScreen() {
             const fillPct = Math.min(sets / mrv, 1);
             const ghostFillPct = Math.min(prevSets / mrv, 1);
 
-            // AX-04 (launch accessibility audit): freshness band/meta computed
-            // once per row so both the visual dot/chip below and the row's
-            // combined accessibilityLabel read the identical value (previously
-            // computed only inline, purely for the dot's own now-removed
-            // per-node accessibility props).
+            // AX-04 (launch accessibility audit): recency computed once per
+            // row so both the visual chip below and the row's combined
+            // accessibilityLabel read the identical value. Task 2: reads the
+            // raw lastDate through the shared trainingRecency() authority
+            // rather than the row's own precomputed daysAgo, so a malformed
+            // or future timestamp is caught here too, not just trusted.
             const lastTrained = lastTrainedMap[muscle];
-            const freshnessBandKey = lastTrained != null ? freshnessBand(lastTrained.daysAgo, muscle) : null;
-            const freshnessMetaEntry = freshnessBandKey ? freshnessMeta[freshnessBandKey] : null;
-            const lastTrainedText = lastTrained != null ? formatLastTrained(lastTrained.daysAgo) : null;
+            const recency = trainingRecency(lastTrained?.lastDate ?? null, Date.now());
+            const lastTrainedText = recency.known ? recency.label : null;
 
             // AX-04: the body diagram above is now a single decorative/summary
             // image for assistive tech (its per-shape press targets were
@@ -659,7 +614,7 @@ export default function VolumeHeatmapScreen() {
                 ? 'Adjusted from your logged training'
                 : 'Research starting point';
             const rowA11yLabel = `${MUSCLE_DISPLAY_NAMES[muscle]}: ${sets} of ${mrv} weekly sets, ${statusLabel}, ${provenance}`
-              + (freshnessMetaEntry ? `, ${freshnessMetaEntry.label}, ${lastTrainedText}` : '');
+              + (lastTrainedText ? `, ${lastTrainedText}` : '');
 
             return (
               <View
@@ -696,22 +651,22 @@ export default function VolumeHeatmapScreen() {
                 </View>
                 <Text style={[styles.setsCount, live.setsCount, { color }]}>{sets}</Text>
                 <Text style={[styles.mrvLabel, live.mrvLabel]}>/{mrv}</Text>
-                {freshnessMetaEntry && (
+                {lastTrainedText && (
                   // AX-04: decorative once the row above carries the combined
-                  // label -- an accessible child dot/chip here would nest a
+                  // label -- an accessible child chip here would nest a
                   // second accessible node inside this one and duplicate the
-                  // "Fresh"/"Today" wording the row already speaks (the same
-                  // nested-accessible anti-pattern the audit flags for
-                  // InfoTooltip's Close button, AX-01).
+                  // wording the row already speaks (the same nested-accessible
+                  // anti-pattern the audit flags for InfoTooltip's Close
+                  // button, AX-01). Task 2: factual recency text only, no
+                  // colour-coded verdict dot - there is no band left to code.
                   <View
                     style={styles.freshnessGroup}
                     accessibilityElementsHidden
                     importantForAccessibility="no-hide-descendants"
                   >
-                    <View style={[styles.freshnessDot, { backgroundColor: freshnessMetaEntry.color }]} />
                     <Text style={[
                       styles.lastTrainedChip, live.lastTrainedChip,
-                      lastTrained.daysAgo <= 1 && [styles.lastTrainedRecent, live.lastTrainedRecent],
+                      recency.daysAgo <= 1 && [styles.lastTrainedRecent, live.lastTrainedRecent],
                     ]}>
                       {lastTrainedText}
                     </Text>
@@ -1092,11 +1047,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-  },
-  freshnessDot: {
-    width: 8,
-    height: 8,
-    borderRadius: circle(8),
   },
   lastTrainedChip: {
     fontSize: fontSize.xs,

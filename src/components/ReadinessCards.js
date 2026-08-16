@@ -21,6 +21,7 @@ import InfoTooltip from './InfoTooltip';
 import SectionLabel from './SectionLabel';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { trainingRecency } from '../lib/trainingRecency';
 import {
   getAllWorkouts, getCompletedWorkoutSets,
   getLastTrainedPerMuscle, getRecentCheckins,
@@ -40,22 +41,21 @@ function nextMilestone(total) {
   return MILESTONES.find(m => m.sessions > total) ?? null;
 }
 
-// CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
-// variant of the frozen freshnessMeta(lastTrainedAt, now) this file used to
-// define inline (module-scope, reading `colors.*` at call time), same
-// "build" pattern as theme.js's buildVolumeStatusColor -- resolves the SAME
-// thresholds/labels off a passed-in colour table (t.colors) instead of the
-// frozen module `colors` singleton, so muscle-freshness colouring stays in
-// step with a theme flip. No frozen twin kept: this helper was file-private
-// and untested, so there is no unmigrated caller to preserve it for.
-function buildFreshnessMeta(c) {
-  return function freshnessMetaLive(lastTrainedAt, now) {
-    if (!lastTrainedAt) return { label: 'Ready', color: c.success, dot: c.success };
-    const hoursAgo = (now - lastTrainedAt) / (1000 * 60 * 60);
-    if (hoursAgo < 24)  return { label: 'Just trained', color: c.warning, dot: c.warning };
-    if (hoursAgo < 48)  return { label: 'Recovering',   color: c.warning, dot: c.warning };
-    if (hoursAgo < 72)  return { label: 'Nearly ready',  color: c.success, dot: withAlpha(c.success, 0.6) };
-    return { label: 'Ready', color: c.success, dot: c.success };
+// Task 2 (recovery/freshness UI factual-language amendment): this used to
+// band elapsed time into a readiness verdict (Just trained/Recovering/
+// Nearly ready/Ready) via its own inline hours-since thresholds, and its
+// `!lastTrainedAt` branch turned a muscle with NO recorded training at all
+// into 'Ready' - missing evidence read as a positive readiness claim, and a
+// second, disagreeing banding system from the one VolumeHeatmapScreen used
+// (muscleRecovery.js, since deleted). Both are gone: this now reads the
+// single shared trainingRecency() authority (lib/trainingRecency.js), which
+// states only what a logged timestamp establishes and never infers
+// recovered/ready/fresh/fatigued. One neutral colour for every entry - there
+// is no verdict left to colour-code.
+function buildFreshnessDisplay(c) {
+  return function freshnessDisplay(lastTrainedAt, now) {
+    const recency = trainingRecency(lastTrainedAt, now);
+    return { label: recency.label, daysAgo: recency.daysAgo, color: c.textMuted, dot: c.textMuted };
   };
 }
 
@@ -228,14 +228,17 @@ export default function ReadinessCards({ userId, tier }) {
   const lastUnlocked = unlocked[unlocked.length - 1] ?? null;
   const progressPct = next ? `${Math.round(Math.min(1, totalWorkouts / next.sessions) * 100)}%` : '100%';
 
-  const resolveFreshnessMeta = buildFreshnessMeta(t.colors);
+  const resolveFreshnessDisplay = buildFreshnessDisplay(t.colors);
   const freshnessEntries = Object.entries(MUSCLE_DISPLAY_NAMES)
     .filter(([key]) => muscleFreshness[key] !== undefined)
-    .map(([key, displayName]) => ({ key, displayName, ...resolveFreshnessMeta(muscleFreshness[key], Date.now()) }))
-    .sort((a, b) => {
-      const order = { 'Just trained': 0, Recovering: 1, 'Nearly ready': 2, Ready: 3 };
-      return (order[a.label] ?? 4) - (order[b.label] ?? 4);
-    });
+    .map(([key, displayName]) => ({ key, displayName, ...resolveFreshnessDisplay(muscleFreshness[key], Date.now()) }))
+    // Malformed/future evidence reads as daysAgo: null (trainingRecency's
+    // 'Not logged') - drop it rather than show a not-logged chip for a
+    // muscle the pre-filter above already established has SOME record.
+    .filter((e) => e.daysAgo !== null)
+    // Factual ordering only: most recently trained first. No severity or
+    // readiness implication - trainingRecency carries none to sort by.
+    .sort((a, b) => a.daysAgo - b.daysAgo);
 
   return (
     <AnimatedEntrance index={1} style={{ gap: spacing.md }}>
@@ -294,12 +297,11 @@ export default function ReadinessCards({ userId, tier }) {
                   <Ionicons name="flash-outline" size={20} color={t.colors.primary} />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.mfTitle, live.mfTitle]}>Muscle recovery</Text>
-                  {/* C6 RD6-11 (D97-25): the band is days-since-trained
-                      against a typical window - it never reads this user's
-                      soreness data - so the gloss says what it measures,
-                      matching the heatmap sibling's honest wording. */}
-                  <Text style={[styles.mfSub, live.mfSub]}>How recently each muscle was trained, against its typical recovery window.</Text>
+                  <Text style={[styles.mfTitle, live.mfTitle]}>Training recency</Text>
+                  {/* Task 2: this is elapsed time since the last logged set,
+                      nothing more - it never reads this user's soreness or
+                      recovery data, so the title and gloss say only that. */}
+                  <Text style={[styles.mfSub, live.mfSub]}>How recently each muscle was trained.</Text>
                 </View>
               </View>
               <View style={styles.mfChipGrid}>

@@ -219,8 +219,10 @@ describe('AX-04 (launch accessibility audit): muscle rows are the accessible + o
     expect(chestRow.props.style.minHeight).toBeGreaterThanOrEqual(44);
   });
 
-  test('the freshness dot/chip no longer carries its own accessibility node (avoids nesting inside the row)', async () => {
-    getLastTrainedByMuscle.mockResolvedValueOnce({ chest: { daysAgo: 0 } });
+  test('the recency chip no longer carries its own accessibility node (avoids nesting inside the row)', async () => {
+    // Task 2: the row now reads the raw timestamp (lastDate) through the
+    // shared trainingRecency() authority, not a precomputed band/daysAgo.
+    getLastTrainedByMuscle.mockResolvedValueOnce({ chest: { daysAgo: 0, lastDate: Date.now() } });
     getCompletedWorkoutSets.mockResolvedValueOnce(chestSets(11));
     let tree;
     await act(async () => { tree = create(<VolumeHeatmapScreen />); });
@@ -232,10 +234,9 @@ describe('AX-04 (launch accessibility audit): muscle rows are the accessible + o
         && n.props.accessibilityLabel.startsWith('Chest:')
         && typeof n.type === 'string',
     )[0];
-    // daysAgo: 0 => the 'fatigued' freshness band ("Recently trained"), the
-    // resting state for a muscle trained today (see buildFreshnessMeta above).
-    expect(chestRow.props.accessibilityLabel).toContain('Recently trained');
-    expect(chestRow.props.accessibilityLabel).toContain('Today');
+    // Factual recency only - no biological/readiness verdict language.
+    expect(chestRow.props.accessibilityLabel).toContain('Trained within 24h');
+    expect(chestRow.props.accessibilityLabel).not.toMatch(/Fresh|Recovering|Ready/);
 
     // The freshness group inside is hidden from assistive tech (its info is
     // now spoken once, in the row's own combined label above).
@@ -247,6 +248,25 @@ describe('AX-04 (launch accessibility audit): muscle rows are the accessible + o
     // No leftover per-dot accessibilityRole="image" node (the old pattern).
     const dotImageNodes = chestRow.findAll((n) => n.props.accessibilityRole === 'image');
     expect(dotImageNodes.length).toBe(0);
+  });
+
+  test('a future/malformed last-trained timestamp shows no recency chip, never a guessed verdict', async () => {
+    // Task 2 (missing/malformed-evidence guard): a corrupt row with a
+    // timestamp after "now" must read as unknown, not as a positive or
+    // negative training-recency claim.
+    getLastTrainedByMuscle.mockResolvedValueOnce({ chest: { daysAgo: -3, lastDate: Date.now() + 3 * 86400000 } });
+    getCompletedWorkoutSets.mockResolvedValueOnce(chestSets(11));
+    let tree;
+    await act(async () => { tree = create(<VolumeHeatmapScreen />); });
+    await flush();
+
+    const chestRow = tree.root.findAll(
+      (n) => n.props.accessibilityRole === 'text'
+        && typeof n.props.accessibilityLabel === 'string'
+        && n.props.accessibilityLabel.startsWith('Chest:')
+        && typeof n.type === 'string',
+    )[0];
+    expect(chestRow.props.accessibilityLabel).not.toMatch(/Trained|Not logged/);
   });
 });
 
