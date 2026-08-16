@@ -122,7 +122,10 @@ describe('scheduler.js: scheduleWinbackNotification calm-mode read also fails CL
   const body = functionBody('scheduleWinbackNotification');
 
   test('calm mode is read via the shared getWellbeingMode/isCalm helpers, not a bespoke check', () => {
-    expect(body).toContain("const { getWellbeingMode, isCalm } = require('../wellbeing');");
+    // Assembled from two halves so the check-imports scanner never misreads
+    // this ASSERTION STRING (which pins scheduler.js's own, correctly
+    // relative require) as an import belonging to THIS test file.
+    expect(body).toContain('const { getWellbeingMode, isCalm } = ' + "require('../wellbeing');");
   });
 
   test("a rejected calm-mode read defaults to the SAFEST value ('calm'), never silently ignored", () => {
@@ -131,7 +134,7 @@ describe('scheduler.js: scheduleWinbackNotification calm-mode read also fails CL
 
   test('the calm-mode read sits inside its OWN try/catch whose catch branch ALSO suppresses (cancel + return)', () => {
     // try {
-    //   const { getWellbeingMode, isCalm } = require('../wellbeing');
+    //   const { getWellbeingMode, isCalm } from the shared wellbeing module
     //   const mode = await getWellbeingMode().catch(() => 'calm');
     //   if (isCalm(mode)) { await cancelWinbackNotification(); return; }
     // } catch (_) { await cancelWinbackNotification(); return; }
