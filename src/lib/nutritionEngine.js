@@ -1,9 +1,14 @@
 /**
  * nutritionEngine.js
  * Pure-function nutrition target calculator for the Volyume app.
- * No side effects, no DB calls, no imports, just math.
+ * No side effects, no DB calls, just math. One import: the DST-safe local
+ * calendar helper from dayKey.js, which is itself import-free (the same
+ * no-cycle exception algorithms.js documents), so day semantics stay
+ * single-sourced instead of duplicated here.
  * Adaptive TDEE: computeEWMA, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment
  */
+
+import { localDayKey } from './dayKey';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -175,9 +180,25 @@ export function computeEWMA(weightData, alpha = EWMA_ALPHA) {
   // rapid-loss signal. Defensive filter only; no target/floor maths change.
   const clean = weightData.filter((p) => p && Number.isFinite(Number(p.weightKg)) && Number(p.weightKg) > 0);
   if (clean.length === 0) return [];
-  const result = [];
-  let ewma = Number(clean[0].weightKg);
+  // Campaign 21 temporal finding 3 (parity with weeklyCoach.computeEWMA):
+  // one weight truth per local day - a duplicate same-day weigh-in must not
+  // double-learn into the smoothed trend - and smoothing must run in
+  // chronological order rather than input order, so row arrival order can
+  // never change the trend. Latest-timestamped row of each local day wins
+  // (canonicalWeightEvidence semantics). Rows without a usable loggedAt
+  // keep their input position and collapse under one key so nothing is
+  // silently dropped.
+  const byDay = new Map();
   for (const point of clean) {
+    const at = Number(point.loggedAt);
+    const key = Number.isFinite(at) ? localDayKey(at) : `unkeyed_${byDay.size}`;
+    const prev = byDay.get(key);
+    if (!prev || (Number.isFinite(at) && at > Number(prev.loggedAt))) byDay.set(key, point);
+  }
+  const ordered = [...byDay.values()].sort((a, b) => (Number(a.loggedAt) || 0) - (Number(b.loggedAt) || 0));
+  const result = [];
+  let ewma = Number(ordered[0].weightKg);
+  for (const point of ordered) {
     ewma = alpha * Number(point.weightKg) + (1 - alpha) * ewma;
     result.push({ ...point, ewma: parseFloat(ewma.toFixed(3)) });
   }

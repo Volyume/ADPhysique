@@ -552,7 +552,10 @@ export function assembleEvidencePacket(input) {
         const bandOk = todayWidth > 0
           ? (overlapWidth / todayWidth) >= 0.5
           : (s.band.min === todayBand.min && s.band.max === todayBand.max);
-        const recentOk = s.at > 0 && (now - s.at) <= FORTY_FIVE_DAYS_MS;
+        // Campaign 21 temporal finding 6: the recency bound must reject
+        // FUTURE-dated sessions too - a clock-skewed row would otherwise
+        // produce a negative gap that trivially passes the recent check.
+        const recentOk = s.at > 0 && s.at <= now && (now - s.at) <= FORTY_FIVE_DAYS_MS;
         return { ...s, comparable: bandOk && recentOk && s.working.length > 0 };
       })
       .sort((a, b) => b.at - a.at)

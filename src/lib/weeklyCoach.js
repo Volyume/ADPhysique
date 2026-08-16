@@ -57,7 +57,20 @@ export function computeEWMA(weights, alpha = 0.1) {
   // rapid-loss/ED signal from noise.
   const clean = weights.filter((w) => w && Number.isFinite(Number(w.weightKg)) && Number(w.weightKg) > 0);
   if (clean.length === 0) return [];
-  const sorted = [...clean].sort((a, b) => a.loggedAt - b.loggedAt);
+  // Campaign 21 temporal finding 3: one weight truth per local day. The
+  // confidence gate (C10C) and canonicalWeightEvidence already collapse
+  // same-day duplicates, but the EWMA applied its update once per ROW, so
+  // a duplicate same-day weigh-in double-learned into the smoothed trend
+  // feeding the calorie magnitude and the ED rapid-loss signal. Collapse
+  // to the latest-timestamped row of each local day (exactly
+  // canonicalWeightEvidence's documented semantics) before smoothing.
+  const byDay = new Map();
+  for (const w of clean) {
+    const key = localDayKey(Number(w.loggedAt));
+    const prev = byDay.get(key);
+    if (!prev || Number(w.loggedAt) > Number(prev.loggedAt)) byDay.set(key, w);
+  }
+  const sorted = [...byDay.values()].sort((a, b) => a.loggedAt - b.loggedAt);
   const result = [];
   let ema = Number(sorted[0].weightKg);
   for (const w of sorted) {
@@ -84,6 +97,14 @@ export function getLatestEwma(weights, alpha = 0.1) {
  */
 export function computeWeeklyTrendPct(morningWeights, currentBodyweightKg = null, nowMs = Date.now()) {
   if (!morningWeights || morningWeights.length < 4) return null;
+  // Campaign 21 temporal finding 5: the windows here bound the PAST only,
+  // so a clock-skewed future-dated row could become the trend's "latest"
+  // point. Future rows are excluded outright - conservative direction: the
+  // count can only fall, so evidence holds fire MORE often, never less.
+  morningWeights = morningWeights.filter(
+    (w) => Number(w?.loggedAt) <= nowMs,
+  );
+  if (morningWeights.length < 4) return null;
   // C10A RB6-2 (founder-commissioned): the comparator can be a pre-gap
   // point, so the raw difference can describe months of change. This
   // returns a PER-WEEK rate, which is what every consumer's threshold is
@@ -812,7 +833,10 @@ export function runWeeklyCoach(inputs) {
     const weekWindowStartMs = nowMs - 7 * 86400000;
     const distinctDays = new Set(
       timed
-        .filter((w) => Number(w.loggedAt) >= weekWindowStartMs)
+        // Campaign 21 temporal finding 5: bounded on BOTH sides - a
+        // clock-skewed future row must not inflate the confidence count
+        // (that would weaken the data hold, the anti-conservative direction).
+        .filter((w) => Number(w.loggedAt) >= weekWindowStartMs && Number(w.loggedAt) <= nowMs)
         .map((w) => localDayKey(Number(w.loggedAt))),
     );
     return distinctDays.size + untimed;

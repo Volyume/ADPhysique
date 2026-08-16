@@ -275,7 +275,13 @@ export function computeVolumeApply(plannedRows, volumeDelta) {
     // absolute backstop — never +Infinity, so a null-mrv row cannot uncap
     // progression (PROG-1, audit §2).
     const mrv = row.mrv ?? row.mav ?? ABSOLUTE_WEEKLY_SET_CEILING;
-    const current = row.planned_sets ?? 0;
+    // Campaign 21 temporal finding 7: a non-numeric planned_sets (a corrupt
+    // or foreign-client row) used to survive as string concatenation junk in
+    // the output. An unusable base holds that row instead - the same
+    // fail-closed posture as the landmark guards above.
+    const currentRaw = Number(row.planned_sets ?? 0);
+    if (!Number.isFinite(currentRaw)) continue;
+    const current = currentRaw;
     let next = current + volumeDelta;
     if (next < mev) next = mev;
     if (next > mrv) next = mrv;
