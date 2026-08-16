@@ -110,13 +110,38 @@ describe('F5 Phase A: tombstone-aware legacy pulls', () => {
     expect(chunked).toMatch(/\.in\(column, slice\)\.is\('deleted_at', null\)/);
   });
 
-  test('the workouts delta pull filters tombstones', () => {
-    // The highest-traffic legacy pull: the watermark delta on workouts
-    // (from('workouts') ... gte('updated_at', watermark)).
+  // PHASE B (release-gate blocker fix): the workouts delta pull is the ONE
+  // deliberate inversion of the rule above, and the reason is the rule's own
+  // logic taken one step further. Filtering tombstones out protects a build
+  // that cannot APPLY them. This build can: a pulled workout tombstone is
+  // applied as a local hard delete. Filtering them here was therefore no
+  // longer protective, it was the defect - device B never learned device A
+  // had deleted a session, kept its stale live copy, and re-uploaded it on
+  // the next bulk cycle, resurrecting a deleted workout.
+  //
+  // Every OTHER pull keeps the Phase A filter (pinned by the >=15 count and
+  // the fetchByIdsChunked chokepoint tests above), because none of them has
+  // an apply path for a tombstone yet.
+  test('the workouts delta pull SELECTS tombstones so deletes can propagate', () => {
     const at = SYNC.indexOf("gte('updated_at', isoFromMs(wmWorkouts))");
     expect(at).toBeGreaterThan(-1);
-    const windowBefore = SYNC.slice(Math.max(0, at - 800), at);
+    const windowBefore = SYNC.slice(Math.max(0, at - 1200), at);
     expect(windowBefore).toMatch(/from\('workouts'\)/);
-    expect(windowBefore).toMatch(/\.is\('deleted_at', null\)/);
+    // deleted_at must be in the projection, and must NOT be filtered out.
+    expect(windowBefore).toMatch(/updated_at, deleted_at'/);
+    expect(windowBefore).not.toMatch(/\.is\('deleted_at', null\)/);
+  });
+
+  test('a pulled workout tombstone is APPLIED locally, never silently ignored', () => {
+    // Selecting tombstones is only half the contract: without an apply step
+    // the pull would just skip them and the stale local row would survive.
+    const pull = fnBody(SYNC, 'export async function pullFromCloud');
+    expect(pull).not.toBeNull();
+    expect(pull).toMatch(/const tombstoned = cloudWorkouts\.filter\(w => w\?\.deleted_at\)/);
+    expect(pull).toMatch(/deleteWorkoutAndSets\(supabaseUserId, w\.id\)/);
+    // Live rows and tombstones must not be conflated: only live rows are
+    // inserted, and only live rows have their sets fetched.
+    expect(pull).toMatch(/const liveWorkouts = cloudWorkouts\.filter\(w => !w\?\.deleted_at\)/);
+    expect(pull).toMatch(/const workoutIds = liveWorkouts\.map\(w => w\.id\)/);
   });
 });

@@ -331,9 +331,21 @@ export async function syncWorkout(supabaseUserId, workoutId, { rethrow = false }
  * drainer retries with backoff. Sets go first so a mid-way failure leaves a
  * set-less workout shell, never orphaned cloud sets.
  *
- * Multi-device note (v1): a device that has ALREADY pulled the session keeps
- * its local copy until its next full pull (sign-in); the watermark delta pull
- * has no tombstone to carry, and the cloud rows are simply gone.
+ * Multi-device note: this used to HARD delete both rows, which made the
+ * deletion invisible to every other device - a pull only ever selects live
+ * rows, so device B never learned the session was gone, kept its stale local
+ * copy, and re-uploaded it on its next bulkUploadLocalData cycle,
+ * RESURRECTING a session the athlete had deliberately deleted (release-gate
+ * blocker). The workout row is now TOMBSTONED instead (deleted_at set, the
+ * column migrate_012 added to both cloud tables for exactly this purpose),
+ * so the delete is durable cross-device truth that a delta pull can carry.
+ *
+ * Sets are still hard-deleted: the workout tombstone alone is sufficient to
+ * suppress them (pullFromCloud only fetches sets for workouts it pulled, and
+ * applying a workout tombstone removes the local workout AND its sets), so
+ * tombstoning every child row would be redundant write amplification with no
+ * extra convergence. Sets go first so a mid-way failure leaves a set-less
+ * workout shell, never orphaned cloud sets.
  */
 export async function deleteWorkoutFromCloud(supabaseUserId, workoutId) {
   const sb = getClient();
@@ -346,8 +358,13 @@ export async function deleteWorkoutFromCloud(supabaseUserId, workoutId) {
     const { error: setsErr } = await sb.from('workout_sets')
       .delete().eq('user_id', supabaseUserId).eq('workout_id', workoutId);
     if (setsErr) { logPgErr('sync.deleteWorkoutFromCloud.sets', setsErr); return false; }
+    // Tombstone, not delete. updated_at is bumped alongside deleted_at so the
+    // watermark delta pull (which filters on updated_at) actually re-includes
+    // the row on every other device rather than skipping it as unchanged.
+    const nowIso = new Date().toISOString();
     const { error: wErr } = await sb.from('workouts')
-      .delete().eq('user_id', supabaseUserId).eq('id', workoutId);
+      .update({ deleted_at: nowIso, updated_at: nowIso })
+      .eq('user_id', supabaseUserId).eq('id', workoutId);
     if (wErr) { logPgErr('sync.deleteWorkoutFromCloud.workout', wErr); return false; }
     return true;
   } catch (e) {
@@ -2061,25 +2078,50 @@ export async function pullFromCloud(supabaseUserId) {
       'sync.pullFromCloud.workouts',
       () => {
         let q = sb.from('workouts')
-          .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id, name, pre_workout_intent, set_count, total_volume, mesocycle_week_id, joint_discomfort, updated_at')
+          // deleted_at is SELECTED and no longer FILTERED OUT: a tombstone is
+          // the only way this device can learn that another device deleted a
+          // session. Filtering them out (the old F5 Phase A defensive guard)
+          // is what let a stale local copy survive and be re-uploaded,
+          // resurrecting a deleted workout (release-gate blocker).
+          .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id, name, pre_workout_intent, set_count, total_volume, mesocycle_week_id, joint_discomfort, updated_at, deleted_at')
           .eq('user_id', supabaseUserId)
-          .eq('is_completed', true)
-          .is('deleted_at', null); // F5 Phase A: tombstone-aware (no-op until Phase B writes them)
+          .eq('is_completed', true);
         if (wmWorkouts > 0) q = q.gte('updated_at', isoFromMs(wmWorkouts));
         return q.order('started_at', { ascending: false });
       },
     );
     let workoutFailures = 0;
     if (cloudWorkouts?.length) {
-      // First pass: insert every workout shell. Don't fetch sets per
+      // A tombstoned workout is applied as a LOCAL HARD DELETE rather than a
+      // local tombstone. Keeping local rows either live-or-absent means every
+      // existing workout reader (history, programme position, volume, PRs,
+      // coach evidence, re-entry recency - ~50 query sites) stays correct
+      // with no filter changes, and there is no half-state for them to
+      // mis-read. The durable propagation evidence for THIS device's own
+      // deletes lives in pending_sync_ops ('workout_delete'), not in the row,
+      // so removing the row destroys nothing the sync layer still needs.
+      const tombstoned = cloudWorkouts.filter(w => w?.deleted_at);
+      const liveWorkouts = cloudWorkouts.filter(w => !w?.deleted_at);
+      for (const w of tombstoned) {
+        try {
+          // eslint-disable-next-line global-require
+          const { deleteWorkoutAndSets } = require('./database');
+          await deleteWorkoutAndSets(supabaseUserId, w.id);
+        } catch (e) {
+          workoutFailures++;
+          logWarn('sync.pullFromCloud', 'workout tombstone apply failed', { workoutId: w?.id, error: e?.message });
+        }
+      }
+      // First pass: insert every LIVE workout shell. Don't fetch sets per
       // workout (that was N+1 round-trips); batch them after.
-      for (const w of cloudWorkouts) {
+      for (const w of liveWorkouts) {
         try { await insertWorkoutFromCloud(supabaseUserId, w); workoutCount++; }
         catch (e) { workoutFailures++; logWarn('sync.pullFromCloud', 'workout insert failed', { workoutId: w?.id, error: e?.message }); }
       }
       // Second pass: one chunked query per ~200 workouts for their sets.
+      // Only live workouts: a tombstoned one has just been removed locally.
       if (bailForWipe('workout_sets')) return 0;
-      const workoutIds = cloudWorkouts.map(w => w.id);
+      const workoutIds = liveWorkouts.map(w => w.id);
       const allSets = await fetchByIdsChunked(
         'sync.pullFromCloud.sets', 'workout_sets', 'workout_id', workoutIds,
       );
