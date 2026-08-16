@@ -2054,3 +2054,19 @@ D37 triage; (2) the ED detector's positional weeklyHistory contract
 (architecture note, single verified caller, no change made); (3) the
 known widget-storage full-run flake (pre-Campaign-20, still intermittent,
 needs its own session).
+
+## CAMPAIGN 22 (2026-08-16) — UX/presentation, screen 1: Home/Today. PHASE 1 IN FLIGHT, BLOCKED ON BRIEF.
+
+Founder order 2026-08-16 (audit + IA + hierarchy + copy contract; NO
+implementation; Fable lead, no Opus). Branch
+`claude/campaign22-home-today-audit` off main `624cf126`. BLOCKER: the
+founder's campaign prompt arrived TRUNCATED mid-way through the CRITICAL
+INTERPRETATION LAW section (cut at the third complaint example, '"3
+weeks'); the complaint list, audit method, deliverable structure and
+verdict format are missing. Surfaced to the founder 2026-08-16; the
+audit's judgement layer waits for the full brief so complaints are read
+narrowly as ordered, not reconstructed. DONE MEANWHILE: mechanical state
+inventory landed (docs/home-today-ux-campaign-22-2026-08-16/
+STATE-INVENTORY.md - 21 sections, 47 state axes, ~120 strings, ~65
+actions, 150-400 realistic configurations). RECOVERY PATH: resume from
+the inventory + the full brief when supplied; no production code touched.
