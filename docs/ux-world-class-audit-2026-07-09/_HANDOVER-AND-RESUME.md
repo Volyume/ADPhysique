@@ -569,6 +569,13 @@ its evidence).
 
 ===============================================================================
 
+### 2026-08-16 — CAMPAIGN 21 (coach decision-graph validation) — COMPLETE, LANDED
+Whole-system coaching validation landed on main same day: 113 rules
+mapped/oracle-locked, ~250 scenarios + adversarial suites through real
+seams, four production defects fixed, hostile review closed, strict
+coverage gate green (one explained residue). Detail: TASKBOARD Campaign
+21 entry; campaign folder docs/coach-validation-campaign-21-2026-08-16/.
+
 ### 2026-08-16 — CAMPAIGN 20 PHASE 2 (live set prescription) — IMPLEMENTED, LANDED
 Full implementation landed on main same day (commits d9f8d105 / 4d1f0274 /
 5ebaae41): one authoritative pure resolver (src/lib/livePrescription.js),

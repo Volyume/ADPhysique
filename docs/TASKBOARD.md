@@ -2033,16 +2033,24 @@ migration, per the campaign brief. Baseline traced: main `9816b601`.
   session. Founder device retest of the new prescription flow is the
   outstanding action (checklist in the Phase 2 handover message).
 
-## CAMPAIGN 21 (2026-08-16) — coach decision-graph validation & whole-athlete scenario matrix. IN FLIGHT.
+## CAMPAIGN 21 (2026-08-16) — coach decision-graph validation & whole-athlete scenario matrix. COMPLETE, LANDED on main.
 
 Founder order 2026-08-16 (validation + repair, no new features). Branch
 `claude/campaign21-coach-validation` off main `c6eb3cf2`. Fable leads;
 sonnet traces/oracles/reviews; haiku expands mechanics. Campaign folder:
 `docs/coach-validation-campaign-21-2026-08-16/` (decision graph, ledger,
-oracle, coverage). RECOVERY PATH: on session death, `git status` on the
-branch; the ledger + graph docs in the campaign folder are the resume
-point — uncommitted work is lead-reviewed against them and landed or the
-step relaunched from the last green commit. Agents never commit. Steps:
-(1) graph mapping → (2-3) ledger + oracle lock → (4-6) 180+ scenario
-matrix through real seams → (7-11) restraint/precedence/boundary/temporal
-+ defect triage → (12-13) hostile review + coverage gate → land.
+oracle, coverage). LANDED same day: 113 production rules mapped and
+oracle-locked; ~250 whole-athlete scenarios + boundary/temporal/property/
+restraint/suppression/persistence suites through 23 real seams; FOUR
+production defects found and fixed (EWMA same-day double-learning in both
+engines, future-dated rows passing two past-only windows, non-numeric
+planned_sets junk); hostile review closed (matrixDeload gate, bulk
+branches, banking ED-gate behavioural coverage, persistence proofs);
+strict coverage gate green with ONE named explained residue (U-AUTH-01
+round trip, fix recipe documented in the gate file). Final full suite
+968 suites / 13,187 tests, zero failures. FOUNDER-SIDE OPEN ITEMS:
+(1) T-RECOVERY-05 evaluateAutoReg/predictDeloadWeek dead-code candidate,
+D37 triage; (2) the ED detector's positional weeklyHistory contract
+(architecture note, single verified caller, no change made); (3) the
+known widget-storage full-run flake (pre-Campaign-20, still intermittent,
+needs its own session).
