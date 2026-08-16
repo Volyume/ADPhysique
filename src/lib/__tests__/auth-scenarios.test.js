@@ -463,6 +463,48 @@ describe('Scenario: refreshTierFromCloud safety guards', () => {
     await useAppStore.getState().refreshTierFromCloud({ from: () => {} }, null);
     expect(useAppStore.getState().tier).toBe('pro');
   });
+
+  // Release-gate fix: the exact cross-user race restoreSessionFromCloud was
+  // hardened against (AUTH-2/I5, "restoreSessionFromCloud is uid-guarded"
+  // scenario below) but this sibling function never got the same guard. A
+  // fast sign-out-as-A -> sign-in-as-B fires this for both users; A's read
+  // (up to 5s) landing after B is already signed in must not overwrite B's
+  // live tier/trial state with A's.
+  test('a resolving read for a user who is no longer signed in does not overwrite the CURRENT user', async () => {
+    useAppStore.setState({
+      user: { id: 'userB' }, tier: 'free',
+      userProfile: { firstName: 'Bob' },
+    });
+    mockCloudProfile = {
+      tier: 'pro', billing_period: 'annual',
+      trial_state: 'trial_active', pro_trial_ends_at: 999,
+    };
+    // Called for userA, exactly as the fire-and-forget bootstrap/SIGNED_IN
+    // call sites in RootNavigator would after a stale sign-out.
+    await useAppStore.getState().refreshTierFromCloud(getSupabaseClient(), 'userA');
+
+    expect(useAppStore.getState().tier).toBe('free');
+    expect(useAppStore.getState().userProfile).toEqual({ firstName: 'Bob' });
+  });
+
+  test('still applies normally when the read resolves for the CURRENT user', async () => {
+    useAppStore.setState({
+      user: { id: 'userB' }, tier: 'free',
+      userProfile: { firstName: 'Bob' },
+    });
+    mockCloudProfile = { tier: 'pro', billing_period: 'monthly' };
+    await useAppStore.getState().refreshTierFromCloud(getSupabaseClient(), 'userB');
+
+    expect(useAppStore.getState().tier).toBe('pro');
+  });
+
+  test('applies when no user is signed in yet (first sign-in, user not yet set)', async () => {
+    useAppStore.setState({ user: null, tier: null });
+    mockCloudProfile = { tier: 'pro' };
+    await useAppStore.getState().refreshTierFromCloud(getSupabaseClient(), 'userA');
+
+    expect(useAppStore.getState().tier).toBe('pro');
+  });
 });
 
 // ─── Scenario 11: Cloud query error mid sign-in ──────────────────────────────

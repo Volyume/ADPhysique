@@ -1044,6 +1044,17 @@ const useAppStore = create((set, get) => ({
         // Clear the loser timer so a fast read doesn't leave a 5s timer armed.
         clearTimeout(tierTimeoutId);
       }
+      // Release-gate fix (AUTH-2 sibling): this function runs fire-and-forget
+      // from RootNavigator's bootstrap/SIGNED_IN paths with a read that can
+      // take up to 5s. A fast sign-out-as-A -> sign-in-as-B on the same
+      // device fires this again for B while A's read is still in flight; A's
+      // read landing after B's would otherwise overwrite B's live tier and
+      // trial state with A's - the exact cross-user race
+      // restoreSessionFromCloud was hardened against (AUTH-2/I5, same file)
+      // but this sibling function never got the same guard. Bail if a
+      // DIFFERENT user is now signed in.
+      const cur = get().user?.id;
+      if (cur && cur !== supabaseUserId) return;
       if (data?.tier) {
         // Same beta tier policy as restoreSessionFromCloud, see comment
         // there. Any cloud-signed-in user is Pro during beta because the
