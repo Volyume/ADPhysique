@@ -327,6 +327,16 @@ const styles = StyleSheet.create({
   metricAction: {
     minHeight: 30,
     paddingVertical: spacing.xs,
+    // Founder device screenshot (Today truth repair): the Log button sat
+    // ABOVE the row's icon/text instead of level with them. Button applies
+    // `alignSelf: fullWidth ? 'stretch' : 'flex-start'`, and this button is
+    // fullWidth={false} - so its own alignSelf overrode metricRow's
+    // alignItems: 'center' and pinned it to the top of the row. In the
+    // not-logged state metricCopy is three lines tall (label + prompt + the
+    // two-line why caption), so the gap was plainly visible. Re-asserting
+    // centre here restores the shared row alignment; size, behaviour and
+    // labels are untouched.
+    alignSelf: 'center',
   },
   editHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   inputRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -361,6 +371,12 @@ const styles = StyleSheet.create({
     minHeight: 40,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    // Same fullWidth={false} alignSelf override as metricAction above: the
+    // shared Button pins itself to flex-start, which beats inputRow's
+    // alignItems: 'center'. Matching heights hid it here while the stones
+    // variant (two stacked fields) exposed it; centre it explicitly so the
+    // button can never drift from the field it sits beside.
+    alignSelf: 'center',
   },
   logBtnDisabled: { opacity: 0.5 },
   logBtnText: { ...type.label, color: colors.onPrimary },
