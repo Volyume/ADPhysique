@@ -190,6 +190,7 @@ export default function NowCard({
         exerciseType={exerciseType}
         weightStepKg={weightStepKg}
         recordLine={recordLine}
+        compact
       />
 
       {/* Note: collapsed row, honest toggle both ways. */}
@@ -237,12 +238,15 @@ export default function NowCard({
 }
 
 const styles = StyleSheet.create({
+  // Phase 2B density pass (founder S22 verdict): the active row's shell is
+  // as thin as the accent allows - the compact SetEntry inside it halves
+  // the input height, and gap/padding drop a step each.
   card: {
-    gap: spacing.sm,
+    gap: spacing.xs,
     borderRadius: radius.md,
     borderWidth: 1,
     borderLeftWidth: 3,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
   },
   positionRow: {

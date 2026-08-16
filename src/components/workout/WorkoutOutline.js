@@ -1,41 +1,40 @@
 /**
- * WorkoutOutline (logger phase 2B, physical-device corrective redesign)
+ * WorkoutOutline (logger phase 2B, physical-device corrective redesign;
+ * density pass after the founder's S22 screenshots)
  *
- * The compact workout navigator: the whole session as a quiet vertical
- * outline directly under the header, replacing the phase-2 card-per-exercise
- * list whose completed/upcoming cards buried the rest of the workout beneath
- * the active logger on a real device (founder screenshots, failures 4/5/6).
+ * The workout navigator, COLLAPSED BY DEFAULT to one 36dp strip. The first
+ * 2B build kept the full exercise list permanently expanded under the
+ * header; on a real S22 that fixed block consumed ~235dp before the
+ * workspace began - the single biggest "does not fit" offender. The dense
+ * loggers this correction studies spend ZERO permanent chrome on
+ * navigation; ours spends one strip:
  *
- * Design laws carried from the founder's device verdict:
- *   - completed = QUIET: a muted check, secondary-ink name, "4/4". No green
- *     progress bar, no card, no celebration panel.
- *   - current = OBVIOUS but restrained: one amber marker + strong name on a
- *     faint tint. The screen's single other amber is the Log set CTA.
- *   - upcoming = plainly TAPPABLE (primary ink, never disabled-looking):
- *     gym reality is jumping around occupied equipment.
- *   - skipped-for-time = dimmed but still tappable (unchanged law).
- *   - tap = JUMP ONLY; long-press = the ONE reorder path (the existing
- *     block-aware reorder sheet). JUMPING != REORDERING != SKIPPING.
- *   - supersets read from a small link glyph on each member row - no
- *     standalone pill/card.
+ *   collapsed:  [v]  Exercise 2 of 8                         3/24 sets
+ *   expanded:   the full quiet outline (tap = jump, collapses itself)
  *
- * The outline is height-capped so a long session can never push the active
- * workspace off screen: beyond MAX_VISIBLE_ROWS it scrolls internally and
- * keeps the current exercise in view (one neighbour of context above). It
- * renders nothing for single-exercise sessions, the same guarantee the old
- * ExerciseNav strip and the phase-2 list both gave.
+ * Laws carried forward unchanged:
+ *   - completed = QUIET (muted check + n/n; no bars, no cards);
+ *   - current = one amber marker on a faint tint;
+ *   - upcoming = plainly tappable; skipped-for-time dimmed but tappable;
+ *   - tap = JUMP ONLY; long-press (strip or row) = the ONE reorder path;
+ *   - supersets read from a small link glyph, never a pill;
+ *   - height-capped, self-positioning when longer than the cap;
+ *   - renders nothing for single-exercise sessions.
  *
- * Row height sits on the loggedSetMinHeight exception precedent (36dp visual
- * rows in an adjacent list, hitSlop-compensated) - the outline trades a
- * little target height for the founder's density law; names remain
- * full-width targets.
+ * The strip deliberately does NOT repeat the current exercise's name - the
+ * workspace title below is the one place the name renders (the S22 shots
+ * showed it twice within ~100dp).
+ *
+ * Row height sits on the loggedSetMinHeight exception precedent (36dp
+ * visual rows in an adjacent list, hitSlop-compensated).
  */
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { spacing } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { workoutLoggerSize } from '../../styles/layout';
+import { selection as hapticSelection } from '../../lib/haptics';
 
 const ROW_HEIGHT = workoutLoggerSize.loggedSetMinHeight; // 36, the documented compact-row exception
 const MAX_VISIBLE_ROWS = 6.5; // the half row is the "more below" cue
@@ -49,81 +48,112 @@ export default function WorkoutOutline({
 }) {
   const t = useTheme();
   const scrollRef = useRef(null);
+  // Collapsed by default; re-collapses whenever the exercise changes, so a
+  // jump (from here or anywhere else) always returns the strip.
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => { setExpanded(false); }, [currentIndex]);
 
   // Keep the current exercise visible inside the capped outline, with one
   // row of context above it. Plain offset maths on fixed-height rows - a
   // navigator positioning itself, not an input-chasing scroll hack.
   useEffect(() => {
+    if (!expanded) return;
     if (items.length * ROW_HEIGHT <= MAX_VISIBLE_ROWS * ROW_HEIGHT) return;
     scrollRef.current?.scrollTo({
       y: Math.max(0, (currentIndex - 1) * ROW_HEIGHT),
       animated: false,
     });
-  }, [currentIndex, items.length]);
+  }, [currentIndex, items.length, expanded]);
 
   if (items.length <= 1) return null;
 
+  const doneSets = items.reduce((a, it) => a + (it.done || 0), 0);
+  const totalSets = items.reduce((a, it) => a + (it.total || 0), 0);
+
   return (
     <View style={[styles.wrap, { borderBottomColor: t.colors.borderSubtle }]}>
-      <ScrollView
-        ref={scrollRef}
-        style={{ maxHeight: Math.round(MAX_VISIBLE_ROWS * ROW_HEIGHT) }}
-        showsVerticalScrollIndicator={false}
+      <TouchableOpacity
+        style={styles.strip}
+        onPress={() => { hapticSelection(); setExpanded(v => !v); }}
+        onLongPress={onReorder}
+        delayLongPress={300}
+        hitSlop={{ top: 4, bottom: 4, left: 0, right: 0 }}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={`Workout outline, exercise ${currentIndex + 1} of ${items.length}, ${doneSets} of ${totalSets} sets done`}
+        accessibilityHint={onReorder
+          ? 'Shows every exercise in this workout. Hold to reorder.'
+          : 'Shows every exercise in this workout.'}
       >
-        {items.map((item, i) => {
-          const isCurrent = i === currentIndex;
-          const complete = !item.skipped && item.total > 0 && item.done >= item.total;
-          return (
-            <TouchableOpacity
-              key={item.key}
-              style={[
-                styles.row,
-                isCurrent && { backgroundColor: t.colors.primaryBg },
-                item.skipped && styles.rowSkipped,
-              ]}
-              onPress={() => onSelect?.(i)}
-              onLongPress={onReorder}
-              delayLongPress={300}
-              hitSlop={{ top: 2, bottom: 2, left: 0, right: 0 }}
-              accessibilityRole="button"
-              accessibilityState={{ selected: isCurrent }}
-              accessibilityLabel={`${item.name}, ${item.done} of ${item.total} sets done${complete ? ', complete' : ''}${isCurrent ? ', current exercise' : ''}${item.skipped ? ', skipped for time' : ''}${item.groupLabel ? `, ${item.groupLabel.toLowerCase()}` : ''}`}
-              accessibilityHint={onReorder
-                ? 'Switches to this exercise. Hold to reorder the workout.'
-                : 'Switches to this exercise.'}
-            >
-              <View style={styles.marker}>
-                {complete ? (
-                  <Ionicons name="checkmark" size={14} color={t.colors.success} />
-                ) : isCurrent ? (
-                  <View style={[styles.currentDot, { backgroundColor: t.colors.primary }]} />
-                ) : (
-                  <View style={[styles.upcomingDot, { borderColor: t.colors.textMuted }]} />
-                )}
-              </View>
-              <Text
-                numberOfLines={1}
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={t.colors.textSecondary} />
+        <Text style={[styles.stripText, { ...t.type.caption, color: t.colors.textSecondary }]} numberOfLines={1}>
+          {`Exercise ${currentIndex + 1} of ${items.length}`}
+        </Text>
+        <Text style={[styles.count, { ...t.type.num('caption'), color: t.colors.textMuted }]}>
+          {`${doneSets}/${totalSets} sets`}
+        </Text>
+      </TouchableOpacity>
+      {expanded ? (
+        <ScrollView
+          ref={scrollRef}
+          style={{ maxHeight: Math.round(MAX_VISIBLE_ROWS * ROW_HEIGHT) }}
+          showsVerticalScrollIndicator={false}
+        >
+          {items.map((item, i) => {
+            const isCurrent = i === currentIndex;
+            const complete = !item.skipped && item.total > 0 && item.done >= item.total;
+            return (
+              <TouchableOpacity
+                key={item.key}
                 style={[
-                  styles.name,
-                  isCurrent
-                    ? { ...t.type.bodyStrong, color: t.colors.textPrimary }
-                    : complete
-                      ? { ...t.type.bodySm, color: t.colors.textSecondary }
-                      : { ...t.type.bodySm, color: t.colors.textPrimary },
+                  styles.row,
+                  isCurrent && { backgroundColor: t.colors.primaryBg },
+                  item.skipped && styles.rowSkipped,
                 ]}
+                onPress={() => { onSelect?.(i); setExpanded(false); }}
+                onLongPress={onReorder}
+                delayLongPress={300}
+                hitSlop={{ top: 2, bottom: 2, left: 0, right: 0 }}
+                accessibilityRole="button"
+                accessibilityState={{ selected: isCurrent }}
+                accessibilityLabel={`${item.name}, ${item.done} of ${item.total} sets done${complete ? ', complete' : ''}${isCurrent ? ', current exercise' : ''}${item.skipped ? ', skipped for time' : ''}${item.groupLabel ? `, ${item.groupLabel.toLowerCase()}` : ''}`}
+                accessibilityHint={onReorder
+                  ? 'Switches to this exercise. Hold to reorder the workout.'
+                  : 'Switches to this exercise.'}
               >
-                {item.name}
-              </Text>
-              {item.groupLabel ? (
-                <Ionicons name="link" size={12} color={t.colors.textMuted} />
-              ) : null}
-              <Text style={[styles.count, { ...t.type.num('caption'), color: t.colors.textMuted }]}>
-                {item.skipped ? '–' : `${item.done}/${item.total}`}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+                <View style={styles.marker}>
+                  {complete ? (
+                    <Ionicons name="checkmark" size={14} color={t.colors.success} />
+                  ) : isCurrent ? (
+                    <View style={[styles.currentDot, { backgroundColor: t.colors.primary }]} />
+                  ) : (
+                    <View style={[styles.upcomingDot, { borderColor: t.colors.textMuted }]} />
+                  )}
+                </View>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.name,
+                    isCurrent
+                      ? { ...t.type.bodyStrong, color: t.colors.textPrimary }
+                      : complete
+                        ? { ...t.type.bodySm, color: t.colors.textSecondary }
+                        : { ...t.type.bodySm, color: t.colors.textPrimary },
+                  ]}
+                >
+                  {item.name}
+                </Text>
+                {item.groupLabel ? (
+                  <Ionicons name="link" size={12} color={t.colors.textMuted} />
+                ) : null}
+                <Text style={[styles.count, { ...t.type.num('caption'), color: t.colors.textMuted }]}>
+                  {item.skipped ? '–' : `${item.done}/${item.total}`}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      ) : null}
     </View>
   );
 }
@@ -133,6 +163,14 @@ const styles = StyleSheet.create({
   // Deliberately NO card, NO per-row borders, NO progress bars: the outline
   // is a list of lines, not a stack of containers.
   wrap: { borderBottomWidth: 1 },
+  strip: {
+    height: ROW_HEIGHT,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+  },
+  stripText: { flex: 1, minWidth: 0 },
   row: {
     height: ROW_HEIGHT,
     flexDirection: 'row',

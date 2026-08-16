@@ -56,10 +56,25 @@ describe('quiet visual law: completed rows are lines, not celebration panels', (
 });
 
 describe('jump/reorder contract', () => {
-  test('tap is a plain onSelect jump; long-press is the reorder entry, spoken in the hint', () => {
-    expect(SRC).toContain('onPress={() => onSelect?.(i)}');
+  test('tap is a plain onSelect jump (self-collapsing); long-press is the reorder entry, spoken in the hint', () => {
+    // Density pass: selecting a row also collapses the outline back to its
+    // strip - a jump, then out of the way.
+    expect(SRC).toContain("onPress={() => { onSelect?.(i); setExpanded(false); }}");
     expect(SRC).toContain('onLongPress={onReorder}');
     expect(SRC).toContain("'Switches to this exercise. Hold to reorder the workout.'");
+  });
+
+  test('the outline is COLLAPSED BY DEFAULT and re-collapses on every exercise change', () => {
+    // The permanently-expanded list was the S22 "does not fit" offender: it
+    // consumed ~235dp of fixed chrome before the workspace began. One strip
+    // by default; the full list only on request.
+    expect(SRC).toContain('const [expanded, setExpanded] = useState(false);');
+    expect(SRC).toMatch(/useEffect\(\(\) => \{ setExpanded\(false\); \}, \[currentIndex\]\);/);
+    // The strip states position + session set count, and deliberately NOT
+    // the current exercise name (the workspace title is the one name).
+    expect(SRC).toContain('`Exercise ${currentIndex + 1} of ${items.length}`');
+    expect(SRC).toContain('`${doneSets}/${totalSets} sets`');
+    expect(SRC).not.toMatch(/stripText[\s\S]{0,200}item\.name/);
   });
 
   test('skipped rows dim but stay tappable (no disabled prop)', () => {

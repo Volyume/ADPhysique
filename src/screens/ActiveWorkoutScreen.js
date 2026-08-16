@@ -3372,9 +3372,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     setCurrentSet(s => ({ ...s, weight: String(prev.weight ?? 0), reps: prev.actualReps ?? s.reps, isGhost: false }));
                   },
                 };
-              } else if (range) {
-                prefill = { label: 'First time - Target', valueLabel: `${range} reps` };
               }
+              // Phase 2B density pass: the quiet first-time line is retired.
+              // It repeated the exact range the position line above already
+              // shows ("Set 1 of 6 - Working · 8-12 reps" then "First time -
+              // Target 8-12 reps" on the founder's S22 shots). The TAPPABLE
+              // prefill variants (Last session / Recovery week) carry real
+              // information and stay.
             }
 
             return (
@@ -3522,7 +3526,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View key={`upcoming-${n}`} style={styles.upcomingSetRow}>
                   <Text style={[styles.upcomingSetNum, live.upcomingSetNum]}>{n}</Text>
                   <Text style={[styles.upcomingSetText, live.upcomingSetText]}>
-                    {`Set ${n}${range ? ` - ${range} reps` : ''}`}
+                    {range ? `${range} reps` : `Set ${n}`}
                   </Text>
                 </View>,
               );
@@ -3530,7 +3534,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             return rows.length ? <View style={styles.upcomingSection}>{rows}</View> : null;
           })()}
 
-          <View style={{ height: Math.max(spacing.xxl, safeBottom + spacing.lg) }} />
+          {/* Phase 2B: the rest strip + CTA live OUTSIDE this scroll and the
+              bar already absorbs safeBottom - counting it here too created
+              the dead gap on the founder's S22 shots. A step of breathing
+              room is all the scroll needs. */}
+          <View style={{ height: spacing.xl }} />
         </ScrollView>
 
         {/* A2 (audit CL-4): the primary action lives in a bottom-pinned bar,

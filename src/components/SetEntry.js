@@ -12,7 +12,12 @@ const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 // D87: `recordLine` is the pure buildRecordLine() result (or null). The
 // caller owns it because the set history lives on the screen; SetEntry only
 // renders it. Absent (the logged-set edit sheet) = today's card, unchanged.
-function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5, recordLine = null }) {
+// `compact` (phase 2B density pass, founder S22 verdict): weight + reps
+// side-by-side in ONE row with labels above, halving the entry's height.
+// Same inputs, testIDs, keyboards, validation and focus chain - only the
+// arrangement changes. Applies to weight_reps/weighted_bodyweight/reps_only;
+// duration/distance keep their existing layout.
+function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5, recordLine = null, compact = false }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize/
   // type-bearing keys only.
@@ -132,15 +137,9 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
   // recordLine.isRecord still renders the gold record flag below, and PR
   // detection/celebration live in the orchestrator.
 
-  return (
-    <View style={styles.container}>
-      {/* Weight Row, rendered for weight_reps and weighted_bodyweight only.
-          This branch is BYTE-IDENTICAL to the original single-schema layout. */}
-      {showWeightReps && (
-      <View style={styles.inputRow}>
-        <View style={styles.fieldLabelWrap}>
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>Weight ({units})</Text>
-        </View>
+  // Shared stepper groups so the compact and full layouts render the SAME
+  // input elements (identity, testIDs, focus refs) - only placement differs.
+  const weightStepper = (
         <View style={[styles.stepper, live.stepper]}>
           <TouchableOpacity
             style={[styles.stepBtn, live.stepBtn]}
@@ -197,6 +196,86 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
           >
             <Ionicons name="add" size={20} color={t.colors.primary} />
           </TouchableOpacity>
+        </View>
+  );
+  const repsStepper = (
+        <View style={[styles.stepper, live.stepper]}>
+          <TouchableOpacity
+            style={[styles.stepBtn, live.stepBtn]}
+            onPress={() => adjust('reps', -1)}
+            onLongPress={() => startRepeat('reps', -1)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel="Decrease reps by 1"
+            accessibilityHint="Hold to keep adjusting"
+          >
+            <Ionicons name="remove" size={20} color={t.colors.primary} />
+          </TouchableOpacity>
+          <TextInput
+            testID="volyume-reps-input"
+            ref={repsRef}
+            style={[styles.valueInput, live.valueInput, isGhost && [styles.valueInputGhost, live.valueInputGhost]]}
+            value={reps == null || reps === '' ? '' : String(reps)}
+            onChangeText={v => {
+              bumpIdle();
+              const n = parseInt(v, 10);
+              if (!isNaN(n)) setField('reps', Math.min(Math.max(n, 1), 200));
+              else if (v === '') setField('reps', '');
+            }}
+            onFocus={bumpIdle}
+            onBlur={clearIdle}
+            keyboardType="number-pad"
+            returnKeyType="done"
+            // Keyboard-completes-the-set (ULTIMATE-WR-1): reps is the last field,
+            // so its Done key logs the set directly. Falls back to dismissing the
+            // keyboard when no handler is supplied, so other call sites are
+            // unaffected.
+            onSubmitEditing={() => (onSubmitComplete ? onSubmitComplete() : Keyboard.dismiss())}
+            selectTextOnFocus
+            accessibilityLabel="Number of reps"
+            {...numericAccessory}
+          />
+          <TouchableOpacity
+            style={[styles.stepBtn, live.stepBtn]}
+            onPress={() => adjust('reps', 1)}
+            onLongPress={() => startRepeat('reps', 1)}
+            onPressOut={stopRepeat}
+            delayLongPress={300}
+            hitSlop={STEPPER_HIT_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel="Increase reps by 1"
+            accessibilityHint="Hold to keep adjusting"
+          >
+            <Ionicons name="add" size={20} color={t.colors.primary} />
+          </TouchableOpacity>
+        </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      {/* Weight Row, rendered for weight_reps and weighted_bodyweight only.
+          This branch is BYTE-IDENTICAL to the original single-schema layout. */}
+      {showWeightReps && !compact && (
+      <View style={styles.inputRow}>
+        <View style={styles.fieldLabelWrap}>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>Weight ({units})</Text>
+        </View>
+        {weightStepper}
+      </View>
+      )}
+      {(showWeightReps || exerciseType === 'reps_only') && compact && (
+      <View style={styles.compactRow}>
+        {showWeightReps && (
+          <View style={styles.compactCol}>
+            <Text style={[styles.fieldLabel, live.fieldLabel]}>Weight ({units})</Text>
+            {weightStepper}
+          </View>
+        )}
+        <View style={styles.compactCol}>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>Reps</Text>
+          {repsStepper}
         </View>
       </View>
       )}
@@ -356,64 +435,13 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
       {/* Reps, rendered for weight_reps, weighted_bodyweight and reps_only.
           reps_only hides only the Weight Row above; the reps field itself is
           unchanged. */}
-      {(showWeightReps || exerciseType === 'reps_only') && (
+      {(showWeightReps || exerciseType === 'reps_only') && !compact && (
       <View style={styles.repsBlock}>
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
           <Text style={[styles.fieldLabel, live.fieldLabel]}>Reps</Text>
         </View>
-        <View style={[styles.stepper, live.stepper]}>
-          <TouchableOpacity
-            style={[styles.stepBtn, live.stepBtn]}
-            onPress={() => adjust('reps', -1)}
-            onLongPress={() => startRepeat('reps', -1)}
-            onPressOut={stopRepeat}
-            delayLongPress={300}
-            hitSlop={STEPPER_HIT_SLOP}
-            accessibilityRole="button"
-            accessibilityLabel="Decrease reps by 1"
-            accessibilityHint="Hold to keep adjusting"
-          >
-            <Ionicons name="remove" size={20} color={t.colors.primary} />
-          </TouchableOpacity>
-          <TextInput
-            testID="volyume-reps-input"
-            ref={repsRef}
-            style={[styles.valueInput, live.valueInput, isGhost && [styles.valueInputGhost, live.valueInputGhost]]}
-            value={reps == null || reps === '' ? '' : String(reps)}
-            onChangeText={v => {
-              bumpIdle();
-              const n = parseInt(v, 10);
-              if (!isNaN(n)) setField('reps', Math.min(Math.max(n, 1), 200));
-              else if (v === '') setField('reps', '');
-            }}
-            onFocus={bumpIdle}
-            onBlur={clearIdle}
-            keyboardType="number-pad"
-            returnKeyType="done"
-            // Keyboard-completes-the-set (ULTIMATE-WR-1): reps is the last field,
-            // so its Done key logs the set directly. Falls back to dismissing the
-            // keyboard when no handler is supplied, so other call sites are
-            // unaffected.
-            onSubmitEditing={() => (onSubmitComplete ? onSubmitComplete() : Keyboard.dismiss())}
-            selectTextOnFocus
-            accessibilityLabel="Number of reps"
-            {...numericAccessory}
-          />
-          <TouchableOpacity
-            style={[styles.stepBtn, live.stepBtn]}
-            onPress={() => adjust('reps', 1)}
-            onLongPress={() => startRepeat('reps', 1)}
-            onPressOut={stopRepeat}
-            delayLongPress={300}
-            hitSlop={STEPPER_HIT_SLOP}
-            accessibilityRole="button"
-            accessibilityLabel="Increase reps by 1"
-            accessibilityHint="Hold to keep adjusting"
-          >
-            <Ionicons name="add" size={20} color={t.colors.primary} />
-          </TouchableOpacity>
-        </View>
+        {repsStepper}
       </View>
       </View>
       )}
@@ -502,6 +530,9 @@ const styles = StyleSheet.create({
   // when a genuine record is dialled in); the R2-4 est-max caption styles
   // went with the removed routine copy.
   repsBlock: { gap: spacing.sm },
+  // Phase 2B density pass: the compact side-by-side arrangement.
+  compactRow: { flexDirection: 'row', gap: spacing.sm },
+  compactCol: { flex: 1, gap: spacing.xxs },
   perSideHint: {
     ...type.caption,
     color: colors.textMuted,
