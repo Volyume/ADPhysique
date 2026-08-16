@@ -322,7 +322,7 @@ describe('4. future-dated / malformed-timestamp rows -> safe handling', () => {
     expect(typeof out.confidence).toBe('string');
   });
 
-  test('FINDING: weeklyCoach\'s 7-day weigh-in window only bounds the PAST (loggedAt >= nowMs-7d, weeklyCoach.js:815), never the FUTURE -- a clock-skewed future-dated row is counted toward weigh-in days and can become the EWMA\'s "latest" point', () => {
+  test('FIXED (Campaign 21 finding 5, class B repaired): a clock-skewed future-dated row no longer moves the trend or the confidence day-count', () => {
     const clean = flatWeights(10, 85, -0.3);
     const futureRow = { loggedAt: NOW + 30 * DAY, weightKg: 70 }; // implausible, clock-skewed
     const withFutureRow = [...clean, futureRow];
@@ -333,9 +333,9 @@ describe('4. future-dated / malformed-timestamp rows -> safe handling', () => {
     expect(Number.isFinite(cleanTrend)).toBe(true);
     expect(Number.isFinite(withFutureTrend)).toBe(true);
     // ...but the future row becomes the temporally-latest point once sorted,
-    // so it materially changes the "current" EWMA reading the trend is
-    // built from -- there is no `loggedAt <= nowMs` guard in this seam.
-    expect(withFutureTrend).not.toBeCloseTo(cleanTrend, 6);
+    // The windowed trend consumer now excludes the future row outright, so
+    // the trend is IDENTICAL with or without it (conservative direction).
+    expect(withFutureTrend).toBeCloseTo(cleanTrend, 6);
     const series = computeEWMA(withFutureRow);
     // FIXED (Campaign 21 finding 5, lead-confirmed class B and repaired):
     // computeWeeklyTrendPct and the confidence day-count now exclude
