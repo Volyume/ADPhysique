@@ -2453,6 +2453,14 @@ DEFECT: none.
 
 ```
 RULE: X-SAFETY-07
+LEAD CORRECTION (Step 11 triage class A/C, 2026-08-16): the Step 5-6
+build's full read of notifications/categories.js:127 + scheduler.js +
+handler.js found NO distinct "soften presentation" mechanism - the cited
+comment describes schedulePartnerBeats' own early-return silence
+(scheduler.js:1813-1818), which IS X-SAFETY-06's suppression. This rule
+is FOLDED INTO X-SAFETY-06; not a production defect, an oracle/graph
+over-claim from a comment-level trace. Ledger: safety_na_reason set;
+excluded from scenario coverage as a distinct rule.
 LOCK: MUST downgrade (soften) the FOREGROUND presentation of a
       notification that DOES fire under an open ED/wellbeing flag, rather
       than a full alert. This is a JUNIOR variant of X-SAFETY-06 —
