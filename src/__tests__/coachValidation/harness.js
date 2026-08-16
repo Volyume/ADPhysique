@@ -31,6 +31,11 @@ import {
   runAdaptiveEngine,
   computeAdaptiveDecision,
   shouldDeload,
+  detectPlateau,
+  detectProgressionConsistency,
+  getVolumeStatus,
+  computeAdaptiveLandmarks,
+  detectLaggingMuscles,
 } from '../../lib/algorithms';
 import {
   assembleEvidencePacket,
@@ -45,6 +50,25 @@ import {
   isApplied,
 } from '../../lib/coachApply';
 import { materialEvidenceChange, suppressedByDecline, evidenceSignature } from '../../lib/coachDecline';
+// ── TRAINING/PROGRAMME family (Campaign 21 Step 5) new registry seams ──────
+import {
+  slotVerdict, programmeVerdict, countEpochBlocks, epochReviewDue,
+} from '../../lib/programmeEpoch';
+import {
+  getBlockStatus, getCurrentBlockWeekIndex, blockCompletionState, applyTimeCrunch,
+} from '../../lib/mesocycle';
+import {
+  resolveWeekSessions, weekProgressionResolved, nextOutstandingSession,
+  pickCurrentResolution, precedenceFor,
+} from '../../lib/blockProgression';
+import { shouldConfirmBeforeFinish } from '../../lib/workoutHelpers';
+import {
+  isExcluded, isAvoidedThisBlock, isEligible, approvedDefaultFor, swappedAwayCount,
+  sessionSubstitutionCount, exerciseEvidence, evidenceMaturity, repeatedDefaultCandidate,
+} from '../../lib/exercise/intent';
+import { checkinReadiness, applyAdjustEvidence, buildNextBlockOptions } from '../../lib/blockAdvisor';
+import { classifyMuscleBlock } from '../../lib/interBlock';
+import { mergeLandmarkPrecedence, isManualEdit } from '../../lib/effectiveLandmarks';
 
 // ─── Deterministic clock ─────────────────────────────────────────────────────
 
@@ -364,6 +388,110 @@ export const ENTRIES = {
       return evidenceSignature(scenario.facts.context, scenario.facts.opts);
     }
     return suppressedByDecline(scenario.facts);
+  },
+
+  // ── T-PROGRAMME-04/05/06: programmeEpoch.js's slot/programme verdicts ──────
+  programmeEpoch: (scenario) => {
+    const fn = scenario.facts?._fn || 'slotVerdict';
+    if (fn === 'slotVerdict') return slotVerdict(scenario.facts.evidence, scenario.facts.opts);
+    if (fn === 'programmeVerdict') return programmeVerdict(scenario.facts.input);
+    if (fn === 'countEpochBlocks') {
+      return { count: countEpochBlocks(scenario.facts.currentSignature, scenario.facts.history) };
+    }
+    if (fn === 'epochReviewDue') return { due: epochReviewDue(scenario.facts.epochBlocks) };
+    throw new Error(`programmeEpoch: unknown _fn "${fn}"`);
+  },
+
+  // ── T-PERFORMANCE-03: plateau / progression-consistency mirror ─────────────
+  performance: (scenario) => {
+    const fn = scenario.facts?._fn || 'detectPlateau';
+    if (fn === 'detectPlateau') {
+      return detectPlateau(scenario.facts.exerciseSessions, scenario.facts.repMin, scenario.facts.repMax);
+    }
+    if (fn === 'detectProgressionConsistency') {
+      return detectProgressionConsistency(scenario.facts.exerciseSessions);
+    }
+    throw new Error(`performance: unknown _fn "${fn}"`);
+  },
+
+  // ── T-PROGRAMME-01/03: mesocycle.js block lifecycle + T-SESSION-04 trimmer ─
+  mesocycleBlock: (scenario) => {
+    const fn = scenario.facts?._fn || 'getBlockStatus';
+    const nowMs = scenario.facts.nowMs ?? NOW;
+    if (fn === 'getBlockStatus') return getBlockStatus(scenario.facts.startDateMs, scenario.facts.plannedWeeks, nowMs);
+    if (fn === 'getCurrentBlockWeekIndex') {
+      return { weekIndex: getCurrentBlockWeekIndex(scenario.facts.startDateMs, scenario.facts.plannedWeeks, nowMs) };
+    }
+    if (fn === 'blockCompletionState') return { state: blockCompletionState(scenario.facts.meso, nowMs) };
+    if (fn === 'applyTimeCrunch') {
+      return applyTimeCrunch(scenario.facts.exercises, scenario.facts.targetMinutes, scenario.facts.estimateFn, scenario.facts.options);
+    }
+    throw new Error(`mesocycleBlock: unknown _fn "${fn}"`);
+  },
+
+  // ── T-SESSION-01/02, T-PROGRAMME-09: blockProgression.js session table ─────
+  blockProgression: (scenario) => {
+    const fn = scenario.facts?._fn || 'resolveWeekSessions';
+    if (fn === 'resolveWeekSessions') return resolveWeekSessions(scenario.facts.input);
+    if (fn === 'weekProgressionResolved') return { resolved: weekProgressionResolved(scenario.facts.sessions) };
+    if (fn === 'nextOutstandingSession') return { next: nextOutstandingSession(scenario.facts.sessions) };
+    if (fn === 'pickCurrentResolution') return { resolution: pickCurrentResolution(scenario.facts.rows) };
+    if (fn === 'precedenceFor') return precedenceFor(scenario.facts.explicit, scenario.facts.hasOtherCompletion);
+    throw new Error(`blockProgression: unknown _fn "${fn}"`);
+  },
+
+  // ── T-SESSION-03: workoutHelpers.js finish-confirm gate ─────────────────────
+  sessionConfirm: (scenario) => ({ confirm: shouldConfirmBeforeFinish(scenario.facts.workoutExercises) }),
+
+  // ── T-SLOT-01..04: exercise/intent.js pure intent questions ─────────────────
+  slotIntent: (scenario) => {
+    const fn = scenario.facts?._fn || 'isEligible';
+    const state = scenario.facts.state;
+    if (fn === 'isExcluded') return { value: isExcluded(state, scenario.facts.exerciseId) };
+    if (fn === 'isAvoidedThisBlock') return { value: isAvoidedThisBlock(state, scenario.facts.exerciseId) };
+    if (fn === 'isEligible') return { value: isEligible(state, scenario.facts.exerciseId) };
+    if (fn === 'approvedDefaultFor') {
+      return { value: approvedDefaultFor(state, scenario.facts.fromExerciseId, scenario.facts.routineId ?? null) };
+    }
+    if (fn === 'swappedAwayCount') return { value: swappedAwayCount(state, scenario.facts.exerciseId) };
+    if (fn === 'sessionSubstitutionCount') return { value: sessionSubstitutionCount(state, scenario.facts.exerciseId) };
+    if (fn === 'exerciseEvidence') return exerciseEvidence(state, scenario.facts.exerciseId, scenario.facts.opts);
+    if (fn === 'evidenceMaturity') return { value: evidenceMaturity(scenario.facts.opts) };
+    if (fn === 'repeatedDefaultCandidate') {
+      return { value: repeatedDefaultCandidate(state, scenario.facts.fromExerciseId, scenario.facts.opts) };
+    }
+    throw new Error(`slotIntent: unknown _fn "${fn}"`);
+  },
+
+  // ── T-PROGRAMME-07 (partial, pure half): blockAdvisor.js exported pieces ───
+  blockAdvisor: (scenario) => {
+    const fn = scenario.facts?._fn || 'checkinReadiness';
+    if (fn === 'checkinReadiness') return { readiness: checkinReadiness(scenario.facts.checkin) };
+    if (fn === 'applyAdjustEvidence') {
+      return applyAdjustEvidence(scenario.facts.nextBlock, scenario.facts.preview, scenario.facts.opts);
+    }
+    if (fn === 'buildNextBlockOptions') return { options: buildNextBlockOptions(scenario.facts.opts) };
+    throw new Error(`blockAdvisor: unknown _fn "${fn}"`);
+  },
+
+  // ── T-PROGRAMME-11: interBlock.js block ledger classification ──────────────
+  interBlock: (scenario) => classifyMuscleBlock(scenario.facts.input, scenario.facts.ctx),
+
+  // ── T-VOLUME-01/04/07/08: display classifier, adaptive bands, precedence ───
+  landmarks: (scenario) => {
+    const fn = scenario.facts?._fn || 'getVolumeStatus';
+    if (fn === 'getVolumeStatus') {
+      return getVolumeStatus(scenario.facts.workingSets, scenario.facts.muscle, scenario.facts.customLandmarks ?? null);
+    }
+    if (fn === 'computeAdaptiveLandmarks') {
+      return computeAdaptiveLandmarks(scenario.facts.history, scenario.facts.baseDefaults);
+    }
+    if (fn === 'detectLaggingMuscles') {
+      return { flags: detectLaggingMuscles(scenario.facts.weeklyVolumeHistory, scenario.facts.minWeeks) };
+    }
+    if (fn === 'mergeLandmarkPrecedence') return mergeLandmarkPrecedence(scenario.facts.opts);
+    if (fn === 'isManualEdit') return { value: isManualEdit(scenario.facts.entry, scenario.facts.research) };
+    throw new Error(`landmarks: unknown _fn "${fn}"`);
   },
 };
 

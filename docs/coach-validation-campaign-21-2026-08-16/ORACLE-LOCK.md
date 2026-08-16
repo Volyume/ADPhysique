@@ -524,13 +524,20 @@ LOCK: MUST classify BLOCK_CLASS per muscle: perfUp (slope>=1.5%),
       RECOVERY_EXCESSIVE_WEIGHT=2, cost weight = +1 sorenessLateAvg>=4,
       +1 jointDiscomfortAvg>=3, +1 sleepFlaggedWeeks>=2, +1 (not +2) for a
       block-level deload flag alone). MUST classify INSUFFICIENT_DATA when
-      dataPoints<4 OR exposures<4 OR adherence<0.6 OR
-      weeksSinceBlockEnd>=4 (STALE_EVIDENCE_WEEKS) — stale evidence
-      suppresses a fresh classification even if raw numbers would
-      otherwise classify. proposedRecoveryDays = 10 when anyStrained &&
-      persistent>=2, else 7. HOLD/no-change: STALE evidence (>=4 weeks
-      old) always suppresses to INSUFFICIENT_DATA regardless of the raw
-      numbers.
+      dataPoints<4 OR exposures<4 OR adherence<0.6 (raw-evidence gates
+      only). LEAD CORRECTION (Step 11 triage, class A/C oracle error,
+      exposed by TRN-52): staleness (weeksSinceBlockEnd>=4,
+      STALE_EVIDENCE_WEEKS) does NOT suppress classification - per the
+      cited founder order ("upwardCarryPrevented - founder Stage 6 order
+      B", interBlock.js:266) it prevents the UPWARD volume carry-over
+      only: start/peak hold at pre-stale values when a rise would occur,
+      REDUCTIONS pass through untouched, the classification stays honest
+      and the evidence list carries `evidence_weeks_old`. This is more
+      protective than blanket INSUFFICIENT_DATA, which would discard
+      reduction-relevant evidence too. proposedRecoveryDays = 10 when
+      anyStrained && persistent>=2, else 7. HOLD/no-change: stale
+      evidence holds the UPWARD carry, never fabricates a classification
+      downgrade.
 MUST_NOT: the advisor's early-deload flag alone can NO LONGER make
       recoveryPoor true for every muscle (RA6-2 fix) — it must be
       corroborated by at least one OTHER signal; an algorithm-version bump
