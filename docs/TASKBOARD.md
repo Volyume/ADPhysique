@@ -2016,6 +2016,14 @@ migration, per the campaign brief. Baseline traced: main `9816b601`.
   ordinal "Set 3 = 75 forever" teaching lives in the Last-session reference
   row + ghost + per-ordinal targets; five competing authorities incl. dead
   `getProgressionSuggestion` and unit-blind `stalledAdvice` +2.5 literal.
-- Phase 2 (implementation) is UNBLOCKED: rulings resolved, design doc §19 is
-  the staged landing order (resolver module + tests → screen wiring →
-  presentation → retirements + guard re-pins).
+- Phase 2 (implementation) IN FLIGHT (2026-08-16, founder order, MODEL:
+  SONNET dispatch under Fable lead review). Branch:
+  `claude/campaign20-live-prescription` off main `4a76e8b7`. Staged landing
+  per design doc §19: (1) resolver module + tests → (2) screen wiring →
+  (3) presentation → (4) retirements + guard re-pins; commit per stage,
+  merge to main when green. RECOVERY PATH: if a session dies mid-stage,
+  `git status` on that branch; uncommitted work is lead-reviewed against
+  design doc §9-§17 + FOUNDER-RULINGS-2026-08-16.md and either landed or
+  the stage relaunched from the last green commit — never blind-committed,
+  never discarded. Agents never commit; every commit on that branch is
+  lead-reviewed.
