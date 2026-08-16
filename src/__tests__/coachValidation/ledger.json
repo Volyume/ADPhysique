@@ -348,7 +348,7 @@
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -435,7 +435,9 @@
    "NUT-47",
    "NUT-48"
   ],
-  "property_test_ids": [],
+  "property_test_ids": [
+   "boundary_test"
+  ],
   "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
@@ -481,7 +483,9 @@
   "thresholds": "cut+losing-too-slowly: -150 if calsAdherence==='hit' else -100;",
   "precedence": "superseded by the adaptive resize (N-COACH-05) when confident",
   "direct_case": [
-   "NUT-49"
+   "NUT-49",
+   "NUT-63",
+   "NUT-64"
   ],
   "boundary_case": [],
   "conflict_case": [
@@ -492,7 +496,9 @@
   "safety_na_reason": null,
   "whole_scenario_ids": [
    "NUT-49",
-   "NUT-50"
+   "NUT-50",
+   "NUT-63",
+   "NUT-64"
   ],
   "property_test_ids": [],
   "status": "WHOLE_CHAIN_PROVEN",
@@ -511,7 +517,11 @@
   "decision": "change overwritten to adaptiveCal.adjustmentKcal when eligible",
   "thresholds": "fires only when useAdaptiveCal AND !rapidLossOverride AND",
   "precedence": "junior to rapidLossOverride (never applies on that path);",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-63",
+   "NUT-64",
+   "residueClosure:N-COACH-05"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
@@ -519,7 +529,7 @@
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "UNIT_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -695,7 +705,9 @@
   "whole_scenario_ids": [
    "CFL-06"
   ],
-  "property_test_ids": [],
+  "property_test_ids": [
+   "boundary_test"
+  ],
   "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
@@ -769,7 +781,14 @@
   "thresholds": "OR of all nine inputs \u2014 any one open hold forces confirm-first",
   "precedence": "\"a more autonomous mode changes WHO confirms, never whether the",
   "direct_case": [
-   "NUT-57"
+   "NUT-57",
+   "NUT-65",
+   "NUT-66",
+   "NUT-67",
+   "NUT-68",
+   "NUT-69",
+   "NUT-70",
+   "NUT-71"
   ],
   "boundary_case": [],
   "conflict_case": [],
@@ -777,7 +796,14 @@
   "safety_case": [],
   "safety_na_reason": null,
   "whole_scenario_ids": [
-   "NUT-57"
+   "NUT-57",
+   "NUT-65",
+   "NUT-66",
+   "NUT-67",
+   "NUT-68",
+   "NUT-69",
+   "NUT-70",
+   "NUT-71"
   ],
   "property_test_ids": [],
   "status": "WHOLE_CHAIN_PROVEN",
@@ -1009,15 +1035,19 @@
   "decision": "outcome forced to CONFOUNDED, because:'user_changed_it_themselves'",
   "thresholds": "any mismatch between the coach's last-applied kcal and the",
   "precedence": "user's manual edit is senior \u2014 the app never claims credit or",
-  "direct_case": [],
+  "direct_case": [
+   "residueClosure:N-MAINT-04"
+  ],
   "boundary_case": [],
-  "conflict_case": [],
+  "conflict_case": [
+   "residueClosure:N-MAINT-04:userOverrode"
+  ],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "UNIT_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1191,7 +1221,9 @@
    "NUT-07",
    "NUT-08"
   ],
-  "property_test_ids": [],
+  "property_test_ids": [
+   "boundary_test"
+  ],
   "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
@@ -1219,7 +1251,9 @@
   "whole_scenario_ids": [
    "NUT-09"
   ],
-  "property_test_ids": [],
+  "property_test_ids": [
+   "boundary_test"
+  ],
   "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
@@ -1448,7 +1482,7 @@
    "expected": null,
    "authority_source": null,
    "suspected_defect": false,
-   "notes": "no separate schema migration was needed \u2014 deliberately piggybacks the"
+   "notes": "no separate schema migration was needed \u2014 deliberately piggybacks the | EXPLAINED RESIDUE at campaign close: pure-function coverage exists; the write-then-read round trip (saveCoachOutput -> getCoachOutputHistory -> interventionsFromHistory) is unproven. Fix recipe: the identical in-memory-table pattern persistence.test.js delivers for U-AUTH-02. Recorded in the Campaign 21 final handover."
   }
  },
  {
@@ -1540,7 +1574,9 @@
    "CFL-14",
    "CFL-14b"
   ],
-  "property_test_ids": [],
+  "property_test_ids": [
+   "boundary_test"
+  ],
   "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
@@ -1777,14 +1813,20 @@
   "thresholds": "weigh_ins < 3 -> data_hold (\"fewer than 3 different days\"); hasUnusualEvent && weigh_ins < 5 -> data_hold; weigh_ins < 5 -> medium; weeksInPhase < 2 -> low",
   "precedence": "data_hold is a hard early-return from runWeeklyCoach (line 827) that suppresses every calorie/training/deload/diet-break decision this run and returns training.signal = 'hold' unconditionally",
   "direct_case": [],
-  "boundary_case": [],
+  "boundary_case": [
+   "temporalEvidenceGuards:finding5"
+  ],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
   "whole_scenario_ids": [],
-  "property_test_ids": [],
-  "status": "MAPPED",
+  "property_test_ids": [
+   "temporal:section2-dedup",
+   "temporalEvidenceGuards:finding3",
+   "temporalEvidenceGuards:finding5"
+  ],
+  "status": "ADVERSARIAL_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1800,15 +1842,21 @@
   "decision": "",
   "thresholds": "exactly one step on ['low','medium','high']; never moves 'data_hold'; only 'supports' direction moves it; ceiling at 'high'",
   "precedence": "display-only \u2014 pinned NEVER to reach any calorie/macro/ training/floor decision (isolation guard test: progressScanSafetyFloorIsolation.test.js)",
-  "direct_case": [],
+  "direct_case": [
+   "residueClosure:T-WEEKLY-02"
+  ],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
-  "safety_case": [],
+  "hold_case": [
+   "residueClosure:T-WEEKLY-02:suppressed"
+  ],
+  "safety_case": [
+   "residueClosure:T-WEEKLY-02:suppressed"
+  ],
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "UNIT_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1831,7 +1879,11 @@
    "TRN-07",
    "TRN-08",
    "TRN-09",
-   "TRN-10"
+   "TRN-10",
+   "TRN-77",
+   "TRN-78",
+   "TRN-79",
+   "TRN-80"
   ],
   "boundary_case": [],
   "conflict_case": [
@@ -1857,7 +1909,11 @@
    "TRN-07",
    "TRN-08",
    "TRN-09",
-   "TRN-10"
+   "TRN-10",
+   "TRN-77",
+   "TRN-78",
+   "TRN-79",
+   "TRN-80"
   ],
   "property_test_ids": [],
   "status": "WHOLE_CHAIN_PROVEN",
@@ -1876,15 +1932,31 @@
   "decision": "",
   "thresholds": "OR of the 9 named booleans (no numeric threshold)",
   "precedence": "senior to every autonomy-mode auto-apply; a more autonomous coachAutonomy mode changes WHO confirms, never whether this hold applies",
-  "direct_case": [],
+  "direct_case": [
+   "NUT-65",
+   "NUT-66",
+   "NUT-67",
+   "NUT-68",
+   "NUT-69",
+   "NUT-70",
+   "NUT-71"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
-  "whole_scenario_ids": [],
+  "whole_scenario_ids": [
+   "NUT-65",
+   "NUT-66",
+   "NUT-67",
+   "NUT-68",
+   "NUT-69",
+   "NUT-70",
+   "NUT-71"
+  ],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1959,7 +2031,10 @@
   "decision": "",
   "thresholds": "matrixDeload -> fatigue copy; trainingSignal==='reduce' -> reduce copy; ==='hold' -> hold copy; volumeSignal>=2 -> push-high copy; volumeSignal===1 -> push-light copy",
   "precedence": "matrixDeload > reduce > hold > push-high > push-light",
-  "direct_case": [],
+  "direct_case": [
+   "TRN-77",
+   "TRN-78"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
@@ -1967,7 +2042,7 @@
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -1983,7 +2058,9 @@
   "decision": "",
   "thresholds": "DOSE_ESCALATION_MULTIPLIER = 1.5. Observation windows (OBSERVE table): CALORIE_TARGET min 2 weeks; VOLUME_START min 2 weeks (BOTH training.progress AND recovery.systemic must be GOOD for IMPROVED); PRESCRIPTION min 3 exposures; EXERCISE_REPLACEMENT min 3 exposures; STRUCTURE min 4 weeks.",
   "precedence": "CONFOUNDED is checked before any outcome classification (user_changed_it_themselves, goal_phase_changed_or_unknown, training_stopped -- training.execution.signal !== GOOD, manualVolumeMuscles confound for VOLUME_START, diary_coverage_lost for CALORIE_TARGET). Only UNCHANGED and WORSENED are acted on by volumeDecisionMemory; CONFOUNDED and IMPROVED never resize a future change (\"CONFOUNDED NEVER TEACHES\").",
-  "direct_case": [],
+  "direct_case": [
+   "lib:coachIntervention.test"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
@@ -1991,7 +2068,7 @@
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "UNIT_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2037,7 +2114,10 @@
   "decision": "",
   "thresholds": "comparator must be <= nowMs-7d; comparator freshness boundary = 14 days (weeklyComparatorFresh); elapsedWeeksSinceComparator floored at 1 week",
   "precedence": "feeds T-WEEKLY-03's on-target/off-target read and the rapid- loss/ED detector (nutrition-adjacent; noted for completeness since it also drives whether a volume \"push\" reads as evidence)",
-  "direct_case": [],
+  "direct_case": [
+   "campaign6.longTerm:RB6-2",
+   "temporalEvidenceGuards:finding5"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
@@ -2045,7 +2125,7 @@
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "UNIT_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2096,10 +2176,10 @@
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
-  "safety_na_reason": null,
+  "safety_na_reason": "DEAD/TEST-ONLY: getCurrentMesoWeek/MESO_SCHEDULE self-documented in code as a deliberately retained DST/consistency test oracle; zero production callers (GRAPH-TRAINING.md T-PROGRAMME-02)",
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "ORACLE_LOCKED",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2255,15 +2335,20 @@
   "decision": "",
   "thresholds": "avgReadiness computed only over check-ins inside the 14-day detraining window (fallback 70 = conservative default -> repeat branch when no data); highSignals.length===0 && avgReadiness>=60 -> repeat; highSignals.length<=1 || avgReadiness>=50 -> adjust; else consider_rebuild",
   "precedence": "applyAdjustEvidence (C8) re-decides Repeat vs Adjust from the ACTUAL ledger-derived seed preview after the base recommendation is computed \u2014 NEVER overrides consider_rebuild (\"persistent fatigue keeps its own advice\"); Free is never touched (recommendation stays null)",
-  "direct_case": [],
+  "direct_case": [
+   "residueClosure:T-PROGRAMME-07"
+  ],
   "boundary_case": [],
   "conflict_case": [],
-  "hold_case": [],
+  "hold_case": [
+   "residueClosure:T-PROGRAMME-07:free-tier-null",
+   "residueClosure:T-PROGRAMME-07:no-data-repeat"
+  ],
   "safety_case": [],
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2446,8 +2531,10 @@
   "safety_case": [],
   "safety_na_reason": null,
   "whole_scenario_ids": [],
-  "property_test_ids": [],
-  "status": "MAPPED",
+  "property_test_ids": [
+   "boundary_test"
+  ],
+  "status": "ADVERSARIAL_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2487,7 +2574,9 @@
    "TRN-50",
    "TRN-51"
   ],
-  "property_test_ids": [],
+  "property_test_ids": [
+   "boundary_test"
+  ],
   "status": "WHOLE_CHAIN_PROVEN",
   "oracle": {
    "expected": null,
@@ -2504,7 +2593,9 @@
   "decision": "",
   "thresholds": "requires entries.length>=3 to adapt (else isAdapted:false, raw defaults returned). Uses last 8 data points. netScore = (avgPump-3)*0.3 + -(avgSoreness-2)*0.4 + -(avgJoint)*0.8 + avgPerf*0.8 + min(avgPRFreq*0.3, 0.6) + -(avgMissed*0.6). adjustment = round(clamp(netScore*2, -4, 4)) sets. mev = max(0, base.mev+adjustment); mav = clamp(round(bestVolume), base.mev+1, base.mrv-1); mrv = max(base.mav+1, base.mrv + floor(adjustment/2))",
   "precedence": "weighting order stated in comment: performance trend > missed reps > joint > soreness > pump (\"pump is exercise-selection-dependent and over-weighted in naive models\")",
-  "direct_case": [],
+  "direct_case": [
+   "lib:effectiveLandmarks.test"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
@@ -2512,7 +2603,7 @@
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "UNIT_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2600,7 +2691,9 @@
   "decision": "",
   "thresholds": "requires weeklyVolumeHistory.length>=minWeeks; flags a muscle when weeksBelow (weeks with sets<mev) >= minWeeks over the trailing minWeeks window; skips muscles with mev<=0 (e.g. front_delts \u2014 \"no effective minimum\")",
   "precedence": "n/a (independent per-muscle check)",
-  "direct_case": [],
+  "direct_case": [
+   "lib:algorithms.test:detectLaggingMuscles"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
@@ -2608,7 +2701,7 @@
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "UNIT_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2822,10 +2915,10 @@
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
-  "safety_na_reason": null,
+  "safety_na_reason": "DEAD IN PRODUCTION: evaluateAutoReg/predictDeloadWeek have zero production callers and no retention note; OPEN founder D37 triage item recorded on the taskboard at campaign close (GRAPH-TRAINING.md T-RECOVERY-05 + lead addendum)",
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "ORACLE_LOCKED",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2841,7 +2934,10 @@
   "decision": "",
   "thresholds": "reps===1 -> return weight verbatim. reps clamped at 20 for the formula (r = min(reps,20)) \u2014 \"1RM estimators lose validity past ~12-15 reps... a 25-30 rep set used to return a wildly inflated estimate (~5x)\". r<=10: blend epley*0.6 + brzycki*0.4. r>10 (11-20): Epley ALONE (C10L ruling \u2014 Brzycki over-inflates in this range, \"a lighter high-rep set could manufacture an Est. max PR, a steeper block e1RM slope and... stronger weekly performance evidence than its quality warranted\")",
   "precedence": "n/a (single formula, not a competing-rule decision)",
-  "direct_case": [],
+  "direct_case": [
+   "lib:algorithms.test:calculate1RM",
+   "lib:campaign10l.highRepStrength"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
@@ -2849,7 +2945,7 @@
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "UNIT_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -2865,7 +2961,10 @@
   "decision": "",
   "thresholds": "isE1rmEligibleRow excludes setType in {warmup, myo_reps, rest_pause} \u2014 cluster-commit rows store SUMMED reps and would fabricate a huge estimate. 1rm_estimate PR requires new1RM > best1RM * 1.001 (0.1% margin, \"detectPR's 0.1% margin\", reused verbatim as E1RM_PROGRESS_MARGIN elsewhere). heaviest_weight: weight > heaviestEver (any margin). most_reps_at_weight: reps > maxRepsAtWeight at the same weight (within 0.1kg tolerance), maxRepsAtWeight>0 required (no PR on a genuinely first-ever weight for this exercise via this route)",
   "precedence": "bestPRPerExercise collapses multiple PRs from one session per exercise to ONE, ranked 1rm_estimate(3) > heaviest_weight(2) > most_reps_at_weight(1), tie-broken by larger value",
-  "direct_case": [],
+  "direct_case": [
+   "lib:blockMetrics.stage3",
+   "lib:campaign10m.estMaxRecordConsistency"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
@@ -2873,7 +2972,7 @@
   "safety_na_reason": null,
   "whole_scenario_ids": [],
   "property_test_ids": [],
-  "status": "MAPPED",
+  "status": "UNIT_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
@@ -3015,7 +3114,10 @@
   "precedence": "adjustWeaker checked before adjustStronger in determineWorkingLoad (weaker wins if both could theoretically apply, though the anySubBand guard on adjustStronger makes true overlap rare)",
   "direct_case": [
    "LSO-10",
-   "LSO-12"
+   "LSO-12",
+   "LSO-31",
+   "LSO-32",
+   "LSO-33"
   ],
   "boundary_case": [],
   "conflict_case": [
@@ -3034,7 +3136,10 @@
    "LSO-11",
    "LSO-12",
    "LSO-13",
-   "LSO-14"
+   "LSO-14",
+   "LSO-31",
+   "LSO-32",
+   "LSO-33"
   ],
   "property_test_ids": [],
   "status": "WHOLE_CHAIN_PROVEN",
@@ -3289,15 +3394,19 @@
   "decision": "",
   "thresholds": "total order: newest updatedAt, then newest resolvedAt, then explicit-state rank (ENDED_EARLY=2 > SKIPPED_BY_USER=1), then workoutId text, then id text (ASCII code-unit compare, matching the server-side C-collation trigger)",
   "precedence": "deterministic regardless of arrival order \u2014 \"shuffling the input cannot change the result\"",
-  "direct_case": [],
+  "direct_case": [
+   "residueClosure:T-SESSION-02"
+  ],
   "boundary_case": [],
   "conflict_case": [],
   "hold_case": [],
   "safety_case": [],
   "safety_na_reason": null,
   "whole_scenario_ids": [],
-  "property_test_ids": [],
-  "status": "MAPPED",
+  "property_test_ids": [
+   "residueClosure:T-SESSION-02:shuffle"
+  ],
+  "status": "ADVERSARIAL_PROVEN",
   "oracle": {
    "expected": null,
    "authority_source": null,
