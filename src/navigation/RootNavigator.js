@@ -1,17 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
 export const navigationRef = createNavigationContainerRef();
-import { View, Image, StyleSheet, Animated, Easing, useWindowDimensions } from 'react-native';
+import { View, Image, Text, StyleSheet, Animated, Easing, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import Button from '../components/Button';
 
 const SPLASH_HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, spacing, motion, type } from '../styles/theme';
+import { colors, spacing, motion, type, fontSize, fontWeight } from '../styles/theme';
 // CP-10 stage 2 (docs/ux-world-class-audit-2026-07-09/
 // CP-10-restart-free-theming-plan.md, "Stage 2 — Root chrome"): the
 // NavigationContainer theme prop and the stackOptions header/card colours
@@ -862,6 +863,18 @@ export default function RootNavigator() {
   // gate comment) cannot come back. A hard timeout in the bootstrap effect
   // stops it ever hanging the splash.
   const [initialAuthResolved, setInitialAuthResolved] = useState(false);
+  // Release-gate fix: initDatabase() (SQLCipher open + migrations) used to
+  // fail INSIDE bootstrap()'s try/catch with only a log call - the app then
+  // rendered normally with the local DB permanently unopened (`_db` reset to
+  // null by initDatabase's own catch), so every screen silently read empty
+  // state forever with no way for the athlete to know why, and no retry
+  // path short of reinstalling (which restarts the same broken migration
+  // from user_version 0). This state makes that failure a first-class,
+  // recoverable boot outcome instead of a silent one. Never reset except by
+  // a successful retry - a transient failure must stay visible until it is
+  // actually fixed, not disappear on the next unrelated re-render.
+  const [dbInitFailed, setDbInitFailed] = useState(false);
+  const [dbRetrying, setDbRetrying] = useState(false);
   // CP-10 stage 2: drives the NavigationContainer theme prop below live (was
   // the static resolvedTheme/colors imports, class 3 per the CP-10 plan --
   // already inline JSX, so it only needed RootNavigator itself to re-render
@@ -934,6 +947,75 @@ export default function RootNavigator() {
     };
   }, []);
 
+  // Release-gate fix: extracted from bootstrap() so the "Try again" button
+  // on the DB-init-failed fallback screen below can re-run EXACTLY the same
+  // sequence a cold launch would, rather than duplicating it. Resolves to
+  // true/false rather than throwing - both bootstrap() and the retry button
+  // need to keep going afterward regardless of outcome.
+  const attemptDbInit = useCallback(async () => {
+    try {
+      await initDatabase();
+      seedExercisesIfNeeded()
+        .then(() => topUpNewExercisesIfNeeded())
+        .then(() => backfillExerciseMetadataIfNeeded())
+        .then(() => rederiveExerciseMetadataIfNeeded())
+        .catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.seedExercises', e));
+      cleanupOrphanRoutineExercises().catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.cleanupOrphanRoutines', e));
+      // OpenFoodFacts UK snapshot import. Idempotent + safe;
+      // logs to errorLog at every fault boundary. Fire-and-
+      // forget -- doesn't block app boot. On failure, the food
+      // layer falls back to live OFF / USDA / manual.
+      // eslint-disable-next-line global-require
+      require('../lib/food/seed').importOffSnapshotIfNeeded()
+        // Surface a RESOLVED failure (asset missing, load_failed, etc.): it
+        // was previously ignored, so a non-importing snapshot was invisible
+        // (food audit D-4).
+        .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.offSnapshot.failed', res.reason); })
+        .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.offSnapshot', err));
+      // CoFID UK generic foods (~3k rows). Static dataset, runs
+      // once per snapshot version. Fills the gap OFF leaves on
+      // raw/unbranded items (chicken breast raw, plain oats, etc.).
+      // eslint-disable-next-line global-require
+      require('../lib/food/seed').importCofidSnapshotIfNeeded()
+        .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.cofidSnapshot.failed', res.reason); })
+        .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.cofidSnapshot', err));
+      // Food library delta pull (step 3): refresh local foods
+      // cache against cloud foods that were updated since the
+      // last pull. Throttled to once per 6 hours by default;
+      // skipped silently if no session. Same fire-and-forget
+      // pattern as the snapshot import.
+      // eslint-disable-next-line global-require
+      require('../lib/food/libraryDelta').pullFoodLibraryDelta()
+        .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta.failed', res.reason); })
+        .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta', err));
+      setDbInitFailed(false);
+      return true;
+    } catch (e) {
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('RootNavigator.bootstrap.initDb', e); } catch (_) {}
+      // Release-gate fix: this used to be the end of it - the failure was
+      // logged and bootstrap silently carried on as if the database had
+      // opened. _db stays null (initDatabase's own catch resets it), so
+      // every subsequent db() call anywhere in the app re-attempts this
+      // SAME failing init and every read function's own try/catch quietly
+      // returns []/null - the athlete would see a permanently empty app
+      // (no plan, no history, can't start a workout) with no error and no
+      // way to recover short of the OS-level "reset app data", on every
+      // launch, forever. Surfacing it as recoverable state instead.
+      setDbInitFailed(true);
+      return false;
+    }
+  }, []);
+
+  const handleDbRetry = useCallback(async () => {
+    setDbRetrying(true);
+    try {
+      await attemptDbInit();
+    } finally {
+      setDbRetrying(false);
+    }
+  }, [attemptDbInit]);
+
   useEffect(() => {
     async function bootstrap() {
       try {
@@ -949,47 +1031,8 @@ export default function RootNavigator() {
 
         // Await the SQLite init so subsequent reads (the getSession-
         // driven hydrators below) can't race against a half-open
-        // database. Failure here is rare but catastrophic, so
-        // surface it via the log layer.
-        try {
-          await initDatabase();
-          seedExercisesIfNeeded()
-            .then(() => topUpNewExercisesIfNeeded())
-            .then(() => backfillExerciseMetadataIfNeeded())
-            .then(() => rederiveExerciseMetadataIfNeeded())
-            .catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.seedExercises', e));
-          cleanupOrphanRoutineExercises().catch((e) => _bootLog('warn', 'RootNavigator.bootstrap.cleanupOrphanRoutines', e));
-          // OpenFoodFacts UK snapshot import. Idempotent + safe;
-          // logs to errorLog at every fault boundary. Fire-and-
-          // forget -- doesn't block app boot. On failure, the food
-          // layer falls back to live OFF / USDA / manual.
-          // eslint-disable-next-line global-require
-          require('../lib/food/seed').importOffSnapshotIfNeeded()
-            // Surface a RESOLVED failure (asset missing, load_failed, etc.): it
-            // was previously ignored, so a non-importing snapshot was invisible
-            // (food audit D-4).
-            .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.offSnapshot.failed', res.reason); })
-            .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.offSnapshot', err));
-          // CoFID UK generic foods (~3k rows). Static dataset, runs
-          // once per snapshot version. Fills the gap OFF leaves on
-          // raw/unbranded items (chicken breast raw, plain oats, etc.).
-          // eslint-disable-next-line global-require
-          require('../lib/food/seed').importCofidSnapshotIfNeeded()
-            .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.cofidSnapshot.failed', res.reason); })
-            .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.cofidSnapshot', err));
-          // Food library delta pull (step 3): refresh local foods
-          // cache against cloud foods that were updated since the
-          // last pull. Throttled to once per 6 hours by default;
-          // skipped silently if no session. Same fire-and-forget
-          // pattern as the snapshot import.
-          // eslint-disable-next-line global-require
-          require('../lib/food/libraryDelta').pullFoodLibraryDelta()
-            .then((res) => { if (res && res.ok === false) _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta.failed', res.reason); })
-            .catch((err) => _bootLog('warn', 'RootNavigator.bootstrap.libraryDelta', err));
-        } catch (e) {
-          // eslint-disable-next-line global-require
-          try { require('../lib/errorLog').logError('RootNavigator.bootstrap.initDb', e); } catch (_) {}
-        }
+        // database.
+        await attemptDbInit();
 
         // AWAIT checkTier so the local 'pro' value is in the store before
         // refreshTierFromCloud (below) reads it for the beta-demotion
@@ -1576,6 +1619,32 @@ export default function RootNavigator() {
     return <SplashScreen />;
   }
 
+  // Release-gate fix: the local database (source of truth for every screen
+  // per CLAUDE.md) failed to open/migrate. Rendering the normal navigator
+  // here used to be silent and permanent - every screen would read empty
+  // state forever with no explanation and no recovery path. This blocks
+  // the rest of the tree until the athlete retries and it actually opens.
+  if (dbInitFailed) {
+    return (
+      <View style={dbErrorStyles.container}>
+        <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
+        <Text style={dbErrorStyles.title}>Couldn't open your data</Text>
+        <Text style={dbErrorStyles.body}>
+          Nothing has been lost. Volyume couldn't open your local data this
+          time - try again, and if it keeps happening, it has already been
+          reported.
+        </Text>
+        <Button
+          title={dbRetrying ? 'Trying again...' : 'Try again'}
+          onPress={handleDbRetry}
+          disabled={dbRetrying}
+          fullWidth={false}
+          style={dbErrorStyles.retry}
+        />
+      </View>
+    );
+  }
+
   // While a cloud restore is in flight (right after SIGNED_IN, before
   // we know whether the user has a profile in the cloud), park on
   // the splash. Without this, the navigator routes on stale local
@@ -1783,6 +1852,38 @@ function SplashScreen() {
 // so no sign-in splash is needed. The brand splash (SplashScreen) is
 // still used for cold-launch bootstrap before tierChecked /
 // firstRunChecked are set.
+
+// Release-gate fix: styled like ScreenBoundary's fallback (components/
+// ScreenBoundary.js) - calm, static tokens only, no live theme hook. This
+// screen renders when the database itself failed to open, so it must be the
+// most robust screen in the tree: no dependency that could itself fail.
+const dbErrorStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.background,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spacing.xl,
+  },
+  title: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.textPrimary,
+    textAlign: 'center',
+    marginTop: spacing.md,
+  },
+  body: {
+    fontSize: fontSize.sm,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: 20,
+  },
+  retry: {
+    marginTop: spacing.lg,
+    paddingHorizontal: spacing.xl,
+  },
+});
 
 const splashStyles = StyleSheet.create({
   container: {
