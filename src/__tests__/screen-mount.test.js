@@ -2026,6 +2026,251 @@ describe('ActiveWorkoutScreen with active workout state', () => {
   });
 });
 
+// ─── Campaign 20 Phase 2: the live set prescription resolver wired into the
+// real logger (docs/live-prescription-campaign-20-2026-08-16/
+// CAMPAIGN-20-PHASE-1-DESIGN.md, FOUNDER-RULINGS-2026-08-16.md). Mounted,
+// behavioural tests against ActiveWorkoutScreen.js itself - not the pure
+// resolver (src/lib/livePrescription.js has its own full suites) - so these
+// pin the WIRING: the screen assembling the packet, seeding the real
+// editable weight/reps boxes, and re-resolving after each logged set.
+// database.js is monkeypatched on the shared module object (the established
+// pattern used above by the AnalyticsScreen empty-state test), restored in
+// `finally` so no test leaks its history into the next.
+describe('Campaign 20 Phase 2: live set prescription resolver wired into ActiveWorkoutScreen', () => {
+  async function actFlush(fn) {
+    await TestRenderer.act(async () => {
+      if (fn) await fn();
+      for (let i = 0; i < 15; i++) await Promise.resolve();
+      await new Promise(r => setImmediate(r));
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+    });
+  }
+
+  function weightInput(tree) { return tree.root.findByProps({ testID: 'volyume-weight-input' }); }
+  function repsInput(tree) { return tree.root.findByProps({ testID: 'volyume-reps-input' }); }
+  function logButton(tree) { return tree.root.findByProps({ testID: 'volyume-btn-complete-set' }); }
+
+  async function typeAndLog(tree, weight, reps) {
+    await actFlush(() => {
+      weightInput(tree).props.onChangeText(String(weight));
+    });
+    await actFlush(() => {
+      repsInput(tree).props.onChangeText(String(reps));
+    });
+    await actFlush(() => logButton(tree).props.onPress());
+  }
+
+  function mkEntry({ exerciseId, repsMin, repsMax, sets = 3 }) {
+    return {
+      exercise: { id: exerciseId, name: 'Bench Press', equipment: 'Barbell', primaryMuscle: 'chest', exerciseType: 'weight_reps', exerciseCategory: 'compound' },
+      routineExercise: { id: `re-${exerciseId}`, recommendedSets: sets, recommendedRepsMin: repsMin, recommendedRepsMax: repsMax },
+      sets: [],
+    };
+  }
+
+  // One comparable history session: 80x12 / 80x10 / 75x10 (positions 1-3),
+  // difficulty 2 (effort supports an advance where the band allows one).
+  // Band 8-15 keeps position 1's top reps (12) IN band rather than topped,
+  // so nextSessionOpeningLoad's ordinary MATCH_LOAD_ADD_REP path is the one
+  // under test here (the ADVANCE/DROP paths are the pure resolver suite's
+  // job, not this wiring suite's).
+  function mockSingleSessionHistory(database, exerciseId) {
+    const histSets = [
+      { id: 'h1', exerciseId, workoutId: 'histW1', setNumber: 1, setType: 'straight', actualReps: 12, weight: 80, createdAt: Date.now() - 3 * 86400000, targetRepsMin: 8, targetRepsMax: 15 },
+      { id: 'h2', exerciseId, workoutId: 'histW1', setNumber: 2, setType: 'straight', actualReps: 10, weight: 80, createdAt: Date.now() - 3 * 86400000, targetRepsMin: 8, targetRepsMax: 15 },
+      { id: 'h3', exerciseId, workoutId: 'histW1', setNumber: 3, setType: 'straight', actualReps: 10, weight: 75, createdAt: Date.now() - 3 * 86400000, targetRepsMin: 8, targetRepsMax: 15 },
+    ];
+    database.getLastNWorkoutSets = async () => [histSets];
+    database.getWorkoutById = async (id) => ({ id, startedAt: Date.now() - 3 * 86400000, sessionDifficulty: 2 });
+    database.getAllCompletedSetsForExercise = async () => [];
+  }
+
+  function mockNoHistory(database) {
+    database.getLastNWorkoutSets = async () => [];
+    database.getWorkoutById = async () => null;
+    database.getAllCompletedSetsForExercise = async () => [];
+  }
+
+  function baseState(entry) {
+    return {
+      user: { id: 'u-c20', isLocal: false },
+      session: { user: { id: 'u-c20' } },
+      tier: 'pro',
+      firstRunComplete: true,
+      userProfile: { firstName: 'C', goal: 'lean_gain', units: 'metric' },
+      activeWorkout: { id: 'w-c20', userId: 'u-c20', routineId: 'r-c20', startedAt: Date.now(), isCompleted: false },
+      workoutStartTime: Date.now(),
+      workoutExercises: [entry],
+      currentExerciseIndex: 0,
+      restTimerActive: false,
+      accessibility: { reduceMotion: false },
+    };
+  }
+
+  test('(a) first-set seed comes from the resolver, not raw history echo', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockSingleSessionHistory(database, 'exA');
+    database.getCurrentMesocycleWeek = async () => null;
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId: 'exA', repsMin: 8, repsMax: 15 })));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      expect(tree).not.toBeNull();
+      // 80 is the session's top working load, in band (12 < repsMax 15) -
+      // MATCH_LOAD_ADD_REP, not a fabricated number and not the raw
+      // ordinal echo of whichever set the old getBestAnchorSet preferred.
+      expect(weightInput(tree).props.value).toBe('80');
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  test('(b) live re-resolution: log 80x12 then 80x11 -> Set 3 stays 80, never reverts to the old ordinal 75', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockSingleSessionHistory(database, 'exB');
+    database.getCurrentMesocycleWeek = async () => null;
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId: 'exB', repsMin: 8, repsMax: 15, sets: 4 })));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+
+      await typeAndLog(tree, 80, 12);
+      await typeAndLog(tree, 80, 11);
+
+      // Set 3's box: the resolver's own current-session HOLD rule (today's
+      // demonstrated 80 outranks the single historical ordinal-3 value of
+      // 75 - Law B / the brief's core scenario), not carry-forward echo.
+      expect(weightInput(tree).props.value).toBe('80');
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  test('(c) weaker today: a below-band set drops the load by exactly one increment, honest reps', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    // repsMin 8 (so "6" genuinely misses it) but repsMax 13, one rep above
+    // the history's best (12), so position 1's own seed is the ordinary
+    // MATCH_LOAD_ADD_REP 80 - not an ADVANCE to 82.5, which would otherwise
+    // read the test's own typed "80" as a Law G override and mask the
+    // weaker-today drop this test exists to pin.
+    const histSets = [
+      { id: 'h1', exerciseId: 'exC', workoutId: 'histW2', setNumber: 1, setType: 'straight', actualReps: 12, weight: 80, createdAt: Date.now() - 3 * 86400000, targetRepsMin: 8, targetRepsMax: 13 },
+      { id: 'h2', exerciseId: 'exC', workoutId: 'histW2', setNumber: 2, setType: 'straight', actualReps: 11, weight: 80, createdAt: Date.now() - 3 * 86400000, targetRepsMin: 8, targetRepsMax: 13 },
+      { id: 'h3', exerciseId: 'exC', workoutId: 'histW2', setNumber: 3, setType: 'straight', actualReps: 9, weight: 80, createdAt: Date.now() - 3 * 86400000, targetRepsMin: 8, targetRepsMax: 13 },
+    ];
+    database.getLastNWorkoutSets = async () => [histSets];
+    database.getWorkoutById = async (id) => ({ id, startedAt: Date.now() - 3 * 86400000, sessionDifficulty: 2 });
+    database.getAllCompletedSetsForExercise = async () => [];
+    database.getCurrentMesocycleWeek = async () => null;
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId: 'exC', repsMin: 8, repsMax: 13, sets: 3 })));
+      // Sanity: position 1's own seed is 80 (not an ADVANCE to 82.5), so the
+      // deliberate 80 typed below reads as ordinary logging, not an override.
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+      expect(weightInput(tree).props.value).toBe('80');
+
+      await typeAndLog(tree, 80, 6); // below repsMin(8) - a genuine miss, not noise
+
+      expect(weightInput(tree).props.value).toBe('77.5'); // one increment down, grid-rounded
+      expect(repsInput(tree).props.value).toBe('8');       // honest target: the band minimum
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  test('(d) user override: presented 80, logs 75 instead -> the resolver stops re-suggesting 80', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockSingleSessionHistory(database, 'exD');
+    database.getCurrentMesocycleWeek = async () => null;
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId: 'exD', repsMin: 8, repsMax: 15, sets: 4 })));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+
+      // The presented prescription is 80 (test (a) pins this exact value);
+      // deliberately log 75 instead - more than half an increment away.
+      expect(weightInput(tree).props.value).toBe('80');
+      await typeAndLog(tree, 75, 10);
+
+      // Law G: the resolver stops re-suggesting 80 for the rest of this
+      // exercise today and prescribes AT the chosen load instead.
+      expect(weightInput(tree).props.value).toBe('75');
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  test('(e) overshoot under an active re-entry easing never adds load (Founder Ruling 2)', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockNoHistory(database);
+    database.getCurrentMesocycleWeek = async () => null;
+    let tree = null;
+    try {
+      const state = baseState(mkEntry({ exerciseId: 'exE', repsMin: 8, repsMax: 12, sets: 3 }));
+      // The athlete's explicit re-entry-ease choice - NOT tier-gated, one
+      // downward-only step (sessionAdjustments.getReEntryEaseTweak).
+      state.activeWorkout = { ...state.activeWorkout, reEntryEaseApplied: true };
+      useAppStore.setState(state);
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+
+      // repsMax(12) + 2 = 14: a genuine overshoot, outside noise.
+      await typeAndLog(tree, 80, 14);
+
+      const nextWeight = parseFloat(weightInput(tree).props.value);
+      // The ADD path is disabled outright under an active re-entry easing
+      // (Founder Ruling 2, ABSOLUTE) - the box must never show 82.5 (one
+      // increment up). It may only hold or reduce.
+      expect(nextWeight).not.toBe(82.5);
+      expect(nextWeight).toBeLessThanOrEqual(80);
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+
+  test('(f) common case: no adjustment fires, so the next box equals what was just lifted (carry-forward feel preserved)', async () => {
+    const database = require('../lib/database');
+    const orig = { ...database };
+    mockNoHistory(database);
+    database.getCurrentMesocycleWeek = async () => null;
+    let tree = null;
+    try {
+      useAppStore.setState(baseState(mkEntry({ exerciseId: 'exF', repsMin: 8, repsMax: 12, sets: 3 })));
+      const Screen = require('../screens/ActiveWorkoutScreen').default;
+      const result = await mountScreen(Screen);
+      tree = result.tree;
+
+      await typeAndLog(tree, 60, 10); // ordinary, in-band, no overshoot or miss
+
+      expect(weightInput(tree).props.value).toBe('60');
+      expect(repsInput(tree).props.value).toBe('10');
+    } finally {
+      unmountTree(tree);
+      Object.assign(database, orig);
+    }
+  });
+});
+
 // ─── C3 (ultimate-audit 2026-07-03): the auto-advance countdown is visible
 // and cancellable ──────────────────────────────────────────────────────────
 //

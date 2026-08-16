@@ -51,11 +51,23 @@ import { swapAdjacentBlocks } from '../lib/reorder';
 import {
   detectPR,
   bestPRPerExercise,
-  computeSetTargets,
   summariseWorkoutSets,
   MUSCLE_DISPLAY_NAMES,
   generateDeloadPrescription,
+  defaultIncrement,
 } from '../lib/algorithms';
+// Campaign 20 Phase 2 (docs/live-prescription-campaign-20-2026-08-16/
+// CAMPAIGN-20-PHASE-1-DESIGN.md, FOUNDER-RULINGS-2026-08-16.md): the single
+// authoritative live set prescription resolver, replacing the fragmented
+// authorities traced in the design doc's section 2 (best-anchor seed, ghost
+// decision, computeSetTargets' per-set loop, stalledAdvice).
+import {
+  PROVENANCE,
+  resolveSetPrescription,
+  assembleEvidencePacket,
+  detectLoadOverride,
+  detectRepsOverride,
+} from '../lib/livePrescription';
 import { buildRecordLine } from '../lib/workoutRecordLine';
 import {
   nextWorkoutRecoveryLabel, trainRecoveryDetail, describePrescriptionDifferences,
@@ -65,8 +77,6 @@ import { isClusterType, clusterLabel, summariseCluster, mergeClusterNote } from 
 import {
   countProgressSets,
   setNumberForKind,
-  getBestAnchorSet,
-  prefillRepsForTarget,
   validateSetEntryValue,
   shouldConfirmBeforeFinish,
 } from '../lib/workoutHelpers';
@@ -81,7 +91,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
 import {
-  applyReadinessToSets, applyReadinessToTargets, getSessionWeeklyAllocation,
+  applyReadinessToSets, getSessionWeeklyAllocation,
   resolveSessionEasingTweak,
 } from '../lib/sessionAdjustments';
 import { clearPendingReEntryEase } from '../lib/reEntryEaseState';
@@ -102,6 +112,36 @@ const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 
 // either side of a comparison. Tolerates both the camelCase session shape
 // and the snake_case rows getAllCompletedSetsForExercise returns.
 const isWorkingSetRow = (s) => (s?.setType ?? s?.set_type ?? 'straight') !== 'warmup';
+
+// Campaign 20 Phase 2, Stage 11 (NowCard presentation, Founder Ruling 1):
+// the plain-English line for the resolver's provenance code, replacing the
+// retired stalledAdvice/targetReason coach-line branch for ORDINARY
+// prescriptions. SENIOR_RECOVERY_HOLD and INSUFFICIENT_EVIDENCE deliberately
+// have no entry here (design §17: deload/block-finished/layoff keep their
+// existing recovery copy paths and must not be duplicated; insufficient
+// evidence stays quiet) - provenanceLineFor returns null for both, and for
+// any code with no mapped copy. British English, no em dashes, calm; copy
+// bank is the wiring brief's canonical wording (a tighter equivalent of
+// design doc §17's illustrative copy).
+const PROVENANCE_COPY = {
+  [PROVENANCE.MATCH_LOAD_ADD_REP]: (p) => `Same weight. Aim for ${p.repsTarget}.`,
+  [PROVENANCE.LOAD_ADVANCE_RANGE_TOPPED]: () => 'Range topped last time. Next step up.',
+  [PROVENANCE.HOLD_BUILDING_RANGE]: (p) => `Same load. Build towards ${p.repsBand.max}.`,
+  [PROVENANCE.HOLD_EFFORT_UNKNOWN]: () => 'Range topped. Add weight when you are ready.',
+  [PROVENANCE.HOLD_EFFORT_VERY_HARD]: () => 'Topped the range, but that session was hard. Keep this load until it feels smoother.',
+  [PROVENANCE.LOAD_DROP_CONSECUTIVE_MISS]: () => 'Load dropped after two short sessions. Reset and rebuild.',
+  [PROVENANCE.CURRENT_SESSION_STRONGER]: () => 'Strong today. Stay here for this one.',
+  [PROVENANCE.CURRENT_SESSION_FATIGUE_ADJUST]: () => 'Down a little today. Steady here.',
+  [PROVENANCE.STABLE_BACKOFF_PATTERN]: () => 'You usually back this set off slightly.',
+  [PROVENANCE.USER_CHOICE_RESPECTED]: () => 'Working from the weight you chose.',
+  [PROVENANCE.FIRST_TIME_BAND]: (p) => `First time here. Use a load you can control for ${p.repsBand.min} to ${p.repsBand.max} reps.`,
+};
+
+function provenanceLineFor(prescription) {
+  if (!prescription) return null;
+  const fn = PROVENANCE_COPY[prescription.provenance];
+  return fn ? fn(prescription) : null;
+}
 
 // Founder fix (2026-07-10): "the next exercise button ... doesn't always
 // happen, it goes on and adds more and more sets". Root cause: targetSets
@@ -381,8 +421,31 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // is in progress.
   // shape: { setType, weight, reps, phase: 'side1' | 'side2' }
   const [perSide, setPerSide] = useState(null);
-  const [setTargets, setSetTargets] = useState([]);
+  // Campaign 20 Phase 2: setTargets/computeSetTargets are retired as the
+  // screen's prescription authority (src/lib/livePrescription.js owns it
+  // now, see packetBase/packet/prescriptions below). targetReason survives
+  // ONLY to carry the existing deload/block-finished recovery copy strings
+  // (design doc section 14/16: "keep the existing recovery copy lines
+  // as-is" - the resolver's SENIOR_RECOVERY_HOLD deliberately renders no
+  // provenance line of its own, see provenanceLineFor above).
   const [targetReason, setTargetReason] = useState(null);
+  // packetBase: the bounded evidence pass's raw inputs (exercise,
+  // prescription band, up to 3 comparable history sessions, senior
+  // recovery facts), assembled ONCE per exercise load in loadHistory.
+  // Re-resolution after each logged set and on every readiness change is
+  // then purely in-memory (assembleEvidencePacket is pure) - see the
+  // `packet`/`prescriptions` derivations below and handleCompleteSet.
+  const [packetBase, setPacketBase] = useState(null);
+  // Law G (design section 9.4): a logged working set whose weight/reps
+  // differ from what was PRESENTED counts as a deliberate choice for the
+  // rest of this exercise today. Reset on exercise change (loadHistory) and
+  // implicitly on session end (the screen unmounts when the workout ends).
+  const [overrideLoad, setOverrideLoad] = useState(null);
+  const [overrideReps, setOverrideReps] = useState(null);
+  // The prescription actually shown for the NEXT entry, tracked so
+  // handleCompleteSet can detect a user override against what was
+  // genuinely presented (not re-derived after the fact).
+  const presentedPrescriptionRef = useRef(null);
   const [showSetTypePicker, setShowSetTypePicker] = useState(false);
   const [showOverflow, setShowOverflow] = useState(false);
   const [showExecution, setShowExecution] = useState(false);
@@ -626,11 +689,38 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     ? Math.min(comp015SetCount, readinessSetCount)
     : (Number.isFinite(readinessSetCount) ? readinessSetCount : comp015SetCount);
 
-  // B2: the suggested-load surface (per-set targets) with the readiness trim
-  // applied for display. Deload prescriptions pass through untouched.
-  const displaySetTargets = readinessReduces
-    ? applyReadinessToTargets(setTargets, readinessTweak)
-    : setTargets;
+  // Campaign 20 Phase 2, Stage 3/4 (design section 9.1, 9.3): the live
+  // evidence packet, rebuilt PURELY IN MEMORY every render from the bounded
+  // evidence pass (packetBase, fetched once per exercise load in
+  // loadHistory) plus whatever has changed since - today's logged sets
+  // (loggedSets, live), a user override (Law G) and the current senior
+  // readiness/re-entry context. No I/O here: assembleEvidencePacket is a
+  // pure function. CRITICAL DOUBLE-TRIM GUARD: the resolver applies the
+  // readiness load trim INTERNALLY (senior.readinessTweak, step 7 of its
+  // precedence pipeline) - applyReadinessToTargets must never run again
+  // over resolver-derived values, so displaySetTargets is retired outright,
+  // not merely renamed.
+  const packet = useMemo(() => {
+    if (!packetBase) return null;
+    return assembleEvidencePacket({
+      exercise: packetBase.exercise,
+      prescription: packetBase.prescription,
+      senior: {
+        isDeload: packetBase.senior.isDeload,
+        deloadTargets: packetBase.senior.deloadTargets,
+        blockFinished: packetBase.senior.blockFinished,
+        layoffDays: packetBase.senior.layoffDays,
+        readinessTweak,
+        reEntryEaseActive,
+        readinessReductionActive: readinessReduces && !readinessDismissed,
+      },
+      rawHistory: packetBase.rawHistory,
+      rawToday: loggedSets,
+      overrideLoad,
+      overrideReps,
+      now: Date.now(),
+    });
+  }, [packetBase, loggedSets, overrideLoad, overrideReps, readinessTweak, reEntryEaseActive, readinessReduces, readinessDismissed]);
 
   // Wave-3 review: when the readiness trim sets a LOWER target than the
   // COMP-015 line announces (the min() above discarded it), the readiness
@@ -1381,6 +1471,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setCurrentSet({ ...DEFAULT_SET });
     seededEntryRef.current = { weight: DEFAULT_SET.weight, reps: DEFAULT_SET.reps };
     setGhostSet(null);
+    // Campaign 20 Phase 2: the evidence packet and any user override are
+    // exercise-scoped (design section 9.4/14) - clear immediately so a fast
+    // exercise switch never carries the old exercise's packet or override
+    // into the new one before loadHistory's fresh packet lands.
+    setPacketBase(null);
+    setOverrideLoad(null);
+    setOverrideReps(null);
+    presentedPrescriptionRef.current = null;
     setNoteText('');
     // An unfinished cluster belongs to the exercise it was started on;
     // abandon it on any exercise change (incl. superset auto-jump) so
@@ -1398,122 +1496,46 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     let cancelled = false;
 
     async function loadHistory() {
-      const [lastN, allTime] = await Promise.all([
-        getLastNWorkoutSets(exercise.id, activeWorkout.id, 2),
-        getAllCompletedSetsForExercise(exercise.id, activeWorkout.id),
-      ]);
+      // Campaign 20 Phase 2, Stage 3 (design section 9.1/19, 2 - one bounded
+      // evidence pass): getLastNWorkoutSets moves from N=2 to N=3, the one
+      // data change the design requires, and getAllCompletedSetsForExercise
+      // stays exactly as it was (PR detection, allTimeSets state).
+      const lastN = await getLastNWorkoutSets(exercise.id, activeWorkout.id, 3);
+      if (cancelled) return;
+      const allTime = await getAllCompletedSetsForExercise(exercise.id, activeWorkout.id);
       if (cancelled) return;
       const prev = lastN[0] || [];
-      const prevPrev = lastN[1] || [];
       setPrevSets(prev);
       setAllTimeSets(allTime);
-      // FQ-3 (D96): the previous session's post-workout difficulty rating is
-      // the session-level effort evidence the progression engine consults at
-      // the top of the rep band. Null when the user skipped the rating (the
-      // engine then holds conservatively) - and thanks to C5-P17-01, a
-      // skipped rating IS stored as null, never as a fabricated 'moderate'.
-      let prevSessionDifficulty = null;
-      const prevWorkoutId = prev[0]?.workoutId ?? prev[0]?.workout_id ?? null;
-      if (prevWorkoutId) {
-        const prevWorkout = await getWorkoutById(prevWorkoutId).catch(() => null);
-        if (cancelled) return;
-        const rawSd = Number(prevWorkout?.sessionDifficulty ?? prevWorkout?.session_difficulty);
-        prevSessionDifficulty = Number.isFinite(rawSd) && rawSd >= 1 ? rawSd : null;
-      }
 
-      // Ghost pre-fill: use the matching set index from last session
-      const allLoggedAtLoad = workoutExercises[currentExerciseIndex]?.sets || [];
-      const ghostIndex = allLoggedAtLoad.length; // 0-based index of next set to log
-      const ghostCandidate = prev[ghostIndex] ?? prev[prev.length - 1] ?? null;
-      if (ghostCandidate && ghostCandidate.weight > 0) {
-        setGhostSet({
-          weight: ghostCandidate.weight,
-          reps: ghostCandidate.actualReps ?? ghostCandidate.actual_reps ?? 0,
-          rir: ghostCandidate.rir ?? null,
+      // The packet's raw history: up to 3 comparable sessions, each with its
+      // own workout row fetched once for its difficulty rating - mirrors
+      // livePrescription.js's own buildEvidencePacket loop byte-for-byte
+      // (same two-call IO shape per session), but reuses the lastN already
+      // fetched above instead of a second getLastNWorkoutSets round trip.
+      const rawHistory = [];
+      for (const sessionSets of lastN) {
+        const workoutId = sessionSets?.[0]?.workoutId ?? sessionSets?.[0]?.workout_id ?? null;
+        let workout = null;
+        if (workoutId != null) {
+          workout = await getWorkoutById(workoutId).catch(() => null);
+          if (cancelled) return;
+        }
+        rawHistory.push({
+          at: workout?.startedAt ?? workout?.started_at ?? null,
+          difficulty: workout?.sessionDifficulty ?? workout?.session_difficulty ?? null,
+          isDeload: false,
+          sets: sessionSets,
         });
-      } else {
-        setGhostSet(null);
       }
 
-      // Layoff detection: last session was more than 7 days ago
-      const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
-      const lastTs = prev.reduce((m, s) => Math.max(m, s.createdAt ?? s.created_at ?? 0), 0);
-      const layoffMultiplier = lastTs > 0 && (Date.now() - lastTs) > SEVEN_DAYS ? 0.9 : 1.0;
+      // Layoff: days since this exercise was last trained (design section
+      // 10.5) - the resolver applies the >7-day 0.9 reduction itself.
+      const lastTs = (rawHistory[0]?.sets || []).reduce((m, s) => Math.max(m, s.createdAt ?? s.created_at ?? 0), 0);
+      const layoffDays = lastTs > 0 ? Math.floor((Date.now() - lastTs) / (24 * 60 * 60 * 1000)) : null;
 
       const allLoggedForExercise = workoutExercises[currentExerciseIndex]?.sets || [];
       setLoggedSets(allLoggedForExercise);
-
-      // Compute per-set targets for next session
-      const { targets: computed, reason: computedReason } = computeSetTargets(
-        prev,
-        routineExercise?.recommendedRepsMin,
-        routineExercise?.recommendedRepsMax,
-        units,
-        {
-          exerciseCategory: exercise?.exerciseCategory || exercise?.exercise_category || 'compound',
-          incrementKg: exercise?.incrementKg || exercise?.increment_kg || null,
-          prevPrevSets: prevPrev,
-          layoffMultiplier,
-          prevSessionDifficulty,
-        },
-      );
-      setSetTargets(computed);
-      setTargetReason(computedReason);
-
-      // Pre-fill from what was ACTUALLY lifted last time for this set position
-      // (Strong / Hevy behaviour), NOT the computed progression target, the
-      // target felt random to users (e.g. 9.5kg prefilled after a 30kg set).
-      // The target still shows as the suggestion chip (setTargets), so the
-      // coaching cue is kept; it just no longer overrides the input.
-      const currentWorkingCount = allLoggedForExercise.filter(s => s.setType !== 'warmup').length;
-      const lastActual = getBestAnchorSet(prev, currentWorkingCount) || prev[prev.length - 1] || null;
-      if (lastActual && (lastActual.weight ?? 0) > 0) {
-        const seeded = {
-          weight: lastActual.weight,
-          reps: lastActual.actualReps ?? lastActual.actual_reps ?? DEFAULT_SET.reps,
-        };
-        setCurrentSet({ ...DEFAULT_SET, ...seeded });
-        seededEntryRef.current = seeded;
-      } else {
-        // C5-P14-02 (D96): the zero-history seed used the TOP of the rep
-        // band, so on an 8-12 plan the card said "8-12 reps", the prefill row
-        // said "First time - Target 8-12 reps", and the stepper sat on 12. A
-        // novice reads a prefilled number as an instruction, so the app was
-        // simultaneously saying "we do not know your strength" (blank weight)
-        // and pre-selecting the hardest end of the range. The bottom of the
-        // band is the honest starting point, and matches the seed the
-        // warm-up auto-switch below already uses. Nothing else moves: the
-        // history-anchored branch and the carry-forward are untouched, and
-        // seededEntryRef follows this seed so C5-P13-02's "unlogged set"
-        // baseline stays exact.
-        const seeded = {
-          weight: routineExercise?.startingWeight ?? '',
-          reps: routineExercise?.recommendedRepsMin || DEFAULT_SET.reps,
-        };
-        setCurrentSet({ ...DEFAULT_SET, ...seeded });
-        seededEntryRef.current = seeded;
-      }
-
-      // Ghost pre-fill: if the computed weight is 0 or empty, apply ghost values
-      if (ghostCandidate && ghostCandidate.weight > 0) {
-        setCurrentSet(cs => {
-          const w = parseFloat(cs.weight) || 0;
-          if (w === 0) {
-            const next = {
-              ...cs,
-              weight: ghostCandidate.weight,
-              reps: ghostCandidate.actualReps ?? ghostCandidate.actual_reps ?? cs.reps,
-              rir: ghostCandidate.rir ?? cs.rir,
-              isGhost: true,
-            };
-            // C5-P13-02: a ghost is the app's own suggestion, not typed
-            // work; losing it loses nothing.
-            seededEntryRef.current = { weight: next.weight, reps: next.reps };
-            return next;
-          }
-          return cs;
-        });
-      }
 
       // Warm-up sets are no longer forced on the first set of every
       // exercise. Forcing every exercise to start with a warm-up that
@@ -1523,12 +1545,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // warm-up first tap the "Add warm-up set" button which flips
       // the current entry to warmup with sensible defaults.
 
-      // Read the current mesocycle week for the deload state + prescription.
+      // Read the current mesocycle week for the deload state + prescription,
+      // BEFORE assembling the packet: senior.isDeload/deloadTargets/
+      // blockFinished are packet INPUTS (design section 14, Law F), so this
+      // fetch has to land before the resolver can seed the entry.
+      let localIsDeloadWeek = false;
+      let localBlockFinished = false;
+      let localDeloadTargets = null; // {weight, reps} pairs, the packet's shape
+      let deloadRirSeed = null; // generateDeloadPrescription's own fixed RIR
       try {
         const currentWeek = await getCurrentMesocycleWeek(user?.id);
         if (currentWeek) {
-          setIsDeloadWeek(!!currentWeek.isDeload);
-          setBlockFinished(!!currentWeek.awaitingDecision);
+          localIsDeloadWeek = !!currentWeek.isDeload;
+          localBlockFinished = !!currentWeek.awaitingDecision;
+          setIsDeloadWeek(localIsDeloadWeek);
+          setBlockFinished(localBlockFinished);
           // C18 recovery visibility: the SAME resolved state Home renders, so
           // Train is a detail surface rather than a second opinion. It used to
           // say "Recovery week" whether the block had reached its recovery
@@ -1551,30 +1582,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // line below. Read from the same row Home's readiness chip reads.
           setWeekRirTarget(currentWeek.rirTarget ?? null);
 
-          // If this is a deload week, generate deload prescription from week-1 sets
+          // If this is a deload week, generate deload prescription from
+          // week-1 sets - now a SENIOR INPUT to the resolver
+          // (packet.senior.deloadTargets, design section 14 Law F) rather
+          // than a separate setTargets/currentSet write: the resolver's own
+          // SENIOR_RECOVERY_HOLD branch below is what actually seeds the box.
           if (currentWeek.isDeload && currentWeek.mesocycleId && exercise?.id) {
             const week1Sets = await getWeek1SetsForExercise(currentWeek.mesocycleId, exercise.id);
+            if (cancelled) return;
             if (week1Sets.length > 0) {
               // Use first-half prescription (week-1 weight, 50% reps) as default
               const deloadTargets = generateDeloadPrescription(week1Sets, true);
               if (deloadTargets.length > 0) {
-                const firstDeload = deloadTargets[0];
-                setCurrentSet(cs => ({
-                  ...cs,
-                  weight: firstDeload.weight,
-                  reps: firstDeload.reps,
-                  rir: firstDeload.rir,
-                }));
-                // C5-P13-02: the deload prescription is a seed too.
-                seededEntryRef.current = { weight: firstDeload.weight, reps: firstDeload.reps };
-                // Store deload targets in setTargets shape so the inline chip renders them
-                setSetTargets(deloadTargets.map(t => ({
-                  weight: t.weight,
-                  repsMin: t.reps,
-                  repsMax: t.reps,
-                  action: 'deload',
-                  isDeload: true,
-                })));
+                localDeloadTargets = deloadTargets.map(t => ({ weight: t.weight, reps: t.reps }));
+                deloadRirSeed = deloadTargets[0]?.rir ?? null;
                 // C18: describe what THIS prescription actually changed,
                 // measured against the block's week-1 baseline, rather than
                 // asserting a generic reduction. Today's first-half recovery
@@ -1583,6 +1604,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 setRecoveryDifferences(
                   describePrescriptionDifferences(week1Sets, deloadTargets),
                 );
+                // The existing recovery copy lines keep working as-is
+                // (design sections 14/16): the resolver's SENIOR_RECOVERY_HOLD
+                // provenance deliberately renders no line of its own
+                // (provenanceLineFor above), so targetReason still carries
+                // this text through the coach-line chain.
                 setTargetReason(currentWeek.awaitingDecision
                   ? 'Block finished: targets hold at recovery-week volume until you choose your next block.'
                   : 'Recovery week: very easy effort, full recovery focus.');
@@ -1591,6 +1617,107 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           }
         }
       } catch (_e) {}
+      if (cancelled) return;
+
+      // Readiness/re-entry senior context, derived FRESH from the
+      // just-fetched mesocycle week (not the render-scope isDeloadWeek
+      // state, which has not caught up with localIsDeloadWeek yet on the
+      // very first exercise load of a session) - keeps this seed's senior
+      // gate exact rather than one render stale.
+      const localReEntryEaseActive = !localIsDeloadWeek && !!activeWorkout?.reEntryEaseApplied;
+      const localReadinessTweak = !localIsDeloadWeek
+        ? resolveSessionEasingTweak({
+          intent: tier === 'pro' ? activeWorkout?.preWorkoutIntent : null,
+          chips: { sleepQuality: activeWorkout?.sleepQuality, energyScore: activeWorkout?.energyScore },
+          reEntryEaseActive: localReEntryEaseActive,
+        })
+        : null;
+      const localReadinessReduces = !!localReadinessTweak?.reduces && !readinessDismissed;
+
+      // The packet's fixed inputs for this exercise load - stored so every
+      // later re-resolution (each logged set in handleCompleteSet, every
+      // readiness change in the `packet` useMemo above) rebuilds from these
+      // SAME raw rows purely in memory. No further DB reads until the next
+      // exercise change.
+      const base = {
+        exercise: {
+          id: exercise.id,
+          exerciseType: exercise?.exerciseType || 'weight_reps',
+          category: exercise?.exerciseCategory || exercise?.exercise_category || 'compound',
+          incrementKg: exercise?.incrementKg ?? exercise?.increment_kg ?? null,
+          units,
+        },
+        prescription: {
+          repsMin: routineExercise?.recommendedRepsMin,
+          repsMax: routineExercise?.recommendedRepsMax,
+          targetSets: routineExercise?.recommendedSets ?? null,
+          startingWeight: routineExercise?.startingWeight ?? null,
+          goal: null,
+        },
+        rawHistory,
+        senior: {
+          isDeload: localIsDeloadWeek,
+          deloadTargets: localDeloadTargets,
+          blockFinished: localBlockFinished,
+          layoffDays,
+        },
+      };
+      setPacketBase(base);
+      setOverrideLoad(null);
+      setOverrideReps(null);
+
+      // Seed the CURRENT entry from the resolver's prescription for the next
+      // position (workingLogged + 1) - replacing the best-anchor seed, the
+      // zero-history seed and the ghost overlay in one call (design section
+      // 2's production trace of what this replaces, at the campaign
+      // baseline commit d9f8d105). today.working carries any sets already
+      // logged for this exercise earlier in the session (a superset
+      // jump-back), so the resolver's own current-session evidence rule
+      // (Law B) already applies here, not just after the next log.
+      const localPacket = assembleEvidencePacket({
+        exercise: base.exercise,
+        prescription: base.prescription,
+        senior: {
+          ...base.senior,
+          readinessTweak: localReadinessTweak,
+          reEntryEaseActive: localReEntryEaseActive,
+          readinessReductionActive: localReadinessReduces,
+        },
+        rawHistory: base.rawHistory,
+        rawToday: allLoggedForExercise,
+        overrideLoad: null,
+        overrideReps: null,
+        now: Date.now(),
+      });
+      const seedPos = countProgressSets(allLoggedForExercise) + 1;
+      const seedPrescription = resolveSetPrescription(localPacket, seedPos);
+      presentedPrescriptionRef.current = { pos: seedPos, prescription: seedPrescription };
+      // Founder Ruling 1 (B-plus): HIGH/MEDIUM confidence puts the
+      // prescription in the REAL boxes as committed, ghost-styled values;
+      // LOW confidence already falls back to the factual reference/starting
+      // weight/blank inside resolveSetPrescription itself (its own `weight`
+      // and `prefill` fields already encode that fallback), so no separate
+      // confidence branch is needed here. C5-P14-02: the resolver's
+      // FIRST_TIME_BAND reps target is band.min, so a genuinely blank-weight
+      // first exposure still seeds reps at the bottom of the band.
+      const seededWeight = seedPrescription.prefill ? (seedPrescription.weight ?? '') : '';
+      const seededReps = seedPrescription.repsTarget != null ? seedPrescription.repsTarget : DEFAULT_SET.reps;
+      const seeded = {
+        weight: seededWeight,
+        reps: seededReps,
+        isGhost: seedPrescription.prefill && seedPrescription.weight != null,
+      };
+      if (localIsDeloadWeek && deloadRirSeed != null && seedPrescription.provenance === PROVENANCE.SENIOR_RECOVERY_HOLD) {
+        seeded.rir = deloadRirSeed;
+      }
+      setCurrentSet({ ...DEFAULT_SET, ...seeded });
+      seededEntryRef.current = { weight: seeded.weight, reps: seeded.reps };
+      audit('workout.prescription.presented', {
+        exerciseId: exercise.id,
+        provenance: seedPrescription.provenance,
+        confidence: seedPrescription.confidence,
+        position: seedPos,
+      });
 
       // Restore an in-progress draft (typed but not yet logged) so backgrounding
       // or a cold relaunch mid-set doesn't wipe what the user just entered. Only
@@ -1850,15 +1977,99 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         ]));
       }
 
-      // Carry forward what was just lifted (Strong / Hevy): the next set defaults
-      // to the SAME weight and reps you just did, not a stale previous-session
-      // target. The target chip still shows the progression suggestion.
+      // Campaign 20 Phase 2, Stage 4/5 (design section 9.3/9.4/12): live
+      // re-resolution replaces the unconditional carry-forward. Pure, in
+      // memory - the SAME raw history from packetBase, with the just-logged
+      // set appended to today's evidence. In the common case (no adjustment
+      // fires) the resolver's own output equals what was just lifted, so the
+      // felt behaviour IS carry-forward; it only differs where the resolver
+      // has a genuine reason (back-off position, fatigue adjust, overshoot
+      // add, senior recovery), and the provenance line then explains why.
       if (currentSet.setType !== 'warmup') {
-        setCurrentSet(cs => ({ ...cs, weight: setData.weight, reps: setData.actualReps }));
-        // C5-P13-02: the carry-forward is the app seeding the next set, not
-        // unsaved work. This is the state that made the finish confirm
-        // claim an unlogged set for the whole rest of every session.
-        seededEntryRef.current = { weight: setData.weight, reps: setData.actualReps };
+        // The ordinal position the just-logged set occupies among eligible
+        // working rows (design section 15's NEVER_ELIGIBLE_TYPES) - matches
+        // `presented.pos` exactly whenever the just-logged set is the
+        // position the resolver actually prescribed for.
+        const seedPosForCompletedSet = countProgressSets(newLoggedSets);
+        // Law G: a logged weight/reps that differs from what was PRESENTED
+        // for this exact set counts as a deliberate choice for the rest of
+        // this exercise today - including a tap on the history reference
+        // row's "Use" (it silently overwrote the box before this log, so
+        // the comparison below is naturally against the ORIGINAL
+        // prescription, not the row the user chose).
+        const presented = presentedPrescriptionRef.current;
+        let nextOverrideLoad = overrideLoad;
+        let nextOverrideReps = overrideReps;
+        if (presented && presented.pos === seedPosForCompletedSet && presented.prescription) {
+          const overrideOpts = {
+            incrementKg: exercise?.incrementKg ?? exercise?.increment_kg ?? null,
+            units,
+            category: exercise?.exerciseCategory || exercise?.exercise_category || 'compound',
+          };
+          const loadOv = detectLoadOverride(setData.weight, presented.prescription.weight, overrideOpts);
+          const repsOv = detectRepsOverride(setData.actualReps, presented.prescription.repsTarget);
+          if (loadOv != null) {
+            nextOverrideLoad = loadOv;
+            setOverrideLoad(loadOv);
+            audit('workout.prescription.overridden', {
+              exerciseId: exercise.id,
+              direction: (presented.prescription.weight != null && loadOv < presented.prescription.weight) ? 'down' : 'up',
+            });
+          }
+          if (repsOv != null) {
+            nextOverrideReps = repsOv;
+            setOverrideReps(repsOv);
+          }
+        }
+
+        if (packetBase) {
+          const nextPacket = assembleEvidencePacket({
+            exercise: packetBase.exercise,
+            prescription: packetBase.prescription,
+            senior: {
+              isDeload: packetBase.senior.isDeload,
+              deloadTargets: packetBase.senior.deloadTargets,
+              blockFinished: packetBase.senior.blockFinished,
+              layoffDays: packetBase.senior.layoffDays,
+              readinessTweak,
+              reEntryEaseActive,
+              readinessReductionActive: readinessReduces && !readinessDismissed,
+            },
+            rawHistory: packetBase.rawHistory,
+            rawToday: newLoggedSets,
+            overrideLoad: nextOverrideLoad,
+            overrideReps: nextOverrideReps,
+            now: Date.now(),
+          });
+          const nextPos = countProgressSets(newLoggedSets) + 1;
+          const nextPrescription = resolveSetPrescription(nextPacket, nextPos);
+          presentedPrescriptionRef.current = { pos: nextPos, prescription: nextPrescription };
+          audit('workout.prescription.presented', {
+            exerciseId: exercise.id,
+            provenance: nextPrescription.provenance,
+            confidence: nextPrescription.confidence,
+            position: nextPos,
+          });
+          if (nextPrescription.prefill) {
+            const w = nextPrescription.weight != null ? nextPrescription.weight : setData.weight;
+            const r = nextPrescription.repsTarget != null ? nextPrescription.repsTarget : setData.actualReps;
+            setCurrentSet(cs => ({ ...cs, weight: w, reps: r, isGhost: nextPrescription.weight != null }));
+            seededEntryRef.current = { weight: w, reps: r };
+          } else {
+            // Same fallback the old unconditional carry-forward always used.
+            setCurrentSet(cs => ({ ...cs, weight: setData.weight, reps: setData.actualReps }));
+            seededEntryRef.current = { weight: setData.weight, reps: setData.actualReps };
+          }
+        } else {
+          // Defensive: packetBase should always be set by the time a set is
+          // logged (loadHistory sets it before the CTA is even enabled), but
+          // never leave the entry unseeded if it somehow isn't.
+          setCurrentSet(cs => ({ ...cs, weight: setData.weight, reps: setData.actualReps }));
+          // C5-P13-02: the carry-forward is the app seeding the next set, not
+          // unsaved work. This is the state that made the finish confirm
+          // claim an unlogged set for the whole rest of every session.
+          seededEntryRef.current = { weight: setData.weight, reps: setData.actualReps };
+        }
       }
 
       // Update last activity timestamp
@@ -1961,24 +2172,36 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
       // Prepare next set
       setNoteText('');
-      // If warmup was just completed, mark hint seen and auto-switch to working set
+      // If warmup was just completed, mark hint seen and auto-switch to
+      // working set. Campaign 20 Phase 2: seeds from the resolver's first
+      // working-position prescription instead of getBestAnchorSet/
+      // prefillRepsForTarget (design section 19) - `packet` already carries
+      // today's readiness/senior context reactively (see the useMemo above).
       if (currentSet.setType === 'warmup') {
         warmupHintSeenRef.current = true;
-        const firstTarget = displaySetTargets[0]; // B2: readiness-trimmed suggestion
-        if (firstTarget) {
-          const anchorSet0 = getBestAnchorSet(prevSets, 0);
-          const prefillReps = prefillRepsForTarget(anchorSet0, firstTarget);
+        const firstPrescription = packet ? resolveSetPrescription(packet, { index: 1, setType: 'straight' }) : null;
+        if (firstPrescription) {
+          presentedPrescriptionRef.current = { pos: 1, prescription: firstPrescription };
+        }
+        if (firstPrescription && firstPrescription.prefill) {
+          const w = firstPrescription.weight != null ? firstPrescription.weight : '';
+          const r = firstPrescription.repsTarget != null ? firstPrescription.repsTarget : (routineExercise?.recommendedRepsMin || 8);
           setCurrentSet(cs => ({
             ...cs,
             setType: 'straight',
-            weight: firstTarget.weight,
-            reps: prefillReps,
+            weight: w,
+            reps: r,
+            isGhost: firstPrescription.weight != null,
           }));
           // C5-P13-02: the auto-switch to the first working set is a seed.
-          seededEntryRef.current = { weight: firstTarget.weight, reps: prefillReps };
+          seededEntryRef.current = { weight: w, reps: r };
         } else {
           setCurrentSet(cs => {
-            const next = { ...cs, setType: 'straight', reps: routineExercise?.recommendedRepsMin || 8 };
+            const next = {
+              ...cs,
+              setType: 'straight',
+              reps: firstPrescription?.repsTarget ?? (routineExercise?.recommendedRepsMin || 8),
+            };
             // Idempotent: the entry is being seeded for the first working
             // set, carrying whatever weight the warm-up left in it.
             seededEntryRef.current = { weight: next.weight, reps: next.reps };
@@ -2801,6 +3024,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const workingLogged = countProgressSets(loggedSets);
   const targetComplete = targetSets && workingLogged >= targetSets;
 
+  // Campaign 20 Phase 2, Stage 3/4 (design section 9.3): prescriptions[i] is
+  // the resolver's prescription for working position i+1 (1-based
+  // elsewhere, 0-indexed here). Reactive to `packet` (readiness changes,
+  // overrides, today's logged sets all flow through it), so the NowCard
+  // range/provenance line and the upcoming-set previews below always read
+  // the CURRENT resolved state, not a stale computeSetTargets snapshot.
+  // Capped to cover at least the current entry even past targetSets (an
+  // "extra set" logged beyond the plan).
+  const prescriptions = useMemo(() => {
+    if (!packet) return [];
+    const count = Math.max(targetSets || 0, workingLogged + 1);
+    const list = [];
+    for (let pos = 1; pos <= count; pos++) {
+      list.push(resolveSetPrescription(packet, pos));
+    }
+    return list;
+  }, [packet, targetSets, workingLogged]);
+
   // Card-header line 1 (COMP-001): where am I, what kind of set. The whole
   // line opens the set-type picker (it replaced SetEntry's card-foot row).
   const orientationLabel = (() => {
@@ -2815,35 +3056,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return `${pos} - ${mode}`;
   })();
 
-  // Stalled-progress nudge: same weight & reps across the last 3 sessions
-  // means the suggestion engine isn't doing enough on its own, pull back
-  // the loop and offer a concrete next step. First working set only, so it
-  // doesn't blare repeatedly. Renders as the card header's coaching line.
-  const stalledAdvice = (() => {
-    if (currentSet.setType === 'warmup' || workingLogged !== 0) return null;
-    if (!allTimeSets || allTimeSets.length < 9) return null;
-    // Group by workoutId, take the heaviest set of each session
-    const bySession = new Map();
-    for (const s of allTimeSets) {
-      if ((s.setType ?? s.set_type ?? 'straight') === 'warmup') continue;
-      const wid = s.workoutId ?? s.workout_id;
-      if (!wid) continue;
-      const cur = bySession.get(wid);
-      if (!cur || (s.weight ?? 0) > (cur.weight ?? 0)) bySession.set(wid, s);
-    }
-    const sessions = Array.from(bySession.values())
-      .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))
-      .slice(0, 3);
-    if (sessions.length < 3) return null;
-    const w0 = sessions[0].weight ?? 0;
-    const r0 = sessions[0].actualReps ?? 0;
-    const stalled = sessions.every(s =>
-      Math.abs((s.weight ?? 0) - w0) < 0.1 &&
-      Math.abs((s.actualReps ?? 0) - r0) <= 1,
-    );
-    if (!stalled || w0 === 0) return null;
-    return { w0, r0 };
-  })();
+  // stalledAdvice (the 3-session same-weight nudge with its hard-coded,
+  // unit-blind +2.5 literal) is RETIRED as of Campaign 20 Phase 2 (design
+  // section 3, authority 7): its user-facing intent - a concrete next step
+  // when stalled - is now carried by the resolver's own provenance line
+  // (provenanceLineFor above), using the one increment source
+  // (resolveLoadIncrement inside livePrescription.js).
 
   // B2: the readiness line for the coach slot. A below-par reduction carries
   // its written why on every exercise; a Sharp answer gets at most a calm
@@ -3280,7 +3498,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                         onCancelEdit={closeEditSet}
                         onDeleteEdit={handleDeleteEditedSet}
                         saving={editingSet != null && editingSet.id === s.id ? saving : false}
-                        weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
+                        weightStepKg={exercise?.incrementKg || exercise?.increment_kg
+                          || defaultIncrement(s.weight || 0, units, exercise?.exerciseCategory || exercise?.exercise_category || 'compound')}
                       />
                     </AnimatedRow>
                   );
@@ -3304,14 +3523,36 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               the set-type line, or pull the ramp from exercise options. */}
           {(() => {
             const isWarmupSet = currentSet.setType === 'warmup';
-            const coachText = (sessionAdjustment?.show && !readinessDrivesTarget)
-              ? sessionAdjustment.reasonText
-              : readinessLine
-                ? readinessLine
-                : stalledAdvice
-                  ? `Same weight 3 sessions running. Try ${stalledAdvice.w0 + 2.5}${units} x ${Math.max(1, stalledAdvice.r0 - 1)}, or stay at ${stalledAdvice.w0}${units} and push for ${stalledAdvice.r0 + 1}.`
-                  : targetReason;
-            const showCoach = !isWarmupSet && workingLogged === 0
+            const currentPrescription = prescriptions[workingLogged] ?? null;
+            // Campaign 20 Phase 2, Stage 11 (design section 16/17, Founder
+            // Ruling 1): the provenance line replaces stalledAdvice as the
+            // lowest-priority coach-line content. sessionAdjustment and
+            // readiness keep seniority for their own content; SENIOR_
+            // RECOVERY_HOLD and INSUFFICIENT_EVIDENCE render no line here
+            // (provenanceLineFor), so targetReason's existing deload/
+            // block-finished copy still carries through for those. Never
+            // shown on a warm-up entry (isWarmupSet already gates showCoach).
+            const provenanceLine = !isWarmupSet ? provenanceLineFor(currentPrescription) : null;
+            // Lead amendment (Stage 11, primary product law): the FIRST set
+            // keeps the existing coach-line chain exactly (session
+            // adjustment > readiness > provenance > targetReason, first
+            // working set only - their pinned behaviour). LATER working
+            // sets render the provenance line ALONE, because the campaign's
+            // core contract is an answer before EVERY working set - the
+            // mid-session codes (fatigue adjust, stronger, back-off, user
+            // choice) only ever occur at set 2+, and a box that changes
+            // without its one-line why is exactly the opacity the design
+            // forbids. Dismissal stays per-exercise and silences both.
+            const coachText = workingLogged === 0
+              ? ((sessionAdjustment?.show && !readinessDrivesTarget)
+                ? sessionAdjustment.reasonText
+                : readinessLine
+                  ? readinessLine
+                  : provenanceLine
+                    ? provenanceLine
+                    : targetReason)
+              : provenanceLine;
+            const showCoach = !isWarmupSet
               && !(isDeloadWeek && !deloadDismissed)
               && !!coachText
               && !dismissedCoachLines.has(exercise?.id);
@@ -3335,28 +3576,32 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   }
                   : null;
 
-            const target = displaySetTargets[workingLogged];
             // Warm-ups and working sets number independently, so filter
             // warm-ups out BEFORE indexing by workingLogged (D1 #2).
             const prevWorking = prevSets.filter(
               s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup',
             );
             const prev = prevWorking[workingLogged];
-            const range = target
-              ? (target.repsMin === target.repsMax ? `${target.repsMin}` : `${target.repsMin}-${target.repsMax}`)
+            // Stage 11: the range label shows the CURRENT prescription's
+            // repsBand - unchanged visual (still the honest range, not the
+            // single repsTarget number), now resolver-derived.
+            const range = currentPrescription
+              ? (currentPrescription.repsBand.min === currentPrescription.repsBand.max
+                ? `${currentPrescription.repsBand.min}`
+                : `${currentPrescription.repsBand.min}-${currentPrescription.repsBand.max}`)
               : (routineExercise?.recommendedRepsMin != null
                 ? `${routineExercise.recommendedRepsMin}-${routineExercise.recommendedRepsMax}`
                 : null);
             let prefill = null;
             if (!isWarmupSet) {
-              if (target?.isDeload) {
+              if (isDeloadWeek && currentPrescription?.provenance === PROVENANCE.SENIOR_RECOVERY_HOLD) {
                 prefill = {
                   label: 'Recovery week -',
-                  valueLabel: `${target.weight}${units} x ${target.repsMin}`,
+                  valueLabel: `${currentPrescription.weight}${units} x ${currentPrescription.repsTarget}`,
                   onUse: () => {
                     hapticsVocab.setLogged();
                     audit('workout.beatline.apply', { exerciseId: exercise?.id, setIndex: workingLogged });
-                    setCurrentSet(s => ({ ...s, weight: String(target.weight ?? 0), reps: target.repsMin ?? s.reps, isGhost: false }));
+                    setCurrentSet(s => ({ ...s, weight: String(currentPrescription.weight ?? 0), reps: currentPrescription.repsTarget ?? s.reps, isGhost: false }));
                   },
                 };
               } else if (prev) {
@@ -3364,6 +3609,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   // "Last" alone read ambiguously mid-workout: it could mean
                   // the previous SET. This is the matching set from the most
                   // recent completed workout (getLastNWorkoutSets), so say so.
+                  // Law A (design section 16): always the factual history,
+                  // never the target - unmistakably labelled as history.
                   label: 'Last session:',
                   valueLabel: `${prev.weight}${units} x ${prev.actualReps}`,
                   onUse: () => {
@@ -3394,7 +3641,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 isWarmup={isWarmupSet}
                 onSubmitComplete={handleCompleteSetPress}
                 exerciseType={activeExerciseType}
-                weightStepKg={exercise?.incrementKg || exercise?.increment_kg || 2.5}
+                weightStepKg={exercise?.incrementKg || exercise?.increment_kg
+                  || defaultIncrement(parseFloat(currentSet.weight) || 0, units, exercise?.exerciseCategory || exercise?.exercise_category || 'compound')}
                 recordLine={recordLine}
                 noteText={noteText}
                 onNoteChange={setNoteText}
@@ -3516,9 +3764,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             if (currentSet.setType === 'warmup') return null;
             const rows = [];
             for (let n = workingLogged + 2; n <= targetSets; n += 1) {
-              const tgt = displaySetTargets[n - 1];
+              // Campaign 20 Phase 2: upcoming previews read the SAME
+              // resolver-derived prescriptions array as the NowCard range
+              // (same visual, new source) - position n renders
+              // prescriptions[n - 1].repsBand.
+              const tgt = prescriptions[n - 1];
               const range = tgt
-                ? (tgt.repsMin === tgt.repsMax ? `${tgt.repsMin}` : `${tgt.repsMin}-${tgt.repsMax}`)
+                ? (tgt.repsBand.min === tgt.repsBand.max ? `${tgt.repsBand.min}` : `${tgt.repsBand.min}-${tgt.repsBand.max}`)
                 : (routineExercise?.recommendedRepsMin != null
                   ? `${routineExercise.recommendedRepsMin}-${routineExercise.recommendedRepsMax}`
                   : null);

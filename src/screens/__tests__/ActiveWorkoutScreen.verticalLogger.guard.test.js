@@ -112,9 +112,14 @@ describe('the continuous set sequence: completed above, active entry, upcoming b
 
   test('upcoming rows are read-only previews of the remaining prescribed working sets', () => {
     expect(SRC).toContain('for (let n = workingLogged + 2; n <= targetSets; n += 1) {');
-    // They derive from the readiness-trimmed display targets, so a reduced
-    // day never previews more sets than the session actually prescribes.
-    expect(SRC).toContain('const tgt = displaySetTargets[n - 1];');
+    // Campaign 20 Phase 2 (live set prescription resolver): the readiness-
+    // trimmed computeSetTargets snapshot (displaySetTargets) is retired.
+    // Upcoming previews now read the SAME reactive resolver-derived
+    // `prescriptions` array the NowCard range uses - position n renders
+    // prescriptions[n - 1].repsBand, which already carries the readiness
+    // trim (applied INSIDE resolveSetPrescription, never re-applied by the
+    // screen - the double-trim guard in livePrescription.js's own tests).
+    expect(SRC).toContain('const tgt = prescriptions[n - 1];');
     // No handlers: previews cannot log, edit or navigate.
     const upcoming = SRC.match(/for \(let n = workingLogged \+ 2[\s\S]*?return rows\.length/)?.[0] ?? '';
     expect(upcoming).not.toContain('onPress');

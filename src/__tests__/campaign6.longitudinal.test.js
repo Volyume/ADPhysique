@@ -249,8 +249,18 @@ describe('PHASE 6 (D91-25 characterisation): the stored-ledger asymmetry, pinned
 
 describe('PHASE 6: the existing session-level re-entry mechanism (what protects loads today)', () => {
   test('a 7-day exercise gap applies the one-time 10% layoff reduction in the live session path', () => {
+    // Campaign 20 Phase 2 (live set prescription resolver): the screen no
+    // longer computes its own layoffMultiplier - it derives layoffDays and
+    // passes it into the packet as a senior fact; livePrescription.js's
+    // resolveSetPrescription applies the >7-day 0.9 reduction itself
+    // (design section 10.5), so the law is pinned in TWO places now: the
+    // screen still measures the real day count, and the resolver is the
+    // one applying 0.9.
     const src = read('screens/ActiveWorkoutScreen.js');
-    expect(src).toMatch(/layoffMultiplier = lastTs > 0 && \(Date\.now\(\) - lastTs\) > SEVEN_DAYS \? 0\.9 : 1\.0/);
+    expect(src).toMatch(/const layoffDays = lastTs > 0 \? Math\.floor\(\(Date\.now\(\) - lastTs\) \/ \(24 \* 60 \* 60 \* 1000\)\) : null;/);
+    const engine = read('lib/livePrescription.js');
+    expect(engine).toMatch(/Number\.isFinite\(senior\.layoffDays\) && senior\.layoffDays > 7/);
+    expect(engine).toMatch(/seniorMultiplier: isLayoff \? 0\.9 : null/);
   });
 
   test('under a layoff multiplier the engine reduces every load and never claims an increase', () => {

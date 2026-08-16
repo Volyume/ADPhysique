@@ -1251,15 +1251,25 @@ describe('LOGGER: the first session states its effort target and its own words (
 
   test('a first-ever set is anchored to the bottom of the rep band (C5-P14-02)', () => {
     const src = read('screens/ActiveWorkoutScreen.js');
-    // Zero-history loader branch AND the swap path, which resets history by
-    // construction. Both update seededEntryRef, so C5-P13-02's "unlogged
-    // set" baseline stays exact.
-    expect(src).toContain('reps: routineExercise?.recommendedRepsMin || DEFAULT_SET.reps');
-    expect(src).not.toContain('reps: routineExercise?.recommendedRepsMax || DEFAULT_SET.reps');
+    // The swap path resets history by construction and seeds from the newly
+    // swapped exercise's own rep band, unaffected by Campaign 20 - still the
+    // bottom of the band, still feeding seededEntryRef.
+    expect(src).toContain('reps: newRepMin || DEFAULT_SET.reps');
+    expect(src).not.toContain('reps: newRepMax');
     expect(src).toContain('seededEntryRef.current = { weight: DEFAULT_SET.weight, reps: newRepMin || DEFAULT_SET.reps }');
-    // The history-anchored branch is untouched: it still seeds from what was
-    // actually lifted last time.
-    expect(src).toMatch(/const lastActual = getBestAnchorSet\(prev, currentWorkingCount\)/);
+    // Campaign 20 Phase 2 (live set prescription resolver, commit d9f8d105
+    // onward): the zero-history loader branch now seeds through
+    // resolveSetPrescription (src/lib/livePrescription.js), which pins the
+    // SAME bottom-of-band law for a genuine zero-history exposure as an
+    // authoritative rule - FIRST_TIME_BAND's repsTarget is band.min
+    // (repsMin), never band.max - instead of the screen's own retired
+    // getBestAnchorSet ordinal anchor (design doc section 3 #2).
+    expect(src).toContain('const seedPrescription = resolveSetPrescription(localPacket, seedPos);');
+    expect(src).not.toContain('const lastActual = getBestAnchorSet(prev, currentWorkingCount)');
+    // livePrescription.js's own FIRST_TIME_BAND branch is the ground truth
+    // for the bottom-of-band pin (checked directly, not just referenced).
+    const engine = read('lib/livePrescription.js');
+    expect(engine).toMatch(/repsTarget: band\.min,[\s\S]{0,80}provenance: PROVENANCE\.FIRST_TIME_BAND,/);
   });
 });
 
