@@ -30,6 +30,19 @@
  */
 
 describe('X-SAFETY-06 (second site): schedulePlannedMealConfirm fails CLOSED on a read error', () => {
+  // Lead fix (post-Campaign-21, class A test defect): the confirm push
+  // fires at 20:00 local and production CORRECTLY declines to schedule
+  // after that time (scheduler.js "past 20:00 today: no nudge"). The
+  // original control fixture never froze the clock, so this suite went
+  // red the moment the wall clock crossed 20:00. Freeze every test in
+  // this describe at a MORNING instant so "today's 20:00" is always in
+  // the future and the suite is time-of-day independent.
+  beforeEach(() => {
+    jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+    jest.setSystemTime(new Date(2026, 7, 16, 9, 0, 0));
+  });
+  afterEach(() => { jest.useRealTimers(); });
+
   let mockScheduleAsync;
   let mockCancelAsync;
   let mockGetEd;
