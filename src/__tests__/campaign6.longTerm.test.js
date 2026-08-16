@@ -491,11 +491,15 @@ describe('RB6 fixes (D97-25): the return experience holds under adversarial revi
     // requirement this test protects is UNCHANGED and now strengthened:
     // a gap-spanning delta must never be spoken, or counted, as weekly.
     const fn = src.slice(src.indexOf('export function computeWeeklyTrendPct'));
-    expect(fn.slice(0, 1200)).toMatch(/PER-WEEK rate/);
-    // The fix must remain time-normalisation, never a freshness cut-off
-    // that would discard the only evidence of a genuine large loss.
-    expect(fn.slice(0, 1200)).not.toMatch(/weeklyComparatorFresh\(morningWeights, nowMs\)\) return null/);
-    expect(fn.slice(0, 1200)).toMatch(/elapsedWeeksSinceComparator/);
+    // Window widened 1200 -> 1800 (Campaign 21 finding 5): the future-row
+    // guard inserted at the top of the function pushed the normalisation
+    // call past the old slice. The pinned law is unchanged and still
+    // asserted: PER-WEEK normalisation present, and NO freshness cut-off
+    // that would discard old evidence (the finding-5 guard excludes only
+    // FUTURE-dated rows, which is not a staleness cut).
+    expect(fn.slice(0, 1800)).toMatch(/PER-WEEK rate/);
+    expect(fn.slice(0, 1800)).not.toMatch(/weeklyComparatorFresh\(morningWeights, nowMs\)\) return null/);
+    expect(fn.slice(0, 1800)).toMatch(/elapsedWeeksSinceComparator/);
   });
 
   test('RB6-3: the Home chip states the calendar fact for an unearned recovery week', () => {
