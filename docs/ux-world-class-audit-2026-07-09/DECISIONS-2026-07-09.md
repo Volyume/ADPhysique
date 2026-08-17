@@ -2865,3 +2865,16 @@ Lead rulings under D33 recorded with the implementation:
 - **D102-5 (Progress overflow):** pillar state/evidence text wraps in
   full (rows grow) rather than truncating mid-sentence; copy sources
   unchanged.
+- **D102-6 (FRAMING CORRECTION, founder same-day, verbatim: "STOP
+  CALLING IT FIRST REVIEW"):** the evidence pane is the RECURRING
+  weekly read and is never framed as a first review in any state.
+  Titles: "Since your check-in" once ANY real check-in exists in
+  history; the ledger's own "What your coach is reading" before that.
+  Root cause of the regression on the founder's four-week device: the
+  pane (and the C22 line before it) keyed off latestCoachDecisionComplete,
+  a CURRENT-WEEK predicate that goes false mid-cycle when the engine
+  saves a held output before the week's check-in. "Ever checked in" now
+  derives from check-in HISTORY (any weekly_checkins row with an energy
+  score); sessions count from the last real check-in's timestamp.
+  Pinned: no pane state may ever contain "first review"
+  (evidencePanel.test.js framing-law block).

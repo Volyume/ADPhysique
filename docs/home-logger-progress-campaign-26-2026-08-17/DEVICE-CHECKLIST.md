@@ -13,9 +13,13 @@ gone, NowCard accent gone, Diary macros-guide row gone). Rulings: D102.
    Recovery/deload/readiness caution lines unchanged when those states
    are live. Tap still opens the block-shape sheet.
 3. Before logging weight (Pro): the morning-weight strip renders as the
-   action row. Below it, the quiet evidence pane: title ("Your first
-   review" pre-first-review, "Since your check-in" after), "N days to
-   your next check-in", weigh-in row, sessions row.
+   action row. Below it, the quiet evidence pane: title "Since your
+   check-in" once ANY check-in exists in history ("What your coach is
+   reading" only for an account that has never checked in - the pane
+   NEVER says "first review" in any state), "N days to your next
+   check-in", weigh-in row, sessions row. On an account with weeks of
+   check-ins the title must read "Since your check-in" even mid-week
+   before this week's check-in.
 4. Log the weight. Expected: the strip DISAPPEARS entirely - no
    bordered card, no green Logged pill. The pane now carries a quiet
    "Morning weight <value>" tick row. Whole pane taps through to the

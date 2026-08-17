@@ -23,7 +23,7 @@ const DAY = 86400000;
 
 const BASE = {
   tier: 'pro',
-  hasCompletedFirstReview: false,
+  hasCheckedInEver: false,
   weighIns7d: 0,
   firstWeightAt: MONDAY - 10 * DAY,
   checkinDay: 0, // Sunday
@@ -93,17 +93,33 @@ describe('honest counts: progress while short, the actual count once met', () =>
   });
 });
 
-describe('title truth: "Since your check-in" only after a real check-in', () => {
-  test('pre-first-review title never claims a past check-in', () => {
+describe('title truth: "Since your check-in" only after a real check-in, and NEVER first-review framing', () => {
+  test('before any check-in: the ledger\'s own title, no past-check-in claim, no "first review"', () => {
+    // FRAMING LAW (founder correction 2026-08-17, "STOP CALLING IT FIRST
+    // REVIEW"): this pane is the recurring weekly evidence read; no state
+    // of it is ever framed as a first review.
     const panel = resolveEvidencePanel(BASE);
-    expect(panel.title).toBe('Your first review');
+    expect(panel.title).toBe('What your coach is reading');
     expect(panel.title).not.toMatch(/since your check-in/i);
+    expect(JSON.stringify(panel)).not.toMatch(/first review/i);
   });
 
-  test('post-first-review: "Since your check-in" with sessions since the cycle started', () => {
+  test('no state of the pane ever says "first review" (framing law, every branch)', () => {
+    const variants = [
+      resolveEvidencePanel(BASE),
+      resolveEvidencePanel({ ...BASE, hasCheckedInEver: true, sessionsSinceCheckin: 4, weighIns7d: 3 }),
+      resolveEvidencePanel({ ...BASE, edFlagOpen: true }),
+      resolveEvidencePanel({ ...BASE, weighIns7d: 5, todayWeightLabel: '213 lbs' }),
+    ];
+    for (const v of variants) {
+      expect(JSON.stringify(v) || '').not.toMatch(/first review/i);
+    }
+  });
+
+  test('after a check-in: "Since your check-in" with sessions since the cycle started', () => {
     const panel = resolveEvidencePanel({
       ...BASE,
-      hasCompletedFirstReview: true,
+      hasCheckedInEver: true,
       weighIns7d: 3,
       sessionsSinceCheckin: 4,
     });
@@ -113,16 +129,16 @@ describe('title truth: "Since your check-in" only after a real check-in', () => 
     expect(sessions.label).toBe('4 training sessions logged');
   });
 
-  test('post-first-review with an unknown since-check-in count: the row is omitted, never guessed', () => {
+  test('checked-in with an unknown since-check-in count: the row is omitted, never guessed', () => {
     const panel = resolveEvidencePanel({
       ...BASE,
-      hasCompletedFirstReview: true,
+      hasCheckedInEver: true,
       sessionsSinceCheckin: null,
     });
     expect(panel.rows.find((r) => r.key === 'sessions')).toBeUndefined();
   });
 
-  test('pre-first-review sessions row uses the all-time count', () => {
+  test('before any check-in the sessions row uses the all-time count', () => {
     const panel = resolveEvidencePanel({ ...BASE, completedSessions: 2 });
     expect(panel.rows.find((r) => r.key === 'sessions').label)
       .toBe('2 training sessions logged');

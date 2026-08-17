@@ -38,11 +38,22 @@ function plural(n, word) {
 }
 
 /**
+ * FRAMING LAW (founder correction 2026-08-17, verbatim: "STOP CALLING IT
+ * FIRST REVIEW"): this pane is the RECURRING weekly evidence read - it
+ * exists every week of the athlete's life, and no state of it is ever
+ * framed as a "first review". Before any check-in has happened it titles
+ * itself with the ledger's own honest "What your coach is reading" (the
+ * exact title the original runway used); after that, "Since your
+ * check-in". Never re-introduce first-review wording here.
+ *
  * @param {object} facts
  * @param {'free'|'pro'} facts.tier - Pro only; check-ins are Precision Coaching.
- * @param {boolean} [facts.hasCompletedFirstReview] - a completed coach
- *   decision exists; flips the pane from first-review progress to the
- *   since-check-in read.
+ * @param {boolean} [facts.hasCheckedInEver] - a REAL weekly check-in row
+ *   (energy score present) exists in history. NOT "is the latest coach
+ *   output complete" - that predicate is about the current week's
+ *   decision and goes false mid-cycle whenever the engine saves a held
+ *   output before the week's check-in, which made a four-week veteran's
+ *   device regress to first-review framing (founder device report).
  * @param {number} [facts.weighIns7d] - distinct weigh-in mornings in the
  *   current Monday-anchored week (the same count the You tab reads).
  * @param {number|null} [facts.firstWeightAt] - epoch ms of the earliest
@@ -50,9 +61,9 @@ function plural(n, word) {
  * @param {number} [facts.checkinDay] - 0=Sunday … 6=Saturday.
  * @param {boolean} [facts.edFlagOpen] - the fail-closed suppression chain.
  * @param {number} [facts.completedSessions] - completed workouts, all time
- *   (the first-review sessions row).
+ *   (the sessions row before any check-in exists).
  * @param {number|null} [facts.sessionsSinceCheckin] - completed workouts
- *   since the last check-in's week started, or null when unknown (the row
+ *   since the last real check-in happened, or null when unknown (the row
  *   is omitted rather than guessed).
  * @param {string|null} [facts.todayWeightLabel] - the ALREADY-FORMATTED
  *   display weight logged this morning ("213 lbs"), or null when unlogged.
@@ -62,7 +73,7 @@ function plural(n, word) {
  */
 export function resolveEvidencePanel({
   tier,
-  hasCompletedFirstReview = false,
+  hasCheckedInEver = false,
   weighIns7d = 0,
   firstWeightAt = null,
   checkinDay = 0,
@@ -99,9 +110,9 @@ export function resolveEvidencePanel({
   });
 
   // Sessions: since the last check-in once one exists (the pane's whole
-  // frame is "since your check-in"); all-time before the first review,
-  // where the ledger's own gate row is the honest read.
-  if (hasCompletedFirstReview) {
+  // frame is "since your check-in"); all-time before any check-in, where
+  // the ledger's own gate row is the honest read.
+  if (hasCheckedInEver) {
     if (Number.isFinite(sessionsSinceCheckin)) {
       rows.push({
         key: 'sessions',
@@ -135,8 +146,10 @@ export function resolveEvidencePanel({
   return {
     variant: 'full',
     // "Since your check-in" is only ever claimed once a check-in has
-    // actually happened (C5-P12-04's truth rule, kept).
-    title: hasCompletedFirstReview ? 'Since your check-in' : 'Your first review',
+    // actually happened (C5-P12-04's truth rule); before that, the
+    // ledger's own title - NEVER first-review framing (see the framing
+    // law in the header).
+    title: hasCheckedInEver ? 'Since your check-in' : ledger.title,
     countdown,
     rows,
   };

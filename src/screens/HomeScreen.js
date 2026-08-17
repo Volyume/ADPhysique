@@ -57,6 +57,7 @@ import {
   getRecentWorkoutFeedback, getLatestCoachOutput,
   getMorningWeightsLast14Days, getOpenEdPatternFlag,
   getRecentCheckins, getNutritionTargets, getLatestCheckin,
+  getAllWeeklyCheckinsForUser,
 } from '../lib/database';
 import {
   stageOf, canStillTrial, trialEndsAtMs, daysRemaining,
@@ -538,16 +539,17 @@ export default function HomeScreen({ navigation, route }) {
   async function loadFirstReviewFacts() {
     try {
       if (!user?.id) { setFirstReviewFacts(null); return; }
-      const [workouts, weights, edFlag, prefsRaw, wellbeing] = await Promise.all([
+      const [workouts, weights, edFlag, prefsRaw, wellbeing, checkinRows] = await Promise.all([
         getAllWorkouts(user.id).catch(() => []),
         getMorningWeightsLast14Days(user.id).catch(() => []),
         // ED-safety, fail CLOSED: a transient flag read maps to the truthy
         // 'read_failed' sentinel, matching every sibling loader on this
-        // screen -- firstReviewLine.js treats any truthy edFlagOpen as
-        // suppress-the-line.
+        // screen -- evidencePanel.js treats any truthy edFlagOpen as
+        // drop-to-neutral.
         getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
         AsyncStorage.getItem('@volyume_notification_prefs').catch(() => null),
         AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
+        getAllWeeklyCheckinsForUser(user.id).catch(() => []),
       ]);
       let checkinDay = 0;
       try {
@@ -558,11 +560,24 @@ export default function HomeScreen({ navigation, route }) {
       } catch (_) {}
       const completedWorkouts = workouts.filter((w) => w.isCompleted);
       const completedSessions = completedWorkouts.length;
-      // Campaign 26: the evidence pane's since-check-in sessions row needs
-      // WHEN each completed session started, not just the total.
-      const completedSessionStarts = completedWorkouts
-        .map((w) => Number(w.startedAt))
-        .filter((tms) => Number.isFinite(tms));
+      // Campaign 26 correction (founder device report 2026-08-17): "ever
+      // checked in" is derived from REAL check-in HISTORY - any
+      // weekly_checkins row carrying an energy score, the same realness
+      // signal isCompletedCoachDecision uses. It is deliberately NOT
+      // latestCoachDecisionComplete: that predicate is about the CURRENT
+      // week's decision and goes false mid-cycle whenever the engine saves
+      // a held output before the week's check-in, which regressed a
+      // four-week veteran's device to first-review framing.
+      const realCheckins = (checkinRows || []).filter((c) => c?.energyScore != null);
+      const everCheckedIn = realCheckins.length > 0;
+      // Sessions since the last real check-in HAPPENED (its createdAt; the
+      // week_start is the fallback for legacy rows without one).
+      const lastCheckinAt = everCheckedIn
+        ? Math.max(...realCheckins.map((c) => Number(c.createdAt ?? c.weekStart) || 0))
+        : null;
+      const sessionsSinceCheckin = lastCheckinAt != null
+        ? completedWorkouts.filter((w) => Number(w.startedAt) >= lastCheckinAt).length
+        : null;
       // X5/X11 (cross-surface consistency audit 2026-07-30): Monday-anchored,
       // never a rolling window, matching every other "this week" count on
       // this screen and the You tab's own coachReadiness read.
@@ -591,7 +606,8 @@ export default function HomeScreen({ navigation, route }) {
         checkinDay,
         edFlagOpen: edSuppressed,
         completedSessions,
-        completedSessionStarts,
+        everCheckedIn,
+        sessionsSinceCheckin,
       });
     } catch (_) {
       setFirstReviewFacts(null);
@@ -1832,27 +1848,23 @@ export default function HomeScreen({ navigation, route }) {
   const trialEndingEligible = stageOf(userProfile) === 'pro_trial'
     && msToTrialEnd != null && msToTrialEnd <= 48 * 60 * 60 * 1000;
   // ── Campaign 26 (founder device order 2026-08-17): the evidence pane
-  // view-model. Replaces the C22 firstReviewLineItem: the pane is ALWAYS
-  // the readiness/evidence home (pre- and post-first-review), so the C22
-  // conflict-day rank-4.5 arbiter feed is retired with the line - the two
-  // rows can no longer compete because there is only one region. Null
+  // view-model - the RECURRING weekly evidence read, every week, never
+  // framed as a first review (founder correction, same day). The C22
+  // conflict-day rank-4.5 arbiter feed is retired with the old line - the
+  // two rows can no longer compete because there is only one region. Null
   // until loadFirstReviewFacts resolves so it never flashes on cold load.
-  const lastCheckinWeekStart = latestCoachDecisionComplete
-    && Number.isFinite(Number(latestCoachOutput?.weekStart))
-    ? Number(latestCoachOutput.weekStart)
-    : null;
+  // everCheckedIn/sessionsSinceCheckin come from real check-in HISTORY in
+  // the loader, never from the current week's decision predicate.
   const evidencePanelItem = tier === 'pro' && firstReviewFacts
     ? resolveEvidencePanel({
         tier,
-        hasCompletedFirstReview: latestCoachDecisionComplete,
+        hasCheckedInEver: firstReviewFacts.everCheckedIn,
         weighIns7d: firstReviewFacts.weighIns7d,
         firstWeightAt: firstReviewFacts.firstWeightAt,
         checkinDay: firstReviewFacts.checkinDay,
         edFlagOpen: firstReviewFacts.edFlagOpen,
         completedSessions: firstReviewFacts.completedSessions,
-        sessionsSinceCheckin: lastCheckinWeekStart != null
-          ? (firstReviewFacts.completedSessionStarts || []).filter((tms) => tms >= lastCheckinWeekStart).length
-          : null,
+        sessionsSinceCheckin: firstReviewFacts.sessionsSinceCheckin,
         // The folded-in weight line: only on a day it is actually logged,
         // and never under the fail-closed suppression chain (the resolver
         // drops it with every other count under the neutral variant).
