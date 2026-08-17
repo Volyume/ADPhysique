@@ -569,6 +569,16 @@ its evidence).
 
 ===============================================================================
 
+### 2026-08-17 — CAMPAIGN 24 (whole-app coherence sweep) — COMPLETE, VERDICT A, LANDED
+All 81 production screens reviewed in seven waves; 3 authority
+collisions closed, the startup auth flash root-caused and fixed, 20+
+unit sites corrected, ED suppression extended to BodyMetrics, dead
+surfaces retired, one shared deload-bucket derivation, hostile review
+closed (7 findings fixed). Zero founder rulings. Definitive gates: 993
+suites / 13,435 tests, zero failures. Handover + 26-step device
+checklist: docs/whole-app-coherence-campaign-24-2026-08-17/
+(FINAL-LANDING.md, DEVICE-CHECKLIST.md).
+
 ### 2026-08-17 — CAMPAIGN 23 PHASE 2 (Progress redesign) — IMPLEMENTED, LANDED
 Full implementation landed on main same day (stages 1c84531c /
 b8347c55 / Stage-3 commit + D99 rulings and privacy-law amendment):

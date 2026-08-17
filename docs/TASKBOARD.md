@@ -2055,7 +2055,18 @@ D37 triage; (2) the ED detector's positional weeklyHistory contract
 known widget-storage full-run flake (pre-Campaign-20, still intermittent,
 needs its own session).
 
-## CAMPAIGN 24 (2026-08-17) — WHOLE-APP UX/LOGIC/PRESENTATION COHERENCE SWEEP. IN FLIGHT.
+## CAMPAIGN 24 (2026-08-17) — WHOLE-APP UX/LOGIC/PRESENTATION COHERENCE SWEEP. COMPLETE, MERGED TO MAIN.
+
+**VERDICT A.** All seven waves + cohesion pass + hostile review (7
+confirmed findings, all closed) landed same day. Register acceptance:
+81 screens, 61 NO_CHANGE_REQUIRED / 24 IMPLEMENTED / 1
+FOUNDER_ACCEPTED / 0 UNREVIEWED. Zero founder rulings needed
+(FOUNDER-RULINGS.md + D100). Final gates: lint, tsc, check:imports,
+diff-check all clean; definitive full suite 993 suites / 13,435 tests,
+zero failures. Full handover:
+docs/whole-app-coherence-campaign-24-2026-08-17/FINAL-LANDING.md.
+FOUNDER-SIDE OPEN: DEVICE-CHECKLIST.md (26 checks, aeroplane-mode
+startup first) + the three standing prior-campaign walks.
 
 Founder order 2026-08-17. Branch `claude/campaign24-whole-app` off main
 `e5319811`. One programme: register reconciliation → waves A-G (each
