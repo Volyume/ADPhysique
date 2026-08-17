@@ -2720,3 +2720,32 @@ Supplements the interim block above:
 
 WORK IS STOPPED per the order — no returning-user work. Founder-side
 actions and carried FR items: docs/TASKBOARD.md §3.
+
+## D98 — Campaign 22 Phase 2 Stage 2 lead rulings (2026-08-17, D33)
+
+Recorded at the Stage 2 lead review on `claude/campaign22-home-impl`
+(commit 56782be2). Authority: HOME-TODAY-UX-SPEC.md (binding Phase 1
+spec) + FOUNDER-RULINGS-PHASE2.md (R1/R2/R3 locked YES).
+
+- **D98-1 (spec conformance, not a fork):** the agent build rendered the
+  first-review readiness line only after today's weigh-in was logged,
+  silently dropping spec §17 R4's conflict-day clause ("weigh-in wins;
+  readiness line moves to R2 slot rank 4.5 on conflict days"). Built in
+  full at lead review: `todayLineArbiter` gains a rank-4.5 occupant fed
+  only while today's weigh-in is unlogged; on logged days the line
+  renders in the Evidence Row as before. The line never simply vanishes.
+- **D98-2 (safety parity, inviolable-adjacent):** the Home first-review
+  line's suppression is the You tab's FULL `edSuppressed` formula (open
+  ED flag, SCOFF >= 2, failed wellbeing read, calm mode - all failing
+  closed), not the raw ED flag alone as the agent built it. The two
+  surfaces consume the identical ledger, so they can never disagree
+  about when weigh-in counting is allowed. Pinned at source level in
+  firstReviewLine.test.js.
+- **D98-3 (rehomed trial card S3 tap target):** on the You screen the
+  S3 zero-history variant ("One session starts your first coaching
+  review") taps through to the Today tab's Start hero, not the weekly
+  check-in (which at zero sessions opens a hold receipt, not the
+  promised session) - the C5-P12-01 principle: the card leads to the
+  session it names, or stops claiming to. All other variants open the
+  weekly check-in directly. Rationale over effort per D33: one extra
+  branch, honest destination.
