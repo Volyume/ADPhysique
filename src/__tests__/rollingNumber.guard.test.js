@@ -5,8 +5,12 @@
  *     weight surfaces must not reference RollingNumber, ever — not under a
  *     flag, not under calm mode. Absolute.
  *   - the commissioned surfaces are exactly WorkoutSummary, MacroRings
- *     (Diary remaining-kcal hero) and Analytics; anywhere else is scope
- *     creep to re-decide with the founder first.
+ *     (Diary remaining-kcal hero) and Partner (shared-streak hero); anywhere
+ *     else is scope creep to re-decide with the founder first. Analytics
+ *     left this list under Campaign 23 (PROGRESS-UX-SPEC.md §27): its
+ *     ticking numeral (the Training Load hero) demoted off the Progress
+ *     landing entirely, and the relocated hero on LiftProgressScreen was
+ *     deliberately NOT re-commissioned (plain formatted text instead).
  *   - the two JS-thread counters the primitive retires stay retired: no
  *     requestAnimationFrame counter in WorkoutSummary, no Animated.Value
  *     listener in MacroRings.
@@ -28,7 +32,16 @@ const WEIGHT_SURFACES = [
 const COMMISSIONED = [
   'src/screens/WorkoutSummaryScreen.js',
   'src/components/food/MacroRings.js',
-  'src/screens/AnalyticsScreen.js',
+  // Campaign 23 (PROGRESS-UX-SPEC.md §27: "Training Load hero (position +
+  // label) | DEMOTE to drilldown"): the A5 hero and its ticking numeral left
+  // AnalyticsScreen entirely -- the Progress landing carries no RollingNumber
+  // surface any more (the Answer Block's pillar rows are plain evidence
+  // text, per §22 R2's "no imperative copy... evidence statements only").
+  // The relocated "Weight lifted" hero on LiftProgressScreen deliberately
+  // renders its numeral as plain formatted text, not a re-commissioned
+  // RollingNumber -- extending the commission to a new screen is exactly the
+  // "scope creep to re-decide with the founder first" this suite's header
+  // warns against, so Stage 2 did not make that call unasked.
   // Partner shared-streak hero (DESIGN-SPEC B2, orchestrator-fixed 2026-07-03):
   // the "N weeks running, together" count on PartnerScreen is a deliberately
   // commissioned RollingNumber surface — the sanctioned streak-increment roll.

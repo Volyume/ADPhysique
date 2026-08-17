@@ -14,41 +14,28 @@ import * as haptics from '../lib/haptics';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
-import RollingNumber from '../components/RollingNumber';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
-import VolyumeChart from '../components/VolyumeChart';
 import { ProBadge } from '../components/ProGate';
 import EmptyState from '../components/EmptyState';
 import InfoTooltip from '../components/InfoTooltip';
 import useAppStore from '../store/useAppStore';
 import useProgressData from '../hooks/useProgressData';
 import useWeightTrend from '../hooks/useWeightTrend';
-import WeightTrendCard from '../components/WeightTrendCard';
+import useVisualPillar from '../hooks/useVisualPillar';
 import { getLifetimeTonnage } from '../lib/database';
 import { pendingTonnageMilestone, loadSeenTonnage, markTonnageMilestoneSeen, formatTonnage } from '../lib/tonnageMilestone';
 import { formatNumber } from '../lib/format';
+import { formatBodyWeight } from '../lib/units';
 import { track } from '../lib/engineTelemetry';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 import { VOLUME_LANDMARKS, getVolumeStatus, calculateTonnage } from '../lib/algorithms';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
-import { buildWeeklyLoadSeries, buildWeeklySessionCounts } from '../lib/progressSeries';
+import { localWeekStartMs } from '../lib/dayKey';
+import { computeTrainingPillarSummary, buildVisualPillarCopy } from '../lib/progress/pillars';
 
-
-// Severity → icon + color mapping (jargon-free UI)
-//
-// CP-10 batch G (2026-07-11): converted to accept the live theme `t.colors`
-// on the buildVolumeStatusColor(t.colors) precedent -- the severity -> icon
-// + tone mapping is byte-identical in meaning, only the token SOURCE moved
-// from the frozen import to the live theme.
-function buildSeverityStyle(c) {
-  return {
-    0: { icon: 'information-circle-outline', color: c.primary },
-    1: { icon: 'alert-circle-outline',       color: c.warning },
-    2: { icon: 'warning-outline',            color: c.error },
-  };
-}
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // COMP-005: which monthly recap the Recaps tile / ephemeral card opens. The last
 // completed calendar month when the user was training before this month began;
@@ -76,6 +63,52 @@ function recentMonthRecapParams(earliestWorkoutAt) {
   };
 }
 
+// Campaign 23 (§8/§21/§22 R2): the Training pillar's copy, built from
+// computeTrainingPillarSummary's pure counts (lib/progress/pillars.js) --
+// no imperative training advice, only factual evidence statements and (for
+// the zero-history state) the single honest next action §23's state F/L
+// sanctions.
+function trainingPillarCopy({ completedWorkoutCount, summary, lastSessionAt, unitsLabel, now = Date.now() }) {
+  if (completedWorkoutCount === 0) {
+    return { state: 'No sessions logged yet', evidence: 'Log your first session to start your training evidence.' };
+  }
+  if (summary.trainedCount === 0) {
+    const days = Number.isFinite(lastSessionAt) ? Math.max(0, Math.floor((now - lastSessionAt) / DAY_MS)) : null;
+    return {
+      state: days != null ? `No sessions in the last ${days} day${days === 1 ? '' : 's'}` : 'No sessions this month',
+      evidence: null,
+    };
+  }
+  const state = summary.improvedCount > 0
+    ? `Strength up on ${summary.improvedCount} of ${summary.trainedCount} lift${summary.trainedCount === 1 ? '' : 's'} this month`
+    : 'No new bests this month, holding steady';
+  const best = summary.namedBests[0];
+  const evidence = best
+    ? `${best.exerciseName} ${formatNumber(Math.round(best.weight))} ${unitsLabel} x ${best.reps}, new best`
+    : 'Keep training to build your evidence trail.';
+  return { state, evidence };
+}
+
+// Campaign 23 (§15/§22 R2): the Body pillar's copy is the SAME weightTrend
+// view-model WeightTrendCard already renders (useWeightTrend/deriveWeightTrend)
+// -- no new derivation, only a compact two-line read of fields that already
+// exist. The full chart/maintenance detail stays one tap away in BodyMetrics
+// (WeightTrendCard renders there unchanged).
+function bodyPillarCopy(weightTrend, bodyWeightUnits) {
+  if (!weightTrend?.render) {
+    return { state: 'No weigh-ins logged yet', evidence: 'Log a morning weight to start your trend.' };
+  }
+  const parts = [];
+  if (weightTrend.state >= 2 && weightTrend.ewmaNow != null) {
+    parts.push(formatBodyWeight(weightTrend.ewmaNow, bodyWeightUnits));
+    if (weightTrend.showRate && Number.isFinite(weightTrend.weeklyChange)) {
+      const wc = weightTrend.weeklyChange;
+      parts.push(`${wc > 0 ? '+' : ''}${wc.toFixed(1)} kg/week`);
+    }
+  }
+  return { state: weightTrend.insight, evidence: parts.length ? parts.join(', ') : null };
+}
+
 export default function AnalyticsScreen({ navigation, route }) {
   const toast = useToast();
   const user = useAppStore(s => s.user);
@@ -83,14 +116,19 @@ export default function AnalyticsScreen({ navigation, route }) {
   const bodyWeightUnits = useAppStore(s => s.bodyWeightUnits);
   const units = useAppStore(s => s.units);
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js). Memoised
-  // because this screen renders an insight list and recent-sessions list.
+  // because this screen renders a recent-sessions list.
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
 
-  // COMP-004 "Your trend": Pro-only weight-trend read (morning weighing is a
-  // Pro feature, so the card never appears for free users). The hook always
-  // runs (hooks are unconditional); the card self-hides until there is data.
+  // COMP-004 "Body pillar": Pro-only weight-trend read (morning weighing is a
+  // Pro feature). The hook always runs (hooks are unconditional); the pillar
+  // shows its honest locked affordance for free tier instead.
   const weightTrend = useWeightTrend(tier === 'pro' ? user?.id : null);
+  // Campaign 23 R1 (§16/§22 R2): the Visual pillar's derived signal. Fails
+  // closed under calm mode/open ED flag regardless of tier (usePhotoSuppression
+  // inside the hook); only fetches scan data for a Pro user once suppression
+  // is confirmed lifted.
+  const visualPillar = useVisualPillar(user?.id, tier);
 
   // Founder ruling (Today truth repair): the COMP-018 weekly-run view
   // model, its milestone / perfect-month / longest-run-PB landmarks and
@@ -106,7 +144,10 @@ export default function AnalyticsScreen({ navigation, route }) {
 
   // Phase-2 landmark: lifetime tonnage (total weight lifted all-time). A pure
   // training-volume win, so it is never ED-gated. Re-checked whenever the
-  // completed-workout count changes; fires once per threshold.
+  // completed-workout count changes; fires once per threshold. Campaign 23
+  // (§27): the standing all-time sessions/tonnage/reps panel this used to sit
+  // beside was rehomed to Recaps/Year of Lifts; this landmark stays -- it is
+  // the transient Moment (R5), not a standing panel.
   const [tonnageLandmark, setTonnageLandmark] = useState(null);
   // D90 #3 (2026-08-06): the resolved landmark table for the volume strip
   // (manual > adapted(Pro) > research), loaded on focus below.
@@ -119,10 +160,6 @@ export default function AnalyticsScreen({ navigation, route }) {
       .catch(() => { if (!cancelled) setLandmarkResolution(null); });
     return () => { cancelled = true; };
   }, [user?.id, tier]);
-  // R3 lifetime-stats panel: the all-time tonnage total (not just a pending
-  // milestone threshold). Read from the same getLifetimeTonnage query as the
-  // landmark below, so the panel and the share card never disagree.
-  const [lifetimeTonnage, setLifetimeTonnage] = useState(null);
 
   function makeTonnageCard() {
     if (!tonnageLandmark) return;
@@ -151,98 +188,76 @@ export default function AnalyticsScreen({ navigation, route }) {
   }, [navigation]);
 
   // COMP-004 door: arriving from the Home TodayStrip weight cell scrolls the
-  // "Your trend" section into view (once the card has rendered), then clears
-  // the param so a normal re-focus does not re-scroll. Programmatic navigation
-  // does not fire 'tabPress', so this never fights the scroll-to-top above.
+  // Body pillar row into view (once the Answer Block has rendered), then
+  // clears the param so a normal re-focus does not re-scroll. Programmatic
+  // navigation does not fire 'tabPress', so this never fights the
+  // scroll-to-top above.
   const trendSectionY = useRef(0);
   useEffect(() => {
-    if (!route?.params?.focusWeightTrend || !weightTrend.render) return undefined;
-    const t = setTimeout(() => {
+    if (!route?.params?.focusWeightTrend) return undefined;
+    const timer = setTimeout(() => {
       scrollRef.current?.scrollTo({ y: Math.max(0, trendSectionY.current - 12), animated: true });
     }, 350);
     navigation.setParams({ focusWeightTrend: undefined });
-    return () => clearTimeout(t);
-  }, [route?.params?.focusWeightTrend, weightTrend.render, navigation]);
+    return () => clearTimeout(timer);
+  }, [route?.params?.focusWeightTrend, navigation]);
 
   const {
     loading, refreshing, loadError,
-    insights, weeklyVolume, prBars,
+    weeklyVolume,
     recentSessions, allSets, exerciseMap, earliestWorkoutAt, completedWorkoutCount,
-    hasData, enoughForTrends,
-    handleDismiss, handleRefresh,
+    hasData,
+    handleRefresh,
   } = useProgressData();
 
-  // A5 dashboard series (design audit 03's elite description for this
-  // screen). All derived from the already-loaded data via memoised pure
-  // builders (progressSeries caps every window), so nothing recomputes per
-  // render (F7) and no new queries run.
-  const exerciseTypeById = useMemo(
-    () => Object.fromEntries(
-      Object.entries(exerciseMap).map(([id, e]) => [id, e.exerciseType ?? e.exercise_type ?? 'weight_reps']),
-    ),
-    [exerciseMap],
+  // Campaign 23 (§8/§21/§22 R2): the Training pillar's numeric summary
+  // (trailing-month strength-direction count + named bests, per-exercise-
+  // per-day deduplicated, IA-3). Derived from the already-loaded data, no
+  // new query.
+  const trainingSummary = useMemo(
+    () => computeTrainingPillarSummary(allSets, exerciseMap, { windowDays: 30 }),
+    [allSets, exerciseMap],
   );
-  const weeklyLoad = useMemo(
-    () => buildWeeklyLoadSeries(allSets, { exerciseTypeById }),
-    [allSets, exerciseTypeById],
+  const lastSessionAt = useMemo(
+    () => allSets.reduce((m, s) => Math.max(m, s.createdAt ?? s.created_at ?? 0), 0) || null,
+    [allSets],
   );
+  const unitsLabel = units === 'lbs' ? 'lbs' : 'kg';
+  const trainingCopy = useMemo(
+    () => trainingPillarCopy({ completedWorkoutCount, summary: trainingSummary, lastSessionAt, unitsLabel }),
+    [completedWorkoutCount, trainingSummary, lastSessionAt, unitsLabel],
+  );
+  const bodyCopy = useMemo(() => bodyPillarCopy(weightTrend, bodyWeightUnits || 'st'), [weightTrend, bodyWeightUnits]);
+  const visualCopy = useMemo(() => buildVisualPillarCopy({
+    hasScan: visualPillar.hasScan,
+    hasNote: visualPillar.hasNote,
+    packet: visualPillar.packet,
+    capturedAt: visualPillar.capturedAt,
+  }), [visualPillar.hasScan, visualPillar.hasNote, visualPillar.packet, visualPillar.capturedAt]);
 
-  // S4 (world-class audit 04a): share image extended to training load. A
-  // pure training-volume read (kg lifted), never ED-gated (same reasoning as
-  // makeTonnageCard above) and never a comparison to anyone else, just this
-  // week's number against the plain average of the weeks already on screen.
-  function makeTrainingLoadCard() {
-    if (!weeklyLoad || weeklyLoad.length < 2) return;
-    const u = units === 'lbs' ? 'lbs' : 'kg';
-    const latest = weeklyLoad[weeklyLoad.length - 1]?.value || 0;
-    const avg = Math.round(weeklyLoad.reduce((t, p) => t + p.value, 0) / weeklyLoad.length);
-    navigation.navigate('ShareCard', {
-      milestoneData: {
-        eyebrow: 'Training load',
-        title: 'Your training load',
-        heroValue: Math.round(latest).toLocaleString('en-GB'),
-        heroUnit: `${u} lifted, this week`,
-        caption: `Averaging ${avg.toLocaleString('en-GB')} ${u} a week over the last ${weeklyLoad.length} weeks.`,
-        date: Date.now(),
-        stats: [],
-      },
-    });
-  }
-
-  const sessionSpark = useMemo(() => {
-    const { bins, total } = buildWeeklySessionCounts(allSets);
-    return {
-      total,
-      bars: bins.map((v, i) => ({
-        value: v,
-        color: v > 0 ? (i === bins.length - 1 ? t.colors.primary : t.colors.primaryDim) : t.colors.surface3,
-      })),
-    };
-  }, [allSets, t]);
-  const prSpark = useMemo(() => ({
-    total: prBars.reduce((s, b) => s + b.value, 0),
-    bars: prBars.map(b => ({ value: b.value, color: b.value > 0 ? t.colors.gold : t.colors.surface3 })),
-  }), [prBars, t]);
-
-  // R3 lifetime-stats panel: total reps performed across every working set
-  // ever logged. Derived from the already-loaded set list (no new query),
-  // using the same filter as getLifetimeTonnage, warmups excluded, only
-  // sets with a positive weight and reps, so reps and tonnage describe the
-  // same body of work.
-  const lifetimeReps = useMemo(() => {
-    let total = 0;
+  // R3's quiet adherence context line ("3 sessions this week"), Monday-
+  // anchored -- the SAME week boundary the volume strip below already uses,
+  // so the landing carries one definition of "this week" (§6/§28 IA-2).
+  const sessionsThisWeek = useMemo(() => {
+    const weekStart = localWeekStartMs(Date.now());
+    const ids = new Set();
     for (const s of allSets) {
-      if (s.setType === 'warmup') continue;
-      const reps = s.actualReps ?? s.actual_reps ?? 0;
-      const weight = s.weight ?? 0;
-      if (reps > 0 && weight > 0) total += reps;
+      const at = s.createdAt ?? s.created_at ?? 0;
+      if (at >= weekStart) ids.add(s.workoutId ?? s.workout_id);
     }
-    return total;
+    return ids.size;
   }, [allSets]);
 
+  // R4's visibility condition: something logged in the current Monday-
+  // anchored week (§22: "cond: ... any sets this Monday-anchored week").
+  const hasVolumeThisWeek = useMemo(
+    () => Object.values(weeklyVolume).some(m => (m?.workingSets ?? 0) > 0),
+    [weeklyVolume],
+  );
+
   // COMP-005: ephemeral recap card, for the first 7 days of the month, once
-  // the user has unlocked recaps, a one-line nudge at the top of the insight
-  // stack. Dismissable; gone after first open or day 7 (per-month key).
+  // the user has unlocked recaps. R5 (§22): at most one Moment at a time,
+  // recap outranks the tonnage milestone.
   const [recapCardHidden, setRecapCardHidden] = useState(true);
   const recapMonthKey = format(new Date(), 'yyyy-MM');
   useEffect(() => {
@@ -256,38 +271,21 @@ export default function AnalyticsScreen({ navigation, route }) {
     AsyncStorage.setItem(`@volyume_recap_card_${recapMonthKey}`, 'dismissed').catch(() => {});
   };
 
-  // Founder 2026-07-09 (resume session): the near-empty "Good start" momentum
-  // note used to sit as a permanent text block for anyone with one or two
-  // sessions. It is now closable like the Today hints; once dismissed the
-  // space collapses and the insight stack moves up. One-time key: dismissing
-  // it means it never returns.
-  const [trendsStartHidden, setTrendsStartHidden] = useState(true);
-  useEffect(() => {
-    AsyncStorage.getItem('@volyume_seen_trends_start')
-      .then(v => setTrendsStartHidden(v === 'dismissed'))
-      .catch(() => setTrendsStartHidden(false));
-  }, []);
-  const dismissTrendsStart = () => {
-    setTrendsStartHidden(true);
-    AsyncStorage.setItem('@volyume_seen_trends_start', 'dismissed').catch(() => {});
-  };
-
   // Re-check the lifetime-tonnage landmark whenever the workout count changes
   // (tonnage only grows when a session is logged). The CTA persists until the
   // user taps the share-image CTA (markTonnageMilestoneSeen on tap), so it never
   // vanishes before it can be used; telemetry fires once per app run.
   useEffect(() => {
     let cancelled = false;
-    if (!user?.id || completedWorkoutCount < 1) { setTonnageLandmark(null); setLifetimeTonnage(null); return undefined; }
+    if (!user?.id || completedWorkoutCount < 1) { setTonnageLandmark(null); return undefined; }
     (async () => {
       try {
         const [tonnage, seen] = await Promise.all([getLifetimeTonnage(user.id), loadSeenTonnage(user.id)]);
         const pending = pendingTonnageMilestone(tonnage, seen);
         if (cancelled) return;
-        setLifetimeTonnage(tonnage);
         setTonnageLandmark(pending);
         if (pending) fireLandmarkOnce(`tn:${pending}`, user.id, 'tonnage_milestone_reached', { milestone: pending });
-      } catch (_) { if (!cancelled) { setTonnageLandmark(null); setLifetimeTonnage(null); } }
+      } catch (_) { if (!cancelled) setTonnageLandmark(null); }
     })();
     return () => { cancelled = true; };
   }, [user?.id, completedWorkoutCount]);
@@ -305,94 +303,51 @@ export default function AnalyticsScreen({ navigation, route }) {
           />
         }
       >
-        {/* ── Header ────────────────────────────────────────── */}
+        {/* ── Header (R1) ───────────────────────────────────── */}
         <ScreenHeader title="Progress" />
 
-        {/* ── A5 dashboard opener (design audit 03): one large owned
-            visual, the weekly training-load hero with this week
-            highlighted and a display-size numeral, then sessions and
-            new-bests as two half-width sparkline cards. Free-safe training
-            data only (tonnage, sessions, PRs); weight stays on its
-            existing Pro trend card further down. Held back until there
-            are enough sessions for the trend to be honest. ── */}
-        {loading && (
-          <View style={styles.section}>
-            <SkeletonCard height={176} />
-            <View style={styles.sparkRow}>
-              <SkeletonCard height={116} style={styles.sparkCard} />
-              <SkeletonCard height={116} style={styles.sparkCard} />
-            </View>
-          </View>
-        )}
-        {!loading && enoughForTrends && (
+        {/* ── The Answer Block (R2, always): "am I actually making
+            progress?" in one glance -- three compact pillar rows inside one
+            container, never three hero cards (§26). No share CTA, no
+            imperative copy, evidence statements only (§14). ── */}
+        {loading ? (
+          <SkeletonCard height={168} />
+        ) : (
           <AnimatedEntrance>
-            <View style={styles.section}>
-              <TrainingLoadHero series={weeklyLoad} units={units} onMakeCard={makeTrainingLoadCard} />
-              <View style={styles.sparkRow}>
-                <SparkCard
-                  label="Sessions"
-                  value={sessionSpark.total}
-                  sub="Last 30 days"
-                  bars={sessionSpark.bars}
-                  onPress={() => navigation.navigate('Consistency')}
-                  accessibilityLabel={`Sessions. ${sessionSpark.total} in the last 30 days. Opens consistency.`}
-                />
-                <SparkCard
-                  label="New PRs"
-                  value={prSpark.total}
-                  sub="Last 30 days"
-                  bars={prSpark.bars}
-                  onPress={() => navigation.navigate('LiftProgress')}
-                  accessibilityLabel={`New personal records. ${prSpark.total} in the last 30 days. Opens lifts.`}
+            <Card padding="none" style={styles.answerBlock}>
+              <PillarRow
+                icon="barbell-outline"
+                label="Training"
+                stateText={trainingCopy.state}
+                evidenceText={trainingCopy.evidence}
+                onPress={() => navigation.navigate('LiftProgress')}
+              />
+              <View style={[styles.answerDivider, live.answerDivider]} />
+              <View onLayout={(e) => { trendSectionY.current = e.nativeEvent.layout.y; }}>
+                <PillarRow
+                  icon="body-outline"
+                  label="Body"
+                  proGated={tier !== 'pro'}
+                  stateText={tier === 'pro' ? bodyCopy.state : null}
+                  evidenceText={tier === 'pro' ? bodyCopy.evidence : null}
+                  onPress={() => navigation.navigate('BodyMetrics')}
                 />
               </View>
-            </View>
+              {!visualPillar.suppressed && (
+                <>
+                  <View style={[styles.answerDivider, live.answerDivider]} />
+                  <PillarRow
+                    icon="camera-outline"
+                    label="Visual"
+                    proGated={tier !== 'pro'}
+                    stateText={tier === 'pro' && !visualPillar.loading ? visualCopy.state : null}
+                    evidenceText={tier === 'pro' && !visualPillar.loading ? visualCopy.evidence : null}
+                    onPress={() => navigation.navigate('ProgressPhotos')}
+                  />
+                </>
+              )}
+            </Card>
           </AnimatedEntrance>
-        )}
-
-        {/* Founder ruling (Today truth repair): the COMP-018 "This week"
-            run strip and its streak celebrations (milestone, perfect month,
-            longest-run personal record, and their share cards) are REMOVED.
-            The weekly run/streak construct is rejected product-wide: it was
-            noise, not trusted as accurate, and unwanted gamification. The
-            lifetime-tonnage landmark below is a genuine training total and
-            is deliberately unaffected. */}
-
-        {/* Phase-2 lifetime-tonnage landmark, independent of the streak strip.
-            T9 (world-class audit 2026-07-03, identity-copy sweep): matches the
-            "showing up" identity register the streak-milestone copy above
-            already uses, rather than a bare number with a generic label. */}
-        {tonnageLandmark ? (
-          <View style={styles.section}>
-            <View style={styles.milestoneRow}>
-              <Ionicons name="barbell-outline" size={16} color={t.colors.primary} />
-              <Text style={[styles.milestoneText, live.milestoneText]}>
-                {formatTonnage(tonnageLandmark)} {units === 'lbs' ? 'lbs' : 'kg'} lifted all-time. That's what showing up adds up to.
-              </Text>
-              {/* R9 (D70): milestoneCtaButton -> shared Button outline sm. */}
-              <Button
-                variant="outline"
-                size="sm"
-                fullWidth={false}
-                title="Create share image"
-                onPress={makeTonnageCard}
-                accessibilityLabel="Create share image"
-              />
-            </View>
-          </View>
-        ) : null}
-
-        {/* Skeleton placeholders during the initial cold-load, in the same
-            layout slots the loaded content fills (insight rows, recent
-            sessions, the volume summary) so the dashboard doesn't pop in
-            with a layout shift once the SQLite reads finish. Mirrors the
-            HomeScreen cold-load pattern. */}
-        {loading && (
-          <View style={styles.section}>
-            <SkeletonCard height={64} />
-            <SkeletonCard height={64} />
-            <SkeletonCard height={92} />
-          </View>
         )}
 
         {/* EP-09/P-06 (Codex end-user-polish audit): a load that FAILED must
@@ -433,108 +388,12 @@ export default function AnalyticsScreen({ navigation, route }) {
           />
         )}
 
-        {/* ── Near-empty (U-D-4): a session or two in, frame it as momentum.
-            Closable (founder 2026-07-09): dismissing collapses the space so
-            the stack moves up, rather than a constant block of text or a big
-            blank area before the charts arrive. ── */}
-        {!loading && !trendsStartHidden && allSets.length > 0 && completedWorkoutCount > 0 && completedWorkoutCount < 3 && (
-          <View style={styles.momentumRow}>
-            <Text style={[styles.momentumText, live.momentumText]}>
-              Good start. A couple more sessions and your trends really take shape.
-            </Text>
-            <TouchableOpacity
-              onPress={dismissTrendsStart}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss"
-            >
-              <Ionicons name="close" size={16} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* COMP-005: ephemeral recap nudge */}
-        {!recapCardHidden && (
-          <TouchableOpacity
-            style={[styles.recapCard, live.recapCard]}
-            activeOpacity={0.85}
-            onPress={() => { dismissRecapCard(); navigation.navigate('RecapStory', recentMonthRecapParams(earliestWorkoutAt)); }}
-            accessibilityRole="button"
-            accessibilityLabel="Open your monthly recap, about 45 seconds"
-          >
-            <Ionicons name="newspaper-outline" size={18} color={t.colors.primary} />
-            <Text style={[styles.recapCardText, live.recapCardText]}>
-              Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready - 45 seconds
-            </Text>
-            <TouchableOpacity
-              onPress={dismissRecapCard}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss"
-            >
-              <Ionicons name="close" size={16} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
-
-        {/* ── 2 · Insight Stack ─────────────────────────────── */}
-        {insights.length > 0 && (
-          <View style={styles.section}>
-            <SectionLabel>For you</SectionLabel>
-            {insights.map(ins => (
-              <InsightRow key={ins.id} insight={ins} onDismiss={() => handleDismiss(ins.id)} />
-            ))}
-          </View>
-        )}
-
-        {/* ── Partners (spec B8): promoted from the More-stats grid to
-            directly after the insight stack. A NavTile in a full-width row
-            so it reads as a proper destination, not a buried grid cell.
-            Keeps the Pro lock; label only (NavTile shows no sub-line outside
-            the locked countdown state, so no component surgery). ── */}
-        <View style={styles.section}>
-          <View style={styles.navGrid}>
-            <NavTile
-              icon="people"
-              color={t.colors.primary}
-              label="Partners"
-              pro={tier !== 'pro'}
-              onPress={() => {
-                trackPartnerSurfaceView('progress_tile');
-                navigation.navigate('Partner', { source: 'progress_tile' });
-              }}
-            />
-            {/* Progress photos promoted to a front-and-central Progress
-                destination (founder device-walk 2026-07-03: it was buried in
-                Body Metrics and effectively undiscoverable). Same promoted
-                treatment and Pro lock as Partners; the screen's own
-                withReadOnlyProGuard still governs view-only lapse access. */}
-            <NavTile
-              icon="camera"
-              color={t.colors.primary}
-              label="Progress photos"
-              pro={tier !== 'pro'}
-              onPress={() => navigation.navigate('ProgressPhotos')}
-            />
-          </View>
-        </View>
-
-        {/* ── Your trend (COMP-004): the calm weight-trend read, between the
-            insight stack and recent sessions. Pro-only; self-hides until
-            there are morning weights to interpret. ── */}
-        {tier === 'pro' && weightTrend.render && (
-          <View
-            style={styles.section}
-            onLayout={(e) => { trendSectionY.current = e.nativeEvent.layout.y; }}
-          >
-            <WeightTrendCard vm={weightTrend} bodyWeightUnits={bodyWeightUnits || 'st'} />
-          </View>
-        )}
-
-        {/* ── Recent sessions: what you actually did, kept high up (above the
-            analytical charts) so it is the first concrete thing you see. ── */}
+        {/* ── Evidence trail (R3, cond: any sessions exist) ──────── */}
         {recentSessions.length > 0 && (
           <View style={styles.section}>
+            <Text style={[styles.adherenceLine, live.adherenceLine]}>
+              {sessionsThisWeek} session{sessionsThisWeek === 1 ? '' : 's'} this week
+            </Text>
             <View style={styles.rowBetween}>
               <SectionLabel>Recent sessions</SectionLabel>
               {/* R9 (D70): seeAllButton -> shared Button outline sm. */}
@@ -583,8 +442,9 @@ export default function AnalyticsScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* ── 3 · Volume summary, drills into the heatmap (the one volume home) ── */}
-        {hasData && (
+        {/* ── Plan evidence (R4, cond: any sets logged this Monday-anchored
+            week) -- the volume-vs-targets strip exactly as built. ── */}
+        {hasData && hasVolumeThisWeek && (
         <View style={styles.section}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
             <SectionLabel>This week's volume</SectionLabel>
@@ -602,68 +462,59 @@ export default function AnalyticsScreen({ navigation, route }) {
         </View>
         )}
 
-        {/* Cardio card REMOVED from Progress (founder ruling 2026-08-06:
-            "that's not progress"). Cardio logging itself was later retired
-            outright as a product boundary (D92-1/D95, Campaign 4). */}
-
-        {/* The old full-width "New personal records" sparkline section moved
-            into the half-width New bests card at the top of the dashboard
-            (A5); the detail per lift lives on LiftProgress, which that card
-            opens. */}
-
-        {/* ── Lifetime totals (R3): a standing read-only panel of all-time
-            numbers, sessions, total weight lifted, total reps. No
-            comparison, no rank; just your own running totals. Self-hides
-            until there is something logged. ── */}
-        {hasData && completedWorkoutCount > 0 && (
+        {/* ── Moments (R5, cond: at most one at a time; priority order
+            recap > milestone). Both remain transient and dismissible
+            exactly as built. ── */}
+        {!recapCardHidden ? (
+          <TouchableOpacity
+            style={[styles.recapCard, live.recapCard]}
+            activeOpacity={0.85}
+            onPress={() => { dismissRecapCard(); navigation.navigate('RecapStory', recentMonthRecapParams(earliestWorkoutAt)); }}
+            accessibilityRole="button"
+            accessibilityLabel="Open your monthly recap, about 45 seconds"
+          >
+            <Ionicons name="newspaper-outline" size={18} color={t.colors.primary} />
+            <Text style={[styles.recapCardText, live.recapCardText]}>
+              Your {recentMonthRecapParams(earliestWorkoutAt).monthLabel.replace(' so far', '')} recap is ready - 45 seconds
+            </Text>
+            <TouchableOpacity
+              onPress={dismissRecapCard}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss"
+            >
+              <Ionicons name="close" size={16} color={t.colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        ) : tonnageLandmark ? (
           <View style={styles.section}>
-            <SectionLabel>Lifetime totals</SectionLabel>
-            {/* R9 (D70): radius="md" -> default (radius.lg); cards move to
-                the app-wide card radius. */}
-            <Card padding="none" style={styles.lifetimePanel}>
-              <View style={styles.lifetimeCell}>
-                <Text style={[styles.lifetimeValue, live.lifetimeValue]}>{formatNumber(completedWorkoutCount)}</Text>
-                <Text style={[styles.lifetimeLabel, live.lifetimeLabel]}>
-                  {completedWorkoutCount === 1 ? 'session' : 'sessions'}
-                </Text>
-              </View>
-              <View style={[styles.lifetimeDivider, live.lifetimeDivider]} />
-              <View style={styles.lifetimeCell}>
-                <Text style={[styles.lifetimeValue, live.lifetimeValue]}>
-                  {formatNumber(lifetimeTonnage)}
-                </Text>
-                <Text style={[styles.lifetimeLabel, live.lifetimeLabel]}>{units === 'lbs' ? 'lbs lifted' : 'kg lifted'}</Text>
-              </View>
-              <View style={[styles.lifetimeDivider, live.lifetimeDivider]} />
-              <View style={styles.lifetimeCell}>
-                <Text style={[styles.lifetimeValue, live.lifetimeValue]}>{formatNumber(lifetimeReps)}</Text>
-                <Text style={[styles.lifetimeLabel, live.lifetimeLabel]}>
-                  {lifetimeReps === 1 ? 'rep' : 'reps'}
-                </Text>
-              </View>
-            </Card>
+            <View style={styles.milestoneRow}>
+              <Ionicons name="barbell-outline" size={16} color={t.colors.primary} />
+              <Text style={[styles.milestoneText, live.milestoneText]}>
+                {formatTonnage(tonnageLandmark)} {units === 'lbs' ? 'lbs' : 'kg'} lifted all-time. That's what showing up adds up to.
+              </Text>
+              {/* R9 (D70): milestoneCtaButton -> shared Button outline sm.
+                  The page's single permitted share CTA (§9/§24): it lives
+                  only inside this transient achievement Moment. */}
+              <Button
+                variant="outline"
+                size="sm"
+                fullWidth={false}
+                title="Create share image"
+                onPress={makeTonnageCard}
+                accessibilityLabel="Create share image"
+              />
+            </View>
           </View>
-        )}
+        ) : null}
 
-        {/* ── Quick nav tiles ────────────────────────────────── */}
-        {/* L04-14 (design audit 2026-07-09): "Explore" was a generic label
-            over Consistency/Lifts/Body Metrics/Full History/Recaps/Year of
-            Lifts (prior audit R6). "More stats" says what the grid actually
-            is, matching the app's own "progress stats" terminology. */}
+        {/* ── Utilities (R6, always) ──────────────────────────── */}
         <View style={styles.section}>
           <SectionLabel>More stats</SectionLabel>
           <View style={styles.navGrid}>
-            <NavTile icon="pulse" color={t.colors.success} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
-            <NavTile icon="barbell" color={t.colors.primary} label="Lifts" onPress={() => navigation.navigate('LiftProgress')} />
-            {/* Body Metrics carries the weight EWMA trend once 2+ logs exist,
-                but it is a metrics screen, so the tile says what it opens
-                (founder device-walk 2026-06-12: a "Weight" tile promised a
-                progress chart and landed on a logging form). The IA pass will
-                lead that screen with the trend; the label stops over-promising
-                now. */}
             <NavTile icon="body" color={t.colors.warning} label="Body Metrics" pro={tier !== 'pro'} onPress={() => navigation.navigate('BodyMetrics')} />
-            {/* Partners moved out of the grid to a promoted slot directly under
-                the insight stack (spec B8). */}
+            <NavTile icon="barbell" color={t.colors.primary} label="Lifts" onPress={() => navigation.navigate('LiftProgress')} />
+            <NavTile icon="pulse" color={t.colors.success} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
             <NavTile icon="time" color={t.colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
               // COMP-005: Recaps replaces the year-long locked Year-of-Lifts
@@ -709,6 +560,20 @@ export default function AnalyticsScreen({ navigation, route }) {
                 />
               );
             })()}
+            {/* Campaign 23 (§27): demoted from its own promoted full-width
+                row into the utilities grid -- accountability is a valued
+                feature but is not evidence of MY progress, so it no longer
+                shares visual parity with the Answer Block's Visual pillar. */}
+            <NavTile
+              icon="people"
+              color={t.colors.primary}
+              label="Partners"
+              pro={tier !== 'pro'}
+              onPress={() => {
+                trackPartnerSurfaceView('progress_tile');
+                navigation.navigate('Partner', { source: 'progress_tile' });
+              }}
+            />
           </View>
         </View>
       </ScrollView>
@@ -718,31 +583,42 @@ export default function AnalyticsScreen({ navigation, route }) {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-// CP-10 batch G (2026-07-11): sibling function-component scope (not
-// prop-drilled `live`/`t` from AnalyticsScreen), so its own useTheme() call
-// is cleaner than threading two extra props through. Same shared
-// buildLiveStyles(t) as the parent screen.
-function InsightRow({ insight, onDismiss }) {
+// Campaign 23 (§21/§22 R2): one row inside the Answer Block. `proGated` mirrors
+// NavTile's `pro` idiom exactly (icon stays its normal colour, a ProBadge
+// shows, no invented data is displayed) -- never the separate "not enough
+// data yet" dimmed treatment, which for these pillars is carried by their
+// own honest state/evidence copy instead.
+function PillarRow({ icon, label, stateText, evidenceText, proGated, onPress }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  const severityStyle = useMemo(() => buildSeverityStyle(t.colors), [t]);
-  const sev = severityStyle[insight.severity ?? 0] ?? severityStyle[0];
-  // R9 (D70): radius="md" -> default (radius.lg).
+  const a11y = proGated
+    ? `${label}. Part of Pro.`
+    : [label, stateText, evidenceText].filter(Boolean).join('. ');
   return (
-    <Card padding="md" style={[styles.insightRow, { borderLeftColor: sev.color }]}>
-      <Ionicons name={sev.icon} size={18} color={sev.color} style={{ marginTop: spacing.hair }} />
-      <Text style={[styles.insightCopy, live.insightCopy]} numberOfLines={5}>{insight.copy}</Text>
-      <TouchableOpacity
-        // R9 (D70): InsightRow dismiss joins the app's haptic vocabulary.
-        onPress={() => { haptics.selection(); onDismiss(); }}
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        style={styles.insightDismiss}
-        accessibilityRole="button"
-        accessibilityLabel="Dismiss insight"
-      >
-        <Ionicons name="close" size={14} color={t.colors.textMuted} />
-      </TouchableOpacity>
-    </Card>
+    <TouchableOpacity
+      style={styles.pillarRow}
+      onPress={() => { haptics.selection(); onPress?.(); }}
+      activeOpacity={0.75}
+      accessibilityRole="button"
+      accessibilityLabel={a11y}
+    >
+      <Ionicons name={icon} size={22} color={t.colors.primary} />
+      <View style={styles.pillarTextWrap}>
+        <View style={styles.pillarLabelRow}>
+          <Text style={[styles.pillarLabel, live.pillarLabel]}>{label}</Text>
+          {proGated ? <ProBadge size="sm" /> : null}
+        </View>
+        {proGated ? (
+          <Text style={[styles.pillarEvidence, live.pillarEvidence]} numberOfLines={1}>Part of Pro</Text>
+        ) : (
+          <>
+            {stateText ? <Text style={[styles.pillarState, live.pillarState]} numberOfLines={2}>{stateText}</Text> : null}
+            {evidenceText ? <Text style={[styles.pillarEvidence, live.pillarEvidence]} numberOfLines={2}>{evidenceText}</Text> : null}
+          </>
+        )}
+      </View>
+      <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+    </TouchableOpacity>
   );
 }
 
@@ -751,11 +627,11 @@ const MUSCLES = Object.keys(VOLUME_LANDMARKS);
 // Compact landing read for weekly volume. The full per-muscle picture lives on
 // the heatmap (the one volume home); this is a glanceable summary that drills
 // in: how many muscles were trained, how many sit outside their target, and
-// (A5) an inline stacked bar, one segment per trained muscle, sized by its
+// an inline stacked bar, one segment per trained muscle, sized by its
 // working sets and coloured through the volumeStatusColor grammar, so the
 // week's volume shape is visible without leaving the dashboard.
 // CP-10 batch G (2026-07-11): sibling function-component scope, own
-// useTheme() call (same reasoning as InsightRow above), same shared
+// useTheme() call (same reasoning as PillarRow above), same shared
 // buildLiveStyles(t).
 function VolumeSummaryStrip({ volume, loading, onPress, landmarksTable = null }) {
   const t = useTheme();
@@ -834,126 +710,8 @@ function VolumeSummaryStrip({ volume, loading, onPress, landmarksTable = null })
   );
 }
 
-// A5 hero: the dashboard opens on weekly training load (tonnage) over the
-// last 8 rolling weeks, drawn with the app's one chart engine (VolyumeChart's
-// bar variant, scrub haptics already no-op under Reduce Motion). The
-// display-size numeral reads the week under the finger while scrubbing and
-// the current week otherwise. Scrub state lives here so a scrub re-renders
-// this card only, never the whole screen (F7).
 // CP-10 batch G (2026-07-11): sibling function-component scope, own
-// useTheme() call (same reasoning as InsightRow above), same shared
-// buildLiveStyles(t).
-function TrainingLoadHero({ series, units, onMakeCard }) {
-  const t = useTheme();
-  const live = useMemo(() => buildLiveStyles(t), [t]);
-  const [chartW, setChartW] = useState(0);
-  const [scrubIdx, setScrubIdx] = useState(null);
-  const lastIdx = series.length - 1;
-  const bars = useMemo(
-    () => series.map((pt, i) => ({
-      value: pt.value,
-      color: i === lastIdx ? t.colors.primary : t.colors.primaryDim,
-    })),
-    [series, lastIdx, t],
-  );
-  if (series.length < 2) return null;
-  const activeIdx = scrubIdx != null && scrubIdx >= 0 && scrubIdx < series.length ? scrubIdx : lastIdx;
-  const active = series[activeIdx];
-  const weekLabel = active.weeksAgo === 0
-    ? 'This week'
-    : active.weeksAgo === 1 ? 'Last week' : `${active.weeksAgo} weeks ago`;
-  const unit = units === 'lbs' ? 'lbs' : 'kg';
-  return (
-    <Card accessibilityLabel={`Training load. ${weekLabel}: ${formatNumber(active.value)} ${unit} lifted.`}>
-      <Text style={[styles.heroEyebrow, live.heroEyebrow]}>Training load</Text>
-      <View style={styles.heroValueRow}>
-        <RollingNumber
-          value={active.value}
-          style={[styles.heroValue, live.heroValue]}
-          accessibilityLabel={`${formatNumber(active.value)} ${unit}`}
-        />
-        <Text style={[styles.heroUnit, live.heroUnit]}>{unit}</Text>
-      </View>
-      <Text style={[styles.heroSub, live.heroSub]}>{weekLabel} - weight lifted</Text>
-      <View
-        style={styles.heroChartSlot}
-        onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
-      >
-        {chartW > 0 && (
-          <VolyumeChart
-            variant="bar"
-            data={bars}
-            width={chartW}
-            height={64}
-            barGap={spacing.xs}
-            interactive
-            onScrubIndex={setScrubIdx}
-            accessibilityLabel={`Weekly training load, last ${series.length} weeks. This week highlighted.`}
-          />
-        )}
-      </View>
-      <View style={styles.rowBetween}>
-        <Text style={[styles.heroAxisLabel, live.heroAxisLabel]}>{series.length - 1} weeks ago</Text>
-        <Text style={[styles.heroAxisLabel, live.heroAxisLabel]}>this week</Text>
-      </View>
-      {/* S4: share image extended to training load, reflective and factual,
-          never a comparison to anyone else. R9 (D70): milestoneCtaButton ->
-          shared Button outline sm; trainingLoadCtaRow (alignSelf: flex-end)
-          stays as the style override so the CTA keeps its right-aligned
-          position under the axis row. */}
-      <Button
-        variant="outline"
-        size="sm"
-        fullWidth={false}
-        title="Create share image"
-        onPress={onMakeCard}
-        accessibilityLabel="Create share image"
-        style={styles.trainingLoadCtaRow}
-      />
-    </Card>
-  );
-}
-
-// A5 half-width sparkline card: a headline numeral over a compact 30-day
-// weekly series, doubling as the door to its detail screen. Free-safe
-// training data only (sessions, PRs), never weight or calories.
-// CP-10 batch G (2026-07-11): sibling function-component scope, own
-// useTheme() call (same reasoning as InsightRow above), same shared
-// buildLiveStyles(t).
-function SparkCard({ label, value, sub, bars, onPress, accessibilityLabel }) {
-  const t = useTheme();
-  const live = useMemo(() => buildLiveStyles(t), [t]);
-  const [chartW, setChartW] = useState(0);
-  return (
-    <Card
-      style={styles.sparkCard}
-      padding="md"
-      onPress={onPress}
-      accessibilityLabel={accessibilityLabel}
-    >
-      <Text style={[styles.sparkLabel, live.sparkLabel]}>{label}</Text>
-      <Text style={[styles.sparkValue, live.sparkValue]}>{formatNumber(value)}</Text>
-      <View
-        style={styles.sparkChartSlot}
-        onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
-      >
-        {chartW > 0 && (
-          <VolyumeChart
-            variant="bar"
-            data={bars}
-            width={chartW}
-            height={32}
-            barGap={spacing.xxs}
-          />
-        )}
-      </View>
-      <Text style={[styles.sparkSub, live.sparkSub]}>{sub}</Text>
-    </Card>
-  );
-}
-
-// CP-10 batch G (2026-07-11): sibling function-component scope, own
-// useTheme() call (same reasoning as InsightRow above), same shared
+// useTheme() call (same reasoning as PillarRow above), same shared
 // buildLiveStyles(t).
 function SessionCard({ workout, onPress }) {
   const t = useTheme();
@@ -999,7 +757,7 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
   // read as the same dimmed padlock; time-outline replaces the padlock
   // here so a not-enough-data tile can never be misread as a paywall).
   // CP-10 batch G (2026-07-11): sibling function-component scope, own
-  // useTheme() call (same reasoning as InsightRow above), same shared
+  // useTheme() call (same reasoning as PillarRow above), same shared
   // buildLiveStyles(t). `color` arrives pre-resolved from the caller
   // (t.colors.* at each call site); only the locked/label-muted tokens
   // owned by this component need their own `t`.
@@ -1054,56 +812,36 @@ const styles = StyleSheet.create({
   safe:        { flex: 1, backgroundColor: colors.background },
   content:     { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxxl },
   section:     { gap: spacing.md },
+  rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+
+  // ── Answer Block (R2) ──
+  answerBlock: {},
+  answerDivider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border },
+  pillarRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
+  },
+  pillarTextWrap: { flex: 1, gap: spacing.xxs },
+  pillarLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  pillarLabel: { ...type.overline, color: colors.textMuted },
+  pillarState: { ...type.bodyStrong, color: colors.textPrimary },
+  pillarEvidence: { ...type.bodySm, color: colors.textSecondary },
+
+  // ── Evidence trail (R3) ──
+  adherenceLine: { ...type.caption, color: colors.textMuted },
+
+  // ── Moments (R5) ──
   milestoneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs },
   milestoneText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
-  // R9 (D70): milestoneCtaButton/milestoneCta deleted - every "Create share
-  // image" CTA converted to the shared Button primitive (outline sm).
-  rowBetween:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  // R9 (D70): seeAllButton/seeAll deleted - "All sessions" converted to the
-  // shared Button primitive (outline sm).
-
-  // ── Insight rows ──
-  // R9 (D70): recapCard stays radius.md (ephemeral banner class, not a
-  // card) but its solid colors.primary border moves to the banner-grammar
-  // alpha treatment (withAlpha(colors.primary, alpha.mid)), matching the
-  // block-advisor / other ephemeral banners elsewhere in the app.
   recapCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md, marginBottom: spacing.md,
+    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   recapCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
-  insightRow: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
-    borderLeftWidth: 3,
-  },
-  insightCopy:    { ...type.bodySm, flex: 1, color: colors.textSecondary },
-  insightDismiss: { padding: spacing.xxs },
 
-  // ── A5 dashboard: training-load hero + sparkline cards ──
-  heroEyebrow:   { ...type.label, color: colors.textSecondary },
-  // D3 (pre-release sweep 2026-07-27, LANE D): the numeral is a RollingNumber
-  // TextInput that cannot shrink, so a large tonnage figure (or a large OS
-  // text size) pushed the trailing unit off screen with no way to wrap.
-  // Matches PartnerScreen.js heroRow, which sets the same flexWrap.
-  heroValueRow:  { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
-  heroValue:     { ...type.num('display'), color: colors.textPrimary },
-  heroUnit:      { ...type.title, color: colors.textSecondary },
-  heroSub:       { ...type.num('caption'), color: colors.textMuted, marginTop: spacing.xxs },
-  heroChartSlot: { marginTop: spacing.md, minHeight: 64 },
-  // S4: share image extended to training load, same text style as the
-  // milestone CTAs (milestoneCta) but right-aligned under the axis row.
-  trainingLoadCtaRow: { alignSelf: 'flex-end', marginTop: spacing.sm },
-  heroAxisLabel: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xs },
-  sparkRow:      { flexDirection: 'row', gap: spacing.md },
-  sparkCard:     { flex: 1 },
-  sparkLabel:    { ...type.label, color: colors.textSecondary },
-  sparkValue:    { ...type.num('h2'), color: colors.textPrimary, marginTop: spacing.xxs },
-  sparkChartSlot: { marginTop: spacing.sm, minHeight: 32 },
-  sparkSub:      { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xs },
-
-  // ── Volume snapshot ──
+  // ── Volume snapshot (R4) ──
   volEmptyText: { fontSize: fontSize.sm, color: colors.textMuted },
   volSummary:      { gap: spacing.md },
   volSummaryTop:   { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -1118,20 +856,7 @@ const styles = StyleSheet.create({
   volLegendItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   volLegendDot: { width: 8, height: 8, borderRadius: circle(8) },
 
-  // ── Lifetime totals panel ──
-  lifetimePanel: {
-    flexDirection: 'row', alignItems: 'stretch',
-    paddingVertical: spacing.lg, paddingHorizontal: spacing.md,
-  },
-  lifetimeCell: { flex: 1, alignItems: 'center', gap: spacing.xxs },
-  lifetimeValue: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.bold,
-    color: colors.textPrimary, fontVariant: ['tabular-nums'],
-  },
-  lifetimeLabel: { fontSize: fontSize.micro, color: colors.textSecondary, textAlign: 'center' },
-  lifetimeDivider: { width: 1, backgroundColor: colors.border, marginVertical: spacing.xxs },
-
-  // ── Recent sessions ──
+  // ── Recent sessions (R3) ──
   sessionCard: {
     flexDirection: 'row', alignItems: 'center',
     gap: spacing.md,
@@ -1142,12 +867,12 @@ const styles = StyleSheet.create({
   diffChip:     { borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.xxs },
   // R2 (cohesion sweep, 2026-07-11): the difficulty readout ("8/10") is a
   // data numeral, so it joins the screen's tabular-figure discipline like
-  // every other numeral here (volSummaryCount/lifetimeValue). fontSize.xs +
+  // every other numeral here (volSummaryCount). fontSize.xs +
   // fontWeight.bold has no exact type.* role (theme gap logged in the R2
   // report), so the raw weight stays rather than dropping emphasis.
   diffText:     { fontSize: fontSize.xs, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
 
-  // ── Nav tiles ──
+  // ── Utilities (R6) ──
   navGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   navTile: {
     flex: 1, minWidth: '45%',
@@ -1176,55 +901,32 @@ const styles = StyleSheet.create({
     marginTop: spacing.xxs,
     textAlign: 'center',
   },
-  // ── Near-empty momentum note (closable; founder 2026-07-09) ──
-  momentumRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-  },
-  momentumText: {
-    ...type.bodySm,
-    flex: 1,
-    color: colors.textSecondary,
-  },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
 // identical. This mirrors ONLY the colour/fontSize/type-bearing sub-
 // properties of the matching frozen style, at identical rest values, shared
 // by this screen's several function-component scopes (AnalyticsScreen and
-// its sibling InsightRow/VolumeSummaryStrip/TrainingLoadHero/SparkCard/
-// SessionCard/NavTile) so they can never drift out of step with each other
-// or the frozen block. Pure layout keys (flex/gap/padding/width/borderWidth,
-// no token) are correctly omitted -- there is nothing to unfreeze for them.
+// its sibling PillarRow/VolumeSummaryStrip/SessionCard/NavTile) so they can
+// never drift out of step with each other or the frozen block. Pure layout
+// keys (flex/gap/padding/width/borderWidth, no token) are correctly omitted
+// -- there is nothing to unfreeze for them.
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
+    answerDivider: { backgroundColor: t.colors.border },
+    pillarLabel: { ...t.type.overline, color: t.colors.textMuted },
+    pillarState: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    pillarEvidence: { ...t.type.bodySm, color: t.colors.textSecondary },
+    adherenceLine: { ...t.type.caption, color: t.colors.textMuted },
     milestoneText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    // R9 (D70): milestoneCtaButton/milestoneCta/seeAllButton/seeAll live
-    // twins deleted alongside their frozen styles - the shared Button
-    // primitive resolves its own live theme internally.
     recapCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     recapCardText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    insightCopy: { ...t.type.bodySm, color: t.colors.textSecondary },
-    heroEyebrow: { ...t.type.label, color: t.colors.textSecondary },
-    heroValue: { ...t.type.num('display'), color: t.colors.textPrimary },
-    heroUnit: { ...t.type.title, color: t.colors.textSecondary },
-    heroSub: { ...t.type.num('caption'), color: t.colors.textMuted },
-    heroAxisLabel: { ...t.type.captionTight, color: t.colors.textMuted },
-    sparkLabel: { ...t.type.label, color: t.colors.textSecondary },
-    sparkValue: { ...t.type.num('h2'), color: t.colors.textPrimary },
-    sparkSub: { ...t.type.captionTight, color: t.colors.textMuted },
     volEmptyText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     volSummaryCount: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
     volSummaryLabel: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     volSummaryFlagText: { fontSize: t.fontSize.micro, color: t.colors.textSecondary },
     volSummaryClear: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
-    lifetimeValue: { fontSize: t.fontSize.xl, color: t.colors.textPrimary },
-    lifetimeLabel: { fontSize: t.fontSize.micro, color: t.colors.textSecondary },
-    lifetimeDivider: { backgroundColor: t.colors.border },
     sessionName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     sessionMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
     diffText: { fontSize: t.fontSize.xs },
@@ -1232,6 +934,5 @@ function buildLiveStyles(t) {
     navTileLabel: { ...t.type.captionStrong, color: t.colors.textSecondary },
     navTileLabelLocked: { color: t.colors.textMuted },
     navTileSub: { ...t.type.num('caption'), color: t.colors.textMuted },
-    momentumText: { ...t.type.bodySm, color: t.colors.textSecondary },
   };
 }

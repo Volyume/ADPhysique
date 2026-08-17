@@ -31,6 +31,10 @@ jest.mock('@react-navigation/native', () => ({
 // Sparkline pulls in react-native-svg (native-only); stub it like the other
 // screen tests do for chart components (FoodInsightsScreen -> VolyumeChart).
 jest.mock('../../components/Sparkline', () => () => null);
+// Campaign 23 (§20/§27): the relocated Weight Lifted hero (WeightLiftedHero)
+// pulls in VolyumeChart, itself a react-native-svg wrapper (native-only);
+// same stub pattern as Sparkline above.
+jest.mock('../../components/VolyumeChart', () => () => null);
 // PeekMenu pulls in expo-haptics (native-only). It's stubbed out for most of
 // this suite, but the EP-23/UI-11 malformed-data tests below need to reach
 // the "Share this PR" item's onPress (built in openLiftMenu, LiftProgress

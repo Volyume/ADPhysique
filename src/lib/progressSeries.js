@@ -12,6 +12,7 @@
 // be impossible from any call site.
 
 import { calculateTonnage } from './algorithms';
+import { localWeekStartMs, localWeekEndMs } from './dayKey';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
@@ -32,17 +33,57 @@ function setTimestamp(s) {
 
 /**
  * Weekly training-load (tonnage) series for the hero chart, oldest → newest.
- * The last entry is the current rolling week (weeksAgo 0). Weeks are rolling
- * 7-day windows back from `now`, matching the existing weekly tonnage bars
- * in useProgressData. `exerciseTypeById` is passed straight through to
- * calculateTonnage so distance/duration sets never inflate load.
+ * The last entry is the current week (weeksAgo 0). `exerciseTypeById` is
+ * passed straight through to calculateTonnage so distance/duration sets
+ * never inflate load.
+ *
+ * `weekBoundary` picks the week grammar:
+ *  - 'rolling' (default): a trailing 7-day window measured back from `now`,
+ *    matching the original A5 hero binning.
+ *  - 'monday': the same Monday-anchored calendar week every other "this
+ *    week" surface uses (dayKey.js's localWeekStartMs/localWeekEndMs, DST
+ *    safe). Campaign 23 §6 (IA-2): a screen that shows both a rolling and a
+ *    Monday-anchored series disagrees with itself about what "this week"
+ *    means; callers that sit beside a Monday-anchored surface (e.g. the
+ *    weekly volume strip) should pass 'monday' so the whole screen shares
+ *    one definition.
  *
  * @param {Array<object>} sets - completed workout sets
- * @param {{weeks?: number, now?: number, exerciseTypeById?: object|null}} [opts]
+ * @param {{weeks?: number, now?: number, exerciseTypeById?: object|null, weekBoundary?: ('rolling'|'monday')}} [opts]
  * @returns {Array<{value: number, weeksAgo: number}>}
  */
-export function buildWeeklyLoadSeries(sets, { weeks = DEFAULT_LOAD_WEEKS, now = Date.now(), exerciseTypeById = null } = {}) {
+export function buildWeeklyLoadSeries(sets, {
+  weeks = DEFAULT_LOAD_WEEKS, now = Date.now(), exerciseTypeById = null, weekBoundary = 'rolling',
+} = {}) {
   const n = clampInt(weeks, 1, MAX_LOAD_WEEKS, DEFAULT_LOAD_WEEKS);
+
+  if (weekBoundary === 'monday') {
+    // Build n Monday-anchored week boundaries, oldest first, current week
+    // last. localWeekEndMs/localWeekStartMs handle BST/GMT transitions
+    // (a DST week is 167h or 169h, never a fixed 168h), so this stays
+    // correct across the spring/autumn boundary the rolling grammar never
+    // had to worry about.
+    const bounds = [];
+    let end = localWeekEndMs(now);
+    for (let i = 0; i < n; i++) {
+      const start = localWeekStartMs(end - 1);
+      bounds.unshift({ start, end });
+      end = start;
+    }
+    const bins = bounds.map(() => []);
+    for (const s of (sets || [])) {
+      const at = setTimestamp(s);
+      if (!at || at > now) continue;
+      const idx = bounds.findIndex((b) => at >= b.start && at < b.end);
+      if (idx === -1) continue;
+      bins[idx].push(s);
+    }
+    return bins.map((binSets, i) => ({
+      value: Math.round(calculateTonnage(binSets, exerciseTypeById)),
+      weeksAgo: n - 1 - i,
+    }));
+  }
+
   const bins = Array.from({ length: n }, () => []);
   for (const s of (sets || [])) {
     const at = setTimestamp(s);

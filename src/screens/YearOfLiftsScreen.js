@@ -30,7 +30,10 @@ import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { getYearOfLiftsData, getRecapData, getBlockReflectionData, getOpenEdPatternFlag } from '../lib/database';
+import {
+  getYearOfLiftsData, getRecapData, getBlockReflectionData, getOpenEdPatternFlag,
+  getLifetimeTonnage, getLifetimeWorkoutStats,
+} from '../lib/database';
 import { safeDate, safeToFixed } from '../lib/safeFormat';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -63,7 +66,7 @@ function fmtDate(ms) {
  * cards are dropped so the deck stays tight. `neutral` (calm mode / open ED
  * flag) suppresses the year-over-year comparison, mirroring buildMonthCards.
  */
-export function buildCards(data, units, { neutral = false } = {}) {
+export function buildCards(data, units, { neutral = false, lifetime = null } = {}) {
   if (!data) return [];
   const cards = [];
 
@@ -173,7 +176,23 @@ export function buildCards(data, units, { neutral = false } = {}) {
     });
   }
 
-  // 8. Outro
+  // 8. Lifetime totals (Campaign 23, §27: rehomed from the Progress landing's
+  // standing "Lifetime totals" panel, which is not scoped to this rolling
+  // year -- it is the whole account's running total). No comparison, no
+  // rank, just the running totals, same as the retired panel. Own totals
+  // only; distinct from the year-scoped stat cards above.
+  if (lifetime?.sessions > 0) {
+    cards.push({
+      type: 'stat',
+      icon: 'infinite',
+      tone: 'primary',
+      value: lifetime.sessions.toLocaleString('en-GB'),
+      unit: lifetime.sessions === 1 ? 'session, lifetime' : 'sessions, lifetime',
+      caption: `${lifetime.tonnage.toLocaleString('en-GB')} kg lifted and ${lifetime.reps.toLocaleString('en-GB')} reps, all time.`,
+    });
+  }
+
+  // 9. Outro
   cards.push({
     type: 'outro',
     icon: 'checkmark-circle',
@@ -509,6 +528,7 @@ export default function YearOfLiftsScreen({ navigation, route }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const [data, setData] = useState(null);
+  const [lifetime, setLifetime] = useState(null);
   const [neutral, setNeutral] = useState(false);
   const [loading, setLoading] = useState(true);
   // EP-09/P-06 (Codex end-user-polish audit): whether the most recent load
@@ -553,15 +573,25 @@ export default function YearOfLiftsScreen({ navigation, route }) {
         const yd = await getYearOfLiftsData(user.id, yearMs);
         // Fail CLOSED: same raw wellbeing read as above; a genuine read
         // failure on either flag must suppress the year-over-year comparison.
-        const [mode, edFlag, recap] = await Promise.all([
+        const [mode, edFlag, recap, lifetimeTonnage, lifetimeStats] = await Promise.all([
           AsyncStorage.getItem(WELLBEING_KEY).then(v => v || 'unspecified').catch(() => 'read_failed'),
           getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
           (yd && yd.tonnage > 0 && yd.yearStart != null)
             ? getRecapData(user.id, { startMs: yd.yearStart, endMs: yd.yearEnd, compare: true }).catch(() => null)
             : Promise.resolve(null),
+          // Campaign 23 (§27): the rehomed Lifetime totals panel's data,
+          // same queries AnalyticsScreen used, best-effort (a failure here
+          // must not block the rest of the story deck).
+          getLifetimeTonnage(user.id).catch(() => null),
+          getLifetimeWorkoutStats(user.id).catch(() => null),
         ]);
         setNeutral(isCalm(mode) || mode === 'read_failed' || !!edFlag);
         setData(recap?.previous ? { ...yd, previous: recap.previous } : yd);
+        setLifetime(
+          Number.isFinite(lifetimeTonnage) && lifetimeStats
+            ? { tonnage: lifetimeTonnage, sessions: lifetimeStats.sessions, reps: lifetimeStats.reps }
+            : null,
+        );
       }
       setLoadError(false);
     } catch (e) {
@@ -585,8 +615,8 @@ export default function YearOfLiftsScreen({ navigation, route }) {
     if (variant === 'month') return buildMonthCards(data, units, { label: monthLabel, neutral });
     if (variant === 'week') return buildWeekCards(data, units, { label: weekLabel, neutral });
     if (variant === 'block') return buildBlockCards(data, units);
-    return buildCards(data, units, { neutral });
-  }, [data, units, variant, monthLabel, weekLabel, neutral]);
+    return buildCards(data, units, { neutral, lifetime });
+  }, [data, units, variant, monthLabel, weekLabel, neutral, lifetime]);
 
   // COMP-005: open-rate telemetry for the recap surfaces (month/week/block).
   // variant only, no PII. Year of Lifts keeps its own (untracked) path unchanged.

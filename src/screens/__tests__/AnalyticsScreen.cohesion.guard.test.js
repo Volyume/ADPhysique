@@ -25,7 +25,12 @@ describe('AnalyticsScreen cohesion census (R2)', () => {
     expect(SRC).toMatch(/diffText:\s*\{[^}]*fontVariant: \['tabular-nums'\]/);
     // Pre-existing numerals stay tabular.
     expect(SRC).toMatch(/volSummaryCount:\s*\{[^}]*fontVariant: \['tabular-nums'\]/);
-    expect(SRC).toMatch(/lifetimeValue:\s*\{[\s\S]{0,120}?fontVariant: \['tabular-nums'\]/);
+    // Campaign 23 (§27: "Lifetime totals panel | REHOME to Recaps/YearOfLifts
+    // family"): the 3-cell lifetimeValue panel this used to pin left
+    // AnalyticsScreen entirely -- it is not a like-for-like style move, the
+    // rehomed figure now renders as a YearOfLiftsScreen story 'stat' card
+    // (a different component, its own numeral style), so there is nothing
+    // left on this screen to pin.
   });
 
   test('nav-tile label uses the shared type.captionStrong role, not a raw pair', () => {

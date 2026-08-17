@@ -4,7 +4,7 @@ import { colors } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import {
   getCompletedWorkoutSets, getAllWorkouts, getAllExercises, getAllMesocycles,
-  dismissInsight, runInsightsEngine, getActivePlan,
+  getActivePlan,
   getAcuteChronicWorkload,
   getRecentWorkoutFeedback, getCurrentMesocycleWeek, getPlannedMuscleVolume,
 } from '../lib/database';
@@ -85,7 +85,6 @@ export default function useProgressData() {
   // Section data
   const [activeMeso, setActiveMeso]         = useState(null);
   const [mesoTonnage, setMesoTonnage]       = useState([]);   // [{value, label}]
-  const [insights, setInsights]             = useState([]);
   const [weeklyVolume, setWeeklyVolume]     = useState({});
   const [prBars, setPrBars]                 = useState([]);   // [{value}] 30d by default
   const [prWindow, setPrWindow]             = useState(30);
@@ -111,7 +110,6 @@ export default function useProgressData() {
   function clearUserProgressState() {
     setActiveMeso(null);
     setMesoTonnage([]);
-    setInsights([]);
     setWeeklyVolume({});
     setPrBars([]);
     setPrWindow(30);
@@ -170,7 +168,6 @@ export default function useProgressData() {
 
       await Promise.all([
         loadMesocycle(workouts, sets, exMap, isCurrentRequest),
-        loadInsights(isCurrentRequest),
         loadVolumeSnapshot(sets, exMap, isCurrentRequest),
         loadDeloadCheck(sets, exMap, workouts, isCurrentRequest),
         loadPRBars(sets, exMap, 30, isCurrentRequest),
@@ -251,13 +248,6 @@ export default function useProgressData() {
         setBlockProgress([]);
       }
     }
-  }
-
-  async function loadInsights(isCurrentRequest = () => true) {
-    try {
-      const fresh = await runInsightsEngine(user.id);
-      if (isCurrentRequest()) setInsights(fresh);
-    } catch (_) {}
   }
 
   async function loadVolumeSnapshot(sets, exMap, isCurrentRequest = () => true) {
@@ -484,11 +474,6 @@ export default function useProgressData() {
     } catch (_) {}
   }
 
-  async function handleDismiss(insightId) {
-    await dismissInsight(insightId);
-    setInsights(prev => prev.filter(i => i.id !== insightId));
-  }
-
   function handlePrWindowToggle() {
     const next = prWindow === 30 ? 90 : 30;
     setPrWindow(next);
@@ -533,14 +518,14 @@ export default function useProgressData() {
 
   return {
     loading, refreshing, loadError,
-    activeMeso, mesoTonnage, insights, weeklyVolume, prBars, prWindow,
+    activeMeso, mesoTonnage, weeklyVolume, prBars, prWindow,
     calValues, recentSessions, allSets, exerciseMap, deloadAlert,
     durationBars, muscleFreq, showAllMuscles, setShowAllMuscles,
     workloadData, fatigueSessions, blockProgress, earliestWorkoutAt,
     completedWorkoutCount,
     currentMesoWeek,
     hasData, sessionCount, enoughForTrends,
-    handleDismiss, handlePrWindowToggle, handleRefresh,
+    handlePrWindowToggle, handleRefresh,
     mesoProgress, mesoCurrentWeek,
   };
 }

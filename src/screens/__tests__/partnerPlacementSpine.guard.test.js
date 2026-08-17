@@ -8,8 +8,12 @@
  *   2. ConsistencyScreen carries NO Partners row (founder device-walk
  *      2026-07-03: three entry points read as duplication; the Consistency
  *      row was the most out-of-place and was removed).
- *   3. AnalyticsScreen promotes the Partners tile above the Explore grid's
- *      Full History tile (i.e. it is no longer last).
+ *   3. AnalyticsScreen carries the Partners tile INSIDE the utilities grid
+ *      (Campaign 23, PROGRESS-UX-SPEC.md §27: "Partners tile (top slot) |
+ *      DEMOTE to utilities grid; feature KEEP" -- superseding the earlier
+ *      promoted full-width row this suite used to pin. §22 R6 lists the
+ *      grid order explicitly with Partners last, so it is now AFTER Full
+ *      History, not before it).
  *   4. HomeScreen stays free of any partner entry — the one-banner invariant.
  */
 import fs from 'fs';
@@ -59,12 +63,16 @@ describe('ConsistencyScreen carries no Partners row (deduped)', () => {
 });
 
 describe('AnalyticsScreen Partners tile', () => {
-  test('is promoted above the Explore grid (Partners appears before Full History)', () => {
+  // Campaign 23 (§27/§22 R6): Partners demoted OUT of its promoted full-width
+  // row into the utilities grid, ordered last per §22 R6's explicit list
+  // ("Body Metrics, Lifts, Consistency, Full History, Recaps..., Year of
+  // Lifts..., Partners").
+  test('is demoted into the utilities grid, after Full History (no longer a promoted row)', () => {
     const partnersIdx = ANALYTICS.indexOf('label="Partners"');
     const fullHistoryIdx = ANALYTICS.indexOf('label="Full History"');
     expect(partnersIdx).toBeGreaterThan(-1);
     expect(fullHistoryIdx).toBeGreaterThan(-1);
-    expect(partnersIdx).toBeLessThan(fullHistoryIdx);
+    expect(partnersIdx).toBeGreaterThan(fullHistoryIdx);
   });
 
   test('keeps the pro lock and attributes the view with a source param', () => {
@@ -73,8 +81,8 @@ describe('AnalyticsScreen Partners tile', () => {
     expect(ANALYTICS).toMatch(/navigation\.navigate\('Partner', \{ source: 'progress_tile' \}\)/);
   });
 
-  test('the old grid Partner tile is gone (moved, not duplicated)', () => {
-    expect(ANALYTICS).not.toMatch(/label="Partner"/);
+  test('there is exactly one Partners tile (moved, not duplicated)', () => {
+    expect(ANALYTICS.match(/label="Partners"/g)?.length).toBe(1);
   });
 });
 

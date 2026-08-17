@@ -37,16 +37,25 @@ describe('share copy polish', () => {
     // c.border }), just resolved by the primitive instead of a screen-local
     // StyleSheet pair. Re-anchored to the Button call sites; the deleted
     // milestoneCtaButton/milestoneCta StyleSheet keys must stay gone.
-    // RE-ANCHORED (Today truth repair): three of these CTAs belonged to the
-    // streak celebrations (run milestone, perfect month, longest-run PB) and
-    // went with the rejected construct. The RULE is unchanged and still
-    // pinned for every CTA that remains: a contained bordered control, never
-    // a loose amber text link.
+    // RE-ANCHORED (Campaign 23, PROGRESS-UX-SPEC.md §9/§24): "Net landing
+    // rule: at most ONE share affordance visible per landing render, and
+    // only inside a transient achievement moment". The Training Load hero's
+    // standing share CTA moved to LiftProgressScreen with the hero itself
+    // (§27 DEMOTE), so the landing keeps exactly the tonnage-milestone
+    // Moment's CTA -- one, not two. The RULE is unchanged for the one CTA
+    // that remains: a contained bordered control, never a loose amber text
+    // link.
     const ctaMatches = analytics.match(/<Button\s+variant="outline"[\s\S]{0,220}?title="Create share image"/g);
-    expect(ctaMatches?.length).toBeGreaterThanOrEqual(2);
-    expect(analytics).toContain('style={styles.trainingLoadCtaRow}');
+    expect(ctaMatches?.length).toBe(1);
     expect(analytics).not.toMatch(/milestoneCtaButton:\s*\{/);
     expect(analytics).not.toMatch(/milestoneCta:\s*\{/);
+    expect(analytics).not.toContain('trainingLoadCtaRow');
+
+    // The relocated hero's own share CTA lives on LiftProgressScreen now,
+    // same contained-control contract.
+    const liftProgress = read('LiftProgressScreen.js');
+    expect(liftProgress).toMatch(/<Button\s+variant="outline"[\s\S]{0,220}?title="Create share image"/);
+    expect(liftProgress).toContain('style={styles.heroCtaRow}');
   });
 
   test('Analytics recent sessions link uses contained neutral chrome', () => {

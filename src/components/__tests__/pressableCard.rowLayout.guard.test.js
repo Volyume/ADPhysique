@@ -109,9 +109,17 @@ describe('row-fill dependents keep flex: 1 (founder photo, build 2608)', () => {
   // half-empty"). The earlier "verified correct in source" claim read the
   // JSX (two-up flex, correct) but missed that the flex never reached the
   // element the row lays out.
-  test('Progress spark cards fill the row (founder R7, build 2608)', () => {
+  //
+  // RETIRED (Campaign 23, PROGRESS-UX-SPEC.md §27): "Sessions spark card |
+  // RETIRE" and "New PRs spark card | RETIRE" -- SparkCard and its
+  // sparkCard/sparkRow styles left AnalyticsScreen.js entirely with the A5
+  // dashboard opener, so there is nothing left on this screen for the R7
+  // regression class to apply to. The class itself stays covered by the
+  // WorkoutBottomBar test above; this is an absence guard so the pattern is
+  // not silently reintroduced without flex.
+  test('Progress spark cards do not exist to regress (SparkCard retired, §27)', () => {
     const analytics = read('screens/AnalyticsScreen.js');
-    expect(analytics).toMatch(/sparkCard:\s*\{\s*flex:\s*1\s*\}/);
-    expect(analytics).toMatch(/<Card\s*\n\s*style=\{styles\.sparkCard\}/);
+    expect(analytics).not.toMatch(/function SparkCard/);
+    expect(analytics).not.toMatch(/sparkCard:\s*\{/);
   });
 });

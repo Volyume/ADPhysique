@@ -12,17 +12,22 @@ import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import PressableCard from '../components/PressableCard';
+import Card from '../components/Card';
+import Button from '../components/Button';
 import PeekMenu from '../components/PeekMenu';
 import InfoTooltip from '../components/InfoTooltip';
 import SectionLabel from '../components/SectionLabel';
 import SearchBar from '../components/SearchBar';
 import EmptyState from '../components/EmptyState';
+import VolyumeChart from '../components/VolyumeChart';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { buildLiftProgressRows, buildExerciseMetricSeries, derivePRIndices } from '../lib/liftProgress';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getStrengthLevel, summariseStrengthStanding } from '../lib/strengthStandards';
 import { kgToLbs } from '../lib/units';
+import { buildWeeklyLoadSeries } from '../lib/progressSeries';
+import { formatNumber } from '../lib/format';
 import Sparkline from '../components/Sparkline';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -104,6 +109,12 @@ export default function LiftProgressScreen({ navigation }) {
   const [rows, setRows] = useState([]);
   const [bodyWeight, setBodyWeight] = useState(null);
   const [strengthLevels, setStrengthLevels] = useState({});
+  // Campaign 23 (§20/§27): the Training Load hero + its 8-week chart demoted
+  // off the Progress landing into this drilldown, Monday-anchored (§6, IA-2:
+  // the landing's rolling-week hero used to disagree with the Monday-
+  // anchored volume strip on the same screen about what "this week" meant).
+  const [weeklyLoad, setWeeklyLoad] = useState([]);
+  const [weeklyLoadSessionCount, setWeeklyLoadSessionCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState('all'); // 'all' | 'best'
@@ -141,6 +152,8 @@ export default function LiftProgressScreen({ navigation }) {
       setMetricSeries(new Map());
       setBodyWeight(null);
       setStrengthLevels({});
+      setWeeklyLoad([]);
+      setWeeklyLoadSessionCount(0);
       setLoading(false);
       return true;
     }
@@ -162,6 +175,9 @@ export default function LiftProgressScreen({ navigation }) {
         (exercises || []).map(e => [e.id, e.exercise_type ?? e.exerciseType ?? 'weight_reps']),
       );
       setMetricSeries(buildExerciseMetricSeries(sets, typeById));
+      const exerciseTypeById = Object.fromEntries(typeById);
+      setWeeklyLoad(buildWeeklyLoadSeries(sets, { exerciseTypeById, weekBoundary: 'monday' }));
+      setWeeklyLoadSessionCount(new Set((sets || []).map(s => s.workoutId ?? s.workout_id)).size);
 
       if (bw?.weightKg) {
         // Bodyweight is canonical kg; estimated maxes come from logged gym
@@ -192,6 +208,8 @@ export default function LiftProgressScreen({ navigation }) {
       setMetricSeries(new Map());
       setBodyWeight(null);
       setStrengthLevels({});
+      setWeeklyLoad([]);
+      setWeeklyLoadSessionCount(0);
       setLoadError(true);
       return true;
     } finally {
@@ -203,6 +221,27 @@ export default function LiftProgressScreen({ navigation }) {
     setRefreshing(true);
     const completedCurrent = await loadData();
     if (completedCurrent) setRefreshing(false);
+  }
+
+  // Campaign 23 (§9): the standing share CTA moved off the Progress landing
+  // with the hero itself. Sharing weekly load is still available, one tap
+  // deep, from here.
+  function makeWeightLiftedCard() {
+    if (!weeklyLoad || weeklyLoad.length < 2) return;
+    const u = units === 'lbs' ? 'lbs' : 'kg';
+    const latest = weeklyLoad[weeklyLoad.length - 1]?.value || 0;
+    const avg = Math.round(weeklyLoad.reduce((sum, p) => sum + p.value, 0) / weeklyLoad.length);
+    navigation.navigate('ShareCard', {
+      milestoneData: {
+        eyebrow: 'Weight lifted',
+        title: 'Your weight lifted',
+        heroValue: Math.round(latest).toLocaleString('en-GB'),
+        heroUnit: `${u} lifted, this week`,
+        caption: `Averaging ${avg.toLocaleString('en-GB')} ${u} a week over the last ${weeklyLoad.length} weeks.`,
+        date: Date.now(),
+        stats: [],
+      },
+    });
   }
 
   function trendColor(deltaPct) {
@@ -266,6 +305,14 @@ export default function LiftProgressScreen({ navigation }) {
 
   const header = (
     <View>
+      {/* Campaign 23 (§20/§27): the demoted Training Load hero + 8-week
+          chart, relabelled "Weight lifted" (§6) and Monday-anchored. */}
+      {weeklyLoadSessionCount >= 3 && (
+        <View style={styles.weightLiftedSection}>
+          <SectionLabel>Training</SectionLabel>
+          <WeightLiftedHero series={weeklyLoad} units={units} onMakeCard={makeWeightLiftedCard} />
+        </View>
+      )}
       {rows.length > 0 && (
         <SearchBar
           style={styles.searchBar}
@@ -534,9 +581,88 @@ export default function LiftProgressScreen({ navigation }) {
   );
 }
 
+// Campaign 23 (§6/§20/§27): relocated from the Progress landing's A5 hero
+// (AnalyticsScreen.js), unchanged except relabelled "Weight lifted" (the
+// prior "Training load" headline claimed a construct this only computes as
+// tonnage) and Monday-anchored (buildWeeklyLoadSeries weekBoundary:
+// 'monday'). Scrub state lives here so a scrub re-renders this card only.
+function WeightLiftedHero({ series, units, onMakeCard }) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
+  const [chartW, setChartW] = useState(0);
+  const [scrubIdx, setScrubIdx] = useState(null);
+  const lastIdx = series.length - 1;
+  const bars = useMemo(
+    () => series.map((pt, i) => ({
+      value: pt.value,
+      color: i === lastIdx ? t.colors.primary : t.colors.primaryDim,
+    })),
+    [series, lastIdx, t],
+  );
+  if (series.length < 2) return null;
+  const activeIdx = scrubIdx != null && scrubIdx >= 0 && scrubIdx < series.length ? scrubIdx : lastIdx;
+  const active = series[activeIdx];
+  const weekLabel = active.weeksAgo === 0
+    ? 'This week'
+    : active.weeksAgo === 1 ? 'Last week' : `${active.weeksAgo} weeks ago`;
+  const unit = units === 'lbs' ? 'lbs' : 'kg';
+  return (
+    <Card accessibilityLabel={`Weight lifted. ${weekLabel}: ${formatNumber(active.value)} ${unit}.`}>
+      <Text style={[styles.heroEyebrow, live.heroEyebrow]}>Weight lifted</Text>
+      <View style={styles.heroValueRow}>
+        <Text style={[styles.heroValue, live.heroValue]}>{formatNumber(active.value)}</Text>
+        <Text style={[styles.heroUnit, live.heroUnit]}>{unit}</Text>
+      </View>
+      <Text style={[styles.heroSub, live.heroSub]}>{weekLabel}</Text>
+      <View
+        style={styles.heroChartSlot}
+        onLayout={e => setChartW(Math.round(e.nativeEvent.layout.width))}
+      >
+        {chartW > 0 && (
+          <VolyumeChart
+            variant="bar"
+            data={bars}
+            width={chartW}
+            height={64}
+            barGap={spacing.xs}
+            interactive
+            onScrubIndex={setScrubIdx}
+            accessibilityLabel={`Weekly weight lifted, last ${series.length} weeks. This week highlighted.`}
+          />
+        )}
+      </View>
+      <View style={styles.heroAxisRow}>
+        <Text style={[styles.heroAxisLabel, live.heroAxisLabel]}>{series.length - 1} weeks ago</Text>
+        <Text style={[styles.heroAxisLabel, live.heroAxisLabel]}>this week</Text>
+      </View>
+      <Button
+        variant="outline"
+        size="sm"
+        fullWidth={false}
+        title="Create share image"
+        onPress={onMakeCard}
+        accessibilityLabel="Create share image"
+        style={styles.heroCtaRow}
+      />
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   list: { padding: spacing.lg, paddingBottom: spacing.xxl },
+
+  // ── Weight lifted (Campaign 23, relocated from the Progress landing) ──
+  weightLiftedSection: { gap: spacing.md, marginBottom: spacing.lg },
+  heroEyebrow: { ...type.label, color: colors.textSecondary },
+  heroValueRow: { flexDirection: 'row', alignItems: 'baseline', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.xs },
+  heroValue: { ...type.num('display'), color: colors.textPrimary },
+  heroUnit: { ...type.title, color: colors.textSecondary },
+  heroSub: { ...type.num('caption'), color: colors.textMuted, marginTop: spacing.xxs },
+  heroChartSlot: { marginTop: spacing.md, minHeight: 64 },
+  heroAxisRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroAxisLabel: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xs },
+  heroCtaRow: { alignSelf: 'flex-end', marginTop: spacing.sm },
 
   searchBar: { marginBottom: spacing.md },
 
@@ -680,6 +806,11 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
+    heroEyebrow: { ...t.type.label, color: t.colors.textSecondary },
+    heroValue: { ...t.type.num('display'), color: t.colors.textPrimary },
+    heroUnit: { ...t.type.title, color: t.colors.textSecondary },
+    heroSub: { ...t.type.num('caption'), color: t.colors.textMuted },
+    heroAxisLabel: { ...t.type.captionTight, color: t.colors.textMuted },
     standingCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     standingHeadline: { borderBottomColor: t.colors.border },
     standingLabel: { color: t.colors.primary, fontSize: t.fontSize.xxxl },

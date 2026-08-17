@@ -24,6 +24,7 @@ import {
   DEFAULT_SPARK_DAYS,
   MAX_SPARK_DAYS,
 } from '../progressSeries';
+import { localWeekStartMs, localWeekEndMs } from '../dayKey';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 // A fixed clock: every test passes `now` explicitly so results never depend
@@ -96,6 +97,47 @@ describe('buildWeeklyLoadSeries', () => {
     ];
     const series = buildWeeklyLoadSeries(sets, { now: NOW });
     expect(series.every(pt => pt.value === 0)).toBe(true);
+  });
+});
+
+// Campaign 23 (§6/§28 IA-2): buildWeeklyLoadSeries gained a Monday-anchored
+// grammar so a screen that also shows a Monday-anchored surface (the volume
+// strip) never disagrees with itself about what "this week" means. These pin
+// the NEW option only; the pre-existing 'rolling' describe block above is
+// untouched (default behaviour is byte-identical).
+describe('buildWeeklyLoadSeries with weekBoundary: monday', () => {
+  test("the current bin is exactly [localWeekStartMs(now), localWeekEndMs(now))", () => {
+    // `now` sits at the exclusive end of the current week (minus 1ms) so
+    // BOTH edges of the bin can be exercised in one fixture without any set
+    // reading as "in the future" relative to `now` (buildWeeklyLoadSeries
+    // ignores sets after `now`, same as the rolling-week grammar above).
+    const weekEnd = localWeekEndMs(NOW);
+    const now = weekEnd - 1;
+    const weekStart = localWeekStartMs(now);
+    const sets = [
+      { createdAt: weekStart, weight: 100, actualReps: 5, workoutId: 'w1', setType: 'straight', exerciseId: 'e1' }, // inside, at the boundary
+      { createdAt: weekEnd - 1, weight: 50, actualReps: 5, workoutId: 'w1', setType: 'straight', exerciseId: 'e1' }, // inside, just before the exclusive end
+      { createdAt: weekEnd, weight: 999, actualReps: 5, workoutId: 'w2', setType: 'straight', exerciseId: 'e1' }, // next week (and future relative to now), must NOT count
+      { createdAt: weekStart - 1, weight: 999, actualReps: 5, workoutId: 'w3', setType: 'straight', exerciseId: 'e1' }, // previous week, must NOT count
+    ];
+    const series = buildWeeklyLoadSeries(sets, { now, weekBoundary: 'monday' });
+    const current = series[series.length - 1];
+    expect(current.weeksAgo).toBe(0);
+    expect(current.value).toBe(750); // 100*5 + 50*5, the two in-window sets only
+  });
+
+  test('deterministic and matches the standing volume-strip week rule', () => {
+    // Same fixed reference point localWeekStartMs itself uses elsewhere
+    // (useProgressData.js's loadVolumeSnapshot) -- this is the "one week
+    // definition" the fix exists to guarantee.
+    const a = buildWeeklyLoadSeries([], { now: NOW, weekBoundary: 'monday' });
+    const b = buildWeeklyLoadSeries([], { now: NOW, weekBoundary: 'monday' });
+    expect(a).toEqual(b);
+    expect(a).toHaveLength(DEFAULT_LOAD_WEEKS);
+  });
+
+  test('still respects the MAX_LOAD_WEEKS cap', () => {
+    expect(buildWeeklyLoadSeries([], { weeks: 500, now: NOW, weekBoundary: 'monday' })).toHaveLength(MAX_LOAD_WEEKS);
   });
 });
 

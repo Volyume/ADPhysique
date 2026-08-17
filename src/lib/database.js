@@ -7550,6 +7550,40 @@ export async function getLifetimeTonnage(userId) {
   return Math.round(row?.tonnage ?? 0);
 }
 
+/**
+ * Campaign 23 (§27 "Lifetime totals panel | REHOME to Recaps/YearOfLifts
+ * family"): the two lifetime figures the old Progress-landing panel showed
+ * alongside getLifetimeTonnage's own total weight lifted -- completed
+ * session count and total reps, same all-time window, same working-set
+ * exclusion rule as getLifetimeTonnage (non-warmup, positive weight/reps,
+ * distance/duration excluded) so the three figures always describe the
+ * same body of work.
+ */
+export async function getLifetimeWorkoutStats(userId) {
+  const d = await db();
+  const sessionsRow = await d.getFirstAsync(
+    `SELECT COUNT(*) AS sessions
+     FROM workouts w
+     WHERE w.user_id = ? AND w.is_completed = 1 AND w.started_at IS NOT NULL`,
+    [userId],
+  );
+  const repsRow = await d.getFirstAsync(
+    `SELECT COALESCE(SUM(ws.actual_reps), 0) AS reps
+     FROM workout_sets ws
+     JOIN workouts w ON ws.workout_id = w.id
+     LEFT JOIN exercises e ON e.id = ws.exercise_id
+     LEFT JOIN custom_exercises ce ON ce.id = ws.exercise_id AND ce.user_id = ws.user_id
+     WHERE ws.user_id = ? AND w.is_completed = 1
+       AND (ws.set_type IS NULL OR ws.set_type != 'warmup') AND ws.actual_reps > 0 AND ws.weight > 0
+       AND COALESCE(ce.exercise_type, e.exercise_type, 'weight_reps') NOT IN ('distance', 'duration')`,
+    [userId],
+  );
+  return {
+    sessions: Math.round(sessionsRow?.sessions ?? 0),
+    reps: Math.round(repsRow?.reps ?? 0),
+  };
+}
+
 export async function getYearOfLiftsData(userId, yearMs = null) {
   const d = await db();
   const now = Date.now();
