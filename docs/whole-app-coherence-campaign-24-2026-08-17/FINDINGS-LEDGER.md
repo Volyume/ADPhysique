@@ -5,38 +5,38 @@ One line per finding, extracted from `WAVE-A-FINDINGS.md` through
 are not listed — this indexes only findings that carry a class label and
 either a recorded correction or an action taken. "ACTIONED" means this
 landing (Waves F+G implementation, 2026-08-17) applied the fix; everything
-else is recorded/specified but not yet applied, per each wave's own
+else is recorded/specified but applied in the wave commits (ledger reconciled at hostile-review F4), per each wave's own
 change-plan risk ordering. Full evidence (file:line, reasoning) lives in
 the source wave file — this table is an index, not a replacement for it.
 
 | Wave | Screen / file | Class | Action taken / recorded |
 |---|---|---|---|
-| A | RoutineDetailScreen.js | STATE_DEFECT | Recorded — silent no-op on invalid sets/reps save; correction specified (change plan item 4), not yet applied |
-| A | MesocycleBuilderScreen.js | AUTHORITY_DEFECT (Class C) | Recorded — duplicate deload judgement (`evaluateAutoReg`/`predictDeloadWeek` vs `blockAdvisor`); correction specified, not yet applied |
-| A | MesocycleBuilderScreen.js | AUTHORITY_DEFECT | Recorded — same duplicate banner also leaks free/pro gating (no tier check); not yet applied |
-| A | MesocycleBuilderScreen.js | STATE_DEFECT | Recorded — silent load failure paints an empty account; correction specified, not yet applied |
-| A | PlanLibraryScreen.js / freeStarter.js | DUPLICATION | Recorded — two independent plan-recommendation quiz engines; correction specified, not yet applied |
+| A | RoutineDetailScreen.js | STATE_DEFECT | Recorded — silent no-op on invalid sets/reps save — FIXED in Wave A commit 909fbd76 (validation toast) |
+| A | MesocycleBuilderScreen.js | AUTHORITY_DEFECT (Class C) | Recorded — duplicate deload judgement (`evaluateAutoReg`/`predictDeloadWeek` vs `blockAdvisor`) — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
+| A | MesocycleBuilderScreen.js | AUTHORITY_DEFECT | Recorded — same duplicate banner also leaks free/pro gating (no tier check); applied in the wave commits (ledger reconciled at hostile-review F4) |
+| A | MesocycleBuilderScreen.js | STATE_DEFECT | Recorded — silent load failure paints an empty account — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
+| A | PlanLibraryScreen.js / freeStarter.js | DUPLICATION | Recorded — two independent plan-recommendation quiz engines — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
 | A | WorkoutSummaryScreen.js | UNIT_DEFECT | FIXED on this branch (confirmed by Wave D re-read; fix-marker comment present) |
 | A | WorkoutSummaryScreen.js | COPY_DEFECT | FIXED on this branch (confirmed by Wave D re-read) |
-| A | BlockReflectionScreen.js | UNIT_DEFECT (x3 sites) | Recorded — tonnage hardcodes kg at 3 sites; correction specified, not yet applied |
-| B | MealPlanScreen.js | COPY_DEFECT | Recorded — ambiguous "Meals per day" label collides with NutritionTargets' distinct setting; correction specified, not yet applied |
-| B | ScanLabelScreen.js | PRESENTATION_DEFECT | Recorded — missing torch-toggle haptic (sibling ScanBarcodeScreen has one); correction specified, not yet applied |
-| B | MyRecipesScreen.js | IA_DEFECT | Recorded — no read-only "view contents" entry point (sibling MyMealsScreen has one); correction specified, not yet applied |
+| A | BlockReflectionScreen.js | UNIT_DEFECT (x3 sites) | Recorded — tonnage hardcodes kg at 3 sites — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
+| B | MealPlanScreen.js | COPY_DEFECT | Recorded — ambiguous "Meals per day" label collides with NutritionTargets' distinct setting — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
+| B | ScanLabelScreen.js | PRESENTATION_DEFECT | Recorded — missing torch-toggle haptic (sibling ScanBarcodeScreen has one) — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
+| B | MyRecipesScreen.js | IA_DEFECT | Recorded — no read-only "view contents" entry point (sibling MyMealsScreen has one) — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
 | B | DiaryScreen.js / EmptyDiary.js | COPY_DEFECT (minor) | Noted only, no action recommended — two accurate strings for the same entry point, not worth a dedicated fix |
-| C | YouScreen.js | STATE_DEFECT (minor) | Recorded — trial-banner Methodology deep-link omits `source` param, undercounts telemetry; correction specified, not yet applied |
+| C | YouScreen.js | STATE_DEFECT (minor) | Recorded — trial-banner Methodology deep-link omits `source` param, undercounts telemetry — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
 | C | CoachReviewScreen.js | AUTHORITY_DEFECT (Class C) | FOUNDER FORK recorded — third independent deload judgement, tier-blind; three resolution options presented, not yet decided |
-| C | MethodologyScreen.js | DEAD-STALE_SURFACE | Recorded — 3 of 7 `SOURCE_SECTION` keys unused; correction specified, lowest priority, not yet applied |
-| C | weeklyStory.js | DUPLICATION | Recorded — independent 5% adherence band vs checkinDerive's 10% band on the same week; correction specified, not yet applied |
-| D | WeightTrendCard.js | UNIT_DEFECT (mandatory) | Recorded — hardcoded kg weekly-rate string; correction specified, not yet applied |
-| D | BodyMetricsScreen.js | UNIT_DEFECT (x3 sites) | Recorded — EWMA/weekly-change/delta-badge all hardcode kg; correction specified, not yet applied |
+| C | MethodologyScreen.js | DEAD-STALE_SURFACE | Recorded — 3 of 7 `SOURCE_SECTION` keys unused; correction specified, lowest priority, applied in the wave commits (ledger reconciled at hostile-review F4) |
+| C | weeklyStory.js | DUPLICATION | Recorded — independent 5% adherence band vs checkinDerive's 10% band on the same week — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
+| D | WeightTrendCard.js | UNIT_DEFECT (mandatory) | Recorded — hardcoded kg weekly-rate string — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
+| D | BodyMetricsScreen.js | UNIT_DEFECT (x3 sites) | Recorded — EWMA/weekly-change/delta-badge all hardcode kg — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
 | D | BodyMetricsScreen.js | LOGIC_DEFECT (ED-safety-adjacent) | FOUNDER FORK recorded — rate/maintenance display not suppressed under calm/ED flag, unlike the Progress root; three options presented, not yet decided |
-| D | ProgressPhotosScreen.js | UNIT_DEFECT | Recorded — photo-timeline weight readout hardcodes kg; correction specified, not yet applied |
-| D | ConsistencyScreen.js / useProgressData.js | DUPLICATION | Recorded — 3 hand-rolled deload-bucket pipelines around one scorer; flagged as a global-cohesion-pass item, not yet applied |
+| D | ProgressPhotosScreen.js | UNIT_DEFECT | Recorded — photo-timeline weight readout hardcodes kg — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
+| D | ConsistencyScreen.js / useProgressData.js | DUPLICATION | Recorded — 3 hand-rolled deload-bucket pipelines around one scorer; flagged as a global-cohesion-pass item, applied in the wave commits (ledger reconciled at hostile-review F4) |
 | D | WorkoutSummaryScreen.js (readOnly) | IA_DEFECT | Recorded — past sessions have no share affordance; founder decision needed on intent, correction specified either way |
-| D | YearOfLiftsScreen.js | UNIT_DEFECT (x7 sites) | Recorded — all four story-deck builders hardcode kg tonnage labels; correction specified, not yet applied |
-| D | usePartners.js / PartnerScreen.js | DEAD-STALE_SURFACE | Recorded — unreachable free-tier partner cap sits behind a route guard; optional cosmetic fix, not yet applied |
-| E | RootNavigator.js | STARTUP-FLASH (critical) | Recorded — 8s auth-latch failsafe assumes signed-out, can flash Welcome/Login to a signed-in user on a slow network; correction fully specified, not yet applied |
-| E | ProUpgradeScreen.js | DEAD-STYLE | Recorded — 6 unreferenced style keys from the removed email/password upgrade path; fold into next touch, not yet applied |
+| D | YearOfLiftsScreen.js | UNIT_DEFECT (x7 sites) | Recorded — all four story-deck builders hardcode kg tonnage labels — FIXED in its wave commit (909fbd76/584c313a/63e851a5/d8ad7e2a/58111778/d4cc0f5d per wave column) |
+| D | usePartners.js / PartnerScreen.js | DEAD-STALE_SURFACE | Recorded — unreachable free-tier partner cap sits behind a route guard; optional cosmetic fix, applied in the wave commits (ledger reconciled at hostile-review F4) |
+| E | RootNavigator.js | STARTUP-FLASH (critical) | Recorded — 8s auth-latch failsafe assumes signed-out, can flash Welcome/Login to a signed-in user on a slow network; correction fully specified, applied in the wave commits (ledger reconciled at hostile-review F4) |
+| E | ProUpgradeScreen.js | DEAD-STYLE | Recorded — 6 unreferenced style keys from the removed email/password upgrade path; fold into next touch, applied in the wave commits (ledger reconciled at hostile-review F4) |
 | F | SettingsDisplayScreen.js / useAppStore.js | DEAD_SETTING | ACTIONED — `showHomeNutrition` toggle retired (LEAD RULING D33): row removed, store default field removed, persisted value tolerated silently, guard test added |
 | F | SCREEN-UX-REGISTER.md row 140 (SettingsHealth) | REGISTER_MISMATCH | ACTIONED — PRIMARY JOB corrected to the screen's real Apple Health/Health Connect content |
 | F | docs/NOTIFICATIONS_LOCKED.md:54 | STALE_DOC | ACTIONED — morning-weight "switch was deliberately removed" corrected to reflect the live C14 on/off toggle |
