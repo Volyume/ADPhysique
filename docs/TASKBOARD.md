@@ -2306,3 +2306,15 @@ and P0/P1 recommendations against the ACTUAL tree (the report's
 docs/complaint-research-triage-2026-08-17/TRIAGE.md. No production
 code without founder answers. RECOVERY PATH: agents read-only; on
 death relaunch from this entry. C27 2b/2c/2d/2e remain PAUSED (D106-4).
+
+## CAMPAIGN 30 (2026-08-17) — share-card elite revamp. PHASE 1 IN FLIGHT (docs-only).
+
+Founder order: complete revamp - cards "don't work well at all, look
+dull, data doesn't fit, not attractive or share worthy"; target = as
+good and appealing as competitors. Phase 1 now: two read-only sonnet
+agents (share-system inventory; competitor share-card research), lead
+design spec to docs/share-cards-campaign-30-2026-08-17/. Build next
+session with the C27 resume + D107-2 specs. GDPR share-card law binding
+throughout (no name/bodyweight/measurements/notes; Pro before/after
+exception only). RECOVERY PATH: agents read-only; relaunch from this
+entry on death.
