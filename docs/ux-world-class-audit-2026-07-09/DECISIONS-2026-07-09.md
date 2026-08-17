@@ -2967,3 +2967,27 @@ export adopts no-export-path-under-suppression. Build queued for the
 next session; three founder taste choices listed in the spec. Also
 surfaced: documentation debt - CLAUDE.md Section 2 does not name the
 weekly weight-hero bodyweight exception (greatWeek.js:13-19).
+
+## D109 — build-batch rulings (lead, D33, 2026-08-17)
+
+Founder build order: share cards, then injury constraints, then load
+semantics; "use appropriate low level agents as much as possible as
+long as quality remains right." Rulings so the build proceeds from
+settled law:
+- **D109-1 (share taste defaults, per the spec's recommendations,
+  reversible on the founder device walk):** story-first default
+  format; tagline band dropped on every card; NO new typeface (the
+  font-asset decision stays founder-gated) - hero contrast from
+  weight/scale/glow only.
+- **D109-2 (constraints fail direction):** on a constraints read
+  error, generation/suggestion proceeds and the affected surfaces
+  show a visible constraints-unavailable notice - never fabricate a
+  constraint, never block training, never silently ignore the state.
+- **D109-3 (constraints list home):** active movement constraints are
+  listed from a "Avoided movements" row in the Plans screen's Plan
+  tools section, opening a simple list with per-row removal; set/clear
+  stays on the exercise long-press.
+- **D109-4 (agent plan):** sonnet builds each spec lane (renderer,
+  injury engine, screen UX, load semantics) with strict file lanes;
+  the lead hands-on reviews every diff (engine hunks line-by-line)
+  and rules all landings; landings in the founder's stated order.

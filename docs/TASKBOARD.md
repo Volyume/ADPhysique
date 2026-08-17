@@ -2318,3 +2318,18 @@ session with the C27 resume + D107-2 specs. GDPR share-card law binding
 throughout (no name/bodyweight/measurements/notes; Pro before/after
 exception only). RECOVERY PATH: agents read-only; relaunch from this
 entry on death.
+
+## CAMPAIGN 30/31/32 BUILD BATCH (2026-08-17) — share cards, injury constraints, load semantics. IN FLIGHT.
+
+Founder build order received; rulings D109-1..4. Pair 1: sonnet share
+RENDERER agent (drawShareCard.js + harness + renderer tests, per
+ELITE-SHARE-SPEC B1 + tone-scrim renderer half of B2) and sonnet
+INJURY agent (INJURY-CONSTRAINTS-SPEC in full; file lane: exercise/
+intent.js, database.js migration + optional migrate_137 file NEVER
+applied, poolGenerator, planAutoGen, swapEngine, ActiveWorkoutScreen
+swap/notice, RoutineDetailScreen, PlansScreen Plan-tools row per
+D109-3, tests). No file overlap between lanes. Landings in order with
+precise staging (C25/C26 precedent). RECOVERY PATH: agents never
+commit; on death, lead-review the working tree against the owning spec
+and land or relaunch; share files and injury files are disjoint so a
+partial tree stays separable.
