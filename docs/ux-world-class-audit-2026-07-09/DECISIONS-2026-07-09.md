@@ -2891,3 +2891,21 @@ founder approval of the Campaign 27 proposal's choice points, built.
 Any capping change must amend the Settings copy that promises the
 phone's text size is respected (truth law). The specific amendment
 awaits the founder's answers to PROPOSAL.md section 4.
+
+## D104 — Campaign 27 proposal approved in full (founder, 2026-08-17)
+
+The founder answered all three PROPOSAL.md section 4 choice points:
+- **D104-1:** EP-14 amendment APPROVED as proposed - per-surface
+  font-scale caps from one central theme table (reading 2.0x, dense
+  chrome 1.3x, fixed-geometry numerals 1.15x), Settings text-size
+  promise re-worded honestly in the same change, and the
+  accessibilityDesign guard rewritten so caps may come only from the
+  central table (closing the WorkoutSummaryScreen guard-evasion hole).
+- **D104-2:** narrow-device type bucket APPROVED - below 390dp window
+  width the display sizes step down one notch (40>36, 32>29, 24>22;
+  body stays 16) and screen padding drops one step, inside
+  resolveTheme/useTheme.
+- **D104-3:** phasing APPROVED as sequenced: 2a wrap-first sweep, 2b
+  cap table, 2c narrow bucket, 2d Maestro screenshot net (2d may run
+  parallel). Each phase lands through the normal gates with its own
+  device checklist.
