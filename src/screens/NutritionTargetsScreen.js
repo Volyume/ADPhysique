@@ -12,7 +12,6 @@ import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, 
 import useTheme from '../hooks/useTheme';
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
-import InfoTooltip from '../components/InfoTooltip';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import Chip from '../components/Chip';
@@ -49,6 +48,70 @@ import AgeYearsField from '../components/AgeYearsField';
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = '@volyume_nutrition_targets';
+
+// Founder device order 2026-08-17: the derivation explainers used to live in
+// InfoTooltip bubbles - static, overflowing the screen, raw text. They are
+// now structured content presented in ONE shared bottom sheet (scrollable,
+// designed rows), opened from a proper entry row / quiet info buttons. Copy
+// is carried over verbatim, split into sections.
+const EXPLAINERS = {
+  calories: {
+    title: 'How these numbers are worked out',
+    sections: [
+      { heading: 'Calorie baseline', lines: [
+        'A standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a body-fat estimate or measured figure, we can account for your likely lean mass with lower or higher confidence depending on the source.',
+      ] },
+      { heading: 'Maintenance', lines: [
+        'The formula baseline adjusted by validated food and weight history when enough real logging exists. Without that evidence, the formula remains the honest starting point.',
+      ] },
+      { heading: 'Target', lines: [
+        'Your maintenance adjusted for your goal (for example around +10% for slow muscle building, -13% for steady fat loss). Surplus amounts are scaled to your training experience.',
+      ] },
+      { heading: 'Protein', lines: [
+        'Varies by your chosen approach (1.2 to 3.3 g/kg). Rates rise in deeper deficits to protect muscle. Select your approach in the Protein Target section.',
+      ] },
+      { heading: 'Fat', lines: [
+        'Set by phase (0.7 to 1.0 g/kg bodyweight). Surplus phases use a lower fat target so carbs stay high for training performance. Deficit phases hold fat constant while carbs reduce first. Minimum 0.5 g/kg (never below 40 g) for hormonal health.',
+      ] },
+      { heading: 'Carbs', lines: [
+        'All remaining calories after protein and fat are set.',
+      ] },
+      { heading: 'A note on estimates', lines: [
+        'These are estimates. Adjust based on real-world progress over 2 to 4 weeks.',
+        'The estimated range under your daily target is a plus or minus 10% range showing normal uncertainty in the estimate. Aim for the single target, not the edges of the range.',
+      ] },
+    ],
+  },
+  proteinApproaches: {
+    title: 'Protein target guidelines',
+    sections: [
+      { heading: '1.2 to 1.5 g/kg', lines: [
+        'General athletic guidelines. Adequate for muscle growth and easy to hit day-to-day.',
+      ] },
+      { heading: '1.6 to 2.2 g/kg', lines: [
+        'The range most commonly recommended for building muscle. Research suggests gains plateau around 1.62 g/kg bodyweight; the upper end gives a comfortable buffer without being excessive.',
+      ] },
+      { heading: '2.2 to 3.3 g/kg', lines: [
+        'The upper end, used by serious athletes and people cutting aggressively. Effective at preserving muscle, but harder to sustain day-to-day.',
+      ] },
+      { heading: 'Choosing a level', lines: [
+        'There is no single right answer. The level you can consistently hit every day will produce better results than an aggressive target you miss half the time.',
+        'The approaches below are the specific targets Volyume uses; they sit towards the higher end of these ranges, where muscle retention is strongest.',
+      ] },
+    ],
+  },
+  perMeal: {
+    title: 'Splitting protein across the day',
+    sections: [
+      { heading: 'The per-meal window', lines: [
+        'The effective window per meal is roughly 0.4 to 0.55 g of protein per kilogram of bodyweight. Below that, the meal does not give you the full muscle-building benefit. Above it, the extra protein mostly goes to waste at that meal.',
+      ] },
+      { heading: 'How Volyume splits it', lines: [
+        'Volyume picks the smallest meal count that keeps every meal at or below the ceiling, so your daily target is hit without overshooting per-meal. Your daily total stays exactly the same. This is purely how to split it.',
+      ] },
+    ],
+  },
+};
 
 const ACTIVITY_OPTIONS = [
   { key: 'sedentary',    label: 'Sedentary' },
@@ -240,6 +303,9 @@ export default function NutritionTargetsScreen({ navigation }) {
   const toast = useToast();
   // Campaign 17A job 5: the dry-run plan reconciliation awaiting the user's yes.
   const [planReview, setPlanReview] = useState(null);
+  // Founder device order 2026-08-17: which derivation explainer (from the
+  // EXPLAINERS table) the shared bottom sheet is showing, or null.
+  const [explainer, setExplainer] = useState(null);
   const [planUpdating, setPlanUpdating] = useState(false);
   // CP-10 batch E (2026-07-10): live theme (src/hooks/useTheme.js). This
   // screen renders its rows via plain .map() inside a ScrollView (no
@@ -705,26 +771,24 @@ export default function NutritionTargetsScreen({ navigation }) {
           // reachable numeric-entry surface.
           keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}
         >
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' }}>
-            <InfoTooltip
-              size={14}
-              text={
-                'How calories are calculated:\n' +
-                '• Calorie baseline: a standard formula using your sex, age, height, and weight to estimate how many calories you burn at rest. If you enter a body-fat estimate or measured figure, we can account for your likely lean mass with lower or higher confidence depending on the source.\n' +
-                '• Maintenance: the formula baseline adjusted by validated food and weight history when enough real logging exists. Without that evidence, the formula remains the honest starting point.\n' +
-                '• Target: your maintenance adjusted for your goal (e.g. around +10% for slow muscle building, -13% for steady fat loss). Surplus amounts are scaled to your training experience.\n\n' +
-                'How your targets are calculated:\n' +
-                '• Protein: varies by your chosen approach (1.2 to 3.3 g/kg). Rates rise in deeper deficits to protect muscle. Select your approach in the Protein Target section.\n' +
-                '• Fat: set by phase (0.7 to 1.0 g/kg bodyweight). Surplus phases use a lower fat target so carbs stay high for training performance. Deficit phases hold fat constant while carbs reduce first. Minimum 0.5 g/kg (never below 40 g) for hormonal health.\n' +
-                '• Carbs: all remaining calories after protein and fat are set.\n\n' +
-                'These are estimates. Adjust based on real-world progress over 2 to 4 weeks.\n\n' +
-                'The estimated range under your daily target is a plus or minus 10% range showing normal uncertainty in the estimate. Aim for the single target, not the edges of the range.'
-              }
-            />
-          </View>
           <Text style={[styles.pageSubtitle, live.pageSubtitle]}>
             Calculate your personalised daily calorie and protein targets.
           </Text>
+
+          {/* Founder device order 2026-08-17: the derivation tooltip (a
+              lone glyph hiding an essay that overflowed the screen) is
+              replaced by a proper entry row opening the shared explainer
+              sheet below. */}
+          <TouchableOpacity
+            style={[styles.explainerRow, live.explainerRow]}
+            onPress={() => { haptics.selection(); setExplainer(EXPLAINERS.calories); }}
+            accessibilityRole="button"
+            accessibilityLabel="How these numbers are worked out"
+          >
+            <Ionicons name="calculator-outline" size={16} color={t.colors.textSecondary} />
+            <Text style={[styles.explainerRowText, live.explainerRowText]}>How these numbers are worked out</Text>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </TouchableOpacity>
 
           {/* Education entry point, surfaces a 5-min nutrition primer for
               users new to tracking. Doesn't change targets, just teaches. */}
@@ -1001,14 +1065,14 @@ export default function NutritionTargetsScreen({ navigation }) {
           <SectionHeading title="Protein target" />
 
           <View style={styles.approachNote}>
-            <InfoTooltip size={12} text={
-              "Different guidelines recommend different protein targets:\n\n" +
-              "• 1.2 to 1.5 g/kg: general athletic guidelines. Adequate for muscle growth and easy to hit day-to-day.\n\n" +
-              "• 1.6 to 2.2 g/kg: the range most commonly recommended for building muscle. Research suggests gains plateau around 1.62 g/kg bodyweight; the upper end gives a comfortable buffer without being excessive.\n\n" +
-              "• 2.2 to 3.3 g/kg: the upper end, used by serious athletes and people cutting aggressively. Effective at preserving muscle, but harder to sustain day-to-day.\n\n" +
-              "There is no single right answer. The level you can consistently hit every day will produce better results than an aggressive target you miss half the time.\n\n" +
-              "The approaches below are the specific targets Volyume uses; they sit towards the higher end of these ranges, where muscle retention is strongest."
-            } />
+            <TouchableOpacity
+              onPress={() => { haptics.selection(); setExplainer(EXPLAINERS.proteinApproaches); }}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              accessibilityRole="button"
+              accessibilityLabel="About protein target guidelines"
+            >
+              <Ionicons name="information-circle-outline" size={16} color={t.colors.textSecondary} />
+            </TouchableOpacity>
             <Text style={[styles.approachNoteText, live.approachNoteText]}>Different guidelines use different targets. Pick the level you can consistently sustain.</Text>
           </View>
 
@@ -1232,14 +1296,14 @@ export default function NutritionTargetsScreen({ navigation }) {
                   <Card padding="md" style={styles.perMealCard}>
                     <View style={styles.perMealHeader}>
                       <Text style={[styles.perMealHeading, live.perMealHeading]}>PER MEAL</Text>
-                      <InfoTooltip
-                        size={12}
-                        text={
-                          'How to split your daily protein across the day.\n\n' +
-                          'The effective window per meal is roughly 0.4 to 0.55 g of protein per kilogram of bodyweight. Below that, the meal does not give you the full muscle-building benefit. Above it, the extra protein mostly goes to waste at that meal.\n\n' +
-                          'Volyume picks the smallest meal count that keeps every meal at or below the ceiling, so your daily target is hit without overshooting per-meal. Your daily total stays exactly the same. This is purely how to split it.'
-                        }
-                      />
+                      <TouchableOpacity
+                        onPress={() => { haptics.selection(); setExplainer(EXPLAINERS.perMeal); }}
+                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                        accessibilityRole="button"
+                        accessibilityLabel="About splitting protein across the day"
+                      >
+                        <Ionicons name="information-circle-outline" size={14} color={t.colors.textSecondary} />
+                      </TouchableOpacity>
                     </View>
 
                     <View style={styles.perMealCenter}>
@@ -1733,6 +1797,30 @@ export default function NutritionTargetsScreen({ navigation }) {
           </View>
         ) : null}
       </BottomSheet>
+
+      {/* Founder device order 2026-08-17: the shared explainer sheet
+          replacing the three overflowing InfoTooltips - scrollable,
+          designed section rows, fits every screen. */}
+      <BottomSheet
+        visible={!!explainer}
+        onClose={() => setExplainer(null)}
+        scroll
+        accessibilityLabel={explainer?.title ?? 'Explanation'}
+      >
+        {explainer ? (
+          <View style={styles.explainerSheet}>
+            <Text style={[styles.explainerTitle, live.explainerTitle]}>{explainer.title}</Text>
+            {explainer.sections.map((section) => (
+              <View key={section.heading} style={styles.explainerSection}>
+                <Text style={[styles.explainerHeading, live.explainerHeading]}>{section.heading}</Text>
+                {section.lines.map((line, i) => (
+                  <Text key={`${section.heading}-${i}`} style={[styles.explainerBody, live.explainerBody]}>{line}</Text>
+                ))}
+              </View>
+            ))}
+          </View>
+        ) : null}
+      </BottomSheet>
     </SafeAreaView>
   );
 }
@@ -1744,6 +1832,21 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  // Founder device order 2026-08-17: the explainer entry row + shared sheet.
+  explainerRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
+    backgroundColor: colors.surface,
+    paddingHorizontal: spacing.md, minHeight: 44,
+  },
+  explainerRowText: { flex: 1, minWidth: 0, ...type.bodySm, color: colors.textPrimary },
+  explainerSheet: { gap: spacing.md },
+  explainerTitle: {
+    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary,
+  },
+  explainerSection: { gap: spacing.xxs },
+  explainerHeading: { ...type.overline, color: colors.textMuted },
+  explainerBody: { ...type.bodySm, color: colors.textSecondary },
   // Campaign 17A job 5: the target-change receipt sheet.
   planReviewSheet: { gap: spacing.sm },
   planReviewTitle: {
@@ -2497,6 +2600,11 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     planReviewTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     planReviewLine: { ...t.type.body, color: t.colors.textSecondary },
+    explainerRow: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    explainerRowText: { ...t.type.bodySm, color: t.colors.textPrimary },
+    explainerTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    explainerHeading: { ...t.type.overline, color: t.colors.textMuted },
+    explainerBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     eduCard: { borderLeftColor: t.colors.border },
     fastTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
     fastSubtitle: { ...t.type.bodySm, color: t.colors.textSecondary },
