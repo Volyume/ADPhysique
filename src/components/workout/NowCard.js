@@ -7,10 +7,12 @@
  *   Line 1  "Set 2 of 3 · Working · 8-12 reps" - ONE tappable line, the
  *           set-type picker's only entry point (volyume-set-type-btn).
  *   Line 2  at most ONE context line, priority-ordered by the orchestrator
- *           (group-focus flash > warm-up > coach note). The coach note is
- *           plain, CLOSABLE info - an info glyph, the sentence, and a
- *           dismiss X. It never navigates anywhere (the old chevron opened
- *           the exercise form guide; founder-killed).
+ *           (group-focus flash > warm-up). The coach-note kind is RETIRED
+ *           from the orchestrator (founder device order 2026-08-17: the
+ *           prescription is the intelligence; explanations are on-demand
+ *           in the adjustment/readiness sheets, never standing in the
+ *           card); this component keeps the generic dismiss support for
+ *           any future closable kind.
  *   Prefill one compact "Last session: 80kg x 8 - Use" row when history exists;
  *           first-time sessions get a quiet non-tappable target line.
  *   Inputs  the proven SetEntry stepper block, untouched.

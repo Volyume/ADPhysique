@@ -65,12 +65,18 @@ describe('R2-2 header: X + Finish share one chrome family', () => {
     expect(b).toContain('minHeight: workoutLoggerSize.headerButtonMin');
   });
 
-  test('the "..." options button shares the same small-surface radius.md', () => {
+  test('the "..." options button is chromeless: full 44dp target, no container at rest', () => {
+    // RE-PINNED (founder device order 2026-08-17): the rounded-square
+    // container came OFF the exercise-header overflow - it made the
+    // top-right action look almost as important as the exercise name. The
+    // X and Finish keep their contained chrome (pinned above); the dots
+    // keep the full 44dp target with nothing drawn at rest.
     const b = styleBlock(ACTIVE, 'overflowBtn');
     expect(b).toBeTruthy();
-    expect(b).toContain('borderRadius: radius.md');
-    // radius.sm (the old odd-one-out) is gone from this control
-    expect(b).not.toContain('radius.sm');
+    expect(b).toContain('width: workoutLoggerSize.overflowButton');
+    expect(b).toContain('height: workoutLoggerSize.overflowButton');
+    expect(b).not.toContain('backgroundColor');
+    expect(b).not.toContain('border');
   });
 });
 

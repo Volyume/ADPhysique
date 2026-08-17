@@ -168,13 +168,18 @@ describe('buildReadinessSummary', () => {
   // different mental models of the same plan." Tone and priority order are
   // unchanged; only Priority 5's line lost its counter.
   test('default block-phase read carries no counter of its own', () => {
+    // RE-PINNED AGAIN (founder device order 2026-08-17): "Stop N short of
+    // failure" was an effort instruction with no function on Today and
+    // nothing to do with the block details the chip opens. The default is
+    // the block fact for every input now; the week's shape (including its
+    // effort target) stays in the block-shape sheet.
     const result = buildReadinessSummary({
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(result).toEqual({ tone: 'go', line: 'Stop 2 short of failure.' });
+    expect(result).toEqual({ tone: 'go', line: 'On track for this block.' });
   });
 
   test('default block-phase read tolerates a missing rir target', () => {

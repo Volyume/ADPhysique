@@ -444,7 +444,10 @@ describe('HOME: zero history has one clear next action and claims no history (C5
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(summary.line).toBe('Stop 3 short of failure.');
+    // RE-PINNED AGAIN (founder device order 2026-08-17): the default line
+    // dropped the "Stop N short of failure" effort wording for the block
+    // fact - still counter-free, which is this test's guarantee.
+    expect(summary.line).toBe('On track for this block.');
     expect(summary.line).not.toMatch(/\d+ of \d+/);
   });
 
@@ -1237,16 +1240,16 @@ describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, 
 });
 
 describe('LOGGER: the first session states its effort target and its own words (C5-P13-*, C5-P14-02, D96)', () => {
-  test('the session header carries the block\'s effort target (C5-P13-01)', () => {
-    const src = read('screens/ActiveWorkoutScreen.js');
-    // Derived from the block row Home already reads, in Home's own wording,
-    // so the logger can never state an effort the block does not prescribe.
-    expect(src).toContain('setWeekRirTarget(currentWeek.rirTarget ?? null)');
-    expect(src).toContain('`This week: stop ${weekRirTarget} short of failure`');
-    expect(src).toContain('<InfoTooltip text={GLOSSARY.rir} size={13} />');
-    // Suppressed in a recovery week, where the Recovery banner already says
-    // the week is deliberately lighter.
-    expect(src).toContain('{weekRirTarget != null && !isDeloadWeek ? (');
+  test('the session header carries NO standing effort line (C5-P13-01 reversed by founder device order 2026-08-17)', () => {
+    // C5-P13-01 added "This week: stop N short of failure" to the session
+    // header; the founder's device verdict removed it with the rest of the
+    // standing logger explanations - the prescription is the intelligence.
+    // Comments stripped: the retirement notes may cite the old wording.
+    const src = read('screens/ActiveWorkoutScreen.js')
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(src).not.toContain('short of failure');
+    expect(src).not.toContain('weekRirTarget');
+    expect(src).not.toContain('<InfoTooltip');
   });
 
   test('the set/rep cue survives until it has been used once (C5-P13-03)', () => {

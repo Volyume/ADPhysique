@@ -87,7 +87,6 @@ import {
 } from '../lib/unilateral';
 import { FORM_TIPS } from '../lib/formTips';
 import { GLOSSARY } from '../lib/coachGlossary';
-import InfoTooltip from '../components/InfoTooltip';
 import { applyTimeCrunch } from '../lib/mesocycle';
 import { getTimeCrunchMessage, getStarterSessionMessage } from '../lib/whyThisTemplates';
 import {
@@ -113,35 +112,19 @@ const DEFAULT_SET = { weight: '', reps: 8, setType: 'straight', notes: '', rir: 
 // and the snake_case rows getAllCompletedSetsForExercise returns.
 const isWorkingSetRow = (s) => (s?.setType ?? s?.set_type ?? 'straight') !== 'warmup';
 
-// Campaign 20 Phase 2, Stage 11 (NowCard presentation, Founder Ruling 1):
-// the plain-English line for the resolver's provenance code, replacing the
-// retired stalledAdvice/targetReason coach-line branch for ORDINARY
-// prescriptions. SENIOR_RECOVERY_HOLD and INSUFFICIENT_EVIDENCE deliberately
-// have no entry here (design §17: deload/block-finished/layoff keep their
-// existing recovery copy paths and must not be duplicated; insufficient
-// evidence stays quiet) - provenanceLineFor returns null for both, and for
-// any code with no mapped copy. British English, no em dashes, calm; copy
-// bank is the wiring brief's canonical wording (a tighter equivalent of
-// design doc §17's illustrative copy).
-const PROVENANCE_COPY = {
-  [PROVENANCE.MATCH_LOAD_ADD_REP]: (p) => `Same weight. Aim for ${p.repsTarget}.`,
-  [PROVENANCE.LOAD_ADVANCE_RANGE_TOPPED]: () => 'Range topped last time. Next step up.',
-  [PROVENANCE.HOLD_BUILDING_RANGE]: (p) => `Same load. Build towards ${p.repsBand.max}.`,
-  [PROVENANCE.HOLD_EFFORT_UNKNOWN]: () => 'Range topped. Add weight when you are ready.',
-  [PROVENANCE.HOLD_EFFORT_VERY_HARD]: () => 'Topped the range, but that session was hard. Keep this load until it feels smoother.',
-  [PROVENANCE.LOAD_DROP_CONSECUTIVE_MISS]: () => 'Load dropped after two short sessions. Reset and rebuild.',
-  [PROVENANCE.CURRENT_SESSION_STRONGER]: () => 'Strong today. Stay here for this one.',
-  [PROVENANCE.CURRENT_SESSION_FATIGUE_ADJUST]: () => 'Down a little today. Steady here.',
-  [PROVENANCE.STABLE_BACKOFF_PATTERN]: () => 'You usually back this set off slightly.',
-  [PROVENANCE.USER_CHOICE_RESPECTED]: () => 'Working from the weight you chose.',
-  [PROVENANCE.FIRST_TIME_BAND]: (p) => `First time here. Use a load you can control for ${p.repsBand.min} to ${p.repsBand.max} reps.`,
-};
-
-function provenanceLineFor(prescription) {
-  if (!prescription) return null;
-  const fn = PROVENANCE_COPY[prescription.provenance];
-  return fn ? fn(prescription) : null;
-}
+// Founder device order 2026-08-17: the in-card coach line is RETIRED. The
+// Campaign 20 Stage 11 provenance copy bank (PROVENANCE_COPY /
+// provenanceLineFor) and the whole coach-line chain that fed the NowCard
+// context slot (session-adjustment reason > readiness why > provenance >
+// targetReason) rendered a permanent explanation inside the logging
+// workspace ("Down a little today. Steady here."). The founder's ruling:
+// the weight and reps prescription IS the intelligence; explanation is
+// on-demand only. The on-demand surfaces remain: the session-adjustment
+// sheet and the readiness sheet both still show their written why, and
+// deload/block-finished state stays on the Recovery banner. Only the
+// group-focus flash and the warm-up label (functional, not explanatory)
+// still use the NowCard context line. Never re-add a standing coach
+// explanation to the set card without a founder order.
 
 // Founder fix (2026-07-10): "the next exercise button ... doesn't always
 // happen, it goes on and adds more and more sets". Root cause: targetSets
@@ -380,7 +363,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // info sheet, so closing the line hides words, never a decision. The old
   // showNoteInput latch is gone with the corner pencil - NowCard owns the
   // note row's own expand/collapse.
-  const [dismissedCoachLines, setDismissedCoachLines] = useState(() => new Set());
   // Superset notification, tracks which group IDs the user has already
   // seen the "heads up, paired exercises" modal for in this workout. We
   // show it once per pair so the user can grab both stations before
@@ -423,12 +405,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [perSide, setPerSide] = useState(null);
   // Campaign 20 Phase 2: setTargets/computeSetTargets are retired as the
   // screen's prescription authority (src/lib/livePrescription.js owns it
-  // now, see packetBase/packet/prescriptions below). targetReason survives
-  // ONLY to carry the existing deload/block-finished recovery copy strings
-  // (design doc section 14/16: "keep the existing recovery copy lines
-  // as-is" - the resolver's SENIOR_RECOVERY_HOLD deliberately renders no
-  // provenance line of its own, see provenanceLineFor above).
-  const [targetReason, setTargetReason] = useState(null);
+  // now, see packetBase/packet/prescriptions below). targetReason itself
+  // retired with the in-card coach line (founder device order 2026-08-17);
+  // deload/block-finished state stays on the Recovery banner.
   // packetBase: the bounded evidence pass's raw inputs (exercise,
   // prescription band, up to 3 comparable history sessions, senior
   // recovery facts), assembled ONCE per exercise load in loadHistory.
@@ -486,14 +465,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // isDeloadWeek alone would claim a live "Recovery week" for ever. The
   // targets legitimately hold at that row's volume; only the copy changes.
   const [blockFinished, setBlockFinished] = useState(false);
-  // C5-P13-01 (D96): the block week's reps-in-reserve target. The product
-  // published its effort instruction on the HOME chip and in a Home sheet,
-  // and then said nothing at all in the one place a set is actually
-  // performed, so a novice had to have opened a sheet two screens away,
-  // translated it, and carried it into a session that never mentions it
-  // again. This is that same number, on the session header, in the same
-  // words Home uses. One line, no tutorial, no new control.
-  const [weekRirTarget, setWeekRirTarget] = useState(null);
+  // The C5-P13-01 session-header effort line ("This week: stop N short of
+  // failure") was removed on the founder device order of 2026-08-17 - the
+  // prescription carries the intelligence; the RIR gloss stays available
+  // from Home's readiness chip surface.
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   // C18 recovery visibility: the resolved state and the prescription changes
   // that are genuinely true of THIS session.
@@ -722,14 +697,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     });
   }, [packetBase, loggedSets, overrideLoad, overrideReps, readinessTweak, reEntryEaseActive, readinessReduces, readinessDismissed]);
 
-  // Wave-3 review: when the readiness trim sets a LOWER target than the
-  // COMP-015 line announces (the min() above discarded it), the readiness
-  // line must lead the in-session surface, a discarded "added a set" line
-  // fronting a reduced target read as a contradiction.
-  const readinessDrivesTarget = readinessReduces
-    && Number.isFinite(readinessSetCount)
-    && Number.isFinite(comp015SetCount)
-    && readinessSetCount < comp015SetCount;
+  // The Wave-3 readinessDrivesTarget seniority flag retired with the
+  // in-card coach line it ordered (founder device order 2026-08-17).
   // Honest restore copy: dismissing the easing returns to the coach's
   // session target, which may include a COMP-015 change to the plan.
   const readinessRestoreLabel = (Number.isFinite(comp015SetCount)
@@ -1578,9 +1547,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             setProgressionWeekId(pos?.activeWeekId ?? null);
             setProgressionBlockId(pos?.blockId ?? null);
           } catch (_) { /* progression is best-effort here */ }
-          // C5-P13-01: the block's own effort target, for the session header
-          // line below. Read from the same row Home's readiness chip reads.
-          setWeekRirTarget(currentWeek.rirTarget ?? null);
 
           // If this is a deload week, generate deload prescription from
           // week-1 sets - now a SENIOR INPUT to the resolver
@@ -1604,14 +1570,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 setRecoveryDifferences(
                   describePrescriptionDifferences(week1Sets, deloadTargets),
                 );
-                // The existing recovery copy lines keep working as-is
-                // (design sections 14/16): the resolver's SENIOR_RECOVERY_HOLD
-                // provenance deliberately renders no line of its own
-                // (provenanceLineFor above), so targetReason still carries
-                // this text through the coach-line chain.
-                setTargetReason(currentWeek.awaitingDecision
-                  ? 'Block finished: targets hold at recovery-week volume until you choose your next block.'
-                  : 'Recovery week: very easy effort, full recovery focus.');
               }
             }
           }
@@ -3093,19 +3051,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
   // stalledAdvice (the 3-session same-weight nudge with its hard-coded,
   // unit-blind +2.5 literal) is RETIRED as of Campaign 20 Phase 2 (design
-  // section 3, authority 7): its user-facing intent - a concrete next step
-  // when stalled - is now carried by the resolver's own provenance line
-  // (provenanceLineFor above), using the one increment source
-  // (resolveLoadIncrement inside livePrescription.js).
+  // section 3, authority 7). Its provenance-line successor retired in turn
+  // with the in-card coach line (founder device order 2026-08-17).
 
-  // B2: the readiness line for the coach slot. A below-par reduction carries
-  // its written why on every exercise; a Sharp answer gets at most a calm
-  // acknowledgement on the first exercise only, and never a target change.
-  const readinessLine = readinessReduces
-    ? readinessTweak.whySets
-    : (readinessTweak?.acknowledgement && currentExerciseIndex === 0
-      ? readinessTweak.acknowledgement
-      : null);
+  // The B2 readiness line for the coach slot retired with the in-card coach
+  // line (founder device order 2026-08-17); the readiness sheet still
+  // carries the written why on demand.
   const activeExerciseType = exercise?.exerciseType || 'weight_reps';
 
   // D87: the live record line under the steppers. Pure derivation from data
@@ -3264,7 +3215,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.overflowBtn, live.overflowBtn, showInfoTipPulse && styles.overflowBtnHinted]}
+                style={[styles.overflowBtn, showInfoTipPulse && styles.overflowBtnHinted]}
                 onPress={() => {
                   if (showInfoTipPulse) {
                     infoPulseLoop.current?.stop();
@@ -3289,28 +3240,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   {showInfoTipPulse ? (
                     <Text style={[styles.overflowHintLabel, live.overflowHintLabel]}>Help</Text>
                   ) : null}
-                  <Ionicons name="ellipsis-horizontal" size={20} color={t.colors.textSecondary} />
+                  <Ionicons name="ellipsis-horizontal" size={20} color={t.colors.textMuted} />
                 </Animated.View>
               </TouchableOpacity>
             </View>
             {/* Muscle line deleted (COMP-001): primary muscle and equipment
                 already show in the exercise info sheet. Superset chip moved
-                into the collapsed "N notes" rail (U-A-1). */}
-            {/* C5-P13-01 (D96): the session's effort target, in the exact
-                wording Home's readiness chip already publishes, with the
-                existing GLOSSARY.rir gloss one tap away for the novice who
-                does not know what "short of failure" means. Suppressed in a
-                recovery week, where the Recovery banner above already says
-                the week is deliberately easy. Derived from the block row, so
-                it can never state an effort the block does not prescribe. */}
-            {weekRirTarget != null && !isDeloadWeek ? (
-              <View style={styles.effortLineRow}>
-                <Text style={[styles.effortLineText, live.effortLineText]}>
-                  {`This week: stop ${weekRirTarget} short of failure`}
-                </Text>
-                <InfoTooltip text={GLOSSARY.rir} size={13} />
-              </View>
-            ) : null}
+                into the collapsed "N notes" rail (U-A-1). The C5-P13-01
+                effort line ("This week: stop N short of failure") removed on
+                the founder device order of 2026-08-17. */}
           </View>
 
           {/* D43 S2: the "N notes" accordion is retired. Content-labelled
@@ -3559,38 +3497,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           {(() => {
             const isWarmupSet = currentSet.setType === 'warmup';
             const currentPrescription = prescriptions[workingLogged] ?? null;
-            // Campaign 20 Phase 2, Stage 11 (design section 16/17, Founder
-            // Ruling 1): the provenance line replaces stalledAdvice as the
-            // lowest-priority coach-line content. sessionAdjustment and
-            // readiness keep seniority for their own content; SENIOR_
-            // RECOVERY_HOLD and INSUFFICIENT_EVIDENCE render no line here
-            // (provenanceLineFor), so targetReason's existing deload/
-            // block-finished copy still carries through for those. Never
-            // shown on a warm-up entry (isWarmupSet already gates showCoach).
-            const provenanceLine = !isWarmupSet ? provenanceLineFor(currentPrescription) : null;
-            // Lead amendment (Stage 11, primary product law): the FIRST set
-            // keeps the existing coach-line chain exactly (session
-            // adjustment > readiness > provenance > targetReason, first
-            // working set only - their pinned behaviour). LATER working
-            // sets render the provenance line ALONE, because the campaign's
-            // core contract is an answer before EVERY working set - the
-            // mid-session codes (fatigue adjust, stronger, back-off, user
-            // choice) only ever occur at set 2+, and a box that changes
-            // without its one-line why is exactly the opacity the design
-            // forbids. Dismissal stays per-exercise and silences both.
-            const coachText = workingLogged === 0
-              ? ((sessionAdjustment?.show && !readinessDrivesTarget)
-                ? sessionAdjustment.reasonText
-                : readinessLine
-                  ? readinessLine
-                  : provenanceLine
-                    ? provenanceLine
-                    : targetReason)
-              : provenanceLine;
-            const showCoach = !isWarmupSet
-              && !(isDeloadWeek && !deloadDismissed)
-              && !!coachText
-              && !dismissedCoachLines.has(exercise?.id);
+            // Founder device order 2026-08-17: the coach-note branch of the
+            // context line is retired (see the retirement note by the old
+            // PROVENANCE_COPY site near the top of this file). Only the
+            // group-focus flash and the warm-up label remain - both
+            // functional state, not explanation.
             const context = groupFocusMessage
               ? { kind: 'group', text: groupFocusMessage }
               : isWarmupSet
@@ -3600,16 +3511,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     ? 'Warm-up - not counted in your totals.'
                     : "Warm-up - not counted in your totals. Light weight, easy reps; tap Log warm-up when you're ready to work.",
                 }
-                : showCoach
-                  ? {
-                    kind: 'coach',
-                    text: coachText,
-                    onDismiss: () => {
-                      hapticsVocab.selection();
-                      setDismissedCoachLines(prev => new Set(prev).add(exercise?.id));
-                    },
-                  }
-                  : null;
+                : null;
 
             // Warm-ups and working sets number independently, so filter
             // warm-ups out BEFORE indexing by workingLogged (D1 #2).
@@ -4921,8 +4823,6 @@ const styles = StyleSheet.create({
   exerciseHeader: { gap: spacing.xs },
   // C5-P13-01: the session effort line, quiet caption weight so it orients
   // without competing with the exercise title above it.
-  effortLineRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  effortLineText: { ...type.caption, color: colors.textSecondary },
   // R2-4 (2026-07-11): a consistent row height (the options button's own
   // 44dp) with centre alignment so the exercise title and the "..." options
   // button share one row and align on their centres at any title length.
@@ -5146,19 +5046,17 @@ const styles = StyleSheet.create({
   // R2 compliance (2026-07-11): control -> the logger's one small-surface radius.md.
   clusterCancel: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center', minHeight: workoutLoggerSize.primaryActionMinHeight, paddingHorizontal: spacing.lg, borderRadius: radius.md, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.border },
   clusterCancelText: { ...type.label, color: colors.textPrimary },
-  // R2-2/R2-4 (2026-07-11): the "..." options button is the reference chrome
-  // the header X now shares (headerIconBtn). radius.sm -> radius.md brings it
-  // onto the logger's one small-surface radius (Section 1 compliance sweep,
-  // controls -> md).
+  // Founder device order 2026-08-17: the rounded-square container around
+  // the exercise-header "..." is retired - it made the overflow look almost
+  // as important as the exercise name. The button keeps its full 44dp
+  // TARGET (workoutLoggerSize.overflowButton = touchTarget.minimum) but
+  // draws nothing at rest: just the muted dots, dimmed while pressed via
+  // the TouchableOpacity's own feedback.
   overflowBtn: {
     width: workoutLoggerSize.overflowButton,
     height: workoutLoggerSize.overflowButton,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface2,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
   },
   // C5-P13-03: the one-time hinted state. The button widens to fit the
   // label rather than cropping it inside the fixed square, and returns to
@@ -5397,7 +5295,6 @@ function buildLiveStyles(t) {
     navTabBadge: { backgroundColor: t.colors.primaryFill },
     navTabBadgeText: { ...t.type.caption, color: t.colors.onPrimary, fontSize: t.fontSize.micro },
     exerciseName: { ...t.type.title, color: t.colors.textPrimary },
-    effortLineText: { ...t.type.caption, color: t.colors.textSecondary },
     swapSafe: { backgroundColor: t.colors.background },
     swapHeader: { borderBottomColor: t.colors.borderSubtle },
     swapTitle: { ...t.type.title, color: t.colors.textPrimary },
@@ -5448,7 +5345,6 @@ function buildLiveStyles(t) {
     clusterAddBtnText: { ...t.type.label, color: t.colors.primary },
     clusterCancel: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     clusterCancelText: { ...t.type.label, color: t.colors.textPrimary },
-    overflowBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     overflowHintLabel: { ...t.type.captionStrong, color: t.colors.textSecondary },
     // R2-3: contained note-corner button chrome, live-mirrored.
     noteCornerBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },

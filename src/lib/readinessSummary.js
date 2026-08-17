@@ -174,9 +174,14 @@ export function buildReadinessSummary({
   // workout rotation) and this one (position in the block) -- so a
   // first-time user could reasonably read them as two mental models of the
   // same plan." Priority 1 to 4 wordings are deliberately untouched.
-  const rirBit = currentMesoWeek.rirTarget != null ? `Stop ${currentMesoWeek.rirTarget} short of failure.` : 'On track for this block.';
+  // Founder device order 2026-08-17: the default line said "Stop N short of
+  // failure" - an effort instruction with no function on Today, and nothing
+  // to do with the block details the chip actually opens. The default now
+  // states the block fact; the week's shape (including its effort target)
+  // stays one tap away in the block-shape sheet, per the C22 single-counter
+  // law (no second "N of M" on the hero).
   return {
     tone: 'go',
-    line: rirBit,
+    line: 'On track for this block.',
   };
 }
