@@ -279,7 +279,9 @@ function ProOnboardingHeader({ step, title, sub, onBack }) {
             {outcomes.map((item) => (
               <View key={item.label} style={[styles.outcomeChip, live.outcomeChip]}>
                 <Ionicons name={item.icon} size={14} color={t.colors.primary} />
-                <Text style={[styles.outcomeChipText, live.outcomeChipText]} numberOfLines={1}>{item.label}</Text>
+                {/* Campaign 27 Pillar A (D104): chip has no fixed height and
+                    sizes to content, so the label wraps instead of clamping. */}
+                <Text style={[styles.outcomeChipText, live.outcomeChipText]}>{item.label}</Text>
               </View>
             ))}
           </View>

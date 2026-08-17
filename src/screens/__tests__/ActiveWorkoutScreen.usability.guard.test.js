@@ -186,7 +186,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(NOW_CARD).toContain('positionLabel');
     expect(ACTIVE_WORKOUT).toContain('positionLabel={orientationLabel}');
     expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
-    expect(ACTIVE_WORKOUT).toContain('exerciseName: { flex: 1, ...type.title, color: colors.textPrimary }');
+    // Re-pinned (founder order 2026-08-17, Campaign 27): the exercise name
+    // stepped down one notch, title -> bodyStrong ("ever so slightly
+    // smaller"); same flex/colour contract.
+    expect(ACTIVE_WORKOUT).toContain('exerciseName: { flex: 1, ...type.bodyStrong, color: colors.textPrimary }');
     expect(ACTIVE_WORKOUT).not.toContain('targetRow:');
     expect(ACTIVE_WORKOUT).not.toContain('targetText:');
     expect(NOW_CARD).toMatch(/prefillRow: \{[\s\S]*minHeight: 36/);

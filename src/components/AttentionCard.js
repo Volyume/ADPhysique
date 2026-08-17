@@ -78,7 +78,9 @@ export default function AttentionCard({
       >
         <View style={styles.trialBannerTopRow}>
           <Ionicons name="checkmark-done-outline" size={18} color={t.colors.primary} />
-          <Text style={[styles.trialBannerText, live.trialBannerText]} numberOfLines={2}>{trialBanner.line}</Text>
+          {/* Campaign 27 Pillar A (D104): sentence-length trial copy never
+              carries a line clamp - it wraps, and the row grows. */}
+          <Text style={[styles.trialBannerText, live.trialBannerText]}>{trialBanner.line}</Text>
           {onTrialPress ? <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} /> : null}
           <TouchableOpacity
             onPress={onTrialDismiss}

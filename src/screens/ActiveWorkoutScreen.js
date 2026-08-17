@@ -4832,7 +4832,10 @@ const styles = StyleSheet.create({
   // now, exerciseName keeps its own flex: 1 so numberOfLines={2} still wraps
   // correctly inside it.
   exerciseNameTap: { flex: 1 },
-  exerciseName: { flex: 1, ...type.title, color: colors.textPrimary },
+  // Founder order 2026-08-17 (Campaign 27): the exercise name steps down one
+  // notch, title (17) -> bodyStrong (16, same medium weight) - "ever so
+  // slightly smaller", calmer against the plain header dots.
+  exerciseName: { flex: 1, ...type.bodyStrong, color: colors.textPrimary },
   swapSafe: { flex: 1, backgroundColor: colors.background },
   swapHeader: {
     flexDirection: 'row',
@@ -5294,7 +5297,7 @@ function buildLiveStyles(t) {
     navTabTextActive: { color: t.colors.primary },
     navTabBadge: { backgroundColor: t.colors.primaryFill },
     navTabBadgeText: { ...t.type.caption, color: t.colors.onPrimary, fontSize: t.fontSize.micro },
-    exerciseName: { ...t.type.title, color: t.colors.textPrimary },
+    exerciseName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     swapSafe: { backgroundColor: t.colors.background },
     swapHeader: { borderBottomColor: t.colors.borderSubtle },
     swapTitle: { ...t.type.title, color: t.colors.textPrimary },

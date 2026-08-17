@@ -2272,3 +2272,17 @@ copy + guard rewrite (lead hands-on); 2c narrow bucket in resolveTheme
 branch claude/campaign27-responsive-research, never commits; on death,
 lead-review the working tree against AUDIT-FINDINGS.md section 4 and
 PROPOSAL.md Pillar A, then land or relaunch.
+
+**C27 Phase 2a LANDED 2026-08-17.** Wrap-first sweep of the top-15
+register (sonnet agent, lead-reviewed): sentence clamps removed on the
+Home coach line, TodayStrip explainer, plateau/activation banners,
+Diary planned-hint, onboarding outcome chips and the trial banner; hero
+session name widened to three lines; SettingRow gained minWidth:0;
+identifier clamps verified honest (food/plan names, logged-set rows,
+PeekMenu titles). Plus D105: logger exercise name title->bodyStrong.
+Report-only residue for 2b: SetEntry label column (chrome cap),
+MacroRings kcalPlanned numeral cap, PeekMenu subtitle latent-truncation
+doc note. NEW PHASE 2e QUEUED (D105): type-role adoption sweep of the
+~177 hand-rolled size sites, after 2b/2c so it normalises onto the
+finished system. Gates at landing: lint clean, full suite 994 suites /
+13,463 passed.

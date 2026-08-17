@@ -2083,7 +2083,10 @@ export default function HomeScreen({ navigation, route }) {
             <SectionLabel tone="muted" style={styles.heroEyebrow} numberOfLines={1}>
               {recoveryLabel ? `${recoveryLabel} · ${planProgress}` : planProgress}
             </SectionLabel>
-            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={2}>
+            {/* Campaign 27 Pillar A (D104): workoutName is a session NAME, an
+                identifier, so a clamp stays honest - but two lines truncated
+                real names at large text scale, so it's raised to three. */}
+            <Text style={[styles.workoutName, live.workoutName]} numberOfLines={3}>
               {/* C18: where a display name repeats inside one programme week
                   (the bikini Glute Focus split lists "Glutes" twice) the
                   session is qualified by its programme position, so the
@@ -2140,7 +2143,9 @@ export default function HomeScreen({ navigation, route }) {
                 (dismissBrief / @volyume_brief_dismissed_date, once per day). */}
             {coachBrief && (
               <View style={styles.coachBriefLineRow}>
-                <Text style={[styles.coachBriefLineText, live.coachBriefLineText]} numberOfLines={2}>
+                {/* Campaign 27 Pillar A (D104): sentence-length coach copy never
+                    carries a line clamp - it wraps in full, row grows. */}
+                <Text style={[styles.coachBriefLineText, live.coachBriefLineText]}>
                   {coachBrief.headline}. {coachBrief.body}
                 </Text>
                 <TouchableOpacity
@@ -2366,7 +2371,9 @@ export default function HomeScreen({ navigation, route }) {
           >
             <View style={styles.plateauBannerLeft}>
               <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
-              <Text style={[styles.plateauBannerText, live.plateauBannerText]} numberOfLines={2}>{plateauBanner.line}</Text>
+              {/* Campaign 27 Pillar A (D104): sentence-length copy never carries
+                  a line clamp - it wraps, and the row grows. */}
+              <Text style={[styles.plateauBannerText, live.plateauBannerText]}>{plateauBanner.line}</Text>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
             </View>
             <TouchableOpacity
@@ -2396,7 +2403,9 @@ export default function HomeScreen({ navigation, route }) {
                 <Text style={[styles.activationBannerTitle, live.activationBannerTitle]} numberOfLines={1}>
                   {activationBannerLine(activationNudge.stage)?.title}
                 </Text>
-                <Text style={[styles.activationBannerBody, live.activationBannerBody]} numberOfLines={2}>
+                {/* Campaign 27 Pillar A (D104): body is sentence-length copy,
+                    so it wraps in full rather than carrying a line clamp. */}
+                <Text style={[styles.activationBannerBody, live.activationBannerBody]}>
                   {activationBannerLine(activationNudge.stage)?.body}
                 </Text>
               </View>

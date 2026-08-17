@@ -38,7 +38,9 @@ export function SettingRow({ icon, label, sub, value, onPress, destructive, righ
       >
         <Ionicons name={icon} size={18} color={destructive ? t.colors.error : t.colors.primary} />
       </View>
-      <View style={{ flex: 1 }}>
+      {/* Campaign 27 Pillar A (D104): minWidth: 0 added so the label column
+          uses the codebase's safe flex:1 + minWidth:0 wrapping idiom. */}
+      <View style={{ flex: 1, minWidth: 0 }}>
         <Text
           style={[
             styles.settingLabel,

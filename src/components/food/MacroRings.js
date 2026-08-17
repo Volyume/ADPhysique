@@ -342,7 +342,9 @@ export default function MacroRings({ rollup, targets, planned, dayTypeLabel, onP
           visible explanation, only an accessibility label. One quiet line,
           shown only when a planned amount is showing anywhere on the card. */}
       {hasPlanned ? (
-        <Text style={[styles.plannedHint, live.plannedHint]} numberOfLines={1}>
+        // Campaign 27 Pillar A (D104): sentence-length explainer never
+        // carries a line clamp - it wraps, and the row grows.
+        <Text style={[styles.plannedHint, live.plannedHint]}>
           Planned means added ahead, it counts once you mark it eaten.
         </Text>
       ) : null}

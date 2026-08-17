@@ -48,10 +48,13 @@ describe('ProOnboardingScreen premium polish guards', () => {
   });
 
   test('header outcome chips and dense rows are shrink-safe on phones', () => {
-    // CP-10 batch G lane 1: outcomeChipText gained its live-theme override
-    // (style={[styles.outcomeChipText, live.outcomeChipText]}); the pinned
-    // contract (numberOfLines=1, flexShrink) is unchanged.
-    expect(SOURCE).toMatch(/<Text style=\{\[styles\.outcomeChipText, live\.outcomeChipText\]\} numberOfLines=\{1\}>/);
+    // Re-pinned under Campaign 27 Pillar A (D104, founder-approved
+    // 2026-08-17): the chip label's numberOfLines={1} clamp is removed -
+    // wrap-first law; the chip has no fixed height and grows. The
+    // shrink-safety contract (flexShrink on the label, wrap-capable rows)
+    // is unchanged and still pinned below.
+    expect(SOURCE).toMatch(/<Text style=\{\[styles\.outcomeChipText, live\.outcomeChipText\]\}>/);
+    expect(SOURCE).not.toMatch(/outcomeChipText, live\.outcomeChipText\]\} numberOfLines/);
     expect(SOURCE).toMatch(/outcomeChipText: \{[^}]*flexShrink: 1/);
     expect(SOURCE).toMatch(/heightImperialRow: \{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing\.md \}/);
     expect(SOURCE).toMatch(/inputHalf: \{ flex: 1, minWidth: 140 \}/);

@@ -229,7 +229,9 @@ export default function TodayStrip({
                 not a daily fixture -- retires for good once the caller
                 reports a real weigh-in has ever been logged. */}
             {!everLogged && (
-              <Text style={[styles.logWhy, live.logWhy]} numberOfLines={2}>
+              // Campaign 27 Pillar A (D104): sentence-length copy never
+              // carries a line clamp - it wraps, and the row grows.
+              <Text style={[styles.logWhy, live.logWhy]}>
                 Before food, after the bathroom. It feeds your weight trend, and several mornings go by before anything changes.
               </Text>
             )}

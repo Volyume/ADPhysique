@@ -2909,3 +2909,15 @@ The founder answered all three PROPOSAL.md section 4 choice points:
   cap table, 2c narrow bucket, 2d Maestro screenshot net (2d may run
   parallel). Each phase lands through the normal gates with its own
   device checklist.
+
+## D105 — category type standardisation sanctioned + logger name step-down (founder, 2026-08-17)
+
+Founder: "I'm open to standardising text across the app based on
+category"; specifically, the workout logger's exercise name "could be
+ever so slightly smaller". Effects:
+- The deferred D0 type-role adoption sweep (~177 hand-rolled
+  size/lineHeight sites, noted in theme.js's own bodySm comment) is
+  UNLOCKED as Campaign 27 Phase 2e: every user-facing text site
+  normalised onto a named type role, category-consistent app-wide.
+- The logger exercise name steps title (17) -> bodyStrong (16, same
+  medium weight); usability guard re-pinned.
