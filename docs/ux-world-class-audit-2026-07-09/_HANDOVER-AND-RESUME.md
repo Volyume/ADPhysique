@@ -569,6 +569,20 @@ its evidence).
 
 ===============================================================================
 
+### 2026-08-17 — CAMPAIGN 23 PHASE 2 (Progress redesign) — IMPLEMENTED, LANDED
+Full implementation landed on main same day (stages 1c84531c /
+b8347c55 / Stage-3 commit + D99 rulings and privacy-law amendment):
+bounded photo corroboration connected to the authoritative coach run
+(R2, lead-built), the three-pillar Answer Block landing with the
+signal-only Visual pillar (R1), For You feed retired (the second
+progression authority closed), single share CTA, Monday-anchored
+weeks, A-P mounted state matrix. Three genuine defects caught at lead
+review across stages (false date anchor; §15 unit mixing; plus the
+D98-pattern flagged calls all ruled). Detail + 12-step founder device
+checklist: docs/progress-audit-campaign-23-2026-08-17/
+PHASE2-LANDING.md. Outstanding: founder Android walk (ED/calm cases
+9-11); next screen per the register: ActiveWorkout.
+
 ### 2026-08-17 — CAMPAIGN 23 PHASE 1 (Progress audit) — COMPLETE, LANDED, RULINGS OPEN
 Docs-only audit landed on main same day. Four evidence traces + the
 34-section PROGRESS-UX-SPEC.md (verdict B) in

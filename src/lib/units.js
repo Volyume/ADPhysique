@@ -95,6 +95,25 @@ export function formatBodyWeightShort(kg, bodyWeightUnits = 'st') {
 }
 
 /**
+ * Weekly body-weight rate in the user's DISPLAY units (Campaign 23 §15:
+ * units stay single-system — never a kg rate beside an lbs weight on one
+ * surface). Stone users read small weekly changes in lbs (the stone
+ * system's own sub-unit); lbs users read lbs; kg users read kg. One
+ * decimal, signed.
+ *
+ * @param {number} kgPerWeek - signed weekly change in kg
+ * @param {'st'|'lbs'|'kg'} bodyWeightUnits
+ * @returns {string} e.g. "-0.4 kg/week", "+0.9 lbs/week", "" for bad input
+ */
+export function formatBodyWeightRate(kgPerWeek, bodyWeightUnits = 'st') {
+  if (kgPerWeek == null || isNaN(kgPerWeek)) return '';
+  const inLbs = bodyWeightUnits === 'st' || bodyWeightUnits === 'lbs';
+  const value = inLbs ? kgToLbs(kgPerWeek) : kgPerWeek;
+  const unit = inLbs ? 'lbs' : 'kg';
+  return `${value > 0 ? '+' : ''}${value.toFixed(1)} ${unit}/week`;
+}
+
+/**
  * Returns the unit label suffix for body weight (e.g. for input placeholders).
  */
 export function bodyWeightUnitLabel(bodyWeightUnits = 'st') {

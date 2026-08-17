@@ -2092,10 +2092,19 @@ recorded in the commit body, incl. volume strip stays tier-unchanged
 per the senior CLAUDE.md free list). Gates: lint 0 warnings; full
 suite green (one appearance of the documented widget-storage flake on
 an identical-tree rerun, passes isolated — both outcomes on record).
-STAGE 3 (state matrix + presentation guards + merge + handover) IN
-FLIGHT, sonnet agent. RECOVERY PATH: uncommitted work lead-reviewed
-against PROGRESS-UX-SPEC.md §23/§31; land or relaunch from
-`b8347c55`.
+STAGE 3 LANDED (this commit): §23 A-P mounted state matrix + guards
+(density ceiling, suppression seniority, single CTA, For You absence
+with legacy rows). The matrix caught a real §15 defect — the Body
+pillar's hard-coded kg/week rate for lbs/stone users — fixed at the
+lead review (formatBodyWeightRate, units.js) and re-pinned. CAMPAIGN
+23 COMPLETE, MERGED TO MAIN. Final gates: lint 0 warnings, 978 suites
+/ 13,344 tests, zero failures. FOUNDER-SIDE OPEN: the 12-step Android
+device walk (PHASE2-LANDING.md; ED/calm cases steps 9-11). Recorded
+for later sessions: WeightTrendCard's sibling kg literal (BodyMetrics
+detail); user_insights still in legacy sync though unwritten;
+prBars/computePRsPerWeek + buildWeeklySessionCounts now
+production-unreferenced (future dead-code sweep); the widget-storage
+flake session.
 
 Founder order 2026-08-17. Fable lead; sonnet for authority tracing;
 haiku for mechanical inventory; no Opus; NO IMPLEMENTATION this phase.

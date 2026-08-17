@@ -27,7 +27,7 @@ import useVisualPillar from '../hooks/useVisualPillar';
 import { getLifetimeTonnage } from '../lib/database';
 import { pendingTonnageMilestone, loadSeenTonnage, markTonnageMilestoneSeen, formatTonnage } from '../lib/tonnageMilestone';
 import { formatNumber } from '../lib/format';
-import { formatBodyWeight } from '../lib/units';
+import { formatBodyWeight, formatBodyWeightRate } from '../lib/units';
 import { track } from '../lib/engineTelemetry';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 import { VOLUME_LANDMARKS, getVolumeStatus, calculateTonnage } from '../lib/algorithms';
@@ -102,8 +102,10 @@ function bodyPillarCopy(weightTrend, bodyWeightUnits) {
   if (weightTrend.state >= 2 && weightTrend.ewmaNow != null) {
     parts.push(formatBodyWeight(weightTrend.ewmaNow, bodyWeightUnits));
     if (weightTrend.showRate && Number.isFinite(weightTrend.weeklyChange)) {
-      const wc = weightTrend.weeklyChange;
-      parts.push(`${wc > 0 ? '+' : ''}${wc.toFixed(1)} kg/week`);
+      // Lead fix (Stage 3 review, state O): the rate follows the user's
+      // display units (§15 single-system rule) — never a kg rate beside an
+      // lbs/stone weight on the same evidence row.
+      parts.push(formatBodyWeightRate(weightTrend.weeklyChange, bodyWeightUnits));
     }
   }
   return { state: weightTrend.insight, evidence: parts.length ? parts.join(', ') : null };
