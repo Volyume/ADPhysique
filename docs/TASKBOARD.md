@@ -2055,7 +2055,7 @@ D37 triage; (2) the ED detector's positional weeklyHistory contract
 known widget-storage full-run flake (pre-Campaign-20, still intermittent,
 needs its own session).
 
-## CAMPAIGN 22 (2026-08-16) — UX/presentation, screen 1: Home/Today. PHASE 1 COMPLETE — SPEC AWAITING FOUNDER REVIEW.
+## CAMPAIGN 22 (2026-08-16) — UX/presentation, screen 1: Home/Today. PHASE 2 (IMPLEMENTATION) IN FLIGHT.
 
 Founder order 2026-08-16 (full brief received after an initial truncated
 send). Branch `claude/campaign22-home-today-audit` off main `624cf126`.
@@ -2070,3 +2070,15 @@ redesigned first-review readiness line returns; R3 everyday trial
 presence leaves the top slot). Phase 2 implements only after the
 rulings. Startup auth-hydration flash: recorded as a SEPARATE bounded
 task (spec section 21), still pending since the input-focus campaign.
+PHASE 2 (2026-08-16): all three rulings answered YES and locked
+(FOUNDER-RULINGS-PHASE2.md). Implementation branch
+`claude/campaign22-home-impl` off main `3ab82c4b`+rulings-commit.
+Stages: (1) TodayLine component + P1 slot arbitration + banner-idiom
+unification + recovery single-wording-source fix; (2) weight row below
+hero (R1) + first-review readiness line (R2) + trial rehome (R3) + hero
+merge + footer discipline; (3) guards + 18-state mounted suite + gates
++ merge. Commit per stage, lead review every diff, merge when green.
+RECOVERY PATH: uncommitted work lead-reviewed against
+HOME-TODAY-UX-SPEC.md sections 13/17/20 + the rulings file; land or
+relaunch from last green commit. Preservation contract (spec section
+20) is binding: no engine, tier, trial-logic or safety-gate changes.
