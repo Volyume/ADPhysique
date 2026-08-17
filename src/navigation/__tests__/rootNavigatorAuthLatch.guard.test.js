@@ -42,7 +42,14 @@ describe('RootNavigator initial-auth splash latch (founder defect 2026-07-12)', 
   });
 
   test('the hard timeout failsafe exists and is cleaned up', () => {
-    expect(src).toMatch(/const authLatchTimer = setTimeout\(\(\) => setInitialAuthResolved\(true\), 8000\)/);
+    // RE-PINNED (Campaign 24 Wave E, WAVE-E-FINDINGS.md item 0 /
+    // hostile-review F1): the failsafe now records a GIVE-UP when it fires
+    // without a genuine getSession answer, so a previously-signed-in device
+    // holds on the bounded retry state instead of flashing WelcomeStack.
+    // The invariant this suite pins — a hard 8s timeout exists and is
+    // cleaned up — is unchanged and strengthened (see authBootGate.test.js
+    // for the give-up semantics' own pins).
+    expect(src).toMatch(/const authLatchTimer = setTimeout\(\(\) => \{\s*\n\s*if \(!authGenuinelyResolvedRef\.current\) setAuthGaveUp\(true\);\s*\n\s*setInitialAuthResolved\(true\);\s*\n\s*\}, 8000\);/);
     expect(src).toMatch(/clearTimeout\(authLatchTimer\)/);
   });
 

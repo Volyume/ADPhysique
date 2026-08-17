@@ -2776,3 +2776,34 @@ docs/progress-audit-campaign-23-2026-08-17/FOUNDER-RULINGS-PHASE2.md.
   locally derived, non-reversible corroboration signal may contribute
   only to the bounded confidence of an authoritative coaching result;
   underlying visual evidence is never uploaded or synced."
+
+## D100 — Campaign 24 lead rulings (2026-08-17, D33; recorded late —
+## hostile-review F5 caught that two commit bodies cited "recorded"
+## rulings this register did not yet hold. Corrected before merge.)
+
+- **D100-1 (CoachReview deload gate, Wave C):** the shouldDeload
+  suggestion on CoachReviewScreen is the same sanctioned data-driven
+  authority Home presents and stays tier-visible (recorded C18 honesty
+  rule); the defect was the missing seniority gate. Fixed with Home's
+  exact inScheduledRecovery predicate (FB-02). No tier gate.
+- **D100-2 (BodyMetrics trend consolidation, Wave D):** the screen's
+  parallel rate/maintenance computation consolidated onto the shared
+  deriveWeightTrend, extending the RECORDED ED-flag suppression
+  (direction-only, no rate, no maintenance, fail-closed reads) to the
+  surface that had missed it — the D98-2 suppression-widening
+  precedent: safety-positive, no threshold changed, nothing removed,
+  no new suppression law invented (no calm gate the sibling lacks).
+- **D100-3 (CoachReview bucket unification, cohesion pass):** the
+  three deload bucket builders share one derivation
+  (buildLast4WeekDeloadBuckets); CoachReview unifies onto the
+  D6-correct answered-only path — its pre-D6 coercion of unrated
+  values to zero was a stale bug (Campaign 1 P0-7 D6 fixed the other
+  two copies), so the sensitivity change is the correction, pinned
+  with before/after values.
+- **D100-4 (dead settings toggle, Wave F):** showHomeNutrition retired
+  (a toggle controlling nothing fails the truth law; building the
+  unbuilt feature would be sprawl). Returns with the feature if ever
+  built.
+- **D100-5 (startup flash, Wave E):** the give-up/retry design per
+  WAVE-E-FINDINGS.md item 0 under the founder's neutral-splash law;
+  sign-out clears the prior-session marker (hostile F7).

@@ -40,6 +40,9 @@ import * as haptics from '../lib/haptics';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { femaleNutritionAwareness } from '../lib/femaleNutritionAwareness';
 import { ageYearsFromDateOfBirth } from '../lib/profileAge';
+// Campaign 24 hostile-review F3: display-units helpers for the weight and
+// rate strings (single-system rule, §15 of the C23 spec).
+import { formatBodyWeight, formatBodyWeightRate } from '../lib/units';
 import HeightFeetInchesField from '../components/HeightFeetInchesField';
 import AgeYearsField from '../components/AgeYearsField';
 
@@ -257,7 +260,11 @@ export default function NutritionTargetsScreen({ navigation }) {
   // mutation (rest timer ticks, sync events, etc.) re-renders this
   // huge screen. Selecting just the two fields we read means we only
   // re-render when those change.
-  const { user, userProfile, energyUnit } = useAppStore(useShallow(s => ({ user: s.user, userProfile: s.userProfile, energyUnit: s.accessibility?.energyUnit ?? 'kcal' })));
+  // Campaign 24 hostile-review F3: bodyWeightUnits added so the four
+  // weight/rate strings below follow the user's display system (the same
+  // UNIT_DEFECT class waves A/D fixed elsewhere; this screen's Wave F
+  // NO_CHANGE verdict missed them).
+  const { user, userProfile, energyUnit, bodyWeightUnits } = useAppStore(useShallow(s => ({ user: s.user, userProfile: s.userProfile, energyUnit: s.accessibility?.energyUnit ?? 'kcal', bodyWeightUnits: s.bodyWeightUnits })));
   // Whether the athlete has ever accepted a calorie intervention. This is
   // still target provenance; Campaign 19 maintenance provenance is loaded
   // separately from the canonical memo below.
@@ -1080,7 +1087,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                 <Ionicons name="nutrition" size={14} color={t.colors.textMuted} />
                 <Text style={[styles.collapsedText, live.collapsedText]} numberOfLines={1}>
                   {age && weight && heightFt
-                    ? `${sex === 'male' ? 'Male' : 'Female'} - ${age}yrs - ${heightFt}ft${heightIn ? ` ${heightIn}in` : ''} - ${weight}kg - ${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? goal}`
+                    ? `${sex === 'male' ? 'Male' : 'Female'} - ${age}yrs - ${heightFt}ft${heightIn ? ` ${heightIn}in` : ''} - ${formatBodyWeight(Number(weight), bodyWeightUnits)} - ${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? goal}`
                     : `${results?.phase ?? GOALS.find(g => g.key === goal)?.label ?? 'Targets set during coaching setup'}`}
                 </Text>
               </View>
@@ -1386,9 +1393,9 @@ export default function NutritionTargetsScreen({ navigation }) {
                 const calorieWhy = maintenanceKcal == null
                   ? 'Your saved target is available, but maintenance cannot be verified from the current profile and evidence. Recalculate after confirming your baseline details; we will not invent a maintenance number from the target.'
                   : isGain
-                  ? `Your maintenance is ${formatEnergy(maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${formatEnergy(surplusDelta, energyUnit)} ${energyUnitLabel(energyUnit)}) puts you on track to gain roughly ${rateAbs.toFixed(2)} kg/week. ${rateAbs <= 0.3 ? 'That rate is slow and lean. Most of what you gain will be muscle, with very little fat alongside it.' : rateAbs <= 0.5 ? 'That rate is steady. Some fat alongside the muscle is inevitable, but the ratio stays favourable.' : 'That rate is on the faster side. Muscle gain is quicker but more fat comes along with it.'} Consistency over weeks matters far more than perfection each day.`
+                  ? `Your maintenance is ${formatEnergy(maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. That is what you need to stay the same weight. Adding a ${absPct}% surplus (+${formatEnergy(surplusDelta, energyUnit)} ${energyUnitLabel(energyUnit)}) puts you on track to gain roughly ${formatBodyWeightRate(rateAbs, bodyWeightUnits).replace('+', '')}. ${rateAbs <= 0.3 ? 'That rate is slow and lean. Most of what you gain will be muscle, with very little fat alongside it.' : rateAbs <= 0.5 ? 'That rate is steady. Some fat alongside the muscle is inevitable, but the ratio stays favourable.' : 'That rate is on the faster side. Muscle gain is quicker but more fat comes along with it.'} Consistency over weeks matters far more than perfection each day.`
                   : isCut
-                  ? `Your maintenance is ${formatEnergy(maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. A ${absPct}% deficit (${formatEnergy(Math.abs(surplusDelta), energyUnit)} ${energyUnitLabel(energyUnit)} below maintenance) puts you on track to ${rateDir} roughly ${rateAbs.toFixed(2)} kg/week. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while holding onto more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable risk to muscle' : 'aggressive. Protein has been set higher to protect your muscle'}. Consistency over weeks matters far more than perfection each day.`
+                  ? `Your maintenance is ${formatEnergy(maintenanceKcal, energyUnit)} ${energyUnitLabel(energyUnit)}. A ${absPct}% deficit (${formatEnergy(Math.abs(surplusDelta), energyUnit)} ${energyUnitLabel(energyUnit)} below maintenance) puts you on track to ${rateDir} roughly ${formatBodyWeightRate(rateAbs, bodyWeightUnits).replace('+', '')}. That rate is ${rateAbs <= 0.5 ? 'conservative. You will lose mostly fat while holding onto more muscle' : rateAbs <= 0.8 ? 'moderate. Effective fat loss with manageable risk to muscle' : 'aggressive. Protein has been set higher to protect your muscle'}. Consistency over weeks matters far more than perfection each day.`
                   : isMaintain
                   ? `Your target is ${formatEnergy(results.targetKcal ?? 0, energyUnit)} ${energyUnitLabel(energyUnit)}, which matches your maintenance level. Eating at maintenance gives you the energy to recover hard and train hard, without gaining fat. With high protein and consistent training, you can still build muscle slowly and improve body composition. No deficit, no surplus: a steady baseline.`
                   : isRecomp
@@ -1638,7 +1645,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     <Text style={[styles.calcValue, live.calcValue]}>
                       {results.targetRateKgPerWeek != null && results.targetRateKgPerWeek !== ''
                         && Number.isFinite(Number(results.targetRateKgPerWeek))
-                        ? `${results.targetRateKgPerWeek > 0 ? '+' : ''}${results.targetRateKgPerWeek} kg/week`
+                        ? formatBodyWeightRate(results.targetRateKgPerWeek, bodyWeightUnits)
                         : 'Unavailable'}
                     </Text>
                   </View>

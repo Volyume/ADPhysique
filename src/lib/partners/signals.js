@@ -73,9 +73,8 @@ export function partnerRowState({ partnership = null, partnerWeek = null } = {})
  * used to branch `tier === 'pro' ? 3 : 1`, but every caller of this module
  * (usePartners.js, consumed only by PartnerScreen.js) is unreachable for a
  * free-tier user -- the `Partner` route is `withProGuard`-wrapped at the
- * navigator (RootNavigator.js:223, `GatedPartner = lazyScreen(() =>
- * withProGuard(require('../screens/PartnerScreen').default, 'Training
- * partner'))`), so `tier` is always 'pro' by the time any of this module's
+ * navigator (RootNavigator.js:223, the GatedPartner lazyScreen wrapper
+ * around PartnerScreen), so `tier` is always 'pro' by the time any of this module's
  * functions run in the live app. The free-tier branch was dead code, not a
  * live tier-gating leak; `tier` stays a parameter (rather than dropped
  * outright) only because canAddPartner's call sites already pass it and

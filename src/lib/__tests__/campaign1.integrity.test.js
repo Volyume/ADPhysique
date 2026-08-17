@@ -499,9 +499,19 @@ describe('P0-7: permissive-default defects are closed', () => {
     expect(ws).toMatch(/if \(!feedbackTouched\) \{\s*\n\s*setAdaptiveDecisions\(\{\}\);/);
 
     // D8: Home no longer hard-codes the joint/soreness signals away.
+    // RE-PINNED (Campaign 24 cohesion pass / hostile-review F1): the
+    // answered-only bucket averages moved from HomeScreen's inline block
+    // into the ONE shared derivation, buildLast4WeekDeloadBuckets
+    // (algorithms.js) — the invariant (rated-only averages, never a
+    // manufactured zero; zeroFillUnrated defaults FALSE) now lives there
+    // and is behaviourally pinned by algorithms.deloadBuckets.test.js.
+    // HomeScreen must consume the shared builder, never re-derive.
     const home = read('screens/HomeScreen.js');
     expect(home).not.toMatch(/avgJointDiscomfort: 0,\s*\/\/ not tracked/);
-    expect(home).toMatch(/jointRated\.length/);
+    expect(home).toMatch(/buildLast4WeekDeloadBuckets\(/);
+    const algorithms = read('lib/algorithms.js');
+    expect(algorithms).toMatch(/jointRatedWeeks\.length/);
+    expect(algorithms).toMatch(/zeroFillUnrated = false/);
   });
 });
 

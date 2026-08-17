@@ -323,9 +323,14 @@ describe('R-17 (D97-22): the win-back claims storage only, and calm mode gates t
 
 describe('R-12 (D97-22): a gap week is an accumulation boundary, never fatigue evidence', () => {
   test('the lighter-week scan ends at an untrained week and cannot invert polarity', () => {
-    const src = read('hooks/useProgressData.js');
-    const fn = src.slice(src.indexOf('const weeksSinceLighter = (() => {'));
-    const scan = fn.slice(0, fn.indexOf('})();'));
+    // RE-PINNED (Campaign 24 cohesion pass / hostile-review F1): the scan
+    // moved from useProgressData's inline weeksSinceLighter IIFE into the
+    // ONE shared derivation, buildLast4WeekDeloadBuckets (algorithms.js).
+    // The R-12 invariant (an untrained week ends the scan and never reads
+    // as fatigue evidence) is unchanged at its new home.
+    const src = read('lib/algorithms.js');
+    const fn = src.slice(src.indexOf('export function buildLast4WeekDeloadBuckets'));
+    const scan = fn.slice(0, fn.indexOf('\n}'));
     // The empty-week branch returns the span measured so far (wk), and it
     // sits BEFORE the volume threshold so a gap can never read as heavy
     // training (returning 12 here would fabricate fatigue from absence).

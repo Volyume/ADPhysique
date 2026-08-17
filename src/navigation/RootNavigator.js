@@ -1267,6 +1267,14 @@ export default function RootNavigator() {
           // bundle reload (dev / Expo Go) would skip the restore + tier + sync.
           if (event === 'SIGNED_OUT') {
             _lastAuthEnter = { uid: null, at: 0 };
+            // Campaign 24 hostile-review F7: a DELIBERATE sign-out clears
+            // the prior-session marker (and the in-memory flag), so a
+            // signed-out device on a bad network next boot lands on Welcome
+            // -- its honest state -- never the auth-retry wall. The marker
+            // means "a signed-in user is expected on this device"; after
+            // sign-out, none is.
+            AsyncStorage.removeItem('@volyume_last_supabase_user_id').catch(() => {});
+            setHadPriorSession(false);
             // Release-gate fix: playBilling.logOut() exists and correctly
             // removes the purchase/error listeners and ends the store
             // connection, but nothing in the app has ever called it - so the

@@ -115,7 +115,12 @@ describe('navigator wiring (Wave-3 review fixes, source-level pins)', () => {
 
   test('the retry is AWAITED inside the sign-in pipeline, before the cross-account gate', () => {
     const retryAt = nav.indexOf('await retryPendingAuthDeletion(session.user.id)');
-    const lastUidAt = nav.indexOf("@volyume_last_supabase_user_id'");
+    // RE-PINNED (Campaign 24 Wave E / hostile-review F1): the marker string
+    // now ALSO appears earlier in the file (the fail-quiet boot read the
+    // startup-flash fix added, and the SIGNED_OUT clear). The invariant is
+    // about the SIGN-IN PIPELINE's cross-account read, so anchor on the
+    // first occurrence AFTER the retry await, not the first in the file.
+    const lastUidAt = nav.indexOf("@volyume_last_supabase_user_id'", retryAt);
     expect(retryAt).toBeGreaterThan(-1);
     expect(lastUidAt).toBeGreaterThan(-1);
     expect(retryAt).toBeLessThan(lastUidAt);

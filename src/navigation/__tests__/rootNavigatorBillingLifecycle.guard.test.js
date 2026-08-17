@@ -79,13 +79,19 @@ describe('sign-out releases the billing session so a user switch cannot inherit 
   test('SIGNED_OUT calls playBilling.logOut()', () => {
     const idx = src.indexOf("if (event === 'SIGNED_OUT') {");
     expect(idx).toBeGreaterThan(-1);
-    const block = src.slice(idx, idx + 900);
+    // Window widened 900->1400 (Campaign 24 hostile-review F1/F7: the
+    // sign-out block gained the prior-session marker clear above the
+    // billing logOut call, pushing it past the old slice).
+    const block = src.slice(idx, idx + 1400);
     expect(block).toMatch(/require\('\.\.\/lib\/payments\/playBilling'\)\.logOut\?\.\(\)/);
   });
 
   test('it is best-effort and can never block or fail the sign-out', () => {
     const idx = src.indexOf("if (event === 'SIGNED_OUT') {");
-    const block = src.slice(idx, idx + 900);
+    // Window widened 900->1400 (Campaign 24 hostile-review F1/F7: the
+    // sign-out block gained the prior-session marker clear above the
+    // billing logOut call, pushing it past the old slice).
+    const block = src.slice(idx, idx + 1400);
     expect(block).toMatch(/\.catch\(\(\) => \{\}\)/);
     expect(block).not.toMatch(/await require\('\.\.\/lib\/payments\/playBilling'\)/);
   });
