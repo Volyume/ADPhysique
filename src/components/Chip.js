@@ -11,7 +11,7 @@
 import { Platform, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
-import { spacing, radius } from '../styles/theme';
+import { spacing, radius, fontScaleCaps } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 export default function Chip({
@@ -28,14 +28,13 @@ export default function Chip({
   labelStyle,
   selectedLabelStyle,
   numberOfLines,
-  // Launch accessibility audit AX-05 (2026-07-12): this used to default to
-  // 1.3 so a row of chips could not blow past its container, silently
-  // reintroducing the app-wide 1.3x cap EP-14 removed everywhere else and
-  // denying low-vision users their requested text size on 49 call sites. No
-  // default now -- the label scales with the system like every other Text.
-  // A caller with a genuinely fixed-geometry need may still pass its own
-  // value; none currently do.
-  maxFontSizeMultiplier,
+  // Campaign 27 Pillar B (D104-1, founder-approved 2026-08-17, amending
+  // AX-05/EP-14): chips are dense chrome, so the label defaults to the
+  // central chrome ceiling - sourced from the theme table, never a numeric
+  // literal (the exact silent-literal shape AX-05 objected to stays
+  // banned; the DEFAULT itself is now sanctioned law). Callers may still
+  // override per surface.
+  maxFontSizeMultiplier = fontScaleCaps.chrome,
   testID,
 }) {
   // CP-10 stage 1: live theme (src/hooks/useTheme.js) instead of the static

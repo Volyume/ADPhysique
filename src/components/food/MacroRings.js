@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSharedValue, useDerivedValue, withTiming } from 'react-native-reanimated';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import RollingNumber from '../RollingNumber';
-import { colors, fontSize, fontWeight, spacing, radius, motion } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, motion, fontScaleCaps } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -16,7 +16,9 @@ const KCAL_STROKE = 14;
 // most-viewed screen in the app. RollingNumber's maxFontSizeMultiplier prop
 // exists for exactly this (see its header comment); it stayed optional
 // (D6) rather than becoming required, so it is capped here at the call sites.
-const KCAL_MAX_FONT_SCALE = 1.3;
+// Campaign 27 Pillar B (D104-1): re-sourced from the central theme table
+// (same 1.3 value; caps never carry inline numeric literals now).
+const KCAL_MAX_FONT_SCALE = fontScaleCaps.chrome;
 
 // Adherence-neutral ring colour (founder decision 2026-05-29, reversing the
 // earlier amber/green/amber three-band). The ring shows progress in the brand

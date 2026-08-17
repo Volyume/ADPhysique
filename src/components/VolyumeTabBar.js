@@ -41,7 +41,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import useAppStore from '../store/useAppStore';
 import ActiveSessionMiniBar from './ActiveSessionMiniBar';
-import { colors, radius, spacing, motion, type } from '../styles/theme';
+import { colors, radius, spacing, motion, type, fontScaleCaps } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 // Sits behind the ACTIVE ICON AND ITS LABEL as one soft cushion (founder
@@ -175,7 +175,9 @@ export default function VolyumeTabBar({ state, descriptors, navigation }) {
                 </TabIcon>
                 {showCoachBadge ? <View style={[styles.badgeDot, live.badgeDot]} pointerEvents="none" /> : null}
               </View>
-              <Text style={[styles.label, live.label, { color }]} numberOfLines={1}>{label}</Text>
+              {/* Campaign 27 Pillar B (D104-1): tab labels are dense chrome -
+                  the central chrome ceiling applies. */}
+              <Text style={[styles.label, live.label, { color }]} numberOfLines={1} maxFontSizeMultiplier={fontScaleCaps.chrome}>{label}</Text>
             </Pressable>
           );
         })}

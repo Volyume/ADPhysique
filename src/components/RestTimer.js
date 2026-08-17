@@ -439,10 +439,12 @@ export default function RestTimer() {
             : `Rest timer, ${mins} minute${mins === 1 ? '' : 's'} ${secs} second${secs === 1 ? '' : 's'} remaining`}
         >
           <Text style={[styles.label, live.label]} numberOfLines={1}>Rest</Text>
+          {/* Campaign 27 Pillar B (D104-1): the countdown's fixed-geometry
+              cap re-sourced from the central theme table (same 1.15). */}
           {isCountdown ? (
-            <Text style={[styles.timeText, styles.countdownNum, live.countdownNum]} maxFontSizeMultiplier={1.15}>{restTimerRemaining}</Text>
+            <Text style={[styles.timeText, styles.countdownNum, live.countdownNum]} maxFontSizeMultiplier={fontScaleCaps.numeral}>{restTimerRemaining}</Text>
           ) : (
-            <Text style={[styles.timeText, live.timeText, isAlmostDone && [styles.almostDone, live.almostDone]]} maxFontSizeMultiplier={1.15}>{timeStr}</Text>
+            <Text style={[styles.timeText, live.timeText, isAlmostDone && [styles.almostDone, live.almostDone]]} maxFontSizeMultiplier={fontScaleCaps.numeral}>{timeStr}</Text>
           )}
         </View>
         {TIME_ADJUSTMENTS.map(({ delta, label }) => {

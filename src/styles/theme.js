@@ -413,6 +413,27 @@ const baseFontSize = {
 
 export const fontSize = { ...baseFontSize };
 
+// ─── Campaign 27 Pillar B (D104-1, founder-approved 2026-08-17): the ONE
+// place font-scale ceilings live. EP-14's blanket-uncapped law is AMENDED
+// (D103/D104): per-surface caps, sourced ONLY from this table - never an
+// inline numeric literal (accessibilityDesign.guard.test.js enforces this,
+// closing the old guard's literal-only blind spot).
+//   reading - body/reading copy. Binds only above 200% (iOS accessibility
+//             sizes; Android tops out at 200% with a non-linear curve), per
+//             Apple's own "at minimum 200%" larger-text bar. Applied by the
+//             D30 codemod sweep (explicit per-element props - React 19
+//             drops Text.defaultProps, so a global default cannot work).
+//   chrome  - dense UI: chips, buttons, section labels, tab labels, stat
+//             tiles and fixed-layout numerals that tolerate 1.3.
+//   numeral - genuinely fixed-geometry glyphs (rest-timer countdown).
+// Settings' text-size copy states this honestly (SettingsDisplayScreen);
+// never re-tighten a value here without a founder ruling.
+export const fontScaleCaps = {
+  reading: 2.0,
+  chrome: 1.3,
+  numeral: 1.15,
+};
+
 // ─── CP-10 stage 0: the restart-free theming primitive ─────────────────────
 // Pure derivation shared by BOTH theming systems. Given the same four raw
 // preferences applyAccessibility already reads (theme/higherContrast/

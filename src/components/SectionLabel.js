@@ -1,5 +1,5 @@
 import { Text, StyleSheet } from 'react-native';
-import { colors, type } from '../styles/theme';
+import { colors, type, fontScaleCaps } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 // AX-07 (launch accessibility audit, 2026-07-12): SectionLabel covers both
@@ -22,6 +22,10 @@ export default function SectionLabel({
   const live = buildLiveStyles(t);
   return (
     <Text
+      // Campaign 27 Pillar B (D104-1): section/overline labels are dense
+      // chrome - the central chrome ceiling applies, before the spread so
+      // a call site with a genuine need can still override it.
+      maxFontSizeMultiplier={fontScaleCaps.chrome}
       {...textProps}
       accessibilityRole={heading ? 'header' : textProps.accessibilityRole}
       style={[

@@ -38,7 +38,7 @@ import PressableCard from './PressableCard';
 import useAppStore from '../store/useAppStore';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
-import { spacing, radius, motion, withAlpha, alpha, lineHeight } from '../styles/theme';
+import { spacing, radius, motion, withAlpha, alpha, lineHeight, fontScaleCaps } from '../styles/theme';
 import { fontFamily } from '../styles/fontFamily';
 
 // CP-10 stage 1: VARIANTS (colour) and SIZES (fontSize) were module-scope
@@ -177,7 +177,9 @@ export default function Button({
     <>
       <Ionicons name="checkmark" size={s.icon} color={v.fg} />
       {successLabel ? (
-        <Text style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
+        // Campaign 27 Pillar B (D104-1): buttons are dense chrome - the
+        // central chrome ceiling applies, sourced from the theme table.
+        <Text maxFontSizeMultiplier={fontScaleCaps.chrome} style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}>
           {successLabel}
         </Text>
       ) : null}
@@ -190,6 +192,8 @@ export default function Button({
           numberOfLines={singleLine ? 1 : undefined}
           adjustsFontSizeToFit={singleLine}
           minimumFontScale={singleLine ? 0.8 : undefined}
+          // Campaign 27 Pillar B (D104-1): chrome ceiling from the theme table.
+          maxFontSizeMultiplier={fontScaleCaps.chrome}
           style={[styles.label, { color: v.fg, fontSize: s.font, lineHeight: Math.round(s.font * lineHeight.snug) }, textStyle]}
         >
           {title}
