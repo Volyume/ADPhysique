@@ -2878,3 +2878,16 @@ Lead rulings under D33 recorded with the implementation:
   score); sessions count from the last real check-in's timestamp.
   Pinned: no pane state may ever contain "first review"
   (evidencePanel.test.js framing-law block).
+
+## D103 — text-size law opened for amendment (founder, 2026-08-17)
+
+Founder ruling, given ahead of the Campaign 27 proposal (verbatim
+intent): "I am open to modifying any law for the betterment of the
+app. The goal is the app to be elite and perfect on a range of
+[devices]. All texts can be sized as suited for the best product."
+Effect: EP-14's blanket-uncapped text scaling is no longer inviolable;
+per-surface caps and device-class type ramps may be proposed and, on
+founder approval of the Campaign 27 proposal's choice points, built.
+Any capping change must amend the Settings copy that promises the
+phone's text size is respected (truth law). The specific amendment
+awaits the founder's answers to PROPOSAL.md section 4.

@@ -2243,7 +2243,7 @@ docs/home-logger-progress-campaign-26-2026-08-17/DEVICE-CHECKLIST.md
 (15 checks, founder walk pending). Known flake: widget-storage suite
 under the parallel run (passes isolated; recorded residue).
 
-## CAMPAIGN 27 (2026-08-17) — responsive display consistency research. IN FLIGHT (docs-only phase).
+## CAMPAIGN 27 (2026-08-17) — responsive display consistency research. PHASE 1 COMPLETE — PROPOSAL AWAITING FOUNDER ANSWERS.
 
 Founder question: text/layout renders very differently 17 Pro Max vs
 S22+, worse on smaller screens; research how mobile apps achieve
@@ -2255,3 +2255,11 @@ docs/responsive-display-campaign-27-2026-08-17/PROPOSAL.md.
 RECOVERY PATH: agents are read-only; if either dies, relaunch from this
 entry's brief summary - no tree state to recover. Implementation only
 after the founder chooses among the proposal's options.
+
+**C27 Phase 1 landed 2026-08-17.** Both agents reported (sonnet
+audit + sonnet research, per the founder's low-tier order); lead
+synthesis in docs/responsive-display-campaign-27-2026-08-17/
+(PROPOSAL.md + AUDIT-FINDINGS.md + RESEARCH-FINDINGS.md). Founder
+ruling D103 recorded (text-size law open). BLOCKED ON: the three
+choice points in PROPOSAL.md section 4 (EP-14 amendment shape, narrow-
+device bucket, phasing). No production code until answered.
