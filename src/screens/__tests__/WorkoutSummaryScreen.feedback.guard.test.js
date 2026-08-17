@@ -69,7 +69,11 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toContain('<Text style={[styles.sectionTitle, live.sectionTitle]}>Workout feedback</Text>');
     expect(SOURCE).toContain('Rate this workout');
     expect(SOURCE).toContain('placeholder="Anything notable from this session"');
-    expect(SOURCE).toContain('placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume"');
+    // Re-pinned (Campaign 24 Wave A, WAVE-A-FINDINGS.md COPY_DEFECT :1744):
+    // the placeholder used to hard-code 'kg' regardless of the user's chosen
+    // unit; it now branches on the store's units, matching the tonnage hero
+    // fix on the same screen (UNIT_DEFECT :1220-1226).
+    expect(SOURCE).toContain("placeholder={`Anything to remember for next session? e.g. try ${units === 'lbs' ? '185lbs' : '85kg'}, wider grip, reduce volume`}");
     expect(SOURCE).not.toContain('Tell your coach');
     expect(SOURCE).not.toContain('const [feedbackExpanded, setFeedbackExpanded] = useState(!readOnly);');
     expect(SOURCE).not.toContain('Add session feedback');

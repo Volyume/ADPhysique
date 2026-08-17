@@ -298,7 +298,14 @@ export default function RoutineDetailScreen({ navigation, route }) {
     const sets = parseInt(editSets, 10);
     const repsMin = parseInt(editRepsMin, 10);
     const repsMax = parseInt(editRepsMax, 10);
-    if (!sets || !repsMin || !repsMax) return;
+    // WAVE-A-FINDINGS.md STATE_DEFECT (:296-311): this used to return
+    // silently on invalid input (0/NaN), leaving the BottomSheet open with
+    // no visible reason nothing happened. Every sibling save path in this
+    // wave (ManualBuilderScreen.validate) shows a warning toast instead.
+    if (!sets || !repsMin || !repsMax) {
+      toast.show('Enter a value for sets and reps before saving', { variant: 'warning' });
+      return;
+    }
     await updateRoutineExercise(editingExercise.routineExercise.id, {
       recommendedSets: sets,
       recommendedRepsMin: repsMin,

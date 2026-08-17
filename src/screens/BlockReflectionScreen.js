@@ -52,7 +52,7 @@ function StatBlock({ icon, value, label, tooltip = null }) {
   );
 }
 
-function buildNarrative(data) {
+function buildNarrative(data, units) {
   const { meso, totalSessions, totalSets, tonnage, tonnageDelta, topExercise, avgDuration } = data;
   const name = meso?.name ?? 'this block';
   const weeks = meso?.plannedWeeks ?? meso?.planned_weeks ?? '';
@@ -63,7 +63,10 @@ function buildNarrative(data) {
   }
 
   if (totalSets > 0) {
-    lines.push(`That's ${totalSets.toLocaleString('en-GB')} working sets and ${tonnage.toLocaleString('en-GB')} kg lifted in total.`);
+    // WAVE-A-FINDINGS.md UNIT_DEFECT (:66): hard-coded 'kg' regardless of
+    // the store's units; `units` is now threaded in from the render below,
+    // matching the correct PR-value pattern already in this file (:309).
+    lines.push(`That's ${totalSets.toLocaleString('en-GB')} working sets and ${tonnage.toLocaleString('en-GB')} ${units} lifted in total.`);
   }
 
   if (avgDuration > 0) {
@@ -184,7 +187,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
     }
   }
 
-  const narrative = data ? buildNarrative(data) : [];
+  const narrative = data ? buildNarrative(data, units) : [];
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'left', 'right']}>
@@ -259,7 +262,10 @@ export default function BlockReflectionScreen({ navigation, route }) {
               <StatBlock icon="layers-outline" value={data.totalSets.toLocaleString('en-GB')} label="Sets" tooltip={GLOSSARY.workingSets} />
               <StatBlock
                 icon="trending-up-outline"
-                value={`${data.tonnage.toLocaleString('en-GB')} kg`}
+                // WAVE-A-FINDINGS.md UNIT_DEFECT (:262): hard-coded 'kg';
+                // swapped for the store's units, mirroring the correct
+                // PR-value pattern already in this file (:309).
+                value={`${data.tonnage.toLocaleString('en-GB')} ${units}`}
                 label="Total lifted"
                 tooltip={GLOSSARY.tonnage}
               />
@@ -338,7 +344,9 @@ export default function BlockReflectionScreen({ navigation, route }) {
                   <Text style={[styles.bestSessionDate, live.bestSessionDate]}>{fmtDate(data.bestSession.startedAt)}</Text>
                 </View>
                 <Text style={[styles.bestSessionVolume, live.bestSessionVolume]}>
-                  {Math.round(data.bestSession.volume).toLocaleString('en-GB')} kg
+                  {/* WAVE-A-FINDINGS.md UNIT_DEFECT (:341): hard-coded 'kg';
+                      swapped for the store's units, mirroring :309. */}
+                  {Math.round(data.bestSession.volume).toLocaleString('en-GB')} {units}
                 </Text>
               </View>
             )}

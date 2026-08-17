@@ -1220,7 +1220,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         <Card elevated padding="xl" style={styles.heroCard}>
           <StatBox
             hero
-            value={formatWithUnit(formatNumber(Math.round(tonnage || 0)), 'kg')}
+            // WAVE-A-FINDINGS.md UNIT_DEFECT (:1220-1226): hard-coded 'kg'
+            // regardless of the store's units, mislabelling an lbs user's
+            // total. Matches the already-fixed ShareCard sibling (R8/M5,
+            // :936: `units === 'lbs' ? 'lbs' : 'kg'`).
+            value={formatWithUnit(formatNumber(Math.round(tonnage || 0)), units === 'lbs' ? 'lbs' : 'kg')}
             label="Total lifted"
             tooltip={'Total weight moved this session: sets x reps x weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
           />
@@ -1741,7 +1745,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               inputStyle={[styles.nextTimeNoteInput, live.nextTimeNoteInput]}
               value={nextTimeNote}
               onChangeText={setNextTimeNote}
-              placeholder="Anything to remember for next session? e.g. try 85kg, wider grip, reduce volume"
+              // WAVE-A-FINDINGS.md COPY_DEFECT (:1744): the example hard-coded
+              // kg regardless of the user's chosen unit; same root cause as
+              // the hero-stat fix above, bundled per the change plan.
+              placeholder={`Anything to remember for next session? e.g. try ${units === 'lbs' ? '185lbs' : '85kg'}, wider grip, reduce volume`}
               placeholderTextColor={t.colors.textMuted}
               multiline
               numberOfLines={3}

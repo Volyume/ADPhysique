@@ -18,7 +18,7 @@ import ExerciseConflictSheet from '../components/ExerciseConflictSheet';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import { planHeadingName, planEquipmentLabel } from '../lib/planDisplay';
-import { getPlanDays } from '../lib/onboarding/freeStarter';
+import { getPlanDays, planEquipmentAllows, scorePlanRecommendation } from '../lib/onboarding/freeStarter';
 import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE } from '../lib/blockExplain';
 import { SkeletonCard } from '../components/Skeleton';
 import SearchBar from '../components/SearchBar';
@@ -152,44 +152,37 @@ function sortBeginnerFirst(list) {
 
 // C5-P10-03 (D96): equipment is a hard FILTER, not a score bump.
 //
-// The scorer below gave a matching equipment tag +4, which a division plan
-// clears on goal alone (+5 for stage_prep), so a "Home / no equipment" user
-// answering "Get on stage" was handed a five-day advanced full-gym division
-// plan under the heading "Here's our suggestion". This is the same
-// predicate shape freeStarter.isStarterCandidate already encodes ("someone
-// training at home is never handed a barbell plan they cannot do"), applied
-// to the library quiz's own answer keys. An emptied pool falls through to
-// the screen's existing "No exact match found" branch.
-function quizEquipmentAllows(plan, equipment) {
-  if (equipment === 'bodyweight') return hasTag(plan, 'equipment:bodyweight');
-  if (equipment === 'dumbbell') {
-    return hasTag(plan, 'equipment:dumbbell') || hasTag(plan, 'equipment:bodyweight');
-  }
-  return true; // full gym, or no answer: everything is performable
-}
-
+// The scorer used to give a matching equipment tag +4, which a division
+// plan cleared on goal alone (+5 for stage_prep), so a "Home / no
+// equipment" user answering "Get on stage" was handed a five-day advanced
+// full-gym division plan under the heading "Here's our suggestion". An
+// emptied pool falls through to the screen's existing "No exact match
+// found" branch.
+//
+// Campaign 24 Wave A (WAVE-A-FINDINGS.md DUPLICATION): the equipment filter
+// and the goal/equipment scoring core used to be re-implemented by hand
+// here (quizEquipmentAllows + an inline scorer), independently of the
+// identically-shaped rules in freeStarter.js's starter quiz -- the same
+// user answering equivalent questions in the starter flow and this quiz in
+// the same session could get two different plans, and a future rule change
+// was not guaranteed to reach both. Both quizzes now share
+// freeStarter.planEquipmentAllows / scorePlanRecommendation; this quiz's
+// only addition on top is `includeDivisions: true`, since unlike the
+// starter quiz it weighs stage_prep/division plans.
+//
 // Exported for the C5-P10-03 pin: the equipment filter is a behavioural
 // rule, not a copy one, so it is asserted against the real scorer (the same
 // pattern YearOfLiftsScreen's card builders already use).
 export function getQuizRecommendation(answers, plans) {
-  const { goal, equipment } = answers;
+  const { equipment } = answers;
   if (!plans.length) return null;
-  const performable = plans.filter(p => quizEquipmentAllows(p, equipment));
+  const performable = plans.filter(p => planEquipmentAllows(p, equipment));
   if (!performable.length) return null;
 
-  const scored = performable.map(p => {
-    let score = 0;
-    if (hasTag(p, 'category:division') && goal !== 'stage_prep') score -= 5;
-    if (goal === 'build_muscle'  && hasTag(p, 'goal:build_muscle'))  score += 3;
-    if (goal === 'get_stronger'  && hasTag(p, 'goal:get_stronger'))  score += 3;
-    if (goal === 'conditioning'  && hasTag(p, 'goal:conditioning'))  score += 3;
-    if (goal === 'stage_prep'    && hasTag(p, 'category:division'))  score += 5;
-    if (equipment === 'full_gym'   && !hasTag(p, 'equipment:dumbbell') && !hasTag(p, 'equipment:bodyweight')) score += 1;
-    if (equipment === 'dumbbell'   && hasTag(p, 'equipment:dumbbell'))  score += 4;
-    if (equipment === 'bodyweight' && hasTag(p, 'equipment:bodyweight')) score += 4;
-    if (hasTag(p, 'featured')) score += 1;
-    return { plan: p, score };
-  });
+  const scored = performable.map(p => ({
+    plan: p,
+    score: scorePlanRecommendation(p, answers, { includeDivisions: true }),
+  }));
 
   scored.sort((a, b) => b.score - a.score);
   return scored[0]?.plan ?? null;

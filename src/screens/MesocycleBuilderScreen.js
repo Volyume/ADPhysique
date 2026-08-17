@@ -24,7 +24,6 @@ import {
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage } from '../lib/algorithms';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
-import { predictDeloadWeek, evaluateAutoReg } from '../lib/mesocycle';
 import { planHeadingName } from '../lib/planDisplay';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -45,6 +44,16 @@ export default function MesocycleBuilderScreen({ navigation }) {
   const [activePlan, setActivePlanData] = useState(null);  // coach/manual-built plan
   const [activeStats, setActiveStats] = useState(null);   // { tonnageBars, recovery, deload }
   const [loaded, setLoaded] = useState(false);
+  // WAVE-A-FINDINGS.md STATE_DEFECT (:162-176): every catch below used to
+  // silently reset state to []/null with no error flag exposed to render,
+  // so a transient DB read failure painted the "Your training blocks start
+  // here" / "No block running yet" EmptyState exactly as if the user had
+  // never trained -- a load FAILURE read as a confirmed empty account.
+  // Mirrors PlansScreen.js's EP-09/P-06 loadError pattern: each loader now
+  // reports success/failure, loadAll flags loadError if any of the three
+  // failed, and the render layer shows a retryable error state instead of
+  // the empty-account copy when there is genuinely nothing to fall back on.
+  const [loadError, setLoadError] = useState(false);
 
   useFocusEffect(useCallback(() => {
     if (user?.id) loadAll();
@@ -53,36 +62,53 @@ export default function MesocycleBuilderScreen({ navigation }) {
 
   async function loadAll() {
     try {
-      await Promise.all([loadMesocycles(), loadActiveStats(), loadActivePlan()]);
+      const results = await Promise.all([loadMesocycles(), loadActiveStats(), loadActivePlan()]);
+      setLoadError(results.some(ok => ok === false));
     } finally {
       setLoaded(true);
     }
   }
 
   async function loadMesocycles() {
-    if (!user?.id) return;
+    if (!user?.id) return true;
     try {
       const mine = await getAllMesocycles(user.id);
       setMesocycles(mine);
+      return true;
     } catch (e) {
       logError('MesocycleBuilderScreen.loadMesocycles', e, { userId: user.id });
+      return false;
     }
   }
 
   async function loadActivePlan() {
-    if (!user?.id) return;
+    if (!user?.id) return true;
     try {
       const plan = await getActivePlan(user.id);
-      if (!plan) { setActivePlanData(null); return; }
+      if (!plan) { setActivePlanData(null); return true; }
       const routines = await getRoutinesForPlan(plan.id).catch(() => []);
       setActivePlanData({ ...plan, workoutCount: routines.length });
+      return true;
     } catch (_) {
       setActivePlanData(null);
+      return false;
     }
   }
 
+  // WAVE-A-FINDINGS.md AUTHORITY_DEFECT (Class C, :109-160): this used to
+  // also compute evaluateAutoReg/predictDeloadWeek (src/lib/mesocycle.js)
+  // from a 4-workout post-session feedback window and feed ActiveMesoDash-
+  // board's deload advisory banner -- an independent, ungated second
+  // recovery/deload judgement that could disagree with the authoritative
+  // blockAdvisor.getBlockAdvice decision on the Train tab (which reads
+  // weekly check-ins) and leaked adaptive coaching copy to Free (no tier
+  // check existed on this path). Removed per the change plan; the lib
+  // functions in mesocycle.js are left in place (production-unreferenced,
+  // a standing D37 founder-triage item) -- only this call site and its
+  // JSX are gone. Tonnage bars and recovery EMA (factual display, class A)
+  // are unaffected.
   async function loadActiveStats() {
-    if (!user?.id) return;
+    if (!user?.id) return true;
     try {
       const [mesoRows, workouts, sets] = await Promise.all([
         getAllMesocycles(user.id),
@@ -90,7 +116,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
         getCompletedWorkoutSets(user.id),
       ]);
       const active = mesoRows.find(m => m.isActive === 1 || m.isActive === true);
-      if (!active?.startDate) { setActiveStats(null); return; }
+      if (!active?.startDate) { setActiveStats(null); return true; }
 
       const startMs = new Date(active.startDate).getTime();
       const totalWeeks = active.durationWeeks || 4;
@@ -117,24 +143,12 @@ export default function MesocycleBuilderScreen({ navigation }) {
       const completed = workouts.filter(w => w.isCompleted ?? w.is_completed ?? false);
       const recovery = computeRecoveryEMAs(completed);
 
-      // Last 4 workouts feedback window
-      const recent = completed.sort((a, b) => (b.startedAt ?? 0) - (a.startedAt ?? 0)).slice(0, 4);
-      const feedbackWindow = recent.map(w => ({
-        sessionDifficulty: w.sessionDifficulty ?? w.session_difficulty ?? 3,
-        overallPump: w.overallPump ?? w.overall_pump ?? 3,
-        soreness24hBefore: w.soreness24hBefore ?? w.soreness_24h_before ?? 0,
-        fatigueLevel: w.fatigueLevel ?? w.fatigue_level ?? 3,
-        jointDiscomfort: w.jointDiscomfort ?? 0,
-      }));
-
-      const autoReg = evaluateAutoReg(feedbackWindow);
-      const currentWeek = getCurrentWeek(active);
-      const deloadPrediction = predictDeloadWeek(feedbackWindow, currentWeek);
-
-      setActiveStats({ tonnageBars, recovery, autoReg, deloadPrediction, active });
+      setActiveStats({ tonnageBars, recovery, active });
+      return true;
     } catch (e) {
       logWarn('MesocycleBuilderScreen.loadActiveStats', e?.message);
       setActiveStats(null);
+      return false;
     }
   }
 
@@ -371,7 +385,22 @@ export default function MesocycleBuilderScreen({ navigation }) {
               <SkeletonCard height={120} />
               <SkeletonCard height={72} />
             </View>
-          ) : activeStats ? null : (
+          ) : activeStats ? null : loadError ? (
+            // WAVE-A-FINDINGS.md STATE_DEFECT (:162-176): a load failure
+            // must never be mistaken for a confirmed "no blocks yet"
+            // account state, matching PlansScreen.js's EP-09/P-06 pattern.
+            // Only shown when there is genuinely nothing to fall back on
+            // (gated on !activeStats, same as the empty-account branch it
+            // replaces).
+            <EmptyState
+              icon="cloud-offline-outline"
+              title="Couldn't load your training blocks"
+              text="Check your connection and try again. Nothing has been lost."
+              actionLabel="Retry"
+              onAction={loadAll}
+              actionAccessibilityLabel="Retry loading your training blocks"
+            />
+          ) : (
             <EmptyState
               icon="calendar-outline"
               title={activePlan ? 'No block running yet' : 'Your training blocks start here'}
@@ -398,20 +427,12 @@ export default function MesocycleBuilderScreen({ navigation }) {
 function ActiveMesoDashboard({ stats, currentWeek, finished = false }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  const { tonnageBars, recovery, autoReg, deloadPrediction, active } = stats;
+  const { tonnageBars, recovery, active } = stats;
   const totalWeeks = active.durationWeeks || 4;
   const progress = Math.min(1, (currentWeek - 1) / Math.max(totalWeeks - 1, 1));
   const progressPct = `${Math.round(progress * 100)}%`;
 
   const hasTonnage = tonnageBars.some(b => b.value > 0);
-
-  // Deload advice copy (jargon-free)
-  let deloadCopy = null;
-  if (autoReg?.action === 'deload_now') {
-    deloadCopy = { text: autoReg.reason || 'Your body is signalling it needs a lighter week.', urgent: true };
-  } else if (deloadPrediction?.weeksUntilDeload != null && deloadPrediction.weeksUntilDeload <= 2) {
-    deloadCopy = { text: `A lighter week is likely in about ${deloadPrediction.weeksUntilDeload} week${deloadPrediction.weeksUntilDeload !== 1 ? 's' : ''}.`, urgent: false };
-  }
 
   return (
     <View style={[styles.dashCard, live.dashCard]}>
@@ -497,20 +518,6 @@ function ActiveMesoDashboard({ stats, currentWeek, finished = false }) {
           </View>
         </View>
       )}
-
-      {/* Deload advice banner */}
-      {deloadCopy && (
-        <View style={[styles.deloadBanner, live.deloadBanner, deloadCopy.urgent && [styles.deloadBannerUrgent, live.deloadBannerUrgent]]}>
-          <Ionicons
-            name={deloadCopy.urgent ? 'warning-outline' : 'information-circle-outline'}
-            size={14}
-            color={deloadCopy.urgent ? t.colors.error : t.colors.warning}
-          />
-          <Text style={[styles.deloadBannerText, live.deloadBannerText, deloadCopy.urgent && { color: t.colors.onErrorBg }]}>
-            {deloadCopy.text}
-          </Text>
-        </View>
-      )}
     </View>
   );
 }
@@ -544,13 +551,6 @@ const styles = StyleSheet.create({
   recovItem:  { alignItems: 'center', gap: spacing.xxs },
   recovValue: { ...type.num('bodyStrong'), color: colors.textPrimary },
   recovLabel: { fontSize: fontSize.micro, color: colors.textMuted },
-  deloadBanner: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm,
-    backgroundColor: colors.warningBg, borderRadius: radius.md,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.warning,
-  },
-  deloadBannerUrgent: { backgroundColor: colors.errorBg, borderColor: colors.error },
-  deloadBannerText: { ...type.captionTight, flex: 1, color: colors.warning },
 
   // Meso list cards
   mesoCard: {
@@ -643,9 +643,6 @@ function buildLiveStyles(t) {
     tonnageLabel: { ...t.type.caption, color: t.colors.textMuted },
     recovValue: { ...t.type.num('bodyStrong'), color: t.colors.textPrimary },
     recovLabel: { fontSize: t.fontSize.micro, color: t.colors.textMuted },
-    deloadBanner: { backgroundColor: t.colors.warningBg, borderColor: t.colors.warning },
-    deloadBannerUrgent: { backgroundColor: t.colors.errorBg, borderColor: t.colors.error },
-    deloadBannerText: { ...t.type.captionTight, color: t.colors.warning },
     mesoCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     mesoCardActive: { borderColor: t.colors.primary },
     activeBadge: { backgroundColor: t.colors.primaryBg },
