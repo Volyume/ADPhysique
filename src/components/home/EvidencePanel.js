@@ -36,13 +36,25 @@ function EvidencePanel({ panel, onPress, testID }) {
       ].filter(Boolean).join('. ')}
       testID={testID}
     >
-      <View style={styles.headerRow}>
-        <Text style={[styles.title, live.title]}>{panel.title}</Text>
-        <Ionicons name="chevron-forward" size={14} color={t.colors.textMuted} />
-      </View>
-      {panel.countdown ? (
-        <Text style={[styles.countdown, live.countdown]}>{panel.countdown}</Text>
-      ) : null}
+      {/* Founder order 2026-08-17: no coach-voiced title. When a real
+          check-in exists the pane titles itself "Since your check-in";
+          otherwise the countdown IS the header line. */}
+      {panel.title ? (
+        <>
+          <View style={styles.headerRow}>
+            <Text style={[styles.title, live.title]}>{panel.title}</Text>
+            <Ionicons name="chevron-forward" size={14} color={t.colors.textMuted} />
+          </View>
+          {panel.countdown ? (
+            <Text style={[styles.countdown, live.countdown]}>{panel.countdown}</Text>
+          ) : null}
+        </>
+      ) : (
+        <View style={styles.headerRow}>
+          <Text style={[styles.countdown, live.countdown]}>{panel.countdown}</Text>
+          <Ionicons name="chevron-forward" size={14} color={t.colors.textMuted} />
+        </View>
+      )}
       {panel.rows.map((row) => (
         <View key={row.key} style={styles.row}>
           <Ionicons

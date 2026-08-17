@@ -2286,3 +2286,12 @@ doc note. NEW PHASE 2e QUEUED (D105): type-role adoption sweep of the
 ~177 hand-rolled size sites, after 2b/2c so it normalises onto the
 finished system. Gates at landing: lint clean, full suite 994 suites /
 13,463 passed.
+
+## CAMPAIGN 28 (2026-08-17) — founder device tweaks, third batch. COMPLETE, MERGED TO MAIN.
+
+Evidence pane: no coach-voiced title in any state (D106-1), food
+adherence row (D106-2). Logger: name/dots true centre line + details
+chevron affordance (D106-3). C27 Phase 2b PAUSED and banked per D106-4
+- board status: 2b/2c/2d/2e HELD until the founder resumes next week;
+the campaign branch fails Chip.a11y BY DESIGN until then, do not merge
+it. Gates: lint clean; full suite green (known widget flake only).

@@ -3208,11 +3208,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   setShowExecution(true);
                 }}
                 accessibilityRole="button"
-                accessibilityLabel="Exercise info"
+                accessibilityLabel="Exercise details"
                 style={styles.exerciseNameTap}
                 hitSlop={{ top: 8, bottom: 8, left: 0, right: 8 }}
               >
                 <Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>
+                {/* Founder order 2026-08-17: the name-tap looked like plain
+                    text, so nothing said it opens the exercise's details.
+                    A quiet chevron in the house muted ink hugs the name's
+                    end - the standard "this expands" signal, no new chrome. */}
+                <Ionicons name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} style={styles.exerciseNameChevron} />
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.overflowBtn, showInfoTipPulse && styles.overflowBtnHinted]}
@@ -4831,11 +4836,26 @@ const styles = StyleSheet.create({
   // info" tap target (relocated off the overflow sheet); flex: 1 lives here
   // now, exerciseName keeps its own flex: 1 so numberOfLines={2} still wraps
   // correctly inside it.
-  exerciseNameTap: { flex: 1 },
+  // Founder order 2026-08-17 (two device notes): (1) the tap target is a ROW
+  // now so the details chevron hugs the name's end; (2) the name and the
+  // options dots sit perfectly on one centre line - the tap row centres its
+  // children on the same 44dp axis the dots box uses, and the name drops
+  // Android's extra font padding, which floated its ink a couple of dp high
+  // beside the icon.
+  exerciseNameTap: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xxs,
+    minHeight: workoutLoggerSize.overflowButton,
+  },
   // Founder order 2026-08-17 (Campaign 27): the exercise name steps down one
   // notch, title (17) -> bodyStrong (16, same medium weight) - "ever so
-  // slightly smaller", calmer against the plain header dots.
-  exerciseName: { flex: 1, ...type.bodyStrong, color: colors.textPrimary },
+  // slightly smaller", calmer against the plain header dots. flexShrink (not
+  // flex: 1) so the details chevron hugs the name's end instead of parking
+  // at the row's far edge; minWidth: 0 keeps two-line wrap working.
+  exerciseName: { flexShrink: 1, minWidth: 0, ...type.bodyStrong, color: colors.textPrimary, includeFontPadding: false },
+  exerciseNameChevron: { marginTop: 1 },
   swapSafe: { flex: 1, backgroundColor: colors.background },
   swapHeader: {
     flexDirection: 'row',

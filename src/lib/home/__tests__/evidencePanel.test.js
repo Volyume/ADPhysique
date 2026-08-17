@@ -51,7 +51,9 @@ describe('ED-safety: the suppression chain fails closed to the neutral variant',
     });
     expect(panel.variant).toBe('neutral');
     expect(panel.rows).toEqual([]);
-    expect(panel.title).toBe('Your coach is getting to know you');
+    // Founder order 2026-08-17 (second correction): the coach is not a
+    // person, so no state carries a coach-voiced title - null here.
+    expect(panel.title).toBeNull();
     // Date-only disclosure survives; nothing numeric or weight-adjacent.
     expect(panel.countdown).toMatch(/check-in/i);
     expect(JSON.stringify(panel)).not.toContain('weigh-in');
@@ -94,14 +96,15 @@ describe('honest counts: progress while short, the actual count once met', () =>
 });
 
 describe('title truth: "Since your check-in" only after a real check-in, and NEVER first-review framing', () => {
-  test('before any check-in: the ledger\'s own title, no past-check-in claim, no "first review"', () => {
-    // FRAMING LAW (founder correction 2026-08-17, "STOP CALLING IT FIRST
-    // REVIEW"): this pane is the recurring weekly evidence read; no state
-    // of it is ever framed as a first review.
+  test('before any check-in: NO title (countdown leads), no past-check-in claim, no "first review", no coach voice', () => {
+    // FRAMING LAWS (founder corrections 2026-08-17): the pane is the
+    // recurring weekly evidence read - never framed as a first review -
+    // and the coach is not a person, so no coach-voiced title exists in
+    // any state. Pre-check-in the countdown is the header line.
     const panel = resolveEvidencePanel(BASE);
-    expect(panel.title).toBe('What your coach is reading');
-    expect(panel.title).not.toMatch(/since your check-in/i);
+    expect(panel.title).toBeNull();
     expect(JSON.stringify(panel)).not.toMatch(/first review/i);
+    expect(JSON.stringify(panel)).not.toMatch(/your coach/i);
   });
 
   test('no state of the pane ever says "first review" (framing law, every branch)', () => {
@@ -142,6 +145,25 @@ describe('title truth: "Since your check-in" only after a real check-in, and NEV
     const panel = resolveEvidencePanel({ ...BASE, completedSessions: 2 });
     expect(panel.rows.find((r) => r.key === 'sessions').label)
       .toBe('2 training sessions logged');
+  });
+});
+
+describe('the food-adherence row (founder order 2026-08-17)', () => {
+  test('food logged on N of the last 7 days renders as a quiet done-row', () => {
+    const panel = resolveEvidencePanel({ ...BASE, foodDays7: 4 });
+    const row = panel.rows.find((r) => r.key === 'food');
+    expect(row.done).toBe(true);
+    expect(row.label).toBe('Food logged on 4 of the last 7 days');
+  });
+
+  test('no food logged: the row is omitted entirely (IF logged, per the order)', () => {
+    expect(resolveEvidencePanel({ ...BASE, foodDays7: 0 }).rows.find((r) => r.key === 'food')).toBeUndefined();
+    expect(resolveEvidencePanel({ ...BASE, foodDays7: null }).rows.find((r) => r.key === 'food')).toBeUndefined();
+  });
+
+  test('ED-safety: the neutral variant drops the food row with every other count', () => {
+    const panel = resolveEvidencePanel({ ...BASE, edFlagOpen: true, foodDays7: 5 });
+    expect(panel.rows).toEqual([]);
   });
 });
 

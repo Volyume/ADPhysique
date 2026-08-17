@@ -186,10 +186,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(NOW_CARD).toContain('positionLabel');
     expect(ACTIVE_WORKOUT).toContain('positionLabel={orientationLabel}');
     expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');
-    // Re-pinned (founder order 2026-08-17, Campaign 27): the exercise name
-    // stepped down one notch, title -> bodyStrong ("ever so slightly
-    // smaller"); same flex/colour contract.
-    expect(ACTIVE_WORKOUT).toContain('exerciseName: { flex: 1, ...type.bodyStrong, color: colors.textPrimary }');
+    // Re-pinned (founder orders 2026-08-17, Campaign 27/28): the exercise
+    // name stepped down one notch, title -> bodyStrong ("ever so slightly
+    // smaller"), and the tap row gained the details chevron - the name now
+    // shrinks (minWidth: 0) so the chevron hugs its end, drops Android's
+    // extra font padding for a true centre line with the dots, and the tap
+    // row centres on the same 44dp axis the dots box uses.
+    expect(ACTIVE_WORKOUT).toContain('exerciseName: { flexShrink: 1, minWidth: 0, ...type.bodyStrong, color: colors.textPrimary, includeFontPadding: false }');
+    expect(ACTIVE_WORKOUT).toMatch(/exerciseNameTap: \{[\s\S]{0,220}?minHeight: workoutLoggerSize\.overflowButton,/);
+    expect(ACTIVE_WORKOUT).toContain('name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} style={styles.exerciseNameChevron}');
     expect(ACTIVE_WORKOUT).not.toContain('targetRow:');
     expect(ACTIVE_WORKOUT).not.toContain('targetText:');
     expect(NOW_CARD).toMatch(/prefillRow: \{[\s\S]*minHeight: 36/);

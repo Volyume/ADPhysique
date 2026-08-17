@@ -65,6 +65,9 @@ function plural(n, word) {
  * @param {number|null} [facts.sessionsSinceCheckin] - completed workouts
  *   since the last real check-in happened, or null when unknown (the row
  *   is omitted rather than guessed).
+ * @param {number|null} [facts.foodDays7] - distinct local days with any
+ *   food logged in the trailing 7 days (getRecentIntakeSummary's own
+ *   count); row omitted at zero/null.
  * @param {string|null} [facts.todayWeightLabel] - the ALREADY-FORMATTED
  *   display weight logged this morning ("213 lbs"), or null when unlogged.
  * @param {number} [facts.now] - epoch ms, injectable for tests.
@@ -80,6 +83,7 @@ export function resolveEvidencePanel({
   edFlagOpen = false,
   completedSessions = 0,
   sessionsSinceCheckin = null,
+  foodDays7 = null,
   todayWeightLabel = null,
   now = Date.now(),
 } = {}) {
@@ -92,8 +96,11 @@ export function resolveEvidencePanel({
 
   if (ledger.variant === 'neutral') {
     // Date-only disclosure; no counts, no weight line, no weight ask.
+    // Founder order 2026-08-17 (second correction): no title in any
+    // pre-check-in state - the coach is not a person, so the pane never
+    // speaks as one. Countdown only here.
     if (!countdown) return null;
-    return { variant: 'neutral', title: ledger.title, countdown, rows: [] };
+    return { variant: 'neutral', title: null, countdown, rows: [] };
   }
 
   const rows = [];
@@ -132,6 +139,18 @@ export function resolveEvidencePanel({
     });
   }
 
+  // Food adherence (founder order 2026-08-17): IF food has been logged,
+  // show on how many of the last 7 days - the same trailing week the
+  // engine's own intake summary reads. Day count only, never amounts;
+  // omitted entirely at zero and under the neutral variant above.
+  if (Number.isFinite(foodDays7) && foodDays7 >= 1) {
+    rows.push({
+      key: 'food',
+      done: true,
+      label: `Food logged on ${foodDays7} of the last 7 days`,
+    });
+  }
+
   // The folded-in morning weight: a quiet done-line, only on a day it was
   // actually logged. When unlogged, logging is an ACTION and belongs to
   // the weigh-in strip above the pane, not to this evidence read.
@@ -146,10 +165,10 @@ export function resolveEvidencePanel({
   return {
     variant: 'full',
     // "Since your check-in" is only ever claimed once a check-in has
-    // actually happened (C5-P12-04's truth rule); before that, the
-    // ledger's own title - NEVER first-review framing (see the framing
-    // law in the header).
-    title: hasCheckedInEver ? 'Since your check-in' : ledger.title,
+    // actually happened (C5-P12-04's truth rule). Before that there is NO
+    // title at all (founder order 2026-08-17: the coach is not a person,
+    // so no "what your coach is reading" voice) - the countdown leads.
+    title: hasCheckedInEver ? 'Since your check-in' : null,
     countdown,
     rows,
   };

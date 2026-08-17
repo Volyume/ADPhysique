@@ -145,8 +145,9 @@ describe('ED-safety — D98-2 suppression parity (moved here from the deleted fi
 
   test('the evidence pane resolver drops every count AND the weight line under suppression (neutral variant)', () => {
     expect(EVIDENCE_PANEL).toMatch(/if \(ledger\.variant === 'neutral'\) \{/);
-    // The neutral early-return renders rows: [] and never reaches the
-    // weigh-in/sessions/weight row builders below it.
-    expect(EVIDENCE_PANEL).toMatch(/return \{ variant: 'neutral', title: ledger\.title, countdown, rows: \[\] \};/);
+    // The neutral early-return renders rows: [] (and, per the founder's
+    // 2026-08-17 correction, NO coach-voiced title) and never reaches the
+    // weigh-in/sessions/food/weight row builders below it.
+    expect(EVIDENCE_PANEL).toMatch(/return \{ variant: 'neutral', title: null, countdown, rows: \[\] \};/);
   });
 });

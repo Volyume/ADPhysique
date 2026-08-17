@@ -2921,3 +2921,20 @@ ever so slightly smaller". Effects:
   normalised onto a named type role, category-consistent app-wide.
 - The logger exercise name steps title (17) -> bodyStrong (16, same
   medium weight); usability guard re-pinned.
+
+## D106 — founder device orders, third batch (2026-08-17)
+
+- **D106-1:** the evidence pane carries NO coach-voiced title ("the coach
+  isn't actually a person"): "Since your check-in" once a check-in
+  exists; before that the countdown leads with no title. Pinned.
+- **D106-2:** food-adherence row added: "Food logged on N of the last 7
+  days" (getRecentIntakeSummary's own day count), only when N >= 1; day
+  count only, never amounts; dropped under the neutral ED variant.
+- **D106-3:** logger header: exercise name and options dots on one true
+  centre line (44dp axis, Android font padding dropped); the name-tap
+  gains a quiet muted chevron-down so the exercise-details control is
+  obviously interactive; a11y label "Exercise details".
+- **D106-4 (PAUSE):** Campaign 27 Phase 2b PAUSED on founder order
+  (usage limit) - the half-built cap table is banked unmerged on
+  claude/campaign27-responsive-research (commit 586206d1, will fail
+  Chip.a11y by design until resume); 2b/2c/2d/2e resume next week.

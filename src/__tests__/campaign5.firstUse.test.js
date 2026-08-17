@@ -2000,9 +2000,12 @@ describe('REVIEW C: the experienced-user findings stay fixed (RC-1..RC-9, D96)',
     expect(src).toMatch(/choose from the plan library on Home/);
   });
 
-  test('RC-9: opening exercise info retires the novice Help pulse too', () => {
+  test('RC-9: opening exercise details retires the novice Help pulse too', () => {
+    // Re-anchored 2026-08-17: the name-tap's label is "Exercise details"
+    // now (founder order: the tap gained a visible chevron affordance);
+    // the RC-9 behaviour pinned here is unchanged.
     const src = read('screens/ActiveWorkoutScreen.js');
-    const tap = src.slice(src.indexOf('accessibilityLabel="Exercise info"') - 1200, src.indexOf('accessibilityLabel="Exercise info"'));
+    const tap = src.slice(src.indexOf('accessibilityLabel="Exercise details"') - 1200, src.indexOf('accessibilityLabel="Exercise details"'));
     expect(tap).toMatch(/@volyume_seen_workout_info/);
     expect(tap).toMatch(/setShowExecution\(true\)/);
   });

@@ -539,7 +539,7 @@ export default function HomeScreen({ navigation, route }) {
   async function loadFirstReviewFacts() {
     try {
       if (!user?.id) { setFirstReviewFacts(null); return; }
-      const [workouts, weights, edFlag, prefsRaw, wellbeing, checkinRows] = await Promise.all([
+      const [workouts, weights, edFlag, prefsRaw, wellbeing, checkinRows, intakeSummary] = await Promise.all([
         getAllWorkouts(user.id).catch(() => []),
         getMorningWeightsLast14Days(user.id).catch(() => []),
         // ED-safety, fail CLOSED: a transient flag read maps to the truthy
@@ -550,6 +550,10 @@ export default function HomeScreen({ navigation, route }) {
         AsyncStorage.getItem('@volyume_notification_prefs').catch(() => null),
         AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
         getAllWeeklyCheckinsForUser(user.id).catch(() => []),
+        // Founder order 2026-08-17: the evidence pane's food-adherence row -
+        // day count only, from the same trailing-7-day summary the engine
+        // reads. Best-effort; zero simply omits the row.
+        getRecentIntakeSummary(user.id).catch(() => null),
       ]);
       let checkinDay = 0;
       try {
@@ -608,6 +612,7 @@ export default function HomeScreen({ navigation, route }) {
         completedSessions,
         everCheckedIn,
         sessionsSinceCheckin,
+        foodDays7: Number(intakeSummary?.daysLogged) || 0,
       });
     } catch (_) {
       setFirstReviewFacts(null);
@@ -1865,6 +1870,7 @@ export default function HomeScreen({ navigation, route }) {
         edFlagOpen: firstReviewFacts.edFlagOpen,
         completedSessions: firstReviewFacts.completedSessions,
         sessionsSinceCheckin: firstReviewFacts.sessionsSinceCheckin,
+        foodDays7: firstReviewFacts.foodDays7,
         // The folded-in weight line: only on a day it is actually logged,
         // and never under the fail-closed suppression chain (the resolver
         // drops it with every other count under the neutral variant).
