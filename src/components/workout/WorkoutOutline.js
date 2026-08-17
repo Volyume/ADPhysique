@@ -72,6 +72,12 @@ export default function WorkoutOutline({
 
   return (
     <View style={[styles.wrap, { borderBottomColor: t.colors.borderSubtle }]}>
+      {/* Founder device order 2026-08-17 (taste delegated): the collapsed
+          strip read as a faint caption, not the workout's navigator. It now
+          carries strong primary ink, an amber chevron (the interactive cue),
+          and a 2dp session-progress line beneath - the rest timer's
+          drain-line idiom carrying REAL information (sets done across the
+          session), never a decorative stripe (the NowCard-accent verdict). */}
       <TouchableOpacity
         style={styles.strip}
         onPress={() => { hapticSelection(); setExpanded(v => !v); }}
@@ -85,14 +91,25 @@ export default function WorkoutOutline({
           ? 'Shows every exercise in this workout. Hold to reorder.'
           : 'Shows every exercise in this workout.'}
       >
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={14} color={t.colors.textSecondary} />
-        <Text style={[styles.stripText, { ...t.type.caption, color: t.colors.textSecondary }]} numberOfLines={1}>
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.primary} />
+        <Text style={[styles.stripText, { ...t.type.captionStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
           {`Exercise ${currentIndex + 1} of ${items.length}`}
         </Text>
         <Text style={[styles.count, { ...t.type.num('caption'), color: t.colors.textMuted }]}>
           {`${doneSets}/${totalSets} sets`}
         </Text>
       </TouchableOpacity>
+      <View style={[styles.progressTrack, { backgroundColor: t.colors.surface3 }]}>
+        <View
+          style={[
+            styles.progressFill,
+            {
+              backgroundColor: t.colors.primaryFill,
+              width: totalSets > 0 ? `${Math.min(100, Math.round((doneSets / totalSets) * 100))}%` : 0,
+            },
+          ]}
+        />
+      </View>
       {expanded ? (
         <ScrollView
           ref={scrollRef}
@@ -171,6 +188,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   stripText: { flex: 1, minWidth: 0 },
+  // The 2dp session-progress line (rest-timer drainTrack idiom).
+  progressTrack: { height: 2, overflow: 'hidden' },
+  progressFill: { height: 2 },
   row: {
     height: ROW_HEIGHT,
     flexDirection: 'row',
