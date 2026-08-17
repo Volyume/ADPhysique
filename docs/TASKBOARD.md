@@ -2072,10 +2072,21 @@ suppression) — retired in the spec; hierarchy inverted (workload
 headline, answer buried); two week definitions on one screen; PR count
 inflates without dedup; photo→coach chain is verdict B BY DESIGN (D18
 render-time-only corroboration, no photo-derived data ever synced).
-FOUNDER RULINGS OPEN (spec §33): R1 Visual pillar signal-only vs
-thumbnail (recommend signal-only); R2 confirm D18's device-local
-photo-data line vs connect the recorded decision (recommend confirm
-D18). Phase 2 (implementation) starts only after the rulings.
+FOUNDER RULINGS: ANSWERED AND LOCKED same day (R1 derived signal only;
+R2 connect the bounded corroboration to the authoritative run) —
+verbatim in FOUNDER-RULINGS-PHASE2.md; D99 + privacy-law amendment
+D99-3 in the decisions register. PHASE 2 IN FLIGHT on
+`claude/campaign23-progress-impl`. STAGE 1 LANDED `1c84531c`
+(lead-built hands-on, safety-adjacent): coarse photoCorroborationBasis
+feeds runWeeklyCoach; engine-internal direction classification against
+its own trend; one-step rule under the senior blocked-set; D18
+render-time overlay retired; no photo-derived flags persist; guards
+re-pinned to D99. Gates: lint 0 warnings; full suite green except the
+KNOWN pre-existing widget-storage flake (passed the prior full run and
+passes isolated; still queued for its own session). STAGE 2 (landing
+rebuild per spec §22 + R1) IN FLIGHT, sonnet agent. RECOVERY PATH:
+uncommitted work lead-reviewed against PROGRESS-UX-SPEC.md §22/§29 +
+FOUNDER-RULINGS-PHASE2.md; land or relaunch from `1c84531c`.
 
 Founder order 2026-08-17. Fable lead; sonnet for authority tracing;
 haiku for mechanical inventory; no Opus; NO IMPLEMENTATION this phase.
