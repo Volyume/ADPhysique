@@ -545,8 +545,13 @@ function PillarRow({ icon, label, stateText, evidenceText, proGated, onPress }) 
           <Text style={[styles.pillarEvidence, live.pillarEvidence]} numberOfLines={1}>Part of Pro</Text>
         ) : (
           <>
-            {stateText ? <Text style={[styles.pillarState, live.pillarState]} numberOfLines={2}>{stateText}</Text> : null}
-            {evidenceText ? <Text style={[styles.pillarEvidence, live.pillarEvidence]} numberOfLines={2}>{evidenceText}</Text> : null}
+            {/* Founder device order 2026-08-17: the two-line clamps cut
+                pillar sentences mid-word ("Maintenance comes fr..."), so
+                nearly every box at the top of Progress ran out of space.
+                Evidence text wraps in full now; the row grows instead of
+                truncating. */}
+            {stateText ? <Text style={[styles.pillarState, live.pillarState]}>{stateText}</Text> : null}
+            {evidenceText ? <Text style={[styles.pillarEvidence, live.pillarEvidence]}>{evidenceText}</Text> : null}
           </>
         )}
       </View>
