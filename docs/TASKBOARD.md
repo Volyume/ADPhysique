@@ -2295,3 +2295,14 @@ chevron affordance (D106-3). C27 Phase 2b PAUSED and banked per D106-4
 - board status: 2b/2c/2d/2e HELD until the founder resumes next week;
 the campaign branch fails Chip.a11y BY DESIGN until then, do not merge
 it. Gates: lint clean; full suite green (known widget flake only).
+
+## CAMPAIGN 29 (2026-08-17) — competitive complaint-research triage. IN FLIGHT (docs-only).
+
+Founder supplied a deep-research report (competitor complaint corpus,
+17 fitness apps) and asked what, if anything, Volyume should implement
+NOW. Phase 1: two read-only sonnet agents verify the report's claims
+and P0/P1 recommendations against the ACTUAL tree (the report's
+"product map" input may be stale); lead triage to
+docs/complaint-research-triage-2026-08-17/TRIAGE.md. No production
+code without founder answers. RECOVERY PATH: agents read-only; on
+death relaunch from this entry. C27 2b/2c/2d/2e remain PAUSED (D106-4).
