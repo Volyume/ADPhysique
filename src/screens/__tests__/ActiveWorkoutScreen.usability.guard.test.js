@@ -174,12 +174,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     expect(SET_ENTRY.match(/hitSlop=\{STEPPER_HIT_SLOP\}/g)?.length).toBeGreaterThanOrEqual(10);
     // Phase 2B (physical-device corrective redesign): the house-Card shell
     // is retired - the active set renders as the CURRENT ROW of the one
-    // continuous sequence, a light surface with a 3dp left accent, never a
-    // giant detached card. Position + target still fold into its ONE
-    // tappable line; the prefill row keeps a 36 min-height target.
+    // continuous sequence, a light surface, never a giant detached card.
+    // Founder device order 2026-08-17: the 3dp coloured left accent is
+    // retired too (decoration, not information) - uniform 1px border only.
+    // Position + target still fold into its ONE tappable line; the prefill
+    // row keeps a 36 min-height target.
     expect(NOW_CARD).not.toContain('radius="lg"');
     expect(NOW_CARD).not.toContain("from '../Card'");
-    expect(NOW_CARD).toContain('borderLeftWidth: 3');
+    expect(NOW_CARD).not.toContain('borderLeftWidth');
+    expect(NOW_CARD).not.toContain('borderLeftColor');
     expect(NOW_CARD).toContain('positionLabel');
     expect(ACTIVE_WORKOUT).toContain('positionLabel={orientationLabel}');
     expect(ACTIVE_WORKOUT).toContain('<Text style={[styles.exerciseName, live.exerciseName]} numberOfLines={2}>{exercise.name}</Text>');

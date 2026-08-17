@@ -106,7 +106,11 @@ export function computeTrainingPillarSummary(allSets, exerciseMap, { windowDays 
  */
 export function buildVisualPillarCopy({ hasScan, hasNote, packet, capturedAt: _capturedAt }) {
   if (!hasScan) {
-    return { state: 'No scans yet', evidence: 'Take your first scan to start tracking visible change.' };
+    // Founder device order 2026-08-17: the empty state names the feature in
+    // the user's words - "scan" is capture-flow vocabulary a brand-new user
+    // has not met yet, and the row label alone ("Visual" at the time) told
+    // them nothing.
+    return { state: 'No photos yet', evidence: 'Take your first progress photos to start tracking visible change.' };
   }
   if (!hasNote) {
     return { state: 'Latest scan needs a clearer read', evidence: 'Retake for a comparable read.' };

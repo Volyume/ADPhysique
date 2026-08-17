@@ -37,16 +37,12 @@ describe('share copy polish', () => {
     // c.border }), just resolved by the primitive instead of a screen-local
     // StyleSheet pair. Re-anchored to the Button call sites; the deleted
     // milestoneCtaButton/milestoneCta StyleSheet keys must stay gone.
-    // RE-ANCHORED (Campaign 23, PROGRESS-UX-SPEC.md §9/§24): "Net landing
-    // rule: at most ONE share affordance visible per landing render, and
-    // only inside a transient achievement moment". The Training Load hero's
-    // standing share CTA moved to LiftProgressScreen with the hero itself
-    // (§27 DEMOTE), so the landing keeps exactly the tonnage-milestone
-    // Moment's CTA -- one, not two. The RULE is unchanged for the one CTA
-    // that remains: a contained bordered control, never a loose amber text
-    // link.
-    const ctaMatches = analytics.match(/<Button\s+variant="outline"[\s\S]{0,220}?title="Create share image"/g);
-    expect(ctaMatches?.length).toBe(1);
+    // RE-ANCHORED again (founder device order 2026-08-17): the tonnage-
+    // milestone Moment — the landing's last share CTA — is retired, so the
+    // landing now carries ZERO "Create share image" CTAs. The contained-
+    // control contract continues to apply to the relocated CTA on
+    // LiftProgressScreen below.
+    expect(analytics).not.toMatch(/Create share image/);
     expect(analytics).not.toMatch(/milestoneCtaButton:\s*\{/);
     expect(analytics).not.toMatch(/milestoneCta:\s*\{/);
     expect(analytics).not.toContain('trainingLoadCtaRow');

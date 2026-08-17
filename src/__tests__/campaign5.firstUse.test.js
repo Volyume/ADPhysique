@@ -1580,9 +1580,14 @@ describe('NUTRITION: the first targets are described as profile and research bas
     expect(src).toMatch(/\{hit\}\/\{total\}/);
   });
 
-  test('the Diary has a door to the primer the first nutrition week needs', () => {
+  test('the Diary carries NO standing primer door (founder device order 2026-08-17 reversed C5-P21-03)', () => {
+    // Re-pinned: the "New to macros? Read the 5-minute guide" row under the
+    // rings was removed on the founder's device verdict. The primer itself
+    // and its other two doors (NutritionTargetsScreen education card,
+    // ProSetupCompleteScreen) stay — pinned by their own suites.
     const src = read('screens/DiaryScreen.js');
-    expect(src).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'NutritionEducation'\)/);
+    expect(src).not.toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'NutritionEducation'\)/);
+    expect(src).not.toMatch(/New to macros/);
   });
 });
 

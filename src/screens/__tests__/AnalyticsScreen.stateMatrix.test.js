@@ -64,8 +64,11 @@
  * regions present/absent per §22's stated conditions; no retired idiom
  * renders (no "For you", no insight row, no SparkCard-shaped Sessions/New
  * PRs spark, no landing Training-load hero, no lifetime totals panel, no
- * second share CTA); the single-Moment rule (recap XOR milestone, never
- * both).
+ * second share CTA); the single-Moment rule (recap-only since the founder
+ * device order of 2026-08-17 retired the tonnage-milestone Moment).
+ * The third pillar's user-facing label is "Progress photos" (same order —
+ * "Visual" was internal vocabulary); internal hook/module names keep the
+ * visual-pillar terminology.
  *
  * STATES COVERED AT THE PURE-MODULE LEVEL, WITH REASONS (never silently
  * skipped, per the build brief):
@@ -595,9 +598,9 @@ describe('State matrix — A: established Pro, all progressing, photos current',
     expect(body[0].props.accessibilityLabel).toMatch(/kg/);
 
     // Visual pillar: eligible, real buildVisualPillarCopy string.
-    const visual = pillarRow(tree, 'Visual');
+    const visual = pillarRow(tree, 'Progress photos');
     expect(visual.length).toBe(1);
-    expect(visual[0].props.accessibilityLabel).toBe('Visual. Visible change. Leaner across your last 4 comparable scans, moderate confidence.');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Visible change. Leaner across your last 4 comparable scans, moderate confidence.');
 
     // R3 evidence trail
     expect(flattenText(tree)).toContain('Recent sessions');
@@ -613,7 +616,9 @@ describe('State matrix — A: established Pro, all progressing, photos current',
     expect(flattenText(tree)).not.toContain('New PRs');
     expect(flattenText(tree)).not.toContain('Training load');
     expect(flattenText(tree)).not.toContain('Lifetime total');
-    expect(findByLabel(tree, 'Create share image').length).toBeLessThanOrEqual(1);
+    // Founder device order 2026-08-17: the tonnage-milestone Moment (and
+    // with it the landing's only share CTA) is retired — zero share CTAs.
+    expect(findByLabel(tree, 'Create share image').length).toBe(0);
   });
 });
 
@@ -690,8 +695,8 @@ describe('State matrix — D: both training and weight progressing; Visual pilla
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts this month/);
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toMatch(/^Body\. Your smoothed weight trend is updated\./);
-    const visual = pillarRow(tree, 'Visual');
-    expect(visual[0].props.accessibilityLabel).toBe('Visual. Building your visual trend. 2 more comparable scans until your first assessment.');
+    const visual = pillarRow(tree, 'Progress photos');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Building your visual trend. 2 more comparable scans until your first assessment.');
     expect(visual[0].props.accessibilityLabel).not.toMatch(/visible change/i);
   });
 });
@@ -737,8 +742,8 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training evidence.');
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toContain('No weigh-ins logged yet');
-    const visual = pillarRow(tree, 'Visual');
-    expect(visual[0].props.accessibilityLabel).toBe('Visual. No scans yet. Take your first scan to start tracking visible change.');
+    const visual = pillarRow(tree, 'Progress photos');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Take your first progress photos to start tracking visible change.');
     // Deliberately BOTH render (lead ruling, §23 state F):
     expect(flattenText(tree)).toContain('No training trends yet');
     expect(flattenText(tree)).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
@@ -772,9 +777,9 @@ describe('State matrix — G: Pro, training/body evidence present, no photo hist
     });
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
-    const visual = pillarRow(tree, 'Visual');
+    const visual = pillarRow(tree, 'Progress photos');
     expect(visual.length).toBe(1);
-    expect(visual[0].props.accessibilityLabel).toBe('Visual. No scans yet. Take your first scan to start tracking visible change.');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. No photos yet. Take your first progress photos to start tracking visible change.');
     expect(visual[0].props.accessibilityLabel).not.toMatch(/Part of Pro/);
   });
 });
@@ -793,8 +798,8 @@ describe('State matrix — H: Visual pillar leads with a new comparison status',
     });
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
-    const visual = pillarRow(tree, 'Visual');
-    expect(visual[0].props.accessibilityLabel).toBe('Visual. Visible change. Fuller across your last 5 comparable scans, high confidence.');
+    const visual = pillarRow(tree, 'Progress photos');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Visible change. Fuller across your last 5 comparable scans, high confidence.');
   });
 });
 
@@ -856,8 +861,8 @@ describe('State matrix — K: Free user, Training live, Body/Visual locked, page
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts this month/);
     const body = pillarRow(tree, 'Body');
     expect(body[0].props.accessibilityLabel).toBe('Body. Part of Pro.');
-    const visual = pillarRow(tree, 'Visual');
-    expect(visual[0].props.accessibilityLabel).toBe('Visual. Part of Pro.');
+    const visual = pillarRow(tree, 'Progress photos');
+    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Part of Pro.');
     // Utilities and evidence trail remain fully live for Free.
     expect(flattenText(tree)).toContain('Recent sessions');
     expect(flattenText(tree)).toContain('Body Metrics');

@@ -24,11 +24,8 @@ import useAppStore from '../store/useAppStore';
 import useProgressData from '../hooks/useProgressData';
 import useWeightTrend from '../hooks/useWeightTrend';
 import useVisualPillar from '../hooks/useVisualPillar';
-import { getLifetimeTonnage } from '../lib/database';
-import { pendingTonnageMilestone, loadSeenTonnage, markTonnageMilestoneSeen, formatTonnage } from '../lib/tonnageMilestone';
 import { formatNumber } from '../lib/format';
 import { formatBodyWeight, formatBodyWeightRate } from '../lib/units';
-import { track } from '../lib/engineTelemetry';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
 import { VOLUME_LANDMARKS, getVolumeStatus, calculateTonnage } from '../lib/algorithms';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
@@ -132,25 +129,12 @@ export default function AnalyticsScreen({ navigation, route }) {
   // is confirmed lifted.
   const visualPillar = useVisualPillar(user?.id, tier);
 
-  // Founder ruling (Today truth repair): the COMP-018 weekly-run view
-  // model, its milestone / perfect-month / longest-run-PB landmarks and
-  // their share-card builders are all REMOVED with the strip they fed. The
-  // lifetime-tonnage landmark below is a genuine training total and is
-  // deliberately untouched, along with fireLandmarkOnce, which it shares.
-  const firedLandmarks = useRef(new Set());
-  function fireLandmarkOnce(key, userId, event, payload) {
-    if (!userId || firedLandmarks.current.has(key)) return;
-    firedLandmarks.current.add(key);
-    try { track(userId, event, payload)?.catch?.(() => {}); } catch (_) {}
-  }
-
-  // Phase-2 landmark: lifetime tonnage (total weight lifted all-time). A pure
-  // training-volume win, so it is never ED-gated. Re-checked whenever the
-  // completed-workout count changes; fires once per threshold. Campaign 23
-  // (§27): the standing all-time sessions/tonnage/reps panel this used to sit
-  // beside was rehomed to Recaps/Year of Lifts; this landmark stays -- it is
-  // the transient Moment (R5), not a standing panel.
-  const [tonnageLandmark, setTonnageLandmark] = useState(null);
+  // Founder device order 2026-08-17: the lifetime-tonnage landmark Moment
+  // (the last survivor of the COMP-018 landmark family) is retired - it sat
+  // between Recent sessions and More stats serving no decision, off the
+  // screen's style. The R5 Moment slot is recap-only now; the share surface
+  // for training wins lives on Recaps and LiftProgress. tonnageMilestone.js
+  // remains in the tree, production-unreferenced.
   // D90 #3 (2026-08-06): the resolved landmark table for the volume strip
   // (manual > adapted(Pro) > research), loaded on focus below.
   const [landmarkResolution, setLandmarkResolution] = useState(null);
@@ -162,23 +146,6 @@ export default function AnalyticsScreen({ navigation, route }) {
       .catch(() => { if (!cancelled) setLandmarkResolution(null); });
     return () => { cancelled = true; };
   }, [user?.id, tier]);
-
-  function makeTonnageCard() {
-    if (!tonnageLandmark) return;
-    if (user?.id) markTonnageMilestoneSeen(user.id, tonnageLandmark).catch(() => {});
-    const u = units === 'lbs' ? 'lbs' : 'kg';
-    navigation.navigate('ShareCard', {
-      milestoneData: {
-        eyebrow: 'Lifetime total',
-        title: 'Total weight lifted',
-        heroValue: formatTonnage(tonnageLandmark),
-        heroUnit: `${u} lifted`,
-        caption: 'Every working set you have ever logged, added up.',
-        date: Date.now(),
-        stats: [],
-      },
-    });
-  }
 
   const scrollRef = useRef(null);
   useScrollToTop(scrollRef);
@@ -273,25 +240,6 @@ export default function AnalyticsScreen({ navigation, route }) {
     AsyncStorage.setItem(`@volyume_recap_card_${recapMonthKey}`, 'dismissed').catch(() => {});
   };
 
-  // Re-check the lifetime-tonnage landmark whenever the workout count changes
-  // (tonnage only grows when a session is logged). The CTA persists until the
-  // user taps the share-image CTA (markTonnageMilestoneSeen on tap), so it never
-  // vanishes before it can be used; telemetry fires once per app run.
-  useEffect(() => {
-    let cancelled = false;
-    if (!user?.id || completedWorkoutCount < 1) { setTonnageLandmark(null); return undefined; }
-    (async () => {
-      try {
-        const [tonnage, seen] = await Promise.all([getLifetimeTonnage(user.id), loadSeenTonnage(user.id)]);
-        const pending = pendingTonnageMilestone(tonnage, seen);
-        if (cancelled) return;
-        setTonnageLandmark(pending);
-        if (pending) fireLandmarkOnce(`tn:${pending}`, user.id, 'tonnage_milestone_reached', { milestone: pending });
-      } catch (_) { if (!cancelled) setTonnageLandmark(null); }
-    })();
-    return () => { cancelled = true; };
-  }, [user?.id, completedWorkoutCount]);
-
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ScrollView
@@ -338,9 +286,12 @@ export default function AnalyticsScreen({ navigation, route }) {
               {!visualPillar.suppressed && (
                 <>
                   <View style={[styles.answerDivider, live.answerDivider]} />
+                  {/* Founder device order 2026-08-17: the row is named after
+                      the feature it reads from and opens - "Visual" was
+                      internal architecture vocabulary users cannot decode. */}
                   <PillarRow
                     icon="camera-outline"
-                    label="Visual"
+                    label="Progress photos"
                     proGated={tier !== 'pro'}
                     stateText={tier === 'pro' && !visualPillar.loading ? visualCopy.state : null}
                     evidenceText={tier === 'pro' && !visualPillar.loading ? visualCopy.evidence : null}
@@ -464,9 +415,9 @@ export default function AnalyticsScreen({ navigation, route }) {
         </View>
         )}
 
-        {/* ── Moments (R5, cond: at most one at a time; priority order
-            recap > milestone). Both remain transient and dismissible
-            exactly as built. ── */}
+        {/* ── Moments (R5, cond). Recap-only since the founder device
+            order of 2026-08-17 retired the tonnage-milestone row; the
+            recap card remains transient and dismissible. ── */}
         {!recapCardHidden ? (
           <TouchableOpacity
             style={[styles.recapCard, live.recapCard]}
@@ -488,26 +439,6 @@ export default function AnalyticsScreen({ navigation, route }) {
               <Ionicons name="close" size={16} color={t.colors.textMuted} />
             </TouchableOpacity>
           </TouchableOpacity>
-        ) : tonnageLandmark ? (
-          <View style={styles.section}>
-            <View style={styles.milestoneRow}>
-              <Ionicons name="barbell-outline" size={16} color={t.colors.primary} />
-              <Text style={[styles.milestoneText, live.milestoneText]}>
-                {formatTonnage(tonnageLandmark)} {units === 'lbs' ? 'lbs' : 'kg'} lifted all-time. That's what showing up adds up to.
-              </Text>
-              {/* R9 (D70): milestoneCtaButton -> shared Button outline sm.
-                  The page's single permitted share CTA (§9/§24): it lives
-                  only inside this transient achievement Moment. */}
-              <Button
-                variant="outline"
-                size="sm"
-                fullWidth={false}
-                title="Create share image"
-                onPress={makeTonnageCard}
-                accessibilityLabel="Create share image"
-              />
-            </View>
-          </View>
         ) : null}
 
         {/* ── Utilities (R6, always) ──────────────────────────── */}
@@ -833,8 +764,6 @@ const styles = StyleSheet.create({
   adherenceLine: { ...type.caption, color: colors.textMuted },
 
   // ── Moments (R5) ──
-  milestoneRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.xs },
-  milestoneText: { flex: 1, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   recapCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     backgroundColor: colors.primaryBg, borderRadius: radius.md,
@@ -921,7 +850,6 @@ function buildLiveStyles(t) {
     pillarState: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     pillarEvidence: { ...t.type.bodySm, color: t.colors.textSecondary },
     adherenceLine: { ...t.type.caption, color: t.colors.textMuted },
-    milestoneText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     recapCard: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.mid) },
     recapCardText: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     volEmptyText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
