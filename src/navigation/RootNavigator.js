@@ -35,6 +35,9 @@ import { useNavTheme, useStackOptions } from './navTheme';
 import { SheetIsolationBoundary } from '../lib/sheetA11yIsolation';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient } from '../lib/supabase';
+// Campaign 24 Wave E: the pure boot-time auth presentation decision (the
+// startup auth-hydration flash fix — see the give-up branch in the render).
+import { classifyAuthBoot } from '../lib/authBootGate';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
 import { seedExercisesIfNeeded, topUpNewExercisesIfNeeded, backfillExerciseMetadataIfNeeded, rederiveExerciseMetadataIfNeeded } from '../lib/seedExercises';
 import * as haptics from '../lib/haptics';
@@ -863,6 +866,21 @@ export default function RootNavigator() {
   // gate comment) cannot come back. A hard timeout in the bootstrap effect
   // stops it ever hanging the splash.
   const [initialAuthResolved, setInitialAuthResolved] = useState(false);
+  // Campaign 24 Wave E (WAVE-E-FINDINGS.md item 0, the startup
+  // auth-hydration flash): distinguish a GENUINE first auth answer from
+  // the 8s failsafe giving up. The ref flips true at every real
+  // resolution site (session found, definitively no session); the
+  // timeout/failure paths check it and, when they fire first, mark the
+  // release as a give-up so the render below can hold a
+  // previously-signed-in device on a bounded retry state instead of
+  // flashing WelcomeStack at a still-resolving user (classifyAuthBoot,
+  // src/lib/authBootGate.js).
+  const authGenuinelyResolvedRef = useRef(false);
+  const [authGaveUp, setAuthGaveUp] = useState(false);
+  const [authRetrying, setAuthRetrying] = useState(false);
+  // Read fail-quiet to false: a fresh install (no marker, or a failed
+  // read) behaves exactly as before this fix — straight to Welcome.
+  const [hadPriorSession, setHadPriorSession] = useState(false);
   // Release-gate fix: initDatabase() (SQLCipher open + migrations) used to
   // fail INSIDE bootstrap()'s try/catch with only a log call - the app then
   // rendered normally with the local DB permanently unopened (`_db` reset to
@@ -1016,6 +1034,42 @@ export default function RootNavigator() {
     }
   }, [attemptDbInit]);
 
+  // Campaign 24 Wave E: explicit retry from the auth give-up state. A
+  // successful getSession answer (either way) is a GENUINE resolution:
+  // session -> onAuthStateChange SIGNED_IN runs the normal enter pipeline;
+  // no session -> authGaveUp clears and the navigator's !user branch
+  // renders Welcome as a now-honest, definitively signed-out state. A
+  // throw/timeout keeps the retry state visible (transient failures stay
+  // visible until fixed, the dbInitFailed philosophy).
+  const handleAuthRetry = useCallback(async () => {
+    setAuthRetrying(true);
+    try {
+      const client = getSupabaseClient();
+      const { data } = await client.auth.getSession();
+      authGenuinelyResolvedRef.current = true;
+      if (data?.session?.user) {
+        // The auth listener (SIGNED_IN fires on getSession restoring a
+        // valid session) runs the full enter pipeline; clearing the
+        // give-up releases this branch either way.
+        setAuthGaveUp(false);
+      } else {
+        setAuthGaveUp(false); // definitive no-session: Welcome is honest now
+      }
+    } catch (e) {
+      _bootLog('warn', 'RootNavigator.handleAuthRetry', e);
+      // Still unreachable: stay on the retry state.
+    } finally {
+      setAuthRetrying(false);
+    }
+  }, []);
+
+  // Wave E: the explicit escape hatch — a user CHOICE to go to sign-in is
+  // not speculative rendering (founder law bans speculation, not choice).
+  const handleAuthGiveUpToWelcome = useCallback(() => {
+    authGenuinelyResolvedRef.current = true;
+    setAuthGaveUp(false);
+  }, []);
+
   useEffect(() => {
     async function bootstrap() {
       try {
@@ -1099,6 +1153,7 @@ export default function RootNavigator() {
               } catch (_) { /* lib not loadable in this env */ }
 
               setAuthLoading(false);
+              authGenuinelyResolvedRef.current = true; // Wave E: real answer (session found)
               setInitialAuthResolved(true);
               // C6 Phase 1 seam 3 (D97): the only launch-time
               // restoreNotifications call sat BELOW the return on this
@@ -1145,6 +1200,7 @@ export default function RootNavigator() {
         // spec's scenario A ('Fresh install, signs up') and scenario
         // F ('Uninstall, reinstall') both depend on.
         setAuthLoading(false);
+        authGenuinelyResolvedRef.current = true; // Wave E: real answer (no session)
         setInitialAuthResolved(true);
         try {
           const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
@@ -1159,18 +1215,36 @@ export default function RootNavigator() {
         // No anonymous-mode fallback (spec rule 1), the user lands
         // on Welcome and signs in/up against a real account.
         setAuthLoading(false);
+        // Wave E: a FAILED bootstrap is not an answer — mark the give-up
+        // so a previously-signed-in device holds on the retry state
+        // instead of flashing Welcome (classifyAuthBoot).
+        if (!authGenuinelyResolvedRef.current) setAuthGaveUp(true);
         setInitialAuthResolved(true);
       }
     }
 
+    // Wave E: fast, network-free marker read — was a real athlete ever
+    // signed in on this install? Governs the give-up branch only; a
+    // missing marker or failed read keeps pre-fix behaviour exactly.
+    AsyncStorage.getItem('@volyume_last_supabase_user_id')
+      .then((v) => { if (v) setHadPriorSession(true); })
+      .catch(() => {});
+
     bootstrap().catch((e) => {
       _bootLog('error', 'RootNavigator.bootstrap.unhandled', e);
+      if (!authGenuinelyResolvedRef.current) setAuthGaveUp(true);
       setInitialAuthResolved(true);
     });
     // Hard failsafe: the splash must never hang on the auth latch even if
     // bootstrap stalls inside a hung await (same philosophy as the
     // setAuthLoading failsafe above). 8s is far beyond a healthy boot.
-    const authLatchTimer = setTimeout(() => setInitialAuthResolved(true), 8000);
+    // Wave E: releasing here without a genuine getSession answer is a
+    // GIVE-UP, not a resolution — recorded so the render can hold a
+    // previously-signed-in device on the bounded retry state.
+    const authLatchTimer = setTimeout(() => {
+      if (!authGenuinelyResolvedRef.current) setAuthGaveUp(true);
+      setInitialAuthResolved(true);
+    }, 8000);
 
     let subscription;
     try {
@@ -1653,6 +1727,45 @@ export default function RootNavigator() {
   // without a splash.
   if (!splashReady || !firstRunChecked || !tierChecked || !initialAuthResolved) {
     return <SplashScreen />;
+  }
+
+  // Campaign 24 Wave E (WAVE-E-FINDINGS.md item 0, the startup
+  // auth-hydration flash; decision table in src/lib/authBootGate.js):
+  // auth GAVE UP without a genuine getSession answer on a device with a
+  // recorded prior sign-in — hold on a bounded, retryable neutral state
+  // (the dbInitFailed pattern) instead of speculatively flashing
+  // WelcomeStack at a still-resolving user. The explicit "Go to sign in"
+  // action means a genuinely signed-out user is never stranded. This
+  // branch renders strictly less than the navigator and sits BEFORE any
+  // routing, so the Article 9 consent gate's ordering is untouched.
+  if (classifyAuthBoot({
+    initialAuthResolved, authGaveUp, hasUser: !!user, hadPriorSession,
+  }) === 'auth_retry') {
+    return (
+      <View style={dbErrorStyles.container}>
+        <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
+        <Text style={dbErrorStyles.title}>Couldn't check your sign-in</Text>
+        <Text style={dbErrorStyles.body}>
+          Nothing has been lost. Volyume couldn't reach your account this
+          time - your data is safe on this device. Try again, or sign in
+          fresh.
+        </Text>
+        <Button
+          title={authRetrying ? 'Trying again...' : 'Try again'}
+          onPress={handleAuthRetry}
+          disabled={authRetrying}
+          fullWidth={false}
+          style={dbErrorStyles.retry}
+        />
+        <Button
+          title="Go to sign in"
+          variant="tertiary"
+          onPress={handleAuthGiveUpToWelcome}
+          disabled={authRetrying}
+          fullWidth={false}
+        />
+      </View>
+    );
   }
 
   // Release-gate fix: the local database (source of truth for every screen
