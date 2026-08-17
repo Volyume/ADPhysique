@@ -2203,3 +2203,42 @@ HOME-TODAY-UX-SPEC.md sections 13/17/20 + the rulings file; land or
 relaunch from last green commit (`0deb5ff4`). Preservation contract
 (spec section 20) is binding: no engine, tier, trial-logic or
 safety-gate changes.
+
+## CAMPAIGN 25 (2026-08-17) — Plans screen hierarchy redesign. COMPLETE, MERGED TO MAIN `36389c80`.
+
+Founder order: active-plan hero stays primary; previous plans collapse
+to compact rows; plan tools rise above history; no capability removed.
+Spec + diagnosis: docs/plans-screen-campaign-25-2026-08-17/
+PLANS-SCREEN-SPEC.md (Section 1 carries a landing correction note on the
+pre-campaign hero/block-card order, ruling D101-1). Built by a sonnet
+agent against the spec, lead-reviewed hands-on; new
+PlansScreen.hierarchy.guard.test.js pins the section order, collapsed
+default, deleted-folder fallthrough and tier logic; AX-11 sibling law
+re-pinned for CompactPlanRow. Rulings D101-1..3. Gates at landing: lint
+clean, full suite 994 suites / 13,455 passed. Device checklist:
+docs/plans-screen-campaign-25-2026-08-17/DEVICE-CHECKLIST.md (12 checks,
+founder walk pending).
+
+## CAMPAIGN 26 (2026-08-17) — founder device-order batch: Today, logger, Progress. COMPLETE, MERGED TO MAIN.
+
+Nine direct founder device orders landed same-day (register D102; the
+first three merged earlier as `a02afeb8`/`0040997f`/`16cd167b`):
+NowCard accent gone; Progress tonnage landmark gone (share budget on the
+landing now ZERO; tonnageMilestone.js production-unreferenced, left in
+tree); "Visual" pillar renamed "Progress photos" with honest empty-state
+copy; Diary macros-guide row gone; Today greeting gone; hero chip
+default now "On track for this block." (D102-3); logger workspace
+cleared - no standing effort line, no in-card coach note (D102-4,
+reverses C20 Stage 11 presentation on founder order; prescriptions
+unchanged; explanations stay on-demand in the adjustment/readiness
+sheets); exercise-header ellipsis chromeless with full 44dp target;
+Progress pillar text wraps instead of truncating (D102-5); and the
+restored since-check-in evidence pane (D102-1/2): EvidencePanel +
+resolveEvidencePanel replace the C22 FirstReviewLine (deleted with its
+resolver/test; honest-denominator + D98-2 suppression pins re-anchored
+into HomeScreen.todayLinePresentationGuards, never lapsed), weigh-in
+strip renders only while unlogged, logged weight is a quiet tick row.
+Branch claude/campaign26-home-logger-progress. Device checklist:
+docs/home-logger-progress-campaign-26-2026-08-17/DEVICE-CHECKLIST.md
+(15 checks, founder walk pending). Known flake: widget-storage suite
+under the parallel run (passes isolated; recorded residue).

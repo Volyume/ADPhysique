@@ -2824,3 +2824,44 @@ docs/progress-audit-campaign-23-2026-08-17/FOUNDER-RULINGS-PHASE2.md.
   Restore stays reachable solely through the archived options sheet
   ("Restore plan"), matching the spec's no-inline-Set-active law for
   archived rows. Verified live at handleArchivedPlanOptions.
+
+## D102 — Campaign 26 founder device orders + lead rulings (2026-08-17)
+
+Founder device orders (verbatim intent, from the device-walk messages):
+remove the Progress tonnage landmark row; remove the NowCard left accent;
+remove the Diary macros-guide row; rename the "Visual" pillar so users
+know it is Progress photos; remove the Home greeting; restore the
+since-check-in evidence pane the C22 "First review" link had flattened;
+combine morning weight + review readiness into one quiet evidence row
+with the logged state de-emphasised; clear the logger workspace (no
+standing "This week: stop N short of failure" line, no in-card coach
+note - the prescription is the intelligence, explanation on demand
+only); plain chromeless ellipsis on the exercise header; fix Progress
+pillar text running out of space; hero chip text must be about the
+block it opens.
+
+Lead rulings under D33 recorded with the implementation:
+
+- **D102-1 (evidence pane honesty reconciliation):** the restore order
+  SUPERSEDES the d1f6a608 removal of the runway, and the truth-repair
+  ruling's clamp objection stays fixed inside the restored pane - the
+  weigh-in row shows "N of 3" needed-to-do progress only while short and
+  the ACTUAL count once met, never Math.min. "Since your check-in" only
+  after a real check-in (C5-P12-04 kept). Neutral ED variant unchanged
+  in scope (date-only, no counts, no weight line).
+- **D102-2 (weight fold-in):** the weigh-in strip renders only while
+  unlogged (the action state); a logged weight is one quiet tick row in
+  the pane. The green Logged pill card is retired.
+- **D102-3 (hero chip default):** "On track for this block." - the C22
+  single-counter law stands, so no week counter returns to the hero;
+  the week's shape (and effort target) stays in the block-shape sheet.
+  Priorities 1-4 (recovery/deload/readiness/fatigue) are untouched.
+- **D102-4 (logger explanations):** the C20 Stage 11 provenance copy
+  bank and the whole in-card coach-line chain are retired; on-demand
+  explanation homes remain (session-adjustment sheet, readiness sheet,
+  Recovery banner). This REVERSES C20's "answer before every working
+  set" presentation contract on the founder's direct order; the
+  deterministic prescriptions themselves are unchanged.
+- **D102-5 (Progress overflow):** pillar state/evidence text wraps in
+  full (rows grow) rather than truncating mid-sentence; copy sources
+  unchanged.

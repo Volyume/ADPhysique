@@ -569,6 +569,27 @@ its evidence).
 
 ===============================================================================
 
+### 2026-08-17 — CAMPAIGN 26 (founder device-order batch: Today/logger/Progress) — COMPLETE, LANDED
+Nine direct founder device orders, same-day: three early fixes merged at
+`16cd167b` (NowCard accent, Progress tonnage landmark + "Progress
+photos" pillar rename, Diary macros-guide row), then the main batch on
+branch claude/campaign26-home-logger-progress - greeting removed, hero
+chip default now block-truthful, logger workspace cleared of standing
+explanations (C20 Stage 11 presentation reversed on founder order,
+prescriptions untouched), chromeless header ellipsis, Progress pillar
+text wraps, and the restored since-check-in evidence pane with the
+logged weight folded in as a quiet row (EvidencePanel/resolveEvidencePanel;
+FirstReviewLine deleted; ED suppression pins re-anchored, never lapsed).
+Rulings: register D102. Detail: TASKBOARD Campaign 26 entry; device
+checklist docs/home-logger-progress-campaign-26-2026-08-17/.
+
+### 2026-08-17 — CAMPAIGN 25 (Plans screen hierarchy) — COMPLETE, LANDED
+Hero first, Plan tools risen, "Previous plans · N" collapsed compact
+rows, Archived on the same row system, renderPlanCard retired, AX-11
+sibling law kept. Rulings D101-1..3. Merged to main `36389c80`. Detail:
+TASKBOARD Campaign 25 entry; spec + checklist in
+docs/plans-screen-campaign-25-2026-08-17/.
+
 ### 2026-08-17 — CAMPAIGN 24 (whole-app coherence sweep) — COMPLETE, VERDICT A, LANDED
 All 81 production screens reviewed in seven waves; 3 authority
 collisions closed, the startup auth flash root-caused and fixed, 20+
