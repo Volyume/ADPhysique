@@ -28,11 +28,11 @@
  *    TodayStrip.test.js's "first-use tutorial copy retires after the first
  *    ever log" block already covers everLogged=false/true/logged-state in
  *    full. Read in full before writing this file; nothing to extend.
- *  - D98-2 suppression parity: src/lib/home/__tests__/firstReviewLine.test.js
- *    already pins the exact 4-condition formula (edFlag, scoffScore>=2,
- *    wellbeing==='read_failed', isCalm(wellbeing)) at source level against
- *    HomeScreen's real loader text. Read in full before writing this file;
- *    sufficient as-is.
+ *  - D98-2 suppression parity: previously pinned by firstReviewLine.test.js
+ *    (deleted with its module, Campaign 26). The exact 4-condition formula
+ *    (edFlag, scoffScore>=2, wellbeing==='read_failed', isCalm(wellbeing))
+ *    is now pinned in THIS file's suppression-parity block below, against
+ *    HomeScreen's real loader text - the pin moved homes, it never lapsed.
  *
  * WHAT THIS FILE ADDS (the two items with no existing pin):
  *  1. Trial-ending-only commerce in P1 — a source guard that HomeScreen's
@@ -53,9 +53,13 @@
 const fs = require('fs');
 const path = require('path');
 
+// RE-ANCHORED (Campaign 26, founder device order 2026-08-17): the
+// firstReviewLine module is DELETED with the one-line link it fed - the
+// restored evidence pane (src/lib/home/evidencePanel.js) is the readiness
+// home now, and the honest-denominators guard below re-pins against it.
 const HOME = fs.readFileSync(path.resolve(__dirname, '../HomeScreen.js'), 'utf8');
-const FIRST_REVIEW_LINE = fs.readFileSync(
-  path.resolve(__dirname, '../../lib/home/firstReviewLine.js'), 'utf8',
+const EVIDENCE_PANEL = fs.readFileSync(
+  path.resolve(__dirname, '../../lib/home/evidencePanel.js'), 'utf8',
 );
 
 describe('Presentation guard — trial-ending-only commerce in P1 (spec §14, FOUNDER-RULINGS-PHASE2 R3)', () => {
@@ -95,23 +99,26 @@ describe('Presentation guard — trial-ending-only commerce in P1 (spec §14, FO
   });
 });
 
-describe('Presentation guard — honest denominators (the readiness line never shows a Math.min-clamped count)', () => {
-  test('firstReviewLine.js never reads a coach-ledger row\'s clamped `label` field', () => {
-    // The module reads specific fields off each row (`done`), and composes
-    // its own sentence from `weighInsNeeded` / `ledger.unlockLabel` — never
-    // `row.label`, which is documented in this exact file as the clamped
-    // display coachLedger.js builds for ITS OWN threshold-ledger UI, wrong
-    // for this line's job.
-    expect(FIRST_REVIEW_LINE).not.toMatch(/\.label\b/);
-    expect(FIRST_REVIEW_LINE).toMatch(/weighInsRow\?\.done/);
-    expect(FIRST_REVIEW_LINE).toMatch(/daysRow\?\.done/);
+describe('Presentation guard — honest denominators (the evidence pane never shows a Math.min-clamped count)', () => {
+  test('evidencePanel.js never reads a coach-ledger row\'s clamped `label` field', () => {
+    // The pane authors its own row labels from the RAW weighIns7d count
+    // (progress "N of 3" only while short, the actual count once met) and
+    // reads only the ledger's variant/title/unlockDate - never `row.label`,
+    // which is Math.min-clamped by design for coachLedger's own
+    // threshold-ledger UI and is the exact founder-named defect class
+    // (3-7 mornings all reading "3 of 3").
+    // Comments stripped: the module's own docs cite the Math.min defect
+    // they forbid.
+    const code = EVIDENCE_PANEL
+      .replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toMatch(/\.label\b/);
+    expect(code).not.toMatch(/Math\.min/);
+    expect(code).toMatch(/weighIns7d >= MIN_WEIGH_INS/);
   });
 
-  test('the weigh-in countdown is built from weighInsNeeded, the unclamped helper — imported and actually called', () => {
-    expect(FIRST_REVIEW_LINE).toMatch(/import \{ weighInsNeeded \} from '\.\.\/trialActivation';/);
-    expect(FIRST_REVIEW_LINE).toMatch(/const remaining = weighInsNeeded\(weighIns7d\);/);
-    // The exact founder-named defect shape: "3 of 3" / "N of M" plumbing.
-    expect(FIRST_REVIEW_LINE).not.toMatch(/of \$\{/);
+  test('the met-state weigh-in row states the ACTUAL count; the short state is a real needed-to-do fraction', () => {
+    expect(EVIDENCE_PANEL).toMatch(/plural\(weighIns7d, 'morning weigh-in'\)/);
+    expect(EVIDENCE_PANEL).toMatch(/\$\{weighIns7d\} of \$\{MIN_WEIGH_INS\} morning weigh-ins this week/);
   });
 
   test('HomeScreen feeds the loader\'s raw weighIns7d straight through, never pre-clamped before it reaches the resolver', () => {
@@ -121,5 +128,25 @@ describe('Presentation guard — honest denominators (the readiness line never s
     expect(loader).toMatch(/const weighIns7d = new Set\(/);
     expect(loader).not.toMatch(/Math\.min\(weighIns7d/);
     expect(loader).toMatch(/weighIns7d,\s*\n/);
+  });
+});
+
+describe('ED-safety — D98-2 suppression parity (moved here from the deleted firstReviewLine.test.js, never lapsed)', () => {
+  test('the loader\'s edSuppressed chain carries all four conditions, fail closed, matching the You tab formula', () => {
+    const site = HOME.indexOf('async function loadFirstReviewFacts()');
+    const end = HOME.indexOf('async function loadFreeCoachLine()');
+    const loader = HOME.slice(site, end);
+    expect(loader).toMatch(/const edSuppressed = !!edFlag\s*\n\s*\|\| \(Number\.isFinite\(userProfile\?\.scoffScore\) && userProfile\.scoffScore >= 2\)\s*\n\s*\|\| wellbeing === 'read_failed'\s*\n\s*\|\| isCalm\(wellbeing\);/);
+    // The flag read itself fails CLOSED (truthy sentinel on error).
+    expect(loader).toMatch(/getOpenEdPatternFlag\(user\.id\)\.catch\(\(\) => 'read_failed'\)/);
+    // The chain is what the resolver receives - no weaker second path.
+    expect(loader).toMatch(/edFlagOpen: edSuppressed,/);
+  });
+
+  test('the evidence pane resolver drops every count AND the weight line under suppression (neutral variant)', () => {
+    expect(EVIDENCE_PANEL).toMatch(/if \(ledger\.variant === 'neutral'\) \{/);
+    // The neutral early-return renders rows: [] and never reaches the
+    // weigh-in/sessions/weight row builders below it.
+    expect(EVIDENCE_PANEL).toMatch(/return \{ variant: 'neutral', title: ledger\.title, countdown, rows: \[\] \};/);
   });
 });

@@ -82,11 +82,14 @@ import { detectDifferentialTrigger } from '../lib/differentialPaywall';
 // the single unified P1 "Today line" and its pure priority arbiter.
 import TodayLine from '../components/home/TodayLine';
 import { resolveTodayLine } from '../lib/home/todayLineArbiter';
-// Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §9/§17 region R4): the
-// self-retiring first-review readiness line and its pure resolver, the same
-// TodayLine/todayLineArbiter split.
-import FirstReviewLine from '../components/home/FirstReviewLine';
-import { resolveFirstReviewLine } from '../lib/home/firstReviewLine';
+// Campaign 26 (founder device order 2026-08-17): the C22 FirstReviewLine
+// link is replaced by the restored since-check-in evidence pane - one
+// quiet region carrying the check-in countdown, the weigh-in and session
+// evidence, and the logged morning weight as a quiet folded-in line. Same
+// component/pure-resolver split as TodayLine.
+import EvidencePanel from '../components/home/EvidencePanel';
+import { resolveEvidencePanel } from '../lib/home/evidencePanel';
+import { formatBodyWeight } from '../lib/units';
 import { mapCalsAdherence } from '../lib/weeklyCoach';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
@@ -553,7 +556,13 @@ export default function HomeScreen({ navigation, route }) {
           if (Number.isInteger(d) && d >= 0 && d <= 6) checkinDay = d;
         }
       } catch (_) {}
-      const completedSessions = workouts.filter((w) => w.isCompleted).length;
+      const completedWorkouts = workouts.filter((w) => w.isCompleted);
+      const completedSessions = completedWorkouts.length;
+      // Campaign 26: the evidence pane's since-check-in sessions row needs
+      // WHEN each completed session started, not just the total.
+      const completedSessionStarts = completedWorkouts
+        .map((w) => Number(w.startedAt))
+        .filter((tms) => Number.isFinite(tms));
       // X5/X11 (cross-surface consistency audit 2026-07-30): Monday-anchored,
       // never a rolling window, matching every other "this week" count on
       // this screen and the You tab's own coachReadiness read.
@@ -582,6 +591,7 @@ export default function HomeScreen({ navigation, route }) {
         checkinDay,
         edFlagOpen: edSuppressed,
         completedSessions,
+        completedSessionStarts,
       });
     } catch (_) {
       setFirstReviewFacts(null);
@@ -1821,21 +1831,32 @@ export default function HomeScreen({ navigation, route }) {
   // transitions themselves are untouched.
   const trialEndingEligible = stageOf(userProfile) === 'pro_trial'
     && msToTrialEnd != null && msToTrialEnd <= 48 * 60 * 60 * 1000;
-  // ── Campaign 22 Phase 2 Stage 2: the first-review readiness line (§9/§17
-  // R4; FOUNDER-RULINGS-PHASE2 R2). Pro + pre-first-review only
-  // (latestCoachDecisionComplete is the same completed-decision predicate
-  // the coach fact above uses); null until loadFirstReviewFacts resolves so
-  // it never flashes on cold load. Derived HERE, above the arbiter call,
-  // because the line has TWO homes per §17 R4: on a day today's weigh-in is
-  // already logged it renders in the Evidence Row below the hero; on a
-  // CONFLICT day (weigh-in not yet logged, the row's slot is the weigh-in
-  // prompt's) it moves onto the Today line at rank 4.5 via the firstReview
-  // fact below, rather than vanishing.
-  const firstReviewLineItem = tier === 'pro' && firstReviewFacts
-    ? resolveFirstReviewLine({
+  // ── Campaign 26 (founder device order 2026-08-17): the evidence pane
+  // view-model. Replaces the C22 firstReviewLineItem: the pane is ALWAYS
+  // the readiness/evidence home (pre- and post-first-review), so the C22
+  // conflict-day rank-4.5 arbiter feed is retired with the line - the two
+  // rows can no longer compete because there is only one region. Null
+  // until loadFirstReviewFacts resolves so it never flashes on cold load.
+  const lastCheckinWeekStart = latestCoachDecisionComplete
+    && Number.isFinite(Number(latestCoachOutput?.weekStart))
+    ? Number(latestCoachOutput.weekStart)
+    : null;
+  const evidencePanelItem = tier === 'pro' && firstReviewFacts
+    ? resolveEvidencePanel({
         tier,
         hasCompletedFirstReview: latestCoachDecisionComplete,
-        ...firstReviewFacts,
+        weighIns7d: firstReviewFacts.weighIns7d,
+        firstWeightAt: firstReviewFacts.firstWeightAt,
+        checkinDay: firstReviewFacts.checkinDay,
+        edFlagOpen: firstReviewFacts.edFlagOpen,
+        completedSessions: firstReviewFacts.completedSessions,
+        sessionsSinceCheckin: lastCheckinWeekStart != null
+          ? (firstReviewFacts.completedSessionStarts || []).filter((tms) => tms >= lastCheckinWeekStart).length
+          : null,
+        // The folded-in weight line: only on a day it is actually logged,
+        // and never under the fail-closed suppression chain (the resolver
+        // drops it with every other count under the neutral variant).
+        todayWeightLabel: todayWeight != null ? formatBodyWeight(todayWeight, bwu) : null,
       })
     : null;
   const openFirstReviewSurface = useCallback(() => {
@@ -1873,14 +1894,10 @@ export default function HomeScreen({ navigation, route }) {
       },
       onDismiss: dismissCoachingNudge,
     },
-    // Rank 4.5, CONFLICT DAYS ONLY (§17 R4 "weigh-in wins; readiness line
-    // moves to R2 slot rank 4.5 on conflict days"): fed only while today's
-    // weigh-in is not yet logged; on logged days the same item renders in
-    // the Evidence Row instead and this fact is null.
-    firstReview: {
-      item: todayWeight == null ? firstReviewLineItem : null,
-      onPress: openFirstReviewSurface,
-    },
+    // The C22 rank-4.5 conflict-day firstReview fact is retired (Campaign
+    // 26): the evidence pane below the hero is the readiness home on every
+    // day now, logged or not, so there is no conflict day left to resolve.
+    // resolveFirstReview in the arbiter handles the absent fact as null.
     recovery: {
       state: gatedRecoveryState,
       onOpenDetail: () => { haptics.selection(); setShowRecoveryDetail(true); },
@@ -2265,29 +2282,17 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Founder ruling (Today truth repair, RE-DECIDED Campaign 22 Phase 2
-            Stage 2): the S3 "What your coach is
-            reading" daily brief stays removed -- its rows were first-review THRESHOLD counters
-            (Math.min(weighIns7d, MIN_WEIGH_INS), so 3, 4, 5, 6 or 7
-            qualifying mornings all read "3 of 3"), gate plumbing, not an
-            ongoing description of what the coach understands. The ledger
-            maths is untouched and still serves CoachOutputScreen's
-            insufficient-data hold receipt and the You tab's coach-readiness
-            surface. What DOES now answer the same pre-first-review question,
-            honestly: the Evidence Row's first-review line below (§9,
-            FOUNDER-RULINGS-PHASE2 R2) -- a REDESIGN (real unclamped
-            denominators, self-retiring, actionable only), never a restore of
-            this ledger. */}
-
-        {/* ── Campaign 22 Phase 2 Stage 2: the Evidence Row (region R4,
-            §9/§11/§17). Morning-weight one-tap (Pro), quiet when logged;
-            below it, the first-review readiness line when pre-first-review
-            and today's weigh-in is already logged. On a CONFLICT day (weigh-
-            in not yet logged) "weigh-in wins" this slot and the readiness
-            line moves onto the Today line at rank 4.5 instead (§17 R4; the
-            firstReview fact above), so the two rows never compete for the
-            same line of copy at once and the line never simply vanishes. ── */}
-        {tier === 'pro' && user?.id && (
+        {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero
+            evidence region. The weigh-in strip renders ONLY while today's
+            weight is an ACTION (not yet logged) - once logged, the big
+            bordered card and its green "Logged" pill are gone and the
+            weight becomes one quiet line inside the evidence pane below.
+            The pane itself restores the since-check-in runway the C22
+            FirstReviewLine link had flattened: title, days to the next
+            check-in, weigh-in and session evidence - honouring the Today
+            truth-repair ruling with real counts (progress "N of 3" only
+            while short, the ACTUAL count once met, never a clamp). ── */}
+        {tier === 'pro' && user?.id && todayWeight == null && (
           <TodayStrip
             bwu={bwu}
             todayWeight={todayWeight}
@@ -2301,11 +2306,11 @@ export default function HomeScreen({ navigation, route }) {
             everLogged={hasEverLoggedWeight}
           />
         )}
-        {tier === 'pro' && user?.id && todayWeight != null && firstReviewLineItem && (
-          <FirstReviewLine
-            item={firstReviewLineItem}
+        {tier === 'pro' && user?.id && evidencePanelItem && (
+          <EvidencePanel
+            panel={evidencePanelItem}
             onPress={openFirstReviewSurface}
-            testID="first-review-line"
+            testID="evidence-panel"
           />
         )}
 
