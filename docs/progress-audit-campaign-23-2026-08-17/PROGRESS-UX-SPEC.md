@@ -41,7 +41,7 @@ surface whose job is understanding, not broadcasting.
 
 The redesign is therefore an information-architecture and authority
 repair, not a re-skin. Final verdict: **B — Progress mostly locked,
-specific founder rulings required** (§33: three genuine rulings; every
+specific founder rulings required** (§33: two genuine rulings; every
 other decision follows from measured evidence, existing law, or the
 delegated decision standard and is ruled inline with rationale).
 
@@ -353,14 +353,75 @@ neither computes independently of the shared EWMA authority.
 
 ## 16. PROGRESS-PHOTO / SCAN RULING
 
-[HELD FOR WAVE 3 — filled from PHOTO-SCAN-CHAIN-TRACE.md when the
-production-chain proof lands. The ruling will fix the landing
-treatment of visual intelligence and its privacy constraints.]
+Evidence (PHOTO-SCAN-CHAIN-TRACE.md): the on-device pipeline produces
+genuinely differentiated, bounded intelligence — `visualLeannessScore`
+(0-100), leanness band + label, confidence tier
+(high/moderate/low/not_enough/unknown), `trendDirection`, a 7-value v2
+packet status, a 6-value assessment, an eligibility gate (≥3
+comparable points at High/Moderate confidence), and a corroboration
+signal — all local-only (sync-registry absence + a dedicated no-sync
+guard test), all privacy-law compliant (no body-fat % ever displayed;
+`affectsTargets` hard-coded false in three modules; no network calls
+in the scan chain). Today ALL of that renders only inside
+ProgressPhotos and the coach receipt — on the Progress landing it is a
+plain tile labelled "Progress photos" beside Partners.
+
+**Ruling (lead, D33):** the Visual pillar (§22 R2) surfaces the
+DERIVED intelligence, not the imagery. Landing content: comparison
+status/assessment when eligible ("Visible change since June: leaner,
+moderate confidence" — exact copy against the v2 packet enums in
+Phase 2), the honest immature state when not ("2 more comparable scans
+until your first assessment"), and the new-comparison moment when one
+is fresh. Tap → ProgressPhotos (timeline/comparison). Suppression:
+the pillar renders NOTHING under calm mode/open ED flag/any packet
+suppression state — fail-closed via the existing usePhotoSuppression +
+packet gates, mirroring the coach receipt's own behaviour. No
+body-fat figures, no invented precision, no daily nagging (the scan
+cadence logic is unchanged). Whether any thumbnail imagery appears on
+the landing is founder ruling R1 (§33) — the recommended treatment
+needs none.
 
 ## 17. PHOTO → COACH PRODUCTION-CHAIN RESULT
 
-[HELD FOR WAVE 3 — the A/B/C/D chain classification with evidence, and
-the product-gap record + contract design if warranted.]
+**Chain verdict: B — PARTIALLY CONNECTED, and the partial boundary is
+a RECORDED DELIBERATE DESIGN, not an accidental gap.** Proven chain:
+capture (quality/retake logic) → on-device processing (native module,
+no network calls) → local persistence (derived rows excluded from
+SYNC_REGISTRY; raw photos local; both guard-tested) → presentation
+(ProgressPhotos surfaces + coach receipt) → coach intake: the
+authoritative `runWeeklyCoach` call is ALWAYS made with
+`photoCorroboration` absent (CoachOutputScreen.js:2399-2411, the D18
+lead ruling quoted in code), pinned by
+progressScanCoachIsolation.guard.test.js; the engine itself carries a
+complete, safety-suppressed intake seam
+(weeklyCoach.js:2344-2357 — corroboration blocked under ED hold, FFM
+floor, rapid-loss, safety hold, SCOFF, calm) that is exercised
+RENDER-TIME ONLY: the displayed confidence caption may rise one
+bounded step on scan corroboration, and a narrative sentence folds
+into the interpretation — neither ever touches a calorie, macro,
+training or held-decision value, and nothing photo-derived is
+persisted or synced.
+
+**Product-gap record (per the brief's requirement):** the brief's
+hypothesis ("derived photo intelligence may not be reaching the
+coach where law would permit") is substantially CLOSED by D18's
+bounded seam. What remains is a boundary question, not a wiring
+defect: connecting the scan to the RECORDED decision would put a
+photo-derived value inside the synced `coach_outputs` blob, crossing
+the standing "photos and their derived data never leave the device"
+line (weeklyCoach.js comment, enforced by the no-sync guards). That
+is a genuine privacy-versus-coherence preference — founder ruling R2
+(§33). The designed contract, EITHER WAY: scan evidence may affect
+ONLY confidence/interpretation, one bounded step, through the single
+shared derivation (derivePhotoCorroborationSignal) and the engine's
+own rule (corroborateConfidenceLevel), under the full safety-
+suppression set — never targets, never calories, never training
+decisions. Hygiene facts recorded for Phase 2 regardless of R2:
+the two inert booleans (`photoCorroborationApplied`/`Blocked`) ride
+in the synced output outside the isolation guard's regex (extend the
+guard); the internal body-fat estimate (clamp 4-55, FFM-floor
+fallback source) is proven non-authoritative and never displayed —
+keep it that way under the §31 guards.
 
 ## 18. PARTNERS RULING
 
@@ -642,7 +703,12 @@ CTAs):
   rename.
 **Visual defects:** raw text outside containers ×2; duplicate share
 CTAs; warning styling on non-alerts (§26).
-**Coaching/engine gap:** [photo→coach chain — held for §17/Wave 3].
+**Coaching/engine gap:** none in the defect sense — the photo→coach
+boundary is verdict B by recorded design (D18); the open question is
+the R2 founder ruling (§33), plus two guard-hygiene facts: the inert
+corroboration booleans sit outside the isolation guard's regex, and
+the Progress landing currently surfaces NONE of the scan intelligence
+(resolved by §16's Visual pillar).
 
 ## 29. PRESERVATION CONTRACT (BINDING ON PHASE 2)
 
@@ -721,12 +787,40 @@ brief.
 
 ## 33. GENUINE FOUNDER RULINGS
 
-[HELD — finalised after Wave 3 so the photo rulings carry the chain
-evidence. Expected set (§16/§17 dependent): R1 visual-intelligence
-landing treatment; R2 photo→coach evidence contract go/no-go; R3 (only
-if Wave 3 evidence makes it genuine) scan-signal copy exposure level.
-Every other decision in this spec is ruled inline under D33 with
-rationale and alternatives recorded.]
+Only two decisions in this campaign are genuine preference calls;
+everything else is ruled inline under D33 with rationale recorded.
+
+**R1 — Visual pillar landing treatment: signal only, or thumbnail?**
+Evidence: the scan's derived intelligence is bounded, validated and
+local-only (§16); raw photos are private by law; the landing page is
+glanceable in public places (gym floor). RECOMMENDATION: the Visual
+pillar shows DERIVED SIGNAL ONLY — assessment, trend direction,
+confidence, comparison status — no imagery on the landing; photos
+appear only inside ProgressPhotos after the user navigates there.
+This keeps the differentiator visible while making the landing safe to
+open anywhere. ALTERNATIVE: include a small latest-photo thumbnail on
+the pillar (own-device display is lawful; the risk is purely
+over-the-shoulder exposure and it forecloses none of the signal
+content).
+
+**R2 — Photo→coach evidence boundary: confirm D18's device-local
+line, or connect the recorded decision?**
+Evidence: §17 — the engine seam exists, fully safety-suppressed; D18
+deliberately keeps it render-time-only so no photo-derived value
+enters the synced coach output; the cost is that the RECORDED
+decision's confidence and the DISPLAYED caption can differ by the one
+corroboration step. RECOMMENDATION: CONFIRM D18 — keep "photos and
+their derived data never leave the device" absolute. It is the
+stronger privacy story, a true marketing differentiator, and the
+display-side corroboration already delivers the user-visible benefit;
+Phase 2 then extends the isolation guard over the inert booleans and
+surfaces the same shared derivation on the Progress Visual pillar.
+ALTERNATIVE: feed `photoCorroboration` into the production
+`runWeeklyCoach` call so recorded and displayed confidence always
+agree — accepting a photo-derived (non-image, bounded, one-step)
+value inside the synced coach output, which loosens the standing
+derived-data locality line and would need its own privacy-law
+amendment recorded before any code changes.
 
 ## 34. FINAL VERDICT
 
