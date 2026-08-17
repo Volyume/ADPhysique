@@ -42,8 +42,19 @@ describe('FQ-6.2: one authoritative trial end date', () => {
   });
 
   test('both surfaces read the shared label, not their own maths', () => {
+    // RE-PINNED (Campaign 22 Phase 2 Stage 2, FOUNDER-RULINGS-PHASE2 R3): the
+    // trial banner -- and with it, this line -- rehomed from HomeScreen.js to
+    // YouScreen.js in full (billing-adjacent flag for review: cascade.js and
+    // trialEndsLabel() itself are untouched; only the calling surface moved,
+    // still read-only consumption of the same shared function, still the
+    // ONE authoritative source this test exists to guard). YouScreen reads
+    // its own already-destructured `userProfile` (a real hook dependency of
+    // its effect, unlike Home's old imperative getState() escape hatch,
+    // which existed only because Home's effect did not depend on userProfile
+    // at all) rather than a live store re-read.
     expect(read('screens/SettingsAccountScreen.js')).toMatch(/trialEndsLabel\(userProfile\)/);
-    expect(read('screens/HomeScreen.js')).toMatch(/trialEndsLabel\(useAppStore\.getState\(\)\.userProfile\)/);
+    expect(read('screens/HomeScreen.js')).not.toMatch(/trialEndsLabel/);
+    expect(read('screens/YouScreen.js')).toMatch(/trialEndsLabel\(userProfile\)/);
   });
 });
 

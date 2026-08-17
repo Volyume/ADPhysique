@@ -16,7 +16,10 @@ const FREE_STARTER = read('screens/FreeStarterScreen.js');
 
 describe('no-plan / start-plan copy', () => {
   test('HomeScreen uses one no-plan title and the shared start CTA', () => {
-    const block = HOME.slice(HOME.indexOf('<View style={styles.noPlanSection}>'), HOME.indexOf('{/* Progress at a glance'));
+    // Anchor re-pinned (Campaign 22 Phase 2 Stage 2, §7/§17 R5): "Progress at
+    // a glance" is deleted outright (3-way duplication fix), so the end
+    // anchor moves to the next stable comment after the no-plan branch.
+    const block = HOME.slice(HOME.indexOf('<View style={styles.noPlanSection}>'), HOME.indexOf('{/* Pro keeps the quick-start escape hatch'));
     expect(block).toContain('No active plan yet');
     expect(block).toContain('Start with a plan');
     expect(block).toContain('Browse plans');

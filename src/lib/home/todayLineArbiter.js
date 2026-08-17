@@ -16,6 +16,13 @@
  *   2. Block-complete decision needed
  *   3. Coach decision to review
  *   4. Weekly check-in due
+ *   4.5 First-review readiness line, CONFLICT DAYS ONLY (spec §17 R4:
+ *       "two rows at once (weigh-in wins; readiness line moves to R2 slot
+ *       rank 4.5 on conflict days)" — the caller feeds this fact only when
+ *       today's weigh-in is not yet logged, so the Evidence Row below the
+ *       hero holds the weigh-in prompt and this line still surfaces here
+ *       rather than vanishing; on logged days it renders in R4 instead and
+ *       this fact is null)
  *   5. Recovery adjustment / deload suggestion affecting today
  *   6. Re-entry question
  *   7. Nutrition-phase mismatch
@@ -89,6 +96,24 @@ function resolveCheckIn(facts) {
     onPress: f.onPress,
     onDismiss: f.onDismiss,
     accessibilityLabel: 'Your weekly check-in is ready. Tap to open.',
+  };
+}
+
+// Rank 4.5 — the first-review readiness line on CONFLICT DAYS only (today's
+// weigh-in not yet logged, so the Evidence Row's slot is the weigh-in
+// prompt's). The item itself is resolveFirstReviewLine's output, passed
+// through whole so its own contract (Pro-only, pre-first-review-only,
+// actionable-only, self-retiring, ED/calm/wellbeing suppression) carries
+// over unchanged; no dismissal — it retires itself.
+function resolveFirstReview(facts) {
+  const f = facts?.firstReview;
+  if (!f?.item) return null;
+  return {
+    key: 'first_review',
+    text: f.item.text,
+    onPress: f.onPress,
+    onDismiss: null,
+    accessibilityLabel: f.item.accessibilityLabel ?? f.item.text,
   };
 }
 
@@ -193,6 +218,7 @@ export const TODAY_LINE_RANKS = [
   resolveBlockComplete,
   resolveCoachDecision,
   resolveCheckIn,
+  resolveFirstReview,
   resolveRecovery,
   resolveReEntry,
   resolvePhaseMismatch,

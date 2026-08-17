@@ -31,7 +31,11 @@ import {
 import { sessionDisplayName, skipConfirmation } from '../lib/blockProgression';
 import { nextWorkoutRecoveryLabel, isLighterTrainingState } from '../lib/recoveryState';
 import { useToast } from '../components/Toast';
-import CoachBriefCard, { buildBriefIconColor } from '../components/CoachBriefCard';
+// Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §17 R3, hero merge):
+// CoachBriefCard's card-in-card render is retired -- the hero now renders
+// its content as one quiet line inline. buildBriefIconColor is still the
+// shared tone-colour source for the readiness chip below and stays imported.
+import { buildBriefIconColor } from '../components/CoachBriefCard';
 import HomeWelcomeCard from '../components/HomeWelcomeCard';
 import HomeProTeaserCard from '../components/HomeProTeaserCard';
 import HomeLastSessionCard from '../components/HomeLastSessionCard';
@@ -55,15 +59,9 @@ import {
   getRecentCheckins, getNutritionTargets, getLatestCheckin,
 } from '../lib/database';
 import {
-  stageOf, canStillTrial, trialEndsLabel, trialEndsAtMs, daysRemaining,
+  stageOf, canStillTrial, trialEndsAtMs, daysRemaining,
 } from '../lib/payments/cascade';
 import {
-  trialStartFromEndsAt,
-  selectTrialVariant,
-  firstReviewUnlockDate,
-  dayName,
-  trialBannerLine,
-  TRIAL_LENGTH_DAYS,
   FIRST_CHECKIN_MIN_DAYS,
   MIN_WEIGH_INS,
 } from '../lib/trialActivation';
@@ -84,6 +82,11 @@ import { detectDifferentialTrigger } from '../lib/differentialPaywall';
 // the single unified P1 "Today line" and its pure priority arbiter.
 import TodayLine from '../components/home/TodayLine';
 import { resolveTodayLine } from '../lib/home/todayLineArbiter';
+// Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §9/§17 region R4): the
+// self-retiring first-review readiness line and its pure resolver, the same
+// TodayLine/todayLineArbiter split.
+import FirstReviewLine from '../components/home/FirstReviewLine';
+import { resolveFirstReviewLine } from '../lib/home/firstReviewLine';
 import { mapCalsAdherence } from '../lib/weeklyCoach';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
@@ -173,15 +176,9 @@ export default function HomeScreen({ navigation, route }) {
     mesoBriefChip: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     mesoBriefText: { fontSize: t.fontSize.xs, color: t.colors.textSecondary },
     workoutOptionsText: { color: t.colors.textSecondary },
-    glanceTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    // R9/D70 (design-cohesion sweep): raw fontSize.xl + black weight moved
-    // onto the frozen numeral role that matches it in size (t.type.num('h3')
-    // is fontSizeTable.xl, same 20px this readout always rendered at; h2
-    // steps up to xxl/24px, a visible size jump for a "stat at a glance"
-    // number this compact) -- see FOOD-DESIGN-STANDARD.md section 3.
-    glanceStatValue: { ...t.type.num('h3'), color: t.colors.textPrimary },
-    glanceStatLabel: { ...t.type.caption, color: t.colors.textMuted },
-    glanceDivider: { backgroundColor: t.colors.border },
+    // Campaign 22 Phase 2 Stage 2 (§7/§17 R5): the "Progress at a glance"
+    // card is removed (3-way duplication fix); its live styles go with it.
+    coachBriefLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
     coachingNudge: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     coachingNudgeLeft: { backgroundColor: t.colors.primaryBg },
     coachingNudgeTitle: { ...t.type.label, color: t.colors.textPrimary },
@@ -306,18 +303,15 @@ export default function HomeScreen({ navigation, route }) {
   const [latestCoachOutput, setLatestCoachOutput] = useState(null);
   // PM-06: is that output a real, check-in-backed decision (see coachDecision).
   const [latestCoachDecisionComplete, setLatestCoachDecisionComplete] = useState(false);
-  // COMP-023: day-3 trial value banner. { line, variant } when in-window, else
-  // null. Computed from live counters in loadTrialBanner.
-  // Campaign 22 Phase 2 Stage 1 (FOUNDER-RULINGS-PHASE2 R3): the everyday
-  // trial value card (S0-S3) STOPS rendering on Home entirely -- it rehomes
-  // to Profile/You. // Stage 2: that rehome is Stage 2's build; this loader,
-  // its notification side effect (scheduleTrialDay3Notification) and its
-  // dismissal-key semantics are left running and untouched so Stage 2 has a
-  // working starting point, but nothing on Home reads the value this stage,
-  // hence the leading underscore (the codebase's established
-  // intentionally-unused convention, eslint varsIgnorePattern '^_').
-  const [_trialBanner, setTrialBanner] = useState(null);
-  const [_trialBannerDismissed, setTrialBannerDismissed] = useState(false);
+  // Campaign 22 Phase 2 Stage 2 (FOUNDER-RULINGS-PHASE2 R3, complete): the
+  // everyday trial value card (S0-S3), its loader, its notification side
+  // effect and its dismissal key have REHOMED to YouScreen.js in full. Home
+  // carries no trial-banner state at all any more.
+  // Campaign 22 Phase 2 Stage 2 (§9/§17 R4; FOUNDER-RULINGS-PHASE2 R2): the
+  // raw facts the self-retiring first-review readiness line needs, gathered
+  // by loadFirstReviewFacts. Null until loaded, so the line never flashes
+  // before real data is read.
+  const [firstReviewFacts, setFirstReviewFacts] = useState(null);
   // Free-tier weekly one-liner (founder decision 4c): one read-only
   // sentence built from training plus weight direction only. Dismissed
   // per week; defaults dismissed so it never flashes before the stored
@@ -333,6 +327,11 @@ export default function HomeScreen({ navigation, route }) {
   const [todayWeight, setTodayWeight] = useState(null);       // logged weight for today
   const [recentWeights, setRecentWeights] = useState([]);     // last 14 entries for sparkline
   const [savingWeight, setSavingWeight] = useState(false);
+  // Campaign 22 Phase 2 Stage 2 (§11/R1): has the user EVER logged a real
+  // (non-enrolment-seed) morning weight. Gates TodayStrip's first-use
+  // tutorial sentence -- defaults true so the line never flashes for an
+  // established user while this loads.
+  const [hasEverLoggedWeight, setHasEverLoggedWeight] = useState(true);
   // First-launch welcome guide. Defaults to hidden so it never flashes before the
   // saved flag is read; the loader reveals it for a brand-new user (no sessions
   // logged) who hasn't dismissed it. Auto-clears once totalSessions > 0.
@@ -490,7 +489,7 @@ export default function HomeScreen({ navigation, route }) {
         loadBriefDismissal(),
         loadWelcome(),
         loadActivationNudge(), // S6: tier-blind, computes from workouts + account age + ED flag
-        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadTrialBanner()] : []),
+        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstReviewFacts()] : []),
         ...(tier === 'free' ? [loadFreeCoachLine()] : []),
       ]);
       // NAV-4: the differential paywall's deload and stalled-lift contexts
@@ -530,116 +529,69 @@ export default function HomeScreen({ navigation, route }) {
     } catch (_) {}
   }
 
-  // COMP-023: build the day-3 value banner from live counters. Null unless the
-  // user is in a Pro trial, within days 2–7, with no first review yet. Under an
-  // open ED flag the line is the neutral fallback (no counts, no weight ask).
-  async function loadTrialBanner() {
+  // Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §9/§17 region R4;
+  // FOUNDER-RULINGS-PHASE2 R2): raw facts for the self-retiring first-review
+  // readiness line. Gathers the SAME Monday-anchored weigh-in window and
+  // coach-ledger inputs the You tab's own coachReadiness effect computes
+  // (screens/YouScreen.js); the actual gate/threshold judgement happens once,
+  // in the coach-ledger builder (src/lib/coachLedger.js) via
+  // src/lib/home/firstReviewLine.js, never re-derived here. This loader
+  // only reads the inputs.
+  async function loadFirstReviewFacts() {
     try {
-      if (!user?.id || stageOf(userProfile) !== 'pro_trial') { setTrialBanner(null); return; }
-
-      // Re-lay the day-3 push on every Home open during the trial so its baked
-      // variant/copy/unlock-day track the freshest counters. It is laid once at
-      // trial start (day 0, when the user has done nothing → S3); without this
-      // refresh an active user who never cold-relaunches would get that stale
-      // "you've done nothing" push on day 3. No-ops once day 3 has passed.
-      try {
-        // eslint-disable-next-line global-require
-        require('../lib/notifications').scheduleTrialDay3Notification(user.id, userProfile)?.catch?.(() => {});
-      } catch (_) { /* best-effort */ }
-
-      const endsAt = userProfile?.proTrialEndsAt ?? userProfile?.pro_trial_ends_at ?? null;
-      const trialStart = trialStartFromEndsAt(endsAt);
-      if (trialStart == null) { setTrialBanner(null); return; }
-      // A3 (audit OB-4): the banner runs from day 0, not day 2, week one is
-      // exactly when the paid promise is otherwise invisible. It retires when
-      // the first review lands (coachOut below) or the trial ends.
-      const trialDay = Math.floor((Date.now() - trialStart) / 86400000);
-      if (trialDay < 0 || trialDay > TRIAL_LENGTH_DAYS) { setTrialBanner(null); return; }
-
-      // A coach output existing means the first review already happened, the
-      // value moment is past, so the banner retires permanently.
-      const [coachOut, workouts, weights, edFlag] = await Promise.all([
-        getLatestCoachOutput(user.id).catch(() => null),
+      if (!user?.id) { setFirstReviewFacts(null); return; }
+      const [workouts, weights, edFlag, prefsRaw, wellbeing] = await Promise.all([
         getAllWorkouts(user.id).catch(() => []),
         getMorningWeightsLast14Days(user.id).catch(() => []),
         // ED-safety, fail CLOSED: a transient flag read maps to the truthy
-        // 'read_failed' sentinel (edFlagOpen: !!edFlag below), so the trial
-        // banner line uses the neutral, no-weigh-in-count variant on a read
-        // error (matches the siblings at :470/:521/:737/:794).
+        // 'read_failed' sentinel, matching every sibling loader on this
+        // screen -- firstReviewLine.js treats any truthy edFlagOpen as
+        // suppress-the-line.
         getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
+        AsyncStorage.getItem('@volyume_notification_prefs').catch(() => null),
+        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
       ]);
-      // PM-03 (D96): retirement keys on a COMPLETED decision, not on the mere
-      // existence of a persisted row. Any visit to the Coach screen used to
-      // write an output (PM-01), and that row permanently deleted the
-      // week-one banner -- the one surface built to make the coaching loop
-      // visible before the first review. The predicate is the same one the
-      // Coach tab already applies: the check-in that produced the output must
-      // exist for the same week.
-      if (coachOut?.weekStart) {
-        const outCheckin = await getLatestCheckin(user.id, coachOut.weekStart).catch(() => null);
-        if (isCompletedCoachDecision(coachOut, outCheckin)) { setTrialBanner(null); return; }
-      }
-
-      const completedSessions = workouts.filter(w => w.isCompleted && (w.startedAt ?? 0) >= trialStart).length;
-      // X11 (cross-surface consistency audit 2026-07-30): was a rolling
-      // trailing-7-day window, which could show "3 of 3 morning weigh-ins
-      // this week" here while CoachOutputScreen's Monday-anchored count said
-      // something else for the same moment. Every "this week" weigh-in count
-      // now shares the same calendar-week boundary (dayKey.js).
-      const weekAgoMondayMs = localWeekStartMs();
-      // D93 (Campaign 2, review B finding 1): DISTINCT mornings, never raw
-      // rows - the engine credits one weigh-in per local day (weeklyCoach
-      // weighInDayCount), so the banner's variant selection must too.
-      const weighIns7d = new Set(
-        weights
-          .filter(w => Number.isFinite(Number(w.loggedAt)) && Number(w.loggedAt) >= weekAgoMondayMs)
-          .map(w => localDayKey(Number(w.loggedAt)))
-      ).size;
-      const firstWeightAt = weights.length ? Math.min(...weights.map(w => w.loggedAt ?? Infinity)) : null;
-
       let checkinDay = 0;
       try {
-        const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
-        if (raw) { const p = JSON.parse(raw); const d = Number(p?.checkinDay); if (Number.isInteger(d) && d >= 0 && d <= 6) checkinDay = d; }
+        if (prefsRaw) {
+          const d = Number(JSON.parse(prefsRaw)?.checkinDay);
+          if (Number.isInteger(d) && d >= 0 && d <= 6) checkinDay = d;
+        }
       } catch (_) {}
-
-      const variant = selectTrialVariant({ completedSessions, weighIns7d });
-      const unlock = firstReviewUnlockDate(firstWeightAt, checkinDay);
-      let line = trialBannerLine({
-        variant, completedSessions, weighIns7d,
-        unlockDayName: dayName(unlock), trialDay, edFlagOpen: !!edFlag,
+      const completedSessions = workouts.filter((w) => w.isCompleted).length;
+      // X5/X11 (cross-surface consistency audit 2026-07-30): Monday-anchored,
+      // never a rolling window, matching every other "this week" count on
+      // this screen and the You tab's own coachReadiness read.
+      const weekStartMs = localWeekStartMs();
+      const weighIns7d = new Set(
+        weights
+          .filter((w) => Number.isFinite(Number(w.loggedAt)) && Number(w.loggedAt) >= weekStartMs)
+          .map((w) => localDayKey(Number(w.loggedAt))),
+      ).size;
+      const firstWeightAt = weights.length
+        ? Math.min(...weights.map((w) => w.loggedAt ?? Infinity))
+        : null;
+      // ED-safety parity with the You tab's identical ledger read
+      // (YouScreen.js `edSuppressed`): this line prompts for weigh-ins, so
+      // it must stay silent in every state where the You tab's readiness
+      // ledger goes neutral -- open ED flag, elevated SCOFF, a failed
+      // wellbeing read (fail closed), or calm mode. Same formula, so the
+      // two surfaces can never disagree about when counting is allowed.
+      const edSuppressed = !!edFlag
+        || (Number.isFinite(userProfile?.scoffScore) && userProfile.scoffScore >= 2)
+        || wellbeing === 'read_failed'
+        || isCalm(wellbeing);
+      setFirstReviewFacts({
+        weighIns7d,
+        firstWeightAt: Number.isFinite(firstWeightAt) ? firstWeightAt : null,
+        checkinDay,
+        edFlagOpen: edSuppressed,
+        completedSessions,
       });
-      // FQ-6.2 (D96): the banner names the authoritative trial end date -
-      // one source (cascade.trialEndsLabel), so no surface can disagree.
-      const endsLabel = trialEndsLabel(useAppStore.getState().userProfile);
-      if (line && endsLabel) line = `${line} Your free trial runs to ${endsLabel}.`;
-      // Founder ruling (Today truth repair): the A3 "what your coach is
-      // reading" ledger is no longer built or shown here. Its rows were
-      // first-review THRESHOLD counters, and Today must not present gate
-      // plumbing as current coaching observation - on this card they were
-      // the same Math.min(weighIns7d, MIN_WEIGH_INS) rows the removed daily
-      // brief carried. The trial banner keeps its own line, its dismissal
-      // and its methodology link; trial variant selection, the first-review
-      // thresholds and the unlock-date maths are all untouched, and the
-      // ledger still serves CoachOutputScreen's hold receipt and the You
-      // tab's coach-readiness surface.
-
-      // Read the per-trial dismissal BEFORE revealing the banner so a banner the
-      // user already dismissed can't flash for a frame while the read resolves.
-      const dKey = `@volyume_trial_value_banner_dismissed_${user.id}`;
-      const dv = await AsyncStorage.getItem(dKey).catch(() => null);
-      setTrialBannerDismissed(dv === 'true');
-      setTrialBanner({ line, variant });
     } catch (_) {
-      setTrialBanner(null);
+      setFirstReviewFacts(null);
     }
   }
-
-  // Stage 2: dismissTrialBanner (the everyday S0-S3 card's dismiss handler)
-  // is retired with the card it served -- there is nothing left on Home to
-  // dismiss. Its AsyncStorage key (@volyume_trial_value_banner_dismissed_
-  // ${user.id}) keeps its historical meaning; Stage 2's rehomed surface may
-  // reuse or replace it when it lands.
 
   // Free-tier weekly one-liner (founder decision 4c). Free-safe data
   // only: completed sessions this week plus the direction of any logged
@@ -988,6 +940,12 @@ export default function HomeScreen({ navigation, route }) {
       try {
         const recent14 = await getMorningWeights(user.id, 14);
         setRecentWeights(recent14.map(w => w.weightKg).filter(Number.isFinite));
+        // Campaign 22 Phase 2 Stage 2 (§11/R1): TodayStrip's first-use
+        // tutorial sentence retires once a REAL weigh-in has ever been
+        // logged -- the Pro-enrolment seed row (a typed starting point, not
+        // a morning the user weighed) never counts, mirroring the same
+        // isEnrolmentSeedWeight filter used for todayWeight above.
+        setHasEverLoggedWeight(recent14.some((w) => !isEnrolmentSeedWeight(w)));
       } catch (_) {}
     } catch (_) {}
   }
@@ -1891,6 +1849,27 @@ export default function HomeScreen({ navigation, route }) {
   // transitions themselves are untouched.
   const trialEndingEligible = stageOf(userProfile) === 'pro_trial'
     && msToTrialEnd != null && msToTrialEnd <= 48 * 60 * 60 * 1000;
+  // ── Campaign 22 Phase 2 Stage 2: the first-review readiness line (§9/§17
+  // R4; FOUNDER-RULINGS-PHASE2 R2). Pro + pre-first-review only
+  // (latestCoachDecisionComplete is the same completed-decision predicate
+  // the coach fact above uses); null until loadFirstReviewFacts resolves so
+  // it never flashes on cold load. Derived HERE, above the arbiter call,
+  // because the line has TWO homes per §17 R4: on a day today's weigh-in is
+  // already logged it renders in the Evidence Row below the hero; on a
+  // CONFLICT day (weigh-in not yet logged, the row's slot is the weigh-in
+  // prompt's) it moves onto the Today line at rank 4.5 via the firstReview
+  // fact below, rather than vanishing.
+  const firstReviewLineItem = tier === 'pro' && firstReviewFacts
+    ? resolveFirstReviewLine({
+        tier,
+        hasCompletedFirstReview: latestCoachDecisionComplete,
+        ...firstReviewFacts,
+      })
+    : null;
+  const openFirstReviewSurface = useCallback(() => {
+    haptics.selection();
+    navigateCrossTab(navigation, 'ProfileTab', 'You');
+  }, [navigation]);
   const todayLineItem = resolveTodayLine({
     // Rank 1 is reserved: no positive Home safety banner exists to feed it
     // yet (today ED/calm suppression only SUPPRESSES other content, inside
@@ -1921,6 +1900,14 @@ export default function HomeScreen({ navigation, route }) {
         navigation.navigate('ProfileTab', { screen: 'WeeklyCheckIn', initial: false });
       },
       onDismiss: dismissCoachingNudge,
+    },
+    // Rank 4.5, CONFLICT DAYS ONLY (§17 R4 "weigh-in wins; readiness line
+    // moves to R2 slot rank 4.5 on conflict days"): fed only while today's
+    // weigh-in is not yet logged; on logged days the same item renders in
+    // the Evidence Row instead and this fact is null.
+    firstReview: {
+      item: todayWeight == null ? firstReviewLineItem : null,
+      onPress: openFirstReviewSurface,
     },
     recovery: {
       state: gatedRecoveryState,
@@ -1953,6 +1940,8 @@ export default function HomeScreen({ navigation, route }) {
 
   // Stable handler identities for the memoised (React.memo) extracted
   // components below, so passing them as props doesn't defeat the memo.
+  // (openFirstReviewSurface lives above the arbiter call with the line it
+  // serves.)
   const goToProUpgrade = useCallback(() => navigation.navigate('ProUpgrade', { source: 'home' }), [navigation]);
   const goToWorkoutHistory = useCallback(() => navigation.navigate('WorkoutHistory'), [navigation]);
   const closeBlockShape = useCallback(() => setShowBlockShape(false), []);
@@ -2016,108 +2005,17 @@ export default function HomeScreen({ navigation, route }) {
             render location -- their content, tap-through and dismissal now
             live in the arbiter facts above and render through the single
             <TodayLine> row (coach = rank 3, deload/recovery = rank 5, phase
-            = rank 7, trial-ending = rank 8). The everyday trial card's
-            remaining Stage 2 rehome (to Profile/You) is out of this stage's
-            scope; see the Stage 2 note by its retained state, above. */}
+            = rank 7, trial-ending = rank 8). The everyday trial card itself
+            has rehomed to YouScreen.js in full (Stage 2, FOUNDER-RULINGS-
+            PHASE2 R3). */}
 
-        {/* ── B3 lift plateau banner. Training-only content; taps through to
-            the existing plateau protocol on ExerciseDetail. ExerciseDetail is
-            registered in the Progress stack, not this one, so route via the
-            parent tab navigator (F4 / NAV-1 bug class). ── */}
-        {showPlateauBanner && (
-          <TouchableOpacity
-            style={[styles.plateauBanner, live.plateauBanner]}
-            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId }); }}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel={plateauBanner.line}
-          >
-            <View style={styles.plateauBannerLeft}>
-              <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
-              <Text style={[styles.plateauBannerText, live.plateauBannerText]} numberOfLines={2}>{plateauBanner.line}</Text>
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
-            </View>
-            <TouchableOpacity
-              onPress={dismissPlateauBanner}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss plateau banner"
-            >
-              <Ionicons name="close" size={16} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
-
-
-        {/* ── S6 activation nudge banner (stall stages only; cold-start is
-            welcomeCard's). Taps through to start the next session. ── */}
-        {showActivationBanner && (
-          <TouchableOpacity
-            style={[styles.activationBanner, live.activationBanner]}
-            onPress={() => { haptics.selection(); handleStartNextWorkout(false); }}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel={activationBannerLine(activationNudge.stage)?.title}
-          >
-            <View style={styles.activationBannerLeft}>
-              <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.activationBannerTitle, live.activationBannerTitle]} numberOfLines={1}>
-                  {activationBannerLine(activationNudge.stage)?.title}
-                </Text>
-                <Text style={[styles.activationBannerBody, live.activationBannerBody]} numberOfLines={2}>
-                  {activationBannerLine(activationNudge.stage)?.body}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              onPress={dismissActivationNudge}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss"
-            >
-              <Ionicons name="close" size={16} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
-
-        {/* ── D3: the "worth your attention" card, low slot (free tier). The
-            internal priority, free_line over differential, is decided by
-            pickAttentionVariant, the card class's single decision point. ── */}
-        {(showFreeCoachLine || showDifferentialBadge) && (
-          <AttentionCard
-            variant={pickAttentionVariant({
-              freeLine: showFreeCoachLine,
-              differential: showDifferentialBadge,
-            })}
-            freeCoachLine={freeCoachLine}
-            onFreeLineDismiss={dismissFreeCoachLine}
-            onUpgrade={() => navigation.navigate('ProUpgrade', { source: 'home_attention_card' })}
-            differential={differentialBanner}
-            onDifferentialCta={(action) => {
-              if (action === 'shown') {
-                trackEngineEvent(user?.id, 'paywall_shown', {
-                  surface: `differential_${differentialBanner.trigger}`,
-                  trigger: differentialBanner.trigger,
-                  user_pricing_window: userProfile?.lockedInPriceTier ?? 'open_beta',
-                }).catch(() => {});
-              } else if (action === 'pay') {
-                navigation.navigate('ProUpgrade', { source: `differential_${differentialBanner.trigger}` });
-              } else if (action === 'dismiss') {
-                trackEngineEvent(user?.id, 'paywall_tapped_cta', {
-                  surface: `differential_${differentialBanner.trigger}`,
-                  cta: 'dismiss',
-                }).catch(() => {});
-                dismissDifferentialBanner();
-              }
-            }}
-          />
-        )}
-
-        {/* D14 (Home banner cap): no "reveal the rest" affordance. Exactly
-            one attention banner shows at a time (whichever above won the
-            slot); the others wait their turn and appear on a later render
-            once the shown one is dismissed or resolves. ── */}
+        {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §17 region R5,
+            context footer): the plateau banner, activation nudge and the
+            free/differential attention slot RE-SITE to the footer, below
+            last-session and the Pro teaser -- P3 content, never above the
+            hero. The one-slot cap mechanics (BANNER_PRIORITY, shownBannerKey)
+            are UNCHANGED; only the render location moved. See the footer
+            block near the end of this ScrollView. */}
 
         {/* Skeleton placeholders shown during initial cold-load. As
             soon as loadData completes, this block disappears and the
@@ -2139,23 +2037,13 @@ export default function HomeScreen({ navigation, route }) {
             Home, the direction COMP-027 demands: hero first, fewer stacked
             utilities). The dismissal key and gating are reused there. */}
 
-        {/* Today strip (COMP-027 Part B): the morning-weight card sits above
-            the session hero. Meal planning/logging stays in its own flow
-            so this premium slot does one job clearly (cardio logging itself
-            is retired, D95). */}
-        {tier === 'pro' && user?.id && (
-          <TodayStrip
-            bwu={bwu}
-            todayWeight={todayWeight}
-            lastWeightKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : (userProfile?.weightKg ?? null)}
-            savingWeight={savingWeight}
-            onLogWeight={handleLogWeight}
-            // OB-8: the weekly check-in's "Log my weight first" CTA deep-links
-            // here with a fresh timestamp; the strip opens its weight input.
-            openWeightSignal={route?.params?.openWeightLog ?? null}
-            onOpenTrend={() => navigateCrossTab(navigation, 'ProgressTab', 'Analytics', { focusWeightTrend: true })}
-          />
-        )}
+        {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §11 region R4,
+            FOUNDER-RULINGS-PHASE2 R1): TodayStrip moves BELOW the hero -- the
+            session is the reason the athlete opened the app; the weigh-in is
+            a ten-second favour they do the coach afterwards. One-tap logging,
+            the OB-8 deep-link and the alignment fix are all untouched, just
+            re-slotted; see the Evidence Row block after the hero/no-plan
+            section below. */}
 
         {/* First-launch orientation (founder 2026-06-30): a calm welcome for a
             brand-new user, shown only until the first session is logged
@@ -2242,8 +2130,27 @@ export default function HomeScreen({ navigation, route }) {
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
             )}
+            {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §8/§16/§17
+                R3, hero merge): CoachBriefCard's card-in-card render is
+                retired -- this is the SAME coachBrief content (A-job,
+                session-relevant coaching context, per §8), now one quiet
+                line inline in the hero instead of a nested bordered card.
+                Dismissal key, gating and content are byte-identical
+                (dismissBrief / @volyume_brief_dismissed_date, once per day). */}
             {coachBrief && (
-              <CoachBriefCard brief={coachBrief} onDismiss={dismissBrief} />
+              <View style={styles.coachBriefLineRow}>
+                <Text style={[styles.coachBriefLineText, live.coachBriefLineText]} numberOfLines={2}>
+                  {coachBrief.headline}. {coachBrief.body}
+                </Text>
+                <TouchableOpacity
+                  onPress={dismissBrief}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Dismiss coaching brief"
+                >
+                  <Ionicons name="close" size={14} color={t.colors.textMuted} />
+                </TouchableOpacity>
+              </View>
             )}
             {/* The full planned session is the primary action for everyone
                 (founder 2026-06-30: the old first-run variant highlighted a
@@ -2341,25 +2248,14 @@ export default function HomeScreen({ navigation, route }) {
               />
             )}
 
-            {/* Progress at a glance, shown when there's history but no plan */}
-            {lastSession != null && (
-              <Card style={styles.glanceCard}>
-                <Text style={[styles.glanceTitle, live.glanceTitle]}>Your progress at a glance</Text>
-                <View style={styles.glanceRow}>
-                  <View style={styles.glanceStat}>
-                    <Text style={[styles.glanceStatValue, live.glanceStatValue]}>{weekStats.sessions}</Text>
-                    <Text style={[styles.glanceStatLabel, live.glanceStatLabel]}>Sessions this week</Text>
-                  </View>
-                  <View style={[styles.glanceDivider, live.glanceDivider]} />
-                  <View style={styles.glanceStat}>
-                    <Text style={[styles.glanceStatValue, live.glanceStatValue]}>
-                      {getRelativeDay(lastSession.startedAt)}
-                    </Text>
-                    <Text style={[styles.glanceStatLabel, live.glanceStatLabel]}>Last session</Text>
-                  </View>
-                </View>
-              </Card>
-            )}
+            {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §7/§17 R5,
+                the 3-way duplication fix): "Progress at a glance" is
+                REMOVED. It restated last-session facts the slim
+                HomeLastSessionCard row already shows below (both rendered
+                whenever lastSession existed, even in this exact no-plan
+                branch) -- the last-session row absorbs its job; nothing
+                here replaces the dropped "sessions this week" figure, which
+                the Progress tab still carries. */}
 
             {/* Pro keeps the quick-start escape hatch while cloud restore
                 lands. The free path's blank-session route is the quiet link
@@ -2397,32 +2293,57 @@ export default function HomeScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* Founder ruling (Today truth repair): the S3 "What your coach is
-            reading" daily brief is REMOVED from Today. Its rows were
-            first-review THRESHOLD counters (weigh-ins vs MIN_WEIGH_INS, days
-            vs FIRST_CHECKIN_MIN_DAYS), built with Math.min(weighIns7d,
-            MIN_WEIGH_INS) - so 3, 4, 5, 6 or 7 qualifying mornings all read
-            "3 of 3". That is gate plumbing, not an ongoing description of
-            what the coach understands about the athlete, and Today must not
-            present it as one. The ledger itself is untouched and still
-            serves its legitimate first-review consumers: CoachOutputScreen's
+        {/* Founder ruling (Today truth repair, RE-DECIDED Campaign 22 Phase 2
+            Stage 2): the S3 "What your coach is
+            reading" daily brief stays removed -- its rows were first-review THRESHOLD counters
+            (Math.min(weighIns7d, MIN_WEIGH_INS), so 3, 4, 5, 6 or 7
+            qualifying mornings all read "3 of 3"), gate plumbing, not an
+            ongoing description of what the coach understands. The ledger
+            maths is untouched and still serves CoachOutputScreen's
             insufficient-data hold receipt and the You tab's coach-readiness
-            surface. Nothing replaces this on Today. */}
+            surface. What DOES now answer the same pre-first-review question,
+            honestly: the Evidence Row's first-review line below (§9,
+            FOUNDER-RULINGS-PHASE2 R2) -- a REDESIGN (real unclamped
+            denominators, self-retiring, actionable only), never a restore of
+            this ledger. */}
 
-        {/* ── Pro teaser (free tier only, after 3+ sessions) ── now below the
-            hero with the same hero-first reorder. */}
-        {tier === 'free' && totalSessions >= 3 && (
-          <HomeProTeaserCard
-            totalSessions={totalSessions}
-            teaserInsight={teaserInsight}
-            onPress={goToProUpgrade}
+        {/* ── Campaign 22 Phase 2 Stage 2: the Evidence Row (region R4,
+            §9/§11/§17). Morning-weight one-tap (Pro), quiet when logged;
+            below it, the first-review readiness line when pre-first-review
+            and today's weigh-in is already logged. On a CONFLICT day (weigh-
+            in not yet logged) "weigh-in wins" this slot and the readiness
+            line moves onto the Today line at rank 4.5 instead (§17 R4; the
+            firstReview fact above), so the two rows never compete for the
+            same line of copy at once and the line never simply vanishes. ── */}
+        {tier === 'pro' && user?.id && (
+          <TodayStrip
+            bwu={bwu}
+            todayWeight={todayWeight}
+            lastWeightKg={recentWeights.length ? recentWeights[recentWeights.length - 1] : (userProfile?.weightKg ?? null)}
+            savingWeight={savingWeight}
+            onLogWeight={handleLogWeight}
+            // OB-8: the weekly check-in's "Log my weight first" CTA deep-links
+            // here with a fresh timestamp; the strip opens its weight input.
+            openWeightSignal={route?.params?.openWeightLog ?? null}
+            onOpenTrend={() => navigateCrossTab(navigation, 'ProgressTab', 'Analytics', { focusWeightTrend: true })}
+            everLogged={hasEverLoggedWeight}
+          />
+        )}
+        {tier === 'pro' && user?.id && todayWeight != null && firstReviewLineItem && (
+          <FirstReviewLine
+            item={firstReviewLineItem}
+            onPress={openFirstReviewSurface}
+            testID="first-review-line"
           />
         )}
 
-        {/* ── Last session (D3, design audit 03): demoted to one slim row.
-            Same tap-through to history, same Repeat action, same stats,
-            compressed to a label line, a one-line name and an inline meta
-            line instead of a card-sized sibling to the hero. ── */}
+        {/* ── Campaign 22 Phase 2 Stage 2: the context footer (region R5,
+            §17). Last-session slim row first (absorbs the glance card),
+            then the Pro teaser, then the P3 attention stack -- plateau,
+            activation and the free/differential slot, re-sited here from
+            above the hero. Same one-slot cap (BANNER_PRIORITY,
+            shownBannerKey), same per-banner handlers, only the location
+            moved. ── */}
         {lastSession && (
           <HomeLastSessionCard
             lastSession={lastSession}
@@ -2433,6 +2354,112 @@ export default function HomeScreen({ navigation, route }) {
           />
         )}
 
+        {/* ── Pro teaser (free tier only, after 3+ sessions). ── */}
+        {tier === 'free' && totalSessions >= 3 && (
+          <HomeProTeaserCard
+            totalSessions={totalSessions}
+            teaserInsight={teaserInsight}
+            onPress={goToProUpgrade}
+          />
+        )}
+
+        {/* ── B3 lift plateau banner. Training-only content; taps through to
+            the existing plateau protocol on ExerciseDetail. ExerciseDetail is
+            registered in the Progress stack, not this one, so route via the
+            parent tab navigator (F4 / NAV-1 bug class). ── */}
+        {showPlateauBanner && (
+          <TouchableOpacity
+            style={[styles.plateauBanner, live.plateauBanner]}
+            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProgressTab', 'ExerciseDetail', { exerciseId: plateauBanner.exerciseId }); }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={plateauBanner.line}
+          >
+            <View style={styles.plateauBannerLeft}>
+              <Ionicons name="analytics-outline" size={18} color={t.colors.primary} />
+              <Text style={[styles.plateauBannerText, live.plateauBannerText]} numberOfLines={2}>{plateauBanner.line}</Text>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
+            </View>
+            <TouchableOpacity
+              onPress={dismissPlateauBanner}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss plateau banner"
+            >
+              <Ionicons name="close" size={16} color={t.colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+
+        {/* ── S6 activation nudge banner (stall stages only; cold-start is
+            welcomeCard's). Taps through to start the next session. ── */}
+        {showActivationBanner && (
+          <TouchableOpacity
+            style={[styles.activationBanner, live.activationBanner]}
+            onPress={() => { haptics.selection(); handleStartNextWorkout(false); }}
+            activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={activationBannerLine(activationNudge.stage)?.title}
+          >
+            <View style={styles.activationBannerLeft}>
+              <Ionicons name="barbell-outline" size={18} color={t.colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.activationBannerTitle, live.activationBannerTitle]} numberOfLines={1}>
+                  {activationBannerLine(activationNudge.stage)?.title}
+                </Text>
+                <Text style={[styles.activationBannerBody, live.activationBannerBody]} numberOfLines={2}>
+                  {activationBannerLine(activationNudge.stage)?.body}
+                </Text>
+              </View>
+            </View>
+            <TouchableOpacity
+              onPress={dismissActivationNudge}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss"
+            >
+              <Ionicons name="close" size={16} color={t.colors.textMuted} />
+            </TouchableOpacity>
+          </TouchableOpacity>
+        )}
+
+        {/* ── D3: the "worth your attention" card, low slot (free tier). The
+            internal priority, free_line over differential, is decided by
+            pickAttentionVariant, the card class's single decision point. ── */}
+        {(showFreeCoachLine || showDifferentialBadge) && (
+          <AttentionCard
+            variant={pickAttentionVariant({
+              freeLine: showFreeCoachLine,
+              differential: showDifferentialBadge,
+            })}
+            freeCoachLine={freeCoachLine}
+            onFreeLineDismiss={dismissFreeCoachLine}
+            onUpgrade={() => navigation.navigate('ProUpgrade', { source: 'home_attention_card' })}
+            differential={differentialBanner}
+            onDifferentialCta={(action) => {
+              if (action === 'shown') {
+                trackEngineEvent(user?.id, 'paywall_shown', {
+                  surface: `differential_${differentialBanner.trigger}`,
+                  trigger: differentialBanner.trigger,
+                  user_pricing_window: userProfile?.lockedInPriceTier ?? 'open_beta',
+                }).catch(() => {});
+              } else if (action === 'pay') {
+                navigation.navigate('ProUpgrade', { source: `differential_${differentialBanner.trigger}` });
+              } else if (action === 'dismiss') {
+                trackEngineEvent(user?.id, 'paywall_tapped_cta', {
+                  surface: `differential_${differentialBanner.trigger}`,
+                  cta: 'dismiss',
+                }).catch(() => {});
+                dismissDifferentialBanner();
+              }
+            }}
+          />
+        )}
+
+        {/* D14 (Home banner cap): no "reveal the rest" affordance. Exactly
+            one attention banner shows at a time (whichever above won the
+            slot); the others wait their turn and appear on a later render
+            once the shown one is dismissed or resolves. ── */}
 
         {/* "This week's plan" (block progress) moved to Progress tab. */}
 
@@ -2751,39 +2778,22 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 
-  // Progress at a glance (no-plan + has history)
-  glanceCard: {
-    gap: spacing.md,
-  },
-  glanceTitle: {
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-    color: colors.textMuted,
-  },
-  glanceRow: {
+  // Campaign 22 Phase 2 Stage 2 (§7/§17 R5): "Progress at a glance" removed,
+  // absorbed into the last-session row (3-way duplication fix).
+
+  // Campaign 22 Phase 2 Stage 2 (§16/§17 R3, hero merge): CoachBriefCard's
+  // card-in-card render becomes one quiet line inline in the hero, no
+  // border, no nested surface -- the "card-in-card is eliminated" container
+  // target.
+  coachBriefLineRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
   },
-  glanceStat: {
+  coachBriefLineText: {
+    ...type.bodySm,
     flex: 1,
-    alignItems: 'center',
-    gap: spacing.xs,
-  },
-  // R9/D70: raw fontSize.xl + black weight moved onto the matching frozen
-  // numeral role, see the live twin's comment above for why h3 not h2.
-  glanceStatValue: {
-    ...type.num('h3'),
-    color: colors.textPrimary,
-  },
-  glanceStatLabel: {
-    ...type.caption,
-    color: colors.textMuted,
-    textAlign: 'center',
-  },
-  glanceDivider: {
-    width: 1,
-    height: 40,
-    backgroundColor: colors.border,
+    color: colors.textSecondary,
   },
 
   // Block progress card

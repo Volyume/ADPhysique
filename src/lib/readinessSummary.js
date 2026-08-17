@@ -160,17 +160,23 @@ export function buildReadinessSummary({
   }
 
   // Priority 5: default block-phase read.
-  // C5-P12-02 / C5-P11-02 (D96): the noun. The hero shows two unlabelled
-  // "N of M" counters two lines apart with different meanings -- "Day 1 of
-  // 2" (position in the plan's workout rotation) and this one (position in
-  // the block) -- so a first-time user could reasonably read them as two
-  // mental models of the same plan. Naming the block here also makes the
-  // chip an invitation to the block sheet it opens, which was otherwise
-  // advertised only in the accessibility label a sighted user never sees.
-  // Priority 1 to 4 wordings are deliberately untouched.
-  const rirBit = currentMesoWeek.rirTarget != null ? ` - stop ${currentMesoWeek.rirTarget} short of failure` : '';
+  // RE-DECIDED (Campaign 22 Phase 2 Stage 2, HOME-TODAY-UX-SPEC.md §7/§15
+  // item 4/§17 R3: "the hero shows a SINGLE counter"). C5-P12-02's own fix
+  // (quoted below, kept for provenance) put a SECOND "N of M" counter here
+  // to disambiguate it from the eyebrow's "Day 1 of 2" -- which fixed the
+  // confusion but left two counters on the hero, exactly the "hero eyebrow
+  // 'N of M' pair" §7 classifies as NOISE once a single wording source
+  // exists. The eyebrow keeps the surviving position counter; the block-week
+  // figure moves to the block-shape sheet this same chip already opens on
+  // tap, so the fact is one tap away, never deleted. Original C5-P12-02
+  // rationale: "The hero shows two unlabelled 'N of M' counters two lines
+  // apart with different meanings -- 'Day 1 of 2' (position in the plan's
+  // workout rotation) and this one (position in the block) -- so a
+  // first-time user could reasonably read them as two mental models of the
+  // same plan." Priority 1 to 4 wordings are deliberately untouched.
+  const rirBit = currentMesoWeek.rirTarget != null ? `Stop ${currentMesoWeek.rirTarget} short of failure.` : 'On track for this block.';
   return {
     tone: 'go',
-    line: `Block week ${currentMesoWeek.weekIndex} of ${currentMesoWeek.plannedWeeks ?? '-'}${rirBit}`,
+    line: rirBit,
   };
 }

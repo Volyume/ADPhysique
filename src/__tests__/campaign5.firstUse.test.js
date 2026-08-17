@@ -425,14 +425,27 @@ describe('PLAN: the library answers what it is asking of you (C5-P10-02/03/04/09
 });
 
 describe('HOME: zero history has one clear next action and claims no history (C5-P12-*, D96)', () => {
-  test('the block chip names what it counts, so two "N of M" lines cannot be confused', () => {
+  // RE-PINNED (Campaign 22 Phase 2 Stage 2, HOME-TODAY-UX-SPEC.md §7/§15
+  // item 4/§17 R3: "the hero shows a SINGLE counter"). The original C5-P12-02
+  // fix (quoted in readinessSummary.js's own Priority 5 comment) added a
+  // SECOND "N of M" counter here ("Block week 1 of 6") specifically to
+  // disambiguate it from the eyebrow's "Day 1 of 2" -- which traded one
+  // confusion for the two-counters-on-one-hero noise §7 later classified.
+  // The underlying guarantee ("two 'N of M' lines cannot be confused") is
+  // now trivially true a different way: only ONE counter survives on the
+  // hero (the eyebrow's); this chip's default line never restates a block
+  // position at all, so there is nothing left to confuse it with. The
+  // dropped figure is one tap away in the block-shape sheet this same chip
+  // opens.
+  test('the block chip carries no counter of its own, so it can never duplicate the eyebrow\'s', () => {
     const summary = buildReadinessSummary({
       currentMesoWeek: { isDeload: false, weekIndex: 1, plannedWeeks: 6, rirTarget: 3 },
       deloadSuggestion: null,
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(summary.line).toBe('Block week 1 of 6 - stop 3 short of failure');
+    expect(summary.line).toBe('Stop 3 short of failure.');
+    expect(summary.line).not.toMatch(/\d+ of \d+/);
   });
 
   // RE-PINNED (Campaign 22 Phase 2 Stage 1, FOUNDER-RULINGS-PHASE2 R3): the
@@ -1531,9 +1544,17 @@ describe('CHECK-IN: no false-confidence recommendation from a week with no check
   });
 
   test('the week-one ledger survives a visit made before the first review', () => {
-    const src = read('screens/HomeScreen.js');
-    expect(stripComments(src)).not.toMatch(/if \(coachOut\) \{ setTrialBanner\(null\); return; \}/);
-    expect(src).toMatch(/if \(isCompletedCoachDecision\(coachOut, outCheckin\)\) \{ setTrialBanner\(null\); return; \}/);
+    // RE-PINNED (Campaign 22 Phase 2 Stage 2, FOUNDER-RULINGS-PHASE2 R3): the
+    // trial banner (and this retirement predicate) rehomed from Home to
+    // YouScreen.js. Same PM-03/PM-06 point, same predicate -- retirement
+    // keys on a COMPLETED decision, never the mere existence of a persisted
+    // row -- now expressed via `latestDecision`, the SAME
+    // isCompletedCoachDecision-backed variable this hub's own status card
+    // already computes and reads (never a second, parallel check).
+    const src = read('screens/YouScreen.js');
+    expect(stripComments(src)).not.toMatch(/if \(latest\) \{ setTrialBanner\(null\); return; \}/);
+    expect(src).toMatch(/const latestDecision = isCompletedCoachDecision\(latest, checkin\) \? latest : null;/);
+    expect(src).toMatch(/&& !latestDecision\) \{/);
   });
 
   test('the engine files are untouched by this fix', () => {

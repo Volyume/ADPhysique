@@ -96,7 +96,12 @@ export function selectTrialVariant({ completedSessions = 0, weighIns7d = 0 } = {
   return 'S2';
 }
 
-function weighInsNeeded(weighIns7d) {
+// Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §9/§15 item -- real
+// UNCLAMPED evidence requirements): exported so Home's first-review
+// readiness line (src/lib/home/firstReviewLine.js) reads the exact same
+// real remaining-count arithmetic this file already uses for the trial
+// banner's own S2 copy, rather than a second definition of the same sum.
+export function weighInsNeeded(weighIns7d) {
   return Math.max(0, MIN_WEIGH_INS - (weighIns7d || 0));
 }
 

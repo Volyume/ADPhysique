@@ -34,6 +34,13 @@ export default function TodayStrip({
   onLogWeight,
   onOpenTrend,
   openWeightSignal = null,
+  // Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §11 / FOUNDER-RULINGS-
+  // PHASE2 R1): "The explanatory sentence shows only until the FIRST ever
+  // log, then retires permanently (currently daily copy)." Owned by the
+  // caller (HomeScreen knows the user's real logging history); defaults to
+  // true so a not-yet-loaded caller never flashes the tutorial line to an
+  // established user for a frame.
+  everLogged = true,
 }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour-bearing
@@ -217,10 +224,15 @@ export default function TodayStrip({
                 three screens away. One caption, in the register already
                 approved on the hand-off card, on the EMPTY state only: never
                 on the logged state, never a count, never a streak or a
-                frequency, so nothing here can read as pressure to weigh. */}
-            <Text style={[styles.logWhy, live.logWhy]} numberOfLines={2}>
-              Before food, after the bathroom. It feeds your weight trend, and several mornings go by before anything changes.
-            </Text>
+                frequency, so nothing here can read as pressure to weigh.
+                Campaign 22 Phase 2 Stage 2 (§11/R1): first-use education,
+                not a daily fixture -- retires for good once the caller
+                reports a real weigh-in has ever been logged. */}
+            {!everLogged && (
+              <Text style={[styles.logWhy, live.logWhy]} numberOfLines={2}>
+                Before food, after the bathroom. It feeds your weight trend, and several mornings go by before anything changes.
+              </Text>
+            )}
           </View>
         </View>
         {/* C5-P37-01 (D96, applied by the lead at the Wave D/E landing): this

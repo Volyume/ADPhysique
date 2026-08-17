@@ -20,6 +20,10 @@ import { ProBadge } from '../components/ProGate';
 import { Skeleton } from '../components/Skeleton';
 import SectionLabel from '../components/SectionLabel';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
+// Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §14; FOUNDER-RULINGS-
+// PHASE2 R3): the everyday trial value card rehomes here from Home. Same
+// component, same variant, same content builders as it always used.
+import AttentionCard from '../components/AttentionCard';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -39,6 +43,15 @@ import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { buildCoachLedger } from '../lib/coachLedger';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
+import { stageOf, trialEndsLabel } from '../lib/payments/cascade';
+import {
+  trialStartFromEndsAt,
+  selectTrialVariant,
+  firstReviewUnlockDate,
+  dayName,
+  trialBannerLine,
+  TRIAL_LENGTH_DAYS,
+} from '../lib/trialActivation';
 
 function formatDate(ms) {
   if (!ms) return null;
@@ -189,6 +202,10 @@ export default function YouScreen({ navigation }) {
   const [latestReview, setLatestReview] = useState(null);
   const [hasCoachHistory, setHasCoachHistory] = useState(false);
   const [coachReadiness, setCoachReadiness] = useState(null);
+  // Campaign 22 Phase 2 Stage 2 (FOUNDER-RULINGS-PHASE2 R3): the everyday
+  // trial value card, rehomed here from Home. { line, variant } | null.
+  const [trialBanner, setTrialBanner] = useState(null);
+  const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
@@ -287,6 +304,56 @@ export default function YouScreen({ navigation }) {
           firstWeightAt: Number.isFinite(firstWeightAt) ? firstWeightAt : null,
           edSuppressed,
         } : null);
+
+        // Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §14;
+        // FOUNDER-RULINGS-PHASE2 R3): the everyday trial value presence,
+        // rehomed from Home's retired loadTrialBanner. Same
+        // selectTrialVariant/trialBannerLine logic, same day-0-to-trial-end
+        // window, same completed-decision retirement predicate (latestDecision,
+        // computed above by the SAME isCompletedCoachDecision this hub already
+        // applies to its own status card) and the SAME per-trial dismissal key
+        // (@volyume_trial_value_banner_dismissed_${user.id}, reused with its
+        // historical meaning). Reuses the weighIns7d/firstWeightAt/checkinDay/
+        // edSuppressed facts this effect already gathered for coachReadiness
+        // above -- never a parallel computation of the same counts.
+        if (tier === 'pro' && stageOf(userProfile) === 'pro_trial') {
+          // Re-lay the day-3 push on every Coach-tab open during the trial so
+          // its baked variant/copy/unlock-day track the freshest counters
+          // (byte-identical side effect to the retired Home loader; it simply
+          // fires from here now that the surface has moved).
+          try {
+            // eslint-disable-next-line global-require
+            require('../lib/notifications').scheduleTrialDay3Notification(user.id, userProfile)?.catch?.(() => {});
+          } catch (_) { /* best-effort */ }
+
+          const endsAt = userProfile?.proTrialEndsAt ?? userProfile?.pro_trial_ends_at ?? null;
+          const trialStart = trialStartFromEndsAt(endsAt);
+          const trialDay = trialStart != null ? Math.floor((Date.now() - trialStart) / 86400000) : null;
+          if (trialStart != null && trialDay >= 0 && trialDay <= TRIAL_LENGTH_DAYS && !latestDecision) {
+            const completedSessions = (workouts || []).filter(
+              (w) => !!(w.isCompleted ?? w.is_completed) && Number(w.startedAt ?? w.started_at ?? 0) >= trialStart,
+            ).length;
+            const variant = selectTrialVariant({ completedSessions, weighIns7d });
+            const unlock = firstReviewUnlockDate(firstWeightAt, checkinDay);
+            let line = trialBannerLine({
+              variant, completedSessions, weighIns7d,
+              unlockDayName: dayName(unlock), trialDay, edFlagOpen: edSuppressed,
+            });
+            const endsLabel = trialEndsLabel(userProfile);
+            if (line && endsLabel) line = `${line} Your free trial runs to ${endsLabel}.`;
+            const dKey = `@volyume_trial_value_banner_dismissed_${user.id}`;
+            // Read the per-trial dismissal BEFORE revealing the banner so a
+            // banner the user already dismissed can't flash for a frame.
+            const dv = await AsyncStorage.getItem(dKey).catch(() => null);
+            setTrialBannerDismissed(dv === 'true');
+            setTrialBanner({ line, variant });
+          } else {
+            setTrialBanner(null);
+          }
+        } else {
+          setTrialBanner(null);
+        }
+
         setLoadError(failed);
       } catch (e) {
         if (alive) {
@@ -297,7 +364,12 @@ export default function YouScreen({ navigation }) {
     }
     load();
     return () => { alive = false; };
-  }, [user?.id, tier, reloadKey, userProfile?.scoffScore]));
+    // Campaign 22 Phase 2 Stage 2: the rehomed trial banner reads several
+    // more userProfile fields (proTrialEndsAt, pro_trial_ends_at) beyond the
+    // scoffScore this effect already depended on, so the whole object is the
+    // correct dependency now -- a genuine improvement, not just satisfying
+    // the lint rule: the trial banner recomputes when its inputs change.
+  }, [user?.id, tier, reloadKey, userProfile]));
 
   const displayName = userProfile?.firstName
     || user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim()
@@ -319,6 +391,35 @@ export default function YouScreen({ navigation }) {
   const openPartners = useCallback(() => {
     trackPartnerSurfaceView('coach_row');
     navigateCrossTab(navigation, 'ProgressTab', 'Partner', { source: 'coach_row' });
+  }, [navigation]);
+
+  // Campaign 22 Phase 2 Stage 2: same AsyncStorage key the retired Home
+  // loader used, reused with its historical meaning (a user who already
+  // dismissed the trial value banner on Home stays dismissed here).
+  const dismissTrialBanner = useCallback(() => {
+    setTrialBannerDismissed(true);
+    if (user?.id) {
+      AsyncStorage.setItem(`@volyume_trial_value_banner_dismissed_${user.id}`, 'true').catch(() => {});
+    }
+  }, [user?.id]);
+  // The trial card's tap target, per variant (lead ruling, Stage 2 review;
+  // D33 register). S3's copy is "One session starts your first coaching
+  // review" -- with zero completed sessions the weekly check-in opens a
+  // hold receipt, not the promised session, so S3 leads to the Today tab's
+  // Start hero instead (the C5-P12-01 principle: the card leads to the
+  // session it names, or stops claiming to). Every other variant is
+  // review/weigh-in-voiced and opens the weekly check-in directly.
+  const openTrialSurface = useCallback(() => {
+    haptics.selection();
+    if (trialBanner?.variant === 'S3') {
+      navigateCrossTab(navigation, 'HomeTab', 'Home');
+      return;
+    }
+    navigation.navigate('WeeklyCheckIn');
+  }, [navigation, trialBanner?.variant]);
+  const openTrialMethodology = useCallback(() => {
+    haptics.selection();
+    navigation.navigate('Methodology');
   }, [navigation]);
 
   return (
@@ -407,6 +508,22 @@ export default function YouScreen({ navigation }) {
           </View>
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </Card>
+
+        {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §14;
+            FOUNDER-RULINGS-PHASE2 R3): the everyday trial value presence,
+            rehomed from Home's Today-line top slot. Same AttentionCard
+            component and variant='trial' content Home always rendered; only
+            the surface and the tap destination (this hub's own Weekly
+            check-in, see openTrialSurface above) changed. */}
+        {trialBanner && !trialBannerDismissed ? (
+          <AttentionCard
+            variant="trial"
+            trialBanner={trialBanner}
+            onTrialPress={openTrialSurface}
+            onTrialDismiss={dismissTrialBanner}
+            onMethodology={openTrialMethodology}
+          />
+        ) : null}
 
         {/* R8 (D68, founder: "cobbled together mess with duplication"):
             the status card is no longer a third voice restating what the

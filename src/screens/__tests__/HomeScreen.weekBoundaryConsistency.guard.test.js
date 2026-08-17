@@ -24,6 +24,7 @@ const fs = require('fs');
 const path = require('path');
 
 const HOME = fs.readFileSync(path.resolve(__dirname, '../HomeScreen.js'), 'utf8');
+const YOU = fs.readFileSync(path.resolve(__dirname, '../YouScreen.js'), 'utf8');
 
 function fnBody(src, decl) {
   const start = src.indexOf(decl);
@@ -57,9 +58,16 @@ describe('X5/X11: HomeScreen "this week" counts are Monday-anchored, not rolling
     expect(HOME).not.toMatch(/coachRunway/);
   });
 
-  test('loadTrialBanner\'s weigh-in count uses the Monday-anchored window, not a rolling one', () => {
-    const body = fnBody(HOME, 'async function loadTrialBanner()');
-    expect(body).toMatch(/const weekAgoMondayMs = localWeekStartMs\(\);/);
+  // RE-PINNED (Campaign 22 Phase 2 Stage 2, FOUNDER-RULINGS-PHASE2 R3):
+  // loadTrialBanner rehomed to YouScreen.js in full; its weigh-in count is
+  // the SAME Monday-anchored `weekAgo` this hub's own coachReadiness effect
+  // already computes (never a second, parallel window). Home gained its own
+  // new "this week" reader for the R2 first-review line -- pinned alongside.
+  test('the rehomed trial banner and Home\'s new first-review facts loader both use the Monday-anchored window, never a rolling one', () => {
+    expect(YOU).toMatch(/const weekAgo = localWeekStartMs\(\);/);
+    expect(YOU).not.toMatch(/Date\.now\(\) - 7 \* 86400000/);
+    const body = fnBody(HOME, 'async function loadFirstReviewFacts()');
+    expect(body).toMatch(/const weekStartMs = localWeekStartMs\(\);/);
     expect(body).not.toMatch(/Date\.now\(\) - 7 \* 86400000/);
   });
 

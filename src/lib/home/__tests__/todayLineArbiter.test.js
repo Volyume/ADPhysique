@@ -17,6 +17,10 @@ function fullFacts(overrides = {}) {
     blockComplete: { eligible: true, onPress: noop },
     coachDecision: { eligible: true, caloriesKcal: null, weekStart: 1, onPress: noop, onDismiss: noop },
     checkIn: { eligible: true, onPress: noop, onDismiss: noop },
+    firstReview: {
+      item: { text: 'First review: 2 more morning weigh-ins.', accessibilityLabel: 'First review: 2 more morning weigh-ins. See your readiness.' },
+      onPress: noop,
+    },
     recovery: {
       state: { state: RECOVERY_STATE.PLANNED_BLOCK_RECOVERY },
       onOpenDetail: noop,
@@ -32,8 +36,11 @@ function fullFacts(overrides = {}) {
 }
 
 describe('todayLineArbiter — rank order constant', () => {
-  it('declares exactly the 8 spec ranks in order', () => {
-    expect(TODAY_LINE_RANKS).toHaveLength(8);
+  // RE-PINNED (Stage 2 lead review): §17 R4 adds the first-review readiness
+  // line at rank 4.5 on conflict days ("weigh-in wins; readiness line moves
+  // to R2 slot rank 4.5"), so the 8 spec ranks become 9 resolver entries.
+  it('declares exactly the 9 resolver entries in order (8 spec ranks + rank 4.5, §17 R4)', () => {
+    expect(TODAY_LINE_RANKS).toHaveLength(9);
   });
 });
 
@@ -91,6 +98,45 @@ describe('todayLineArbiter — each rank in isolation', () => {
     expect(result.text).toBe('Your weekly check-in is ready.');
     expect(result.text).not.toMatch(/scan/i);
     expect(result.text).not.toMatch(/skipping/i);
+  });
+
+  it('rank 4.5: first-review line on a conflict day, passed through whole', () => {
+    const onPress = jest.fn();
+    const result = resolveTodayLine({
+      firstReview: {
+        item: { text: 'First review: 3 more morning weigh-ins.', accessibilityLabel: 'First review: 3 more morning weigh-ins. See your readiness.' },
+        onPress,
+      },
+    });
+    expect(result).toEqual({
+      key: 'first_review',
+      text: 'First review: 3 more morning weigh-ins.',
+      onPress,
+      onDismiss: null,
+      accessibilityLabel: 'First review: 3 more morning weigh-ins. See your readiness.',
+    });
+  });
+
+  it('rank 4.5: a null item (non-conflict day, or the resolver retired the line) renders nothing from this fact', () => {
+    expect(resolveTodayLine({ firstReview: { item: null, onPress: noop } })).toBeNull();
+  });
+
+  it('rank 4.5: loses to check-in (rank 4), wins over recovery (rank 5)', () => {
+    const firstReview = {
+      item: { text: 'First review: 1 more morning weigh-in.', accessibilityLabel: 'First review: 1 more morning weigh-in. See your readiness.' },
+      onPress: noop,
+    };
+    const recovery = {
+      state: { state: RECOVERY_STATE.PLANNED_BLOCK_RECOVERY },
+      onOpenDetail: noop,
+      deloadEligible: false,
+    };
+    expect(resolveTodayLine({
+      checkIn: { eligible: true, onPress: noop, onDismiss: noop },
+      firstReview,
+      recovery,
+    }).key).toBe('check_in');
+    expect(resolveTodayLine({ firstReview, recovery }).key).toBe('first_review');
   });
 
   it('rank 5a: structural recovery state (planned block recovery)', () => {
@@ -186,8 +232,8 @@ describe('todayLineArbiter — adversarial: every rank eligible at once', () => 
   it('dismissal advances to the next eligible occupant on re-render, walking the full ladder', () => {
     let facts = fullFacts();
     const expectedOrder = [
-      'block_complete', 'coach_decision', 'check_in', 'recovery_state',
-      're_entry', 'phase_mismatch', 'trial_ending',
+      'block_complete', 'coach_decision', 'check_in', 'first_review',
+      'recovery_state', 're_entry', 'phase_mismatch', 'trial_ending',
     ];
     for (const expectedKey of expectedOrder) {
       const result = resolveTodayLine(facts);
@@ -236,6 +282,9 @@ function disable(facts, key) {
     case 'block_complete': next.blockComplete = { ...next.blockComplete, eligible: false }; break;
     case 'coach_decision': next.coachDecision = { ...next.coachDecision, eligible: false }; break;
     case 'check_in': next.checkIn = { ...next.checkIn, eligible: false }; break;
+    // Rank 4.5 self-retires (or leaves for R4 once the weigh-in lands):
+    // either way the fact's item goes null, never a dismissed flag.
+    case 'first_review': next.firstReview = { ...next.firstReview, item: null }; break;
     case 'recovery_state':
     case 'deload_suggestion':
       next.recovery = { ...next.recovery, state: null, deloadEligible: false };

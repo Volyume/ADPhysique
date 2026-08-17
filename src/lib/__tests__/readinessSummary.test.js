@@ -155,30 +155,36 @@ describe('buildReadinessSummary', () => {
     expect(result.tone).toBe('caution');
   });
 
-  // Re-anchored under C5-P12-02 (D96): the default read now names what it
-  // counts ("Block week 2 of 4"). The hero renders this chip two lines
-  // below the plan eyebrow's "Day 1 of 2", and neither counter carried a
-  // noun, so the two positions read as two different mental models of the
-  // same plan. Structure, tone, priority order and the RIR clause are
-  // unchanged; only the missing noun was added.
-  test('default block-phase read names the block it counts', () => {
+  // RE-PINNED (Campaign 22 Phase 2 Stage 2, HOME-TODAY-UX-SPEC.md §7/§15
+  // item 4/§17 R3: "the hero shows a SINGLE counter"). C5-P12-02's own fix
+  // (quoted below, superseded) added the "Block week 2 of 4" noun here to
+  // disambiguate it from the eyebrow's "Day 1 of 2" -- which fixed that
+  // confusion but left two "N of M" counters on the hero, the exact
+  // hero-eyebrow-pair §7 later classifies as NOISE. The block-week figure
+  // moves to the block-shape sheet this same chip opens on tap; the eyebrow
+  // keeps the surviving position counter. Original C5-P12-02 rationale: "the
+  // hero renders this chip two lines below the plan eyebrow's 'Day 1 of 2',
+  // and neither counter carried a noun, so the two positions read as two
+  // different mental models of the same plan." Tone and priority order are
+  // unchanged; only Priority 5's line lost its counter.
+  test('default block-phase read carries no counter of its own', () => {
     const result = buildReadinessSummary({
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(result).toEqual({ tone: 'go', line: 'Block week 2 of 4 - stop 2 short of failure' });
+    expect(result).toEqual({ tone: 'go', line: 'Stop 2 short of failure.' });
   });
 
-  test('default block-phase read tolerates a missing planned-weeks / rir target', () => {
+  test('default block-phase read tolerates a missing rir target', () => {
     const result = buildReadinessSummary({
       currentMesoWeek: { isDeload: false, weekIndex: 1, plannedWeeks: null, rirTarget: null },
       deloadSuggestion: null,
       fatigueHistory: [],
       lastSession: null,
     });
-    expect(result).toEqual({ tone: 'go', line: 'Block week 1 of -' });
+    expect(result).toEqual({ tone: 'go', line: 'On track for this block.' });
   });
 
   test('deterministic: identical inputs produce an identical result', () => {

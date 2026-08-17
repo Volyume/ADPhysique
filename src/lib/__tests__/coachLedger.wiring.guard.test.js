@@ -12,38 +12,52 @@ const path = require('path');
 
 const read = (p) => fs.readFileSync(path.resolve(__dirname, p), 'utf8');
 const HOME = read('../../screens/HomeScreen.js');
+const YOU = read('../../screens/YouScreen.js');
 const COACH = read('../../screens/CoachOutputScreen.js');
 const REVEAL = read('../../screens/ProSetupCompleteScreen.js');
 const ONBOARD = read('../../screens/ProOnboardingScreen.js');
 
-describe('A3: Home trial banner (day 0, pre-first-review)', () => {
-  // RE-PINNED (Today truth repair, founder Ruling 2): Home no longer builds
-  // or carries a coach ledger at all. Its rows were first-review THRESHOLD
-  // counters, and Today must not present gate plumbing as ongoing coaching
-  // observation. The banner LINE, its window, its dismissal and its
-  // methodology CTA are unchanged and still pinned below.
-  test('the trial banner carries its line and variant only, never a ledger', () => {
-    expect(HOME).not.toMatch(/buildCoachLedger/);
-    expect(HOME).toMatch(/setTrialBanner\(\{ line, variant \}\)/);
+// RE-PINNED IN FULL (Campaign 22 Phase 2 Stage 2, FOUNDER-RULINGS-PHASE2 R3):
+// the everyday trial value banner -- loader, state and render -- rehomed from
+// Home to YouScreen.js. This describe block previously pinned "Home still
+// COMPUTES the line without rendering it" (Stage 1's half-measure); that is
+// no longer true by design, and Home carries no trial-banner code at all now.
+describe('A3: trial banner (day 0, pre-first-review) -- rehomed to the You surface', () => {
+  test('Home carries no trial-banner state, loader or render; the You surface does', () => {
+    expect(HOME).not.toMatch(/setTrialBanner/);
+    expect(HOME).not.toMatch(/loadTrialBanner/);
+    expect(HOME).not.toMatch(/variant="trial"/);
+    expect(YOU).toMatch(/setTrialBanner\(\{ line, variant \}\)/);
+    expect(YOU).toMatch(/variant="trial"/);
+  });
+  // The ledger maths itself stays OFF the trial banner everywhere it has
+  // rendered (Home historically, now YouScreen) -- Today truth repair
+  // Ruling 2's point, unchanged by the rehome.
+  test('the trial banner still carries no ledger, on whichever surface renders it', () => {
+    expect(YOU).not.toMatch(/trialBanner\.ledger|trialLedger/);
   });
   test('the window runs from day 0 to trial end, not day 2 to 7', () => {
-    expect(HOME).toMatch(/trialDay < 0 \|\| trialDay > TRIAL_LENGTH_DAYS/);
-    expect(HOME).not.toMatch(/trialDay < 2 \|\| trialDay > 7/);
+    // The rehomed loader states the window as a positive admit-condition
+    // (trialDay >= 0 && trialDay <= TRIAL_LENGTH_DAYS) rather than Home's old
+    // early-return negation -- same window, day 0 through TRIAL_LENGTH_DAYS
+    // inclusive, never day 2 to 7.
+    expect(YOU).toMatch(/trialDay >= 0 && trialDay <= TRIAL_LENGTH_DAYS/);
+    expect(YOU).not.toMatch(/trialDay < 2 \|\| trialDay > 7/);
+    expect(YOU).not.toMatch(/trialDay >= 2 && trialDay <= 7/);
   });
-  // RE-PINNED (Campaign 22 Phase 2 Stage 1, FOUNDER-RULINGS-PHASE2 R3): the
-  // everyday trial card (this A3 banner's render location) no longer
-  // mounts on Home at all -- it rehomes to Profile/You (Stage 2 scope). The
-  // AttentionCard component's own "no ledger rows, still the banner line"
-  // contract is unchanged and still pinned directly against the component;
-  // Home's half of the pin is now that it still COMPUTES the line (for
-  // Stage 2 to consume) without rendering it.
-  test('the attention card component itself renders NO ledger rows and still carries the banner line; Home still computes but no longer renders it', () => {
+  // The everyday trial card's own eligibility/retirement predicate: no coach
+  // output existing, or one existing but not yet a completed decision, keeps
+  // the banner live; a completed decision retires it. Same predicate the
+  // rehomed surface already applies to its own status card.
+  test('the trial banner retires on the same completed-decision predicate the hub already computes, never a second one', () => {
+    expect(YOU).toMatch(/!latestDecision\) \{/);
+  });
+
+  test('the attention card component itself renders NO ledger rows and still carries the banner line', () => {
     const CARD = read('../../components/AttentionCard.js');
     expect(CARD).not.toMatch(/trialBanner\.ledger/);
     expect(CARD).not.toMatch(/trialLedger/);
     expect(CARD).toMatch(/trialBanner\.line/);
-    expect(HOME).not.toMatch(/variant="trial"/);
-    expect(HOME).toMatch(/setTrialBanner\(\{ line, variant \}\)/);
   });
 
   test('attention-card coach CTAs use contained neutral buttons, not loose amber text links', () => {
@@ -128,9 +142,17 @@ describe('S3 RETIRED: the Today runway is removed (founder Ruling 2)', () => {
     expect(fs.existsSync(path.resolve(__dirname, '../../components/CoachDailyBrief.js'))).toBe(false);
   });
   test('the pro-only load array no longer fetches it', () => {
+    // RE-PINNED (Campaign 22 Phase 2 Stage 2, FOUNDER-RULINGS-PHASE2 R3):
+    // loadTrialBanner itself has since rehomed to YouScreen.js (a separate,
+    // later change from the one this test originally pinned -- see the "A3:
+    // trial banner" describe block above). The array's third pro-only slot
+    // is now loadFirstReviewFacts, the new R2 readiness-line loader; the
+    // point this test guards (no loadCoachRunway slot ever returns) still
+    // holds.
     expect(HOME).toMatch(
-      /\.\.\.\(tier === 'pro' \? \[loadTodayWeight\(\), loadLatestCoachOutput\(\), loadTrialBanner\(\)\] : \[\]\),/,
+      /\.\.\.\(tier === 'pro' \? \[loadTodayWeight\(\), loadLatestCoachOutput\(\), loadFirstReviewFacts\(\)\] : \[\]\),/,
     );
+    expect(HOME).not.toMatch(/loadTrialBanner/);
   });
   test('the one-liner mesocycle brief stays gone too (founder call 2026-07-03)', () => {
     expect(HOME).not.toMatch(/dailyBriefLine/);

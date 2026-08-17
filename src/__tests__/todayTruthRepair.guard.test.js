@@ -46,6 +46,7 @@ const read = (p) => fs.readFileSync(path.join(SRC, p), 'utf8');
 
 const HOME = read('screens/HomeScreen.js');
 const ATTENTION = read('components/AttentionCard.js');
+const YOU = read('screens/YouScreen.js');
 
 // Every production surface a user can actually look at. Excludes __tests__,
 // and excludes the partner lane (see the header note above).
@@ -186,7 +187,11 @@ describe('Ruling 2: Today shows no first-review threshold counters', () => {
     expect(ATTENTION).toContain('trialBanner.line');
     expect(ATTENTION).toContain('Dismiss trial banner');
     expect(ATTENTION).toContain('How Precision Coaching works');
-    expect(HOME).toContain('setTrialBanner({ line, variant });');
+    // RE-PINNED (Campaign 22 Phase 2 Stage 2, FOUNDER-RULINGS-PHASE2 R3): the
+    // everyday trial card, and the loader that computes its line, rehomed to
+    // YouScreen.js in full -- Home carries no trial-banner state at all.
+    expect(HOME).not.toContain('setTrialBanner');
+    expect(YOU).toContain('setTrialBanner({ line, variant });');
   });
 
   test('"What your coach is reading" is unreachable from Today', () => {
