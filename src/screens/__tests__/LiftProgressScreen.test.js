@@ -234,6 +234,32 @@ describe('LiftProgressScreen load safety', () => {
   });
 });
 
+describe('LiftProgressScreen loading state (Campaign 24 §1.4)', () => {
+  test('shows skeleton placeholders during initial load, not a blank flash', async () => {
+    const slowSets = deferred();
+    getCompletedWorkoutSets.mockImplementationOnce(() => slowSets.promise);
+
+    await act(async () => { create(<LiftProgressScreen navigation={nav} />); });
+    // Deliberately no `flush()` here -- the load is still in flight, so
+    // `loading` is still true and this is the state that used to render
+    // ListEmptyComponent={null} (a blank first-paint flash).
+
+    expect(capturedListProps).toBeTruthy();
+    expect(capturedListProps.data).toEqual([]);
+    expect(capturedListProps.ListEmptyComponent).not.toBeNull();
+
+    const { SkeletonRow } = require('../../components/Skeleton');
+    let emptyTree;
+    act(() => { emptyTree = create(capturedListProps.ListEmptyComponent); });
+    expect(emptyTree.root.findAllByType(SkeletonRow).length).toBeGreaterThan(0);
+
+    // Let the in-flight load settle so the test doesn't leak a dangling
+    // promise into the next one.
+    slowSets.resolve([]);
+    await flush();
+  });
+});
+
 function findMetricChip(headerTree, label) {
   return headerTree.root.findAll(
     n => n.props && n.props.accessibilityLabel === `Show ${label} trend` && typeof n.props.onPress === 'function',

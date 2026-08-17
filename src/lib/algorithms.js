@@ -530,6 +530,200 @@ export function shouldDeload(last4WeeksData) {
   return { deload: score >= 50, reasons };
 }
 
+const DELOAD_BUCKET_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+function deloadBucketSetAt(s) {
+  return s.createdAt ?? s.created_at ?? 0;
+}
+
+function deloadBucketWorkoutAt(w) {
+  return w.startedAt ?? w.createdAt ?? w.created_at ?? 0;
+}
+
+function deloadBucketWorkoutCompleted(w) {
+  return w.isCompleted ?? w.is_completed ?? false;
+}
+
+/**
+ * Builds the last 4 weekly evidence buckets shouldDeload() reads: average
+ * reps, soreness/joint-discomfort, over-MRV volume, and weeks since the
+ * last lighter/recovery week. One derivation for every caller that feeds
+ * shouldDeload, so a correction to one rule (e.g. the "untrained week" scan
+ * boundary, Campaign 24 §2) cannot fix one copy and leave the others to
+ * drift, as CoachReviewScreen's averages had (see zeroFillUnrated below --
+ * Campaign 24 D33 ruling corrected that caller onto the answered-only path,
+ * so no caller may set it true any more; the option and its dead branch
+ * stay only as the documented record of the bug this replaced).
+ *
+ * @param {Array} sets - workout sets (already time/completion-filtered by
+ *   the caller as appropriate; see opts.repsViaWorkoutRoster for a caller
+ *   that instead scopes "this week's sets" via the workout roster).
+ * @param {Array} workouts - workout rows (isCompleted, startedAt,
+ *   soreness24hBefore, jointDiscomfort).
+ * @param {object|null} exerciseMap - exerciseId -> exercise, required for
+ *   the hasOverMRV pass and the derived weeksSinceLastDeload scan. Pass
+ *   null/undefined to skip the hasOverMRV pass entirely (every bucket's
+ *   hasOverMRV is false) -- the honest answer for a caller with no
+ *   landmarks pass available (HomeScreen's documented D92 residual:
+ *   under-suggests a deload by 12 points, never over-suggests). Must be
+ *   paired with a finite opts.weeksSinceLastDeloadOverride, since the
+ *   derived scan also needs exerciseMap.
+ * @param {object} [opts]
+ * @param {number} [opts.now] - anchor instant, default Date.now(). Also
+ *   used as the scan anchor for the derived weeksSinceLastDeload even when
+ *   opts.weekAnchorMs is set (matches CoachReviewScreen: Monday-anchored
+ *   buckets, but a now-rolling lighter-week scan).
+ * @param {number|null} [opts.weekAnchorMs] - if set, the 4 buckets are
+ *   Monday-anchored (or whatever grammar the caller's own anchor encodes)
+ *   weeks ending at this timestamp plus one week (CoachReviewScreen's
+ *   grammar: bucket 3, the most recent, is [weekAnchorMs, weekAnchorMs +
+ *   1 week)). If null (default), buckets are 4 trailing weeks measured
+ *   back from `now` (useProgressData/HomeScreen's rolling grammar).
+ * @param {boolean} [opts.excludeWarmups=false] - exclude
+ *   s.setType === 'warmup' sets from the avgReps calc (HomeScreen's
+ *   current behaviour; useProgressData/CoachReviewScreen do not do this).
+ * @param {boolean} [opts.repsViaWorkoutRoster=false] - source "this
+ *   week's sets" for the avgReps calc from the set of sets belonging to a
+ *   completed workout whose own startedAt falls in the bucket (HomeScreen's
+ *   current behaviour: `wIds = weekWorkouts.map(w => w.id)`, then
+ *   `sets.filter(s => wIds.has(s.workoutId))`) instead of filtering sets
+ *   directly by their own createdAt (useProgressData/CoachReviewScreen's
+ *   behaviour, and this option's default).
+ * @param {boolean} [opts.zeroFillUnrated=false] - coerce unrated
+ *   soreness/joint values to 0 instead of excluding them from the average.
+ *   No production caller may pass this any more (Campaign 24 D33: this was
+ *   CoachReviewScreen's pre-fix behaviour, the already-fixed-elsewhere bug,
+ *   Campaign 1 P0-7 D6). Kept as a disabled, documented option rather than
+ *   deleted so the shape of the bug this replaced stays legible; defaults
+ *   to false (the correct, answered-only behaviour).
+ * @param {number|null} [opts.weeksSinceLastDeloadOverride] - if a finite
+ *   number, every bucket gets this flat value instead of the derived,
+ *   per-bucket-back-projected figure (HomeScreen's current `99`, since it
+ *   has no exerciseMap to run the derivation's volume pass with).
+ * @returns {Array<{avgReps, avgSoreness, avgJointDiscomfort, hasOverMRV,
+ *   weeksSinceLastDeload}>} 4 entries, oldest first, ready for
+ *   shouldDeload().
+ */
+export function buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, opts = {}) {
+  const {
+    now = Date.now(),
+    weekAnchorMs = null,
+    excludeWarmups = false,
+    repsViaWorkoutRoster = false,
+    zeroFillUnrated = false,
+    weeksSinceLastDeloadOverride = null,
+  } = opts;
+  const WEEK_MS = DELOAD_BUCKET_WEEK_MS;
+
+  const rawBuckets = [];
+  for (let o = 0; o < 4; o++) {
+    let start, end;
+    if (weekAnchorMs != null) {
+      // Monday-anchored grammar: bucket o=3 (most recent) is
+      // [weekAnchorMs, weekAnchorMs + 1 week).
+      start = weekAnchorMs - (3 - o) * WEEK_MS;
+      end = start + WEEK_MS;
+    } else {
+      // Rolling grammar: measured back from `now`, oldest first.
+      const wk = 3 - o;
+      end = now - wk * WEEK_MS;
+      start = end - WEEK_MS;
+    }
+
+    const wkSets = sets.filter((s) => {
+      const at = deloadBucketSetAt(s);
+      return at >= start && at < end;
+    });
+    const wkWorkouts = workouts.filter((w) => {
+      const at = deloadBucketWorkoutAt(w);
+      return at >= start && at < end && deloadBucketWorkoutCompleted(w);
+    });
+
+    const repsSets = repsViaWorkoutRoster
+      ? (() => {
+          const wIds = new Set(wkWorkouts.map((w) => w.id));
+          return sets.filter((s) => wIds.has(s.workoutId ?? s.workout_id));
+        })()
+      : wkSets;
+    const setsForReps = excludeWarmups
+      ? repsSets.filter((s) => (s.setType ?? s.set_type) !== 'warmup')
+      : repsSets;
+    const avgReps = setsForReps.length > 0
+      ? setsForReps.reduce((sum, s) => sum + (s.actualReps ?? s.actual_reps ?? 0), 0) / setsForReps.length
+      : 0;
+
+    let avgSoreness;
+    let avgJointDiscomfort;
+    if (zeroFillUnrated) {
+      // Dead in production (Campaign 24 D33) -- see JSDoc above.
+      avgSoreness = wkWorkouts.length > 0
+        ? wkWorkouts.reduce((sum, w) => sum + (w.soreness24hBefore ?? w.soreness_24h_before ?? 0), 0) / wkWorkouts.length
+        : 0;
+      avgJointDiscomfort = wkWorkouts.length > 0
+        ? wkWorkouts.reduce((sum, w) => sum + (w.jointDiscomfort ?? w.joint_discomfort ?? 0), 0) / wkWorkouts.length
+        : 0;
+    } else {
+      // Campaign 1 P0-7 D6: answered-only averages, null when nothing was
+      // rated -- unanswered sessions coerced to 0 diluted genuine
+      // soreness/joint evidence and suppressed the deload triggers.
+      const sorenessRated = wkWorkouts
+        .map((w) => w.soreness24hBefore ?? w.soreness_24h_before ?? null)
+        .filter((v) => v != null);
+      avgSoreness = sorenessRated.length
+        ? sorenessRated.reduce((sum, v) => sum + v, 0) / sorenessRated.length
+        : null;
+      const jointRated = wkWorkouts
+        .map((w) => w.jointDiscomfort ?? w.joint_discomfort ?? null)
+        .filter((v) => v != null);
+      avgJointDiscomfort = jointRated.length
+        ? jointRated.reduce((sum, v) => sum + v, 0) / jointRated.length
+        : null;
+    }
+
+    let hasOverMRV = false;
+    if (exerciseMap) {
+      const vol = calculateWeeklyVolume(wkSets, exerciseMap);
+      hasOverMRV = Object.entries(vol).some(([muscle, data]) => {
+        const lm = VOLUME_LANDMARKS[muscle];
+        return lm && data.workingSets > lm.mrv;
+      });
+    }
+
+    rawBuckets.push({ avgReps, avgSoreness, avgJointDiscomfort, hasOverMRV });
+  }
+
+  // Weeks since the last lighter/recovery week: scan backwards for a
+  // genuinely trained low-volume week (< 15 total working sets), an
+  // untrained week ending the scan (fatigue cannot accumulate across a
+  // week with no training, so the scan stops there -- Campaign 1 D97-22).
+  // Always a now-rolling scan, even under the Monday-anchored bucket
+  // grammar (matches CoachReviewScreen: Monday buckets, now-rolling scan).
+  const weeksSinceLighter = weeksSinceLastDeloadOverride != null
+    ? null
+    : (() => {
+        for (let wk = 1; wk <= 12; wk++) {
+          const end = now - wk * WEEK_MS;
+          const start = end - WEEK_MS;
+          const wkSets = sets.filter((s) => {
+            const at = deloadBucketSetAt(s);
+            return at >= start && at < end;
+          });
+          if (wkSets.length === 0) return wk; // accumulation boundary, not a rest week
+          const vol = calculateWeeklyVolume(wkSets, exerciseMap);
+          const totalSets = Object.values(vol).reduce((sum, v) => sum + (v.workingSets || 0), 0);
+          if (totalSets < 15) return wk; // a genuinely trained lighter week
+        }
+        return 12; // no lighter week found in last 12 weeks
+      })();
+
+  return rawBuckets.map((bucket, o) => ({
+    ...bucket,
+    weeksSinceLastDeload: weeksSinceLastDeloadOverride != null
+      ? weeksSinceLastDeloadOverride
+      : weeksSinceLighter + (3 - o),
+  }));
+}
+
 // RP-style soreness × performance → volume decision
 // Inputs use numeric scales:
 //   soreness:    1=none  2=healed_early  3=healed_on_time  4=still_sore

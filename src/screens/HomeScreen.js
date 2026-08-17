@@ -92,7 +92,7 @@ import { getRecentIntakeSummary } from '../lib/food/db';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
-import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload } from '../lib/algorithms';
+import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { buildReadinessSummary } from '../lib/readinessSummary';
 import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
@@ -1082,44 +1082,21 @@ export default function HomeScreen({ navigation, route }) {
       // Reset dismissed state each time data reloads so a new week's signal shows again
       setDeloadDismissed(false);
       try {
-        const weekMs = 7 * 24 * 60 * 60 * 1000;
-        const now = Date.now();
-        const last4Weeks = Array.from({ length: 4 }, (_, i) => {
-          const weekStart = now - (i + 1) * weekMs;
-          const weekEnd   = now - i * weekMs;
-          const weekWorkouts = allWorkouts.filter(
-            w => w.isCompleted && w.startedAt >= weekStart && w.startedAt < weekEnd,
-          );
-          const wIds = new Set(weekWorkouts.map(w => w.id));
-          const wSets = recentSets.filter(s => wIds.has(s.workoutId) && s.setType !== 'warmup');
-          const totalReps = wSets.reduce((t, s) => t + (s.actualReps || 0), 0);
-          const avgReps = wSets.length > 0 ? totalReps / wSets.length : 0;
-          // Campaign 1 P0-7 D8: the old hard-coded zeros silenced the joint
-          // and soreness signals entirely (the comment claiming they are
-          // "not tracked in local DB" was wrong - the workout rows carry
-          // both), so the Home recovery-week banner could only ever fire
-          // on rep performance. Answered-only averages, null when nothing
-          // was rated (never a manufactured zero). hasOverMRV remains
-          // un-computed here (needs the full volume/landmarks pass the
-          // Progress surface runs); that can only UNDER-suggest a recovery
-          // week by its 12 points - recorded as a residual in D92, and the
-          // Progress banner computes the complete signal.
-          const jointRated = weekWorkouts
-            .map(w => w.jointDiscomfort ?? w.joint_discomfort ?? null)
-            .filter(v => v != null);
-          const sorenessRated = weekWorkouts
-            .map(w => w.soreness24hBefore ?? w.soreness_24h_before ?? null)
-            .filter(v => v != null);
-          return {
-            avgReps,
-            weeksSinceLastDeload: 99, // unknown: conservative (banner may fire, never suppressed)
-            avgJointDiscomfort: jointRated.length
-              ? jointRated.reduce((s, v) => s + v, 0) / jointRated.length : null,
-            hasOverMRV: false,
-            avgSoreness: sorenessRated.length
-              ? sorenessRated.reduce((s, v) => s + v, 0) / sorenessRated.length : null,
-          };
-        }).reverse(); // oldest first, as shouldDeload expects
+        // Campaign 24 §2 (LOCKED baseline: import + call change only, no
+        // behaviour change): bucket-building extracted to the shared
+        // buildLast4WeekDeloadBuckets (src/lib/algorithms.js). exerciseMap:
+        // null reproduces the hard-coded hasOverMRV: false (D92 residual,
+        // unchanged); weeksSinceLastDeloadOverride: 99 reproduces the flat
+        // 99; excludeWarmups + repsViaWorkoutRoster together reproduce this
+        // screen's exact avgReps sourcing (recentSets filtered by the
+        // completed-workout roster for the week, then warm-ups excluded).
+        // shouldDeload itself is untouched.
+        const last4Weeks = buildLast4WeekDeloadBuckets(recentSets, allWorkouts, null, {
+          now: Date.now(),
+          excludeWarmups: true,
+          repsViaWorkoutRoster: true,
+          weeksSinceLastDeloadOverride: 99,
+        });
         const result = shouldDeload(last4Weeks);
         setDeloadSuggestion(result.deload ? result : null);
         // NAV-4: the differential loader reads this signal after the parallel

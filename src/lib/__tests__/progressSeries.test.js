@@ -18,11 +18,8 @@
 
 import {
   buildWeeklyLoadSeries,
-  buildWeeklySessionCounts,
   DEFAULT_LOAD_WEEKS,
   MAX_LOAD_WEEKS,
-  DEFAULT_SPARK_DAYS,
-  MAX_SPARK_DAYS,
 } from '../progressSeries';
 import { localWeekStartMs, localWeekEndMs } from '../dayKey';
 
@@ -141,51 +138,9 @@ describe('buildWeeklyLoadSeries with weekBoundary: monday', () => {
   });
 });
 
-describe('buildWeeklySessionCounts', () => {
-  test('empty data yields full all-zero bins and a zero total', () => {
-    const { bins, total } = buildWeeklySessionCounts([], { now: NOW });
-    expect(bins).toHaveLength(Math.ceil(DEFAULT_SPARK_DAYS / 7));
-    expect(bins.every(v => v === 0)).toBe(true);
-    expect(total).toBe(0);
-  });
-
-  test('the day window is capped at MAX_SPARK_DAYS whatever is asked for', () => {
-    expect(buildWeeklySessionCounts([], { windowDays: 3650, now: NOW }).bins)
-      .toHaveLength(Math.ceil(MAX_SPARK_DAYS / 7));
-    expect(buildWeeklySessionCounts([], { windowDays: NaN, now: NOW }).bins)
-      .toHaveLength(Math.ceil(DEFAULT_SPARK_DAYS / 7));
-    expect(buildWeeklySessionCounts([], { windowDays: 1, now: NOW }).bins)
-      .toHaveLength(1);
-  });
-
-  test('deterministic for a fixed now', () => {
-    const sets = [set(1), set(8, { workoutId: 'w2' }), set(8, { workoutId: 'w2' })];
-    const a = buildWeeklySessionCounts(sets, { now: NOW });
-    const b = buildWeeklySessionCounts(sets, { now: NOW });
-    expect(a).toEqual(b);
-  });
-
-  test('a session is a distinct workout id, binned by week', () => {
-    const sets = [
-      // three sets of one workout this week: one session
-      set(1, { workoutId: 'w1' }), set(1, { workoutId: 'w1' }), set(1, { workoutId: 'w1' }),
-      // a different workout ~9 days ago: one session, previous bin
-      set(9, { workoutId: 'w2' }),
-    ];
-    const { bins, total } = buildWeeklySessionCounts(sets, { now: NOW });
-    expect(bins[bins.length - 1]).toBe(1);
-    expect(bins[bins.length - 2]).toBe(1);
-    expect(total).toBe(2);
-  });
-
-  test('sets outside the window, in the future, or without a workout id are ignored', () => {
-    const sets = [
-      set(DEFAULT_SPARK_DAYS + 5, { workoutId: 'old' }),
-      set(-1, { workoutId: 'future' }),
-      { createdAt: NOW - DAY_MS, weight: 100, actualReps: 10, setType: 'straight' }, // no workoutId
-    ];
-    const { bins, total } = buildWeeklySessionCounts(sets, { now: NOW });
-    expect(bins.every(v => v === 0)).toBe(true);
-    expect(total).toBe(0);
-  });
-});
+// buildWeeklySessionCounts and its test coverage above were retired,
+// Campaign 24 §3.1: zero production call sites (confirmed by grep across
+// every screen/component; AnalyticsScreen.campaign23.guard.test.js:65-68
+// independently pins that the landing never imports a rolling-week series
+// builder). Dead code, mechanical removal -- see GLOBAL-COHERENCE-DECISIONS.md
+// §3.1 for the full trace.

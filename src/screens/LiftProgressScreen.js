@@ -19,6 +19,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import SectionLabel from '../components/SectionLabel';
 import SearchBar from '../components/SearchBar';
 import EmptyState from '../components/EmptyState';
+import { SkeletonRow } from '../components/Skeleton';
 import VolyumeChart from '../components/VolyumeChart';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
@@ -547,7 +548,21 @@ export default function LiftProgressScreen({ navigation }) {
           );
         }}
         ListEmptyComponent={
-          loading ? null : loadError ? (
+          loading ? (
+            // Campaign 24 §1.4: this used to render nothing at all during
+            // first paint (a blank flash), the one Progress-detail screen
+            // without a loading placeholder -- ConsistencyScreen (same tab)
+            // shows SkeletonCard rows, YearOfLiftsScreen shows a "Building…"
+            // caption. This list is row-shaped, so SkeletonRow is the
+            // closer structural match.
+            <View style={styles.loadingWrap}>
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+              <SkeletonRow />
+            </View>
+          ) : loadError ? (
             <View style={styles.emptyStateWrap}>
               <EmptyState
                 icon="cloud-offline-outline"
@@ -791,6 +806,7 @@ const styles = StyleSheet.create({
   cardRight: { alignItems: 'center', flexDirection: 'row', gap: spacing.xs },
   trendBuilding: { width: 84, textAlign: 'center', fontSize: fontSize.xs, color: colors.textMuted },
   emptyStateWrap: { paddingTop: spacing.xxl },
+  loadingWrap: { paddingTop: spacing.md, paddingHorizontal: spacing.sm },
   empty: { alignItems: 'center', paddingHorizontal: spacing.xxl, paddingTop: spacing.xxxl, gap: spacing.md },
   emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   emptyText: { fontSize: fontSize.sm, color: colors.textSecondary, textAlign: 'center', lineHeight: 22 },

@@ -97,34 +97,3 @@ export function buildWeeklyLoadSeries(sets, {
     weeksAgo: n - 1 - i,
   }));
 }
-
-/**
- * Sessions-per-week sparkline bins over a capped day window, oldest → newest,
- * plus the distinct-session total across the whole window. A session is a
- * distinct workout id — the same rule as the data layer's sessionCount — and
- * the binning mirrors computePRsPerWeek so the two sparkline cards share one
- * week grammar.
- *
- * @param {Array<object>} sets - completed workout sets
- * @param {{windowDays?: number, now?: number}} [opts]
- * @returns {{bins: number[], total: number}}
- */
-export function buildWeeklySessionCounts(sets, { windowDays = DEFAULT_SPARK_DAYS, now = Date.now() } = {}) {
-  const days = clampInt(windowDays, 7, MAX_SPARK_DAYS, DEFAULT_SPARK_DAYS);
-  const totalWeeks = Math.ceil(days / 7);
-  const perBin = Array.from({ length: totalWeeks }, () => new Set());
-  const all = new Set();
-  const windowStart = now - days * DAY_MS;
-  for (const s of (sets || [])) {
-    const at = setTimestamp(s);
-    if (!at || at < windowStart || at > now) continue;
-    const workoutId = s.workoutId ?? s.workout_id;
-    if (workoutId == null) continue;
-    const daysAgo = Math.floor((now - at) / DAY_MS);
-    const idx = totalWeeks - 1 - Math.floor(daysAgo / 7);
-    if (idx < 0 || idx >= totalWeeks) continue;
-    perBin[idx].add(workoutId);
-    all.add(workoutId);
-  }
-  return { bins: perBin.map(ids => ids.size), total: all.size };
-}

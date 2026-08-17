@@ -10,7 +10,7 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins, getCurrentMesocycleWeek } from '../lib/database';
-import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles, summariseWorkoutSets } from '../lib/algorithms';
+import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, detectLaggingMuscles, summariseWorkoutSets, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
@@ -353,79 +353,41 @@ export default function CoachReviewScreen() {
       const wins = detectProgressionWins(thisWeekSets, allSets, exerciseMap);
       setProgressionWins(wins);
 
-      // Deload check, build last-4-weeks data from workouts
-      const fourWeeksMs = 28 * 24 * 60 * 60 * 1000;
-      const last4Workouts = allWorkouts
-        .filter(w => w.isCompleted && (w.startedAt || 0) >= Date.now() - fourWeeksMs)
-        .sort((a, b) => (a.startedAt || 0) - (b.startedAt || 0));
-
-      // Group into 4 weekly buckets for shouldDeload + lagging muscle detection
-      const weeklyVolumeHistory = [];
-      const weeklyBuckets = [0, 1, 2, 3].map(offset => {
+      // Per-muscle working sets for each of the last 4 weekly (Monday-
+      // anchored) buckets, for lagging-muscle detection only -- unrelated
+      // to the shouldDeload signal built below.
+      const weeklyVolumeHistory = [0, 1, 2, 3].map(offset => {
         const bucketStart = weekStartMs - (3 - offset) * 7 * 24 * 60 * 60 * 1000;
         const bucketEnd = bucketStart + 7 * 24 * 60 * 60 * 1000;
-        const workoutsInWeek = last4Workouts.filter(
-          w => (w.startedAt || 0) >= bucketStart && (w.startedAt || 0) < bucketEnd,
-        );
-
         const setsInWeek = allSets.filter(
           s => (s.createdAt || 0) >= bucketStart && (s.createdAt || 0) < bucketEnd,
         );
         const weekVolume = calculateWeeklyVolume(setsInWeek, exerciseMap);
-        // Capture per-muscle working sets for lagging muscle detection
         const muscleSets = {};
         for (const [muscle, data] of Object.entries(weekVolume)) {
           muscleSets[muscle] = data.workingSets || 0;
         }
-        weeklyVolumeHistory.push(muscleSets);
-        const hasOverMRV = Object.entries(weekVolume).some(([muscle, data]) => {
-          const landmarks = VOLUME_LANDMARKS[muscle];
-          return landmarks && data.workingSets > landmarks.mrv;
-        });
-
-        const avgSoreness =
-          workoutsInWeek.length > 0
-            ? workoutsInWeek.reduce((s, w) => s + (w.soreness24hBefore || 0), 0) /
-              workoutsInWeek.length
-            : 0;
-        const avgReps =
-          setsInWeek.length > 0
-            ? setsInWeek.reduce((s, set) => s + (set.actualReps || set.actual_reps || 0), 0) /
-              setsInWeek.length
-            : 0;
-        const avgJointDiscomfort =
-          workoutsInWeek.length > 0
-            ? workoutsInWeek.reduce((s, w) => s + (w.jointDiscomfort || 0), 0) /
-              workoutsInWeek.length
-            : 0;
-
-        return { avgSoreness, avgReps, hasOverMRV, avgJointDiscomfort };
+        return muscleSets;
       });
 
-      // Derive weeks since the last lighter/recovery week from the full set
-      // history (parity with useProgressData). Feeding shouldDeload a hardcoded
-      // 99 made the free-tier deload check ignore recency (both recency gates,
-      // >= 3 and >= 4, always passed), so it over-recommended deloads and
-      // drifted from the Pro-side derivation.
-      const LIGHTER_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
-      const weeksSinceLighter = (() => {
-        for (let wk = 1; wk <= 12; wk++) {
-          const end = Date.now() - wk * LIGHTER_WEEK_MS;
-          const start = end - LIGHTER_WEEK_MS;
-          const wkSets = allSets.filter((s) => {
-            const at = s.createdAt || 0;
-            return at >= start && at < end;
-          });
-          const vol = calculateWeeklyVolume(wkSets, exerciseMap);
-          const totalSets = Object.values(vol).reduce((sum, v) => sum + (v.workingSets || 0), 0);
-          if (totalSets < 15) return wk;
-        }
-        return 12;
-      })();
-      const patchedBuckets = weeklyBuckets.map((b, i) => ({
-        ...b,
-        weeksSinceLastDeload: weeksSinceLighter + (3 - i),
-      }));
+      // Campaign 24 §2 (D33 ruling): bucket-building for shouldDeload moved
+      // to the shared buildLast4WeekDeloadBuckets (src/lib/algorithms.js),
+      // on the D6-correct answered-only path (zeroFillUnrated is never
+      // passed, so it defaults to false). CORRECTION: this screen used to
+      // coerce unrated soreness/joint values to 0
+      // (`w.soreness24hBefore || 0`), the Campaign 1 P0-7 D6 bug already
+      // fixed in useProgressData/HomeScreen; that coercion diluted genuine
+      // evidence toward "no signal" and suppressed the deload triggers. This
+      // is a deliberate, disclosed change to this screen's deload-signal
+      // sensitivity (rated weeks now carry full weight instead of being
+      // diluted by unrated ones), not a silent one -- shouldDeload itself is
+      // untouched. weekAnchorMs reproduces this screen's Monday-anchored
+      // bucket grammar; the weeks-since-lighter-week scan stays now-rolling
+      // (parity with useProgressData), matching this screen's prior
+      // behaviour exactly.
+      const patchedBuckets = buildLast4WeekDeloadBuckets(allSets, allWorkouts, exerciseMap, {
+        weekAnchorMs: weekStartMs,
+      });
 
       const deload = shouldDeload(patchedBuckets);
       setDeloadResult(deload);

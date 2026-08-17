@@ -9,8 +9,8 @@ import {
   getRecentWorkoutFeedback, getCurrentMesocycleWeek, getPlannedMuscleVolume,
 } from '../lib/database';
 import {
-  calculateWeeklyVolume, VOLUME_LANDMARKS,
-  calculate1RM, calculateTonnage, shouldDeload,
+  calculateWeeklyVolume,
+  calculate1RM, calculateTonnage, shouldDeload, buildLast4WeekDeloadBuckets,
 } from '../lib/algorithms';
 import { logError } from '../lib/errorLog';
 import { localDayKey, localWeekStartMs } from '../lib/dayKey';
@@ -86,8 +86,6 @@ export default function useProgressData() {
   const [activeMeso, setActiveMeso]         = useState(null);
   const [mesoTonnage, setMesoTonnage]       = useState([]);   // [{value, label}]
   const [weeklyVolume, setWeeklyVolume]     = useState({});
-  const [prBars, setPrBars]                 = useState([]);   // [{value}] 30d by default
-  const [prWindow, setPrWindow]             = useState(30);
   const [calValues, setCalValues]           = useState([]);   // [{date, count}]
   const [recentSessions, setRecentSessions] = useState([]);
   const [allSets, setAllSets]               = useState([]);
@@ -111,8 +109,6 @@ export default function useProgressData() {
     setActiveMeso(null);
     setMesoTonnage([]);
     setWeeklyVolume({});
-    setPrBars([]);
-    setPrWindow(30);
     setCalValues([]);
     setRecentSessions([]);
     setAllSets([]);
@@ -170,7 +166,6 @@ export default function useProgressData() {
         loadMesocycle(workouts, sets, exMap, isCurrentRequest),
         loadVolumeSnapshot(sets, exMap, isCurrentRequest),
         loadDeloadCheck(sets, exMap, workouts, isCurrentRequest),
-        loadPRBars(sets, exMap, 30, isCurrentRequest),
         loadCalendar(workouts, isCurrentRequest),
         loadRecentSessions(workouts, isCurrentRequest),
         loadSessionDurationTrend(workouts, isCurrentRequest),
@@ -266,90 +261,16 @@ export default function useProgressData() {
   function loadDeloadCheck(sets, exMap, workouts, isCurrentRequest = () => true) {
     if (!isCurrentRequest()) return;
     try {
-      const now = Date.now();
-      // Build per-week data for last 4 weeks
-      const last4 = [];
-      for (let wk = 3; wk >= 0; wk--) {
-        const end   = now - wk * WEEK_MS;
-        const start = end - WEEK_MS;
-        const wkSets = sets.filter(s => {
-          const at = s.createdAt ?? s.created_at ?? 0;
-          return at >= start && at < end;
-        });
-        const vol = calculateWeeklyVolume(wkSets, exMap);
-        const hasOverMRV = Object.entries(vol).some(([muscle, data]) => {
-          const lm = VOLUME_LANDMARKS[muscle];
-          return lm && data.workingSets > lm.mrv;
-        });
-        const wkWorkouts = workouts.filter(w => {
-          const at = w.startedAt ?? w.createdAt ?? 0;
-          return at >= start && at < end && (w.isCompleted ?? w.is_completed);
-        });
-        // Campaign 1 P0-7 D6: answered-only averages, null when nothing
-        // was rated - unanswered sessions coerced to 0 diluted genuine
-        // soreness/joint evidence and suppressed the deload triggers.
-        const sorenessRated = wkWorkouts
-          .map(w => w.soreness24hBefore ?? w.soreness_24h_before ?? null)
-          .filter(v => v != null);
-        const avgSoreness = sorenessRated.length
-          ? sorenessRated.reduce((sum, v) => sum + v, 0) / sorenessRated.length
-          : null;
-        const jointRated = wkWorkouts
-          .map(w => w.jointDiscomfort ?? w.joint_discomfort ?? null)
-          .filter(v => v != null);
-        const avgJointDiscomfort = jointRated.length
-          ? jointRated.reduce((sum, v) => sum + v, 0) / jointRated.length
-          : null;
-        const avgReps = wkSets.length > 0
-          ? wkSets.reduce((sum, s) => sum + (s.actualReps ?? s.actual_reps ?? 0), 0) / wkSets.length
-          : 0;
-        // Estimate weeks since last lighter week: scan backwards for a low-volume week (< 15 total working sets)
-        last4.push({ avgReps, avgSoreness, avgJointDiscomfort, hasOverMRV, weeksSinceLastDeload: 4 - wk });
-      }
-      // Compute weeks since last lighter week more accurately using full set history
-      const weeksSinceLighter = (() => {
-        for (let wk = 1; wk <= 12; wk++) {
-          const end   = now - wk * WEEK_MS;
-          const start = end - WEEK_MS;
-          const wkSets = sets.filter(s => {
-            const at = s.createdAt ?? 0;
-            return at >= start && at < end;
-          });
-          // C6 R-12 (D97-22): an untrained week is NOT "a rest week the
-          // user took" (absence converted into evidence, campaign law 1) -
-          // it is the boundary of continuous accumulation: fatigue cannot
-          // have been accumulating across a week with no training, so the
-          // scan ends here with the accumulation span measured so far.
-          // Outcome identical to before (deload stays suppressed after a
-          // gap - the returning user IS rested), but the rule the code
-          // expresses is now the true one, and the polarity is pinned so
-          // an inversion (a gap ever COUNTING toward accumulation or
-          // triggering deloads) fails the suite.
-          if (wkSets.length === 0) return wk; // accumulation boundary, not a rest week
-          const vol = calculateWeeklyVolume(wkSets, exMap);
-          const totalSets = Object.values(vol).reduce((sum, v) => sum + v.workingSets, 0);
-          if (totalSets < 15) return wk;  // a genuinely trained lighter week
-        }
-        return 12; // no lighter week found in last 12 weeks
-      })();
-      // Patch weeksSinceLastDeload into all 4 entries
-      const patched = last4.map((entry, i) => ({
-        ...entry,
-        weeksSinceLastDeload: weeksSinceLighter + (3 - i),
-      }));
-      const result = shouldDeload(patched);
+      // Campaign 24 §2: bucket-building extracted to the shared
+      // buildLast4WeekDeloadBuckets (src/lib/algorithms.js), byte-identical
+      // to this file's prior inline derivation -- every default matches
+      // this caller's behaviour verbatim (rolling anchor, full exerciseMap,
+      // answered-only soreness/joint, derived weeksSinceLastDeload, no
+      // warmup exclusion). shouldDeload itself is untouched.
+      const buckets = buildLast4WeekDeloadBuckets(sets, workouts, exMap, { now: Date.now() });
+      const result = shouldDeload(buckets);
       setDeloadAlert(result.deload ? result : null);
     } catch (_) {}
-  }
-
-  function loadPRBars(sets, exMap, windowDays, isCurrentRequest = () => true) {
-    if (!isCurrentRequest()) return;
-    const bars = computePRsPerWeek(sets, exMap, windowDays).map((v, i) => ({
-      value: v,
-      frontColor: v > 0 ? colors.gold : colors.surface2,
-      label: i === 0 ? `${windowDays}d` : '',
-    }));
-    setPrBars(bars);
   }
 
   async function loadCalendar(workouts, isCurrentRequest = () => true) {
@@ -474,12 +395,6 @@ export default function useProgressData() {
     } catch (_) {}
   }
 
-  function handlePrWindowToggle() {
-    const next = prWindow === 30 ? 90 : 30;
-    setPrWindow(next);
-    loadPRBars(allSets, exerciseMap, next);
-  }
-
   async function handleRefresh() {
     setRefreshing(true);
     await load();
@@ -518,14 +433,14 @@ export default function useProgressData() {
 
   return {
     loading, refreshing, loadError,
-    activeMeso, mesoTonnage, weeklyVolume, prBars, prWindow,
+    activeMeso, mesoTonnage, weeklyVolume,
     calValues, recentSessions, allSets, exerciseMap, deloadAlert,
     durationBars, muscleFreq, showAllMuscles, setShowAllMuscles,
     workloadData, fatigueSessions, blockProgress, earliestWorkoutAt,
     completedWorkoutCount,
     currentMesoWeek,
     hasData, sessionCount, enoughForTrends,
-    handlePrWindowToggle, handleRefresh,
+    handleRefresh,
     mesoProgress, mesoCurrentWeek,
   };
 }

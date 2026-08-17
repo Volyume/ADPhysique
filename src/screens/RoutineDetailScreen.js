@@ -125,11 +125,12 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const toast = useToast();
   const { routineId } = route.params || {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, userProfile, startWorkout, reduceMotion } = useAppStore(useShallow(s => ({
+  const { user, userProfile, startWorkout, reduceMotion, units } = useAppStore(useShallow(s => ({
     user: s.user,
     userProfile: s.userProfile,
     startWorkout: s.startWorkout,
     reduceMotion: s.accessibility?.reduceMotion,
+    units: s.units,
   })));
   const [routine, setRoutine] = useState(null);
   const [exercises, setExercises] = useState([]);
@@ -983,7 +984,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 value={editStartWeight}
                 onChangeText={setEditStartWeight}
                 keyboardType="decimal-pad"
-                placeholder="kg"
+                placeholder={units === 'lbs' ? 'lbs' : 'kg'}
                 maxLength={6}
                 placeholderTextColor={t.colors.textMuted}
               />
