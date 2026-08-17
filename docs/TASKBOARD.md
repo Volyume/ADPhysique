@@ -2078,7 +2078,16 @@ unification + recovery single-wording-source fix; (2) weight row below
 hero (R1) + first-review readiness line (R2) + trial rehome (R3) + hero
 merge + footer discipline; (3) guards + 18-state mounted suite + gates
 + merge. Commit per stage, lead review every diff, merge when green.
+STAGE 1 LANDED `0deb5ff4` (lead-reviewed, lint 0 warnings, full suite
+970 suites / 13,224 tests green): todayLineArbiter.js (8-rank pure
+resolver) + TodayLine.js + HomeScreen banner unification +
+readinessSummary gatedRecoveryState wording-source fix +
+recoveryWordingSource.test.js + 12 guard re-pins. NOTE: Stage 1 retires
+the everyday trial card from Home but its You/Profile rehome is Stage
+2 — branch must NOT merge to main until Stage 2 lands the rehome (the
+gap would ship). STAGE 2 IN FLIGHT (sonnet agent).
 RECOVERY PATH: uncommitted work lead-reviewed against
 HOME-TODAY-UX-SPEC.md sections 13/17/20 + the rulings file; land or
-relaunch from last green commit. Preservation contract (spec section
-20) is binding: no engine, tier, trial-logic or safety-gate changes.
+relaunch from last green commit (`0deb5ff4`). Preservation contract
+(spec section 20) is binding: no engine, tier, trial-logic or
+safety-gate changes.
