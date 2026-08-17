@@ -80,11 +80,12 @@ export default function NowCard({
 
   // Phase 2B (physical-device corrective redesign, screenshot failure 3):
   // the "huge detached NowCard" is retired. The active set renders as the
-  // CURRENT ROW of the one continuous set sequence - a light surface with a
-  // 3dp accent along its left edge (amber = active, warning = warm-up),
+  // CURRENT ROW of the one continuous set sequence - a light surface
   // sitting flush between the completed rows above and the upcoming rows
   // below. Content, testIDs and behaviour are unchanged; only the shell
-  // shrank.
+  // shrank. (The 3dp coloured left accent that came with this redesign was
+  // itself retired on the founder device order of 2026-08-17 - see the
+  // styles.card note below.)
   return (
     <View
       style={[
@@ -92,7 +93,6 @@ export default function NowCard({
         {
           backgroundColor: t.colors.surface,
           borderColor: t.colors.borderSubtle,
-          borderLeftColor: isWarmup ? t.colors.warning : t.colors.primary,
         },
         flash && { borderColor: t.colors.primary },
       ]}
@@ -241,11 +241,14 @@ const styles = StyleSheet.create({
   // Phase 2B density pass (founder S22 verdict): the active row's shell is
   // as thin as the accent allows - the compact SetEntry inside it halves
   // the input height, and gap/padding drop a step each.
+  // Founder device order 2026-08-17: the coloured left accent stripe is
+  // retired (it read as decoration, not information - the expanded card
+  // shape already marks the active set; warm-ups keep their distinct
+  // header label). Uniform 1px border on all four sides.
   card: {
     gap: spacing.xs,
     borderRadius: radius.md,
     borderWidth: 1,
-    borderLeftWidth: 3,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
   },

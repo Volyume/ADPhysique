@@ -80,7 +80,10 @@ describe('one continuous set sequence (failure 3)', () => {
 
   test('the active entry is a ROW of the sequence, not a detached house Card', () => {
     expect(NOW_CARD).not.toContain("from '../Card'");
-    expect(NOW_CARD).toContain('borderLeftWidth: 3');
+    // Founder device order 2026-08-17: the coloured left accent stripe is
+    // retired - the row keeps a uniform 1px border on all four sides.
+    expect(NOW_CARD).not.toContain('borderLeftWidth');
+    expect(NOW_CARD).not.toContain('borderLeftColor');
     // Its position line and note row keep their pinned testIDs.
     expect(NOW_CARD).toContain('testID="volyume-set-type-btn"');
     expect(NOW_CARD).toContain('testID="volyume-note-row"');
