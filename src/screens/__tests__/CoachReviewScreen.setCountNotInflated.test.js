@@ -49,6 +49,7 @@ jest.mock('../../lib/database', () => ({
   getCompletedWorkoutSets: jest.fn(() => Promise.resolve(mockTenBenchSets())),
   getAllExercises: jest.fn(() => Promise.resolve([mockBench()])),
   getRecentCheckins: jest.fn(() => Promise.resolve([])),
+  getCurrentMesocycleWeek: jest.fn(() => Promise.resolve(null)),
 }));
 
 jest.mock('expo-haptics', () => ({

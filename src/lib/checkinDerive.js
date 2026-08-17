@@ -99,6 +99,17 @@ export function deriveTrainingPerformance({ completed, planned, prs, volDeltaPct
   return 'struggled';
 }
 
+// Wave C item 2 (whole-app coherence campaign 24, 2026-08-17,
+// WAVE-C-FINDINGS.md DUPLICATION finding): the ONE named adherence-band
+// constant. weeklyStory.buildEatingChapter used to carry its own
+// independent 5% "close" band, so the same week could read as "Hit it" here
+// (inside 10%) and "above target" on Your Week's narration (outside 5%) --
+// two verdicts, two unreconciled constants, same data. This is now the
+// single derivation home; weeklyStory.js imports this constant rather than
+// hardcoding its own. Untouched: the threshold value and deriveCalsAdherence's
+// own verdict logic (do not change the check-in side).
+export const CALS_ADHERENCE_BAND = 0.10;
+
 // Derive calorie adherence from the week's food rollups. Returns a verdict
 // from whatever days were logged (the screen shows the days-logged count and
 // the average alongside, so the user sees the confidence and can override).
@@ -112,7 +123,7 @@ export function deriveCalsAdherence({ rollups, targetKcal }) {
   if (logged.length < 1) return null;
   const avg = logged.reduce((a, r) => a + r.kcal_total, 0) / logged.length;
   const drift = Math.abs(avg - targetKcal) / targetKcal;
-  return drift <= 0.10 ? 'yes' : 'no';
+  return drift <= CALS_ADHERENCE_BAND ? 'yes' : 'no';
 }
 
 // Recover the user's free-text note from a stored notes string by removing the

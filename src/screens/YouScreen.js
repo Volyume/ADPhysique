@@ -419,7 +419,13 @@ export default function YouScreen({ navigation }) {
   }, [navigation, trialBanner?.variant]);
   const openTrialMethodology = useCallback(() => {
     haptics.selection();
-    navigation.navigate('Methodology');
+    // Wave C item 3 (whole-app coherence campaign 24, 2026-08-17,
+    // WAVE-C-FINDINGS.md STATE_DEFECT): every other Methodology entry point
+    // passes a source so methodology_opened telemetry attributes correctly
+    // (CoachOutputScreen.js 'why_block'/'held_decisions',
+    // ProSetupCompleteScreen.js 'setup_complete'). This was the sole
+    // unlabelled call site, silently logging 'unknown'.
+    navigation.navigate('Methodology', { source: 'trial_banner' });
   }, [navigation]);
 
   return (

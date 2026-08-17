@@ -17,6 +17,7 @@
  *    no em dash (house style).
  */
 import { buildWeeklyStory } from '../weeklyStory';
+import { CALS_ADHERENCE_BAND } from '../checkinDerive';
 
 const COACH_OUTPUT_BASE = {
   weekStart: 1000,
@@ -78,13 +79,32 @@ describe('buildWeeklyStory', () => {
     expect(eating.body).toBe("You logged food on 5 of the last 7 days, averaging 2100 kcal a day. That's below your 2500 kcal target.");
   });
 
-  test('eating chapter reads "close to" within a 5% band instead of over/under', () => {
+  // Wave C item 2 (whole-app coherence campaign 24, 2026-08-17,
+  // WAVE-C-FINDINGS.md DUPLICATION finding): this chapter used to carry its
+  // own independent 5% "close" band, separate from WeeklyCheckInScreen's
+  // 10% "hit" band feeding the actual coaching engine (checkinDerive
+  // .deriveCalsAdherence). A week 7% off target read as "Hit it" on the
+  // check-in but "above your target" here -- two verdicts, same week. The
+  // chapter now reuses CALS_ADHERENCE_BAND (10%), so the two consumers can
+  // no longer disagree. Re-pinned WITH this rationale (was 5%, now 10%).
+  test('eating chapter reads "close to" within the shared adherence band, not its own 5%', () => {
+    expect(CALS_ADHERENCE_BAND).toBe(0.10);
     const { chapters } = buildWeeklyStory({
       intake: { avgKcal: 2480, daysLogged: 7 },
       targetKcal: 2500,
     });
     const eating = chapters.find(c => c.key === 'eating');
     expect(eating.body).toMatch(/close to your 2500 kcal target/);
+  });
+
+  test('eating chapter reads "close to" for a week the old 5% band would have called "above" (7% off, inside the shared 10%)', () => {
+    const { chapters } = buildWeeklyStory({
+      intake: { avgKcal: 2675, daysLogged: 7 }, // 7% over target
+      targetKcal: 2500,
+    });
+    const eating = chapters.find(c => c.key === 'eating');
+    expect(eating.body).toMatch(/close to your 2500 kcal target/);
+    expect(eating.body).not.toMatch(/above your 2500 kcal target/);
   });
 
   test('eating chapter omits the target sentence when no target is available', () => {

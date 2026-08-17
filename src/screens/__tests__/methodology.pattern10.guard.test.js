@@ -35,4 +35,30 @@ describe('MethodologyScreen honours locked Pattern 10', () => {
     expect(RAW).toMatch(/held_decisions:\s*'holds'/);
     expect(RAW).toMatch(/route\?\.params\?\.source/);
   });
+
+  // Wave C item 4 (whole-app coherence campaign 24, 2026-08-17,
+  // WAVE-C-FINDINGS.md DEAD-STALE_SURFACE): SOURCE_SECTION only documents
+  // routes a real navigate('Methodology', { source: ... }) call site
+  // actually passes. paywall/goal_lock/plan_reveal were dead (no call site
+  // anywhere in the app used them); deleted rather than wired, since wiring
+  // would mean inventing a new "Learn more" link on screens outside this
+  // wave's scope. trial_banner is now live (Wave C item 3).
+  test('the three unreachable SOURCE_SECTION keys are removed, not left dead', () => {
+    expect(RAW).not.toMatch(/paywall:\s*'safety'/);
+    expect(RAW).not.toMatch(/goal_lock:\s*'safety'/);
+    expect(RAW).not.toMatch(/plan_reveal:\s*'training'/);
+  });
+
+  test('every remaining SOURCE_SECTION key matches a real call site', () => {
+    const mapBody = RAW.match(/const SOURCE_SECTION = \{([\s\S]*?)\};/)[1];
+    expect(mapBody).toMatch(/held_decisions:/);
+    expect(mapBody).toMatch(/why_block:/);
+    expect(mapBody).toMatch(/trial_banner:/);
+    expect(mapBody).toMatch(/setup_complete:/);
+    // Exactly 4 keys left -- if this count moves, a corresponding real
+    // call site must exist (or this test, and the comment above the map,
+    // need updating alongside it).
+    const keyCount = (mapBody.match(/^\s*\w+:/gm) || []).length;
+    expect(keyCount).toBe(4);
+  });
 });

@@ -34,6 +34,14 @@
 // Campaign 18: the ONE definition of how many logged days it takes before an
 // intake reading may be compared to a target.
 import { MIN_INTAKE_DAYS } from './coachContext';
+// Wave C item 2 (whole-app coherence campaign 24, 2026-08-17,
+// WAVE-C-FINDINGS.md DUPLICATION finding): the ONE adherence-band constant,
+// shared with WeeklyCheckInScreen's pre-fill (via deriveCalsAdherence). This
+// chapter used to carry its own independent 5% "close" band, so a week could
+// read as "Hit it" on the check-in (inside 10%) and "above target" here
+// (outside 5%) -- two verdicts about the same seven days. Reusing the same
+// constant means the two consumers can no longer disagree about "close".
+import { CALS_ADHERENCE_BAND } from './checkinDerive';
 
 function chapter(key, icon, heading, body, empty = false) {
   return { key, icon, heading, body, empty };
@@ -75,10 +83,12 @@ function buildEatingChapter({ intake, targetKcal }) {
     body += ' That is not enough days to compare against your target yet.';
   } else if (Number.isFinite(targetKcal) && targetKcal > 0) {
     const diff = avgKcal - targetKcal;
-    // Within 5% of target reads as "close to" rather than a hair-splitting
-    // over/under, matching the adherence-neutral voice used elsewhere
-    // (weeklyCoach's calsAdherence bands, no pass/fail framing).
-    const closeBand = targetKcal * 0.05;
+    // Within CALS_ADHERENCE_BAND of target reads as "close to" rather than a
+    // hair-splitting over/under, matching the adherence-neutral voice used
+    // elsewhere (weeklyCoach's calsAdherence bands, no pass/fail framing).
+    // Wave C item 2: this used to be an independent 0.05 (5%), the
+    // unreconciled second threshold WAVE-C-FINDINGS.md flagged.
+    const closeBand = targetKcal * CALS_ADHERENCE_BAND;
     if (Math.abs(diff) <= closeBand) {
       body += ` That's close to your ${targetKcal} kcal target.`;
     } else if (diff > 0) {

@@ -9,7 +9,7 @@ import { isWithinInterval } from 'date-fns/isWithinInterval';
 import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins } from '../lib/database';
+import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins, getCurrentMesocycleWeek } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS, detectLaggingMuscles, summariseWorkoutSets } from '../lib/algorithms';
 import { SkeletonCard } from '../components/Skeleton';
 import useAppStore from '../store/useAppStore';
@@ -104,11 +104,15 @@ function detectProgressionWins(thisWeekSets, allSets, exerciseMap) {
 // the screen resolved; loadData writes it before any row renders.
 let _resolvedLandmarks = null;
 
-function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingMuscles = [] }) {
+function buildRecommendations({ volumeByMuscle, deloadResult, checkins, laggingMuscles = [], inScheduledRecovery = false }) {
   const recs = [];
 
-  // 1. Recovery week signal
-  if (deloadResult?.deload && deloadResult.reasons.length > 0) {
+  // 1. Recovery week signal. Wave C item 1 (lead ruling, 2026-08-17) / FB-02:
+  // suppressed inside a week already scheduled as recovery (or a finished
+  // block awaiting its decision) so this screen cannot contradict the
+  // structural block state the same day, mirroring HomeScreen.js's
+  // inScheduledRecovery gate exactly (see the shared derivation above).
+  if (deloadResult?.deload && deloadResult.reasons.length > 0 && !inScheduledRecovery) {
     recs.push(
       'Consider making next week a lighter recovery week. Reduce your sets by around a third and keep the weights comfortable. Your body will come back stronger afterwards.',
     );
@@ -272,6 +276,9 @@ export default function CoachReviewScreen() {
   const [weekRange, setWeekRange] = useState({ start: null, end: null });
   const [laggingMuscles, setLaggingMuscles] = useState([]);
   const [loadError, setLoadError] = useState(false);
+  // Wave C item 1 (lead ruling, 2026-08-17): the same block-week fact
+  // HomeScreen reads to gate its recovery banner (getCurrentMesocycleWeek).
+  const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
   const loadRequestRef = useRef(0);
 
   useEffect(() => {
@@ -291,6 +298,7 @@ export default function CoachReviewScreen() {
       setDeloadResult(null);
       setCheckins([]);
       setLaggingMuscles([]);
+      setCurrentMesoWeek(null);
       setLoadError(false);
       setLoading(false);
       return;
@@ -306,13 +314,17 @@ export default function CoachReviewScreen() {
       const weekStartMs = weekStart.getTime();
       const weekEndMs = weekEnd.getTime();
 
-      const [allWorkouts, allSets, allExercises, recentCheckins] = await Promise.all([
+      const [allWorkouts, allSets, allExercises, recentCheckins, mesoWeek] = await Promise.all([
         getAllWorkouts(user.id),
         getCompletedWorkoutSets(user.id),
         getAllExercises(),
         getRecentCheckins(user.id, 4),
+        // Wave C item 1: getCurrentMesocycleWeek already fails closed (returns
+        // null on any read error), so no separate try/catch is needed here.
+        getCurrentMesocycleWeek(user.id),
       ]);
       if (!isCurrentRequest()) return;
+      setCurrentMesoWeek(mesoWeek);
 
       // This week's completed workouts
       const thisWeekWorkouts = allWorkouts.filter(w =>
@@ -459,11 +471,21 @@ export default function CoachReviewScreen() {
     ? (MUSCLE_DISPLAY_NAMES[trainedMuscles[0][0]] || trainedMuscles[0][0])
     : null;
 
+  // Wave C item 1 (lead ruling, 2026-08-17) / FB-02: identical predicate to
+  // HomeScreen.js:1776 (`inScheduledRecovery`) so this screen's recovery-week
+  // suggestion can never fire inside a week already scheduled as recovery or
+  // a finished block awaiting its decision -- the missing gate that let this
+  // screen contradict the structural block state on the same day. Reads the
+  // same getCurrentMesocycleWeek fact Home reads, not a re-derivation.
+  const inScheduledRecovery = !!currentMesoWeek?.isDeload || !!currentMesoWeek?.awaitingDecision;
+  const deloadSuggestionEligible = !!deloadResult?.deload && !inScheduledRecovery;
+
   const recommendations = buildRecommendations({
     volumeByMuscle,
     deloadResult,
     checkins,
     laggingMuscles,
+    inScheduledRecovery,
   });
 
   // Joint discomfort flag from recent workouts
@@ -625,7 +647,7 @@ export default function CoachReviewScreen() {
             {/* -- What to watch -- */}
             <View style={styles.section}>
               <SectionHeading title="What to watch" />
-              {watchMuscles.length === 0 && !deloadResult?.deload && !jointFlag ? (
+              {watchMuscles.length === 0 && !deloadSuggestionEligible && !jointFlag ? (
                 <Card>
                   <Text style={[styles.emptySubText, live.emptySubText]}>
                     Nothing to flag this week, your training is looking nicely balanced.
@@ -668,7 +690,7 @@ export default function CoachReviewScreen() {
                     );
                   })}
 
-                  {deloadResult?.deload && (
+                  {deloadSuggestionEligible && (
                     <InsightRow
                       icon="battery-half-outline"
                       iconColor={t.colors.warning}

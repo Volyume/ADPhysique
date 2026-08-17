@@ -122,12 +122,21 @@ const SECTIONS = [
 // Wave A B2: land the reader on the section their entry point is about,
 // instead of always defaulting to the cooldown section. Falls back to the
 // first section for unknown sources so the page never opens fully closed.
+//
+// Wave C item 4 (whole-app coherence campaign 24, 2026-08-17,
+// WAVE-C-FINDINGS.md DEAD-STALE_SURFACE): this map documents only routes
+// that are real. `paywall`/`goal_lock`/`plan_reveal` were deleted: grep-
+// confirmed app-wide, no `navigate('Methodology', ...)` call site anywhere
+// passes those source literals (ProUpgradeScreen and GoalLockConsentScreen
+// carry no "Learn more" link into this screen today, and no "plan reveal
+// moment" screen exists to wire). Wiring a real link for any of them is a
+// net-new UI addition on a screen outside this wave's scope, not a
+// mechanical correction; deleting the unreachable keys keeps this table
+// honest without inventing a feature. If any of those screens later grow a
+// Methodology "Learn more" link, re-add the key alongside it.
 const SOURCE_SECTION = {
   held_decisions: 'holds',
   why_block: 'inputs',
-  paywall: 'safety',
-  goal_lock: 'safety',
-  plan_reveal: 'training',
   trial_banner: 'inputs',
   setup_complete: 'inputs',
 };

@@ -18,6 +18,7 @@ jest.mock('../../lib/database', () => ({
   getCompletedWorkoutSets: jest.fn(() => Promise.resolve([])),
   getAllExercises: jest.fn(() => Promise.resolve([])),
   getRecentCheckins: jest.fn(() => Promise.resolve([])),
+  getCurrentMesocycleWeek: jest.fn(() => Promise.resolve(null)),
 }));
 
 // expo-haptics can't construct its native EventEmitter in the bare test env;
