@@ -2749,3 +2749,30 @@ spec) + FOUNDER-RULINGS-PHASE2.md (R1/R2/R3 locked YES).
   session it names, or stops claiming to. All other variants open the
   weekly check-in directly. Rationale over effort per D33: one extra
   branch, honest destination.
+
+## D99 — Campaign 23 founder rulings + privacy-law amendment (2026-08-17)
+
+Founder rulings R1/R2 for the Progress redesign, verbatim record in
+docs/progress-audit-campaign-23-2026-08-17/FOUNDER-RULINGS-PHASE2.md.
+
+- **D99-1 (R1):** the Progress landing Visual pillar shows derived
+  visual-progress intelligence only (assessment/progress signal,
+  trend, confidence, comparison status) — never a photo thumbnail.
+  Imagery stays inside Progress Photos.
+- **D99-2 (R2):** SUPERSEDES D18's render-time-only design as final
+  architecture. The coarse locally-derived photoCorroboration
+  contract feeds the authoritative runWeeklyCoach call. Authority
+  exactly bounded: one-step confidence movement via the existing
+  corroboration rule; supports-only; never originates evidence;
+  never exits data-hold; all ED/calm/safety suppression senior;
+  never alters calories, macros, training, volume, floors, recovery
+  or held decisions. Raw photos, scan assets, scores, estimates,
+  measurements, scan IDs and history stay local-only, never entering
+  sync or coach persistence. Only the ordinary resulting coach output
+  persists/syncs; no explicit photo-derived input/source flag is
+  persisted unless technically unavoidable and separately justified.
+- **D99-3 (PRIVACY-LAW AMENDMENT, exact founder wording, standing):**
+  "Raw photos and scan-derived measurements remain on-device. A
+  locally derived, non-reversible corroboration signal may contribute
+  only to the bounded confidence of an authoritative coaching result;
+  underlying visual evidence is never uploaded or synced."
