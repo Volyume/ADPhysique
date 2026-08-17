@@ -46,7 +46,9 @@ describe('Visual pillar suppression seniority: the suppression check wraps OUTSI
     expect(closeIdx).toBeGreaterThan(markerIdx);
     const block = ANALYTICS_SRC.slice(markerIdx, closeIdx);
 
-    expect(block).toMatch(/label="Visual"/);
+    // Re-pinned 2026-08-17 (founder device order): the pillar is labelled
+    // "Progress photos" now — "Visual" was internal vocabulary.
+    expect(block).toMatch(/label="Progress photos"/);
     expect(block).toMatch(/proGated=\{tier !== 'pro'\}/);
     expect(block).toMatch(/onPress=\{\(\) => navigation\.navigate\('ProgressPhotos'\)\}/);
 
@@ -57,7 +59,7 @@ describe('Visual pillar suppression seniority: the suppression check wraps OUTSI
     // "Part of Pro" vs real copy), never a second visibility wrapper — the
     // row's mounting is controlled by the suppression check alone, exactly
     // once, exactly here.
-    const beforeLabel = block.slice(marker.length, block.indexOf('label="Visual"'));
+    const beforeLabel = block.slice(marker.length, block.indexOf('label="Progress photos"'));
     expect((beforeLabel.match(/&&/g) || []).length).toBe(0);
   });
 
@@ -72,21 +74,16 @@ describe('Visual pillar suppression seniority: the suppression check wraps OUTSI
   });
 });
 
-// ─── Share-CTA budget: verify Stage 2's pin is sufficient (no new pin) ────
+// ─── Share-CTA budget (re-pinned 2026-08-17) ──────────────────────────────
 //
-// VERIFIED SUFFICIENT, not re-pinned: AnalyticsScreen.campaign23.guard.
-// test.js already asserts exactly one `title="Create share image"` match
-// AND that it sits after the "Moments (R5" marker (i.e. inside the
-// milestone Moment, never a standing hero). shareCopyPolish.guard.test.js
-// separately pins the CTA's contained-control chrome (Button variant=
-// "outline") and that LiftProgressScreen's own relocated hero CTA carries
-// the same contract. Between the two, "at most ONE share affordance
-// visible per landing render, and only inside a transient achievement
-// moment" (§9/§24) is fully covered; this file adds nothing here.
-describe('Share-CTA budget (§9/§24): sufficiency check only', () => {
-  test('exactly one "Create share image" CTA remains, confirmed still true after Stage 3 changes', () => {
-    const matches = ANALYTICS_SRC.match(/title="Create share image"/g);
-    expect(matches?.length).toBe(1);
+// The founder device order of 2026-08-17 retired the tonnage-milestone
+// Moment and with it the landing's single permitted share CTA, so the
+// budget tightened from "exactly one, inside a Moment" to NONE.
+// shareCopyPolish.guard.test.js still pins LiftProgressScreen's own
+// relocated hero CTA (contained Button chrome), which is unaffected.
+describe('Share-CTA budget: none on the landing (founder device order 2026-08-17)', () => {
+  test('zero share CTAs on the landing (the milestone Moment that carried the single permitted one is retired)', () => {
+    expect(ANALYTICS_SRC).not.toMatch(/Create share image/);
   });
 });
 
@@ -143,8 +140,8 @@ describe('"For You" retirement covers useProgressData.js as well as the screen',
 // + 3 SessionCard slots MAX (R3, capped by useProgressData's own
 //     `.slice(0, 3)` on recentSessions — verified below, not assumed)
 // + 1 VolumeSummaryStrip Card (R4, conditional)
-// + 1 Moment card MAX (R5: recap OR milestone, mutually exclusive by a
-//     single ternary chain — verified below, never both)
+// + 1 Moment card MAX (R5: recap only since 2026-08-17; a single
+//     conditional — verified below)
 // + 1 utilities grid (R6, one NavTile grid = one container per the
 //     recorded interpretation, regardless of how many tiles it holds)
 // = 7, exactly the spec's stated ceiling ("Max bordered containers on the
@@ -154,22 +151,20 @@ describe('§24 density budget: primary evidence container ceiling, source-counte
     expect(USE_PROGRESS_DATA_SRC).toMatch(/\.slice\(0, 3\)/);
   });
 
-  test('R5 Moments is a single mutually-exclusive ternary: recap XOR milestone, never both', () => {
-    // `{!recapCardHidden ? (<recap...>) : tonnageLandmark ? (<milestone...>) : null}`
-    // -- a single conditional EXPRESSION (one `?`, one matching `:`, one
-    // final `: null`) can only ever evaluate to ONE of its branches, so
-    // "at most one Moment renders" is a JS-semantics guarantee once this
-    // shape is confirmed, not merely a convention.
+  test('R5 Moments is recap-only: a single conditional, no milestone branch (founder device order 2026-08-17)', () => {
+    // Was `recap XOR milestone` via one ternary chain; the tonnage-milestone
+    // Moment is retired, so the slot is `{!recapCardHidden ? (<recap...>) :
+    // null}` — still a single conditional expression, so "at most one
+    // Moment renders" remains a JS-semantics guarantee.
     const momentsIdx = ANALYTICS_SRC.indexOf('Moments (R5');
     expect(momentsIdx).toBeGreaterThan(-1);
     const nextSectionIdx = ANALYTICS_SRC.indexOf('Utilities (R6', momentsIdx);
     expect(nextSectionIdx).toBeGreaterThan(momentsIdx);
     const momentsBlock = ANALYTICS_SRC.slice(momentsIdx, nextSectionIdx);
     expect(momentsBlock).toMatch(/\{!recapCardHidden \? \(/);
-    expect(momentsBlock).toMatch(/\) : tonnageLandmark \? \(/);
+    expect(momentsBlock).not.toMatch(/tonnageLandmark/);
     expect(momentsBlock).toMatch(/\) : null\}/);
-    // Exactly one ternary in this block (not two independent conditionals
-    // that could both be true at once).
+    // Exactly one conditional in this block.
     expect((momentsBlock.match(/\{!recapCardHidden \?/g) || []).length).toBe(1);
   });
 
@@ -182,7 +177,7 @@ describe('§24 density budget: primary evidence container ceiling, source-counte
     const answerBlock = 1;
     const sessionCardsMax = 3;
     const volumeStripMax = 1;
-    const momentMax = 1; // recap XOR milestone
+    const momentMax = 1; // recap only (milestone retired 2026-08-17)
     const utilitiesGrid = 1; // counts as one, per the recorded interpretation
     expect(answerBlock + sessionCardsMax + volumeStripMax + momentMax + utilitiesGrid).toBe(7);
   });

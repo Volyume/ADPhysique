@@ -160,18 +160,16 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // is left in place: it is additive and harmless, and dropping a live
   // allow-list column is a migration decision, not a client one.
 
-  // Share-card landmarks (audit S-011, Sentry VOLYUME-1P). Emitted via
-  // fireLandmarkOnce → track() on the Analytics screen; both gate a "Make a
-  // card" share CTA. They were wired in the client but never catalogued, so the
-  // allow-list dropped them with an "unknown event" warning once per app run.
-  //   tonnage_milestone_reached  payload: { milestone } — lifetime-tonnage band
-  // Counts/enums only, never training or body data.
-  // Server allow-list: supabase/migrate_093_landmark_telemetry.sql.
-  //
-  // perfect_month_reached and longest_run_pb_reached are RETIRED with the
-  // weekly run/streak construct they measured (see the COMP-018 note above);
-  // the lifetime-tonnage landmark is a genuine training total and stays.
-  { name: 'tonnage_milestone_reached',       deferred: false, panel: 1 },
+  // Share-card landmarks (audit S-011, Sentry VOLYUME-1P) are ALL retired
+  // now. perfect_month_reached and longest_run_pb_reached went with the
+  // weekly run/streak construct (COMP-018 note above);
+  // tonnage_milestone_reached went with the lifetime-tonnage landmark
+  // Moment on the Progress landing (founder device order 2026-08-17).
+  // Nothing emits any of them, so they leave the catalogue rather than
+  // linger as permanently-silent entries. The server allow-list
+  // (supabase/migrate_093_landmark_telemetry.sql and later re-statements)
+  // is left in place: additive and harmless, and dropping a live
+  // allow-list entry is a migration decision, not a client one.
 
   // COMP-026 (B): step-trend TDEE modifier evaluated on a coach run. Counts and
   // flags only (active/direction/gain bucket, agreement, logged-day counts,

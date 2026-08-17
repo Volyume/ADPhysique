@@ -129,14 +129,17 @@ describe('computeTrainingPillarSummary', () => {
 
 describe('buildVisualPillarCopy', () => {
   test('no scan ever (state G): honest empty state with the single next action', () => {
+    // Re-pinned 2026-08-17 (founder device order): the empty state names
+    // the feature in the user's words ("progress photos"), not the
+    // capture-flow word "scan" a brand-new user has not met yet.
     const copy = buildVisualPillarCopy({ hasScan: false, hasNote: false, packet: null, capturedAt: null });
-    expect(copy.state).toBe('No scans yet');
-    expect(copy.evidence).toMatch(/first scan/i);
+    expect(copy.state).toBe('No photos yet');
+    expect(copy.evidence).toMatch(/first progress photos/i);
   });
 
   test('scan exists but confidence too low for a note: distinct from "never scanned"', () => {
     const copy = buildVisualPillarCopy({ hasScan: true, hasNote: false, packet: null, capturedAt: NOW });
-    expect(copy.state).not.toBe('No scans yet');
+    expect(copy.state).not.toBe('No photos yet');
     expect(copy.evidence).toMatch(/retake/i);
   });
 
