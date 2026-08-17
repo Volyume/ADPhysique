@@ -509,6 +509,11 @@ zero items touch validated coaching logic (the §20 contract forbids it).
 
 ## 24. GENUINE FOUNDER RULINGS
 
+> **RESOLVED 2026-08-16: all three rulings answered YES by the founder
+> (verbatim record: FOUNDER-RULINGS-PHASE2.md in this folder). The spec is
+> now the binding Phase 2 implementation contract; verdict effectively A.**
+
+
 **R1 — Morning weight below the hero.** Recommended: YES (P2, §11). This
 reverses the COMP-027 Part B order you previously accepted; the evidence is
 the density analysis (the session action losing the opening glance daily).
