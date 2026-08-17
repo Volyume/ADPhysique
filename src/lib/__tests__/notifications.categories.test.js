@@ -27,7 +27,11 @@ describe('CATEGORY enum + channel map are consistent', () => {
 
 describe('isPushCategory', () => {
   test('returns true for push categories', () => {
-    expect(isPushCategory(CATEGORY.DAILY_CHECKIN_REMINDER)).toBe(true);
+    // DAILY_CHECKIN_REMINDER assertion removed (Campaign 24 Wave F LEAD
+    // RULING item 3): the category itself was struck from categories.js as
+    // a phantom declaration with zero live scheduling/UI implementation.
+    // WEEKLY_CHECKIN_REMINDER below covers the same "is a push category"
+    // assertion shape for the category that actually ships.
     expect(isPushCategory(CATEGORY.WEEKLY_CHECKIN_REMINDER)).toBe(true);
     expect(isPushCategory(CATEGORY.CASCADE_GATE)).toBe(true);
     expect(isPushCategory(CATEGORY.MORNING_WEIGHT)).toBe(true);

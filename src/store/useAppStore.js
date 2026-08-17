@@ -2055,7 +2055,13 @@ const useAppStore = create((set, get) => ({
     theme: 'dark',         // COMP-029: 'dark' | 'light' | 'system'. Default dark, no existing user changes
     energyUnit: 'kcal',    // food-UI energy DISPLAY unit: 'kcal' | 'kj'. Display-only (read reactively,
                            // no reload); stored values, targets + the coaching engine stay in kcal.
-    showHomeNutrition: true, // gap #17: show the nutrition glance + food entry on the Home strip
+    // showHomeNutrition removed from the default shape (Campaign 24 Wave F,
+    // LEAD RULING D33): it was a fully-wired but dead toggle -- no component
+    // in src/ ever read it (the "gap #17" Home nutrition-glance feature it
+    // was built for never shipped). A stale persisted value from an
+    // existing install is tolerated silently via the `...parsed` spread in
+    // loadAccessibility below (ignored, not migrated) -- nothing reads the
+    // key, so its presence is harmless. Returns if the feature is ever built.
     // gap #16 + E4: choose-which-nutrients-shown on a food's detail. Fibre,
     // sugar and sodium are carried per-food (per-100g) when the source has
     // them; these toggles decide which appear under the kcal/P/C/F summary.

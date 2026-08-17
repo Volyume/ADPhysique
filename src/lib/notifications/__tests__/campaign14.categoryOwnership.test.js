@@ -240,7 +240,10 @@ describe('C14 the live matrix — a new category cannot slip through unclassifie
     [CATEGORY.MONTHLY_RECAP]: 'periodic recap, no live scheduler switch',
     [CATEGORY.WINBACK]: 'single-shot per episode, floored at 180 days',
     [CATEGORY.WEEKLY_COACH_READY]: 'the coach run the user asked for',
-    [CATEGORY.DAILY_CHECKIN_REMINDER]: 'legacy: no live scheduler',
+    // DAILY_CHECKIN_REMINDER entry removed (Campaign 24 Wave F LEAD RULING
+    // item 3): the category no longer exists in categories.js (it was a
+    // phantom declaration -- no schedule* function ever created it). This
+    // NOT_USER_CONTROLLED map only classifies categories that still exist.
     [CATEGORY.EVENING_WEIGHT]: 'rides the morning weigh-in switch',
     // Own dedicated preference structure, not a single on/off flag.
     [CATEGORY.MEAL_LOG_REMINDER]: 'per-meal array, its own control',

@@ -121,23 +121,18 @@ export default function SettingsDisplayScreen() {
         </View>
       </View>
 
-      <View style={[styles.section, live.section]}>
-        <Text style={[local.title, liveText.title]}>Home</Text>
-        <SettingRow
-          icon="restaurant-outline"
-          label="Show nutrition on Home"
-          sub="A remaining-calories glance and a quick way into your diary, on the Today tab."
-          showArrow={false}
-          rightElement={
-            <Switch
-              value={accessibility.showHomeNutrition !== false}
-              onValueChange={(v) => { haptics.selection(); setAccessibilityPref('showHomeNutrition', v); }}
-              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-              thumbColor={(accessibility.showHomeNutrition !== false) ? t.colors.primary : t.colors.textMuted}
-            />
-          }
-        />
-      </View>
+      {/* "Show nutrition on Home" row retired (Campaign 24 Wave F, LEAD
+          RULING D33 on the showHomeNutrition dead toggle,
+          WAVE-F-FINDINGS.md DEAD_SETTING finding): the toggle was fully
+          wired end-to-end (store write, AsyncStorage persist, cloud pref
+          push) but no component anywhere in src/ ever read
+          accessibility.showHomeNutrition to gate anything -- the "gap #17"
+          Home nutrition-glance feature it was built for never shipped. A
+          toggle that controls nothing fails the truth law, and building
+          the unbuilt feature was ruled out of scope as sprawl this
+          campaign forbids. If the Home nutrition-glance feature is ever
+          built, this row (and the accessibility.showHomeNutrition field in
+          useAppStore.js) returns with it. */}
 
       <View style={[styles.section, live.section]}>
         <Text style={[local.title, liveText.title]}>Nutrients shown</Text>

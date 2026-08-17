@@ -56,7 +56,7 @@ Status updates happen at every screen campaign landing. Status key:
 | `ExerciseDetail` | Exercise Details | PlansTab/ProgressTab > ExerciseDetail | `src/screens/ExerciseDetailScreen.js` | RoutineDetailScreen, AnalyticsScreen, LiftProgressScreen | Both | Exercise reference — form guide video, variation picker, historical sets/reps, and personal notes | UNREVIEWED | Origin-aware hero-zoom from card (grows from tapped card location) |
 | `ManualBuilder` | Custom Training | PlansTab > ManualBuilder | `src/screens/ManualBuilderScreen.js` | PlansScreen, PlanDetailScreen | Both | Create/edit custom training programmes — build weeks, exercises, and periodisation | UNREVIEWED | Free feature; no limits on custom plans |
 | `MesocycleBuilder` | Edit Blocks | PlansTab > MesocycleBuilder | `src/screens/MesocycleBuilderScreen.js` | PlanDetailScreen | Both | Mesocycle editor — create/edit weeks, set deload flags, manage periodisation structure | UNREVIEWED | Pro-only for advanced editing; free can't edit existing library plans |
-| `PlanLibrary` | Browse Library | PlansTab > PlanLibrary | `src/screens/PlansScreen | Both | Curated training programme catalogue — browse by goal, experience, duration, and muscle split | UNREVIEWED | Free and Pro have same library view; tier affects start options |
+| `PlanLibrary` | Browse Library | PlansTab > PlanLibrary | `src/screens/PlanLibraryScreen.js` | PlansScreen | Both | Curated training programme catalogue — browse by goal, experience, duration, and muscle split | UNREVIEWED | Free and Pro have same library view; tier affects start options |
 | `FreeStarter` | Difficulty Quiz | HomeTab/PlansTab/FirstRunStack > FreeStarter | HomeScreen no-plan, PlansScreen, FirstRunStack | Both | Free onboarding micro-quiz — three questions that activate a starter difficulty-0 plan | UNREVIEWED | Registered in three stacks; shown on new free account with no plan |
 
 ---
@@ -137,7 +137,7 @@ Status updates happen at every screen campaign landing. Status key:
 | `SettingsProfile` | Profile Settings | ProfileTab > SettingsProfile | `src/screens/SettingsProfileScreen.js` | SettingsScreen | Both | Units and body — weight/distance units, biological sex, age, height | UNREVIEWED | Used by coaching engine for calorie floors |
 | `SettingsCoaching` | Coaching Settings | ProfileTab > SettingsCoaching | `src/screens/SettingsCoachingScreen.js` | SettingsScreen | Both | Coaching preferences — training goal, macro split, volume modulation, and deload frequency | UNREVIEWED | Pro users edit here; free view only |
 | `SettingsDisplay` | Display | ProfileTab > SettingsDisplay | `src/screens/SettingsDisplayScreen.js` | SettingsScreen | Both | Theme and accessibility — light/dark mode, text size, motion reduction, and language | UNREVIEWED | Affects app-wide styling and motion UX |
-| `SettingsHealth` | Health | ProfileTab > SettingsHealth | `src/screens/SettingsHealthScreen.js` | SettingsScreen | Both | Health metrics — ED pattern flag status, wellbeing state (Beat UK), and calm mode toggle | UNREVIEWED | Critical for ED-safety guardrails; gates nutrition data exposure |
+| `SettingsHealth` | Health | ProfileTab > SettingsHealth | `src/screens/SettingsHealthScreen.js` | SettingsScreen | Both | Apple Health / Health Connect integration — per-scope read (weight) and write (workouts) toggles, manual sync, and deep link to system Health settings (corrected Campaign 24 Wave F, WAVE-F-FINDINGS.md; no ED-safety content in this screen — that lives on SettingsCoaching/WellbeingCheck) | UNREVIEWED | Device-integration screen, not ED-safety adjacent; previous PRIMARY JOB described a different screen entirely |
 | `SettingsData` | Your Data | ProfileTab > SettingsData | `src/screens/SettingsDataScreen.js` | SettingsScreen | Both | Data management — account snapshots, import/export, and cross-device restore history | UNREVIEWED | Snapshot and import flows; account switch recovery |
 | `SettingsDietary` | Dietary Preferences | ProfileTab > SettingsDietary | `src/screens/SettingsDietaryScreen.js` | SettingsScreen | Both | Dietary restrictions — allergies, intolerances, vegetarian/vegan, and food preferences | UNREVIEWED | Used by meal planning and food suggestions |
 | `SettingsPrivacy` | Privacy | ProfileTab > SettingsPrivacy | `src/screens/SettingsPrivacyScreen.js` | SettingsScreen | Both | GDPR and consent — data access request, consent replay, and policy links | UNREVIEWED | Privacy and regulatory compliance management |
@@ -148,13 +148,13 @@ Status updates happen at every screen campaign landing. Status key:
 | `MealNames` | Meal Names | ProfileTab > MealNames | `src/screens/MealNamesScreen.js` | SettingsScreen (unreachable per D95) | Pro | Meal naming preferences — rename meal slots (Breakfast, Lunch, etc.) | UNREVIEWED | D95 note: deliberately unreachable; retained pending feature return |
 | `NutritionEducation` | Nutrition Guide | ProfileTab/ProOnboardingStack > NutritionEducation | `src/screens/NutritionEducationScreen.js` | ProSetupCompleteScreen, SettingsCoachingScreen, ProfileStack | Both | Nutrition education — macro system explanation, calorie basics, and plan mechanics | UNREVIEWED | Educational; part of Pro onboarding and settings access |
 | `CoachingReminders` | Coaching Alerts | ProfileTab/ProOnboardingStack > CoachingReminders | `src/screens/CoachingRemindersScreen.js` | NotificationSettingsScreen, ProSetupCompleteScreen, ProfileStack | Pro | Coaching notification frequency — toggle check-in reminders and adjust cadence | UNREVIEWED | Pro-only; registered in three stacks |
-| `WellbeingCheck` | Wellbeing | ProfileTab > WellbeingCheck | `src/screens/WellbeingCheckScreen.js` | SettingsHealthScreen wellbeing state card, ProfileTab | Both | Beat UK ED screening and calm mode — manage wellbeing status and activate calm mode | UNREVIEWED | ED-safety critical; manages content suppression flags |
+| `WellbeingCheck` | Wellbeing | ProfileTab > WellbeingCheck | `src/screens/WellbeingCheckScreen.js` | YouScreen Safety checks section only | Both | Beat UK ED screening — five-question SCOFF self-report, feeds the tier-blind safety system (corrected Campaign 24 Wave G, WAVE-G-FINDINGS.md:180-206) | UNREVIEWED | ED-safety critical; manages content suppression flags. Calm mode lives on SettingsCoaching, not here |
 | `Subscription` | Subscription | ProfileTab > Subscription | `src/screens/SubscriptionScreen.js` | YouScreen subscription card, SettingsScreen | Both | Subscription status — manage subscription, upgrade, downgrade, and billing info | UNREVIEWED | Billing and entitlement management |
 | `CascadeGate` | Pro Trial Gate | ProfileTab > CascadeGate (modal) | `src/screens/CascadeGateScreen.js` | YouScreen, SettingsScreen (on-demand) | Both | 14-day Pro trial start — upgrade gate and trial messaging (modal presentation) | UNREVIEWED | Paywall surface for trial initiation |
 | `ProUpgrade` | Upgrade to Pro | MultiTab > ProUpgrade (modal) | `src/screens/ProUpgradeScreen.js` | ProGate wraps throughout app | Both | Paywall modal — Pro benefits teaser, purchase button, and trial offer | UNREVIEWED | Registered in all five tab stacks (HomeStack, PlansStack, DiaryStack, ProgressStack, ProfileStack) |
 | `SubscriptionPolicy` | Subscription Terms | ProfileTab > SubscriptionPolicy | `src/screens/SubscriptionPolicyScreen.js` | SubscriptionScreen link | Both | Subscription terms and policy — cancellation, billing, and renewal policy | UNREVIEWED | Legal/policy reference |
-| `Import` | Import Workouts | ProfileTab > Import | `src/screens/ImportScreen.js` | SettingsDataScreen | Both | Import workouts from external sources — Strong, Fitbod, and other exportable formats | UNREVIEWED | Data import and migration tool |
-| `Credits` | Credits | ProfileTab > Credits | `src/screens/CreditsScreen.js` | SettingsAboutScreen link | Both | Credits — music, fonts, data sources, and third-party attributions | UNREVIEWED | Attribution and credits page |
+| `Import` | Import Workouts | ProfileTab > Import | `src/screens/ImportScreen.js` | SettingsDataScreen | Both | Import workouts from Hevy and Strong CSV exports (corrected Campaign 24 Wave G, WAVE-G-FINDINGS.md:229-238; no Fitbod support exists) | UNREVIEWED | Data import and migration tool |
+| `Credits` | Credits | ProfileTab > Credits | `src/screens/CreditsScreen.js` | SettingsAboutScreen link | Both | Credits — attribution for the app's food data sources (OpenFoodFacts, CoFID, USDA) (corrected Campaign 24 Wave G, WAVE-G-FINDINGS.md:294-304; no music/font credits exist) | UNREVIEWED | Attribution and credits page |
 
 ---
 
@@ -163,8 +163,8 @@ Status updates happen at every screen campaign landing. Status key:
 | SCREEN_ID | USER-FACING NAME | PRODUCTION ROUTE | SOURCE FILE | ENTRY POINTS | TIER | PRIMARY JOB | STATUS | NOTES |
 |---|---|---|---|---|---|---|---|---|
 | `ProGoalSetup` | Goal Setup | ProfileTab > ProGoalSetup | `src/screens/ProGoalSetupScreen.js` | YouScreen goal card or ProfileStack | Pro | Goal definition and macro preference editor — Pro users set training goals and nutrition targets | UNREVIEWED | Pro-only goal and nutrition configuration |
-| `GoalChangeSummary` | Goal Change | ProfileTab > GoalChangeSummary | `src/screens/GoalChangeSummaryScreen.js` | ProfileStack, notification routing, goal change flow | Both | Summary of coaching adjustments when goal changes — explain plan/volume impact | UNREVIEWED | Shown after goal update; free and Pro |
-| `GoalLockConsent` | Goal Lock Consent | ProfileTab > GoalLockConsent | `src/screens/GoalLockConsentScreen.js` | GoalChangeSummaryScreen, ProfileStack | Both | Goal lock consent — confirm before locking goal for a coaching cycle | UNREVIEWED | Prevents accidental goal changes mid-cycle |
+| `GoalChangeSummary` | Goal Change | ProfileTab > GoalChangeSummary | `src/screens/GoalChangeSummaryScreen.js` | ProGoalSetupScreen save action only | Both | Summary of coaching adjustments when goal changes — explain plan/volume impact | UNREVIEWED | Shown after goal update; free and Pro. Entry points corrected Campaign 24 Wave G (WAVE-G-FINDINGS.md:54-63) — no notification-routing or second ProfileStack call site exists |
+| `GoalLockConsent` | Goal Lock Consent | ProfileTab > GoalLockConsent | `src/screens/GoalLockConsentScreen.js` | YouScreen Safety checks section only | Both | Goal lock consent — confirm before locking goal for a coaching cycle | UNREVIEWED | Prevents accidental goal changes mid-cycle. Entry point corrected Campaign 24 Wave G (WAVE-G-FINDINGS.md:90-98) — GoalChangeSummaryScreen never navigates here |
 | `DebugLog` | Debug Log | ProfileTab > DebugLog | `src/screens/DebugLogScreen.js` | SettingsAboutScreen (dev-mode route) | Both | Internal debugging log view — app events, errors, and diagnostic information | UNREVIEWED | Development and support tool; not user-facing in production |
 | `Snapshots` | Snapshots | ProfileTab > Snapshots | `src/screens/SnapshotsScreen.js` | SettingsDataScreen link | Both | Account data snapshots — list of saved snapshots for restore and cross-device migration | UNREVIEWED | Data recovery and account switch management |
 
@@ -227,7 +227,7 @@ Verification: walked full RootNavigator.js graph (WelcomeStack, FirstRunStack, A
 - **Total production screens:** 81 (80 from original register + 1 new: PlanUpdate)
 - **IMPLEMENTED screens:** 4 (Home, ProgressTab, HomeTab, Analytics; all with device validation pending per Campaign 22 and 23 notes)
 - **FOUNDER_ACCEPTED screens:** 1 (ActiveWorkout; Campaign 24 founder order: no deep reaudit)
-- **UNREVIEWED screens:** 76 (all remaining screens)
+- **UNREVIEWED screens:** 78 (all remaining screens; corrected Campaign 24 — recounted from the per-wave work-queue list rows below, which sum to 78, not the 76 this line previously stated; see WAVE-G-FINDINGS.md MISSED_COVERAGE)
 - **Reachable screens:** 81 (100% coverage; all navigation paths verified)
 
 ---
@@ -288,7 +288,7 @@ UNREVIEWED screens grouped by wave (from docs/whole-app-coherence-campaign-24-20
 - `WorkoutHistory` — `WorkoutHistoryScreen.js` — Both — Past workout list, search, filter, session replay and details
 - `ShareCard` — `ShareCardScreen.js` — Both — Social share card builder for sessions, volume, progress milestones
 
-### WAVE E — Onboarding/Auth/Consent (10 screens)
+### WAVE E — Onboarding/Auth/Consent (11 screens, corrected Campaign 24 — the list below has always had 11 rows)
 
 - `Welcome` — `WelcomeScreen.js` — Both — Tier selection entry screen (free or Pro path)
 - `Login` — `LoginScreen.js` — Both — Email/password and OAuth sign-in/sign-up (Apple, Google)
@@ -302,7 +302,7 @@ UNREVIEWED screens grouped by wave (from docs/whole-app-coherence-campaign-24-20
 - `ProUpgrade` — `ProUpgradeScreen.js` — Both — Paywall modal, Pro benefits teaser, trial offer (registered in all tab stacks)
 - `CascadeGate` — `CascadeGateScreen.js` — Both — 14-day Pro trial start, upgrade gate and trial messaging
 
-### WAVE F — Profile/Settings (18 screens)
+### WAVE F — Profile/Settings (19 screens, corrected Campaign 24 — the list below has always had 19 rows)
 
 - `Settings` — `SettingsScreen.js` — Both — Settings hub, navigation to all preference sub-screens
 - `SettingsWorkout` — `SettingsWorkoutScreen.js` — Both — Exercise preferences, muscle defaults, favourite exercises
@@ -330,11 +330,11 @@ UNREVIEWED screens grouped by wave (from docs/whole-app-coherence-campaign-24-20
 - `GoalLockConsent` — `GoalLockConsentScreen.js` — Both — Goal lock confirmation before locking for coaching cycle
 - `ProGoalSetup` — `ProGoalSetupScreen.js` — Pro — Goal definition and macro preference editor
 - `WellbeingCheck` — `WellbeingCheckScreen.js` — Both — Beat UK ED screening and calm mode management
-- `Import` — `ImportScreen.js` — Both — Import workouts from Strong, Fitbod, other exportable formats
+- `Import` — `ImportScreen.js` — Both — Import workouts from Hevy and Strong CSV exports (corrected Campaign 24 Wave G; no Fitbod support exists)
 - `Snapshots` — `SnapshotsScreen.js` — Both — Account data snapshots, restore, cross-device migration
 - `DebugLog` — `DebugLogScreen.js` — Both — Internal debugging log (dev-mode only, not user-facing)
-- `Credits` — `CreditsScreen.js` — Both — Attribution, music, fonts, data sources, third-party credits
+- `Credits` — `CreditsScreen.js` — Both — Attribution for the app's food data sources (corrected Campaign 24 Wave G; no music/font credits exist)
 
 ### Routes unclassifiable into waves (if any)
 
-None. All 76 UNREVIEWED screens are assigned to waves per the CAMPAIGN-24-OVERVIEW plan.
+None. All 78 UNREVIEWED screens are assigned to waves per the CAMPAIGN-24-OVERVIEW plan (count corrected Campaign 24 — see the UNREVIEWED summary note above).

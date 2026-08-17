@@ -15,7 +15,14 @@
  */
 
 export const CATEGORY = Object.freeze({
-  DAILY_CHECKIN_REMINDER: 'daily_checkin_reminder',
+  // DAILY_CHECKIN_REMINDER removed (Campaign 24 Wave F, LEAD RULING item 3,
+  // WAVE-F-FINDINGS.md Documentation-truth finding 2): zero-implementation
+  // proof -- grepped the entire src/ tree, the only two references were this
+  // declaration and its CATEGORY_CHANNELS entry below; no `schedule*`
+  // function in scheduler.js ever created it and no screen offered a
+  // control for it. The product's check-in model is weekly, not daily
+  // (WEEKLY_CHECKIN_REMINDER, below, is live and correct). Behaviour-neutral
+  // removal: nothing fired, so no user is affected.
   WEEKLY_CHECKIN_REMINDER: 'weekly_checkin_reminder',
   CASCADE_GATE: 'cascade_gate',
   SUBSCRIPTION_PAYMENT_FAILURE: 'subscription_payment_failure',
@@ -100,7 +107,8 @@ export const CHANNEL = Object.freeze({
 });
 
 export const CATEGORY_CHANNELS = Object.freeze({
-  [CATEGORY.DAILY_CHECKIN_REMINDER]: [CHANNEL.PUSH],
+  // DAILY_CHECKIN_REMINDER's channel entry removed alongside the enum
+  // value above -- see that comment for the zero-implementation proof.
   [CATEGORY.WEEKLY_CHECKIN_REMINDER]: [CHANNEL.PUSH],
   [CATEGORY.CASCADE_GATE]: [CHANNEL.PUSH, CHANNEL.IN_APP],
   [CATEGORY.SUBSCRIPTION_PAYMENT_FAILURE]: [CHANNEL.PUSH, CHANNEL.IN_APP],

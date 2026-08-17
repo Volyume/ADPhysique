@@ -1,16 +1,19 @@
 // Pro coaching reminders, morning weight + weekly check-in.
 //
-// These reminders feed the Precision Coaching loop and are non-optional
-// for Pro users (you can't run the coach without the morning weight
-// trend or weekly check-in answers). Previously they lived in
-// NotificationSettingsScreen alongside Free-tier training reminders,
-// with on/off toggles, but the toggles were misleading. The user has
-// to keep them on for the app to work as designed, so the toggle just
-// added a way to break the experience.
+// These reminders feed the Precision Coaching loop, but they are the
+// NUDGE, not the input: turning a reminder off does not stop the user
+// logging a weight or filling in a check-in, it only stops the
+// notification. C14 job 4 (reconciled Campaign 24, WAVE-F-FINDINGS.md
+// STALE_DOC finding, CoachingRemindersScreen.js:1-13) restored a genuine
+// on/off switch for both reminders after finding the earlier "always on,
+// no toggle" design confused the coaching input with the reminder prompt
+// -- Volyume must not send a recurring optional notification a user has
+// no way to stop.
 //
-// This screen exposes only the day + hour pickers. Both reminders are
-// always scheduled. Toggle removed. Lives in Settings > Coaching
-// reminders (Pro-only row).
+// This screen exposes day + hour pickers AND a real on/off switch per
+// reminder (`morningEnabled`/`checkinEnabled`, default on so nothing
+// changes for an existing user who never touches the switch). Lives in
+// Settings > Coaching reminders (Pro-only row).
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {

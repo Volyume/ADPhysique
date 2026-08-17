@@ -28,7 +28,7 @@ Push, in-app, and email (where applicable) at v1. Locked 2026-05-23.
 
 | Category | Channel | Default | User can disable |
 | --- | --- | --- | --- |
-| Daily check-in reminder | Push | On | Yes |
+| ~~Daily check-in reminder~~ | ~~Push~~ | ~~On~~ | ~~Yes~~ (struck: no `schedule*` function in `scheduler.js` ever creates this category and no screen offers a control for it; the product's check-in model is weekly, not daily. The only two live references left in the codebase are the enum declaration and its channel-map entry, both removed from `categories.js` in the same pass as this correction. (reconciled Campaign 24, shipped-code citation: `WAVE-F-FINDINGS.md` Documentation-truth finding 2)) |
 | Weekly check-in reminder | Push | On | Yes |
 | Cascade gate (day 19, 21) | Push + in-app | On | Push only |
 | Subscription payment failure | Push + in-app | On | Push only |
@@ -41,9 +41,11 @@ Push, in-app, and email (where applicable) at v1. Locked 2026-05-23.
 
 ### The rest of the live enum (recorded 2026-08-10, Campaign 4 docs-truth)
 
-The ten rows above are the categories the 2026-05-23 lock enumerated. The
-live enum in `src/lib/notifications/categories.js` now holds **23**. The
-thirteen below shipped after the lock and were never added here, so the
+The rows above are the categories the 2026-05-23 lock enumerated (nine
+live plus the struck phantom row; reconciled Campaign 24). The live enum in
+`src/lib/notifications/categories.js` now holds **22** (reconciled Campaign
+24 — was 23 before the phantom `daily_checkin_reminder` declaration was
+removed from the enum). The thirteen below shipped after the lock and were never added here, so the
 unsubscribe ledger was silent on more than half the product. Channels are
 read from `CATEGORY_CHANNELS` in that file. The control column records the
 control that actually exists today; it does not grant or remove any control,
@@ -51,7 +53,7 @@ and it does not resolve FR-5.
 
 | Category | Channel | Default | User control today |
 | --- | --- | --- | --- |
-| Morning weigh-in (`morning_weight`) | Push | On (Pro) | Time only. Settings → Coaching reminders sets the hour; the on/off switch was deliberately removed (it is a coaching input). |
+| Morning weigh-in (`morning_weight`) | Push | On (Pro) | Yes. Settings → Coaching reminders has a genuine on/off switch (restored under C14 — the earlier removal turned out to confuse the coaching input with the reminder). (reconciled Campaign 24, shipped-code citation: `CoachingRemindersScreen.js:473-481`, `:104-110`) |
 | Evening weigh-in backstop (`evening_weight`) | Push | On (Pro) | None of its own. It rides the morning weigh-in schedule and self-suppresses once the day's weight is logged and under an open ED flag. |
 | Training reminder (`training_reminder`) | Push | Off until enabled | Yes. Settings → Notifications and reminders → "Remind me to train", with a time picker. |
 | Meal-log reminder (`meal_log_reminder`) | Push | Off (opt-in) | Yes. Settings → Notifications and reminders → Meal reminders, one switch per reminder. |
@@ -310,14 +312,22 @@ push, full stop.
 
 ### Collision priority (highest first)
 
+(reconciled Campaign 24, shipped-code citation: `src/lib/notifications/budget.js:43-58`
+`EVENT_PRIORITY` — the list below was 8 items and missed two shipped
+additions, `activation_nudge` (S6) and `planned_meal_confirm` (F3), both
+already documented as shipped elsewhere in this file but never folded into
+this summary table)
+
 1. `cascade_gate`
 2. `weekly_coach_ready`
-3. `checkin_missed`
-4. `trial_day3`
-5. `winback`
-6. `year_of_lifts_unlock`
-7. `monthly_recap`
-8. `partner_cheer`
+3. `activation_nudge`
+4. `checkin_missed`
+5. `trial_day3`
+6. `winback`
+7. `year_of_lifts_unlock`
+8. `monthly_recap`
+9. `planned_meal_confirm`
+10. `partner_cheer`
 
 **Collision rule:** when a day (or week) is at cap, higher priority
 wins. An incoming push that outranks the lowest-priority push already
