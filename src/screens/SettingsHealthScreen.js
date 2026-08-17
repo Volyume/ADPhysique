@@ -144,6 +144,27 @@ export default function SettingsHealthScreen() {
     }
   }
 
+  // Campaign 29 (D107-1, founder 2026-08-17): the health-platform modules
+  // were removed on the founder's 2026-06-30 order (store-review cost), so
+  // isHealthAvailable() is always false in this build - but this screen
+  // still rendered two working-looking switches that silently did nothing
+  // when tapped. The screen now states the truth instead of a dead-end UI;
+  // the full toggle surface below is kept intact for a future re-enable.
+  if (!isHealthAvailable()) {
+    return (
+      <SettingsPage title="Health">
+        <View style={[styles.section, live.section]}>
+          <SettingRow
+            icon="fitness-outline"
+            label="Not available in this version"
+            sub={`${getHealthProviderLabel()} connections are switched off in this build of Volyume. Your morning weight and workouts stay safely in the app.`}
+            showArrow={false}
+          />
+        </View>
+      </SettingsPage>
+    );
+  }
+
   return (
     <SettingsPage title="Health">
       <View style={[styles.section, live.section]}>

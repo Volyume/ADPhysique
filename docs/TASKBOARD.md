@@ -2296,7 +2296,7 @@ chevron affordance (D106-3). C27 Phase 2b PAUSED and banked per D106-4
 the campaign branch fails Chip.a11y BY DESIGN until then, do not merge
 it. Gates: lint clean; full suite green (known widget flake only).
 
-## CAMPAIGN 29 (2026-08-17) — competitive complaint-research triage. IN FLIGHT (docs-only).
+## CAMPAIGN 29 (2026-08-17) — competitive complaint-research triage. COMPLETE (D107) — two build specs queued for next session.
 
 Founder supplied a deep-research report (competitor complaint corpus,
 17 fitness apps) and asked what, if anything, Volyume should implement

@@ -2938,3 +2938,17 @@ ever so slightly smaller". Effects:
   (usage limit) - the half-built cap table is banked unmerged on
   claude/campaign27-responsive-research (commit 586206d1, will fail
   Chip.a11y by design until resume); 2b/2c/2d/2e resume next week.
+
+## D107 — complaint-research triage rulings (founder, 2026-08-17)
+
+- **D107-1:** Apple Health / Health Connect stay DISABLED - founder:
+  "very difficult to get through testing to go on the markets". A
+  deliberate hold, not a gap; the report's P0 on it is declined. The
+  dead-toggle SettingsHealthScreen UI is fixed to state this honestly.
+- **D107-2:** injury/constraint controls and load semantics are the two
+  workstreams adopted from the report ("would be good"), specced in
+  docs/complaint-research-triage-2026-08-17/ (INJURY-CONSTRAINTS-SPEC,
+  LOAD-SEMANTICS-SPEC) for the next session's build alongside the
+  Campaign 27 resume. Everything else: dispositions in TRIAGE.md
+  (mostly already covered; several holds; renewal-date display surfaced
+  as a billing-gated founder option, not built).
