@@ -2055,6 +2055,25 @@ D37 triage; (2) the ED detector's positional weeklyHistory contract
 known widget-storage full-run flake (pre-Campaign-20, still intermittent,
 needs its own session).
 
+## CAMPAIGN 23 (2026-08-17) — UX/presentation, screen 2: Progress. PHASE 1 (AUDIT) IN FLIGHT.
+
+Founder order 2026-08-17. Fable lead; sonnet for authority tracing;
+haiku for mechanical inventory; no Opus; NO IMPLEMENTATION this phase.
+Branch `claude/campaign23-progress-audit` off main `4aa39c6f` (docs
+only). Deliverables: the 34-section Progress audit/spec in
+docs/progress-audit-campaign-23-2026-08-17/ and the permanent master
+screen register docs/ux-screen-programme-2026-08-17/
+SCREEN-UX-REGISTER.md. Screenshot evidence: no image files supplied in
+the environment — the brief's own transcription is the screenshot
+record, and nothing beyond it may be claimed. Key laws: Progress is a
+summary + evidence surface, never a second progression/coaching engine
+(C20 resolver and C21 graph are the authorities); Progress Photos are
+a core differentiator whose photo→coach chain must be PROVEN, not
+assumed. RECOVERY PATH: docs-only branch; if the session dies, land or
+relaunch from the last pushed commit on this branch; no production
+code may have been touched (verify with git diff --stat against
+4aa39c6f -- src/).
+
 ## CAMPAIGN 22 (2026-08-16) — UX/presentation, screen 1: Home/Today. PHASE 2 LANDED ON MAIN 2026-08-17.
 
 **COMPLETE.** All three stages lead-reviewed and landed (0deb5ff4 /
