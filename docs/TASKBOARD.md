@@ -2055,6 +2055,22 @@ D37 triage; (2) the ED detector's positional weeklyHistory contract
 known widget-storage full-run flake (pre-Campaign-20, still intermittent,
 needs its own session).
 
+## CAMPAIGN 24 (2026-08-17) — WHOLE-APP UX/LOGIC/PRESENTATION COHERENCE SWEEP. IN FLIGHT.
+
+Founder order 2026-08-17. Branch `claude/campaign24-whole-app` off main
+`e5319811`. One programme: register reconciliation → waves A-G (each
+audits AND implements, committed per wave after lead review) → global
+cohesion pass → hostile review → full gates → ONE merge to main.
+Constraints: ActiveWorkout FOUNDER_ACCEPTED (no deep reaudit);
+Home/Progress reference baselines (no IA reopen); C20/C21
+authoritative; near-zero founder interruption (undecidable forks go to
+FOUNDER-RULINGS.md, work continues). Campaign folder:
+docs/whole-app-coherence-campaign-24-2026-08-17/. RECOVERY PATH: the
+board + CAMPAIGN-24-OVERVIEW.md + FINDINGS-LEDGER.md carry live state;
+each wave commits when green so a dead session resumes from the last
+wave commit on the branch; uncommitted wave work is lead-reviewed
+against the wave's ledger entries, landed or relaunched.
+
 ## CAMPAIGN 23 (2026-08-17) — UX/presentation, screen 2: Progress. PHASE 1 (AUDIT) COMPLETE — TWO FOUNDER RULINGS OPEN.
 
 **AUDIT LANDED** same day. NO production code touched (src/ diff vs
