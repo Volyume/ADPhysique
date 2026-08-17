@@ -106,15 +106,10 @@ import { useShallow } from 'zustand/react/shallow';
 
 // Soft targets used only to size the weekly progress bars, not enforced
 
-function getGreeting(firstName) {
-  const h = new Date().getHours();
-  const name = firstName ? `, ${firstName}` : '';
-  if (h < 5)  return `Up early${name}.`;
-  if (h < 12) return `Morning${name}.`;
-  if (h < 17) return `Afternoon${name}.`;
-  if (h < 21) return `Evening${name}.`;
-  return `Late night${name}.`;
-}
+// The time-of-day greeting subtitle ("Afternoon, Alex.") was removed on the
+// founder device order of 2026-08-17: it pushed the content down and added
+// nothing the header's title does not already say. Do not re-add a greeting
+// line without a founder order.
 
 // COMP-008: the three pre-workout readiness rows shown beneath the intent
 // options. Each is an optional low/middle/high chip. Stored values match the
@@ -1948,7 +1943,7 @@ export default function HomeScreen({ navigation, route }) {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={t.colors.primary} />}
       >
         {/* ── Branded header ── */}
-        <ScreenHeader title="Today" subtitle={getGreeting(userProfile?.firstName)} />
+        <ScreenHeader title="Today" />
 
         {/* ── Campaign 22 Phase 2 Stage 1: the unified Today line (P1 slot,
             HOME-TODAY-UX-SPEC.md §17 region R2). One quiet row, one occupant,
