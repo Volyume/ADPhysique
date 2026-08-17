@@ -65,8 +65,16 @@ describe('no-plan / start-plan copy', () => {
     expect(block).not.toContain('Find my plan');
   });
 
-  test('PlansScreen decision hub label stays on the same verb for no-plan users', () => {
-    expect(PLANS).toContain("{isProWithPlan ? 'Switch your plan' : 'Start with a plan'}");
+  test('PlansScreen tools section carries one unifying label, and no older fallback phrasing lingers', () => {
+    // RE-PINNED (Campaign 25, PLANS-SCREEN-SPEC.md §2 item 3): the decision
+    // hub's own dynamic "Switch your plan" / "Start with a plan" SectionLabel
+    // is retired -- the training-blocks row and the action cards now share
+    // ONE static "Plan tools" label ("only position and the unifying label
+    // change"). The underlying verb guarantee this test protects (no older
+    // fallback phrasing) is unchanged; where it lives moved to the no-plan
+    // EmptyState blocks, already pinned two tests above and one below.
+    expect(PLANS).toContain('<SectionLabel>Plan tools</SectionLabel>');
+    expect(PLANS).not.toMatch(/<SectionLabel>\s*\{isProWithPlan \? 'Switch your plan' : 'Start with a plan'\}/);
     expect(PLANS).not.toContain('Start or build a plan');
   });
 

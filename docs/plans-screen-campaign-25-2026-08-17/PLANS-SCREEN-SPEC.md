@@ -11,6 +11,12 @@ The hero is right; everything after it is inverted.
 
 - **Hierarchy inversion.** Current render order: active-plan hero →
   block-advice card → Folders (full cards) → "My plans" (full cards,
+  [CORRECTION, landed 2026-08-17: the implementation agent verified
+  against source (and `git show`) that the block-advice card actually
+  rendered BEFORE the hero pre-campaign; this diagnosis line had them
+  reversed. The target order in §2 — hero first, block card second —
+  is explicit and authoritative, and is what was built: the hero was
+  moved above the block card. Lead-ruled at landing.]
   unbounded stack, :1538-1544) → Archived (collapsible, but
   DUPLICATED full-card JSX when open, :1547+) → Training blocks row
   (:1669) → the change-plan action cards (:1698, the very bottom).

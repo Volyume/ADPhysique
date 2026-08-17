@@ -8,24 +8,27 @@
  * nested secondary action was never a separate VoiceOver focus stop, and the
  * nested press handling was a double-activation risk.
  *
- * Fix: the primary action (open plan / toggle folder) and the secondary
- * action (Plan options / Archived plan options / folder options) are now
- * SIBLINGS under a shared plain, non-interactive View, never one nested
- * inside the other:
- *   - Live plan card: renderPlanCard's <View> wraps a <PressableCard>
- *     (primary) and a sibling <TouchableOpacity> (options), the button
- *     absolutely positioned over an inert spacer left in its old spot so the
- *     pixel layout is unchanged.
- *   - Archived plan card: the duplicated JSX block gets the identical fix.
- *   - Folder header: folderHeader is now a plain View wrapping a sibling
- *     <TouchableOpacity style={styles.folderHeaderPress}> (primary, the
- *     toggle) and the options <TouchableOpacity> (secondary).
- *
- * This suite pins that structural shape via source position (the primary
- * pressable's own JSX span closes before the secondary button's JSX span
- * opens, both underneath a shared non-interactive parent), and that every
- * handler wired to each action is unchanged and independent of the other, so
- * one action's activation can never also fire the other's.
+ * RE-PINNED under Campaign 25 (PLANS-SCREEN-SPEC.md §2/§3): renderPlanCard
+ * and the archived section's duplicated card JSX are RETIRED. Every place a
+ * non-hero plan renders (folder bodies, the unfiled list, the archived list)
+ * now goes through the single CompactPlanRow component. The AX-11 shape is
+ * unchanged in principle -- the primary action (open plan) and the secondary
+ * action (options) stay SIBLINGS under one plain, non-interactive View, never
+ * one nested inside the other -- but the row no longer needs the old
+ * absolutely-positioned overlay button (a compact row has no card padding to
+ * overlay against): the options button, and the previous-only "Set active"
+ * button, are laid out as true flex siblings of the row's PressableCard.
+ * This suite re-pins:
+ *   - CompactPlanRow's own JSX shape (options button, and Set active when
+ *     present, are siblings of the PressableCard, never nested inside it).
+ *   - every call site wires CompactPlanRow's onPress/onLongPress/onOptions/
+ *     onSetActive to the same handlers the retired cards used (View plan,
+ *     handlePlanOptions/handleArchivedPlanOptions, handleSetActive), so no
+ *     capability was dropped in the retirement.
+ *   - archived rows pass onSetActive={null} and the `archived` variant --
+ *     activation stays inside the archived options sheet, never inline.
+ *   - the folder header's own AX-11 sibling shape (folderHeaderPress /
+ *     options button), untouched by this campaign, stays pinned as before.
  *
  * PlansScreen has no existing real-render test harness (only source guards
  * -- see PlansScreen.loadErrorState.guard.test.js), so this follows the same
@@ -61,53 +64,93 @@ function spanOf(tagName, openIndex) {
   }
 }
 
-describe('PlansScreen AX-11: plan card body and "Plan options" are siblings', () => {
-  const openIdx = source.indexOf('<PressableCard\n            style={styles.planCardBody}');
-  const pressableSpan = spanOf('PressableCard', openIdx);
+describe('CompactPlanRow AX-11: the row pressable and its options button are siblings', () => {
+  // CompactPlanRow's own function body, isolated so every assertion below
+  // reads the row component and nothing else in the file.
+  const fnStart = source.indexOf('function CompactPlanRow(');
+  const fnEnd = source.indexOf('\nexport default function PlansScreen');
+  const rowFn = source.slice(fnStart, fnEnd);
 
-  test('the live plan card PressableCard is found and does not contain the options button', () => {
+  test('CompactPlanRow is found and is a sibling function component (not nested in PlansScreen)', () => {
+    expect(fnStart).toBeGreaterThan(-1);
+    expect(fnEnd).toBeGreaterThan(fnStart);
+  });
+
+  const openIdx = rowFn.indexOf('<PressableCard\n        style={styles.compactRowPress}');
+  const pressableSpan = spanOf('PressableCard', fnStart + openIdx);
+
+  test('the row PressableCard is found and does not contain the options button', () => {
     expect(openIdx).toBeGreaterThan(-1);
-    expect(pressableSpan).not.toMatch(/accessibilityLabel="Plan options"/);
-    // The spacer that preserves the row's height/spacing is a plain View,
-    // never a touchable.
-    expect(pressableSpan).toMatch(/<View style=\{styles\.moreBtn\} \/>/);
+    expect(pressableSpan).not.toMatch(/accessibilityRole="button"\s*\n\s*accessibilityLabel=\{archived/);
+    expect(pressableSpan).not.toMatch(/onPress=\{onOptions\}/);
   });
 
-  test('the options button is a sibling immediately after PressableCard closes, inside a plain View', () => {
-    const afterPressable = source.slice(openIdx + pressableSpan.length, openIdx + pressableSpan.length + 400);
-    expect(afterPressable).toMatch(/^\s*<TouchableOpacity\s*\n\s*style=\{\[styles\.moreBtn, styles\.moreBtnOverlay\]\}\s*\n\s*onPress=\{\(\) => handlePlanOptions\(plan\)\}[\s\S]*accessibilityLabel="Plan options"/);
+  test('the options button is a sibling that follows the PressableCard (and the conditional Set-active button), never nested inside it', () => {
+    const afterPressableIdx = fnStart + openIdx + pressableSpan.length;
+    const afterPressable = source.slice(afterPressableIdx, afterPressableIdx + 700);
+    // The optional "Set active" button, when it renders, sits between the
+    // row pressable and the options button -- also a sibling, also outside
+    // the PressableCard's own span (proven above).
+    expect(afterPressable).toMatch(/\{onSetActive \? \(/);
+    expect(afterPressable).toMatch(/title="Set active"/);
+    expect(afterPressable).toMatch(/onPress=\{onSetActive\}/);
+    expect(afterPressable).toMatch(/<TouchableOpacity\s*\n\s*style=\{styles\.moreBtn\}\s*\n\s*onPress=\{onOptions\}[\s\S]*accessibilityLabel=\{archived \? 'Archived plan options' : 'Plan options'\}/);
   });
 
-  test('both actions keep their original handlers, unchanged and independent of each other', () => {
-    expect(pressableSpan).toMatch(/onPress=\{\(\) => navigation\.navigate\('PlanDetail', \{ planId: plan\.id, isLibrary: false \}\)\}/);
-    expect(pressableSpan).toMatch(/onLongPress=\{\(\) => handlePlanOptions\(plan\)\}/);
-    expect(pressableSpan).toMatch(/accessibilityLabel=\{planHeadingName\(plan\.name\)\}/);
+  test('the row press and long-press stay generic props, wired per call site, independent of the options action', () => {
+    expect(pressableSpan).toMatch(/onPress=\{onPress\}/);
+    expect(pressableSpan).toMatch(/onLongPress=\{onLongPress\}/);
+    expect(pressableSpan).toMatch(/accessibilityLabel=\{name\}/);
+  });
+
+  test('the whole row sits under one plain, non-interactive View (no onPress/onLongPress of its own)', () => {
+    const wrapOpenIdx = rowFn.indexOf('<View style={[styles.compactRow, live.compactRow, isLast && styles.compactRowLast]}>');
+    expect(wrapOpenIdx).toBeGreaterThan(-1);
+    expect(wrapOpenIdx).toBeLessThan(openIdx);
+    const wrapOwnOpenTag = rowFn.slice(wrapOpenIdx, rowFn.indexOf('>', wrapOpenIdx) + 1);
+    expect(wrapOwnOpenTag).not.toMatch(/onPress|onLongPress|accessibilityRole|accessibilityLabel/);
   });
 });
 
-describe('PlansScreen AX-11: archived plan card body and "Archived plan options" are siblings', () => {
-  const openIdx = source.indexOf('<PressableCard\n                    style={styles.planCardBody}');
-  const pressableSpan = spanOf('PressableCard', openIdx);
-
-  test('the archived plan card PressableCard is found and does not contain the options button', () => {
-    expect(openIdx).toBeGreaterThan(-1);
-    expect(pressableSpan).not.toMatch(/accessibilityLabel="Archived plan options"/);
-    expect(pressableSpan).toMatch(/<View style=\{styles\.moreBtn\} \/>/);
+describe('CompactPlanRow call sites: every retired capability is still wired', () => {
+  test('folder-body rows: View plan, options and Set active all reach the same handlers renderPlanCard used', () => {
+    const folderRowIdx = source.indexOf('{filed.map((plan, i) => (');
+    expect(folderRowIdx).toBeGreaterThan(-1);
+    const block = source.slice(folderRowIdx, folderRowIdx + 700);
+    expect(block).toMatch(/onPress=\{\(\) => navigation\.navigate\('PlanDetail', \{ planId: plan\.id, isLibrary: false \}\)\}/);
+    expect(block).toMatch(/onLongPress=\{\(\) => handlePlanOptions\(plan\)\}/);
+    expect(block).toMatch(/onOptions=\{\(\) => handlePlanOptions\(plan\)\}/);
+    expect(block).toMatch(/onSetActive=\{\(\) => handleSetActive\(plan\)\}/);
+    expect(block).not.toMatch(/archived\n/);
   });
 
-  test('the options button is a sibling immediately after PressableCard closes', () => {
-    const afterPressable = source.slice(openIdx + pressableSpan.length, openIdx + pressableSpan.length + 400);
-    expect(afterPressable).toMatch(/^\s*<TouchableOpacity\s*\n\s*style=\{\[styles\.moreBtn, styles\.moreBtnOverlay\]\}\s*\n\s*onPress=\{\(\) => handleArchivedPlanOptions\(plan\)\}[\s\S]*accessibilityLabel="Archived plan options"/);
+  test('unfiled rows: the same four handlers, inside the compactListBody section wrapper', () => {
+    const unfiledRowIdx = source.indexOf('{unfiledPlans.map((plan, i) => (');
+    expect(unfiledRowIdx).toBeGreaterThan(-1);
+    const block = source.slice(unfiledRowIdx, unfiledRowIdx + 700);
+    expect(block).toMatch(/onPress=\{\(\) => navigation\.navigate\('PlanDetail', \{ planId: plan\.id, isLibrary: false \}\)\}/);
+    expect(block).toMatch(/onLongPress=\{\(\) => handlePlanOptions\(plan\)\}/);
+    expect(block).toMatch(/onOptions=\{\(\) => handlePlanOptions\(plan\)\}/);
+    expect(block).toMatch(/onSetActive=\{\(\) => handleSetActive\(plan\)\}/);
   });
 
-  test('both actions keep their original handlers, unchanged and independent of each other', () => {
-    expect(pressableSpan).toMatch(/onPress=\{\(\) => navigation\.navigate\('PlanDetail', \{ planId: plan\.id, isLibrary: false \}\)\}/);
-    expect(pressableSpan).toMatch(/onLongPress=\{\(\) => handleArchivedPlanOptions\(plan\)\}/);
+  test('archived rows: View plan and options reach handleArchivedPlanOptions; Set active is explicitly null, not inline', () => {
+    const archivedRowIdx = source.indexOf('{archivedPlans.map((plan, i) => (');
+    expect(archivedRowIdx).toBeGreaterThan(-1);
+    const block = source.slice(archivedRowIdx, archivedRowIdx + 700);
+    expect(block).toMatch(/onPress=\{\(\) => navigation\.navigate\('PlanDetail', \{ planId: plan\.id, isLibrary: false \}\)\}/);
+    expect(block).toMatch(/onLongPress=\{\(\) => handleArchivedPlanOptions\(plan\)\}/);
+    expect(block).toMatch(/onOptions=\{\(\) => handleArchivedPlanOptions\(plan\)\}/);
+    expect(block).toMatch(/onSetActive=\{null\}/);
+    expect(block).toMatch(/\barchived\b/);
+    // No inline reactivation ever reaches an archived row -- unarchivePlan
+    // stays reachable only through handleArchivedPlanOptions's own sheet.
+    expect(block).not.toMatch(/unarchivePlan/);
   });
 });
 
-describe('PlansScreen AX-11: folder header toggle and folder options are siblings', () => {
-  const openIdx = source.indexOf('<TouchableOpacity\n                      style={styles.folderHeaderPress}');
+describe('PlansScreen AX-11: folder header toggle and folder options are siblings (unchanged by Campaign 25)', () => {
+  const openIdx = source.indexOf('<TouchableOpacity\n                          style={styles.folderHeaderPress}');
   const toggleSpan = spanOf('TouchableOpacity', openIdx);
 
   test('folderHeader itself is a plain, non-interactive View (no onPress of its own)', () => {

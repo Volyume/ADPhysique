@@ -19,7 +19,6 @@ import EmptyState from '../components/EmptyState';
 import TextField from '../components/TextField';
 import SectionLabel from '../components/SectionLabel';
 import PressableCard from '../components/PressableCard';
-import AnimatedEntrance from '../components/AnimatedEntrance';
 import PeekMenu from '../components/PeekMenu';
 import BottomSheet from '../components/BottomSheet';
 import {
@@ -103,6 +102,74 @@ const BLOCK_ICON = {
   post_recovery: 'checkmark-circle-outline',
 };
 
+// Campaign 25 (PLANS-SCREEN-SPEC.md §2/§3): the single-line-height plan row
+// that replaces the retired renderPlanCard (and its duplicated archived
+// copy) everywhere a non-hero plan is listed -- folder bodies, the unfiled
+// list and the archived list. Sibling function-component scope, own
+// useTheme(), matching YouScreen's NavRow precedent (CP-10 batch G).
+//
+// AX-11 LAW (unnest the options button, launch accessibility audit): the
+// options button is a SIBLING of the row's pressable, never nested inside
+// it -- the same law renderPlanCard enforced with an absolutely-positioned
+// overlay button. A compact row has no card padding to overlay against, so
+// the row itself lays every action out as true flex siblings under one
+// plain, non-interactive View: the PressableCard (row press = View plan,
+// long-press = options), the previous-only "Set active" button, then the
+// options button. None nests inside another.
+//
+// Props: plan, meta (workout-count string or null), onPress, onLongPress,
+// onOptions, onSetActive (null for archived rows -- activation stays
+// inside the archived options sheet, unchanged), archived (muted name
+// styling variant, matching the old archivedPlanCardName treatment),
+// isLast (drops the row's own hairline divider on the final row of its
+// section body).
+function CompactPlanRow({
+  plan, meta, onPress, onLongPress, onOptions, onSetActive, archived = false, isLast = false,
+}) {
+  const t = useTheme();
+  const live = useMemo(() => buildLiveStyles(t), [t]);
+  const name = planHeadingName(plan.name);
+  return (
+    <View style={[styles.compactRow, live.compactRow, isLast && styles.compactRowLast]}>
+      <PressableCard
+        style={styles.compactRowPress}
+        onPress={onPress}
+        onLongPress={onLongPress}
+        accessibilityLabel={name}
+      >
+        <Text
+          style={[styles.compactRowName, live.compactRowName, archived && [styles.compactRowNameArchived, live.compactRowNameArchived]]}
+          numberOfLines={1}
+        >
+          {name}
+        </Text>
+        {meta ? (
+          <Text style={[styles.compactRowMeta, live.compactRowMeta]} numberOfLines={1}>{meta}</Text>
+        ) : null}
+      </PressableCard>
+      {onSetActive ? (
+        <Button
+          variant="tertiary"
+          size="sm"
+          fullWidth={false}
+          title="Set active"
+          onPress={onSetActive}
+          accessibilityLabel={`Set ${name} as active plan`}
+        />
+      ) : null}
+      <TouchableOpacity
+        style={styles.moreBtn}
+        onPress={onOptions}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        accessibilityRole="button"
+        accessibilityLabel={archived ? 'Archived plan options' : 'Plan options'}
+      >
+        <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function PlansScreen({ navigation }) {
   const toast = useToast();
   // Selector-scoped subscription: only re-render when these specific
@@ -133,6 +200,10 @@ export default function PlansScreen({ navigation }) {
   const [savingFolder, setSavingFolder] = useState(false);
   const [archivedPlans, setArchivedPlans] = useState([]);
   const [archivedExpanded, setArchivedExpanded] = useState(false);
+  // Campaign 25 (PLANS-SCREEN-SPEC.md §3): the "Previous plans" collapsed
+  // section mirrors archivedExpanded's own precedent -- session-scoped,
+  // collapsed by default on every mount.
+  const [previousExpanded, setPreviousExpanded] = useState(false);
   const [templates, setTemplates] = useState([]);
   const [planWorkoutCounts, setPlanWorkoutCounts] = useState({});
   const [exerciseCounts, setExerciseCounts] = useState({});
@@ -956,78 +1027,6 @@ export default function PlansScreen({ navigation }) {
     }
   }
 
-  // One plan card, shared by the folder sections and the unfiled list so the
-  // card, its options menu and footer stay identical wherever a plan lives.
-  function renderPlanCard(plan, i) {
-    return (
-      <AnimatedEntrance key={plan.id} index={i}>
-      <Card padding="none" style={styles.planCard}>
-        {/* AX-11 (launch accessibility audit): "Plan options" used to be a
-            TouchableOpacity nested inside this PressableCard, so an
-            accessible iOS parent grouped it and it was never a separate
-            VoiceOver focus stop (also a double-activation risk). It is now
-            a SIBLING of the PressableCard under this plain, unstyled View:
-            an inert 28x28 spacer holds its old spot inside planCardMetaRow
-            so that row's height/spacing is unchanged, and the real button
-            renders absolutely at top/right = spacing.lg, the same inset
-            planCardBody's own padding already gives it as a normal-flow
-            child -- unambiguous, since this wrapper carries no padding of
-            its own. Visual position, size and hit target are unchanged;
-            only the two actions' place in the tree moved from parent/child
-            to siblings (both independently focusable and activatable, see
-            PlansScreen.optionsButtonSiblings.guard.test.js). */}
-        <View>
-          <PressableCard
-            style={styles.planCardBody}
-            onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
-            onLongPress={() => handlePlanOptions(plan)}
-            accessibilityLabel={planHeadingName(plan.name)}
-          >
-            <View style={styles.planCardMetaRow}>
-              {planWorkoutCounts[plan.id] ? (
-                <Text style={[styles.planCardMeta, live.planCardMeta]}>
-                  {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
-                </Text>
-              ) : <View />}
-              <View style={styles.moreBtn} />
-            </View>
-            <Text style={[styles.planCardName, live.planCardName]} numberOfLines={2}>{planHeadingName(plan.name)}</Text>
-          </PressableCard>
-          <TouchableOpacity
-            style={[styles.moreBtn, styles.moreBtnOverlay]}
-            onPress={() => handlePlanOptions(plan)}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            accessibilityRole="button"
-            accessibilityLabel="Plan options"
-          >
-            <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
-          </TouchableOpacity>
-        </View>
-        <View style={[styles.planCardFooter, live.planCardFooter]}>
-          {/* R9 (D70): the footer text links -> shared Button tertiary sm,
-              matching the quiet in-card action idiom (FOOD-DESIGN-STANDARD §4). */}
-          <Button
-            variant="tertiary"
-            size="sm"
-            fullWidth={false}
-            title="View plan"
-            onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
-            accessibilityLabel={`View ${planHeadingName(plan.name)}`}
-          />
-          <Button
-            variant="tertiary"
-            size="sm"
-            fullWidth={false}
-            title="Set as active"
-            onPress={() => handleSetActive(plan)}
-            accessibilityLabel={`Set ${planHeadingName(plan.name)} as active plan`}
-          />
-        </View>
-      </Card>
-      </AnimatedEntrance>
-    );
-  }
-
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
       <ScrollView
@@ -1051,6 +1050,131 @@ export default function PlansScreen({ navigation }) {
 
         {loaded ? (
           <>
+        {/* Active Plan. Campaign 25 (PLANS-SCREEN-SPEC.md §2 item 1): the
+            hero renders FIRST -- content and the three branches below are
+            byte-identical to before, only their position (now ahead of the
+            block-advice card) moved. */}
+        {loadError && !activePlan ? (
+          // EP-09/P-06: only shown when there is genuinely nothing to fall
+          // back on (a refresh failure with an already-loaded active plan
+          // keeps showing that plan card instead, per loadError being gated
+          // on !activePlan here). A load failure must never be mistaken for
+          // a confirmed "no active plan" account state.
+          <EmptyState
+            icon="cloud-offline-outline"
+            title="Couldn't load your plans"
+            text="Check your connection and try again. Nothing has been lost."
+            actionLabel="Retry"
+            onAction={loadData}
+            actionAccessibilityLabel="Retry loading your plans"
+          />
+        ) : activePlan ? (
+          <View style={styles.section}>
+            <Card style={[styles.activePlanCard, live.activePlanCard]}>
+              <View style={styles.activePlanHeader}>
+                <View style={[styles.activeBadge, live.activeBadge]}>
+                  <Text style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
+                </View>
+                <TouchableOpacity onPress={() => handlePlanOptions(activePlan)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Plan options">
+                  <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              {/* Must-fix 3 (2026-07-11): this is the card heading, so it drops the
+                  "N×/Week" frequency baked into activePlan.name (see planDisplay.js);
+                  the raw name is unchanged everywhere else it is read. */}
+              <Text style={[styles.activePlanName, live.activePlanName]}>{planHeadingName(activePlan.name)}</Text>
+              {planWorkoutCounts[activePlan.id] ? (
+                <Text style={[styles.activePlanMeta, live.activePlanMeta]}>
+                  {planWorkoutCounts[activePlan.id]} workout{planWorkoutCounts[activePlan.id] !== 1 ? 's' : ''}
+                </Text>
+              ) : null}
+              {blockAdvice?.action === 'continue' && blockAdvice.blockStatus && (
+                <Text style={[styles.activePlanWeek, live.activePlanWeek]}>
+                  Week {blockAdvice.blockStatus.currentWeek} of {blockAdvice.blockStatus.totalWeeks}
+                </Text>
+              )}
+              {/* FB-04 (D96): the only forward warning in the product --
+                  "One more week before your recovery week. Push hard this
+                  week. It's your peak." -- was composed by the advisor's
+                  'continue' branch and then never rendered, because the
+                  block card is hidden on 'continue'. It is surfaced here in
+                  the week it is true, so a first-time user meets the
+                  recovery week having been told it is coming. The other
+                  'continue' bodies ("Training is going well. Stay on plan.")
+                  stay unrendered: they add nothing this card does not say. */}
+              {blockAdvice?.action === 'continue' && showPeakWeekNote && (
+                <Text style={[styles.proCoachNote, live.proCoachNote]}>{blockAdvice.body}</Text>
+              )}
+              {tier === 'pro' && (
+                <Text style={[styles.proCoachNote, live.proCoachNote]}>
+                  Your coach adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
+                </Text>
+              )}
+              <View style={styles.activePlanActions}>
+                {/* R9 (D70): startNextBtn -> shared Button primary (fires its
+                    own selection() tick on press). */}
+                <Button
+                  variant="primary"
+                  icon="play"
+                  title="Start next workout"
+                  onPress={() => handleStartNextWorkout(activePlan)}
+                  accessibilityLabel="Start next workout"
+                  style={styles.startNextBtnWrap}
+                />
+                <Button
+                  variant="secondary"
+                  title="View plan"
+                  onPress={() => navigation.navigate('PlanDetail', { planId: activePlan.id, isLibrary: false })}
+                  accessibilityLabel="View plan"
+                />
+              </View>
+            </Card>
+          </View>
+        ) : tier !== 'pro' ? (
+          /* B2: the free no-plan state is a proper card, sitting where the
+             active plan card would be, so a new user never scrolls past
+             empty sections looking for a way in. Quiz first, library second. */
+          <EmptyState
+            icon="compass-outline"
+            title="No active plan yet"
+            text="Answer a few quick questions and we'll suggest a starter plan, or browse the library if you'd rather choose yourself."
+            actionLabel="Start with a plan"
+            onAction={() => navigation.navigate('FreeStarter')}
+            actionAccessibilityLabel="Answer three quick questions to start with a plan"
+            secondaryLabel="Browse plans"
+            onSecondary={() => navigation.navigate('PlanLibrary')}
+            secondaryAccessibilityLabel="Browse the plan library"
+          />
+        ) : (
+          /* C5-P10-09 (D96): the Pro no-plan state used to be an inert Card
+             naming an action it did not offer ("Start with a plan" is the
+             FREE path's route to the starter quiz; there was no Pro
+             affordance with that name, no onPress and no button). It gets
+             the same real two-CTA EmptyState shape the free branch has,
+             with the coach-built plan Home's Pro branch already offers, so
+             the verb and the action finally agree. */
+          <EmptyState
+            icon="barbell-outline"
+            title="No active plan yet"
+            text={`Start with a plan and we'll build one from your profile, or browse the library and pick one yourself. ${BLOCK_START_SENTENCE}`}
+            actionLabel="Start with a plan"
+            onAction={async () => {
+              const result = await generateAndSavePlan(user.id, userProfile);
+              if (result.ok) {
+                await loadData();
+                toast.show('Your plan is active', { variant: 'success' });
+              } else {
+                logError('PlansScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
+                toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+              }
+            }}
+            actionAccessibilityLabel="Start with a plan built from your profile"
+            secondaryLabel="Browse plans"
+            onSecondary={() => navigation.navigate('PlanLibrary')}
+            secondaryAccessibilityLabel="Browse the plan library"
+          />
+        )}
+
         {/* Block advisor card */}
         {showBlockCard && (
           <Card style={[
@@ -1349,341 +1473,27 @@ export default function PlansScreen({ navigation }) {
           </Card>
         )}
 
-        {/* Active Plan */}
-        {loadError && !activePlan ? (
-          // EP-09/P-06: only shown when there is genuinely nothing to fall
-          // back on (a refresh failure with an already-loaded active plan
-          // keeps showing that plan card instead, per loadError being gated
-          // on !activePlan here). A load failure must never be mistaken for
-          // a confirmed "no active plan" account state.
-          <EmptyState
-            icon="cloud-offline-outline"
-            title="Couldn't load your plans"
-            text="Check your connection and try again. Nothing has been lost."
-            actionLabel="Retry"
-            onAction={loadData}
-            actionAccessibilityLabel="Retry loading your plans"
-          />
-        ) : activePlan ? (
-          <View style={styles.section}>
-            <Card style={[styles.activePlanCard, live.activePlanCard]}>
-              <View style={styles.activePlanHeader}>
-                <View style={[styles.activeBadge, live.activeBadge]}>
-                  <Text style={[styles.activeBadgeText, live.activeBadgeText]}>Active</Text>
-                </View>
-                <TouchableOpacity onPress={() => handlePlanOptions(activePlan)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Plan options">
-                  <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
-                </TouchableOpacity>
-              </View>
-              {/* Must-fix 3 (2026-07-11): this is the card heading, so it drops the
-                  "N×/Week" frequency baked into activePlan.name (see planDisplay.js);
-                  the raw name is unchanged everywhere else it is read. */}
-              <Text style={[styles.activePlanName, live.activePlanName]}>{planHeadingName(activePlan.name)}</Text>
-              {planWorkoutCounts[activePlan.id] ? (
-                <Text style={[styles.activePlanMeta, live.activePlanMeta]}>
-                  {planWorkoutCounts[activePlan.id]} workout{planWorkoutCounts[activePlan.id] !== 1 ? 's' : ''}
-                </Text>
-              ) : null}
-              {blockAdvice?.action === 'continue' && blockAdvice.blockStatus && (
-                <Text style={[styles.activePlanWeek, live.activePlanWeek]}>
-                  Week {blockAdvice.blockStatus.currentWeek} of {blockAdvice.blockStatus.totalWeeks}
-                </Text>
-              )}
-              {/* FB-04 (D96): the only forward warning in the product --
-                  "One more week before your recovery week. Push hard this
-                  week. It's your peak." -- was composed by the advisor's
-                  'continue' branch and then never rendered, because the
-                  block card is hidden on 'continue'. It is surfaced here in
-                  the week it is true, so a first-time user meets the
-                  recovery week having been told it is coming. The other
-                  'continue' bodies ("Training is going well. Stay on plan.")
-                  stay unrendered: they add nothing this card does not say. */}
-              {blockAdvice?.action === 'continue' && showPeakWeekNote && (
-                <Text style={[styles.proCoachNote, live.proCoachNote]}>{blockAdvice.body}</Text>
-              )}
-              {tier === 'pro' && (
-                <Text style={[styles.proCoachNote, live.proCoachNote]}>
-                  Your coach adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
-                </Text>
-              )}
-              <View style={styles.activePlanActions}>
-                {/* R9 (D70): startNextBtn -> shared Button primary (fires its
-                    own selection() tick on press). */}
-                <Button
-                  variant="primary"
-                  icon="play"
-                  title="Start next workout"
-                  onPress={() => handleStartNextWorkout(activePlan)}
-                  accessibilityLabel="Start next workout"
-                  style={styles.startNextBtnWrap}
-                />
-                <Button
-                  variant="secondary"
-                  title="View plan"
-                  onPress={() => navigation.navigate('PlanDetail', { planId: activePlan.id, isLibrary: false })}
-                  accessibilityLabel="View plan"
-                />
-              </View>
-            </Card>
-          </View>
-        ) : tier !== 'pro' ? (
-          /* B2: the free no-plan state is a proper card, sitting where the
-             active plan card would be, so a new user never scrolls past
-             empty sections looking for a way in. Quiz first, library second. */
-          <EmptyState
-            icon="compass-outline"
-            title="No active plan yet"
-            text="Answer a few quick questions and we'll suggest a starter plan, or browse the library if you'd rather choose yourself."
-            actionLabel="Start with a plan"
-            onAction={() => navigation.navigate('FreeStarter')}
-            actionAccessibilityLabel="Answer three quick questions to start with a plan"
-            secondaryLabel="Browse plans"
-            onSecondary={() => navigation.navigate('PlanLibrary')}
-            secondaryAccessibilityLabel="Browse the plan library"
-          />
-        ) : (
-          /* C5-P10-09 (D96): the Pro no-plan state used to be an inert Card
-             naming an action it did not offer ("Start with a plan" is the
-             FREE path's route to the starter quiz; there was no Pro
-             affordance with that name, no onPress and no button). It gets
-             the same real two-CTA EmptyState shape the free branch has,
-             with the coach-built plan Home's Pro branch already offers, so
-             the verb and the action finally agree. */
-          <EmptyState
-            icon="barbell-outline"
-            title="No active plan yet"
-            text={`Start with a plan and we'll build one from your profile, or browse the library and pick one yourself. ${BLOCK_START_SENTENCE}`}
-            actionLabel="Start with a plan"
-            onAction={async () => {
-              const result = await generateAndSavePlan(user.id, userProfile);
-              if (result.ok) {
-                await loadData();
-                toast.show('Your plan is active', { variant: 'success' });
-              } else {
-                logError('PlansScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
-                toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
-              }
-            }}
-            actionAccessibilityLabel="Start with a plan built from your profile"
-            secondaryLabel="Browse plans"
-            onSecondary={() => navigation.navigate('PlanLibrary')}
-            secondaryAccessibilityLabel="Browse the plan library"
-          />
-        )}
-
-        {/* Folders are only shown when they already exist. Folder creation is
-            intentionally hidden from the main Train surface to keep the core
-            coaching flow clean. */}
-        {folders.length > 0 && (
-          <View style={styles.section}>
-            <SectionLabel>Folders</SectionLabel>
-            {folders.map(folder => {
-              const filed = plansByFolder[folder.id] || [];
-              const collapsed = !!collapsedFolders[folder.id];
-              return (
-                <View key={folder.id} style={[styles.folderBlock, live.folderBlock]}>
-                  {/* AX-11 (launch accessibility audit): the folder-options
-                      button used to be a TouchableOpacity nested inside this
-                      header TouchableOpacity, so an accessible iOS parent
-                      grouped it and it was never a separate VoiceOver focus
-                      stop. folderHeader (row/gap/padding, unchanged) now
-                      wraps a plain View instead of being touchable itself;
-                      its two children -- folderHeaderPress (the toggle,
-                      flex:1) and the options button -- are true siblings, and
-                      folderHeaderPress's own row+gap reproduces the same
-                      uniform gap:sm the five items used to share, so the
-                      pixel layout is unchanged (verified in
-                      PlansScreen.optionsButtonSiblings.guard.test.js). */}
-                  <View style={styles.folderHeader}>
-                    <TouchableOpacity
-                      style={styles.folderHeaderPress}
-                      onPress={() => toggleFolder(folder.id)}
-                      onLongPress={() => handleFolderOptions(folder)}
-                      accessibilityRole="button"
-                      accessibilityState={{ expanded: !collapsed }}
-                      accessibilityLabel={`${folder.name}, ${filed.length} plan${filed.length !== 1 ? 's' : ''}`}
-                    >
-                      <Ionicons
-                        name={collapsed ? 'chevron-forward' : 'chevron-down'}
-                        size={16}
-                        color={t.colors.textSecondary}
-                      />
-                      <Ionicons name="folder-outline" size={16} color={t.colors.textSecondary} />
-                      <Text style={[styles.folderName, live.folderName]} numberOfLines={1}>{folder.name}</Text>
-                      <Text style={[styles.folderCount, live.folderCount]}>{filed.length}</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.moreBtn}
-                      onPress={() => handleFolderOptions(folder)}
-                      hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${folder.name} folder options`}
-                    >
-                      <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                  {!collapsed && (
-                    filed.length > 0
-                      ? <View style={[styles.folderBody, live.folderBody]}>{filed.map((plan, i) => renderPlanCard(plan, i))}</View>
-                      : <Text style={[styles.folderEmpty, live.folderEmpty]}>No plans in here yet. Use a plan&apos;s options to move it in.</Text>
-                  )}
-                </View>
-              );
-            })}
-          </View>
-        )}
-
-        {/* My Plans (unfiled). Plans not in any folder, or whose folder was
-            deleted, always live here so a plan is never hidden. */}
-        {unfiledPlans.length > 0 && (
-          <View style={styles.section}>
-            <SectionLabel>My plans</SectionLabel>
-            {unfiledPlans.map((plan, i) => renderPlanCard(plan, i))}
-          </View>
-        )}
-
-        {/* Archived Plans */}
-        {archivedPlans.length > 0 && (
-          <View style={styles.section}>
-            <TouchableOpacity
-              style={styles.archivedHeader}
-              onPress={() => setArchivedExpanded(v => !v)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: archivedExpanded }}
-              accessibilityLabel={`Archived plans, ${archivedPlans.length}`}
-            >
-              <Text style={[styles.archivedHeaderText, live.archivedHeaderText]}>
-                Archived plans · {archivedPlans.length}
-              </Text>
-              <Ionicons
-                name={archivedExpanded ? 'chevron-up' : 'chevron-down'}
-                size={18}
-                color={t.colors.textSecondary}
-              />
-            </TouchableOpacity>
-            {archivedExpanded && archivedPlans.map(plan => (
-              <Card key={plan.id} padding="none" style={[styles.planCard, styles.archivedPlanCard]}>
-                {/* AX-11: same fix as renderPlanCard's live plan card above --
-                    this archived-plan block duplicates that JSX rather than
-                    calling renderPlanCard, so it carried the identical nested-
-                    pressable defect and gets the identical sibling fix. */}
-                <View>
-                  <PressableCard
-                    style={styles.planCardBody}
-                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
-                    onLongPress={() => handleArchivedPlanOptions(plan)}
-                    accessibilityLabel={planHeadingName(plan.name)}
-                  >
-                    <View style={styles.planCardMetaRow}>
-                      {planWorkoutCounts[plan.id] ? (
-                        <Text style={[styles.planCardMeta, live.planCardMeta]}>
-                          {planWorkoutCounts[plan.id]} workout{planWorkoutCounts[plan.id] !== 1 ? 's' : ''}
-                        </Text>
-                      ) : <View />}
-                      <View style={styles.moreBtn} />
-                    </View>
-                    <Text style={[styles.planCardName, live.planCardName, styles.archivedPlanCardName, live.archivedPlanCardName]} numberOfLines={2}>{planHeadingName(plan.name)}</Text>
-                  </PressableCard>
-                  <TouchableOpacity
-                    style={[styles.moreBtn, styles.moreBtnOverlay]}
-                    onPress={() => handleArchivedPlanOptions(plan)}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Archived plan options"
-                  >
-                    <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-                <View style={[styles.planCardFooter, live.planCardFooter]}>
-                  {/* R9 (D70): same footer-link -> Button tertiary sm
-                      conversion as the live plan card footer above; this
-                      archived footer shares the identical style contract
-                      (planCardFooterGhost/planCardFooterPrimary), just with
-                      "Restore" in place of "Set as active". */}
-                  <Button
-                    variant="tertiary"
-                    size="sm"
-                    fullWidth={false}
-                    title="View plan"
-                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
-                    accessibilityLabel={`View ${planHeadingName(plan.name)}`}
-                  />
-                  <Button
-                    variant="tertiary"
-                    size="sm"
-                    fullWidth={false}
-                    title="Restore"
-                    onPress={async () => { await unarchivePlan(plan.id); await loadData(); }}
-                    accessibilityLabel={`Restore ${planHeadingName(plan.name)}`}
-                  />
-                </View>
-              </Card>
-            ))}
-          </View>
-        )}
-
-        {/* Workout Templates */}
-        {templates.length > 0 && (
-          <View style={styles.section}>
-            <SectionLabel>Workout templates</SectionLabel>
-            <Text style={[styles.sectionSubtitle, live.sectionSubtitle]}>Saved workouts you can start directly.</Text>
-            {templates.map(routine => (
-              <Card key={routine.id} style={styles.templateCard}>
-                <View style={styles.templateMain}>
-                  <Text style={[styles.templateName, live.templateName]} numberOfLines={2}>{routine.name}</Text>
-                  {exerciseCounts[routine.id] ? (
-                    <Text style={[styles.templateMeta, live.templateMeta]}>{exerciseCounts[routine.id]} exercises</Text>
-                  ) : null}
-                </View>
-                <View style={styles.templateActions}>
-                  {/* R9 (D70): startTemplateBtn -> shared Button secondary sm. */}
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    fullWidth={false}
-                    icon="play"
-                    title="Start"
-                    onPress={() => handleStartTemplate(routine)}
-                    accessibilityLabel={`Start ${routine.name}`}
-                  />
-                  <TouchableOpacity
-                    style={styles.moreBtn}
-                    onPress={() => handleTemplateOptions(routine)}
-                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                    accessibilityRole="button"
-                    accessibilityLabel="Routine options"
-                  >
-                    <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
-                  </TouchableOpacity>
-                </View>
-              </Card>
-            ))}
-          </View>
-        )}
-
-        {/* Training Blocks */}
-        <Card
-          style={styles.trainingBlocksRow}
-          onPress={() => navigation.navigate('MesocycleBuilder')}
-          accessibilityLabel="Training blocks"
-        >
-          <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
-            <Ionicons name="layers-outline" size={20} color={t.colors.textSecondary} />
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>Training blocks</Text>
-            <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>View completed blocks and long-term progress</Text>
-          </View>
-          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-        </Card>
-
-        {/* Decision Hub, visible to everyone. Section title and copy adapt:
-            Pro with active plan → "Switch your plan", Free / no plan → "Start with a plan". */}
+        {/* Plan tools. Campaign 25 (PLANS-SCREEN-SPEC.md §2 item 3): MOVED UP
+            from the page bottom, one SectionLabel over the training-blocks
+            row and the action cards -- same components, same destinations,
+            same tier logic (actionCards, above), only position and the
+            unifying label change. */}
         <View style={styles.section}>
-          <SectionLabel>
-            {isProWithPlan ? 'Switch your plan' : 'Start with a plan'}
-          </SectionLabel>
+          <SectionLabel>Plan tools</SectionLabel>
+          <Card
+            style={styles.trainingBlocksRow}
+            onPress={() => navigation.navigate('MesocycleBuilder')}
+            accessibilityLabel="Training blocks"
+          >
+            <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
+              <Ionicons name="layers-outline" size={20} color={t.colors.textSecondary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>Training blocks</Text>
+              <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>View completed blocks and long-term progress</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </Card>
           {/* C5-P10-01 (D96): this sentence was the only place in the
               product that said activation starts a block, and it was gated
               on already BEING Pro with an active plan, so no first-time
@@ -1723,6 +1533,225 @@ export default function PlansScreen({ navigation }) {
             );
           })}
         </View>
+
+        {/* Previous plans. Campaign 25 (PLANS-SCREEN-SPEC.md §2 item 4): the
+            NEW collapsed section replacing the previously always-open
+            Folders + "My plans" stacks. Collapsed by default on every mount
+            (session-scoped, archivedExpanded's own precedent); renders
+            nothing at all when there are no non-active plans (no empty
+            shell -- §4 edge case). N = myPlans.length (filed + unfiled). */}
+        {myPlans.length > 0 && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.archivedHeader}
+              onPress={() => setPreviousExpanded(v => !v)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: previousExpanded }}
+              accessibilityLabel={`Previous plans, ${myPlans.length}`}
+            >
+              <Text style={[styles.archivedHeaderText, live.archivedHeaderText]}>
+                Previous plans · {myPlans.length}
+              </Text>
+              <Ionicons
+                name={previousExpanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={t.colors.textSecondary}
+              />
+            </TouchableOpacity>
+            {previousExpanded && (
+              <>
+                {/* Folders are only shown when they already exist. Folder
+                    creation is intentionally hidden from the main Train
+                    surface to keep the core coaching flow clean. Toggle,
+                    options and a11y semantics, and the empty-folder copy,
+                    are byte-identical to before this campaign; only each
+                    folder's body content (compact rows, not renderPlanCard)
+                    changed. */}
+                {folders.length > 0 && folders.map(folder => {
+                  const filed = plansByFolder[folder.id] || [];
+                  const collapsed = !!collapsedFolders[folder.id];
+                  return (
+                    <View key={folder.id} style={[styles.folderBlock, live.folderBlock]}>
+                      {/* AX-11 (launch accessibility audit): the folder-options
+                          button used to be a TouchableOpacity nested inside this
+                          header TouchableOpacity, so an accessible iOS parent
+                          grouped it and it was never a separate VoiceOver focus
+                          stop. folderHeader (row/gap/padding, unchanged) now
+                          wraps a plain View instead of being touchable itself;
+                          its two children -- folderHeaderPress (the toggle,
+                          flex:1) and the options button -- are true siblings, and
+                          folderHeaderPress's own row+gap reproduces the same
+                          uniform gap:sm the five items used to share, so the
+                          pixel layout is unchanged (verified in
+                          PlansScreen.optionsButtonSiblings.guard.test.js). */}
+                      <View style={styles.folderHeader}>
+                        <TouchableOpacity
+                          style={styles.folderHeaderPress}
+                          onPress={() => toggleFolder(folder.id)}
+                          onLongPress={() => handleFolderOptions(folder)}
+                          accessibilityRole="button"
+                          accessibilityState={{ expanded: !collapsed }}
+                          accessibilityLabel={`${folder.name}, ${filed.length} plan${filed.length !== 1 ? 's' : ''}`}
+                        >
+                          <Ionicons
+                            name={collapsed ? 'chevron-forward' : 'chevron-down'}
+                            size={16}
+                            color={t.colors.textSecondary}
+                          />
+                          <Ionicons name="folder-outline" size={16} color={t.colors.textSecondary} />
+                          <Text style={[styles.folderName, live.folderName]} numberOfLines={1}>{folder.name}</Text>
+                          <Text style={[styles.folderCount, live.folderCount]}>{filed.length}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          style={styles.moreBtn}
+                          onPress={() => handleFolderOptions(folder)}
+                          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                          accessibilityRole="button"
+                          accessibilityLabel={`${folder.name} folder options`}
+                        >
+                          <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
+                        </TouchableOpacity>
+                      </View>
+                      {!collapsed && (
+                        filed.length > 0
+                          ? (
+                            <View style={[styles.folderBody, live.folderBody]}>
+                              {filed.map((plan, i) => (
+                                <CompactPlanRow
+                                  key={plan.id}
+                                  plan={plan}
+                                  meta={planWorkoutCounts[plan.id] ? `${planWorkoutCounts[plan.id]} workout${planWorkoutCounts[plan.id] !== 1 ? 's' : ''}` : null}
+                                  onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                                  onLongPress={() => handlePlanOptions(plan)}
+                                  onOptions={() => handlePlanOptions(plan)}
+                                  onSetActive={() => handleSetActive(plan)}
+                                  isLast={i === filed.length - 1}
+                                />
+                              ))}
+                            </View>
+                          )
+                          : <Text style={[styles.folderEmpty, live.folderEmpty]}>No plans in here yet. Use a plan&apos;s options to move it in.</Text>
+                      )}
+                    </View>
+                  );
+                })}
+
+                {/* Unfiled plans. Plans not in any folder, or whose folder was
+                    deleted, always live here so a plan is never hidden (§4
+                    deleted-folder fallthrough). No "My plans" sub-label --
+                    the section header above already covers them. */}
+                {unfiledPlans.length > 0 && (
+                  <View style={[styles.compactListBody, live.compactListBody]}>
+                    {unfiledPlans.map((plan, i) => (
+                      <CompactPlanRow
+                        key={plan.id}
+                        plan={plan}
+                        meta={planWorkoutCounts[plan.id] ? `${planWorkoutCounts[plan.id]} workout${planWorkoutCounts[plan.id] !== 1 ? 's' : ''}` : null}
+                        onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                        onLongPress={() => handlePlanOptions(plan)}
+                        onOptions={() => handlePlanOptions(plan)}
+                        onSetActive={() => handleSetActive(plan)}
+                        isLast={i === unfiledPlans.length - 1}
+                      />
+                    ))}
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+        )}
+
+        {/* Archived Plans. Campaign 25 (PLANS-SCREEN-SPEC.md §2 item 5, §5):
+            kept as its own section (a deliberate "I am done with this" user
+            act, distinct from Previous plans), same header idiom, same
+            position (last), same collapsed-by-default behaviour. The
+            duplicated full-card JSX is retired: expanded content is now the
+            SAME compact row component the Previous section uses, with the
+            archived name-style variant and no inline Set-active -- restoring
+            activation stays inside handleArchivedPlanOptions's sheet exactly
+            as before. */}
+        {archivedPlans.length > 0 && (
+          <View style={styles.section}>
+            <TouchableOpacity
+              style={styles.archivedHeader}
+              onPress={() => setArchivedExpanded(v => !v)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: archivedExpanded }}
+              accessibilityLabel={`Archived plans, ${archivedPlans.length}`}
+            >
+              <Text style={[styles.archivedHeaderText, live.archivedHeaderText]}>
+                Archived plans · {archivedPlans.length}
+              </Text>
+              <Ionicons
+                name={archivedExpanded ? 'chevron-up' : 'chevron-down'}
+                size={18}
+                color={t.colors.textSecondary}
+              />
+            </TouchableOpacity>
+            {archivedExpanded && (
+              <View style={[styles.compactListBody, live.compactListBody]}>
+                {archivedPlans.map((plan, i) => (
+                  <CompactPlanRow
+                    key={plan.id}
+                    plan={plan}
+                    meta={planWorkoutCounts[plan.id] ? `${planWorkoutCounts[plan.id]} workout${planWorkoutCounts[plan.id] !== 1 ? 's' : ''}` : null}
+                    onPress={() => navigation.navigate('PlanDetail', { planId: plan.id, isLibrary: false })}
+                    onLongPress={() => handleArchivedPlanOptions(plan)}
+                    onOptions={() => handleArchivedPlanOptions(plan)}
+                    onSetActive={null}
+                    archived
+                    isLast={i === archivedPlans.length - 1}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Workout Templates. Not part of the spec's five-section target
+            architecture (spec silent on it); left in its existing relative
+            position -- immediately after Archived, which it already
+            followed -- since only the Training-blocks row and action cards
+            that used to sit after it were named for relocation. */}
+        {templates.length > 0 && (
+          <View style={styles.section}>
+            <SectionLabel>Workout templates</SectionLabel>
+            <Text style={[styles.sectionSubtitle, live.sectionSubtitle]}>Saved workouts you can start directly.</Text>
+            {templates.map(routine => (
+              <Card key={routine.id} style={styles.templateCard}>
+                <View style={styles.templateMain}>
+                  <Text style={[styles.templateName, live.templateName]} numberOfLines={2}>{routine.name}</Text>
+                  {exerciseCounts[routine.id] ? (
+                    <Text style={[styles.templateMeta, live.templateMeta]}>{exerciseCounts[routine.id]} exercises</Text>
+                  ) : null}
+                </View>
+                <View style={styles.templateActions}>
+                  {/* R9 (D70): startTemplateBtn -> shared Button secondary sm. */}
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    fullWidth={false}
+                    icon="play"
+                    title="Start"
+                    onPress={() => handleStartTemplate(routine)}
+                    accessibilityLabel={`Start ${routine.name}`}
+                  />
+                  <TouchableOpacity
+                    style={styles.moreBtn}
+                    onPress={() => handleTemplateOptions(routine)}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    accessibilityRole="button"
+                    accessibilityLabel="Routine options"
+                  >
+                    <Ionicons name="ellipsis-vertical" size={18} color={t.colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+              </Card>
+            ))}
+          </View>
+        )}
           </>
         ) : null}
 
@@ -1986,8 +2015,11 @@ const styles = StyleSheet.create({
   },
   folderName: { flex: 1, ...type.bodyStrong, color: colors.textPrimary },
   folderCount: { ...type.num('caption'), color: colors.textMuted },
+  // Campaign 25: folderBody now holds CompactPlanRow children directly (no
+  // per-row Card, so no gap/padding of its own -- each row self-pads and
+  // draws its own hairline divider); only the separator from the header
+  // above survives from the pre-campaign style.
   folderBody: {
-    gap: spacing.md, padding: spacing.md,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
   folderEmpty: {
@@ -2060,11 +2092,6 @@ const styles = StyleSheet.create({
   // startNextBtn used to fill the row; Button owns the rest of the chrome.
   startNextBtnWrap: { flex: 1 },
 
-  planCard: {
-    overflow: 'hidden',
-  },
-  archivedPlanCard: { opacity: 0.7 },
-  archivedPlanCardName: { color: colors.textSecondary },
   archivedHeader: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     paddingVertical: spacing.sm,
@@ -2072,28 +2099,32 @@ const styles = StyleSheet.create({
   archivedHeaderText: {
     ...type.label, color: colors.textSecondary,
   },
-  planCardBody: { padding: spacing.lg, gap: spacing.sm },
-  planCardMetaRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-  },
-  planCardName: { ...type.bodyStrong, color: colors.textPrimary },
-  planCardMeta: { ...type.num('caption'), color: colors.textSecondary },
-  planCardFooter: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderTopWidth: 1, borderTopColor: colors.border,
-  },
-  // R9 (D70): planCardFooterGhost/planCardFooterPrimary deleted - the
-  // footer links are now Button tertiary sm (both the live and archived
-  // plan card footers).
   moreBtn: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
-  // AX-11: the real "Plan options"/"Archived plan options" button renders
-  // here, absolutely positioned over the inert moreBtn spacer left inside
-  // planCardMetaRow. Its wrapping View (the plain <View> in renderPlanCard /
-  // the archived block) carries no padding of its own, so top/right must
-  // equal planCardBody's own padding (spacing.lg) to land in the exact spot
-  // the button occupied as a normal-flow child before this fix.
-  moreBtnOverlay: { position: 'absolute', top: spacing.lg, right: spacing.lg },
+
+  // Campaign 25 (PLANS-SCREEN-SPEC.md §2/§3): the compact plan row that
+  // replaced renderPlanCard and the archived section's duplicated card JSX.
+  // compactListBody is the standalone bordered section body (the folderBody
+  // idiom, without a header above it) used by the unfiled list and the
+  // archived list; folder bodies reuse the existing folderBlock/folderBody
+  // pair instead, since they already carry a header.
+  compactListBody: {
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    backgroundColor: colors.surface, overflow: 'hidden',
+  },
+  compactRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.md,
+    borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.borderSubtle,
+  },
+  // The last row in any section body drops its own divider so the body's
+  // own bottom edge is the only line there.
+  compactRowLast: { borderBottomWidth: 0 },
+  compactRowPress: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+  },
+  compactRowName: { ...type.bodyStrong, color: colors.textPrimary, flex: 1 },
+  compactRowNameArchived: { color: colors.textSecondary },
+  compactRowMeta: { ...type.num('caption'), color: colors.textSecondary },
 
   templateCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
@@ -2280,11 +2311,18 @@ function buildLiveStyles(t) {
     // planCardFooterGhost/planCardFooterPrimary/startTemplateBtn/
     // startTemplateBtnText live twins deleted alongside their frozen styles -
     // the shared Button primitive resolves its own live theme internally.
-    archivedPlanCardName: { color: t.colors.textSecondary },
     archivedHeaderText: { ...t.type.label, color: t.colors.textSecondary },
-    planCardName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    planCardMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
-    planCardFooter: { borderTopColor: t.colors.border },
+    // Campaign 25: renderPlanCard's live twins (planCardName/planCardMeta/
+    // planCardFooter/archivedPlanCardName) are retired alongside their
+    // frozen styles. CompactPlanRow calls this SAME buildLiveStyles(t) from
+    // its own useTheme() (sibling scope, matching NavRow's precedent), so
+    // its tokens live here once and both callers (this screen and the row
+    // component) read the identical entries.
+    compactListBody: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    compactRow: { borderBottomColor: t.colors.borderSubtle },
+    compactRowName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    compactRowNameArchived: { color: t.colors.textSecondary },
+    compactRowMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
     templateName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     templateMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
     actionCardIcon: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },

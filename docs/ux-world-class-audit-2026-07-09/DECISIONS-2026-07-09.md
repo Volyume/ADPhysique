@@ -2807,3 +2807,20 @@ docs/progress-audit-campaign-23-2026-08-17/FOUNDER-RULINGS-PHASE2.md.
 - **D100-5 (startup flash, Wave E):** the give-up/retry design per
   WAVE-E-FINDINGS.md item 0 under the founder's neutral-splash law;
   sign-out clears the prior-session marker (hostile F7).
+
+## D101 — Campaign 25 lead rulings at landing (2026-08-17, D33)
+
+- **D101-1 (hero order STOP item):** the implementation agent proved
+  (source + git show) that the block-advice card rendered BEFORE the
+  hero pre-campaign, contradicting the spec's §1 diagnosis prose. The
+  explicit target order in the founder brief and spec §2 (hero first,
+  block card second) governs; the reorder the agent applied is
+  accepted and the spec carries a correction note in §1.
+- **D101-2 (Workout templates placement):** the spec's five-section
+  target architecture is silent on the templates section. It stays in
+  its pre-existing relative position (after Archived) — nothing in the
+  founder order named it, and inventing a move is out of scope.
+- **D101-3 (archived restore):** with renderPlanCard's footer retired,
+  Restore stays reachable solely through the archived options sheet
+  ("Restore plan"), matching the spec's no-inline-Set-active law for
+  archived rows. Verified live at handleArchivedPlanOptions.
