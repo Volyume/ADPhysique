@@ -704,11 +704,37 @@ describe('source guards', () => {
     expect(withoutComments).not.toMatch(/fetch\(/);
   });
 
-  test('the deterministic engine never references this module back', () => {
-    const engineFiles = ['weeklyCoach.js', 'coachApply.js', 'nutritionEngine.js', 'planEngine.js'];
+  // RE-PINNED (Campaign 23 R2, D99, superseding the blanket D18-era ban):
+  // weeklyCoach.js is now SANCTIONED to import exactly one pure export from
+  // this module — deriveCorroborationDirectionAgainstTrend — so the
+  // corroboration direction is classified against the run's own emitted
+  // trend by the ONE shared classification rather than a caller-side
+  // reading of a different trend. Everything else stays banned: every
+  // other engine file still never references this module, weeklyCoach may
+  // not import anything else from it (no packet builders, no receipt
+  // logic), and this module still never imports the engine (the guard two
+  // tests up). Purity is unaffected: the imported function is pure, no
+  // I/O, no Date.now().
+  test('the deterministic engine references this module ONLY via the one sanctioned D99 import', () => {
+    const engineFiles = ['coachApply.js', 'nutritionEngine.js', 'planEngine.js'];
     for (const file of engineFiles) {
       const engineSource = fs.readFileSync(path.resolve(__dirname, '..', file), 'utf8');
       expect(engineSource).not.toMatch(/progressScanCheckInEvidence/);
     }
+    const weeklyCoachSource = fs.readFileSync(path.resolve(__dirname, '..', 'weeklyCoach.js'), 'utf8');
+    expect(weeklyCoachSource).toMatch(
+      /import \{ deriveCorroborationDirectionAgainstTrend \} from '\.\/progressScanCheckInEvidence';/,
+    );
+    // Exactly one CODE reference site beyond the import: the single call
+    // inside the corroboration block. Comments explaining the law may name
+    // the module (same convention as the purity guard above); code may
+    // not. Strip comments, then the sanctioned identifiers, and the module
+    // name must vanish entirely.
+    const stripped = weeklyCoachSource
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/.*$/gm, '')
+      .replaceAll("import { deriveCorroborationDirectionAgainstTrend } from './progressScanCheckInEvidence';", '')
+      .replaceAll('deriveCorroborationDirectionAgainstTrend', '');
+    expect(stripped).not.toMatch(/progressScanCheckInEvidence/);
   });
 });

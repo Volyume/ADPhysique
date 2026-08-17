@@ -55,9 +55,16 @@ function callBlocks(source, callName) {
 }
 
 describe('Progress Scan coach isolation guard', () => {
-  test('runWeeklyCoach inputs do not include Progress Scan context', () => {
+  // Campaign 23 R2 (D99): the ONE sanctioned corroboration input is the
+  // coarse basis ({eligible, scanDirection} — built by
+  // buildPhotoCorroborationBasis, itself guarded to carry no score, band,
+  // estimate or id). Everything scan-shaped beyond it stays banned from the
+  // run, and EVERY corroboration token stays banned from persistence.
+  test('runWeeklyCoach inputs carry only the coarse corroboration basis, never Progress Scan context', () => {
     const body = callBody(SCREEN, 'runWeeklyCoach');
     expect(body).not.toMatch(/progressScan|photo_scan|estimateBodyFatPercent|rangeLow|rangeHigh/i);
+    expect(body).toMatch(/photoCorroborationBasis,/);
+    expect(body).not.toMatch(/scanAssessmentPacket|scanCoachSummary|visualLeannessScore|leannessBand|scanId/);
   });
 
   test('local Progress Scan context is not persisted into coach_outputs', () => {
@@ -65,6 +72,10 @@ describe('Progress Scan coach isolation guard', () => {
     expect(bodies.length).toBeGreaterThan(0);
     for (const body of bodies) {
       expect(body).not.toMatch(/progressScan|photo_scan|estimateBodyFatPercent|rangeLow|rangeHigh/i);
+      // D99-2: no explicit photo-derived input or source flag is persisted
+      // — closes the pre-D99 gap where the inert Applied/Blocked booleans
+      // rode inside the synced blob outside this guard's regex.
+      expect(body).not.toMatch(/photoCorroboration/i);
     }
   });
 

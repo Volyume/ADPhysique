@@ -1,36 +1,34 @@
 /**
- * CoachOutputScreen render-time confidence-caption transform
- * (D18, founder decision 2026-07-09; docs/ux-world-class-audit-2026-07-09/
- * DECISIONS-2026-07-09.md D18; plan-F §4.4 fork, delegated to the lead --
- * ruling registered in docs/ux-world-class-audit-2026-07-09/
- * _HANDOVER-AND-RESUME.md "PLAN-F FORKS").
+ * CoachOutputScreen photo-corroboration wiring — Campaign 23 R2 (D99,
+ * founder ruling 2026-08-17; verbatim in docs/progress-audit-campaign-23-
+ * 2026-08-17/FOUNDER-RULINGS-PHASE2.md; register entry D99).
  *
- * The lead ruling: corroboration is RENDER-TIME ONLY. `runWeeklyCoach` is
- * still always called with photoCorroboration absent/null (the persisted/
- * synced coach output stays byte-identical); the screen separately derives
- * a photo-corroboration signal from the device-local v2 evidence packet
- * (via the ONE shared derivation, `derivePhotoCorroborationSignal`,
- * progressScanCheckInEvidence.js) and feeds it through the engine's own
- * pure `corroborateConfidenceLevel` (weeklyCoach.js) purely to choose which
- * caption word is shown on THIS load. Nothing here writes back to `output`,
- * `saveCoachOutput`, or any synced field.
+ * D99 SUPERSEDES the D18 render-time-only transform this suite used to pin:
+ * the coarse locally-derived corroboration basis now feeds the
+ * authoritative `runWeeklyCoach` call itself, the engine resolves the
+ * 'supports' direction against ITS OWN emitted trend and applies its
+ * one-step rule under its own senior blocked-set, and the emitted
+ * `confidence` — recorded, synced and displayed — is one value. No
+ * photo-derived input or source flag rides on the output
+ * (photoCorroborationApplied/Blocked are retired), and nothing beyond the
+ * {eligible, scanDirection} basis ever reaches the run.
  *
  * This screen cannot be safely `require`'d in Jest (see
- * progressScanCoachIsolation.guard.test.js / CoachOutputScreen.
- * progressScanAssessment.test.js for why), so the wiring itself is pinned by
- * source guard, exactly like those suites. The behavioural claims (base vs.
- * one-step-raised vs. fail-to-base) are exercised directly against the two
- * REAL, pure, exported functions the screen composes at that exact site
- * (`derivePhotoCorroborationSignal` + `corroborateConfidenceLevel`), so the
- * assertions are against real engine/evidence-layer behaviour, not a
- * reimplementation of it.
+ * progressScanCoachIsolation.guard.test.js for why), so the wiring is
+ * pinned by source guard; the behavioural claims are exercised against the
+ * REAL pure functions the wiring composes (`buildPhotoCorroborationBasis`,
+ * `deriveCorroborationDirectionAgainstTrend`,
+ * `corroborateConfidenceLevel`), never a reimplementation. The engine-side
+ * run-level invariants (one-step-and-nothing-else, calm/data-hold
+ * seniority, no flags on the output) are pinned through the real
+ * runWeeklyCoach in progressScanSafetyFloorIsolation.test.js.
  */
 const fs = require('fs');
 const path = require('path');
 const { corroborateConfidenceLevel } = require('../../lib/weeklyCoach');
 const {
-  derivePhotoCorroborationSignal,
-  buildScanEvidencePacket,
+  buildPhotoCorroborationBasis,
+  deriveCorroborationDirectionAgainstTrend,
 } = require('../../lib/progressScanCheckInEvidence');
 
 const SCREEN = fs.readFileSync(path.resolve(__dirname, '../CoachOutputScreen.js'), 'utf8');
@@ -64,139 +62,125 @@ function callBlocks(source, callName) {
 
 const NOW = 1720000000000;
 
-function scoredEvidence(overrides = {}) {
+// A bounded coach summary exactly as getProgressScanCoachSummary shapes it
+// (the basis builder's real input): source, capturedAt, comparisonStatus,
+// confidence tier, trendDirection, comparableCount.
+function scoredSummary(overrides = {}) {
   return {
     source: 'photo_scan',
-    scanId: null,
     capturedAt: NOW - 2 * 86400000,
-    score: 66,
-    band: 'Lean',
-    confidenceTier: 'moderate',
-    validityStatus: 'scored',
-    withholdReasons: [],
-    captureQuality: { lighting: null, blur: null, framing: null, pose: null, segmentation: null, tiltDegrees: null },
-    baselineScanId: null,
-    trendWindow: { count: 4, spanDays: null, direction: 'down', magnitudePoints: 3.2, comparableOnly: true },
-    setupFindings: [],
-    usedFor: 'visual_trend_context_only',
-    affectsTargets: false,
+    comparisonStatus: 'comparable',
+    confidence: 'moderate',
+    trendDirection: 'down',
+    comparableCount: 4,
     ...overrides,
   };
 }
 
-function trend(deltaKg) {
-  return { delta: deltaKg };
-}
-
-describe('CoachOutputScreen wiring: render-time confidence-caption transform (source guard)', () => {
-  test('imports corroborateConfidenceLevel from weeklyCoach and derivePhotoCorroborationSignal from the evidence layer', () => {
-    expect(SCREEN).toMatch(/import \{ runWeeklyCoach, mapCalsAdherence, corroborateConfidenceLevel \} from '\.\.\/lib\/weeklyCoach';/);
-    expect(SCREEN).toMatch(/import \{ composeScanEvidencePacket, derivePhotoCorroborationSignal \} from '\.\.\/lib\/progressScanCheckInEvidence';/);
+describe('CoachOutputScreen wiring: run-time corroboration (D99 source guard)', () => {
+  test('imports buildPhotoCorroborationBasis from the evidence layer; the retired render-time derivation is gone', () => {
+    expect(SCREEN).toMatch(/import \{ composeScanEvidencePacket, buildPhotoCorroborationBasis \} from '\.\.\/lib\/progressScanCheckInEvidence';/);
+    expect(SCREEN).not.toMatch(/derivePhotoCorroborationSignal/);
+    expect(SCREEN).not.toMatch(/corroborateConfidenceLevel/);
   });
 
-  test('the signal is derived from scanAssessmentPacket (the same device-local packet the receipt card renders), not re-derived from raw scan data', () => {
-    expect(SCREEN).toMatch(/const photoCorroborationSignal = derivePhotoCorroborationSignal\(scanAssessmentPacket\);/);
-  });
-
-  test('fail-to-base gate: suppressed is true whenever photoCorroborationBlocked is not explicitly false (blocked OR absent on an older output)', () => {
-    expect(SCREEN).toMatch(/const photoCorroborationRenderSuppressed = output\.photoCorroborationBlocked !== false;/);
-  });
-
-  test('displayConfidence composes the engine\'s own pure rule against the real base confidence and the derived signal', () => {
-    expect(SCREEN).toMatch(
-      /const displayConfidence = corroborateConfidenceLevel\(\s*\n\s*confidence,\s*\n\s*photoCorroborationSignal,\s*\n\s*\{ suppressed: photoCorroborationRenderSuppressed \},\s*\n\s*\);/,
-    );
-  });
-
-  test('the caption renders displayConfidence, never confidence directly', () => {
-    expect(SCREEN).toMatch(/CONFIDENCE_CAPTIONS\[displayConfidence\]/);
-    expect(SCREEN).not.toMatch(/CONFIDENCE_CAPTIONS\[confidence\]/);
-  });
-
-  test('the weigh-in-count disclosure stays keyed off the real logged-data confidence, never the display transform (a raised caption must never hide genuine data thinness)', () => {
-    expect(SCREEN).toMatch(/confidence !== 'high' && weighInsThisWeek != null && weighInsThisWeek < 4/);
-    expect(SCREEN).not.toMatch(/displayConfidence !== 'high'/);
-  });
-
-  test('runWeeklyCoach is still always called with no photoCorroboration argument (persisted/synced output stays byte-identical)', () => {
+  test('the basis is built pre-run from the suppression-aware bounded summary and fed into runWeeklyCoach', () => {
+    expect(SCREEN).toMatch(/const photoCorroborationBasis = buildPhotoCorroborationBasis\(scanCoachSummary, \{ nowMs: Date\.now\(\) \}\);/);
     const start = SCREEN.indexOf('runWeeklyCoach(');
     expect(start).toBeGreaterThan(-1);
     const body = matchingParenSlice(SCREEN, start + 'runWeeklyCoach'.length);
-    expect(body).not.toMatch(/photoCorroboration/);
+    expect(body).toMatch(/photoCorroborationBasis,/);
+    // Only the coarse basis — never a packet, signal, score or estimate.
+    expect(body).not.toMatch(/scanAssessmentPacket|composeScanEvidencePacket|visualLeannessScore|estimateBodyFat|scanId/);
   });
 
-  test('no token from the render-time transform reaches any saveCoachOutput or setOutput call (nothing photo-derived is persisted or synced)', () => {
+  test('the displayed confidence IS the recorded confidence — no render-time transform survives', () => {
+    expect(SCREEN).toMatch(/const displayConfidence = confidence;/);
+    expect(SCREEN).not.toMatch(/photoCorroborationSignal/);
+    expect(SCREEN).not.toMatch(/photoCorroborationRenderSuppressed/);
+    expect(SCREEN).not.toMatch(/photoCorroborationBlocked/);
+  });
+
+  test('the caption renders displayConfidence and the weigh-in-thinness disclosure keys off the observable count, never the caption', () => {
+    expect(SCREEN).toMatch(/CONFIDENCE_CAPTIONS\[displayConfidence\]/);
+    // D99 port of the D18 honesty rule ("a raised caption must never hide
+    // genuine data thinness"): the disclosure is keyed to the weigh-in
+    // count fact alone, so a corroboration-raised week still discloses.
+    expect(SCREEN).toMatch(/\{weighInsThisWeek != null && weighInsThisWeek < 4\n/);
+    expect(SCREEN).not.toMatch(/confidence !== 'high' && weighInsThisWeek/);
+  });
+
+  test('nothing photo-derived reaches any saveCoachOutput or setOutput call', () => {
     for (const callName of ['saveCoachOutput', 'setOutput']) {
       const bodies = callBlocks(SCREEN, callName);
       expect(bodies.length).toBeGreaterThan(0);
       for (const body of bodies) {
-        expect(body).not.toMatch(/displayConfidence|photoCorroborationSignal|photoCorroborationRenderSuppressed/);
+        expect(body).not.toMatch(/photoCorroboration|displayConfidence|scanAssessmentPacket|visualLeannessScore/);
       }
     }
   });
 });
 
-describe('CoachOutputScreen render-time transform: behavioural pins against the real composed functions', () => {
-  test('base caption when the signal is absent (no packet -- no scan, or suppressed and nulled upstream)', () => {
-    const signal = derivePhotoCorroborationSignal(null);
-    const display = corroborateConfidenceLevel('medium', signal, { suppressed: false });
-    expect(display).toBe('medium');
+describe('buildPhotoCorroborationBasis: the coarse pre-run gate (real function)', () => {
+  test('a scored, in-window, Moderate+ summary with 3+ comparable points and a definite direction is eligible', () => {
+    expect(buildPhotoCorroborationBasis(scoredSummary(), { nowMs: NOW }))
+      .toEqual({ eligible: true, scanDirection: 'down' });
   });
 
-  test('base caption when the packet classifies as conflicts (a strong disagreeing scan never lowers or originates a raise)', () => {
-    const conflictEvidence = scoredEvidence({ trendWindow: { count: 4, spanDays: null, direction: 'up', magnitudePoints: 3, comparableOnly: true } });
-    const packet = buildScanEvidencePacket({ evidence: conflictEvidence, weightTrend: trend(-0.6), goalPhase: 'mild_cut', nowMs: NOW });
-    expect(packet.assessment).toBe('conflicts');
-    const signal = derivePhotoCorroborationSignal(packet);
-    const display = corroborateConfidenceLevel('medium', signal, { suppressed: false });
-    expect(display).toBe('medium');
+  test('the basis carries ONLY {eligible, scanDirection} — never a score, band, estimate or id', () => {
+    const basis = buildPhotoCorroborationBasis(scoredSummary({ visualLeannessScore: 66, leannessBandLabel: 'Lean' }), { nowMs: NOW });
+    expect(Object.keys(basis).sort()).toEqual(['eligible', 'scanDirection']);
   });
 
-  test('base caption when photoCorroborationBlocked is true this run (an active safety hold), even with an eligible supporting scan', () => {
-    const supportsEvidence = scoredEvidence({ trendWindow: { count: 4, spanDays: null, direction: 'down', magnitudePoints: 3, comparableOnly: true } });
-    const packet = buildScanEvidencePacket({ evidence: supportsEvidence, weightTrend: trend(-0.6), goalPhase: 'mild_cut', nowMs: NOW });
-    expect(packet.assessment).toBe('supports');
-    const signal = derivePhotoCorroborationSignal(packet);
-    const photoCorroborationBlocked = true; // e.g. FFM floor hold this week
-    const display = corroborateConfidenceLevel('medium', signal, { suppressed: photoCorroborationBlocked !== false });
-    expect(display).toBe('medium');
+  test.each([
+    ['no scan', null, {}],
+    ['wrong source', scoredSummary({ source: 'manual' }), {}],
+    ['out of window (11 days old)', scoredSummary({ capturedAt: NOW - 11 * 86400000 }), {}],
+    ['future capturedAt fails closed (clock skew)', scoredSummary({ capturedAt: NOW + 86400000 }), {}],
+    ['missing capturedAt', scoredSummary({ capturedAt: null }), {}],
+    ['baseline scan (first set is a reference, never direction evidence)', scoredSummary({ comparisonStatus: 'baseline' }), {}],
+    ['not comparable', scoredSummary({ comparisonStatus: 'not_comparable' }), {}],
+    ['low confidence tier', scoredSummary({ confidence: 'low' }), {}],
+    ['thin data (2 comparable points)', scoredSummary({ comparableCount: 2 }), {}],
+    ['uncertain direction', scoredSummary({ trendDirection: 'uncertain' }), {}],
+  ])('%s is ineligible', (_label, scan) => {
+    expect(buildPhotoCorroborationBasis(scan, { nowMs: NOW }))
+      .toEqual({ eligible: false, scanDirection: null });
+  });
+});
+
+describe('deriveCorroborationDirectionAgainstTrend + corroborateConfidenceLevel: the engine composition (real functions)', () => {
+  test('a leaner-trending scan against a losing trend on a cut classifies supports and raises one step', () => {
+    const direction = deriveCorroborationDirectionAgainstTrend({
+      scanDirection: 'down', weightTrend: { delta: -0.6 }, goalPhase: 'mild_cut',
+    });
+    expect(direction).toBe('supports');
+    expect(corroborateConfidenceLevel('medium', { eligible: true, direction }, { suppressed: false })).toBe('high');
   });
 
-  test('one-step-raised caption when eligible + supports + not blocked', () => {
-    const supportsEvidence = scoredEvidence({ trendWindow: { count: 4, spanDays: null, direction: 'down', magnitudePoints: 3, comparableOnly: true } });
-    const packet = buildScanEvidencePacket({ evidence: supportsEvidence, weightTrend: trend(-0.6), goalPhase: 'mild_cut', nowMs: NOW });
-    expect(packet.assessment).toBe('supports');
-    expect(packet.eligibleForAssessment).toBe(true);
-    const signal = derivePhotoCorroborationSignal(packet);
-    const photoCorroborationBlocked = false; // this run positively cleared every hold
-    const display = corroborateConfidenceLevel('medium', signal, { suppressed: photoCorroborationBlocked !== false });
-    expect(display).toBe('high');
+  test('a leaner-trending scan against a gaining trend is a direct contradiction: conflicts, never moves the level', () => {
+    const direction = deriveCorroborationDirectionAgainstTrend({
+      scanDirection: 'down', weightTrend: { delta: 0.6 }, goalPhase: 'mild_cut',
+    });
+    expect(direction).toBe('conflicts');
+    expect(corroborateConfidenceLevel('medium', { eligible: true, direction }, { suppressed: false })).toBe('medium');
   });
 
-  test('a data_hold base level is never moved, even when eligible + supports + not blocked (a data hold is a safety hold)', () => {
-    const supportsEvidence = scoredEvidence({ trendWindow: { count: 4, spanDays: null, direction: 'down', magnitudePoints: 3, comparableOnly: true } });
-    const packet = buildScanEvidencePacket({ evidence: supportsEvidence, weightTrend: trend(-0.6), goalPhase: 'mild_cut', nowMs: NOW });
-    const signal = derivePhotoCorroborationSignal(packet);
-    const display = corroborateConfidenceLevel('data_hold', signal, { suppressed: false });
-    expect(display).toBe('data_hold');
+  test('an uncertain or absent scan direction derives null and is inert', () => {
+    expect(deriveCorroborationDirectionAgainstTrend({ scanDirection: 'uncertain', weightTrend: { delta: -0.6 }, goalPhase: 'mild_cut' })).toBeNull();
+    expect(deriveCorroborationDirectionAgainstTrend({ scanDirection: null, weightTrend: { delta: -0.6 }, goalPhase: 'mild_cut' })).toBeNull();
+    expect(corroborateConfidenceLevel('medium', { eligible: true, direction: null }, { suppressed: false })).toBe('medium');
   });
 
-  test('older stored outputs without photoCorroborationBlocked (undefined, pre-D18) render base, never raised', () => {
-    const supportsEvidence = scoredEvidence({ trendWindow: { count: 4, spanDays: null, direction: 'down', magnitudePoints: 3, comparableOnly: true } });
-    const packet = buildScanEvidencePacket({ evidence: supportsEvidence, weightTrend: trend(-0.6), goalPhase: 'mild_cut', nowMs: NOW });
-    const signal = derivePhotoCorroborationSignal(packet);
-    const olderStoredOutput = { confidence: 'medium' }; // photoCorroborationBlocked key absent entirely
-    const suppressed = olderStoredOutput.photoCorroborationBlocked !== false;
-    expect(suppressed).toBe(true);
-    const display = corroborateConfidenceLevel(olderStoredOutput.confidence, signal, { suppressed });
-    expect(display).toBe('medium');
+  test('suppression is senior: an eligible supporting signal never raises under a hold', () => {
+    expect(corroborateConfidenceLevel('medium', { eligible: true, direction: 'supports' }, { suppressed: true })).toBe('medium');
   });
 
-  test('clamped at high: an already-high base level stays high under an eligible supporting scan', () => {
-    const supportsEvidence = scoredEvidence({ trendWindow: { count: 4, spanDays: null, direction: 'down', magnitudePoints: 3, comparableOnly: true } });
-    const packet = buildScanEvidencePacket({ evidence: supportsEvidence, weightTrend: trend(-0.6), goalPhase: 'mild_cut', nowMs: NOW });
-    const signal = derivePhotoCorroborationSignal(packet);
-    const display = corroborateConfidenceLevel('high', signal, { suppressed: false });
-    expect(display).toBe('high');
+  test('a data_hold base level is never moved (a data hold is a safety hold)', () => {
+    expect(corroborateConfidenceLevel('data_hold', { eligible: true, direction: 'supports' }, { suppressed: false })).toBe('data_hold');
+  });
+
+  test('clamped at high: an already-high level stays high', () => {
+    expect(corroborateConfidenceLevel('high', { eligible: true, direction: 'supports' }, { suppressed: false })).toBe('high');
   });
 });

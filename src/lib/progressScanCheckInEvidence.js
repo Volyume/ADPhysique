@@ -81,7 +81,10 @@
  * was held (not changed) this run.
  */
 
-import { buildProgressScanCoachEvidence } from './progressScanCoachEvidence';
+import { buildProgressScanCoachEvidence, validityStatusFor } from './progressScanCoachEvidence';
+// Campaign 23 R2 (D99): the basis builder applies the same source check the
+// resolver applies — one constant, not a mirrored literal.
+import { PHOTO_SCAN_SOURCE } from './progressScanAnalysis';
 
 // ── Frozen enums (integration-plan.md §4) ──────────────────────────────────
 
@@ -559,4 +562,76 @@ export function derivePhotoCorroborationSignal(packet) {
     ? packet.assessment
     : null;
   return { eligible: packet.eligibleForAssessment === true, direction };
+}
+
+/**
+ * Campaign 23 R2 (D99, founder ruling 2026-08-17, superseding D18's
+ * render-time-only split): the COARSE photo-corroboration basis fed into
+ * the authoritative `runWeeklyCoach` call. Carries ONLY a data-quality
+ * eligibility boolean and the coarse scan trend direction — never a
+ * leanness score, band, body-composition estimate, scan id, capture asset
+ * or measurement (privacy-law amendment D99-3: "Raw photos and
+ * scan-derived measurements remain on-device. A locally derived,
+ * non-reversible corroboration signal may contribute only to the bounded
+ * confidence of an authoritative coaching result; underlying visual
+ * evidence is never uploaded or synced.").
+ *
+ * The gates mirror `buildScanEvidencePacket`'s rules (a)-(e) EXACTLY, from
+ * the bounded coach summary alone (every field the packet's gates read via
+ * the v1 evidence/note is a pass-through of this same summary):
+ *  - a scan must exist, from the photo-scan source, with `capturedAt`
+ *    inside the window (age >= 0 — clock skew fails closed — and
+ *    <= windowDays);
+ *  - `validityStatusFor(scan)` must be 'scored' (baseline and
+ *    not_comparable are never directional evidence);
+ *  - confidence tier must be the High/Moderate allow-list;
+ *  - 3+ comparable trend points with a definite direction (rule (e):
+ *    never a signal on thin data; 'uncertain' is not a direction).
+ *
+ * Direction-vs-trend classification does NOT happen here: 'supports' is
+ * meaningful only against the weight trend THE RUN ITSELF emits, so the
+ * engine resolves it internally via
+ * `deriveCorroborationDirectionAgainstTrend` below — preserving D18's
+ * exact semantics (the render path classified against `result.trend`)
+ * while closing D18's recorded-vs-displayed split.
+ *
+ * Pure: no I/O, no Date.now() (nowMs is the caller's anchor).
+ *
+ * @param {object|null} scan - getProgressScanCoachSummary's bounded
+ *   summary (already null under photo suppression — the engine's own
+ *   blocked-set stays senior regardless).
+ * @param {{nowMs: number, windowDays?: number}} opts
+ * @returns {{eligible: boolean, scanDirection: (string|null)}}
+ */
+export function buildPhotoCorroborationBasis(scan, { nowMs, windowDays = 10 } = {}) {
+  const INELIGIBLE = { eligible: false, scanDirection: null };
+  if (!scan || scan.source !== PHOTO_SCAN_SOURCE) return INELIGIBLE;
+  const scanAgeMs = Number.isFinite(scan.capturedAt) && Number.isFinite(nowMs)
+    ? nowMs - scan.capturedAt
+    : null;
+  if (scanAgeMs === null || scanAgeMs < 0 || scanAgeMs > windowDays * MS_PER_DAY) return INELIGIBLE;
+  if (validityStatusFor(scan) !== 'scored') return INELIGIBLE;
+  if (scan.confidence !== 'high' && scan.confidence !== 'moderate') return INELIGIBLE;
+  const direction = scan.trendDirection || 'uncertain';
+  const thinData = !(Number(scan.comparableCount) >= 3) || direction === 'uncertain';
+  if (thinData) return INELIGIBLE;
+  return { eligible: true, scanDirection: direction };
+}
+
+/**
+ * Campaign 23 R2 (D99): resolves the corroboration DIRECTION against the
+ * weight trend the run itself emitted, via the ONE classification
+ * (`classifyAgainstWeightAndGoal`) the v2 packet already uses — never a
+ * second mapping. Called by `runWeeklyCoach` with its own `trend` object;
+ * returns 'supports' | 'conflicts' | null, exactly the vocabulary
+ * `corroborateConfidenceLevel` reads (and that function ignores everything
+ * except an explicit 'supports': never lowers, never originates).
+ *
+ * @param {{scanDirection: string|null, weightTrend: object|null, goalPhase: string}} args
+ * @returns {'supports'|'conflicts'|null}
+ */
+export function deriveCorroborationDirectionAgainstTrend({ scanDirection, weightTrend, goalPhase }) {
+  if (!scanDirection || scanDirection === 'uncertain') return null;
+  const { assessment } = classifyAgainstWeightAndGoal({ scanDirection, weightTrend, goalPhase });
+  return (assessment === 'supports' || assessment === 'conflicts') ? assessment : null;
 }

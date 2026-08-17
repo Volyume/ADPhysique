@@ -22,6 +22,12 @@ import { robustTrackingLatest, robustTrackingSevenDaysAgoPoint } from './robustT
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
 import { cycleTrendAnnotation } from './cyclePhase';
+// Campaign 23 R2 (D99): the one shared scan-vs-trend classification, so the
+// corroboration direction is resolved against this run's own emitted trend
+// rather than a caller-side reading of a different trend. Pure module, no
+// cycle (progressScanCheckInEvidence is source-guarded to never import this
+// engine).
+import { deriveCorroborationDirectionAgainstTrend } from './progressScanCheckInEvidence';
 // Campaign 18: one shared reading of the week's evidence, and one shared
 // answer to what is actually limiting progress.
 import { buildCoachContext } from './coachContext';
@@ -672,11 +678,16 @@ export function runWeeklyCoach(inputs) {
     // D18 (founder decision 2026-07-09, plan-F §4.4): optional caller-supplied
     // photo-corroboration signal, { eligible: boolean, direction: 'supports' |
     // 'conflicts' | null }. Defaults null so every existing caller is
-    // byte-identical. It can ONLY raise the EMITTED data-confidence caption by
-    // one bounded step (see the PHOTO CORROBORATION block before the return);
-    // it never reaches any calorie/macro/training/floor path. The engine never
-    // reads a scan itself — the caller derives this from the v2 evidence packet.
-    photoCorroboration = null,
+    // Campaign 23 R2 (D99, superseding D18's render-time-only split): the
+    // COARSE photo-corroboration basis, {eligible, scanDirection} only —
+    // built by buildPhotoCorroborationBasis (progressScanCheckInEvidence.js)
+    // from the bounded scan summary; never a score, band, estimate, id or
+    // measurement. It can ONLY raise the EMITTED data-confidence by one
+    // bounded step (see the PHOTO CORROBORATION block before the return);
+    // it never reaches any calorie/macro/training/floor path, and the
+    // direction is resolved HERE against this run's own emitted trend so
+    // 'supports' always means "agrees with the decision actually made".
+    photoCorroborationBasis = null,
     lastCalAdjustmentDirection: _lastCalAdjustmentDirection = null,
     lastCalAdjustmentWeeksAgo = 99,
     currentCalTarget = null,
@@ -881,11 +892,9 @@ export function runWeeklyCoach(inputs) {
       limiters: classifyLimiters(holdContext),
       dataNote: confidence.holdMessage,
       confidence: confidence.level,
-      // D18: a data hold is a safety hold — corroboration can never lift it,
-      // and it is blocked from surfacing. Emitted here for output-shape parity
-      // with the main-card return.
-      photoCorroborationApplied: false,
-      photoCorroborationBlocked: true,
+      // D18/D99: a data hold is a safety hold — corroboration can never
+      // lift it (this return runs before the corroboration block is ever
+      // reached, so no basis input can move this level).
       weekLabel: `Week ${Number.isFinite(claimedWeeksInPhase) ? Math.round(claimedWeeksInPhase) : 1} · ${phaseConfig(goalPhase).label}`,
       trend: { ewma7: ewmaNow, delta: null, onTarget: false, deltaLabel: 'Log morning weight', rateLabel: null },
       whatWorking: ['Check-in saved.'],
@@ -2316,14 +2325,20 @@ export function runWeeklyCoach(inputs) {
     trendPctPerWeek: computeWeeklyTrendPct(morningWeights, bodyweightKg, nowMs),
   });
 
-  // ── PHOTO CORROBORATION (D18, founder decision 2026-07-09; plan-F §4.4) ────
-  // A strong, already-agreeing progress-photo trend (photoCorroboration:
-  // eligible === true means 3+ comparable scans at Moderate+ confidence;
-  // direction 'supports' means the scan agrees with the decision the logged
-  // data was already leaning toward) may raise the EMITTED data-confidence
-  // caption by EXACTLY ONE bounded step, clamped at 'high', never lowering,
-  // never originating, never moving 'data_hold' (the data_hold early return
-  // above never reaches this block).
+  // ── PHOTO CORROBORATION (D99, founder ruling 2026-08-17; supersedes D18's
+  // render-time-only split — the corroborated confidence is now THE emitted,
+  // persisted confidence) ─────────────────────────────────────────────────
+  // A strong, already-agreeing progress-photo trend (basis eligible === true
+  // means a scored, in-window scan with 3+ comparable points at Moderate+
+  // confidence; direction 'supports' means the scan agrees with the trend
+  // this run itself emitted) may raise the EMITTED data-confidence by
+  // EXACTLY ONE bounded step, clamped at 'high', never lowering, never
+  // originating, never moving 'data_hold' (the data_hold early return above
+  // never reaches this block). Privacy-law amendment (D99-3): "Raw photos
+  // and scan-derived measurements remain on-device. A locally derived,
+  // non-reversible corroboration signal may contribute only to the bounded
+  // confidence of an authoritative coaching result; underlying visual
+  // evidence is never uploaded or synced."
   //
   // It moves ONLY the emitted `confidence` field. The pre-corroboration
   // `confidence.level` is what fed offTargetWeeksRequired and therefore every
@@ -2349,12 +2364,30 @@ export function runWeeklyCoach(inputs) {
     scoffPositive ||
     calmMode
   );
+  // Campaign 23 R2 (D99): direction resolved against THIS run's own trend
+  // via the one shared classification — 'supports' means the scan agrees
+  // with the trend this decision was actually made from, exactly the
+  // semantics the D18 render path had when it classified against
+  // result.trend. The emitted `confidence` below is what persists/syncs:
+  // the ordinary coach output, no photo-derived input or source flag
+  // (D99-2). The pre-corroboration confidence.level fed every
+  // calorie/macro/training/floor decision earlier in this run, so all of
+  // those stay byte-identical whether or not a scan corroborates.
+  const photoCorroboration = photoCorroborationBasis?.eligible === true
+    ? {
+      eligible: true,
+      direction: deriveCorroborationDirectionAgainstTrend({
+        scanDirection: photoCorroborationBasis.scanDirection,
+        weightTrend: { delta: weightDelta },
+        goalPhase,
+      }),
+    }
+    : { eligible: false, direction: null };
   const emittedConfidenceLevel = corroborateConfidenceLevel(
     confidence.level,
     photoCorroboration,
     { suppressed: photoCorroborationBlocked },
   );
-  const photoCorroborationApplied = emittedConfidenceLevel !== confidence.level;
 
   return {
     hasEnoughData: true,
@@ -2388,14 +2421,13 @@ export function runWeeklyCoach(inputs) {
       onTarget: onTarget === true, goalPhase,
     }),
     doseEscalated,
+    // Campaign 23 R2 (D99): the one emitted confidence — already carries
+    // the bounded one-step scan corroboration where it applied, so the
+    // recorded, synced and displayed values are the same value. No
+    // photo-derived input or source flag is emitted or persisted (the D18
+    // photoCorroborationApplied/Blocked flags are retired with the
+    // render-time overlay they existed to gate).
     confidence: emittedConfidenceLevel,
-    // D18: true only on a run where a strong, already-agreeing scan actually
-    // raised the emitted confidence caption one step; false otherwise.
-    photoCorroborationApplied,
-    // D18: the engine's authoritative "corroboration is unsafe to surface this
-    // week" read (calm mode / ED flag / any safety hold), so a display-only
-    // consumer never has to re-derive scoffPositive/calm to gate the caption.
-    photoCorroborationBlocked,
     weekLabel,
     trend: {
       ewma7: ewma7Today,

@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { runWeeklyCoach, mapCalsAdherence, corroborateConfidenceLevel } from '../lib/weeklyCoach';
+import { runWeeklyCoach, mapCalsAdherence } from '../lib/weeklyCoach';
 // Campaign 18: the week as one account, written from the engine's own context.
 import { buildCoachStory } from '../lib/coachStory';
 // Campaign 18 outcome follow-up: what changed, why, and what happened after.
@@ -57,7 +57,7 @@ import { getProgressScanHideExactPreference } from '../lib/progressScanPreferenc
 // extends the existing "Progress photo context" card. composeScanEvidencePacket
 // is the shared v1-evidence-then-v2-packet composition (progressScanCheckInEvidence.js)
 // also used by WeeklyCheckInScreen, so the two-step assembly lives in one place.
-import { composeScanEvidencePacket, derivePhotoCorroborationSignal } from '../lib/progressScanCheckInEvidence';
+import { composeScanEvidencePacket, buildPhotoCorroborationBasis } from '../lib/progressScanCheckInEvidence';
 import { confidenceChipLabel } from '../lib/progressScanResultsContract';
 // Suppression unification (Wave 4): this screen already fails-closed on calm
 // mode / an open ED-pattern flag with its own raw reads, reused across many
@@ -1822,11 +1822,21 @@ export default function CoachOutputScreen({ navigation, route }) {
       const { getManualVolumeMuscles } = require('../lib/effectiveLandmarks');
       const manualVolumeMuscles = await getManualVolumeMuscles(user.id).catch(() => []);
 
+      // Campaign 23 R2 (D99, superseding D18's render-time-only split): the
+      // coarse corroboration basis — {eligible, scanDirection} only, never a
+      // score/band/estimate/id — derived pre-run from the same bounded,
+      // suppression-aware scan summary loaded above. The engine resolves the
+      // 'supports' direction against its OWN emitted trend and applies its
+      // one-step rule under its own senior blocked-set (ED hold, FFM floor,
+      // rapid-loss, safety hold, SCOFF, calm), so the recorded, synced and
+      // displayed confidence are one value.
+      const photoCorroborationBasis = buildPhotoCorroborationBasis(scanCoachSummary, { nowMs: Date.now() });
       const result = runWeeklyCoach({
         checkin: engineCheckin,
         priorInterventions,
         priorDeclines,
         manualVolumeMuscles,
+        photoCorroborationBasis,
         morningWeights: weights,
         sessionsCompleted: sessionStats.completed,
         sessionsPlanned: sessionStats.planned,
@@ -2396,30 +2406,14 @@ export default function CoachOutputScreen({ navigation, route }) {
   const scanAssessmentUsedSentence = scanAssessmentPacket
     ? dedupeUsedSentence([scanAssessmentPacket.receipt.headline, scanAssessmentPacket.receipt.detail].filter(Boolean).join(' '), scanAssessmentPacket.receipt.usedSentence)
     : null;
-  // D18 lead ruling (2026-07-09 resume session; docs/ux-world-class-audit-
-  // 2026-07-09/DECISIONS-2026-07-09.md D18; plan-F §4.4 fork, delegated to
-  // the lead): a RENDER-TIME-ONLY confidence-caption transform. This never
-  // writes back to `output`, `saveCoachOutput`, or any synced field --
-  // runWeeklyCoach above is still ALWAYS called with photoCorroboration
-  // absent/null, so the persisted/synced coach output stays byte-identical.
-  // The signal is derived from the SAME device-local v2 packet the receipt
-  // card above already shows, via the ONE shared derivation
-  // (derivePhotoCorroborationSignal, progressScanCheckInEvidence.js) rather
-  // than a second invented mapping. `corroborateConfidenceLevel` itself
-  // (weeklyCoach.js) is the engine's own pure one-step rule -- calling it
-  // here does not change what it does, only when its result is looked at.
-  const photoCorroborationSignal = derivePhotoCorroborationSignal(scanAssessmentPacket);
-  // Fail to base, never fail upward: `photoCorroborationBlocked` is `true`
-  // on a genuinely blocked run and simply ABSENT (undefined) on an older
-  // stored output that predates D18 -- both must suppress the render-time
-  // raise. Only an explicit `false` (this run positively cleared every
-  // hold) allows it.
-  const photoCorroborationRenderSuppressed = output.photoCorroborationBlocked !== false;
-  const displayConfidence = corroborateConfidenceLevel(
-    confidence,
-    photoCorroborationSignal,
-    { suppressed: photoCorroborationRenderSuppressed },
-  );
+  // Campaign 23 R2 (D99, superseding the D18 render-time-only transform
+  // that used to live here): the corroboration now happens INSIDE
+  // runWeeklyCoach (fed the coarse basis at the call site above), so the
+  // recorded `confidence` on this output already carries the bounded
+  // one-step raise where it applied — recorded, synced and displayed are
+  // one value, and older stored outputs simply display the confidence they
+  // recorded. No render-time re-derivation, no photo-derived flags read.
+  const displayConfidence = confidence;
   let trendIcon = 'remove-outline';
   // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): stateColors
   // is a frozen alias onto colors.success/warning/error/textMuted (theme.js),
@@ -2969,7 +2963,15 @@ export default function CoachOutputScreen({ navigation, route }) {
                 photo-corroborated caption word must never hide or reframe a
                 genuine thin-weigh-in disclosure, per D18's "only the caption
                 moves" bound. */}
-            {confidence !== 'high' && weighInsThisWeek != null && weighInsThisWeek < 4
+            {/* Campaign 23 R2 (D99): keyed off the OBSERVABLE weigh-in count
+                alone, not the confidence caption. Raw 'high' already requires
+                5+ distinct weigh-in days (assessDataConfidence), so this is
+                behaviour-identical for every un-corroborated output — and on
+                a week where scan corroboration raised the emitted confidence,
+                the thinness disclosure now correctly STAYS visible (the D18
+                honesty rule "a raised caption must never hide genuine data
+                thinness", preserved under the unified confidence field). */}
+            {weighInsThisWeek != null && weighInsThisWeek < 4
               ? ` Only ${weighInsThisWeek} morning weigh-in${weighInsThisWeek === 1 ? '' : 's'} landed this week.`
               : ''}
           </Text>

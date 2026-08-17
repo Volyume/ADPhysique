@@ -66,7 +66,12 @@ const STATIC_LIMITATION_LABELS = new Set([
   'never_authoritative_for_safety_floors',
 ]);
 
-function validityStatusFor(scan) {
+// Exported for Campaign 23 R2 (D99): the photo-corroboration basis builder
+// (progressScanCheckInEvidence.buildPhotoCorroborationBasis) applies the
+// SAME validity classification pre-run rather than re-deriving it — one
+// derivation home for "is this scan scored evidence", per the module's own
+// one-shared-derivation rule.
+export function validityStatusFor(scan) {
   if (!scan) return null;
   if (scan.comparisonStatus === 'not_comparable') return 'not_comparable';
   if (scan.comparisonStatus !== 'comparable') return 'baseline';
