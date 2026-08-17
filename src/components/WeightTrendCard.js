@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import VolyumeChart from './VolyumeChart';
-import { formatBodyWeight } from '../lib/units';
+import { formatBodyWeight, formatBodyWeightRate } from '../lib/units';
 import { formatNumber, formatWithUnit } from '../lib/format';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -67,10 +67,16 @@ export default function WeightTrendCard({ vm, bodyWeightUnits = 'st' }) {
     ? rawData.map((p) => ({ value: p?.weightKg })).filter((p) => Number.isFinite(p.value))
     : null;
 
-  // Weekly rate in kg (rate of change is conventionally read in kg, and the
-  // blueprint copy uses kg). One decimal, explicit sign, neutral colour.
+  // WAVE-D-FINDINGS.md (mandatory item, WeightTrendCard.js:70-74, C23
+  // carry-over): the rate must follow the user's DISPLAY units, never a
+  // hard-coded kg literal beside an st/lbs headline weight (units.js §15,
+  // formatBodyWeightRate's own header law). formatBodyWeightRate already
+  // carries its own "/week" suffix, so it is used as the whole rateText
+  // (no separate "this week" appended, which would read as "kg/week this
+  // week") -- matches AnalyticsScreen.js:108's already-correct sibling call
+  // exactly (`formatBodyWeightRate(weightTrend.weeklyChange, bodyWeightUnits)`).
   const rateText = Number.isFinite(weeklyChange)
-    ? `${weeklyChange > 0 ? '+' : ''}${weeklyChange.toFixed(1)} kg this week`
+    ? formatBodyWeightRate(weeklyChange, bodyWeightUnits)
     : null;
 
   const a11y = [

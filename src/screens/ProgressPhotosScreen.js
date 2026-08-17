@@ -74,6 +74,7 @@ import {
   firstPoseRetakeCopy,
 } from '../lib/progressCaptureGuide';
 import { formatProgressPhotoDay, formatProgressPhotoShortDay } from '../lib/progressPhotoDates';
+import { formatBodyWeight } from '../lib/units';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import ProgressPhotoViewer from '../components/ProgressPhotoViewer';
 import ProgressPhotoCompare from '../components/ProgressPhotoCompare';
@@ -161,6 +162,10 @@ export default function ProgressPhotosScreen({ navigation }) {
   // store inside the screen.
   const tier = useAppStore((s) => s.tier);
   const readOnly = tier !== 'pro';
+  // WAVE-D-FINDINGS.md UNIT_DEFECT (:1263): the check-in card's own weight
+  // readout hard-coded 'kg' regardless of the user's chosen body-weight
+  // unit, unlike the already-correct sibling BeforeAfterShareSheet.js:148.
+  const bodyWeightUnits = useAppStore((s) => s.bodyWeightUnits);
   const userId = useAppStore((s) => s.user?.id);
   const user = useAppStore((s) => s.user);
   const userSex = useAppStore((s) => s.userProfile?.sex ?? null);
@@ -1260,7 +1265,10 @@ export default function ProgressPhotosScreen({ navigation }) {
     const poseSummary = missingPoses.length === 0
       ? (hasSide ? 'Front, back + side' : 'Front + back')
       : `${scorePoseCount}/${SCORE_POSES.length} scoring photos`;
-    const weightText = Number.isFinite(item.weightKg) ? `${item.weightKg.toFixed(1)} kg` : null;
+    // WAVE-D-FINDINGS.md UNIT_DEFECT (:1263): was a hard-coded 'kg' literal
+    // regardless of bodyWeightUnits; matches BeforeAfterShareSheet.js:148's
+    // already-correct read of the same store field.
+    const weightText = Number.isFinite(item.weightKg) ? formatBodyWeight(item.weightKg, bodyWeightUnits) : null;
     const scanForDay = scanForCheckIn(item);
     const scanSummary = libraryScanSummary(scanForDay);
     // Receipts (results-ui-and-copy-blueprint.md §2/§9): one calm sentence +

@@ -69,6 +69,11 @@ function fmtDate(ms) {
 export function buildCards(data, units, { neutral = false, lifetime = null } = {}) {
   if (!data) return [];
   const cards = [];
+  // WAVE-D-FINDINGS.md UNIT_DEFECT (systemic, 7 sites): every tonnage/volume
+  // figure hard-coded 'kg', ignoring `units`, unlike every PR value in this
+  // same function. Mirrors the already-fixed share-card sibling exactly
+  // (recapPayload.js:51, `const u = units === 'lbs' ? 'lbs' : 'kg';`).
+  const u = units === 'lbs' ? 'lbs' : 'kg';
 
   // 1. Intro: period framing
   cards.push({
@@ -115,7 +120,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
       icon: 'trending-up',
       tone: 'success',
       value: data.tonnage.toLocaleString('en-GB'),
-      unit: 'kg moved',
+      unit: `${u} moved`,
       caption,
     });
   }
@@ -188,7 +193,7 @@ export function buildCards(data, units, { neutral = false, lifetime = null } = {
       tone: 'primary',
       value: lifetime.sessions.toLocaleString('en-GB'),
       unit: lifetime.sessions === 1 ? 'session, lifetime' : 'sessions, lifetime',
-      caption: `${lifetime.tonnage.toLocaleString('en-GB')} kg lifted and ${lifetime.reps.toLocaleString('en-GB')} reps, all time.`,
+      caption: `${lifetime.tonnage.toLocaleString('en-GB')} ${u} lifted and ${lifetime.reps.toLocaleString('en-GB')} reps, all time.`,
     });
   }
 
@@ -218,6 +223,8 @@ function parseDateText(t) {
 export function buildMonthCards(data, units, { label = 'This month', neutral = false } = {}) {
   if (!data) return [];
   const cards = [];
+  // WAVE-D-FINDINGS.md UNIT_DEFECT: see buildCards' identical fix above.
+  const u = units === 'lbs' ? 'lbs' : 'kg';
   cards.push({
     type: 'intro', icon: 'sparkles', tone: 'gold',
     headline: `${label}, in numbers.`,
@@ -252,7 +259,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
     }
     content.push({
       type: 'stat', icon: 'trending-up', tone: 'success',
-      value: data.tonnage.toLocaleString('en-GB'), unit: 'kg moved', caption,
+      value: data.tonnage.toLocaleString('en-GB'), unit: `${u} moved`, caption,
     });
   }
 
@@ -275,7 +282,7 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
   if (data.bestSession) {
     content.push({
       type: 'stat', icon: 'flash', tone: 'primary',
-      value: data.bestSession.tonnage.toLocaleString('en-GB'), unit: 'kg, best session',
+      value: data.bestSession.tonnage.toLocaleString('en-GB'), unit: `${u}, best session`,
       caption: `Your biggest session was on ${fmtDate(data.bestSession.startedAt)}.`,
     });
   }
@@ -309,6 +316,8 @@ export function buildMonthCards(data, units, { label = 'This month', neutral = f
 export function buildWeekCards(data, units, { label = 'This week', neutral = false } = {}) {
   if (!data || !(data.totalSessions > 0)) return [];
   const cards = [];
+  // WAVE-D-FINDINGS.md UNIT_DEFECT: see buildCards' identical fix above.
+  const u = units === 'lbs' ? 'lbs' : 'kg';
   cards.push({
     type: 'intro', icon: 'sparkles', tone: 'gold',
     headline: `${label}, in numbers.`,
@@ -341,7 +350,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
     }
     content.push({
       type: 'stat', icon: 'trending-up', tone: 'success',
-      value: data.tonnage.toLocaleString('en-GB'), unit: 'kg moved', caption,
+      value: data.tonnage.toLocaleString('en-GB'), unit: `${u} moved`, caption,
     });
   }
 
@@ -364,7 +373,7 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
   if (data.bestSession) {
     content.push({
       type: 'stat', icon: 'flash', tone: 'primary',
-      value: data.bestSession.tonnage.toLocaleString('en-GB'), unit: 'kg, best session',
+      value: data.bestSession.tonnage.toLocaleString('en-GB'), unit: `${u}, best session`,
       caption: `Your biggest session was on ${fmtDate(data.bestSession.startedAt)}.`,
     });
   }
@@ -393,6 +402,8 @@ export function buildWeekCards(data, units, { label = 'This week', neutral = fal
 export function buildBlockCards(data, units) {
   if (!data) return [];
   const cards = [];
+  // WAVE-D-FINDINGS.md UNIT_DEFECT: see buildCards' identical fix above.
+  const u = units === 'lbs' ? 'lbs' : 'kg';
   const name = data.meso?.name || 'Training block';
   const startMs = parseDateText(data.startDate);
   const endMs = parseDateText(data.endDate);
@@ -433,7 +444,7 @@ export function buildBlockCards(data, units) {
     type: 'stat', icon: 'layers', tone: 'primary',
     value: data.totalSessions.toLocaleString('en-GB'),
     unit: data.totalSessions === 1 ? 'session' : 'sessions',
-    caption: `${data.totalSets.toLocaleString('en-GB')} sets - ${data.tonnage.toLocaleString('en-GB')} kg moved.`,
+    caption: `${data.totalSets.toLocaleString('en-GB')} sets - ${data.tonnage.toLocaleString('en-GB')} ${u} moved.`,
   });
 
   // FB-23 (D96): "Recover well, then go again" told a user who had just

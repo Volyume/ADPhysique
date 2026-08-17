@@ -57,15 +57,25 @@ describe('partnerRowLine (shared by PartnerRow and the You-tab row)', () => {
     expect(partnerRowLine({ rowState: 'resting' })).toBe('Your partner: resting this week'));
 });
 
-describe('free/Pro partner cap (§4.9)', () => {
-  test('free allows one', () => expect(maxPartnersForTier('free')).toBe(1));
-  test('pro allows three', () => expect(maxPartnersForTier('pro')).toBe(3));
-  test('free user with one partner cannot add', () =>
-    expect(canAddPartner({ tier: 'free', activeCount: 1 })).toBe(false));
-  test('free user with none can add', () =>
-    expect(canAddPartner({ tier: 'free', activeCount: 0 })).toBe(true));
-  test('pro user with two can add a third', () =>
-    expect(canAddPartner({ tier: 'pro', activeCount: 2 })).toBe(true));
-  test('pro user with three cannot add a fourth', () =>
-    expect(canAddPartner({ tier: 'pro', activeCount: 3 })).toBe(false));
+// WAVE-D-FINDINGS.md DEAD-STALE_SURFACE (lead ruling item 4, RE-PINNED): the
+// free/Pro tier split was removed -- PartnerScreen (this module's only
+// caller chain, via usePartners.js) is withProGuard-wrapped at the
+// navigator (RootNavigator.js:223), so `tier` was always 'pro' by the time
+// any of this ran live; the 'free' branch was dead code. The cap is now a
+// flat 3 regardless of the `tier` argument, which stays accepted (unused)
+// so canAddPartner's existing call shape needs no change.
+describe('partner cap (§4.9, flat -- Pro-only surface)', () => {
+  test('cap is 3 regardless of tier', () => {
+    expect(maxPartnersForTier('pro')).toBe(3);
+    expect(maxPartnersForTier('free')).toBe(3);
+    expect(maxPartnersForTier(undefined)).toBe(3);
+  });
+  test('at 3 active, cannot add a fourth (any tier value)', () => {
+    expect(canAddPartner({ tier: 'pro', activeCount: 3 })).toBe(false);
+    expect(canAddPartner({ tier: 'free', activeCount: 3 })).toBe(false);
+  });
+  test('under 3 active, can add (any tier value)', () => {
+    expect(canAddPartner({ tier: 'pro', activeCount: 2 })).toBe(true);
+    expect(canAddPartner({ tier: 'free', activeCount: 0 })).toBe(true);
+  });
 });

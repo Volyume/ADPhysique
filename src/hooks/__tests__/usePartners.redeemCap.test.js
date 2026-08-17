@@ -1,9 +1,19 @@
 /**
- * Partners cap guard on the redeem path (2026-07-03). The free = 1 / pro = 3
- * partner cap (canAddPartner) must hold INSIDE redeem itself, not only via the
- * surfaces that gate around it: every caller (deep link, code entry, resurfaced
+ * Partners cap guard on the redeem path (2026-07-03). The partner cap
+ * (canAddPartner) must hold INSIDE redeem itself, not only via the surfaces
+ * that gate around it: every caller (deep link, code entry, resurfaced
  * paywall invite) inherits it. These pin that a redeem at the cap is refused
  * before the RPC, and allowed while under it.
+ *
+ * WAVE-D-FINDINGS.md DEAD-STALE_SURFACE (lead ruling item 4, RE-PINNED): the
+ * cap used to differ by tier (free=1/pro=3); it is now a flat 3 for every
+ * tier value, since PartnerScreen (this hook's only caller) is
+ * withProGuard-wrapped at the navigator (RootNavigator.js:223) and `tier`
+ * is therefore always 'pro' in the live app -- see
+ * src/lib/partners/signals.js's maxPartnersForTier for the full
+ * unreachability proof. The 'free' tier cases below now exercise the same
+ * flat cap as 'pro' (the hook still accepts a tier argument; only the cap
+ * value stopped differing by it).
  */
 import { create, act } from 'react-test-renderer';
 
@@ -102,8 +112,8 @@ beforeEach(() => {
 });
 
 describe('usePartners redeem enforces the partner cap', () => {
-  test('free at the cap (1 active) refuses without calling the RPC', async () => {
-    db.getActivePartnerCount.mockResolvedValue(1);
+  test('free at the flat cap (3 active) refuses without calling the RPC', async () => {
+    db.getActivePartnerCount.mockResolvedValue(3);
     const ref = renderHook('free');
     let r;
     await act(async () => { r = await ref.redeem('CODE1234'); });

@@ -704,7 +704,12 @@ export default function PartnerScreen({ route }) {
     setCode(incomingCode);
     if (!p.canAdd) {
       const visiblePairs = (p.pairs || []).length;
-      const limit = tier === 'pro' ? PRO_MAX_PAIRS : 1;
+      // WAVE-D-FINDINGS.md DEAD-STALE_SURFACE (lead ruling item 4, removed):
+      // this screen is only reachable Pro (RootNavigator.js:223,
+      // withProGuard), so `tier` is always 'pro' here -- the free-tier
+      // branch was dead code. See signals.js's maxPartnersForTier for the
+      // full unreachability proof.
+      const limit = PRO_MAX_PAIRS;
       if (visiblePairs >= limit) {
         handledCodeRef.current = incomingCode;
         setCodeEntryOpen(true);

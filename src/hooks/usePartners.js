@@ -4,9 +4,11 @@
  * keeps it current); the ONLINE actions (create/redeem/cheer/unpair/block) are
  * the deliberate exceptions — pairing is "the one online-required step" (§4.2).
  *
- * v1 surfaces a single primary partnership (the free cap is one partner; the
- * Pro three-partner list is a follow-on). Recomputes on focus so a synced cheer
- * or week signal reflects immediately.
+ * v1 surfaces a single primary partnership; the three-partner list is a
+ * follow-on (the cap is a flat 3 -- see signals.js's maxPartnersForTier;
+ * WAVE-D-FINDINGS.md item 4 removed the old free/pro split as dead code,
+ * this route being Pro-only). Recomputes on focus so a synced cheer or week
+ * signal reflects immediately.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -533,10 +535,12 @@ export default function usePartners(userId, tier) {
   }, [userId]);
 
   const redeem = useCallback(async (code) => {
-    // Cap guard on the redeem path itself (free = 1, pro = 3): every caller
-    // inherits it, not just the surfaces that happen to gate around it. Read the
-    // live active count so a just-synced pairing counts. Refuse before the RPC
-    // when at the limit; the caller surfaces the calm at-limit toast.
+    // Cap guard on the redeem path itself (flat 3-partner cap, WAVE-D-
+    // FINDINGS.md item 4: the old free/pro split was removed as dead code --
+    // see signals.js's maxPartnersForTier): every caller inherits it, not
+    // just the surfaces that happen to gate around it. Read the live active
+    // count so a just-synced pairing counts. Refuse before the RPC when at
+    // the limit; the caller surfaces the calm at-limit toast.
     const activeCount = await getActivePartnerCount(userId).catch(() => 0);
     if (!canAddPartner({ tier, activeCount })) return { ok: false, error: 'at_cap' };
     const r = await redeemPartnerInvite(userId, code);

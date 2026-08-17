@@ -55,10 +55,16 @@ describe('Workout History tonnage chip uses the central formatter (P-15)', () =>
 });
 
 describe('Workout Summary hero tonnage uses the central formatter (P-15)', () => {
+  // RE-PINNED (Campaign 24 Wave A, WAVE-A-FINDINGS.md UNIT_DEFECT; commit
+  // 909fbd76): the hero stat's hard-coded 'kg' was the exact defect that
+  // wave fixed — the unit now follows the user's display setting, matching
+  // the screen's own R8/M5 share-card path. The P-15 rule this suite pins
+  // (central formatter, never bare toLocaleString + no-space unit) is
+  // unchanged and still asserted.
   test('routes through formatNumber + formatWithUnit, matching Workout History and the recap', () => {
     expect(WORKOUT_SUMMARY).toMatch(/import \{ formatNumber, formatWithUnit \} from '\.\.\/lib\/format';/);
     expect(WORKOUT_SUMMARY).toMatch(
-      /value=\{formatWithUnit\(formatNumber\(Math\.round\(tonnage \|\| 0\)\), 'kg'\)\}/,
+      /value=\{formatWithUnit\(formatNumber\(Math\.round\(tonnage \|\| 0\)\), units === 'lbs' \? 'lbs' : 'kg'\)\}/,
     );
     expect(WORKOUT_SUMMARY).not.toMatch(/\$\{Math\.round\(tonnage \|\| 0\)\.toLocaleString\('en-GB'\)\} kg/);
   });

@@ -102,7 +102,19 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     // shape unnoticed. See AUDIT-MODULES-FLAGS.md §1.4 for the distinction
     // between this self-logged capture weight and the scan-stats weight the
     // other three sites gate.
-    expect(SCREEN).toMatch(/const weightText = Number\.isFinite\(item\.weightKg\) \? `\$\{item\.weightKg\.toFixed\(1\)\} kg` : null;/);
+    //
+    // RE-PINNED (WAVE-D-FINDINGS.md UNIT_DEFECT, :1263, lead ruling item 2):
+    // this line hard-coded a 'kg' literal regardless of the user's chosen
+    // body-weight unit (bodyWeightUnits was never even read in this file).
+    // Now formats through formatBodyWeight(item.weightKg, bodyWeightUnits),
+    // matching the already-correct sibling BeforeAfterShareSheet.js:148.
+    // The weight-privacy law this test pins (not itself suppression-gated
+    // at this line) is unchanged.
+    expect(SCREEN).toMatch(
+      /const weightText = Number\.isFinite\(item\.weightKg\) \? formatBodyWeight\(item\.weightKg, bodyWeightUnits\) : null;/,
+    );
+    expect(SCREEN).toMatch(/import \{ formatBodyWeight \} from '\.\.\/lib\/units';/);
+    expect(SCREEN).toMatch(/const bodyWeightUnits = useAppStore\(\(s\) => s\.bodyWeightUnits\);/);
   });
 
   test('capture and deletion lifecycle cleans up scan assets', () => {

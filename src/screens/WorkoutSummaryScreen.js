@@ -907,9 +907,20 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   }
 
   function handleShareCard() {
+    // WAVE-D-FINDINGS.md IA_DEFECT (:1811, lead ruling item 3): the live
+    // path's `exerciseData` route param is never populated for a readOnly
+    // (history) open -- WorkoutHistoryScreen's navigate call only supplies
+    // `readOnlyExerciseData` (loaded separately, above), which is the SAME
+    // shape topSetFromExerciseData expects ([{ name, loggedSets }]), so it
+    // is the correct read here rather than a second data load. `detectedPRs`
+    // stays at its route-params default ([]) in readOnly, which degrades
+    // gracefully (no PR badge on a shared historical session), never a
+    // crash -- confirmed in the findings' own analysis of this path. Same
+    // fallback pattern already used for the on-screen exercise list (:1369).
+    const shareExerciseData = readOnly ? readOnlyExerciseData : exerciseData;
     // Top set across the whole session, heaviest non-warmup set drives the
     // "best lift" highlight on the share card.
-    const topSet = topSetFromExerciseData(exerciseData);
+    const topSet = topSetFromExerciseData(shareExerciseData);
 
     // Intensity tier, drives the badge on the share card. Heuristic, but
     // gives a "great workout" flavour without needing a full grading system.
@@ -1807,8 +1818,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           />
           {/* R11/L2 (share-card audit 2026-07-27): a zero-working-set session
               (e.g. a warm-up-only or cardio-only log) still offered Share and
-              rendered a card reading "0 SETS / 0m" -- nothing worth sharing. */}
-          {!readOnly && displayWorkingSets > 0 && (
+              rendered a card reading "0 SETS / 0m" -- nothing worth sharing.
+              WAVE-D-FINDINGS.md IA_DEFECT (lead ruling item 3): a past
+              session opened from history used to have NO share affordance
+              at all, ever again, unlike every other progress surface's
+              "share your own evidence" standing capability. handleShareCard
+              now reads readOnlyExerciseData in readOnly mode (above), so the
+              !readOnly guard is no longer needed here. */}
+          {displayWorkingSets > 0 && (
             <Button
               title="Share"
               icon="share-social-outline"

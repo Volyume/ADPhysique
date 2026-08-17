@@ -57,8 +57,13 @@ import { robustValues } from '../lib/robustTrend';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { toEnergy, energyUnitLabel } from '../lib/format';
-import { formatBodyWeight, formatBodyWeightShort, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
+import { formatBodyWeight, formatBodyWeightShort, formatBodyWeightRate, kgToStoneLbsStrings, kgToLbs } from '../lib/units';
 import { isCalm, WELLBEING_HELPLINE, WELLBEING_KEY } from '../lib/wellbeing';
+// WAVE-D-FINDINGS.md item 1 (lead ruling, D33/D98-2 precedent): the rate/
+// maintenance suppression under an open ED-pattern flag must be decided by
+// the SAME shared derivation the Progress root's "Your trend" card uses
+// (deriveWeightTrend, weightTrend.js), never a hand-rolled parallel branch.
+import { deriveWeightTrend } from '../lib/weightTrend';
 import { validateBodyMetricForm } from '../lib/bodyMetricValidate';
 import { mergeMorningWeightsIntoHistory } from '../lib/bodyMetricsHistoryMerge';
 
@@ -572,6 +577,26 @@ export default function BodyMetricsScreen() {
         : 'Based on earlier logged history and being revalidated with fresh data.',
     };
   }, [maintenanceAuthority]);
+
+  // WAVE-D-FINDINGS.md item 1 (LOGIC_DEFECT, ED-safety-adjacent) -- lead
+  // ruling: this screen's own "Weight trend" EWMA card and "Effective
+  // maintenance" card must have their rate/maintenance suppression decided
+  // by the SAME shared derivation the Progress root's "Your trend" card uses
+  // (useWeightTrend -> deriveWeightTrend, src/lib/weightTrend.js), never a
+  // hand-rolled `if (edFlagOpen)` branch re-deriving that decision. Fed with
+  // this screen's OWN already-loaded ewmaData/weeklyChange/adaptiveBurn (the
+  // underlying numbers and this card's own richer copy -- the average-intake
+  // line, the confidence-tier wording -- are unchanged; only the suppression
+  // VERDICT is now sourced from the one authoritative function). ED-flag
+  // suppression only, matching deriveWeightTrend exactly: no additional
+  // calm-mode gate is added here (deriveWeightTrend does not take calm as an
+  // input, and this screen's own top-of-render calm gate already handles
+  // calm mode via the re-confirmation screen above).
+  const weeklyChange = useMemo(() => computeWeeklyWeightChange(ewmaData), [ewmaData]);
+  const weightTrendVm = useMemo(
+    () => deriveWeightTrend({ ewmaData, weeklyChange, adaptiveBurn, edFlagOpen }),
+    [ewmaData, weeklyChange, adaptiveBurn, edFlagOpen],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -1154,8 +1179,19 @@ export default function BodyMetricsScreen() {
             {latest.body_weight && (
               <View style={styles.weightRow}>
                 <Text style={[styles.weightValue, live.weightValue]}>{formatBodyWeight(latest.body_weight, bwu)}</Text>
+                {/* WAVE-D-FINDINGS.md UNIT_DEFECT (:1156-1159, minor, same
+                    family as the mandatory WeightTrendCard item): getDelta
+                    always returns a raw-KG difference (body_weight is stored
+                    in kg per rowToEntry), so it must convert -- not just
+                    relabel -- for an st/lbs display unit, mirroring
+                    formatBodyWeightRate's own inLbs branch logic exactly. */}
                 {getDelta('body_weight') && (
-                  <DeltaBadge delta={parseFloat(getDelta('body_weight'))} units={bwu === 'st' ? 'kg' : bwu} />
+                  <DeltaBadge
+                    delta={(bwu === 'st' || bwu === 'lbs')
+                      ? parseFloat(kgToLbs(parseFloat(getDelta('body_weight'))).toFixed(1))
+                      : parseFloat(getDelta('body_weight'))}
+                    units={(bwu === 'st' || bwu === 'lbs') ? 'lbs' : 'kg'}
+                  />
                 )}
               </View>
             )}
@@ -1193,18 +1229,20 @@ export default function BodyMetricsScreen() {
                     <InfoTooltip text={GLOSSARY.ewma} size={13} />
                   </View>
                   <Text style={[styles.ewmaValue, live.ewmaValue]}>
-                    {ewmaData[ewmaData.length - 1]?.ewma?.toFixed(1)} kg
+                    {formatBodyWeight(ewmaData[ewmaData.length - 1]?.ewma, bwu)}
                   </Text>
-                  {(() => {
-                    const weeklyChange = computeWeeklyWeightChange(ewmaData);
-                    if (weeklyChange == null) return null;
-                    const sign = weeklyChange >= 0 ? '+' : '';
-                    return (
-                      <Text style={[styles.ewmaWeekly, live.ewmaWeekly]}>
-                        Weekly change: {sign}{weeklyChange.toFixed(1)} kg
-                      </Text>
-                    );
-                  })()}
+                  {/* WAVE-D-FINDINGS.md item 1: the weekly-rate line is
+                      suppressed under an open ED-pattern flag by the SAME
+                      shared derivation the Progress root's card uses
+                      (weightTrendVm, deriveWeightTrend) -- not a hand-rolled
+                      `if (edFlagOpen)` branch. The underlying number and this
+                      card's own copy are unchanged; only the ED-safety
+                      verdict is sourced from the shared function. */}
+                  {!weightTrendVm.edFlagOpen && weeklyChange != null && (
+                    <Text style={[styles.ewmaWeekly, live.ewmaWeekly]}>
+                      Weekly change: {formatBodyWeightRate(weeklyChange, bwu)}
+                    </Text>
+                  )}
                   <Text style={[styles.ewmaMuted, live.ewmaMuted]}>
                     Smoothed out across day-to-day ups and downs, so it's more reliable than a single weigh-in.
                   </Text>
@@ -1221,7 +1259,11 @@ export default function BodyMetricsScreen() {
               )}
             </Card>
 
-            {ewmaData.length >= 7 ? (
+            {/* WAVE-D-FINDINGS.md item 1: withheld entirely under an open
+                ED-pattern flag, matching deriveWeightTrend's edFlagOpen
+                branch (`maintenance: null`) exactly -- the same shared
+                derivation the Progress root's card already obeys. */}
+            {ewmaData.length >= 7 && !weightTrendVm.edFlagOpen ? (
               <Card radius="md" padding="md" style={styles.burnCard}>
                 <View style={styles.labelTipRow}>
                   <Text style={[styles.burnLabel, live.burnLabel]}>Effective maintenance</Text>

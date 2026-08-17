@@ -954,16 +954,45 @@ describe('invite journey', () => {
     expect(redeem).toHaveBeenCalledWith('ABCD1234');
   });
 
+  // WAVE-D-FINDINGS.md DEAD-STALE_SURFACE (lead ruling item 4, RE-PINNED):
+  // the limit this deep-link handler checks is now a flat 3
+  // (PRO_MAX_PAIRS) for every tier value -- PartnerScreen is Pro-only
+  // (withProGuard at the navigator, RootNavigator.js:223), so the old
+  // free=1/pro=3 split was dead code and was removed (see
+  // src/lib/partners/signals.js's maxPartnersForTier for the full
+  // unreachability proof). This test now hits the real limit (3 pairs)
+  // rather than the old free-tier limit of 1.
   test('deep-linked invite at the partner limit explains why it cannot join', async () => {
     mockState.tier = 'free';
     const redeem = jest.fn(async () => ({ ok: true }));
-    mockHook.value = base({ pairs: [pair()], canAdd: false, redeem });
+    mockHook.value = base({
+      pairs: [pair({ id: 'p1' }), pair({ id: 'p2' }), pair({ id: 'p3' })],
+      canAdd: false,
+      redeem,
+    });
     await mount({ code: 'abcd1234' });
     expect(redeem).not.toHaveBeenCalled();
     expect(mockToastShow).toHaveBeenCalledWith(
       'Your partner spaces are full. Remove a partner before using this invite code.',
       { variant: 'warning' },
     );
+  });
+
+  test('deep-linked invite under the (now tier-independent) limit keeps waiting rather than claiming the spaces are full', () => {
+    // Below the flat 3-pair limit: the handler enters the "not yet room"
+    // branch but does NOT show the "full" toast -- it waits for canAdd to
+    // resolve true (mirrors the "waits until partner capacity has loaded"
+    // test above), same as a Pro user with one pair used to behave.
+    mockState.tier = 'free';
+    const redeem = jest.fn(async () => ({ ok: true }));
+    mockHook.value = base({ pairs: [pair({ id: 'p1' })], canAdd: false, redeem });
+    return mount({ code: 'abcd1234' }).then(() => {
+      expect(redeem).not.toHaveBeenCalled();
+      expect(mockToastShow).not.toHaveBeenCalledWith(
+        'Your partner spaces are full. Remove a partner before using this invite code.',
+        expect.anything(),
+      );
+    });
   });
 });
 
