@@ -2085,7 +2085,15 @@ readinessSummary gatedRecoveryState wording-source fix +
 recoveryWordingSource.test.js + 12 guard re-pins. NOTE: Stage 1 retires
 the everyday trial card from Home but its You/Profile rehome is Stage
 2 — branch must NOT merge to main until Stage 2 lands the rehome (the
-gap would ship). STAGE 2 IN FLIGHT (sonnet agent).
+gap would ship). STAGE 2 LANDED `56782be2` + D98 rulings `f66131e8`
+(lead-reviewed with three lead amendments, recorded as D98-1..3 in the
+decisions register: the missing §17 R4 rank-4.5 conflict-day fallback
+built in full; first-review-line suppression widened to the You tab's
+full edSuppressed formula, source-pinned; rehomed trial card's S3 tap
+retargeted to the Today Start hero). Gates: lint 0 warnings, full
+suite 971 suites / 13,241 tests green. The trial rehome is now IN,
+so the merge blocker above is cleared once Stage 3's gates pass.
+STAGE 3 IN FLIGHT (guards + 18-state suite + merge + handover).
 RECOVERY PATH: uncommitted work lead-reviewed against
 HOME-TODAY-UX-SPEC.md sections 13/17/20 + the rulings file; land or
 relaunch from last green commit (`0deb5ff4`). Preservation contract
