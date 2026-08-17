@@ -569,6 +569,17 @@ its evidence).
 
 ===============================================================================
 
+### 2026-08-17 — CAMPAIGN 22 PHASE 2 (Home/Today redesign) — IMPLEMENTED, LANDED
+Full implementation landed on main same day (stages 0deb5ff4 / 56782be2 /
+b23bd9d6 + D98 rulings): single arbitrated Today line (9-rank pure
+resolver), weight row below hero with permanent tutorial retirement,
+self-retiring first-review readiness line (unclamped, full ED/calm
+suppression parity), trial card rehomed to You, hero merge, footer
+discipline, 18-state mounted matrix suite. Three lead amendments
+recorded as D98-1..3 in the decisions register. Detail + founder device
+checklist: docs/home-today-ux-campaign-22-2026-08-16/PHASE2-LANDING.md.
+Outstanding: founder Android device walk (15 steps, ED cases 12-14).
+
 ### 2026-08-16 — CAMPAIGN 21 (coach decision-graph validation) — COMPLETE, LANDED
 Whole-system coaching validation landed on main same day: 113 rules
 mapped/oracle-locked, ~250 scenarios + adversarial suites through real

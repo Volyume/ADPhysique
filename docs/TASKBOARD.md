@@ -2055,7 +2055,16 @@ D37 triage; (2) the ED detector's positional weeklyHistory contract
 known widget-storage full-run flake (pre-Campaign-20, still intermittent,
 needs its own session).
 
-## CAMPAIGN 22 (2026-08-16) — UX/presentation, screen 1: Home/Today. PHASE 2 (IMPLEMENTATION) IN FLIGHT.
+## CAMPAIGN 22 (2026-08-16) — UX/presentation, screen 1: Home/Today. PHASE 2 LANDED ON MAIN 2026-08-17.
+
+**COMPLETE.** All three stages lead-reviewed and landed (0deb5ff4 /
+56782be2+D98 / b23bd9d6), full gates green at every landing (final:
+973 suites / 13,268 tests), merged to main 2026-08-17. Landing record
++ 15-step founder device checklist:
+docs/home-today-ux-campaign-22-2026-08-16/PHASE2-LANDING.md.
+FOUNDER-SIDE OPEN: the Android device walk (ED cases steps 12-14).
+Historical in-flight detail below rolls to the archive at the next
+sweep.
 
 Founder order 2026-08-16 (full brief received after an initial truncated
 send). Branch `claude/campaign22-home-today-audit` off main `624cf126`.
