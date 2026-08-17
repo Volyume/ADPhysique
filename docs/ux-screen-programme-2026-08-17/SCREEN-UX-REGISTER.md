@@ -46,10 +46,11 @@ Status updates happen at every screen campaign landing. Status key:
 |---|---|---|---|---|---|---|---|---|
 | `Home` | Today | HomeTab > Home | `src/screens/HomeScreen.js` | HomeTab (root) | Both | Displays today's session, coaching brief, recovery state, and progress signals | IMPLEMENTED | Campaign 22 redesign landed on main 2026-08-17; founder device validation PENDING (15-step checklist in docs/home-today-ux-campaign-22-2026-08-16/PHASE2-LANDING.md) |
 | `BuildWorkout` | Blank Session | HomeTab > BuildWorkout | `src/screens/BuildWorkoutScreen.js` | HomeScreen "Build" button | Both | Workout builder — add exercises and set schema to structure a session manually | UNREVIEWED | Free feature; no plan required |
-| `ActiveWorkout` | Live Workout | HomeTab/PlansTab > ActiveWorkout | `src/screens/ActiveWorkoutScreen.js` | HomeScreen continue/next, PlanDetailScreen, RoutineDetailScreen | Both | Live workout timer, exercise logging, set/rep entry, and rest tracking during active session | UNREVIEWED | Hero-zoom transition from cards; session state persisted locally. Campaign 20 rebuilt its prescription logic (landed on main); the founder device retest of that flow is still outstanding, and the screen has not had a UX-programme audit — logic landing is not screen completion |
+| `ActiveWorkout` | Live Workout | HomeTab/PlansTab > ActiveWorkout | `src/screens/ActiveWorkoutScreen.js` | HomeScreen continue/next, PlanDetailScreen, RoutineDetailScreen | Both | Live workout timer, exercise logging, set/rep entry, and rest tracking during active session | FOUNDER_ACCEPTED | Founder order Campaign 24: NO_DEEP_REAUDIT — logger UX approved; touchable only for shared-component correctness, direct regressions, or global token repairs |
 | `WorkoutSummary` | Session Complete | HomeTab/PlansTab/ProgressTab > WorkoutSummary | `src/screens/WorkoutSummaryScreen.js` | ActiveWorkoutScreen finish action, HomeScreen history tap | Both | Post-workout feedback form — tonnage reflection, performance feel, injury/soreness notes | UNREVIEWED | Hero-zoom transition; optional coach reflection prompt if Pro |
 | `WorkoutHistory` | Workout History | HomeTab/ProgressTab > WorkoutHistory | `src/screens/WorkoutHistoryScreen.js` | HomeScreen history link, AnalyticsScreen | Both | List of past workouts — search, filter by muscle/week, session replay and details | UNREVIEWED | Registered in both HomeStack and ProgressStack |
 | `Plans` | Train | PlansTab > Plans | `src/screens/PlansScreen.js` | PlansTab (root) | Both | Plans tab root — active plan overview and library browser entry | UNREVIEWED | Free shows Plan Library only; Pro shows active plan + library |
+| `PlanUpdate` | Adjust training | PlansTab > PlanUpdate | `src/screens/PlanUpdateScreen.js` | PlansScreen | Pro | Regenerate or adjust training plan — goals, experience, schedule, and muscle preferences | UNREVIEWED | Pro-only plan re-generation and customisation flow; allow athlete to modify plan parameters |
 | `PlanDetail` | Plan Overview | PlansTab > PlanDetail | `src/screens/PlanDetailScreen.js` | PlansScreen plan card | Both | Plan structure — mesocycles, weeks, routines, and start/swap controls | UNREVIEWED | Hero-zoom from card; manual/generated plan support |
 | `RoutineDetail` | Routine Exercises | PlansTab > RoutineDetail | `src/screens/RoutineDetailScreen.js` | PlanDetailScreen routine card | Both | Routine breakdown — exercise order, set/rep schema, form notes, and exercise variations | UNREVIEWED | Hero-zoom from card |
 | `ExerciseDetail` | Exercise Details | PlansTab/ProgressTab > ExerciseDetail | `src/screens/ExerciseDetailScreen.js` | RoutineDetailScreen, AnalyticsScreen, LiftProgressScreen | Both | Exercise reference — form guide video, variation picker, historical sets/reps, and personal notes | UNREVIEWED | Origin-aware hero-zoom from card (grows from tapped card location) |
@@ -201,4 +202,139 @@ Status updates happen at every screen campaign landing. Status key:
 
 ### Screens awaiting trace (entry point or title TRACE-NEEDED)
 
-None. All 80 screens have verified entry points and user-facing titles established from RootNavigator code inspection.
+None. All screens have verified entry points and user-facing titles established from RootNavigator code inspection.
+
+---
+
+## RECONCILIATION 2026-08-17 (Campaign 24)
+
+### Rows added to register
+
+**PlanUpdate** (line 53) — newly registered in PlansTab stack, gated Pro, entry point PlansScreen coaching-decision flow. Verified in RootNavigator.js line 464 (`<Stack.Screen name="PlanUpdate" component={GatedPlanUpdate}...`) and PlansScreen.js line 1281 (`navigation.navigate('PlanUpdate')`).
+
+### Rows flagged as dead
+
+None. All 81 registered production routes (including newly added PlanUpdate) are currently live in src/navigation/RootNavigator.js and its referenced stack navigators.
+
+Verification: walked full RootNavigator.js graph (WelcomeStack, FirstRunStack, Article9ConsentStack, ProOnboardingStack, HomeStack, PlansStack, DiaryStack, ProgressStack, ProfileStack); every registered route name matched a Stack.Screen declaration.
+
+### Orphan screen files
+
+**paywallExcerpts.js** — not a production screen (already noted in register). Utility module imported by screens for paywall copy reuse; verified by grep: no `Stack.Screen name=` references anywhere in codebase.
+
+### Summary counts
+
+- **Total production screens:** 81 (80 from original register + 1 new: PlanUpdate)
+- **IMPLEMENTED screens:** 4 (Home, ProgressTab, HomeTab, Analytics; all with device validation pending per Campaign 22 and 23 notes)
+- **FOUNDER_ACCEPTED screens:** 1 (ActiveWorkout; Campaign 24 founder order: no deep reaudit)
+- **UNREVIEWED screens:** 76 (all remaining screens)
+- **Reachable screens:** 81 (100% coverage; all navigation paths verified)
+
+---
+
+## CAMPAIGN 24 WORK QUEUE
+
+UNREVIEWED screens grouped by wave (from docs/whole-app-coherence-campaign-24-2026-08-17/CAMPAIGN-24-OVERVIEW.md). Each row: route — file — tier — one-line job.
+
+### WAVE A — Train/Programme (11 screens)
+
+- `BuildWorkout` — `BuildWorkoutScreen.js` — Both — Workout builder interface and exercise selection for manual session creation
+- `Plans` — `PlansScreen.js` — Both — Tab root with active plan overview and Plan Library browse entry
+- `PlanUpdate` — `PlanUpdateScreen.js` — Pro — Re-generation and customisation of training plan parameters
+- `PlanDetail` — `PlanDetailScreen.js` — Both — Plan structure, mesocycles, weeks, routines, start/swap controls
+- `RoutineDetail` — `RoutineDetailScreen.js` — Both — Routine breakdown, exercises, set/rep schema, form guidance
+- `ExerciseDetail` — `ExerciseDetailScreen.js` — Both — Exercise library entry, form guide, variation picker, personal history
+- `ManualBuilder` — `ManualBuilderScreen.js` — Both — Custom training programme creation and periodisation editing
+- `MesocycleBuilder` — `MesocycleBuilderScreen.js` — Both — Mesocycle/block editing, week creation, deload flags
+- `PlanLibrary` — `PlanLibraryScreen.js` — Both — Curated programme catalogue, filtering by goal and experience
+- `FreeStarter` — `FreeStarterScreen.js` — Both — Free user onboarding micro-quiz activating starter plan
+- `WorkoutSummary` — `WorkoutSummaryScreen.js` — Both — Post-workout feedback form (read-only and edit modes)
+
+### WAVE B — Nutrition (10 screens)
+
+- `Diary` — `DiaryScreen.js` — Pro (RO) — Food diary root with meal sections, macro rings, date pager
+- `MealPlan` — `MealPlanScreen.js` — Pro — Nutrition targets editor and meal planning automation
+- `FoodSearch` — `FoodSearchScreen.js` — Pro — Food library search, barcode database, branded foods
+- `AddCustomFood` — `AddCustomFoodScreen.js` — Pro — Manual food entry with macro and micronutrient input
+- `ScanBarcode` — `ScanBarcodeScreen.js` — Pro — Barcode scanning and product lookup (native module)
+- `ScanLabel` — `ScanLabelScreen.js` — Pro — Nutrition label OCR and macro text extraction
+- `FoodInsights` — `FoodInsightsScreen.js` — Pro — Weekly nutrition analysis, macro balance, food patterns
+- `MyRecipes` — `MyRecipesScreen.js` — Pro — User's saved recipes, quick reuse for multi-ingredient meals
+- `MyMeals` — `MyMealsScreen.js` — Pro — User's saved meal combinations for quick logging
+- `RecipeBuilder` — `RecipeBuilderScreen.js` — Pro — Custom recipe creation with ingredient search and auto-calc
+
+### WAVE C — Coach/Check-in (9 screens)
+
+- `You` — `YouScreen.js` — Both — Profile tab root, athlete summary, weight, goals, recent activity
+- `AthleteProfile` — `AthleteProfileScreen.js` — Both — Edit profile name, photo, biography, experience level
+- `WeeklyCheckIn` — `WeeklyCheckInScreen.js` — Pro — Precision Coaching intake form, recovery, exertion, energy
+- `CoachOutput` — `CoachOutputScreen.js` — Pro — Coaching decision display, volume adjust, deload, intensity modulation
+- `CoachReview` — `CoachReviewScreen.js` — Both — Optional post-workout coaching reflection prompt
+- `BlockReflection` — `BlockReflectionScreen.js` — Both — Mesocycle reflection form at block end
+- `CoachHeldHistory` — `CoachHeldHistoryScreen.js` — Both — History of deferred coaching recommendations
+- `Methodology` — `MethodologyScreen.js` — Both — Precision Coaching system explanation and decision logic
+- `WeeklyStory` — `WeeklyStoryScreen.js` — Pro — Weekly narrative combining nutrition, weight trend, check-in, coach decision
+
+### WAVE D — Progress detail (10 screens)
+
+- `VolumeHeatmap` — `VolumeHeatmapScreen.js` — Both — Exercise matrix heatmap, 52-week rolling volume per muscle
+- `LiftProgress` — `LiftProgressScreen.js` — Both — Personal records with progression timeline and trend arrows
+- `Consistency` — `ConsistencyScreen.js` — Both — Workout adherence, weekly streak, frequency patterns
+- `YearOfLifts` — `YearOfLiftsScreen.js` — Both — Annual recap, monthly volume blocks, session counts, tonnage milestones
+- `RecapStory` — `YearOfLiftsScreen.js` — Both — Monthly recap (parameterised variant of YearOfLifts)
+- `BodyMetrics` — `BodyMetricsScreen.js` — Pro (RO) — Weight tracking, morning weigh-ins, measurements, trend graph
+- `ProgressPhotos` — `ProgressPhotosScreen.js` — Pro (RO) — Before/after gallery with Volyume Score and comparison sliders
+- `Partner` — `PartnerScreen.js` — Pro — Training partner view, performance comparison, shared insights
+- `WorkoutHistory` — `WorkoutHistoryScreen.js` — Both — Past workout list, search, filter, session replay and details
+- `ShareCard` — `ShareCardScreen.js` — Both — Social share card builder for sessions, volume, progress milestones
+
+### WAVE E — Onboarding/Auth/Consent (10 screens)
+
+- `Welcome` — `WelcomeScreen.js` — Both — Tier selection entry screen (free or Pro path)
+- `Login` — `LoginScreen.js` — Both — Email/password and OAuth sign-in/sign-up (Apple, Google)
+- `QuizTraining` — `QuizScreen.js` — Both — Optional pre-account training quiz for Pro signup path
+- `PlanPreview` — `PlanPreviewScreen.js` — Both — Recommended plan preview before account creation (quiz-first path)
+- `FirstRunBranch` — `FirstRunScreen.js` — Both — Free tier onboarding wizard, name and preferences
+- `ProOnboarding` — `ProOnboardingScreen.js` — Both — Pro multi-step onboarding, goals, metrics, check-in intro
+- `ProSetupComplete` — `ProSetupCompleteScreen.js` — Both — Pro onboarding hand-off and next steps
+- `Article9Consent` — `Article9ConsentScreen.js` — Both — Un-skippable Article 9 GDPR health data consent gate
+- `PrivacyPolicy` — `PrivacyPolicyScreen.js` — Both — Privacy policy and data processing terms (inline and on-demand)
+- `ProUpgrade` — `ProUpgradeScreen.js` — Both — Paywall modal, Pro benefits teaser, trial offer (registered in all tab stacks)
+- `CascadeGate` — `CascadeGateScreen.js` — Both — 14-day Pro trial start, upgrade gate and trial messaging
+
+### WAVE F — Profile/Settings (18 screens)
+
+- `Settings` — `SettingsScreen.js` — Both — Settings hub, navigation to all preference sub-screens
+- `SettingsWorkout` — `SettingsWorkoutScreen.js` — Both — Exercise preferences, muscle defaults, favourite exercises
+- `SettingsAccount` — `SettingsAccountScreen.js` — Both — Email, password change, sign out, account deletion
+- `SettingsProfile` — `SettingsProfileScreen.js` — Both — Units and body settings, weight/distance, biological sex, age, height
+- `SettingsCoaching` — `SettingsCoachingScreen.js` — Both — Coaching preferences, training goal, macro split, volume modulation
+- `SettingsDisplay` — `SettingsDisplayScreen.js` — Both — Theme and accessibility, light/dark mode, text size, motion reduction
+- `SettingsHealth` — `SettingsHealthScreen.js` — Both — ED pattern flag status, wellbeing state, calm mode toggle
+- `SettingsData` — `SettingsDataScreen.js` — Both — Data management, snapshots, import/export, restore history
+- `SettingsDietary` — `SettingsDietaryScreen.js` — Both — Dietary restrictions, allergies, intolerances, preferences
+- `SettingsPrivacy` — `SettingsPrivacyScreen.js` — Both — GDPR, data access request, consent replay, policy links
+- `SettingsAbout` — `SettingsAboutScreen.js` — Both — App info, version, build, legal and support links
+- `SettingsFaq` — `SettingsFaqScreen.js` — Both — Frequently asked questions and help content
+- `NutritionTargets` — `NutritionTargetsScreen.js` — Pro — Edit daily calorie and macro targets, override coaching
+- `MealNames` — `MealNamesScreen.js` — Pro — Meal naming preferences, rename meal slots (D95: deliberately unreachable)
+- `NutritionEducation` — `NutritionEducationScreen.js` — Both — Nutrition guide, macro explanation, calorie basics
+- `NotificationSettings` — `NotificationSettingsScreen.js` — Both — Push notification type toggles, quiet hours
+- `CoachingReminders` — `CoachingRemindersScreen.js` — Pro — Coaching notification frequency, check-in reminders
+- `Subscription` — `SubscriptionScreen.js` — Both — Subscription status, manage, upgrade, downgrade, billing info
+- `SubscriptionPolicy` — `SubscriptionPolicyScreen.js` — Both — Subscription terms, cancellation, billing, renewal policy
+
+### WAVE G — Secondary/modals (8 screens)
+
+- `GoalChangeSummary` — `GoalChangeSummaryScreen.js` — Both — Coaching adjustments summary when goal changes
+- `GoalLockConsent` — `GoalLockConsentScreen.js` — Both — Goal lock confirmation before locking for coaching cycle
+- `ProGoalSetup` — `ProGoalSetupScreen.js` — Pro — Goal definition and macro preference editor
+- `WellbeingCheck` — `WellbeingCheckScreen.js` — Both — Beat UK ED screening and calm mode management
+- `Import` — `ImportScreen.js` — Both — Import workouts from Strong, Fitbod, other exportable formats
+- `Snapshots` — `SnapshotsScreen.js` — Both — Account data snapshots, restore, cross-device migration
+- `DebugLog` — `DebugLogScreen.js` — Both — Internal debugging log (dev-mode only, not user-facing)
+- `Credits` — `CreditsScreen.js` — Both — Attribution, music, fonts, data sources, third-party credits
+
+### Routes unclassifiable into waves (if any)
+
+None. All 76 UNREVIEWED screens are assigned to waves per the CAMPAIGN-24-OVERVIEW plan.
