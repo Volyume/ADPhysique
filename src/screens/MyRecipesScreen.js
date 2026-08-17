@@ -17,7 +17,7 @@
  */
 import { todayLocalKey } from '../lib/dayKey';
 import { appAlert } from '../components/AppAlert';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -31,10 +31,12 @@ import EmptyState from '../components/EmptyState';
 import Stepper from '../components/Stepper';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
+import RecipeDetailSheet from '../components/food/RecipeDetailSheet';
 import { useToast } from '../components/Toast';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { perServingTotals } from '../lib/food/macros';
-import { listRecipesWithTotals, deleteRecipe, applyRecipeToDiary } from '../lib/food/db';
+import { listRecipesWithTotals, deleteRecipe, applyRecipeToDiary, getRecipeWithIngredients } from '../lib/food/db';
+import { resolveFoodRef } from '../lib/food/sources/localCache';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
@@ -65,6 +67,15 @@ export default function MyRecipesScreen({ navigation, route }) {
   // user logs the portion they actually ate, instead of always one serving.
   const [servePrompt, setServePrompt] = useState(null); // the recipe being logged
   const [servings, setServings] = useState(1);
+  // Campaign 24 Wave B (IA_DEFECT finding): read-only "view contents" sheet,
+  // matching MyMealsScreen's D6 inspect capability. Holds the already-loaded
+  // list row (name/totals/total_servings); the per-ingredient breakdown
+  // below is a separate, read-only fetch because listRecipesWithTotals only
+  // resolves the WHOLE-recipe total, not a per-ingredient one.
+  const [inspecting, setInspecting] = useState(null); // recipe list row | null
+  const [inspectItems, setInspectItems] = useState(null);
+  const [inspectLoading, setInspectLoading] = useState(false);
+  const [inspectError, setInspectError] = useState(false);
 
   const reload = useCallback(async () => {
     if (!userId) {
@@ -85,6 +96,47 @@ export default function MyRecipesScreen({ navigation, route }) {
   }, [userId]);
 
   useFocusEffect(useCallback(() => { reload(); }, [reload]));
+
+  // Read-only ingredient resolution for the open inspect sheet. Runs once
+  // per recipe opened (not on every render); the outer row list only carries
+  // the whole-recipe total, so this is the one extra read the sheet needs.
+  // A read, same as reload() above; never writes to recipe_ingredients.
+  useEffect(() => {
+    if (!inspecting) {
+      setInspectItems(null);
+      setInspectError(false);
+      setInspectLoading(false);
+      return undefined;
+    }
+    let cancelled = false;
+    (async () => {
+      setInspectLoading(true);
+      setInspectError(false);
+      try {
+        const detail = await getRecipeWithIngredients(userId, inspecting.id);
+        const rawIngredients = detail?.ingredients ?? [];
+        const resolved = [];
+        for (const ing of rawIngredients) {
+          // eslint-disable-next-line no-await-in-loop
+          const food = await resolveFoodRef(userId, ing.food_ref);
+          const factor = (Number(ing.quantity_g) || 0) / 100;
+          resolved.push({
+            food_ref: ing.food_ref,
+            name: food?.name ?? ing.food_ref,
+            quantityG: ing.quantity_g,
+            kcal: Math.round((Number(food?.kcal_100g) || 0) * factor),
+          });
+        }
+        if (!cancelled) setInspectItems(resolved);
+      } catch (e) {
+        logError('MyRecipesScreen.inspect', e, { hasId: !!inspecting?.id });
+        if (!cancelled) setInspectError(true);
+      } finally {
+        if (!cancelled) setInspectLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [inspecting, userId]);
 
   function onCreate() {
     navigation.navigate('RecipeBuilder', { mealSlot, entryDate });
@@ -166,7 +218,7 @@ export default function MyRecipesScreen({ navigation, route }) {
           disabled={!!loggingId}
           accessibilityRole="button"
           accessibilityLabel={`Log ${item.name}`}
-          accessibilityHint="Choose servings before adding it to your diary"
+          accessibilityHint="Choose servings before adding it to your diary. Use the info button to view what's inside, or edit or delete"
         >
           <View style={styles.rowText}>
             <Text style={[styles.name, live.name]} numberOfLines={1}>{item.name}</Text>
@@ -196,6 +248,21 @@ export default function MyRecipesScreen({ navigation, route }) {
             )}
         </TouchableOpacity>
         <View style={styles.rowActions}>
+          {/* Campaign 24 Wave B (IA_DEFECT finding): read-only inspect
+              entry point, matching MyMealsScreen.js:213-220's info-circle
+              button (same icon, same a11y label pattern, same haptic).
+              Placed first, ahead of Edit, so a non-committal "just check
+              what's inside" is reachable before any editing/write surface. */}
+          <TouchableOpacity
+            onPress={() => { haptics.selection(); setInspecting(item); }}
+            disabled={!!loggingId}
+            hitSlop={12}
+            accessibilityRole="button"
+            accessibilityLabel={`View ${item.name}`}
+            style={styles.actionBtn}
+          >
+            <Ionicons name="information-circle-outline" size={18} color={t.colors.textMuted} />
+          </TouchableOpacity>
           <TouchableOpacity
             onPress={() => { haptics.selection(); onEdit(item); }}
             disabled={!!loggingId}
@@ -292,6 +359,16 @@ export default function MyRecipesScreen({ navigation, route }) {
           accessibilityLabel={`Log ${fmtServings(servings)} ${servings === 1 ? 'serving' : 'servings'}`}
         />
       </BottomSheet>
+
+      <RecipeDetailSheet
+        visible={!!inspecting}
+        recipe={inspecting}
+        items={inspectItems}
+        loading={inspectLoading}
+        loadError={inspectError}
+        energyUnit={energyUnit}
+        onClose={() => setInspecting(null)}
+      />
     </SafeAreaView>
   );
 }

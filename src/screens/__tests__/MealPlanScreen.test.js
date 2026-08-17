@@ -501,7 +501,7 @@ describe('MealPlanScreen — Dietary needs row (founder ask 2026-07-09, inline f
       source.indexOf('export default function MealPlanScreen'),
     );
     expect(controlsBody).toContain('label="Dietary needs"');
-    expect(controlsBody.indexOf('label="Dietary needs"')).toBeLessThan(controlsBody.indexOf('label="Meals per day"'));
+    expect(controlsBody.indexOf('label="Dietary needs"')).toBeLessThan(controlsBody.indexOf('label="Meal plan meals per day"'));
     expect(controlsBody).toContain('sub={dietSummary}');
     expect(controlsBody).toContain('onPress={onOpenDietary}');
     // Rendered from both call sites (empty-state prefsPanel and the
@@ -513,6 +513,38 @@ describe('MealPlanScreen — Dietary needs row (founder ask 2026-07-09, inline f
       expect(call).toContain('dietSummary={dietSummary}');
       expect(call).toContain('onOpenDietary={handleOpenDietary}');
     });
+  });
+});
+
+// Campaign 24 Wave B finding (docs/whole-app-coherence-campaign-24-2026-08-17/
+// WAVE-B-FINDINGS.md, MealPlanScreen.js section): this row used to share the
+// bare "Meals per day" label with NutritionTargetsScreen's "Diary meals per
+// day" row while writing a completely different key with a different effect
+// (mealPlanMealsPerDay only sizes this auto-generated meal plan; it never
+// touches the diary's meal-slot count, @volyume_meals_per_day). Campaign 3
+// disambiguated the Nutrition Targets side only; this pins the completed,
+// two-sided fix so the two screens cannot drift back into sharing a label.
+describe('MealPlanScreen — "Meal plan meals per day" label/help disambiguation (Campaign 24 Wave B)', () => {
+  const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
+
+  test('renders the disambiguated label, not the bare "Meals per day" string', () => {
+    expect(source).toContain('label="Meal plan meals per day"');
+    expect(source).not.toMatch(/label="Meals per day"/);
+  });
+
+  test('help text names the scope of this control and points to Nutrition Targets for the diary count', () => {
+    expect(source).toMatch(
+      /Choose how many meals Volyume should build before snacks or pre-workout extras\. This is separate from your diary's meal count, which you set in Nutrition Targets\./,
+    );
+  });
+
+  test('still writes the same mealPlanMealsPerDay key, never the diary AsyncStorage key, from this row', () => {
+    const controlsBody = source.slice(
+      source.indexOf('function MealPreferencesControls'),
+      source.indexOf('export default function MealPlanScreen'),
+    );
+    expect(controlsBody).toContain('mealPlanMealsPerDay: v');
+    expect(controlsBody).not.toContain('@volyume_meals_per_day');
   });
 });
 

@@ -49,12 +49,14 @@ describe('NutritionTargetsScreen "Diary meals per day" label (finding #4 fix)', 
     expect(chipRowIdx - labelIdx).toBeLessThan(1200);
   });
 
-  test('does not re-use MealPlanScreen\'s bare "Meals per day" label string', () => {
-    // MealPlanScreen.js:227 renders label="Meals per day" verbatim (a
-    // different key, a different consequence, out of scope to change here).
-    // NutritionTargetsScreen must not reintroduce that exact bare string as
-    // this control's own label.
+  test('does not re-use MealPlanScreen\'s "Meal plan meals per day" label string', () => {
+    // MealPlanScreen.js renders label="Meal plan meals per day" (Campaign 24
+    // Wave B fix, a different key, a different consequence, disambiguated on
+    // that screen's own side rather than merged here). NutritionTargetsScreen
+    // must not reintroduce either the old bare string or the new disambiguated
+    // one as this control's own label.
     expect(ntsSource).not.toMatch(/label="Meals per day"/);
+    expect(ntsSource).not.toMatch(/label="Meal plan meals per day"/);
     expect(ntsSource).not.toMatch(/>Meals per day</);
   });
 });
@@ -90,12 +92,13 @@ describe('Every surface the new sub-copy claims is affected still reads @volyume
     expect(source).toMatch(/AsyncStorage\.getItem\('@volyume_meals_per_day'\)/);
   });
 
-  test('MealPlanScreen\'s "Meals per day" row writes a DIFFERENT key and is not merged by this fix', () => {
+  test('MealPlanScreen\'s meal-plan-sizing row writes a DIFFERENT key, now disambiguated on its own side too (Campaign 24 Wave B)', () => {
     const source = fs.readFileSync(
       path.join(__dirname, '..', 'MealPlanScreen.js'),
       'utf8',
     );
-    expect(source).toMatch(/label="Meals per day"/);
+    expect(source).toMatch(/label="Meal plan meals per day"/);
+    expect(source).not.toMatch(/label="Meals per day"/);
     expect(source).toMatch(/mealPlanMealsPerDay: v/);
     expect(source).not.toMatch(/@volyume_meals_per_day/);
   });

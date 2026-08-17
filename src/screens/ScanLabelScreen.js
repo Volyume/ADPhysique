@@ -38,6 +38,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, spacing, radius, type, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { selection as hapticSelection } from '../lib/haptics';
 import Button from '../components/Button';
 import ModalHeader from '../components/ModalHeader';
 import NetInfo from '@react-native-community/netinfo';
@@ -311,7 +312,7 @@ export default function ScanLabelScreen({ navigation, route }) {
         onClose={() => navigation.goBack()}
         rightAccessory={(
         <TouchableOpacity
-          onPress={() => setTorch(v => !v)}
+          onPress={() => { hapticSelection(); setTorch(v => !v); }}
           hitSlop={12}
           accessibilityRole="button"
           accessibilityState={{ selected: torch }}

@@ -50,8 +50,13 @@ jest.mock('../../lib/food/labelName', () => ({ pickProductName: jest.fn(() => nu
 // Button pulls in expo-haptics (native), unused on the granted-permission,
 // OCR-available path these tests exercise; stub it like MealPlanScreen.test.js.
 jest.mock('../../components/Button', () => () => null);
+// Campaign 24 Wave B: the torch toggle now fires haptics.selection() (parity
+// fix with ScanBarcodeScreen.js's identical torch control), matching
+// ScanBarcodeScreen.test.js's own mock of this module.
+jest.mock('../../lib/haptics', () => ({ selection: jest.fn() }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { selection as hapticSelection } from '../../lib/haptics';
 import ScanLabelScreen, { SKIP_NAME_KEY, getInitialStep, shouldOfferAddNameLink } from '../ScanLabelScreen';
 
 const nav = { goBack: jest.fn(), replace: jest.fn() };
@@ -104,6 +109,26 @@ describe('ScanLabelScreen skip-name persistence (C8)', () => {
   test('live camera close button is labelled', async () => {
     const tree = await mount();
     expect(byLabel(tree, 'Close')).toBeTruthy();
+  });
+
+  // Campaign 24 Wave B PRESENTATION_DEFECT finding (docs/whole-app-
+  // coherence-campaign-24-2026-08-17/WAVE-B-FINDINGS.md): the torch toggle
+  // used to fire no haptic here while its sibling on ScanBarcodeScreen.js
+  // did (ScanBarcodeScreen.test.js's own "fires haptics.selection() on
+  // press" pin). Same assertion shape on this screen now the fix matches.
+  test('the torch toggle fires haptics.selection() on press, matching ScanBarcodeScreen', async () => {
+    const tree = await mount();
+
+    expect(hapticSelection).not.toHaveBeenCalled();
+
+    const torch = buttons(tree).find((b) => (
+      b.props.accessibilityLabel === 'Torch off' || b.props.accessibilityLabel === 'Torch on'
+    ));
+    expect(torch).toBeTruthy();
+
+    await act(async () => { torch.props.onPress(); });
+
+    expect(hapticSelection).toHaveBeenCalledTimes(1);
   });
 
   test('tapping "Skip name" persists the flag and moves to the nutrition step', async () => {

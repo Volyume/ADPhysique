@@ -272,9 +272,20 @@ function MealPreferencesControls({
           </View>
         </View>
       ) : null}
+      {/* Campaign 24 Wave B finding (docs/whole-app-coherence-campaign-24-
+          2026-08-17/WAVE-B-FINDINGS.md, MealPlanScreen.js section): this row
+          used to share the bare "Meals per day" label with Nutrition
+          Targets' "Diary meals per day" row while writing a different key
+          with a different effect (mealPlanMealsPerDay only sizes this
+          auto-generated meal plan; it never touches the diary's meal-slot
+          count). Campaign 3 disambiguated the Nutrition Targets side
+          (NutritionTargetsScreen.js:1267-1268) but left this side
+          unqualified. Label and help now name the plan this sizes and point
+          to where the diary's own meal count lives, closing the gap from
+          this screen too. */}
       <PrefRow
-        label="Meals per day"
-        help="Choose how many meals Volyume should build before snacks or pre-workout extras."
+        label="Meal plan meals per day"
+        help="Choose how many meals Volyume should build before snacks or pre-workout extras. This is separate from your diary's meal count, which you set in Nutrition Targets."
         options={[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))}
         value={prefs.mealsPerDay}
         onSelect={(v) => onSetPref({ mealPlanMealsPerDay: v })}
