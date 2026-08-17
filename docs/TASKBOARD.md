@@ -2307,7 +2307,7 @@ docs/complaint-research-triage-2026-08-17/TRIAGE.md. No production
 code without founder answers. RECOVERY PATH: agents read-only; on
 death relaunch from this entry. C27 2b/2c/2d/2e remain PAUSED (D106-4).
 
-## CAMPAIGN 30 (2026-08-17) — share-card elite revamp. PHASE 1 IN FLIGHT (docs-only).
+## CAMPAIGN 30 (2026-08-17) — share-card elite revamp. SPEC COMPLETE (D108) — build queued next session.
 
 Founder order: complete revamp - cards "don't work well at all, look
 dull, data doesn't fit, not attractive or share worthy"; target = as

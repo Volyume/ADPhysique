@@ -2952,3 +2952,18 @@ ever so slightly smaller". Effects:
   Campaign 27 resume. Everything else: dispositions in TRIAGE.md
   (mostly already covered; several holds; renewal-date display surfaced
   as a billing-gated founder option, not built).
+
+## D108 — share-card elite revamp specced (founder order 2026-08-17)
+
+Founder: cards "don't work well at all, look dull, data doesn't fit,
+not attractive or share worthy" - full revamp to competitor-beating
+standard. Evidence phase complete (share-system inventory with
+rendered-PNG proof; competitor research). Design spec:
+docs/share-cards-campaign-30-2026-08-17/ELITE-SHARE-SPEC.md - photo-
+first tone-scrimmed composition, per-moment visual signatures,
+story/square/portrait plus a transparent sticker export, quiet brand
+mark, template-strip picker. ALL privacy/guard laws inherited; sticker
+export adopts no-export-path-under-suppression. Build queued for the
+next session; three founder taste choices listed in the spec. Also
+surfaced: documentation debt - CLAUDE.md Section 2 does not name the
+weekly weight-hero bodyweight exception (greatWeek.js:13-19).
