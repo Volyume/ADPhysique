@@ -2242,3 +2242,16 @@ Branch claude/campaign26-home-logger-progress. Device checklist:
 docs/home-logger-progress-campaign-26-2026-08-17/DEVICE-CHECKLIST.md
 (15 checks, founder walk pending). Known flake: widget-storage suite
 under the parallel run (passes isolated; recorded residue).
+
+## CAMPAIGN 27 (2026-08-17) — responsive display consistency research. IN FLIGHT (docs-only phase).
+
+Founder question: text/layout renders very differently 17 Pro Max vs
+S22+, worse on smaller screens; research how mobile apps achieve
+consistent display and propose a solution (Progress was the proven case,
+now fixed by wrap; the class remains). Phase 1 is RESEARCH + PROPOSAL
+ONLY - no production code. Two read-only agents (opus codebase sizing
+audit; sonnet industry-practice research), lead synthesis to
+docs/responsive-display-campaign-27-2026-08-17/PROPOSAL.md.
+RECOVERY PATH: agents are read-only; if either dies, relaunch from this
+entry's brief summary - no tree state to recover. Implementation only
+after the founder chooses among the proposal's options.
