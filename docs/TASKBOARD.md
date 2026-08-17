@@ -2083,10 +2083,19 @@ its own trend; one-step rule under the senior blocked-set; D18
 render-time overlay retired; no photo-derived flags persist; guards
 re-pinned to D99. Gates: lint 0 warnings; full suite green except the
 KNOWN pre-existing widget-storage flake (passed the prior full run and
-passes isolated; still queued for its own session). STAGE 2 (landing
-rebuild per spec §22 + R1) IN FLIGHT, sonnet agent. RECOVERY PATH:
-uncommitted work lead-reviewed against PROGRESS-UX-SPEC.md §22/§29 +
-FOUNDER-RULINGS-PHASE2.md; land or relaunch from `1c84531c`.
+passes isolated; still queued for its own session). STAGE 2 LANDED
+`b8347c55` (lead-reviewed; one lead amendment: the Visual pillar
+copy's false 'since <month>' anchor removed — the baseline date is
+not carried by the bounded summary, so the claim now cites the
+comparable-scan count; the agent's four flagged calls ruled and
+recorded in the commit body, incl. volume strip stays tier-unchanged
+per the senior CLAUDE.md free list). Gates: lint 0 warnings; full
+suite green (one appearance of the documented widget-storage flake on
+an identical-tree rerun, passes isolated — both outcomes on record).
+STAGE 3 (state matrix + presentation guards + merge + handover) IN
+FLIGHT, sonnet agent. RECOVERY PATH: uncommitted work lead-reviewed
+against PROGRESS-UX-SPEC.md §23/§31; land or relaunch from
+`b8347c55`.
 
 Founder order 2026-08-17. Fable lead; sonnet for authority tracing;
 haiku for mechanical inventory; no Opus; NO IMPLEMENTATION this phase.
