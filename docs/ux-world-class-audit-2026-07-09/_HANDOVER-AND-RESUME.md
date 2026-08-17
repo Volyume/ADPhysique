@@ -569,6 +569,17 @@ its evidence).
 
 ===============================================================================
 
+### 2026-08-17 — CAMPAIGN 23 PHASE 1 (Progress audit) — COMPLETE, LANDED, RULINGS OPEN
+Docs-only audit landed on main same day. Four evidence traces + the
+34-section PROGRESS-UX-SPEC.md (verdict B) in
+docs/progress-audit-campaign-23-2026-08-17/; permanent master screen
+register created (docs/ux-screen-programme-2026-08-17/
+SCREEN-UX-REGISTER.md, 80 screens). Core findings: For You feed =
+live second progression authority (retired in spec); hierarchy
+inversion; photo→coach = verdict B by D18 design. OPEN: founder
+rulings R1/R2 (spec §33) gate the Visual pillar; Phase 2 implements
+after they land. Next-screen recommendation: ActiveWorkout.
+
 ### 2026-08-17 — CAMPAIGN 22 PHASE 2 (Home/Today redesign) — IMPLEMENTED, LANDED
 Full implementation landed on main same day (stages 0deb5ff4 / 56782be2 /
 b23bd9d6 + D98 rulings): single arbitrated Today line (9-rank pure

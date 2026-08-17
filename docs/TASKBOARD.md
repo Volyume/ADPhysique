@@ -2055,7 +2055,27 @@ D37 triage; (2) the ED detector's positional weeklyHistory contract
 known widget-storage full-run flake (pre-Campaign-20, still intermittent,
 needs its own session).
 
-## CAMPAIGN 23 (2026-08-17) — UX/presentation, screen 2: Progress. PHASE 1 (AUDIT) IN FLIGHT.
+## CAMPAIGN 23 (2026-08-17) — UX/presentation, screen 2: Progress. PHASE 1 (AUDIT) COMPLETE — TWO FOUNDER RULINGS OPEN.
+
+**AUDIT LANDED** same day. NO production code touched (src/ diff vs
+main empty, verified). Deliverables in
+docs/progress-audit-campaign-23-2026-08-17/: ELEMENT-INVENTORY.md,
+FORYOU-AUTHORITY-TRACE.md, METRICS-AND-SHARE-TRACE.md,
+PHOTO-SCAN-CHAIN-TRACE.md, and PROGRESS-UX-SPEC.md (the authoritative
+34-section audit/spec). Master screen register created:
+docs/ux-screen-programme-2026-08-17/SCREEN-UX-REGISTER.md (80 screens;
+Analytics AUDITED; next-screen recommendation: ActiveWorkout).
+VERDICT B. Headline findings: the "For You" feed is a live second
+progression/programme authority (4 stale-authority defects incl. a
+contradiction of C20's founder-ordered senior gate and missing ED/calm
+suppression) — retired in the spec; hierarchy inverted (workload
+headline, answer buried); two week definitions on one screen; PR count
+inflates without dedup; photo→coach chain is verdict B BY DESIGN (D18
+render-time-only corroboration, no photo-derived data ever synced).
+FOUNDER RULINGS OPEN (spec §33): R1 Visual pillar signal-only vs
+thumbnail (recommend signal-only); R2 confirm D18's device-local
+photo-data line vs connect the recorded decision (recommend confirm
+D18). Phase 2 (implementation) starts only after the rulings.
 
 Founder order 2026-08-17. Fable lead; sonnet for authority tracing;
 haiku for mechanical inventory; no Opus; NO IMPLEMENTATION this phase.

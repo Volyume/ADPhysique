@@ -35,7 +35,7 @@ Status updates happen at every screen campaign landing. Status key:
 | `HomeTab` | Today | MainTabs root | `src/screens/HomeScreen.js` | Initial tab on app load | Both | Tab root — displays today's session, coaching brief, and progress signals | IMPLEMENTED |
 | `PlansTab` | Train | MainTabs root | `src/screens/PlansScreen.js` | Tab navigation | Both | Tab root — user's active training programme and library browser | UNREVIEWED |
 | `DiaryTab` | Nutrition | MainTabs root (gated) | `src/screens/DiaryScreen.js` | Tab navigation | Pro | Tab root — food diary entry point with meal sections and macro tracking (gated; readOnly for free) | UNREVIEWED |
-| `ProgressTab` | Progress | MainTabs root | `src/screens/AnalyticsScreen.js` | Tab navigation | Both | Tab root — training analytics, volume trends, and lifetime tonnage | IN_AUDIT |
+| `ProgressTab` | Progress | MainTabs root | `src/screens/AnalyticsScreen.js` | Tab navigation | Both | Tab root — training analytics, volume trends, and lifetime tonnage | AUDITED |
 | `ProfileTab` | Coach | MainTabs root | `src/screens/YouScreen.js` | Tab navigation | Both | Tab root — athlete profile, coaching hub, and settings | UNREVIEWED |
 
 ---
@@ -95,7 +95,7 @@ Status updates happen at every screen campaign landing. Status key:
 
 | SCREEN_ID | USER-FACING NAME | PRODUCTION ROUTE | SOURCE FILE | ENTRY POINTS | TIER | PRIMARY JOB | STATUS | NOTES |
 |---|---|---|---|---|---|---|---|---|
-| `Analytics` | Progress | ProgressTab > Analytics | `src/screens/AnalyticsScreen.js` | ProgressTab (root) | Both | Progress tab root — volume trends, tonnage milestones, weight graph, and recent sessions | IN_AUDIT | Primary progress view; campaign 23 under audit |
+| `Analytics` | Progress | ProgressTab > Analytics | `src/screens/AnalyticsScreen.js` | ProgressTab (root) | Both | Progress tab root — volume trends, tonnage milestones, weight graph, and recent sessions | AUDITED | Campaign 23 Phase 1 audit complete 2026-08-17; redesign spec at docs/progress-audit-campaign-23-2026-08-17/PROGRESS-UX-SPEC.md (verdict B, two founder rulings open) |
 | `VolumeHeatmap` | Exercise Matrix | ProgressTab > VolumeHeatmap | `src/screens/VolumeHeatmapScreen.js` | AnalyticsScreen | Both | Heatmap of training volume — volume per muscle per week (52-week rolling view) | UNREVIEWED | Shows adherence patterns and muscle group balance |
 | `LiftProgress` | Lift PRs | ProgressTab > LiftProgress | `src/screens/LiftProgressScreen.js` | AnalyticsScreen | Both | Personal records — tracked max per exercise with progression timeline and trend arrows | UNREVIEWED | Shows top set per exercise; pro users see weight trend |
 | `Consistency` | Consistency | ProgressTab > Consistency | `src/screens/ConsistencyScreen.js` | AnalyticsScreen | Both | Workout adherence — weekly session streak, frequency patterns, and scheduled vs. actual | UNREVIEWED | Shows consistency trends and achievement badges |
