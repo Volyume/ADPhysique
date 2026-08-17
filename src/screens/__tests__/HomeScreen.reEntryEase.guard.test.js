@@ -56,10 +56,23 @@ describe('C18 re-entry: the "I haven\'t trained" answer becomes an actionable, b
     expect(HOME).toMatch(/import \{\s*setPendingReEntryEase, clearPendingReEntryEaseIfMatches,\s*\} from '\.\.\/lib\/reEntryEaseState';/);
   });
 
-  test('an easeReturn answer is bound to the exact outstanding required session', () => {
+  // RE-PINNED (Campaign 22 Phase 2 Stage 1, HOME-TODAY-UX-SPEC.md §13 rank 6):
+  // the re-entry question's ENTRY moved off an auto-firing appAlert onto the
+  // Today line (arbiter rank 6) — `maybeAskReEntry` now only DETECTS the due
+  // state and stores the bound session facts (boundWeekId/boundRoutineId) on
+  // a ref for the tap handler to use; `handleReEntryPress` is the function
+  // that actually opens the prompt, binds the answer and persists it. The
+  // bind/persist logic itself, and every value it reads/writes, is otherwise
+  // byte-identical to before — only which function contains it changed, per
+  // the build brief's "the existing sheet/flow unchanged on tap".
+  test('the due state is detected once and bound to the exact outstanding required session', () => {
     const body = fnBody(HOME, 'async function maybeAskReEntry(position, lastWorkoutAtMs)');
-    expect(body).toMatch(/boundWeekId = position\?\.activeWeekId/);
-    expect(body).toMatch(/boundRoutineId = position\?\.nextSession\?\.routineId/);
+    expect(body).toMatch(/boundWeekId: position\?\.activeWeekId/);
+    expect(body).toMatch(/boundRoutineId: position\?\.nextSession\?\.routineId/);
+  });
+
+  test('answering on tap persists the bound easeReturn decision exactly as before', () => {
+    const body = fnBody(HOME, 'function handleReEntryPress()');
     expect(body).toMatch(/if \(outcome\.easeReturn && boundWeekId && boundRoutineId\)/);
     expect(body).toMatch(/setPendingReEntryEase\(user\.id, \{ mesocycleWeekId: boundWeekId, routineId: boundRoutineId \}\)/);
   });

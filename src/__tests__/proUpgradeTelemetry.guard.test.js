@@ -66,7 +66,10 @@ describe('C2: ProUpgrade funnel telemetry', () => {
       ['components/ProGate.js', 3],
       ['screens/BodyMetricsScreen.js', 1],
       ['screens/SettingsAccountScreen.js', 1],
-      ['screens/HomeScreen.js', 3],
+      // Campaign 22 Phase 2 Stage 1: +1 site (source: 'home_trial_ending'),
+      // the Today line's trial-ENDING occupant (spec §13 rank 8) navigating
+      // to ProUpgrade for the one state genuinely requiring payment action.
+      ['screens/HomeScreen.js', 4],
       ['screens/DiaryScreen.js', 1],
       ['screens/YouScreen.js', 1],
     ];

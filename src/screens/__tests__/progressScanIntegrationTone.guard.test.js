@@ -27,13 +27,18 @@ function assertClean(str) {
 }
 
 // The exact new literal strings authored in this wave, one per screen.
+// RE-PINNED (Campaign 22 Phase 2 Stage 1, HOME-TODAY-UX-SPEC.md §15 copy
+// contract item 5): the "HomeScreen.js (check-in nudge scan subline)" entry
+// is REMOVED from this map -- the check-in nudge card it lived on is
+// retired from Home (collapsed to one sentence in the unified Today line);
+// "the scan invitation lives on the check-in screen it belongs to", i.e.
+// WeeklyCheckInScreen's own scan-prompt strings below, unchanged.
 const NEW_STRINGS = {
   'WeeklyCheckInScreen.js (scan prompt title)': 'Add a progress scan first?',
   'WeeklyCheckInScreen.js (scan prompt body)': 'A recent scan gives this check-in extra visual context. It is optional and skipping it changes nothing.',
   'WeeklyCheckInScreen.js (scan prompt CTA)': 'Do a scan',
   'WeeklyCheckInScreen.js (scan prompt dismiss)': 'Not now',
   'WeeklyCheckInScreen.js (no-scan-this-period line)': 'No photo set this period.',
-  'HomeScreen.js (check-in nudge scan subline)': 'If you like, add a progress scan first for extra visual context. Skipping it is fine.',
   'ProgressPhotosScreen.js (post-scan check-in value line)': 'If you check in this week, the coach can use this as context.',
 };
 
@@ -51,7 +56,9 @@ describe('progress-scan integration wave: new user-facing strings are clean', ()
     expect(files.WeeklyCheckInScreen).toMatch(/Add a progress scan first\?/);
     expect(files.WeeklyCheckInScreen).toMatch(/A recent scan gives this check-in extra visual context\. It is optional and skipping it changes nothing\./);
     expect(files.WeeklyCheckInScreen).toMatch(/No photo set this period\./);
-    expect(files.HomeScreen).toMatch(/If you like, add a progress scan first for extra visual context\. Skipping it is fine\./);
+    // The Home check-in nudge's scan subline is retired (see the NEW_STRINGS
+    // comment above); pin its absence instead of its presence.
+    expect(files.HomeScreen).not.toMatch(/If you like, add a progress scan first for extra visual context\. Skipping it is fine\./);
     expect(files.ProgressPhotosScreen).toMatch(/If you check in this week, the coach can use this as context\./);
   });
 

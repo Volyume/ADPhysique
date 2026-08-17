@@ -18,6 +18,19 @@
 // CoachBriefCard ('go' | 'caution' | 'recover') so the two read as one
 // family rather than inventing a parallel scheme.
 
+// Campaign 22 Phase 2 Stage 1 (HOME-TODAY-UX-SPEC.md §8, the "measured copy
+// contradiction"): Priority 1 used to read `currentMesoWeek.isDeload` -- a
+// PARALLEL derivation of the same fact `recoveryState.js`'s resolver already
+// computes as `gatedRecoveryState`. The raw isDeload flag and the gated,
+// position-aware resolved state can disagree (a block whose calendar has
+// reached the deload row but still owes an outstanding accumulation session
+// gates back to NORMAL_ACCUMULATION; the raw flag does not know that), which
+// is exactly how this chip and RecoveryStateCard/the hero eyebrow could
+// contradict each other in the same render. Fix: both surfaces now derive
+// their recovery-tone line from the SAME resolved state -- this file never
+// re-reads isDeload for the recovery-tone decision again.
+import { isLighterTrainingState, RECOVERY_STATE } from './recoveryState';
+
 // Sleep/energy chips offer 2 (Poor/Low), 3 (OK), 4 (Good/High) on a 1-5
 // domain; soreness offers 1 (Fresh), 2 (Mild), 3 (Sore) on a 1-3 domain
 // (see HomeScreen's READINESS_ROWS). "Low" here means the chip value that
@@ -53,6 +66,12 @@ function joinNatural(words) {
  *
  * @param {object} input
  * @param {{isDeload?: boolean, weekIndex?: number, plannedWeeks?: number, rirTarget?: number}|null} input.currentMesoWeek
+ * @param {object|null} [input.gatedRecoveryState] - the SAME resolved state
+ *   `recoveryState.resolveRecoveryState()` produces (HomeScreen's
+ *   `gatedRecoveryState`, position-gated), used ONLY to decide/word Priority
+ *   1 so this chip can never contradict RecoveryStateCard or the hero
+ *   eyebrow. Optional so a caller with no block-position read yet degrades
+ *   to Priority 2+ rather than throwing; never re-derived here.
  * @param {object|null} input.deloadSuggestion - shouldDeload() result, truthy when a recovery week is suggested.
  * @param {Array<{fatigueLevel?: number, fatigue_level?: number}>} [input.fatigueHistory] - newest-first, from getRecentWorkoutFeedback.
  * @param {{soreness24hBefore?: number|null, sleepQuality?: number|null, energyScore?: number|null}|null} [input.lastSession]
@@ -60,6 +79,7 @@ function joinNatural(words) {
  */
 export function buildReadinessSummary({
   currentMesoWeek = null,
+  gatedRecoveryState = null,
   deloadSuggestion = null,
   fatigueHistory = [],
   lastSession = null,
@@ -71,18 +91,29 @@ export function buildReadinessSummary({
   // chip's existing visibility rule, only the content composes further.
   if (!currentMesoWeek) return null;
 
-  // Priority 1: the plan itself has scheduled a deload this week. The most
-  // concrete signal there is, since it does not depend on interpreting data.
-  // C6 RB6-3 (D97-25): "pull effort back" implies effort was being spent -
-  // an unearned calendar recovery week after a gap must state the calendar
-  // fact instead, matching the R-4 advisor ruling. Recency is judged from
-  // the same last-session evidence priority 3 uses.
-  if (currentMesoWeek.isDeload) {
-    const trainedRecently = Number.isFinite(Number(lastSession?.startedAt))
-      && (nowMs - Number(lastSession.startedAt)) <= 14 * 86400000;
-    return trainedRecently
-      ? { tone: 'recover', line: 'Recovery week, pull effort back.' }
-      : { tone: 'recover', line: 'Recovery week on the calendar. Ease back in whenever suits you.' };
+  // Priority 1: the block is DELIBERATELY lighter right now, for either
+  // reason recoveryState.js distinguishes -- read from the resolved state,
+  // never the raw isDeload flag (see the Stage 1 note above the imports).
+  // Wording is guaranteed one-source-of-truth with RecoveryStateCard and the
+  // hero eyebrow: whenever isLighterTrainingState(gatedRecoveryState) is
+  // true here, it is true there too, because both consume the identical
+  // resolver output.
+  if (isLighterTrainingState(gatedRecoveryState)) {
+    if (gatedRecoveryState.state === RECOVERY_STATE.PLANNED_BLOCK_RECOVERY) {
+      // C6 RB6-3 (D97-25): "pull effort back" implies effort was being spent
+      // - an unearned calendar recovery week after a gap must state the
+      // calendar fact instead, matching the R-4 advisor ruling. Recency is
+      // judged from the same last-session evidence priority 3 uses.
+      const trainedRecently = Number.isFinite(Number(lastSession?.startedAt))
+        && (nowMs - Number(lastSession.startedAt)) <= 14 * 86400000;
+      return trainedRecently
+        ? { tone: 'recover', line: 'Recovery week, pull effort back.' }
+        : { tone: 'recover', line: 'Recovery week on the calendar. Ease back in whenever suits you.' };
+    }
+    // ADAPTIVE_RECOVERY_ADJUSTMENT: still inside accumulation, so this must
+    // never be worded as "recovery week" (that would claim the hard part of
+    // the block is over, which recoveryStateCard's own copy rule forbids).
+    return { tone: 'recover', line: 'Training is lighter for now while your recovery catches up.' };
   }
 
   // Priority 2: the training-data-driven suggestion (shouldDeload). Worded

@@ -47,11 +47,16 @@ describe('B3 plateau banner priority slot (D7 ranked-list mechanics)', () => {
     );
   });
 
-  test('ranks below coach, trial, deload and phase; above the activation and attention slots', () => {
+  // RE-PINNED (Campaign 22 Phase 2 Stage 1): coach/trial/deload/phase moved
+  // off this array onto the Today line arbiter (see
+  // HomeScreen.bannerPriorityCap.test.js) -- they no longer compete for
+  // this P3 stack's slot at all, so plateau's remaining peers here are only
+  // activation and attention.
+  test('ranks above the activation and attention slots', () => {
     const site = HOME.indexOf('const BANNER_PRIORITY = [');
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site, HOME.indexOf('];', site));
-    const order = ['coach', 'trial', 'deload', 'phase', 'plateau', 'activation', 'attention']
+    const order = ['plateau', 'activation', 'attention']
       .map((key) => block.indexOf(`key: '${key}'`));
     expect(order.every((i) => i > -1)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));

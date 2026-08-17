@@ -30,12 +30,20 @@ describe('A3: Home trial banner (day 0, pre-first-review)', () => {
     expect(HOME).toMatch(/trialDay < 0 \|\| trialDay > TRIAL_LENGTH_DAYS/);
     expect(HOME).not.toMatch(/trialDay < 2 \|\| trialDay > 7/);
   });
-  test('the attention card renders NO ledger rows, and still renders the banner line', () => {
+  // RE-PINNED (Campaign 22 Phase 2 Stage 1, FOUNDER-RULINGS-PHASE2 R3): the
+  // everyday trial card (this A3 banner's render location) no longer
+  // mounts on Home at all -- it rehomes to Profile/You (Stage 2 scope). The
+  // AttentionCard component's own "no ledger rows, still the banner line"
+  // contract is unchanged and still pinned directly against the component;
+  // Home's half of the pin is now that it still COMPUTES the line (for
+  // Stage 2 to consume) without rendering it.
+  test('the attention card component itself renders NO ledger rows and still carries the banner line; Home still computes but no longer renders it', () => {
     const CARD = read('../../components/AttentionCard.js');
     expect(CARD).not.toMatch(/trialBanner\.ledger/);
     expect(CARD).not.toMatch(/trialLedger/);
     expect(CARD).toMatch(/trialBanner\.line/);
-    expect(HOME).toMatch(/trialBanner=\{trialBanner\}/);
+    expect(HOME).not.toMatch(/variant="trial"/);
+    expect(HOME).toMatch(/setTrialBanner\(\{ line, variant \}\)/);
   });
 
   test('attention-card coach CTAs use contained neutral buttons, not loose amber text links', () => {

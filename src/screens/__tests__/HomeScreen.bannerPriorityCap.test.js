@@ -1,74 +1,69 @@
 /**
- * D14 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md): "Home
- * banner cap: DELEGATED to the lead ('You decide what will be best'). Lead
- * ruling: ONE attention banner max above the Start-Workout hero, chosen by
- * the existing pickAttentionVariant priority order; others wait their turn
- * (strongest match to the one-hero Materials Policy)."
+ * D14 (docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md) +
+ * Campaign 22 Phase 2 Stage 1 (HOME-TODAY-UX-SPEC.md §13, the ranked
+ * priority contract) RE-PIN.
  *
- * This SUPERSEDES the earlier D7 "top two + collapsed overflow" model
- * (AC-6/CP-1, design-usability-audit-2026-07-09) that used to be pinned
- * here: the bannersExpanded/topBannerKeys/overflowBannerKeys machinery and
- * the "more updates" affordance are gone. At most one of the seven ranked
- * banner slots renders at a time; whichever loses the slot simply waits --
- * it stays fully loaded/eligible and takes the slot on a later render once
- * the winner is dismissed or resolves (own dismissal semantics untouched).
+ * WHAT CHANGED. The seven-slot BANNER_PRIORITY cap (coach > trial > deload >
+ * phase > plateau > activation > attention) is SPLIT:
+ *  - coach, trial(-ending only), deload/recovery, phase, check-in and
+ *    block-complete now compete for the single Today line (P1) via the pure
+ *    `todayLineArbiter` resolver (see src/lib/home/__tests__/
+ *    todayLineArbiter.test.js for that ranking's own adversarial coverage);
+ *  - plateau, activation and the free/differential attention slot are
+ *    UNCHANGED P3 content -- same three-way one-banner cap mechanism as
+ *    before, just with the four senior slots removed from the array (they
+ *    would otherwise still suppress plateau/activation whenever eligible,
+ *    even though nothing renders their old JSX any more). Their own move
+ *    into a full P3 footer redesign is Stage 2's scope (marked `// Stage 2:`
+ *    at the array site in HomeScreen.js), untouched here.
  *
  * This screen has no full render test (per HomeScreen.progressScanNudge.test.js:
  * "cannot safely be `require`'d in this Jest environment"), so these are
- * scoped source guards in the same established convention, plus one pure
- * unit test of the ranking arithmetic extracted verbatim from the screen so
- * the "exactly one" behaviour is actually exercised with values, not just
- * pattern-matched.
+ * scoped source guards in the same established convention.
  *
  * Pins:
- *  1. The seven banner slots are ranked in one fixed, ordered list
- *     (BANNER_PRIORITY), highest priority first: coach > trial > deload >
- *     phase > plateau > activation > attention (free coach line /
- *     differential badge, which still resolve their own order within that
- *     shared slot exactly as before via AttentionCard's pickAttentionVariant).
- *  2. Exactly one entry of that list (the highest-ranked eligible one) is
- *     chosen as shownBannerKey; every show* flag reduces to a straight
- *     equality check against it. No affordance reveals more than one.
- *  3. None of the seven banner slots is an ED-safety, wellbeing or calm-mode
- *     banner in its own right (each is a coaching/training/monetisation
- *     notice; where ED-safety is relevant, e.g. the activation nudge and the
- *     differential badge, suppression already happens inside their own
- *     loaders under an open ED flag or calm mode, untouched by this change),
- *     so nothing in this stack needed exempt/always-show treatment. This
- *     test also confirms that untouched ED/calm suppression is still present.
+ *  1. BANNER_PRIORITY now lists exactly the three P3 slots, in order:
+ *     plateau > activation > attention.
+ *  2. Exactly one entry of that list is chosen as shownBannerKey; every
+ *     show* flag reduces to a straight equality check against it.
+ *  3. coach/trial/deload/phase/check-in/block-complete are NOT in the array
+ *     -- they feed the arbiter's facts instead, each carrying its exact
+ *     original tap-through and dismissal.
+ *  4. None of the three P3 triggers reads an ED flag or wellbeing/calm-mode
+ *     signal directly (suppression already happens inside their own
+ *     loaders, untouched by this change).
  */
 const fs = require('fs');
 const path = require('path');
 
 const HOME = fs.readFileSync(path.resolve(__dirname, '../HomeScreen.js'), 'utf8');
 
-describe('D14: banner stack is priority-ranked and capped to exactly one', () => {
-  test('BANNER_PRIORITY lists all seven slots in the documented priority order', () => {
+describe('D14 + Campaign 22 Phase 2 Stage 1: the P3 banner stack is priority-ranked and capped to exactly one', () => {
+  test('BANNER_PRIORITY lists exactly the three P3 slots in order', () => {
     const site = HOME.indexOf('const BANNER_PRIORITY = [');
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site, HOME.indexOf('];', site));
-    const keys = ['coach', 'trial', 'deload', 'phase', 'plateau', 'activation', 'attention'];
+    const keys = ['plateau', 'activation', 'attention'];
     const positions = keys.map((key) => block.indexOf(`key: '${key}'`));
     expect(positions.every((i) => i > -1)).toBe(true);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    // The four senior ranks are gone from this array -- they compete for the
+    // Today line instead, not this cap.
+    expect(block).not.toMatch(/key: '(coach|trial|deload|phase)'/);
   });
 
   test('exactly one banner key is chosen: the highest-ranked eligible entry', () => {
     expect(HOME).toMatch(
       /const shownBannerKey = BANNER_PRIORITY\[0\]\?\.key \?\? null;/,
     );
-    // No cap-2/overflow/expand machinery survives from the superseded D7 model.
     expect(HOME).not.toMatch(/bannersExpanded/);
     expect(HOME).not.toMatch(/overflowBannerKeys/);
     expect(HOME).not.toMatch(/overflowBannerCount/);
     expect(HOME).not.toMatch(/topBannerKeys/);
   });
 
-  test('every one of the seven show* flags renders from a plain equality check against shownBannerKey', () => {
+  test('every one of the three show* flags renders from a plain equality check against shownBannerKey', () => {
     const perBanner = {
-      showTrialCountdownBanner: 'trial',
-      showDeloadBanner: 'deload',
-      showPhaseBanner: 'phase',
       showPlateauBanner: 'plateau',
       showActivationBanner: 'activation',
       showAttentionSlot: 'attention',
@@ -77,23 +72,6 @@ describe('D14: banner stack is priority-ranked and capped to exactly one', () =>
       const re = new RegExp(`const ${flag} = shownBannerKey === '${key}';`);
       expect(HOME).toMatch(re);
     }
-    // Coach is rank 1: it is BANNER_PRIORITY[0] whenever eligible (nothing
-    // outranks it), so its own render flag is simply its own trigger,
-    // verified unchanged, not re-gated through shownBannerKey.
-    // PM-06 (D96) re-anchor, same meaning: the eligibility test now runs
-    // through the shared completed-decision predicate
-    // (src/lib/coachDecision.js), which REQUIRES hasEnoughData and also
-    // requires the check-in that produced the output to exist for the same
-    // week -- the predicate the Coach tab already applied. The rank-1
-    // property this test pins is unchanged: showCoachBanner is still its own
-    // trigger, not re-gated through shownBannerKey, and the dismissal and
-    // 7-day freshness terms are untouched.
-    expect(HOME).toMatch(
-      /const showCoachBanner = tier === 'pro' && !!latestCoachOutput && latestCoachDecisionComplete\s*\n\s*&& !coachBannerDismissed\s*\n\s*&& \(Date\.now\(\) - \(latestCoachOutput\.weekStart \?\? 0\) < 7 \* 86400000\);/,
-    );
-    // ... and the predicate itself still requires hasEnoughData.
-    expect(fs.readFileSync(require.resolve('../../lib/coachDecision.js'), 'utf8'))
-      .toContain('output.hasEnoughData === false');
   });
 
   test('there is no "reveal the rest" affordance left in the JSX', () => {
@@ -103,51 +81,31 @@ describe('D14: banner stack is priority-ranked and capped to exactly one', () =>
   });
 
   test('the ranking arithmetic picks exactly one and leaves the rest waiting (worked example)', () => {
-    // Extracted verbatim from the screen's own logic: five of the seven
-    // slots eligible at once (a realistic worst case per the audit) must
-    // yield exactly one shown, the highest-ranked of the five.
-    const eligible = {
-      coach: true, trial: true, deload: true, phase: false, plateau: true,
-      activation: true, attention: false,
-    };
-    const BANNER_PRIORITY = ['coach', 'trial', 'deload', 'phase', 'plateau', 'activation', 'attention']
+    const eligible = { plateau: true, activation: true, attention: true };
+    const BANNER_PRIORITY = ['plateau', 'activation', 'attention']
       .map((key) => ({ key, eligible: eligible[key] }))
       .filter((b) => b.eligible);
     const shownBannerKey = BANNER_PRIORITY[0]?.key ?? null;
-    expect(shownBannerKey).toBe('coach');
+    expect(shownBannerKey).toBe('plateau');
 
-    // A different mix: coach absent, so the slot shifts down to the next
-    // eligible rank (trial), confirming the cap is dynamic, not a fixed
-    // "always show slot 1 regardless of eligibility" rule, and that only
-    // ONE key is ever chosen even with four eligible candidates.
-    const eligible2 = { coach: false, trial: true, deload: true, phase: true, plateau: false, activation: false, attention: true };
-    const rank2 = ['coach', 'trial', 'deload', 'phase', 'plateau', 'activation', 'attention']
+    const eligible2 = { plateau: false, activation: true, attention: true };
+    const rank2 = ['plateau', 'activation', 'attention']
       .map((key) => ({ key, eligible: eligible2[key] }))
       .filter((b) => b.eligible);
-    expect(rank2[0]?.key ?? null).toBe('trial');
-    expect(rank2.length).toBe(4); // trial, deload, phase, attention all eligible...
-    // ...but only the first is ever surfaced; the cap is a single key, not a set.
+    expect(rank2[0]?.key ?? null).toBe('activation');
+    expect(rank2.length).toBe(2);
     expect(new Set([rank2[0]?.key ?? null]).size).toBe(1);
   });
 
-  test('each banner keeps its own original tap-through and dismiss handlers untouched', () => {
-    expect(HOME).toMatch(/onPress=\{dismissPhaseBanner\}/);
-    expect(HOME).toMatch(/onPress=\{\(\) => setDeloadDismissed\(true\)\}/);
+  test('plateau and activation keep their own original tap-through and dismiss handlers untouched', () => {
     expect(HOME).toMatch(/onPress=\{dismissPlateauBanner\}/);
     expect(HOME).toMatch(/onPress=\{dismissActivationNudge\}/);
-    expect(HOME).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'CoachOutput', \{ weekStart: latestCoachOutput\.weekStart \}\)/);
-    expect(HOME).toMatch(/onTrialDismiss=\{dismissTrialBanner\}/);
   });
 
-  test('dismissing the shown banner never marks a waiting (unshown) banner as seen/dismissed', () => {
-    // Each dismiss handler only ever writes ITS OWN storage key / setState,
-    // scoped to its own banner name; none references another banner's
-    // dismissed-state setter or storage key.
+  test('dismissing the shown P3 banner never marks a waiting (unshown) banner as seen/dismissed', () => {
     const dismissers = [
-      { fn: 'dismissPhaseBanner', setter: 'setPhaseBannerDismissed' },
       { fn: 'dismissPlateauBanner', setter: 'setPlateauBannerDismissed' },
       { fn: 'dismissActivationNudge', setter: 'setActivationNudgeDismissed' },
-      { fn: 'dismissTrialBanner', setter: 'setTrialBannerDismissed' },
       { fn: 'dismissFreeCoachLine', setter: 'setFreeCoachLineDismissed' },
       { fn: 'dismissDifferentialBanner', setter: 'setDifferentialDismissed' },
     ];
@@ -157,7 +115,6 @@ describe('D14: banner stack is priority-ranked and capped to exactly one', () =>
       const next = HOME.slice(start + 1).search(/\n  (async )?function /);
       const body = next === -1 ? HOME.slice(start) : HOME.slice(start, start + 1 + next);
       expect(body).toMatch(new RegExp(setter));
-      // None of the OTHER dismissed-state setters appear inside this body.
       const otherSetters = dismissers.filter((d) => d.setter !== setter).map((d) => d.setter);
       for (const other of otherSetters) {
         expect(body).not.toMatch(new RegExp(other));
@@ -166,9 +123,53 @@ describe('D14: banner stack is priority-ranked and capped to exactly one', () =>
   });
 });
 
-describe('D14: no banner in this stack is ED-safety/wellbeing/calm-mode, so none is exempt from the cap', () => {
-  test('none of the seven eligibility triggers reads an ED flag or wellbeing/calm-mode signal directly', () => {
-    const site = HOME.indexOf("const trialBannerEligible = !!trialBanner");
+describe('Campaign 22 Phase 2 Stage 1: the senior ranks moved to the Today line arbiter, not deleted', () => {
+  test('the arbiter facts object carries all six senior occupants, each keyed to its own fact', () => {
+    const site = HOME.indexOf('const todayLineItem = resolveTodayLine({');
+    expect(site).toBeGreaterThan(-1);
+    const block = HOME.slice(site, HOME.indexOf('  });', site));
+    for (const key of ['blockComplete', 'coachDecision', 'checkIn', 'recovery', 'reEntry', 'phaseMismatch', 'trialEnding']) {
+      expect(block).toMatch(new RegExp(`${key}: \\{`));
+    }
+  });
+
+  test('coach decision keeps its exact original tap-through, dismissal key and store mirror', () => {
+    expect(HOME).toMatch(
+      /const showCoachBanner = tier === 'pro' && !!latestCoachOutput && latestCoachDecisionComplete\s*\n\s*&& !coachBannerDismissed\s*\n\s*&& \(Date\.now\(\) - \(latestCoachOutput\.weekStart \?\? 0\) < 7 \* 86400000\);/,
+    );
+    // Still its own trigger, not routed through shownBannerKey -- and still
+    // mirrored into the store for the You-tab badge, exactly as before.
+    expect(HOME).toMatch(/setHasUnseenCoachChange\(showCoachBanner\)/);
+    expect(HOME).toMatch(/\}, \[showCoachBanner\]\);/);
+    expect(HOME).toMatch(/navigateCrossTab\(navigation, 'ProfileTab', 'CoachOutput', \{ weekStart: latestCoachOutput\.weekStart \}\)/);
+    expect(HOME).toMatch(/AsyncStorage\.setItem\(`@volyume_coach_banner_dismissed_\$\{latestCoachOutput\.weekStart\}`, 'true'\)\.catch\(\(\) => \{\}\);/);
+  });
+
+  test('the deload suggestion keeps its exact original eligibility gate, tap-through and dismissal', () => {
+    expect(HOME).toMatch(/deloadEligible: deloadBannerEligible,/);
+    expect(HOME).toMatch(/onDeloadPress: \(\) => \{ haptics\.selection\(\); navigation\.navigate\('CoachReview'\); \},/);
+    expect(HOME).toMatch(/onDeloadDismiss: \(\) => setDeloadDismissed\(true\),/);
+  });
+
+  test('the phase mismatch keeps its exact original dismissal function', () => {
+    expect(HOME).toMatch(/onDismiss: dismissPhaseBanner,/);
+  });
+
+  test('trial ending is derived read-only from cascade.js, never a re-derivation of trial state', () => {
+    expect(HOME).toMatch(/const trialEndMs = trialEndsAtMs\(userProfile\);/);
+    expect(HOME).toMatch(/daysRemaining: daysRemaining\(userProfile\) \?\? 0,/);
+    // The everyday S0-S3 variant machinery is gone; only the ending fact remains.
+    expect(HOME).not.toMatch(/variant="trial"/);
+  });
+
+  test('resume suppression: the arbiter is told about the active workout', () => {
+    expect(HOME).toMatch(/hasActiveWorkout,\s*\n\s*\}\);/);
+  });
+});
+
+describe('D14: no P3 trigger is ED-safety/wellbeing/calm-mode, so none is exempt from the cap', () => {
+  test('none of the three P3 eligibility triggers reads an ED flag or wellbeing/calm-mode signal directly', () => {
+    const site = HOME.indexOf('const plateauBannerEligible = !!plateauBanner');
     const end = HOME.indexOf('const BANNER_PRIORITY = [');
     const triggerBlock = HOME.slice(site, end);
     expect(triggerBlock).not.toMatch(/edFlag|isCalm|WELLBEING_KEY|openEdPatternFlag/i);
@@ -181,23 +182,8 @@ describe('D14: no banner in this stack is ED-safety/wellbeing/calm-mode, so none
     expect(differentialLoader.slice(0, 1200)).toMatch(/edFlag \|\| wellbeing === 'read_failed' \|\| isCalm\(wellbeing\)/);
   });
 
-  // Classification note (D14 task): HomeScreen renders no Article 9/consent
-  // surface at all (that gate lives in RootNavigator, before Home ever
-  // mounts). The one wellbeing/ED-adjacent element that DOES live on this
-  // screen, ConsistencyEcho, is not part of the seven-slot banner stack and
-  // is never funnelled through shownBannerKey/BANNER_PRIORITY, so the cap
-  // cannot ever hide it. This pins that independence: it renders alongside
-  // whichever (if any) attention banner currently holds the one slot.
-  // RE-PINNED (Today truth repair): ConsistencyEcho - the element this test
-  // used as its worked example - is DELETED with the weekly run/streak
-  // construct. Home now renders no ED/wellbeing-adjacent element outside the
-  // banner stack at all, so the rule is pinned directly instead: the cap
-  // governs the seven-slot stack and nothing else, and no safety surface has
-  // been funnelled into it.
-  test('the cap governs only the banner stack, and no ED/wellbeing surface was funnelled into it', () => {
-    expect(fs.existsSync(path.resolve(__dirname, '../../components/ConsistencyEcho.js'))).toBe(false);
-    // Every shownBannerKey consumer is one of the declared banner slots.
-    const declared = ['coach', 'trial', 'deload', 'phase', 'plateau', 'activation', 'attention'];
+  test('the cap governs only the P3 stack, and no ED/wellbeing surface was funnelled into it', () => {
+    const declared = ['plateau', 'activation', 'attention'];
     const gated = HOME.match(/const show\w+ = shownBannerKey === '(\w+)';/g) || [];
     expect(gated.length).toBeGreaterThan(0);
     for (const line of gated) {

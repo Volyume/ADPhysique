@@ -104,8 +104,18 @@ describe('CHAIN A + B: HOME / TODAY, the primary fix', () => {
     expect(recoveryStateCard(state(BLOCK_DELOAD_WEEK, { awaitingDecision: true }))).toBeNull();
   });
 
-  test('the deload SUGGESTION banner still defers to the block, now on the block\'s own position', () => {
-    expect(home).toMatch(/currentMesoWeek\?\.recoveryState\?\.recoveryWeek/);
+  // RE-PINNED (Campaign 22 Phase 2 Stage 1): the "your block already has a
+  // recovery week scheduled at week N" addendum this pinned
+  // (scheduledRecoveryWeekIndex, built from currentMesoWeek?.recoveryState?.
+  // recoveryWeek) was display-only extra colour on the old two-line banner;
+  // the new Today line idiom is ONE sentence (spec §17 R2), and the
+  // addendum did not survive the compression. The underlying suggestion,
+  // its eligibility gate and its CoachReview tap-through (where the block's
+  // own recovery position is still shown) are unchanged -- this test now
+  // pins that persistence instead of the retired addendum string.
+  test('the deload SUGGESTION banner still defers to the block via its unchanged eligibility gate', () => {
+    expect(home).toMatch(/const inScheduledRecovery = !!currentMesoWeek\?\.isDeload \|\| !!currentMesoWeek\?\.awaitingDecision;/);
+    expect(home).toMatch(/const deloadBannerEligible = !!deloadSuggestion && !deloadDismissed && !inScheduledRecovery;/);
   });
 });
 

@@ -1,66 +1,71 @@
 /**
- * HomeScreen check-in nudge: optional progress-scan subline
- * (`.volyume-audit/progress-scan-coach-worldclass/integration-plan.md` §8).
+ * HomeScreen check-in nudge, Campaign 22 Phase 2 Stage 1 re-pin.
  *
- * The existing "Your weekly check-in is ready" nudge (Pro, one-time) gains
- * one optional subline, fail-closed via usePhotoSuppression(). Nothing else
- * about the nudge (its Pro gating, dismiss behaviour, or the one-banner
- * priority chain) changes.
+ * RETIRED BY THIS STAGE: the standalone "Your weekly check-in is ready"
+ * nudge card (with its optional progress-scan subline,
+ * `.volyume-audit/progress-scan-coach-worldclass/integration-plan.md` §8)
+ * no longer renders at the bottom of Home. HOME-TODAY-UX-SPEC.md §15 copy
+ * contract item 5 collapses it to ONE sentence in the unified Today line
+ * (rank 4 of the arbiter): "Your weekly check-in is ready." The scan
+ * subline is explicitly dropped -- "the scan invitation lives on the
+ * check-in screen it belongs to" -- so usePhotoSuppression is no longer
+ * imported or read by HomeScreen at all.
  *
- * This screen has no existing test file and cannot safely be `require`'d in
- * this Jest environment (heavy transitive imports, no mock scaffold set up
- * for this file -- see CoachOutputScreen's own test family for the same
- * constraint). Source-guard style, matching the established convention.
+ * This screen has no existing full-mount test and cannot safely be
+ * `require`'d in this Jest environment (heavy transitive imports, no mock
+ * scaffold set up for this file -- see CoachOutputScreen's own test family
+ * for the same constraint). Source-guard style, matching the established
+ * convention.
  *
  * Pins:
- *  1. usePhotoSuppression is imported and called once, keyed to the user id,
- *     fail-closed default (the hook itself defaults `suppressed = true`).
- *  2. The subline sits inside the existing showCoachingNudge card, gated on
- *     `!photoScanSuppressed`, after the existing body copy, before the
- *     "Open check-in" button -- an addition, not a replacement.
- *  3. Nothing else in the nudge card (title, body, dismiss, navigation
- *     target) changed.
+ *  1. usePhotoSuppression and its scan-subline copy are gone from Home.
+ *  2. The old standalone nudge card markup (title/body/scan-subline/
+ *     dedicated dismiss cross) is gone.
+ *  3. The check-in fact feeding the arbiter carries the ONE-sentence copy,
+ *     the exact original dismiss handler (dismissCoachingNudge) and the
+ *     exact original navigation target, unchanged.
  */
 const fs = require('fs');
 const path = require('path');
 
 const SCREEN = fs.readFileSync(path.resolve(__dirname, '../HomeScreen.js'), 'utf8');
 
-describe('HomeScreen check-in nudge scan subline', () => {
-  test('imports and calls usePhotoSuppression, keyed to the user id', () => {
-    expect(SCREEN).toMatch(/import usePhotoSuppression from '\.\.\/hooks\/usePhotoSuppression';/);
-    expect(SCREEN).toMatch(/const photoScanSuppressed = usePhotoSuppression\(user\?\.id\);/);
+describe('HomeScreen check-in nudge -> Today line rank 4 (Campaign 22 Phase 2 Stage 1)', () => {
+  test('usePhotoSuppression is no longer imported or called', () => {
+    expect(SCREEN).not.toMatch(/^import usePhotoSuppression/m);
+    expect(SCREEN).not.toMatch(/usePhotoSuppression\(user\?\.id\)/);
+    expect(SCREEN).not.toMatch(/const photoScanSuppressed =/);
+    expect(SCREEN).not.toMatch(/\{!photoScanSuppressed &&/);
+    expect(SCREEN).not.toMatch(/add a progress scan first/i);
   });
 
-  test('the subline is gated on !photoScanSuppressed and sits inside the existing nudge card', () => {
-    const cardStart = SCREEN.indexOf('{showCoachingNudge && (');
-    expect(cardStart).toBeGreaterThan(-1);
-    const cardBlock = SCREEN.slice(cardStart, cardStart + 1600);
-    expect(cardBlock).toMatch(/Your weekly check-in is ready/);
-    expect(cardBlock).toMatch(/It's your check-in day\. See how your week went and what to adjust\./);
-    // Subline appears after the existing body text, before the CTA button.
-    const bodyIdx = cardBlock.indexOf("It's your check-in day");
-    const sublineIdx = cardBlock.indexOf('!photoScanSuppressed');
-    const ctaIdx = cardBlock.indexOf('Open check-in');
-    expect(sublineIdx).toBeGreaterThan(bodyIdx);
-    expect(sublineIdx).toBeLessThan(ctaIdx);
-    // CP-10 stage 3 (theming batch 2, 2026-07-10): HomeScreen appends a live
-    // theme override after the frozen style in each array (batch 1's
-    // pattern), so this call site is `style={[styles.X, live.X]}` instead of
-    // `style={styles.X}`. The pinned RULE (subline gated on
-    // !photoScanSuppressed, positioned between body and CTA) is unchanged --
-    // the static coachingNudgeScanSubline definition (asserted below) is
-    // byte-identical to before.
-    expect(cardBlock).toMatch(/\{!photoScanSuppressed && \(\s*\n\s*<Text style=\{\[styles\.coachingNudgeScanSubline, live\.coachingNudgeScanSubline\]\}>/);
-    expect(cardBlock).toMatch(/If you like, add a progress scan first for extra visual context\. Skipping it is fine\./);
+  test('the old standalone nudge card markup is gone', () => {
+    expect(SCREEN).not.toMatch(/showCoachingNudge && \(\s*\n\s*<View style=\{\[styles\.coachingNudge/);
+    expect(SCREEN).not.toMatch(/It's your check-in day\. See how your week went and what to adjust\./);
+  });
+
+  test('the checkIn fact carries the one-sentence copy contract (spec §15 item 5)', () => {
+    expect(SCREEN).toMatch(/checkIn: \{\s*\n\s*eligible: showCoachingNudge,/);
   });
 
   test('the nudge dismiss and navigation target are untouched', () => {
-    expect(SCREEN).toMatch(/onPress=\{dismissCoachingNudge\}/);
+    expect(SCREEN).toMatch(/onDismiss: dismissCoachingNudge,/);
     expect(SCREEN).toMatch(/navigation\.navigate\('ProfileTab', \{ screen: 'WeeklyCheckIn', initial: false \}\);/);
   });
 
-  test('the subline style exists and uses theme tokens, not hard-coded values', () => {
-    expect(SCREEN).toMatch(/coachingNudgeScanSubline: \{\s*\n\s*\.\.\.type\.captionTight, color: colors\.textMuted,\s*\n\s*\},/);
+  test('the arbiter itself owns the exact copy string, not HomeScreen', () => {
+    const ARBITER = fs.readFileSync(
+      path.resolve(__dirname, '../../lib/home/todayLineArbiter.js'), 'utf8',
+    );
+    expect(ARBITER).toContain("text: 'Your weekly check-in is ready.'");
+    // The occupant TEXT itself (what actually renders) never mentions the
+    // scan invitation, even though the module's own explanatory comments
+    // discuss why it was dropped (checked directly against the resolver's
+    // output rather than the whole file, so this cannot false-positive on
+    // that commentary).
+    // eslint-disable-next-line global-require
+    const { resolveTodayLine } = require('../../lib/home/todayLineArbiter');
+    const result = resolveTodayLine({ checkIn: { eligible: true, onPress: () => {}, onDismiss: () => {} } });
+    expect(result.text).not.toMatch(/scan/i);
   });
 });

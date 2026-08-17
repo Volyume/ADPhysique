@@ -18,8 +18,19 @@
  *  - deterministic for identical inputs; no score, no traffic-light words.
  */
 import { buildReadinessSummary } from '../readinessSummary';
+import { RECOVERY_STATE } from '../recoveryState';
 
 const BASE_MESO = { isDeload: false, weekIndex: 2, plannedWeeks: 4, rirTarget: 2 };
+// Campaign 22 Phase 2 Stage 1 (HOME-TODAY-UX-SPEC.md §8): Priority 1 now
+// reads the resolved `gatedRecoveryState`, not the raw `currentMesoWeek.
+// isDeload` flag (that parallel derivation is exactly the historical
+// contradiction the stage closes -- see readinessSummary.js's Stage 1 note
+// and src/lib/__tests__/recoveryWordingSource.test.js for the dedicated
+// single-source guard). Fixtures below that need Priority 1 to fire now
+// carry PLANNED_RECOVERY as an explicit gatedRecoveryState alongside the
+// legacy isDeload:true field (still realistic DB shape, just no longer the
+// thing this function reads for the decision).
+const PLANNED_RECOVERY = { state: RECOVERY_STATE.PLANNED_BLOCK_RECOVERY, weekIndex: 2, plannedWeeks: 4, recoveryWeek: 2, weeksToRecovery: 0 };
 // C6 RE6-5 (D97-25): a fixed clock, threaded as nowMs into every test
 // whose fixture carries timestamps. The suite previously read
 // Date.now() at fixture build AND let buildReadinessSummary default
@@ -39,9 +50,15 @@ describe('buildReadinessSummary', () => {
     })).toBeNull();
   });
 
+  // RE-PINNED (Campaign 22 Phase 2 Stage 1): was `currentMesoWeek: {
+  // ...BASE_MESO, isDeload: true }` alone. Priority 1 now decides off
+  // gatedRecoveryState, so the fixture must carry it for this scenario to
+  // still exercise the branch under test; the assertion and its meaning are
+  // unchanged (a scheduled deload week still outranks every other signal).
   test('a scheduled deload week outranks every other signal', () => {
     const result = buildReadinessSummary({
       currentMesoWeek: { ...BASE_MESO, isDeload: true },
+      gatedRecoveryState: PLANNED_RECOVERY,
       deloadSuggestion: { deload: true },
       fatigueHistory: [{ fatigueLevel: 5, startedAt: NOW - 2 * 86400000 }, { fatigueLevel: 5, startedAt: NOW - 4 * 86400000 }], nowMs: NOW, // D97-25 RB6-4 re-anchor + RE6-5 hermetic clock
       lastSession: { startedAt: NOW, soreness24hBefore: 3, sleepQuality: 2, energyScore: 2 },
@@ -174,9 +191,12 @@ describe('buildReadinessSummary', () => {
     expect(buildReadinessSummary(input)).toEqual(buildReadinessSummary({ ...input }));
   });
 
+  // RE-PINNED (Campaign 22 Phase 2 Stage 1): the first scenario's isDeload
+  // fixture needs gatedRecoveryState too, for the same reason as above, so
+  // it still exercises the Priority 1 branch this check means to cover.
   test('no score-like or traffic-light wording in any produced line', () => {
     const scenarios = [
-      { currentMesoWeek: { ...BASE_MESO, isDeload: true }, deloadSuggestion: null, fatigueHistory: [], lastSession: null },
+      { currentMesoWeek: { ...BASE_MESO, isDeload: true }, gatedRecoveryState: PLANNED_RECOVERY, deloadSuggestion: null, fatigueHistory: [], lastSession: null },
       { currentMesoWeek: BASE_MESO, deloadSuggestion: { deload: true }, fatigueHistory: [], lastSession: null },
       { currentMesoWeek: BASE_MESO, deloadSuggestion: null, fatigueHistory: [], lastSession: { startedAt: NOW, soreness24hBefore: 3 }, nowMs: NOW },
       { currentMesoWeek: BASE_MESO, deloadSuggestion: null, fatigueHistory: [{ fatigueLevel: 5, startedAt: NOW - 2 * 86400000 }, { fatigueLevel: 5, startedAt: NOW - 4 * 86400000 }], lastSession: null, nowMs: NOW },

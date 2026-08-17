@@ -435,14 +435,25 @@ describe('HOME: zero history has one clear next action and claims no history (C5
     expect(summary.line).toBe('Block week 1 of 6 - stop 3 short of failure');
   });
 
+  // RE-PINNED (Campaign 22 Phase 2 Stage 1, FOUNDER-RULINGS-PHASE2 R3): the
+  // everyday trial value card (S0-S3, including this S3 zero-history
+  // variant) no longer renders on Home at all -- it rehomes to Profile/You
+  // (Stage 2 scope, marked with a `// Stage 2:` comment at the retained
+  // state in HomeScreen.js). The onTrialPress wiring this test used to pin
+  // is retired with the card, so the original concern ("the top card leads
+  // to the session it names, or stops claiming to") is now trivially true:
+  // there is no top trial card on Home left to mislead anyone.
   test('the top card on a zero-history Home leads to the session it names, or stops claiming to', () => {
     // C5-P12-01: the S3 variant (completed sessions <= 0) scrolled to y=0,
     // where the user already was, from the first element on the screen.
     const home = read('screens/HomeScreen.js');
     expect(home).not.toMatch(/variant === 'S3'\)\s*\{\s*\n\s*scrollRef\.current\?\.scrollTo/);
-    expect(home).toMatch(/trialBanner\.variant === 'S3'\s*\n?\s*\? \(activePlan && nextWorkout \? \(\) => handleStartNextWorkout\(false\) : null\)/);
-    // The card renders inert rather than as a chevroned button with nowhere
-    // to go when the caller has no honest destination.
+    // The everyday trial card's variant JSX is gone from Home entirely.
+    expect(home).not.toMatch(/variant="trial"/);
+    // The AttentionCard component's inert-fallback contract (renders a
+    // non-chevroned View, not a dead-end button, when it has no honest
+    // destination) is untouched and still exercised wherever the component
+    // is used today (the free-tier attention footer slot).
     const card = read('components/AttentionCard.js');
     expect(card).toMatch(/const Wrapper = onTrialPress \? TouchableOpacity : View;/);
     expect(card).toMatch(/\{onTrialPress \? <Ionicons name="chevron-forward"/);
@@ -1707,12 +1718,21 @@ describe('TIER: a Pro feature never fails silently on a Free phone (FM-01, FM-04
 });
 
 describe('HOME: the recovery suggestion acknowledges the block it is arguing with (PM-08 / FM-07, D96)', () => {
-  test('the banner names the scheduled recovery week when one is still ahead', () => {
+  // RE-PINNED (Campaign 22 Phase 2 Stage 1): the "your block already has a
+  // recovery week scheduled at week N" addendum (scheduledRecoveryAhead /
+  // scheduledRecoveryWeekIndex) was display-only extra colour on the old
+  // two-line banner. The new Today line idiom is ONE sentence (spec §17
+  // R2), and the addendum did not survive the compression -- the
+  // underlying PM-08/FM-07 suggestion, its suppression inside a scheduled
+  // recovery week, and its CoachReview tap-through (where the block's own
+  // recovery position is still shown) are all unchanged.
+  test('the suggestion still defers to the block via its unchanged eligibility gate', () => {
     const src = read('screens/HomeScreen.js');
-    expect(src).toMatch(/const scheduledRecoveryAhead =/);
-    expect(src).toMatch(/already has a recovery week scheduled at week \$\{scheduledRecoveryWeekIndex\}/);
+    expect(src).not.toMatch(/const scheduledRecoveryAhead =/);
     // FB-02's suppression inside a scheduled recovery week is untouched.
     expect(src).toMatch(/const inScheduledRecovery = !!currentMesoWeek\?\.isDeload \|\| !!currentMesoWeek\?\.awaitingDecision;/);
+    expect(src).toMatch(/const deloadBannerEligible = !!deloadSuggestion && !deloadDismissed && !inScheduledRecovery;/);
+    expect(src).toMatch(/onDeloadPress: \(\) => \{ haptics\.selection\(\); navigation\.navigate\('CoachReview'\); \},/);
   });
 
   test('the deload maths itself is untouched', () => {

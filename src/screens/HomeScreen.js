@@ -54,7 +54,9 @@ import {
   getMorningWeightsLast14Days, getOpenEdPatternFlag,
   getRecentCheckins, getNutritionTargets, getLatestCheckin,
 } from '../lib/database';
-import { stageOf, canStillTrial, trialEndsLabel } from '../lib/payments/cascade';
+import {
+  stageOf, canStillTrial, trialEndsLabel, trialEndsAtMs, daysRemaining,
+} from '../lib/payments/cascade';
 import {
   trialStartFromEndsAt,
   selectTrialVariant,
@@ -78,6 +80,10 @@ import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 // already loads; the badge only navigates to ProUpgrade.
 import AttentionCard, { pickAttentionVariant } from '../components/AttentionCard';
 import { detectDifferentialTrigger } from '../lib/differentialPaywall';
+// Campaign 22 Phase 2 Stage 1 (HOME-TODAY-UX-SPEC.md §13/§17 region R2):
+// the single unified P1 "Today line" and its pure priority arbiter.
+import TodayLine from '../components/home/TodayLine';
+import { resolveTodayLine } from '../lib/home/todayLineArbiter';
 import { mapCalsAdherence } from '../lib/weeklyCoach';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
@@ -90,9 +96,10 @@ import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-// Integration wave (integration-plan.md §8): the check-in nudge's optional
-// scan subline, fail-closed via the shared photo-suppression hook.
-import usePhotoSuppression from '../hooks/usePhotoSuppression';
+// Campaign 22 Phase 2 Stage 1 copy contract item 5: the check-in nudge's
+// optional scan subline is retired from Home (it moves to the check-in
+// screen it belongs to), so the photo-suppression hook this line fed is no
+// longer read here. usePhotoSuppression itself is untouched.
 
 // Soft targets used only to size the weekly progress bars, not enforced
 
@@ -278,11 +285,6 @@ export default function HomeScreen({ navigation, route }) {
   // the user navigating away and back.
   const cloudSyncVersion = useAppStore(s => s.cloudSyncVersion);
   const bwu = bodyWeightUnits || 'st';
-  // Integration wave (integration-plan.md §8): fail-closed (defaults
-  // suppressed until both the calm-mode and open-ED-flag reads resolve), so
-  // the check-in nudge's optional scan subline never flashes before that
-  // confirmation lands.
-  const photoScanSuppressed = usePhotoSuppression(user?.id);
 
   const [weekStats, setWeekStats] = useState({ sessions: 0, sets: 0, volume: 0 });
   const [activePlan, setActivePlanData] = useState(null);
@@ -306,8 +308,16 @@ export default function HomeScreen({ navigation, route }) {
   const [latestCoachDecisionComplete, setLatestCoachDecisionComplete] = useState(false);
   // COMP-023: day-3 trial value banner. { line, variant } when in-window, else
   // null. Computed from live counters in loadTrialBanner.
-  const [trialBanner, setTrialBanner] = useState(null);
-  const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
+  // Campaign 22 Phase 2 Stage 1 (FOUNDER-RULINGS-PHASE2 R3): the everyday
+  // trial value card (S0-S3) STOPS rendering on Home entirely -- it rehomes
+  // to Profile/You. // Stage 2: that rehome is Stage 2's build; this loader,
+  // its notification side effect (scheduleTrialDay3Notification) and its
+  // dismissal-key semantics are left running and untouched so Stage 2 has a
+  // working starting point, but nothing on Home reads the value this stage,
+  // hence the leading underscore (the codebase's established
+  // intentionally-unused convention, eslint varsIgnorePattern '^_').
+  const [_trialBanner, setTrialBanner] = useState(null);
+  const [_trialBannerDismissed, setTrialBannerDismissed] = useState(false);
   // Free-tier weekly one-liner (founder decision 4c): one read-only
   // sentence built from training plus weight direction only. Dismissed
   // per week; defaults dismissed so it never flashes before the stored
@@ -358,6 +368,19 @@ export default function HomeScreen({ navigation, route }) {
   const [programmePosition, setProgrammePosition] = useState(null);
   // C18 long-gap re-entry: asked once per return, never on every screen.
   const [reEntryAsked, setReEntryAsked] = useState(false);
+  // Campaign 22 Phase 2 Stage 1 (spec §13 rank 6): the re-entry question's
+  // ENTRY is now the Today line, not an auto-firing alert. reEntryDue gates
+  // whether the arbiter's re-entry occupant is eligible; the bound facts the
+  // tap needs (which session the answer binds to) live on a ref, not state,
+  // because they are read exactly once, at tap time, never rendered.
+  const [reEntryDue, setReEntryDue] = useState(false);
+  const reEntryPendingRef = useRef(null);
+  // Campaign 22 Phase 2 Stage 1 (spec §17 R2 "opens the existing expanded
+  // detail"): RecoveryStateCard no longer free-stacks above the hero. It
+  // stays the exact same component with the exact same props; the Today
+  // line's recovery occupant opens it in a sheet instead of rendering it
+  // inline every time the state is live.
+  const [showRecoveryDetail, setShowRecoveryDetail] = useState(false);
 
   // B3: lift plateau banner. { exerciseId, line } | null. Defaults dismissed
   // so it never flashes before the stored dismissal has been read (the
@@ -612,12 +635,11 @@ export default function HomeScreen({ navigation, route }) {
     }
   }
 
-  function dismissTrialBanner() {
-    setTrialBannerDismissed(true);
-    if (user?.id) {
-      AsyncStorage.setItem(`@volyume_trial_value_banner_dismissed_${user.id}`, 'true').catch(() => {});
-    }
-  }
+  // Stage 2: dismissTrialBanner (the everyday S0-S3 card's dismiss handler)
+  // is retired with the card it served -- there is nothing left on Home to
+  // dismiss. Its AsyncStorage key (@volyume_trial_value_banner_dismissed_
+  // ${user.id}) keeps its historical meaning; Stage 2's rehomed surface may
+  // reuse or replace it when it lands.
 
   // Free-tier weekly one-liner (founder decision 4c). Free-safe data
   // only: completed sessions this week plus the direction of any logged
@@ -1418,6 +1440,12 @@ export default function HomeScreen({ navigation, route }) {
   // The outstanding session is untouched by this: Legs is still Legs after
   // twenty days. All this does is ask, once, before the same peak targets are
   // handed back, and record what the athlete said.
+  // Campaign 22 Phase 2 Stage 1 (HOME-TODAY-UX-SPEC.md §13 rank 6): this used
+  // to open the prompt itself, the moment the due state was detected. It now
+  // only DETECTS the due state and remembers the exact bound session facts
+  // for the tap handler below -- the Today line's re-entry occupant is the
+  // entry point now, and the prompt/record flow it opens on tap is
+  // byte-identical to what used to fire automatically.
   async function maybeAskReEntry(position, lastWorkoutAtMs) {
     if (!user?.id || reEntryAsked) return;
     try {
@@ -1431,31 +1459,49 @@ export default function HomeScreen({ navigation, route }) {
       });
       if (!check) return;
       setReEntryAsked(true);
-      const prompt = reEntryPrompt(check);
-      // The exact outstanding required session at the moment the athlete
-      // answers - the one and only session an easeReturn answer may bind to.
-      const boundWeekId = position?.activeWeekId ?? null;
-      const boundRoutineId = position?.nextSession?.routineId ?? null;
-      const record = async (answer) => {
-        const outcome = reEntryOutcome(answer);
-        try { await AsyncStorage.setItem(key, check.key); } catch (_) { /* asked again next open */ }
-        // C18 re-entry amendment: persist the actionable ease decision, not
-        // just the "asked" marker. Only when there IS an outstanding
-        // required session to bind it to - with nothing outstanding there
-        // is no next session for "a little easier" to mean anything about.
-        if (outcome.easeReturn && boundWeekId && boundRoutineId) {
-          await setPendingReEntryEase(user.id, { mesocycleWeekId: boundWeekId, routineId: boundRoutineId });
-        }
-        if (outcome.note) toast.show(outcome.note, { variant: 'info' });
+      // The exact outstanding required session at the moment the question
+      // became due - the one and only session an easeReturn answer may bind
+      // to. Captured now (not at tap time) so a later loadData() refresh
+      // (e.g. the athlete switching workouts before answering) cannot change
+      // what the eventual answer binds to.
+      reEntryPendingRef.current = {
+        check,
+        boundWeekId: position?.activeWeekId ?? null,
+        boundRoutineId: position?.nextSession?.routineId ?? null,
       };
-      appAlert(prompt.title, prompt.body, [
-        { text: prompt.options[0].label, onPress: () => record(RE_ENTRY_ANSWER.TRAINED_ELSEWHERE) },
-        { text: prompt.options[1].label, onPress: () => record(RE_ENTRY_ANSWER.DID_NOT_TRAIN) },
-        { text: prompt.options[2].label, style: 'cancel', onPress: () => record(RE_ENTRY_ANSWER.CONTINUE) },
-      ]);
+      setReEntryDue(true);
     } catch (e) {
       logError('HomeScreen.maybeAskReEntry', e, { userId: user?.id });
     }
+  }
+
+  // The tap handler: opens the exact same prompt/record flow that used to
+  // fire automatically. Outcomes, the AsyncStorage answered-key and the
+  // pending-ease bind are unchanged.
+  function handleReEntryPress() {
+    const pending = reEntryPendingRef.current;
+    if (!user?.id || !pending) return;
+    setReEntryDue(false);
+    const { check, boundWeekId, boundRoutineId } = pending;
+    const key = `@volyume_reentry_answered_${user.id}`;
+    const prompt = reEntryPrompt(check);
+    const record = async (answer) => {
+      const outcome = reEntryOutcome(answer);
+      try { await AsyncStorage.setItem(key, check.key); } catch (_) { /* asked again next open */ }
+      // C18 re-entry amendment: persist the actionable ease decision, not
+      // just the "asked" marker. Only when there IS an outstanding
+      // required session to bind it to - with nothing outstanding there
+      // is no next session for "a little easier" to mean anything about.
+      if (outcome.easeReturn && boundWeekId && boundRoutineId) {
+        await setPendingReEntryEase(user.id, { mesocycleWeekId: boundWeekId, routineId: boundRoutineId });
+      }
+      if (outcome.note) toast.show(outcome.note, { variant: 'info' });
+    };
+    appAlert(prompt.title, prompt.body, [
+      { text: prompt.options[0].label, onPress: () => record(RE_ENTRY_ANSWER.TRAINED_ELSEWHERE) },
+      { text: prompt.options[1].label, onPress: () => record(RE_ENTRY_ANSWER.DID_NOT_TRAIN) },
+      { text: prompt.options[2].label, style: 'cancel', onPress: () => record(RE_ENTRY_ANSWER.CONTINUE) },
+    ]);
   }
 
   async function handleRefresh() {
@@ -1704,6 +1750,10 @@ export default function HomeScreen({ navigation, route }) {
     ? { tone: 'go', line: 'Block finished. Targets hold at recovery-week volume until you choose what comes next.' }
     : buildReadinessSummary({
       currentMesoWeek,
+      // Campaign 22 Phase 2 Stage 1 (spec §8, the measured copy
+      // contradiction fix): the SAME resolved state RecoveryStateCard and
+      // the hero eyebrow read, so this chip can never disagree with them.
+      gatedRecoveryState,
       deloadSuggestion,
       fatigueHistory: fatigueSessions,
       lastSession,
@@ -1751,10 +1801,11 @@ export default function HomeScreen({ navigation, route }) {
   useEffect(() => {
     useAppStore.getState().setHasUnseenCoachChange(showCoachBanner);
   }, [showCoachBanner]);
-  // COMP-023 trial value banner: suppressed by the day-of coaching nudge so
-  // two voices never say the same thing (a "don't repeat yourself" rule,
-  // kept as-is; unrelated to the stack-size cap below).
-  const trialBannerEligible = !!trialBanner && !trialBannerDismissed && !showCoachingNudge;
+  // Stage 2: the everyday trial value card's own eligibility calc
+  // (trialBannerEligible, "suppressed by the day-of coaching nudge so two
+  // voices never say the same thing") is retired with the card -- it no
+  // longer renders on Home at all (FOUNDER-RULINGS-PHASE2 R3). Only the
+  // trial-ENDING fact below (rank 8) may occupy the Today line now.
   // FB-02 (D96): display gate only, no change to shouldDeload's maths or
   // thresholds. Inside a SCHEDULED recovery week the user is following the
   // app's own prescription of roughly half the reps, which drops the
@@ -1776,13 +1827,14 @@ export default function HomeScreen({ navigation, route }) {
   // banner: a Free user has no Apply mechanism, so naming the week already in
   // their plan is the honest thing either way. Display only, no change to
   // shouldDeload's maths or thresholds.
-  // C18: the block's OWN recovery position, not its length. They coincide on
-  // today's block and would not on a block whose deload_week says otherwise.
-  const scheduledRecoveryWeekIndex = currentMesoWeek?.recoveryState?.recoveryWeek
-    ?? currentMesoWeek?.plannedWeeks ?? null;
-  const scheduledRecoveryAhead = Number.isFinite(Number(scheduledRecoveryWeekIndex))
-    && Number.isFinite(Number(currentMesoWeek?.weekIndex))
-    && Number(currentMesoWeek.weekIndex) < Number(scheduledRecoveryWeekIndex);
+  // Campaign 22 Phase 2 Stage 1: the "your block already has a recovery week
+  // scheduled at week N" addendum (scheduledRecoveryWeekIndex/
+  // scheduledRecoveryAhead) is dropped -- the new Today line is ONE sentence
+  // (spec §17 R2), and this addendum was display-only extra colour, never
+  // load-bearing for shouldDeload's own maths/thresholds. The suggestion
+  // itself, its eligibility (deloadBannerEligible, unchanged above) and its
+  // tap-through to CoachReview (where the block's own recovery position is
+  // still visible) are all untouched.
   const phaseBannerEligible = !!phaseMismatch && !phaseBannerDismissed;
   // B3 lift plateau banner: below deload and phase, recovery and targets
   // outrank a single lift's stall, dismissible per exercise + week.
@@ -1800,14 +1852,15 @@ export default function HomeScreen({ navigation, route }) {
   const freeCoachLineEligible = tier === 'free' && !!freeCoachLine && !freeCoachLineDismissed;
   const differentialBadgeEligible = tier === 'free' && !!differentialBanner?.shown && !differentialDismissed;
 
-  // The ranked list, highest priority first. Filtering to only the currently
-  // eligible ones keeps this dynamic: whichever banners are actually active
-  // this load compete for the ONE visible slot, in this fixed order.
+  // Campaign 22 Phase 2 Stage 1: coach/trial/deload/phase moved OUT of this
+  // array onto the Today line (arbiter ranks 2-3, 5, 7-8 below) -- leaving
+  // them in here would wrongly let them keep suppressing plateau/activation/
+  // attention whenever eligible, even though nothing renders their old JSX
+  // any more. // Stage 2: plateau and activation stay exactly as they are
+  // (P3, still capped to one at a time against each other and the free/
+  // differential attention slot) -- their own move into the full P3 footer
+  // redesign is Stage 2's scope, left untouched here per the build brief.
   const BANNER_PRIORITY = [
-    { key: 'coach', eligible: showCoachBanner },
-    { key: 'trial', eligible: trialBannerEligible },
-    { key: 'deload', eligible: deloadBannerEligible },
-    { key: 'phase', eligible: phaseBannerEligible },
     { key: 'plateau', eligible: plateauBannerEligible },
     { key: 'activation', eligible: activationBannerEligible },
     { key: 'attention', eligible: freeCoachLineEligible || differentialBadgeEligible },
@@ -1816,15 +1869,83 @@ export default function HomeScreen({ navigation, route }) {
   // highest takes the one visible slot; everything else waits its turn.
   const shownBannerKey = BANNER_PRIORITY[0]?.key ?? null;
 
-  const showTrialCountdownBanner = shownBannerKey === 'trial';
-  const showDeloadBanner = shownBannerKey === 'deload';
-  const showPhaseBanner = shownBannerKey === 'phase';
   const showPlateauBanner = shownBannerKey === 'plateau';
   const showActivationBanner = shownBannerKey === 'activation';
   const showAttentionSlot = shownBannerKey === 'attention';
   // Free line still outranks the differential badge within their shared slot.
   const showFreeCoachLine = freeCoachLineEligible && showAttentionSlot;
   const showDifferentialBadge = differentialBadgeEligible && !freeCoachLineEligible && showAttentionSlot;
+
+  // ── Campaign 22 Phase 2 Stage 1: the single P1 occupant (spec §13) ──────
+  // Facts only: every occupant's action/dismissal below reuses the exact
+  // existing handler for that fact (same navigation targets, same
+  // AsyncStorage dismissal keys, same trial/recovery logic read, never
+  // re-derived). The arbiter is a pure function; it only decides which one,
+  // if any, wins the one slot.
+  const trialEndMs = trialEndsAtMs(userProfile);
+  const msToTrialEnd = trialEndMs != null ? trialEndMs - Date.now() : null;
+  // "Trial ENDING" (spec §14 / FOUNDER-RULINGS-PHASE2 R3): the last 48h of
+  // the trial, or past its end with the auto-downgrade not yet applied --
+  // the one trial state genuinely requiring a payment action. Read-only
+  // against cascade.js's single authoritative end instant; trial state
+  // transitions themselves are untouched.
+  const trialEndingEligible = stageOf(userProfile) === 'pro_trial'
+    && msToTrialEnd != null && msToTrialEnd <= 48 * 60 * 60 * 1000;
+  const todayLineItem = resolveTodayLine({
+    // Rank 1 is reserved: no positive Home safety banner exists to feed it
+    // yet (today ED/calm suppression only SUPPRESSES other content, inside
+    // each fact's own loader below) -- see todayLineArbiter.js's header.
+    safety: null,
+    blockComplete: {
+      eligible: !!currentMesoWeek?.awaitingDecision,
+      onPress: () => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'Plans'); },
+    },
+    coachDecision: {
+      eligible: showCoachBanner,
+      caloriesKcal: latestCoachOutput?.adjustments?.calories?.applied
+        ? latestCoachOutput.adjustments.calories.newKcal
+        : null,
+      onPress: () => {
+        haptics.selection();
+        navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart });
+      },
+      onDismiss: () => {
+        AsyncStorage.setItem(`@volyume_coach_banner_dismissed_${latestCoachOutput.weekStart}`, 'true').catch(() => {});
+        setCoachBannerDismissed(true);
+      },
+    },
+    checkIn: {
+      eligible: showCoachingNudge,
+      onPress: () => {
+        dismissCoachingNudge();
+        navigation.navigate('ProfileTab', { screen: 'WeeklyCheckIn', initial: false });
+      },
+      onDismiss: dismissCoachingNudge,
+    },
+    recovery: {
+      state: gatedRecoveryState,
+      onOpenDetail: () => { haptics.selection(); setShowRecoveryDetail(true); },
+      deloadEligible: deloadBannerEligible,
+      onDeloadPress: () => { haptics.selection(); navigation.navigate('CoachReview'); },
+      onDeloadDismiss: () => setDeloadDismissed(true),
+    },
+    reEntry: {
+      eligible: reEntryDue,
+      onPress: () => { haptics.selection(); handleReEntryPress(); },
+    },
+    phaseMismatch: {
+      eligible: phaseBannerEligible,
+      savedPhaseLabel: phaseMismatch?.savedPhaseLabel,
+      onPress: () => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets'); },
+      onDismiss: dismissPhaseBanner,
+    },
+    trialEnding: {
+      eligible: trialEndingEligible,
+      daysRemaining: daysRemaining(userProfile) ?? 0,
+      onPress: () => { haptics.selection(); navigation.navigate('ProUpgrade', { source: 'home_trial_ending' }); },
+    },
+    hasActiveWorkout,
+  });
 
   // Pre-formatted for HomeLastSessionCard (memoised): keeps the component a
   // pure renderer of already-derived data rather than importing the helper.
@@ -1863,6 +1984,15 @@ export default function HomeScreen({ navigation, route }) {
         {/* ── Branded header ── */}
         <ScreenHeader title="Today" subtitle={getGreeting(userProfile?.firstName)} />
 
+        {/* ── Campaign 22 Phase 2 Stage 1: the unified Today line (P1 slot,
+            HOME-TODAY-UX-SPEC.md §17 region R2). One quiet row, one occupant,
+            chosen by todayLineArbiter from the facts above. Absorbs: the
+            coach decision banner, the deload/recovery-state announcement,
+            the nutrition-phase banner, the bottom check-in nudge, the
+            block-complete decision entry, the re-entry question entry and
+            trial-ENDING (never the everyday trial card). ── */}
+        <TodayLine item={todayLineItem} testID="today-line" />
+
         {/* The training-schedule context line was REMOVED on founder ruling
             2026-08-03: the product has no scheduled training days. The
             schedule key is a habit inference (D17), sanctioned only for the
@@ -1881,127 +2011,14 @@ export default function HomeScreen({ navigation, route }) {
             the standard RefreshControl spinner if the user wants to
             force a sync. */}
 
-        {/* ── Fresh coach update banner ── */}
-        {showCoachBanner && (
-          <TouchableOpacity
-            style={[styles.coachBanner, live.coachBanner]}
-            // F4 (audit NAV-1): CoachOutput is registered in ProfileStack only.
-            // A bare navigate from HomeStack is silently dropped in production,
-            // making the flagship banner a dead tap; route via the parent tab
-            // navigator like the phase banner above.
-            onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput', { weekStart: latestCoachOutput.weekStart }); }}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel="This week's coaching review. Tap to open."
-          >
-            <View style={styles.coachBannerLeft}>
-              <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.coachBannerTitle, live.coachBannerTitle]}>Coach - this week's decision</Text>
-                <Text style={[styles.coachBannerBody, live.coachBannerBody]}>
-                  {latestCoachOutput.adjustments?.calories?.applied
-                    ? `Calories adjusted to ${latestCoachOutput.adjustments.calories.newKcal} kcal. Tap to see why.`
-                    : 'Tap to see what changed and why.'}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              onPress={() => {
-                AsyncStorage.setItem(`@volyume_coach_banner_dismissed_${latestCoachOutput.weekStart}`, 'true').catch(() => {});
-                setCoachBannerDismissed(true);
-              }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss coaching review banner"
-            >
-              <Ionicons name="close" size={16} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
-
-        {/* ── D3: the "worth your attention" card, trial variant (second
-            priority, its historical slot). The card class and its internal
-            priority live in AttentionCard; only the slot lives here. ── */}
-        {showTrialCountdownBanner && (
-          <AttentionCard
-            variant="trial"
-            trialBanner={trialBanner}
-            // C5-P12-01 (D96): the S3 variant is exactly the zero-history
-            // state (selectTrialVariant returns it whenever completed
-            // sessions <= 0), and this card is the FIRST element after the
-            // header, so scrollTo({ y: 0 }) took a day-0 user nowhere -- or
-            // further away from the hero it should lead to. It reads
-            // "One session starts your first coaching review", so it now
-            // leads to that session. No trial copy and no billing logic is
-            // touched: this is the press handler only.
-            onTrialPress={trialBanner.variant === 'S3'
-              ? (activePlan && nextWorkout ? () => handleStartNextWorkout(false) : null)
-              : () => navigateCrossTab(navigation, 'ProfileTab', 'WeeklyCheckIn')}
-            onTrialDismiss={dismissTrialBanner}
-            onMethodology={() => navigateCrossTab(navigation, 'ProfileTab', 'Methodology', { source: 'trial_banner' })}
-          />
-        )}
-
-        {/* ── Recovery week banner ── */}
-        {showDeloadBanner && (
-          <TouchableOpacity
-            style={[styles.deloadBanner, live.deloadBanner]}
-            onPress={() => { haptics.selection(); navigation.navigate('CoachReview'); }}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel="Recovery week suggested. Tap to review."
-          >
-            <View style={styles.deloadBannerLeft}>
-              {/* Class C (COMP-027): recovery is rest-positive, the coach
-                  working for you, not a hazard. Primary amber, not warning. */}
-              <Ionicons name="battery-charging-outline" size={20} color={t.colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.deloadBannerTitle, live.deloadBannerTitle]}>Recovery week suggested</Text>
-                <Text style={[styles.deloadBannerBody, live.deloadBannerBody]}>
-                  {deloadSuggestion.reasons?.[0] ?? 'Your recent training signals it is time for a lighter week.'}
-                  {scheduledRecoveryAhead
-                    ? ` Your block already has a recovery week scheduled at week ${scheduledRecoveryWeekIndex}, and you are in week ${currentMesoWeek.weekIndex}.`
-                    : ''}
-                </Text>
-              </View>
-            </View>
-            <TouchableOpacity
-              onPress={() => setDeloadDismissed(true)}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss recovery week banner"
-            >
-              <Ionicons name="close" size={16} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          </TouchableOpacity>
-        )}
-
-        {/* ── Nutrition phase sync banner ── */}
-        {showPhaseBanner && (
-          <View style={[styles.phaseBanner, live.phaseBanner]}>
-            <Ionicons name="information-circle-outline" size={18} color={t.colors.primary} style={{ marginTop: spacing.hair }} />
-            <Text style={[styles.phaseBannerText, live.phaseBannerText]} numberOfLines={3}>
-              Your nutrition targets are set for {phaseMismatch.savedPhaseLabel}. Update them in Coach to reflect your current plan.
-            </Text>
-            <TouchableOpacity
-              style={styles.phaseBannerArrow}
-              onPress={() => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets'); }}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Go to nutrition targets"
-            >
-              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={dismissPhaseBanner}
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss nutrition phase banner"
-            >
-              <Ionicons name="close" size={iconSize.sm} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Stage 2: the coach decision banner, the trial value card (S0-S3)
+            and the deload/nutrition-phase banners are RETIRED from this
+            render location -- their content, tap-through and dismissal now
+            live in the arbiter facts above and render through the single
+            <TodayLine> row (coach = rank 3, deload/recovery = rank 5, phase
+            = rank 7, trial-ending = rank 8). The everyday trial card's
+            remaining Stage 2 rehome (to Profile/You) is out of this stage's
+            scope; see the Stage 2 note by its retained state, above. */}
 
         {/* ── B3 lift plateau banner. Training-only content; taps through to
             the existing plateau protocol on ExerciseDetail. ExerciseDetail is
@@ -2031,16 +2048,6 @@ export default function HomeScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
 
-        {/* ── C18 RECOVERY STATE (recovery-visibility amendment). The primary
-            fix: a consequential coaching state must not live only inside
-            Train. Renders nothing during normal accumulation and nothing once
-            the block finishes, because the resolver returns nothing - the
-            state ends with the lifecycle, never with a tap. ── */}
-        <RecoveryStateCard
-          recoveryState={gatedRecoveryState}
-          expanded={!recoveryRead}
-          onToggle={toggleRecoveryRead}
-        />
 
         {/* ── S6 activation nudge banner (stall stages only; cold-start is
             welcomeCard's). Taps through to start the next session. ── */}
@@ -2429,46 +2436,15 @@ export default function HomeScreen({ navigation, route }) {
 
         {/* "This week's plan" (block progress) moved to Progress tab. */}
 
-        {/* ── Coaching discovery nudge (Pro, one-time) ── */}
-        {showCoachingNudge && (
-          <View style={[styles.coachingNudge, live.coachingNudge]}>
-            <View style={[styles.coachingNudgeLeft, live.coachingNudgeLeft]}>
-              <Ionicons name="pulse-outline" size={20} color={t.colors.primary} />
-            </View>
-            <View style={{ flex: 1, gap: spacing.xs }}>
-              <Text style={[styles.coachingNudgeTitle, live.coachingNudgeTitle]}>Your weekly check-in is ready</Text>
-              <Text style={[styles.coachingNudgeBody, live.coachingNudgeBody]}>
-                It's your check-in day. See how your week went and what to adjust.
-              </Text>
-              {!photoScanSuppressed && (
-                <Text style={[styles.coachingNudgeScanSubline, live.coachingNudgeScanSubline]}>
-                  If you like, add a progress scan first for extra visual context. Skipping it is fine.
-                </Text>
-              )}
-              <Button
-                variant="tertiary"
-                size="sm"
-                fullWidth={false}
-                title="Open check-in"
-                trailingIcon="chevron-forward"
-                accessibilityLabel="Open check-in"
-                onPress={() => {
-                  dismissCoachingNudge();
-                  navigation.navigate('ProfileTab', { screen: 'WeeklyCheckIn', initial: false });
-                }}
-                style={styles.coachingNudgeBtn}
-              />
-            </View>
-            <TouchableOpacity
-              onPress={dismissCoachingNudge}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              accessibilityRole="button"
-              accessibilityLabel="Dismiss coaching nudge"
-            >
-              <Ionicons name="close" size={16} color={t.colors.textMuted} />
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Campaign 22 Phase 2 Stage 1: the bottom check-in nudge card is
+            RETIRED from this render location -- rank 4 of the Today line
+            above absorbs it (arbiter's `checkIn` fact: eligible on
+            showCoachingNudge, same dismissCoachingNudge handler, same
+            WeeklyCheckIn navigation target), one sentence, no scan subline
+            (copy contract item 5 -- that invitation now lives on the
+            check-in screen it belongs to). This closes the exact rank error
+            spec §2 named: the day's most consequential Pro action no longer
+            renders at the very bottom, below the last-session row. */}
 
         {/* History / Lifts / Volume quick links removed from Train (founder
             2026-06-03): they are Progress items and live on the Progress tab. */}
@@ -2502,6 +2478,26 @@ export default function HomeScreen({ navigation, route }) {
         onSelectOverride={setSelectedWorkoutOverride}
         navigation={navigation}
       />
+
+      {/* ── C18 RECOVERY STATE detail (recovery-visibility amendment),
+          Campaign 22 Phase 2 Stage 1 re-slot: the card no longer free-stacks
+          above the hero -- its announcement duty is the Today line's rank-5
+          recovery occupant (spec §17 R2), and tapping it opens exactly this
+          same component, unchanged, as the "why" detail. Renders nothing
+          during normal accumulation and nothing once the block finishes,
+          because the resolver returns nothing - the state ends with the
+          lifecycle, never with a tap. ── */}
+      <BottomSheet
+        visible={showRecoveryDetail}
+        onClose={() => setShowRecoveryDetail(false)}
+        accessibilityLabel="Recovery detail"
+      >
+        <RecoveryStateCard
+          recoveryState={gatedRecoveryState}
+          expanded={!recoveryRead}
+          onToggle={toggleRecoveryRead}
+        />
+      </BottomSheet>
 
       {/* ── Pre-workout intent prompt ── */}
       {/* R9 (D70): the pre-workout intent prompt moves off its hand-rolled
