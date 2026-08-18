@@ -1400,6 +1400,36 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **OPEN (2026-08-18) - BLOCKING THE PLAY RELEASE: Android developer
+  verification.** Creating the production release fails with "To proceed
+  with this release, all keys should be registered to meet the Android
+  developer verification requirements". This is Google's package-name and
+  signing-key registration programme, deadline **2026-09-30**, after
+  which unregistered packages are removed from Play. It is an account and
+  console requirement, NOT a property of the build: nothing in the repo
+  configures it, and build 3359's own release-signing check passed on the
+  usual upload keystore. It surfaced now only because this is the first
+  release that could be created since the versionCode fix (D111-2).
+  ORDER OF WORK:
+  1. Settings -> Developer account: confirm identity verification is
+     complete. This is the prerequisite for package registration and is
+     the most common cause of this exact error. Google states most
+     developers need no new action because existing Play identity
+     verification already satisfies it.
+  2. Play Console Home -> the registration banner -> the Android
+     developer verification page for `app.volyume`. Google auto-registered
+     about 99% of apps; this one should qualify automatically, holding the
+     only signing key and all installs.
+  3. ONLY if auto-registration failed: Add key -> select the app public
+     certificate -> Get Started -> Google issues a snippet -> the snippet
+     goes in the APK assets folder -> sign and upload. Google notes "You
+     do not need to upload the actual APK" - it proves key ownership, it
+     is not a release. **Step 3 is buildable in-repo: send the snippet and
+     the assets wiring plus a signed APK can be produced from the existing
+     Android workflow.**
+  Sources: https://developer.android.com/developer-verification/guides/google-play-console
+  and https://support.google.com/googleplay/android-developer/answer/16984799
+
 - **OPEN (2026-08-18) - DELETE THE iOS PROVISIONING PROFILE. One click,
   blocks every iOS build.** Build iOS (EAS) #146 failed at signing:
   `Provisioning profile "*[expo] app.volyume AppStore
