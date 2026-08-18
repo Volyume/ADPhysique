@@ -265,9 +265,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // completely out of place"): the 44dp bordered square became a 40dp
     // borderless DISC. The GUARANTEE this test exists for - a full
     // thumb-sized target under fatigue - is unchanged and still pinned, now
-    // as the disc token PLUS the hitSlop that carries the effective target
-    // past 44dp on both controls.
-    expect(WORKOUT_HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.headerActionCircle,[\s\S]*height: workoutLoggerSize\.headerActionCircle/);
+    // as the full-size target token PLUS the hitSlop on both controls. The
+    // container came off entirely in the second pass; the thumb size did
+    // not change.
+    expect(WORKOUT_HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.headerActionTarget,[\s\S]*height: workoutLoggerSize\.headerActionTarget/);
     expect((WORKOUT_HEADER.match(/hitSlop=\{\{ top: 8, bottom: 8, left: 8, right: 8 \}\}/g) || []).length).toBe(2);
     expect(WORKOUT_HEADER).toContain('testID="volyume-workout-finish"');
     expect(BOTTOM_BAR).toContain('size="lg"');

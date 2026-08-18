@@ -249,6 +249,11 @@ function WorkoutBottomSheet({
 // from '.../ActiveWorkoutScreen'` call sites keep working unchanged.
 export { LoggedSetRow };
 
+// The logger's bottom chrome (rest strip + action bar, safe area included)
+// never legitimately exceeds this. Used to reject nonsense layout passes
+// before they can move the PR toast (founder device report 2026-08-18).
+const MAX_BOTTOM_CHROME = 320;
+
 export default function ActiveWorkoutScreen({ navigation, route }) {
   // Use a shallow selector so every store mutation (rest timer ticks,
   // PR celebration flag flips, accessibility toggles) doesn't re-render
@@ -311,6 +316,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // line" position, and the rest strip is appearing at log time anyway.
     // Reset happens on unmount only.
     const h = Math.round(e?.nativeEvent?.layout?.height ?? 0);
+    // Founder device report 2026-08-18 (third walk): the toast stopped
+    // appearing AT ALL on a second PR. A ratchet with no ceiling can latch
+    // any spurious layout pass forever, and one big value pushes an
+    // absolutely-positioned toast clean off the top of the screen. The
+    // bottom chrome is a rest strip plus an action bar - it is never taller
+    // than MAX_BOTTOM_CHROME - so anything outside that range is a bad
+    // measurement and is ignored rather than trusted.
+    if (h <= 0 || h > MAX_BOTTOM_CHROME) return;
     const s = useAppStore.getState();
     if (h > (s.loggerBottomInset || 0)) s.setLoggerBottomInset(h);
   }, []);

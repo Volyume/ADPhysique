@@ -149,6 +149,19 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   // falls back to the safe-area bottom offset.
   const loggerBottomInset = useAppStore(s => s.loggerBottomInset);
   const insets = useSafeAreaInsets();
+  // Hard ceiling (founder device report 2026-08-18: the toast vanished
+  // entirely on a second PR). Whatever the logger publishes, the toast must
+  // remain on screen - so the docking offset can never exceed a fraction of
+  // the window, and an out-of-range value falls back to the plain
+  // safe-area position rather than putting the celebration where nobody can
+  // see it. A toast in a slightly wrong place is a blemish; an invisible
+  // one is a missing feature.
+  const { height: windowH } = useWindowDimensions();
+  const fallbackBottom = insets.bottom + spacing.xxl;
+  const docked = loggerBottomInset > 0 ? loggerBottomInset + spacing.sm : 0;
+  const toastBottom = (docked > 0 && docked < windowH * 0.45)
+    ? docked
+    : fallbackBottom + spacing.sm;
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize-
   // bearing keys only.
@@ -216,7 +229,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
 
   return (
     <TouchableOpacity accessibilityRole="button"
-      style={[styles.toastWrap, { bottom: (loggerBottomInset || insets.bottom + spacing.xxl) + spacing.sm }]}
+      style={[styles.toastWrap, { bottom: toastBottom }]}
       activeOpacity={0.9}
       onPress={onDismiss}
     >

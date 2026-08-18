@@ -57,13 +57,21 @@ describe('R2-2 header: X + Finish share one chrome family', () => {
     const fsMod = require('fs');
     const pathMod = require('path');
     const HEADER = fsMod.readFileSync(pathMod.resolve(__dirname, '../../components/workout/WorkoutHeader.js'), 'utf8');
-    expect(HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.headerActionCircle/);
-    expect(HEADER).toMatch(/iconBtn: \{[\s\S]*borderRadius: workoutLoggerSize\.headerActionCircle \/ 2/);
-    // Borderless: the heavy outline was the offending part of the old look.
-    expect(HEADER).not.toMatch(/iconBtn: \{[\s\S]*borderWidth/);
-    // The quiet action recedes, the affirmative one carries brand amber.
-    expect(HEADER).toContain('backgroundColor: t.colors.surface2');
-    expect(HEADER).toContain('backgroundColor: t.colors.primaryBg');
+    expect(HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.headerActionTarget/);
+    // CHROMELESS (second pass, same day - the founder's verdict on the first
+    // was "absolutely the same look and style"): the container itself is the
+    // thing that read as out of place, so nothing is drawn at rest but the
+    // glyph. No fill, no border, no radius - matching the "..." overflow
+    // treatment already approved on this screen.
+    const iconBtnBlock = HEADER.match(/iconBtn: \{[^}]*\}/)?.[0] ?? '';
+    expect(iconBtnBlock).toBeTruthy();
+    expect(iconBtnBlock).not.toContain('backgroundColor');
+    expect(iconBtnBlock).not.toContain('border');
+    expect(HEADER).not.toContain('backgroundColor: t.colors.surface2');
+    expect(HEADER).not.toContain('backgroundColor: t.colors.primaryBg');
+    // Ink, not shape, separates them: muted to leave, brand amber to finish.
+    expect(HEADER).toMatch(/name="close"[^\n]*color=\{t\.colors\.textMuted\}/);
+    expect(HEADER).toMatch(/name="checkmark-done"[^\n]*color=\{t\.colors\.primary\}/);
     expect(ACTIVE).toContain('<WorkoutHeader');
   });
 
