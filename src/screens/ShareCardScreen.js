@@ -23,6 +23,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
+import { logError } from '../lib/errorLog';
 import { drawShareCard, cardHeight, drawSticker, stickerHeight } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
@@ -283,29 +284,49 @@ export default function ShareCardScreen({ route }) {
     // fell back to plain system-font text instead of the brand mark. That is
     // the reported "some don't have the logo". A card that cannot be branded
     // must not render at all, let alone export.
-    if (!Skia || !typefaces || !wordmark) return null;
-    const params = buildParams();
-    // Sticker: the transparent stat panel (ELITE-SHARE-SPEC pillar 3). Same
-    // params object the full card would draw from, so every upstream gate
-    // (suppress, toggles) applies identically - suppressed content has NO
-    // export path here either.
-    if (isSticker) {
-      const H = stickerHeight(width);
+    // Founder device report 2026-08-18 ("can't build preview and the share
+    // buttons don't work"): every failure exit here now says WHY through
+    // logError, because a silent null gives a device walk nothing to act
+    // on - the calm error UI is right for the user but useless for the
+    // diagnosis. A renderer THROW is caught to the same calm null instead
+    // of taking the screen down.
+    if (!Skia || !typefaces || !wordmark) {
+      logError('ShareCardScreen.renderCard', new Error('renderer inputs missing'), {
+        hasSkia: !!Skia, hasTypefaces: !!typefaces, hasWordmark: !!wordmark,
+      });
+      return null;
+    }
+    try {
+      const params = buildParams();
+      // Sticker: the transparent stat panel (ELITE-SHARE-SPEC pillar 3). Same
+      // params object the full card would draw from, so every upstream gate
+      // (suppress, toggles) applies identically - suppressed content has NO
+      // export path here either.
+      const H = isSticker ? stickerHeight(width) : cardHeight(width, params.isSquare, params.aspect);
       const surface = Skia.Surface.MakeOffscreen(width, H);
-      if (!surface) return null;
-      drawSticker(surface.getCanvas(), { Skia, width, params, typefaces, wordmark });
+      if (!surface) {
+        logError('ShareCardScreen.renderCard', new Error('MakeOffscreen returned null'), { width, H });
+        return null;
+      }
+      if (isSticker) {
+        drawSticker(surface.getCanvas(), { Skia, width, params, typefaces, wordmark });
+      } else {
+        drawShareCard(surface.getCanvas(), { Skia, width, params, typefaces, wordmark, bgPhoto });
+      }
       surface.flush();
       const image = surface.makeImageSnapshot();
-      return image ? image.encodeToBase64() : null;
+      if (!image) {
+        logError('ShareCardScreen.renderCard', new Error('makeImageSnapshot returned null'), { width, H });
+        return null;
+      }
+      const b64 = image.encodeToBase64();
+      if (!b64) logError('ShareCardScreen.renderCard', new Error('encodeToBase64 returned null'), { width, H });
+      return b64 || null;
+    } catch (e) {
+      logError('ShareCardScreen.renderCard', e, { cardType, format, hasPhoto: !!bgPhoto });
+      return null;
     }
-    const H = cardHeight(width, params.isSquare, params.aspect);
-    const surface = Skia.Surface.MakeOffscreen(width, H);
-    if (!surface) return null;
-    drawShareCard(surface.getCanvas(), { Skia, width, params, typefaces, wordmark, bgPhoto });
-    surface.flush();
-    const image = surface.makeImageSnapshot();
-    return image ? image.encodeToBase64() : null;
-  }, [typefaces, wordmark, buildParams, bgPhoto, isSticker]);
+  }, [typefaces, wordmark, buildParams, bgPhoto, isSticker, cardType, format]);
 
   // Template-strip thumbnails (pillar 5, the Hevy pattern): one LIVE render
   // per card type this moment offers, drawn by the same renderer at a small
