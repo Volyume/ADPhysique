@@ -167,17 +167,27 @@ describe('the food-adherence row (founder order 2026-08-17)', () => {
   });
 });
 
-describe('the folded-in morning weight', () => {
-  test('logged day: one quiet done-row with the formatted weight', () => {
+describe('the folded-in morning weight (founder device order 2026-08-18)', () => {
+  // Re-pinned twice on the same device walk: the weight is NOT merged onto
+  // the weigh-in count line ("have it in the next row") - it keeps its own
+  // quiet done-row DIRECTLY behind the weigh-ins row, and the row order is
+  // sessions first, weigh-ins second, weight behind it, food last.
+  test('logged day: one quiet done-row with the formatted weight, right after weigh-ins', () => {
     const panel = resolveEvidencePanel({ ...BASE, todayWeightLabel: '213 lbs' });
     const row = panel.rows.find((r) => r.key === 'weight');
     expect(row.done).toBe(true);
     expect(row.label).toBe('Morning weight 213 lbs');
+    expect(panel.rows.find((r) => r.key === 'weighIns').label).not.toContain('213');
   });
 
   test('unlogged day: no weight row (logging is the strip\'s job, not evidence)', () => {
     const panel = resolveEvidencePanel(BASE);
     expect(panel.rows.find((r) => r.key === 'weight')).toBeUndefined();
+  });
+
+  test('row order: sessions, weigh-ins, weight, food', () => {
+    const panel = resolveEvidencePanel({ ...BASE, foodDays7: 4, todayWeightLabel: '213 lbs' });
+    expect(panel.rows.map((r) => r.key)).toEqual(['sessions', 'weighIns', 'weight', 'food']);
   });
 });
 

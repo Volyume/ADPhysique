@@ -107,15 +107,10 @@ export function resolveEvidencePanel({
 
   // Weigh-ins: needed-to-do progress while short, the actual count once
   // met (never the Math.min clamp the truth-repair ruling removed).
-  const weighInsMet = weighIns7d >= MIN_WEIGH_INS;
-  rows.push({
-    key: 'weighIns',
-    done: weighInsMet,
-    label: weighInsMet
-      ? `${plural(weighIns7d, 'morning weigh-in')} this week`
-      : `${weighIns7d} of ${MIN_WEIGH_INS} morning weigh-ins this week`,
-  });
-
+  // Row order is a founder device order (2026-08-18): training sessions
+  // FIRST, then the weigh-in count with the latest weight folded onto the
+  // same line, then food. The old standalone "Morning weight X" row is
+  // gone - the number now rides the weigh-in row it belongs to.
   // Sessions: since the last check-in once one exists (the pane's whole
   // frame is "since your check-in"); all-time before any check-in, where
   // the ledger's own gate row is the honest read.
@@ -139,6 +134,25 @@ export function resolveEvidencePanel({
     });
   }
 
+  // Weigh-ins second, and the latest logged weight on its OWN row directly
+  // behind it (founder device order 2026-08-18, corrected same day: "have
+  // it in the next row", never merged onto the count line).
+  const weighInsMet = weighIns7d >= MIN_WEIGH_INS;
+  rows.push({
+    key: 'weighIns',
+    done: weighInsMet,
+    label: weighInsMet
+      ? `${plural(weighIns7d, 'morning weigh-in')} this week`
+      : `${weighIns7d} of ${MIN_WEIGH_INS} morning weigh-ins this week`,
+  });
+  if (todayWeightLabel) {
+    rows.push({
+      key: 'weight',
+      done: true,
+      label: `Morning weight ${todayWeightLabel}`,
+    });
+  }
+
   // Food adherence (founder order 2026-08-17): IF food has been logged,
   // show on how many of the last 7 days - the same trailing week the
   // engine's own intake summary reads. Day count only, never amounts;
@@ -148,17 +162,6 @@ export function resolveEvidencePanel({
       key: 'food',
       done: true,
       label: `Food logged on ${foodDays7} of the last 7 days`,
-    });
-  }
-
-  // The folded-in morning weight: a quiet done-line, only on a day it was
-  // actually logged. When unlogged, logging is an ACTION and belongs to
-  // the weigh-in strip above the pane, not to this evidence read.
-  if (todayWeightLabel) {
-    rows.push({
-      key: 'weight',
-      done: true,
-      label: `Morning weight ${todayWeightLabel}`,
     });
   }
 
