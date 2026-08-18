@@ -24,12 +24,14 @@ function loadDrawModule() {
     .replace(/export\s+(function|const|let|class)/g, '$1');
   const m = { exports: {} };
   // eslint-disable-next-line no-new-func
-  new Function('module', 'exports', `${src}\nmodule.exports={drawShareCard,cardHeight};`)(m, m.exports);
+  new Function('module', 'exports', `${src}\nmodule.exports={drawShareCard,cardHeight,drawSticker,stickerHeight};`)(m, m.exports);
   return m.exports;
 }
 
 async function main() {
-  const { drawShareCard, cardHeight } = loadDrawModule();
+  const {
+    drawShareCard, cardHeight, drawSticker, stickerHeight,
+  } = loadDrawModule();
   const ckDir = path.dirname(require.resolve('canvaskit-wasm/package.json'));
   // eslint-disable-next-line global-require, import/no-dynamic-require
   const CK = await require(path.join(ckDir, 'bin/full/canvaskit.js'))({ locateFile: (f) => path.join(ckDir, 'bin/full', f) });
@@ -67,12 +69,21 @@ async function main() {
   };
 
   const render = (params, width, name) => {
-    const H = cardHeight(width, params.isSquare);
+    const H = cardHeight(width, params.isSquare, params.aspect);
     const surf = Skia.Surface.MakeOffscreen(width, H);
     drawShareCard(surf.getCanvas(), { Skia, width, params, typefaces, wordmark });
     surf.flush();
     fs.writeFileSync(path.join(OUT, `${name}.png`), Buffer.from(surf.makeImageSnapshot().encodeToBytes()));
     console.log(`${name}  ${width}x${H}`);
+  };
+
+  const renderSticker = (params, width, name) => {
+    const H = stickerHeight(width);
+    const surf = Skia.Surface.MakeOffscreen(width, H);
+    drawSticker(surf.getCanvas(), { Skia, width, params, typefaces, wordmark });
+    surf.flush();
+    fs.writeFileSync(path.join(OUT, `${name}.png`), Buffer.from(surf.makeImageSnapshot().encodeToBytes()));
+    console.log(`${name}  ${width}x${H} (sticker)`);
   };
 
   // Share-card audit R10/M7: `premium` was a dead fixture key here -- drawShareCard
@@ -82,10 +93,20 @@ async function main() {
   const premiumMilestone = { cardType: 'milestone', eyebrow: 'Perfect month', title: 'A perfect month', showDate: true, date: 'Sun · 22 Jun 2026', heroValue: '4', heroUnit: 'weeks on target', caption: 'Four weeks running, every session and target met.', stats: [{ label: 'Weeks', value: '4' }, { label: 'Sessions', value: '16' }] };
   const tonnage = { cardType: 'milestone', eyebrow: 'Lifetime total', title: 'Total weight lifted', showDate: true, date: 'Sun · 22 Jun 2026', heroValue: '1,000,000', heroUnit: 'kg lifted', caption: 'Every working set you have ever logged, added up.', stats: [] };
 
+  // Campaign 30 (ELITE-SHARE-SPEC pillar 3/#4): every non-beforeAfter card
+  // type now renders all THREE aspect presets, not just square/story --
+  // portrait 4:5 was previously only wired for beforeAfter.
   [['session', session], ['pr', pr], ['milestone', milestone], ['weekly', weekly], ['weeklyLift', weeklyLift], ['premium', premiumMilestone], ['tonnage', tonnage]].forEach(([n, p]) => {
-    render({ ...p, isSquare: true }, 1080, `card_${n}_square`);
-    render({ ...p, isSquare: false }, 1080, `card_${n}_story`);
+    render({ ...p, aspect: 'square' }, 1080, `card_${n}_square`);
+    render({ ...p, aspect: 'portrait' }, 1080, `card_${n}_portrait`);
+    render({ ...p, aspect: 'story' }, 1080, `card_${n}_story`);
   });
+
+  // Sticker export (pillar 3, Strava Sticker Stats): transparent-background
+  // compact stat block + small trailing mark, at least two card types.
+  renderSticker({ ...pr }, 700, 'sticker_pr');
+  renderSticker({ ...session }, 700, 'sticker_session');
+  renderSticker({ ...weekly }, 700, 'sticker_weekly');
 
   // Share-card audit R10/M7: the before/after progress card is the ONLY Pro
   // card and the only one carrying bodyweight, and had NO rendered-output
