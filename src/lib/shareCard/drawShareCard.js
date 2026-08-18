@@ -16,13 +16,22 @@
  * so a single layout serves the preview (small) and the export (1080) at any
  * size. Text is MEASURED with the active font, so centring and wrapping are
  * correct whatever typeface is loaded (the platform system font on device).
+ *
+ * CAMPAIGN 30 (D108/D109-1, ELITE-SHARE-SPEC): per-type crafted backgrounds, a
+ * tone-sampled photo scrim, per-moment visual signatures (PR glow, session
+ * editorial, portrait/story rebalance with platform-chrome safe zones), a new
+ * transparent sticker export, and a quiet one-line brand mark replacing the old
+ * wordmark+tagline+underline lockup (tagline dropped everywhere, D109-1). The
+ * module stays pure and import-free (no ESM imports) so it keeps running
+ * unmodified under both Jest and the manual eval-based render harness.
  */
 
-// react-native-skia PaintStyle / TileMode are plain numeric enums; hardcoded
-// here so the module needs no RN-only imports (keeps it Node-runnable).
+// react-native-skia PaintStyle / TileMode / BlurStyle are plain numeric enums;
+// hardcoded here so the module needs no RN-only imports (keeps it Node-runnable).
 const FILL = 0;
 const STROKE = 1;
 const CLAMP = 0;
+const BLUR_NORMAL = 0;
 
 // The share card's own palette. DESIGN_SYSTEM.md whitelists this offline canvas
 // to hold its own values (it is not a screen/component bound by the no-hardcoded-
@@ -42,11 +51,31 @@ const PALETTE = {
   text: '#FFFFFF', textSecondary: '#9E9E9E', textMuted: '#9C9C9C',
 };
 
+// Central number+unit join (P-15, ux-copy-polish audit 2026-07-12 / format.js).
+// This file is deliberately import-free (see header), so `format.js`'s single
+// source of truth is mirrored here rather than imported: a non-breaking space
+// between a number and its unit so the pair never wraps mid-token. Campaign 30
+// pillar 7 kills the last two call sites that had drifted from this law (the
+// PR/top-lift weight strings joined the unit with NO space at all -- "120kg"
+// -- while the weekly best-lift line used a plain breakable space -- "100 kg").
+const NBSP = ' ';
+function withUnit(value, unit) {
+  return `${value}${NBSP}${unit}`;
+}
+
 // The brand lockup is a fixed fraction of the canvas width on every format, so
-// the logo is identical across square, portrait and story (audit R3).
-const MARK_WIDTH_RATIO = 0.23;
-// How far a 9:16 story footer lifts to clear Instagram's reply bar (audit H2).
-const STORY_SAFE_BOTTOM_RATIO = 0.10;
+// the logo is identical across square, portrait and story (audit R3). D109-1
+// shrank it as part of dropping the loud stacked lockup for one quiet trailing
+// line (footer mark + sticker mark both derive from a ratio, per spec pillar 6).
+const MARK_WIDTH_RATIO = 0.16;
+const STICKER_MARK_WIDTH_RATIO = 0.15;
+// Story 9:16 platform-chrome safe zones (ELITE-SHARE-SPEC pillar 3): nothing
+// meaningful renders in the top 14% (platform header/controls) or the bottom
+// 20% (reply bar / actions). The bottom ratio previously only cleared
+// Instagram's reply bar empirically (H2, 10%); D108 widens it to a stated 20%
+// so the footer clears chrome on every platform, not just the one measured.
+const STORY_TOP_SAFE_RATIO = 0.14;
+const STORY_SAFE_BOTTOM_RATIO = 0.20;
 
 // Optional user gym photo (SkImage) used as the card background. Set per-render
 // at the top of drawShareCard; single-threaded so a module-level handle is safe.
@@ -59,6 +88,15 @@ function rgba(hex, a) {
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);
   return `rgba(${r},${g},${b},${a})`;
+}
+
+// Mix an {r,g,b} triple toward black by `amount` (0..1) and return a hex string,
+// used to deepen a photo's sampled tone into a scrim colour (pillar 1).
+function darkenRgb(r, g, b, amount) {
+  const dr = Math.round(r * (1 - amount));
+  const dg = Math.round(g * (1 - amount));
+  const db = Math.round(b * (1 - amount));
+  return `#${[dr, dg, db].map((v) => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0')).join('')}`;
 }
 
 // ── primitives ──────────────────────────────────────────────────────────────
@@ -89,22 +127,6 @@ function text(canvas, Skia, str, x, y, font, colorStr, align) {
   canvas.drawText(String(str), dx, y, paintFor(Skia, colorStr, FILL), font);
 }
 
-// Centred text with explicit letter tracking. Skia has no letter-spacing, so
-// the tagline used to fake it with a literal double space inside the string
-// ("SMARTER  TRAINING"), which reads as a typo anywhere the string is reused.
-// Drawing glyph by glyph gives real, tunable tracking.
-function drawTracked(canvas, Skia, str, cx, y, font, colorStr, tracking) {
-  const chars = String(str).split('');
-  const total = chars.reduce((acc, ch) => acc + measure(font, ch), 0)
-    + tracking * Math.max(0, chars.length - 1);
-  let x = cx - total / 2;
-  const paint = paintFor(Skia, colorStr, FILL);
-  for (const ch of chars) {
-    canvas.drawText(ch, x, y, paint, font);
-    x += measure(font, ch) + tracking;
-  }
-}
-
 // Baseline for the label that sits under a hero numeral. Digits with descenders
 // (commas in "1,240,000") struck straight through labels placed at a flat
 // offset -- rendered and confirmed on the session and milestone cards. The
@@ -126,6 +148,18 @@ function fillRRect(canvas, Skia, x, y, w, h, r, colorStr) {
 
 function strokeRRect(canvas, Skia, x, y, w, h, r, colorStr, lw) {
   canvas.drawRRect(Skia.RRectXY(Skia.XYWHRect(x, y, w, h), r, r), paintFor(Skia, colorStr, STROKE, lw));
+}
+
+// A soft blurred glow (Skia MaskFilter blur), used for the PR numeral's warm
+// amber halo (pillar 2) and the per-type background accent geometry (pillar 1).
+// MaskFilter.MakeBlur is core Skia, present identically on the device JsiSk*
+// path and the CanvasKit-in-Node harness path (both wrap the same C++ API).
+function drawGlow(canvas, Skia, cx, cy, radius, colorStr, alpha, sigma) {
+  const p = Skia.Paint();
+  p.setAntiAlias(true);
+  p.setColor(Skia.Color(rgba(colorStr, alpha)));
+  p.setMaskFilter(Skia.MaskFilter.MakeBlur(BLUR_NORMAL, sigma, true));
+  canvas.drawCircle(cx, cy, radius, p);
 }
 
 // Greedy word wrap to a max pixel width, using the active font.
@@ -171,11 +205,11 @@ function wrapTextCapped(font, str, maxW, maxLines) {
 
 // A no-op canvas for a dry-run "measure" pass (share-card audit R6/H5): every
 // canvas method the layouts below call (drawText/drawRect/drawRRect/
-// drawImageRect/save/restore/clipRRect) becomes a no-op via a Proxy, so a
-// layout function can run TWICE with the EXACT same code -- once to discover
-// the natural, unconstrained content height, once for real -- and the two can
-// never drift out of sync the way a hand-duplicated height calculation would
-// the moment either copy was edited alone.
+// drawImageRect/drawCircle/save/restore/clipRRect) becomes a no-op via a Proxy,
+// so a layout function can run TWICE with the EXACT same code -- once to
+// discover the natural, unconstrained content height, once for real -- and the
+// two can never drift out of sync the way a hand-duplicated height calculation
+// would the moment either copy was edited alone.
 function makeNoopCanvas() {
   return new Proxy({}, { get: () => () => undefined });
 }
@@ -215,21 +249,157 @@ function drawImageCover(canvas, Skia, img, W, H) {
   canvas.drawImageRect(img, Skia.XYWHRect(0, 0, iw, ih), Skia.XYWHRect((W - dw) / 2, (H - dh) / 2, dw, dh), p);
 }
 
-function drawBackground(canvas, Skia, W, H) {
-  if (BG && BG.width && BG.width() && BG.height()) {
-    // Gym photo background: cover-fit the photo, then a near-black scrim so the
-    // white/amber text stays legible over any image.
-    drawImageCover(canvas, Skia, BG, W, H);
-    fillRect(canvas, Skia, 0, 0, W, H, rgba(PALETTE.bg0, 0.62));
+// Downscale a photo into a tiny offscreen surface and average its pixels --
+// the MacroFactor technique (ELITE-SHARE-SPEC pillar 1) -- so the background
+// scrim can be built from the photo's OWN dominant tone instead of a generic
+// flat black wash. Surface.MakeOffscreen + SkImage.readPixels are both plain
+// Skia API, present identically on the device JsiSk* path and the
+// CanvasKit-in-Node harness path, so this samples correctly on both.
+// Bottom rows are weighted more heavily: the scrim sits over the BOTTOM of the
+// photo, so its tone should match what is actually behind it there, not the
+// photo as a whole (a bright-sky-top / dark-floor-bottom gym photo should
+// scrim dark, not sky-blue). Returns null if the photo can't be read/sampled
+// (missing readPixels, decode failure) so the caller can fall back safely.
+function sampleAverageTone(Skia, img) {
+  try {
+    const N = 12;
+    const surf = Skia.Surface.MakeOffscreen(N, N);
+    if (!surf) return null;
+    drawImageCover(surf.getCanvas(), Skia, img, N, N);
+    surf.flush();
+    const snap = surf.makeImageSnapshot();
+    if (!snap) return null;
+    // AlphaType.Unpremul = 3, ColorType.RGBA_8888 = 4 (numeric, matching the
+    // FILL/STROKE/CLAMP convention above -- keeps the module RN-import-free).
+    const px = snap.readPixels(0, 0, { width: N, height: N, alphaType: 3, colorType: 4 });
+    if (!px || !px.length) return null;
+    let rT = 0; let gT = 0; let bT = 0; let wT = 0;
+    // The top band is tracked separately (unweighted): the date, kicker,
+    // title and hero numeral all sit over the TOP of the photo, so the
+    // scrim's opening stop must answer to what is actually behind THEM --
+    // a bright-sky-top photo must not read "dark enough" just because its
+    // floor is dark (lead render review, light-photo card).
+    let topLumT = 0; let topN = 0;
+    const topBand = Math.max(1, Math.round(N * 0.4));
+    for (let y = 0; y < N; y += 1) {
+      const rowWeight = 0.4 + 0.6 * (y / (N - 1));
+      for (let x = 0; x < N; x += 1) {
+        const i = (y * N + x) * 4;
+        rT += px[i] * rowWeight; gT += px[i + 1] * rowWeight; bT += px[i + 2] * rowWeight;
+        wT += rowWeight;
+        if (y < topBand) {
+          topLumT += 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+          topN += 1;
+        }
+      }
+    }
+    if (!wT) return null;
+    const r = rT / wT; const g = gT / wT; const b = bT / wT;
+    const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b; // 0..255
+    return { r, g, b, luminance, topLuminance: topN ? topLumT / topN : luminance };
+  } catch (_e) {
+    return null; // never let a sampling failure break the export
+  }
+}
+
+// A UI-safe minimum: above this sampled luminance, a plain tone-tinted scrim
+// alone does not give white text a reliable contrast floor, so the scrim
+// deepens toward black instead of just tinting (ELITE-SHARE-SPEC pillar 1,
+// "computed contrast check ... fall back to a deeper scrim").
+const SCRIM_LEGIBILITY_LUMINANCE_FLOOR = 130;
+
+// Tone-sampled, bottom-weighted gradient scrim over a photo background,
+// replacing the old flat rgba(bg0,0.62) wash. Legible-by-construction: the
+// deepen amount and peak alpha both increase once the sample is too bright.
+function drawPhotoScrim(canvas, Skia, W, H, tone) {
+  const t = tone || { r: 10, g: 10, b: 10, luminance: 8 };
+  const bright = t.luminance > SCRIM_LEGIBILITY_LUMINANCE_FLOOR;
+  // The top stop answers to the TOP band's own luminance, never the
+  // bottom-weighted average: the date, kicker, title and most of the hero
+  // numeral sit above the 45% stop, and a bright-sky-top / dark-floor photo
+  // sampled "dark" overall while leaving all of them on near-raw pale photo
+  // (lead render review, light-photo card). Dark-topped photos keep the
+  // near-transparent opening - their upper region is already legible ground.
+  const brightTop = (t.topLuminance != null ? t.topLuminance : t.luminance) > SCRIM_LEGIBILITY_LUMINANCE_FLOOR;
+  const deepHex = darkenRgb(t.r, t.g, t.b, (bright || brightTop) ? 0.86 : 0.6);
+  const topAlpha = brightTop ? 0.5 : 0.06;
+  const midAlpha = (bright || brightTop) ? 0.62 : 0.32;
+  const maxAlpha = bright ? 0.88 : 0.72;
+  const shader = Skia.Shader.MakeLinearGradient(
+    { x: W / 2, y: 0 }, { x: W / 2, y: H },
+    [Skia.Color(rgba(deepHex, topAlpha)), Skia.Color(rgba(deepHex, midAlpha)), Skia.Color(rgba(deepHex, maxAlpha))],
+    [0, 0.45, 1], CLAMP,
+  );
+  const p = Skia.Paint(); p.setShader(shader);
+  canvas.drawRect(Skia.XYWHRect(0, 0, W, H), p);
+}
+
+// Per-type crafted dark-premium background (ELITE-SHARE-SPEC pillar 1): each
+// card type gets its own gradient tone + direction instead of the single
+// shared gradient every card used before. Still near-black, still calm --
+// only the tonal lean and one restrained accent geometry (below) differ.
+const BG_THEME = {
+  pr: { stops: ['#17100A', PALETTE.bg0, '#0E0906'], dir: 'diagonal' },
+  session: { stops: [PALETTE.bg1, PALETTE.bg0, PALETTE.bg2], dir: 'vertical' },
+  milestone: { stops: [PALETTE.bg2, PALETTE.bg0, PALETTE.bg1], dir: 'diagonal' },
+  weekly: { stops: [PALETTE.bg1, PALETTE.bg1, PALETTE.bg0], dir: 'vertical' },
+  beforeAfter: { stops: [PALETTE.bg0, PALETTE.bg1, PALETTE.bg0], dir: 'vertical' },
+};
+
+// One restrained accent geometry per type (amber only, low alpha, never
+// neon) -- the visual signature a no-photo card carries when there is no
+// photo tone to lean on.
+function drawBackgroundGeometry(canvas, Skia, W, H, cardType) {
+  if (cardType === 'pr') {
+    // The trophy moment's own light source: a soft glow seated top-right,
+    // echoed by the numeral's own glow lower on the canvas. Kept small and
+    // corner-anchored -- a large sigma here read as a wash across the whole
+    // canvas rather than a restrained accent (rendered and corrected).
+    drawGlow(canvas, Skia, W * 0.92, H * 0.05, W * 0.18, PALETTE.accent, 0.07, W * 0.05);
+  } else if (cardType === 'milestone') {
+    // One large, quiet ring, mostly off-canvas -- large-type editorial framing
+    // for the big number, never competing with it.
+    const paint = paintFor(Skia, rgba(PALETTE.accent, 0.09), STROKE, Math.max(1, W * 0.006));
+    canvas.drawCircle(W * 1.04, H * 0.2, W * 0.5, paint);
+  } else if (cardType === 'weekly') {
+    // A calm row of seven ticks along the top edge -- one per day of the week,
+    // data-forward rather than decorative.
+    const y = H * 0.028;
+    for (let i = 0; i < 7; i += 1) {
+      const x = W * (0.6 + i * 0.045);
+      fillRect(canvas, Skia, x, y, Math.max(1, W * 0.005), H * 0.018, rgba(PALETTE.accent, 0.16));
+    }
+  } else if (cardType === 'beforeAfter') {
+    // A faint vertical seam echoing the gutter between the two photo cells.
+    fillRect(canvas, Skia, W / 2 - Math.max(1, W * 0.0015), H * 0.05, Math.max(2, W * 0.003), H * 0.12, rgba(PALETTE.accent, 0.14));
   } else {
-    const shader = Skia.Shader.MakeLinearGradient(
-      { x: W / 2, y: 0 }, { x: W / 2, y: H },
-      [Skia.Color(PALETTE.bg1), Skia.Color(PALETTE.bg0), Skia.Color(PALETTE.bg2)],
-      [0, 0.5, 1], CLAMP,
-    );
-    const p = Skia.Paint();
-    p.setShader(shader);
-    canvas.drawRect(Skia.XYWHRect(0, 0, W, H), p);
+    // session (and any unrecognised type, matching the dispatcher's own
+    // default): one quiet glow low-left, balancing the header's weight.
+    drawGlow(canvas, Skia, W * 0.06, H * 0.96, W * 0.16, PALETTE.accent, 0.06, W * 0.05);
+  }
+}
+
+function drawCraftedBackground(canvas, Skia, W, H, cardType) {
+  const theme = BG_THEME[cardType] || BG_THEME.session;
+  const start = theme.dir === 'diagonal' ? { x: 0, y: 0 } : { x: W / 2, y: 0 };
+  const end = theme.dir === 'diagonal' ? { x: W, y: H } : { x: W / 2, y: H };
+  const shader = Skia.Shader.MakeLinearGradient(
+    start, end, theme.stops.map((c) => Skia.Color(c)), [0, 0.5, 1], CLAMP,
+  );
+  const p = Skia.Paint(); p.setShader(shader);
+  canvas.drawRect(Skia.XYWHRect(0, 0, W, H), p);
+  drawBackgroundGeometry(canvas, Skia, W, H, cardType);
+}
+
+function drawBackground(canvas, Skia, W, H, cardType) {
+  if (BG && BG.width && BG.width() && BG.height()) {
+    // Gym photo background: cover-fit the photo, then a tone-sampled,
+    // bottom-weighted gradient scrim (pillar 1) instead of the old flat
+    // rgba(bg0,0.62) wash, with a computed contrast floor.
+    drawImageCover(canvas, Skia, BG, W, H);
+    drawPhotoScrim(canvas, Skia, W, H, sampleAverageTone(Skia, BG));
+  } else {
+    drawCraftedBackground(canvas, Skia, W, H, cardType);
   }
 }
 
@@ -237,81 +407,66 @@ function drawAccentBar(canvas, Skia, W, s) {
   fillRect(canvas, Skia, 0, 0, W, Math.round(8 * s), PALETTE.accent);
 }
 
-// Footer block height, ONE definition (it was duplicated as a bare
-// `isSquare ? 162 : 250` in five places, which is precisely how the overlap
-// below went unnoticed).
-//
-// 162 was correct only while `volyume.app` printed on story ONLY. Rendering it
-// on EVERY format (audit R3) put a fifth element into a block sized for four,
-// and on square the tagline baseline (fy+127) and the URL baseline (fy+125)
-// landed on top of each other -- the brand line and the URL drawn over one
-// another on the DEFAULT format. Square is now tall enough to hold divider,
-// wordmark, tagline, accent bar and URL with real separation.
-const FOOTER_H_SQUARE = 216;
-const FOOTER_H_TALL = 250;
+// Footer block height, ONE definition. D109-1 drops the tagline band
+// everywhere and replaces the stacked wordmark/tagline+underline/url lockup
+// with a single quiet trailing line (mark + volyume.app side by side), so the
+// footer needs far less vertical room than the old three-tier lockup did.
+const FOOTER_H_SQUARE = 128;
+const FOOTER_H_TALL = 150;
 function footerHeight(isSquare, s) {
   return Math.round((isSquare ? FOOTER_H_SQUARE : FOOTER_H_TALL) * s);
 }
 
+// D109-1: "Footer replaced by a small trailing mark: compact wordmark +
+// volyume.app in one quiet line. The tagline band is dropped ... small
+// trailing mark is the elite norm; the loud lockup is the anti-pattern."
+// Keeps the MARK_WIDTH_RATIO proportionality law and the story safe-bottom
+// law (brandLockup.guard R3/H2) -- only the lockup's own shape changes, from
+// three stacked tiers to one centred line.
 function drawFooter(canvas, Skia, W, H, pad, isSquare, s, font, wordmark) {
-  // The brand moment: a prominent centred Volyume wordmark, the SMARTER TRAINING
-  // tagline, and the amber accent underline. Sized so the logo reads as the
-  // logo (wordmark ~23% of the card width), aligned with the rest of the card.
   const footerH = footerHeight(isSquare, s);
-  // On a 9:16 story the footer sat in the last 250px of the canvas, which is
-  // exactly where Instagram overlays its reply bar and gesture area -- so the
-  // logo, tagline and URL were the FIRST things a viewer lost (audit H2). Lift
-  // the whole block clear of that band. Square is unaffected.
+  // On a 9:16 story the footer used to sit in the last ~10% of the canvas,
+  // which is exactly where platform chrome (reply bar / actions) overlays --
+  // so the logo and URL were the FIRST things a viewer lost (audit H2). D108
+  // widens that clearance to a stated bottom-20% platform-chrome safe zone.
   const storyLift = isSquare ? 0 : Math.round(H * STORY_SAFE_BOTTOM_RATIO);
   const fy = H - footerH - storyLift;
   fillRect(canvas, Skia, pad, fy, W - pad * 2, Math.max(1, Math.round(1 * s)), PALETTE.divider);
 
-  // ONE lockup, ONE relative size, on every format (share-card audit R3). This
-  // used to be `isSquare ? 66 : 90`, which made the mark 22.8% of the width on
-  // square and 31.1% on story -- a 36% jump between formats of the same card,
-  // and half of the reported "some have the logo ... depending on the sizing".
-  // Deriving the width as a fraction of the canvas keeps the brand identical
-  // everywhere regardless of the asset's pixel dimensions.
+  // ONE lockup, ONE relative size, on every format (share-card audit R3) --
+  // deriving the width as a fraction of canvas width keeps the brand
+  // identical everywhere regardless of the asset's pixel dimensions.
   const markW = W * MARK_WIDTH_RATIO;
   const hasMark = !!(wordmark && wordmark.width && wordmark.height && wordmark.width() && wordmark.height());
   const markH = hasMark
     ? Math.round(markW / (wordmark.width() / wordmark.height()))
-    : Math.round((isSquare ? 66 : 90) * s);
-  const markY = fy + Math.round((isSquare ? 26 : 36) * s);
+    : Math.round((isSquare ? 30 : 36) * s);
   // No fake wordmark. This used to draw the plain system-font word "Volyume"
   // when the asset was missing, which shipped an off-brand card that LOOKED
-  // deliberate -- the reported "some don't have the logo". The screen now
-  // refuses to export until the mark has loaded (ShareCardScreen `cardReady`),
-  // so in the app this branch is unreachable; it exists only so the Node render
-  // harness and layout tests, which pass no wordmark, still lay out and do not
-  // throw. Space is reserved either way so the footer geometry never shifts.
+  // deliberate -- the reported "some don't have the logo". The screen refuses
+  // to export until the mark has loaded (ShareCardScreen `cardReady`), so in
+  // the app this branch is unreachable; it exists only so the Node render
+  // harness and layout tests, which pass no wordmark, still lay out and do
+  // not throw. Space is reserved either way so the footer geometry never
+  // shifts, and the URL still centres alone rather than the pair looking
+  // lopsided.
+  const urlFont = font(isSquare ? 20 : 24, 'regular');
+  const urlStr = 'volyume.app';
+  const gap = Math.round(14 * s);
+  const rowW = (hasMark ? markW + gap : 0) + measure(urlFont, urlStr);
+  const rowX = (W - rowW) / 2;
+  const lineY = fy + footerH / 2;
   if (hasMark) {
     const p = Skia.Paint(); p.setAntiAlias(true);
     canvas.drawImageRect(
       wordmark,
       Skia.XYWHRect(0, 0, wordmark.width(), wordmark.height()),
-      Skia.XYWHRect((W - markW) / 2, markY, markW, markH),
+      Skia.XYWHRect(rowX, lineY - markH / 2, markW, markH),
       p,
     );
   }
-
-  const taglineY = markY + markH + Math.round((isSquare ? 34 : 44) * s);
-  // Explicit tracking rather than a literal double space, which read as a typo
-  // and broke the moment the string was copied anywhere else (audit L1).
-  drawTracked(canvas, Skia, 'SMARTER TRAINING', W / 2, taglineY, font(isSquare ? 20 : 28), PALETTE.accent, Math.round(6 * s));
-  const accW = (W - pad * 2) * 0.4;
-  fillRect(canvas, Skia, (W - accW) / 2, taglineY + Math.round((isSquare ? 14 : 18) * s), accW, Math.round(3 * s), PALETTE.accent);
-
-  // The URL now prints on EVERY format, not only story (audit R3), and is
-  // positioned inside the footer block so it travels with the story lift
-  // instead of being pinned to the canvas bottom. On square the footer's own
-  // bottom edge IS the canvas edge (no story lift), and the fixed 36*s offset
-  // left only ~19px of clear space below the text once its descenders are
-  // accounted for -- against a 74px side pad, that read as the brand hugging
-  // the edge (audit M8). The last footer element now keeps at least half the
-  // side pad clear of the footer's bottom edge.
-  const urlClearance = Math.max(Math.round(36 * s), Math.round(pad * 0.5));
-  text(canvas, Skia, 'volyume.app', W / 2, fy + footerH - urlClearance, font(22, 'regular'), PALETTE.textMuted, 'center');
+  const urlX = rowX + (hasMark ? markW + gap : 0);
+  text(canvas, Skia, urlStr, urlX, lineY + urlFont.getSize() * 0.34, urlFont, PALETTE.textMuted, 'left');
 }
 
 function drawIntensityBadge(canvas, Skia, W, y, tier, s, font) {
@@ -347,53 +502,111 @@ function drawStatBoxes(canvas, Skia, W, pad, y, stats, isSquare, s, font) {
   stats.forEach((st, i) => {
     const bx = rowX + i * (boxW + gap);
     fillRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), PALETTE.surface);
-    strokeRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), PALETTE.border, Math.max(1, 1.2 * s));
+    // Quiet supports (ELITE-SHARE-SPEC pillar 2): a softened border alpha
+    // rather than the old fully-opaque outline keeps the stat row calm
+    // instead of reading as a checklist of bordered boxes.
+    strokeRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), rgba(PALETTE.border, 0.55), Math.max(1, 1.2 * s));
     text(canvas, Skia, st.value, bx + boxW / 2, y + statBoxH * 0.5, font(isSquare ? 42 : 52), PALETTE.text, 'center');
     text(canvas, Skia, st.label.toUpperCase(), bx + boxW / 2, y + statBoxH - Math.round(18 * s), font(16), PALETTE.textMuted, 'center');
   });
   return y + statBoxH + Math.round(24 * s);
 }
 
-function drawExerciseChips(canvas, Skia, W, pad, y, exercises, s, font) {
+// Session editorial (ELITE-SHARE-SPEC pillar 2): six bordered chip boxes read
+// as a checklist, not an editorial card. One quiet line names the session's
+// exercises without competing with the hero stat.
+function drawExerciseSummary(canvas, Skia, W, pad, y, exercises, s, font) {
   if (!exercises || !exercises.length) return y;
-  // Entries may be plain names or { name } objects — coerce to a label.
   const names = exercises.map((ex) => (typeof ex === 'string' ? ex : (ex && ex.name) || '')).filter(Boolean);
   if (!names.length) return y;
-  const f = font(22, 'regular');
-  const rowH = Math.round(48 * s);
-  const chipH = rowH - Math.round(8 * s);
-  const gap = Math.round(10 * s);
-  let x = pad;
-  let drew = 0;
-  names.slice(0, 6).forEach((name) => {
-    const tw = measure(f, name);
-    const chipW = tw + Math.round(36 * s);
-    if (x + chipW > W - pad) return;
-    fillRRect(canvas, Skia, x, y, chipW, chipH, chipH / 2, PALETTE.surface2);
-    strokeRRect(canvas, Skia, x, y, chipW, chipH, chipH / 2, PALETTE.border, Math.max(1, 1 * s));
-    text(canvas, Skia, name, x + chipW / 2, y + chipH * 0.66, f, PALETTE.textSecondary, 'center');
-    x += chipW + gap;
-    drew += 1;
-  });
-  if (names.length > drew) {
-    const more = `+${names.length - drew} more`;
-    if (x + measure(f, more) < W - pad) text(canvas, Skia, more, x, y + chipH * 0.66, f, PALETTE.textMuted, 'left');
-  }
-  return y + rowH + Math.round(16 * s);
+  const f = font(24, 'regular');
+  const shown = names.slice(0, 5);
+  const extra = names.length - shown.length;
+  const raw = shown.join('  ·  ') + (extra > 0 ? `  +${extra} more` : '');
+  const line = wrapTextCapped(f, raw, W - pad * 2, 1)[0];
+  text(canvas, Skia, line, pad, y + Math.round(f.getSize() * 0.9), f, PALETTE.textSecondary, 'left');
+  return y + Math.round(46 * s);
+}
+
+// ── format + safe-zone layout ────────────────────────────────────────────
+//
+// Every card type previously understood a binary p.isSquare true/false. Wiring
+// portrait 4:5 through required a real THIRD mode (ELITE-SHARE-SPEC pillar 3/
+// #4): 'square' stays top-anchored exactly as before; 'portrait' now gets the
+// centred-body treatment 'story' already had, so a taller canvas doesn't leave
+// a dead band under the content; only 'story' additionally respects the
+// platform-chrome safe zones (a portrait feed post has no chrome overlay).
+
+function bodyFormat(p) {
+  if (p.aspect === 'portrait') return 'portrait';
+  if (p.aspect === 'story') return 'story';
+  if (p.aspect === 'square') return 'square';
+  return p.isSquare ? 'square' : 'story'; // legacy callers with no aspect param
+}
+
+// The first content y (date/eyebrow/title row). Story clamps it below the
+// top-14% chrome safe zone; square/portrait keep the card's own base offset.
+function headerTopY(H, fmt, base) {
+  return fmt === 'story' ? Math.max(base, Math.round(H * STORY_TOP_SAFE_RATIO)) : base;
+}
+
+// Runs `layoutBody(canvas, startY)` top-anchored on 'square' (unchanged), or
+// measured once against a no-op canvas and re-run centred between `topY` and
+// the footer on 'portrait'/'story' -- the shape 'story' already had hand-
+// duplicated per card type (share-card audit R6/H5); weekly recap never had
+// it at all, which was its own dead-band bug on a tall canvas. One shared
+// runner now drives all four non-beforeAfter card types.
+// `forceCentre` skips the square top-anchor branch: the PR card is a single
+// hero moment on every format (unlike session/milestone/weekly, which carry a
+// title/header worth anchoring near the top), and top-anchoring it on square
+// left the exact dead band under "previous best" the spec calls out --
+// enlarging the numeral closed most of it, but the remaining gap only fully
+// closes once the whole block is centred, matching portrait/story.
+function runBody(canvas, H, s, p, topY, footerH, layoutBody, forceCentre) {
+  const fmt = bodyFormat(p);
+  if (fmt === 'square' && !forceCentre) { layoutBody(canvas, topY); return; }
+  const storyLift = fmt === 'story' ? Math.round(H * STORY_SAFE_BOTTOM_RATIO) : 0;
+  const cellsBottom = H - footerH - storyLift - Math.round(24 * s);
+  const naturalEnd = layoutBody(makeNoopCanvas(), topY);
+  const naturalHeight = naturalEnd - topY;
+  const available = Math.max(0, cellsBottom - topY);
+  const startY = topY + Math.max(0, (available - naturalHeight) / 2);
+  layoutBody(canvas, startY);
 }
 
 // ── card layouts ─────────────────────────────────────────────────────────────
 
+// Shared with the session sticker: ONE hero stat, chosen the same way on both
+// the full card and the compact sticker so the two never disagree.
+function sessionHeroInfo(p, unit) {
+  if (p.prCount > 0) {
+    return {
+      value: String(p.prCount),
+      label: p.prCount === 1 ? 'NEW PERSONAL RECORD' : 'NEW PERSONAL RECORDS',
+      color: PALETTE.gold,
+    };
+  }
+  if (p.showVolume && (p.tonnage || 0) > 0) {
+    return {
+      value: Math.round(p.tonnage).toLocaleString('en-GB'),
+      label: `TOTAL ${unit.toUpperCase()} LIFTED`,
+      color: PALETTE.accent,
+    };
+  }
+  return { value: String(p.workingSets || 0), label: 'WORKING SETS COMPLETED', color: PALETTE.text };
+}
+
 function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
   const pad = Math.round(W * 0.074);
-  drawBackground(canvas, Skia, W, H);
+  const fmt = bodyFormat(p);
+  drawBackground(canvas, Skia, W, H, p.cardType);
   drawAccentBar(canvas, Skia, W, s);
   // Gym weights are stored in the user's chosen unit (kg|lbs); the hero label,
   // the "Total ..." stat box and the top-lift line all used to hard-code "kg"
   // (share-card audit R8/M5), a latent lie for any lbs user.
   const unit = p.units || 'kg';
 
-  let y = pad + Math.round(60 * s);
+  let y = headerTopY(H, fmt, pad + Math.round(60 * s));
   if (p.showDate && p.date) text(canvas, Skia, p.date, W - pad, y, font(22, 'regular'), PALETTE.textMuted, 'right');
   y += Math.round(70 * s);
 
@@ -415,39 +628,19 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
   });
   y += Math.round(30 * s);
 
-  let heroValue; let heroLabel; let heroColor;
-  if (p.prCount > 0) {
-    heroValue = String(p.prCount);
-    heroLabel = p.prCount === 1 ? 'NEW PERSONAL RECORD' : 'NEW PERSONAL RECORDS';
-    heroColor = PALETTE.gold;
-  } else if (p.showVolume && (p.tonnage || 0) > 0) {
-    heroValue = Math.round(p.tonnage).toLocaleString('en-GB');
-    heroLabel = `TOTAL ${unit.toUpperCase()} LIFTED`;
-    heroColor = PALETTE.accent;
-  } else {
-    heroValue = String(p.workingSets || 0);
-    heroLabel = 'WORKING SETS COMPLETED';
-    heroColor = PALETTE.text;
-  }
+  const heroInfo = sessionHeroInfo(p, unit);
+  const { value: heroValue, label: heroLabel, color: heroColor } = heroInfo;
 
   const stats = [
     { label: 'Sets', value: String(p.workingSets || 0) },
-    { label: 'Time', value: `${p.duration || 0}m` },
   ];
+  // A zero-length duration renders as a raw "0m" box (the exact failure the
+  // inventory audit flagged); below one minute there is no honest time to
+  // show, so the box is omitted rather than faked.
+  if ((p.duration || 0) >= 1) stats.push({ label: 'Time', value: `${p.duration}m` });
   if (p.showVolume && (p.tonnage || 0) > 0 && p.prCount > 0) stats.push({ label: `Total ${unit}`, value: Math.round(p.tonnage).toLocaleString('en-GB') });
   else if (p.exerciseCount > 0) stats.push({ label: 'Exercises', value: String(p.exerciseCount) });
 
-  // The hero + badge + stats + top-lift + exercise chips used to jump to a
-  // fixed `H * 0.42` on story, a near-constant OFFSET FROM THE TOP regardless
-  // of how much (or little) content followed -- on the much taller story
-  // canvas that left a large empty band both above the hero and below the
-  // last element before the footer (share-card audit R6/H5). `layoutBody`
-  // draws that whole block from a given start y and returns where it ended;
-  // on story it is run once against a no-op canvas purely to measure that
-  // natural height, then re-run for real from a y that centres it between the
-  // title and the footer -- the same cellsTop/cellsBottom shape
-  // `drawBeforeAfter` already uses. Square is untouched (still `y +
-  // heroNum.getSize()`, exactly as before).
   function layoutBody(cv, startY) {
     const heroNum = fitFont(null, heroValue, W - pad * 2, p.isSquare ? 140 : 220, (px) => font(px));
     const heroY = startY + heroNum.getSize();
@@ -460,61 +653,42 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
     by = drawStatBoxes(cv, Skia, W, pad, by, stats, p.isSquare, s, font);
 
     // Exercise names now honoured on BOTH formats (the toggle was previously
-    // dead on square). Story has room for the top-lift card above the chips.
-    if (!p.isSquare && p.topSet && p.topSet.weight > 0) {
+    // dead on square). Story/portrait have room for the top-lift card above
+    // the exercise summary line.
+    if (fmt !== 'square' && p.topSet && p.topSet.weight > 0) {
       const cardW = W - pad * 2; const cardH = Math.round(130 * s);
       fillRRect(cv, Skia, pad, by, cardW, cardH, Math.round(18 * s), PALETTE.surface);
-      strokeRRect(cv, Skia, pad, by, cardW, cardH, Math.round(18 * s), PALETTE.border, Math.max(1, 1.5 * s));
+      strokeRRect(cv, Skia, pad, by, cardW, cardH, Math.round(18 * s), rgba(PALETTE.border, 0.55), Math.max(1, 1.5 * s));
       fillRRect(cv, Skia, pad, by, Math.round(6 * s), cardH, Math.round(3 * s), PALETTE.accent);
       text(cv, Skia, 'TOP LIFT', pad + Math.round(28 * s), by + Math.round(36 * s), font(18), PALETTE.textMuted, 'left');
-      text(cv, Skia, `${p.topSet.weight}${unit} × ${p.topSet.reps}`, pad + Math.round(28 * s), by + Math.round(84 * s), font(46), PALETTE.text, 'left');
+      text(cv, Skia, `${withUnit(String(p.topSet.weight), unit)} × ${p.topSet.reps}`, pad + Math.round(28 * s), by + Math.round(84 * s), font(46), PALETTE.text, 'left');
       if (p.topSet.exerciseName) text(cv, Skia, p.topSet.exerciseName, pad + cardW - Math.round(28 * s), by + Math.round(84 * s), font(22, 'regular'), PALETTE.textSecondary, 'right');
       by += cardH + Math.round(24 * s);
     }
     if (p.showExercises && p.exercises && p.exercises.length) {
-      by = drawExerciseChips(cv, Skia, W, pad, by, p.exercises, s, font);
+      by = drawExerciseSummary(cv, Skia, W, pad, by, p.exercises, s, font);
     }
     return by;
   }
 
-  if (p.isSquare) {
-    layoutBody(canvas, y);
-  } else {
-    const footerH = footerHeight(p.isSquare, s);
-    // Story's footer itself lifts clear of Instagram's reply bar
-    // (STORY_SAFE_BOTTOM_RATIO, drawFooter above), so the bottom bound for
-    // centring has to match where the footer actually starts, not just its
-    // height, or a tall content block could sit UNDER the lifted footer.
-    const storyLift = Math.round(H * STORY_SAFE_BOTTOM_RATIO);
-    const cellsBottom = H - footerH - storyLift - Math.round(24 * s);
-    const naturalEnd = layoutBody(makeNoopCanvas(), y);
-    const naturalHeight = naturalEnd - y;
-    const available = Math.max(0, cellsBottom - y);
-    const startY = y + Math.max(0, (available - naturalHeight) / 2);
-    layoutBody(canvas, startY);
-  }
-
+  runBody(canvas, H, s, p, y, footerHeight(p.isSquare, s), layoutBody);
   drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
 }
 
 function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
   const pad = Math.round(W * 0.074);
-  drawBackground(canvas, Skia, W, H);
+  const fmt = bodyFormat(p);
+  drawBackground(canvas, Skia, W, H, p.cardType);
   drawAccentBar(canvas, Skia, W, s);
 
-  const brandY = pad + Math.round(60 * s);
+  const brandY = headerTopY(H, fmt, pad + Math.round(60 * s));
   if (p.showDate && p.date) text(canvas, Skia, p.date, W - pad, brandY, font(22, 'regular'), PALETTE.textMuted, 'right');
 
-  // The whole PR moment (badge + exercise name + weight + previous best) used
-  // to start at a fixed `H * 0.22` -- a near-constant OFFSET FROM THE TOP on
-  // every format, which is fine on the short square canvas but on the much
-  // taller story canvas left a large empty band both above the badge and
-  // below "previous best" (share-card audit R6/H5). `layoutBody` draws that
-  // block from a given start y and returns where it ended; on story it is run
-  // once against a no-op canvas purely to measure that natural height, then
-  // re-run for real from a y that centres it between the header and the
-  // footer -- the same cellsTop/cellsBottom shape `drawBeforeAfter` already
-  // uses. Square is untouched (still the plain H*0.22 offset).
+  // The trophy card (ELITE-SHARE-SPEC pillar 2): the numeral scales up to
+  // BE the hero -- previously it was sized smaller than even the milestone
+  // and weekly heroes, which is exactly what left a dead zone around it on a
+  // card whose entire job is celebrating one number. It now gets both the
+  // bigger start size AND a warm amber glow (Skia blur) seated behind it.
   function layoutBody(cv, startY) {
     const by = startY;
     // Plain text in the pill (matches the intensity badge). No decorative
@@ -525,7 +699,7 @@ function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
     const bw = measure(f, label) + 60 * s; const bh = Math.round(56 * s);
     fillRRect(cv, Skia, (W - bw) / 2, by, bw, bh, bh / 2, rgba(PALETTE.gold, 0.15));
     strokeRRect(cv, Skia, (W - bw) / 2, by, bw, bh, bh / 2, rgba(PALETTE.gold, 0.44), Math.max(1, 2 * s));
-    text(cv, Skia, label, W / 2, by + bh * 0.66, f, PALETTE.gold, 'center');
+    text(cv, Skia, label, W / 2, by + bh * 0.68, f, PALETTE.gold, 'center');
 
     const exFont = font(p.isSquare ? 56 : 72);
     let ey = by + bh + Math.round(70 * s);
@@ -535,50 +709,45 @@ function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
       text(cv, Skia, l, W / 2, ey, exFont, PALETTE.text, 'center');
       ey += Math.round((p.isSquare ? 56 : 72) * 1.08 * s);
     });
-    ey += Math.round(30 * s);
+    ey += Math.round(34 * s);
 
     const wStr = p.showPRWeight
-      ? `${p.weight || '-'}${p.units || 'kg'} × ${p.reps || '-'}`
+      ? `${withUnit(String(p.weight || '-'), p.units || 'kg')} × ${p.reps || '-'}`
       : `${p.reps || '-'} reps`;
-    const wFont = fitFont(null, wStr, W - pad * 1.6, p.isSquare ? 110 : 160, (px) => font(px));
+    // Bumped from the old 110/160 start (share-card audit's reported ~250px
+    // dead zone): this is the whole card's reason to exist, so it now starts
+    // bigger than even the milestone/weekly heroes and only shrinks to fit a
+    // genuinely long string.
+    const wFont = fitFont(null, wStr, W - pad * 1.5, p.isSquare ? 200 : 270, (px) => font(px), 72);
+    const wCy = ey + wFont.getSize() * 0.62;
+    // A restrained halo, not a wash: sized off the numeral's own font size
+    // (not the full multi-character string width) and a small blur sigma, so
+    // the glow reads as warm light seated tightly behind the digits rather
+    // than tinting the whole canvas (rendered and corrected twice -- the
+    // first pass spanned the card, the second was still a hard-edged disc).
+    drawGlow(cv, Skia, W / 2, wCy, wFont.getSize() * 0.62, PALETTE.accent, 0.16, wFont.getSize() * 0.16);
     text(cv, Skia, wStr, W / 2, ey + wFont.getSize(), wFont, PALETTE.accent, 'center');
     let endY = ey + wFont.getSize();
 
     if (p.showPrevBest && p.previousBest) {
       const prevY = ey + wFont.getSize() + Math.round(70 * s);
-      text(cv, Skia, `Previous best: ${p.previousBest}${p.units || 'kg'}`, W / 2, prevY, font(28, 'regular'), PALETTE.textMuted, 'center');
+      text(cv, Skia, `Previous best: ${withUnit(String(p.previousBest), p.units || 'kg')}`, W / 2, prevY, font(28, 'regular'), PALETTE.textMuted, 'center');
       endY = prevY;
     }
     return endY;
   }
 
-  if (p.isSquare) {
-    layoutBody(canvas, Math.round(H * 0.22));
-  } else {
-    const footerH = footerHeight(p.isSquare, s);
-    const cellsTop = brandY + Math.round(70 * s);
-    // Story's footer itself lifts clear of Instagram's reply bar
-    // (STORY_SAFE_BOTTOM_RATIO, drawFooter above), so the bottom bound for
-    // centring has to match where the footer actually starts, not just its
-    // height, or a tall content block could sit UNDER the lifted footer.
-    const storyLift = Math.round(H * STORY_SAFE_BOTTOM_RATIO);
-    const cellsBottom = H - footerH - storyLift - Math.round(24 * s);
-    const naturalEnd = layoutBody(makeNoopCanvas(), cellsTop);
-    const naturalHeight = naturalEnd - cellsTop;
-    const available = Math.max(0, cellsBottom - cellsTop);
-    const startY = cellsTop + Math.max(0, (available - naturalHeight) / 2);
-    layoutBody(canvas, startY);
-  }
-
+  runBody(canvas, H, s, p, brandY + Math.round(70 * s), footerHeight(p.isSquare, s), layoutBody, true);
   drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
 }
 
 function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
   const pad = Math.round(W * 0.074);
-  drawBackground(canvas, Skia, W, H);
+  const fmt = bodyFormat(p);
+  drawBackground(canvas, Skia, W, H, p.cardType);
   drawAccentBar(canvas, Skia, W, s);
 
-  let y = pad + Math.round(60 * s);
+  let y = headerTopY(H, fmt, pad + Math.round(60 * s));
   if (p.showDate && p.date) text(canvas, Skia, p.date, W - pad, y, font(22, 'regular'), PALETTE.textMuted, 'right');
   y += Math.round(70 * s);
 
@@ -601,16 +770,6 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
   const heroValue = String(p.heroValue != null ? p.heroValue : '');
   const stats = (p.stats || []).slice(0, 3).map((st) => ({ label: String(st.label || ''), value: String(st.value != null ? st.value : '') }));
 
-  // The hero + caption + stats used to jump to a fixed `H * 0.42` on story, a
-  // near-constant OFFSET FROM THE TOP regardless of how much (or little)
-  // content followed -- on the much taller story canvas that left a large
-  // empty band both above the hero and below the last element before the
-  // footer (share-card audit R6/H5). `layoutBody` draws that whole block from
-  // a given start y and returns where it ended; on story it is run once
-  // against a no-op canvas purely to measure that natural height, then re-run
-  // for real from a y that centres it between the title and the footer -- the
-  // same cellsTop/cellsBottom shape `drawBeforeAfter` already uses. Square is
-  // untouched (still `y + heroNum.getSize()`, exactly as before).
   function layoutBody(cv, startY) {
     let by = startY;
     // An empty hero used to reserve the full hero band anyway, leaving a
@@ -640,23 +799,7 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
     return by;
   }
 
-  if (p.isSquare) {
-    layoutBody(canvas, y);
-  } else {
-    const footerH = footerHeight(p.isSquare, s);
-    // Story's footer itself lifts clear of Instagram's reply bar
-    // (STORY_SAFE_BOTTOM_RATIO, drawFooter above), so the bottom bound for
-    // centring has to match where the footer actually starts, not just its
-    // height, or a tall content block could sit UNDER the lifted footer.
-    const storyLift = Math.round(H * STORY_SAFE_BOTTOM_RATIO);
-    const cellsBottom = H - footerH - storyLift - Math.round(24 * s);
-    const naturalEnd = layoutBody(makeNoopCanvas(), y);
-    const naturalHeight = naturalEnd - y;
-    const available = Math.max(0, cellsBottom - y);
-    const startY = y + Math.max(0, (available - naturalHeight) / 2);
-    layoutBody(canvas, startY);
-  }
-
+  runBody(canvas, H, s, p, y, footerHeight(p.isSquare, s), layoutBody);
   drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
 }
 
@@ -666,13 +809,17 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
 // that names the numbers. ED-safety lives in the param builder (greatWeek.js): under
 // calm mode / an ED flag the progress hero, the lift hero and all weight
 // language are already stripped before they reach here, and the card only ever
-// renders for a verified-safe, on-target week.
+// renders for a verified-safe, on-target week. DATA LAWS UNCHANGED by campaign 30
+// -- the only change here is wrapping the existing content in the same
+// centred-body/safe-zone runner every other card type uses (it previously had
+// none at all, which was its own dead-band bug on a tall canvas).
 function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
   const pad = Math.round(W * 0.074);
-  drawBackground(canvas, Skia, W, H);
+  const fmt = bodyFormat(p);
+  drawBackground(canvas, Skia, W, H, p.cardType);
   drawAccentBar(canvas, Skia, W, s);
 
-  let y = pad + Math.round(56 * s);
+  let y = headerTopY(H, fmt, pad + Math.round(56 * s));
   if (p.showDate && p.dateFormatted) {
     text(canvas, Skia, p.dateFormatted, W - pad, y, font(22, 'regular'), PALETTE.textMuted, 'right');
   }
@@ -694,50 +841,56 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
   });
   y += Math.round(20 * s);
 
-  // HERO: the single biggest win (cut weight loss, else best lift, else PRs) —
-  // the big amber data numeral with ONE uppercase label beneath, exactly like the
-  // session card's hero. greatWeek.js drops it under suppress.
-  if (p.hero && p.hero.value) {
-    const phFont = fitFont(null, p.hero.value, W - pad * 2, p.isSquare ? 140 : 180, (px) => font(px));
-    const heroBaseline = y + phFont.getSize();
-    text(canvas, Skia, p.hero.value, W / 2, heroBaseline, phFont, PALETTE.accent, 'center');
-    // Clear the numeral's descenders (e.g. the "g" in "kg") before the label.
-    y = heroBaseline + Math.round(phFont.getSize() * 0.24) + Math.round((p.isSquare ? 16 : 22) * s);
-    const heroLabel = [p.hero.heading, p.hero.context].filter(Boolean).join(' · ').toUpperCase();
-    if (heroLabel) {
-      // Fit to width: the heading can be an arbitrary exercise name (best-lift
-      // hero), so shrink before it would overflow.
-      const lblFont = fitFont(null, heroLabel, W - pad * 2, p.isSquare ? 18 : 24, (px) => font(px), 12);
-      text(canvas, Skia, heroLabel, W / 2, y, lblFont, PALETTE.textSecondary, 'center');
-      y += Math.round((p.isSquare ? 50 : 62) * s);
+  function layoutBody(cv, startY) {
+    let by = startY;
+    // HERO: the single biggest win (cut weight loss, else best lift, else
+    // PRs) -- the big amber data numeral with ONE uppercase label beneath,
+    // exactly like the session card's hero. greatWeek.js drops it under
+    // suppress.
+    if (p.hero && p.hero.value) {
+      const phFont = fitFont(null, p.hero.value, W - pad * 2, p.isSquare ? 140 : 180, (px) => font(px));
+      const heroBaseline = by + phFont.getSize();
+      text(cv, Skia, p.hero.value, W / 2, heroBaseline, phFont, PALETTE.accent, 'center');
+      // Clear the numeral's descenders (e.g. the "g" in "kg") before the label.
+      by = heroBaseline + Math.round(phFont.getSize() * 0.24) + Math.round((p.isSquare ? 16 : 22) * s);
+      const heroLabel = [p.hero.heading, p.hero.context].filter(Boolean).join(' · ').toUpperCase();
+      if (heroLabel) {
+        // Fit to width: the heading can be an arbitrary exercise name (best-lift
+        // hero), so shrink before it would overflow.
+        const lblFont = fitFont(null, heroLabel, W - pad * 2, p.isSquare ? 18 : 24, (px) => font(px), 12);
+        text(cv, Skia, heroLabel, W / 2, by, lblFont, PALETTE.textSecondary, 'center');
+        by += Math.round((p.isSquare ? 50 : 62) * s);
+      }
     }
+
+    // Best-lift feature: the standout set, a competence win, never a ranking.
+    if (p.bestLift && p.bestLift.weight) {
+      const bl = p.bestLift;
+      text(cv, Skia, 'BEST LIFT', pad, by, font(p.isSquare ? 18 : 22), PALETTE.textMuted, 'left');
+      if (bl.isNewBest) text(cv, Skia, 'NEW PR', W - pad, by, font(p.isSquare ? 18 : 22), PALETTE.gold, 'right');
+      by += Math.round((p.isSquare ? 40 : 52) * s);
+      const liftStr = `${bl.exerciseName} · ${withUnit(String(bl.weight), bl.units || 'kg')} × ${bl.reps}`;
+      const blFont = fitFont(null, liftStr, W - pad * 2, p.isSquare ? 42 : 54, (px) => font(px));
+      text(cv, Skia, liftStr, pad, by + blFont.getSize(), blFont, PALETTE.accent, 'left');
+      by += Math.round(blFont.getSize() + (p.isSquare ? 30 : 38) * s);
+    }
+
+    const stats = (p.stats || []).slice(0, 4).map((st) => ({ label: String(st.label || ''), value: String(st.value != null ? st.value : '') }));
+    if (stats.length) by = drawStatBoxes(cv, Skia, W, pad, by, stats, p.isSquare, s, font);
+
+    // Coach line — names the real numbers, sits as a caption above the footer.
+    if (p.coachLine) {
+      const capFont = font(p.isSquare ? 24 : 30, 'regular');
+      by += Math.round(8 * s);
+      wrapText(capFont, String(p.coachLine), W - pad * 2).slice(0, 3).forEach((l) => {
+        text(cv, Skia, l, pad, by + Math.round((p.isSquare ? 24 : 30) * 0.9 * s), capFont, PALETTE.textSecondary, 'left');
+        by += Math.round((p.isSquare ? 38 : 46) * s);
+      });
+    }
+    return by;
   }
 
-  // Best-lift feature: the standout set, a competence win, never a ranking.
-  if (p.bestLift && p.bestLift.weight) {
-    const bl = p.bestLift;
-    text(canvas, Skia, 'BEST LIFT', pad, y, font(p.isSquare ? 18 : 22), PALETTE.textMuted, 'left');
-    if (bl.isNewBest) text(canvas, Skia, 'NEW PR', W - pad, y, font(p.isSquare ? 18 : 22), PALETTE.gold, 'right');
-    y += Math.round((p.isSquare ? 40 : 52) * s);
-    const liftStr = `${bl.exerciseName} · ${bl.weight} ${bl.units || 'kg'} × ${bl.reps}`;
-    const blFont = fitFont(null, liftStr, W - pad * 2, p.isSquare ? 42 : 54, (px) => font(px));
-    text(canvas, Skia, liftStr, pad, y + blFont.getSize(), blFont, PALETTE.accent, 'left');
-    y += Math.round(blFont.getSize() + (p.isSquare ? 30 : 38) * s);
-  }
-
-  const stats = (p.stats || []).slice(0, 4).map((st) => ({ label: String(st.label || ''), value: String(st.value != null ? st.value : '') }));
-  if (stats.length) y = drawStatBoxes(canvas, Skia, W, pad, y, stats, p.isSquare, s, font);
-
-  // Coach line — names the real numbers, sits as a caption above the footer.
-  if (p.coachLine) {
-    const capFont = font(p.isSquare ? 24 : 30, 'regular');
-    y += Math.round(8 * s);
-    wrapText(capFont, String(p.coachLine), W - pad * 2).slice(0, 3).forEach((l) => {
-      text(canvas, Skia, l, pad, y + Math.round((p.isSquare ? 24 : 30) * 0.9 * s), capFont, PALETTE.textSecondary, 'left');
-      y += Math.round((p.isSquare ? 38 : 46) * s);
-    });
-  }
-
+  runBody(canvas, H, s, p, y, footerHeight(p.isSquare, s), layoutBody);
   drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
 }
 
@@ -773,7 +926,9 @@ function drawPhotoCell(canvas, Skia, img, x, y, w, h, r) {
 // sitting ON its own photo cell so which weight belongs to which shot is never
 // ambiguous. Weight is optional — suppressed/toggled-off callers pass '' and
 // only the date shows. Clipped to the cell so the plate shares its rounded
-// bottom corners rather than overhanging them.
+// bottom corners rather than overhanging them. Campaign 30 restyle: a slightly
+// stronger scrim (0.62 -> 0.7) plus a hairline amber top edge, matching the new
+// system's quieter-but-more-legible plates elsewhere on the family.
 function drawCellCaption(canvas, Skia, x, y, w, h, r, cell, s, font) {
   const line = [cell && cell.date, cell && cell.scanRange, cell && cell.weight].filter(Boolean).join('  ·  ');
   if (!line) return;
@@ -781,7 +936,8 @@ function drawCellCaption(canvas, Skia, x, y, w, h, r, cell, s, font) {
   const py = y + h - plateH;
   canvas.save();
   canvas.clipRRect(Skia.RRectXY(Skia.XYWHRect(x, y, w, h), r, r), CLIP_INTERSECT, true);
-  fillRect(canvas, Skia, x, py, w, plateH, rgba(PALETTE.bg0, 0.62));
+  fillRect(canvas, Skia, x, py, w, plateH, rgba(PALETTE.bg0, 0.7));
+  fillRect(canvas, Skia, x, py, w, Math.max(1, Math.round(1 * s)), rgba(PALETTE.accent, 0.3));
   canvas.restore();
   const f = fitFont(null, line, w - Math.round(36 * s), 22, (px) => font(px, 'regular'), 12);
   text(canvas, Skia, line, x + w / 2, py + plateH * 0.62, f, PALETTE.text, 'center');
@@ -789,7 +945,7 @@ function drawCellCaption(canvas, Skia, x, y, w, h, r, cell, s, font) {
 
 // The centred elapsed-time badge — the quiet headline that belongs to the PAIR,
 // not either photo. Reuses the intensity-badge construction (fill rgba(accent,
-// .125), hairline rgba(accent,.38) stroke, caps text): time stated neutrally,
+// .11), hairline rgba(accent,.32) stroke, caps text): time stated neutrally,
 // never "transformation", never an arrow.
 function drawElapsedBadge(canvas, Skia, W, y, label, s, font) {
   if (!label) return y;
@@ -798,8 +954,8 @@ function drawElapsedBadge(canvas, Skia, W, y, label, s, font) {
   const bw = measure(f, txt) + 60 * s;
   const bh = Math.round(48 * s);
   const bx = (W - bw) / 2;
-  fillRRect(canvas, Skia, bx, y, bw, bh, bh / 2, rgba(PALETTE.accent, 0.125));
-  strokeRRect(canvas, Skia, bx, y, bw, bh, bh / 2, rgba(PALETTE.accent, 0.38), Math.max(1, 1.5 * s));
+  fillRRect(canvas, Skia, bx, y, bw, bh, bh / 2, rgba(PALETTE.accent, 0.11));
+  strokeRRect(canvas, Skia, bx, y, bw, bh, bh / 2, rgba(PALETTE.accent, 0.32), Math.max(1, 1.5 * s));
   text(canvas, Skia, txt, W / 2, y + bh * 0.68, f, PALETTE.accent, 'center');
   return y + bh + Math.round(28 * s);
 }
@@ -823,7 +979,7 @@ function drawElapsedBadge(canvas, Skia, W, y, label, s, font) {
 //     + the screen's privacy line.
 function drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos) {
   const pad = Math.round(W * 0.074);
-  drawBackground(canvas, Skia, W, H);
+  drawBackground(canvas, Skia, W, H, p.cardType);
   drawAccentBar(canvas, Skia, W, s);
 
   const before = p.before || {};
@@ -838,13 +994,13 @@ function drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos) {
   y += Math.round(8 * s);
 
   const footerH = footerHeight(p.isSquare, s);
-  // On the 'story' aspect the footer itself lifts clear of Instagram's reply
-  // bar (STORY_SAFE_BOTTOM_RATIO, drawFooter above); missing that lift here
-  // meant the bottom cell's photo (and its date/weight caption) rendered
-  // UNDER the lifted footer, so the wordmark and tagline painted straight
-  // over the photo and its caption instead of below it -- found by actually
-  // rendering this card (share-card audit R10/M7, the first time this card
-  // type had any rendered-output coverage at all).
+  // On the 'story' aspect the footer itself lifts clear of the platform-chrome
+  // safe zone (STORY_SAFE_BOTTOM_RATIO, drawFooter above); missing that lift
+  // here meant the bottom cell's photo (and its date/weight caption) rendered
+  // UNDER the lifted footer, so the wordmark and URL painted straight over the
+  // photo and its caption instead of below it -- found by actually rendering
+  // this card (share-card audit R10/M7, the first time this card type had any
+  // rendered-output coverage at all).
   const storyLift = p.isSquare ? 0 : Math.round(H * STORY_SAFE_BOTTOM_RATIO);
   const cellsTop = y;
   const cellsBottom = H - footerH - storyLift - Math.round(24 * s);
@@ -878,10 +1034,10 @@ function drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos) {
  * The card pixel height for a given width + format.
  *
  * The back-compatible two-arg form (isSquare boolean) drives every existing
- * card type unchanged. The optional third `aspect` is used by the before/after
- * progress card, which ships three presets: 'square' 1:1, 'portrait' 4:5 (the
- * IG-feed ratio) and 'story' 9:16. When `aspect` is omitted the legacy isSquare
- * behaviour is preserved exactly.
+ * card type unchanged. The optional third `aspect` is used by every card type
+ * that wants the ('square'|'portrait'|'story') preset: 'square' 1:1, 'portrait'
+ * 4:5 (the IG-feed ratio) and 'story' 9:16. When `aspect` is omitted the legacy
+ * isSquare behaviour is preserved exactly.
  */
 export function cardHeight(width, isSquare, aspect) {
   if (aspect === 'square') return width;
@@ -904,9 +1060,9 @@ export function drawShareCard(canvas, {
   Skia, width, params, typefaces, wordmark, bgPhoto = null, photos = null,
 }) {
   BG = bgPhoto || null; // optional gym photo background (all card types)
-  // The beforeAfter card drives its own three aspect presets ('square' |
-  // 'portrait' | 'story') via params.aspect; every other card type keeps the
-  // legacy isSquare boolean untouched (aspect stays undefined for them).
+  // Every card type now drives its own three aspect presets ('square' |
+  // 'portrait' | 'story') via params.aspect (ELITE-SHARE-SPEC pillar 3/#4);
+  // callers that pass no aspect keep the legacy isSquare boolean untouched.
   const aspect = params.aspect || null;
   const isSquare = aspect ? aspect !== 'story' : !!params.isSquare;
   const W = width;
@@ -920,4 +1076,148 @@ export function drawShareCard(canvas, {
   else if (params.cardType === 'beforeAfter') drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos);
   else drawSession(canvas, Skia, W, H, p, s, font, wordmark);
   return { width: W, height: H };
+}
+
+// ── sticker export (ELITE-SHARE-SPEC pillar 3, Strava Sticker Stats) ──────
+//
+// A transparent-background PNG carrying just the compact stat block + a small
+// trailing mark, meant to be pasted onto the user's OWN story/photo rather
+// than shared as a full card. It is deliberately small in scope: no
+// background, no accent geometry, no template picker -- just the strongest
+// single number the moment has, drawn once, the same way every time.
+//
+// SUPPRESSION LAW: a sticker has NO data path of its own. `stickerContentFor`
+// reads ONLY fields already present on the caller's `params` object -- the
+// exact same object the full card draws from. Whatever calm mode / an open
+// ED-pattern flag already strips upstream (greatWeek.js et al -- "the
+// progress hero, the lift hero and all weight language are already stripped
+// before they reach here") is equally absent here: there is no alternate
+// derivation that could reconstruct suppressed content, so suppression
+// carries over automatically, fail closed, exactly like the Strava-precedent
+// rule the spec names. beforeAfter deliberately omits bodyweight from its
+// sticker even though the full card may show it (progress-photos DECISIONS
+// #2): that founder-approved exception named one specific card, and this file
+// lane doesn't extend a privacy-sensitive exception onto a brand-new export
+// surface on its own authority.
+
+function stickerContentFor(cardType, p) {
+  const unit = p.units || 'kg';
+  if (cardType === 'pr') {
+    const value = p.showPRWeight
+      ? withUnit(String(p.weight || '-'), p.units || 'kg')
+      : `${p.reps || '-'} reps`;
+    return { value, label: 'PERSONAL RECORD', sub: p.exerciseName || '', color: PALETTE.accent };
+  }
+  if (cardType === 'milestone') {
+    if (p.heroValue) {
+      return { value: String(p.heroValue), label: (p.heroUnit || p.eyebrow || 'MILESTONE'), sub: p.title || '', color: PALETTE.accent };
+    }
+    if (p.title) return { value: p.title, label: p.eyebrow || 'MILESTONE', sub: '', color: PALETTE.text };
+    return null;
+  }
+  if (cardType === 'weekly') {
+    if (p.hero && p.hero.value) {
+      const label = [p.hero.heading, p.hero.context].filter(Boolean).join(' · ') || 'THIS WEEK';
+      return { value: p.hero.value, label, sub: p.tierLabel || '', color: PALETTE.accent };
+    }
+    if (p.bestLift && p.bestLift.weight) {
+      const bl = p.bestLift;
+      return { value: withUnit(String(bl.weight), bl.units || 'kg'), label: 'BEST LIFT', sub: bl.exerciseName || '', color: PALETTE.accent };
+    }
+    const stats = p.stats || [];
+    if (stats.length && stats[0].value) {
+      return { value: String(stats[0].value), label: String(stats[0].label || '').toUpperCase(), sub: p.tierLabel || '', color: PALETTE.accent };
+    }
+    return null;
+  }
+  if (cardType === 'beforeAfter') {
+    if (!p.elapsedLabel) return null;
+    return { value: String(p.elapsedLabel), label: 'PROGRESS', sub: '', color: PALETTE.accent };
+  }
+  // session (and any unrecognised type, matching drawShareCard's own default).
+  const heroInfo = sessionHeroInfo(p, unit);
+  if (!heroInfo.value || heroInfo.value === '0') return null;
+  return { value: heroInfo.value, label: heroInfo.label, sub: p.sessionName || '', color: heroInfo.color };
+}
+
+// A small trailing mark, proportioned like the main footer's but smaller
+// again -- the sticker's own quiet signature (D109-1 "small trailing mark",
+// keeping MARK_WIDTH_RATIO-style proportionality on a second, sticker-scaled
+// ratio).
+function drawStickerMark(canvas, Skia, width, panelH, pad, s, font, wordmark) {
+  const markW = width * STICKER_MARK_WIDTH_RATIO;
+  const hasMark = !!(wordmark && wordmark.width && wordmark.height && wordmark.width() && wordmark.height());
+  const markH = hasMark ? Math.round(markW / (wordmark.width() / wordmark.height())) : Math.round(16 * s);
+  const urlFont = font(15, 'regular');
+  const urlStr = 'volyume.app';
+  const gap = Math.round(8 * s);
+  const totalW = (hasMark ? markW + gap : 0) + measure(urlFont, urlStr);
+  const x0 = width - pad - totalW;
+  const y0 = panelH - Math.round(pad * 0.55) - markH;
+  if (hasMark) {
+    const p = Skia.Paint(); p.setAntiAlias(true); p.setAlphaf(0.72);
+    canvas.drawImageRect(
+      wordmark,
+      Skia.XYWHRect(0, 0, wordmark.width(), wordmark.height()),
+      Skia.XYWHRect(x0, y0, markW, markH),
+      p,
+    );
+  }
+  const urlX = x0 + (hasMark ? markW + gap : 0);
+  text(canvas, Skia, urlStr, urlX, y0 + markH * 0.82, urlFont, PALETTE.textMuted, 'left');
+}
+
+/** The sticker panel's pixel height for a given width (fixed compact ratio). */
+export function stickerHeight(width) {
+  return Math.round(width * 0.56);
+}
+
+/**
+ * Draw a transparent-background stat sticker. ONE call per export, same
+ * pattern as drawShareCard: pass an offscreen Surface's canvas, then encode.
+ * @param canvas SkCanvas from an offscreen Surface (must start transparent)
+ * @param deps.Skia the react-native-skia Skia API (or JsiSkApi(CanvasKit) in Node)
+ * @param deps.width pixel width
+ * @param deps.params the SAME params object the full card for this cardType
+ *   would receive (buildParams output) -- already gated upstream
+ * @param deps.typefaces { regular, bold } SkTypeface
+ * @param deps.wordmark SkImage logo, or null
+ */
+export function drawSticker(canvas, {
+  Skia, width, params, typefaces, wordmark,
+}) {
+  const s = width / 700;
+  const H = stickerHeight(width);
+  const font = makeFonts(Skia, typefaces, s);
+  const pad = Math.round(width * 0.09);
+  const r = Math.round(30 * s);
+
+  // No drawBackground call: an untouched offscreen Surface starts fully
+  // transparent on both the device and CanvasKit-in-Node runtimes, and the
+  // rounded panel below is the ONLY opaque content, so the sticker can sit
+  // directly on the user's own photo.
+  fillRRect(canvas, Skia, 0, 0, width, H, r, rgba(PALETTE.bg0, 0.82));
+  strokeRRect(canvas, Skia, 0, 0, width, H, r, rgba(PALETTE.accent, 0.3), Math.max(1, 1.5 * s));
+  fillRRect(canvas, Skia, pad * 0.55, Math.round(16 * s), Math.max(3, Math.round(5 * s)), H - Math.round(32 * s), Math.round(3 * s), rgba(PALETTE.accent, 0.75));
+
+  const content = stickerContentFor(params.cardType, params);
+  const textX = pad + Math.round(16 * s);
+  const maxW = width - textX - pad;
+  if (content && content.value) {
+    const labelY = Math.round(H * 0.34);
+    if (content.label) {
+      const labelFont = fitFont(null, String(content.label).toUpperCase(), maxW, 20, (px) => font(px), 12);
+      text(canvas, Skia, String(content.label).toUpperCase(), textX, labelY, labelFont, PALETTE.textMuted, 'left');
+    }
+    const valFont = fitFont(null, content.value, maxW, 76, (px) => font(px), 34);
+    const valY = labelY + valFont.getSize() * 0.92;
+    text(canvas, Skia, content.value, textX, valY, valFont, content.color || PALETTE.accent, 'left');
+    if (content.sub) {
+      const subFont = font(18, 'regular');
+      const subLine = wrapTextCapped(subFont, content.sub, maxW, 1)[0];
+      text(canvas, Skia, subLine, textX, valY + Math.round(34 * s), subFont, PALETTE.textSecondary, 'left');
+    }
+  }
+  drawStickerMark(canvas, Skia, width, H, pad, s, font, wordmark);
+  return { width, height: H };
 }

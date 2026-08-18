@@ -2562,6 +2562,42 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE effective_maintenance_memos ADD COLUMN revalidation_started_at INTEGER',
     'ALTER TABLE effective_maintenance_memos ADD COLUMN revalidation_context_signature TEXT',
   ],
+  // D107-2 injury/constraint layer: day-bound expiry for exercise_intent.
+  //
+  // Builds ON the Campaign 9 intent layer rather than a parallel one. The
+  // new PATTERN_AVOID kind (src/lib/database.js EXERCISE_INTENT, targets a
+  // movementFamily key rather than one exercise, via the existing
+  // `exercise_id` column carrying a `family:<key>` target string - see
+  // src/lib/exercise/intent.js familyTargetKey) needs a day-bound duration
+  // (7/14/30 days) that the two existing kinds never needed: EXCLUDED is
+  // indefinite by definition and AVOIDED_BLOCK already expires at the block
+  // boundary via scope_mesocycle_id. `expires_at_ms` is nullable and read
+  // ONLY for rows that set it; every existing row (and every future
+  // EXCLUDED/AVOIDED_BLOCK row) leaves it NULL and is completely unaffected.
+  //
+  // Expiry is evaluated at READ time (database.js getExerciseIntents), not
+  // here: this migration only adds the column. A row past its expiry is
+  // excluded from the live result and then lazily tombstoned so it does not
+  // keep being re-evaluated forever.
+  //
+  // Applied: LOCALLY via this user_version bump. Cloud counterpart:
+  // supabase/migrate_142_exercise_intent_expiry.sql, additive, NOT applied
+  // (founder-gated per CLAUDE.md - cloud migrations are manual-run only).
+  // The push (src/lib/sync.js _pushExerciseIntent) sends expires_at_ms in
+  // every payload; until the cloud column exists Postgres rejects the
+  // unknown column for the WHOLE upsert batch, exactly the same tolerated
+  // failure mode migrate_137's header describes for exercise_swaps.scope -
+  // logged, swallowed, retried on the next sync tick, device data is safe.
+  // Additive: yes (one nullable column). Safe to re-run: yes (the runner
+  // treats a duplicate-column error as benign, isBenignMigrationError).
+  // Rollback: leave the column in place and ignore it; every reader treats
+  // NULL as "no expiry", which is the pre-migration behaviour for every kind
+  // except PATTERN_AVOID, and no PATTERN_AVOID row can exist on a device
+  // that has not run this migration (the UI action that creates one ships
+  // in the same build as this migration).
+  [
+    'ALTER TABLE exercise_intent ADD COLUMN expires_at_ms INTEGER',
+  ],
 ];
 
 async function migrateProgressPhotoMetaUserScope(d) {
@@ -9638,6 +9674,13 @@ export async function runAdaptationEventBatch(task) {
 export const EXERCISE_INTENT = Object.freeze({
   EXCLUDED: 'excluded',        // "Don't suggest this exercise" - indefinite
   AVOIDED_BLOCK: 'avoided_block', // "Avoid for this block" - one mesocycle
+  // D107-2: "Avoid this movement PATTERN for N days" - day-bound only,
+  // targets a movementFamily key via the `family:<key>` exercise_id
+  // convention (src/lib/exercise/intent.js familyTargetKey). "This block"
+  // and "indefinite" pattern avoidance reuse AVOIDED_BLOCK/EXCLUDED above
+  // with the same family target rather than inventing a third duration
+  // model for two kinds that already express exactly that.
+  PATTERN_AVOID: 'pattern_avoid',
 });
 
 /**
@@ -9647,13 +9690,16 @@ export const EXERCISE_INTENT = Object.freeze({
  *
  * @param {string} userId
  * @param {string} exerciseId
- * @param {'excluded'|'avoided_block'} kind
- * @param {{scopeMesocycleId?: string|null, reason?: string|null}} [opts]
+ * @param {'excluded'|'avoided_block'|'pattern_avoid'} kind
+ * @param {{scopeMesocycleId?: string|null, reason?: string|null, expiresAtMs?: number|null}} [opts]
  *   reason is OPTIONAL lightweight context the user may skip entirely. It is
  *   never interpreted: "discomfort" records that the user said so, never that
- *   the exercise injures them.
+ *   the exercise injures them. expiresAtMs is D107-2's day-bound duration,
+ *   set only for PATTERN_AVOID rows; every other kind passes null, which is
+ *   also what a caller upgrading a PATTERN_AVOID row to EXCLUDED/AVOIDED_BLOCK
+ *   should pass, so the stale expiry cannot linger under the new kind.
  */
-export async function setExerciseIntent(userId, exerciseId, kind, { scopeMesocycleId = null, reason = null } = {}) {
+export async function setExerciseIntent(userId, exerciseId, kind, { scopeMesocycleId = null, reason = null, expiresAtMs = null } = {}) {
   if (!userId || !exerciseId) return null;
   const d = await db();
   const now = Date.now();
@@ -9664,9 +9710,9 @@ export async function setExerciseIntent(userId, exerciseId, kind, { scopeMesocyc
   if (existing?.id) {
     await d.runAsync(
       `UPDATE exercise_intent
-          SET kind = ?, scope_mesocycle_id = ?, reason = ?, updated_at = ?, deleted_at = NULL
+          SET kind = ?, scope_mesocycle_id = ?, reason = ?, expires_at_ms = ?, updated_at = ?, deleted_at = NULL
         WHERE id = ?`,
-      [kind, scopeMesocycleId, reason, now, existing.id],
+      [kind, scopeMesocycleId, reason, expiresAtMs, now, existing.id],
     );
     _scheduleSync();
     return existing.id;
@@ -9674,9 +9720,9 @@ export async function setExerciseIntent(userId, exerciseId, kind, { scopeMesocyc
   const id = uid();
   await d.runAsync(
     `INSERT INTO exercise_intent
-       (id, user_id, exercise_id, kind, scope_mesocycle_id, reason, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, userId, exerciseId, kind, scopeMesocycleId, reason, now, now],
+       (id, user_id, exercise_id, kind, scope_mesocycle_id, reason, expires_at_ms, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, exerciseId, kind, scopeMesocycleId, reason, expiresAtMs, now, now],
   );
   _scheduleSync();
   return id;
@@ -9698,17 +9744,41 @@ export async function clearExerciseIntent(userId, exerciseId) {
   _scheduleSync();
 }
 
-/** Every live intent row for the user. Tombstones excluded. */
-export async function getExerciseIntents(userId) {
+/**
+ * Every live intent row for the user. Tombstones excluded.
+ *
+ * D107-2: expiry is evaluated HERE, at read time, against `nowMs` (real
+ * clock by default, overridable for tests so expiry is provable to the
+ * millisecond). A row whose expires_at_ms has passed is left OUT of the
+ * result - "ignored" - and then tombstoned as a lazy best-effort cleanup so
+ * it stops being re-evaluated on every future read. The cleanup is
+ * fire-and-forget and its failure can never affect the read it rode in on.
+ */
+export async function getExerciseIntents(userId, { nowMs = Date.now() } = {}) {
   if (!userId) return [];
   const d = await db();
-  return d.getAllAsync(
-    `SELECT exercise_id AS exerciseId, kind, scope_mesocycle_id AS scopeMesocycleId,
-            reason, created_at AS createdAt, updated_at AS updatedAt
+  const rows = await d.getAllAsync(
+    `SELECT id, exercise_id AS exerciseId, kind, scope_mesocycle_id AS scopeMesocycleId,
+            reason, expires_at_ms AS expiresAtMs, created_at AS createdAt, updated_at AS updatedAt
        FROM exercise_intent
       WHERE user_id = ? AND deleted_at IS NULL`,
     [userId],
   ).catch(() => []);
+  const live = [];
+  const expiredIds = [];
+  for (const r of rows) {
+    if (r.expiresAtMs != null && r.expiresAtMs <= nowMs) expiredIds.push(r.id);
+    else live.push(r);
+  }
+  if (expiredIds.length) {
+    const placeholders = expiredIds.map(() => '?').join(',');
+    d.runAsync(
+      `UPDATE exercise_intent SET deleted_at = ?, updated_at = ? WHERE id IN (${placeholders})`,
+      [nowMs, nowMs, ...expiredIds],
+    ).then(() => { try { _scheduleSync(); } catch (_) { /* best effort */ } })
+      .catch(() => { /* lazy cleanup is best-effort; the next read tries again */ });
+  }
+  return live;
 }
 
 /**
@@ -10387,12 +10457,20 @@ export async function insertOrUpdateExerciseIntentFromCloud(userId, row) {
   );
   await d.runAsync(
     `INSERT OR REPLACE INTO exercise_intent
-      (id, user_id, exercise_id, kind, scope_mesocycle_id, reason,
+      (id, user_id, exercise_id, kind, scope_mesocycle_id, reason, expires_at_ms,
        created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       row.id, userId, row.exercise_id, row.kind ?? EXERCISE_INTENT.EXCLUDED,
       row.scope_mesocycle_id ?? null, row.reason ?? null,
+      // D107-2: the cloud column is `expires_at` (timestamptz, same
+      // convention as created_at/updated_at/deleted_at), converted back to
+      // the local epoch-ms column. It may not exist yet on a project that
+      // has not run migrate_142 (founder-gated) - row.expires_at is simply
+      // absent from the payload in that case, which reads as undefined and
+      // collapses to null here, exactly the pre-migration "no expiry"
+      // meaning rather than a thrown reference error.
+      _tsToMs(row.expires_at) ?? null,
       _tsToMs(row.created_at) ?? cloudUpdated,
       cloudUpdated,
       _tsToMs(row.deleted_at) ?? null,

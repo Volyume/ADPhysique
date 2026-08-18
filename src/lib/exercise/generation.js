@@ -28,24 +28,44 @@
  * was filtered out, by name. `reasonByName` is how the caller catches that
  * on the way back out.
  */
-import { isExcluded, isAvoidedThisBlock } from './intent';
+import {
+  isExcluded, isAvoidedThisBlock, isPatternAvoided, movementFamilyOf, familyTargetKey,
+} from './intent';
 
-/** Why a candidate may not be seeded. Mirrors EXERCISE_INTENT's two kinds. */
+/** Why a candidate may not be seeded. Mirrors EXERCISE_INTENT's kinds. */
 export const GENERATION_BLOCK = Object.freeze({
   EXCLUDED: 'excluded',
   AVOIDED_BLOCK: 'avoided_block',
+  // D107-2: the exercise itself is fine, but its movementFamily is under an
+  // active avoidance (day-bound, this-block or indefinite - all three read
+  // the same here; isFamilyBlocked is the single family-level question).
+  PATTERN_AVOID: 'pattern_avoid',
 });
 
 /**
  * The reason this exercise may not be seeded right now, or null.
+ *
  * @param {object} state loadExerciseIntentState output
- * @param {string} exerciseId
- * @returns {'excluded'|'avoided_block'|null}
+ * @param {string|{id?: string, name?: string, primaryMuscle?: string, subregion?: string}} exercise
+ *   a bare id (legacy shape, id-level checks only) or the full library row
+ *   (also checks the exercise's movementFamily against active pattern
+ *   avoidance - D107-2's senior enforcement point for generation).
+ * @returns {'excluded'|'avoided_block'|'pattern_avoid'|null}
  */
-export function generationBlockReason(state, exerciseId) {
-  if (!exerciseId || !state?.intents?.size) return null;
-  if (isExcluded(state, exerciseId)) return GENERATION_BLOCK.EXCLUDED;
-  if (isAvoidedThisBlock(state, exerciseId)) return GENERATION_BLOCK.AVOIDED_BLOCK;
+export function generationBlockReason(state, exercise) {
+  const id = typeof exercise === 'string' ? exercise : exercise?.id;
+  if (!id || !state?.intents?.size) return null;
+  if (isExcluded(state, id)) return GENERATION_BLOCK.EXCLUDED;
+  if (isAvoidedThisBlock(state, id)) return GENERATION_BLOCK.AVOIDED_BLOCK;
+  const family = typeof exercise === 'object' ? movementFamilyOf(exercise) : null;
+  if (family) {
+    const target = familyTargetKey(family);
+    // Same granularity as the id-level checks above: which of the three
+    // kinds is live decides the reason, not just whether one is.
+    if (isExcluded(state, target)) return GENERATION_BLOCK.EXCLUDED;
+    if (isAvoidedThisBlock(state, target)) return GENERATION_BLOCK.AVOIDED_BLOCK;
+    if (isPatternAvoided(state, target)) return GENERATION_BLOCK.PATTERN_AVOID;
+  }
   return null;
 }
 
@@ -92,7 +112,9 @@ export function filterLibraryForGeneration(library, state) {
     const kept = [];
     const dropped = [];
     for (const ex of library) {
-      const reason = generationBlockReason(state, ex?.id);
+      // D107-2: the full row, not just the id, so a family-level avoidance
+      // (the exercise itself was never touched) is caught too.
+      const reason = generationBlockReason(state, ex);
       if (reason) dropped.push({ exerciseId: ex.id, name: ex?.name ?? null, reason });
       else kept.push(ex);
     }

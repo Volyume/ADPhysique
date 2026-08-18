@@ -43,6 +43,9 @@ import { SWAP_SCOPE } from './swapScope';
 // past.
 import { tierRank } from './canonicality';
 import { detectPlateau, detectProgressionConsistency } from '../algorithms';
+// D107-2 injury/constraint layer: PATTERN_AVOID targets a movement FAMILY
+// (movementFamily()) rather than one exercise.
+import { movementFamily as resolveMovementFamily, familyLabel } from './movementFamily';
 
 export { EXERCISE_INTENT, SWAP_SCOPE };
 
@@ -68,6 +71,13 @@ export async function loadExerciseIntentState(userId, { activeMesocycleId = null
   const empty = {
     intents: new Map(), swaps: [], defaults: [], usage: new Map(),
     progression: new Map(), activeMesocycleId,
+    // D107-2 (D109-2 fail direction): false unless the read below genuinely
+    // failed. Distinct from "no intents recorded" - a user with a clean
+    // slate is NOT unavailable. Surfaces that would have filtered read this
+    // to show a visible "avoidance settings unavailable" notice; the state
+    // itself stays the pre-Campaign-9 empty shape either way, so generation
+    // and suggestion proceed exactly as they always have on a read failure.
+    unavailable: false,
   };
   if (!userId) return empty;
   try {
@@ -98,13 +108,16 @@ export async function loadExerciseIntentState(userId, { activeMesocycleId = null
       usage: new Map((usage ?? []).filter((r) => r?.exerciseId).map((r) => [r.exerciseId, r])),
       progression,
       activeMesocycleId,
+      unavailable: false,
     };
   } catch (_e) {
     // Fail OPEN on a read error, deliberately. A transient database failure
     // must not silently start suppressing exercises the user never
     // excluded, nor invent a preference. No state means no intent, which
-    // is exactly the pre-Campaign-9 behaviour.
-    return empty;
+    // is exactly the pre-Campaign-9 behaviour. D109-2: the caller is told
+    // WHY via `unavailable`, so a surface that would have filtered can show
+    // a visible notice instead of quietly looking like a clean slate.
+    return { ...empty, unavailable: true };
   }
 }
 
@@ -189,6 +202,140 @@ export function isEligible(state, exerciseId) {
 export function filterEligible(state, exercises, getId = (e) => e?.id) {
   if (!Array.isArray(exercises)) return [];
   return exercises.filter((e) => isEligible(state, getId(e)));
+}
+
+// ─── Movement-pattern avoidance (D107-2 injury/constraint layer) ────────────
+//
+// Built ON the intent layer above, not a parallel one. A PATTERN_AVOID (or a
+// family-scoped AVOIDED_BLOCK/EXCLUDED - see below) constrains a whole
+// movementFamily rather than one exercise: "avoid overhead pressing" is ONE
+// row, not ten. The row lives in the exact same exercise_intent table and
+// the exact same `state.intents` map every function above already reads;
+// only the TARGET differs.
+//
+// TARGET DISAMBIGUATION. exercise_intent.exercise_id is reused as a generic
+// target column (it always has been - see the module header). A real
+// exercise id and a movementFamily key could theoretically collide as
+// strings, so a family target is always stored and looked up as
+// `family:<key>`, never the bare key. This is the ONLY place that prefix is
+// constructed; every reader and writer of a family-scoped row goes through
+// familyTargetKey.
+const FAMILY_TARGET_PREFIX = 'family:';
+
+/** The exercise_intent target string for a movementFamily key. */
+export function familyTargetKey(family) {
+  return family ? `${FAMILY_TARGET_PREFIX}${family}` : null;
+}
+
+function familyFromTargetKey(target) {
+  return typeof target === 'string' && target.startsWith(FAMILY_TARGET_PREFIX)
+    ? target.slice(FAMILY_TARGET_PREFIX.length)
+    : null;
+}
+
+/**
+ * The movementFamily an exercise belongs to, or null. Accepts the shapes
+ * every caller already has on hand: a library row (primaryMuscle/subregion),
+ * a swap candidate's `exercise` object (same fields), or a routine_exercises
+ * join row.
+ */
+export function movementFamilyOf(exercise) {
+  if (!exercise) return null;
+  const muscle = exercise.primaryMuscle ?? exercise.muscle ?? null;
+  const subregion = exercise.subregion ?? null;
+  return resolveMovementFamily(exercise.name ?? null, muscle, subregion) ?? null;
+}
+
+/**
+ * "Avoid this movement pattern for N days." Day-bound only; already
+ * expiry-filtered by database.getExerciseIntents at load time, so a live row
+ * here is, by construction, still within its window.
+ */
+export function isPatternAvoided(state, target) {
+  // The row must EXIST before its kind is compared: a bare `?.kind ===`
+  // would answer true for a missing row anywhere the PATTERN_AVOID constant
+  // itself resolved undefined (undefined === undefined), silently blocking
+  // every family. Absence of intent is always eligibility.
+  const row = intentFor(state, target);
+  return !!row && row.kind === EXERCISE_INTENT.PATTERN_AVOID;
+}
+
+/**
+ * Is `family` currently under ANY strength of avoidance - day-bound
+ * (PATTERN_AVOID), this-block, or indefinite? The two reused kinds are asked
+ * exactly as they already are for a single exercise (isExcluded /
+ * isAvoidedThisBlock), just against the family's target key, so block-scope
+ * expiry and indefinite duration behave identically whether the target is
+ * one exercise or a whole pattern.
+ */
+export function isFamilyBlocked(state, family) {
+  if (!family) return false;
+  const target = familyTargetKey(family);
+  return isExcluded(state, target) || isAvoidedThisBlock(state, target) || isPatternAvoided(state, target);
+}
+
+/**
+ * THE senior hard-filter question every generator, swap sheet and picker
+ * asks once movement-pattern avoidance exists: may this exercise be
+ * suggested, either because IT is blocked directly (the pre-existing
+ * per-exercise intent) or because its whole movement FAMILY currently is?
+ *
+ * Superset of isEligible: every id-level law above still applies unchanged,
+ * this only adds the family check on top.
+ */
+export function isEligibleExercise(state, exercise) {
+  if (!exercise) return true;
+  if (!isEligible(state, exercise.id)) return false;
+  return !isFamilyBlocked(state, movementFamilyOf(exercise));
+}
+
+/** Filter a candidate list of full exercise objects. Pure. */
+export function filterEligibleExercises(state, exercises) {
+  if (!Array.isArray(exercises)) return [];
+  return exercises.filter((e) => isEligibleExercise(state, e));
+}
+
+/** Day-bound duration choices offered in the UI. */
+export const PATTERN_AVOID_DAYS = Object.freeze([7, 14, 30]);
+
+// The WRITE side of movement-pattern avoidance (setMovementPatternAvoid /
+// clearMovementPatternAvoid) lives in ./movementConstraints.js: this module
+// is the pinned read layer and can never reach a database write
+// (campaign9.intent.test.js source guard).
+
+/**
+ * Every currently-active movement-pattern constraint, for the "Avoided
+ * movements" list (D109-3, PlansScreen Plan tools -> AvoidedMovementsScreen).
+ * Pure: reads the same state every other function here reads.
+ *
+ * @returns {Array<{family: string, label: string, kind: string, untilMs: number|null, reason: string|null}>}
+ *   untilMs is the day-bound expiry for PATTERN_AVOID, null for the two
+ *   reused kinds (AVOIDED_BLOCK has no calendar date - it ends with the
+ *   block; EXCLUDED has none by definition).
+ */
+export function listActiveMovementConstraints(state) {
+  if (!state?.intents?.size) return [];
+  const out = [];
+  for (const [target, row] of state.intents) {
+    const family = familyFromTargetKey(target);
+    if (!family) continue;
+    let active = false;
+    let untilMs = null;
+    if (row.kind === EXERCISE_INTENT.PATTERN_AVOID) {
+      active = true;
+      untilMs = row.expiresAtMs ?? null;
+    } else if (row.kind === EXERCISE_INTENT.AVOIDED_BLOCK) {
+      active = !!row.scopeMesocycleId && row.scopeMesocycleId === (state?.activeMesocycleId ?? null);
+    } else if (row.kind === EXERCISE_INTENT.EXCLUDED) {
+      active = true;
+    }
+    if (!active) continue;
+    out.push({
+      family, label: familyLabel(family) ?? family, kind: row.kind, untilMs,
+      reason: row.reason ?? null,
+    });
+  }
+  return out.sort((a, b) => a.label.localeCompare(b.label));
 }
 
 /**
@@ -461,7 +608,11 @@ export function rankPersonalised(state, candidates, { fromExerciseId, routineId 
   const decorated = candidates
     // An exclusion is explicit intent and outranks every kind of evidence:
     // a repeatedly chosen exercise the user has since excluded is gone.
-    .filter((c) => isEligible(state, c?.exercise?.id))
+    // D107-2: a candidate whose whole movement FAMILY is currently avoided
+    // is dropped the same way - this is the swap sheet's hard filter
+    // (RoutineDetailScreen and ActiveWorkoutScreen both rank candidates
+    // through this one function, so neither needs its own family check).
+    .filter((c) => isEligibleExercise(state, c?.exercise))
     .map((c, i) => {
       const id = c?.exercise?.id;
       const ev = byId.get(id) ?? null;

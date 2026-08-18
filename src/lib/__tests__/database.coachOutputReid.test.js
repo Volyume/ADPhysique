@@ -89,7 +89,7 @@ test('v72 re-ids legacy uid() rows to the deterministic form, without touching u
   // C18 block progression appended two migrations and Campaign 19 appended
   // the memo plus its audit remediation, so this window widens by four to
   // keep testing the SAME v72 migration rather than a later pair.
-  return runLast(raw, 10).then(() => {
+  return runLast(raw, 11).then(() => {
     const after = rows(raw);
     expect(after).toEqual([
       // Already deterministic: byte-identical.
@@ -104,9 +104,9 @@ test('v72 is idempotent: a second run changes nothing', async () => {
   const raw = freshDb();
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
-  await runLast(raw, 10); // widened by four, C18 + Campaign 19 remediation
+  await runLast(raw, 11); // widened by four, C18 + Campaign 19 remediation
   const once = rows(raw);
-  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 9}`);
+  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 10}`);
   await runMigrations(adapt(raw));
   expect(rows(raw)).toEqual(once);
 });

@@ -39,9 +39,19 @@ describe('completion rule and spoken states (carried from WorkoutExerciseRow)', 
 });
 
 describe('quiet visual law: completed rows are lines, not celebration panels', () => {
-  test('no progress bar, no per-row border, no per-row card', () => {
-    // The phase-2 full-width progress track is gone for good.
-    expect(CODE).not.toMatch(/track|progressBar|fill.*width.*%/i);
+  test('no PER-ROW progress bar/border/card; exactly one strip-level session-progress line', () => {
+    // Re-pinned (founder device order 2026-08-17, taste delegated): the
+    // quiet-row LAW is unchanged - the expanded rows carry no bars, borders
+    // or cards - but the collapsed strip now carries ONE 2dp session-
+    // progress line (the rest-timer drain-line idiom, real information:
+    // sets done across the session), which the founder explicitly invited
+    // to make the navigator stand out. The old blanket "no track anywhere"
+    // pin would false-fail that; the per-row prohibition is pinned
+    // directly instead.
+    const rowsBlock = CODE.slice(CODE.indexOf('{items.map((item, i) => {'), CODE.indexOf('</ScrollView>'));
+    expect(rowsBlock).not.toMatch(/track|progressBar|fill.*width.*%/i);
+    expect((SRC.match(/progressTrack/g) || []).length).toBeGreaterThan(0);
+    expect((SRC.match(/progressTrack: \{/g) || []).length).toBe(1);
     // Rows carry no border chrome of their own; the outline's only border is
     // the single hairline separating it from the workspace.
     const borders = SRC.match(/borderBottomWidth|borderWidth/g) || [];

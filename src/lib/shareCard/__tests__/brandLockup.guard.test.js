@@ -4,9 +4,18 @@
  * Pins the share-card audit of 2026-07-27
  * (docs/audit/share-card-audit-2026-07-27.md), founder report: "some dont have
  * the logo and such and some do and things like that depending on the sizing
- * and function."
+ * and function." RE-PINNED for campaign 30 (D108 ELITE-SHARE-SPEC, ruling
+ * D109-1): the tagline band is dropped everywhere and the old stacked
+ * wordmark/tagline+underline/url lockup is replaced by one quiet trailing
+ * line (compact wordmark + volyume.app side by side). The mark-ratio and
+ * story-safe-bottom contracts below are UNCHANGED in shape -- they still pin
+ * "a fixed fraction of canvas width" / "the footer lifts clear of chrome" --
+ * only the lockup's own internal layout (one line instead of three tiers)
+ * changed, so R3/H2 keep passing against the new drawFooter unmodified. R6 is
+ * new: it pins the tagline's actual removal, since no existing guard asserted
+ * its presence before now.
  *
- * Three contracts, all written to FAIL if the brand regresses:
+ * Contracts, all written to FAIL if the brand regresses:
  *
  *   R1 - No fake wordmark. drawFooter used to draw the plain system-font word
  *        "Volyume" whenever the asset had not loaded, which shipped an
@@ -18,8 +27,11 @@
  *        36% jump between two formats of the same card. It is now a fixed
  *        fraction of canvas width, and volyume.app prints on every format
  *        rather than story only.
- *   H2 - The story footer clears Instagram's reply bar, which used to overlay
- *        exactly the band the logo sat in.
+ *   H2 - The story footer clears the platform-chrome safe zone, which used to
+ *        overlay exactly the band the logo sat in.
+ *   R6 - D109-1: the tagline band ("SMARTER TRAINING" + its underline) is
+ *        gone from the renderer entirely, on every format -- not "kept on
+ *        flat cards", dropped everywhere per the founder ruling.
  *
  * Source-level guard: drawFooter is module-private and Skia-dependent, so the
  * contract is pinned against the source, matching supabaseAuthStorage.guard.
@@ -67,5 +79,10 @@ describe('share-card brand lockup (audit 2026-07-27)', () => {
   test('R5: the family says PR, never PB', () => {
     expect(src).not.toMatch(/NEW PB/);
     expect(src).toMatch(/NEW PR/);
+  });
+
+  test('R6 (D109-1): the tagline band is dropped everywhere, not kept on any format', () => {
+    expect(src).not.toMatch(/SMARTER TRAINING/);
+    expect(src).not.toMatch(/drawTracked/);
   });
 });

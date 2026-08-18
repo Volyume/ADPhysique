@@ -21,7 +21,12 @@ import {
 } from '../intent';
 
 jest.mock('../../database', () => ({
-  EXERCISE_INTENT: { EXCLUDED: 'excluded', AVOIDED_BLOCK: 'avoided_block' },
+  // Mirrors the real EXERCISE_INTENT enum. PATTERN_AVOID matters even in
+  // suites that never set one: if it were absent here, an `undefined ===
+  // undefined` comparison inside the eligibility layer could misread every
+  // family as avoided (the exact defect isPatternAvoided now hardens
+  // against - D107-2 lead review).
+  EXERCISE_INTENT: { EXCLUDED: 'excluded', AVOIDED_BLOCK: 'avoided_block', PATTERN_AVOID: 'pattern_avoid' },
   getExerciseIntents: jest.fn(),
   getExerciseSwaps: jest.fn(),
   getExerciseSlotDefaults: jest.fn(),
