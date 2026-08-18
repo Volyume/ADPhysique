@@ -52,10 +52,7 @@
             ]
           }
         ]
-      },
-      "associatedDomains": [
-        "applinks:volyume.app"
-      ]
+      }
     },
     "android": {
       "adaptiveIcon": {

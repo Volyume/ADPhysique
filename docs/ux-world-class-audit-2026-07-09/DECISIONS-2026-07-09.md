@@ -3075,3 +3075,30 @@ The API-36 analysis was NOT re-derived: it is taken from
   a mis-selection revokes the distribution certificate, which is a worse
   failure than the one being fixed. The workflow header now records this
   second occurrence verbatim so the next one is recognised on sight.
+
+- **D111-4 (iOS Universal Links entitlement REVERTED, 2026-08-18):**
+  `ios.associatedDomains: ['applinks:volyume.app']`, added 2026-08-11 in
+  fc08bd1e, is removed. Evidence: the complete xcodebuild log for run
+  #146 contains exactly TWO error lines in 1,995 lines, both at
+  Volyume.xcodeproj:1978-1979 - "doesn't support the Associated Domains
+  capability" and "doesn't include the com.apple.developer.
+  associated-domains entitlement". Every other line is a deployment-target
+  warning or a run-script note; the compile was clean, and there is no
+  dependency error in the log. Run #145 (2026-07-30), the last green iOS
+  build, predates the entitlement.
+  Ruled to REMOVE rather than to keep provisioning it, on the founder's
+  refusal to spend further build credits testing a signing hypothesis.
+  This costs users nothing: no shipped iOS build has EVER carried the
+  entitlement, so it reverts an unshipped change rather than dropping a
+  live feature, and iOS partner links keep resolving through the
+  `volyume://` scheme. The AASA file stays served from
+  `public/.well-known/`, and the campaign7.releaseConfig guard now pins
+  the ABSENCE with this rationale plus the AASA assertion retained, so
+  restoring it is one line in app.json once a provisioning profile
+  carrying the entitlement exists.
+  Correction recorded against my own earlier advice: I told the founder
+  to delete the profile on expo.dev. The run log shows EAS also does
+  "Fetched Apple provisioning profiles" from Apple and reports the
+  profile Status active, so an expo.dev deletion alone need not remove it
+  - the Apple Developer portal copy has to go too. That omission is why
+  the same advice had failed before.

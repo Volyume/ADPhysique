@@ -37,8 +37,27 @@ describe('C7 release-config laws', () => {
     expect(raw).not.toMatch(/health_connect|healthkit|BODY_SENSORS|ACTIVITY_RECOGNITION/i);
   });
 
-  test('iOS Universal Links entitlement matches the live AASA host', () => {
-    expect(expo.ios.associatedDomains).toEqual(['applinks:volyume.app']);
+  // REVERSED 2026-08-18 (D111-4). This pinned the OPPOSITE until today:
+  // `associatedDomains: ['applinks:volyume.app']`, added 2026-08-11 in
+  // fc08bd1e. That entitlement broke every iOS build. EAS enabled the
+  // Associated Domains capability on the App ID but kept signing with the
+  // stored provisioning profile minted 2026-06-10, which predates it, so
+  // Xcode failed the archive with the only two errors in the whole build
+  // log: "doesn't support the Associated Domains capability" and "doesn't
+  // include the com.apple.developer.associated-domains entitlement"
+  // (run #146, xcodebuild log lines 1978-1979; the compile itself was
+  // clean). Run #145 on 2026-07-30, the last green iOS build, predates
+  // the entitlement.
+  //
+  // Removing it costs users NOTHING: no shipped iOS build ever carried it,
+  // so this reverts an unshipped change rather than dropping a live
+  // feature. iOS partner links keep working through the volyume:// scheme.
+  //
+  // The AASA file stays served from public/.well-known/ and is still
+  // asserted below, so restoring the entitlement is a one-line app.json
+  // change the moment a provisioning profile carrying it exists.
+  test('iOS Universal Links entitlement stays off until the profile carries it', () => {
+    expect(expo.ios.associatedDomains).toBeUndefined();
     const aasa = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'public', '.well-known', 'apple-app-site-association'), 'utf8'));
     expect(aasa.applinks.details[0].appID.endsWith('app.volyume')).toBe(true);
   });
