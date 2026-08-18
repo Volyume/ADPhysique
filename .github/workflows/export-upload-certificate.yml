@@ -1,0 +1,128 @@
+name: Export upload key certificate
+
+# Exports the PUBLIC certificate of the Android upload key, for the
+# "Add key" step of Android developer verification (Play Console ->
+# Android developer verification), and for any other place that asks for
+# the upload certificate or its fingerprint.
+#
+# WHY THIS EXISTS (2026-08-18). The upload keystore lives ONLY as the
+# ANDROID_KEYSTORE_BASE64 repository secret. GitHub secrets are write-only:
+# nothing and nobody can read them back out, not through the API and not
+# from a log, so the private key cannot be handed to anyone on request.
+# That is the correct design and it must stay that way. What Play actually
+# asks for at "Add key" is the app's PUBLIC certificate, which can be
+# derived from the keystore safely, and that is what this workflow emits.
+#
+# SAFETY. `keytool -exportcert` writes the public certificate only; the
+# private key never leaves the keystore. The decoded keystore is written
+# to a scratch path that is NOT the artifact directory, and is deleted in
+# an always() step. Only out/ is uploaded. Do not add the keystore, the
+# passwords, or a -importkeystore/-keyclone step to this file.
+#
+# FASTER ROUTE FIRST. If the app is on Play App Signing (it is), Play
+# Console already offers both certificates for download at
+# Test and release -> Setup -> App signing, with no build required. Use
+# that when the console will give it to you. This workflow is for the
+# upload certificate specifically, and for when the console route is not
+# offering what the verification flow is asking for.
+#
+# NEVER generates a new key. Creating a new upload key requires Play's
+# upload-key reset process, and the app signing key of a published app can
+# never be changed. If a key genuinely needs replacing, that is a Play
+# Console request, not a workflow.
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: export-upload-certificate
+  cancel-in-progress: true
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  export:
+    name: Export public certificate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Export the public certificate
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -e
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ] || [ -z "$ANDROID_KEYSTORE_PASSWORD" ] || [ -z "$ANDROID_KEY_ALIAS" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64, ANDROID_KEYSTORE_PASSWORD and ANDROID_KEY_ALIAS must all be set."
+            exit 1
+          fi
+
+          # Scratch path, deliberately outside the uploaded directory.
+          mkdir -p out
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.keystore"
+          if [ ! -s "$RUNNER_TEMP/upload.keystore" ]; then
+            echo "::error::Decoded keystore is empty. ANDROID_KEYSTORE_BASE64 is not valid base64 of a keystore."
+            exit 1
+          fi
+
+          # Public certificate only. DER is what Play's "Add key" upload
+          # accepts; PEM is the same certificate in text form, handy for
+          # anything that wants to paste it.
+          keytool -exportcert \
+            -keystore "$RUNNER_TEMP/upload.keystore" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -file out/upload-certificate.der
+          keytool -exportcert -rfc \
+            -keystore "$RUNNER_TEMP/upload.keystore" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -alias "$ANDROID_KEY_ALIAS" \
+            -file out/upload-certificate.pem
+
+          # Fingerprints, for developer verification and for the App Links
+          # assetlinks.json entry.
+          SHA256=$(keytool -printcert -file out/upload-certificate.der \
+            | grep -E '^\s*SHA256:' | head -1 | awk '{print $2}')
+          SHA1=$(keytool -printcert -file out/upload-certificate.der \
+            | grep -E '^\s*SHA1:' | head -1 | awk '{print $2}')
+          {
+            echo "Upload key certificate"
+            echo "SHA-256: $SHA256"
+            echo "SHA-1:   $SHA1"
+          } | tee out/upload-certificate-fingerprints.txt
+
+          {
+            echo "### Upload key certificate"
+            echo ""
+            echo "- SHA-256: \`$SHA256\`"
+            echo "- SHA-1: \`$SHA1\`"
+            echo ""
+            echo "Download the \`upload-certificate\` artifact below for the .der and .pem files."
+            echo "The private key is NOT included and cannot be exported."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Guard: the keystore must never reach the artifact directory.
+          if find out -name '*.keystore' -o -name '*.jks' -o -name '*.p12' | grep -q .; then
+            echo "::error::A keystore file reached the artifact directory. Refusing to upload."
+            exit 1
+          fi
+
+      - name: Shred the decoded keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/upload.keystore"
+
+      - name: Upload the certificate
+        uses: actions/upload-artifact@v4
+        with:
+          name: upload-certificate
+          path: out/
+          retention-days: 7
