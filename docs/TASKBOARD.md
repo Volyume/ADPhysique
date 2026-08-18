@@ -1400,8 +1400,15 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
-- **OPEN (2026-08-18) - LIVE DEFECT: Android App Links are half-signed,
-  so partner invite links do not open the app for Play-installed users.**
+- **OPEN, LOW PRIORITY (2026-08-18) - Android App Links publish only one
+  of the two fingerprints, so a volyume.app/partner link opens the
+  browser rather than the app.** NOT a Play problem and NOT a
+  regression: nothing about the store listing, the release or the
+  running app is affected, and assetlinks.json + deploy-pages.yml were
+  both last modified 2026-07-13, so this predates the 2026-08-18 work
+  entirely. Impact is limited to partner invite links, which have never
+  worked on Android, so real-world impact today is nil. Do it when
+  partner invites actually matter.
   Found while answering the developer-verification key question.
   `https://volyume.app/.well-known/assetlinks.json` currently serves
   exactly ONE fingerprint:
@@ -1409,9 +1416,13 @@ conditional on the decision; recorded here so they are visible, not lost._
   The committed template (`public/.well-known/assetlinks.json`) expects
   TWO - the Play app signing cert and the upload cert - and
   deploy-pages.yml fills them from the `PLAY_APP_SIGNING_SHA256` secret
-  and the keystore secret respectively. Only one landed, so
-  `PLAY_APP_SIGNING_SHA256` is not set and the surviving value is the
-  upload key. Google re-signs every Play install with the app signing
+  and the keystore secret respectively. Only one landed. INFERRED, not
+  directly observed: the injector builds [play, upload] deduped, and the
+  keystore secrets are provably set (build 3359 signed with them), so the
+  computed upload value would always be present - meaning
+  `PLAY_APP_SIGNING_SHA256` is empty and the published value is the
+  upload key. Confirm against the "Inject assetlinks fingerprints" step
+  log of a deploy-pages run before acting on it. Google re-signs every Play install with the app signing
   key, whose fingerprint is therefore absent - so Android refuses to
   verify the domain and `https://volyume.app/partner/<CODE>` opens the
   browser instead of the app for real users. The `volyume://` scheme
