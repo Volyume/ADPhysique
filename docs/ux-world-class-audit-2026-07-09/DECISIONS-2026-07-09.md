@@ -2991,3 +2991,36 @@ settled law:
   injury engine, screen UX, load semantics) with strict file lanes;
   the lead hands-on reviews every diff (engine hunks line-by-line)
   and rules all landings; landings in the founder's stated order.
+
+## D110 — build-batch landing rulings (lead, D33, 2026-08-18)
+
+All three lanes landed on main (C30 847ab8af/e8313c68, C31 f672c590,
+C32 26d1a39b). Rulings made while landing:
+- **D110-1 (read-layer law upheld over convenience):** the injury
+  agent's movement-constraint WRITE helpers were moved out of
+  intent.js into exercise/movementConstraints.js rather than
+  loosening the campaign9.intent.test.js source guard - intent.js
+  stays the pinned read-only layer. isPatternAvoided additionally
+  hardened to require the row to exist before comparing kinds (an
+  undefined-vs-undefined comparison in any context where the constant
+  resolves undefined would have silently blocked every family).
+- **D110-2 (D109-2 applied to a pinned test):** the "read failure is
+  byte-identical to a clean slate" generation pin was re-pinned to
+  allow exactly ONE difference - the visible constraintsUnavailable
+  flag - because D109-2 rules a read failure must not masquerade as a
+  clean slate. Writes remain pinned identical.
+- **D110-3 (bright-top photo scrim):** the share scrim's legibility
+  decision for the OPENING gradient stop now answers to the photo's
+  TOP band luminance, sampled separately from the bottom-weighted
+  scrim tone - a bright-sky-top/dark-floor photo previously read
+  "dark" overall and left the header text on raw pale photo.
+- **D110-4 (per-hand classification record):** dumbbell/kettlebell
+  equipment does not imply per_hand; single-implement movements
+  (goblet squats, pullovers, swings, one-arm rows, carries, get-ups
+  and kin) stay 'total' via an explicit named exception list in
+  seedExercises.js - the reviewable judgement record, adjustable
+  name-by-name on the founder walk.
+- **D110-5 (weekly recap formats):** the weekly card's square-only
+  restriction is lifted; the rebuilt renderer composes it on
+  story/portrait properly (verified in the review PNGs), so all four
+  formats are offered on every card type.

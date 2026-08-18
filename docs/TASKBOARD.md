@@ -2319,17 +2319,38 @@ throughout (no name/bodyweight/measurements/notes; Pro before/after
 exception only). RECOVERY PATH: agents read-only; relaunch from this
 entry on death.
 
-## CAMPAIGN 30/31/32 BUILD BATCH (2026-08-17) — share cards, injury constraints, load semantics. IN FLIGHT.
+## CAMPAIGN 30/31/32 BUILD BATCH (2026-08-17) — share cards, injury constraints, load semantics. COMPLETE, ALL ON MAIN (2026-08-18).
 
-Founder build order received; rulings D109-1..4. Pair 1: sonnet share
-RENDERER agent (drawShareCard.js + harness + renderer tests, per
-ELITE-SHARE-SPEC B1 + tone-scrim renderer half of B2) and sonnet
-INJURY agent (INJURY-CONSTRAINTS-SPEC in full; file lane: exercise/
-intent.js, database.js migration + optional migrate_137 file NEVER
-applied, poolGenerator, planAutoGen, swapEngine, ActiveWorkoutScreen
-swap/notice, RoutineDetailScreen, PlansScreen Plan-tools row per
-D109-3, tests). No file overlap between lanes. Landings in order with
-precise staging (C25/C26 precedent). RECOVERY PATH: agents never
-commit; on death, lead-review the working tree against the owning spec
-and land or relaunch; share files and injury files are disjoint so a
-partial tree stays separable.
+All three landed in the founder's order, merged to main continually:
+- **C30 share cards**: renderer rebuild (847ab8af, sonnet agent + two
+  lead render-review fixes: the "0m" TIME box now hidden below one
+  minute, and a bright-TOPPED photo scrims from the top - the sampler
+  reports the top band separately) and the B3 screen (e8313c68, lead
+  hands-on after the agent pool hit the session cap): live-thumbnail
+  template strip, Story/Square/4:5/Sticker format row (story-first,
+  D109-1), gallery picker + Dark background row, transparent sticker
+  export inheriting suppression. 30 review PNGs rendered via
+  scripts/render-share-card.cjs.
+- **C31 injury constraints** (f672c590): the injury agent died on the
+  session cap AFTER completing the build (lint clean, tests unrun);
+  recovered per the recovery path - lead-reviewed in full, corrected
+  (write helpers out of the pinned read-only intent.js into
+  movementConstraints.js; isPatternAvoided hardened against the
+  undefined-kind misread; migration-window suites bumped; the
+  identical-writes pin re-pinned under D109-2), landed. migrate_142
+  written, NOT applied (founder-gated).
+- **C32 load semantics** (26d1a39b, lead hands-on): load_semantics
+  catalogue column + shared seed/backfill derivation with an explicit
+  single-implement exception list; per_hand tonnage x2, assistance
+  excluded from tonnage (no bodyweight coupling, ED law), assisted PR
+  inversion in detectPR + buildRecordLine (D87 contract both sides);
+  logger field labels, creation picker, ExerciseDetail sentence.
+  migrate_143 written, NOT applied (founder-gated).
+
+Founder-side: device-walk checklist in the session report (share
+export to Instagram Stories incl. sticker + light-photo background;
+avoid-pattern set/notice/list/allow-again; dumbbell 20 kg -> 40 kg
+per rep session tonnage; assisted PR fires on lower assistance).
+Cloud batch awaiting the phrase: migrate_142 + migrate_143 (run
+BEFORE the next build ships, or exercise_intent/custom_exercises
+upsert batches soft-fail until run - order note in each header).

@@ -569,6 +569,22 @@ its evidence).
 
 ===============================================================================
 
+### 2026-08-18 — CAMPAIGNS 30/31/32 (share revamp, injury constraints, load semantics) — COMPLETE, ALL ON MAIN
+All three landed in the founder's order and merged continually (C30
+renderer 847ab8af + B3 screen e8313c68, C31 f672c590, C32 26d1a39b;
+plus the outline strip dd729202 and the Nutrition Targets explainer
+114fb9a3 from earlier in the window). The injury agent died on the
+session cap post-build and was recovered per the board's recovery path
+(lead review + corrections, rulings D110-1/2); C30-B3 and all of C32
+were built lead hands-on for the same cap reason. Full detail:
+docs/TASKBOARD.md "CAMPAIGN 30/31/32 BUILD BATCH" entry; rulings
+D109/D110 in the decisions register. Outstanding founder-side: the
+device walk (checklist in the session report / board entry) and the
+cloud batch phrase for migrate_142 + migrate_143 (run BEFORE the next
+build ships - order note in each header). Paused next week: C27-2b
+(banked at 586206d1 on claude/campaign27-responsive-research, fails
+Chip.a11y BY DESIGN, do not merge), 2c, 2d, 2e.
+
 ### 2026-08-17 — CAMPAIGN 26 (founder device-order batch: Today/logger/Progress) — COMPLETE, LANDED
 Nine direct founder device orders, same-day: three early fixes merged at
 `16cd167b` (NowCard accent, Progress tonnage landmark + "Progress
