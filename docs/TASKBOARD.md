@@ -1416,6 +1416,11 @@ conditional on the decision; recorded here so they are visible, not lost._
   verify the domain and `https://volyume.app/partner/<CODE>` opens the
   browser instead of the app for real users. The `volyume://` scheme
   still works, so this was invisible on sideloaded test builds.
+  NOT the same SHA as Play developer verification (registered
+  2026-08-18, app now live). That one went into the Play Console and
+  publishes the UPLOAD key; this file is served from volyume.app and
+  is read by Android ON THE DEVICE. Play re-signs every install with
+  the APP SIGNING key, so that is the fingerprint this file is missing.
   FIX (founder supplies one value, then this is an in-repo change):
   Play Console -> Test and release -> Setup -> App signing -> copy the
   **App signing key certificate SHA-256**. That fingerprint is PUBLIC by
@@ -1424,8 +1429,9 @@ conditional on the decision; recorded here so they are visible, not lost._
   `public/.well-known/assetlinks.json`, removing the missing-secret
   failure mode permanently rather than re-creating it.
 
-- **OPEN (2026-08-18) - BLOCKING THE PLAY RELEASE: Android developer
-  verification.** Creating the production release fails with "To proceed
+- **CLOSED (2026-08-18) - Android developer verification: DONE by the
+  founder, app is live on Play.** Kept for the next time it appears.
+  Was:** Creating the production release fails with "To proceed
   with this release, all keys should be registered to meet the Android
   developer verification requirements". This is Google's package-name and
   signing-key registration programme, deadline **2026-09-30**, after
@@ -1471,8 +1477,8 @@ conditional on the decision; recorded here so they are visible, not lost._
   Associated Domains and Push Notifications.
   Repeat this whenever a future app.json change adds an iOS capability.
 
-- **OPEN (2026-08-18) - the API-36 AAB is BUILT and waiting to be
-  uploaded to Play.** Build Android run **3359** on main (354bc2cb) went
+- **CLOSED (2026-08-18) - the API-36 release is LIVE on Play** (founder
+  confirmed). Detail kept for the record. Was:** Build Android run **3359** on main (354bc2cb) went
   green end to end at targetSdk 36, including the release-signing check
   and the 16 KB native-library page-size gate. Download
   **`volyume-release-aab-3359`** from
