@@ -261,7 +261,14 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // unchanged and still pinned: the control is a full thumb-sized target.
     // iconBtn sets width AND height to the same token, so it is now pinned
     // squarely rather than as a minHeight.
-    expect(WORKOUT_HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.primaryActionMinHeight,[\s\S]*height: workoutLoggerSize\.primaryActionMinHeight/);
+    // RE-PINNED 2026-08-18 (founder device order: the header actions "look
+    // completely out of place"): the 44dp bordered square became a 40dp
+    // borderless DISC. The GUARANTEE this test exists for - a full
+    // thumb-sized target under fatigue - is unchanged and still pinned, now
+    // as the disc token PLUS the hitSlop that carries the effective target
+    // past 44dp on both controls.
+    expect(WORKOUT_HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.headerActionCircle,[\s\S]*height: workoutLoggerSize\.headerActionCircle/);
+    expect((WORKOUT_HEADER.match(/hitSlop=\{\{ top: 8, bottom: 8, left: 8, right: 8 \}\}/g) || []).length).toBe(2);
     expect(WORKOUT_HEADER).toContain('testID="volyume-workout-finish"');
     expect(BOTTOM_BAR).toContain('size="lg"');
     expect(ACTIVE_WORKOUT).toContain('inlineActionPill');

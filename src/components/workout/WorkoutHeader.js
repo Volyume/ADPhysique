@@ -1,10 +1,21 @@
 /**
  * WorkoutHeader (R3 logger rebuild, founder order 2026-07-12)
  *
- * The logger's top chrome: close, elapsed time, finish. Composed from the
- * house tokens only - icon buttons on the surface2/border/radius.md control
- * chrome, the elapsed readout as an overline label over a tabular title
- * numeral, so the header reads as the same system as every other screen.
+ * The logger's top chrome: close, elapsed time, finish.
+ *
+ * REDESIGNED 2026-08-18 (founder device order: "they look completely out of
+ * place"). The two actions were 44dp bordered rounded squares filled with
+ * surface2 - generic control chrome that read as heavy grey boxes against
+ * the logger's near-black workspace, and matched nothing else on the screen
+ * now that the outline strip, the rest bar and the Log set button all speak
+ * one calm dark language with amber reserved for action.
+ *
+ * They are now DISCS: no border, a soft dark seat for the quiet action and
+ * an amber-tinted seat for the affirmative one. The two keep IDENTICAL
+ * geometry (founder order 2026-07-27: the ends of one bar are one control
+ * system, not two shapes doing the same job) - only COLOUR separates them,
+ * which is the same grammar the rest of the logger uses: muted ink for
+ * "leave", brand amber for "this is the action".
  *
  * Presentation only: both actions are owned by the orchestrator
  * (ActiveWorkoutScreen), which carries the cancel/finish behaviour contract
@@ -12,7 +23,7 @@
  */
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { spacing, radius, iconSize } from '../../styles/theme';
+import { spacing, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { workoutLoggerSize } from '../../styles/layout';
 
@@ -36,13 +47,13 @@ export default function WorkoutHeader({
       <View style={styles.side}>
         <TouchableOpacity
           testID="volyume-workout-close"
-          style={[styles.iconBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
+          style={[styles.iconBtn, { backgroundColor: t.colors.surface2 }]}
           onPress={onCancel}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           accessibilityRole="button"
           accessibilityLabel="Cancel workout"
         >
-          <Ionicons name="close" size={iconSize.md} color={t.colors.textPrimary} />
+          <Ionicons name="close" size={iconSize.md} color={t.colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -74,13 +85,13 @@ export default function WorkoutHeader({
           // rule). Pinned by loggerHeaderFinishIconOnly.guard.test.js.
           <TouchableOpacity
             testID="volyume-workout-finish"
-            style={[styles.iconBtn, { backgroundColor: t.colors.surface2, borderColor: t.colors.border }]}
+            style={[styles.iconBtn, { backgroundColor: t.colors.primaryBg }]}
             onPress={onFinish}
             hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
             accessibilityRole="button"
             accessibilityLabel="Finish workout"
           >
-            <Ionicons name="checkmark-done" size={iconSize.md} color={t.colors.textPrimary} />
+            <Ionicons name="checkmark-done" size={iconSize.md} color={t.colors.primary} />
           </TouchableOpacity>
         ) : null}
       </View>
@@ -97,11 +108,13 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
   },
+  // One geometry for both ends of the bar (2026-07-27 order); the 2026-08-18
+  // redesign makes it a borderless disc. hitSlop on each control keeps the
+  // effective target well past 44dp despite the smaller visible seat.
   iconBtn: {
-    width: workoutLoggerSize.primaryActionMinHeight,
-    height: workoutLoggerSize.primaryActionMinHeight,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    width: workoutLoggerSize.headerActionCircle,
+    height: workoutLoggerSize.headerActionCircle,
+    borderRadius: workoutLoggerSize.headerActionCircle / 2,
     alignItems: 'center',
     justifyContent: 'center',
   },

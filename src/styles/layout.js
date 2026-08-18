@@ -13,6 +13,11 @@ export const workoutLoggerSize = Object.freeze({
   primaryActionMinHeight: touchTarget.minimum,
   addExerciseMinHeight: 48,
   overflowButton: touchTarget.minimum,
+  // Founder device order 2026-08-18: the logger's header actions are DISCS,
+  // not the 44dp bordered squares they were - see WorkoutHeader. 40dp of
+  // visible disc inside a hitSlop-extended target, so the chrome is quiet
+  // while the touch area stays well past the 44dp minimum.
+  headerActionCircle: 40,
   loggedSetMinHeight: 36,
   setNumberBadge: 22,
   // Wide enough for the longest set-logger field label ("Weight (kg)",

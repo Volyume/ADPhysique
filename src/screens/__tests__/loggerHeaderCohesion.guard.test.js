@@ -47,14 +47,23 @@ function styleBlock(src, name) {
 describe('R2-2 header: X + Finish share one chrome family', () => {
   test('the header X sits in the contained icon-button chrome (headerIconBtn)', () => {
     // RE-ANCHORED 2026-07-12 (R3 logger rebuild): the header is the
-    // WorkoutHeader component; the SAME chrome contract (surface2 fill,
-    // border, radius.md, 44dp square) is pinned there.
+    // WorkoutHeader component. RE-PINNED 2026-08-18 (founder device order,
+    // "they look completely out of place"): the bordered surface2 rounded
+    // SQUARE is gone - the actions are borderless DISCS now. The LAW this
+    // test exists for is unchanged and still pinned: the X and Finish share
+    // ONE geometry (a single `iconBtn` style, same token, same radius), so
+    // the two ends of the bar can never drift into two different shapes
+    // doing the same job. Colour, not shape, separates them.
     const fsMod = require('fs');
     const pathMod = require('path');
     const HEADER = fsMod.readFileSync(pathMod.resolve(__dirname, '../../components/workout/WorkoutHeader.js'), 'utf8');
-    expect(HEADER).toContain('backgroundColor: t.colors.surface2, borderColor: t.colors.border');
-    expect(HEADER).toMatch(/iconBtn: \{[\s\S]*borderRadius: radius\.md/);
-    expect(HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.primaryActionMinHeight/);
+    expect(HEADER).toMatch(/iconBtn: \{[\s\S]*width: workoutLoggerSize\.headerActionCircle/);
+    expect(HEADER).toMatch(/iconBtn: \{[\s\S]*borderRadius: workoutLoggerSize\.headerActionCircle \/ 2/);
+    // Borderless: the heavy outline was the offending part of the old look.
+    expect(HEADER).not.toMatch(/iconBtn: \{[\s\S]*borderWidth/);
+    // The quiet action recedes, the affirmative one carries brand amber.
+    expect(HEADER).toContain('backgroundColor: t.colors.surface2');
+    expect(HEADER).toContain('backgroundColor: t.colors.primaryBg');
     expect(ACTIVE).toContain('<WorkoutHeader');
   });
 
