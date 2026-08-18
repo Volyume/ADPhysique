@@ -1417,14 +1417,20 @@ conditional on the decision; recorded here so they are visible, not lost._
   Associated Domains and Push Notifications.
   Repeat this whenever a future app.json change adds an iOS capability.
 
-- **OPEN (2026-08-18) - Play release still needs a fresh Android build
-  and an upload.** targetSdk is now 36 and the versionCode is derived in
-  CI (D111-1, D111-2), but nothing reaches users until a Build Android
-  run finishes on main and its AAB is uploaded to Play. The next AAB will
-  carry versionCode ~3358 (the workflow run number), not 31 - that jump is
+- **OPEN (2026-08-18) - the API-36 AAB is BUILT and waiting to be
+  uploaded to Play.** Build Android run **3359** on main (354bc2cb) went
+  green end to end at targetSdk 36, including the release-signing check
+  and the 16 KB native-library page-size gate. Download
+  **`volyume-release-aab-3359`** from
+  https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/32128221878
+  and upload it to Play. It carries versionCode **3359** (the workflow run
+  number, set by the Set Android versionCode step), not 31 - that jump is
   expected and permanent; Play only requires the number to increase. Hard
   deadline: updates submitted on or after **2026-08-31** are rejected
-  below API 36, so this upload cannot slip past that date.
+  below API 36, so this upload cannot slip past that date. NOTE: this AAB
+  predates any founder device walk of today's landings, so walk it from
+  the matching APK (`volyume-release-apk-3359`) before promoting it
+  beyond internal testing.
 
 - **NEW PRODUCT WORK (2026-08-18, from D111-1) - Android large-screen
   layout.** The founder ruled to ship API 36 with NO resizability
