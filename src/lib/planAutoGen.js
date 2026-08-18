@@ -43,6 +43,7 @@ import {
   isEligibleExercise,
 } from './exercise/intent';
 import { isAutoEligible } from './exercise/canonicality';
+import { parseProfiles } from './poolGenerator';
 
 // Where the per-plan rationale ("Why this plan?") is cached so the
 // enrollment reveal and the plan view can explain why the routine, sets,
@@ -338,6 +339,32 @@ function resolveSeed(exerciseMap, filteredLibrary, exerciseName, exerciseId = nu
 /**
  * Index the catalogue once, three ways, so resolution can prefer identity.
  */
+/**
+ * Whether an exercise is still performable with the equipment the athlete
+ * now says they have. The equipment vocabulary is the same one planEngine's
+ * filterPool matches on (`full_gym`, `machines_cables`, `dumbbells_only`,
+ * `barbell_plates`, `home_gym`, `bodyweight`), read from the row's
+ * equipmentProfiles via the same parser the exercise pool uses, so this
+ * answer and the engine's cannot drift apart.
+ *
+ * Fails OPEN in both unknown cases, deliberately:
+ *   - no equipment on the profile at all: we cannot claim a loss we have no
+ *     basis for, so nothing is treated as lost (the pre-fix behaviour).
+ *   - the row carries no equipment profiles (a custom exercise the athlete
+ *     created): silently replacing someone's own exercise is a worse failure
+ *     than carrying one forward, and an untagged row is not evidence of loss.
+ *
+ * Exported for direct testing: this predicate is the whole of the fix for the
+ * founder's 2026-08-18 report, and it needs to be provable without standing
+ * up a database.
+ */
+export function equipmentReachable(ex, equipment) {
+  if (!equipment) return true;
+  const profiles = parseProfiles(ex);
+  if (profiles.length === 0) return true;
+  return profiles.includes(equipment);
+}
+
 export function buildExerciseIndex(allExercises) {
   const byId = new Map();
   const byName = new Map();
@@ -481,6 +508,7 @@ function libraryForReviewedProposal(filteredLibrary, replacementIds) {
  */
 async function withContinuity(
   userId, plan, allExercises, intentState, filteredLibrary, continuityProposal = null,
+  equipment = null,
 ) {
   try {
     const incumbents = await loadIncumbentSlots(userId);
@@ -491,8 +519,22 @@ async function withContinuity(
     // "Still reachable with the equipment the user now has" is decided from
     // the library the engine was actually given, so an equipment change is
     // read as equipment loss rather than as a preference.
+    //
+    // FOUNDER BUG 2026-08-18 ("I've selected machines and cables and it's
+    // giving me barbell squats"): filteredLibrary is
+    // filterLibraryForGeneration's output, which filters ONLY on Campaign-9
+    // exclusion/avoidance intent and has no equipment logic at all. So
+    // currentLibraryIds held every exercise regardless of equipment,
+    // equipmentLost below was a permanent false negative, slotVerdict never
+    // reached its EQUIPMENT_LOST branch, and applyContinuity spliced the old
+    // barbell incumbents back into a plan planEngine had already filtered
+    // them out of correctly. The engine was never at fault; this layer
+    // overwrote its correct answer. Equipment is now applied here too.
     const currentLibraryIds = new Set(
-      (filteredLibrary?.library ?? allExercises ?? []).map(e => e.id).filter(Boolean),
+      (filteredLibrary?.library ?? allExercises ?? [])
+        .filter(ex => equipmentReachable(ex, equipment))
+        .map(e => e.id)
+        .filter(Boolean),
     );
     const familyOf = (id) => {
       const row = exercisesById.get(id);
@@ -684,6 +726,7 @@ export async function generateAndSavePlan(userId, profile, {
   // reading the state the same transaction is in the middle of superseding.
   const continuity = await withContinuity(
     userId, plan, allExercises, intentState, filteredLibrary, continuityProposal,
+    inputs.equipment,
   );
   const planForWrite = { ...plan, workouts: continuity.workouts };
 
@@ -879,6 +922,7 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
   // user would be shown replacements the commit is not going to make.
   const continuity = await withContinuity(
     userId, plan, allExercises, intentState, filteredLibrary, continuityProposal,
+    inputs.equipment,
   );
   const planForWrite = { ...plan, workouts: continuity.workouts };
 

@@ -101,8 +101,8 @@ export function translateSubregion(muscle, librarySubregion, name = null) {
 // One library exercise becomes one POOL entry. equipmentProfiles is already
 // the exact `eq` vocab planEngine filters on, so it passes through (parsing
 // the JSON string getAllExercises returns if needed).
-function parseProfiles(ex) {
-  const p = ex.equipmentProfiles;
+export function parseProfiles(ex) {
+  const p = ex?.equipmentProfiles;
   if (Array.isArray(p)) return p;
   if (typeof p === 'string' && p.length) {
     try { return JSON.parse(p); } catch { return []; }
