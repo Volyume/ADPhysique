@@ -1400,76 +1400,22 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
-- **OPEN, LOW PRIORITY (2026-08-18) - Android App Links publish only one
-  of the two fingerprints, so a volyume.app/partner link opens the
-  browser rather than the app.** NOT a Play problem and NOT a
-  regression: nothing about the store listing, the release or the
-  running app is affected, and assetlinks.json + deploy-pages.yml were
-  both last modified 2026-07-13, so this predates the 2026-08-18 work
-  entirely. Impact is limited to partner invite links, which have never
-  worked on Android, so real-world impact today is nil. Do it when
-  partner invites actually matter.
-  Found while answering the developer-verification key question.
-  `https://volyume.app/.well-known/assetlinks.json` currently serves
-  exactly ONE fingerprint:
-  `1B:5C:F2:34:32:DD:7A:E2:C4:D5:07:51:E0:54:35:70:9C:8A:3B:8E:44:28:BC:D9:B0:8C:B1:F4:E7:79:AE:2E`
-  The committed template (`public/.well-known/assetlinks.json`) expects
-  TWO - the Play app signing cert and the upload cert - and
-  deploy-pages.yml fills them from the `PLAY_APP_SIGNING_SHA256` secret
-  and the keystore secret respectively. Only one landed. INFERRED, not
-  directly observed: the injector builds [play, upload] deduped, and the
-  keystore secrets are provably set (build 3359 signed with them), so the
-  computed upload value would always be present - meaning
-  `PLAY_APP_SIGNING_SHA256` is empty and the published value is the
-  upload key. Confirm against the "Inject assetlinks fingerprints" step
-  log of a deploy-pages run before acting on it. Google re-signs every Play install with the app signing
-  key, whose fingerprint is therefore absent - so Android refuses to
-  verify the domain and `https://volyume.app/partner/<CODE>` opens the
-  browser instead of the app for real users. The `volyume://` scheme
-  still works, so this was invisible on sideloaded test builds.
-  NOT the same SHA as Play developer verification (registered
-  2026-08-18, app now live). That one went into the Play Console and
-  publishes the UPLOAD key; this file is served from volyume.app and
-  is read by Android ON THE DEVICE. Play re-signs every install with
-  the APP SIGNING key, so that is the fingerprint this file is missing.
-  FIX (founder supplies one value, then this is an in-repo change):
-  Play Console -> Test and release -> Setup -> App signing -> copy the
-  **App signing key certificate SHA-256**. That fingerprint is PUBLIC by
-  definition (it is published in assetlinks.json), so it does not need to
-  be a secret at all - paste it here and it gets committed straight into
-  `public/.well-known/assetlinks.json`, removing the missing-secret
-  failure mode permanently rather than re-creating it.
-
-- **CLOSED (2026-08-18) - Android developer verification: DONE by the
-  founder, app is live on Play.** Kept for the next time it appears.
-  Was:** Creating the production release fails with "To proceed
-  with this release, all keys should be registered to meet the Android
-  developer verification requirements". This is Google's package-name and
-  signing-key registration programme, deadline **2026-09-30**, after
-  which unregistered packages are removed from Play. It is an account and
-  console requirement, NOT a property of the build: nothing in the repo
-  configures it, and build 3359's own release-signing check passed on the
-  usual upload keystore. It surfaced now only because this is the first
-  release that could be created since the versionCode fix (D111-2).
-  ORDER OF WORK:
-  1. Settings -> Developer account: confirm identity verification is
-     complete. This is the prerequisite for package registration and is
-     the most common cause of this exact error. Google states most
-     developers need no new action because existing Play identity
-     verification already satisfies it.
-  2. Play Console Home -> the registration banner -> the Android
-     developer verification page for `app.volyume`. Google auto-registered
-     about 99% of apps; this one should qualify automatically, holding the
-     only signing key and all installs.
-  3. ONLY if auto-registration failed: Add key -> select the app public
-     certificate -> Get Started -> Google issues a snippet -> the snippet
-     goes in the APK assets folder -> sign and upload. Google notes "You
-     do not need to upload the actual APK" - it proves key ownership, it
-     is not a release. **Step 3 is buildable in-repo: send the snippet and
-     the assets wiring plus a signed APK can be produced from the existing
-     Android workflow.**
-  Sources: https://developer.android.com/developer-verification/guides/google-play-console
-  and https://support.google.com/googleplay/android-developer/answer/16984799
+- **NOTE, NOT A DEFECT (2026-08-18) - Android App Links are not verified,
+  and that is fine.** Recorded so nobody "fixes" it again. The served
+  assetlinks.json carries one fingerprint (the upload key) where the
+  template has two slots, so Android does not auto-open
+  https://volyume.app/partner/<CODE> in the app. That is NOT a broken
+  feature: per src/lib/partners/link.js, the web link is DESIGNED to land
+  on the web/ page that states the derived-signals-only promise and links
+  to the store, for a partner who does not have the app yet, and
+  parseInviteCode accepts the volyume:// scheme link, the web link, or a
+  bare code typed or pasted. Partner invites work today and always have.
+  Adding the Play app signing SHA-256 (Play Console -> Test and release ->
+  Setup -> App signing) would only add the convenience of an already
+  installed user's https link opening the app directly. Worth doing
+  eventually, worth nobody's time now. Raised on 2026-08-18 as a "live
+  defect" purely from the fingerprint count, before reading how invites
+  actually work; that framing was wrong.
 
 - **OPEN (2026-08-18) - DELETE THE iOS PROVISIONING PROFILE. One click,
   blocks every iOS build.** Build iOS (EAS) #146 failed at signing:
