@@ -3,8 +3,8 @@
  *
  * Founder override 2026-06-06: flat pricing replaces the old escalating
  * launch/founders/standard windows. One tier (Pro), two billing periods:
- *   - Monthly  £2.99/month
- *   - Annual   £19.99/year   (about 44% off the monthly rate)
+ *   - Monthly  £1.99/month (reduced from £2.99, founder order 2026-08-18)
+ *   - Annual   £19.99/year   (about 16% off 12x the monthly rate)
  *
  * SKU IDs are the source of truth in code. User-facing prices always come from
  * the active store, never from hardcoded values. SKU IDs must match the
@@ -36,8 +36,8 @@ export const SKU_CATALOGUE = Object.freeze({
       id: 'pro_monthly',
       tier: 'pro',
       period: 'monthly',
-      priceText: '£2.99/month',
-      priceNumber: 2.99,
+      priceText: '£1.99/month',
+      priceNumber: 1.99,
     }),
     annual: Object.freeze({
       id: 'pro_annual',

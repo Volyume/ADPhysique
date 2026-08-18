@@ -1,7 +1,8 @@
 /**
  * Tests for the consumer SKU catalogue. Values match the 2026-06-06
- * founder override: flat pricing, Pro at £2.99/month or £19.99/year,
- * the old launch/founders/standard windows retired.
+ * founder override (flat pricing, the old launch/founders/standard
+ * windows retired) as re-priced 2026-08-18: Pro at £1.99/month or
+ * £19.99/year.
  */
 import {
   SKU_CATALOGUE,
@@ -28,10 +29,10 @@ describe('SKU catalogue (flat pricing, monthly + annual)', () => {
     expect(SKU_CATALOGUE.pro.annual.id).toBe('pro_annual');
   });
 
-  test('UK prices are the flat £2.99/month and £19.99/year', () => {
-    expect(SKU_CATALOGUE.pro.monthly.priceNumber).toBe(2.99);
+  test('UK prices are the flat £1.99/month and £19.99/year', () => {
+    expect(SKU_CATALOGUE.pro.monthly.priceNumber).toBe(1.99);
     expect(SKU_CATALOGUE.pro.annual.priceNumber).toBe(19.99);
-    expect(SKU_CATALOGUE.pro.monthly.priceText).toBe('£2.99/month');
+    expect(SKU_CATALOGUE.pro.monthly.priceText).toBe('£1.99/month');
     expect(SKU_CATALOGUE.pro.annual.priceText).toBe('£19.99/year');
   });
 
@@ -59,9 +60,9 @@ describe('Catalogue lookup helpers', () => {
   });
 
   test('priceTextFor returns the formatted price', () => {
-    expect(priceTextFor('pro', 'monthly')).toBe('£2.99/month');
+    expect(priceTextFor('pro', 'monthly')).toBe('£1.99/month');
     expect(priceTextFor('pro', 'annual')).toBe('£19.99/year');
-    expect(priceTextFor('pro')).toBe('£2.99/month');
+    expect(priceTextFor('pro')).toBe('£1.99/month');
   });
 
   test('priceTextFor returns null for non-Pro', () => {
@@ -84,7 +85,7 @@ describe('Catalogue lookup helpers', () => {
     expect(allSkuIds()).toEqual(['pro_monthly', 'pro_annual']);
   });
 
-  test('annual saves roughly 44% over twelve monthly payments', () => {
-    expect(annualSavingsPct()).toBe(44);
+  test('annual saves roughly 16% over twelve monthly payments', () => {
+    expect(annualSavingsPct()).toBe(16);
   });
 });

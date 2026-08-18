@@ -125,8 +125,8 @@ export default function WelcomeScreen({ navigation }) {
 
             <Text style={[styles.trialNote, live.trialNote]}>
               {monthlyPrice
-                ? `No payment card needed. Afterwards it's ${monthlyPrice} a month on ${storeName()}, or carry on free.`
-                : `No payment card needed. Afterwards it's a monthly subscription on ${storeName()}, or carry on free.`}
+                ? `No payment card needed. If you don't subscribe, you keep the free plan below at no cost. Continuing with Pro afterwards costs ${monthlyPrice} a month on ${storeName()}.`
+                : `No payment card needed. If you don't subscribe, you keep the free plan below at no cost. Continuing with Pro afterwards is a monthly subscription on ${storeName()}.`}
             </Text>
 
             <View style={[styles.proCtaRow, live.proCtaRow]}>
