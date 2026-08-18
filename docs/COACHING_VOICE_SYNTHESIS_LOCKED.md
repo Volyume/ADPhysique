@@ -379,23 +379,36 @@ Body:   You picked a goal that involves an aggressive cut.
         These checks are there for the at-risk users that
         calorie-tracking apps have historically harmed.
 
-        For an aggressive cut, Precision Coaching can raise the
-        bar before those checks fire, so a competition prep
-        doesn't get held up at the standard threshold.
+        If you know what you are doing, you can ask Volyume to
+        wait for one more warning sign before it steps in, so a
+        planned hard cut is not paused earlier than it needs to
+        be.
 
         Choose one:
 
-        (•) I'm experienced with aggressive cuts, or I'm working
-            with a coach. Raise the safety threshold from 2
-            signals to 3.
-        ( ) I'd rather keep Volyume's standard safety checks.
+        (•) I've done hard cuts safely before, or I'm working
+            with a coach. Wait for three warning signs instead
+            of two before pausing my cut.
+        ( ) I'm new to this and want Volyume's standard safety
+            checks to apply.
 
-        Either choice keeps the absolute safety floor (eating
-        below the minimum lean-mass energy threshold) in place.
+        Whichever you choose, one limit never moves: Volyume
+        will never coach you below the minimum amount of food
+        your body needs.
         You can change this any time from You -> Goal lock.
 
 CTAs:   [ Continue ]
 ```
+
+AMENDED 2026-08-18 (founder device order: "plain understandable
+English throughout... no jargon"): "raise the safety threshold from
+2 signals to 3" became "wait for three warning signs instead of
+two before pausing my cut", and the closing floor promise dropped
+"absolute safety floor (eating below the minimum lean-mass energy
+threshold)" for "the minimum amount of food your body needs". The
+MECHANISM is unchanged - the detector's 2-signal gate moves to 3 on
+the experienced choice and the FFM floor never moves - only the
+words changed. Guard: goalLockConsent.lockedCopy.guard.test.js.
 
 Rejected: "unhealthy patterns" (banned moral label, Claude's
 inconsistency in its own pass). "We can apply a Goal Lock" (Claude

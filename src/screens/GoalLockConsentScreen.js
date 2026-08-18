@@ -98,8 +98,14 @@ export default function GoalLockConsentScreen({ navigation, route }) {
         <Text style={[styles.body, live.body]}>
           You picked a goal that involves an aggressive cut. Precision Coaching can support that, with one tradeoff you should know about. Volyume has safety checks: if signs of under-eating and rapid weight loss show up together, Precision Coaching holds the calorie target so the cut doesn't get sharper.
         </Text>
+        {/* Founder device order 2026-08-18: plain understandable British
+            English throughout this screen - "threshold"/"signals" jargon
+            replaced with warning-sign counts a user can picture. The
+            MECHANISM is unchanged (the detector's 2-signal gate moves to 3
+            on the experienced choice; the FFM floor never moves). Locked
+            doc amended in the same commit. */}
         <Text style={[styles.body, live.body]}>
-          These checks are there for the at-risk users that calorie-tracking apps have historically harmed. For an aggressive cut, Precision Coaching can raise the bar before those checks fire, so a competition prep doesn't get held up at the standard threshold.
+          These checks are there for the at-risk users that calorie-tracking apps have historically harmed. If you know what you are doing, you can ask Volyume to wait for one more warning sign before it steps in, so a planned hard cut is not paused earlier than it needs to be.
         </Text>
 
         <Text style={[styles.fieldLabel, live.fieldLabel]}>Confirm one of these</Text>
@@ -115,7 +121,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
             {choice === 'advanced' ? <View style={[styles.radioDot, live.radioDot]} /> : null}
           </View>
           <Text style={[styles.optionText, live.optionText]}>
-            I have prior experience managing aggressive cuts safely, or I'm working with a coach. Raise the safety threshold from 2 signals to 3.
+            I've done hard cuts safely before, or I'm working with a coach. Wait for three warning signs instead of two before pausing my cut.
           </Text>
         </Pressable>
 
@@ -135,7 +141,7 @@ export default function GoalLockConsentScreen({ navigation, route }) {
         </View>
 
         <Text style={[styles.body, live.body]}>
-          Either choice keeps the absolute safety floor (eating below the minimum lean-mass energy threshold) in place.
+          Whichever you choose, one limit never moves: Volyume will never coach you below the minimum amount of food your body needs.
         </Text>
 
         <View style={styles.note}>
