@@ -297,6 +297,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     barWeight,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // Founder device order 2026-08-18: publish the measured bottom-chrome
+  // height (rest strip + bottom bar) so the PR toast docks just above the
+  // rest bar's amber line. Read via getState in the handler (no re-render
+  // dependency) and cleared on unmount so a PR fired outside the logger
+  // falls back to the toast's own safe-area offset.
+  const handleBottomChromeLayout = useCallback((e) => {
+    useAppStore.getState().setLoggerBottomInset(Math.round(e?.nativeEvent?.layout?.height ?? 0));
+  }, []);
+  useEffect(() => () => { useAppStore.getState().setLoggerBottomInset(0); }, []);
   // Drop assisted machine regressions from swap suggestions for anyone past
   // their first block. A true beginner keeps them. Unknown experience is treated
   // as non-beginner so an athlete is never offered a crutch.
@@ -3862,7 +3871,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         {/* Phase 2B: the compact rest strip docks HERE, above the bottom
             bar and outside the workspace scroll - rest state is glanceable
             by the thumb without ever pushing the active set down the page
-            (screenshot failure 2). RestTimer self-hides when idle. */}
+            (screenshot failure 2). RestTimer self-hides when idle.
+            Founder device order 2026-08-18: the wrapper measures this whole
+            bottom chrome and publishes the height so the PR toast can dock
+            just ABOVE the rest bar's amber top line instead of covering the
+            header. Measurement only - layout is unchanged (a plain
+            full-width View in the same column). */}
+        <View onLayout={handleBottomChromeLayout}>
         <RestTimer />
 
         {cluster ? null : (
@@ -3887,6 +3902,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             safeBottom={safeBottom}
           />
         )}
+        </View>
 
         {/* Exercise Picker Modal, shared by Add and Swap (see pickerMode) */}
         <ExercisePickerModal
@@ -4957,7 +4973,10 @@ const styles = StyleSheet.create({
   // slightly smaller", calmer against the plain header dots. flexShrink (not
   // flex: 1) so the details chevron hugs the name's end instead of parking
   // at the row's far edge; minWidth: 0 keeps two-line wrap working.
-  exerciseName: { flexShrink: 1, minWidth: 0, ...type.bodyStrong, color: colors.textPrimary, includeFontPadding: false },
+  // Founder device order 2026-08-18: the active exercise name steps down
+  // once more (bodyStrong 16 -> label 13, semibold) - it was overpowering
+  // the outline strip; layout position and weight keep its title role.
+  exerciseName: { flexShrink: 1, minWidth: 0, ...type.label, fontWeight: fontWeight.semibold, color: colors.textPrimary, includeFontPadding: false },
   exerciseNameChevron: { marginTop: 1 },
   swapSafe: { flex: 1, backgroundColor: colors.background },
   swapHeader: {
@@ -5420,7 +5439,9 @@ function buildLiveStyles(t) {
     navTabTextActive: { color: t.colors.primary },
     navTabBadge: { backgroundColor: t.colors.primaryFill },
     navTabBadgeText: { ...t.type.caption, color: t.colors.onPrimary, fontSize: t.fontSize.micro },
-    exerciseName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    // fontWeight is a static token table (not theme-resolved), so the live
+    // mirror reads the same import the frozen block does.
+    exerciseName: { ...t.type.label, fontWeight: fontWeight.semibold, color: t.colors.textPrimary },
     swapSafe: { backgroundColor: t.colors.background },
     swapHeader: { borderBottomColor: t.colors.borderSubtle },
     swapTitle: { ...t.type.title, color: t.colors.textPrimary },

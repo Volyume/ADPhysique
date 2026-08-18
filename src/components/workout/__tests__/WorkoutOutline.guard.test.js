@@ -52,11 +52,14 @@ describe('quiet visual law: completed rows are lines, not celebration panels', (
     expect(rowsBlock).not.toMatch(/track|progressBar|fill.*width.*%/i);
     expect((SRC.match(/progressTrack/g) || []).length).toBeGreaterThan(0);
     expect((SRC.match(/progressTrack: \{/g) || []).length).toBe(1);
-    // Rows carry no border chrome of their own; the outline's only border is
-    // the single hairline separating it from the workspace.
+    // Rows carry no border chrome of their own; the outline's borders are
+    // the bar's own top/bottom hairlines (founder device order 2026-08-18:
+    // borderSubtle read "barely visible" on a real panel, so the bar now
+    // carries colors.border hairlines on BOTH edges plus its own surface -
+    // still no card radius, still nothing per-row).
     const borders = SRC.match(/borderBottomWidth|borderWidth/g) || [];
-    expect(borders.length).toBeLessThanOrEqual(2); // wrap hairline + the upcoming dot outline
-    expect(SRC).toContain('wrap: { borderBottomWidth: 1 }');
+    expect(borders.length).toBeLessThanOrEqual(2); // wrap bottom hairline + the upcoming dot outline
+    expect(SRC).toContain('wrap: { borderTopWidth: 1, borderBottomWidth: 1 }');
   });
 
   test('a complete row reads as a muted check + count, never a green bar', () => {

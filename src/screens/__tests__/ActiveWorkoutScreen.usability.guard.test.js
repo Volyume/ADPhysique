@@ -192,7 +192,10 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
     // shrinks (minWidth: 0) so the chevron hugs its end, drops Android's
     // extra font padding for a true centre line with the dots, and the tap
     // row centres on the same 44dp axis the dots box uses.
-    expect(ACTIVE_WORKOUT).toContain('exerciseName: { flexShrink: 1, minWidth: 0, ...type.bodyStrong, color: colors.textPrimary, includeFontPadding: false }');
+    // Re-pinned 2026-08-18 (founder device order): a second step down,
+    // bodyStrong -> label + semibold, after the 16px name overpowered the
+    // outline strip on the S22 walk. Layout facts stay pinned unchanged.
+    expect(ACTIVE_WORKOUT).toContain('exerciseName: { flexShrink: 1, minWidth: 0, ...type.label, fontWeight: fontWeight.semibold, color: colors.textPrimary, includeFontPadding: false }');
     expect(ACTIVE_WORKOUT).toMatch(/exerciseNameTap: \{[\s\S]{0,220}?minHeight: workoutLoggerSize\.overflowButton,/);
     expect(ACTIVE_WORKOUT).toContain('name="chevron-down" size={iconSize.sm} color={t.colors.textMuted} style={styles.exerciseNameChevron}');
     expect(ACTIVE_WORKOUT).not.toContain('targetRow:');

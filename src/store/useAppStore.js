@@ -1878,6 +1878,16 @@ const useAppStore = create((set, get) => ({
     const [next, ...rest] = state.prCelebrationQueue;
     return { prCelebration: next, prCelebrationQueue: rest };
   }),
+  // Founder device order 2026-08-18: the PR toast docks at the BOTTOM of
+  // the logger, just above the rest bar's amber top line, not over the
+  // header. The logger measures its bottom chrome (rest strip + bottom
+  // bar, safe area included) via onLayout and publishes the height here;
+  // PRCelebration reads it to anchor the toast. 0 = no logger chrome
+  // mounted (the toast falls back to a plain safe-area bottom offset).
+  loggerBottomInset: 0,
+  setLoggerBottomInset: (h) => set((state) => (
+    state.loggerBottomInset === h ? state : { loggerBottomInset: Number(h) || 0 }
+  )),
 
   // Gym weight units (barbells, dumbbells). kg-only (UK): lbs was removed,
   // so this is always 'kg'. setUnits coerces anything else to 'kg' and any

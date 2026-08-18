@@ -132,7 +132,8 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   // principle (never break the loop - a mid-session celebration must not
   // stand between the user and their next set; no elite logger interrupts
   // logging with a modal takeover). Every in-session celebration is now the
-  // calm top toast the subdued path already proved: gold-accented for real
+  // calm toast (bottom-docked since 2026-08-18, just above the rest bar's
+  // amber line) the subdued path already proved: gold-accented for real
   // records, honest for first lifts, auto-dismissing, tappable to dismiss
   // early, never obscuring the inputs. The BIG celebratory moment
   // (MilestoneBurst above) stays on the summary screen, where the session
@@ -140,11 +141,13 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
   // the identical surface, so the suppression rules are simpler and
   // strictly stronger than before.
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
-  // The toast is an absolutely-positioned overlay, so it must clear the status
-  // bar / notch / Dynamic Island itself: a fixed top offset (spacing.xxl = 32)
-  // sat UNDER the ~59pt Dynamic Island and overlapped the clock on iOS
-  // (founder device report 2026-07-22). Offset by the real safe-area top inset
-  // instead, which also covers the Android status bar.
+  // Founder device order 2026-08-18: the toast docks at the BOTTOM, just
+  // above the rest bar's amber top line, where the thumb and the eye
+  // already are after logging a set - never over the header. The logger
+  // publishes its measured bottom-chrome height (rest strip + bottom bar,
+  // safe area included); outside the logger that reads 0 and the toast
+  // falls back to the safe-area bottom offset.
+  const loggerBottomInset = useAppStore(s => s.loggerBottomInset);
   const insets = useSafeAreaInsets();
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize-
@@ -213,7 +216,7 @@ export default function PRCelebration({ pr, onDismiss, subdued = false }) {
 
   return (
     <TouchableOpacity accessibilityRole="button"
-      style={[styles.toastWrap, { top: insets.top + spacing.xs }]}
+      style={[styles.toastWrap, { bottom: (loggerBottomInset || insets.bottom + spacing.xxl) + spacing.sm }]}
       activeOpacity={0.9}
       onPress={onDismiss}
     >
@@ -236,8 +239,10 @@ const styles = StyleSheet.create({
   },
   toastWrap: {
     position: 'absolute',
-    // `top` is applied inline from the safe-area inset (see render); it must
-    // clear the status bar / Dynamic Island, which a fixed value cannot.
+    // `bottom` is applied inline (see render): the logger's measured
+    // bottom-chrome height docks the toast just above the rest bar's amber
+    // line (founder device order 2026-08-18); outside the logger it clears
+    // the home indicator via the safe-area inset instead.
     left: spacing.lg,
     right: spacing.lg,
   },

@@ -31,7 +31,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { spacing } from '../../styles/theme';
+import { spacing, fontWeight } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { workoutLoggerSize } from '../../styles/layout';
 import { selection as hapticSelection } from '../../lib/haptics';
@@ -71,13 +71,16 @@ export default function WorkoutOutline({
   const totalSets = items.reduce((a, it) => a + (it.total || 0), 0);
 
   return (
-    <View style={[styles.wrap, { borderBottomColor: t.colors.borderSubtle }]}>
-      {/* Founder device order 2026-08-17 (taste delegated): the collapsed
-          strip read as a faint caption, not the workout's navigator. It now
-          carries strong primary ink, an amber chevron (the interactive cue),
-          and a 2dp session-progress line beneath - the rest timer's
-          drain-line idiom carrying REAL information (sets done across the
-          session), never a decorative stripe (the NowCard-accent verdict). */}
+    <View style={[styles.wrap, { backgroundColor: t.colors.surface, borderTopColor: t.colors.border, borderBottomColor: t.colors.border }]}>
+      {/* Founder device orders 2026-08-17 + 2026-08-18: the collapsed strip
+          must read as the workout's NAVIGATOR, not a faint caption. Second
+          device verdict ("barely visible... all you've done is added an
+          orange arrow"): the amber chevron + 11px semibold ink alone did not
+          land on a real S22 against the pure-black workspace. The strip is
+          now a true bar - its own surface, REAL top/bottom hairlines
+          (colors.border, not borderSubtle), a taller 44dp row, 13px
+          semibold ink - plus the 2dp session-progress line (the rest
+          timer's drain-line idiom, real information, never decoration). */}
       <TouchableOpacity
         style={styles.strip}
         onPress={() => { hapticSelection(); setExpanded(v => !v); }}
@@ -91,11 +94,11 @@ export default function WorkoutOutline({
           ? 'Shows every exercise in this workout. Hold to reorder.'
           : 'Shows every exercise in this workout.'}
       >
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={16} color={t.colors.primary} />
-        <Text style={[styles.stripText, { ...t.type.captionStrong, color: t.colors.textPrimary }]} numberOfLines={1}>
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={t.colors.primary} />
+        <Text style={[styles.stripText, { ...t.type.label, fontWeight: fontWeight.semibold, color: t.colors.textPrimary }]} numberOfLines={1}>
           {`Exercise ${currentIndex + 1} of ${items.length}`}
         </Text>
-        <Text style={[styles.count, { ...t.type.num('caption'), color: t.colors.textMuted }]}>
+        <Text style={[styles.count, { ...t.type.num('bodySm'), color: t.colors.textMuted }]}>
           {`${doneSets}/${totalSets} sets`}
         </Text>
       </TouchableOpacity>
@@ -151,8 +154,11 @@ export default function WorkoutOutline({
                   numberOfLines={1}
                   style={[
                     styles.name,
+                    // Founder device order 2026-08-18: list rows a step
+                    // smaller - one uniform 13px size, WEIGHT marks the
+                    // current exercise instead of a size jump.
                     isCurrent
-                      ? { ...t.type.bodyStrong, color: t.colors.textPrimary }
+                      ? { ...t.type.label, fontWeight: fontWeight.semibold, color: t.colors.textPrimary }
                       : complete
                         ? { ...t.type.bodySm, color: t.colors.textSecondary }
                         : { ...t.type.bodySm, color: t.colors.textPrimary },
@@ -176,12 +182,13 @@ export default function WorkoutOutline({
 }
 
 const styles = StyleSheet.create({
-  // One hairline under the whole outline separates navigator from workspace.
-  // Deliberately NO card, NO per-row borders, NO progress bars: the outline
-  // is a list of lines, not a stack of containers.
-  wrap: { borderBottomWidth: 1 },
+  // The outline is a BAR (own surface, real hairlines above and below -
+  // founder device order 2026-08-18: borderSubtle was "barely visible" on a
+  // real panel), but still NO card chrome, NO per-row borders, NO per-row
+  // progress bars inside it: the rows are a list of lines.
+  wrap: { borderTopWidth: 1, borderBottomWidth: 1 },
   strip: {
-    height: ROW_HEIGHT,
+    height: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
