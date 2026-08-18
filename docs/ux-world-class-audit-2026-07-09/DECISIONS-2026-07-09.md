@@ -3024,3 +3024,54 @@ C32 26d1a39b). Rulings made while landing:
   restriction is lifted; the rebuilt renderer composes it on
   story/portrait properly (verified in the review PNGs), so all four
   formats are offered on every card type.
+
+## D111 — Play API-36 block, Android versionCode, iOS signing (2026-08-18)
+
+Three separate release blockers surfaced together on the founder's
+device/console walk. Sources: the Play Console policy notice ("App must
+target Android 16 (API level 36) or higher... your highest non-compliant
+target API level is Android 15"), the founder report "Android version
+needs bumped too it's been stuck at 30 for about 3 weeks", and the
+failing iOS run
+https://github.com/allansdouglas1983-cmyk/ADPhysique/actions/runs/32126449846.
+The API-36 analysis was NOT re-derived: it is taken from
+`docs/release-readiness-2026-08-11/PLATFORM-REQUIREMENTS-2026-08-11.md`
+§1, which audited every Android 16 behaviour change against this repo on
+2026-08-11 and reserved exactly one row for the founder.
+
+- **D111-1 (FOUNDER RULING - large screens at targetSdk 36):** the
+  audit's adaptive-layout row is the one fork it explicitly refused to
+  pre-decide ("must be put to the founder, not pre-decided"). Put as a
+  three-way question; the founder chose **ship API 36 with NO opt-out**.
+  So `PROPERTY_COMPAT_ALLOW_RESTRICTED_RESIZABILITY` is deliberately NOT
+  emitted. Consequence, accepted knowingly: from the next release,
+  Android 16 ignores the portrait lock on any display >= 600dp, so
+  tablets and unfolded foldables render the 82 screens in landscape at
+  tablet width, which the app has never been laid out for. Phones (the
+  entire current user base) are unaffected. Large-screen layout is now
+  real outstanding product work, not a hypothetical.
+- **D111-2 (lead, D33 - versionCode authority moves to CI):** the store
+  sat on versionCode 30 for five weeks because the Android release is
+  built LOCALLY on the GitHub runner (`expo prebuild` + gradle), so
+  eas.json's `appVersionSource: remote` and the production profile's
+  `autoIncrement: true` never applied to it - those govern EAS CLOUD
+  builds, which this repo uses for iOS only. Every AAB carried whatever
+  integer app.json held, last hand-bumped 2026-07-13 (d97d513f), and
+  Play rejects a duplicate versionCode. Fixed at the cause rather than
+  by another hand-bump: build-android.yml now derives the versionCode
+  from `github.run_number` (monotonic, never reused) before prebuild.
+  app.json keeps the value as a FLOOR and the step fails loudly if the
+  run counter ever regresses below it, so the failure mode is a red CI
+  step rather than a silent Play rejection.
+- **D111-3 (no code fix exists for the iOS failure):** build #146 failed
+  signing, not compiling. `ios.associatedDomains` was added 2026-08-11
+  (fc08bd1e); EAS synced the capability onto the App ID but reused the
+  provisioning profile minted 2026-06-10, which predates it. This is the
+  exact GOTCHA already recorded in build-ios.yml's header from
+  2026-06-10. Capability sync does not regenerate an active profile and
+  EAS exposes no non-interactive flag that forces it, so the fix is a
+  one-time credential deletion by the founder. Driving `eas credentials`
+  under expect was considered and REJECTED: its menus are positional and
+  a mis-selection revokes the distribution certificate, which is a worse
+  failure than the one being fixed. The workflow header now records this
+  second occurrence verbatim so the next one is recognised on sight.

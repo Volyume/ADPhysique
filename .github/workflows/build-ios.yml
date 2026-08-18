@@ -19,6 +19,24 @@ name: Build iOS (EAS)
 # expo.dev → project → Credentials (keep the distribution certificate); the
 # next build mints a fresh profile carrying all current App ID capabilities.
 #
+# IT HAPPENED AGAIN (build #146, 2026-08-18). `ios.associatedDomains:
+# ["applinks:volyume.app"]` was added to app.json on 2026-08-11 (commit
+# fc08bd1e, "Campaign 7: platform-requirements fix batch") so the
+# https://volyume.app/partner universal links open the app -- the matching
+# apple-app-site-association is served from public/.well-known/ by
+# deploy-pages.yml. EAS synced the capability onto the App ID ("Synced
+# capabilities: Enabled: Associated Domains, Push Notifications") but REUSED
+# the stored profile minted 2026-06-10, which predates it, and fastlane failed:
+#   Provisioning profile "*[expo] app.volyume AppStore 2026-06-10T11:35:55.490Z"
+#   doesn't support the Associated Domains capability.
+#   ... doesn't include the com.apple.developer.associated-domains entitlement.
+# Same root cause, same one-time fix as above. Capability sync updates the App
+# ID; it does NOT regenerate an already-active profile, and EAS exposes no
+# non-interactive flag that forces it -- so ANY future app.json change adding an
+# iOS capability needs the profile deleted once, by hand, before the next build.
+# Recognise it by the two "doesn't support / doesn't include" lines in the
+# fastlane step. Nothing in this repo needs changing when it appears.
+#
 # The App Store Connect API key (role Admin) lets EAS create the distribution
 # certificate + provisioning profile for you, and submit to TestFlight, with no
 # interactive Apple login. app.json must carry the EAS project id (extra.eas.projectId).

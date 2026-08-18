@@ -1400,6 +1400,42 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **OPEN (2026-08-18) - DELETE THE iOS PROVISIONING PROFILE. One click,
+  blocks every iOS build.** Build iOS (EAS) #146 failed at signing:
+  `Provisioning profile "*[expo] app.volyume AppStore
+  2026-06-10T11:35:55.490Z" doesn't support the Associated Domains
+  capability`. `ios.associatedDomains` was added on 2026-08-11 (fc08bd1e)
+  and EAS enabled the capability on the App ID, but it REUSES the stored
+  profile, which predates the capability. This is the same GOTCHA already
+  recorded in build-ios.yml's header from 2026-06-10. No code change fixes
+  it and there is no non-interactive EAS flag (D111-3).
+  FIX: expo.dev -> Account `volyume` -> Project `volyume` -> Credentials
+  -> iOS -> `app.volyume` -> App Store -> **delete the Provisioning
+  Profile**. KEEP the Distribution Certificate (serial
+  4C11E6AEB51102841B0A3D62B64FDA85) - deleting that one is the damaging
+  mistake. Then re-run Build iOS (EAS); it mints a fresh profile carrying
+  Associated Domains and Push Notifications.
+  Repeat this whenever a future app.json change adds an iOS capability.
+
+- **OPEN (2026-08-18) - Play release still needs a fresh Android build
+  and an upload.** targetSdk is now 36 and the versionCode is derived in
+  CI (D111-1, D111-2), but nothing reaches users until a Build Android
+  run finishes on main and its AAB is uploaded to Play. The next AAB will
+  carry versionCode ~3358 (the workflow run number), not 31 - that jump is
+  expected and permanent; Play only requires the number to increase. Hard
+  deadline: updates submitted on or after **2026-08-31** are rejected
+  below API 36, so this upload cannot slip past that date.
+
+- **NEW PRODUCT WORK (2026-08-18, from D111-1) - Android large-screen
+  layout.** The founder ruled to ship API 36 with NO resizability
+  opt-out, so from the next release Android 16 ignores the portrait lock
+  on displays >= 600dp: tablets and unfolded foldables render all 82
+  screens in landscape at tablet width, which the app has never been laid
+  out for. Phones are unaffected. This is accepted, known breakage, not a
+  defect report - but it is now real outstanding work and should be
+  scheduled as its own campaign.
+
+
 - **STILL BLOCKED after Campaign 15: deploy the `partner-cheer` Edge
   Function.** Retried at the start of C15 and the reason is now precise:
   the Supabase connector is authorised at ORG level but is toggled OFF for
