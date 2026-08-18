@@ -357,6 +357,46 @@ export default function ShareCardScreen({ route }) {
     return out;
   }, [typefaces, wordmark, buildParamsFor, bgPhoto, availableTypes]);
 
+  // VOLYUME-2T (founder device SIGSEGV, 2026-08-18): a modern phone's
+  // gallery photo can be 50MP - decoded that is a ~200MB native bitmap,
+  // and feeding it to Skia raw first exhausted native memory (offscreen
+  // surfaces started returning null: the "Couldn't build the preview"
+  // dead-end) and then segfaulted outright on a retry. Every photo is now
+  // bounded to what the canvas can ever need (2048px longest edge, above
+  // the 1080px export with cover-crop headroom) by one Skia-side resample
+  // BEFORE it becomes the background; the full-size image is released
+  // immediately. Pure Skia, no new dependency; a resample failure falls
+  // back to the original image rather than losing the feature.
+  const MAX_BG_EDGE = 2048;
+  const boundPhotoForCanvas = useCallback((img) => {
+    try {
+      const w = img.width();
+      const h = img.height();
+      const scale = Math.min(1, MAX_BG_EDGE / Math.max(w, h));
+      if (scale >= 1) return img;
+      const dw = Math.max(1, Math.round(w * scale));
+      const dh = Math.max(1, Math.round(h * scale));
+      const surf = Skia.Surface.MakeOffscreen(dw, dh);
+      if (!surf) return img;
+      surf.getCanvas().drawImageRect(
+        img,
+        Skia.XYWHRect(0, 0, w, h),
+        Skia.XYWHRect(0, 0, dw, dh),
+        Skia.Paint(),
+      );
+      surf.flush();
+      const snap = surf.makeImageSnapshot();
+      if (snap) {
+        try { img.dispose?.(); } catch (_) { /* release best-effort */ }
+        return snap;
+      }
+      return img;
+    } catch (e) {
+      logError('ShareCardScreen.boundPhoto', e);
+      return img;
+    }
+  }, []);
+
   // Take a gym photo with the camera to use as the card background (all cards).
   // Camera capture only: uses the CAMERA permission (same as barcode scanning),
   // so no photo-library permission is needed.
@@ -374,12 +414,12 @@ export default function ShareCardScreen({ route }) {
       if (res.canceled || !res.assets?.[0]?.uri) return;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
-      if (img) setBgPhoto(img);
+      if (img) setBgPhoto(boundPhotoForCanvas(img));
       else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
       toast.show("Couldn't take that photo, try again", { variant: 'error' });
     }
-  }, [toast]);
+  }, [toast, boundPhotoForCanvas]);
 
   // Choose an existing photo from the gallery (ELITE-SHARE-SPEC pillar 1:
   // the photo becomes the canvas, and most gym photos already exist). Uses
@@ -398,12 +438,12 @@ export default function ShareCardScreen({ route }) {
       if (res.canceled || !res.assets?.[0]?.uri) return;
       const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
       const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
-      if (img) setBgPhoto(img);
+      if (img) setBgPhoto(boundPhotoForCanvas(img));
       else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
       toast.show("Couldn't open your photos, try again", { variant: 'error' });
     }
-  }, [toast]);
+  }, [toast, boundPhotoForCanvas]);
 
   // Live preview: re-render whenever anything that changes the card changes.
   const [previewB64, setPreviewB64] = useState(null);
