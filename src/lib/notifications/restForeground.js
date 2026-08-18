@@ -83,6 +83,41 @@ export async function stopRestForeground() {
 }
 
 /**
+ * Founder device order 2026-08-18 ("the resting notification never updates
+ * the time"): rests LONGER than the shortService window used to fall back
+ * to the static "Ends HH:MM" sticky, which on a real device reads as a
+ * frozen timer. A ticking countdown does not actually need the foreground
+ * service - the service only buys background JS + reap protection - so the
+ * long-rest path now posts the module's PLAIN chronometer notification
+ * (NotificationManager + setUsesChronometer/setChronometerCountDown, the
+ * OS renders the tick itself with the app fully suspended). No window cap
+ * applies. Resolves false when the module is unavailable (Expo Go / iOS),
+ * in which case the caller keeps the static sticky as the last resort.
+ */
+export async function startRestChronometerNotification({ endsAtMs, exerciseName } = {}) {
+  if (Platform.OS !== 'android') return false;
+  if (!(Number(endsAtMs) > Date.now())) return false;
+  const rtl = getRestTimerLive();
+  if (typeof rtl?.start !== 'function') return false;
+  try {
+    return !!(await rtl.start({
+      endTimeMs: endsAtMs,
+      exerciseName: exerciseName || 'Rest timer',
+      channelId: 'rest-timer',
+      deepLink: 'volyume://active-workout',
+    }));
+  } catch (_) {
+    return false;
+  }
+}
+
+/** Cancel the plain chronometer notification. Safe when nothing is showing. */
+export async function cancelRestChronometerNotification() {
+  const rtl = getRestTimerLive();
+  try { await rtl?.cancel?.(); } catch (_) { /* best-effort */ }
+}
+
+/**
  * E6A exact alarms: whether the end-of-rest alarm can be second-accurate.
  * expo-notifications auto-upgrades to setExactAndAllowWhileIdle the moment
  * the special app access is granted; nothing in restEnd.js changes. True on

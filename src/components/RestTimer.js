@@ -29,6 +29,8 @@ import {
   shouldUseRestForeground,
   startRestForeground,
   stopRestForeground,
+  startRestChronometerNotification,
+  cancelRestChronometerNotification,
   canScheduleExactAlarms,
   requestExactAlarmAccess,
   REST_FOREGROUND_MAX_MS,
@@ -124,6 +126,7 @@ export default function RestTimer() {
       // ref-gated stop would leave that ghost service counting down a
       // skipped rest. Stopping an idle service is a no-op.
       dismissRestTimerNotification().catch(() => {});
+      cancelRestChronometerNotification().catch(() => {});
       fgsActiveRef.current = false;
       stopRestForeground().catch(() => {});
     }
@@ -184,42 +187,65 @@ export default function RestTimer() {
         if (now.restTimerEndsAt !== anchor) return;
         fgsActiveRef.current = true;
         fgsDeadlineRef.current = Date.now() + REST_FOREGROUND_MAX_MS;
-        // The chronometer replaces the sticky; drop any sticky already
-        // posted for this rest so the shade never shows two countdowns.
+        // The service chronometer replaces both fallbacks; drop any sticky
+        // or plain chronometer already posted for this rest so the shade
+        // never shows two countdowns.
         dismissRestTimerNotification().catch(() => {});
+        cancelRestChronometerNotification().catch(() => {});
       } catch (_) {
         fgsActiveRef.current = false;
       }
     })();
   }, [restTimerActive, restTimerEndsAt]);
 
-  // Persistent lock-screen notification with action buttons. Posted ONCE per
-  // rest, and again only when the rest is re-anchored (a ±15s adjust changes
-  // restTimerEndsAt), deliberately NOT re-presented every tick. It shows a
-  // static "Ends HH:MM"; the old per-second re-post flickered the shade, ran
-  // ~half a second behind the in-app timer, and froze at its last value when
-  // the app was backgrounded (JS suspends). Dismissed the moment the rest is no
-  // longer active. The actions (Complete set / ±15s / Skip rest) are handled in
-  // the notifications listener and only act while a workout + rest are live.
+  // Lock-screen notification for rests OUTSIDE the shortService window (or
+  // when the service start fails). Founder device order 2026-08-18 ("the
+  // resting notification never updates the time"): the first choice here is
+  // now the module's PLAIN chronometer notification - the OS renders the
+  // ticking countdown itself with the app suspended, no per-second JS, no
+  // window cap. The static "Ends HH:MM" sticky (with its action buttons)
+  // survives only as the LAST resort, for builds without the native module
+  // (Expo Go). Posted once per rest / re-anchor; the same native id makes a
+  // ±15s adjust an in-place update, no flicker.
   // E6A: silent while the shortService chronometer is carrying the live count.
   useEffect(() => {
     if (!restTimerActive || !restTimerEndsAt) {
       dismissRestTimerNotification().catch(() => {});
+      cancelRestChronometerNotification().catch(() => {});
       return;
     }
     if (fgsActiveRef.current) {
-      // Chronometer host owns the shade within its OS window; past the fixed
-      // deadline the host is gone, so the static sticky takes the shade back.
+      // Service chronometer owns the shade within its OS window; past the
+      // fixed deadline the host is gone, so this path takes the shade back.
       if (Date.now() < fgsDeadlineRef.current) return;
       fgsActiveRef.current = false;
     }
-    const s = useAppStore.getState();
-    const ex = s.workoutExercises?.[s.currentExerciseIndex];
-    presentRestTimerNotification({
-      endsAtMs: restTimerEndsAt,
-      workoutName: s.activeWorkout?.name,
-      exerciseName: ex?.exercise?.name ?? ex?.name,
-    }).catch(() => {});
+    const anchor = restTimerEndsAt;
+    (async () => {
+      const s = useAppStore.getState();
+      const ex = s.workoutExercises?.[s.currentExerciseIndex];
+      const exerciseName = ex?.exercise?.name ?? ex?.name;
+      const posted = await startRestChronometerNotification({ endsAtMs: anchor, exerciseName })
+        .catch(() => false);
+      // Stale-anchor guard (mirrors the service path): the rest may have
+      // ended or been re-anchored while the native call was in flight.
+      const now = useAppStore.getState();
+      if (!now.restTimerActive) {
+        cancelRestChronometerNotification().catch(() => {});
+        return;
+      }
+      if (now.restTimerEndsAt !== anchor) return;
+      if (posted) {
+        // The live chronometer replaces the static sticky if one is up.
+        dismissRestTimerNotification().catch(() => {});
+        return;
+      }
+      presentRestTimerNotification({
+        endsAtMs: anchor,
+        workoutName: s.activeWorkout?.name,
+        exerciseName,
+      }).catch(() => {});
+    })();
   }, [restTimerActive, restTimerEndsAt]);
 
   // Foreground re-sync: JS timers are suspended while the app is backgrounded,
@@ -335,6 +361,7 @@ export default function RestTimer() {
     // Clear the lock-screen notification too, so a sign-out / navigation
     // mid-rest doesn't leave a phantom rest notification on the lock screen.
     dismissRestTimerNotification().catch(() => {});
+    cancelRestChronometerNotification().catch(() => {});
   }, []);
 
   function handleAdjust(delta) {
