@@ -33,17 +33,20 @@ export const WHATS_NEW = {
     { icon: 'speedometer-outline', text: 'Long lists scroll smoother across the app.' },
     { icon: 'apps-outline', text: 'A home screen widget shows your next session or weekly consistency (Android). Add it from Settings.' },
   ],
-  // L04-10 (design audit 2026-07-09): app.json's marketing version is still
-  // 1.2.0 (no bump has happened since), so a new dated key can't safely be
-  // added here yet - guessing the wrong version string means the entry
-  // silently never fires, per this file's own "a version with no entry shows
-  // nothing" contract. When the next version bump ships, add its entry here
-  // with (at least) the features below, which have shipped since 1.2.0 was
-  // written and have never been announced: tap-to-edit/delete on logged sets,
-  // rest-timer lock-screen/notification Skip and +/-15 actions, plan->diary
-  // "mark as eaten" adherence, the micronutrient panel, the connected weekly
-  // story/recap surface. Founder/release-owner call on the version string;
-  // not a design/usability judgement this session can make.
+  // 1.2.1 clears the backlog L04-10 (design audit 2026-07-09) recorded here.
+  // That note could not add a key because it could not know the next version
+  // string, and several releases then shipped under the unchanged 1.2.0 key,
+  // so this sheet never fired for them and none of that work was ever
+  // announced. The lines below are chosen from that backlog plus the work
+  // since, on one rule: a user would notice it without being told where to
+  // look. Everything else stays unannounced rather than padding the list.
+  '1.2.1': [
+    { icon: 'barbell-outline', text: 'Updating your plan now respects the equipment you have. Change it to machines and cables and barbell work is replaced, not carried over.' },
+    { icon: 'volume-medium-outline', text: 'Rest countdown cues now sound with the app minimised, on any rest length.' },
+    { icon: 'create-outline', text: 'Tap any logged set to edit or delete it, so a mistyped number is never stuck.' },
+    { icon: 'medkit-outline', text: 'Movements you need to avoid can be set for a few days, the rest of the block, or indefinitely.' },
+    { icon: 'image-outline', text: 'Share cards have been rebuilt, with your own photo, four formats and a sticker export.' },
+  ],
 };
 
 export default function WhatsNewSheet() {
