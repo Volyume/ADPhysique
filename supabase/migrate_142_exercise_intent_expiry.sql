@@ -43,19 +43,13 @@
 --                    already being written by setExerciseIntent and read by
 --                    getExerciseIntents).
 --
--- Applied remotely:  NO -- founder-gated. Cloud migrations are applied
---                    MANUALLY by the founder on the exact phrase "run against
---                    production" (CLAUDE.md, supabase/README.md). Until this
---                    runs, the push helper's upsert batch is rejected on the
---                    unknown column and logs a PostgREST error (same
---                    tolerated failure mode as migrate_137's `scope` column
---                    before it was applied) -- the app keeps working, no data
---                    is lost, PATTERN_AVOID constraints simply do not sync to
---                    a second device until this runs. ORDER MATTERS
---                    (migrate_129/131/136 precedent): run this BEFORE a build
---                    carrying the PATTERN_AVOID push ships, or every
---                    exercise_intent upsert batch is rejected, not just the
---                    PATTERN_AVOID rows within it.
+-- Applied remotely:  YES -- 2026-08-18, Claude-run on the founder's exact
+--                    phrase "run against production" (project
+--                    sujrylzzxcqxxfygptns, EU-Dublin). Verified after the
+--                    apply: exercise_intent.expires_at present, timestamptz,
+--                    nullable. Applied BEFORE any build carrying the
+--                    PATTERN_AVOID push shipped, per the order note this
+--                    header carried while pending.
 --
 -- Additive:          YES. One nullable column on an existing table. No
 --                    existing column, row, policy, function, index or

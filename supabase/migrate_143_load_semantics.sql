@@ -34,15 +34,12 @@
 --                    via seedExercises.deriveLoadSemantics - the same
 --                    derivation new installs seed with).
 --
--- Applied remotely:  NO - founder-gated. Cloud migrations are applied
---                    MANUALLY by the founder on the exact phrase "run against
---                    production" (CLAUDE.md, supabase/README.md). Until this
---                    runs, syncExercises' custom_exercises upsert batches are
---                    rejected on the unknown column and log a PostgREST error
---                    (the migrate_137/migrate_142 tolerated failure mode) -
---                    the app keeps working offline-first, no data is lost,
---                    custom exercises simply do not sync to a second device
---                    until this runs. Run it in the same batch as migrate_142.
+-- Applied remotely:  YES - 2026-08-18, Claude-run on the founder's exact
+--                    phrase "run against production" (project
+--                    sujrylzzxcqxxfygptns, EU-Dublin), in the same batch as
+--                    migrate_142. Verified after the apply: load_semantics
+--                    present (text, nullable) on BOTH tables, and both named
+--                    CHECK constraints present in pg_constraint.
 --
 -- Additive:          YES. One nullable column on each of two existing tables
 --                    plus one CHECK per table. Nothing existing is altered,

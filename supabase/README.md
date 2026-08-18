@@ -165,6 +165,30 @@ contract must not delegate its authority to a superseded audit.
   and one "Users manage own food_swaps" policy, and `scope` is `text`,
   `NOT NULL`.
 
+- **2026-08-18 BATCH (Claude-run, founder phrase "run against production",
+  project `sujrylzzxcqxxfygptns`): 142 and 143 APPLIED AND VERIFIED, and
+  the 137-141 ledger corrected against the LIVE schema.**
+  - **Pre-apply verification falsified the two stale pending bullets
+    above**: a single read-only information_schema sweep found
+    `exercise_swaps.scope` (137), the `food_swaps` table (138),
+    `routine_exercises.selection_reason` (139), `session_resolutions`
+    (140) and `effective_maintenance_memos` (141) ALL present in
+    production. Those objects were applied at some point after the
+    2026-08-14 session wrote the bullets; the who/when is not resolvable
+    from the repository, so the fact of liveness is recorded here from
+    direct schema verification and the stale rows in the tracker below
+    are corrected in place. The 137/138 bullets above are kept for
+    history of the 2026-08-14 operator incident.
+  - **142** `exercise_intent.expires_at` added. Verified: present,
+    `timestamp with time zone`, nullable YES. Applied BEFORE any build
+    carrying the PATTERN_AVOID push shipped, per its header's order note.
+  - **143** `exercises.load_semantics` + `custom_exercises.load_semantics`
+    added with the four-value CHECK on each. Verified: both columns
+    present (`text`, nullable YES) and both named constraints present in
+    `pg_constraint`.
+  - Both applied via the Supabase MCP `apply_migration` path (recorded in
+    the project's migration history as `migrate_142_exercise_intent_expiry`
+    and `migrate_143_load_semantics`).
 - **072 was never applied and never will be.** Its content was delivered
   by `migrate_118_workouts_recipes_sync_schema_fix.sql` on 2026-07-11; the
   file is kept for history only (its own header says so).
@@ -305,15 +329,18 @@ themselves; add a row here whenever a migration is added.
 | 129 | `migrate_129_mesocycles_deload_week.sql` | `mesocycles.deload_week` so the user's real deload placement can sync. | YES (file header: 2026-08-06, founder GO) |
 | 130 | `migrate_130_revoke_anon_execute_security_definer.sql` | Revokes anon EXECUTE on 34 SECURITY DEFINER functions; authenticated and service_role keep theirs. | YES (file header: 2026-08-06, founder GO) |
 | 131 | `migrate_131_mesocycles_block_ledger.sql` | `mesocycles.block_ledger` jsonb (adaptive mesocycle Stage 6). | YES 2026-08-09, verified |
-| 132 | `migrate_132_planned_muscle_volume_provenance.sql` | Landmark bounds + seed provenance on `planned_muscle_volume` (Campaign 1 P0-1). | **NO - awaiting "run against production"** |
-| 133 | `migrate_133_delete_privacy_pref_rows.sql` | Deletes `@volyume_privacy_prefs` rows that should never have been transmitted (Campaign 1 P0-2). | **NO - awaiting "run against production"** |
-| 134 | `migrate_134_stale_write_triggers.sql` | Refuse-stale-write triggers on the nine unguarded coaching-state tables (Campaign 1 P0-8). | **NO - awaiting "run against production"** |
-| 135 | `migrate_135_coach_outputs_week_unique.sql` | De-duplicates `coach_outputs` per user-week, then a unique index (Campaign 1 review finding 10). | **NO - awaiting "run against production"** |
+| 132 | `migrate_132_planned_muscle_volume_provenance.sql` | Landmark bounds + seed provenance on `planned_muscle_volume` (Campaign 1 P0-1). | **YES - applied 2026-08-12, verified** (row corrected 2026-08-18 against the CURRENT STATUS block, which is the authority) |
+| 133 | `migrate_133_delete_privacy_pref_rows.sql` | Deletes `@volyume_privacy_prefs` rows that should never have been transmitted (Campaign 1 P0-2). | **YES - applied 2026-08-12** (no-op: 0 rows; row corrected 2026-08-18 against the CURRENT STATUS block) |
+| 134 | `migrate_134_stale_write_triggers.sql` | Refuse-stale-write triggers on the nine unguarded coaching-state tables (Campaign 1 P0-8). | **YES - applied 2026-08-12, verified** (row corrected 2026-08-18 against the CURRENT STATUS block) |
+| 135 | `migrate_135_coach_outputs_week_unique.sql` | De-duplicates `coach_outputs` per user-week, then a unique index (Campaign 1 review finding 10). | **YES - applied 2026-08-12** (step 3 silent no-op, see the DEFECT note in the CURRENT STATUS block; row corrected 2026-08-18) |
 | 136 | `migrate_136_exercise_intent.sql` | `exercise_intent`, `exercise_swaps`, `exercise_slot_defaults` - the cloud half of the Campaign 9 exercise-intent layer (local schema v73). Must land BEFORE a build carrying their sync push ships. | **YES - applied 2026-08-12, verified** (this row said "awaiting the phrase" until 2026-08-14; corrected against the CURRENT STATUS block above, which is the authority) |
-| 137 | `migrate_137_exercise_swap_scope.sql` | `exercise_swaps.scope` ('session' \| 'programme'), so a temporary in-workout substitution is distinguishable from a permanent programme replacement. Campaign 16 quality law 1. NULL means the row predates the column; the client's NEGATIVE reading counts only 'programme', so an unknown row can never cost a user an exercise. Local schema v75. | **NO - PENDING.** Authorised by the founder 2026-08-14 with the exact phrase. NOT executed: the Supabase MCP server was not attached to that session's runtime (connector installed, authenticated and fully permitted; the server dropped mid-session). Needs a fresh session - see the note below. |
-| 138 | `migrate_138_food_swaps.sql` | `food_swaps` - the cloud half of the Campaign 17A job 3 food-intent layer (local schema v77). `scope` is `just_this_time` or `persistent`, NOT NULL: a one-off swap ("no chicken in the house tonight") must never teach food dislike, while a standing replacement ("use turkey from now on") legitimately steers future plans. Ship order does not matter; until it runs the table is device-local. | **NO - PENDING.** Authorised by the founder 2026-08-14 in the 17A closeout. NOT executed: no route to EU-Dublin from that session (no Supabase MCP server attached, no CLI, no connection string). Apply in the same batch as 137. |
-| 139 | `migrate_139_routine_exercises_selection_reason.sql` | Adds nullable `routine_exercises.selection_reason` so Campaign 16 selector provenance survives cloud backup and fresh-device restore. Client push retries without the optional column until it exists. | **UNKNOWN - NOT VERIFIED HERE.** Authored by the independent Campaign 16 audit; not executed from that session. |
-| 140 | `migrate_140_session_resolutions.sql` | Campaign 18 explicit `SKIPPED_BY_USER` / `ENDED_EARLY` session resolutions, owner/parent RLS, and deterministic refuse-stale conflict trigger. Renumbered from a colliding draft named 137; local schema counterpart is live. | **NO - PENDING. Founder-gated; DO NOT APPLY without the exact production phrase.** Resolve/verify the pending 137-139 operator state first; 049 is unrelated and remains HELD. |
+| 137 | `migrate_137_exercise_swap_scope.sql` | `exercise_swaps.scope` ('session' \| 'programme'), so a temporary in-workout substitution is distinguishable from a permanent programme replacement. Campaign 16 quality law 1. NULL means the row predates the column; the client's NEGATIVE reading counts only 'programme', so an unknown row can never cost a user an exercise. Local schema v75. | **YES - LIVE, verified 2026-08-18** (`exercise_swaps.scope` present, text, nullable, checked directly against production during the 142/143 batch; the exact apply date/session is not resolvable from the repository - see the 2026-08-18 batch note above). |
+| 138 | `migrate_138_food_swaps.sql` | `food_swaps` - the cloud half of the Campaign 17A job 3 food-intent layer (local schema v77). `scope` is `just_this_time` or `persistent`, NOT NULL: a one-off swap ("no chicken in the house tonight") must never teach food dislike, while a standing replacement ("use turkey from now on") legitimately steers future plans. Ship order does not matter; until it runs the table is device-local. | **YES - LIVE, verified 2026-08-18** (`food_swaps` table present in production, checked directly during the 142/143 batch; apply date/session not resolvable from the repository). |
+| 139 | `migrate_139_routine_exercises_selection_reason.sql` | Adds nullable `routine_exercises.selection_reason` so Campaign 16 selector provenance survives cloud backup and fresh-device restore. Client push retries without the optional column until it exists. | **YES - LIVE, verified 2026-08-18** (`routine_exercises.selection_reason` present in production, checked directly during the 142/143 batch). |
+| 140 | `migrate_140_session_resolutions.sql` | Campaign 18 explicit `SKIPPED_BY_USER` / `ENDED_EARLY` session resolutions, owner/parent RLS, and deterministic refuse-stale conflict trigger. Renumbered from a colliding draft named 137; local schema counterpart is live. | **YES - LIVE, verified 2026-08-18** (`session_resolutions` table present in production, checked directly during the 142/143 batch). 049 is unrelated and remains HELD. |
+| 141 | `migrate_141_effective_maintenance_memos.sql` | Campaign 19 effective-maintenance memo + revalidation marker (cloud half of local v80/v81). | **YES - LIVE, verified 2026-08-18** (`effective_maintenance_memos` table present in production, checked directly during the 142/143 batch). |
+| 142 | `migrate_142_exercise_intent_expiry.sql` | `exercise_intent.expires_at` (timestamptz) - the D107-2 PATTERN_AVOID day-bound duration (local `expires_at_ms`, schema counterpart live). Must land BEFORE a build carrying the PATTERN_AVOID push ships. | **YES - applied 2026-08-18, verified** (Claude-run on the founder phrase; column present, timestamptz, nullable). |
+| 143 | `migrate_143_load_semantics.sql` | `exercises.load_semantics` + `custom_exercises.load_semantics` (text, four-value CHECK) - the D107-2 weight-meaning axis (total / per_hand / assisted / added_bodyweight). | **YES - applied 2026-08-18, verified** (Claude-run, same batch as 142; both columns and both named CHECKs present). |
 
 > Date note: the 2026-08-09 block near the top of this file describes 129 and
 > 130 as "already applied 2026-08-08", while both migration headers record

@@ -2351,6 +2351,8 @@ Founder-side: device-walk checklist in the session report (share
 export to Instagram Stories incl. sticker + light-photo background;
 avoid-pattern set/notice/list/allow-again; dumbbell 20 kg -> 40 kg
 per rep session tonnage; assisted PR fires on lower assistance).
-Cloud batch awaiting the phrase: migrate_142 + migrate_143 (run
-BEFORE the next build ships, or exercise_intent/custom_exercises
-upsert batches soft-fail until run - order note in each header).
+Cloud batch: DONE. migrate_142 + migrate_143 applied and verified
+against production 2026-08-18 on the founder's phrase (Claude-run,
+before any build carrying the new pushes shipped). The same session's
+pre-apply verification found 137-141 already LIVE in production - the
+supabase/README ledger was stale and is corrected in place there.
