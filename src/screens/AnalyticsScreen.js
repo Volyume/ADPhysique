@@ -27,7 +27,7 @@ import useVisualPillar from '../hooks/useVisualPillar';
 import { formatNumber } from '../lib/format';
 import { formatBodyWeight, formatBodyWeightRate } from '../lib/units';
 import { trackPartnerSurfaceView } from '../lib/partners/telemetry';
-import { VOLUME_LANDMARKS, getVolumeStatus, calculateTonnage } from '../lib/algorithms';
+import { VOLUME_LANDMARKS, getVolumeStatus, calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
 import { localWeekStartMs } from '../lib/dayKey';
 import { computeTrainingPillarSummary, buildVisualPillarCopy } from '../lib/progress/pillars';
@@ -383,7 +383,8 @@ export default function AnalyticsScreen({ navigation, route }) {
                     exerciseCount: exerciseIds.length,
                     setCount: mySets.length,
                     workingSetCount: workingSets.length,
-                    tonnage: calculateTonnage(mySets),
+                    // D107-2: per-hand sets count x2, assistance is excluded.
+                    tonnage: calculateTonnage(mySets, null, buildLoadSemanticsById(Object.values(exerciseMap))),
                     exerciseNames,
                     startedAt: w.startedAt,
                     endedAt: w.endedAt,

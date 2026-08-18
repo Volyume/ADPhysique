@@ -53,6 +53,17 @@ const EXERCISE_TYPE_OPTIONS = [
   { key: 'distance', label: 'Distance & time' },
 ];
 
+// D107-2 load semantics (LOAD-SEMANTICS-SPEC): what the entered weight
+// number MEANS. Drives the logger's field label ("per hand" / "Assistance")
+// and the tonnage/PR calculations in algorithms.js. Neutral copy only -
+// "Assistance", never anything body-referencing.
+const LOAD_SEMANTICS_OPTIONS = [
+  { key: 'total', label: 'Total weight' },
+  { key: 'per_hand', label: 'Per hand' },
+  { key: 'assisted', label: 'Assistance' },
+  { key: 'added_bodyweight', label: 'Added weight' },
+];
+
 // saveLabel / actionLabel are aliases for the create-form's save button text
 // (RoutineDetail/ManualBuilder pass saveLabel, ActiveWorkout passes
 // actionLabel). Either works; saveLabel wins if both are given.
@@ -112,6 +123,20 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   // exercise carries the same fields a seeded library exercise does.
   const [createSecondaryMuscles, setCreateSecondaryMuscles] = useState([]);
   const [createExerciseType, setCreateExerciseType] = useState('weight_reps');
+  // D107-2 load semantics: what the entered weight means for this exercise.
+  // Smart-defaulted from equipment/type (dumbbell -> per hand, loaded
+  // bodyweight -> added weight) until the user picks one themselves; an
+  // explicit choice always wins.
+  const [createLoadSemantics, setCreateLoadSemantics] = useState('total');
+  const [createLoadSemanticsTouched, setCreateLoadSemanticsTouched] = useState(false);
+  useEffect(() => {
+    if (createLoadSemanticsTouched) return;
+    setCreateLoadSemantics(
+      createExerciseType === 'weighted_bodyweight' ? 'added_bodyweight'
+        : createEquipment === 'Dumbbell' ? 'per_hand'
+          : 'total',
+    );
+  }, [createEquipment, createExerciseType, createLoadSemanticsTouched]);
   const [creating, setCreating] = useState(false);
   // 2026-07-11 (TASKBOARD "exercise picker first-open fix", D33): on the
   // FIRST open of a session the Android Modal's native window is freshly
@@ -223,6 +248,11 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
         // gets the duration/distance SetEntry schema instead of always
         // defaulting to weight_reps.
         exerciseType: createExerciseType,
+        // D107-2: what the entered weight means (per hand / assistance /
+        // added weight / total). Only meaningful on weight-bearing schemas;
+        // other types store 'total', today's de facto meaning.
+        loadSemantics: (createExerciseType === 'weight_reps' || createExerciseType === 'weighted_bodyweight')
+          ? createLoadSemantics : 'total',
         // SFR is left null/unknown, never a guessed midpoint: the swap and plan
         // engines treat a missing stimulus-to-fatigue ratio as "no data" and
         // skip the SFR scoring term. A hard-coded value (e.g. 3) would make a
@@ -243,6 +273,8 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
           secondaryMuscles: createSecondaryMuscles.length ? createSecondaryMuscles : null,
           equipment: createEquipment,
           exerciseType: createExerciseType,
+          loadSemantics: (createExerciseType === 'weight_reps' || createExerciseType === 'weighted_bodyweight')
+            ? createLoadSemantics : 'total',
         };
       onSelect(newEx);
       onClose();
@@ -385,6 +417,29 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   />
                 ))}
               </View>
+              {/* D107-2: what the entered weight number means, smart-defaulted
+                  from equipment/type. Shown only for weight-bearing schemas -
+                  a timed hold or a distance entry has no weight to describe. */}
+              {(createExerciseType === 'weight_reps' || createExerciseType === 'weighted_bodyweight') && (
+                <>
+                  <Text style={[styles.createLabel, live.createLabel]}>Weight entered as</Text>
+                  <View style={styles.chipRow}>
+                    {LOAD_SEMANTICS_OPTIONS.map(opt => (
+                      <Chip
+                        key={opt.key}
+                        label={opt.label}
+                        selected={createLoadSemantics === opt.key}
+                        onPress={() => {
+                          haptics.selection();
+                          setCreateLoadSemantics(opt.key);
+                          setCreateLoadSemanticsTouched(true);
+                        }}
+                        accessibilityLabel={`Weight entered as: ${opt.label}`}
+                      />
+                    ))}
+                  </View>
+                </>
+              )}
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel={buttonLabel}
                 style={[styles.createSaveBtn, live.createSaveBtn, creating && { opacity: 0.5 }]}

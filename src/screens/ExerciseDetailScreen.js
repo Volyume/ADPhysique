@@ -616,6 +616,19 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             </View>
           )}
 
+          {/* D107-2: the weight-entry convention, stated in one sentence for
+              any exercise whose entered number is not simply the total load.
+              Neutral copy - "assistance", never anything body-referencing. */}
+          {(exercise.loadSemantics === 'per_hand' || exercise.loadSemantics === 'assisted' || exercise.loadSemantics === 'added_bodyweight') && (
+            <Text style={[styles.secMuscleLabel, live.secMuscleLabel]}>
+              {exercise.loadSemantics === 'per_hand'
+                ? 'Weights are entered per hand, one dumbbell or kettlebell of the pair.'
+                : exercise.loadSemantics === 'assisted'
+                  ? 'The weight entered here is the assistance. Less assistance means a stronger set.'
+                  : 'The weight entered here is what you add on top of your own bodyweight.'}
+            </Text>
+          )}
+
           {best1RM > 0 && (
             <View style={[styles.est1RM, live.est1RM]}>
               <Ionicons name="trophy-outline" size={16} color={t.colors.gold} />

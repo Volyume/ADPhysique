@@ -10,7 +10,7 @@ import {
 } from '../lib/database';
 import {
   calculateWeeklyVolume,
-  calculate1RM, calculateTonnage, shouldDeload, buildLast4WeekDeloadBuckets,
+  calculate1RM, calculateTonnage, buildLoadSemanticsById, shouldDeload, buildLast4WeekDeloadBuckets,
 } from '../lib/algorithms';
 import { logError } from '../lib/errorLog';
 import { localDayKey, localWeekStartMs } from '../lib/dayKey';
@@ -183,7 +183,7 @@ export default function useProgressData() {
     }
   }
 
-  async function loadMesocycle(workouts, sets, _exMap, isCurrentRequest = () => true) {
+  async function loadMesocycle(workouts, sets, exMap, isCurrentRequest = () => true) {
     try {
       const mesoRows = await getAllMesocycles(user.id);
       let active = mesoRows.find(m => m.isActive === 1 || m.isActive === true) ?? null;
@@ -199,6 +199,8 @@ export default function useProgressData() {
       // {value, label, color} point format.
       const bars = [];
       const now = Date.now();
+      // D107-2: per-hand sets count x2, assistance is excluded.
+      const loadSemanticsById = buildLoadSemanticsById(Object.values(exMap ?? {}));
       for (let wk = 3; wk >= 0; wk--) {
         const end   = now - wk * WEEK_MS;
         const start = end - WEEK_MS;
@@ -206,7 +208,7 @@ export default function useProgressData() {
           const at = s.createdAt ?? s.created_at ?? 0;
           return at >= start && at < end;
         });
-        const tonnage = calculateTonnage(wkSets);
+        const tonnage = calculateTonnage(wkSets, null, loadSemanticsById);
         bars.push({
           value: Math.round(tonnage),
           label: wk === 0 ? 'Now' : `-${wk}w`,

@@ -76,8 +76,13 @@ describe('C10M: no persisted numeric Est. max exists anywhere in the client', ()
   test('detectPR derives the bar from raw historical sets on every call', () => {
     const ALG = read('lib/algorithms.js');
     const fn = ALG.slice(ALG.indexOf('export function detectPR'));
-    expect(fn.slice(0, 700)).toMatch(/const best1RM = historicalSets\.reduce/);
-    expect(fn.slice(0, 700)).toMatch(/calculate1RM\(s\.weight \|\| 0, s\.actualReps \|\| s\.actual_reps \|\| 0\)/);
+    // Budget widened 700 -> 3800 for D107-2: the assisted-semantics branch
+    // now precedes the best1RM derivation (an assistance number never feeds
+    // a 1RM estimate, so that branch returns before this code). The law is
+    // unchanged: the bar is derived from raw historical sets on every call,
+    // never read from a persisted number.
+    expect(fn.slice(0, 3800)).toMatch(/const best1RM = historicalSets\.reduce/);
+    expect(fn.slice(0, 3800)).toMatch(/calculate1RM\(s\.weight \|\| 0, s\.actualReps \|\| s\.actual_reps \|\| 0\)/);
   });
 });
 

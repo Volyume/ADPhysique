@@ -53,6 +53,7 @@ export default function NowCard({
   isWarmup = false,
   onSubmitComplete,
   exerciseType,
+  loadSemantics = 'total',
   weightStepKg,
   // D87: buildRecordLine() result (or null), passed straight to SetEntry.
   recordLine = null,
@@ -190,6 +191,7 @@ export default function NowCard({
         isWarmup={isWarmup}
         onSubmitComplete={onSubmitComplete}
         exerciseType={exerciseType}
+        loadSemantics={loadSemantics}
         weightStepKg={weightStepKg}
         recordLine={recordLine}
         compact

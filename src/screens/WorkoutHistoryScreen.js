@@ -23,7 +23,7 @@ import SearchBar from '../components/SearchBar';
 import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets } from '../lib/database';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
-import { calculateTonnage } from '../lib/algorithms';
+import { calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
 import { formatNumber, formatWithUnit } from '../lib/format';
 import { workoutDayMs, workoutDayKey, calendarRelativeLabel } from '../lib/workoutDate';
 import { formatLoggedSet } from '../lib/workoutHelpers';
@@ -175,7 +175,8 @@ export default function WorkoutHistoryScreen({ navigation }) {
           setCount: mySets.length,
           workingSetCount: workingSets.length,
           exerciseCount: exerciseIds.length,
-          tonnage: calculateTonnage(mySets),
+          // D107-2: per-hand sets count x2, assistance is excluded.
+          tonnage: calculateTonnage(mySets, null, buildLoadSemanticsById(allExercises)),
           exerciseNames,
           allExerciseNames,
           muscleGroup: classifyMuscleGroup(primaryMuscles),

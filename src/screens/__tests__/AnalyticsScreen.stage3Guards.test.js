@@ -107,7 +107,10 @@ describe('Week-boundary unification: no production caller uses the rolling defau
     }
     expect(callers.length).toBe(1);
     expect(callers[0].file).toBe('src/screens/LiftProgressScreen.js');
-    expect(callers[0].src).toMatch(/buildWeeklyLoadSeries\(sets, \{ exerciseTypeById, weekBoundary: 'monday' \}\)/);
+    // Re-pinned for D107-2 load semantics: the call now also passes the
+    // per-exercise weight-meaning map; the LAW (one production caller,
+    // Monday-anchored) is unchanged.
+    expect(callers[0].src).toMatch(/buildWeeklyLoadSeries\(sets, \{ exerciseTypeById, loadSemanticsById, weekBoundary: 'monday' \}\)/);
   });
 
   test('the landing itself carries no rolling-week construct (re-verified, Stage 2 already pins this)', () => {

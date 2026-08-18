@@ -2598,7 +2598,55 @@ const SCHEMA_MIGRATIONS = [
   [
     'ALTER TABLE exercise_intent ADD COLUMN expires_at_ms INTEGER',
   ],
+  // D107-2 load semantics (LOAD-SEMANTICS-SPEC): what the ENTERED weight
+  // number means per exercise - 'total' (default), 'per_hand' (two-implement
+  // dumbbell/kettlebell work, one hand's weight), 'assisted' (assistance
+  // stack, less is stronger) or 'added_bodyweight' (external addition to a
+  // bodyweight movement). Nullable + read-defaulted to 'total', so every
+  // existing row and every custom exercise keeps today's de facto meaning -
+  // nothing silently changes. The backfill classifies CANONICAL rows only
+  // (is_custom = 0) via the same deriveLoadSemantics the seed uses, so a
+  // fresh install and an upgraded one agree exercise-for-exercise.
+  // Historical workout data is NEVER rewritten: semantics apply at read
+  // time from the exercise definition (calculateTonnage / detectPR in
+  // algorithms.js). Cloud counterpart: supabase/migrate_143_load_semantics.sql
+  // (NOT applied; founder-gated).
+  [
+    'ALTER TABLE exercises ADD COLUMN load_semantics TEXT',
+    migrateLoadSemanticsBackfill,
+  ],
 ];
+
+// Backfill canonical exercises' load_semantics from the seed's own
+// derivation (single source of truth in seedExercises.js - lazy require to
+// avoid the import cycle; both modules are fully loaded by migration time).
+// The local custom_exercises mirror table gains the column here too, guarded
+// separately: migration-window test fixtures build only the tables their
+// target migration touches (their documented convention), and a genuinely
+// missing table on a real device would have failed far earlier migrations
+// first. Best-effort by design - a failed backfill leaves rows NULL, which
+// every reader treats as 'total', today's behaviour.
+async function migrateLoadSemanticsBackfill(d) {
+  try {
+    await d.execAsync('ALTER TABLE custom_exercises ADD COLUMN load_semantics TEXT');
+  } catch (_e) { /* duplicate column (re-run) or fixture without the mirror table */ }
+  try {
+    // eslint-disable-next-line global-require
+    const { deriveLoadSemantics } = require('./seedExercises');
+    const rows = await d.getAllAsync(
+      'SELECT id, name, equipment, exercise_type AS exerciseType FROM exercises WHERE is_custom = 0',
+    );
+    for (const r of rows ?? []) {
+      const sem = deriveLoadSemantics(r);
+      if (sem !== 'total') {
+        await d.runAsync('UPDATE exercises SET load_semantics = ? WHERE id = ?', [sem, r.id]);
+      }
+    }
+    await d.runAsync("UPDATE exercises SET load_semantics = 'total' WHERE load_semantics IS NULL");
+  } catch (e) {
+    logWarn('database.migrateLoadSemanticsBackfill', e?.message || String(e));
+  }
+}
 
 async function migrateProgressPhotoMetaUserScope(d) {
   const cols = await d.getAllAsync('PRAGMA table_info(progress_photo_meta)').catch(() => []);
@@ -2931,9 +2979,9 @@ export async function insertExerciseWithId(id, data) {
        stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at,
        exercise_category, increment_kg,
        equipment_category, machine_type, force, laterality, difficulty,
-       machine_ok, home_ok, cue, equipment_profiles, exercise_type)
+       machine_ok, home_ok, cue, equipment_profiles, exercise_type, load_semantics)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.name,
@@ -2963,6 +3011,9 @@ export async function insertExerciseWithId(id, data) {
       data.cue ?? null,
       data.equipmentProfiles ? JSON.stringify(data.equipmentProfiles) : null,
       data.exerciseType ?? 'weight_reps',
+      // D107-2: what the entered weight means. 'total' is today's de facto
+      // meaning, so an omitted value changes nothing.
+      data.loadSemantics ?? 'total',
     ],
   );
   _invalidateExercisesCache();
@@ -9136,8 +9187,8 @@ export async function insertOrUpdateExerciseFromCloud(e) {
       (id, name, primary_muscle, secondary_muscles, equipment, movement_pattern,
        compound_isolation, default_rep_min, default_rep_max, fatigue_cost,
        stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at,
-       exercise_category, increment_kg, exercise_type)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       exercise_category, increment_kg, exercise_type, load_semantics)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       e.id, e.name,
       e.primary_muscle ?? null, secondary,
@@ -9150,6 +9201,9 @@ export async function insertOrUpdateExerciseFromCloud(e) {
       _tsToMs(e.created_at) ?? now, now,
       e.exercise_category ?? 'compound', e.increment_kg ?? 2.5,
       e.exercise_type ?? 'weight_reps',
+      // D107-2: absent from pre-migrate_143 cloud payloads; 'total' is the
+      // pre-semantics meaning, matching the exercise_type default pattern.
+      e.load_semantics ?? 'total',
     ],
   );
   _invalidateExercisesCache();

@@ -49,11 +49,11 @@ function setTimestamp(s) {
  *    one definition.
  *
  * @param {Array<object>} sets - completed workout sets
- * @param {{weeks?: number, now?: number, exerciseTypeById?: object|null, weekBoundary?: ('rolling'|'monday')}} [opts]
+ * @param {{weeks?: number, now?: number, exerciseTypeById?: object|null, loadSemanticsById?: object|null, weekBoundary?: ('rolling'|'monday')}} [opts]
  * @returns {Array<{value: number, weeksAgo: number}>}
  */
 export function buildWeeklyLoadSeries(sets, {
-  weeks = DEFAULT_LOAD_WEEKS, now = Date.now(), exerciseTypeById = null, weekBoundary = 'rolling',
+  weeks = DEFAULT_LOAD_WEEKS, now = Date.now(), exerciseTypeById = null, loadSemanticsById = null, weekBoundary = 'rolling',
 } = {}) {
   const n = clampInt(weeks, 1, MAX_LOAD_WEEKS, DEFAULT_LOAD_WEEKS);
 
@@ -79,7 +79,7 @@ export function buildWeeklyLoadSeries(sets, {
       bins[idx].push(s);
     }
     return bins.map((binSets, i) => ({
-      value: Math.round(calculateTonnage(binSets, exerciseTypeById)),
+      value: Math.round(calculateTonnage(binSets, exerciseTypeById, loadSemanticsById)),
       weeksAgo: n - 1 - i,
     }));
   }
@@ -93,7 +93,7 @@ export function buildWeeklyLoadSeries(sets, {
     bins[n - 1 - weeksAgo].push(s);
   }
   return bins.map((binSets, i) => ({
-    value: Math.round(calculateTonnage(binSets, exerciseTypeById)),
+    value: Math.round(calculateTonnage(binSets, exerciseTypeById, loadSemanticsById)),
     weeksAgo: n - 1 - i,
   }));
 }

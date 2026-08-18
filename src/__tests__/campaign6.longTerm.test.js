@@ -237,7 +237,12 @@ describe('PHASES 10 + 11: the mature record system (D97-18)', () => {
     expect(src).toMatch(/export function isE1rmEligibleRow/);
     const fn = src.slice(src.indexOf('export function detectPR'));
     expect(fn.slice(0, 900)).toMatch(/if \(!isE1rmEligibleRow\(newSet\)\) return prs;/);
-    expect(fn.slice(0, 1400)).toMatch(/if \(!isE1rmEligibleRow\(s\)\) return best;/);
+    // Budget widened 1400 -> 3800 for D107-2: the assisted-semantics branch
+    // (its own early-returning block, no 1RM estimates involved) now sits
+    // between the eligibility gate and the best1RM reduce. The law itself
+    // is unchanged and still pinned: history rows feed the estimated-max
+    // bar only through the eligibility filter.
+    expect(fn.slice(0, 3800)).toMatch(/if \(!isE1rmEligibleRow\(s\)\) return best;/);
   });
 
   test('P11-2: the progress PR tile mirrors the live detector (baseline, warm-ups, exercise type)', () => {

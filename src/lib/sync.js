@@ -261,6 +261,11 @@ export async function syncExercises(supabaseUserId, _opts = {}) {
       exercise_type: e.exerciseType ?? 'weight_reps', // migrate_091; mirrors
       // insertOrUpdateExerciseFromCloud's read-side default so a custom
       // exercise's type round-trips through sign-out/sign-in.
+      // D107-2: column added by migrate_143, founder-gated. Until it runs
+      // the upsert batch fails soft with a logged PostgREST error (the
+      // migrate_142/migrate_137 tolerated mode) - device data is safe and
+      // the next sync after the migration lands it.
+      load_semantics: e.loadSemantics ?? 'total',
       updated_at: new Date(e.updatedAt ?? e.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
     }));
     for (let i = 0; i < rows.length; i += 200) {

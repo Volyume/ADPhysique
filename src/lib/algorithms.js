@@ -153,10 +153,39 @@ export function calculate1RM(weight, reps) {
 // keep byte-identical behaviour.
 const NON_LOAD_EXERCISE_TYPES = new Set(['distance', 'duration']);
 
-export function calculateTonnage(sets, exerciseTypeById = null) {
+// D107-2 load semantics (LOAD-SEMANTICS-SPEC): what the entered weight
+// number MEANS per exercise. `loadSemanticsById` (optional) maps
+// exerciseId -> load_semantics; absent map or unknown id reads 'total',
+// which is byte-identical to the pre-semantics behaviour.
+//   per_hand: the entered weight is ONE of two implements, so real load per
+//     rep is weight x 2.
+//   assisted: the entered weight is the machine's ASSISTANCE, not load.
+//     EXCLUDED from tonnage entirely - counting bodyweight minus assistance
+//     would pull the user's bodyweight into training analytics, which is
+//     ED-adjacent and out (spec v1 law; any change is a founder question).
+//   added_bodyweight: external addition only, counted as entered (the
+//     bodyweight component is deliberately NOT estimated - same law).
+export function loadMultiplierFor(semantics) {
+  if (semantics === 'per_hand') return 2;
+  if (semantics === 'assisted') return 0;
+  return 1;
+}
+
+/** Build the exerciseId -> load_semantics map from any exercise list. */
+export function buildLoadSemanticsById(exercises) {
+  const out = {};
+  for (const e of exercises ?? []) {
+    if (e?.id) out[e.id] = e.loadSemantics ?? e.load_semantics ?? 'total';
+  }
+  return out;
+}
+
+export function calculateTonnage(sets, exerciseTypeById = null, loadSemanticsById = null) {
   return sets.reduce((total, s) => {
     if (isHardSet(s) && isLoadBearingSet(s, exerciseTypeById)) {
-      total += (s.weight || 0) * (s.actualReps || s.actual_reps || 0);
+      const id = s.exerciseId ?? s.exercise_id;
+      const mult = loadSemanticsById ? loadMultiplierFor(loadSemanticsById[id]) : 1;
+      total += (s.weight || 0) * (s.actualReps || s.actual_reps || 0) * mult;
     }
     return total;
   }, 0);
@@ -183,13 +212,13 @@ function isLoadBearingSet(set, exerciseTypeById) {
 // swapped out or removed still count towards the total (WK-2), instead of the
 // in-memory exercise list which drops them. Tolerant of camelCase (in-memory)
 // and snake_case (DB row) set_type.
-export function summariseWorkoutSets(sets) {
+export function summariseWorkoutSets(sets, { exerciseTypeById = null, loadSemanticsById = null } = {}) {
   const list = Array.isArray(sets) ? sets : [];
   const workingSetCount = list.filter(s => (s.setType ?? s.set_type) !== 'warmup').length;
   return {
     totalSets: list.length,
     workingSetCount,
-    tonnage: calculateTonnage(list),
+    tonnage: calculateTonnage(list, exerciseTypeById, loadSemanticsById),
   };
 }
 
@@ -367,6 +396,52 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
   // estimated-max record - its rep count is a sum of efforts.
   if (!isE1rmEligibleRow(newSet)) return prs;
 
+  // D107-2 load semantics: on an assistance machine the entered weight is
+  // the ASSISTANCE, so every ordinary comparison INVERTS - less is
+  // stronger. Handled in its own branch: Epley on an assistance number is
+  // meaningless (no 1RM estimate), heavier assistance is never progress
+  // (no heaviest-weight record), and the two records that DO make sense
+  // are lower assistance at no fewer reps, and more reps at the same
+  // assistance. per_hand and added_bodyweight compare like with like on
+  // the entered number and fall through unchanged.
+  const semantics = exercise?.loadSemantics ?? exercise?.load_semantics ?? 'total';
+  if (semantics === 'assisted') {
+    const eligible = historicalSets.filter(
+      s => (s.weight || 0) > 0 && (s.actualReps || s.actual_reps || 0) > 0,
+    );
+    if (!eligible.length) return prs;
+    const lowestAssistance = eligible.reduce(
+      (best, s) => Math.min(best, s.weight || Infinity), Infinity,
+    );
+    const repsAtLowest = eligible
+      .filter(s => Math.abs((s.weight || 0) - lowestAssistance) < 0.1)
+      .reduce((best, s) => Math.max(best, s.actualReps || s.actual_reps || 0), 0);
+    if (weight < lowestAssistance - 0.001 && reps >= repsAtLowest) {
+      prs.push({
+        type: 'least_assistance',
+        weight,
+        value: weight,
+        previousValue: lowestAssistance,
+        reps,
+        label: `New best: ${weight}${units} assistance × ${reps} reps`,
+      });
+    }
+    const maxRepsAtSame = eligible
+      .filter(s => Math.abs((s.weight || 0) - weight) < 0.1)
+      .reduce((best, s) => Math.max(best, s.actualReps || s.actual_reps || 0), 0);
+    if (reps > maxRepsAtSame && maxRepsAtSame > 0) {
+      prs.push({
+        type: 'most_reps_at_weight',
+        weight,
+        value: reps,
+        previousValue: maxRepsAtSame,
+        reps,
+        label: `Most reps at ${weight}${units} assistance: ${reps} reps`,
+      });
+    }
+    return prs;
+  }
+
   const new1RM = calculate1RM(weight, reps);
 
   const best1RM = historicalSets.reduce((best, s) => {
@@ -424,6 +499,9 @@ export function detectPR(newSet, historicalSets, exercise, units = 'kg') {
 const PR_TYPE_RANK = {
   '1rm_estimate': 3,
   heaviest_weight: 2,
+  // D107-2: the assisted counterpart of a heaviest-weight record (lower
+  // assistance at no fewer reps) carries the same significance.
+  least_assistance: 2,
   most_reps_at_weight: 1,
 };
 

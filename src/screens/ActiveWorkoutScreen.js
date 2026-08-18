@@ -57,6 +57,7 @@ import {
   detectPR,
   bestPRPerExercise,
   summariseWorkoutSets,
+  buildLoadSemanticsById,
   MUSCLE_DISPLAY_NAMES,
   generateDeloadPrescription,
   defaultIncrement,
@@ -2771,7 +2772,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       } catch (_) {
         allSets = snapshotExercises.flatMap(e => e.sets || []);
       }
-      const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(allSets);
+      // D107-2 load semantics: the session's stored totalVolume counts a
+      // per-hand dumbbell set as weight x 2 and leaves assistance out
+      // entirely. Built from the full (cached) library so sets on an
+      // exercise later swapped out of the plan still classify correctly;
+      // a read failure falls back to no map, which reads every set as
+      // 'total' - the pre-semantics behaviour.
+      let loadSemanticsById = null;
+      try {
+        loadSemanticsById = buildLoadSemanticsById(await getAllExercises());
+      } catch (_) { /* fall back to unmapped totals */ }
+      const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(allSets, { loadSemanticsById });
       const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);
       const sessionName = shareSessionName(null, exerciseNames);
       const workoutUpdate = {
@@ -3132,7 +3143,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     units,
     isWarmup: currentSet.setType === 'warmup',
     exerciseType: activeExerciseType,
-  }), [currentSet.weight, currentSet.reps, currentSet.setType, allTimeSets, loggedSets, units, activeExerciseType]);
+    // D107-2: the assisted inversion must run on BOTH sides of the D87
+    // agreement contract (this line and the on-log detectPR call).
+    loadSemantics: exercise?.loadSemantics ?? 'total',
+  }), [currentSet.weight, currentSet.reps, currentSet.setType, allTimeSets, loggedSets, units, activeExerciseType, exercise?.loadSemantics]);
 
   const handleCurrentSetChange = useCallback((next) => {
     if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
@@ -3554,6 +3568,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                         units={units}
                         progressNum={countProgressSets(loggedSets.slice(0, i + 1))}
                         exerciseType={activeExerciseType}
+                        loadSemantics={exercise?.loadSemantics || 'total'}
                         onEdit={openEditSet}
                         onDelete={openDeleteFromMenu}
                         isEditing={editingSet != null && editingSet.id === s.id}
@@ -3670,6 +3685,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 isWarmup={isWarmupSet}
                 onSubmitComplete={handleCompleteSetPress}
                 exerciseType={activeExerciseType}
+                loadSemantics={exercise?.loadSemantics || 'total'}
                 weightStepKg={exercise?.incrementKg || exercise?.increment_kg
                   || defaultIncrement(parseFloat(currentSet.weight) || 0, units, exercise?.exerciseCategory || exercise?.exercise_category || 'compound')}
                 recordLine={recordLine}

@@ -44,6 +44,10 @@ jest.mock('../../lib/database', () => ({
   getCompletedWorkoutSets: jest.fn(),
   getActivePlan: jest.fn(),
   getRoutinesForPlan: jest.fn(),
+  // D107-2 load semantics: the tonnage bars now read the exercise library
+  // for the per-exercise weight-meaning map. Empty list = every set reads
+  // 'total', the pre-semantics behaviour these suites were written against.
+  getAllExercises: jest.fn().mockResolvedValue([]),
 }));
 
 import useAppStore from '../../store/useAppStore';

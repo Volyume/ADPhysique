@@ -58,6 +58,7 @@ export function buildRecordLine({
   units = 'kg',
   isWarmup = false,
   exerciseType = 'weight_reps',
+  loadSemantics = 'total',
 } = {}) {
   // Same gate the logger applies before calling detectPR at all.
   const isWeightReps = exerciseType === 'weight_reps' || exerciseType === 'weighted_bodyweight';
@@ -68,6 +69,11 @@ export function buildRecordLine({
   // point, never as a record, so there is no bar to display yet either.
   if (history.length === 0) return null;
 
+  // D107-2: on an assistance machine every comparison inverts (less
+  // assistance is stronger), so the reference set is the LOWEST assistance
+  // (most reps as tie-break) and an estimated max is meaningless.
+  const assisted = loadSemantics === 'assisted';
+
   // The reference set is the best by estimated max: the single honest answer
   // to "what is my best set here", rather than the heaviest weight (which can
   // be a low-rep set) or the most reps (which can be a light one).
@@ -77,6 +83,13 @@ export function buildRecordLine({
     const w = Number(s.weight) || 0;
     const r = repsOf(s);
     if (w <= 0 || r <= 0) continue;
+    if (assisted) {
+      if (!best || w < best.weight - 0.001
+        || (Math.abs(w - best.weight) < 0.1 && r > best.reps)) {
+        best = { weight: w, reps: r };
+      }
+      continue;
+    }
     const e = calculate1RM(w, r);
     if (e > bestE1rm) {
       bestE1rm = e;
@@ -85,7 +98,9 @@ export function buildRecordLine({
   }
   if (!best) return null;
 
-  const bestLabel = `Best ${formatWeight(best.weight)}${units} × ${best.reps}`;
+  const bestLabel = assisted
+    ? `Best ${formatWeight(best.weight)}${units} assistance × ${best.reps}`
+    : `Best ${formatWeight(best.weight)}${units} × ${best.reps}`;
 
   const w = Number(weight) || 0;
   const r = Number(reps) || 0;
@@ -94,8 +109,10 @@ export function buildRecordLine({
     return { isRecord: false, bestLabel, reasons: [], headline: '', a11y: bestLabel };
   }
 
-  // The same call, with the same history, that runs on log.
-  const prs = detectPR({ weight: w, actualReps: r }, history, null, units);
+  // The same call, with the same history, that runs on log. loadSemantics
+  // rides on the exercise argument so the assisted inversion (D107-2) is
+  // the SAME branch on both sides of the D87 agreement contract.
+  const prs = detectPR({ weight: w, actualReps: r }, history, { loadSemantics }, units);
   if (!prs.length) {
     return { isRecord: false, bestLabel, reasons: [], headline: '', a11y: bestLabel };
   }
@@ -111,9 +128,13 @@ export function buildRecordLine({
         ? `Heaviest ever, best is ${formatWeight(pr.previousValue)}${units}`
         : 'Heaviest ever on this exercise');
     } else if (pr.type === 'most_reps_at_weight') {
-      reasons.push(`Most reps at ${formatWeight(w)}${units}, best is ${pr.previousValue}`);
+      reasons.push(assisted
+        ? `Most reps at ${formatWeight(w)}${units} assistance, best is ${pr.previousValue}`
+        : `Most reps at ${formatWeight(w)}${units}, best is ${pr.previousValue}`);
     } else if (pr.type === '1rm_estimate') {
       reasons.push(`Est. max ~${Math.round(pr.value)}${units} beats ${Math.round(pr.previousValue)}${units}`);
+    } else if (pr.type === 'least_assistance') {
+      reasons.push(`Least assistance ever, best is ${formatWeight(pr.previousValue)}${units}`);
     }
   }
 

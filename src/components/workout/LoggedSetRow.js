@@ -44,7 +44,7 @@ import Button from '../Button';
 // renders the editor, it does not persist anything itself. SetEntry.js
 // itself is NOT modified (pinned input contract); this composes with it.
 export const LoggedSetRow = React.memo(function LoggedSetRow({
-  set, units, progressNum, exerciseType = 'weight_reps', onEdit, onDelete,
+  set, units, progressNum, exerciseType = 'weight_reps', loadSemantics = 'total', onEdit, onDelete,
   isEditing = false, editValue, onChangeEditValue, onSaveEdit, onCancelEdit, onDeleteEdit, saving = false, weightStepKg,
 }) {
   // CP-10 stage 3 (theming FINAL batch): live theme (src/hooks/useTheme.js).
@@ -75,6 +75,7 @@ export const LoggedSetRow = React.memo(function LoggedSetRow({
             units={units}
             isWarmup={editValue.setType === 'warmup'}
             exerciseType={exerciseType}
+            loadSemantics={loadSemantics}
             weightStepKg={weightStepKg}
           />
         )}

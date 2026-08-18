@@ -96,7 +96,7 @@ import { getRecentIntakeSummary } from '../lib/food/db';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { logError, logWarn } from '../lib/errorLog';
-import { calculateTonnage, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
+import { calculateTonnage, buildLoadSemanticsById, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
 import { buildReadinessSummary } from '../lib/readinessSummary';
 import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
@@ -1082,7 +1082,10 @@ export default function HomeScreen({ navigation, route }) {
         if (lastSets.length === 0) {
           lastSets = await getWorkoutSetsForWorkout(lastId);
         }
-        const tonnage = calculateTonnage(lastSets);
+        // D107-2: per-hand sets count x2, assistance is excluded. Cached
+        // library read; a failure falls back to unmapped totals.
+        const semantics = await getAllExercises().then(buildLoadSemanticsById).catch(() => null);
+        const tonnage = calculateTonnage(lastSets, null, semantics);
         setLastSessionTonnage(tonnage > 0 ? tonnage : null);
       } else {
         setLastSessionTonnage(null);

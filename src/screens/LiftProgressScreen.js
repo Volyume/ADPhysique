@@ -24,7 +24,7 @@ import VolyumeChart from '../components/VolyumeChart';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { getCompletedWorkoutSets, getAllExercises, getLatestBodyWeight } from '../lib/database';
 import { buildLiftProgressRows, buildExerciseMetricSeries, derivePRIndices } from '../lib/liftProgress';
-import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
+import { MUSCLE_DISPLAY_NAMES, buildLoadSemanticsById } from '../lib/algorithms';
 import { getStrengthLevel, summariseStrengthStanding } from '../lib/strengthStandards';
 import { kgToLbs } from '../lib/units';
 import { buildWeeklyLoadSeries } from '../lib/progressSeries';
@@ -177,7 +177,9 @@ export default function LiftProgressScreen({ navigation }) {
       );
       setMetricSeries(buildExerciseMetricSeries(sets, typeById));
       const exerciseTypeById = Object.fromEntries(typeById);
-      setWeeklyLoad(buildWeeklyLoadSeries(sets, { exerciseTypeById, weekBoundary: 'monday' }));
+      // D107-2: per-hand sets count x2 in weekly load, assistance excluded.
+      const loadSemanticsById = buildLoadSemanticsById(exercises);
+      setWeeklyLoad(buildWeeklyLoadSeries(sets, { exerciseTypeById, loadSemanticsById, weekBoundary: 'monday' }));
       setWeeklyLoadSessionCount(new Set((sets || []).map(s => s.workoutId ?? s.workout_id)).size);
 
       if (bw?.weightKg) {

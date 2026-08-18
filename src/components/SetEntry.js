@@ -17,7 +17,12 @@ const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 // Same inputs, testIDs, keyboards, validation and focus chain - only the
 // arrangement changes. Applies to weight_reps/weighted_bodyweight/reps_only;
 // duration/distance keep their existing layout.
-function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5, recordLine = null, compact = false }) {
+// `loadSemantics` (D107-2): what the entered weight MEANS for this exercise;
+// only the field label changes - "per hand" for two-implement dumbbell work,
+// "Assistance" for assistance machines (neutral, never body-noise), "Added
+// weight" for loaded bodyweight movements. Entry, storage and validation are
+// untouched.
+function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseType = 'weight_reps', weightStepKg = 2.5, recordLine = null, compact = false, loadSemantics = 'total' }) {
   // CP-10 stage 3 (theming batch 2): live theme, same append-after pattern
   // as batch 1. `styles` stays frozen; `live` carries the colour/fontSize/
   // type-bearing keys only.
@@ -64,6 +69,14 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
   // duration / distance swap in time/distance fields. Anything unrecognised
   // falls back to the safe weight_reps layout.
   const showWeightReps = exerciseType === 'weight_reps' || exerciseType === 'weighted_bodyweight';
+  // D107-2: the one place the weight field says what its number means.
+  const weightFieldLabel = loadSemantics === 'per_hand'
+    ? `Weight (${units}, per hand)`
+    : loadSemantics === 'assisted'
+      ? `Assistance (${units})`
+      : loadSemantics === 'added_bodyweight'
+        ? `Added weight (${units})`
+        : `Weight (${units})`;
 
   function adjustFrom(v, field, delta) {
     haptics.selection();
@@ -260,7 +273,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
       {showWeightReps && !compact && (
       <View style={styles.inputRow}>
         <View style={styles.fieldLabelWrap}>
-          <Text style={[styles.fieldLabel, live.fieldLabel]}>Weight ({units})</Text>
+          <Text style={[styles.fieldLabel, live.fieldLabel]}>{weightFieldLabel}</Text>
         </View>
         {weightStepper}
       </View>
@@ -269,7 +282,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
       <View style={styles.compactRow}>
         {showWeightReps && (
           <View style={styles.compactCol}>
-            <Text style={[styles.fieldLabel, live.fieldLabel]}>Weight ({units})</Text>
+            <Text style={[styles.fieldLabel, live.fieldLabel]}>{weightFieldLabel}</Text>
             {weightStepper}
           </View>
         )}

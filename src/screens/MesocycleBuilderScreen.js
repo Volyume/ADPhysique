@@ -18,11 +18,11 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
 import {
-  getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets,
+  getAllMesocycles, getAllWorkouts, getCompletedWorkoutSets, getAllExercises,
   getActivePlan, getRoutinesForPlan,
 } from '../lib/database';
 import { logError, logWarn } from '../lib/errorLog';
-import { calculateTonnage } from '../lib/algorithms';
+import { calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
 import { computeRecoveryEMAs } from '../lib/recoveryEMA';
 import { planHeadingName } from '../lib/planDisplay';
 import useAppStore from '../store/useAppStore';
@@ -110,11 +110,16 @@ export default function MesocycleBuilderScreen({ navigation }) {
   async function loadActiveStats() {
     if (!user?.id) return true;
     try {
-      const [mesoRows, workouts, sets] = await Promise.all([
+      const [mesoRows, workouts, sets, allExercises] = await Promise.all([
         getAllMesocycles(user.id),
         getAllWorkouts(user.id),
         getCompletedWorkoutSets(user.id),
+        // Best-effort: the semantics map only refines tonnage; a library
+        // read failure must not take the whole block dashboard down.
+        getAllExercises().catch(() => []),
       ]);
+      // D107-2: per-hand sets count x2, assistance is excluded.
+      const loadSemanticsById = buildLoadSemanticsById(allExercises);
       const active = mesoRows.find(m => m.isActive === 1 || m.isActive === true);
       if (!active?.startDate) { setActiveStats(null); return true; }
 
@@ -131,7 +136,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
         });
         const currentWeek = getCurrentWeek(active);
         return {
-          value: Math.round(calculateTonnage(wkSets)),
+          value: Math.round(calculateTonnage(wkSets, null, loadSemanticsById)),
           label: `W${wk + 1}`,
           frontColor: wk + 1 === active.deloadWeek ? colors.warning
             : wk + 1 === currentWeek ? colors.primary
