@@ -50,6 +50,7 @@ import InfoTooltip from './InfoTooltip';
 import { getPhotoMetaMap, upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import { logError } from '../lib/errorLog';
 import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
+import { loadWordmarkImage } from '../lib/shareCard/wordmarkImage';
 import {
   buildBeforeAfterParams,
   defaultPair,
@@ -94,10 +95,9 @@ export function buildProgressCardSharePayload(params = {}) {
 // Optional native modules, guarded so the sheet still mounts (tests, or before a
 // rebuild) without them; generation just can't run until a real build provides
 // Skia + the sharing packages (mirrors ShareCardScreen).
-let FileSystem; let Sharing; let Asset; let Skia; let matchFont; let MediaLibrary;
+let FileSystem; let Sharing; let Skia; let matchFont; let MediaLibrary;
 try { FileSystem = require('expo-file-system/legacy'); } catch (_) { /* optional */ }
 try { Sharing = require('expo-sharing'); } catch (_) { /* optional */ }
-try { Asset = require('expo-asset').Asset; } catch (_) { /* optional */ }
 try { MediaLibrary = require('expo-media-library'); } catch (_) { /* optional */ }
 try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont = S.matchFont; } catch (_) { /* optional */ }
 
@@ -223,16 +223,11 @@ export default function BeforeAfterShareSheet({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!Skia || !Asset || !FileSystem) return;
-      try {
-        const asset = Asset.fromModule(WORDMARK);
-        await asset.downloadAsync();
-        const uri = asset.localUri || asset.uri;
-        if (!uri) return;
-        const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-        const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
-        if (!cancelled && img) setWordmark(img);
-      } catch (_) { /* footer falls back to drawn text */ }
+      // VOLYUME-2X: this carried the same release-broken loader the share
+      // screen did (expo-file-system cannot read a bundled asset's resource
+      // name). One shared, scheme-proof loader now serves both.
+      const img = await loadWordmarkImage(Skia, WORDMARK);
+      if (!cancelled && img) setWordmark(img);
     })();
     return () => { cancelled = true; };
   }, []);

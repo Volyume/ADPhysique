@@ -27,6 +27,10 @@ const SCREEN = fs.readFileSync(
   path.join(__dirname, '..', '..', '..', 'screens', 'ShareCardScreen.js'),
   'utf8',
 );
+const SHEET = fs.readFileSync(
+  path.join(__dirname, '..', '..', '..', 'components', 'BeforeAfterShareSheet.js'),
+  'utf8',
+);
 
 describe('the wordmark image is an ornament, not a gate (VOLYUME-2V)', () => {
   test('readiness and the render guard do NOT require the wordmark image', () => {
@@ -37,7 +41,19 @@ describe('the wordmark image is an ornament, not a gate (VOLYUME-2V)', () => {
 
   test('the wordmark loader reports failures instead of swallowing them', () => {
     // The silent `catch (_) {}` is what made this invisible for a whole walk.
-    expect(SCREEN).toMatch(/logError\('ShareCardScreen\.wordmarkLoad'/);
+    // Re-anchored: the loader moved into the shared, scheme-proof helper
+    // (VOLYUME-2X) that both share surfaces now use - it still names every
+    // failure, and no caller may hand-roll the resolve-then-file-read that
+    // could not work in a release build.
+    const LOADER = fs.readFileSync(path.join(__dirname, '..', 'wordmarkImage.js'), 'utf8');
+    expect(LOADER).toMatch(/logError\('wordmarkImage\.load'/);
+    expect(LOADER).toMatch(/Skia\.Data\?\.fromURI/);
+    for (const src of [SCREEN, SHEET]) {
+      expect(src).toContain('loadWordmarkImage(Skia, WORDMARK)');
+      // The hand-rolled resolve-then-read of the MARK is what broke; the
+      // photo paths legitimately read a picked file:// uri and are untouched.
+      expect(src).not.toContain('Asset.fromModule(WORDMARK)');
+    }
   });
 
   test('every card type still draws on the story aspect with wordmark = null', async () => {

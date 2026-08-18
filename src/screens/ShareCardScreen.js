@@ -26,15 +26,15 @@ import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 import { drawShareCard, cardHeight, drawSticker, stickerHeight } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
+import { loadWordmarkImage } from '../lib/shareCard/wordmarkImage';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 
 // Optional native modules, guarded so the screen still mounts (e.g. in tests
 // or before a rebuild) without them; the card just can't render/share until the
 // real build provides Skia + the sharing packages.
-let FileSystem; let Sharing; let Asset; let Skia; let matchFont; let ImagePicker; let MediaLibrary;
+let FileSystem; let Sharing; let Skia; let matchFont; let ImagePicker; let MediaLibrary;
 try { FileSystem = require('expo-file-system/legacy'); } catch (_) { /* optional */ }
 try { Sharing = require('expo-sharing'); } catch (_) { /* optional */ }
-try { Asset = require('expo-asset').Asset; } catch (_) { /* optional */ }
 try { ImagePicker = require('expo-image-picker'); } catch (_) { /* optional */ }
 try { MediaLibrary = require('expo-media-library'); } catch (_) { /* optional */ }
 try { const S = require('@shopify/react-native-skia'); Skia = S.Skia; matchFont = S.matchFont; } catch (_) { /* optional */ }
@@ -174,38 +174,14 @@ export default function ShareCardScreen({ route }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!Skia) return;
-      const toImage = (data) => (data ? Skia.Image.MakeImageFromEncoded(data) : null);
-      try {
-        const asset = Asset.fromModule(WORDMARK);
-        await asset.downloadAsync();
-        const uri = asset.localUri || asset.uri;
-        if (!uri) throw new Error('wordmark asset resolved no uri');
-        let img = null;
-        // Preferred path: read the bundled file directly.
-        if (FileSystem?.readAsStringAsync) {
-          try {
-            const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-            img = toImage(Skia.Data.fromBase64(b64));
-          } catch (e) {
-            logError('ShareCardScreen.wordmarkRead', e, { uri });
-          }
-        }
-        // Fallback: fetch the same uri and hand Skia the raw bytes. Covers
-        // the cases where the legacy file-system read is unavailable or
-        // refuses the bundled asset path on this platform.
-        if (!img) {
-          const res = await fetch(uri);
-          const buf = await res.arrayBuffer();
-          img = toImage(Skia.Data.fromBytes(new Uint8Array(buf)));
-        }
-        if (!img) throw new Error('wordmark decoded to no image');
-        if (!cancelled) setWordmark(img);
-      } catch (e) {
-        // The card still renders and still says volyume.app; this is logged
-        // so a missing mark is visible to us rather than silent.
-        logError('ShareCardScreen.wordmarkLoad', e);
-      }
+      // VOLYUME-2X: the hand-rolled resolve-then-file-read loader that used
+      // to live here could not work in a release build (the bundled asset
+      // resolves to an Android resource name, which expo-file-system
+      // rejects). loadWordmarkImage uses Skia's own loader first and keeps
+      // the old paths as fallbacks; it never throws, and a null mark is a
+      // cosmetic loss only - readiness above does not depend on it.
+      const img = await loadWordmarkImage(Skia, WORDMARK);
+      if (!cancelled && img) setWordmark(img);
     })();
     return () => { cancelled = true; };
   }, []);
