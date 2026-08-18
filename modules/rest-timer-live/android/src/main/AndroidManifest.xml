@@ -17,5 +17,17 @@
             android:name=".WorkoutForegroundService"
             android:exported="false"
             android:foregroundServiceType="shortService" />
+        <!--
+            Founder order 2026-08-18: the rest countdown cues must sound with
+            the app minimised, on ANY rest length. AlarmManager fires this
+            receiver at T-3/-2/-1/0 and it plays the same cached beep the
+            in-app timer uses (RestCueReceiver.kt). Not exported: only our own
+            PendingIntents can trigger it. SCHEDULE_EXACT_ALARM is declared at
+            the app level (app.json); no foreground-service type and no Play
+            Console declaration are involved.
+        -->
+        <receiver
+            android:name=".RestCueReceiver"
+            android:exported="false" />
     </application>
 </manifest>

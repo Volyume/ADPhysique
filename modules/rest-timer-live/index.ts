@@ -22,6 +22,8 @@ type RestForegroundOptions = {
   deepLink?: string;
 };
 
+type RestCueOptions = { endTimeMs: number };
+
 type RestActionEvent = { actionId: string };
 
 type EventSubscriptionLike = { remove: () => void };
@@ -33,6 +35,8 @@ type NativeModuleShape = {
   stopWorkoutForeground?(): Promise<void>;
   startRestForeground?(options: RestForegroundOptions): Promise<boolean>;
   stopRestForeground?(): Promise<void>;
+  scheduleRestCues?(options: RestCueOptions): Promise<boolean>;
+  cancelRestCues?(): Promise<void>;
   canScheduleExactAlarms?(): Promise<boolean>;
   requestExactAlarmAccess?(): Promise<boolean>;
   // D34: Events("onRestTimerAction") makes the native module an EventEmitter,
@@ -221,4 +225,35 @@ export async function requestExactAlarmAccess(): Promise<boolean> {
   } catch (_e) {
     return false;
   }
+}
+
+/**
+ * Whether OS-scheduled rest cues are available (Android with a native build
+ * carrying the 2026-08-18 methods). Older installed builds return false and
+ * callers simply keep the foreground-only beeps.
+ */
+export function isRestCueSchedulingAvailable(): boolean {
+  return isAvailable() && typeof nativeModule?.scheduleRestCues === 'function';
+}
+
+/**
+ * Hand the rest's cue times (T-3/-2/-1/0) to AlarmManager so the beeps sound
+ * with the app suspended. Resolves false when unavailable or the rest has
+ * already ended. Calling again replaces the previous set.
+ */
+export async function scheduleRestCues(options: RestCueOptions): Promise<boolean> {
+  if (!isRestCueSchedulingAvailable()) return false;
+  try {
+    return await nativeModule!.scheduleRestCues!(options);
+  } catch (_e) {
+    return false;
+  }
+}
+
+/** Cancel any scheduled rest cues. Best-effort; safe when none are set. */
+export async function cancelRestCues(): Promise<void> {
+  if (!isRestCueSchedulingAvailable()) return;
+  try {
+    await nativeModule!.cancelRestCues!();
+  } catch (_e) { /* swallow */ }
 }

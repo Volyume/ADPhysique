@@ -37,6 +37,39 @@ class RestTimerLiveModule : Module() {
   private val DEFAULT_CHANNEL_ID = "rest-timer"
   private val VOLYUME_AMBER = 0xFFF59E0B.toInt()
 
+  // Cue key -> offset from the rest END, matching the in-app ladder in
+  // src/components/RestTimer.js (three/two/one at T-3/-2/-1, go at T-0).
+  private val REST_CUES = listOf(
+    "three" to -3000L,
+    "two" to -2000L,
+    "one" to -1000L,
+    "go" to 0L,
+  )
+  private val REST_CUE_REQUEST_BASE = 72001
+
+  private fun restCuePendingIntent(context: Context, cue: String, index: Int): PendingIntent? {
+    val intent = Intent(context, RestCueReceiver::class.java).apply {
+      action = RestCueReceiver.ACTION_CUE
+      putExtra(RestCueReceiver.EXTRA_CUE, cue)
+    }
+    return PendingIntent.getBroadcast(
+      context,
+      REST_CUE_REQUEST_BASE + index,
+      intent,
+      PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+  }
+
+  private fun cancelRestCueAlarms(context: Context) {
+    val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+    REST_CUES.forEachIndexed { index, (cue, _) ->
+      restCuePendingIntent(context, cue, index)?.let {
+        try { alarmManager.cancel(it) } catch (_: Throwable) { }
+        try { it.cancel() } catch (_: Throwable) { }
+      }
+    }
+  }
+
   companion object {
     // D34: Service→module→JS bridge. WorkoutForegroundService lives in a
     // separate process-side class and cannot call sendEvent directly, so the
@@ -251,6 +284,62 @@ class RestTimerLiveModule : Module() {
           action = WorkoutForegroundService.ACTION_STOP
         }
         context.startService(intent)
+        promise.resolve(null)
+      } catch (_: Throwable) {
+        promise.resolve(null)
+      }
+    }
+
+    // ── Rest cues while the app is suspended (founder order 2026-08-18) ──
+    //
+    // The 3-2-1 pips and the go tone are JS timers, so they stop the moment
+    // Android freezes a backgrounded process - which is every rest longer
+    // than the ~170s shortService window, and any rest at all once the phone
+    // is pocketed and the process is cached. These two functions hand the
+    // cue times to AlarmManager instead, and RestCueReceiver plays the SAME
+    // cached WAV the in-app path uses. No service, no wake lock held between
+    // cues, no Play Console declaration (SCHEDULE_EXACT_ALARM is already
+    // declared at app level).
+    //
+    // JS schedules these ONLY while backgrounded and cancels them on return
+    // to the foreground, so a cue is never heard twice.
+    AsyncFunction("scheduleRestCues") { options: Map<String, Any?>, promise: Promise ->
+      try {
+        val context = appContext.reactContext
+        val endTimeMs = (options["endTimeMs"] as? Number)?.toLong() ?: 0L
+        if (context == null || endTimeMs <= System.currentTimeMillis()) {
+          promise.resolve(false)
+          return@AsyncFunction
+        }
+        cancelRestCueAlarms(context)
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val exactAllowed = Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+          alarmManager.canScheduleExactAlarms()
+        var scheduled = 0
+        REST_CUES.forEachIndexed { index, (cue, offsetMs) ->
+          val at = endTimeMs + offsetMs
+          // A cue already in the past (a short rest, or one re-anchored down)
+          // is skipped rather than fired instantly as a stray beep.
+          if (at <= System.currentTimeMillis() + 250L) return@forEachIndexed
+          val pending = restCuePendingIntent(context, cue, index) ?: return@forEachIndexed
+          if (exactAllowed) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+          } else {
+            // Without the special access the cue can drift a little; a
+            // slightly late pip is still better than silence.
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, pending)
+          }
+          scheduled += 1
+        }
+        promise.resolve(scheduled > 0)
+      } catch (_: Throwable) {
+        promise.resolve(false)
+      }
+    }
+
+    AsyncFunction("cancelRestCues") { promise: Promise ->
+      try {
+        appContext.reactContext?.let { cancelRestCueAlarms(it) }
         promise.resolve(null)
       } catch (_: Throwable) {
         promise.resolve(null)

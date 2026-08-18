@@ -31,6 +31,8 @@ import {
   stopRestForeground,
   startRestChronometerNotification,
   cancelRestChronometerNotification,
+  scheduleBackgroundRestCues,
+  cancelBackgroundRestCues,
   canScheduleExactAlarms,
   requestExactAlarmAccess,
   REST_FOREGROUND_MAX_MS,
@@ -127,6 +129,7 @@ export default function RestTimer() {
       // skipped rest. Stopping an idle service is a no-op.
       dismissRestTimerNotification().catch(() => {});
       cancelRestChronometerNotification().catch(() => {});
+      cancelBackgroundRestCues().catch(() => {});
       fgsActiveRef.current = false;
       stopRestForeground().catch(() => {});
     }
@@ -255,7 +258,21 @@ export default function RestTimer() {
   // (it may have already finished while away) instead of resuming frozen.
   useEffect(() => {
     const sub = AppState.addEventListener('change', nextState => {
-      if (nextState !== 'active' || !restTimerActive) return;
+      // Founder order 2026-08-18 ("I want them on and active even if the app
+      // is minimised"): the 3-2-1 pips are JS timers, and Android freezes a
+      // backgrounded process, so leaving the app used to mean silence. On
+      // the way OUT, hand the cue times to the OS (AlarmManager plays the
+      // same cached beeps natively); on the way BACK, cancel them so the
+      // in-app timer owns the sound again and nothing is ever heard twice.
+      if (nextState !== 'active') {
+        if (restTimerActive) {
+          const endsAt = useAppStore.getState().restTimerEndsAt;
+          if (endsAt) scheduleBackgroundRestCues(endsAt).catch(() => {});
+        }
+        return;
+      }
+      cancelBackgroundRestCues().catch(() => {});
+      if (!restTimerActive) return;
       // A2: if rest ELAPSED while backgrounded, the catch-up tick jumps
       // straight to inactive and every end cue used to be skipped. Detect the
       // elapsed case before ticking and fire the GO beat once on return.
@@ -263,7 +280,9 @@ export default function RestTimer() {
       const elapsedWhileAway = endsAt != null && endsAt <= Date.now();
       tickRestTimer();
       if (elapsedWhileAway) {
-        playRestBeep('go');
+        // The OS already played the go tone while we were away; returning to
+        // a finished rest should not play it a second time. The visual
+        // confirmation and the haptic still fire.
         restDone();
         setShowDone(true);
         const t = setTimeout(() => setShowDone(false), 3000);
@@ -362,6 +381,7 @@ export default function RestTimer() {
     // mid-rest doesn't leave a phantom rest notification on the lock screen.
     dismissRestTimerNotification().catch(() => {});
     cancelRestChronometerNotification().catch(() => {});
+    cancelBackgroundRestCues().catch(() => {});
   }, []);
 
   function handleAdjust(delta) {

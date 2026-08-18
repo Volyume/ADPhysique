@@ -135,3 +135,38 @@ export async function requestExactAlarmAccess() {
   if (typeof rtl?.requestExactAlarmAccess !== 'function') return false;
   try { return !!(await rtl.requestExactAlarmAccess()); } catch (_) { return false; }
 }
+
+/**
+ * Founder order 2026-08-18: the countdown cues must sound with the app
+ * minimised, on ANY rest length. JS timers cannot do that - Android freezes
+ * a backgrounded process, and this app runs no long-lived foreground service
+ * (the rest shortService covers ~170s; the `health` type was rejected for
+ * needing a Play declaration - see the native AndroidManifest). These hand
+ * the cue times to AlarmManager, which plays the same cached beeps natively.
+ *
+ * Scheduled ONLY while the app is backgrounded and cancelled the moment it
+ * returns, so a cue is never heard twice. Muted users schedule nothing.
+ */
+export async function scheduleBackgroundRestCues(endsAtMs) {
+  if (Platform.OS !== 'android') return false;
+  if (!(Number(endsAtMs) > Date.now())) return false;
+  try {
+    // eslint-disable-next-line global-require
+    if (require('../../store/useAppStore').default.getState().restSoundsEnabled === false) {
+      return false;
+    }
+  } catch (_) { /* unreadable pref: keep the default-on behaviour */ }
+  const rtl = getRestTimerLive();
+  try {
+    return !!(await rtl?.scheduleRestCues?.({ endTimeMs: Number(endsAtMs) }));
+  } catch (_) {
+    return false;
+  }
+}
+
+/** Cancel any OS-scheduled rest cues. Safe when none are set. */
+export async function cancelBackgroundRestCues() {
+  if (Platform.OS !== 'android') return;
+  const rtl = getRestTimerLive();
+  try { await rtl?.cancelRestCues?.(); } catch (_) { /* best-effort */ }
+}

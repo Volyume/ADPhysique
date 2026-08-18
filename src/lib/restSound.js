@@ -20,6 +20,8 @@
 
 let Audio;
 let FileSystem;
+import { Platform } from 'react-native';
+
 try { Audio = require('expo-av').Audio; } catch (_) {}
 try { FileSystem = require('expo-file-system/legacy'); } catch (_) {}
 
@@ -114,15 +116,30 @@ async function preload() {
     // Allow audio to mix with music apps and play even when the device is on
     // silent. Without setAudioModeAsync, iOS mutes synthesised audio when the
     // ringer switch is silent, which is most lifters at the gym.
+    // Founder device order 2026-08-18 ("I want them on and active even if
+    // the app is minimised"): staysActiveInBackground was FALSE, so expo-av
+    // refused to play the moment the app left the foreground - the rest
+    // beeps were foreground-only by configuration, whatever the timer did.
+    //
+    // Android only, deliberately: on iOS this flag requires the `audio`
+    // UIBackgroundMode in Info.plist, which this app does not declare (and
+    // declaring it is an App Review conversation about genuinely needing
+    // background audio). Setting it true on iOS makes setAudioModeAsync
+    // THROW, which would take the whole preload - and every beep with it -
+    // down. iOS keeps its existing foreground behaviour plus the native
+    // end-of-rest alert.
     try {
       await Audio.setAudioModeAsync({
         playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
+        staysActiveInBackground: Platform.OS === 'android',
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
         allowsRecordingIOS: false,
       });
-    } catch (_) {}
+    } catch (_) {
+      // A rejected audio mode must not stop the beeps being prepared: the
+      // sounds still play in the foreground under the platform default.
+    }
 
     const cache = {};
     for (const [key, spec] of Object.entries(BEEP_SPECS)) {
