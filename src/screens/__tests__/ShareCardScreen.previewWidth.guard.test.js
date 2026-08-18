@@ -31,8 +31,13 @@ describe('ShareCardScreen EP-11/UI-03 responsive preview width guard', () => {
   });
 
   test('the preview height is derived from the responsive width, not the fixed constant', () => {
-    expect(SRC).toMatch(/const previewH = cardHeight\(previewW, isSquare\);/);
-    expect(SRC).not.toMatch(/cardHeight\(PREVIEW_DISPLAY_W, isSquare\)/);
+    // Re-pinned for Campaign 30 (D108 pillar 3): the height expression grew
+    // a sticker branch and the aspect preset argument, but the LAW is
+    // unchanged - every branch derives from the responsive previewW, never
+    // the fixed design constant.
+    expect(SRC).toMatch(/const previewH = isSticker \? stickerHeight\(previewW\) : cardHeight\(previewW, isSquare, cardAspect\);/);
+    expect(SRC).not.toMatch(/cardHeight\(PREVIEW_DISPLAY_W/);
+    expect(SRC).not.toMatch(/stickerHeight\(PREVIEW_DISPLAY_W\)/);
   });
 
   test('the rendered preview Image and placeholder both size off the responsive width', () => {

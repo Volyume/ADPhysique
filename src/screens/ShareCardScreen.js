@@ -23,7 +23,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
 import { useToast } from '../components/Toast';
-import { drawShareCard, cardHeight } from '../lib/shareCard/drawShareCard';
+import { drawShareCard, cardHeight, drawSticker, stickerHeight } from '../lib/shareCard/drawShareCard';
 import { buildWeeklyRecapParams } from '../lib/shareCard/greatWeek';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 
@@ -98,9 +98,12 @@ export default function ShareCardScreen({ route }) {
   const [cardType, setCardType] = useState(
     sessionData ? 'session' : prData ? 'pr' : milestoneData ? 'milestone' : weeklyRecapData ? 'weekly' : 'session',
   );
-  // Square 1:1 by default (founder direction): posts cleanly to a feed and crops
-  // predictably. Story 9:16 stays available as the taller option.
-  const [format, setFormat] = useState('square');
+  // Story-first default (D109-1, Campaign 30): the story composition is now a
+  // first-class layout on every card type (safe zones, balanced content), and
+  // stories are where these cards actually get posted. Square 1:1 and
+  // portrait 4:5 stay one tap away; 'sticker' is the transparent stat-panel
+  // export (ELITE-SHARE-SPEC pillar 3) for pasting onto the user's own story.
+  const [format, setFormat] = useState('story');
   const [savingToGallery, setSavingToGallery] = useState(false);
   const [sharingToStories, setSharingToStories] = useState(false);
 
@@ -129,11 +132,16 @@ export default function ShareCardScreen({ route }) {
   const [selectedPrIndex, setSelectedPrIndex] = useState(0);
 
   const isSession = cardType === 'session';
-  const isMilestone = cardType === 'milestone';
   const isWeekly = cardType === 'weekly';
-  // The weekly recap is square-only: the 9:16 story leaves the tall canvas mostly
-  // empty, so it ships as a clean 1:1 card.
-  const isSquare = isWeekly ? true : format === 'square';
+  const isSticker = format === 'sticker';
+  // Campaign 30: the weekly recap's old square-only restriction is lifted -
+  // the rebuilt renderer composes every type against the tall canvas (story
+  // safe zones, content balance) instead of leaving it mostly empty. The
+  // card aspect ('square'|'portrait'|'story') now drives the renderer via
+  // params.aspect; isSquare stays derived for the legacy readers (PDF path,
+  // filenames, preview sizing fallbacks).
+  const cardAspect = isSticker ? 'square' : format;
+  const isSquare = cardAspect !== 'story';
 
   // System typefaces (regular + bold) for the Skia renderer. getTypeface() gives
   // a typeface we can resize at any point in the draw.
@@ -178,7 +186,14 @@ export default function ShareCardScreen({ route }) {
     return `${days[d.getDay()]} · ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
   }
 
-  const buildParams = useCallback(() => {
+  // Campaign 30 (pillar 5): parameterised by TYPE so the template strip can
+  // render a live thumbnail of every card available for this moment, not
+  // just the selected one. `buildParams()` (below) stays the single source
+  // for the preview/export path, now via buildParamsFor(cardType).
+  const buildParamsFor = useCallback((forType) => {
+    const isWeekly = forType === 'weekly';
+    const isMilestone = forType === 'milestone';
+    const isSession = forType === 'session';
     if (isWeekly) {
       const o = weeklyRecapData || {};
       // The hero is the real weight progress (greatWeek.js); it + all progress
@@ -252,7 +267,14 @@ export default function ShareCardScreen({ route }) {
       previousBest: p.previousBest || '',
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isMilestone, isSession, isWeekly, isSquare, showDate, showVolume, showPlanName, showExercises, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift]);
+  }, [isSquare, showDate, showVolume, showPlanName, showExercises, showPRWeight, showPrevBest, showProgress, showBestLift, suppress, units, sessionData, prData, prs, selectedPrIndex, milestoneData, weeklyRecapData, bestLift]);
+
+  // The selected card's params: the per-type build plus the chosen aspect
+  // preset (the renderer's cardHeight/draw both key off params.aspect).
+  const buildParams = useCallback(
+    () => ({ ...buildParamsFor(cardType), aspect: cardAspect }),
+    [buildParamsFor, cardType, cardAspect],
+  );
 
   // ── ONE renderer for preview + export ──────────────────────────────────────
   const renderCardBase64 = useCallback((width) => {
@@ -263,14 +285,56 @@ export default function ShareCardScreen({ route }) {
     // must not render at all, let alone export.
     if (!Skia || !typefaces || !wordmark) return null;
     const params = buildParams();
-    const H = cardHeight(width, params.isSquare);
+    // Sticker: the transparent stat panel (ELITE-SHARE-SPEC pillar 3). Same
+    // params object the full card would draw from, so every upstream gate
+    // (suppress, toggles) applies identically - suppressed content has NO
+    // export path here either.
+    if (isSticker) {
+      const H = stickerHeight(width);
+      const surface = Skia.Surface.MakeOffscreen(width, H);
+      if (!surface) return null;
+      drawSticker(surface.getCanvas(), { Skia, width, params, typefaces, wordmark });
+      surface.flush();
+      const image = surface.makeImageSnapshot();
+      return image ? image.encodeToBase64() : null;
+    }
+    const H = cardHeight(width, params.isSquare, params.aspect);
     const surface = Skia.Surface.MakeOffscreen(width, H);
     if (!surface) return null;
     drawShareCard(surface.getCanvas(), { Skia, width, params, typefaces, wordmark, bgPhoto });
     surface.flush();
     const image = surface.makeImageSnapshot();
     return image ? image.encodeToBase64() : null;
-  }, [typefaces, wordmark, buildParams, bgPhoto]);
+  }, [typefaces, wordmark, buildParams, bgPhoto, isSticker]);
+
+  // Template-strip thumbnails (pillar 5, the Hevy pattern): one LIVE render
+  // per card type this moment offers, drawn by the same renderer at a small
+  // width so the picker shows the actual designs, not blind labels. Square
+  // preset for a uniform strip; the chosen format still drives the preview
+  // and export above. Re-renders when the underlying data/toggles change.
+  const availableTypes = useMemo(() => [
+    sessionData && { type: 'session', label: 'Session' },
+    (prData || prs.length) && { type: 'pr', label: 'New PR' },
+    milestoneData && { type: 'milestone', label: 'Milestone' },
+    weeklyRecapData && { type: 'weekly', label: 'Weekly' },
+  ].filter(Boolean), [sessionData, prData, prs.length, milestoneData, weeklyRecapData]);
+  const thumbs = useMemo(() => {
+    if (!Skia || !typefaces || !wordmark || availableTypes.length < 2) return {};
+    const out = {};
+    for (const { type: thumbType } of availableTypes) {
+      try {
+        const w = 220; // small but crisp at ~96dp display width
+        const params = { ...buildParamsFor(thumbType), aspect: 'square' };
+        const surface = Skia.Surface.MakeOffscreen(w, cardHeight(w, true, 'square'));
+        if (!surface) continue;
+        drawShareCard(surface.getCanvas(), { Skia, width: w, params, typefaces, wordmark, bgPhoto });
+        surface.flush();
+        const image = surface.makeImageSnapshot();
+        if (image) out[thumbType] = image.encodeToBase64();
+      } catch (_) { /* a failed thumb falls back to the labelled tile */ }
+    }
+    return out;
+  }, [typefaces, wordmark, buildParamsFor, bgPhoto, availableTypes]);
 
   // Take a gym photo with the camera to use as the card background (all cards).
   // Camera capture only: uses the CAMERA permission (same as barcode scanning),
@@ -293,6 +357,30 @@ export default function ShareCardScreen({ route }) {
       else toast.show("Couldn't load that photo, try again", { variant: 'error' });
     } catch (_) {
       toast.show("Couldn't take that photo, try again", { variant: 'error' });
+    }
+  }, [toast]);
+
+  // Choose an existing photo from the gallery (ELITE-SHARE-SPEC pillar 1:
+  // the photo becomes the canvas, and most gym photos already exist). Uses
+  // the system photo picker; on Android 13+/iOS 14+ launchImageLibraryAsync
+  // presents the OS picker without a broad media permission, and the
+  // permission request below covers older platforms.
+  const pickGymPhoto = useCallback(async () => {
+    if (!ImagePicker || !Skia || !FileSystem) {
+      toast.show("Photo backgrounds aren't available on your device.", { variant: 'error', duration: 5000 });
+      return;
+    }
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) { toast.show('Photo access is needed to choose a background', { variant: 'warning' }); return; }
+      const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.9 });
+      if (res.canceled || !res.assets?.[0]?.uri) return;
+      const b64 = await FileSystem.readAsStringAsync(res.assets[0].uri, { encoding: FileSystem.EncodingType.Base64 });
+      const img = Skia.Image.MakeImageFromEncoded(Skia.Data.fromBase64(b64));
+      if (img) setBgPhoto(img);
+      else toast.show("Couldn't load that photo, try again", { variant: 'error' });
+    } catch (_) {
+      toast.show("Couldn't open your photos, try again", { variant: 'error' });
     }
   }, [toast]);
 
@@ -331,11 +419,11 @@ export default function ShareCardScreen({ route }) {
     // overwrote the first file in the cache dir before the OS share sheet/
     // gallery save had necessarily finished reading it. The timestamp makes
     // every export its own file.
-    const filename = `volyume-${cardType}-card-${isSquare ? 'square' : 'story'}-${Date.now()}.png`;
+    const filename = `volyume-${cardType}-${format}-${Date.now()}.png`;
     const uri = (FileSystem.cacheDirectory || '') + filename;
     await FileSystem.writeAsStringAsync(uri, b64, { encoding: FileSystem.EncodingType.Base64 });
     return uri;
-  }, [renderCardBase64, cardType, isSquare]);
+  }, [renderCardBase64, cardType, format]);
 
   // Save the rendered card straight to the device gallery (expo-media-library).
   // Asks for the add-photos permission; a denial is handled with a calm message,
@@ -409,71 +497,118 @@ export default function ShareCardScreen({ route }) {
   // aspect ratio is preserved.
   const { width: windowWidth } = useWindowDimensions();
   const previewW = Math.min(PREVIEW_DISPLAY_W, windowWidth - 2 * spacing.lg);
-  const previewH = cardHeight(previewW, isSquare);
+  const previewH = isSticker ? stickerHeight(previewW) : cardHeight(previewW, isSquare, cardAspect);
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <BackHeader title="Share image" />
       <ScrollView contentContainerStyle={styles.content}>
 
-        {/* Card type: shown per the data the screen was opened with. */}
-        <View style={[styles.segmentRow, live.segmentRow]}>
-          {sessionData && (
-            <SegmentBtn label="Session" active={cardType === 'session'} onPress={() => setCardType('session')} />
-          )}
-          {prData && (
-            <SegmentBtn label="New PR" active={cardType === 'pr'} onPress={() => setCardType('pr')} />
-          )}
-          {milestoneData && (
-            <SegmentBtn label="Milestone" active={cardType === 'milestone'} onPress={() => setCardType('milestone')} />
-          )}
-          {weeklyRecapData && (
-            <SegmentBtn label="Weekly" active={cardType === 'weekly'} onPress={() => setCardType('weekly')} />
-          )}
-        </View>
+        {/* Card type (pillar 5): live template thumbnails when more than one
+            card is available for this moment - the picker shows the actual
+            designs, not blind labels. A single-type open needs no picker.
+            Where a thumbnail can't render (Skia unavailable, e.g. tests or a
+            pre-rebuild session), the tile falls back to its label so the
+            selection contract and accessibility stay intact. */}
+        {availableTypes.length > 1 && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.templateStrip}
+          >
+            {availableTypes.map(({ type: tType, label }) => {
+              const active = cardType === tType;
+              return (
+                <TouchableOpacity
+                  key={tType}
+                  style={[styles.templateTile, live.templateTile, active && [styles.templateTileActive, live.templateTileActive]]}
+                  onPress={() => setCardType(tType)}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: active }}
+                  accessibilityLabel={label}
+                >
+                  {thumbs[tType] ? (
+                    <Image
+                      source={{ uri: `data:image/png;base64,${thumbs[tType]}` }}
+                      style={styles.templateThumb}
+                      resizeMode="cover"
+                    />
+                  ) : (
+                    <View style={[styles.templateThumb, styles.templateThumbEmpty, live.templateThumbEmpty]}>
+                      <Ionicons name="image-outline" size={18} color={t.colors.textMuted} />
+                    </View>
+                  )}
+                  <Text style={[styles.templateLabel, live.templateLabel, active && [styles.templateLabelActive, live.templateLabelActive]]}>{label}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </ScrollView>
+        )}
 
-        {/* Format: the weekly recap is square-only, so the toggle is hidden. */}
-        {!isWeekly && (
+        {/* Format: story 9:16 first (D109-1), square 1:1, portrait 4:5, and
+            the transparent sticker export - all four for every card type. */}
         <View style={styles.section}>
           <SectionLabel>Format</SectionLabel>
           <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
-              label="Story 9:16"
-              active={!isSquare}
+              label="Story"
+              active={format === 'story'}
               onPress={() => setFormat('story')}
-              icon={<Ionicons name="phone-portrait-outline" size={15} color={!isSquare ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="phone-portrait-outline" size={15} color={format === 'story' ? t.colors.primary : t.colors.textMuted} />}
             />
             <SegmentBtn
-              label="Square 1:1"
-              active={isSquare}
+              label="Square"
+              active={format === 'square'}
               onPress={() => setFormat('square')}
-              icon={<Ionicons name="square-outline" size={15} color={isSquare ? t.colors.primary : t.colors.textMuted} />}
+              icon={<Ionicons name="square-outline" size={15} color={format === 'square' ? t.colors.primary : t.colors.textMuted} />}
+            />
+            <SegmentBtn
+              label="4:5"
+              active={format === 'portrait'}
+              onPress={() => setFormat('portrait')}
+              icon={<Ionicons name="tablet-portrait-outline" size={15} color={format === 'portrait' ? t.colors.primary : t.colors.textMuted} />}
+            />
+            <SegmentBtn
+              label="Sticker"
+              active={isSticker}
+              onPress={() => setFormat('sticker')}
+              icon={<Ionicons name="pricetag-outline" size={15} color={isSticker ? t.colors.primary : t.colors.textMuted} />}
             />
           </View>
+          {isSticker ? (
+            <Text style={[styles.formatHint, live.formatHint]}>
+              A small transparent panel to place on your own story photo.
+            </Text>
+          ) : null}
         </View>
-        )}
 
-        {/* Background: optional gym photo behind any card (kept legible by a
-            brand-colour scrim in the renderer). Only shown when the native image
-            picker is available in the build. */}
-        {ImagePicker ? (
+        {/* Background: the user's own photo as the canvas (gallery pick OR
+            camera capture; tone-sampled scrim keeps it legible in the
+            renderer), or the per-type crafted dark background. Hidden for the
+            sticker, which is transparent by design. Only shown when the
+            native image picker is available in the build. */}
+        {ImagePicker && !isSticker ? (
         <View style={styles.section}>
           <SectionLabel>Background</SectionLabel>
           <View style={[styles.segmentRow, live.segmentRow]}>
             <SegmentBtn
-              label={bgPhoto ? 'Retake photo' : 'Take gym photo'}
+              label="My photo"
               active={!!bgPhoto}
-              onPress={takeGymPhoto}
-              icon={<Ionicons name="camera-outline" size={15} color={bgPhoto ? t.colors.primary : t.colors.textMuted} />}
+              onPress={pickGymPhoto}
+              icon={<Ionicons name="images-outline" size={15} color={bgPhoto ? t.colors.primary : t.colors.textMuted} />}
             />
-            {bgPhoto ? (
-              <SegmentBtn
-                label="Remove"
-                active={false}
-                onPress={() => setBgPhoto(null)}
-                icon={<Ionicons name="close-outline" size={15} color={t.colors.textMuted} />}
-              />
-            ) : null}
+            <SegmentBtn
+              label="Camera"
+              active={false}
+              onPress={takeGymPhoto}
+              icon={<Ionicons name="camera-outline" size={15} color={t.colors.textMuted} />}
+            />
+            <SegmentBtn
+              label="Dark"
+              active={!bgPhoto}
+              onPress={() => setBgPhoto(null)}
+              icon={<Ionicons name="moon-outline" size={15} color={!bgPhoto ? t.colors.primary : t.colors.textMuted} />}
+            />
           </View>
         </View>
         ) : null}
@@ -665,6 +800,24 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, gap: spacing.xl, paddingBottom: spacing.xxl },
   section: { gap: spacing.md },
+  // Template strip (Campaign 30 pillar 5): live card thumbnails as the
+  // type picker. Tiles are quiet cards; the active tile carries the accent
+  // border the segmented control used to express with a fill.
+  templateStrip: { gap: spacing.sm, paddingVertical: spacing.xs, paddingRight: spacing.lg },
+  templateTile: {
+    borderRadius: radius.md, borderWidth: 1.5, borderColor: colors.border,
+    backgroundColor: colors.surface, padding: spacing.xs, gap: spacing.xs,
+    alignItems: 'center',
+  },
+  templateTileActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
+  templateThumb: { width: 96, height: 96, borderRadius: radius.sm },
+  templateThumbEmpty: {
+    alignItems: 'center', justifyContent: 'center',
+    backgroundColor: colors.surface2,
+  },
+  templateLabel: { ...type.caption, color: colors.textMuted },
+  templateLabelActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  formatHint: { ...type.captionTight, color: colors.textMuted },
   segmentRow: {
     flexDirection: 'row', gap: spacing.xs,
     backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.xs,
@@ -726,6 +879,12 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
+    templateTile: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    templateTileActive: { borderColor: t.colors.primary, backgroundColor: t.colors.primaryBg },
+    templateThumbEmpty: { backgroundColor: t.colors.surface2 },
+    templateLabel: { ...t.type.caption, color: t.colors.textMuted },
+    templateLabelActive: { color: t.colors.primary },
+    formatHint: { ...t.type.captionTight, color: t.colors.textMuted },
     segmentRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     segmentActive: { backgroundColor: t.colors.surface3 },
     segmentText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
