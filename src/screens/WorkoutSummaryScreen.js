@@ -1367,9 +1367,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
               {/* C5-P16-02 (D96): one plain sentence naming the next
                   planned session, on the card that already knows where
                   this session sits in the block. */}
+              {/* Founder device order 2026-08-18: the "It is ready on
+                  Today..." tail read as nonsense on device - the session
+                  name alone says everything. */}
               {nextSessionName ? (
                 <Text style={[styles.blockArcName, live.blockArcName]}>
-                  Next up: {nextSessionName}. It is ready on Today whenever you are.
+                  Next up: {nextSessionName}.
                 </Text>
               ) : null}
             </Card>

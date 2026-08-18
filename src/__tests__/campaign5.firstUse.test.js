@@ -543,7 +543,10 @@ describe('WORKOUT: the first session completes honestly with no history (C5-P13-
 
   test('the first summary answers what happens next, and says why feedback is asked before asking', () => {
     const src = read('screens/WorkoutSummaryScreen.js');
-    expect(src).toContain('Next up: {nextSessionName}. It is ready on Today whenever you are.');
+    // Re-pinned 2026-08-18 (founder device order): the "It is ready on
+    // Today whenever you are" tail read as nonsense on device and was cut.
+    // The law - the first summary names what comes next - is unchanged.
+    expect(src).toContain('Next up: {nextSessionName}.');
     // C5-P17-03: the purpose sentence renders OUTSIDE the expander.
     const card = src.slice(src.indexOf('Workout feedback'), src.indexOf('{feedbackExpanded &&'));
     expect(card).toContain('Your answers shape how your recovery is read');
