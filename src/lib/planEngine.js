@@ -3505,8 +3505,15 @@ function _generatePlanInner(inputs) {
     lean_gain: 'Lean Gain',
     recomp:    'Recomp',
     maintain:  'Maintain',
-    // coachingPhaseKey variants, planEngine receives either form
+    // nutritionEngine key variants (planAutoGen passes phaseToNutritionKey
+    // output): 'build' is the nutrition key BOTH bulk-family phases map to.
+    // Founder naming law 2026-08-18: a slow bulk is "Lean Gain", a proper
+    // bulk is "Bulk" - this key missing meant a bulk user's plan name
+    // silently dropped its phase while lean-gain plans kept theirs.
+    build:     'Bulk',
     mild_cut:  'Cut',
+    aggressive_cut: 'Cut',
+    // coachingPhaseKey variants, planEngine receives either form
     mild_bulk: 'Lean Gain',
     mod_bulk:  'Bulk',
     maint:     'Maintain',

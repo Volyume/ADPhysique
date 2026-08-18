@@ -415,7 +415,14 @@ export default function ProOnboardingScreen({ navigation }) {
   // Default to lean gain (lean bulk) rather than an empty greyed picker, so
   // the screen lands on the most common phase and the user changes it only if
   // they want something else.
-  const [trainingPhase, setTrainingPhase] = useState('lean_gain');
+  // Founder device report 2026-08-18 ("I selected bulk... my training says
+  // lean gain"): the phase used to start PRE-SELECTED as 'lean_gain', so a
+  // user could sail through step 5 without their real choice ever
+  // registering - the exact silent default the onboarding-enforcement law
+  // (CLAUDE.md Section 2) forbids for required fields. No default: the
+  // advanceFrom5 gate now genuinely blocks until a phase is chosen. Quiz
+  // answers and saved drafts still prefill - both are explicit choices.
+  const [trainingPhase, setTrainingPhase] = useState(null);
   // Weak points the user wants to bring up (UI labels, max 3). Division-scoped:
   // the options shown depend on trainingGoal. Passed into plan generation, which
   // biases volume towards these muscles within the recovery envelope.

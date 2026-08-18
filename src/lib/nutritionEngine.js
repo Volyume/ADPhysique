@@ -38,9 +38,14 @@ const PHASE_ADJUSTMENTS = {
   aggressive_cut: -0.22,
 };
 
+// Founder naming law 2026-08-18: ONE vocabulary for the bulk family
+// everywhere - the slow phase is "lean gain", the faster phase is "bulk" -
+// matching coachingGoals' TRAINING_PHASES labels word for word, so the
+// phase a user picks in onboarding is the phase every later surface names.
+// ("Build muscle (slow)"/"(fast)" was this table's own private dialect.)
 const PHASE_LABELS = {
-  lean_gain: 'Build muscle (slow)',
-  build: 'Build muscle (fast)',
+  lean_gain: 'Build muscle (lean gain)',
+  build: 'Build muscle (bulk)',
   maintain: 'Maintain weight',
   recomp: 'Hold muscle, lose fat',
   mild_cut: 'Lose weight (steady)',
