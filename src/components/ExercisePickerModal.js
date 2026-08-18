@@ -18,7 +18,7 @@ import { colors, fontWeight, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds, getActiveBlock, clearExerciseIntent } from '../lib/database';
-import { loadExerciseIntentState, isEligible, intentFor } from '../lib/exercise/intent';
+import { loadExerciseIntentState, isEligible, intentFor, isFamilyBlocked, movementFamilyOf } from '../lib/exercise/intent';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
 import { fuzzySearch } from '../lib/exerciseFuzzySearch';
 import useAppStore from '../store/useAppStore';
@@ -73,6 +73,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     pickerSetAside: { ...t.type.caption, color: t.colors.textMuted },
     pickerAllowAgain: { ...t.type.caption, color: t.colors.primary },
     showExcludedText: { ...t.type.caption, color: t.colors.textMuted },
+    constraintsUnavailableText: { ...t.type.caption, color: t.colors.textMuted },
     pickerEmptyText: { ...t.type.body, color: t.colors.textMuted },
     separator: { backgroundColor: t.colors.borderSubtle },
     createNewBtn: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
@@ -98,6 +99,11 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   // what they have set aside.
   const [intentState, setIntentState] = useState(null);
   const [showExcluded, setShowExcluded] = useState(false);
+  // D109-2 fail direction: true only when the intent read genuinely FAILED
+  // (getActiveBlock rejected), never for "no constraints recorded" - those
+  // are indistinguishable in intentState itself by design, so this is
+  // tracked separately.
+  const [intentUnavailable, setIntentUnavailable] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createMuscle, setCreateMuscle] = useState('');
@@ -154,11 +160,18 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     // where they are clearly marked and can be allowed again. Restoration
     // must never be obscure.
     setShowExcluded(false);
+    setIntentUnavailable(false);
     if (userId) {
       getActiveBlock(userId)
         .then(block => loadExerciseIntentState(userId, { activeMesocycleId: block?.id ?? null }))
-        .then(setIntentState)
-        .catch(() => setIntentState(null));
+        .then(state => {
+          setIntentState(state);
+          // loadExerciseIntentState fails open internally (returns an empty
+          // state, never throws), so `unavailable` is how a genuine read
+          // failure is told apart from "nothing set aside" - see D109-2.
+          if (state?.unavailable) setIntentUnavailable(true);
+        })
+        .catch(() => { setIntentState(null); setIntentUnavailable(true); });
     } else {
       setIntentState(null);
     }
@@ -180,7 +193,13 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
       matchesEquipmentFilter(e, equipmentFilter) &&
       // Hidden from SUGGESTIONS, never from the user: the toggle below
       // brings them back, marked, with an "Allow again" action.
-      (showExcluded || !intentState || isEligible(intentState, e.id)),
+      (showExcluded || !intentState || isEligible(intentState, e.id)) &&
+      // D107-2 senior enforcement: a movement-pattern avoidance hides the
+      // whole family the same way an id-level exclusion does. Kept as a
+      // separate AND term (not folded into the clause above) so the
+      // pre-existing id-level regression-guard string stays byte-exact
+      // (campaign9.generation.test.js "the shared picker honours intent").
+      (showExcluded || !intentState || !isFamilyBlocked(intentState, movementFamilyOf(e))),
     );
     setFiltered(fuzzySearch(base, query, e => e.name));
   }, [query, muscleFilter, equipmentFilter, allExercises, intentState, showExcluded]);
@@ -421,6 +440,19 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
               </View>
             ) : null}
 
+            {/* D109-2: the constraints read genuinely failed. Generation and
+                suggestion still proceed (the browse list simply shows
+                everything, unfiltered by avoidance) - this is the visible
+                notice that fact requires, not a block. */}
+            {intentUnavailable ? (
+              <View style={styles.constraintsUnavailableRow}>
+                <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
+                <Text style={[styles.constraintsUnavailableText, live.constraintsUnavailableText]}>
+                  Avoided movements could not be checked right now, so nothing is filtered for them.
+                </Text>
+              </View>
+            ) : null}
+
             {/* C9 Work 2: restoration must not be obscure. The toggle only
                 appears when the user actually has something set aside. */}
             {intentState && [...intentState.intents.keys()].length > 0 ? (
@@ -612,6 +644,11 @@ const styles = StyleSheet.create({
   pickerAllowAgain: { ...type.caption, color: colors.primary },
   showExcludedRow: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   showExcludedText: { ...type.caption, color: colors.textMuted },
+  constraintsUnavailableRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
+  },
+  constraintsUnavailableText: { ...type.caption, color: colors.textMuted, flex: 1 },
   pickerEmpty: { alignItems: 'center', paddingTop: spacing.xxxl, gap: spacing.lg, paddingHorizontal: spacing.xl },
   pickerEmptyText: { ...type.body, color: colors.textMuted },
   separator: { height: 1, backgroundColor: colors.borderSubtle },

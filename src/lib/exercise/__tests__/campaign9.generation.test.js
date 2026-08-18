@@ -200,7 +200,18 @@ describe('a user with no exclusions generates exactly what they generated before
 
     expect(before.result.ok).toBe(true);
     expect(after.ok).toBe(true);
-    expect(before.result).toEqual(after);
+    // Re-pinned under D109-2 (injury/constraint layer, founder-adopted
+    // 2026-08-17): a constraints read failure still fails OPEN - the filter
+    // is a no-op and the WRITES are identical to a clean slate, pinned
+    // below unchanged - but it is no longer allowed to look IDENTICAL to a
+    // clean slate on the result: the caller gets `constraintsUnavailable`
+    // so a surface can show a visible "avoidance settings unavailable"
+    // notice instead of the failure masquerading as no constraints. That
+    // one flag is the only permitted difference.
+    const { constraintsUnavailable, ...afterRest } = after;
+    expect(constraintsUnavailable).toBe(true);
+    expect(before.result.constraintsUnavailable).toBeUndefined();
+    expect(before.result).toEqual(afterRest);
     expect(addExerciseToRoutine.mock.calls).toEqual(before.calls);
     expect(before.names.length).toBeGreaterThan(0);
 

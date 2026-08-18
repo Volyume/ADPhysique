@@ -22,7 +22,10 @@ import {
 } from '../lib/database';
 import {
   loadExerciseIntentState, rankPersonalised, repeatedDefaultCandidate, intentFor,
+  movementFamilyOf, isFamilyBlocked,
 } from '../lib/exercise/intent';
+import { setMovementPatternAvoid, clearMovementPatternAvoid } from '../lib/exercise/movementConstraints';
+import { familyLabel } from '../lib/exercise/movementFamily';
 import {
   computeDivisionDiff, divisionFingerprintLine, planWearsDivision,
   computeDivisionCoverage, divisionCoverageLine,
@@ -349,6 +352,12 @@ export default function RoutineDetailScreen({ navigation, route }) {
       // repeated. Never automatic, never after one swap.
       proposal = repeatedDefaultCandidate(state, exercise?.id, { routineId });
       setIntentState(state);
+      // D109-2: the read failed open (structural list stands, nothing is
+      // filtered by avoidance) - say so, rather than let the swap list look
+      // like a clean slate when it may not be.
+      if (state?.unavailable) {
+        toast.show('Avoided movements could not be checked, so nothing is filtered for them here.', { variant: 'warning' });
+      }
     } catch (_) { /* personalisation is additive: the structural list stands */ }
     setSwapCandidates(ordered);
     setDefaultProposal(proposal);
@@ -378,6 +387,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
               } catch (_) { /* best effort */ }
             },
           },
+          {
+            text: 'Avoid this movement pattern...',
+            onPress: () => openPatternAvoidSheet(exercise),
+          },
         ],
       );
       return;
@@ -395,8 +408,74 @@ export default function RoutineDetailScreen({ navigation, route }) {
           text: "Don't suggest it",
           onPress: () => handleExcludeExercise(routineExercise, exercise, EXERCISE_INTENT.EXCLUDED),
         },
+        {
+          text: 'Avoid this movement pattern...',
+          onPress: () => openPatternAvoidSheet(exercise),
+        },
       ],
     );
+  }
+
+  /**
+   * D107-2: the movement-PATTERN mirror of openAvoidSheet above, one level
+   * up - constrains every exercise in the family (movementFamilyOf), not
+   * just this one. Reachable from the same long-press entry point.
+   */
+  function openPatternAvoidSheet(exercise) {
+    const family = movementFamilyOf(exercise);
+    if (!family) {
+      toast.show("Volyume can't place this exercise in a movement pattern to avoid.", { variant: 'warning' });
+      return;
+    }
+    const label = familyLabel(family) ?? family;
+    if (intentState && isFamilyBlocked(intentState, family)) {
+      appAlert(
+        `Avoiding ${label}`,
+        'Volyume is leaving every exercise in this movement pattern out of suggestions. Your logged sets, records and progress stay exactly as they are.',
+        [
+          { text: 'Close', style: 'cancel' },
+          {
+            text: 'Allow again',
+            onPress: async () => {
+              try {
+                await clearMovementPatternAvoid(user.id, family);
+                await refreshIntentState();
+                toast.show(`Volyume can suggest ${label} again.`, { variant: 'success' });
+              } catch (_) { /* best effort */ }
+            },
+          },
+        ],
+      );
+      return;
+    }
+    appAlert(
+      `Avoid ${label}?`,
+      'This leaves every exercise in this movement pattern out of suggestions, not just this one. Your logged sets, records and progress stay exactly as they are, and nothing already in this plan is changed automatically.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: '7 days', onPress: () => handleSetPatternAvoid(family, label, 7) },
+        { text: '14 days', onPress: () => handleSetPatternAvoid(family, label, 14) },
+        { text: '30 days', onPress: () => handleSetPatternAvoid(family, label, 30) },
+        { text: 'For this block', onPress: () => handleSetPatternAvoid(family, label, 'this_block') },
+        { text: 'Indefinitely', onPress: () => handleSetPatternAvoid(family, label, 'indefinite') },
+      ],
+    );
+  }
+
+  async function handleSetPatternAvoid(family, label, duration) {
+    if (!user?.id) return;
+    try {
+      const block = duration === 'this_block' ? await getActiveBlock(user.id) : null;
+      await setMovementPatternAvoid(user.id, family, duration, { activeMesocycleId: block?.id ?? null });
+      await refreshIntentState();
+      const durationCopy = duration === 'indefinite' ? ''
+        : duration === 'this_block' ? ' for this block'
+        : ` for ${duration} days`;
+      toast.show(`Volyume will avoid ${label}${durationCopy}.`, { variant: 'success' });
+    } catch (e) {
+      logError('RoutineDetailScreen.handleSetPatternAvoid', e, { userId: user?.id });
+      toast.show('That did not save. Please try again.', { variant: 'error' });
+    }
   }
 
   async function refreshIntentState() {

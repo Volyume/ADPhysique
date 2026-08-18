@@ -271,6 +271,66 @@ export function isSweepBiased(name) {
 }
 
 // ---------------------------------------------------------------------------
+// Calm, non-clinical display labels (D107-2 injury/constraint layer)
+// ---------------------------------------------------------------------------
+// A user avoiding a movement PATTERN never sees the raw key ('vertical_pull').
+// Covers every FAMILY constant plus the subregion vocabularies the pass-
+// through muscles use (movementFamily() returns these verbatim for any
+// muscle outside CLASSIFIED_MUSCLES), so a constraint set against ANY
+// muscle's pattern - not just back/quads - still renders in plain English.
+// Anything genuinely unlisted (a future subregion tag) falls back to the raw
+// key with underscores turned to spaces rather than ever going unlabelled.
+const FAMILY_LABELS = Object.freeze({
+  [FAMILY.VERTICAL_PULL]: 'vertical pulling',
+  [FAMILY.HORIZONTAL_LAT]: 'lat-biased rowing',
+  [FAMILY.UPPER_MID_ROW]: 'upper-back rowing',
+  [FAMILY.SHOULDER_EXTENSION]: 'straight-arm pulldown work',
+  [FAMILY.SPINAL_ERECTOR]: 'deadlifting and back extensions',
+  [FAMILY.FACE_PULL]: 'face pulls',
+  [FAMILY.SQUAT_PRESS]: 'squatting and pressing',
+  [FAMILY.KNEE_EXTENSION]: 'knee extension work',
+  [FAMILY.FLAT]: 'flat pressing',
+  [FAMILY.INCLINE]: 'incline pressing',
+  [FAMILY.DECLINE]: 'decline pressing',
+  [FAMILY.HIP_EXTENSION]: 'hip extension work',
+  [FAMILY.KNEE_FLEXION]: 'knee flexion work',
+  [FAMILY.GASTRO]: 'straight-knee calf raises',
+  [FAMILY.SOLEUS]: 'bent-knee calf raises',
+  [FAMILY.TRICEPS_OVERHEAD]: 'overhead triceps extensions',
+  [FAMILY.TRICEPS_PUSHDOWN]: 'triceps pushdown work',
+  // Pass-through subregion vocabularies from movementFamily.js's other
+  // muscles (side/rear/front delts, biceps, glutes, abs), not part of the
+  // FAMILY enum above because those muscles were never re-taxonomised - the
+  // raw tag already passes straight through movementFamily().
+  overhead_press: 'overhead pressing',
+  lateral_raise: 'lateral raises',
+  side: 'lateral raises',
+  press: 'overhead pressing',
+  horiz_abduction: 'rear-delt raises',
+  long_head: 'long-head biceps work',
+  short_head: 'short-head biceps work',
+  brachialis: 'brachialis work',
+  activator: 'glute activation work',
+  stretcher: 'glute stretch-position work',
+  pumper: 'glute pump-range work',
+  flexion: 'ab flexion work',
+  anti_extension: 'anti-extension core work',
+  anti_rotation: 'anti-rotation core work',
+});
+
+/**
+ * Calm, non-clinical display label for a movementFamily key. Never returns
+ * the raw enum value unlabelled - an unrecognised key still gets its
+ * underscores turned to spaces rather than being shown verbatim.
+ * @param {string|null} familyKey
+ * @returns {string|null}
+ */
+export function familyLabel(familyKey) {
+  if (!familyKey) return null;
+  return FAMILY_LABELS[familyKey] ?? String(familyKey).replace(/_/g, ' ');
+}
+
+// ---------------------------------------------------------------------------
 // Coverage roles
 // ---------------------------------------------------------------------------
 

@@ -37,6 +37,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
+import { loadExerciseIntentState, listActiveMovementConstraints } from '../lib/exercise/intent';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -224,6 +225,12 @@ export default function PlansScreen({ navigation }) {
   const [activeBlockId, setActiveBlockId] = useState(null);
   const [blockSnoozed, setBlockSnoozed] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // D109-3: the Plan tools count for the "Avoided movements" row. Loaded
+  // independently of loadData's Promise.all batch (own failure mode, own
+  // req-guard would be overkill for one count) - a read failure just leaves
+  // the row hidden, which is the correct degrade (D109-2 fail-open: never
+  // block, and there is nothing to filter here, only a count to show).
+  const [avoidedMovementsCount, setAvoidedMovementsCount] = useState(0);
   // EP-09/P-06 (Codex end-user-polish audit): whether the most recent
   // loadData() attempt failed. Previously the catch block swallowed the
   // exception entirely (`catch (_e) {}`), so a rejected read still landed on
@@ -260,9 +267,20 @@ export default function PlansScreen({ navigation }) {
   useFocusEffect(
     useCallback(() => {
       loadData();
+      loadAvoidedMovementsCount();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]),
   );
+
+  /** D109-3: refreshed on every focus, so a Remove on AvoidedMovementsScreen updates this count on the way back. */
+  async function loadAvoidedMovementsCount() {
+    if (!user?.id) { setAvoidedMovementsCount(0); return; }
+    try {
+      const block = await getActiveBlock(user.id).catch(() => null);
+      const state = await loadExerciseIntentState(user.id, { activeMesocycleId: block?.id ?? null });
+      setAvoidedMovementsCount(listActiveMovementConstraints(state).length);
+    } catch (_) { setAvoidedMovementsCount(0); }
+  }
 
   // Cloud restore: re-run loadData once pullFromCloud lands so a fresh
   // device sees the plan / template list populate without navigating
@@ -1494,6 +1512,28 @@ export default function PlansScreen({ navigation }) {
             </View>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </Card>
+          {/* D109-3: only renders when the count is > 0 - no empty-state
+              entry point in Plan tools for a feature most users never touch.
+              Set/clear stays on the exercise long-press (RoutineDetailScreen);
+              this is the list home. */}
+          {avoidedMovementsCount > 0 && (
+            <Card
+              style={styles.trainingBlocksRow}
+              onPress={() => navigation.navigate('AvoidedMovements')}
+              accessibilityLabel={`Avoided movements, ${avoidedMovementsCount}`}
+            >
+              <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
+                <Ionicons name="shield-outline" size={20} color={t.colors.textSecondary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>
+                  Avoided movements · {avoidedMovementsCount}
+                </Text>
+                <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>Movement patterns Volyume is leaving out of suggestions</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+            </Card>
+          )}
           {/* C5-P10-01 (D96): this sentence was the only place in the
               product that said activation starts a block, and it was gated
               on already BEING Pro with an active plan, so no first-time

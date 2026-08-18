@@ -31,10 +31,25 @@ async function migrationCount() {
   return version;
 }
 
+// D107-2 (2026-08-17) appended one migration (exercise_intent.expires_at_ms)
+// after the two Campaign 19 migrations this file targets, so each window
+// below widens by one to keep testing the SAME migrations; the widened
+// window now also runs that ALTER, so the fixture carries a minimal
+// exercise_intent table for it to land on (the mesocycles precedent in
+// database.bicepsSubregion.test.js).
+function withExerciseIntent(raw) {
+  raw.exec(`CREATE TABLE exercise_intent (
+    id TEXT PRIMARY KEY, user_id TEXT, exercise_id TEXT, kind TEXT,
+    scope_mesocycle_id TEXT, reason TEXT,
+    created_at INTEGER, updated_at INTEGER, deleted_at INTEGER
+  )`);
+  return raw;
+}
+
 test('Campaign 19 local migrations create the one-row memo and revalidation marker', async () => {
-  const raw = new DatabaseSync(':memory:');
+  const raw = withExerciseIntent(new DatabaseSync(':memory:'));
   const total = await migrationCount();
-  raw.exec(`PRAGMA user_version = ${total - 2}`);
+  raw.exec(`PRAGMA user_version = ${total - 3}`);
   await runMigrations(adapt(raw));
 
   const columns = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all();
@@ -49,7 +64,7 @@ test('Campaign 19 local migrations create the one-row memo and revalidation mark
 });
 
 test('a database already at baseline Campaign 19 v80 upgrades additively', async () => {
-  const raw = new DatabaseSync(':memory:');
+  const raw = withExerciseIntent(new DatabaseSync(':memory:'));
   const total = await migrationCount();
   raw.exec(`CREATE TABLE effective_maintenance_memos (
     user_id TEXT PRIMARY KEY,
@@ -59,7 +74,7 @@ test('a database already at baseline Campaign 19 v80 upgrades additively', async
     evidence_signature TEXT NOT NULL,
     version_key TEXT NOT NULL
   )`);
-  raw.exec(`PRAGMA user_version = ${total - 1}`);
+  raw.exec(`PRAGMA user_version = ${total - 2}`);
   await runMigrations(adapt(raw));
 
   const names = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all()

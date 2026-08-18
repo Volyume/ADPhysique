@@ -39,7 +39,8 @@ import { filterLibraryForGeneration, generationBlockFor } from './exercise/gener
 import { applyContinuity, slotKey, summariseDecisions } from './exercise/continuity';
 import { movementFamily } from './exercise/movementFamily';
 import {
-  exerciseEvidence, isExcluded, isAvoidedThisBlock, swappedAwayCount, EVIDENCE_MATURITY,
+  exerciseEvidence, swappedAwayCount, EVIDENCE_MATURITY,
+  isEligibleExercise,
 } from './exercise/intent';
 import { isAutoEligible } from './exercise/canonicality';
 
@@ -402,8 +403,13 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
       ? exerciseEvidence(intentState, exerciseId)
       : { sessions: 0, progression: 'insufficient', sufficient: false };
     return {
+      // D107-2: an incumbent whose whole movement FAMILY is now avoided is
+      // treated as excluded for continuity purposes too, not just an
+      // incumbent excluded by id - so a rebuild does not carry a
+      // family-avoided exercise forward as "retained". isEligibleExercise
+      // is a strict superset of the id-only check this replaces.
       excluded: intentState
-        ? (isExcluded(intentState, exerciseId) || isAvoidedThisBlock(intentState, exerciseId))
+        ? !isEligibleExercise(intentState, row ?? { id: exerciseId })
         : false,
       swappedAwayCount: intentState ? swappedAwayCount(intentState, exerciseId) : 0,
       // The exercise is no longer reachable with the equipment the user
@@ -579,7 +585,13 @@ export function resolvePlanAgainstLibrary(plan, exerciseMap, filteredLibrary) {
  * empty by the user's own exclusion is a different fact and gets its own
  * fields, so nothing existing starts saying the wrong thing.
  */
-function attachBlockedSlots(result, blockedSlots) {
+function attachBlockedSlots(result, blockedSlots, constraintsUnavailable = false) {
+  // D109-2 fail direction: a constraints read failure never blocks
+  // generation (loadExerciseIntentState already failed open and returned an
+  // empty state, so blockedSlots is empty too) - it only adds a flag so the
+  // caller can show a visible notice instead of the read failure looking
+  // identical to a clean slate.
+  if (constraintsUnavailable) result.constraintsUnavailable = true;
   if (!blockedSlots?.length) return result;
   result.blockedByIntent = true;
   result.needsChoice = true;
@@ -733,6 +745,7 @@ export async function generateAndSavePlan(userId, profile, {
         return attachBlockedSlots(
           { ok: false, error: 'plan_blocked_by_exclusions' },
           writeResult.blockedSlots,
+          intentState?.unavailable,
         );
       }
       return { ok: false, error: 'Plan created but no exercises matched the library' };
@@ -783,7 +796,7 @@ export async function generateAndSavePlan(userId, profile, {
       result.missedCount = missedCount;
       result.missedExercises = missedNames;
     }
-    return attachBlockedSlots(result, blockedSlots);
+    return attachBlockedSlots(result, blockedSlots, intentState?.unavailable);
   } catch (e) {
     if (programmeId) {
       try {
@@ -882,6 +895,7 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
       return attachBlockedSlots(
         { ok: false, error: 'plan_blocked_by_exclusions' },
         blockedSlots,
+        intentState?.unavailable,
       );
     }
     return { ok: false, error: 'No exercises matched your equipment' };
@@ -913,5 +927,5 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
     result.missedCount = missedCount;
     result.missedExercises = missedNames;
   }
-  return attachBlockedSlots(result, blockedSlots);
+  return attachBlockedSlots(result, blockedSlots, intentState?.unavailable);
 }

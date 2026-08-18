@@ -116,6 +116,9 @@ const PlansScreen = lazyScreen(() => require('../screens/PlansScreen').default);
 const PlanDetailScreen = lazyScreen(() => require('../screens/PlanDetailScreen').default);
 const RoutineDetailScreen = lazyScreen(() => require('../screens/RoutineDetailScreen').default);
 const MesocycleBuilderScreen = lazyScreen(() => require('../screens/MesocycleBuilderScreen').default);
+// D107-2/D109-3: the "Avoided movements" list home, reached from PlansScreen
+// Plan tools.
+const AvoidedMovementsScreen = lazyScreen(() => require('../screens/AvoidedMovementsScreen').default);
 const ShareCardScreen = lazyScreen(() => require('../screens/ShareCardScreen').default);
 const ManualBuilderScreen = lazyScreen(() => require('../screens/ManualBuilderScreen').default);
 const PlanLibraryScreen = lazyScreen(() => require('../screens/PlanLibraryScreen').default);
@@ -471,6 +474,11 @@ function PlansStack({ navigation }) {
       <Stack.Screen name="ManualBuilder" component={ManualBuilderScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanLibrary" component={PlanLibraryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="MesocycleBuilder" component={MesocycleBuilderScreen} options={{ headerShown: false }} />
+      {/* D107-2/D109-3: the movement-pattern constraints list, reached from
+          the Plan tools "Avoided movements" row. Set/clear stays on the
+          exercise long-press (RoutineDetailScreen); this is the list home
+          with per-row removal. */}
+      <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
       {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
       <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />

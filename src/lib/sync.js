@@ -1209,6 +1209,14 @@ async function _pushExerciseIntent(sb, supabaseUserId, localUserId) {
       kind: r.kind,
       scope_mesocycle_id: r.scopeMesocycleId ?? null,
       reason: r.reason ?? null,
+      // D107-2: PATTERN_AVOID's day-bound duration. timestamptz, same
+      // convention as the three fields below; local stores the epoch-ms
+      // equivalent as expires_at_ms. Every pre-existing row (and every
+      // EXCLUDED/AVOIDED_BLOCK row) sends null here, unchanged from before
+      // this field existed. Column added by migrate_142, founder-gated: the
+      // upsert batch fails soft with a logged PostgREST error until that
+      // migration runs, exactly like migrate_137's scope column.
+      expires_at: r.expiresAtMs != null ? new Date(r.expiresAtMs).toISOString() : null,
       created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
       updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
       deleted_at: r.deletedAt != null ? new Date(r.deletedAt).toISOString() : null,

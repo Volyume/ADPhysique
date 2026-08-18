@@ -76,6 +76,9 @@
  * 2026-08-09 (Stage 6, adaptive mesocycle build): v69 appends
  * mesocycles.block_ledger, shifting this file's last-N window by one
  * again — every runLastMigrations count below is bumped accordingly.
+ *
+ * 2026-08-17 (D107-2 injury/constraint layer): one more appended migration
+ * (exercise_intent.expires_at_ms), every count bumped by one again.
  */
 
 const { DatabaseSync } = require('node:sqlite');
@@ -191,7 +194,7 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('re-tags Machine Shoulder Press and generic Shoulder Press to front_delts', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 19);
+    await runLastMigrations(raw, 20);
 
     const machine = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-1');
     const generic = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-2');
@@ -202,7 +205,7 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('is exactly scoped by name: does not touch Dumbbell Shoulder Press, Dumbbell Lateral Raise, or Upright Row', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 19);
+    await runLastMigrations(raw, 20);
 
     const untouched = ['ex-3', 'ex-5', 'ex-6'];
     for (const id of untouched) {
@@ -220,7 +223,7 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('Plate-Loaded Shoulder Press, out of v62\'s own scope, is retagged once v63 runs alongside it', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    await runLastMigrations(raw, 19);
+    await runLastMigrations(raw, 20);
 
     const plateLoaded = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-4');
     expect(plateLoaded.primary_muscle).toBe('front_delts');
@@ -229,7 +232,7 @@ describe('SCHEMA_MIGRATIONS v62 (+ v63 alongside it): front-delt muscle-taxonomy
   test('is idempotent: running the migrations a second time leaves the corrected rows unchanged and errors on neither run', async () => {
     const raw = freshExercisesDb();
     seedRows(raw);
-    const total = await runLastMigrations(raw, 19);
+    const total = await runLastMigrations(raw, 20);
 
     // Re-run the exact same migration set (simulating a second boot that
     // still sees the pre-migration version, e.g. a restored snapshot) by
@@ -261,7 +264,7 @@ describe('SCHEMA_MIGRATIONS v63: extends the front-delt correction to Viking Pre
   test('re-tags Viking Press and Plate-Loaded Shoulder Press to front_delts', async () => {
     const raw = freshExercisesDb();
     seedRowsV63(raw);
-    await runLastMigrations(raw, 18); // includes both Campaign 19 local migrations
+    await runLastMigrations(raw, 19); // includes both Campaign 19 local migrations
 
     const viking = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-1');
     const plateLoaded = raw.prepare('SELECT primary_muscle FROM exercises WHERE id = ?').get('ex-2');
@@ -272,7 +275,7 @@ describe('SCHEMA_MIGRATIONS v63: extends the front-delt correction to Viking Pre
   test('is exactly scoped by name: does not touch Machine Shoulder Press (already corrected by v62), Dumbbell Shoulder Press, Dumbbell Lateral Raise, or Upright Row', async () => {
     const raw = freshExercisesDb();
     seedRowsV63(raw);
-    await runLastMigrations(raw, 18);
+    await runLastMigrations(raw, 19);
 
     const untouched = ['ex-3', 'ex-4', 'ex-5', 'ex-6'];
     for (const id of untouched) {
@@ -285,7 +288,7 @@ describe('SCHEMA_MIGRATIONS v63: extends the front-delt correction to Viking Pre
   test('is idempotent: running the migration a second time leaves the corrected rows unchanged and errors on neither run', async () => {
     const raw = freshExercisesDb();
     seedRowsV63(raw);
-    const total = await runLastMigrations(raw, 18);
+    const total = await runLastMigrations(raw, 19);
 
     raw.exec(`PRAGMA user_version = ${total - 6}`);
     const d = adapt(raw);

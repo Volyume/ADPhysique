@@ -42,8 +42,13 @@ import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { SWAP_SCOPE } from '../lib/exercise/swapScope';
-import { getAllCompletedSetsForExercise, getWorkoutById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, recordExerciseSwap, getActiveBlock } from '../lib/database';
-import { loadExerciseIntentState, rankPersonalised } from '../lib/exercise/intent';
+import { getAllCompletedSetsForExercise, getWorkoutById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, recordExerciseSwap, getActiveBlock, EXERCISE_INTENT } from '../lib/database';
+import {
+  loadExerciseIntentState, rankPersonalised, movementFamilyOf, isFamilyBlocked,
+  intentFor, familyTargetKey,
+} from '../lib/exercise/intent';
+import { familyLabel } from '../lib/exercise/movementFamily';
+import { useToast } from '../components/Toast';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { audit } from '../lib/observability';
@@ -301,6 +306,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // file, after the frozen `styles` block -- see the comment there for why).
   const t = useTheme();
   const live = buildLiveStyles(t);
+  // D107-2/D109-2: the one visible surface this screen needs for a
+  // constraints-read failure (the quiet avoided-pattern notice itself
+  // degrades silently by simply not showing, which is correct - only the
+  // read failure specifically needs a notice).
+  const toast = useToast();
 
   const [currentSet, setCurrentSet] = useState({ ...DEFAULT_SET });
   // C5-P13-02 (D96): the weight/reps the entry was last SEEDED with, so
@@ -451,6 +461,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showStaleModal, setShowStaleModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapCandidates, setSwapCandidates] = useState([]);
+  // D107-2: exercise-intent state kept at screen scope (not just inside
+  // handleOpenSwap's local read) so the logger can show a quiet notice when
+  // the CURRENT exercise's movement pattern is being avoided - "never
+  // silently rewritten": nothing here changes the plan, it only surfaces
+  // the fact with a Swap shortcut.
+  const [intentState, setIntentState] = useState(null);
   const [showDiscardModal, setShowDiscardModal] = useState(false);
   const [timeCrunchActive, setTimeCrunchActive] = useState(false);
   const [timeCrunchMsg, setTimeCrunchMsg] = useState('');
@@ -605,6 +621,39 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const isLastExercise = !workoutExercises.some(
     (entry, i) => i > currentExerciseIndex && !entry?._timeCrunchSkipped,
   );
+
+  // D107-2: reload the intent state whenever the exercise on screen changes,
+  // so the "avoiding this movement pattern" notice below is checked against
+  // the exercise actually being logged, not a stale one from a previous
+  // slot. Best-effort and additive: a failure simply means no notice shows,
+  // never that logging is affected.
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) { setIntentState(null); return undefined; }
+    getActiveBlock(user.id)
+      .then(block => loadExerciseIntentState(user.id, { activeMesocycleId: block?.id ?? null }))
+      .then(state => { if (!cancelled) setIntentState(state); })
+      .catch(() => { if (!cancelled) setIntentState(null); });
+    return () => { cancelled = true; };
+  }, [user?.id, exercise?.id]);
+
+  // D107-2: is the exercise on screen right now under a movement-pattern
+  // avoidance? Computed here (not inline in the StatusStrip builder below)
+  // so both the notice chip and its accessibility label read the same facts.
+  const patternAvoidFamily = exercise ? movementFamilyOf(exercise) : null;
+  const patternAvoidTarget = patternAvoidFamily ? familyTargetKey(patternAvoidFamily) : null;
+  const patternAvoidRow = (intentState && patternAvoidTarget) ? intentFor(intentState, patternAvoidTarget) : null;
+  const patternAvoidActive = !!(patternAvoidFamily && intentState && isFamilyBlocked(intentState, patternAvoidFamily));
+  const patternAvoidLabel = patternAvoidFamily ? (familyLabel(patternAvoidFamily) ?? patternAvoidFamily) : null;
+  const patternAvoidCopy = (() => {
+    if (!patternAvoidActive || !patternAvoidRow) return null;
+    if (patternAvoidRow.kind === EXERCISE_INTENT.PATTERN_AVOID && patternAvoidRow.expiresAtMs) {
+      const until = new Date(patternAvoidRow.expiresAtMs).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+      return `Avoiding ${patternAvoidLabel} until ${until}`;
+    }
+    if (patternAvoidRow.kind === EXERCISE_INTENT.AVOIDED_BLOCK) return `Avoiding ${patternAvoidLabel} for this block`;
+    return `Avoiding ${patternAvoidLabel}`;
+  })();
 
   // COMP-015: this session's adjustment for the current exercise, if any. Only
   // Pro sessions ever carry adjustments; a reverted one is ignored. A nonzero
@@ -947,6 +996,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         fromExerciseId: exercise?.id,
         routineId: activeWorkout?.routineId ?? null,
       }).slice(0, 8);
+      setIntentState(state);
+      // D109-2: the read failed open (structural list stands, nothing is
+      // filtered by avoidance) - say so, rather than let the swap list look
+      // like a clean slate when it may not be.
+      if (state?.unavailable) {
+        toast.show('Avoided movements could not be checked, so nothing is filtered for them here.', { variant: 'warning' });
+      }
     } catch (_) { /* personalisation is additive: the structural list stands */ }
     setSwapCandidates(ordered);
     setShowSwapModal(true);
@@ -3299,6 +3355,37 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <Text style={[styles.supersetChipText, live.supersetChipText]}>
                       Superset - alternates with {partnerNamesText}
                     </Text>
+                  </View>
+                ),
+              });
+            }
+            // D107-2: "an exercise already IN the active plan is never
+            // silently rewritten" - this is the quiet notice that law
+            // requires. Nothing here changes the plan; it only surfaces the
+            // fact, with a Swap shortcut reusing the existing swap sheet.
+            if (patternAvoidActive && patternAvoidCopy) {
+              items.push({
+                key: 'pattern-avoid',
+                label: 'Avoided pattern',
+                icon: 'shield-outline',
+                iconColor: t.colors.warning,
+                content: (
+                  <View key="pattern-avoid" style={[styles.nextTimeBanner, live.nextTimeBanner]}>
+                    <Ionicons name="shield-outline" size={16} color={t.colors.warning} style={{ marginTop: spacing.hair }} />
+                    <View style={styles.nextTimeBannerBody}>
+                      <Text style={[styles.nextTimeBannerText, live.nextTimeBannerText]}>
+                        {patternAvoidCopy}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.inlineActionPill, live.inlineActionPill]}
+                      onPress={handleOpenSwap}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Swap ${exercise?.name ?? 'this exercise'}`}
+                    >
+                      <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Swap</Text>
+                    </TouchableOpacity>
                   </View>
                 ),
               });
