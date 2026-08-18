@@ -1400,6 +1400,30 @@ conditional on the decision; recorded here so they are visible, not lost._
 
 ## 3. FOUNDER-SIDE OPS (not agent work - only the founder can do these)
 
+- **OPEN (2026-08-18) - LIVE DEFECT: Android App Links are half-signed,
+  so partner invite links do not open the app for Play-installed users.**
+  Found while answering the developer-verification key question.
+  `https://volyume.app/.well-known/assetlinks.json` currently serves
+  exactly ONE fingerprint:
+  `1B:5C:F2:34:32:DD:7A:E2:C4:D5:07:51:E0:54:35:70:9C:8A:3B:8E:44:28:BC:D9:B0:8C:B1:F4:E7:79:AE:2E`
+  The committed template (`public/.well-known/assetlinks.json`) expects
+  TWO - the Play app signing cert and the upload cert - and
+  deploy-pages.yml fills them from the `PLAY_APP_SIGNING_SHA256` secret
+  and the keystore secret respectively. Only one landed, so
+  `PLAY_APP_SIGNING_SHA256` is not set and the surviving value is the
+  upload key. Google re-signs every Play install with the app signing
+  key, whose fingerprint is therefore absent - so Android refuses to
+  verify the domain and `https://volyume.app/partner/<CODE>` opens the
+  browser instead of the app for real users. The `volyume://` scheme
+  still works, so this was invisible on sideloaded test builds.
+  FIX (founder supplies one value, then this is an in-repo change):
+  Play Console -> Test and release -> Setup -> App signing -> copy the
+  **App signing key certificate SHA-256**. That fingerprint is PUBLIC by
+  definition (it is published in assetlinks.json), so it does not need to
+  be a secret at all - paste it here and it gets committed straight into
+  `public/.well-known/assetlinks.json`, removing the missing-secret
+  failure mode permanently rather than re-creating it.
+
 - **OPEN (2026-08-18) - BLOCKING THE PLAY RELEASE: Android developer
   verification.** Creating the production release fails with "To proceed
   with this release, all keys should be registered to meet the Android
