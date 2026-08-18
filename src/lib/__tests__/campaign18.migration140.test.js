@@ -13,7 +13,12 @@ test('session resolutions has one unambiguous migration number and tracker row',
   expect(fs.existsSync(path.join(root, 'supabase', 'migrate_137_session_resolutions.sql'))).toBe(false);
   const tracker = fs.readFileSync(path.join(root, 'supabase', 'README.md'), 'utf8');
   expect(tracker).toMatch(/\| 140 \| `migrate_140_session_resolutions\.sql`/);
-  expect(tracker).toMatch(/NO - PENDING/);
+  // Re-pinned 2026-08-18: the row no longer reads PENDING because the
+  // session_resolutions table was verified LIVE in production during the
+  // 142/143 batch (direct information_schema check). The pin now asserts
+  // the tracker states a verified status rather than freezing "pending"
+  // forever.
+  expect(tracker).toMatch(/\| 140 \| `migrate_140_session_resolutions\.sql`[^\n]*\*\*YES - LIVE, verified/);
 });
 
 test('cloud uniqueness and values match the local explicit-resolution contract', () => {
