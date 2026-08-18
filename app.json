@@ -64,7 +64,7 @@
         "monochromeImage": "./assets/adaptive-icon-monochrome.png"
       },
       "package": "app.volyume",
-      "versionCode": 30,
+      "versionCode": 3357,
       "allowBackup": false,
       "permissions": [
         "android.permission.CAMERA",
@@ -201,10 +201,10 @@
         "expo-build-properties",
         {
           "android": {
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35,
+            "compileSdkVersion": 36,
+            "targetSdkVersion": 36,
             "minSdkVersion": 26,
-            "buildToolsVersion": "35.0.0",
+            "buildToolsVersion": "36.0.0",
             "usesCleartextTraffic": false,
             "manifestQueries": {
               "package": [

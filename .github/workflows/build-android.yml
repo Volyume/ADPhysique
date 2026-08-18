@@ -182,14 +182,74 @@ jobs:
           }
 
           yes | sdkmanager --licenses >/dev/null || true
+          # Android 16 / API 36 is the compile+target level (app.json ->
+          # expo-build-properties), raised 2026-08-18 to clear the Play policy
+          # "App must target Android 16 (API level 36) or higher", which blocks
+          # every update submitted on or after 2026-08-31. 36 is also Expo SDK
+          # 54's own default (node_modules/expo-modules-core/android/
+          # ExpoModulesCorePlugin.gradle:65,69) -- the repo had been pinning
+          # DOWN from it. API 35 stays installed because third-party Android
+          # libraries in the tree may still compile against it.
+          install_sdk_package "platforms;android-36" "$SDK_ROOT/platforms/android-36"
+          install_sdk_package "build-tools;36.0.0" "$SDK_ROOT/build-tools/36.0.0"
           install_sdk_package "platforms;android-35" "$SDK_ROOT/platforms/android-35"
           install_sdk_package "build-tools;35.0.0" "$SDK_ROOT/build-tools/35.0.0"
           install_sdk_package "cmake;3.22.1" "$SDK_ROOT/cmake/3.22.1"
           install_sdk_package "ndk;27.1.12297006" "$SDK_ROOT/ndk/27.1.12297006"
           install_sdk_package "ndk;27.0.12077973" "$SDK_ROOT/ndk/27.0.12077973"
 
-          echo "Installed Android SDK 35, build-tools 35.0.0, CMake 3.22.1, and required NDKs."
+          echo "Installed Android SDK 36 + 35, build-tools 36.0.0 + 35.0.0, CMake 3.22.1, and required NDKs."
           ls -la "$SDK_ROOT/ndk"
+
+      # Android versionCode: computed HERE, never taken from app.json as-is.
+      #
+      # Founder report 2026-08-18 ("stuck at 30 for about 3 weeks"): the Android
+      # release is built LOCALLY on this runner (expo prebuild + gradle), so
+      # eas.json's `appVersionSource: remote` and the production profile's
+      # `autoIncrement: true` never applied to it -- those govern EAS CLOUD
+      # builds, which this repo uses for iOS only. Every AAB therefore shipped
+      # whatever integer app.json happened to hold, and app.json was last bumped
+      # by hand on 2026-07-13 (commit d97d513f, versionCode 30). Play refuses a
+      # duplicate versionCode, so every upload after that one was rejected and
+      # the store stayed on 30 while five weeks of work piled up behind it.
+      #
+      # github.run_number is monotonic for this workflow and never reused, so
+      # every build now gets a unique, always-increasing code and there is
+      # nothing left for anyone to remember. app.json keeps the value as a
+      # FLOOR: if the run counter ever fell below it (only possible if this
+      # workflow file were deleted and recreated, which resets the counter) the
+      # build fails here with the fix spelled out, rather than quietly producing
+      # an AAB that Play will reject on upload.
+      - name: Set Android versionCode
+        env:
+          RUN_NUMBER: ${{ github.run_number }}
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+
+          run_number = int(os.environ['RUN_NUMBER'])
+          with open('app.json') as fh:
+              config = json.load(fh)
+          android = config['expo']['android']
+          floor = int(android.get('versionCode', 0))
+          if run_number <= floor:
+              print(
+                  f"::error::Computed versionCode {run_number} is not above the "
+                  f"floor {floor} recorded in app.json. The workflow run counter "
+                  f"has been reset. Raise app.json expo.android.versionCode above "
+                  f"{run_number}, then re-run."
+              )
+              sys.exit(1)
+          android['versionCode'] = run_number
+          with open('app.json', 'w') as fh:
+              json.dump(config, fh, indent=2)
+              fh.write('\n')
+          print(f"versionCode: {floor} (app.json floor) -> {run_number} (this build)")
+          summary = os.environ.get('GITHUB_STEP_SUMMARY')
+          if summary:
+              with open(summary, 'a') as fh:
+                  fh.write(f"Android versionCode for this build: **{run_number}**\n")
+          PY
 
       - name: Run Expo Prebuild
         run: npx expo prebuild --platform android --clean
