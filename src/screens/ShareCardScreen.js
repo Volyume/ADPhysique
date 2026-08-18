@@ -157,25 +157,55 @@ export default function ShareCardScreen({ route }) {
 
   // Load the wordmark once as an SkImage for the card footer.
   const [wordmark, setWordmark] = useState(null);
-  // Nothing may export until the card can be drawn WITH its brand mark. The
-  // wordmark loads asynchronously, so without this the Share and Save buttons
-  // were live during the window where the footer would fall back to plain
-  // system text -- an unbranded card, shipped silently.
-  const cardReady = !!(Skia && typefaces && wordmark);
+  // VOLYUME-2V (founder device, 2026-08-18 - the "can't build the preview
+  // AND the share buttons don't work" report): the Sentry event named the
+  // cause as `renderer inputs missing`, and the ONLY asynchronously-loaded
+  // input is this wordmark image. Its loader swallowed every failure
+  // silently, so one unavailable decorative asset took the ENTIRE feature
+  // down - render refused, and cardReady disabled both buttons.
+  //
+  // Two corrections. First, readiness no longer waits on the mark IMAGE:
+  // the footer already lays out without it and still carries "volyume.app",
+  // so the card is branded either way - the R1 rule this replaces existed
+  // to stop an off-brand card looking deliberate, never to make the brand
+  // asset a single point of failure for sharing at all. Second, the loader
+  // below now reports why it failed instead of swallowing it.
+  const cardReady = !!(Skia && typefaces);
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      if (!Skia || !Asset || !FileSystem) return;
+      if (!Skia) return;
+      const toImage = (data) => (data ? Skia.Image.MakeImageFromEncoded(data) : null);
       try {
         const asset = Asset.fromModule(WORDMARK);
         await asset.downloadAsync();
         const uri = asset.localUri || asset.uri;
-        if (!uri) return;
-        const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
-        const data = Skia.Data.fromBase64(b64);
-        const img = Skia.Image.MakeImageFromEncoded(data);
-        if (!cancelled && img) setWordmark(img);
-      } catch (_) { /* footer falls back to drawn text */ }
+        if (!uri) throw new Error('wordmark asset resolved no uri');
+        let img = null;
+        // Preferred path: read the bundled file directly.
+        if (FileSystem?.readAsStringAsync) {
+          try {
+            const b64 = await FileSystem.readAsStringAsync(uri, { encoding: FileSystem.EncodingType.Base64 });
+            img = toImage(Skia.Data.fromBase64(b64));
+          } catch (e) {
+            logError('ShareCardScreen.wordmarkRead', e, { uri });
+          }
+        }
+        // Fallback: fetch the same uri and hand Skia the raw bytes. Covers
+        // the cases where the legacy file-system read is unavailable or
+        // refuses the bundled asset path on this platform.
+        if (!img) {
+          const res = await fetch(uri);
+          const buf = await res.arrayBuffer();
+          img = toImage(Skia.Data.fromBytes(new Uint8Array(buf)));
+        }
+        if (!img) throw new Error('wordmark decoded to no image');
+        if (!cancelled) setWordmark(img);
+      } catch (e) {
+        // The card still renders and still says volyume.app; this is logged
+        // so a missing mark is visible to us rather than silent.
+        logError('ShareCardScreen.wordmarkLoad', e);
+      }
     })();
     return () => { cancelled = true; };
   }, []);
@@ -290,7 +320,11 @@ export default function ShareCardScreen({ route }) {
     // on - the calm error UI is right for the user but useless for the
     // diagnosis. A renderer THROW is caught to the same calm null instead
     // of taking the screen down.
-    if (!Skia || !typefaces || !wordmark) {
+    // VOLYUME-2V: the wordmark IMAGE is no longer required to draw - the
+    // renderer lays the footer out without it and still prints volyume.app.
+    // Skia and the typefaces genuinely are required (there is no text
+    // without them).
+    if (!Skia || !typefaces) {
       logError('ShareCardScreen.renderCard', new Error('renderer inputs missing'), {
         hasSkia: !!Skia, hasTypefaces: !!typefaces, hasWordmark: !!wordmark,
       });
@@ -340,7 +374,7 @@ export default function ShareCardScreen({ route }) {
     weeklyRecapData && { type: 'weekly', label: 'Weekly' },
   ].filter(Boolean), [sessionData, prData, prs.length, milestoneData, weeklyRecapData]);
   const thumbs = useMemo(() => {
-    if (!Skia || !typefaces || !wordmark || availableTypes.length < 2) return {};
+    if (!Skia || !typefaces || availableTypes.length < 2) return {};
     const out = {};
     for (const { type: thumbType } of availableTypes) {
       try {
@@ -495,7 +529,7 @@ export default function ShareCardScreen({ route }) {
       toast.show("Saving to your gallery isn't available on your device.", { variant: 'error', duration: 5000 });
       return;
     }
-    if (!typefaces || !wordmark) {
+    if (!typefaces) {
       toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
       return;
     }
@@ -531,7 +565,7 @@ export default function ShareCardScreen({ route }) {
       toast.show("Story sharing isn't available on your device.", { variant: 'error', duration: 5000 });
       return;
     }
-    if (!typefaces || !wordmark) {
+    if (!typefaces) {
       toast.show('Not ready yet, wait a moment and try again', { variant: 'info' });
       return;
     }

@@ -303,7 +303,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // dependency) and cleared on unmount so a PR fired outside the logger
   // falls back to the toast's own safe-area offset.
   const handleBottomChromeLayout = useCallback((e) => {
-    useAppStore.getState().setLoggerBottomInset(Math.round(e?.nativeEvent?.layout?.height ?? 0));
+    // Founder device report 2026-08-18 (second walk): the rest strip HIDES
+    // itself when no rest is running, so a PR fired in that moment measured
+    // the chrome short and the toast docked over the Log set button. The
+    // published height now only RATCHETS UP while the logger is mounted -
+    // its tallest state (bottom bar + rest strip) is the "above the amber
+    // line" position, and the rest strip is appearing at log time anyway.
+    // Reset happens on unmount only.
+    const h = Math.round(e?.nativeEvent?.layout?.height ?? 0);
+    const s = useAppStore.getState();
+    if (h > (s.loggerBottomInset || 0)) s.setLoggerBottomInset(h);
   }, []);
   useEffect(() => () => { useAppStore.getState().setLoggerBottomInset(0); }, []);
   // Drop assisted machine regressions from swap suggestions for anyone past

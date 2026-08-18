@@ -154,12 +154,23 @@ function strokeRRect(canvas, Skia, x, y, w, h, r, colorStr, lw) {
 // amber halo (pillar 2) and the per-type background accent geometry (pillar 1).
 // MaskFilter.MakeBlur is core Skia, present identically on the device JsiSk*
 // path and the CanvasKit-in-Node harness path (both wrap the same C++ API).
+// DECORATION IS NEVER LOAD-BEARING (founder device failure 2026-08-18: the
+// share preview would not build at all on a plain dark session card - the
+// exact path this glow runs on, and the only Skia call the rebuilt renderer
+// added there). MaskFilter/blur support is the least portable corner of the
+// Skia surface between the CanvasKit build the harness renders with and the
+// JsiSk build on device, so a failure here must degrade to "no glow", never
+// to "no card". Same law applied to every other ornament below.
 function drawGlow(canvas, Skia, cx, cy, radius, colorStr, alpha, sigma) {
-  const p = Skia.Paint();
-  p.setAntiAlias(true);
-  p.setColor(Skia.Color(rgba(colorStr, alpha)));
-  p.setMaskFilter(Skia.MaskFilter.MakeBlur(BLUR_NORMAL, sigma, true));
-  canvas.drawCircle(cx, cy, radius, p);
+  try {
+    const p = Skia.Paint();
+    p.setAntiAlias(true);
+    p.setColor(Skia.Color(rgba(colorStr, alpha)));
+    if (Skia.MaskFilter && typeof Skia.MaskFilter.MakeBlur === 'function') {
+      p.setMaskFilter(Skia.MaskFilter.MakeBlur(BLUR_NORMAL, Math.max(0.1, sigma), true));
+    }
+    canvas.drawCircle(cx, cy, radius, p);
+  } catch (_e) { /* ornament only: a card without its glow is still a card */ }
 }
 
 // Greedy word wrap to a max pixel width, using the active font.
@@ -380,27 +391,40 @@ function drawBackgroundGeometry(canvas, Skia, W, H, cardType) {
 }
 
 function drawCraftedBackground(canvas, Skia, W, H, cardType) {
-  const theme = BG_THEME[cardType] || BG_THEME.session;
-  const start = theme.dir === 'diagonal' ? { x: 0, y: 0 } : { x: W / 2, y: 0 };
-  const end = theme.dir === 'diagonal' ? { x: W, y: H } : { x: W / 2, y: H };
-  const shader = Skia.Shader.MakeLinearGradient(
-    start, end, theme.stops.map((c) => Skia.Color(c)), [0, 0.5, 1], CLAMP,
-  );
-  const p = Skia.Paint(); p.setShader(shader);
-  canvas.drawRect(Skia.XYWHRect(0, 0, W, H), p);
-  drawBackgroundGeometry(canvas, Skia, W, H, cardType);
+  // The floor: a plain opaque fill lands FIRST, so the card always has a
+  // ground even if the gradient shader or the accent geometry cannot be
+  // built on this Skia build (founder device failure 2026-08-18).
+  fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg0);
+  try {
+    const theme = BG_THEME[cardType] || BG_THEME.session;
+    const start = theme.dir === 'diagonal' ? { x: 0, y: 0 } : { x: W / 2, y: 0 };
+    const end = theme.dir === 'diagonal' ? { x: W, y: H } : { x: W / 2, y: H };
+    const shader = Skia.Shader.MakeLinearGradient(
+      start, end, theme.stops.map((c) => Skia.Color(c)), [0, 0.5, 1], CLAMP,
+    );
+    const p = Skia.Paint(); p.setShader(shader);
+    canvas.drawRect(Skia.XYWHRect(0, 0, W, H), p);
+  } catch (_e) { /* the flat fill above stands as the background */ }
+  try {
+    drawBackgroundGeometry(canvas, Skia, W, H, cardType);
+  } catch (_e) { /* accent geometry is ornament, never load-bearing */ }
 }
 
 function drawBackground(canvas, Skia, W, H, cardType) {
   if (BG && BG.width && BG.width() && BG.height()) {
     // Gym photo background: cover-fit the photo, then a tone-sampled,
     // bottom-weighted gradient scrim (pillar 1) instead of the old flat
-    // rgba(bg0,0.62) wash, with a computed contrast floor.
-    drawImageCover(canvas, Skia, BG, W, H);
-    drawPhotoScrim(canvas, Skia, W, H, sampleAverageTone(Skia, BG));
-  } else {
-    drawCraftedBackground(canvas, Skia, W, H, cardType);
+    // rgba(bg0,0.62) wash, with a computed contrast floor. A failure in
+    // either half falls back to the crafted background rather than
+    // leaving the card groundless (2026-08-18 law: nothing decorative
+    // may block a render).
+    try {
+      drawImageCover(canvas, Skia, BG, W, H);
+      drawPhotoScrim(canvas, Skia, W, H, sampleAverageTone(Skia, BG));
+      return;
+    } catch (_e) { /* fall through to the crafted background */ }
   }
+  drawCraftedBackground(canvas, Skia, W, H, cardType);
 }
 
 function drawAccentBar(canvas, Skia, W, s) {
@@ -1070,12 +1094,56 @@ export function drawShareCard(canvas, {
   const s = W / 1080;
   const font = makeFonts(Skia, typefaces, s);
   const p = { ...params, isSquare, aspect };
-  if (params.cardType === 'pr') drawPR(canvas, Skia, W, H, p, s, font, wordmark);
-  else if (params.cardType === 'milestone') drawMilestone(canvas, Skia, W, H, p, s, font, wordmark);
-  else if (params.cardType === 'weekly') drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark);
-  else if (params.cardType === 'beforeAfter') drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos);
-  else drawSession(canvas, Skia, W, H, p, s, font, wordmark);
+  // A CARD ALWAYS COMES OUT (founder device failure 2026-08-18: "this still
+  // does not render"). If any composition throws on a Skia build the harness
+  // cannot reproduce, the canvas still carries a legible dark card with the
+  // moment's own headline rather than the caller getting null and the whole
+  // screen dead-ending on "Couldn't build the preview". The failure is
+  // re-thrown afterwards so the screen still LOGS the cause to Sentry - the
+  // user gets a card, we still get the diagnosis.
+  try {
+    if (params.cardType === 'pr') drawPR(canvas, Skia, W, H, p, s, font, wordmark);
+    else if (params.cardType === 'milestone') drawMilestone(canvas, Skia, W, H, p, s, font, wordmark);
+    else if (params.cardType === 'weekly') drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark);
+    else if (params.cardType === 'beforeAfter') drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos);
+    else drawSession(canvas, Skia, W, H, p, s, font, wordmark);
+  } catch (e) {
+    drawMinimalFallbackCard(canvas, Skia, W, H, p, s, font, wordmark);
+    if (typeof params.onDrawError === 'function') {
+      try { params.onDrawError(e); } catch (_) { /* reporting is best-effort */ }
+    }
+  }
   return { width: W, height: H };
+}
+
+/**
+ * The floor card: plain fill, the moment's headline, one hero value, the
+ * quiet mark. Uses ONLY the primitives that have shipped since the first
+ * renderer (fillRect + drawText + the wordmark image) - no gradients, no
+ * blur, no offscreen surfaces - so it stands on any Skia build the app can
+ * boot with. Never the intended design; strictly better than no card.
+ */
+function drawMinimalFallbackCard(canvas, Skia, W, H, p, s, font, wordmark) {
+  try {
+    fillRect(canvas, Skia, 0, 0, W, H, PALETTE.bg0);
+    const pad = Math.round(W * 0.08);
+    const title = p.cardType === 'pr' ? 'Personal record'
+      : p.cardType === 'weekly' ? (p.tierLabel || 'Your week')
+        : p.cardType === 'milestone' ? (p.title || 'Milestone')
+          : (p.sessionName || 'Workout complete');
+    const hero = p.cardType === 'pr'
+      ? `${withUnit(String(p.weight ?? ''), p.units || 'kg')}${p.reps ? ` × ${p.reps}` : ''}`
+      : p.cardType === 'milestone' ? String(p.heroValue ?? '')
+        : p.cardType === 'weekly' ? String(p.hero?.value ?? '')
+          : String(p.workingSets ? `${p.workingSets} sets` : '');
+    const titleFont = fitFont(null, title, W - pad * 2, 64, (px) => font(px), 22);
+    text(canvas, Skia, title, pad, Math.round(H * 0.42), titleFont, PALETTE.text, 'left');
+    if (hero) {
+      const heroFont = fitFont(null, hero, W - pad * 2, 96, (px) => font(px), 28);
+      text(canvas, Skia, hero, pad, Math.round(H * 0.42) + Math.round(110 * s), heroFont, PALETTE.accent, 'left');
+    }
+    drawFooter(canvas, Skia, W, H, s, font, wordmark, p);
+  } catch (_e) { /* even the floor is best-effort; a dark card is acceptable */ }
 }
 
 // ── sticker export (ELITE-SHARE-SPEC pillar 3, Strava Sticker Stats) ──────
