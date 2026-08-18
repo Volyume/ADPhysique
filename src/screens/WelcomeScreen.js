@@ -125,8 +125,8 @@ export default function WelcomeScreen({ navigation }) {
 
             <Text style={[styles.trialNote, live.trialNote]}>
               {monthlyPrice
-                ? `No payment card needed. If you don't subscribe, you keep the free plan below at no cost. Continuing with Pro afterwards costs ${monthlyPrice} a month on ${storeName()}.`
-                : `No payment card needed. If you don't subscribe, you keep the free plan below at no cost. Continuing with Pro afterwards is a monthly subscription on ${storeName()}.`}
+                ? `No payment card needed. When the 14 days end, Pro stops unless you subscribe for ${monthlyPrice} a month on ${storeName()}. If you don't, you move to the free version below and keep using it for as long as you like.`
+                : `No payment card needed. When the 14 days end, Pro stops unless you subscribe on ${storeName()}. If you don't, you move to the free version below and keep using it for as long as you like.`}
             </Text>
 
             <View style={[styles.proCtaRow, live.proCtaRow]}>
@@ -144,8 +144,8 @@ export default function WelcomeScreen({ navigation }) {
                 <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[styles.freeTitle, live.freeTitle]}>What stays free</Text>
-                <Text style={[styles.freeSubtitle, live.freeSubtitle]}>If you don&apos;t subscribe after the trial, these stay.</Text>
+                <Text style={[styles.freeTitle, live.freeTitle]}>The free version</Text>
+                <Text style={[styles.freeSubtitle, live.freeSubtitle]}>What you keep if you don&apos;t subscribe. No time limit, no card.</Text>
               </View>
             </View>
 
