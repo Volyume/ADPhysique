@@ -63,8 +63,12 @@
 --
 -- Applied locally:   YES (src/lib/database.js SCHEMA_MIGRATIONS v77).
 --
--- Applied remotely:  NO. Founder-gated. Requires the exact phrase
---                    "run against production" before it is applied.
+-- Applied remotely:  YES. Verified LIVE 2026-08-18 by a direct
+--                    information_schema check during the 142/143 batch
+--                    (the food_swaps table is present in production). The
+--                    exact apply date/session is not resolvable from the
+--                    repository - see supabase/README.md's 2026-08-18
+--                    batch note, which is the authority.
 --
 --                    Ship order does NOT matter. Until this runs, the table
 --                    is device-local: the push finds no remote table, the

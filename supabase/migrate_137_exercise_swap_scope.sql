@@ -35,8 +35,12 @@
 --                    cover it.
 --
 -- Applied locally:   YES (src/lib/database.js SCHEMA_MIGRATIONS v75).
--- Applied remotely:  NO. Founder-gated. Requires the exact phrase
---                    "run against production" before it is applied.
+-- Applied remotely:  YES. Verified LIVE 2026-08-18 by a direct
+--                    information_schema check during the 142/143 batch
+--                    (exercise_swaps.scope present, text, nullable). The
+--                    exact apply date/session is not resolvable from the
+--                    repository - see supabase/README.md's 2026-08-18
+--                    batch note, which is the authority.
 --
 --                    Ship order does NOT matter for this one, unlike
 --                    migrate_136: the client's push sends `scope` as an
