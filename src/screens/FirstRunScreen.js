@@ -11,6 +11,7 @@ import TextField from '../components/TextField';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
+import { isAppleUser, currentAppleIdentity, currentAppleProfilePatch } from '../lib/appleIdentity';
 
 // First-run for Free users only. Pro signups go through ProOnboardingStack
 // (profile > training > recovery > plan + nutrition generation). Free gets
@@ -36,7 +37,23 @@ export default function FirstRunScreen({ navigation }) {
   // the same shape the Pro wizard uses (ProOnboardingScreen's firstName
   // state). A free user killed mid-quiz walks this screen again, and it used
   // to ask for a name the app had already stored and written.
-  const [firstName, setFirstName] = useState(userProfile?.firstName || '');
+  // App Review Guideline 4 (rejected twice, 2026-07-21 and 2026-08-19): an
+  // Apple-authenticated athlete is never shown a name box. Authentication
+  // Services already supplies the name, and this is the FREE onboarding screen
+  // reached straight after the Apple button, so it asks for exactly what Apple
+  // objected to. The Pro wizard's fix was audited and this screen was carrying
+  // the same defect with no Apple awareness at all.
+  //
+  // Derived from the Supabase auth user, so it holds on the first sign-in and
+  // on every one after (Apple returns the name once per Apple ID, ever).
+  const appleUser = isAppleUser(user);
+  const [firstName, setFirstName] = useState(() => (
+    userProfile?.firstName
+    || (isAppleUser(user)
+      ? currentAppleIdentity({ sessionUser: user, storedProfile: userProfile }).firstName
+      : null)
+    || ''
+  ));
   const [busy, setBusy] = useState(false);
   const nameRef = useRef(null);
   // FQ-6.1 (D96): true only when a network-failed trial grant is queued for
@@ -54,9 +71,12 @@ export default function FirstRunScreen({ navigation }) {
   const hasName = firstName.trim().length > 0;
 
   useEffect(() => {
+    // Nothing to focus when the field is not rendered, and no keyboard should
+    // be raised at an Apple athlete for a question they are not being asked.
+    if (appleUser) return undefined;
     const t = setTimeout(() => nameRef.current?.focus(), 350);
     return () => clearTimeout(t);
-  }, []);
+  }, [appleUser]);
 
   async function finish() {
     setBusy(true);
@@ -69,6 +89,13 @@ export default function FirstRunScreen({ navigation }) {
       // rather than writing a blank over it.
       const merged = { ...(userProfile || {}), units: localUnits };
       if (hasName) merged.firstName = firstName.trim();
+      // App Review Guideline 4: persist what Authentication Services already
+      // supplied, so it is never asked for. Fills gaps only. See the matching
+      // comment in ProOnboardingScreen for why the e-mail stays device-local.
+      if (appleUser) {
+        const applePatch = currentAppleProfilePatch({ sessionUser: user, storedProfile: merged });
+        if (applePatch) Object.assign(merged, applePatch);
+      }
       if (user?.id) await saveLocalProfile(user.id, merged);
       // B2: hand over to the starter micro-quiz. It calls completeFirstRun
       // itself, after a plan is installed or the user skips.
@@ -90,7 +117,9 @@ export default function FirstRunScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, live.title]}>You&apos;re almost set up.</Text>
         <Text style={[styles.subtitle, live.subtitle]}>
-          Add your name if you like, then a few quick questions to get you set up.
+          {appleUser
+            ? 'A few quick questions to get you set up.'
+            : 'Add your name if you like, then a few quick questions to get you set up.'}
         </Text>
 
         {/* FQ-6.1 (D96): a new user only lands on this FREE path with a
@@ -104,6 +133,7 @@ export default function FirstRunScreen({ navigation }) {
           </Text>
         ) : null}
 
+        {appleUser ? null : (
         <TextField
           ref={nameRef}
           label="What should we call you? (optional)"
@@ -119,6 +149,7 @@ export default function FirstRunScreen({ navigation }) {
           returnKeyType="go"
           onSubmitEditing={finish}
         />
+        )}
 
         <Button
           title="Continue"

@@ -439,6 +439,20 @@ export async function signInWithApple() {
     // email on the FIRST authorisation (both are null on later sign-ins), so we
     // return them for the caller to pre-fill onboarding rather than making the
     // user type information Apple already gave us.
+    //
+    // 2026-08-19, after the SECOND rejection on this guideline: returning them
+    // is not enough. Sign-in completion is driven by RootNavigator's
+    // onAuthStateChange, not by this call's return, and of the three screens
+    // that call this function two dropped both values on the floor. Stash them
+    // here, at the one place Apple ever hands them over, so the next profile
+    // write picks the name up whichever screen the user is standing on.
+    try {
+      // eslint-disable-next-line global-require
+      require('./appleIdentity').noteAppleCredential({
+        givenName: credential?.fullName?.givenName || null,
+        email: credential?.email || null,
+      });
+    } catch (_) { /* best effort: the return below is unaffected */ }
     return {
       ok: true,
       appleGivenName: credential?.fullName?.givenName || null,

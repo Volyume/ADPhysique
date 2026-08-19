@@ -253,7 +253,11 @@ describe('ACCOUNT: first use never duplicates the starter plan (C5-P29-02, D96)'
 describe('ACCOUNT: the free path does not block on a display name (C5-P29-03 / C5-P1-09, D96)', () => {
   test('Continue is never disabled by the name, and the field prefills', () => {
     const src = stripComments(read('screens/FirstRunScreen.js'));
-    expect(src).toMatch(/useState\(userProfile\?\.firstName \|\| ''\)/);
+    // 2026-08-19: the initialiser gained an Apple fallback (App Review
+    // Guideline 4, see appleNoNamePrompt.mount.test.js), so it is now a lazy
+    // one. The claim this pins is unchanged and is asserted the same way: the
+    // STORED profile name is what seeds the field, and it seeds it first.
+    expect(src).toMatch(/useState\(\(\) => \(\s*userProfile\?\.firstName/);
     expect(src).not.toMatch(/disabled=\{!hasName\}/);
     expect(src).not.toMatch(/if \(!hasName\) return;/);
     // An empty field must not write a blank over a stored name.

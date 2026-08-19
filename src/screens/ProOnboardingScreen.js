@@ -23,6 +23,7 @@ import {
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
+import { isAppleUser, currentAppleIdentity, currentAppleProfilePatch } from '../lib/appleIdentity';
 import { generateAndSavePlan, planShortfallNote, assessScheduleFit } from '../lib/planAutoGen';
 import {
   PLAN_FIT, fitCopy, alternativeCopy, keepChoiceCopy, coverageCopy,
@@ -362,14 +363,30 @@ export default function ProOnboardingScreen({ navigation }) {
   // before the overlay commits could fire two plan generations.
   const submittingRef = useRef(false);
 
-  // Step 1, profile
-  const [firstName, setFirstName] = useState(userProfile?.firstName || '');
-  // True once this wizard run authenticated through Sign in with Apple.
-  // Suppresses the first-name field entirely: Authentication Services already
-  // supplies the name, and App Review rejects asking for it again (Guideline
-  // 4, rejected twice on this point). Not persisted - it only governs what
-  // this run renders.
-  const [nameFromApple, setNameFromApple] = useState(false);
+  // True when this ACCOUNT authenticates through Apple, read from the Supabase
+  // auth user rather than from anything this wizard run observed.
+  //
+  // App Review Guideline 4, rejected twice. The 2026-08-19 attempt gated the
+  // field on a `nameFromApple` state that handleOAuthOnboarding set. That was
+  // dead code and shipped the rejection again: this stack only mounts once a
+  // session exists (RootNavigator returns WelcomeStack while `user` is null),
+  // `step` therefore initialises to 2, step 1 never renders, and the handler
+  // that set the flag never ran for a single real user. Deriving it from the
+  // session instead means it is true on every route, on the first sign-in and
+  // on every one after, with no ordering to get wrong.
+  const appleUser = isAppleUser(user);
+
+  // Step 1, profile. For an Apple account, seed from what Authentication
+  // Services already supplied (the credential on first authorisation, the auth
+  // user's metadata thereafter) so the greeting has a name without the athlete
+  // ever being asked. Non-Apple routes keep the exact prior behaviour.
+  const [firstName, setFirstName] = useState(() => (
+    userProfile?.firstName
+    || (isAppleUser(user)
+      ? currentAppleIdentity({ sessionUser: user, storedProfile: userProfile }).firstName
+      : null)
+    || ''
+  ));
   const localUnits = 'kg';
   const [localBWUnits, setLocalBWUnits] = useState(bodyWeightUnits || 'st');
   // OB-5 (audit 02): body weight and age start EMPTY and join sex as
@@ -592,12 +609,12 @@ export default function ProOnboardingScreen({ navigation }) {
     // rendered for them at all (App Review Guideline 4), so there is nothing
     // to focus and no keyboard should be raised. The optional chain below
     // already made this harmless; the condition makes it deliberate.
-    if (step === 2 && !nameFromApple) {
+    if (step === 2 && !appleUser) {
       const t = setTimeout(() => nameRef.current?.focus(), 350);
       return () => clearTimeout(t);
     }
     return undefined;
-  }, [step, nameFromApple]);
+  }, [step, appleUser]);
 
   // Auto-advance past Step 1 if the user is already authenticated when the
   // screen mounts. Happens after OAuth: SIGNED_IN flips isAuthLoading true,
@@ -807,7 +824,9 @@ export default function ProOnboardingScreen({ navigation }) {
       // nothing, the greeting simply carries no name. Nothing is required,
       // nothing is re-asked, and the name stays editable later in Settings ->
       // Profile for anyone who wants to set or change it.
-      if (provider === 'apple') setNameFromApple(true);
+      // (No flag is set for Apple here. The suppression is derived from the
+      // session by `appleUser` above, which is already true by the time this
+      // runs and stays true on every later mount - see its comment.)
       // The onboarding wizard collects the training fields in the next steps.
       // Mark the auth step complete and advance.
       logInfo('ProOnboarding.oauth.success', `provider=${provider}, advancing to step 2`);
@@ -1325,6 +1344,16 @@ export default function ProOnboardingScreen({ navigation }) {
       // free path). An empty field leaves any stored name intact rather
       // than writing a blank over it.
       if (firstName.trim()) merged.firstName = firstName.trim();
+      // App Review Guideline 4: persist what Authentication Services already
+      // supplied, so it is never asked for. Fills gaps only - anything already
+      // in `merged` (including a name typed on a non-Apple route) wins. The
+      // e-mail is device-local: the profile sync has an explicit column map
+      // (src/lib/sync/tables/profiles.js FIELD_MAP) with no e-mail column, and
+      // Supabase auth is already the durable holder of the address.
+      if (appleUser) {
+        const applePatch = currentAppleProfilePatch({ sessionUser: user, storedProfile: merged });
+        if (applePatch) Object.assign(merged, applePatch);
+      }
 
       if (user?.id) await saveLocalProfile(user.id, merged);
 
@@ -1613,8 +1642,10 @@ export default function ProOnboardingScreen({ navigation }) {
                   only on the FIRST authorisation and a re-testing reviewer
                   therefore saw an empty box. Every other sign-in route still
                   gets the field, and Apple users can set a name later in
-                  Settings -> Profile. See handleOAuthOnboarding. */}
-              {nameFromApple ? null : (
+                  Settings -> Profile. Gated on `appleUser`, derived from the
+                  Supabase auth user - see its declaration for why a flag set
+                  during sign-in could never work here. */}
+              {appleUser ? null : (
               <View style={styles.section}>
                 {/* RA-4 (D96, Review A): the one field in the block with no
                     stated reason, because there is none an engine could
