@@ -11,9 +11,7 @@ import TextField from '../components/TextField';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
-import {
-  isAppleUser, currentAppleIdentity, currentAppleProfilePatch, loadAppleCredential,
-} from '../lib/appleIdentity';
+import { isAppleUser, appleFirstName } from '../lib/appleIdentity';
 
 // First-run for Free users only. Pro signups go through ProOnboardingStack
 // (profile > training > recovery > plan + nutrition generation). Free gets
@@ -39,45 +37,18 @@ export default function FirstRunScreen({ navigation }) {
   // the same shape the Pro wizard uses (ProOnboardingScreen's firstName
   // state). A free user killed mid-quiz walks this screen again, and it used
   // to ask for a name the app had already stored and written.
-  // App Review Guideline 4 (rejected twice, 2026-07-21 and 2026-08-19): an
-  // Apple-authenticated athlete is never shown a name box. Authentication
-  // Services already supplies the name, and this is the FREE onboarding screen
-  // reached straight after the Apple button, so it asks for exactly what Apple
-  // objected to. The Pro wizard's fix was audited and this screen was carrying
-  // the same defect with no Apple awareness at all.
+  // An Apple-authenticated athlete is never shown a name box: Authentication
+  // Services already supplied it. This is the FREE onboarding screen reached
+  // straight after the Apple button, and it had no Apple awareness at all -
+  // the same defect the Pro wizard was fixed for.
   //
   // Derived from the Supabase auth user, so it holds on the first sign-in and
   // on every one after (Apple returns the name once per Apple ID, ever).
   const appleUser = isAppleUser(user);
-  const [firstName, setFirstName] = useState(() => (
-    userProfile?.firstName
-    || (isAppleUser(user)
-      ? currentAppleIdentity({ sessionUser: user, storedProfile: userProfile }).firstName
-      : null)
-    || ''
-  ));
+  const [firstName, setFirstName] = useState(
+    () => appleFirstName({ sessionUser: user, storedProfile: userProfile }) || '',
+  );
 
-  // COLD START. The `useState` initialiser above reads the credential mirror
-  // synchronously, and on a cold start that mirror is empty until the disk read
-  // resolves - which is exactly the journey that matters, because the disk copy
-  // only earns its keep when the app was killed between the Apple sheet and
-  // here. Pick the name up when it lands. Gap-fill only: a name already in
-  // state (typed, or from the stored profile) is never overwritten.
-  useEffect(() => {
-    if (!appleUser) return undefined;
-    let cancelled = false;
-    loadAppleCredential()
-      .then(() => {
-        if (cancelled) return;
-        setFirstName((cur) => {
-          if (cur && cur.trim()) return cur;
-          return currentAppleIdentity({ sessionUser: user, storedProfile: userProfile }).firstName || cur;
-        });
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appleUser]);
 
   const [busy, setBusy] = useState(false);
   const nameRef = useRef(null);
@@ -114,13 +85,6 @@ export default function FirstRunScreen({ navigation }) {
       // rather than writing a blank over it.
       const merged = { ...(userProfile || {}), units: localUnits };
       if (hasName) merged.firstName = firstName.trim();
-      // App Review Guideline 4: persist what Authentication Services already
-      // supplied, so it is never asked for. Fills gaps only. See the matching
-      // comment in ProOnboardingScreen for why the e-mail stays device-local.
-      if (appleUser) {
-        const applePatch = currentAppleProfilePatch({ sessionUser: user, storedProfile: merged });
-        if (applePatch) Object.assign(merged, applePatch);
-      }
       if (user?.id) await saveLocalProfile(user.id, merged);
       // B2: hand over to the starter micro-quiz. It calls completeFirstRun
       // itself, after a plan is installed or the user skips.

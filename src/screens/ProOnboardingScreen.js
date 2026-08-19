@@ -23,9 +23,7 @@ import {
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
-import {
-  isAppleUser, currentAppleIdentity, currentAppleProfilePatch, loadAppleCredential,
-} from '../lib/appleIdentity';
+import { isAppleUser, appleFirstName } from '../lib/appleIdentity';
 import { generateAndSavePlan, planShortfallNote, assessScheduleFit } from '../lib/planAutoGen';
 import {
   PLAN_FIT, fitCopy, alternativeCopy, keepChoiceCopy, coverageCopy,
@@ -368,9 +366,9 @@ export default function ProOnboardingScreen({ navigation }) {
   // True when this ACCOUNT authenticates through Apple, read from the Supabase
   // auth user rather than from anything this wizard run observed.
   //
-  // App Review Guideline 4, rejected twice. The 2026-08-19 attempt gated the
-  // field on a `nameFromApple` state that handleOAuthOnboarding set. That was
-  // dead code and shipped the rejection again: this stack only mounts once a
+  // The first attempt at this gated the field on a `nameFromApple` state that
+  // handleOAuthOnboarding set. That was dead code and changed nothing for
+  // anybody: this stack only mounts once a
   // session exists (RootNavigator returns WelcomeStack while `user` is null),
   // `step` therefore initialises to 2, step 1 never renders, and the handler
   // that set the flag never ran for a single real user. Deriving it from the
@@ -382,35 +380,10 @@ export default function ProOnboardingScreen({ navigation }) {
   // Services already supplied (the credential on first authorisation, the auth
   // user's metadata thereafter) so the greeting has a name without the athlete
   // ever being asked. Non-Apple routes keep the exact prior behaviour.
-  const [firstName, setFirstName] = useState(() => (
-    userProfile?.firstName
-    || (isAppleUser(user)
-      ? currentAppleIdentity({ sessionUser: user, storedProfile: userProfile }).firstName
-      : null)
-    || ''
-  ));
+  const [firstName, setFirstName] = useState(
+    () => appleFirstName({ sessionUser: user, storedProfile: userProfile }) || '',
+  );
 
-  // COLD START. The `useState` initialiser above reads the credential mirror
-  // synchronously, and on a cold start that mirror is empty until the disk read
-  // resolves - which is exactly the journey that matters, because the disk copy
-  // only earns its keep when the app was killed between the Apple sheet and
-  // here. Pick the name up when it lands. Gap-fill only: a name already in
-  // state (typed, or from the stored profile) is never overwritten.
-  useEffect(() => {
-    if (!appleUser) return undefined;
-    let cancelled = false;
-    loadAppleCredential()
-      .then(() => {
-        if (cancelled) return;
-        setFirstName((cur) => {
-          if (cur && cur.trim()) return cur;
-          return currentAppleIdentity({ sessionUser: user, storedProfile: userProfile }).firstName || cur;
-        });
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [appleUser]);
 
   const localUnits = 'kg';
   const [localBWUnits, setLocalBWUnits] = useState(bodyWeightUnits || 'st');
@@ -835,14 +808,12 @@ export default function ProOnboardingScreen({ navigation }) {
       if (result?.appleGivenName && !firstName.trim()) {
         setFirstName(result.appleGivenName);
       }
-      // App Review REJECTION (2026-08-19, second time on the same guideline):
-      // pre-filling was not enough. Apple returns fullName ONLY on the very
-      // first authorisation for an Apple ID, so a reviewer signing in again,
-      // or re-testing after a delete and reinstall, gets appleGivenName ===
-      // null and lands on step 2 looking at an EMPTY "First name" box on the
-      // screen straight after the Apple button. Optional and pre-filled does
-      // not answer the objection; Apple's point is that the app asks at all
-      // for something Authentication Services already supplies.
+      // Founder report (2026-08-19): pre-filling was not enough, because the
+      // box was still there. Apple returns fullName ONLY on the very first
+      // authorisation for an Apple ID, so signing in again gets
+      // appleGivenName === null and lands on a blank "First name" box on the
+      // screen straight after the Apple button. The problem is that the app
+      // asks at all for something Authentication Services already supplies.
       //
       // So an Apple-authenticated user is never shown the field. Whatever
       // Apple gave is kept and used for the greeting; where Apple gave
@@ -1369,16 +1340,6 @@ export default function ProOnboardingScreen({ navigation }) {
       // free path). An empty field leaves any stored name intact rather
       // than writing a blank over it.
       if (firstName.trim()) merged.firstName = firstName.trim();
-      // App Review Guideline 4: persist what Authentication Services already
-      // supplied, so it is never asked for. Fills gaps only - anything already
-      // in `merged` (including a name typed on a non-Apple route) wins. The
-      // e-mail is device-local: the profile sync has an explicit column map
-      // (src/lib/sync/tables/profiles.js FIELD_MAP) with no e-mail column, and
-      // Supabase auth is already the durable holder of the address.
-      if (appleUser) {
-        const applePatch = currentAppleProfilePatch({ sessionUser: user, storedProfile: merged });
-        if (applePatch) Object.assign(merged, applePatch);
-      }
 
       if (user?.id) await saveLocalProfile(user.id, merged);
 
@@ -1658,8 +1619,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 with real multi-group structure keep their titles. No field,
                 gate, validation or safety hint is removed anywhere. */}
             <QuestionGroup icon="person-outline">
-              {/* App Review Guideline 4 (rejected 2026-08-19): an
-                  Apple-authenticated user is never shown this field.
+              {/* An Apple-authenticated user is never shown this field.
                   Authentication Services already supplies the name, and this
                   is the screen directly after the Apple button, so presenting
                   a name box here is the thing Apple objected to - optional and

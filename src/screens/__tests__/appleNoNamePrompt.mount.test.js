@@ -1,34 +1,29 @@
 /**
- * Sign in with Apple is never followed by a request for a name or an e-mail.
+ * Sign in with Apple is never followed by a request for a name.
  *
- * APP REVIEW REJECTION, TWICE ON THE SAME GUIDELINE:
- *   "The app requires users to provide their name and/or email address after
- *    using Sign in with Apple. This information is already provided by the
- *    Authentication Services framework."
+ * Founder report (2026-08-19): "It asks you on the first bloody box of
+ * onboarding!" Authentication Services already supplies the name at the Apple
+ * button, so the screen straight after it must not ask for one.
  *
- * WHY THIS SUITE MOUNTS THE SCREENS INSTEAD OF READING THEIR SOURCE. The
- * previous version of this file was a source-level pin, and it PASSED against
- * code that shipped the rejection a second time. It asserted that
- * ProOnboardingScreen set a `nameFromApple` flag in its OAuth handler and
- * gated the first-name field on it. All of that was literally present in the
- * file - and all of it was dead. ProOnboardingStack only mounts once a session
- * exists (RootNavigator returns WelcomeStack while `user` is null), so `step`
- * initialises to 2, the sign-in step never renders, the handler that set the
- * flag never ran, and the field was shown to every real Apple user. A source
- * pin can prove a gate is written. Only a mount can prove it is REACHED.
+ * WHY THIS SUITE MOUNTS THE SCREENS INSTEAD OF READING THEIR SOURCE. The first
+ * version of this file was a source-level pin, and it PASSED against code that
+ * did nothing. It asserted that ProOnboardingScreen set a `nameFromApple` flag
+ * in its OAuth handler and gated the first-name field on it. All of that was
+ * literally present in the file - and all of it was dead. ProOnboardingStack
+ * only mounts once a session exists (RootNavigator returns WelcomeStack while
+ * `user` is null), so `step` initialises to 2, the sign-in step never renders,
+ * the handler that set the flag never ran, and the field was shown to every
+ * real Apple user. A source pin can prove a gate is written. Only a mount can
+ * prove it is REACHED.
  *
  * So each case here renders the actual screen against a real store state and
  * asserts on what the tree contains. The Google case is the control: it must
  * still show the field, so a fix that simply deleted the input would fail.
  *
- * The journeys are the reviewer's, not the developer's happy path:
- *   - first Apple signup        credential carries the name
- *   - REPEAT Apple sign-in      credential is null, the stored profile answers
- *   - reinstall / re-test       credential null AND no stored profile
- *   - private relay address     a real address, never challenged
- *   - Apple refused the name    nothing anywhere; must not block or prompt
- * across BOTH onboarding routes: FirstRunScreen (free) and
- * ProOnboardingScreen (Pro).
+ * Covered across BOTH onboarding routes, FirstRunScreen (free) and
+ * ProOnboardingScreen (Pro): first Apple signup (Apple supplies the name),
+ * repeat sign-in (Apple supplies nothing), a private relay address, and an
+ * athlete who refused the name, who must not be blocked or prompted.
  */
 
 jest.mock('react-native-url-polyfill/auto', () => ({}));
@@ -299,9 +294,7 @@ const React = require('react');
 const TestRenderer = require('react-test-renderer');
 
 const useAppStore = require('../../store/useAppStore').default;
-const {
-  noteAppleCredential, clearAppleCredential, readAppleCredential,
-} = require('../../lib/appleIdentity');
+const { noteAppleCredential, clearAppleCredential } = require('../../lib/appleIdentity');
 
 const RELAY = 'ab12cd34ef@privaterelay.appleid.com';
 
@@ -326,21 +319,6 @@ function makeNav() {
     addListener: jest.fn(() => () => {}), replace: jest.fn(), push: jest.fn(),
     reset: jest.fn(), canGoBack: jest.fn(() => true), dispatch: jest.fn(),
   };
-}
-
-/**
- * Put the credential on disk WITHOUT going through noteAppleCredential, so the
- * in-memory mirror never sees it. That is precisely the cold-start state: Apple
- * handed the name over in an earlier process that has since been killed, the
- * disk copy survived, and the mirror is empty. (Calling noteAppleCredential and
- * then trying to empty the mirror would need jest.resetModules(), which
- * invalidates every module this file captured at the top.)
- */
-const CREDENTIAL_KEY = '@volyume_apple_credential_v1';
-async function seedDiskOnly(cred) {
-  // eslint-disable-next-line global-require
-  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-  await AsyncStorage.setItem(CREDENTIAL_KEY, JSON.stringify(cred));
 }
 
 const trees = [];
@@ -405,7 +383,7 @@ describe('FirstRunScreen (free onboarding)', () => {
   });
 
   test('first Apple signup: no name field', async () => {
-    noteAppleCredential({ givenName: 'Ada', email: RELAY });
+    noteAppleCredential({ givenName: 'Ada' });
     const tree = await mount(Screen(), { user: appleUser(), tier: 'free' });
     expect(labels(tree)).not.toContain(NAME_LABEL);
   });
@@ -417,7 +395,7 @@ describe('FirstRunScreen (free onboarding)', () => {
     // ever, to signInWithApple and nobody else, which is why it is stashed at
     // that call and picked up here at the next profile write.
     const saveLocalProfile = jest.fn(() => Promise.resolve());
-    noteAppleCredential({ givenName: 'Ada', email: RELAY });
+    noteAppleCredential({ givenName: 'Ada' });
     const tree = await mount(Screen(), { user: appleUser(), tier: 'free', saveLocalProfile });
 
     const cont = tree.root.findAll(
@@ -427,37 +405,12 @@ describe('FirstRunScreen (free onboarding)', () => {
     await TestRenderer.act(async () => { cont.props.onPress(); });
 
     expect(saveLocalProfile).toHaveBeenCalledTimes(1);
-    const [, profile] = saveLocalProfile.mock.calls[0];
-    expect(profile.firstName).toBe('Ada');
-    expect(profile.email).toBe(RELAY);
-  });
-
-  test('COLD START: killed mid-onboarding, the screen recovers the name from disk', async () => {
-    // The journey the disk copy exists for. Apple handed the name over before
-    // the app was killed, so the in-memory mirror is empty on relaunch and the
-    // useState initialiser has nothing; the screen's effect must pull it back
-    // off disk. Simulated here by writing the credential (which persists), then
-    // emptying the mirror the way a relaunch would.
-    const saveLocalProfile = jest.fn(() => Promise.resolve());
-    await seedDiskOnly({ givenName: 'Ada', email: RELAY });
-    expect(readAppleCredential().givenName).toBeNull();
-
-    const tree = await mount(Screen(), { user: appleUser(), tier: 'free', saveLocalProfile });
-    await TestRenderer.act(async () => { await Promise.resolve(); });
-
-    // Still no box, and the name is back and gets written.
-    expect(labels(tree)).not.toContain(NAME_LABEL);
-    const cont = tree.root.findAll(
-      (n) => n.props?.accessibilityLabel === 'Continue' && typeof n.props?.onPress === 'function',
-      { deep: true },
-    )[0];
-    await TestRenderer.act(async () => { cont.props.onPress(); });
     expect(saveLocalProfile.mock.calls[0][1].firstName).toBe('Ada');
   });
 
   test('a name the athlete already has is never overwritten by Apple', async () => {
     const saveLocalProfile = jest.fn(() => Promise.resolve());
-    noteAppleCredential({ givenName: 'Ada', email: RELAY });
+    noteAppleCredential({ givenName: 'Ada' });
     const tree = await mount(Screen(), {
       user: appleUser(), tier: 'free', saveLocalProfile,
       userProfile: { firstName: 'Bear' },
@@ -478,9 +431,8 @@ describe('FirstRunScreen (free onboarding)', () => {
   });
 
   test('reinstall: credential null AND no stored profile, still no field', async () => {
-    // The case that got the app rejected. Apple returns the name once per
-    // Apple ID ever, so a reviewer re-testing after a delete has nothing to
-    // pre-fill - and the previous fix therefore showed them an EMPTY box.
+    // Apple returns the name once per Apple ID, ever, so there is nothing to
+    // pre-fill here - and the pre-fill-only fix therefore showed an EMPTY box.
     const tree = await mount(Screen(), { user: appleUser(), tier: 'free', userProfile: null });
     expect(labels(tree)).not.toContain(NAME_LABEL);
   });
@@ -519,7 +471,7 @@ describe('ProOnboardingScreen (Pro onboarding)', () => {
   });
 
   test('first Apple signup: no name field', async () => {
-    noteAppleCredential({ givenName: 'Ada', email: RELAY });
+    noteAppleCredential({ givenName: 'Ada' });
     const tree = await mount(Screen(), { user: appleUser(), proOnboardingAccountCreated: true });
     expect(labels(tree)).not.toContain(NAME_LABEL);
   });

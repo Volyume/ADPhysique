@@ -17,9 +17,7 @@ const { Platform } = require('react-native');
 // expo-apple-authentication is mapped to its mock via jest.moduleNameMapper.
 const appleAuth = require('expo-apple-authentication');
 const { signInWithApple, _setClientForTests } = require('../supabase');
-const {
-  readAppleCredential, clearAppleCredential, loadAppleCredential,
-} = require('../appleIdentity');
+const { appleFirstName, clearAppleCredential } = require('../appleIdentity');
 
 describe('signInWithApple', () => {
   let auth;
@@ -32,8 +30,6 @@ describe('signInWithApple', () => {
     auth = {
       signInWithIdToken: jest.fn().mockResolvedValue({ error: null }),
       signInWithOAuth: jest.fn().mockResolvedValue({ data: { url: null }, error: null }),
-      getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1', user_metadata: {} } } }),
-      updateUser: jest.fn().mockResolvedValue({ data: {}, error: null }),
     };
     _setClientForTests({ auth });
     clearAppleCredential();
@@ -129,24 +125,20 @@ describe('signInWithApple', () => {
  * Apple discloses the name ONCE per Apple ID, ever
  * (node_modules/expo-apple-authentication/src/AppleAuthentication.types.ts:
  * fullName "May be null ... if this is not the first time the user has signed
- * into your app"). So the single job of that one moment is to put the name
- * somewhere it cannot be lost, and these tests are about that, not about the
- * return value - which two of the three calling screens ignored.
+ * into your app"). Two of the three screens calling signInWithApple ignored the
+ * return value, so the name is remembered at the call itself.
  */
-describe('signInWithApple keeps the name Apple will never send again', () => {
-  let auth;
-
+describe('signInWithApple remembers the name Apple will never send again', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     Platform.OS = 'ios';
     appleAuth.isAvailableAsync.mockResolvedValue(true);
-    auth = {
-      signInWithIdToken: jest.fn().mockResolvedValue({ error: null }),
-      signInWithOAuth: jest.fn().mockResolvedValue({ data: { url: null }, error: null }),
-      getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'u1', user_metadata: {} } } }),
-      updateUser: jest.fn().mockResolvedValue({ data: {}, error: null }),
-    };
-    _setClientForTests({ auth });
+    _setClientForTests({
+      auth: {
+        signInWithIdToken: jest.fn().mockResolvedValue({ error: null }),
+        signInWithOAuth: jest.fn().mockResolvedValue({ data: { url: null }, error: null }),
+      },
+    });
     clearAppleCredential();
   });
 
@@ -156,93 +148,32 @@ describe('signInWithApple keeps the name Apple will never send again', () => {
     clearAppleCredential();
   });
 
-  test('the credential is stashed, so a screen that ignores the return value still gets it', async () => {
+  test('the name is remembered, so a screen that ignores the return still gets it', async () => {
     appleAuth.signInAsync.mockResolvedValueOnce({
       identityToken: 'apple-id-token',
       fullName: { givenName: 'Allan', familyName: 'Douglas' },
       email: 'allan@example.com',
     });
     await signInWithApple();
-    expect(readAppleCredential()).toEqual({ givenName: 'Allan', email: 'allan@example.com' });
+    expect(appleFirstName({})).toBe('Allan');
   });
 
-  test('it reaches disk BEFORE the call returns, not on a floating promise', async () => {
-    // The window this closes is the whole of onboarding. If the write were left
-    // unawaited, a kill moments later would still lose the name.
+  test('a REPEAT sign-in sends null, and null must not erase it', async () => {
     appleAuth.signInAsync.mockResolvedValueOnce({
-      identityToken: 'apple-id-token',
-      fullName: { givenName: 'Allan' },
-      email: 'allan@example.com',
+      identityToken: 'apple-id-token', fullName: { givenName: 'Allan' },
     });
     await signInWithApple();
-    // eslint-disable-next-line global-require
-    const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-    const raw = await AsyncStorage.getItem('@volyume_apple_credential_v1');
-    expect(JSON.parse(raw).givenName).toBe('Allan');
-  });
-
-  test('the name is written to the auth user too, which is what survives a reinstall', async () => {
-    // Apple's identity token carries the e-mail but not the name, and
-    // signInWithIdToken has no field for one, so Supabase cannot learn it by
-    // itself on the native flow. A reviewer who deletes and reinstalls has no
-    // local disk cache and no users_profile row; the auth user is all that is
-    // left, so the name has to be put there deliberately.
-    appleAuth.signInAsync.mockResolvedValueOnce({
-      identityToken: 'apple-id-token',
-      fullName: { givenName: 'Allan' },
-      email: 'allan@example.com',
-    });
-    await signInWithApple();
-    expect(auth.updateUser).toHaveBeenCalledWith({ data: { given_name: 'Allan' } });
-  });
-
-  test('a name already on the auth user is never overwritten', async () => {
-    auth.getUser.mockResolvedValue({ data: { user: { id: 'u1', user_metadata: { full_name: 'Bear Grylls' } } } });
-    appleAuth.signInAsync.mockResolvedValueOnce({
-      identityToken: 'apple-id-token',
-      fullName: { givenName: 'Allan' },
-    });
-    await signInWithApple();
-    expect(auth.updateUser).not.toHaveBeenCalled();
-  });
-
-  test('a REPEAT sign-in writes nothing: Apple sends null, and null must not erase', async () => {
-    appleAuth.signInAsync.mockResolvedValueOnce({
-      identityToken: 'apple-id-token',
-      fullName: { givenName: 'Allan' },
-    });
-    await signInWithApple();
-
     appleAuth.signInAsync.mockResolvedValueOnce({ identityToken: 'apple-id-token' });
     await signInWithApple();
-
-    expect(auth.updateUser).toHaveBeenCalledTimes(1);
-    expect(readAppleCredential().givenName).toBe('Allan');
+    expect(appleFirstName({})).toBe('Allan');
   });
 
-  test('a failed metadata write never fails the sign-in', async () => {
-    auth.updateUser.mockRejectedValue(new Error('network'));
+  test('an athlete who refused the name is not blocked and nothing is kept', async () => {
     appleAuth.signInAsync.mockResolvedValueOnce({
-      identityToken: 'apple-id-token',
-      fullName: { givenName: 'Allan' },
-      email: 'allan@example.com',
-    });
-    const res = await signInWithApple();
-    expect(res.ok).toBe(true);
-    // The disk copy still carries it.
-    await loadAppleCredential();
-    expect(readAppleCredential().givenName).toBe('Allan');
-  });
-
-  test('an athlete who refused the name is not blocked and nothing is written', async () => {
-    appleAuth.signInAsync.mockResolvedValueOnce({
-      identityToken: 'apple-id-token',
-      fullName: { givenName: null },
-      email: null,
+      identityToken: 'apple-id-token', fullName: { givenName: null }, email: null,
     });
     const res = await signInWithApple();
     expect(res).toEqual({ ok: true, appleGivenName: null, appleEmail: null });
-    expect(auth.updateUser).not.toHaveBeenCalled();
-    expect(readAppleCredential()).toEqual({ givenName: null, email: null });
+    expect(appleFirstName({})).toBeNull();
   });
 });

@@ -990,26 +990,8 @@ const useAppStore = create((set, get) => ({
 
     // Hydrate userProfile if we don't already have one locally.
     if (!get().userProfile) {
-      // Apple fallback for the name ONLY (App Review Guideline 4). A returning
-      // Apple user on a fresh install has no local profile, gets a null
-      // credential from Apple (the name comes once per Apple ID, ever) and may
-      // have a cloud row that predates any name. The Supabase auth user is the
-      // last place the name can still be, so read it there rather than showing
-      // them a box for something Authentication Services already supplied.
-      // Cloud truth always wins; this only fills a null. Non-Apple accounts are
-      // untouched.
-      let appleFirstName = null;
-      if (!cloudData.first_name) {
-        try {
-          // eslint-disable-next-line global-require
-          const { isAppleUser, currentAppleIdentity } = require('../lib/appleIdentity');
-          if (isAppleUser(sessionUser)) {
-            appleFirstName = currentAppleIdentity({ sessionUser }).firstName;
-          }
-        } catch (_) { /* best effort */ }
-      }
       const profile = {
-        firstName: cloudData.first_name ?? appleFirstName ?? null,
+        firstName: cloudData.first_name ?? null,
         trainingFocus: cloudData.training_focus ?? 'bodybuilding',
         trainingAgeYears: cloudData.training_age ?? null,
         primaryEquipment: cloudData.primary_equipment ?? null,
