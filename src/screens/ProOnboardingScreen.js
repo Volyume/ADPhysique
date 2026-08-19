@@ -364,6 +364,12 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // Step 1, profile
   const [firstName, setFirstName] = useState(userProfile?.firstName || '');
+  // True once this wizard run authenticated through Sign in with Apple.
+  // Suppresses the first-name field entirely: Authentication Services already
+  // supplies the name, and App Review rejects asking for it again (Guideline
+  // 4, rejected twice on this point). Not persisted - it only governs what
+  // this run renders.
+  const [nameFromApple, setNameFromApple] = useState(false);
   const localUnits = 'kg';
   const [localBWUnits, setLocalBWUnits] = useState(bodyWeightUnits || 'st');
   // OB-5 (audit 02): body weight and age start EMPTY and join sex as
@@ -582,11 +588,16 @@ export default function ProOnboardingScreen({ navigation }) {
 
   const nameRef = useRef(null);
   useEffect(() => {
-    if (step === 2) {
+    // Not for an Apple-authenticated user: the first-name field is not
+    // rendered for them at all (App Review Guideline 4), so there is nothing
+    // to focus and no keyboard should be raised. The optional chain below
+    // already made this harmless; the condition makes it deliberate.
+    if (step === 2 && !nameFromApple) {
       const t = setTimeout(() => nameRef.current?.focus(), 350);
       return () => clearTimeout(t);
     }
-  }, [step]);
+    return undefined;
+  }, [step, nameFromApple]);
 
   // Auto-advance past Step 1 if the user is already authenticated when the
   // screen mounts. Happens after OAuth: SIGNED_IN flips isAuthLoading true,
@@ -782,6 +793,21 @@ export default function ProOnboardingScreen({ navigation }) {
       if (result?.appleGivenName && !firstName.trim()) {
         setFirstName(result.appleGivenName);
       }
+      // App Review REJECTION (2026-08-19, second time on the same guideline):
+      // pre-filling was not enough. Apple returns fullName ONLY on the very
+      // first authorisation for an Apple ID, so a reviewer signing in again,
+      // or re-testing after a delete and reinstall, gets appleGivenName ===
+      // null and lands on step 2 looking at an EMPTY "First name" box on the
+      // screen straight after the Apple button. Optional and pre-filled does
+      // not answer the objection; Apple's point is that the app asks at all
+      // for something Authentication Services already supplies.
+      //
+      // So an Apple-authenticated user is never shown the field. Whatever
+      // Apple gave is kept and used for the greeting; where Apple gave
+      // nothing, the greeting simply carries no name. Nothing is required,
+      // nothing is re-asked, and the name stays editable later in Settings ->
+      // Profile for anyone who wants to set or change it.
+      if (provider === 'apple') setNameFromApple(true);
       // The onboarding wizard collects the training fields in the next steps.
       // Mark the auth step complete and advance.
       logInfo('ProOnboarding.oauth.success', `provider=${provider}, advancing to step 2`);
@@ -1578,6 +1604,17 @@ export default function ProOnboardingScreen({ navigation }) {
                 with real multi-group structure keep their titles. No field,
                 gate, validation or safety hint is removed anywhere. */}
             <QuestionGroup icon="person-outline">
+              {/* App Review Guideline 4 (rejected 2026-08-19): an
+                  Apple-authenticated user is never shown this field.
+                  Authentication Services already supplies the name, and this
+                  is the screen directly after the Apple button, so presenting
+                  a name box here is the thing Apple objected to - optional and
+                  pre-filled did not answer it, because Apple returns the name
+                  only on the FIRST authorisation and a re-testing reviewer
+                  therefore saw an empty box. Every other sign-in route still
+                  gets the field, and Apple users can set a name later in
+                  Settings -> Profile. See handleOAuthOnboarding. */}
+              {nameFromApple ? null : (
               <View style={styles.section}>
                 {/* RA-4 (D96, Review A): the one field in the block with no
                     stated reason, because there is none an engine could
@@ -1599,6 +1636,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   returnKeyType="next"
                 />
               </View>
+              )}
 
               <View style={styles.section}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Biological sex</Text>
