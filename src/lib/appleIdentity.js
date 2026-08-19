@@ -32,6 +32,22 @@ function firstToken(value) {
 const APPLE_RELAY_SUFFIX = '@privaterelay.appleid.com';
 
 /**
+ * Is this one of Apple's Hide My Email relay addresses?
+ *
+ * They look like ab12cd34ef@privaterelay.appleid.com: a random token, not a
+ * person. Anywhere that falls back to the local part of an e-mail address for
+ * a display name has to skip these, or the athlete's profile header greets
+ * them as "ab  cd  ef".
+ *
+ * @param {string|null|undefined} email
+ * @returns {boolean}
+ */
+export function isApplePrivateRelayEmail(email) {
+  const e = clean(email);
+  return !!e && e.toLowerCase().endsWith(APPLE_RELAY_SUFFIX);
+}
+
+/**
  * Is this account signed in through Apple?
  *
  * Read from the Supabase auth user, NOT from a flag set during sign-in. The
@@ -54,8 +70,7 @@ export function isAppleUser(sessionUser) {
   if (Array.isArray(sessionUser.identities)
     && sessionUser.identities.some((i) => i?.provider === 'apple')) return true;
   // A private relay address can only have come from Apple.
-  const email = clean(sessionUser.email);
-  return !!email && email.toLowerCase().endsWith(APPLE_RELAY_SUFFIX);
+  return isApplePrivateRelayEmail(sessionUser.email);
 }
 
 // What Apple handed over on the first authorisation. Sign-in completes through

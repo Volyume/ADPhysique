@@ -40,6 +40,7 @@ import { buildProfileRowAccessibility, profileRowStatusLabel } from '../lib/athl
 import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
+import { isApplePrivateRelayEmail } from '../lib/appleIdentity';
 import {
   formatVolyumeScore,
   progressScanAssessmentForDisplay,
@@ -277,8 +278,13 @@ export default function AthleteProfileScreen({ navigation }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
 
+  // The e-mail fallback is a nicety for people whose address carries their
+  // name. Apple's Hide My Email gives a random token instead, so that fallback
+  // rendered a profile header reading "ab  cd  ef"; skip it and say Athlete.
   const displayName = userProfile?.firstName
-    || user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim()
+    || (isApplePrivateRelayEmail(user?.email)
+      ? null
+      : user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim())
     || 'Athlete';
   const isPro = tier === 'pro';
   const avatarUri = userProfile?.avatarUri || null;
