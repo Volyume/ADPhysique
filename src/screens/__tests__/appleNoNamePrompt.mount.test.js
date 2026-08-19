@@ -20,18 +20,28 @@
  * asserts on what the tree contains. The Google case is the control: it must
  * still show the field, so a fix that simply deleted the input would fail.
  *
- * THE RULE, after the founder ruling of 2026-08-19: the field is hidden when
- * a name actually arrived, and only then. Apple lets the athlete clear the
- * name on the sign-in sheet, and the sheet can complete before onboarding
- * mounts (the consent gate sits between them), so sometimes nothing arrives.
- * Hiding it regardless would strand those athletes with no name and nowhere
- * to give one. So: name present -> no box; no name -> the optional box.
+ * THE RULE, after the founder's SECOND report on 2026-08-19 - made from a
+ * TestFlight build that already carried the first attempt: an Apple account
+ * is never shown the field. Not conditionally. Never.
+ *
+ * The first attempt hid it only when a name had actually arrived, so that an
+ * athlete who cleared the name on Apple's sheet still had somewhere to answer.
+ * That gate fails the commonest case there is. Apple supplies the name on the
+ * FIRST authorisation for an Apple ID and returns null on every sign-in after
+ * it, so anybody re-installing - every TestFlight tester, every App Review
+ * re-test, every athlete on a new phone - arrives with no name and got the box
+ * straight back, on the screen right after the Apple button. Hence the case
+ * below that used to assert the box came back and now asserts it does not.
+ *
+ * Nobody is stranded: the name is presentation only, no engine reads it, every
+ * surface that greets by name has a neutral fallback, and Settings -> Profile
+ * sets or changes it whenever they like.
  *
  * Covered across BOTH onboarding routes, FirstRunScreen (free) and
  * ProOnboardingScreen (Pro): first Apple signup (Apple supplies the name),
  * repeat sign-in (Apple supplies nothing, the stored profile answers), a
- * private relay address, and an athlete with no name anywhere, who must be
- * asked rather than stranded, and must never be blocked.
+ * private relay address, and the founder's own case - no name anywhere, from
+ * any source - which must still show no field, and must never be blocked.
  */
 
 jest.mock('react-native-url-polyfill/auto', () => ({}));
@@ -438,12 +448,13 @@ describe('FirstRunScreen (free onboarding)', () => {
     expect(labels(tree)).not.toContain(NAME_LABEL);
   });
 
-  test('no name anywhere: the box comes BACK rather than stranding them', async () => {
-    // Founder ruling 2026-08-19. Nothing arrived from Apple and nothing is
-    // stored, so there is nothing to pre-fill and nothing to suppress. Asking
-    // once, optionally, beats a permanently nameless account.
+  test("no name anywhere: STILL no field - this is the founder's own case", async () => {
+    // The exact state a re-install lands in. Apple returned nothing because
+    // this Apple ID has authorised the app before, and no profile has been
+    // written yet, so every name source is empty. The first attempt showed the
+    // box here, which is the screenshot the founder sent from TestFlight.
     const tree = await mount(Screen(), { user: appleUser(), tier: 'free', userProfile: null });
-    expect(labels(tree)).toContain(NAME_LABEL);
+    expect(labels(tree)).not.toContain(NAME_LABEL);
   });
 
   test('a private relay address alone is enough to suppress the field', async () => {
@@ -494,12 +505,13 @@ describe('ProOnboardingScreen (Pro onboarding)', () => {
     expect(labels(tree)).not.toContain(NAME_LABEL);
   });
 
-  test('no name anywhere: the box comes BACK rather than stranding them', async () => {
-    // Founder ruling 2026-08-19 - see the free route's twin above.
+  test("no name anywhere: STILL no field - this is the founder's own case", async () => {
+    // See the free route's twin above. This is the screen in the screenshot:
+    // "Step 1 of 5 - Baseline", reached straight after the Apple button.
     const tree = await mount(Screen(), {
       user: appleUser(), proOnboardingAccountCreated: true, userProfile: null,
     });
-    expect(labels(tree)).toContain(NAME_LABEL);
+    expect(labels(tree)).not.toContain(NAME_LABEL);
   });
 
   test('a Google account that later linked Apple counts as Apple', async () => {

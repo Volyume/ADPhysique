@@ -95,15 +95,27 @@ export function clearAppleCredential() {
  * overwritten. Then what Apple just gave, then what Supabase kept from the
  * Apple identity on the auth user (the Android web flow populates this).
  *
+ * The identity row is read as well as user_metadata, because Apple hands the
+ * name over on the FIRST authorisation for an Apple ID and never again: on a
+ * re-install the credential is null and user_metadata can be bare, while the
+ * identity Supabase wrote at that first sign-in still carries the name. It is
+ * the last chance to greet a returning athlete by name rather than asking.
+ *
  * @returns {string|null} null means "we do not know", which is a nameless
  *   greeting, never a prompt.
  */
 export function appleFirstName({ sessionUser = null, storedProfile = null } = {}) {
   const meta = sessionUser?.user_metadata ?? {};
+  const identity = Array.isArray(sessionUser?.identities)
+    ? (sessionUser.identities.find((i) => i?.provider === 'apple')?.identity_data ?? {})
+    : {};
   return firstToken(storedProfile?.firstName)
     ?? firstToken(_givenName)
     ?? firstToken(meta.given_name)
     ?? firstToken(meta.full_name)
     ?? firstToken(meta.name)
+    ?? firstToken(identity.given_name)
+    ?? firstToken(identity.full_name)
+    ?? firstToken(identity.name)
     ?? null;
 }

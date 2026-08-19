@@ -48,15 +48,13 @@ export default function FirstRunScreen({ navigation }) {
   const [firstName, setFirstName] = useState(
     () => appleFirstName({ sessionUser: user, storedProfile: userProfile }) || '',
   );
-  // Founder ruling 2026-08-19: hide the box only when a name actually arrived.
-  // Apple lets the athlete clear the name on the sign-in sheet, and the sheet
-  // can complete before this screen mounts (the consent gate sits between
-  // them), so there is not always something to pre-fill. Hiding it regardless
-  // would leave those athletes permanently nameless with nowhere to answer.
-  // Read once at mount: if it were live, the field would vanish under their
-  // finger on the first keystroke.
-  const hadNameAtMount = useRef(firstName.length > 0);
-  const hideNameField = appleUser && hadNameAtMount.current;
+  // Founder ruling 2026-08-19, second report - see the twin in
+  // ProOnboardingScreen for the full reasoning. An Apple-authenticated athlete
+  // is never shown this box. Gating it on "did a name actually arrive" put the
+  // box straight back for everybody re-installing, because Apple supplies the
+  // name only on the first authorisation for an Apple ID. Nothing is lost:
+  // the name is presentation only and Settings -> Profile edits it.
+  const hideNameField = appleUser;
 
 
   const [busy, setBusy] = useState(false);

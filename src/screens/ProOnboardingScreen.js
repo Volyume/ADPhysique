@@ -383,15 +383,23 @@ export default function ProOnboardingScreen({ navigation }) {
   const [firstName, setFirstName] = useState(
     () => appleFirstName({ sessionUser: user, storedProfile: userProfile }) || '',
   );
-  // Founder ruling 2026-08-19: hide the box only when a name actually arrived.
-  // Apple lets the athlete clear the name on the sign-in sheet, and the sheet
-  // can complete before this wizard mounts (the consent gate sits between
-  // them), so there is not always something to pre-fill. Hiding it regardless
-  // would leave those athletes permanently nameless with nowhere to answer.
-  // Read once at mount: if it were live, the field would vanish under their
-  // finger on the first keystroke, and the draft restore below would move it.
-  const hadNameAtMount = useRef(firstName.length > 0);
-  const hideNameField = appleUser && hadNameAtMount.current;
+  // Founder ruling 2026-08-19, SECOND report, from a TestFlight build that
+  // already carried the first attempt: an Apple-authenticated athlete is never
+  // shown this box. Not conditionally. Never.
+  //
+  // The first attempt gated on "did a name actually arrive", to avoid leaving
+  // a nameless athlete with nowhere to answer. It reads well and it fails the
+  // one case that matters most. Apple hands the name over on the FIRST
+  // authorisation for an Apple ID and returns null on every sign-in after
+  // that, so everybody who re-installs - every TestFlight tester, every App
+  // Review re-test, every athlete on a new phone - arrives with no name, and
+  // the box came straight back on the screen directly after the Apple button.
+  // That IS the complaint the fix was for.
+  //
+  // Nobody is stranded by hiding it: the name is presentation only, no engine
+  // reads it, every surface that greets by name has a neutral fallback, and
+  // Settings -> Profile sets or changes it at any time.
+  const hideNameField = appleUser;
 
 
   const localUnits = 'kg';
