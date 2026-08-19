@@ -14,27 +14,33 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { spawnSync } from 'child_process';
 import * as babel from '@babel/core';
 
 const ROOT = path.resolve(__dirname, '..', '..', '..');
+const SEARCH_ROOTS = ['src/components', 'src/screens', 'src/lib'];
 
 function reanimatedFiles() {
-  // Invoke the repository's normal search tool directly. The former shell
-  // string depended on Unix `grep` and `|| true`, so this compiler guard
-  // could never run in the Windows development environment.
-  const result = spawnSync('rg', [
-    '-l', 'react-native-reanimated',
-    'src/components', 'src/screens', 'src/lib',
-    '-g', '*.js',
-  ], { cwd: ROOT, encoding: 'utf8' });
-  if (result.error) throw result.error;
-  // ripgrep status 1 means no matches, not an execution failure.
-  if (result.status !== 0 && result.status !== 1) {
-    throw new Error(result.stderr || `rg exited ${result.status}`);
-  }
-  const out = result.stdout ?? '';
-  return out.split('\n').filter((f) => f && !f.includes('__tests__'));
+  // Walk the tree in Node rather than shelling out. The first version piped
+  // Unix `grep`, which could not run in the Windows development environment;
+  // the second called `rg`, which is not on the GitHub Actions image, so
+  // spawnSync returned ENOENT and this guard threw before it checked a single
+  // file - red CI on every commit, and the VOLYUME-2A defect class unguarded
+  // the whole time. fs has no such dependency and behaves the same everywhere.
+  const found = [];
+  const walk = (rel) => {
+    const abs = path.join(ROOT, rel);
+    for (const entry of fs.readdirSync(abs, { withFileTypes: true })) {
+      const child = `${rel}/${entry.name}`;
+      if (entry.isDirectory()) { walk(child); continue; }
+      if (!entry.name.endsWith('.js')) continue;
+      if (child.includes('__tests__')) continue;
+      if (fs.readFileSync(path.join(ROOT, child), 'utf8').includes('react-native-reanimated')) {
+        found.push(child);
+      }
+    }
+  };
+  SEARCH_ROOTS.forEach(walk);
+  return found;
 }
 
 function suspectsIn(file) {
