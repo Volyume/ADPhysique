@@ -2415,3 +2415,45 @@ against production 2026-08-18 on the founder's phrase (Claude-run,
 before any build carrying the new pushes shipped). The same session's
 pre-apply verification found 137-141 already LIVE in production - the
 supabase/README ledger was stale and is corrected in place there.
+
+---
+
+## CAMPAIGN 33 (2026-08-19) — Sign in with Apple must not ask for a name. LANDED ON MAIN `aa34828`.
+
+**Founder report, twice in one day.** First: "It asks you on the first bloody
+box of onboarding!" Second, with a TestFlight screenshot of Pro onboarding
+"Step 1 of 5 - Baseline" from a build already carrying the first attempt: it
+still asked.
+
+**Root cause of the second report.** The first attempt (`bacc1ca`) hid the
+first-name box only when a name had actually arrived, so an athlete who
+cleared the name on Apple's own sheet still had somewhere to answer. Apple
+supplies the name on the FIRST authorisation for an Apple ID and returns null
+on every sign-in after it, so every re-install - every TestFlight tester, every
+App Review re-test, every athlete on a new phone - reaches onboarding with no
+credential, no stored profile and nothing to suppress on, and the box came
+straight back. Verified: the build the founder ran was EAS iOS run at
+16:06 UTC off `214b57f`, which contains the first attempt.
+
+**Landed (`0d5ed6f`).** `hideNameField = appleUser`, on both onboarding routes
+(`FirstRunScreen`, `ProOnboardingScreen`). No condition. Nobody is stranded:
+the name is presentation only, no engine reads it, every greeting surface has a
+neutral fallback, and `SettingsProfileScreen` sets or changes it at any time.
+`appleFirstName` also reads the Apple identity row on the auth user, not just
+`user_metadata`, so a re-installing athlete is still greeted by the name
+Supabase stored at their first authorisation. The two mount cases that pinned
+"the box comes back" now pin the opposite and name the founder's own state.
+
+**Also landed (`aa34828`), unrelated, found while verifying.** Main CI's Jest
+job had been red on every commit that day on one suite:
+`workletClosure.guard.test.js` shelled out to ripgrep, which is not on the
+GitHub Actions image, so it threw ENOENT before compiling a single file - red
+CI, and the VOLYUME-2A worklet defect class unguarded in CI the whole time.
+Now walks the source roots with `fs`, no external tool, same checks.
+
+`npm run lint` clean; `npm test` 1002 suites passed, 13569 tests passed,
+0 failed (the ripgrep suite included, for the first time in CI).
+
+**Founder-side:** an iOS build is manual-dispatch only (build credits), so the
+fix is on main and waiting for a dispatch. Device checklist in the session
+report.
