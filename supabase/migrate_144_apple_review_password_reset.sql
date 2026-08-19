@@ -32,7 +32,15 @@
 --
 -- APPLIED
 --   Locally:  N/A (cloud-only; nothing in database.js changes)
---   Remotely: PENDING the founder's exact phrase "run against production".
+--   Remotely: APPLIED 2026-08-19 on the founder's "run against production",
+--             ahead of the iOS App Review submission. Verified immediately
+--             after the run by re-deriving each hash with crypt(): the Pro
+--             password validates against the Pro row and not the Free row,
+--             and vice versa, so the two are correctly paired. Both rows
+--             still email-confirmed, tier/trial_state 'pro'/'paid_pro' and
+--             'free'/'free', first_run_complete and health_data_consent
+--             true, so a reviewer signing in on a fresh install lands in
+--             the app rather than the wizard or the Article 9 gate.
 --
 -- SAFE TO RE-RUN
 --   YES. Both statements are idempotent UPDATEs guarded on the e-mail. A
