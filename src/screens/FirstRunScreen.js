@@ -37,10 +37,10 @@ export default function FirstRunScreen({ navigation }) {
   // the same shape the Pro wizard uses (ProOnboardingScreen's firstName
   // state). A free user killed mid-quiz walks this screen again, and it used
   // to ask for a name the app had already stored and written.
-  // An Apple-authenticated athlete who already gave us a name is not asked
-  // for it again: Authentication Services supplied it at the button, half a
-  // second before this screen. This is the FREE onboarding route reached
-  // straight after that button, and it had no Apple awareness at all.
+  // An Apple-authenticated athlete is not asked for a name at all:
+  // Authentication Services supplied it at the button, half a second before
+  // this screen. This is the FREE onboarding route reached straight after that
+  // button, and it had no Apple awareness at all.
   //
   // Derived from the Supabase auth user, so it holds on the first sign-in and
   // on every one after (Apple returns the name once per Apple ID, ever).

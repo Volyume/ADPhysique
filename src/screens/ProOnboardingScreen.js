@@ -1636,13 +1636,14 @@ export default function ProOnboardingScreen({ navigation }) {
                 with real multi-group structure keep their titles. No field,
                 gate, validation or safety hint is removed anywhere. */}
             <QuestionGroup icon="person-outline">
-              {/* An Apple-authenticated athlete who already gave us a name
-                  is not asked for it again: Authentication Services supplied
-                  it at the button, half a second before this screen, and this
-                  is the screen directly after. When no name came through, the
-                  field stays - see hideNameField's declaration. Every other
-                  sign-in route is untouched, and anyone can change a name
-                  later in Settings -> Profile. */}
+              {/* An Apple-authenticated athlete is not asked for a name.
+                  Authentication Services supplied it at the button, half a
+                  second before this screen, and this is the screen directly
+                  after - which is what App Review rejected the app for. No
+                  condition: see hideNameField's declaration for why gating on
+                  "did a name arrive" put the box straight back. Every other
+                  sign-in route is untouched, and anyone can set or change a
+                  name later in Settings -> Profile. */}
               {hideNameField ? null : (
               <View style={styles.section}>
                 {/* RA-4 (D96, Review A): the one field in the block with no

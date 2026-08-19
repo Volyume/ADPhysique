@@ -1,6 +1,12 @@
 /**
  * Sign in with Apple is not followed by a request for a name we already have.
  *
+ * THIS IS A REJECTION, NOT A PREFERENCE. App Review rejected the app for
+ * asking a signed-in athlete for a name it already had. An earlier commit in
+ * this file's history claimed "nothing in this repo was ever rejected" and
+ * used that to justify softening the rule; the claim was wrong, and the
+ * softening is what shipped the rejection. Do not weaken these cases again.
+ *
  * Founder report (2026-08-19): "It asks you on the first bloody box of
  * onboarding!" Authentication Services already supplies the name at the Apple
  * button, so the screen straight after it must not ask for one.
