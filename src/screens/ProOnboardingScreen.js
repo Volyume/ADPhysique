@@ -383,6 +383,15 @@ export default function ProOnboardingScreen({ navigation }) {
   const [firstName, setFirstName] = useState(
     () => appleFirstName({ sessionUser: user, storedProfile: userProfile }) || '',
   );
+  // Founder ruling 2026-08-19: hide the box only when a name actually arrived.
+  // Apple lets the athlete clear the name on the sign-in sheet, and the sheet
+  // can complete before this wizard mounts (the consent gate sits between
+  // them), so there is not always something to pre-fill. Hiding it regardless
+  // would leave those athletes permanently nameless with nowhere to answer.
+  // Read once at mount: if it were live, the field would vanish under their
+  // finger on the first keystroke, and the draft restore below would move it.
+  const hadNameAtMount = useRef(firstName.length > 0);
+  const hideNameField = appleUser && hadNameAtMount.current;
 
 
   const localUnits = 'kg';
@@ -607,12 +616,12 @@ export default function ProOnboardingScreen({ navigation }) {
     // rendered for them at all (App Review Guideline 4), so there is nothing
     // to focus and no keyboard should be raised. The optional chain below
     // already made this harmless; the condition makes it deliberate.
-    if (step === 2 && !appleUser) {
+    if (step === 2 && !hideNameField) {
       const t = setTimeout(() => nameRef.current?.focus(), 350);
       return () => clearTimeout(t);
     }
     return undefined;
-  }, [step, appleUser]);
+  }, [step, hideNameField]);
 
   // Auto-advance past Step 1 if the user is already authenticated when the
   // screen mounts. Happens after OAuth: SIGNED_IN flips isAuthLoading true,
@@ -1619,18 +1628,14 @@ export default function ProOnboardingScreen({ navigation }) {
                 with real multi-group structure keep their titles. No field,
                 gate, validation or safety hint is removed anywhere. */}
             <QuestionGroup icon="person-outline">
-              {/* An Apple-authenticated user is never shown this field.
-                  Authentication Services already supplies the name, and this
-                  is the screen directly after the Apple button, so presenting
-                  a name box here is the thing Apple objected to - optional and
-                  pre-filled did not answer it, because Apple returns the name
-                  only on the FIRST authorisation and a re-testing reviewer
-                  therefore saw an empty box. Every other sign-in route still
-                  gets the field, and Apple users can set a name later in
-                  Settings -> Profile. Gated on `appleUser`, derived from the
-                  Supabase auth user - see its declaration for why a flag set
-                  during sign-in could never work here. */}
-              {appleUser ? null : (
+              {/* An Apple-authenticated athlete who already gave us a name
+                  is not asked for it again: Authentication Services supplied
+                  it at the button, half a second before this screen, and this
+                  is the screen directly after. When no name came through, the
+                  field stays - see hideNameField's declaration. Every other
+                  sign-in route is untouched, and anyone can change a name
+                  later in Settings -> Profile. */}
+              {hideNameField ? null : (
               <View style={styles.section}>
                 {/* RA-4 (D96, Review A): the one field in the block with no
                     stated reason, because there is none an engine could

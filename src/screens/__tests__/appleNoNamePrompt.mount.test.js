@@ -1,5 +1,5 @@
 /**
- * Sign in with Apple is never followed by a request for a name.
+ * Sign in with Apple is not followed by a request for a name we already have.
  *
  * Founder report (2026-08-19): "It asks you on the first bloody box of
  * onboarding!" Authentication Services already supplies the name at the Apple
@@ -20,10 +20,18 @@
  * asserts on what the tree contains. The Google case is the control: it must
  * still show the field, so a fix that simply deleted the input would fail.
  *
+ * THE RULE, after the founder ruling of 2026-08-19: the field is hidden when
+ * a name actually arrived, and only then. Apple lets the athlete clear the
+ * name on the sign-in sheet, and the sheet can complete before onboarding
+ * mounts (the consent gate sits between them), so sometimes nothing arrives.
+ * Hiding it regardless would strand those athletes with no name and nowhere
+ * to give one. So: name present -> no box; no name -> the optional box.
+ *
  * Covered across BOTH onboarding routes, FirstRunScreen (free) and
  * ProOnboardingScreen (Pro): first Apple signup (Apple supplies the name),
- * repeat sign-in (Apple supplies nothing), a private relay address, and an
- * athlete who refused the name, who must not be blocked or prompted.
+ * repeat sign-in (Apple supplies nothing, the stored profile answers), a
+ * private relay address, and an athlete with no name anywhere, who must be
+ * asked rather than stranded, and must never be blocked.
  */
 
 jest.mock('react-native-url-polyfill/auto', () => ({}));
@@ -298,7 +306,7 @@ const { noteAppleCredential, clearAppleCredential } = require('../../lib/appleId
 
 const RELAY = 'ab12cd34ef@privaterelay.appleid.com';
 
-// The auth users the reviewer's journeys actually produce.
+// The auth users each sign-in route actually produces.
 const appleUser = (over = {}) => ({
   id: 'u-apple',
   email: RELAY,
@@ -389,11 +397,11 @@ describe('FirstRunScreen (free onboarding)', () => {
   });
 
   test('the name Apple gave is PERSISTED, not merely not-asked-for', async () => {
-    // The other half of the fix. Hiding the box without keeping the name would
-    // satisfy App Review and quietly lose the name the athlete already gave,
-    // so the greeting would go blank. Apple hands it over once per Apple ID
-    // ever, to signInWithApple and nobody else, which is why it is stashed at
-    // that call and picked up here at the next profile write.
+    // The other half of the fix. Hiding the box without keeping the name
+    // would quietly lose the name the athlete already gave, so the greeting
+    // would go blank. Apple hands it over once per Apple ID ever, to
+    // signInWithApple and nobody else, which is why it is stashed at that
+    // call and picked up here at the next profile write.
     const saveLocalProfile = jest.fn(() => Promise.resolve());
     noteAppleCredential({ givenName: 'Ada' });
     const tree = await mount(Screen(), { user: appleUser(), tier: 'free', saveLocalProfile });
@@ -430,22 +438,25 @@ describe('FirstRunScreen (free onboarding)', () => {
     expect(labels(tree)).not.toContain(NAME_LABEL);
   });
 
-  test('reinstall: credential null AND no stored profile, still no field', async () => {
-    // Apple returns the name once per Apple ID, ever, so there is nothing to
-    // pre-fill here - and the pre-fill-only fix therefore showed an EMPTY box.
+  test('no name anywhere: the box comes BACK rather than stranding them', async () => {
+    // Founder ruling 2026-08-19. Nothing arrived from Apple and nothing is
+    // stored, so there is nothing to pre-fill and nothing to suppress. Asking
+    // once, optionally, beats a permanently nameless account.
     const tree = await mount(Screen(), { user: appleUser(), tier: 'free', userProfile: null });
-    expect(labels(tree)).not.toContain(NAME_LABEL);
+    expect(labels(tree)).toContain(NAME_LABEL);
   });
 
   test('a private relay address alone is enough to suppress the field', async () => {
     // Even with no provider metadata at all: the address can only be Apple's.
+    noteAppleCredential({ givenName: 'Ada' });
     const tree = await mount(Screen(), {
       user: { id: 'u-relay', email: RELAY }, tier: 'free',
     });
     expect(labels(tree)).not.toContain(NAME_LABEL);
   });
 
-  test('the copy does not invite a name that is not there', async () => {
+  test('the copy does not invite a name we already hold', async () => {
+    noteAppleCredential({ givenName: 'Ada' });
     const tree = await mount(Screen(), { user: appleUser(), tier: 'free' });
     expect(texts(tree).join(' ')).not.toMatch(/Add your name/i);
   });
@@ -483,14 +494,16 @@ describe('ProOnboardingScreen (Pro onboarding)', () => {
     expect(labels(tree)).not.toContain(NAME_LABEL);
   });
 
-  test('reinstall: credential null AND no stored profile, still no field', async () => {
+  test('no name anywhere: the box comes BACK rather than stranding them', async () => {
+    // Founder ruling 2026-08-19 - see the free route's twin above.
     const tree = await mount(Screen(), {
       user: appleUser(), proOnboardingAccountCreated: true, userProfile: null,
     });
-    expect(labels(tree)).not.toContain(NAME_LABEL);
+    expect(labels(tree)).toContain(NAME_LABEL);
   });
 
   test('a Google account that later linked Apple counts as Apple', async () => {
+    noteAppleCredential({ givenName: 'Ada' });
     const tree = await mount(Screen(), {
       user: {
         id: 'u-both', email: 'ada@gmail.com',
@@ -502,7 +515,7 @@ describe('ProOnboardingScreen (Pro onboarding)', () => {
   });
 
   test('the rest of the wizard is untouched: sex is still asked, and still required', async () => {
-    // Guideline 4 is about what Apple already supplies. Sex, age, height and
+    // This fix is about what Apple already supplies. Sex, age, height and
     // weight are ours, they drive the ED calorie floors, and hiding the name
     // must not have loosened any of them.
     const tree = await mount(Screen(), { user: appleUser(), proOnboardingAccountCreated: true });

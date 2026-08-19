@@ -37,10 +37,10 @@ export default function FirstRunScreen({ navigation }) {
   // the same shape the Pro wizard uses (ProOnboardingScreen's firstName
   // state). A free user killed mid-quiz walks this screen again, and it used
   // to ask for a name the app had already stored and written.
-  // An Apple-authenticated athlete is never shown a name box: Authentication
-  // Services already supplied it. This is the FREE onboarding screen reached
-  // straight after the Apple button, and it had no Apple awareness at all -
-  // the same defect the Pro wizard was fixed for.
+  // An Apple-authenticated athlete who already gave us a name is not asked
+  // for it again: Authentication Services supplied it at the button, half a
+  // second before this screen. This is the FREE onboarding route reached
+  // straight after that button, and it had no Apple awareness at all.
   //
   // Derived from the Supabase auth user, so it holds on the first sign-in and
   // on every one after (Apple returns the name once per Apple ID, ever).
@@ -48,6 +48,15 @@ export default function FirstRunScreen({ navigation }) {
   const [firstName, setFirstName] = useState(
     () => appleFirstName({ sessionUser: user, storedProfile: userProfile }) || '',
   );
+  // Founder ruling 2026-08-19: hide the box only when a name actually arrived.
+  // Apple lets the athlete clear the name on the sign-in sheet, and the sheet
+  // can complete before this screen mounts (the consent gate sits between
+  // them), so there is not always something to pre-fill. Hiding it regardless
+  // would leave those athletes permanently nameless with nowhere to answer.
+  // Read once at mount: if it were live, the field would vanish under their
+  // finger on the first keystroke.
+  const hadNameAtMount = useRef(firstName.length > 0);
+  const hideNameField = appleUser && hadNameAtMount.current;
 
 
   const [busy, setBusy] = useState(false);
@@ -69,10 +78,10 @@ export default function FirstRunScreen({ navigation }) {
   useEffect(() => {
     // Nothing to focus when the field is not rendered, and no keyboard should
     // be raised at an Apple athlete for a question they are not being asked.
-    if (appleUser) return undefined;
+    if (hideNameField) return undefined;
     const t = setTimeout(() => nameRef.current?.focus(), 350);
     return () => clearTimeout(t);
-  }, [appleUser]);
+  }, [hideNameField]);
 
   async function finish() {
     setBusy(true);
@@ -106,7 +115,7 @@ export default function FirstRunScreen({ navigation }) {
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={[styles.title, live.title]}>You&apos;re almost set up.</Text>
         <Text style={[styles.subtitle, live.subtitle]}>
-          {appleUser
+          {hideNameField
             ? 'A few quick questions to get you set up.'
             : 'Add your name if you like, then a few quick questions to get you set up.'}
         </Text>
@@ -122,7 +131,7 @@ export default function FirstRunScreen({ navigation }) {
           </Text>
         ) : null}
 
-        {appleUser ? null : (
+        {hideNameField ? null : (
         <TextField
           ref={nameRef}
           label="What should we call you? (optional)"
