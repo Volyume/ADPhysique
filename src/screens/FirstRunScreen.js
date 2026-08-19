@@ -11,7 +11,9 @@ import TextField from '../components/TextField';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
-import { isAppleUser, currentAppleIdentity, currentAppleProfilePatch } from '../lib/appleIdentity';
+import {
+  isAppleUser, currentAppleIdentity, currentAppleProfilePatch, loadAppleCredential,
+} from '../lib/appleIdentity';
 
 // First-run for Free users only. Pro signups go through ProOnboardingStack
 // (profile > training > recovery > plan + nutrition generation). Free gets
@@ -54,6 +56,29 @@ export default function FirstRunScreen({ navigation }) {
       : null)
     || ''
   ));
+
+  // COLD START. The `useState` initialiser above reads the credential mirror
+  // synchronously, and on a cold start that mirror is empty until the disk read
+  // resolves - which is exactly the journey that matters, because the disk copy
+  // only earns its keep when the app was killed between the Apple sheet and
+  // here. Pick the name up when it lands. Gap-fill only: a name already in
+  // state (typed, or from the stored profile) is never overwritten.
+  useEffect(() => {
+    if (!appleUser) return undefined;
+    let cancelled = false;
+    loadAppleCredential()
+      .then(() => {
+        if (cancelled) return;
+        setFirstName((cur) => {
+          if (cur && cur.trim()) return cur;
+          return currentAppleIdentity({ sessionUser: user, storedProfile: userProfile }).firstName || cur;
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appleUser]);
+
   const [busy, setBusy] = useState(false);
   const nameRef = useRef(null);
   // FQ-6.1 (D96): true only when a network-failed trial grant is queued for

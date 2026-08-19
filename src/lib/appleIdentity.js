@@ -172,22 +172,88 @@ export function isAppleUser(sessionUser) {
 // value has to outlive the call that received it. It is stashed here at the
 // source (src/lib/supabase.js) and read wherever a profile is next written.
 //
-// Process-lifetime only, and deliberately not persisted: it is a hand-off
-// between one function and the profile write a moment later, not a store.
+// IT IS WRITTEN TO DISK, IMMEDIATELY. This was memory-only in the first cut of
+// this file and that was a real defect, not a style point. Apple hands the name
+// over once and never again, and between that moment and the profile write at
+// the end of onboarding the athlete crosses the Article 9 consent gate and a
+// six-step wizard - minutes, during which iOS may reclaim a backgrounded app,
+// the app may crash, or the athlete may force-quit. Any of those with a
+// memory-only stash loses the name PERMANENTLY: Apple returns null on every
+// later sign-in, so there is no second chance to recover it. Apple's own
+// guidance is to cache the name on first receipt, and this is that cache.
+//
+// A synchronous in-memory mirror is kept alongside, because the onboarding
+// screens read the name in a `useState` initialiser and cannot await. On a cold
+// start the mirror is empty until `loadAppleCredential()` resolves, so those
+// screens also run an effect that picks up the late value (see their call
+// sites). Disk is the truth; the mirror is a fast path.
+const CREDENTIAL_KEY = '@volyume_apple_credential_v1';
+
 let _credential = { givenName: null, email: null };
 
-/** Called by signInWithApple with whatever Authentication Services returned. */
-export function noteAppleCredential({ givenName = null, email = null } = {}) {
+function _storage() {
+  // Lazy: this module is imported by pure-logic tests that have no AsyncStorage
+  // mock, and a missing store must degrade to the memory mirror, never throw.
+  try {
+    // eslint-disable-next-line global-require
+    return require('@react-native-async-storage/async-storage').default;
+  } catch (_) { return null; }
+}
+
+/**
+ * Called by signInWithApple with whatever Authentication Services returned.
+ *
+ * @returns {Promise<void>} resolves once the value is on disk. Callers should
+ *   await it: this is the one moment the name exists anywhere, so the write
+ *   must not be racing the rest of the sign-in.
+ */
+export async function noteAppleCredential({ givenName = null, email = null } = {}) {
   const g = clean(givenName);
   const e = clean(email);
   // Never let a later null sign-in erase a name an earlier one supplied.
-  _credential = {
+  const next = {
     givenName: g ?? _credential.givenName,
     email: e ?? _credential.email,
   };
+  _credential = next;
+  if (!next.givenName && !next.email) return;
+  const store = _storage();
+  if (!store) return;
+  try {
+    await store.setItem(CREDENTIAL_KEY, JSON.stringify(next));
+  } catch (_) { /* the memory mirror still serves this process */ }
 }
 
-/** @returns {{ givenName: string|null, email: string|null }} */
+/**
+ * Rehydrate the in-memory mirror from disk. Call before reading the credential
+ * on a cold start (the onboarding screens do, in an effect).
+ *
+ * @returns {Promise<{ givenName: string|null, email: string|null }>}
+ */
+export async function loadAppleCredential() {
+  const store = _storage();
+  if (!store) return { ..._credential };
+  try {
+    const raw = await store.getItem(CREDENTIAL_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      // Disk fills gaps only; anything this process already learned is at least
+      // as fresh, so it wins.
+      _credential = {
+        givenName: _credential.givenName ?? clean(parsed?.givenName),
+        email: _credential.email ?? clean(parsed?.email),
+      };
+    }
+  } catch (_) { /* unreadable or corrupt: the mirror stands */ }
+  return { ..._credential };
+}
+
+/**
+ * Synchronous read of the mirror. May be empty on a cold start before
+ * loadAppleCredential() has resolved - that is what the screens' effect covers.
+ *
+ * @returns {{ givenName: string|null, email: string|null }}
+ */
 export function readAppleCredential() {
   return { ..._credential };
 }
@@ -195,6 +261,9 @@ export function readAppleCredential() {
 /** Sign-out: the next account must not inherit this one's name. */
 export function clearAppleCredential() {
   _credential = { givenName: null, email: null };
+  const store = _storage();
+  if (!store) return;
+  try { store.removeItem(CREDENTIAL_KEY)?.catch?.(() => {}); } catch (_) { /* best effort */ }
 }
 
 /**

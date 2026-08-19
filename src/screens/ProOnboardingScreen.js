@@ -23,7 +23,9 @@ import {
 } from '../lib/database';
 import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
-import { isAppleUser, currentAppleIdentity, currentAppleProfilePatch } from '../lib/appleIdentity';
+import {
+  isAppleUser, currentAppleIdentity, currentAppleProfilePatch, loadAppleCredential,
+} from '../lib/appleIdentity';
 import { generateAndSavePlan, planShortfallNote, assessScheduleFit } from '../lib/planAutoGen';
 import {
   PLAN_FIT, fitCopy, alternativeCopy, keepChoiceCopy, coverageCopy,
@@ -387,6 +389,29 @@ export default function ProOnboardingScreen({ navigation }) {
       : null)
     || ''
   ));
+
+  // COLD START. The `useState` initialiser above reads the credential mirror
+  // synchronously, and on a cold start that mirror is empty until the disk read
+  // resolves - which is exactly the journey that matters, because the disk copy
+  // only earns its keep when the app was killed between the Apple sheet and
+  // here. Pick the name up when it lands. Gap-fill only: a name already in
+  // state (typed, or from the stored profile) is never overwritten.
+  useEffect(() => {
+    if (!appleUser) return undefined;
+    let cancelled = false;
+    loadAppleCredential()
+      .then(() => {
+        if (cancelled) return;
+        setFirstName((cur) => {
+          if (cur && cur.trim()) return cur;
+          return currentAppleIdentity({ sessionUser: user, storedProfile: userProfile }).firstName || cur;
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [appleUser]);
+
   const localUnits = 'kg';
   const [localBWUnits, setLocalBWUnits] = useState(bodyWeightUnits || 'st');
   // OB-5 (audit 02): body weight and age start EMPTY and join sex as

@@ -300,7 +300,7 @@ const TestRenderer = require('react-test-renderer');
 
 const useAppStore = require('../../store/useAppStore').default;
 const {
-  noteAppleCredential, clearAppleCredential,
+  noteAppleCredential, clearAppleCredential, readAppleCredential,
 } = require('../../lib/appleIdentity');
 
 const RELAY = 'ab12cd34ef@privaterelay.appleid.com';
@@ -326,6 +326,21 @@ function makeNav() {
     addListener: jest.fn(() => () => {}), replace: jest.fn(), push: jest.fn(),
     reset: jest.fn(), canGoBack: jest.fn(() => true), dispatch: jest.fn(),
   };
+}
+
+/**
+ * Put the credential on disk WITHOUT going through noteAppleCredential, so the
+ * in-memory mirror never sees it. That is precisely the cold-start state: Apple
+ * handed the name over in an earlier process that has since been killed, the
+ * disk copy survived, and the mirror is empty. (Calling noteAppleCredential and
+ * then trying to empty the mirror would need jest.resetModules(), which
+ * invalidates every module this file captured at the top.)
+ */
+const CREDENTIAL_KEY = '@volyume_apple_credential_v1';
+async function seedDiskOnly(cred) {
+  // eslint-disable-next-line global-require
+  const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+  await AsyncStorage.setItem(CREDENTIAL_KEY, JSON.stringify(cred));
 }
 
 const trees = [];
@@ -415,6 +430,29 @@ describe('FirstRunScreen (free onboarding)', () => {
     const [, profile] = saveLocalProfile.mock.calls[0];
     expect(profile.firstName).toBe('Ada');
     expect(profile.email).toBe(RELAY);
+  });
+
+  test('COLD START: killed mid-onboarding, the screen recovers the name from disk', async () => {
+    // The journey the disk copy exists for. Apple handed the name over before
+    // the app was killed, so the in-memory mirror is empty on relaunch and the
+    // useState initialiser has nothing; the screen's effect must pull it back
+    // off disk. Simulated here by writing the credential (which persists), then
+    // emptying the mirror the way a relaunch would.
+    const saveLocalProfile = jest.fn(() => Promise.resolve());
+    await seedDiskOnly({ givenName: 'Ada', email: RELAY });
+    expect(readAppleCredential().givenName).toBeNull();
+
+    const tree = await mount(Screen(), { user: appleUser(), tier: 'free', saveLocalProfile });
+    await TestRenderer.act(async () => { await Promise.resolve(); });
+
+    // Still no box, and the name is back and gets written.
+    expect(labels(tree)).not.toContain(NAME_LABEL);
+    const cont = tree.root.findAll(
+      (n) => n.props?.accessibilityLabel === 'Continue' && typeof n.props?.onPress === 'function',
+      { deep: true },
+    )[0];
+    await TestRenderer.act(async () => { cont.props.onPress(); });
+    expect(saveLocalProfile.mock.calls[0][1].firstName).toBe('Ada');
   });
 
   test('a name the athlete already has is never overwritten by Apple', async () => {

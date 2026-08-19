@@ -446,13 +446,41 @@ export async function signInWithApple() {
     // that call this function two dropped both values on the floor. Stash them
     // here, at the one place Apple ever hands them over, so the next profile
     // write picks the name up whichever screen the user is standing on.
+    const givenName = credential?.fullName?.givenName || null;
     try {
       // eslint-disable-next-line global-require
-      require('./appleIdentity').noteAppleCredential({
-        givenName: credential?.fullName?.givenName || null,
+      // AWAITED. This is the only moment the name exists anywhere; letting it
+      // race the rest of sign-in would reintroduce the window it exists to
+      // close (see appleIdentity.js's own note on why it goes to disk).
+      await require('./appleIdentity').noteAppleCredential({
+        givenName,
         email: credential?.email || null,
       });
     } catch (_) { /* best effort: the return below is unaffected */ }
+
+    // SECOND DURABILITY LAYER, and the one that survives a reinstall.
+    //
+    // Apple's identity token carries the e-mail but NOT the name, and
+    // signInWithIdToken has no field to pass one, so Supabase cannot learn the
+    // name by itself on the native iOS flow - only the Android web flow, where
+    // Apple POSTs the user JSON to the callback, populates user_metadata for
+    // free. Writing it here puts the name on the athlete's own auth row, so a
+    // delete-and-reinstall, or a second device, still knows it after the local
+    // disk cache is gone and before any users_profile row exists. That is the
+    // exact journey App Review re-tests on.
+    //
+    // Gap-fill only, and only when Apple actually supplied a name: never on a
+    // repeat sign-in (givenName is null then), and never over a value already
+    // there. Best-effort - a failure here costs a fallback, not the sign-in.
+    if (givenName) {
+      try {
+        const { data: { user: authUser } = {} } = await c.auth.getUser();
+        const meta = authUser?.user_metadata ?? {};
+        if (!meta.given_name && !meta.full_name && !meta.name) {
+          await c.auth.updateUser({ data: { given_name: givenName } });
+        }
+      } catch (_) { /* the disk cache above still carries it */ }
+    }
     return {
       ok: true,
       appleGivenName: credential?.fullName?.givenName || null,
