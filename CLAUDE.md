@@ -229,6 +229,56 @@ founder answer is. Present options and let the founder choose; never choose the
 easy path for them. This applies retroactively: every previously parked / held
 / deferred item must be surfaced to the founder as a question, not left sitting.
 
+**EVIDENCE BEFORE ASSERTION (ABSOLUTE, founder rule 2026-08-19).** Written
+after a single session in which every one of these was done at least once, and
+several were done repeatedly after being called out. Each line names the real
+failure, so none of it can be read as generic advice.
+
+1. **Never state an inference as a fact.** Say what was OBSERVED, then what it
+   suggests, and label which is which. Failures: "It's toggled off for this
+   specific chat" (observed: four tool names did not resolve; asserted: the
+   state of the founder's settings, wrongly). "The fix was written for
+   Android, so it fails on iOS" (observed: one screenshot and one code
+   comment; asserted: a platform-specific cause, wrongly). "There is no noise
+   filtering at all" (observed: `beforeSend` does not filter; asserted: the
+   whole file does not, wrongly - it filters in `captureWarning`, 60 lines
+   further down). Anything about the founder's accounts, devices, consoles or
+   settings is THEIR fact, never ours to declare.
+
+2. **Read to the end of the mechanism before concluding.** A constant is not
+   behaviour; find the function that consumes it. Failure: quoting
+   `PROFILES_BY_CATEGORY` to claim bodyweight and bands were mis-tagged, when
+   `deriveEquipmentProfiles` fourteen lines below overrides it deliberately
+   and documents why. Grep locates; it never concludes.
+
+3. **A plausible cause is not a root cause.** It must explain EVERY reported
+   symptom, including the awkward ones. Intermittency, "it worked the second
+   time", and "it happens with lots of different X" are disproofs of any
+   missing-data or wrong-value theory, and must be treated as such rather
+   than talked around. Failure: blaming a missing library row for a picker
+   that worked on the second open.
+
+4. **A timing patch is not a fix.** If the mechanism can still lose the race,
+   the window was narrowed, not closed. Say so plainly rather than reporting
+   it as fixed. Failure: `modalShown` gated WHEN the list mounted and never
+   gave it a height; the real fault was a list with no flex parent, and the
+   patch survived a month because second opens self-heal.
+
+5. **Scope every claim to exactly what was changed.** "Equipment is respected
+   when updating your plan" was true of the continuity path and false of the
+   three swap surfaces, which had never passed equipment at all. State the
+   path fixed and the paths NOT checked, in the same sentence.
+
+6. **Being told to fix it IS the instruction.** Do not queue, do not ask
+   permission to begin, do not close with "want me to?" on work already
+   named. The founder reporting a defect is the go-ahead. Questions are for
+   genuine product forks (Section 4, point 6), never for buying time or
+   shifting the decision back. "Say the word" is not a plan.
+
+7. **When corrected, correct the record and move on.** One plain sentence, no
+   defence of the earlier claim, no restating it in softer words, and never
+   "I'm not disputing that" about something just disputed.
+
 **Before any task:** state assumptions; if unclear, ask. Multiple approaches →
 present them. Anything bigger than a one-liner → plan first, wait for "go".
 Work from SOURCE documents (audits/blueprints/specs) — open and read them in
