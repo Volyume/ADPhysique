@@ -583,6 +583,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 change to state + a condition, not a new node that could
                 itself need to survive the same measurement race. */}
             {modalShown ? (
+            <View style={styles.pickerListWrap}>
             <FlashList
               data={filtered}
               keyExtractor={e => String(e.id)}
@@ -662,6 +663,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 </View>
               }
             />
+            </View>
             ) : null}
           </>
         )}
@@ -673,6 +675,23 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
 
 const styles = StyleSheet.create({
   pickerSafe: { flex: 1, backgroundColor: colors.background },
+  // THE fix for the first-open blank picker (founder report 2026-08-19,
+  // reproduced on BOTH platforms). The FlashList had no style and no flex,
+  // and its parent is a Fragment, so nothing in the layout ever told it how
+  // tall it was: its height was left to FlashList's own native measurement
+  // handshake, which races the modal window's setup and can commit a
+  // ~zero-height first paint. That is what put the results, the empty state
+  // and the create-custom footer into a blank gap, and why a second open
+  // "self-healed" (warm measurement) and why it looked random.
+  //
+  // The 2026-07-11 `modalShown` gate was a TIMING mitigation for the same
+  // symptom: it delays WHEN the list mounts but never gives it a height, so
+  // it narrows the race instead of closing it, which is why the bug survived
+  // it. A flex:1 wrapper is laid out by Yoga on the first pass, so the list
+  // is handed a definite height before it measures anything. Deterministic,
+  // not timed. The gate is kept as belt and braces; it is now redundant
+  // rather than load-bearing.
+  pickerListWrap: { flex: 1 },
   pickerHeader: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,

@@ -50,7 +50,33 @@ describe('ExercisePickerModal first-open native-race gate', () => {
   });
 
   test('the FlashList mount is gated on modalShown', () => {
-    expect(source).toMatch(/\{modalShown \? \(\s*\n\s*<FlashList/);
+    // 2026-08-19: the regex used to require <FlashList to be the immediate
+    // next line after the gate. It now sits inside a flex:1 wrapper (see the
+    // pickerListWrap test below), so the shape is asserted as "the gate opens,
+    // and the FlashList is what it guards" rather than by adjacency. The gate
+    // itself is unchanged; only what it wraps gained a parent.
+    expect(source).toMatch(/\{modalShown \? \([\s\S]{0,200}?<FlashList/);
+  });
+
+  test('the FlashList has a flex parent, so its height never depends on timing', () => {
+    // THE actual fix for the blank first-open picker (founder report
+    // 2026-08-19, reproduced on BOTH platforms, not Android-only as the
+    // 2026-07-11 diagnosis above assumed).
+    //
+    // The gate pinned above is a TIMING mitigation: it delays WHEN the list
+    // mounts but never tells it how tall it is. The FlashList had no style and
+    // no flex, and its parent is a Fragment, so its container height was
+    // indeterminate and it fell back to its own native measurement handshake
+    // to discover one - the very race the gate was trying to dodge. That is
+    // why the bug survived the gate and still presented as a blank gap with
+    // the results, empty state and create-custom footer clipped out.
+    //
+    // A flex:1 wrapper is laid out by Yoga on the first pass, so the list is
+    // handed a definite height before it measures anything. Deterministic
+    // rather than timed. If this wrapper is ever removed, the blank picker
+    // comes back and no amount of onShow gating will save it.
+    expect(source).toMatch(/<View style=\{styles\.pickerListWrap\}>\s*\n\s*<FlashList/);
+    expect(source).toMatch(/pickerListWrap:\s*\{\s*flex:\s*1\s*\}/);
   });
 
   test('the showBrowseFilters chip block is gated on modalShown too', () => {

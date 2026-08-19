@@ -1015,7 +1015,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // C9 Work 3: ask for a wider structural slate than we show, then let the
     // personal layer re-order inside it and drop anything the user has
     // excluded. Structural suitability still decides who is a candidate.
-    const ranked = rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 20, excludeAssisted: !isBeginner });
+    // equipment (founder report 2026-08-19): mid-session swaps offered kit the
+    // athlete does not have, because no swap surface passed their profile and
+    // rankSwaps defaults to no filter. Read lazily off the store rather than
+    // adding a subscription: this runs on a tap, not on render.
+    const swapEquipment = useAppStore.getState().userProfile?.equipment ?? null;
+    const ranked = rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 20, excludeAssisted: !isBeginner, equipment: swapEquipment });
     let ordered = ranked.slice(0, 8);
     try {
       const block = user?.id ? await getActiveBlock(user.id) : null;

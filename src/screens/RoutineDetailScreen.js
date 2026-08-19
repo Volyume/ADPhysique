@@ -335,6 +335,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
     const ranked = rankSwaps(exercise, all, {
       excludeIds: otherIds,
       numResults: 24,
+      // Founder report 2026-08-19: swapping with Machines & Cables selected
+      // still offered Barbell Back Squat, because no swap surface passed the
+      // athlete's equipment at all and rankSwaps defaults to no filter.
+      // Undefined profile means no filter, exactly as before.
+      equipment: userProfile?.equipment ?? null,
     });
     let ordered = ranked.slice(0, 12);
     let proposal = null;

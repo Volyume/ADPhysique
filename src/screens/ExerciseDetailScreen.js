@@ -382,7 +382,13 @@ export default function ExerciseDetailScreen({ navigation, route }) {
       // Substitutes, ranked by SFR score and similarity
       const allExercises = await getAllExercises();
       try {
-        const swaps = rankSwaps(ex, allExercises, { equipment: [] });
+        // `equipment: []` matched NOTHING: an empty array made the array
+        // branch of the filter reject every row, so this section could only
+        // ever have been empty. Pass the athlete's real profile (null when
+        // unset, which means no filter) so substitutes are both present and
+        // actually performable with their kit.
+        const swapEquipment = useAppStore.getState().userProfile?.equipment ?? null;
+        const swaps = rankSwaps(ex, allExercises, { equipment: swapEquipment });
         setSubstitutes(swaps.slice(0, 4));
       } catch (_) {
         // swapEngine unavailable, hide section silently

@@ -6,6 +6,11 @@
  * Extended (Phase 6) with joint-discomfort pattern detection and auto-swap logic.
  */
 
+// The one parser for an exercise row's equipment profiles, shared with the
+// exercise pool planEngine filters on, so a swap and a generated plan can
+// never disagree about what the athlete's kit allows. Pure, no DB.
+import { parseProfiles } from './poolGenerator';
+
 // ---------------------------------------------------------------------------
 // Scoring weights
 // ---------------------------------------------------------------------------
@@ -209,11 +214,29 @@ export function rankSwaps(originalExercise, allExercises, options = {}) {
     // itself: if the user is on an assisted lift and wants alternatives, they
     // still get loaded ones.
     .filter((ex) => !excludeAssisted || !ASSISTED_RE.test(ex.name ?? ''))
-    // Optional equipment filter, accepts a string or array of strings
+    // Equipment filter (founder report 2026-08-19: swapping with Machines &
+    // Cables selected still offered Barbell Back Squat).
+    //
+    // This used to compare the caller's value against `ex.equipment`, which
+    // is the RAW seed column ('barbell', 'cable', 'machine', 'dumbbell').
+    // What a caller actually has is the athlete's equipment PROFILE
+    // ('machines_cables', 'full_gym', ...) - a different vocabulary - so
+    // `ex.equipment === 'machines_cables'` could never be true and passing
+    // equipment would have emptied the list rather than filtering it. The
+    // comparison now runs against equipmentProfiles through the same parser
+    // planEngine's filterPool uses, so a swap and a generated plan can never
+    // disagree about what the athlete can actually do.
+    //
+    // Legacy shape kept: an ARRAY is still matched against the raw column,
+    // because that is what the exercise picker's equipment chips pass.
     .filter((ex) => {
       if (equipment === null) return true;
       if (Array.isArray(equipment)) return equipment.includes(ex.equipment);
-      return ex.equipment === equipment;
+      const profiles = parseProfiles(ex);
+      // An untagged row (a custom exercise the athlete created) carries no
+      // profiles. Never hide someone's own exercise on an absence of data.
+      if (profiles.length === 0) return true;
+      return profiles.includes(equipment);
     })
     // Score each candidate
     .map((ex) => ({
