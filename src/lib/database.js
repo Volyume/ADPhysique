@@ -4741,6 +4741,27 @@ export async function getLibraryPlans() {
   return rows.map(rowToCamel);
 }
 
+// CC28 (section 9.2.5): every library plan's exercise rows in ONE read, so
+// capability-computed compatibility can cover the whole browse surface
+// without a per-plan query fan-out. Read-only; returns the exercise
+// columns the resolver questions need plus the owning programme id.
+export async function getLibraryPlanExerciseRows() {
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT r.programme_id, re.exercise_id,
+            e.id, e.name, e.primary_muscle, e.subregion, e.is_custom,
+            e.position, e.floor_access, e.overhead_position, e.grip_demand,
+            e.unilateral_loadable, e.bilateral_upper, e.bilateral_lower,
+            e.axial_load, e.impact, e.balance_demand
+       FROM routines r
+       JOIN routine_exercises re ON re.routine_id = r.id
+       JOIN exercises e ON e.id = re.exercise_id
+       JOIN programmes p ON p.id = r.programme_id
+      WHERE p.is_library = 1`,
+  );
+  return rows.map(rowToCamel);
+}
+
 export async function getRoutinesForPlan(planId) {
   const d = await db();
   // Day-level plan reorder: order by the user-set position when present;

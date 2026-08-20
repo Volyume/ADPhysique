@@ -71,7 +71,7 @@ const NAME_STANDING_FAMILY = /\bsquat\b(?!.*pistol)|\bdeadlift\b|\brdl\b|\broman
 // Hanging / bar-suspended work: none of the four ground positions.
 const NAME_SUSPENDED = /\bpull-?up\b|\bchin-?up\b|\bdip\b(?!.*machine)|\bhanging\b|\bdead hang\b|\btoe-to-bar\b|\bmuscle-?up\b|\bl-sit\b|\bdip machine\b|\bassisted dip\b/i;
 // Seated by construction: the station has a seat.
-const NAME_SEATED_STATION = /\bpulldown\b|\bcable row\b|\bhigh row\b|\blow row\b|\bleg press\b|\bleg extension\b|\bpec deck\b|\bassisted pull-?up\b|\bmachine (chest|shoulder) press\b|\bmachine (row|curl|crunch|lateral raise|tricep|y-raise)\b|\bplate-loaded (chest|incline|decline|shoulder|overhead|row|high row|low row|lat|rear delt)\b|\biso-lateral\b|\bhammer strength\b|\bchest press machine\b|\blateral raise machine\b|\btriceps extension machine\b|\bneck (machine|flexion \(machine\)|extension \(machine\))|\bneck machine\b|\bhip (abduction|adduction)\b|\babduction machine\b|\bhip adduction machine\b|\bcycling\b|\bassault bike\b|\bviking press\b|\bhand gripper\b/i;
+const NAME_SEATED_STATION = /\bpulldown\b|\bcable row\b|\bhigh row\b|\blow row\b|\bleg press\b|\bleg extension\b|\bpec deck\b|\bmachine rear delt\b|\breverse pec deck\b|\bseated rear delt\b|\bassisted pull-?up\b|\bmachine (chest|shoulder) press\b|\bmachine (row|curl|crunch|lateral raise|tricep|y-raise)\b|\bplate-loaded (chest|incline|decline|shoulder|overhead|row|high row|low row|lat|rear delt)\b|\biso-lateral\b|\bhammer strength\b|\bchest press machine\b|\blateral raise machine\b|\btriceps extension machine\b|\bneck (machine|flexion \(machine\)|extension \(machine\))|\bneck machine\b|\bhip (abduction|adduction)\b|\babduction machine\b|\bhip adduction machine\b|\bcycling\b|\bassault bike\b|\bviking press\b|\bhand gripper\b/i;
 // Standing free-weight/cable movements whose unqualified form is standing
 // by the naming convention above.
 const NAME_STANDING_CONVENTION = /\bcurl\b|\bpushdown\b|\bface pull\b|\blateral raise\b|\bfront raise\b|\by-raise\b(?!.*prone)|\bw-raise\b|\bytw\b|\bcrossover\b|\bcable fly\b|\bwoodchop\b|\btwist\b|\brotation\b|\bpull-?through\b|\bpull-apart\b|\bkickback\b|\boverhead.*extension\b|\btate press\b|\bsvend press\b|\bpallof\b|\bserratus punch\b|\bbattle ropes\b|\bwrist\b|\broller\b|\bplate pinch\b|\bside bend\b|\bband (row|lat pulldown|chest press|shoulder press|leg curl|tibialis)\b|\btibialis raise\b|\bstraight-arm pulldown\b|\brack pull\b|\bhip extension \(cable\)\b|\bcable (hip abduction|hip adduction|donkey kickback)\b|\bpress\b(?=.*landmine)|\brow\b/i;
@@ -307,7 +307,7 @@ export function deriveDemandMetadata(ex = {}) {
   else if (NAME_SEATED_STATION.test(name)) out.position = DEMAND_POSITION.SEATED;
   else if (NAME_STANDING_FAMILY.test(name) || out.impact === true) out.position = DEMAND_POSITION.STANDING;
   else if (/\bfly\b/i.test(name) && (equipment === 'dumbbell')) out.position = DEMAND_POSITION.LYING;
-  else if (/\brear delt fly\b|\biron cross\b/i.test(name)) out.position = DEMAND_POSITION.STANDING;
+  else if (/\brear delt fly\b|\biron cross\b/i.test(name) && equipment !== 'machine') out.position = DEMAND_POSITION.STANDING;
   else if (NAME_OVERHEAD.test(name) && (equipment === 'barbell' || equipment === 'dumbbell' || equipment === 'kettlebell' || equipment === 'cable')) out.position = DEMAND_POSITION.STANDING;
   else if (equipment === 'machine' && /\bpress\b|\bfly\b/i.test(name)) out.position = DEMAND_POSITION.SEATED;
   else if (NAME_STANDING_CONVENTION.test(name)
@@ -408,13 +408,13 @@ export function deriveDemandMetadata(ex = {}) {
       // stances still place both legs; the loaded demand is per side and
       // section 33.8's side-scoping happens in the resolver.
       out.bilateralLower = /\blunge\b|bulgarian|split squat|curtsy|cossack|step-?up|skater|shrimp/i.test(name);
+    } else if (/\bkickback\b|\bdonkey kick\b|\babduction\b|\badduction\b|\bhip extension \(cable\)|\btibialis\b|\bheel walk\b|\btoe walk\b/i.test(name)) {
+      out.bilateralLower = false; // one leg works at a time by construction
     } else if (LOWER_PATTERNS.has(pattern) || NAME_STANDING_FAMILY.test(name)
       || NAME_MACHINE_SUPPORTIVE.test(name) || /\bleg (press|extension|curl)\b|\bcalf\b|\bcycling\b|\bassault bike\b|\bglute ham\b|\bnordic\b|\bbridge\b|\bthrust\b|\bfrog pump\b/i.test(name)) {
       // Standard two-leg execution as seeded; single-leg use is its own
       // variant or an allowance.
       out.bilateralLower = true;
-    } else if (/\bkickback\b|\bdonkey kick\b|\babduction\b|\badduction\b|\bhip extension \(cable\)\b|\btibialis\b|\bheel walk\b|\btoe walk\b/i.test(name)) {
-      out.bilateralLower = false; // one leg works at a time / trivially one-sided
     }
   }
 

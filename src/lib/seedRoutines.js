@@ -6,7 +6,10 @@ import {
 import { logError, logWarn, logInfo } from './errorLog';
 
 // Bump to v12: adds Mens Physique Width Enhancement plan
-const SEED_KEY = '@volyume_routines_seeded_v12';
+// v13 (CC28): the capability-led routine families - nine free plans
+// buildable from the existing library's demand metadata (Amendment
+// deliverable 2). A bump adds them on existing installs; names dedupe.
+const SEED_KEY = '@volyume_routines_seeded_v13';
 
 // Extra exercises the plan templates rely on that may not be in the base exercise seed
 const REQUIRED_EXERCISES = [
@@ -1467,7 +1470,363 @@ const LIBRARY_PLANS = [
       },
     ],
   },
+,
+  // ── CC28: capability-led routine families (Amendment deliverable 2) ─────
+  // Function-named, never population-named (CC-F3 gate; CAP-3). Every row
+  // below is validated against the demand derivation by
+  // capabilityFamilyPlans.test.js: each family's exercises pass ITS OWN
+  // capability profile, so these plans are compatible BY CONSTRUCTION, not
+  // by tag. They appear in normal browse like any other plan (Amendment
+  // section 13 - no segregated shelf).
 
+  {
+    name: 'Seated Full Body',
+    description: 'A three-day full-body plan trained entirely from a seated or lying position, with no standing work anywhere. Built around machines, cables and bench work. Add a rep each session; once you reach the top of the range, add a little weight and start again. Leave 2 reps in the tank on each set.',
+    tags: 'seated full_body adapted goal:build_muscle days:3',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Day 1: Press & Quads',
+        exercises: [
+          { name: 'Machine Chest Press',        sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Set the seat so handles sit at mid-chest.' },
+          { name: 'Leg Press',                  sets: 3, repsMin: 10, repsMax: 15, rest: 120, notes: 'Feet mid-platform, full comfortable range.' },
+          { name: 'Machine Shoulder Press',     sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Stop the descent at ear height if that suits you better.' },
+          { name: 'Leg Extension',              sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Pause a second at the top.' },
+          { name: 'Machine Tricep Extension',   sets: 2, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Elbows stay on the pad.' },
+        ],
+      },
+      {
+        name: 'Day 2: Pull & Hamstrings',
+        exercises: [
+          { name: 'Lat Pulldown (Wide Grip)',   sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Pull to the collarbone, control the way up.' },
+          { name: 'Seated Leg Curl',            sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Slow lowering, full squeeze.' },
+          { name: 'Seated Cable Row',           sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Long stretch forward, pull to the ribs.' },
+          { name: 'Machine Rear Delt Fly',      sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Arms just below shoulder height.' },
+          { name: 'Machine Curl',               sets: 2, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Full range, no swinging.' },
+        ],
+      },
+      {
+        name: 'Day 3: Mixed & Detail',
+        exercises: [
+          { name: 'Pec Deck (Machine Fly)',     sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Elbows slightly bent, squeeze in the middle.' },
+          { name: 'Machine Row (Chest Supported)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Chest stays on the pad throughout.' },
+          { name: 'Machine Hip Thrust',         sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Drive through the hips, pause at the top.' },
+          { name: 'Machine Lateral Raise',      sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Lead with the elbows.' },
+          { name: 'Seated Calf Raise',          sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Pause at the stretch and the top.' },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: 'Seated Upper Strength',
+    description: 'Two upper-body strength sessions per week, all seated or lying, no standing work. Heavier sets in the 6 to 10 range with full rests. When you complete every rep at the top of the range, add weight. Leave 2 reps in the tank.',
+    tags: 'seated upper strength adapted goal:get_stronger days:2',
+    difficulty: 1,
+    workouts: [
+      {
+        name: 'Day 1: Press Strength',
+        exercises: [
+          { name: 'Machine Chest Press',        sets: 4, repsMin: 6,  repsMax: 10, rest: 150, notes: 'Full rests. Quality over speed.' },
+          { name: 'Machine Shoulder Press',     sets: 3, repsMin: 6,  repsMax: 10, rest: 150, notes: 'Set the range that suits your shoulders.' },
+          { name: 'Incline Machine Press',      sets: 3, repsMin: 8,  repsMax: 10, rest: 120, notes: 'Smooth press, controlled return.' },
+          { name: 'Seated Dip Machine',         sets: 3, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Elbows track back, not out.' },
+        ],
+      },
+      {
+        name: 'Day 2: Pull Strength',
+        exercises: [
+          { name: 'Lat Pulldown (Neutral Grip)', sets: 4, repsMin: 6, repsMax: 10, rest: 150, notes: 'Drive the elbows down, no lean-back swing.' },
+          { name: 'Seated Cable Row',           sets: 4, repsMin: 6,  repsMax: 10, rest: 150, notes: 'Braced torso, pull to the ribs.' },
+          { name: 'Machine Rear Delt Fly',      sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Strict and slow.' },
+          { name: 'Preacher Curl (Dumbbell)',   sets: 3, repsMin: 8,  repsMax: 10, rest: 90,  notes: 'One arm at a time is fine.' },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: 'No-Floor Full Body',
+    description: 'Three full-body days with nothing performed on the floor: every movement starts and finishes standing, seated or at a bench or machine. Add a rep each session; at the top of the range, add weight and start again. Leave 2 reps in the tank.',
+    tags: 'no_floor full_body adapted goal:build_muscle days:3',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Day 1: Push',
+        exercises: [
+          { name: 'Machine Chest Press',        sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Handles at mid-chest.' },
+          { name: 'Leg Press',                  sets: 3, repsMin: 10, repsMax: 15, rest: 120, notes: 'Full comfortable range.' },
+          { name: 'Seated Dumbbell Press',      sets: 3, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Back supported on the bench.' },
+          { name: 'Leg Extension',              sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Pause at the top.' },
+          { name: 'Tricep Pushdown (Rope)',     sets: 2, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Elbows pinned to your sides.' },
+        ],
+      },
+      {
+        name: 'Day 2: Pull',
+        exercises: [
+          { name: 'Lat Pulldown (Wide Grip)',   sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Control the way up.' },
+          { name: 'Seated Leg Curl',            sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Slow lowering.' },
+          { name: 'Seated Cable Row',           sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Pull to the ribs.' },
+          { name: 'Face Pull',                  sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Rope at face height, elbows high.' },
+          { name: 'Dumbbell Curl',              sets: 2, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Standing or seated, no swing.' },
+        ],
+      },
+      {
+        name: 'Day 3: Whole Body',
+        exercises: [
+          { name: 'Goblet Squat',               sets: 3, repsMin: 10, repsMax: 15, rest: 120, notes: 'Hold the dumbbell at your chest.' },
+          { name: 'Chest-Supported Row (Dumbbell)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Chest on the incline bench.' },
+          { name: 'Incline Dumbbell Press',     sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Set the bench to about 30 degrees.' },
+          { name: 'Dumbbell Calf Raise (Standing)', sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Hold support with the free hand. Pause at the stretch.' },
+          { name: 'Cable Lateral Raise',        sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Lead with the elbow.' },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: 'Supported Machine Builder',
+    description: 'A three-day plan where every movement is guided or supported: machines, cables and supported benches only, nothing free-standing. A calm way to build training without balance demands. Add a rep each session; at the top of the range, add weight. Leave 2 reps in the tank.',
+    tags: 'machine supported adapted goal:build_muscle days:3',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Day 1: Chest & Back',
+        exercises: [
+          { name: 'Machine Chest Press',        sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Smooth tempo.' },
+          { name: 'Machine Row (Chest Supported)', sets: 3, repsMin: 8, repsMax: 12, rest: 120, notes: 'Chest stays on the pad.' },
+          { name: 'Pec Deck (Machine Fly)',     sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Squeeze in the middle.' },
+          { name: 'Lat Pulldown (Close Grip)',  sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Elbows to pockets.' },
+        ],
+      },
+      {
+        name: 'Day 2: Legs',
+        exercises: [
+          { name: 'Leg Press',                  sets: 3, repsMin: 10, repsMax: 15, rest: 120, notes: 'Feet mid-platform.' },
+          { name: 'Seated Leg Curl',            sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Full squeeze.' },
+          { name: 'Leg Extension',              sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Pause at the top.' },
+          { name: 'Seated Machine Calf Raise',  sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Slow stretch at the bottom.' },
+          { name: 'Hip Adduction Machine',      sets: 2, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Controlled in both directions.' },
+        ],
+      },
+      {
+        name: 'Day 3: Shoulders & Arms',
+        exercises: [
+          { name: 'Machine Shoulder Press',     sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Set a comfortable range.' },
+          { name: 'Machine Lateral Raise',      sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Lead with the elbows.' },
+          { name: 'Machine Rear Delt Fly',      sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Strict form.' },
+          { name: 'Machine Curl',               sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'No swinging.' },
+          { name: 'Machine Tricep Extension',   sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Elbows on the pad.' },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: 'Supported Machine Builder II',
+    description: 'The four-day step up from Supported Machine Builder: still fully guided and supported throughout, with more weekly sets per muscle and an upper/lower split. When every rep at the top of the range is completed, add weight. Leave 1 to 2 reps in the tank.',
+    tags: 'machine supported adapted goal:build_muscle days:4',
+    difficulty: 1,
+    workouts: [
+      {
+        name: 'Day 1: Upper Push',
+        exercises: [
+          { name: 'Machine Chest Press',        sets: 4, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Two warm-up sets first.' },
+          { name: 'Incline Machine Press',      sets: 3, repsMin: 10, repsMax: 12, rest: 120, notes: 'Upper-chest emphasis.' },
+          { name: 'Machine Shoulder Press',     sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Comfortable range.' },
+          { name: 'Machine Lateral Raise',      sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Strict.' },
+          { name: 'Machine Tricep Extension',   sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Full lockout.' },
+        ],
+      },
+      {
+        name: 'Day 2: Lower',
+        exercises: [
+          { name: 'Leg Press',                  sets: 4, repsMin: 10, repsMax: 15, rest: 150, notes: 'Deep, controlled reps.' },
+          { name: 'Seated Leg Curl',            sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Slow eccentric.' },
+          { name: 'Leg Extension',              sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Pause at the top.' },
+          { name: 'Seated Machine Calf Raise',  sets: 4, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Pause at the stretch.' },
+        ],
+      },
+      {
+        name: 'Day 3: Upper Pull',
+        exercises: [
+          { name: 'Lat Pulldown (Wide Grip)',   sets: 4, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Control the way up.' },
+          { name: 'Machine Row (Chest Supported)', sets: 4, repsMin: 8, repsMax: 12, rest: 120, notes: 'Chest on the pad.' },
+          { name: 'Machine Rear Delt Fly',      sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Slow and strict.' },
+          { name: 'Machine Curl',               sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Full range.' },
+        ],
+      },
+      {
+        name: 'Day 4: Weak-Point Mix',
+        exercises: [
+          { name: 'Pec Deck (Machine Fly)',     sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Squeeze hard.' },
+          { name: 'Lat Pulldown (Neutral Grip)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Long stretch at the top.' },
+          { name: 'Machine Hip Thrust',         sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Pause at the top.' },
+          { name: 'Abduction Machine',          sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Controlled in both directions.' },
+          { name: 'Machine Crunch',             sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Curl, do not fold.' },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: 'One-Arm Upper Builder',
+    description: 'A two-day upper-body plan where every movement loads one side at a time, so it works fully when you train with one arm. Work your training side; the plan never assumes both. Add a rep each session; at the top of the range, add weight. Leave 2 reps in the tank.',
+    tags: 'unilateral upper adapted goal:build_muscle days:2',
+    difficulty: 1,
+    workouts: [
+      {
+        name: 'Day 1: Push Side',
+        exercises: [
+          { name: 'Single-Arm Dumbbell Press',  sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Seated with back support works well.' },
+          { name: 'Chest Press Machine (Single-Arm)', sets: 3, repsMin: 8, repsMax: 12, rest: 120, notes: 'One handle at a time.' },
+          { name: 'Single-Arm Cable Lateral Raise', sets: 3, repsMin: 12, repsMax: 20, rest: 60, notes: 'Lead with the elbow.' },
+          { name: 'Single Arm Cable Extension', sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Elbow stays by your side.' },
+          { name: 'Dumbbell Side Bend',         sets: 2, repsMin: 10, repsMax: 12, rest: 60,  notes: 'One side at a time, slow and controlled.' },
+        ],
+      },
+      {
+        name: 'Day 2: Pull Side',
+        exercises: [
+          { name: 'Single-Arm Lat Pulldown',    sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Long stretch at the top.' },
+          { name: 'Single-Arm Cable Row',       sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Braced, no torso twist.' },
+          { name: 'Dumbbell Row',               sets: 3, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Support yourself on the bench.' },
+          { name: 'Concentration Curl',         sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Elbow braced on the thigh.' },
+          { name: 'Tricep Kickback',            sets: 2, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Upper arm parallel to the floor.' },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: 'One-Leg Lower Builder',
+    description: 'A two-day lower-body plan built from movements that load one leg at a time. Work your training side at its own pace; nothing in the plan needs both legs at once. Add a rep each session; at the top of the range, add weight. Leave 2 reps in the tank.',
+    tags: 'unilateral lower adapted goal:build_muscle days:2',
+    difficulty: 1,
+    workouts: [
+      {
+        name: 'Day 1: Knee-Led',
+        exercises: [
+          { name: 'Single Leg Press',           sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Foot mid-platform.' },
+          { name: 'Terminal Knee Extension',    sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Band behind the knee, straighten fully.' },
+          { name: 'Cable Kickback',             sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Squeeze at the back.' },
+          { name: 'Single-Leg Calf Raise (Dumbbell)', sets: 3, repsMin: 10, repsMax: 15, rest: 60, notes: 'Hold something stable for support.' },
+        ],
+      },
+      {
+        name: 'Day 2: Hip-Led',
+        exercises: [
+          { name: 'Single-Leg Romanian Deadlift (DB)', sets: 3, repsMin: 8, repsMax: 12, rest: 120, notes: 'Hold support with the free hand if useful.' },
+          { name: 'Single Leg Hip Thrust',      sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Pause at the top.' },
+          { name: 'Cable Hip Abduction',        sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Stand tall, controlled sweep.' },
+          { name: 'Hip Extension (Cable)',      sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Drive back through the heel.' },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: 'Steady-Base Full Body',
+    description: 'Three full-body days where every movement has external support or a fixed path: machines, supported benches and braced positions, with no free-standing balance demands anywhere. Add a rep each session; at the top of the range, add weight. Leave 2 reps in the tank.',
+    tags: 'supported balance adapted goal:build_muscle days:3',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Day 1: Push & Quads',
+        exercises: [
+          { name: 'Machine Chest Press',        sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Smooth tempo.' },
+          { name: 'Leg Press',                  sets: 3, repsMin: 10, repsMax: 15, rest: 120, notes: 'Comfortable depth.' },
+          { name: 'Machine Shoulder Press',     sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Back on the pad.' },
+          { name: 'Leg Extension',              sets: 2, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Pause at the top.' },
+        ],
+      },
+      {
+        name: 'Day 2: Pull & Hamstrings',
+        exercises: [
+          { name: 'Lat Pulldown (Wide Grip)',   sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Seated and braced.' },
+          { name: 'Seated Leg Curl',            sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Slow lowering.' },
+          { name: 'Machine Row (Chest Supported)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Chest stays supported.' },
+          { name: 'Preacher Curl (Dumbbell)',   sets: 2, repsMin: 10, repsMax: 12, rest: 60,  notes: 'Arm braced on the pad.' },
+        ],
+      },
+      {
+        name: 'Day 3: Machines Mixed',
+        exercises: [
+          { name: 'Incline Machine Press',      sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Upper-chest emphasis.' },
+          { name: 'Seated Cable Row',           sets: 3, repsMin: 10, repsMax: 12, rest: 90,  notes: 'Pull to the ribs.' },
+          { name: 'Machine Hip Thrust',         sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Pause at the top.' },
+          { name: 'Seated Machine Calf Raise',  sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Full stretch.' },
+          { name: 'Machine Rear Delt Fly',      sets: 2, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Strict.' },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: 'Dumbbell & Band Foundations',
+    description: 'Three full-body days using only dumbbells and a resistance band, with seated and supported options built in. A complete week of training from minimal equipment. Add a rep each session; at the top of the range, move up a weight or band. Leave 2 reps in the tank.',
+    tags: 'dumbbell band low_equipment adapted goal:build_muscle days:3',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Day 1: Push',
+        exercises: [
+          { name: 'Dumbbell Bench Press',       sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'A floor press works if you have no bench.' },
+          { name: 'Goblet Squat',               sets: 3, repsMin: 10, repsMax: 15, rest: 120, notes: 'Dumbbell held at the chest.' },
+          { name: 'Seated Dumbbell Press',      sets: 3, repsMin: 8,  repsMax: 12, rest: 90,  notes: 'Back supported if possible.' },
+          { name: 'Band Tricep Pushdown',       sets: 2, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Anchor the band high.' },
+        ],
+      },
+      {
+        name: 'Day 2: Pull',
+        exercises: [
+          { name: 'Dumbbell Row',               sets: 3, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Brace on a bench or chair.' },
+          { name: 'Band Lat Pulldown',          sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Anchor high, pull to the collarbone.' },
+          { name: 'Band Pull-Apart',            sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Squeeze the shoulder blades.' },
+          { name: 'Dumbbell Curl',              sets: 2, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Seated or standing.' },
+        ],
+      },
+      {
+        name: 'Day 3: Hips & Detail',
+        exercises: [
+          { name: 'Romanian Deadlift (Dumbbell)', sets: 3, repsMin: 10, repsMax: 12, rest: 120, notes: 'Soft knees, hinge at the hips.' },
+          { name: 'Dumbbell Hip Thrust',        sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Shoulders on a bench or sofa edge.' },
+          { name: 'Dumbbell Lateral Raise',     sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Lead with the elbows.' },
+          { name: 'Band Leg Curl',              sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Anchor low, curl the heel in.' },
+          { name: 'Dumbbell Calf Raise (Standing)', sets: 3, repsMin: 12, repsMax: 20, rest: 60, notes: 'Hold support with the free hand.' },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: 'No-Overhead Upper Split',
+    description: 'A two-day upper-body split with nothing pressed, pulled or held above head height. Chest, back, shoulders and arms all still get full work from presses, rows and raises that stay below shoulder level. Add a rep each session; at the top of the range, add weight. Leave 2 reps in the tank.',
+    tags: 'no_overhead upper adapted goal:build_muscle days:2',
+    difficulty: 1,
+    workouts: [
+      {
+        name: 'Day 1: Push Without Overhead',
+        exercises: [
+          { name: 'Barbell Bench Press',        sets: 3, repsMin: 8,  repsMax: 10, rest: 150, notes: 'Bar path stays over the chest.' },
+          { name: 'Machine Chest Press',        sets: 3, repsMin: 10, repsMax: 12, rest: 120, notes: 'Handles at mid-chest.' },
+          { name: 'Dumbbell Lateral Raise',     sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'To shoulder height, never above.' },
+          { name: 'Pec Deck (Machine Fly)',     sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Squeeze in the middle.' },
+          { name: 'Tricep Pushdown (Bar)',      sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'Elbows pinned.' },
+        ],
+      },
+      {
+        name: 'Day 2: Pull Without Overhead',
+        exercises: [
+          { name: 'Seated Cable Row',           sets: 4, repsMin: 8,  repsMax: 12, rest: 120, notes: 'Pull to the ribs.' },
+          { name: 'Chest-Supported Row (Dumbbell)', sets: 3, repsMin: 10, repsMax: 12, rest: 90, notes: 'Chest on the incline bench.' },
+          { name: 'Face Pull',                  sets: 3, repsMin: 15, repsMax: 20, rest: 60,  notes: 'Rope at chest height.' },
+          { name: 'Machine Rear Delt Fly',      sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Strict and slow.' },
+          { name: 'Dumbbell Curl',              sets: 3, repsMin: 10, repsMax: 15, rest: 60,  notes: 'No swinging.' },
+        ],
+      },
+    ],
+  },
 ];
 
 // ─── Seed function ────────────────────────────────────────────────────────────
