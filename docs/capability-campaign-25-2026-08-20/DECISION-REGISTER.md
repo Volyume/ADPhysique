@@ -262,6 +262,20 @@ the amendments). Every accepted item is a BINDING amendment in
 ARCHITECTURE §33 or an inline REVISED block; nothing was resolved by
 prose alone.
 
+RT-BUNDLE (2026-08-20, implementation red team over the combined
+CC27-CC29 diff; ONE Sonnet, bundle-end): 13 attack classes, 9 held
+clean, 4 BREAKs — all four accepted and fixed (lead-ruled under D33,
+mechanisms verified in source before fixing): RT-F1 three ungated
+generateAndSavePlan surfaces + a capability-blind picker notice
+(section 9.6 gates + consent-gated notice); RT-F2 the free starter's
+silent full-pool fallback (honest caveat + explicit pre-activation
+choice); RT-F3 the conflict sheet's "Keep it in this plan" on
+clinician rows (CAP-7 — replaced by "Update restriction" routing to
+How you train); RT-F4 completion effects excusing declined/undecided
+rules (excusal now requires the applied choice on every driving rule).
+Each fix is pinned; the full adjudication with mechanisms is in
+CC27-29-BUNDLE-TRACKER.md.
+
 ## E. DEFERRED (recorded, not parked — each carries its revisit trigger)
 
 - DEF-1 Clinician/coach shared views (multiplayer) — revisit on
