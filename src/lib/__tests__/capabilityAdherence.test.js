@@ -40,7 +40,6 @@ jest.mock('../consent/capabilityConsent', () => ({
   getLocalCapabilityConsent: async () => mockLocalConsent.value,
 }));
 
-const { __raw: raw } = jest.requireMock('../dbCrypto');
 const {
   db, getWeeklySessionStats, recordExerciseSwap, getExerciseSwaps,
   appendSessionConstraintEffects, getSessionConstraintEffect,
