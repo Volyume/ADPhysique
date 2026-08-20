@@ -1406,3 +1406,59 @@ not break the role model itself, CAP-3's no-diagnosis promise, or
 CAP-19's mechanical guard. The §29 scorecard's residual NOT-PREVENTED
 items are all resolved by 33.6-33.19 or explicitly registered
 (CC-F8, CC-R17).
+
+---
+
+## 34. POST-ARCHITECTURE CHECKPOINT (founder-ordered, 2026-08-20; three external findings)
+
+**34.1 Custom-exercise parity rule (Finding 1 — the one accepted
+amendment; binding).** A custom or adapted exercise is a first-class
+capability exercise for its owner: the gate at every automatic seam is
+METADATA SUFFICIENCY, never `is_custom`. Concretely: (a) logging,
+volume, progression, PR/history and provenance already treat customs
+identically (they live in `exercises` with `is_custom=1`); (b) swap and
+slot ranking already draw from `getAllExercises` and therefore include
+customs (AUDIT-C §13.2) — the §9 resolver keeps that, applying the same
+demand checks; (c) GENERATION pools, which today skip `isCustom`
+categorically (`poolGenerator.js:162-167`, AUDIT-A §14 Q2 row 2), are
+amended for CC27: the OWNER's custom exercises enter their generation
+pool when they meet the same pool-entry requirements as built-ins
+(name, primary muscle, equipment category ≠ 'other', equipment
+profiles) plus known values on the user's constrained axes — metadata
+sufficiency replaces the categorical exclusion, scoped to the owning
+user; (d) a custom in a plan is ordinary baseline content — CAP-1/2
+role-scoping applies and no exception furniture ever attaches to it;
+(e) none of this weakens CC-R12: manual use requires nothing, and
+automatic reasoning uses only what is actually known (CAP-8).
+Implemented in CC27 (pool-entry gate + tests); PD-8's null-fabrication
+fix (already CC27) is a prerequisite for honest custom metadata.
+
+**34.2 "Operating point / variance band" primitive (Finding 2) —
+REJECTED (CC-R20).** The existing semantics already cover the scenario:
+day-to-day variance that changes nothing selectable is readiness/
+recovery territory (existing easing); a genuine transient capability
+change is an EPISODE against an untouched baseline, and the §5.3
+role-scoping revision plus the §33.16 explanation budget mean episode
+furniture attaches only to the episode's own rules — a lifelong
+baseline user's normal training carries none of it, and copy never
+says "injury" anywhere (§2.5). Sub-day changes ride the §17
+mid-workout work-around path with no episode at all; repeated flares
+ride §21's restart-with-changes. A third primitive would duplicate
+episode lifecycle, blur the representativeness axis (variance-band
+evidence has no decidable eligibility), and add state with no
+deterministic consumer.
+
+**34.3 Grip/implement/prosthetic fidelity (Finding 3) — COVERED;
+additions REJECTED (CC-R21).** The deterministic decisions in the
+external list resolve on existing machinery: conventional-grip-required
+= `grip_demand:'bar'`; grip-not-required = `'none'`; hold-without-crush
+= `'supportive'`; one-functional-grip users = `bilateral_upper` +
+`unilateral_loadable` + laterality scoping (§33.8); residual edge cases
+and specialist setups = per-exercise allowances (§4.1) and custom
+exercises under 34.1. A strap/hook-compatibility axis would change no
+eligibility outcome the allowance doesn't already produce more
+accurately (the user knows their implements) at the cost of a 552-row
+backfill — DEF-3 stands as the deferral. Prosthetic/orthotic interface
+fields are rejected outright: no deterministic eligibility decision
+needs them, and they drift toward condition-specific data (R1 maximal
+sensitivity; R2 specific-link risk).

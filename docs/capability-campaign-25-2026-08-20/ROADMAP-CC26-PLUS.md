@@ -40,7 +40,9 @@ applied only on the founder phrase (CC-F7).
   same-position sequencing preference + generated-plan programme-check
   fixtures; C31 behavioural test debt (PD-9) paid at the touched call
   sites; demand-axis priority coverage for the five untagged muscles
-  (§33.3). NON-GOALS: plan diffs,
+  (§33.3); the §34.1 custom-parity pool-entry gate (owner-scoped
+  metadata sufficiency replaces the categorical isCustom skip, with
+  PD-8's null-fix as prerequisite). NON-GOALS: plan diffs,
   adherence, learning.
 - FILES: exercise/generation.js, intent.js callers, planAutoGen,
   ExercisePickerModal, seedExercises + exerciseMetadata, new

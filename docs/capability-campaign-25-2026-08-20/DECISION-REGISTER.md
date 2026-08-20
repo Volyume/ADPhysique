@@ -133,6 +133,11 @@ CC25 — mention-don't-fix rule; each is queued as a board note):
   (Determination made, not parked.)
 - CC-D25 The "safe to perform" generation claim is corrected to honest
   equipment/capability copy in CC27 (CAP-18).
+- CC-D26 (checkpoint 2026-08-20) Custom-exercise parity: metadata
+  sufficiency, never `is_custom`, gates every automatic capability
+  seam for the owner; generation's categorical isCustom skip is
+  replaced by the same pool-entry requirements as built-ins, owner-
+  scoped (ARCHITECTURE §34.1; CC27).
 
 ## C. REJECTED IDEAS (CC-R) — from the brief's candidate list and prior models
 
@@ -181,6 +186,13 @@ CC25 — mention-don't-fix rule; each is queued as a board note):
 - CC-R18 Graded ROM / pain-range axes (RT2-5) — re-affirmed rejected;
   partial capability is expressed at exercise grain (exclusions +
   allowances), stated in onboarding copy.
+- CC-R20 (checkpoint 2026-08-20) A third "operating point / variance
+  band" primitive — rejected; baseline+episode with role-scoped UX
+  already represents transient departures without injury framing
+  (ARCHITECTURE §34.2).
+- CC-R21 (checkpoint) Strap/hook and prosthetic/orthotic interface
+  fields — rejected; allowances + custom parity cover the decisions;
+  DEF-3 stands (ARCHITECTURE §34.3).
 - CC-R19 Energy/pacing computation (RT2-4) — rejected as app logic
   (CLIN-5..7); the population is served by session-length/days levers
   (session length becomes free-editable), short-session families, and
