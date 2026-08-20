@@ -1,3 +1,5 @@
+// CC27 appended one further migration (exercise demand columns + canonical
+// backfill; inert here), so both offsets widen by one more.
 const { DatabaseSync } = require('node:sqlite');
 const { runMigrations } = require('../database');
 
@@ -54,7 +56,7 @@ function withExerciseIntent(raw) {
 test('Campaign 19 local migrations create the one-row memo and revalidation marker', async () => {
   const raw = withExerciseIntent(new DatabaseSync(':memory:'));
   const total = await migrationCount();
-  raw.exec(`PRAGMA user_version = ${total - 5}`);
+  raw.exec(`PRAGMA user_version = ${total - 6}`);
   await runMigrations(adapt(raw));
 
   const columns = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all();
@@ -79,7 +81,7 @@ test('a database already at baseline Campaign 19 v80 upgrades additively', async
     evidence_signature TEXT NOT NULL,
     version_key TEXT NOT NULL
   )`);
-  raw.exec(`PRAGMA user_version = ${total - 4}`);
+  raw.exec(`PRAGMA user_version = ${total - 5}`);
   await runMigrations(adapt(raw));
 
   const names = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all()

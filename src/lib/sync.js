@@ -223,6 +223,14 @@ export async function fetchByIdsChunked(scope, table, column, ids, queryFactory)
  * Idempotent, onConflict: 'id' means re-running the push touches
  * existing rows' updated_at but creates no duplicates.
  */
+// SQLite stores demand booleans as 0/1/NULL; cloud columns are boolean.
+// NULL stays NULL (CAP-8: unknown is a real state, never coerced).
+function _intToBool(v) {
+  if (v === 1 || v === true) return true;
+  if (v === 0 || v === false) return false;
+  return null;
+}
+
 export async function syncExercises(supabaseUserId, _opts = {}) {
   const sb = getClient();
   if (!sb || !supabaseUserId) return;
@@ -249,8 +257,13 @@ export async function syncExercises(supabaseUserId, _opts = {}) {
       secondary_muscles: e.secondaryMuscles ?? [],
       equipment: e.equipment ?? null,
       movement_pattern: e.movementPattern ?? null,
-      fatigue_cost: e.fatigueCost ?? 1,
-      stimulus_to_fatigue_ratio: e.stimulusToFatigueRatio ?? 3,
+      // PD-8 fix (CC27): these columns are nullable in cloud (migrate_020)
+      // and NULL is a DELIBERATE value on a custom exercise - "no claimed
+      // SFR/fatigue judgement". The old `?? 1` / `?? 3` fabricated a
+      // middling judgement the owner never made, and it round-tripped back
+      // onto the device as if real. Null pushes as null.
+      fatigue_cost: e.fatigueCost ?? null,
+      stimulus_to_fatigue_ratio: e.stimulusToFatigueRatio ?? null,
       compound_isolation: e.compoundIsolation ?? null,
       default_rep_min: e.defaultRepMin ?? null,
       default_rep_max: e.defaultRepMax ?? null,
@@ -266,6 +279,19 @@ export async function syncExercises(supabaseUserId, _opts = {}) {
       // migrate_142/migrate_137 tolerated mode) - device data is safe and
       // the next sync after the migration lands it.
       load_semantics: e.loadSemantics ?? 'total',
+      // CC27 demand ontology: columns added by migrate_148, founder-gated,
+      // same tolerated mode as load_semantics above. A custom exercise's
+      // owner-answered axes round-trip; unanswered axes stay NULL (CAP-8).
+      position: e.position ?? null,
+      floor_access: _intToBool(e.floorAccess),
+      overhead_position: _intToBool(e.overheadPosition),
+      grip_demand: e.gripDemand ?? null,
+      unilateral_loadable: _intToBool(e.unilateralLoadable),
+      bilateral_upper: _intToBool(e.bilateralUpper),
+      bilateral_lower: _intToBool(e.bilateralLower),
+      axial_load: _intToBool(e.axialLoad),
+      impact: _intToBool(e.impact),
+      balance_demand: e.balanceDemand ?? null,
       updated_at: new Date(e.updatedAt ?? e.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
     }));
     for (let i = 0; i < rows.length; i += 200) {

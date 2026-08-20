@@ -2660,7 +2660,73 @@ const SCHEMA_MIGRATIONS = [
     )`,
     'CREATE INDEX IF NOT EXISTS idx_session_constraint_effects_user ON session_constraint_effects(user_id)',
   ],
+  // CC27 demand ontology (ARCHITECTURE sections 5.4, 8): ten nullable
+  // demand columns on `exercises` - the ONE closed vocabulary constraint
+  // rules and exercise metadata share, so eligibility is set intersection.
+  // NULL = UNKNOWN and unknown is meaningful (CAP-8): automatic surfaces
+  // treat NULL-on-a-constrained-axis as ineligible with its own reason;
+  // manual paths never read these. Additive and idempotent (ALTER + a
+  // backfill that only fills canonical rows); rollback = columns ignored,
+  // since no reader existed before CC27. The backfill derives every value
+  // via capability/demands.js (materialised at migration time, so
+  // behaviour never depends on a runtime regex - section 8.3) and leaves
+  // custom rows NULL by design. updated_at is NOT touched: derivation is
+  // not a user edit (F5 honest timestamps). Cloud counterpart:
+  // supabase/migrate_148_exercise_demands.sql (written, NOT applied;
+  // founder-gated).
+  [
+    "ALTER TABLE exercises ADD COLUMN position TEXT CHECK (position IN ('standing','seated','lying','kneeling','mixed'))",
+    'ALTER TABLE exercises ADD COLUMN floor_access INTEGER',
+    'ALTER TABLE exercises ADD COLUMN overhead_position INTEGER',
+    "ALTER TABLE exercises ADD COLUMN grip_demand TEXT CHECK (grip_demand IN ('none','supportive','bar'))",
+    'ALTER TABLE exercises ADD COLUMN unilateral_loadable INTEGER',
+    'ALTER TABLE exercises ADD COLUMN bilateral_upper INTEGER',
+    'ALTER TABLE exercises ADD COLUMN bilateral_lower INTEGER',
+    'ALTER TABLE exercises ADD COLUMN axial_load INTEGER',
+    'ALTER TABLE exercises ADD COLUMN impact INTEGER',
+    "ALTER TABLE exercises ADD COLUMN balance_demand TEXT CHECK (balance_demand IN ('supported','stable','high'))",
+    migrateDemandMetadataBackfill,
+  ],
 ];
+
+// CC27: backfill canonical exercises' demand columns from the pure
+// derivation in capability/demands.js (lazy require; no import cycle - the
+// module is dependency-free). Canonical rows only: custom rows stay NULL
+// (CAP-8 - unknown is honest; the owner supplies axes progressively).
+// Best-effort per row; a failed row stays NULL, which reads as UNKNOWN,
+// the safe direction for this lane.
+async function migrateDemandMetadataBackfill(d) {
+  let derive;
+  try {
+    // eslint-disable-next-line global-require
+    ({ deriveDemandMetadata: derive } = require('./capability/demands'));
+  } catch (_e) { return; }
+  const rows = await d.getAllAsync(
+    `SELECT id, name, equipment, movement_pattern AS movementPattern,
+            primary_muscle AS primaryMuscle, compound_isolation AS compoundIsolation
+       FROM exercises WHERE is_custom = 0`,
+  ).catch(() => []);
+  const asInt = (v) => (v === true ? 1 : v === false ? 0 : null);
+  for (const r of rows ?? []) {
+    try {
+      const m = derive(r);
+      // eslint-disable-next-line no-await-in-loop
+      await d.runAsync(
+        `UPDATE exercises SET
+           position = ?, floor_access = ?, overhead_position = ?, grip_demand = ?,
+           unilateral_loadable = ?, bilateral_upper = ?, bilateral_lower = ?,
+           axial_load = ?, impact = ?, balance_demand = ?
+         WHERE id = ?`,
+        [
+          m.position ?? null, asInt(m.floorAccess), asInt(m.overheadPosition),
+          m.gripDemand ?? null, asInt(m.unilateralLoadable), asInt(m.bilateralUpper),
+          asInt(m.bilateralLower), asInt(m.axialLoad), asInt(m.impact),
+          m.balanceDemand ?? null, r.id,
+        ],
+      );
+    } catch (_e) { /* row stays NULL = unknown */ }
+  }
+}
 
 // Backfill canonical exercises' load_semantics from the seed's own
 // derivation (single source of truth in seedExercises.js - lazy require to
@@ -3024,9 +3090,12 @@ export async function insertExerciseWithId(id, data) {
        stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at,
        exercise_category, increment_kg,
        equipment_category, machine_type, force, laterality, difficulty,
-       machine_ok, home_ok, cue, equipment_profiles, exercise_type, load_semantics)
+       machine_ok, home_ok, cue, equipment_profiles, exercise_type, load_semantics,
+       position, floor_access, overhead_position, grip_demand, unilateral_loadable,
+       bilateral_upper, bilateral_lower, axial_load, impact, balance_demand)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.name,
@@ -3059,6 +3128,19 @@ export async function insertExerciseWithId(id, data) {
       // D107-2: what the entered weight means. 'total' is today's de facto
       // meaning, so an omitted value changes nothing.
       data.loadSemantics ?? 'total',
+      // CC27 demand ontology (sections 5.4, 8): NULL = UNKNOWN (CAP-8).
+      // The seed derives these; custom creation leaves them NULL unless
+      // the owner answers the single-axis ask.
+      data.position ?? null,
+      data.floorAccess === true ? 1 : data.floorAccess === false ? 0 : null,
+      data.overheadPosition === true ? 1 : data.overheadPosition === false ? 0 : null,
+      data.gripDemand ?? null,
+      data.unilateralLoadable === true ? 1 : data.unilateralLoadable === false ? 0 : null,
+      data.bilateralUpper === true ? 1 : data.bilateralUpper === false ? 0 : null,
+      data.bilateralLower === true ? 1 : data.bilateralLower === false ? 0 : null,
+      data.axialLoad === true ? 1 : data.axialLoad === false ? 0 : null,
+      data.impact === true ? 1 : data.impact === false ? 0 : null,
+      data.balanceDemand ?? null,
     ],
   );
   _invalidateExercisesCache();
@@ -3079,6 +3161,48 @@ export async function deleteExercise(id) {
 // it overwrites the metadata columns and nothing else. equipment_profiles
 // is stored as a JSON array string, matching insertExerciseWithId. Does not
 // schedule a sync; canonical exercises are local and the columns don't sync.
+// CC27 (sections 8.4, 34.1): write ONE or more demand axes on an exercise -
+// the owner answering the single-axis ask on a custom exercise, or a
+// curation correction. Only the axes present in `meta` change; everything
+// else is untouched. updated_at moves because this IS a user edit.
+export async function updateExerciseDemands(id, meta = {}) {
+  if (!id) return;
+  const cols = {
+    position: (v) => v ?? null,
+    floorAccess: (v) => (v === true ? 1 : v === false ? 0 : null),
+    overheadPosition: (v) => (v === true ? 1 : v === false ? 0 : null),
+    gripDemand: (v) => v ?? null,
+    unilateralLoadable: (v) => (v === true ? 1 : v === false ? 0 : null),
+    bilateralUpper: (v) => (v === true ? 1 : v === false ? 0 : null),
+    bilateralLower: (v) => (v === true ? 1 : v === false ? 0 : null),
+    axialLoad: (v) => (v === true ? 1 : v === false ? 0 : null),
+    impact: (v) => (v === true ? 1 : v === false ? 0 : null),
+    balanceDemand: (v) => v ?? null,
+  };
+  const toSnake = {
+    position: 'position', floorAccess: 'floor_access', overheadPosition: 'overhead_position',
+    gripDemand: 'grip_demand', unilateralLoadable: 'unilateral_loadable',
+    bilateralUpper: 'bilateral_upper', bilateralLower: 'bilateral_lower',
+    axialLoad: 'axial_load', impact: 'impact', balanceDemand: 'balance_demand',
+  };
+  const sets = [];
+  const args = [];
+  for (const [key, convert] of Object.entries(cols)) {
+    if (key in meta) {
+      sets.push(`${toSnake[key]} = ?`);
+      args.push(convert(meta[key]));
+    }
+  }
+  if (!sets.length) return;
+  const d = await db();
+  await d.runAsync(
+    `UPDATE exercises SET ${sets.join(', ')}, updated_at = ? WHERE id = ?`,
+    [...args, Date.now(), id],
+  );
+  _invalidateExercisesCache();
+  _scheduleSync();
+}
+
 export async function updateExerciseMetadata(id, meta) {
   const d = await db();
   await d.runAsync(
@@ -9237,20 +9361,68 @@ export async function insertOrUpdateExerciseFromCloud(e) {
     if (e.secondary_muscles == null) return null;
     try { return JSON.stringify(e.secondary_muscles); } catch { return null; }
   })();
+  // CC27 (bundle defect BD-1): this was INSERT OR REPLACE with a partial
+  // column list, and REPLACE resets every UNLISTED column to NULL - so any
+  // cloud pull of an existing row silently wiped its derived metadata
+  // (equipment_category, machine_type, laterality, difficulty, machine_ok,
+  // home_ok, equipment_profiles, selection_reason - and, from CC27, the ten
+  // demand columns), with nothing left to restore them (the one-time
+  // rederive keys had already burned). Now an UPSERT: unlisted columns
+  // survive untouched. Nullable metadata the cloud may not know yet
+  // (demand columns, sfr/fatigue - PD-8) updates via COALESCE, so a known
+  // local value is never clobbered by a payload that lacks the column,
+  // while a real cloud value still wins.
+  //
+  // PD-8 fix (pull side): fatigue_cost/stimulus_to_fatigue_ratio no longer
+  // default to 1/3 - a custom exercise's deliberate NULL stays NULL, and
+  // the pool generator treats null as "unknown and never penalised".
   await d.runAsync(
-    `INSERT OR REPLACE INTO exercises
+    `INSERT INTO exercises
       (id, name, primary_muscle, secondary_muscles, equipment, movement_pattern,
        compound_isolation, default_rep_min, default_rep_max, fatigue_cost,
        stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at,
-       exercise_category, increment_kg, exercise_type, load_semantics)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       exercise_category, increment_kg, exercise_type, load_semantics,
+       position, floor_access, overhead_position, grip_demand, unilateral_loadable,
+       bilateral_upper, bilateral_lower, axial_load, impact, balance_demand)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET
+       name = excluded.name,
+       primary_muscle = excluded.primary_muscle,
+       secondary_muscles = excluded.secondary_muscles,
+       equipment = excluded.equipment,
+       movement_pattern = excluded.movement_pattern,
+       compound_isolation = excluded.compound_isolation,
+       default_rep_min = excluded.default_rep_min,
+       default_rep_max = excluded.default_rep_max,
+       fatigue_cost = COALESCE(excluded.fatigue_cost, fatigue_cost),
+       stimulus_to_fatigue_ratio = COALESCE(excluded.stimulus_to_fatigue_ratio, stimulus_to_fatigue_ratio),
+       subregion = excluded.subregion,
+       is_custom = excluded.is_custom,
+       notes = excluded.notes,
+       created_at = excluded.created_at,
+       updated_at = excluded.updated_at,
+       exercise_category = excluded.exercise_category,
+       increment_kg = excluded.increment_kg,
+       exercise_type = excluded.exercise_type,
+       load_semantics = excluded.load_semantics,
+       position = COALESCE(excluded.position, position),
+       floor_access = COALESCE(excluded.floor_access, floor_access),
+       overhead_position = COALESCE(excluded.overhead_position, overhead_position),
+       grip_demand = COALESCE(excluded.grip_demand, grip_demand),
+       unilateral_loadable = COALESCE(excluded.unilateral_loadable, unilateral_loadable),
+       bilateral_upper = COALESCE(excluded.bilateral_upper, bilateral_upper),
+       bilateral_lower = COALESCE(excluded.bilateral_lower, bilateral_lower),
+       axial_load = COALESCE(excluded.axial_load, axial_load),
+       impact = COALESCE(excluded.impact, impact),
+       balance_demand = COALESCE(excluded.balance_demand, balance_demand)`,
     [
       e.id, e.name,
       e.primary_muscle ?? null, secondary,
       e.equipment ?? null, e.movement_pattern ?? null,
       e.compound_isolation ?? null,
       e.default_rep_min ?? null, e.default_rep_max ?? null,
-      e.fatigue_cost ?? 1, e.stimulus_to_fatigue_ratio ?? 3,
+      e.fatigue_cost ?? null, e.stimulus_to_fatigue_ratio ?? null,
       e.subregion ?? null,
       e.is_custom ? 1 : 0, e.notes ?? null,
       _tsToMs(e.created_at) ?? now, now,
@@ -9259,9 +9431,25 @@ export async function insertOrUpdateExerciseFromCloud(e) {
       // D107-2: absent from pre-migrate_143 cloud payloads; 'total' is the
       // pre-semantics meaning, matching the exercise_type default pattern.
       e.load_semantics ?? 'total',
+      // CC27 demand columns: absent until cloud migrate_148 runs; COALESCE
+      // above keeps local derivation authoritative until then.
+      e.position ?? null,
+      _boolToInt(e.floor_access), _boolToInt(e.overhead_position),
+      e.grip_demand ?? null,
+      _boolToInt(e.unilateral_loadable), _boolToInt(e.bilateral_upper),
+      _boolToInt(e.bilateral_lower), _boolToInt(e.axial_load),
+      _boolToInt(e.impact), e.balance_demand ?? null,
     ],
   );
   _invalidateExercisesCache();
+}
+
+// Cloud booleans arrive as true/false; SQLite stores 0/1; NULL stays NULL
+// (CAP-8: unknown is meaningful).
+function _boolToInt(v) {
+  if (v === true || v === 1) return 1;
+  if (v === false || v === 0) return 0;
+  return null;
 }
 
 export async function insertOrUpdateUserBodyProfileFromCloud(userId, p) {

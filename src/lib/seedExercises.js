@@ -1,6 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAllExercises, insertExerciseWithId, updateExerciseMetadata } from './database';
 import { deriveExerciseMetadata } from './exerciseMetadata';
+// CC27 demand ontology: pure, dependency-free (capability lane's
+// exercise-side vocabulary; carries no user data whatsoever).
+import { deriveDemandMetadata } from './capability/demands';
 import { logError, logInfo } from './errorLog';
 
 const SEEDED_KEY = '@volyume_exercises_seeded_v7';
@@ -1421,7 +1424,11 @@ function rowToExercise(row) {
   base.loadSemantics = deriveLoadSemantics({
     name, equipment, exerciseType: base.exerciseType,
   });
-  return { ...base, ...deriveExerciseMetadata(base) };
+  // CC27: the demand ontology (capability/demands.js) is materialised at
+  // seed time like every other derived column, so behaviour never depends
+  // on a runtime regex (section 8.3). Upgraded installs get the same
+  // values from the database.js migration backfill.
+  return { ...base, ...deriveExerciseMetadata(base), ...deriveDemandMetadata(base) };
 }
 
 export async function seedExercisesIfNeeded() {
