@@ -32,9 +32,15 @@ applied only on the founder phrase (CC-F7).
   senior-question composition (all 16 isEligibleExercise callers + the
   three id-blind readers + the Recent rail); pre/post-engine wiring;
   picker/builder filter + §9.4 manual-conflict flows + allowances;
-  no-compatible-option reporting; CAP-18 explanations incl. the CC-D25
-  copy fix; CAP-17 fail-closed surfaces; C31 behavioural test debt
-  (PD-9) paid at the touched call sites. NON-GOALS: plan diffs,
+  no-compatible-option reporting incl. §33.11 exits and the §33.14
+  thin-session banner; CAP-18 explanations incl. the CC-D25 copy fix
+  and the §33.16 explanation budget; CAP-17 pre-flight gating (§9.6 as
+  revised) with the capability-lane counterpart test; the §33.17
+  library/exercise text sweep against the R2 wording lists; §33.19
+  same-position sequencing preference + generated-plan programme-check
+  fixtures; C31 behavioural test debt (PD-9) paid at the touched call
+  sites; demand-axis priority coverage for the five untagged muscles
+  (§33.3). NON-GOALS: plan diffs,
   adherence, learning.
 - FILES: exercise/generation.js, intent.js callers, planAutoGen,
   ExercisePickerModal, seedExercises + exerciseMetadata, new
@@ -75,8 +81,10 @@ applied only on the founder phrase (CC-F7).
   derivation; gather-time ledger eligibility + CC-D17 backfill
   restamp; learnedRange/establishedStart/structure/seed skips; adapted-
   landmark window exclusion; preference-evidence exclusion + contextual
-  substitute ranking; plateau exclusion; slot-verdict capability
-  reason. TESTS: the §31 contamination replay (Audit E §Q5 as a
+  substitute ranking (eligibility-derived cause, §5.5 as revised);
+  plateau exclusion; slot-verdict capability reason; the DEDICATED
+  eligibility-restamp pass (§33.4) with its capability watermark; the
+  block-start narration surfaces (§33.6). TESTS: the §31 contamination replay (Audit E §Q5 as a
   fixture) is THE gate; full matrix cell suite.
 - GATE: six-week constrained fixture leaves every durable state
   untouched for affected muscles and normal for unaffected ones.
@@ -96,8 +104,10 @@ applied only on the founder phrase (CC-F7).
 ## CC32 — Accessibility, observability, privacy hardening, readiness
 - OBJECTIVE: Standard B operational readiness. IN SCOPE: feature-path
   accessibility completion + core-operation barrier fixes (R4 checklist
-  applied; per-platform announcements; timer redundant cues; adjustable
-  steppers; drag/long-press alternatives on the core path); §29
+  applied; per-platform announcements; timer redundant cues AND
+  operable controls; adjustable steppers; drag/long-press/swipe
+  alternatives on the core path; the mid-workout capability sheet with
+  the Modal-focus mitigation — §33.18); §29
   aggregate observability; DPIA input pack + export/delete verification
   end-to-end; marketing-claims wording guard wired to the R2 blacklist;
   coverage registry + readiness matrix updates; disabled-user
@@ -189,6 +199,8 @@ marketing-claims-check skill with the R2 wording lists.
 
 ## AMENDMENT DELIVERABLE 5 — Evidence dossier framework (Layer-2)
 
+Population labels are discovery metadata over capability-led plans and
+never bypass or preset individual capability state (§33.20).
 The 18-field template of Amendment §7 is adopted verbatim as
 `dossiers/DOSSIER-TEMPLATE.md` (created with the first dossier, CC-F3);
 completion of fields 14-15 (user testing, expert review) plus LEG-23

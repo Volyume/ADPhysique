@@ -89,8 +89,12 @@ CC25 — mention-don't-fix rule; each is queued as a board note):
   muscle, blocking BOTH directions (teach-nothing semantics).
 - CC-D8 Demand ontology: nine closed axes, tri-state, materialised at
   seed time; families remain a separate stimulus taxonomy.
-- CC-D9 Constrained-entry threshold: >25% of a muscle's block sessions
-  affected ⇒ entry ineligible. (Lead ruling; red-team target.)
+- CC-D9 SUPERSEDED by the revision round (ARCHITECTURE §6.2 as
+  revised): no share threshold — episode-affected sessions are excluded
+  per session via the existing deload-exclusion machinery and the
+  existing sufficiency gates decide INSUFFICIENT_DATA; entry
+  eligibility is the tri-state normal/constrained/unknown with absent
+  = legacy-normal.
 - CC-D10 Capability reads fail CLOSED at suggestion surfaces (explicit
   user choice to continue unfiltered); logging never blocked.
   Sharpens C31's D109-2 for the inverted harm direction.
@@ -170,6 +174,17 @@ CC25 — mention-don't-fix rule; each is queued as a board note):
 - CC-R15 An overlay STORE for temporary plans — rejected (CC-D5).
 - CC-R16 One generic "adaptive workout" — rejected (Amendment §4;
   families are capability-led).
+- CC-R17 Sided muscle-volume keys for one-side users (RT2-15) —
+  rejected as disproportionate; unsided per-muscle volume is
+  internally consistent; documented limitation with a
+  revisit-on-evidence trigger.
+- CC-R18 Graded ROM / pain-range axes (RT2-5) — re-affirmed rejected;
+  partial capability is expressed at exercise grain (exclusions +
+  allowances), stated in onboarding copy.
+- CC-R19 Energy/pacing computation (RT2-4) — rejected as app logic
+  (CLIN-5..7); the population is served by session-length/days levers
+  (session length becomes free-editable), short-session families, and
+  the episode machinery.
 
 ## D. ACCEPTED/MODIFIED PRIOR-MODEL IDEAS (disposition of the brief's list)
 
@@ -186,6 +201,17 @@ record); reintroduction-as-experiment (→ conservative subset;
 symptom-gated experiment to clinical review); unilateral progression
 (→ selection-level v1; per-side logging not reopened, see CC-F2);
 one-tap flare (→ re-start-from-history affordance with explicit state).
+
+### Red-team adjudication record (2026-08-20)
+RT1: 13 attacks — 11 accepted, 2 partial (RT1-8 documented behaviour;
+RT1-5 superseded CC-D9). RT2: 17 attacks — 13 accepted (several as
+copy/scope amendments), 2 partial (RT2-5, RT2-17), 2 rejected/flagged
+(RT2-15 → CC-R17; RT2-7 → CC-F8). Lead self-attacks S1-S14 folded in
+(S2=RT1-7, S3→CC-D9 supersession, S6=RT1-11, S8=RT1-2, S13 tri-state,
+S14 effects-precedence; the rest were covered by the inline design or
+the amendments). Every accepted item is a BINDING amendment in
+ARCHITECTURE §33 or an inline REVISED block; nothing was resolved by
+prose alone.
 
 ## E. DEFERRED (recorded, not parked — each carries its revisit trigger)
 
@@ -249,3 +275,9 @@ one-tap flare (→ re-start-from-history affordance with explicit state).
 - CC-F6 Clinical reviewer engagement for the CLIN register.
 - CC-F7 Cloud migrations for the new tables apply only on the standing
   "run against production" phrase, per supabase/README process.
+- CC-F8 (from RT2-7) Should constrained-profile FREE users get a
+  bounded generation path when no library family fits their
+  constraint combination? RECOMMENDATION: not in v1 — capability-aware
+  library + builder cover the free tier with parity (FD-1's own
+  wording); revisit with CC28's coverage data. Surfaced because tier
+  boundaries are founder-gated.

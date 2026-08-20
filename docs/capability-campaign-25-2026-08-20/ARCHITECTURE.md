@@ -158,7 +158,7 @@ previous episode's rule set in one flow (§21), not a new entity.
 "Baseline capability" / "temporary restriction" / "your training" /
 "effective session". The words injury, adaptive, disabled, modified,
 rehabilitation never name system states (CAP-2, CAP-22; R3 CR-13; R2
-wording blacklist). The settings surface is named "Movement & capability"
+wording blacklist). The settings surface is named "How you train"
 (the existing SettingsHealthScreen is device-health integration and keeps
 its name).
 
@@ -353,7 +353,13 @@ source            TEXT NOT NULL             -- 'self' | 'clinician_reported'
 rule_kind         TEXT NOT NULL             -- 'demand' | 'family' | 'exercise' | 'exercise_allow'
 rule_value        TEXT NOT NULL             -- demand tag | family key | exercise id
 laterality        TEXT                      -- NULL | 'left' | 'right'
-starts_at         INTEGER NOT NULL          -- epoch ms
+starts_at         INTEGER NOT NULL          -- epoch ms; episode creation
+                                            -- offers a backdating quick-pick
+                                            -- (today / this week / two weeks
+                                            -- / pick a date) so sessions
+                                            -- trained before the row was
+                                            -- created interpret correctly
+                                            -- (RT1-7)
 ends_at           INTEGER                   -- NULL = open; episodes may carry a
                                             -- planned end (date-bound) or NULL
                                             -- ('until I end it')
@@ -412,7 +418,13 @@ effects_json  TEXT NOT NULL                 -- [{slot, exerciseFrom, effect:
 created_at / updated_at / deleted_at
 ```
 Written once when a session is served/completed with any constraint
-effect; empty sessions write nothing. This closes Audit D §Q5 (deviation
+effect; empty sessions write nothing. ROLE-SCOPED (RT2-1, binding):
+effects records, the §17 quiet lines, the §14 diff flow and the §15
+under-target explanations exist for EPISODE-role constraints only.
+Baseline-role constraints shape selection and generation invisibly —
+the resulting plan simply IS the user's plan, nothing "deviates", and
+no record, marker or line ever frames it otherwise (CAP-1/CAP-2
+mechanically enforced; guard-tested in CC26). This closes Audit D §Q5 (deviation
 provenance) and Audit G C3 (silent removal) for the constraint cause
 specifically, without per-set tags (D54/C-3 respected). Adherence (§18)
 and the coach (§20) read it; erasure reaches it (Art 9-derived, R1 #19).
@@ -423,10 +435,15 @@ the existing exercise pull path.
 
 ### 5.5 `exercise_swaps.cause` (one additive column)
 
-`cause TEXT NULL` — `'constraint'` written ONLY when the swap flow was
-entered from a constraint notice/blocked state; NULL otherwise. Never
-free text. This is the minimum choice-aware-learning provenance (CAP-13)
-and mirrors the existing scope column's asymmetric-counting pattern
+`cause TEXT NULL` — REVISED (RT1-10, RT2-14): `'constraint'` is
+ELIGIBILITY-DERIVED at write time, not UI-path-keyed: any swap whose
+FROM-exercise is capability-ineligible at swap time records
+cause='constraint', whichever surface it came through; and preference
+evidence earned in a slot whose original exercise was
+capability-ineligible at the time is episode-contextual (§6.3),
+covering manual and custom-exercise workarounds too. Never free text.
+This is the minimum choice-aware-learning provenance (CAP-13) and
+mirrors the existing scope column's asymmetric-counting pattern
 (C§7.9).
 
 ### 5.6 Sync classification
@@ -465,14 +482,23 @@ must be decided AT GATHER TIME: `buildBlockLedger` receives, per muscle,
 fell inside an episode-affected interval) and writes per-entry
 `eligibility: 'normal' | 'constrained'`. The per-entry `suppressed`
 marker (E§9.1) is the structural precedent; unlike suppression, this is
-PER MUSCLE (fixing E§C3) and gates BOTH directions (CAP-12): a
-`constrained` entry is skipped by learnedRange, establishedStart,
-structure-memory verdicts and seeding, exactly as `deferredToManual`
-entries are today (E§13 Q3.3) — the proven no-teaching path. Threshold:
-an entry is `constrained` when constrainedShare > 0.25 (a quarter of the
-muscle's sessions; below that the block is substantially normal — the
-red team is invited to attack this number; it is a lead ruling, register
-CC-D9).
+PER MUSCLE (fixing E§C3) and gates BOTH directions (CAP-12).
+REVISED (RT1-5 + lead S3; supersedes the original CC-D9 threshold):
+there is NO share threshold. Episode-affected sessions are EXCLUDED
+from the muscle's block metrics the same way deload sessions already
+are (blockMetrics' exclusion machinery, E§Q4); if the remaining
+evidence is too thin, the EXISTING sufficiency gates
+(exposures/recovery-points/confidence) fire INSUFFICIENT_DATA
+naturally. The entry additionally records
+`eligibility: 'normal' | 'constrained' | 'unknown'` — 'constrained'
+whenever any exclusion occurred (provenance), 'unknown' only as the
+post-erasure neutral value. A `constrained` OR `unknown` entry is
+skipped by learnedRange, establishedStart, structure-memory verdicts
+and seeding, exactly as `deferredToManual` entries are today (E§13
+Q3.3) — the proven no-teaching path. An ABSENT eligibility field
+(every pre-CC30 ledger) means legacy-normal and teaches as today —
+the tri-state is explicit so the two null-like values can never blur
+(lead S13).
 
 ### 6.3 Write-time cause capture (user actions only)
 
@@ -706,12 +732,19 @@ reasons distinguished).
 
 `loadCapabilityState` failure returns `unavailable: true` with the LAST
 KNOWN in-memory state if one exists this session; surfaces then behave
-normally on that state. With NO known state: automatic suggestion
-surfaces show the capability-unavailable notice and offer "hold
-suggestions" vs "continue without capability filtering" — an explicit
-user choice, never a silent fail-open (sharpening D109-2 for the
-inverted harm direction the C31 spec itself flagged, C§13.4). Logging is
-never blocked by any of this.
+normally on that state. With NO known state: the capability-unavailable
+notice and the "hold suggestions" vs "continue without capability
+filtering" choice are offered PRE-FLIGHT, at the UI layer, BEFORE the
+generation/suggestion call is made — an explicit user choice, never a
+silent fail-open (sharpening the posture for this lane's inverted harm
+direction, which the C31 spec itself flagged, C§13.4). REVISED
+(RT1-2): the gate lives outside the engine call so the founder-pinned
+identical-writes contract for the INTENT lane
+(campaign9.generation.test.js:188-222, D110-2) stays byte-true — two
+lanes, two postures, both pinned; CC26 adds the capability-lane
+counterpart test (state unavailable ⇒ the UI gate fires and the engine
+is not invoked with half-state). Logging is never blocked by any of
+this.
 
 ---
 
@@ -786,8 +819,11 @@ the first build; blocked-slot reporting surfaces during preview.
 
 ## 12. SETTINGS / HEALTH UX (deliverable 12)
 
-New surface "Movement & capability" (free tier, CAP-19), distinct from
-SettingsHealthScreen (device integrations — name collision checked):
+New surface "How you train" (free tier, CAP-19; RENAMED from
+"Movement & capability" per RT2-2 — that name reads, to a UK
+audience, like the DWP Work Capability Assessment; final wording gets
+the copy pass), distinct from SettingsHealthScreen (device
+integrations):
 - Baseline list (edit = supersede; end).
 - Active temporary restrictions with time remaining / "until you end
   it", end + "this has become how I train" (promotion, §24) actions.
@@ -1217,3 +1253,156 @@ PLUS.md carries the campaign decomposition and every Amendment
 deliverable (routine library plan, coverage registry, marketing
 readiness matrix, validation plan). EXTERNAL-CONSULTATION-QUEUE.md
 carries the Checkpoint A prompts.
+
+---
+
+## 33. RED-TEAM REVISION ROUND (binding amendments; adjudication record)
+
+Both budgeted red teams ran (redteam/RT1-technical.md, 13 attacks;
+redteam/RT2-product.md, 17 attacks + the Amendment §29 scorecard),
+joined by the lead's 14 self-attacks. Six revisions were applied inline
+above (marked REVISED/ROLE-SCOPED). The following are equally binding
+amendments to the named sections; the register records the rejections.
+
+**33.1 Erasure exposure is bounded and honest (RT1-1 — the top
+technical finding).** Amends §6.4/§26: capability erasure removes the
+intervals, so RECOMPUTE consumers (whose windows are ≤45 days / ≤8
+sessions / rolling) lose the exclusions for that horizon — a bounded,
+self-expiring exposure. DURABLE state stays protected: ledger-entry
+eligibility was stamped at gather time and erasure rewrites it to
+'unknown' (no-teach), never to normal. The erasure flow states the
+consequence plainly ("your training history will no longer know about
+these periods"). Counsel item L7/L8 unchanged.
+
+**33.2 CONFOUNDED wiring named correctly (RT1-3).** §7's coach-outcome
+row cites AUDIT-F reusable **#8** (`coachIntervention.js:256-340`), not
+#6; CC31's scope explicitly extends `classifyOutcome`'s closed trigger
+set with the episode-overlap case.
+
+**33.3 Family-rule dead zones (RT1-4).** Amends §5.2: capability
+`family` rules are OFFERED only for families that exist on the target
+muscle's exercises; demand and exercise rules carry the five untagged
+muscles. The ontology backfill (CC27) prioritises demand-axis coverage
+for exactly those muscles, and family coverage for them is a recorded
+stretch goal.
+
+**33.4 Eligibility restamp is new code (RT1-6).** Amends §28:
+`backfillMissingBlockLedgers` skips ledgered blocks by design
+(`blockLedgerRunner.js:575`), so CC30 ships a DEDICATED
+eligibility-restamp pass keyed on the recorded capability watermark;
+CC-D17 stands with that mechanism named.
+
+**33.5 Adapted-window chronic case fails toward defaults (RT1-8 —
+partial).** Documented behaviour, not a defect: long exclusion thins
+the per-muscle window until the adapted layer returns null and
+`mergeLandmarkPrecedence` falls back to research — the safe direction.
+
+**33.6 HomeScreen ledger narration joins the consumer set (RT1-9).**
+The §7 matrix gains the row: block-start narration surfaces
+(HomeScreen direct `blockLedger` read + blockExplain) — BN F / EA-EU
+C / RI C / PB F: constrained entries narrate as "held while your
+restriction was active", never as achievement or failure. CC30 scope.
+
+**33.7 AWAITING gains cadence and a third option (RT1-11, RT2-12,
+S6).** Amends §22: the confirm offers ended / extend / "keep it active
+for now" (explicit continue, resets cadence); prompts appear at day 0
+and day 7, then decay to a settings badge only. Constraints keep
+applying throughout (fail-safe unchanged). Never auto-ends.
+
+**33.8 Laterality × demand eligibility defined (RT1-12).** Amends
+§8/§9: a left/right-qualified constraint scopes its rules to movements
+requiring THAT side's involvement: `bilateral_upper=true` conflicts
+with any upper-limb-side constraint; `unilateral_loadable=true`
+exercises stay eligible with side-aware instruction copy. Laterality
+qualifies constraint scope; exercises themselves are never sided.
+
+**33.9 Promotion race is union-safe and idempotent (RT1-13).**
+Amends §24/§28: promotion stamps the episode_group (idempotent);
+duplicate baseline+episode rows for one rule are semantically safe
+(union = over-restriction) and the settings surface offers a one-tap
+tidy when it detects them.
+
+**33.10 Session-grain interpretation prefers effects records (S14).**
+Amends §6.1: where a `session_constraint_effects` record exists it is
+authoritative for that session's context; the interval join is the
+fallback. An offline device that served a constrained session proves
+it regardless of later interval edits elsewhere.
+
+**33.11 No-compatible-option paths get real exits (RT2-3).** Amends
+§9.5: the unknown-shown fallback lists near-miss candidates WITH the
+blocking/unknown axis named per row (actionable, not a wall); empty
+states carry the custom-exercise shortcut with the single-axis ask
+prefilled.
+
+**33.12 Energy-limited training gets its honest v1 home (RT2-4).**
+Amends §11.2: a card "My energy varies / I keep sessions short" maps
+to the EXISTING deterministic levers — session length (which becomes
+free-editable; today it is Pro-edit-gated for unrelated reasons,
+A§14 Q4) and days/week guidance — plus the episode machinery for bad
+spells. No energy axis on exercises, no pacing computation: pacing
+therapy remains CLIN-5..7 territory. The support-roadmap row for
+chronic/fluctuating conditions references this mapping.
+
+**33.13 Partial-range capability is exercise-grain by design (RT2-5 —
+partial accept).** Amends §8.4: the documented answer to "some of that
+movement is fine" is exercise-grain expression (exclude the specific
+aggravators, allow the specific tolerable ones); the onboarding cards
+say so ("you can fine-tune by exercise"). Graded ROM axes stay
+rejected (CC-R8) — no deterministic consumer short of clinical
+modelling. Recorded as a known expressiveness limit.
+
+**33.14 Thin-session signal (RT2-6).** Amends §9.5/§17: when more than
+a third of a session's slots are omitted/unfillable under constraints,
+the session view leads with an "unusually reduced" banner and the
+resolution actions, instead of quietly serving a husk.
+
+**33.15 Consent-declined signposting (RT2-9).** Amends §11.2/§26: the
+decline/withdraw paths signpost the consent-free lanes that still
+help — per-exercise avoid/"don't suggest" (preference lane) and the
+equipment setting — with one calm sentence. No dead end.
+
+**33.16 Readback and explanation budgets (RT2-10, RT2-11).** Amends
+§11.2/§17/CAP-18 practice: the confirmation readback is ONE grouped
+sentence + "view details", never a rule recitation; and at most ONE
+constraint mention per surface per session (pre-workout line OR status
+item for the same fact), with every further explanation on-demand.
+CAP-2 and CAP-18 reconcile as: always available, never repeated.
+
+**33.17 Library text sweep (RT2-13).** CC27 scope addition: the
+552-exercise names/notes and 31 library-plan descriptions are swept
+against the R2 wording lists before capability-computed browse raises
+their prominence.
+
+**33.18 Accessibility list completed (RT2-16).** Amends §27: swipe-only
+interactions join the alternatives list; rest-timer CONTROLS
+(operability: target size, non-time-critical operation) are in scope
+alongside its output channels; the mid-workout capability sheet is a
+named surface with the R4 Modal-focus mitigation applied.
+
+**33.19 Transition burden under constraints (RT2-17 — partial).**
+Amends §13/§15: when active constraints include floor/position/
+transfer axes, generation orders same-position work contiguously
+(deterministic sequencing preference on the existing
+estimateSessionMinutes transition model); Amendment §17's programme
+checks run as fixtures over GENERATED plans too in CC27's tests.
+
+**33.20 Dossier composition rule (RT2 scorecard #8).** Amends the
+ROADMAP dossier framework: population labels are discovery metadata
+over capability-led plans; a labelled routine NEVER bypasses or
+presets individual capability state.
+
+**Rejected attacks (with reasons — register CC-R17..19):** RT2-15
+sided muscle volume keys (disproportionate fork of the whole volume
+system; unsided per-muscle volume is internally consistent for
+one-side users; documented limitation, revisit on evidence of harm);
+RT2-7 free-tier generation (commercial tier boundary — surfaced to the
+founder as CC-F8 with a recommendation, not decided here); RT1-8's
+framing as a defect (behaviour is fail-toward-defaults; documented in
+33.5).
+
+**Survivals worth recording:** RT1 could not break the LWW ending
+races, decline-path contamination, or precedence stacking; RT2 could
+not break the role model itself, CAP-3's no-diagnosis promise, or
+CAP-19's mechanical guard. The §29 scorecard's residual NOT-PREVENTED
+items are all resolved by 33.6-33.19 or explicitly registered
+(CC-F8, CC-R17).
