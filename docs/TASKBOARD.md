@@ -769,6 +769,37 @@ queue paused here for the founder review per D55.
 
 ## 1. IN FLIGHT
 
+### CAPABILITY CAMPAIGN 25 (CC25) — capability-aware, disability-inclusive, restriction & injury-aware training intelligence. IN FLIGHT (opened 2026-08-20).
+
+**Founder order 2026-08-20** (master brief in chat; architecture campaign
+first, implementation campaigns CC26+ only after its completion gate).
+Numbering note: the brief numbers this workstream from 25; the global board
+already runs to 33, so this stream is namespaced CC25+ (no renumbering; the
+closed 2026-08-17 "Campaign 25 — Plans screen" is unrelated).
+CURRENT STATE: constraint handling is C31 PATTERN_AVOID (day-bound/indefinite
+movement avoidance) + equipment filtering; no baseline-capability model, no
+learning-eligibility provenance, no inclusive onboarding step.
+END STATE: full architecture (domain model, product laws, precedence,
+provenance, exercise-demand ontology, resolver, lifecycle, privacy/safety
+boundaries) + CC26+ implementation roadmap, red-teamed and gated.
+ELEVATES BECAUSE: the app currently cannot correctly serve users whose
+normal training differs from an unrestricted template, and temporary
+restrictions can contaminate durable learning.
+
+Lead: Fable (main loop), decision authority per brief; clinical/legal/
+irreversible-business calls flagged to registers, ED-safety and all
+Section 2 inviolables untouched. Campaign folder:
+`docs/capability-campaign-25-2026-08-20/` (challenge pass, roster,
+stage plan). Branch `claude/build-name-prompt-apple-auth-fp49by` (== main
+at open), merge-to-main at green landings per the 2026-07-30 order.
+
+**RECOVERY PATH:** Wave 1 agents are read-only except one report file each
+under the campaign folder (`audits/`, `research/`); agents never commit/
+push/stash. Dead session ⇒ re-read founder brief + `_CAMPAIGN-LOG.md`;
+missing report file = relaunch that audit; reports commit to the branch as
+reviewed; no production code changes exist during Wave 1.
+
+
 ### CAMPAIGN 6: RETURNING USERS, LONG-TERM PERSONALISATION, LAPSES,
 ### REINSTALL AND MULTI-BLOCK EXPERIENCE (founder order 2026-08-11)
 - IN FLIGHT on `claude/campaign6-long-term` from main `5764a947`.
