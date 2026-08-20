@@ -673,6 +673,41 @@ function attachBlockedSlots(result, blockedSlots, constraintsUnavailable = false
   return result;
 }
 
+/** The demand axes whose presence makes position transitions costly for
+ *  the user (section 33.19: floor/position/transfer). */
+const TRANSITION_SENSITIVE_AXES = new Set(['standing', 'floor_access', 'balance_high']);
+
+/**
+ * CC27 (section 33.19): when the user's active constraints include a
+ * floor/position/transfer axis, order same-position work CONTIGUOUSLY
+ * inside each session - a deterministic sequencing preference riding the
+ * same transition-cost intuition estimateSessionMinutes already models.
+ * Stable: within a position group the engine's own order is preserved,
+ * and groups appear in first-appearance order, so the change is exactly
+ * "no needless position changes" and nothing else. Pure.
+ *
+ * @param {Array<{exercises: Array<{exerciseId?: string}>}>} workouts resolved workouts
+ * @param {Map<string, {position?: string|null}>} exerciseById library index
+ * @param {object|null} capabilityState the resolver state
+ * @returns {Array} the same workout objects with re-ordered exercise arrays
+ */
+export function orderSamePositionContiguously(workouts, exerciseById, capabilityState) {
+  const active = (capabilityState?.restrictions ?? []).some(
+    (r) => r.ruleKind === 'demand' && TRANSITION_SENSITIVE_AXES.has(r.ruleValue),
+  );
+  if (!active || !Array.isArray(workouts)) return workouts;
+  return workouts.map((w) => {
+    const groups = new Map();
+    for (const ex of w.exercises ?? []) {
+      const pos = exerciseById?.get?.(ex.exerciseId)?.position ?? 'unknown';
+      if (!groups.has(pos)) groups.set(pos, []);
+      groups.get(pos).push(ex);
+    }
+    if (groups.size <= 1) return w;
+    return { ...w, exercises: [...groups.values()].flat() };
+  });
+}
+
 /**
  * CC27 (section 33.14): per-session thinness under capability constraints.
  * A session where MORE THAN A THIRD of its slots were omitted as
@@ -808,9 +843,17 @@ export async function generateAndSavePlan(userId, profile, {
       // run uses, then write what it resolved. The commit no longer does its
       // own name matching, so the preview and the saved plan cannot disagree.
       const {
-        workouts: resolvedWorkouts, totalRequested, totalResolved: totalWritten,
+        workouts: rawResolvedWorkouts, totalRequested, totalResolved: totalWritten,
         missedCount, missedNames, blockedSlots,
       } = resolvePlanAgainstLibrary(planForWrite, buildExerciseIndex(allExercises), filteredLibrary);
+      // CC27 (section 33.19): under floor/position/transfer constraints,
+      // same-position work runs contiguously. A no-constraint user gets the
+      // identical array back.
+      const resolvedWorkouts = orderSamePositionContiguously(
+        rawResolvedWorkouts,
+        new Map(allExercises.map((e) => [e.id, e])),
+        intentState?.capability,
+      );
 
       for (const workout of resolvedWorkouts) {
         const routine = await createRoutine(
@@ -992,9 +1035,16 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
   const planForWrite = { ...plan, workouts: continuity.workouts };
 
   const {
-    workouts: resolvedWorkouts, totalResolved: totalWritten,
+    workouts: rawResolvedWorkouts, totalResolved: totalWritten,
     missedCount, missedNames, blockedSlots,
   } = resolvePlanAgainstLibrary(planForWrite, buildExerciseIndex(allExercises), filteredLibrary);
+  // CC27 (section 33.19): same ordering as the commit, so the preview
+  // cannot show an order the save would then change.
+  const resolvedWorkouts = orderSamePositionContiguously(
+    rawResolvedWorkouts,
+    new Map(allExercises.map((e) => [e.id, e])),
+    intentState?.capability,
+  );
 
   // Mirror generateAndSavePlan's zero-match guard so the preview never offers a
   // plan the commit would refuse to save (the diff must not lie — blueprint
