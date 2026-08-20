@@ -28,6 +28,12 @@ export default function SettingsScreen({ navigation }) {
     <SettingsPage title="Settings">
       <View style={[styles.section, live.section]}>
         <SettingRow
+          icon="body"
+          label="How you train"
+          sub="Anything Volyume should build your training around"
+          onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
+        />
+        <SettingRow
           icon="person-circle-outline"
           label="Account"
           sub={user?.email || (tier === 'pro' ? 'Volyume Pro' : 'Free plan')}

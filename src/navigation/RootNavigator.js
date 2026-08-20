@@ -102,6 +102,10 @@ const SettingsProfileScreen = lazyScreen(() => require('../screens/SettingsProfi
 const SettingsCoachingScreen = lazyScreen(() => require('../screens/SettingsCoachingScreen').default);
 const SettingsDisplayScreen = lazyScreen(() => require('../screens/SettingsDisplayScreen').default);
 const SettingsHealthScreen = lazyScreen(() => require('../screens/SettingsHealthScreen').default);
+// CC26: the capability lane's settings home. UNGUARDED by law (CAP-19,
+// pinned by capabilityGuards.test.js) - core capability accommodation is
+// never Pro-gated.
+const HowYouTrainScreen = lazyScreen(() => require('../screens/HowYouTrainScreen').default);
 const SettingsDataScreen = lazyScreen(() => require('../screens/SettingsDataScreen').default);
 const SettingsDietaryScreen = lazyScreen(() => require('../screens/SettingsDietaryScreen').default);
 const SnapshotsScreen = lazyScreen(() => require('../screens/SnapshotsScreen').default);
@@ -479,6 +483,8 @@ function PlansStack({ navigation }) {
           exercise long-press (RoutineDetailScreen); this is the list home
           with per-row removal. */}
       <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
+      {/* CC26: capability settings home ("How you train"). Free tier, CAP-19. */}
+      <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
       {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
       <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />

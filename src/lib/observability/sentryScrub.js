@@ -35,6 +35,13 @@ const REDACTED = '[redacted]';
 // ────────────────────────────────────────────────────────────────────
 
 export const SENSITIVE_KEY_PATTERNS = Object.freeze([
+  // CC26 capability lane: any capability/constraint field is Article 9
+  // content by construction - rule values, roles, laterality included.
+  /^capability/i,
+  /^constraint/i,
+  /^rule[._-]?value$/i,
+  /^laterality$/i,
+  /^episode[._-]?group/i,
   // Body composition + measurements
   /^weight/i,
   /^body[._-]?weight/i,
@@ -117,6 +124,11 @@ export const SENSITIVE_VALUE_SUBSTRINGS = Object.freeze([
   'progress_scan_sessions',
   'progress_scan_assets',
   'progress_photos/',
+  // CC26 capability lane (CAP-20/section 26): Article 9 data. Table names
+  // AND the consent marker; the key-pattern list below catches field names.
+  'capability_constraints',
+  'session_constraint_effects',
+  'capability_data_consent',
 ]);
 
 // ────────────────────────────────────────────────────────────────────
