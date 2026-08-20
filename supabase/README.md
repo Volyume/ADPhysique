@@ -341,6 +341,15 @@ themselves; add a row here whenever a migration is added.
 | 141 | `migrate_141_effective_maintenance_memos.sql` | Campaign 19 effective-maintenance memo + revalidation marker (cloud half of local v80/v81). | **YES - LIVE, verified 2026-08-18** (`effective_maintenance_memos` table present in production, checked directly during the 142/143 batch). |
 | 142 | `migrate_142_exercise_intent_expiry.sql` | `exercise_intent.expires_at` (timestamptz) - the D107-2 PATTERN_AVOID day-bound duration (local `expires_at_ms`, schema counterpart live). Must land BEFORE a build carrying the PATTERN_AVOID push ships. | **YES - applied 2026-08-18, verified** (Claude-run on the founder phrase; column present, timestamptz, nullable). |
 | 143 | `migrate_143_load_semantics.sql` | `exercises.load_semantics` + `custom_exercises.load_semantics` (text, four-value CHECK) - the D107-2 weight-meaning axis (total / per_hand / assisted / added_bodyweight). | **YES - applied 2026-08-18, verified** (Claude-run, same batch as 142; both columns and both named CHECKs present). |
+| 145 | `migrate_145_capability_constraints.sql` | `capability_constraints` - the CC26 capability lane's cloud table (role baseline/episode, source, rule_kind, laterality, interval fields, supersession lifecycle), refuse-stale trigger, owner RLS, and `delete_user_data()` recreated with the capability deletes (Art 9 erasure reach). Local schema counterpart is live (CC26). | **NO - NOT APPLIED.** Written 2026-08-20 (CC26). Awaits the founder phrase; until it runs, capability rows are device-local and the sync push retries harmlessly. |
+| 146 | `migrate_146_session_constraint_effects.sql` | `session_constraint_effects` - per-workout constraint-effect provenance (one row per workout, effects JSON), refuse-stale trigger, owner RLS. Inert until CC27+ writes effects. | **NO - NOT APPLIED.** Written 2026-08-20 (CC26), same batch as 145; apply 145 first. |
+| 147 | `migrate_147_capability_consent.sql` | Widens the `consent_log` CHECK with `capability_data`, adds `users_profile.capability_data_consent`/`_at`, and `record_capability_consent()` RPC (granular Art 9 consent for the capability lane, separate from healthConsent). | **NO - NOT APPLIED.** Written 2026-08-20 (CC26), same batch as 145/146; apply after 145. |
+
+> Ledger gap noted 2026-08-20: `migrate_144_apple_review_password_reset.sql`
+> exists in this folder but has no row in this table (it predates CC26 and
+> belongs to the App Review account workstream). The gap is recorded here
+> rather than back-filled, because its applied/not-applied status is not
+> resolvable from the repository alone.
 
 > Date note: the 2026-08-09 block near the top of this file describes 129 and
 > 130 as "already applied 2026-08-08", while both migration headers record

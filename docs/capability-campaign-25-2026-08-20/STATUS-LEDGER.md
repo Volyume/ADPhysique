@@ -65,3 +65,13 @@ None. ListAgents: no reachable agents. All 18 pre-order launches accounted for: 
   the then-standing CLAUDE.md audit-default (Opus); the 2026-08-20
   cost-governance order supersedes that default for this campaign and is
   recorded in `_CAMPAIGN-LOG.md`.
+
+## CC26 status (2026-08-20)
+
+BUILT AND GATED THIS SESSION — capability foundations end to end and
+inert: local schema + lifecycle, cloud files 145/146/147 (NOT applied,
+CC-F7), registry sync both directions, granular consent lane +
+erasure, How you train surface (demand add flow per CC-D27), CAP-19/
+CAP-4 guards, scrub coverage, 105 targeted tests green. Selection,
+generation, coaching and learning behaviour UNCHANGED by construction
+(guard-tested). Next: CC27 per ROADMAP-CC26-PLUS.md, on founder go.

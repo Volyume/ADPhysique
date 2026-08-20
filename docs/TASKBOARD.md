@@ -769,7 +769,7 @@ queue paused here for the founder review per D55.
 
 ## 1. IN FLIGHT
 
-### CAPABILITY CAMPAIGN 25 (CC25) — capability-aware, disability-inclusive, restriction & injury-aware training intelligence. ARCHITECTURE COMPLETE, GATE PASSED, MERGED TO MAIN (2026-08-20). CC26 (foundations build) is NEXT UP from the roadmap.
+### CAPABILITY CAMPAIGN 25 (CC25) — capability-aware, disability-inclusive, restriction & injury-aware training intelligence. ARCHITECTURE COMPLETE + CC26 FOUNDATIONS BUILT, GATED AND MERGED (2026-08-20). CC27 (eligibility resolver + selection seams) is NEXT UP from the roadmap, on founder go.
 
 **Founder order 2026-08-20** (master brief in chat; architecture campaign
 first, implementation campaigns CC26+ only after its completion gate).
@@ -820,8 +820,19 @@ Checkpoint A prompts in EXTERNAL-CONSULTATION-QUEUE.md at will; (6)
 PD-1..9 pre-existing defects recorded in the register for triage —
 notably PD-1 (adapted-MAV per-session unit) and PD-2 (Engine Log's
 false rotation claim).
-**RECOVERY/RESUME:** next session starts CC26 from
-ROADMAP-CC26-PLUS.md; everything needed is in the campaign folder.
+**CC26 (2026-08-20, same session as the start order):** capability
+foundations landed per the roadmap CC26 block — local + cloud schema
+(145/146/147 written, NOT applied, CC-F7), registry sync, granular
+consent + erasure, How you train surface (CAP-19 free), CAP-4 lane
+guards, scrub coverage, 105 targeted tests. Lane is inert by
+construction (guard-tested: selection/generation/coaching unchanged).
+Ruling CC-D27: demand-only add UI in CC26; family/exercise/allow add
+surfaces are a named CC27 gate item. Zero implementation subagents;
+red-team record in `_CAMPAIGN-LOG.md`. Full record: campaign log CC26
+block + STATUS-LEDGER.md.
+**RECOVERY/RESUME:** next session starts CC27 from
+ROADMAP-CC26-PLUS.md (on founder go — the CC26 close produced the
+CC27 start prompt); everything needed is in the campaign folder.
 
 
 ### CAMPAIGN 6: RETURNING USERS, LONG-TERM PERSONALISATION, LAPSES,

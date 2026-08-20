@@ -255,3 +255,58 @@ architecture complete; Standard B carried as designed roadmap +
 honest all-NO marketing matrix + validation plan, per Amendment §32's
 own phasing. Implementation (CC26) starts only on the next session's
 capacity or founder go — the architecture is merge-ready now.
+
+## CC26 — CAPABILITY FOUNDATIONS (implementation, 2026-08-20)
+
+Founder start order received same day (scope = ROADMAP CC26 block
+verbatim; CC27+ explicitly forbidden; zero-agent target, max 2
+implementation subagents, max 1 bounded red team, no Opus). Built
+hands-on by the lead with direct tools; no implementation subagents
+spent.
+
+LANDED (branch `claude/build-name-prompt-apple-auth-fp49by`, merged to
+main at gate):
+- Domain model `src/lib/capability/model.js` — pure, no clock reads;
+  9-axis demand vocabulary (§8); role/source/rule_kind/laterality
+  vocabularies; interval validation (baseline forbids ends_at + group;
+  episode requires group); status derivation incl. AWAITING_CONFIRMATION
+  (§22, constraints still apply while awaiting); `isConstraintActiveAt`
+  closes on confirmed `ended_at` only (§28 interval law).
+- Local schema (SCHEMA_MIGRATIONS append in `src/lib/database.js`):
+  `capability_constraints` + `session_constraint_effects` + indexes,
+  wipe-list additions, CRUD/lifecycle appliers (supersession = end old +
+  insert new; promote transactional exactly-once; readers never write;
+  cloud applier strictly-newer LWW so a newer tombstone beats an older
+  active row).
+- Cloud files `supabase/migrate_145/146/147` — written, NOT APPLIED
+  (CC-F7; README ledger rows added, all three marked NOT APPLIED).
+  145 recreates `delete_user_data()` with the capability deletes
+  (erasure reach); 147 adds the granular `capability_data` consent
+  (consent_log CHECK widening, users_profile flags, RPC).
+- Sync: registry rows (lww, softDelete, bidirectional), tables modules,
+  transport MIGRATED_TABLES/handlers, runner flush of the pending
+  consent queue; stateContract classification rows.
+- Consent lane `src/lib/consent/capabilityConsent.js` — local flag
+  first, RPC with never-strand retry queue; withdraw = revoke +
+  tombstone-all + flag false. Store derives consent cross-device from
+  rows-imply-consent when no local flag exists (no profiles-sync
+  changes needed).
+- Surface `src/screens/HowYouTrainScreen.js` (RT2-2 name) + unguarded
+  route (CAP-19) + settings row. Role-scoped copy (RT2-1), staged
+  INLINE add flow (no Modal — R4 by construction), demand-axis
+  multi-select, clinician toggle, backdating quick-picks (§33
+  starts_at), consent stage, episode actions (ended / a while longer /
+  promote), history, withdraw-and-erase.
+- Sentry scrub allow-list additions (capability key patterns +
+  substrings).
+- Tests: 66 new capability tests green (model 23, store 9 real-SQLite,
+  sync replay 4 incl. §28 A/B, consent 4, guards 26) + stateContract 20
+  + four migration-window suites bumped +1 per their own convention.
+
+RULINGS: CC-D27 (demand-only add UI in CC26; family/exercise/allow add
+surfaces land with CC27's pickers — register entry has the ontology-
+divergence rationale).
+
+DEFECT NOTE (mention, don't fix): `migrate_144` has no README ledger
+row (pre-existing, App Review workstream); gap recorded in the README
+rather than back-filled.

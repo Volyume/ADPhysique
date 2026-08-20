@@ -138,6 +138,21 @@ CC25 — mention-don't-fix rule; each is queued as a board note):
   seam for the owner; generation's categorical isCustom skip is
   replaced by the same pool-entry requirements as built-ins, owner-
   scoped (ARCHITECTURE §34.1; CC27).
+- CC-D27 (CC26 lead ruling, D33, 2026-08-20) The CC26 settings surface
+  ships the ADD flow for `demand` rules only; `family`, `exercise` and
+  `exercise_allow` add UIs land in CC27 with the selection work. Not an
+  effort call: the four rule_kinds are fully supported end to end in
+  CC26 (schema, model, validation, store, sync, lifecycle, erasure —
+  a synced or promoted row of any kind round-trips and lists
+  correctly); only the authoring UI is sequenced. Rationale: family/
+  exercise pickers must present exactly the ontology the CC27
+  eligibility resolver consumes — including the CC-D26 custom-parity
+  metadata and the CC27 ontology backfill — or rules authored now
+  could bind to pre-backfill metadata and mean something different
+  once the resolver lands. The 9-axis demand vocabulary is frozen in
+  ARCHITECTURE §8, so demand authoring carries no divergence risk and
+  ships now. Revisit trigger: CC27's picker work must add the three
+  add surfaces in its own gate list.
 
 ## C. REJECTED IDEAS (CC-R) — from the brief's candidate list and prior models
 
