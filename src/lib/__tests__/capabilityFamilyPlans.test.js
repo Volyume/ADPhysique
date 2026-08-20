@@ -90,12 +90,16 @@ const FAMILY_PROFILES = {
   'Steady-Base Full Body': cap(['balance_high']),
   'Dumbbell & Band Foundations': cap([]),
   'No-Overhead Upper Split': cap(['overhead_position']),
+  // The grip-light circuit ships in place of the deferred grip-limited
+  // PULLING collection (DEF-3): it covers what genuinely needs no firm
+  // grip and says the pulling gap out loud in its description.
+  'Grip-Light Machine Circuit': cap(['grip_bar']),
 };
 
 const FAMILY_NAMES = Object.keys(FAMILY_PROFILES);
 const familyPlans = plans.filter((p) => FAMILY_NAMES.includes(p.name));
 
-test('all nine families are present in the seed with real content', () => {
+test('all families are present in the seed with real content', () => {
   expect(familyPlans.map((p) => p.name).sort()).toEqual(FAMILY_NAMES.sort());
   for (const p of familyPlans) {
     expect(p.exercises.length).toBeGreaterThanOrEqual(8);

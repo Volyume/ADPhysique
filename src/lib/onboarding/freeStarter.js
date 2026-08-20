@@ -183,6 +183,35 @@ export function scoreStarterPlan(plan, answers) {
  * user's equipment allows, with a stable name tiebreak. Returns null
  * when no candidate exists (empty or unseeded library).
  */
+/**
+ * CC28 (section 11.3): the capability-aware starter pick. The compatible
+ * pool is tried FIRST under the normal difficulty-0 gate; when that pool
+ * holds no beginner plan, the difficulty gate relaxes WITHIN the
+ * compatible pool - a compatible intermediate plan is a better first plan
+ * than an incompatible beginner one, because the capability constraint is
+ * a hard filter and difficulty is a preference. Only when the compatible
+ * pool cannot serve the answers at all does the full pool stand, so the
+ * walk never dead-ends.
+ *
+ * @param {object} answers the three starter answers
+ * @param {Array} allPlans every library plan
+ * @param {Set<string>|null} compatibleIds ids of fully compatible plans
+ *   (null = no capability state - behaves exactly as before)
+ */
+export function getCapabilityAwareStarterRecommendation(answers, allPlans, compatibleIds) {
+  if (!compatibleIds || !compatibleIds.size) return getFreeStarterRecommendation(answers, allPlans);
+  const compatible = (allPlans ?? []).filter(p => compatibleIds.has(p.id));
+  const strict = getFreeStarterRecommendation(answers, compatible);
+  if (strict) return strict;
+  // Relax difficulty inside the compatible pool only.
+  const relaxed = compatible
+    .filter(p => planEquipmentAllows(p, answers?.equipment))
+    .map(plan => ({ plan, score: scoreStarterPlan(plan, answers) }))
+    .sort((a, b) => b.score - a.score || String(a.plan.name).localeCompare(String(b.plan.name)));
+  if (relaxed.length) return relaxed[0].plan;
+  return getFreeStarterRecommendation(answers, allPlans);
+}
+
 export function getFreeStarterRecommendation(answers, plans) {
   if (!answers || !Array.isArray(plans)) return null;
   const candidates = plans.filter(p => isStarterCandidate(p, answers.equipment));

@@ -15,7 +15,7 @@
  */
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, AccessibilityInfo, TextInput } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import useTheme from '../hooks/useTheme';
@@ -67,6 +67,7 @@ const END_CHOICES = [
 
 export default function HowYouTrainScreen() {
   const t = useTheme();
+  const navigation = useNavigation();
   const toast = useToast();
   const { user } = useAppStore(useShallow(s => ({ user: s.user })));
   const userId = user?.id;
@@ -468,6 +469,18 @@ export default function HowYouTrainScreen() {
           Volyume could not read this right now. Nothing has changed; pull back in a moment.
         </Text>
       ) : null}
+
+      {/* CC28 (section 33.12): energy-limited training's honest v1 home.
+          No energy axis, no pacing computation - the card maps to the two
+          EXISTING deterministic levers (session length, now free-editable
+          in Workout settings; the episode machinery for bad spells) and
+          says so plainly. */}
+      <SettingRow
+        icon="battery-half-outline"
+        label="My energy varies, or I keep sessions short"
+        sub="Two levers help here: set a session length that actually fits under Workout and units, and add a temporary change here for a rough patch."
+        onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
+      />
 
       <SectionHeader title="Your setup" />
       {state.baseline.length === 0 && !adding ? (

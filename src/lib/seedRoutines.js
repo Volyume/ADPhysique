@@ -1826,6 +1826,44 @@ const LIBRARY_PLANS = [
         ],
       },
     ],
+  },,
+  {
+    name: 'Grip-Light Machine Circuit',
+    description: 'Three machine-based days where nothing needs a firm grip: every movement loads through pads, platforms or light supportive holds. Rowing and pulldown work needs a firm grip, so this plan covers the rest of the body honestly instead of pretending; add any exercise that works for you from the library. Add a rep each session; at the top of the range, add weight. Leave 2 reps in the tank.',
+    tags: 'machine grip_light supported adapted goal:build_muscle days:3',
+    difficulty: 0,
+    workouts: [
+      {
+        name: 'Day 1: Legs & Chest',
+        exercises: [
+          { name: 'Leg Press',                  sets: 3, repsMin: 10, repsMax: 15, rest: 120, notes: 'Feet mid-platform. Handles are optional support only.' },
+          { name: 'Pec Deck (Machine Fly)',     sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Forearms on the pads.' },
+          { name: 'Leg Extension',              sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Pause at the top.' },
+          { name: 'Machine Lateral Raise',      sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Pads on the arms, no grip needed.' },
+          { name: 'Machine Crunch',             sets: 2, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Curl, do not fold.' },
+        ],
+      },
+      {
+        name: 'Day 2: Hips & Rear',
+        exercises: [
+          { name: 'Seated Leg Curl',            sets: 3, repsMin: 10, repsMax: 15, rest: 90,  notes: 'Slow lowering.' },
+          { name: 'Reverse Pec Deck',           sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Rest your forearms on the pads if gripping is hard.' },
+          { name: 'Abduction Machine',          sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Controlled in both directions.' },
+          { name: 'Hip Adduction Machine',      sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Smooth tempo.' },
+          { name: 'Seated Machine Calf Raise',  sets: 3, repsMin: 12, repsMax: 20, rest: 60,  notes: 'Pause at the stretch.' },
+        ],
+      },
+      {
+        name: 'Day 3: Whole Body',
+        exercises: [
+          { name: 'Leg Press (High Foot)',      sets: 3, repsMin: 10, repsMax: 15, rest: 120, notes: 'Feet high on the platform for more hip work.' },
+          { name: 'Pec Deck (Machine Fly)',     sets: 3, repsMin: 12, repsMax: 15, rest: 90,  notes: 'Squeeze in the middle.' },
+          { name: 'Machine Rear Delt Fly',      sets: 3, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Strict and slow.' },
+          { name: 'Leg Extension',              sets: 2, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Pause at the top.' },
+          { name: 'Machine Crunch',             sets: 2, repsMin: 12, repsMax: 15, rest: 60,  notes: 'Slow and controlled.' },
+        ],
+      },
+    ],
   },
 ];
 

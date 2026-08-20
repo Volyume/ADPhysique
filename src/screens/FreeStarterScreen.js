@@ -13,7 +13,7 @@ import {
 } from '../lib/database';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
 import {
-  FREE_STARTER_STEPS, getFreeStarterRecommendation, getPlanDays,
+  FREE_STARTER_STEPS, getFreeStarterRecommendation, getCapabilityAwareStarterRecommendation, getPlanDays,
 } from '../lib/onboarding/freeStarter';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -112,9 +112,8 @@ export default function FreeStarterScreen({ navigation, route }) {
     // answers, the full pool stands rather than a dead end (the library
     // families guarantee this pool is never empty in practice).
     if (capability?.byPlan) {
-      const compatiblePool = plans.filter(pl => capability.byPlan.get(pl.id)?.fullyCompatible === true);
-      const pick = getFreeStarterRecommendation(answers, compatiblePool);
-      if (pick) return pick;
+      const compatibleIds = new Set(plans.filter(pl => capability.byPlan.get(pl.id)?.fullyCompatible === true).map(pl => pl.id));
+      return getCapabilityAwareStarterRecommendation(answers, plans, compatibleIds);
     }
     return getFreeStarterRecommendation(answers, plans);
   }, [onResultStep, answers, plans, capability]);

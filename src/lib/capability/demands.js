@@ -100,7 +100,7 @@ const NAME_GRIP_BAR_BODYWEIGHT = /\bpull-?up\b|\bchin-?up\b|\bdip\b|\bhanging\b|
 
 // Machines where the load path needs no hand grip (handles are optional
 // support): the lower-body selectorised family.
-const NAME_MACHINE_SUPPORTIVE = /\bleg press\b|\bleg extension\b|\bleg curl\b|\bcalf (press|raise).*(machine|leg press)|\bhack squat\b|\bhip (abduction|adduction)\b|\babductor\b|\badductor machine\b|\bglute kickback machine\b|\bpec deck\b|\bmachine crunch\b|\bab crunch machine\b|\bback extension\b|\breverse hyper|\bbelt squat\b|\bneck (machine|harness)/i;
+const NAME_MACHINE_SUPPORTIVE = /\bleg press\b|\bleg extension\b|\bleg curl\b|\bcalf (press|raise).*(machine|leg press)|\bhack squat\b|\bhip (abduction|adduction)\b|\babduction machine\b|\babductor\b|\badductor machine\b|\bmachine calf raise\b|\bseated calf raise\b|\bglute kickback machine\b|\bpec deck\b|\bmachine crunch\b|\bab crunch machine\b|\bback extension\b|\breverse hyper|\bbelt squat\b|\bneck (machine|harness)/i;
 
 // Squat/hinge family = meaningful spinal compression when externally
 // loaded. (Pattern strings come from the seed's own vocabulary.)

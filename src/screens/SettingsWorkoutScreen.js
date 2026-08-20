@@ -38,7 +38,7 @@ function formatRestSeconds(seconds) {
 // picked the wrong unit in onboarding, or wants a non-90s default rest, is
 // no longer stuck.
 export default function SettingsWorkoutScreen() {
-  const {
+  const { user, userProfile, saveLocalProfile,
     bodyWeightUnits, setBodyWeightUnits,
     defaultRestSeconds, setDefaultRestSeconds,
     autoStartRestTimer, setAutoStartRestTimer,
@@ -46,6 +46,9 @@ export default function SettingsWorkoutScreen() {
     restSoundsEnabled, setRestSoundsEnabled,
     workoutPrefsLoaded, loadWorkoutPrefs,
   } = useAppStore(useShallow(s => ({
+    user: s.user,
+    userProfile: s.userProfile,
+    saveLocalProfile: s.saveLocalProfile,
     bodyWeightUnits: s.bodyWeightUnits,
     setBodyWeightUnits: s.setBodyWeightUnits,
     defaultRestSeconds: s.defaultRestSeconds,
@@ -123,6 +126,38 @@ export default function SettingsWorkoutScreen() {
             </View>
           </View>
         </View>
+
+        <SettingRow
+          icon="hourglass-outline"
+          label="Session length"
+          sub="How long your sessions usually run. If your energy varies or you keep sessions short, set the length that actually fits - plans and suggestions size to it."
+          showArrow={false}
+          rightElement={(
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', maxWidth: 180, justifyContent: 'flex-end' }}>
+              {[30, 45, 60, 75, 90].map(min => {
+                const active = (userProfile?.sessionLengthMinutes ?? 60) === min;
+                return (
+                  <Chip
+                    key={min}
+                    label={`${min}`}
+                    selected={active}
+                    onPress={async () => {
+                      if (active || !user?.id) return;
+                      haptics.selection();
+                      try {
+                        await saveLocalProfile(user.id, { ...(userProfile || {}), sessionLengthMinutes: min });
+                      } catch (_) { /* best effort; the row re-reads the store */ }
+                    }}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`Session length ${min} minutes`}
+                    style={local.segChip}
+                    labelStyle={local.segLabel}
+                  />
+                );
+              })}
+            </View>
+          )}
+        />
 
         <SettingRow
           icon="timer-outline"
