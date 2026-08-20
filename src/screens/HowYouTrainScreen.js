@@ -135,7 +135,7 @@ export default function HowYouTrainScreen() {
       episodeGroupId: groupId,
     })), { nowMs: now });
     setAdding(null); setDraft(null);
-    toast.show(isEpisode ? 'Saved. Volyume will treat this as temporary.' : 'Saved. This is part of how you train.');
+    toast.show(isEpisode ? 'Saved. Volyume will keep this as a temporary change.' : 'Saved. This is part of how you train.');
     refresh();
   };
 
@@ -152,14 +152,14 @@ export default function HowYouTrainScreen() {
   };
 
   const confirmEndEpisode = (ep) => {
-    appAlert('Has this ended?', 'Volyume will go back to treating the affected training normally. Nothing from this period is lost.', [
+    appAlert('Has this ended?', 'Volyume will go back to planning the affected training normally. Nothing from this period is lost.', [
       { text: 'Keep it active', style: 'cancel' },
       { text: 'It has ended', onPress: async () => { await endEpisode(userId, ep.groupId); refresh(); } },
     ]);
   };
 
   const confirmPromote = (ep) => {
-    appAlert('Make this part of how you train?', 'Volyume will treat these as your normal setup from now on, with full progression and coaching. Your history is not rewritten.', [
+    appAlert('Make this part of how you train?', 'Volyume will keep these as your normal setup from now on, with full progression and coaching. Your history is not rewritten.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'This is how I train now', onPress: async () => { await promoteEpisode(userId, ep.groupId); refresh(); } },
     ]);
@@ -230,7 +230,7 @@ export default function HowYouTrainScreen() {
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>Is this about how you train generally, or something temporary right now?</Text>
           <Choice label="How I train generally" sub="Part of your normal setup. Full progression and coaching, no special labels."
             onPress={() => chooseRole(CONSTRAINT_ROLE.BASELINE)} t={t} />
-          <Choice label="Temporary, for now" sub="Volyume treats it as a passing change and will help you step back when it ends."
+          <Choice label="Temporary, for now" sub="Volyume takes it as a passing change and will help you step back when it ends."
             onPress={() => chooseRole(CONSTRAINT_ROLE.EPISODE)} t={t} />
         </View>
       );
@@ -356,7 +356,7 @@ export default function HowYouTrainScreen() {
             {ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION ? (
               // Section 33.7's third option: an explicit continue that resets
               // the ask cadence without committing to a new end date.
-              <Choice label="Still going for now" onPress={async () => { haptics.selection(); await acknowledgeEpisode(userId, ep.groupId); toast.show('Noted. Volyume will keep treating it as temporary.'); refresh(); }} t={t} compact />
+              <Choice label="Still going for now" onPress={async () => { haptics.selection(); await acknowledgeEpisode(userId, ep.groupId); toast.show('Noted. Volyume will keep it as temporary for now.'); refresh(); }} t={t} compact />
             ) : null}
             <Choice label="This is how I train now" onPress={() => confirmPromote(ep)} t={t} compact />
           </View>
