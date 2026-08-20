@@ -152,3 +152,21 @@ Activity Alliance findings); R6 competitor disability-support matrix.
   on simulator; expo-video subtitles broken on Android (open issue);
   NEEDS LEGAL REVIEW: whether pro_monthly/pro_annual IAP brings EAA
   "e-commerce" scope + EN 301 549 Ch.11 primary-text verification.
+
+- 2026-08-20 — R5 population evidence COMPLETE (research/R5-population-
+  evidence.md, 1,038 lines; 80 evidence tags; 12-item clinical-review
+  register). Verdicts: curated Layer-2 routine plausibly supportable
+  (with dossier) ONLY for chronic SCI (Martin Ginis 2018), MS and
+  Parkinson's; all other surveyed populations resolve capability-led with
+  education/UX. Central cross-cutting finding: benefit/safety evidence
+  exists but training PARAMETERS do not template (CP meta-regression: no
+  intensity/volume association; stroke: "insufficient for evidence-based"
+  parameters; amputation: RT not isolable). Corrections to founder leads:
+  CMO 2026 refresh is real (10 Jul 2026) but the strength-2-days line
+  dates from 2019 unchanged; Activity Alliance 2025-26 verified (52% vs
+  74% gap) but their facts page mixes survey years - always reopen the
+  specific report before citing. Traps recorded: SCI 8-10 rep range was
+  dropped in the 2018 update (secondaries still quote it); Parkinson's RT
+  not superior to other active interventions; "wheelchair users" is not
+  an evidence grouping (SCI ~ a tenth of UK users). MS Society 403'd -
+  verified via MS Trust instead; LimbPower PDF unread (existence only).
