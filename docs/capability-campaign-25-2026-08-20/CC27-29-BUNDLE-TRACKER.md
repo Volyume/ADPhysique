@@ -5,7 +5,7 @@ Update at every slice landing. Next session resumes from THIS file.
 
 - BUNDLE START MAIN: aabb16f
 - BRANCH: claude/build-name-prompt-apple-auth-fp49by
-- AGENT BUDGET USED: 0 implementation/research agents; 1 red team (Sonnet, bundle-end, running); 0 Opus.
+- AGENT BUDGET USED: 0 implementation/research agents; 1 red team (Sonnet, bundle-end, COMPLETE); 0 Opus. Budget closed.
 - PRODUCTION MIGRATIONS: 145/146/147 NOT RUN; any new cloud files also NOT RUN.
 
 ## Dependency checklist (built from roadmap blocks + code recon)
@@ -32,8 +32,51 @@ CC29 (read §14, §17, §18, §5.5, Audit G C1-C4 at start):
 - [x] §14 diff propose/apply/decline; session_constraint_effects writers; §17 logger surfaces (constraint-cause swaps via exercise_swaps.cause additive column, omission capture); §18 denominators (getWeeklySessionStats, interBlock, stabilise gate, directive copy, partner/widget); G C1-C4 fixtures; NO session_resolutions schema change.
 
 Bundle end:
-- [~] ONE Sonnet red team over combined diff; adjudicate; fix. (LAUNCHED)
+- [x] ONE Sonnet red team over combined diff; adjudicate; fix. (COMPLETE - see adjudication below)
 - [ ] Lint + ONE full suite; merge to main; consolidated report.
+
+## Red-team adjudication (bundle end)
+
+ONE bounded Sonnet red team over the combined CC27-CC29 diff, attacking the
+thirteen named classes. Verdict: 9 attack classes held clean; 4 findings
+returned as BREAK. Fable adjudication: ALL FOUR ACCEPTED as genuine law
+violations (each mechanism verified against source before fixing). All four
+FIXED and pinned; no second wave (per the bundle order).
+
+- RT-F1 ACCEPTED, FIXED. CAP-17 silent fail-open: three pre-existing
+  ungated generateAndSavePlan sites (PlansScreen block-boundary refinement;
+  PlansScreen + HomeScreen Pro no-plan "Start with a plan"), and the picker
+  surfaced only the INTENT lane's read failure, never the capability
+  lane's. Fix: the section 9.6 pre-flight gates all three sites (hold at
+  the block boundary falls into the existing literal-reactivation path;
+  hold on the empty states simply stays put); the picker gains its own
+  capability-unavailable notice for the no-known-state posture, shown only
+  under the local consent flag so users without the feature see no noise.
+  Pinned: capabilityPreflight source pins (5 screens), capabilityPicker +2.
+- RT-F2 ACCEPTED, FIXED. Free-starter silent full-pool fallback: with zero
+  compatible plans the recommender's full-pool fallback served an
+  incompatible pick with no caveat and handleStartPlan activated it
+  silently - against the section 11.3 day-one promise. Fix: the shown
+  pick's verdict is computed on screen; the card states the fallback
+  honestly (with the outside-count) before the decision, and starting
+  becomes an explicit choice (Browse plans that fit / Start it anyway;
+  first-run offers Not now instead of the missing library route). Pinned:
+  capabilityOnboardingWalks +2 (zero-compatible walk over the real seeds +
+  screen source pins).
+- RT-F3 ACCEPTED, FIXED. ExerciseConflictSheet offered "Keep it in this
+  plan" for capability_clinician rows - a manual override CAP-7 forbids.
+  Fix: clinician rows lose the keep affordance and gain "Update
+  restriction" routing to How you train (the picker's section 9.4 confirm
+  flow); every other row keeps the keep affordance and the campaign 9
+  keeping-is-not-un-excluding law. Intro copy no longer promises "keep"
+  for every row. Pinned: capabilityGuards +2.
+- RT-F4 ACCEPTED, FIXED (first, pre-compaction). computeCompletionEffects
+  excused unperformed rows whose driving rules were DECLINED or UNDECIDED;
+  section 14 step 3 makes those rows still owed, so their absence is an
+  ordinary early stop. Fix: excusal now requires effectiveChoice ===
+  'applied' on EVERY driving rule (same bar as substitution), and the
+  ActiveWorkoutScreen removal hook gained the same gate. Pinned:
+  capabilityAdherence +1 (declined/undecided never excuse; applied does).
 
 ## Slice log (append per landing)
 

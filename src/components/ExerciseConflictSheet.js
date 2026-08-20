@@ -128,7 +128,7 @@ export default function ExerciseConflictSheet({
             {blocked
               ? 'Everything that would normally fit here is set aside, so Volyume has left these slots empty rather than putting back something you asked it not to suggest.'
               : hasCapability
-                ? 'You chose this plan, and some of it sits outside how you train or is set aside. Both facts stand, so each one is your call - swap it here, or keep it as it is.'
+                ? 'You chose this plan, and some of it sits outside how you train or is set aside. Both facts stand, so each row below is your call.'
                 : 'You chose this plan, and Volyume also remembers what you asked it to stop suggesting. Both still stand, so this is your call.'}
           </Text>
           <ScrollView contentContainerStyle={styles.list}>
@@ -155,7 +155,30 @@ export default function ExerciseConflictSheet({
                         onPress={() => setPickerFor(c)}
                         accessibilityLabel={`Choose a replacement for ${c.exerciseName}`}
                       />
-                      {!blocked ? (
+                      {!blocked && String(c?.reason ?? '') === 'capability_clinician' ? (
+                        // Red-team finding 3 (bundle): keeping a row here is
+                        // a manual override, and a clinician-reported
+                        // restriction cannot be silently overridden (CAP-7).
+                        // Same route as the picker's confirm flow: update
+                        // the restriction first, then the plan follows.
+                        <Button
+                          title="Update restriction"
+                          size="sm"
+                          variant="secondary"
+                          onPress={() => {
+                            onClose?.();
+                            try {
+                              // Lazy: importing the navigator statically
+                              // would create an import cycle (navigator ->
+                              // screens -> this sheet).
+                              // eslint-disable-next-line global-require
+                              const { navigationRef } = require('../navigation/RootNavigator');
+                              if (navigationRef.isReady()) navigationRef.navigate('HowYouTrain');
+                            } catch (_e) { /* best effort */ }
+                          }}
+                          accessibilityLabel={`Update the restriction covering ${c.exerciseName}`}
+                        />
+                      ) : !blocked ? (
                         <Button
                           title="Keep it in this plan"
                           size="sm"

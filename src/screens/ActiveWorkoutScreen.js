@@ -1063,7 +1063,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             // cause): removing an EPISODE-affected exercise writes a
             // durable omission on this session's effects record. Removal
             // for any other reason writes nothing, exactly as before.
-            if (constraintConflicts.length && user?.id && activeWorkout?.id && exercise?.id) {
+            if (constraintConflicts.length
+              && constraintConflicts.every(c => c.row?.effectiveChoice === 'applied')
+              && user?.id && activeWorkout?.id && exercise?.id) {
               // eslint-disable-next-line global-require
               const { appendSessionConstraintEffects } = require('../lib/database');
               appendSessionConstraintEffects(user.id, activeWorkout.id, [{

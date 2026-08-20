@@ -121,7 +121,15 @@ export function computeCompletionEffects(sessionRows, capabilityState) {
     if (!exercise?.id) return;
     unperformedIds.push(exercise.id);
     const conflicts = episodeConflicts(capabilityState, exercise);
-    if (conflicts.length) {
+    // Red-team finding 4 (bundle): excusal requires the APPLIED choice on
+    // EVERY driving rule, exactly as computeEffectiveSession requires it
+    // for substitution. A declined or undecided rule leaves the row in
+    // the effective prescription (section 14 step 3: "visibly
+    // conflicted" = still owed), so its absence is an ordinary early
+    // stop, never an excused one (section 18).
+    const applied = conflicts.length > 0
+      && conflicts.every((c) => c.row?.effectiveChoice === 'applied');
+    if (applied) {
       excusedIds.push(exercise.id);
       entries.push({
         slot: i,

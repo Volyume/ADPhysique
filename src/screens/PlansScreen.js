@@ -36,6 +36,9 @@ import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, buildSeedReceipt } f
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { generateAndSavePlan } from '../lib/planAutoGen';
+// CC27 (section 9.6) red-team finding 1: every generateAndSavePlan surface
+// runs the capability pre-flight first - never a silent fail-open.
+import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { loadExerciseIntentState, listActiveMovementConstraints } from '../lib/exercise/intent';
 import useAppStore from '../store/useAppStore';
@@ -603,16 +606,34 @@ export default function PlansScreen({ navigation }) {
       // exclusions and continuity exactly as a rebuild does. The finished
       // block's own programme is left intact and archived, so what the user
       // actually trained stays true in their history.
-      const result = await generateAndSavePlan(user.id, userProfile, {
-        ledger: seedRanges,
-        allowLearnedCarry: true,
-        continuityProposal: review?.programmeProposal ?? blockReview?.programmeProposal ?? null,
+      // CC27 (section 9.6) red-team finding 1: the refinement is a real
+      // generator run, so the capability pre-flight gates it like every
+      // other generation surface. Holding falls into the literal
+      // reactivation below: the user keeps their current workouts and no
+      // new suggestions are generated on unknown capability state.
+      const preflight = await capabilityPreflight(user.id);
+      const goAhead = preflight.proceed || await new Promise((resolve) => {
+        offerCapabilityPreflightChoice({
+          onHold: () => resolve(false),
+          onContinue: () => resolve(true),
+        });
       });
+      const result = !goAhead
+        ? { ok: false, error: 'capability_preflight_hold' }
+        : await generateAndSavePlan(user.id, userProfile, {
+          ledger: seedRanges,
+          allowLearnedCarry: true,
+          continuityProposal: review?.programmeProposal ?? blockReview?.programmeProposal ?? null,
+        });
       if (!result?.ok) {
-        // The refinement failed. Fall back to the literal reactivation the
-        // user would otherwise have had rather than leaving them with no
-        // new block at all, and say so.
-        logError('PlansScreen.refineNextBlock', result?.error ?? 'unknown', { userId: user?.id });
+        // The refinement failed (or the user held it at the pre-flight).
+        // Fall back to the literal reactivation the user would otherwise
+        // have had rather than leaving them with no new block at all, and
+        // say so. A hold is a user choice, not an error, so it skips the
+        // error log.
+        if (result?.error !== 'capability_preflight_hold') {
+          logError('PlansScreen.refineNextBlock', result?.error ?? 'unknown', { userId: user?.id });
+        }
         await activatePlanWithBlock(user.id, activePlan.id, planHeadingName(activePlan.name), {
           ledger: seedRanges, allowLearnedCarry: true,
         });
@@ -1177,6 +1198,17 @@ export default function PlansScreen({ navigation }) {
             text={`Start with a plan and we'll build one from your profile, or browse the library and pick one yourself. ${BLOCK_START_SENTENCE}`}
             actionLabel="Start with a plan"
             onAction={async () => {
+              // CC27 (section 9.6) red-team finding 1: pre-flight before
+              // the generator, like every generation surface. Holding
+              // leaves the empty state in place to try again later.
+              const preflight = await capabilityPreflight(user.id);
+              const goAhead = preflight.proceed || await new Promise((resolve) => {
+                offerCapabilityPreflightChoice({
+                  onHold: () => resolve(false),
+                  onContinue: () => resolve(true),
+                });
+              });
+              if (!goAhead) return;
               const result = await generateAndSavePlan(user.id, userProfile);
               if (result.ok) {
                 await loadData();

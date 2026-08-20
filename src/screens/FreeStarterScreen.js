@@ -18,6 +18,7 @@ import {
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
+import { appAlert } from '../components/AppAlert';
 import { logError, logWarn } from '../lib/errorLog';
 import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import InfoTooltip from '../components/InfoTooltip';
@@ -118,6 +119,20 @@ export default function FreeStarterScreen({ navigation, route }) {
     return getFreeStarterRecommendation(answers, plans);
   }, [onResultStep, answers, plans, capability]);
 
+  // Red-team finding 2 (bundle), section 11.3: the full-pool fallback
+  // inside getCapabilityAwareStarterRecommendation is a real outcome (a
+  // small compatible pool can fail every answer), and it used to be
+  // SILENT - the one screen whose promise is "compatible on day one"
+  // could hand over an incompatible plan without a word. This is the
+  // shown pick's verdict; when it is not a full fit the card says so and
+  // the start press becomes an explicit choice, never a silent default.
+  const recOutside = useMemo(() => {
+    if (!recommendation || !capability?.byPlan) return 0;
+    const verdict = capability.byPlan.get(recommendation.id);
+    if (!verdict || verdict.fullyCompatible === true) return 0;
+    return verdict.conflicts.length + verdict.unknowns.length;
+  }, [recommendation, capability]);
+
   function handleOption(stepKey, optionKey) {
     setAnswers(prev => ({ ...prev, [stepKey]: optionKey }));
     setStep(s => s + 1);
@@ -182,6 +197,33 @@ export default function FreeStarterScreen({ navigation, route }) {
     if (!user?.id) {
       toast.show('Setting up your profile, try again in a second', { variant: 'info' });
       return;
+    }
+    // Red-team finding 2 (bundle), section 11.3: a pick that is not a
+    // full fit for how you train never activates silently - the user
+    // chooses, with browsing the fitting plans offered first where the
+    // library route exists (first run has no library tab, so it offers a
+    // plain hold instead). The ref guards the dialog against a second
+    // tap (RB-3 pattern), and is released on every non-start exit.
+    if (recOutside > 0) {
+      startingRef.current = true;
+      const choice = await new Promise((resolve) => {
+        appAlert(
+          'Not a full fit for how you train',
+          `${recOutside === 1 ? '1 movement in this plan sits' : `${recOutside} movements in this plan sit`} outside how you train. You can swap ${recOutside === 1 ? 'it' : 'them'} once the plan is running.`,
+          fromFirstRun
+            ? [
+              { text: 'Not now', style: 'cancel', onPress: () => resolve('hold') },
+              { text: 'Start it anyway', onPress: () => resolve('start') },
+            ]
+            : [
+              { text: 'Browse plans that fit', style: 'cancel', onPress: () => resolve('browse') },
+              { text: 'Start it anyway', onPress: () => resolve('start') },
+            ],
+        );
+      });
+      startingRef.current = false;
+      if (choice === 'browse') { handleBrowse(); return; }
+      if (choice !== 'start') return;
     }
     startingRef.current = true;
     setBusy(true);
@@ -396,6 +438,14 @@ export default function FreeStarterScreen({ navigation, route }) {
                 {answers.days < recDays
                   ? `This plan runs ${recDays} days a week. You said ${answers.days}, and that still works: do the sessions in order and take longer over each week.`
                   : `This plan runs ${recDays} days a week. You said ${answers.days}: ${recDays} good sessions are plenty to start with, and you can add a day once you build your own plan.`}
+              </Text>
+            ) : null}
+            {/* Red-team finding 2 (bundle), section 11.3: when the pick
+                came from the full-pool fallback the card says so BEFORE
+                the decision - honest numbers, no silent hand-over. */}
+            {recOutside > 0 ? (
+              <Text style={[styles.resultFootnote, live.resultFootnote]}>
+                {`No starter plan fits everything in how you train just now. This one is the closest: ${recOutside === 1 ? '1 movement sits outside it, and you can swap it' : `${recOutside} movements sit outside it, and you can swap them`} once the plan is yours.`}
               </Text>
             ) : null}
             {/* C5-P10-01 (D96, wave C carry-over): this is a first-plan

@@ -78,3 +78,17 @@ describe('section 8.4: the single-axis ask on custom creation', () => {
     expect(specs).not.toMatch(/injur|rehab|safe/i);
   });
 });
+
+describe('red-team finding 1 (bundle): the capability read failure is never silent', () => {
+  test('the no-known-state posture gets its own visible notice', () => {
+    // Fires ONLY when the capability read failed with no known state this
+    // session (unavailable && !stale) - the one posture where nothing is
+    // filtered for how you train (section 9.6 / CAP-17).
+    expect(src).toMatch(/state\?\.capability\?\.unavailable && !state\.capability\.stale/);
+    expect(src).toMatch(/How you train could not be checked right now, so nothing is filtered for it\./);
+  });
+  test('the notice is consent-gated so users without the feature never see it', () => {
+    expect(src).toMatch(/getLocalCapabilityConsent\(userId\)/);
+    expect(src).toMatch(/consented === true.*setCapabilityUnavailable\(true\)/);
+  });
+});

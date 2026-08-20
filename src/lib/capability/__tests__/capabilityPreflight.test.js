@@ -82,6 +82,10 @@ describe('the gate lives OUTSIDE the engine, at every generation surface (source
     'screens/ProGoalSetupScreen.js',
     'screens/PlanUpdateScreen.js',
     'screens/ProOnboardingScreen.js',
+    // Red-team finding 1 (bundle): the block-boundary refinement and the
+    // two no-plan "Start with a plan" surfaces were silent fail-opens.
+    'screens/PlansScreen.js',
+    'screens/HomeScreen.js',
   ])('%s runs capabilityPreflight before generateAndSavePlan', (f) => {
     const src = read(f);
     const gate = src.indexOf('capabilityPreflight(');

@@ -25,6 +25,10 @@ import { loadExerciseIntentState, isEligible, intentFor, isFamilyBlocked, moveme
 // capability store (allowances) - the same door every capability write uses.
 import { capabilityBlockReason, demandConflicts, CAPABILITY_BLOCK } from '../lib/capability/resolve';
 import { demandLabel } from '../lib/capability/model';
+// Red-team finding 1 (bundle): the capability-unavailable notice is shown
+// only to users who actually turned the feature on, so everyone else never
+// sees noise about a lane they do not use.
+import { getLocalCapabilityConsent } from '../lib/consent/capabilityConsent';
 import { appAlert } from './AppAlert';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
 // CC27 (section 34.1): custom creation derives equipment metadata from the
@@ -171,6 +175,12 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   // are indistinguishable in intentState itself by design, so this is
   // tracked separately.
   const [intentUnavailable, setIntentUnavailable] = useState(false);
+  // Red-team finding 1 (bundle), section 9.6: true only when the CAPABILITY
+  // read failed with NO known state this session - the one posture where
+  // the browse list filters nothing for how you train - AND the user has
+  // the feature turned on (local consent flag), so it is a true notice,
+  // never noise.
+  const [capabilityUnavailable, setCapabilityUnavailable] = useState(false);
   // CC27 (section 9.2.6): default-on capability filter with a "show anyway"
   // toggle - the existing showExcluded pattern, its own switch so the two
   // lanes' actions stay distinct (Allow again vs the section 9.4 flows).
@@ -252,6 +262,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     setShowExcluded(false);
     setShowIncompatible(false);
     setIntentUnavailable(false);
+    setCapabilityUnavailable(false);
     if (userId) {
       getActiveBlock(userId)
         .then(block => loadExerciseIntentState(userId, { activeMesocycleId: block?.id ?? null }))
@@ -261,6 +272,16 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
           // state, never throws), so `unavailable` is how a genuine read
           // failure is told apart from "nothing set aside" - see D109-2.
           if (state?.unavailable) setIntentUnavailable(true);
+          // Red-team finding 1 (bundle), section 9.6: with no known
+          // capability state this session the list filters nothing for how
+          // you train, and that fact gets the same visible notice the
+          // intent lane's failure gets. Stale last-known state keeps
+          // filtering normally (CAP-17), so it stays quiet here.
+          if (state?.capability?.unavailable && !state.capability.stale) {
+            getLocalCapabilityConsent(userId)
+              .then((consented) => { if (consented === true) setCapabilityUnavailable(true); })
+              .catch(() => {});
+          }
         })
         .catch(() => { setIntentState(null); setIntentUnavailable(true); });
     } else {
@@ -708,6 +729,19 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
                 <Text style={[styles.constraintsUnavailableText, live.constraintsUnavailableText]}>
                   Avoided movements could not be checked right now, so nothing is filtered for them.
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Red-team finding 1 (bundle), section 9.6: the capability
+                lane's read failed with no known state, so the list is not
+                filtered for how you train. Same visible-notice posture as
+                the intent row above; shown only when the feature is on. */}
+            {capabilityUnavailable ? (
+              <View style={styles.constraintsUnavailableRow}>
+                <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
+                <Text style={[styles.constraintsUnavailableText, live.constraintsUnavailableText]}>
+                  How you train could not be checked right now, so nothing is filtered for it.
                 </Text>
               </View>
             ) : null}

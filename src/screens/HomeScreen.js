@@ -95,6 +95,9 @@ import { mapCalsAdherence } from '../lib/weeklyCoach';
 import { getRecentIntakeSummary } from '../lib/food/db';
 import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import { generateAndSavePlan } from '../lib/planAutoGen';
+// CC27 (section 9.6) red-team finding 1: every generateAndSavePlan surface
+// runs the capability pre-flight first - never a silent fail-open.
+import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, buildLoadSemanticsById, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
@@ -2235,6 +2238,17 @@ export default function HomeScreen({ navigation, route }) {
                 text={`If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile. ${BLOCK_START_SENTENCE}`}
                 actionLabel="Start with a plan"
                 onAction={async () => {
+                  // CC27 (section 9.6) red-team finding 1: pre-flight
+                  // before the generator, like every generation surface.
+                  // Holding leaves the empty state in place to try again.
+                  const preflight = await capabilityPreflight(user.id);
+                  const goAhead = preflight.proceed || await new Promise((resolve) => {
+                    offerCapabilityPreflightChoice({
+                      onHold: () => resolve(false),
+                      onContinue: () => resolve(true),
+                    });
+                  });
+                  if (!goAhead) return;
                   const result = await generateAndSavePlan(user.id, userProfile);
                   if (result.ok) {
                     await loadData();

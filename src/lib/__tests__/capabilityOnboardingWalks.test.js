@@ -107,6 +107,39 @@ describe.each(SCENARIOS)('$label', ({ rules }) => {
   });
 });
 
+describe('red-team finding 2 (bundle): the full-pool fallback is real and never silent', () => {
+  // A state no library plan can fully fit: every demand axis in the closed
+  // vocabulary is ruled out at once, so every plan carries at least one
+  // conflicting or unknown (CAP-8) row and fullyCompatible is impossible.
+  const rules = [
+    'standing', 'floor_access', 'overhead_position', 'grip_bar',
+    'bilateral_upper', 'bilateral_lower', 'axial_load', 'impact', 'balance_high',
+  ];
+
+  test('zero compatible plans still yields a pick (no dead end), and that pick is NOT a full fit', () => {
+    const { state, compatible, rec } = walk(rules, { goal: 'build_muscle', equipment: 'full_gym', days: 3 });
+    expect(compatible).toHaveLength(0);
+    expect(rec).toBeTruthy();
+    const verdict = computePlanCompatibility(state, PLANS.find((p) => p.name === rec.name).rows);
+    expect(verdict.fullyCompatible).toBe(false);
+  });
+
+  test('the screen surfaces the fallback: caveat on the card and an explicit choice before activation', () => {
+    const src = fs.readFileSync(path.resolve(__dirname, '../../screens/FreeStarterScreen.js'), 'utf8');
+    // The shown pick's verdict is computed, the card says so before the
+    // decision, and starting is an explicit choice - never silent.
+    expect(src).toMatch(/const recOutside = useMemo/);
+    expect(src).toMatch(/No starter plan fits everything in how you train just now\./);
+    expect(src).toMatch(/Not a full fit for how you train/);
+    expect(src).toMatch(/Browse plans that fit/);
+    expect(src).toMatch(/Start it anyway/);
+    const gate = src.indexOf('if (recOutside > 0) {');
+    const activate = src.indexOf('activatePlanWithBlock(user.id, planId');
+    expect(gate).toBeGreaterThan(-1);
+    expect(gate).toBeLessThan(activate);
+  });
+});
+
 test('the compatible pools come from NORMAL browse content, never a segregated shelf (Amendment section 13)', () => {
   // The family plans carry ordinary tags (days:N, goal:...) exactly like
   // every other library plan - the recommender needs no special casing.

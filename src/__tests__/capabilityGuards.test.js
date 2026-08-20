@@ -166,3 +166,23 @@ describe('CC-D27: the family/exercise/allow add surfaces (CC27)', () => {
     expect(scr.match(/await createConstraints\(/g)).toHaveLength(1);
   });
 });
+
+describe('CAP-7 at the install-conflict sheet (red-team finding 3, bundle)', () => {
+  const sheet = read('components/ExerciseConflictSheet.js');
+  test('a clinician-reported row is never offered "Keep it in this plan"', () => {
+    // The keep affordance is the non-clinician branch of an explicit
+    // reason check; the clinician branch routes to the restriction
+    // editor instead (the picker's section 9.4 confirm flow).
+    expect(sheet).toMatch(/String\(c\?\.reason \?\? ''\) === 'capability_clinician' \?/);
+    const clinician = sheet.slice(
+      sheet.indexOf("=== 'capability_clinician' ?"),
+      sheet.indexOf('title="Keep it in this plan"'),
+    );
+    expect(clinician).toMatch(/title="Update restriction"/);
+    expect(clinician).toMatch(/navigate\('HowYouTrain'\)/);
+    expect(clinician).not.toMatch(/onKeep/);
+  });
+  test('the keep affordance survives for every other conflict row', () => {
+    expect(sheet).toMatch(/title="Keep it in this plan"/);
+  });
+});

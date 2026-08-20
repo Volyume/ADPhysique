@@ -156,6 +156,15 @@ describe('C1/C4: ended_early within effective scope counts completed', () => {
   test('excused stop counts; a stop beyond effective scope stays ended_early', async () => {
     const d = await db();
     await addEpisodeRule('r2', 'standing', { choice: 'applied' });
+    // The previous test left r1 (same axis) undecided; excusal requires
+    // EVERY driving rule applied, so align it - and that requirement
+    // itself is pinned in the declined/undecided test below.
+    const all = await require('../database').getCapabilityConstraints(USER);
+    for (const r of all.filter(x => x.role === 'episode' && x.ruleValue === 'standing')) {
+      // eslint-disable-next-line no-await-in-loop
+      await setConstraintEffectiveChoice(USER, r.id, 'applied');
+    }
+    _resetCapabilityResolveCache();
 
     // Session A: performed the leg press, skipped the squat (excused).
     await insertWorkout('wA', 'rout1', WEEK + 3600_000);
@@ -198,6 +207,32 @@ describe('C1/C4: ended_early within effective scope counts completed', () => {
     ]);
     const stats2 = await getWeeklySessionStats(USER, WEEK);
     expect(stats2.completed).toBe(1); // wB still excluded
+  });
+});
+
+describe('red-team finding 4: declined or undecided rules never excuse a stop', () => {
+  test('computeCompletionEffects excuses only all-applied conflicts', async () => {
+    const declinedId = await addEpisodeRule('rDecl', 'axial_load', { choice: 'declined' });
+    _resetCapabilityResolveCache();
+    const state = await require('../capability/resolve').loadCapabilityResolveState(USER, {});
+    const axialRow = { id: 'fx-ax', name: 'Fixture Axial', primaryMuscle: 'back', axialLoad: true, position: 'seated', gripDemand: 'none', bilateralUpper: false, bilateralLower: false, impact: false, floorAccess: false, overheadPosition: false, balanceDemand: 'supported' };
+    const declinedOut = computeCompletionEffects([{ exercise: axialRow, performed: false }], state);
+    expect(declinedOut.entries).toEqual([]);
+    expect(declinedOut.coversAllUnperformed).toBe(false);
+
+    await setConstraintEffectiveChoice(USER, declinedId, null); // undecided
+    _resetCapabilityResolveCache();
+    const s2 = await require('../capability/resolve').loadCapabilityResolveState(USER, {});
+    const undecidedOut = computeCompletionEffects([{ exercise: axialRow, performed: false }], s2);
+    expect(undecidedOut.entries).toEqual([]);
+
+    await setConstraintEffectiveChoice(USER, declinedId, 'applied');
+    _resetCapabilityResolveCache();
+    const s3 = await require('../capability/resolve').loadCapabilityResolveState(USER, {});
+    const appliedOut = computeCompletionEffects([{ exercise: axialRow, performed: false }], s3);
+    expect(appliedOut.entries).toHaveLength(1);
+    expect(appliedOut.coversAllUnperformed).toBe(true);
+    await setConstraintEffectiveChoice(USER, declinedId, 'declined'); // park it out of later tests
   });
 });
 
