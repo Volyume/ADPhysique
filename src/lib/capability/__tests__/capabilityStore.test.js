@@ -53,7 +53,6 @@ const {
 const {
   loadCapabilityState, createConstraint, hasCapabilityConsent,
 } = require('../store');
-const { CONSTRAINT_ROLE } = require('../model');
 
 const U = 'user-cc26-store';
 const T0 = 1767000000000;

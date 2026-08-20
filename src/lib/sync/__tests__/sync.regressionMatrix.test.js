@@ -244,6 +244,11 @@ describe('Matrix coverage', () => {
       // perday_target_offsets (per-day calorie planning offsets, L05-PDT1):
       // push/pull covered in the describe block below.
       'perday_target_offsets',
+      // capability_constraints + session_constraint_effects (CC26 capability
+      // lane): field maps, tombstone travel and the §28 A/B interval replay
+      // are covered in the dedicated capabilityConstraintsSync.test.js
+      // (src/lib/__tests__), against the real appliers.
+      'capability_constraints', 'session_constraint_effects',
     ]);
     for (const t of registryTables) expect(covered.has(t)).toBe(true);
     for (const t of covered) expect(registryTables.has(t)).toBe(true);

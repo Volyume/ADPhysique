@@ -54,6 +54,11 @@ jest.mock('../../database', () => ({
   getPlanFoldersForPush: jest.fn().mockResolvedValue([]),
   insertPlanFolderFromCloud: jest.fn().mockResolvedValue(undefined),
   getPlanFolderUpdatedAt: jest.fn().mockResolvedValue(0),
+  // CC26 capability lane.
+  getAllCapabilityConstraintsForUser: jest.fn().mockResolvedValue([]),
+  insertCapabilityConstraintFromCloud: jest.fn().mockResolvedValue(undefined),
+  getAllSessionConstraintEffectsForUser: jest.fn().mockResolvedValue([]),
+  insertSessionConstraintEffectFromCloud: jest.fn().mockResolvedValue(undefined),
   // NEW-002 partner mirror.
   getPartnershipsLocal: jest.fn().mockResolvedValue([]),
   getPartnerWeekSignal: jest.fn().mockResolvedValue(null),
