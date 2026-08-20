@@ -139,3 +139,16 @@ Activity Alliance findings); R6 competitor disability-support matrix.
   trust-damaging (Wheel Fit); every credible disability claim carries a
   named adaptive-athlete credential; no flare-mode feature exists
   anywhere; reintroduction is a binary toggle industry-wide.
+
+- 2026-08-20 — R4 mobile accessibility COMPLETE (research/R4-mobile-
+  accessibility.md, 442 lines; 25-item checklist, 11 RN limits, 5
+  legal-review items; per-finding confidence tags). Headlines: WCAG 2.2
+  2.5.7 dragging-alternative / 2.5.8 target size / 3.3.7 redundant entry /
+  1.3.3 no-audio-only-cues bear directly on the logger and rest timer;
+  WCAG2Mobile is still an unendorsed draft (no ratified native checklist);
+  accessibilityLiveRegion is Android-only and iOS lacks the concept
+  (per-platform timer announcement mechanics); RN FlatList VoiceOver order
+  and Modal focus restoration are documented-broken; VoiceOver untestable
+  on simulator; expo-video subtitles broken on Android (open issue);
+  NEEDS LEGAL REVIEW: whether pro_monthly/pro_annual IAP brings EAA
+  "e-commerce" scope + EN 301 549 Ch.11 primary-text verification.
