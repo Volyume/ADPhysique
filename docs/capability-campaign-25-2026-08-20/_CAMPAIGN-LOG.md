@@ -182,3 +182,22 @@ Activity Alliance findings); R6 competitor disability-support matrix.
   workout_sets/exercises. Dead-accessor list recorded (incl. the whole
   insights pipeline, guard-tested dead). Cross-cutting: 16/17 families
   sync via legacy sync.js; only weekly_checkins is on the new registry.
+
+## COST-GOVERNANCE ORDER (founder, 2026-08-20, binding — supersedes prior orchestration rules for this campaign)
+
+Received after the 12:40 UTC session-limit event killed 12 in-flight
+agents. Full text is the authority (chat). Operative rules now in force:
+subagents default to the LOWEST suitable tier (haiku); sonnet only with
+recorded justification; NO Opus subagents without explicit founder
+approval (requests go to HIGH_COST_ESCALATION_REQUESTS.md); max 2
+pre-synthesis subagents, max 2 red-team subagents; direct tools before
+agents; Fable synthesises personally; short agent reports; session-limit
+handoff discipline. This supersedes the CLAUDE.md "audits default Opus"
+tier block FOR THIS CAMPAIGN by explicit founder order.
+
+Recovery state: audits A, C, D, E, G and research R1, R2, R3 all wrote
+complete reports before dying — banked at 619b4bd. Only audits H, I, J,
+K have no output; their architecture-blocking cores are being resolved
+by Fable direct reads (see STATUS-LEDGER.md gap classification). Wave 1
+is otherwise COMPLETE. No agents running. Next: consolidated evidence
+map, then synthesis.
