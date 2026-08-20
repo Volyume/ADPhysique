@@ -226,8 +226,8 @@ export default function HowYouTrainScreen() {
   const renderAddFlow = () => {
     if (adding === 'role') {
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.card }]}>
-          <Text style={[styles.q, { color: t.colors.text }]}>Is this about how you train generally, or something temporary right now?</Text>
+        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+          <Text style={[styles.q, { color: t.colors.textPrimary }]}>Is this about how you train generally, or something temporary right now?</Text>
           <Choice label="How I train generally" sub="Part of your normal setup. Full progression and coaching, no special labels."
             onPress={() => chooseRole(CONSTRAINT_ROLE.BASELINE)} t={t} />
           <Choice label="Temporary, for now" sub="Volyume treats it as a passing change and will help you step back when it ends."
@@ -237,8 +237,8 @@ export default function HowYouTrainScreen() {
     }
     if (adding === 'axes') {
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.card }]}>
-          <Text style={[styles.q, { color: t.colors.text }]}>What should Volyume build around?</Text>
+        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+          <Text style={[styles.q, { color: t.colors.textPrimary }]}>What should Volyume build around?</Text>
           <Text style={[styles.hint, { color: t.colors.textSecondary }]}>Pick anything that applies. You never need to say why.</Text>
           {DEMAND_AXES.map(a => (
             <Choice key={a.id} label={a.label} selected={draft.axes.includes(a.id)}
@@ -254,13 +254,13 @@ export default function HowYouTrainScreen() {
     }
     if (adding === 'dates') {
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.card }]}>
-          <Text style={[styles.q, { color: t.colors.text }]}>Since when?</Text>
+        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+          <Text style={[styles.q, { color: t.colors.textPrimary }]}>Since when?</Text>
           {START_CHOICES.map(c => (
             <Choice key={c.key} label={c.label} selected={draft.startDays === c.days}
               onPress={() => setDraft(d => ({ ...d, startDays: c.days }))} t={t} />
           ))}
-          <Text style={[styles.q, { color: t.colors.text, marginTop: 16 }]}>Roughly how long?</Text>
+          <Text style={[styles.q, { color: t.colors.textPrimary, marginTop: 16 }]}>Roughly how long?</Text>
           <Text style={[styles.hint, { color: t.colors.textSecondary }]}>A rough guess is fine. Volyume will check with you rather than assume.</Text>
           {END_CHOICES.map(c => (
             <Choice key={c.key} label={c.label} selected={draft.endDays === c.days}
@@ -272,9 +272,9 @@ export default function HowYouTrainScreen() {
     }
     if (adding === 'consent') {
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.card }]}>
-          <Text style={[styles.q, { color: t.colors.text }]}>One thing first</Text>
-          <Text style={[styles.body, { color: t.colors.text }]}>
+        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+          <Text style={[styles.q, { color: t.colors.textPrimary }]}>One thing first</Text>
+          <Text style={[styles.body, { color: t.colors.textPrimary }]}>
             To build training around your body, Volyume stores what you choose here: the training
             situations you have asked it to work around, whether each is part of your normal setup
             or temporary, and when it applies. That counts as health information, so it needs your
@@ -291,8 +291,8 @@ export default function HowYouTrainScreen() {
       const labels = draft.axes.map(demandLabel).join(', ').toLowerCase();
       const isEpisode = draft.role === CONSTRAINT_ROLE.EPISODE;
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.card }]}>
-          <Text style={[styles.q, { color: t.colors.text }]}>
+        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+          <Text style={[styles.q, { color: t.colors.textPrimary }]}>
             {isEpisode
               ? `Volyume will temporarily work around: ${labels}.`
               : `Volyume will build your training around: ${labels}.`}
@@ -408,7 +408,7 @@ function Choice({ label, sub, onPress, t, selected, primary, disabled, compact }
         disabled && { opacity: 0.4 },
       ]}
     >
-      <Text style={[styles.choiceLabel, { color: t.colors.text }]}>{label}</Text>
+      <Text style={[styles.choiceLabel, { color: t.colors.textPrimary }]}>{label}</Text>
       {sub ? <Text style={[styles.hint, { color: t.colors.textSecondary }]}>{sub}</Text> : null}
     </PressableCard>
   );
