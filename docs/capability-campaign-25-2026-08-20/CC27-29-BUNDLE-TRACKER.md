@@ -26,7 +26,7 @@ CC27 slices (order = dependency order):
 - [x] S13 Q3 gate fixture (both paths: adequate library; no-compatible-quality) + docs + atomic CC27 commit.
 
 CC28 (read §11, §33.12, §33.15, Amendment §17 at start):
-- [ ] Onboarding both paths + consent moment + Pro step-count guard; free-starter persistence; computed library compatibility + browse chips + install-time conflict/substitution (A§11.8); routine family content v1 + validation; coverage tooling → registry; §33.12 energy card (session length becomes free-editable); §33.15 decline signposting; gate fixtures (wheelchair/no-floor/one-arm/grip-limited); a11y scenarios → PHYSICAL-VALIDATION-BACKLOG.md.
+- [x] Onboarding both paths + consent moment + Pro step-count guard; free-starter persistence; computed library compatibility + browse chips + install-time conflict/substitution (A§11.8); routine family content v1 + validation; coverage tooling → registry; §33.12 energy card (session length becomes free-editable); §33.15 decline signposting; gate fixtures (wheelchair/no-floor/one-arm/grip-limited); a11y scenarios → PHYSICAL-VALIDATION-BACKLOG.md.
 
 CC29 (read §14, §17, §18, §5.5, Audit G C1-C4 at start):
 - [ ] §14 diff propose/apply/decline; session_constraint_effects writers; §17 logger surfaces (constraint-cause swaps via exercise_swaps.cause additive column, omission capture); §18 denominators (getWeeklySessionStats, interBlock, stabilise gate, directive copy, partner/widget); G C1-C4 fixtures; NO session_resolutions schema change.
@@ -37,6 +37,8 @@ Bundle end:
 
 ## Slice log (append per landing)
 
+- CC28 COMPLETE. Internal gate: 454 targeted+affected tests green; repo lint clean. Ten families shipped by construction (grip-limited PULLING deferred to DEF-3 with reason, Grip-Light Machine Circuit ships instead); computed browse compatibility + chips + computed collection; install check asks the senior question (A11.8 fixed) with lane-worded sheet; both onboarding paths gained the optional capability step (Pro TOTAL_STEPS 7 under the sexGate guards); free path persists via the shared store and recommends capability-computed (difficulty relaxes inside the compatible pool); session length free-editable + 33.12 energy card; 33.15 signposting verified (CC26 copy already conformed); coverage registry generated; onboarding walks (seated/no-floor/one-arm/grip-limited) all land fully compatible first plans. Commits 06b6eed, +browse/onboarding, d074006.
+
 - CC27 COMPLETE. Internal gate: 42 suites / 715 targeted+affected tests green; repo lint clean (max-warnings 0). Q3 gate: compatible core (9 slots, floor 8) + every shortfall visibly reported; path B honest-gap proven. PD-2/PD-8/PD-9 fixed; CC-D25/CC-D26/CC-D27 implemented; BD-1 fixed. 49 of 551 seed rows are Q3-compatible today - CC28 families widen this. Migrate_148 written NOT applied (custom pushes fail soft until it runs - migrate_143 tolerated mode). Commits: b802b75, 5b1853d, 468a84f, 2f466c5, b5e6a75, +sweep, 9b8739c, +gate.
 
 - CC27 S3-S8 landed: resolver (35), composition + PD-9 debt (14 incl. post-engine hole + near-miss), pool parity (poolGenerator pin REVISED per CC-D26), blocked-slot capability class + near-miss attach (4 sites), pre-flight gate (8) wired into 3 screens, picker capability filter + 9.4 flows + Recent rail senior question + 8.4 single-axis ask (11 pins). Commits 5b1853d, 468a84f, +picker.
@@ -45,6 +47,9 @@ Bundle end:
 ## Decisions made (bundle-internal, D33)
 
 - BD-D1 (CC27 S8): the section 8.4 "single-axis ask" renders one optional question PER constrained demand axis (only the user's active axes; enum axes ask the full closed enum so a "no" answer is expressible without guessing). Rationale: a yes/no on an enum axis would discard honest "no" answers; per-axis scope keeps it progressive disclosure, never an exam.
+- BD-D3 (CC28): the grip-limited PULLING collection does not ship at v1 - the library's only firm-grip-free pulling is extension-class back work, below any honest coverage bar; deferred to DEF-3 (implement guidance) and recorded in the registry. The Grip-Light Machine Circuit ships instead and names the gap in its own description.
+- BD-D4 (CC28): both onboarding capability steps route to the SHARED How you train surface for the full add flow (consent, cards, durability, readback) instead of duplicating a five-stage flow per path - section 12's "Add flows = the onboarding cards" satisfied with one implementation that cannot drift.
+- BD-D5 (CC28): the capability-aware starter pick relaxes the difficulty-0 gate INSIDE the compatible pool before any fallback - a compatible intermediate first plan beats an incompatible beginner one (constraint is a hard filter; difficulty is a preference).
 - BD-D2 (CC27 S7): a pre-flight HOLD in ProGoalSetupScreen/ProOnboardingScreen skips only the plan build and lands in the existing not-rebuilt/recovery paths; in PlanUpdateScreen (rebuild-first invariant) it aborts the whole update cleanly. Rationale: never leave half-saved state, never block goal/nutrition saves on a suggestion-lane gate.
 
 ## Defects discovered
