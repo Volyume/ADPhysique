@@ -213,3 +213,23 @@ map, then synthesis.
   self-attack candidates for joint adjudication (S1-S14, held in-loop).
   RECOVERY: if the session dies, resume = read the four synthesis docs +
   redteam/ reports when present, adjudicate, revise, close the gate.
+
+- 2026-08-20 — RT-1 (technical) COMPLETE: 13 attacks, all
+  evidence-verified (redteam/RT1-technical.md). Lead pre-adjudication:
+  all accepted or partially accepted as revision-grade; none structural.
+  Headlines: erasure de-protects recompute history (fix: bounded-exposure
+  documentation + honest consequence copy + no-teach 'unknown' stamps
+  survive); CAP-17 must gate PRE-FLIGHT to respect the D110-2 pinned
+  contract; CONFOUNDED citation wrong (F#8, coachIntervention.js) and its
+  closed trigger set needs the episode case in CC31; family-rule dead
+  zones on 5 untagged muscles (demand rules carry them; UI offers family
+  rules only where covered); CC-D9's 25% threshold DROPPED in favour of
+  per-session exclusion via the deload-exclusion machinery + existing
+  sufficiency gates (converges with lead self-attack S3); CC-D17 needs a
+  dedicated restamp pass (backfillMissingBlockLedgers skips ledgered
+  blocks); starts_at gains a backdating quick-pick (S2); adapted-window
+  chronic case fails toward research defaults (acceptable, documented);
+  HomeScreen ledger narration joins the consumer list; swap cause becomes
+  eligibility-derived, not UI-path-keyed; AWAITING gains a quiet forcing
+  cadence (S6); laterality×bilateral eligibility defined; promotion race
+  = union-safe + idempotent group marker. Revision lands after RT-2.
