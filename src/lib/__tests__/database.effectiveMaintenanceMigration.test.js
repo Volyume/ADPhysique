@@ -31,6 +31,9 @@ async function migrationCount() {
   return version;
 }
 
+// CC26 (capability foundations) appended one further migration (two new
+// CREATE TABLE IF NOT EXISTS, inert against this fixture), so every
+// `total - N` offset below widens by one again.
 // D107-2 (2026-08-17) appended two migrations (exercise_intent.expires_at_ms,
 // then exercises.load_semantics) after the two Campaign 19 migrations this
 // file targets, so each window below widens by two to keep testing the SAME
@@ -51,7 +54,7 @@ function withExerciseIntent(raw) {
 test('Campaign 19 local migrations create the one-row memo and revalidation marker', async () => {
   const raw = withExerciseIntent(new DatabaseSync(':memory:'));
   const total = await migrationCount();
-  raw.exec(`PRAGMA user_version = ${total - 4}`);
+  raw.exec(`PRAGMA user_version = ${total - 5}`);
   await runMigrations(adapt(raw));
 
   const columns = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all();
@@ -76,7 +79,7 @@ test('a database already at baseline Campaign 19 v80 upgrades additively', async
     evidence_signature TEXT NOT NULL,
     version_key TEXT NOT NULL
   )`);
-  raw.exec(`PRAGMA user_version = ${total - 3}`);
+  raw.exec(`PRAGMA user_version = ${total - 4}`);
   await runMigrations(adapt(raw));
 
   const names = raw.prepare('PRAGMA table_info(effective_maintenance_memos)').all()

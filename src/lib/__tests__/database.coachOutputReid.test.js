@@ -10,6 +10,11 @@
  * in-memory SQLite (node:sqlite), same harness as
  * database.bicepsSubregion.test.js. If a later migration appends to the
  * array, bump the runLastMigrations counts per that file's convention.
+ * CC26 (capability foundations) appended one further migration after
+ * this file's window - two new CREATE TABLE IF NOT EXISTS statements
+ * (capability_constraints, session_constraint_effects), inert against
+ * every fixture here (the v65 convention) - so each runLastMigrations
+ * count below is bumped by one again.
  */
 
 const { DatabaseSync } = require('node:sqlite');
@@ -88,8 +93,9 @@ test('v72 re-ids legacy uid() rows to the deterministic form, without touching u
     .run('co_1734000000000_user-1', 'user-1', 1734000000000, 0, 90, 90);
   // C18 block progression appended two migrations and Campaign 19 appended
   // the memo plus its audit remediation, so this window widens by four to
-  // keep testing the SAME v72 migration rather than a later pair.
-  return runLast(raw, 12).then(() => {
+  // keep testing the SAME v72 migration rather than a later pair. CC26
+  // appended the capability tables, widening it by one more.
+  return runLast(raw, 13).then(() => {
     const after = rows(raw);
     expect(after).toEqual([
       // Already deterministic: byte-identical.
@@ -104,9 +110,9 @@ test('v72 is idempotent: a second run changes nothing', async () => {
   const raw = freshDb();
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
-  await runLast(raw, 12); // widened by four, C18 + Campaign 19 remediation
+  await runLast(raw, 13); // widened by four (C18 + Campaign 19), then one more (CC26)
   const once = rows(raw);
-  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 11}`);
+  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 12}`);
   await runMigrations(adapt(raw));
   expect(rows(raw)).toEqual(once);
 });

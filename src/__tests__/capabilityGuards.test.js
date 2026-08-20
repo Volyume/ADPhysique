@@ -1,0 +1,119 @@
+/**
+ * CC26 - source-level guards for the capability-lane laws
+ * (docs/capability-campaign-25-2026-08-20/ARCHITECTURE.md; CAP-4, CAP-19,
+ * CAP-20, the inertness law and the model's no-clock rule). The house
+ * guard convention: fs.readFileSync + targeted assertions, so a violating
+ * edit fails mechanically and the break is a decision, not an accident.
+ */
+const fs = require('fs');
+const path = require('path');
+
+const read = (p) => fs.readFileSync(path.resolve(__dirname, '..', p), 'utf8');
+
+const CAPABILITY_FILES = [
+  'lib/capability/model.js',
+  'lib/capability/store.js',
+  'lib/consent/capabilityConsent.js',
+  'lib/sync/tables/capabilityConstraints.js',
+  'lib/sync/tables/sessionConstraintEffects.js',
+  'screens/HowYouTrainScreen.js',
+];
+
+describe('CAP-19: core capability accommodation is never Pro-gated', () => {
+  test('HowYouTrain registers UNGUARDED in the navigator', () => {
+    const nav = read('navigation/RootNavigator.js');
+    const reg = nav.match(/const HowYouTrainScreen = [^\n]+/)?.[0] ?? '';
+    expect(reg).not.toMatch(/withProGuard/);
+    expect(nav).toMatch(/name="HowYouTrain" component=\{HowYouTrainScreen\}/);
+  });
+  test('no capability module consults the tier gate', () => {
+    for (const f of CAPABILITY_FILES) {
+      const src = read(f);
+      expect(src).not.toMatch(/withProGuard|proGate|PRO_BETA|isPro\b|tier ===/);
+    }
+  });
+});
+
+describe('CAP-4: the capability lane and the preference lane never touch', () => {
+  test('capability files never import or query the preference lane', () => {
+    for (const f of CAPABILITY_FILES) {
+      const src = read(f);
+      // Imports/requires of preference-lane modules (comments may NAME the
+      // lane to state the law; code may not reach it).
+      const importLines = src.split('\n')
+        .filter(l => /^\s*(import |const .*require\()/.test(l)).join('\n');
+      expect(importLines).not.toMatch(/exercise\/intent|movementConstraints|swapEngine/);
+      // No SQL/API reach into the preference tables from the lane.
+      const codeOnly = src.replace(/\/\*[^]*?\*\//g, '').split('\n')
+        .filter(l => !/^\s*(\/\/|\*)/.test(l)).join('\n');
+      expect(codeOnly).not.toMatch(/FROM exercise_intent|setExerciseIntent|getExerciseIntents|recordExerciseSwap/);
+    }
+  });
+  test('the preference lane never imports capability', () => {
+    for (const f of ['lib/exercise/intent.js', 'lib/exercise/movementConstraints.js', 'lib/exercise/generation.js']) {
+      const src = read(f);
+      expect(src).not.toMatch(/capability/i);
+    }
+  });
+});
+
+describe('CC26 inertness: no downstream behaviour activates before its campaign', () => {
+  test.each([
+    'lib/planEngine.js', 'lib/planAutoGen.js', 'lib/poolGenerator.js',
+    'lib/weeklyCoach.js', 'lib/coachApply.js', 'lib/coachPrecedence.js',
+    'lib/livePrescription.js', 'lib/sessionAdjustments.js',
+    'lib/algorithms.js', 'lib/blockLedgerRunner.js', 'lib/learnedRange.js',
+    'lib/interBlock.js', 'lib/programmeStructureMemory.js',
+    'lib/blockProgression.js', 'lib/swapEngine.js',
+  ])('%s has no capability wiring', (f) => {
+    const src = read(f);
+    expect(src).not.toMatch(/capability_constraints|capability\/(model|store)|loadCapabilityState|isCapabilityEligible/);
+  });
+});
+
+describe('determinism and privacy discipline', () => {
+  test('the pure model never reads the clock', () => {
+    expect(read('lib/capability/model.js')).not.toMatch(/Date\.now|new Date\(/);
+  });
+  test('no capability module emits telemetry events', () => {
+    for (const f of CAPABILITY_FILES) {
+      expect(read(f)).not.toMatch(/engineTelemetry|trackEvent|track\(/);
+    }
+  });
+  test('the Sentry scrub covers the capability lane (CAP-20)', () => {
+    const scrub = read('lib/observability/sentryScrub.js');
+    expect(scrub).toMatch(/capability_constraints/);
+    expect(scrub).toMatch(/session_constraint_effects/);
+    expect(scrub).toMatch(/\^capability/);
+    expect(scrub).toMatch(/rule\[\._-\]\?value/);
+  });
+  test('the user-boundary wipe covers both tables', () => {
+    const dbSrc = read('lib/database.js');
+    expect(dbSrc).toMatch(/'capability_constraints', 'session_constraint_effects',/);
+  });
+  test('no diagnosis vocabulary anywhere in the lane (CAP-3)', () => {
+    for (const f of CAPABILITY_FILES) {
+      const src = read(f);
+      // The word may appear only in the negative ("never a diagnosis").
+      const uses = src.match(/diagnos\w+/gi) ?? [];
+      for (const u of uses) {
+        const idx = src.indexOf(u);
+        const context = src.slice(Math.max(0, idx - 80), idx + 40);
+        expect(context).toMatch(/no diagnos|never (a )?diagnos|not.*diagnos|without.*diagnos/i);
+      }
+    }
+  });
+});
+
+describe('the C31 pinned contracts are untouched (section 33 preservation)', () => {
+  test('the identical-writes pin file still pins the intent lane', () => {
+    const pin = read('lib/exercise/__tests__/campaign9.generation.test.js');
+    expect(pin).toMatch(/identical library array and writes identical rows/);
+  });
+  test('reads never write: the capability read path contains no UPDATE', () => {
+    const dbSrc = read('lib/database.js');
+    const readFn = dbSrc.slice(dbSrc.indexOf('export async function getCapabilityConstraints'),
+      dbSrc.indexOf('export async function getAllCapabilityConstraintsForUser'));
+    expect(readFn).not.toMatch(/UPDATE|INSERT|DELETE/);
+  });
+});
