@@ -23,8 +23,9 @@ import {
   GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
 } from '../lib/coachingGoals';
 import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
+import { demandLabel } from '../lib/capability/model';
 import {
-  generateAndSavePlan, generatePlanDryRun, planShortfallNote, assessScheduleFit,
+  generateAndSavePlan, generatePlanDryRun, planShortfallNote, assessScheduleFit, thinSessionReport,
 } from '../lib/planAutoGen';
 import { PLAN_FIT, fitCopy, alternativeCopy } from '../lib/planFit';
 import { buildChangeReceipt } from '../lib/planRationale';
@@ -196,6 +197,13 @@ export default function PlanUpdateScreen({ navigation }) {
         partial: !!dry.partial,
         missedCount: dry.missedCount ?? 0,
         blockedCount: afterSummary.blockedCount ?? 0,
+        // CC27 (sections 9.5, 33.11, 33.14): the capability reason class,
+        // its near misses, and per-session thinness ride the preview so
+        // the copy below never conflates "you set this aside" with
+        // "outside how you train".
+        capabilityBlockedCount: dry.capabilityBlockedCount ?? 0,
+        capabilityNearMisses: dry.capabilityNearMisses ?? null,
+        thinSessions: thinSessionReport(dry.plan, dry.blockedSlots ?? []),
         fit: fit?.ok ? fit : null,
         // C16 job 11: the reason-coded receipt. Built from the SAME
         // continuity decisions the commit will act on, so the sheet cannot
@@ -495,13 +503,46 @@ export default function PlanUpdateScreen({ navigation }) {
                     set aside shows its real state instead of naming the
                     exercise. Resolving it stays the job of the existing
                     conflict flow; nothing is chosen or restored here. */}
+                {/* CC27 (section 33.14): a session losing over a third of
+                    its slots to capability constraints says so up front,
+                    with the honest way forward - never a quiet husk. */}
+                {staged?.thinSessions?.length ? (
+                  <View style={styles.thinSessionBanner}>
+                    <Text style={[styles.diffShortfall, live.diffShortfall]}>
+                      {staged.thinSessions.map(ts => `${ts.workoutName} is unusually reduced: ${ts.omitted} of ${ts.requested} exercises have no match inside how you train.`).join(' ')}
+                      {' '}You can pick replacements yourself, create a custom exercise, or keep the reduced session. Volyume will not add lower-quality work to hit a number.
+                    </Text>
+                  </View>
+                ) : null}
+                {/* CC27 (section 33.11): near misses - movements held back
+                    only because an axis is UNKNOWN, each naming that axis,
+                    so the way forward is actionable rather than a wall. */}
+                {staged?.capabilityNearMisses ? (
+                  Object.entries(staged.capabilityNearMisses).map(([muscle, list]) => (
+                    <View key={muscle}>
+                      {list.map(nm => (
+                        <Text key={nm.exerciseId} style={[styles.diffShortfall, live.diffShortfall]}>
+                          {nm.name}: Volyume doesn't know yet whether this involves {nm.unknownAxes.map(a => demandLabel(a).toLowerCase()).join(', ')}. You can still add it yourself.
+                        </Text>
+                      ))}
+                    </View>
+                  ))
+                ) : null}
                 {staged?.blockedCount > 0 ? (
-                  <Text style={[styles.diffShortfall, live.diffShortfall]}>
-                    {staged.blockedCount === 1 ? 'Exercise choice needed' : `Exercise choice needed for ${staged.blockedCount} slots`}
-                    {'. '}
-                    You have set aside the exercises that would normally fill
-                    {staged.blockedCount === 1 ? ' this slot.' : ' these slots.'}
-                  </Text>
+                  (() => {
+                    const capabilityCount = staged.capabilityBlockedCount ?? 0;
+                    const intentCount = Math.max(0, staged.blockedCount - capabilityCount);
+                    return (
+                      <Text style={[styles.diffShortfall, live.diffShortfall]}>
+                        {intentCount > 0
+                          ? `${intentCount === 1 ? 'One slot' : `${intentCount} slots`} would normally use exercises you have set aside. `
+                          : ''}
+                        {capabilityCount > 0
+                          ? `${capabilityCount === 1 ? 'One slot has' : `${capabilityCount} slots have`} no match inside how you train.`
+                          : ''}
+                      </Text>
+                    );
+                  })()
                 ) : null}
                 {/* Schedule fit, from the shared resolver. Only surfaced
                     when the new schedule cannot carry the plan comfortably:
@@ -609,6 +650,9 @@ const styles = StyleSheet.create({
   diffReceiptHead: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, marginTop: spacing.sm, marginBottom: spacing.xxs },
   diffMoveText: { color: colors.textPrimary, fontSize: fontSize.sm },
   diffShortfall: { ...type.bodySm, marginTop: spacing.md, color: colors.textSecondary },
+  thinSessionBanner: {
+    marginTop: spacing.sm,
+  },
   diffBackBtn: { marginTop: spacing.sm },
   diffBackText: { color: colors.textSecondary, ...type.bodyStrong },
   diffSheetContent: { gap: spacing.md },

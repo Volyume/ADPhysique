@@ -825,7 +825,13 @@ export function computeAdaptiveDecision({ soreness = 3, performance = 3, pump = 
       decision: 'rotate_exercise',
       delta: 0,
       reasonCode: 'joint_high',
-      reasonText: 'High joint discomfort. Rotating to a lower-risk exercise next session.',
+      // PD-2 fix (CC27): the old text claimed "Rotating to a lower-risk
+      // exercise next session" - but no code performs any rotation, and
+      // "lower-risk" is a safety claim no deterministic rule supports
+      // (CAP-18 honest-explanation law). The decision is a RECOMMENDATION
+      // the user acts on through the swap sheet; the copy now says exactly
+      // that and nothing more.
+      reasonText: 'High joint discomfort. Worth choosing a different exercise here; nothing changes until you swap it.',
     };
   }
   if (soreness == null || performance == null) {
@@ -843,7 +849,13 @@ export function computeAdaptiveDecision({ soreness = 3, performance = 3, pump = 
       decision: 'rotate_exercise',
       delta: 0,
       reasonCode: 'joint_high',
-      reasonText: 'High joint discomfort. Rotating to a lower-risk exercise next session.',
+      // PD-2 fix (CC27): the old text claimed "Rotating to a lower-risk
+      // exercise next session" - but no code performs any rotation, and
+      // "lower-risk" is a safety claim no deterministic rule supports
+      // (CAP-18 honest-explanation law). The decision is a RECOMMENDATION
+      // the user acts on through the swap sheet; the copy now says exactly
+      // that and nothing more.
+      reasonText: 'High joint discomfort. Worth choosing a different exercise here; nothing changes until you swap it.',
     };
   }
 

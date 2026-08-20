@@ -190,3 +190,32 @@ describe('near-miss candidates (section 33.11)', () => {
     expect(out).toEqual([{ exerciseId: 'ex-mq', name: 'Mystery Quad Move', unknownAxes: ['standing'] }]);
   });
 });
+
+describe('thin-session report (section 33.14)', () => {
+  const { thinSessionReport } = require('../../planAutoGen');
+  test('flags a session losing over a third of its slots to capability blocks', () => {
+    const plan = { workouts: [
+      { name: 'Push A', exercises: [1, 2, 3, 4] }, // 4 resolved
+      { name: 'Legs', exercises: [1, 2] },          // 2 resolved
+    ] };
+    const blocked = [
+      { workoutName: 'Legs', reason: 'capability_declared' },
+      { workoutName: 'Legs', reason: 'capability_unknown' },   // 2 of 4 -> thin
+      { workoutName: 'Push A', reason: 'capability_declared' }, // 1 of 5 -> fine
+    ];
+    expect(thinSessionReport(plan, blocked)).toEqual([
+      { workoutName: 'Legs', requested: 4, omitted: 2 },
+    ]);
+  });
+  test('intent-class blocks never trigger the capability banner', () => {
+    const plan = { workouts: [{ name: 'A', exercises: [1] }] };
+    expect(thinSessionReport(plan, [
+      { workoutName: 'A', reason: 'excluded' },
+      { workoutName: 'A', reason: 'excluded' },
+    ])).toEqual([]);
+  });
+  test('exactly one third is NOT thin (the law says more than)', () => {
+    const plan = { workouts: [{ name: 'A', exercises: [1, 2] }] };
+    expect(thinSessionReport(plan, [{ workoutName: 'A', reason: 'capability_declared' }])).toEqual([]);
+  });
+});

@@ -674,6 +674,38 @@ function attachBlockedSlots(result, blockedSlots, constraintsUnavailable = false
 }
 
 /**
+ * CC27 (section 33.14): per-session thinness under capability constraints.
+ * A session where MORE THAN A THIRD of its slots were omitted as
+ * capability-blocked is flagged so the preview/session view can lead with
+ * an "unusually reduced" banner instead of quietly serving a husk. Pure.
+ *
+ * @param {{workouts?: Array<{name?: string, exercises?: Array}>}} plan the
+ *   RESOLVED plan (post-resolution workouts)
+ * @param {Array<{workoutName?: string|null, reason?: string}>} blockedSlots
+ * @returns {Array<{workoutName: string, requested: number, omitted: number}>}
+ */
+export function thinSessionReport(plan, blockedSlots) {
+  if (!plan?.workouts?.length || !blockedSlots?.length) return [];
+  const capabilityByWorkout = new Map();
+  for (const s of blockedSlots) {
+    if (!String(s?.reason ?? '').startsWith('capability')) continue;
+    const key = s.workoutName ?? '';
+    capabilityByWorkout.set(key, (capabilityByWorkout.get(key) ?? 0) + 1);
+  }
+  if (!capabilityByWorkout.size) return [];
+  const out = [];
+  for (const w of plan.workouts) {
+    const omitted = capabilityByWorkout.get(w.name ?? '') ?? 0;
+    if (!omitted) continue;
+    const requested = (w.exercises?.length ?? 0) + omitted;
+    if (requested > 0 && omitted / requested > (1 / 3)) {
+      out.push({ workoutName: w.name ?? 'Session', requested, omitted });
+    }
+  }
+  return out;
+}
+
+/**
  * Generate a plan and persist it. Activates it as the user's current
  * mesocycle. Returns { ok, programmeId, error } so callers can react. On a
  * partial match it also returns { partial: true, missedCount, missedExercises }.
