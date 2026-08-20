@@ -20,8 +20,13 @@ jest.mock('../../supabase', () => ({
 }));
 
 const mockTombstoned = [];
+let mockTombstoneFails = false;
 jest.mock('../../database', () => ({
-  tombstoneAllCapabilityConstraints: async (uid) => { mockTombstoned.push(uid); return 3; },
+  tombstoneAllCapabilityConstraints: async (uid) => {
+    if (mockTombstoneFails) throw new Error('disk full');
+    mockTombstoned.push(uid);
+    return 3;
+  },
 }));
 
 const {
@@ -31,7 +36,7 @@ const {
 
 const U = 'user-consent';
 
-beforeEach(() => { mockStorage.clear(); mockRpcCalls.length = 0; mockTombstoned.length = 0; mockRpcResult = { error: null }; mockClientAvailable = true; });
+beforeEach(() => { mockStorage.clear(); mockRpcCalls.length = 0; mockTombstoned.length = 0; mockRpcResult = { error: null }; mockClientAvailable = true; mockTombstoneFails = false; });
 
 test('grant sets the local flag first and records the cloud audit row', async () => {
   await grantCapabilityConsent(U, { appVersion: '1.2.1', platform: 'android' });
@@ -69,4 +74,20 @@ test('withdraw records the revoke, clears the flag, and erases the lane - nothin
   expect(await getLocalCapabilityConsent(U)).toBe(false);
   expect(mockRpcCalls[0].args._granted).toBe(false);
   expect(mockTombstoned).toEqual([U]); // the capability rows, and only them
+});
+
+test('withdraw is erasure-first: a failed tombstone throws and changes NOTHING (red-team finding 1)', async () => {
+  await grantCapabilityConsent(U);
+  mockRpcCalls.length = 0;
+  mockTombstoneFails = true;
+  await expect(withdrawCapabilityConsent(U)).rejects.toThrow('disk full');
+  // Flag still true: the delete affordance stays on screen; no revoke was
+  // recorded over live rows. "Removed" can never be shown for a failure.
+  expect(await getLocalCapabilityConsent(U)).toBe(true);
+  expect(mockRpcCalls).toHaveLength(0);
+  // And the retry path works once the write succeeds.
+  mockTombstoneFails = false;
+  await withdrawCapabilityConsent(U);
+  expect(await getLocalCapabilityConsent(U)).toBe(false);
+  expect(mockTombstoned).toEqual([U]);
 });

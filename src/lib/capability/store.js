@@ -13,9 +13,12 @@
  * loses both together).
  */
 import {
-  createCapabilityConstraint, getCapabilityConstraints,
+  createCapabilityConstraint, createCapabilityConstraints,
+  getCapabilityConstraints,
   endCapabilityConstraint, endCapabilityEpisode, extendCapabilityEpisode,
   promoteCapabilityEpisode, supersedeCapabilityConstraint,
+  acknowledgeCapabilityEpisode,
+  getAllSessionConstraintEffectsForUser,
 } from '../database';
 import { getLocalCapabilityConsent } from '../consent/capabilityConsent';
 import { logError } from '../errorLog';
@@ -90,6 +93,21 @@ export async function createConstraint(userId, input, { nowMs = Date.now() } = {
   return createCapabilityConstraint(userId, input, { nowMs });
 }
 
+/**
+ * Multi-input create in ONE transaction (the multi-axis add flow): all
+ * rows land or none do, so the save error copy can honestly say nothing
+ * changed. Same consent gate as the single creator.
+ */
+export async function createConstraints(userId, inputs, { nowMs = Date.now() } = {}) {
+  if (!(await hasCapabilityConsent(userId))) {
+    throw new Error('capability_consent_required');
+  }
+  return createCapabilityConstraints(userId, inputs, { nowMs });
+}
+
+// ENDING is deliberately NOT consent-gated: the user must always be able
+// to stop a constraint applying, consent state notwithstanding - an end
+// only closes rows, it mints nothing.
 export async function endConstraint(userId, id, { nowMs = Date.now() } = {}) {
   return endCapabilityConstraint(userId, id, ENDED_REASON.USER_ENDED, { nowMs });
 }
@@ -98,12 +116,29 @@ export async function endEpisode(userId, groupId, { nowMs = Date.now(), reason =
   return endCapabilityEpisode(userId, groupId, reason, { nowMs });
 }
 
+// Extend lengthens live rows' planned end and promote mints new baseline
+// rows - both EXTEND the lane's future application, so they carry the
+// same write gate as create (red-team finding 8: a device that has
+// learned of withdrawal must not keep the lane alive for the account).
 export async function extendEpisode(userId, groupId, newEndsAtMs, { nowMs = Date.now() } = {}) {
+  if (!(await hasCapabilityConsent(userId))) {
+    throw new Error('capability_consent_required');
+  }
   return extendCapabilityEpisode(userId, groupId, newEndsAtMs, { nowMs });
 }
 
 export async function promoteEpisode(userId, groupId, { nowMs = Date.now() } = {}) {
+  if (!(await hasCapabilityConsent(userId))) {
+    throw new Error('capability_consent_required');
+  }
   return promoteCapabilityEpisode(userId, groupId, { nowMs });
+}
+
+// "Keep it active for now" (section 33.7's third AWAITING option). Not
+// consent-gated: it mints nothing and extends nothing - it stamps when
+// the user last answered the confirm, so the prompt cadence can decay.
+export async function acknowledgeEpisode(userId, groupId, { nowMs = Date.now() } = {}) {
+  return acknowledgeCapabilityEpisode(userId, groupId, { nowMs });
 }
 
 export async function supersedeConstraint(userId, id, newInput, { nowMs = Date.now() } = {}) {
@@ -111,6 +146,61 @@ export async function supersedeConstraint(userId, id, newInput, { nowMs = Date.n
     throw new Error('capability_consent_required');
   }
   return supersedeCapabilityConstraint(userId, id, newInput, { nowMs });
+}
+
+/**
+ * Article 20 portability export of the capability lane (CAP-20, R1 #22):
+ * structured, machine-readable JSON of every non-erased constraint row
+ * (ended history included) plus session effects and the consent state.
+ * Tombstoned rows are erased data and never appear. NOT consent-gated:
+ * reading your own data out is a data-subject right, not new processing.
+ * ISO 8601 timestamps for portability; epoch ms stays an internal format.
+ */
+export async function buildCapabilityExport(userId, { nowMs = Date.now() } = {}) {
+  if (!userId) return null;
+  const iso = (ms) => (ms == null ? null : new Date(ms).toISOString());
+  const rows = await getCapabilityConstraints(userId, { includeEnded: true });
+  const effects = (await getAllSessionConstraintEffectsForUser(userId))
+    .filter((e) => e.deletedAt == null);
+  const flag = await getLocalCapabilityConsent(userId);
+  return {
+    format: 'volyume.capability-export',
+    version: 1,
+    exported_at: iso(nowMs),
+    consent: {
+      // true/false = the flag this device holds; null = no local record
+      // (state then follows the rows, per the store's derivation rule).
+      granted_on_this_device: flag === true ? true : flag === false ? false : null,
+    },
+    constraints: rows.map((r) => ({
+      id: r.id,
+      role: r.role,
+      source: r.source,
+      rule_kind: r.ruleKind,
+      rule_value: r.ruleValue,
+      laterality: r.laterality ?? null,
+      starts_at: iso(r.startsAt),
+      ends_at: iso(r.endsAt),
+      state: r.state,
+      ended_at: iso(r.endedAt),
+      ended_reason: r.endedReason ?? null,
+      episode_group_id: r.episodeGroupId ?? null,
+      acknowledged_at: iso(r.acknowledgedAt),
+      created_at: iso(r.createdAt),
+      updated_at: iso(r.updatedAt),
+    })),
+    session_effects: effects.map((e) => {
+      let parsed = null;
+      try { parsed = JSON.parse(e.effectsJson); } catch (_) { parsed = e.effectsJson ?? null; }
+      return {
+        id: e.id,
+        workout_id: e.workoutId,
+        effects: parsed,
+        created_at: iso(e.createdAt),
+        updated_at: iso(e.updatedAt),
+      };
+    }),
+  };
 }
 
 export { constraintStatus };

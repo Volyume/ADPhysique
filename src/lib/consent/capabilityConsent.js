@@ -76,20 +76,22 @@ export async function grantCapabilityConsent(userId, meta = {}) {
 }
 
 /**
- * Withdraw: revoke record + local flag off + EVERY capability row
- * tombstoned so the erasure propagates to the user's other devices
- * (CAP-20; the cloud purge removes tombstones on its standing schedule).
- * The account and the health-data consent are untouched.
+ * Withdraw: EVERY capability row tombstoned FIRST, then flag off, then
+ * the revoke record (which queues itself if offline). Erasure-first is
+ * the fail-closed order: if the tombstone write throws, this THROWS -
+ * the flag stays true, the delete affordance stays on screen and the
+ * caller reports the failure, rather than "Removed" over live rows
+ * (CAP-20 erasable; red-team finding 1). The tombstones propagate the
+ * erasure to the user's other devices; the cloud purge removes them on
+ * its standing schedule. Account + health-data consent untouched.
  */
 export async function withdrawCapabilityConsent(userId, meta = {}) {
   if (!userId) return false;
+  // eslint-disable-next-line global-require
+  const { tombstoneAllCapabilityConstraints } = require('../database');
+  await tombstoneAllCapabilityConstraints(userId); // throws on failure
   await _setLocalFlag(userId, false);
   await _recordCloud(false, meta);
-  try {
-    // eslint-disable-next-line global-require
-    const { tombstoneAllCapabilityConstraints } = require('../database');
-    await tombstoneAllCapabilityConstraints(userId);
-  } catch (e) { logError('capabilityConsent.erase', e, {}); }
   return true;
 }
 

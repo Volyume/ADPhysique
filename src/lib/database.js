@@ -2642,6 +2642,7 @@ const SCHEMA_MIGRATIONS = [
       ended_at INTEGER,
       ended_reason TEXT CHECK (ended_reason IN ('expired','user_ended','superseded','promoted')),
       episode_group_id TEXT,
+      acknowledged_at INTEGER,
       created_at INTEGER NOT NULL,
       updated_at INTEGER NOT NULL,
       deleted_at INTEGER
@@ -6530,6 +6531,13 @@ export const BACKUP_TABLES = [
   'progress_photo_meta',
   'progress_scan_sessions',
   'progress_scan_assets',
+  // CC26 capability lane (CAP-20: exportable): the user's own Article 9
+  // capability records travel in the full local export like the food domain
+  // above, and restore with it. Restored rows re-imply consent by the
+  // store's derivation rule, which is the intended reading of restoring
+  // your own data; withdrawal afterwards still tombstones everywhere.
+  'capability_constraints',
+  'session_constraint_effects',
 ];
 
 // Returns { schemaVersion, tables: { tableName: [rawRows...] } }.
@@ -10735,7 +10743,7 @@ function _mapCapabilityRow(r) {
     ruleKind: r.rule_kind, ruleValue: r.rule_value, laterality: r.laterality,
     startsAt: r.starts_at, endsAt: r.ends_at, state: r.state,
     endedAt: r.ended_at, endedReason: r.ended_reason,
-    episodeGroupId: r.episode_group_id,
+    episodeGroupId: r.episode_group_id, acknowledgedAt: r.acknowledged_at,
     createdAt: r.created_at, updatedAt: r.updated_at, deletedAt: r.deleted_at,
   };
 }
@@ -10765,6 +10773,41 @@ export async function createCapabilityConstraint(userId, input = {}, { nowMs = D
   );
   _scheduleSync();
   return id;
+}
+
+/**
+ * Create a set of constraints in ONE transaction (the multi-axis add
+ * flow): all rows land or none do, so a mid-set failure can honestly
+ * report "nothing was changed" (red-team finding 3). Inputs are all
+ * validated BEFORE any write.
+ */
+export async function createCapabilityConstraints(userId, inputs = [], { nowMs = Date.now() } = {}) {
+  if (!userId || !inputs.length) return [];
+  // eslint-disable-next-line global-require
+  const { validateConstraintInput } = require('./capability/model');
+  for (const input of inputs) {
+    const verdict = validateConstraintInput(input);
+    if (!verdict.ok) throw new Error(`capability_constraint_invalid:${verdict.reason}`);
+  }
+  const d = await db();
+  const ids = [];
+  await runInTransaction(d, async () => {
+    for (const input of inputs) {
+      const id = uid();
+      await d.runAsync(
+        `INSERT INTO capability_constraints
+           (id, user_id, role, source, rule_kind, rule_value, laterality,
+            starts_at, ends_at, state, episode_group_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`,
+        [id, userId, input.role, input.source, input.ruleKind, input.ruleValue,
+          input.laterality ?? null, input.startsAt, input.endsAt ?? null,
+          input.episodeGroupId ?? null, nowMs, nowMs],
+      );
+      ids.push(id);
+    }
+  });
+  _scheduleSync();
+  return ids;
 }
 
 /** All non-deleted rows for the user, newest first. */
@@ -10831,6 +10874,28 @@ export async function extendCapabilityEpisode(userId, episodeGroupId, newEndsAtM
         SET ends_at = ?, updated_at = ?
       WHERE user_id = ? AND episode_group_id = ? AND state = 'active' AND deleted_at IS NULL`,
     [newEndsAtMs ?? null, nowMs, userId, episodeGroupId],
+  );
+  if (res?.changes) _scheduleSync();
+  return res?.changes ?? 0;
+}
+
+/**
+ * "Keep it active for now" - the third AWAITING option (ARCHITECTURE
+ * section 33.7): an explicit continue that stamps the cadence anchor
+ * WITHOUT changing the planned end. The prompt cadence that reads
+ * acknowledged_at arrives with the coach/notification campaign; the
+ * anchor is durable state, so it lands with the schema (CC26) and syncs
+ * like every other capability field. Constraints keep applying
+ * throughout (fail-safe unchanged); never auto-ends.
+ */
+export async function acknowledgeCapabilityEpisode(userId, episodeGroupId, { nowMs = Date.now() } = {}) {
+  if (!userId || !episodeGroupId) return 0;
+  const d = await db();
+  const res = await d.runAsync(
+    `UPDATE capability_constraints
+        SET acknowledged_at = ?, updated_at = ?
+      WHERE user_id = ? AND episode_group_id = ? AND state = 'active' AND deleted_at IS NULL`,
+    [nowMs, nowMs, userId, episodeGroupId],
   );
   if (res?.changes) _scheduleSync();
   return res?.changes ?? 0;
@@ -10949,12 +11014,13 @@ export async function insertCapabilityConstraintFromCloud(localUserId, row) {
     `INSERT OR REPLACE INTO capability_constraints
        (id, user_id, role, source, rule_kind, rule_value, laterality,
         starts_at, ends_at, state, ended_at, ended_reason, episode_group_id,
-        created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        acknowledged_at, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [row.id, localUserId, row.role, row.source, row.rule_kind, row.rule_value,
       row.laterality ?? null, _tsToMs(row.starts_at), _tsToMs(row.ends_at),
       row.state, _tsToMs(row.ended_at), row.ended_reason ?? null,
-      row.episode_group_id ?? null, _tsToMs(row.created_at) ?? cloudUpdated,
+      row.episode_group_id ?? null, _tsToMs(row.acknowledged_at),
+      _tsToMs(row.created_at) ?? cloudUpdated,
       cloudUpdated, _tsToMs(row.deleted_at)],
   );
   return true;

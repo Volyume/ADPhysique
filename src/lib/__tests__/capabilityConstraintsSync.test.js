@@ -57,6 +57,7 @@ beforeAll(async () => { await db(); });
 const ARCH_FIELDS = [
   'id', 'userId', 'role', 'source', 'ruleKind', 'ruleValue', 'laterality',
   'startsAt', 'endsAt', 'state', 'endedAt', 'endedReason', 'episodeGroupId',
+  'acknowledgedAt', // section 33.7 cadence anchor - must survive transit
   'createdAt', 'updatedAt', 'deletedAt',
 ];
 

@@ -14,12 +14,12 @@
  * learning - those campaigns arrive later; this screen manages state.
  */
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, AccessibilityInfo } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import useTheme from '../hooks/useTheme';
-import { type } from '../styles/theme';
+import { type, spacing, radius } from '../styles/theme';
 import { useToast } from '../components/Toast';
 import { appAlert } from '../components/AppAlert';
 import PressableCard from '../components/PressableCard';
@@ -28,9 +28,12 @@ import { logError } from '../lib/errorLog';
 import {
   SettingsPage, SettingRow, SectionHeader,
 } from '../components/SettingsPrimitives';
+import * as FileSystem from 'expo-file-system/legacy';
+import * as Sharing from 'expo-sharing';
 import {
-  loadCapabilityState, createConstraint, endConstraint, endEpisode,
-  extendEpisode, promoteEpisode, hasCapabilityConsent,
+  loadCapabilityState, createConstraints, endConstraint, endEpisode,
+  extendEpisode, promoteEpisode, acknowledgeEpisode, hasCapabilityConsent,
+  buildCapabilityExport,
 } from '../lib/capability/store';
 import {
   grantCapabilityConsent, withdrawCapabilityConsent,
@@ -70,7 +73,16 @@ export default function HowYouTrainScreen() {
 
   const refresh = useCallback(() => {
     if (!userId) return;
-    loadCapabilityState(userId).then(setState).catch(() => {});
+    loadCapabilityState(userId).then((st) => {
+      setState(st);
+      // accessibilityLiveRegion is Android-only; announce the fail-closed
+      // notice on iOS too (ARCHITECTURE section 27 names both mechanisms).
+      if (st.unavailable) {
+        AccessibilityInfo.announceForAccessibility(
+          'Volyume could not read this right now. Nothing has changed.',
+        );
+      }
+    }).catch(() => {});
     hasCapabilityConsent(userId).then(setConsented).catch(() => {});
   }, [userId]);
   useFocusEffect(refresh);
@@ -111,18 +123,17 @@ export default function HowYouTrainScreen() {
     const groupId = isEpisode ? uid() : null;
     const startsAt = now - (draft.startDays ?? 0) * DAY_MS;
     const endsAt = isEpisode && draft.endDays != null ? now + draft.endDays * DAY_MS : null;
-    for (const axis of draft.axes) {
-      // eslint-disable-next-line no-await-in-loop
-      await createConstraint(userId, {
-        role: draft.role,
-        source: draft.clinician ? CONSTRAINT_SOURCE.CLINICIAN_REPORTED : CONSTRAINT_SOURCE.SELF,
-        ruleKind: CONSTRAINT_RULE_KIND.DEMAND,
-        ruleValue: axis,
-        startsAt,
-        endsAt,
-        episodeGroupId: groupId,
-      }, { nowMs: now });
-    }
+    // One transaction for the whole set: all axes land or none do, so the
+    // save failure copy can honestly say nothing was changed.
+    await createConstraints(userId, draft.axes.map((axis) => ({
+      role: draft.role,
+      source: draft.clinician ? CONSTRAINT_SOURCE.CLINICIAN_REPORTED : CONSTRAINT_SOURCE.SELF,
+      ruleKind: CONSTRAINT_RULE_KIND.DEMAND,
+      ruleValue: axis,
+      startsAt,
+      endsAt,
+      episodeGroupId: groupId,
+    })), { nowMs: now });
     setAdding(null); setDraft(null);
     toast.show(isEpisode ? 'Saved. Volyume will treat this as temporary.' : 'Saved. This is part of how you train.');
     refresh();
@@ -161,12 +172,48 @@ export default function HowYouTrainScreen() {
         text: 'Delete and turn off',
         style: 'destructive',
         onPress: async () => {
-          await withdrawCapabilityConsent(userId, {});
-          toast.show('Removed. You can set this up again any time.');
+          try {
+            await withdrawCapabilityConsent(userId, {});
+            toast.show('Removed. You can set this up again any time.');
+          } catch (e) {
+            logError('HowYouTrain.withdraw', e);
+            toast.show('Could not delete right now. Nothing was removed - try again.', { variant: 'error' });
+          }
           refresh();
         },
       },
     ]);
+  };
+
+  // Article 20 portability (CAP-20, R1 #22): a structured JSON file of
+  // everything in this lane, via the share sheet. Not consent-gated -
+  // reading your own data out is a right, not new processing. No row
+  // content goes to logs on failure.
+  const exportCapabilityData = async () => {
+    try {
+      const payload = await buildCapabilityExport(userId);
+      if (!payload || (!payload.constraints.length && !payload.session_effects.length)) {
+        toast.show('Nothing to export yet.');
+        return;
+      }
+      const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const fileUri = `${FileSystem.cacheDirectory}volyume_capability_${date}.json`;
+      await FileSystem.writeAsStringAsync(fileUri, JSON.stringify(payload, null, 2), {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      const canShare = await Sharing.isAvailableAsync();
+      if (canShare) {
+        await Sharing.shareAsync(fileUri, {
+          mimeType: 'application/json',
+          dialogTitle: 'Export capability information',
+        });
+      } else {
+        toast.show('Export saved.');
+      }
+    } catch (e) {
+      logError('HowYouTrain.exportCapabilityData', e);
+      toast.show('Could not export right now. Try again later.', { variant: 'error' });
+    }
   };
 
   const endBaselineRow = (row) => {
@@ -269,7 +316,7 @@ export default function HowYouTrainScreen() {
   return (
     <SettingsPage title="How you train">
       {state.unavailable ? (
-        <Text style={[styles.hint, { color: t.colors.textSecondary, margin: 16 }]}
+        <Text style={[styles.hint, { color: t.colors.textSecondary, margin: spacing.lg }]}
           accessibilityLiveRegion="polite">
           Volyume could not read this right now. Nothing has changed; pull back in a moment.
         </Text>
@@ -277,7 +324,7 @@ export default function HowYouTrainScreen() {
 
       <SectionHeader title="Your setup" />
       {state.baseline.length === 0 && !adding ? (
-        <Text style={[styles.hint, { color: t.colors.textSecondary, marginHorizontal: 16 }]}>
+        <Text style={[styles.hint, { color: t.colors.textSecondary, marginHorizontal: spacing.lg }]}>
           Nothing here yet. If there is anything Volyume should build your training around, add it -
           it stays part of your normal training, with full progression and coaching.
         </Text>
@@ -289,14 +336,14 @@ export default function HowYouTrainScreen() {
           rightElement={(
             <PressableCard onPress={() => endBaselineRow(row)} accessibilityRole="button"
               accessibilityLabel={`Remove ${demandLabel(row.ruleValue)} from your setup`}>
-              <Text style={{ color: t.colors.textSecondary, padding: 8 }}>Remove</Text>
+              <Text style={{ ...type.label, color: t.colors.textSecondary, padding: spacing.sm }}>Remove</Text>
             </PressableCard>
           )} />
       ))}
 
       <SectionHeader title="Temporary, right now" />
       {state.episodes.length === 0 && !adding ? (
-        <Text style={[styles.hint, { color: t.colors.textSecondary, marginHorizontal: 16 }]}>
+        <Text style={[styles.hint, { color: t.colors.textSecondary, marginHorizontal: spacing.lg }]}>
           No temporary changes at the moment.
         </Text>
       ) : null}
@@ -306,6 +353,11 @@ export default function HowYouTrainScreen() {
           <View style={styles.episodeActions}>
             <Choice label="It has ended" onPress={() => confirmEndEpisode(ep)} t={t} compact />
             <Choice label="A while longer" onPress={async () => { haptics.selection(); await extendEpisode(userId, ep.groupId, Date.now() + 14 * DAY_MS); toast.show('Extended by two weeks.'); refresh(); }} t={t} compact />
+            {ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION ? (
+              // Section 33.7's third option: an explicit continue that resets
+              // the ask cadence without committing to a new end date.
+              <Choice label="Still going for now" onPress={async () => { haptics.selection(); await acknowledgeEpisode(userId, ep.groupId); toast.show('Noted. Volyume will keep treating it as temporary.'); refresh(); }} t={t} compact />
+            ) : null}
             <Choice label="This is how I train now" onPress={() => confirmPromote(ep)} t={t} compact />
           </View>
         </View>
@@ -330,6 +382,9 @@ export default function HowYouTrainScreen() {
       {consented ? (
         <>
           <SectionHeader title="Your data" />
+          <SettingRow icon="download" label="Export capability information"
+            sub="A readable file of everything you have added here"
+            onPress={exportCapabilityData} showArrow={false} />
           <SettingRow icon="trash" label="Delete capability information" destructive
             sub="Removes everything here on all devices and turns the feature off"
             onPress={confirmWithdraw} showArrow={false} />
@@ -360,13 +415,23 @@ function Choice({ label, sub, onPress, t, selected, primary, disabled, compact }
 }
 
 const styles = StyleSheet.create({
-  card: { borderRadius: 16, padding: 16, margin: 16 },
-  q: { ...type.h3, marginBottom: 8 },
-  body: { ...type.body, marginBottom: 12 },
-  hint: { ...type.caption, marginBottom: 8 },
-  choice: { borderWidth: 1, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 14, marginTop: 8, minHeight: 48, justifyContent: 'center' },
-  choiceCompact: { flexGrow: 1, marginRight: 8 },
+  card: { borderRadius: radius.lg, padding: spacing.lg, margin: spacing.lg },
+  q: { ...type.h3, marginBottom: spacing.sm },
+  body: { ...type.body, marginBottom: spacing.md },
+  hint: { ...type.caption, marginBottom: spacing.sm },
+  choice: {
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    // WCAG 2.2 minimum touch target (ARCHITECTURE section 27); xxxl is the
+    // scale's 48.
+    minHeight: spacing.xxxl,
+    justifyContent: 'center',
+  },
+  choiceCompact: { flexGrow: 1, marginRight: spacing.sm },
   choiceLabel: { ...type.label },
-  episodeActions: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, paddingBottom: 8 },
-  addWrap: { paddingHorizontal: 16, paddingTop: 8 },
+  episodeActions: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  addWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
 });

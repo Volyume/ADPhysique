@@ -51,7 +51,10 @@ const {
   tombstoneAllCapabilityConstraints,
 } = require('../../database');
 const {
-  loadCapabilityState, createConstraint, hasCapabilityConsent,
+  loadCapabilityState, createConstraint, createConstraints,
+  extendEpisode, promoteEpisode, acknowledgeEpisode,
+  endEpisode: storeEndEpisode,
+  buildCapabilityExport, hasCapabilityConsent,
 } = require('../store');
 
 const U = 'user-cc26-store';
@@ -175,4 +178,76 @@ test('consent withdrawal tombstones every row so the erasure propagates (CAP-20)
   const raw = await conn.getFirstAsync(
     'SELECT COUNT(*) AS n FROM capability_constraints WHERE user_id = ? AND deleted_at IS NOT NULL', [U]);
   expect(raw.n).toBeGreaterThan(0); // tombstoned, not silently gone: sync carries the delete
+});
+
+// ── Red-team round (findings 3/6/8) + section 33.7 + Article 20 export ──
+
+const U2 = 'user-cc26-batch';
+
+test('multi-axis create is atomic: one bad input and nothing lands (finding 3)', async () => {
+  mockLocalConsent.value = true;
+  await expect(createConstraints(U2, [
+    { ...baseInput, ruleValue: 'standing' },
+    { ...baseInput, role: 'injured' }, // invalid - must sink the whole set
+  ], { nowMs: T0 })).rejects.toThrow('capability_constraint_invalid:role');
+  const count = await conn.getFirstAsync(
+    'SELECT COUNT(*) AS n FROM capability_constraints WHERE user_id = ?', [U2]);
+  expect(count.n).toBe(0); // "Nothing was changed" is TRUE
+  const ids = await createConstraints(U2, [
+    { ...baseInput, ruleValue: 'standing' },
+    { ...baseInput, ruleValue: 'impact' },
+  ], { nowMs: T0 });
+  expect(ids).toHaveLength(2);
+});
+
+test('extend and promote carry the write gate; ending never does (finding 8)', async () => {
+  await createCapabilityConstraint(U2, episodeInput({ episodeGroupId: 'grp-gate', ruleValue: 'balance_high' }), { nowMs: T0 });
+  mockLocalConsent.value = false; // device has learned of withdrawal
+  await expect(extendEpisode(U2, 'grp-gate', T0 + 30 * DAY)).rejects.toThrow('capability_consent_required');
+  await expect(promoteEpisode(U2, 'grp-gate')).rejects.toThrow('capability_consent_required');
+  // Ending must ALWAYS work, consent state notwithstanding.
+  const ended = await storeEndEpisode(U2, 'grp-gate', { nowMs: T0 + DAY });
+  expect(ended).toBe(1);
+  mockLocalConsent.value = true;
+});
+
+test('"keep it active for now" stamps the cadence anchor and nothing else (section 33.7)', async () => {
+  await createCapabilityConstraint(U2, episodeInput({ episodeGroupId: 'grp-ack', ruleValue: 'floor_access' }), { nowMs: T0 });
+  const late = T0 + 30 * DAY; // past the planned end: AWAITING
+  let state = await loadCapabilityState(U2, { nowMs: late });
+  expect(state.episodes.find(e => e.groupId === 'grp-ack').status).toBe('awaiting_confirmation');
+  const n = await acknowledgeEpisode(U2, 'grp-ack', { nowMs: late });
+  expect(n).toBe(1);
+  const row = (await getCapabilityConstraints(U2)).find(r => r.episodeGroupId === 'grp-ack');
+  expect(row.acknowledgedAt).toBe(late);
+  expect(row.endsAt).toBe(T0 + 14 * DAY); // planned end untouched
+  // Never auto-ends: still awaiting, constraints still apply.
+  state = await loadCapabilityState(U2, { nowMs: late + DAY });
+  expect(state.episodes.find(e => e.groupId === 'grp-ack').status).toBe('awaiting_confirmation');
+});
+
+test('the Article 20 export is structured, ISO-stamped and excludes erased rows (CAP-20)', async () => {
+  const out = await buildCapabilityExport(U2, { nowMs: T0 + 60 * DAY });
+  expect(out.format).toBe('volyume.capability-export');
+  expect(out.constraints.length).toBeGreaterThanOrEqual(3); // active pair + lifecycle rows
+  const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+  for (const c of out.constraints) {
+    expect(c.created_at).toMatch(iso);
+    expect(c.starts_at).toMatch(iso);
+  }
+  expect(out.constraints.some(c => c.state === 'ended')).toBe(true); // history is the user's data too
+  expect(Array.isArray(out.session_effects)).toBe(true);
+  // U's rows were all tombstoned above: erased data never exports.
+  const erased = await buildCapabilityExport(U, { nowMs: T0 + 60 * DAY });
+  expect(erased.constraints).toHaveLength(0);
+});
+
+test('a read failure reports unavailable and fabricates nothing (section 9.6 counterpart)', async () => {
+  // LAST test: dropping the table makes every later read impossible.
+  await conn.execAsync('ALTER TABLE capability_constraints RENAME TO capability_constraints_gone');
+  const state = await loadCapabilityState(U2, { nowMs: T0 });
+  expect(state.unavailable).toBe(true);
+  expect(state.baseline).toHaveLength(0);
+  expect(state.episodes).toHaveLength(0);
+  await conn.execAsync('ALTER TABLE capability_constraints_gone RENAME TO capability_constraints');
 });

@@ -43,6 +43,9 @@ create table if not exists public.capability_constraints (
   ended_at         timestamptz,
   ended_reason     text check (ended_reason in ('expired','user_ended','superseded','promoted')),
   episode_group_id text,
+  -- Section 33.7 cadence anchor: when the user last explicitly continued
+  -- an AWAITING episode ("keep it active for now").
+  acknowledged_at  timestamptz,
   created_at       timestamptz not null default now(),
   updated_at       timestamptz not null default now(),
   deleted_at       timestamptz,

@@ -52,6 +52,7 @@ export async function pushCapabilityConstraints(sb, { userId, localUserId } = {}
       ended_at: _toIso(c.endedAt),
       ended_reason: c.endedReason ?? null,
       episode_group_id: c.episodeGroupId ?? null,
+      acknowledged_at: _toIso(c.acknowledgedAt),
       created_at: _toIso(c.createdAt) ?? nowIso,
       updated_at: _toIso(c.updatedAt) ?? nowIso,
       deleted_at: _toIso(c.deletedAt),
