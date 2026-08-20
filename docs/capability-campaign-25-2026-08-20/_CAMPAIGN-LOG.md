@@ -129,3 +129,13 @@ R5 population-specific evidence (SCI, wheelchair users generally, upper/
 lower limb difference, CP, MS, Parkinson's, stroke asymmetry, short
 stature; verify the amendment's claimed 2026 CMO refresh and 2025–26
 Activity Alliance findings); R6 competitor disability-support matrix.
+
+- 2026-08-20 — R6 competitor matrix COMPLETE (research/R6-competitor-
+  disability-matrix.md, 630 lines, 15 products, vendor-verbatim). Headlines
+  for synthesis: no plan-generating app has a persistent capability
+  profile (Alpha Progression's always-enabled/disabled list is the only
+  analogue); seated/no-floor programme GENERATION absent across all 11
+  programming products; dedicated adaptive space thin and partly
+  trust-damaging (Wheel Fit); every credible disability claim carries a
+  named adaptive-athlete credential; no flare-mode feature exists
+  anywhere; reintroduction is a binary toggle industry-wide.
