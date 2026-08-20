@@ -170,3 +170,15 @@ Activity Alliance findings); R6 competitor disability-support matrix.
   not superior to other active interventions; "wheelchair users" is not
   an evidence grouping (SCI ~ a tenth of UK users). MS Society 403'd -
   verified via MS Trust instead; LimbPower PDF unread (existence only).
+
+- 2026-08-20 — AUDIT L evidence-consumer sweep COMPLETE (audits/AUDIT-L-
+  evidence-consumers.md, 549 lines). ~186 distinct production reader
+  sites across 17 data families. 17 hidden consumers incl. share cards
+  (greatWeek.js), CSV export, home cards (FatigueTrendCard, CoachBrief,
+  ReadinessCards), widget writer, notification scheduler,
+  CascadeGateScreen (billing copy reads weekly PR count!), partner
+  weekSignalWriter, food-domain recompReframe (reads e1RM trend).
+  ONE direct-SQL bypass: importExternal.js raw INSERTs into workouts/
+  workout_sets/exercises. Dead-accessor list recorded (incl. the whole
+  insights pipeline, guard-tested dead). Cross-cutting: 16/17 families
+  sync via legacy sync.js; only weekly_checkins is on the new registry.
