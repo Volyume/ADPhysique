@@ -769,7 +769,7 @@ queue paused here for the founder review per D55.
 
 ## 1. IN FLIGHT
 
-### CAPABILITY CAMPAIGN 25 (CC25) — capability-aware, disability-inclusive, restriction & injury-aware training intelligence. IN FLIGHT (opened 2026-08-20).
+### CAPABILITY CAMPAIGN 25 (CC25) — capability-aware, disability-inclusive, restriction & injury-aware training intelligence. ARCHITECTURE COMPLETE, GATE PASSED, MERGED TO MAIN (2026-08-20). CC26 (foundations build) is NEXT UP from the roadmap.
 
 **Founder order 2026-08-20** (master brief in chat; architecture campaign
 first, implementation campaigns CC26+ only after its completion gate).
@@ -803,11 +803,25 @@ Section 2 inviolables untouched. Campaign folder:
 stage plan). Branch `claude/build-name-prompt-apple-auth-fp49by` (== main
 at open), merge-to-main at green landings per the 2026-07-30 order.
 
-**RECOVERY PATH:** Wave 1 agents are read-only except one report file each
-under the campaign folder (`audits/`, `research/`); agents never commit/
-push/stash. Dead session ⇒ re-read founder brief + `_CAMPAIGN-LOG.md`;
-missing report file = relaunch that audit; reports commit to the branch as
-reviewed; no production code changes exist during Wave 1.
+**STATE (2026-08-20 close):** Wave 1 (8 audits + 6 research) banked;
+consolidated map; lead-written ARCHITECTURE.md (1,408 lines incl. the
+§33 revision round), DECISION-REGISTER.md, ROADMAP-CC26-PLUS.md,
+EXTERNAL-CONSULTATION-QUEUE.md — all in
+`docs/capability-campaign-25-2026-08-20/`. Both budgeted red teams run
+and adjudicated (30 attacks + 14 lead self-attacks; every accepted item
+a binding amendment). Completion gate PASSED (record in
+`_CAMPAIGN-LOG.md`). Cost governance: 0 pre-synthesis subagents, 2
+red-team sonnet agents, ledger in the folder.
+**FOUNDER-SIDE (section 3 material):** (1) CC-F1 counsel + DPIA
+engagement (LEG register); (2) CC-F2 per-side logging reopen question
+(recommend NO); (3) CC-F6 clinical reviewer engagement (CLIN register);
+(4) CC-F8 free-tier generation question (recommend not v1); (5) run the
+Checkpoint A prompts in EXTERNAL-CONSULTATION-QUEUE.md at will; (6)
+PD-1..9 pre-existing defects recorded in the register for triage —
+notably PD-1 (adapted-MAV per-session unit) and PD-2 (Engine Log's
+false rotation claim).
+**RECOVERY/RESUME:** next session starts CC26 from
+ROADMAP-CC26-PLUS.md; everything needed is in the campaign folder.
 
 
 ### CAMPAIGN 6: RETURNING USERS, LONG-TERM PERSONALISATION, LAPSES,

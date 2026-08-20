@@ -233,3 +233,25 @@ map, then synthesis.
   eligibility-derived, not UI-path-keyed; AWAITING gains a quiet forcing
   cadence (S6); laterality×bilateral eligibility defined; promotion race
   = union-safe + idempotent group marker. Revision lands after RT-2.
+
+## COMPLETION GATE — PASSED 2026-08-20 (architecture phase)
+
+Walked against the founder brief's gate list, every line: pathways
+mapped (§1 + eight audits); every known evidence consumer classified
+(§7, cross-checked against AUDIT-L's sweep, misses hunted by RT-1 and
+closed in §33.6); final terminology (§2.5); explicit precedence (§4,
+§33.8); baseline/temporary semantics (role axis); disability as normal
+baseline (CAP-1/2, §33 role-scoping); provenance (§6, §33.10);
+ontology justified per axis (§8); unknown-safe (CAP-8); no-solution
+state (CAP-9, §33.11/14); reversible adaptation (§14); effective plan
+cannot silently become baseline (CAP-11/12; RT-1 attack surface 4
+held); volume (§15); adherence (§18); asymmetry deliberately answered
+(§16, CC-F2, CC-R17); chronic (§21); reintroduction (§23);
+temporary→durable (§24); privacy (§26 + R1 register); sync/offline
+(§28 + §33.4/9/10); clinical/legal unknowns separated (registers);
+red-team attacks resolved (§33, adjudication record); campaign
+boundaries justified (ROADMAP). Amendment standard: Standard A
+architecture complete; Standard B carried as designed roadmap +
+honest all-NO marketing matrix + validation plan, per Amendment §32's
+own phasing. Implementation (CC26) starts only on the next session's
+capacity or founder go — the architecture is merge-ready now.

@@ -1,6 +1,21 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-08-20 — CAPABILITY CAMPAIGN 25 (CC25): ARCHITECTURE COMPLETE, ON MAIN ★
+
+The capability/disability-inclusion workstream (founder master brief +
+Amendment 1, 2026-08-20) completed its architecture campaign under the
+same-day cost-governance order. Everything lives in
+`docs/capability-campaign-25-2026-08-20/`: ARCHITECTURE.md (incl. §33
+red-team revisions), DECISION-REGISTER.md (laws CAP-1..22, decisions,
+rejections, CLIN/LEG/founder registers), ROADMAP-CC26-PLUS.md (CC26-32
++ Amendment deliverables), STATUS/COST ledgers, 8 audits, 6 research
+reports, 2 red-team reports. Gate passed; board entry updated;
+**next session begins CC26 (capability foundations) from the roadmap.**
+Founder-side asks are on the board (CC-F1/2/6/8, Checkpoint A prompts,
+PD-1..9 triage).
+
+===============================================================================
 ## ★ FRESH SESSION START HERE (2026-08-13, after Campaign 15) ★
 
 **Campaigns 1-15 are CLOSED. Main is `0f7f0775`** (merge commit "Merge
