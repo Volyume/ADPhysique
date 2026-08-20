@@ -68,10 +68,14 @@ None. ListAgents: no reachable agents. All 18 pre-order launches accounted for: 
 
 ## CC26 status (2026-08-20)
 
-BUILT AND GATED THIS SESSION — capability foundations end to end and
-inert: local schema + lifecycle, cloud files 145/146/147 (NOT applied,
-CC-F7), registry sync both directions, granular consent lane +
-erasure, How you train surface (demand add flow per CC-D27), CAP-19/
-CAP-4 guards, scrub coverage, 105 targeted tests green. Selection,
-generation, coaching and learning behaviour UNCHANGED by construction
-(guard-tested). Next: CC27 per ROADMAP-CC26-PLUS.md, on founder go.
+BUILT, RED-TEAMED AND GATED THIS SESSION — capability foundations end
+to end and inert: local schema + lifecycle (incl. the section 33.7
+acknowledge anchor), cloud files 145/146/147 (NOT applied, CC-F7;
+executed twice each against a local scratch Postgres), registry sync
+both directions, granular consent lane + erasure-first withdrawal,
+How you train surface (demand add flow per CC-D27; Article 20 JSON
+export; BACKUP_TABLES coverage), CAP-19/CAP-4 guards, scrub coverage.
+One Sonnet red team: 8 findings, all adjudicated and landed
+(record in _CAMPAIGN-LOG.md). Selection, generation, coaching and
+learning behaviour UNCHANGED by construction (guard-tested).
+Next: CC27 per ROADMAP-CC26-PLUS.md, on founder go.

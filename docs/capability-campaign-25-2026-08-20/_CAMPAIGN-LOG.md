@@ -310,3 +310,46 @@ divergence rationale).
 DEFECT NOTE (mention, don't fix): `migrate_144` has no README ledger
 row (pre-existing, App Review workstream); gap recorded in the README
 rather than back-filled.
+
+### CC26 red team + adjudication (2026-08-20)
+
+One Sonnet agent over the full CC26 diff + laws (the CC26 budget's
+single bounded slot; tier justification in the cost ledger). Swept all
+ten briefed surfaces; five came back clean (tier gating, lane
+separation, sync convergence, migrations, engine inertness - each
+independently re-verified by the agent beyond the guard tests).
+Findings and rulings (all landed same session, commit 2e5450a):
+
+1. BLOCKER, ACCEPTED - withdraw-and-erase could show "Removed" over
+   live rows (tombstone failure only logged; delete affordance gone).
+   Fixed erasure-first: tombstone throws → flag untouched → screen
+   reports failure. Regression test pins it.
+2. BLOCKER, ACCEPTED (convergent) - capability tables missing from
+   BACKUP_TABLES (Art 20). The lead found and fixed this independently
+   minutes before the report landed; the dedicated JSON export from
+   the data controls landed with it.
+3. MAJOR, ACCEPTED - multi-axis save was per-row; "nothing was
+   changed" could be false. Now one validated transaction.
+4. MAJOR, ACCEPTED - raw spacing/radius literals; all theme tokens now.
+5. MINOR, ACCEPTED - unavailable notice now announced on iOS too.
+6. MINOR, ACCEPTED - the section 9.6 unavailable-path counterpart test
+   now exists (read failure → unavailable:true, nothing fabricated).
+7. MINOR, ACCEPTED with scope ruling - section 33.7's third AWAITING
+   option ("keep it active for now") + its durable cadence anchor
+   (acknowledged_at, local + cloud 145 + sync + export) land in CC26;
+   the day-0/day-7 prompt surfaces and settings-badge decay read that
+   anchor and land with the coach/notification campaign (CC30 lane).
+   Never-auto-ends pinned by test.
+8. MINOR, ACCEPTED with split ruling - extend and promote now carry
+   the consent write gate (they keep the lane alive); ending remains
+   deliberately UNGATED - stopping data collection must never be
+   blocked by a consent check. Both halves pinned by test.
+
+Migration local-execution testing (beyond the brief): the three cloud
+files were executed twice each against a scratch Postgres 16 cluster
+with a stubbed auth schema - idempotency, refuse-stale behaviour,
+CHECK enforcement, consent RPC round-trip and delete_user_data reach
+all proven. This caught one further defect the code review had missed:
+147 re-added consent_log's CHECK without migration 102's
+partner_sharing value, which would have FAILED at apply time against
+live partner consent rows. Fixed and re-proven (commit bc0dee9).

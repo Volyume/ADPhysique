@@ -23,3 +23,18 @@ Direct-tool resolutions (no agent spent):
   direct workout reads in decision paths (display-level recompReframe
   already mapped by AUDIT-L). Closed.
 - Subagent budget spent pre-synthesis: 0/2.
+
+## CC26 (2026-08-20)
+
+- Implementation subagents: 0/2 used. Entire build hands-on with
+  direct tools.
+- Red team: 1/1 used - Sonnet, general-purpose, single bounded pass
+  over the diff + laws. Tier justification: adversarial review of
+  Article 9 consent/erasure and sync-convergence code is above Haiku's
+  reliability floor (quality variance matters on safety-adjacent
+  surfaces); Opus is forbidden without founder approval and was not
+  needed. Yield: 8 findings (2 blockers), all adjudicated and landed.
+- Opus subagents: 0. Escalation requests: 0.
+- Direct-tool substitutions: local Postgres execution testing of
+  migrations 145-147 (no agent; caught the 147 CHECK regression);
+  export-surface scope check (BACKUP_TABLES) by direct read.
