@@ -14,7 +14,7 @@
  * learning - those campaigns arrive later; this screen manages state.
  */
 import { useState, useCallback } from 'react';
-import { View, Text, StyleSheet, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, AccessibilityInfo, TextInput } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
@@ -38,11 +38,17 @@ import {
 import {
   grantCapabilityConsent, withdrawCapabilityConsent,
 } from '../lib/consent/capabilityConsent';
+// CC-D27 (CC27): family and exercise rules join the add flow, consuming
+// the same taxonomy the resolver reads. movementFamily is the shared
+// vocabulary module (no user data); the exercise list is the ordinary
+// library read.
+import { movementFamily, familyLabel } from '../lib/exercise/movementFamily';
 import {
   DEMAND_AXES, demandLabel, CONSTRAINT_ROLE, CONSTRAINT_SOURCE,
   CONSTRAINT_RULE_KIND, EPISODE_STATUS,
 } from '../lib/capability/model';
-import { uid } from '../lib/database';
+import {
+  getAllExercises, uid } from '../lib/database';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -67,9 +73,15 @@ export default function HowYouTrainScreen() {
 
   const [state, setState] = useState({ baseline: [], episodes: [], history: [], unavailable: false });
   const [consented, setConsented] = useState(false);
-  // Add-flow stages: null | 'role' | 'axes' | 'dates' | 'consent' | 'readback'
+  // Add-flow stages (CC-D27 widened): null | 'role' | 'kind' | 'axes' |
+  // 'family' | 'exercise' | 'dates' | 'consent' | 'readback'
   const [adding, setAdding] = useState(null);
   const [draft, setDraft] = useState(null);
+  // CC-D27: the family list is OFFERED only for families that actually
+  // exist on library exercises (section 33.3), so it is computed from the
+  // library, never hardcoded. Exercise search shares the same load.
+  const [library, setLibrary] = useState([]);
+  const [exerciseQuery, setExerciseQuery] = useState('');
 
   const refresh = useCallback(() => {
     if (!userId) return;
@@ -84,19 +96,62 @@ export default function HowYouTrainScreen() {
       }
     }).catch(() => {});
     hasCapabilityConsent(userId).then(setConsented).catch(() => {});
+    // Exercise-rule rows label by name; the library read is best-effort
+    // (an id is still shown if it fails).
+    getAllExercises().then(setLibrary).catch(() => {});
   }, [userId]);
   useFocusEffect(refresh);
 
+  // CC-D27: one label for any rule row - demand axes by their labels,
+  // families by the shared taxonomy's labels, exercises by name.
+  const ruleLabel = (row) => {
+    if (row.ruleKind === CONSTRAINT_RULE_KIND.FAMILY) return familyLabel(row.ruleValue) ?? row.ruleValue;
+    if (row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE || row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW) {
+      return library.find(e => e.id === row.ruleValue)?.name ?? 'An exercise';
+    }
+    return demandLabel(row.ruleValue);
+  };
+
   const beginAdd = () => {
     haptics.selection();
-    setDraft({ role: null, axes: [], clinician: false, startDays: 0, endDays: null });
+    setDraft({
+      role: null, kind: null, axes: [], families: [], exercises: [],
+      clinician: false, startDays: 0, endDays: null,
+    });
     setAdding('role');
+    if (!library.length)
+
+      getAllExercises().then(setLibrary).catch(() => {});
   };
 
   const chooseRole = (role) => {
     haptics.selection();
     setDraft(d => ({ ...d, role }));
-    setAdding('axes');
+    setAdding('kind');
+  };
+
+  const chooseKind = (kind) => {
+    haptics.selection();
+    setDraft(d => ({ ...d, kind }));
+    setAdding(kind === 'demand' ? 'axes' : kind === 'family' ? 'family' : 'exercise');
+  };
+
+  const toggleFamily = (key) => {
+    haptics.selection();
+    setDraft(d => ({
+      ...d,
+      families: d.families.includes(key) ? d.families.filter(f => f !== key) : [...d.families, key],
+    }));
+  };
+
+  const toggleExercise = (ex) => {
+    haptics.selection();
+    setDraft(d => ({
+      ...d,
+      exercises: d.exercises.some(e => e.id === ex.id)
+        ? d.exercises.filter(e => e.id !== ex.id)
+        : [...d.exercises, { id: ex.id, name: ex.name }],
+    }));
   };
 
   const toggleAxis = (id) => {
@@ -125,17 +180,25 @@ export default function HowYouTrainScreen() {
     const endsAt = isEpisode && draft.endDays != null ? now + draft.endDays * DAY_MS : null;
     // One transaction for the whole set: all axes land or none do, so the
     // save failure copy can honestly say nothing was changed.
-    await createConstraints(userId, draft.axes.map((axis) => ({
-      role: draft.role,
-      source: draft.clinician ? CONSTRAINT_SOURCE.CLINICIAN_REPORTED : CONSTRAINT_SOURCE.SELF,
-      ruleKind: CONSTRAINT_RULE_KIND.DEMAND,
-      ruleValue: axis,
-      startsAt,
-      endsAt,
-      episodeGroupId: groupId,
-    })), { nowMs: now });
+    const source = draft.clinician ? CONSTRAINT_SOURCE.CLINICIAN_REPORTED : CONSTRAINT_SOURCE.SELF;
+    const base = { role: draft.role, source, startsAt, endsAt, episodeGroupId: groupId };
+    // CC-D27: one batch across every chosen kind, same transaction law.
+    const rows = [
+      ...draft.axes.map((axis) => ({ ...base, ruleKind: CONSTRAINT_RULE_KIND.DEMAND, ruleValue: axis })),
+      ...(draft.families ?? []).map((fam) => ({ ...base, ruleKind: CONSTRAINT_RULE_KIND.FAMILY, ruleValue: fam })),
+      ...(draft.exercises ?? []).map((ex) => ({
+        ...base,
+        ruleKind: draft.kind === 'allow' ? CONSTRAINT_RULE_KIND.EXERCISE_ALLOW : CONSTRAINT_RULE_KIND.EXERCISE,
+        ruleValue: ex.id,
+        // An allowance is the user's own call, whatever prompted the rest.
+        source: draft.kind === 'allow' ? CONSTRAINT_SOURCE.SELF : source,
+      })),
+    ];
+    await createConstraints(userId, rows, { nowMs: now });
     setAdding(null); setDraft(null);
-    toast.show(isEpisode ? 'Saved. Volyume will keep this as a temporary change.' : 'Saved. This is part of how you train.');
+    toast.show(draft.kind === 'allow'
+      ? 'Saved. Volyume will keep offering this exercise.'
+      : isEpisode ? 'Saved. Volyume will keep this as a temporary change.' : 'Saved. This is part of how you train.');
     refresh();
   };
 
@@ -217,7 +280,7 @@ export default function HowYouTrainScreen() {
   };
 
   const endBaselineRow = (row) => {
-    appAlert('Remove this from your setup?', `Volyume will stop building around "${demandLabel(row.ruleValue)}".`, [
+    appAlert('Remove this from your setup?', `Volyume will stop building around "${ruleLabel(row)}".`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', onPress: async () => { await endConstraint(userId, row.id); refresh(); } },
     ]);
@@ -232,6 +295,82 @@ export default function HowYouTrainScreen() {
             onPress={() => chooseRole(CONSTRAINT_ROLE.BASELINE)} t={t} />
           <Choice label="Temporary, for now" sub="Volyume takes it as a passing change and will help you step back when it ends."
             onPress={() => chooseRole(CONSTRAINT_ROLE.EPISODE)} t={t} />
+        </View>
+      );
+    }
+    if (adding === 'kind') {
+      const isBaseline = draft.role === CONSTRAINT_ROLE.BASELINE;
+      return (
+        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+          <Text style={[styles.q, { color: t.colors.textPrimary }]}>What kind of thing is it?</Text>
+          <Choice label="A kind of movement or position" sub="Standing work, overhead positions, gripping a bar and so on."
+            onPress={() => chooseKind('demand')} t={t} />
+          <Choice label="A movement pattern" sub="A whole pattern, like overhead pressing or squatting."
+            onPress={() => chooseKind('family')} t={t} />
+          <Choice label="A specific exercise" sub="Volyume will build around that one exercise."
+            onPress={() => chooseKind('exercise')} t={t} />
+          {isBaseline ? (
+            <Choice label="An exercise that is always fine for me" sub="Overrides the rest of your setup for that exercise."
+              onPress={() => chooseKind('allow')} t={t} />
+          ) : null}
+        </View>
+      );
+    }
+    if (adding === 'family') {
+      // Section 33.3: family rules are OFFERED only for families that
+      // exist on the library's exercises - computed, never hardcoded.
+      const familyKeys = [...new Set(library
+        .map(e => movementFamily(e.name, e.primaryMuscle, e.subregion))
+        .filter(Boolean))].sort((a, b) => String(familyLabel(a)).localeCompare(String(familyLabel(b))));
+      return (
+        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+          <Text style={[styles.q, { color: t.colors.textPrimary }]}>Which movement patterns?</Text>
+          <Text style={[styles.hint, { color: t.colors.textSecondary }]}>Pick anything that applies. You never need to say why.</Text>
+          {familyKeys.map(key => (
+            <Choice key={key} label={familyLabel(key)} selected={draft.families.includes(key)}
+              onPress={() => toggleFamily(key)} t={t} />
+          ))}
+          <Choice label={draft.clinician ? 'A clinician asked for this: yes' : 'A clinician asked for this: no'}
+            sub="Only changes how Volyume words things. It never contacts anyone."
+            onPress={() => setDraft(d => ({ ...d, clinician: !d.clinician }))} t={t} />
+          <Choice label="Continue" disabled={!draft.families.length}
+            onPress={() => setAdding(draft.role === CONSTRAINT_ROLE.EPISODE ? 'dates' : 'readback')} t={t} primary />
+        </View>
+      );
+    }
+    if (adding === 'exercise') {
+      const isAllow = draft.kind === 'allow';
+      const q = exerciseQuery.trim().toLowerCase();
+      const matches = q.length >= 2
+        ? library.filter(e => e.name.toLowerCase().includes(q)).slice(0, 8)
+        : [];
+      return (
+        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+          <Text style={[styles.q, { color: t.colors.textPrimary }]}>
+            {isAllow ? 'Which exercise is always fine?' : 'Which exercise should Volyume build around?'}
+          </Text>
+          <TextInput
+            accessibilityLabel="Search exercises"
+            value={exerciseQuery}
+            onChangeText={setExerciseQuery}
+            placeholder="Search exercises"
+            placeholderTextColor={t.colors.textMuted}
+            style={[styles.search, { color: t.colors.textPrimary, borderColor: t.colors.borderSubtle, backgroundColor: t.colors.inputBg }]}
+          />
+          {draft.exercises.map(ex => (
+            <Choice key={ex.id} label={ex.name} selected
+              onPress={() => toggleExercise(ex)} t={t} />
+          ))}
+          {matches.filter(m => !draft.exercises.some(e => e.id === m.id)).map(m => (
+            <Choice key={m.id} label={m.name} onPress={() => toggleExercise(m)} t={t} />
+          ))}
+          {!isAllow ? (
+            <Choice label={draft.clinician ? 'A clinician asked for this: yes' : 'A clinician asked for this: no'}
+              sub="Only changes how Volyume words things. It never contacts anyone."
+              onPress={() => setDraft(d => ({ ...d, clinician: !d.clinician }))} t={t} />
+          ) : null}
+          <Choice label="Continue" disabled={!draft.exercises.length}
+            onPress={() => setAdding(draft.role === CONSTRAINT_ROLE.EPISODE && !isAllow ? 'dates' : 'readback')} t={t} primary />
         </View>
       );
     }
@@ -288,17 +427,25 @@ export default function HowYouTrainScreen() {
       );
     }
     if (adding === 'readback') {
-      const labels = draft.axes.map(demandLabel).join(', ').toLowerCase();
+      const labels = [
+        ...draft.axes.map(a => demandLabel(a).toLowerCase()),
+        ...(draft.families ?? []).map(f => familyLabel(f)),
+        ...(draft.exercises ?? []).map(e => e.name),
+      ].join(', ');
       const isEpisode = draft.role === CONSTRAINT_ROLE.EPISODE;
+      const isAllow = draft.kind === 'allow';
+      const backStage = draft.kind === 'demand' ? 'axes' : draft.kind === 'family' ? 'family' : 'exercise';
       return (
         <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>
-            {isEpisode
-              ? `Volyume will temporarily work around: ${labels}.`
-              : `Volyume will build your training around: ${labels}.`}
+            {isAllow
+              ? `Always fine for you: ${labels}.`
+              : isEpisode
+                ? `Volyume will temporarily work around: ${labels}.`
+                : `Volyume will build your training around: ${labels}.`}
           </Text>
           <Choice label="Save" onPress={saveDraft} t={t} primary />
-          <Choice label="Back" onPress={() => setAdding('axes')} t={t} />
+          <Choice label="Back" onPress={() => setAdding(backStage)} t={t} />
         </View>
       );
     }
@@ -306,7 +453,7 @@ export default function HowYouTrainScreen() {
   };
 
   const episodeSub = (ep) => {
-    const names = ep.rows.filter(r => r.state === 'active').map(r => demandLabel(r.ruleValue)).join(', ');
+    const names = ep.rows.filter(r => r.state === 'active').map(r => ruleLabel(r)).join(', ');
     if (ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION) {
       return `${names}. Past the time you expected - has it ended?`;
     }
@@ -330,12 +477,12 @@ export default function HowYouTrainScreen() {
         </Text>
       ) : null}
       {state.baseline.map(row => (
-        <SettingRow key={row.id} icon="body" label={demandLabel(row.ruleValue)}
+        <SettingRow key={row.id} icon="body" label={ruleLabel(row)}
           sub={row.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED ? 'You told Volyume a clinician asked for this' : 'Part of your normal training'}
           showArrow={false}
           rightElement={(
             <PressableCard onPress={() => endBaselineRow(row)} accessibilityRole="button"
-              accessibilityLabel={`Remove ${demandLabel(row.ruleValue)} from your setup`}>
+              accessibilityLabel={`Remove ${ruleLabel(row)} from your setup`}>
               <Text style={{ ...type.label, color: t.colors.textSecondary, padding: spacing.sm }}>Remove</Text>
             </PressableCard>
           )} />
@@ -373,7 +520,7 @@ export default function HowYouTrainScreen() {
         <>
           <SectionHeader title="Past" />
           {state.history.slice(0, 12).map(row => (
-            <SettingRow key={row.id} icon="checkmark" label={demandLabel(row.ruleValue)}
+            <SettingRow key={row.id} icon="checkmark" label={ruleLabel(row)}
               sub={row.endedReason === 'promoted' ? 'Became part of your setup' : 'Ended'} showArrow={false} />
           ))}
         </>
@@ -415,6 +562,14 @@ function Choice({ label, sub, onPress, t, selected, primary, disabled, compact }
 }
 
 const styles = StyleSheet.create({
+  search: {
+    ...type.body,
+    borderWidth: 1,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    marginBottom: spacing.sm,
+  },
   card: { borderRadius: radius.lg, padding: spacing.lg, margin: spacing.lg },
   q: { ...type.h3, marginBottom: spacing.sm },
   body: { ...type.body, marginBottom: spacing.md },

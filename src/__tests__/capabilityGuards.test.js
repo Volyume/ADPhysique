@@ -142,3 +142,27 @@ describe('the C31 pinned contracts are untouched (section 33 preservation)', () 
     expect(readFn).not.toMatch(/UPDATE|INSERT|DELETE/);
   });
 });
+
+describe('CC-D27: the family/exercise/allow add surfaces (CC27)', () => {
+  const scr = read('screens/HowYouTrainScreen.js');
+  test('the kind stage offers all three rule kinds, and allowances only under baseline', () => {
+    expect(scr).toMatch(/A movement pattern/);
+    expect(scr).toMatch(/A specific exercise/);
+    expect(scr).toMatch(/always fine for me/);
+    const kindStage = scr.slice(scr.indexOf("adding === 'kind'"), scr.indexOf("adding === 'family'"));
+    expect(kindStage).toMatch(/isBaseline \?/);
+  });
+  test('the family list is COMPUTED from the library (section 33.3), never hardcoded', () => {
+    const fam = scr.slice(scr.indexOf("adding === 'family'"), scr.indexOf("adding === 'exercise'"));
+    expect(fam).toMatch(/movementFamily\(e\.name, e\.primaryMuscle, e\.subregion\)/);
+    expect(fam).not.toMatch(/\[\s*'vertical_pull'/);
+  });
+  test('an allowance always writes as the user\'s own call (source self)', () => {
+    const write = scr.slice(scr.indexOf('const rows = ['), scr.indexOf('await createConstraints'));
+    expect(write).toMatch(/EXERCISE_ALLOW/);
+    expect(write).toMatch(/source: draft\.kind === 'allow' \? CONSTRAINT_SOURCE\.SELF : source/);
+  });
+  test('every kind lands through the same batched, consent-gated write', () => {
+    expect(scr.match(/await createConstraints\(/g)).toHaveLength(1);
+  });
+});
