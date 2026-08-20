@@ -19,11 +19,11 @@ CC27 slices (order = dependency order):
 - [x] S6 Post-engine + blockedSlots: capability reasons flow resolveSeed→blockedSlots (reason maps carry them automatically once filter drops); §9.5 reason class distinguished; §33.11 near-miss data.
 - [x] S7 §9.6 pre-flight UI gate at generation call sites + counterpart test (capability unavailable ⇒ gate fires, engine not called with half-state).
 - [x] S8 Pickers: ExercisePickerModal capability filter + show-anyway + §9.4 flows (self warn/allow; clinician blocked+route; unknown copy) + Recent rail senior question; swap sheet pin via rankPersonalised.
-- [ ] S9 §33.14 thin-session banner; §33.16 explanation budget; CAP-18/CC-D25 copy; PD-2 fix (algorithms.js:828/846 rotation claim).
-- [ ] S10 §33.19 same-position contiguous ordering under floor/position axes + Amendment §17 programme checks as fixtures over GENERATED plans.
-- [ ] S11 §33.17 text sweep: 552 names/notes + 31 plan descriptions vs R2 wording lists (script + fixes).
-- [ ] S12 CC-D27 add surfaces (family/exercise/exercise_allow) in HowYouTrainScreen, same ontology as resolver.
-- [ ] S13 Q3 gate fixture (both paths: adequate library; no-compatible-quality) + docs + atomic CC27 commit.
+- [x] S9 §33.14 thin-session banner; §33.16 explanation budget; CAP-18/CC-D25 copy; PD-2 fix (algorithms.js:828/846 rotation claim).
+- [x] S10 §33.19 same-position contiguous ordering under floor/position axes + Amendment §17 programme checks as fixtures over GENERATED plans.
+- [x] S11 §33.17 text sweep: 552 names/notes + 31 plan descriptions vs R2 wording lists (script + fixes).
+- [x] S12 CC-D27 add surfaces (family/exercise/exercise_allow) in HowYouTrainScreen, same ontology as resolver.
+- [x] S13 Q3 gate fixture (both paths: adequate library; no-compatible-quality) + docs + atomic CC27 commit.
 
 CC28 (read §11, §33.12, §33.15, Amendment §17 at start):
 - [ ] Onboarding both paths + consent moment + Pro step-count guard; free-starter persistence; computed library compatibility + browse chips + install-time conflict/substitution (A§11.8); routine family content v1 + validation; coverage tooling → registry; §33.12 energy card (session length becomes free-editable); §33.15 decline signposting; gate fixtures (wheelchair/no-floor/one-arm/grip-limited); a11y scenarios → PHYSICAL-VALIDATION-BACKLOG.md.
@@ -36,6 +36,8 @@ Bundle end:
 - [ ] Lint + ONE full suite; merge to main; consolidated report.
 
 ## Slice log (append per landing)
+
+- CC27 COMPLETE. Internal gate: 42 suites / 715 targeted+affected tests green; repo lint clean (max-warnings 0). Q3 gate: compatible core (9 slots, floor 8) + every shortfall visibly reported; path B honest-gap proven. PD-2/PD-8/PD-9 fixed; CC-D25/CC-D26/CC-D27 implemented; BD-1 fixed. 49 of 551 seed rows are Q3-compatible today - CC28 families widen this. Migrate_148 written NOT applied (custom pushes fail soft until it runs - migrate_143 tolerated mode). Commits: b802b75, 5b1853d, 468a84f, 2f466c5, b5e6a75, +sweep, 9b8739c, +gate.
 
 - CC27 S3-S8 landed: resolver (35), composition + PD-9 debt (14 incl. post-engine hole + near-miss), pool parity (poolGenerator pin REVISED per CC-D26), blocked-slot capability class + near-miss attach (4 sites), pre-flight gate (8) wired into 3 screens, picker capability filter + 9.4 flows + Recent rail senior question + 8.4 single-axis ask (11 pins). Commits 5b1853d, 468a84f, +picker.
 - CC27 S1+S2 landed: capability/demands.js (551-row derivation, 0 contradictions, coverage 87-100% per axis, report artefact CC27-DEMAND-COVERAGE.md); 10 demand columns local migration + canonical backfill; migrate_148 written NOT applied; seed + top-up derive at insert; custom push carries demand columns (tolerated-mode until 148); PD-8 fixed both directions; BD-1 fixed (upsert preserves unlisted columns). Suites: capabilityDemands (6), database.demandMetadataMigration (3), customExerciseSyncNulls (5), 4 window suites rebumped (19), affected domain 121+53 green.

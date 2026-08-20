@@ -70,6 +70,28 @@ CC25 — mention-don't-fix rule; each is queued as a board note):
 - PD-9 C31 shipped with zero behavioural tests (spec's test section
   undelivered) (C §8.2) — paid down in CC27.
 
+## CC27 IMPLEMENTATION RULINGS (2026-08-20, lead-ruled under D33)
+
+- CC27-R1 The senior question composes capability by RIDING the intent
+  state object (state.capability), so all 16 existing callers inherit it
+  with zero signature changes; the CAP-4 guard was revised from a
+  no-mention pin to a DATA-REACH pin (storage/consent unreachable from
+  the preference lane; pure question modules importable).
+- CC27-R2 The section 8.4 single-axis ask renders one optional question
+  per CONSTRAINED axis; enum axes ask their full closed enum so a "no"
+  answer is expressible without guessing (BD-D1).
+- CC27-R3 Q3 gate truth at CC27: 49/551 seed rows are Q3-compatible; the
+  written core is fully compatible and every shortfall is reported
+  (blocked/missed/thin/near-miss). CC28 curated families widen the core.
+- CC27-R4 BD-1 (new defect, fixed): the cloud-pull exercise applier's
+  INSERT OR REPLACE wiped unlisted metadata columns on every pulled row;
+  now an UPSERT preserving unlisted columns with COALESCE on nullable
+  metadata. PD-8 fixed both directions in the same applier.
+- CC27-R5 Custom creation derives EQUIPMENT metadata (Audit B-reliable
+  derivations) so section 34.1 parity is reachable; demand axes on
+  customs stay asked-only (CAP-8). Existing customs backfilled in the
+  same unreleased migration.
+
 ## B. ARCHITECTURAL DECISIONS (CC-D)
 
 - CC-D1 One constraint entity with a role axis (baseline|episode);
