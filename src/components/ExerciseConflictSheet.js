@@ -59,6 +59,19 @@ export default function ExerciseConflictSheet({
 
   const blocked = mode === 'blocked';
   const remaining = conflicts.filter((c) => !resolved[c.exerciseId]);
+  // CC28 (A section 11.8): install-time conflicts now arrive from BOTH
+  // lanes. When any capability conflict is present the heading widens;
+  // the per-row caption below names each row's own lane, so the two are
+  // never conflated (the section 4.4 equipment/exclusion separation
+  // pattern applied to copy).
+  const hasCapability = conflicts.some((c) => String(c?.reason ?? '').startsWith('capability'));
+  const reasonCaption = (c) => {
+    const r = String(c?.reason ?? '');
+    if (r === 'capability_clinician') return 'Covered by your clinician-reported restriction';
+    if (r === 'capability_declared') return 'Outside how you train';
+    if (r === 'capability_unknown') return "Volyume doesn't know yet whether this fits how you train";
+    return null; // the intent lane keeps its existing wording below
+  };
 
   function markResolved(conflict, how) {
     setResolved((prev) => ({ ...prev, [conflict.exerciseId]: how }));
@@ -104,13 +117,19 @@ export default function ExerciseConflictSheet({
         <View style={styles.backdrop}>
         <SafeAreaView style={[styles.sheet, live.sheet]} edges={['bottom']} accessibilityViewIsModal>
           <ModalHeader
-            title={blocked ? 'These slots need your choice' : 'This plan includes exercises you set aside'}
+            title={blocked
+              ? 'These slots need your choice'
+              : hasCapability
+                ? 'This plan includes movements to check'
+                : 'This plan includes exercises you set aside'}
             onClose={onClose}
           />
           <Text style={[styles.intro, live.intro]}>
             {blocked
               ? 'Everything that would normally fit here is set aside, so Volyume has left these slots empty rather than putting back something you asked it not to suggest.'
-              : 'You chose this plan, and Volyume also remembers what you asked it to stop suggesting. Both still stand, so this is your call.'}
+              : hasCapability
+                ? 'You chose this plan, and some of it sits outside how you train or is set aside. Both facts stand, so each one is your call - swap it here, or keep it as it is.'
+                : 'You chose this plan, and Volyume also remembers what you asked it to stop suggesting. Both still stand, so this is your call.'}
           </Text>
           <ScrollView contentContainerStyle={styles.list}>
             {conflicts.map((c) => {
@@ -118,6 +137,9 @@ export default function ExerciseConflictSheet({
               return (
                 <Card key={c.exerciseId} radius="md" style={styles.row}>
                   <Text style={[styles.name, live.name]}>{c.exerciseName}</Text>
+                  {reasonCaption(c) ? (
+                    <Text style={[styles.intro, live.intro]}>{reasonCaption(c)}</Text>
+                  ) : null}
                   {c.workoutName ? (
                     <Text style={[styles.where, live.where]}>{c.workoutName}</Text>
                   ) : null}

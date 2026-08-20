@@ -44,6 +44,11 @@ export default function FreeStarterScreen({ navigation, route }) {
   const [plans, setPlans] = useState([]);
   const [workoutCounts, setWorkoutCounts] = useState({});
   const [busy, setBusy] = useState(false);
+  // CC28 (section 11.1): the free path's optional capability step. compat
+  // is { byPlan } when the user has active constraints, else null - and
+  // the recommendation below becomes capability-computed exactly then.
+  const [capability, setCapability] = useState(null);
+  const [hasCapabilitySetup, setHasCapabilitySetup] = useState(false);
   // Synchronous double-tap guard for the two writing paths (C5-P29-02).
   const startingRef = useRef(false);
   // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
@@ -67,14 +72,52 @@ export default function FreeStarterScreen({ navigation, route }) {
     return () => { cancelled = true; };
   }, [user?.id]);
 
-  const onResultStep = step >= FREE_STARTER_STEPS.length;
+  // CC28 (sections 11.3, 9.2.5): reload the capability picture whenever
+  // this screen regains focus, so returning from How you train flows
+  // straight into a capability-computed recommendation. Best-effort: with
+  // nothing recorded (or a failed read) the starter behaves exactly as
+  // before.
+  useEffect(() => {
+    const load = async () => {
+      try {
+        if (!user?.id) return;
+        // eslint-disable-next-line global-require
+        const { loadCapabilityResolveState } = require('../lib/capability/resolve');
+        // eslint-disable-next-line global-require
+        const { computeLibraryCompatibility } = require('../lib/capability/planCompat');
+        const st = await loadCapabilityResolveState(user.id, {});
+        setHasCapabilitySetup(!st.empty);
+        if (!st.empty && !st.unavailable) {
+          setCapability({ byPlan: await computeLibraryCompatibility(st) });
+        } else {
+          setCapability(null);
+        }
+      } catch (_) { setCapability(null); }
+    };
+    load();
+    const unsub = navigation.addListener?.('focus', load);
+    return () => { try { unsub?.(); } catch (_) { /* noop */ } };
+  }, [user?.id, navigation]);
+
+  const capabilityStep = step === FREE_STARTER_STEPS.length;
+  const onResultStep = step > FREE_STARTER_STEPS.length;
 
   // Computed at render so a slow library load can never freeze a stale
   // null result: the moment plans arrive, the recommendation appears.
-  const recommendation = useMemo(
-    () => (onResultStep ? getFreeStarterRecommendation(answers, plans) : null),
-    [onResultStep, answers, plans],
-  );
+  const recommendation = useMemo(() => {
+    if (!onResultStep) return null;
+    // CC28 (section 11.3): with active constraints the pool narrows to
+    // fully compatible plans FIRST, so the first offered routine is
+    // compatible on day one; if nothing fully compatible fits the
+    // answers, the full pool stands rather than a dead end (the library
+    // families guarantee this pool is never empty in practice).
+    if (capability?.byPlan) {
+      const compatiblePool = plans.filter(pl => capability.byPlan.get(pl.id)?.fullyCompatible === true);
+      const pick = getFreeStarterRecommendation(answers, compatiblePool);
+      if (pick) return pick;
+    }
+    return getFreeStarterRecommendation(answers, plans);
+  }, [onResultStep, answers, plans, capability]);
 
   function handleOption(stepKey, optionKey) {
     setAnswers(prev => ({ ...prev, [stepKey]: optionKey }));
@@ -221,7 +264,7 @@ export default function FreeStarterScreen({ navigation, route }) {
           accessibilityElementsHidden
           importantForAccessibility="no-hide-descendants"
         >
-          {FREE_STARTER_STEPS.map((_, i) => (
+          {[...FREE_STARTER_STEPS, { key: 'capability' }].map((_, i) => (
             <View key={i} style={[styles.dot, live.dot, i <= step && [styles.dotActive, live.dotActive]]} />
           ))}
         </View>
@@ -230,7 +273,56 @@ export default function FreeStarterScreen({ navigation, route }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {!onResultStep ? (
+        {capabilityStep ? (
+          <>
+            {/* CC28 (section 11.2): the optional capability entry - skip is
+                first-class, the skip copy names the settings surface, and
+                the full add flow is the shared How you train screen. */}
+            <Text style={[styles.question, live.question]}>Anything Volyume should build around?</Text>
+            <Text style={[styles.questionSub, live.questionSub]}>
+              {hasCapabilitySetup
+                ? 'Set up. Your first plan will fit how you train, and you can adjust it any time.'
+                : 'Some people train seated, one-sided, or without certain movements. Set that up now and your first plan fits from day one.'}
+            </Text>
+            <View style={styles.options}>
+              {!hasCapabilitySetup ? (
+                <TouchableOpacity
+                  style={[styles.optionBtn, live.optionBtn]}
+                  onPress={() => setStep(s => s + 1)}
+                  activeOpacity={0.82}
+                  accessibilityRole="button"
+                  accessibilityLabel="Nothing in particular"
+                >
+                  <Ionicons name="checkmark-circle-outline" size={20} color={t.colors.primary} style={{ marginRight: spacing.md }} />
+                  <Text style={[styles.optionText, live.optionText]}>Nothing in particular</Text>
+                  <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+                </TouchableOpacity>
+              ) : null}
+              <TouchableOpacity
+                style={[styles.optionBtn, live.optionBtn]}
+                onPress={() => navigation.navigate('HowYouTrain')}
+                activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityLabel={hasCapabilitySetup ? 'Adjust how you train' : "Yes, let's set that up"}
+              >
+                <Ionicons name="body-outline" size={20} color={t.colors.primary} style={{ marginRight: spacing.md }} />
+                <Text style={[styles.optionText, live.optionText]}>{hasCapabilitySetup ? 'Adjust how you train' : "Yes, let's set that up"}</Text>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.optionBtn, live.optionBtn]}
+                onPress={() => setStep(s => s + 1)}
+                activeOpacity={0.82}
+                accessibilityRole="button"
+                accessibilityLabel={hasCapabilitySetup ? 'Continue' : 'Later, from Settings'}
+              >
+                <Ionicons name="arrow-forward-circle-outline" size={20} color={t.colors.primary} style={{ marginRight: spacing.md }} />
+                <Text style={[styles.optionText, live.optionText]}>{hasCapabilitySetup ? 'Continue' : 'Later, from Settings under How you train'}</Text>
+                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : !onResultStep ? (
           <>
             <Text style={[styles.question, live.question]}>{FREE_STARTER_STEPS[step].question}</Text>
             <Text style={[styles.questionSub, live.questionSub]}>

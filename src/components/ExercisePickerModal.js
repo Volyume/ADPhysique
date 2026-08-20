@@ -26,7 +26,6 @@ import { loadExerciseIntentState, isEligible, intentFor, isFamilyBlocked, moveme
 import { capabilityBlockReason, demandConflicts, CAPABILITY_BLOCK } from '../lib/capability/resolve';
 import { demandLabel } from '../lib/capability/model';
 import { appAlert } from './AppAlert';
-import { navigationRef } from '../navigation/RootNavigator';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
 // CC27 (section 34.1): custom creation derives equipment metadata from the
 // owner's own choices so customs can meet the built-in pool-entry bar.
@@ -347,7 +346,13 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
             text: 'Update restriction',
             onPress: () => {
               onClose?.();
-              try { if (navigationRef.isReady()) navigationRef.navigate('HowYouTrain'); } catch (_e) { /* best effort */ }
+              try {
+                // Lazy: importing the navigator statically would create an
+                // import cycle (navigator -> screens -> this picker).
+                // eslint-disable-next-line global-require
+                const { navigationRef } = require('../navigation/RootNavigator');
+                if (navigationRef.isReady()) navigationRef.navigate('HowYouTrain');
+              } catch (_e) { /* best effort */ }
             },
           },
         ],

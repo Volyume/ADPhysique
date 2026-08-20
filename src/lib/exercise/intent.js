@@ -160,7 +160,15 @@ export async function loadExerciseIntentState(userId, { activeMesocycleId = null
  * exercise - so the choice is theirs to make.
  */
 export async function findPlanIntentConflicts(planId, state) {
-  if (!planId || !state?.intents?.size) return [];
+  // CC27/CC28 (A section 11.8 fix): the install-time check asks the SENIOR
+  // question - id-level intent, movement-family avoidance AND the
+  // capability lane - where it used to ask only the id-level question, so
+  // an installed plan could quietly carry a family-avoided or
+  // capability-conflicting movement. Each conflict carries its reason so
+  // the sheet can word the two lanes honestly.
+  const hasIntent = !!state?.intents?.size;
+  const hasCapability = !!state?.capability && !state.capability.empty;
+  if (!planId || (!hasIntent && !hasCapability)) return [];
   try {
     // eslint-disable-next-line global-require
     const { getRoutinesForPlan, getRoutineExercisesWithDetails } = require('../database');
@@ -172,7 +180,7 @@ export async function findPlanIntentConflicts(planId, state) {
       const rows = await getRoutineExercisesWithDetails(routine.id).catch(() => []);
       for (const row of rows ?? []) {
         const id = row?.exercise?.id;
-        if (!id || seen.has(id) || isEligible(state, id)) continue;
+        if (!id || seen.has(id) || isEligibleExercise(state, row.exercise)) continue;
         seen.add(id);
         conflicts.push({
           exerciseId: id,
@@ -180,6 +188,7 @@ export async function findPlanIntentConflicts(planId, state) {
           routineId: routine.id,
           routineExerciseId: row.id ?? row.routineExercise?.id ?? null,
           workoutName: routine.name ?? null,
+          reason: eligibilityBlockReason(state, row.exercise),
         });
       }
     }

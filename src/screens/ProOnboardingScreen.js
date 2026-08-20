@@ -74,8 +74,12 @@ const PROTEIN_SHORT = {
 // is now its own step (3), matching the one-QuestionGroup-per-step pattern
 // used everywhere else. TOTAL_STEPS moved from 5 to 6; every step after the
 // old Step 2 shifted up by one.
-const TOTAL_STEPS = 6;
-const STEP_LABELS = ['Account', 'Baseline', 'Body composition', 'Training week', 'Targets', 'Check-in rhythm'];
+// CC28 (ARCHITECTURE section 11.1): one OPTIONAL capability step between
+// Training week and Targets - the pinned-contract change done under the
+// sexGate suite's guards (its step-2 pins are untouched). TOTAL_STEPS
+// moved from 6 to 7; every step after Training week shifted up by one.
+const TOTAL_STEPS = 7;
+const STEP_LABELS = ['Account', 'Baseline', 'Body composition', 'Training week', 'How you train', 'Targets', 'Check-in rhythm'];
 const STEP_OUTCOMES = {
   1: [
     { icon: 'shield-checkmark-outline', label: 'Secure sign-in' },
@@ -95,11 +99,15 @@ const STEP_OUTCOMES = {
     { icon: 'fitness-outline', label: 'Exercise pool' },
   ],
   5: [
+    { icon: 'body-outline', label: 'Built around you' },
+    { icon: 'checkmark-circle-outline', label: 'Optional, skip freely' },
+  ],
+  6: [
     { icon: 'flag-outline', label: 'Goal phase' },
     { icon: 'body-outline', label: 'Muscle priorities' },
     { icon: 'restaurant-outline', label: 'Nutrition target' },
   ],
-  6: [
+  7: [
     { icon: 'pulse-outline', label: 'Recovery guardrails' },
     { icon: 'notifications-outline', label: 'Check-in rhythm' },
   ],
@@ -459,7 +467,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // user could sail through step 5 without their real choice ever
   // registering - the exact silent default the onboarding-enforcement law
   // (CLAUDE.md Section 2) forbids for required fields. No default: the
-  // advanceFrom5 gate now genuinely blocks until a phase is chosen. Quiz
+  // advanceFrom6 gate now genuinely blocks until a phase is chosen. Quiz
   // answers and saved drafts still prefill - both are explicit choices.
   const [trainingPhase, setTrainingPhase] = useState(null);
   // Weak points the user wants to bring up (UI labels, max 3). Division-scoped:
@@ -727,7 +735,7 @@ export default function ProOnboardingScreen({ navigation }) {
   }, [user]);
 
   // Debounced draft save on any answer/step change while the wizard is live.
-  // Skips step 1 (auth-owned) and the final submission (advanceFrom6 clears
+  // Skips step 1 (auth-owned) and the final submission (advanceFrom7 clears
   // the draft; a queued save after that would resurrect it).
   const draftTimerRef = useRef(null);
   useEffect(() => {
@@ -952,7 +960,17 @@ export default function ProOnboardingScreen({ navigation }) {
     setStep(5);
   }
 
+  // CC28 (section 11.2): the capability step is OPTIONAL and one-tap
+  // skippable - no gate, no required field. The full add flow (consent,
+  // cards, durability, readback) is the shared How you train surface;
+  // this step only offers the entry choice, so the two paths cannot
+  // drift (section 12: "Add flows = the onboarding cards").
   function advanceFrom5() {
+    emitStepDone(5);
+    setStep(6);
+  }
+
+  function advanceFrom6() {
     if (!trainingGoal || !trainingPhase) {
       appAlert('Almost there', 'Choose what you are focused on to continue.');
       return;
@@ -964,8 +982,8 @@ export default function ProOnboardingScreen({ navigation }) {
     // now keeps the standard ED-pattern threshold (the more protective
     // 2-signal setting); the advanced opt-in still lives on the Goal lock
     // screen under Coach for anyone who wants it.
-    emitStepDone(5);
-    setStep(6);
+    emitStepDone(6);
+    setStep(7);
   }
 
   // The four honest stage lines, mapped to real _generatePlanInner phases.
@@ -1025,7 +1043,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   // The reminder half of finishing setup: the preference blob, the SQLite
   // mirror, the OS permission prompt and the day-0 schedules. Extracted from
-  // advanceFrom6 under C5-P27-02 (D96) so it can run BEFORE the build
+  // advanceFrom7 under C5-P27-02 (D96) so it can run BEFORE the build
   // animation; the body and its order are otherwise unchanged.
   async function applyReminderPreferences() {
     // Flat schema: CoachingReminders, WeeklyCheckIn and the Coach tab
@@ -1173,7 +1191,7 @@ export default function ProOnboardingScreen({ navigation }) {
   useEffect(() => {
     if (!fitResumeRef.current || !fitAccepted || fitReview) return;
     fitResumeRef.current = false;
-    advanceFrom6();
+    advanceFrom7();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitAccepted, fitReview, daysPerWeek, sessionLengthMinutes]);
 
@@ -1200,7 +1218,7 @@ export default function ProOnboardingScreen({ navigation }) {
     fitResumeRef.current = true;
   }
 
-  async function advanceFrom6() {
+  async function advanceFrom7() {
     if (!recoveryRating) {
       appAlert('Recovery rating', 'Please select your recovery level to continue.');
       return;
@@ -2039,9 +2057,56 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 5, Goal ────────────────────────────────────────────────────────────
+  // ── Step 5, How you train (CC28, section 11.2) ─────────────────────────────
+  // OPTIONAL, one-tap skippable, skip is first-class. The full add flow
+  // (consent moment, functional cards, durability, readback) is the shared
+  // How you train surface, so the two entry points can never drift.
 
   if (step === 5) {
+    return (
+      <SafeAreaView key="step-5" style={[styles.safe, live.safe]}>
+        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+          <ProOnboardingHeader
+            step={step}
+            title="Anything Volyume should build around?"
+            sub="Some people train seated, one-sided, without overhead work, or around other realities. If that is you, set it up now and every plan starts compatible. If not, skip straight past."
+            onBack={goBack}
+          />
+
+          <QuestionGroup icon="body-outline">
+            <View style={styles.section}>
+              <Button
+                title="Nothing in particular"
+                onPress={advanceFrom5}
+              />
+            </View>
+            <View style={styles.section}>
+              <Button
+                title="Yes, let's set that up"
+                variant="secondary"
+                onPress={() => navigation.navigate('HowYouTrain')}
+              />
+            </View>
+            <View style={styles.sectionLast}>
+              <Button
+                title="Later, from Settings"
+                variant="secondary"
+                onPress={advanceFrom5}
+              />
+            </View>
+          </QuestionGroup>
+
+          <Text style={[styles.fieldHint, live.fieldHint]}>
+            You can change any of this at any time under Settings, in How you train.
+          </Text>
+        </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  // ── Step 6, Goal ────────────────────────────────────────────────────────────
+
+  if (step === 6) {
     const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
     const canContinue = !!trainingGoal && !!trainingPhase;
 
@@ -2188,7 +2253,7 @@ export default function ProOnboardingScreen({ navigation }) {
               title="Continue"
               trailingIcon="arrow-forward"
               style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-              onPress={canContinue ? advanceFrom5 : undefined}
+              onPress={canContinue ? advanceFrom6 : undefined}
               disabled={!canContinue}
               textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               accessibilityLabel="Continue"
@@ -2199,9 +2264,9 @@ export default function ProOnboardingScreen({ navigation }) {
     );
   }
 
-  // ── Step 6, Recovery & reminders ───────────────────────────────────────────
+  // ── Step 7, Recovery & reminders ───────────────────────────────────────────
 
-  if (step === 6) {
+  if (step === 7) {
     const canContinue = !!recoveryRating;
 
     // ── Plan fit ────────────────────────────────────────────────────────────
@@ -2547,7 +2612,7 @@ export default function ProOnboardingScreen({ navigation }) {
             title="Continue"
             trailingIcon="arrow-forward"
             style={[styles.primaryBtn, (!canContinue || busy || fitBusy) && styles.primaryBtnDisabled]}
-            onPress={canContinue && !busy && !fitBusy ? advanceFrom6 : undefined}
+            onPress={canContinue && !busy && !fitBusy ? advanceFrom7 : undefined}
             disabled={!canContinue || busy || fitBusy}
             loading={busy || fitBusy}
             textStyle={[styles.primaryBtnText, live.primaryBtnText]}

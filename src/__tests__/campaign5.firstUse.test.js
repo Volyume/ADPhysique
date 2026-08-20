@@ -1669,7 +1669,7 @@ describe('NOTIFICATIONS: a denied permission produces no fake scheduled state (C
 
   test('the OS prompt no longer lands under the build animation', () => {
     const src = read('screens/ProOnboardingScreen.js');
-    const fn = src.slice(src.indexOf('async function advanceFrom6'));
+    const fn = src.slice(src.indexOf('async function advanceFrom7'));
     expect(fn.indexOf('await applyReminderPreferences()'))
       .toBeLessThan(fn.indexOf('if (useSequence) startSequence();'));
   });
@@ -1952,7 +1952,7 @@ describe('REVIEW B: the interruption and state findings stay fixed (RB-1..RB-12,
     expect(coach).toMatch(/if \(applyingRef\.current \|\| applyingKey \|\| !user\?\.id \|\| !output\) return;/);
     expect(read('components/AppAlert.js')).toMatch(/options\.onDismiss\?\.\(\)/);
     const wiz = read('screens/ProOnboardingScreen.js');
-    const from6 = wiz.slice(wiz.indexOf('async function advanceFrom6'));
+    const from6 = wiz.slice(wiz.indexOf('async function advanceFrom7'));
     const armAt = from6.indexOf('submittingRef.current = true;');
     expect(from6.slice(armAt, armAt + 700)).toMatch(/setBusy\(true\);/);
     expect(from6.slice(armAt, armAt + 1200)).toMatch(/clearTimeout\(draftTimerRef\.current\)/);

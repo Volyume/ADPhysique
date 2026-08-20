@@ -34,6 +34,12 @@ import BottomSheet from '../components/BottomSheet';
 
 const COLLECTIONS = [
   { key: 'all',       label: 'All plans' },
+  // CC28 (Amendment section 13): a COMPUTED collection - plans whose
+  // contents pass the user's capability state. Only rendered while the
+  // user actually has active constraints (see collectionsForUser below);
+  // families appear in normal browse alongside everything else, never a
+  // segregated shelf.
+  { key: 'compatible', label: 'Fits how you train' },
   { key: 'featured',  label: 'Featured' },
   { key: 'women',     label: 'For women' },
   { key: 'men',       label: 'For men' },
@@ -284,6 +290,9 @@ export default function PlanLibraryScreen({ navigation }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
 
   const [plans, setPlans] = useState([]);
+  // CC28: { state, byPlan: Map<planId, verdict> } or null (no constraints /
+  // read unavailable - browse is untouched then).
+  const [compatibility, setCompatibility] = useState(null);
   // C9 closeout item 3: a copied published plan may contain exercises the
   // user has set aside. Both facts stand, so they choose.
   const [planConflicts, setPlanConflicts] = useState(null);
@@ -328,6 +337,21 @@ export default function PlanLibraryScreen({ navigation }) {
       const [lib, pwc] = await Promise.all([getLibraryPlans(), getPlanWorkoutCounts()]);
       setPlans(lib);
       setWorkoutCounts(pwc);
+      // CC28 (section 9.2.5): capability-computed compatibility for the
+      // whole library in one read. Best-effort - without it the browse
+      // renders exactly as before, no chips, no filter.
+      try {
+        // eslint-disable-next-line global-require
+        const { loadCapabilityResolveState } = require('../lib/capability/resolve');
+        // eslint-disable-next-line global-require
+        const { computeLibraryCompatibility } = require('../lib/capability/planCompat');
+        const capState = user?.id ? await loadCapabilityResolveState(user.id, {}) : null;
+        if (capState && !capState.empty && !capState.unavailable) {
+          setCompatibility({ state: capState, byPlan: await computeLibraryCompatibility(capState) });
+        } else {
+          setCompatibility(null);
+        }
+      } catch (_) { setCompatibility(null); }
       setLoadError(false);
     } catch (e) {
       // FF-004: a real init/storage failure must not masquerade as an empty
@@ -477,8 +501,20 @@ export default function PlanLibraryScreen({ navigation }) {
     if (activeCollection === 'division' && selectedDivision) {
       return hasTag(p, `division:${selectedDivision}`);
     }
+    // CC28: computed, never tagged - a plan is in "Fits how you train"
+    // exactly when every one of its exercises passes the user's live
+    // capability state (section 9.2.5).
+    if (activeCollection === 'compatible') {
+      return compatibility?.byPlan?.get(p.id)?.fullyCompatible === true;
+    }
     return matchesCollection(p, activeCollection);
   });
+
+  // The computed collection only exists while there is a state to compute
+  // against; everyone else sees the browse exactly as before.
+  const visibleCollections = compatibility
+    ? COLLECTIONS
+    : COLLECTIONS.filter(c => c.key !== 'compatible');
 
   // T5: default to beginner-appropriate plans first, outside the quiz path
   // only. `quizResult` is the same "quiz answered this session" signal
@@ -538,7 +574,7 @@ export default function PlanLibraryScreen({ navigation }) {
 
         <FlatList
           horizontal
-          data={COLLECTIONS}
+          data={visibleCollections}
           keyExtractor={c => c.key}
           showsHorizontalScrollIndicator={false}
           style={styles.chipsList}
@@ -666,6 +702,16 @@ export default function PlanLibraryScreen({ navigation }) {
                 {/* Top row: badges */}
                 <View style={styles.planCardTopRow}>
                   <View style={styles.badgeRow}>
+                    {/* CC28: the computed compatibility chip. Shown only
+                        with active constraints; conflicts render as an
+                        honest count, never hidden. */}
+                    {compatibility?.byPlan?.get(plan.id)?.fullyCompatible === true && (
+                      <PlanBadge label="Fits how you train" />
+                    )}
+                    {compatibility && compatibility.byPlan?.get(plan.id)
+                      && !compatibility.byPlan.get(plan.id).fullyCompatible && (
+                      <PlanBadge label={`${compatibility.byPlan.get(plan.id).conflicts.length + compatibility.byPlan.get(plan.id).unknowns.length} to swap`} />
+                    )}
                     {isFeatured && <PlanBadge label="Featured" amber />}
                     {division && <PlanBadge label={division.label} />}
                     {!division && isWomen && <PlanBadge label="For women" />}
