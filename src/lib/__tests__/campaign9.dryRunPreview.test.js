@@ -116,8 +116,13 @@ describe('the preview states the blocked slot honestly', () => {
     require('path').resolve(__dirname, '../../screens/PlanUpdateScreen.js'), 'utf8');
 
   test('it says a choice is needed and why, without naming a prescription', () => {
-    expect(screen).toMatch(/Exercise choice needed/);
-    expect(screen).toMatch(/You have set aside the exercises that would normally fill/);
+    // CC27 (section 9.5 / CC-D25) split the single "Exercise choice
+    // needed" line by LANE: set-aside slots and capability-blocked slots
+    // are different facts and each is named in its own words. The
+    // campaign 9 contract stands - the preview states why a slot is
+    // empty, and never shows a set-aside exercise as the prescription.
+    expect(screen).toMatch(/would normally use exercises you have set aside/);
+    expect(screen).toMatch(/no match inside how you train/);
   });
 
   test('the screen passes the dry run\'s own blocked list to the summariser', () => {
@@ -125,7 +130,8 @@ describe('the preview states the blocked slot honestly', () => {
   });
 
   test('it neither chooses a replacement nor restores an exclusion', () => {
-    const block = screen.slice(screen.indexOf('Exercise choice needed') - 900, screen.indexOf('Exercise choice needed') + 500);
+    const anchor = screen.indexOf('no match inside how you train');
+    const block = screen.slice(anchor - 900, anchor + 500);
     expect(block).not.toMatch(/clearExerciseIntent|setExerciseIntent|updateRoutineExerciseExercise/);
   });
 });

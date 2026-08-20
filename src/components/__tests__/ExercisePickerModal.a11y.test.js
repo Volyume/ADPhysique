@@ -15,7 +15,9 @@ describe('ExercisePickerModal accessibility labels', () => {
   test('labels exercise selection rows with the selected exercise name', () => {
     // C9: the label now also states when a row is one the user has set
     // aside, so a screen-reader user hears the status a sighted user sees.
-    expect(source).toContain("accessibilityLabel={`${isSwapAction ? 'Swap in' : 'Add'} ${item.name}${setAside ? ', set aside' : ''}`}");
+    // CC27 (section 9.2.6): and the capability caption, when one applies,
+    // for exactly the same reason.
+    expect(source).toContain("accessibilityLabel={`${isSwapAction ? 'Swap in' : 'Add'} ${item.name}${setAside ? ', set aside' : ''}${capCaption ? `, ${capCaption}` : ''}`}");
     expect(source).toContain('accessibilityLabel={`Allow ${item.name} again`}');
     expect(source).toContain("name={isSwapAction ? 'swap-horizontal' : 'add-circle-outline'}");
   });

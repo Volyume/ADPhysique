@@ -16,7 +16,12 @@
  * syncExercises() (sync.js), and absent from both the cloud `exercises` and
  * `custom_exercises` table schemas (migrate_020_custom_exercises.sql,
  * migrate_091_exercise_type.sql). Reading them off a cloud row would only
- * ever yield null, so they are intentionally left out of the restore INSERT.
+ * ever yield null, so they are left out of the restore statement's column
+ * list - and since CC27's BD-1 fix that statement is a true UPSERT
+ * (INSERT ... ON CONFLICT DO UPDATE), so an unlisted column now SURVIVES a
+ * re-restore instead of being reset by REPLACE's delete-and-reinsert. The
+ * mock below models those semantics, reading the COALESCE set from the SQL
+ * itself so it follows the statement rather than a hand-kept list.
  */
 
 const mockMemory = { exercises: new Map() };
@@ -25,11 +30,27 @@ jest.mock('expo-sqlite', () => {
   const db = {
     execAsync: jest.fn(() => Promise.resolve()),
     runAsync: jest.fn((sql, params = []) => {
-      if (/INSERT OR REPLACE INTO exercises/.test(sql)) {
+      if (/INSERT INTO exercises/.test(sql)) {
         const cols = sql.match(/\(([^)]+)\)/)[1].split(',').map((c) => c.trim());
-        const row = {};
-        cols.forEach((c, i) => { row[c] = params[i]; });
-        mockMemory.exercises.set(row.id, row);
+        const incoming = {};
+        cols.forEach((c, i) => { incoming[c] = params[i]; });
+        const existing = mockMemory.exercises.get(incoming.id);
+        if (!existing) {
+          mockMemory.exercises.set(incoming.id, incoming);
+        } else {
+          // ON CONFLICT DO UPDATE: listed columns take the excluded value,
+          // except the ones the statement wraps in COALESCE(excluded.x, x),
+          // which keep the stored value when the incoming one is null.
+          // Unlisted columns survive untouched (the BD-1 point).
+          const coalesced = new Set(
+            [...sql.matchAll(/COALESCE\(excluded\.(\w+)/g)].map((m) => m[1]),
+          );
+          const merged = { ...existing };
+          cols.forEach((c) => {
+            merged[c] = coalesced.has(c) ? (incoming[c] ?? existing[c] ?? null) : incoming[c];
+          });
+          mockMemory.exercises.set(incoming.id, merged);
+        }
       }
       return Promise.resolve({ changes: 1, lastInsertRowId: 0 });
     }),
