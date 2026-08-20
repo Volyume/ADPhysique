@@ -21,12 +21,15 @@
 -- ============================================================================
 
 -- 1. Widen the consent_type CHECK (drop + re-add; append-only log rows are
---    untouched).
+--    untouched). The re-added list is the CURRENT live list - migration
+--    019's three values plus 102's 'partner_sharing' - with
+--    'capability_data' appended. Omitting 'partner_sharing' here would
+--    make ADD CONSTRAINT fail against existing partner consent rows.
 alter table public.consent_log
   drop constraint if exists consent_log_consent_type_check;
 alter table public.consent_log
   add constraint consent_log_consent_type_check
-  check (consent_type in ('health_data', 'marketing', 'analytics', 'capability_data'));
+  check (consent_type in ('health_data', 'marketing', 'analytics', 'partner_sharing', 'capability_data'));
 
 -- 2. Live state on users_profile, mirroring health_data_consent.
 alter table public.users_profile

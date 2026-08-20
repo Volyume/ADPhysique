@@ -229,12 +229,14 @@ BEGIN
   -- behind. Guarded like every sibling, so running this against a project
   -- where the tables above have not yet been created is still safe.
   BEGIN DELETE FROM exercise_slot_defaults      WHERE user_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
-
-  -- ─── Capability lane (CC26, migrations 145/146) ─────────────────────
-  BEGIN DELETE FROM session_constraint_effects  WHERE user_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
-  BEGIN DELETE FROM capability_constraints      WHERE user_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
   BEGIN DELETE FROM exercise_swaps              WHERE user_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
   BEGIN DELETE FROM exercise_intent             WHERE user_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
+
+  -- ─── Capability lane (CC26, migrations 145/146) ─────────────────────
+  -- Children (effects reference constraint ids in their JSON) before the
+  -- constraints themselves; both are also ON DELETE CASCADE on auth.users.
+  BEGIN DELETE FROM session_constraint_effects  WHERE user_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
+  BEGIN DELETE FROM capability_constraints      WHERE user_id = uid; EXCEPTION WHEN undefined_table THEN NULL; END;
 
   -- ─── users_profile last (load-bearing) ──────────────────────────────
   -- Let this raise if it's missing — that means the deployment is
