@@ -13,6 +13,12 @@ const read = (p) => fs.readFileSync(path.resolve(__dirname, '..', p), 'utf8');
 const CAPABILITY_FILES = [
   'lib/capability/model.js',
   'lib/capability/store.js',
+  // CC27: the resolver and the demand ontology join the lane. resolve.js
+  // imports the movement-family TAXONOMY (shared vocabulary, no user
+  // data) - the CAP-4 wall below is about the preference lane's STORED
+  // INTENT, which stays unreachable.
+  'lib/capability/resolve.js',
+  'lib/capability/demands.js',
   'lib/consent/capabilityConsent.js',
   'lib/sync/tables/capabilityConstraints.js',
   'lib/sync/tables/sessionConstraintEffects.js',
@@ -49,17 +55,35 @@ describe('CAP-4: the capability lane and the preference lane never touch', () =>
       expect(codeOnly).not.toMatch(/FROM exercise_intent|setExerciseIntent|getExerciseIntents|recordExerciseSwap/);
     }
   });
-  test('the preference lane never imports capability', () => {
-    for (const f of ['lib/exercise/intent.js', 'lib/exercise/movementConstraints.js', 'lib/exercise/generation.js']) {
+  test('the preference lane never reaches capability STORAGE or CONSENT', () => {
+    // CC27 REVISION of this pin: section 9.2.3 composes the senior
+    // question, so intent.js and generation.js now lawfully import the
+    // PURE question modules (capability/resolve, capability/demands). The
+    // CAP-4 wall is DATA reach: the preference lane must never touch the
+    // Article 9 store, the consent lane, or the capability tables - the
+    // resolver's single loader is the only door, and it lives in the
+    // capability lane.
+    for (const f of ['lib/exercise/intent.js', 'lib/exercise/generation.js']) {
       const src = read(f);
-      expect(src).not.toMatch(/capability/i);
+      expect(src).not.toMatch(/capability\/store|consent\/capabilityConsent|FROM capability_constraints|getCapabilityConstraints|createCapabilityConstraint|tombstoneAllCapabilityConstraints|endCapabilityEpisode|promoteCapabilityEpisode/);
+      // The only capability imports allowed are the pure question modules.
+      const importLines = src.split('\n')
+        .filter((l) => /^\s*(import |const .*require\()/.test(l) && /capability/i.test(l)).join('\n');
+      expect(importLines).not.toMatch(/capability\/(?!resolve|demands)/);
     }
+    // The write side of movement constraints stays fully capability-free.
+    expect(read('lib/exercise/movementConstraints.js')).not.toMatch(/capability/i);
   });
 });
 
-describe('CC26 inertness: no downstream behaviour activates before its campaign', () => {
+describe('inertness: no downstream behaviour activates before its campaign', () => {
+  // CC27 activates the selection seams (planAutoGen and the picker ride
+  // the composed state; the engine itself stays capability-blind - it
+  // receives a pre-filtered library, section 9.2.1). Everything below
+  // stays inert until ITS campaign: coach/check-in CC31, learning CC30,
+  // adherence CC29.
   test.each([
-    'lib/planEngine.js', 'lib/planAutoGen.js', 'lib/poolGenerator.js',
+    'lib/planEngine.js', 'lib/poolGenerator.js',
     'lib/weeklyCoach.js', 'lib/coachApply.js', 'lib/coachPrecedence.js',
     'lib/livePrescription.js', 'lib/sessionAdjustments.js',
     'lib/algorithms.js', 'lib/blockLedgerRunner.js', 'lib/learnedRange.js',

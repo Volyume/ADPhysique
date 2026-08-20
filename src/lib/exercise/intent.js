@@ -46,6 +46,12 @@ import { detectPlateau, detectProgressionConsistency } from '../algorithms';
 // D107-2 injury/constraint layer: PATTERN_AVOID targets a movement FAMILY
 // (movementFamily()) rather than one exercise.
 import { movementFamily as resolveMovementFamily, familyLabel } from './movementFamily';
+// CC27 (ARCHITECTURE section 9.2.3): the senior question COMPOSES the
+// capability lane. Pure questions only - this module still cannot reach
+// capability STORAGE (the CAP-4 wall is data reach, pinned in
+// capabilityGuards.test.js); the capability state is loaded by the
+// capability lane's own loader and carried on the state object.
+import { isCapabilityEligible, capabilityBlockReason } from '../capability/resolve';
 
 export { EXERCISE_INTENT, SWAP_SCOPE };
 
@@ -78,10 +84,28 @@ export async function loadExerciseIntentState(userId, { activeMesocycleId = null
     // itself stays the pre-Campaign-9 empty shape either way, so generation
     // and suggestion proceed exactly as they always have on a read failure.
     unavailable: false,
+    // CC27: the capability lane rides the same state object so every
+    // caller of the senior question inherits it (section 9.2.3's superset
+    // property). Null until loaded below; a null/empty capability state
+    // filters NOTHING. TWO LANES, TWO POSTURES (section 9.6/RT1-2): the
+    // intent lane above fails OPEN; the capability lane's failure is
+    // reported on capability.unavailable, and the PRE-FLIGHT choice for
+    // suggestion surfaces lives at the UI layer - never inside a filter.
+    capability: null,
   };
   if (!userId) return empty;
+  // Capability loads independently of the intent read: a failure in either
+  // lane never takes the other down, and the ONE load serves both exit
+  // paths. The loader itself never throws (CAP-17 posture lives inside it).
+  const capabilityPromise = (async () => {
+    try {
+      // eslint-disable-next-line global-require
+      const { loadCapabilityResolveState } = require('../capability/resolve');
+      return await loadCapabilityResolveState(userId, {});
+    } catch (_e) { return null; }
+  })();
   try {
-    const [intents, swaps, defaults, usage, sessions] = await Promise.all([
+    const [intents, swaps, defaults, usage, sessions, capability] = await Promise.all([
       getExerciseIntents(userId),
       getExerciseSwaps(userId),
       getExerciseSlotDefaults(userId),
@@ -89,6 +113,7 @@ export async function loadExerciseIntentState(userId, { activeMesocycleId = null
       Array.isArray(progressionForIds) && progressionForIds.length
         ? getExerciseProgressionSessions(userId, progressionForIds)
         : Promise.resolve(new Map()),
+      capabilityPromise,
     ]);
     // Judged here, once, by the shared law - never re-derived per screen.
     const progression = new Map();
@@ -109,6 +134,7 @@ export async function loadExerciseIntentState(userId, { activeMesocycleId = null
       progression,
       activeMesocycleId,
       unavailable: false,
+      capability,
     };
   } catch (_e) {
     // Fail OPEN on a read error, deliberately. A transient database failure
@@ -117,7 +143,9 @@ export async function loadExerciseIntentState(userId, { activeMesocycleId = null
     // is exactly the pre-Campaign-9 behaviour. D109-2: the caller is told
     // WHY via `unavailable`, so a surface that would have filtered can show
     // a visible notice instead of quietly looking like a clean slate.
-    return { ...empty, unavailable: true };
+    // CC27: the capability lane still loads - its constraints must not
+    // vanish because the PREFERENCE read failed (independent lanes).
+    return { ...empty, unavailable: true, capability: await capabilityPromise };
   }
 }
 
@@ -286,7 +314,29 @@ export function isFamilyBlocked(state, family) {
 export function isEligibleExercise(state, exercise) {
   if (!exercise) return true;
   if (!isEligible(state, exercise.id)) return false;
-  return !isFamilyBlocked(state, movementFamilyOf(exercise));
+  if (isFamilyBlocked(state, movementFamilyOf(exercise))) return false;
+  // CC27 (section 9.2.3): the capability lane joins the senior question.
+  // Ranks 2-4 of the section 4.1 table - hard, allowance-aware, and
+  // UNKNOWN-honest - all inside isCapabilityEligible. A null/empty
+  // capability state (no constraints, or a caller that never loaded the
+  // lane) filters nothing: the pre-CC27 answer, byte for byte.
+  return isCapabilityEligible(state?.capability ?? null, exercise);
+}
+
+/**
+ * CC27: why the senior question said no, for surfaces that explain
+ * (CAP-18). Capability reasons first (section 4.1 ranks 2-4), then the
+ * preference lane's own kinds. Null when eligible.
+ */
+export function eligibilityBlockReason(state, exercise) {
+  if (!exercise) return null;
+  const cap = capabilityBlockReason(state?.capability ?? null, exercise);
+  if (cap) return cap;
+  if (isExcluded(state, exercise.id)) return EXERCISE_INTENT.EXCLUDED;
+  if (isAvoidedThisBlock(state, exercise.id)) return EXERCISE_INTENT.AVOIDED_BLOCK;
+  const family = movementFamilyOf(exercise);
+  if (family && isFamilyBlocked(state, family)) return EXERCISE_INTENT.PATTERN_AVOID;
+  return null;
 }
 
 /** Filter a candidate list of full exercise objects. Pure. */
@@ -344,7 +394,7 @@ export function listActiveMovementConstraints(state) {
  * preference is contextual, and the more specific context is the better
  * answer.
  */
-export function approvedDefaultFor(state, fromExerciseId, routineId = null) {
+export function approvedDefaultFor(state, fromExerciseId, routineId = null, { getExercise = null } = {}) {
   const rows = (state?.defaults ?? []).filter((r) => r.fromExerciseId === fromExerciseId);
   const scoped = rows.find((r) => r.routineId != null && r.routineId === routineId);
   const general = rows.find((r) => r.routineId == null);
@@ -353,6 +403,15 @@ export function approvedDefaultFor(state, fromExerciseId, routineId = null) {
   // An approved default that the user has since excluded is not offered:
   // the newer explicit intent wins over the older explicit intent.
   if (!isEligible(state, pick.exerciseId)) return null;
+  // CC27 (section 9.2.3): this reader returns a bare id, blind to family
+  // and capability. A caller that can resolve the row upgrades it to the
+  // SENIOR question; without a lookup the id-level answer stands (the
+  // in-module consumers only tag candidates that already passed the full
+  // filter, so nothing blocked can surface through them).
+  if (typeof getExercise === 'function') {
+    const row = getExercise(pick.exerciseId);
+    if (row && !isEligibleExercise(state, row)) return null;
+  }
   return pick.exerciseId;
 }
 
@@ -421,13 +480,20 @@ export function sessionSubstitutionCount(state, exerciseId) {
  * swap can offer the original back under "Previously used" instead of
  * burying it in the full catalogue.
  */
-export function previouslyUsedBefore(state, exerciseId) {
+export function previouslyUsedBefore(state, exerciseId, { getExercise = null } = {}) {
   const rows = (state?.swaps ?? [])
     .filter((r) => r.toExerciseId === exerciseId)
     .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
   const prev = rows[0]?.fromExerciseId ?? null;
   // Never resurrect something the user has since excluded.
-  return prev && isEligible(state, prev) ? prev : null;
+  if (!prev || !isEligible(state, prev)) return null;
+  // CC27: senior-question upgrade when the caller can resolve the row
+  // (same contract as approvedDefaultFor).
+  if (typeof getExercise === 'function') {
+    const row = getExercise(prev);
+    if (row && !isEligibleExercise(state, row)) return null;
+  }
+  return prev;
 }
 
 // ─── Evidence dimensions (Work 4) ────────────────────────────────────────────
@@ -556,11 +622,19 @@ export function maturityWeight(maturity) {
  * make it the default is helpful rather than presumptuous? Never after one
  * swap, and never automatic: the caller must ask the user.
  */
-export function repeatedDefaultCandidate(state, fromExerciseId, { routineId = null } = {}) {
+export function repeatedDefaultCandidate(state, fromExerciseId, { routineId = null, getExercise = null } = {}) {
   if (approvedDefaultFor(state, fromExerciseId, routineId)) return null;
   const top = swapEvidenceFor(state, fromExerciseId, { routineId })[0] ?? null;
   if (!top || top.count < REPEATED_SWAP_MIN || !top.explicit) return null;
   if (!isEligible(state, top.exerciseId)) return null;
+  // CC27: this reader PROPOSES an exercise by bare id (the "make X your
+  // default here?" prompt), so it must ask the senior question when the
+  // caller can resolve the row - a capability-blocked or family-blocked
+  // movement is never proposed as a default.
+  if (typeof getExercise === 'function') {
+    const row = getExercise(top.exerciseId);
+    if (row && !isEligibleExercise(state, row)) return null;
+  }
   return { exerciseId: top.exerciseId, count: top.count };
 }
 

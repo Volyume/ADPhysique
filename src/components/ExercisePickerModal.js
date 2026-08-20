@@ -20,6 +20,9 @@ import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds, getActiveBlock, clearExerciseIntent } from '../lib/database';
 import { loadExerciseIntentState, isEligible, intentFor, isFamilyBlocked, movementFamilyOf } from '../lib/exercise/intent';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
+// CC27 (section 34.1): custom creation derives equipment metadata from the
+// owner's own choices so customs can meet the built-in pool-entry bar.
+import { deriveExerciseMetadata } from '../lib/exerciseMetadata';
 import { fuzzySearch } from '../lib/exerciseFuzzySearch';
 import useAppStore from '../store/useAppStore';
 import * as haptics from '../lib/haptics';
@@ -259,6 +262,18 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
         // brand-new custom move falsely read as a real, ranked candidate.
         stimulusToFatigueRatio: null,
         isCustom: 1,
+        // CC27 (section 34.1): equipment metadata derives from what the
+        // owner just chose, so the custom can meet the SAME pool-entry
+        // requirements as a built-in (metadata sufficiency, never
+        // is_custom). Demand axes are NOT derived here - section 8.4 says
+        // they are asked, one axis at a time, only when a constraint makes
+        // one relevant; unanswered stays NULL and manual use never needs it.
+        ...deriveExerciseMetadata({
+          name: createName.trim(),
+          equipment: createEquipment || null,
+          movementPattern: null,
+          compoundIsolation: null,
+        }),
       });
       const all = await getAllExercises();
       setAll(all);

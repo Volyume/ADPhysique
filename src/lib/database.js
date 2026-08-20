@@ -2726,6 +2726,42 @@ async function migrateDemandMetadataBackfill(d) {
       );
     } catch (_e) { /* row stays NULL = unknown */ }
   }
+  // Section 34.1 (CC-D26): custom rows never received EQUIPMENT metadata,
+  // which is what the pool-entry requirements read - so custom parity was
+  // structurally impossible however complete the owner's data. Derive the
+  // equipment-driven fields (Audit B graded these derivations reliable)
+  // for customs that carry an equipment string but no category yet. DEMAND
+  // axes stay NULL on customs by design (section 8.4: they are ASKED, one
+  // axis at a time, never guessed from a user-invented name).
+  try {
+    // eslint-disable-next-line global-require
+    const { deriveExerciseMetadata } = require('./exerciseMetadata');
+    const customs = await d.getAllAsync(
+      `SELECT id, name, equipment, movement_pattern AS movementPattern,
+              compound_isolation AS compoundIsolation
+         FROM exercises
+        WHERE is_custom = 1 AND equipment IS NOT NULL AND equipment_category IS NULL`,
+    ).catch(() => []);
+    for (const r of customs ?? []) {
+      try {
+        const m = deriveExerciseMetadata(r);
+        // eslint-disable-next-line no-await-in-loop
+        await d.runAsync(
+          `UPDATE exercises SET
+             equipment_category = ?, machine_type = ?, force = ?, laterality = ?,
+             difficulty = ?, machine_ok = ?, home_ok = ?, equipment_profiles = ?
+           WHERE id = ? AND equipment_category IS NULL`,
+          [
+            m.equipmentCategory ?? null, m.machineType ?? null, m.force ?? null,
+            m.laterality ?? null, m.difficulty ?? null,
+            m.machineOk ? 1 : 0, m.homeOk ? 1 : 0,
+            m.equipmentProfiles ? JSON.stringify(m.equipmentProfiles) : null,
+            r.id,
+          ],
+        );
+      } catch (_e) { /* row keeps coarse-equipment fallback behaviour */ }
+    }
+  } catch (_e) { /* metadata module unavailable: customs keep fallback */ }
 }
 
 // Backfill canonical exercises' load_semantics from the seed's own

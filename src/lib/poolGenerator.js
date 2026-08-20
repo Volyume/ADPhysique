@@ -152,15 +152,27 @@ export function isHypertrophyExercise(ex) {
 }
 
 // ── generate ────────────────────────────────────────────────────────────
-// Build the full { muscle: [entry] } pool from the library. Skips custom
-// exercises (no derived metadata) and anything with no equipment profile
-// (can't be filtered into a plan). Returns only canonical, profiled,
-// non-`other` exercises grouped by primary muscle.
+// Build the full { muscle: [entry] } pool from the library. Skips anything
+// with no equipment profile (can't be filtered into a plan) or an `other`
+// equipment category. Returns profiled, non-`other` exercises grouped by
+// primary muscle.
+//
+// CC27 (section 34.1, CC-D26 - binding): custom exercises are NO LONGER
+// categorically skipped. The gate at every automatic seam is METADATA
+// SUFFICIENCY, never `is_custom`: a custom row that carries the same
+// pool-entry requirements as a built-in (name, primary muscle, equipment
+// category, profiles) enters its OWNER's pool - the library array handed
+// in is already per-user, so a custom here is the owner's own. Capability
+// compatibility on constrained axes is enforced UPSTREAM by
+// filterLibraryForGeneration (the library reaching this pool is already
+// capability-filtered), so an unknown-on-a-constrained-axis custom never
+// gets here. A custom with insufficient metadata simply fails the same
+// requirements a built-in would - manual use is untouched (CC-R12), and
+// null SFR/fatigue stays "unknown and never penalised" (PD-8).
 export function generatePoolFromLibrary(exercises) {
   const pool = {};
   for (const ex of exercises || []) {
     if (!ex || !ex.name || !ex.primaryMuscle) continue;
-    if (ex.isCustom === 1 || ex.isCustom === true) continue;
     if (!ex.equipmentCategory || ex.equipmentCategory === 'other') continue;
     if (!isHypertrophyExercise(ex)) continue;
     const entry = toPoolEntry(ex);

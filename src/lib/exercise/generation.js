@@ -31,8 +31,15 @@
 import {
   isExcluded, isAvoidedThisBlock, isPatternAvoided, movementFamilyOf, familyTargetKey,
 } from './intent';
+// CC27 (section 9.2.1/9.2.2): the capability lane joins the generation
+// filter through the SAME drop-report contract. Pure questions only; the
+// capability state rides `state.capability` (loaded by that lane's own
+// loader), so every existing caller inherits the check unchanged.
+import { capabilityBlockReason } from '../capability/resolve';
 
-/** Why a candidate may not be seeded. Mirrors EXERCISE_INTENT's kinds. */
+/** Why a candidate may not be seeded. Mirrors EXERCISE_INTENT's kinds,
+ *  plus the section 4.1 capability reason codes (ranks 2-4, reported
+ *  ahead of the preference kinds because the table orders them senior). */
 export const GENERATION_BLOCK = Object.freeze({
   EXCLUDED: 'excluded',
   AVOIDED_BLOCK: 'avoided_block',
@@ -40,6 +47,10 @@ export const GENERATION_BLOCK = Object.freeze({
   // active avoidance (day-bound, this-block or indefinite - all three read
   // the same here; isFamilyBlocked is the single family-level question).
   PATTERN_AVOID: 'pattern_avoid',
+  // CC27 capability lane (hard, never never-starve re-entered):
+  CAPABILITY_CLINICIAN: 'capability_clinician',
+  CAPABILITY_DECLARED: 'capability_declared',
+  CAPABILITY_UNKNOWN: 'capability_unknown',
 });
 
 /**
@@ -54,7 +65,18 @@ export const GENERATION_BLOCK = Object.freeze({
  */
 export function generationBlockReason(state, exercise) {
   const id = typeof exercise === 'string' ? exercise : exercise?.id;
-  if (!id || !state?.intents?.size) return null;
+  if (!id) return null;
+  // CC27, checked FIRST: the section 4.1 table puts capability ranks 2-4
+  // above the preference lane, so when both lanes block, the reported
+  // reason is the capability one. Only the full row can answer demand
+  // questions - the legacy bare-id shape skips this arm, which is safe
+  // because both generation gates (the pre-engine filter and the
+  // post-engine re-check) hold full library rows.
+  if (typeof exercise === 'object' && state?.capability && !state.capability.empty) {
+    const cap = capabilityBlockReason(state.capability, exercise);
+    if (cap) return cap;
+  }
+  if (!state?.intents?.size) return null;
   if (isExcluded(state, id)) return GENERATION_BLOCK.EXCLUDED;
   if (isAvoidedThisBlock(state, id)) return GENERATION_BLOCK.AVOIDED_BLOCK;
   const family = typeof exercise === 'object' ? movementFamilyOf(exercise) : null;
@@ -105,8 +127,12 @@ export function filterLibraryForGeneration(library, state) {
   if (!Array.isArray(library) || library.length === 0) return passThrough(library);
   // No stored intent at all is the pre-Campaign-9 world. Return early rather
   // than rebuilding an identical array, so the no-intent path is provably a
-  // no-op rather than merely an equal one.
-  if (!state?.intents?.size) return passThrough(library);
+  // no-op rather than merely an equal one. CC27: the capability lane joins
+  // the same early-out - a user with neither intents nor active capability
+  // constraints gets the SAME array by reference (the D110-2 identical
+  // path, extended verbatim to the new lane).
+  const capabilityActive = !!state?.capability && !state.capability.empty;
+  if (!state?.intents?.size && !capabilityActive) return passThrough(library);
 
   try {
     const kept = [];

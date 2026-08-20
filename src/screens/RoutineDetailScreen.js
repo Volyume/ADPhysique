@@ -355,7 +355,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
       }).slice(0, 12);
       // Work 6: only OFFER a default once the same deliberate choice has
       // repeated. Never automatic, never after one swap.
-      proposal = repeatedDefaultCandidate(state, exercise?.id, { routineId });
+      // CC27: the library lookup upgrades the id-level answer to the
+      // SENIOR question, so a capability- or family-blocked movement is
+      // never proposed as a default (section 9.2.3).
+      const byId = new Map(all.map((e) => [e.id, e]));
+      proposal = repeatedDefaultCandidate(state, exercise?.id, {
+        routineId, getExercise: (id) => byId.get(id) ?? null,
+      });
       setIntentState(state);
       // D109-2: the read failed open (structural list stands, nothing is
       // filtered by avoidance) - say so, rather than let the swap list look

@@ -111,18 +111,34 @@ describe('generatePoolFromLibrary', () => {
     { name: 'No Profile', primaryMuscle: 'chest', equipmentCategory: 'barbell', equipmentProfiles: [] },
   ];
 
-  test('groups canonical, profiled exercises by primary muscle', () => {
+  test('groups profiled exercises by primary muscle', () => {
     const pool = generatePoolFromLibrary(lib);
-    expect(pool.chest).toHaveLength(1);
-    expect(pool.chest[0].n).toBe('Barbell Bench Press');
+    expect(pool.chest).toHaveLength(2);
+    expect(pool.chest.map(e => e.n)).toEqual(['Barbell Bench Press', 'My Custom']);
     expect(pool.adductors).toHaveLength(1);
   });
-  test('skips custom, other-category and profile-less exercises', () => {
+  // CC27 REVISION of the old "skips custom" pin (section 34.1, CC-D26 -
+  // founder-accepted checkpoint amendment): the gate is METADATA
+  // SUFFICIENCY, never is_custom. A custom row meeting the same pool-entry
+  // requirements as a built-in enters its owner's pool; one that does not
+  // fails the same requirements a built-in would.
+  test('a custom with sufficient metadata enters; other-category and profile-less rows stay out', () => {
     const pool = generatePoolFromLibrary(lib);
     const allNames = Object.values(pool).flat().map(e => e.n);
-    expect(allNames).not.toContain('My Custom');
+    expect(allNames).toContain('My Custom');
     expect(allNames).not.toContain('Assault Bike');
     expect(allNames).not.toContain('No Profile');
+    // Null SFR/fatigue on the custom stays null in the entry - "unknown
+    // and never penalised" (PD-8), not a fabricated midpoint.
+    const custom = pool.chest.find(e => e.n === 'My Custom');
+    expect(custom.sfr).toBeNull();
+    expect(custom.fatigue).toBeNull();
+  });
+  test('a custom WITHOUT equipment metadata fails the same bar a built-in would', () => {
+    const pool = generatePoolFromLibrary([
+      { name: 'Bare Custom', primaryMuscle: 'chest', isCustom: 1, equipmentCategory: null, equipmentProfiles: null },
+    ]);
+    expect(pool).toEqual({});
   });
   test('empty / null input yields an empty pool', () => {
     expect(generatePoolFromLibrary([])).toEqual({});

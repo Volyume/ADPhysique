@@ -104,6 +104,27 @@ test('a pre-CC27 database upgrades: canonical rows derive, matching the seed der
   expect(legPress.bilateral_upper).toBe(0);
 });
 
+test('a custom with an equipment string gains EQUIPMENT metadata (section 34.1), demands stay NULL', async () => {
+  const raw = freshDb();
+  raw.exec('ALTER TABLE exercises ADD COLUMN equipment_category TEXT');
+  raw.exec('ALTER TABLE exercises ADD COLUMN machine_type TEXT');
+  raw.exec('ALTER TABLE exercises ADD COLUMN force TEXT');
+  raw.exec('ALTER TABLE exercises ADD COLUMN laterality TEXT');
+  raw.exec('ALTER TABLE exercises ADD COLUMN difficulty INTEGER');
+  raw.exec('ALTER TABLE exercises ADD COLUMN machine_ok INTEGER');
+  raw.exec('ALTER TABLE exercises ADD COLUMN home_ok INTEGER');
+  raw.exec('ALTER TABLE exercises ADD COLUMN equipment_profiles TEXT');
+  raw.prepare("UPDATE exercises SET equipment = 'dumbbell' WHERE id = 'ex-custom'").run();
+  await runLast(raw, 1);
+
+  const custom = raw.prepare('SELECT equipment_category, equipment_profiles, position, grip_demand FROM exercises WHERE id = ?').get('ex-custom');
+  expect(custom.equipment_category).toBe('dumbbell');
+  expect(JSON.parse(custom.equipment_profiles)).toEqual(expect.arrayContaining(['full_gym']));
+  // Demand axes are ASKED on customs (section 8.4), never derived here.
+  expect(custom.position).toBeNull();
+  expect(custom.grip_demand).toBeNull();
+});
+
 test('custom rows stay NULL on every axis (CAP-8), and updated_at is untouched everywhere', async () => {
   const raw = freshDb();
   await runLast(raw, 1);
