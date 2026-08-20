@@ -21,6 +21,25 @@
 
 export const SYNC_REGISTRY = [
   {
+    // CC26 capability lane (ARCHITECTURE.md section 5.6). Soft-delete so
+    // consent-withdrawal tombstones propagate before the server purge.
+    table: 'capability_constraints',
+    pk: 'id',
+    conflictStrategy: 'last_write_wins',
+    serverAuthoritative: false,
+    softDelete: true,
+    direction: 'bidirectional',
+  },
+  {
+    // CC26 schema foundation; writers arrive in CC29.
+    table: 'session_constraint_effects',
+    pk: 'id',
+    conflictStrategy: 'last_write_wins',
+    serverAuthoritative: false,
+    softDelete: true,
+    direction: 'bidirectional',
+  },
+  {
     table: 'weekly_checkins_v2',
     pk: 'id',
     conflictStrategy: 'last_write_wins',

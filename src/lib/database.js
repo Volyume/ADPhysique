@@ -2615,6 +2615,50 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE exercises ADD COLUMN load_semantics TEXT',
     migrateLoadSemanticsBackfill,
   ],
+  // CC26 capability foundations (docs/capability-campaign-25-2026-08-20/
+  // ARCHITECTURE.md sections 5.1, 5.3). Two NEW tables, nothing altered:
+  // inert against every migration-window fixture (the v65 convention).
+  // capability_constraints is the Article 9 capability lane - structurally
+  // separate from exercise_intent (CAP-4); rows are append-only in meaning
+  // (a rule is never edited into a different rule; only its ending fields
+  // and the erasure tombstone ever mutate - CAP-14). NO rows are created
+  // for existing users: an upgraded device gets empty tables and identical
+  // behaviour (rollback = tables stay empty). session_constraint_effects
+  // is schema-only foundation here; its writers arrive in CC29.
+  // Cloud counterparts: supabase/migrate_145 + migrate_146 (written, NOT
+  // applied; founder-gated).
+  [
+    `CREATE TABLE IF NOT EXISTS capability_constraints (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      role TEXT NOT NULL CHECK (role IN ('baseline','episode')),
+      source TEXT NOT NULL CHECK (source IN ('self','clinician_reported')),
+      rule_kind TEXT NOT NULL CHECK (rule_kind IN ('demand','family','exercise','exercise_allow')),
+      rule_value TEXT NOT NULL,
+      laterality TEXT CHECK (laterality IN ('left','right')),
+      starts_at INTEGER NOT NULL,
+      ends_at INTEGER,
+      state TEXT NOT NULL CHECK (state IN ('active','ended')),
+      ended_at INTEGER,
+      ended_reason TEXT CHECK (ended_reason IN ('expired','user_ended','superseded','promoted')),
+      episode_group_id TEXT,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_capability_constraints_user_state ON capability_constraints(user_id, state)',
+    'CREATE INDEX IF NOT EXISTS idx_capability_constraints_user_group ON capability_constraints(user_id, episode_group_id)',
+    `CREATE TABLE IF NOT EXISTS session_constraint_effects (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      workout_id TEXT NOT NULL UNIQUE,
+      effects_json TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      deleted_at INTEGER
+    )`,
+    'CREATE INDEX IF NOT EXISTS idx_session_constraint_effects_user ON session_constraint_effects(user_id)',
+  ],
 ];
 
 // Backfill canonical exercises' load_semantics from the seed's own
@@ -6113,6 +6157,9 @@ export const WIPE_DIRECT_TABLES = [
   // else's preferences - the same ownership leak the entries above were
   // added to close.
   'exercise_intent', 'exercise_swaps', 'exercise_slot_defaults',
+  // CC26: the capability lane wipes on every user boundary for the same
+  // ownership reason, and because it is Article 9 data (CAP-20).
+  'capability_constraints', 'session_constraint_effects',
 ];
 
 export const FATAL_LOCAL_WIPE_TABLES = new Set([
@@ -10670,4 +10717,292 @@ export async function remapExerciseIdInIntentTables(d, fromId, toId) {
     'UPDATE OR REPLACE exercise_slot_defaults SET from_exercise_id = ? WHERE from_exercise_id = ?',
     [toId, fromId],
   ).catch(() => {});
+}
+
+// ─── Capability constraints (CC26 foundations) ───────────────────────────────
+// The Article 9 capability lane (ARCHITECTURE.md sections 5-6; CAP laws).
+// This file owns only rows; every decision lives in src/lib/capability/.
+// Rows are append-only in meaning: a rule is never edited into a different
+// rule - supersession ends the old row and inserts a new one, so the
+// interval history that later campaigns join provenance against is never
+// destroyed (CAP-14). Readers NEVER write (no expiry sweeps: the C31
+// sweep-clobber class is designed out, ARCHITECTURE section 5.1).
+
+function _mapCapabilityRow(r) {
+  if (!r) return null;
+  return {
+    id: r.id, userId: r.user_id, role: r.role, source: r.source,
+    ruleKind: r.rule_kind, ruleValue: r.rule_value, laterality: r.laterality,
+    startsAt: r.starts_at, endsAt: r.ends_at, state: r.state,
+    endedAt: r.ended_at, endedReason: r.ended_reason,
+    episodeGroupId: r.episode_group_id,
+    createdAt: r.created_at, updatedAt: r.updated_at, deletedAt: r.deleted_at,
+  };
+}
+
+/**
+ * Create one capability constraint row. Validation mirrors the CHECKs via
+ * the pure model so an invalid combination can never reach the table.
+ * Consent gating lives ABOVE this in src/lib/capability/store.js; this
+ * function is the raw row writer.
+ */
+export async function createCapabilityConstraint(userId, input = {}, { nowMs = Date.now() } = {}) {
+  if (!userId) return null;
+  // eslint-disable-next-line global-require
+  const { validateConstraintInput } = require('./capability/model');
+  const verdict = validateConstraintInput(input);
+  if (!verdict.ok) throw new Error(`capability_constraint_invalid:${verdict.reason}`);
+  const d = await db();
+  const id = uid();
+  await d.runAsync(
+    `INSERT INTO capability_constraints
+       (id, user_id, role, source, rule_kind, rule_value, laterality,
+        starts_at, ends_at, state, episode_group_id, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`,
+    [id, userId, input.role, input.source, input.ruleKind, input.ruleValue,
+      input.laterality ?? null, input.startsAt, input.endsAt ?? null,
+      input.episodeGroupId ?? null, nowMs, nowMs],
+  );
+  _scheduleSync();
+  return id;
+}
+
+/** All non-deleted rows for the user, newest first. */
+export async function getCapabilityConstraints(userId, { includeEnded = true } = {}) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    `SELECT * FROM capability_constraints
+      WHERE user_id = ? AND deleted_at IS NULL ${includeEnded ? '' : "AND state = 'active'"}
+      ORDER BY created_at DESC`,
+    [userId],
+  );
+  return (rows ?? []).map(_mapCapabilityRow);
+}
+
+/** Sync push reader: every row INCLUDING tombstones, so deletes propagate. */
+export async function getAllCapabilityConstraintsForUser(userId) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM capability_constraints WHERE user_id = ?', [userId],
+  );
+  return (rows ?? []).map(_mapCapabilityRow);
+}
+
+/** End one constraint. Only the ending fields ever mutate (CAP-14). */
+export async function endCapabilityConstraint(userId, id, reason, { nowMs = Date.now() } = {}) {
+  if (!userId || !id) return false;
+  const d = await db();
+  const res = await d.runAsync(
+    `UPDATE capability_constraints
+        SET state = 'ended', ended_at = ?, ended_reason = ?, updated_at = ?
+      WHERE id = ? AND user_id = ? AND state = 'active' AND deleted_at IS NULL`,
+    [nowMs, reason, nowMs, id, userId],
+  );
+  if (res?.changes) _scheduleSync();
+  return !!res?.changes;
+}
+
+/** End every active row of one episode group in one transaction. */
+export async function endCapabilityEpisode(userId, episodeGroupId, reason, { nowMs = Date.now() } = {}) {
+  if (!userId || !episodeGroupId) return 0;
+  const d = await db();
+  const res = await d.runAsync(
+    `UPDATE capability_constraints
+        SET state = 'ended', ended_at = ?, ended_reason = ?, updated_at = ?
+      WHERE user_id = ? AND episode_group_id = ? AND state = 'active' AND deleted_at IS NULL`,
+    [nowMs, reason, nowMs, userId, episodeGroupId],
+  );
+  if (res?.changes) _scheduleSync();
+  return res?.changes ?? 0;
+}
+
+/**
+ * Extend (or shorten) an episode's planned end. ends_at is a lifecycle
+ * field, not rule meaning, so an in-place update is inside the
+ * append-only-in-meaning law (ARCHITECTURE section 5.1).
+ */
+export async function extendCapabilityEpisode(userId, episodeGroupId, newEndsAtMs, { nowMs = Date.now() } = {}) {
+  if (!userId || !episodeGroupId) return 0;
+  const d = await db();
+  const res = await d.runAsync(
+    `UPDATE capability_constraints
+        SET ends_at = ?, updated_at = ?
+      WHERE user_id = ? AND episode_group_id = ? AND state = 'active' AND deleted_at IS NULL`,
+    [newEndsAtMs ?? null, nowMs, userId, episodeGroupId],
+  );
+  if (res?.changes) _scheduleSync();
+  return res?.changes ?? 0;
+}
+
+/**
+ * "This is how I train now" (CAP-16, ARCHITECTURE section 24). Ends every
+ * active row of the episode with reason 'promoted' and inserts a BASELINE
+ * copy of each (new id, no group, no planned end, starts now). One
+ * transaction; idempotent - a group with no active rows promotes nothing,
+ * so a double-tap or a cross-device race cannot duplicate baselines
+ * (section 33.9: the union of duplicates is safe, the promote itself is
+ * exactly-once per live row).
+ */
+export async function promoteCapabilityEpisode(userId, episodeGroupId, { nowMs = Date.now() } = {}) {
+  if (!userId || !episodeGroupId) return [];
+  const d = await db();
+  const createdIds = [];
+  await runInTransaction(d, async () => {
+    const live = await d.getAllAsync(
+      `SELECT * FROM capability_constraints
+        WHERE user_id = ? AND episode_group_id = ? AND state = 'active' AND deleted_at IS NULL`,
+      [userId, episodeGroupId],
+    );
+    for (const r of live ?? []) {
+      await d.runAsync(
+        `UPDATE capability_constraints
+            SET state = 'ended', ended_at = ?, ended_reason = 'promoted', updated_at = ?
+          WHERE id = ?`,
+        [nowMs, nowMs, r.id],
+      );
+      // exercise_allow rows are per-exercise carve-outs; they promote too,
+      // keeping the user's recorded allowances part of their normal.
+      const id = uid();
+      await d.runAsync(
+        `INSERT INTO capability_constraints
+           (id, user_id, role, source, rule_kind, rule_value, laterality,
+            starts_at, ends_at, state, episode_group_id, created_at, updated_at)
+         VALUES (?, ?, 'baseline', ?, ?, ?, ?, ?, NULL, 'active', NULL, ?, ?)`,
+        [id, userId, r.source, r.rule_kind, r.rule_value, r.laterality, nowMs, nowMs, nowMs],
+      );
+      createdIds.push(id);
+    }
+  });
+  if (createdIds.length) _scheduleSync();
+  return createdIds;
+}
+
+/** Supersede: end the old row and insert the corrected one, atomically. */
+export async function supersedeCapabilityConstraint(userId, id, newInput, { nowMs = Date.now() } = {}) {
+  if (!userId || !id) return null;
+  // eslint-disable-next-line global-require
+  const { validateConstraintInput } = require('./capability/model');
+  const verdict = validateConstraintInput(newInput);
+  if (!verdict.ok) throw new Error(`capability_constraint_invalid:${verdict.reason}`);
+  const d = await db();
+  let newId = null;
+  await runInTransaction(d, async () => {
+    const res = await d.runAsync(
+      `UPDATE capability_constraints
+          SET state = 'ended', ended_at = ?, ended_reason = 'superseded', updated_at = ?
+        WHERE id = ? AND user_id = ? AND state = 'active' AND deleted_at IS NULL`,
+      [nowMs, nowMs, id, userId],
+    );
+    if (!res?.changes) return; // nothing live to supersede; insert nothing
+    newId = uid();
+    await d.runAsync(
+      `INSERT INTO capability_constraints
+         (id, user_id, role, source, rule_kind, rule_value, laterality,
+          starts_at, ends_at, state, episode_group_id, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?)`,
+      [newId, userId, newInput.role, newInput.source, newInput.ruleKind,
+        newInput.ruleValue, newInput.laterality ?? null, newInput.startsAt,
+        newInput.endsAt ?? null, newInput.episodeGroupId ?? null, nowMs, nowMs],
+    );
+  });
+  if (newId) _scheduleSync();
+  return newId;
+}
+
+/**
+ * Consent withdrawal / erasure (CAP-20): tombstone every row so the
+ * removal PROPAGATES to the user's other devices through sync; the cloud
+ * side hard-purges tombstones on its standing schedule, and account
+ * deletion hard-deletes via delete_user_data (migrate_145). Local hard
+ * delete happens on the user-boundary wipe as for every other table.
+ */
+export async function tombstoneAllCapabilityConstraints(userId, { nowMs = Date.now() } = {}) {
+  if (!userId) return 0;
+  const d = await db();
+  const res = await d.runAsync(
+    `UPDATE capability_constraints SET deleted_at = ?, updated_at = ?
+      WHERE user_id = ? AND deleted_at IS NULL`,
+    [nowMs, nowMs, userId],
+  );
+  if (res?.changes) _scheduleSync();
+  return res?.changes ?? 0;
+}
+
+/**
+ * Pull-side applier: strictly-newer last-write-wins on updated_at, the
+ * registry contract (sync/tables/weeklyCheckins.js precedent). A local
+ * write that has not pushed yet is never clobbered by an older cloud row,
+ * and a NEWER tombstone always beats an older active copy - retirement can
+ * never resurrect (CC26 sync law).
+ */
+export async function insertCapabilityConstraintFromCloud(localUserId, row) {
+  if (!localUserId || !row?.id) return false;
+  const d = await db();
+  const cloudUpdated = _tsToMs(row.updated_at) ?? 0;
+  const existing = await d.getFirstAsync(
+    'SELECT updated_at FROM capability_constraints WHERE id = ?', [row.id],
+  );
+  if (existing && (existing.updated_at ?? 0) >= cloudUpdated) return false;
+  await d.runAsync(
+    `INSERT OR REPLACE INTO capability_constraints
+       (id, user_id, role, source, rule_kind, rule_value, laterality,
+        starts_at, ends_at, state, ended_at, ended_reason, episode_group_id,
+        created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [row.id, localUserId, row.role, row.source, row.rule_kind, row.rule_value,
+      row.laterality ?? null, _tsToMs(row.starts_at), _tsToMs(row.ends_at),
+      row.state, _tsToMs(row.ended_at), row.ended_reason ?? null,
+      row.episode_group_id ?? null, _tsToMs(row.created_at) ?? cloudUpdated,
+      cloudUpdated, _tsToMs(row.deleted_at)],
+  );
+  return true;
+}
+
+// ── session_constraint_effects (schema foundation; writers arrive in CC29) ──
+
+export async function createSessionConstraintEffect(userId, workoutId, effects, { nowMs = Date.now() } = {}) {
+  if (!userId || !workoutId) return null;
+  const d = await db();
+  const id = `sce_${workoutId}`;
+  await d.runAsync(
+    `INSERT OR REPLACE INTO session_constraint_effects
+       (id, user_id, workout_id, effects_json, created_at, updated_at)
+     VALUES (?, ?, ?, ?, COALESCE((SELECT created_at FROM session_constraint_effects WHERE id = ?), ?), ?)`,
+    [id, userId, workoutId, JSON.stringify(effects ?? []), id, nowMs, nowMs],
+  );
+  _scheduleSync();
+  return id;
+}
+
+export async function getAllSessionConstraintEffectsForUser(userId) {
+  if (!userId) return [];
+  const d = await db();
+  const rows = await d.getAllAsync(
+    'SELECT * FROM session_constraint_effects WHERE user_id = ?', [userId],
+  );
+  return (rows ?? []).map(r => ({
+    id: r.id, userId: r.user_id, workoutId: r.workout_id,
+    effectsJson: r.effects_json, createdAt: r.created_at,
+    updatedAt: r.updated_at, deletedAt: r.deleted_at,
+  }));
+}
+
+export async function insertSessionConstraintEffectFromCloud(localUserId, row) {
+  if (!localUserId || !row?.id) return false;
+  const d = await db();
+  const cloudUpdated = _tsToMs(row.updated_at) ?? 0;
+  const existing = await d.getFirstAsync(
+    'SELECT updated_at FROM session_constraint_effects WHERE id = ?', [row.id],
+  );
+  if (existing && (existing.updated_at ?? 0) >= cloudUpdated) return false;
+  await d.runAsync(
+    `INSERT OR REPLACE INTO session_constraint_effects
+       (id, user_id, workout_id, effects_json, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [row.id, localUserId, row.workout_id, row.effects_json ?? '[]',
+      _tsToMs(row.created_at) ?? cloudUpdated, cloudUpdated, _tsToMs(row.deleted_at)],
+  );
+  return true;
 }

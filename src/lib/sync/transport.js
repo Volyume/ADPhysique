@@ -43,6 +43,8 @@ import {
   pullRecipeIngredients,
 } from './tables/recipeIngredients';
 import { pushWeightLog, pullWeightLog } from './tables/weightLog';
+import { pushCapabilityConstraints, pullCapabilityConstraints } from './tables/capabilityConstraints';
+import { pushSessionConstraintEffects, pullSessionConstraintEffects } from './tables/sessionConstraintEffects';
 import { pushDailySteps, pullDailySteps } from './tables/dailySteps';
 import { pullCardioLog } from './tables/cardioLog';
 import { pushProfiles, pullProfiles } from './tables/profiles';
@@ -84,6 +86,8 @@ function _getSupabaseClient() {
 // src/lib/sync/tables/foodDomain.js; the others have dedicated
 // handlers under tables/.
 export const MIGRATED_TABLES = Object.freeze([
+  'capability_constraints',
+  'session_constraint_effects',
   'notification_preferences',
   'weekly_checkins_v2',
   'body_composition_log',
@@ -106,6 +110,8 @@ export const MIGRATED_TABLES = Object.freeze([
 ]);
 
 const PUSH_HANDLERS = {
+  capability_constraints: pushCapabilityConstraints,
+  session_constraint_effects: pushSessionConstraintEffects,
   notification_preferences: pushNotificationPreferences,
   weekly_checkins_v2: pushWeeklyCheckins,
   body_composition_log: pushBodyComposition,
@@ -133,6 +139,8 @@ const PUSH_HANDLERS = {
 };
 
 const PULL_HANDLERS = {
+  capability_constraints: pullCapabilityConstraints,
+  session_constraint_effects: pullSessionConstraintEffects,
   notification_preferences: pullNotificationPreferences,
   weekly_checkins_v2: pullWeeklyCheckins,
   body_composition_log: pullBodyComposition,

@@ -163,6 +163,8 @@ export async function syncAll({ userId, localUserId, triggeredBy = 'manual' } = 
       try {
         // eslint-disable-next-line global-require
         require('../consent/pendingConsent').flushPendingConsent().catch(() => {});
+        // eslint-disable-next-line global-require
+        require('../consent/capabilityConsent').flushPendingCapabilityConsent().catch(() => {});
       } catch (_) { /* tolerate */ }
       // FQ-6.1 (D96): the trial-grant retry rides the same trigger, in the
       // same shape - queue on network failure at consent, flush on sync.

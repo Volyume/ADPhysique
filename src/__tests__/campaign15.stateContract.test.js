@@ -51,6 +51,24 @@ const EXPECTED_LOCAL_LOSS = 'EXPECTED_LOCAL_LOSS';
  */
 const CONTRACT = [
   {
+    state: 'capability constraints (CC26 capability lane)',
+    authority: 'local SQLite (capability_constraints)',
+    mechanism: 'registry engine (sync/tables/capabilityConstraints.js)',
+    applier: 'insertCapabilityConstraintFromCloud',
+    destination: 'capability_constraints',
+    conflict: 'strictly-newer last-write-wins on updated_at; a newer tombstone beats an older active row, so retirement never resurrects; server refuse-stale trigger (migrate_145)',
+    reinstall: RESTORED,
+  },
+  {
+    state: 'session constraint effects (CC26 schema; CC29 writers)',
+    authority: 'local SQLite (session_constraint_effects)',
+    mechanism: 'registry engine (sync/tables/sessionConstraintEffects.js)',
+    applier: 'insertSessionConstraintEffectFromCloud',
+    destination: 'session_constraint_effects',
+    conflict: 'strictly-newer last-write-wins on updated_at (migrate_146 trigger)',
+    reinstall: RESTORED,
+  },
+  {
     state: 'plans and routines',
     authority: 'local SQLite (programmes, routines)',
     mechanism: 'legacy bulk pull',
@@ -266,6 +284,7 @@ describe('C15-8 nothing ships without an entry in the contract', () => {
     'food_favourites', 'daily_water', 'daily_intake_rollups', 'meal_plans',
     'nutrition_targets', 'perday_target_offsets',      // nutrition, C15 job 4 ruled ownership
     'effective_maintenance_memos',                     // nutrition authority, Campaign 19
+    'capability_constraints', 'session_constraint_effects',
     'weekly_checkins_v2', 'weight_log', 'body_composition_log',
     'daily_steps', 'cardio_log',                        // retired surfaces
     'ed_pattern_flags',                                 // D92-11 holds
