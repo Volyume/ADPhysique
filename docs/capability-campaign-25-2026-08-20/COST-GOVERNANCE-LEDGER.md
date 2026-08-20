@@ -6,7 +6,8 @@ explicit founder approval. Direct tools before agents.
 
 | # | Agent | Question | Tier | Why lowest suitable | Result | Follow-up |
 |---|---|---|---|---|---|---|
-| — | (none yet post-order) | | | | | |
+| RT-1 | Technical red team (post-architecture slot 1/2) | Break the CC25 architecture: contamination, provenance, sync, precedence, state machine | sonnet | Lowest SUITABLE: sustained multi-document adversarial reasoning over a 1,219-line architecture + repo verification; haiku judged unable to execute reliably (§1 conditions 1-4 met; judgement recorded here per §13) | pending | — |
+| RT-2 | Product red team (slot 2/2) | Break it on inclusivity, UX dignity, claims, no-solution handling, medical overreach, Amendment §29 scenarios | sonnet | same justification | pending | — |
 
 Direct-tool resolutions (no agent spent):
 - I-1..I-4 sync contract: read conflict.js (102 ln), registry.js head,
