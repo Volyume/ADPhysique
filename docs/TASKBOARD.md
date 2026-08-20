@@ -769,7 +769,7 @@ queue paused here for the founder review per D55.
 
 ## 1. IN FLIGHT
 
-### CAPABILITY CAMPAIGN 25 (CC25) — capability-aware, disability-inclusive, restriction & injury-aware training intelligence. ARCHITECTURE COMPLETE + CC26 FOUNDATIONS BUILT, GATED AND MERGED (2026-08-20). CC27 (eligibility resolver + selection seams) is NEXT UP from the roadmap, on founder go.
+### CAPABILITY CAMPAIGN 25 (CC25) — capability-aware, disability-inclusive, restriction & injury-aware training intelligence. ARCHITECTURE COMPLETE + CC26 FOUNDATIONS + CC27–CC29 EXECUTION BUNDLE BUILT, RED-TEAMED, GATED AND MERGED (2026-08-20). CC30 (learning eligibility / contamination shield) is NEXT UP from the roadmap, on founder go.
 
 **Founder order 2026-08-20** (master brief in chat; architecture campaign
 first, implementation campaigns CC26+ only after its completion gate).
@@ -830,9 +830,20 @@ Ruling CC-D27: demand-only add UI in CC26; family/exercise/allow add
 surfaces are a named CC27 gate item. Zero implementation subagents;
 red-team record in `_CAMPAIGN-LOG.md`. Full record: campaign log CC26
 block + STATUS-LEDGER.md.
-**RECOVERY/RESUME:** next session starts CC27 from
-ROADMAP-CC26-PLUS.md (on founder go — the CC26 close produced the
-CC27 start prompt); everything needed is in the campaign folder.
+**CC27–CC29 (2026-08-20, execution bundle 1, founder bundle order):**
+all three campaigns landed back-to-back per the roadmap blocks — demand
+ontology + resolver + composed senior question everywhere (CC27),
+inclusive onboarding + computed library compatibility + ten family
+plans (CC28), effective prescription + honest adherence denominators
+(CC29). Cloud files 148/149 written, NOT applied (CC-F7; 145-149 all
+await the founder phrase). ONE bundle-end Sonnet red team: 4 accepted
+BREAKs, all fixed and pinned. Full-suite gate green; merged to main.
+Full record: `CC27-29-BUNDLE-TRACKER.md` + STATUS-LEDGER.md in the
+campaign folder; physical device walk banked in
+PHYSICAL-VALIDATION-BACKLOG.md (30 steps, CC26-CC29).
+**RECOVERY/RESUME:** next session starts CC30 from
+ROADMAP-CC26-PLUS.md (on founder go); everything needed is in the
+campaign folder.
 
 
 ### CAMPAIGN 6: RETURNING USERS, LONG-TERM PERSONALISATION, LAPSES,

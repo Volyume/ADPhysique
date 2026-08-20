@@ -79,3 +79,29 @@ One Sonnet red team: 8 findings, all adjudicated and landed
 (record in _CAMPAIGN-LOG.md). Selection, generation, coaching and
 learning behaviour UNCHANGED by construction (guard-tested).
 Next: CC27 per ROADMAP-CC26-PLUS.md, on founder go.
+
+## CC27–CC29 status (2026-08-20, execution bundle 1)
+
+BUILT, RED-TEAMED AND GATED IN ONE BUNDLE (founder order: CC27 → CC28 →
+CC29 without campaign-boundary stops). CC27: the ten-axis demand
+ontology over all 551 seed rows (87-100% per-axis coverage, zero
+contradictions), the pure resolver + section 4.1 precedence, the senior
+question composed through every caller (16 callers + the three id-blind
+readers + the Recent rail), pre/post-engine wiring, picker filter +
+section 9.4 flows, the section 9.6 pre-flight, honest no-compatible
+reporting, CC-D25/CAP-18 copy, the wording sweep, same-position
+sequencing, custom parity (PD-8 prerequisite fixed), CC-D27 add
+surfaces; PD-2/PD-8/PD-9 paid; BD-1 pull-wipe defect found and fixed.
+CC28: both onboarding paths gain the optional capability step, computed
+library compatibility + chips + install-time senior check (A11.8), ten
+compatible-by-construction family plans (grip-limited pulling deferred
+DEF-3, named honestly), free-starter capability-aware pick, session
+length free-editable + energy card (33.12), coverage registry. CC29:
+effective prescription as a resolution layer (never a store), the
+section 14 propose/apply/decline, serve-time substitution after explicit
+Apply on fresh sessions only, eligibility-derived swap cause, section 18
+honest denominators through the ONE stats function (C1-C4 fixed by
+fixture). Bundle red team (ONE Sonnet): 4 BREAKs, all accepted, fixed,
+pinned (tracker). Cloud files 148/149 written and locally exercised —
+NOT applied (CC-F7). Full-suite gate green over the settled tree.
+Next: CC30 per ROADMAP-CC26-PLUS.md, on founder go.
