@@ -782,3 +782,416 @@ the opposite: **the app acts on what is wrong with the user, and says so in thos
 terms.** Capability in, training out. Condition in, health outcome out. The
 architecture should make the first easy to express and the second hard — in the
 data model, in the copy pipeline, and in the store listing.
+
+---
+
+## Q4 — MHRA specifics: the current UK position
+
+### 4.1 The operative UK instrument [ESTABLISHED]
+
+Great Britain still regulates under **the Medical Devices Regulations 2002
+(SI 2002/618), as amended** — the Directive-era transposition, not the EU MDR.
+Regulation 2(1), retrieved verbatim from legislation.gov.uk:
+
+> "'medical device' means any instrument, apparatus, appliance, software,
+> material or other article, whether used alone or in combination, together with
+> any accessories, including the software intended by its manufacturer to be used
+> specifically for diagnosis or therapeutic purposes or both and necessary for its
+> proper application, which—
+> (a) is intended by the manufacturer to be used for human beings for the purpose
+> of-
+> (i) diagnosis, prevention, monitoring, treatment or alleviation of disease,
+> (ii) diagnosis, monitoring, treatment, **alleviation of or compensation for an
+> injury or handicap**,
+> (iii) investigation, replacement or modification of the anatomy or of a
+> physiological process, or
+> (iv) control of conception; and
+> (b) does not achieve its principal intended action in or on the human body by
+> pharmacological, immunological or metabolic means, even if it is assisted in its
+> function by such means ..."
+
+and:
+
+> "'intended purpose' means— ... (b) in relation to any other medical device, the
+> use to which the device is intended according to the data supplied by the
+> manufacturer on the labelling, the instructions for use and/or the promotional
+> materials".
+
+**Differences from MDR Art. 2(1) that matter to Volyume** [INFERENCE from the two
+texts side by side]:
+
+| | UK MDR 2002 | MDR (EU) 2017/745 |
+|---|---|---|
+| Disease limb | diagnosis, prevention, monitoring, treatment or alleviation | adds **prediction, prognosis** |
+| Injury limb wording | "injury or **handicap**" | "injury or **disability**" |
+| Software named in definition | yes (as article and as accessory) | yes, plus Art. 2(4) deems software an active device |
+
+The EU text is the stricter of the two for a forward-looking feature such as
+reintroduction readiness, because "prediction" has no UK counterpart. **Designing
+to the EU text covers both.** [INFERENCE]
+
+### 4.2 Territorial split [REGULATOR GUIDANCE]
+
+MHRA SaMD guidance, application note:
+
+> "This guidance is applicable to standalone software and apps placed on the Great
+> Britain market. Great Britain is England, Wales and Scotland. The UKCA (UK
+> Conformity Assessed) mark is used for certain goods, including medical devices,
+> being placed on the Great Britain market."
+
+> "For Northern Ireland, different rules apply to those in Great Britain."
+
+[INFERENCE] Northern Ireland follows the EU regime under the Windsor Framework,
+so an app distributed UK-wide is exposed to **both** the UK MDR 2002 and the MDR
+analysis. This is not a choice of one regime.
+
+### 4.3 What the MHRA guidance actually is, and its status [REGULATOR GUIDANCE]
+
+- Document: *Guidance: Medical device stand-alone software including apps
+  (including IVDMDs)*, **v1.10f**, 43 pages, on the GOV.UK page *Medical devices:
+  software applications* (published 8 Aug 2014, **last updated 1 July 2023**).
+  Verified 2026-08-20: the current attachment is byte-identical to the version
+  analysed here.
+- It is expressly the UK reading of the EU material: "This guidance is to be used
+  in addition to MEDDEV 2.1/6 and is the UK's interpretation of the guidance."
+- It is built as a set of flowcharts plus one page per medical purpose, each page
+  carrying: a definition, "Examples that may be devices", "Examples that are
+  unlikely to be devices", an **Indicative words and phrases** box, and a marginal
+  rule. The indicative-words boxes are introduced as: "Words and phrases listed in
+  this box are all likely to contribute to a determination by the MHRA that the app
+  they were associated with is a medical device."
+- Its stated scope explicitly contemplates the fitness sector: "As well as medical
+  device apps becoming a growth area in healthcare management in hospital and in
+  the community settings, the role of apps used as part of **fitness regimes** and
+  for social care situations is also expanding."
+
+### 4.4 Published MHRA examples nearest this boundary [REGULATOR GUIDANCE]
+
+Collected here because they are the closest thing to a decided case that exists
+for a UK fitness app.
+
+| MHRA page | Unlikely to be a device | May be a device |
+|---|---|---|
+| Non-medical functions (p.12) | "The monitoring of general fitness, general health and general wellbeing is not usually considered to be a medical purpose"; software offering "only lifestyle treatment choices or referral advice (e.g. see your GP)" | — |
+| Prevention (p.18) | "Apps and software that just provide tips or advice on prevention" | "Apps and software that claim that the output from the physical device can prevent disease". Marginal rule: "There needs to be a link to specific disease/s to qualify as a device." Note: prevention limb "does not include products that claim to prevent injury or handicap" |
+| Diagnosis (p.19) | "Apps and software that are intended to make **general recommendations to seek further advice**"; risk stated for "a **broad group** of the population ... e.g. males aged over 50 have X% chance of heart disease" | "Apps and software that provide medical condition advice based on user entered data"; risk stated for "a **specific patient** ... e.g. people with the same risk factors as you have a X% chance of heart disease" |
+| Monitoring (p.20) | "Apps and software for monitoring sport or fitness purposes, e.g. heart rate"; "Apps and software that simply replace a written diary/log of symptoms" | Monitoring apps where "the output is intended to affect the treatment of an individual"; "**the addition of features that enhance the data presented** may bring it into the remit of the UK MDR 2002"; sport/fitness monitoring may be a device "where the intention is to investigate the physiological processes" |
+| Treatment / alleviation (p.21) | "Apps and software that are intended to treat non-medical conditions e.g. non-specific stress"; "Apps and software that are intended to just provide tips or advice or link to support groups"; medication reminders | "Apps and software that are intended to **automate the treatment pathway for an individual patient**"; insulin dose calculators; software "intended for the treatment of neurotrauma, neurodegenerative and neuropsychiatric conditions" |
+| Compensation (p.22) | Text magnification / sound amplification **with no mention of the impairment in the claims** | The same functions **claimed for visual impairment / reduced hearing**. "It doesn't include those products that are intended for general use but can be used to compensate" |
+| Appendix 1 (symptom checkers) | "Software that **only** signposts the user to suitable care e.g. see your GP, go to A&E"; "Software that offers **only** reference information about the conditions listed"; listing all matching conditions in an order "independent of likelihood, e.g. in alphabetical order" | Outputting a subset of matching conditions; indicating likelihood of a match; providing treatment recommendations; offering "filters by red flag/severity/probability of a match" |
+
+[INFERENCE] Two structural lessons for Volyume from this table. First, the word
+**"only"** appears in nearly every safe example: the safe versions are safe
+because they do *one* modest thing and stop. Second, **ordering and ranking are
+regulated acts**: an alphabetical list is safe, a likelihood-ordered list is not.
+Any "most likely cause of your discomfort" or "top recommended adaptations for
+your issue" ranking inherits that problem.
+
+### 4.5 UK reform in flight [COMMENTARY — dating only]
+
+Post-market surveillance requirements were strengthened in 2024/2025, and on
+8 May 2026 the MHRA published a draft *Medical Devices (Amendment) Regulations
+2026* on the WTO notification portal, covering pre-market requirements,
+international reliance, and Predetermined Change Control Plans for software and
+AI devices; commentary reports an expected 2026 adoption and 2027 commencement,
+plus proposals to recognise CE marking in GB indefinitely. None of this changes
+the **qualification** limbs analysed above, which are the only part that decides
+whether Volyume is in scope. Treat as a watch item, and re-check the MHRA SaMD
+guidance version before any launch of the restriction feature. [Sources are
+secondary; the draft SI itself was not retrieved. Logged as **LR-7**.]
+
+---
+
+## Q5 — Language and claims discipline
+
+### 5.1 Why wording is the control surface [REGULATOR GUIDANCE]
+
+Established above (E1, E9, E10, §1.3): the intended purpose is read off the
+label, IFU and promotional materials — and MHRA counts the **App Store
+description and category**, the **landing page** and **social media channels** as
+promotional materials. MHRA states outright that "Simple changes to the
+description make the difference between a product being considered a device or
+not", that disclaimers do not cure medical claims made elsewhere, that repeated
+testimonials count as implied manufacturer claims, and that the reader is an
+"averagely informed consumer".
+
+[INFERENCE] For Volyume this means the wording rules cannot live only in the app.
+They must cover: in-app copy, coaching-voice strings, notification text, the
+Play Store and App Store listings (title, subtitle, category, description,
+screenshots), volyume.app pages and blog posts, social posts, support macros,
+and any testimonial the marketing pipeline republishes. The existing
+`marketing-claims-check` skill and CLAIMS-STANDARDS are the natural enforcement
+point, and the vocabulary below should be folded into them.
+
+### 5.2 BLACKLIST — words and phrases MHRA lists as indicators of medical intended purpose
+
+These are transcribed **verbatim** from the "Indicative words and phrases" boxes
+in MHRA SaMD guidance v1.10f. The MHRA introduces them as "likely to contribute
+to a determination by the MHRA that the app they were associated with is a
+medical device". Grouped by the limb whose page they appear on.
+
+| Limb (page) | Indicative words and phrases (verbatim) |
+|---|---|
+| **Prevention of disease** (p.18) | Avoids… · Can benefit those who suffer from… · Combats… · Controls… · Protects against… · Stops… |
+| **Diagnosis** (p.19) | Spots · Detects… · Finds · Prognosis · Screening · Symptom Checker · Triage · Risk of… · Measures · Predicts |
+| **Monitoring** (p.20) | Check · Alarms |
+| **Treatment / alleviation** (p.21) | Calculates… · Can benefit those who suffer from… · Clears · Combats · Controls · Counteracts · Cure/cures · Eliminates · Fights · Heals · Help/help with · Reduce pain |
+| **Compensation for an injury or handicap** (p.22) | Corrects · Helps |
+| **Control of conception** (p.24) | Fertility · Ovulation · Menstruation · Contraception · IVF |
+| **Accessory** (p.9) | Can be used with… · Helps… |
+| **Intended purpose / evidence claims** (p.11) | Clinical Trials Evidence · Clinically proven… · Medical research… |
+| **Self-identification as SaMD** (p.8) | Software as a medical device · Standalone software · Medical apps · SaMD · Macro · Script |
+| **Symptom checkers** (Appendix 1) | Triage · Self assessment · Medical Information · Health Information · Working diagnosis · Differential diagnosis |
+
+[INFERENCE — note the awkward ones] "Helps", "Controls", "Check", "Measures" and
+"Calculates" are ordinary product words that a fitness app uses without thinking.
+MHRA's own framing is that they *contribute to* a determination, not that they
+decide it; a word in this list beside a **specific disease, injury or handicap**
+is what does the damage. The practical rule that falls out is: these words are
+usable about **training** ("checks your set volume", "calculates your weekly
+sets"), and unusable about **the body's condition** ("helps your shoulder",
+"controls your flare-ups", "measures your recovery from the injury").
+
+### 5.3 Answering 3(f) directly: "recovery", "rehabilitation", "injury management", "flare"
+
+| Term | Verdict | Evidence |
+|---|---|---|
+| **rehabilitation** | **BLACKLIST — do not use in any surface** | MDCG 2019-11 rev.1 p.10 uses the word in two of its MDSW examples: recommending "personalised **rehabilitation** exercises" to alleviate pain, and an aid "in the **rehabilitation** of persons with amputations". The word is the regulator's own label for the qualifying activity. |
+| **injury management** | **BLACKLIST** | Combines a specific-injury link (MHRA's stated requirement on the monitoring, treatment/alleviation and compensation pages) with a claim to manage it. "Manage" is the verb MDCG rev.1 p.11 uses for the depression MDSW ("assess, monitor, and manage depression"). |
+| **flare / flare-up** | **BLACKLIST** | A flare is a symptom episode of an underlying condition; using it imports the disease/injury link and the symptom frame that the alleviation limb turns on (MHRA p.21: "Alleviation — includes devices that **reduce symptoms** or severity of a disease, injury or handicap"). |
+| **recovery** | **GREYLIST — allowed only in its training-science sense** | Not in any MHRA indicative list. In strength training, "recovery" is a standard term for between-session readiness and is already used throughout Volyume. It becomes risky when attached to an injury or condition ("recovery from your shoulder injury", "recovery plan for your back"), which supplies the specific-injury link. Rule: recovery *of training capacity*, never recovery *from an injury*. |
+| **physio / physiotherapy** | **BLACKLIST as a claim; permitted only as attribution of the user's own external advice** | Naming a profession that treats injuries positions the product in that space. "Physio said no overhead until September" as a *user-entered note* is a record of what the user told the app; "physio-designed programme" or "follows physio guidelines" is a claim. |
+| **prehab / rehab** | **BLACKLIST** | Same as rehabilitation; the abbreviation carries the same meaning to an averagely informed consumer (E10). |
+| **pain** | **GREYLIST — logging yes, outcome no** | "Reduce pain" is on MHRA's treatment/alleviation indicative list (p.21). Volyume may let users record pain/discomfort (diary is safe, p.20) but must never claim to reduce it or present pain reduction as an outcome of using the app. |
+| **treat / treatment / therapy / therapeutic** | **BLACKLIST** | Directly on the treatment limb. |
+| **diagnose / assess / screen / triage** | **BLACKLIST** | MHRA diagnosis indicative words; "assess" is the verb of the depression MDSW example. |
+| **heal / healing / repair / restore** | **BLACKLIST** | "Heals" is on MHRA's treatment/alleviation list. |
+| **safe for / protects / prevents injury** | **BLACKLIST** | "Protects against" and "Avoids" are on the prevention list; MHRA notes the prevention limb "does not include products that claim to prevent injury or handicap" — which means a prevent-injury claim does not qualify the app under *that* limb, but it is still a health claim that an objective observer may read as a medical benefit, and it is not defensible as a training statement. |
+| **clinically proven / evidence-based for [condition]** | **BLACKLIST** | "Clinically proven…", "Clinical Trials Evidence", "Medical research…" are all MHRA indicative phrases (p.11). This directly constrains how any "evidence dossier" behind a routine family may be described. |
+| **condition names** (spinal cord injury, MS, arthritis, frozen shoulder, ACL, sciatica, hypermobility, etc.) | **BLACKLIST in product/marketing copy; NEEDS REVIEW for discovery metadata** | Every MHRA medical-purpose page carries the marginal rule "There needs to be a link to a **specific** disease, injury or handicap." Naming the condition is that link. See LR-3. |
+
+### 5.4 GREENLIST — the vocabulary that stays inside "fitness"
+
+[INFERENCE, constructed to sit inside the exclusions quoted at §2.1–2.2 and to
+avoid every term in §5.2]
+
+- Capability and constraint: *available movements*, *movements you've excluded*,
+  *can train standing / seated*, *overhead available*, *grip-limited*,
+  *unilateral*, *equipment you have*.
+- Programme mechanics: *swap*, *substitute*, *same muscle group*, *same movement
+  pattern*, *weekly sets*, *volume target*, *deload*, *progression*, *training
+  block*, *stimulus*.
+- Reintroduction: *try it again*, *add it back*, *test set*, *see how it goes*,
+  *keep it out for now* — user-agency verbs, not protocol nouns.
+- Logging: *you logged discomfort*, *you marked this exercise as one to avoid* —
+  reporting the user's own input back to them.
+- Signposting: *we can't build a programme around this — please speak to a
+  doctor or physiotherapist* (this is the MHRA-safe "only signposts" pattern,
+  Appendix 1).
+
+### 5.5 Structural claim patterns to avoid, independent of individual words [INFERENCE]
+
+1. **Condition → benefit sentences.** Any sentence of the shape "[condition]:
+   [what Volyume does for it]". This is the intended-purpose statement MHRA looks
+   for.
+2. **Ranked or likelihood-ordered health outputs.** Appendix 1 treats
+   likelihood-ordering and severity filtering as qualifying; alphabetical or
+   user-chosen ordering as not.
+3. **Derived symptom analytics.** Trends, scores, forecasts or comparisons built
+   on discomfort reports — MHRA p.20's "features that enhance the data presented".
+4. **Prediction of a bodily state.** MDR Art. 2(1) includes "prediction"; UK does
+   not. "You'll be ready to press overhead in two weeks" is a prediction about
+   the body. "Your reintroduction plan has three steps left" is a statement about
+   the plan.
+5. **Testimonials describing recovery from injury.** MHRA: repeated testimonials
+   are implied manufacturer claims.
+6. **Category and keyword choices in the stores.** MHRA lists "App store
+   description **and category**". A Medical category, or ASO keywords naming
+   conditions, is a claim.
+
+---
+
+## Q6 — App store layer (brief)
+
+### 6.1 Apple [PLATFORM POLICY]
+
+App Store Review Guidelines (retrieved 2026-08-20):
+
+- **§1.4.1** — "Medical apps that could provide inaccurate data or information, or
+  that could be used for diagnosing or treating patients may be reviewed with
+  greater scrutiny." Apps "must clearly disclose data and methodology to support
+  accuracy claims relating to health measurements, and if the level of accuracy or
+  methodology cannot be validated, we will reject your app." Apps "should remind
+  users to check with a doctor in addition to using the app and before making
+  medical decisions. **If your medical app has received regulatory clearance,
+  please submit a link to that documentation with your app.**"
+- **§1.4.2** — drug dosage calculators must come from an approved entity or hold
+  regulatory approval. (Not applicable to Volyume; noted because it shows Apple
+  will demand provenance for calculation features in a clinical frame.)
+- **§5.1.3** — health/fitness/medical-research data may not be used or disclosed
+  "for advertising, marketing, or other use-based data mining purposes other than
+  improving health management"; "You must disclose the specific health data that
+  you are collecting from the device"; apps "must not write false or inaccurate
+  data into HealthKit"; and health-related human subject research needs informed
+  consent and ethics-board approval.
+- **§5.1.1(ix)** — apps providing services in "highly regulated fields (such as
+  ... healthcare ...)" "should be submitted by a legal entity that provides the
+  services, and not by an individual developer."
+
+### 6.2 Google Play [PLATFORM POLICY]
+
+*Health Content and Services* policy (retrieved 2026-08-20), verbatim:
+
+> "All developers must complete the health apps declaration form on the App
+> content page (Monitor and improve > Policy > App content) in Play Console."
+
+> "If your app is not primarily a health app, but has health-related features and
+> accesses health data, **it is still in scope of the health app policy**."
+
+> "We don't allow apps with health and medical-related functionalities that are
+> misleading or potentially harmful."
+
+> "Apps that are regulated because they are a medical device must be declared as
+> such ... These apps will be identified as a 'medical device' on Google Play.
+> Apps that are regulated as a medical device **must provide proof of approval,
+> clearance or certification by the relevant authority upon request**. **Other
+> health and medical apps must include a clear disclaimer in their app description
+> indicating that the app is 'not a medical device and does not diagnose, treat,
+> cure or prevent any medical condition'.**"
+
+> "Apps must also remind users to consult a healthcare professional for medical
+> advice, diagnosis or treatment."
+
+> "Permissions that are not required for a health app to perform its core
+> functionality should not be requested and unused permissions must be removed."
+
+### 6.3 The one tension worth noticing [INFERENCE]
+
+Google **requires** the "not a medical device and does not diagnose, treat, cure
+or prevent any medical condition" disclaimer in the store description. MHRA says
+a disclaimer like that "is not acceptable if medical claims are made or implied
+elsewhere". These are not in conflict, but they must both be satisfied and they
+must be satisfied in the right order: **first remove the claims, then add the
+disclaimer.** A disclaimer added to a listing that also says "manage your injury"
+satisfies Google's tick-box and hands MHRA the evidence of an implied claim in
+the same document.
+
+[INFERENCE] Also worth an explicit decision: Volyume's store listings, category
+and screenshots are currently written by the marketing pipeline. If the
+restriction/capability feature ships, the listing copy becomes a regulatory
+artefact under MHRA's own definition of promotional material. That should be a
+gated surface, not an autonomous-lane one.
+
+---
+
+## BOUNDARY TABLE
+
+Risk ratings: **LOW** = the sources point clearly away from qualification for the
+described framing; **MEDIUM** = defensible but the framing does real work and a
+single copy change flips it; **NEEDS REVIEW** = R2 cannot responsibly call it,
+regulatory professional required before build. All ratings are R2 [INFERENCE]
+against the cited controlling source.
+
+| # | Feature function | Limb it could touch | Risk | Controlling source |
+|---|---|---|---|---|
+| 1 | Exclude exercises the user asked to avoid (capability/preference input) | none | **LOW** | MDCG 2019-11 rev.1 §3.1 p.9 (wellness/fitness apps not MDSW); MHRA p.12 (fitness/wellbeing not a medical purpose) |
+| 2 | Suggest substitutes for an excluded movement, framed as same pattern / same muscles | alleviation, if framed as protecting a body part | **LOW** | MDCG rev.1 p.10 (contrast: exercise recommendation *to alleviate pain* IS MDSW); MHRA p.21 |
+| 3 | Reduce training volume while a restriction is active, framed as fewer available exercises | alleviation / treatment, if framed as therapeutic dose | **LOW** | MHRA p.21 indicative words ("Controls", "Counteracts", "Reduce pain") |
+| 4 | Time-boxed restriction ("no X until September") entered as a user note and honoured | none, if the app does not act on the clinical reason | **LOW** | MHRA p.11 (intended purpose read from claims, not from user-entered data) |
+| 5 | Staged reintroduction with entry criteria and hold/regression rules, user-approved at each gate | treatment pathway automation; MDR "prediction" | **MEDIUM** | MHRA p.21 ("automate the treatment pathway for an individual patient" MAY be a device); MDCG rev.1 p.10–11 |
+| 6 | Logging user-reported discomfort per exercise/session (raw diary) | none | **LOW** | MHRA p.20 ("simply replace a written diary/log of symptoms" unlikely to be a device) |
+| 7 | Detecting a pattern across discomfort reports and prompting to adapt | monitoring (enhanced data); alleviation (symptom-contingent adaptation) | **NEEDS REVIEW** | MHRA p.20 ("addition of features that enhance the data presented"); MDCG rev.1 p.11 (symptom-input → individually chosen exercises → reduce symptoms IS MDSW) |
+| 8 | Derived symptom analytics: discomfort trends, flare-frequency scores, comparisons over time | monitoring | **NEEDS REVIEW** | MHRA p.20 |
+| 9 | Ranking or likelihood-ordering any health-related output | diagnosis | **NEEDS REVIEW → avoid** | MHRA Appendix 1 (likelihood ordering / severity filters qualify; alphabetical does not) |
+| 10 | Red-flag refusal + signposting to a professional, with no severity grading | none | **LOW** | MHRA Appendix 1 ("only signposts the user to suitable care"); MHRA p.19 ("general recommendations to seek further advice") |
+| 11 | Capability-led routine families: seated-only, unilateral, grip-limited, standing-free | compensation, if labelled by condition | **LOW** | MHRA p.22 ("intended for general use but can be used to compensate" is outside the limb) |
+| 12 | Population-labelled curated routines (e.g. "spinal cord injury") | **compensation for an injury or disability** | **NEEDS REVIEW** | MHRA p.22 (paired magnification examples; "link to a specific injury or handicap"); MDCG rev.1 p.10 (rehabilitation-of-amputees MDSW); Borderline Manual v5 §1.1.7.1 |
+| 13 | Evidence dossiers described as clinical evidence for a population | treatment/alleviation substantiation | **NEEDS REVIEW → reframe** | MHRA p.11 indicative phrases "Clinically proven…", "Clinical Trials Evidence", "Medical research…" |
+| 14 | Storing a declared diagnosis in the profile and deriving programmes from it | all limbs (supplies the specific-condition link) | **NEEDS REVIEW → avoid** | MHRA marginal rules on pp.18–22; MHRA p.19 ("medical condition advice based on user entered data" MAY be a device) |
+| 15 | Predicting when a movement will be tolerable again | MDR "prediction" (EU only) | **NEEDS REVIEW → avoid** | MDR Art. 2(1) as quoted in MDCG rev.1 §2; MHRA p.19 indicative word "Predicts" |
+| 16 | Copy using "rehabilitation", "injury management", "flare", "prehab", "therapy" anywhere | all limbs | **NEEDS REVIEW → avoid** | MDCG rev.1 p.10; MHRA pp.18–22 indicative word boxes |
+| 17 | Store listing / category / ASO keywords naming conditions or clinical benefit | all limbs | **NEEDS REVIEW → avoid** | MHRA p.11 ("App store description and category" is promotional material); Play health policy; Apple §1.4.1 |
+| 18 | Existing ED-safety subsystem (suppression + Beat UK signposting), unchanged | alleviation of an eating disorder | **LOW as built; MEDIUM if it ever gains interventions** | MDCG rev.1 p.9 (ED-alleviation MDSW example); MHRA Appendix 1 (signposting-only safe) |
+
+---
+
+## WORDING BLACKLIST / GREYLIST — evidence index
+
+For enforcement, the tables at §5.2 and §5.3 are the deliverable. This index maps
+each list back to its source so the claims-check skill can cite it.
+
+| List | Source of authority |
+|---|---|
+| Blacklist by limb (§5.2 table) | MHRA SaMD guidance v1.10f, "Indicative words and phrases" boxes, pp.8, 9, 11, 18, 19, 20, 21, 22, 24 and Appendix 1. Introduced as "likely to contribute to a determination by the MHRA that the app they were associated with is a medical device." |
+| "rehabilitation" | MDCG 2019-11 rev.1 p.10, twice, as the label of MDSW activity |
+| "manage [condition]", "assess", "monitor" applied to a condition | MDCG 2019-11 rev.1 p.11 ("assess, monitor, and manage depression") |
+| "alleviate", "reduce symptoms" | MDR Art. 2(1) limbs 1–2; MHRA p.21 definition of Alleviation |
+| "compensate", "helps", "corrects" applied to an impairment | MHRA p.22 |
+| "clinically proven", "clinical trials evidence" | MHRA p.11 |
+| Condition names as the required "specific link" | MHRA marginal rules, pp.18, 20, 21, 22 |
+| Disclaimers do not cure claims | MHRA p.11 |
+| Testimonials are implied claims | MHRA p.11 |
+| Store listing and category are promotional material | MHRA p.11 |
+| Greenlist (§5.4) | R2 [INFERENCE], constructed to avoid every term above and to sit inside MDCG rev.1 §3.1 p.9 and MHRA p.12 |
+
+---
+
+## NEEDS LEGAL REVIEW REGISTER
+
+Each item states the question a regulatory professional (UK medical devices /
+digital health) must answer, why R2 cannot, and what is blocked until it is
+answered. Founder decision required on whether to obtain the review before build
+or accept the risk; per CLAUDE.md Section 4 this is surfaced as a question, not
+parked.
+
+| ID | Question for review | Why R2 cannot answer it | Blocks |
+|---|---|---|---|
+| **LR-1** | Does symptom-pattern detection over user-reported discomfort, followed by an offer to change the programme, create a medical intended purpose if no symptom-reduction benefit is claimed? | Turns on how an "objective observer / averagely informed consumer" (MHRA p.11) reads the prompt, and on how close MHRA considers it to MDCG rev.1 p.11's depression example. That is a judgement call reserved to the regulator or a professional advising on it. | Feature 3(e); boundary-table rows 7, 8 |
+| **LR-2** | Does a staged reintroduction protocol with entry criteria and hold/regression rules amount to "automating the treatment pathway for an individual patient" (MHRA p.21) when no condition is named? | The MHRA example is stated without elaboration; no published case distinguishes a training progression from a treatment pathway. | Feature 3(d); row 5 |
+| **LR-3** | Can routines be labelled with a clinical population (e.g. spinal cord injury) as discovery metadata only, without engaging the compensation limb? If not, what labelling is permissible? | MHRA p.22 makes the limb turn on whether the claim links the product to a specific injury or handicap; whether search metadata counts as a "claim" is untested in the published material. | Population-labelled routine families; rows 12, 13 |
+| **LR-4** | May Volyume store a user-declared diagnosis at all (even for the user's own reference, never acted on), without that recording becoming evidence of intended purpose? | Interacts with GDPR Art. 9 as well as device qualification; needs both privacy and regulatory input. Coordinate with R1 (privacy/Art. 9). | Row 14; data model for restrictions |
+| **LR-5** | Do the app-store listings, category choice and marketing site copy need a gated compliance review before the capability feature ships, and who signs it off? | MHRA treats these as promotional materials determining intended purpose; today they are produced through the marketing pipeline. | Marketing autonomous lane; §6.3 |
+| **LR-6** | Does Volyume's existing ED-safety subsystem (suppression + Beat UK signposting) sit outside MDCG rev.1 p.9's ED-alleviation example, and should that non-qualification be documented explicitly? | Concerns live, shipped, safety-critical behaviour that CLAUDE.md Section 2 forbids altering without founder approval; R2 must not touch it, only flag it. | Nothing (documentation only), unless the answer is negative |
+| **LR-7** | Confirm the current MHRA SaMD guidance version and whether the draft *Medical Devices (Amendment) Regulations 2026* alters qualification for software before Volyume's launch date. | Draft SI not retrieved; commentary only. | Launch readiness check |
+| **LR-8** | Northern Ireland: does UK-wide distribution require the MDR analysis in parallel with UK MDR 2002, and does that change any of the above ratings? | MHRA guidance states NI rules differ but does not analyse this case. | Territorial scope of the feature |
+
+---
+
+## Retrieval gaps (evidence honesty)
+
+Stated so no claim above is mistaken for something it is not.
+
+1. **EUR-Lex was unreachable from this session.** Every attempt to fetch
+   `eur-lex.europa.eu` (HTML and PDF, via WebFetch and via curl) returned
+   HTTP 202 with a zero-byte body. MDR Art. 2(1), 2(4) and 2(12) are therefore
+   quoted **as reproduced verbatim, with Article-number footnotes, in MDCG
+   2019-11 and MDCG 2019-11 rev.1** — a Commission-hosted MDCG document quoting
+   the Regulation. The wording should be re-verified against EUR-Lex before any
+   external use.
+2. **MDR Art. 7 ("Claims") was not retrieved from a primary source** and is
+   therefore not quoted or relied on in this report. It prohibits misleading
+   claims *about devices*, so it bites only after qualification; it is noted here
+   for completeness, not used.
+3. **CJEU C-329/16 SNITEM** could not be retrieved from curia.europa.eu (the
+   document endpoint redirected to infocuria and returned no content) or from
+   EUR-Lex. The operative principle is quoted **as it appears verbatim in MHRA
+   SaMD guidance p.18**. The underlying judgment should be read before any
+   external reliance.
+4. **MHRA *Crafting an intended purpose in the context of SaMD*** — the GOV.UK
+   landing page was retrieved (title, date 22 March 2023, HTML link); the full
+   HTML guidance was not separately extracted. The one phrase quoted from it is
+   attributed to the landing page rendering, not to the guidance body.
+5. **Borderline Manual version drift.** The download URL published on the
+   Commission's 12 September 2025 update page currently serves **Version 5,
+   April 2026**. Both the version number and the URL are recorded above so the
+   discrepancy is visible rather than silently resolved.
+6. **PDF text extraction.** All PDF quotations were produced by a local
+   zlib/stream text extractor, so hyphenation and line breaks were normalised by
+   hand when quoting. Wording was not altered; where a ligature or dash was lost
+   in extraction it has been restored to the obvious reading. Any quotation
+   intended for external or legal use should be checked against the original PDF.
+7. **No FDA / US analysis was performed** — outside the brief (UK/EU users).
+   Note only that the US "general wellness" policy is a different framework and
+   must not be borrowed as a defence in a UK/EU assessment.
+8. **Nothing here was reviewed by a lawyer.** Everything tagged [INFERENCE] is
+   R2's reading of the quoted material and carries no authority.
