@@ -2687,7 +2687,38 @@ const SCHEMA_MIGRATIONS = [
     "ALTER TABLE exercises ADD COLUMN balance_demand TEXT CHECK (balance_demand IN ('supported','stable','high'))",
     migrateDemandMetadataBackfill,
   ],
+  // CC29 (ARCHITECTURE sections 5.5, 14): two additive nullable columns.
+  // exercise_swaps.cause - 'constraint' is ELIGIBILITY-DERIVED at write
+  // time (any swap whose FROM-exercise is capability-ineligible at swap
+  // time), never UI-path-keyed and never free text (CAP-13). NULL on
+  // every pre-CC29 row and every unconstrained swap: byte-identical
+  // meaning to today.
+  // capability_constraints.effective_choice - the section 14 per-line
+  // Apply/Decline on an EPISODE rule's session effect ('applied' |
+  // 'declined'; NULL = not yet proposed/decided). Lives on the rule row
+  // itself so sync, erasure and export all inherit (R1 #19); the
+  // effective view stays a RESOLUTION LAYER (section 2.3) - this column
+  // stores the user's standing choice, never a computed plan.
+  // Cloud counterpart: supabase/migrate_149_swap_cause_effective_choice.sql
+  // (written, NOT applied; founder-gated).
+  [
+    migrateSwapCauseAndEffectiveChoice,
+  ],
 ];
+
+// CC29 columns, guarded per the migrateLoadSemanticsBackfill convention:
+// migration-window fixtures build only the tables their target migration
+// touches, and a duplicate column on a re-run is equally tolerable - a
+// genuinely missing table on a real device would have failed far earlier
+// migrations first.
+async function migrateSwapCauseAndEffectiveChoice(d) {
+  try {
+    await d.execAsync('ALTER TABLE exercise_swaps ADD COLUMN cause TEXT');
+  } catch (_e) { /* duplicate column (re-run) or fixture without the table */ }
+  try {
+    await d.execAsync("ALTER TABLE capability_constraints ADD COLUMN effective_choice TEXT CHECK (effective_choice IN ('applied','declined'))");
+  } catch (_e) { /* duplicate column (re-run) or fixture without the table */ }
+}
 
 // CC27: backfill canonical exercises' demand columns from the pure
 // derivation in capability/demands.js (lazy require; no import cycle - the
@@ -7651,10 +7682,100 @@ export async function getWeeklySessionStats(userId, weekStart) {
     }
   } catch (_) { /* fall back to the historical estimate below */ }
 
-  const completed = row?.completed ?? 0;
-  const planned = plannedFromPlan != null
+  let completed = row?.completed ?? 0;
+
+  // CC29 (section 18; Audit G C1/C4): denominators read the EFFECTIVE
+  // prescription. An ended_early session whose every unperformed planned
+  // exercise is excused by its own effects record (episode-constraint
+  // omissions written at finish) counts COMPLETED - the athlete did
+  // everything effectively prescribed. Stopping BEYOND effective scope
+  // stays ended_early, exactly as before. Best-effort: any read failure
+  // leaves the pre-CC29 numbers.
+  try {
+    const endedEarly = await d.getAllAsync(
+      `SELECT w.id, w.routine_id AS routineId FROM workouts w
+        WHERE w.user_id = ? AND w.is_completed = 1
+          AND w.started_at >= ? AND w.started_at < ?
+          AND EXISTS (SELECT 1 FROM workout_sets ws WHERE ws.workout_id = w.id)
+          AND EXISTS (
+            SELECT 1 FROM session_resolutions sr
+             WHERE sr.user_id = w.user_id AND sr.workout_id = w.id
+               AND sr.resolution = 'ended_early' AND sr.deleted_at IS NULL)`,
+      [userId, weekStartMs, weekEnd],
+    ).catch(() => []);
+    for (const w of endedEarly ?? []) {
+      if (!w.routineId) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const eff = await getSessionConstraintEffect(userId, w.id);
+      const excused = new Set((eff?.effects ?? [])
+        .filter((e) => e?.effect === 'omitted' && e?.exerciseFrom)
+        .map((e) => e.exerciseFrom));
+      if (!excused.size) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const plannedRows = await d.getAllAsync(
+        'SELECT exercise_id AS exerciseId FROM routine_exercises WHERE routine_id = ?', [w.routineId],
+      ).catch(() => []);
+      // eslint-disable-next-line no-await-in-loop
+      const performedRows = await d.getAllAsync(
+        'SELECT DISTINCT exercise_id AS exerciseId FROM workout_sets WHERE workout_id = ?', [w.id],
+      ).catch(() => []);
+      const performedIds = new Set((performedRows ?? []).map((r) => r.exerciseId));
+      const unperformed = (plannedRows ?? [])
+        .map((r) => r.exerciseId)
+        .filter((exId) => exId && !performedIds.has(exId));
+      if (unperformed.length > 0 && unperformed.every((exId) => excused.has(exId))) {
+        completed += 1;
+      }
+    }
+  } catch (_e) { /* pre-CC29 numbers stand */ }
+
+  let planned = plannedFromPlan != null
     ? plannedFromPlan
     : Math.max(completed, Math.round(avgPrev) || 3);
+
+  // CC29 (section 18): a session FULLY omitted by the applied effective
+  // view reduces planned - a routine whose every exercise is blocked by
+  // an APPLIED episode rule with no eligible substitute is not owed.
+  // Conservative on purpose: only whole-session omission moves the
+  // denominator, and only while the episode rules are active and applied.
+  if (plannedFromPlan != null) {
+    try {
+      // eslint-disable-next-line global-require
+      const { loadCapabilityResolveState, capabilityBlockReason } = require('./capability/resolve');
+      // eslint-disable-next-line global-require
+      const { computeEffectiveSession } = require('./capability/effective');
+      const state = await loadCapabilityResolveState(userId, {});
+      const hasAppliedEpisode = !state.empty && !state.unavailable
+        && (state.restrictions ?? []).some((r) => r.role === 'episode' && r.effectiveChoice === 'applied');
+      if (hasAppliedEpisode) {
+        const plan = await getActivePlan(userId);
+        const routines = plan?.id ? await getRoutinesForPlan(plan.id) : [];
+        const library = await getAllExercises();
+        const byId = new Map(library.map((e) => [e.id, e]));
+        let fullyOmitted = 0;
+        for (const routine of routines ?? []) {
+          // eslint-disable-next-line no-await-in-loop
+          const exRows = await d.getAllAsync(
+            'SELECT exercise_id AS exerciseId FROM routine_exercises WHERE routine_id = ?', [routine.id],
+          ).catch(() => []);
+          const baseRows = (exRows ?? [])
+            .map((r) => ({ exercise: byId.get(r.exerciseId) }))
+            .filter((r) => r.exercise);
+          if (!baseRows.length) continue;
+          // Capability-only substitute test: if a capability-eligible
+          // substitute exists the session still happens (substituted),
+          // so it stays in planned; only a genuinely unfillable session
+          // reduces the denominator.
+          const view = computeEffectiveSession(
+            baseRows, library, state, (ex) => capabilityBlockReason(state, ex) === null,
+          );
+          if (view.lines.every((l) => l.effect === 'omitted')) fullyOmitted += 1;
+        }
+        if (fullyOmitted > 0) planned = Math.max(completed, planned - fullyOmitted);
+      }
+    } catch (_e) { /* pre-CC29 numbers stand */ }
+  }
+
   // RD6-9: display surfaces must not present the trailing-average
   // estimate as though a plan prescribed it; plannedIsEstimate lets
   // them choose honest phrasing. Existing numeric consumers unchanged.
@@ -10145,11 +10266,27 @@ export async function recordExerciseSwap(userId, fromExerciseId, toExerciseId, {
   const d = await db();
   const now = Date.now();
   const id = uid();
+  // CC29 (section 5.5, CAP-13): 'constraint' provenance is ELIGIBILITY-
+  // DERIVED at write time, here, once, for every surface: any swap whose
+  // FROM-exercise is capability-ineligible right now records
+  // cause='constraint', whichever sheet or shortcut it came through.
+  // Never free text, never UI-path-keyed. Best-effort: a read failure
+  // leaves cause NULL (unknown), which no reader ever counts.
+  let cause = null;
+  try {
+    // eslint-disable-next-line global-require
+    const { loadCapabilityResolveState, capabilityBlockReason } = require('./capability/resolve');
+    const state = await loadCapabilityResolveState(userId, {});
+    if (!state.empty && !state.unavailable) {
+      const from = await getExerciseById(fromExerciseId);
+      if (from && capabilityBlockReason(state, from) !== null) cause = 'constraint';
+    }
+  } catch (_e) { cause = null; }
   await d.runAsync(
     `INSERT INTO exercise_swaps
-       (id, user_id, from_exercise_id, to_exercise_id, routine_id, mesocycle_id, explicit, scope, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, userId, fromExerciseId, toExerciseId, routineId, mesocycleId, explicit ? 1 : 0, scope, now, now],
+       (id, user_id, from_exercise_id, to_exercise_id, routine_id, mesocycle_id, explicit, scope, cause, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, userId, fromExerciseId, toExerciseId, routineId, mesocycleId, explicit ? 1 : 0, scope, cause, now, now],
   );
   _scheduleSync();
   return id;
@@ -10162,7 +10299,7 @@ export async function getExerciseSwaps(userId, { fromExerciseId = null, limit = 
   const args = [userId];
   let sql = `SELECT from_exercise_id AS fromExerciseId, to_exercise_id AS toExerciseId,
                     routine_id AS routineId, mesocycle_id AS mesocycleId,
-                    explicit, scope, created_at AS createdAt
+                    explicit, scope, cause, created_at AS createdAt
                FROM exercise_swaps
               WHERE user_id = ? AND deleted_at IS NULL`;
   if (fromExerciseId) { sql += ' AND from_exercise_id = ?'; args.push(fromExerciseId); }
@@ -10989,6 +11126,9 @@ function _mapCapabilityRow(r) {
     startsAt: r.starts_at, endsAt: r.ends_at, state: r.state,
     endedAt: r.ended_at, endedReason: r.ended_reason,
     episodeGroupId: r.episode_group_id, acknowledgedAt: r.acknowledged_at,
+    // CC29 (section 14): the standing Apply/Decline; undefined on rows
+    // read before the column migration ran maps to null (undecided).
+    effectiveChoice: r.effective_choice ?? null,
     createdAt: r.created_at, updatedAt: r.updated_at, deletedAt: r.deleted_at,
   };
 }
@@ -11259,19 +11399,69 @@ export async function insertCapabilityConstraintFromCloud(localUserId, row) {
     `INSERT OR REPLACE INTO capability_constraints
        (id, user_id, role, source, rule_kind, rule_value, laterality,
         starts_at, ends_at, state, ended_at, ended_reason, episode_group_id,
-        acknowledged_at, created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        acknowledged_at, effective_choice, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [row.id, localUserId, row.role, row.source, row.rule_kind, row.rule_value,
       row.laterality ?? null, _tsToMs(row.starts_at), _tsToMs(row.ends_at),
       row.state, _tsToMs(row.ended_at), row.ended_reason ?? null,
       row.episode_group_id ?? null, _tsToMs(row.acknowledged_at),
+      row.effective_choice ?? null,
       _tsToMs(row.created_at) ?? cloudUpdated,
       cloudUpdated, _tsToMs(row.deleted_at)],
   );
   return true;
 }
 
+// CC29 (section 14): the standing Apply/Decline on an EPISODE rule's
+// session effect. Only the choice column moves; the rule itself is never
+// edited (CAP-14), and updated_at moves because this IS a user decision.
+export async function setConstraintEffectiveChoice(userId, constraintId, choice) {
+  if (!userId || !constraintId) return;
+  if (choice !== 'applied' && choice !== 'declined' && choice !== null) return;
+  const d = await db();
+  await d.runAsync(
+    'UPDATE capability_constraints SET effective_choice = ?, updated_at = ? WHERE id = ? AND user_id = ?',
+    [choice, Date.now(), constraintId, userId],
+  );
+  _scheduleSync();
+}
+
 // ── session_constraint_effects (schema foundation; writers arrive in CC29) ──
+
+// CC29: one effects record per workout, merged by exerciseFrom so the
+// mid-session removal hook (section 17) and the completion writer never
+// duplicate or clobber each other's entries.
+export async function appendSessionConstraintEffects(userId, workoutId, newEntries, { nowMs = Date.now() } = {}) {
+  if (!userId || !workoutId || !Array.isArray(newEntries) || !newEntries.length) return null;
+  const d = await db();
+  const id = `sce_${workoutId}`;
+  const existing = await d.getFirstAsync(
+    'SELECT effects_json FROM session_constraint_effects WHERE id = ? AND deleted_at IS NULL', [id],
+  ).catch(() => null);
+  let entries = [];
+  try { entries = existing?.effects_json ? JSON.parse(existing.effects_json) : []; } catch (_e) { entries = []; }
+  const seen = new Set(entries.map((e) => `${e.effect}:${e.exerciseFrom}`));
+  for (const entry of newEntries) {
+    const key = `${entry.effect}:${entry.exerciseFrom}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    entries.push(entry);
+  }
+  return createSessionConstraintEffect(userId, workoutId, entries, { nowMs });
+}
+
+export async function getSessionConstraintEffect(userId, workoutId) {
+  if (!userId || !workoutId) return null;
+  const d = await db();
+  const row = await d.getFirstAsync(
+    'SELECT * FROM session_constraint_effects WHERE workout_id = ? AND user_id = ? AND deleted_at IS NULL',
+    [workoutId, userId],
+  ).catch(() => null);
+  if (!row) return null;
+  const out = rowToCamel(row);
+  try { out.effects = JSON.parse(out.effectsJson ?? '[]'); } catch (_e) { out.effects = []; }
+  return out;
+}
 
 export async function createSessionConstraintEffect(userId, workoutId, effects, { nowMs = Date.now() } = {}) {
   if (!userId || !workoutId) return null;

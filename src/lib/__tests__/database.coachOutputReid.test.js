@@ -18,6 +18,8 @@
  * CC27 appended one further migration (exercise demand columns +
  * canonical backfill; inert here), so each count is bumped by one
  * more.
+ * CC29 appended one further migration (swap cause + effective choice
+ * columns; inert here), so each count widens by one more.
  */
 
 const { DatabaseSync } = require('node:sqlite');
@@ -98,7 +100,7 @@ test('v72 re-ids legacy uid() rows to the deterministic form, without touching u
   // the memo plus its audit remediation, so this window widens by four to
   // keep testing the SAME v72 migration rather than a later pair. CC26
   // appended the capability tables, widening it by one more.
-  return runLast(raw, 14).then(() => {
+  return runLast(raw, 15).then(() => {
     const after = rows(raw);
     expect(after).toEqual([
       // Already deterministic: byte-identical.
@@ -113,9 +115,9 @@ test('v72 is idempotent: a second run changes nothing', async () => {
   const raw = freshDb();
   raw.prepare('INSERT INTO coach_outputs VALUES (?, ?, ?, ?, ?, ?)')
     .run('legacy-abc', 'user-1', 1735000000000, 1, 100, 200);
-  await runLast(raw, 14); // widened by four (C18 + Campaign 19), then one more (CC26)
+  await runLast(raw, 15); // widened by four (C18 + Campaign 19), then one more (CC26)
   const once = rows(raw);
-  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 13}`);
+  raw.exec(`PRAGMA user_version = ${(await totalMigrationCount()) - 14}`);
   await runMigrations(adapt(raw));
   expect(rows(raw)).toEqual(once);
 });

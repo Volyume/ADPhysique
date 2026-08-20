@@ -654,6 +654,52 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     (entry, i) => i > currentExerciseIndex && !entry?._timeCrunchSkipped,
   );
 
+  // CC29 (section 14 step 3): the APPLIED effective view, computed once
+  // per fresh session at serve time. Substituted rows carry the quiet
+  // temporary marker; omitted rows drop with a durable effects entry. The
+  // BASE plan rows are untouched (this rewrites only the in-session list),
+  // a resumed session with logged sets is never rewritten, and any
+  // failure serves the base session unchanged.
+  const effectiveAppliedRef = useRef(null);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!user?.id || !activeWorkout?.id) return;
+        if (effectiveAppliedRef.current === activeWorkout.id) return;
+        if (!workoutExercises.length) return;
+        const anyLogged = workoutExercises.some((e) => (e.sets?.length ?? 0) > 0);
+        if (anyLogged) { effectiveAppliedRef.current = activeWorkout.id; return; }
+        if (workoutExercises.some((e) => e?._capabilityTemp)) { effectiveAppliedRef.current = activeWorkout.id; return; }
+        // eslint-disable-next-line global-require
+        const { applyEffectiveViewToSession } = require('../lib/sessionEffective');
+        const baseRows = workoutExercises.map((e) => e?.exercise ?? e);
+        const served = await applyEffectiveViewToSession(user.id, activeWorkout.id, baseRows);
+        if (cancelled) return;
+        effectiveAppliedRef.current = activeWorkout.id;
+        if (served === baseRows) return; // nothing applied
+        const servedEntries = [];
+        for (const row of served) {
+          const idx = baseRows.findIndex((b) => b.id === (row._capabilityTemp?.fromId ?? row.id));
+          const original = idx >= 0 ? workoutExercises[idx] : null;
+          if (row._capabilityTemp) {
+            servedEntries.push({
+              ...(original ?? {}),
+              exercise: { ...row, _capabilityTemp: undefined },
+              _capabilityTemp: row._capabilityTemp,
+              sets: [],
+            });
+          } else {
+            servedEntries.push(original ?? { exercise: row, sets: [] });
+          }
+        }
+        useAppStore.getState().setWorkoutExercises(servedEntries);
+      } catch (_e) { /* the base session stands */ }
+    })();
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, activeWorkout?.id, workoutExercises.length]);
+
   // D107-2: reload the intent state whenever the exercise on screen changes,
   // so the "avoiding this movement pattern" notice below is checked against
   // the exercise actually being logged, not a stale one from a previous
@@ -686,6 +732,25 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (patternAvoidRow.kind === EXERCISE_INTENT.AVOIDED_BLOCK) return `Avoiding ${patternAvoidLabel} for this block`;
     return `Avoiding ${patternAvoidLabel}`;
   })();
+
+  // CC29 (section 17, RT2-1): the constraint notice, EPISODE-role only -
+  // a baseline-shaped session is simply the user's session and carries no
+  // furniture. One quiet line on the sanctioned status strip, with the
+  // existing Swap shortcut; section 33.16's budget (one mention per
+  // surface) holds because this is the strip's single constraint item.
+  const constraintConflicts = (() => {
+    if (!exercise || !intentState?.capability || intentState.capability.empty) return [];
+    try {
+      // eslint-disable-next-line global-require
+      const { episodeConflicts } = require('../lib/capability/effective');
+      return episodeConflicts(intentState.capability, exercise);
+    } catch (_e) { return []; }
+  })();
+  const constraintNoticeCopy = currentEntry?._capabilityTemp?.fromName
+    ? `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts`
+    : constraintConflicts.length
+      ? 'Today this works around your temporary change'
+      : null;
 
   // COMP-015: this session's adjustment for the current exercise, if any. Only
   // Pro sessions ever carry adjustments; a reverted one is ignored. A nonzero
@@ -994,6 +1059,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           style: 'destructive',
           onPress: () => {
             audit('workout.exercise.removed', { exerciseId: exercise?.id });
+            // CC29 (section 17; closes Audit G C3 for the constraint
+            // cause): removing an EPISODE-affected exercise writes a
+            // durable omission on this session's effects record. Removal
+            // for any other reason writes nothing, exactly as before.
+            if (constraintConflicts.length && user?.id && activeWorkout?.id && exercise?.id) {
+              // eslint-disable-next-line global-require
+              const { appendSessionConstraintEffects } = require('../lib/database');
+              appendSessionConstraintEffects(user.id, activeWorkout.id, [{
+                slot: currentExerciseIndex,
+                exerciseFrom: exercise.id,
+                effect: 'omitted',
+                constraintIds: constraintConflicts.map(c => c.constraintId),
+              }]).catch(() => { /* best effort; completion re-derives */ });
+            }
             cancelAutoAdvance();
             const store = useAppStore.getState();
             const updated = workoutExercises.filter((_, i) => i !== currentExerciseIndex);
@@ -2966,6 +3045,29 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
 
     async function runFinish(sessionResolution = null) {
       pendingSessionResolution = sessionResolution;
+      // CC29 (sections 5.3, 18): the completion effects record - which
+      // planned-but-unperformed rows this session's ACTIVE EPISODE
+      // constraints excuse. Written before close so the adherence reader
+      // (getWeeklySessionStats) can tell effective completion from a real
+      // early stop; merge-by-exercise keeps the mid-session removal
+      // entries. Episode-role only (RT2-1); a session with no episode
+      // effects writes nothing. Best-effort: a failure here never blocks
+      // the finish.
+      try {
+        if (user?.id && activeWorkout?.id && intentState?.capability && !intentState.capability.empty) {
+          // eslint-disable-next-line global-require
+          const { computeCompletionEffects } = require('../lib/capability/effective');
+          const { entries } = computeCompletionEffects(
+            snapshotExercises.map((e) => ({ exercise: e?.exercise ?? e, performed: (e.sets?.length ?? 0) > 0 })),
+            intentState.capability,
+          );
+          if (entries.length) {
+            // eslint-disable-next-line global-require
+            const { appendSessionConstraintEffects } = require('../lib/database');
+            await appendSessionConstraintEffects(user.id, activeWorkout.id, entries).catch(() => {});
+          }
+        }
+      } catch (_e) { /* effects are additive; the finish must never block */ }
       try {
         await doFinish();
       } catch (e) {
@@ -3425,6 +3527,33 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     <View style={styles.nextTimeBannerBody}>
                       <Text style={[styles.nextTimeBannerText, live.nextTimeBannerText]}>
                         {patternAvoidCopy}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.inlineActionPill, live.inlineActionPill]}
+                      onPress={handleOpenSwap}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Swap ${exercise?.name ?? 'this exercise'}`}
+                    >
+                      <Text style={[styles.inlineActionPillText, live.inlineActionPillText]}>Swap</Text>
+                    </TouchableOpacity>
+                  </View>
+                ),
+              });
+            }
+            if (constraintNoticeCopy) {
+              items.push({
+                key: 'capability-constraint',
+                label: 'Temporary change',
+                icon: 'body-outline',
+                iconColor: t.colors.warning,
+                content: (
+                  <View key="capability-constraint" style={[styles.nextTimeBanner, live.nextTimeBanner]}>
+                    <Ionicons name="body-outline" size={16} color={t.colors.warning} style={{ marginTop: spacing.hair }} />
+                    <View style={styles.nextTimeBannerBody}>
+                      <Text style={[styles.nextTimeBannerText, live.nextTimeBannerText]}>
+                        {constraintNoticeCopy}
                       </Text>
                     </View>
                     <TouchableOpacity
@@ -4394,6 +4523,38 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="swap-horizontal" size={18} color={t.colors.textSecondary} />
                   <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Swap exercise</Text>
+                </View>
+              </TouchableOpacity>
+              {/* CC29 (section 17): "this movement is a problem today" -
+                  substitute now via the ordinary swap sheet, and the option
+                  to note a temporary change through the standard How you
+                  train flow. No pain scales, no per-set questions. */}
+              <TouchableOpacity
+                style={[styles.sheetOption, live.sheetOption]}
+                onPress={() => {
+                  setShowOverflow(false);
+                  appAlert(
+                    'Work around this today?',
+                    'Swap it for something that works now. If this is more than a one-off, you can also note a temporary change so plans work around it.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Just swap it', onPress: () => handleOpenSwap() },
+                      {
+                        text: 'Swap and note a temporary change',
+                        onPress: () => {
+                          handleOpenSwap();
+                          try { navigation.navigate('HowYouTrain'); } catch (_e) { /* best effort */ }
+                        },
+                      },
+                    ],
+                  );
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Work around this exercise today"
+              >
+                <View style={styles.overflowOptionRow}>
+                  <Ionicons name="body-outline" size={18} color={t.colors.textSecondary} />
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Work around this</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity

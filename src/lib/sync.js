@@ -1276,6 +1276,10 @@ async function _pushExerciseSwaps(sb, supabaseUserId, localUserId) {
       // before the column existed, and the receiving device treats null as
       // unknown, which the negative-preference reading never counts.
       scope: r.scope ?? null,
+      // CC29 (section 5.5): eligibility-derived provenance; null on every
+      // pre-CC29 row. Until migrate_149 runs the batch fails soft per the
+      // documented tolerated mode.
+      cause: r.cause ?? null,
       created_at: new Date(r.createdAt ?? Date.now()).toISOString(),
       updated_at: new Date(r.updatedAt ?? r.createdAt ?? Date.now()).toISOString(),
       deleted_at: r.deletedAt != null ? new Date(r.deletedAt).toISOString() : null,

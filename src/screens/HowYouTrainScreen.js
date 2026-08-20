@@ -195,12 +195,22 @@ export default function HowYouTrainScreen() {
         source: draft.kind === 'allow' ? CONSTRAINT_SOURCE.SELF : source,
       })),
     ];
-    await createConstraints(userId, rows, { nowMs: now });
+    const createdIds = await createConstraints(userId, rows, { nowMs: now });
     setAdding(null); setDraft(null);
     toast.show(draft.kind === 'allow'
       ? 'Saved. Volyume will keep offering this exercise.'
       : isEpisode ? 'Saved. Volyume will keep this as a temporary change.' : 'Saved. This is part of how you train.');
     refresh();
+    // CC29 (section 14, CAP-11): a NEW EPISODE with an installed plan
+    // active proposes its effective diff - grouped, consequential, never
+    // silent. Applying substitutes affected sessions at serve time
+    // (derived live, base rows untouched); declining leaves the affected
+    // slots visibly conflicted with swap shortcuts. The standing choice
+    // lives on the rule rows (effective_choice) and is reversible from
+    // the episode's own actions.
+    if (isEpisode && draft.kind !== 'allow' && Array.isArray(createdIds) && createdIds.length) {
+      proposeEffectiveDiff(createdIds).catch(() => { /* proposal is additive */ });
+    }
   };
 
   const onConsent = async () => {
@@ -213,6 +223,49 @@ export default function HowYouTrainScreen() {
       toast.show('Consent is recorded, but the save failed. Try again from Add.');
       setAdding(null);
     }
+  };
+
+  // CC29 (section 14, CAP-11): the proposed diff for a new episode against
+  // the active plan, grouped per rule (slot micro-approvals avoided). The
+  // cross-lane computation lives in lib/sessionEffective.js, outside both
+  // lanes, so this capability surface never imports the preference lane.
+  const proposeEffectiveDiff = async (createdIds) => {
+    try {
+      // eslint-disable-next-line global-require
+      const { computePlanEffectiveSummary, setConstraintEffectiveChoice } = require('../lib/sessionEffective');
+      const summary = await computePlanEffectiveSummary(userId, createdIds);
+      if (!summary.affected) return;
+      const parts = [];
+      if (summary.substituted) parts.push(`${summary.substituted} exercise${summary.substituted === 1 ? '' : 's'} swapped for something that works now`);
+      if (summary.omitted) parts.push(`${summary.omitted} left out with nothing forced in their place`);
+      appAlert(
+        'Apply this to your current plan?',
+        `While this lasts, your sessions would show ${parts.join(', and ')}. Your plan itself is not changed, and everything returns when this ends.`,
+        [
+          {
+            text: 'Not now',
+            style: 'cancel',
+            onPress: async () => {
+              for (const id of createdIds) {
+                // eslint-disable-next-line no-await-in-loop
+                await setConstraintEffectiveChoice(userId, id, 'declined').catch(() => {});
+              }
+              toast.show('Kept as recorded. Affected exercises will show a quiet notice with a swap shortcut.');
+            },
+          },
+          {
+            text: 'Apply while it lasts',
+            onPress: async () => {
+              for (const id of createdIds) {
+                // eslint-disable-next-line no-await-in-loop
+                await setConstraintEffectiveChoice(userId, id, 'applied').catch(() => {});
+              }
+              toast.show('Applied. Sessions will work around it until it ends.');
+            },
+          },
+        ],
+      );
+    } catch (_e) { /* proposal is additive; the save already stands */ }
   };
 
   const confirmEndEpisode = (ep) => {

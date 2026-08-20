@@ -53,6 +53,9 @@ export async function pushCapabilityConstraints(sb, { userId, localUserId } = {}
       ended_reason: c.endedReason ?? null,
       episode_group_id: c.episodeGroupId ?? null,
       acknowledged_at: _toIso(c.acknowledgedAt),
+      // CC29 (section 14): the standing Apply/Decline on an episode rule's
+      // session effect. Tolerated-mode until migrate_149 runs.
+      effective_choice: c.effectiveChoice ?? null,
       created_at: _toIso(c.createdAt) ?? nowIso,
       updated_at: _toIso(c.updatedAt) ?? nowIso,
       deleted_at: _toIso(c.deletedAt),
