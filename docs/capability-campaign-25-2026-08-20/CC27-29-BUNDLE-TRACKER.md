@@ -5,7 +5,7 @@ Update at every slice landing. Next session resumes from THIS file.
 
 - BUNDLE START MAIN: aabb16f
 - BRANCH: claude/build-name-prompt-apple-auth-fp49by
-- AGENT BUDGET USED: 0 implementation/research agents; 0 red team (1 Sonnet allowed at bundle end); 0 Opus.
+- AGENT BUDGET USED: 0 implementation/research agents; 1 red team (Sonnet, bundle-end, running); 0 Opus.
 - PRODUCTION MIGRATIONS: 145/146/147 NOT RUN; any new cloud files also NOT RUN.
 
 ## Dependency checklist (built from roadmap blocks + code recon)
@@ -32,7 +32,7 @@ CC29 (read §14, §17, §18, §5.5, Audit G C1-C4 at start):
 - [x] §14 diff propose/apply/decline; session_constraint_effects writers; §17 logger surfaces (constraint-cause swaps via exercise_swaps.cause additive column, omission capture); §18 denominators (getWeeklySessionStats, interBlock, stabilise gate, directive copy, partner/widget); G C1-C4 fixtures; NO session_resolutions schema change.
 
 Bundle end:
-- [ ] ONE Sonnet red team over combined diff; adjudicate; fix.
+- [~] ONE Sonnet red team over combined diff; adjudicate; fix. (LAUNCHED)
 - [ ] Lint + ONE full suite; merge to main; consolidated report.
 
 ## Slice log (append per landing)

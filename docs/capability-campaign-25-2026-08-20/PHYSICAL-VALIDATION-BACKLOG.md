@@ -33,5 +33,13 @@ touched) except where marked.
 20. Session length is editable FREE under Settings -> Workout and units; the energy row on How you train routes there.
 21. VoiceOver/TalkBack on: onboarding capability steps (both paths), the library chips, the conflict sheet - operable and announced.
 
-## CC29 - effective prescription (extended when built)
-(placeholder - extended at CC29 landing)
+## CC29 - effective prescription
+22. Add a TEMPORARY change (episode) while a plan is active. Expected: the "Apply this to your current plan?" proposal appears with honest swap/left-out counts; "Not now" keeps sessions unchanged with quiet conflict notices.
+23. Choose "Apply while it lasts", then start an affected session. Expected: the affected exercise is substituted with the marker line "Temporarily in for {name}"; the plan itself (Plans tab) is unchanged.
+24. Resume a mid-session workout with logged sets after applying. Expected: the session list is NOT rewritten.
+25. In a session, remove an exercise the temporary change covers. Expected: no interrogation; finishing the week still counts the session correctly (see 27).
+26. Use the exercise sheet's "Work around this". Expected: the three-way choice; "Swap and note a temporary change" opens the swap sheet and routes to How you train.
+27. Perform everything except the covered exercise, finish via "ended early". Expected: the weekly count (Home/widget/coach) counts the session as done; stopping early beyond the covered exercise still counts as ended early.
+28. Swap an exercise the change covers from the strip notice. Expected: normal swap; no extra questions (the cause is recorded internally, never asked).
+29. End the episode from How you train. Expected: sessions return to the base plan; nothing to restore, history intact.
+30. TalkBack over the strip notice, the proposal sheet and the Work-around entry. Expected: all announced and operable.
