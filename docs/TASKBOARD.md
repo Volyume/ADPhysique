@@ -786,6 +786,16 @@ ELEVATES BECAUSE: the app currently cannot correctly serve users whose
 normal training differs from an unrestricted template, and temporary
 restrictions can contaminate durable learning.
 
+**AMENDMENT 1 (founder, 2026-08-20, binding, same day):** disability-first
+product completeness. Core disability/capability accommodation is NOT
+Pro-gated (founder decision FD-1); dual completion standard (A training
+intelligence + B disability product readiness); free capability-aware
+routine library; population layer only behind evidence dossiers; coverage
+registry + marketing readiness gates + disabled-user validation plan;
+Grok/Gemini consultation via an EXTERNAL CONSULTATION QUEUE (not reachable
+from this environment — amendment §22 route). Full integration record:
+`docs/capability-campaign-25-2026-08-20/_CAMPAIGN-LOG.md` Amendment 1 block.
+
 Lead: Fable (main loop), decision authority per brief; clinical/legal/
 irreversible-business calls flagged to registers, ED-safety and all
 Section 2 inviolables untouched. Campaign folder:
