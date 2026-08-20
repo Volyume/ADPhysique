@@ -18,7 +18,15 @@ import { colors, fontWeight, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds, getActiveBlock, clearExerciseIntent } from '../lib/database';
-import { loadExerciseIntentState, isEligible, intentFor, isFamilyBlocked, movementFamilyOf } from '../lib/exercise/intent';
+import { loadExerciseIntentState, isEligible, intentFor, isFamilyBlocked, movementFamilyOf, isEligibleExercise } from '../lib/exercise/intent';
+// CC27 (sections 9.2.6, 9.4, 8.4): the picker asks the capability lane's
+// pure questions, offers the manual-conflict flows, and hosts the
+// single-axis ask on custom creation. Storage writes go through the
+// capability store (allowances) - the same door every capability write uses.
+import { capabilityBlockReason, demandConflicts, CAPABILITY_BLOCK } from '../lib/capability/resolve';
+import { demandLabel } from '../lib/capability/model';
+import { appAlert } from './AppAlert';
+import { navigationRef } from '../navigation/RootNavigator';
 import { matchesEquipmentFilter, matchesMuscleFilter } from '../lib/exerciseDisplay';
 // CC27 (section 34.1): custom creation derives equipment metadata from the
 // owner's own choices so customs can meet the built-in pool-entry bar.
@@ -66,6 +74,52 @@ const LOAD_SEMANTICS_OPTIONS = [
   { key: 'assisted', label: 'Assistance' },
   { key: 'added_bodyweight', label: 'Added weight' },
 ];
+
+// CC27 (section 8.4): the single-axis ask specs. Each entry is ONE
+// optional question, rendered only when the user has an active demand
+// constraint on that axis. Answers write the exercise's own demand
+// columns; skipping stays NULL (unknown, honest).
+const DEMAND_ASK_SPECS = {
+  standing: { field: 'position', label: 'How is this performed?', options: [
+    { key: 'standing', label: 'Standing' }, { key: 'seated', label: 'Seated' },
+    { key: 'lying', label: 'Lying' }, { key: 'kneeling', label: 'Kneeling' },
+    { key: 'mixed', label: 'Mixed' }] },
+  floor_access: { field: 'floorAccess', label: 'Does it involve getting to or from the floor?', options: [
+    { key: true, label: 'Yes' }, { key: false, label: 'No' }] },
+  overhead_position: { field: 'overheadPosition', label: 'Does it involve reaching overhead?', options: [
+    { key: true, label: 'Yes' }, { key: false, label: 'No' }] },
+  grip_bar: { field: 'gripDemand', label: 'What kind of grip does it need?', options: [
+    { key: 'none', label: 'No grip needed' }, { key: 'supportive', label: 'Light hold' },
+    { key: 'bar', label: 'Firm grip' }] },
+  bilateral_upper: { field: 'bilateralUpper', label: 'Does it need both arms?', options: [
+    { key: true, label: 'Yes' }, { key: false, label: 'No' }] },
+  bilateral_lower: { field: 'bilateralLower', label: 'Does it need both legs?', options: [
+    { key: true, label: 'Yes' }, { key: false, label: 'No' }] },
+  axial_load: { field: 'axialLoad', label: 'Does it load the spine?', options: [
+    { key: true, label: 'Yes' }, { key: false, label: 'No' }] },
+  impact: { field: 'impact', label: 'Does it involve jumping or impact?', options: [
+    { key: true, label: 'Yes' }, { key: false, label: 'No' }] },
+  balance_high: { field: 'balanceDemand', label: 'How balanced does it need you to be?', options: [
+    { key: 'supported', label: 'Supported' }, { key: 'stable', label: 'Free-standing' },
+    { key: 'high', label: 'Single-leg or unstable' }] },
+};
+
+// CC27 (CAP-18): one grouped, mechanical description of why an exercise
+// sits outside how the user trains. Names the axis/rule and nothing else -
+// no advice, no safety claim, no diagnosis language.
+function describeCapabilityConflict(capabilityState, exercise, reason) {
+  if (reason === CAPABILITY_BLOCK.CLINICIAN) return 'Covered by your clinician-reported restriction';
+  const conflicts = demandConflicts(capabilityState, exercise);
+  if (reason === CAPABILITY_BLOCK.UNKNOWN) {
+    const axis = conflicts.find(c => c.unknown)?.ruleValue;
+    const label = axis ? demandLabel(axis).toLowerCase() : 'this';
+    return `Volyume doesn't know yet whether this involves ${label}`;
+  }
+  const first = conflicts.find(c => !c.unknown);
+  if (first?.ruleKind === 'demand') return `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you've set aside`;
+  if (first?.ruleKind === 'family') return 'A movement pattern you\'ve set aside';
+  return 'You set this movement aside in How you train';
+}
 
 // saveLabel / actionLabel are aliases for the create-form's save button text
 // (RoutineDetail/ManualBuilder pass saveLabel, ActiveWorkout passes
@@ -118,6 +172,10 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
   // are indistinguishable in intentState itself by design, so this is
   // tracked separately.
   const [intentUnavailable, setIntentUnavailable] = useState(false);
+  // CC27 (section 9.2.6): default-on capability filter with a "show anyway"
+  // toggle - the existing showExcluded pattern, its own switch so the two
+  // lanes' actions stay distinct (Allow again vs the section 9.4 flows).
+  const [showIncompatible, setShowIncompatible] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createMuscle, setCreateMuscle] = useState('');
@@ -141,6 +199,11 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     );
   }, [createEquipment, createExerciseType, createLoadSemanticsTouched]);
   const [creating, setCreating] = useState(false);
+  // CC27 (section 8.4): the single-axis ask. Rendered ONLY for axes the
+  // user actually has an active demand constraint on - progressive
+  // disclosure, never a biomechanics exam. Unanswered stays NULL and the
+  // exercise remains fully manually usable.
+  const [createDemands, setCreateDemands] = useState({});
   // 2026-07-11 (TASKBOARD "exercise picker first-open fix", D33): on the
   // FIRST open of a session the Android Modal's native window is freshly
   // created, and FlashList's native measurement handshake races that
@@ -188,6 +251,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     // where they are clearly marked and can be allowed again. Restoration
     // must never be obscure.
     setShowExcluded(false);
+    setShowIncompatible(false);
     setIntentUnavailable(false);
     if (userId) {
       getActiveBlock(userId)
@@ -205,10 +269,20 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     }
   }, [visible, isSwapAction, userId]);
 
+  // CC27 (section 8.4): the demand axes this user actually has active
+  // constraints on - the ONLY axes the create form may ask about.
+  const constrainedAxes = [...new Set((intentState?.capability?.restrictions ?? [])
+    .filter(r => r.ruleKind === 'demand' && DEMAND_ASK_SPECS[r.ruleValue])
+    .map(r => r.ruleValue))];
+
   // Recents are an entry point into an untouched browse, not another filter:
   // once the user is searching or has a chip active, the row steps aside.
   const recentExercises = (!isSwapAction && !query.trim() && !muscleFilter && !equipmentFilter)
     ? recentIds.map(id => allExercises.find(e => String(e.id) === String(id))).filter(Boolean)
+      // CC27: the Recent rail was id-blind; it now asks the SENIOR question
+      // (intent + family + capability), so nothing set aside or outside how
+      // you train is quietly re-offered through recency.
+      .filter(e => !intentState || isEligibleExercise(intentState, e))
     : [];
 
   useEffect(() => {
@@ -227,10 +301,87 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
       // separate AND term (not folded into the clause above) so the
       // pre-existing id-level regression-guard string stays byte-exact
       // (campaign9.generation.test.js "the shared picker honours intent").
-      (showExcluded || !intentState || !isFamilyBlocked(intentState, movementFamilyOf(e))),
+      (showExcluded || !intentState || !isFamilyBlocked(intentState, movementFamilyOf(e))) &&
+      // CC27 (section 9.2.6): the capability filter, default on, with its
+      // own "show anyway" toggle. A separate AND term for the same reason
+      // as the family term above: the pinned id-level clause stays intact.
+      (showIncompatible || !intentState?.capability
+        || capabilityBlockReason(intentState.capability, e) === null),
     );
     setFiltered(fuzzySearch(base, query, e => e.name));
-  }, [query, muscleFilter, equipmentFilter, allExercises, intentState, showExcluded]);
+  }, [query, muscleFilter, equipmentFilter, allExercises, intentState, showExcluded, showIncompatible]);
+
+  // CC27 (section 9.4): the manual-conflict flows. Selection of a
+  // capability-conflicted movement is never silent and never hard-blocked
+  // for SELF-declared rules; clinician-reported rules are edited, not
+  // excepted (CAP-7), so their path routes to the restriction editor.
+  async function writeAllowance(item) {
+    try {
+      // eslint-disable-next-line global-require
+      const { createConstraint } = require('../lib/capability/store');
+      await createConstraint(userId, {
+        role: 'baseline', source: 'self',
+        ruleKind: 'exercise_allow', ruleValue: item.id,
+        startsAt: Date.now(),
+      });
+      const block = await getActiveBlock(userId).catch(() => null);
+      setIntentState(await loadExerciseIntentState(userId, { activeMesocycleId: block?.id ?? null }));
+      return true;
+    } catch (_e) {
+      toast.show('Could not record that just now. The exercise is still added.', { variant: 'warning' });
+      return false;
+    }
+  }
+
+  function handleSelect(item, capReason) {
+    if (!capReason) { onSelect(item); onClose(); return; }
+    const commit = () => { onSelect(item); onClose(); };
+    if (capReason === CAPABILITY_BLOCK.CLINICIAN) {
+      // No inline override for a clinician-reported rule (CAP-7).
+      appAlert(
+        'Covered by your restriction',
+        'Your clinician-reported restriction covers this movement. If that has changed, update it first.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Update restriction',
+            onPress: () => {
+              onClose?.();
+              try { if (navigationRef.isReady()) navigationRef.navigate('HowYouTrain'); } catch (_e) { /* best effort */ }
+            },
+          },
+        ],
+      );
+      return;
+    }
+    if (capReason === CAPABILITY_BLOCK.UNKNOWN) {
+      const caption = describeCapabilityConflict(intentState.capability, item, capReason);
+      appAlert(
+        'Not sure yet',
+        `${caption}. You can still add it yourself.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Add anyway', onPress: commit },
+          { text: 'Add, this works for me', onPress: async () => { await writeAllowance(item); commit(); } },
+        ],
+      );
+      return;
+    }
+    // Self-declared conflict: inline warning naming the constraint + the
+    // two actions (section 9.4). "Add anyway" changes no state - the
+    // conflict badge persists; "This one works for me" records the
+    // allowance.
+    const caption = describeCapabilityConflict(intentState.capability, item, capReason);
+    appAlert(
+      item.name,
+      `${caption}.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Add anyway, just this plan', onPress: commit },
+        { text: 'This one works for me', onPress: async () => { await writeAllowance(item); commit(); } },
+      ],
+    );
+  }
 
   async function handleCreate() {
     if (!createName.trim()) {
@@ -274,6 +425,8 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
           movementPattern: null,
           compoundIsolation: null,
         }),
+        // CC27 (section 8.4): the owner's own single-axis answers, if any.
+        ...createDemands,
       });
       const all = await getAllExercises();
       setAll(all);
@@ -306,6 +459,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     setCreateEquipment('');
     setCreateSecondaryMuscles([]);
     setCreateExerciseType('weight_reps');
+    setCreateDemands({});
     setShowCreate(true);
   }
 
@@ -455,6 +609,36 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   </View>
                 </>
               )}
+              {/* CC27 (section 8.4): the single-axis ask - one optional
+                  question per axis the user has an active constraint on,
+                  never more. Skipping leaves the axis unknown, which the
+                  browse and generation surfaces report honestly. */}
+              {constrainedAxes.map(axis => {
+                const spec = DEMAND_ASK_SPECS[axis];
+                return (
+                  <View key={axis}>
+                    <Text style={[styles.createLabel, live.createLabel]}>{spec.label} (optional)</Text>
+                    <View style={styles.chipRow}>
+                      {spec.options.map(opt => (
+                        <Chip
+                          key={String(opt.key)}
+                          label={opt.label}
+                          selected={createDemands[spec.field] === opt.key}
+                          onPress={() => {
+                            haptics.selection();
+                            setCreateDemands(prev => (
+                              prev[spec.field] === opt.key
+                                ? Object.fromEntries(Object.entries(prev).filter(([k]) => k !== spec.field))
+                                : { ...prev, [spec.field]: opt.key }
+                            ));
+                          }}
+                          accessibilityLabel={`${spec.label} ${opt.label}`}
+                        />
+                      ))}
+                    </View>
+                  </View>
+                );
+              })}
               <TouchableOpacity accessibilityRole="button"
                 accessibilityLabel={buttonLabel}
                 style={[styles.createSaveBtn, live.createSaveBtn, creating && { opacity: 0.5 }]}
@@ -521,6 +705,24 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                   Avoided movements could not be checked right now, so nothing is filtered for them.
                 </Text>
               </View>
+            ) : null}
+
+            {/* CC27 (section 9.2.6): the capability "show anyway" toggle,
+                shown only while active constraints exist. Its own switch so
+                restoring a set-aside exercise and overriding a capability
+                conflict stay visibly different actions. */}
+            {intentState?.capability && !intentState.capability.empty ? (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={showIncompatible ? 'Hide movements outside how you train' : 'Show movements outside how you train'}
+                onPress={() => setShowIncompatible(v => !v)}
+                style={styles.showExcludedRow}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Text style={[styles.showExcludedText, live.showExcludedText]}>
+                  {showIncompatible ? 'Hide movements outside how you train' : 'Show movements outside how you train'}
+                </Text>
+              </TouchableOpacity>
             ) : null}
 
             {/* C9 Work 2: restoration must not be obscure. The toggle only
@@ -609,11 +811,16 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 // user asked to see them. It says so plainly and offers the
                 // way back, so restoring is never a hunt.
                 const setAside = intentState ? !isEligible(intentState, item.id) : false;
+                // CC27 (CAP-18): the capability caption is mechanical - the
+                // conflict names its own axis/rule, nothing is inferred.
+                const capReason = intentState?.capability
+                  ? capabilityBlockReason(intentState.capability, item) : null;
+                const capCaption = capReason ? describeCapabilityConflict(intentState.capability, item, capReason) : null;
                 return (
                   <TouchableOpacity accessibilityRole="button"
-                    accessibilityLabel={`${isSwapAction ? 'Swap in' : 'Add'} ${item.name}${setAside ? ', set aside' : ''}`}
+                    accessibilityLabel={`${isSwapAction ? 'Swap in' : 'Add'} ${item.name}${setAside ? ', set aside' : ''}${capCaption ? `, ${capCaption}` : ''}`}
                     style={styles.pickerRow}
-                    onPress={() => { haptics.selection(); onSelect(item); onClose(); }}
+                    onPress={() => { haptics.selection(); handleSelect(item, capReason); }}
                   >
                     <View style={styles.pickerRowContent}>
                       <Text style={[styles.pickerExName, live.pickerExName]}>{item.name}</Text>
@@ -623,6 +830,8 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                             ? 'Set aside for this block'
                             : 'You asked Volyume not to suggest this'}
                         </Text>
+                      ) : capCaption ? (
+                        <Text style={[styles.pickerSetAside, live.pickerSetAside]}>{capCaption}</Text>
                       ) : item.primaryMuscle ? (
                         <Text style={[styles.pickerMuscle, live.pickerMuscle]}>{item.primaryMuscle}</Text>
                       ) : null}

@@ -13,12 +13,12 @@ Update at every slice landing. Next session resumes from THIS file.
 CC27 slices (order = dependency order):
 - [x] S1 Demand ontology: 10 nullable columns on local `exercises` (customs share the table); cloud migrate_148 (exercises + custom_exercises, NOT applied); pure derivation module `src/lib/capability/demands.js` (constants + decoder + curated overrides, exerciseMetadata.js mould); seed/backfill wiring via seedExercises version-key pattern; coverage report artefact + §33.3 five-muscle priority; metadata invariants suite (§8.5).
 - [x] S2 PD-8 fix: sync.js:252-253 pushes `?? null` (cloud cols nullable, migrate_020); regression test. Prerequisite for S5.
-- [ ] S3 Resolver `src/lib/capability/resolve.js` (pure): rule↔demand compat incl. §33.8 laterality; §4.1 first-match reasons (clinician > declared > unknown); allowances carve rank 3/4 never 2; affectedScope; resolveEffectiveTargets; purity/property tests.
-- [ ] S4 Composition: loadExerciseIntentState attaches `capability` (lazy, per-lane fail posture); isEligibleExercise consults it; generation.js capability arm (capability reasons before intent); capabilityGuards CAP-4 guard REVISED to data-reach terms; D110-2 pin re-run; 3 id-blind readers (approvedDefaultFor, previouslyUsedBefore, repeatedDefaultCandidate) upgraded via optional row lookup + callers; PD-9 behavioural tests at touched call sites.
-- [ ] S5 §34.1 pool parity: poolGenerator.js:163 isCustom skip removed; same pool-entry requirements; null sfr/fatigue never penalised; tests.
-- [ ] S6 Post-engine + blockedSlots: capability reasons flow resolveSeed→blockedSlots (reason maps carry them automatically once filter drops); §9.5 reason class distinguished; §33.11 near-miss data.
-- [ ] S7 §9.6 pre-flight UI gate at generation call sites + counterpart test (capability unavailable ⇒ gate fires, engine not called with half-state).
-- [ ] S8 Pickers: ExercisePickerModal capability filter + show-anyway + §9.4 flows (self warn/allow; clinician blocked+route; unknown copy) + Recent rail senior question; swap sheet pin via rankPersonalised.
+- [x] S3 Resolver `src/lib/capability/resolve.js` (pure): rule↔demand compat incl. §33.8 laterality; §4.1 first-match reasons (clinician > declared > unknown); allowances carve rank 3/4 never 2; affectedScope; resolveEffectiveTargets; purity/property tests.
+- [x] S4 Composition: loadExerciseIntentState attaches `capability` (lazy, per-lane fail posture); isEligibleExercise consults it; generation.js capability arm (capability reasons before intent); capabilityGuards CAP-4 guard REVISED to data-reach terms; D110-2 pin re-run; 3 id-blind readers (approvedDefaultFor, previouslyUsedBefore, repeatedDefaultCandidate) upgraded via optional row lookup + callers; PD-9 behavioural tests at touched call sites.
+- [x] S5 §34.1 pool parity: poolGenerator.js:163 isCustom skip removed; same pool-entry requirements; null sfr/fatigue never penalised; tests.
+- [x] S6 Post-engine + blockedSlots: capability reasons flow resolveSeed→blockedSlots (reason maps carry them automatically once filter drops); §9.5 reason class distinguished; §33.11 near-miss data.
+- [x] S7 §9.6 pre-flight UI gate at generation call sites + counterpart test (capability unavailable ⇒ gate fires, engine not called with half-state).
+- [x] S8 Pickers: ExercisePickerModal capability filter + show-anyway + §9.4 flows (self warn/allow; clinician blocked+route; unknown copy) + Recent rail senior question; swap sheet pin via rankPersonalised.
 - [ ] S9 §33.14 thin-session banner; §33.16 explanation budget; CAP-18/CC-D25 copy; PD-2 fix (algorithms.js:828/846 rotation claim).
 - [ ] S10 §33.19 same-position contiguous ordering under floor/position axes + Amendment §17 programme checks as fixtures over GENERATED plans.
 - [ ] S11 §33.17 text sweep: 552 names/notes + 31 plan descriptions vs R2 wording lists (script + fixes).
@@ -37,11 +37,13 @@ Bundle end:
 
 ## Slice log (append per landing)
 
+- CC27 S3-S8 landed: resolver (35), composition + PD-9 debt (14 incl. post-engine hole + near-miss), pool parity (poolGenerator pin REVISED per CC-D26), blocked-slot capability class + near-miss attach (4 sites), pre-flight gate (8) wired into 3 screens, picker capability filter + 9.4 flows + Recent rail senior question + 8.4 single-axis ask (11 pins). Commits 5b1853d, 468a84f, +picker.
 - CC27 S1+S2 landed: capability/demands.js (551-row derivation, 0 contradictions, coverage 87-100% per axis, report artefact CC27-DEMAND-COVERAGE.md); 10 demand columns local migration + canonical backfill; migrate_148 written NOT applied; seed + top-up derive at insert; custom push carries demand columns (tolerated-mode until 148); PD-8 fixed both directions; BD-1 fixed (upsert preserves unlisted columns). Suites: capabilityDemands (6), database.demandMetadataMigration (3), customExerciseSyncNulls (5), 4 window suites rebumped (19), affected domain 121+53 green.
 
 ## Decisions made (bundle-internal, D33)
 
-(none yet)
+- BD-D1 (CC27 S8): the section 8.4 "single-axis ask" renders one optional question PER constrained demand axis (only the user's active axes; enum axes ask the full closed enum so a "no" answer is expressible without guessing). Rationale: a yes/no on an enum axis would discard honest "no" answers; per-axis scope keeps it progressive disclosure, never an exam.
+- BD-D2 (CC27 S7): a pre-flight HOLD in ProGoalSetupScreen/ProOnboardingScreen skips only the plan build and lands in the existing not-rebuilt/recovery paths; in PlanUpdateScreen (rebuild-first invariant) it aborts the whole update cleanly. Rationale: never leave half-saved state, never block goal/nutrition saves on a suggestion-lane gate.
 
 ## Defects discovered
 
