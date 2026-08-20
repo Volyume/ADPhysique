@@ -22,6 +22,7 @@ import {
   PHYSIQUE_GOALS,
   GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
 } from '../lib/coachingGoals';
+import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
 import {
   generateAndSavePlan, generatePlanDryRun, planShortfallNote, assessScheduleFit,
 } from '../lib/planAutoGen';
@@ -222,6 +223,19 @@ export default function PlanUpdateScreen({ navigation }) {
     // FF-002 (unchanged invariant): rebuild FIRST, bail on failure without
     // saving or navigating, and only commit the profile as canonical once the
     // rebuild succeeds, so a failed rebuild can't split-brain.
+    // CC27 (section 9.6): capability pre-flight BEFORE the engine call.
+    // Rebuild-first means nothing has been saved yet, so a hold aborts the
+    // whole update cleanly.
+    const preflight = await capabilityPreflight(user.id);
+    if (!preflight.proceed) {
+      const goAhead = await new Promise((resolve) => {
+        offerCapabilityPreflightChoice({
+          onHold: () => resolve(false),
+          onContinue: () => resolve(true),
+        });
+      });
+      if (!goAhead) { setSaving(false); return; }
+    }
     let planResult = { ok: false, error: 'not attempted' };
     try {
       planResult = await generateAndSavePlan(user.id, updatedProfile);

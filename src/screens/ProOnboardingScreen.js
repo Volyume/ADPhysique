@@ -25,6 +25,7 @@ import { stoneLbsToKg, ftInToCm, parseBodyWeightToKg } from '../lib/units';
 import { signInWithGoogle, signInWithApple } from '../lib/supabase';
 import { isAppleUser, appleFirstName } from '../lib/appleIdentity';
 import { generateAndSavePlan, planShortfallNote, assessScheduleFit } from '../lib/planAutoGen';
+import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
 import {
   PLAN_FIT, fitCopy, alternativeCopy, keepChoiceCopy, coverageCopy,
 } from '../lib/planFit';
@@ -1484,8 +1485,22 @@ export default function ProOnboardingScreen({ navigation }) {
         if (priorPlan && priorPlan.isActive && !priorPlan.isArchived) {
           planResult = { ok: true, programmeId: priorPlan.id };
         } else {
-          try { planResult = await generateAndSavePlan(user.id, planProfile); }
-          catch (e) { planResult = { ok: false, error: e?.message ?? 'unknown' }; }
+          // CC27 (section 9.6): capability pre-flight before the first
+          // generation. A hold falls into the existing plan-recovery path
+          // (HomeScreen CTA) rather than blocking onboarding completion.
+          const preflight = await capabilityPreflight(user.id);
+          const goAhead = preflight.proceed || await new Promise((resolve) => {
+            offerCapabilityPreflightChoice({
+              onHold: () => resolve(false),
+              onContinue: () => resolve(true),
+            });
+          });
+          if (goAhead) {
+            try { planResult = await generateAndSavePlan(user.id, planProfile); }
+            catch (e) { planResult = { ok: false, error: e?.message ?? 'unknown' }; }
+          } else {
+            planResult = { ok: false, error: 'capability_preflight_hold' };
+          }
           if (planResult.ok && planResult.programmeId) {
             await markBuildProgress(user.id, { planId: planResult.programmeId, planSignature });
           }

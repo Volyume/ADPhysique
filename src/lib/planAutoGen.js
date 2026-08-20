@@ -627,18 +627,49 @@ export function resolvePlanAgainstLibrary(plan, exerciseMap, filteredLibrary) {
  * empty by the user's own exclusion is a different fact and gets its own
  * fields, so nothing existing starts saying the wrong thing.
  */
-function attachBlockedSlots(result, blockedSlots, constraintsUnavailable = false) {
+function attachBlockedSlots(result, blockedSlots, constraintsUnavailable = false, { capabilityState = null, library = null } = {}) {
   // D109-2 fail direction: a constraints read failure never blocks
   // generation (loadExerciseIntentState already failed open and returned an
   // empty state, so blockedSlots is empty too) - it only adds a flag so the
   // caller can show a visible notice instead of the read failure looking
   // identical to a clean slate.
   if (constraintsUnavailable) result.constraintsUnavailable = true;
+  // CC27 (section 9.6): the capability lane's read state is its own fact
+  // with its own posture - the pre-flight choice happens BEFORE the engine
+  // call at the UI layer; this flag lets post-hoc surfaces say the truth.
+  if (capabilityState?.unavailable) result.capabilityUnavailable = true;
   if (!blockedSlots?.length) return result;
   result.blockedByIntent = true;
   result.needsChoice = true;
   result.blockedCount = blockedSlots.length;
   result.blockedSlots = blockedSlots;
+  // CC27 (sections 9.5, 33.11): capability blocks are their OWN reason
+  // class, kept distinct end to end (the equipment/exclusion separation
+  // pattern). For muscles holding capability-blocked slots, near-miss
+  // candidates - blocked only by UNKNOWN axes - ride along so the
+  // no-compatible-option surface can offer "suggest with unknowns shown"
+  // per row instead of a dead end.
+  const capabilitySlots = blockedSlots.filter((s) => String(s.reason ?? '').startsWith('capability'));
+  if (capabilitySlots.length > 0) {
+    result.blockedByCapability = true;
+    result.capabilityBlockedCount = capabilitySlots.length;
+    if (capabilityState && Array.isArray(library) && library.length) {
+      try {
+        // eslint-disable-next-line global-require
+        const { nearMissCandidates } = require('./capability/resolve');
+        const byId = new Map(library.map((e) => [e.id, e]));
+        const muscles = [...new Set(capabilitySlots
+          .map((s) => byId.get(s.exerciseId)?.primaryMuscle)
+          .filter(Boolean))];
+        const nearMisses = {};
+        for (const muscle of muscles) {
+          const list = nearMissCandidates(capabilityState, library, { muscle });
+          if (list.length) nearMisses[muscle] = list;
+        }
+        if (Object.keys(nearMisses).length) result.capabilityNearMisses = nearMisses;
+      } catch (_e) { /* near-miss detail is additive; the block report stands */ }
+    }
+  }
   return result;
 }
 
@@ -789,6 +820,7 @@ export async function generateAndSavePlan(userId, profile, {
           { ok: false, error: 'plan_blocked_by_exclusions' },
           writeResult.blockedSlots,
           intentState?.unavailable,
+          { capabilityState: intentState?.capability, library: allExercises },
         );
       }
       return { ok: false, error: 'Plan created but no exercises matched the library' };
@@ -839,7 +871,8 @@ export async function generateAndSavePlan(userId, profile, {
       result.missedCount = missedCount;
       result.missedExercises = missedNames;
     }
-    return attachBlockedSlots(result, blockedSlots, intentState?.unavailable);
+    return attachBlockedSlots(result, blockedSlots, intentState?.unavailable,
+    { capabilityState: intentState?.capability, library: allExercises });
   } catch (e) {
     if (programmeId) {
       try {
@@ -940,6 +973,7 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
         { ok: false, error: 'plan_blocked_by_exclusions' },
         blockedSlots,
         intentState?.unavailable,
+        { capabilityState: intentState?.capability, library: allExercises },
       );
     }
     return { ok: false, error: 'No exercises matched your equipment' };
@@ -971,5 +1005,6 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
     result.missedCount = missedCount;
     result.missedExercises = missedNames;
   }
-  return attachBlockedSlots(result, blockedSlots, intentState?.unavailable);
+  return attachBlockedSlots(result, blockedSlots, intentState?.unavailable,
+    { capabilityState: intentState?.capability, library: allExercises });
 }

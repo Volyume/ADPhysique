@@ -292,6 +292,34 @@ export function affectedScope(state, library) {
 }
 
 /**
+ * Section 33.11: near-miss candidates for a muscle - movements blocked
+ * ONLY by unknowns (rank 4), each named with its unknown axes, so the
+ * no-compatible-option surface can offer "suggest with unknowns shown"
+ * as an actionable list instead of a wall. Definite conflicts (ranks
+ * 2-3) are NOT near misses and never appear here.
+ *
+ * @returns {Array<{exerciseId: string, name: string|null, unknownAxes: string[]}>}
+ */
+export function nearMissCandidates(state, library, { muscle = null, limit = 4 } = {}) {
+  if (!state || state.empty || !Array.isArray(library)) return [];
+  const out = [];
+  for (const ex of library) {
+    if (muscle && ex?.primaryMuscle !== muscle) continue;
+    const conflicts = demandConflicts(state, ex);
+    if (!conflicts.length) continue; // fully eligible: not a near miss
+    if (conflicts.some((c) => !c.unknown)) continue; // definite conflict: out
+    if (ex?.id && state.allowances.has(ex.id)) continue; // already allowed through
+    out.push({
+      exerciseId: ex?.id ?? null,
+      name: ex?.name ?? null,
+      unknownAxes: [...new Set(conflicts.map((c) => c.ruleValue))],
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+/**
  * Section 15: effective per-muscle ceilings. Landmarks are never
  * rewritten; the ceiling applies at consumption points only.
  *

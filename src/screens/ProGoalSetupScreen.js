@@ -36,6 +36,7 @@ import { ageYearsFromDateOfBirth } from '../lib/profileAge';
 import { computeEWMA } from '../lib/weeklyCoach';
 import { formatBodyWeightShort } from '../lib/units';
 import { generateAndSavePlan } from '../lib/planAutoGen';
+import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 
 const APPROACH_SHORT = {
@@ -451,11 +452,27 @@ export default function ProGoalSetupScreen({ navigation }) {
     // mesocycle to week 1 of a freshly-generated plan that reflects the
     // new goal/phase. The previous plan is deactivated by
     // activatePlanWithBlock; session history stays intact.
+    // CC27 (section 9.6): the capability pre-flight runs BEFORE the engine
+    // call. With no readable capability state and none known this session,
+    // the choice is the user's - hold, or continue without those checks.
+    // Holding skips only the REBUILD (the goal itself saved above); the
+    // existing not-rebuilt path already tells the user how to retry.
     let planResult = { ok: false, error: 'not attempted' };
-    try {
-      planResult = await generateAndSavePlan(user.id, updatedProfile);
-    } catch (e) {
-      planResult = { ok: false, error: e?.message ?? 'unknown' };
+    const preflight = await capabilityPreflight(user.id);
+    const goAhead = preflight.proceed || await new Promise((resolve) => {
+      offerCapabilityPreflightChoice({
+        onHold: () => resolve(false),
+        onContinue: () => resolve(true),
+      });
+    });
+    if (goAhead) {
+      try {
+        planResult = await generateAndSavePlan(user.id, updatedProfile);
+      } catch (e) {
+        planResult = { ok: false, error: e?.message ?? 'unknown' };
+      }
+    } else {
+      planResult = { ok: false, error: 'capability_preflight_hold' };
     }
     if (!planResult.ok) {
       // Don't block navigation, the goal is saved, nutrition updated. Just

@@ -19,6 +19,7 @@ const CAPABILITY_FILES = [
   // INTENT, which stays unreachable.
   'lib/capability/resolve.js',
   'lib/capability/demands.js',
+  'lib/capability/preflight.js',
   'lib/consent/capabilityConsent.js',
   'lib/sync/tables/capabilityConstraints.js',
   'lib/sync/tables/sessionConstraintEffects.js',

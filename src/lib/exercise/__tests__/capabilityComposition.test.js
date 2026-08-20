@@ -167,3 +167,26 @@ describe('loadExerciseIntentState carries the capability lane (independent postu
     expect(isEligibleExercise(state, SQUAT)).toBe(false);
   });
 });
+
+describe('post-engine re-check (section 9.2.2): the POOL-fallback hole stays closed', () => {
+  test('an engine pick that names a capability-dropped exercise is blocked BY NAME', () => {
+    const { generationBlockFor } = require('../generation');
+    const state = emptyIntentState(standingBlocked());
+    const filtered = filterLibraryForGeneration([SQUAT, LEGPRESS], state);
+    // The engine resolves picks by name against the FULL library, so a
+    // dropped id can come back through the hand-written POOL as a name.
+    expect(generationBlockFor(filtered, null, 'Barbell Back Squat')).toBe(GENERATION_BLOCK.CAPABILITY_DECLARED);
+    expect(generationBlockFor(filtered, SQUAT)).toBe(GENERATION_BLOCK.CAPABILITY_DECLARED);
+    expect(generationBlockFor(filtered, LEGPRESS)).toBeNull();
+  });
+});
+
+describe('near-miss candidates (section 33.11)', () => {
+  test('rows blocked ONLY by unknowns list their unknown axes; definite conflicts stay out', () => {
+    const { nearMissCandidates } = require('../../capability/resolve');
+    const mysteryQuad = { id: 'ex-mq', name: 'Mystery Quad Move', primaryMuscle: 'quads', position: null, gripDemand: 'supportive', bilateralUpper: 0, bilateralLower: 1, axialLoad: 0, impact: 0, floorAccess: 0, overheadPosition: 0, unilateralLoadable: null, balanceDemand: 'supported' };
+    const state = standingBlocked();
+    const out = nearMissCandidates(state, [SQUAT, LEGPRESS, mysteryQuad], { muscle: 'quads' });
+    expect(out).toEqual([{ exerciseId: 'ex-mq', name: 'Mystery Quad Move', unknownAxes: ['standing'] }]);
+  });
+});
