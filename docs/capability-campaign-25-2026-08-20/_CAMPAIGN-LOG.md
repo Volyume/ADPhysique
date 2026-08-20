@@ -201,3 +201,15 @@ K have no output; their architecture-blocking cores are being resolved
 by Fable direct reads (see STATUS-LEDGER.md gap classification). Wave 1
 is otherwise COMPLETE. No agents running. Next: consolidated evidence
 map, then synthesis.
+
+- 2026-08-20 — SYNTHESIS COMPLETE (lead, per the cost-governance order):
+  ARCHITECTURE.md (1,219 lines, deliverables 1-31), DECISION-REGISTER.md
+  (facts, CC-D1..25, CC-R1..16, deferrals, CLIN/LEG/founder registers),
+  ROADMAP-CC26-PLUS.md (CC26-CC32 + all Amendment deliverables),
+  EXTERNAL-CONSULTATION-QUEUE.md (Checkpoint A prompts). Zero
+  pre-synthesis subagents used. Red teams RT-1 (technical) and RT-2
+  (product) launched on sonnet (2/2 budget, justification in
+  COST-GOVERNANCE-LEDGER.md). Lead's own adversarial pass banked 14
+  self-attack candidates for joint adjudication (S1-S14, held in-loop).
+  RECOVERY: if the session dies, resume = read the four synthesis docs +
+  redteam/ reports when present, adjudicate, revise, close the gate.
