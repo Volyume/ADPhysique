@@ -33,7 +33,15 @@ CC29 (read §14, §17, §18, §5.5, Audit G C1-C4 at start):
 
 Bundle end:
 - [x] ONE Sonnet red team over combined diff; adjudicate; fix. (COMPLETE - see adjudication below)
-- [ ] Lint + ONE full suite; merge to main; consolidated report.
+- [x] Lint + ONE full suite; merge to main; consolidated report.
+  Gate (settled tree): `eslint . --max-warnings 0` clean; jest 1020
+  suites passed / 1 pre-existing skip (progressScanBodyMExternal), 0
+  failed; 13,778 tests passed / 13 pre-existing skips, 0 failed; 17
+  snapshots. First full run caught three suites the targeted nets
+  missed (campaign9.dryRunPreview old blocked-copy anchor; picker a11y
+  label pin pre-capCaption; cloud-restore mock still intercepting
+  INSERT OR REPLACE) - realigned to the landed contracts in 3b2dd3c,
+  re-run green.
 
 ## Red-team adjudication (bundle end)
 
