@@ -24,7 +24,8 @@ export const R2_FUNCTION_TERMS = [
 // Named conditions (the specific-injury link, R2 section 5.3 last row):
 // banned in exercise/plan/library/marketing text; PERMITTED inside the
 // user-initiated condition/injury directory, whose validator applies
-// R2_FUNCTION_TERMS only (GC-D4; counsel confirmation LEG-30).
+// R2_FUNCTION_TERMS only (GC-D4; LEG-30 resolved internally 2026-08-21:
+// a stateless browse-only surface processes no new data).
 export const R2_CONDITION_NAME_TERMS = [
   /\bspinal cord\b/i, /\bmultiple sclerosis\b/i, /\barthritis\b/i,
   /\bfrozen shoulder\b/i, /\bsciatica\b/i, /\bhypermobil\w*\b/i,

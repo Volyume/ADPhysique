@@ -1,9 +1,10 @@
 # CC25 EXTERNAL CONSULTATION QUEUE (Amendment §20-22)
 
-Grok/Gemini are not reachable from this environment; per §22 the exact
-prompts are queued here for the founder to run at will. Responses get
+OPTIONAL IDEATION ONLY - NEVER A DEPENDENCY (GC-D12). Grok/Gemini are
+not reachable from this environment; the exact prompts are queued here
+for the founder to run at will, or never. Responses, if any, get
 reconciled into DECISION-REGISTER.md (ACCEPT/MODIFY/REJECT/DEFER each
-consequential suggestion). Nothing below blocks work.
+consequential suggestion). Nothing below blocks or gates anything.
 
 ## CHECKPOINT A (now) — attack the provisional architecture
 

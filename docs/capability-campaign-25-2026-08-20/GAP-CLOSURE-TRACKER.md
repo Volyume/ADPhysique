@@ -100,3 +100,29 @@ a second store, or a per-condition branch anywhere in engine code.
 - [x] Gate: lint zero-warning green; ONE full settled-tree suite green
   (Test Suites: 1033 passed, 1 skipped of 1034; Tests: 13,932 passed,
   13 skipped of 13,945; Snapshots: 17; 87.6s); merged to main.
+
+## NO-OUTSIDE-PARTY CORRECTION (2026-08-21, founder law; final closure pass)
+
+- [x] Law recorded: CLAUDE.md section 2 + GC-D12 (with sweep rulings a-h).
+- [x] Q1-Q9 ruled internally (DPIA pack is now the internal DPIA
+  record); consent copy corrected (processor-honest "never shared");
+  capability telemetry RETIRED end to end (client emissions + catalogue
+  removed; migrate_150 retired unapplied; README updated; run set
+  145-149 + 151).
+- [x] CLIN-1..9 ruled internally or scoped out (clinical pack is now
+  the boundary record); no reviewer action exists.
+- [x] Population-label FINAL ruling (GC-D12 d): named collections out
+  for every population; directory is the named surface.
+- [x] GC-D10 re-based on product grounds only (GC-D12 e).
+- [x] CC-F1/F3/F5/F6 closed on the register; sections F and G closed;
+  matrix gates internal/device-only with EXPERT/USERVAL as truth
+  fields; action pack now production/device/credential only; board,
+  handover, traceability (section 10), LAYER2 proof, A11Y audit,
+  dossiers, validation package, consultation queue, evidence map,
+  registry generator all corrected.
+- [x] Gate (runtime changed): lint zero-warning green; ONE full
+  settled-tree suite green (Test Suites: 1033 passed, 1 skipped of
+  1034; Tests: 13,922 passed, 13 skipped of 13,935; Snapshots: 17;
+  81.5s - ten fewer tests than the prior run: the retired telemetry
+  events took their parameterised catalogue cases with them); merged
+  to main.

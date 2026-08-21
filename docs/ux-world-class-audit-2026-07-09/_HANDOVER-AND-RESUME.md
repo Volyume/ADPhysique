@@ -20,10 +20,14 @@ REAL-DISABLED-USER-VALIDATED = NO). Final gate: lint green, ONE full
 suite green (1033 suites / 13,929 tests), merged to main. Records:
 `GAP-CLOSURE-TRACKER.md`, `ORIGINAL-SPEC-TRACEABILITY.md`,
 `COST-GOVERNANCE-LEDGER.md` in the campaign folder. Founder-side
-actions: `FOUNDER-ACTION-PACK.md` (migrations 145–151 await "run
-against production"; iOS profile delete; device walks; CC-F5 user
-validation; CC-F6 clinical review; CC-F1 counsel). No new campaign
-was opened; remaining items are external-only.
+actions: `FOUNDER-ACTION-PACK.md`. CORRECTED 2026-08-21 by the
+founder's no-outside-party law (GC-D12): counsel, clinical review and
+disabled-user recruitment are CLOSED INTERNALLY (rulings in the two
+former packs); migrate_150 RETIRED (capability telemetry removed
+client-side under the Q4 ruling). Remaining founder actions are
+production/device/credential only: migrations 145-149 + 151 await "run
+against production"; iOS profile delete; device walks. No new campaign
+was opened.
 
 ===============================================================================
 ## ★ 2026-08-20 — CAPABILITY CAMPAIGN 25 (CC25): ARCHITECTURE COMPLETE, ON MAIN ★

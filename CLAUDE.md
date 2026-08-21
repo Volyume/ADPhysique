@@ -178,6 +178,17 @@ tap-through (regression-guarded in `proOnboarding.sexGate.test.js`).
 **Never add dependencies without asking.** Name, purpose, licence — wait for
 yes.
 
+**No outside-party dependencies (founder law 2026-08-21).** Volyume never
+uses solicitors, clinical reviewers, recruited disability panels, paid
+experts or outside consultants as product or release dependencies. Every
+such question is either resolved internally from published authority
+(ICO, MHRA, NICE/NHS, platform policy, peer-reviewed and recognised
+disability-organisation guidance) under a deliberately conservative
+posture, or the behaviour needing individual professional judgement
+stays OUT of product scope. "Awaiting external sign-off" is not an
+allowed state. Truth fields (e.g. REAL-DISABLED-USER-VALIDATED = NO)
+stay honest and never convert to claims. Register: GC-D12.
+
 ---
 
 ## 3. CONVENTIONS (derived from the code — match them exactly)
@@ -400,8 +411,8 @@ campaign operating model as standing law; it is not campaign-scoped.
    never the lighter option framed as the recommendation), and work
    continues on unblocked lanes while questions are open.
    DELIVERY (founder order 2026-08-21): anything the founder must act on
-   (questions for counsel/clinicians/reviewers, action requests,
-   checklists) is delivered IN CHAT as a ready-to-use message. The
+   (questions, action requests, checklists) is delivered IN CHAT as a
+   ready-to-use message. The
    founder works from a phone and cannot easily open repo files. Repo
    packs/docs are the internal record only, never the delivery vehicle;
    "it's in the pack" is not delivery.

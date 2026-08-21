@@ -812,14 +812,16 @@ and adjudicated (30 attacks + 14 lead self-attacks; every accepted item
 a binding amendment). Completion gate PASSED (record in
 `_CAMPAIGN-LOG.md`). Cost governance: 0 pre-synthesis subagents, 2
 red-team sonnet agents, ledger in the folder.
-**FOUNDER-SIDE (section 3 material):** (1) CC-F1 counsel + DPIA
-engagement (LEG register); (2) CC-F2 per-side logging reopen question
-(recommend NO); (3) CC-F6 clinical reviewer engagement (CLIN register);
-(4) CC-F8 free-tier generation question (recommend not v1); (5) run the
-Checkpoint A prompts in EXTERNAL-CONSULTATION-QUEUE.md at will; (6)
-PD-1..9 pre-existing defects recorded in the register for triage —
-notably PD-1 (adapted-MAV per-session unit) and PD-2 (Engine Log's
-false rotation claim).
+**FOUNDER-SIDE (section 3 material; corrected 2026-08-21 under the
+no-outside-party law GC-D12):** (1) CC-F1 counsel and (3) CC-F6
+clinical review are CLOSED INTERNALLY - rulings in
+DPIA-COUNSEL-INPUT-PACK and CLINICAL-REVIEW-PACK; no engagement exists.
+Still standing: (2) CC-F2 per-side logging reopen question (recommend
+NO); (4) CC-F8 free-tier generation question (recommend not v1); (5)
+the Checkpoint prompts in EXTERNAL-CONSULTATION-QUEUE.md remain
+optional ideation, never a dependency; (6) PD-1..9 pre-existing defects
+recorded in the register for triage — notably PD-1 (adapted-MAV
+per-session unit) and PD-2 (Engine Log's false rotation claim).
 **CC26 (2026-08-20, same session as the start order):** capability
 foundations landed per the roadmap CC26 block — local + cloud schema
 (145/146/147 written, NOT applied, CC-F7), registry sync, granular
@@ -866,10 +868,11 @@ delegation. Final gate: 40-item walk (one genuine find fixed at the
 gate), lint green, ONE full suite green (1033 suites / 13,929 tests),
 merged to main. Full record: GAP-CLOSURE-TRACKER.md +
 ORIGINAL-SPEC-TRACEABILITY.md + COST-GOVERNANCE-LEDGER.md.
-**RECOVERY/RESUME:** the workstream is CLOSED. Nothing resumes from
-here; founder-side actions live in FOUNDER-ACTION-PACK.md (migrations
-145–151 await the exact phrase; iOS profile delete; device walks;
-CC-F5 cohorts; CC-F6 clinical review; CC-F1 counsel).
+**RECOVERY/RESUME:** the workstream is CLOSED, and the 2026-08-21
+no-outside-party law (GC-D12) closed every external-professional item
+internally. Remaining founder actions are production/device/credential
+only (FOUNDER-ACTION-PACK.md): migrations 145-149 + 151 await the exact
+phrase (150 RETIRED); iOS profile delete; device walks.
 
 
 ### CAMPAIGN 6: RETURNING USERS, LONG-TERM PERSONALISATION, LAPSES,

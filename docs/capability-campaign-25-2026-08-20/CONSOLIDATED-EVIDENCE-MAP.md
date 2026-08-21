@@ -161,7 +161,9 @@ record. All facts verified against the 149d140 code tree._
 - Append-only history has NO Art 17(3) exemption; erasure must reach the
   timeline AND derivatives (effective plans, eligibility markers). DPIA
   required before launch. Equality Act reasonable-adjustments duty is
-  anticipatory (supports FD-1); s.20(7) no-charging line needs counsel.
+  anticipatory (supports FD-1); the s.20(7) no-charging reading is
+  adopted conservatively as product law (CAP-19 free accommodation),
+  which satisfies it without external advice (GC-D12).
 
 ## 10. Medical-device boundary (R2)
 - Intended purpose = claims/copy, not code. Exclude/substitute/reduce/

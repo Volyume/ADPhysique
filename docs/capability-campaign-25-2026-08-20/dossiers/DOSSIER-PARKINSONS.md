@@ -71,17 +71,17 @@ Generic conservative model.
 ## 18. Review date and version
 2026-08-21, v1.
 
-## 19. Product status and required validation
+## 19. Product status and validation truth
 ENGINE SUPPORTED, CONTENT SUPPORTED (capability-led), RESEARCH
 SUPPORTED, AUTOMATED TESTED. Not DEVICE TESTED, not EXPERT REVIEWED,
 not USER VALIDATED, not MARKETING READY.
-Required user testing (amendment item 14): VALIDATION-PACKAGE cohorts
-E/F as functionally relevant (balance-supported, fluctuating), tasks
-T1-T7 with attention to T3 (working around a movement mid-session).
-Required expert review (amendment item 15): CLIN-1 (hold-vs-review
-asymmetry), CLIN-4 (balance axis sufficiency), plus the R5
-clinical-register items tagged Parkinson's, before any
-Parkinson's-labelled content releases.
+What WOULD constitute user validation, if ever chosen (truth-field
+definition, not a dependency - GC-D12): VALIDATION-PACKAGE cohorts E/F
+as functionally relevant (balance-supported, fluctuating), tasks T1-T7
+with attention to T3 (working around a movement mid-session). What
+WOULD constitute expert review: the former CLIN-1 and CLIN-4
+questions, since resolved internally as shipped (CLINICAL-REVIEW-PACK
+rulings).
 
 ## 20. Marketing-safe statements
 None until the matrix row converts.

@@ -29,6 +29,6 @@ profileId: <directory profile id>
 ## 16. Check-in implications
 ## 17. Reintroduction implications
 ## 18. Review date and version
-## 19. Product status and required validation (ENGINE SUPPORTED / CONTENT SUPPORTED / RESEARCH SUPPORTED / AUTOMATED TESTED / DEVICE TESTED / EXPERT REVIEWED / USER VALIDATED / MARKETING READY - list which hold; then state the REQUIRED user-testing cohort/tasks and the REQUIRED expert-review items for this population, per the original amendment items 14-15)
+## 19. Product status and validation truth (ENGINE SUPPORTED / CONTENT SUPPORTED / RESEARCH SUPPORTED / AUTOMATED TESTED / DEVICE TESTED / EXPERT REVIEWED / USER VALIDATED / MARKETING READY - list which hold. EXPERT/USER fields are TRUTH FIELDS, never dependencies (GC-D12): state what WOULD constitute such validation for this population if ever chosen, so any future YES is well-defined - nothing waits on it)
 ## 20. Marketing-safe statements (the only lines marketing may derive)
 ## 21. Prohibited claims

@@ -55,9 +55,11 @@ picker, logging, effective prescription, coach, check-in, reintroduction
 and the learning shield all consume FUNCTIONAL state only (GC-D1), so
 every profile inherits full support the moment its questions are
 answered; per-profile automated scenario coverage is the Phase H matrix
-suite (every profile iterated by construction). Clinical/expert review,
-device validation and user validation remain EXTERNAL and pending for
-every profile (founder actions); marketing stays governed by
+suite (every profile iterated by construction). Device validation is
+pending (physical-device walks, founder/device action). Expert review
+and user validation are TRUTH FIELDS, not gates or actions (GC-D12
+no-outside-party law: CLIN and legal questions were resolved internally
+from published authority); marketing stays governed by
 MARKETING-READINESS-MATRIX.md (all NO).
 
 | Profile | Kind | Questions | Evidence (best tier) | Aliases | Known gaps |

@@ -80,17 +80,16 @@ designed repeated-episode path.
 ## 18. Review date and version
 2026-08-21, v1.
 
-## 19. Product status and required validation
+## 19. Product status and validation truth
 ENGINE SUPPORTED, CONTENT SUPPORTED (capability-led), RESEARCH
 SUPPORTED, AUTOMATED TESTED. Not DEVICE TESTED, not EXPERT REVIEWED,
 not USER VALIDATED, not MARKETING READY.
-Required user testing (amendment item 14): VALIDATION-PACKAGE cohort F
-(chronic/fluctuating, energy-limited), tasks T1-T7 with attention to T5
-(episode declare/end across a bad week).
-Required expert review (amendment item 15): CLIN-1 (hold-vs-review
-asymmetry), CLIN-5..7 (fatigue levers-only boundary), plus the R5
-clinical-register items tagged MS, before any MS-labelled content
-releases.
+What WOULD constitute user validation, if ever chosen (truth-field
+definition, not a dependency - GC-D12): VALIDATION-PACKAGE cohort F
+(chronic/fluctuating, energy-limited), tasks T1-T7 with attention to
+T5 (episode declare/end across a bad week). What WOULD constitute
+expert review: the former CLIN-1 and CLIN-5..7 questions, since
+resolved internally as shipped (CLINICAL-REVIEW-PACK rulings).
 
 ## 20. Marketing-safe statements
 None until the matrix row converts.

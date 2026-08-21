@@ -6,20 +6,30 @@ what it unlocks.
 
 DELIVERY NOTE (founder order 2026-08-21): this file is the internal
 record. Every ask in it is delivered to the founder in chat as a
-ready-to-use message (the counsel and clinical questions were sent
-that way the same day); never point the founder at this file.
+ready-to-use message; never point the founder at this file.
+
+NO-OUTSIDE-PARTY LAW (founder, 2026-08-21, binding): Volyume does not
+use solicitors, clinical reviewers, recruited disability panels, paid
+experts or outside consultants as product or release dependencies. The
+former items D (disabled-user recruitment), E (clinical review) and F
+(counsel) are REMOVED: their questions were resolved internally from
+published authority or scoped out (rulings in DPIA-COUNSEL-INPUT-PACK
+and CLINICAL-REVIEW-PACK; register entry GC-D12). The two forwardable
+question messages previously sent in chat are VOID - do not send them
+to anyone. Only production, device and credential actions remain.
 
 ### A. PRODUCTION
 
-- **Run migrations 145-151 against production** (your exact phrase, per
-  supabase/README). Order: 145 → 146 → 147 → 148 → 149 → 150 → 151 (149
-  needs 145's table; 150 and 151 are independent but batch them; 151 is
-  the gap-closure demand column). Pre-checks per
-  README (backup point; each file is additive + idempotent and was
-  exercised twice on scratch Postgres). Until run: capability rows stay
-  device-local with harmless push retries; custom-exercise pushes fail
-  soft (migrate_143 tolerated mode); the five telemetry counters drop
-  server-side. No user-visible breakage in the meantime.
+- **Run migrations 145-149 and 151 against production** (your exact
+  phrase, per supabase/README). Order: 145 → 146 → 147 → 148 → 149 →
+  151 (149 needs 145's table; 151 is the gap-closure demand column).
+  **150 is RETIRED and must NOT be run** (Q4 ruling: the capability
+  telemetry counters were removed client-side; the file is a no-op kept
+  for numbering). Pre-checks per README (backup point; each live file
+  is additive + idempotent and was exercised on scratch Postgres).
+  Until run: capability rows stay device-local with harmless push
+  retries; custom-exercise pushes fail soft (migrate_143 tolerated
+  mode). No user-visible breakage in the meantime.
 
 ### B. IOS
 
@@ -29,56 +39,35 @@ that way the same day); never point the founder at this file.
   Provisioning Profile. KEEP the Distribution Certificate (serial
   4C11E6AEB51102841B0A3D62B64FDA85). Then re-run Build iOS (EAS).
 
-### C. PHYSICAL VALIDATION
+### C. PHYSICAL VALIDATION (device testing - yours or any device you choose)
 
 - **One consolidated device script**: PHYSICAL-VALIDATION-BACKLOG.md,
-  now organised as eight journeys plus the gap-closure sub-steps (A-plus discovery, C-plus adapted setup, D-plus new families, F-plus TalkBack discovery walk) (A free baseline user; B temporary
-  episode; C custom adapted exercise; D compatible programme/library;
-  E coach/check-in/reintroduction; F accessibility; G export/delete/
-  privacy; H unaffected training + ED-safety regression). Physical
-  Android device, green EAS build. Journey F converts the matrix's
-  A11Y gates from PARTIAL; journey H is the do-first regression sweep.
+  organised as eight journeys plus the gap-closure sub-steps (A-plus
+  discovery, C-plus adapted setup, D-plus new families, F-plus TalkBack
+  discovery walk) (A free baseline user; B temporary episode; C custom
+  adapted exercise; D compatible programme/library; E coach/check-in/
+  reintroduction; F accessibility; G export/delete/privacy; H
+  unaffected training + ED-safety regression). Physical Android device,
+  green EAS build. Journey F converts the matrix's A11Y gates from
+  PARTIAL; journey H is the do-first regression sweep.
 
-### D. DISABLED-USER VALIDATION (CC-F5)
-
-- **Recruit and run round 1** using VALIDATION-PACKAGE.md as written
-  (cohorts, recruitment wording, session script, severity and blocker
-  definitions, capture format). Unlocks: USERVAL=YES per passing
-  cohort on MARKETING-READINESS-MATRIX.md - one of the gates between
-  every population claim and NO.
-
-### E. CLINICAL REVIEW (CC-F6)
-
-- **Engage the clinical reviewer** with CLINICAL-REVIEW-PACK.md - nine
-  exact questions (CLIN-1..9) with the materials list. Unlocks:
-  EXPERT gate on the matrix; also the recorded deferred behaviours
-  (symptom-gated reintroduction, pacing coaching) become *discussable*,
-  never automatic.
-
-### F. PRIVACY / COUNSEL / DPIA (CC-F1)
-
-- **Engage counsel** with DPIA-COUNSEL-INPUT-PACK.md - nine exact
-  questions (Q1-Q9; Q9 covers the Training considerations directory
-  surface, LEG-30) with the processing description, risk register and
-  document paths. Until answered, the conservative Article 9 posture
-  stays in force (it blocks nothing that is built) and no telemetry
-  dashboard may be created (R1 L10).
-
-### G. MARKETING READINESS
+### D. MARKETING READINESS (standing law, no action owed)
 
 - **Every population/support claim remains NO** -
   MARKETING-READINESS-MATRIX.md is the single authority and
-  marketingClaimsGuard.test.js enforces it against the store listings
-  and PRODUCT-FACTS mechanically. What converts each NO to YES, per
-  row: CONTENT (coverage bar in the registry), A11Y (journey F on a
-  real device), DOSSIER (CC-F3, populations only), EXPERT (item E),
-  USERVAL (item D). Wording stays governed by CLAIMS-STANDARDS 9A and
-  the R2 list regardless of readiness - readiness never unlocks
-  medical language.
+  marketingClaimsGuard.test.js enforces it mechanically. Conversion is
+  now fully internal/device-side per GC-D12: CONTENT (coverage bar in
+  the registry) + A11Y (journey F on a real device) + DOSSIER for any
+  population-NAMED claim + the wording laws. EXPERT and USERVAL are
+  truth fields, not gates: they stay NO unless such review/validation
+  ever actually happens, and no claim may say or imply reviewed or
+  user-tested while they are NO. Readiness never unlocks medical
+  language.
 
-Standing choices already yours whenever you wish (not blockers): the
-Grok/Gemini consultation prompts (EXTERNAL-CONSULTATION-QUEUE.md);
-CC-F2/CC-F8 register questions (recommendations recorded). DEF-3
-closed at gap closure by mechanism (GC-D7: adapted-setup strap
-guidance + grip profiles + the allowance flow), recorded in the
-registry.
+Standing choices already yours whenever you wish (never blockers): the
+Grok/Gemini consultation prompts (EXTERNAL-CONSULTATION-QUEUE.md -
+optional ideation only, never a dependency); CC-F2/CC-F8 register
+questions (recommendations recorded). DEF-3 closed at gap closure by
+mechanism (GC-D7). Optional forever: if you ever choose to run
+disabled-user sessions, VALIDATION-PACKAGE.md remains the ready how-to;
+it is not required for anything.

@@ -25,9 +25,12 @@ Population collections are served FUNCTION-FIRST: each profile's
 `familyRelevance` names shipped capability-family plans, and the same
 plans surface through computed compatibility the moment the profile's
 questions are answered ("Fits how you train" chips). Condition-NAMED
-shelf labels ("Wheelchair strength") remain withheld behind the
-recorded gates (GC-D5: dossier + CLIN + LEG-23/Q9 + user validation) —
-which is the amendment's own §5/§7/§10 demand, not a shortfall. The
+shelf labels ("Wheelchair strength") are ruled OUT as a mechanism for
+ANY population - a FINAL internal product decision (GC-D12), not a
+pending gate: the evidence base itself says populations do not share
+one training profile, so a named shelf would re-create the
+diagnosis-first template the amendment's own §5 bans. The sanctioned
+NAMED surface is the directory (education + question selection). The
 amendment's §5 obligation reads "routines, collections OR guidance";
 guidance ships for all 20, collections ship function-first for all
 that need them.
@@ -68,14 +71,14 @@ dossier, ONLY for these three. State of each layer today:
 - Function-first plans: shipped and pointed at by each profile.
 - Directory guidance: shipped with quotes from the population's own
   authorities.
-- The LABEL: withheld behind the amendment's own gates (§7 dossier
-  process incl. expert review, §10 marketing gate, §11 user
-  validation) plus counsel Q9. This is the responsible outcome the
-  reconciliation order allows ("If capability-only is genuinely the
-  responsible outcome, record why") — with the stronger note that what
-  ships is NOT capability-only: guidance and collections exist,
-  function-first; only the population NAME on a shelf waits for the
-  external gates.
+- The LABEL: ruled out as a plan-shelf mechanism by the FINAL internal
+  product decision above (GC-D12) - for these three exactly as for
+  every population, because even the best-evidenced populations do not
+  template (SCI dose guidance is population-level, not a routine; MS
+  Society: no single MS exercise). What ships is NOT capability-only:
+  named guidance and function-first collections exist; the population
+  NAME lives on the directory surface, which is where a person looks
+  for it. No external gate exists or is awaited.
 
 ## Populations where capability-led IS the whole answer (recorded why)
 

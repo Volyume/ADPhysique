@@ -12,8 +12,10 @@
  * could reach without naming anything (function-first, order section 5).
  *
  * Wording law (GC-D4): condition names are permitted here (the directory
- * is the sanctioned, user-initiated surface for them - LEG-30 pending);
- * function/benefit/treatment vocabulary is banned via R2_FUNCTION_TERMS.
+ * is the sanctioned, user-initiated surface for them; LEG-30 resolved
+ * internally 2026-08-21 - browse-only, stores nothing, non-medical
+ * intended purpose); function/benefit/treatment vocabulary is banned
+ * via R2_FUNCTION_TERMS.
  * Copy is British English; no em dash in any user-facing string.
  */
 

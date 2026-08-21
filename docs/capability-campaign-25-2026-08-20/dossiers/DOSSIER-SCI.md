@@ -91,17 +91,17 @@ deterministic guideline-level return rules exist).
 ## 18. Review date and version
 2026-08-21, v1.
 
-## 19. Product status and required validation
+## 19. Product status and validation truth
 ENGINE SUPPORTED, CONTENT SUPPORTED (capability-led families), RESEARCH
 SUPPORTED, AUTOMATED TESTED. Not DEVICE TESTED, not EXPERT REVIEWED, not
 USER VALIDATED, not MARKETING READY.
-Required user testing (amendment item 14): VALIDATION-PACKAGE cohort A
-(wheelchair/seated), tasks T1-T7 with the T6 assistive overlay where
-relevant; include at least one experienced seated lifter.
-Required expert review (amendment item 15): CLIN-2 (reintroduction
-subset), CLIN-3 (whether holding volume needs naming for any SCI
-subgroup), CLIN-4 (axis sufficiency), plus the R5 clinical-register
-items tagged SCI, before any SCI-labelled content releases.
+What WOULD constitute user validation, if ever chosen (truth-field
+definition, not a dependency - GC-D12): VALIDATION-PACKAGE cohort A
+(wheelchair/seated), tasks T1-T7 with the T6 assistive overlay,
+including at least one experienced seated lifter. What WOULD
+constitute expert review: the former CLIN-2/3/4 questions, since
+resolved internally as shipped (CLINICAL-REVIEW-PACK rulings); an
+external opinion would only ever refine copy, never unlock behaviour.
 
 ## 20. Marketing-safe statements
 None until the matrix row converts. (Internal truth: the directory

@@ -293,6 +293,11 @@ CC27-29-BUNDLE-TRACKER.md.
 
 ## F. CLINICAL REVIEW REQUIRED (consolidated; full registers in R3 §7 and R5)
 
+SECTION CLOSED 2026-08-21 (GC-D12 b): every item below is resolved
+internally from published evidence or excluded from automatic product
+scope - rulings in CLINICAL-REVIEW-PACK.md. Kept for the record; no
+external review is pending or required.
+
 - CLIN-1 Any numeric pain threshold / pain-monitoring arithmetic /
   symptom-keyed progression gate (R3 CR-1..4).
 - CLIN-2 Deterioration-vs-improvement weighting beyond
@@ -309,6 +314,12 @@ CC27-29-BUNDLE-TRACKER.md.
 
 ## G. LEGAL / PRIVACY REVIEW REQUIRED (consolidated; full registers in R1 and R2)
 
+SECTION CLOSED 2026-08-21 (GC-D12 a): every item below is resolved
+internally under the conservative posture - rulings Q1-Q9 in
+DPIA-COUNSEL-INPUT-PACK.md (LEG-23/LEG-30 = Q9 population/directory
+ruling; LEG-29 = Q7 EAA ruling). Kept for the record; no external
+review is pending or required.
+
 - LEG-1..20 = R1's L1-L20 (classification, consent granularity,
   minimisation, erasure of the timeline and derivatives, telemetry,
   DPIA, Equality Act boundary, EAA, third-party data…).
@@ -322,6 +333,8 @@ CC27-29-BUNDLE-TRACKER.md.
 - CC-F1 Engage counsel for the LEG register + commission the DPIA
   before the first capability release (the architecture assumes the
   conservative posture meanwhile — building is not blocked).
+  CLOSED INTERNALLY 2026-08-21 (GC-D12): Q1-Q9 ruled from published
+  authority; DPIA record maintained internally; no engagement exists.
 - CC-F2 Per-side capacity logging for declared one-side users would
   reopen D54 (reversed as ED-adverse). RECOMMENDATION: do not reopen;
   unilateral exercise variants + per_hand semantics serve the need.
@@ -329,13 +342,23 @@ CC27-29-BUNDLE-TRACKER.md.
 - CC-F3 Layer-2 population content go/no-go per population after
   dossier + CLIN-5 + LEG-23 complete. RECOMMENDATION: sequence after
   the capability core ships; start with SCI.
+  CLOSED 2026-08-21 (GC-D12 d): condition-NAMED plan collections are
+  ruled out as a mechanism for any population (final product
+  decision); the directory is the named surface; dossiers stay the
+  internal evidence standard.
 - CC-F4 Marketing: credible disability claims industry-wide carry a
   named adaptive-athlete credential (R6 #9). Partnership/ambassador
-  strategy is a business call; the readiness gate (ROADMAP) blocks
-  claims regardless until validation passes.
+  strategy is a business call; claims stay governed by the matrix
+  (GC-D12: internal + device gates; truth fields never convert to
+  claims).
 - CC-F5 Disabled-user validation recruitment (cohorts in ROADMAP) —
   founder-side operational commitment; claims stay blocked without it.
+  REMOVED AS AN ACTION 2026-08-21 (GC-D12 c): recruitment gates
+  nothing; the truth field stays NO and no user-tested claim may exist
+  while it is.
 - CC-F6 Clinical reviewer engagement for the CLIN register.
+  CLOSED INTERNALLY 2026-08-21 (GC-D12 b): CLIN-1..9 ruled from
+  published evidence or scoped out; no engagement exists.
 - CC-F7 Cloud migrations for the new tables apply only on the standing
   "run against production" phrase, per supabase/README process.
 - CC-F8 (from RT2-7) Should constrained-profile FREE users get a
@@ -509,3 +532,70 @@ CC27-29-BUNDLE-TRACKER.md.
   nothing (eligibility governs); machine one-arm use stays a recorded
   per-gym boundary, not a false claim. Null-tolerant floor: a row with
   unknown metadata earns no class line (CAP-8 honesty).
+- GC-D12 NO-OUTSIDE-PARTY LAW AND ITS SWEEP (founder, 2026-08-21,
+  binding): Volyume will not use solicitors, clinical reviewers,
+  recruited disability panels, paid experts or outside consultants as
+  product or release dependencies. Every open external-professional
+  gate in the workstream was closed the same day, each either
+  INTERNALLY RESOLVED FROM PUBLISHED AUTHORITY or ruled OUT OF CURRENT
+  PRODUCT SCOPE. External sign-off is not an allowed unresolved state.
+  The sweep's rulings:
+  (a) CC-F1 counsel CLOSED: Q1-Q9 ruled internally
+  (DPIA-COUNSEL-INPUT-PACK, now the internal DPIA record). Material
+  outcomes: Article 9 classification is permanent law, not a pending
+  assumption; consent copy corrected ("never shared" now names the EU
+  processor honestly); capability telemetry RETIRED entirely (Q4: the
+  five counters' per-user presence could reveal capability-lane use -
+  client emission removed, events de-catalogued, migrate_150 retired
+  unapplied and excluded from the production run set); retention
+  justified by the learning shield's history need, bounded by the
+  lane's life; EAA treated as applicable with an accessibility
+  statement as ordinary product work; future telemetry, if ever,
+  aggregate-only and identity-free by design.
+  (b) CC-F6 clinical review CLOSED: CLIN-1..9 ruled internally
+  (CLINICAL-REVIEW-PACK, now the boundary record). Everything
+  answerable from published evidence is resolved as shipped;
+  everything needing individual clinical judgement (symptom-gated
+  reintroduction, pacing/energy-envelope coaching, DEF-5
+  observed-discomfort discovery) is OUT OF CURRENT PRODUCT SCOPE -
+  excluded from automatic behaviour, not awaiting anyone.
+  (c) CC-F5 recruitment REMOVED as an action and gate.
+  REAL-DISABLED-USER-VALIDATED = NO stays recorded because it is TRUE;
+  it is informational. VALIDATION-PACKAGE.md remains an optional
+  how-to, required for nothing. No claim may say or imply user-tested
+  while the field is NO.
+  (d) POPULATION-LABELLED COLLECTIONS - FINAL PRODUCT RULING
+  (supersedes GC-D5's gate framing): condition-NAMED plan collections
+  are NOT the right mechanism for ANY population, decided on product
+  grounds, not pending anyone. The evidence base itself says
+  populations do not share one training profile (MS Society: no single
+  MS exercise; R5: parameters do not template for CP/stroke/
+  amputation; wheelchair users are not one research population), so a
+  named shelf would re-create the diagnosis-first template the
+  original amendment section 5 bans. The sanctioned NAMED surface is
+  the Training considerations directory (education + question
+  selection, wording-law enforced); plans remain capability-led and
+  computed-compatible. This is a closed decision, revisitable only by
+  founder order with new evidence.
+  (e) GC-D10 REWORDED (stateless context) - the ruling stands entirely
+  on product grounds: data minimisation (functional rules suffice; a
+  stored profile id would be named-condition Article 9 data with no
+  engine consumer), no downstream product necessity (all six
+  contextual behaviours proven from rules), and the non-medical
+  intended-purpose boundary (identity-blind engines cannot drift into
+  condition-specific behaviour). The former counsel-Q9 reference is
+  void: the directory's statelessness was ruled lawful internally
+  (browse-only surfaces that store nothing process nothing). A future
+  provenance breadcrumb is OUT OF CURRENT PRODUCT SCOPE - it would
+  store condition identity for navigation-only value; if ever
+  designed, it must satisfy published minimisation guidance on its own
+  terms, with fresh consent wording.
+  (f) DEF-2 (assisted free-text entry) re-based: OUT OF CURRENT
+  PRODUCT SCOPE on minimisation grounds (free text invites
+  diagnosis-adjacent data the product must not hold), no longer
+  "counsel-gated". Same outcome, internal basis.
+  (g) The EXTERNAL-CONSULTATION-QUEUE (Grok/Gemini) is optional
+  ideation only and was never blocking; recorded as never-a-dependency.
+  (h) The readiness matrix's EXPERT and USERVAL columns became TRUTH
+  FIELDS (never gates); MARKETING READY converts on internal +
+  device-side gates plus the wording laws.

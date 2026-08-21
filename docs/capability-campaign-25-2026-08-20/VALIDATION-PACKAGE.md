@@ -1,9 +1,12 @@
 # DISABLED-USER VALIDATION PACKAGE (CC-F5, round 1) — CC32
 
-Founder-ready. Everything here can be run without further build work;
-recruitment and sessions are founder/external actions. Statuses this
-round unlocks are listed at the end. Nothing in this document is a
-claim; claims stay governed by MARKETING-READINESS-MATRIX.md.
+OPTIONAL, NOT A DEPENDENCY (founder no-outside-party law 2026-08-21,
+GC-D12): recruiting disabled-user cohorts is not a required action and
+gates nothing. This package stays banked as the ready how-to if such
+sessions are ever chosen. REAL-DISABLED-USER-VALIDATED remains NO
+because that is true; no claim may say or imply user-tested while it
+is. Nothing in this document is a claim; claims stay governed by
+MARKETING-READINESS-MATRIX.md.
 
 ## 1. Target cohorts (8-12 participants total; ≥1 per cohort A-G)
 

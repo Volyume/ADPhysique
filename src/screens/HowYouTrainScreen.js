@@ -583,8 +583,9 @@ export default function HowYouTrainScreen() {
             To build training around your body, Volyume stores what you choose here: the training
             situations you have asked it to work around, whether each is part of your normal setup
             or temporary, and when it applies. That counts as health information, so it needs your
-            explicit agreement. It is never used for anything else, never shared, and you can see,
-            export or delete all of it here at any time. Deleting it does not touch your account.
+            explicit agreement. It is never used for anything else and never shared with anyone
+            beyond the secure EU service that stores your Volyume data, and you can see, export or
+            delete all of it here at any time. Deleting it does not touch your account.
           </Text>
           <Choice label="I agree - store my capability information" onPress={onConsent} t={t} primary />
           <Choice label="Not now" sub="You can still avoid specific exercises from Plan tools, and set your equipment - neither needs this agreement."

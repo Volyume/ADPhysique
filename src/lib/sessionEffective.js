@@ -17,21 +17,13 @@ import { loadExerciseIntentState, isEligibleExercise } from './exercise/intent';
 export { setConstraintEffectiveChoice };
 
 /**
- * CC32 (section 29): the choice write plus its aggregate counter, emitted
- * from this NEUTRAL seam so the guarded capability surfaces stay
- * telemetry-free. Content-free by law: the event carries no rule content,
- * only that a diff choice happened. Best-effort - a telemetry failure
- * never affects the write.
+ * The choice write. Its aggregate counter was RETIRED under the Q4
+ * ruling (2026-08-21): no capability-derived event leaves the device,
+ * because even a content-free event in a per-user table reveals that
+ * the user has capability rules.
  */
 export async function recordEffectiveChoice(userId, constraintId, choice) {
-  const ok = await setConstraintEffectiveChoice(userId, constraintId, choice);
-  try {
-    // eslint-disable-next-line global-require
-    const { track } = require('./engineTelemetry');
-    if (choice === 'applied') track(userId, 'effective_diff_applied')?.catch?.(() => {});
-    else if (choice === 'declined') track(userId, 'effective_diff_declined')?.catch?.(() => {});
-  } catch (_e) { /* counters never affect the write */ }
-  return ok;
+  return setConstraintEffectiveChoice(userId, constraintId, choice);
 }
 
 /**

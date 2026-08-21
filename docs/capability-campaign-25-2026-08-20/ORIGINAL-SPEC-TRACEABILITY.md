@@ -99,10 +99,14 @@ not evaluate; axes that still fail the test stay rejected.
 - DEF-3 grip-limited pulling implement guidance — stands; Phase E must
   either solve it (strap/hook setup content + honest coverage) or
   re-record the hard evidence/content reason (order gate item 15).
-- DEF-2 assisted free-text entry — stands (counsel-gated); the
+- DEF-2 assisted free-text entry — stands, re-based 2026-08-21 to OUT
+  OF CURRENT PRODUCT SCOPE on minimisation grounds (GC-D12 f, no
+  counsel gate); the
   directory's alias search (Phase D) is NOT free-text storage and does
   not touch this deferral.
-- DEF-5 observed-discomfort discovery — stands (regulatory-gated).
+- DEF-5 observed-discomfort discovery — stands as OUT OF CURRENT
+  PRODUCT SCOPE (GC-D12: inference about a person is individual
+  judgement territory; no external gate).
 - DEF-6 per-side capacity logging — stands (CC-F2 founder question).
 - Full-app accessibility audit — stands as its own campaign; Phase G
   re-verifies the CRITICAL training journey only.
@@ -235,3 +239,30 @@ convert (founder actions); it is never claimed as done.
    original on any engine, gating, safety or scope decision: FD-1..FD-4
    and the deliverable set match the original faithfully. The
    reconstruction's only real losses were the compressions above.
+
+## 10. FOUNDER-LAW SUPERSESSION (2026-08-21, no-outside-party dependencies)
+
+After the section 7 trace was written, the founder made binding that no
+solicitor, clinical reviewer, recruited panel, paid expert or outside
+consultant is ever a product or release dependency (GC-D12). Read the
+section 7/8 status labels through that law:
+
+- Wherever a row says EXTERNAL for counsel/clinical/user-validation
+  conversion (rows 1, 6, 10, 11, 30; scenario rows 3, 4, 6, 19, 20's
+  cohort halves), the conversion is now DEVICE-PENDING where a
+  physical-device walk applies, and otherwise a TRUTH FIELD that gates
+  nothing. The former counsel questions Q1-Q9 and clinical questions
+  CLIN-1..9 are resolved internally (rulings in
+  DPIA-COUNSEL-INPUT-PACK.md and CLINICAL-REVIEW-PACK.md).
+- Row 7's dossier fields 14-15 now define what WOULD constitute
+  validation (truth-field definitions), not requirements.
+- Row 11 (§11 real-user validation): the plan artefact stands as an
+  optional how-to; REAL-DISABLED-USER-VALIDATED = NO remains recorded
+  because it is true; recruitment is not an action. The amendment's
+  §11 gate is superseded by the later founder law; its truth
+  requirement (never claim user-tested) is retained in full.
+- Row 12 representation, row 20-22 consultation queue: unchanged in
+  substance; the queue is optional ideation, never a dependency.
+- The Q4 telemetry ruling retired migrate_150 and removed the five
+  capability counters client-side, which STRENGTHENS row 2 (free/
+  privacy posture) and the §29 scenario walk's privacy rows.

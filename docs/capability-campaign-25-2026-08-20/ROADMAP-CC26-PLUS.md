@@ -216,3 +216,13 @@ was rejected (nothing to shield until selection/effective layers emit
 provenance). The order store → selection → onboarding/content →
 effective/adherence → learning → coach/lifecycle → hardening keeps
 every landing coherent and independently shippable.
+
+## SUPERSESSION NOTE (2026-08-21, GC-D12)
+
+The founder's no-outside-party law closed every external-professional
+gate this roadmap mentions: CC-F1 (counsel) and CC-F6 (clinical
+review) are resolved internally; CC-F5 recruitment is optional and
+gates nothing; the "Layer-2, later" route's external steps are
+superseded by the GC-D12 population ruling (the directory is the named
+surface; collections stay capability-led as a final product decision).
+Historical text above is unedited; this note governs.

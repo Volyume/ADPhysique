@@ -73,13 +73,14 @@ device-verified behaviour.
 - The learning_disability directory profile records the delivery
   guidance (consistent flow, supporter setup) that the product already
   satisfies structurally.
-- DEVICE-PENDING: real-user comprehension is exactly what CC-F5 cohorts
-  measure; no code check substitutes.
+- HONEST LIMIT: real-user comprehension can only ever be shown by real
+  users; no code check substitutes. Not a required action (GC-D12) -
+  recorded so no comprehension claim is made without it.
 
 ## Residuals (honest)
 
 1. Journey F device walk (TalkBack + VoiceOver + Switch Access spot
-   checks) is REQUIRED before any A11Y matrix cell converts - founder
+   checks) is REQUIRED before any A11Y matrix cell converts - device
    action C.
 2. Whole-app audit beyond the journey stays a registered future
    campaign; unrelated screens carry no new claims.

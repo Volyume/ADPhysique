@@ -1,61 +1,85 @@
-# CLINICAL REVIEW PACK (CC-F6) — CC32
+# CLINICAL BOUNDARY RECORD — internal rulings (CC-F6 CLOSED INTERNALLY)
 
-The exact questions for the clinical reviewer, with the shipped
-behaviour each answer gates. Status: PREPARED, ENGAGEMENT PENDING
-(founder-external). Until answers arrive, every listed behaviour stays
-at its shipped conservative form; nothing below blocks current use.
+STATUS (founder law 2026-08-21, no-outside-party dependencies): the
+former clinical-review questions CLIN-1..9 are each RESOLVED below,
+either internally from authoritative published evidence plus the
+product's conservative laws, or by EXCLUDING the behaviour from
+automatic product scope where responsible implementation would need
+individual professional judgement. No clinical reviewer is pending,
+required or awaited. Volyume's standing boundary is unchanged and
+absolute: general strength and fitness; user-declared capability and
+restrictions; deterministic programming; no diagnosis, no treatment,
+no rehabilitation, no medical clearance, no tissue timelines, no
+therapeutic prescriptions. The filename is kept so references resolve.
 
-## Reviewer brief
+## Rulings
 
-Volyume is a deterministic training app (no AI coaching). It never
-diagnoses, never claims treatment, and treats a user's declared way of
-training as normal. The questions are about whether our CONSERVATIVE
-deterministic behaviours are appropriately conservative - not about
-adding clinical features.
+CLIN-1 (weekly conditional answer, hold-vs-suggest-review only) -
+  RULED CORRECT AS SHIPPED. Never auto-escalate, never auto-relax is
+  the lay boundary published self-management guidance supports (NHS
+  keep-active-within-your-limits framing): the app follows the user's
+  declaration in the cautious direction only. Automatic escalation or
+  relaxation would be the app exercising clinical judgement - excluded
+  from scope by product law, permanently.
 
-## Questions (each maps to a register item)
+CLIN-2 (reintroduction subset) - RULED CORRECT AS SHIPPED; the
+  excluded half is OUT OF SCOPE, not deferred. The shipped subset
+  (instant eligibility restore, conservative load resolution with
+  stale-history gates and no percentages, gradual volume ramp to the
+  user's own plan, learning paused) follows published
+  return-to-exercise principles (gradual reloading; NHS guidance
+  basis in R3/R8). Symptom-checked "controlled experiment"
+  reintroduction requires individual judgement about symptoms - that
+  is clinical work and will not become automatic app behaviour.
 
-CLIN-1 (CC-C2, section 19): the weekly conditional answer is limited to
-  hold-vs-suggest-review; we deliberately do NOT model deterioration
-  ladders. Confirm the asymmetry (never auto-escalate, never
-  auto-relax) is the right lay boundary.
-CLIN-2 (CC-C3, section 23): reintroduction ships as: instant
-  eligibility restore + conservative load resolution (stale-history
-  gates, no percentages) + a volume ramp back to the pre-episode plan
-  across remaining weeks + no durable learning until the window closes.
-  Symptom-checked "controlled experiment" reintroduction was DEFERRED
-  to you. Review the shipped subset for harm vectors.
-CLIN-3 (sections 15/20): under an active episode the coach withholds
-  volume adds for affected muscles and never converts constrained weeks
-  into adherence blame. Are there populations where HOLDING volume is
-  itself a risk we should name (not model - name in copy)?
-CLIN-4 (ontology, section 8): the eleven demand axes (position, floor
-  access, overhead, grip, unilateral loadability, bilateral upper/
-  lower, axial load, impact, balance, weight bearing through the
-  hands - the last added at gap closure 2026-08-21) as the functional
-  vocabulary - any axis whose absence creates a foreseeable-misuse
-  risk?
-CLIN-5..7 (deferred features register): pacing/energy-envelope
-  coaching for chronic fatigue populations (33.12 ships levers only:
-  session length, days, episodes). Confirm the levers-only boundary.
-CLIN-8: the ED-safety interplay - capability episodes suppress
-  nothing in the ED-safety system (floors, gates and signposting are
-  senior everywhere, tier-blind and episode-blind). Sanity-check for
-  interaction cases we have not considered.
-CLIN-9 (CC-C1, R3 CR-8): the episode state machine's honest states
-  (active/awaiting/ended + promotion) with fail-safe
-  awaiting-confirmation. Confirm no state implies recovery staging.
+CLIN-3 (is HOLDING volume itself a risk to name?) - RULED RESOLVED BY
+  EXISTING CONTENT. The hold touches only affected muscles' ADDS;
+  training everything else continues, and the app never advises rest.
+  The keep-moving message published for the populations where
+  deconditioning matters most (NICE NG226 exercise-as-core-care for
+  osteoarthritis; ACR strong exercise recommendation for RA; MS Trust
+  keep-active framing) is already carried by the directory's
+  keep-training lines and cited education. No engine change; no named
+  warning is needed because the behaviour never tells anyone to stop.
 
-## Materials
+CLIN-4 (eleven axes, foreseeable-misuse from absence) - RULED
+  SUFFICIENT. The reconciliation's movement-path sufficiency matrix
+  (MOVEMENT-PATH-AUDIT.md, 13 distinctions, all expressible) is the
+  evidence; the residual misuse vector - unknown metadata treated as
+  compatible - is structurally prevented by CAP-8 (unknown is never
+  eligible against a restriction).
 
-- ARCHITECTURE.md sections 7, 15, 19-24, 25 (safety boundary), 33.
-- src/lib/capability/* (pure modules; reviewer-readable headers).
-- The section 7 learning-eligibility matrix (the contamination shield).
-- CLAIMS-STANDARDS.md 9A + MARKETING-READINESS-MATRIX.md (what we say).
-- R3-training-science.md (the evidence base we relied on).
+CLIN-5..7 (fatigue: levers only) - RULED CORRECT AS SHIPPED; pacing
+  and energy-envelope COACHING is OUT OF SCOPE, not deferred. The 2021
+  UK guidance change on ME/CFS (NICE NG206 withdrawing graded exercise
+  therapy) is exactly why app-driven exertion coaching for
+  energy-limited conditions is individual specialist territory. The
+  app ships levers the user controls (session length, days, temporary
+  changes) and never pushes through fatigue - the boundary the
+  published position supports.
 
-## What each answer unlocks
+CLIN-8 (ED-safety interplay) - RULED SOUND, MECHANICALLY PINNED.
+  Capability state suppresses nothing in the ED-safety system: floors,
+  gates and signposting are senior everywhere, tier-blind and
+  episode-blind, and the capability lane never reads or writes
+  nutrition state (guard suites pin both directions). The interaction
+  surface between the two systems is empty BY CONSTRUCTION, which is
+  the strongest available answer.
 
-EXPERT=YES on MARKETING-READINESS-MATRIX rows (with the other gates);
-release of the deferred behaviours ONLY via a new founder-approved
-campaign - a clinical yes alone changes no code.
+CLIN-9 (episode states imply no recovery staging) - RULED CORRECT AS
+  SHIPPED. States are active / awaiting confirmation / ended - time
+  and user words, never tissue words; the fail-safe keeps a
+  restriction in force until the user says otherwise; the wording
+  validator bans recovery/healing vocabulary in directory content and
+  the R2 sweep bans it in product copy.
+
+## What this closure does NOT do
+
+It does not add any behaviour a reviewer might have unlocked: the
+deferred-behaviour register entries tied to individual clinical
+judgement (symptom-gated reintroduction, pacing coaching,
+observed-discomfort discovery DEF-5, assisted free-text DEF-2) are now
+recorded OUT OF CURRENT PRODUCT SCOPE (GC-D12) rather than "awaiting
+review". Volyume does not need a clinician to be what it is: a
+deterministic training app that believes what users tell it and stays
+inside general-fitness territory.
