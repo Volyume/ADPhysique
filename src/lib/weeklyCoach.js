@@ -2197,6 +2197,16 @@ export function runWeeklyCoach(inputs) {
     exceededEscalationApplied = true;
   }
 
+  // CC31 (section 19): the conditional answer's ONE consumer. When the
+  // week's answer was "it got in the way more than expected", the note
+  // suggests reviewing the restriction - a suggestion only, after every
+  // volume decision has settled, changing no number and never modifying
+  // the constraint itself. Any other answer (or none) changes nothing.
+  const pcFact = coachContext?.training?.physicalConstraint;
+  if (pcFact?.active && pcFact.weeklyAnswer === 'in_the_way' && trainingNote) {
+    trainingNote += ' You said it got in the way more than expected. If that carries on, you can adjust it under How you train.';
+  }
+
   // ── WHAT'S WORKING ────────────────────────────────────────────────────────
   const whatWorking = [];
 
