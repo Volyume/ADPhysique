@@ -29,6 +29,26 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'weekly_coach_run',                deferred: false, panel: 2 },
   { name: 'ffm_floor_hold_fired',            deferred: false, panel: 2 },
   { name: 'rapid_loss_compression_triggered',deferred: false, panel: 2 },
+  // CC32 (ARCHITECTURE section 29): capability OPERATIONAL counters -
+  // aggregate and content-free by law (R1 #12: no per-user capability
+  // events beyond counts; no rule content, no exercise ids tied to
+  // users, no health data). Payloads: counts and closed-vocabulary axis
+  // names only.
+  //   capability_resolution_no_candidate  {count} capability-blocked
+  //                                       slots in one generation run
+  //   capability_state_unavailable        no payload - a resolver read
+  //                                       failed during generation
+  //   capability_unknown_metadata_hit     {axis} - an unknown demand
+  //                                       axis blocked suggestion
+  //   effective_diff_applied              no payload
+  //   effective_diff_declined             no payload
+  // Server allow-list: supabase/migrate_150_capability_telemetry.sql
+  // (NOT applied; the server drops the events harmlessly until it runs).
+  { name: 'capability_resolution_no_candidate', deferred: false, panel: 2 },
+  { name: 'capability_state_unavailable',       deferred: false, panel: 2 },
+  { name: 'capability_unknown_metadata_hit',    deferred: false, panel: 2 },
+  { name: 'effective_diff_applied',             deferred: false, panel: 2 },
+  { name: 'effective_diff_declined',            deferred: false, panel: 2 },
 
   // Panel 3: food layer
   { name: 'food_lookup_barcode',             deferred: false, panel: 3 },

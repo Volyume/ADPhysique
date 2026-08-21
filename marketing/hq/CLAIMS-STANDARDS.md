@@ -365,6 +365,37 @@ offending sentence quoted.
 
 ---
 
+## 9A. Capability and disability claims (CC32, binding)
+
+Two mechanical registers govern this whole area; neither may be
+overridden by any brief:
+
+1. **The R2 wording list** (`src/lib/observability/r2Wording.js`,
+   from research/R2-medical-device-boundary.md): no marketing artefact
+   may use any listed medical-purpose term about Volyume in a claiming
+   sense - rehab, treatment, therapy, diagnosis, healing, "safe for",
+   injury prevention, clinical proof, or any named condition. Platform
+   metadata vocabulary (Apple's "Medical/Treatment Information" rating
+   category, the "Diagnostics" privacy label) and honest "not medical
+   advice" disclaimers are exempt; nothing else is.
+
+2. **The marketing readiness matrix**
+   (`docs/capability-campaign-25-2026-08-20/MARKETING-READINESS-MATRIX.md`):
+   a DIRECT population/support claim ("built for wheelchair users",
+   "adaptive training", any named population) requires that
+   population's row to read MARKETING READY = YES. Every row is
+   currently NO, so every such claim is currently prohibited - in any
+   channel, including organic and replies. Implementation existing in
+   the app does not change this; only the matrix does.
+
+What MAY be said while the matrix is all-NO: the product's own
+neutral framing in its own voice - "your plan is built around how you
+train" - with no population named, no medical framing, and no
+suggestion of professional suitability. The enforcement is
+`src/__tests__/marketingClaimsGuard.test.js` over the store listings
+and PRODUCT-FACTS; a compliance PASS additionally re-checks this
+section by hand for artefacts outside those files.
+
 ## 10. The gate
 
 - **Nothing is marked publish-ready without a recorded PASS from the

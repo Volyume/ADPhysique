@@ -691,6 +691,34 @@ function attachBlockedSlots(result, blockedSlots, constraintsUnavailable = false
   return result;
 }
 
+/**
+ * CC32 (section 29): the aggregate, content-free operational counters,
+ * emitted from OUTSIDE the guarded capability modules. Counts and
+ * closed-vocabulary axis names only - never rule content, exercise ids
+ * or health data. Best-effort by construction; a telemetry failure
+ * changes nothing. Server allow-list: migrate_150 (drops harmlessly
+ * until applied).
+ */
+function emitCapabilityAggregates(userId, result) {
+  try {
+    // eslint-disable-next-line global-require
+    const { track } = require('./engineTelemetry');
+    if (result?.capabilityUnavailable) {
+      track(userId, 'capability_state_unavailable').catch?.(() => {});
+    }
+    if (result?.capabilityBlockedCount > 0) {
+      track(userId, 'capability_resolution_no_candidate', { count: result.capabilityBlockedCount }).catch?.(() => {});
+    }
+    const axes = new Set();
+    for (const list of Object.values(result?.capabilityNearMisses ?? {})) {
+      for (const nm of list) for (const axis of nm.unknownAxes ?? []) axes.add(axis);
+    }
+    for (const axis of axes) {
+      track(userId, 'capability_unknown_metadata_hit', { axis }).catch?.(() => {});
+    }
+  } catch (_e) { /* counters never affect generation */ }
+}
+
 /** The demand axes whose presence makes position transitions costly for
  *  the user (section 33.19: floor/position/transfer). */
 const TRANSITION_SENSITIVE_AXES = new Set(['standing', 'floor_access', 'balance_high']);
@@ -909,12 +937,14 @@ export async function generateAndSavePlan(userId, profile, {
       // lie, and quietly restoring the excluded exercise to fill the plan is
       // exactly what the founder's rule forbids.
       if (writeResult.blockedSlots.length > 0) {
-        return attachBlockedSlots(
+        const blockedResult = attachBlockedSlots(
           { ok: false, error: 'plan_blocked_by_exclusions' },
           writeResult.blockedSlots,
           intentState?.unavailable,
           { capabilityState: intentState?.capability, library: allExercises },
         );
+        emitCapabilityAggregates(userId, blockedResult);
+        return blockedResult;
       }
       return { ok: false, error: 'Plan created but no exercises matched the library' };
     }
@@ -964,8 +994,12 @@ export async function generateAndSavePlan(userId, profile, {
       result.missedCount = missedCount;
       result.missedExercises = missedNames;
     }
-    return attachBlockedSlots(result, blockedSlots, intentState?.unavailable,
+    const finalResult = attachBlockedSlots(result, blockedSlots, intentState?.unavailable,
     { capabilityState: intentState?.capability, library: allExercises });
+    // Section 29 counters ride the COMMIT path only (the dry-run twin
+    // stays silent - a preview is not a resolution outcome).
+    emitCapabilityAggregates(userId, finalResult);
+    return finalResult;
   } catch (e) {
     if (programmeId) {
       try {
