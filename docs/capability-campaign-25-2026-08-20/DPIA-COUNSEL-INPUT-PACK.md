@@ -51,6 +51,18 @@ Q7 EAA / EN 301 549 applicability to Volyume (R4/R1 L15) and any
 Q8 Threshold/suppression review for any future telemetry DASHBOARD
    (R1 L10) - none exists yet; flag requirements now.
 
+Q9 (LEG-30, added at gap closure 2026-08-21) The Training
+   considerations directory: an optional, user-initiated, in-app
+   knowledge surface where condition and injury NAMES appear
+   (education + question selection). Selecting a profile stores
+   NOTHING (stateless lens, GC-D1); only the confirmed functional
+   rules persist, under the existing capability consent. Wording bans
+   function/benefit/treatment vocabulary mechanically. Confirm: (a)
+   this surface does not change the Article 9 posture (no new data is
+   processed); (b) the wording posture is sufficient against the
+   medical-device boundary (extends LR-3/LEG-23); (c) no additional
+   notice is needed for a browse-only knowledge surface.
+
 ## 3. Risk register (pre-assessed, for the DPIA's Part 2)
 
 - Inference risk: rules reveal disability without naming it.
