@@ -11,12 +11,12 @@ coverage floors pinned in `capabilityDemands.test.js`.
 |---|---|---|
 | position | 551 | 100% |
 | floorAccess | 545 | 99% |
-| overheadPosition | 522 | 95% |
+| overheadPosition | 551 | 100% |
 | gripDemand | 530 | 96% |
 | unilateralLoadable | 481 | 87% |
 | bilateralUpper | 538 | 98% |
 | bilateralLower | 548 | 99% |
-| axialLoad | 517 | 94% |
+| axialLoad | 551 | 100% |
 | impact | 551 | 100% |
 | balanceDemand | 546 | 99% |
 | weightBearingHands | 517 | 94% |
@@ -25,23 +25,23 @@ coverage floors pinned in `capabilityDemands.test.js`.
 
 | Muscle | Rows | position | grip | overhead | floor | bilat.upper | bilat.lower | balance | axial |
 |---|---|---|---|---|---|---|---|---|---|
-| abs | 62 | 100% | 90% | 89% | 100% | 85% | 100% | 100% | 100% |
-| adductors * | 11 | 100% | 100% | 100% | 100% | 100% | 82% | 100% | 91% |
-| back | 65 | 100% | 98% | 97% | 100% | 98% | 100% | 100% | 88% |
+| abs | 62 | 100% | 90% | 100% | 100% | 85% | 100% | 100% | 100% |
+| adductors * | 11 | 100% | 100% | 100% | 100% | 100% | 82% | 100% | 100% |
+| back | 65 | 100% | 98% | 100% | 100% | 98% | 100% | 100% | 100% |
 | biceps | 36 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | calves | 21 | 100% | 86% | 100% | 100% | 100% | 100% | 100% | 100% |
-| chest | 56 | 100% | 98% | 96% | 95% | 100% | 100% | 96% | 93% |
+| chest | 56 | 100% | 98% | 100% | 95% | 100% | 100% | 96% | 100% |
 | forearms * | 22 | 100% | 100% | 100% | 100% | 95% | 100% | 95% | 100% |
-| front_delts | 23 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 61% |
-| glutes | 37 | 100% | 97% | 89% | 100% | 100% | 100% | 100% | 100% |
-| hamstrings | 38 | 100% | 95% | 89% | 100% | 100% | 100% | 100% | 92% |
+| front_delts | 23 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
+| glutes | 37 | 100% | 97% | 100% | 100% | 100% | 100% | 100% | 100% |
+| hamstrings | 38 | 100% | 95% | 100% | 100% | 100% | 100% | 100% | 100% |
 | neck * | 14 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| quads | 57 | 100% | 89% | 100% | 100% | 100% | 100% | 100% | 89% |
-| rear_delts | 24 | 100% | 96% | 79% | 100% | 92% | 100% | 100% | 100% |
+| quads | 57 | 100% | 89% | 100% | 100% | 100% | 100% | 100% | 100% |
+| rear_delts | 24 | 100% | 96% | 100% | 100% | 92% | 100% | 100% | 100% |
 | side_delts | 17 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | tibialis * | 9 | 100% | 100% | 100% | 100% | 100% | 89% | 100% | 100% |
 | traps * | 18 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| triceps | 41 | 100% | 100% | 88% | 93% | 100% | 100% | 95% | 93% |
+| triceps | 41 | 100% | 100% | 100% | 93% | 100% | 100% | 95% | 100% |
 
 ## Contradiction check (section 8.5)
 
@@ -62,9 +62,9 @@ where families exist); their per-axis coverage is in the table above.
 
 Dumbbell Squeeze Press [chest/dumbbell]; JM Press [triceps/barbell]; Board Press [triceps/barbell]; Guillotine Press [chest/barbell]; Landmine Chest Press (Single-Arm) [chest/barbell]; Landmine Tricep Extension [triceps/barbell]
 
-### overheadPosition (29 unknown)
+### overheadPosition (0 unknown)
 
-Cable Crossover (High to Low) [chest/cable]; Rack Pull [back/barbell]; Good Morning (Barbell) [hamstrings/barbell]; Dumbbell Side-Lying Rear Delt [rear_delts/dumbbell]; YTW [rear_delts/dumbbell]; Seated Rear Delt Machine [rear_delts/machine]; EZ Bar Skull Crusher [triceps/ez_bar]; Dumbbell Skull Crusher [triceps/dumbbell]; Decline Skull Crusher [triceps/barbell]; Good Morning [hamstrings/barbell]; Frog Pump [glutes/bodyweight]; Donkey Kick [glutes/bodyweight]; Abduction Machine [glutes/machine]; Ab Rollout [abs/bodyweight]; Dragon Flag [abs/bodyweight]; Stir the Pot [abs/bodyweight]; L-Sit Hold [abs/bodyweight]; Tyre Flip [back/machine]; Barbell Good Morning [hamstrings/barbell]; Bear Crawl [abs/bodyweight]; Kneeling Ab Rollout [abs/bodyweight]; Windmill [abs/dumbbell]; Barbell Skull Crusher [triceps/barbell]; Plate-Loaded Rear Delt [rear_delts/machine]; Band Good Morning [hamstrings/bodyweight]; Reverse Cable Crossover [rear_delts/cable]; Weighted Frog Pump [glutes/dumbbell]; Cable Iron Cross [chest/cable]; Dumbbell Floor Skull Crusher [triceps/dumbbell]
+(none)
 
 ### gripDemand (21 unknown)
 
@@ -82,9 +82,9 @@ Dragon Flag [abs/bodyweight]; V-Up [abs/bodyweight]; Stir the Pot [abs/bodyweigh
 
 Adductor Squeeze (Ball) [adductors/bodyweight]; Adductor Rock-Back (Kneeling) [adductors/bodyweight]; Tib Bar Raise (Machine) [tibialis/machine]
 
-### axialLoad (34 unknown)
+### axialLoad (0 unknown)
 
-Landmine Press [chest/barbell]; Dumbbell Squeeze Press [chest/dumbbell]; Barbell Row (Supinated) [back/barbell]; Dumbbell Row [back/dumbbell]; Landmine Row [back/barbell]; Helms Row [back/dumbbell]; Dumbbell Shoulder Press [front_delts/dumbbell]; Arnold Press [front_delts/dumbbell]; Seated Dumbbell Press [front_delts/dumbbell]; Z-Press [front_delts/barbell]; JM Press [triceps/barbell]; Board Press [triceps/barbell]; Sissy Squat [quads/bodyweight]; Spanish Squat [quads/bodyweight]; Jump Squat [quads/bodyweight]; Guillotine Press [chest/barbell]; Smith Machine Row [back/smith_machine]; Kneeling Dumbbell Press [front_delts/dumbbell]; Single-Arm Dumbbell Press [front_delts/dumbbell]; Half-Kneeling Shoulder Press [front_delts/dumbbell]; Smith Machine Close-Grip Press [triceps/smith_machine]; Skater Squat [quads/bodyweight]; Cossack Squat [adductors/bodyweight]; Band Squat [quads/bodyweight]; Band Good Morning [hamstrings/bodyweight]; Band Deadlift [hamstrings/bodyweight]; Bodyweight Single-Leg RDL [hamstrings/bodyweight]; Cuban Press [front_delts/dumbbell]; Bradford Press [front_delts/barbell]; Bodyweight Bulgarian Split Squat [quads/bodyweight]; Landmine Chest Press (Single-Arm) [chest/barbell]; Batwing Row [back/dumbbell]; Renegade Row [back/dumbbell]; Single-Arm Landmine Row [back/barbell]
+(none)
 
 ### impact (0 unknown)
 

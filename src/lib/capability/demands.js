@@ -138,12 +138,12 @@ const FIXED_IMPLEMENT = new Set(['barbell', 'smith_machine', 'landmine', 'trap_b
 // Partial objects: only the named axes are overridden.
 export const CURATED_DEMANDS = Object.freeze({
   // Rack pull: a deadlift from pins - axial, bar grip, standing.
-  'Rack Pull': { position: 'standing', axialLoad: true, gripDemand: 'bar', bilateralUpper: true, bilateralLower: true },
+  'Rack Pull': { position: 'standing', axialLoad: true, gripDemand: 'bar', bilateralUpper: true, bilateralLower: true, overheadPosition: false },
   // Hip thrust variants sit AGAINST a bench but set up from the floor.
   'Barbell Hip Thrust': { position: 'lying', floorAccess: true, gripDemand: 'supportive', bilateralLower: true, axialLoad: false },
   'Dumbbell Hip Thrust': { position: 'lying', floorAccess: true, gripDemand: 'supportive', bilateralLower: true, axialLoad: false },
   // Cable crossovers/raises are performed standing in every seed variant.
-  'Cable Crossover (High to Low)': { position: 'standing' },
+  'Cable Crossover (High to Low)': { position: 'standing', overheadPosition: true },
   'Cable Fly (Low to High)': { position: 'standing' },
   // Face pull: standing cable pull at face height - no overhead reach.
   'Face Pull': { position: 'standing', overheadPosition: false },
@@ -159,12 +159,12 @@ export const CURATED_DEMANDS = Object.freeze({
   // B-stance hip thrust: lying against the bench, floor set-up, supported.
   'B-Stance Hip Thrust': { position: 'lying', floorAccess: true, balanceDemand: 'supported', gripDemand: 'none', bilateralLower: true, axialLoad: false },
   // Renegade row: plank on dumbbells - floor work, both arms load-bearing.
-  'Renegade Row': { position: 'lying', floorAccess: true, bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'stable', overheadPosition: false },
+  'Renegade Row': { position: 'lying', floorAccess: true, bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'stable', overheadPosition: false, axialLoad: false },
   // Kroc / Meadows / Helms rows: standing hinge braced on a bench/bar.
   'Kroc Row': { position: 'standing', balanceDemand: 'supported', bilateralUpper: false },
   'Meadows Row': { position: 'standing', balanceDemand: 'supported', bilateralUpper: false },
-  'Helms Row': { position: 'standing', balanceDemand: 'supported', bilateralUpper: false, unilateralLoadable: true },
-  'Batwing Row': { position: 'lying', balanceDemand: 'supported', bilateralUpper: false, unilateralLoadable: true },
+  'Helms Row': { position: 'standing', balanceDemand: 'supported', bilateralUpper: false, unilateralLoadable: true, axialLoad: false },
+  'Batwing Row': { position: 'lying', balanceDemand: 'supported', bilateralUpper: false, unilateralLoadable: true, axialLoad: false },
   // Jefferson curl: standing loaded spinal flexion - axial by intent.
   'Jefferson Curl': { position: 'standing', axialLoad: true, bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'stable', overheadPosition: false, floorAccess: false },
   // Neck work off the machine: lying on a bench with a plate, or floor
@@ -185,8 +185,8 @@ export const CURATED_DEMANDS = Object.freeze({
   // Svend press: standing plate squeeze.
   'Svend Press': { position: 'standing', overheadPosition: false, balanceDemand: 'stable' },
   // Landmine chest press: standing press at chest height.
-  'Landmine Press': { position: 'standing', overheadPosition: true, balanceDemand: 'stable' },
-  'Landmine Chest Press (Single-Arm)': { position: 'standing', overheadPosition: false, balanceDemand: 'stable' },
+  'Landmine Press': { position: 'standing', overheadPosition: true, balanceDemand: 'stable', axialLoad: true },
+  'Landmine Chest Press (Single-Arm)': { position: 'standing', overheadPosition: false, balanceDemand: 'stable', axialLoad: true },
   // Weighted dips carry the same demands as the bodyweight movement.
   'Weighted Dips (Chest)': { position: 'mixed', gripDemand: 'bar', bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'supported', overheadPosition: false, floorAccess: false },
   'Weighted Dips (Triceps)': { position: 'mixed', gripDemand: 'bar', bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'supported', overheadPosition: false, floorAccess: false },
@@ -211,8 +211,8 @@ export const CURATED_DEMANDS = Object.freeze({
   'Battle Ropes': { position: 'standing', gripDemand: 'bar', overheadPosition: false, bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'stable', floorAccess: false },
   'Prowler Drag': { position: 'standing', gripDemand: 'bar', overheadPosition: false, balanceDemand: 'stable', floorAccess: false },
   // Frog pump / glute squeeze: floor work, no grip.
-  'Frog Pump': { position: 'lying', floorAccess: true, gripDemand: 'none', balanceDemand: 'supported' },
-  'Weighted Frog Pump': { position: 'lying', floorAccess: true, gripDemand: 'supportive', balanceDemand: 'supported' },
+  'Frog Pump': { position: 'lying', floorAccess: true, gripDemand: 'none', balanceDemand: 'supported', overheadPosition: false },
+  'Weighted Frog Pump': { position: 'lying', floorAccess: true, gripDemand: 'supportive', balanceDemand: 'supported', overheadPosition: false },
   'Glute Squeeze Hold': { position: 'standing', floorAccess: false, gripDemand: 'none', balanceDemand: 'stable', bilateralLower: true, overheadPosition: false },
   // 45-degree back/hip extensions: braced apparatus.
   '45-Degree Hip Extension': { position: 'mixed', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true },
@@ -225,13 +225,13 @@ export const CURATED_DEMANDS = Object.freeze({
   'TRX Row': { position: 'mixed', floorAccess: false, gripDemand: 'bar', bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'supported', overheadPosition: false },
   'TRX Curl': { position: 'mixed', floorAccess: false, gripDemand: 'bar', bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'supported', overheadPosition: false },
   // Bench-pressing variants without 'bench' in the name.
-  'Dumbbell Squeeze Press': { position: 'lying' },
-  'JM Press': { position: 'lying' },
-  'Board Press': { position: 'lying' },
-  'Guillotine Press': { position: 'lying' },
-  'Smith Machine Close-Grip Press': { position: 'lying' },
+  'Dumbbell Squeeze Press': { position: 'lying', axialLoad: false },
+  'JM Press': { position: 'lying', axialLoad: false },
+  'Board Press': { position: 'lying', axialLoad: false },
+  'Guillotine Press': { position: 'lying', axialLoad: false },
+  'Smith Machine Close-Grip Press': { position: 'lying', axialLoad: false },
   // Z-press: seated ON THE FLOOR - both floor access and seated.
-  'Z-Press': { position: 'seated', floorAccess: true, balanceDemand: 'stable' },
+  'Z-Press': { position: 'seated', floorAccess: true, balanceDemand: 'stable', axialLoad: true },
   // Standing cable/landmine arm work without a convention keyword.
   'Single Arm Cable Extension': { position: 'standing', balanceDemand: 'stable' },
   'Cross-Body Cable Tricep Extension': { position: 'standing', balanceDemand: 'stable' },
@@ -244,9 +244,9 @@ export const CURATED_DEMANDS = Object.freeze({
   'Adductor Squeeze (Ball)': { position: 'seated', balanceDemand: 'supported', floorAccess: false, overheadPosition: false },
   'Tib Bar Raise (Machine)': { position: 'seated', balanceDemand: 'supported', floorAccess: false, gripDemand: 'supportive' },
   // Family-thin muscle leftovers (section 33.3 priority closure).
-  'Cuban Press': { position: 'standing', floorAccess: false, balanceDemand: 'stable' },
-  'Bradford Press': { position: 'standing', floorAccess: false, balanceDemand: 'stable' },
-  'Single-Arm Dumbbell Press': { position: 'standing', floorAccess: false, balanceDemand: 'stable' },
+  'Cuban Press': { position: 'standing', floorAccess: false, balanceDemand: 'stable', axialLoad: true },
+  'Bradford Press': { position: 'standing', floorAccess: false, balanceDemand: 'stable', axialLoad: true },
+  'Single-Arm Dumbbell Press': { position: 'standing', floorAccess: false, balanceDemand: 'stable', axialLoad: true },
   'Power Clean': { overheadPosition: false, weightBearingHands: true }, // racked at the shoulders, never overhead; the rack catch extends the wrists under load
 
   // Weight-bearing-hands curation (gap-closure Phase C). The name rule
@@ -255,16 +255,63 @@ export const CURATED_DEMANDS = Object.freeze({
   // though the grip axis reads them as gripped or grip-free.
   'Nordic Curl': { weightBearingHands: true }, // press-up catch at the bottom
   'Nordic Glute Curl': { weightBearingHands: true }, // same catch
-  'L-Sit Hold': { weightBearingHands: true }, // palms pressing the surface
+  'L-Sit Hold': { weightBearingHands: true, overheadPosition: false }, // palms pressing the surface
   'Reverse Plank': { weightBearingHands: true }, // hands under shoulders, palms down
   'Barbell Front Squat': { weightBearingHands: true }, // clean-grip rack extends the wrists under the bar
   'Smith Machine Front Squat': { weightBearingHands: true }, // same rack position
   'Clean Pull': { overheadPosition: false },
   'Rack Pull (Traps)': { overheadPosition: false },
-  'Cossack Squat': { gripDemand: 'none' }, // bodyweight lateral squat
+  'Cossack Squat': { gripDemand: 'none', axialLoad: false }, // bodyweight lateral squat
   'Side-Lying Adduction': { gripDemand: 'none', overheadPosition: false },
   'Adductor Rock-Back (Kneeling)': { gripDemand: 'none', overheadPosition: false },
   'Dead Hang': { gripDemand: 'bar', overheadPosition: true },
+
+  // Gap-closure Phase C lead curation: the two judgement axes'
+  // NULL worklists (overhead = shoulder-elevated position, axial =
+  // spinal compression under load). Rationale per class in
+  // MOVEMENT-PATH-AUDIT.md section 4.2.
+  'Ab Rollout': { overheadPosition: true },
+  'Abduction Machine': { overheadPosition: false },
+  'Arnold Press': { axialLoad: true },
+  'Band Deadlift': { axialLoad: true },
+  'Band Good Morning': { overheadPosition: false, axialLoad: true },
+  'Band Squat': { axialLoad: true },
+  'Barbell Good Morning': { overheadPosition: false },
+  'Barbell Row (Supinated)': { axialLoad: true },
+  'Barbell Skull Crusher': { overheadPosition: true },
+  'Bear Crawl': { overheadPosition: false },
+  'Bodyweight Bulgarian Split Squat': { axialLoad: false },
+  'Bodyweight Single-Leg RDL': { axialLoad: false },
+  'Cable Iron Cross': { overheadPosition: false },
+  'Decline Skull Crusher': { overheadPosition: true },
+  'Donkey Kick': { overheadPosition: false },
+  'Dragon Flag': { overheadPosition: true },
+  'Dumbbell Floor Skull Crusher': { overheadPosition: true },
+  'Dumbbell Row': { axialLoad: false },
+  'Dumbbell Shoulder Press': { axialLoad: true },
+  'Dumbbell Side-Lying Rear Delt': { overheadPosition: false },
+  'Dumbbell Skull Crusher': { overheadPosition: true },
+  'EZ Bar Skull Crusher': { overheadPosition: true },
+  'Good Morning': { overheadPosition: false },
+  'Good Morning (Barbell)': { overheadPosition: false },
+  'Half-Kneeling Shoulder Press': { axialLoad: true },
+  'Jump Squat': { axialLoad: false },
+  'Kneeling Ab Rollout': { overheadPosition: true },
+  'Kneeling Dumbbell Press': { axialLoad: true },
+  'Landmine Row': { axialLoad: true },
+  'Plate-Loaded Rear Delt': { overheadPosition: false },
+  'Reverse Cable Crossover': { overheadPosition: false },
+  'Seated Dumbbell Press': { axialLoad: true },
+  'Seated Rear Delt Machine': { overheadPosition: false },
+  'Single-Arm Landmine Row': { axialLoad: true },
+  'Sissy Squat': { axialLoad: false },
+  'Skater Squat': { axialLoad: false },
+  'Smith Machine Row': { axialLoad: true },
+  'Spanish Squat': { axialLoad: false },
+  'Stir the Pot': { overheadPosition: false },
+  'Tyre Flip': { overheadPosition: false },
+  'Windmill': { overheadPosition: true },
+  'YTW': { overheadPosition: true },
 });
 
 // ── Derivation ──────────────────────────────────────────────────────────
