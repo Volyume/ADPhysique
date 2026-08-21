@@ -30,6 +30,16 @@ function realLibraryByName() {
   const seedSrc = fs.readFileSync(path.resolve(__dirname, '../seedExercises.js'), 'utf8');
   const start = seedSrc.indexOf('const RAW = [');
   const body = seedSrc.slice(start, seedSrc.indexOf('\n];', start));
+  // Subregions ride SUBREGION_MAP at insert time; the harness attaches
+  // them too so FAMILY-rule audiences (gap-closure Phase E) resolve
+  // through the real movementFamily pass-through instead of silently
+  // matching nothing.
+  const mapStart = seedSrc.indexOf('const SUBREGION_MAP = {');
+  const mapBody = seedSrc.slice(mapStart, seedSrc.indexOf('\n};', mapStart));
+  const sub = new Map();
+  let sm;
+  const subRe = /'((?:[^'\\]|\\.)+)':\s*'([a-z_]+)'/g;
+  while ((sm = subRe.exec(mapBody)) !== null) sub.set(sm[1].replace(/\\'/g, "'"), sm[2]);
   const out = new Map();
   const re = /\[\s*'([^']+)',\s*'([a-z_]+)',\s*\[([^\]]*)\],\s*'([a-z_]+)',\s*'([a-z_]+)',\s*(true|false),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+)\s*\]/g;
   let m;
@@ -38,7 +48,10 @@ function realLibraryByName() {
       name: m[1], primaryMuscle: m[2], equipment: m[4], movementPattern: m[5],
       compoundIsolation: m[6] === 'true' ? 'compound' : 'isolation',
     };
-    out.set(m[1], { id: m[1], ...base, ...deriveExerciseMetadata(base), ...deriveDemandMetadata(base) });
+    out.set(m[1], {
+      id: m[1], ...base, subregion: sub.get(m[1]) ?? null,
+      ...deriveExerciseMetadata(base), ...deriveDemandMetadata(base),
+    });
   }
   return out;
 }
@@ -69,14 +82,18 @@ function parseSeedRoutines() {
 const LIB = realLibraryByName();
 const { plans, required } = parseSeedRoutines();
 
-const cap = (rules) => buildCapabilityResolveState(
-  rules.map((ruleValue, i) => ({
-    id: `c${i}`, userId: 'u', role: 'baseline', source: 'self', ruleKind: 'demand',
-    ruleValue, laterality: null, startsAt: NOW - 1, endsAt: null, state: 'active',
+const capRows = (rules) => buildCapabilityResolveState(
+  rules.map((r, i) => ({
+    id: `c${i}`, userId: 'u', role: 'baseline', source: 'self', ruleKind: r.kind,
+    ruleValue: r.value, laterality: null, startsAt: NOW - 1, endsAt: null, state: 'active',
     endedAt: null, endedReason: null, episodeGroupId: null, deletedAt: null,
   })),
   { atMs: NOW },
 );
+const cap = (rules) => capRows(rules.map(value => ({ kind: 'demand', value })));
+// Gap-closure Phase E: some family audiences are FAMILY-rule shaped (a
+// no-deep-knee audience excludes movement classes, not a demand axis).
+const capFamilies = (families) => capRows(families.map(value => ({ kind: 'family', value })));
 
 // Each family's OWN capability profile - the audience the plan claims.
 const FAMILY_PROFILES = {
@@ -94,7 +111,17 @@ const FAMILY_PROFILES = {
   // PULLING collection (DEF-3): it covers what genuinely needs no firm
   // grip and says the pulling gap out loud in its description.
   'Grip-Light Machine Circuit': cap(['grip_bar']),
+  // Gap-closure Phase E (GC-D8): breadth and the experienced tiers.
+  'Seated Home Strength': cap(['standing']),
+  'Grip-Light Lower Builder': cap(['grip_bar']),
+  'Hinge & Hip Lower Builder': capFamilies(['squat_press', 'knee_flexion']),
+  'Seated Upper Strength II': cap(['standing']),
+  'Steady-Base Strength': cap(['balance_high']),
 };
+
+// Seated Home Strength exists for home training from a chair: nothing in
+// it may need a gym station (GC-D8).
+const HOME_EQUIPMENT = new Set(['dumbbell', 'bodyweight']);
 
 const FAMILY_NAMES = Object.keys(FAMILY_PROFILES);
 const familyPlans = plans.filter((p) => FAMILY_NAMES.includes(p.name));
@@ -163,6 +190,25 @@ test('Amendment section 16: each family covers its claimed scope', () => {
       expect(muscles.has('quads')).toBe(true);
       expect(muscles.has('hamstrings') || muscles.has('glutes')).toBe(true);
     }
+  }
+});
+
+test('Seated Home Strength needs no gym station and the experienced tiers train like it (GC-D8)', () => {
+  const home = familyPlans.find((p) => p.name === 'Seated Home Strength');
+  expect(home).toBeTruthy();
+  for (const ex of home.exercises) {
+    const row = LIB.get(ex.name) ?? null;
+    const equipment = row?.equipment ?? 'required-exercise';
+    expect({ name: ex.name, equipment, ok: row ? HOME_EQUIPMENT.has(row.equipment) : true }).toEqual({
+      name: ex.name, equipment, ok: true,
+    });
+  }
+  // The experienced tiers are not a watered-down shelf (Amendment
+  // section 15; order section 24): heavier rep ranges appear.
+  for (const name of ['Seated Upper Strength II', 'Steady-Base Strength']) {
+    const p = familyPlans.find((x) => x.name === name);
+    expect(p).toBeTruthy();
+    expect(p.exercises.some((e) => e.repsMin <= 6)).toBe(true);
   }
 });
 

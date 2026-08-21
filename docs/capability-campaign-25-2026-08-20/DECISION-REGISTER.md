@@ -430,3 +430,20 @@ CC27-29-BUNDLE-TRACKER.md.
   knee flexion), and experienced tiers Seated Upper Strength II and
   Steady-Base Strength (the no watered-down-only-shelf law, Amendment
   section 15; order section 24).
+- GC-D9 T13 (exercise instructions) splits: the ADAPTED SETUP layer
+  (order section 23's actual scope: structured variant/setup guidance
+  where seated, one-arm, one-leg, strap/cuff, supported, reduced-range
+  or per-side setup materially differs) ships in this workstream as a
+  validated knowledge module rendered on the exercise surfaces. A BASE
+  551-exercise technique-instruction library is a separate
+  content-production programme (voice, technique QA and liability
+  posture are founder calls for coaching-adjacent content) - surfaced
+  in FOUNDER-ACTION-PACK, not parked: the amendment's requirement was
+  accessible/ADAPTED instructions and the adapted layer is what ships.
+- GC-D9 CORRECTION (2026-08-21, same day): the "base 551-exercise
+  instruction library" premise was WRONG - src/lib/formTips.js already
+  ships 554 base instruction entries rendered as "How to do it". The
+  founder-programme half of GC-D9 is VOID (nothing to commission except
+  demonstration MEDIA, which was always founder-side asset production);
+  the adapted-setup layer half stands and ships in Phase G. The
+  traceability T13 row carries the correction.

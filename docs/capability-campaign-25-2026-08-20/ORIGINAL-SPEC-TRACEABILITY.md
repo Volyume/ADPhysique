@@ -60,7 +60,7 @@ order's phases A–I); "—" = nothing to close.
 | T10 | Builder respects capability | Picker/builder capability filter + show-anyway + section 9.4 flows; RT-F3 clinician fix; senior question at all 16 callers + 3 id-blind readers + Recent rail | FULLY IMPLEMENTED | F (inherit new layers) |
 | T11 | Exercise library coverage at required fidelity | 10-axis demand metadata over all 551 seed rows: 87–100% per axis, 0 contradictions (`CC27-DEMAND-COVERAGE.md`); explicit NULL worklists remain (70 unilateralLoadable, 34 axialLoad, 29 overheadPosition, 24 gripDemand, 13 bilateralUpper, 6 floorAccess, 5 balanceDemand, 3 bilateralLower); customs share schema with single-axis progressive ask | PARTIALLY IMPLEMENTED (fidelity high; worklists open; new-axis needs decided in Phase C) | C |
 | T12 | Routine quality validation per family (Amendment section 17 checklist) | Checklist runs as fixtures over family plans AND generated plans (CC27 S10; `capabilityFamilyPlans.test.js`) | FULLY IMPLEMENTED (for what shipped) | E (apply to new) |
-| T13 | Exercise instructions / demonstrations, accessible and adapted (order section 23 names this as an original amendment requirement) | `exercises.cue` column exists (database.js:1342) and `ExerciseDetailScreen.js:506/999-1001` renders it — but seed content = 0 rows (grep "cue:" in seedExercises.js = 0); no setup guidance, no adapted variants (seated/one-arm/strap), no demonstration media, no media pipeline | MISSED / GAP (never decomposed into CC26–32; the roadmap carried no instruction deliverable) | C (schema), E/G (content) |
+| T13 | Exercise instructions / demonstrations, accessible and adapted (order section 23 names this as an original amendment requirement) | CORRECTED 2026-08-21 (evidence-before-assertion): BASE instructions EXIST — `src/lib/formTips.js` carries 554 entries rendered as "How to do it" (`ExerciseDetailScreen.js:1006-1011`); the earlier claim keyed on the empty `cue` column and missed FORM_TIPS. Genuinely absent: ADAPTED setup variants (seated/one-arm/strap/supported/reduced-range/per-side) and demonstration media | PARTIALLY IMPLEMENTED (base text exists; adapted layer absent; media absent) | G (adapted content); media = founder programme |
 | T14 | App accessibility beyond exercise selection: motor/visual/hearing/cognitive (Amendment section 6 app-operation half) | CC32: capability path + core operation path (Stepper adjustable, timer redundant cues, per-platform announcements, target sizes, modal focus); `PHYSICAL-VALIDATION-BACKLOG.md` journey F. Full per-screen audit REGISTERED as separate future campaign (brief's own boundary). Device walk NOT done. Cognitive pass beyond onboarding cards not done | PARTIALLY IMPLEMENTED (feature+core path); full-app DEFERRED (defensible, recorded boundary); device validation NOT DONE (founder-side) | G |
 | T15 | Population/condition coverage knowledge (order section 2's "population/condition coverage") | No directory, no taxonomy artefact, no per-condition functional-question mapping | CONTENT NOT BUILT | B, D |
 | T16 | Specific injury handling beyond manual entry (order sections 6/7) | Episodes mechanically support ANY user-declared restriction incl. injuries (create/backdate/AWAITING/end/flare/promote); but NO injury knowledge layer: no region/injury profiles, no suggested-question sets, no evidence-informed education, no injury-aware check-in question selection | ARCHITECTURE ONLY (mechanism general; injury knowledge absent) | B, D, F |
@@ -134,9 +134,11 @@ The founder's challenge is CONFIRMED in three specific respects: the
 implementation to date is a strong LAYER 1 (capability engine +
 lifecycle + learning shield + coach + starter content) with Layer 2
 (population/condition knowledge), the injury knowledge layer, and the
-instruction/setup content layer NOT BUILT; routine content stops at
+ADAPTED-setup content layer NOT BUILT; routine content stops at
 beginner/intermediate v1; and the coverage registry, while real, tracks
 content floors rather than the full support surface. Nothing found
-contradicts the recorded rejections/deferrals, and no silent scope cut
-beyond T13 (exercise instructions — a genuine missed decomposition) was
-discovered. The remaining phases close G1–G11.
+contradicts the recorded rejections/deferrals. T13 correction
+(2026-08-21): base exercise instructions exist (formTips.js, 554
+entries) — the original T13 row wrongly called the base layer missing;
+the adapted-variant layer is the real gap and Phase G closes it. The
+remaining phases close G1–G11.
