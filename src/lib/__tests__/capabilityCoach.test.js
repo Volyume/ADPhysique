@@ -278,27 +278,107 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
     });
   });
 
-  describe('i. section 19 rendering — WeeklyCheckInScreen pins', () => {
-    it('source contains conditional question text', () => {
-      // This is a source-level pin: we verify the string exists in the source file
-      // In a real test this would read the JSX and inspect the rendered output
-      // For now, this is a manual verification that must be done post-edit
-      // Expected pin: source contains 'How did training around your restriction go this week?'
-      // and renderStep2 contains conditional render when hasActiveEpisode === true
-      expect(true).toBe(true); // placeholder
+  describe('i. section 19 rendering — WeeklyCheckInScreen pins (source guards)', () => {
+    // Realised 2026-08-21 (these three were placeholders): the house
+    // source-guard pattern, pinning the conditional question surface the
+    // founder's weekly-loop order depends on.
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../../screens/WeeklyCheckInScreen.js'), 'utf8',
+    );
+
+    it('source contains the conditional question, gated on hasActiveEpisode', () => {
+      expect(src).toContain('How did training around your restriction go this week?');
+      expect(/hasActiveEpisode\s*\?/.test(src)).toBe(true);
     });
 
-    it('source contains setCapabilityWeekNote call', () => {
-      // Source-level pin: verify that handleSubmit calls setCapabilityWeekNote
-      // when restrictionWeek != null
-      // Expected pin: source contains 'setCapabilityWeekNote(userId, { weekStart'
-      expect(true).toBe(true); // placeholder
+    it('source stores the weekly answer via setCapabilityWeekNote', () => {
+      expect(/setCapabilityWeekNote\(userId,\s*\{\s*weekStart/.test(src)).toBe(true);
     });
 
-    it('source conditionally appends joint-pain sentence only when not hasActiveEpisode', () => {
-      // Source-level pin: verify that the notes array builder has guard
-      // !hasActiveEpisode && jointPain === 'yes' before appending sentence
-      expect(true).toBe(true); // placeholder
+    it('joint-pain question renders only without an active episode', () => {
+      // The ternary's else branch carries the joint-pain question, so the
+      // two can never render together.
+      const conditional = src.slice(src.indexOf('hasActiveEpisode ?'));
+      const restrictionIdx = conditional.indexOf('How did training around your restriction');
+      const jointIdx = conditional.indexOf('Any joint or tendon pain?');
+      expect(restrictionIdx).toBeGreaterThan(-1);
+      expect(jointIdx).toBeGreaterThan(restrictionIdx);
+    });
+
+    it('an overdue restriction adds the close-it hint to the question (2026-08-21)', () => {
+      expect(/episodeOverdue\s*\n?\s*\?\s*'Past the time you expected it to run\. If it has ended, you can close it under How you train\.'/.test(src)
+        || src.includes("episodeOverdue")).toBe(true);
+      expect(src).toContain('Past the time you expected it to run. If it has ended, you can close it under How you train.');
+      // Detection uses the real status machine, not a re-derived clock rule.
+      expect(/constraintStatus\(r,\s*Date\.now\(\)\)\s*===\s*EPISODE_STATUS\.AWAITING_CONFIRMATION/.test(src)).toBe(true);
+    });
+  });
+
+  describe('j. weekly-answer note consumer — both directions, fine inert (2026-08-21)', () => {
+    const baseInputs = {
+      checkin: { energyScore: 3, sorenessScore: 2 },
+      morningWeights: [],
+      sessionsCompleted: 3,
+      sessionsPlanned: 3,
+      prsThisWeek: 0,
+      goalPhase: 'maint',
+      weeksInPhase: 4,
+      consecutiveOffTargetWeeks: 0,
+      consecutivePoorRecoveryWeeks: 0,
+      sex: 'male',
+      targetKcal: 2500,
+      userProfile: { ffm: 80 },
+    };
+    const withAnswer = (weeklyAnswer) => runWeeklyCoach({
+      ...baseInputs,
+      physicalConstraint: {
+        active: true,
+        affectedMuscles: ['chest'],
+        excusedThisWeek: 1,
+        weeklyAnswer,
+      },
+    });
+
+    it('"in the way" appends the adjust suggestion', () => {
+      const out = withAnswer(CAPABILITY_WEEK_ANSWER.IN_THE_WAY);
+      expect(out.adjustments.training.note).toContain('you can adjust it under How you train');
+      expect(out.adjustments.training.note).not.toContain('you can close it under How you train');
+    });
+
+    it('"mostly didn\'t come up" appends the close suggestion', () => {
+      const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
+      expect(out.adjustments.training.note).toContain('If it has ended, you can close it under How you train');
+      expect(out.adjustments.training.note).not.toContain('you can adjust it under How you train');
+    });
+
+    it('"fine" and no answer change nothing', () => {
+      for (const answer of [CAPABILITY_WEEK_ANSWER.FINE, null]) {
+        const out = withAnswer(answer);
+        // Read the REAL field (adjustments.training.note is always a
+        // string), so this can never pass vacuously on a wrong key.
+        expect(typeof out.adjustments.training.note).toBe('string');
+        expect(out.adjustments.training.note).not.toContain('You said');
+      }
+    });
+
+    it('the suggestion reaches data-hold weeks too (no weigh-ins - the path that hid it)', () => {
+      // Found while building this: the original consumer lived only on
+      // the full-data path, so a user without regular weigh-ins never saw
+      // either suggestion. Now applied at every note-bearing return.
+      const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
+      expect(out.adjustments.training.note).toContain('If it has ended, you can close it under How you train');
+      const inWay = withAnswer(CAPABILITY_WEEK_ANSWER.IN_THE_WAY);
+      expect(inWay.adjustments.training.note).toContain('you can adjust it under How you train');
+    });
+
+    it('suggestions never change a number: decisions identical across answers', () => {
+      const a = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
+      const b = withAnswer(CAPABILITY_WEEK_ANSWER.FINE);
+      expect(a.adjustments.training.signal).toEqual(b.adjustments.training.signal);
+      expect(a.adjustments.calories).toEqual(b.adjustments.calories);
+      expect(a.deloadSuggested).toEqual(b.deloadSuggested);
     });
   });
 });

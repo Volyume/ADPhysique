@@ -322,8 +322,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [jointPain, setJointPain] = useState(null);         // 'yes'|'no'
   const [notes, setNotes] = useState('');
   // CC31 (section 19): conditional question replaces joint-pain when user has
-  // an active episode-role capability constraint.
+  // an active episode-role capability constraint. episodeOverdue marks a
+  // restriction past its expected end (founder order 2026-08-21): the
+  // question gains a hint pointing at How you train, so the weekly loop
+  // surfaces an overdue restriction without the user opening Settings.
+  // Wording only - the rules stay in force until the user acts (fail safe).
   const [hasActiveEpisode, setHasActiveEpisode] = useState(false);
+  const [episodeOverdue, setEpisodeOverdue] = useState(false);
   const [restrictionWeek, setRestrictionWeek] = useState(null); // 'fine'|'in_the_way'|'not_relevant'
 
   // Step 4, Training
@@ -379,15 +384,28 @@ export default function WeeklyCheckInScreen({ navigation }) {
         setAlreadyLoggedToday(hasLoggedToday(weights));
 
         // CC31 (section 19): load whether user has an ACTIVE episode-role
-        // capability constraint. Best-effort; any error reads as false.
+        // capability constraint, and whether any of it has run past its
+        // expected end (awaiting confirmation). Best-effort; any error
+        // reads as false.
         try {
           // eslint-disable-next-line global-require
           const { getCapabilityConstraints } = require('../lib/database');
+          // eslint-disable-next-line global-require
+          const { constraintStatus, EPISODE_STATUS } = require('../lib/capability/model');
           const rows = await getCapabilityConstraints(user.id, { includeEnded: false });
-          const active = rows.some(r => r.role === 'episode');
-          if (!cancelled) setHasActiveEpisode(active);
+          const episodeRows = rows.filter(r => r.role === 'episode');
+          const overdue = episodeRows.some(
+            r => constraintStatus(r, Date.now()) === EPISODE_STATUS.AWAITING_CONFIRMATION,
+          );
+          if (!cancelled) {
+            setHasActiveEpisode(episodeRows.length > 0);
+            setEpisodeOverdue(overdue);
+          }
         } catch (_) {
-          if (!cancelled) setHasActiveEpisode(false);
+          if (!cancelled) {
+            setHasActiveEpisode(false);
+            setEpisodeOverdue(false);
+          }
         }
         // X11 (cross-surface audit 2026-07-30), RULED after review: this count
         // stays a TRAILING 7-DAY window, deliberately.
@@ -1230,7 +1248,11 @@ export default function WeeklyCheckInScreen({ navigation }) {
         <View style={styles.section}>
           {hasActiveEpisode ? (
             <>
-              <SectionLabel>How did training around your restriction go this week?</SectionLabel>
+              <SectionLabel
+                hint={episodeOverdue
+                  ? 'Past the time you expected it to run. If it has ended, you can close it under How you train.'
+                  : undefined}
+              >How did training around your restriction go this week?</SectionLabel>
               <OptionRow
                 options={[
                   { value: 'fine', label: 'Fine' },

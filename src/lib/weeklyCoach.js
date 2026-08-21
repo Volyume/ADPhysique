@@ -904,7 +904,7 @@ export function runWeeklyCoach(inputs) {
       weekLabel: `Week ${Number.isFinite(claimedWeeksInPhase) ? Math.round(claimedWeeksInPhase) : 1} · ${phaseConfig(goalPhase).label}`,
       trend: { ewma7: ewmaNow, delta: null, onTarget: false, deltaLabel: 'Log morning weight', rateLabel: null },
       whatWorking: ['Check-in saved.'],
-      adjustments: { training: { signal: 'hold', note: 'Plan unchanged. A few more weigh-ins needed to act on.' }, calories: null, steps: null },
+      adjustments: { training: { signal: 'hold', note: appendWeeklyAnswerSuggestion('Plan unchanged. A few more weigh-ins needed to act on.', physicalConstraint) }, calories: null, steps: null },
       whyThisWeek: confidence.holdMessage,
       deloadSuggested: false, deloadNote: null, dietBreakSuggested: false, dietBreakNote: null,
       heldDecisions: [],
@@ -2197,15 +2197,12 @@ export function runWeeklyCoach(inputs) {
     exceededEscalationApplied = true;
   }
 
-  // CC31 (section 19): the conditional answer's ONE consumer. When the
-  // week's answer was "it got in the way more than expected", the note
-  // suggests reviewing the restriction - a suggestion only, after every
-  // volume decision has settled, changing no number and never modifying
-  // the constraint itself. Any other answer (or none) changes nothing.
-  const pcFact = coachContext?.training?.physicalConstraint;
-  if (pcFact?.active && pcFact.weeklyAnswer === 'in_the_way' && trainingNote) {
-    trainingNote += ' You said it got in the way more than expected. If that carries on, you can adjust it under How you train.';
-  }
+  // CC31 (section 19): the conditional answer's consumer - see
+  // appendWeeklyAnswerSuggestion for the law (suggestions only, after
+  // every volume decision has settled).
+  trainingNote = appendWeeklyAnswerSuggestion(
+    trainingNote, coachContext?.training?.physicalConstraint,
+  );
 
   // ── WHAT'S WORKING ────────────────────────────────────────────────────────
   const whatWorking = [];
@@ -2568,6 +2565,26 @@ export function runWeeklyCoach(inputs) {
 
 // ─── Helper output builders ───────────────────────────────────────────────────
 
+// CC31 (section 19) + founder order 2026-08-21: the weekly conditional
+// answer's copy-only consumer, applied to EVERY note-bearing return so
+// the suggestion reaches users on data-hold, baseline and adherence
+// weeks too (it previously lived only on the full-data path, where a
+// user without regular weigh-ins would never see it). Both directions
+// of hold-vs-suggest-review: "in the way" points at adjusting the
+// restriction, "mostly didn't come up" points at closing it. Copy only:
+// no number changes, no constraint writes; "fine" or no answer changes
+// nothing.
+function appendWeeklyAnswerSuggestion(note, pcFact) {
+  if (!note || !pcFact?.active) return note;
+  if (pcFact.weeklyAnswer === 'in_the_way') {
+    return `${note} You said it got in the way more than expected. If that carries on, you can adjust it under How you train.`;
+  }
+  if (pcFact.weeklyAnswer === 'not_relevant') {
+    return `${note} You said it mostly didn't come up. If it has ended, you can close it under How you train.`;
+  }
+  return note;
+}
+
 function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget, context = null }) {
   return {
     hasEnoughData: false,
@@ -2580,7 +2597,7 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
     trend: { ewma7: ewma7Today, delta: weightDelta, onTarget: onTarget ?? false, deltaLabel, rateLabel },
     whatWorking: ['Logging consistently. The data is building.'],
     adjustments: {
-      training: { signal: 'hold', note: 'Continue your plan as written.' },
+      training: { signal: 'hold', note: appendWeeklyAnswerSuggestion('Continue your plan as written.', context?.training?.physicalConstraint) },
       calories: null,
       steps: null,
     },
@@ -2619,7 +2636,7 @@ function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, w
     trend: { ewma7: ewma7Today, delta: weightDelta, onTarget: onTarget ?? false, deltaLabel, rateLabel },
     whatWorking: ['Showing up, even partially, keeps the habit alive.'],
     adjustments: {
-      training: { signal: 'hold', note: 'Get back to your full plan before changing anything.' },
+      training: { signal: 'hold', note: appendWeeklyAnswerSuggestion('Get back to your full plan before changing anything.', context?.training?.physicalConstraint) },
       calories: null,
       steps: null,
     },
