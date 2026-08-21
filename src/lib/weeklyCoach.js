@@ -31,7 +31,8 @@ import { deriveCorroborationDirectionAgainstTrend } from './progressScanCheckInE
 // Campaign 18: one shared reading of the week's evidence, and one shared
 // answer to what is actually limiting progress.
 import { buildCoachContext } from './coachContext';
-import { classifyLimiters, LIMITER, coordinateChanges } from './coachPrecedence';
+import { classifyLimiters, LIMITER, coordinateChanges, conflictOutcome } from './coachPrecedence';
+import { stripAutoNotes } from './checkinDerive';
 import {
   wouldReverseRecent, doseEscalation, holdReinforcement, volumeDecisionMemory,
 } from './coachIntervention';
@@ -626,6 +627,11 @@ export function runWeeklyCoach(inputs) {
     // never read a second time inside the run.
     nowMs = Date.now(),
     checkin,
+    // CC31 (section 20): the physicalConstraint fact, assembled by the
+    // caller from the capability lane's own reads (never inside this
+    // pure engine). null = no active restriction, byte-identical to
+    // every existing caller.
+    physicalConstraint = null,
     morningWeights = [],
     sessionsCompleted: _sessionsCompletedRaw = 0,
     sessionsPlanned: _sessionsPlannedRaw = 3,
@@ -1234,7 +1240,15 @@ export function runWeeklyCoach(inputs) {
   // drop any push. It can only cap an increase, never turn a planned reduce or
   // deload into a progress, so a recovery week still reduces as intended.
   const jointPainFlagged = !!(checkin?.jointPain);
-  const noteFlags = parseNoteFlags(checkin?.notes);
+  // PD-3 (bundle 2): structured data enters the engine ONCE. The
+  // check-in screen appends its own generated sentences ("Joint pain
+  // flagged this week." / "Sore: ...") to the notes for display, and the
+  // word "pain" in the app's OWN sentence re-parsed here as a second
+  // injury signal from the same answer. The parser now reads only what
+  // the USER typed (checkinDerive.stripAutoNotes is the existing
+  // recovery for exactly these appended lines); the structured jointPain
+  // answer above remains the single explicit channel.
+  const noteFlags = parseNoteFlags(stripAutoNotes(checkin?.notes));
   const safetyHold = jointPainFlagged || noteFlags.injury || noteFlags.illness;
   let safetyHoldNote = null;
   if (safetyHold && trainingSignal !== 'reduce') {
@@ -1351,6 +1365,7 @@ export function runWeeklyCoach(inputs) {
     training: {
       sessionsCompleted, sessionsPlanned, prsThisWeek,
       blockE1rmSlopePct, blockWeekIndex, blockAccumWeeks,
+      physicalConstraint,
     },
     recovery: {
       hasCheckin: checkinCompleted,
@@ -1794,7 +1809,12 @@ export function runWeeklyCoach(inputs) {
     coordinationVolumeHeld = coordination.holds
       .find((h) => h.domain === 'training')?.reason ?? 'one_change_at_a_time';
     volumeSignal = 0;
-    trainingNote = getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
+    // CC31 (section 20, CAP-18): when the hold's reason is the user's own
+    // restriction, the note says so in the restriction's terms - never
+    // adherence, never a recovery verdict about the person.
+    trainingNote = coordinationVolumeHeld === 'constraint_active'
+      ? 'Training ran around your temporary change this week, so volume holds rather than judging the week by it. Everything unaffected carries on as normal.'
+      : getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
   }
 
   // ── STEPS PRESCRIPTION ────────────────────────────────────────────────────
@@ -2399,6 +2419,11 @@ export function runWeeklyCoach(inputs) {
     // coachStory.buildWeeklyStory on CoachOutputScreen.
     context: coachContext,
     limiters: coachLimiters,
+    // CC31 (PD-4 wiring): the anti-causal register, recorded on the real
+    // output path so every stored weekly run carries what this layer may
+    // and may never claim. The invariant suite holds the run's actual
+    // copy to the neverClaim entries.
+    claims: conflictOutcome(coachContext),
     // Campaign 18 job A3: a change that worked is a reason to LEAVE THINGS
     // ALONE, and the athlete is told so in those words. Never a reason to
     // change anything.

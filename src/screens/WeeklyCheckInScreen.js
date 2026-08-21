@@ -321,6 +321,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
   const [soreMuscles, setSoreMuscles] = useState([]);       // muscle group keys
   const [jointPain, setJointPain] = useState(null);         // 'yes'|'no'
   const [notes, setNotes] = useState('');
+  // CC31 (section 19): conditional question replaces joint-pain when user has
+  // an active episode-role capability constraint.
+  const [hasActiveEpisode, setHasActiveEpisode] = useState(false);
+  const [restrictionWeek, setRestrictionWeek] = useState(null); // 'fine'|'in_the_way'|'not_relevant'
 
   // Step 4, Training
   const [trainingPerformance, setTrainingPerformance] = useState(null); // 'exceeded'|'hit'|'struggled'|'dropped'
@@ -373,6 +377,18 @@ export default function WeeklyCheckInScreen({ navigation }) {
         const weights = await getMorningWeightsLast14Days(user.id);
         if (cancelled) return;
         setAlreadyLoggedToday(hasLoggedToday(weights));
+
+        // CC31 (section 19): load whether user has an ACTIVE episode-role
+        // capability constraint. Best-effort; any error → false.
+        try {
+          // eslint-disable-next-line global-require
+          const { getCapabilityConstraints } = require('../lib/database');
+          const rows = await getCapabilityConstraints(user.id, { includeEnded: false });
+          const active = rows.some(r => r.role === 'episode');
+          if (!cancelled) setHasActiveEpisode(active);
+        } catch (_) {
+          if (!cancelled) setHasActiveEpisode(false);
+        }
         // X11 (cross-surface audit 2026-07-30), RULED after review: this count
         // stays a TRAILING 7-DAY window, deliberately.
         //
@@ -819,11 +835,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
         trainingPerformance: trainingPerformance ?? null,
         // Campaign 1 P0-4 tri-state: unanswered persists as null, never as
         // an explicit "no" the user did not give.
-        jointPain: jointPain === 'yes' ? true : (jointPain === 'no' ? false : null),
+        // CC31 (section 19): when hasActiveEpisode, joint-pain question is
+        // replaced by restriction question, so store jointPain as null.
+        jointPain: hasActiveEpisode ? null : (jointPain === 'yes' ? true : (jointPain === 'no' ? false : null)),
         soreMuscles: soreMuscles.length > 0 ? soreMuscles.join(',') : null,
         notes: [
           notes.trim(),
-          jointPain === 'yes' ? 'Joint pain flagged this week.' : '',
+          // CC31: only append joint-pain sentence when question was shown
+          !hasActiveEpisode && jointPain === 'yes' ? 'Joint pain flagged this week.' : '',
           soreMuscles.length > 0 ? `Sore: ${soreMuscles.join(', ')}.` : '',
         ].filter(Boolean).join(' ') || null,
       });
@@ -839,6 +858,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
           assessment: scanEvidencePacket.assessment,
           status: scanEvidencePacket.status,
         }).catch(() => {});
+      }
+
+      // CC31 (section 19): store the weekly restriction answer if provided.
+      // Best-effort, never blocks submit.
+      if (restrictionWeek != null) {
+        try {
+          // eslint-disable-next-line global-require
+          const { setCapabilityWeekNote } = require('../lib/capability/weekNote');
+          await setCapabilityWeekNote(userId, { weekStart: weekStart.getTime(), answer: restrictionWeek });
+        } catch (_) {}
       }
 
       // Reschedule the check-in reminder so we don't bug them again this week.
@@ -931,6 +960,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
   }, [
     busy, submitSuccess, user?.id, energyScore, sorenessScore, stressScore, sleepHours,
     calsAdherence, stepsAdherence, trainingPerformance, jointPain, notes, weekStart, navigation,
+    hasActiveEpisode, restrictionWeek,
   ]);
 
   // M4: the Button's success beat finished; run the stashed outcome.
@@ -1198,15 +1228,32 @@ export default function WeeklyCheckInScreen({ navigation }) {
         )}
 
         <View style={styles.section}>
-          <SectionLabel hint="Joints and tendons, not normal muscle soreness">Any joint or tendon pain?</SectionLabel>
-          <OptionRow
-            options={[
-              { value: 'no', label: 'No' },
-              { value: 'yes', label: 'Yes' },
-            ]}
-            selected={jointPain}
-            onSelect={setJointPain}
-          />
+          {hasActiveEpisode ? (
+            <>
+              <SectionLabel>How did training around your restriction go this week?</SectionLabel>
+              <OptionRow
+                options={[
+                  { value: 'fine', label: 'Fine' },
+                  { value: 'in_the_way', label: 'It got in the way more than expected' },
+                  { value: 'not_relevant', label: 'Mostly didn\'t come up' },
+                ]}
+                selected={restrictionWeek}
+                onSelect={setRestrictionWeek}
+              />
+            </>
+          ) : (
+            <>
+              <SectionLabel hint="Joints and tendons, not normal muscle soreness">Any joint or tendon pain?</SectionLabel>
+              <OptionRow
+                options={[
+                  { value: 'no', label: 'No' },
+                  { value: 'yes', label: 'Yes' },
+                ]}
+                selected={jointPain}
+                onSelect={setJointPain}
+              />
+            </>
+          )}
         </View>
 
         <View style={styles.section}>

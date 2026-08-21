@@ -42,6 +42,9 @@ export const LIMITER = Object.freeze({
   EXECUTION: 'execution',
   RECOVERY: 'recovery',
   INSUFFICIENT_EVIDENCE: 'insufficient_evidence',
+  // CC31 (section 20): a physical restriction, not the athlete and not
+  // the plan, explains the week. Never an adherence accusation.
+  CONSTRAINED: 'constrained',
 });
 
 /**
@@ -191,6 +194,24 @@ export function classifyTrainingLimiter(context) {
   const progress = context?.training?.progress;
   const recovery = context?.recovery?.systemic;
 
+  // CC31 (section 20; the section 7 matrix's EXECUTION row): a shortfall
+  // EXPLAINED by the user's active restriction reclassifies as
+  // CONSTRAINED before the execution read can call it 'sessions_missed'.
+  // The condition is deliberately narrow and evidence-backed: an active
+  // episode alone never reclassifies an ordinary no-show week - at least
+  // one omission this week must actually have been excused by constraint
+  // effects (the section 18 record). An unknown execution read stays
+  // INSUFFICIENT_EVIDENCE below - unknown is not a restriction story.
+  const pc = context?.training?.physicalConstraint;
+  if (pc?.active && execution?.signal === SIGNAL.POOR
+    && Number(pc.excusedThisWeek) > 0) {
+    return {
+      limiter: LIMITER.CONSTRAINED,
+      because: 'constraint_explained_shortfall',
+      scope: Array.isArray(pc.affectedMuscles) ? pc.affectedMuscles : [],
+    };
+  }
+
   if (!execution || execution.signal === SIGNAL.UNKNOWN) {
     return { limiter: LIMITER.INSUFFICIENT_EVIDENCE, because: 'execution_unknown' };
   }
@@ -281,6 +302,17 @@ export function chooseInterventions(context, limiters = null) {
   })();
 
   const trainingAllowed = (() => {
+    // CC31 (section 20): under CONSTRAINED the intervention caps at
+    // EXPLAIN (plus exercise-substitution OFFERS for affected slots,
+    // which the owning surfaces already carry via the section 9.4/17
+    // flows). Volume adds for affected muscles are blocked at the
+    // per-muscle apply path; unaffected muscles coach normally. And
+    // NOTHING here reaches nutrition: a restricted week is never a
+    // calorie story (see conflictOutcome's neverClaim).
+    if (l.training.limiter === LIMITER.CONSTRAINED) {
+      holds.push({ domain: 'training', reason: 'constraint_active' });
+      return INTERVENTION.EXPLAIN;
+    }
     if (l.training.limiter === LIMITER.EXECUTION) {
       holds.push({ domain: 'training', reason: 'sessions_missed' });
       return INTERVENTION.EXPLAIN;
@@ -405,6 +437,14 @@ export function coordinateChanges({
     if (l.training.limiter === LIMITER.EXECUTION) {
       allowVolumeChange = false;
       holds.push({ domain: 'training', reason: 'sessions_missed' });
+    } else if (l.training.limiter === LIMITER.CONSTRAINED) {
+      // CC31 (section 20): a week whose shortfall the restriction
+      // explains proves nothing about the dose, so a body-wide ADD is
+      // withheld - with the constraint named, never adherence. A future
+      // progressing week under the same episode proposes normally, and
+      // the per-muscle apply hold protects the affected muscles there.
+      allowVolumeChange = false;
+      holds.push({ domain: 'training', reason: 'constraint_active' });
     } else if (l.training.limiter === LIMITER.RECOVERY) {
       allowVolumeChange = false;
       holds.push({ domain: 'training', reason: 'recovery_calls_for_restraint' });
@@ -471,6 +511,16 @@ export function conflictOutcome(context) {
     mustRemainUnknown,
     // NEVER claimable from this layer, in any combination. Correlation is not
     // causation and the app does not observe the mechanism.
-    neverClaim: ['nutrition_caused_training_outcome', 'training_caused_weight_outcome'],
+    // CC31 (PD-4 wiring + section 20): the capability entries join the
+    // register - an active restriction never becomes a recovery verdict
+    // about the person ("you are recovering badly") and never justifies a
+    // nutrition action. runWeeklyCoach records this block on every
+    // output, and the invariant suite holds the REAL outputs to it.
+    neverClaim: [
+      'nutrition_caused_training_outcome',
+      'training_caused_weight_outcome',
+      'capability_caused_recovery_outcome',
+      'constraint_justified_nutrition_change',
+    ],
   };
 }

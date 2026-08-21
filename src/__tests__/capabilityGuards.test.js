@@ -172,12 +172,20 @@ describe('CC-D27: the family/exercise/allow add surfaces (CC27)', () => {
     expect(fam).not.toMatch(/\[\s*'vertical_pull'/);
   });
   test('an allowance always writes as the user\'s own call (source self)', () => {
-    const write = scr.slice(scr.indexOf('const rows = ['), scr.indexOf('await createConstraints'));
+    const write = scr.slice(scr.indexOf('const rows = ['), scr.indexOf('await writeConstraintRows'));
     expect(write).toMatch(/EXERCISE_ALLOW/);
     expect(write).toMatch(/source: draft\.kind === 'allow' \? CONSTRAINT_SOURCE\.SELF : source/);
   });
   test('every kind lands through the same batched, consent-gated write', () => {
-    expect(scr.match(/await createConstraints\(/g)).toHaveLength(1);
+    // CC31 strengthened the door rather than the count: writeConstraintRows
+    // is the ONE place createConstraints is called, and both the add flow
+    // and the section 21 flare re-start go through it (the re-start with
+    // its own consent gate).
+    expect(scr.match(/createConstraints\(userId/g)).toHaveLength(1);
+    expect(scr.match(/await writeConstraintRows\(/g).length).toBeGreaterThanOrEqual(2);
+    const restart = scr.slice(scr.indexOf('const confirmRestartEpisode'), scr.indexOf('const renderAddFlow'));
+    expect(restart).toMatch(/hasCapabilityConsent\(userId\)/);
+    expect(restart).toMatch(/await writeConstraintRows\(/);
   });
 });
 

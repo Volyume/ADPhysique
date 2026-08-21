@@ -1692,6 +1692,27 @@ export default function HomeScreen({ navigation, route }) {
 
   // Compute pre-workout coaching brief (shown only when plan active + not trained today + not dismissed)
   const showCoachBrief = !!activePlan && !hasActiveWorkout && lastWorkoutDaysAgo !== 0 && !briefDismissed;
+
+  // CC31 (section BD-D8): detect active episode-role capability constraint.
+  // Best-effort: error → false. Try to use composed intentState if available,
+  // otherwise lazy-load the resolve state.
+  const [activeConstraint, setActiveConstraint] = useState(false);
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      try {
+        // eslint-disable-next-line global-require
+        const { loadCapabilityResolveState } = require('../lib/capability/resolve');
+        const state = await loadCapabilityResolveState(user.id, {});
+        const hasEpisode = state?.restrictions && Array.isArray(state.restrictions)
+          && state.restrictions.some(r => r.role === 'episode');
+        setActiveConstraint(!!hasEpisode);
+      } catch (_) {
+        setActiveConstraint(false);
+      }
+    })();
+  }, [user?.id]);
+
   const rawCoachBrief = showCoachBrief
     ? buildCoachBrief({
         fatigueHistory: fatigueSessions,
@@ -1699,6 +1720,7 @@ export default function HomeScreen({ navigation, route }) {
         deloadSuggestion,
         lastWorkoutDaysAgo,
         blockProgress,
+        activeConstraint,
       })
     : null;
   // Suppress the default "Ready when you are" filler (founder 2026-06-30: it
@@ -2165,6 +2187,10 @@ export default function HomeScreen({ navigation, route }) {
                     carries a line clamp - it wraps in full, row grows. */}
                 <Text style={[styles.coachBriefLineText, live.coachBriefLineText]}>
                   {coachBrief.headline}. {coachBrief.body}
+                  {/* CC31 (BD-D8): the pre-workout quiet line rides the
+                      same sentence flow - one mention per surface
+                      (section 33.16). */}
+                  {coachBrief.lines?.length ? ` ${coachBrief.lines.join(' ')}` : ''}
                 </Text>
                 <TouchableOpacity
                   onPress={dismissBrief}

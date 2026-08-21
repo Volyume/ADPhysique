@@ -266,10 +266,21 @@ export function isApplied(output, key) {
  *
  * @returns {Array<{ muscle, plannedSets, mev, mav, mrv }>}
  */
-export function computeVolumeApply(plannedRows, volumeDelta) {
+export function computeVolumeApply(plannedRows, volumeDelta, holdMuscles = null) {
   if (!Array.isArray(plannedRows) || !volumeDelta) return [];
   const changes = [];
+  // CC31 (section 20, per-muscle application): an INCREASE never lands on
+  // a held muscle - one under an active capability episode (re-checked by
+  // the caller at Apply time, never from the stale proposal) or one the
+  // user flagged sore at this week's check-in (PD-7: the structured
+  // answer consumed directly, at its own grain). Reductions pass through
+  // untouched: the safety direction stays open, and unaffected muscles
+  // coach exactly as before.
+  const held = holdMuscles instanceof Set
+    ? holdMuscles
+    : new Set(Array.isArray(holdMuscles) ? holdMuscles : []);
   for (const row of plannedRows) {
+    if (volumeDelta > 0 && held.has(row.muscle)) continue;
     const mev = row.mev ?? 0;
     // Hard ceiling for the push. Prefer mrv; fall back to mav, then to the
     // absolute backstop — never +Infinity, so a null-mrv row cannot uncap

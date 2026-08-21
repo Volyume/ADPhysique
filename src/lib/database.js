@@ -7734,6 +7734,23 @@ export async function getWeeklySessionStats(userId, weekStart) {
   } catch (_) { /* fall back to the historical estimate below */ }
 
   let completed = row?.completed ?? 0;
+  // CC31 (section 20): how many of this week's sessions carry at least
+  // one constraint-excused omission (full or partial) - the CONSTRAINED
+  // limiter's evidence that the restriction shaped the week. Additive
+  // field; a read failure honestly reports zero.
+  let constraintExcusedSessions = 0;
+  try {
+    const excusedRow = await d.getFirstAsync(
+      `SELECT COUNT(DISTINCT sce.workout_id) AS n
+         FROM session_constraint_effects sce
+         JOIN workouts w ON w.id = sce.workout_id
+        WHERE sce.user_id = ? AND sce.deleted_at IS NULL
+          AND w.user_id = ? AND w.started_at >= ? AND w.started_at < ?
+          AND sce.effects_json LIKE '%"omitted"%'`,
+      [userId, userId, weekStartMs, weekEnd],
+    ).catch(() => null);
+    constraintExcusedSessions = Number(excusedRow?.n ?? 0) || 0;
+  } catch (_e) { constraintExcusedSessions = 0; }
 
   // CC29 (section 18; Audit G C1/C4): denominators read the EFFECTIVE
   // prescription. An ended_early session whose every unperformed planned
@@ -7830,7 +7847,10 @@ export async function getWeeklySessionStats(userId, weekStart) {
   // RD6-9: display surfaces must not present the trailing-average
   // estimate as though a plan prescribed it; plannedIsEstimate lets
   // them choose honest phrasing. Existing numeric consumers unchanged.
-  return { completed, planned, plannedIsEstimate: plannedFromPlan == null };
+  return {
+    completed, planned, plannedIsEstimate: plannedFromPlan == null,
+    constraintExcusedSessions,
+  };
 }
 
 // True when a workout exists for the given calendar day (any state,

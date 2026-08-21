@@ -1279,7 +1279,39 @@ export default function CoachOutputScreen({ navigation, route }) {
     setApplyingKey('training');
     try {
       const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
-      const changes = computeVolumeApply(rows, delta);
+      // CC31 (section 20): the per-muscle apply re-checks eligibility at
+      // APPLY time, never from the stale proposal. An increase never
+      // lands on a muscle under an active capability episode, nor on one
+      // the user flagged sore at this week's check-in (PD-7: the
+      // structured answer, consumed at its own grain). Reductions and
+      // unaffected muscles are untouched. Best-effort: a failed read
+      // holds nothing extra (the proposal was already lawful body-wide).
+      let holdMuscles = new Set();
+      if (delta > 0) {
+        try {
+          // eslint-disable-next-line global-require
+          const { loadCapabilityResolveState, demandConflicts } = require('../lib/capability/resolve');
+          // eslint-disable-next-line global-require
+          const { getAllExercises, getLatestCheckin } = require('../lib/database');
+          const capState = await loadCapabilityResolveState(user.id, {});
+          const episodeIds = new Set((capState.restrictions ?? [])
+            .filter((r) => r.role === 'episode').map((r) => r.id));
+          if (episodeIds.size) {
+            const library = await getAllExercises();
+            for (const ex of library) {
+              if (!ex?.primaryMuscle) continue;
+              if (demandConflicts(capState, ex).some((c) => !c.unknown && episodeIds.has(c.constraintId))) {
+                holdMuscles.add(ex.primaryMuscle);
+              }
+            }
+          }
+          const checkin = await getLatestCheckin(user.id).catch(() => null);
+          for (const m of String(checkin?.soreMuscles ?? '').split(',')) {
+            if (m.trim()) holdMuscles.add(m.trim());
+          }
+        } catch (_e) { holdMuscles = new Set(); }
+      }
+      const changes = computeVolumeApply(rows, delta, holdMuscles);
       for (const c of changes) {
         await upsertPlannedMuscleVolume({
           mesocycleWeekId: nextTrainingWeekId,
@@ -1831,8 +1863,41 @@ export default function CoachOutputScreen({ navigation, route }) {
       // rapid-loss, safety hold, SCOFF, calm), so the recorded, synced and
       // displayed confidence are one value.
       const photoCorroborationBasis = buildPhotoCorroborationBasis(scanCoachSummary, { nowMs: Date.now() });
+      // CC31 (section 20): the physicalConstraint fact, assembled from the
+      // capability lane's own reads. Best-effort: any failure passes null
+      // and the engine behaves exactly as before the fact existed.
+      let physicalConstraint = null;
+      try {
+        // eslint-disable-next-line global-require
+        const { loadCapabilityResolveState, demandConflicts } = require('../lib/capability/resolve');
+        const capState = await loadCapabilityResolveState(user.id, {});
+        const episodeIds = new Set((capState.restrictions ?? [])
+          .filter((r) => r.role === 'episode').map((r) => r.id));
+        if (episodeIds.size) {
+          // eslint-disable-next-line global-require
+          const { getAllExercises } = require('../lib/database');
+          // eslint-disable-next-line global-require
+          const { getCapabilityWeekNote } = require('../lib/capability/weekNote');
+          const library = await getAllExercises();
+          const affected = new Set();
+          for (const ex of library) {
+            if (!ex?.primaryMuscle) continue;
+            if (demandConflicts(capState, ex).some((c) => !c.unknown && episodeIds.has(c.constraintId))) {
+              affected.add(ex.primaryMuscle);
+            }
+          }
+          const note = await getCapabilityWeekNote(user.id, weekStart).catch(() => null);
+          physicalConstraint = {
+            active: true,
+            affectedMuscles: [...affected],
+            excusedThisWeek: sessionStats.constraintExcusedSessions ?? 0,
+            weeklyAnswer: note?.answer ?? null,
+          };
+        }
+      } catch (_e) { physicalConstraint = null; }
       const result = runWeeklyCoach({
         checkin: engineCheckin,
+        physicalConstraint,
         priorInterventions,
         priorDeclines,
         manualVolumeMuscles,

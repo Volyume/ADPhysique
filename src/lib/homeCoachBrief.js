@@ -3,18 +3,30 @@
 
 /**
  * Derive a 1-3 sentence coaching brief from available training data.
- * Returns { headline, body, type } where type is 'go' | 'caution' | 'recover'.
+ * Returns { headline, body, type, lines: [...] } where type is 'go' | 'caution' | 'recover'
+ * and lines is an array of brief strings (e.g. for testing).
  */
 // blockProgress is still ACCEPTED (callers pass it) but unused since Rule 4's
 // removal -- kept in the signature so no call site changes, prefixed per lint.
-export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutDaysAgo, blockProgress: _blockProgress }) {
+// CC31 (section BD-D8): when activeConstraint is true, appends a quiet line
+// to the brief about training working around a temporary change.
+export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutDaysAgo, blockProgress: _blockProgress, activeConstraint = false }) {
+  // Helper to apply activeConstraint quiet line to any result
+  const applyConstraintLine = (result) => {
+    if (!activeConstraint) return result;
+    return {
+      ...result,
+      lines: [...(result.lines ?? []), 'Training works around your temporary change.'],
+    };
+  };
+
   // Rule 1, deload suggested
   if (deloadSuggestion) {
-    return {
+    return applyConstraintLine({
       headline: 'Recovery week',
       body: 'Your body is signalling it needs a lighter week. Keep the movement, drop the weight. This is how you come back stronger.',
       type: 'recover',
-    };
+    });
   }
 
   // Rule 2, high fatigue (avg of last 2 sessions ≥ 3.5)
@@ -30,21 +42,21 @@ export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutD
     const recent = recentRated.slice(0, 2);
     const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
     if (avg >= 3.5) {
-      return {
+      return applyConstraintLine({
         headline: 'Fatigue building',
         body: 'Fatigue is building. Consider reducing weight by 10% today and focusing on quality reps.',
         type: 'caution',
-      };
+      });
     }
   }
 
   // Rule 3, long gap since last session
   if (lastWorkoutDaysAgo != null && lastWorkoutDaysAgo >= 5) {
-    return {
+    return applyConstraintLine({
       headline: 'Good to see you back',
       body: "It's been a while since your last session. Ease in. Don't try to catch up in one workout.",
       type: 'go',
-    };
+    });
   }
 
   // Rule 4 REMOVED (founder ruling 2026-08-06): "Muscle groups need
@@ -64,18 +76,18 @@ export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutD
     const recent = fatigueHistory.slice(0, 2);
     const avg = recent.reduce((s, r) => s + (r.fatigueLevel ?? r.fatigue_level ?? 0), 0) / recent.length;
     if (avg <= 2) {
-      return {
+      return applyConstraintLine({
         headline: 'Looking good',
         body: 'Training is on track. Push the quality today.',
         type: 'go',
-      };
+      });
     }
   }
 
   // Rule 6, default
-  return {
+  return applyConstraintLine({
     headline: 'Ready when you are',
     body: 'Ready when you are.',
     type: 'go',
-  };
+  });
 }

@@ -388,6 +388,23 @@ export function buildCoachContext({
       plateauedExerciseCount: Number(training.plateauedExerciseCount) || 0,
       blockWeekIndex: num(training.blockWeekIndex),
       blockAccumWeeks: num(training.blockAccumWeeks),
+      // CC31 (section 20): the physicalConstraint FACT - scope and
+      // provenance, no judgement. Supplied by the caller from the
+      // capability lane's own reads: whether an episode is active, which
+      // muscles its definite conflicts cover, how many of this week's
+      // omissions the section 18 effects record excused, and the week's
+      // conditional check-in answer (fine / in_the_way / not_relevant,
+      // or null). Absent input = no fact, and every consumer treats
+      // that exactly as "no active restriction".
+      physicalConstraint: training.physicalConstraint
+        ? {
+          active: !!training.physicalConstraint.active,
+          affectedMuscles: Array.isArray(training.physicalConstraint.affectedMuscles)
+            ? training.physicalConstraint.affectedMuscles : [],
+          excusedThisWeek: Number(training.physicalConstraint.excusedThisWeek) || 0,
+          weeklyAnswer: training.physicalConstraint.weeklyAnswer ?? null,
+        }
+        : null,
     },
     recovery: {
       systemic: systemicRecoveryFact({ ...recovery, nowMs }),

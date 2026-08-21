@@ -173,6 +173,12 @@ export default function HowYouTrainScreen() {
     }
   };
 
+  // CC-D27: the ONE write door for capability rows - every path (the add
+  // flow AND the section 21 flare re-start) lands through this single
+  // batched call, so the consent gate and the transaction law cannot be
+  // bypassed by a new surface.
+  const writeConstraintRows = async (rows, nowMs) => createConstraints(userId, rows, { nowMs });
+
   const writeDraft = async () => {
     const now = Date.now();
     const isEpisode = draft.role === CONSTRAINT_ROLE.EPISODE;
@@ -195,7 +201,7 @@ export default function HowYouTrainScreen() {
         source: draft.kind === 'allow' ? CONSTRAINT_SOURCE.SELF : source,
       })),
     ];
-    const createdIds = await createConstraints(userId, rows, { nowMs: now });
+    const createdIds = await writeConstraintRows(rows, now);
     setAdding(null); setDraft(null);
     toast.show(draft.kind === 'allow'
       ? 'Saved. Volyume will keep offering this exercise.'
@@ -232,7 +238,10 @@ export default function HowYouTrainScreen() {
   const proposeEffectiveDiff = async (createdIds) => {
     try {
       // eslint-disable-next-line global-require
-      const { computePlanEffectiveSummary, setConstraintEffectiveChoice } = require('../lib/sessionEffective');
+      // CC32 (section 29): recordEffectiveChoice = the same write plus its
+      // aggregate counter, emitted from the neutral seam so this guarded
+      // surface stays telemetry-free.
+      const { computePlanEffectiveSummary, recordEffectiveChoice } = require('../lib/sessionEffective');
       const summary = await computePlanEffectiveSummary(userId, createdIds);
       if (!summary.affected) return;
       const parts = [];
@@ -248,7 +257,7 @@ export default function HowYouTrainScreen() {
             onPress: async () => {
               for (const id of createdIds) {
                 // eslint-disable-next-line no-await-in-loop
-                await setConstraintEffectiveChoice(userId, id, 'declined').catch(() => {});
+                await recordEffectiveChoice(userId, id, 'declined').catch(() => {});
               }
               toast.show('Kept as recorded. Affected exercises will show a quiet notice with a swap shortcut.');
             },
@@ -258,7 +267,7 @@ export default function HowYouTrainScreen() {
             onPress: async () => {
               for (const id of createdIds) {
                 // eslint-disable-next-line no-await-in-loop
-                await setConstraintEffectiveChoice(userId, id, 'applied').catch(() => {});
+                await recordEffectiveChoice(userId, id, 'applied').catch(() => {});
               }
               toast.show('Applied. Sessions will work around it until it ends.');
             },
@@ -271,7 +280,32 @@ export default function HowYouTrainScreen() {
   const confirmEndEpisode = (ep) => {
     appAlert('Has this ended?', 'Volyume will go back to planning the affected training normally. Nothing from this period is lost.', [
       { text: 'Keep it active', style: 'cancel' },
-      { text: 'It has ended', onPress: async () => { await endEpisode(userId, ep.groupId); refresh(); } },
+      {
+        text: 'It has ended',
+        onPress: async () => {
+          await endEpisode(userId, ep.groupId);
+          // CC31 (section 23): apply reintroduction ramp and show toast if muscles ramped.
+          try {
+            // eslint-disable-next-line global-require
+            const { applyReintroductionRamp, reintroductionCopy } = require('../lib/capability/reintroduction');
+            const { ramped } = await applyReintroductionRamp(userId, { endedAtMs: Date.now() });
+            if (ramped.length > 0) {
+              const firstRamped = ramped[0];
+              // Try to resolve muscle display name, fall back to raw label
+              let muscleLabel = firstRamped.muscle;
+              try {
+                // eslint-disable-next-line global-require
+                const { muscleDisplayName } = require('../lib/algorithms');
+                muscleLabel = muscleDisplayName(firstRamped.muscle) ?? firstRamped.muscle;
+              } catch (_) {}
+              toast.show(reintroductionCopy(muscleLabel));
+            }
+          } catch (_) {
+            // Best-effort; never blocks the end flow
+          }
+          refresh();
+        },
+      },
     ]);
   };
 
@@ -337,6 +371,53 @@ export default function HowYouTrainScreen() {
     appAlert('Remove this from your setup?', `Volyume will stop building around "${ruleLabel(row)}".`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', onPress: async () => { await endConstraint(userId, row.id); refresh(); } },
+    ]);
+  };
+
+  // CC31 (section 20, history restart): add a handler for "Start this again"
+  // on ended episode-role rows.
+  const confirmRestartEpisode = (row) => {
+    appAlert('Start this restriction again from today?', 'You can end it any time.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Start again',
+        onPress: async () => {
+          try {
+            // Consent gates every write path (CC-D27), the re-start
+            // included: a withdrawn consent must not be bypassed by an
+            // old episode's shortcut.
+            if (!(await hasCapabilityConsent(userId))) {
+              toast.show('Turn this feature back on first, under the consent section below.');
+              return;
+            }
+            // Section 21: the re-start recreates the WHOLE saved shape -
+            // every rule the ended episode's group carried - under one
+            // fresh group, one confirm, no re-entry of every card.
+            const now = Date.now();
+            const newGroupId = uid();
+            const groupRows = row.episodeGroupId
+              ? state.history.filter((h) => h.episodeGroupId === row.episodeGroupId
+                && h.role === CONSTRAINT_ROLE.EPISODE)
+              : [row];
+            const rows = (groupRows.length ? groupRows : [row]).map((h) => ({
+              role: h.role,
+              ruleKind: h.ruleKind,
+              ruleValue: h.ruleValue,
+              laterality: h.laterality ?? null,
+              episodeGroupId: newGroupId,
+              startsAt: now,
+              endsAt: null, // stays open until the user ends it
+              source: h.source,
+            }));
+            await writeConstraintRows(rows, now);
+            toast.show('Started again. You can end it any time.');
+            refresh();
+          } catch (e) {
+            logError('HowYouTrain.restartEpisode', e, {});
+            toast.show('Could not start this again. Try once more.', { variant: 'error' });
+          }
+        },
+      },
     ]);
   };
 
@@ -585,10 +666,25 @@ export default function HowYouTrainScreen() {
       {state.history.length > 0 ? (
         <>
           <SectionHeader title="Past" />
-          {state.history.slice(0, 12).map(row => (
-            <SettingRow key={row.id} icon="checkmark" label={ruleLabel(row)}
-              sub={row.endedReason === 'promoted' ? 'Became part of your setup' : 'Ended'} showArrow={false} />
-          ))}
+          {state.history.slice(0, 12).map(row => {
+            // A PROMOTED episode's rules live on as baseline now (section
+            // 24) - restarting it would duplicate the user's own setup as
+            // an episode, so only genuinely ended ones offer the section
+            // 21 flare re-start.
+            const isEndedEpisode = row.role === CONSTRAINT_ROLE.EPISODE
+              && row.endedReason !== 'promoted';
+            return (
+              <View key={row.id}>
+                <SettingRow icon="checkmark" label={ruleLabel(row)}
+                  sub={row.endedReason === 'promoted' ? 'Became part of your setup' : 'Ended'} showArrow={false} />
+                {isEndedEpisode ? (
+                  <View style={styles.episodeActions}>
+                    <Choice label="Start this again" onPress={() => confirmRestartEpisode(row)} t={t} compact />
+                  </View>
+                ) : null}
+              </View>
+            );
+          })}
         </>
       ) : null}
 

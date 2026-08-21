@@ -2621,4 +2621,38 @@ BOUNDARIES: n/a — scope-boundary negative finding, not a rule.
 SOURCE: ARCH — src/lib/readinessSummary.js (module header, per graph
       trace).
 DEFECT: none — explicit scope boundary, not a defect.
+
+---
+
+## AMENDMENT — CC31 (capability constraints, 2026-08-21)
+
+**New rule: T-WEEKLY-10 (CONSTRAINED limiter)**
+
+RULE: T-WEEKLY-10
+LOCK: When classifyTrainingLimiter receives context with
+      training.physicalConstraint { active:true, affectedMuscles:[], excusedThisWeek:int }
+      AND execution.signal==='poor' AND excusedThisWeek > 0, MUST classify
+      the limiter as CONSTRAINED (not EXECUTION); chooseInterventions MUST
+      cap training intervention at EXPLAIN; coordinateChanges MUST withhold
+      volumeChange (allowVolumeChange=false, holds=[{domain:'training',
+      reason:'constraint_active'}]); computeVolumeApply MUST hold affected
+      muscles on volume INCREASES only (decreases pass); conflictOutcome
+      neverClaim entries MUST include 'capability_caused_recovery_outcome'
+      and 'constraint_justified_nutrition_change'.
+MUST_NOT: CONSTRAINED must not be classified without excusedThisWeek > 0
+      (active alone does not reclassify); must not reach nutrition
+      (a physical restriction is never a calorie story); must not suppress
+      volume reductions (safety direction stays open).
+BOUNDARIES: excusedThisWeek > 0 (at least one omission must be recorded
+      as constraint-caused); no nutrient path; volumeDelta < 0 always
+      passes through.
+SOURCE: LAW — Campaign 31 brief (capability constraints, section 20:
+      CONSTRAINED classification and intervention caps); ARCH —
+      coachPrecedence.js classifyTrainingLimiter:206-213,
+      chooseInterventions:312-315, coordinateChanges:440-447;
+      coachApply.js computeVolumeApply:269-310; conflictOutcome:519-525.
+DEFECT: none.
+
+**Rule count amended:** 113 → 114 rules documented and locked
+(amendment dated 2026-08-21).
 ```
