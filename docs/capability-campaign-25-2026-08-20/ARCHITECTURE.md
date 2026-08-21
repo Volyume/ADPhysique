@@ -1145,6 +1145,9 @@ Scope for THIS workstream (the app-operation half of Amendment §6):
   implementation campaign (ROADMAP) — this workstream fixes the
   feature-path barriers, not the whole app (brief's boundary).
 - EAA/EN 301 549 applicability = legal review (R4/R1 L15).
+  [SUPERSEDED 2026-08-21, GC-D13: voluntary design against current
+  accessibility standards is product law; legal applicability is left
+  undetermined and nothing turns on it.]
 - Cognitive: onboarding cards follow COGA basics (one idea per card,
   no memory burden, plain language, error tolerance).
 

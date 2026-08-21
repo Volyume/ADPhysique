@@ -549,7 +549,9 @@ review is pending or required.
   client emission removed, events de-catalogued, migrate_150 retired
   unapplied and excluded from the production run set); retention
   justified by the learning shield's history need, bounded by the
-  lane's life; EAA treated as applicable with an accessibility
+  lane's life; accessibility ruled as VOLUNTARY design against current
+  standards and platform guidance (no categorical EAA applicability
+  claim - corrected wording per GC-D13), with an honest accessibility
   statement as ordinary product work; future telemetry, if ever,
   aggregate-only and identity-free by design.
   (b) CC-F6 clinical review CLOSED: CLIN-1..9 ruled internally
@@ -585,7 +587,9 @@ review is pending or required.
   intended-purpose boundary (identity-blind engines cannot drift into
   condition-specific behaviour). The former counsel-Q9 reference is
   void: the directory's statelessness was ruled lawful internally
-  (browse-only surfaces that store nothing process nothing). A future
+  (lookup selections are processed TRANSIENTLY on-device for the
+  immediate interaction and retained nowhere - corrected terminology
+  per GC-D13; transient processing is not persistent storage). A future
   provenance breadcrumb is OUT OF CURRENT PRODUCT SCOPE - it would
   store condition identity for navigation-only value; if ever
   designed, it must satisfy published minimisation guidance on its own
@@ -599,3 +603,49 @@ review is pending or required.
   (h) The readiness matrix's EXPERT and USERVAL columns became TRUTH
   FIELDS (never gates); MARKETING READY converts on internal +
   device-side gates plus the wording laws.
+- GC-D13 GOVERNANCE WORDING CORRECTION (founder order 2026-08-21, same
+  day; no behaviour change, no scope change). Four rulings re-worded to
+  correct privacy/legal terminology; the outside-party law (GC-D12)
+  stays absolute and GC-D10 statelessness stays as built.
+  (1) Q9 PROCESSING TERMINOLOGY: "stores nothing so processes nothing"
+  was too broad. Correct form: lookup selections ARE processed -
+  transiently, on-device, solely to display education, select
+  functional questions and help the user configure their own rules;
+  never persisted, synced, transmitted, sent to analytics, used by the
+  coach as a diagnosis, used by eligibility directly, used by
+  learning, or retained after the interaction. Only explicitly
+  confirmed functional rules persist. Transient processing is not
+  persistent storage.
+  (2) ARTICLE 6 + ARTICLE 9: no absolute "consent is sufficient"
+  conclusion is recorded. The record now states the design target:
+  designed against published ICO explicit-consent requirements, with
+  BOTH layers named - Article 6(1)(a) consent as the lawful basis
+  (documentation gap closed: earlier records carried R1's
+  6(1)(a)-or-(b) pairing without pinning one; 6(1)(b) contract
+  necessity could not honestly be claimed for an optional lane) and
+  Article 9(2)(a) explicit consent as the condition. Criteria mapped
+  to mechanisms in the DPIA record: specific, informed, affirmative,
+  explicit, freely given, clear about the special-category data,
+  withdrawable, refusal never blocks unrelated use. Processor wording
+  stays corrected (no bare "never shared").
+  (3) ACCESSIBILITY: the categorical "EAA treated as applicable" claim
+  is withdrawn. Product law instead: Volyume voluntarily designs
+  against relevant current accessibility standards and official
+  platform guidance because accessibility is a product-quality
+  requirement; legal applicability may depend on jurisdiction, service
+  classification and exemptions and is left undetermined; the work is
+  required by product law regardless. Any accessibility statement is
+  honest documentation (tested vs device-pending, limitations, report
+  route) and never claims certification, audit, third-party review or
+  full WCAG/EAA compliance unless mechanically justified. No
+  accessibility implementation removed or weakened.
+  (4) MEDICAL-DEVICE WORDING: "sits outside the medical-device
+  boundary" replaced with "deliberately designed to remain outside the
+  medical-device intended-purpose boundary described in current
+  published MHRA guidance", with the WHY recorded (intended purpose;
+  the never-do list; what directory entries may and may never do; the
+  eligibility formula: user-confirmed function + user-reported
+  restriction + user-reported clinician restriction + exercise demand
+  = deterministic product behaviour).
+  Consistency sweep completed over the live governance docs; banked
+  founder orders and research files stay verbatim as history.

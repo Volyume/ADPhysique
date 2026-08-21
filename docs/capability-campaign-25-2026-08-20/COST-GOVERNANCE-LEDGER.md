@@ -86,3 +86,8 @@ Agents used: ZERO (direct tools only, per the order). Bounded runtime
 change: capability telemetry retirement + one consent-copy correction;
 targeted suites during (telemetry 4 suites 169 tests; changed-module
 filter 116 tests), ONE full suite at the close.
+
+## GOVERNANCE WORDING CORRECTION (2026-08-21)
+
+Agents: ZERO. Docs + two code comments only (no runtime change); lint +
+targeted guard suites per the order; full suite deliberately NOT rerun.

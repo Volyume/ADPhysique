@@ -25,6 +25,9 @@ so existing references resolve.
   `session_constraint_effects`; migrations 145-149 and 151 written, NOT
   yet in production; 150 RETIRED unapplied under ruling Q4). Weekly
   conditional check-in answer is DEVICE-LOCAL only (never synced).
+- Legal layers: Article 6(1)(a) consent as the lawful basis with
+  Article 9(2)(a) explicit consent as the special-category condition,
+  both given by the same granular consent moment (ruling Q2).
 - Consent: granular, separate from the app's general health-consent
   gate: `record_capability_consent` RPC + local flag; fail-closed reads;
   withdrawal tombstones the lane everywhere (erasure-first design).
@@ -42,15 +45,33 @@ Q1 ARTICLE 9 CLASSIFICATION - RULED: the demand-rule data IS treated as
    rules support exactly that inference. This is the conservative end
    of the published position and it costs the product nothing.
 
-Q2 EXPLICIT CONSENT - RULED SUFFICIENT after one copy correction. The
-   consent moment meets the ICO's explicit-consent criteria: specific
-   (names the exact data), informed (purpose, storage, deletion),
-   affirmative and separate (its own agree step, decline keeps the app
-   usable). CORRECTED the same day: "never shared" was technically
-   loose because an EU processor stores the synced copy; the card now
-   reads "never shared with anyone beyond the secure EU service that
-   stores your Volyume data" (HowYouTrainScreen consent card). The
-   privacy policy remains the full processor disclosure.
+Q2 CONSENT DESIGN - RECORDED AS DESIGNED AGAINST the current published
+   ICO explicit-consent requirements (no absolute legal conclusion is
+   recorded; the design target and its mechanisms are). BOTH required
+   layers are identified (ICO: a lawful basis AND a special-category
+   condition are always needed - R1 #12):
+   ARTICLE 6 LAWFUL BASIS: Article 6(1)(a) consent. The earlier records
+   noted the 6(1)(a)-or-6(1)(b) pairing without pinning one (R1 #22);
+   that was a documentation gap, closed here. 6(1)(a) is the defensible
+   basis the actual product supports: the lane is genuinely optional,
+   declining leaves every unrelated feature working, and contract
+   necessity could not honestly be claimed for a feature the service
+   runs fine without.
+   ARTICLE 9 CONDITION: Article 9(2)(a) explicit consent, given by the
+   same consent moment.
+   The consent UX is designed to satisfy the published requirements:
+   SPECIFIC and CLEAR ABOUT THE DATA (the card names exactly what is
+   stored and calls it health information); INFORMED (purpose, sync,
+   deletion and export stated); AFFIRMATIVE and EXPLICIT (a dedicated
+   agree step in its own words, never pre-ticked, never bundled);
+   FREELY GIVEN (decline is a first-class path and unrelated app use is
+   never blocked - CAP-19); WITHDRAWABLE (withdrawal tombstones the
+   lane everywhere, erasure-first). Processor wording CORRECTED the
+   same day: the card no longer says a bare "never shared" - it reads
+   "never shared with anyone beyond the secure EU service that stores
+   your Volyume data" (HowYouTrainScreen consent card), matching the
+   actual implementation (Supabase EU-Dublin as processor). The privacy
+   policy remains the fuller disclosure surface.
 
 Q3 LEARNING-EXCLUSION PURPOSE - RULED IN PURPOSE: excluding
    capability-affected weeks from on-device learning is processing FOR
@@ -81,14 +102,23 @@ Q6 CLINICIAN-REPORTED LABEL - RULED KEPT: the label is the user's own
    override, never looser). Honest self-report labelling with no
    implied endorsement.
 
-Q7 EAA / EN 301 549 - RULED: treat the European Accessibility Act as
-   applicable to the EU offering (the app sells subscriptions; the
-   conservative reading of the e-commerce scope applies from June
-   2025). Product consequence: an accessibility statement will be
-   drafted and published with the store listing as ordinary product
-   work, and platform accessibility guidance continues to govern the
-   build (R4 basis). No compliance is CLAIMED until the device walk
-   passes; the statement will describe the honest state.
+Q7 ACCESSIBILITY STANDARDS - PRODUCT LAW, no categorical legal claim:
+   Volyume VOLUNTARILY designs against relevant current accessibility
+   standards and official platform guidance (the WCAG 2.2 items and
+   Android/Apple guidance banked in R4) because accessibility is a
+   product-quality requirement of this product. No blanket assertion
+   is made that the European Accessibility Act legally applies to
+   Volyume: actual applicability may depend on jurisdiction, service
+   classification and applicable exemptions, and is deliberately left
+   undetermined - the accessibility work is required by Volyume
+   product law REGARDLESS, so nothing turns on the legal question.
+   An accessibility statement may be published as honest product
+   documentation: what has actually been tested, what remains
+   device-pending, known limitations, and how users report
+   accessibility issues. It must never claim certification, a legal
+   compliance audit, third-party review, or full WCAG/EAA compliance
+   unless mechanically justified. Nothing in this ruling removes or
+   weakens any accessibility implementation.
 
 Q8 FUTURE DASHBOARDS - STANDING LAW: no telemetry dashboard over
    capability data exists or is planned; with Q4's retirement there is
@@ -97,17 +127,47 @@ Q8 FUTURE DASHBOARDS - STANDING LAW: no telemetry dashboard over
    suppression (published anonymisation practice: small groups are
    identifying) and no per-user drill-down.
 
-Q9 DIRECTORY SURFACE (LEG-30) - RULED, three parts: (a) browsing and
-   selecting stores NOTHING (GC-D1 statelessness, guard-tested), so no
-   new personal data is processed and the Article 9 posture is
-   unchanged; (b) the surface stays outside the medical-device
-   boundary because its intended purpose is general fitness education
-   and setup guidance - no diagnosis, treatment, monitoring or
-   prediction function - with the vocabulary mechanically enforced
-   (MHRA "Medical device stand-alone software including apps" guidance:
-   intended purpose decides; R2 research basis); (c) no additional
-   privacy notice is owed for a browse-only surface that collects
-   nothing.
+Q9 DIRECTORY SURFACE (LEG-30) - RULED, three parts, in correct privacy
+   terminology (TRANSIENT PROCESSING is not PERSISTENT STORAGE):
+   (a) PROCESSING: a named condition/injury lookup selection IS
+   processed - transiently, on-device, for the immediate purpose of
+   displaying the relevant educational information, selecting the
+   relevant functional questions and helping the user configure their
+   own capability rules. It is NOT persisted as profile state, NOT
+   synced, NOT transmitted to Supabase, NOT sent to analytics, NOT
+   used by the coach as a diagnosis, NOT used by eligibility directly,
+   NOT used by long-term learning, and NOT retained after the
+   immediate interaction (GC-D1 statelessness, guard-tested). Only the
+   functional capability/restriction rules the user explicitly
+   confirms are persisted, under the Q2 consent. The Article 9 posture
+   is unchanged by the surface: the transient on-device processing
+   creates no stored special-category record and serves only the
+   user's own immediate request.
+   (b) MEDICAL-DEVICE BOUNDARY: Volyume is DELIBERATELY DESIGNED TO
+   REMAIN OUTSIDE the medical-device intended-purpose boundary
+   described in current published MHRA guidance ("Medical device
+   stand-alone software including apps"; R2 research basis). WHY: the
+   intended purpose is general strength-training planning, workout
+   logging, general fitness coaching, capability-aware exercise and
+   programme selection, accessibility, and programming around
+   USER-DECLARED functional capability and restrictions. Volyume does
+   not diagnose, infer a diagnosis, treat disease or injury,
+   rehabilitate, medically clear, predict tissue healing, prescribe
+   injury-specific therapeutic protocols, provide return-to-sport
+   clearance, claim an exercise is medically safe for a diagnosis,
+   claim to compensate medically for a disability, or make
+   condition-specific treatment or efficacy claims - and the wording
+   laws enforce that vocabulary mechanically. Directory entries may
+   provide general evidence-informed education, explain variability,
+   suggest relevant functional questions and link the user into
+   capability-led configuration; they can never themselves cause an
+   exercise restriction. Eligibility remains: user-confirmed function
+   + user-reported restriction + user-reported clinician restriction
+   + exercise demand = deterministic product behaviour.
+   (c) NOTICE: no additional privacy notice is owed for the surface
+   because the transient on-device processing retains nothing; the
+   consent moment and privacy policy cover what IS stored (the
+   confirmed rules).
 
 ## 3. Risk register (DPIA part 2, maintained)
 

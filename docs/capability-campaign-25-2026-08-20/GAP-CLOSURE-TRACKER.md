@@ -126,3 +126,22 @@ a second store, or a per-condition branch anywhere in engine code.
   81.5s - ten fewer tests than the prior run: the retired telemetry
   events took their parameterised catalogue cases with them); merged
   to main.
+
+## GOVERNANCE WORDING CORRECTION (2026-08-21, founder order; GC-D13)
+
+- [x] Q9 processing terminology corrected everywhere live (transient
+  on-device processing, retained nowhere; never persisted/synced/
+  analytics/coach-diagnosis/eligibility-direct/learning).
+- [x] Article 6(1)(a) lawful basis pinned (documentation gap closed) +
+  Article 9(2)(a) condition; consent recorded as DESIGNED AGAINST
+  published ICO requirements, criteria mapped to mechanisms; no
+  absolute sufficiency conclusion.
+- [x] EAA categorical applicability claim withdrawn; voluntary-standards
+  product law recorded; honest accessibility-statement rules set.
+- [x] MHRA wording corrected to designed-to-remain-outside with the WHY
+  (intended purpose, never-do list, eligibility formula).
+- [x] Sweep clean (only GC-D13's own quotations of the old phrases
+  remain); historical ARCHITECTURE/evidence-map pointers annotated
+  as superseded; code comments corrected (schema.js, r2Wording.js).
+- [x] No runtime change; lint + targeted guard suites only (per order);
+  merged to main.

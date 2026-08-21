@@ -206,6 +206,8 @@ record. All facts verified against the 149d140 code tree._
   iOS lacks live regions (per-platform timer announcements); RN FlatList/
   Modal focus issues documented; EAA scope for the IAP flow = legal
   review. Repo has 1,564 accessibilityLabel sites (real base, unaudited
+  [SUPERSEDED 2026-08-21, GC-D13: voluntary-standards product law;
+  applicability left undetermined.]
   per-screen); rest timer has sound + haptics + visual channels.
 
 ## Gap classification outcome (§9)

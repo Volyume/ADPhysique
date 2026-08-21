@@ -25,7 +25,8 @@ export const R2_FUNCTION_TERMS = [
 // banned in exercise/plan/library/marketing text; PERMITTED inside the
 // user-initiated condition/injury directory, whose validator applies
 // R2_FUNCTION_TERMS only (GC-D4; LEG-30 resolved internally 2026-08-21:
-// a stateless browse-only surface processes no new data).
+// lookup selections are processed transiently on-device for the
+// immediate interaction and retained nowhere - GC-D13 terminology).
 export const R2_CONDITION_NAME_TERMS = [
   /\bspinal cord\b/i, /\bmultiple sclerosis\b/i, /\barthritis\b/i,
   /\bfrozen shoulder\b/i, /\bsciatica\b/i, /\bhypermobil\w*\b/i,

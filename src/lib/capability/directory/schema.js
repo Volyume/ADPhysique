@@ -13,9 +13,11 @@
  *
  * Wording law (GC-D4): condition names are permitted here (the directory
  * is the sanctioned, user-initiated surface for them; LEG-30 resolved
- * internally 2026-08-21 - browse-only, stores nothing, non-medical
- * intended purpose); function/benefit/treatment vocabulary is banned
- * via R2_FUNCTION_TERMS.
+ * internally 2026-08-21 - lookup selections are processed transiently
+ * on-device for the immediate interaction, retained nowhere, and the
+ * surface is deliberately designed to remain outside the MHRA
+ * intended-purpose boundary); function/benefit/treatment vocabulary is
+ * banned via R2_FUNCTION_TERMS.
  * Copy is British English; no em dash in any user-facing string.
  */
 
