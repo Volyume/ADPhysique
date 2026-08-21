@@ -6866,6 +6866,24 @@ export async function getAdaptiveLandmarkHistory(userId) {
     const PUMP_MAP    = [1, 2, 4]; // overall_pump 1→1, 2→2, 3→4
     const SORENESS_MAP = [2, 3, 4]; // soreness_24h_before 1→2, 2→3, 3→4
 
+    // PD-1 (bundle 2 prelude): computeAdaptiveLandmarks treats
+    // `weeklyVolume` as WEEKLY sets for the muscle - bestVolume becomes
+    // the adapted MAV, a weekly landmark clamped between weekly mev/mrv.
+    // This function used to pass the per-SESSION set count, so a user
+    // training a muscle twice a week at 6 sets each taught a 6-set
+    // "weekly" ceiling. Each session entry now carries its calendar
+    // week's TOTAL for that muscle (UK-local weeks, Monday start), while
+    // the entry grain itself stays per-session - pump/soreness/trend are
+    // session facts and dataPoints/trend behaviour is unchanged. Known
+    // honest limits: the current in-progress week and the oldest week
+    // clipped by the 200-row window carry their so-far totals.
+    const weekTotals = {};
+    for (const row of rows) {
+      if (!row.muscle) continue;
+      const wk = `${row.muscle}|${localWeekStartMs(row.started_at)}`;
+      weekTotals[wk] = (weekTotals[wk] || 0) + (row.set_count || 0);
+    }
+
     // C6-P2 (D97, Campaign 6 maturity audit): computeAdaptiveLandmarks
     // treats its input as CHRONOLOGICAL and takes entries.slice(-8) as
     // "the last 8 data points". This query is ORDER BY started_at DESC,
@@ -6880,7 +6898,7 @@ export async function getAdaptiveLandmarkHistory(userId) {
       pumpScore:       PUMP_MAP[(row.overall_pump || 2) - 1]     ?? 3,
       sorenessScore:   SORENESS_MAP[(row.soreness_24h_before || 1) - 1] ?? 2,
       jointDiscomfort: row.joint_discomfort || 0,
-      weeklyVolume:    row.set_count,
+      weeklyVolume:    weekTotals[`${row.muscle}|${localWeekStartMs(row.started_at)}`] ?? row.set_count,
       performanceTrend: trendKey[`${row.workout_id}_${row.muscle}`] ?? 0,
       prFrequency:     0,
       missedReps:      Math.round((row.avg_missed || 0) * 10) / 10,
