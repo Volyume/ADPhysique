@@ -769,7 +769,7 @@ queue paused here for the founder review per D55.
 
 ## 1. IN FLIGHT
 
-### CAPABILITY CAMPAIGN 25 (CC25) — capability-aware, disability-inclusive, restriction & injury-aware training intelligence. ARCHITECTURE COMPLETE + CC26 FOUNDATIONS + CC27–CC29 EXECUTION BUNDLE BUILT, RED-TEAMED, GATED AND MERGED (2026-08-20). CC30 (learning eligibility / contamination shield) is NEXT UP from the roadmap, on founder go.
+### CAPABILITY CAMPAIGN 25 (CC25) — capability-aware, disability-inclusive, restriction & injury-aware training intelligence. WORKSTREAM COMPLETE AND ON MAIN (2026-08-21): architecture + CC26 foundations + bundle 1 (CC27–29) + bundle 2 (CC30–32) + the founder's final GAP-CLOSURE order, all gated and merged. Remaining items are founder-side/external only (FOUNDER-ACTION-PACK.md).
 
 **Founder order 2026-08-20** (master brief in chat; architecture campaign
 first, implementation campaigns CC26+ only after its completion gate).
@@ -841,9 +841,34 @@ BREAKs, all fixed and pinned. Full-suite gate green; merged to main.
 Full record: `CC27-29-BUNDLE-TRACKER.md` + STATUS-LEDGER.md in the
 campaign folder; physical device walk banked in
 PHYSICAL-VALIDATION-BACKLOG.md (30 steps, CC26-CC29).
-**RECOVERY/RESUME:** next session starts CC30 from
-ROADMAP-CC26-PLUS.md (on founder go); everything needed is in the
-campaign folder.
+**CC30–CC32 (2026-08-20/21, execution bundle 2, founder bundle order):**
+learning eligibility + contamination shield (CC30), coach/check-in/
+return path with the CONSTRAINED limiter and conservative formula-free
+reintroduction (CC31), accessibility + observability + privacy/
+readiness (CC32). Cloud file 150 written, NOT applied. Sonnet red team:
+3 accepted findings fixed and pinned. Full-suite gate green; merged to
+main at `1259a9f`; report delivered. Full record: campaign folder
+STATUS-LEDGER.md + _CAMPAIGN-LOG.md.
+**GAP CLOSURE (2026-08-21, founder final order, banked at
+GAP-CLOSURE-ORDER-2026-08-21.md):** phases A–I complete — original-spec
+traceability (T1–T30), Training considerations directory (20 condition
++ 20 injury stateless knowledge profiles + OTHER path, live-verified
+citations, wording-law validator), eleventh demand axis
+weight_bearing_hands (migrate_151 written NOT applied), library tagging
+closed (nine axes 100%, unilateral 95% with 26 deliberate NULLs, wbh
+98%), five new family plans (16 capability families, seed v14, 2 new
+seeded movements), adapted-setup layer (29 exercises), directory-wide
+scenario matrix + nine §16 movement fixtures + coverage stats, truth
+pass (registry, matrix 8-status ladder, REAL-DISABLED-USER-VALIDATED =
+NO). Cost: 5/6 Haiku, 0/1 Sonnet, 0 Opus, no agent-to-agent
+delegation. Final gate: 40-item walk (one genuine find fixed at the
+gate), lint green, ONE full suite green (1033 suites / 13,929 tests),
+merged to main. Full record: GAP-CLOSURE-TRACKER.md +
+ORIGINAL-SPEC-TRACEABILITY.md + COST-GOVERNANCE-LEDGER.md.
+**RECOVERY/RESUME:** the workstream is CLOSED. Nothing resumes from
+here; founder-side actions live in FOUNDER-ACTION-PACK.md (migrations
+145–151 await the exact phrase; iOS profile delete; device walks;
+CC-F5 cohorts; CC-F6 clinical review; CC-F1 counsel).
 
 
 ### CAMPAIGN 6: RETURNING USERS, LONG-TERM PERSONALISATION, LAPSES,

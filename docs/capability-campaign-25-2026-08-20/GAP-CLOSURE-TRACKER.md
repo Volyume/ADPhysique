@@ -34,7 +34,12 @@ PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
 - [x] G Accessibility/content COMPLETE: adapted-setup layer + 30 entries + audit record (device walk stays founder action C)
 - [x] H Scenario/coverage gate COMPLETE: 40-profile matrix + 9 fixtures + 3 stacks + laterality, strengthened on lead review (7 corrections, still green); SCENARIO-COVERAGE.md emitted by the passing suite
 - [x] I Final truth pass COMPLETE: registry rebuilt to the section 26 dimensions (40 profiles), matrix status ladder, DEF-3 row converted to the GC-D7 mechanism set
-- [~] Final gate: 40-item walk done (one genuine find fixed: required-exercise metadata + compat blind spot); lint + ONE full suite next, then merge + report
+- [x] Final gate CLOSED 2026-08-21: 40-item walk done (one genuine find
+  fixed: required-exercise metadata + compat blind spot); `npx eslint .
+  --max-warnings 0` green (zero output); ONE full settled-tree suite
+  green — Test Suites: 1033 passed, 1 skipped (1034 total); Tests:
+  13,929 passed, 13 skipped (13,942); Snapshots: 17 passed; 93.3s.
+  Merged to main and pushed; founder report delivered.
 
 ## Decisions (append; register-grade ones also go to DECISION-REGISTER.md)
 

@@ -52,8 +52,9 @@ what it unlocks.
 
 ### F. PRIVACY / COUNSEL / DPIA (CC-F1)
 
-- **Engage counsel** with DPIA-COUNSEL-INPUT-PACK.md - eight exact
-  questions (Q1-Q8) with the processing description, risk register and
+- **Engage counsel** with DPIA-COUNSEL-INPUT-PACK.md - nine exact
+  questions (Q1-Q9; Q9 covers the Training considerations directory
+  surface, LEG-30) with the processing description, risk register and
   document paths. Until answered, the conservative Article 9 posture
   stays in force (it blocks nothing that is built) and no telemetry
   dashboard may be created (R1 L10).
@@ -72,6 +73,7 @@ what it unlocks.
 
 Standing choices already yours whenever you wish (not blockers): the
 Grok/Gemini consultation prompts (EXTERNAL-CONSULTATION-QUEUE.md);
-CC-F2/CC-F8 register questions (recommendations recorded); DEF-3
-grip-limited pulling content (needs new curated content, tracked in
-the registry).
+CC-F2/CC-F8 register questions (recommendations recorded). DEF-3
+closed at gap closure by mechanism (GC-D7: adapted-setup strap
+guidance + grip profiles + the allowance flow), recorded in the
+registry.

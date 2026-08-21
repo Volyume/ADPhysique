@@ -1,6 +1,30 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-08-21 — CAPABILITY WORKSTREAM CC25–CC32 + GAP CLOSURE: COMPLETE, ON MAIN ★
+
+The whole capability/disability-inclusion workstream is CLOSED and
+merged: architecture (CC25), foundations (CC26), execution bundles 1
+(CC27–29) and 2 (CC30–32), and the founder's final gap-closure order
+(2026-08-21, banked at `docs/capability-campaign-25-2026-08-20/
+GAP-CLOSURE-ORDER-2026-08-21.md`). Gap closure shipped: the Training
+considerations directory (20 condition + 20 injury stateless knowledge
+profiles + OTHER path, live-verified citations), the eleventh demand
+axis (weight_bearing_hands, migrate_151 written NOT applied), full
+library tagging (nine axes 100%), five new family plans (library at 16
+capability families, seed v14), the adapted-setup layer (29 exercises),
+the directory-wide scenario matrix + nine movement fixtures, and the
+truth pass (registry, marketing matrix 8-status ladder,
+REAL-DISABLED-USER-VALIDATED = NO). Final gate: lint green, ONE full
+suite green (1033 suites / 13,929 tests), merged to main. Records:
+`GAP-CLOSURE-TRACKER.md`, `ORIGINAL-SPEC-TRACEABILITY.md`,
+`COST-GOVERNANCE-LEDGER.md` in the campaign folder. Founder-side
+actions: `FOUNDER-ACTION-PACK.md` (migrations 145–151 await "run
+against production"; iOS profile delete; device walks; CC-F5 user
+validation; CC-F6 clinical review; CC-F1 counsel). No new campaign
+was opened; remaining items are external-only.
+
+===============================================================================
 ## ★ 2026-08-20 — CAPABILITY CAMPAIGN 25 (CC25): ARCHITECTURE COMPLETE, ON MAIN ★
 
 The capability/disability-inclusion workstream (founder master brief +
