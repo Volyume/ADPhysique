@@ -1250,7 +1250,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <>
               <SectionLabel
                 hint={episodeOverdue
-                  ? 'This has been going longer than you expected. If you are done with it, you can end it under How you train.'
+                  ? "This has been going longer than you expected. If you're done with it, you can end it under How you train."
                   : undefined}
               >How did you get on training around your temporary change?</SectionLabel>
               <OptionRow

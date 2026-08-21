@@ -235,8 +235,8 @@ export default function HowYouTrainScreen() {
     const createdIds = await writeConstraintRows(rows, now);
     setAdding(null); setDraft(null);
     toast.show(draft.kind === 'allow'
-      ? 'Saved. Volyume will keep offering this exercise.'
-      : isEpisode ? 'Saved. Volyume will keep this as a temporary change.' : 'Saved. This is part of how you train.');
+      ? 'Saved. Volyume will keep offering this exercise, even where your other answers would normally leave it out.'
+      : isEpisode ? "Saved. Volyume will work around this for now. When you're done with it, end it here and training builds back to your plan." : 'Saved. Volyume will build your training around this from now on.');
     refresh();
     // CC29 (section 14, CAP-11): a NEW EPISODE with an installed plan
     // active proposes its effective diff - grouped, consequential, never
@@ -257,7 +257,7 @@ export default function HowYouTrainScreen() {
     setConsented(true);
     try { await writeDraft(); } catch (e) {
       logError('HowYouTrain.consentSave', e, {});
-      toast.show('Consent is recorded, but the save failed. Try again from Add.');
+      toast.show('Your consent saved, but the change did not. Tap Add something and try again.');
       setAdding(null);
     }
   };
@@ -300,7 +300,7 @@ export default function HowYouTrainScreen() {
                 // eslint-disable-next-line no-await-in-loop
                 await recordEffectiveChoice(userId, id, 'applied').catch(() => {});
               }
-              toast.show('Applied. Sessions will work around it until it ends.');
+              toast.show('Applied. Your sessions will work around this until you end it.');
             },
           },
         ],
@@ -309,10 +309,10 @@ export default function HowYouTrainScreen() {
   };
 
   const confirmEndEpisode = (ep) => {
-    appAlert('Done with this?', 'Volyume will go back to planning the affected training normally. Nothing from this period is lost.', [
-      { text: 'Keep it active', style: 'cancel' },
+    appAlert('Done with this?', 'Your exercises come back straight away, and training builds back up to your plan over the coming weeks. Nothing from this period is lost.', [
+      { text: 'Not yet', style: 'cancel' },
       {
-        text: 'It has ended',
+        text: 'Done with it',
         onPress: async () => {
           await endEpisode(userId, ep.groupId);
           // CC31 (section 23): apply reintroduction ramp and show toast if muscles ramped.
@@ -441,7 +441,7 @@ export default function HowYouTrainScreen() {
               source: h.source,
             }));
             await writeConstraintRows(rows, now);
-            toast.show('Started again. You can end it any time.');
+            toast.show('Started again from today. Volyume will work around it until you end it here.');
             refresh();
           } catch (e) {
             logError('HowYouTrain.restartEpisode', e, {});
@@ -688,11 +688,11 @@ export default function HowYouTrainScreen() {
           <SettingRow icon="time" label="Temporary change" sub={episodeSub(ep)} showArrow={false} />
           <View style={styles.episodeActions}>
             <Choice label="Done with it" onPress={() => confirmEndEpisode(ep)} t={t} compact />
-            <Choice label="A while longer" onPress={async () => { haptics.selection(); await extendEpisode(userId, ep.groupId, Date.now() + 14 * DAY_MS); toast.show('Extended by two weeks.'); refresh(); }} t={t} compact />
+            <Choice label="A while longer" onPress={async () => { haptics.selection(); await extendEpisode(userId, ep.groupId, Date.now() + 14 * DAY_MS); toast.show('Extended by two weeks. Volyume will ask again around then.'); refresh(); }} t={t} compact />
             {ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION ? (
               // Section 33.7's third option: an explicit continue that resets
               // the ask cadence without committing to a new end date.
-              <Choice label="Still going for now" onPress={async () => { haptics.selection(); await acknowledgeEpisode(userId, ep.groupId); toast.show('Noted. Volyume will keep it as temporary for now.'); refresh(); }} t={t} compact />
+              <Choice label="Still going for now" onPress={async () => { haptics.selection(); await acknowledgeEpisode(userId, ep.groupId); toast.show('Noted. Volyume will keep working around this until you end it here.'); refresh(); }} t={t} compact />
             ) : null}
             <Choice label="This is how I train now" onPress={() => confirmPromote(ep)} t={t} compact />
           </View>

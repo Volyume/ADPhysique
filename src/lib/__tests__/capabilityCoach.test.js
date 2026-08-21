@@ -309,7 +309,7 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
 
     it('an overdue restriction adds the close-it hint to the question (2026-08-21)', () => {
       expect(src.includes('episodeOverdue')).toBe(true);
-      expect(src).toContain('This has been going longer than you expected. If you are done with it, you can end it under How you train.');
+      expect(src).toContain("This has been going longer than you expected. If you're done with it, you can end it under How you train.");
       // Detection uses the real status machine, not a re-derived clock rule.
       expect(/constraintStatus\(r,\s*Date\.now\(\)\)\s*===\s*EPISODE_STATUS\.AWAITING_CONFIRMATION/.test(src)).toBe(true);
     });
@@ -348,7 +348,7 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
 
     it('"mostly didn\'t come up" appends the close suggestion', () => {
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
-      expect(out.adjustments.training.note).toContain('If you are done with it, you can end it under How you train');
+      expect(out.adjustments.training.note).toContain("If you're done with it, you can end it under How you train");
       expect(out.adjustments.training.note).not.toContain('you can adjust it under How you train');
     });
 
@@ -367,7 +367,7 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
       // the full-data path, so a user without regular weigh-ins never saw
       // either suggestion. Now applied at every note-bearing return.
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
-      expect(out.adjustments.training.note).toContain('If you are done with it, you can end it under How you train');
+      expect(out.adjustments.training.note).toContain("If you're done with it, you can end it under How you train");
       const inWay = withAnswer(CAPABILITY_WEEK_ANSWER.IN_THE_WAY);
       expect(inWay.adjustments.training.note).toContain('you can adjust it under How you train');
     });

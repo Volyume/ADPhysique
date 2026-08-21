@@ -398,7 +398,7 @@ export const INJURY_PROFILES = Object.freeze([
         id: 'gr_q1', kind: Q.EXERCISE_LIST,
         exerciseNames: ['Hip Adduction Machine', 'Adductor Squeeze (Ball)', 'Copenhagen Plank', 'Cossack Squat', 'Sumo Deadlift'],
         wording: 'Which of these inner-thigh exercises are you leaving out for now?',
-        whyAsked: 'These load the adductors most directly; parking the ones that apply keeps everything else going.',
+        whyAsked: 'These load the adductors most directly; leaving out the ones that apply keeps everything else going.',
       },
       dq('gr_q2', 'impact', 'Impact and sprint-type work is out while it settles', 'Fast direction change is the classic trigger; usually the last thing back.'),
     ],
