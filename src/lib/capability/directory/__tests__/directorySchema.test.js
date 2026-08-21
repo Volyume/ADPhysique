@@ -66,6 +66,7 @@ const validCondition = () => ({
   neverInfer: ['Never assume any movement is unavailable from the name alone.'],
   clinicianConfirm: [],
   familyRelevance: ['Seated Full Body'],
+  professionalNote: 'Anything a professional has told you comes first; Volyume builds around it.',
   claimRisks: ['Never claim benefit for the condition.'],
   evidence: [{ source: 'UK Chief Medical Officers', year: 2019, url: 'https://www.gov.uk/example', tier: 'T1', quote: 'strengthening activities on at least two days a week' }],
   knownGaps: [],

@@ -205,6 +205,11 @@ export function validateConditionProfile(p) {
   }
   if (p?.fatigueNote != null) pushWordingErrors(errors, 'fatigueNote', p.fatigueNote);
   if (!Array.isArray(p?.familyRelevance)) errors.push('familyRelevance must be an array (routine family plan names)');
+  if (!isNonEmptyString(p?.professionalNote)) {
+    errors.push('professionalNote: every condition profile carries the professional-guidance boundary line');
+  } else {
+    pushWordingErrors(errors, 'professionalNote', p.professionalNote);
+  }
   return errors;
 }
 
