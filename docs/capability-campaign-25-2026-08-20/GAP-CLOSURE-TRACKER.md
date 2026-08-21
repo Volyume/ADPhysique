@@ -3,7 +3,7 @@
 Authority: GAP-CLOSURE-ORDER-2026-08-21.md (banked copy of the founder
 order). Start main: 1259a9f. Branch: claude/build-name-prompt-apple-auth-fp49by.
 Agent slots used: 5/6 Haiku (R7, R8, worklist curation, family plans, scenario suites), 0/1 Sonnet, 0 Opus. No red-team agent: lead adversarial review per order 29.9.
-PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
+PRODUCTION MIGRATIONS: 145-151 NOT RUN.
 
 ## Phase state
 
@@ -31,7 +31,9 @@ PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
   route, HowYouTrain entry + preselect consumption, discovery pins suite
 - [x] E Routines/library COMPLETE: five new families (16 shipped total incl. experienced tiers); oracle-proven; two seated band pulling movements added with derived metadata
 - [x] F Deep integration COMPLETE (verification record below)
-- [x] G Accessibility/content COMPLETE: adapted-setup layer + 30 entries + audit record (device walk stays founder action C)
+- [x] G Accessibility/content COMPLETE: adapted-setup layer, 29 rich
+  entries (+ GC-D11 class defaults at reconciliation) + audit record
+  (device walk stays founder action C)
 - [x] H Scenario/coverage gate COMPLETE: 40-profile matrix + 9 fixtures + 3 stacks + laterality, strengthened on lead review (7 corrections, still green); SCENARIO-COVERAGE.md emitted by the passing suite
 - [x] I Final truth pass COMPLETE: registry rebuilt to the section 26 dimensions (40 profiles), matrix status ladder, DEF-3 row converted to the GC-D7 mechanism set
 - [x] Final gate CLOSED 2026-08-21: 40-item walk done (one genuine find
@@ -45,9 +47,8 @@ PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
 
 ## Next exact action
 
-Slot 4 (family plans) in flight; on return: lead diff review, green the
-oracle, commit; then dispatch slot 5 per PHASE-H-SPEC.md; then Phase I
-registry rebuild + matrix statuses + final gate.
+NONE - workstream and reconciliation CLOSED; founder-side actions only
+(delivered in chat per the 2026-08-21 delivery rule).
 
 ## Internal defect log
 
@@ -71,3 +72,31 @@ never presetting state); coach/check-in/reintroduction/learning
 untouched by construction (GC-D1: the directory cannot reach them) and
 re-proven by the standing suites. Nothing gained a second write path,
 a second store, or a per-condition branch anywhere in engine code.
+
+## FINAL SPEC RECONCILIATION (2026-08-21, founder order; sign-off pass)
+
+- [x] Area 1: exact original amendment RECOVERED from session uploads
+  (never lost after all), banked verbatim (md5
+  e3754558ce43cbe10cbc10a2d2409096), traced section-by-section against
+  live main (traceability sections 7-9); 5 reconstruction differences
+  found, all fixed in place; the 20 adversarial scenarios walked with
+  named mechanisms.
+- [x] Area 2: statelessness STANDS (GC-D10) - all six contextual
+  behaviours proven from persisted rules + the on-demand directory;
+  zero persistence is the correct minimum (minimisation + Q9 premise).
+- [x] Area 3: Layer 2 proven population-by-population
+  (LAYER2-POPULATION-PROOF.md); every B/C/D layer present; labelled
+  SCI/MS/Parkinson's collections stay gated by the amendment's own
+  gates, recorded.
+- [x] Area 4: movement-path sufficiency matrix (13 distinctions, all
+  YES, MOVEMENT-PATH-AUDIT.md reconciliation section); no new ontology
+  field justified.
+- [x] Area 5: injury accounting (INJURY-DIRECTORY-ACCOUNTING.md) -
+  36/37 R8 families consumed, every merge reasoned, ONE honest research
+  gap recorded (elbow ligament/instability - clinician-led path).
+- [x] Area 6: adapted-setup audit over all 551 (GC-D11): 220 materially
+  needing, 100% covered via class classifier + rich entries; script
+  regresses loudly. Behavioural change, suite-pinned.
+- [x] Gate: lint zero-warning green; ONE full settled-tree suite green
+  (Test Suites: 1033 passed, 1 skipped of 1034; Tests: 13,932 passed,
+  13 skipped of 13,945; Snapshots: 17; 87.6s); merged to main.

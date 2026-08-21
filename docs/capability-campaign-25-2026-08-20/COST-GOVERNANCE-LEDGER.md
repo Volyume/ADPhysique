@@ -58,3 +58,24 @@ delegation. Maximums, not targets.
 
 Direct-tool substitutions log:
 - Phase A traceability: entirely direct reads (0 agents).
+
+## FINAL SPEC RECONCILIATION (2026-08-21, founder order after the gap-closure report)
+
+Budget: Haiku MAX 1 (mechanical traceability/coverage only), Sonnet 0,
+Opus 0, no broad research restart, targeted tests only, ONE full suite
+only if behavioural code changed.
+
+Agents used: **ZERO** (the allowed Haiku slot went unspent). Every
+area ran on direct tools:
+- Area 1: the exact original amendment recovered from the session
+  uploads directory by filesystem search, banked verbatim (md5
+  recorded), traced section-by-section hands-on; 20-scenario walk
+  verified against live code by grep/read.
+- Areas 2-5: proofs and accountings from direct reads of the live
+  modules and the banked research files.
+- Area 6: rule-driven audit SCRIPT (adapted-setup-coverage.mjs) instead
+  of an agent - deterministic, auditable, re-runnable; lead spot-checks
+  caught and fixed two rule defects (grip-purpose strap absurdity,
+  seated walks) before anything shipped.
+Behavioural code changed (adaptedSetup class layer + one screen line),
+so the ONE full suite ran at the close per the order.
