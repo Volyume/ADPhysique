@@ -75,12 +75,25 @@ function parseSeedRoutines() {
     const workoutCount = (seg.match(/name: 'Day /g) ?? []).length;
     plans.push({ ...indices[i], exercises: exNames, workoutCount });
   }
-  const required = [...src.matchAll(/name: '((?:[^'\\]|\\.)*)',\s*primaryMuscle/g)].map((x) => x[1]);
-  return { plans, required: new Set(required) };
+  // Required exercises join the derived library so the compatibility
+  // proof COVERS them (final-review fix: they were silently filtered out,
+  // leaving the Seated Home band pulls unproven).
+  const requiredEntries = [...src.matchAll(/name: '((?:[^'\\]|\\.)*)',\s*primaryMuscle: '([a-z_]+)',\s*equipment: '([a-z_]+)',\s*movementPattern: '([a-z_]+)',\s*compoundIsolation: '([a-z_]+)'/g)]
+    .map((x) => ({ name: x[1], primaryMuscle: x[2], equipment: x[3], movementPattern: x[4], compoundIsolation: x[5] }));
+  return { plans, required: new Set(requiredEntries.map((e) => e.name)), requiredEntries };
 }
 
 const LIB = realLibraryByName();
-const { plans, required } = parseSeedRoutines();
+const { plans, required, requiredEntries } = parseSeedRoutines();
+// LIB plus the required exercises, derived the same way the seed loop
+// now derives them at insert.
+const LIB_ALL = new Map(LIB);
+for (const base of requiredEntries) {
+  LIB_ALL.set(base.name, {
+    id: base.name, ...base, subregion: null,
+    ...deriveExerciseMetadata(base), ...deriveDemandMetadata(base),
+  });
+}
 
 const capRows = (rules) => buildCapabilityResolveState(
   rules.map((r, i) => ({
@@ -147,7 +160,8 @@ test('every referenced exercise name resolves against the library', () => {
 test("each family's rows pass ITS OWN capability profile - compatible by construction", () => {
   const failures = [];
   for (const p of familyPlans) {
-    const rows = p.exercises.map((ex) => LIB.get(ex.name)).filter(Boolean);
+    const rows = p.exercises.map((ex) => LIB_ALL.get(ex.name)).filter(Boolean);
+    expect(rows.length).toBe(p.exercises.length);
     const verdict = computePlanCompatibility(FAMILY_PROFILES[p.name], rows);
     for (const c of verdict.conflicts) failures.push({ plan: p.name, name: c.row.name, reason: c.reason });
     for (const u of verdict.unknowns) failures.push({ plan: p.name, name: u.row.name, reason: u.reason });
@@ -173,7 +187,7 @@ test('Amendment section 17: session sizes, weekly sets, rep and rest sanity', ()
 });
 
 test('Amendment section 16: each family covers its claimed scope', () => {
-  const muscleOf = (name) => LIB.get(name)?.primaryMuscle ?? null;
+  const muscleOf = (name) => LIB_ALL.get(name)?.primaryMuscle ?? null;
   const LOWER = new Set(['quads', 'hamstrings', 'glutes', 'calves', 'adductors', 'tibialis']);
   for (const p of familyPlans) {
     const muscles = new Set(p.exercises.map((e) => muscleOf(e.name)).filter(Boolean));
@@ -197,10 +211,10 @@ test('Seated Home Strength needs no gym station and the experienced tiers train 
   const home = familyPlans.find((p) => p.name === 'Seated Home Strength');
   expect(home).toBeTruthy();
   for (const ex of home.exercises) {
-    const row = LIB.get(ex.name) ?? null;
-    const equipment = row?.equipment ?? 'required-exercise';
-    expect({ name: ex.name, equipment, ok: row ? HOME_EQUIPMENT.has(row.equipment) : true }).toEqual({
-      name: ex.name, equipment, ok: true,
+    const row = LIB_ALL.get(ex.name);
+    expect(row).toBeDefined();
+    expect({ name: ex.name, equipment: row.equipment, ok: HOME_EQUIPMENT.has(row.equipment) }).toEqual({
+      name: ex.name, equipment: row.equipment, ok: true,
     });
   }
   // The experienced tiers are not a watered-down shelf (Amendment

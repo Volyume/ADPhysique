@@ -1,9 +1,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  getAllExercises, insertExercise, createRoutine, addExerciseToRoutine,
+  getAllExercises, insertExercise, updateExerciseDemands, createRoutine, addExerciseToRoutine,
   createProgramme, getLibraryPlans,
 } from './database';
 import { logError, logWarn, logInfo } from './errorLog';
+// Gap-closure final review: required exercises must land with derived
+// metadata like every seeded row, or capability filtering reads them as
+// UNKNOWN and excludes them for exactly the audiences their plans serve.
+import { deriveExerciseMetadata } from './exerciseMetadata';
+import { deriveDemandMetadata } from './capability/demands';
 
 // Bump to v12: adds Mens Physique Width Enhancement plan
 // v13 (CC28): the capability-led routine families - nine free plans
@@ -2093,11 +2098,21 @@ export async function seedRoutinesIfNeeded(userId) {
       byName[ex.name] = ex;
     }
 
-    // Ensure required exercises exist
+    // Ensure required exercises exist, WITH derived metadata (equipment +
+    // demand axes) so they are first-class for capability filtering. Rows
+    // inserted by earlier versions of this loop landed without demand
+    // axes; repair those honestly from the same pure derivation.
     for (const exData of REQUIRED_EXERCISES) {
-      if (!byName[exData.name]) {
-        const created = await insertExercise(exData);
+      const existing = byName[exData.name];
+      if (!existing) {
+        const created = await insertExercise({
+          ...exData,
+          ...deriveExerciseMetadata(exData),
+          ...deriveDemandMetadata(exData),
+        });
         byName[created.name] = created;
+      } else if (existing.position == null && existing.impact == null) {
+        await updateExerciseDemands(existing.id, deriveDemandMetadata(exData)).catch(() => {});
       }
     }
 
