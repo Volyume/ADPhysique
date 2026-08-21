@@ -134,3 +134,36 @@ everything else on the section 8 candidate list is rejected with its
 failing test recorded. Status: PROVISIONAL until the Phase B injury
 evidence batch lands; any additional expressibility need it surfaces
 re-runs the same test before the axis set freezes.
+
+## RECONCILIATION 2026-08-21 — movement-path sufficiency matrix (order area 4)
+
+For each distinction an injury/profile question actually needs: the
+current deterministic representation, the exact mechanism, and a
+sufficiency verdict. The standard applied: a REUSABLE deterministic
+constraint must exist wherever a class-level decision is needed;
+per-exercise grain is acceptable only as the ALLOW-BACK direction
+(conservative class out, user re-admits specifics), never as the
+exclusion mechanism for a class.
+
+| Distinction | Product question needing it | Representation | Exact mechanism | Sufficient |
+|---|---|---|---|---|
+| Overhead vs horizontal press | rc_q1/rc_q2, si_q1/si_q3, ac_q2/ac_q1, nb_q3 | Axis + families | `overhead_position` axis for the overhead class; `flat`/`incline`/`decline` chest-plane families for horizontal pressing; `overhead_press` family separates loaded pressing from general reach (nb_q3) | YES |
+| Shoulder rotation-sensitive positions | rc_q3, fs_q2, si_q1 | Families + axis + allowance | `lateral_raise`/`overhead_press` families for raise work; `overhead_position` for end range; provocative single movements (upright-row style) go per-exercise with allow-back. No rotation AXIS: it would have no other deterministic consumer (CC-R8 test re-run; the class decisions above are already expressible) | YES |
+| Loaded elbow flexion/extension | bt_q1, bt_q2, me_q1 | Families | `short_head`/`long_head`/`brachialis` (flexion) and `overhead`/`pushdown` (extension) | YES |
+| Forearm pronation/supination | me_q1/me_q3 (golfer's elbow) | Family class + exercise-grain allow-back | Curl families exclude the class; orientation variants are separate seed rows (hammer vs supinated curls), so re-admission happens at the honest grain. A pronation axis would tag ~30 rows for one consumer the class+allowance mechanism already serves correctly | YES |
+| Wrist extension/loading | wh_q1, ac_q3, fs_q3, oa_q2, ra_q2, uld_q3, grip_q2 | Axis | `weight_bearing_hands` (the gap-closure eleventh axis: load through extended wrists, push-up class) | YES |
+| Grip vs strap/cuff/hook | le_q1, me_q2, wh_q2, grip_q1, sci_q3 | Axis + allowance + adapted setup | `grip_bar` axis excludes firm-grip work; allowances re-admit strapped movements per user (GC-D7); adaptedSetup carries the strap/cuff setup text | YES |
+| Axial spinal loading | lb_q1, nb_q2, po_q1, ss_q1 | Axis | `axial_load` | YES |
+| Loaded spinal flexion/rotation | lb_q4 | Families | `flexion` + `rotation` ab classes, distinct from compression (axis) and from hinging (`spinal_erector`) - anti-movement core work stays available exactly as the question promises | YES |
+| Deep hip flexion | hip_q1, hip_q2 | Families + allowance | `squat_press` (depth class) + `flexion` (loaded hip flexion); shallow variants return as allowances. Depth is continuous and personal - a boolean depth tag would be arbitrary where the class+allow-back grain is honest; REDUCED_RANGE adapted-setup text covers the setup side | YES |
+| Knee-flexion depth | kd_q1, kd_q2, pf_q1 | Families + allowance + dedicated family plan | `squat_press` + `knee_flexion` + `knee_extension` classes; Hinge & Hip Lower Builder is the limited-knee-flexion capability plan | YES |
+| Ankle dorsiflexion demand | as_q1..q3, ac2_q1 | Axis pair + families + allowance | `impact` + `balance_high` axes carry the ankle-loading classes the questions target; `squat_press`/`gastro`/`soleus` classes carry standing and calf loading; deep-dorsiflexion variants re-admit per exercise. No dorsiflexion axis: in this library its demand tracks the squat-depth class (same consumer, same decision), so a separate tag adds no decision power | YES |
+| Support/stability requirements | bal_q1, as_q2, md_q1, pd_q1, ms_q1, cp_q1, hm_q1, td_q2, lld_q2, sb_q4, abi_q3, vi_q1, hi_q1 | Axis | `balance_high` (support level), the single most-consumed axis in the directory | YES |
+| Unilateral / laterality | uld_q1, lld_q1, cp_q2/q3, abi_q1/q2, grip_q3, sci_q4, wc_q4, sb_q3 | Axes + side carving | `unilateral`, `bilateral_upper`, `bilateral_lower` axes; SIDE_CARVEABLE carving keeps single-side work eligible; every answer takes a side | YES |
+
+Verdict: the eleven-axis + family + exercise/allowance model expresses
+every distinction the shipped questions need. NO new ontology field is
+justified by this matrix; the two class+allow-back cases (depth,
+pronation/supination) use the family as the reusable exclusion and the
+exercise grain only for re-admission, which is the direction the order
+requires.

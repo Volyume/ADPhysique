@@ -447,3 +447,46 @@ CC27-29-BUNDLE-TRACKER.md.
   demonstration MEDIA, which was always founder-side asset production);
   the adapted-setup layer half stands and ships in Phase G. The
   traceability T13 row carries the correction.
+- GC-D10 STATELESS-CONTEXT RULING (2026-08-21 reconciliation, founder
+  question "does complete statelessness prevent required contextual
+  behaviour?"): NO persistence of profile identity is needed - the
+  minimum contextual field is ZERO, and stateless stands. Each required
+  downstream behaviour is proven from persisted RULES plus the
+  on-demand directory:
+  (1) profile-relevant check-in questions - the weekly conditional
+  question fires from active episode-role rows and replaces joint-pain
+  (WeeklyCheckInScreen.js:324-327, wording at :1233), so the questions
+  a profile pre-selected ARE what drive it;
+  (2) evidence-informed contextual education - the directory is
+  reachable at any time from How you train, search re-finds every
+  profile by name/alias (discovery suite pins no-dead-end), education
+  renders with sources on demand;
+  (3) coach context (temporary shoulder + confirmed overhead
+  restriction) - the coach consumes the episode's functional state:
+  volume holds carry reason 'constraint_active' and the note speaks in
+  the restriction's own terms (weeklyCoach.js:1810-1817), while the
+  resolver carves eligibility from the same rows; profile identity
+  adds nothing a deterministic coach may act on;
+  (4) chronic/recurring context - baseline-role rows ARE the chronic
+  record; ended episode rows persist (CAP-14) and "Start again"
+  recreates the whole saved shape for a flare
+  (HowYouTrainScreen.js:408-447);
+  (5) follow-up explanations - every conditional surface names the
+  user's OWN declared restriction ("How did training around your
+  restriction go this week?"), which is the honest provenance;
+  (6) reintroduction considerations where evidence exists - every
+  injury profile carries the reintroduction education note; the ENGINE
+  path stays cause-blind conservative by the CLIN-2 boundary
+  (condition-specific automation is exactly what clinical review must
+  approve first, recorded CLIN-2/5-7).
+  WHY zero is also the CORRECT minimum, not merely sufficient: storing
+  a profile id would create named-condition Article 9 data where
+  functional rules suffice (data minimisation, CAP-3 no-diagnosis
+  guard), would invalidate the premise of counsel question Q9 as posed
+  ("selecting stores NOTHING"), and the strongest possible guarantee
+  that identity can never feed eligibility/learning/coach is that it
+  is never stored. HONEST LIMITATION recorded: after leaving the
+  directory the app cannot label a rule "came from the X page" - the
+  route back is search, which is proven. IF a navigational breadcrumb
+  is ever wanted, it requires counsel first (extend Q9) and a consent
+  wording change; recorded as conditional, NOT built.
