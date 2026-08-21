@@ -7,7 +7,9 @@
  * Word-boundary regexes; case-insensitive. 'health' is deliberately NOT
  * here (not on any R2 list; 'heal/healing/heals' are).
  */
-export const R2_BLACKLIST = [
+// Function/benefit/treatment vocabulary: banned on EVERY surface,
+// including the condition/injury directory (GC-D4).
+export const R2_FUNCTION_TERMS = [
   /\brehabilitat\w*\b/i, /\brehab\b/i, /\bprehab\b/i,
   /\binjury management\b/i, /\bflare(-| )?ups?\b/i, /\bflare\b/i,
   /\bphysio(therap\w*)?\b/i,
@@ -17,11 +19,19 @@ export const R2_BLACKLIST = [
   /\breduce[sd]? pain\b/i, /\bpain[- ]free\b/i,
   /\bsafe for\b/i, /\bprotects? against\b/i, /\bprevents? injur\w*\b/i,
   /\bclinically proven\b/i, /\bclinical trials?\b/i, /\bmedical\w*\b/i,
-  // Named conditions (the specific-injury link, R2 section 5.3 last row).
+];
+
+// Named conditions (the specific-injury link, R2 section 5.3 last row):
+// banned in exercise/plan/library/marketing text; PERMITTED inside the
+// user-initiated condition/injury directory, whose validator applies
+// R2_FUNCTION_TERMS only (GC-D4; counsel confirmation LEG-30).
+export const R2_CONDITION_NAME_TERMS = [
   /\bspinal cord\b/i, /\bmultiple sclerosis\b/i, /\barthritis\b/i,
   /\bfrozen shoulder\b/i, /\bsciatica\b/i, /\bhypermobil\w*\b/i,
   /\bscoliosis\b/i, /\btendinitis\b/i, /\btendinopathy\b/i, /\bimpingement\b/i,
 ];
+
+export const R2_BLACKLIST = [...R2_FUNCTION_TERMS, ...R2_CONDITION_NAME_TERMS];
 
 /**
  * Population/support-claim terms for MARKETING surfaces only (in-app

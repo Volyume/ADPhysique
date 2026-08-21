@@ -47,7 +47,7 @@ delegation. Maximums, not targets.
 
 | Slot | Tier | Task | Output | Why needed | Result |
 |---|---|---|---|---|---|
-| (none yet) | | | | | |
+| 1 | Haiku | Condition-directory evidence batch (12 full workups + 3 currency checks + completeness candidates) | research/R7-condition-directory-evidence.md | ~15 populations x multiple authoritative sources = mechanical extraction vs fixed schema; R5 covers only 8 populations; direct hands-on would burn main-loop context on gathering (order 29.1) | pending |
 
 Direct-tool substitutions log:
 - Phase A traceability: entirely direct reads (0 agents).

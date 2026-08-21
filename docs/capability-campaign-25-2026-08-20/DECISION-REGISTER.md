@@ -374,3 +374,27 @@ CC27-29-BUNDLE-TRACKER.md.
   candidate ontology axis against the NEW consumer class (injury/
   condition movement-path questions). Axes that pass gain columns;
   axes that fail stay rejected with the failure recorded.
+- GC-D4 Directory wording law: the condition/injury directory is a NEW
+  user-initiated, non-promotional surface class where condition NAMES
+  are permitted (they are its purpose, order section 25), while
+  function/benefit/treatment vocabulary stays banned (treat, cure,
+  heal, rehabilitate, therapy, safe-for, reduces pain, prevents,
+  clinically proven, symptom-monitoring language, flare). Mechanically:
+  r2Wording.js splits into R2_FUNCTION_TERMS + R2_CONDITION_NAME_TERMS
+  with R2_BLACKLIST preserved as their union (existing sweep/guard
+  consumers unchanged); the directory schema validator enforces
+  R2_FUNCTION_TERMS over every user-facing directory string. Exercise/
+  plan/library text keeps the FULL blacklist (condition names stay
+  banned there). Marketing keeps POPULATION_CLAIM_TERMS + the all-NO
+  matrix. New register row LEG-30: counsel to confirm the directory
+  surface's wording posture (extends LR-3/LEG-23); conservative posture
+  in force meanwhile, building not blocked (CC-F1 pattern).
+- GC-D5 Layer-2 shipping shape: dossiers are BUILT now (machine-readable
+  docs) for the R5-supported candidates; in-app, condition profiles
+  point to capability-led routine FAMILIES via functional framing
+  (discovery metadata, 33.20); condition-NAMED collection labels stay
+  OFF pending LEG-23 + CLIN-5 (the order bans medical claims and keeps
+  legal/clinical stops; the SUBSTANCE ships, the label waits). A user
+  searching a condition name finds the profile, its questions,
+  education and fitting families - order section 25 satisfied without a
+  condition-labelled programme claim.
