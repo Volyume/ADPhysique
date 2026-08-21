@@ -38,6 +38,7 @@ import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 import { FORM_TIPS } from '../lib/formTips';
+import { adaptedSetupFor } from '../lib/exercise/adaptedSetup';
 import InfoTooltip from '../components/InfoTooltip';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import BottomSheet from '../components/BottomSheet';
@@ -498,6 +499,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   }
 
   const formTip = FORM_TIPS[exercise.name] ?? null;
+  const adaptedLines = adaptedSetupFor(exercise.name);
   const primaryMuscle = MUSCLE_DISPLAY_NAMES[(exercise.primaryMuscle || '').toLowerCase()] || exercise.primaryMuscle;
   const secondaryMuscles = exercise.secondaryMuscles || [];
   const equipmentLabel = equipmentDisplayLabel(exercise);
@@ -1026,6 +1028,30 @@ export default function ExerciseDetailScreen({ navigation, route }) {
             </View>
           );
         })()}
+
+        {/* Gap-closure Phase G (order section 23; GC-D9): adapted setup
+            guidance where the setup materially differs for a way of
+            training. Setup and accessibility content only - never
+            technique coaching, never clinical. Plain text, screen-reader
+            first-class. */}
+        {adaptedLines.length > 0 && (
+          <View style={styles.section}>
+            <SectionLabel>Ways to set this up</SectionLabel>
+            <Card radius="md" style={styles.notesCard}>
+              {adaptedLines.map((line, i) => (
+                <View key={line.context} style={i > 0 ? styles.stepRowSpaced : null}>
+                  <Text
+                    style={[styles.adaptedLabel, live.adaptedLabel]}
+                    accessibilityRole="header"
+                  >
+                    {line.label}
+                  </Text>
+                  <Text style={[styles.notesText, live.notesText]}>{line.text}</Text>
+                </View>
+              ))}
+            </Card>
+          </View>
+        )}
       </ScrollView>
 
       {/* Goal-setting bottom sheet.
@@ -1273,6 +1299,7 @@ const styles = StyleSheet.create({
   },
   notesCard: {},
   notesText: { ...type.bodySm, color: colors.textSecondary },
+  adaptedLabel: { ...type.captionStrong, color: colors.textPrimary, marginBottom: 2 },
   stepRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   stepRowSpaced: { marginTop: spacing.md },
   stepNumber: {
@@ -1472,6 +1499,7 @@ function buildLiveStyles(t) {
     prHighlightStatLabel: { ...t.type.caption, color: t.colors.textMuted },
     prHighlightDate: { ...t.type.caption, color: t.colors.textMuted },
     notesText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    adaptedLabel: { ...t.type.captionStrong, color: t.colors.textPrimary },
     stepNumber: { backgroundColor: t.colors.primaryBg },
     stepNumberText: { fontSize: t.fontSize.xs, color: t.colors.primary },
     stepText: { ...t.type.bodySm, color: t.colors.textSecondary },
