@@ -25,7 +25,13 @@
 
 import { PROFILE_KIND, CONDITION_CATEGORY, QUESTION_KIND } from './schema';
 
-const PRO_NOTE = 'Anything a clinician or specialist has told you comes first. Volyume builds around what you confirm and never overrides professional guidance.';
+const PRO_NOTE = 'Anything a clinician or specialist has told you comes first. If you have been told to keep a movement out, add it under How you train and say that a clinician asked for it. Volyume then works around it, and will not offer it back unless you change it yourself.';
+// The one-sided training facts, shared so each profile adds only its own
+// lead clause (founder order 2026-08-21). Says ONLY what ships: the
+// both-arms / both-legs answers plan one-sided work, and per-side logging
+// records what each side did. Volyume has no per-side rule and sets the
+// same target for both sides, so neither is claimed here.
+const SIDED = 'you can leave out movements that need both sides and train one side at a time. Volyume can also log an exercise one side at a time, recording what each side actually did.';
 const REVIEWED = '2026-08-21';
 
 const K = PROFILE_KIND.CONDITION;
@@ -109,7 +115,7 @@ export const CONDITION_PROFILES = Object.freeze([
       'Rest timers and logging work one-handed and from a chair throughout.',
     ],
     fatigueNote: null,
-    lateralityNote: 'Effects are usually both-sided; if one side works differently, the side picker on each answer covers it.',
+    lateralityNote: `Effects are usually both-sided, but if one side works differently, ${SIDED}`,
     generalisable: [
       'International guidance for adults with long-standing spinal cord injury includes strength work for each muscle group that works for you, twice a week.',
     ],
@@ -161,8 +167,8 @@ export const CONDITION_PROFILES = Object.freeze([
       'Machines and supported positions give you somewhere steady on variable days.',
     ],
     accessibilityConsiderations: [],
-    fatigueNote: 'Energy with MS is personal and can change day to day; Volyume never judges a shorter week, and a temporary change can cover a rough patch.',
-    lateralityNote: 'If one side is more affected, the side picker on each answer covers it.',
+    fatigueNote: 'Energy with MS can change day to day. You set how many days you train and how long a session runs, and Volyume plans to what you set rather than to a fixed idea of a full week. For a rough patch, add a temporary change under How you train.',
+    lateralityNote: `If one side is more affected, ${SIDED}`,
     generalisable: [
       'Strength work is consistently supported by research in MS, built around how your MS affects you.',
     ],
@@ -207,19 +213,17 @@ export const CONDITION_PROFILES = Object.freeze([
     ],
     setupConsiderations: [
       'Seated and supported positions remove the balance cost from heavy work.',
-      'Many people time training for when they feel at their best in the day.',
+      'Many people time training for when they feel at their best in the day; Volyume never schedules your sessions, so when you train is entirely your call.',
     ],
     accessibilityConsiderations: [
       'Larger touch targets and steady layouts help when precision varies; logging never needs a fast tap.',
     ],
     fatigueNote: null,
-    lateralityNote: 'Parkinson’s often affects one side more; the side picker on each answer covers it.',
+    lateralityNote: `Parkinson’s often affects one side more. Where it does, ${SIDED}`,
     generalisable: [
       'Strength training is well supported by research in Parkinson’s and is part of recognised exercise guidance.',
     ],
-    individual: [
-      'When in the day you train best is personal and often matters; Volyume leaves timing entirely to you.',
-    ],
+    individual: [],
     neverInfer: [
       'Never assume tremor, balance or walking ability from the name Parkinson’s.',
       'Never reference medication timing; that belongs with the specialist team.',
@@ -263,10 +267,10 @@ export const CONDITION_PROFILES = Object.freeze([
       'Strap and cuff attachments make cable work available whatever grip is doing.',
     ],
     accessibilityConsiderations: [
-      'One-handed logging and generous touch targets are part of the standard app checks.',
+      'Logging works one-handed, and the buttons are large enough to hit without precision.',
     ],
-    fatigueNote: 'Movement with CP can cost more energy than it looks; shorter sessions are a fine normal, not a reduced one.',
-    lateralityNote: 'CP is often one-sided or uneven; the side picker on each answer covers it.',
+    fatigueNote: 'Moving about with cerebral palsy can cost more energy than it looks. Shorter sessions are a normal setup here rather than a reduced one, and Volyume plans to the session length you set.',
+    lateralityNote: `Cerebral palsy is often one-sided or uneven. Where it is, ${SIDED}`,
     generalisable: [
       'Research supports strength training for adults with cerebral palsy, built around individual function.',
     ],
@@ -313,10 +317,10 @@ export const CONDITION_PROFILES = Object.freeze([
       'Single-arm and single-leg stations mean the affected side trains without the other side covering for it.',
     ],
     accessibilityConsiderations: [
-      'Plain wording and an unhurried flow matter when concentration tires; nothing in logging is timed.',
+      'Plain wording and no hurry matter when concentration tires; nothing in logging runs against a clock.',
     ],
-    fatigueNote: 'Tiredness after a brain injury is real and often invisible; shorter sessions and extra rest days are a normal shape here.',
-    lateralityNote: 'Effects are often one-sided; every answer takes a side when that is true for you.',
+    fatigueNote: 'Tiredness after a brain injury is real and often invisible to everyone else. Fewer days and shorter sessions are a normal shape here, and Volyume works to the plan you set rather than pushing you towards more.',
+    lateralityNote: `Effects are often one-sided. Where that is true for you, ${SIDED}`,
     generalisable: [
       'Research finds strength training worthwhile long after a stroke, with each person’s starting point setting the shape.',
     ],
@@ -360,19 +364,18 @@ export const CONDITION_PROFILES = Object.freeze([
     ],
     setupConsiderations: [
       'Cable single handles, cuffs and adjustable dumbbells cover most one-arm work.',
-      'A custom exercise is the right home for a movement you have built around your own setup; it gets full tracking.',
+      'A custom exercise is the place for a movement you have built around your own setup, and it tracks like any other.',
+      'Which movements you use a hook, cuff or prosthesis for is personal and often differs exercise by exercise, so you can mark any exercise as one that works for you.',
     ],
     accessibilityConsiderations: [
       'The whole app works one-handed, including mid-set logging.',
     ],
     fatigueNote: null,
-    lateralityNote: 'Every answer takes a side, so the trained side and any assisted side are planned honestly.',
+    lateralityNote: `One-arm training is planned as complete training rather than a reduced version: ${SIDED}`,
     generalisable: [
       'One-side strength work is fully effective training and the standard approach with limb difference.',
     ],
-    individual: [
-      'Prosthesis and interface choices during training are personal and often per-exercise; allowances exist for exactly that.',
-    ],
+    individual: [],
     neverInfer: [
       'Never assume which arm, what level, or whether a prosthesis is used in training.',
       'Never assume a prosthesis means grip; the user decides per movement.',
@@ -413,7 +416,7 @@ export const CONDITION_PROFILES = Object.freeze([
     ],
     accessibilityConsiderations: [],
     fatigueNote: null,
-    lateralityNote: 'Every answer takes a side; the trained leg and any prosthetic-side work are planned separately and honestly.',
+    lateralityNote: `Single-leg work is planned as complete training rather than a reduced version: ${SIDED}`,
     generalisable: [
       'Single-leg and supported lower-body strength work is standard, effective training with limb difference.',
     ],
@@ -512,9 +515,9 @@ export const CONDITION_PROFILES = Object.freeze([
       'Anything your specialist team has said about lowering-phase effort belongs in how you perform each set; Volyume never pushes past it.',
     ],
     accessibilityConsiderations: [
-      'Steady layouts and one-handed logging are part of the standard app checks.',
+      'Screens stay laid out the same way between sessions, and logging works one-handed.',
     ],
-    fatigueNote: 'With these conditions, stopping short is the professional norm; a modest session that leaves plenty in reserve is the intended shape, and Volyume never counts it as a shortfall.',
+    fatigueNote: 'Stopping well short of your limit is the usual approach with these conditions. Volyume plans to the days and session length you set, so a modest session is simply your session, not a lesser one.',
     lateralityNote: null,
     generalisable: [
       'Research supports supervised, progressive strength work in several of these conditions, with the type and stage setting the boundaries.',
@@ -572,7 +575,7 @@ export const CONDITION_PROFILES = Object.freeze([
     ],
     accessibilityConsiderations: [],
     fatigueNote: null,
-    lateralityNote: 'If one side is more involved, the side picker on each answer covers it.',
+    lateralityNote: `If one side is more involved than the other, ${SIDED}`,
     generalisable: [
       'UK guidance recommends tailored strength and fitness exercise as core care for osteoarthritis.',
       'Some ache when starting new exercise is described as normal in the guidance, settling as the body adapts.',
@@ -619,7 +622,7 @@ export const CONDITION_PROFILES = Object.freeze([
       'On rough weeks, a temporary change under How you train keeps the plan honest without rewriting your normal.',
     ],
     accessibilityConsiderations: [],
-    fatigueNote: 'Tiredness is part of these conditions for many people; research links regular activity with better energy over time, and a modest week is a fine week.',
+    fatigueNote: 'Tiredness is part of these conditions for many people. Volyume plans to the days and session length you set, and on a rough week a temporary change under How you train covers it without rewriting your normal setup.',
     lateralityNote: null,
     generalisable: [
       'Research strongly supports regular strength and fitness work in rheumatoid arthritis, shaped around how things are week to week.',
@@ -666,7 +669,7 @@ export const CONDITION_PROFILES = Object.freeze([
       'Stopping movements short of end range is a performance note worth making your habit; equipment choice can help it.',
     ],
     accessibilityConsiderations: [],
-    fatigueNote: 'Tiredness and dizziness alongside hypermobility are common and personal; build up gently and let a temporary change cover rough patches.',
+    fatigueNote: 'Building up gradually is the usual approach with hypermobile joints. If you hit a rough patch, a temporary change under How you train covers it without changing your normal setup.',
     lateralityNote: null,
     generalisable: [
       'Guidance for hypermobile EDS centres strength and control work, started gently and built gradually.',
@@ -711,6 +714,7 @@ export const CONDITION_PROFILES = Object.freeze([
     setupConsiderations: [
       'Machines, seats and a wall or rail nearby mean an unsteady day changes the setup rather than the session.',
       'Fixed and guided equipment beats free-standing work on unsteady days.',
+      'If balance comes and goes rather than staying the same, a temporary change under How you train covers a rough spell without changing your normal setup.',
     ],
     accessibilityConsiderations: [],
     fatigueNote: null,
@@ -718,9 +722,7 @@ export const CONDITION_PROFILES = Object.freeze([
     generalisable: [
       'Strength work from supported positions carries on regardless of balance; support level is the only variable.',
     ],
-    individual: [
-      'Whether balance varies day to day, and what triggers it, is personal; temporary changes cover rough spells.',
-    ],
+    individual: [],
     neverInfer: [
       'Never assume the cause, or that balance is constant, from the name.',
       'Never schedule balance-demanding work by default.',
@@ -758,18 +760,17 @@ export const CONDITION_PROFILES = Object.freeze([
     setupConsiderations: [
       'Cuffs, straps and hooks take firm grip out of most pulling movements; if you have your own way of setting one up, save it as a custom exercise and it tracks like any other.',
       'Machine work with pads and supports needs the least from the hands.',
+      'Which holds work can differ movement by movement and day by day, so you can mark individual exercises as ones that work for you.',
     ],
     accessibilityConsiderations: [
       'The app itself works one-handed with generous touch targets.',
     ],
     fatigueNote: null,
-    lateralityNote: 'Often one-sided; every answer takes a side when that is true for you.',
+    lateralityNote: `If one hand works differently from the other, ${SIDED}`,
     generalisable: [
       'Grip-light equipment and adapted holds keep the training effect while changing only the interface.',
     ],
-    individual: [
-      'Which holds work is per-movement and per-day for many people; allowances exist for exactly that.',
-    ],
+    individual: [],
     neverInfer: [
       'Never assume the cause, or that both hands are the same.',
       'Never assume a movement is out before the user says so; interfaces vary.',
@@ -806,18 +807,17 @@ export const CONDITION_PROFILES = Object.freeze([
     setupConsiderations: [
       'Machines with a fixed path suit variable steadiness better than free weights.',
       'Slightly heavier, slower movements are steadier than light fast ones for many people with tremor.',
+      'Tremor usually touches particular movements rather than everything, so you can keep single exercises out instead of whole groups.',
     ],
     accessibilityConsiderations: [
       'Logging never needs precision taps; buttons are large and forgiving.',
     ],
-    fatigueNote: 'Steadiness can drop as a session tires you; ending a session early is a fine call and never judged.',
-    lateralityNote: 'Often one-sided or task-specific; the side picker covers it where true.',
+    fatigueNote: 'Steadiness often drops as a session goes on. You can finish a session whenever you want to, and everything you logged up to that point still counts.',
+    lateralityNote: `Tremor is often one-sided or specific to certain tasks. Where that is true, ${SIDED}`,
     generalisable: [
       'Research suggests strength work itself remains fully available, with equipment choice absorbing steadiness demands.',
     ],
-    individual: [
-      'Which tasks are affected is highly specific; per-exercise exclusions and allowances are the right grain.',
-    ],
+    individual: [],
     neverInfer: [
       'Never assume tremor touches all movements; most strength work is unaffected for many people.',
     ],
@@ -853,17 +853,16 @@ export const CONDITION_PROFILES = Object.freeze([
       'Consistent racking and a familiar gym layout do more for independence than any exercise choice.',
     ],
     accessibilityConsiderations: [
-      'The app is built to work fully with screen readers; every control is labelled and nothing relies on colour alone.',
-      'Timers announce and vibrate rather than relying on the screen.',
+      'Controls are labelled for screen readers, and nothing depends on colour alone to make sense.',
+      'The end of a rest timer sounds and vibrates, so it does not depend on you watching the screen.',
+      'Volyume follows the accessibility settings on your phone rather than asking you to set them up again here.',
     ],
     fatigueNote: null,
     lateralityNote: null,
     generalisable: [
       'Strength training is fully available with sight loss; the adaptations are informational and environmental.',
     ],
-    individual: [
-      'Preferred formats, residual vision and gym familiarity vary; the app follows your device accessibility settings.',
-    ],
+    individual: [],
     neverInfer: [
       'Never assume reduced physical capability from sight loss.',
       'Never assume screen-reader use or any particular access method.',
@@ -898,7 +897,7 @@ export const CONDITION_PROFILES = Object.freeze([
       'Visual and vibration cues replace audio ones throughout the app.',
     ],
     accessibilityConsiderations: [
-      'Rest timers show and vibrate as first-class channels; no information is audio-only.',
+      'Rest timers count down on screen and vibrate at the end, so nothing depends on hearing them.',
     ],
     fatigueNote: null,
     lateralityNote: null,
@@ -938,8 +937,8 @@ export const CONDITION_PROFILES = Object.freeze([
       'Training with a supporter or friend works well; the app keeps each step small and clear.',
     ],
     accessibilityConsiderations: [
-      'Plain language, one idea per screen and no time-pressured steps are standing app rules.',
-      'The same flow happens the same way every time; nothing rearranges itself.',
+      'Plain language, one thing per screen, and no step that runs against a clock.',
+      'Each screen works the same way every time; nothing rearranges itself between sessions.',
     ],
     fatigueNote: null,
     lateralityNote: null,

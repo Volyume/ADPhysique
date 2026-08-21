@@ -69,12 +69,25 @@ export default function TrainingConsiderationsScreen() {
   // ── Detail mode ─────────────────────────────────────────────────────
   if (open) {
     const questions = open.kind === PROFILE_KIND.INJURY ? open.movementQuestions : open.functionalQuestions;
+    // Founder order 2026-08-21 (surface the hidden user value): guidance
+    // written for these profiles used to sit in the data unrendered.
+    // "Worth knowing" carries the training guidance in the section 9
+    // order - what is generally supported, then practical setup, then the
+    // profile's own extra notes on quieter weeks and one-sided training.
+    // Field names never reach the user; the classification of which
+    // strings render lives in DISABILITY-PROFILE-GUIDANCE-COVERAGE.md.
     const notes = open.kind === PROFILE_KIND.INJURY
       ? (open.education ?? []).map(e => ({ text: e.text, source: open.evidence?.[e.evidenceIndex] }))
       : [
         ...(open.generalisable ?? []).map(text => ({ text, source: open.evidence?.[0] })),
         ...(open.setupConsiderations ?? []).map(text => ({ text, source: null })),
+        ...(open.fatigueNote ? [{ text: open.fatigueNote, source: null }] : []),
+        ...(open.lateralityNote ? [{ text: open.lateralityNote, source: null }] : []),
       ];
+    // App support is a different subject from training guidance, so it
+    // gets its own quiet heading rather than being mixed in above. Only
+    // rendered when the profile actually has something to say.
+    const appNotes = open.accessibilityConsiderations ?? [];
     return (
       <SettingsPage title={open.canonicalName}>
         <PressableCard
@@ -133,6 +146,13 @@ export default function TrainingConsiderationsScreen() {
                 Source: {n.source.source}, {n.source.year}
               </Text>
             ) : null}
+          </View>
+        ))}
+
+        {appNotes.length ? <SectionHeader title="Using Volyume" /> : null}
+        {appNotes.map((text, i) => (
+          <View key={`a${i}`} style={styles.note}>
+            <Text style={[styles.body, { color: t.colors.textPrimary }]}>{text}</Text>
           </View>
         ))}
 

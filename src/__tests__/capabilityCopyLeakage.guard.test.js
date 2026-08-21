@@ -92,6 +92,11 @@ function renderedStrings(profile) {
   }
   for (const t of profile.generalisable ?? []) push(t);
   for (const t of profile.setupConsiderations ?? []) push(t);
+  // Surfaced by the founder's 2026-08-21 order; rendered under "Worth
+  // knowing" and "Using Volyume".
+  push(profile.fatigueNote);
+  push(profile.lateralityNote);
+  for (const t of profile.accessibilityConsiderations ?? []) push(t);
   for (const e of profile.education ?? []) push(e.text);
   for (const t of profile.familyRelevance ?? []) push(t);
   return out;
@@ -126,5 +131,79 @@ describe('the condition and injury directory speaks plainly where it renders', (
     const total = profiles.reduce((n, p) => n + renderedStrings(p).length, 0);
     expect(profiles.length).toBeGreaterThan(20);
     expect(total).toBeGreaterThan(200);
+  });
+});
+
+// ── Surfaced disability guidance (founder order 2026-08-21) ────────────
+// Accounting and per-string classification:
+// docs/capability-campaign-25-2026-08-20/DISABILITY-PROFILE-GUIDANCE-COVERAGE.md
+
+describe('the disability guidance that was hidden now has a rendering path', () => {
+  const screen = read('screens/TrainingConsiderationsScreen.js');
+  const conditions = allConditionProfiles();
+
+  it('the profile page reads each surfaced field', () => {
+    expect(screen).toMatch(/open\.fatigueNote/);
+    expect(screen).toMatch(/open\.lateralityNote/);
+    expect(screen).toMatch(/open\.accessibilityConsiderations/);
+  });
+
+  it('every profile that has surfaced guidance actually has it rendered', () => {
+    // Non-vacuous by construction: the counts below are the real content,
+    // so deleting the content fails the test rather than passing it.
+    const fatigue = conditions.filter((p) => p.fatigueNote).length;
+    const sided = conditions.filter((p) => p.lateralityNote).length;
+    const app = conditions.reduce((n, p) => n + (p.accessibilityConsiderations ?? []).length, 0);
+    expect(fatigue).toBe(7);
+    expect(sided).toBe(10);
+    expect(app).toBe(16);
+    for (const p of conditions) {
+      for (const text of [p.fatigueNote, p.lateralityNote, ...(p.accessibilityConsiderations ?? [])]) {
+        if (text) expect(renderedStrings(p)).toContain(text);
+      }
+    }
+  });
+
+  it('no internal field name reaches a user-facing string', () => {
+    const labels = /fatigueNote|lateralityNote|accessibilityConsiderations|clinicianConfirm|neverInfer|claimRisks|knownGaps/;
+    for (const p of [...conditions, ...allInjuryProfiles()]) {
+      for (const text of renderedStrings(p)) expect(text).not.toMatch(labels);
+    }
+    // The headings the screen actually uses are plain English.
+    expect(screen).toMatch(/title="Worth knowing"/);
+    expect(screen).toMatch(/title="Using Volyume"/);
+  });
+
+  it('the side-picker claim never returns (it does not exist in the app)', () => {
+    // The add flow stores no laterality: its draft has no such field and
+    // writeDraft never sets one. Copy promising a per-answer side picker
+    // would be a false promise, so it is pinned out here.
+    const claim = /side picker|answer takes a side/i;
+    for (const p of conditions) {
+      for (const text of renderedStrings(p)) expect(text).not.toMatch(claim);
+    }
+    const howYouTrain = read('screens/HowYouTrainScreen.js');
+    const draftShape = howYouTrain.slice(howYouTrain.indexOf('role: null, kind: null'), howYouTrain.indexOf('setAdding(\'role\')'));
+    expect(draftShape.length).toBeGreaterThan(50); // the slice is real code, not empty
+    expect(draftShape).not.toMatch(/laterality/);
+  });
+
+  it('the clinician checklists stay internal, and their product truth is on the page instead', () => {
+    // Rendering "things to confirm with your clinician" would read as
+    // needing medical clearance to use Volyume (GC-D12). None renders.
+    for (const p of conditions) {
+      const rendered = renderedStrings(p);
+      for (const line of p.clinicianConfirm ?? []) expect(rendered).not.toContain(line);
+      // The actionable half IS carried, once, by the professional note.
+      expect(p.professionalNote).toMatch(/clinician asked for it/);
+    }
+    const totalHidden = conditions.reduce((n, p) => n + (p.clinicianConfirm ?? []).length, 0);
+    expect(totalHidden).toBe(26);
+  });
+
+  it('surfacing guidance gained no persistence or behavioural authority', () => {
+    // GC-D1 statelessness: the page still only reads and navigates.
+    expect(screen).not.toMatch(/createConstraint|capability\/store|setItem|AsyncStorage|trackEvent/);
+    expect(screen).toMatch(/navigation\.navigate\('HowYouTrain'/);
   });
 });
