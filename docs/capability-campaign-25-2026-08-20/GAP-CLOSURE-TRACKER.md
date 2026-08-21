@@ -35,3 +35,12 @@ PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
 
 Phase C close-out: lead curates axial/overhead NULLs; Haiku slot 3
 curates rule-shaped NULL worklists; then Phase D discovery UX.
+
+## Internal defect log
+
+- ID-1 (2026-08-21): two lead commits (fc933a3, 99362df) used git add -A
+  while Haiku slot 3 was live in the tree, sweeping its mid-flight
+  demands.js edits and an intentionally-red oracle into history.
+  Content was reviewed and corrected afterwards (dupe-key merge, three
+  judgement fixes); no work lost. Standing rule from here: explicit-path
+  staging ONLY while any agent is running.

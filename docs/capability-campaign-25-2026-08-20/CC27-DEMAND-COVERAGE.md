@@ -9,14 +9,14 @@ coverage floors pinned in `capabilityDemands.test.js`.
 
 | Axis | Known | Coverage |
 |---|---|---|
-| position | 549 | 100% |
+| position | 551 | 100% |
 | floorAccess | 551 | 100% |
-| overheadPosition | 550 | 100% |
+| overheadPosition | 551 | 100% |
 | gripDemand | 551 | 100% |
 | unilateralLoadable | 525 | 95% |
 | bilateralUpper | 550 | 100% |
 | bilateralLower | 551 | 100% |
-| axialLoad | 549 | 100% |
+| axialLoad | 551 | 100% |
 | impact | 551 | 100% |
 | balanceDemand | 551 | 100% |
 | weightBearingHands | 538 | 98% |
@@ -25,18 +25,18 @@ coverage floors pinned in `capabilityDemands.test.js`.
 
 | Muscle | Rows | position | grip | overhead | floor | bilat.upper | bilat.lower | balance | axial |
 |---|---|---|---|---|---|---|---|---|---|
-| abs | 62 | 100% | 100% | 98% | 100% | 100% | 100% | 100% | 100% |
+| abs | 62 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | adductors * | 11 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| back | 65 | 97% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
+| back | 65 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | biceps | 36 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | calves | 21 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | chest | 56 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | forearms * | 22 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | front_delts | 23 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | glutes | 37 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| hamstrings | 38 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 97% |
+| hamstrings | 38 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | neck * | 14 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| quads | 57 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 98% |
+| quads | 57 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | rear_delts | 24 | 100% | 100% | 100% | 100% | 96% | 100% | 100% | 100% |
 | side_delts | 17 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | tibialis * | 9 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
@@ -54,17 +54,17 @@ where families exist); their per-axis coverage is in the table above.
 
 ## NULL worklist per axis (curation surface)
 
-### position (2 unknown)
+### position (0 unknown)
 
-Hyperextension (Back Extension) [back/machine]; Back Extension (Weighted) [back/machine]
+(none)
 
 ### floorAccess (0 unknown)
 
 (none)
 
-### overheadPosition (1 unknown)
+### overheadPosition (0 unknown)
 
-Dragon Flag [abs/bodyweight]
+(none)
 
 ### gripDemand (0 unknown)
 
@@ -82,9 +82,9 @@ Machine Y-Raise [rear_delts/machine]
 
 (none)
 
-### axialLoad (2 unknown)
+### axialLoad (0 unknown)
 
-Bodyweight Single-Leg RDL [hamstrings/bodyweight]; Bodyweight Bulgarian Split Squat [quads/bodyweight]
+(none)
 
 ### impact (0 unknown)
 

@@ -12,15 +12,15 @@ compatibility is separately proven by construction in
 | Profile | Total | abs | adductors | back | biceps | calves | chest | forearms | front_delts | glutes | hamstrings | neck | quads | rear_delts | side_delts | tibialis | traps | triceps |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | Seated / cannot stand | 241 | 44 | 6 | 32 | 14 | 7 | 41 | 3 | 8 | 19 | 9 | 14 | 9 | 12 | 3 | 3 | 0 | 17 |
-| No floor access | 478 | 32 | 10 | 64 | 36 | 21 | 42 | 22 | 22 | 24 | 35 | 11 | 56 | 24 | 17 | 9 | 18 | 35 |
-| One arm (bilateral upper constrained) | 296 | 31 | 10 | 13 | 20 | 18 | 25 | 12 | 10 | 30 | 26 | 8 | 34 | 12 | 12 | 9 | 8 | 18 |
-| One leg (bilateral lower constrained) | 386 | 60 | 4 | 54 | 36 | 2 | 56 | 19 | 21 | 9 | 6 | 14 | 2 | 24 | 17 | 8 | 13 | 41 |
-| Grip-limited (no firm bar grip) | 142 | 26 | 7 | 3 | 0 | 14 | 11 | 0 | 0 | 21 | 12 | 14 | 17 | 4 | 2 | 9 | 0 | 2 |
-| No overhead work | 464 | 50 | 11 | 42 | 34 | 21 | 51 | 20 | 13 | 33 | 34 | 14 | 56 | 16 | 15 | 9 | 17 | 28 |
-| No spinal loading | 415 | 60 | 6 | 44 | 36 | 21 | 52 | 19 | 11 | 26 | 15 | 14 | 19 | 24 | 17 | 9 | 4 | 38 |
+| No floor access | 484 | 32 | 10 | 64 | 36 | 21 | 45 | 22 | 22 | 24 | 35 | 11 | 56 | 24 | 17 | 9 | 18 | 38 |
+| One arm (bilateral upper constrained) | 299 | 33 | 10 | 13 | 20 | 18 | 25 | 12 | 10 | 30 | 26 | 8 | 34 | 13 | 12 | 9 | 8 | 18 |
+| One leg (bilateral lower constrained) | 387 | 60 | 4 | 54 | 36 | 2 | 56 | 19 | 21 | 9 | 6 | 14 | 2 | 24 | 17 | 9 | 13 | 41 |
+| Grip-limited (no firm bar grip) | 159 | 30 | 7 | 3 | 0 | 17 | 12 | 0 | 0 | 22 | 13 | 14 | 23 | 5 | 2 | 9 | 0 | 2 |
+| No overhead work | 482 | 53 | 11 | 44 | 34 | 21 | 52 | 20 | 13 | 37 | 38 | 14 | 56 | 20 | 15 | 9 | 17 | 28 |
+| No spinal loading | 431 | 60 | 7 | 48 | 36 | 21 | 54 | 19 | 11 | 26 | 16 | 14 | 24 | 24 | 17 | 9 | 4 | 41 |
 | No impact | 543 | 62 | 11 | 65 | 36 | 18 | 56 | 22 | 23 | 37 | 38 | 14 | 52 | 24 | 17 | 9 | 18 | 41 |
-| Balance-supported only | 264 | 37 | 5 | 45 | 16 | 10 | 40 | 4 | 5 | 19 | 13 | 14 | 17 | 12 | 3 | 3 | 1 | 20 |
-| No weight through hands/wrists | 495 | 52 | 8 | 64 | 36 | 18 | 44 | 21 | 22 | 34 | 32 | 14 | 46 | 23 | 17 | 8 | 17 | 39 |
+| Balance-supported only | 268 | 37 | 5 | 45 | 16 | 10 | 42 | 4 | 5 | 19 | 13 | 14 | 17 | 12 | 3 | 3 | 1 | 22 |
+| No weight through hands/wrists | 515 | 57 | 8 | 65 | 36 | 21 | 45 | 21 | 22 | 35 | 34 | 14 | 51 | 24 | 17 | 9 | 17 | 39 |
 
 ## Routine family ship status (Amendment sections 15-17)
 

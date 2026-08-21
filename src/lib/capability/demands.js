@@ -150,7 +150,6 @@ export const CURATED_DEMANDS = Object.freeze({
   // Back extension apparatus: no grip needed, trunk supported.
   'Back Extension (45-degree)': { position: 'mixed', gripDemand: 'none', balanceDemand: 'supported', floorAccess: false },
   // Captain's chair knee raise: forearms on pads.
-  "Captain's Chair Leg Raise": { position: 'mixed', gripDemand: 'supportive', floorAccess: false, overheadPosition: false },
   // Wall sit: standing profile against support, no floor, no grip.
   'Wall Sit': { position: 'standing', balanceDemand: 'supported', floorAccess: false, gripDemand: 'none', bilateralLower: true },
   // Turkish get-up: floor-to-standing BY DESIGN - mixed position, high
@@ -186,63 +185,63 @@ export const CURATED_DEMANDS = Object.freeze({
   'Svend Press': { position: 'standing', overheadPosition: false, balanceDemand: 'stable' },
   // Landmine chest press: standing press at chest height.
   'Landmine Press': { position: 'standing', overheadPosition: true, balanceDemand: 'stable', axialLoad: true },
-  'Landmine Chest Press (Single-Arm)': { position: 'standing', overheadPosition: false, balanceDemand: 'stable', axialLoad: true },
+  'Landmine Chest Press (Single-Arm)': { position: 'standing', overheadPosition: false, balanceDemand: 'stable', axialLoad: true, floorAccess: false },
   // Weighted dips carry the same demands as the bodyweight movement.
   'Weighted Dips (Chest)': { position: 'mixed', gripDemand: 'bar', bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'supported', overheadPosition: false, floorAccess: false },
   'Weighted Dips (Triceps)': { position: 'mixed', gripDemand: 'bar', bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'supported', overheadPosition: false, floorAccess: false },
   // Glute ham raise: knees on the pad, trunk hinging - kneeling profile.
-  'Glute Ham Raise': { position: 'kneeling', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported' },
-  'Glute-Ham Raise Machine': { position: 'kneeling', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported' },
+  'Glute Ham Raise': { position: 'kneeling', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', unilateralLoadable: false },
+  'Glute-Ham Raise Machine': { position: 'kneeling', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', unilateralLoadable: false },
   'Nordic Hamstring Curl': { position: 'kneeling', floorAccess: true, gripDemand: 'none', balanceDemand: 'supported', weightBearingHands: true },
   // Terminal knee extension: standing with a band at a rack.
   'Terminal Knee Extension': { position: 'standing', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', bilateralLower: false, overheadPosition: false },
   // Swiss ball / slider leg curls: lying floor work.
   'Swiss Ball Leg Curl': { position: 'lying', floorAccess: true, gripDemand: 'none', balanceDemand: 'supported' },
   // Rice bucket and grippers: seated grip work.
-  'Rice Bucket': { position: 'seated', floorAccess: false, overheadPosition: false, bilateralUpper: false, unilateralLoadable: true },
+  'Rice Bucket': { position: 'seated', floorAccess: false, overheadPosition: false, bilateralUpper: false, unilateralLoadable: true, gripDemand: 'bar', balanceDemand: 'stable', weightBearingHands: false },
   'Hand Gripper': { position: 'seated', floorAccess: false, overheadPosition: false, bilateralUpper: false, unilateralLoadable: true },
   'Gripper Walks': { position: 'standing', overheadPosition: false, bilateralUpper: false, unilateralLoadable: true, balanceDemand: 'stable', floorAccess: false },
   'Dumbbell Pronation/Supination': { position: 'seated', floorAccess: false, overheadPosition: false, balanceDemand: 'supported' },
   'Plate Pinch': { position: 'standing', overheadPosition: false, balanceDemand: 'stable', floorAccess: false },
   // Cycling / assault bike / battle ropes: seated or standing conditioning
   // with supportive interfaces.
-  'Cycling (Stationary)': { position: 'seated', gripDemand: 'supportive', overheadPosition: false, bilateralUpper: false, balanceDemand: 'supported', floorAccess: false },
-  'Assault Bike': { position: 'seated', gripDemand: 'supportive', overheadPosition: false, bilateralUpper: true, balanceDemand: 'supported', floorAccess: false },
+  'Cycling (Stationary)': { position: 'seated', gripDemand: 'supportive', overheadPosition: false, bilateralUpper: false, balanceDemand: 'supported', floorAccess: false, unilateralLoadable: false },
+  'Assault Bike': { position: 'seated', gripDemand: 'supportive', overheadPosition: false, bilateralUpper: false, balanceDemand: 'supported', floorAccess: false, unilateralLoadable: false },
   'Battle Ropes': { position: 'standing', gripDemand: 'bar', overheadPosition: false, bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'stable', floorAccess: false },
-  'Prowler Drag': { position: 'standing', gripDemand: 'bar', overheadPosition: false, balanceDemand: 'stable', floorAccess: false },
+  'Prowler Drag': { position: 'standing', gripDemand: 'bar', overheadPosition: false, balanceDemand: 'stable', floorAccess: false, unilateralLoadable: false },
   // Frog pump / glute squeeze: floor work, no grip.
   'Frog Pump': { position: 'lying', floorAccess: true, gripDemand: 'none', balanceDemand: 'supported', overheadPosition: false },
   'Weighted Frog Pump': { position: 'lying', floorAccess: true, gripDemand: 'supportive', balanceDemand: 'supported', overheadPosition: false },
   'Glute Squeeze Hold': { position: 'standing', floorAccess: false, gripDemand: 'none', balanceDemand: 'stable', bilateralLower: true, overheadPosition: false },
   // 45-degree back/hip extensions: braced apparatus.
-  '45-Degree Hip Extension': { position: 'mixed', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true },
-  'Hyperextension (Back Extension)': { position: 'mixed', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true },
-  'Back Extension (Weighted)': { position: 'mixed', floorAccess: false, gripDemand: 'supportive', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true },
-  'Reverse Hyperextension': { position: 'lying', floorAccess: false, gripDemand: 'supportive', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true },
-  'Reverse Hyperextension (Glute)': { position: 'lying', floorAccess: false, gripDemand: 'supportive', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true },
+  '45-Degree Hip Extension': { position: 'mixed', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true, unilateralLoadable: false },
+  'Hyperextension (Back Extension)': { position: 'mixed', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true, unilateralLoadable: false },
+  'Back Extension (Weighted)': { position: 'mixed', floorAccess: false, gripDemand: 'supportive', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true, unilateralLoadable: false },
+  'Reverse Hyperextension': { position: 'lying', floorAccess: false, gripDemand: 'supportive', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true, unilateralLoadable: false },
+  'Reverse Hyperextension (Glute)': { position: 'lying', floorAccess: false, gripDemand: 'supportive', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true, unilateralLoadable: false },
   // Inverted/TRX rows: suspended pulls, both hands, no floor sitting.
   'Inverted Row': { position: 'mixed', floorAccess: false, gripDemand: 'bar', bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'supported', overheadPosition: false },
   'TRX Row': { position: 'mixed', floorAccess: false, gripDemand: 'bar', bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'supported', overheadPosition: false },
   'TRX Curl': { position: 'mixed', floorAccess: false, gripDemand: 'bar', bilateralUpper: true, unilateralLoadable: false, balanceDemand: 'supported', overheadPosition: false },
   // Bench-pressing variants without 'bench' in the name.
-  'Dumbbell Squeeze Press': { position: 'lying', axialLoad: false },
-  'JM Press': { position: 'lying', axialLoad: false },
-  'Board Press': { position: 'lying', axialLoad: false },
-  'Guillotine Press': { position: 'lying', axialLoad: false },
+  'Dumbbell Squeeze Press': { position: 'lying', axialLoad: false, floorAccess: false, balanceDemand: 'supported' },
+  'JM Press': { position: 'lying', axialLoad: false, floorAccess: false, balanceDemand: 'supported' },
+  'Board Press': { position: 'lying', axialLoad: false, floorAccess: false, balanceDemand: 'supported' },
+  'Guillotine Press': { position: 'lying', axialLoad: false, floorAccess: false, balanceDemand: 'supported' },
   'Smith Machine Close-Grip Press': { position: 'lying', axialLoad: false },
   // Z-press: seated ON THE FLOOR - both floor access and seated.
   'Z-Press': { position: 'seated', floorAccess: true, balanceDemand: 'stable', axialLoad: true },
   // Standing cable/landmine arm work without a convention keyword.
   'Single Arm Cable Extension': { position: 'standing', balanceDemand: 'stable' },
   'Cross-Body Cable Tricep Extension': { position: 'standing', balanceDemand: 'stable' },
-  'Landmine Tricep Extension': { position: 'standing', balanceDemand: 'stable' },
+  'Landmine Tricep Extension': { position: 'standing', balanceDemand: 'stable', floorAccess: false },
   'Landmine Press (Abs)': { position: 'standing', balanceDemand: 'stable', overheadPosition: false },
   'Hip Extension (Cable)': { position: 'standing', balanceDemand: 'stable' },
   // Kick-back machines kneel/lean on a pad.
   'Glute Kickback Machine': { position: 'kneeling', balanceDemand: 'supported', floorAccess: false },
-  'Donkey Kickback (Machine)': { position: 'kneeling', balanceDemand: 'supported', floorAccess: false },
-  'Adductor Squeeze (Ball)': { position: 'seated', balanceDemand: 'supported', floorAccess: false, overheadPosition: false },
-  'Tib Bar Raise (Machine)': { position: 'seated', balanceDemand: 'supported', floorAccess: false, gripDemand: 'supportive' },
+  'Donkey Kickback (Machine)': { position: 'kneeling', balanceDemand: 'supported', floorAccess: false, gripDemand: 'none', weightBearingHands: false },
+  'Adductor Squeeze (Ball)': { position: 'seated', balanceDemand: 'supported', floorAccess: false, overheadPosition: false, bilateralLower: true },
+  'Tib Bar Raise (Machine)': { position: 'seated', balanceDemand: 'supported', floorAccess: false, gripDemand: 'supportive', bilateralLower: false, weightBearingHands: false },
   // Family-thin muscle leftovers (section 33.3 priority closure).
   'Cuban Press': { position: 'standing', floorAccess: false, balanceDemand: 'stable', axialLoad: true },
   'Bradford Press': { position: 'standing', floorAccess: false, balanceDemand: 'stable', axialLoad: true },
@@ -255,7 +254,7 @@ export const CURATED_DEMANDS = Object.freeze({
   // though the grip axis reads them as gripped or grip-free.
   'Nordic Curl': { weightBearingHands: true }, // press-up catch at the bottom
   'Nordic Glute Curl': { weightBearingHands: true }, // same catch
-  'L-Sit Hold': { weightBearingHands: true, overheadPosition: false }, // palms pressing the surface
+  'L-Sit Hold': { weightBearingHands: true, overheadPosition: false, gripDemand: 'none', bilateralUpper: true }, // palms pressing the surface
   'Reverse Plank': { weightBearingHands: true }, // hands under shoulders, palms down
   'Barbell Front Squat': { weightBearingHands: true }, // clean-grip rack extends the wrists under the bar
   'Smith Machine Front Squat': { weightBearingHands: true }, // same rack position
@@ -263,15 +262,15 @@ export const CURATED_DEMANDS = Object.freeze({
   'Rack Pull (Traps)': { overheadPosition: false },
   'Cossack Squat': { gripDemand: 'none', axialLoad: false }, // bodyweight lateral squat
   'Side-Lying Adduction': { gripDemand: 'none', overheadPosition: false },
-  'Adductor Rock-Back (Kneeling)': { gripDemand: 'none', overheadPosition: false },
-  'Dead Hang': { gripDemand: 'bar', overheadPosition: true },
+  'Adductor Rock-Back (Kneeling)': { gripDemand: 'none', overheadPosition: false, bilateralLower: true },
+  'Dead Hang': { gripDemand: 'bar', overheadPosition: true, bilateralUpper: true },
 
   // Gap-closure Phase C lead curation: the two judgement axes'
   // NULL worklists (overhead = shoulder-elevated position, axial =
   // spinal compression under load). Rationale per class in
   // MOVEMENT-PATH-AUDIT.md section 4.2.
   'Ab Rollout': { overheadPosition: true },
-  'Abduction Machine': { overheadPosition: false },
+  'Abduction Machine': { overheadPosition: false, unilateralLoadable: false },
   'Arnold Press': { axialLoad: true },
   'Band Deadlift': { axialLoad: true },
   'Band Good Morning': { overheadPosition: false, axialLoad: true },
@@ -279,13 +278,13 @@ export const CURATED_DEMANDS = Object.freeze({
   'Barbell Good Morning': { overheadPosition: false },
   'Barbell Row (Supinated)': { axialLoad: true },
   'Barbell Skull Crusher': { overheadPosition: true },
-  'Bear Crawl': { overheadPosition: false },
-  'Bodyweight Bulgarian Split Squat': { axialLoad: false },
-  'Bodyweight Single-Leg RDL': { axialLoad: false },
+  'Bear Crawl': { overheadPosition: false, bilateralUpper: true },
+  'Bodyweight Bulgarian Split Squat': { axialLoad: false, gripDemand: 'none', weightBearingHands: false },
+  'Bodyweight Single-Leg RDL': { axialLoad: false, gripDemand: 'none', weightBearingHands: false },
   'Cable Iron Cross': { overheadPosition: false },
   'Decline Skull Crusher': { overheadPosition: true },
   'Donkey Kick': { overheadPosition: false },
-  'Dragon Flag': { overheadPosition: true },
+  'Dragon Flag': { overheadPosition: true, gripDemand: 'bar', bilateralUpper: true, weightBearingHands: false },
   'Dumbbell Floor Skull Crusher': { overheadPosition: true },
   'Dumbbell Row': { axialLoad: false },
   'Dumbbell Shoulder Press': { axialLoad: true },
@@ -313,44 +312,24 @@ export const CURATED_DEMANDS = Object.freeze({
   'Windmill': { overheadPosition: true },
   'YTW': { overheadPosition: true },
 
-  // Gap-closure Phase C slot-3 curation: rule-shaped worklists
-  // Floor access and balance demands (bench/standing work)
-  'Dumbbell Squeeze Press': { position: 'lying', axialLoad: false, floorAccess: false, balanceDemand: 'supported' },
-  'JM Press': { position: 'lying', axialLoad: false, floorAccess: false, balanceDemand: 'supported' },
-  'Board Press': { position: 'lying', axialLoad: false, floorAccess: false, balanceDemand: 'supported' },
-  'Guillotine Press': { position: 'lying', axialLoad: false, floorAccess: false, balanceDemand: 'supported' },
-  'Landmine Chest Press (Single-Arm)': { position: 'standing', overheadPosition: false, balanceDemand: 'stable', axialLoad: true, floorAccess: false },
-  'Landmine Tricep Extension': { position: 'standing', balanceDemand: 'stable', floorAccess: false },
-  'Rice Bucket': { position: 'seated', floorAccess: false, overheadPosition: false, bilateralUpper: false, unilateralLoadable: true, gripDemand: 'bar', balanceDemand: 'stable', weightBearingHands: false },
-
   // Grip demand: bodyweight and supportive interfaces
   'Pendulum Squat': { unilateralLoadable: false, gripDemand: 'supportive', weightBearingHands: false, bilateralUpper: false },
-  'Donkey Kickback (Machine)': { position: 'kneeling', balanceDemand: 'supported', floorAccess: false, gripDemand: 'none', weightBearingHands: false },
   'Donkey Calf Raise': { gripDemand: 'none', weightBearingHands: false },
   'Calf Raise on Steps': { gripDemand: 'none', weightBearingHands: false },
   'Russian Twist': { gripDemand: 'none', weightBearingHands: false },
-  'Dragon Flag': { gripDemand: 'bar', bilateralUpper: true, weightBearingHands: false },
   'V-Up': { gripDemand: 'none', bilateralUpper: false, weightBearingHands: false },
   'Toe-to-Bar': { gripDemand: 'bar', bilateralUpper: true, weightBearingHands: false },
-  'L-Sit Hold': { weightBearingHands: true, overheadPosition: false, gripDemand: 'none' },
-  'Sled Push': { unilateralLoadable: false, gripDemand: 'none', bilateralUpper: false, weightBearingHands: true },
+  'Sled Push': { unilateralLoadable: false, gripDemand: 'none', bilateralUpper: true, weightBearingHands: true },
   'Sled Pull': { unilateralLoadable: false, gripDemand: 'bar', bilateralUpper: false, weightBearingHands: false },
-  'Bodyweight Single-Leg RDL': { gripDemand: 'none', weightBearingHands: false },
   'Prone Reverse Fly': { gripDemand: 'none', bilateralUpper: false, weightBearingHands: false },
   'Seated Bodyweight Calf Raise': { gripDemand: 'supportive', weightBearingHands: false },
   'Oblique V-Up': { gripDemand: 'none', bilateralUpper: false, weightBearingHands: false },
   'Sissy Squat Machine': { unilateralLoadable: false, gripDemand: 'none', weightBearingHands: false },
-  'Bodyweight Bulgarian Split Squat': { gripDemand: 'none', weightBearingHands: false },
-  'Machine Chest Fly (Single-Arm)': { unilateralLoadable: false, gripDemand: 'supportive', weightBearingHands: false },
+  'Machine Chest Fly (Single-Arm)': { unilateralLoadable: true, gripDemand: 'supportive', weightBearingHands: false },
 
   // Bilateral upper/lower: hanging and compound bodyweight
   'Hanging Knee Raise': { gripDemand: 'bar', bilateralUpper: true },
   'Hanging Oblique Raise': { gripDemand: 'bar', bilateralUpper: true },
-
-  // Bilateral lower: adductors
-  'Adductor Squeeze (Ball)': { position: 'seated', balanceDemand: 'supported', floorAccess: false, overheadPosition: false, bilateralLower: true },
-  'Adductor Rock-Back (Kneeling)': { gripDemand: 'none', overheadPosition: false, bilateralLower: true },
-  'Tib Bar Raise (Machine)': { position: 'seated', balanceDemand: 'supported', floorAccess: false, gripDemand: 'supportive', bilateralLower: false, weightBearingHands: false },
 
   // Unilateral loadable: leg press and leg curl machines (one-leg standard)
   'Leg Press': { unilateralLoadable: true },
@@ -369,20 +348,6 @@ export const CURATED_DEMANDS = Object.freeze({
   'Seated Tibialis Raise': { unilateralLoadable: true },
   'Donkey Calf Raise (Machine)': { unilateralLoadable: true },
   'Belt Squat': { unilateralLoadable: true },
-
-  // Consolidated: unilateral loadable and grip/bilateral (must preserve original fields)
-  'Pendulum Squat': { unilateralLoadable: false, gripDemand: 'supportive', weightBearingHands: false, bilateralUpper: false },
-  'Cycling (Stationary)': { position: 'seated', gripDemand: 'supportive', overheadPosition: false, bilateralUpper: false, balanceDemand: 'supported', floorAccess: false, unilateralLoadable: false },
-  'Assault Bike': { position: 'seated', gripDemand: 'supportive', overheadPosition: false, bilateralUpper: true, balanceDemand: 'supported', floorAccess: false, unilateralLoadable: false },
-  'Prowler Drag': { position: 'standing', gripDemand: 'bar', overheadPosition: false, balanceDemand: 'stable', floorAccess: false, unilateralLoadable: false },
-  'Glute Ham Raise': { position: 'kneeling', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', unilateralLoadable: false },
-  'Glute-Ham Raise Machine': { position: 'kneeling', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', unilateralLoadable: false },
-  'Reverse Hyperextension': { position: 'lying', floorAccess: false, gripDemand: 'supportive', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true, unilateralLoadable: false },
-  'Reverse Hyperextension (Glute)': { position: 'lying', floorAccess: false, gripDemand: 'supportive', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true, unilateralLoadable: false },
-  '45-Degree Hip Extension': { position: 'mixed', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', overheadPosition: false, bilateralLower: true, unilateralLoadable: false },
-  'Abduction Machine': { overheadPosition: false, unilateralLoadable: false },
-  'Hyperextension (Back Extension)': { unilateralLoadable: false },
-  'Back Extension (Weighted)': { unilateralLoadable: false },
   'Machine Crunch': { unilateralLoadable: false },
   'Ab Crunch Machine': { unilateralLoadable: false },
   'Neck Flexion (Machine)': { unilateralLoadable: false },
@@ -395,9 +360,6 @@ export const CURATED_DEMANDS = Object.freeze({
   'Hip Adduction Machine': { unilateralLoadable: false },
   'Hack Squat Machine': { unilateralLoadable: false },
   'Machine Hip Thrust': { unilateralLoadable: false },
-  'L-Sit Hold': { weightBearingHands: true, overheadPosition: false, gripDemand: 'none', bilateralUpper: true },
-  'Dead Hang': { gripDemand: 'bar', overheadPosition: true, bilateralUpper: true },
-  'Bear Crawl': { overheadPosition: false, bilateralUpper: true },
 });
 
 // ── Derivation ──────────────────────────────────────────────────────────

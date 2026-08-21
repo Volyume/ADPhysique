@@ -55,11 +55,15 @@ test('per-axis coverage floors hold (a rule regression fails loudly)', () => {
   // Floors sit just under the achieved coverage recorded in
   // CC27-DEMAND-COVERAGE.md, so honest curation headroom remains while a
   // broken rule (coverage collapse) cannot ship silently.
+  // Raised at the gap-closure worklist close (Phase C): nine axes sit at
+  // 100%; unilateralLoadable keeps 26 deliberate machine-design NULLs
+  // (allowances are the designed answer); weightBearingHands keeps a
+  // small honest-unknown tail.
   const floors = {
-    position: 0.97, floorAccess: 0.95, overheadPosition: 0.90,
-    gripDemand: 0.92, unilateralLoadable: 0.84, bilateralUpper: 0.95,
-    bilateralLower: 0.96, axialLoad: 0.90, impact: 1.0, balanceDemand: 0.96,
-    weightBearingHands: 0.92,
+    position: 0.99, floorAccess: 0.99, overheadPosition: 0.99,
+    gripDemand: 0.99, unilateralLoadable: 0.93, bilateralUpper: 0.99,
+    bilateralLower: 0.99, axialLoad: 0.99, impact: 1.0, balanceDemand: 0.99,
+    weightBearingHands: 0.96,
   };
   for (const f of DEMAND_FIELDS) {
     const known = derived.filter((d) => d.meta[f] !== null && d.meta[f] !== undefined).length;
@@ -135,7 +139,12 @@ describe('weight_bearing_hands (gap-closure Phase C: the audited eleventh column
   });
 
   test('unresolved grip stays honestly NULL on the new axis too (CAP-8)', () => {
-    expect(by('Sissy Squat')?.weightBearingHands).toBeNull();
+    // The seed no longer carries a grip-NULL row (the curation closed the
+    // worklists), so the behaviour is pinned on a synthetic input the
+    // rules cannot classify.
+    const meta = deriveDemandMetadata({ name: 'Mystery Movement', equipment: null, movementPattern: null, primaryMuscle: 'chest', compoundIsolation: 'compound' });
+    expect(meta.gripDemand).toBeNull();
+    expect(meta.weightBearingHands).toBeNull();
   });
 
   test('the resolver reads the axis tri-state', () => {
