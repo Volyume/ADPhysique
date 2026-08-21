@@ -2,7 +2,7 @@
 
 Authority: GAP-CLOSURE-ORDER-2026-08-21.md (banked copy of the founder
 order). Start main: 1259a9f. Branch: claude/build-name-prompt-apple-auth-fp49by.
-Agent slots used: 2/6 Haiku (R7, R8), 0/1 Sonnet, 0 Opus.
+Agent slots used: 5/6 Haiku (R7, R8, worklist curation, family plans, scenario suites), 0/1 Sonnet, 0 Opus. No red-team agent: lead adversarial review per order 29.9.
 PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
 
 ## Phase state
@@ -29,14 +29,12 @@ PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
 - [x] D UX/discovery COMPLETE: TrainingConsiderationsScreen (search,
   detail, stateless preselect into the add flow, OTHER path), unguarded
   route, HowYouTrain entry + preselect consumption, discovery pins suite
-- [ ] E Routines/library
-- [ ] F Deep integration
-- [~] G Accessibility/content: adapted-setup layer + 30-entry content
-  landed with validation; A11Y-CRITICAL-JOURNEY-AUDIT.md records
-  code-verified vs device-pending; residue = final-review walk
-- [ ] H Scenario/coverage gate
-- [ ] I Final truth pass
-- [ ] Final gate (40 items) + ONE full suite + merge + report
+- [x] E Routines/library COMPLETE: five new families (16 shipped total incl. experienced tiers); oracle-proven; two seated band pulling movements added with derived metadata
+- [x] F Deep integration COMPLETE (verification record below)
+- [x] G Accessibility/content COMPLETE: adapted-setup layer + 30 entries + audit record (device walk stays founder action C)
+- [x] H Scenario/coverage gate COMPLETE: 40-profile matrix + 9 fixtures + 3 stacks + laterality, strengthened on lead review (7 corrections, still green); SCENARIO-COVERAGE.md emitted by the passing suite
+- [x] I Final truth pass COMPLETE: registry rebuilt to the section 26 dimensions (40 profiles), matrix status ladder, DEF-3 row converted to the GC-D7 mechanism set
+- [~] Final gate: 40-item walk done (one genuine find fixed: required-exercise metadata + compat blind spot); lint + ONE full suite next, then merge + report
 
 ## Decisions (append; register-grade ones also go to DECISION-REGISTER.md)
 

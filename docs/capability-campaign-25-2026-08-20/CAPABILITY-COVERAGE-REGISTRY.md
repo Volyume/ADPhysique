@@ -37,7 +37,7 @@ compatibility is separately proven by construction in
 | Dumbbell & Band Foundations | SHIPPED v1 (beginner) |
 | No-Overhead Upper Split | SHIPPED v1 (intermediate) |
 | Grip-Light Machine Circuit | SHIPPED v1 (beginner; pulling gap stated in-plan) |
-| Grip-limited PULLING collection | NOT SHIPPED - deferred to DEF-3 (implement guidance): the only grip-light pulling in the library is extension-class work, below any honest coverage threshold. Registry keeps this row until it ships. |
+| Grip-limited PULLING collection | RESOLVED BY MECHANISM, not by a plan (GC-D7): a strap-assisted pulling PLAN would be incompatible by construction (honest bar-grip metadata), so the shipped answer is per-exercise strap/cuff setup guidance (adaptedSetup: pulldown, row, pull-up, deadlift, band row), the grip profiles pointing at implements, and the allowance flow re-admitting strapped movements per user. DEF-3 closes on this mechanism set. |
 | Seated Home Strength | SHIPPED v1 (beginner) |
 | Grip-Light Lower Builder | SHIPPED v1 (intermediate) |
 | Hinge & Hip Lower Builder | SHIPPED v1 (intermediate) |
