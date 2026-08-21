@@ -107,7 +107,7 @@ async function fillRequiredFields(tree, { weight = '82', bodyFat, expandFull = f
     await act(async () => { bfField.props.onChangeText(bodyFat); });
   }
 
-  const consent = findPressable(tree, 'I consent to storing this data on my device')[0];
+  const consent = findPressable(tree, 'I consent to storing this data')[0];
   await act(async () => { consent.props.onPress(); });
   await flush();
 }

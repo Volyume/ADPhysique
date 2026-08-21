@@ -33,7 +33,7 @@ describe('shared consent checkbox rows', () => {
 
   test('Nutrition Targets uses the shared row in both body-data consent placements', () => {
     expect(nutritionTargets).toMatch(/import ConsentCheckboxRow from '\.\.\/components\/ConsentCheckboxRow';/);
-    const uses = nutritionTargets.match(/<ConsentCheckboxRow[\s\S]*?accessibilityLabel="I consent to storing this data on my device"[\s\S]*?\/>/g) || [];
+    const uses = nutritionTargets.match(/<ConsentCheckboxRow[\s\S]*?accessibilityLabel="I consent to storing this data"[\s\S]*?\/>/g) || [];
     expect(uses).toHaveLength(2);
     expect(nutritionTargets).not.toMatch(/styles\.checkbox|styles\.checkboxChecked|styles\.consentRow|styles\.consentCheckLabel/);
   });

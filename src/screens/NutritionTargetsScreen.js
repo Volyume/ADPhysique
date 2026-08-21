@@ -895,13 +895,13 @@ export default function NutritionTargetsScreen({ navigation }) {
                 <Ionicons name="lock-closed-outline" size={18} color={t.colors.textSecondary} style={{ marginTop: spacing.xxs }} />
                 <View style={styles.consentBody}>
                   <Text style={[styles.consentText, live.consentText]}>
-                    Your body data is stored only on this device. It is never shared and you can delete it at any time.
+                    Your body data is stored on this device and synced to your Volyume account so your devices stay in step. It is never shared with anyone beyond the secure EU service that stores your Volyume data, and you can delete it at any time.
                   </Text>
                   <ConsentCheckboxRow
                     checked={consent}
                     onPress={() => setConsent(v => !v)}
-                    label="I consent to storing this data on my device"
-                    accessibilityLabel="I consent to storing this data on my device"
+                    label="I consent to storing this data"
+                    accessibilityLabel="I consent to storing this data"
                   />
                 </View>
               </Card>
@@ -1132,13 +1132,13 @@ export default function NutritionTargetsScreen({ navigation }) {
             <Ionicons name="lock-closed-outline" size={18} color={t.colors.textSecondary} style={{ marginTop: spacing.xxs }} />
             <View style={styles.consentBody}>
               <Text style={[styles.consentText, live.consentText]}>
-                Your body data is stored only on this device. It is never shared and you can delete it at any time.
+                Your body data is stored on this device and synced to your Volyume account so your devices stay in step. It is never shared with anyone beyond the secure EU service that stores your Volyume data, and you can delete it at any time.
               </Text>
               <ConsentCheckboxRow
                 checked={consent}
                 onPress={() => setConsent(v => !v)}
-                label="I consent to storing this data on my device"
-                accessibilityLabel="I consent to storing this data on my device"
+                label="I consent to storing this data"
+                accessibilityLabel="I consent to storing this data"
               />
             </View>
           </Card>
