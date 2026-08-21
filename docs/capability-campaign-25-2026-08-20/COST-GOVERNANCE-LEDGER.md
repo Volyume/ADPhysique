@@ -38,3 +38,16 @@ Direct-tool resolutions (no agent spent):
 - Direct-tool substitutions: local Postgres execution testing of
   migrations 145-147 (no agent; caught the 147 CHECK regression);
   export-surface scope check (BACKUP_TABLES) by direct read.
+
+## GAP-CLOSURE WORKSTREAM (2026-08-21, order section 29)
+
+Budget: Haiku MAX 6, Sonnet MAX 1, Opus 0. Concurrency 1 (2 only for
+independent research + mechanical repo work). No agent-to-agent
+delegation. Maximums, not targets.
+
+| Slot | Tier | Task | Output | Why needed | Result |
+|---|---|---|---|---|---|
+| (none yet) | | | | | |
+
+Direct-tool substitutions log:
+- Phase A traceability: entirely direct reads (0 agents).
