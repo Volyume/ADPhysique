@@ -95,5 +95,51 @@ md += `\nUnknown-rate note: profiles count DEFINITE compatibility only; NULL
 axes are excluded on both sides (CAP-8), so every number here is a floor,
 not an estimate.\n`;
 
+// ── Gap-closure Phase I (order section 26): the directory dimension set,
+// generated from the ACTUAL knowledge modules so coverage can never be
+// hand-waved. Statuses that are shared mechanisms (coach, check-in,
+// reintroduction, learning shield, logging) are stated once - they are
+// profile-blind by design (GC-D1/GC-D2).
+// The directory modules use bundler-style extensionless imports, so the
+// script PARSES them (the same posture as the seed parse above) rather
+// than importing.
+function parseProfiles(file, kind) {
+  const src = readFileSync(join(root, file), 'utf8');
+  const blocks = src.split(/\n  \{\n    id: '/).slice(1);
+  return blocks.map((b) => {
+    const id = b.slice(0, b.indexOf("'"));
+    const name = (b.match(/canonicalName: '((?:[^'\\]|\\.)*)'/) ?? [])[1] ?? id;
+    // Questions carry ids like sci_q1 in both files (helper calls and
+    // inline objects alike), so the id convention is the reliable count.
+    const questions = new Set([...b.matchAll(/'(\w+_q\d+)'/g)].map((m) => m[1])).size;
+    const evidence = (b.match(/tier: 'T\d'/g) ?? []).length;
+    const tiers = [...b.matchAll(/tier: '(T\d)'/g)].map((m) => m[1]).sort();
+    const aliasBlock = (b.match(/aliases: \[([^\]]*)\]/) ?? [])[1] ?? '';
+    const aliases = (aliasBlock.match(/'/g) ?? []).length / 2;
+    const gapsBlock = (b.match(/knownGaps: \[([^\]]*)\]/) ?? [])[1] ?? '';
+    const gaps = gapsBlock.trim() ? gapsBlock.replace(/[']/g, '').trim() : 'none recorded';
+    return { id, kind, name, questions, evidence, bestTier: tiers[0] ?? 'none', aliases, gaps };
+  });
+}
+const CONDITION_PROFILES = parseProfiles('src/lib/capability/directory/conditions.js', 'condition');
+const INJURY_PROFILES = parseProfiles('src/lib/capability/directory/injuries.js', 'injury');
+
+md += `\n## Directory profiles (order section 26 dimensions; generated from the live modules)\n
+Shared mechanisms, profile-blind by design: plan generation, builder,
+picker, logging, effective prescription, coach, check-in, reintroduction
+and the learning shield all consume FUNCTIONAL state only (GC-D1), so
+every profile inherits full support the moment its questions are
+answered; per-profile automated scenario coverage is the Phase H matrix
+suite (every profile iterated by construction). Clinical/expert review,
+device validation and user validation remain EXTERNAL and pending for
+every profile (founder actions); marketing stays governed by
+MARKETING-READINESS-MATRIX.md (all NO).\n
+| Profile | Kind | Questions | Evidence (best tier) | Aliases | Known gaps |\n|---|---|---|---|---|---|\n`;
+for (const p of [...CONDITION_PROFILES, ...INJURY_PROFILES]) {
+  md += `| ${p.name} | ${p.kind} | ${p.questions} | ${p.evidence} (${p.bestTier}) | ${p.aliases} | ${p.gaps} |\n`;
+}
+md += `\nREAL-DISABLED-USER-VALIDATED: **NO** for every profile (order
+section 14 truth field; converts only through CC-F5 rounds).\n`;
+
 writeFileSync(join(root, 'docs/capability-campaign-25-2026-08-20/CAPABILITY-COVERAGE-REGISTRY.md'), md);
-console.log('registry written;', rows.length, 'rows,', Object.keys(PROFILES).length, 'profiles');
+console.log('registry written;', rows.length, 'rows,', Object.keys(PROFILES).length, 'profiles,', CONDITION_PROFILES.length + INJURY_PROFILES.length, 'directory profiles');

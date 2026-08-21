@@ -47,3 +47,61 @@ compatibility is separately proven by construction in
 Unknown-rate note: profiles count DEFINITE compatibility only; NULL
 axes are excluded on both sides (CAP-8), so every number here is a floor,
 not an estimate.
+
+## Directory profiles (order section 26 dimensions; generated from the live modules)
+
+Shared mechanisms, profile-blind by design: plan generation, builder,
+picker, logging, effective prescription, coach, check-in, reintroduction
+and the learning shield all consume FUNCTIONAL state only (GC-D1), so
+every profile inherits full support the moment its questions are
+answered; per-profile automated scenario coverage is the Phase H matrix
+suite (every profile iterated by construction). Clinical/expert review,
+device validation and user validation remain EXTERNAL and pending for
+every profile (founder actions); marketing stays governed by
+MARKETING-READINESS-MATRIX.md (all NO).
+
+| Profile | Kind | Questions | Evidence (best tier) | Aliases | Known gaps |
+|---|---|---|---|---|---|
+| Spinal cord injury | condition | 4 | 2 (T1) | 6 | Dose guidance covers ages 18 to 64 and long-standing injury only; outside that scope the general adult guidance applies. |
+| Multiple sclerosis | condition | 3 | 2 (T2) | 3 | Heat management specifics are professional territory and deliberately not encoded. |
+| Parkinson’s | condition | 3 | 2 (T2) | 3 | Session-timing guidance stays with the specialist team by design. |
+| Cerebral palsy | condition | 5 | 2 (T3) | 4 | No dose formula exists in the adult CP literature; the profile deliberately sets none. |
+| Stroke and acquired brain injury | condition | 4 | 2 (T3) | 7 | No parameter formula exists in the stroke literature; the profile deliberately sets none. |
+| Upper limb difference | condition | 3 | 1 (T3) | 7 | Peer-reviewed training-protocol evidence is thin; the profile stays capability-led by design. |
+| Lower limb difference | condition | 4 | 1 (T3) | 6 | Intensity reporting in the research is poor; the profile stays capability-led by design. |
+| Spina bifida | condition | 4 | 2 (T2) | 3 | UK-specific guidance is thin; general adult guidance plus specialist input covers the rest. |
+| Muscular dystrophy and neuromuscular conditions | condition | 4 | 3 (T2) | 9 | Certainty is low in parts of this literature; the profile keeps every boundary with the specialist team. |
+| Osteoarthritis | condition | 4 | 2 (T1) | 6 | none recorded |
+| Rheumatoid and inflammatory arthritis | condition | 3 | 2 (T2) | 6 | Active-period specifics stay with the rheumatology team by design. |
+| Hypermobility and hypermobile EDS | condition | 3 | 2 (T2) | 7 | Progression ceilings are not defined in the research; the profile sets none. |
+| Balance and stability conditions | condition | 3 | 2 (T2) | 8 | Cause-specific guidance stays with the specialist; the profile only sets support level. |
+| Grip, hand and dexterity differences | condition | 3 | 1 (T3) | 7 | Non-stroke hand-impairment training evidence is thin; the profile stays functional by design. |
+| Tremor and dystonia | condition | 3 | 1 (T3) | 5 | Evidence is small-sample and emerging; the profile keeps to functional support. |
+| Visual impairment | condition | 1 | 2 (T2) | 5 | Training-parameter research specific to sight loss is scarce; none is needed for functional support. |
+| Hearing impairment | condition | 1 | 1 (T2) | 4 | The inner-ear and balance overlap is under-researched; the balance answer covers it functionally. |
+| Learning disability | condition | 0 | 1 (T2) | 4 | Programming-parameter research is sparse; none is needed for functional support. |
+| Dwarfism and short stature | condition | 3 | 1 (T3) | 5 | No training guideline exists for skeletal dysplasia; every boundary stays with the specialist team. |
+| Wheelchair users | condition | 4 | 2 (T2) | 4 | Wheelchair users are not one research population; the profile deliberately routes to specific answers. |
+| Rotator-cuff-related shoulder trouble | injury | 3 | 1 (T1) | 6 | none recorded |
+| Shoulder instability and dislocation history | injury | 3 | 1 (T1) | 5 | none recorded |
+| AC joint trouble | injury | 3 | 1 (T1) | 5 | none recorded |
+| Biceps and labral shoulder trouble | injury | 3 | 1 (T1) | 5 | none recorded |
+| Frozen shoulder | injury | 3 | 1 (T1) | 3 | none recorded |
+| Tennis elbow | injury | 2 | 1 (T1) | 4 | none recorded |
+| Golfer’s elbow | injury | 3 | 1 (T1) | 4 | none recorded |
+| Biceps and triceps tendon trouble at the elbow | injury | 3 | 1 (T1) | 5 | none recorded |
+| Wrist and hand loading trouble | injury | 3 | 1 (T1) | 6 | none recorded |
+| Low back trouble | injury | 4 | 1 (T1) | 6 | none recorded |
+| Neck and upper back trouble | injury | 3 | 1 (T1) | 5 | none recorded |
+| Hip-related trouble | injury | 3 | 1 (T1) | 6 | none recorded |
+| Groin and adductor trouble | injury | 2 | 1 (T1) | 4 | none recorded |
+| Kneecap-area trouble | injury | 2 | 1 (T1) | 5 | none recorded |
+| Knee tendon trouble | injury | 3 | 1 (T1) | 4 | none recorded |
+| Deep knee bend restrictions | injury | 3 | 1 (T1) | 5 | none recorded |
+| Ankle sprain and instability | injury | 3 | 1 (T1) | 4 | none recorded |
+| Achilles and calf loading trouble | injury | 2 | 1 (T1) | 5 | none recorded |
+| Muscle strain | injury | 5 | 1 (T1) | 7 | none recorded |
+| After an operation | injury | 3 | 1 (T1) | 5 | none recorded |
+
+REAL-DISABLED-USER-VALIDATED: **NO** for every profile (order
+section 14 truth field; converts only through CC-F5 rounds).
