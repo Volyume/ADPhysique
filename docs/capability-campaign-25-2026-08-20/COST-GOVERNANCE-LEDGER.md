@@ -52,5 +52,7 @@ delegation. Maximums, not targets.
 
 | 3 | Haiku | Rule-shaped NULL-worklist curation (unilateralLoadable, gripDemand, bilateralUpper/Lower, floorAccess, balanceDemand, weightBearingHands follow-through) in CURATED_DEMANDS | demands.js curated entries + regenerated coverage report | ~150 mechanical cells against lead-written per-axis rules; the two judgement axes were curated by the lead first (d937134); order 29.7 lists exercise tagging as Haiku work | COMPLETE with lead corrections: 29 duplicate keys re-merged as per-field unions (whole-entry replacement was silently dropping earlier fields), three judgement fixes (Single-Arm fly one-side loadable; Sled Push needs both arms; Assault Bike does not), one stale pin re-expressed synthetically. Nine axes at 100 percent; 26 deliberate machine-design NULLs stand. |
 
+| 4 | Haiku | Five family plans (GC-D8 list) authored in seedRoutines against the LOCKED red oracle (capabilityFamilyPlans suite entries written by the lead first) | seedRoutines.js plans + REQUIRED_EXERCISES + seed-key bump + registry FAMILIES rows | Plan data entry against a mechanical compatibility oracle is order 29.7 routine-data work; the lead defined audiences, thresholds and allowed quad options | pending |
+
 Direct-tool substitutions log:
 - Phase A traceability: entirely direct reads (0 agents).
