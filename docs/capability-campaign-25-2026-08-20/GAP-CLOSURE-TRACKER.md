@@ -54,3 +54,17 @@ registry rebuild + matrix statuses + final gate.
   Content was reviewed and corrected afterwards (dupe-key merge, three
   judgement fixes); no work lost. Standing rule from here: explicit-path
   staging ONLY while any agent is running.
+
+## Phase F verification record (order section 18: no parallel architecture)
+
+Every new layer feeds the EXISTING seams; verified mechanism by
+mechanism: directory questions -> the one consent-gated add flow
+(preselect, pinned); new axis -> the generic resolver/picker/
+generation/compat paths (no special-casing anywhere); new families ->
+ordinary seeded plans (computed browse compatibility, install checks,
+activation all inherited); adapted setup -> the existing exercise
+detail surface; profiles' family pointers -> text discovery (33.20:
+never presetting state); coach/check-in/reintroduction/learning
+untouched by construction (GC-D1: the directory cannot reach them) and
+re-proven by the standing suites. Nothing gained a second write path,
+a second store, or a per-condition branch anywhere in engine code.

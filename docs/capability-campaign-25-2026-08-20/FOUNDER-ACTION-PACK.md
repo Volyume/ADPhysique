@@ -6,9 +6,10 @@ what it unlocks.
 
 ### A. PRODUCTION
 
-- **Run migrations 145-150 against production** (your exact phrase, per
-  supabase/README). Order: 145 → 146 → 147 → 148 → 149 → 150 (149
-  needs 145's table; 150 is independent but batch it). Pre-checks per
+- **Run migrations 145-151 against production** (your exact phrase, per
+  supabase/README). Order: 145 → 146 → 147 → 148 → 149 → 150 → 151 (149
+  needs 145's table; 150 and 151 are independent but batch them; 151 is
+  the gap-closure demand column). Pre-checks per
   README (backup point; each file is additive + idempotent and was
   exercised twice on scratch Postgres). Until run: capability rows stay
   device-local with harmless push retries; custom-exercise pushes fail
@@ -26,7 +27,7 @@ what it unlocks.
 ### C. PHYSICAL VALIDATION
 
 - **One consolidated device script**: PHYSICAL-VALIDATION-BACKLOG.md,
-  now organised as eight journeys (A free baseline user; B temporary
+  now organised as eight journeys plus the gap-closure sub-steps (A-plus discovery, C-plus adapted setup, D-plus new families, F-plus TalkBack discovery walk) (A free baseline user; B temporary
   episode; C custom adapted exercise; D compatible programme/library;
   E coach/check-in/reintroduction; F accessibility; G export/delete/
   privacy; H unaffected training + ED-safety regression). Physical

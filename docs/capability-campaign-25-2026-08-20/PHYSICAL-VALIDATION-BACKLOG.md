@@ -27,6 +27,16 @@ from PARTIAL, so run it deliberately, TalkBack on.
    and Targets; skipping never blocks; step count reads 6 with Account
    excluded.
 
+### A-plus (gap closure): the discovery surface
+A1. Open How you train, then "Looking for a specific condition or injury?".
+    Expected: Training considerations opens; searching "wheelchair" and
+    "shoulder" both find profiles; a nonsense search still offers
+    "Something else, or not listed".
+A2. Open a condition profile and tap one question card.
+    Expected: How you train opens at the durability step with that
+    choice preselected; nothing saves until the readback; backing out
+    saves nothing.
+
 ## B. Temporary episode (declare, apply, work around, end, restart)
 
 8. Add a TEMPORARY change (episode) with a rough end date. Expected:
@@ -68,6 +78,11 @@ from PARTIAL, so run it deliberately, TalkBack on.
 19. Give the custom compatible answers. Expected: it appears in
     suggestions/generation alongside built-ins (pool parity).
 
+### C-plus (gap closure): adapted setup lines
+C1. Open Lat Pulldown (Wide Grip) in the exercise library.
+    Expected: "Ways to set this up" shows strap and one-arm lines under
+    the instructions; TalkBack reads them as ordinary text.
+
 ## D. Compatible programme and library
 
 20. With Standing work active: open the exercise picker. Expected:
@@ -97,6 +112,16 @@ from PARTIAL, so run it deliberately, TalkBack on.
     now, so nothing is filtered for it" (only when the feature is on);
     generation surfaces offer Hold suggestions / Continue without
     checks.
+
+### D-plus (gap closure): the five new families
+D1. Browse the plan library; install Seated Home Strength and open its
+    days. Expected: dumbbell and band work only, seated or lying
+    throughout; the two seated band pulling movements resolve.
+D2. Open Hinge & Hip Lower Builder. Expected: no squat, leg press,
+    lunge or leg-curl anywhere; quad work is Terminal Knee Extension
+    and Wall Sit only.
+D3. Open Seated Upper Strength II and Steady-Base Strength. Expected:
+    heavier rep ranges present; every movement machine-based or seated.
 
 ## E. Coach, check-in and the return path (Pro account)
 
@@ -142,6 +167,12 @@ from PARTIAL, so run it deliberately, TalkBack on.
     targets; nothing is time-critical to operate.
 40. Display scaling at maximum font size: journeys A-B core screens
     remain readable and operable (no clipped controls).
+
+### F-plus (gap closure): discovery surface under TalkBack
+F1. With TalkBack on, walk Training considerations: search, open a
+    profile, activate a question card. Expected: every control is
+    labelled, the detail-mode change is announced, and the question
+    card's hint says it opens How you train.
 
 ## G. Export, delete, privacy
 
