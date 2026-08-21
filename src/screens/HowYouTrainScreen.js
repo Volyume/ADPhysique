@@ -309,7 +309,7 @@ export default function HowYouTrainScreen() {
   };
 
   const confirmEndEpisode = (ep) => {
-    appAlert('Has this ended?', 'Volyume will go back to planning the affected training normally. Nothing from this period is lost.', [
+    appAlert('Done with this?', 'Volyume will go back to planning the affected training normally. Nothing from this period is lost.', [
       { text: 'Keep it active', style: 'cancel' },
       {
         text: 'It has ended',
@@ -348,7 +348,7 @@ export default function HowYouTrainScreen() {
   };
 
   const confirmWithdraw = () => {
-    appAlert('Remove your capability information?', 'This deletes everything you have told Volyume here, on all your devices, and turns the feature off. Your account, workouts and history are untouched.', [
+    appAlert('Delete everything here?', 'This deletes everything you have told Volyume here, on all your devices, and turns the feature off. Your account, workouts and history are untouched.', [
       { text: 'Keep it', style: 'cancel' },
       {
         text: 'Delete and turn off',
@@ -387,7 +387,7 @@ export default function HowYouTrainScreen() {
       if (canShare) {
         await Sharing.shareAsync(fileUri, {
           mimeType: 'application/json',
-          dialogTitle: 'Export capability information',
+          dialogTitle: 'Export this information',
         });
       } else {
         toast.show('Export saved.');
@@ -408,7 +408,7 @@ export default function HowYouTrainScreen() {
   // CC31 (section 20, history restart): add a handler for "Start this again"
   // on ended episode-role rows.
   const confirmRestartEpisode = (row) => {
-    appAlert('Start this restriction again from today?', 'You can end it any time.', [
+    appAlert('Start this again from today?', 'You can end it any time.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Start again',
@@ -459,7 +459,7 @@ export default function HowYouTrainScreen() {
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>Is this about how you train generally, or something temporary right now?</Text>
           <Choice label="How I train generally" sub="Part of your normal setup. Full progression and coaching, no special labels."
             onPress={() => chooseRole(CONSTRAINT_ROLE.BASELINE)} t={t} />
-          <Choice label="Temporary, for now" sub="Volyume takes it as a passing change and will help you step back when it ends."
+          <Choice label="Temporary, for now" sub="Volyume takes it as a passing change and will help you build back up when it ends."
             onPress={() => chooseRole(CONSTRAINT_ROLE.EPISODE)} t={t} />
         </View>
       );
@@ -587,7 +587,7 @@ export default function HowYouTrainScreen() {
             beyond the secure EU service that stores your Volyume data, and you can see, export or
             delete all of it here at any time. Deleting it does not touch your account.
           </Text>
-          <Choice label="I agree - store my capability information" onPress={onConsent} t={t} primary />
+          <Choice label="I agree - store this information" onPress={onConsent} t={t} primary />
           <Choice label="Not now" sub="You can still avoid specific exercises from Plan tools, and set your equipment - neither needs this agreement."
             onPress={() => { setAdding(null); setDraft(null); }} t={t} />
         </View>
@@ -622,7 +622,7 @@ export default function HowYouTrainScreen() {
   const episodeSub = (ep) => {
     const names = ep.rows.filter(r => r.state === 'active').map(r => ruleLabel(r)).join(', ');
     if (ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION) {
-      return `${names}. Past the time you expected - has it ended?`;
+      return `${names}. You thought this would be done by about now. Still need it?`;
     }
     return names;
   };
@@ -687,7 +687,7 @@ export default function HowYouTrainScreen() {
         <View key={ep.groupId}>
           <SettingRow icon="time" label="Temporary change" sub={episodeSub(ep)} showArrow={false} />
           <View style={styles.episodeActions}>
-            <Choice label="It has ended" onPress={() => confirmEndEpisode(ep)} t={t} compact />
+            <Choice label="Done with it" onPress={() => confirmEndEpisode(ep)} t={t} compact />
             <Choice label="A while longer" onPress={async () => { haptics.selection(); await extendEpisode(userId, ep.groupId, Date.now() + 14 * DAY_MS); toast.show('Extended by two weeks.'); refresh(); }} t={t} compact />
             {ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION ? (
               // Section 33.7's third option: an explicit continue that resets
@@ -733,10 +733,10 @@ export default function HowYouTrainScreen() {
       {consented ? (
         <>
           <SectionHeader title="Your data" />
-          <SettingRow icon="download" label="Export capability information"
+          <SettingRow icon="download" label="Export this information"
             sub="A readable file of everything you have added here"
             onPress={exportCapabilityData} showArrow={false} />
-          <SettingRow icon="trash" label="Delete capability information" destructive
+          <SettingRow icon="trash" label="Delete this information" destructive
             sub="Removes everything here on all devices and turns the feature off"
             onPress={confirmWithdraw} showArrow={false} />
         </>

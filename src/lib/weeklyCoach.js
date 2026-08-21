@@ -2580,7 +2580,7 @@ function appendWeeklyAnswerSuggestion(note, pcFact) {
     return `${note} You said it got in the way more than expected. If that carries on, you can adjust it under How you train.`;
   }
   if (pcFact.weeklyAnswer === 'not_relevant') {
-    return `${note} You said it mostly didn't come up. If it has ended, you can close it under How you train.`;
+    return `${note} You said it mostly didn't come up. If you are done with it, you can end it under How you train.`;
   }
   return note;
 }

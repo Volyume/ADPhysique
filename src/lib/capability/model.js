@@ -65,7 +65,7 @@ export const DEMAND_AXES = Object.freeze([
   { id: 'bilateral_lower',   label: 'Using both legs together' },
   { id: 'axial_load',        label: 'Loading the spine' },
   { id: 'impact',            label: 'Impact and jumping' },
-  { id: 'balance_high',      label: 'High balance demand' },
+  { id: 'balance_high',      label: 'Balancing without support' },
   // Gap-closure Phase C (MOVEMENT-PATH-AUDIT.md): the push-up class loads
   // the extended wrist while reading as grip-free, so wrist and hand
   // restrictions could not be expressed without it.

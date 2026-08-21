@@ -289,7 +289,7 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
     );
 
     it('source contains the conditional question, gated on hasActiveEpisode', () => {
-      expect(src).toContain('How did training around your restriction go this week?');
+      expect(src).toContain('How did you get on training around your temporary change?');
       expect(/hasActiveEpisode\s*\?/.test(src)).toBe(true);
     });
 
@@ -301,16 +301,15 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
       // The ternary's else branch carries the joint-pain question, so the
       // two can never render together.
       const conditional = src.slice(src.indexOf('hasActiveEpisode ?'));
-      const restrictionIdx = conditional.indexOf('How did training around your restriction');
+      const restrictionIdx = conditional.indexOf('How did you get on training around your temporary change?');
       const jointIdx = conditional.indexOf('Any joint or tendon pain?');
       expect(restrictionIdx).toBeGreaterThan(-1);
       expect(jointIdx).toBeGreaterThan(restrictionIdx);
     });
 
     it('an overdue restriction adds the close-it hint to the question (2026-08-21)', () => {
-      expect(/episodeOverdue\s*\n?\s*\?\s*'Past the time you expected it to run\. If it has ended, you can close it under How you train\.'/.test(src)
-        || src.includes("episodeOverdue")).toBe(true);
-      expect(src).toContain('Past the time you expected it to run. If it has ended, you can close it under How you train.');
+      expect(src.includes('episodeOverdue')).toBe(true);
+      expect(src).toContain('This has been going longer than you expected. If you are done with it, you can end it under How you train.');
       // Detection uses the real status machine, not a re-derived clock rule.
       expect(/constraintStatus\(r,\s*Date\.now\(\)\)\s*===\s*EPISODE_STATUS\.AWAITING_CONFIRMATION/.test(src)).toBe(true);
     });
@@ -344,12 +343,12 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
     it('"in the way" appends the adjust suggestion', () => {
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.IN_THE_WAY);
       expect(out.adjustments.training.note).toContain('you can adjust it under How you train');
-      expect(out.adjustments.training.note).not.toContain('you can close it under How you train');
+      expect(out.adjustments.training.note).not.toContain('you can end it under How you train');
     });
 
     it('"mostly didn\'t come up" appends the close suggestion', () => {
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
-      expect(out.adjustments.training.note).toContain('If it has ended, you can close it under How you train');
+      expect(out.adjustments.training.note).toContain('If you are done with it, you can end it under How you train');
       expect(out.adjustments.training.note).not.toContain('you can adjust it under How you train');
     });
 
@@ -368,7 +367,7 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
       // the full-data path, so a user without regular weigh-ins never saw
       // either suggestion. Now applied at every note-bearing return.
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
-      expect(out.adjustments.training.note).toContain('If it has ended, you can close it under How you train');
+      expect(out.adjustments.training.note).toContain('If you are done with it, you can end it under How you train');
       const inWay = withAnswer(CAPABILITY_WEEK_ANSWER.IN_THE_WAY);
       expect(inWay.adjustments.training.note).toContain('you can adjust it under How you train');
     });
