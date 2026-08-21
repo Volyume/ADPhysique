@@ -2126,7 +2126,12 @@ export async function pullFromCloud(supabaseUserId) {
           // session. Filtering them out (the old F5 Phase A defensive guard)
           // is what let a stale local copy survive and be re-uploaded,
           // resurrecting a deleted workout (release-gate blocker).
-          .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id, name, pre_workout_intent, set_count, total_volume, mesocycle_week_id, joint_discomfort, updated_at, deleted_at')
+          // PD-5 (bundle 2 prelude): sleep_quality/energy_score were pushed
+          // but missing from this explicit select, so every cross-device
+          // pull handed insertWorkoutFromCloud undefined and REPLACEd the
+          // entered readiness with NULL. Cloud columns live since
+          // migrate_118 (applied 2026-07-11).
+          .select('id, started_at, ended_at, duration_minutes, notes, is_completed, session_difficulty, overall_pump, soreness_24h_before, fatigue_level, routine_id, mesocycle_id, name, pre_workout_intent, set_count, total_volume, mesocycle_week_id, joint_discomfort, sleep_quality, energy_score, updated_at, deleted_at')
           .eq('user_id', supabaseUserId)
           .eq('is_completed', true);
         if (wmWorkouts > 0) q = q.gte('updated_at', isoFromMs(wmWorkouts));
