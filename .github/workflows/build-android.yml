@@ -508,19 +508,29 @@ jobs:
             android/app/build/outputs/apk/release/app-release.apk \
             android/app/build/outputs/bundle/release/app-release.aab
 
+      # 2026-08-21: artifact storage quota exhaustion broke every build
+      # from run 3400 onward (the gradle build succeeded; the uploads
+      # failed with "Artifact storage quota has been hit"). Each push
+      # was storing APK (63 MB) + AAB (83 MB) twice (branch run + main
+      # run) for 30 days. Retention drops to 3 days - a build is
+      # installed within a day or two of being cut, and any older SHA
+      # can be rebuilt from git. The AAB uploads only from main: Play
+      # submissions come from main, so the branch copy was dead weight
+      # doubling the largest artifact.
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: volyume-release-apk-${{ github.run_number }}
           path: android/app/build/outputs/apk/release/app-release.apk
-          retention-days: 30
+          retention-days: 3
 
       - name: Upload AAB artifact (Play Store)
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@v4
         with:
           name: volyume-release-aab-${{ github.run_number }}
           path: android/app/build/outputs/bundle/release/app-release.aab
-          retention-days: 30
+          retention-days: 3
 
       # Status report written as a workflow artifact instead of a
       # git push back to the branch. The previous design committed
@@ -580,4 +590,4 @@ jobs:
         with:
           name: build-status-${{ github.run_number }}
           path: .ci-status/latest.md
-          retention-days: 30
+          retention-days: 3
