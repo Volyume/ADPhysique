@@ -398,3 +398,35 @@ CC27-29-BUNDLE-TRACKER.md.
   searching a condition name finds the profile, its questions,
   education and fitting families - order section 25 satisfied without a
   condition-labelled programme claim.
+- GC-D6 Order section 20 (injury check-in intelligence) resolves onto
+  EXISTING mechanisms, deliberately adding no questions: "previously
+  restricted movement now tolerated" is the AWAITING confirm + episode
+  end + reintroduction ramp; "additional movement now problematic" is
+  the mid-workout work-around entry + episode extension; "restriction
+  changed" is the supersede/edit flow; execution quality under
+  restriction is the section 19 conditional answer. Grounds: CLIN-2
+  keeps finer grading clinical; the order's own "Do not ask unnecessary
+  questions" law; the check-in questionnaire-minimalism law (section 19,
+  "minimal delta"). Revisit trigger: validation-round evidence that a
+  specific structured question earns its burden.
+- GC-D7 DEF-3 (grip-limited pulling) resolves WITHOUT a plan: a
+  strap-assisted pulling PLAN would be incompatible by construction
+  (the exercises' honest grip metadata is 'bar'), so the content answer
+  is (a) per-exercise strap/cuff setup guidance in the adapted-setup
+  layer (Phase G), (b) the grip profiles' guidance pointing at
+  implements + allowances (shipped), (c) the allowance flow re-admitting
+  strapped movements per user (shipped). The registry row converts from
+  NOT SHIPPED to this mechanism set when (a) lands; the "no fake
+  compatibility" reason is the standing law.
+- GC-D8 Order section 10 duplicate-avoidance mapping, recorded so
+  breadth claims stay honest: wheelchair gym strength = Seated Full
+  Body + Seated Upper Strength; no-standing full body = Seated Full
+  Body; resistance-band adapted = Dumbbell & Band Foundations;
+  no-floor-transfer = No-Floor Full Body; support/stability-heavy =
+  Supported Machine Builder I/II. NEW builds justified by real unmet
+  need: Seated Home Strength (home wheelchair users - the shipped
+  seated families are machine-led), Grip-Light Lower Builder (serious
+  lower training without firm grip), Hinge & Hip Lower Builder (no deep
+  knee flexion), and experienced tiers Seated Upper Strength II and
+  Steady-Base Strength (the no watered-down-only-shelf law, Amendment
+  section 15; order section 24).

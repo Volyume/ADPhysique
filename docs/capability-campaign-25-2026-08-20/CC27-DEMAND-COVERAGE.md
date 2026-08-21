@@ -9,39 +9,39 @@ coverage floors pinned in `capabilityDemands.test.js`.
 
 | Axis | Known | Coverage |
 |---|---|---|
-| position | 551 | 100% |
-| floorAccess | 545 | 99% |
-| overheadPosition | 551 | 100% |
-| gripDemand | 530 | 96% |
-| unilateralLoadable | 481 | 87% |
-| bilateralUpper | 538 | 98% |
-| bilateralLower | 548 | 99% |
-| axialLoad | 551 | 100% |
+| position | 544 | 99% |
+| floorAccess | 551 | 100% |
+| overheadPosition | 546 | 99% |
+| gripDemand | 543 | 99% |
+| unilateralLoadable | 527 | 96% |
+| bilateralUpper | 548 | 99% |
+| bilateralLower | 551 | 100% |
+| axialLoad | 549 | 100% |
 | impact | 551 | 100% |
-| balanceDemand | 546 | 99% |
-| weightBearingHands | 517 | 94% |
+| balanceDemand | 551 | 100% |
+| weightBearingHands | 533 | 97% |
 
 ## Per-muscle coverage (family-thin muscles marked *, section 33.3 priority)
 
 | Muscle | Rows | position | grip | overhead | floor | bilat.upper | bilat.lower | balance | axial |
 |---|---|---|---|---|---|---|---|---|---|
-| abs | 62 | 100% | 90% | 100% | 100% | 85% | 100% | 100% | 100% |
-| adductors * | 11 | 100% | 100% | 100% | 100% | 100% | 82% | 100% | 100% |
-| back | 65 | 100% | 98% | 100% | 100% | 98% | 100% | 100% | 100% |
+| abs | 62 | 100% | 100% | 97% | 100% | 98% | 100% | 100% | 100% |
+| adductors * | 11 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
+| back | 65 | 97% | 98% | 97% | 100% | 98% | 100% | 100% | 100% |
 | biceps | 36 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| calves | 21 | 100% | 86% | 100% | 100% | 100% | 100% | 100% | 100% |
-| chest | 56 | 100% | 98% | 100% | 95% | 100% | 100% | 96% | 100% |
-| forearms * | 22 | 100% | 100% | 100% | 100% | 95% | 100% | 95% | 100% |
+| calves | 21 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
+| chest | 56 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
+| forearms * | 22 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | front_delts | 23 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| glutes | 37 | 100% | 97% | 100% | 100% | 100% | 100% | 100% | 100% |
-| hamstrings | 38 | 100% | 95% | 100% | 100% | 100% | 100% | 100% | 100% |
-| neck * | 14 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| quads | 57 | 100% | 89% | 100% | 100% | 100% | 100% | 100% | 100% |
-| rear_delts | 24 | 100% | 96% | 100% | 100% | 92% | 100% | 100% | 100% |
+| glutes | 37 | 97% | 100% | 97% | 100% | 100% | 100% | 100% | 100% |
+| hamstrings | 38 | 95% | 92% | 100% | 100% | 100% | 100% | 100% | 97% |
+| neck * | 14 | 86% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
+| quads | 57 | 100% | 93% | 100% | 100% | 100% | 100% | 100% | 98% |
+| rear_delts | 24 | 100% | 100% | 100% | 100% | 96% | 100% | 100% | 100% |
 | side_delts | 17 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| tibialis * | 9 | 100% | 100% | 100% | 100% | 100% | 89% | 100% | 100% |
+| tibialis * | 9 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | traps * | 18 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| triceps | 41 | 100% | 100% | 100% | 93% | 100% | 100% | 95% | 100% |
+| triceps | 41 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 
 ## Contradiction check (section 8.5)
 
@@ -54,46 +54,46 @@ where families exist); their per-axis coverage is in the table above.
 
 ## NULL worklist per axis (curation surface)
 
-### position (0 unknown)
+### position (7 unknown)
+
+Hyperextension (Back Extension) [back/machine]; Back Extension (Weighted) [back/machine]; Glute Ham Raise [hamstrings/machine]; 45-Degree Hip Extension [glutes/machine]; Neck Harness Flexion [neck/machine]; Neck Harness Extension [neck/machine]; Glute-Ham Raise Machine [hamstrings/machine]
+
+### floorAccess (0 unknown)
 
 (none)
 
-### floorAccess (6 unknown)
+### overheadPosition (5 unknown)
 
-Dumbbell Squeeze Press [chest/dumbbell]; JM Press [triceps/barbell]; Board Press [triceps/barbell]; Guillotine Press [chest/barbell]; Landmine Chest Press (Single-Arm) [chest/barbell]; Landmine Tricep Extension [triceps/barbell]
+Reverse Hyperextension [back/machine]; Abduction Machine [glutes/machine]; Dragon Flag [abs/bodyweight]; L-Sit Hold [abs/bodyweight]; Tyre Flip [back/machine]
 
-### overheadPosition (0 unknown)
+### gripDemand (8 unknown)
 
-(none)
+Pendulum Squat [quads/machine]; Cycling (Stationary) [quads/machine]; Sled Push [quads/machine]; Sled Pull [hamstrings/machine]; Prowler Drag [hamstrings/machine]; Assault Bike [quads/machine]; Tyre Flip [back/machine]; Glute-Ham Raise Machine [hamstrings/machine]
 
-### gripDemand (21 unknown)
+### unilateralLoadable (24 unknown)
 
-Sissy Squat [quads/bodyweight]; Pendulum Squat [quads/machine]; Spanish Squat [quads/bodyweight]; Donkey Kickback (Machine) [glutes/machine]; Donkey Calf Raise [calves/bodyweight]; Calf Raise on Steps [calves/bodyweight]; Russian Twist [abs/bodyweight]; Dragon Flag [abs/bodyweight]; V-Up [abs/bodyweight]; Toe-to-Bar [abs/bodyweight]; L-Sit Hold [abs/bodyweight]; Sled Push [quads/machine]; Sled Pull [hamstrings/machine]; Tyre Flip [back/machine]; Bodyweight Single-Leg RDL [hamstrings/bodyweight]; Prone Reverse Fly [rear_delts/bodyweight]; Seated Bodyweight Calf Raise [calves/bodyweight]; Oblique V-Up [abs/bodyweight]; Sissy Squat Machine [quads/machine]; Bodyweight Bulgarian Split Squat [quads/bodyweight]; Machine Chest Fly (Single-Arm) [chest/machine]
+Machine Chest Press [chest/machine]; Incline Machine Press [chest/machine]; Decline Machine Press [chest/machine]; Hammer Strength Chest Press [chest/machine]; Machine Shoulder Press [front_delts/machine]; Viking Press [front_delts/machine]; Machine Lateral Raise [side_delts/machine]; Machine Rear Delt Fly [rear_delts/machine]; Seated Rear Delt Machine [rear_delts/machine]; Machine Curl [biceps/machine]; Machine Tricep Extension [triceps/machine]; Plate-Loaded Incline Press [chest/machine]; Plate-Loaded Chest Press [chest/machine]; Plate-Loaded Decline Press [chest/machine]; Plate-Loaded Shoulder Press [front_delts/machine]; Plate-Loaded Rear Delt [rear_delts/machine]; Plate-Loaded Preacher Curl [biceps/machine]; Plate-Loaded Overhead Extension [triceps/machine]; Lateral Raise Machine [side_delts/machine]; Preacher Curl Machine [biceps/machine]; Triceps Extension Machine [triceps/machine]; Machine Shoulder Press (Front Delt Focus) [front_delts/machine]; Tib Bar Raise (Machine) [tibialis/machine]; Machine Y-Raise [rear_delts/machine]
 
-### unilateralLoadable (70 unknown)
+### bilateralUpper (3 unknown)
 
-Pec Deck (Machine Fly) [chest/machine]; Machine Chest Press [chest/machine]; Incline Machine Press [chest/machine]; Decline Machine Press [chest/machine]; Hammer Strength Chest Press [chest/machine]; Hyperextension (Back Extension) [back/machine]; Reverse Hyperextension [back/machine]; Back Extension (Weighted) [back/machine]; Machine Shoulder Press [front_delts/machine]; Viking Press [front_delts/machine]; Machine Lateral Raise [side_delts/machine]; Machine Rear Delt Fly [rear_delts/machine]; Reverse Pec Deck [rear_delts/machine]; Seated Rear Delt Machine [rear_delts/machine]; Machine Curl [biceps/machine]; Machine Tricep Extension [triceps/machine]; Hack Squat Machine [quads/machine]; Leg Press [quads/machine]; Leg Extension [quads/machine]; Pendulum Squat [quads/machine]; Leg Press (Narrow Stance) [quads/machine]; Leg Press (High Foot) [quads/machine]; Cycling (Stationary) [quads/machine]; Lying Leg Curl [hamstrings/machine]; Seated Leg Curl [hamstrings/machine]; Standing Leg Curl [hamstrings/machine]; Glute Ham Raise [hamstrings/machine]; Prone Leg Curl [hamstrings/machine]; Machine Hip Thrust [glutes/machine]; Abduction Machine [glutes/machine]; 45-Degree Hip Extension [glutes/machine]; Reverse Hyperextension (Glute) [glutes/machine]; Standing Calf Raise (Machine) [calves/machine]; Seated Calf Raise [calves/machine]; Seated Machine Calf Raise [calves/machine]; Leg Press Calf Raise [calves/machine]; Calf Raise on Leg Press Sled [calves/machine]; Machine Crunch [abs/machine]; Neck Flexion (Machine) [neck/machine]; Neck Extension (Machine) [neck/machine]; Neck Harness Flexion [neck/machine]; Neck Harness Extension [neck/machine]; Sled Push [quads/machine]; Sled Pull [hamstrings/machine]; Prowler Drag [hamstrings/machine]; Assault Bike [quads/machine]; Tyre Flip [back/machine]; Seated Tibialis Raise [tibialis/machine]; GHD Sit-Up [abs/machine]; Hip Adduction Machine [adductors/machine]; Plate-Loaded Incline Press [chest/machine]; Plate-Loaded Chest Press [chest/machine]; Plate-Loaded Decline Press [chest/machine]; Plate-Loaded Shoulder Press [front_delts/machine]; Plate-Loaded Rear Delt [rear_delts/machine]; Plate-Loaded Preacher Curl [biceps/machine]; Plate-Loaded Hip Thrust [glutes/machine]; Plate-Loaded Overhead Extension [triceps/machine]; Lateral Raise Machine [side_delts/machine]; Preacher Curl Machine [biceps/machine]; Triceps Extension Machine [triceps/machine]; Ab Crunch Machine [abs/machine]; Glute-Ham Raise Machine [hamstrings/machine]; Machine Shoulder Press (Front Delt Focus) [front_delts/machine]; Tib Bar Raise (Machine) [tibialis/machine]; Neck Machine Lateral Flexion [neck/machine]; Machine Y-Raise [rear_delts/machine]; Donkey Calf Raise (Machine) [calves/machine]; Sissy Squat Machine [quads/machine]; Belt Squat [quads/machine]
+L-Sit Hold [abs/bodyweight]; Tyre Flip [back/machine]; Machine Y-Raise [rear_delts/machine]
 
-### bilateralUpper (13 unknown)
-
-Dragon Flag [abs/bodyweight]; V-Up [abs/bodyweight]; Stir the Pot [abs/bodyweight]; Hanging Knee Raise [abs/bodyweight]; Toe-to-Bar [abs/bodyweight]; L-Sit Hold [abs/bodyweight]; Dead Hang [forearms/bodyweight]; Tyre Flip [back/machine]; Bear Crawl [abs/bodyweight]; Hanging Oblique Raise [abs/bodyweight]; Prone Reverse Fly [rear_delts/bodyweight]; Oblique V-Up [abs/bodyweight]; Machine Y-Raise [rear_delts/machine]
-
-### bilateralLower (3 unknown)
-
-Adductor Squeeze (Ball) [adductors/bodyweight]; Adductor Rock-Back (Kneeling) [adductors/bodyweight]; Tib Bar Raise (Machine) [tibialis/machine]
-
-### axialLoad (0 unknown)
+### bilateralLower (0 unknown)
 
 (none)
+
+### axialLoad (2 unknown)
+
+Bodyweight Single-Leg RDL [hamstrings/bodyweight]; Bodyweight Bulgarian Split Squat [quads/bodyweight]
 
 ### impact (0 unknown)
 
 (none)
 
-### balanceDemand (5 unknown)
+### balanceDemand (0 unknown)
 
-Dumbbell Squeeze Press [chest/dumbbell]; JM Press [triceps/barbell]; Board Press [triceps/barbell]; Rice Bucket [forearms/bodyweight]; Guillotine Press [chest/barbell]
+(none)
 
-### weightBearingHands (34 unknown)
+### weightBearingHands (18 unknown)
 
-Weighted Dips (Chest) [chest/bodyweight]; Weighted Dips (Triceps) [triceps/bodyweight]; Sissy Squat [quads/bodyweight]; Pendulum Squat [quads/machine]; Spanish Squat [quads/bodyweight]; Cycling (Stationary) [quads/machine]; Terminal Knee Extension [quads/bodyweight]; Frog Pump [glutes/bodyweight]; Donkey Kickback (Machine) [glutes/machine]; Donkey Calf Raise [calves/bodyweight]; Calf Raise on Steps [calves/bodyweight]; Russian Twist [abs/bodyweight]; Dragon Flag [abs/bodyweight]; V-Up [abs/bodyweight]; Toe-to-Bar [abs/bodyweight]; Dead Hang [forearms/bodyweight]; Sled Push [quads/machine]; Sled Pull [hamstrings/machine]; Prowler Drag [hamstrings/machine]; Battle Ropes [front_delts/machine]; Assault Bike [quads/machine]; Tyre Flip [back/machine]; Cossack Squat [adductors/bodyweight]; Side-Lying Adduction [adductors/bodyweight]; Bodyweight Single-Leg RDL [hamstrings/bodyweight]; Glute-Ham Raise Machine [hamstrings/machine]; Prone Reverse Fly [rear_delts/bodyweight]; Seated Bodyweight Calf Raise [calves/bodyweight]; Oblique V-Up [abs/bodyweight]; Adductor Rock-Back (Kneeling) [adductors/bodyweight]; Tib Bar Raise (Machine) [tibialis/machine]; Sissy Squat Machine [quads/machine]; Bodyweight Bulgarian Split Squat [quads/bodyweight]; Machine Chest Fly (Single-Arm) [chest/machine]
+Weighted Dips (Chest) [chest/bodyweight]; Weighted Dips (Triceps) [triceps/bodyweight]; Pendulum Squat [quads/machine]; Cycling (Stationary) [quads/machine]; Terminal Knee Extension [quads/bodyweight]; Frog Pump [glutes/bodyweight]; L-Sit Hold [abs/bodyweight]; Dead Hang [forearms/bodyweight]; Sled Push [quads/machine]; Sled Pull [hamstrings/machine]; Prowler Drag [hamstrings/machine]; Battle Ropes [front_delts/machine]; Assault Bike [quads/machine]; Tyre Flip [back/machine]; Cossack Squat [adductors/bodyweight]; Side-Lying Adduction [adductors/bodyweight]; Glute-Ham Raise Machine [hamstrings/machine]; Adductor Rock-Back (Kneeling) [adductors/bodyweight]

@@ -50,5 +50,7 @@ delegation. Maximums, not targets.
 | 1 | Haiku | Condition-directory evidence batch (12 full workups + 3 currency checks + completeness candidates) | research/R7-condition-directory-evidence.md | ~15 populations x multiple authoritative sources = mechanical extraction vs fixed schema; R5 covers only 8 populations; direct hands-on would burn main-loop context on gathering (order 29.1) | COMPLETE (12/12, no blocks; adjudication pending) |
 | 2 | Haiku | Injury/body-region evidence batch (order section 6 seed families by region + completeness) | research/R8-injury-directory-evidence.md | Largely NEW ground (R3 covered general reintroduction/pain-monitoring, not per-region injury guidance); same mechanical-extraction shape as slot 1 | COMPLETE (37 families; DEFECT: zero URLs returned; education lines unshippable as-is - both handled at adjudication: lead-written education, live-verified citations) |
 
+| 3 | Haiku | Rule-shaped NULL-worklist curation (unilateralLoadable, gripDemand, bilateralUpper/Lower, floorAccess, balanceDemand, weightBearingHands follow-through) in CURATED_DEMANDS | demands.js curated entries + regenerated coverage report | ~150 mechanical cells against lead-written per-axis rules; the two judgement axes were curated by the lead first (d937134); order 29.7 lists exercise tagging as Haiku work | pending |
+
 Direct-tool substitutions log:
 - Phase A traceability: entirely direct reads (0 agents).
