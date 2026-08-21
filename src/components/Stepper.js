@@ -63,8 +63,24 @@ export default function Stepper({
   // bounds, so the parent has to make room for it).
   const effectiveHitSlop = hitSlop ?? (isCompact ? COMPACT_HIT_SLOP : undefined);
 
+  const handleAccessibilityAction = (event) => {
+    if (event.nativeEvent.actionName === 'increment') {
+      if (!atMax) inc();
+    } else if (event.nativeEvent.actionName === 'decrement') {
+      if (!atMin) dec();
+    }
+  };
+
   return (
-    <View style={[styles.row, { gap: sizeStyle.gap }, isCompact && [styles.rowCompact, live.rowCompact], style]}>
+    <View
+      accessible={true}
+      accessibilityRole="adjustable"
+      accessibilityLabel={label}
+      accessibilityValue={{ text: String(display) }}
+      accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+      onAccessibilityAction={handleAccessibilityAction}
+      style={[styles.row, { gap: sizeStyle.gap }, isCompact && [styles.rowCompact, live.rowCompact], style]}
+    >
       <PressableCard
         onPress={dec}
         disabled={atMin}

@@ -89,6 +89,6 @@ describe('red-team finding 1 (bundle): the capability read failure is never sile
   });
   test('the notice is consent-gated so users without the feature never see it', () => {
     expect(src).toMatch(/getLocalCapabilityConsent\(userId\)/);
-    expect(src).toMatch(/consented === true.*setCapabilityUnavailable\(true\)/);
+    expect(src).toMatch(/consented === true\) \{[\s\S]{0,200}setCapabilityUnavailable\(true\)/);
   });
 });

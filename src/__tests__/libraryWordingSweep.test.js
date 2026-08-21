@@ -9,34 +9,21 @@
  * or plan description carrying a blacklisted medical-purpose term fails
  * here, mechanically, before it ships.
  *
- * The list below is the R2 BLACKLIST verbatim (words whose presence MHRA
- * treats as indicators of medical intended purpose), plus the named
- * condition terms. GREYLIST terms (recovery, pain-as-logging) are NOT
- * banned here - R2 permits their training-science senses - except the
- * outcome phrases ("reduce pain") which are.
+ * The R2 BLACKLIST (words whose presence MHRA treats as indicators of
+ * medical intended purpose) and named condition terms are shared in
+ * src/lib/observability/r2Wording.js to keep the list canonical.
+ * GREYLIST terms (recovery, pain-as-logging) are NOT banned here - R2
+ * permits their training-science senses - except the outcome phrases
+ * ("reduce pain") which are.
  */
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { R2_BLACKLIST } from '../lib/observability/r2Wording';
 
 const read = (p) => fs.readFileSync(path.resolve(__dirname, '..', p), 'utf8');
 
-// Word-boundary regexes; case-insensitive. 'health' is deliberately NOT
-// here (not on any R2 list; 'heal/healing/heals' are).
-const BLACKLIST = [
-  /\brehabilitat\w*\b/i, /\brehab\b/i, /\bprehab\b/i,
-  /\binjury management\b/i, /\bflare(-| )?ups?\b/i, /\bflare\b/i,
-  /\bphysio(therap\w*)?\b/i,
-  /\btreat(s|ment|ing)?\b/i, /\btherap(y|eutic|ies)\b/i,
-  /\bdiagnos\w+\b/i, /\bscreening\b/i, /\btriage\b/i, /\bsymptom\w*\b/i,
-  /\bheal(s|ing|ed)?\b/i, /\bcures?\b/i, /\bcounteracts?\b/i,
-  /\breduce[sd]? pain\b/i, /\bpain[- ]free\b/i,
-  /\bsafe for\b/i, /\bprotects? against\b/i, /\bprevents? injur\w*\b/i,
-  /\bclinically proven\b/i, /\bclinical trials?\b/i, /\bmedical\w*\b/i,
-  // Named conditions (the specific-injury link, R2 section 5.3 last row).
-  /\bspinal cord\b/i, /\bmultiple sclerosis\b/i, /\barthritis\b/i,
-  /\bfrozen shoulder\b/i, /\bsciatica\b/i, /\bhypermobil\w*\b/i,
-  /\bscoliosis\b/i, /\btendinitis\b/i, /\btendinopathy\b/i, /\bimpingement\b/i,
-];
+// Alias for backward compatibility with the rest of the suite.
+const BLACKLIST = R2_BLACKLIST;
 
 function stringsFrom(src, regex) {
   const out = [];

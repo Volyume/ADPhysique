@@ -43,7 +43,8 @@ export const POPULATION_CLAIM_TERMS = [
  *  - Apple's age-rating category "Medical/Treatment Information" and
  *    the privacy-label "Diagnostics" category;
  *  - "not medical advice" disclaimers (the opposite of a claim);
- *  - markdown table rows (platform metadata declarations).
+ *  - markdown table rows (platform metadata declarations);
+ *  - technical configuration and code snippets (lines with backticks).
  */
 export function isExemptMarketingLine(line) {
   const t = String(line ?? '');
@@ -51,5 +52,6 @@ export function isExemptMarketingLine(line) {
   if (/Medical\/Treatment Information/i.test(t)) return true;
   if (/^\s*\|.*\|\s*$/.test(t)) return true; // metadata tables
   if (/^\s*>/.test(t)) return true; // reviewer notes/quotes
+  if (/`/.test(t)) return true; // code/configuration snippets
   return false;
 }

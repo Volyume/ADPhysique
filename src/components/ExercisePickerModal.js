@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, Modal,
-  TouchableOpacity, ScrollView,
+  TouchableOpacity, ScrollView, AccessibilityInfo,
 } from 'react-native';
 // Campaign item 14 (D25): react-native-keyboard-controller outside sheets
 // (this is a plain RN Modal, not a gorhom BottomSheet). Used only for the
@@ -271,7 +271,14 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
           // loadExerciseIntentState fails open internally (returns an empty
           // state, never throws), so `unavailable` is how a genuine read
           // failure is told apart from "nothing set aside" - see D109-2.
-          if (state?.unavailable) setIntentUnavailable(true);
+          if (state?.unavailable) {
+            setIntentUnavailable(true);
+            // CC32 (section 27): announce the state change - iOS has no
+            // live regions, so the imperative announcement covers both
+            // platforms; the row below also carries liveRegion for
+            // Android focus-order arrivals.
+            try { AccessibilityInfo.announceForAccessibility('Avoided movements could not be checked right now, so nothing is filtered for them.'); } catch (_a) { /* best effort */ }
+          }
           // Red-team finding 1 (bundle), section 9.6: with no known
           // capability state this session the list filters nothing for how
           // you train, and that fact gets the same visible notice the
@@ -279,7 +286,12 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
           // filtering normally (CAP-17), so it stays quiet here.
           if (state?.capability?.unavailable && !state.capability.stale) {
             getLocalCapabilityConsent(userId)
-              .then((consented) => { if (consented === true) setCapabilityUnavailable(true); })
+              .then((consented) => {
+                if (consented === true) {
+                  setCapabilityUnavailable(true);
+                  try { AccessibilityInfo.announceForAccessibility('How you train could not be checked right now, so nothing is filtered for it.'); } catch (_a) { /* best effort */ }
+                }
+              })
               .catch(() => {});
           }
         })
@@ -725,7 +737,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 everything, unfiltered by avoidance) - this is the visible
                 notice that fact requires, not a block. */}
             {intentUnavailable ? (
-              <View style={styles.constraintsUnavailableRow}>
+              <View style={styles.constraintsUnavailableRow} accessibilityLiveRegion="polite">
                 <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
                 <Text style={[styles.constraintsUnavailableText, live.constraintsUnavailableText]}>
                   Avoided movements could not be checked right now, so nothing is filtered for them.
@@ -738,7 +750,7 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                 filtered for how you train. Same visible-notice posture as
                 the intent row above; shown only when the feature is on. */}
             {capabilityUnavailable ? (
-              <View style={styles.constraintsUnavailableRow}>
+              <View style={styles.constraintsUnavailableRow} accessibilityLiveRegion="polite">
                 <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
                 <Text style={[styles.constraintsUnavailableText, live.constraintsUnavailableText]}>
                   How you train could not be checked right now, so nothing is filtered for it.
