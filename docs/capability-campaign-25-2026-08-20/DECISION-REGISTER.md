@@ -344,3 +344,33 @@ CC27-29-BUNDLE-TRACKER.md.
   library + builder cover the free tier with parity (FD-1's own
   wording); revisit with CC28's coverage data. Surfaced because tier
   boundaries are founder-gated.
+
+## GAP-CLOSURE RULINGS (2026-08-21, lead-ruled under D33; authority = founder gap-closure order, banked as GAP-CLOSURE-ORDER-2026-08-21.md)
+
+- GC-D1 The condition/injury directory selection is a STATELESS
+  question-selection lens: choosing a profile in the discovery UX
+  pre-selects which functional cards/questions are shown and surfaces
+  education, and NOTHING but the confirmed functional constraint rows
+  ever persists. No condition id, no diagnosis, no context_ref column.
+  Rationale: every deterministic behaviour the order names (question
+  selection, eligibility, explanation, education, collection pointers,
+  check-in relevance) is derivable from functional state + the
+  ephemeral lens; persistent condition storage would add
+  maximal-sensitivity Article 9 surface with NO deterministic consumer
+  (the CC-R8 test) - CAP-18 already bans condition names in
+  explanations, and affected scope/check-in relevance derive from the
+  functional rules. CAP-3's storage posture stands intact; LEG-24
+  (diagnosis storage) stays moot. Revisit trigger: a future consumer
+  that genuinely needs persistent context lands behind counsel review
+  (R1 L18) + a dedicated consent line, as a founder decision.
+- GC-D2 The directories are DETERMINISTIC KNOWLEDGE MODULES in source
+  (`src/lib/capability/directory/`): structured data + pure accessors,
+  schema-validated by tests, versioned by review date; human-facing
+  dossiers live in docs/ and embed the same ids. They feed question
+  selection, discovery UX, collections and the coverage registry; they
+  NEVER feed eligibility, learning, or the coach (function-first,
+  order section 5; CC-R14 stays closed).
+- GC-D3 Phase C re-runs CC-R8's "no deterministic consumer" test per
+  candidate ontology axis against the NEW consumer class (injury/
+  condition movement-path questions). Axes that pass gain columns;
+  axes that fail stay rejected with the failure recorded.
