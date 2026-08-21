@@ -9463,9 +9463,17 @@ export async function insertWorkoutSetFromCloud(userId, s) {
   // Last-write-wins, same as insertWorkoutFromCloud: a stale cloud set must
   // not clobber a newer local edit (RIR, notes, post-set ratings).
   const cloudMs = _tsToMs(s.updated_at);
-  const existing = await d.getFirstAsync('SELECT updated_at FROM workout_sets WHERE id = ?', [s.id]);
+  const existing = await d.getFirstAsync('SELECT updated_at, created_at FROM workout_sets WHERE id = ?', [s.id]);
   const localMs = existing?.updated_at ?? null;
   if (localMs && cloudMs && localMs >= cloudMs) return;
+  // PD-6 (bundle 2 prelude): restore used to stamp Date.now() as
+  // created_at, so every restored set's chronology collapsed to restore
+  // time and created_at-ordered consumers (the PR path) saw history in
+  // the wrong order. Preserve the cloud's stamp; when the cloud carries
+  // none, keep the existing local one; only a set with no timestamp
+  // anywhere falls back to now. Already-damaged rows whose original
+  // stamp never survived are not reconstructable and are left honest.
+  const createdAt = _tsToMs(s.created_at) ?? existing?.created_at ?? Date.now();
   await d.runAsync(
     `INSERT OR REPLACE INTO workout_sets
       (id, user_id, workout_id, exercise_id, exercise_name, set_number, set_type,
@@ -9484,7 +9492,7 @@ export async function insertWorkoutSetFromCloud(userId, s) {
       s.is_amrap ? 1 : 0, s.amrap_reps ?? null,
       s.missed_reps ?? null,
       s.left_reps ?? null, s.right_reps ?? null,
-      Date.now(), cloudMs ?? Date.now(),
+      createdAt, cloudMs ?? Date.now(),
       s.deleted_at ? new Date(s.deleted_at).getTime() : null,
     ],
   );

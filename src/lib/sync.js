@@ -520,6 +520,11 @@ async function _upsertSets(sb, supabaseUserId, sets) {
     // bilateral set. actual_reps already holds the lower side.
     left_reps: s.leftReps ?? null,
     right_reps: s.rightReps ?? null,
+    // PD-6 (bundle 2 prelude): carry the set's TRUE creation time to the
+    // cloud. Without this the cloud column held its first-push NOW()
+    // default, so a restore could only ever guess. Forward-only: rows
+    // whose original stamp never reached the cloud stay as they are.
+    created_at: new Date(s.createdAt ?? s.updatedAt ?? Date.now()).toISOString(),
     updated_at: new Date(s.updatedAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
   }));
   // Chunk to avoid hitting Supabase row limits
