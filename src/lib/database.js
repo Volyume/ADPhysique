@@ -6840,10 +6840,40 @@ export async function getAdaptiveLandmarkHistory(userId) {
 
     if (rows.length === 0) return [];
 
+    // CC30 (section 7 matrix, adapted landmarks row): affected
+    // (muscle, session) rows leave the window at compute time - a session
+    // trained under a definite EPISODE conflict for that muscle teaches
+    // no adapted band, and the window self-heals once the episode ends
+    // (PB column). Baseline rules never exclude anything (CAP-1), and
+    // the common no-episode case skips all of this. Best-effort: if the
+    // capability read fails, the unfiltered history stands (the adapted
+    // layer is Pro polish; a transient failure must not blank it).
+    let eligibleRows = rows;
+    try {
+      // Lazy: the capability lane lazy-requires this module (same
+      // convention as the section 18 stats reader).
+      // eslint-disable-next-line global-require
+      const elig = require('./capability/eligibility');
+      const capRows = await getCapabilityConstraints(userId);
+      if (capRows.some((r) => r.role === 'episode')) {
+        const library = await getAllExercises();
+        const cache = new Map();
+        const constrainedAt = (atMs) => {
+          const key = String(atMs);
+          if (!cache.has(key)) cache.set(key, elig.constrainedMusclesAt(capRows, library, atMs));
+          return cache.get(key);
+        };
+        eligibleRows = rows.filter((row) => !constrainedAt(row.started_at).has(row.muscle));
+        if (eligibleRows.length === 0) return [];
+      }
+    } catch (_e) { eligibleRows = rows; }
+
     // Derive performanceTrend per muscle: compare avg reps from last 3 sessions vs 3 before.
     // -1 = declining, 0 = flat, 1 = improving.
+    // CC30: over ELIGIBLE sessions only - a constrained session's reps
+    // are confounded evidence for the trend too.
     const byMuscle = {};
-    for (const row of rows) {
+    for (const row of eligibleRows) {
       if (!row.muscle) continue;
       if (!byMuscle[row.muscle]) byMuscle[row.muscle] = [];
       byMuscle[row.muscle].push(row); // already DESC by started_at
@@ -6893,7 +6923,10 @@ export async function getAdaptiveLandmarkHistory(userId) {
     // new sessions arrived. Returned oldest-first so the slice reads the
     // genuinely most recent sessions. The trend derivation above is
     // per-muscle-constant and unaffected by return order.
-    return rows.map(row => ({
+    // CC30: entries over ELIGIBLE sessions only. weekTotals above stays
+    // over ALL rows deliberately - the week's physical volume includes
+    // constrained sessions even when they are not evidence.
+    return eligibleRows.map(row => ({
       muscle: row.muscle,
       pumpScore:       PUMP_MAP[(row.overall_pump || 2) - 1]     ?? 3,
       sorenessScore:   SORENESS_MAP[(row.soreness_24h_before || 1) - 1] ?? 2,
@@ -10427,6 +10460,63 @@ export async function getExerciseUsageStats(userId) {
  * warm-ups, myo-reps and rest-pause rows in the pure layer rather than
  * here.
  */
+/**
+ * CC30 (section 7 matrix, plateau/progression rows): drop set rows whose
+ * exercise sat under a DEFINITE episode conflict at the row's own moment.
+ * A "plateau" under restriction is not a plateau. No-episode users pass
+ * straight through; a capability read failure returns the rows unfiltered
+ * (display truth stands; learning consumers have their own gates).
+ */
+export async function filterCapabilityEligibleSetRows(userId, rows, { atField = 'createdAt' } = {}) {
+  if (!userId || !Array.isArray(rows) || rows.length === 0) return rows;
+  try {
+    // eslint-disable-next-line global-require
+    const elig = require('./capability/eligibility');
+    const capRows = await getCapabilityConstraints(userId);
+    if (!capRows.some((r) => r.role === 'episode')) return rows;
+    const library = await getAllExercises();
+    const byId = new Map(library.map((e) => [e.id, e]));
+    return rows.filter((r) => {
+      const ex = byId.get(r?.exerciseId ?? r?.exercise_id);
+      const at = r?.[atField] ?? r?.created_at ?? null;
+      if (!ex || !Number.isFinite(at)) return true;
+      return !elig.isExerciseConstrainedAt(capRows, ex, at);
+    });
+  } catch (_e) {
+    return rows;
+  }
+}
+
+/**
+ * CC30 (section 7 matrix, rows 1/4): stamp `capabilityConstrained` on
+ * live-prescription history sessions whose moment fell under a definite
+ * episode conflict for the exercise. The pure resolver treats the stamp
+ * as comparable:false - visible history, never learning evidence - so
+ * livePrescription itself stays capability-blind. No-episode users pass
+ * straight through; a read failure stamps nothing (display truth stands).
+ */
+export async function stampCapabilityConstrainedSessions(userId, exerciseId, sessions) {
+  if (!userId || !exerciseId || !Array.isArray(sessions) || sessions.length === 0) return sessions;
+  try {
+    // eslint-disable-next-line global-require
+    const elig = require('./capability/eligibility');
+    const capRows = await getCapabilityConstraints(userId);
+    if (!capRows.some((r) => r.role === 'episode')) return sessions;
+    const library = await getAllExercises();
+    const ex = library.find((e) => e.id === exerciseId);
+    if (!ex) return sessions;
+    return sessions.map((s) => {
+      const at = s?.at ?? null;
+      if (!Number.isFinite(at)) return s;
+      return elig.isExerciseConstrainedAt(capRows, ex, at)
+        ? { ...s, capabilityConstrained: true }
+        : s;
+    });
+  } catch (_e) {
+    return sessions;
+  }
+}
+
 export async function getExerciseProgressionSessions(userId, exerciseIds = [], { sessionsPerExercise = 4 } = {}) {
   if (!userId || !Array.isArray(exerciseIds) || exerciseIds.length === 0) return new Map();
   const d = await db();
@@ -10444,8 +10534,11 @@ export async function getExerciseProgressionSessions(userId, exerciseIds = [], {
     [userId, ...ids],
   ).catch(() => []);
 
+  // CC30: progression/plateau windows read ELIGIBLE sessions only.
+  const eligible = await filterCapabilityEligibleSetRows(userId, rows ?? [], { atField: 'startedAt' });
+
   const byExercise = new Map();
-  for (const r of rows ?? []) {
+  for (const r of eligible ?? []) {
     if (!byExercise.has(r.exerciseId)) byExercise.set(r.exerciseId, new Map());
     const sessions = byExercise.get(r.exerciseId);
     if (!sessions.has(r.workoutId)) {
@@ -11487,6 +11580,59 @@ export async function getSessionConstraintEffect(userId, workoutId) {
   const out = rowToCamel(row);
   try { out.effects = JSON.parse(out.effectsJson ?? '[]'); } catch (_e) { out.effects = []; }
   return out;
+}
+
+/**
+ * CC30 (BD-D7): every constraint-effects record for a set of workouts in
+ * one read - the block ledger's per-muscle EFFECTIVE-planned input.
+ * Returns [{ workoutId, effects: [...] }]; workouts with no record are
+ * simply absent.
+ */
+export async function getSessionConstraintEffectsForWorkouts(userId, workoutIds = []) {
+  if (!userId || !Array.isArray(workoutIds) || workoutIds.length === 0) return [];
+  const d = await db();
+  const out = [];
+  for (let i = 0; i < workoutIds.length; i += 200) {
+    const slice = workoutIds.slice(i, i + 200);
+    const marks = slice.map(() => '?').join(',');
+    // eslint-disable-next-line no-await-in-loop
+    const rows = await d.getAllAsync(
+      `SELECT workout_id, effects_json FROM session_constraint_effects
+        WHERE user_id = ? AND deleted_at IS NULL AND workout_id IN (${marks})`,
+      [userId, ...slice],
+    ).catch(() => []);
+    for (const r of rows ?? []) {
+      let effects = [];
+      try { effects = JSON.parse(r.effects_json ?? '[]'); } catch (_e) { effects = []; }
+      out.push({ workoutId: r.workout_id, effects });
+    }
+  }
+  return out;
+}
+
+/**
+ * CC30 (BD-D7): planned (recommended) sets per routine exercise, keyed
+ * `${routineId}|${exerciseId}`, so an omitted slot's planned dose can be
+ * removed from the ledger's per-muscle denominator.
+ */
+export async function getRoutineExerciseSetsMap(routineIds = []) {
+  const map = new Map();
+  if (!Array.isArray(routineIds) || routineIds.length === 0) return map;
+  const d = await db();
+  for (let i = 0; i < routineIds.length; i += 200) {
+    const slice = routineIds.slice(i, i + 200);
+    const marks = slice.map(() => '?').join(',');
+    // eslint-disable-next-line no-await-in-loop
+    const rows = await d.getAllAsync(
+      `SELECT routine_id, exercise_id, recommended_sets FROM routine_exercises
+        WHERE routine_id IN (${marks})`,
+      slice,
+    ).catch(() => []);
+    for (const r of rows ?? []) {
+      map.set(`${r.routine_id}|${r.exercise_id}`, r.recommended_sets ?? 3);
+    }
+  }
+  return map;
 }
 
 export async function createSessionConstraintEffect(userId, workoutId, effects, { nowMs = Date.now() } = {}) {

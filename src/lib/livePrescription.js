@@ -541,7 +541,12 @@ export function assembleEvidencePacket(input) {
         diff = diff == null ? null : Number(diff);
         if (!Number.isFinite(diff) || diff < 1 || diff > 5) diff = null;
         const isDeload = !!(meta.isDeload ?? meta.is_deload);
-        return { at: at || 0, difficulty: diff, isDeload, band: band ?? todayBand, working };
+        // CC30 (section 7 matrix): a session the caller stamped as trained
+        // under a capability episode stays VISIBLE history but is never
+        // comparable learning evidence. Neutral provenance field only -
+        // this module remains capability-blind.
+        const capabilityConstrained = !!meta.capabilityConstrained;
+        return { at: at || 0, difficulty: diff, isDeload, capabilityConstrained, band: band ?? todayBand, working };
       })
       .filter((s) => !s.isDeload); // §8.5: deload sessions never enter history at all
 
@@ -556,7 +561,7 @@ export function assembleEvidencePacket(input) {
         // FUTURE-dated sessions too - a clock-skewed row would otherwise
         // produce a negative gap that trivially passes the recent check.
         const recentOk = s.at > 0 && s.at <= now && (now - s.at) <= FORTY_FIVE_DAYS_MS;
-        return { ...s, comparable: bandOk && recentOk && s.working.length > 0 };
+        return { ...s, comparable: bandOk && recentOk && s.working.length > 0 && !s.capabilityConstrained };
       })
       .sort((a, b) => b.at - a.at)
       .slice(0, 3);
@@ -646,7 +651,7 @@ export async function buildEvidencePacket({
   now = Date.now(),
 } = {}) {
   // eslint-disable-next-line global-require
-  const { getLastNWorkoutSets, getWorkoutById } = require('./database');
+  const { getLastNWorkoutSets, getWorkoutById, stampCapabilityConstrainedSessions } = require('./database');
   let sessionsRaw = [];
   try {
     sessionsRaw = await getLastNWorkoutSets(exerciseId, currentWorkoutId, 3);
@@ -671,11 +676,21 @@ export async function buildEvidencePacket({
       sets,
     });
   }
+  // CC30: the storage layer stamps sessions trained under a capability
+  // episode; the pure assembler reads only the stamp. userId comes off
+  // the set rows themselves (this wrapper's signature is unchanged).
+  let stampedHistory = rawHistory;
+  try {
+    const rowUserId = sessionsRaw?.[0]?.[0]?.userId ?? sessionsRaw?.[0]?.[0]?.user_id ?? null;
+    if (rowUserId) {
+      stampedHistory = await stampCapabilityConstrainedSessions(rowUserId, exerciseId, rawHistory);
+    }
+  } catch (_e) { stampedHistory = rawHistory; }
   return assembleEvidencePacket({
     exercise: { id: exerciseId, ...exercise },
     prescription,
     senior,
-    rawHistory,
+    rawHistory: stampedHistory,
     rawToday,
     overrideLoad,
     overrideReps,

@@ -480,6 +480,7 @@ async function buildProgrammeReview(userId, activeBlock) {
   const routines = await getRoutinesForPlan(plan.id);
   const slots = [];
   const structure = [];
+  const rowById = new Map();
   for (const r of routines ?? []) {
     // eslint-disable-next-line no-await-in-loop
     const rows = await getRoutineExercisesWithDetails(r.id);
@@ -489,6 +490,7 @@ async function buildProgrammeReview(userId, activeBlock) {
       if (!ex.id) continue;
       slots.push({ exerciseId: ex.id, exerciseName: ex.name ?? null, workout: r.name ?? null });
       exercises.push({ exerciseId: ex.id });
+      rowById.set(ex.id, ex);
     }
     structure.push({ name: r.name, exercises });
   }
@@ -505,7 +507,19 @@ async function buildProgrammeReview(userId, activeBlock) {
 
   const evidenceFor = (exerciseId) => {
     const facts = exerciseEvidence(intentState, exerciseId);
+    // CC30 (section 7 matrix): an EPISODE-affected slot is not
+    // evidence-judged - the verdict engine keeps it with the capability
+    // reason. Baseline rules never mark a slot (CAP-1), and the user's
+    // own exclusion below still outranks it inside slotVerdict.
+    let capabilityAffected = false;
+    try {
+      // eslint-disable-next-line global-require
+      const { episodeConflicts } = require('./capability/effective');
+      const row = rowById.get(exerciseId);
+      capabilityAffected = !!row && episodeConflicts(intentState?.capability, row).length > 0;
+    } catch (_e) { capabilityAffected = false; }
     return {
+      capabilityAffected,
       excluded: isExcluded(intentState, exerciseId) || isAvoidedThisBlock(intentState, exerciseId),
       swappedAwayCount: swappedAwayCount(intentState, exerciseId),
       autoEligible: undefined,

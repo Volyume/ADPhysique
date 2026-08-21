@@ -88,7 +88,11 @@ describe('B3 plateau banner loader', () => {
 
   test('detection input is training data only (workout sets), never weight or food', () => {
     expect(loader).toMatch(/getWorkoutSetsSince\(user\.id/);
-    expect(loader).toMatch(/selectPlateauForBanner\(recentSets\)/);
+    // CC30: the sets pass the capability-eligibility filter first - a
+    // stall under an episode restriction is not a stall. Still training
+    // data only.
+    expect(loader).toMatch(/filterCapabilityEligibleSetRows\(user\.id, recentSets\)/);
+    expect(loader).toMatch(/selectPlateauForBanner\(eligibleSets\)/);
     // Nothing weight-, food- or calorie-derived may ever feed this banner
     // without adding the ED-flag/calm suppression the COMP-004 rules require.
     expect(loader).not.toMatch(/MorningWeight|weightKg|nutrition|calorie|kcal|food/i);

@@ -434,9 +434,12 @@ export function approvedDefaultFor(state, fromExerciseId, routineId = null, { ge
  * `routineId` narrows it further when the caller knows the slot.
  */
 export function swapEvidenceFor(state, fromExerciseId, { routineId = null } = {}) {
+  // Forced substitutions are not preference (CAP-13, CC30); the cause field
+  // is stamped at write time by the logger.
   const rows = (state?.swaps ?? []).filter(
     (r) => r.fromExerciseId === fromExerciseId
-      && (routineId == null || r.routineId == null || r.routineId === routineId),
+      && (routineId == null || r.routineId == null || r.routineId === routineId)
+      && r.cause !== 'constraint',
   );
   const byTarget = new Map();
   for (const r of rows) {
@@ -465,8 +468,10 @@ export function swapEvidenceFor(state, fromExerciseId, { routineId = null } = {}
  * an exercise they like.
  */
 export function swappedAwayCount(state, exerciseId) {
+  // Forced substitutions are not preference (CAP-13, CC30); the cause field
+  // is stamped at write time by the logger.
   return (state?.swaps ?? []).filter(
-    (r) => r.fromExerciseId === exerciseId && r.scope === SWAP_SCOPE.PROGRAMME,
+    (r) => r.fromExerciseId === exerciseId && r.scope === SWAP_SCOPE.PROGRAMME && r.cause !== 'constraint',
   ).length;
 }
 

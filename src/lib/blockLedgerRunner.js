@@ -40,7 +40,16 @@ import {
   getRoutinesForPlan,
   getRoutineExercisesWithDetails,
   storeBlockLedger,
+  getAllExercises,
+  getCapabilityConstraints,
+  getSessionConstraintEffectsForWorkouts,
+  getRoutineExerciseSetsMap,
 } from './database';
+// CC30 (sections 7, 33.4): learning eligibility is decided at GATHER
+// time from the capability state effective when the evidence occurred,
+// stamped per entry, and every downstream consumer reads the stamp -
+// the frozen judgement itself is never recomputed (CC-D17).
+import { capabilityWatermark, constrainedMusclesInWindow } from './capability/eligibility';
 import { buildBlockLedger, BLOCK_CLASS, LEDGER_VERSION, STALE_EVIDENCE_WEEKS } from './interBlock';
 import { computeBlockPerformance, effectiveBlockSlopePct } from './blockMetrics';
 import {
@@ -109,6 +118,8 @@ function judgedEvidenceAgeByMuscle(mesos, nowMs) {
       for (const e of JSON.parse(m.blockLedger)?.entries ?? []) {
         if (!e?.muscle) continue;
         if (e.classification === BLOCK_CLASS.INSUFFICIENT_DATA) continue;
+        // Skip constrained entries — they are never recent judged evidence (CC30).
+        if (e.eligibility === 'constrained') continue;
         byMuscle.set(e.muscle, { entry: e, weeksOverdue: overdue });
       }
     } catch (_e) { /* unparseable prior ledger: no evidence */ }
@@ -307,6 +318,51 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
 
     const workoutsById = new Map(training.workouts.map((w) => [w.id, w]));
 
+    // CC30 (section 7 matrix): the gather-time eligibility stamp. A read
+    // failure records watermark null so the dedicated restamp pass
+    // (section 33.4) corrects the stamps once rows are readable again;
+    // eligibility itself defaults to 'normal' (the ledger is frozen at
+    // block end - the restamp, not a guess, is the correction path).
+    let constrainedMuscles = new Set();
+    let capWatermark = null;
+    try {
+      const capRows = await getCapabilityConstraints(userId);
+      capWatermark = capabilityWatermark(capRows);
+      if (capRows.some((r) => r.role === 'episode')) {
+        const library = await getAllExercises();
+        constrainedMuscles = constrainedMusclesInWindow(capRows, library, blockStart, blockEnd);
+      }
+    } catch (_e) { capWatermark = null; }
+
+    // CC30 (BD-D7): the per-muscle EFFECTIVE planned dose. A slot omitted
+    // under an APPLIED episode rule (session_constraint_effects) was never
+    // owed, so its planned sets leave the muscle's denominator - the
+    // ledger's adherence question becomes "of what was effectively
+    // planned, what was delivered", per muscle, matching section 18's
+    // session-level law.
+    const omittedPlannedByMuscle = {};
+    try {
+      const effectRecords = await getSessionConstraintEffectsForWorkouts(
+        userId, training.workouts.map((w) => w.id),
+      );
+      if (effectRecords.length) {
+        const routineIds = [...new Set(training.workouts.map((w) => w.routine_id).filter(Boolean))];
+        const setsMap = await getRoutineExerciseSetsMap(routineIds);
+        for (const rec of effectRecords) {
+          const w = workoutsById.get(rec.workoutId);
+          if (!w?.routine_id) continue;
+          for (const eff of rec.effects ?? []) {
+            if (eff?.effect !== 'omitted' || !eff.exerciseFrom) continue;
+            const ex = exercisesById.get(eff.exerciseFrom);
+            const muscle = ex?.primary_muscle ?? null;
+            if (!muscle) continue;
+            const planned = setsMap.get(`${w.routine_id}|${eff.exerciseFrom}`) ?? 0;
+            omittedPlannedByMuscle[muscle] = (omittedPlannedByMuscle[muscle] || 0) + planned;
+          }
+        }
+      }
+    } catch (_e) { /* best effort: the plan-wide denominator stands */ }
+
     // Muscles worth judging: anything the block planned or trained.
     const muscles = Object.keys(VOLUME_LANDMARKS).filter((muscle) => (
       sumPlannedSets(planned, muscle) > 0 || sumCompletedSets(training.sets, exercisesById, muscle) > 0
@@ -360,6 +416,8 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
 
       return {
         muscle,
+        // CC30: the gather-time stamp (section 7 matrix, EA column).
+        eligibility: constrainedMuscles.has(muscle) ? 'constrained' : 'normal',
         landmarks: effective[muscle] ?? VOLUME_LANDMARKS[muscle],
         researchMev: VOLUME_LANDMARKS[muscle]?.mev ?? null,
         learnedCeiling: learned.isLearned ? learned.ceiling : null,
@@ -372,7 +430,9 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
         priorFlatBlocks: trailingStaleCount(history),
         adherence: {
           completedSets: sumCompletedSets(training.sets, exercisesById, muscle),
-          plannedSets: sumPlannedSets(planned, muscle),
+          // BD-D7: effective planned, never below zero.
+          plannedSets: Math.max(0,
+            sumPlannedSets(planned, muscle) - (omittedPlannedByMuscle[muscle] || 0)),
         },
         performance,
         recovery: {
@@ -437,6 +497,10 @@ export async function computeAndStoreBlockLedger(userId, mesocycleId, { force = 
       blockStartDate: meso.startDate ?? null,
       blockEndDate: new Date(blockEnd).toISOString().slice(0, 10),
       computedAt: Date.now(),
+      // CC30 (section 33.4): the capability state this computation saw.
+      // null = the rows were unreadable; the restamp pass treats that as
+      // "needs restamping" the moment rows become readable.
+      capabilityWatermark: capWatermark,
     };
     await storeBlockLedger(mesocycleId, JSON.stringify(record));
     return record;
@@ -585,6 +649,59 @@ export async function backfillMissingBlockLedgers(userId, { userProfile = null, 
 }
 
 /**
+ * CC30 (section 33.4 / CC-D17): the DEDICATED eligibility-restamp pass.
+ *
+ * backfillMissingBlockLedgers skips ledgered blocks by design, so a
+ * backdated or late-synced capability row could leave an old frozen
+ * ledger carrying stale eligibility. This pass re-derives ONLY the
+ * per-entry `eligibility` field for every stored ledger whose recorded
+ * capabilityWatermark predates the newest capability row (or recorded
+ * null - the rows were unreadable at computation). Eligibility is
+ * PROVENANCE, not judgement: classification, proposal, observed numbers
+ * and rationale are never touched (the one exemption from the
+ * never-recompute law, register CC-D17). Restamping is idempotent and
+ * best-effort; consumers gate on the stamp at their next read.
+ */
+export async function restampLedgerEligibility(userId) {
+  try {
+    const capRows = await getCapabilityConstraints(userId);
+    const wm = capabilityWatermark(capRows);
+    const mesos = await getAllMesocyclesForUser(userId);
+    const anyEpisode = capRows.some((r) => r.role === 'episode');
+    const library = anyEpisode ? await getAllExercises() : [];
+    let restamped = 0;
+    for (const m of mesos ?? []) {
+      if (!m?.blockLedger) continue;
+      let ledger;
+      try { ledger = JSON.parse(m.blockLedger); } catch (_e) { continue; }
+      if (!Array.isArray(ledger?.entries)) continue;
+      const seen = ledger.capabilityWatermark;
+      if (seen != null && seen >= wm) continue; // already stamped against these rows
+      const start = toMs(m.startDate);
+      const weeks = m.plannedWeeks ?? m.durationWeeks ?? 5;
+      if (start == null) continue;
+      const constrained = anyEpisode
+        ? constrainedMusclesInWindow(capRows, library, start, start + weeks * WEEK_MS)
+        : new Set();
+      let changed = false;
+      for (const e of ledger.entries) {
+        const next = constrained.has(e.muscle) ? 'constrained' : 'normal';
+        if ((e.eligibility ?? 'normal') !== next) { e.eligibility = next; changed = true; }
+      }
+      ledger.capabilityWatermark = wm;
+      if (changed || seen == null || seen < wm) {
+        // eslint-disable-next-line no-await-in-loop
+        await storeBlockLedger(m.id, JSON.stringify(ledger)).catch(() => {});
+        restamped += changed ? 1 : 0;
+      }
+    }
+    return { restamped };
+  } catch (_e) {
+    return { restamped: 0 };
+  }
+}
+
+/**
  * C8 Work 2 (D97-9): muscle-level learned evidence for an activation
  * that is NOT "Continue with adjustments".
  *
@@ -672,6 +789,9 @@ export async function backfillMissingBlockLedgers(userId, { userProfile = null, 
 export async function buildLearnedSeedRangesForActivation(userId, { userProfile = null, tier = 'free' } = {}) {
   if (!userId || tier !== 'pro') return null;
   try {
+    // CC30 (section 33.4): stale eligibility self-corrects at the durable
+    // decision doors, before any ledger entry is consulted.
+    await restampLedgerEligibility(userId).catch(() => {});
     const allMesos = await getAllMesocyclesForUser(userId);
     if (!Array.isArray(allMesos) || allMesos.length === 0) return null;
     // C13 job 4: ledgers whose raw evidence the user deleted stay stored and
@@ -714,7 +834,9 @@ export async function buildLearnedSeedRangesForActivation(userId, { userProfile 
         // The RECENT ACTIVATION SEED. Withheld entirely under
         // suppression: a flagged or calm user's activation must never
         // start above the ramp they would otherwise have been given.
-        ledgerEntry: (fresh && !suppressed) ? recent.entry : null,
+        // Constrained entries are also excluded — a block trained under a
+        // capability episode does not seed the next block (CC30).
+        ledgerEntry: (fresh && !suppressed && recent.entry?.eligibility !== 'constrained') ? recent.entry : null,
         learnedRange: (learned.isLearned && fresh) ? learned : null,
         profileAdjusted: profileAdjustedPrior(muscle, userProfile),
         research,
@@ -742,6 +864,9 @@ export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', u
     // C6 P9-01 (D97): judge any switched-away finished blocks first, so
     // the replay below reads the user's WHOLE history.
     await backfillMissingBlockLedgers(userId, { userProfile, tier });
+    // CC30 (section 33.4): then restamp eligibility on the whole stored
+    // history against the newest capability rows.
+    await restampLedgerEligibility(userId).catch(() => {});
     const allMesos = await getAllMesocyclesForUser(userId);
     // C13 job 4: same law on the Adjust path. The just-finished block is
     // re-spliced below with its fresh ledger, and it necessarily still has
@@ -805,9 +930,11 @@ export async function buildSeedRangesForNextBlock(userId, { intent = 'adjust', u
       // it neither refreshes nor erases what earlier blocks established.
       const { recent, fresh: learnedFresh } = learnedActionability(freshnessByMuscle, muscle);
       const manualControls = isManualEdit(manualEntry, research);
+      const ledgerEntry = ledger?.entries?.find?.((e) => e.muscle === muscle) ?? null;
+      // Constrained entries do not seed the next block (CC30).
       ranges[muscle] = resolveSeedRange({
         manual: manualControls ? manualEntry : null,
-        ledgerEntry: ledger?.entries?.find?.((e) => e.muscle === muscle) ?? null,
+        ledgerEntry: ledgerEntry?.eligibility === 'constrained' ? null : ledgerEntry,
         learnedRange: (learned.isLearned && learnedFresh) ? learned : null,
         profileAdjusted: profileAdjustedPrior(muscle, userProfile),
         research,

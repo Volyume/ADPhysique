@@ -312,6 +312,19 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
     };
   };
 
+  // ── CC30 (section 7 matrix): eligibility:'constrained' ─────────────────
+  // A muscle whose block overlapped a definite EPISODE conflict is not
+  // judged at all: the evidence is confounded, so the entry is
+  // INSUFFICIENT-like - it judges nothing, teaches nothing (the fold and
+  // the seed chain skip it) and erases nothing (the hold keeps the
+  // previous dose). Baseline rules never reach here (CAP-1): the caller
+  // derives eligibility from episode scope only.
+  if (input.eligibility === 'constrained') {
+    evidence.push({ signal: 'insufficient', value: 'capability' });
+    return finish(BLOCK_CLASS.INSUFFICIENT_DATA, previousStart, plannedPeak, null,
+      `${name} trained under your temporary change this block, so nothing was judged from it`);
+  }
+
   // ── INSUFFICIENT_DATA gates ─────────────────────────────────────────────
   // Undelivered dose (adherence/exposure): nothing was proven, so the
   // proposal is the research-table seed the app would use anyway (§3.1,
@@ -456,7 +469,14 @@ export function buildBlockLedger({
   const ctx = { suppressed: !!suppressed, weeksSinceBlockEnd: num(weeksSinceBlockEnd, 0) };
   const entries = (Array.isArray(muscles) ? muscles : [])
     .filter((m) => m && typeof m === 'object')
-    .map((m) => classifyMuscleBlock(m, ctx));
+    // CC30: every entry carries its learning-eligibility provenance. The
+    // consumers (fold, seed chain, structure memory, narration) gate on
+    // THIS field, so a later restamp (section 33.4) can change what an
+    // old block teaches without touching its frozen judgement.
+    .map((m) => ({
+      ...classifyMuscleBlock(m, ctx),
+      eligibility: m.eligibility === 'constrained' ? 'constrained' : 'normal',
+    }));
 
   // §3.4 + founder Stage 7: the longer recovery window is only PROPOSED,
   // and only when strain is corroborated by multiple persistent systemic

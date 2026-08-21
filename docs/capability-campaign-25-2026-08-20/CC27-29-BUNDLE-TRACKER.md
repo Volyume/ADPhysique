@@ -112,3 +112,45 @@ FIXED and pinned; no second wave (per the bundle order).
 
 - BD-1 (CC27, fixed): insertOrUpdateExerciseFromCloud used INSERT OR REPLACE with a partial column list, so any cloud pull of an existing exercise row nulled every unlisted column (equipment_category, equipment_profiles, laterality, difficulty, machine_ok/home_ok, cue, selection metadata, demand columns) with no restore path (one-time rederive keys already burned). Fixed as UPSERT preserving unlisted columns; COALESCE on nullable metadata. Pinned in customExerciseSyncNulls.test.js.
 - Note: until cloud migrate_148 runs, custom-exercise pushes fail soft per the documented migrate_143 tolerated mode (deferred, no data loss). 148 should join the next founder-gated production batch.
+
+## BUNDLE 2 (PD prelude + CC30-CC32; cost-control override in force)
+
+Cost policy (founder override, mid-bundle): Fable architects/reviews;
+Haiku implements (explicit tier, one at a time, HARD MAX 4 dispatches
+bundle-wide); no automatic red-team agent (Fable final diff review; ONE
+Sonnet only if a genuine cross-domain risk emerges); targeted tests only
+until the single final full suite. Agent budget used so far: 1 (Haiku,
+CC30 provenance-consumer edits). Opus: 0.
+
+- [x] PRELUDE: PD-1 f6c00d5 (weekly unit, pinned end to end); PD-5
+  e794466 (readiness pull contract); PD-6 4fb0679 (restore preserves
+  set chronology; push now carries true created_at forward).
+- [x] CC30 COMPLETE. capability/eligibility.js (episode-scope interval
+  questions: definite conflicts only, allowances carve, baseline NEVER
+  constrains - lead ruling recorded here: CAP-8 unknowns do not mark
+  learning scope, over-marking would wrongly suspend a disabled user's
+  ordinary learning). Gather-time stamping in computeAndStoreBlockLedger
+  (per-muscle eligibility + capabilityWatermark + BD-D7 effective
+  planned via session_constraint_effects); classifyMuscleBlock
+  constrained short-circuit (INSUFFICIENT-like, holds previous dose);
+  restampLedgerEligibility (CC-D17: eligibility+watermark only, wired at
+  both seed doors); consumers stay BLIND on stamped provenance:
+  priorLedgerEntries/learnedRange fold/judgedEvidenceAge/seed picks skip
+  constrained; swapEvidenceFor+swappedAwayCount skip cause='constraint'
+  (previouslyUsedBefore deliberately keeps them - the way back);
+  slotVerdict KEEP+capability_hold (both evidence builders wired;
+  planAutoGen's excluded/episode decomposition keeps user exclusion
+  outranking); structure memory refuses constrained blocks; blockExplain
+  narrates "held while your restriction was active" (33.6); plateau +
+  progression windows filter via filterCapabilityEligibleSetRows; C20
+  comparability via stampCapabilityConstrainedSessions (livePrescription
+  stays pure/blind - one IO seam preserved); adapted-landmark history
+  excludes affected (muscle, session) rows; receipt copy for
+  capability_hold. GATE: capabilityContaminationReplay (6, incl. the
+  frozen-judgement byte-equality restamp proof) + capabilityLearningEligibility
+  (9) green; affected domain 50 suites / 1,104 tests green; lint clean.
+  Slot-default protection is transitive (defaults only arise from
+  swap-evidence surfaces, which now exclude forced swaps; explicit user
+  defaults are manual intent and stay durable - recorded ruling).
+  Contextual substitute ranking DURING an episode (matrix RI column 'C'
+  rows) rides CC31's reintroduction lane, recorded not parked.

@@ -40,7 +40,7 @@ import { applyContinuity, slotKey, summariseDecisions } from './exercise/continu
 import { movementFamily } from './exercise/movementFamily';
 import {
   exerciseEvidence, swappedAwayCount, EVIDENCE_MATURITY,
-  isEligibleExercise,
+  isEligibleExercise, isEligible,
 } from './exercise/intent';
 import { isAutoEligible } from './exercise/canonicality';
 import { parseProfiles } from './poolGenerator';
@@ -429,15 +429,33 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
     const facts = intentState
       ? exerciseEvidence(intentState, exerciseId)
       : { sessions: 0, progression: 'insufficient', sufficient: false };
+    // CC30 (section 7 matrix): a slot blocked ONLY by an EPISODE-role
+    // capability conflict is temporarily affected, not invalid - the
+    // verdict engine keeps it with the capability reason instead of
+    // judging (or replacing) it. A baseline conflict, a set-aside or a
+    // family avoidance still reads as excluded: those are durable facts
+    // a rebuild should act on. The user's own id-level exclusion always
+    // outranks the episode (checked separately below).
+    let capabilityAffected = false;
+    if (intentState?.capability && row) {
+      try {
+        // eslint-disable-next-line global-require
+        const { episodeConflicts } = require('../capability/effective');
+        capabilityAffected = episodeConflicts(intentState.capability, row).length > 0;
+      } catch (_e) { capabilityAffected = false; }
+    }
+    const senior = intentState
+      ? isEligibleExercise(intentState, row ?? { id: exerciseId })
+      : true;
+    const intentBlocked = intentState ? !isEligible(intentState, exerciseId) : false;
     return {
       // D107-2: an incumbent whose whole movement FAMILY is now avoided is
       // treated as excluded for continuity purposes too, not just an
       // incumbent excluded by id - so a rebuild does not carry a
       // family-avoided exercise forward as "retained". isEligibleExercise
       // is a strict superset of the id-only check this replaces.
-      excluded: intentState
-        ? !isEligibleExercise(intentState, row ?? { id: exerciseId })
-        : false,
+      excluded: intentBlocked || (!senior && !capabilityAffected),
+      capabilityAffected,
       swappedAwayCount: intentState ? swappedAwayCount(intentState, exerciseId) : 0,
       // The exercise is no longer reachable with the equipment the user
       // now says they have, so the slot is not valid regardless of history.

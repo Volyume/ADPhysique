@@ -78,21 +78,35 @@ describe('CAP-4: the capability lane and the preference lane never touch', () =>
 });
 
 describe('inertness: no downstream behaviour activates before its campaign', () => {
-  // CC27 activates the selection seams (planAutoGen and the picker ride
-  // the composed state; the engine itself stays capability-blind - it
-  // receives a pre-filtered library, section 9.2.1). Everything below
-  // stays inert until ITS campaign: coach/check-in CC31, learning CC30,
-  // adherence CC29.
+  // CC27 activated the selection seams; CC29 adherence; CC30 activates
+  // LEARNING - but only at the GATHER layer (blockLedgerRunner stamps
+  // eligibility; database.js filters the adapted window). Every learning
+  // CONSUMER below stays capability-BLIND by design: it reads stamped
+  // provenance (entry.eligibility, swap cause) and never the capability
+  // lane. Coach/check-in files stay fully inert until CC31.
   test.each([
     'lib/planEngine.js', 'lib/poolGenerator.js',
     'lib/weeklyCoach.js', 'lib/coachApply.js', 'lib/coachPrecedence.js',
     'lib/livePrescription.js', 'lib/sessionAdjustments.js',
-    'lib/algorithms.js', 'lib/blockLedgerRunner.js', 'lib/learnedRange.js',
+    'lib/algorithms.js', 'lib/learnedRange.js',
     'lib/interBlock.js', 'lib/programmeStructureMemory.js',
     'lib/blockProgression.js', 'lib/swapEngine.js',
   ])('%s has no capability wiring', (f) => {
     const src = read(f);
     expect(src).not.toMatch(/capability_constraints|capability\/(model|store)|loadCapabilityState|isCapabilityEligible/);
+  });
+
+  test('CC30: the runner is the ONE learning file wired to the lane, and only through eligibility', () => {
+    const src = read('lib/blockLedgerRunner.js');
+    expect(src).toMatch(/from '\.\/capability\/eligibility'/);
+    expect(src).not.toMatch(/capability\/(model|store|resolve)'/);
+  });
+
+  test('CC-D17: the restamp pass rewrites eligibility and the watermark, never the judgement', () => {
+    const src = read('lib/blockLedgerRunner.js');
+    const fn = src.slice(src.indexOf('export async function restampLedgerEligibility'), src.indexOf('\n}\n', src.indexOf('export async function restampLedgerEligibility')));
+    expect(fn).toMatch(/e\.eligibility = next/);
+    expect(fn).not.toMatch(/classification\s*=|proposal\s*=|observed\s*=|rationale\s*=/);
   });
 });
 

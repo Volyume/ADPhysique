@@ -150,6 +150,9 @@ export function computeLearnedRange({
     // user's chosen numbers must not launder into "learned from your
     // history" once the override is removed.
     if (raw.proposal?.deferredToManual) continue;
+    // Constrained entries are skipped exactly like deferredToManual — a block
+    // trained under a temporary capability episode never moves the learned range (CC30).
+    if (raw.eligibility === 'constrained') continue;
     if (classification !== BLOCK_CLASS.RESPONSIVE
       && classification !== BLOCK_CLASS.OVERREACHED
       && classification !== BLOCK_CLASS.STALE

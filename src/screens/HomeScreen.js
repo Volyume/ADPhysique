@@ -773,7 +773,13 @@ export default function HomeScreen({ navigation, route }) {
       // lift without loading every set ever logged (LB-7 pattern).
       const eightWeeksAgo = Date.now() - 8 * 7 * 24 * 60 * 60 * 1000;
       const recentSets = await getWorkoutSetsSince(user.id, eightWeeksAgo);
-      const picked = selectPlateauForBanner(recentSets);
+      // CC30 (section 7 matrix): sessions trained under an episode
+      // conflict leave the plateau window - a stall under restriction is
+      // not a stall. No-episode users pass straight through.
+      // eslint-disable-next-line global-require
+      const { filterCapabilityEligibleSetRows } = require('../lib/database');
+      const eligibleSets = await filterCapabilityEligibleSetRows(user.id, recentSets);
+      const picked = selectPlateauForBanner(eligibleSets);
       if (!picked) { setPlateauBanner(null); return null; }
       const ex = await getExerciseById(picked.exerciseId);
       if (!ex?.name) { setPlateauBanner(null); return picked; }

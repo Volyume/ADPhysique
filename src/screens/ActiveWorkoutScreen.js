@@ -1671,6 +1671,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           sets: sessionSets,
         });
       }
+      // CC30 (section 7 matrix): sessions trained under a capability
+      // episode stay visible history but never comparable evidence - the
+      // storage layer stamps them, the pure resolver reads the stamp.
+      let stampedHistory = rawHistory;
+      try {
+        // eslint-disable-next-line global-require
+        const { stampCapabilityConstrainedSessions } = require('../lib/database');
+        stampedHistory = await stampCapabilityConstrainedSessions(user?.id, exercise.id, rawHistory);
+        if (cancelled) return;
+      } catch (_e) { stampedHistory = rawHistory; }
 
       // Layoff: days since this exercise was last trained (design section
       // 10.5) - the resolver applies the >7-day 0.9 reduction itself.
@@ -1786,7 +1796,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           startingWeight: routineExercise?.startingWeight ?? null,
           goal: null,
         },
-        rawHistory,
+        rawHistory: stampedHistory,
         senior: {
           isDeload: localIsDeloadWeek,
           deloadTargets: localDeloadTargets,

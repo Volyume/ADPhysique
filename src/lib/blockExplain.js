@@ -273,15 +273,25 @@ const HELD_DELIBERATELY_CLAUSE = ' This one is deliberately kept steady rather t
 export function buildLedgerReflectionRows(ledger) {
   const entries = Array.isArray(ledger?.entries) ? ledger.entries : [];
   return entries
-    .filter((e) => e && e.muscle && typeof e.rationale === 'string')
-    .map((e) => ({
-      muscle: e.muscle,
-      label: muscleDisplayName(e.muscle),
-      classification: e.classification ?? null,
-      rationale: e.upwardCarryPrevented
-        ? `${e.rationale}${HELD_DELIBERATELY_CLAUSE}`
-        : e.rationale,
-    }))
+    .filter((e) => e && e.muscle && (typeof e.rationale === 'string' || e.eligibility === 'constrained'))
+    .map((e) => {
+      const label = muscleDisplayName(e.muscle);
+      let rationale;
+      if (e.eligibility === 'constrained') {
+        // For constrained entries, use a fixed narration about the restriction.
+        rationale = `${label} was held while your restriction was active`;
+      } else if (e.upwardCarryPrevented) {
+        rationale = `${e.rationale}${HELD_DELIBERATELY_CLAUSE}`;
+      } else {
+        rationale = e.rationale;
+      }
+      return {
+        muscle: e.muscle,
+        label,
+        classification: e.classification ?? null,
+        rationale,
+      };
+    })
     .sort((a, b) => (CLASS_ORDER[a.classification] ?? 9) - (CLASS_ORDER[b.classification] ?? 9));
 }
 

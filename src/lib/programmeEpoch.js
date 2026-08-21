@@ -65,6 +65,7 @@ export const SLOT_REASON = Object.freeze({
   USER_EXCLUDED: 'user_excluded',
   JOINT_DISCOMFORT: 'joint_discomfort',
   USER_SWAPPED_AWAY: 'user_swapped_away',
+  CAPABILITY_HOLD: 'capability_hold',
   // Structural: the slot no longer fits the programme it sits in.
   EQUIPMENT_LOST: 'equipment_lost',
   NO_LONGER_AUTO_ELIGIBLE: 'no_longer_auto_eligible',
@@ -274,6 +275,10 @@ export function slotVerdict(evidence = {}, {
 
   // 1. The user told us. Outranks everything, in any block.
   if (evidence.excluded) return verdict(SLOT_VERDICT.REPLACE, SLOT_REASON.USER_EXCLUDED);
+  // CC30 (section 7 matrix): an episode-affected slot is not evidence-judged —
+  // it is kept, with the capability reason; the user's own explicit exclusion
+  // above still outranks it.
+  if (evidence.capabilityAffected) return verdict(SLOT_VERDICT.KEEP, SLOT_REASON.CAPABILITY_HOLD);
   // Repeated deliberate swaps are the user telling us by behaviour rather
   // than by switch. One swap is not evidence; a pattern is.
   if ((evidence.swappedAwayCount ?? 0) >= 2) {

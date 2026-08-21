@@ -125,6 +125,10 @@ export const MIN_JUDGED_MUSCLES = 2;
  */
 export function blockOutcomeFromLedger(ledger, { executionGood = false } = {}) {
   const entries = Array.isArray(ledger?.entries) ? ledger.entries : [];
+  // A split cannot be judged by a constrained run of it (CC30, section 7 matrix).
+  if (entries.length && entries.some((e) => e?.eligibility === 'constrained')) {
+    return { judgeable: false };
+  }
   const judged = entries.filter((e) => {
     const c = e?.classification;
     return typeof c === 'string' && c !== 'INSUFFICIENT_DATA';

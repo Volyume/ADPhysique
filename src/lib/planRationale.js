@@ -78,6 +78,10 @@ const REASON_COPY = Object.freeze({
   // there is nothing to change either.
   [SLOT_REASON.INSUFFICIENT_EXECUTION]:
     'This block was not trained often enough to judge this exercise, so it stays as it is.',
+  // CC30 (section 7 matrix): an episode-affected slot is kept, not
+  // judged. Calm, no medical language, and it names the temporary frame.
+  [SLOT_REASON.CAPABILITY_HOLD]:
+    'This sits outside how you train while your temporary change lasts, so it is kept as it is rather than judged.',
   // Changed, and why.
   [SLOT_REASON.USER_EXCLUDED]:
     'You asked not to be suggested this.',

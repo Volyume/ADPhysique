@@ -415,7 +415,9 @@ export function priorLedgerEntries(mesos = [], beforeStartMs, muscle) {
     try {
       const ledger = JSON.parse(m.blockLedger);
       const entry = ledger?.entries?.find?.((e) => e.muscle === muscle);
-      if (entry) entries.push(entry);
+      // Skip constrained entries — they teach nothing downstream; stored only
+      // for archive purposes (CC30, section 7 matrix).
+      if (entry && entry.eligibility !== 'constrained') entries.push(entry);
     } catch (_e) { /* unparseable prior ledger: no evidence */ }
   }
   return entries;
