@@ -192,3 +192,19 @@ CC30 provenance-consumer edits). Opus: 0.
   journeys A-H. Agent budget: 3 of 4 used (all Haiku); 0 Sonnet; 0 Opus;
   red-team agent removed per cost override - lead final diff review
   instead.
+
+- [x] CC32 COMPLETE (24e7089 + 0233150). Batch 3 (Haiku) was also
+  killed by a container restart ~items 4-6; remainder finished
+  hands-on (33.18 verified satisfied by construction - the sheet is a
+  native alert; picker notices announced + polite live regions;
+  Stepper adjustable; backlog consolidated to journeys A-H, 47 steps).
+  Registry regenerated: no drift.
+- [x] BUNDLE FINAL REVIEW (lead, per cost override - no red-team
+  agent). Fourteen classes walked over the whole diff; two gaps found
+  and closed: section 19 answer had no consumer (wired: in-the-way
+  appends the review suggestion to the settled note); section 23 had
+  no gate fixture (written: capabilityReintroduction, 3, incl.
+  another-episode-still-holds and repeat-no-op). All other classes
+  held with existing pins. Agent budget final: 3 Haiku invocations
+  (two killed by container restarts and completed hands-on), 0 Sonnet,
+  0 Opus.
