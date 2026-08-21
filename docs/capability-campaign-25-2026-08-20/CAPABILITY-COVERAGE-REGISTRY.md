@@ -38,6 +38,11 @@ compatibility is separately proven by construction in
 | No-Overhead Upper Split | SHIPPED v1 (intermediate) |
 | Grip-Light Machine Circuit | SHIPPED v1 (beginner; pulling gap stated in-plan) |
 | Grip-limited PULLING collection | NOT SHIPPED - deferred to DEF-3 (implement guidance): the only grip-light pulling in the library is extension-class work, below any honest coverage threshold. Registry keeps this row until it ships. |
+| Seated Home Strength | SHIPPED v1 (beginner) |
+| Grip-Light Lower Builder | SHIPPED v1 (intermediate) |
+| Hinge & Hip Lower Builder | SHIPPED v1 (intermediate) |
+| Seated Upper Strength II | SHIPPED v1 (experienced) |
+| Steady-Base Strength | SHIPPED v1 (experienced) |
 
 Unknown-rate note: profiles count DEFINITE compatibility only; NULL
 axes are excluded on both sides (CAP-8), so every number here is a floor,
