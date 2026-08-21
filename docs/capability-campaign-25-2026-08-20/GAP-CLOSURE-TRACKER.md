@@ -3,7 +3,7 @@
 Authority: GAP-CLOSURE-ORDER-2026-08-21.md (banked copy of the founder
 order). Start main: 1259a9f. Branch: claude/build-name-prompt-apple-auth-fp49by.
 Agent slots used: 5/6 Haiku (R7, R8, worklist curation, family plans, scenario suites), 0/1 Sonnet, 0 Opus. No red-team agent: lead adversarial review per order 29.9.
-PRODUCTION MIGRATIONS: 145-151 NOT RUN.
+PRODUCTION MIGRATIONS: 145-149 + 151 APPLIED AND VERIFIED 2026-08-21 (founder phrase; supabase/README batch block); 150 retired/skipped; 049 HELD.
 
 ## Phase state
 
@@ -145,3 +145,14 @@ a second store, or a per-condition branch anywhere in engine code.
   as superseded; code comments corrected (schema.js, r2Wording.js).
 - [x] No runtime change; lint + targeted guard suites only (per order);
   merged to main.
+
+## PRODUCTION APPLY (2026-08-21, founder phrase "Run against production")
+
+- [x] Batch 145/146/147/148/149/151 applied via Supabase MCP to
+  project sujrylzzxcqxxfygptns and verified read-only object by object
+  (README 2026-08-21 batch block is the full record).
+- [x] 150 skipped (retired); telemetry allow-list verified free of
+  capability events. 144 ledger gap resolved: APPLIED (hash evidence).
+- [x] One verification find fixed in-flight: record_capability_consent
+  ACL aligned to the migrate_130 posture (revoke PUBLIC/anon); the 147
+  file carries the revoke for fresh environments.

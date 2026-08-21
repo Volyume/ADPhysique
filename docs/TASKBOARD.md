@@ -870,9 +870,9 @@ merged to main. Full record: GAP-CLOSURE-TRACKER.md +
 ORIGINAL-SPEC-TRACEABILITY.md + COST-GOVERNANCE-LEDGER.md.
 **RECOVERY/RESUME:** the workstream is CLOSED, and the 2026-08-21
 no-outside-party law (GC-D12) closed every external-professional item
-internally. Remaining founder actions are production/device/credential
-only (FOUNDER-ACTION-PACK.md): migrations 145-149 + 151 await the exact
-phrase (150 RETIRED); iOS profile delete; device walks.
+internally. Remaining founder actions after the 2026-08-21 production apply
+(145-149 + 151 APPLIED AND VERIFIED on the phrase; 150 retired/skipped;
+supabase/README batch block): iOS profile delete; device walks.
 
 
 ### CAMPAIGN 6: RETURNING USERS, LONG-TERM PERSONALISATION, LAPSES,

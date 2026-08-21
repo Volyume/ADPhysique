@@ -18,18 +18,18 @@ and CLINICAL-REVIEW-PACK; register entry GC-D12). The two forwardable
 question messages previously sent in chat are VOID - do not send them
 to anyone. Only production, device and credential actions remain.
 
-### A. PRODUCTION
+### A. PRODUCTION - DONE 2026-08-21
 
-- **Run migrations 145-149 and 151 against production** (your exact
-  phrase, per supabase/README). Order: 145 → 146 → 147 → 148 → 149 →
-  151 (149 needs 145's table; 151 is the gap-closure demand column).
-  **150 is RETIRED and must NOT be run** (Q4 ruling: the capability
-  telemetry counters were removed client-side; the file is a no-op kept
-  for numbering). Pre-checks per README (backup point; each live file
-  is additive + idempotent and was exercised on scratch Postgres).
-  Until run: capability rows stay device-local with harmless push
-  retries; custom-exercise pushes fail soft (migrate_143 tolerated
-  mode). No user-visible breakage in the meantime.
+- **APPLIED AND VERIFIED**: the founder gave the exact phrase and
+  migrations 145, 146, 147, 148, 149 and 151 were applied to EU-Dublin
+  via the Supabase MCP, each verified read-only afterwards (full record
+  in supabase/README, 2026-08-21 batch block). 150 stayed retired and
+  was skipped; the 144 ledger gap was resolved as APPLIED by hash
+  evidence. One completion during verification: the new consent RPC's
+  ACL aligned to the standing revoke posture. Capability sync,
+  custom-exercise demand pushes and the capability consent RPC are now
+  live server-side. NOTHING remains production-pending except 049
+  (HELD).
 
 ### B. IOS
 

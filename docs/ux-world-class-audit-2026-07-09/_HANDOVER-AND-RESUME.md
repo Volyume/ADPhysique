@@ -10,7 +10,7 @@ merged: architecture (CC25), foundations (CC26), execution bundles 1
 GAP-CLOSURE-ORDER-2026-08-21.md`). Gap closure shipped: the Training
 considerations directory (20 condition + 20 injury stateless knowledge
 profiles + OTHER path, live-verified citations), the eleventh demand
-axis (weight_bearing_hands, migrate_151 written NOT applied), full
+axis (weight_bearing_hands, migrate_151 now applied in production), full
 library tagging (nine axes 100%), five new family plans (library at 16
 capability families, seed v14), the adapted-setup layer (29 rich entries plus class-level defaults
 covering all 220 materially-needing exercises, reconciliation GC-D11),
@@ -25,9 +25,10 @@ founder's no-outside-party law (GC-D12): counsel, clinical review and
 disabled-user recruitment are CLOSED INTERNALLY (rulings in the two
 former packs); migrate_150 RETIRED (capability telemetry removed
 client-side under the Q4 ruling). Remaining founder actions are
-production/device/credential only: migrations 145-149 + 151 await "run
-against production"; iOS profile delete; device walks. No new campaign
-was opened.
+production/device/credential only. Migrations 145-149 + 151 were then
+APPLIED AND VERIFIED on the founder's phrase (2026-08-21, README batch
+block; 150 retired/skipped). Remaining: iOS profile delete; device
+walks. No new campaign was opened.
 
 ===============================================================================
 ## ★ 2026-08-20 — CAPABILITY CAMPAIGN 25 (CC25): ARCHITECTURE COMPLETE, ON MAIN ★

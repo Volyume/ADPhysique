@@ -68,3 +68,13 @@ end $$;
 select proname from pg_proc p
 join pg_namespace n on n.oid = p.pronamespace
 where n.nspname = 'public' and p.proname = 'record_capability_consent';
+
+-- ACL completion (applied in production 2026-08-21 as
+-- migrate_147_capability_consent_acl_revoke): a freshly created function
+-- gets PUBLIC execute by default, which handed anon a call right the
+-- sibling record_health_consent does not have (migrate_130 posture).
+-- Kept here so fresh environments match production.
+revoke all on function public.record_capability_consent(boolean, text, text) from public;
+revoke all on function public.record_capability_consent(boolean, text, text) from anon;
+grant execute on function public.record_capability_consent(boolean, text, text) to authenticated;
+grant execute on function public.record_capability_consent(boolean, text, text) to service_role;

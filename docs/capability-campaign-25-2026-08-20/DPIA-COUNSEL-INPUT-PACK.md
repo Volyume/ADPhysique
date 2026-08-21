@@ -22,8 +22,9 @@ so existing references resolve.
   functionally worded.
 - Storage: device SQLite (SQLCipher-encrypted) as source of truth;
   cloud sync to Supabase EU-Dublin (`capability_constraints`,
-  `session_constraint_effects`; migrations 145-149 and 151 written, NOT
-  yet in production; 150 RETIRED unapplied under ruling Q4). Weekly
+  `session_constraint_effects`; migrations 145-149 and 151 APPLIED to
+  production 2026-08-21 on the founder's phrase; 150 RETIRED unapplied
+  under ruling Q4). Weekly
   conditional check-in answer is DEVICE-LOCAL only (never synced).
 - Legal layers: Article 6(1)(a) consent as the lawful basis with
   Article 9(2)(a) explicit consent as the special-category condition,

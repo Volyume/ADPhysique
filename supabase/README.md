@@ -189,6 +189,40 @@ contract must not delegate its authority to a superseded audit.
   - Both applied via the Supabase MCP `apply_migration` path (recorded in
     the project's migration history as `migrate_142_exercise_intent_expiry`
     and `migrate_143_load_semantics`).
+- **2026-08-21 BATCH (Claude-run, founder phrase "run against production",
+  project `sujrylzzxcqxxfygptns`, via the Supabase MCP `apply_migration`
+  path): 145, 146, 147, 148, 149 and 151 APPLIED AND VERIFIED.**
+  Pre-apply read-only sweep confirmed none of the batch's objects
+  existed and that `consent_log` held only `health_data` values against
+  exactly the four-value CHECK 147 widens. Post-apply verification, all
+  green: `capability_constraints` (18 columns incl. 149's
+  `effective_choice`, RLS on, owner policy, refuse-stale trigger, both
+  indexes), `session_constraint_effects` (7 columns, RLS, policy,
+  unique (user_id, workout_id)), consent CHECK now five values,
+  `users_profile` capability consent columns, `record_capability_consent`
+  present, eleven demand columns on BOTH `exercises` and
+  `custom_exercises` (148 + 151), `exercise_swaps.cause`, and
+  `delete_user_data()` recreated WITH its migrate_130 ACL preserved
+  (postgres/authenticated/service_role only).
+  - **ACL completion found and fixed during verification:** the freshly
+    created `record_capability_consent` carried default PUBLIC/anon
+    EXECUTE (the function self-guards on auth.uid, but the standing
+    migrate_130 posture says no anon call right). Revoked + re-granted
+    to authenticated/service_role as
+    `migrate_147_capability_consent_acl_revoke`; final ACL verified
+    identical to `record_health_consent`. The revoke is appended to the
+    147 file so fresh environments match.
+  - **150 was deliberately SKIPPED (retired, never to be run - Q4/GC-D12):**
+    verified negatively that `record_engine_telemetry` contains no
+    capability event names.
+  - **144 ledger gap RESOLVED - it IS APPLIED:** both App Review demo
+    accounts carry exactly the file's password hashes (updated_at
+    2026-08-19/20), so the one-time data migration ran. The gap note
+    below is superseded by this finding.
+  - **NOTHING IS NOW PENDING for production except 049 (HELD forever
+    unless the founder unholds it).** The client's capability sync,
+    custom-exercise demand pushes and consent RPC go live server-side
+    from this batch.
 - **072 was never applied and never will be.** Its content was delivered
   by `migrate_118_workouts_recipes_sync_schema_fix.sql` on 2026-07-11; the
   file is kept for history only (its own header says so).
@@ -341,13 +375,13 @@ themselves; add a row here whenever a migration is added.
 | 141 | `migrate_141_effective_maintenance_memos.sql` | Campaign 19 effective-maintenance memo + revalidation marker (cloud half of local v80/v81). | **YES - LIVE, verified 2026-08-18** (`effective_maintenance_memos` table present in production, checked directly during the 142/143 batch). |
 | 142 | `migrate_142_exercise_intent_expiry.sql` | `exercise_intent.expires_at` (timestamptz) - the D107-2 PATTERN_AVOID day-bound duration (local `expires_at_ms`, schema counterpart live). Must land BEFORE a build carrying the PATTERN_AVOID push ships. | **YES - applied 2026-08-18, verified** (Claude-run on the founder phrase; column present, timestamptz, nullable). |
 | 143 | `migrate_143_load_semantics.sql` | `exercises.load_semantics` + `custom_exercises.load_semantics` (text, four-value CHECK) - the D107-2 weight-meaning axis (total / per_hand / assisted / added_bodyweight). | **YES - applied 2026-08-18, verified** (Claude-run, same batch as 142; both columns and both named CHECKs present). |
-| 145 | `migrate_145_capability_constraints.sql` | `capability_constraints` - the CC26 capability lane's cloud table (role baseline/episode, source, rule_kind, laterality, interval fields, supersession lifecycle), refuse-stale trigger, owner RLS, and `delete_user_data()` recreated with the capability deletes (Art 9 erasure reach). Local schema counterpart is live (CC26). | **NO - NOT APPLIED.** Written 2026-08-20 (CC26). Awaits the founder phrase; until it runs, capability rows are device-local and the sync push retries harmlessly. |
-| 146 | `migrate_146_session_constraint_effects.sql` | `session_constraint_effects` - per-workout constraint-effect provenance (one row per workout, effects JSON), refuse-stale trigger, owner RLS. Inert until CC27+ writes effects. | **NO - NOT APPLIED.** Written 2026-08-20 (CC26), same batch as 145; apply 145 first. |
-| 147 | `migrate_147_capability_consent.sql` | Widens the `consent_log` CHECK with `capability_data`, adds `users_profile.capability_data_consent`/`_at`, and `record_capability_consent()` RPC (granular Art 9 consent for the capability lane, separate from healthConsent). | **NO - NOT APPLIED.** Written 2026-08-20 (CC26), same batch as 145/146; apply after 145. |
-| 148 | `migrate_148_exercise_demands.sql` | CC27 demand ontology: ten nullable demand columns on `exercises` + `custom_exercises` (position/floor/overhead/grip/unilateral/bilateral upper+lower/axial/impact/balance; NULL = UNKNOWN, CAP-8). Until it runs, custom-exercise pushes fail soft (the migrate_143 tolerated mode) and local derivation stays authoritative via the pull applier's COALESCE. | **NO - NOT APPLIED.** Written 2026-08-20 (CC27). Apply with/after 145-147. |
-| 149 | `migrate_149_swap_cause_effective_choice.sql` | CC29: `exercise_swaps.cause` (eligibility-derived 'constraint' provenance, CAP-13) + `capability_constraints.effective_choice` (the section 14 Apply/Decline standing choice). Both nullable additive; pushes fail soft until applied. | **NO - NOT APPLIED.** Written 2026-08-20 (CC29). Requires 145 first (alters its table). |
+| 145 | `migrate_145_capability_constraints.sql` | `capability_constraints` - the CC26 capability lane's cloud table (role baseline/episode, source, rule_kind, laterality, interval fields, supersession lifecycle), refuse-stale trigger, owner RLS, and `delete_user_data()` recreated with the capability deletes (Art 9 erasure reach). Local schema counterpart is live (CC26). | **YES - APPLIED 2026-08-21** (founder phrase, MCP apply; verified: table/RLS/policy/trigger/indexes). |
+| 146 | `migrate_146_session_constraint_effects.sql` | `session_constraint_effects` - per-workout constraint-effect provenance (one row per workout, effects JSON), refuse-stale trigger, owner RLS. Inert until CC27+ writes effects. | **YES - APPLIED 2026-08-21** (same batch; verified incl. unique (user_id, workout_id)). |
+| 147 | `migrate_147_capability_consent.sql` | Widens the `consent_log` CHECK with `capability_data`, adds `users_profile.capability_data_consent`/`_at`, and `record_capability_consent()` RPC (granular Art 9 consent for the capability lane, separate from healthConsent). | **YES - APPLIED 2026-08-21** (same batch; CHECK widened to five values; RPC present; ACL aligned to record_health_consent via migrate_147_capability_consent_acl_revoke). |
+| 148 | `migrate_148_exercise_demands.sql` | CC27 demand ontology: ten nullable demand columns on `exercises` + `custom_exercises` (position/floor/overhead/grip/unilateral/bilateral upper+lower/axial/impact/balance; NULL = UNKNOWN, CAP-8). Until it runs, custom-exercise pushes fail soft (the migrate_143 tolerated mode) and local derivation stays authoritative via the pull applier's COALESCE. | **YES - APPLIED 2026-08-21** (same batch; ten columns verified on both tables). |
+| 149 | `migrate_149_swap_cause_effective_choice.sql` | CC29: `exercise_swaps.cause` (eligibility-derived 'constraint' provenance, CAP-13) + `capability_constraints.effective_choice` (the section 14 Apply/Decline standing choice). Both nullable additive; pushes fail soft until applied. | **YES - APPLIED 2026-08-21** (same batch; both columns verified). |
 | 150 | `migrate_150_capability_telemetry.sql` | **RETIRED, NEVER TO BE RUN** (founder no-outside-party law + Q4 ruling, 2026-08-21): even content-free capability events land per-user, so their presence could reveal capability-lane use. Client emission and catalogue entries removed the same day; the file is now a no-op kept for numbering. | **RETIRED UNAPPLIED - exclude from every batch.** The capability run set is 145-149 and 151. |
-| 151 | `migrate_151_weight_bearing_hands.sql` | Gap-closure Phase C: eleventh demand column `weight_bearing_hands` (boolean, NULL = unknown) on `exercises` + `custom_exercises` - the push-up class loads extended wrists while reading grip-free, so wrist/hand restrictions were inexpressible. Movement metadata only, no user data. Until it runs, custom pushes carrying the field fail soft per the migrate_143 tolerated mode. | **NO - NOT APPLIED.** Written 2026-08-21 (gap closure). Mirrors 148; apply in the same founder-gated batch. |
+| 151 | `migrate_151_weight_bearing_hands.sql` | Gap-closure Phase C: eleventh demand column `weight_bearing_hands` (boolean, NULL = unknown) on `exercises` + `custom_exercises` - the push-up class loads extended wrists while reading grip-free, so wrist/hand restrictions were inexpressible. Movement metadata only, no user data. Until it runs, custom pushes carrying the field fail soft per the migrate_143 tolerated mode. | **YES - APPLIED 2026-08-21** (same batch; column verified on both tables). |
 
 > Ledger gap noted 2026-08-20: `migrate_144_apple_review_password_reset.sql`
 > exists in this folder but has no row in this table (it predates CC26 and
