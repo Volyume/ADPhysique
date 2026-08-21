@@ -13,9 +13,9 @@
  * capabilityGuards.test.js. Nothing here changes selection, coaching or
  * learning - those campaigns arrive later; this screen manages state.
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, AccessibilityInfo, TextInput } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import useTheme from '../hooks/useTheme';
@@ -125,16 +125,47 @@ export default function HowYouTrainScreen() {
       getAllExercises().then(setLibrary).catch(() => {});
   };
 
+  // Training considerations preselect (gap-closure Phase D; GC-D1). A
+  // directory question arrives as a SUGGESTED draft: rules preselected,
+  // nothing written - the user still walks durability, dates, consent and
+  // readback. Exercise names resolve against the library, so that kind
+  // waits for the library read before consuming the param.
+  const route = useRoute();
+  const preselect = route.params?.preselect;
+  useEffect(() => {
+    if (!preselect || adding) return;
+    if (preselect.kind === 'exercise' && !library.length) return;
+    navigation.setParams({ preselect: undefined });
+    const exercises = (preselect.exerciseNames ?? [])
+      .map(n => library.find(e => e.name === n))
+      .filter(Boolean)
+      .map(e => ({ id: e.id, name: e.name }));
+    setDraft({
+      role: null,
+      kind: preselect.kind ?? null,
+      axes: preselect.axes ?? [],
+      families: preselect.families ?? [],
+      exercises,
+      clinician: false, startDays: 0, endDays: null,
+    });
+    setAdding('role');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselect, library, adding]);
+
   const chooseRole = (role) => {
     haptics.selection();
     setDraft(d => ({ ...d, role }));
-    setAdding('kind');
+    // A preselected draft (Training considerations, GC-D1) already knows
+    // its kind; skip straight to that kind's stage.
+    setAdding(draft?.kind ? stageForKind(draft.kind) : 'kind');
   };
+
+  const stageForKind = (kind) => (kind === 'demand' ? 'axes' : kind === 'family' ? 'family' : 'exercise');
 
   const chooseKind = (kind) => {
     haptics.selection();
     setDraft(d => ({ ...d, kind }));
-    setAdding(kind === 'demand' ? 'axes' : kind === 'family' ? 'family' : 'exercise');
+    setAdding(stageForKind(kind));
   };
 
   const toggleFamily = (key) => {
@@ -614,6 +645,16 @@ export default function HowYouTrainScreen() {
         label="My energy varies, or I keep sessions short"
         sub="Two levers help here: set a session length that actually fits under Workout and units, and add a temporary change here for a rough patch."
         onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
+      />
+
+      {/* Gap-closure Phase D (order section 25): the optional named-
+          condition and injury directory. Discovery only - selecting a
+          profile stores nothing (GC-D1); its questions land back here. */}
+      <SettingRow
+        icon="search-outline"
+        label="Looking for a specific condition or injury?"
+        sub="Optional. Finding it selects better questions; you never need a name to get the same support."
+        onPress={() => { haptics.selection(); navigation.navigate('TrainingConsiderations'); }}
       />
 
       <SectionHeader title="Your setup" />

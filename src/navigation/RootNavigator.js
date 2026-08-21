@@ -106,6 +106,7 @@ const SettingsHealthScreen = lazyScreen(() => require('../screens/SettingsHealth
 // pinned by capabilityGuards.test.js) - core capability accommodation is
 // never Pro-gated.
 const HowYouTrainScreen = lazyScreen(() => require('../screens/HowYouTrainScreen').default);
+const TrainingConsiderationsScreen = lazyScreen(() => require('../screens/TrainingConsiderationsScreen').default);
 const SettingsDataScreen = lazyScreen(() => require('../screens/SettingsDataScreen').default);
 const SettingsDietaryScreen = lazyScreen(() => require('../screens/SettingsDietaryScreen').default);
 const SnapshotsScreen = lazyScreen(() => require('../screens/SnapshotsScreen').default);
@@ -485,6 +486,8 @@ function PlansStack({ navigation }) {
       <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
       {/* CC26: capability settings home ("How you train"). Free tier, CAP-19. */}
       <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
+      {/* Gap-closure Phase D: free-tier discovery surface (CAP-19), unguarded like HowYouTrain. */}
+      <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
       {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
       <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
