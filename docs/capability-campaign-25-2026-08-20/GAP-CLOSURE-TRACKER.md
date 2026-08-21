@@ -2,7 +2,7 @@
 
 Authority: GAP-CLOSURE-ORDER-2026-08-21.md (banked copy of the founder
 order). Start main: 1259a9f. Branch: claude/build-name-prompt-apple-auth-fp49by.
-Agent slots used: 0/6 Haiku, 0/1 Sonnet, 0 Opus.
+Agent slots used: 2/6 Haiku (R7, R8), 0/1 Sonnet, 0 Opus.
 PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
 
 ## Phase state
@@ -10,7 +10,16 @@ PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
 - [x] A Traceability — ORIGINAL-SPEC-TRACEABILITY.md (gaps G1-G11; T13
   instructions = the one MISSED item; amendment source files never
   committed - founder flag recorded)
-- [ ] B Research/taxonomy (directories + dossiers)
+- [x] B Research/taxonomy COMPLETE: R7 (12 populations) + R8 (37 injury
+  families) banked; conditions.js 20 profiles + injuries.js 20 profiles,
+  schema-validated, every URL live-checked (two fabricated-identifier
+  catches fixed via PubMed); dossiers/ template + SCI + MS + Parkinson's.
+  R8 defect recorded: zero URLs returned (contract breach); education
+  candidates adjudicated unshippable (clinical framing); movement-question
+  evidence used as the mapping basis. Deferred with reasons: ME/CFS and
+  fibromyalgia (2021 UK guidance change makes exercise framing clinically
+  sensitive; CLIN register), CRPS, systemic autoimmune, CKD/COPD
+  (comorbidity-adjustment class, not primary functional constraint).
 - [ ] C Movement-path ontology + tagging
 - [ ] D UX/discovery
 - [ ] E Routines/library
@@ -24,5 +33,5 @@ PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
 
 ## Next exact action
 
-Phase B: define directory schemas hands-on, then Haiku slot 1
-(disability/condition evidence batch) + slot 2 (injury evidence batch).
+Phase C close-out: lead curates axial/overhead NULLs; Haiku slot 3
+curates rule-shaped NULL worklists; then Phase D discovery UX.
