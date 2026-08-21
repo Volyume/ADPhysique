@@ -9,6 +9,7 @@
  */
 
 import { getTrainingNote } from './coachingGoals';
+import { muscleDisplayName } from './algorithms';
 import {
   shouldSuggestDietBreak,
   computeFFMFloor,
@@ -1813,7 +1814,12 @@ export function runWeeklyCoach(inputs) {
     // restriction, the note says so in the restriction's terms - never
     // adherence, never a recovery verdict about the person.
     trainingNote = coordinationVolumeHeld === 'constraint_active'
-      ? 'Training ran around your temporary change this week, so volume holds rather than judging the week by it. Everything unaffected carries on as normal.'
+      ? (() => {
+        const scope = constraintScopePhrase(coachContext?.training?.physicalConstraint);
+        return scope
+          ? `Training worked around your ${scope} this week, so volume holds rather than judging the week by it. Everything unaffected carries on as normal.`
+          : 'Training ran around your temporary change this week, so volume holds rather than judging the week by it. Everything unaffected carries on as normal.';
+      })()
       : getTrainingNote(trainingGoal, volumeSignal, trainingSignal, matrixDeload);
   }
 
@@ -2576,13 +2582,29 @@ export function runWeeklyCoach(inputs) {
 // nothing.
 function appendWeeklyAnswerSuggestion(note, pcFact) {
   if (!note || !pcFact?.active) return note;
+  const scope = constraintScopePhrase(pcFact);
   if (pcFact.weeklyAnswer === 'in_the_way') {
-    return `${note} You said it got in the way more than expected. If that carries on, you can adjust it under How you train.`;
+    return scope
+      ? `${note} You said your ${scope} got in the way more than expected. If that carries on, you can adjust things under How you train.`
+      : `${note} You said it got in the way more than expected. If that carries on, you can adjust it under How you train.`;
   }
   if (pcFact.weeklyAnswer === 'not_relevant') {
-    return `${note} You said it mostly didn't come up. If you're done with it, you can end it under How you train.`;
+    return scope
+      ? `${note} You said your ${scope} mostly didn't get in the way. If you're done working around it, you can end that under How you train.`
+      : `${note} You said it mostly didn't come up. If you're done with it, you can end it under How you train.`;
   }
   return note;
+}
+
+// Natural coach-language order (2026-08-21): when the constraint fact
+// covers one or two muscles, the coach names them ("your chest and
+// shoulders") the way a person who remembers would; three or more, or
+// none recorded, keeps the generic wording. Copy only - the fact and
+// every decision made from it are untouched.
+function constraintScopePhrase(pcFact) {
+  const muscles = Array.isArray(pcFact?.affectedMuscles) ? pcFact.affectedMuscles : [];
+  if (!muscles.length || muscles.length > 2) return null;
+  return muscles.map((m) => String(muscleDisplayName(m)).toLowerCase()).join(' and ');
 }
 
 function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, dataNote, weekSeed, onTarget, context = null }) {

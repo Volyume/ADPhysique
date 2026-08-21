@@ -322,7 +322,7 @@ export function classifyMuscleBlock(rawInput, ctx = {}) {
   if (input.eligibility === 'constrained') {
     evidence.push({ signal: 'insufficient', value: 'capability' });
     return finish(BLOCK_CLASS.INSUFFICIENT_DATA, previousStart, plannedPeak, null,
-      `${name} trained under your temporary change this block, so nothing was judged from it`);
+      `${name} trained around your temporary change this block, so nothing was judged from it`);
   }
 
   // ── INSUFFICIENT_DATA gates ─────────────────────────────────────────────

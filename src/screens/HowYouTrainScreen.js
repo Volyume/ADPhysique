@@ -47,6 +47,7 @@ import {
   DEMAND_AXES, demandLabel, CONSTRAINT_ROLE, CONSTRAINT_SOURCE,
   CONSTRAINT_RULE_KIND, EPISODE_STATUS,
 } from '../lib/capability/model';
+import { subjectPhrase, draftSubjectPhrase } from '../lib/capability/phrase';
 import {
   getAllExercises, uid } from '../lib/database';
 
@@ -112,6 +113,12 @@ export default function HowYouTrainScreen() {
     }
     return demandLabel(row.ruleValue);
   };
+
+  // Natural coach-language order (2026-08-21): alerts and toasts name the
+  // actual thing whenever the rules give it a short honest name; null
+  // falls back to the generic wording. Naming only, nothing else changes.
+  const nameOf = (id) => library.find(e => e.id === id)?.name ?? null;
+  const groupSubject = (rows) => subjectPhrase(rows ?? [], { nameOf });
 
   const beginAdd = () => {
     haptics.selection();
@@ -233,10 +240,20 @@ export default function HowYouTrainScreen() {
       })),
     ];
     const createdIds = await writeConstraintRows(rows, now);
+    const subject = draftSubjectPhrase(draft);
+    const several = (draft.exercises ?? []).length > 1;
     setAdding(null); setDraft(null);
     toast.show(draft.kind === 'allow'
-      ? 'Saved. Volyume will keep offering this exercise, even where your other answers would normally leave it out.'
-      : isEpisode ? "Saved. Volyume will work around this for now. When you're done with it, end it here and training builds back to your plan." : 'Saved. Volyume will build your training around this from now on.');
+      ? (subject
+        ? `Saved. Volyume will keep offering ${subject}, even where your other answers would normally leave ${several ? 'them' : 'it'} out.`
+        : 'Saved. Volyume will keep offering this exercise, even where your other answers would normally leave it out.')
+      : isEpisode
+        ? (subject
+          ? `Saved. Volyume will keep ${subject} out of your training for now. When you're ready to bring it back, end this here and training builds back to your plan.`
+          : "Saved. Volyume will work around this for now. When you're done with it, end it here and training builds back to your plan.")
+        : (subject
+          ? `Saved. Volyume will build your training around ${subject} from now on.`
+          : 'Saved. Volyume will build your training around this from now on.'));
     refresh();
     // CC29 (section 14, CAP-11): a NEW EPISODE with an installed plan
     // active proposes its effective diff - grouped, consequential, never
@@ -246,7 +263,7 @@ export default function HowYouTrainScreen() {
     // lives on the rule rows (effective_choice) and is reversible from
     // the episode's own actions.
     if (isEpisode && draft.kind !== 'allow' && Array.isArray(createdIds) && createdIds.length) {
-      proposeEffectiveDiff(createdIds).catch(() => { /* proposal is additive */ });
+      proposeEffectiveDiff(createdIds, subject).catch(() => { /* proposal is additive */ });
     }
   };
 
@@ -266,7 +283,7 @@ export default function HowYouTrainScreen() {
   // the active plan, grouped per rule (slot micro-approvals avoided). The
   // cross-lane computation lives in lib/sessionEffective.js, outside both
   // lanes, so this capability surface never imports the preference lane.
-  const proposeEffectiveDiff = async (createdIds) => {
+  const proposeEffectiveDiff = async (createdIds, subject = null) => {
     try {
       // eslint-disable-next-line global-require
       // CC32 (section 29): recordEffectiveChoice = the same write plus its
@@ -280,7 +297,7 @@ export default function HowYouTrainScreen() {
       if (summary.omitted) parts.push(`${summary.omitted} left out with nothing forced in their place`);
       appAlert(
         'Apply this to your current plan?',
-        `While this lasts, your sessions would show ${parts.join(', and ')}. Your plan itself is not changed, and everything returns when this ends.`,
+        `${subject ? `While ${subject} is out` : 'While this lasts'}, your sessions would show ${parts.join(', and ')}. Your plan itself is not changed, and everything returns when you end it.`,
         [
           {
             text: 'Not now',
@@ -300,7 +317,9 @@ export default function HowYouTrainScreen() {
                 // eslint-disable-next-line no-await-in-loop
                 await recordEffectiveChoice(userId, id, 'applied').catch(() => {});
               }
-              toast.show('Applied. Your sessions will work around this until you end it.');
+              toast.show(subject
+                ? `Applied. Your sessions will leave ${subject} out until you end it.`
+                : 'Applied. Your sessions will work around this until you end it.');
             },
           },
         ],
@@ -309,10 +328,13 @@ export default function HowYouTrainScreen() {
   };
 
   const confirmEndEpisode = (ep) => {
-    appAlert('Done with this?', 'Your exercises come back straight away, and training builds back up to your plan over the coming weeks. Nothing from this period is lost.', [
+    const subject = groupSubject(ep.rows.filter(r => r.state === 'active'));
+    appAlert(
+      subject ? `Back to ${subject}?` : 'Done with this?',
+      'Everything comes back straight away, and training builds back up to your plan over the coming weeks. Nothing from this period is lost.', [
       { text: 'Not yet', style: 'cancel' },
       {
-        text: 'Done with it',
+        text: subject ? 'Yes, bring it back' : 'Done with it',
         onPress: async () => {
           await endEpisode(userId, ep.groupId);
           // CC31 (section 23): apply reintroduction ramp and show toast if muscles ramped.
@@ -341,7 +363,11 @@ export default function HowYouTrainScreen() {
   };
 
   const confirmPromote = (ep) => {
-    appAlert('Make this part of how you train?', 'Volyume will keep these as your normal setup from now on, with full progression and coaching. Your history is not rewritten.', [
+    const subject = groupSubject(ep.rows.filter(r => r.state === 'active'));
+    appAlert('Make this part of how you train?',
+      subject
+        ? `Volyume will keep building your training around ${subject} from now on, with full progression and coaching. Your history is not rewritten.`
+        : 'Volyume will keep these as your normal setup from now on, with full progression and coaching. Your history is not rewritten.', [
       { text: 'Cancel', style: 'cancel' },
       { text: 'This is how I train now', onPress: async () => { await promoteEpisode(userId, ep.groupId); refresh(); } },
     ]);
@@ -408,7 +434,14 @@ export default function HowYouTrainScreen() {
   // CC31 (section 20, history restart): add a handler for "Start this again"
   // on ended episode-role rows.
   const confirmRestartEpisode = (row) => {
-    appAlert('Start this again from today?', 'You can end it any time.', [
+    // Same group filter as the write below, read-only, purely for naming.
+    const subject = groupSubject(row.episodeGroupId
+      ? state.history.filter((h) => h.episodeGroupId === row.episodeGroupId
+        && h.role === CONSTRAINT_ROLE.EPISODE)
+      : [row]);
+    appAlert(
+      subject ? `Keep ${subject} out again?` : 'Start this again from today?',
+      subject ? 'From today, until you end it here.' : 'You can end it any time.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Start again',
@@ -441,7 +474,9 @@ export default function HowYouTrainScreen() {
               source: h.source,
             }));
             await writeConstraintRows(rows, now);
-            toast.show('Started again from today. Volyume will work around it until you end it here.');
+            toast.show(subject
+              ? `Started again from today. Volyume will keep ${subject} out until you end it here.`
+              : 'Started again from today. Volyume will work around it until you end it here.');
             refresh();
           } catch (e) {
             logError('HowYouTrain.restartEpisode', e, {});
@@ -683,21 +718,24 @@ export default function HowYouTrainScreen() {
           No temporary changes at the moment.
         </Text>
       ) : null}
-      {state.episodes.map(ep => (
-        <View key={ep.groupId}>
-          <SettingRow icon="time" label="Temporary change" sub={episodeSub(ep)} showArrow={false} />
-          <View style={styles.episodeActions}>
-            <Choice label="Done with it" onPress={() => confirmEndEpisode(ep)} t={t} compact />
-            <Choice label="A while longer" onPress={async () => { haptics.selection(); await extendEpisode(userId, ep.groupId, Date.now() + 14 * DAY_MS); toast.show('Extended by two weeks. Volyume will ask again around then.'); refresh(); }} t={t} compact />
-            {ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION ? (
-              // Section 33.7's third option: an explicit continue that resets
-              // the ask cadence without committing to a new end date.
-              <Choice label="Still going for now" onPress={async () => { haptics.selection(); await acknowledgeEpisode(userId, ep.groupId); toast.show('Noted. Volyume will keep working around this until you end it here.'); refresh(); }} t={t} compact />
-            ) : null}
-            <Choice label="This is how I train now" onPress={() => confirmPromote(ep)} t={t} compact />
+      {state.episodes.map(ep => {
+        const subject = groupSubject(ep.rows.filter(r => r.state === 'active'));
+        return (
+          <View key={ep.groupId}>
+            <SettingRow icon="time" label="Temporary change" sub={episodeSub(ep)} showArrow={false} />
+            <View style={styles.episodeActions}>
+              <Choice label="Done with it" onPress={() => confirmEndEpisode(ep)} t={t} compact />
+              <Choice label="A while longer" onPress={async () => { haptics.selection(); await extendEpisode(userId, ep.groupId, Date.now() + 14 * DAY_MS); toast.show(subject ? `Extended by two weeks. Volyume will check in about ${subject} around then.` : 'Extended by two weeks. Volyume will ask again around then.'); refresh(); }} t={t} compact />
+              {ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION ? (
+                // Section 33.7's third option: an explicit continue that resets
+                // the ask cadence without committing to a new end date.
+                <Choice label="Still going for now" onPress={async () => { haptics.selection(); await acknowledgeEpisode(userId, ep.groupId); toast.show(subject ? `Noted. Volyume will keep ${subject} out until you end it here.` : 'Noted. Volyume will keep working around this until you end it here.'); refresh(); }} t={t} compact />
+              ) : null}
+              <Choice label="This is how I train now" onPress={() => confirmPromote(ep)} t={t} compact />
+            </View>
           </View>
-        </View>
-      ))}
+        );
+      })}
 
       {adding ? renderAddFlow() : (
         <View style={styles.addWrap}>

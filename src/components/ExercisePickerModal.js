@@ -24,7 +24,9 @@ import { loadExerciseIntentState, isEligible, intentFor, isFamilyBlocked, moveme
 // single-axis ask on custom creation. Storage writes go through the
 // capability store (allowances) - the same door every capability write uses.
 import { capabilityBlockReason, demandConflicts, CAPABILITY_BLOCK } from '../lib/capability/resolve';
-import { demandLabel } from '../lib/capability/model';
+import { demandLabel, CONSTRAINT_SOURCE } from '../lib/capability/model';
+import { rulePhrase } from '../lib/capability/phrase';
+import { familyLabel } from '../lib/exercise/movementFamily';
 // Red-team finding 1 (bundle): the capability-unavailable notice is shown
 // only to users who actually turned the feature on, so everyone else never
 // sees noise about a lane they do not use.
@@ -113,8 +115,17 @@ const DEMAND_ASK_SPECS = {
 // sits outside how the user trains. Names the axis/rule and nothing else -
 // no advice, no safety claim, no diagnosis language.
 function describeCapabilityConflict(capabilityState, exercise, reason) {
-  if (reason === CAPABILITY_BLOCK.CLINICIAN) return 'Covered by your clinician-reported restriction';
   const conflicts = demandConflicts(capabilityState, exercise);
+  if (reason === CAPABILITY_BLOCK.CLINICIAN) {
+    // Natural coach-language order (2026-08-21): name the movement the
+    // clinician-reported rule covers; an exercise-level rule has no name
+    // to add beyond the row itself.
+    const clin = conflicts.find(c => c.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED && !c.unknown);
+    const named = clin ? rulePhrase(clin) : null;
+    return named
+      ? `You told Volyume a clinician asked you to keep ${named} out`
+      : 'You told Volyume a clinician asked for this one to stay out';
+  }
   if (reason === CAPABILITY_BLOCK.UNKNOWN) {
     const axis = conflicts.find(c => c.unknown)?.ruleValue;
     const label = axis ? demandLabel(axis).toLowerCase() : 'this';
@@ -122,7 +133,7 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
   }
   const first = conflicts.find(c => !c.unknown);
   if (first?.ruleKind === 'demand') return `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you've set aside`;
-  if (first?.ruleKind === 'family') return 'A movement pattern you\'ve set aside';
+  if (first?.ruleKind === 'family') return `Involves ${familyLabel(first.ruleValue)}, which you've set aside`;
   return 'You set this movement aside in How you train';
 }
 
@@ -373,12 +384,12 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
     if (capReason === CAPABILITY_BLOCK.CLINICIAN) {
       // No inline override for a clinician-reported rule (CAP-7).
       appAlert(
-        'Covered by your restriction',
-        'Your clinician-reported restriction covers this movement. If that has changed, update it first.',
+        `${item.name} is one you're keeping out`,
+        `${describeCapabilityConflict(intentState.capability, item, capReason)}. If that's changed, update it under How you train first.`,
         [
           { text: 'Cancel', style: 'cancel' },
           {
-            text: 'Update restriction',
+            text: 'Update How you train',
             onPress: () => {
               onClose?.();
               try {

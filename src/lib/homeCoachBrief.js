@@ -10,13 +10,17 @@
 // removal -- kept in the signature so no call site changes, prefixed per lint.
 // CC31 (section BD-D8): when activeConstraint is true, appends a quiet line
 // to the brief about training working around a temporary change.
-export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutDaysAgo, blockProgress: _blockProgress, activeConstraint = false }) {
+// constraintSubject (natural coach-language order, 2026-08-21) is the short
+// honest name for what that change covers, or null for the generic line.
+export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutDaysAgo, blockProgress: _blockProgress, activeConstraint = false, constraintSubject = null }) {
   // Helper to apply activeConstraint quiet line to any result
   const applyConstraintLine = (result) => {
     if (!activeConstraint) return result;
     return {
       ...result,
-      lines: [...(result.lines ?? []), 'Training works around your temporary change.'],
+      lines: [...(result.lines ?? []), constraintSubject
+        ? `Training leaves ${constraintSubject} out at the moment.`
+        : 'Training works around your temporary change.'],
     };
   };
 

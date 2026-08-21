@@ -746,11 +746,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       return episodeConflicts(intentState.capability, exercise);
     } catch (_e) { return []; }
   })();
-  const constraintNoticeCopy = currentEntry?._capabilityTemp?.fromName
-    ? `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts`
-    : constraintConflicts.length
-      ? 'Today this works around your temporary change'
-      : null;
+  const constraintNoticeCopy = (() => {
+    if (currentEntry?._capabilityTemp?.fromName) {
+      return `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts`;
+    }
+    if (!constraintConflicts.length) return null;
+    // Natural coach-language order (2026-08-21): name what the conflict
+    // is about when the rules give it a short honest name.
+    try {
+      // eslint-disable-next-line global-require
+      const { subjectPhrase } = require('../lib/capability/phrase');
+      const named = subjectPhrase(constraintConflicts.filter(c => c.ruleKind !== 'exercise'), {});
+      if (named) return `This one involves ${named}, which you're working around at the moment`;
+    } catch (_e) { /* fall through to the generic line */ }
+    return constraintConflicts.every(c => c.ruleKind === 'exercise')
+      ? "This is one you're working around at the moment"
+      : 'Today this works around your temporary change';
+  })();
 
   // COMP-015: this session's adjustment for the current exercise, if any. Only
   // Pro sessions ever carry adjustments; a reverted one is ignored. A nonzero
@@ -4546,7 +4558,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 onPress={() => {
                   setShowOverflow(false);
                   appAlert(
-                    'Work around this today?',
+                    exercise?.name ? `Work around ${exercise.name} today?` : 'Work around this today?',
                     'Swap it for something that works now. If this is more than a one-off, you can also note a temporary change so plans work around it.',
                     [
                       { text: 'Cancel', style: 'cancel' },
@@ -4562,7 +4574,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   );
                 }}
                 accessibilityRole="button"
-                accessibilityLabel="Work around this exercise today"
+                accessibilityLabel={exercise?.name ? `Work around ${exercise.name} today` : 'Work around this exercise today'}
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="body-outline" size={18} color={t.colors.textSecondary} />

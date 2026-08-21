@@ -1697,6 +1697,9 @@ export default function HomeScreen({ navigation, route }) {
   // Best-effort: error → false. Try to use composed intentState if available,
   // otherwise lazy-load the resolve state.
   const [activeConstraint, setActiveConstraint] = useState(false);
+  // Natural coach-language order (2026-08-21): the short honest name for
+  // what the temporary change covers, or null for the generic brief line.
+  const [constraintSubject, setConstraintSubject] = useState(null);
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
@@ -1704,11 +1707,17 @@ export default function HomeScreen({ navigation, route }) {
         // eslint-disable-next-line global-require
         const { loadCapabilityResolveState } = require('../lib/capability/resolve');
         const state = await loadCapabilityResolveState(user.id, {});
-        const hasEpisode = state?.restrictions && Array.isArray(state.restrictions)
-          && state.restrictions.some(r => r.role === 'episode');
-        setActiveConstraint(!!hasEpisode);
+        const episodeRows = Array.isArray(state?.restrictions)
+          ? state.restrictions.filter(r => r.role === 'episode') : [];
+        setActiveConstraint(episodeRows.length > 0);
+        try {
+          // eslint-disable-next-line global-require
+          const { subjectPhrase } = require('../lib/capability/phrase');
+          setConstraintSubject(subjectPhrase(episodeRows, {}));
+        } catch (_) { setConstraintSubject(null); }
       } catch (_) {
         setActiveConstraint(false);
+        setConstraintSubject(null);
       }
     })();
   }, [user?.id]);
@@ -1721,6 +1730,7 @@ export default function HomeScreen({ navigation, route }) {
         lastWorkoutDaysAgo,
         blockProgress,
         activeConstraint,
+        constraintSubject,
       })
     : null;
   // Suppress the default "Ready when you are" filler (founder 2026-06-30: it

@@ -20,6 +20,10 @@ const CAPABILITY_FILES = [
   'lib/capability/resolve.js',
   'lib/capability/demands.js',
   'lib/capability/preflight.js',
+  // Natural coach-language order (2026-08-21): the naming helper joins
+  // the lane under the same laws. Like resolve.js it may import the
+  // shared movement-family TAXONOMY; never the preference lane's intent.
+  'lib/capability/phrase.js',
   'lib/consent/capabilityConsent.js',
   'lib/sync/tables/capabilityConstraints.js',
   'lib/sync/tables/sessionConstraintEffects.js',
@@ -200,7 +204,7 @@ describe('CAP-7 at the install-conflict sheet (red-team finding 3, bundle)', () 
       sheet.indexOf("=== 'capability_clinician' ?"),
       sheet.indexOf('title="Keep it in this plan"'),
     );
-    expect(clinician).toMatch(/title="Update restriction"/);
+    expect(clinician).toMatch(/title="Update How you train"/);
     expect(clinician).toMatch(/navigate\('HowYouTrain'\)/);
     expect(clinician).not.toMatch(/onKeep/);
   });

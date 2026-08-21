@@ -151,7 +151,10 @@ describe('section 23: the return ramp', () => {
 
   test('the copy is trajectory only - no promises, no timelines, no medical words', () => {
     const line = reintroductionCopy('Front delts');
-    expect(line).toBe('Rebuilding Front delts gradually after your restriction ended.');
+    // Natural coach-language order (2026-08-21): the muscle is named in
+    // plain words and "restriction ended" never reaches the user.
+    expect(line).toBe('Your front delts work builds back up to your plan from here.');
     expect(line).not.toMatch(/rehab|heal|safe|recover in|weeks|days|%/i);
+    expect(line).not.toMatch(/restriction|episode/i);
   });
 });

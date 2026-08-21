@@ -329,6 +329,10 @@ export default function WeeklyCheckInScreen({ navigation }) {
   // Wording only - the rules stay in force until the user acts (fail safe).
   const [hasActiveEpisode, setHasActiveEpisode] = useState(false);
   const [episodeOverdue, setEpisodeOverdue] = useState(false);
+  // The short honest name for what the active temporary change covers
+  // (natural coach-language order, 2026-08-21), or null for the generic
+  // wording. Display only; never stored, never sent anywhere.
+  const [episodeSubject, setEpisodeSubject] = useState(null);
   const [restrictionWeek, setRestrictionWeek] = useState(null); // 'fine'|'in_the_way'|'not_relevant'
 
   // Step 4, Training
@@ -389,7 +393,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         // reads as false.
         try {
           // eslint-disable-next-line global-require
-          const { getCapabilityConstraints } = require('../lib/database');
+          const { getCapabilityConstraints, getAllExercises } = require('../lib/database');
           // eslint-disable-next-line global-require
           const { constraintStatus, EPISODE_STATUS } = require('../lib/capability/model');
           const rows = await getCapabilityConstraints(user.id, { includeEnded: false });
@@ -397,14 +401,29 @@ export default function WeeklyCheckInScreen({ navigation }) {
           const overdue = episodeRows.some(
             r => constraintStatus(r, Date.now()) === EPISODE_STATUS.AWAITING_CONFIRMATION,
           );
+          // Natural coach-language order (2026-08-21): name what the
+          // temporary change actually covers when it has a short honest
+          // name; null keeps the generic question. Naming only.
+          let subject = null;
+          try {
+            // eslint-disable-next-line global-require
+            const { subjectPhrase } = require('../lib/capability/phrase');
+            const needsNames = episodeRows.some(r => r.ruleKind === 'exercise');
+            const lib = needsNames ? await getAllExercises() : [];
+            subject = subjectPhrase(episodeRows, {
+              nameOf: (id) => lib.find(e => e.id === id)?.name ?? null,
+            });
+          } catch (_) { subject = null; }
           if (!cancelled) {
             setHasActiveEpisode(episodeRows.length > 0);
             setEpisodeOverdue(overdue);
+            setEpisodeSubject(subject);
           }
         } catch (_) {
           if (!cancelled) {
             setHasActiveEpisode(false);
             setEpisodeOverdue(false);
+            setEpisodeSubject(null);
           }
         }
         // X11 (cross-surface audit 2026-07-30), RULED after review: this count
@@ -1250,9 +1269,13 @@ export default function WeeklyCheckInScreen({ navigation }) {
             <>
               <SectionLabel
                 hint={episodeOverdue
-                  ? "This has been going longer than you expected. If you're done with it, you can end it under How you train."
+                  ? (episodeSubject
+                    ? `You thought you'd be back to ${episodeSubject} by about now. When you're ready, you can end this under How you train and everything comes back.`
+                    : "This has been going longer than you expected. If you're done with it, you can end it under How you train.")
                   : undefined}
-              >How did you get on training around your temporary change?</SectionLabel>
+              >{episodeSubject
+                  ? `How did you get on training without ${episodeSubject}?`
+                  : 'How did you get on training around your temporary change?'}</SectionLabel>
               <OptionRow
                 options={[
                   { value: 'fine', label: 'Fine' },

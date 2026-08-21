@@ -102,7 +102,10 @@ export async function applyReintroductionRamp(userId, { endedAtMs = Date.now() }
   }
 }
 
-/** The section 23.5 line - trajectory copy, no promises, no timelines. */
+/** The section 23.5 line - trajectory copy, no promises, no timelines.
+ *  Names the muscle in plain words (natural coach-language order,
+ *  2026-08-21); "restriction ended" never reaches the user. */
 export function reintroductionCopy(muscleLabel) {
-  return `Rebuilding ${muscleLabel} gradually after your restriction ended.`;
+  const muscle = String(muscleLabel ?? 'that muscle').toLowerCase();
+  return `Your ${muscle} work builds back up to your plan from here.`;
 }

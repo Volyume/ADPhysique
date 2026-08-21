@@ -67,7 +67,7 @@ export default function ExerciseConflictSheet({
   const hasCapability = conflicts.some((c) => String(c?.reason ?? '').startsWith('capability'));
   const reasonCaption = (c) => {
     const r = String(c?.reason ?? '');
-    if (r === 'capability_clinician') return 'Covered by your clinician-reported restriction';
+    if (r === 'capability_clinician') return 'You told Volyume a clinician asked you to leave this one out';
     if (r === 'capability_declared') return 'Outside how you train';
     if (r === 'capability_unknown') return "Volyume doesn't know yet whether this fits how you train";
     return null; // the intent lane keeps its existing wording below
@@ -162,7 +162,7 @@ export default function ExerciseConflictSheet({
                         // Same route as the picker's confirm flow: update
                         // the restriction first, then the plan follows.
                         <Button
-                          title="Update restriction"
+                          title="Update How you train"
                           size="sm"
                           variant="secondary"
                           onPress={() => {
@@ -176,7 +176,7 @@ export default function ExerciseConflictSheet({
                               if (navigationRef.isReady()) navigationRef.navigate('HowYouTrain');
                             } catch (_e) { /* best effort */ }
                           }}
-                          accessibilityLabel={`Update the restriction covering ${c.exerciseName}`}
+                          accessibilityLabel={`Update How you train for ${c.exerciseName}`}
                         />
                       ) : !blocked ? (
                         <Button

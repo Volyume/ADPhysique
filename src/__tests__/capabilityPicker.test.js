@@ -27,7 +27,8 @@ describe('section 9.2.6: default-on capability filter with show-anyway', () => {
 describe('section 9.4: the manual-conflict flows', () => {
   test('clinician-reported: no inline override, one-tap route to the restriction editor', () => {
     const clin = src.slice(src.indexOf('capReason === CAPABILITY_BLOCK.CLINICIAN'), src.indexOf('capReason === CAPABILITY_BLOCK.UNKNOWN'));
-    expect(clin).toMatch(/update it first/i);
+    // Natural coach-language wording (2026-08-21) names the destination.
+    expect(clin).toMatch(/update it under How you train first/i);
     expect(clin).toMatch(/navigationRef\.navigate\('HowYouTrain'\)/);
     expect(clin).not.toMatch(/writeAllowance|Add anyway/);
   });

@@ -340,16 +340,41 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
       },
     });
 
-    it('"in the way" appends the adjust suggestion', () => {
+    it('"in the way" appends the adjust suggestion, naming the muscle', () => {
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.IN_THE_WAY);
-      expect(out.adjustments.training.note).toContain('you can adjust it under How you train');
-      expect(out.adjustments.training.note).not.toContain('you can end it under How you train');
+      // Natural coach-language order (2026-08-21): one or two affected
+      // muscles are named the way a person would say them.
+      expect(out.adjustments.training.note).toContain('You said your chest got in the way more than expected');
+      expect(out.adjustments.training.note).toContain('you can adjust things under How you train');
+      expect(out.adjustments.training.note).not.toContain('you can end that under How you train');
     });
 
-    it('"mostly didn\'t come up" appends the close suggestion', () => {
+    it('"mostly didn\'t come up" appends the close suggestion, naming the muscle', () => {
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
-      expect(out.adjustments.training.note).toContain("If you're done with it, you can end it under How you train");
-      expect(out.adjustments.training.note).not.toContain('you can adjust it under How you train');
+      expect(out.adjustments.training.note).toContain("You said your chest mostly didn't get in the way");
+      expect(out.adjustments.training.note).toContain('you can end that under How you train');
+      expect(out.adjustments.training.note).not.toContain('you can adjust things under How you train');
+    });
+
+    it('no recorded muscles, or three or more, falls back to the generic wording', () => {
+      const generic = runWeeklyCoach({
+        ...baseInputs,
+        physicalConstraint: {
+          active: true, affectedMuscles: [], excusedThisWeek: 1,
+          weeklyAnswer: CAPABILITY_WEEK_ANSWER.NOT_RELEVANT,
+        },
+      });
+      expect(generic.adjustments.training.note)
+        .toContain("You said it mostly didn't come up. If you're done with it, you can end it under How you train.");
+      const wide = runWeeklyCoach({
+        ...baseInputs,
+        physicalConstraint: {
+          active: true, affectedMuscles: ['chest', 'front_delts', 'triceps'], excusedThisWeek: 1,
+          weeklyAnswer: CAPABILITY_WEEK_ANSWER.IN_THE_WAY,
+        },
+      });
+      expect(wide.adjustments.training.note)
+        .toContain('You said it got in the way more than expected. If that carries on, you can adjust it under How you train.');
     });
 
     it('"fine" and no answer change nothing', () => {
@@ -367,9 +392,9 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
       // the full-data path, so a user without regular weigh-ins never saw
       // either suggestion. Now applied at every note-bearing return.
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
-      expect(out.adjustments.training.note).toContain("If you're done with it, you can end it under How you train");
+      expect(out.adjustments.training.note).toContain('you can end that under How you train');
       const inWay = withAnswer(CAPABILITY_WEEK_ANSWER.IN_THE_WAY);
-      expect(inWay.adjustments.training.note).toContain('you can adjust it under How you train');
+      expect(inWay.adjustments.training.note).toContain('you can adjust things under How you train');
     });
 
     it('suggestions never change a number: decisions identical across answers', () => {
