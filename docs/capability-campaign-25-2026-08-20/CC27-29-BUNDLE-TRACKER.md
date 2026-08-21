@@ -154,3 +154,41 @@ CC30 provenance-consumer edits). Opus: 0.
   defaults are manual intent and stay durable - recorded ruling).
   Contextual substitute ranking DURING an episode (matrix RI column 'C'
   rows) rides CC31's reintroduction lane, recorded not parked.
+
+- [x] CC31 COMPLETE (84c648d). physicalConstraint fact (context) +
+  LIMITER.CONSTRAINED (before execution; fires only on active episode +
+  poor execution + >=1 constraint-excused omission this week -
+  constraintExcusedSessions additive on getWeeklySessionStats);
+  interventions cap EXPLAIN; coordinateChanges withholds body-wide adds
+  reason constraint_active with CAP-18 copy; per-muscle apply holds
+  (computeVolumeApply holdMuscles; CoachOutputScreen re-checks at Apply
+  time: episode-affected muscles + this week's sore muscles; increases
+  only). PD-3 fixed (parseNoteFlags over stripAutoNotes); PD-4 WIRED
+  (conflictOutcome claims block, + capability neverClaim entries, on
+  every runWeeklyCoach output; invariance pinned: identical nutrition
+  with/without constraint); PD-7 fixed (soreMuscles consumed per-muscle
+  at apply). Section 19 conditional question (replaces joint question
+  under active episode; device-local weekNote - lead ruling: never
+  synced, one-week shelf life); section 23 ramp (plan's own peak =
+  protected target; RI teaching-gates ride CC30 block-overlap + C20
+  stale-history - lead ruling, no new machinery); section 21 re-start
+  (whole saved shape, one confirm, SAME consent-gated write door -
+  Haiku's direct second call was a CC-D27 breach caught by the pin and
+  refactored to writeConstraintRows; promoted episodes excluded);
+  BD-D8 brief line (rendered - the container restart left it dead-copy;
+  wired into the hero sentence). C21 oracle T-WEEKLY-10 (114 rules).
+  Gate: capabilityCoach (19) + coach domain 36 suites / 410 + mount 837
+  green; lint clean. Agent note: batch 2 (Haiku) was killed by a
+  container restart ~90% done; remainder finished hands-on.
+- [~] CC32 IN PROGRESS. Part 1 committed (24e7089): section 29 counters
+  (locked catalogue + planAutoGen commit-path + sessionEffective
+  recordEffectiveChoice seam; migrate_150 written NOT applied);
+  MARKETING-READINESS-MATRIX (all-NO, gate conversions defined);
+  CLAIMS-STANDARDS 9A; shared r2Wording module; DPIA + clinical +
+  validation packs founder-ready; FOUNDER-ACTION-PACK.md written.
+  Part 2 (Haiku batch 3, running): sweep refactor onto the shared list,
+  marketingClaimsGuard, Stepper adjustable trait, 33.18 modal focus,
+  picker notice announcements, physical-validation consolidation into
+  journeys A-H. Agent budget: 3 of 4 used (all Haiku); 0 Sonnet; 0 Opus;
+  red-team agent removed per cost override - lead final diff review
+  instead.
