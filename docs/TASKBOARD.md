@@ -857,7 +857,8 @@ citations, wording-law validator), eleventh demand axis
 weight_bearing_hands (migrate_151 written NOT applied), library tagging
 closed (nine axes 100%, unilateral 95% with 26 deliberate NULLs, wbh
 98%), five new family plans (16 capability families, seed v14, 2 new
-seeded movements), adapted-setup layer (29 exercises), directory-wide
+seeded movements), adapted-setup layer (29 rich entries + GC-D11 class defaults over all
+220 materially-needing exercises), directory-wide
 scenario matrix + nine §16 movement fixtures + coverage stats, truth
 pass (registry, matrix 8-status ladder, REAL-DISABLED-USER-VALIDATED =
 NO). Cost: 5/6 Haiku, 0/1 Sonnet, 0 Opus, no agent-to-agent

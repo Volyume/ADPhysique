@@ -12,7 +12,8 @@ considerations directory (20 condition + 20 injury stateless knowledge
 profiles + OTHER path, live-verified citations), the eleventh demand
 axis (weight_bearing_hands, migrate_151 written NOT applied), full
 library tagging (nine axes 100%), five new family plans (library at 16
-capability families, seed v14), the adapted-setup layer (29 exercises),
+capability families, seed v14), the adapted-setup layer (29 rich entries plus class-level defaults
+covering all 220 materially-needing exercises, reconciliation GC-D11),
 the directory-wide scenario matrix + nine movement fixtures, and the
 truth pass (registry, marketing matrix 8-status ladder,
 REAL-DISABLED-USER-VALIDATED = NO). Final gate: lint green, ONE full

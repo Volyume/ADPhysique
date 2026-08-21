@@ -499,7 +499,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   }
 
   const formTip = FORM_TIPS[exercise.name] ?? null;
-  const adaptedLines = adaptedSetupFor(exercise.name);
+  const adaptedLines = adaptedSetupFor(exercise);
   const primaryMuscle = MUSCLE_DISPLAY_NAMES[(exercise.primaryMuscle || '').toLowerCase()] || exercise.primaryMuscle;
   const secondaryMuscles = exercise.secondaryMuscles || [];
   const equipmentLabel = equipmentDisplayLabel(exercise);

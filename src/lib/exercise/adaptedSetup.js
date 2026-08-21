@@ -163,12 +163,83 @@ export const ADAPTED_SETUP = Object.freeze({
   },
 });
 
-/** The adapted-setup lines for one exercise name, as
- *  [{context, label, text}] in a stable order, or []. */
-export function adaptedSetupFor(name) {
-  const entry = ADAPTED_SETUP[name];
-  if (!entry) return [];
+/**
+ * Class-level default lines (reconciliation 2026-08-21, GC-D11). Whole
+ * movement classes share the same honest setup adaptation, so the
+ * class carries one line and the per-exercise entries above override or
+ * extend it. Same wording laws as the entries: setup only, no
+ * technique coaching, no loads, no outcomes.
+ */
+export const CLASS_TEXT = Object.freeze({
+  [SETUP_CONTEXT.STRAP_CUFF]: 'A lifting strap or cuff looped around the bar or handle takes firm grip out of it; the working muscles still do the whole job.',
+  [SETUP_CONTEXT.ONE_ARM]: 'A single handle on the same station works one side at a time; brace the free hand on the frame or your thigh.',
+  [SETUP_CONTEXT.SEATED]: 'This works from a sturdy chair or bench with the same equipment; brace against the backrest and keep the weight path clear of the seat.',
+  [SETUP_CONTEXT.SUPPORTED]: 'A rail, wall or sturdy bench within reach turns balance effort into training effort; hold on as much as you need.',
+  [SETUP_CONTEXT.REDUCED_RANGE]: 'Setting the rack pins or blocks higher shortens the range; the movement stays the same.',
+});
+
+const UPPER_MUSCLES = new Set(['chest', 'back', 'front_delts', 'side_delts', 'rear_delts', 'biceps', 'triceps', 'traps', 'forearms', 'neck']);
+const SINGLE_SIDED_NAME = /single-arm|single-leg|one-arm|one-leg|\(single|unilateral|pistol|b-stance|kroc|meadows|suitcase|concentration/i;
+const SUPPORT_PATTERN_NAME = /lunge|split squat|step-?up|calf raise/i;
+const REDUCED_RANGE_NAME = /(^|\b)(back squat|front squat|barbell bench press|overhead press|conventional deadlift|romanian deadlift|trap bar deadlift)\b/i;
+const CABLE_ROTATION_NAME = /woodchop|pallof|rotation|crunch/i;
+
+/**
+ * Which contexts materially change THIS exercise's setup, judged from
+ * the row's own metadata (null-tolerant: unknown metadata earns no
+ * class line - the honest floor). Mirrored by
+ * scripts/adapted-setup-coverage.mjs, which audits the whole seed with
+ * these same rules.
+ */
+export function materialContextsFor(ex) {
+  if (!ex || !ex.name) return [];
+  const n = String(ex.name).toLowerCase();
+  const out = [];
+  const singleSided = SINGLE_SIDED_NAME.test(n);
+  const pullHinge = ex.movementPattern === 'pull' || ex.movementPattern === 'hinge';
+
+  // Forearm-primary rows are excluded: where grip IS the training
+  // purpose, a strap removes the exercise rather than adapting it.
+  if (ex.gripDemand === 'bar'
+    && ex.primaryMuscle !== 'forearms'
+    && (pullHinge || ['back', 'traps'].includes(ex.primaryMuscle))
+    && !/curl|reverse hyper|back extension/.test(n)) {
+    out.push(SETUP_CONTEXT.STRAP_CUFF);
+  }
+  if (ex.equipment === 'cable' && UPPER_MUSCLES.has(ex.primaryMuscle)
+    && !singleSided && !CABLE_ROTATION_NAME.test(n)) {
+    out.push(SETUP_CONTEXT.ONE_ARM);
+  }
+  if (ex.position === 'standing'
+    && (ex.equipment === 'dumbbell' || ex.equipment === 'cable' || ex.equipment === 'band')
+    && UPPER_MUSCLES.has(ex.primaryMuscle) && !singleSided
+    && !/seated|lying|chest-supported|prone|walk|carry|march/.test(n)) {
+    out.push(SETUP_CONTEXT.SEATED);
+  }
+  if ((ex.balanceDemand === 'high' || (SUPPORT_PATTERN_NAME.test(n) && ex.position === 'standing'))
+    && ex.impact !== true && ex.impact !== 1) {
+    out.push(SETUP_CONTEXT.SUPPORTED);
+  }
+  if (ex.equipment === 'barbell' && REDUCED_RANGE_NAME.test(n)) {
+    out.push(SETUP_CONTEXT.REDUCED_RANGE);
+  }
+  return out;
+}
+
+/** The adapted-setup lines for one exercise, as [{context, label,
+ *  text}] in a stable order, or []. Accepts the exercise row (class
+ *  rules + specific entry, specific text winning per context) or a
+ *  bare name (specific entry only, kept for existing callers). */
+export function adaptedSetupFor(exOrName) {
+  const name = typeof exOrName === 'string' ? exOrName : exOrName?.name;
+  if (!name) return [];
+  const entry = ADAPTED_SETUP[name] ?? {};
+  const classCtx = typeof exOrName === 'string' ? [] : materialContextsFor(exOrName);
   return Object.values(SETUP_CONTEXT)
-    .filter(ctx => entry[ctx])
-    .map(ctx => ({ context: ctx, label: SETUP_CONTEXT_LABELS[ctx], text: entry[ctx] }));
+    .filter(ctx => entry[ctx] || (classCtx.includes(ctx) && CLASS_TEXT[ctx]))
+    .map(ctx => ({
+      context: ctx,
+      label: SETUP_CONTEXT_LABELS[ctx],
+      text: entry[ctx] ?? CLASS_TEXT[ctx],
+    }));
 }

@@ -490,3 +490,22 @@ CC27-29-BUNDLE-TRACKER.md.
   route back is search, which is proven. IF a navigational breadcrumb
   is ever wanted, it requires counsel first (extend Q9) and a consent
   wording change; recorded as conditional, NOT built.
+- GC-D11 CLASS-LEVEL ADAPTED SETUP (2026-08-21 reconciliation, area 6):
+  the full-seed audit (scripts/adapted-setup-coverage.mjs) classified
+  220 of 551 canonical exercises as materially needing adapted-setup
+  text across 308 context needs (strap/cuff 132, seated 75, one-arm
+  cable 64, supported 37, reduced range 14). Hand-writing ~200 more
+  per-exercise entries would have been copy-paste noise, so the same
+  reusable-constraint law that governs the ontology governs here: a
+  pure classifier (materialContextsFor, living ONCE in adaptedSetup.js
+  and shared by the audit script) plus one class default line per
+  context (CLASS_TEXT), with the 29 rich per-exercise entries
+  overriding the class text where they exist. Coverage of the
+  materially-needing set: 100 percent (18 needs resolved by rich
+  entries, 290 by class lines, 0 unresolved - the script exits nonzero
+  if that ever regresses). Judgement calls pinned in the suite:
+  grip-purpose rows (pinches, grippers, wrist work) never get strap
+  text because strapping removes that exercise; impact rows get
+  nothing (eligibility governs); machine one-arm use stays a recorded
+  per-gym boundary, not a false claim. Null-tolerant floor: a row with
+  unknown metadata earns no class line (CAP-8 honesty).
