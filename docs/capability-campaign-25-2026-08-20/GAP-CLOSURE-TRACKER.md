@@ -20,11 +20,20 @@ PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
   fibromyalgia (2021 UK guidance change makes exercise framing clinically
   sensitive; CLIN register), CRPS, systemic autoimmune, CKD/COPD
   (comorbidity-adjustment class, not primary functional constraint).
-- [ ] C Movement-path ontology + tagging
-- [ ] D UX/discovery
+- [x] C Movement-path ontology + tagging COMPLETE: audit doc (one axis
+  added: weight_bearing_hands; every other section 8 candidate rejected
+  with its failing test); migrate_151 written NOT applied; nine axes at
+  100 percent coverage, 26 deliberate machine-design NULLs + small wrist
+  tail; floors raised; slot-3 batch corrected on lead review (dupe-key
+  merge, three value fixes)
+- [x] D UX/discovery COMPLETE: TrainingConsiderationsScreen (search,
+  detail, stateless preselect into the add flow, OTHER path), unguarded
+  route, HowYouTrain entry + preselect consumption, discovery pins suite
 - [ ] E Routines/library
 - [ ] F Deep integration
-- [ ] G Accessibility/content
+- [~] G Accessibility/content: adapted-setup layer + 30-entry content
+  landed with validation; A11Y-CRITICAL-JOURNEY-AUDIT.md records
+  code-verified vs device-pending; residue = final-review walk
 - [ ] H Scenario/coverage gate
 - [ ] I Final truth pass
 - [ ] Final gate (40 items) + ONE full suite + merge + report
@@ -33,8 +42,9 @@ PRODUCTION MIGRATIONS: 145-150 NOT RUN; any new files also NOT RUN.
 
 ## Next exact action
 
-Phase C close-out: lead curates axial/overhead NULLs; Haiku slot 3
-curates rule-shaped NULL worklists; then Phase D discovery UX.
+Slot 4 (family plans) in flight; on return: lead diff review, green the
+oracle, commit; then dispatch slot 5 per PHASE-H-SPEC.md; then Phase I
+registry rebuild + matrix statuses + final gate.
 
 ## Internal defect log
 
