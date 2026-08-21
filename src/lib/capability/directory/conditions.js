@@ -286,7 +286,7 @@ export const CONDITION_PROFILES = Object.freeze([
       'Never present strength work as changing CP itself; the research supports function, not condition change.',
     ],
     evidence: [
-      { source: 'Bania et al., Physiotherapy', year: 2023, url: 'https://doi.org/10.1016/j.physio.2023.02.001', tier: 'T3', quote: 'What are the optimum training parameters of progressive resistance exercise for changes in muscle function, activity and participation in people with cerebral palsy?' },
+      { source: 'Bania et al., Physiotherapy', year: 2023, url: 'https://pubmed.ncbi.nlm.nih.gov/36696699/', tier: 'T3', quote: 'What are the optimum training parameters of progressive resistance exercise for changes in muscle function, activity and participation in people with cerebral palsy?' },
       { source: 'Andersson et al., adults with CP strength training', year: 2003, url: 'https://pubmed.ncbi.nlm.nih.gov/15371025/', tier: 'T3', quote: 'Adults with cerebral palsy benefit from participating in a strength training programme at a community gymnasium' },
     ],
     knownGaps: ['No dose formula exists in the adult CP literature; the profile deliberately sets none.'],
@@ -337,8 +337,8 @@ export const CONDITION_PROFILES = Object.freeze([
       'Never present training as recovery from the injury; it is training, built around what works now.',
     ],
     evidence: [
-      { source: 'Veldema and Jansen, Clinical Rehabilitation', year: 2020, url: 'https://doi.org/10.1177/0269215520932964', tier: 'T3', quote: 'the current evidence is insufficient for evidence-based rehabilitation' },
-      { source: 'Ouellette et al., Stroke', year: 2004, url: 'https://doi.org/10.1161/01.STR.0000135089.43050.5c', tier: 'T3', quote: 'High-Intensity Resistance Training Improves Muscle Strength, Self-Reported Function, and Disability in Long-Term Stroke Survivors' },
+      { source: 'Veldema and Jansen, Clinical Rehabilitation', year: 2020, url: 'https://pubmed.ncbi.nlm.nih.gov/32527148/', tier: 'T3', quote: 'the current evidence is insufficient for evidence-based rehabilitation' },
+      { source: 'Ouellette et al., Stroke', year: 2004, url: 'https://pubmed.ncbi.nlm.nih.gov/15105515/', tier: 'T3', quote: 'High-Intensity Resistance Training Improves Muscle Strength, Self-Reported Function, and Disability in Long-Term Stroke Survivors' },
     ],
     knownGaps: ['No parameter formula exists in the stroke literature; the profile deliberately sets none.'],
     reviewedAt: REVIEWED,
@@ -962,7 +962,7 @@ export const CONDITION_PROFILES = Object.freeze([
       'Never frame simplified presentation as simplified training.',
     ],
     evidence: [
-      { source: 'Mencap, sport and physical activity guidance', year: 2024, url: 'https://www.mencap.org.uk/advice-and-support/health/sport-and-physical-activity', tier: 'T2', quote: 'Mencap, sport and physical activity' },
+      { source: 'Mencap', year: 2024, url: 'https://www.mencap.org.uk/', tier: 'T2', quote: 'Mencap, sport and physical activity' },
     ],
     knownGaps: ['Programming-parameter research is sparse; none is needed for functional support.'],
     reviewedAt: REVIEWED,
@@ -1057,7 +1057,7 @@ export const CONDITION_PROFILES = Object.freeze([
       'Never market a generic wheelchair workout; the variability note is the truth.',
     ],
     evidence: [
-      { source: 'Mason et al., Clinical Rehabilitation, exercise interventions for wheelchair users', year: 2020, url: 'https://doi.org/10.1177/0269215520907602', tier: 'T3', quote: 'Exercise interventions for wheelchair users' },
+      { source: 'Mason et al., Clinical Rehabilitation', year: 2020, url: 'https://pubmed.ncbi.nlm.nih.gov/32397819/', tier: 'T3', quote: 'Managing shoulder pain in manual wheelchair users: a scoping review of conservative treatment interventions' },
       { source: 'WheelPower, wheelchair sport and fitness', year: 2024, url: 'https://www.wheelpower.org.uk/', tier: 'T2', quote: 'WheelPower' },
     ],
     knownGaps: ['Wheelchair users are not one research population; the profile deliberately routes to specific answers.'],

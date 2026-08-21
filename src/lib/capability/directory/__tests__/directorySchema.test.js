@@ -197,6 +197,31 @@ describe('every shipped profile validates clean and ids are unique', () => {
     const ids = [...CONDITION_PROFILES, ...INJURY_PROFILES].map(p => p.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  test('every exercise-list question names only real seed exercises (aggravator honesty)', () => {
+    const names = new Set(seedRows().map(r => r.name));
+    const bad = [];
+    for (const p of [...CONDITION_PROFILES, ...INJURY_PROFILES]) {
+      const qs = [...(p.functionalQuestions ?? []), ...(p.movementQuestions ?? [])];
+      for (const q of qs) {
+        for (const n of q.exerciseNames ?? []) {
+          if (!names.has(n)) bad.push(`${p.id}/${q.id}: ${n}`);
+        }
+      }
+    }
+    expect(bad).toEqual([]);
+  });
+
+  test('every familyRelevance entry names a real shipped family plan', () => {
+    const src = fs.readFileSync(path.resolve(__dirname, '../../../seedRoutines.js'), 'utf8');
+    const bad = [];
+    for (const p of CONDITION_PROFILES) {
+      for (const fam of p.familyRelevance ?? []) {
+        if (!src.includes(`'${fam}`)) bad.push(`${p.id}: ${fam}`);
+      }
+    }
+    expect(bad).toEqual([]);
+  });
 });
 
 describe('search is deterministic, alias-aware, and never dead-ends', () => {
