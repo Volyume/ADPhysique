@@ -208,3 +208,11 @@ CC30 provenance-consumer edits). Opus: 0.
   held with existing pins. Agent budget final: 3 Haiku invocations
   (two killed by container restarts and completed hands-on), 0 Sonnet,
   0 Opus.
+
+- [x] BUNDLE 2 FINAL GATE (settled tree): eslint . --max-warnings 0
+  clean; jest 1,028 suites passed / 1 pre-existing skip, 0 failed;
+  13,839 tests passed / 13 pre-existing skips, 0 failed; 17 snapshots.
+  First run caught four pre-CC31 pin shapes (apply write-failure catch
+  anchor, joint-pain tri-state pre-conditional, an arrow character in a
+  comment, the run-call argument list) - realigned, fixes proven on the
+  four suites, full suite re-run green. Merged to main.
