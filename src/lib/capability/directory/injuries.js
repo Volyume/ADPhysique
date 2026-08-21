@@ -305,10 +305,10 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Low back trouble',
     aliases: ['back pain', 'lower back', 'lumbar', 'bad back', 'back spasm', 'sciatica'],
     movementQuestions: [
-      dq('lb_q1', 'axial_load', 'I am keeping compressive load off my spine for now', 'Loaded squats and deadlifts compress the spine; excluding that class keeps supported alternatives available.'),
+      dq('lb_q1', 'axial_load', 'I am keeping compressive load off my spine for now', 'Loaded squats and deadlifts compress the spine; leaving those out keeps supported alternatives available.'),
       fq('lb_q2', ['spinal_erector'], 'I’m keeping deadlifts and back-extension work out for now', 'Hinging works the lower back directly; some people keep it, some park it for a while.'),
       fq('lb_q3', ['squat_press'], 'I’m keeping squatting movements out for now', 'Squat-pattern work is a separate call from hinging; you can exclude one and keep the other.'),
-      fq('lb_q4', ['flexion', 'rotation'], 'I’m keeping weighted sit-up and twisting work out for now', 'Bending and twisting under load is its own class; anti-movement core work usually stays available.'),
+      fq('lb_q4', ['flexion', 'rotation'], 'I’m keeping weighted sit-up and twisting work out for now', 'Bending and twisting under load is its own thing; core work that holds you steady usually stays available.'),
     ],
     education: [
       { text: 'UK guidance describes back trouble as usually improving within a few weeks, and staying active as part of the picture.', evidenceIndex: 0 },
@@ -367,7 +367,7 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Hip-related trouble',
     aliases: ['hip pain', 'hip impingement', 'FAI', 'hip flexor', 'front of hip pain', 'deep squat hip pain'],
     movementQuestions: [
-      fq('hip_q1', ['squat_press'], 'I’m keeping deep squats out for now', 'Depth is the usual trigger at the hip; excluding the class now and allowing back specific movements later works well.'),
+      fq('hip_q1', ['squat_press'], 'I’m keeping deep squats out for now', 'Depth is the usual trigger at the hip; leaving deep work out now and bringing back specific movements later works well.'),
       fq('hip_q2', ['flexion'], 'I’m keeping weighted leg raises and sit-up work out for now', 'Lifting the leg against load works the same hip corner; a separate call from squatting.'),
       dq('hip_q3', 'impact', 'Impact work is out while the hip settles', 'Jumping loads the hip fast; most people park it first and bring it back last.'),
     ],
@@ -398,7 +398,7 @@ export const INJURY_PROFILES = Object.freeze([
         id: 'gr_q1', kind: Q.EXERCISE_LIST,
         exerciseNames: ['Hip Adduction Machine', 'Adductor Squeeze (Ball)', 'Copenhagen Plank', 'Cossack Squat', 'Sumo Deadlift'],
         wording: 'Which of these inner-thigh exercises are you leaving out for now?',
-        whyAsked: 'These load the adductors most directly; leaving out the ones that apply keeps everything else going.',
+        whyAsked: 'These load the inner thigh most directly; leaving out the ones that apply keeps everything else going.',
       },
       dq('gr_q2', 'impact', 'Impact and sprint-type work is out while it settles', 'Fast direction change is the classic trigger; usually the last thing back.'),
     ],
@@ -426,7 +426,7 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Kneecap-area trouble',
     aliases: ['patellofemoral', 'kneecap pain', 'runner’s knee', 'knee pain squatting', 'front of knee'],
     movementQuestions: [
-      fq('pf_q1', ['squat_press', 'knee_extension'], 'Which knee movements are you keeping out for now?', 'Deep squatting and leg-extension work load the kneecap most; excluding a class keeps hinging and the rest available.'),
+      fq('pf_q1', ['squat_press', 'knee_extension'], 'Which knee movements are you keeping out for now?', 'Deep squatting and leg-extension work load the kneecap most; leaving those out keeps hinging and the rest available.'),
       dq('pf_q2', 'impact', 'Impact work is out while the knee settles', 'Jumping asks the most of the kneecap; usually first out, last back.'),
     ],
     education: [
@@ -478,7 +478,7 @@ export const INJURY_PROFILES = Object.freeze([
     canonicalName: 'Deep knee bend restrictions',
     aliases: ['meniscus', 'cartilage knee', 'cannot squat deep', 'knee locks', 'deep bend hurts'],
     movementQuestions: [
-      fq('kd_q1', ['squat_press'], 'I’m keeping deep squats out for now', 'Depth is the story here; the class goes out, and specific shallower movements come back as allowances.'),
+      fq('kd_q1', ['squat_press'], 'I’m keeping deep squats out for now', 'Depth is the story here; deep work goes out, and you can bring back specific shallower movements that are fine.'),
       fq('kd_q2', ['knee_flexion'], 'I’m keeping leg curls out for now', 'Fully bending the knee under load is a separate call from squatting depth.'),
       dq('kd_q3', 'impact', 'Impact and twisting work is out for now', 'Loaded twisting on a bent knee is the classic aggravator with cartilage trouble.'),
     ],

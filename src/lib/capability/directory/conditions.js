@@ -56,7 +56,7 @@ const qBalance = (id, whyAsked) => ({
 });
 const qOverhead = (id, whyAsked) => ({
   id, kind: Q.DEMAND, demandId: 'overhead_position',
-  wording: 'Overhead positions do not work for me at the moment',
+  wording: 'Overhead positions do not work for me',
   whyAsked,
 });
 const qOneArm = (id, whyAsked) => ({
@@ -355,7 +355,7 @@ export const CONDITION_PROFILES = Object.freeze([
     variability: 'Limb difference spans congenital and acquired, every level, and every combination of prosthesis, adaptive equipment or neither. What you use and what you train with is entirely yours to set.',
     functionalQuestions: [
       qOneArm('uld_q1', 'One-arm training is complete upper-body training; this tells Volyume to plan it that way.'),
-      qGrip('uld_q2', 'If you use a hook, cuff, strap or prosthesis for some movements, allowances and custom exercises make them first-class.'),
+      qGrip('uld_q2', 'If you use a hook, cuff, strap or prosthesis for some movements, you can mark those exercises as ones that work for you, and save your own setup as a custom exercise.'),
       qWrists('uld_q3', 'Push-up style positions are a separate question from grip; answer for how things actually are.'),
     ],
     setupConsiderations: [
@@ -405,7 +405,7 @@ export const CONDITION_PROFILES = Object.freeze([
       qOneLeg('lld_q1', 'Single-leg strength work is complete lower-body training; this plans it that way.'),
       qBalance('lld_q2', 'Supported positions take balance out of the equation where you want them to.'),
       qSeated('lld_q3', 'If seated is your base for some or all training, say so and it is planned from there.'),
-      qImpact('lld_q4', 'Impact work is a personal and prosthesis-specific call; excluded until you want it.'),
+      qImpact('lld_q4', 'Jumping and impact work depends on you and on your prosthesis; Volyume leaves it out until you say otherwise.'),
     ],
     setupConsiderations: [
       'Machines with independent leg action and single-leg stations do the honest work here.',
@@ -659,7 +659,7 @@ export const CONDITION_PROFILES = Object.freeze([
     functionalQuestions: [
       qBalance('hm_q1', 'Supported, stable positions suit joints that move further than they should; you set the support level.'),
       qImpact('hm_q2', 'Impact work is usually kept out with hypermobile joints; yours to decide.'),
-      qOverhead('hm_q3', 'Overhead positions can be a shoulder-stability question; exclude them if that is you, and allow back what works.'),
+      qOverhead('hm_q3', 'Overhead positions can be a shoulder-stability question with hypermobility; leave them out if that is you, and you can bring back any that are fine.'),
     ],
     setupConsiderations: [
       'Controlled machine work and bands give feedback that free weights do not, which suits hypermobile joints.',
@@ -704,12 +704,12 @@ export const CONDITION_PROFILES = Object.freeze([
     affects: { programming: true, appAccessibility: false },
     variability: 'Balance conditions range from steady-state to variable day to day, and from inner-ear to neurological causes. The support level you choose is the whole adjustment; strength work itself is unchanged.',
     functionalQuestions: [
-      qBalance('bal_q1', 'This is the central question here: supported training removes the balance tax from strength work.'),
+      qBalance('bal_q1', 'This is the main one here: training from a supported position lets the muscles work without balance being part of the effort.'),
       qImpact('bal_q2', 'Impact work asks the most of balance; usually the first thing to set aside.'),
-      qFloor('bal_q3', 'Floor transitions can be the unsteadiest moment; exclude them if that is true for you.'),
+      qFloor('bal_q3', 'Getting down and up can be the unsteadiest moment; leave floor work out if that is true for you.'),
     ],
     setupConsiderations: [
-      'Machines, seats and a wall or rail nearby turn balance days from a blocker into a detail.',
+      'Machines, seats and a wall or rail nearby mean an unsteady day changes the setup rather than the session.',
       'Fixed and guided equipment beats free-standing work on unsteady days.',
     ],
     accessibilityConsiderations: [],
@@ -756,7 +756,7 @@ export const CONDITION_PROFILES = Object.freeze([
       qOneArm('grip_q3', 'If one hand does most of the work, one-side training keeps everything available.'),
     ],
     setupConsiderations: [
-      'Cuffs, straps and hooks turn most pulling movements into grip-light movements; a custom exercise makes your version first-class.',
+      'Cuffs, straps and hooks take firm grip out of most pulling movements; if you have your own way of setting one up, save it as a custom exercise and it tracks like any other.',
       'Machine work with pads and supports needs the least from the hands.',
     ],
     accessibilityConsiderations: [
@@ -801,7 +801,7 @@ export const CONDITION_PROFILES = Object.freeze([
     functionalQuestions: [
       qGrip('td_q1', 'If steady gripping is the affected task, grip-light equipment keeps everything trainable.'),
       qBalance('td_q2', 'Supported positions remove precision demands from heavy work.'),
-      qOverhead('td_q3', 'Overhead positions ask the most steadiness; exclude them if that is you, and allow back what works.'),
+      qOverhead('td_q3', 'Overhead positions ask the most steadiness; leave them out if that is you, and you can bring back any that are fine.'),
     ],
     setupConsiderations: [
       'Machines with a fixed path suit variable steadiness better than free weights.',
@@ -934,7 +934,7 @@ export const CONDITION_PROFILES = Object.freeze([
     variability: 'A learning disability changes how instructions and plans are best presented, not what training is possible. Support needs and preferences differ widely between people.',
     functionalQuestions: [],
     setupConsiderations: [
-      'A consistent, repeating plan with familiar exercises beats novelty here; Volyume’s plans repeat weekly by design.',
+      'A consistent, repeating plan with familiar exercises works better than variety here; Volyume plans the same week each week.',
       'Training with a supporter or friend works well; the app keeps each step small and clear.',
     ],
     accessibilityConsiderations: [
@@ -979,7 +979,7 @@ export const CONDITION_PROFILES = Object.freeze([
     variability: 'Training capacity is generally ordinary; equipment reach, proportions and any spine or joint considerations your team monitors are what shape the details.',
     functionalQuestions: [
       qAxial('ss_q1', 'If your team has advised keeping load off the spine, this carries it through every plan and suggestion.'),
-      qOverhead('ss_q2', 'Overhead range differs with proportions for some people; exclude it if that is you, and allow back what works.'),
+      qOverhead('ss_q2', 'Overhead reach differs with proportions for some people; leave it out if that is you, and you can bring back any movements that are fine.'),
       qImpact('ss_q3', 'Impact work is a common thing to keep out where joints or spine are monitored; your call.'),
     ],
     setupConsiderations: [

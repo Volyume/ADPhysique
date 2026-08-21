@@ -425,7 +425,14 @@ export default function HowYouTrainScreen() {
   };
 
   const endBaselineRow = (row) => {
-    appAlert('Remove this from your setup?', `Volyume will stop building around "${ruleLabel(row)}".`, [
+    // Natural coach-language order (2026-08-21): the title named nothing
+    // while the body named the rule; a person names it once, up front.
+    const subject = groupSubject([row]);
+    appAlert(
+      subject ? `Stop building around ${subject}?` : 'Remove this from your setup?',
+      subject
+        ? 'Volyume will plan and suggest it normally again from now on. Nothing in your history changes.'
+        : `Volyume will stop building around "${ruleLabel(row)}".`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Remove', onPress: async () => { await endConstraint(userId, row.id); refresh(); } },
     ]);

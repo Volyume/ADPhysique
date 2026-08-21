@@ -70,3 +70,61 @@ describe.each(SURFACES)('%s exposes no system vocabulary in copy', (file) => {
     expect(offenders).toEqual([]);
   });
 });
+
+// ── The condition and injury directory (disability side, 2026-08-21) ────
+// Scanned by RENDERED FIELD rather than by literal, because these files
+// also carry internal author notes (neverInfer, claimRisks, knownGaps)
+// that never reach a user and legitimately use system words. The fields
+// below are exactly what TrainingConsiderationsScreen renders.
+
+const { allConditionProfiles, allInjuryProfiles, OTHER_PROFILE } = require('../lib/capability/directory');
+
+function renderedStrings(profile) {
+  const out = [];
+  const push = (v) => { if (typeof v === 'string' && v.trim()) out.push(v); };
+  push(profile.canonicalName);
+  push(profile.variability);
+  push(profile.professionalNote);
+  push(profile.clinicianBoundary);
+  push(profile.routeNote);
+  for (const q of [...(profile.functionalQuestions ?? []), ...(profile.movementQuestions ?? [])]) {
+    push(q.wording); push(q.whyAsked);
+  }
+  for (const t of profile.generalisable ?? []) push(t);
+  for (const t of profile.setupConsiderations ?? []) push(t);
+  for (const e of profile.education ?? []) push(e.text);
+  for (const t of profile.familyRelevance ?? []) push(t);
+  return out;
+}
+
+// Jargon the founder's audit named: developer vocabulary, coined
+// metaphors, and Volyume's internal terms for its own mechanisms.
+const DIRECTORY_JARGON = [
+  /first-class/i,
+  /\bblocker\b/i,
+  /balance tax/i,
+  /\ballowances?\b/i,
+  /\b(the|that|a) class\b/i,
+  /\bthe right grain\b/i,
+  /\bshortfall\b/i,
+];
+
+describe('the condition and injury directory speaks plainly where it renders', () => {
+  const profiles = [...allConditionProfiles(), ...allInjuryProfiles(), OTHER_PROFILE];
+
+  it.each(DIRECTORY_JARGON.map((j) => [String(j), j]))('no rendered field says %s', (_label, jargon) => {
+    const offenders = [];
+    for (const p of profiles) {
+      for (const text of renderedStrings(p)) {
+        if (jargon.test(text)) offenders.push(`${p.id}: ${text}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it('scans a real, non-empty set of rendered strings (never passes vacuously)', () => {
+    const total = profiles.reduce((n, p) => n + renderedStrings(p).length, 0);
+    expect(profiles.length).toBeGreaterThan(20);
+    expect(total).toBeGreaterThan(200);
+  });
+});

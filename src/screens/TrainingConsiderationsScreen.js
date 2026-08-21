@@ -97,7 +97,7 @@ export default function TrainingConsiderationsScreen() {
 
         <SectionHeader title="Set up what applies to you" />
         <Text style={[styles.hint, { color: t.colors.textSecondary }]}>
-          People differ, so nothing is assumed. Each of these opens How you train with the choice ready to confirm, change or skip.
+          People differ, so nothing is assumed. Tapping one opens How you train with the answer filled in, ready for you to confirm, change or skip.
         </Text>
         {(questions ?? []).map(q => (
           <PressableCard
@@ -120,7 +120,7 @@ export default function TrainingConsiderationsScreen() {
         >
           <Text style={[styles.cardTitle, { color: t.colors.textPrimary }]}>Something else</Text>
           <Text style={[styles.cardWhy, { color: t.colors.textSecondary }]}>
-            The full How you train flow covers anything these do not.
+            If none of these fit, How you train covers anything else.
           </Text>
         </PressableCard>
 
@@ -151,7 +151,7 @@ export default function TrainingConsiderationsScreen() {
   return (
     <SettingsPage title="Training considerations">
       <Text style={[styles.body, { color: t.colors.textSecondary }]}>
-        Entirely optional. If a condition or an injury shapes how you train, finding it here selects better questions. You never need a name: describing how you train under How you train gives the same support.
+        Entirely optional. If a condition or an injury shapes how you train, finding it here brings up the questions that matter for it. You never need a name: describing how you train under How you train gives you the same support.
       </Text>
       <TextInput
         value={query}
