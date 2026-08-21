@@ -12,13 +12,14 @@ coverage floors pinned in `capabilityDemands.test.js`.
 | position | 551 | 100% |
 | floorAccess | 545 | 99% |
 | overheadPosition | 522 | 95% |
-| gripDemand | 527 | 96% |
+| gripDemand | 530 | 96% |
 | unilateralLoadable | 481 | 87% |
 | bilateralUpper | 538 | 98% |
 | bilateralLower | 548 | 99% |
 | axialLoad | 517 | 94% |
 | impact | 551 | 100% |
 | balanceDemand | 546 | 99% |
+| weightBearingHands | 517 | 94% |
 
 ## Per-muscle coverage (family-thin muscles marked *, section 33.3 priority)
 
@@ -28,11 +29,11 @@ coverage floors pinned in `capabilityDemands.test.js`.
 | adductors * | 11 | 100% | 100% | 100% | 100% | 100% | 82% | 100% | 91% |
 | back | 65 | 100% | 98% | 97% | 100% | 98% | 100% | 100% | 88% |
 | biceps | 36 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
-| calves | 21 | 100% | 76% | 100% | 100% | 100% | 100% | 100% | 100% |
+| calves | 21 | 100% | 86% | 100% | 100% | 100% | 100% | 100% | 100% |
 | chest | 56 | 100% | 98% | 96% | 95% | 100% | 100% | 96% | 93% |
 | forearms * | 22 | 100% | 100% | 100% | 100% | 95% | 100% | 95% | 100% |
 | front_delts | 23 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 61% |
-| glutes | 37 | 100% | 95% | 89% | 100% | 100% | 100% | 100% | 100% |
+| glutes | 37 | 100% | 97% | 89% | 100% | 100% | 100% | 100% | 100% |
 | hamstrings | 38 | 100% | 95% | 89% | 100% | 100% | 100% | 100% | 92% |
 | neck * | 14 | 100% | 100% | 100% | 100% | 100% | 100% | 100% | 100% |
 | quads | 57 | 100% | 89% | 100% | 100% | 100% | 100% | 100% | 89% |
@@ -65,9 +66,9 @@ Dumbbell Squeeze Press [chest/dumbbell]; JM Press [triceps/barbell]; Board Press
 
 Cable Crossover (High to Low) [chest/cable]; Rack Pull [back/barbell]; Good Morning (Barbell) [hamstrings/barbell]; Dumbbell Side-Lying Rear Delt [rear_delts/dumbbell]; YTW [rear_delts/dumbbell]; Seated Rear Delt Machine [rear_delts/machine]; EZ Bar Skull Crusher [triceps/ez_bar]; Dumbbell Skull Crusher [triceps/dumbbell]; Decline Skull Crusher [triceps/barbell]; Good Morning [hamstrings/barbell]; Frog Pump [glutes/bodyweight]; Donkey Kick [glutes/bodyweight]; Abduction Machine [glutes/machine]; Ab Rollout [abs/bodyweight]; Dragon Flag [abs/bodyweight]; Stir the Pot [abs/bodyweight]; L-Sit Hold [abs/bodyweight]; Tyre Flip [back/machine]; Barbell Good Morning [hamstrings/barbell]; Bear Crawl [abs/bodyweight]; Kneeling Ab Rollout [abs/bodyweight]; Windmill [abs/dumbbell]; Barbell Skull Crusher [triceps/barbell]; Plate-Loaded Rear Delt [rear_delts/machine]; Band Good Morning [hamstrings/bodyweight]; Reverse Cable Crossover [rear_delts/cable]; Weighted Frog Pump [glutes/dumbbell]; Cable Iron Cross [chest/cable]; Dumbbell Floor Skull Crusher [triceps/dumbbell]
 
-### gripDemand (24 unknown)
+### gripDemand (21 unknown)
 
-Sissy Squat [quads/bodyweight]; Pendulum Squat [quads/machine]; Spanish Squat [quads/bodyweight]; Abduction Machine [glutes/machine]; Donkey Kickback (Machine) [glutes/machine]; Seated Calf Raise [calves/machine]; Seated Machine Calf Raise [calves/machine]; Donkey Calf Raise [calves/bodyweight]; Calf Raise on Steps [calves/bodyweight]; Russian Twist [abs/bodyweight]; Dragon Flag [abs/bodyweight]; V-Up [abs/bodyweight]; Toe-to-Bar [abs/bodyweight]; L-Sit Hold [abs/bodyweight]; Sled Push [quads/machine]; Sled Pull [hamstrings/machine]; Tyre Flip [back/machine]; Bodyweight Single-Leg RDL [hamstrings/bodyweight]; Prone Reverse Fly [rear_delts/bodyweight]; Seated Bodyweight Calf Raise [calves/bodyweight]; Oblique V-Up [abs/bodyweight]; Sissy Squat Machine [quads/machine]; Bodyweight Bulgarian Split Squat [quads/bodyweight]; Machine Chest Fly (Single-Arm) [chest/machine]
+Sissy Squat [quads/bodyweight]; Pendulum Squat [quads/machine]; Spanish Squat [quads/bodyweight]; Donkey Kickback (Machine) [glutes/machine]; Donkey Calf Raise [calves/bodyweight]; Calf Raise on Steps [calves/bodyweight]; Russian Twist [abs/bodyweight]; Dragon Flag [abs/bodyweight]; V-Up [abs/bodyweight]; Toe-to-Bar [abs/bodyweight]; L-Sit Hold [abs/bodyweight]; Sled Push [quads/machine]; Sled Pull [hamstrings/machine]; Tyre Flip [back/machine]; Bodyweight Single-Leg RDL [hamstrings/bodyweight]; Prone Reverse Fly [rear_delts/bodyweight]; Seated Bodyweight Calf Raise [calves/bodyweight]; Oblique V-Up [abs/bodyweight]; Sissy Squat Machine [quads/machine]; Bodyweight Bulgarian Split Squat [quads/bodyweight]; Machine Chest Fly (Single-Arm) [chest/machine]
 
 ### unilateralLoadable (70 unknown)
 
@@ -92,3 +93,7 @@ Landmine Press [chest/barbell]; Dumbbell Squeeze Press [chest/dumbbell]; Barbell
 ### balanceDemand (5 unknown)
 
 Dumbbell Squeeze Press [chest/dumbbell]; JM Press [triceps/barbell]; Board Press [triceps/barbell]; Rice Bucket [forearms/bodyweight]; Guillotine Press [chest/barbell]
+
+### weightBearingHands (34 unknown)
+
+Weighted Dips (Chest) [chest/bodyweight]; Weighted Dips (Triceps) [triceps/bodyweight]; Sissy Squat [quads/bodyweight]; Pendulum Squat [quads/machine]; Spanish Squat [quads/bodyweight]; Cycling (Stationary) [quads/machine]; Terminal Knee Extension [quads/bodyweight]; Frog Pump [glutes/bodyweight]; Donkey Kickback (Machine) [glutes/machine]; Donkey Calf Raise [calves/bodyweight]; Calf Raise on Steps [calves/bodyweight]; Russian Twist [abs/bodyweight]; Dragon Flag [abs/bodyweight]; V-Up [abs/bodyweight]; Toe-to-Bar [abs/bodyweight]; Dead Hang [forearms/bodyweight]; Sled Push [quads/machine]; Sled Pull [hamstrings/machine]; Prowler Drag [hamstrings/machine]; Battle Ropes [front_delts/machine]; Assault Bike [quads/machine]; Tyre Flip [back/machine]; Cossack Squat [adductors/bodyweight]; Side-Lying Adduction [adductors/bodyweight]; Bodyweight Single-Leg RDL [hamstrings/bodyweight]; Glute-Ham Raise Machine [hamstrings/machine]; Prone Reverse Fly [rear_delts/bodyweight]; Seated Bodyweight Calf Raise [calves/bodyweight]; Oblique V-Up [abs/bodyweight]; Adductor Rock-Back (Kneeling) [adductors/bodyweight]; Tib Bar Raise (Machine) [tibialis/machine]; Sissy Squat Machine [quads/machine]; Bodyweight Bulgarian Split Squat [quads/bodyweight]; Machine Chest Fly (Single-Arm) [chest/machine]

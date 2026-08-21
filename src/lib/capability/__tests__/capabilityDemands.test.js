@@ -59,6 +59,7 @@ test('per-axis coverage floors hold (a rule regression fails loudly)', () => {
     position: 0.97, floorAccess: 0.95, overheadPosition: 0.90,
     gripDemand: 0.92, unilateralLoadable: 0.84, bilateralUpper: 0.95,
     bilateralLower: 0.96, axialLoad: 0.90, impact: 1.0, balanceDemand: 0.96,
+    weightBearingHands: 0.92,
   };
   for (const f of DEMAND_FIELDS) {
     const known = derived.filter((d) => d.meta[f] !== null && d.meta[f] !== undefined).length;
@@ -106,4 +107,40 @@ test('anchor rows derive the values the resolver depends on (pinned)', () => {
   expect(by('Plank')).toMatchObject({ floorAccess: true, gripDemand: 'none' });
   expect(by('Pull-Up')).toMatchObject({ overheadPosition: true, gripDemand: 'bar', bilateralUpper: true });
   expect(by('Deadlift (Conventional)')).toMatchObject({ axialLoad: true, bilateralLower: true, gripDemand: 'bar' });
+});
+
+describe('weight_bearing_hands (gap-closure Phase C: the audited eleventh column)', () => {
+  const by = (name) => derived.find((d) => d.ex.name === name)?.meta;
+  const { demandAxisConflict } = require('../resolve');
+
+  test('the push-up class is TRUE while gripped and forearm work stays FALSE', () => {
+    expect(by('Push-Up')?.weightBearingHands).toBe(true);
+    expect(by('Mountain Climber')?.weightBearingHands).toBe(true);
+    expect(by('Bear Crawl')?.weightBearingHands).toBe(true);
+    expect(by('Turkish Get-Up')?.weightBearingHands).toBe(true);
+    // Forearm-supported planks do not load the extended wrist.
+    expect(by('Plank')?.weightBearingHands).toBe(false);
+    // Gripped implements are the grip axis's interface, not this one.
+    expect(by('Renegade Row')?.weightBearingHands).toBe(false);
+    expect(by('Barbell Bench Press')?.weightBearingHands).toBe(false);
+    expect(by('Ab Wheel Rollout')?.weightBearingHands).toBe(false);
+  });
+
+  test('curated judgement rows: catch phases and front racks load extended wrists', () => {
+    expect(by('Nordic Hamstring Curl')?.weightBearingHands).toBe(true);
+    expect(by('Barbell Front Squat')?.weightBearingHands).toBe(true);
+    expect(by('L-Sit Hold')?.weightBearingHands).toBe(true);
+    // Reverse Nordic has no catch; the knees and torso carry it.
+    expect(by('Reverse Nordic Curl')?.weightBearingHands).toBe(false);
+  });
+
+  test('unresolved grip stays honestly NULL on the new axis too (CAP-8)', () => {
+    expect(by('Sissy Squat')?.weightBearingHands).toBeNull();
+  });
+
+  test('the resolver reads the axis tri-state', () => {
+    expect(demandAxisConflict('weight_bearing_hands', { weightBearingHands: true })).toBe(true);
+    expect(demandAxisConflict('weight_bearing_hands', { weightBearingHands: false })).toBe(false);
+    expect(demandAxisConflict('weight_bearing_hands', {})).toBeNull();
+  });
 });

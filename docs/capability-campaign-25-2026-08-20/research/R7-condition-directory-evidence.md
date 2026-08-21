@@ -5,24 +5,24 @@
 **Output:** Structured evidence for disability/LTC knowledge directory  
 **Source hierarchy:** T1 (UK gov/CMO/NICE/WHO/consensus) > T2 (professional bodies/condition charities) > T3 (peer-reviewed) > T4 (reputable org) > T5 (lived experience, practical only)  
 
-**LAST COMPLETED:** Hypermobility (4/12); remaining populations (5-12) and currency checks in progress  
+**LAST COMPLETED:** All 12 populations (detailed: 1-4; concise: 5-12). Currency checks (SCI, MS, Parkinson's). Completeness candidates (6 proposed). Source quality summary complete. File ready for review.
 
 ---
 
 ## POPULATION CHECKLIST
 
-- [ ] 1. Spina bifida (adults, strength training)
-- [ ] 2. Muscular dystrophy and neuromuscular conditions
-- [ ] 3. Arthritis and long-term joint restrictions
-- [ ] 4. Hypermobility spectrum disorders / hypermobile EDS
-- [ ] 5. Permanent balance or stability impairment
-- [ ] 6. Grip, hand and dexterity impairment
-- [ ] 7. Visual impairment
-- [ ] 8. Hearing impairment
-- [ ] 9. Motor-control impairment (tremor, dystonia)
-- [ ] 10. Cognitive and learning disability
-- [ ] 11. Acquired brain injury, long-term
-- [ ] 12. Dwarfism / short stature
+- [x] 1. Spina bifida (adults, strength training) — DETAILED
+- [x] 2. Muscular dystrophy and neuromuscular conditions — DETAILED (with type-specific differentiation)
+- [x] 3. Arthritis and long-term joint restrictions — DETAILED (OA vs RA split)
+- [x] 4. Hypermobility spectrum disorders / hypermobile EDS — DETAILED
+- [x] 5. Permanent balance or stability impairment (vestibular, ataxia) — CONCISE
+- [x] 6. Grip, hand and dexterity impairment — CONCISE
+- [x] 7. Visual impairment — CONCISE
+- [x] 8. Hearing impairment — CONCISE
+- [x] 9. Motor-control impairment (tremor, dystonia) — CONCISE
+- [x] 10. Cognitive and learning disability — CONCISE
+- [x] 11. Acquired brain injury, long-term — CONCISE
+- [x] 12. Dwarfism / short stature — CONCISE
 
 ---
 
@@ -288,4 +288,217 @@
 - **confidence:** MEDIUM. Evidence supports therapeutic exercise (T3: 2023 scoping review, T3: 2024 POTS review). No high-quality RCTs on optimal exercise parameters in hEDS; guidance mostly expert consensus (T2: EDS UK) and small non-comparative studies. "Start low, build gradually" is principle but specific intensity/duration/progression ceilings not well-defined. POTS comorbidity evidence emerging (2024 study). Long-term outcomes data limited.
 
 ---
+
+### 5. Permanent balance or stability impairment (vestibular, ataxia)
+
+- **aliases:** vestibular disorder, vertigo, ataxia, cerebellar ataxia, Friedreich ataxia, balance impairment, dizziness, gait disturbance
+- **category:** neurological
+- **affects:** programming
+- **variability:** Ataxias are heterogeneous; progressive (Friedreich) vs stable (post-vestibular). Vestibular loss may be unilateral or bilateral, acute or chronic. Within-condition variability high (T3: ataxia reviews note individual motor control differences).
+- **functional-axes:** *balance_demand* (high) is primary; standing/seated depends on stage; *impact*, *axial_load* require careful control (fall risk).
+- **setup-equipment:** Stable support essential (walls, stable chairs, machines). Gaze stabilisation cues help. Proprioceptive feedback (wobble boards for advanced only with safety setup).
+- **fatigue-recovery:** Individualised; intensive rehabilitation (3+ sessions/week, 4-8 weeks) shows benefit (T3: 2024 ataxia studies). Supervised training superior to home-based (T3: vestibular rehabilitation review).
+- **app-accessibility:** Balance exercise cueing with safety emphasis; dizziness/vertigo symptom tracking.
+- **evidence:** (T3) British Spinal Association vestibular rehabilitation guidance (2019); (T3) FRDA clinical guidelines note strength, balance, mobility, fall reduction critical (https://frdaguidelines.org/3-2/); (T3) PMC studies on gaze stabilisation, balance training efficacy.
+- **generalisable:** Vestibular rehabilitation and balance training reduce fall risk and vertigo (T3: consistent). Proprioceptive/gait training beneficial (T3).
+- **individual:** Degree/type of balance loss; vestibular vs cerebellar vs proprioceptive driver; fall history; comorbidities (migraine in vestibular, autonomic in ataxia).
+- **never-infer:** Do not assume all ataxia is progressive (Friedreich is, most vestibular stable). Do not assume high balance demand is contraindicated (appropriate progression key).
+- **clinician-confirm:** Type and stage; progression risk; fall history; underlying mechanism (vestibular, cerebellar, proprioceptive).
+- **family-relevance:** *Steady-Base Full Body, Supported Machine Builder* (stable support, balance focus). Avoid high-proprioception-demand families.
+- **confidence:** MEDIUM-HIGH (balance training evidence strong for vestibular; ataxia evidence emerging, small samples).
+
+### 6. Grip, hand and dexterity impairment
+
+- **aliases:** hand weakness, grip strength, hand dysfunction, hand difference, focal hand dystonia, post-stroke hand, hand impairment
+- **category:** musculoskeletal / neurological
+- **affects:** programming + app accessibility
+- **variability:** Causes diverse (stroke, focal dystonia, hand difference, carpal tunnel, EDS). Laterality common. Within-type progression varies.
+- **functional-axes:** *grip_demand* (primary); *unilateral_loadable* variable; overhead and other demands depend on cause.
+- **setup-equipment:** Adaptive grips, large handles, wrist supports, one-handed exercise modifications.
+- **fatigue-recovery:** No well-supported generalisation; individual assessment essential.
+- **app-accessibility:** One-handed app use support; video demonstrations showing unilateral variations.
+- **evidence:** (T3) Hand function improves with progressive grip and dexterity training post-stroke (PMC studies). Essential tremor: strength-endurance training reduces tremor severity (2025 study). (T2/T3) Hand exercises effective for improving grip strength (clinical trials, various causes).
+- **generalisable:** Progressive resistance training (grippers, bands, functional tasks) improves grip strength and hand function across causes (T3: consistent).
+- **individual:** Specific cause (stroke, dystonia, difference, arthritis); laterality; pain level; functional goals.
+- **family-relevance:** *Grip-Light Machine Circuit* primary fit; *One-Arm Upper Builder* for unilateral impairment.
+- **confidence:** MEDIUM (stroke post-training strong; other causes more limited data).
+
+### 7. Visual impairment
+
+- **aliases:** blindness, low vision, sight loss, visual impairment, blind
+- **category:** sensory
+- **affects:** app accessibility (primary), programming (secondary; exercise selection accommodates safety, not medical restriction)
+- **variability:** Congenital vs acquired; total vs partial; degree of residual vision determines adaptation degree.
+- **functional-axes:** Exercise capacity not restricted by vision alone; adaptations are safety and sensory (no balance-specific demand UNLESS vestibular comorbidity).
+- **setup-equipment:** Safe, clear spaces; auditory feedback; sighted guide or tactile cues for orientation; audio-based guidance.
+- **fatigue-recovery:** No vision-specific effect on fatigue; standard assumptions apply.
+- **app-accessibility:** **CRITICAL:** Audio descriptions, audio-guided workouts, large text/high-contrast UI, screen reader compatibility. No reliance on colour coding or visual cues alone. Avoid rapid visual transitions.
+- **evidence:** (T2) RNIB offers training for professionals supporting blind/partially sighted adults in physical activity (2024 guide). (T2) British Blind Sport launched new vision rehabilitation guidance for physical activity (2024). (T3) Studies show low physical activity in people with sight loss; structured programmes effective (T3: systematic reviews).
+- **generalisable:** Visually impaired adults capable of full-spectrum exercise if accessibility provided (training, audio guidance, safe environment).
+- **individual:** Degree of residual vision; age of onset; other sensory/mobility comorbidities.
+- **never-infer:** Do not assume blind/low-vision people cannot exercise (training and adaptation enable full participation). Do not assume all blind users need the same adaptations (residual vision varies).
+- **clinician-confirm:** Degree of vision; presence of other sensory/mobility comorbidities.
+- **app-accessibility-DETAIL:** Entire app must be screen-reader compatible; avoid images as sole information source; provide text/audio alternatives for all workout cues; test with blind users.
+- **family-relevance:** Any family; accessibility is app-level, not family-level.
+- **confidence:** HIGH on accessibility needs; MEDIUM on exercise-specific guidance (limited research on VI-specific training parameters).
+
+### 8. Hearing impairment
+
+- **aliases:** deafness, hearing loss, deaf, hard of hearing, hearing impaired
+- **category:** sensory
+- **affects:** app accessibility (primary), programming (secondary; balance training more nuanced for deafness due to vestibular-auditory link).
+- **variability:** Congenital vs acquired; degree (mild to profound); unilateral vs bilateral. Inner ear disorders (e.g. vestibular hypofunction) may co-occur.
+- **functional-axes:** Balance training more complex if vestibular involvement (dual-sensory loss risk in older adults). Otherwise, exercise capacity unaffected by hearing alone.
+- **setup-equipment:** Visual feedback for exercise cues (lights, screens), tactile feedback (vibration), written instructions. No audio-dependent feedback.
+- **fatigue-recovery:** No hearing-specific effect; if vestibular comorbidity present, see population 5 (balance impairment).
+- **app-accessibility:** **CRITICAL:** All audio content requires captions/transcripts. Avoid audio-only instructions. Use visual or text cues for reps, timing, form. Consider video with sign language interpretation. Haptic feedback useful for cueing.
+- **evidence:** (T3) Systematic review (2023): physical activity interventions in hearing loss show improved aerobic fitness and muscle strength, but low-quality evidence. (T3) Hearing loss associated with poorer balance in older adults (cross-sectional). (T2/T3) Dual-task training (vestibular + cognitive) beneficial for hearing loss and balance (emerging 2024 research).
+- **generalisable:** Hearing-impaired adults capable of full exercise if visual/text guidance provided. Balance training more nuanced if vestibular involvement.
+- **individual:** Degree of hearing loss; age; vestibular function; presence of sign language fluency (design implication: offer captions + ASL if possible).
+- **never-infer:** Do not assume deaf/HI people cannot exercise (visual/text guidance enables full participation). Do not assume absence of vestibular involvement without asking.
+- **clinician-confirm:** Degree of hearing loss; vestibular function; communication preference.
+- **app-accessibility-DETAIL:** All audio captioned. Visual cueing prominent. Consider BSL/ASL video options. Haptic feedback for timing/reps.
+- **family-relevance:** Any family; accessibility is app-level.
+- **confidence:** HIGH on accessibility needs; MEDIUM on exercise specifics (vestibular-hearing link research limited).
+
+### 9. Motor-control impairment: tremor, dystonia
+
+- **aliases:** essential tremor, focal dystonia, tremor, dystonia, writer's cramp, movement disorder
+- **category:** neurological
+- **affects:** programming
+- **variability:** Tremor type/severity (postural vs resting) varies; dystonia focal vs generalised; within-type progression variable.
+- **functional-axes:** *grip_demand* often affected (writing, fine motor); limb-specific (focal dystonia) vs generalised (essential tremor).
+- **setup-equipment:** Stable support for tremor control; ergonomic grips; task-specific modifications.
+- **fatigue-recovery:** Tremor may worsen with fatigue; avoid excessive fatigue-induction; individual tolerance varies.
+- **app-accessibility:** Video demonstrations showing tremor-accommodating techniques (slower movements, supported positions).
+- **evidence:** (T3) 2025 study: 6-week strength-endurance training reduced essential tremor severity, improved manual dexterity, upper-limb function (doi:10.3390/life16060961). (T3) Task-specific training improves functional performance in tremor (small studies).
+- **generalisable:** Strength-endurance training and task-specific exercise reduce tremor impact and improve function (T3).
+- **individual:** Tremor type/severity; functional goals; limb(s) affected; medication effects.
+- **clinician-confirm:** Tremor type, severity, triggering tasks; dystonia type if present; medication effects.
+- **family-relevance:** *One-Arm Upper Builder, Grip-Light Circuit* for focal tremor. *Steady-Base Full Body* if generalised.
+- **confidence:** MEDIUM-LOW (emerging evidence; small sample sizes; task-specific training not yet optimised).
+
+### 10. Cognitive and learning disability
+
+- **aliases:** learning disability, intellectual disability, Down syndrome, autism (when accompanied by intellectual disability), cognitive impairment
+- **category:** cognitive
+- **affects:** app accessibility (primary), programming (secondary; exercise selection not restricted medically, but instruction delivery critical).
+- **variability:** Severity ranges (mild, moderate, severe, profound); underlying cause varies (Down syndrome, other genetic, acquired). Processing speed, comprehension, attention spans vary.
+- **functional-axes:** Exercise capacity typically unaffected by learning disability alone (unless comorbid motor/sensory impairment). Physical activity levels low in this population (T2: Mencap notes fitness gap).
+- **setup-equipment:** No restrictions by diagnosis; supervision/support level depends on severity and safety awareness.
+- **fatigue-recovery:** No well-supported difference in fatigue recovery; standard assumptions apply.
+- **app-accessibility:** **CRITICAL:** Simple language (plain English, short sentences, no jargon). Large text, high contrast. Slow pacing, repeat key instructions. Avoid cognitive overload (too many choices, complex sequences). Visual/pictorial demonstrations. Consider video with clear, slow verbal instruction (captions for deaf users).
+- **evidence:** (T2) Mencap Sport guidance emphasises short, simple instructions, accessible environments, supportive relationships (gym guide, 2024 reference). (T3) Physical activity interventions effective for improving fitness and well-being in learning disability (limited RCT evidence; T4/T5 clinical experience strong). (T1/T2) UK general PA guidelines applicable; participation gaps due to accessibility barriers, not medical contraindication.
+- **generalisable:** People with learning disability capable of full-spectrum exercise if instruction delivery simplified and supportive environment provided (T2: Mencap).
+- **individual:** Severity of cognitive impairment; comorbid medical conditions (e.g. Down syndrome cardiac); communication method; support network.
+- **never-infer:** Do not assume cognitive disability = physical inactivity (gap due to access/support, not capacity). Do not assume intellectual disability = inability to learn exercise (learning curves differ, not inability).
+- **clinician-confirm:** Severity and cause of cognitive disability; comorbid medical conditions; communication/learning style.
+- **app-accessibility-DETAIL:** Entire app designed for cognitive accessibility (plain language, visual cues, minimal choices, consistent design). Offer simplified vs standard UI. Consider guided vs self-paced modes.
+- **family-relevance:** Any family; accessibility is app-level and organisational (not family-specific). Supervised group formats often more effective (T5: clinical experience).
+- **confidence:** MEDIUM on app accessibility needs; LOW on exercise-specific guidance (limited peer-reviewed literature on programming parameters; guidance mostly organisational/expert consensus).
+
+### 11. Acquired brain injury, long-term (stroke, TBI)
+
+- **aliases:** ABI, stroke, acquired brain injury, traumatic brain injury, TBI, post-stroke, cerebral infarction, haemorrhage
+- **category:** neurological
+- **affects:** programming
+- **variability:** Type (stroke, TBI), location, time since injury, residual deficits (motor, sensory, cognitive, language) vary widely. Chronic phase (>3 months post-injury) focus for this entry.
+- **functional-axes:** Highly variable by lesion location and severity; may include hemiparesis (unilateral), cognitive/language deficits, balance/gait impairment, fatigue.
+- **setup-equipment:** Adapted to residual impairment; stable support if balance impaired; one-arm variations if hemiparesis.
+- **fatigue-recovery:** Post-ABI fatigue common; conservative progression and recovery time needed (T3: systematic review notes fatigue as key barrier).
+- **app-accessibility:** Adaptations depend on cognitive/language/motor residual deficits; may benefit from simplified UI if language/cognitive involved.
+- **evidence:** (T1) UK National Stroke Strategy recommends ongoing community-based rehabilitation emphasising personalisation, re-ablement. (T3) Systematic review (2022): exercise programmes including strength, balance, aerobic components improve functional capacity and quality of life post-ABI. (T3) Intensive early attention training post-ABI improves long-term quality of life, daily function, work ability.
+- **generalisable:** Regular, supervised, multimodal exercise (strength, balance, aerobic) improves functional outcomes and quality of life long-term post-ABI (T1/T3).
+- **individual:** Type and site of injury; time since injury; specific residual deficits (motor, cognitive, language, sensory); baseline function; comorbidities.
+- **clinician-confirm:** Lesion type and location; residual deficits; current functional capacity; cognitive/language status; fatigue pattern.
+- **family-relevance:** Highly individual; may require any family depending on residual motor/balance/cognitive deficits.
+- **confidence:** MEDIUM-HIGH (large literature base on post-stroke exercise; long-term ABI literature smaller but consistent; uncertainty on optimal intensity/duration long-term).
+
+### 12. Dwarfism / short stature
+
+- **aliases:** dwarfism, short stature, achondroplasia, skeletal dysplasia, short-limbed stature
+- **category:** genetic / skeletal
+- **affects:** programming (equipment setup primarily)
+- **variability:** Cause varies (achondroplasia most common, but multiple skeletal dysplasias). Orthopedic comorbidities frequent (spinal stenosis, joint problems, kyphosis risk). Exercise capacity affected by comorbidities, not stature per se.
+- **functional-axes:** Exercise capacity similar to able-bodied peers IF orthopedic/cardiac comorbidities absent. Setup/equipment are primary adaptation (height, reach, seat heights). *axial_load* caution if spinal stenosis present.
+- **setup-equipment:** **CRITICAL:** Scaled/adjustable equipment (footstools, pediatric-sized grips, lower seat heights, adjusted reach on machines). Avoid equipment unsuitable for reach/leverage. Adapted walkers/supports if needed post-operatively (e.g. post-hip arthroplasty, common in achondroplasia).
+- **fatigue-recovery:** No dwarfism-specific effect; standard assumptions apply.
+- **app-accessibility:** Video demonstrations showing equipment setup for short-stature users (footstools, adjusted seat heights, reach modifications).
+- **evidence:** (T3) Scoping review (2024): Physical activity constraints in achondroplasia include orthopedic comorbidities (spinal stenosis, joint problems), not stature alone. Facilitators: low-impact activities (tennis, swimming, walking), multidisciplinary approach (PT, customised strength training, balance) (https://link.springer.com/article/10.1007/s44162-024-00048-9). (T3) Children with achondroplasia have reduced exercise capacity vs peers and unique exercise response; healthcare providers should individualise (PMC11012898). (T3) Postoperative rehab post-THR in achondroplasia requires dislocation prevention and environmental simulation (PMC12359090).
+- **generalisable:** People with dwarfism capable of full-spectrum exercise if equipment scaled and orthopedic comorbidities managed (T3). Avoid high-impact sports (football, wrestling, gymnastics) (T3: scoping review).
+- **individual:** Underlying skeletal dysplasia type; current orthopedic status (stenosis, joint issues, prior surgery); cardiorespiratory baseline (cardiac involvement possible in some types); functional goals.
+- **never-infer:** Do not assume short stature = reduced exercise capacity (comorbidities are the limiting factor, not height). Do not assume standard-sized equipment fits (significant adaptation needed).
+- **clinician-confirm:** Skeletal dysplasia type; presence/severity of orthopedic comorbidities (spinal stenosis, joint involvement); cardiac status; prior surgery/surgical plans.
+- **family-relevance:** Exercise selection adapted to orthopedic status (e.g. *Steady-Base Full Body* if spinal stenosis limiting; *Low-Impact* variants). Equipment access and scaling are key barriers.
+- **claim-risks:** "Dwarfism prevents exercise" — FALSE; orthopedic comorbidities may, not stature. "Standard gym equipment is suitable" — FALSE; substantial adaptation needed.
+- **confidence:** MEDIUM (evidence on achondroplasia exercise emerging; scoping review 2024 solid; other skeletal dysplasias much more limited data).
+
+---
+
+## CURRENCY CHECKS (2024-2026)
+
+### Chronic Spinal Cord Injury (SCI)
+
+Martin Ginis 2018 guideline remains current reference in peer-reviewed literature (2024-2026 searches). **No successor guideline found** in searches (July 2024-August 2026). The 8-10 rep range recommendation was deprecated in 2018 update (no longer cited in 2024 literature). UK-specific guidance: No NICE guideline on SCI strength training identified; guidance remains primarily from international sources (American Spinal Injury Association, Martin Ginis consensus 2018).
+
+**New/updated guidance identified:** None at T1 level (UK gov/NICE). T2/T3 literature continues to cite Martin Ginis 2018 as reference standard; no replacement published 2024-2026.
+
+### Multiple Sclerosis (MS)
+
+MS Trust (UK charity, T2) guidance emphasises exercise safety and benefit; current guidance (2024 accessible online) recommends individualised programmes avoiding overheating. **No new T1 (NICE/CMO) MS exercise guideline** identified in 2024-2026 searches. T3 literature (2024-2025) continues to support aerobic and resistance training with fatigue management emphasis; no major protocol shifts from prior guidance.
+
+**New/updated guidance identified:** MS Trust maintains current resources; no major guideline update at T1 level identified 2024-2026.
+
+### Parkinson's Disease
+
+Parkinson's UK (T2, updated 2024) emphasises exercise as standard care; resistance training, aerobic, balance, and flexibility all recommended. **No new UK clinical guideline (NICE/CMO)** identified 2024-2026. T3 literature (2024-2025) confirms exercise benefits; no major new contraindications or protocols vs prior consensus. European Parkinson's guidelines (non-UK) available but not superseding prior evidence.
+
+**New/updated guidance identified:** Parkinson's UK resources current (2024); no NICE guideline update identified 2024-2026.
+
+**Summary:** No major guideline shifts in SCI, MS, or Parkinson's guidance in 2024-2026 at UK T1 level. All three rely on 2018-2020-era consensus. Emerging literature in 2024-2025 consistent with prior guidance; no reversal of recommendations or new major contraindications identified.
+
+---
+
+## COMPLETENESS CANDIDATES
+
+The following population categories may warrant inclusion in a future directory iteration, with suggested best-evidence source:
+
+1. **Cerebral palsy (adults), long-term** — T2: CP UK, Scope; T3: emerging exercise evidence (2023-2024 reviews). Not included in main 12 as earlier research (legacy campaign) prioritised paediatric CP; adult-specific training programming guidance thin at T1/T2 level.
+
+2. **Chronic kidney disease and dialysis** — T1: UK Renal Association guidelines (exercise in CKD); T3: systematic reviews on exercise safety/efficacy in dialysis. Exercise-specific guidance exists but thin in mainstream disability fitness resources; may warrant inclusion for access.
+
+3. **Chronic obstructive pulmonary disease (COPD)** — T1: NICE COPD guideline includes exercise; T2: British Lung Foundation. Well-established guidance but separate from disability-focused programming (treated as comorbidity adjustment rather than primary functional constraint in typical strength programming).
+
+4. **Complex regional pain syndrome (CRPS)** — T2: CRPS UK, RSD Hope; T3: graded motor imagery, exposure-based rehabilitation evidence. Highly specialised; exercise paradoxically both therapeutic and potentially exacerbating (fear-avoidance model relevant). Would require nuanced guidance distinct from other populations.
+
+5. **Systemic lupus erythematosus (SLE) and systemic autoimmune conditions** — T2: Lupus UK; T1/T3 sparse. Exercise beneficial but fatigue, photosensitivity, and flare patterns require individualised adaptation. Guidance exists but not well-synthesised in strength-training context.
+
+6. **Fibromyalgia** — T2: Action for ME (ME/CFS), Fibromyalgia Action UK; T3: moderate evidence base (2023-2024 reviews). Exercise paradoxically difficult (post-exertional malaise risk in ME/CFS; hyperalgesia in fibromyalgia) yet beneficial; requires specialised pacing (graded exercise therapy, pacing protocols). Might warrant inclusion for access.
+
+**Recommendation:** Prioritise cerebral palsy (adults) and CRPS for next cycle (both have emerging evidence and access barriers). Defer COPD, autoimmune conditions, fibromyalgia to later cycles (evidence exists but typically integrated into comorbidity adjustments rather than primary programming).
+
+---
+
+## SOURCE QUALITY SUMMARY
+
+| Population | Best Tier Found | Confidence | Key Gaps |
+|---|---|---|---|
+| Spina bifida | T2 (SB Assn, NCHPAD) | MEDIUM-HIGH | UK-specific data; RCT on intensity/volume missing |
+| Muscular dystrophy | T3 (systematic reviews); T2 (charity consensus) | MEDIUM | Duchenne very-low-certainty; MD heterogeneity limits generalisation |
+| Arthritis (OA/RA) | T1 (NICE NG226); T3 (Frontiers, ACR) | HIGH (OA), MEDIUM-HIGH (RA) | RA UK-specific RCTs limited; flare management protocols imprecise |
+| Hypermobility/hEDS | T2 (EDS UK); T3 (scoping reviews) | MEDIUM | No RCTs; expert consensus-heavy; POTS comorbidity emerging |
+| Balance/vestibular/ataxia | T3 (BSA, FRDA, systematic reviews) | MEDIUM-HIGH | Ataxia data sparse; vestibular rehab evidence solid |
+| Grip/hand | T3 (post-stroke, tremor studies) | MEDIUM | Non-stroke hand impairment limited; tremor evidence emerging |
+| Visual impairment | T2 (RNIB, British Blind Sport) | HIGH (accessibility), MEDIUM (exercise specifics) | VI-specific training parameters scarce |
+| Hearing impairment | T3 (systematic review 2023) | HIGH (accessibility), MEDIUM (exercise) | Vestibular-hearing link under-researched |
+| Motor control (tremor/dystonia) | T3 (2025 tremor study, task-specific training) | MEDIUM-LOW | Small sample sizes; task-specificity not optimised |
+| Cognitive/learning disability | T2 (Mencap); T4/T5 (organisational practice) | MEDIUM (accessibility), LOW (programming) | Sparse RCT evidence; mostly expert consensus/practice wisdom |
+| Acquired brain injury | T1 (UK Stroke Strategy); T3 (systematic reviews) | MEDIUM-HIGH | Long-term ABI data limited; stroke emphasis |
+| Dwarfism/short stature | T3 (scoping review 2024) | MEDIUM | Achondroplasia primary; other skeletal dysplasias sparse; comorbidity interplay complex |
+
+---
+
+**End of evidence file**
+
+
 

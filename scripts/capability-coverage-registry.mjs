@@ -42,6 +42,7 @@ const PROFILES = {
   'No spinal loading': (r) => r.d.axialLoad === false,
   'No impact': (r) => r.d.impact === false,
   'Balance-supported only': (r) => r.d.balanceDemand === 'supported',
+  'No weight through hands/wrists': (r) => r.d.weightBearingHands === false,
 };
 
 const MUSCLES = [...new Set(rows.map((r) => r.primaryMuscle))].sort();

@@ -2704,7 +2704,43 @@ const SCHEMA_MIGRATIONS = [
   [
     migrateSwapCauseAndEffectiveChoice,
   ],
+  // Gap-closure Phase C (MOVEMENT-PATH-AUDIT.md): the eleventh demand
+  // column. Weight borne through the palms with extended wrists (the
+  // push-up/quadruped class) reads as grip-free on the grip axis, so
+  // wrist and hand restrictions could not be expressed without it.
+  // Additive + idempotent; NULL = UNKNOWN (CAP-8). Cloud counterpart:
+  // supabase/migrate_151_weight_bearing_hands.sql (written, NOT applied;
+  // founder-gated).
+  [
+    'ALTER TABLE exercises ADD COLUMN weight_bearing_hands INTEGER',
+    migrateWeightBearingHandsBackfill,
+  ],
 ];
+
+// Backfill the new axis on canonical rows from the pure derivation, in
+// the migrateDemandMetadataBackfill mould: canonical only (customs stay
+// NULL - asked, never guessed), best-effort per row, failed rows stay
+// NULL which reads as UNKNOWN.
+async function migrateWeightBearingHandsBackfill(d) {
+  let derive;
+  try {
+    // eslint-disable-next-line global-require
+    ({ deriveDemandMetadata: derive } = require('./capability/demands'));
+  } catch (_e) { return; }
+  const rows = await d.getAllAsync(
+    `SELECT id, name, equipment, movement_pattern AS movementPattern,
+            primary_muscle AS primaryMuscle, compound_isolation AS compoundIsolation
+       FROM exercises WHERE is_custom = 0`,
+  ).catch(() => []);
+  for (const r of rows ?? []) {
+    try {
+      const m = derive(r);
+      const v = m.weightBearingHands === true ? 1 : m.weightBearingHands === false ? 0 : null;
+      // eslint-disable-next-line no-await-in-loop
+      await d.runAsync('UPDATE exercises SET weight_bearing_hands = ? WHERE id = ?', [v, r.id]);
+    } catch (_e) { /* row stays NULL = unknown */ }
+  }
+}
 
 // CC29 columns, guarded per the migrateLoadSemanticsBackfill convention:
 // migration-window fixtures build only the tables their target migration
@@ -3159,10 +3195,11 @@ export async function insertExerciseWithId(id, data) {
        equipment_category, machine_type, force, laterality, difficulty,
        machine_ok, home_ok, cue, equipment_profiles, exercise_type, load_semantics,
        position, floor_access, overhead_position, grip_demand, unilateral_loadable,
-       bilateral_upper, bilateral_lower, axial_load, impact, balance_demand)
+       bilateral_upper, bilateral_lower, axial_load, impact, balance_demand,
+       weight_bearing_hands)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
              ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id,
       data.name,
@@ -3208,6 +3245,7 @@ export async function insertExerciseWithId(id, data) {
       data.axialLoad === true ? 1 : data.axialLoad === false ? 0 : null,
       data.impact === true ? 1 : data.impact === false ? 0 : null,
       data.balanceDemand ?? null,
+      data.weightBearingHands === true ? 1 : data.weightBearingHands === false ? 0 : null,
     ],
   );
   _invalidateExercisesCache();
@@ -3245,12 +3283,14 @@ export async function updateExerciseDemands(id, meta = {}) {
     axialLoad: (v) => (v === true ? 1 : v === false ? 0 : null),
     impact: (v) => (v === true ? 1 : v === false ? 0 : null),
     balanceDemand: (v) => v ?? null,
+    weightBearingHands: (v) => (v === true ? 1 : v === false ? 0 : null),
   };
   const toSnake = {
     position: 'position', floorAccess: 'floor_access', overheadPosition: 'overhead_position',
     gripDemand: 'grip_demand', unilateralLoadable: 'unilateral_loadable',
     bilateralUpper: 'bilateral_upper', bilateralLower: 'bilateral_lower',
     axialLoad: 'axial_load', impact: 'impact', balanceDemand: 'balance_demand',
+    weightBearingHands: 'weight_bearing_hands',
   };
   const sets = [];
   const args = [];
@@ -4783,7 +4823,7 @@ export async function getLibraryPlanExerciseRows() {
             e.id, e.name, e.primary_muscle, e.subregion, e.is_custom,
             e.position, e.floor_access, e.overhead_position, e.grip_demand,
             e.unilateral_loadable, e.bilateral_upper, e.bilateral_lower,
-            e.axial_load, e.impact, e.balance_demand
+            e.axial_load, e.impact, e.balance_demand, e.weight_bearing_hands
        FROM routines r
        JOIN routine_exercises re ON re.routine_id = r.id
        JOIN exercises e ON e.id = re.exercise_id
@@ -9640,9 +9680,10 @@ export async function insertOrUpdateExerciseFromCloud(e) {
        stimulus_to_fatigue_ratio, subregion, is_custom, notes, created_at, updated_at,
        exercise_category, increment_kg, exercise_type, load_semantics,
        position, floor_access, overhead_position, grip_demand, unilateral_loadable,
-       bilateral_upper, bilateral_lower, axial_load, impact, balance_demand)
+       bilateral_upper, bilateral_lower, axial_load, impact, balance_demand,
+       weight_bearing_hands)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        name = excluded.name,
        primary_muscle = excluded.primary_muscle,
@@ -9672,7 +9713,8 @@ export async function insertOrUpdateExerciseFromCloud(e) {
        bilateral_lower = COALESCE(excluded.bilateral_lower, bilateral_lower),
        axial_load = COALESCE(excluded.axial_load, axial_load),
        impact = COALESCE(excluded.impact, impact),
-       balance_demand = COALESCE(excluded.balance_demand, balance_demand)`,
+       balance_demand = COALESCE(excluded.balance_demand, balance_demand),
+       weight_bearing_hands = COALESCE(excluded.weight_bearing_hands, weight_bearing_hands)`,
     [
       e.id, e.name,
       e.primary_muscle ?? null, secondary,
@@ -9696,6 +9738,7 @@ export async function insertOrUpdateExerciseFromCloud(e) {
       _boolToInt(e.unilateral_loadable), _boolToInt(e.bilateral_upper),
       _boolToInt(e.bilateral_lower), _boolToInt(e.axial_load),
       _boolToInt(e.impact), e.balance_demand ?? null,
+      _boolToInt(e.weight_bearing_hands),
     ],
   );
   _invalidateExercisesCache();

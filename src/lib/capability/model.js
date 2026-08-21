@@ -66,6 +66,10 @@ export const DEMAND_AXES = Object.freeze([
   { id: 'axial_load',        label: 'Loading the spine' },
   { id: 'impact',            label: 'Impact and jumping' },
   { id: 'balance_high',      label: 'High balance demand' },
+  // Gap-closure Phase C (MOVEMENT-PATH-AUDIT.md): the push-up class loads
+  // the extended wrist while reading as grip-free, so wrist and hand
+  // restrictions could not be expressed without it.
+  { id: 'weight_bearing_hands', label: 'Taking weight through the hands and wrists' },
 ]);
 
 const DEMAND_IDS = new Set(DEMAND_AXES.map(a => a.id));

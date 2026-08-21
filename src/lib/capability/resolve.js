@@ -65,7 +65,7 @@ function tri(v) {
 
 /** The demand axes a laterality-qualified constraint can be carved on by
  *  one-side loadability (section 33.8). */
-const SIDE_CARVEABLE = new Set(['grip_bar', 'overhead_position', 'bilateral_upper', 'bilateral_lower']);
+const SIDE_CARVEABLE = new Set(['grip_bar', 'overhead_position', 'bilateral_upper', 'bilateral_lower', 'weight_bearing_hands']);
 
 /**
  * Does this exercise CONFLICT with one demand-axis constraint?
@@ -105,6 +105,7 @@ export function demandAxisConflict(axisId, exercise) {
     }
     case 'axial_load': return tri(ex.axialLoad);
     case 'impact': return tri(ex.impact);
+    case 'weight_bearing_hands': return tri(ex.weightBearingHands);
     case 'balance_high': {
       const b = ex.balanceDemand ?? null;
       if (b == null) return null;

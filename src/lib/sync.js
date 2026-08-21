@@ -292,6 +292,7 @@ export async function syncExercises(supabaseUserId, _opts = {}) {
       axial_load: _intToBool(e.axialLoad),
       impact: _intToBool(e.impact),
       balance_demand: e.balanceDemand ?? null,
+      weight_bearing_hands: _intToBool(e.weightBearingHands),
       updated_at: new Date(e.updatedAt ?? e.createdAt ?? Date.now()).toISOString(), // F5 Phase A: honest edit time
     }));
     for (let i = 0; i < rows.length; i += 200) {

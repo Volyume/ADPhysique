@@ -105,6 +105,8 @@ const DEMAND_ASK_SPECS = {
   balance_high: { field: 'balanceDemand', label: 'How balanced does it need you to be?', options: [
     { key: 'supported', label: 'Supported' }, { key: 'stable', label: 'Free-standing' },
     { key: 'high', label: 'Single-leg or unstable' }] },
+  weight_bearing_hands: { field: 'weightBearingHands', label: 'Does it take weight through flat hands, like a push-up?', options: [
+    { key: true, label: 'Yes' }, { key: false, label: 'No' }] },
 };
 
 // CC27 (CAP-18): one grouped, mechanical description of why an exercise

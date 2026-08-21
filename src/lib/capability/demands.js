@@ -40,12 +40,13 @@ export const DEMAND_BALANCE = Object.freeze({
   HIGH: 'high',
 });
 
-/** The ten demand columns (nine axes; position carries the enum). Order is
- *  the storage order in database.js and migrate_148. */
+/** The demand columns (position carries the enum). Order is the storage
+ *  order in database.js and migrate_148; weightBearingHands appends last
+ *  (gap-closure Phase C, MOVEMENT-PATH-AUDIT.md; cloud migrate_151). */
 export const DEMAND_FIELDS = Object.freeze([
   'position', 'floorAccess', 'overheadPosition', 'gripDemand',
   'unilateralLoadable', 'bilateralUpper', 'bilateralLower',
-  'axialLoad', 'impact', 'balanceDemand',
+  'axialLoad', 'impact', 'balanceDemand', 'weightBearingHands',
 ]);
 
 const POSITION_VALUES = new Set(Object.values(DEMAND_POSITION));
@@ -88,6 +89,14 @@ const NAME_OVERHEAD = /\boverhead\b|\bshoulder press\b|\bmilitary\b|\bpush press
 
 // Impact: airborne / repeated landing.
 const NAME_IMPACT = /\bjump\b|\bhop\b|\bbound\b|\bsprint\b|\bplyo|\bbroad jump\b|\bbox jump\b|\bstair running\b|\bskater\b|\bburpee\b/i;
+
+// Weight borne through the palms with extended wrists (the push-up /
+// quadruped class). DEFINITION (gap-closure Phase C): the hand is a flat
+// or near-flat weight-bearing surface. Gripped implements are NOT this
+// axis (the grip axis owns that interface); forearm-supported planks are
+// NOT this axis (load is through the forearm). Front-rack catches and
+// floor-support catch phases are curated by name below.
+const NAME_WEIGHT_BEARING_HANDS = /\bpush-?up\b|\bhandstand\b|\bmountain climber\b|\bcrawl\b|\bburpee\b|\bget-?up\b|\bbird dog\b|\binchworm\b|\bwalkout\b/i;
 
 // High balance: single-leg stance or an unstable base is the point.
 const NAME_BALANCE_HIGH = /\bsingle-?leg\b|\bone-?leg\b|\bpistol\b|\blunge\b|\bstep-?up\b|\bbulgarian\b|\bsplit squat\b|\bcurtsy\b|\bcossack\b|\bskater\b|\bshrimp\b|\bb-stance\b|\bwalking\b|\bturkish get-?up\b|\boverhead squat\b/i;
@@ -184,7 +193,7 @@ export const CURATED_DEMANDS = Object.freeze({
   // Glute ham raise: knees on the pad, trunk hinging - kneeling profile.
   'Glute Ham Raise': { position: 'kneeling', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported' },
   'Glute-Ham Raise Machine': { position: 'kneeling', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported' },
-  'Nordic Hamstring Curl': { position: 'kneeling', floorAccess: true, gripDemand: 'none', balanceDemand: 'supported' },
+  'Nordic Hamstring Curl': { position: 'kneeling', floorAccess: true, gripDemand: 'none', balanceDemand: 'supported', weightBearingHands: true },
   // Terminal knee extension: standing with a band at a rack.
   'Terminal Knee Extension': { position: 'standing', floorAccess: false, gripDemand: 'none', balanceDemand: 'supported', bilateralLower: false, overheadPosition: false },
   // Swiss ball / slider leg curls: lying floor work.
@@ -238,7 +247,18 @@ export const CURATED_DEMANDS = Object.freeze({
   'Cuban Press': { position: 'standing', floorAccess: false, balanceDemand: 'stable' },
   'Bradford Press': { position: 'standing', floorAccess: false, balanceDemand: 'stable' },
   'Single-Arm Dumbbell Press': { position: 'standing', floorAccess: false, balanceDemand: 'stable' },
-  'Power Clean': { overheadPosition: false }, // racked at the shoulders, never overhead
+  'Power Clean': { overheadPosition: false, weightBearingHands: true }, // racked at the shoulders, never overhead; the rack catch extends the wrists under load
+
+  // Weight-bearing-hands curation (gap-closure Phase C). The name rule
+  // covers the push-up/quadruped class; these are the judgement rows:
+  // catch phases and front-rack positions load extended wrists even
+  // though the grip axis reads them as gripped or grip-free.
+  'Nordic Curl': { weightBearingHands: true }, // press-up catch at the bottom
+  'Nordic Glute Curl': { weightBearingHands: true }, // same catch
+  'L-Sit Hold': { weightBearingHands: true }, // palms pressing the surface
+  'Reverse Plank': { weightBearingHands: true }, // hands under shoulders, palms down
+  'Barbell Front Squat': { weightBearingHands: true }, // clean-grip rack extends the wrists under the bar
+  'Smith Machine Front Squat': { weightBearingHands: true }, // same rack position
   'Clean Pull': { overheadPosition: false },
   'Rack Pull (Traps)': { overheadPosition: false },
   'Cossack Squat': { gripDemand: 'none' }, // bodyweight lateral squat
@@ -264,7 +284,8 @@ function isUpperBodyMuscle(muscle) {
  *           overheadPosition: boolean|null, gripDemand: string|null,
  *           unilateralLoadable: boolean|null, bilateralUpper: boolean|null,
  *           bilateralLower: boolean|null, axialLoad: boolean|null,
- *           impact: boolean|null, balanceDemand: string|null}}
+ *           impact: boolean|null, balanceDemand: string|null,
+ *           weightBearingHands: boolean|null}}
  */
 export function deriveDemandMetadata(ex = {}) {
   const name = String(ex.name || '');
@@ -283,6 +304,7 @@ export function deriveDemandMetadata(ex = {}) {
     axialLoad: null,
     impact: null,
     balanceDemand: null,
+    weightBearingHands: null,
   };
 
   // ── impact (cheap, total) ─────────────────────────────────────────────
@@ -444,6 +466,14 @@ export function deriveDemandMetadata(ex = {}) {
     out.balanceDemand = DEMAND_BALANCE.STABLE;
   }
 
+  // ── weight bearing through the hands (gap-closure Phase C) ────────────
+  // Order matters: the TRUE name class first (push-ups carry gripDemand
+  // 'none', so the grip-derived FALSE branches would otherwise claim
+  // them); then any resolved grip interface means the hands are gripping
+  // or free, not palm-bearing. Unresolved grip stays NULL here too.
+  if (NAME_WEIGHT_BEARING_HANDS.test(name)) out.weightBearingHands = true;
+  else if (out.gripDemand != null) out.weightBearingHands = false;
+
   // ── curated overrides win over every rule ─────────────────────────────
   const curated = CURATED_DEMANDS[name];
   return curated ? { ...out, ...curated } : out;
@@ -462,7 +492,7 @@ export function validateDemandMetadata(meta = {}) {
   if (!(meta.position == null || POSITION_VALUES.has(meta.position))) errs.push(`position:${meta.position}`);
   if (!(meta.gripDemand == null || GRIP_VALUES.has(meta.gripDemand))) errs.push(`gripDemand:${meta.gripDemand}`);
   if (!(meta.balanceDemand == null || BALANCE_VALUES.has(meta.balanceDemand))) errs.push(`balanceDemand:${meta.balanceDemand}`);
-  for (const f of ['floorAccess', 'overheadPosition', 'unilateralLoadable', 'bilateralUpper', 'bilateralLower', 'axialLoad', 'impact']) {
+  for (const f of ['floorAccess', 'overheadPosition', 'unilateralLoadable', 'bilateralUpper', 'bilateralLower', 'axialLoad', 'impact', 'weightBearingHands']) {
     if (!boolOrNull(meta[f])) errs.push(`${f}:${meta[f]}`);
   }
   // Contradictions (the legal-combination table): impact needs a standing

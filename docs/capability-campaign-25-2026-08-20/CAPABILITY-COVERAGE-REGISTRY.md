@@ -20,6 +20,7 @@ compatibility is separately proven by construction in
 | No spinal loading | 415 | 60 | 6 | 44 | 36 | 21 | 52 | 19 | 11 | 26 | 15 | 14 | 19 | 24 | 17 | 9 | 4 | 38 |
 | No impact | 543 | 62 | 11 | 65 | 36 | 18 | 56 | 22 | 23 | 37 | 38 | 14 | 52 | 24 | 17 | 9 | 18 | 41 |
 | Balance-supported only | 264 | 37 | 5 | 45 | 16 | 10 | 40 | 4 | 5 | 19 | 13 | 14 | 17 | 12 | 3 | 3 | 1 | 20 |
+| No weight through hands/wrists | 495 | 52 | 8 | 64 | 36 | 18 | 44 | 21 | 22 | 34 | 32 | 14 | 46 | 23 | 17 | 8 | 17 | 39 |
 
 ## Routine family ship status (Amendment sections 15-17)
 

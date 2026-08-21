@@ -24,8 +24,10 @@ const episode = {
 };
 
 describe('vocabularies are closed and non-clinical', () => {
-  test('nine demand axes with calm labels', () => {
-    expect(DEMAND_AXES).toHaveLength(9);
+  test('ten demand axes with calm labels', () => {
+    // Nine from ARCHITECTURE section 8.2 plus weight_bearing_hands
+    // (gap-closure Phase C, MOVEMENT-PATH-AUDIT.md - the audited addition).
+    expect(DEMAND_AXES).toHaveLength(10);
     for (const a of DEMAND_AXES) {
       expect(a.id).toMatch(/^[a-z_]+$/);
       expect(a.label).not.toMatch(/injur|rehab|diagnos|patient|therap/i);
