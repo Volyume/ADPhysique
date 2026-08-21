@@ -63,8 +63,10 @@ noted):
     appears in suggestions where compatible. PASS: no dead end;
     answers the demand questions without confusion or discomfort.
  T5 Declare a TEMPORARY limitation (episode) → see the plan's
-    proposed changes → apply → later end it. PASS: understands what
-    applied/declined mean; nothing feels like a medical judgement.
+    proposed changes → apply → later end it. Then adjust one BASELINE
+    rule in How you train (the amendment's "capability update" task).
+    PASS: understands what applied/declined mean; nothing feels like
+    a medical judgement; the baseline change is findable unprompted.
  T6 (H overlay) Complete T1+T3 with their assistive setup (screen
     reader / switch / display scaling). PASS: no blocker requiring
     sighted/precise-touch help.

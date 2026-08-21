@@ -6,33 +6,28 @@ requirement of the ORIGINAL disability brief against what actually exists
 in the repository, verified by direct reads — not by prior completion
 summaries.
 
-## Source situation (recorded honestly)
+## Source situation (updated at the 2026-08-21 reconciliation)
 
-The two original binding files
-(`Volyume_Campaign_25_Fable_Kickoff_Prompt.md`,
-`Volyume_Campaign_25_Disability_Completeness_Amendment.md`) were chat
-uploads and were NEVER COMMITTED to the repository; the uploads are no
-longer retrievable from this environment. The requirement set below is
-reconstructed from the four contemporaneous records that captured the
-amendment while the file was in hand, plus the gap-closure order's own
-restatement:
+RESOLVED: the exact founder-supplied amendment WAS recovered from the
+session uploads directory during the founder's final-reconciliation
+order and is now banked verbatim in this folder as
+`Volyume_Campaign_25_Disability_Completeness_Amendment.md`
+(1,064 lines, md5 `e3754558ce43cbe10cbc10a2d2409096`). The earlier
+statement that the upload was "no longer retrievable" was wrong: the
+file survived at
+`/root/.claude/uploads/95210e18-.../55df017c-Volyume_Campaign_25_
+Disability_Completeness_Amendment.md` and a filesystem search found it.
+Section 7 below traces EVERY section of the exact original against
+live main; section 9 records where the reconstruction differed from
+the original and how each difference was resolved. The kickoff prompt
+(`Volyume_Campaign_25_Fable_Kickoff_Prompt.md`) was not found in the
+uploads directory and remains reconstructed via the campaign log; no
+binding requirement below rests on it alone.
 
-1. `_CAMPAIGN-LOG.md` — AMENDMENT 1 integration record (FD-1..FD-4,
-   scope additions, wave adjustments).
-2. `ROADMAP-CC26-PLUS.md` — Amendment Deliverables 1–5 (support roadmap,
-   free routine library plan, readiness matrix, validation plan, dossier
-   framework), with amendment section references (sections 4, 7, 10, 13,
-   15, 16, 17, 22, 27, 28, 29, 32).
-3. `ARCHITECTURE.md` — design-time amendment references (section 6
-   accessibility halves; section 33.20 dossier composition rule).
-4. `DECISION-REGISTER.md` — FD entries, CC-D23, CC-F3/F5/F8.
-5. The gap-closure order 2026-08-21, section 2, which restates the
-   amendment's minimum coverage areas.
-
-FOUNDER FLAG (non-blocking): committing the two original files to
-`docs/capability-campaign-25-2026-08-20/source/` would make future
-traceability exact rather than reconstructed. Until then, this
-reconstruction is the best available authority and is marked as such.
+The reconstruction sources remain listed for the record:
+`_CAMPAIGN-LOG.md` Amendment 1 block, `ROADMAP-CC26-PLUS.md`
+deliverables, `ARCHITECTURE.md` references, `DECISION-REGISTER.md`
+FD entries, and the gap-closure order's own restatement.
 
 ## Classifications
 
@@ -44,7 +39,13 @@ Every row cites live evidence (file or artefact, verified 2026-08-21).
 "Phase" = where this workstream closes the residue (per the gap-closure
 order's phases A–I); "—" = nothing to close.
 
-## 1. The traceability matrix
+## 1. The traceability matrix (Phase-A BASELINE, kept as the historical record)
+
+NOTE (2026-08-21 reconciliation): the T-rows below describe the tree at
+`1259a9f`, BEFORE the gap-closure phases ran; their "Phase" column shows
+where each residue was closed. For the CURRENT state of every
+requirement, section 7 (the exact-original trace against live main) is
+authoritative.
 
 | # | Requirement (recorded source) | Live evidence | Classification | Phase |
 |---|---|---|---|---|
@@ -142,3 +143,95 @@ contradicts the recorded rejections/deferrals. T13 correction
 entries) — the original T13 row wrongly called the base layer missing;
 the adapted-variant layer is the real gap and Phase G closes it. The
 remaining phases close G1–G11.
+
+## 7. EXACT-ORIGINAL TRACE (2026-08-21 reconciliation, against live main)
+
+Every section of the banked original amendment, traced against the live
+tree AFTER gap closure. Statuses use the same ladder as section 1.
+"EXTERNAL" marks the part that only a person, device or professional can
+convert (founder actions); it is never claimed as done.
+
+| § | Exact requirement (condensed from the original; the banked file is authority) | Live evidence | Status |
+|---|---|---|---|
+| 1 | Raise the end-state to "confidently and truthfully marketed directly to disabled users"; do not stop at avoidance/one field/token routine | Dual completion standard recorded (FD-2); all-NO matrix + `marketingClaimsGuard` make the standard mechanical; the layers §1 warns against all exist (16 families, directory, adapted setup) | FULLY as governance + code; marketing conversion EXTERNAL |
+| 2 | Core accommodation NOT Pro-only; eleven named free capabilities | CAP-19 tier-blind law + `capabilityGuards.test.js` sweep; each named item live free: onboarding capability step (CC28), baseline profile + durable restrictions (`HowYouTrainScreen`, unguarded route), filtering (resolver at every selection seam), library browse+install (`PlanLibraryScreen` computed chips, no gate), builder (free), adapted/custom logging with demand parity (34.1), unilateral logging counts logged work without mirroring assumptions (laterality carving; per-side capacity refinement = recorded founder question CC-F2/DEF-6), core-operation accessibility (CC32), later inspect/update (`How you train` edit/end/allowances) | FULLY IMPLEMENTED |
+| 3 | Real free capability-aware library; audit ten hidden assumptions | 16 families shipped (registry table); each named assumption has a deterministic representation: standing→`position`, floor transfer→`floorAccess`, two arms→`bilateralUpper`, two legs→`bilateralLower`, grip→`gripDemand`, symmetrical loading→`unilateralLoadable`+side carving, balance→`balanceDemand`, free ROM→family/exercise rules, station transitions→§17 programme review (lead-walked per plan), mirrored-unilateral assumption→laterality carving honours a single trained side | FULLY IMPLEMENTED |
+| 4 | No single generic "disabled/adaptive workout"; 23-item family seed list is ideation only; Fable decides final families | No plan or collection carries a generic disabled/adaptive label (wording sweeps); seed list maps function-first: seated (4 families incl. home + experienced), no-floor, supported/balance (3), one-arm, one-leg, lower-with-limited-upper (Grip-Light Lower, Hinge & Hip), grip-limited pulling (GC-D7 mechanism set), machine-supported (2 tiers), limited-overhead (No-Overhead Upper Split), limited-knee-flexion (Hinge & Hip Lower Builder), low-equipment/band (Dumbbell & Band Foundations, Seated Home), accessible beginner→experienced (levels per registry), independently-loadable unilateral (One-Arm/One-Leg builders), no-floor-transfer (No-Floor), substantial-support (Supported Machine, Steady-Base). "Wheelchair-based" NAMED shelves stay withheld under GC-D5 (population labels need their gates); the FUNCTION is fully served seated | FULLY IMPLEMENTED (per the seed's own "ideation only" framing) |
+| 5 | Two complementary layers | Layer 1: engine + 16 families. Layer 2: 40-profile directory + cited education + dossiers (SCI/MS/Parkinson's) + R5 verdicts governing which populations may ever get labelled content | FULLY IMPLEMENTED code/content-side; labelled release EXTERNAL-gated |
+| 6 | Five disability categories get the CORRECT product response (not always a routine) | Physical→capability lane; motor/dexterity→CC32 targets, adjustable steppers, no gesture-only flows; visual→labels/roles/announcements (49 on the logger) + non-colour states; hearing→three-channel timer cues; cognitive→COGA onboarding cards, plain-language law, learning_disability profile delivery guidance | FULLY (feature path); device walk + cohorts EXTERNAL |
+| 7 | Evidence dossier before population-labelled content; 18 documented items | `dossiers/DOSSIER-TEMPLATE.md` (21 fields ⊇ the 18; mapping in section 9) + SCI/MS/Parkinson's instances; composition rule ARCHITECTURE 33.20; reconciliation fix: field 19 now states required validation/review per population, not status alone | FULLY IMPLEMENTED |
+| 8 | Reverify the named research leads, then expand | R5 (1,038 lines) re-verified every lead WITH corrections recorded (CMO 2026 refresh real but strength line unchanged since 2019; Activity Alliance 2025-26 verified, year-mixing trap; SCI 2018 dose verbatim, dropped rep-range trap; LimbPower existence; MS Society 403→MS Trust); R7/R8 expanded to 40 profiles with live-verified citations | FULLY IMPLEMENTED |
+| 9 | Coverage registry with the 18 recorded dimensions; suggested 7-status progression | Registry + matrix jointly carry all 18 (mapping in section 9); status ladder is the LATER gap-closure order's 8-status set (supersedes the amendment's "suggested" progression) | FULLY IMPLEMENTED |
+| 10 | Marketing claims only from demonstrated coverage (16 demonstrations) | Matrix columns + conversion rules; `marketingClaimsGuard.test.js` mechanically ties store listings to the matrix; CLAIMS-STANDARDS 9A | FULLY as gate; conversions EXTERNAL |
+| 11 | Real disabled-user validation required; cohorts; gates designed now | `VALIDATION-PACKAGE.md` cohorts A–H, tasks, severity, blockers, capture; REAL-DISABLED-USER-VALIDATED = NO stands everywhere | Plan FULLY; execution EXTERNAL |
+| 12 | Representation considered before community marketing; no token representation | WAS UNRECORDED product-side (reconciliation find); now recorded in the matrix's claims section as a standing requirement for any direct-to-community campaign | FULLY as record (this pass) |
+| 13 | Library IA: normal browse, no segregated shelf, filters; collections only where research supports; any compatible routine usable | Families sit in normal browse; computed chips ("Fits how you train" / "N to swap") never filter plans out; text search never hides (PlanLibraryScreen.js:707-714); labelled collections deferred behind user research per the amendment's own condition (GC-D5); install is open to everyone | FULLY IMPLEMENTED |
+| 14 | Builder equally capability-aware (11 listed abilities) | Compatibility + restrictions (resolver in picker/builder), incompatibility explanations (conflict sheet + unavailable notices), side-specific where required (side carving + per-exercise allowances), no-floor/no-standing filters (axes), equipment+capability intersection (planCompat), custom fallback (34.1), no-compatible-option state (honest fallback, RT fix 2), slot suggestions (poolGenerator senior question), whole-plan checks (muscle-coverage section, RoutineDetailScreen.js:54-88 + compat summary), manual override per law (show-anyway ranks 3-4; clinician rank 2 routes to Update restriction) | FULLY IMPLEMENTED |
+| 15 | Free routines not watered down: levels incl. experienced; goals from user, not disability status | Registry family table records level per family; experienced tier exists (Seated Upper Strength II, Steady-Base Strength); goals ride the shared goal system; no beginner-mode fork anywhere (engine tier-blind, no capability-conditional level cap) | FULLY within evidence bounds (levels recorded per family, honest) |
+| 16 | Coverage measured, not assumed; thresholds before "supported" | Registry per-profile × 17-muscle floors; family oracle enforces muscle thresholds + home-equipment reality (`capabilityFamilyPlans.test.js`); "supported" language governed by matrix gates | FULLY IMPLEMENTED |
+| 17 | Routine quality validated as a PROGRAMME (11 dimensions) | Mechanical part in the oracle (compat, coverage, home equipment); volume/frequency/fatigue/transitions/duration lead-reviewed per plan at landing (recorded in tracker/ledger corrections); programme-quality checklist named in roadmap Deliverable 2 gate | FULLY for shipped set |
+| 18 | Accessible instruction architecture (text-first, SR semantics, adapted, side-specific, setup variants, equipment; media capable when introduced) | formTips (554 text entries, SR-readable), adaptedSetup layer (closed contexts incl. per-side, seated), equipment field per exercise; media/captions structurally n/a until media ships (recorded in the a11y audit; no promise made) | FULLY within no-media scope |
+| 19 | Reverify current Android/Apple accessibility guidance; no compliance claims from checklists | R4 (WCAG 2.2 specifics, platform limits) consumed by CC32; compliance never claimed (matrix A11Y = PARTIAL until device walk) | FULLY IMPLEMENTED |
+| 20-22 | Grok/Gemini as consultants; if unreachable, produce exact prompt queue; block nothing needlessly | `EXTERNAL-CONSULTATION-QUEUE.md` carries Checkpoints A–D exact prompts; unavailability honestly recorded (FD-4); no decision was blocked on them; ACCEPT/MODIFY/REJECT reconciliation path documented for when answers arrive | FULLY per §22 fallback |
+| 23 | Competitor matrix incl. 11 tracked capabilities | `research/R6-competitor-disability-matrix.md`: 15 products, PART 2 matrix columns are exactly the 11 (injury exclusion, disability onboarding, baseline profile, seated/no-floor generation, unilateral support, chronic flare, learning provenance, adaptive library, reintroduction, UI accessibility, disability content) | FULLY IMPLEMENTED |
+| 24 | Claim architecture: capability→claims mapping; no blanket claims | CLAIMS-STANDARDS 9A (traceable claims law + capability section); matrix conversion rules per claim family; blanket-claim ban in the standards; nothing published | FULLY as architecture |
+| 25 | Disability/capability support roadmap deliverable | ROADMAP Deliverable 1 (per-profile current/missing/route) + registry (current truth) + action pack (external route); may span later campaigns per the amendment | FULLY (route now = external items only) |
+| 26 | Free routine library plan deliverable (9 specifications) | ROADMAP Deliverable 2 answers all nine (families, buildable-now, metadata needs, validation, dossier-gated set, discovery, coexistence with generated plans, builder start path, quality gate); living instance = registry family table | FULLY IMPLEMENTED |
+| 27 | Readiness matrix with the exact 16 areas per group | Matrix carries the per-group table + status ladder; reconciliation fix adds the amendment's exact 16-area table (previously compressed into 7 columns) | FULLY after fix |
+| 28 | Disabled-user validation plan (10 specifications; 10 task types) | VALIDATION-PACKAGE sections 1–9 cover all ten specs; session tasks T1–T7 cover the amendment task list; reconciliation fix adds the later baseline-capability-update step to T5 | FULLY after fix |
+| 29 | Twenty adversarial scenarios | Walked one-by-one against live main in section 8 below | FULLY (see per-row status) |
+| 30 | Dual completion standard; B failure = not complete for marketing | Recorded (FD-2); Standard A complete + tested; Standard B code/content complete, conversion EXTERNAL; the matrix enforces "not complete for disability marketing purposes" exactly | FULLY as governance |
+| 31 | Conduct principle: say which answer pattern applies per population | The registry "Known gaps" column and R5 verdicts use exactly the three sanctioned answer patterns (engine-supports-content-missing / clinical-territory / accessibility-not-routines) | FULLY IMPLEMENTED |
+| 32 | Apply the amendment to Campaign 25 now (register, roadmap, gates) | FD-1..4 in the register; deliverables in the roadmap; gates in the matrix + guards; this trace closes the loop | FULLY IMPLEMENTED |
+
+## 8. Amendment §29 adversarial scenarios — live-main walk (2026-08-21)
+
+| # | Scenario | Live defence (verified) | Status |
+|---|---|---|---|
+| 1 | Wheelchair "routines" are all beginner wellness despite experienced lifter | Seated Upper Strength II ships EXPERIENCED (registry); engine never caps level by capability | PREVENTED |
+| 2 | Permanent one-arm user gets symmetrical progression instructions | Laterality carving keeps single-side work eligible; no mirrored-set instruction exists; coach consumes per-muscle logged work | PREVENTED |
+| 3 | Blind user cannot tell which workout control is selected | accessibilityState selected/disabled/expanded on logger controls (ActiveWorkoutScreen.js:4391, 4826-4837; Stepper.js:90,119) | PREVENTED in code; device walk EXTERNAL |
+| 4 | Dexterity-impaired user cannot operate small rest-timer controls | Timer controls are buttons with 44pt+ targets, no gesture-only path (CC32) | PREVENTED in code; device walk EXTERNAL |
+| 5 | Hearing-impaired user misses audio-only timer cue | Three channels: visual + haptic + audio; audio never sole (RestTimer.js:298 fallback) | PREVENTED |
+| 6 | Learning-disability user cannot understand capability setup language | One-idea-per-card onboarding, plain-language law, wording validator; learning_disability profile carries delivery guidance | PREVENTED in code; cohort validation EXTERNAL |
+| 7 | User forced to disclose diagnosis for correct filtering | Functional questions never require a name; the directory is optional (GC-D2); no diagnosis field exists anywhere (CAP-3 guard) | PREVENTED |
+| 8 | Condition-specific routine assumes identical capabilities across a diagnosis | No condition-labelled routine exists; profiles select QUESTIONS; wheelchair profile explicitly routes to specific answers ("not one research population" gap note) | PREVENTED |
+| 9 | "Full body" plan with no meaningful pulling | Family oracle muscle thresholds (back floor); Grip-Light plan states its pulling gap in-plan rather than hiding it | PREVENTED |
+| 10 | Adapted routine with impossible equipment transitions | §17 lead programme review per plan; home plans proven against HOME equipment set in the oracle | PREVENTED (mechanical for equipment; transitions lead-reviewed) |
+| 11 | Free disability support accidentally paywalled | CAP-19 guard sweep pins the lane tier-blind | PREVENTED |
+| 12 | Custom movement cannot participate in progression | 34.1 metadata-sufficiency parity (pool, swaps, ranking, PRs) | PREVENTED |
+| 13 | Disabled user permanently shown "modified" badges | Chips read "Fits how you train" / "N to swap", only while constraints are active; no adapted/modified label exists (wording sweep) | PREVENTED |
+| 14 | Marketing claims wheelchair support before wheelchair users tested | REAL-DISABLED-USER-VALIDATED=NO + matrix all-NO + mechanical claims guard | PREVENTED |
+| 15 | Limb-difference support claimed but unilateral volume accounting wrong | Logged sets count as performed (no doubling/halving); single-side training counts toward its muscles; per-side capacity refinement recorded honestly as open founder question (DEF-6), unclaimed | PREVENTED (accounting honest); refinement OPEN by record |
+| 16 | Capability filter works but library search hides relevant routines | Search is text-only; compatibility renders as chips and never filters out (PlanLibraryScreen.js:707-714) | PREVENTED |
+| 17 | Condition-specific routine crosses into rehab advice | No condition routine exists; directory wording validator bans rehab/treatment vocabulary; reintroduction stays formula-free (CLIN-2 boundary) | PREVENTED |
+| 18 | Unrelated temporary injury collapses into the disability baseline | Roles are separate rows (baseline vs episode); stacks proven as set intersections with episode-end restoration (directoryScenarioMatrix stack proofs) | PREVENTED |
+| 19 | VoiceOver navigates settings but not the active workout | 49 labels/roles on the logger; announced states; FlatList order limitation recorded (R4) | PREVENTED in code; device walk EXTERNAL |
+| 20 | Switch Control cannot trigger a swipe/drag-only action | CC32 sweep: every drag/long-press has a button alternative on the journey | PREVENTED in code; device walk EXTERNAL |
+
+## 9. Reconstruction vs original — differences found and resolved
+
+1. **Dossier fields: original lists 18; shipped template has 21.** The 21
+   are a superset: original items 1-13 map to template 1-13; item 7's
+   accessibility half maps to template 14; original 14-15 (user-testing
+   and expert-review REQUIREMENTS) were only partially represented
+   (template field 19 recorded STATUS, not required validation) — FIXED
+   this pass: template + all three instances now state the required
+   cohort and CLIN items per population; original 16→19, 17→20, 18→21;
+   template additions 15-18 (routine/check-in/reintroduction
+   implications, review date) are extra fidelity, not drift.
+2. **Registry status ladder: original SUGGESTS a 7-status progression;
+   live uses the gap-closure order's 8-status set.** Resolved as
+   supersession by the later founder order (§27 of the gap-closure
+   order); the original marked its progression "Suggested".
+3. **Matrix areas: original prescribes an exact 16-area table; live
+   matrix compressed them into 7 columns.** FIXED this pass: the matrix
+   now also carries the exact 16-area table with per-area status.
+4. **§12 representation was never recorded product-side.** FIXED this
+   pass: standing record added to the matrix claims section.
+5. **§28 task list: "capability update" (later baseline change) was not
+   an explicit session task.** FIXED this pass: added to T5.
+6. **No contradiction found** between the reconstruction and the
+   original on any engine, gating, safety or scope decision: FD-1..FD-4
+   and the deliverable set match the original faithfully. The
+   reconstruction's only real losses were the compressions above.

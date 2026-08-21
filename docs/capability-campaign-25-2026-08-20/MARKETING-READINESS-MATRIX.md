@@ -44,6 +44,43 @@ What converts each gate:
   cohort completes with zero open release-blockers
   (VALIDATION-PACKAGE.md defines cohorts, tasks and blocker severity).
 
+## Amendment section 27 exact areas (reconciliation 2026-08-21)
+
+The original amendment prescribes exactly these sixteen areas per
+supported group. The seven columns above compress them; this table
+keeps the exact vocabulary so nothing hides in the compression. Where
+an area is uniform across groups by construction (the engine is
+profile-blind, GC-D1), one status covers all rows; where it varies,
+the varying column above is named.
+
+| Area (amendment wording) | Status today |
+|---|---|
+| Onboarding | YES all groups (free capability step; functional questions; optional directory) |
+| Plan generation | YES all groups (resolver inside generation; CAP-8 unknown-honest) |
+| Free routines | Varies by group → CONTENT column (16 families; levels per registry) |
+| Builder | YES all groups (compat, explanations, overrides per law) |
+| Exercise coverage | Varies by group → registry per-profile muscle floors |
+| Custom exercise fallback | YES all groups (34.1 parity incl. progression/PRs) |
+| Logging | YES all groups (logged work counts as performed; no mirroring assumption) |
+| Progression | YES all groups (tier-blind, capability-aware, no level cap by capability) |
+| Learning | YES all groups (CC30 contamination shield; constrained weeks never teach) |
+| Weekly coaching | YES all groups (CONSTRAINED limiter; no adherence blame) |
+| Temporary limitation overlay | YES all groups (episodes stack over baseline; proven as set intersections) |
+| Accessibility | PARTIAL → A11Y column (feature path code-verified; device walk pending) |
+| Evidence dossier | Varies → DOSSIER column (SCI, MS, Parkinson's built; others per R5 verdicts) |
+| Expert review | NO everywhere (CC-F6 pending) |
+| Disabled-user validation | NO everywhere (CC-F5 pending; REAL-DISABLED-USER-VALIDATED = NO) |
+| Marketing-safe | NO everywhere |
+
+## Representation (amendment section 12, standing record)
+
+Before any campaign that markets directly to disabled communities:
+imagery/examples must show a genuine range of users, must not always
+centre an unrestricted body, and copy gets a dignity review; token
+representation over an unvalidated product is prohibited. The product
+gates above come first; this record exists so the requirement cannot
+be lost when marketing work starts.
+
 ## Status ladder (gap-closure order section 27)
 
 Separate truth states, never conflated; a row's honest position today:
