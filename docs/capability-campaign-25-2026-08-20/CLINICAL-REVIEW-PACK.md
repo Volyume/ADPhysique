@@ -29,10 +29,12 @@ CLIN-3 (sections 15/20): under an active episode the coach withholds
   volume adds for affected muscles and never converts constrained weeks
   into adherence blame. Are there populations where HOLDING volume is
   itself a risk we should name (not model - name in copy)?
-CLIN-4 (ontology, section 8): the ten demand axes (position, floor
+CLIN-4 (ontology, section 8): the eleven demand axes (position, floor
   access, overhead, grip, unilateral loadability, bilateral upper/
-  lower, axial load, impact, balance) as the functional vocabulary -
-  any axis whose absence creates a foreseeable-misuse risk?
+  lower, axial load, impact, balance, weight bearing through the
+  hands - the last added at gap closure 2026-08-21) as the functional
+  vocabulary - any axis whose absence creates a foreseeable-misuse
+  risk?
 CLIN-5..7 (deferred features register): pacing/energy-envelope
   coaching for chronic fatigue populations (33.12 ships levers only:
   session length, days, episodes). Confirm the levers-only boundary.

@@ -4,6 +4,11 @@ Only actions that genuinely cannot be done autonomously. Everything
 else is complete and merged. One list, no duplicates; each row names
 what it unlocks.
 
+DELIVERY NOTE (founder order 2026-08-21): this file is the internal
+record. Every ask in it is delivered to the founder in chat as a
+ready-to-use message (the counsel and clinical questions were sent
+that way the same day); never point the founder at this file.
+
 ### A. PRODUCTION
 
 - **Run migrations 145-151 against production** (your exact phrase, per

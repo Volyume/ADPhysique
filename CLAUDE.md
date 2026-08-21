@@ -399,6 +399,12 @@ campaign operating model as standing law; it is not campaign-scoped.
    the founder as structured multi-choice questions (never walls of text,
    never the lighter option framed as the recommendation), and work
    continues on unblocked lanes while questions are open.
+   DELIVERY (founder order 2026-08-21): anything the founder must act on
+   (questions for counsel/clinicians/reviewers, action requests,
+   checklists) is delivered IN CHAT as a ready-to-use message. The
+   founder works from a phone and cannot easily open repo files. Repo
+   packs/docs are the internal record only, never the delivery vehicle;
+   "it's in the pack" is not delivery.
 
 ---
 
