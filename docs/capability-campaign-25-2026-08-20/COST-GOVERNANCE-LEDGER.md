@@ -54,5 +54,7 @@ delegation. Maximums, not targets.
 
 | 4 | Haiku | Five family plans (GC-D8 list) authored in seedRoutines against the LOCKED red oracle (capabilityFamilyPlans suite entries written by the lead first) | seedRoutines.js plans + REQUIRED_EXERCISES + seed-key bump + registry FAMILIES rows | Plan data entry against a mechanical compatibility oracle is order 29.7 routine-data work; the lead defined audiences, thresholds and allowed quad options | COMPLETE with lead corrections: two chest flies replaced with shoulder work on the home plan's pull day, an off-scope rear-delt row swapped for calf work in the lower plan, one awkward note reworded. Oracle + wording sweep + walks green. |
 
+| 5 | Haiku | Phase H scenario suites + coverage generator, implemented mechanically against PHASE-H-SPEC.md (lead-authored contract with exact fixtures, assertions and bounds) | directoryScenarioMatrix.test.js + movementConstraintFixtures.test.js + scripts/scenario-coverage.mjs + SCENARIO-COVERAGE.md | Directory-wide fixture generation is order 29.7 deterministic-scenario work; the spec fixes every judgement call | pending |
+
 Direct-tool substitutions log:
 - Phase A traceability: entirely direct reads (0 agents).
