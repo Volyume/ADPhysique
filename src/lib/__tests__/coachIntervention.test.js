@@ -344,7 +344,7 @@ describe('THE PRODUCTION PATHS', () => {
 
   test('it is READ back before the run, so the gate can see it', () => {
     expect(SCREEN).toMatch(/const priorInterventions = interventionsFromHistory\(/);
-    expect(SCREEN).toMatch(/runWeeklyCoach\(\{\s*\n\s*checkin: engineCheckin,\s*\n\s*priorInterventions,/);
+    expect(SCREEN).toMatch(/runWeeklyCoach\(\{\s*\n\s*checkin: engineCheckin,\s*\n\s*physicalConstraint,\s*\n\s*priorInterventions,/);
   });
 
   test('and the outcome REACHES THE USER in the weekly story', () => {

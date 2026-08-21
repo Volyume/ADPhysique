@@ -379,7 +379,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
         setAlreadyLoggedToday(hasLoggedToday(weights));
 
         // CC31 (section 19): load whether user has an ACTIVE episode-role
-        // capability constraint. Best-effort; any error → false.
+        // capability constraint. Best-effort; any error reads as false.
         try {
           // eslint-disable-next-line global-require
           const { getCapabilityConstraints } = require('../lib/database');

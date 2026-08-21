@@ -47,7 +47,10 @@ describe('joint pain keeps YES, NO and UNKNOWN distinct', () => {
   });
 
   test('the screen writes YES as true, NO as false and unanswered as null', () => {
-    expect(screen).toMatch(/jointPain: jointPain === 'yes' \? true : \(jointPain === 'no' \? false : null\)/);
+    // CC31 (section 19): during an active-episode week the conditional
+    // question replaces this one, storing null by design; every other
+    // week keeps the exact tri-state law.
+    expect(screen).toMatch(/jointPain: hasActiveEpisode \? null : \(jointPain === 'yes' \? true : \(jointPain === 'no' \? false : null\)\)/);
   });
 
   test('reload maps the three states back without turning UNKNOWN into NO', () => {

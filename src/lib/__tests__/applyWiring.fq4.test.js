@@ -105,9 +105,12 @@ describe('FQ-4: the wiring (source pins)', () => {
     // Success state (markApplied + the settled flag) lives inside the try,
     // after the awaited row writes; the catch path logs and sets neither, so
     // a failed write leaves no success receipt and no applied mark.
-    const catchBlock = body.slice(body.indexOf('} catch'));
+    // CC31 added a best-effort inner catch (the apply-time hold-muscle
+    // read) INSIDE the try; the handler's own failure path is the LAST
+    // catch in the body, so the window anchors there.
+    const catchBlock = body.slice(body.lastIndexOf('} catch'));
     expect(catchBlock.length).toBeGreaterThan(0);
     expect(catchBlock).not.toMatch(/markApplied|setApplySettling|setOutput/);
-    expect(body.slice(0, body.indexOf('} catch'))).toMatch(/markApplied[\s\S]*setApplySettling/);
+    expect(body.slice(0, body.lastIndexOf('} catch'))).toMatch(/markApplied[\s\S]*setApplySettling/);
   });
 });
