@@ -113,7 +113,7 @@ export function activationNudgePush(stage, name = '') {
     case NUDGE_STAGE.STALLED_2:
       return {
         title: `Two sessions in${name}`,
-        body: 'One more and this starts to feel automatic. Your plan is ready whenever you are.',
+        body: 'Two in, and it is starting to look like a routine. Your next session is in your plan when you want it.',
       };
     default:
       return null;
@@ -134,7 +134,7 @@ export function activationBannerLine(stage) {
     case NUDGE_STAGE.STALLED_1:
       return {
         title: 'You\'ve made a start',
-        body: 'A second session is what turns a first one into a habit. Your next one is ready in your plan whenever you are.',
+        body: 'Going back for a second one is where it starts to stick. Your next session is in your plan when you want it.',
       };
     case NUDGE_STAGE.STALLED_2:
       return {

@@ -75,7 +75,7 @@ export const MILESTONES = Object.freeze([
   Object.freeze({
     key: 'sessions_50', kind: 'sessions', threshold: 50, icon: 'ribbon-outline',
     title: 'Fifty sessions',
-    body: 'Fifty sessions of showing up. That is real, steady commitment.',
+    body: 'Fifty times you have turned up. That takes some doing.',
     heroValue: '50', heroUnit: 'sessions logged',
   }),
   Object.freeze({

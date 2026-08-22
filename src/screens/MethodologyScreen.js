@@ -112,10 +112,10 @@ const SECTIONS = [
     key: 'limits',
     title: 'What Precision Coaching cannot do',
     body:
-      'It cannot see food you did not log. It cannot know how a set felt unless ' +
-      'you log it or tell the check-in. It cannot diagnose injury, illness or body ' +
-      'composition. It cannot override your choices. Its adjustments are suggestions ' +
-      'until you apply them.',
+      'It cannot see food you have not logged. It cannot know how a set felt unless ' +
+      'you log it or say so at your check-in. It cannot diagnose injury or illness, ' +
+      'or work out your body composition. It cannot overrule you: its adjustments ' +
+      'stay suggestions until you apply them.',
   },
 ];
 

@@ -780,7 +780,7 @@ export async function getBlockAdvice(userId, activeBlock, userProfile, { isPro =
       action: 'in_recovery',
       reviewHeadsUp,
       headline: 'Recovery week is active',
-      body: `Keep sessions lighter. Roughly half the sets, same exercises, easy effort. This isn't stepping back; it's letting the last few weeks of work pay off. You'll come back to full training next week.`,
+      body: `Keep sessions lighter this week. Roughly half the sets, same exercises, easy effort. That is not a step backwards. It is how the work from the last few weeks catches up with you. Back to full training next week.`,
       signals,
       nextBlock,
       blockStatus,

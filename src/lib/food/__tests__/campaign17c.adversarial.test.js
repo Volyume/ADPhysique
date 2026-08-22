@@ -421,9 +421,9 @@ describe('WORK 5: calorie-bank arithmetic over the real display target', () => {
     const apply = diary.slice(applyStart, clearStart);
     const clear = diary.slice(clearStart, diary.indexOf('// BUG-1', clearStart));
     expect(apply.indexOf('resyncBankedPlannedFood')).toBeLessThan(apply.indexOf('setCalorieBank(bank)'));
-    expect(apply).toMatch(/catch[\s\S]*Couldn't adjust the planned food[\s\S]*return/);
+    expect(apply).toMatch(/catch[\s\S]*Couldn't plan your higher-calorie day[\s\S]*return/);
     expect(clear.indexOf('restoreUnbankedPlannedFood')).toBeLessThan(clear.indexOf('setCalorieBank(null)'));
-    expect(clear).toMatch(/catch[\s\S]*Couldn't restore the planned food[\s\S]*return/);
+    expect(clear).toMatch(/catch[\s\S]*Couldn't undo your higher-calorie day[\s\S]*return/);
   });
 });
 

@@ -419,7 +419,7 @@ export default function DiaryScreen({ navigation, route }) {
       });
       perDayChanges = res.perDayChanges || [];
     } catch (_) {
-      toast.show("Couldn't adjust the planned food. Nothing was banked.", { variant: 'error' });
+      toast.show("Couldn't plan your higher-calorie day. Nothing has changed, so try again in a moment.", { variant: 'error' });
       return;
     }
     await setCalorieBank(bank);
@@ -461,7 +461,7 @@ export default function DiaryScreen({ navigation, route }) {
         perDayDeltaKcal: calorieBank?.perDayDeltaKcal, startDate: isoDate(new Date()),
       });
     } catch (_) {
-      toast.show("Couldn't restore the planned food. The bank is still active.", { variant: 'error' });
+      toast.show("Couldn't undo your higher-calorie day. It is still planned, so try again in a moment.", { variant: 'error' });
       return;
     }
     await setCalorieBank(null);

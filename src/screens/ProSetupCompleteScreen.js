@@ -510,7 +510,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 These start from your profile and the research, then adjust as your logs and weight trend come in.
               </Text>
               <Text style={[styles.targetsNote, live.targetsNote]}>
-                Hit these most days. Logging your meals sharpens your coaching, and your weight trend carries the rest.
+                Hit these most days. Logging your meals gives the coach something to work from, and your weight trend fills in the rest.
               </Text>
               {/* Optional head start: a full week of meals built to these
                   targets, with a shopping list, waiting in Meal planning. */}
@@ -571,7 +571,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                     other placement is CoachOutputScreen's first real weekly
                     output. */}
                 <Text style={[styles.routineBody, live.routineBody]}>
-                  The more sessions you log, the better your coach understands how your body responds, so it can get your weights and your lighter weeks right.
+                  The more sessions you log, the better the coach can judge how you respond, and the better it sets your weights and your easier weeks.
                 </Text>
                 {/* Wave A B3: the trial arc, stated once, calmly, so day 14
                     is never a surprise. Facts mirror the subscription FAQ. */}

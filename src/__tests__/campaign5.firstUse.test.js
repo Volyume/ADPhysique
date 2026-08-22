@@ -1632,8 +1632,8 @@ describe('WEIGH-IN: day 0 never claims a weigh-in the user did not take (C5-P22-
   test('the evening backstop teaches the morning rule rather than fighting it', () => {
     const src = read('lib/notifications/scheduler.js');
     const copies = src.slice(src.indexOf('function eveningCopies'), src.indexOf('function pickEveningCopy'));
-    expect(copies).toMatch(/tomorrow morning is the reading the trend uses best/i);
-    expect(copies).toMatch(/a morning reading is the one the trend uses best/i);
+    expect(copies).toMatch(/tomorrow morning is the reading your trend uses best/i);
+    expect(copies).toMatch(/a morning reading is the one your trend uses best/i);
     // Still neutral: no accusation anywhere in the rotation.
     expect(copies).not.toMatch(/you haven't logged|you missed|behind/i);
   });
@@ -1641,7 +1641,7 @@ describe('WEIGH-IN: day 0 never claims a weigh-in the user did not take (C5-P22-
   test('the weigh-in strip says why, on the empty state only, with no count', () => {
     const src = stripComments(read('components/TodayStrip.js'));
     const empty = src.slice(src.indexOf('function WeightEmpty'), src.indexOf('if (editing)'));
-    expect(empty).toMatch(/several mornings go by before anything changes/);
+    expect(empty).toMatch(/there is nothing to read into any single day/);
     expect(empty).not.toMatch(/streak|days in a row|of 3/i);
     const logged = src.slice(src.indexOf('function WeightLogged'), src.indexOf('function WeightEmpty'));
     expect(logged).not.toMatch(/several mornings/);

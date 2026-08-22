@@ -313,7 +313,7 @@ export default function GoalChangeSummaryScreen({ navigation, route }) {
             <View style={styles.nextRow}>
               <Ionicons name="ellipse" size={6} color={t.colors.primary} style={styles.bullet} />
               <Text style={[styles.nextText, live.nextText]}>
-                If you stay in a deficit for more than eight weeks, Volyume will suggest a short diet break to support recovery and metabolic rate.
+                If you stay in a deficit for more than eight weeks, Volyume will suggest a short diet break.
               </Text>
             </View>
           )}

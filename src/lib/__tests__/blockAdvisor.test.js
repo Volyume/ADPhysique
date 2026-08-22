@@ -187,7 +187,7 @@ describe('C6 R-4 (D97-22): a recovery week is only claimed live when it was earn
     ]);
     const advice = await getBlockAdvice('u1', block, { experience: 'intermediate' });
     expect(advice.headline).toBe('Recovery week is active');
-    expect(advice.body).toMatch(/letting the last few weeks of work pay off/);
+    expect(advice.body).toMatch(/how the work from the last few weeks catches up with you/);
   });
 
   test('a failed workout read cannot invent recent training (fails to the honest card)', async () => {
