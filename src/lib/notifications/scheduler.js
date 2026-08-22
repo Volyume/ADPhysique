@@ -82,7 +82,7 @@ function morningCopies(name) {
   return [
     { title: `Good morning${name}`, body: 'Whenever you\'re ready, hop on the scales and log today\'s weight.' },
     { title: `Good morning${name}`, body: 'A quiet weigh-in to start the day. No rush, just whenever suits you.' },
-    { title: `Morning${name}`, body: 'When you get a moment, pop on the scales and log it. That is all for today.' },
+    { title: `Morning${name}`, body: 'When you get a moment, pop on the scales and log it.' },
     { title: `Rise and shine${name}`, body: 'Logging your weight today keeps your coaching on track. Whenever you\'re ready.' },
   ];
 }
@@ -217,9 +217,9 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0, { 
 function eveningCopies(name) {
   return [
     { title: `Evening${name}`, body: 'If you haven\'t caught today\'s weight yet, there\'s still time. No worries either way.' },
-    { title: `Before the day\'s out${name}`, body: 'Today\'s weight can still go in if you want it to. Tomorrow morning is the reading your trend uses best.' },
+    { title: `Before the day\'s out${name}`, body: 'Still time to weigh in today if you want. Mornings are more consistent though, because you haven\'t eaten yet.' },
     { title: `Quick one${name}`, body: 'If you haven\'t weighed in today, there\'s still time whenever it suits you.' },
-    { title: `Evening${name}`, body: 'There is still time today if you want to. A morning reading is the one your trend uses best.' },
+    { title: `Evening${name}`, body: 'Weigh in tonight if you like. Mornings are steadier, so leaving it until tomorrow is fine too.' },
   ];
 }
 

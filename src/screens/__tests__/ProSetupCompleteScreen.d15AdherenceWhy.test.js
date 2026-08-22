@@ -58,7 +58,7 @@ import {
 } from '../../lib/database';
 import ProSetupCompleteScreen from '../ProSetupCompleteScreen';
 
-const ADHERENCE_WHY_COPY = 'The more sessions you log, the better the coach can judge how you respond, and the better it sets your weights and your easier weeks.';
+const ADHERENCE_WHY_COPY = 'The more sessions you log, the better the coach knows what you can handle, so it can set your weights and your lighter weeks properly.';
 
 const store = {
   user: { id: 'u1' },

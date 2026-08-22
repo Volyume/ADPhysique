@@ -29,7 +29,7 @@ export const WHATS_NEW = {
   '1.2.0': [
     { icon: 'timer-outline', text: 'Rest alerts can now land to the second. Allow exact alarms when asked, or from Settings.' },
     { icon: 'play-circle-outline', text: 'A live session bar keeps your workout in view on every tab. Tap it to jump back in.' },
-    { icon: 'search-outline', text: 'Food search is much better at brand names, part-typed words and several words at once.' },
+    { icon: 'search-outline', text: 'Food search is much better now, whether you type a brand, half a word, or several words at once.' },
     { icon: 'speedometer-outline', text: 'Long lists scroll smoother across the app.' },
     { icon: 'apps-outline', text: 'A home screen widget shows your next session or weekly consistency (Android). Add it from Settings.' },
   ],

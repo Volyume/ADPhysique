@@ -113,9 +113,9 @@ const SECTIONS = [
     title: 'What Precision Coaching cannot do',
     body:
       'It cannot see food you have not logged. It cannot know how a set felt unless ' +
-      'you log it or say so at your check-in. It cannot diagnose injury or illness, ' +
-      'or work out your body composition. It cannot overrule you: its adjustments ' +
-      'stay suggestions until you apply them.',
+      'you log it or say so at your check-in. It cannot tell you what is wrong if ' +
+      'you are injured or ill, and it cannot measure how much of you is muscle or ' +
+      'fat. It cannot overrule you: every change it suggests waits until you accept it.',
   },
 ];
 

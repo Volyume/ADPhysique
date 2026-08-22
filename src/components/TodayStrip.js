@@ -232,7 +232,7 @@ export default function TodayStrip({
               // Campaign 27 Pillar A (D104): sentence-length copy never
               // carries a line clamp - it wraps, and the row grows.
               <Text style={[styles.logWhy, live.logWhy]}>
-                Before breakfast, after the loo. It takes a few mornings before your trend settles, so there is nothing to read into any single day.
+                Before breakfast, after the loo. Your weight bounces around day to day, so try not to read much into any one morning.
               </Text>
             )}
           </View>
