@@ -130,12 +130,12 @@ describe('R2 radius cohesion (2026-07-11)', () => {
 describe('Campaign 22 Phase 2 Stage 2: first-use tutorial copy retires after the first ever log', () => {
   test('everLogged=false (default): the why-line shows on the empty state', async () => {
     const tree = await render({ todayWeight: null, everLogged: false });
-    expect(json(tree)).toContain('read much into any one morning');
+    expect(json(tree)).toContain('not any one morning');
   });
 
   test('everLogged=true: the why-line never renders once a real weigh-in exists', async () => {
     const tree = await render({ todayWeight: null, everLogged: true });
-    expect(json(tree)).not.toContain('read much into any one morning');
+    expect(json(tree)).not.toContain('not any one morning');
     // The rest of the empty state is unaffected: label, prompt and Log stay.
     expect(json(tree)).toContain('Morning weight');
     expect(json(tree)).toContain('Not logged yet');
@@ -144,7 +144,7 @@ describe('Campaign 22 Phase 2 Stage 2: first-use tutorial copy retires after the
 
   test('the logged state never shows the tutorial line either way', async () => {
     const tree = await render({ todayWeight: 82.4, everLogged: false });
-    expect(json(tree)).not.toContain('read much into any one morning');
+    expect(json(tree)).not.toContain('not any one morning');
   });
 });
 

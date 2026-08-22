@@ -108,12 +108,12 @@ export function activationNudgePush(stage, name = '') {
     case NUDGE_STAGE.STALLED_1:
       return {
         title: `One session down${name}`,
-        body: 'Your second session is in your plan, ready whenever you want it.',
+        body: 'Your second session is in your plan, ready whenever you want it. Each one you log gives Volyume more to go on when it sets your weights.',
       };
     case NUDGE_STAGE.STALLED_2:
       return {
         title: `Two sessions in${name}`,
-        body: 'Your third session is there whenever you want it. No rush.',
+        body: 'Your third session is there whenever you want it. The more you log, the better Volyume judges what weights suit you.',
       };
     default:
       return null;
@@ -134,7 +134,7 @@ export function activationBannerLine(stage) {
     case NUDGE_STAGE.STALLED_1:
       return {
         title: 'You\'ve made a start',
-        body: 'Your second session is in your plan, ready whenever you want it.',
+        body: 'Your second session is in your plan, ready whenever you want it. Every session you log helps Volyume set your weights more accurately.',
       };
     case NUDGE_STAGE.STALLED_2:
       return {

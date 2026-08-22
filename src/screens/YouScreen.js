@@ -182,7 +182,7 @@ function buildPendingCoachCopy(readiness) {
   if (daysReady && !weighInsReady) {
     return {
       title: 'First check-in needs more morning weights',
-      body: 'Keep logging your morning weight. A few more and there will be enough for your first weekly review.',
+      body: 'Keep logging your morning weight. A few more and there will be enough for your first weekly review, since one morning on its own moves about too much to tell you anything.',
     };
   }
   return {
