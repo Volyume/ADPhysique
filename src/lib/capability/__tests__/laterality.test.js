@@ -13,10 +13,10 @@
  */
 import {
   buildCapabilityResolveState, capabilityBlockReason, demandConflicts,
-  isSideCarveable, CAPABILITY_BLOCK, _resetCapabilityResolveCache,
+  isSideCarveable, isSideCarvedAvailable, CAPABILITY_BLOCK, _resetCapabilityResolveCache,
 } from '../resolve';
 import { CONSTRAINT_RULE_KIND, CONSTRAINT_ROLE, CONSTRAINT_SOURCE, CONSTRAINT_STATE, LATERALITY, DEMAND_AXES } from '../model';
-import { sideBodyPart, sideLabel, rulePhrase } from '../phrase';
+import { sideBodyPart, sidedRuleLabel, rulePhrase } from '../phrase';
 
 const NOW = 1_760_000_000_000;
 const DAY = 86_400_000;
@@ -200,17 +200,37 @@ describe('a stored side survives being read back, and is spoken naturally', () =
   });
 
   it('null is never spoken as a side, and never invented as one', () => {
-    expect(sideLabel(rule({ laterality: null }))).toBeNull();
+    expect(sidedRuleLabel(rule({ laterality: null }))).toBeNull();
     expect(rulePhrase(rule({ laterality: null }))).toBe('gripping a bar');
   });
 
-  it('a sided rule names the body part, never the word laterality', () => {
-    expect(sideLabel(rule({ laterality: LATERALITY.LEFT }))).toBe('left hand');
-    expect(sideLabel(rule({ ruleValue: 'bilateral_lower', laterality: LATERALITY.RIGHT }))).toBe('right leg');
-    expect(rulePhrase(rule({ laterality: LATERALITY.LEFT }))).toBe('gripping a bar (left hand)');
-    for (const side of [LATERALITY.LEFT, LATERALITY.RIGHT]) {
-      expect(sideLabel(rule({ laterality: side }))).not.toMatch(/lateral/i);
+  it('a sided rule reads like a person, not like a field with a value', () => {
+    // Founder wording law: "Firm gripping with your left hand", never
+    // "Gripping a bar or handle firmly (left hand)".
+    expect(rulePhrase(rule({ laterality: LATERALITY.LEFT }))).toBe('firm gripping with your left hand');
+    expect(sidedRuleLabel(rule({ laterality: LATERALITY.LEFT }))).toBe('Firm gripping with your left hand');
+    for (const r of [rule({ laterality: LATERALITY.LEFT }), rule({ ruleValue: 'bilateral_lower', laterality: LATERALITY.RIGHT })]) {
+      expect(sidedRuleLabel(r)).not.toMatch(/lateral|\(/i);
     }
+  });
+
+  // Q6: the founder's mirror cases, wording and behaviour together.
+  it.each([
+    ['left hand', 'grip_bar', LATERALITY.LEFT, 'Firm gripping with your left hand'],
+    ['right hand', 'grip_bar', LATERALITY.RIGHT, 'Firm gripping with your right hand'],
+    ['left arm', 'bilateral_upper', LATERALITY.LEFT, 'Using both arms together, left arm'],
+    ['right leg', 'bilateral_lower', LATERALITY.RIGHT, 'Using both legs together, right leg'],
+  ])('%s reads naturally and keeps its side', (_name, ruleValue, side, label) => {
+    const r = rule({ ruleValue, laterality: side });
+    expect(sidedRuleLabel(r)).toBe(label);
+    expect(stateOf([r]).restrictions[0].laterality).toBe(side);
+  });
+
+  it('both hands keeps the plain wording and applies whole', () => {
+    const r = rule({ ruleValue: 'grip_bar', laterality: null });
+    expect(sidedRuleLabel(r)).toBeNull();
+    expect(rulePhrase(r)).toBe('gripping a bar');
+    expect(capabilityBlockReason(stateOf([r]), oneSideLoadable)).toBe(CAPABILITY_BLOCK.DECLARED);
   });
 });
 
@@ -223,6 +243,63 @@ describe('no per-side prescription engine was introduced', () => {
     );
     for (const key of ['reps', 'sets', 'weight', 'load', 'targetLeft', 'targetRight']) {
       expect(conflict[key]).toBeUndefined();
+    }
+  });
+});
+
+describe('the app never PROPOSES work the user has just ruled out', () => {
+  const fs = require('fs');
+  const path = require('path');
+
+  it('a movement available only because of the carve is identifiable', () => {
+    const sided = stateOf([rule({ laterality: LATERALITY.LEFT })]);
+    // Only here because the left-hand rule was carved.
+    expect(isSideCarvedAvailable(sided, oneSideLoadable)).toBe(true);
+    // Not carve-available: it conflicts outright rather than being carved in.
+    expect(isSideCarvedAvailable(sided, needsBothHands)).toBe(false);
+    // Not carve-available: no side declared, so nothing was carved.
+    expect(isSideCarvedAvailable(stateOf([rule({ laterality: null })]), oneSideLoadable)).toBe(false);
+    // Not carve-available: the rule does not touch this movement at all.
+    const legPress = { id: 'ex_leg', name: 'Leg Press', gripDemand: 'none', unilateralLoadable: true };
+    expect(isSideCarvedAvailable(sided, legPress)).toBe(false);
+    // Empty state never claims a carve.
+    expect(isSideCarvedAvailable(stateOf([]), oneSideLoadable)).toBe(false);
+  });
+
+  it('the workout screen holds its own both-sides suggestion for exactly those', () => {
+    // The per-side prompt says "Do the same reps on each side", which is
+    // the one thing a user with a one-sided rule cannot do. It is the
+    // APP's suggestion that is held; the manual toggle stays, because an
+    // explicit choice is the user's to make.
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '../../../screens/ActiveWorkoutScreen.js'), 'utf8',
+    );
+    expect(src).toMatch(/if \(carvedForOneSide\) return;/);
+    expect(src).toMatch(/isSideCarvedAvailable\(intentState\.capability, exercise\)/);
+    // The guard sits inside the suggestion effect, before the ask.
+    const effect = src.slice(src.indexOf('const acknowledgedUnilateralRef'), src.indexOf('Log this one side at a time?'));
+    expect(effect.length).toBeGreaterThan(200);
+    expect(effect).toMatch(/carvedForOneSide/);
+    // The manual per-side toggle is untouched.
+    expect(src).toMatch(/accessibilityLabel=\{unilateralExercises\.has\(exercise\.id\) \? 'Stop logging this exercise per side'/);
+  });
+
+  it('no capability copy claims Volyume programmes the unaffected side or records sides apart', () => {
+    // Per-side logging enters ONE rep count used for both sides
+    // (finishPerSide passes perSide.reps), so nothing may say otherwise.
+    const files = [
+      '../../../lib/capability/directory/conditions.js',
+      '../../../screens/HowYouTrainScreen.js',
+      '../../../components/ExercisePickerModal.js',
+    ];
+    const banned = /each side actually did|unaffected side|only the (good|strong|working) side|records each side|different reps|per-side target/i;
+    for (const rel of files) {
+      const src = fs.readFileSync(path.resolve(__dirname, rel), 'utf8');
+      const literals = src
+        .replace(/\/\*[^]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ')
+        .match(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g) ?? [];
+      expect(literals.length).toBeGreaterThan(20); // really scanning copy
+      for (const lit of literals) expect(lit).not.toMatch(banned);
     }
   });
 });

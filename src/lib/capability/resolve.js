@@ -81,6 +81,25 @@ export function isSideCarveable(ruleKind, ruleValue) {
 }
 
 /**
+ * Is this exercise available ONLY because a sided rule was carved - the
+ * user has said one side cannot do it, and the movement can be loaded a
+ * side at a time? Surfaces that would otherwise PROPOSE two-sided work
+ * ask this first, so Volyume never suggests work the user has just told
+ * it they cannot do. It grants nothing and prescribes nothing: the
+ * exercise is planned and logged exactly as any other. Pure, no clock.
+ */
+export function isSideCarvedAvailable(state, exercise) {
+  if (!state || state.empty || !exercise) return false;
+  if (tri(exercise.unilateralLoadable) !== true) return false;
+  return (state.restrictions ?? []).some((r) => (
+    r.ruleKind === CONSTRAINT_RULE_KIND.DEMAND
+    && r.laterality
+    && SIDE_CARVEABLE.has(r.ruleValue)
+    && demandAxisConflict(r.ruleValue, exercise) === true
+  ));
+}
+
+/**
  * Does this exercise CONFLICT with one demand-axis constraint?
  * Returns true (conflict), false (compatible) or null (UNKNOWN - the
  * axis's demand is not known for this exercise).

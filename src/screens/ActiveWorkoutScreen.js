@@ -746,6 +746,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       return episodeConflicts(intentState.capability, exercise);
     } catch (_e) { return []; }
   })();
+  // True when this movement is available only because a sided rule was
+  // carved (the model answers, not this screen). Read-only.
+  const carvedForOneSide = (() => {
+    if (!exercise || !intentState?.capability || intentState.capability.empty) return false;
+    try {
+      // eslint-disable-next-line global-require
+      const { isSideCarvedAvailable } = require('../lib/capability/resolve');
+      return isSideCarvedAvailable(intentState.capability, exercise);
+    } catch (_e) { return false; }
+  })();
+
   const constraintNoticeCopy = (() => {
     if (currentEntry?._capabilityTemp?.fromName) {
       return `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts`;
@@ -1412,6 +1423,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   useEffect(() => {
     if (!unilateralPrefsLoaded || !exercise?.id) return;
     if (exercise.laterality !== 'unilateral') return;
+    // Laterality verification (founder order 2026-08-21): never PROPOSE
+    // a both-sides flow for a movement that is only here because the
+    // user told Volyume one side cannot do it - "do the same reps on
+    // each side" would be asking for work they have just ruled out. The
+    // manual toggle in the overflow sheet stays, because an explicit
+    // choice is theirs to make; only the app's own suggestion is held.
+    // Nothing about prescription changes either way.
+    if (carvedForOneSide) return;
     if (unilateralAsked.has(exercise.id)) return;
     if (acknowledgedUnilateralRef.current.has(exercise.id)) return;
     if (supersetSheetOpenRef.current) return; // C5-P37-02: defer, do not stack
@@ -1433,7 +1452,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // supersetHeadsUp is in the list so a deferred walkthrough fires the moment
   // the superset sheet closes (C5-P37-02).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp]);
+  }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp, carvedForOneSide]);
 
   // First-use info tip: pulse the Info button until tapped. The pulse itself
   // is suppressed under Reduce Motion (the static badge still shows so the

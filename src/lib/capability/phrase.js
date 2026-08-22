@@ -52,16 +52,36 @@ export function sideBodyPart(axisId) {
   return SIDE_BODY_PART[axisId] ?? null;
 }
 
+// How a sided rule is SPOKEN in a sentence. Only the three axes whose
+// sided form is a clean noun phrase appear here: "Back to firm gripping
+// with your left hand?" reads like a person, whereas the two-limb axes
+// do not survive the "keep X out of your training" frame with a side
+// attached, so those keep the movement phrase in sentences and carry
+// the side on the settings row instead (sidedRuleLabel below).
+const SIDED_PHRASES = Object.freeze({
+  grip_bar: (side) => `firm gripping with your ${side} hand`,
+  weight_bearing_hands: (side) => `taking weight through your ${side} wrist`,
+  overhead_position: (side) => `overhead work with your ${side} shoulder`,
+});
+
+// The settings-row form, sentence-cased, for all five sided axes.
+const SIDED_ROW_LABELS = Object.freeze({
+  grip_bar: (side) => `Firm gripping with your ${side} hand`,
+  weight_bearing_hands: (side) => `Taking weight through your ${side} wrist`,
+  overhead_position: (side) => `Overhead work with your ${side} shoulder`,
+  bilateral_upper: (side) => `Using both arms together, ${side} arm`,
+  bilateral_lower: (side) => `Using both legs together, ${side} leg`,
+});
+
 /**
- * How a sided rule is spoken: 'left hand', 'right leg'. Null when the
- * rule carries no side - which is every legacy row and every rule the
- * user answered "both" to, and which means the rule applies whole.
- * Never reinterpreted as a side.
+ * The row label for a rule, naming the side in plain words. Null when
+ * the rule carries no side, in which case callers use the ordinary
+ * label unchanged.
  */
-export function sideLabel(rule) {
+export function sidedRuleLabel(rule) {
   if (!rule?.laterality) return null;
-  const part = sideBodyPart(rule.ruleValue);
-  return part ? `${rule.laterality} ${part}` : null;
+  const build = SIDED_ROW_LABELS[rule.ruleValue];
+  return build ? build(rule.laterality) : null;
 }
 
 /** Mid-sentence phrase for one demand axis. */
@@ -78,8 +98,8 @@ export function rulePhrase(rule, nameOf) {
   if (!rule || !rule.ruleValue) return null;
   const kind = rule.ruleKind;
   if (kind === CONSTRAINT_RULE_KIND.DEMAND) {
-    const side = sideLabel(rule);
-    return side ? `${demandPhrase(rule.ruleValue)} (${side})` : demandPhrase(rule.ruleValue);
+    const sided = rule.laterality ? SIDED_PHRASES[rule.ruleValue] : null;
+    return sided ? sided(rule.laterality) : demandPhrase(rule.ruleValue);
   }
   if (kind === CONSTRAINT_RULE_KIND.FAMILY) return familyLabel(rule.ruleValue);
   if (kind === CONSTRAINT_RULE_KIND.EXERCISE

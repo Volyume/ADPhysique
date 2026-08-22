@@ -1196,7 +1196,10 @@ describe('HIERARCHY: two instructional sheets never stack (C5-P37-02, D96)', () 
     // Each effect re-runs when the other sheet closes, so the deferred one
     // arrives at its next natural moment rather than being lost.
     expect(src).toMatch(/\}, \[currentSGI, pairedExerciseName, exercise\?\.name, unilateralSuggest\]\);/);
-    expect(src).toMatch(/unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp\]\);/);
+    // supersetHeadsUp must stay a dependency (that is what re-fires the
+    // deferred walkthrough); the array may carry others beside it, and
+    // does since the 2026-08-21 laterality guard joined it.
+    expect(src).toMatch(/unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp[^\]]*\]\);/);
     // Both one-time acknowledgement rules survive untouched.
     expect(src).toContain('acknowledgedSupersetsRef.current.add(currentSGI);');
     expect(src).toContain('acknowledgedUnilateralRef.current.add(exercise.id);');

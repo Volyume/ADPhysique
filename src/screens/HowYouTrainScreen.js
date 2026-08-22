@@ -48,7 +48,7 @@ import {
   CONSTRAINT_RULE_KIND, EPISODE_STATUS, LATERALITY,
 } from '../lib/capability/model';
 import {
-  subjectPhrase, draftSubjectPhrase, sideBodyPart, sideLabel,
+  subjectPhrase, draftSubjectPhrase, sideBodyPart, sidedRuleLabel,
 } from '../lib/capability/phrase';
 // The model owns which rules a side actually changes; this screen asks
 // the question only where the resolver would use the answer.
@@ -117,8 +117,7 @@ export default function HowYouTrainScreen() {
     if (row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE || row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW) {
       return library.find(e => e.id === row.ruleValue)?.name ?? 'An exercise';
     }
-    const side = sideLabel(row);
-    return side ? `${demandLabel(row.ruleValue)} (${side})` : demandLabel(row.ruleValue);
+    return sidedRuleLabel(row) ?? demandLabel(row.ruleValue);
   };
 
   // Natural coach-language order (2026-08-21): alerts and toasts name the
@@ -657,7 +656,8 @@ export default function HowYouTrainScreen() {
         <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>{ask.question}</Text>
           <Text style={[styles.hint, { color: t.colors.textSecondary }]}>
-            If it is one side, Volyume can still use movements that work one side at a time.
+            If it is one side, Volyume can still include movements you can do one side at a
+            time. It plans them as normal, and how you work them is up to you.
           </Text>
           <Choice label={ask.left} onPress={() => chooseSide(LATERALITY.LEFT)} t={t} />
           <Choice label={ask.right} onPress={() => chooseSide(LATERALITY.RIGHT)} t={t} />
@@ -704,9 +704,9 @@ export default function HowYouTrainScreen() {
     if (adding === 'readback') {
       const labels = [
         ...draft.axes.map((a) => {
-          const side = draft.side && isSideCarveable(CONSTRAINT_RULE_KIND.DEMAND, a)
-            ? sideLabel({ ruleValue: a, laterality: draft.side }) : null;
-          return side ? `${demandLabel(a).toLowerCase()} (${side})` : demandLabel(a).toLowerCase();
+          const sided = draft.side && isSideCarveable(CONSTRAINT_RULE_KIND.DEMAND, a)
+            ? sidedRuleLabel({ ruleValue: a, laterality: draft.side }) : null;
+          return (sided ?? demandLabel(a)).toLowerCase();
         }),
         ...(draft.families ?? []).map(f => familyLabel(f)),
         ...(draft.exercises ?? []).map(e => e.name),

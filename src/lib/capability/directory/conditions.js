@@ -28,10 +28,13 @@ import { PROFILE_KIND, CONDITION_CATEGORY, QUESTION_KIND } from './schema';
 const PRO_NOTE = 'Anything a clinician or specialist has told you comes first. If you have been told to keep a movement out, add it under How you train and say that a clinician asked for it. Volyume then works around it, and will not offer it back unless you change it yourself.';
 // The one-sided training facts, shared so each profile adds only its own
 // lead clause (founder order 2026-08-21). Says ONLY what ships: the
-// both-arms / both-legs answers plan one-sided work, and per-side logging
-// records what each side did. Volyume has no per-side rule and sets the
-// same target for both sides, so neither is claimed here.
-const SIDED = 'you can leave out movements that need both sides and train one side at a time. Volyume can also log an exercise one side at a time, recording what each side actually did.';
+// both-arms / both-legs answers plan one-sided work, and a one-sided
+// movement is planned as ordinary training. Corrected 2026-08-21 after
+// the end-to-end trace: per-side logging enters ONE rep count used for
+// both sides, so it does not record the sides differently and this line
+// must never claim it does. Volyume has no per-side rule and no per-side
+// target.
+const SIDED = 'you can leave out movements that need both sides and train one side at a time. Volyume plans those movements as ordinary training rather than as a reduced version.';
 const REVIEWED = '2026-08-21';
 
 const K = PROFILE_KIND.CONDITION;
