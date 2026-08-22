@@ -2342,7 +2342,7 @@ export default function HomeScreen({ navigation, route }) {
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
-                  <Text style={[styles.quickStartSub, live.quickStartSub]}>Log your sets as you go. You don't need a plan to start, and everything you log is saved, so next time you can see what you did and build on it.</Text>
+                  <Text style={[styles.quickStartSub, live.quickStartSub]}>Log your sets as you go. You don't need a plan to start, and next time Volyume will start you at the weights you log today.</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </PressableCard>

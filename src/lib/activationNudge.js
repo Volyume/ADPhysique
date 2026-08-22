@@ -108,12 +108,12 @@ export function activationNudgePush(stage, name = '') {
     case NUDGE_STAGE.STALLED_1:
       return {
         title: `One session down${name}`,
-        body: 'Your second session is in your plan, ready whenever you want it. A gap changes nothing, so just pick it up when you can.',
+        body: 'Your second session is in your plan, ready whenever you want it. Volyume starts you at the weights you logged last time, so a gap costs you nothing.',
       };
     case NUDGE_STAGE.STALLED_2:
       return {
         title: `Two sessions in${name}`,
-        body: 'Your third session is in your plan, ready when you are. Train it on whichever day suits you.',
+        body: 'Your third session is in your plan, ready when you are. It picks up from the weights you logged last time.',
       };
     default:
       return null;
@@ -134,7 +134,7 @@ export function activationBannerLine(stage) {
     case NUDGE_STAGE.STALLED_1:
       return {
         title: 'You\'ve made a start',
-        body: 'Your second session is in your plan, ready whenever you want it. A gap changes nothing, so just pick it up when you can.',
+        body: 'Your second session is in your plan, ready whenever you want it. Volyume starts you at the weights you logged last time, so a gap costs you nothing.',
       };
     case NUDGE_STAGE.STALLED_2:
       return {
