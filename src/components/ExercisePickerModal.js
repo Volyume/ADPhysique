@@ -25,7 +25,7 @@ import { loadExerciseIntentState, isEligible, intentFor, isFamilyBlocked, moveme
 // capability store (allowances) - the same door every capability write uses.
 import { capabilityBlockReason, demandConflicts, CAPABILITY_BLOCK } from '../lib/capability/resolve';
 import { demandLabel, CONSTRAINT_SOURCE } from '../lib/capability/model';
-import { rulePhrase } from '../lib/capability/phrase';
+import { rulePhrase, sideLabel } from '../lib/capability/phrase';
 import { familyLabel } from '../lib/exercise/movementFamily';
 // Red-team finding 1 (bundle): the capability-unavailable notice is shown
 // only to users who actually turned the feature on, so everyone else never
@@ -132,7 +132,14 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
     return `Volyume doesn't know yet whether this involves ${label}`;
   }
   const first = conflicts.find(c => !c.unknown);
-  if (first?.ruleKind === 'demand') return `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you've set aside`;
+  if (first?.ruleKind === 'demand') {
+    // A sided rule says which side it is about, so the reason is never
+    // vaguer than what the user actually told Volyume.
+    const side = sideLabel(first);
+    return side
+      ? `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you've set aside for your ${side}`
+      : `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you've set aside`;
+  }
   if (first?.ruleKind === 'family') return `Involves ${familyLabel(first.ruleValue)}, which you've set aside`;
   return 'You set this movement aside in How you train';
 }

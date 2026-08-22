@@ -24,6 +24,12 @@ Field totals as dumped from live source: fatigueNote 7, lateralityNote
 
 ## THE TRUTH DEFECT FOUND DURING THE AUDIT (blocking, resolved)
 
+> UPDATE 2026-08-21, after this pass: the missing affordance itself has
+> since been built (GC-D14 in DECISION-REGISTER.md). Users can now
+> declare a side where the resolver actually uses one. The rewritten
+> copy below stays as written - it describes what ships, and it never
+> promised a per-answer side picker.
+
 All ten `lateralityNote` strings promised a UI affordance that **does
 not exist**: "the side picker on each answer covers it" / "every answer
 takes a side". Verified against source: the How you train add flow's

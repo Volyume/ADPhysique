@@ -45,9 +45,14 @@ import {
 import { movementFamily, familyLabel } from '../lib/exercise/movementFamily';
 import {
   DEMAND_AXES, demandLabel, CONSTRAINT_ROLE, CONSTRAINT_SOURCE,
-  CONSTRAINT_RULE_KIND, EPISODE_STATUS,
+  CONSTRAINT_RULE_KIND, EPISODE_STATUS, LATERALITY,
 } from '../lib/capability/model';
-import { subjectPhrase, draftSubjectPhrase } from '../lib/capability/phrase';
+import {
+  subjectPhrase, draftSubjectPhrase, sideBodyPart, sideLabel,
+} from '../lib/capability/phrase';
+// The model owns which rules a side actually changes; this screen asks
+// the question only where the resolver would use the answer.
+import { isSideCarveable } from '../lib/capability/resolve';
 import {
   getAllExercises, uid } from '../lib/database';
 
@@ -75,8 +80,9 @@ export default function HowYouTrainScreen() {
 
   const [state, setState] = useState({ baseline: [], episodes: [], history: [], unavailable: false });
   const [consented, setConsented] = useState(false);
-  // Add-flow stages (CC-D27 widened): null | 'role' | 'kind' | 'axes' |
-  // 'family' | 'exercise' | 'dates' | 'consent' | 'readback'
+  // Add-flow stages (CC-D27 widened; 'side' added 2026-08-21): null |
+  // 'role' | 'kind' | 'axes' | 'family' | 'exercise' | 'side' | 'dates' |
+  // 'consent' | 'readback'
   const [adding, setAdding] = useState(null);
   const [draft, setDraft] = useState(null);
   // CC-D27: the family list is OFFERED only for families that actually
@@ -111,7 +117,8 @@ export default function HowYouTrainScreen() {
     if (row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE || row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW) {
       return library.find(e => e.id === row.ruleValue)?.name ?? 'An exercise';
     }
-    return demandLabel(row.ruleValue);
+    const side = sideLabel(row);
+    return side ? `${demandLabel(row.ruleValue)} (${side})` : demandLabel(row.ruleValue);
   };
 
   // Natural coach-language order (2026-08-21): alerts and toasts name the
@@ -124,7 +131,7 @@ export default function HowYouTrainScreen() {
     haptics.selection();
     setDraft({
       role: null, kind: null, axes: [], families: [], exercises: [],
-      clinician: false, startDays: 0, endDays: null,
+      clinician: false, startDays: 0, endDays: null, side: null,
     });
     setAdding('role');
     if (!library.length)
@@ -153,7 +160,7 @@ export default function HowYouTrainScreen() {
       axes: preselect.axes ?? [],
       families: preselect.families ?? [],
       exercises,
-      clinician: false, startDays: 0, endDays: null,
+      clinician: false, startDays: 0, endDays: null, side: null,
     });
     setAdding('role');
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,6 +175,43 @@ export default function HowYouTrainScreen() {
   };
 
   const stageForKind = (kind) => (kind === 'demand' ? 'axes' : kind === 'family' ? 'family' : 'exercise');
+
+  // The axes in this draft whose resolution a side would actually
+  // change. Empty means the side question is skipped entirely: asking
+  // for one on standing, floor access, spine load, impact or balance
+  // would be fake precision, since the resolver ignores it there.
+  const sidedAxes = (d) => (d?.axes ?? [])
+    .filter(a => isSideCarveable(CONSTRAINT_RULE_KIND.DEMAND, a));
+
+  // After the rule is chosen: ask the side when it matters, then dates
+  // for a temporary change, then the readback.
+  const afterRuleStage = (d) => {
+    if (sidedAxes(d).length) return 'side';
+    return d.role === CONSTRAINT_ROLE.EPISODE ? 'dates' : 'readback';
+  };
+  const afterSideStage = (d) => (d.role === CONSTRAINT_ROLE.EPISODE ? 'dates' : 'readback');
+
+  // Worded from what the chosen axes are actually about, so the question
+  // reads "Which hand?" rather than anything about sides in the
+  // abstract. Mixed body parts fall back to the plain side question.
+  const sideAsk = (d) => {
+    const parts = [...new Set(sidedAxes(d).map(a => sideBodyPart(a)).filter(Boolean))];
+    const part = parts.length === 1 ? parts[0] : null;
+    return {
+      question: part ? `Which ${part}?` : 'Which side?',
+      left: part ? `Left ${part}` : 'Left side',
+      right: part ? `Right ${part}` : 'Right side',
+      both: part ? `Both ${part}s` : 'Both sides',
+    };
+  };
+
+  const chooseSide = (side) => {
+    haptics.selection();
+    // "Both" stores no side: that is what a rule with no side has always
+    // meant, and it keeps every existing row's behaviour identical.
+    setDraft(d => ({ ...d, side }));
+    setAdding(afterSideStage(draft));
+  };
 
   const chooseKind = (kind) => {
     haptics.selection();
@@ -228,8 +272,16 @@ export default function HowYouTrainScreen() {
     const source = draft.clinician ? CONSTRAINT_SOURCE.CLINICIAN_REPORTED : CONSTRAINT_SOURCE.SELF;
     const base = { role: draft.role, source, startsAt, endsAt, episodeGroupId: groupId };
     // CC-D27: one batch across every chosen kind, same transaction law.
+    // A side is stored only where it changes resolution (the model's own
+    // rule). Family and exercise rules, and whole-body axes, keep the
+    // long-standing null: the rule applies whole, exactly as before.
     const rows = [
-      ...draft.axes.map((axis) => ({ ...base, ruleKind: CONSTRAINT_RULE_KIND.DEMAND, ruleValue: axis })),
+      ...draft.axes.map((axis) => ({
+        ...base,
+        ruleKind: CONSTRAINT_RULE_KIND.DEMAND,
+        ruleValue: axis,
+        laterality: isSideCarveable(CONSTRAINT_RULE_KIND.DEMAND, axis) ? (draft.side ?? null) : null,
+      })),
       ...(draft.families ?? []).map((fam) => ({ ...base, ruleKind: CONSTRAINT_RULE_KIND.FAMILY, ruleValue: fam })),
       ...(draft.exercises ?? []).map((ex) => ({
         ...base,
@@ -595,7 +647,21 @@ export default function HowYouTrainScreen() {
             sub="Only changes how Volyume words things. It never contacts anyone."
             onPress={() => setDraft(d => ({ ...d, clinician: !d.clinician }))} t={t} />
           <Choice label="Continue" disabled={!draft.axes.length}
-            onPress={() => setAdding(draft.role === CONSTRAINT_ROLE.EPISODE ? 'dates' : 'readback')} t={t} primary />
+            onPress={() => setAdding(afterRuleStage(draft))} t={t} primary />
+        </View>
+      );
+    }
+    if (adding === 'side') {
+      const ask = sideAsk(draft);
+      return (
+        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+          <Text style={[styles.q, { color: t.colors.textPrimary }]}>{ask.question}</Text>
+          <Text style={[styles.hint, { color: t.colors.textSecondary }]}>
+            If it is one side, Volyume can still use movements that work one side at a time.
+          </Text>
+          <Choice label={ask.left} onPress={() => chooseSide(LATERALITY.LEFT)} t={t} />
+          <Choice label={ask.right} onPress={() => chooseSide(LATERALITY.RIGHT)} t={t} />
+          <Choice label={ask.both} onPress={() => chooseSide(null)} t={t} />
         </View>
       );
     }
@@ -637,13 +703,19 @@ export default function HowYouTrainScreen() {
     }
     if (adding === 'readback') {
       const labels = [
-        ...draft.axes.map(a => demandLabel(a).toLowerCase()),
+        ...draft.axes.map((a) => {
+          const side = draft.side && isSideCarveable(CONSTRAINT_RULE_KIND.DEMAND, a)
+            ? sideLabel({ ruleValue: a, laterality: draft.side }) : null;
+          return side ? `${demandLabel(a).toLowerCase()} (${side})` : demandLabel(a).toLowerCase();
+        }),
         ...(draft.families ?? []).map(f => familyLabel(f)),
         ...(draft.exercises ?? []).map(e => e.name),
       ].join(', ');
       const isEpisode = draft.role === CONSTRAINT_ROLE.EPISODE;
       const isAllow = draft.kind === 'allow';
-      const backStage = draft.kind === 'demand' ? 'axes' : draft.kind === 'family' ? 'family' : 'exercise';
+      const backStage = sidedAxes(draft).length
+        ? 'side'
+        : draft.kind === 'demand' ? 'axes' : draft.kind === 'family' ? 'family' : 'exercise';
       return (
         <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>

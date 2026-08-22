@@ -68,6 +68,19 @@ function tri(v) {
 const SIDE_CARVEABLE = new Set(['grip_bar', 'overhead_position', 'bilateral_upper', 'bilateral_lower', 'weight_bearing_hands']);
 
 /**
+ * Does knowing the side change how this rule resolves? THE model truth
+ * for the add flow's conditional side question (founder order
+ * 2026-08-21): only a DEMAND rule on a body-side axis carves, and only
+ * against one-side-loadable movements. Whole-body axes (standing, floor
+ * access, spine load, impact, balance) and family/exercise rules resolve
+ * identically with or without a side, so the flow must not ask.
+ * Exported so no surface keeps its own list of "sided" rules.
+ */
+export function isSideCarveable(ruleKind, ruleValue) {
+  return ruleKind === CONSTRAINT_RULE_KIND.DEMAND && SIDE_CARVEABLE.has(ruleValue);
+}
+
+/**
  * Does this exercise CONFLICT with one demand-axis constraint?
  * Returns true (conflict), false (compatible) or null (UNKNOWN - the
  * axis's demand is not known for this exercise).

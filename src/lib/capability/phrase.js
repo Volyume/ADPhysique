@@ -34,6 +34,36 @@ const DEMAND_PHRASES = Object.freeze({
   weight_bearing_hands: 'taking weight through your hands',
 });
 
+// The body part each side-carveable axis is about, so a sided rule can
+// be named the way a person would ("left hand", never "laterality:
+// left"). Keys are exactly resolve.js's SIDE_CARVEABLE set: an axis
+// that cannot carve by side never carries one.
+const SIDE_BODY_PART = Object.freeze({
+  grip_bar: 'hand',
+  weight_bearing_hands: 'wrist',
+  overhead_position: 'shoulder',
+  bilateral_upper: 'arm',
+  bilateral_lower: 'leg',
+});
+
+/** 'hand' | 'wrist' | 'shoulder' | 'arm' | 'leg', or null when the axis
+ *  is not one a side applies to. */
+export function sideBodyPart(axisId) {
+  return SIDE_BODY_PART[axisId] ?? null;
+}
+
+/**
+ * How a sided rule is spoken: 'left hand', 'right leg'. Null when the
+ * rule carries no side - which is every legacy row and every rule the
+ * user answered "both" to, and which means the rule applies whole.
+ * Never reinterpreted as a side.
+ */
+export function sideLabel(rule) {
+  if (!rule?.laterality) return null;
+  const part = sideBodyPart(rule.ruleValue);
+  return part ? `${rule.laterality} ${part}` : null;
+}
+
 /** Mid-sentence phrase for one demand axis. */
 export function demandPhrase(axisId) {
   return DEMAND_PHRASES[axisId] ?? String(demandLabel(axisId)).toLowerCase();
@@ -47,7 +77,10 @@ export function demandPhrase(axisId) {
 export function rulePhrase(rule, nameOf) {
   if (!rule || !rule.ruleValue) return null;
   const kind = rule.ruleKind;
-  if (kind === CONSTRAINT_RULE_KIND.DEMAND) return demandPhrase(rule.ruleValue);
+  if (kind === CONSTRAINT_RULE_KIND.DEMAND) {
+    const side = sideLabel(rule);
+    return side ? `${demandPhrase(rule.ruleValue)} (${side})` : demandPhrase(rule.ruleValue);
+  }
   if (kind === CONSTRAINT_RULE_KIND.FAMILY) return familyLabel(rule.ruleValue);
   if (kind === CONSTRAINT_RULE_KIND.EXERCISE
     || kind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW) {

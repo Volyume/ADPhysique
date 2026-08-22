@@ -649,3 +649,59 @@ review is pending or required.
   = deterministic product behaviour).
   Consistency sweep completed over the live governance docs; banked
   founder orders and research files stay verbatim as history.
+
+---
+
+## GC-D14 - the laterality input gap (founder order 2026-08-21)
+
+BEFORE (the honest record, not rewritten): the capability model, the
+local SQLite schema, the cloud schema (migrate_145), the sync mapper in
+both directions and the resolver's SIDE_CARVEABLE path ALL understood
+left/right from CC26 onwards. The live creation interface did not. The
+add flow's draft carried role, kind, axes, families, exercises,
+clinician, startDays and endDays and no side, and `writeDraft` never
+put one on a row, so every rule a user created stored
+`laterality = null`. The only write of that column anywhere was the
+flare re-start copying a previous row's value forward. The carve rule
+was therefore unreachable in practice: architecture could express
+asymmetry, users could not declare it. Discovered while surfacing the
+disability-profile guidance, where ten profile strings promised a
+"side picker on each answer" that did not exist.
+
+AFTER: side-capable rules can be scoped by the user, and the same field
+the resolver already read is what gets written.
+
+- WHERE IT IS ASKED is model truth, not a UI list:
+  `isSideCarveable(ruleKind, ruleValue)` is exported from resolve.js
+  and returns true only for a DEMAND rule on the five body-side axes
+  (grip_bar, overhead_position, bilateral_upper, bilateral_lower,
+  weight_bearing_hands). Whole-body axes (standing, floor access,
+  spine load, impact, balance) and family/exercise rules resolve
+  identically with or without a side, so the flow does not ask -
+  asking there would be fake precision.
+- WHAT IS STORED: 'left' or 'right' on the carveable DEMAND rows only.
+  "Both" stores no side, because a rule with no side has always meant
+  "applies whole" in the resolver. That is not a reinterpretation of
+  NULL: it is the existing meaning, which is why every legacy row keeps
+  its exact behaviour and no migration was needed or written.
+- WHAT IT CHANGES: exactly what it changed before, i.e. the existing
+  carve - a sided rule is satisfied by a one-side-loadable movement.
+  Scoped honestly: the carve turns on a side being SPECIFIED, not on
+  which one, because Volyume does not know which side an exercise
+  loads. Left and right resolve identically; the specific side is the
+  user's own record and is shown back to them.
+- WHAT WAS NOT BUILT: no per-side rep targets, no per-side loads, no
+  weaker-side coaching, no symmetry or imbalance logic. Per-side
+  LOGGING is untouched and still records what each side did, with the
+  engine reading the lower side (the 2026-07-11 device ruling stands).
+- NO MIGRATION: local and cloud schemas already carry the column with
+  the same `check (laterality in ('left','right'))`. Nothing was run
+  against production; nothing needed to be.
+
+Wording law applied: the user is asked "Which hand?", "Which wrist?",
+"Which shoulder?", "Which arm?" or "Which leg?" from the axes they
+chose (a plain "Which side?" only when the chosen axes span different
+body parts), with options "Left hand / Right hand / Both hands". A
+sided rule then reads back as "Gripping a bar or handle firmly (left
+hand)". The word laterality never reaches a user, and a guard pins
+that.
