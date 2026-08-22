@@ -571,7 +571,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                     other placement is CoachOutputScreen's first real weekly
                     output. */}
                 <Text style={[styles.routineBody, live.routineBody]}>
-                  The more sessions you log, the better the coach knows what you can handle, so it can set your weights and your lighter weeks properly.
+                  The more sessions you log, the better the coach can judge how much training you need, and when to give you an easier week.
                 </Text>
                 {/* Wave A B3: the trial arc, stated once, calmly, so day 14
                     is never a surprise. Facts mirror the subscription FAQ. */}

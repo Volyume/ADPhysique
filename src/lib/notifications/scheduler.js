@@ -82,7 +82,7 @@ function morningCopies(name) {
   return [
     { title: `Good morning${name}`, body: 'Whenever you\'re ready, hop on the scales and log today\'s weight.' },
     { title: `Good morning${name}`, body: 'A quiet weigh-in to start the day. No rush, just whenever suits you.' },
-    { title: `Morning${name}`, body: 'When you get a moment, pop on the scales and log it. Volyume looks at these across the weeks to work out whether anything needs changing.' },
+    { title: `Morning${name}`, body: 'When you get a moment, pop on the scales and log your weight. Volyume looks at these across the weeks to work out whether anything needs changing.' },
     { title: `Rise and shine${name}`, body: 'Logging your weight today keeps your coaching on track. Whenever you\'re ready.' },
   ];
 }
@@ -219,7 +219,7 @@ function eveningCopies(name) {
     { title: `Evening${name}`, body: 'If you haven\'t caught today\'s weight yet, there\'s still time. No worries either way.' },
     { title: `Before the day\'s out${name}`, body: 'Still time to weigh in today if you want. Mornings are more consistent though, because food and drink through the day move the number about.' },
     { title: `Quick one${name}`, body: 'If you haven\'t weighed in today, there\'s still time whenever it suits you.' },
-    { title: `Evening${name}`, body: 'Weigh in tonight if you like, or leave it until the morning. Mornings are steadier, because your weight shifts through the day as you eat and drink.' },
+    { title: `Evening${name}`, body: 'Weigh in tonight if you like, or wait until tomorrow morning. Mornings are steadier, because your weight shifts through the day as you eat and drink.' },
   ];
 }
 

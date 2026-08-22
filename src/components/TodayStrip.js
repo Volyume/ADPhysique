@@ -232,7 +232,7 @@ export default function TodayStrip({
               // Campaign 27 Pillar A (D104): sentence-length copy never
               // carries a line clamp - it wraps, and the row grows.
               <Text style={[styles.logWhy, live.logWhy]}>
-                Before breakfast, after the loo, so each reading is comparable. Your weight moves about day to day, so it is the pattern over a few weeks that counts, not any one morning.
+                Before breakfast, after the bathroom, so each reading is comparable. Your weight moves about day to day, so it is the pattern over a few weeks that counts, not any one morning.
               </Text>
             )}
           </View>
