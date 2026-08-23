@@ -1153,6 +1153,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     .filter(Boolean)
     .join(', ');
 
+  // Founder ruling 2026-08-23, after "it's oddly saying I only had 1 PR
+  // when I had about 10". detectedPRs is bestPRPerExercise's output, so it
+  // has always been one entry per LIFT, not one per record: working up
+  // through three new bests on the same lift is one entry. Read as "1 new
+  // PR" that flatly contradicted the three celebrations the session had
+  // just given. The founder's call was to keep the list at one per lift
+  // and say what the number actually counts.
+  const prLine = detectedPRs.length === 1
+    ? `New best on ${prExerciseNames || '1 lift'}`
+    : `New bests on ${detectedPRs.length} lifts${prExerciseNames ? ` - ${prExerciseNames}` : ''}`;
+
   return (
     // R2-5 (remediation 2026-07-11, founder device walk build 2684): edges is
     // ['top'] only, NOT ['top', 'bottom']. This screen always renders INSIDE a
@@ -1417,15 +1428,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <RevealSection delay={1340}>
           <View style={[styles.prRow, live.prRow]}>
             <Ionicons name="trophy-outline" size={18} color={t.colors.warning} />
-            <Text style={[styles.prRowText, live.prRowText]}>
-              {detectedPRs.length} new PR{detectedPRs.length !== 1 ? 's' : ''}
-              {prExerciseNames ? ` - ${prExerciseNames}` : ''}
-            </Text>
-            {/* C5-P34-02 (D96): this is where a novice meets the
-                abbreviation for the first time (the in-session celebration
-                labels are plain English and stay that way). GLOSSARY.pr was
-                authored for exactly this and had one consumer, a screen only
-                reachable after a whole block has finished. Same tooltip
+            <Text style={[styles.prRowText, live.prRowText]}>{prLine}</Text>
+            {/* C5-P34-02 (D96): this is where a novice meets the term for
+                the first time (the in-session celebration labels are plain
+                English and stay that way). GLOSSARY.pr was authored for
+                exactly this and had one consumer, a screen only reachable
+                after a whole block has finished. Its own first words are
+                "a new best for you on an exercise", so it still explains
+                the line above it after the 2026-08-23 reword. Same tooltip
                 primitive and same string as BlockReflectionScreen; no new
                 copy and no PR-maths change. */}
             <InfoTooltip text={GLOSSARY.pr} size={13} />

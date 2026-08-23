@@ -604,9 +604,15 @@ function runBody(canvas, H, s, p, topY, footerH, layoutBody, forceCentre) {
 // the full card and the compact sticker so the two never disagree.
 function sessionHeroInfo(p, unit) {
   if (p.prCount > 0) {
+    // Founder ruling 2026-08-23: prCount is the workout summary's
+    // detectedPRs length, which is bestPRPerExercise's output - one entry
+    // per LIFT, not one per record. Labelling it "NEW PERSONAL RECORDS"
+    // undercounted a session where the athlete beat their best several
+    // times on the same lift. The number is kept and the label now says
+    // what it counts.
     return {
       value: String(p.prCount),
-      label: p.prCount === 1 ? 'NEW PERSONAL RECORD' : 'NEW PERSONAL RECORDS',
+      label: p.prCount === 1 ? 'LIFT WITH A NEW BEST' : 'LIFTS WITH A NEW BEST',
       color: PALETTE.gold,
     };
   }

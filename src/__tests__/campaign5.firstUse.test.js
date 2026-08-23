@@ -1219,10 +1219,17 @@ describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, 
     expect(src).toMatch(/Your coach explains what changed, what stayed the same, and why\./);
   });
 
-  test('PR is glossed on the surface a novice first meets the abbreviation (C5-P34-02)', () => {
+  test('the record line is glossed on the surface a novice first meets it (C5-P34-02)', () => {
     const summary = read('screens/WorkoutSummaryScreen.js');
     expect(summary).toContain("import { GLOSSARY } from '../lib/coachGlossary';");
-    expect(stripComments(summary)).toMatch(/new PR\{detectedPRs\.length !== 1[\s\S]{0,200}<InfoTooltip text=\{GLOSSARY\.pr\} size=\{13\} \/>/);
+    // Founder ruling 2026-08-23 reworded the line off the abbreviation:
+    // the number was always one per LIFT, so "N new PRs" undercounted a
+    // session with several new bests on the same lift. The gloss stays
+    // attached to whatever that line now says - its own opening words are
+    // "a new best for you on an exercise", so it still explains it.
+    expect(stripComments(summary)).toMatch(/\{prLine\}<\/Text>[\s\S]{0,120}<InfoTooltip text=\{GLOSSARY\.pr\} size=\{13\} \/>/);
+    expect(summary).toMatch(/New bests on \$\{detectedPRs\.length\} lifts/);
+    expect(stripComments(summary)).not.toMatch(/new PR\{/);
     // The in-session celebration labels stay plain English, unabbreviated.
     const celebration = read('components/PRCelebration.js');
     expect(celebration).toContain('First lift logged');
