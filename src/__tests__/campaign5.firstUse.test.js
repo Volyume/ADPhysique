@@ -519,25 +519,21 @@ describe('WORKOUT: the first session completes honestly with no history (C5-P13-
     // starting point" acknowledgement, and the first working set ever was
     // then given the full gold record for beating it.
     expect(AWS).toMatch(/const isWorkingSetRow = \(s\) =>/);
-    expect(AWS).toMatch(/const priorHistory = priorSets\.filter\(isWorkingSetRow\)/);
-    // FQ-7 (D96): PR detection additionally requires prior exposure - the
-    // first qualifying exposure is baseline, records start from the next
-    // comparable one.
-    expect(AWS).toMatch(/const prs = isWeightReps && !isWarmupSet && hadPriorExposure/);
-    expect(AWS).toMatch(/const hadPriorExposure = priorHistory\.length > 0/);
-    // The recorded Wave A A1 gate itself is untouched.
-    // FQ-7 (D96): the first-lift acknowledgement re-keys on exposure - the
-    // first WORKING set of a first exposure gets the calm starting-point
-    // toast; every later set of that exposure is silent baseline material.
-    expect(AWS).toMatch(/!hadPriorExposure && !priorUnknown && sessionHistory\.length === 0/);
+    // Founder ruling 2026-08-23: the comparison is everything on record -
+    // past sessions PLUS today's earlier working sets for this exercise.
+    // FQ-7's prior-exposure gate, which silenced every set after the
+    // opening one on a newly met exercise, is gone.
+    expect(AWS).toMatch(/const prHistory = \[\s*\n\s*\.\.\.priorSets\.filter\(isWorkingSetRow\),/);
+    expect(AWS).toMatch(/const prs = isWeightReps && !isWarmupSet && prHistory\.length > 0/);
+    expect(AWS).not.toMatch(/hadPriorExposure/);
+    // The recorded Wave A A1 gate itself is untouched: the one set that
+    // cannot be a record is the one with nothing on record to beat, and it
+    // gets the honest acknowledgement instead of a record claim.
+    expect(AWS).toMatch(/!priorUnknown && prHistory\.length === 0/);
     // And the live record line reads the same history the log does (D87
-    // contract). Founder ruling 2026-08-22 moved the log's comparison to
-    // PREVIOUS SESSIONS only, so this line moved with it: both sides now
-    // read allTimeSets (this workout excluded) filtered to working sets.
-    // Pinned as an agreement, not as a string: whatever the log passes to
-    // detectPR is what the line must pass too.
-    expect(AWS).toMatch(/historySets: allTimeSets\.filter\(isWorkingSetRow\)/);
-    expect(AWS).not.toMatch(/historySets: \[\.\.\.allTimeSets, \.\.\.loggedSets\]/);
+    // contract), so the flag can neither promise a record the log withholds
+    // nor stay dark on one the log gives.
+    expect(AWS).toMatch(/historySets: \[\.\.\.allTimeSets, \.\.\.loggedSets\]\.filter\(isWorkingSetRow\)/);
   });
 
   test('the summary states a week in progress instead of a finished-week verdict', () => {

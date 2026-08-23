@@ -37,13 +37,14 @@ describe('A1 contract 2: the celebration layer treats a first honestly', () => {
   const screen = fs.readFileSync(path.join(ROOT, 'screens', 'ActiveWorkoutScreen.js'), 'utf8');
   const celebration = fs.readFileSync(path.join(ROOT, 'components', 'PRCelebration.js'), 'utf8');
 
-  test('a first exposure routes to first_lift and skips the PR list', () => {
-    // FQ-7 (D96): the guard re-keyed from "detectPR returned something
-    // against empty history" to exposure itself - the first WORKING set of
-    // a first exposure gets the quiet acknowledgement, and no set of that
-    // exposure can join the PR list (detectPR is not even consulted until
-    // a prior exposure exists). Same law, honest key.
-    const gate = /!hadPriorExposure && !priorUnknown && sessionHistory\.length === 0/.exec(screen);
+  test('the first set on record routes to first_lift and skips the PR list', () => {
+    // Founder ruling 2026-08-23 retired FQ-7's prior-exposure gate, which
+    // had silenced every set after the opening one on a newly met
+    // exercise. The A1 law itself is unchanged and keys on the honest
+    // thing: a set with nothing on record to beat gets the quiet
+    // acknowledgement and never joins the PR list. From the next set
+    // onwards there IS a bar, so a record becomes possible.
+    const gate = /!priorUnknown && prHistory\.length === 0/.exec(screen);
     expect(gate).toBeTruthy();
     const branch = screen.slice(gate.index, screen.indexOf('} else if (prs.length > 0)', gate.index));
     expect(branch).toMatch(/type:\s*'first_lift'/);

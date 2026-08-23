@@ -356,11 +356,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // Founder device report 2026-08-22 (PRs "don't always show"): allTimeSets
   // is cleared to [] the instant the exercise changes and refilled two
   // awaited DB reads later. A set logged inside that window saw an EMPTY
-  // history, so hadPriorExposure was false and the record was silently
-  // skipped - and worse, the empty prHistory took the first-lift branch, so
-  // a veteran's working set was announced as "your starting point". An
-  // empty list and an unread list are not the same thing, and this ref is
-  // what tells them apart.
+  // history, so the record was silently skipped - and worse, the empty
+  // prHistory took the first-lift branch, so a veteran's working set was
+  // announced as "your starting point". An empty list and an unread list
+  // are not the same thing, and this ref is what tells them apart.
   const historyLoadedRef = useRef(false);
   const [loggedSets, setLoggedSets] = useState([]);
   // Edit/delete an already-logged set mid-session (Hevy parity). `editingSet`
@@ -2128,48 +2127,47 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           priorUnknown = true;
         }
       }
-      // Founder ruling 2026-08-22: a record is judged against your PREVIOUS
-      // SESSIONS, not against earlier sets today. Before this, set one of a
-      // PR day became the bar for the rest of the session, so every later
-      // set went quiet even when it beat the record the user actually knows
-      // they hold - which is what "the next PR didn't show" was. Set one is
-      // usually the strongest set, so on any PR day that silenced the rest
-      // of the exercise. Each set now stands against the old record on its
-      // own, and several sets beating it several times is the intended
-      // outcome, not noise to be deduplicated.
-      const priorHistory = priorSets.filter(isWorkingSetRow);
-      // Today's earlier working sets for this exercise. No longer part of
-      // the record comparison; still what tells a first exposure's opening
-      // set (the honest baseline) from its later ones (silent).
-      const sessionHistory = sessionSetsRef.current.filter(
-        s => s.exerciseId === exercise.id && isWorkingSetRow(s),
-      );
+      // Founder ruling 2026-08-23, correcting BOTH the 2026-08-22 ruling and
+      // FQ-7 before it: "Today's sets should be in comparison", and "if I PR
+      // again a second time beating the first PR, it does not pop up".
+      //
+      // The bar is the best set Volyume has on record for this exercise,
+      // today's earlier sets included, and it moves during the session. Beat
+      // it and it is a record; beat the new one later and that is a record
+      // too. Two rules had been standing between the user and that:
+      //
+      //  - FQ-7 required a set from a PREVIOUS session before anything could
+      //    be a record, so on an exercise met for the first time set one got
+      //    the honest starting-point line and every later set was silent,
+      //    however far it climbed. That is the reported session: 80x15,
+      //    80x15, then 100x15, and nothing for the 100.
+      //  - The 2026-08-22 ruling then took today's sets OUT of the
+      //    comparison, which was a misreading of the same report.
+      //
+      // Both are gone. The comparison is simply everything on record: past
+      // sessions plus today's earlier working sets for this exercise. The
+      // only set that cannot be a record is the one with nothing to compare
+      // to, which still gets the honest acknowledgement below rather than a
+      // record claim. detectPR's maths and the three record types are
+      // untouched.
+      const prHistory = [
+        ...priorSets.filter(isWorkingSetRow),
+        ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && isWorkingSetRow(s)),
+      ];
       sessionSetsRef.current = [...sessionSetsRef.current, setData];
-      // FQ-7 (D96, founder ruling 2026-08-10): the first qualifying exposure
-      // to an exercise establishes the BASELINE, per exercise; records begin
-      // from the next comparable exposure. Without this, set 2 beating set 1
-      // inside the very first session was celebrated as a full personal
-      // record - a record against a baseline minutes old. Prior exposure
-      // means completed WORKING sets from a previous session (allTimeSets
-      // excludes this workout by id, and a swapped-in exercise loads its own
-      // history, so substitution can never inherit an unrelated baseline).
-      // The rule holds for a veteran account meeting a brand-new exercise.
-      // detectPR's maths and the three record types are untouched.
-      const hadPriorExposure = priorHistory.length > 0;
       // PR detection runs ONLY for weight-based schemas. duration/distance
       // reuse the weight field for time/distance, so running the weight x reps
       // 1RM/heaviest detector over them would report meaningless "PRs".
       // A warm-up never runs it at all (C5-P15-01).
-      const prs = isWeightReps && !isWarmupSet && hadPriorExposure && !priorUnknown
-        ? detectPR(setData, priorHistory, exercise, units) : [];
-      if (isWeightReps && !isWarmupSet && !hadPriorExposure && !priorUnknown && sessionHistory.length === 0) {
-        // Wave A A1 (re-keyed under FQ-7): the first working set of a first
-        // exposure beats nothing, so "PERSONAL RECORD" would be a false
-        // claim in the very session that builds trust. Acknowledge it
-        // honestly and quietly instead (PRCelebration renders its calm
-        // first-lift toast), and it never joins the session's PR list.
-        // Later sets of this same first exposure are silent baseline
-        // material - records begin from the next comparable exposure.
+      const prs = isWeightReps && !isWarmupSet && prHistory.length > 0 && !priorUnknown
+        ? detectPR(setData, prHistory, exercise, units) : [];
+      if (isWeightReps && !isWarmupSet && !priorUnknown && prHistory.length === 0) {
+        // Wave A A1: the first working set on record beats nothing, so
+        // "PERSONAL RECORD" would be a false claim in the very session that
+        // builds trust. Acknowledge it honestly and quietly instead
+        // (PRCelebration renders its calm first-lift toast), and it never
+        // joins the session's PR list. From set two onwards there is a bar,
+        // so from set two onwards a record is possible.
         showPRCelebration({
           type: 'first_lift',
           weight: setData.weight,
@@ -2539,14 +2537,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // C5-P15-01 (D96): the same working-sets-only history as the
         // log-time detection, so an edited set can never be celebrated for
         // beating a warm-up either.
-        // Same bar as the log path (founder ruling 2026-08-22): previous
-        // sessions only, so an edited-up set is judged exactly as it would
-        // have been had it been logged that way first time.
-        const editPrHistory = allTimeSets.filter(isWorkingSetRow);
-        // FQ-7 (D96): the same per-exercise baseline rule as the log path -
-        // no record inside a first exposure, edited or not.
-        const editHadPriorExposure = editPrHistory.length > 0;
-        const editedPrs = editHadPriorExposure
+        // Founder ruling 2026-08-23: the same bar as the log path - past
+        // sessions PLUS today's earlier sets for this exercise - so an
+        // edited-up set is judged exactly as it would have been had it been
+        // logged that way first time. Its own pre-edit entry is excluded by
+        // id so it can never beat itself.
+        const editPrHistory = [
+          ...allTimeSets.filter(isWorkingSetRow),
+          ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && s.id !== editingSet.id && isWorkingSetRow(s)),
+        ];
+        const editedPrs = editPrHistory.length > 0
           ? detectPR({ weight, actualReps }, editPrHistory, exercise, units) : [];
         if (editedPrs.length > 0 && editPrHistory.length > 0) {
           showPRCelebration({ ...editedPrs[0], exerciseName: exercise.name });
@@ -3346,36 +3346,27 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const activeExerciseType = exercise?.exerciseType || 'weight_reps';
 
   // D87: the live record line under the steppers. Pure derivation from data
-  // already in memory -- allTimeSets, every past working set for this
-  // exercise, excluding this workout. That is the SAME list handleCompleteSet
-  // assembles as priorHistory before calling detectPR, and buildRecordLine
-  // calls that same detectPR, so the flag and the celebration can only ever
-  // agree. No query, no engine change.
+  // already in memory -- allTimeSets (every past set for this exercise,
+  // excluding this workout) plus loggedSets (this session's sets for it),
+  // which is the same history shape handleCompleteSet assembles as prHistory
+  // before calling detectPR. buildRecordLine calls that same detectPR, so the
+  // flag and the celebration can only ever agree. No query, no engine change.
   const recordLine = useMemo(() => buildRecordLine({
     weight: currentSet.weight,
     reps: currentSet.reps,
     // C5-P15-01 (D96): the D87 agreement contract requires this history to
-    // be the SAME shape handleCompleteSet assembles as priorHistory, so the
-    // line can never promise a record the log then withholds. Both exclude
-    // warm-ups.
-    //
-    // Founder ruling 2026-08-22 made the log judge a set against PREVIOUS
-    // SESSIONS only, so today's earlier sets left this line and dropped out
-    // of the comparison here too. Keeping them would have re-opened exactly
-    // the disagreement this contract exists to prevent, in both directions:
-    // set one of a personal-best day would have raised the bar for the rest
-    // of the session, hiding the gold flag on later sets the log then
-    // celebrated; and on a first exposure the line would have flagged a
-    // record against a set logged minutes earlier, which the log correctly
-    // withholds because there is no previous session to beat.
-    historySets: allTimeSets.filter(isWorkingSetRow),
+    // be the SAME shape handleCompleteSet assembles as prHistory, so the
+    // line can never promise a record the log then withholds, nor stay dark
+    // on a set the log celebrates. Both exclude warm-ups, and both include
+    // today's earlier sets (founder ruling 2026-08-23).
+    historySets: [...allTimeSets, ...loggedSets].filter(isWorkingSetRow),
     units,
     isWarmup: currentSet.setType === 'warmup',
     exerciseType: activeExerciseType,
     // D107-2: the assisted inversion must run on BOTH sides of the D87
     // agreement contract (this line and the on-log detectPR call).
     loadSemantics: exercise?.loadSemantics ?? 'total',
-  }), [currentSet.weight, currentSet.reps, currentSet.setType, allTimeSets, units, activeExerciseType, exercise?.loadSemantics]);
+  }), [currentSet.weight, currentSet.reps, currentSet.setType, allTimeSets, loggedSets, units, activeExerciseType, exercise?.loadSemantics]);
 
   const handleCurrentSetChange = useCallback((next) => {
     if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
