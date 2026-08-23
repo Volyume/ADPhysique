@@ -2128,10 +2128,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           priorUnknown = true;
         }
       }
-      const prHistory = [
-        ...priorSets.filter(isWorkingSetRow),
-        ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && isWorkingSetRow(s)),
-      ];
+      // Founder ruling 2026-08-22: a record is judged against your PREVIOUS
+      // SESSIONS, not against earlier sets today. Before this, set one of a
+      // PR day became the bar for the rest of the session, so every later
+      // set went quiet even when it beat the record the user actually knows
+      // they hold - which is what "the next PR didn't show" was. Set one is
+      // usually the strongest set, so on any PR day that silenced the rest
+      // of the exercise. Each set now stands against the old record on its
+      // own, and several sets beating it several times is the intended
+      // outcome, not noise to be deduplicated.
+      const priorHistory = priorSets.filter(isWorkingSetRow);
+      // Today's earlier working sets for this exercise. No longer part of
+      // the record comparison; still what tells a first exposure's opening
+      // set (the honest baseline) from its later ones (silent).
+      const sessionHistory = sessionSetsRef.current.filter(
+        s => s.exerciseId === exercise.id && isWorkingSetRow(s),
+      );
       sessionSetsRef.current = [...sessionSetsRef.current, setData];
       // FQ-7 (D96, founder ruling 2026-08-10): the first qualifying exposure
       // to an exercise establishes the BASELINE, per exercise; records begin
@@ -2143,14 +2155,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // history, so substitution can never inherit an unrelated baseline).
       // The rule holds for a veteran account meeting a brand-new exercise.
       // detectPR's maths and the three record types are untouched.
-      const hadPriorExposure = priorSets.some(isWorkingSetRow);
+      const hadPriorExposure = priorHistory.length > 0;
       // PR detection runs ONLY for weight-based schemas. duration/distance
       // reuse the weight field for time/distance, so running the weight x reps
       // 1RM/heaviest detector over them would report meaningless "PRs".
       // A warm-up never runs it at all (C5-P15-01).
       const prs = isWeightReps && !isWarmupSet && hadPriorExposure && !priorUnknown
-        ? detectPR(setData, prHistory, exercise, units) : [];
-      if (isWeightReps && !isWarmupSet && !hadPriorExposure && !priorUnknown && prHistory.length === 0) {
+        ? detectPR(setData, priorHistory, exercise, units) : [];
+      if (isWeightReps && !isWarmupSet && !hadPriorExposure && !priorUnknown && sessionHistory.length === 0) {
         // Wave A A1 (re-keyed under FQ-7): the first working set of a first
         // exposure beats nothing, so "PERSONAL RECORD" would be a false
         // claim in the very session that builds trust. Acknowledge it
@@ -2527,13 +2539,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // C5-P15-01 (D96): the same working-sets-only history as the
         // log-time detection, so an edited set can never be celebrated for
         // beating a warm-up either.
-        const editPrHistory = [
-          ...allTimeSets.filter(isWorkingSetRow),
-          ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && s.id !== editingSet.id && isWorkingSetRow(s)),
-        ];
+        // Same bar as the log path (founder ruling 2026-08-22): previous
+        // sessions only, so an edited-up set is judged exactly as it would
+        // have been had it been logged that way first time.
+        const editPrHistory = allTimeSets.filter(isWorkingSetRow);
         // FQ-7 (D96): the same per-exercise baseline rule as the log path -
         // no record inside a first exposure, edited or not.
-        const editHadPriorExposure = allTimeSets.some(isWorkingSetRow);
+        const editHadPriorExposure = editPrHistory.length > 0;
         const editedPrs = editHadPriorExposure
           ? detectPR({ weight, actualReps }, editPrHistory, exercise, units) : [];
         if (editedPrs.length > 0 && editPrHistory.length > 0) {

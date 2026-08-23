@@ -130,11 +130,16 @@ describe('L07-F2 contract 1: engine behaviour composes correctly on edit/delete'
 });
 
 describe('L07-F2 contract 2: the screen wires edit/delete back into PR state', () => {
-  test('handleSaveEditedSet re-runs detectPR with history excluding this set\'s own pre-edit entry', () => {
+  test('handleSaveEditedSet re-runs detectPR against previous sessions, so it can never match itself', () => {
     const window = ACTIVE_WORKOUT.match(/async function handleSaveEditedSet\(\)[\s\S]*?\n  \}/)?.[0] ?? '';
     expect(window).toContain('sessionSetsRef.current = sessionSetsRef.current.map(s => (');
     expect(window).toContain('s.id === editingSet.id ? { ...s, weight, actualReps } : s');
-    expect(window).toContain('s.exerciseId === exercise.id && s.id !== editingSet.id');
+    // Founder ruling 2026-08-22: the bar is previous sessions only. The old
+    // rule had to exclude this set's own pre-edit entry by id; now no set
+    // logged today is in the comparison at all, which is a stronger form of
+    // the same guarantee rather than a weaker one.
+    expect(window).toContain('const editPrHistory = allTimeSets.filter(isWorkingSetRow)');
+    expect(window).not.toContain('sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && s.id !== editingSet.id');
     // FQ-7 (D96): the edit path carries the same per-exercise baseline rule
     // as the log path - detectPR is consulted only after a prior exposure.
     expect(window).toContain('const editedPrs = editHadPriorExposure');
