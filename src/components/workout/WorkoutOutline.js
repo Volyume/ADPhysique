@@ -28,8 +28,8 @@
  * Row height sits on the loggedSetMinHeight exception precedent (36dp
  * visual rows in an adjacent list, hitSlop-compensated).
  */
-import { useEffect, useRef, useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, AccessibilityInfo } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { spacing, fontWeight } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
@@ -38,6 +38,11 @@ import { selection as hapticSelection } from '../../lib/haptics';
 
 const ROW_HEIGHT = workoutLoggerSize.loggedSetMinHeight; // 36, the documented compact-row exception
 const MAX_VISIBLE_ROWS = 6.5; // the half row is the "more below" cue
+// Founder device order 2026-08-22: the outline is a navigator you glance at,
+// so it puts itself away again rather than sitting open over the workspace
+// while you lift. Any touch inside the list restarts the countdown, so it
+// only closes when you have genuinely finished with it.
+const AUTO_COLLAPSE_MS = 5000;
 
 export default function WorkoutOutline({
   // [{ key, name, done, total, skipped, groupLabel }]
@@ -52,6 +57,47 @@ export default function WorkoutOutline({
   // jump (from here or anywhere else) always returns the strip.
   const [expanded, setExpanded] = useState(false);
   useEffect(() => { setExpanded(false); }, [currentIndex]);
+
+  // A timed close is a WCAG 2.2 "enough time" problem for anyone reading the
+  // list with a screen reader, so it is suppressed there and the outline
+  // stays open until it is dismissed deliberately. Same detection as
+  // Toast.js, which holds its undo action open for the same reason.
+  const [screenReaderEnabled, setScreenReaderEnabled] = useState(false);
+  useEffect(() => {
+    let mounted = true;
+    AccessibilityInfo?.isScreenReaderEnabled?.()
+      ?.then?.((on) => { if (mounted) setScreenReaderEnabled(!!on); })
+      ?.catch?.(() => {});
+    const subscription = AccessibilityInfo?.addEventListener?.('screenReaderChanged', (on) => {
+      setScreenReaderEnabled(!!on);
+    });
+    return () => { mounted = false; subscription?.remove?.(); };
+  }, []);
+
+  // The countdown itself. The ref is cleared on every path out, including
+  // unmount, so a pending close can never outlive the screen and re-enter a
+  // component that is gone.
+  const collapseTimer = useRef(null);
+  const cancelAutoCollapse = useCallback(() => {
+    if (collapseTimer.current) {
+      clearTimeout(collapseTimer.current);
+      collapseTimer.current = null;
+    }
+  }, []);
+  const restartAutoCollapse = useCallback(() => {
+    cancelAutoCollapse();
+    if (screenReaderEnabled) return;
+    collapseTimer.current = setTimeout(() => {
+      collapseTimer.current = null;
+      setExpanded(false);
+    }, AUTO_COLLAPSE_MS);
+  }, [cancelAutoCollapse, screenReaderEnabled]);
+
+  useEffect(() => {
+    if (!expanded) { cancelAutoCollapse(); return undefined; }
+    restartAutoCollapse();
+    return cancelAutoCollapse;
+  }, [expanded, restartAutoCollapse, cancelAutoCollapse]);
 
   // Keep the current exercise visible inside the capped outline, with one
   // row of context above it. Plain offset maths on fixed-height rows - a
@@ -118,6 +164,11 @@ export default function WorkoutOutline({
           ref={scrollRef}
           style={{ maxHeight: Math.round(MAX_VISIBLE_ROWS * ROW_HEIGHT) }}
           showsVerticalScrollIndicator={false}
+          // Reading the list IS activity: a touch or a settling fling puts
+          // the five seconds back, so it never closes under your thumb.
+          onTouchStart={restartAutoCollapse}
+          onScrollBeginDrag={restartAutoCollapse}
+          onMomentumScrollEnd={restartAutoCollapse}
         >
           {items.map((item, i) => {
             const isCurrent = i === currentIndex;
