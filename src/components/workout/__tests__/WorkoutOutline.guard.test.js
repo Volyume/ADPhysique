@@ -59,7 +59,13 @@ describe('quiet visual law: completed rows are lines, not celebration panels', (
     // still no card radius, still nothing per-row).
     const borders = SRC.match(/borderBottomWidth|borderWidth/g) || [];
     expect(borders.length).toBeLessThanOrEqual(2); // wrap bottom hairline + the upcoming dot outline
-    expect(SRC).toContain('wrap: { borderTopWidth: 1, borderBottomWidth: 1 }');
+    // Founder device order 2026-08-22: the top edge became the static amber
+    // separator (2dp, matching the progress line's weight); the bottom
+    // hairline and the no-row-chrome law are unchanged.
+    expect(SRC).toContain('wrap: { borderTopWidth: 2, borderBottomWidth: 1 }');
+    expect(SRC).toContain('borderTopColor: t.colors.primaryFill');
+    // The line that MOVES stays the one below the strip.
+    expect(SRC).toMatch(/progressFill[\s\S]{0,160}width: totalSets > 0/);
   });
 
   test('a complete row reads as a muted check + count, never a green bar', () => {

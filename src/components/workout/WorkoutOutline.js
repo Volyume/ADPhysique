@@ -117,7 +117,17 @@ export default function WorkoutOutline({
   const totalSets = items.reduce((a, it) => a + (it.total || 0), 0);
 
   return (
-    <View style={[styles.wrap, { backgroundColor: t.colors.surface, borderTopColor: t.colors.border, borderBottomColor: t.colors.border }]}>
+    <View style={[styles.wrap, {
+      backgroundColor: t.colors.surface,
+      // Founder device order 2026-08-22: the amber under the strip is the
+      // session-progress line and moves with the workout, so the bar had a
+      // live edge below and a grey hairline above. The top edge is now the
+      // same amber at the same weight, but STATIC and full width - it reads
+      // as the separation between the navigator and the timer above it,
+      // while the line below stays the one that means something.
+      borderTopColor: t.colors.primaryFill,
+      borderBottomColor: t.colors.border,
+    }]}>
       {/* Founder device orders 2026-08-17 + 2026-08-18: the collapsed strip
           must read as the workout's NAVIGATOR, not a faint caption. Second
           device verdict ("barely visible... all you've done is added an
@@ -237,7 +247,7 @@ const styles = StyleSheet.create({
   // founder device order 2026-08-18: borderSubtle was "barely visible" on a
   // real panel), but still NO card chrome, NO per-row borders, NO per-row
   // progress bars inside it: the rows are a list of lines.
-  wrap: { borderTopWidth: 1, borderBottomWidth: 1 },
+  wrap: { borderTopWidth: 2, borderBottomWidth: 1 },
   strip: {
     height: 44,
     flexDirection: 'row',
