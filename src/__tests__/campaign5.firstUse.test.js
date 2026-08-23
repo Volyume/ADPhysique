@@ -519,17 +519,17 @@ describe('WORKOUT: the first session completes honestly with no history (C5-P13-
     // starting point" acknowledgement, and the first working set ever was
     // then given the full gold record for beating it.
     expect(AWS).toMatch(/const isWorkingSetRow = \(s\) =>/);
-    expect(AWS).toMatch(/\.\.\.allTimeSets\.filter\(isWorkingSetRow\)/);
+    expect(AWS).toMatch(/\.\.\.priorSets\.filter\(isWorkingSetRow\)/);
     // FQ-7 (D96): PR detection additionally requires prior exposure - the
     // first qualifying exposure is baseline, records start from the next
     // comparable one.
     expect(AWS).toMatch(/const prs = isWeightReps && !isWarmupSet && hadPriorExposure/);
-    expect(AWS).toMatch(/const hadPriorExposure = allTimeSets\.some\(isWorkingSetRow\)/);
+    expect(AWS).toMatch(/const hadPriorExposure = priorSets\.some\(isWorkingSetRow\)/);
     // The recorded Wave A A1 gate itself is untouched.
     // FQ-7 (D96): the first-lift acknowledgement re-keys on exposure - the
     // first WORKING set of a first exposure gets the calm starting-point
     // toast; every later set of that exposure is silent baseline material.
-    expect(AWS).toMatch(/!hadPriorExposure && prHistory\.length === 0/);
+    expect(AWS).toMatch(/!hadPriorExposure && !priorUnknown && prHistory\.length === 0/);
     // And the live record line reads the same history shape (D87 contract).
     expect(AWS).toMatch(/historySets: \[\.\.\.allTimeSets, \.\.\.loggedSets\]\.filter\(isWorkingSetRow\)/);
   });

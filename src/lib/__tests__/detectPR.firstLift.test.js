@@ -43,7 +43,7 @@ describe('A1 contract 2: the celebration layer treats a first honestly', () => {
     // a first exposure gets the quiet acknowledgement, and no set of that
     // exposure can join the PR list (detectPR is not even consulted until
     // a prior exposure exists). Same law, honest key.
-    const gate = /!hadPriorExposure && prHistory\.length === 0/.exec(screen);
+    const gate = /!hadPriorExposure && !priorUnknown && prHistory\.length === 0/.exec(screen);
     expect(gate).toBeTruthy();
     const branch = screen.slice(gate.index, screen.indexOf('} else if (prs.length > 0)', gate.index));
     expect(branch).toMatch(/type:\s*'first_lift'/);

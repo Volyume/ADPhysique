@@ -353,6 +353,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const seededEntryRef = useRef({ weight: DEFAULT_SET.weight, reps: DEFAULT_SET.reps });
   const [prevSets, setPrevSets] = useState([]);
   const [allTimeSets, setAllTimeSets] = useState([]);
+  // Founder device report 2026-08-22 (PRs "don't always show"): allTimeSets
+  // is cleared to [] the instant the exercise changes and refilled two
+  // awaited DB reads later. A set logged inside that window saw an EMPTY
+  // history, so hadPriorExposure was false and the record was silently
+  // skipped - and worse, the empty prHistory took the first-lift branch, so
+  // a veteran's working set was announced as "your starting point". An
+  // empty list and an unread list are not the same thing, and this ref is
+  // what tells them apart.
+  const historyLoadedRef = useRef(false);
   const [loggedSets, setLoggedSets] = useState([]);
   // Edit/delete an already-logged set mid-session (Hevy parity). `editingSet`
   // is the logged-set object being edited (null when the sheet is closed);
@@ -1642,6 +1651,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     setLoggedSets([]);
     setPrevSets([]);
     setAllTimeSets([]);
+    historyLoadedRef.current = false;
     setCurrentSet({ ...DEFAULT_SET });
     seededEntryRef.current = { weight: DEFAULT_SET.weight, reps: DEFAULT_SET.reps };
     setGhostSet(null);
@@ -1681,6 +1691,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const prev = lastN[0] || [];
       setPrevSets(prev);
       setAllTimeSets(allTime);
+      historyLoadedRef.current = true;
 
       // The packet's raw history: up to 3 comparable sessions, each with its
       // own workout row fetched once for its difficulty rating - mirrors
@@ -2102,8 +2113,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // attempt (buildRecordLine already returns null for one). detectPR's
       // maths and Campaign 2's PR definition are untouched: this changes
       // only which sets are eligible to be, or to be beaten by, a record.
+      // If the exercise's history has not landed yet, read it now rather
+      // than judging the set against an empty list. priorUnknown stays true
+      // only when that read also fails, and then the set is left alone: no
+      // record claimed, and no first-lift claim either, because both would
+      // be assertions we cannot support.
+      let priorSets = allTimeSets;
+      let priorUnknown = false;
+      if (!historyLoadedRef.current) {
+        try {
+          priorSets = await getAllCompletedSetsForExercise(exercise.id, activeWorkout.id);
+        } catch (_e) {
+          priorSets = [];
+          priorUnknown = true;
+        }
+      }
       const prHistory = [
-        ...allTimeSets.filter(isWorkingSetRow),
+        ...priorSets.filter(isWorkingSetRow),
         ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && isWorkingSetRow(s)),
       ];
       sessionSetsRef.current = [...sessionSetsRef.current, setData];
@@ -2117,14 +2143,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // history, so substitution can never inherit an unrelated baseline).
       // The rule holds for a veteran account meeting a brand-new exercise.
       // detectPR's maths and the three record types are untouched.
-      const hadPriorExposure = allTimeSets.some(isWorkingSetRow);
+      const hadPriorExposure = priorSets.some(isWorkingSetRow);
       // PR detection runs ONLY for weight-based schemas. duration/distance
       // reuse the weight field for time/distance, so running the weight x reps
       // 1RM/heaviest detector over them would report meaningless "PRs".
       // A warm-up never runs it at all (C5-P15-01).
-      const prs = isWeightReps && !isWarmupSet && hadPriorExposure
+      const prs = isWeightReps && !isWarmupSet && hadPriorExposure && !priorUnknown
         ? detectPR(setData, prHistory, exercise, units) : [];
-      if (isWeightReps && !isWarmupSet && !hadPriorExposure && prHistory.length === 0) {
+      if (isWeightReps && !isWarmupSet && !hadPriorExposure && !priorUnknown && prHistory.length === 0) {
         // Wave A A1 (re-keyed under FQ-7): the first working set of a first
         // exposure beats nothing, so "PERSONAL RECORD" would be a false
         // claim in the very session that builds trust. Acknowledge it
