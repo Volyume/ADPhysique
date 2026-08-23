@@ -133,6 +133,9 @@ function _persistActiveWorkout(state) {
       // restore rehydrates them WITHOUT recomputing — which would otherwise
       // re-log duplicate adaptation_events.
       sessionAdjustments: state.sessionAdjustments,
+      // The session's records, so a process kill mid-workout cannot cost the
+      // athlete the PRs they were already congratulated for.
+      sessionPRs: Array.isArray(state.sessionPRs) ? state.sessionPRs : [],
       // COMP-020: persist the applied watch event ids so replay after a crash /
       // background-relaunch stays idempotent (never double-logs a set).
       appliedRemoteEventIds: Array.isArray(state.appliedRemoteEventIds)
@@ -1263,6 +1266,27 @@ const useAppStore = create((set, get) => ({
   currentExerciseIndex: 0,
   workoutStartTime: null,
   lastActivityAt: null,
+  // The records set THIS session, one per exercise (bestPRPerExercise).
+  //
+  // Founder device report 2026-08-23: "it's oddly saying I only had 1 PR
+  // when I had about 10". This list used to be useState on
+  // ActiveWorkoutScreen - a screen the app is built to leave and come back
+  // to (ActiveSessionMiniBar navigates straight back into it) and which is
+  // rebuilt from scratch after a process kill. Everything else about the
+  // session survives that: the workout, the logged sets, the elapsed time,
+  // the adjustments. The records did not, so leaving the logger once
+  // emptied the list and the summary reported only what came after.
+  // It belongs with the rest of the session, and is persisted on WK-1
+  // alongside it.
+  sessionPRs: [],
+  // Accepts a value or an updater, so the screen reads exactly as the
+  // useState it replaces.
+  setSessionPRs: (next) => {
+    set((state) => ({
+      sessionPRs: typeof next === 'function' ? next(state.sessionPRs || []) : (next || []),
+    }));
+    _persistActiveWorkout(get());
+  },
   // COMP-020: ids of watch set-events already applied this session, so replay
   // (a reconnect, or a background-relaunch) is idempotent. Persisted on WK-1.
   appliedRemoteEventIds: [],
@@ -1534,6 +1558,7 @@ const useAppStore = create((set, get) => ({
       // COMP-015: a fresh session starts with no adjustments; HomeScreen fills
       // them in once the (async, Pro-only) compute resolves.
       sessionAdjustments: [],
+      sessionPRs: [],
     });
     _persistActiveWorkout(get());
     // C18 re-entry amendment: fire-and-forget match against any pending
@@ -1591,6 +1616,7 @@ const useAppStore = create((set, get) => ({
         // COMP-015: rehydrate the already-computed adjustments; do NOT recompute
         // on restore (that would re-log duplicate adaptation_events).
         sessionAdjustments: Array.isArray(snap.sessionAdjustments) ? snap.sessionAdjustments : [],
+        sessionPRs: Array.isArray(snap.sessionPRs) ? snap.sessionPRs : [],
         appliedRemoteEventIds: Array.isArray(snap.appliedRemoteEventIds) ? snap.appliedRemoteEventIds : [],
         // A2: resume a rest that is still in the future; an elapsed one stays
         // stopped (its OS alert already fired — scheduled notifications
@@ -1650,6 +1676,7 @@ const useAppStore = create((set, get) => ({
       restTimerEndsAt: null,
       lastActivityAt: null,
       sessionAdjustments: [], // COMP-015
+      sessionPRs: [],
     });
     // A2: a session ending mid-rest must retire its end-of-rest alert.
     try {

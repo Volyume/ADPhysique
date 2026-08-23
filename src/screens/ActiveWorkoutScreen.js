@@ -381,7 +381,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // tracked timeout the same way logFlash above is.
   const [groupFocusMessage, setGroupFocusMessage] = useState(null);
   const groupFocusTimeoutRef = useRef(null);
-  const [detectedPRs, setDetectedPRs] = useState([]);
+  // Founder device report 2026-08-23 ("it's oddly saying I only had 1 PR
+  // when I had about 10"): the session's records live in the store with the
+  // rest of the session, not in this screen's state. The logger is built to
+  // be left and returned to (ActiveSessionMiniBar navigates back into it)
+  // and is rebuilt from scratch after a process kill, so screen state meant
+  // the whole list was emptied the first time the user stepped out of it
+  // and the summary counted only what came after.
+  const detectedPRs = useAppStore(s => s.sessionPRs);
+  const setDetectedPRs = useAppStore(s => s.setSessionPRs);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showExercisePicker, setShowExercisePicker] = useState(false);
   // CL-6.1 (founder decision: prepare-not-commit). Past the target, "Log
@@ -2150,9 +2158,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // to, which still gets the honest acknowledgement below rather than a
       // record claim. detectPR's maths and the three record types are
       // untouched.
+      // Today's earlier sets come from loggedSets, which loadHistory
+      // rehydrates from the store (workoutExercises[i].sets) on every mount.
+      // sessionSetsRef is a plain ref and starts empty again after the user
+      // steps out of the logger and back in, which would silently drop
+      // today's sets out of the comparison - the exact thing the ruling
+      // above says must never happen.
       const prHistory = [
         ...priorSets.filter(isWorkingSetRow),
-        ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && isWorkingSetRow(s)),
+        ...loggedSets.filter(isWorkingSetRow),
       ];
       sessionSetsRef.current = [...sessionSetsRef.current, setData];
       // PR detection runs ONLY for weight-based schemas. duration/distance
@@ -2544,7 +2558,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // id so it can never beat itself.
         const editPrHistory = [
           ...allTimeSets.filter(isWorkingSetRow),
-          ...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && s.id !== editingSet.id && isWorkingSetRow(s)),
+          ...loggedSets.filter(s => s.id !== editingSet.id && isWorkingSetRow(s)),
         ];
         const editedPrs = editPrHistory.length > 0
           ? detectPR({ weight, actualReps }, editPrHistory, exercise, units) : [];
@@ -3090,6 +3104,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const finishedAdjustments = (useAppStore.getState().sessionAdjustments || [])
         .filter(a => a.setDelta !== 0 && !a.reverted)
         .map(a => ({ muscle: a.muscle, setDelta: a.setDelta }));
+      // The session's records, captured BEFORE endWorkout clears the slice -
+      // the same shape of guard finishedAdjustments above already needs.
+      const finishedPRs = detectedPRs;
       endWorkout();
       // D2: the whole-workout completion beat (the vocabulary event
       // existed but was never called anywhere).
@@ -3108,7 +3125,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         workingSetCount,
         tonnage,
         exerciseNames,
-        detectedPRs,
+        detectedPRs: finishedPRs,
         exerciseData: snapshotExercises.map(e => ({
           exerciseId: e.exercise?.id,
           name: e.exercise?.name,

@@ -101,7 +101,11 @@ describe('the screen must not treat an unread history as an empty one', () => {
     // history, not the possibly-empty state - and that history is past
     // sessions PLUS today's earlier working sets for this exercise
     // (founder ruling 2026-08-23).
-    expect(SRC).toMatch(/const prHistory = \[\s*\n\s*\.\.\.priorSets\.filter\(isWorkingSetRow\),\s*\n\s*\.\.\.sessionSetsRef\.current\.filter\(s => s\.exerciseId === exercise\.id && isWorkingSetRow\(s\)\),/);
+    expect(SRC).toMatch(/const prHistory = \[\s*\n\s*\.\.\.priorSets\.filter\(isWorkingSetRow\),\s*\n\s*\.\.\.loggedSets\.filter\(isWorkingSetRow\),/);
+    // Today's sets come from loggedSets, which is rehydrated from the store
+    // on every mount, NOT from a ref that starts empty again when the user
+    // steps out of the logger and back in.
+    expect(/const prHistory = \[[^\]]*\]/.exec(SRC)?.[0] ?? '').not.toMatch(/sessionSetsRef/);
     expect(SRC).toMatch(/detectPR\(setData, prHistory, exercise, units\)/);
     // The first-exposure gate that silenced every set after the opening
     // one on a new exercise is gone, and must not come back.

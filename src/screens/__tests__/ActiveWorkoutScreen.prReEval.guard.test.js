@@ -139,7 +139,7 @@ describe('L07-F2 contract 2: the screen wires edit/delete back into PR state', (
     // This set's own pre-edit entry is excluded by id so it cannot beat
     // itself.
     expect(window).toContain('...allTimeSets.filter(isWorkingSetRow),');
-    expect(window).toContain('...sessionSetsRef.current.filter(s => s.exerciseId === exercise.id && s.id !== editingSet.id && isWorkingSetRow(s)),');
+    expect(window).toContain('...loggedSets.filter(s => s.id !== editingSet.id && isWorkingSetRow(s)),');
     // The prior-exposure gate is gone here too: a set with a bar to beat
     // can be a record, whether that bar was set last week or an hour ago.
     expect(window).not.toContain('editHadPriorExposure');
