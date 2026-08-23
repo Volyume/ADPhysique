@@ -1521,9 +1521,24 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                 // adapted muscle but claimed the plural for all of them -
                 // the sentence is now scoped to "muscles with enough
                 // logged data", true whatever the mix.
-                (landmarkResolution && Object.values(landmarkResolution.source ?? {}).includes('adapted')
-                  ? 'These ranges start from research values and, for muscles with enough logged data, have adjusted to your own response. You can also set them by hand with Edit volume targets on the Volume screen, your edits always win.'
-                  : 'These ranges are research-based starting points. With enough logged sessions they adjust to your response, and you can set them by hand with Edit volume targets on the Volume screen.')
+                // Founder ruling 2026-08-23: the bands can now come from
+                // the athlete's own plan or their profile, so "research
+                // starting points" is false for most readers. Each source
+                // gets its own true sentence, checked in the order that
+                // describes the strongest thing behind the ranges.
+                (() => {
+                  const sources = Object.values(landmarkResolution?.source ?? {});
+                  if (sources.includes('adapted')) {
+                    return 'These ranges start from your plan and your profile and, for muscles with enough logged data, have adjusted to your own response. You can also set them by hand with Edit volume targets on the Volume screen, your edits always win.';
+                  }
+                  if (sources.includes('plan')) {
+                    return 'These ranges come from what your plan programs each week, inside the range your experience, recovery, phase and age support. You can also set them by hand with Edit volume targets on the Volume screen, your edits always win.';
+                  }
+                  if (sources.includes('profile')) {
+                    return 'These ranges are matched to your training experience, recovery, phase and age. Once a plan programs a muscle they follow what it aims at, and you can set them by hand with Edit volume targets on the Volume screen.';
+                  }
+                  return 'These ranges are research-based starting points. With enough logged sessions they adjust to your response, and you can set them by hand with Edit volume targets on the Volume screen.';
+                })()
               } />
             </View>
             {/* C5-P16-01 (D96): the week-in-progress statement, so the

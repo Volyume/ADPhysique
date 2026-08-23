@@ -55,11 +55,18 @@ export function getVolumeWhy(muscle, sets, status, table = null, source = null) 
   // muscle whose numbers deliberately never move. Each source now gets
   // its own true sentence; unknown source keeps the research wording
   // (the conservative claim, true for every band that has not adapted).
+  // Founder ruling 2026-08-23 added the plan and profile bands, so two
+  // more sources exist and each needs its own true sentence: the closing
+  // clause must never describe a band the reader is not looking at.
   const closing = source === 'adapted'
     ? ' Targets adjust over time as your body responds to training.'
     : source === 'manual'
       ? ' These are your own volume targets, exactly as you set them.'
-      : ' These targets are research-based starting points.';
+      : source === 'plan'
+        ? ' This target is what your plan programs for this muscle each week.'
+        : source === 'profile'
+          ? ' These targets are matched to your training experience, recovery, phase and age.'
+          : ' These targets are research-based starting points.';
   if (status === 'optimal') {
     return `${name}'s productive range sits between ${mev} and ${mrv} sets per week, and you landed inside it. Next week, look for an extra rep on at least one exercise rather than piling on more sets.${closing}`;
   }

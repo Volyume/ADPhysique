@@ -555,9 +555,9 @@ export default function VolumeHeatmapScreen() {
             'Each bar shows weekly sets for a muscle group.\n\n' +
             'The two tick marks on each bar are:\n' +
             '  First tick: the least amount needed to maintain or grow\n' +
-            '  Second tick: the sweet spot for growth\n' +
+            '  Second tick: what your plan aims at, or the sweet spot for growth if your plan does not train that muscle\n' +
             '  End of bar: beyond this, recovery suffers\n\n' +
-            'Aim to stay between the two ticks most weeks. You can customise these targets using the "Edit volume targets" button below.'
+            'The caption under each muscle name says where its numbers come from. Aim to stay between the two ticks most weeks. You can customise these targets using the "Edit volume targets" button below.'
           } />
         </Card>
 
@@ -608,11 +608,20 @@ export default function VolumeHeatmapScreen() {
             // training, or the research starting point. No percentages,
             // no engine terms, no capacity claims; the research caption
             // makes no learning promise (free-safe, RD6-10).
+            // Founder ruling 2026-08-23 added the plan layer, so two more
+            // honest answers exist: the band came from what this athlete's
+            // plan programs for that muscle, or from the personalised
+            // table their plan was generated from. Same restrained
+            // vocabulary, no percentages, no engine terms.
             const provenance = resolvedSource?.[muscle] === 'manual'
               ? 'Your own targets'
               : resolvedSource?.[muscle] === 'adapted'
                 ? 'Adjusted from your logged training'
-                : 'Research starting point';
+                : resolvedSource?.[muscle] === 'plan'
+                  ? 'From your plan'
+                  : resolvedSource?.[muscle] === 'profile'
+                    ? 'Matched to your profile'
+                    : 'Research starting point';
             const rowA11yLabel = `${MUSCLE_DISPLAY_NAMES[muscle]}: ${sets} of ${mrv} weekly sets, ${statusLabel}, ${provenance}`
               + (lastTrainedText ? `, ${lastTrainedText}` : '');
 
