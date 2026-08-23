@@ -530,8 +530,14 @@ describe('WORKOUT: the first session completes honestly with no history (C5-P13-
     // first WORKING set of a first exposure gets the calm starting-point
     // toast; every later set of that exposure is silent baseline material.
     expect(AWS).toMatch(/!hadPriorExposure && !priorUnknown && sessionHistory\.length === 0/);
-    // And the live record line reads the same history shape (D87 contract).
-    expect(AWS).toMatch(/historySets: \[\.\.\.allTimeSets, \.\.\.loggedSets\]\.filter\(isWorkingSetRow\)/);
+    // And the live record line reads the same history the log does (D87
+    // contract). Founder ruling 2026-08-22 moved the log's comparison to
+    // PREVIOUS SESSIONS only, so this line moved with it: both sides now
+    // read allTimeSets (this workout excluded) filtered to working sets.
+    // Pinned as an agreement, not as a string: whatever the log passes to
+    // detectPR is what the line must pass too.
+    expect(AWS).toMatch(/historySets: allTimeSets\.filter\(isWorkingSetRow\)/);
+    expect(AWS).not.toMatch(/historySets: \[\.\.\.allTimeSets, \.\.\.loggedSets\]/);
   });
 
   test('the summary states a week in progress instead of a finished-week verdict', () => {

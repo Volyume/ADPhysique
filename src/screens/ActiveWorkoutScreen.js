@@ -3346,26 +3346,36 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const activeExerciseType = exercise?.exerciseType || 'weight_reps';
 
   // D87: the live record line under the steppers. Pure derivation from data
-  // already in memory -- allTimeSets (every past set for this exercise,
-  // excluding this workout) plus loggedSets (this session's sets for it),
-  // which is the same history shape handleCompleteSet assembles as prHistory
-  // before calling detectPR. buildRecordLine calls that same detectPR, so the
-  // flag and the celebration can only ever agree. No query, no engine change.
+  // already in memory -- allTimeSets, every past working set for this
+  // exercise, excluding this workout. That is the SAME list handleCompleteSet
+  // assembles as priorHistory before calling detectPR, and buildRecordLine
+  // calls that same detectPR, so the flag and the celebration can only ever
+  // agree. No query, no engine change.
   const recordLine = useMemo(() => buildRecordLine({
     weight: currentSet.weight,
     reps: currentSet.reps,
     // C5-P15-01 (D96): the D87 agreement contract requires this history to
-    // be the SAME shape handleCompleteSet assembles as prHistory, so the
-    // line can never promise a record the log then withholds. Both now
-    // exclude warm-ups.
-    historySets: [...allTimeSets, ...loggedSets].filter(isWorkingSetRow),
+    // be the SAME shape handleCompleteSet assembles as priorHistory, so the
+    // line can never promise a record the log then withholds. Both exclude
+    // warm-ups.
+    //
+    // Founder ruling 2026-08-22 made the log judge a set against PREVIOUS
+    // SESSIONS only, so today's earlier sets left this line and dropped out
+    // of the comparison here too. Keeping them would have re-opened exactly
+    // the disagreement this contract exists to prevent, in both directions:
+    // set one of a personal-best day would have raised the bar for the rest
+    // of the session, hiding the gold flag on later sets the log then
+    // celebrated; and on a first exposure the line would have flagged a
+    // record against a set logged minutes earlier, which the log correctly
+    // withholds because there is no previous session to beat.
+    historySets: allTimeSets.filter(isWorkingSetRow),
     units,
     isWarmup: currentSet.setType === 'warmup',
     exerciseType: activeExerciseType,
     // D107-2: the assisted inversion must run on BOTH sides of the D87
     // agreement contract (this line and the on-log detectPR call).
     loadSemantics: exercise?.loadSemantics ?? 'total',
-  }), [currentSet.weight, currentSet.reps, currentSet.setType, allTimeSets, loggedSets, units, activeExerciseType, exercise?.loadSemantics]);
+  }), [currentSet.weight, currentSet.reps, currentSet.setType, allTimeSets, units, activeExerciseType, exercise?.loadSemantics]);
 
   const handleCurrentSetChange = useCallback((next) => {
     if (!next.isGhost && currentSet.isGhost) setGhostSet(null);
