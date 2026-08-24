@@ -455,6 +455,15 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
       {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
       <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
+      {/* ActiveWorkout's "Swap and note a temporary change" and the Home-side
+          FreeStarter both navigate here. ActiveWorkout wraps its call in
+          try/catch, which never caught anything: an unregistered route is
+          dropped silently rather than thrown, so the tap simply did nothing.
+          All three are free by law (CAP-19) and unguarded in the main stack.
+          Swept by navigation/__tests__/capabilityRoutesReachable.test.js. */}
+      <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -488,6 +497,10 @@ function PlansStack({ navigation }) {
       <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
       {/* Gap-closure Phase D: free-tier discovery surface (CAP-19), unguarded like HowYouTrain. */}
       <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
+      {/* HowYouTrain (above) links here, so registering it without this one
+          only moves the dead tap one screen along. See the sweep in
+          navigation/__tests__/capabilityRoutesReachable.test.js. */}
+      <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
       {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
       <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
@@ -541,6 +554,13 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="AthleteProfile" component={AthleteProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
+      {/* SettingsScreen's "How you train" row links here, and the 1.3.0
+          release note sends users to it by name, so this stack has to carry the
+          route rather than rely on PlansStack having it. TrainingConsiderations
+          rides along as HowYouTrain's own outbound target (transitive closure).
+          Swept by navigation/__tests__/capabilityRoutesReachable.test.js. */}
+      <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsAccount" component={SettingsAccountScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsCoaching" component={SettingsCoachingScreen} options={{ headerShown: false }} />
@@ -699,6 +719,18 @@ function FirstRunStack() {
           could reach them. Removed under D95 (AUDIT-ROUTES 5.7). If a "browse
           the library during onboarding" step ever returns, it needs a
           navigator, not these registrations. */}
+      {/* FreeStarter offers "Yes, let's set that up" and links to HowYouTrain.
+          Without an in-stack registration React Navigation drops that tap in
+          silence, which is the third time this navigator has lost a tap that
+          way: NotificationSettings and Methodology in ProOnboardingStack carry
+          the same note. TrainingConsiderations and SettingsWorkout ride along
+          because HowYouTrain links to both and neither leads anywhere further
+          (transitive closure), so without them the NEXT tap dies instead. All
+          three are free by law (CAP-19), copied unguarded from the main stack.
+          Swept by navigation/__tests__/capabilityRoutesReachable.test.js. */}
+      <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -740,6 +772,17 @@ function ProOnboardingStack() {
       {/* Wave A B3: the hand-off screen links "How Precision Coaching works"
           so the trial is never a black box before the first check-in. */}
       <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: false }} />
+      {/* Same fault, same fix: ProOnboarding step 5 offers "Yes, let's set that
+          up" and links to HowYouTrain, and without an in-stack registration the
+          tap was dropped in silence. TrainingConsiderations and SettingsWorkout
+          ride along because HowYouTrain links to both and neither leads anywhere
+          further (transitive closure), so without them the NEXT tap dies
+          instead. All three are free by law (CAP-19), copied unguarded from the
+          main stack. Swept by
+          navigation/__tests__/capabilityRoutesReachable.test.js. */}
+      <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
