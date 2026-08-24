@@ -388,6 +388,14 @@ export default function AnalyticsScreen({ navigation, route }) {
                     exerciseNames,
                     startedAt: w.startedAt,
                     endedAt: w.endedAt,
+                    // Founder device report 2026-08-24: without the routine
+                    // the summary has nothing to title the session with and
+                    // its share card falls back to a join of the first two
+                    // exercise names, which then moves whenever an exercise
+                    // is swapped. getAllWorkouts joins the routine, so both
+                    // are already on the row.
+                    routineId: w.routineId ?? null,
+                    routineName: w.routineName ?? null,
                     readOnly: true,
                   })}
                 />

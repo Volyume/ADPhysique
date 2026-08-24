@@ -63,13 +63,49 @@ describe('the finished workout stores that name', () => {
   });
 });
 
-describe('history opens the summary with its routine', () => {
+describe('every route into the summary carries its routine', () => {
   const SRC = read('screens/WorkoutHistoryScreen.js');
   const SUMMARY = read('screens/WorkoutSummaryScreen.js');
 
   test('both View summary routes carry the routine through', () => {
     const passes = SRC.match(/routineId: workout\.routineId \?\? null,\s*\n\s*routineName: workout\.routineName \?\? null,/g) || [];
     expect(passes.length).toBe(2);
+  });
+
+  // Enumerated rather than listed. Fixing the two routes that were reported
+  // left a third starved one on the Progress tab (Analytics' recent
+  // sessions), which is very likely where the founder's card came from. A
+  // pin on named screens would not have caught it, and would not catch the
+  // next screen that grows a link to the summary either.
+  test('no navigation to the summary anywhere omits the routine', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const root = path.join(__dirname, '..', '..');
+    const files = [];
+    (function walk(dir) {
+      for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) { if (entry.name !== '__tests__') walk(full); continue; }
+        if (entry.name.endsWith('.js')) files.push(full);
+      }
+    }(root));
+
+    const offenders = [];
+    let seen = 0;
+    for (const file of files) {
+      const src = fs.readFileSync(file, 'utf8');
+      // Each navigate/replace call to WorkoutSummary, up to its closing brace.
+      const calls = src.match(/navigation\.(?:navigate|replace)\('WorkoutSummary',\s*\{[\s\S]*?\n\s*\}\)/g) || [];
+      seen += calls.length;
+      for (const call of calls) {
+        if (!/routineId:/.test(call)) offenders.push(path.relative(root, file));
+      }
+    }
+    // Non-vacuity: the sweep must actually be finding the routes. Four exist
+    // today (two in history, one in analytics, the live finish); a regex that
+    // silently stopped matching would otherwise pass this test forever.
+    expect(seen).toBeGreaterThanOrEqual(4);
+    expect(offenders).toEqual([]);
   });
 
   test('the summary uses the name it is handed, and still fetches when it is not', () => {
