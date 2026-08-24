@@ -47,6 +47,19 @@ export const WHATS_NEW = {
     { icon: 'medkit-outline', text: 'Movements you need to avoid can be set for a few days, the rest of the block, or indefinitely.' },
     { icon: 'image-outline', text: 'Share cards have been rebuilt, with your own photo, four formats and a sticker export.' },
   ],
+  // 1.3.0 is a minor bump because the capability lane shipped whole in it:
+  // naming what to train around, the condition and injury directory, per-side
+  // restrictions, and the adapted setup notes. Five lines chosen on the same
+  // one rule as 1.2.1, that a user would notice the change without being told
+  // where to look. The plain-English copy pass and the record-detection fixes
+  // are felt rather than announced, so only the record one earns a line.
+  '1.3.0': [
+    { icon: 'medkit-outline', text: 'You can tell Volyume what to build your training around, and which side it affects. Settings, then How you train.' },
+    { icon: 'search-outline', text: 'Looking for a specific condition or injury finds better questions to ask you. You never need a name to get the same support.' },
+    { icon: 'body-outline', text: 'Where an exercise is set up differently for you, the setup notes now say how instead of assuming one way of doing it.' },
+    { icon: 'trophy-outline', text: 'Personal records show every time you beat your best, including the first time you meet an exercise.' },
+    { icon: 'stats-chart-outline', text: 'Your weekly volume targets come from your own plan and profile, not a general starting table.' },
+  ],
 };
 
 export default function WhatsNewSheet() {
