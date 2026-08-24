@@ -1478,7 +1478,6 @@ const LIBRARY_PLANS = [
       },
     ],
   },
-,
   // ── CC28: capability-led routine families (Amendment deliverable 2) ─────
   // Function-named, never population-named (CC-F3 gate; CAP-3). Every row
   // below is validated against the demand derivation by
@@ -1834,7 +1833,7 @@ const LIBRARY_PLANS = [
         ],
       },
     ],
-  },,
+  },
   {
     name: 'Grip-Light Machine Circuit',
     description: 'Three machine-based days where nothing needs a firm grip: every movement loads through pads, platforms or light supportive holds. Rowing and pulldown work needs a firm grip, so this plan covers the rest of the body honestly instead of pretending; add any exercise that works for you from the library. Add a rep each session; at the top of the range, add weight. Leave 2 reps in the tank.',
@@ -2075,6 +2074,16 @@ const LIBRARY_PLANS = [
 export async function seedRoutinesIfNeeded(userId) {
   if (!userId) return;
 
+  // One try/catch spans the whole of this function, so until now a throw
+  // anywhere in roughly a hundred lines reported as the same context-free
+  // Sentry event (VOLYUME-30). That is why two stray commas in LIBRARY_PLANS
+  // needed a reproduction rather than a reading. `stage` and `stageDetail`
+  // travel with the work so the report names where it stopped and on which
+  // row. They are diagnostics only: nothing below reads them to decide
+  // anything, so the seeding behaviour is unchanged.
+  let stage = 'readMarker';
+  let stageDetail = null;
+
   try {
     const alreadySeeded = await AsyncStorage.getItem(SEED_KEY);
 
@@ -2092,6 +2101,7 @@ export async function seedRoutinesIfNeeded(userId) {
       logWarn('seedRoutines.reseed', 'Marker was set but no library plans found. Re-seeding.');
     }
 
+    stage = 'loadExercises';
     const existing = await getAllExercises();
     const byName = {};
     for (const ex of existing) {
@@ -2102,7 +2112,9 @@ export async function seedRoutinesIfNeeded(userId) {
     // demand axes) so they are first-class for capability filtering. Rows
     // inserted by earlier versions of this loop landed without demand
     // axes; repair those honestly from the same pure derivation.
+    stage = 'requiredExercises';
     for (const exData of REQUIRED_EXERCISES) {
+      stageDetail = exData?.name ?? null;
       const existing = byName[exData.name];
       if (!existing) {
         const created = await insertExercise({
@@ -2120,11 +2132,19 @@ export async function seedRoutinesIfNeeded(userId) {
     // only adds new plans rather than duplicating the entire library. Names
     // are the natural dedupe key: plan IDs are random UUIDs that change on
     // every seed, and there's no upsert path through createProgramme.
+    stage = 'readLibrary';
+    stageDetail = null;
     const existingLibrary = await getLibraryPlans().catch(() => []);
     const existingNames = new Set(existingLibrary.map(p => p.name));
 
     // Create library plans we haven't seeded yet
-    for (const plan of LIBRARY_PLANS) {
+    stage = 'createPlans';
+    for (let planIndex = 0; planIndex < LIBRARY_PLANS.length; planIndex++) {
+      const plan = LIBRARY_PLANS[planIndex];
+      // Index as well as name: a hole yields undefined here, so the name is
+      // exactly what is unavailable in the case this instrumentation exists
+      // for. The index still says which row.
+      stageDetail = `plan ${planIndex}: ${plan?.name ?? '(missing)'}`;
       if (existingNames.has(plan.name)) continue;
       const programme = await createProgramme(
         userId,
@@ -2137,6 +2157,7 @@ export async function seedRoutinesIfNeeded(userId) {
       );
 
       for (const workoutDef of plan.workouts) {
+        stageDetail = `plan ${planIndex}: ${plan.name} / ${workoutDef?.name ?? '(missing)'}`;
         const routine = await createRoutine(
           userId,
           workoutDef.name,
@@ -2170,9 +2191,11 @@ export async function seedRoutinesIfNeeded(userId) {
       }
     }
 
+    stage = 'setMarker';
+    stageDetail = null;
     await AsyncStorage.setItem(SEED_KEY, '1');
     logInfo('seedRoutines.created', `Created ${LIBRARY_PLANS.length} library plans`);
   } catch (err) {
-    logError('seedRoutines.seedRoutinesIfNeeded', err);
+    logError('seedRoutines.seedRoutinesIfNeeded', err, { stage, stageDetail });
   }
 }
