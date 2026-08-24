@@ -427,8 +427,128 @@ function drawBackground(canvas, Skia, W, H, cardType) {
   drawCraftedBackground(canvas, Skia, W, H, cardType);
 }
 
-function drawAccentBar(canvas, Skia, W, s) {
-  fillRect(canvas, Skia, 0, 0, W, Math.round(8 * s), PALETTE.accent);
+// Founder device order 2026-08-24 ("improve the share cards to look
+// something like this"): the family's frame. A flat amber bar welded to the
+// top edge read as a browser chrome bar once the card was posted on a dark
+// feed; a card needs an EDGE, so the artwork sits inside a rounded amber
+// rule with the corners lit. Same call site on every card type, so the whole
+// family gains it at once rather than the session card drifting away from
+// its siblings.
+function drawCardFrame(canvas, Skia, W, H, s) {
+  const inset = Math.round(14 * s);
+  const r = Math.round(52 * s);
+  const w = W - inset * 2;
+  const h = H - inset * 2;
+  // The lit corners, drawn UNDER the rule so the stroke stays crisp.
+  const glow = Math.round(230 * s);
+  drawGlow(canvas, Skia, inset + r, inset + r, glow, PALETTE.accent, 0.18, 90 * s);
+  drawGlow(canvas, Skia, W - inset - r, H - inset - r, glow, PALETTE.accent, 0.13, 100 * s);
+  strokeRRect(canvas, Skia, inset, inset, w, h, r, rgba(PALETTE.accent, 0.55), Math.max(1, 3 * s));
+  // A second, wider and fainter rule just outside it: on a real feed this is
+  // what stops the edge looking like a 1px hairline after re-compression.
+  strokeRRect(canvas, Skia, inset, inset, w, h, r, rgba(PALETTE.accent, 0.12), Math.max(1, 9 * s));
+}
+
+// Letter-spaced text. Skia's font API has no tracking, and the mockup's
+// eyebrow, hero label and stat captions all depend on it: without tracking a
+// short uppercase caption reads as a cramped word rather than a label.
+// Drawn per character so measurement stays honest for centring.
+function textTracked(canvas, Skia, str, x, y, font, colorStr, align, tracking) {
+  const chars = String(str).split('');
+  const advances = chars.map((c) => measure(font, c));
+  const total = advances.reduce((a, b) => a + b, 0) + tracking * Math.max(0, chars.length - 1);
+  let cx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+  chars.forEach((c, i) => {
+    text(canvas, Skia, c, cx, y, font, colorStr, 'left');
+    cx += advances[i] + tracking;
+  });
+  return total;
+}
+
+function trackedWidth(str, font, tracking) {
+  const chars = String(str).split('');
+  return chars.reduce((a, c) => a + measure(font, c), 0) + tracking * Math.max(0, chars.length - 1);
+}
+
+// ── icons ────────────────────────────────────────────────────────────────
+//
+// Drawn as Skia primitives rather than loaded from an icon font: this module
+// is deliberately import-free and Node-runnable (see the header), and a
+// missing glyph would ship a tofu box onto somebody's Instagram story. Each
+// takes a centre and a size so the same mark scales across formats.
+function iconBars(canvas, Skia, cx, cy, size, colorStr) {
+  const w = size * 0.22;
+  const gap = size * 0.14;
+  const heights = [size * 0.45, size * 0.72, size];
+  const totalW = w * 3 + gap * 2;
+  let x = cx - totalW / 2;
+  heights.forEach((h) => {
+    fillRRect(canvas, Skia, x, cy + size / 2 - h, w, h, w * 0.35, colorStr);
+    x += w + gap;
+  });
+}
+
+function iconDumbbell(canvas, Skia, cx, cy, size, colorStr) {
+  const barH = size * 0.16;
+  const plateH = size * 0.56;
+  const plateW = size * 0.2;
+  const innerH = size * 0.78;
+  fillRRect(canvas, Skia, cx - size / 2, cy - barH / 2, size, barH, barH / 2, colorStr);
+  fillRRect(canvas, Skia, cx - size / 2, cy - plateH / 2, plateW, plateH, plateW * 0.3, colorStr);
+  fillRRect(canvas, Skia, cx + size / 2 - plateW, cy - plateH / 2, plateW, plateH, plateW * 0.3, colorStr);
+  fillRRect(canvas, Skia, cx - size * 0.28, cy - innerH / 2, plateW * 0.7, innerH, plateW * 0.3, colorStr);
+  fillRRect(canvas, Skia, cx + size * 0.28 - plateW * 0.7, cy - innerH / 2, plateW * 0.7, innerH, plateW * 0.3, colorStr);
+}
+
+function iconClock(canvas, Skia, cx, cy, size, colorStr) {
+  const r = size * 0.46;
+  const lw = Math.max(1, size * 0.1);
+  const paint = paintFor(Skia, colorStr, STROKE, lw);
+  canvas.drawCircle(cx, cy, r, paint);
+  // Hands: one up, one to the right, so it reads as a clock at any size.
+  fillRRect(canvas, Skia, cx - lw / 2, cy - r * 0.62, lw, r * 0.68, lw / 2, colorStr);
+  fillRRect(canvas, Skia, cx - lw / 2, cy - lw / 2, r * 0.58, lw, lw / 2, colorStr);
+  // The little stem on top.
+  fillRRect(canvas, Skia, cx - size * 0.12, cy - r - lw * 1.4, size * 0.24, lw, lw / 2, colorStr);
+}
+
+function iconList(canvas, Skia, cx, cy, size, colorStr) {
+  const w = size * 0.78;
+  const h = size;
+  const lw = Math.max(1, size * 0.09);
+  strokeRRect(canvas, Skia, cx - w / 2, cy - h / 2, w, h, size * 0.16, colorStr, lw);
+  // The tab at the top of the clipboard.
+  fillRRect(canvas, Skia, cx - w * 0.28, cy - h / 2 - lw, w * 0.56, lw * 2.2, lw, colorStr);
+  for (let i = 0; i < 3; i += 1) {
+    const ly = cy - h * 0.16 + i * h * 0.22;
+    fillRRect(canvas, Skia, cx - w * 0.26, ly, lw * 1.1, lw * 1.1, lw * 0.5, colorStr);
+    fillRRect(canvas, Skia, cx - w * 0.06, ly, w * 0.32, lw, lw / 2, colorStr);
+  }
+}
+
+function iconTrophy(canvas, Skia, cx, cy, size, colorStr) {
+  const lw = Math.max(1, size * 0.09);
+  const top = cy - size * 0.44;
+  // The bowl, tapered by stacking three bands rather than drawn as one
+  // rounded box: a single rrect reads as a bucket at this size, and the
+  // module has no path builder to spend on one glyph.
+  const bands = [
+    { w: size * 0.62, h: size * 0.2, r: size * 0.05 },
+    { w: size * 0.5, h: size * 0.17, r: size * 0.05 },
+    { w: size * 0.28, h: size * 0.13, r: size * 0.06 },
+  ];
+  let by = top;
+  bands.forEach((b) => {
+    fillRRect(canvas, Skia, cx - b.w / 2, by, b.w, b.h, b.r, colorStr);
+    by += b.h;
+  });
+  // Handles, hooked off the widest band.
+  const paint = paintFor(Skia, colorStr, STROKE, lw * 0.85);
+  canvas.drawCircle(cx - size * 0.37, top + size * 0.16, size * 0.12, paint);
+  canvas.drawCircle(cx + size * 0.37, top + size * 0.16, size * 0.12, paint);
+  // Stem, then the plinth.
+  fillRRect(canvas, Skia, cx - size * 0.06, by, size * 0.12, size * 0.14, size * 0.03, colorStr);
+  fillRRect(canvas, Skia, cx - size * 0.26, by + size * 0.14, size * 0.52, size * 0.11, size * 0.05, colorStr);
 }
 
 // Footer block height, ONE definition. D109-1 drops the tagline band
@@ -493,25 +613,18 @@ function drawFooter(canvas, Skia, W, H, pad, isSquare, s, font, wordmark) {
   text(canvas, Skia, urlStr, urlX, lineY + urlFont.getSize() * 0.34, urlFont, PALETTE.textMuted, 'left');
 }
 
-function drawIntensityBadge(canvas, Skia, W, y, tier, s, font) {
-  if (!tier) return y;
-  let label; let color;
-  if (tier === 'epic') { label = 'EPIC SESSION'; color = PALETTE.gold; }
-  else if (tier === 'tough') { label = 'TOUGH SESSION'; color = PALETTE.accent; }
-  else { label = 'SOLID SESSION'; color = PALETTE.textSecondary; }
-  const f = font(22);
-  const bw = measure(f, label) + 60 * s;
-  const bh = Math.round(44 * s);
-  const bx = (W - bw) / 2;
-  fillRRect(canvas, Skia, bx, y, bw, bh, bh / 2, rgba(color, 0.125));
-  strokeRRect(canvas, Skia, bx, y, bw, bh, bh / 2, rgba(color, 0.38), Math.max(1, 1.5 * s));
-  text(canvas, Skia, label, W / 2, y + bh * 0.68, f, color, 'center');
-  return y + bh + Math.round(28 * s);
-}
+// Founder device order 2026-08-24: each box gets the mark for what it
+// counts. Three bare numbers in three identical boxes made the reader parse
+// the captions to tell them apart; an icon is read before the word is.
+const STAT_ICONS = {
+  SETS: iconDumbbell,
+  TIME: iconClock,
+  EXERCISES: iconList,
+};
 
 function drawStatBoxes(canvas, Skia, W, pad, y, stats, isSquare, s, font) {
   if (!stats.length) return y;
-  const statBoxH = Math.round((isSquare ? 100 : 130) * s);
+  const statBoxH = Math.round((isSquare ? 132 : 186) * s);
   const gap = Math.round(14 * s);
   // Fixed box width (share-card audit R11/L3): boxes used to stretch to fill
   // the row width divided by the stat count, so the SAME "Sets" box was
@@ -525,15 +638,20 @@ function drawStatBoxes(canvas, Skia, W, pad, y, stats, isSquare, s, font) {
   const rowX = (W - rowW) / 2;
   stats.forEach((st, i) => {
     const bx = rowX + i * (boxW + gap);
-    fillRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), PALETTE.surface);
+    fillRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(26 * s), rgba(PALETTE.surface, 0.5));
     // Quiet supports (ELITE-SHARE-SPEC pillar 2): a softened border alpha
     // rather than the old fully-opaque outline keeps the stat row calm
     // instead of reading as a checklist of bordered boxes.
-    strokeRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(16 * s), rgba(PALETTE.border, 0.55), Math.max(1, 1.2 * s));
-    text(canvas, Skia, st.value, bx + boxW / 2, y + statBoxH * 0.5, font(isSquare ? 42 : 52), PALETTE.text, 'center');
-    text(canvas, Skia, st.label.toUpperCase(), bx + boxW / 2, y + statBoxH - Math.round(18 * s), font(16), PALETTE.textMuted, 'center');
+    strokeRRect(canvas, Skia, bx, y, boxW, statBoxH, Math.round(26 * s), rgba(PALETTE.border, 0.45), Math.max(1, 1.2 * s));
+    const caption = st.label.toUpperCase();
+    const icon = STAT_ICONS[caption];
+    // Positioned as fractions of the box rather than by fixed offsets, so
+    // a format can size the box without the value landing on its caption.
+    if (icon) icon(canvas, Skia, bx + boxW / 2, y + statBoxH * 0.24, Math.round((isSquare ? 32 : 40) * s), PALETTE.accent);
+    text(canvas, Skia, st.value, bx + boxW / 2, y + statBoxH * 0.66, font(isSquare ? 44 : 58), PALETTE.text, 'center');
+    textTracked(canvas, Skia, caption, bx + boxW / 2, y + statBoxH * 0.88, font(isSquare ? 16 : 19), PALETTE.textMuted, 'center', Math.round(1.6 * s));
   });
-  return y + statBoxH + Math.round(24 * s);
+  return y + statBoxH + Math.round((isSquare ? 18 : 26) * s);
 }
 
 // Session editorial (ELITE-SHARE-SPEC pillar 2): six bordered chip boxes read
@@ -543,12 +661,37 @@ function drawExerciseSummary(canvas, Skia, W, pad, y, exercises, s, font) {
   if (!exercises || !exercises.length) return y;
   const names = exercises.map((ex) => (typeof ex === 'string' ? ex : (ex && ex.name) || '')).filter(Boolean);
   if (!names.length) return y;
-  const f = font(24, 'regular');
-  const shown = names.slice(0, 5);
+  // Founder device order 2026-08-24: two names and an honest remainder,
+  // centred, with the separators in amber so the eye lands on the names
+  // rather than on the punctuation. Five names ran the line to the edge and
+  // the last one was ellipsised into nonsense on a long exercise title.
+  const f = font(26, 'regular');
+  const dotR = Math.max(1, Math.round(4 * s));
+  const gap = Math.round(20 * s);
+  const shown = names.slice(0, 2);
   const extra = names.length - shown.length;
-  const raw = shown.join('  ·  ') + (extra > 0 ? `  +${extra} more` : '');
-  const line = wrapTextCapped(f, raw, W - pad * 2, 1)[0];
-  text(canvas, Skia, line, pad, y + Math.round(f.getSize() * 0.9), f, PALETTE.textSecondary, 'left');
+  const parts = shown.concat(extra > 0 ? [`+${extra} more`] : []);
+  // Shrink to fit rather than truncate: the whole point of the line is that
+  // every word on it is readable.
+  let fit = f;
+  let widths = parts.map((t) => measure(fit, t));
+  let total = widths.reduce((a, b) => a + b, 0) + (parts.length - 1) * (gap * 2 + dotR * 2);
+  for (let px = 26; total > W - pad * 2 && px > 15; px -= 1) {
+    fit = font(px, 'regular');
+    widths = parts.map((t) => measure(fit, t));
+    total = widths.reduce((a, b) => a + b, 0) + (parts.length - 1) * (gap * 2 + dotR * 2);
+  }
+  const baseline = y + Math.round(fit.getSize() * 0.9);
+  let x = (W - total) / 2;
+  parts.forEach((t, i) => {
+    text(canvas, Skia, t, x, baseline, fit, PALETTE.textSecondary, 'left');
+    x += widths[i];
+    if (i < parts.length - 1) {
+      x += gap;
+      canvas.drawCircle(x + dotR, baseline - fit.getSize() * 0.3, dotR, paintFor(Skia, PALETTE.accent, FILL));
+      x += dotR * 2 + gap;
+    }
+  });
   return y + Math.round(46 * s);
 }
 
@@ -630,7 +773,7 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
   const pad = Math.round(W * 0.074);
   const fmt = bodyFormat(p);
   drawBackground(canvas, Skia, W, H, p.cardType);
-  drawAccentBar(canvas, Skia, W, s);
+  drawCardFrame(canvas, Skia, W, H, s);
   // Gym weights are stored in the user's chosen unit (kg|lbs); the hero label,
   // the "Total ..." stat box and the top-lift line all used to hard-code "kg"
   // (share-card audit R8/M5), a latent lie for any lbs user.
@@ -641,11 +784,23 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
   y += Math.round(70 * s);
 
   if (p.showPlanName && p.planName) {
-    // Width-fit (audit M3): an unfitted plan name ran past the right pad on a
-    // long name. Matches the weekly card's hero-label fit floor.
-    const planFont = fitFont(null, p.planName.toUpperCase(), W - pad * 2, 22, (px) => font(px), 12);
-    text(canvas, Skia, p.planName.toUpperCase(), pad, y, planFont, PALETTE.accent, 'left');
-    y += Math.round(36 * s);
+    // Founder device order 2026-08-24: the plan name becomes a pill with the
+    // session mark on it. As plain amber capitals it sat at the same weight
+    // as the date on the opposite side and read as a stray label; inside a
+    // rule it reads as the badge for the session it belongs to. Content is
+    // still the user's own plan name, still behind its own toggle - nothing
+    // generic is invented to fill the pill when there is no plan.
+    const chipFont = fitFont(null, p.planName.toUpperCase(), W - pad * 2 - Math.round(150 * s), 24, (px) => font(px), 13);
+    const tracking = Math.round(2 * s);
+    const iconSize = Math.round(26 * s);
+    const labelW = trackedWidth(p.planName.toUpperCase(), chipFont, tracking);
+    const chipH = Math.round(62 * s);
+    const chipW = labelW + iconSize + Math.round(76 * s);
+    fillRRect(canvas, Skia, pad, y, chipW, chipH, chipH / 2, rgba(PALETTE.accent, 0.1));
+    strokeRRect(canvas, Skia, pad, y, chipW, chipH, chipH / 2, rgba(PALETTE.accent, 0.5), Math.max(1, 2 * s));
+    iconBars(canvas, Skia, pad + Math.round(28 * s) + iconSize / 2, y + chipH / 2, iconSize, PALETTE.accent);
+    textTracked(canvas, Skia, p.planName.toUpperCase(), pad + Math.round(56 * s) + iconSize, y + chipH * 0.63, chipFont, PALETTE.accent, 'left', tracking);
+    y += chipH + Math.round((p.isSquare ? 22 : 30) * s);
   }
 
   const heroFont = font(p.isSquare ? 64 : 78);
@@ -656,7 +811,11 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
     text(canvas, Skia, l, pad, y + Math.round((p.isSquare ? 64 : 78) * 0.82 * s), heroFont, PALETTE.text, 'left');
     y += Math.round((p.isSquare ? 64 : 78) * 1.05 * s);
   });
-  y += Math.round(30 * s);
+  // The short rule under the title: it closes the header block, so the hero
+  // number below reads as the card's subject rather than as a second title.
+  y += Math.round(18 * s);
+  fillRRect(canvas, Skia, pad, y, Math.round(118 * s), Math.round(5 * s), Math.round(3 * s), PALETTE.accent);
+  y += Math.round((p.isSquare ? 26 : 34) * s);
 
   const heroInfo = sessionHeroInfo(p, unit);
   const { value: heroValue, label: heroLabel, color: heroColor } = heroInfo;
@@ -671,37 +830,82 @@ function drawSession(canvas, Skia, W, H, p, s, font, wordmark) {
   if (p.showVolume && (p.tonnage || 0) > 0 && p.prCount > 0) stats.push({ label: `Total ${unit}`, value: Math.round(p.tonnage).toLocaleString('en-GB') });
   else if (p.exerciseCount > 0) stats.push({ label: 'Exercises', value: String(p.exerciseCount) });
 
-  function layoutBody(cv, startY) {
-    const heroNum = fitFont(null, heroValue, W - pad * 2, p.isSquare ? 140 : 220, (px) => font(px));
+  function layoutBody(cv, startY, withTopSet) {
+    const heroNum = fitFont(null, heroValue, W - pad * 2, p.isSquare ? 116 : 220, (px) => font(px));
     const heroY = startY + heroNum.getSize();
     text(cv, Skia, heroValue, W / 2, heroY, heroNum, heroColor, 'center');
     const heroLabelY = heroLabelBaseline(heroY, heroNum, p.isSquare, s);
-    text(cv, Skia, heroLabel, W / 2, heroLabelY, font(p.isSquare ? 18 : 24), PALETTE.textSecondary, 'center');
+    // Founder device order 2026-08-24: the label under the hero was a small
+    // muted whisper under a 220px number. Tracked capitals at a readable
+    // size give the number its unit without competing with it.
+    textTracked(cv, Skia, heroLabel, W / 2, heroLabelY, font(p.isSquare ? 24 : 30), PALETTE.textSecondary, 'center', Math.round(3 * s));
 
-    let by = heroLabelY + Math.round((p.isSquare ? 30 : 40) * s);
-    by = drawIntensityBadge(cv, Skia, W, by, p.intensityTier, s, font);
+    // The intensity badge ("EPIC SESSION" / "TOUGH SESSION" / "SOLID
+    // SESSION") is RETIRED from this card on founder order 2026-08-24: "I
+    // don't want the epic session thing in it either". It graded a session
+    // from thresholds the athlete never agreed to, directly under their own
+    // number, and a "SOLID SESSION" stamp on a hard day reads as a verdict.
+    // The tier is still computed and still travels in sessionData; nothing
+    // else consumes it visually here.
+    let by = heroLabelY + Math.round((p.isSquare ? 22 : 52) * s);
     by = drawStatBoxes(cv, Skia, W, pad, by, stats, p.isSquare, s, font);
 
     // Exercise names now honoured on BOTH formats (the toggle was previously
-    // dead on square). Story/portrait have room for the top-lift card above
-    // the exercise summary line.
-    if (fmt !== 'square' && p.topSet && p.topSet.weight > 0) {
-      const cardW = W - pad * 2; const cardH = Math.round(130 * s);
-      fillRRect(cv, Skia, pad, by, cardW, cardH, Math.round(18 * s), PALETTE.surface);
-      strokeRRect(cv, Skia, pad, by, cardW, cardH, Math.round(18 * s), rgba(PALETTE.border, 0.55), Math.max(1, 1.5 * s));
-      fillRRect(cv, Skia, pad, by, Math.round(6 * s), cardH, Math.round(3 * s), PALETTE.accent);
-      text(cv, Skia, 'TOP LIFT', pad + Math.round(28 * s), by + Math.round(36 * s), font(18), PALETTE.textMuted, 'left');
-      text(cv, Skia, `${withUnit(String(p.topSet.weight), unit)} × ${p.topSet.reps}`, pad + Math.round(28 * s), by + Math.round(84 * s), font(46), PALETTE.text, 'left');
-      if (p.topSet.exerciseName) text(cv, Skia, p.topSet.exerciseName, pad + cardW - Math.round(28 * s), by + Math.round(84 * s), font(22, 'regular'), PALETTE.textSecondary, 'right');
-      by += cardH + Math.round(24 * s);
-    }
+    // dead on square), and they sit ABOVE the top-lift card: the names are
+    // context for the session, the top lift is its closing statement.
     if (p.showExercises && p.exercises && p.exercises.length) {
       by = drawExerciseSummary(cv, Skia, W, pad, by, p.exercises, s, font);
+    }
+    // Founder device order 2026-08-24: the top lift appears on EVERY format
+    // that has room for it. Square used to drop it unconditionally and end
+    // on an empty band, which is exactly the space it belongs in, and the
+    // 1:1 reference carries it. Whether it fits is measured, not assumed:
+    // square is top-anchored with no overflow protection of its own, so an
+    // unconditional card printed straight through the footer.
+    if (withTopSet) {
+      const cardW = W - pad * 2; const cardH = Math.round((p.isSquare ? 116 : 150) * s);
+      const r = Math.round(24 * s);
+      fillRRect(cv, Skia, pad, by, cardW, cardH, r, rgba(PALETTE.accent, 0.06));
+      strokeRRect(cv, Skia, pad, by, cardW, cardH, r, rgba(PALETTE.accent, 0.65), Math.max(1, 2 * s));
+      const midY = by + cardH / 2;
+      const iconSize = Math.round(46 * s);
+      iconTrophy(cv, Skia, pad + Math.round(46 * s), midY, iconSize, PALETTE.gold);
+      const labelX = pad + Math.round(84 * s);
+      textTracked(cv, Skia, 'TOP LIFT', labelX, midY + Math.round(8 * s), font(22), PALETTE.accent, 'left', Math.round(2 * s));
+      // A hairline between the label and the number, so the pair reads as
+      // one statement rather than two stacked fragments.
+      const divX = labelX + trackedWidth('TOP LIFT', font(22), Math.round(2 * s)) + Math.round(34 * s);
+      fillRect(cv, Skia, divX, by + Math.round(30 * s), Math.max(1, Math.round(2 * s)), cardH - Math.round(60 * s), rgba(PALETTE.accent, 0.4));
+      const valX = divX + Math.round(34 * s);
+      const hasName = !!p.topSet.exerciseName;
+      text(cv, Skia, `${withUnit(String(p.topSet.weight), unit)} × ${p.topSet.reps}`, valX, midY - (hasName ? Math.round(8 * s) : -Math.round(16 * s)), font(48), PALETTE.text, 'left');
+      if (hasName) {
+        const nameFont = font(24, 'regular');
+        const nameMax = pad + cardW - Math.round(28 * s) - valX;
+        // withEllipsis appends the mark unconditionally - wrapTextCapped
+        // needs that, because there its caller has already dropped words.
+        // Here nothing has been dropped unless the name genuinely overruns,
+        // so an unguarded call put "Lat Pulldown..." on a line with 600px
+        // of room to spare and implied a truncation that never happened.
+        const name = measure(nameFont, p.topSet.exerciseName) <= nameMax
+          ? p.topSet.exerciseName
+          : withEllipsis(nameFont, p.topSet.exerciseName, nameMax);
+        text(cv, Skia, name, valX, midY + Math.round(42 * s), nameFont, PALETTE.textSecondary, 'left');
+      }
+      by += cardH + Math.round((p.isSquare ? 12 : 24) * s);
     }
     return by;
   }
 
-  runBody(canvas, H, s, p, y, footerHeight(p.isSquare, s), layoutBody);
+  // Measure the body WITH the top-lift card before committing to it: the
+  // bottom limit is the same one runBody uses for the centred formats, and
+  // square gets the same protection here rather than trusting the layout.
+  const footerH = footerHeight(p.isSquare, s);
+  const storyLift = fmt === 'story' ? Math.round(H * STORY_SAFE_BOTTOM_RATIO) : 0;
+  const bottomLimit = H - footerH - storyLift - Math.round(24 * s);
+  const wantsTopSet = !!(p.topSet && p.topSet.weight > 0);
+  const topSetFits = wantsTopSet && layoutBody(makeNoopCanvas(), y, true) <= bottomLimit;
+  runBody(canvas, H, s, p, y, footerH, (cv, startY) => layoutBody(cv, startY, topSetFits));
   drawFooter(canvas, Skia, W, H, pad, p.isSquare, s, font, wordmark);
 }
 
@@ -709,7 +913,7 @@ function drawPR(canvas, Skia, W, H, p, s, font, wordmark) {
   const pad = Math.round(W * 0.074);
   const fmt = bodyFormat(p);
   drawBackground(canvas, Skia, W, H, p.cardType);
-  drawAccentBar(canvas, Skia, W, s);
+  drawCardFrame(canvas, Skia, W, H, s);
 
   const brandY = headerTopY(H, fmt, pad + Math.round(60 * s));
   if (p.showDate && p.date) text(canvas, Skia, p.date, W - pad, brandY, font(22, 'regular'), PALETTE.textMuted, 'right');
@@ -775,7 +979,7 @@ function drawMilestone(canvas, Skia, W, H, p, s, font, wordmark) {
   const pad = Math.round(W * 0.074);
   const fmt = bodyFormat(p);
   drawBackground(canvas, Skia, W, H, p.cardType);
-  drawAccentBar(canvas, Skia, W, s);
+  drawCardFrame(canvas, Skia, W, H, s);
 
   let y = headerTopY(H, fmt, pad + Math.round(60 * s));
   if (p.showDate && p.date) text(canvas, Skia, p.date, W - pad, y, font(22, 'regular'), PALETTE.textMuted, 'right');
@@ -847,7 +1051,7 @@ function drawWeeklyRecap(canvas, Skia, W, H, p, s, font, wordmark) {
   const pad = Math.round(W * 0.074);
   const fmt = bodyFormat(p);
   drawBackground(canvas, Skia, W, H, p.cardType);
-  drawAccentBar(canvas, Skia, W, s);
+  drawCardFrame(canvas, Skia, W, H, s);
 
   let y = headerTopY(H, fmt, pad + Math.round(56 * s));
   if (p.showDate && p.dateFormatted) {
@@ -1010,7 +1214,7 @@ function drawElapsedBadge(canvas, Skia, W, y, label, s, font) {
 function drawBeforeAfter(canvas, Skia, W, H, p, s, font, wordmark, photos) {
   const pad = Math.round(W * 0.074);
   drawBackground(canvas, Skia, W, H, p.cardType);
-  drawAccentBar(canvas, Skia, W, s);
+  drawCardFrame(canvas, Skia, W, H, s);
 
   const before = p.before || {};
   const after = p.after || {};
