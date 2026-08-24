@@ -42,7 +42,7 @@ import WorkoutBottomBar from '../components/workout/WorkoutBottomBar';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { SWAP_SCOPE } from '../lib/exercise/swapScope';
-import { getAllCompletedSetsForExercise, getWorkoutById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, recordExerciseSwap, getActiveBlock, EXERCISE_INTENT } from '../lib/database';
+import { getAllCompletedSetsForExercise, getWorkoutById, getRoutineById, createWorkoutSet, updateWorkout, deleteIncompleteWorkout, getAllExercises, getCurrentMesocycleWeek, getWeek1SetsForExercise, getLastNWorkoutSets, getNextTimeNotes, markNoteShown, getWorkoutSetsForWorkout, updateWorkoutSet, deleteWorkoutSet, recordExerciseSwap, getActiveBlock, EXERCISE_INTENT } from '../lib/database';
 import {
   loadExerciseIntentState, rankPersonalised, movementFamilyOf, isFamilyBlocked,
   intentFor, familyTargetKey,
@@ -2994,7 +2994,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       } catch (_) { /* fall back to unmapped totals */ }
       const { totalSets, workingSetCount, tonnage } = summariseWorkoutSets(allSets, { loadSemanticsById });
       const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);
-      const sessionName = shareSessionName(null, exerciseNames);
+      // Founder device report 2026-08-24: a session done from a named
+      // routine was being stored as a join of its first two exercise
+      // names, so swapping an exercise in renamed the whole workout - the
+      // share card titled a Back + Hams day "Ab Crunch Machine & Seated
+      // Leg Curl +more". The routine name was never even offered:
+      // shareSessionName's first argument was hard-coded null here, so the
+      // fallback ran every time. The workout keeps the name of the day it
+      // came from, and the exercise join stays what it was written to be,
+      // the fallback for a free-form session that has no routine.
+      let finishedRoutineName = null;
+      if (activeWorkout.routineId) {
+        try {
+          finishedRoutineName = (await getRoutineById(activeWorkout.routineId))?.name ?? null;
+        } catch (_) { /* fall back to the exercise-name title */ }
+      }
+      const sessionName = shareSessionName(finishedRoutineName, exerciseNames);
       const workoutUpdate = {
         endedAt: Date.now(),
         durationMinutes: Math.round(snapshotElapsed / 60),

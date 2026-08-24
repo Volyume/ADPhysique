@@ -64,7 +64,15 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
   test('stored workout name uses the same full-title rule as summary sharing', () => {
     expect(ACTIVE_WORKOUT).toContain("import { shareSessionName } from '../lib/sessionShareData';");
     expect(ACTIVE_WORKOUT).toContain('const exerciseNames = snapshotExercises.map(e => e.exercise?.name).filter(Boolean);');
-    expect(ACTIVE_WORKOUT).toContain('const sessionName = shareSessionName(null, exerciseNames);');
+    // Founder device report 2026-08-24: the routine name was never even
+    // offered here - the first argument was hard-coded null, so the
+    // exercise-name fallback ran on every session from a named day and
+    // swapping an exercise in silently renamed the whole workout. The rule
+    // this test exists to protect is unchanged; it is now given the input
+    // it always needed.
+    expect(ACTIVE_WORKOUT).toContain('const sessionName = shareSessionName(finishedRoutineName, exerciseNames);');
+    expect(ACTIVE_WORKOUT).not.toContain('shareSessionName(null, exerciseNames)');
+    expect(ACTIVE_WORKOUT).toMatch(/finishedRoutineName = \(await getRoutineById\(activeWorkout\.routineId\)\)\?\.name/);
     expect(ACTIVE_WORKOUT).not.toContain("split(' ')[0]");
   });
 

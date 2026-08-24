@@ -562,6 +562,14 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   exerciseNames,
                   startedAt: workout.startedAt,
                   endedAt: workout.endedAt,
+                  // Founder device report 2026-08-24: the history route
+                  // carried no routine at all, so the summary had nothing
+                  // to title the session with and its share card fell back
+                  // to a join of the first two exercise names. Both already
+                  // ride on the row (getRecentCompletedWorkouts returns
+                  // routineName), so pass them.
+                  routineId: workout.routineId ?? null,
+                  routineName: workout.routineName ?? null,
                   readOnly: true,
                 })
               }
@@ -590,6 +598,14 @@ export default function WorkoutHistoryScreen({ navigation }) {
                   exerciseNames,
                   startedAt: workout.startedAt,
                   endedAt: workout.endedAt,
+                  // Founder device report 2026-08-24: the history route
+                  // carried no routine at all, so the summary had nothing
+                  // to title the session with and its share card fell back
+                  // to a join of the first two exercise names. Both already
+                  // ride on the row (getRecentCompletedWorkouts returns
+                  // routineName), so pass them.
+                  routineId: workout.routineId ?? null,
+                  routineName: workout.routineName ?? null,
                   readOnly: true,
                 })
               }

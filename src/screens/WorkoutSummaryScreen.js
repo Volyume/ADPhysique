@@ -138,7 +138,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const {
     workoutId, durationMinutes, exerciseCount, setCount, workingSetCount, tonnage,
     exerciseNames = [], readOnly = false,
-    routineId = null, detectedPRs = [], exerciseData = [],
+    routineId = null, routineName: passedRoutineName = null,
+    detectedPRs = [], exerciseData = [],
     startedAt = null, endedAt = null,
     // COMP-015: the session's nonzero adjustments, passed from the finish flow
     // ([{ muscle, setDelta }]). Live path only; history (readOnly) has none.
@@ -209,8 +210,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   const [notes, setNotes] = useState('');
   const [nextTimeNote, setNextTimeNote] = useState('');
   // The day's name (e.g. "Back + Delts (Width)") for the share card title.
-  // The summary is reached with routineId but not the name, so fetch it.
-  const [routineName, setRoutineName] = useState('');
+  // The live finish flow arrives with routineId but not the name, so the
+  // effect below fetches it; the history route now passes the name it
+  // already holds, which seeds this so the title is right on first paint
+  // rather than after a round trip (founder device report 2026-08-24).
+  const [routineName, setRoutineName] = useState(passedRoutineName || '');
   const [weeklyVolume, setWeeklyVolume] = useState({});
   // C5-P16-01 (D96): how far through the session's own week this is, so the
   // volume card can state a week in progress instead of delivering a
