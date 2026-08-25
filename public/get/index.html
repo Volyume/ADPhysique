@@ -114,13 +114,19 @@
     .btn{min-height:48px;padding:10px 14px;}
   }
 
+  /* Motion is transform only, deliberately. The first version faded in from
+     opacity 0 with a backwards fill, which means the page is INVISIBLE until
+     the animation runs. That is a bad bet for a link in bio: it opens inside
+     slow in-app browsers, and preview crawlers screenshot early. Twice in
+     testing the capture came back blank. Animating position alone can never
+     hide the copy or the buttons, however slow the client. */
   @media (prefers-reduced-motion:no-preference){
-    .page > *{animation:rise .5s cubic-bezier(.22,.9,.3,1) backwards;}
-    .page > *:nth-child(2){animation-delay:.05s;}
-    .page > *:nth-child(3){animation-delay:.10s;}
-    .page > *:nth-child(4){animation-delay:.15s;}
-    .page > *:nth-child(5){animation-delay:.20s;}
-    @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+    .page > *{animation:rise .45s cubic-bezier(.22,.9,.3,1) both;}
+    .page > *:nth-child(2){animation-delay:.04s;}
+    .page > *:nth-child(3){animation-delay:.08s;}
+    .page > *:nth-child(4){animation-delay:.12s;}
+    .page > *:nth-child(5){animation-delay:.16s;}
+    @keyframes rise{from{transform:translateY(8px);}to{transform:none;}}
   }
 </style>
 </head>
