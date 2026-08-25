@@ -237,7 +237,7 @@ qualified professional before making significant changes to your diet or exercis
 
 ## What's New (Release Notes, v1.3.0)
 
-**Limit: 500 characters, plain text. This draft: 403.**
+**Limit: 500 characters, plain text. This draft: 456.**
 
 Gated 2026-08-25 against CLAIMS-STANDARDS (Claim Rule, section 9A capability
 claims, prohibited list, qualified claims, ASA/CAP, tone, section 9 human
@@ -248,7 +248,7 @@ in-app framing only. Facts trace to PRODUCT-FACTS section H.
 ```
 Tell Volyume what to build your training around, and which side it affects. You never need to say why. Look for How you train in Settings. You do not need Pro for it.
 
-Personal bests now count every time you beat one, instead of once per session.
+The personal best alert now fires every time you beat your best, not only the first time. The summary still shows one per exercise.
 
 Your weekly set targets are built from your own plan and profile, not a general table.
 

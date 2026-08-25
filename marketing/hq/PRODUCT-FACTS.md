@@ -225,12 +225,22 @@ voice, which is what the in-app screen already says.
   one way. Verified `src/lib/exercise/adaptedSetup.js` and its consumer
   `src/screens/ExerciseDetailScreen.js` (no Pro guard on either;
   `RootNavigator.js:487, 532`).
-- **Personal bests.** The bar is the best set on record for that exercise,
-  past sessions plus the session's own earlier working sets, and it moves
-  during the session, so every set that beats it counts rather than one per
-  session. The first working set ever recorded on an exercise beats nothing
-  and gets an honest "logged as your starting point" line instead of a
-  record claim. Verified `src/screens/ActiveWorkoutScreen.js:2138-2196`.
+- **Personal bests. Two separate behaviours, and copy must not blur them.**
+  (1) THE IN-SESSION ALERT fires per set, every time a set beats the running
+  best. The bar is the best set on record for that exercise, past sessions
+  plus the session's own earlier working sets, and it moves during the
+  session, so a second and third beat each raise their own alert. Verified
+  `src/screens/ActiveWorkoutScreen.js:2194` (`showPRCelebration`).
+  (2) THE SESSION LIST keeps ONE entry per exercise, not one per beat, so a
+  multi-set session never reports four for the same lift. Verified
+  `ActiveWorkoutScreen.js:2205` (`bestPRPerExercise`) and
+  `src/lib/algorithms.js` (`bestPRPerExercise`, whose header states the rule:
+  "A session should read as 'one PR for that exercise'").
+  Do not write "personal bests count every time" without saying which of the
+  two is meant; it reads as the summary counting them all, which is false.
+  The first working set ever recorded on an exercise beats nothing and gets
+  an honest "logged as your starting point" line instead of a record claim.
+  Verified `src/screens/ActiveWorkoutScreen.js:2138-2196`.
 - **Session summary wording.** The count is one entry per lift, not per
   record, and now says so: "New bests on 4 lifts". Verified commit
   `aabf5ec` against `detectedPRs` / `bestPRPerExercise`.

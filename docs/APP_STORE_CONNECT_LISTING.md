@@ -216,7 +216,7 @@ fields are known to differ on purpose.
 ```
 You can now tell Volyume which movements and positions to keep out of your plan, and it builds around them. Set it up in Settings, under How you train. Choose a whole movement family or a single exercise, keep it in place for a few weeks or leave it open, and allow individual exercises back in whenever you want. It works on the free tier as well as Pro.
 
-Personal bests now count every time you beat one, instead of once per session, and the session summary says how many lifts you beat a best on.
+The personal best alert now fires every time you beat your best during a session, not only the first time. The summary still shows one per exercise, and says how many lifts you beat a best on.
 
 Weekly set targets are built from your own plan and profile, so the number you are aiming at matches the plan you actually follow.
 
@@ -227,7 +227,7 @@ Session share cards have been redrawn, and they no longer grade your session.
 Some people were missing 16 of the 47 library plans. That is fixed, and the library fills itself back in on the next launch.
 ```
 
-> Character count: 912 ✓ (within 4,000)
+> Character count: 962 ✓ (within 4,000)
 
 ---
 
