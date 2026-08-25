@@ -42,22 +42,22 @@
     width:100%;max-width:430px;
     min-height:100svh;
     display:flex;flex-direction:column;
-    gap:clamp(14px,3.4vh,26px);
-    padding:calc(env(safe-area-inset-top) + clamp(18px,3.4vh,30px))
+    gap:clamp(9px,2.5vh,22px);
+    padding:calc(env(safe-area-inset-top) + clamp(12px,2.4vh,26px))
             22px
-            calc(env(safe-area-inset-bottom) + clamp(16px,3vh,26px));
+            calc(env(safe-area-inset-bottom) + clamp(12px,2.2vh,22px));
   }
 
   .mark{height:clamp(19px,2.6vh,24px);width:auto;align-self:flex-start;}
 
   h1{
-    font-size:clamp(29px,8.4vw,40px);line-height:1.08;
+    font-size:clamp(27px,7.9vw,37px);line-height:1.07;
     letter-spacing:-0.025em;font-weight:800;
   }
   h1 .hl{color:var(--amber);}
   .lede{
-    margin-top:10px;
-    font-size:clamp(14.5px,3.9vw,16.5px);line-height:1.5;color:var(--textSecondary);
+    margin-top:9px;
+    font-size:clamp(13.5px,3.7vw,15.5px);line-height:1.45;color:var(--textSecondary);
   }
 
   /* Fanned screenshots. Shrinks first when height is tight. */
@@ -67,7 +67,7 @@
     gap:0;
   }
   .deck img{
-    width:clamp(74px,21vw,96px);height:auto;
+    width:clamp(66px,19.5vw,88px);height:auto;
     border-radius:11px;border:1px solid var(--borderSubtle);
     box-shadow:0 14px 30px rgba(0,0,0,0.55);
     background:var(--surface);
@@ -77,29 +77,42 @@
   .deck img:nth-child(3){transform:rotate(2.5deg);margin-left:-16px;z-index:3;}
   .deck img:nth-child(4){transform:rotate(7deg) translateY(8px);margin-left:-16px;z-index:2;}
 
-  ul{list-style:none;display:flex;flex-direction:column;gap:clamp(9px,1.7vh,14px);}
-  li{display:flex;gap:11px;align-items:flex-start;font-size:clamp(13.5px,3.6vw,15px);line-height:1.42;}
+  ul{list-style:none;display:flex;flex-direction:column;gap:clamp(8px,1.5vh,13px);}
+  li{display:flex;gap:11px;align-items:flex-start;font-size:clamp(13px,3.5vw,14.5px);line-height:1.4;}
   li svg{flex:0 0 auto;margin-top:1px;}
   li b{font-weight:600;color:var(--text);}
   li span{color:var(--textSecondary);}
 
-  .cta{display:flex;flex-direction:column;gap:10px;margin-top:auto;}
+  .cta{display:flex;flex-direction:column;gap:9px;margin-top:auto;}
   .btn{
-    display:flex;align-items:center;justify-content:center;gap:11px;
+    display:flex;align-items:center;justify-content:center;gap:10px;
     text-decoration:none;border-radius:14px;
-    padding:13px 18px;min-height:54px;
+    padding:11px 16px;min-height:52px;
   }
   .btn .lbl{display:flex;flex-direction:column;line-height:1.15;text-align:left;}
-  .btn .lbl .sm{font-size:10.5px;letter-spacing:0.055em;text-transform:uppercase;opacity:0.72;}
-  .btn .lbl .lg{font-size:16.5px;font-weight:700;letter-spacing:-0.01em;}
+  .btn .lbl .sm{white-space:nowrap;font-size:9.8px;letter-spacing:0.055em;text-transform:uppercase;opacity:0.72;}
+  .btn .lbl .lg{white-space:nowrap;font-size:15.5px;font-weight:700;letter-spacing:-0.01em;}
   .btn--primary{background:var(--amberFill);color:#0D0D0D;box-shadow:0 8px 24px rgba(224,140,11,0.28);}
   .btn--ghost{background:var(--surface);color:var(--text);border:1px solid var(--borderSubtle);}
-  @media (min-width:390px){ .cta{flex-direction:row;} .cta .btn{flex:1;} }
+  @media (min-width:380px){ .cta{flex-direction:row;} .cta .btn{flex:1;} }
 
-  .terms{font-size:12.2px;line-height:1.5;color:var(--textSecondary);text-align:center;}
+  .terms{font-size:11.6px;line-height:1.45;color:var(--textSecondary);text-align:center;}
   .terms b{color:var(--text);font-weight:600;}
-  .privacy{font-size:11px;line-height:1.45;color:#6F6F6F;text-align:center;}
+  .privacy{font-size:10.4px;line-height:1.4;color:#6F6F6F;text-align:center;}
   .privacy a{color:#6F6F6F;}
+
+  /* Short-viewport ladder, tuned against measured scrollHeight on 320x568,
+     360x740, 375x667, 390x844 and 414x896. The page must not scroll, so the
+     decoration goes before the copy and the copy goes before the buttons. */
+  @media (max-height:780px){ .deck{display:none;} }
+  @media (max-height:640px){
+    .lede{display:none;}
+    h1{font-size:clamp(25px,7.2vw,31px);}
+    .page{gap:clamp(8px,2vh,14px);}
+    .terms{font-size:11px;}
+    .privacy{font-size:10px;}
+    .btn{min-height:48px;padding:10px 14px;}
+  }
 
   @media (prefers-reduced-motion:no-preference){
     .page > *{animation:rise .5s cubic-bezier(.22,.9,.3,1) backwards;}
