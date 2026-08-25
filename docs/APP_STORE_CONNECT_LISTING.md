@@ -175,19 +175,31 @@ claims, prohibited list, qualified claims, ASA/CAP, tone, section 9 human
 voice). No population named, no medical framing, per the all-NO marketing
 readiness matrix. Facts trace to PRODUCT-FACTS section H.
 
+REVIEW-SCRUTINY REWRITE (founder order 2026-08-25): this field goes into the
+App Store submission, so it is written to give App Review nothing to escalate.
+The capability feature is described in plain programming terms, as movements
+and positions kept out of a plan. No body part, no side, no reason for the
+choice, nothing that reads as health or clinical content, and no reference to
+the other platform's store. Scanned for those triggers as well as the claims
+rules. The Play field keeps the warmer wording; Play review does not apply the
+same health-metadata scrutiny, and that decision is recorded here so the two
+fields are known to differ on purpose.
+
 ```
-Tell Volyume what to build your training around, and which side it affects. You never need to say why. Look for How you train in Settings. You do not need Pro for it. Where an exercise is set up differently for you, the setup notes now say how, instead of assuming one way of doing it.
+You can now tell Volyume which movements and positions to keep out of your plan, and it builds around them. Set it up in Settings, under How you train. Choose a whole movement family or a single exercise, keep it in place for a few weeks or leave it open, and allow individual exercises back in whenever you want. It works on the free tier as well as Pro.
 
 Personal bests now count every time you beat one, instead of once per session, and the session summary says how many lifts you beat a best on.
 
-Your weekly set targets are built from your own plan and profile, so the number you are aiming at matches the plan you actually follow.
+Weekly set targets are built from your own plan and profile, so the number you are aiming at matches the plan you actually follow.
+
+Exercise setup notes now cover more than one way of setting a movement up.
 
 Session share cards have been redrawn, and they no longer grade your session.
 
 Some people were missing 16 of the 47 library plans. That is fixed, and the library fills itself back in on the next launch.
 ```
 
-> Character count: 771 ✓ (within 4,000)
+> Character count: 912 ✓ (within 4,000)
 
 ---
 
