@@ -66,11 +66,39 @@ Log smarter. Grow faster.
 ### Promotional Text
 **Limit: 170 characters — can be updated without a new submission**
 
+FOR THE REVIEW SUBMISSION (2026-08-25). Written to give App Review nothing
+to check: no price, no trial mechanics, no health framing. The field can be
+changed at any time without resubmitting, so the trial hook below can go in
+once the app is approved.
+
 ```
-Pro is free for 14 days, no card needed. Personalised coaching, nutrition targets, weekly check-ins. Keep it for a 7-day store free trial, then £2.99 a month.
+New: tell Volyume which movements and positions to leave out, and your plan is built around them. It works on the free tier as well as Pro.
 ```
 
-> Character count: 156 ✓
+> Character count: 139 ✓
+
+AFTER APPROVAL, if the founder wants the trial hook back (their call: pricing
+and trial claims are FOUNDER-ONLY under OPERATING-CHARTER autonomy
+boundaries):
+
+```
+New: tell Volyume which movements and positions to leave out, and your plan is built around them. Pro starts with 14 days of full access, no card needed.
+```
+
+> Character count: 153 ✓
+
+WITHDRAWN, and why. The previous text read "Pro is free for 14 days, no card
+needed. Personalised coaching, nutrition targets, weekly check-ins. Keep it
+for a 7-day store free trial, then £2.99 a month." The 7-day figure traces
+only to the Google Play introductory offer configured per product in the Play
+Console (PRODUCT-FACTS section C, trial mechanism 2). Nothing in
+PRODUCT-FACTS verifies an equivalent App Store introductory offer, so on this
+listing it was an unverified claim under the Claim Rule, and an unverified
+subscription claim is exactly what a reviewer checks against the live IAP
+configuration. The in-app 14-day trial IS verified in code
+(`src/lib/trialActivation.js:18`) and is app-side, so it holds on either
+platform, which is why the post-approval option keeps that half alone and
+drops the store-side half and the price.
 
 ---
 
