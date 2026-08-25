@@ -1,4 +1,27 @@
 <!DOCTYPE html>
+<!--
+  Supabase "Confirm signup" email template. THIS FILE MUST MATCH what is
+  pasted into Supabase, Authentication, Email Templates, Confirm signup.
+
+  Do NOT use {{ .ConfirmationURL }} here. It resolves to the raw
+  sujrylzzxcqxxfygptns.supabase.co/auth/v1/verify URL, and a link domain
+  that does not match the sending domain (volyume.app, via Resend) is a
+  phishing signal: Yahoo and corporate filters binned these emails, which
+  is the whole reason docs/EMAIL_AUTH_DELIVERABILITY.md exists. The link
+  below goes to volyume.app/auth/confirm/ instead, which hands the
+  one-time token straight to the same verify endpoint. The verification is
+  identical; only the domain in the email changes.
+
+  Corrected 2026-08-25: this file had drifted back to
+  {{ .ConfirmationURL }} while the live dashboard template carried the
+  volyume.app link (EMAIL_AUTH_DELIVERABILITY.md section 3 records it as
+  DONE). Anyone re-pasting this file would have silently undone the
+  deliverability fix and sent auth email back to spam.
+
+  The page this points at is served by GitHub Pages from public/. If that
+  site is down, confirmation links 404 and no account can confirm, which
+  is exactly what happened on 2026-08-25.
+-->
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -95,7 +118,7 @@
               <table role="presentation" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td style="border-radius:12px;background-color:#F59E0B;">
-                    <a href="{{ .ConfirmationURL }}"
+                    <a href="https://volyume.app/auth/confirm/?token={{ .TokenHash }}&amp;type=signup&amp;redirect_to={{ .RedirectTo }}"
                        target="_blank"
                        style="display:inline-block;padding:16px 40px;font-size:16px;font-weight:700;color:#0A0A0A;text-decoration:none;border-radius:12px;letter-spacing:0.1px;">
                       Confirm my email
@@ -133,7 +156,7 @@
                 Button not working? Copy and paste this link into your browser:
               </p>
               <p style="margin:0;font-size:11px;color:#F59E0B;word-break:break-all;">
-                {{ .ConfirmationURL }}
+                https://volyume.app/auth/confirm/?token={{ .TokenHash }}&amp;type=signup&amp;redirect_to={{ .RedirectTo }}
               </p>
             </td>
           </tr>
