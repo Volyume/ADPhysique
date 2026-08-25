@@ -53,6 +53,26 @@ describe('marketing claims guard (CC32)', () => {
     expect(violations).toEqual([]);
   });
 
+  // Added 2026-08-25 with the social landing page. It is a public marketing
+  // surface on volyume.app, so it belongs under the same mechanical guard as
+  // the store listings rather than relying on a hand check that only happens
+  // when someone remembers.
+  test('public/get/index.html carries no R2-blacklisted or population-claim terms in marketing copy', () => {
+    const src = read('public/get/index.html');
+    const lines = src.split('\n');
+    const violations = [];
+    for (const line of lines) {
+      if (isExemptMarketingLine(line)) continue;
+      for (const re of R2_BLACKLIST) {
+        if (re.test(line)) violations.push(line.trim());
+      }
+      for (const re of POPULATION_CLAIM_TERMS) {
+        if (re.test(line)) violations.push(line.trim());
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+
   test('marketing/hq/PRODUCT-FACTS.md carries no R2-blacklisted or population-claim terms in marketing copy', () => {
     const src = read('marketing/hq/PRODUCT-FACTS.md');
     const lines = src.split('\n');

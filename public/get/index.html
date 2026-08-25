@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Get Volyume</title>
+<link rel="canonical" href="https://volyume.app/get/">
+<link rel="icon" type="image/png" href="/favicon.png">
+<meta name="theme-color" content="#0D0D0D">
+<meta name="description" content="Volyume makes the weekly call on your training and nutrition, and shows its working. Free to log, plan and track. Download for iPhone and Android.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Volyume: the weekly call, with its working shown">
+<meta property="og:description" content="Log your sets and your food. Every week Volyume decides what to change, and tells you why. Free to log, plan and track.">
+<meta property="og:url" content="https://volyume.app/get/">
+<meta property="og:image" content="https://volyume.app/volyume-v.png">
+<meta name="twitter:card" content="summary_large_image">
+<style>
+  :root{
+    --bg:#0D0D0D; --surface:#191917; --borderSubtle:#2E2E2C;
+    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
+    --text:#FFFFFF; --textSecondary:#9E9E9E;
+    --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{color-scheme:dark;-webkit-text-size-adjust:100%;}
+  body{
+    background:var(--bg);color:var(--text);font-family:var(--font);
+    -webkit-font-smoothing:antialiased;
+    min-height:100svh;
+    display:flex;justify-content:center;
+    overflow-x:hidden;
+  }
+  /* Amber glow behind the fold, the app's own accent rather than a stock gradient. */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(120% 55% at 50% -8%, rgba(245,166,35,0.20) 0%, rgba(245,166,35,0.05) 42%, transparent 72%),
+      radial-gradient(90% 40% at 50% 108%, rgba(245,166,35,0.10) 0%, transparent 70%);
+  }
+  .page{
+    position:relative;z-index:1;
+    width:100%;max-width:430px;
+    min-height:100svh;
+    display:flex;flex-direction:column;
+    gap:clamp(14px,3.4vh,26px);
+    padding:calc(env(safe-area-inset-top) + clamp(18px,3.4vh,30px))
+            22px
+            calc(env(safe-area-inset-bottom) + clamp(16px,3vh,26px));
+  }
+
+  .mark{height:clamp(19px,2.6vh,24px);width:auto;align-self:flex-start;}
+
+  h1{
+    font-size:clamp(29px,8.4vw,40px);line-height:1.08;
+    letter-spacing:-0.025em;font-weight:800;
+  }
+  h1 .hl{color:var(--amber);}
+  .lede{
+    margin-top:10px;
+    font-size:clamp(14.5px,3.9vw,16.5px);line-height:1.5;color:var(--textSecondary);
+  }
+
+  /* Fanned screenshots. Shrinks first when height is tight. */
+  .deck{
+    flex:0 1 auto;min-height:0;
+    display:flex;justify-content:center;align-items:flex-start;
+    gap:0;
+  }
+  .deck img{
+    width:clamp(74px,21vw,96px);height:auto;
+    border-radius:11px;border:1px solid var(--borderSubtle);
+    box-shadow:0 14px 30px rgba(0,0,0,0.55);
+    background:var(--surface);
+  }
+  .deck img:nth-child(1){transform:rotate(-7deg) translateY(8px);z-index:1;}
+  .deck img:nth-child(2){transform:rotate(-2.5deg);margin-left:-16px;z-index:2;}
+  .deck img:nth-child(3){transform:rotate(2.5deg);margin-left:-16px;z-index:3;}
+  .deck img:nth-child(4){transform:rotate(7deg) translateY(8px);margin-left:-16px;z-index:2;}
+
+  ul{list-style:none;display:flex;flex-direction:column;gap:clamp(9px,1.7vh,14px);}
+  li{display:flex;gap:11px;align-items:flex-start;font-size:clamp(13.5px,3.6vw,15px);line-height:1.42;}
+  li svg{flex:0 0 auto;margin-top:1px;}
+  li b{font-weight:600;color:var(--text);}
+  li span{color:var(--textSecondary);}
+
+  .cta{display:flex;flex-direction:column;gap:10px;margin-top:auto;}
+  .btn{
+    display:flex;align-items:center;justify-content:center;gap:11px;
+    text-decoration:none;border-radius:14px;
+    padding:13px 18px;min-height:54px;
+  }
+  .btn .lbl{display:flex;flex-direction:column;line-height:1.15;text-align:left;}
+  .btn .lbl .sm{font-size:10.5px;letter-spacing:0.055em;text-transform:uppercase;opacity:0.72;}
+  .btn .lbl .lg{font-size:16.5px;font-weight:700;letter-spacing:-0.01em;}
+  .btn--primary{background:var(--amberFill);color:#0D0D0D;box-shadow:0 8px 24px rgba(224,140,11,0.28);}
+  .btn--ghost{background:var(--surface);color:var(--text);border:1px solid var(--borderSubtle);}
+  @media (min-width:390px){ .cta{flex-direction:row;} .cta .btn{flex:1;} }
+
+  .terms{font-size:12.2px;line-height:1.5;color:var(--textSecondary);text-align:center;}
+  .terms b{color:var(--text);font-weight:600;}
+  .privacy{font-size:11px;line-height:1.45;color:#6F6F6F;text-align:center;}
+  .privacy a{color:#6F6F6F;}
+
+  @media (prefers-reduced-motion:no-preference){
+    .page > *{animation:rise .5s cubic-bezier(.22,.9,.3,1) backwards;}
+    .page > *:nth-child(2){animation-delay:.05s;}
+    .page > *:nth-child(3){animation-delay:.10s;}
+    .page > *:nth-child(4){animation-delay:.15s;}
+    .page > *:nth-child(5){animation-delay:.20s;}
+    @keyframes rise{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+  }
+</style>
+</head>
+<body>
+<main class="page">
+
+  <img class="mark" src="/volyume-wordmark.png" alt="Volyume">
+
+  <div>
+    <h1>Volyume makes the weekly call, and <span class="hl">shows its working</span>.</h1>
+    <p class="lede">Log your sets and your food. Each week it decides what to change in your training and nutrition, and tells you exactly why.</p>
+  </div>
+
+  <div class="deck">
+    <img src="/screenshots/02_know_what_to_do_today.jpg" alt="Today screen showing the session to do" loading="lazy">
+    <img src="/screenshots/05_log_every_set.jpg" alt="Logging a set in the workout logger" loading="lazy">
+    <img src="/screenshots/06_meals_planned_to_your_targets.jpg" alt="Meals planned to your macro targets" loading="lazy">
+    <img src="/screenshots/03_plan_that_moves_with_you.jpg" alt="Training plan adjusting week to week" loading="lazy">
+  </div>
+
+  <ul>
+    <li>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="#F5A623" stroke-width="1.6"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span><b>Change or hold, with the reasons.</b> You see what it decided and what it read to get there.</span>
+    </li>
+    <li>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="#F5A623" stroke-width="1.6"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span><b>Rule based, not generative.</b> The same inputs give the same decision, so you can check it.</span>
+    </li>
+    <li>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="#F5A623" stroke-width="1.6"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span><b>It holds when the data is thin.</b> Too little to be sure and it says so, rather than guessing.</span>
+    </li>
+  </ul>
+
+  <div class="cta">
+    <a class="btn btn--primary" href="https://apps.apple.com/gb/app/volyume/id6777083702">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 1.4c0 1.1-.5 2.2-1.2 3-.8.9-2.2 1.6-3.3 1.5-.2-1.1.4-2.3 1.1-3 .9-.9 2.3-1.5 3.4-1.5zm4.1 15.7c-.6 1.3-.8 1.9-1.5 3-1 1.5-2.4 3.5-4.1 3.5-1.5 0-1.9-1-4-1-2.1 0-2.5 1-4 1-1.7 0-3.1-1.8-4.1-3.3C.1 15.9-.2 10.8 1.5 8c1.2-1.9 3.1-3 4.9-3 1.9 0 3 1 4.5 1 1.5 0 2.4-1 4.5-1 1.6 0 3.3.9 4.5 2.4-4 2.2-3.3 7.9.6 9.7z"/></svg>
+      <span class="lbl"><span class="sm">Download on the</span><span class="lg">App Store</span></span>
+    </a>
+    <a class="btn btn--ghost" href="https://play.google.com/store/apps/details?id=app.volyume">
+      <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1zm13.5 13.4l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-3.9 2.2h-.1zm-.2.2l-3.4-3.4-9.9 9.9c.4.4 1 .4 1.7.1l11.6-6.6zm0-6.8L5.3 2C4.6 1.6 4 1.7 3.6 2.1l9.9 9.9 3.4-3.4z"/></svg>
+      <span class="lbl"><span class="sm">Get it on</span><span class="lg">Google Play</span></span>
+    </a>
+  </div>
+
+  <p class="terms"><b>Logging, plans and progress are free</b>, with no time limit. Pro adds the food diary, the weekly coaching and photo progress tracking, and starts with 14 days of full access, no card needed.</p>
+
+  <p class="privacy">Encrypted on your device and stored in the EU. No ads, and your data is never sold. <a href="/privacy/">Privacy</a> &middot; <a href="/support/">Support</a></p>
+
+</main>
+</body>
+</html>

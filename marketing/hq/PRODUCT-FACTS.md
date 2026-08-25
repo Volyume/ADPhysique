@@ -22,8 +22,18 @@ re-verified before reuse if the app has been updated since this date.
 ## A. What Volyume Is (founder-stated)
 
 - Connected physique coaching system for serious self-coached lifters.
-- Platform status: live on Google Play (package `app.volyume`). Apple App
-  Store: coming soon (currently TestFlight only — see Section E).
+- Platform status: live on Google Play (package `app.volyume`) AND live on
+  the Apple App Store. CORRECTED 2026-08-25: this line previously said the
+  App Store was "coming soon (currently TestFlight only)", which is now
+  false and would have blocked any honest iOS download claim. Both store
+  pages were fetched and returned HTTP 200 on that date:
+  - Google Play: https://play.google.com/store/apps/details?id=app.volyume
+  - App Store:   https://apps.apple.com/gb/app/volyume/id6777083702
+  Copy may therefore say the app is available for iPhone and Android, and
+  may link to both. iOS-specific TRIAL mechanics are still UNKNOWN: only
+  the in-app 14-day trial (mechanism 1 in Section C) is verified as
+  platform-neutral, and the 7-day store offer in Section C is configured
+  in the Play Console, so it must not be claimed on an iOS surface.
 - Zero users at build date; no marketing has been done before this system.
 - The customer is the end user paying for Pro (not gyms, not coaches).
 - The problem: users of workout loggers (Strong/Hevy), nutrition apps
