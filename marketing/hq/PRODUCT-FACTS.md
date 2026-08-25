@@ -126,8 +126,12 @@ Each figure below is tied to a specific file reference, verified
 - **551 exercises** in the built-in library, plus unlimited user-added
   custom exercises — `src/lib/seedExercises.js`, RAW array, lines 580-1279.
   NOTE: older marketing material stated 448 — that figure is stale; use 551.
-- **31 built-in training plans** — `src/lib/seedRoutines.js`,
-  `LIBRARY_PLANS`.
+- **47 built-in training plans** — `src/lib/seedRoutines.js`,
+  `LIBRARY_PLANS`. CORRECTED 2026-08-25: this said 31, which was stale and
+  was nearly used on an advert. Counted from the live array (47 top-level
+  entries) and cross-checked against
+  `src/lib/__tests__/seedRoutinesLibraryData.test.js`, which pins 47 and
+  guards against the array holes that hid 16 of them from some users.
 - **9 physique goal options**: general (non-competing) plus 8 divisions —
   Men's Physique, Classic Physique, Bodybuilding, Bikini, Wellness, Figure,
   Women's Physique, Women's Bodybuilding —

@@ -1,0 +1,49 @@
+{
+  "meta": {
+    "source": "Founder request 2026-08-25: an Instagram advert. Written hands-on against ADVERTISING-PRINCIPLES.md (HOOK + AD-STRUCTURE rubrics) and MARKETING-VISUAL-IDENTITY-LOCKED.md.",
+    "title": "You logged every set this week",
+    "format": "Instagram feed advert, 5 slides, 1080x1350",
+    "status": "DRAFT - founder-tap lane (playbook step 4: Instagram's first batch is not yet approved, so this does not publish autonomously)",
+    "rubric": {
+      "hook": "problem-aware opener in the viewer's own words, concrete, no jargon before the plain explanation",
+      "structure": "problem (1) -> product named by beat 2 (2) -> reason/mechanism (3) -> real-app proof (4) -> one CTA (5)",
+      "freeProAccuracy": "training logging stated free; the weekly coaching, and the food and weigh-in reading it does, attributed to Pro throughout",
+      "claimsTraced": "3 morning weights = MIN_WEIGH_INS in weeklyCoach.js; 14 days = TRIAL_LENGTH_DAYS in trialActivation.js; both stores verified live 2026-08-25"
+    }
+  },
+  "slides": [
+    {
+      "heading": "You logged every set this week.",
+      "supporting": "Deciding what to change next week is still guesswork.",
+      "headingAmber": true
+    },
+    {
+      "heading": "Volyume makes that call.",
+      "supporting": "Its weekly coaching reads your training, your food and your weigh-ins, then decides one thing: change, or hold."
+    },
+    {
+      "heading": "And it holds when the data is thin.",
+      "miniCard": {
+        "label": "Weekly decision",
+        "verdict": "Hold",
+        "pillOutline": true,
+        "reason": "Need at least 3 morning weights for a reliable trend."
+      }
+    },
+    {
+      "heading": "Every call comes with its reason.",
+      "appShot": {
+        "src": "02_know_what_to_do_today.jpg",
+        "label": "The Today screen."
+      }
+    },
+    {
+      "heading": "Logging your training is free, with no time limit.",
+      "supporting": "The weekly coaching is Pro. On the App Store and Google Play.",
+      "monoStat": {
+        "value": "14 days",
+        "caption": "of full Pro access to start, no card needed."
+      }
+    }
+  ]
+}
