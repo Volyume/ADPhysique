@@ -40,21 +40,32 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # enablement: true (2026-08-25). The repository was taken private and
-      # made public again; GitHub unpublishes a Pages site on that transition
-      # and does NOT restore it, so volyume.app served GitHub's own 404 and
-      # every link into it died -- including the Supabase email-confirmation
-      # landing page at /auth/confirm, the App Store support and privacy URLs,
-      # and the partner invite pages. This action defaults to enablement:
-      # false, so it only READS the Pages config and fails with "Get Pages
-      # site failed ... Not Found" when there isn't one. With enablement true
-      # it creates the site and sets the build type to Actions itself, so the
-      # deploy repairs the site instead of needing a console visit. The custom
-      # domain comes back from public/CNAME in the uploaded artifact.
+      # 2026-08-25 incident, recorded so the same dead end is not retried.
+      # The repository was taken private and made public again. GitHub
+      # unpublishes a Pages site on that transition and does NOT restore it
+      # when the repository comes back, so volyume.app served GitHub's own
+      # 404 and every link into the site died: the Supabase
+      # email-confirmation landing page at /auth/confirm (no new account
+      # could confirm an address), the support and privacy URLs the store
+      # listings point at, and the partner invite pages. Nothing had touched
+      # public/ since 10 August, so this workflow had not run and nothing
+      # surfaced it.
+      #
+      # This step then failed with "Get Pages site failed ... Not Found",
+      # because the action defaults to enablement: false and only READS the
+      # Pages configuration. Setting enablement: true was tried and does NOT
+      # work either: creating a Pages site needs repository ADMIN, and the
+      # job's GITHUB_TOKEN has pages: write, which covers deploying to an
+      # existing site and nothing more. The run failed with "Create Pages
+      # site failed. Error: Resource not accessible by integration". So the
+      # input is deliberately left off.
+      #
+      # Re-enabling is a repository-settings action only an admin can take:
+      # Settings, then Pages, then Build and deployment, then set Source to
+      # GitHub Actions. Re-run this workflow afterwards; the custom domain
+      # comes back from public/CNAME in the uploaded artifact.
       - name: Setup Pages
         uses: actions/configure-pages@v5
-        with:
-          enablement: true
 
       - name: Setup Java 17
         uses: actions/setup-java@v4
