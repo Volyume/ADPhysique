@@ -235,7 +235,27 @@ qualified professional before making significant changes to your diet or exercis
 
 ---
 
-## What's New (Release Notes, v1.2.0)
+## What's New (Release Notes, v1.3.0)
+
+**Limit: 500 characters, plain text. This draft: 403.**
+
+Gated 2026-08-25 against CLAIMS-STANDARDS (Claim Rule, section 9A capability
+claims, prohibited list, qualified claims, ASA/CAP, tone, section 9 human
+voice). No population is named and no medical framing is used, per the
+all-NO marketing readiness matrix; the capability line uses the neutral
+in-app framing only. Facts trace to PRODUCT-FACTS section H.
+
+```
+Tell Volyume what to build your training around, and which side it affects. You never need to say why. Look for How you train in Settings. You do not need Pro for it.
+
+Personal bests now count every time you beat one, instead of once per session.
+
+Your weekly set targets are built from your own plan and profile, not a general table.
+
+Some people were missing 16 of the 47 library plans. That is fixed.
+```
+
+### Previous release notes, v1.2.0 (superseded, kept for reference)
 
 ```
 The full release of Volyume.

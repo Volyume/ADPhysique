@@ -198,3 +198,56 @@ Each figure below is tied to a specific file reference, verified
   pool holds available codes; if the pool is empty, sending pauses and an
   incident is logged. Do not imply stacking with the Play introductory offer
   or guarantee redemption outcomes; the code is the deliverable.
+
+---
+
+## H. Version 1.3.0 changes (code-verified 2026-08-25)
+
+Added for the 1.3.0 release notes. Each line was read in the cited file
+before it was written here; nothing is taken from a commit summary alone.
+Section 9A of CLAIMS-STANDARDS governs the first item: the marketing
+readiness matrix is all-NO, so no population may be named and no medical
+framing used. The only permitted framing is the product's own neutral
+voice, which is what the in-app screen already says.
+
+- **"How you train" (Settings).** A screen where the user says what their
+  training should be built around, including which side of the body it
+  affects, and for how long. The screen's own words are "What should
+  Volyume build around?" and "Pick anything that applies. You never need
+  to say why." Verified `src/screens/HowYouTrainScreen.js:639-640, 745`.
+- **Tier: free.** `HowYouTrain` and `TrainingConsiderations` are registered
+  in the navigator with no Pro guard, and the second is annotated as a
+  free-tier discovery surface (CAP-19). Verified
+  `src/navigation/RootNavigator.js:464-465, 497-499`. Copy may say it is
+  available on the free tier as well as Pro.
+- **Adapted setup notes.** Where an exercise is set up differently for a
+  given user, the exercise's setup notes state how rather than assuming
+  one way. Verified `src/lib/exercise/adaptedSetup.js` and its consumer
+  `src/screens/ExerciseDetailScreen.js` (no Pro guard on either;
+  `RootNavigator.js:487, 532`).
+- **Personal bests.** The bar is the best set on record for that exercise,
+  past sessions plus the session's own earlier working sets, and it moves
+  during the session, so every set that beats it counts rather than one per
+  session. The first working set ever recorded on an exercise beats nothing
+  and gets an honest "logged as your starting point" line instead of a
+  record claim. Verified `src/screens/ActiveWorkoutScreen.js:2138-2196`.
+- **Session summary wording.** The count is one entry per lift, not per
+  record, and now says so: "New bests on 4 lifts". Verified commit
+  `aabf5ec` against `detectedPRs` / `bestPRPerExercise`.
+- **Weekly set targets.** Resolved by precedence manual > adapted (Pro) >
+  plan > profile > research, so the target reflects the user's own plan and
+  profile rather than a population table. The plan layer is tier-blind; the
+  adapted layer stays Pro. The volume screen itself carries no Pro guard
+  (`RootNavigator.js:526`). Verified commit `416269c`.
+- **Session share cards.** Redrawn (frame, plan-name pill, hero label, stat
+  icons) and the intensity badge is retired, so a session is no longer
+  graded on the card. Verified commit `6f32275`.
+- **Plan library.** The library holds 47 plans. Two array holes in
+  `LIBRARY_PLANS` aborted seeding partway, so affected users held 16 fewer
+  and could not repair it; the seed marker is written only after the loop
+  completes and existing plans are matched by name, so the next launch
+  after the fix fills the gap without duplicating. Verified
+  `src/lib/seedRoutines.js:2088-2103, 2131-2195` and commit `bd1cea0`.
+- **UNKNOWN, must not appear in copy:** which version is currently live on
+  Google Play, and therefore whether the 1.2.1 items were ever announced to
+  store users. That is a Play Console fact, founder-held.

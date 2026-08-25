@@ -167,26 +167,27 @@ bodybuilding,hypertrophy,gym,workout log,weightlifting,strength,muscle,fitness,t
 
 ---
 
-### What's New (Release Notes)
+### What's New (Release Notes, v1.3.0)
 **Limit: 4000 characters — plain text**
 
+Gated 2026-08-25 against CLAIMS-STANDARDS (Claim Rule, section 9A capability
+claims, prohibited list, qualified claims, ASA/CAP, tone, section 9 human
+voice). No population named, no medical framing, per the all-NO marketing
+readiness matrix. Facts trace to PRODUCT-FACTS section H.
+
 ```
-The full release of Volyume.
+Tell Volyume what to build your training around, and which side it affects. You never need to say why. Look for How you train in Settings. You do not need Pro for it. Where an exercise is set up differently for you, the setup notes now say how, instead of assuming one way of doing it.
 
-WHAT'S IN THIS RELEASE
+Personal bests now count every time you beat one, instead of once per session, and the session summary says how many lifts you beat a best on.
 
-Training logbook with automatic rest timer after every set, inline previous-session performance so you always know if you're progressing, and PR detection that tells you when you hit a lifetime best.
+Your weekly set targets are built from your own plan and profile, so the number you are aiming at matches the plan you actually follow.
 
-Pro Coaching with personalised plan generation based on your goal, schedule, recovery capacity, and equipment. Weekly check-ins let the app adjust your plan based on how training actually felt.
+Session share cards have been redrawn, and they no longer grade your session.
 
-Nutrition targets calculated from your body stats and training phase. Protein, carbohydrate, and fat targets update automatically as your weight or phase changes.
-
-Pro starts with a 14-day free trial, no card needed. Keep it for a 7-day store free trial, then £2.99 a month or £19.99 a year. The Free tier stays free with no time limit.
-
-Found a bug or something that does not feel right? The in-app feedback button goes directly to the developer.
+Some people were missing 16 of the 47 library plans. That is fixed, and the library fills itself back in on the next launch.
 ```
 
-> Character count: ~820 ✓ (within 4,000)
+> Character count: 771 ✓ (within 4,000)
 
 ---
 

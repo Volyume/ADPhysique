@@ -2563,3 +2563,37 @@ Now walks the source roots with `fs`, no external tool, same checks.
 **Founder-side:** an iOS build is manual-dispatch only (build credits), so the
 fix is on main and waiting for a dispatch. Device checklist in the session
 report.
+
+---
+
+## STORE RELEASE NOTES, v1.3.0 (2026-08-25) — WRITTEN AND GATED, awaiting the founder's paste.
+
+**Founder ask:** a short "what's new in this version" to attract users.
+
+**Delivered.** Play (403 of 500 characters) and App Store (771 of 4,000)
+release notes for 1.3.0, in `docs/PLAY_STORE_LISTING.md` and
+`docs/APP_STORE_CONNECT_LISTING.md`. Both sections had been left at the
+v1.2.0 full-release text; the v1.2.0 Play block is kept beneath the new one
+for reference. Facts added to `marketing/hq/PRODUCT-FACTS.md` section H,
+each read in the cited file rather than taken from a commit summary.
+
+**The constraint that shaped the copy.** The biggest thing in 1.3.0 is the
+capability lane, and CLAIMS-STANDARDS section 9A forbids naming any
+population while every row of MARKETING-READINESS-MATRIX.md reads NO. So
+the lead line uses the product's own neutral words, which is the one
+framing 9A permits: "Tell Volyume what to build your training around, and
+which side it affects. You never need to say why." No population, no
+medical framing, no condition named.
+
+**Gates.** `npm run lint` clean. `marketingClaimsGuard.test.js` 5/5 pass
+over both listings and PRODUCT-FACTS. Full suite run at the same landing.
+Copy additionally checked line by line against the section 9 human-voice
+bans (em dash, exclamation, hype words, US spellings, negation pivots,
+audience sweeps, emoji) using the repo's own R2 and population regexes.
+
+**Open founder question (asked in chat, not blocking):** which version is
+live on Google Play right now. If 1.2.1 never shipped, the notes should
+also carry its headline items (equipment-aware plan updates, background
+rest cues, tap-to-edit a logged set, the share-card rebuild) because those
+users are coming from 1.2.0. Recorded as UNKNOWN in PRODUCT-FACTS section H
+rather than guessed.
