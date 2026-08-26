@@ -34,6 +34,14 @@
  * Exact source snippets below were verified against scheduler.js before
  * writing these regexes (each site printed and read in full); production
  * code is unchanged, this suite only pins what already exists.
+ *
+ * 2026-08-26 (Sentry VOLYUME-1K native-crash fix): every scheduling call in
+ * this file now goes through `scheduleCheckedNotification(...)` from
+ * ./triggerDate instead of `Notifications.scheduleNotificationAsync(...)`,
+ * so the ordering assertions below anchor on the new symbol. The ED/calm
+ * suppression behaviour these tests pin is UNCHANGED: the flag is still read
+ * fail-closed and still acted on before any push is laid, at all five sites.
+ * Only the name of the call it must precede has moved.
  */
 const fs = require('fs');
 const path = require('path');
@@ -63,7 +71,7 @@ describe('scheduler.js: getOpenEdPatternFlag fail-closed wrapping, all five X-SA
     // The suppression check must gate the push: it appears strictly before
     // the notification is scheduled.
     expect(body.indexOf('const edFlag = ')).toBeLessThan(
-      body.indexOf('Notifications.scheduleNotificationAsync('),
+      body.indexOf('scheduleCheckedNotification('),
     );
   });
 
@@ -76,7 +84,7 @@ describe('scheduler.js: getOpenEdPatternFlag fail-closed wrapping, all five X-SA
       /if \(edFlag\) \{\s*\n\s*await cancelMissedCheckinFollowups\(\);\s*\n\s*return;\s*\n\s*\}/,
     );
     expect(body.indexOf('const edFlag = ')).toBeLessThan(
-      body.indexOf('Notifications.scheduleNotificationAsync('),
+      body.indexOf('scheduleCheckedNotification('),
     );
   });
 
@@ -87,7 +95,7 @@ describe('scheduler.js: getOpenEdPatternFlag fail-closed wrapping, all five X-SA
     );
     expect(body).toContain('if (edFlag) { await cancelActivationNudge(); return; }');
     expect(body.indexOf('const edFlag = ')).toBeLessThan(
-      body.indexOf('Notifications.scheduleNotificationAsync('),
+      body.indexOf('scheduleCheckedNotification('),
     );
   });
 
@@ -98,7 +106,7 @@ describe('scheduler.js: getOpenEdPatternFlag fail-closed wrapping, all five X-SA
     );
     expect(body).toContain('if (edFlag) { await cancelPlannedMealConfirm(); return; }');
     expect(body.indexOf('const edFlag = ')).toBeLessThan(
-      body.indexOf('Notifications.scheduleNotificationAsync('),
+      body.indexOf('scheduleCheckedNotification('),
     );
   });
 
@@ -113,7 +121,7 @@ describe('scheduler.js: getOpenEdPatternFlag fail-closed wrapping, all five X-SA
     // evaluated, rather than cancelling something already laid.
     expect(body).toContain('if (edFlag) return;');
     expect(body.indexOf('const edFlag = ')).toBeLessThan(
-      body.indexOf('Notifications.scheduleNotificationAsync('),
+      body.indexOf('scheduleCheckedNotification('),
     );
   });
 });

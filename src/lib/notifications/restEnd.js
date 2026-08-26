@@ -24,6 +24,7 @@
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { REST_ALERTS_CHANNEL } from './channels';
+import { scheduleCheckedNotification } from './triggerDate';
 
 const NOTIF_ID_REST_END = 'volyume_rest_end';
 
@@ -54,7 +55,7 @@ export async function scheduleRestEndNotification(endsAtMs) {
     // Under ~2s away the in-app/foreground cues own the moment; scheduling a
     // past or imminent date would fire instantly and read as a stray buzz.
     if (!Number.isFinite(ms) || ms < 2000) return;
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: NOTIF_ID_REST_END,
       content: {
         title: 'Rest done',
