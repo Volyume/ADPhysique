@@ -132,7 +132,10 @@ good offer; it does not need inflating.
 
 ## 4. Pricing
 
-- Volyume Pro is **£2.99 per month** or **£19.99 per year**, UK.
+- Volyume Pro is **£1.99 per month** or **£19.99 per year**, UK.
+  (Monthly corrected 2026-08-25 from £2.99, which this line still carried
+  after the founder's 2026-08-18 reduction recorded in
+  `src/lib/payments/catalogue.js:6`.)
 - **The price shown by Google Play (or the App Store) at the point of purchase
   is always authoritative.** Public copy defers to it.
 - Never advertise a price other than the current one. Old prices, launch

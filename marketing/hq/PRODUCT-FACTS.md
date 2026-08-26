@@ -122,8 +122,12 @@ re-verified before reuse if the app has been updated since this date.
 
 ## C. Pricing and Trial (founder-stated + code-verified)
 
-- **Pricing:** £2.99/month (product ID `pro_monthly`), £19.99/year (product
+- **Pricing:** £1.99/month (product ID `pro_monthly`), £19.99/year (product
   ID `pro_annual`) — verified at `src/lib/payments/catalogue.js:36-46`.
+  CORRECTED 2026-08-25: this read £2.99. The monthly price was reduced to
+  £1.99 by founder order on 2026-08-18 (`catalogue.js:6`) and this file had
+  not followed, so copy written from here would have quoted a price the app
+  does not charge. Founder confirmed £1.99 the same day.
   The price Google Play displays at the point of purchase is authoritative;
   this file's figures are for copy drafting only.
 - **Trial mechanism 1 — in-app trial:** 14-day full-Pro trial inside the app,
