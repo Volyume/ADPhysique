@@ -126,9 +126,17 @@ const WEIGH_IN_HORIZON_DAYS = 14;
 
 function weighInHorizonDates(hour, minute, days = WEIGH_IN_HORIZON_DAYS) {
   const out = [];
+  // VOLYUME-1K, same fail-open shape as getNextWeekdayDate. An unusable hour
+  // or minute makes every `new Date(...)` below invalid, and the past-date
+  // skip cannot catch it because `NaN <= Date.now()` is FALSE: the Invalid
+  // Date is pushed and scheduled, and traps natively. restoreNotifications
+  // feeds this from stored prefs via `prefs.morningHour ?? 7`, and `??`
+  // defaults only null/undefined, so a stored NaN reaches here intact.
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return out;
   const now = new Date();
   for (let i = 0; i <= days; i += 1) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, hour, minute, 0, 0);
+    if (!Number.isFinite(d.getTime())) continue; // proved, not compared
     if (d.getTime() <= Date.now()) continue; // never schedule into the past
     out.push(d);
     if (out.length >= days) break;
