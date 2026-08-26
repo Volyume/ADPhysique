@@ -32,20 +32,20 @@
   /* Tight above the first CTA, roomier below it. The gap is the single
      biggest lever on how far a high-intent visitor has to scroll. */
   .page{position:relative;z-index:1;width:100%;max-width:430px;
-    display:flex;flex-direction:column;gap:14px;
+    display:flex;flex-direction:column;gap:12px;
     padding:calc(env(safe-area-inset-top) + 18px) 20px calc(env(safe-area-inset-bottom) + 28px);}
 
   .mark{height:21px;width:auto;align-self:flex-start;}
 
   .eyebrow{font-family:var(--mono);font-size:clamp(9.5px,2.5vw,11px);
     letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);margin-bottom:9px;}
-  h1{font-size:clamp(28px,7.9vw,36px);line-height:1.06;letter-spacing:-0.025em;font-weight:800;}
+  h1{font-size:clamp(24px,6.6vw,30px);line-height:1.1;letter-spacing:-0.025em;font-weight:800;}
   h1 .hl{color:var(--amber);}
   .sub b{color:var(--text);font-weight:600;}
   .sub{margin-top:11px;font-size:clamp(14.5px,3.9vw,16px);line-height:1.45;color:var(--textSecondary);}
 
   .deck{display:flex;justify-content:center;align-items:flex-start;}
-  .deck img{width:clamp(62px,17.5vw,79px);height:auto;border-radius:10px;
+  .deck img{width:clamp(58px,16.2vw,73px);height:auto;border-radius:10px;
     border:1px solid var(--borderSubtle);box-shadow:0 12px 26px rgba(0,0,0,0.55);background:var(--surface);}
   .deck img:nth-child(1){transform:rotate(-7deg) translateY(7px);z-index:1;}
   .deck img:nth-child(2){transform:rotate(-2.5deg);margin-left:-15px;z-index:2;}
@@ -58,13 +58,9 @@
   .reason b{display:block;font-size:clamp(14px,3.8vw,15.5px);font-weight:700;letter-spacing:-0.01em;color:var(--text);}
   .reason span{display:block;margin-top:2px;font-size:clamp(13px,3.5vw,14.5px);line-height:1.4;color:var(--textSecondary);}
 
-  .offer{background:var(--surface);border:1px solid var(--borderSubtle);border-radius:15px;padding:13px 15px;text-align:center;}
-  .offer .free{font-family:var(--mono);font-size:clamp(12.5px,3.4vw,14px);line-height:1.35;
-    letter-spacing:0.03em;text-transform:uppercase;color:var(--amber);font-weight:700;}
-  .offer .price{margin-top:7px;font-size:clamp(15px,4.1vw,17px);font-weight:700;color:var(--text);letter-spacing:-0.01em;}
-  .offer .always{margin-top:9px;padding-top:9px;border-top:1px solid var(--borderSubtle);
-    font-size:clamp(12.5px,3.3vw,13.5px);line-height:1.4;color:var(--textSecondary);}
 
+  .offer{font-size:clamp(12.5px,3.3vw,13.5px);line-height:1.5;color:var(--textSecondary);}
+  .offer b{color:var(--amber);font-weight:700;}
   .cta{display:flex;flex-direction:column;gap:9px;}
   .btn{display:flex;align-items:center;justify-content:center;gap:11px;text-decoration:none;
     border-radius:14px;padding:12px 16px;min-height:54px;}
@@ -134,11 +130,7 @@
     <div class="reason"><b>It doesn't invent a change.</b><span>If there is not enough yet to justify changing something, it tells you.</span></div>
   </div>
 
-  <div class="offer">
-    <p class="free">14 days of Volyume Pro free<br>No card required</p>
-    <p class="price">£1.99/month or £19.99/year</p>
-    <p class="always">Training logging, the plan library and progress tracking stay free, with no time limit.</p>
-  </div>
+  <p class="offer"><b>14 days Pro free, no card required.</b> Then &pound;1.99/month or &pound;19.99/year. Training logging, the plan library and progress tracking stay free, with no time limit.</p>
 
   <div class="cta">
     <a class="btn btn--primary" href="https://apps.apple.com/gb/app/volyume/id6777083702">
