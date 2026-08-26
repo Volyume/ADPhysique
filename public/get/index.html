@@ -7,10 +7,10 @@
 <link rel="canonical" href="https://volyume.app/get/">
 <link rel="icon" type="image/png" href="/favicon.png">
 <meta name="theme-color" content="#0D0D0D">
-<meta name="description" content="Not an AI fitness chatbot. You log your training. Volyume keeps track of the bigger picture and tells you each week whether to keep going or change something, and why.">
+<meta name="description" content="Your training, nutrition, recovery and progress work together to guide what you do next. Free to log your training, with 14 days of full Volyume Pro and no card required.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Volyume: not an AI fitness chatbot">
-<meta property="og:description" content="AI can guess. Volyume doesn't. You log your training. It keeps track of the bigger picture and tells you what to do next, and why.">
+<meta property="og:title" content="Volyume: know what to do next">
+<meta property="og:description" content="AI can guess. Volyume doesn't. Your training, nutrition, recovery and progress work together to guide what you do next.">
 <meta property="og:url" content="https://volyume.app/get/">
 <meta property="og:image" content="https://volyume.app/volyume-v.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -27,75 +27,74 @@
   body{background:var(--bg);color:var(--text);font-family:var(--font);
     -webkit-font-smoothing:antialiased;display:flex;justify-content:center;overflow-x:hidden;}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-    background:radial-gradient(120% 44% at 50% -6%, rgba(245,166,35,0.18) 0%, rgba(245,166,35,0.04) 44%, transparent 74%);}
-  .page{position:relative;z-index:1;width:100%;max-width:430px;
-    display:flex;flex-direction:column;gap:26px;
-    padding:calc(env(safe-area-inset-top) + 22px) 20px calc(env(safe-area-inset-bottom) + 28px);}
+    background:radial-gradient(120% 40% at 50% -6%, rgba(245,166,35,0.18) 0%, rgba(245,166,35,0.04) 44%, transparent 74%);}
 
-  .mark{height:22px;width:auto;align-self:flex-start;}
+  /* Tight above the first CTA, roomier below it. The gap is the single
+     biggest lever on how far a high-intent visitor has to scroll. */
+  .page{position:relative;z-index:1;width:100%;max-width:430px;
+    display:flex;flex-direction:column;gap:17px;
+    padding:calc(env(safe-area-inset-top) + 18px) 20px calc(env(safe-area-inset-bottom) + 28px);}
+
+  .mark{height:21px;width:auto;align-self:flex-start;}
 
   .eyebrow{font-family:var(--mono);font-size:clamp(9.5px,2.5vw,11px);
-    letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);margin-bottom:10px;}
-  h1{font-size:clamp(29px,8.2vw,38px);line-height:1.07;letter-spacing:-0.025em;font-weight:800;}
+    letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);margin-bottom:9px;}
+  h1{font-size:clamp(28px,7.9vw,36px);line-height:1.06;letter-spacing:-0.025em;font-weight:800;}
   h1 .hl{color:var(--amber);}
-
-  p.body{font-size:clamp(14px,3.8vw,15.5px);line-height:1.5;color:var(--textSecondary);}
-  p.body + p.body{margin-top:12px;}
-  p.body b{color:var(--text);font-weight:600;}
-
-  h2{font-size:clamp(17px,4.6vw,20px);line-height:1.2;letter-spacing:-0.02em;font-weight:800;margin-bottom:14px;}
-
-  /* The loop. A step marker, an amber spine, one plain line each. */
-  .steps{display:flex;flex-direction:column;}
-  .step{display:grid;grid-template-columns:auto 1fr;gap:13px;}
-  .step__rail{display:flex;flex-direction:column;align-items:center;}
-  .step__dot{width:11px;height:11px;border-radius:50%;background:var(--amber);margin-top:4px;flex:0 0 auto;}
-  .step__line{width:2px;flex:1;background:var(--borderSubtle);margin:4px 0;}
-  .step:last-child .step__line{display:none;}
-  .step__body{padding-bottom:16px;}
-  .step:last-child .step__body{padding-bottom:0;}
-  .step__name{font-family:var(--mono);font-size:clamp(10.5px,2.8vw,12px);letter-spacing:0.1em;
-    text-transform:uppercase;color:var(--text);font-weight:600;}
-  .step__what{font-size:clamp(13.5px,3.6vw,15px);line-height:1.4;color:var(--textSecondary);margin-top:3px;}
+  .sub{margin-top:11px;font-size:clamp(14.5px,3.9vw,16px);line-height:1.45;color:var(--textSecondary);}
 
   .deck{display:flex;justify-content:center;align-items:flex-start;}
-  .deck img{width:clamp(74px,21vw,94px);height:auto;border-radius:11px;
-    border:1px solid var(--borderSubtle);box-shadow:0 14px 30px rgba(0,0,0,0.55);background:var(--surface);}
-  .deck img:nth-child(1){transform:rotate(-7deg) translateY(8px);z-index:1;}
-  .deck img:nth-child(2){transform:rotate(-2.5deg);margin-left:-16px;z-index:2;}
-  .deck img:nth-child(3){transform:rotate(2.5deg);margin-left:-16px;z-index:3;}
-  .deck img:nth-child(4){transform:rotate(7deg) translateY(8px);margin-left:-16px;z-index:2;}
+  .deck img{width:clamp(68px,19vw,86px);height:auto;border-radius:10px;
+    border:1px solid var(--borderSubtle);box-shadow:0 12px 26px rgba(0,0,0,0.55);background:var(--surface);}
+  .deck img:nth-child(1){transform:rotate(-7deg) translateY(7px);z-index:1;}
+  .deck img:nth-child(2){transform:rotate(-2.5deg);margin-left:-15px;z-index:2;}
+  .deck img:nth-child(3){transform:rotate(2.5deg);margin-left:-15px;z-index:3;}
+  .deck img:nth-child(4){transform:rotate(7deg) translateY(7px);margin-left:-15px;z-index:2;}
 
-  ul{list-style:none;display:flex;flex-direction:column;gap:15px;}
-  li{border-left:2px solid var(--amber);padding-left:13px;}
-  li b{display:block;font-size:clamp(14.5px,3.9vw,16px);font-weight:700;color:var(--text);
-    margin-bottom:3px;letter-spacing:-0.01em;}
-  li span{font-size:clamp(13px,3.5vw,14.5px);line-height:1.45;color:var(--textSecondary);}
+  /* Three reasons, above the fold. Deliberately one line each. */
+  .reasons{display:flex;flex-direction:column;gap:11px;}
+  .reason{border-left:2px solid var(--amber);padding-left:12px;}
+  .reason b{display:block;font-size:clamp(14px,3.8vw,15.5px);font-weight:700;letter-spacing:-0.01em;color:var(--text);}
+  .reason span{display:block;margin-top:2px;font-size:clamp(13px,3.5vw,14.5px);line-height:1.4;color:var(--textSecondary);}
 
-  .who{display:flex;flex-direction:column;gap:12px;}
-  .who__card{background:var(--surface);border:1px solid var(--borderSubtle);border-radius:14px;padding:15px 16px;}
-  .who__card h3{font-family:var(--mono);font-size:clamp(10.5px,2.8vw,12px);letter-spacing:0.1em;
-    text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:6px;}
-  .who__card p{font-size:clamp(13.5px,3.6vw,15px);line-height:1.45;color:var(--textSecondary);}
+  .offer{background:var(--surface);border:1px solid var(--borderSubtle);border-radius:15px;padding:15px 16px;text-align:center;}
+  .offer .free{font-family:var(--mono);font-size:clamp(12.5px,3.4vw,14px);line-height:1.35;
+    letter-spacing:0.03em;text-transform:uppercase;color:var(--amber);font-weight:700;}
+  .offer .price{margin-top:7px;font-size:clamp(15px,4.1vw,17px);font-weight:700;color:var(--text);letter-spacing:-0.01em;}
+  .offer .always{margin-top:9px;padding-top:9px;border-top:1px solid var(--borderSubtle);
+    font-size:clamp(12.5px,3.3vw,13.5px);line-height:1.4;color:var(--textSecondary);}
 
-  .start{background:var(--surface);border:1px solid var(--borderSubtle);border-radius:16px;padding:18px 17px;}
-  .start h2{margin-bottom:9px;}
-  .start p{font-size:clamp(13.5px,3.6vw,15px);line-height:1.45;color:var(--textSecondary);}
-  .start .trial{margin-top:12px;padding-top:12px;border-top:1px solid var(--borderSubtle);
-    font-family:var(--mono);font-size:clamp(12px,3.2vw,13.5px);line-height:1.4;
-    letter-spacing:0.02em;color:var(--amber);text-transform:uppercase;font-weight:600;}
-  .start .after{margin-top:7px;}
-  .start .after b{color:var(--text);font-weight:600;}
-
-  .cta{display:flex;flex-direction:column;gap:10px;}
+  .cta{display:flex;flex-direction:column;gap:9px;}
   .btn{display:flex;align-items:center;justify-content:center;gap:11px;text-decoration:none;
-    border-radius:14px;padding:13px 18px;min-height:56px;}
+    border-radius:14px;padding:12px 16px;min-height:54px;}
   .btn .lbl{display:flex;flex-direction:column;line-height:1.15;text-align:left;}
-  .btn .lbl .sm{white-space:nowrap;font-size:10px;letter-spacing:0.055em;text-transform:uppercase;opacity:0.72;}
-  .btn .lbl .lg{white-space:nowrap;font-size:16.5px;font-weight:700;letter-spacing:-0.01em;}
+  .btn .lbl .sm{white-space:nowrap;font-size:9.8px;letter-spacing:0.055em;text-transform:uppercase;opacity:0.72;}
+  .btn .lbl .lg{white-space:nowrap;font-size:16px;font-weight:700;letter-spacing:-0.01em;}
   .btn--primary{background:var(--amberFill);color:#0D0D0D;box-shadow:0 8px 24px rgba(224,140,11,0.28);}
   .btn--ghost{background:var(--surface2);color:var(--text);border:1px solid var(--borderSubtle);}
   @media (min-width:380px){ .cta{flex-direction:row;} .cta .btn{flex:1;} }
+
+  /* Everything below is for the visitor who wants convincing. */
+  .more{margin-top:16px;padding-top:22px;border-top:1px solid var(--borderSubtle);}
+  .more h2{font-family:var(--mono);font-size:clamp(10.5px,2.8vw,12px);letter-spacing:0.12em;
+    text-transform:uppercase;color:var(--amber);font-weight:600;margin-bottom:12px;}
+  .more h3{font-size:clamp(16px,4.3vw,18px);line-height:1.25;letter-spacing:-0.02em;
+    font-weight:800;margin:22px 0 9px;}
+  .more p{font-size:clamp(13.5px,3.7vw,15px);line-height:1.5;color:var(--textSecondary);}
+  .more p + p{margin-top:10px;}
+  .more p b{color:var(--text);font-weight:600;}
+
+  .trust{list-style:none;display:flex;flex-direction:column;gap:13px;margin-top:14px;}
+  .trust li{border-left:2px solid var(--amber);padding-left:12px;}
+  .trust b{display:block;font-size:clamp(14px,3.8vw,15.5px);font-weight:700;color:var(--text);letter-spacing:-0.01em;}
+  .trust span{display:block;margin-top:2px;font-size:clamp(13px,3.5vw,14.5px);line-height:1.4;color:var(--textSecondary);}
+
+  .who{display:grid;grid-template-columns:1fr;gap:10px;margin-top:22px;}
+  @media (min-width:400px){ .who{grid-template-columns:1fr 1fr;} }
+  .who div{background:var(--surface);border:1px solid var(--borderSubtle);border-radius:12px;padding:12px 13px;}
+  .who h4{font-family:var(--mono);font-size:10.5px;letter-spacing:0.1em;text-transform:uppercase;
+    color:var(--amber);font-weight:600;margin-bottom:5px;}
+  .who p{font-size:clamp(12.5px,3.3vw,13.5px);line-height:1.4;color:var(--textSecondary);}
 
   .privacy{font-size:11px;line-height:1.45;color:#6F6F6F;text-align:center;}
   .privacy a{color:#6F6F6F;}
@@ -118,45 +117,7 @@
   <div>
     <p class="eyebrow">Not an AI fitness chatbot</p>
     <h1>AI can guess. <span class="hl">Volyume doesn't.</span></h1>
-  </div>
-
-  <div>
-    <p class="body">A chatbot makes up an answer from whatever you tell it. That answer can change depending on what you ask, and it can sound confident even when important information is missing.</p>
-    <p class="body"><b>Volyume works differently.</b> It already has the training, progress, food and recovery you have logged. Every week it brings that together to decide whether you are on track, whether something needs changing, or whether you should simply keep going, and tells you why.</p>
-  </div>
-
-  <div>
-    <h2>You log. Volyume keeps track of the bigger picture.</h2>
-    <div class="steps">
-      <div class="step">
-        <div class="step__rail"><div class="step__dot"></div><div class="step__line"></div></div>
-        <div class="step__body">
-          <div class="step__name">You log</div>
-          <div class="step__what">Train and eat.</div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step__rail"><div class="step__dot"></div><div class="step__line"></div></div>
-        <div class="step__body">
-          <div class="step__name">Volyume tracks</div>
-          <div class="step__what">Sees what is actually happening.</div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step__rail"><div class="step__dot"></div><div class="step__line"></div></div>
-        <div class="step__body">
-          <div class="step__name">Weekly check-in</div>
-          <div class="step__what">Brings the week together.</div>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step__rail"><div class="step__dot"></div><div class="step__line"></div></div>
-        <div class="step__body">
-          <div class="step__name">Coaching decision</div>
-          <div class="step__what">Keep going, or adjust.</div>
-        </div>
-      </div>
-    </div>
+    <p class="sub">Your training, nutrition, recovery and progress work together to guide what you do next.</p>
   </div>
 
   <div class="deck">
@@ -166,50 +127,64 @@
     <img src="/screenshots/03_plan_that_moves_with_you.jpg" alt="A training plan across the week" loading="lazy">
   </div>
 
-  <ul>
-    <li>
-      <b>Based on what you actually did.</b>
-      <span>Your logged training, progress, food and recovery, not information a chatbot has to guess.</span>
-    </li>
-    <li>
-      <b>Consistent advice.</b>
-      <span>The same situation will not suddenly produce different advice because you asked twice.</span>
-    </li>
-    <li>
-      <b>It knows when not to change things.</b>
-      <span>Not enough to go on yet, and Volyume keeps you on course instead of inventing a reason to adjust.</span>
-    </li>
-    <li>
-      <b>You are always in control.</b>
-      <span>It shows you what it recommends and why. Nothing changes until you approve it.</span>
-    </li>
-  </ul>
-
-  <div class="who">
-    <div class="who__card">
-      <h3>New to training?</h3>
-      <p>Stop wondering what you are supposed to do next. Follow the plan, log what you do, and let Volyume guide the journey.</p>
-    </div>
-    <div class="who__card">
-      <h3>Experienced lifter?</h3>
-      <p>Stop piecing together workouts, food logs, spreadsheets and progress data. Volyume connects them and helps you decide what actually needs changing.</p>
-    </div>
+  <div class="reasons">
+    <div class="reason"><b>It follows your progress.</b><span>Works from the workouts, food and check-ins you actually log.</span></div>
+    <div class="reason"><b>It coaches the whole journey.</b><span>Train, eat, check in, know what to do next.</span></div>
+    <div class="reason"><b>It doesn't make things up.</b><span>When there is not enough to go on, it tells you.</span></div>
   </div>
 
-  <div class="start">
-    <h2>Start free</h2>
-    <p>Training logging, the plan library and progress tracking are free, with no time limit.</p>
-    <p class="trial">14 days of full Volyume Pro, no card required</p>
-    <p class="body after">Pro adds the weekly coaching, the food diary and progress photos. <b>£1.99 a month, or £19.99 a year.</b></p>
+  <div class="offer">
+    <p class="free">14 days of Volyume Pro free<br>No card required</p>
+    <p class="price">£1.99/month or £19.99/year</p>
+    <p class="always">Training logging, the plan library and progress tracking stay free, with no time limit.</p>
   </div>
 
   <div class="cta">
     <a class="btn btn--primary" href="https://apps.apple.com/gb/app/volyume/id6777083702">
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 1.4c0 1.1-.5 2.2-1.2 3-.8.9-2.2 1.6-3.3 1.5-.2-1.1.4-2.3 1.1-3 .9-.9 2.3-1.5 3.4-1.5zm4.1 15.7c-.6 1.3-.8 1.9-1.5 3-1 1.5-2.4 3.5-4.1 3.5-1.5 0-1.9-1-4-1-2.1 0-2.5 1-4 1-1.7 0-3.1-1.8-4.1-3.3C.1 15.9-.2 10.8 1.5 8c1.2-1.9 3.1-3 4.9-3 1.9 0 3 1 4.5 1 1.5 0 2.4-1 4.5-1 1.6 0 3.3.9 4.5 2.4-4 2.2-3.3 7.9.6 9.7z"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 1.4c0 1.1-.5 2.2-1.2 3-.8.9-2.2 1.6-3.3 1.5-.2-1.1.4-2.3 1.1-3 .9-.9 2.3-1.5 3.4-1.5zm4.1 15.7c-.6 1.3-.8 1.9-1.5 3-1 1.5-2.4 3.5-4.1 3.5-1.5 0-1.9-1-4-1-2.1 0-2.5 1-4 1-1.7 0-3.1-1.8-4.1-3.3C.1 15.9-.2 10.8 1.5 8c1.2-1.9 3.1-3 4.9-3 1.9 0 3 1 4.5 1 1.5 0 2.4-1 4.5-1 1.6 0 3.3.9 4.5 2.4-4 2.2-3.3 7.9.6 9.7z"/></svg>
       <span class="lbl"><span class="sm">Download on the</span><span class="lg">App Store</span></span>
     </a>
     <a class="btn btn--ghost" href="https://play.google.com/store/apps/details?id=app.volyume">
-      <svg width="21" height="21" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1zm13.5 13.4l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-3.9 2.2h-.1zm-.2.2l-3.4-3.4-9.9 9.9c.4.4 1 .4 1.7.1l11.6-6.6zm0-6.8L5.3 2C4.6 1.6 4 1.7 3.6 2.1l9.9 9.9 3.4-3.4z"/></svg>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1zm13.5 13.4l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-3.9 2.2h-.1zm-.2.2l-3.4-3.4-9.9 9.9c.4.4 1 .4 1.7.1l11.6-6.6zm0-6.8L5.3 2C4.6 1.6 4 1.7 3.6 2.1l9.9 9.9 3.4-3.4z"/></svg>
+      <span class="lbl"><span class="sm">Get it on</span><span class="lg">Google Play</span></span>
+    </a>
+  </div>
+
+  <section class="more">
+    <h2>Why Volyume works differently</h2>
+
+    <p>A general chatbot only knows what you have told it in that conversation. It can fill in the gaps, sound convincing on very little, and answer differently if you word the question another way. That is not what Volyume uses to decide what you should change.</p>
+
+    <h3>You are already logging it</h3>
+    <p>So you never have to explain your training again. Volyume follows what actually happens over time: the sessions you complete, the exercises, sets, reps and weights, how your lifts are progressing, how your bodyweight is moving, what you have eaten and what you tell it about recovery.</p>
+    <p>At your weekly check-in it puts those together. If something genuinely needs changing, it tells you what and why. <b>If the right answer is to stay the course, it says that instead.</b></p>
+
+    <ul class="trust">
+      <li><b>Based on what you actually did.</b><span>Uses what you have logged rather than filling in missing history.</span></li>
+      <li><b>Consistent advice.</b><span>The same situation will not suddenly produce different coaching because you asked again.</span></li>
+      <li><b>It knows when not to change things.</b><span>Without enough to go on it can stay the course, instead of inventing a reason to adjust.</span></li>
+      <li><b>You are always in control.</b><span>It explains what it recommends, and its weekly suggestions only take effect when you apply them.</span></li>
+    </ul>
+
+    <div class="who">
+      <div>
+        <h4>New to training?</h4>
+        <p>Know what to do next, and let Volyume guide the journey.</p>
+      </div>
+      <div>
+        <h4>Experienced lifter?</h4>
+        <p>Bring training, food and progress together and know what actually needs changing.</p>
+      </div>
+    </div>
+  </section>
+
+  <div class="cta">
+    <a class="btn btn--primary" href="https://apps.apple.com/gb/app/volyume/id6777083702">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16.4 1.4c0 1.1-.5 2.2-1.2 3-.8.9-2.2 1.6-3.3 1.5-.2-1.1.4-2.3 1.1-3 .9-.9 2.3-1.5 3.4-1.5zm4.1 15.7c-.6 1.3-.8 1.9-1.5 3-1 1.5-2.4 3.5-4.1 3.5-1.5 0-1.9-1-4-1-2.1 0-2.5 1-4 1-1.7 0-3.1-1.8-4.1-3.3C.1 15.9-.2 10.8 1.5 8c1.2-1.9 3.1-3 4.9-3 1.9 0 3 1 4.5 1 1.5 0 2.4-1 4.5-1 1.6 0 3.3.9 4.5 2.4-4 2.2-3.3 7.9.6 9.7z"/></svg>
+      <span class="lbl"><span class="sm">Download on the</span><span class="lg">App Store</span></span>
+    </a>
+    <a class="btn btn--ghost" href="https://play.google.com/store/apps/details?id=app.volyume">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3.6 1.8c-.3.3-.5.8-.5 1.4v17.6c0 .6.2 1.1.5 1.4l.1.1 9.9-9.9v-.2L3.7 1.7l-.1.1zm13.5 13.4l-3.3-3.3v-.2l3.3-3.3.1.1 3.9 2.2c1.1.6 1.1 1.7 0 2.3l-3.9 2.2h-.1zm-.2.2l-3.4-3.4-9.9 9.9c.4.4 1 .4 1.7.1l11.6-6.6zm0-6.8L5.3 2C4.6 1.6 4 1.7 3.6 2.1l9.9 9.9 3.4-3.4z"/></svg>
       <span class="lbl"><span class="sm">Get it on</span><span class="lg">Google Play</span></span>
     </a>
   </div>
