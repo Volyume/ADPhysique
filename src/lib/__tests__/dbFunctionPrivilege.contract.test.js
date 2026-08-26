@@ -1,0 +1,189 @@
+/**
+ * Database function privilege contract (P0-01, Codex adversarial audit
+ * 2026-08-26; forward fix in supabase/migrate_152_p0_restrict_internal_
+ * security_definer_execute.sql).
+ *
+ * WHAT WENT WRONG. Postgres grants EXECUTE to PUBLIC on every new function,
+ * and PUBLIC includes `authenticated`. Six SECURITY DEFINER functions that are
+ * not client RPCs were therefore callable by any signed-in user, and three of
+ * them take a user identifier without asserting ownership. Verified against
+ * production: 38 SECURITY DEFINER functions, 35 authenticated-executable.
+ *
+ * WHAT THIS SUITE PINS. Effective privilege lives in the database, not in this
+ * repo, so no Jest test can assert it directly. What this suite CAN do, and
+ * does, is fail the moment the repo drifts from the agreed authorisation law:
+ *
+ *   1. every internal function is revoked from `authenticated` by the forward
+ *      migration;
+ *   2. no client RPC is caught by that revoke;
+ *   3. the app never actually calls an internal function -- this one is
+ *      derived from the real source, so wiring a client call to an internal
+ *      function fails the build rather than silently reopening the hole;
+ *   4. no migration ever uses a blanket GRANT ON ALL FUNCTIONS, which is the
+ *      pattern that produces this class of defect;
+ *   5. the two ownership assertions keep the NULL-tolerant shape that lets
+ *      trigger, cron and service_role callers through.
+ *
+ * Effective-privilege verification against production is a separate, manual
+ * step recorded in the migration header; it cannot run here because CI holds
+ * no production credentials.
+ */
+
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..', '..', '..');
+const MIGRATION = path.join(
+  ROOT, 'supabase', 'migrate_152_p0_restrict_internal_security_definer_execute.sql',
+);
+const SQL = fs.readFileSync(MIGRATION, 'utf8');
+
+/**
+ * Internal only. Trigger-, cron- or definer-invoked. An ordinary signed-in
+ * user must never hold EXECUTE on any of these.
+ */
+const INTERNAL_ONLY = [
+  'recompute_daily_intake_rollup',
+  '_partner_first_name',
+  'apply_founder_pro_entitlement',
+  'cascade_advance_due_users',
+  'refresh_food_frequents',
+  'finalise_partner_signals',
+  'founder_pro_entitlement_trigger',
+  'protect_users_profile_tier',
+  '_partnership_ended_purge_block',
+  '_partnership_ended_purge_intentions',
+  '_partnership_ended_purge_win_cards',
+];
+
+/**
+ * The RPCs a signed-in Volyume client is intentionally allowed to call. Every
+ * one derives its user from auth.uid() rather than trusting an argument.
+ */
+const CLIENT_RPCS = [
+  'create_partner_invite',
+  'delete_user_data',
+  'end_partnership',
+  'food_frequents_pull',
+  'food_library_pull',
+  'food_sync_pull',
+  'food_sync_push',
+  'record_capability_consent',
+  'record_engine_telemetry',
+  'record_health_consent',
+  'record_partner_consent',
+  'record_rpc_fallback_deletion',
+  'redeem_partner_invite',
+];
+
+/** Every RPC name the app actually calls, read from the real source. */
+function rpcsCalledByApp() {
+  const found = new Set();
+  const walk = (dir) => {
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const p = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name === '__tests__' || e.name === 'node_modules') continue;
+        walk(p);
+      } else if (e.name.endsWith('.js')) {
+        const src = fs.readFileSync(p, 'utf8');
+        for (const m of src.matchAll(/\.rpc\(\s*'([a-z_0-9]+)'/g)) found.add(m[1]);
+      }
+    }
+  };
+  walk(path.join(ROOT, 'src'));
+  return [...found].sort();
+}
+
+describe('every internal SECURITY DEFINER function is closed to authenticated', () => {
+  test.each(INTERNAL_ONLY)('%s is revoked from authenticated', (fn) => {
+    const revokes = SQL.split('\n').filter(
+      (l) => l.includes('REVOKE EXECUTE') && new RegExp(`\\b${fn}\\s*\\(`).test(l),
+    );
+    expect(revokes.length).toBeGreaterThan(0);
+    for (const line of revokes) expect(line).toMatch(/FROM\s+authenticated/);
+  });
+
+  test('anon and PUBLIC are revoked alongside authenticated, not left implicit', () => {
+    const revokes = SQL.split('\n').filter((l) => l.includes('REVOKE EXECUTE'));
+    expect(revokes.length).toBeGreaterThan(0);
+    for (const line of revokes) {
+      expect(line).toMatch(/FROM\s+authenticated,\s*anon,\s*PUBLIC/);
+    }
+  });
+
+  test('CREATE OR REPLACE is followed by a second revoke', () => {
+    // CREATE OR REPLACE re-establishes the default PUBLIC EXECUTE grant, so a
+    // migration that replaces a body and revokes only beforehand silently
+    // undoes itself. Both replaced functions must be revoked after section B.
+    const lastReplace = SQL.lastIndexOf('CREATE OR REPLACE FUNCTION');
+    const tail = SQL.slice(lastReplace);
+    expect(tail).toMatch(/REVOKE EXECUTE ON FUNCTION public\.recompute_daily_intake_rollup/);
+    expect(tail).toMatch(/REVOKE EXECUTE ON FUNCTION public\.apply_founder_pro_entitlement/);
+  });
+});
+
+describe('legitimate client RPCs are untouched', () => {
+  test.each(CLIENT_RPCS)('%s is never revoked from authenticated', (fn) => {
+    const revoked = SQL.split('\n').some(
+      (l) => l.includes('REVOKE EXECUTE')
+        && new RegExp(`\\b${fn}\\s*\\(`).test(l)
+        && /FROM\s+[^;]*authenticated/.test(l),
+    );
+    expect(revoked).toBe(false);
+  });
+
+  test('the app calls only allow-listed RPCs', () => {
+    // Derived from real source: if anyone wires a client call to an internal
+    // function, this fails instead of quietly reopening the hole.
+    const called = rpcsCalledByApp();
+    expect(called.length).toBeGreaterThan(0);
+    expect(called.filter((r) => INTERNAL_ONLY.includes(r))).toEqual([]);
+    expect(called.filter((r) => !CLIENT_RPCS.includes(r))).toEqual([]);
+  });
+});
+
+describe('the regression pattern cannot come back', () => {
+  test('no migration grants EXECUTE on ALL FUNCTIONS to a client role', () => {
+    const dir = path.join(ROOT, 'supabase');
+    const offenders = [];
+    for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.sql'))) {
+      const body = fs.readFileSync(path.join(dir, f), 'utf8');
+      const lines = body.split('\n').filter((l) => !l.trim().startsWith('--'));
+      for (const l of lines) {
+        if (/GRANT\s+EXECUTE\s+ON\s+ALL\s+FUNCTIONS/i.test(l)
+            && /(authenticated|anon|PUBLIC)/.test(l)) offenders.push(`${f}: ${l.trim()}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
+describe('ownership assertions keep their NULL-tolerant shape', () => {
+  // A bare `auth.uid() = target` would break every trigger, cron and
+  // service_role call, because those carry no JWT and auth.uid() is NULL.
+  test.each([
+    ['recompute_daily_intake_rollup', 'target_user_id'],
+    ['apply_founder_pro_entitlement', '_user_id'],
+  ])('%s rejects only a JWT-bearing cross-account caller', (fn, arg) => {
+    const start = SQL.indexOf(`CREATE OR REPLACE FUNCTION public.${fn}`);
+    expect(start).toBeGreaterThan(-1);
+    const body = SQL.slice(start, SQL.indexOf('$function$;', start));
+    expect(body).toContain(`IF auth.uid() IS NOT NULL AND auth.uid() <> ${arg} THEN`);
+    expect(body).toContain('cross-account call refused');
+    expect(body).toMatch(/ERRCODE\s*=\s*'42501'/);
+  });
+
+  test('_partner_first_name deliberately has no ownership assertion', () => {
+    // Reading the OTHER party's name is its purpose inside the partner invite
+    // RPCs; the grant revoke is its control. Pinned so it is not "fixed" later.
+    expect(SQL).toMatch(/_partner_first_name deliberately receives NO assertion/);
+    expect(SQL).not.toMatch(/CREATE OR REPLACE FUNCTION public\._partner_first_name/);
+  });
+
+  test('the founder allow-list check is retained, not replaced by the new guard', () => {
+    const start = SQL.indexOf('CREATE OR REPLACE FUNCTION public.apply_founder_pro_entitlement');
+    const body = SQL.slice(start, SQL.indexOf('$function$;', start));
+    expect(body).toContain('private.is_founder_pro_user(_user_id)');
+  });
+});
