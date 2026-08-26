@@ -7,10 +7,10 @@
 <link rel="canonical" href="https://volyume.app/get/">
 <link rel="icon" type="image/png" href="/favicon.png">
 <meta name="theme-color" content="#0D0D0D">
-<meta name="description" content="Your training, nutrition, recovery and progress work together to guide what you do next. Free to log your training, with 14 days of full Volyume Pro and no card required.">
+<meta name="description" content="A chatbot has to make an answer from what it has. Volyume already has the training, nutrition, recovery and progress you have actually logged, so its coaching starts from what you really did.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Volyume: know what to do next">
-<meta property="og:description" content="AI can guess. Volyume doesn't. Your training, nutrition, recovery and progress work together to guide what you do next.">
+<meta property="og:description" content="AI can guess. Volyume doesn't have to. It already has the training, nutrition, recovery and progress you have actually logged.">
 <meta property="og:url" content="https://volyume.app/get/">
 <meta property="og:image" content="https://volyume.app/volyume-v.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -32,7 +32,7 @@
   /* Tight above the first CTA, roomier below it. The gap is the single
      biggest lever on how far a high-intent visitor has to scroll. */
   .page{position:relative;z-index:1;width:100%;max-width:430px;
-    display:flex;flex-direction:column;gap:17px;
+    display:flex;flex-direction:column;gap:14px;
     padding:calc(env(safe-area-inset-top) + 18px) 20px calc(env(safe-area-inset-bottom) + 28px);}
 
   .mark{height:21px;width:auto;align-self:flex-start;}
@@ -41,10 +41,11 @@
     letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);margin-bottom:9px;}
   h1{font-size:clamp(28px,7.9vw,36px);line-height:1.06;letter-spacing:-0.025em;font-weight:800;}
   h1 .hl{color:var(--amber);}
+  .sub b{color:var(--text);font-weight:600;}
   .sub{margin-top:11px;font-size:clamp(14.5px,3.9vw,16px);line-height:1.45;color:var(--textSecondary);}
 
   .deck{display:flex;justify-content:center;align-items:flex-start;}
-  .deck img{width:clamp(68px,19vw,86px);height:auto;border-radius:10px;
+  .deck img{width:clamp(62px,17.5vw,79px);height:auto;border-radius:10px;
     border:1px solid var(--borderSubtle);box-shadow:0 12px 26px rgba(0,0,0,0.55);background:var(--surface);}
   .deck img:nth-child(1){transform:rotate(-7deg) translateY(7px);z-index:1;}
   .deck img:nth-child(2){transform:rotate(-2.5deg);margin-left:-15px;z-index:2;}
@@ -52,12 +53,12 @@
   .deck img:nth-child(4){transform:rotate(7deg) translateY(7px);margin-left:-15px;z-index:2;}
 
   /* Three reasons, above the fold. Deliberately one line each. */
-  .reasons{display:flex;flex-direction:column;gap:11px;}
+  .reasons{display:flex;flex-direction:column;gap:10px;}
   .reason{border-left:2px solid var(--amber);padding-left:12px;}
   .reason b{display:block;font-size:clamp(14px,3.8vw,15.5px);font-weight:700;letter-spacing:-0.01em;color:var(--text);}
   .reason span{display:block;margin-top:2px;font-size:clamp(13px,3.5vw,14.5px);line-height:1.4;color:var(--textSecondary);}
 
-  .offer{background:var(--surface);border:1px solid var(--borderSubtle);border-radius:15px;padding:15px 16px;text-align:center;}
+  .offer{background:var(--surface);border:1px solid var(--borderSubtle);border-radius:15px;padding:13px 15px;text-align:center;}
   .offer .free{font-family:var(--mono);font-size:clamp(12.5px,3.4vw,14px);line-height:1.35;
     letter-spacing:0.03em;text-transform:uppercase;color:var(--amber);font-weight:700;}
   .offer .price{margin-top:7px;font-size:clamp(15px,4.1vw,17px);font-weight:700;color:var(--text);letter-spacing:-0.01em;}
@@ -116,8 +117,8 @@
 
   <div>
     <p class="eyebrow">Not an AI fitness chatbot</p>
-    <h1>AI can guess. <span class="hl">Volyume doesn't.</span></h1>
-    <p class="sub">Your training, nutrition, recovery and progress work together to guide what you do next.</p>
+    <h1>AI can guess. <span class="hl">Volyume doesn't have to.</span></h1>
+    <p class="sub">A chatbot has to make an answer from the information it has. <b>Volyume already has the training, nutrition, recovery and progress you have actually logged</b>, so its coaching starts from what you really did.</p>
   </div>
 
   <div class="deck">
@@ -128,9 +129,9 @@
   </div>
 
   <div class="reasons">
-    <div class="reason"><b>It follows your progress.</b><span>Works from the workouts, food and check-ins you actually log.</span></div>
-    <div class="reason"><b>It coaches the whole journey.</b><span>Train, eat, check in, know what to do next.</span></div>
-    <div class="reason"><b>It doesn't make things up.</b><span>When there is not enough to go on, it tells you.</span></div>
+    <div class="reason"><b>It follows what actually happened.</b><span>Your workouts, food, progress and check-ins build the picture over time.</span></div>
+    <div class="reason"><b>It tells you what to do next.</b><span>Keep going when things are working. Adjust when there is a genuine reason.</span></div>
+    <div class="reason"><b>It doesn't invent a change.</b><span>If there is not enough yet to justify changing something, it tells you.</span></div>
   </div>
 
   <div class="offer">
@@ -153,7 +154,8 @@
   <section class="more">
     <h2>Why Volyume works differently</h2>
 
-    <p>A general chatbot only knows what you have told it in that conversation. It can fill in the gaps, sound convincing on very little, and answer differently if you word the question another way. That is not what Volyume uses to decide what you should change.</p>
+    <p>A general chatbot has to make its answer from the information available to it. If something important is missing, it can still give you an answer that sounds convincing, and it may answer differently if you word the question another way. That is not how Volyume decides what you should change.</p>
+    <p><b>Volyume already has the history you have been building as you train.</b></p>
 
     <h3>You are already logging it</h3>
     <p>So you never have to explain your training again. Volyume follows what actually happens over time: the sessions you complete, the exercises, sets, reps and weights, how your lifts are progressing, how your bodyweight is moving, what you have eaten and what you tell it about recovery.</p>
