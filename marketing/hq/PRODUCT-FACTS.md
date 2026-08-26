@@ -49,6 +49,16 @@ re-verified before reuse if the app has been updated since this date.
   Progress Scan baseline.
 - The app deliberately holds decisions when data is insufficient — it needs
   enough observations before acting and never guesses.
+- **The coach PROPOSES, the athlete APPLIES (founder direction 2026-05-27,
+  reaffirmed 2026-05-28 for calories).** Every weekly adjustment is surfaced
+  as a suggestion with an Apply button, and nothing changes until the user
+  taps it. There is no silent auto-apply, calories included. Verified
+  `src/lib/coachApply.js` header and `CoachOutputScreen.js`. COPY RULE:
+  never write that Volyume "decides what to change", "changes your plan" or
+  "adjusts your targets" unqualified, because each implies it acts on its
+  own. Say it works out what SHOULD change, recommends, or makes the
+  change-or-hold call, and leave the acting with the athlete. Caught
+  2026-08-25 by the founder on the /get/ landing page.
 - Progress Scan / Progress Photos (KEY Pro feature, founder-stated
   2026-07-12): a physique-scoring algorithm produces a progress score from the
   user's own photos with a stated confidence level; it may abstain from
