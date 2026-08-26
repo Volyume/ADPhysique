@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { colors } from '../../styles/theme';
 import { getQuietHours, shiftHourMinuteOutOfQuietHours } from './quietHours';
+import { scheduleCheckedNotification } from './triggerDate';
 
 export const SCHEDULE_KEY = '@volyume_schedule_v1';
 export const REMINDER_PREF_KEY = '@volyume_reminder_enabled_v1';
@@ -209,7 +210,7 @@ export async function scheduleTrainingReminders(planNameArg) {
     await Promise.all(
       days.map((jsDay) => {
         const identifier = `${NOTIF_ID_PREFIX}${jsDay}`;
-        return Notifications.scheduleNotificationAsync({
+        return scheduleCheckedNotification({
           identifier,
           content: {
             // D17: the schedule key is HABIT-derived, not a set timetable, and

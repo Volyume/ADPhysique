@@ -46,6 +46,7 @@ import {
 import { missedCheckinFireDates, missedCheckinPush } from './missedCheckin';
 import { plannedMealConfirmPush, plannedConfirmSlot } from './plannedMealConfirm';
 import { resolveActivationNudge, activationNudgePush, NUDGE_WINDOW_GRACE_MS } from '../activationNudge';
+import { scheduleCheckedNotification } from './triggerDate';
 
 const NOTIF_ID_MORNING = 'volyume_morning_weight';
 const NOTIF_ID_EVENING = 'volyume_evening_weight';
@@ -167,7 +168,7 @@ export async function scheduleMorningWeightNotification(hour = 7, minute = 0, { 
       const when = dates[i];
       const copy = pickMorningCopy(when.getDay(), name);
       // eslint-disable-next-line no-await-in-loop
-      await Notifications.scheduleNotificationAsync({
+      await scheduleCheckedNotification({
         identifier: `${NOTIF_ID_MORNING}_${i + 1}`,
         content: {
           title: copy.title,
@@ -366,7 +367,7 @@ export async function scheduleEveningWeightReminder(hour = 19, minute = 30, { us
       const when = dates[i];
       const copy = pickEveningCopy(when.getDay(), name);
       // eslint-disable-next-line no-await-in-loop
-      await Notifications.scheduleNotificationAsync({
+      await scheduleCheckedNotification({
         identifier: `${NOTIF_ID_EVENING}_${i + 1}`,
         content: {
           title: copy.title,
@@ -523,7 +524,7 @@ export async function scheduleMealReminders(reminders = []) {
       const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hr, mn, quiet);
       const label = (typeof r.label === 'string' && r.label.trim()) ? r.label.trim().slice(0, 24) : 'Meal';
       // eslint-disable-next-line no-await-in-loop
-      await Notifications.scheduleNotificationAsync({
+      await scheduleCheckedNotification({
         identifier: `${NOTIF_ID_MEAL_PREFIX}${r.id}`,
         content: {
           title: label,
@@ -610,7 +611,7 @@ export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0
     const { date: shiftedDate } = shiftDateOutOfQuietHours(fireAt, quiet);
 
     const checkin = checkinCopy(greetName());
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: NOTIF_ID_CHECKIN,
       content: {
         title: checkin.title,
@@ -748,7 +749,7 @@ export async function scheduleCascadeGateNotifications(trialEndsAt) {
       // than ever dropping the gate itself.
       const slot = await requestEventPushSlot({ category: CATEGORY.CASCADE_GATE, fireDate: shifted });
       if (!slot.allowed) continue;
-      await Notifications.scheduleNotificationAsync({
+      await scheduleCheckedNotification({
         identifier: g.id,
         content: {
           title: g.copy.title,
@@ -847,7 +848,7 @@ export async function scheduleTrialDay3Notification(userId, profile) {
     // re-queued; the Home banner still carries the day-3 moment in-app.
     const slot = await requestEventPushSlot({ category: CATEGORY.TRIAL_DAY3, fireDate: shifted });
     if (!slot.allowed) return;
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: NOTIF_ID_TRIAL_DAY3,
       content: {
         title: copy.title,
@@ -952,7 +953,7 @@ export async function scheduleWinbackNotification(userId) {
     // marked, so the next app-open re-lay retries the same window.
     const slot = await requestEventPushSlot({ category: CATEGORY.WINBACK, fireDate: shifted });
     if (!slot.allowed) return;
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: NOTIF_ID_WINBACK,
       content: {
         title: copy.title,
@@ -1071,7 +1072,7 @@ export async function scheduleMissedCheckinFollowups(userId) {
       const slotOk = await requestEventPushSlot({ category: CATEGORY.CHECKIN_MISSED, fireDate: shifted });
       if (!slotOk.allowed) continue;
       // eslint-disable-next-line no-await-in-loop
-      await Notifications.scheduleNotificationAsync({
+      await scheduleCheckedNotification({
         identifier: s.id,
         content: {
           title: s.copy.title,
@@ -1184,7 +1185,7 @@ export async function scheduleActivationNudge(userId) {
     const slot = await requestEventPushSlot({ category: CATEGORY.ACTIVATION_NUDGE, fireDate: shifted });
     if (!slot.allowed) return;
     const copy = activationNudgePush(nudge.stage, greetName());
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: NOTIF_ID_ACTIVATION_NUDGE,
       content: {
         title: copy.title,
@@ -1271,7 +1272,7 @@ export async function schedulePlannedMealConfirm(userId) {
     if (!slotOk.allowed) return;
 
     const copy = plannedMealConfirmPush(greetName());
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: NOTIF_ID_PLANNED_MEAL_CONFIRM,
       content: {
         title: copy.title,
@@ -1345,7 +1346,7 @@ export async function scheduleWeeklyCoachReady(hour = 9, minute = 0, { weekStart
     // lower-priority push on a full Monday rather than being dropped.
     const slot = await requestEventPushSlot({ category: CATEGORY.WEEKLY_COACH_READY, fireDate: fireAt });
     if (!slot.allowed) return;
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: NOTIF_ID_COACH_READY,
       content: {
         title: COACH_READY_COPY.title,
@@ -1434,7 +1435,7 @@ export async function scheduleBlockReadyToReview(proposal = null, when = null) {
     });
     if (!slot.allowed) return;
 
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: NOTIF_ID_BLOCK_READY,
       content: {
         title: 'Your next block is ready',
@@ -1714,7 +1715,7 @@ export async function checkYearOfLiftsUnlock(earliestWorkoutAt) {
     // slot is today's. Blocked = flag stays unset, so a later open retries.
     const slot = await requestEventPushSlot({ category: CATEGORY.YEAR_OF_LIFTS_UNLOCK, fireDate: new Date() });
     if (!slot.allowed) return;
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: 'volyume_year_of_lifts_unlock',
       content: {
         title: 'A whole year of lifts',
@@ -1757,7 +1758,7 @@ export async function checkMonthlyRecapReady({ completedCount = 0, monthSessions
     // qualifying open retries within the same month.
     const slot = await requestEventPushSlot({ category: CATEGORY.MONTHLY_RECAP, fireDate: new Date() });
     if (!slot.allowed) return;
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: `volyume_monthly_recap_${monthKey}`,
       content: {
         title: `Your ${monthLabel} recap is ready`,
@@ -1848,7 +1849,7 @@ export async function schedulePartnerBeats(userId) {
       const slot = await requestEventPushSlot({ category: CATEGORY.PARTNER_CHEER, fireDate: date });
       if (slot.allowed) {
         const copy = cheerPush(partnerName);
-        await Notifications.scheduleNotificationAsync({
+        await scheduleCheckedNotification({
           identifier: NOTIF_ID_PARTNER_CHEER,
           content: {
             title: copy.title, body: copy.body,
@@ -1879,7 +1880,7 @@ export async function schedulePartnerBeats(userId) {
         const slot = await requestEventPushSlot({ category: CATEGORY.PARTNER_CHEER, fireDate: date });
         if (slot.allowed) {
           const copy = streakKeptPush(partnerName, run);
-          await Notifications.scheduleNotificationAsync({
+          await scheduleCheckedNotification({
             identifier: NOTIF_ID_PARTNER_STREAK,
             content: {
               title: copy.title, body: copy.body,
@@ -1909,7 +1910,7 @@ export async function schedulePartnerBeats(userId) {
       const slot = await requestEventPushSlot({ category: CATEGORY.PARTNER_CHEER, fireDate: date });
       if (slot.allowed) {
         const copy = joinPush(jp.partnerFirstName || null);
-        await Notifications.scheduleNotificationAsync({
+        await scheduleCheckedNotification({
           identifier: `${NOTIF_ID_PARTNER_JOIN}_${jp.id}`,
           content: {
             title: copy.title, body: copy.body,

@@ -22,6 +22,7 @@ import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
 import { REST_TIMER_CATEGORY_ID } from './categories';
+import { scheduleCheckedNotification } from './triggerDate';
 
 const NOTIF_ID = 'volyume_active_workout';
 const CHANNEL_ID = 'volyume_active_workout';
@@ -161,7 +162,7 @@ export async function showActiveWorkoutNotification(args = {}) {
   try {
     await ensureChannel();
 
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: NOTIF_ID,
       content: {
         title,
@@ -266,7 +267,7 @@ export async function presentRestTimerNotification({
     if (endLabel) parts.push(`Ends ${endLabel}`);
     if (exerciseName) parts.push(exerciseName);
     const body = parts.length ? parts.join('  ·  ') : 'Rest in progress';
-    await Notifications.scheduleNotificationAsync({
+    await scheduleCheckedNotification({
       identifier: REST_NOTIF_ID,
       content: {
         title,
