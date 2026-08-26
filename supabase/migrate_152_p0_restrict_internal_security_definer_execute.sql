@@ -46,7 +46,19 @@
 --   produced this class of problem in the first place.
 --
 -- Applied locally:  n/a (grants are environment state; nothing local)
--- Applied remotely: PENDING (see footer note after execution)
+-- Applied remotely: NO, as at 2026-08-26. Two attempts, neither applied:
+--     1. First attempt FAILED and rolled back atomically on
+--        "42P13: cannot remove parameter defaults from existing function",
+--        because the CREATE OR REPLACE for apply_founder_pro_entitlement
+--        omitted the DEFAULT on _source_surface. Production was verified
+--        unchanged immediately afterwards: all six functions still
+--        authenticated=true, neither guard present. That defect is fixed
+--        below and is the reason the DEFAULT is now spelled out.
+--     2. Second attempt was BLOCKED BEFORE REACHING THE DATABASE by the
+--        agent harness's permission classifier, not by Postgres. No SQL ran.
+--   This file is therefore ready but unapplied, and production still carries
+--   the P0 exposure. Verified production state at that point: 38 SECURITY
+--   DEFINER functions, anon 0, PUBLIC 0, authenticated 35, service_role 38.
 -- Safe to re-run:   yes. REVOKE of an absent privilege and GRANT of a held
 --                   one are both no-ops, and both function bodies are
 --                   CREATE OR REPLACE with identical signatures.
@@ -164,7 +176,13 @@ $function$;
 --   users_profile_founder_pro_entitlement fires on the row being written; a
 --   client can only write its own profile row, and a service_role insert
 --   carries no JWT. Both pass.
-CREATE OR REPLACE FUNCTION public.apply_founder_pro_entitlement(_user_id uuid, _source_surface text)
+-- The DEFAULT on _source_surface is part of the live signature and MUST be
+-- reproduced: CREATE OR REPLACE cannot drop a parameter default, and a first
+-- attempt at this migration failed on exactly that ("42P13: cannot remove
+-- parameter defaults from existing function"). It failed atomically, so
+-- nothing was applied. pg_get_function_identity_arguments omits defaults;
+-- pg_get_function_arguments is the one that shows them.
+CREATE OR REPLACE FUNCTION public.apply_founder_pro_entitlement(_user_id uuid, _source_surface text DEFAULT 'founder_pro_entitlement'::text)
  RETURNS jsonb
  LANGUAGE plpgsql
  SECURITY DEFINER
