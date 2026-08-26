@@ -7,17 +7,17 @@
 <link rel="canonical" href="https://volyume.app/get/">
 <link rel="icon" type="image/png" href="/favicon.png">
 <meta name="theme-color" content="#0D0D0D">
-<meta name="description" content="Not an AI fitness chatbot. Volyume reads your actual training, nutrition, recovery and progress against defined coaching rules, then makes a repeatable decision and shows you why.">
+<meta name="description" content="Not an AI fitness chatbot. Volyume follows what you actually do in the gym, then at your weekly check-in it works out whether to keep going or change something, and tells you why.">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Volyume: not an AI fitness chatbot">
-<meta property="og:description" content="AI guesses. Volyume doesn't. It reads your real training, nutrition, recovery and progress against defined coaching rules, then makes a repeatable decision and shows you why.">
+<meta property="og:description" content="AI can guess. Volyume doesn't. It follows what you actually do, then works out whether to keep going or change something, and tells you why.">
 <meta property="og:url" content="https://volyume.app/get/">
 <meta property="og:image" content="https://volyume.app/volyume-v.png">
 <meta name="twitter:card" content="summary_large_image">
 <style>
   :root{
     --bg:#0D0D0D; --surface:#191917; --borderSubtle:#2E2E2C;
-    --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
+    --amber:#F5A623; --amberFill:#E08C0B;
     --text:#FFFFFF; --textSecondary:#9E9E9E;
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
     --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
@@ -27,118 +27,75 @@
   body{
     background:var(--bg);color:var(--text);font-family:var(--font);
     -webkit-font-smoothing:antialiased;
-    min-height:100svh;
-    display:flex;justify-content:center;
-    overflow-x:hidden;
+    display:flex;justify-content:center;overflow-x:hidden;
   }
-  /* Amber glow behind the fold, the app's own accent rather than a stock gradient. */
   body::before{
     content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
-    background:
-      radial-gradient(120% 55% at 50% -8%, rgba(245,166,35,0.20) 0%, rgba(245,166,35,0.05) 42%, transparent 72%),
-      radial-gradient(90% 40% at 50% 108%, rgba(245,166,35,0.10) 0%, transparent 70%);
+    background:radial-gradient(120% 46% at 50% -6%, rgba(245,166,35,0.19) 0%, rgba(245,166,35,0.04) 44%, transparent 74%);
   }
   .page{
-    position:relative;z-index:1;
-    width:100%;max-width:430px;
-    min-height:100svh;
-    display:flex;flex-direction:column;
-    gap:clamp(9px,2.5vh,22px);
-    padding:calc(env(safe-area-inset-top) + clamp(12px,2.4vh,26px))
-            22px
-            calc(env(safe-area-inset-bottom) + clamp(12px,2.2vh,22px));
+    position:relative;z-index:1;width:100%;max-width:430px;
+    display:flex;flex-direction:column;gap:22px;
+    padding:calc(env(safe-area-inset-top) + 22px) 22px
+            calc(env(safe-area-inset-bottom) + 30px);
   }
 
-  .mark{height:clamp(19px,2.6vh,24px);width:auto;align-self:flex-start;}
+  .mark{height:22px;width:auto;align-self:flex-start;}
 
-  /* Mono caps metadata line, the locked identity's own slot for this. */
   .eyebrow{
     font-family:var(--mono);font-size:clamp(9.5px,2.5vw,11px);
     letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);
     margin-bottom:11px;
   }
-  h1{
-    font-size:clamp(27px,7.9vw,37px);line-height:1.07;
-    letter-spacing:-0.025em;font-weight:800;
-  }
+  h1{font-size:clamp(29px,8.2vw,38px);line-height:1.07;letter-spacing:-0.025em;font-weight:800;}
   h1 .hl{color:var(--amber);}
-  .lede{
-    margin-top:9px;
-    font-size:clamp(13.5px,3.7vw,15.5px);line-height:1.45;color:var(--textSecondary);
-  }
 
-  /* Fanned screenshots. Shrinks first when height is tight. */
-  .deck{
-    flex:0 1 auto;min-height:0;
-    display:flex;justify-content:center;align-items:flex-start;
-    gap:0;
-  }
+  p.body{font-size:clamp(14.5px,3.9vw,16px);line-height:1.55;color:var(--textSecondary);}
+  p.body + p.body{margin-top:13px;}
+  p.body b{color:var(--text);font-weight:600;}
+  .turn{font-size:clamp(16px,4.4vw,18px);line-height:1.4;color:var(--text);font-weight:700;letter-spacing:-0.01em;}
+
+  .deck{display:flex;justify-content:center;align-items:flex-start;}
   .deck img{
-    width:clamp(66px,19.5vw,88px);height:auto;
-    border-radius:11px;border:1px solid var(--borderSubtle);
-    box-shadow:0 14px 30px rgba(0,0,0,0.55);
-    background:var(--surface);
+    width:clamp(74px,21vw,94px);height:auto;border-radius:11px;
+    border:1px solid var(--borderSubtle);box-shadow:0 14px 30px rgba(0,0,0,0.55);background:var(--surface);
   }
   .deck img:nth-child(1){transform:rotate(-7deg) translateY(8px);z-index:1;}
   .deck img:nth-child(2){transform:rotate(-2.5deg);margin-left:-16px;z-index:2;}
   .deck img:nth-child(3){transform:rotate(2.5deg);margin-left:-16px;z-index:3;}
   .deck img:nth-child(4){transform:rotate(7deg) translateY(8px);margin-left:-16px;z-index:2;}
 
-  ul{list-style:none;display:flex;flex-direction:column;gap:clamp(8px,1.5vh,13px);}
-  li{display:flex;gap:11px;align-items:flex-start;font-size:clamp(13px,3.5vw,14.5px);line-height:1.4;}
-  li svg{flex:0 0 auto;margin-top:1px;}
-  li b{font-weight:600;color:var(--text);}
-  li .g{font-style:normal;}
-  li span{color:var(--textSecondary);}
+  ul{list-style:none;display:flex;flex-direction:column;gap:16px;}
+  li{
+    border-left:2px solid var(--amber);padding-left:14px;
+  }
+  li b{display:block;font-size:clamp(14.5px,3.9vw,16px);font-weight:700;color:var(--text);margin-bottom:4px;letter-spacing:-0.01em;}
+  li span{font-size:clamp(13.5px,3.6vw,15px);line-height:1.5;color:var(--textSecondary);}
 
-  .cta{display:flex;flex-direction:column;gap:9px;margin-top:auto;}
+  .cta{display:flex;flex-direction:column;gap:10px;}
   .btn{
-    display:flex;align-items:center;justify-content:center;gap:10px;
-    text-decoration:none;border-radius:14px;
-    padding:11px 16px;min-height:52px;
+    display:flex;align-items:center;justify-content:center;gap:11px;
+    text-decoration:none;border-radius:14px;padding:13px 18px;min-height:56px;
   }
   .btn .lbl{display:flex;flex-direction:column;line-height:1.15;text-align:left;}
-  .btn .lbl .sm{white-space:nowrap;font-size:9.8px;letter-spacing:0.055em;text-transform:uppercase;opacity:0.72;}
-  .btn .lbl .lg{white-space:nowrap;font-size:15.5px;font-weight:700;letter-spacing:-0.01em;}
+  .btn .lbl .sm{white-space:nowrap;font-size:10px;letter-spacing:0.055em;text-transform:uppercase;opacity:0.72;}
+  .btn .lbl .lg{white-space:nowrap;font-size:16.5px;font-weight:700;letter-spacing:-0.01em;}
   .btn--primary{background:var(--amberFill);color:#0D0D0D;box-shadow:0 8px 24px rgba(224,140,11,0.28);}
   .btn--ghost{background:var(--surface);color:var(--text);border:1px solid var(--borderSubtle);}
   @media (min-width:380px){ .cta{flex-direction:row;} .cta .btn{flex:1;} }
 
-  .strap{font-family:var(--mono);font-size:clamp(10.5px,2.8vw,12px);letter-spacing:0.04em;color:var(--amber);}
-  .terms{font-size:11.6px;line-height:1.45;color:var(--textSecondary);text-align:center;}
+  .terms{font-size:12.5px;line-height:1.5;color:var(--textSecondary);text-align:center;}
   .terms b{color:var(--text);font-weight:600;}
-  .privacy{font-size:10.4px;line-height:1.4;color:#6F6F6F;text-align:center;}
+  .privacy{font-size:11px;line-height:1.45;color:#6F6F6F;text-align:center;}
   .privacy a{color:#6F6F6F;}
 
-  /* Short-viewport ladder, tuned against measured scrollHeight on 320x568,
-     360x740, 375x667, 390x844 and 414x896. The page must not scroll, so the
-     decoration goes before the copy and the copy goes before the buttons. */
-  @media (max-height:820px){ .strap{display:none;} }
-  @media (max-height:780px){ .deck{display:none;} }
-  @media (max-height:640px){
-    .g{display:none;}
-    h1{font-size:clamp(25px,7.2vw,31px);}
-    .page{gap:clamp(8px,2vh,14px);}
-    .terms{font-size:11px;}
-    .privacy{font-size:10px;}
-    .btn{min-height:48px;padding:10px 14px;}
-  }
-  /* Last 6px on a 320x568 screen, taken from the gaps rather than from any
-     line of copy, so the smallest phone still gets the full argument. */
-  @media (max-height:600px){ .page{gap:clamp(7px,1.7vh,12px);} }
-
-  /* Motion is transform only, deliberately. The first version faded in from
-     opacity 0 with a backwards fill, which means the page is INVISIBLE until
-     the animation runs. That is a bad bet for a link in bio: it opens inside
-     slow in-app browsers, and preview crawlers screenshot early. Twice in
-     testing the capture came back blank. Animating position alone can never
-     hide the copy or the buttons, however slow the client. */
+  /* Motion is transform only. A fade from opacity 0 leaves the page blank
+     until it runs, which is a bad bet for a link opened inside a slow in-app
+     browser. Position cannot hide copy or buttons however slow the client. */
   @media (prefers-reduced-motion:no-preference){
     .page > *{animation:rise .45s cubic-bezier(.22,.9,.3,1) both;}
     .page > *:nth-child(2){animation-delay:.04s;}
     .page > *:nth-child(3){animation-delay:.08s;}
-    .page > *:nth-child(4){animation-delay:.12s;}
-    .page > *:nth-child(5){animation-delay:.16s;}
     @keyframes rise{from{transform:translateY(8px);}to{transform:none;}}
   }
 </style>
@@ -150,33 +107,46 @@
 
   <div>
     <p class="eyebrow">Not an AI fitness chatbot</p>
-    <h1>AI guesses. <span class="hl">Volyume doesn't.</span></h1>
-    <p class="lede">It reads your actual training, nutrition, recovery and progress against defined coaching rules, then makes a repeatable decision and shows you why.</p>
+    <h1>AI can guess. <span class="hl">Volyume doesn't.</span></h1>
+  </div>
+
+  <div>
+    <p class="body">Ask a general AI chatbot what to change about your training and it has to come up with an answer from whatever you have just told it. Word the question differently, leave something out, or ask again tomorrow, and the advice can change. It can sound completely convincing even when it does not really have enough to go on.</p>
+  </div>
+
+  <p class="turn">Volyume works differently.</p>
+
+  <div>
+    <p class="body">You never have to explain your training to it, because you are already logging it as you go.</p>
+    <p class="body">It follows what you actually do week to week: the sessions you finish, how your lifts are moving, the way your weight is trending, what you have eaten and how recovered you have been feeling.</p>
+    <p class="body">At your weekly check-in it puts all of that together and works out one thing. Are you progressing the way you should be, does something genuinely need changing, or is the right answer simply to carry on as you are. <b>Then it tells you why.</b></p>
   </div>
 
   <div class="deck">
-    <img src="/screenshots/02_know_what_to_do_today.jpg" alt="Today screen showing the session to do" loading="lazy">
+    <img src="/screenshots/02_know_what_to_do_today.jpg" alt="The Today screen showing the session to do" loading="lazy">
     <img src="/screenshots/05_log_every_set.jpg" alt="Logging a set in the workout logger" loading="lazy">
-    <img src="/screenshots/06_meals_planned_to_your_targets.jpg" alt="Meals planned to your macro targets" loading="lazy">
-    <img src="/screenshots/03_plan_that_moves_with_you.jpg" alt="Training plan adjusting week to week" loading="lazy">
+    <img src="/screenshots/06_meals_planned_to_your_targets.jpg" alt="Meals planned to your targets" loading="lazy">
+    <img src="/screenshots/03_plan_that_moves_with_you.jpg" alt="A training plan across the week" loading="lazy">
   </div>
 
   <ul>
     <li>
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="#F5A623" stroke-width="1.6"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span><b>No made-up answers.</b> <i class="g">Every call comes from the rules.</i></span>
+      <b>No invented answers.</b>
+      <span>What you are told comes from what you have actually logged, not from a chatbot filling in the gaps.</span>
     </li>
     <li>
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="#F5A623" stroke-width="1.6"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span><b>No changing its mind because you asked twice.</b> <i class="g">The same inputs give the same decision.</i></span>
+      <b>No random changes.</b>
+      <span>If nothing has really changed in your training, the advice does not suddenly change either, just because you asked again.</span>
     </li>
     <li>
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="#F5A623" stroke-width="1.6"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span><b>No pretending it knows when the data isn't there.</b> <i class="g">It holds, and says so.</i></span>
+      <b>No pretending to know.</b>
+      <span>When there is not enough there yet to justify changing something, it says so and keeps you on course instead of guessing.</span>
+    </li>
+    <li>
+      <b>You stay in control.</b>
+      <span>It explains what it suggests and why, and nothing changes until you say so. It never rebuilds your training behind your back.</span>
     </li>
   </ul>
-
-  <p class="strap">Real data. Defined rules. Explainable coaching.</p>
 
   <div class="cta">
     <a class="btn btn--primary" href="https://apps.apple.com/gb/app/volyume/id6777083702">
@@ -189,7 +159,7 @@
     </a>
   </div>
 
-  <p class="terms"><b>Logging, plans and progress are free</b>, with no time limit. Pro adds the food diary, the weekly coaching and photo progress tracking, and starts with 14 days of full access, no card needed.</p>
+  <p class="terms"><b>Logging your training, the plan library and your progress are free</b>, with no time limit. The weekly coaching, the food diary and progress photos come with Pro.</p>
 
   <p class="privacy">Encrypted on your device and stored in the EU. No ads, and your data is never sold. <a href="/privacy/">Privacy</a> &middot; <a href="/support/">Support</a></p>
 
