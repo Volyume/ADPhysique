@@ -564,7 +564,17 @@ function checkinCopy(name) {
  * can skip the week when the user has already checked in.
  */
 function getNextWeekdayDate(weekday, hour, minute, after = new Date()) {
+  // VOLYUME-1K: this used to be able to hand back an Invalid Date, which then
+  // killed the app natively downstream (see triggerDate.js for the trap).
+  // setHours(NaN, ...) invalidates the Date outright, and neither guard below
+  // repairs it: `target.getTime() <= after.getTime()` is FALSE for NaN, and
+  // setDate(getDate() + NaN) leaves it invalid. So the inputs are proved
+  // usable here rather than assumed, and an unusable one yields null for the
+  // caller to skip on. Proving beats comparing: NaN passes every comparison.
+  const usable = (n) => Number.isFinite(n);
+  if (!usable(weekday) || !usable(hour) || !usable(minute)) return null;
   const target = new Date(after);
+  if (Number.isNaN(target.getTime())) return null;
   const currentDow = target.getDay();
   let daysUntil = (weekday - currentDow + 7) % 7;
   target.setHours(hour, minute, 0, 0);
@@ -584,6 +594,16 @@ export async function scheduleCheckinReminder(weekday = 0, hour = 12, minute = 0
       ? new Date(Date.now() + 24 * 60 * 60 * 1000)
       : new Date();
     let fireAt = getNextWeekdayDate(weekday, hour, minute, baseAfter);
+    // Unusable weekday/hour/minute: skip rather than schedule. Reported so
+    // the caller that supplied them names itself (VOLYUME-1K).
+    if (!fireAt) {
+      trackNotificationFailed({
+        category: CATEGORY.WEEKLY_CHECKIN_REMINDER,
+        reason: 'invalid_trigger_date',
+        payload: { raw: 'unusable-weekday-hour-minute', scope: 'scheduleCheckinReminder' },
+      });
+      return;
+    }
 
     // Minimum-gap enforcement: when the user changes their check-in
     // day mid-cycle, the next reminder must still land at least
@@ -1342,6 +1362,15 @@ export async function scheduleWeeklyCoachReady(hour = 9, minute = 0, { weekStart
     const { hour: h, minute: m } = shiftHourMinuteOutOfQuietHours(hour, minute, quiet);
     // Next Monday at h:m (getNextWeekdayDate uses JS getDay, Monday = 1).
     const fireAt = getNextWeekdayDate(1, h, m, new Date());
+    // Same skip-rather-than-trap rule as scheduleCheckinReminder above.
+    if (!fireAt) {
+      trackNotificationFailed({
+        category: CATEGORY.WEEKLY_COACH_READY,
+        reason: 'invalid_trigger_date',
+        payload: { raw: 'unusable-hour-minute', scope: 'scheduleWeeklyCoachReady' },
+      });
+      return;
+    }
     // Push budget (NOTIFICATIONS_LOCKED addendum): rank 2, evicts a
     // lower-priority push on a full Monday rather than being dropped.
     const slot = await requestEventPushSlot({ category: CATEGORY.WEEKLY_COACH_READY, fireDate: fireAt });
