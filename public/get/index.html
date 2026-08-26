@@ -7,10 +7,10 @@
 <link rel="canonical" href="https://volyume.app/get/">
 <link rel="icon" type="image/png" href="/favicon.png">
 <meta name="theme-color" content="#0D0D0D">
-<meta name="description" content="Volyume's weekly coaching makes the call on your training and nutrition, and shows its working. Free to log your training, plan and track. Download for iPhone and Android.">
+<meta name="description" content="Not an AI fitness chatbot. Volyume reads your actual training, nutrition, recovery and progress against defined coaching rules, then makes a repeatable decision and shows you why.">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Volyume: the weekly call, with its working shown">
-<meta property="og:description" content="Log your sets. Volyume's weekly coaching works out what should change, and tells you why. Free to log your training, plan and track.">
+<meta property="og:title" content="Volyume: not an AI fitness chatbot">
+<meta property="og:description" content="AI guesses. Volyume doesn't. It reads your real training, nutrition, recovery and progress against defined coaching rules, then makes a repeatable decision and shows you why.">
 <meta property="og:url" content="https://volyume.app/get/">
 <meta property="og:image" content="https://volyume.app/volyume-v.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -20,6 +20,7 @@
     --amber:#F5A623; --amberFill:#E08C0B; --amberBg:rgba(245,166,35,0.12);
     --text:#FFFFFF; --textSecondary:#9E9E9E;
     --font:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   html{color-scheme:dark;-webkit-text-size-adjust:100%;}
@@ -50,6 +51,12 @@
 
   .mark{height:clamp(19px,2.6vh,24px);width:auto;align-self:flex-start;}
 
+  /* Mono caps metadata line, the locked identity's own slot for this. */
+  .eyebrow{
+    font-family:var(--mono);font-size:clamp(9.5px,2.5vw,11px);
+    letter-spacing:0.14em;text-transform:uppercase;color:var(--amber);
+    margin-bottom:11px;
+  }
   h1{
     font-size:clamp(27px,7.9vw,37px);line-height:1.07;
     letter-spacing:-0.025em;font-weight:800;
@@ -81,6 +88,7 @@
   li{display:flex;gap:11px;align-items:flex-start;font-size:clamp(13px,3.5vw,14.5px);line-height:1.4;}
   li svg{flex:0 0 auto;margin-top:1px;}
   li b{font-weight:600;color:var(--text);}
+  li .g{font-style:normal;}
   li span{color:var(--textSecondary);}
 
   .cta{display:flex;flex-direction:column;gap:9px;margin-top:auto;}
@@ -96,6 +104,7 @@
   .btn--ghost{background:var(--surface);color:var(--text);border:1px solid var(--borderSubtle);}
   @media (min-width:380px){ .cta{flex-direction:row;} .cta .btn{flex:1;} }
 
+  .strap{font-family:var(--mono);font-size:clamp(10.5px,2.8vw,12px);letter-spacing:0.04em;color:var(--amber);}
   .terms{font-size:11.6px;line-height:1.45;color:var(--textSecondary);text-align:center;}
   .terms b{color:var(--text);font-weight:600;}
   .privacy{font-size:10.4px;line-height:1.4;color:#6F6F6F;text-align:center;}
@@ -104,15 +113,19 @@
   /* Short-viewport ladder, tuned against measured scrollHeight on 320x568,
      360x740, 375x667, 390x844 and 414x896. The page must not scroll, so the
      decoration goes before the copy and the copy goes before the buttons. */
+  @media (max-height:820px){ .strap{display:none;} }
   @media (max-height:780px){ .deck{display:none;} }
   @media (max-height:640px){
-    .lede{display:none;}
+    .g{display:none;}
     h1{font-size:clamp(25px,7.2vw,31px);}
     .page{gap:clamp(8px,2vh,14px);}
     .terms{font-size:11px;}
     .privacy{font-size:10px;}
     .btn{min-height:48px;padding:10px 14px;}
   }
+  /* Last 6px on a 320x568 screen, taken from the gaps rather than from any
+     line of copy, so the smallest phone still gets the full argument. */
+  @media (max-height:600px){ .page{gap:clamp(7px,1.7vh,12px);} }
 
   /* Motion is transform only, deliberately. The first version faded in from
      opacity 0 with a backwards fill, which means the page is INVISIBLE until
@@ -136,8 +149,9 @@
   <img class="mark" src="/volyume-wordmark.png" alt="Volyume">
 
   <div>
-    <h1>Volyume makes the weekly call, and <span class="hl">shows its working</span>.</h1>
-    <p class="lede">Log your sets. Volyume's weekly coaching then works out what should change in your training and nutrition, and tells you exactly why.</p>
+    <p class="eyebrow">Not an AI fitness chatbot</p>
+    <h1>AI guesses. <span class="hl">Volyume doesn't.</span></h1>
+    <p class="lede">It reads your actual training, nutrition, recovery and progress against defined coaching rules, then makes a repeatable decision and shows you why.</p>
   </div>
 
   <div class="deck">
@@ -150,17 +164,19 @@
   <ul>
     <li>
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="#F5A623" stroke-width="1.6"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span><b>Change or hold, with the reasons.</b> You see what it decided and what it read to get there.</span>
+      <span><b>No made-up answers.</b> <i class="g">Every call comes from the rules.</i></span>
     </li>
     <li>
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="#F5A623" stroke-width="1.6"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span><b>Not an AI chatbot.</b> It follows set coaching rules, so it never guesses and never tells you what you want to hear.</span>
+      <span><b>No changing its mind because you asked twice.</b> <i class="g">The same inputs give the same decision.</i></span>
     </li>
     <li>
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="11" stroke="#F5A623" stroke-width="1.6"/><path d="M7.5 12.4l3 3 6-6.6" stroke="#F5A623" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <span><b>It holds when the data is thin.</b> Too little to be sure and it says so, rather than guessing.</span>
+      <span><b>No pretending it knows when the data isn't there.</b> <i class="g">It holds, and says so.</i></span>
     </li>
   </ul>
+
+  <p class="strap">Real data. Defined rules. Explainable coaching.</p>
 
   <div class="cta">
     <a class="btn btn--primary" href="https://apps.apple.com/gb/app/volyume/id6777083702">
