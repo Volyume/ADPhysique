@@ -172,22 +172,40 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const live = useMemo(() => buildLiveStyles(t), [t]);
 
   useEffect(() => {
-    if (routineId) loadRoutine();
+    // Both are async and neither returns to a caller that could handle a
+    // rejection, so both are terminated here. Without this an unexpected
+    // throw is an unhandled rejection: invisible in release, and it leaves
+    // the screen mid-load with nothing on it.
+    if (routineId) loadRoutine().catch((e) => logError('RoutineDetailScreen.loadRoutine', e, { routineId }));
     // C9: seed the intent state so a row already under an exclusion offers
     // "Allow again" straight away rather than only after a swap sheet opens.
-    refreshIntentState();
+    refreshIntentState().catch((e) => logError('RoutineDetailScreen.refreshIntentState', e, { routineId }));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routineId, user?.id]);
 
   async function loadRoutine() {
-    const r = await getRoutineById(routineId);
-    if (!r) return;
+    // Train-page audit 2026-08-26. These three reads had no try/catch, and the
+    // useEffect above calls loadRoutine() without a .catch(), so any read
+    // failure became an unhandled rejection: the screen sat on its skeleton
+    // for ever with no message, no toast and no way to retry but leaving and
+    // coming back. `routine` stays null, so even the "no exercises" empty
+    // state never rendered. Per CLAUDE.md a user-facing failure gets a calm
+    // toast, never silence.
+    let r;
+    let withExercises;
+    let all;
+    try {
+      r = await getRoutineById(routineId);
+      if (!r) return;
+      withExercises = await getRoutineExercisesWithDetails(routineId);
+      all = await getAllExercises();
+    } catch (e) {
+      logError('RoutineDetailScreen.loadRoutine', e, { routineId });
+      toast.show("Couldn't load this workout, try again", { variant: 'error' });
+      return;
+    }
     setRoutine(r);
-
-    const withExercises = await getRoutineExercisesWithDetails(routineId);
     setExercises(withExercises);
-
-    const all = await getAllExercises();
     setAllExercises(all);
 
     // A4: division fingerprint. Pure re-presentation of the volume overlay

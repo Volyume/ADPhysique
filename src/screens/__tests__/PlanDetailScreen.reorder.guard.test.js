@@ -54,8 +54,42 @@ describe('PlanDetailScreen day-level reorder', () => {
 
   test('a failed persist reverts the optimistic reorder and toasts, matching every other write-failure path', () => {
     const moveWindow = PLAN_DETAIL.match(/async function handleMoveDay\(routineId, direction\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
-    expect(moveWindow).toContain('setWorkouts(workouts);');
+    // 2026-08-26 Train-page audit. The revert used to be `setWorkouts(workouts)`,
+    // reverting to the array THIS RENDER captured. Under repeated taps that
+    // array was already out of date, so a failed write threw away every tap
+    // since. It now reverts to `current`, the baseline this particular swap
+    // was actually computed from. The pinned behaviour is unchanged: a failed
+    // persist still reverts and still toasts.
+    expect(moveWindow).toContain('setWorkouts(current);');
+    expect(moveWindow).not.toContain('setWorkouts(workouts);');
     expect(moveWindow).toContain("toast.show(\"Couldn't reorder, try again\", { variant: 'error' });");
+  });
+
+  test('repeated taps cannot interleave: the order carries forward and writes are chained', () => {
+    // Founder report 2026-08-26, "swapping workout days repeatedly". Two taps
+    // inside one write window used to compute from the same stale array and
+    // could land their writes out of order. orderRef advances synchronously so
+    // tap N+1 builds on tap N, and reorderChain serialises the writes.
+    const moveWindow = PLAN_DETAIL.match(/async function handleMoveDay\(routineId, direction\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(moveWindow).toContain('const current = orderRef.current;');
+    expect(moveWindow).toContain('orderRef.current = updated;');
+    expect(moveWindow).toContain('reorderChain.current = reorderChain.current.then(');
+    // The chevrons are the ACCESSIBLE move path (D32), so no tap may be
+    // dropped: there must be no early-return busy latch.
+    expect(moveWindow).not.toMatch(/if \(\w*[Bb]usy\w*(\.current)?\)\s*return/);
+  });
+
+  test('drag and chevron share one baseline and one write chain, so they cannot race each other', () => {
+    const dragWindow = PLAN_DETAIL.match(/async function handleReorderWorkouts\(nextWorkouts\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(dragWindow).toContain('const previous = orderRef.current;');
+    expect(dragWindow).toContain('orderRef.current = nextWorkouts;');
+    expect(dragWindow).toContain('reorderChain.current = reorderChain.current.then(');
+  });
+
+  test('a reload reseats the reorder baseline', () => {
+    // Otherwise a chevron tap after a refresh would swap against the order
+    // that was on screen before it.
+    expect(PLAN_DETAIL).toContain('orderRef.current = routines;');
   });
 
   test('the reorder affordance is tier-blind: gated on isLibrary only, not tier', () => {

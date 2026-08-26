@@ -63,6 +63,12 @@ export default function PlanDetailScreen({ navigation, route }) {
   // reordering: the bridge only does anything once a DragReorderList drag
   // actually picks up, and that list only mounts in reorder mode.
   const { scrollRef, scrollOffset, onScroll, onContentSizeChange } = useDragAutoScrollBridge();
+  // The authoritative day order, advanced synchronously by every reorder so a
+  // second tap builds on the first even before React has re-rendered, plus a
+  // promise chain that keeps the position writes in tap order. See
+  // handleMoveDay for the corruption these two exist to stop.
+  const orderRef = useRef(workouts);
+  const reorderChain = useRef(Promise.resolve());
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -83,6 +89,9 @@ export default function PlanDetailScreen({ navigation, route }) {
         user?.id ? getActivePlan(user.id) : Promise.resolve(null),
       ]);
       setPlan(p);
+      // A reload is the new truth: reseat the reorder baseline with it, or a
+      // later chevron tap would swap against the pre-reload order.
+      orderRef.current = routines;
       setWorkouts(routines);
       setExerciseCounts(counts);
       setSetCounts(sets);
@@ -201,29 +210,53 @@ export default function PlanDetailScreen({ navigation, route }) {
   // within a day (RoutineDetailScreen.handleMoveExercise), one level up the
   // hierarchy. No drag library, no new dependency.
   async function handleMoveDay(routineId, direction) {
-    const index = workouts.findIndex(w => w.id === routineId);
+    // Founder report 2026-08-26: "swapping workout days repeatedly". Tapping
+    // the chevrons faster than a write completes used to corrupt the order,
+    // because this read `workouts` from the render closure and awaited two
+    // writes with nothing serialising them:
+    //
+    //   - tap N+1 could start before tap N's re-render committed, so it built
+    //     its swap from an array that was already one swap out of date;
+    //   - the two awaits could interleave across taps, so tap N's second write
+    //     could land AFTER tap N+1's writes and stamp a dead position;
+    //   - the failure path did `setWorkouts(workouts)`, reverting to the same
+    //     stale closure array and discarding every later tap.
+    //
+    // orderRef carries the authoritative order forward synchronously, so each
+    // tap always builds on the last one, and reorderChain serialises the
+    // writes so they land in the order the taps happened. Every tap is still
+    // honoured: nothing is dropped, which matters because the chevrons are the
+    // ACCESSIBLE move path (D32) and a silently ignored tap is worse there
+    // than anywhere else.
+    const current = orderRef.current;
+    const index = current.findIndex(w => w.id === routineId);
     if (index === -1) return;
     const swapIndex = direction === 'up' ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= workouts.length) return;
+    if (swapIndex < 0 || swapIndex >= current.length) return;
     haptics.selection();
 
     // Optimistic update.
-    const updated = [...workouts];
-    const temp = updated[index];
-    updated[index] = updated[swapIndex];
-    updated[swapIndex] = temp;
+    const updated = [...current];
+    updated[index] = current[swapIndex];
+    updated[swapIndex] = current[index];
+    orderRef.current = updated;
     setWorkouts(updated);
 
-    // Persist both swapped items using their new positions.
-    try {
-      await updateRoutinePosition(updated[index].id, index);
-      await updateRoutinePosition(updated[swapIndex].id, swapIndex);
-    } catch (e) {
-      logError('PlanDetailScreen.handleMoveDay', e, { planId, routineId });
-      // Revert on failure.
-      setWorkouts(workouts);
-      toast.show("Couldn't reorder, try again", { variant: 'error' });
-    }
+    // Persist both swapped items using their new positions, strictly after any
+    // write already in flight.
+    reorderChain.current = reorderChain.current.then(async () => {
+      try {
+        await updateRoutinePosition(updated[index].id, index);
+        await updateRoutinePosition(updated[swapIndex].id, swapIndex);
+      } catch (e) {
+        logError('PlanDetailScreen.handleMoveDay', e, { planId, routineId });
+        // Revert to what the user can actually see now, not to a stale array.
+        orderRef.current = current;
+        setWorkouts(current);
+        toast.show("Couldn't reorder, try again", { variant: 'error' });
+      }
+    });
+    await reorderChain.current;
   }
 
   // D32 (2026-07-10, campaign item 20): true long-press drag, additive to
@@ -234,19 +267,27 @@ export default function PlanDetailScreen({ navigation, route }) {
   // failure shape handleMoveDay uses -- generalised from exactly two writes
   // to however many days a single drag actually moved.
   async function handleReorderWorkouts(nextWorkouts) {
-    const previous = workouts;
+    // Shares handleMoveDay's baseline and write chain: a drag and a chevron
+    // tap move the same list, so they must not race each other either.
+    const previous = orderRef.current;
+    orderRef.current = nextWorkouts;
     setWorkouts(nextWorkouts);
-    try {
-      for (let i = 0; i < nextWorkouts.length; i++) {
-        if (previous[i]?.id !== nextWorkouts[i].id) {
-          await updateRoutinePosition(nextWorkouts[i].id, i);
+    reorderChain.current = reorderChain.current.then(async () => {
+      try {
+        for (let i = 0; i < nextWorkouts.length; i++) {
+          if (previous[i]?.id !== nextWorkouts[i].id) {
+            // eslint-disable-next-line no-await-in-loop
+            await updateRoutinePosition(nextWorkouts[i].id, i);
+          }
         }
+      } catch (e) {
+        logError('PlanDetailScreen.handleReorderWorkouts', e, { planId });
+        orderRef.current = previous;
+        setWorkouts(previous);
+        toast.show("Couldn't reorder, try again", { variant: 'error' });
       }
-    } catch (e) {
-      logError('PlanDetailScreen.handleReorderWorkouts', e, { planId });
-      setWorkouts(previous);
-      toast.show("Couldn't reorder, try again", { variant: 'error' });
-    }
+    });
+    await reorderChain.current;
   }
 
   async function handleArchive() {
