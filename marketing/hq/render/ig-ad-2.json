@@ -1,0 +1,46 @@
+{
+  "meta": {
+    "source": "Founder-written copy, 2026-08-25, used as given. Only change: the em dash removed on the founder's instruction.",
+    "title": "Not an AI fitness chatbot",
+    "format": "Instagram advert, 5 slides, 1080x1350",
+    "status": "DRAFT - founder-tap lane (Instagram's first batch is not yet approved)",
+    "note": "Founder ruled on wording after I offered a rewrite. Their register is the plain one: 'generative' and 'language model' mean nothing to a normal reader, which is what CLAIMS-STANDARDS 9.10 and 9.11 already require. Their copy stands.",
+    "factsChecked": "not a chatbot (no LLM anywhere in src/ or modules/); reads training, nutrition, recovery and progress (runWeeklyCoach inputs incl. getRecoveryScore from energy, soreness and stress); repeatable (engine comment: identical inputs and the same nowMs give byte-identical outputs); holds when data is thin (MIN_WEIGH_INS = 3)."
+  },
+  "slides": [
+    {
+      "eyebrow": "NOT AN AI FITNESS CHATBOT",
+      "heading": "AI can guess. AI can hallucinate. AI can tell you what it thinks you want to hear.",
+      "headingAmber": true
+    },
+    {
+      "heading": "Volyume doesn't.",
+      "supporting": "It reads your actual training, nutrition, recovery and progress against defined coaching rules, then makes a repeatable decision and shows you why."
+    },
+    {
+      "heading": "No made-up answers.",
+      "supporting": "No changing its mind because you asked twice. No pretending it knows when the data isn't there.",
+      "miniCard": {
+        "label": "Weekly decision",
+        "verdict": "Hold",
+        "pillOutline": true,
+        "reason": "Need at least 3 morning weights for a reliable trend."
+      }
+    },
+    {
+      "heading": "Real data. Defined rules. Explainable coaching.",
+      "appShot": {
+        "src": "02_know_what_to_do_today.jpg",
+        "label": "The Today screen."
+      }
+    },
+    {
+      "heading": "Logging your training is free, with no time limit.",
+      "supporting": "The weekly coaching is Pro. On the App Store and Google Play.",
+      "monoStat": {
+        "value": "14 days",
+        "caption": "of full Pro access to start, no card needed."
+      }
+    }
+  ]
+}
