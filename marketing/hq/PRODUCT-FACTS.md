@@ -43,6 +43,22 @@ re-verified before reuse if the app has been updated since this date.
 - The coaching is deterministic, rule-based and explainable. It is not
   conversational AI, not a black box, and does not "learn you" in an AI
   sense.
+- **What is and is not AI in Volyume, because a blanket "no AI" line is
+  FALSE and would be easy to disprove.** The COACHING ENGINE contains no
+  model of any kind: no LLM, no generative step, no randomness (verified
+  2026-08-25, zero references to any LLM provider anywhere in `src/` or
+  `modules/`), so the weekly decision cannot hallucinate a number or invent
+  a reason. But the app DOES ship a neural network: Progress Scan runs
+  MediaPipe Selfie Segmentation on-device through TFLite
+  (`assets/ml/selfie_segmentation_v2.tflite`,
+  `react-native-fast-tflite` in package.json, ML Kit as the native
+  fallback) to find the body outline in the user's own photo. It is a
+  vision segmentation model, not a generative one.
+  COPY RULE: never write "no AI", "AI-free" or similar about the product as
+  a whole. Scope the claim to the decision: no language model is involved
+  in the weekly call, so nothing about it is generated. This is the same
+  conclusion CLAIMS-STANDARDS section 6 reaches, with the reason now
+  recorded.
 - Onboarding delivers value before the first workout: it builds the training
   plan, sets calorie/macro targets, shows the rationale for those targets,
   supports meal planning, sets the first check-in date, and establishes the
