@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { A11Y_PREFS_KEY, loadA11yPrefs } from '../lib/accessibilityPrefs';
 import { PRIVACY_PREFS_KEY, loadPrivacyPrefs } from '../lib/privacyPrefs';
+import { safeIntInRange } from '../lib/nativeSafe';
 
 // Auto-instrumentation lives in observability.js. Wrapping the store
 // once at module evaluation means every action call gets a
@@ -36,6 +37,9 @@ const PAID_VERIFIED_AT_KEY = '@volyume_paid_verified_at';
 // is_completed=0 forever, invisible to every history query. We snapshot the
 // slice here on each mutation and rehydrate it on launch (WK-1).
 const ACTIVE_WORKOUT_KEY = '@volyume_active_workout';
+// Longest rest any path may set, in seconds. An hour is far beyond any real
+// rest; the bound exists to refuse the impossible, never to police the unusual.
+const REST_MAX_SECONDS = 3600;
 
 // Monotonic stamp for PR celebrations (see showPRCelebration): App.js keys
 // the PRCelebration component on it so every celebration remounts and its
@@ -102,6 +106,38 @@ async function _persistProfileTimestamps(userId, map) {
 // so no consumer (finish, empty-view, aggregates) can ever meet a missing
 // array. Preserves array identity when nothing needs fixing (no needless
 // re-renders); only rewrites the offending entries.
+/**
+ * REST TIMER SAFETY (adversarial audit 2026-08-26, finding 2).
+ *
+ * The rest timer is a wall-clock anchor, so every path that sets restTimerEndsAt
+ * has to land on a real, finite, in-range instant. A non-finite anchor never
+ * expires: `remaining <= 0` is false for NaN and for Infinity alike, so the
+ * timer stays ACTIVE for the whole session, and because the anchor is persisted
+ * with the active-workout snapshot it survives a kill and comes back just as
+ * stuck. It also crosses to native, where a saturating conversion turns it into
+ * a chronometer roughly 292 million years out that the user cannot dismiss.
+ *
+ * Ordering checks alone cannot do this job, which is the lesson of VOLYUME-1K:
+ * every comparison against NaN is false, so `endsAt > now` and `endsAt <= now`
+ * both say no and the value slips through whichever branch is the permissive
+ * one. The finiteness test has to be explicit and first.
+ *
+ * @param {*} value candidate end time, epoch ms
+ * @param {{clamp?: boolean}} [opts] clamp: pull an over-long end time down to
+ *   the ceiling instead of refusing it. Used by the +15s path, where the user's
+ *   intent is unambiguous and refusing a tap would just look broken; refused
+ *   outright everywhere the value's provenance is not a deliberate tap.
+ * @returns {number|null} bounded epoch ms, or null meaning no rest is running
+ */
+function boundedRestEndsAt(value, { clamp = false } = {}) {
+  const now = Date.now();
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= now) return null;
+  const ceiling = now + REST_MAX_SECONDS * 1000;
+  if (n > ceiling) return clamp ? ceiling : null;
+  return n;
+}
+
 function withSetsArrays(list) {
   if (!Array.isArray(list)) return [];
   let changed = false;
@@ -1701,6 +1737,7 @@ const useAppStore = create((set, get) => ({
       // during the AsyncStorage + DB reads above. Don't clobber a live session
       // with the restored one (the top-of-function check is now stale).
       if (get().activeWorkout) return false;
+      const restoredRestEndsAt = boundedRestEndsAt(snap.restTimerEndsAt);
       set({
         activeWorkout: snap.workout,
         workoutExercises: withSetsArrays(snap.workoutExercises),
@@ -1715,12 +1752,17 @@ const useAppStore = create((set, get) => ({
         // A2: resume a rest that is still in the future; an elapsed one stays
         // stopped (its OS alert already fired — scheduled notifications
         // survive process death, which is exactly the backstop working).
-        ...(Number(snap.restTimerEndsAt) > Date.now()
+        // Finding 2: bounded, not merely compared. The old test was
+        // `Number(snap.restTimerEndsAt) > Date.now()`, which Infinity passes,
+        // and an Infinity anchor makes `remaining <= 0` false forever — so a
+        // corrupt snapshot restored a rest timer that could never expire and
+        // was itself re-persisted on the next mutation.
+        ...(restoredRestEndsAt !== null
           ? {
             restTimerActive: true,
-            restTimerDuration: Number(snap.restTimerDuration) > 0 ? Number(snap.restTimerDuration) : 90,
-            restTimerRemaining: Math.max(0, Math.round((Number(snap.restTimerEndsAt) - Date.now()) / 1000)),
-            restTimerEndsAt: Number(snap.restTimerEndsAt),
+            restTimerDuration: safeIntInRange(snap.restTimerDuration, 1, REST_MAX_SECONDS, 90),
+            restTimerRemaining: Math.max(0, Math.round((restoredRestEndsAt - Date.now()) / 1000)),
+            restTimerEndsAt: restoredRestEndsAt,
           }
           : {}),
       });
@@ -1794,11 +1836,35 @@ const useAppStore = create((set, get) => ({
   restTimerEndsAt: null,
 
   startRestTimer: (duration = 90) => {
-    const endsAt = Date.now() + duration * 1000;
+    // REST TIMER SAFETY (adversarial audit 2026-08-26). This took `duration`
+    // on trust and computed `Date.now() + duration * 1000`, so:
+    //   NaN      -> restTimerEndsAt NaN, and because every comparison against
+    //               NaN is false the countdown can never reach zero. The timer
+    //               stays ACTIVE for the rest of the session: the "permanently
+    //               active rest timer" in the finding.
+    //   Infinity -> endsAt Infinity. iOS is safe (LiveActivityModule guards
+    //               isFinite), but Kotlin's Double.POSITIVE_INFINITY.toLong()
+    //               is Long.MAX_VALUE, which sails past the module's
+    //               `endTimeMs <= now` check and arms a foreground-service
+    //               chronometer roughly 292 million years out.
+    // One validated entry point is the right control: every rest timer in the
+    // app starts here, so the JS timer, the OS notification, the Live Activity
+    // and the Android service all inherit the same bounded number.
+    let seconds = safeIntInRange(duration, 1, REST_MAX_SECONDS, null);
+    if (seconds === null) {
+      // eslint-disable-next-line global-require
+      require('../lib/errorLog').logWarn(
+        'startRestTimer.unusableDuration',
+        'rest duration was not a usable number; falling back to the default',
+        { fallbackSeconds: 90 },
+      );
+      seconds = 90;
+    }
+    const endsAt = Date.now() + seconds * 1000;
     set({
       restTimerActive: true,
-      restTimerDuration: duration,
-      restTimerRemaining: duration,
+      restTimerDuration: seconds,
+      restTimerRemaining: seconds,
       restTimerEndsAt: endsAt,
     });
     // A2: OS-scheduled end-of-rest alert so a locked/pocketed phone still
@@ -1841,7 +1907,21 @@ const useAppStore = create((set, get) => ({
     let nextEndsAt = null;
     set((state) => {
       if (!state.restTimerActive) return {};
-      const endsAt = (state.restTimerEndsAt ?? Date.now()) + seconds * 1000;
+      // Finding 2: both operands were taken on trust. A non-finite `seconds`
+      // (this is reachable from a notification action as well as the on-screen
+      // buttons) or an already-poisoned anchor produced a NaN end time, and
+      // NaN is the one value that makes the countdown unable to reach zero.
+      const delta = safeIntInRange(seconds, -REST_MAX_SECONDS, REST_MAX_SECONDS, 0);
+      const base = boundedRestEndsAt(state.restTimerEndsAt) ?? Date.now();
+      // Clamped rather than refused: a tap the user made is honoured up to the
+      // ceiling. A rest longer than the ceiling simply stops there.
+      const endsAt = boundedRestEndsAt(base + delta * 1000, { clamp: true });
+      if (endsAt === null) {
+        // The adjustment took the rest to or past now: that is a skip, and the
+        // caller's own clamp already keeps a five-second floor, so reaching
+        // here means the value was not a real adjustment. Leave the timer be.
+        return {};
+      }
       nextEndsAt = endsAt;
       return {
         restTimerEndsAt: endsAt,
@@ -1867,9 +1947,20 @@ const useAppStore = create((set, get) => ({
       if (!state.restTimerActive) return {};
       // Wall-clock derived: recompute from the end timestamp rather than
       // decrementing, so a backgrounded (suspended) timer catches up on resume.
-      const remaining = state.restTimerEndsAt != null
-        ? Math.max(0, Math.round((state.restTimerEndsAt - Date.now()) / 1000))
-        : Math.max(0, state.restTimerRemaining - 1);
+      const rawRemaining = state.restTimerEndsAt != null
+        ? Math.round((state.restTimerEndsAt - Date.now()) / 1000)
+        : state.restTimerRemaining - 1;
+      // Finding 2, last line of defence. Every path that sets the anchor is
+      // now bounded, but this loop is what a bad value would live inside, so
+      // it fails to EXPIRED rather than to running. Two ways in, and finiteness
+      // alone only closes the first: `remaining <= 0` is false for NaN and for
+      // Infinity, and it is equally false for a huge FINITE anchor like 1e300,
+      // which counts down for 1e297 seconds and is indistinguishable from
+      // stuck. Out of range is therefore treated as no rest at all, which
+      // releases the user rather than trapping them behind the countdown.
+      const remaining = (Number.isFinite(rawRemaining) && rawRemaining <= REST_MAX_SECONDS)
+        ? Math.max(0, rawRemaining)
+        : 0;
       if (remaining <= 0) expired = true;
       return remaining <= 0
         ? { restTimerActive: false, restTimerRemaining: 0, restTimerEndsAt: null }

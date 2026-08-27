@@ -47,6 +47,40 @@ class RestTimerLiveModule : Module() {
   )
   private val REST_CUE_REQUEST_BASE = 72001
 
+  // A rest end time arrives from JS as a plain number, and all three entry
+  // points below fed it straight into `.toLong()`. Kotlin's Double.toLong()
+  // SATURATES rather than throwing, so NaN became 0 while both Infinity and
+  // any huge finite double became Long.MAX_VALUE - which then sailed past the
+  // `endTimeMs <= now` guard, because Long.MAX_VALUE is not in the past. Every
+  // resulting state was sticky and un-dismissable by the user: an ongoing
+  // chronometer counting down to the year 292278994, a foreground service that
+  // never reaches its own stop time, and exact alarms parked for eternity.
+  //
+  // The horizon is deliberately far wider than any real rest (JS caps at one
+  // hour) because this is defence in depth, not the product rule: it exists to
+  // refuse the impossible, never to police the unusual.
+  private val MAX_REST_HORIZON_MS = 24L * 60L * 60L * 1000L
+
+  /**
+   * Reads options["endTimeMs"] as a usable future timestamp, or null.
+   *
+   * Null means "do not start" for every caller. None of them may substitute a
+   * default: a rest timer anchored to a made-up end time is worse than no rest
+   * timer, because the user sees a countdown that is confidently wrong.
+   */
+  private fun readEndTimeMs(options: Map<String, Any?>): Long? {
+    val raw = (options["endTimeMs"] as? Number)?.toDouble() ?: return null
+    // Explicit, and first: with NaN both comparisons below are false, so an
+    // ordering check alone lets it through. That is the whole defect class.
+    if (raw.isNaN() || raw.isInfinite()) return null
+    val now = System.currentTimeMillis()
+    // Compared as Double BEFORE the conversion. Doing it after is exactly what
+    // the saturating .toLong() defeats.
+    if (raw <= now.toDouble()) return null
+    if (raw > (now + MAX_REST_HORIZON_MS).toDouble()) return null
+    return raw.toLong()
+  }
+
   private fun restCuePendingIntent(context: Context, cue: String, index: Int): PendingIntent? {
     val intent = Intent(context, RestCueReceiver::class.java).apply {
       action = RestCueReceiver.ACTION_CUE
@@ -125,15 +159,15 @@ class RestTimerLiveModule : Module() {
           return@AsyncFunction
         }
 
-        val exerciseName = (options["exerciseName"] as? String)?.takeIf { it.isNotBlank() } ?: "Rest timer"
-        val endTimeMs = (options["endTimeMs"] as? Number)?.toLong() ?: 0L
-        val channelId = (options["channelId"] as? String)?.takeIf { it.isNotBlank() } ?: DEFAULT_CHANNEL_ID
-        val deepLink = options["deepLink"] as? String
-
-        if (endTimeMs <= System.currentTimeMillis()) {
+        val endTimeMs = readEndTimeMs(options)
+        if (endTimeMs == null) {
           promise.resolve(false)
           return@AsyncFunction
         }
+
+        val exerciseName = (options["exerciseName"] as? String)?.takeIf { it.isNotBlank() } ?: "Rest timer"
+        val channelId = (options["channelId"] as? String)?.takeIf { it.isNotBlank() } ?: DEFAULT_CHANNEL_ID
+        val deepLink = options["deepLink"] as? String
 
         ensureChannel(context, channelId)
 
@@ -246,8 +280,8 @@ class RestTimerLiveModule : Module() {
           promise.resolve(false)
           return@AsyncFunction
         }
-        val endTimeMs = (options["endTimeMs"] as? Number)?.toLong() ?: 0L
-        if (endTimeMs <= System.currentTimeMillis()) {
+        val endTimeMs = readEndTimeMs(options)
+        if (endTimeMs == null) {
           promise.resolve(false)
           return@AsyncFunction
         }
@@ -306,8 +340,8 @@ class RestTimerLiveModule : Module() {
     AsyncFunction("scheduleRestCues") { options: Map<String, Any?>, promise: Promise ->
       try {
         val context = appContext.reactContext
-        val endTimeMs = (options["endTimeMs"] as? Number)?.toLong() ?: 0L
-        if (context == null || endTimeMs <= System.currentTimeMillis()) {
+        val endTimeMs = readEndTimeMs(options)
+        if (context == null || endTimeMs == null) {
           promise.resolve(false)
           return@AsyncFunction
         }
