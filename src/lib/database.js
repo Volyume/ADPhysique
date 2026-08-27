@@ -3922,6 +3922,50 @@ export async function getAllCompletedSetsForExercise(exerciseId, currentWorkoutI
   return rows.map(rowToCamel);
 }
 
+// ─── Logged-set domain bounds ───────────────────────────────────────────────
+//
+// A logged set's weight and reps are the seed of nearly every derived number in
+// the app: session tonnage, weekly volume, e1RM, PRs, the coach's evidence, and
+// the chart geometry that eventually reaches Skia. A poisoned value here does
+// not stay here.
+//
+// `data.weight || 0` accepted Infinity, because Infinity is truthy, and turned
+// NaN into a silent 0. Infinity is reachable from the ordinary decimal keypad:
+// a long enough run of digits is exactly what parseFloat returns Infinity for
+// ('1' followed by 400 zeros does it). One Infinity weight makes every
+// downstream aggregate Infinity and syncs it to cloud.
+//
+// These bounds are deliberately generous rather than "sensible". The rule is
+// not to police unusual lifts: a loaded leg press in pounds, a heavy machine
+// stack, or a chain-and-band total should all pass untouched. They exist only
+// to keep an impossible number out of the database.
+const MAX_SET_WEIGHT = 5000;   // any unit; far above any real machine or bar load
+const MAX_SET_REPS = 1000;     // an AMRAP is long, not unbounded
+
+/**
+ * Coerce a logged-set number to something the database can safely hold.
+ * Non-finite becomes 0 and is logged; an out-of-range value is clamped and
+ * logged. Never throws: a user mid-session must still be able to log the set.
+ */
+function boundSetNumber(value, { max, field, setId = null }) {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) {
+    if (value !== null && value !== undefined && value !== '') {
+      logWarn('database.boundSetNumber', `non-finite ${field} refused`, { field, setId });
+    }
+    return 0;
+  }
+  if (n < 0) {
+    logWarn('database.boundSetNumber', `negative ${field} clamped`, { field, setId });
+    return 0;
+  }
+  if (n > max) {
+    logWarn('database.boundSetNumber', `${field} above domain maximum, clamped`, { field, setId });
+    return max;
+  }
+  return n;
+}
+
 export async function createWorkoutSet(data) {
   const d = await db();
   const id = uid();
@@ -3958,8 +4002,8 @@ export async function createWorkoutSet(data) {
       data.setType || 'straight',
       data.targetRepsMin ?? null,
       data.targetRepsMax ?? null,
-      data.actualReps || 0,
-      data.weight || 0,
+      boundSetNumber(data.actualReps, { max: MAX_SET_REPS, field: 'actualReps' }),
+      boundSetNumber(data.weight, { max: MAX_SET_WEIGHT, field: 'weight' }),
       data.rir ?? null,
       data.rpe ?? null,
       data.failed ? 1 : 0,
@@ -4008,7 +4052,8 @@ export async function updateWorkoutSet(setId, fields = {}) {
     if (fields[key] === undefined) continue;
     let v = fields[key];
     if (key === 'failed') v = v ? 1 : 0;
-    else if (key === 'weight' || key === 'actualReps') v = v ?? 0;
+    else if (key === 'weight') v = boundSetNumber(v, { max: MAX_SET_WEIGHT, field: 'weight', setId });
+    else if (key === 'actualReps') v = boundSetNumber(v, { max: MAX_SET_REPS, field: 'actualReps', setId });
     else v = v ?? null;
     sets.push(`${col} = ?`);
     vals.push(v);
