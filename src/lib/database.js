@@ -3011,27 +3011,82 @@ export async function runMigrations(d) {
   }
 
   for (let v = current; v < SCHEMA_MIGRATIONS.length; v++) {
-    for (const op of SCHEMA_MIGRATIONS[v]) {
-      try {
-        // Function migrations let us run JS (e.g. compute deterministic
-        // IDs and UPDATE rows) inside the same versioned migration
-        // pipeline as plain SQL strings. The function is passed the
-        // database handle and may use any of its async methods.
-        if (typeof op === 'function') {
-          await op(d);
-        } else {
-          await d.execAsync(op);
+    // MIGRATION DURABILITY (adversarial audit 2026-08-26, finding 3).
+    //
+    // A version's ops and its user_version bump used to be separate,
+    // unprotected statements. So a process death part-way through a version —
+    // an OOM kill, a battery cut-off, the user force-quitting an update that
+    // felt stuck — left the schema half-changed with the OLD version still
+    // recorded, and the next launch re-ran that version from the top against a
+    // database it had already partly modified.
+    //
+    // For a version of plain additive DDL that was survivable, because the
+    // benign-error skip below absorbs "duplicate column name" and "already
+    // exists". Nothing else was. v55 renames progress_photo_meta aside, builds
+    // the replacement, copies the rows and drops the original: die between the
+    // rename and the create and the re-run throws "no such table", which is
+    // NOT benign, so every subsequent launch fails the same way and the only
+    // route back is the COMP-009 snapshot. The v18 exercise-id canonicalisation
+    // rewrites foreign keys across routine_exercises, workout_sets,
+    // exercise_user_notes and exercise_goals before updating exercises itself;
+    // its own comment says the references "stay valid throughout the
+    // transaction", and there was no transaction. Half of that rewrite is
+    // logged training history pointing at ids that no longer exist.
+    //
+    // One transaction per version fixes both: the version either applies whole
+    // or not at all, and a retry always starts from a clean boundary. Four
+    // things this relies on were measured against SQLite rather than assumed:
+    // DDL is transactional; PRAGMA user_version is transactional and rolls
+    // back with the ops it describes; and neither "duplicate column name" nor
+    // "table already exists" aborts the surrounding transaction, so the skip
+    // below still behaves exactly as it did.
+    //
+    // THROUGH THE HANDLE'S OWN TRANSACTION, and deliberately NOT through
+    // runInTransaction. The queue's reentrancy check inline-joins a
+    // transaction it does not own (`inTx() && !_txQueueActive`), which is
+    // exactly what the v22 mesocycle-week re-id migration needs when it calls
+    // runInTransaction from inside this one. Wrapping the version in
+    // runInTransaction instead would set _txQueueActive, sending that inner
+    // call down the queued path to wait on _txTail — the promise for the very
+    // transaction it is running inside. That deadlocks on first launch after
+    // an update, which is the worst possible place for one.
+    //
+    // Nothing else can be touching this connection: migrations run inside
+    // _doInit against the unpublished handle, and every other caller reaches
+    // SQLite through db(), which awaits _initPromise. That is also why a
+    // deferred BEGIN is sufficient here and no raw BEGIN IMMEDIATE is needed
+    // (D74 bans those outside the queue, correctly).
+    await d.withTransactionAsync(async () => {
+      for (const op of SCHEMA_MIGRATIONS[v]) {
+        try {
+          // Function migrations let us run JS (e.g. compute deterministic
+          // IDs and UPDATE rows) inside the same versioned migration
+          // pipeline as plain SQL strings. The function is passed the
+          // database handle and may use any of its async methods.
+          if (typeof op === 'function') {
+            await op(d);
+          } else {
+            await d.execAsync(op);
+          }
+        } catch (e) {
+          if (isBenignMigrationError(e)) continue;
+          // Logged HERE rather than at the throw site outside the transaction.
+          // withTransactionAsync rolls back before rethrowing and does not
+          // guard that ROLLBACK, so on the pathological path the caller can
+          // receive the rollback's error instead of this one. Recording the
+          // real cause first means a bricked upgrade is still diagnosable.
+          logWarn('database.migration', `migration v${v + 1} failed: ${e?.message || e}`);
+          throw e;
         }
-      } catch (e) {
-        if (isBenignMigrationError(e)) continue;
-        // A genuine migration failure, surface it instead of silently
-        // corrupting the schema and crashing later at an unrelated query.
-        logWarn('database.migration', `migration v${v + 1} failed: ${e?.message || e}`);
-        throw e;
       }
-    }
-    // PRAGMA does not accept bound params; v is an integer we control.
-    await d.execAsync(`PRAGMA user_version = ${v + 1}`);
+      // Inside the transaction, deliberately: the recorded version and the
+      // schema it describes must never disagree.
+      // PRAGMA does not accept bound params; v is an integer we control.
+      await d.execAsync(`PRAGMA user_version = ${v + 1}`);
+    });
+    // A throw propagates from here having already rolled back. initDatabase
+    // clears _initPromise on failure, so the next db() call retries from the
+    // version boundary rather than from a half-applied schema.
   }
 }
 
