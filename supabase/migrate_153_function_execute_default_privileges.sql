@@ -70,14 +70,22 @@
 -- it, and service_role retains execute through the schema default.
 --
 -- Applied locally:  n/a (grants are environment state; nothing local)
--- Applied remotely: NO, as at 2026-08-27. BLOCKED by the agent harness's
---   permission classifier before any SQL reached the database, exactly as
---   migrate_152's second attempt was. Not a Postgres failure and not a founder
---   gate: no SQL ran. The file is verified and ready. Deliberately NOT routed
---   through execute_sql, which would defeat the intent of that block rather
---   than respect it. Until this is applied, a NEWLY CREATED function in public
---   still lands executable by anon and authenticated; the existing surface is
---   already contained by migrate_152.
+-- Applied remotely: YES. 2026-08-27, project sujrylzzxcqxxfygptns (Volyume,
+--   eu-west-1). Verified immediately afterwards inside an aborted transaction,
+--   so the probe function was never committed:
+--     NEW FUNCTION ACL   {postgres=X/postgres, service_role=X/postgres}
+--                        no PUBLIC, no anon, no authenticated. Target reached.
+--     pg_default_acl     GLOBAL={postgres=X} | public={postgres=X,
+--                        service_role=X}. Both non-empty, so neither row is a
+--                        deletion candidate and PUBLIC cannot creep back.
+--     client RPCs        5/5 sampled still executable by authenticated.
+--     internal set       0 of 6 executable by authenticated.
+--   Two earlier attempts did not apply: the first was blocked by the agent
+--   harness permission classifier before any SQL ran, and was recorded rather
+--   than bypassed.
+--   NOTE: the `storage` schema keeps its permissive default ACL. That row
+--   belongs to Supabase, not to us, and no Volyume migration creates functions
+--   there, so it is deliberately untouched.
 -- Safe to re-run:   yes. ALTER DEFAULT PRIVILEGES REVOKE of a privilege that
 --                   is already absent is a no-op.
 -- Rollback:         ALTER DEFAULT PRIVILEGES FOR ROLE postgres
