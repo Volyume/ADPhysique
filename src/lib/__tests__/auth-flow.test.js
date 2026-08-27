@@ -116,24 +116,42 @@ describe('clearAuthStateForSignOut', () => {
     expect(s.prCelebrationQueue).toEqual([]);
   });
 
-  test('does not throw if AsyncStorage.getAllKeys rejects', async () => {
+  test('an unverifiable AsyncStorage wipe ABORTS sign-out (P1 cross-account isolation)', async () => {
+    // INVERTED 2026-08-27, adversarial audit P1. This test previously asserted
+    // that an AsyncStorage failure was "caught + logged but doesn't abort the
+    // sign-out". That was the defect, not the design: it let account B activate
+    // on a device still holding account A's cached tier, trial state, consent
+    // cache and error-log buffer. The product law is now the same one the
+    // SQLite limb has followed since D33 -- verified clean, or nobody else
+    // activates -- and it matches CLAUDE.md's rule that a transient read
+    // failure must never bypass a gate.
+    //
+    // getAllKeys rejecting means we cannot prove the store is empty. Unknown is
+    // treated as residue, so sign-out fails closed and the user stays signed in
+    // as A rather than ending up half-torn-down with residue on the device.
     const Store = require('@react-native-async-storage/async-storage');
     const target = Store.default ?? Store;
     const original = target.getAllKeys;
     target.getAllKeys = jest.fn().mockRejectedValue(new Error('disk full'));
+    const useAppStore = require('../../store/useAppStore').default;
     try {
-      const useAppStore = require('../../store/useAppStore').default;
-      // Per the locked design, sign-out returns { ok: true } on
-      // success and { ok: false, reason: ... } if it had to abort
-      // (e.g. cloud push failed). An AsyncStorage failure inside the
-      // local wipe step is caught + logged but doesn't abort the
-      // sign-out -- in-memory state still clears.
+      // Seed a live account A, or "still signed in" proves nothing: the
+      // preceding test leaves the store already signed out.
+      useAppStore.setState({
+        user: { id: 'user-A', email: 'a@example.com' },
+        session: { user: { id: 'user-A' } },
+        tier: 'pro',
+      });
       const result = await useAppStore.getState().clearAuthStateForSignOut();
-      expect(result?.ok).toBe(true);
-      expect(useAppStore.getState().user).toBeNull();
-      expect(useAppStore.getState().tier).toBeNull();
+      expect(result?.ok).toBe(false);
+      expect(result?.reason).toBe('wipe_failed');
+      expect(result?.step).toBe('async_storage_verify_unreadable');
+      // Fail-closed means nothing was half-cleared: A is still the live account,
+      // which is far safer than a half-torn-down device that B can then use.
+      expect(useAppStore.getState().user?.id).toBe('user-A');
     } finally {
       target.getAllKeys = original;
+      useAppStore.setState({ user: null, session: null, tier: null });
     }
   });
 });

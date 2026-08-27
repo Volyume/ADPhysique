@@ -21,7 +21,13 @@ test('sign-out cancels all scheduled notifications before the storage wipe', () 
   const start = SRC.indexOf('clearAuthStateForSignOut');
   const fn = SRC.slice(start);
   const cancelAt = fn.indexOf('cancelAllScheduledNotificationsAsync');
-  const clearAt = fn.indexOf('await AsyncStorage.clear()'); // the call, not the comments naming it
+  // P1 (2026-08-27): the raw AsyncStorage.clear() call is now behind
+  // wipeAsyncStorageWithRetry, which retries and verifies so a failed wipe can
+  // fail closed. The ordering property this suite exists to pin is unchanged:
+  // notifications must be cancelled BEFORE the storage wipe, or the previous
+  // user's reminders keep firing on a device that may now belong to someone
+  // else. Only the symbol moved.
+  const clearAt = fn.indexOf('wipeAsyncStorageWithRetry()');
   expect(cancelAt).toBeGreaterThan(-1);
   expect(clearAt).toBeGreaterThan(-1);
   // Cancel must run BEFORE the wipe removes the prefs blob.

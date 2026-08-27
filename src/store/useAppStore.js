@@ -350,6 +350,14 @@ const useAppStore = create((set, get) => ({
   //   { ok: false, reason: 'unsynced' }    push failed, sign-out aborted
   //   { ok: false, reason: 'wipe_failed' } local wipe failed, sign-out aborted
   clearAuthStateForSignOut: async ({ force = false } = {}) => {
+    // P1 cross-account isolation. Invalidate account A's in-flight async work
+    // FIRST, before any wiping, so a cloud read dispatched moments ago cannot
+    // land its result under account B, and cannot re-seed AsyncStorage between
+    // the clear and the verify. See lib/accountEpoch.js.
+    try {
+      // eslint-disable-next-line global-require
+      require('../lib/accountEpoch').beginNewAccountEpoch();
+    } catch (_) { /* tolerate: the wipe below is still fail-closed */ }
     // eslint-disable-next-line global-require
     const log = require('../lib/errorLog');
     const prevUid = get().user?.id ?? null;
@@ -585,28 +593,49 @@ const useAppStore = create((set, get) => ({
     // Per founder direction: signing out should leave nothing
     // behind. Same hammer as delete-account. AsyncStorage.clear()
     // is scoped to this app only.
-    try {
-      await AsyncStorage.clear();
-      log.logInfo('clearAuthStateForSignOut.asyncStorage.clear', 'ok');
-    } catch (e) {
-      log.logError('clearAuthStateForSignOut.asyncStorage.clear.failed', e, { prevUid });
+    // P1: this used to be best-effort. A failed clear was logged and stepped
+    // past, and sign-out still returned ok, so account B could activate on a
+    // device still holding A's cached tier, trial state, consent cache and
+    // error-log buffer. It now retries, verifies the store is actually empty,
+    // and refuses sign-out when it cannot prove that. An unreadable store
+    // counts as residue, never as absence.
+    {
+      // eslint-disable-next-line global-require
+      const { wipeAsyncStorageWithRetry } = require('../lib/deviceWipe');
+      const cleared = await wipeAsyncStorageWithRetry();
+      if (!cleared.ok) {
+        log.logError('clearAuthStateForSignOut.asyncStorage.failed',
+          new Error(`device storage wipe failed at ${cleared.step}`), { prevUid });
+        try {
+          // eslint-disable-next-line global-require
+          require('../lib/sync/signOutGuard').setSignOutWiping(false);
+        } catch (_) { /* tolerate */ }
+        return { ok: false, reason: 'wipe_failed', step: cleared.step };
+      }
     }
 
     // SecureStore tokens too. supabase-js signOut() should have done
     // this, but if the cloud call failed the tokens persist and a
     // restoreSession revives the session under the same uid. Same
     // best-effort pattern as delete-account.
-    try {
-      // eslint-disable-next-line global-require
-      const SecureStore = require('expo-secure-store');
+    // P1: a surviving refresh token does not merely leak data, it can
+    // re-authenticate the previous account, so this is the one residue that
+    // must never be shrugged off. Retried, then read back to prove it is gone.
+    {
       const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
-      const projectRef = url.replace(/^https?:\/\//, '').split('.')[0];
-      if (projectRef) {
-        await SecureStore.deleteItemAsync(`sb-${projectRef}-auth-token`).catch(() => {});
+      const projectRef = url.replace(/^https?:\/\//, '').split('.')[0] || null;
+      // eslint-disable-next-line global-require
+      const { wipeAuthTokensWithRetry } = require('../lib/deviceWipe');
+      const tokens = await wipeAuthTokensWithRetry({ projectRef });
+      if (!tokens.ok) {
+        log.logError('clearAuthStateForSignOut.secureStore.failed',
+          new Error(`auth token wipe failed at ${tokens.step}`), { prevUid });
+        try {
+          // eslint-disable-next-line global-require
+          require('../lib/sync/signOutGuard').setSignOutWiping(false);
+        } catch (_) { /* tolerate */ }
+        return { ok: false, reason: 'wipe_failed', step: tokens.step };
       }
-      await SecureStore.deleteItemAsync('supabase.auth.token').catch(() => {});
-    } catch (e) {
-      log.logWarn('clearAuthStateForSignOut.secureStore.failed', e?.message ?? 'unknown', { prevUid });
     }
 
     // The next account must not inherit this one's Apple name. Process-scoped
@@ -847,6 +876,8 @@ const useAppStore = create((set, get) => ({
   restoreSessionFromCloud: async (supabaseUserId, sessionUser = null) => {
     if (!supabaseUserId) return;
     // eslint-disable-next-line global-require
+    const _epoch = require('../lib/accountEpoch').currentEpoch();
+    // eslint-disable-next-line global-require
     const log = require('../lib/errorLog');
     log.logInfo('restoreSessionFromCloud.start', `uid=${supabaseUserId}`, { uid: supabaseUserId });
 
@@ -854,7 +885,16 @@ const useAppStore = create((set, get) => ({
     // sign-out -> sign-in-as-B, a late-resolving restore for user A must NOT
     // write A's firstRun/profile/tier over user B. Bail if a DIFFERENT user is
     // now signed in (a null user.id means sign-in hasn't set it yet — proceed).
+    // P1 cross-account isolation: identity alone is not sufficient. The uid
+    // comparison deliberately proceeds when cur is null, which is right for the
+    // "sign-in has not set user yet" case, but it also lets a late restore for
+    // account A write A's profile, tier and first-run cache back into storage
+    // AFTER A signed out and the device was wiped. The epoch catches exactly
+    // that: it moves on sign-out, so any answer captured before it is stale
+    // whatever the current uid happens to be.
     const staleUid = () => {
+      // eslint-disable-next-line global-require
+      if (!require('../lib/accountEpoch').isEpochCurrent(_epoch)) return true;
       const cur = get().user?.id;
       return !!cur && cur !== supabaseUserId;
     };
@@ -1059,6 +1099,8 @@ const useAppStore = create((set, get) => ({
   // tierChecked / firstRunChecked and only proceeds once both are set.
   refreshTierFromCloud: async (supabaseClient, supabaseUserId) => {
     if (!supabaseClient || !supabaseUserId) return;
+    // eslint-disable-next-line global-require
+    const _epoch = require('../lib/accountEpoch').currentEpoch();
     try {
       const queryPromise = supabaseClient
         .from('users_profile')
@@ -1087,6 +1129,19 @@ const useAppStore = create((set, get) => ({
       // DIFFERENT user is now signed in.
       const cur = get().user?.id;
       if (cur && cur !== supabaseUserId) return;
+      // P1 cross-account isolation. The uid comparison above deliberately
+      // proceeds when cur is null, which is correct for the "sign-in has not
+      // set user yet" case it was written for, but it also lets a late read
+      // from account A write A's tier into storage AFTER A signed out and the
+      // device was wiped. Account B then inherits A's tier and trial state on
+      // next launch. Identity cannot detect that; only time can. If the epoch
+      // moved, this answer belongs to an account the device no longer serves.
+      // eslint-disable-next-line global-require
+      if (!require('../lib/accountEpoch').isEpochCurrent(_epoch)) {
+        // eslint-disable-next-line global-require
+        require('../lib/errorLog').logInfo('refreshTierFromCloud.staleEpoch', 'dropped a previous account\'s tier read');
+        return;
+      }
       if (data?.tier) {
         // Same beta tier policy as restoreSessionFromCloud, see comment
         // there. Any cloud-signed-in user is Pro during beta because the
