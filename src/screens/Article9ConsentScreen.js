@@ -12,6 +12,7 @@ import useAppStore from '../store/useAppStore';
 import useAccountActions from '../hooks/useAccountActions';
 import { getSupabaseClient } from '../lib/supabase';
 import { logError, logInfo } from '../lib/errorLog';
+import { isLocalDbEncrypted } from '../lib/database';
 import { audit } from '../lib/observability';
 
 /**
@@ -194,6 +195,32 @@ export default function Article9ConsentScreen({ navigation }) {
     navigation?.navigate('PrivacyPolicy');
   }
 
+  // HONEST STORAGE COPY (adversarial audit 2026-08-26, finding 10).
+  //
+  // This line sits inside the Article 9 consent gate, which is the one place in
+  // the app where an inaccurate statement is legally load-bearing. It claimed
+  // encrypted local storage unconditionally.
+  //
+  // The database does not always get to be encrypted. dbCrypto opens it
+  // plaintext, deliberately and by design, when SQLCipher is unavailable, when
+  // the key cannot be read, or when the plaintext-to-encrypted migration fails
+  // (F-002) - because bricking the app or losing the user's training history
+  // would be worse. That decision stands and is not changed here. What was
+  // wrong is that isLocalDbEncrypted() was written to keep this copy honest and
+  // had no callers at all, so the screen went on making a claim the app already
+  // knew might be false.
+  //
+  // null means the database has not been opened yet, which is not the same as
+  // "not encrypted": only an explicit false changes what the user is told.
+  const dbEncrypted = isLocalDbEncrypted();
+  const storageLine = dbEncrypted === false
+    ? 'On your phone, in this app\'s private storage. Your device could not set up '
+      + 'the extra layer of encryption Volyume normally adds, so your data is protected '
+      + 'by your device\'s own security rather than by that layer. Progress photo image '
+      + 'files stay on this device unless you choose to share or export them'
+    : 'On your phone, in encrypted local storage. Progress photo image files stay on '
+      + 'this device unless you choose to share or export them';
+
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
@@ -240,7 +267,7 @@ export default function Article9ConsentScreen({ navigation }) {
 
         <Text style={[styles.subhead, live.subhead]}>Where it lives:</Text>
         <BulletList items={[
-          'On your phone, in encrypted local storage. Progress photo image files stay on this device unless you choose to share or export them',
+          storageLine,
           'In Supabase in the EU region for cloud-backed account data, with row-level security so only you and the team supporting your account can see it',
           'If you delete your account, cloud removal starts immediately, this device is wiped, and backup copies are purged within 30 days',
         ]} />
