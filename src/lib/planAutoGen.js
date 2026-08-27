@@ -439,10 +439,35 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
     let capabilityAffected = false;
     if (intentState?.capability && row) {
       try {
+        // Path fixed 2026-08-27 (adversarial audit). This required the module
+        // via a parent-relative specifier, which from src/lib resolves to
+        // src/capability/effective and does not exist. The require threw
+        // MODULE_NOT_FOUND on EVERY call, the catch below swallowed it, and
+        // capabilityAffected was therefore permanently false. CC30's documented
+        // behaviour -- a slot blocked only by an EPISODE-role conflict is
+        // temporarily affected, not invalid -- has consequently never once
+        // executed: those slots fell to `excluded` and were replaced on
+        // rebuild, which is precisely the outcome CC30 exists to prevent for
+        // someone training around a temporary injury.
         // eslint-disable-next-line global-require
-        const { episodeConflicts } = require('../capability/effective');
+        const { episodeConflicts } = require('./capability/effective');
         capabilityAffected = episodeConflicts(intentState.capability, row).length > 0;
-      } catch (_e) { capabilityAffected = false; }
+      } catch (e) {
+        // UNKNOWN IS NOT NONE. A capability read we could not perform tells us
+        // nothing about whether this user is training around something, so it
+        // must not be reported as "no restriction". The conservative reading is
+        // possibly-affected: that keeps the incumbent exercise and lets the
+        // verdict engine say why, instead of silently replacing a movement on
+        // the strength of a check that did not happen. Logged rather than
+        // swallowed, because reaching here at all is a code defect.
+        capabilityAffected = true;
+        try {
+          // eslint-disable-next-line global-require
+          require('./errorLog').logError('planAutoGen.capabilityRead', e, {
+            reason: 'episode conflict check failed; treating slot as possibly affected',
+          });
+        } catch (_) { /* logging must never break plan generation */ }
+      }
     }
     const senior = intentState
       ? isEligibleExercise(intentState, row ?? { id: exerciseId })
