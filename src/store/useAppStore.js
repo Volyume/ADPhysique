@@ -485,11 +485,21 @@ const useAppStore = create((set, get) => ({
           // eslint-disable-next-line global-require
           const sbClient = require('../lib/supabase').getSupabaseClient?.();
           if (sbClient) await sq.drainSyncQueue(sbClient, prevUid);
-          const remainingDeletes = await sq.getPendingDeleteOpCount(prevUid);
-          if (!force && remainingDeletes > 0) {
+          // P1 sync truth: `ok:false` means the queue could not be READ, which
+          // is not the same as it being empty. Wiping on an unreadable queue
+          // destroys delete tombstones and resurrects workouts the user
+          // deleted offline, so unknown is treated as unsafe.
+          const deletes = await sq.getPendingDeleteOpCount(prevUid);
+          if (!force && !deletes.ok) {
+            log.logWarn('clearAuthStateForSignOut.pendingDeletesUnknown',
+              'sign-out aborted: could not read the delete queue, so cannot prove it is empty',
+              { prevUid });
+            return { ok: false, reason: 'unsynced' };
+          }
+          if (!force && (deletes.count ?? 0) > 0) {
             log.logWarn('clearAuthStateForSignOut.pendingDeletes',
               'sign-out aborted: delete tombstones not yet shipped, keeping user signed in',
-              { prevUid, remainingDeletes });
+              { prevUid, remainingDeletes: deletes.count });
             return { ok: false, reason: 'unsynced' };
           }
         } catch (e) {
