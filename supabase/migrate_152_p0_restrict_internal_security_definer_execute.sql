@@ -46,7 +46,30 @@
 --   produced this class of problem in the first place.
 --
 -- Applied locally:  n/a (grants are environment state; nothing local)
--- Applied remotely: NO, as at 2026-08-26. Two attempts, neither applied:
+-- Applied remotely: YES. 2026-08-27 05:13:20 UTC, project sujrylzzxcqxxfygptns
+--   (Volyume, eu-west-1), recorded as supabase_migrations version
+--   20260827051320. Founder authorised with the Section 2 gate phrase.
+--   Verified after applying, all read-only:
+--     - the 11 functions below: authenticated=false, anon=false,
+--       service_role=true; both ownership guards present in the live bodies;
+--     - SECURITY DEFINER functions executable by authenticated: 35 -> 24;
+--     - all 13 client RPCs (15 overloads) still executable by authenticated,
+--       0 broken; is_active_coach_of untouched so RLS is unaffected;
+--     - cross-account proof, in a self-aborting DO block that persisted
+--       nothing: role authenticated BLOCKED 42501 at the grant; a JWT naming
+--       another user BLOCKED 42501 by the body guard; the same JWT acting on
+--       ITSELF passed the guard and failed only on a foreign key, which is
+--       the trigger path proven still open;
+--     - cron job cascade-advance-due-users ran at 05:15:00, after this
+--       migration, and succeeded;
+--     - unchanged: 25 users, 16 food_entries, 1 rollup, 18 tier_history,
+--       last rollup write still 2026-08-26 17:57, no synthetic rows left.
+--   food_frequents moved 0 -> 16 between the pre-check and the post-check.
+--   Not caused by this migration: all 16 rows carry one computed_at of
+--   2026-08-27 03:10:00 and the refresh-food-frequents cron succeeded at
+--   03:10:00.26, two hours before this ran.
+--
+-- Earlier attempt history, kept because the first failure is instructive:
 --     1. First attempt FAILED and rolled back atomically on
 --        "42P13: cannot remove parameter defaults from existing function",
 --        because the CREATE OR REPLACE for apply_founder_pro_entitlement
@@ -56,9 +79,9 @@
 --        below and is the reason the DEFAULT is now spelled out.
 --     2. Second attempt was BLOCKED BEFORE REACHING THE DATABASE by the
 --        agent harness's permission classifier, not by Postgres. No SQL ran.
---   This file is therefore ready but unapplied, and production still carries
---   the P0 exposure. Verified production state at that point: 38 SECURITY
---   DEFINER functions, anon 0, PUBLIC 0, authenticated 35, service_role 38.
+--   Both are superseded by the successful apply recorded above. Production no
+--   longer carries the P0 exposure. State before the fix, for the record: 38
+--   SECURITY DEFINER functions, anon 0, PUBLIC 0, authenticated 35, svc 38.
 -- Safe to re-run:   yes. REVOKE of an absent privilege and GRANT of a held
 --                   one are both no-ops, and both function bodies are
 --                   CREATE OR REPLACE with identical signatures.
