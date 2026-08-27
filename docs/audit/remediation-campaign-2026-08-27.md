@@ -23,20 +23,20 @@ the deliverable, not a pointer to one.
 | 7 | Date / DST | **Fixed** | The 84-day training grid stepped by `offset * 86400000`. Measured for Europe/London: a grid drawn at 00:30 on 2025-04-15 contains no square for 2025-03-30. The suite now runs under `TZ=Europe/London`; in UTC this class is invisible. |
 | 8 | Train-adjacent sweep | **Fixed** | `.filter((v) => v != null)` on soreness and joint-discomfort ratings in the deload evidence. NaN is not null, so one bad rating made the week's average NaN and every threshold false: a genuinely sore user was not offered a deload. Line 584 of the same file already had the correct shape. |
 | 9 | SecureStore | **Fixed (diagnostic)** | `setItem` swallowed failures, so supabase-js believed a session was persisted either way; a write that did not stick surfaces only as a user who was signed in and now is not. Sentry holds no secureStore or keychain events in 90 days, so this is a diagnostic gap and is fixed as one, not by re-architecting auth storage. |
-| 10 | Plaintext SQLite fallback | **Fixed (copy), one question open** | `isLocalDbEncrypted()` was written to keep privacy copy honest and had **zero callers**, while the Article 9 gate stated unconditionally that data lives in encrypted local storage. Copy is now derived. Whether the app should open plaintext at all is a product decision, below. |
+| 10 | Plaintext SQLite fallback | **Fixed; two further gaps found and fixed 2026-08-27** | `isLocalDbEncrypted()` was written to keep privacy copy honest and had **zero callers**, while the Article 9 gate stated unconditionally that data lives in encrypted local storage. Copy is now derived. Whether the app should open plaintext at all is a product decision, below. |
 | 11 | Live Activity update validation | **Fixed** | `start` has guarded `endTimeMs` since the 2026-07-01 audit, naming the VOLYUME-1K trap. `update` had no guard, and every ±15s tap goes through it. |
 | 12 | Reanimated / photo morph | **No defect found** | Animation values are driven from bounded progress fractions and layout measurements, not from user data. No non-finite path into a shared value. |
 | 13 | Skia / SVG charts | **No defect found** | `VolyumeChart` filters every value through `Number.isFinite` before any geometry, and non-finite SVG coordinates render nothing rather than trapping. Not in the native-trap class. |
 | 14 | Progress scan dimensions | **Hardened** | Traced every `Int(Double)` in the module first: all are bounded by construction, and the only caller passes a constant 256. The two dimension parameters were guarded by `> 0` alone and size a `width * height * 4` buffer, so bounded at 8192 on both platforms. Hardening, not a live defect, and it travels with a build already needed. |
 | 15 | Sensors | **Fixed** | `Math.atan2(x, y)` on a NaN accelerometer sample. Guards downstream are `tilt != null`, and NaN is not null, so the level's transform became `rotate: "NaNdeg"` and "aligned" became permanently unreachable for the session. |
 | 16 | Camera / OCR | **No defect found** | `expo-camera` is lazily required and every use is null-guarded; capture re-checks tier at the shutter. No numeric boundary of the finding-2 class. |
-| 17 | Dependencies | **Reported, not changed** | 25 vulnerable packages, 8 root advisories. Exactly one is runtime-reachable. Detail in section 2. |
-| 18 | Deep links | **Partly fixed, one decision open** | `url.startsWith('https://volyume.app')` also matches `volyume.app.evil.com`. Not OS-routable today (Android filter is host-scoped, iOS has no `associatedDomains`), so latent rather than live. The custom-scheme implicit-token path is live and is a founder decision, below. |
+| 17 | Dependencies | **CLOSED, accepted, not exploitable** | 25 vulnerable packages, 8 root advisories. Exactly one is runtime-reachable. Detail in section 2. |
+| 18 | Deep links | **Fixed; decision closed 2026-08-27** | `url.startsWith('https://volyume.app')` also matches `volyume.app.evil.com`. Not OS-routable today (Android filter is host-scoped, iOS has no `associatedDomains`), so latent rather than live. The custom-scheme implicit-token path is live and is a founder decision, below. |
 | 19 | Error-handling sweep | **Ratcheted** | 247 unexplained silent catches across 64 files. Frozen rather than edited, because commenting sites the audit did not examine is the drive-by refactoring CLAUDE.md forbids and would assert consideration that did not happen. |
 | 20 | P3/P4 (J, L) | **Fixed** | `PeekMenu` is the app's generic action dispatcher and swallowed every action error: the sheet closed, nothing happened, no toast, no log, no Sentry event. Also not one-shot: a second tap on a different item during the close animation replaced the first action and dropped it. |
 | 21 | Screen / journey matrix | **This document, section 3** | |
 | 22 | Test-gap reconciliation | **This document, section 4** | |
-| 23 | Sentry token configuration | **Gate landed, unproven** | The refuse-to-build gate is in both workflows and tested. It has **never run**: the last iOS build (run 155, 2026-08-26) predates it. Whether `SENTRY_AUTH_TOKEN` is set is therefore still unknown, and the next build will say so explicitly either way. |
+| 23 | Sentry token configuration | **Gate proven; token absent** | Run 156 refused to build: `SENTRY_AUTH_TOKEN` is not set. Fired at step 8 of 12, before the build step, so no credit was spent and nothing shipped. Manual action in section 6. |
 
 ---
 
@@ -202,13 +202,60 @@ changes.
 
 ---
 
-## 6. Founder actions
+## 6. Release candidate, 2026-08-27
 
-- **Run an iOS build.** The observability gate has never executed. It will either
-  pass, proving `SENTRY_AUTH_TOKEN` is set, or fail with an explicit refusal
-  naming the missing secret. Either outcome is the answer to finding 23.
+**Run 156, commit `e6496aa3`, dispatched with `allow_unsymbolicated=false`.
+Result: REFUSED at the observability gate. Finding 23 is now answered from a
+real run rather than inference.**
+
+```
+##[error]Refusing to build without crash symbols::SENTRY_AUTH_TOKEN is not set,
+so this build would ship with no dSYMs and no source maps and its crashes would
+be unreadable.
+```
+
+The gate worked exactly as designed. It fired at step 8 of 12, before the EAS
+build step, so **no build credit was spent and nothing shipped**. Steps 9 to 12
+(build, resolve app id, submit to TestFlight) were all skipped. The five
+preceding steps passed, including "Check required secrets are set", so every
+other required secret is present: only `SENTRY_AUTH_TOKEN` is missing.
+
+This is the same silence that let build 57 ship unsymbolicated and cost a
+hand-disassembly of the .ipa to read one crash. It is now a stop.
+
+### The exact manual action required
+
+Tooling genuinely prevents me from doing this. Writing a GitHub Actions secret
+needs the repository admin API, which no tool available here exposes, and the
+value itself has to be minted in Sentry.
+
+1. Sentry → Settings → Auth Tokens → **Create New Token**. Scopes:
+   `project:releases` and `org:read`.
+2. GitHub → `Volyume/ADPhysique` → Settings → Secrets and variables → Actions →
+   **New repository secret**, named exactly `SENTRY_AUTH_TOKEN`.
+3. Re-dispatch **Build iOS (EAS)** from `main` with `allow_unsymbolicated`
+   left **false**.
+
+The workflow then syncs the token to EAS as a project secret, deletes any stale
+`SENTRY_DISABLE_AUTO_UPLOAD`, and prints
+`✓ SENTRY_AUTH_TOKEN synced (source maps will upload, crashes symbolicate)`.
+
+**Do not** re-dispatch with `allow_unsymbolicated=true` to get past this. That
+option exists for an urgent build where the cost is accepted knowingly, and it
+is the wrong tool for a scheduled release candidate.
+
+Version resolution, checked while investigating: `eas.json` sets
+`appVersionSource: "remote"` with `autoIncrement: true` on the production
+profile, so EAS holds the iOS build number server-side and increments it.
+`app.json`'s `buildNumber: 10` is not what ships and must not be "corrected" to
+58; doing so would fight the remote counter.
+
+## 7. Founder actions
 - **Device-walk the native changes.** The rest timer, Live Activity and progress
   scan changes are native and need an EAS build. Checklist in the campaign's
   commit messages; the rest timer is the one to exercise hardest (start, ±15s
   held down, background, lock screen, kill and relaunch mid-rest).
-- **Rule on the three decisions in section 5.**
+- **Set `SENTRY_AUTH_TOKEN` and re-dispatch.** Section 6 has the exact steps.
+  Nothing ships until this is done, by design.
+- **The Supabase dashboard change** in `src/lib/authCallbackState.js`, which
+  turns the auth remediation from "a ten-minute window" into "unforgeable".
