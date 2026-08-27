@@ -1,0 +1,107 @@
+-- migrate_153_function_execute_default_privileges.sql
+--
+-- PURPOSE (P0-01, permanent close). migrate_152 revoked the eleven internal
+-- functions that were already exposed. It did nothing about the NEXT function
+-- anyone creates, which is where this class actually comes from. This makes a
+-- newly created function private by default, so a migration has to grant
+-- execution deliberately rather than receive it automatically.
+--
+-- WHAT WAS ACTUALLY HAPPENING (measured, not assumed). Two independent
+-- defaults stack on every CREATE FUNCTION in public:
+--
+--   1. PostgreSQL's own hard-wired default grants EXECUTE to PUBLIC.
+--   2. Supabase ships a pg_default_acl row for role postgres in schema public
+--      that additionally grants EXECUTE to anon, authenticated and
+--      service_role.
+--
+-- Measured on production (PostgreSQL 17.6) inside an aborted transaction, a
+-- brand-new function landed with:
+--
+--   {=X/postgres, postgres=X/postgres, anon=X/postgres,
+--    authenticated=X/postgres, service_role=X/postgres}
+--
+-- The leading `=X/postgres` is the PUBLIC grant. So the earlier note in
+-- migrate_152 attributing this solely to the PostgreSQL PUBLIC default was
+-- incomplete: the Supabase default ACL is the reason anon and authenticated
+-- appear, and it is the larger half of the problem.
+--
+-- WHY BOTH STATEMENTS BELOW ARE REQUIRED. Each was measured separately on
+-- production, again inside an aborted transaction. Neither alone is enough:
+--
+--   schema-scoped REVOKE only  -> {=X, postgres=X, service_role=X}
+--                                 PUBLIC SURVIVES.
+--   global REVOKE only         -> {postgres=X, anon=X, authenticated=X,
+--                                  service_role=X}
+--                                 anon and authenticated SURVIVE.
+--   both together              -> {postgres=X, service_role=X}   <- target
+--
+-- The reason is that ALTER DEFAULT PRIVILEGES ... IN SCHEMA writes a
+-- schema-scoped pg_default_acl row, which cannot subtract the hard-wired
+-- PUBLIC default; only the global (no IN SCHEMA) form does that. Anyone
+-- tempted to collapse these two statements into one should re-run that
+-- measurement first.
+--
+-- WHY THE ROWS WILL NOT SILENTLY REVERT. A pg_default_acl row is deleted when
+-- it becomes equivalent to the built-in default, and its disappearance would
+-- restore PUBLIC execute. Both rows below keep a non-default grant after this
+-- runs (global keeps postgres=X, schema keeps postgres=X plus service_role=X),
+-- so neither is a candidate for deletion.
+--
+-- CREATOR ROLE. Verified, not inferred from ownership: migrations execute as
+-- current_user = session_user = postgres, and every function in public and
+-- private is owned by postgres. supabase_admin has its own equivalent default
+-- ACL rows, but supabase_admin is Supabase's internal DDL identity, not ours,
+-- and is deliberately left alone. The storage-schema row is likewise Supabase's
+-- and untouched.
+--
+-- SCOPE OF EFFECT. Default privileges apply to functions created AFTER this
+-- runs. Existing functions keep the ACLs they already have, which is why
+-- migrate_152 was needed separately and why the contract test enumerates the
+-- current allow-list rather than relying on this alone.
+--
+-- CONSEQUENCE FOR FUTURE MIGRATIONS. A new client RPC must now end with an
+-- explicit grant:
+--
+--   GRANT EXECUTE ON FUNCTION public.my_new_rpc(uuid) TO authenticated;
+--
+-- and an RLS helper used inside a policy expression must be granted to every
+-- role whose queries evaluate that policy, or the policy will fail for them.
+-- An internal, trigger or cron function needs no grant at all: postgres owns
+-- it, and service_role retains execute through the schema default.
+--
+-- Applied locally:  n/a (grants are environment state; nothing local)
+-- Applied remotely: NO, as at 2026-08-27. BLOCKED by the agent harness's
+--   permission classifier before any SQL reached the database, exactly as
+--   migrate_152's second attempt was. Not a Postgres failure and not a founder
+--   gate: no SQL ran. The file is verified and ready. Deliberately NOT routed
+--   through execute_sql, which would defeat the intent of that block rather
+--   than respect it. Until this is applied, a NEWLY CREATED function in public
+--   still lands executable by anon and authenticated; the existing surface is
+--   already contained by migrate_152.
+-- Safe to re-run:   yes. ALTER DEFAULT PRIVILEGES REVOKE of a privilege that
+--                   is already absent is a no-op.
+-- Rollback:         ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+--                     GRANT EXECUTE ON FUNCTIONS TO PUBLIC;
+--                   ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+--                     GRANT EXECUTE ON FUNCTIONS TO anon, authenticated;
+--                   That restores the previous permissive default exactly. It
+--                   does not alter any function created in the meantime.
+-- Transaction:      no explicit BEGIN/COMMIT; the runner supplies one.
+
+-- 1. Global: remove PostgreSQL's hard-wired PUBLIC execute for functions
+--    created by postgres. Only the global form can do this.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres
+  REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;
+
+-- 2. Schema-scoped: remove Supabase's automatic anon + authenticated execute
+--    for functions created by postgres in public. service_role is retained
+--    deliberately: server-side automation is the one caller that should reach
+--    a new internal function without a bespoke grant.
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
+  REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated;
+
+-- 3. The private schema has no pg_default_acl row of its own, so it inherits
+--    the global change above and nothing further is required. Stated here
+--    explicitly so a future reader does not add a redundant row: adding one
+--    that grants nothing beyond the built-in default would be deleted again by
+--    PostgreSQL, which is the exact failure mode this file warns about.

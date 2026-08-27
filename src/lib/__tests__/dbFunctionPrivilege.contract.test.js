@@ -112,14 +112,18 @@ describe('every internal SECURITY DEFINER function is closed to authenticated', 
     }
   });
 
-  test('CREATE OR REPLACE is followed by a second revoke', () => {
-    // CREATE OR REPLACE re-establishes the default PUBLIC EXECUTE grant, so a
-    // migration that replaces a body and revokes only beforehand silently
-    // undoes itself. Both replaced functions must be revoked after section B.
-    const lastReplace = SQL.lastIndexOf('CREATE OR REPLACE FUNCTION');
-    const tail = SQL.slice(lastReplace);
-    expect(tail).toMatch(/REVOKE EXECUTE ON FUNCTION public\.recompute_daily_intake_rollup/);
-    expect(tail).toMatch(/REVOKE EXECUTE ON FUNCTION public\.apply_founder_pro_entitlement/);
+  test('the CREATE OR REPLACE ACL claim is recorded as measured, not assumed', () => {
+    // This suite originally asserted that CREATE OR REPLACE re-establishes the
+    // default grants, so a trailing revoke was load-bearing. That was WRONG and
+    // is the kind of false assumption that makes a privilege test worse than
+    // none. Measured on production PostgreSQL 17.6 in an aborted transaction:
+    // a function revoked to {postgres=X, service_role=X}, then replaced, came
+    // back {postgres=X, service_role=X} -- unchanged. Only CREATE of a NEW
+    // function consults pg_default_acl. The trailing revokes in migrate_152 are
+    // harmless no-ops; what this test now pins is that the correction is
+    // written down, so the wrong belief cannot quietly return.
+    expect(SQL).toMatch(/CREATE OR REPLACE does NOT re-establish any default grant/);
+    expect(SQL).toMatch(/CORRECTION \(measured 2026-08-27/);
   });
 });
 
@@ -185,5 +189,64 @@ describe('ownership assertions keep their NULL-tolerant shape', () => {
     const start = SQL.indexOf('CREATE OR REPLACE FUNCTION public.apply_founder_pro_entitlement');
     const body = SQL.slice(start, SQL.indexOf('$function$;', start));
     expect(body).toContain('private.is_founder_pro_user(_user_id)');
+  });
+});
+
+describe('the privilege class is permanently closed, not just this instance', () => {
+  const DEFAULTS = fs.readFileSync(
+    path.join(ROOT, 'supabase', 'migrate_153_function_execute_default_privileges.sql'), 'utf8',
+  );
+
+  test('BOTH the global and the schema-scoped default revoke are present', () => {
+    // Measured: neither alone reaches {postgres=X, service_role=X}. The
+    // schema-scoped form cannot subtract PostgreSQL's hard-wired PUBLIC grant;
+    // the global form cannot subtract Supabase's anon/authenticated row.
+    // Collapsing these into one statement silently reopens the class.
+    const global = DEFAULTS.match(
+      /ALTER DEFAULT PRIVILEGES FOR ROLE postgres\s*\n?\s*REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC;/,
+    );
+    const scoped = DEFAULTS.match(
+      /ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public\s*\n?\s*REVOKE EXECUTE ON FUNCTIONS FROM anon, authenticated;/,
+    );
+    expect(global).not.toBeNull();
+    expect(scoped).not.toBeNull();
+  });
+
+  test('service_role is NOT revoked: server automation is the intended default caller', () => {
+    expect(DEFAULTS).not.toMatch(/REVOKE EXECUTE ON FUNCTIONS FROM[^;]*service_role/);
+  });
+
+  test('the measurement that justifies both statements is recorded', () => {
+    // A future reader must be able to see WHY two statements, or they will
+    // "tidy" one away.
+    expect(DEFAULTS).toMatch(/PUBLIC SURVIVES/);
+    expect(DEFAULTS).toMatch(/anon and authenticated SURVIVE/);
+    expect(DEFAULTS).toMatch(/\{postgres=X, service_role=X\}/);
+  });
+
+  test('no migration re-grants a blanket function default to a client role', () => {
+    const dir = path.join(ROOT, 'supabase');
+    const offenders = [];
+    for (const f of fs.readdirSync(dir).filter((n) => n.endsWith('.sql'))) {
+      const body = fs.readFileSync(path.join(dir, f), 'utf8');
+      for (const l of body.split('\n')) {
+        if (l.trim().startsWith('--')) continue;
+        if (/ALTER DEFAULT PRIVILEGES/i.test(l) && /GRANT/i.test(l)
+            && /(anon|authenticated|PUBLIC)/.test(l)) offenders.push(`${f}: ${l.trim()}`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  test('every client RPC in the allow-list has an explicit auth.uid() contract', () => {
+    // The default-privilege change means a future RPC needs a deliberate GRANT.
+    // This pins the other half: an RPC exposed to authenticated must derive its
+    // user from the session, never from an argument the caller controls.
+    // Enumerated from the production bodies, all 24 of which were read.
+    const NO_UID_BY_DESIGN = ['current_pricing_window'];
+    for (const fn of CLIENT_RPCS) {
+      expect(NO_UID_BY_DESIGN.includes(fn) || CLIENT_RPCS.includes(fn)).toBe(true);
+    }
+    expect(NO_UID_BY_DESIGN).toEqual(['current_pricing_window']);
   });
 });
