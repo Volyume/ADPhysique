@@ -4653,9 +4653,19 @@ export async function setActivePlan(userId, planId) {
       [now, userId],
     );
     if (planId) {
+      // OWNERSHIP (adversarial audit 2026-08-26). The deactivate-all above is
+      // scoped `WHERE user_id = ?` and this activate was scoped `WHERE id = ?`
+      // only, inside the same transaction. That asymmetry is the defect: a
+      // planId belonging to someone else would be activated AND unarchived for
+      // them, and because the sibling statement only cleared is_active for the
+      // CALLER, the result is two active programmes across two users.
+      // Local SQLite normally holds one user's rows, so the practical route in
+      // is residue from an incomplete wipe or a stale id held across an account
+      // switch. Both are cheaper to make impossible here than to reason about
+      // at every call site.
       await d.runAsync(
-        'UPDATE programmes SET is_active = 1, is_archived = 0, updated_at = ? WHERE id = ?',
-        [now, planId],
+        'UPDATE programmes SET is_active = 1, is_archived = 0, updated_at = ? WHERE id = ? AND user_id = ?',
+        [now, planId, userId],
       );
     }
   });
