@@ -59,6 +59,8 @@ import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import * as haptics from '../lib/haptics';
 import BottomSheet from './BottomSheet';
+import { useToast } from './Toast';
+import { logError } from '../lib/errorLog';
 
 const PeekMenu = forwardRef(function PeekMenu(_, ref) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
@@ -68,6 +70,9 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
   const [config, setConfig] = useState(null);
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
   const closeTimerRef = useRef(null);
+  // One-shot guard: see handleItem.
+  const dispatchedRef = useRef(false);
+  const toast = useToast();
 
   const closeSheet = useCallback(() => {
     if (closeTimerRef.current) {
@@ -80,6 +85,8 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
   useImperativeHandle(ref, () => ({
     open: (cfg) => {
       if (!cfg?.items?.length) return;
+      // A fresh menu is a fresh chance to act.
+      dispatchedRef.current = false;
       // Medium "commit" beat (the same impact this shipped with, now routed
       // through the vocabulary so reduce-motion silences it).
       haptics.commit();
@@ -91,12 +98,37 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
   }), [closeSheet]);
 
   function handleItem(item) {
+    // ONE SHOT, AND NOT SILENT (adversarial audit 2026-08-26, finding 20 J/L).
+    //
+    // Two problems, both from this being the app's generic action dispatcher.
+    //
+    // 1. It swallowed everything. Every menu action in the app runs inside
+    //    that try -- deleting a routine, removing a set, sharing, signing out
+    //    -- and a throw produced NOTHING: the sheet closed, the action did not
+    //    happen, and the user got no toast, no log and no Sentry event. A menu
+    //    that silently does nothing is indistinguishable from one that worked.
+    //
+    // 2. The deferral left a window. setVisible(false) starts an animation;
+    //    the items stay mounted while it plays, so a second tap during those
+    //    ~200ms lands. Tapping the same item twice was already safe, because
+    //    closeSheet clears the pending timer, but tapping a DIFFERENT item
+    //    replaced the first action with the second and dropped the first
+    //    without a word. The flag makes the first tap the only tap.
+    if (dispatchedRef.current) return;
+    dispatchedRef.current = true;
     closeSheet();
     // Preserve the old animateOut(then)-style deferral: run the action after
     // the close animation would have finished, not the instant the tap lands.
     closeTimerRef.current = setTimeout(() => {
       closeTimerRef.current = null;
-      try { item.onPress?.(); } catch (_) {}
+      try {
+        item.onPress?.();
+      } catch (e) {
+        logError('PeekMenu.action', e, { label: typeof item?.label === 'string' ? item.label : null });
+        // Calm, and honest that nothing happened. The user chose an action and
+        // is entitled to know it did not run.
+        try { toast?.show?.("That didn't work. Please try again.", { variant: 'error' }); } catch (_) { /* toast is best-effort */ }
+      }
     }, reduceMotion ? 0 : motion.state);
   }
 
