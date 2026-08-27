@@ -90,7 +90,20 @@ export default function SnapshotsScreen() {
               // SettingsDataScreen's calm generic copy for the equivalent
               // JSON-backup failure ("Could not read that backup file.").
               logError('SnapshotsScreen.restore', e);
-              appAlert('Restore failed', 'Could not restore that snapshot. Please try again.');
+              // Finding 5: a snapshot refused BEFORE anything was overwritten
+              // is a different situation from a restore that failed part-way,
+              // and telling the user to "try again" on the first one sends
+              // them round a loop that cannot succeed. Say which happened, and
+              // say plainly that their current data is still there.
+              if (e?.code === 'SNAPSHOT_UNUSABLE') {
+                appAlert(
+                  "That snapshot can't be read",
+                  'Nothing has changed. Your current data is exactly as it was. '
+                  + 'Try an older snapshot, or keep using the app as normal.',
+                );
+              } else {
+                appAlert('Restore failed', 'Could not restore that snapshot. Please try again.');
+              }
             }
           },
         },
