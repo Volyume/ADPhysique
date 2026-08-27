@@ -13,13 +13,21 @@
 --   migration that accidentally re-grants EXECUTE still cannot produce a
 --   cross-account call.
 --
--- ROOT CAUSE. Postgres grants EXECUTE to PUBLIC on every new function, and
---   PUBLIC includes `authenticated`. migrate_130 then converted that implicit
---   PUBLIC grant into an explicit `authenticated` + `service_role` grant while
---   closing the anon path. migrate_130 did not widen anyone's privileges (the
---   set it re-granted is exactly the set PUBLIC already had), but it did make
---   the authenticated exposure explicit and durable rather than incidental.
---   The exposure predates it and comes from the Postgres default.
+-- ROOT CAUSE, CORRECTED 2026-08-27 (this header's first version was wrong in
+--   an important way; migrate_153 carries the measurements).
+--   TWO defaults stack on every CREATE FUNCTION in public. PostgreSQL's own
+--   hard-wired default grants EXECUTE to PUBLIC, AND Supabase ships a
+--   pg_default_acl row for role postgres in schema public granting EXECUTE to
+--   anon, authenticated and service_role. Measured on production, a brand-new
+--   function lands with {=X, postgres=X, anon=X, authenticated=X,
+--   service_role=X}. The original text here blamed the PUBLIC default alone
+--   and treated `authenticated` as arriving via PUBLIC membership. That was
+--   incomplete: the Supabase default ACL grants authenticated DIRECTLY, and it
+--   is the larger half. migrate_130 is still not the cause; its filter
+--   (has_function_privilege('anon', ...)) cannot match an already-revoked
+--   function, which is why the service-role-only trio was still correctly
+--   locked. The exposure predates it and is a default-privilege problem,
+--   permanently closed in migrate_153.
 --
 -- WHY EACH FUNCTION IS SAFE TO CLOSE (traced, not assumed):
 --   recompute_daily_intake_rollup  invoked by trigger food_entries_to_rollup
@@ -98,10 +106,11 @@
 
 -- ---------------------------------------------------------------------------
 -- A. REVOKE. Internal / cron / trigger-only functions lose `authenticated`.
---    PUBLIC and anon are revoked defensively too: they hold nothing today,
---    but a future CREATE OR REPLACE re-establishes the PUBLIC default, and
---    this file is the one place that is expected to be re-run after such a
---    change.
+--    PUBLIC and anon are revoked defensively too. Note the stated reason was
+--    wrong: CREATE OR REPLACE does NOT re-establish any default grant
+--    (measured; see the correction lower in this file and migrate_153). The
+--    revokes are still correct, just not for that reason -- they cost nothing
+--    and make the intended audience explicit.
 -- ---------------------------------------------------------------------------
 
 REVOKE EXECUTE ON FUNCTION public.recompute_daily_intake_rollup(uuid, date)   FROM authenticated, anon, PUBLIC;
@@ -280,8 +289,16 @@ BEGIN
 END
 $function$;
 
--- CREATE OR REPLACE re-establishes the default PUBLIC EXECUTE grant on both
--- functions, so the revoke must be repeated after section B.
+-- CORRECTION (measured 2026-08-27, after this migration was applied).
+-- These four lines were written believing CREATE OR REPLACE re-establishes the
+-- default grants. It does NOT. Measured on production PostgreSQL 17.6 inside an
+-- aborted transaction: a function revoked to {postgres=X, service_role=X} and
+-- then CREATE OR REPLACE'd came back as {postgres=X, service_role=X},
+-- unchanged. Only CREATE of a NEW function draws on pg_default_acl.
+-- The four statements below are therefore redundant, not load-bearing. They
+-- are harmless no-ops and are kept rather than edited because this file has
+-- already been applied to production and its applied text should stay honest.
+-- Do not copy this pattern into a new migration; see migrate_153.
 REVOKE EXECUTE ON FUNCTION public.recompute_daily_intake_rollup(uuid, date) FROM authenticated, anon, PUBLIC;
 REVOKE EXECUTE ON FUNCTION public.apply_founder_pro_entitlement(uuid, text) FROM authenticated, anon, PUBLIC;
 GRANT  EXECUTE ON FUNCTION public.recompute_daily_intake_rollup(uuid, date) TO service_role;
