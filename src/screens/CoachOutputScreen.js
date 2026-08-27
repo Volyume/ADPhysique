@@ -1156,6 +1156,13 @@ export default function CoachOutputScreen({ navigation, route }) {
         return;
       }
       await saveNutritionTargets(user.id, computed.targets);
+      // ATOMICITY (P1, adversarial audit 2026-08-26). The authoritative write
+      // has landed, so reflect it NOW, before the receipt. Previously
+      // setCurrentTargets ran after saveCoachOutput, so a receipt failure left
+      // the consent preview showing the pre-change base while the real target
+      // had already moved: the row still offered Apply, and the coach's own
+      // record said not-applied for a change the athlete had actually taken.
+      setCurrentTargets(computed.targets);
       await AsyncStorage.setItem(
         '@volyume_nutrition_targets', JSON.stringify(computed.targets),
       ).catch(() => {});
@@ -1190,10 +1197,25 @@ export default function CoachOutputScreen({ navigation, route }) {
           maintenanceAuthority: output?.effectiveMaintenance?.authority ?? null,
         }),
       });
-      await saveCoachOutput(user.id, { weekStart, ...updated });
+      // The receipt is a SECOND write and can fail on its own. When it does,
+      // the calorie change has still happened, so the screen must say so
+      // rather than silently re-offering Apply, which would let a second tap
+      // stack another step onto an already-moved target.
+      let receiptOk = true;
+      try {
+        await saveCoachOutput(user.id, { weekStart, ...updated });
+      } catch (e) {
+        receiptOk = false;
+        logError('CoachOutputScreen.applyCalories.receipt', e, { userId: user?.id });
+      }
       setOutput(updated);
-      setCurrentTargets(computed.targets);
       setApplySettling(s => ({ ...s, calories: true }));
+      if (!receiptOk) {
+        setApplyNotice(n => ({
+          ...n,
+          calories: 'Applied. We could not save the record of it, so it may be offered again next time.',
+        }));
+      }
 
       // If the user is on a generated meal plan, pull the same calorie
       // change THROUGH the plan at the food level and show the coach
@@ -1477,6 +1499,13 @@ export default function CoachOutputScreen({ navigation, route }) {
         return;
       }
       await saveNutritionTargets(user.id, computed.targets);
+      // ATOMICITY (P1, adversarial audit 2026-08-26). The authoritative write
+      // has landed, so reflect it NOW, before the receipt. Previously
+      // setCurrentTargets ran after saveCoachOutput, so a receipt failure left
+      // the consent preview showing the pre-change base while the real target
+      // had already moved: the row still offered Apply, and the coach's own
+      // record said not-applied for a change the athlete had actually taken.
+      setCurrentTargets(computed.targets);
       await AsyncStorage.setItem(
         '@volyume_nutrition_targets', JSON.stringify(computed.targets),
       ).catch(() => {});
@@ -1484,12 +1513,24 @@ export default function CoachOutputScreen({ navigation, route }) {
         newKcal: computed.newKcal,
         maintenanceAuthority: effectiveMaintenanceReceipt(freshAuthority.resolved),
       });
-      await saveCoachOutput(user.id, { weekStart, ...updated });
+      // Same second-write reasoning as the calorie row above.
+      let receiptOk = true;
+      try {
+        await saveCoachOutput(user.id, { weekStart, ...updated });
+      } catch (e) {
+        receiptOk = false;
+        logError('CoachOutputScreen.applyDietBreak.receipt', e, { userId: user?.id });
+      }
       setOutput(updated);
-      setCurrentTargets(computed.targets);
+      setApplySettling(s => ({ ...s, dietBreak: true }));
+      if (!receiptOk) {
+        setApplyNotice(n => ({
+          ...n,
+          dietBreak: 'Applied. We could not save the record of it, so it may be offered again next time.',
+        }));
+      }
       setLiveMaintenanceAuthority(freshAuthority.resolved);
       setDietBreakPreviewChanged(false);
-      setApplySettling(s => ({ ...s, dietBreak: true }));
     } catch (e) {
       logError('CoachOutputScreen.handleApplyDietBreak', e, { userId: user?.id });
     } finally {
