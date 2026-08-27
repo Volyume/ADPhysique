@@ -92,7 +92,20 @@ public class LiveActivityModule: Module {
     AsyncFunction("update") { (activityId: String, options: [String: Any]) -> Bool in
       if #available(iOS 16.1, *) {
         guard let endMs = (options["endTimeMs"] as? NSNumber)?.doubleValue else { return false }
+        // Adversarial audit 2026-08-26, finding 11. `start` above has guarded
+        // this since the 2026-07-01 audit; `update` never did, and it is the
+        // same ContentState reaching the same widget. Every +15s and -15s tap
+        // comes through here, so the crash the start guard was written to
+        // prevent was still one adjustment away.
+        //
+        // What goes wrong is not the update call, it is the widget: it builds
+        // Date()...endTime, and a range whose lowerBound exceeds its upperBound
+        // traps. NaN is the worst of them, because every comparison against it
+        // is false, so an ordering check alone lets it straight through -- the
+        // VOLYUME-1K lesson. Test finiteness first, then order.
+        guard endMs.isFinite, endMs > 0 else { return false }
         let endDate = Date(timeIntervalSince1970: endMs / 1000.0)
+        guard endDate > Date() else { return false }
         for activity in Activity<VolyumeRestTimerAttributes>.activities where activity.id == activityId {
           let nextState = VolyumeRestTimerAttributes.ContentState(
             endTime: endDate,

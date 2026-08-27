@@ -60,7 +60,15 @@ public class ProgressScanImageModule: Module {
     }
 
     AsyncFunction("extractRgb") { (uri: String, width: Int, height: Int) -> [String: Any]? in
-      guard width > 0, height > 0 else { return nil }
+      // Adversarial audit 2026-08-26, finding 14. The dimensions arrive from
+      // JavaScript and were bounded only by "> 0". The single caller passes a
+      // constant (PROGRESS_SCAN_MODEL_INPUT_SIZE, 256), so nothing reaches this
+      // today, but the module's own contract should not depend on its one
+      // caller staying disciplined: `width * height * 4` allocates a buffer, so
+      // an unbounded pair is an out-of-memory kill, and a large enough product
+      // overflows Int and traps. 8192 is far beyond any model input and still
+      // caps the buffer at a quarter of a gigabyte.
+      guard width > 0, height > 0, width <= 8192, height <= 8192 else { return nil }
       guard let url = imageUrl(from: uri) else { return nil }
       guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
       let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
@@ -178,7 +186,8 @@ public class ProgressScanImageModule: Module {
     }
 
     AsyncFunction("segmentPersonMask") { (uri: String, width: Int, height: Int) -> [String: Any]? in
-      guard width > 0, height > 0 else {
+      // Finding 14: same bound as extractRgb above, same reason.
+      guard width > 0, height > 0, width <= 8192, height <= 8192 else {
         return ["engine": "vision_person_segmentation", "errorCode": "invalid_target_size"]
       }
       guard let prepared = preparedImage(from: uri, width: width, height: height) else {

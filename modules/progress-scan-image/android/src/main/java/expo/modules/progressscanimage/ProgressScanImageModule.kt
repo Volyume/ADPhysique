@@ -142,7 +142,11 @@ class ProgressScanImageModule : Module() {
     AsyncFunction("extractRgb") { uri: String, width: Int, height: Int, promise: Promise ->
       try {
         val context = appContext.reactContext
-        if (context == null || width <= 0 || height <= 0) {
+        // Finding 14, same bound as the iOS side: the dimensions come from
+        // JavaScript and gate a width * height * 4 allocation, so "> 0" alone
+        // leaves an out-of-memory kill one bad caller away. 8192 is far beyond
+        // any model input (the only caller passes 256).
+        if (context == null || width <= 0 || height <= 0 || width > 8192 || height > 8192) {
           promise.resolve(null)
           return@AsyncFunction
         }
@@ -227,7 +231,8 @@ class ProgressScanImageModule : Module() {
     AsyncFunction("segmentPersonMask") { uri: String, width: Int, height: Int, promise: Promise ->
       try {
         val context = appContext.reactContext
-        if (context == null || width <= 0 || height <= 0) {
+        // Finding 14: same bound as extractRgb above, same reason.
+        if (context == null || width <= 0 || height <= 0 || width > 8192 || height > 8192) {
           promise.resolve(null)
           return@AsyncFunction
         }
