@@ -26,7 +26,7 @@ import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
 import { ensureNotifChannels } from './src/lib/notifications/channels';
-import { installGlobalHandlers, logError } from './src/lib/errorLog';
+import { installGlobalHandlers, logError, logInfo } from './src/lib/errorLog';
 import { parseInviteCode } from './src/lib/partners/link';
 import { rememberPendingPartnerCode } from './src/lib/partners/pendingInvite';
 import { loadMealLabelOverrides } from './src/lib/food/mealSlots';
@@ -275,9 +275,36 @@ function handleIncomingDeepLink(url) {
   handleAuthDeepLink(url);
 }
 
+/**
+ * Is this URL one of ours?
+ *
+ * DEEP LINK ORIGIN (adversarial audit 2026-08-26, finding 18). This was
+ * `url.startsWith('https://volyume.app')`, which also accepts
+ * https://volyume.app.evil.com and https://volyume.appanything: a prefix test
+ * on a URL treats the host boundary as if it were part of the string, and it is
+ * not. Nothing routes such a URL to the app TODAY, because the Android App Link
+ * filter is scoped to host volyume.app and iOS has no associatedDomains at all,
+ * so this is a latent footgun rather than a live hole. It is one config change
+ * from being neither, and an exact host comparison costs nothing.
+ */
+function isVolyumeLink(url) {
+  const s = String(url ?? '');
+  if (s.startsWith('volyume://')) return true;
+  const m = /^https:\/\/([^/?#]+)/i.exec(s);
+  // Exact host, case-insensitive, and a port is not a host we know.
+  return !!m && m[1].toLowerCase() === 'volyume.app';
+}
+
+/** Three base64url segments, which is the only shape setSession can use. */
+function looksLikeJwt(token) {
+  return typeof token === 'string'
+    && token.length >= 20 && token.length <= 8192
+    && /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token);
+}
+
 async function handleAuthDeepLink(url) {
   if (!url) return;
-  if (!url.startsWith('volyume://') && !url.startsWith('https://volyume.app')) return;
+  if (!isVolyumeLink(url)) return;
   const supabase = getSupabaseClient();
   if (!supabase) return;
 
@@ -302,6 +329,24 @@ async function handleAuthDeepLink(url) {
       }),
     );
     if (params.access_token && params.refresh_token) {
+      // Finding 18, and stated honestly because the limit matters: this is a
+      // SHAPE check, not a security boundary. Any installed app can send
+      // volyume://#access_token=... and this branch will adopt whatever session
+      // it carries, so an attacker holding a real session of their own can
+      // still sign this device into their account and quietly collect whatever
+      // the user logs next. A shape check stops malformed input reaching
+      // setSession; it does not stop that. The actual fix is dropping the
+      // implicit fallback and relying on PKCE alone, which the client already
+      // defaults to, and that is a founder call because it could affect email
+      // verification links depending on how the project's templates are set up.
+      if (!looksLikeJwt(params.access_token) || !looksLikeJwt(params.refresh_token)) {
+        logError('auth.deepLink.malformedTokens', new Error('implicit-flow link carried tokens that are not JWTs'), {});
+        notifyAuthLinkFailed();
+        return;
+      }
+      // Consuming one of these used to be entirely silent. A session adopted
+      // from a link is worth a breadcrumb whether it was legitimate or not.
+      logInfo('auth.deepLink.implicitSession', 'adopting a session from an implicit-flow link');
       try {
         await supabase.auth.setSession({
           access_token: params.access_token,

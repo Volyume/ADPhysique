@@ -249,6 +249,24 @@ export default function ProgressGhostCapture({
     const sub = Accelerometer.addListener(({ x, y }) => {
       // Roll relative to portrait upright: 0 deg when the phone is level.
       const roll = Math.atan2(x, y) * (180 / Math.PI);
+      // SENSOR SAMPLES ARE NOT ALWAYS NUMBERS (adversarial audit 2026-08-26,
+      // finding 15). A device can hand back a transient NaN, and a payload
+      // without x/y gives atan2(undefined, undefined), which is also NaN.
+      //
+      // Every guard downstream is `tilt != null`, and NaN is not null, so a
+      // single bad sample used to reach them all: the level indicator's
+      // transform became rotate: "NaNdeg", and `Math.abs(NaN) <= 1.5` is false
+      // so the "aligned" state could never be reached again. Because nothing
+      // reset it, one bad reading broke the level for the rest of the capture
+      // session. The same shape as every other finding in this audit: a
+      // null-check used as a validity check, failing open on the one value
+      // that satisfies no comparison.
+      //
+      // Dropping the sample and keeping the last good reading is the right
+      // behaviour for a level: it is a continuous physical quantity, so the
+      // previous value is a better answer than nothing, and a real change
+      // arrives within ~120ms anyway.
+      if (!Number.isFinite(roll)) return;
       setTilt(roll);
       // Shutter-time lean for the orientation normaliser (2026-07-13): the
       // capture callback reads this ref, not the state, so it can never see
