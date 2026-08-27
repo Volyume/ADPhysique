@@ -744,15 +744,26 @@ export function buildLast4WeekDeloadBuckets(sets, workouts, exerciseMap, opts = 
       // Campaign 1 P0-7 D6: answered-only averages, null when nothing was
       // rated -- unanswered sessions coerced to 0 diluted genuine
       // soreness/joint evidence and suppressed the deload triggers.
+      // FINDING 8 (adversarial audit 2026-08-26). `v != null` is a
+      // not-null check standing in for a validity check, and NaN is not null.
+      // A single unusable rating turned the average into NaN, and because
+      // every threshold comparison against NaN is false, the deload triggers
+      // it feeds could not fire at all. Someone genuinely sore would simply
+      // not be offered the deload, silently, with the evidence right there.
+      // Line 584 of this same file already had the correct shape; these two
+      // are the ones that missed it. Number is deliberate as well as finite:
+      // these rows can arrive from a cloud pull, and a string would make
+      // `sum + v` a concatenation rather than an arithmetic mean.
       const sorenessRated = wkWorkouts
         .map((w) => w.soreness24hBefore ?? w.soreness_24h_before ?? null)
-        .filter((v) => v != null);
+        .filter((v) => typeof v === 'number' && Number.isFinite(v));
       avgSoreness = sorenessRated.length
         ? sorenessRated.reduce((sum, v) => sum + v, 0) / sorenessRated.length
         : null;
+      // Finding 8, same class, same fix.
       const jointRated = wkWorkouts
         .map((w) => w.jointDiscomfort ?? w.joint_discomfort ?? null)
-        .filter((v) => v != null);
+        .filter((v) => typeof v === 'number' && Number.isFinite(v));
       avgJointDiscomfort = jointRated.length
         ? jointRated.reduce((sum, v) => sum + v, 0) / jointRated.length
         : null;
