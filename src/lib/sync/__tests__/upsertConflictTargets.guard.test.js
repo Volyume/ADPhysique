@@ -25,8 +25,9 @@
  * the cloud still matches. What it does is make the client's half of the
  * contract explicit and reviewable: every conflict target the code sends is
  * listed below with the index it relies on, verified against production on
- * 2026-08-27. A new upsert, or a changed target, fails here until someone
- * writes down which index it expects — which is the moment to go and check.
+ * 2026-08-27, after migrate_154 landed and all 38 resolved. A new upsert, or a
+ * changed target, fails here until someone writes down which index it expects
+ * — which is the moment to go and check.
  */
 
 const fs = require('fs');
@@ -77,8 +78,8 @@ const EXPECTED = {
   planned_muscle_volume: 'user_id,id',
   adaptation_events: 'user_id,id',
   user_prefs: 'user_id,key',
-  // The defect. migrate_154 adds UNIQUE (user_id, id); until it is applied on
-  // a given project this push returns 42P10.
+  // Was the defect: this returned 42P10 until migrate_154 added
+  // UNIQUE (user_id, id), applied to production 2026-08-27.
   workout_notes: 'user_id,id',
 };
 
@@ -195,7 +196,21 @@ describe('the migration that fixes workout_notes is present and honest', () => {
     expect(sql).toMatch(/DELIBERATELY RETAINED/);
   });
 
-  test('it does not claim to be applied while it is still awaiting the phrase', () => {
-    expect(sql).toMatch(/Applied remotely: NOT YET/);
+  test('its applied status is honest, and carries the ledger version', () => {
+    // This assertion was the other way round until the migration was applied
+    // on 2026-08-27: it pinned "NOT YET" so the file could not quietly claim
+    // to be live. The invariant is the same either way -- the header states
+    // what is actually true of production -- so it flipped when the truth did,
+    // and the ledger version is what makes the claim checkable.
+    expect(sql).toMatch(/Applied remotely: YES\. 2026-08-27/);
+    expect(sql).toMatch(/Ledger version 20260827114840/);
+    expect(sql).not.toMatch(/Applied remotely: NOT YET/);
+  });
+
+  test('the applied header records the re-verification, not just the fact', () => {
+    // "Applied" on its own is a claim. These are the observations behind it.
+    expect(sql).toMatch(/RE-VERIFIED ON THE LIVE DATABASE/);
+    expect(sql).toMatch(/ON CONFLICT \(user_id, id\) ACCEPTED/);
+    expect(sql).toMatch(/authenticated=X/);
   });
 });

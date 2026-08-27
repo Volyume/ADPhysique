@@ -134,8 +134,43 @@
 -- Applied locally:  n/a (cloud-only: no local SQLite counterpart. The local
 --                   workout_notes table is keyed by id and never upserts by
 --                   composite key.)
--- Applied remotely: NOT YET. Awaiting the founder's exact phrase per
---                   supabase/README.
+-- Applied remotely: YES. 2026-08-27, project sujrylzzxcqxxfygptns (Volyume,
+--   eu-west-1), on the founder's phrase. Ledger version 20260827114840, name
+--   workout_notes_conflict_target_and_deletion_completeness.
+--
+--   RE-VERIFIED ON THE LIVE DATABASE AFTERWARDS:
+--     index            workout_notes_user_id_id_key on (user_id, id), unique,
+--                      non-partial. The pre-existing workout_notes_pkey (id)
+--                      and idx_workout_notes_user (user_id, updated_at) are
+--                      untouched.
+--     RPC shape        prosecdef = true, proconfig = {search_path=public},
+--                      returns void, plpgsql, volatile, owner postgres. All
+--                      as before.
+--     RPC grants       postgres=X | authenticated=X | service_role=X.
+--                      Unchanged, confirming CREATE OR REPLACE preserves the
+--                      ACL as the header states.
+--     upsert           ON CONFLICT (user_id, id) ACCEPTED; a second push of
+--                      the same row updated in place, 1 row, note replaced.
+--                      Run inside an aborted transaction: workout_notes is
+--                      still 0 rows and the probe never committed.
+--     RPC coverage     every relation with a foreign key to auth.users is
+--                      named. The two deliberate retentions are still NOT
+--                      deleted (account_deletions_log, marketing_email_optout).
+--     data             the applied SQL has no top-level DML at all: one
+--                      CREATE UNIQUE INDEX, one CREATE OR REPLACE FUNCTION,
+--                      one GRANT. It cannot have written a row. Row counts
+--                      afterwards moved only upward on live tables (auth.users
+--                      19->27, routines 2850->3007, user_prefs 324->328 and so
+--                      on), consistent with ordinary traffic over the elapsed
+--                      hour. Note the "before" figures were pg_stat n_live_tup
+--                      estimates, not exact counts, so they are approximate on
+--                      that side. The one apparent decrease,
+--                      marketing_email_optout 1 -> 0, is a stale estimate and
+--                      not a change: that table shows n_tup_ins = 1,
+--                      n_tup_del = 1 and has never been vacuumed or analysed
+--                      (last_autovacuum null), so n_live_tup was reporting a
+--                      row deleted long before this migration ran. Its exact
+--                      count was already 0 beforehand.
 --
 --   DRY-RUN ALREADY DONE, 2026-08-27, project sujrylzzxcqxxfygptns. Both
 --   statements were executed against production inside a transaction that was
@@ -156,7 +191,7 @@
 --   Confirmed afterwards that nothing committed: index absent, _probe154
 --   absent, workout_notes still 0 rows, live delete_user_data unchanged.
 --
---   Verification to repeat immediately after the real apply:
+--   Verification repeated after the real apply (results above):
 --     1. the index exists and is non-partial
 --     2. ON CONFLICT (user_id, id) on workout_notes is accepted
 --     3. delete_user_data shows prosecdef = true, proconfig
