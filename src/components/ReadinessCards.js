@@ -26,6 +26,7 @@ import {
   getAllWorkouts, getCompletedWorkoutSets,
   getLastTrainedPerMuscle, getRecentCheckins,
 } from '../lib/database';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 
 const MILESTONES = [
   { sessions: 1,    label: 'First session',  icon: 'star-outline' },
@@ -355,7 +356,7 @@ function RecoveryGauge({ label, value, samples = 0, invertGood = false }) {
     ? 'After a couple of sessions'
     : 'Nothing to show yet';
   if (hasValue) {
-    const v = parseFloat(value);
+    const v = parseDecimalInput(value);
     if (invertGood) {
       dotColor = v >= 3 ? t.colors.error : v >= 2 ? t.colors.warning : t.colors.success;
       scaleNote = v >= 3 ? 'High discomfort' : v >= 2 ? 'Moderate' : 'Comfortable';

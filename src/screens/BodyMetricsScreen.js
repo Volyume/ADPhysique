@@ -66,6 +66,7 @@ import { isCalm, WELLBEING_HELPLINE, WELLBEING_KEY } from '../lib/wellbeing';
 import { deriveWeightTrend } from '../lib/weightTrend';
 import { validateBodyMetricForm } from '../lib/bodyMetricValidate';
 import { mergeMorningWeightsIntoHistory } from '../lib/bodyMetricsHistoryMerge';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
@@ -722,7 +723,7 @@ export default function BodyMetricsScreen() {
           data.loggedAt = isNaN(d.getTime()) ? Date.now() : d.getTime();
           for (const [formKey, dbField] of Object.entries(FIELD_MAP)) {
             if (entry[formKey] != null && entry[formKey] !== '') {
-              const num = parseFloat(entry[formKey]);
+              const num = parseDecimalInput(entry[formKey]);
               if (Number.isFinite(num)) data[dbField] = num;
             }
           }

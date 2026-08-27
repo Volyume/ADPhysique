@@ -6,6 +6,7 @@ import useTheme from '../hooks/useTheme';
 import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { workoutLoggerSize } from '../styles/layout';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 
 const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
 
@@ -92,7 +93,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
     // arithmetic on those produces NaN and the next clamp wedges at the
     // lower bound forever.
     const raw = v[field];
-    const current = typeof raw === 'number' ? raw : (parseFloat(raw) || 0);
+    const current = typeof raw === 'number' ? raw : (parseDecimalInput(raw) || 0);
     const next = Math.min(Math.max(current + delta * (steps[field] || 1), fieldLimits[0]), fieldLimits[1]);
     onChange({ ...v, [field]: field === 'weight' ? Math.round(next * 100) / 100 : Math.round(next), isGhost: false });
   }
@@ -182,7 +183,7 @@ function SetEntry({ value, onChange, units = 'kg', onSubmitComplete, exerciseTyp
               // values like 21.25 kg (fractional plates) couldn't be typed.
               // Accept up to 3 integer digits and up to 2 decimals, max 500.
               if (v === '' || /^\d{0,3}\.?\d{0,2}$/.test(v)) {
-                const n = parseFloat(v);
+                const n = parseDecimalInput(v);
                 if (!isNaN(n) && n > 500) return; // refuse over-cap
                 setField('weight', v); // keep raw string; parseFloat on read
               }

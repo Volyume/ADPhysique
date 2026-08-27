@@ -103,6 +103,7 @@ import { clearPendingReEntryEase } from '../lib/reEntryEaseState';
 import { DEFAULT_BAR_KG } from '../lib/warmupRamp';
 import { warmupRamp } from '../lib/warmupRamp';
 import { shareSessionName } from '../lib/sessionShareData';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 
 // FQ-3 (D96): rir defaults to NULL. The per-set RIR picker is permanently
 // removed (D14/D19), so no set carries a genuine per-set effort rating, and
@@ -2667,7 +2668,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       return;
     }
     const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
-    const weightNum = parseFloat(currentSet.weight);
+    const weightNum = parseDecimalInput(currentSet.weight);
     if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
       appAlert('Enter weight', `Enter the weight used (in ${units}) before starting the cluster.`);
       return;
@@ -2781,7 +2782,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       return;
     }
     const isBodyweight = /body\s*weight/i.test(exercise?.equipment || '');
-    const weightNum = parseFloat(currentSet.weight);
+    const weightNum = parseDecimalInput(currentSet.weight);
     if (!isBodyweight && (currentSet.weight === '' || currentSet.weight == null || isNaN(weightNum) || weightNum <= 0)) {
       appAlert('Enter weight', `Enter the weight used (in ${units}) before starting your first side.`);
       return;
@@ -3966,7 +3967,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 exerciseType={activeExerciseType}
                 loadSemantics={exercise?.loadSemantics || 'total'}
                 weightStepKg={exercise?.incrementKg || exercise?.increment_kg
-                  || defaultIncrement(parseFloat(currentSet.weight) || 0, units, exercise?.exerciseCategory || exercise?.exercise_category || 'compound')}
+                  || defaultIncrement(parseDecimalInput(currentSet.weight) || 0, units, exercise?.exerciseCategory || exercise?.exercise_category || 'compound')}
                 recordLine={recordLine}
                 noteText={noteText}
                 onNoteChange={setNoteText}
@@ -4527,7 +4528,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 // the anchor while the entry holds a ramp row (so reopening
                 // mid-ramp shows the SAME ramp, not one computed from the
                 // warm-up weight).
-                const entryWeight = parseFloat(currentSet.weight);
+                const entryWeight = parseDecimalInput(currentSet.weight);
                 const entryIsWorking = (currentSet.setType ?? 'straight') !== 'warmup';
                 const working = (entryIsWorking && Number.isFinite(entryWeight) && entryWeight > 0)
                   ? entryWeight
@@ -4774,7 +4775,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => {
                   setShowOverflow(false);
-                  const w = parseFloat(currentSet.weight);
+                  const w = parseDecimalInput(currentSet.weight);
                   if ((currentSet.setType ?? 'straight') !== 'warmup' && Number.isFinite(w) && w > 0) {
                     rampAnchorRef.current = w;
                   }

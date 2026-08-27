@@ -44,6 +44,7 @@ import { ageYearsFromDateOfBirth } from '../lib/profileAge';
 import { formatBodyWeight, formatBodyWeightRate } from '../lib/units';
 import HeightFeetInchesField from '../components/HeightFeetInchesField';
 import AgeYearsField from '../components/AgeYearsField';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -559,15 +560,15 @@ export default function NutritionTargetsScreen({ navigation }) {
     const goalToUse = (typeof goalOverride === 'string') ? goalOverride : goal;
 
     const ageNum    = parseInt(age, 10);
-    const weightNum = parseFloat(weight);
+    const weightNum = parseDecimalInput(weight);
     // Number.isFinite so a partial entry like "." (parseFloat('.') === NaN)
     // resolves to null rather than flowing a NaN body fat into the engine,
     // which produced NaN calorie/macro targets that then persisted.
-    const bfParsed  = parseFloat(bodyFat);
+    const bfParsed  = parseDecimalInput(bodyFat);
     const bfNum     = bodyFat.trim() && Number.isFinite(bfParsed) ? bfParsed : null;
     const baselineBfSource = bfNum != null ? normaliseBodyFatSource(bfSource) : null;
     const ftNum     = parseInt(heightFt, 10) || 0;
-    const inNum     = parseFloat(heightIn) || 0;
+    const inNum     = parseDecimalInput(heightIn) || 0;
     const heightNum = ftNum * 30.48 + inNum * 2.54; // convert to cm
 
     if (!ageNum || !heightNum || !weightNum) {
@@ -594,7 +595,7 @@ export default function NutritionTargetsScreen({ navigation }) {
     // engine. The engine now falls back, but warn here so the user knows
     // their custom value didn't take effect.
     if (proteinApproach === 'custom') {
-      const customNum = parseFloat(customProteinGPerKg);
+      const customNum = parseDecimalInput(customProteinGPerKg);
       if (!customNum || customNum <= 0) {
         toast.show('Enter a protein value in g/kg, or switch to Optimised', { variant: 'warning' });
         return;
@@ -618,7 +619,7 @@ export default function NutritionTargetsScreen({ navigation }) {
         experienceLevel:    userProfile?.experience ?? 'intermediate',
         proteinApproach,
         customProteinGPerKg: proteinApproach === 'custom' && customProteinGPerKg.trim()
-          ? parseFloat(customProteinGPerKg)
+          ? parseDecimalInput(customProteinGPerKg)
           : null,
       };
       const authority = user?.id
@@ -1268,7 +1269,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                   0.4 to 0.55 g/kg muscle protein synthesis window. */}
               {results.proteinG > 0 && (() => {
                 // Derive bodyweight from form or back-calculate from results
-                const formWeightKg = parseFloat(weight) > 0 ? parseFloat(weight) : null;
+                const formWeightKg = parseDecimalInput(weight) > 0 ? parseDecimalInput(weight) : null;
                 const derivedWeightKg = (results.proteinGPerKg > 0)
                   ? Math.round(results.proteinG / results.proteinGPerKg)
                   : null;
@@ -1418,7 +1419,7 @@ export default function NutritionTargetsScreen({ navigation }) {
               {/* ── Why these numbers for you? ─────────────────────── */}
               {(() => {
                 // Derive weight, form state is preferred; fall back to back-calculation
-                const formWeightKg = parseFloat(weight) > 0 ? parseFloat(weight) : null;
+                const formWeightKg = parseDecimalInput(weight) > 0 ? parseDecimalInput(weight) : null;
                 // proteinGPerKg may be absent when results come from the DB (DB stores
                 // only core numbers). Derive it from proteinG / weightKg as a fallback.
                 const safeProteinGPerKg = results.proteinGPerKg != null

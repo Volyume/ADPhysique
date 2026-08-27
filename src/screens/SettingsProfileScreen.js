@@ -17,6 +17,7 @@ import { logError } from '../lib/errorLog';
 import * as haptics from '../lib/haptics';
 import { useToast } from '../components/Toast';
 import { DIETS } from '../lib/food/curatedMeals';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 
 // AC-08 (Codex adversarial audit, 2026-07-12): height/age feed BMR and
 // calorie-floor maths same as weight/body fat, but saveHeight/saveAge below
@@ -124,7 +125,7 @@ export default function SettingsProfileScreen() {
   async function saveHeight(ft, inches) {
     if (!user?.id) return;
     const ftNum = parseInt(ft, 10) || 0;
-    const inNum = parseFloat(inches) || 0;
+    const inNum = parseDecimalInput(inches) || 0;
     const heightCm = ftNum * 30.48 + inNum * 2.54;
     if (!heightCm) return;
     // AC-08: reject an out-of-range height rather than persisting it. This

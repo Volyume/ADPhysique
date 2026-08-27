@@ -49,6 +49,7 @@ import BottomSheet from '../components/BottomSheet';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import * as haptics from '../lib/haptics';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 
 // Compute muscle coverage: { [muscleKey]: count } sorted by count descending
 function computeMuscleCoverage(exercises) {
@@ -333,7 +334,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       recommendedRepsMin: repsMin,
       recommendedRepsMax: repsMax,
       restSeconds: editRest ? parseInt(editRest, 10) : null,
-      startingWeight: editStartWeight ? parseFloat(editStartWeight) : null,
+      startingWeight: editStartWeight ? parseDecimalInput(editStartWeight) : null,
     });
     setEditingExercise(null);
     await loadRoutine();

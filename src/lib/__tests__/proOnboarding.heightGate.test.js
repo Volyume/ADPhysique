@@ -47,9 +47,13 @@ describe('ProOnboarding refuses to progress without a valid height', () => {
     // from advanceFrom2 (the F11 sex-gate spirit, applied to height).
     expect(src).toMatch(/function\s+resolveHeightCm\(/);
     expect(src).toMatch(/function\s+isValidHeightCm\(/);
-    // The resolver handles both units: imperial via ftInToCm, metric via parseFloat.
+    // The resolver handles both units: imperial via ftInToCm, metric via the
+    // shared locale parser. It read parseFloat until 2026-08-27; on a phone
+    // regioned to a comma-decimal country the decimal pad offers a comma, and
+    // parseFloat('175,5') is 175, so a typed height was silently truncated
+    // before it ever reached this validator.
     expect(src).toMatch(/function\s+resolveHeightCm\([\s\S]{0,300}ftInToCm\(/);
-    expect(src).toMatch(/function\s+resolveHeightCm\([\s\S]{0,300}parseFloat\(/);
+    expect(src).toMatch(/function\s+resolveHeightCm\([\s\S]{0,300}parseDecimalInput\(/);
     // Imperial returns NaN when feet is blank, so a blank imperial height fails.
     expect(src).toMatch(/ft\.trim\(\)\s*!==\s*''\s*\?\s*ftInToCm\([^)]*\)\s*:\s*NaN/);
     // The validator enforces a finite, in-range value.
