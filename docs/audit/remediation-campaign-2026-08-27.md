@@ -126,25 +126,79 @@ the cheapest guard against a test that quietly measures nothing.
 
 ---
 
-## 5. Open decisions
+## 5. Decisions, all three closed 2026-08-27
 
-Three, none of which I took unilaterally.
+### 1. Auth callback — CLOSED, remediated
 
-1. **Implicit-flow auth tokens over the custom scheme.** Any installed app can
-   send `volyume://#access_token=...&refresh_token=...` and the handler adopts
-   that session, so an attacker with a real account can sign a victim's device
-   into it and collect what they log next. The fix is dropping the implicit
-   fallback for PKCE alone, which the client already defaults to. Not taken
-   because it could affect email verification depending on the project's email
-   templates, and verification working is a stated requirement.
+Founder law: Volyume must not accept an access token merely because it arrived
+through a Volyume deep link. The handler now tries three mechanisms, strongest
+first, and only the last is forgeable:
 
-2. **Plaintext database fallback.** `dbCrypto` opens the database unencrypted
-   when SQLCipher is unavailable, the key cannot be read, or the encryption
-   migration fails. The consent copy is now honest about it either way. Whether
-   the app should instead refuse to start is a product trade made deliberately in
-   F-002 and reversing it is a product call.
+- **`token_hash`** — Supabase's documented PKCE-safe email mechanism. `verifyOtp`
+  asks the SERVER to validate a one-time hash and mint the session, so the app
+  never receives a token from the link. Unforgeable. **Added.**
+- **`code`** — PKCE proper, used by OAuth. The exchange needs the `code_verifier`
+  supabase-js stored when this app began the flow. Unforgeable. Unchanged.
+- **`access_token`** — the implicit fallback. Supabase's own documentation states
+  the PKCE handshake is broken for mobile email links, because the link opens in
+  the phone's browser while the verifier sits in the app; that is why the default
+  templates still emit it and why deleting it outright would break verification.
+  It is now refused unless this app began an email auth flow within ten minutes,
+  with the state cleared before the decision so a refusal cannot be retried into
+  an acceptance and a genuine link cannot be replayed.
 
-3. **`nanoid` version pin.** Section 2 above.
+Stated honestly: the window reduces the attack from "any installed app, at any
+moment" to "any installed app, inside a window that opens only when the user has
+just tapped sign up or reset password on this device". Large, and not zero. The
+**founder action that closes it completely** is in `src/lib/authCallbackState.js`:
+switch the Confirm-signup and Reset-password templates to
+`?token_hash={{ .TokenHash }}&type=...`, and add `volyume://*` to Additional
+Redirect URLs. After that the implicit branch is dead code and should be deleted.
+
+43 tests in `src/__tests__/authCallbackSecurity.test.js` cover every journey the
+founder listed. No token is logged, asserted both behaviourally and at source.
+
+### 2. Encrypted database — CLOSED, two real gaps found and fixed
+
+The law was already satisfied for its headline case: an existing encrypted
+database with a temporary key failure already failed closed. Writing the state
+matrix as tests found two gaps that reading had not.
+
+- **A fresh install with no key created a PLAINTEXT database.** `openDatabaseAsync`
+  creates the file when absent, so a background wake before the device's first
+  unlock produced an unencrypted database that health data was then written into.
+  Now defers: no file is created, and the next launch makes it encrypted.
+- **`keyed()` swallowed a failing `PRAGMA key`.** An empty file reads perfectly
+  well without a key, so on a build with no SQLCipher the app reported
+  `encrypted: true`. Since the Article 9 consent screen now reads that flag to
+  decide what to tell the user, a false positive defeated the honesty fix in
+  exactly its own case. `keyed()` now reports whether the key applied, and only
+  that permits the claim.
+
+24 tests in `src/lib/__tests__/dbFailClosed.test.js` pin states A to E, driving
+the real `openEncryptedDb` through a SQLite fake that creates absent files the
+way the real one does.
+
+### 3. nanoid GHSA-28wg-ghj8-5hjv — CLOSED, ACCEPTED, NOT EXPLOITABLE
+
+Advisory: non-secure generators loop indefinitely with a negative size, fixed in
+3.3.16. Installed 3.3.12. Evidence:
+
+- The vulnerable function is `while (i--)` counting down from `size | 0`. Run
+  against a negative size it was still looping after five million iterations.
+- All three runtime consumers import `nanoid/non-secure`, so the affected entry
+  point IS the one that ships. Established before arguing reachability.
+- **Every call site is `nanoid()` with no argument.** A sweep of the compiled
+  output of all three for any call passing anything returns nothing, so the size
+  is always the default 21 and no input of any kind reaches that parameter.
+- Volyume's own source does not import nanoid at all.
+
+Not upgraded. An `overrides` pin would silence the audit line while changing the
+dependency graph of a live app on a pinned Expo SDK, under a rule requiring a
+question first, to fix something no code path here can reach.
+`src/__tests__/nanoidAdvisory.guard.test.js` makes the disposition falsifiable:
+it fails the moment any consumer passes an argument, or the installed version
+changes.
 
 ---
 

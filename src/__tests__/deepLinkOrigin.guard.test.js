@@ -16,16 +16,14 @@
  * live hole, and an exact host comparison costs nothing. Recording the
  * difference rather than dressing it up.
  *
- * THE PART THAT IS STILL OPEN, AND IS THE FOUNDER'S CALL. Any installed app can
- * send volyume://#access_token=...&refresh_token=..., and the implicit-flow
- * branch will adopt whatever session it carries. An attacker with a real
- * session of their own can sign a victim's device into their account and
- * collect whatever the user logs next. The shape check below stops malformed
- * input reaching setSession; it does not stop that, and these tests say so
- * rather than implying the hole is closed. The real fix is dropping the
- * implicit fallback for PKCE alone, which the client already defaults to, and
- * that could affect email verification depending on the project's email
- * templates.
+ * WHAT THIS FILE NO LONGER COVERS. It once recorded, as still open, that any
+ * installed app could send volyume://#access_token=... and have the session
+ * adopted. That was closed on 2026-08-27 under the founder's law: the handler
+ * now tries token_hash, then PKCE, and admits an implicit callback only against
+ * state this app minted. The four assertions here that pinned the risk as OPEN
+ * were inverted rather than deleted, because the invariant is "the source tells
+ * the truth about this path", and only the truth changed. The behaviour itself
+ * lives in authCallbackSecurity.test.js.
  */
 
 const fs = require('fs');
@@ -130,34 +128,44 @@ describe('the implicit-flow branch checks the token shape', () => {
     expect(branch).toMatch(/logError\('auth\.deepLink\.malformedTokens'/);
   });
 
-  test('adopting a session from a link leaves a breadcrumb', () => {
-    // It used to be entirely silent, so a fixation attempt left no trace at all.
-    expect(code).toMatch(/logInfo\('auth\.deepLink\.implicitSession'/);
+  test('a refused callback leaves a trace, which is now the loud kind', () => {
+    // It used to be entirely silent, so a fixation attempt left nothing behind.
+    // The breadcrumb became an ERROR when the path became a refusal.
+    expect(code).toMatch(/logError\(\s*'auth\.deepLink\.unsolicitedImplicitCallback'/);
   });
 });
 
-describe('the residual risk is written down where the code is, not just here', () => {
-  test('the source says the shape check is not a security boundary', () => {
-    // A future reader must not mistake this for the hole being closed.
-    expect(APP).toMatch(/SHAPE check, not a security boundary/);
+describe('the risk this file used to record as open is closed', () => {
+  test('the source no longer describes the shape check as the only barrier', () => {
+    // Inverted on 2026-08-27. These two assertions pinned honest documentation
+    // of an OPEN hole; leaving them would now pin a false statement.
+    expect(APP).not.toMatch(/SHAPE check, not a security boundary/);
+    expect(APP).not.toMatch(/founder call/);
   });
 
-  test('and names the actual fix and why it is not taken unilaterally', () => {
-    expect(APP).toMatch(/dropping the\n\s*\/\/ implicit fallback and relying on PKCE alone/);
-    expect(APP).toMatch(/founder call/);
+  test('the implicit branch is gated on app-minted state', () => {
+    expect(APP).toMatch(/const gate = await consumeAuthFlow\(params\.state \?\? null\);/);
+    expect(APP).toMatch(/if \(!gate\.ok\)/);
+  });
+
+  test('the strongest mechanism is present and tried first', () => {
+    expect(APP).toMatch(/supabase\.auth\.verifyOtp\(\{/);
   });
 });
 
-describe('PKCE remains the primary path', () => {
-  test('the code exchange is tried before the implicit fallback', () => {
+describe('PKCE remains ahead of the implicit fallback', () => {
+  test('the code exchange is tried first of the two', () => {
     const pkce = code.indexOf('exchangeCodeForSession');
-    const implicit = code.indexOf("fragment.includes('access_token')");
+    const implicit = code.indexOf('params.access_token && params.refresh_token');
     expect(pkce).toBeGreaterThan(-1);
     expect(pkce).toBeLessThan(implicit);
   });
 
   test('a link carrying a code returns without reaching the fallback', () => {
-    const between = code.slice(code.indexOf('exchangeCodeForSession'), code.indexOf("fragment.includes('access_token')"));
+    const between = code.slice(
+      code.indexOf('exchangeCodeForSession'),
+      code.indexOf('params.access_token && params.refresh_token'),
+    );
     expect(between).toMatch(/return;/);
   });
 });

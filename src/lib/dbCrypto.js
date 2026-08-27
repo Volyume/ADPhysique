@@ -159,10 +159,28 @@ function abortOpen(stage) {
   return err;
 }
 
+/**
+ * Opens the database with the key applied, and records WHETHER it applied.
+ *
+ * FAIL-CLOSED AUDIT (founder law, 2026-08-27). This used to swallow a failing
+ * `PRAGMA key` entirely. On a build where SQLCipher is not present the pragma
+ * throws, a brand-new empty file then reads perfectly well without it, and the
+ * caller's first branch concluded the database was encrypted. So the app
+ * reported encrypted: true on a build that has no encryption at all -- and
+ * since the Article 9 consent screen now reads that flag to decide what to tell
+ * the user about their health data, a false positive there is the exact case
+ * the honesty fix was written for.
+ *
+ * `applied` is what callers must consult before claiming encryption.
+ */
 async function keyed(SQLite, key) {
   const db = await SQLite.openDatabaseAsync(DB_NAME);
-  try { await db.execAsync(`PRAGMA key = '${key}'`); } catch (_) { /* probe handles failure */ }
-  return db;
+  let applied = false;
+  try {
+    await db.execAsync(`PRAGMA key = '${key}'`);
+    applied = true;
+  } catch (_) { /* reported through `applied`; the probe still classifies */ }
+  return { db, applied };
 }
 
 /**
@@ -183,8 +201,32 @@ export async function openEncryptedDb(SQLite) {
   // rather than mint a new key/DB and destroy the user's data. The next launch,
   // with SecureStore back, opens it normally.
   if (status === 'unavailable' || !key) {
+    // FAIL-CLOSED AUDIT (founder law, 2026-08-27), state E. Check whether a
+    // database file exists BEFORE opening one, because openDatabaseAsync
+    // CREATES it when absent. Without this check, a fresh install whose
+    // keychain was briefly unavailable -- a background wake before the device's
+    // first unlock is the ordinary way that happens -- created a PLAINTEXT
+    // database and returned it. Health data would then be written unencrypted
+    // until some later launch happened to migrate it. The expected model for a
+    // fresh install is an ENCRYPTED database, so the right answer when we
+    // cannot have one is to wait, not to make the wrong kind.
+    // Lazily required here as it is everywhere else in this module: the main
+    // path's own require sits further down, after this early return.
+    // eslint-disable-next-line global-require
+    const FS = require('expo-file-system/legacy');
+    const existing = await FS.getInfoAsync(`${FS.documentDirectory}SQLite/${DB_NAME}`)
+      .catch(() => ({ exists: false }));
+    if (!existing?.exists) {
+      logInfo('dbCrypto.keyUnavailable.noDatabase', 'no database yet and no key; deferring rather than creating plaintext');
+      const err = new Error('SQLCipher key unavailable and no database exists yet');
+      err.dbCryptoDeferred = true;
+      throw err;
+    }
     const fb = await SQLite.openDatabaseAsync(DB_NAME);
     if (await readable(fb)) {
+      // Reached only for a database that was ALREADY plaintext. Opening it is
+      // not a downgrade: it was never encrypted, and refusing would lock the
+      // user out of their own history for nothing.
       emitPlaintextFallback('key_unavailable');
       return { db: fb, encrypted: false };
     }
@@ -227,7 +269,7 @@ export async function openEncryptedDb(SQLite) {
         // (shared ref-counted native connection), and the branches below
         // move/delete database files on the probes' verdict: abort the open
         // recoverably instead of acting on wrong evidence.
-        const probe = await keyed(SQLite, key);
+        const { db: probe } = await keyed(SQLite, key);
         live = await readable(probe);
         if (!(await closeQuietly(probe, 'recover_keyed_probe'))) {
           throw abortOpen('recover_keyed_probe_close');
@@ -256,8 +298,17 @@ export async function openEncryptedDb(SQLite) {
   }
 
   // 1. Open keyed. If readable, it's already encrypted (or a brand-new file).
-  let db = await keyed(SQLite, key);
-  if (await readable(db)) return { db, encrypted: true };
+  let { db, applied: keyApplied } = await keyed(SQLite, key);
+  if (await readable(db)) {
+    // `applied` and not merely `readable`: an empty file reads fine with no key
+    // at all, so readable alone cannot tell an encrypted database from a build
+    // where PRAGMA key does not exist.
+    if (!keyApplied) {
+      emitPlaintextFallback('sqlcipher_unavailable');
+      return { db, encrypted: false };
+    }
+    return { db, encrypted: true };
+  }
 
   // 2. Not readable keyed: check for plaintext data. If the keyed handle will
   // not close, the "plaintext" open below would reuse the same still-keyed
@@ -283,8 +334,8 @@ export async function openEncryptedDb(SQLite) {
         logError('dbCrypto.unreadableMovedAside', new Error('existing DB unreadable with current key; preserved as volyume-unreadable.db'), {});
       }
     } catch (e) { logError('dbCrypto.moveAside', e, {}); }
-    db = await keyed(SQLite, key);
-    if (await readable(db)) return { db, encrypted: true };
+    ({ db, applied: keyApplied } = await keyed(SQLite, key));
+    if (keyApplied && await readable(db)) return { db, encrypted: true };
     // Even a fresh keyed DB isn't readable → SQLCipher unavailable on this build.
     // Fall back to a working plaintext handle rather than return a broken one.
     await closeQuietly(db, 'sqlcipher_unavailable_probe');
@@ -325,8 +376,8 @@ export async function openEncryptedDb(SQLite) {
       throw swapErr;
     }
 
-    db = await keyed(SQLite, key);
-    if (await readable(db)) {
+    ({ db, applied: keyApplied } = await keyed(SQLite, key));
+    if (keyApplied && await readable(db)) {
       try { await FileSystem.deleteAsync(backup, { idempotent: true }); } catch (_) {}
       logInfo('dbCrypto.migrated', 'local DB encrypted');
       return { db, encrypted: true };
