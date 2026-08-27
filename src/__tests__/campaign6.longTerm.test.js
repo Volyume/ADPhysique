@@ -168,8 +168,13 @@ describe('PHASES 9 + 44: plan lifecycle laws (D97-11..17)', () => {
   test('P44-02: activation unarchives, inside one transaction with a deterministic tiebreak', () => {
     const src = read('lib/database.js');
     const fn = src.slice(src.indexOf('export async function setActivePlan'));
-    expect(fn.slice(0, 1400)).toMatch(/runInTransaction\(d, async \(\) => \{/);
-    expect(fn.slice(0, 1400)).toMatch(/is_active = 1, is_archived = 0/);
+    // Window widened 2026-08-27: the activate statement gained an ownership
+    // predicate and a note explaining the transaction-internal asymmetry it
+    // closes, which pushed the SQL past the old 1400-char slice. The properties
+    // pinned here are unchanged; 2600 matches the slice size already used for
+    // insertProgrammeFromCloud below.
+    expect(fn.slice(0, 2600)).toMatch(/runInTransaction\(d, async \(\) => \{/);
+    expect(fn.slice(0, 2600)).toMatch(/is_active = 1, is_archived = 0/);
     const get = src.slice(src.indexOf('export async function getActivePlan'));
     expect(get.slice(0, 700)).toMatch(/ORDER BY updated_at DESC LIMIT 1/);
   });
