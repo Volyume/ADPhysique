@@ -17,6 +17,10 @@ on:
         description: 'ABIs to build (Play release needs armeabi-v7a,arm64-v8a)'
         default: 'armeabi-v7a,arm64-v8a'
         required: false
+      allow_unsymbolicated:
+        description: 'DANGER: build without Sentry symbols. A native crash will be unreadable without hand-disassembly.'
+        type: boolean
+        default: false
 
 # One Android build per branch at a time. A new push cancels an
 # in-flight run on the same ref, so a stuck or superseded build does
@@ -46,6 +50,25 @@ jobs:
     timeout-minutes: 45
 
     steps:
+      # RELEASE OBSERVABILITY GATE (adversarial audit 2026-08-26).
+      # SENTRY_DISABLE_AUTO_UPLOAD below silently flips to 'true' when the token
+      # is absent, so a release could ship with no source maps and nobody would
+      # notice until a crash arrived that could not be read. The iOS side of
+      # this cost a full manual binary disassembly to identify one function.
+      # Refuse, unless the dispatcher opted out on purpose.
+      - name: Refuse to build without crash symbols
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          if [ -n "$SENTRY_AUTH_TOKEN" ]; then
+            echo "✓ SENTRY_AUTH_TOKEN present; source maps will upload"
+          elif [ "${{ inputs.allow_unsymbolicated }}" = "true" ]; then
+            echo "::warning title=Unsymbolicated build::Building WITHOUT Sentry source maps because allow_unsymbolicated was set. Crashes in this build will be unreadable."
+          else
+            echo "::error title=Refusing to build without crash symbols::SENTRY_AUTH_TOKEN is not set, so this build would ship with no source maps and its crashes would be unreadable. Add the SENTRY_AUTH_TOKEN repo secret, or re-run with allow_unsymbolicated=true to accept that deliberately."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 

@@ -66,6 +66,10 @@ on:
         description: 'Skip the EAS build and submit the latest existing build (no build credit spent)'
         type: boolean
         default: false
+      allow_unsymbolicated:
+        description: 'DANGER: build without Sentry symbols. A native crash will be unreadable without hand-disassembly.'
+        type: boolean
+        default: false
 
 concurrency:
   group: ios-${{ github.ref }}
@@ -166,11 +170,15 @@ jobs:
       # enabled symbolicated prod crashes), so the @sentry/react-native build
       # phase runs sentry-cli on the EAS builder and needs SENTRY_AUTH_TOKEN.
       # That token lives on the EAS builder, not this GitHub runner, so it has
-      # to be synced as an EAS secret here. If it is set, upload works and
-      # crashes symbolicate. If it is NOT set, push SENTRY_DISABLE_AUTO_UPLOAD
-      # so the build can't die at the upload step (unsymbolicated, the same
-      # trade-off build-android.yml already takes). Either way the build
-      # completes; it never fails on a missing token.
+      # to be synced as an EAS secret here.
+      #
+      # CHANGED 2026-08-26 (adversarial audit). This used to fail SOFT: with no
+      # token it pushed SENTRY_DISABLE_AUTO_UPLOAD and completed anyway. That is
+      # exactly how build 57 reached real users with no dSYM, and why its
+      # EXC_BREAKPOINT crash could only be identified by downloading the .ipa,
+      # matching its LC_UUID and disassembling the crash address by hand. A
+      # production build with observability switched off is now a hard failure
+      # unless the dispatcher explicitly chooses it via allow_unsymbolicated.
       - name: Sync app config to EAS
         env:
           EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
@@ -187,9 +195,21 @@ jobs:
             eas secret:create --scope project --name SENTRY_AUTH_TOKEN --value "$SENTRY_AUTH_TOKEN" --type string --force
             eas secret:delete --scope project --name SENTRY_DISABLE_AUTO_UPLOAD --non-interactive 2>/dev/null || true
             echo "✓ SENTRY_AUTH_TOKEN synced (source maps will upload, crashes symbolicate)"
-          else
+          elif [ "${{ inputs.allow_unsymbolicated }}" = "true" ]; then
+            # Deliberate, chosen at dispatch time, and loud about the cost.
             eas secret:create --scope project --name SENTRY_DISABLE_AUTO_UPLOAD --value "true" --type string --force
-            echo "✓ No SENTRY_AUTH_TOKEN; disabled source-map upload so the build can't fail on it"
+            echo "::warning title=Unsymbolicated build::SENTRY_AUTH_TOKEN is absent and allow_unsymbolicated was set. This build ships WITHOUT dSYMs or source maps. A native crash in it cannot be read without downloading the binary and disassembling by hand."
+          else
+            # HARD FAIL (adversarial audit 2026-08-26). This branch used to
+            # disable the upload and carry on, so build 57 shipped to real users
+            # with no dSYM. When it crashed with EXC_BREAKPOINT, Sentry could
+            # show only <redacted> frames, and the only way to identify the
+            # faulting function was to download the .ipa, match its LC_UUID and
+            # disassemble the crash address. That must never be a silent
+            # default. Set the SENTRY_AUTH_TOKEN repo secret, or dispatch again
+            # with allow_unsymbolicated if you accept that cost knowingly.
+            echo "::error title=Refusing to build without crash symbols::SENTRY_AUTH_TOKEN is not set, so this build would ship with no dSYMs and no source maps and its crashes would be unreadable. Add the SENTRY_AUTH_TOKEN repo secret, or re-run with allow_unsymbolicated=true to accept that deliberately."
+            exit 1
           fi
           echo "✓ Config synced to EAS"
 
