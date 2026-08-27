@@ -17,6 +17,7 @@
  * Motion: the iOS host sheet opens without a fade under Reduce Motion.
  */
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { safeEpochMs } from '../lib/nativeSafe';
 import {
   View, Text, StyleSheet, Modal, Platform,
 } from 'react-native';
@@ -45,16 +46,29 @@ export default function PhotoDatePicker({
 
   if (!visible) return null;
 
-  const maxDate = new Date(Number.isFinite(maxMs) ? maxMs : Date.now());
-  const raw = Number.isFinite(valueMs) ? valueMs : Date.now();
+  // NATIVE BOUNDARY (adversarial audit 2026-08-26). These read
+  // Number.isFinite, which is not sufficient for anything date-shaped:
+  // Number.isFinite(1e300) is true and new Date(1e300) is an Invalid Date. A
+  // huge-but-finite maxMs therefore produced maxDate.getTime() === NaN, then
+  // Math.min(raw, NaN) === NaN, and an Invalid Date was handed straight to the
+  // native DateTimePicker. That is the same shape as VOLYUME-1K, where an
+  // Invalid Date reaching native killed the process outright.
+  const maxMsSafe = safeEpochMs(maxMs) ?? Date.now();
+  const maxDate = new Date(maxMsSafe);
+  const raw = safeEpochMs(valueMs) ?? Date.now();
   // Never seed the spinner in the future either.
-  const value = new Date(Math.min(raw, maxDate.getTime()));
+  const value = new Date(Math.min(raw, maxMsSafe));
 
   // Clamp any selection to the max so the future can never be committed, even
   // if a platform briefly allows it.
   const commit = (d) => {
     if (!d) return;
-    onChange?.(Math.min(d.getTime(), maxDate.getTime()));
+    // The platform can hand back an Invalid Date on a cancelled or malformed
+    // spinner interaction; committing its NaN would poison the stored photo
+    // date and every later Date built from it.
+    const chosen = safeEpochMs(d.getTime());
+    if (chosen === null) return;
+    onChange?.(Math.min(chosen, maxMsSafe));
   };
 
   const onNativeChange = (event, selected) => {
