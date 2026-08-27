@@ -98,8 +98,8 @@ describe('AC-04: getPendingDeleteOpCount counts un-shipped delete tombstones', (
 
   test('counts workout_delete / workout_set_delete rows for the user', async () => {
     mockDb.getFirstAsync.mockResolvedValueOnce({ c: 3 });
-    const n = await getPendingDeleteOpCount('u1');
-    expect(n).toBe(3);
+    const r = await getPendingDeleteOpCount('u1');
+    expect(r).toEqual({ ok: true, count: 3 });
     // The query is scoped to the two cloud-DELETE op types, not all pending ops.
     expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
       expect.stringMatching(/op_type IN \('workout_delete', 'workout_set_delete'\)/),
@@ -107,10 +107,19 @@ describe('AC-04: getPendingDeleteOpCount counts un-shipped delete tombstones', (
     );
   });
 
-  test('returns 0 for a missing user and tolerates a query failure', async () => {
-    expect(await getPendingDeleteOpCount(null)).toBe(0);
+  test('a missing user is a genuine zero, but a query failure is UNKNOWN', async () => {
+    // INVERTED 2026-08-27, adversarial audit P1. This test previously asserted
+    // that a query failure "tolerates" its way to 0. That was the defect: the
+    // sign-out guard reads this count to decide whether wiping
+    // pending_sync_ops is safe, so an unreadable queue looked like an empty
+    // one, the wipe destroyed the delete tombstones, and every workout the user
+    // had deleted offline came back on the next sign-in.
+    //
+    // No user really does mean no tombstones, so that stays a measured zero.
+    expect(await getPendingDeleteOpCount(null)).toEqual({ ok: true, count: 0 });
+    // A failed read knows nothing, and must say so rather than guess zero.
     mockDb.getFirstAsync.mockRejectedValueOnce(new Error('no table'));
-    expect(await getPendingDeleteOpCount('u1')).toBe(0);
+    expect(await getPendingDeleteOpCount('u1')).toEqual({ ok: false, count: null });
   });
 });
 

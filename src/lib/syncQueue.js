@@ -270,9 +270,13 @@ export async function getQueueStats(userId) {
         [userId, MAX_RETRIES],
       ),
     ]);
-    return { pending: p?.c ?? 0, failed: f?.c ?? 0 };
-  } catch (_) {
-    return { pending: 0, failed: 0 };
+    return { pending: p?.c ?? 0, failed: f?.c ?? 0, ok: true };
+  } catch (e) {
+    // ERROR IS NOT EMPTY. The zeroes are kept so existing display callers do
+    // not have to branch, but `ok: false` marks them as UNKNOWN rather than
+    // measured. Any caller making a safety decision must read `ok`.
+    logError('syncQueue.getQueueStats', e, { userId });
+    return { pending: 0, failed: 0, ok: false };
   }
 }
 
@@ -285,7 +289,18 @@ export async function getQueueStats(userId) {
  * tombstone never reached cloud).
  */
 export async function getPendingDeleteOpCount(userId) {
-  if (!userId) return 0;
+  // P1 sync truth (adversarial audit 2026-08-26). This used to return a bare
+  // number and `return 0` on a read failure, which made "the queue is empty"
+  // and "I could not read the queue" indistinguishable. Its only production
+  // caller is the sign-out guard, which reads `> 0` to decide whether wiping
+  // pending_sync_ops is safe. A failed read therefore looked like "nothing
+  // pending", the wipe destroyed the tombstones, and every workout the user
+  // had deleted offline resurrected on the next sign-in. The caller's own
+  // try/catch could not help, because the error never escaped this function.
+  //
+  // The outcome is now explicit. `ok: false` means UNKNOWN, and the caller
+  // must treat unknown as unsafe, never as zero.
+  if (!userId) return { ok: true, count: 0 };
   try {
     const d = await db();
     const r = await d.getFirstAsync(
@@ -293,9 +308,10 @@ export async function getPendingDeleteOpCount(userId) {
        WHERE user_id = ? AND op_type IN ('workout_delete', 'workout_set_delete')`,
       [userId],
     );
-    return r?.c ?? 0;
-  } catch (_) {
-    return 0;
+    return { ok: true, count: r?.c ?? 0 };
+  } catch (e) {
+    logError('syncQueue.getPendingDeleteOpCount', e, { userId });
+    return { ok: false, count: null };
   }
 }
 

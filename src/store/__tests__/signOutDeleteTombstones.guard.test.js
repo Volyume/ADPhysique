@@ -44,7 +44,14 @@ describe('AC-04: sign-out ships delete tombstones before wiping the queue', () =
   });
 
   test('it aborts sign-out (unless forced) while a delete tombstone remains un-shipped', () => {
-    expect(fn).toMatch(/if \(!force && remainingDeletes > 0\) \{[\s\S]*?return \{ ok: false, reason: 'unsynced' \};/);
+    expect(fn).toMatch(/if \(!force && \(deletes\.count \?\? 0\) > 0\) \{[\s\S]*?return \{ ok: false, reason: 'unsynced' \};/);
+  });
+
+  test('it also aborts when the delete queue cannot be READ (unknown is not empty)', () => {
+    // P1 sync truth: getPendingDeleteOpCount used to return 0 on a failed read,
+    // so an unreadable queue passed the `> 0` check and the wipe went ahead.
+    // The count check alone can never catch that; the ok flag must be read too.
+    expect(fn).toMatch(/if \(!force && !deletes\.ok\) \{[\s\S]*?return \{ ok: false, reason: 'unsynced' \};/);
   });
 
   test('the drain + delete check sit BEFORE the wipe commitment', () => {
