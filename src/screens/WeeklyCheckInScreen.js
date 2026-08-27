@@ -55,6 +55,7 @@ import { SkeletonCard } from '../components/Skeleton';
 // single source of truth, so the day-3 unlock date this screen gates on and the
 // date the trial moment promises can never drift apart.
 import { FIRST_CHECKIN_MIN_DAYS, MIN_WEIGH_INS, firstReviewUnlockDate } from '../lib/trialActivation';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -839,7 +840,7 @@ export default function WeeklyCheckInScreen({ navigation }) {
       // realistic 0-24h range rather than coercing/clamping, so nothing
       // impossible is ever persisted.
       const sleepTrimmed = sleepHours.trim();
-      const sleepNum = sleepTrimmed ? parseFloat(sleepHours) : null;
+      const sleepNum = sleepTrimmed ? parseDecimalInput(sleepHours) : null;
       if (sleepNum != null && (!Number.isFinite(sleepNum) || sleepNum < 0 || sleepNum > 24)) {
         toast.show('That doesn\'t look like a realistic number of sleep hours. Enter a value between 0 and 24.', { variant: 'error' });
         return;

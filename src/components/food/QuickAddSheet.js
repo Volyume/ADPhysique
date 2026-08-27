@@ -13,6 +13,7 @@ import TextField from '../TextField';
 import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
 import { fromEnergy, toEnergy, energyUnitLabel } from '../../lib/format';
+import { parseDecimalInput } from '../../lib/parseDecimalInput';
 
 /**
  * Quick add: log a bare calorie figure (and optional protein, carbs, fat)
@@ -67,7 +68,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
 
   // A blank macro field is allowed (it counts as 0); only kcal is required.
   function num(v) {
-    const n = parseFloat(v);
+    const n = parseDecimalInput(v);
     return Number.isFinite(n) && n >= 0 ? Math.round(n * 10) / 10 : 0;
   }
 
@@ -75,7 +76,7 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
     // The user typed in THEIR unit, so validate the bounds in that unit and
     // convert once, here, through the shared inverse. The stored value is
     // always kcal -- the engine and every rollup work in kcal only.
-    const typed = parseFloat(kcal);
+    const typed = parseDecimalInput(kcal);
     const maxTyped = toEnergy(5000, energyUnit);
     if (!Number.isFinite(typed) || typed <= 0 || typed > maxTyped) {
       toast.show(`Enter energy between 1 and ${maxTyped} ${unitLabel}.`, { variant: 'warning' });

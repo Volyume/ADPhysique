@@ -55,6 +55,7 @@ import {
 } from '../lib/proOnboardingDraft';
 import { dateOfBirthFromAgeYears } from '../lib/profileAge';
 import { FIRST_CHECKIN_MIN_DAYS } from '../lib/trialActivation';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
@@ -170,7 +171,7 @@ function resolveHeightCm(units, cm, ft, inches) {
   if (units === 'imperial') {
     return ft.trim() !== '' ? ftInToCm(ft, inches) : NaN;
   }
-  return parseFloat(cm);
+  return parseDecimalInput(cm);
 }
 
 function isValidHeightCm(hcm) {
@@ -500,13 +501,13 @@ export default function ProOnboardingScreen({ navigation }) {
           : parseBodyWeightToKg(bodyWeight, localBWUnits);
         const hcm = localHeightUnits === 'imperial'
           ? (!isNaN(parseInt(heightFt, 10)) ? ftInToCm(heightFt, heightIn) : null)
-          : (parseFloat(heightCm) || null);
+          : (parseDecimalInput(heightCm) || null);
         const ageNum = parseInt(age, 10) || null;
         if (!Number.isFinite(bwKg) || bwKg <= 0 || !hcm || !ageNum) {
           if (!cancelled) setProvisionalKcal(null);
           return;
         }
-        const bfParsed = parseFloat(bodyFat);
+        const bfParsed = parseDecimalInput(bodyFat);
         const bfNum = bodyFat.trim() && Number.isFinite(bfParsed) && bfParsed > 0 && bfParsed < 60
           ? bfParsed : null;
         const inputs = buildNutritionEngineInputs({
@@ -1283,7 +1284,7 @@ export default function ProOnboardingScreen({ navigation }) {
         : parseBodyWeightToKg(bodyWeight, localBWUnits);
       const hcm = localHeightUnits === 'imperial'
         ? (!isNaN(parseInt(heightFt, 10)) ? ftInToCm(heightFt, heightIn) : null)
-        : (parseFloat(heightCm) || null);
+        : (parseDecimalInput(heightCm) || null);
       const ageNum = parseInt(age, 10) || null;
 
       if (!ACCEPTED_SEX_VALUES.includes(sex) || !Number.isFinite(bwKg) || bwKg <= 0 || !isValidHeightCm(hcm) || !ageNum || ageNum < 13 || ageNum > 100) {
@@ -1310,7 +1311,7 @@ export default function ProOnboardingScreen({ navigation }) {
       // Parse body fat as a low-confidence baseline unless it came from a
       // measured source. It can shape the first plan, but measured-only safety
       // floors still live inside nutritionEngine.
-      const bfParsed = parseFloat(bodyFat);
+      const bfParsed = parseDecimalInput(bodyFat);
       const bfNum = bodyFat.trim() && Number.isFinite(bfParsed) && bfParsed > 0 && bfParsed < 60 ? bfParsed : null;
       const baselineBfSource = bfNum != null ? normaliseBodyFatSource(bfSource) : null;
       // Build inputs through the shared builder so onboarding and Update Your

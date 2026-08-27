@@ -42,6 +42,7 @@ import { adaptedSetupFor } from '../lib/exercise/adaptedSetup';
 import InfoTooltip from '../components/InfoTooltip';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import BottomSheet from '../components/BottomSheet';
+import { parseDecimalInput } from '../lib/parseDecimalInput';
 
 // Loose date parser, accepts "Dec 2025", "December 2025", "2025-12", "12/2025" etc.
 // Returns unix timestamp (ms) for the 1st of the parsed month, or null.
@@ -436,7 +437,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
   }
 
   async function handleSaveGoal() {
-    const w = parseFloat(goalWeightInput);
+    const w = parseDecimalInput(goalWeightInput);
     if (!w || w <= 0) return;
     const targetDate = parseLooseDate(goalDateInput);
     setGoalSaving(true);
