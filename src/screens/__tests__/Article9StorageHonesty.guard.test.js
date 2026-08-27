@@ -60,6 +60,14 @@ describe('only a definite false changes what the user is told', () => {
   test('the encrypted wording is unchanged for the normal case', () => {
     expect(code).toMatch(/On your phone, in encrypted local storage\./);
   });
+
+  test('the progress-photo sentence stays contiguous in the source', () => {
+    // privacyTruth.guard.test.js reads this file as text and checks for that
+    // exact sentence. Splitting it across a string concatenation broke that
+    // privacy invariant, which is precisely the kind of thing it exists to
+    // catch, so the shape is pinned here too rather than only there.
+    expect(code).toMatch(/const PHOTO_SENTENCE = 'Progress photo image files stay on this device unless you choose to share or export them';/);
+  });
 });
 
 describe('the plaintext wording is accurate and calm', () => {
@@ -70,13 +78,7 @@ describe('the plaintext wording is accurate and calm', () => {
     expect(firstBranch).not.toMatch(/in encrypted local storage/);
   });
 
-  // The copy is written as a concatenation across several source lines, and
-  // apostrophes inside single-quoted strings are backslash-escaped, so these
-  // read the assembled sentence rather than the source text.
-  const assembled = fallback
-    .replace(/\\'/g, "'")
-    .replace(/'\s*\+\s*'/g, '')
-    .replace(/\s+/g, ' ');
+  const assembled = fallback;
 
   test('it says what IS protecting the data, not just what is not', () => {
     // "Not encrypted" alone would frighten someone without telling them
@@ -85,7 +87,12 @@ describe('the plaintext wording is accurate and calm', () => {
   });
 
   test('it keeps the progress-photo sentence, which is true either way', () => {
-    expect(assembled).toMatch(/Progress photo image files stay on this device/);
+    // Interpolated from PHOTO_SENTENCE, so both branches carry it by
+    // construction; that constant's own text is pinned above.
+    expect(assembled).toMatch(/\$\{PHOTO_SENTENCE\}/);
+    const branches = assembled.split(': `');
+    expect(branches).toHaveLength(2);
+    expect(branches.every((b) => b.includes('${PHOTO_SENTENCE}'))).toBe(true);
   });
 
   test('it stays in the coaching voice: no alarm, no blame, no jargon', () => {

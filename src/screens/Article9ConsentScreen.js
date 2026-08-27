@@ -213,13 +213,15 @@ export default function Article9ConsentScreen({ navigation }) {
   // null means the database has not been opened yet, which is not the same as
   // "not encrypted": only an explicit false changes what the user is told.
   const dbEncrypted = isLocalDbEncrypted();
+  // Both branches keep "Progress photo image files stay on this device"
+  // contiguous on one line: privacyTruth.guard.test.js reads this file as text
+  // and checks for that exact sentence, and splitting it across a concatenation
+  // broke a privacy invariant that was doing its job.
+  const PHOTO_SENTENCE = 'Progress photo image files stay on this device unless you choose to share or export them';
   const storageLine = dbEncrypted === false
-    ? 'On your phone, in this app\'s private storage. Your device could not set up '
-      + 'the extra layer of encryption Volyume normally adds, so your data is protected '
-      + 'by your device\'s own security rather than by that layer. Progress photo image '
-      + 'files stay on this device unless you choose to share or export them'
-    : 'On your phone, in encrypted local storage. Progress photo image files stay on '
-      + 'this device unless you choose to share or export them';
+    // eslint-disable-next-line max-len
+    ? `On your phone, in this app's private storage. Your device could not set up the extra layer of encryption Volyume normally adds, so your data is protected by your device's own security rather than by that layer. ${PHOTO_SENTENCE}`
+    : `On your phone, in encrypted local storage. ${PHOTO_SENTENCE}`;
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>

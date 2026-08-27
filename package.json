@@ -62,7 +62,8 @@
       "^@shopify/flash-list$": "<rootDir>/__mocks__/shopify-flash-list.js",
       "^@expo/vector-icons/Ionicons$": "<rootDir>/__mocks__/expo-vector-icons-ionicons.js",
       "^@react-native-community/datetimepicker$": "<rootDir>/__mocks__/datetimepicker-stub.js"
-    }
+    },
+    "globalSetup": "<rootDir>/jest.globalSetup.js"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
