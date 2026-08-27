@@ -1647,23 +1647,52 @@ const useAppStore = create((set, get) => ({
       // eslint-disable-next-line global-require
       require('live-activity').endAllActivities().catch(() => {});
     } catch (_) {}
+    // eslint-disable-next-line global-require
+    const log = require('../lib/errorLog');
     try {
       if (!userId || get().activeWorkout) return false;
       const raw = await AsyncStorage.getItem(ACTIVE_WORKOUT_KEY);
       if (!raw) return false;
       let snap = null;
-      try { snap = JSON.parse(raw); } catch (_) { snap = null; }
+      let parseFailed = false;
+      try { snap = JSON.parse(raw); } catch (_e) { snap = null; parseFailed = true; }
+      if (parseFailed) {
+        // A malformed snapshot can never be restored, so removing it is right,
+        // but it must not vanish silently: a truncated write here is the only
+        // trace we would get of a storage problem that also loses sessions.
+        log.logError('restoreActiveWorkout.snapshotMalformed', new Error('active workout snapshot did not parse'), { userId });
+      }
       if (!snap?.workout?.id || snap.userId !== userId) {
         await AsyncStorage.removeItem(ACTIVE_WORKOUT_KEY).catch(() => {});
         return false;
       }
       // Validate against the DB: the row must still exist and be incomplete.
+      //
+      // ERROR IS NOT NOT-FOUND (adversarial audit 2026-08-26). This read used
+      // to be `catch (_) { row = null; }`, so a THROWN read was indistinguishable
+      // from a genuinely missing workout, and the very next branch deleted the
+      // recovery snapshot. That is permanent, silent loss of a session the user
+      // was in the middle of. It is not hypothetical either: this runs during
+      // launch bootstrap, where the SQLCipher database may not be open yet, so
+      // a transient failure here is exactly the expected kind.
+      //
+      // Deleting is now reserved for a proven absence. An unreadable database
+      // leaves the snapshot untouched and simply declines to restore on THIS
+      // launch, so the next one can try again.
       let row = null;
+      let readFailed = false;
       try {
         // eslint-disable-next-line global-require
         const { getWorkoutById } = require('../lib/database');
         row = await getWorkoutById(snap.workout.id);
-      } catch (_) { row = null; }
+      } catch (e) {
+        readFailed = true;
+        log.logError('restoreActiveWorkout.readFailed', e, { userId });
+      }
+      if (readFailed) {
+        // UNKNOWN: keep the snapshot, restore nothing, retry next launch.
+        return false;
+      }
       if (!row || row.isCompleted || row.is_completed) {
         await AsyncStorage.removeItem(ACTIVE_WORKOUT_KEY).catch(() => {});
         return false;
