@@ -48,6 +48,15 @@ function getRunInTransaction() {
   return require('./database').runInTransaction;
 }
 
+// database.js caches the whole exercises table in memory and states that
+// "every function that writes the exercises table calls
+// _invalidateExercisesCache, so the cache is never stale". This file writes to
+// that table and did not, which made the claim false here (finding 6).
+function getInvalidateExercisesCache() {
+  // eslint-disable-next-line global-require
+  return require('./database')._invalidateExercisesCache;
+}
+
 // ─── CSV parsing ──────────────────────────────────────────────────────────
 
 /**
@@ -328,26 +337,7 @@ export async function runImport(userId, parsed, analysis) {
   }
   const d = await getDb();
 
-  // Names that didn't match an existing exercise → create as custom.
   const newExerciseIds = new Map();   // name → new id
-  for (const name of analysis.unmappedNames || []) {
-    const id = await createCustomExerciseRow(d, name);
-    newExerciseIds.set(name, id);
-  }
-  // Names that didn't even fit in the preview list (unmappedCount may
-  // be larger than the unmappedNames array, which is capped), we
-  // still need to create them. analysis.unmappedNames is the full list
-  // when ≤ 24 names; for longer lists we re-derive from parsed and
-  // skip ones we already mapped.
-  if ((analysis.unmappedCount ?? 0) > newExerciseIds.size) {
-    for (const name of parsed.exerciseNames) {
-      if (analysis._mappedIndex?.has(name)) continue;
-      if (newExerciseIds.has(name)) continue;
-      const id = await createCustomExerciseRow(d, name);
-      newExerciseIds.set(name, id);
-    }
-  }
-
   let workouts = 0;
   let sets = 0;
   let skipped = 0;
@@ -355,7 +345,35 @@ export async function runImport(userId, parsed, analysis) {
   // Rides the app-wide runInTransaction queue; a thrown error inside the
   // task rolls the whole import back exactly as the old manual
   // BEGIN/ROLLBACK did, and still propagates to the caller.
-  await getRunInTransaction()(d, async () => {
+  try {
+    await getRunInTransaction()(d, async () => {
+    // IMPORT ISOLATION (adversarial audit 2026-08-26, finding 6). These
+    // creations used to run BEFORE the transaction opened. So an import that
+    // failed part-way rolled back every workout and set, and left the custom
+    // exercises behind: a library full of entries from an import the user was
+    // told had failed, referenced by nothing, and pushed to cloud on the next
+    // sync. "All or nothing" has to include them, because they are the part
+    // the user actually sees.
+    //
+    // Names that didn't match an existing exercise → create as custom.
+    for (const name of analysis.unmappedNames || []) {
+      const id = await createCustomExerciseRow(d, name);
+      newExerciseIds.set(name, id);
+    }
+    // Names that didn't even fit in the preview list (unmappedCount may
+    // be larger than the unmappedNames array, which is capped), we
+    // still need to create them. analysis.unmappedNames is the full list
+    // when ≤ 24 names; for longer lists we re-derive from parsed and
+    // skip ones we already mapped.
+    if ((analysis.unmappedCount ?? 0) > newExerciseIds.size) {
+      for (const name of parsed.exerciseNames) {
+        if (analysis._mappedIndex?.has(name)) continue;
+        if (newExerciseIds.has(name)) continue;
+        const id = await createCustomExerciseRow(d, name);
+        newExerciseIds.set(name, id);
+      }
+    }
+
     for (const w of parsed.workouts) {
       // Duplicate skip, match on user + started_at.
       const hit = await d.getFirstAsync(
@@ -412,7 +430,16 @@ export async function runImport(userId, parsed, analysis) {
         sets++;
       }
     }
-  });
+    });
+  } finally {
+    // Whichever way the transaction went. On success the new customs must
+    // become visible: getAllExercises serves a whole-table memory cache, and
+    // syncExercises reads THROUGH it, so a stale cache did not merely hide the
+    // imported exercises from the library screen, it kept them off the cloud
+    // for the rest of the session. On failure the cache may have been filled
+    // from inside the rolled-back transaction, so it has to go either way.
+    try { getInvalidateExercisesCache()(); } catch (_) { /* best-effort */ }
+  }
 
   return { workouts, sets, exercisesCreated: newExerciseIds.size, skipped };
 }

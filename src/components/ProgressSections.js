@@ -5,7 +5,7 @@ import useTheme from '../hooks/useTheme';
 import SvgBarSparkline from './SvgBarSparkline';
 import InfoTooltip from './InfoTooltip';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
-import { localDayKey } from '../lib/dayKey';
+import { localDayKeysEndingAt } from '../lib/dayKey';
 import { workloadTakeaway } from '../lib/chartWindows';
 
 // Shared section cards for the Progress tab. These render the consistency and
@@ -112,17 +112,22 @@ export function TrainingCalendar({ values }) {
   const { width: SCREEN_W } = useWindowDimensions();
   const trainedDates = new Set(values.map(v => v.date));
   const trainedCount = values.length;
-  const today = new Date();
-  // Build 84 days oldest→newest, grouped into 12 weeks of 7 days
+  // Build 84 days oldest→newest, grouped into 12 weeks of 7 days.
+  // Finding 7 (audit 2026-08-26): this used to step by `offset * 86400000`
+  // from the current instant. A fixed 24 hours is not a calendar day across a
+  // DST change, so rendered shortly after midnight in the months following the
+  // spring transition the run slid by an hour and skipped a real day: measured
+  // for Europe/London, a grid drawn at 00:30 on 2025-04-15 had no square at all
+  // for 2025-03-30. A day the user trained was simply absent, and the count in
+  // the accessibility label below described a window the grid was not showing.
+  const dayKeys = localDayKeysEndingAt(84);
   const SQ = Math.max(10, Math.floor((SCREEN_W - 90) / 14)); // square size
   const weeks = Array.from({ length: 12 }, (_, wi) =>
-    Array.from({ length: 7 }, (_, di) => {
-      const dayOffset = 83 - (wi * 7 + di);
-      const d = new Date(today.getTime() - dayOffset * 86400000);
+    Array.from({ length: 7 }, (_, di) => (
       // Match on the LOCAL day key (loadCalendar emits the same), so the
       // squares line up with the user's UK calendar, not UTC.
-      return trainedDates.has(localDayKey(d.getTime()));
-    }),
+      trainedDates.has(dayKeys[wi * 7 + di])
+    )),
   );
   return (
     <View style={[styles.calWrap, live.calWrap]}>

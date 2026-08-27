@@ -24,6 +24,40 @@ export function localDayKey(ms = Date.now()) {
   return `${y}-${m}-${day}`;
 }
 
+/**
+ * The last `count` local day-keys, oldest first, ending on the day containing
+ * `endMs` (default today).
+ *
+ * DST (adversarial audit 2026-08-26, finding 7). Callers used to build a run of
+ * days by subtracting `offset * 86400000` from the current instant. A fixed
+ * 24-hour step is not a calendar day across a transition, so on the spring
+ * change the sequence slides by an hour and a real calendar day drops out of
+ * it. Measured for Europe/London: the 84-day training grid rendered at 00:30 on
+ * 2025-04-15 contains no square at all for 2025-03-30, the spring-forward day.
+ * A user who trained that day simply does not see it, and the grid's own
+ * "Trained N of the last 84 days" label counts a window it is not showing.
+ *
+ * Stepping a local Date with setDate crosses transitions correctly. The anchor
+ * is midday rather than midnight so the arithmetic never lands inside an hour
+ * that does not exist locally on a transition day.
+ *
+ * @param {number} count how many days
+ * @param {number} [endMs] the instant whose local day ends the run
+ * @returns {string[]} YYYY-MM-DD, oldest first, length `count`
+ */
+export function localDayKeysEndingAt(count, endMs = Date.now()) {
+  const n = Number.isFinite(count) ? Math.max(0, Math.trunc(count)) : 0;
+  const d = new Date(Number.isFinite(endMs) ? endMs : Date.now());
+  d.setHours(12, 0, 0, 0);
+  d.setDate(d.getDate() - (n - 1));
+  const out = [];
+  for (let i = 0; i < n; i += 1) {
+    out.push(localDayKey(d.getTime()));
+    d.setDate(d.getDate() + 1);
+  }
+  return out;
+}
+
 export function todayLocalKey() {
   return localDayKey(Date.now());
 }
