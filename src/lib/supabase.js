@@ -39,6 +39,62 @@ function _isKeychainLocked(e) {
     || msg.includes('errSecInteractionNotAllowed');
 }
 
+// SECURESTORE WRITE TRUTH (adversarial audit 2026-08-26, finding 9).
+//
+// expo-secure-store documents a 2048-byte value limit and warns above it that
+// the value "may not be stored successfully. In a future SDK version, this call
+// may throw an error." A Supabase session is an access-token JWT plus a refresh
+// token plus the user object, which is not obviously under that.
+//
+// The failure mode matters more than the odds. setItem caught, logged and
+// returned, so supabase-js believed the session was persisted either way. A
+// write that did not stick shows up only at the next cold launch, as a user who
+// was signed in and now is not, with nothing in the logs tying the two together.
+// This app has already lost thirteen days of signal to a misclassified keychain
+// error (VOLYUME-2E), so an auth write that fails silently is exactly the shape
+// worth closing.
+//
+// NOT CURRENTLY HAPPENING. Sentry holds no secureStore or keychain events at all
+// across the last 90 days, so this is a diagnostic gap rather than a live
+// incident, and it is fixed as one: the write is checked, not re-architected.
+// Chunking the session across multiple keychain items would change the storage
+// format on the live auth path and is not warranted by anything observed.
+const SECURE_STORE_VALUE_LIMIT = 2048;
+const _verifiedOnce = new Set();
+
+function _byteLength(value) {
+  try { return new TextEncoder().encode(String(value)).length; }
+  catch (_) { return String(value ?? '').length; }
+}
+
+/**
+ * Confirms a write actually landed, for the two cases worth paying a read for:
+ * a value over the documented limit, and the first write of each key this
+ * launch (which catches a keychain that is broken outright). Every other write
+ * is left alone so the token-refresh path keeps its single keychain operation.
+ */
+async function _verifyWrite(key, value) {
+  const bytes = _byteLength(value);
+  const oversize = bytes > SECURE_STORE_VALUE_LIMIT;
+  if (!oversize && _verifiedOnce.has(key)) return;
+  _verifiedOnce.add(key);
+  try {
+    const readBack = await SecureStore.getItemAsync(key, KEY_OPTS);
+    if (readBack === value) return;
+    // eslint-disable-next-line global-require
+    require('./errorLog').logError(
+      'supabase.secureStore.writeNotPersisted',
+      new Error('SecureStore write did not persist'),
+      { bytes, overDocumentedLimit: oversize, readBackWasNull: readBack == null },
+    );
+  } catch (e) {
+    // A locked keychain cannot answer, which is not evidence of anything.
+    if (_isKeychainLocked(e)) return;
+    // eslint-disable-next-line global-require
+    try { require('./errorLog').logWarn('supabase.secureStore.verifyFailed', String(e?.message || e), { bytes }); } catch (_) {}
+  }
+}
+
 const secureAuthStorage = {
   getItem: async (key) => {
     try {
@@ -58,7 +114,12 @@ const secureAuthStorage = {
     }
   },
   setItem: async (key, value) => {
-    try { await SecureStore.setItemAsync(key, value, KEY_OPTS); }
+    try {
+      await SecureStore.setItemAsync(key, value, KEY_OPTS);
+      // Deliberately not awaited: the caller is supabase-js persisting a
+      // session and must not wait on a diagnostic read.
+      _verifyWrite(key, value).catch(() => {});
+    }
     catch (e) {
       // Re-triage 2026-08-01: getItem classified locked-device reads as
       // expected, but set/remove kept logging them as errors - the residual
@@ -72,7 +133,29 @@ const secureAuthStorage = {
     }
   },
   removeItem: async (key) => {
-    try { await SecureStore.deleteItemAsync(key, KEY_OPTS); }
+    try {
+      await SecureStore.deleteItemAsync(key, KEY_OPTS);
+      // A session token that survives a sign-out is a different order of
+      // problem from one that fails to save, so it is checked every time and
+      // never rate-limited: the next person to hold this device is the one who
+      // pays for a silent failure here.
+      try {
+        const readBack = await SecureStore.getItemAsync(key, KEY_OPTS);
+        if (readBack != null) {
+          // eslint-disable-next-line global-require
+          require('./errorLog').logError(
+            'supabase.secureStore.removeNotPersisted',
+            new Error('SecureStore delete did not remove the session item'),
+            { key: key.startsWith('sb-') ? 'sb-auth-token' : 'other' },
+          );
+        }
+      } catch (verifyErr) {
+        if (!_isKeychainLocked(verifyErr)) {
+          // eslint-disable-next-line global-require
+          try { require('./errorLog').logWarn('supabase.secureStore.removeVerifyFailed', String(verifyErr?.message || verifyErr)); } catch (_) {}
+        }
+      }
+    }
     catch (e) {
       // eslint-disable-next-line global-require
       try {
@@ -83,6 +166,11 @@ const secureAuthStorage = {
     }
   },
 };
+
+// Exported for the write-truth tests (finding 9), which drive the real adapter
+// against a SecureStore that fails the way the docs describe: by not storing
+// the value rather than by throwing. There is no other way to exercise that.
+export const __secureAuthStorageForTests = secureAuthStorage;
 
 // Lazy-init: createClient is never called at module load time.
 // Returns null when SUPABASE_URL / SUPABASE_ANON_KEY env vars are absent (Stage 1).
