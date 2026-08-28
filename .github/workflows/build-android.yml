@@ -1,16 +1,13 @@
 name: Build Android (APK + AAB, signed)
 
 on:
-  push:
-    branches:
-      - main
-      - 'claude/**'
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-      - '.gitignore'
-      - 'LICENSE'
-      - '.ci-status/**'
+  # Manual only (founder order 2026-08-28): the push trigger built a
+  # signed APK + AAB on every merge to main and every claude/** push,
+  # which under the continual-merge rule meant a build per landing.
+  # Matches build-ios.yml's standing posture - each run costs runner
+  # time and produces a release artefact nobody asked for. Run it from
+  # the Actions tab -> "Build Android (APK + AAB, signed)" -> Run
+  # workflow when a build is actually wanted.
   workflow_dispatch:
     inputs:
       architectures:
@@ -22,8 +19,8 @@ on:
         type: boolean
         default: false
 
-# One Android build per branch at a time. A new push cancels an
-# in-flight run on the same ref, so a stuck or superseded build does
+# One Android build per ref at a time. A newer manual run cancels an
+# in-flight one on the same ref, so a stuck or superseded build does
 # not sit on a runner for the full 6h default timeout.
 concurrency:
   group: android-${{ github.ref }}
@@ -39,8 +36,9 @@ permissions:
 # CI proves Node 24 compatibility on our schedule, not on the forced flag day.
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  # main (the release line) and manual runs build the full Play-ready ABI set;
-  # claude/** branch pushes stay on a single fast ABI for the compile-check.
+  # Manual runs default to the full Play-ready ABI set via the input's
+  # default; the ref fallback survives only for a run dispatched with the
+  # input cleared, where main still gets the full set.
   REACT_NATIVE_ARCHITECTURES: ${{ github.event.inputs.architectures || (github.ref == 'refs/heads/main' && 'armeabi-v7a,arm64-v8a' || 'arm64-v8a') }}
 
 jobs:
