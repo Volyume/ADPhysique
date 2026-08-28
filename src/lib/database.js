@@ -2727,9 +2727,19 @@ const SCHEMA_MIGRATIONS = [
   // (APPLIED 2026-08-28 on the founder's named confirmation; pushes
   // carry the field only when some pushed row sets it).
   [
-    "ALTER TABLE capability_constraints ADD COLUMN adaptation_mode TEXT CHECK (adaptation_mode IN ('propose','hold'))",
+    migrateCapabilityAdaptationMode,
   ],
 ];
+
+// CC33 D112 R8: guarded like migrateSwapCauseAndEffectiveChoice above - a
+// bare-string ALTER aborts the whole chain on a re-run (duplicate column)
+// or a fixture built without this table, which is exactly what the five
+// migration fixture suites caught at the W3 gate.
+async function migrateCapabilityAdaptationMode(d) {
+  try {
+    await d.execAsync("ALTER TABLE capability_constraints ADD COLUMN adaptation_mode TEXT CHECK (adaptation_mode IN ('propose','hold'))");
+  } catch (_e) { /* duplicate column (re-run) or fixture without the table */ }
+}
 
 // Backfill the new axis on canonical rows from the pure derivation, in
 // the migrateDemandMetadataBackfill mould: canonical only (customs stay

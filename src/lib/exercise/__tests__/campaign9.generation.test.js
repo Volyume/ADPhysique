@@ -386,8 +386,12 @@ describe('no builder or generator can reinstate a set-aside exercise', () => {
     const fn = SRC.slice(SRC.indexOf('async function applyTravelMode'), SRC.indexOf('function formatRest'));
     expect(fn).toMatch(/filterLibraryForGeneration\(all, state\)\.library/);
     // And a name that survives only in the UNFILTERED catalogue is dropped,
-    // never rebuilt through the unmatched-name placeholder.
-    expect(fn).toMatch(/if \(!match && findIn\(all\)\) return null;/);
+    // never rebuilt through the unmatched-name placeholder. CC33 W3 (audit
+    // T1-23) expanded the one-line drop into a classify-then-drop block so
+    // the toast can name each lane's count - the pinned law is unchanged:
+    // a full-catalogue-only match still ends in `return null;`, and the
+    // placeholder is only reachable when findIn(all) found nothing.
+    expect(fn).toMatch(/const fullMatch = findIn\(all\);\s*\n\s*if \(fullMatch\) \{[\s\S]{0,700}?return null;\s*\n\s*\}/);
     expect(fn).toMatch(/newItems\.filter\(Boolean\)/);
   });
 

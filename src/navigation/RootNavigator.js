@@ -533,6 +533,14 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
+      {/* CC33 W3 (audit T2-07): WorkoutSummary's post-workout "How you
+          train" link must work on HISTORY reopens too, and this stack
+          mounts WorkoutSummary for exactly those. TrainingConsiderations
+          rides along as HowYouTrain's own outbound target (transitive
+          closure). Swept by navigation/__tests__/
+          capabilityRoutesReachable.test.js, which caught this gap. */}
+      <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );

@@ -35,6 +35,16 @@ import { classifyOutcome, INTERVENTION_KIND, OUTCOME } from '../../lib/coachInte
 const DAY = 86_400_000;
 const NOW = Date.UTC(2026, 7, 16, 12, 0, 0);
 
+// The fixtures are built against the FIXED clock above, but blockAdvisor's
+// 14-day recency window reads the real Date.now() - so every "fresh"
+// check-in silently aged out of the window as the calendar passed
+// NOW + 14 days, and the suite started failing at noon UTC on 2026-08-28
+// with no code change anywhere (caught at the CC33 W3 gate; identical
+// failure reproduced on main). Pinning Date.now to the fixtures' own
+// clock removes the fuse without touching any law under test.
+beforeAll(() => { jest.spyOn(Date, 'now').mockReturnValue(NOW); });
+afterAll(() => { Date.now.mockRestore(); });
+
 // ─── T-WEEKLY-02 ────────────────────────────────────────────────────────────
 
 describe('T-WEEKLY-02: photo corroboration moves confidence one step, display-only, senior-suppressed', () => {

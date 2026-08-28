@@ -1578,7 +1578,7 @@ export default function ProOnboardingScreen({ navigation }) {
                         appAlert('Plan ready', 'Your training plan is ready. Open Today to see it.');
                       } else {
                         // eslint-disable-next-line global-require
-                        try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan.retry', retryResult.error, { userId: user.id }); } catch (_) {}
+                        try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan.retry', retryResult.error, { userId: user.id }); } catch (_) {} // logging must never break the retry
                         appAlert(
                           'Plan setup didn\'t finish',
                           'Your profile is saved, but your training plan did not generate. Open Today and choose "Start with a plan" to retry.',
@@ -1586,7 +1586,7 @@ export default function ProOnboardingScreen({ navigation }) {
                       }
                     } catch (e) {
                       // eslint-disable-next-line global-require
-                      try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan.retry', e, { userId: user.id }); } catch (_) {}
+                      try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan.retry', e, { userId: user.id }); } catch (_) {} // logging must never break the retry
                     }
                   },
                 },
