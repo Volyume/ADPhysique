@@ -68,6 +68,13 @@ test('an unmarked conflicted row is substituted - the baseline behaviour stands'
   expect(served).toHaveLength(1);
   expect(served[0].id).toBe(LEGPRESS.id);
   expect(served[0]._capabilityTemp?.fromId).toBe(SQUAT.id);
+  // D112 R7 (audit T2-13): the substitution is recorded the moment it
+  // happens, so a reshaped-but-never-omitting week is visible to the
+  // CONSTRAINED limiter and the effects history.
+  expect(appendSessionConstraintEffects).toHaveBeenCalledTimes(1);
+  expect(appendSessionConstraintEffects.mock.calls[0][2]).toEqual([
+    expect.objectContaining({ effect: 'substituted', exerciseFrom: SQUAT.id, exerciseTo: LEGPRESS.id }),
+  ]);
 });
 
 test('a _userAdded conflicted row is served exactly as given', async () => {

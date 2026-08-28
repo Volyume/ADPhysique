@@ -114,7 +114,14 @@ export function whatItMeans(context, limiters) {
     out.push(line('Your target has had a fair run and your weight still is not moving as planned.', 'nutrition.intake'));
   }
 
-  if (tr?.limiter === LIMITER.EXECUTION) {
+  if (tr?.limiter === LIMITER.CONSTRAINED) {
+    // D112 R7 (audit T2-14): the CONSTRAINED week gets its own truthful
+    // line - before this branch existed the chain fell through and the
+    // coach simply said nothing about training on most constrained
+    // weeks. Calm, no blame, restriction named in the lane's own
+    // vocabulary; the note beside the hold carries the specifics.
+    out.push(line('Training worked around your temporary change this week, so nothing here is judged by it.', 'training.execution'));
+  } else if (tr?.limiter === LIMITER.EXECUTION) {
     out.push(line('There were not enough sessions this block to judge the programme, so it stays as it is.', 'training.execution'));
   } else if (tr?.limiter === LIMITER.RECOVERY) {
     // SCOPE IS STATED (job 6). "Different scopes are allowed... but the
@@ -231,6 +238,10 @@ export function whatStaysTheSame(context, limiters, changes = {}) {
  * on or understand; an unmapped reason renders nothing rather than a code.
  */
 const HOLD_COPY = Object.freeze({
+  // D112 R7 (audit T2-14): chooseInterventions pushes exactly this
+  // reason for every CONSTRAINED week; without the key the hold
+  // rendered nothing.
+  constraint_active: 'We are leaving your programme alone while training works around your temporary change.',
   target_not_eaten: 'We are leaving your target where it is until it has had a fair run.',
   sessions_missed: 'We are leaving your programme alone until there are enough sessions to judge it.',
   intake_coverage_unknown: 'We are leaving your target where it is until there is enough logging to read it.',
@@ -256,6 +267,11 @@ export function whatWeWatchNext(context, limiters, changes = {}) {
   }
   if (limiters?.nutrition?.limiter === LIMITER.INSUFFICIENT_EVIDENCE) {
     return line('A few more logged days would let us read this properly.', 'nutrition.coverage');
+  }
+  if (limiters?.training?.limiter === LIMITER.CONSTRAINED) {
+    // D112 R7 (audit T2-14): the commitment on a constrained week is the
+    // return path, never "get back on schedule".
+    return line('When your temporary change ends, training builds back up and the programme is judged on full evidence again.', 'training.execution');
   }
   if (limiters?.training?.limiter === LIMITER.EXECUTION) {
     return line('Getting back to your full week is the thing that makes the rest readable.', 'training.execution');

@@ -98,7 +98,7 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
     );
     if (!view.anyEffect) return rows;
     const served = [];
-    const omissions = [];
+    const effects = [];
     view.lines.forEach((line, i) => {
       // D112 R4 (CAP-2, closes audit T2-04): a row the user added to this
       // session themselves is served exactly as they added it - their
@@ -115,16 +115,26 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
           _capabilityTemp: { fromId: line.exerciseFrom.id, fromName: line.exerciseFrom.name, constraintIds: line.constraintIds },
           sets: rows[i]?.sets ?? [],
         });
+        // D112 R7 (section 20; closes audit T2-13): the substitution is
+        // recorded too, so a week the restriction reshaped WITHOUT
+        // omissions still reads reshaped - the CONSTRAINED limiter's
+        // missing evidence. The append dedupes on (effect, exerciseFrom),
+        // so a relaunch re-serving the same view writes nothing new, and
+        // the excusal counter's LIKE '%"omitted"%' is untouched by these.
+        effects.push({
+          slot: i, exerciseFrom: line.exerciseFrom.id, exerciseTo: line.exerciseTo.id,
+          effect: 'substituted', constraintIds: line.constraintIds,
+        });
       } else if (line.effect === EFFECTIVE_EFFECT.OMITTED) {
-        omissions.push({
+        effects.push({
           slot: i, exerciseFrom: line.exerciseFrom.id, effect: 'omitted', constraintIds: line.constraintIds,
         });
       } else {
         served.push(rows[i]);
       }
     });
-    if (omissions.length && workoutId) {
-      await appendSessionConstraintEffects(userId, workoutId, omissions).catch(() => {});
+    if (effects.length && workoutId) {
+      await appendSessionConstraintEffects(userId, workoutId, effects).catch(() => {});
     }
     return served.length ? served : rows;
   } catch (_e) {

@@ -198,13 +198,17 @@ export function classifyTrainingLimiter(context) {
   // EXPLAINED by the user's active restriction reclassifies as
   // CONSTRAINED before the execution read can call it 'sessions_missed'.
   // The condition is deliberately narrow and evidence-backed: an active
-  // episode alone never reclassifies an ordinary no-show week - at least
-  // one omission this week must actually have been excused by constraint
-  // effects (the section 18 record). An unknown execution read stays
-  // INSUFFICIENT_EVIDENCE below - unknown is not a restriction story.
+  // episode alone never reclassifies an ordinary no-show week - the
+  // restriction must actually have SHAPED a session this week, through
+  // an excused omission or a recorded substitution (the section 18
+  // record; D112 R7 widened this from omissions-only, which made a
+  // fully-substituted week unreachable - audit T2-13). An unknown
+  // execution read stays INSUFFICIENT_EVIDENCE below - unknown is not a
+  // restriction story.
   const pc = context?.training?.physicalConstraint;
-  if (pc?.active && execution?.signal === SIGNAL.POOR
-    && Number(pc.excusedThisWeek) > 0) {
+  const constraintShapedWeek = !!pc?.active
+    && (Number(pc.excusedThisWeek) > 0 || Number(pc.reshapedThisWeek) > 0);
+  if (constraintShapedWeek && execution?.signal === SIGNAL.POOR) {
     return {
       limiter: LIMITER.CONSTRAINED,
       because: 'constraint_explained_shortfall',
@@ -225,6 +229,20 @@ export function classifyTrainingLimiter(context) {
     return { limiter: LIMITER.INSUFFICIENT_EVIDENCE, because: 'progress_unknown' };
   }
   if (progress.signal === SIGNAL.POOR) {
+    // Section 20's REGRESSION half (D112 R7; audit T2-12): a week the
+    // restriction demonstrably reshaped is not clean programme evidence,
+    // so the fall is attributed to the restriction before the programme.
+    // The block slope itself is now computed over capability-eligible
+    // sets, so a regression manufactured PURELY by the restriction no
+    // longer reaches here; what does reach here on a reshaped week still
+    // is not grounds to propose exercise changes.
+    if (constraintShapedWeek) {
+      return {
+        limiter: LIMITER.CONSTRAINED,
+        because: 'constraint_reshaped_regression',
+        scope: Array.isArray(pc.affectedMuscles) ? pc.affectedMuscles : [],
+      };
+    }
     return { limiter: LIMITER.PLAN, because: 'not_progressing_on_a_run_programme' };
   }
   return { limiter: LIMITER.PLAN, because: 'progressing', progressing: true };

@@ -44,6 +44,7 @@ import {
   getCapabilityConstraints,
   getSessionConstraintEffectsForWorkouts,
   getRoutineExerciseSetsMap,
+  filterCapabilityEligibleSetRows,
 } from './database';
 // CC30 (sections 7, 33.4): learning eligibility is decided at GATHER
 // time from the capability state effective when the evidence occurred,
@@ -584,14 +585,26 @@ export async function computeLiveBlockSlopePct(userId) {
       getExerciseRowsById(userId),
     ]);
 
+    // D112 R7 (section 20; closes audit T2-12): the live slope is judged
+    // over capability-ELIGIBLE sets, the same filter the plateau and
+    // progression paths already use. Sets logged on a movement while a
+    // definite episode conflict held it are display truth, not
+    // programme evidence - without this, the restriction manufactured a
+    // regression and the coach blamed the programme for it. No-episode
+    // users pass through untouched, and a read failure keeps every set
+    // (the pre-filter behaviour).
+    const slopeSets = await filterCapabilityEligibleSetRows(
+      userId, training.sets, { atField: 'created_at' },
+    ).catch(() => training.sets);
+
     // Only muscles actually trained in the block so far can carry strength
     // evidence; a planned-but-untrained muscle would return confidence 0
     // and be dropped anyway, so it costs a read for nothing.
     const perMuscle = Object.keys(VOLUME_LANDMARKS)
-      .filter((muscle) => sumCompletedSets(training.sets, exercisesById, muscle) > 0)
+      .filter((muscle) => sumCompletedSets(slopeSets, exercisesById, muscle) > 0)
       .map((muscle) => computeBlockPerformance({
         muscle,
-        sets: training.sets,
+        sets: slopeSets,
         exercisesById,
         priorSets,
         blockStart,

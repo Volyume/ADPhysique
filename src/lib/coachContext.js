@@ -399,9 +399,16 @@ export function buildCoachContext({
       physicalConstraint: training.physicalConstraint
         ? {
           active: !!training.physicalConstraint.active,
+          // D112 R4 (audit T2-18): the rules' own short name, or null.
+          subject: typeof training.physicalConstraint.subject === 'string'
+            ? training.physicalConstraint.subject : null,
           affectedMuscles: Array.isArray(training.physicalConstraint.affectedMuscles)
             ? training.physicalConstraint.affectedMuscles : [],
           excusedThisWeek: Number(training.physicalConstraint.excusedThisWeek) || 0,
+          // D112 R7 (audit T2-13): sessions the restriction reshaped at
+          // all, substitutions included - the widened CONSTRAINED
+          // evidence beside the omissions-only excusal count.
+          reshapedThisWeek: Number(training.physicalConstraint.reshapedThisWeek) || 0,
           weeklyAnswer: training.physicalConstraint.weeklyAnswer ?? null,
         }
         : null,

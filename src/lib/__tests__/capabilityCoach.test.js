@@ -340,18 +340,24 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
       },
     });
 
-    it('"in the way" appends the adjust suggestion, naming the muscle', () => {
+    it('"in the way" appends the adjust suggestion, muscles as OUR reading only', () => {
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.IN_THE_WAY);
-      // Natural coach-language order (2026-08-21): one or two affected
-      // muscles are named the way a person would say them.
-      expect(out.adjustments.training.note).toContain('You said your chest got in the way more than expected');
+      // D112 R4 (CC33 audit T2-18): the muscle list is derived by the
+      // app, so it is never attributed to the user as their own words -
+      // "You said your chest got in the way" claimed a statement about
+      // muscles they never made. The scope now appears clearly separated
+      // from what they said; with a nameable rule subject on the fact,
+      // the subject leads instead (pinned in constrainedTruth.w2).
+      expect(out.adjustments.training.note).toContain('You said it got in the way more than expected; that mainly touches your chest work');
+      expect(out.adjustments.training.note).not.toMatch(/You said your chest/);
       expect(out.adjustments.training.note).toContain('you can adjust things under How you train');
       expect(out.adjustments.training.note).not.toContain('you can end that under How you train');
     });
 
-    it('"mostly didn\'t come up" appends the close suggestion, naming the muscle', () => {
+    it('"mostly didn\'t come up" appends the close suggestion, muscles as OUR reading only', () => {
       const out = withAnswer(CAPABILITY_WEEK_ANSWER.NOT_RELEVANT);
-      expect(out.adjustments.training.note).toContain("You said your chest mostly didn't get in the way");
+      expect(out.adjustments.training.note).toContain("You said it mostly didn't get in the way; that mainly touches your chest work");
+      expect(out.adjustments.training.note).not.toMatch(/You said your chest/);
       expect(out.adjustments.training.note).toContain('you can end that under How you train');
       expect(out.adjustments.training.note).not.toContain('you can adjust things under How you train');
     });
@@ -377,14 +383,17 @@ describe('CC31 — CONSTRAINED limiter and per-muscle holds', () => {
         .toContain('You said it got in the way more than expected. If that carries on, you can adjust it under How you train.');
     });
 
-    it('"fine" and no answer change nothing', () => {
-      for (const answer of [CAPABILITY_WEEK_ANSWER.FINE, null]) {
-        const out = withAnswer(answer);
-        // Read the REAL field (adjustments.training.note is always a
-        // string), so this can never pass vacuously on a wrong key.
-        expect(typeof out.adjustments.training.note).toBe('string');
-        expect(out.adjustments.training.note).not.toContain('You said');
-      }
+    it('"fine" acknowledges without changing anything; no answer stays silent', () => {
+      // D112 R4 (CC33 audit T2-17): 'fine' was the one answer that
+      // vanished - the single question the app asked, landing nowhere.
+      // It now acknowledges in copy, and STILL changes no number (the
+      // decisions-identical pin above already holds all three answers to
+      // the same decisions). No answer at all remains silent.
+      const fine = withAnswer(CAPABILITY_WEEK_ANSWER.FINE);
+      expect(fine.adjustments.training.note).toContain('went fine around');
+      const none = withAnswer(null);
+      expect(typeof none.adjustments.training.note).toBe('string');
+      expect(none.adjustments.training.note).not.toContain('You said');
     });
 
     it('the suggestion reaches data-hold weeks too (no weigh-ins - the path that hid it)', () => {

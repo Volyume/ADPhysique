@@ -7947,6 +7947,26 @@ export async function getWeeklySessionStats(userId, weekStart) {
     constraintExcusedSessions = Number(excusedRow?.n ?? 0) || 0;
   } catch (_e) { constraintExcusedSessions = 0; }
 
+  // CC33 D112 R7 (section 20; closes audit T2-13): how many of this
+  // week's sessions the restriction RESHAPED at all - any effects record,
+  // substitutions included. A week where a substitute was always found
+  // registered zero excused sessions and could never read CONSTRAINED,
+  // so the coach blamed the programme for a week the restriction shaped.
+  // Additive field; a read failure honestly reports zero.
+  let constraintReshapedSessions = 0;
+  try {
+    const reshapedRow = await d.getFirstAsync(
+      `SELECT COUNT(DISTINCT sce.workout_id) AS n
+         FROM session_constraint_effects sce
+         JOIN workouts w ON w.id = sce.workout_id
+        WHERE sce.user_id = ? AND sce.deleted_at IS NULL
+          AND w.user_id = ? AND w.started_at >= ? AND w.started_at < ?
+          AND sce.effects_json IS NOT NULL AND sce.effects_json != '[]'`,
+      [userId, userId, weekStartMs, weekEnd],
+    ).catch(() => null);
+    constraintReshapedSessions = Number(reshapedRow?.n ?? 0) || 0;
+  } catch (_e) { constraintReshapedSessions = 0; }
+
   // CC29 (section 18; Audit G C1/C4): denominators read the EFFECTIVE
   // prescription. An ended_early session whose every unperformed planned
   // exercise is excused by its own effects record (episode-constraint
@@ -8044,7 +8064,7 @@ export async function getWeeklySessionStats(userId, weekStart) {
   // them choose honest phrasing. Existing numeric consumers unchanged.
   return {
     completed, planned, plannedIsEstimate: plannedFromPlan == null,
-    constraintExcusedSessions,
+    constraintExcusedSessions, constraintReshapedSessions,
   };
 }
 

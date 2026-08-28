@@ -119,9 +119,12 @@ export function computeEffectiveSession(baseRows, library, capabilityState, isEl
 
 /**
  * The section 5.3 effects entries for what ACTUALLY happened in a
- * completed session: substitutions performed, and planned-but-unperformed
- * rows whose absence the active EPISODE constraints excuse. Pure - the
- * caller supplies the facts.
+ * completed session: planned-but-unperformed rows whose absence the
+ * active EPISODE constraints excuse. Substitutions are NOT recorded
+ * here - they are written at serve time by applyEffectiveViewToSession,
+ * the moment they happen (the earlier doc line claiming this function
+ * recorded them was wrong: audit T2-13). Pure - the caller supplies the
+ * facts.
  *
  * @param {Array<{exercise: object, performed: boolean}>} sessionRows the
  *   session's planned rows with whether any set was logged against each

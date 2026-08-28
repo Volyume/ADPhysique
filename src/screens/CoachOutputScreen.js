@@ -1941,10 +1941,32 @@ export default function CoachOutputScreen({ navigation, route }) {
             }
           }
           const note = await getCapabilityWeekNote(user.id, weekStart).catch(() => null);
+          // D112 R4 (audit T2-18): the rules' own subject ("standing
+          // work", "overhead work with your left arm") rides the fact,
+          // so coach copy can name what the USER actually recorded
+          // rather than attributing derived muscle lists to them as
+          // their own words. Null when no short honest name exists -
+          // the phrase module's own law - and copy falls back without
+          // the attribution.
+          let subject = null;
+          try {
+            // eslint-disable-next-line global-require
+            const { subjectPhrase } = require('../lib/capability/phrase');
+            const byName = new Map(library.map((ex) => [ex.id, ex.name]));
+            subject = subjectPhrase(
+              (capState.restrictions ?? []).filter((r) => r.role === 'episode'),
+              { nameOf: (exId) => byName.get(exId) ?? null },
+            );
+          } catch (_e) { subject = null; }
           physicalConstraint = {
             active: true,
+            subject,
             affectedMuscles: [...affected],
             excusedThisWeek: sessionStats.constraintExcusedSessions ?? 0,
+            // D112 R7 (audit T2-13): sessions the restriction reshaped at
+            // all - substitutions included - so a fully-substituted week
+            // can still read CONSTRAINED.
+            reshapedThisWeek: sessionStats.constraintReshapedSessions ?? 0,
             weeklyAnswer: note?.answer ?? null,
           };
         }

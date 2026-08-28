@@ -1815,7 +1815,12 @@ export function runWeeklyCoach(inputs) {
     // adherence, never a recovery verdict about the person.
     trainingNote = coordinationVolumeHeld === 'constraint_active'
       ? (() => {
-        const scope = constraintScopePhrase(coachContext?.training?.physicalConstraint);
+        // D112 R4 (audit T2-18): the rules' own subject first; the
+        // muscle scope only as our reading, never as the user's words.
+        const pcFact = coachContext?.training?.physicalConstraint;
+        const subject = typeof pcFact?.subject === 'string' && pcFact.subject ? pcFact.subject : null;
+        if (subject) return `Training worked around ${subject} this week, so volume holds rather than judging the week by it. Everything unaffected carries on as normal.`;
+        const scope = constraintScopePhrase(pcFact);
         return scope
           ? `Training worked around your ${scope} this week, so volume holds rather than judging the week by it. Everything unaffected carries on as normal.`
           : 'Training ran around your temporary change this week, so volume holds rather than judging the week by it. Everything unaffected carries on as normal.';
@@ -2578,20 +2583,37 @@ export function runWeeklyCoach(inputs) {
 // user without regular weigh-ins would never see it). Both directions
 // of hold-vs-suggest-review: "in the way" points at adjusting the
 // restriction, "mostly didn't come up" points at closing it. Copy only:
-// no number changes, no constraint writes; "fine" or no answer changes
-// nothing.
+// no number changes, no constraint writes; "fine" acknowledges in copy
+// (D112 R4, audit T2-17) and still changes nothing else; no answer
+// changes nothing at all.
 function appendWeeklyAnswerSuggestion(note, pcFact) {
   if (!note || !pcFact?.active) return note;
+  // D112 R4 (audit T2-18): the user's answer is named against the rules'
+  // OWN subject ("working around standing work"), never by attributing a
+  // derived muscle list to them as their words. With no honest subject,
+  // the muscle scope appears only as OUR reading, clearly separated from
+  // what they said.
+  const subject = typeof pcFact.subject === 'string' && pcFact.subject ? pcFact.subject : null;
   const scope = constraintScopePhrase(pcFact);
   if (pcFact.weeklyAnswer === 'in_the_way') {
+    if (subject) return `${note} You said working around ${subject} got in the way more than expected. If that carries on, you can adjust things under How you train.`;
     return scope
-      ? `${note} You said your ${scope} got in the way more than expected. If that carries on, you can adjust things under How you train.`
+      ? `${note} You said it got in the way more than expected; that mainly touches your ${scope} work. If that carries on, you can adjust things under How you train.`
       : `${note} You said it got in the way more than expected. If that carries on, you can adjust it under How you train.`;
   }
   if (pcFact.weeklyAnswer === 'not_relevant') {
+    if (subject) return `${note} You said working around ${subject} mostly didn't get in the way. If you're done working around it, you can end that under How you train.`;
     return scope
-      ? `${note} You said your ${scope} mostly didn't get in the way. If you're done working around it, you can end that under How you train.`
+      ? `${note} You said it mostly didn't get in the way; that mainly touches your ${scope} work. If you're done working around it, you can end that under How you train.`
       : `${note} You said it mostly didn't come up. If you're done with it, you can end it under How you train.`;
+  }
+  // D112 R4 (audit T2-17): 'fine' is an answer too. It changes no
+  // number, and saying so is the point - the one question the app asked
+  // now visibly landed.
+  if (pcFact.weeklyAnswer === 'fine') {
+    return subject
+      ? `${note} You said this week went fine around ${subject}, so everything carries on as planned.`
+      : `${note} You said this week went fine around your temporary change, so everything carries on as planned.`;
   }
   return note;
 }
@@ -2649,16 +2671,33 @@ function _buildBaselineOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, we
 }
 
 function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, weightDelta, prsThisWeek, sessionsCompleted, sessionsPlanned, weekSeed, onTarget, context = null }) {
+  const limiters = context ? classifyLimiters(context) : null;
+  // D112 R7 (audit T2-15): when the shortfall itself reads CONSTRAINED -
+  // the restriction demonstrably shaped this week's sessions - the
+  // stabilise copy must not demand the full plan back. The gate still
+  // holds every change (that part is right either way); only the framing
+  // follows the truth. Genuine no-show weeks keep the Andy Morgan words.
+  const constrained = limiters?.training?.limiter === LIMITER.CONSTRAINED;
+  const pcFact = context?.training?.physicalConstraint ?? null;
+  const subject = typeof pcFact?.subject === 'string' && pcFact.subject ? pcFact.subject : null;
+  const trainingNote = constrained
+    ? (subject
+      ? `Training worked around ${subject} this week, so the sessions that did not happen are not held against you. Your plan stays as it is, ready when you are.`
+      : 'Training worked around your temporary change this week, so the sessions that did not happen are not held against you. Your plan stays as it is, ready when you are.')
+    : 'Get back to your full plan before changing anything.';
+  const adherenceNote = constrained
+    ? `${sessionsCompleted} of ${sessionsPlanned} sessions completed, with your temporary change shaping the week. Nothing here counts against you, and no programming change is made from it.`
+    : `${sessionsCompleted} of ${sessionsPlanned} sessions completed. Getting back on schedule takes priority over any programming change.`;
   return {
     hasEnoughData: true,
     dataNote: null,
     context,
-    limiters: context ? classifyLimiters(context) : null,
+    limiters,
     weekLabel,
     trend: { ewma7: ewma7Today, delta: weightDelta, onTarget: onTarget ?? false, deltaLabel, rateLabel },
     whatWorking: ['Showing up, even partially, keeps the habit alive.'],
     adjustments: {
-      training: { signal: 'hold', note: appendWeeklyAnswerSuggestion('Get back to your full plan before changing anything.', context?.training?.physicalConstraint) },
+      training: { signal: 'hold', note: appendWeeklyAnswerSuggestion(trainingNote, pcFact) },
       calories: null,
       steps: null,
     },
@@ -2671,7 +2710,7 @@ function _buildAdherenceOutput({ weekLabel, deltaLabel, rateLabel, ewma7Today, w
     deloadNote: null,
     dietBreakSuggested: false,
     dietBreakNote: null,
-    adherenceNote: `${sessionsCompleted} of ${sessionsPlanned} sessions completed. Getting back on schedule takes priority over any programming change.`,
+    adherenceNote,
     prsThisWeek,
     sessionsCompleted,
     sessionsPlanned,
