@@ -1503,7 +1503,11 @@ const useAppStore = create((set, get) => ({
     set((state) => ({
       workoutExercises: [
         ...state.workoutExercises,
-        { exercise, routineExercise, sets: [] },
+        // _userAdded (D112 R4, CAP-2): this action only ever runs for an
+        // exercise the user picked into the session themselves, and the
+        // marker persists with the entry so the capability effective view
+        // never substitutes or omits it - not even after a relaunch.
+        { exercise, routineExercise, sets: [], _userAdded: true },
       ],
     }));
     _persistActiveWorkout(get());

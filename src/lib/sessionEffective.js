@@ -98,6 +98,13 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
     const served = [];
     const omissions = [];
     view.lines.forEach((line, i) => {
+      // D112 R4 (CAP-2, closes audit T2-04): a row the user added to this
+      // session themselves is served exactly as they added it - their
+      // explicit choice outranks the effective view, whatever it resolves.
+      if (rows[i]?._userAdded) {
+        served.push(rows[i]);
+        return;
+      }
       if (line.effect === EFFECTIVE_EFFECT.SUBSTITUTED && line.exerciseTo) {
         served.push({
           ...line.exerciseTo,

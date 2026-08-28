@@ -255,6 +255,33 @@ export { LoggedSetRow };
 // before they can move the PR toast (founder device report 2026-08-18).
 const MAX_BOTTOM_CHROME = 320;
 
+/**
+ * Rebuild a slot's routineExercise for a swapped-in exercise. The slot's
+ * routineExercise carries the OLD exercise's planned load and rep band;
+ * left attached, a swapped-in move with no history of its own prefills
+ * the previous exercise's startingWeight and rep range. The rep band
+ * comes from the new exercise's own defaults and the carried-over weight
+ * is cleared; the planned set count is the user's choice for the slot,
+ * so it stays. Shared by the manual swap path and the capability
+ * effective view (D112 R2, audit T2-03) so both substitution routes
+ * carry identical load semantics.
+ */
+function rebuildRoutineExerciseFor(newExercise, prevRoutineEx) {
+  if (!prevRoutineEx) return null;
+  const newRepMin = newExercise.defaultRepMin ?? newExercise.default_rep_min
+    ?? prevRoutineEx?.recommendedRepsMin ?? 6;
+  const newRepMax = newExercise.defaultRepMax ?? newExercise.default_rep_max
+    ?? prevRoutineEx?.recommendedRepsMax ?? 12;
+  return {
+    ...prevRoutineEx,
+    exerciseId: newExercise.id,
+    exerciseName: newExercise.name,
+    recommendedRepsMin: newRepMin,
+    recommendedRepsMax: newRepMax,
+    startingWeight: null,
+  };
+}
+
 export default function ActiveWorkoutScreen({ navigation, route }) {
   // Use a shallow selector so every store mutation (rest timer ticks,
   // PR celebration flag flips, accessibility toggles) doesn't re-render
@@ -684,13 +711,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       try {
         if (!user?.id || !activeWorkout?.id) return;
         if (effectiveAppliedRef.current === activeWorkout.id) return;
-        if (!workoutExercises.length) return;
+        // D112 R4 (closes audit T2-04): an empty session is APPLIED
+        // (vacuously) - without marking it, the effect re-fired when the
+        // first manually added exercise landed and substituted over the
+        // user's own pick. The effective view shapes what the app serves
+        // at session start, never what the user adds afterwards.
+        if (!workoutExercises.length) { effectiveAppliedRef.current = activeWorkout.id; return; }
         const anyLogged = workoutExercises.some((e) => (e.sets?.length ?? 0) > 0);
         if (anyLogged) { effectiveAppliedRef.current = activeWorkout.id; return; }
         if (workoutExercises.some((e) => e?._capabilityTemp)) { effectiveAppliedRef.current = activeWorkout.id; return; }
         // eslint-disable-next-line global-require
         const { applyEffectiveViewToSession } = require('../lib/sessionEffective');
-        const baseRows = workoutExercises.map((e) => e?.exercise ?? e);
+        // _userAdded rides into the row so the effective view can serve the
+        // user's own additions untouched (D112 R4; survives relaunch too).
+        const baseRows = workoutExercises.map((e) => (e?.exercise
+          ? (e._userAdded ? { ...e.exercise, _userAdded: true } : e.exercise)
+          : e));
         const served = await applyEffectiveViewToSession(user.id, activeWorkout.id, baseRows);
         if (cancelled) return;
         effectiveAppliedRef.current = activeWorkout.id;
@@ -703,6 +739,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             servedEntries.push({
               ...(original ?? {}),
               exercise: { ...row, _capabilityTemp: undefined },
+              // D112 R2 (closes audit T2-03): the slot's routineExercise
+              // carries the EXCLUDED exercise's startingWeight and rep
+              // band; rebuilt here from the substitute's own defaults,
+              // exactly as the manual swap path rebuilds it.
+              routineExercise: rebuildRoutineExerciseFor(row, original?.routineExercise),
               _capabilityTemp: row._capabilityTemp,
               sets: [],
             });
@@ -1157,9 +1198,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       setIntentState(state);
       // D109-2: the read failed open (structural list stands, nothing is
       // filtered by avoidance) - say so, rather than let the swap list look
-      // like a clean slate when it may not be.
-      if (state?.unavailable) {
+      // like a clean slate when it may not be. D112 R3 (audit T2-09): the
+      // capability lane gets its own honest line, in its own vocabulary -
+      // only when nothing at all is known (an unavailable read WITH a
+      // last-known state still filters with the user's own rules).
+      const capUnknown = !!(state?.capability?.unavailable && state?.capability?.empty);
+      if (state?.unavailable && capUnknown) {
+        toast.show('Avoided movements and how you train could not be checked, so nothing is filtered here.', { variant: 'warning' });
+      } else if (state?.unavailable) {
         toast.show('Avoided movements could not be checked, so nothing is filtered for them here.', { variant: 'warning' });
+      } else if (capUnknown) {
+        toast.show('Volyume could not check how you train just now, so nothing is filtered for it here.', { variant: 'warning' });
       }
     } catch (_) { /* personalisation is additive: the structural list stands */ }
     setSwapCandidates(ordered);
@@ -1169,27 +1218,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   function handleConfirmSwap(newExercise) {
     const store = useAppStore.getState();
     const updatedExercises = [...workoutExercises];
-    // The slot's routineExercise carries the OLD exercise's planned load and
-    // rep band. Left attached, a swapped-in move (e.g. a lateral raise) with no
-    // history of its own prefills the previous exercise's startingWeight and
-    // rep range. Rebuild it from the new exercise: clear the carried-over
-    // weight and take the rep band from the new exercise's own defaults. The
-    // planned set count is the user's choice for the slot, so keep it.
+    // Load semantics rebuilt from the new exercise's own defaults - the
+    // module-level helper shared with the capability effective view, so a
+    // manual swap and an automatic substitution carry identical
+    // prescription behaviour (D112 R2).
     const prevRoutineEx = updatedExercises[currentExerciseIndex]?.routineExercise;
-    const newRepMin = newExercise.defaultRepMin ?? newExercise.default_rep_min
-      ?? prevRoutineEx?.recommendedRepsMin ?? 6;
-    const newRepMax = newExercise.defaultRepMax ?? newExercise.default_rep_max
-      ?? prevRoutineEx?.recommendedRepsMax ?? 12;
-    const rebuiltRoutineEx = prevRoutineEx
-      ? {
-          ...prevRoutineEx,
-          exerciseId: newExercise.id,
-          exerciseName: newExercise.name,
-          recommendedRepsMin: newRepMin,
-          recommendedRepsMax: newRepMax,
-          startingWeight: null,
-        }
-      : null;
+    const rebuiltRoutineEx = rebuildRoutineExerciseFor(newExercise, prevRoutineEx);
+    // The zero-history seed below wants the same band floor the rebuild
+    // chose; with no routineExercise to rebuild, fall to the new
+    // exercise's own defaults exactly as before.
+    const newRepMin = rebuiltRoutineEx?.recommendedRepsMin
+      ?? newExercise.defaultRepMin ?? newExercise.default_rep_min ?? 6;
     updatedExercises[currentExerciseIndex] = {
       ...updatedExercises[currentExerciseIndex],
       exercise: newExercise,

@@ -50,6 +50,10 @@ export default function FreeStarterScreen({ navigation, route }) {
   // the recommendation below becomes capability-computed exactly then.
   const [capability, setCapability] = useState(null);
   const [hasCapabilitySetup, setHasCapabilitySetup] = useState(false);
+  // D112 R3: true only when the capability read failed AND no last-known
+  // state exists - the one case where the starter knows nothing about how
+  // this user trains and must say so before activating a plan.
+  const [capabilityUnknown, setCapabilityUnknown] = useState(false);
   // Synchronous double-tap guard for the two writing paths (C5-P29-02).
   const startingRef = useRef(false);
   // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
@@ -88,12 +92,21 @@ export default function FreeStarterScreen({ navigation, route }) {
         const { computeLibraryCompatibility } = require('../lib/capability/planCompat');
         const st = await loadCapabilityResolveState(user.id, {});
         setHasCapabilitySetup(!st.empty);
-        if (!st.empty && !st.unavailable) {
+        if (!st.empty) {
+          // CAP-17: a failed read serves the session's last-known state,
+          // and the user's own rules - even stale - filter better than no
+          // filter (D112 R3, closes audit T1-22: this used to throw the
+          // last-known state away and fall to the unfiltered pool).
           setCapability({ byPlan: await computeLibraryCompatibility(st) });
+          setCapabilityUnknown(false);
         } else {
           setCapability(null);
+          // Empty AND unavailable means nothing is known at all (no
+          // session cache): the recommendation must not present itself
+          // as checked (preflight.js harm direction; D112 R3).
+          setCapabilityUnknown(!!st.unavailable);
         }
-      } catch (_) { setCapability(null); }
+      } catch (_) { setCapability(null); setCapabilityUnknown(true); }
     };
     load();
     const unsub = navigation.addListener?.('focus', load);
@@ -197,6 +210,23 @@ export default function FreeStarterScreen({ navigation, route }) {
     if (!user?.id) {
       toast.show('Setting up your profile, try again in a second', { variant: 'info' });
       return;
+    }
+    // D112 R3 (closes audit T1-22): when the capability read failed and
+    // nothing is known, activation is the user's explicit choice through
+    // the standard CAP-17 pre-flight dialog - never a silent fail-open
+    // into an unchecked plan. Same RB-3 ref discipline as below.
+    if (capabilityUnknown) {
+      startingRef.current = true;
+      const goAhead = await new Promise((resolve) => {
+        // eslint-disable-next-line global-require
+        const { offerCapabilityPreflightChoice } = require('../lib/capability/preflight');
+        offerCapabilityPreflightChoice({
+          onHold: () => resolve(false),
+          onContinue: () => resolve(true),
+        });
+      });
+      startingRef.current = false;
+      if (!goAhead) return;
     }
     // Red-team finding 2 (bundle), section 11.3: a pick that is not a
     // full fit for how you train never activates silently - the user

@@ -185,8 +185,15 @@ describe('target-set fallback matrix: targetSets always resolves to a real numbe
     expect(SRC).toContain('const comp015SetCount = (sessionAdjustment && sessionAdjustment.setDelta !== 0)');
     expect(SRC).toContain('(weeklyAllocation?.[exercise?.id] ?? routineExercise?.recommendedSets);');
     const swapWindow = SRC.match(/function handleConfirmSwap\(newExercise\) \{[\s\S]*?\n  \}/)?.[0] ?? '';
-    expect(swapWindow).toContain('const rebuiltRoutineEx = prevRoutineEx');
-    expect(swapWindow).toContain('...prevRoutineEx,');
+    // CC33 W1 (D112 R2): the rebuild moved into the module-level helper
+    // shared with the capability effective view. The pinned semantics are
+    // unchanged - a swapped-in slot gets a REBUILT routineExercise that
+    // keeps the slot's planned set count (`...prevRoutineEx`) - the pin
+    // just follows the code into the helper.
+    expect(swapWindow).toContain('const rebuiltRoutineEx = rebuildRoutineExerciseFor(newExercise, prevRoutineEx);');
+    const helper = SRC.match(/function rebuildRoutineExerciseFor\(newExercise, prevRoutineEx\) \{[\s\S]*?\n\}/)?.[0] ?? '';
+    expect(helper).toContain('...prevRoutineEx,');
+    expect(helper).toContain('startingWeight: null,');
   });
 
   test('a slot with no routineExercise at all falls back to DEFAULT_FREEFORM_TARGET_SETS, never to undefined', () => {

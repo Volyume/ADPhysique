@@ -70,6 +70,7 @@ import { confidenceChipLabel } from '../lib/progressScanResultsContract';
 // (isPhotoSuppressed), so a future change to that policy cannot silently
 // drift between the hook and this screen.
 import { isPhotoSuppressed } from '../hooks/usePhotoSuppression';
+import { useToast } from '../components/Toast';
 import { isCompetitionGoal } from '../lib/coachingGoals';
 import { getCycleTracking } from '../lib/cyclePrefs';
 import { contestCountdown, parseShowDate } from '../lib/contestCountdown';
@@ -908,6 +909,7 @@ export function scanAssessmentAccessibilityLabel(packet) {
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function CoachOutputScreen({ navigation, route }) {
+  const toast = useToast();
   // Default to the current local week when no week is passed. The weekly
   // "your plan is ready" notification routes here with no params; without this
   // weekStart was undefined, which made getWeeklySessionStats build a NaN
@@ -1306,8 +1308,9 @@ export default function CoachOutputScreen({ navigation, route }) {
       // lands on a muscle under an active capability episode, nor on one
       // the user flagged sore at this week's check-in (PD-7: the
       // structured answer, consumed at its own grain). Reductions and
-      // unaffected muscles are untouched. Best-effort: a failed read
-      // holds nothing extra (the proposal was already lawful body-wide).
+      // unaffected muscles are untouched. D112 R3 (closes audit T2-19):
+      // a failed re-check WITHHOLDS the increase for this run - the
+      // capability lane fails safe, never body-wide on a guess.
       let holdMuscles = new Set();
       if (delta > 0) {
         try {
@@ -1333,7 +1336,13 @@ export default function CoachOutputScreen({ navigation, route }) {
           for (const m of String(checkin?.soreMuscles ?? '').split(',')) {
             if (m.trim()) holdMuscles.add(m.trim());
           }
-        } catch (_e) { holdMuscles = new Set(); }
+        } catch (_e) { holdMuscles = null; }
+      }
+      if (delta > 0 && holdMuscles === null) {
+        // D112 R3: the re-check did not happen, so nothing is known about
+        // what this user is training around. Wait, say so calmly, retry.
+        toast.show('Volyume could not check how you train just now, so this increase waits. Try again in a moment.', { variant: 'warning' });
+        return;
       }
       const changes = computeVolumeApply(rows, delta, holdMuscles);
       for (const c of changes) {

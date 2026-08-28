@@ -167,6 +167,20 @@ export default function PlanUpdateScreen({ navigation }) {
     setPreviewing(true);
     const updatedProfile = buildUpdatedProfile();
     try {
+      // CC27 (section 9.6) / D112 R3 (closes audit T1-21): the SAME
+      // capability pre-flight the commit runs, taken before the dry run,
+      // so the preview can never show an unchecked plan that the confirm
+      // step would then refuse to build.
+      const preflight = await capabilityPreflight(user.id);
+      if (!preflight.proceed) {
+        const goAhead = await new Promise((resolve) => {
+          offerCapabilityPreflightChoice({
+            onHold: () => resolve(false),
+            onContinue: () => resolve(true),
+          });
+        });
+        if (!goAhead) return;
+      }
       const dry = await generatePlanDryRun(user.id, updatedProfile);
       if (!dry.ok) {
         // C1: the code is logged for diagnostics, never shown, see

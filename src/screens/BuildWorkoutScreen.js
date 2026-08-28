@@ -197,6 +197,25 @@ export default function BuildWorkoutScreen({ navigation }) {
 
   async function applyTravelMode() {
     setShowTravelModal(false);
+    // CC27 (section 9.6) / D112 R3 (closes audit T1-21): travel mode
+    // BUILDS a session, so it takes the same capability pre-flight as
+    // every other generator - an unreadable capability state is the
+    // user's explicit call, never a silent fail-open into movements
+    // they cannot do.
+    if (user?.id) {
+      // eslint-disable-next-line global-require
+      const { capabilityPreflight, offerCapabilityPreflightChoice } = require('../lib/capability/preflight');
+      const preflight = await capabilityPreflight(user.id);
+      if (!preflight.proceed) {
+        const goAhead = await new Promise((resolve) => {
+          offerCapabilityPreflightChoice({
+            onHold: () => resolve(false),
+            onContinue: () => resolve(true),
+          });
+        });
+        if (!goAhead) return;
+      }
+    }
     const all = allExercises.length > 0 ? allExercises : await getAllExercises();
     if (allExercises.length === 0) setAllExercises(all);
     // C9 Work 7: travel mode BUILDS a session, so it is generation and must

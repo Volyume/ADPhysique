@@ -517,7 +517,21 @@ async function buildProgrammeReview(userId, activeBlock) {
       const { episodeConflicts } = require('./capability/effective');
       const row = rowById.get(exerciseId);
       capabilityAffected = !!row && episodeConflicts(intentState?.capability, row).length > 0;
-    } catch (_e) { capabilityAffected = false; }
+    } catch (e) {
+      // UNKNOWN IS NOT NONE (D112 R3, adopting planAutoGen's posture for
+      // the same field): a capability read that did not happen says
+      // nothing about whether this slot is being trained around, so the
+      // conservative reading keeps the incumbent rather than letting the
+      // verdict engine replace a movement on the strength of a check that
+      // never ran. Logged, because reaching here at all is a code defect.
+      capabilityAffected = true;
+      try {
+        // eslint-disable-next-line global-require
+        require('./errorLog').logError('blockAdvisor.capabilityRead', e, {
+          reason: 'episode conflict check failed; treating slot as possibly affected',
+        });
+      } catch (_) { /* logging must never break the advisor */ }
+    }
     return {
       capabilityAffected,
       excluded: isExcluded(intentState, exerciseId) || isAvoidedThisBlock(intentState, exerciseId),

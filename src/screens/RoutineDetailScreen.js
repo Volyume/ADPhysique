@@ -384,9 +384,17 @@ export default function RoutineDetailScreen({ navigation, route }) {
       setIntentState(state);
       // D109-2: the read failed open (structural list stands, nothing is
       // filtered by avoidance) - say so, rather than let the swap list look
-      // like a clean slate when it may not be.
-      if (state?.unavailable) {
+      // like a clean slate when it may not be. D112 R3 (audit T2-09): the
+      // capability lane gets its own honest line, in its own vocabulary -
+      // only when nothing at all is known (an unavailable read WITH a
+      // last-known state still filters with the user's own rules).
+      const capUnknown = !!(state?.capability?.unavailable && state?.capability?.empty);
+      if (state?.unavailable && capUnknown) {
+        toast.show('Avoided movements and how you train could not be checked, so nothing is filtered here.', { variant: 'warning' });
+      } else if (state?.unavailable) {
         toast.show('Avoided movements could not be checked, so nothing is filtered for them here.', { variant: 'warning' });
+      } else if (capUnknown) {
+        toast.show('Volyume could not check how you train just now, so nothing is filtered for it here.', { variant: 'warning' });
       }
     } catch (_) { /* personalisation is additive: the structural list stands */ }
     setSwapCandidates(ordered);
