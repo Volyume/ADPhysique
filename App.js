@@ -26,8 +26,7 @@ import * as Notifications from 'expo-notifications';
 import * as TaskManager from 'expo-task-manager';
 import * as BackgroundFetch from 'expo-background-fetch';
 import { ensureNotifChannels } from './src/lib/notifications/channels';
-import { installGlobalHandlers, logError, logInfo } from './src/lib/errorLog';
-import { consumeAuthFlow, clearAuthFlow } from './src/lib/authCallbackState';
+import { installGlobalHandlers, logError } from './src/lib/errorLog';
 import { parseInviteCode } from './src/lib/partners/link';
 import { rememberPendingPartnerCode } from './src/lib/partners/pendingInvite';
 import { loadMealLabelOverrides } from './src/lib/food/mealSlots';
@@ -273,147 +272,13 @@ function handleIncomingDeepLink(url) {
   // first-write-wins, sanitised slug only). Never consumes or reroutes the link.
   captureFirstTouch(url).catch(() => {});
   if (handlePartnerDeepLink(url)) return;
-  handleAuthDeepLink(url);
-}
-
-/**
- * Is this URL one of ours?
- *
- * DEEP LINK ORIGIN (adversarial audit 2026-08-26, finding 18). This was
- * `url.startsWith('https://volyume.app')`, which also accepts
- * https://volyume.app.evil.com and https://volyume.appanything: a prefix test
- * on a URL treats the host boundary as if it were part of the string, and it is
- * not. Nothing routes such a URL to the app TODAY, because the Android App Link
- * filter is scoped to host volyume.app and iOS has no associatedDomains at all,
- * so this is a latent footgun rather than a live hole. It is one config change
- * from being neither, and an exact host comparison costs nothing.
- */
-function isVolyumeLink(url) {
-  const s = String(url ?? '');
-  if (s.startsWith('volyume://')) return true;
-  const m = /^https:\/\/([^/?#]+)/i.exec(s);
-  // Exact host, case-insensitive, and a port is not a host we know.
-  return !!m && m[1].toLowerCase() === 'volyume.app';
-}
-
-/**
- * Pulls every auth parameter out of a callback URL, from the query AND the
- * fragment. Supabase puts `code` and `token_hash` in the query and the implicit
- * tokens in the fragment, and a link can legitimately carry both halves.
- */
-function parseAuthParams(url) {
-  const s = String(url ?? '');
-  const out = {};
-  const readPairs = (blob) => {
-    for (const pair of String(blob || '').split('&')) {
-      if (!pair) continue;
-      const eq = pair.indexOf('=');
-      const k = eq === -1 ? pair : pair.slice(0, eq);
-      const v = eq === -1 ? '' : pair.slice(eq + 1);
-      if (!k) continue;
-      try { out[decodeURIComponent(k)] = decodeURIComponent(v); }
-      catch (_) { out[k] = v; }   // a malformed escape is not a reason to drop the link
-    }
-  };
-  const hash = s.indexOf('#');
-  const withoutHash = hash === -1 ? s : s.slice(0, hash);
-  const q = withoutHash.indexOf('?');
-  if (q !== -1) readPairs(withoutHash.slice(q + 1));
-  if (hash !== -1) readPairs(s.slice(hash + 1));
-  return out;
-}
-
-/** Three base64url segments, which is the only shape setSession can use. */
-function looksLikeJwt(token) {
-  return typeof token === 'string'
-    && token.length >= 20 && token.length <= 8192
-    && /^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token);
-}
-
-async function handleAuthDeepLink(url) {
-  if (!url) return;
-  if (!isVolyumeLink(url)) return;
   const supabase = getSupabaseClient();
   if (!supabase) return;
-
-  // AUTH CALLBACK (founder law, 2026-08-27): Volyume must not accept an access
-  // token merely because it arrived through a Volyume deep link. `volyume://`
-  // is a custom scheme, so any installed app can send one and the OS tells us
-  // nothing about who did.
-  //
-  // Three mechanisms, strongest first. The first two cannot be forged at all;
-  // only the third can, and it is gated on state this app minted itself. The
-  // reasoning, and the dashboard change that removes the third entirely, are in
-  // src/lib/authCallbackState.js.
-  const params = parseAuthParams(url);
-
-  // 1. token_hash: Supabase's documented PKCE-safe email mechanism. The link
-  //    carries a one-time hash and the SERVER validates it and mints the
-  //    session, so the app never receives a token from the link. An attacker
-  //    would need Supabase to issue them a hash for someone else's address.
-  if (params.token_hash && params.type) {
-    try {
-      const { error } = await supabase.auth.verifyOtp({
-        token_hash: params.token_hash,
-        type: params.type,
-      });
-      if (error) throw error;
-      logInfo('auth.deepLink.tokenHash', 'session established from a token hash');
-      clearAuthFlow().catch(() => {});
-    } catch (_) {
-      notifyAuthLinkFailed();
-    }
-    return;
-  }
-
-  // 2. PKCE proper, used by the OAuth flow. The exchange needs the
-  //    code_verifier supabase-js stored when THIS app started the flow, so a
-  //    code from anywhere else fails inside Supabase rather than here.
-  if (params.code) {
-    try {
-      await supabase.auth.exchangeCodeForSession(params.code);
-      clearAuthFlow().catch(() => {});
-    } catch (_) {
-      notifyAuthLinkFailed();
-    }
-    return;
-  }
-
-  // 3. The implicit fallback, and the only forgeable one. Supabase's default
-  //    email templates still produce it, because its own documentation notes
-  //    the PKCE handshake is broken for mobile email links: the link opens in
-  //    the phone's browser while the verifier sits in the app. So it cannot
-  //    simply be deleted without breaking verification on the current
-  //    templates. It is instead refused unless this app began an email auth
-  //    flow within the last ten minutes.
-  if (params.access_token && params.refresh_token) {
-    if (!looksLikeJwt(params.access_token) || !looksLikeJwt(params.refresh_token)) {
-      logError('auth.deepLink.malformedTokens', new Error('implicit callback carried tokens that are not JWTs'), {});
-      notifyAuthLinkFailed();
-      return;
-    }
-    const gate = await consumeAuthFlow(params.state ?? null);
-    if (!gate.ok) {
-      // Deliberately loud. On a genuine expired link this is the user waiting
-      // too long, and they can ask for another email. On a forged one it is
-      // the only trace the attempt leaves.
-      logError(
-        'auth.deepLink.unsolicitedImplicitCallback',
-        new Error(`implicit auth callback refused (${gate.reason})`),
-        { reason: gate.reason },
-      );
-      notifyAuthLinkFailed();
-      return;
-    }
-    try {
-      await supabase.auth.setSession({
-        access_token: params.access_token,
-        refresh_token: params.refresh_token,
-      });
-    } catch (_) {
-      notifyAuthLinkFailed();
-    }
-  }
+  // Keep the security-critical callback parser in a small testable module.
+  // It verifies token identity before installing any implicit-flow session.
+  // eslint-disable-next-line global-require
+  const { handleAuthDeepLink } = require('./src/lib/authDeepLink');
+  handleAuthDeepLink(url, { supabase, notifyAuthLinkFailed }).catch(() => notifyAuthLinkFailed());
 }
 
 const CRASH_LOG_KEY = '@volyume_crash_log';

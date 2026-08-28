@@ -1359,13 +1359,10 @@ export default function RootNavigator() {
           // bundle reload (dev / Expo Go) would skip the restore + tier + sync.
           if (event === 'SIGNED_OUT') {
             _lastAuthEnter = { uid: null, at: 0 };
-            // Campaign 24 hostile-review F7: a DELIBERATE sign-out clears
-            // the prior-session marker (and the in-memory flag), so a
-            // signed-out device on a bad network next boot lands on Welcome
-            // -- its honest state -- never the auth-retry wall. The marker
-            // means "a signed-in user is expected on this device"; after
-            // sign-out, none is.
-            AsyncStorage.removeItem('@volyume_last_supabase_user_id').catch(() => {});
+            // The verified sign-out wipe clears the owner marker. Do not clear
+            // it merely because an auth event fired: the account-switch "keep"
+            // path deliberately signs the incoming account back out while the
+            // previous account's data and ownership marker must remain intact.
             setHadPriorSession(false);
             // Release-gate fix: playBilling.logOut() exists and correctly
             // removes the purchase/error listeners and ends the store
@@ -1379,6 +1376,93 @@ export default function RootNavigator() {
               // eslint-disable-next-line global-require
               require('../lib/payments/playBilling').logOut?.().catch(() => {});
             } catch (_) { /* lib not loadable in this env */ }
+          }
+
+          const isAuthEnter =
+            (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') &&
+            session?.user?.id;
+
+          // Account B must not become visible in React/Sentry/observability
+          // while account A still owns either local store. Perform the entire
+          // account-boundary decision and verified wipe before publishing the
+          // incoming session anywhere. A failure queues sign-out outside this
+          // auth callback (Supabase holds an auth lock while invoking it).
+          if (isAuthEnter) {
+            // A pending deletion marker for this uid is also a pre-admission
+            // condition: never publish or restore an account whose auth-row
+            // deletion is still being completed.
+            try {
+              // eslint-disable-next-line global-require
+              const { retryPendingAuthDeletion } = require('../lib/deletionRetry');
+              const retry = await retryPendingAuthDeletion(session.user.id);
+              if (retry.attempted || retry.pending) {
+                try {
+                  // eslint-disable-next-line global-require
+                  require('../components/AppAlert').appAlert(
+                    retry.ok === true ? 'Account deletion complete' : 'Account deletion still pending',
+                    retry.ok === true
+                      ? 'Your earlier account deletion has now finished and your sign-in details have been removed. You can create a fresh account any time.'
+                      : 'You asked us to delete this account and one step is still pending. Connect to the internet and sign in once more to finish removing your sign-in details.',
+                    [{ text: 'OK' }],
+                  );
+                } catch (_) { /* alert module is optional; refusal still signs out */ }
+                setTimeout(() => { client.auth.signOut().catch(() => {}); }, 0);
+                return;
+              }
+            } catch (_) { /* no marker / module unavailable: continue */ }
+
+            // eslint-disable-next-line global-require
+            const { prepareIncomingAccount } = require('../lib/accountTransitionGuard');
+            const transition = await prepareIncomingAccount({
+              incomingUid: session.user.id,
+              readDeviceOwner: () => AsyncStorage.getItem('@volyume_last_supabase_user_id'),
+              chooseAccountSwitch: async () => {
+                // eslint-disable-next-line global-require
+                const { appAlert } = require('../components/AppAlert');
+                return new Promise((resolve) => {
+                  let settled = false;
+                  const pick = (value) => { if (!settled) { settled = true; resolve(value); } };
+                  appAlert(
+                    'You\'re signing in to a different account',
+                    'This device currently holds data for another account. Switching removes that local copy before this account opens. Data already synced to the previous account remains in its cloud account.',
+                    [
+                      { text: 'Keep this device\'s data', style: 'cancel', onPress: () => pick('keep') },
+                      { text: 'Switch accounts', style: 'destructive', onPress: () => pick('switch') },
+                    ],
+                    { cancelable: false },
+                  );
+                });
+              },
+              // eslint-disable-next-line global-require
+              beginAccountEpoch: () => require('../lib/accountEpoch').beginNewAccountEpoch(),
+              // eslint-disable-next-line global-require
+              wipeDatabase: (uid) => require('../lib/database').wipeAllUserDataWithRetry(uid),
+              // eslint-disable-next-line global-require
+              wipeStorage: () => require('../lib/deviceWipe').wipeAsyncStorageWithRetry(),
+              writeDeviceOwner: (uid) => AsyncStorage.setItem('@volyume_last_supabase_user_id', uid),
+            });
+            if (!transition.ok) {
+              try {
+                // eslint-disable-next-line global-require
+                require('../lib/errorLog').logError(
+                  'SignIn.accountBoundary.refused',
+                  new Error(`incoming account refused (${transition.reason})`),
+                  { incoming: session.user.id, previous: transition.previousUid ?? null, step: transition.step ?? null },
+                );
+              } catch (_) { /* logging must not weaken the fail-closed refusal */ }
+              if (transition.reason !== 'kept_device_data') {
+                try {
+                  // eslint-disable-next-line global-require
+                  require('../components/AppAlert').appAlert(
+                    "Couldn't switch accounts safely",
+                    'The previous account could not be fully removed from this device, so the new account was not opened. Try again in a moment.',
+                    [{ text: 'OK' }],
+                  );
+                } catch (_) { /* alert module is optional; refusal still signs out */ }
+              }
+              setTimeout(() => { client.auth.signOut().catch(() => {}); }, 0);
+              return;
+            }
           }
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logInfo('auth.event', event, { uid: session?.user?.id ?? null, prevLocal: localUserIdBeforeSignIn }); } catch (_) {}
@@ -1415,9 +1499,6 @@ export default function RootNavigator() {
           // until they pull-to-refresh'd or navigated to a screen
           // that refetched. Including INITIAL_SESSION means every
           // launch with a valid session auto-syncs.
-          const isAuthEnter =
-            (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') &&
-            session?.user?.id;
           if (event === 'SIGNED_IN' && session?.user?.id) {
             // Funnel telemetry: sign_in fires only on a real sign-in,
             // not on INITIAL_SESSION (which is a session restore on
@@ -1462,70 +1543,6 @@ export default function RootNavigator() {
             // further down are unchanged, the gate is purely additive.
             (async () => {
               try {
-                // SC-2 (Wave-3 review fix): finish a pending account deletion
-                // BEFORE any restore/sync side-effect can run. This used to
-                // fire fire-and-forget alongside the restore pipeline, which
-                // could silently erase a just-restored account mid-session,
-                // and a plain success left the user signed in to an account
-                // whose auth row had just been deleted. Now it is awaited,
-                // and while a marker stands for this uid the sign-in NEVER
-                // proceeds: both outcomes end in a calm sign-out with an
-                // explanation. The marker is uid-keyed, so another account
-                // signing in on this device is untouched.
-                try {
-                  // eslint-disable-next-line global-require
-                  const { retryPendingAuthDeletion } = require('../lib/deletionRetry');
-                  const retry = await retryPendingAuthDeletion(session.user.id);
-                  if (retry.attempted || retry.pending) {
-                    try { await client.auth.signOut(); } catch (_) {}
-                    // eslint-disable-next-line global-require
-                    const { appAlert } = require('../components/AppAlert');
-                    appAlert(
-                      retry.ok === true ? 'Account deletion complete' : 'Account deletion still pending',
-                      retry.ok === true
-                        ? 'Your earlier account deletion has now finished and your sign-in details have been removed. You can create a fresh account any time.'
-                        : 'You asked us to delete this account and one step is still pending. Connect to the internet and sign in once more to finish removing your sign-in details.',
-                      [{ text: 'OK' }],
-                    );
-                    return;
-                  }
-                } catch (_) { /* best-effort: no marker means normal sign-in */ }
-
-                const _lastUid = await AsyncStorage.getItem('@volyume_last_supabase_user_id').catch(() => null);
-                if (_lastUid && _lastUid !== session.user.id) {
-                  // eslint-disable-next-line global-require
-                  const { appAlert } = require('../components/AppAlert');
-                  const choice = await new Promise(resolve => {
-                    let settled = false;
-                    const pick = (v) => { if (!settled) { settled = true; resolve(v); } };
-                    appAlert(
-                      'You\'re signing in to a different account',
-                      'This device currently holds data for a different account. Switching will replace what\'s on this device with the account you\'re signing into. We\'ll save a snapshot first, so nothing is gone for good. You can restore it from Settings, Your data.',
-                      [
-                        { text: 'Keep this device\'s data', style: 'cancel', onPress: () => pick('keep') },
-                        { text: 'Switch accounts', style: 'destructive', onPress: () => pick('switch') },
-                      ],
-                      { cancelable: false },
-                    );
-                  });
-                  if (choice !== 'switch') {
-                    // Keep: never wipe, restore, or re-stamp. Sign the new
-                    // account back out, the SIGNED_OUT event resets routing but
-                    // does NOT wipe local SQLite (only an explicit sign-out
-                    // button does), leaving this device's data intact and the
-                    // last-account key unchanged, so signing back in is silent.
-                    try { await client.auth.signOut(); } catch (_) {}
-                    // eslint-disable-next-line global-require
-                    try { require('../lib/errorLog').logInfo('SignIn.accountSwitch.kept', `aborted sign-in to ${session.user.id}; device data kept`); } catch (_) {}
-                    return;
-                  }
-                  // Switch: snapshot this device's data before the existing wipe.
-                  try {
-                    // eslint-disable-next-line global-require
-                    const { snapshotBeforeAccountSwitch } = require('../lib/dbSnapshot');
-                    await snapshotBeforeAccountSwitch();
-                  } catch (_) {}
-                }
               } catch (_) { /* gate best-effort; fall through to the normal flow */ }
 
             // Optimistic sign-in: kick off the cloud restore but DON'T
@@ -1609,19 +1626,8 @@ export default function RootNavigator() {
                 // their data is still in local SQLite (e.g. a build
                 // crashed mid sign-out before the wipe), wipe it
                 // here before the new account pulls.
-                const lastSignedInUserId = await AsyncStorage.getItem('@volyume_last_supabase_user_id').catch(() => null);
-                if (lastSignedInUserId && lastSignedInUserId !== session.user.id) {
-                  try {
-                    // eslint-disable-next-line global-require
-                    const { wipeAllUserData } = require('../lib/database');
-                    await wipeAllUserData(lastSignedInUserId);
-                    log.logInfo('SignIn.crossUserWipe.ok',
-                      `previous account ${lastSignedInUserId} wiped, new account ${session.user.id} pulling fresh`);
-                  } catch (e) {
-                    log.logError('SignIn.crossUserWipe.failed', e, { previous: lastSignedInUserId, incoming: session.user.id });
-                  }
-                }
-                try { await AsyncStorage.setItem('@volyume_last_supabase_user_id', session.user.id); } catch (_) {}
+                // The account-boundary preflight above has already verified the
+                // owner marker before this pipeline is allowed to run.
 
                 // Article 9 health-data consent check. Local cache
                 // first (set after a successful grant in the consent

@@ -27,6 +27,10 @@ import path from 'path';
 
 jest.mock('expo-sqlite');
 jest.mock('progress-scan-image', () => ({ setExcludedFromBackup: jest.fn(async () => true) }));
+jest.mock('expo-image-manipulator', () => ({
+  manipulateAsync: jest.fn(async (uri) => ({ uri })),
+  SaveFormat: { JPEG: 'jpeg' },
+}));
 
 // Stateful fake filesystem (identifiers must start with "mock" per Jest's
 // out-of-scope-variable rule for hoisted jest.mock factories). Tracks a flat
@@ -45,8 +49,9 @@ jest.mock('expo-file-system/legacy', () => ({
     .map((f) => f.slice(dir.length))
     .filter((rest) => rest && !rest.includes('/'))),
   readAsStringAsync: jest.fn(async (p) => {
+    if (p.startsWith('src://')) return '/9j/2Q==';
     if (!mockFiles.has(p)) throw new Error(`ENOENT: ${p}`);
-    return 'aGVsbG8='; // arbitrary base64 stand-in photo content ("hello")
+    return '/9j/2Q=='; // minimal JPEG: FF D8 FF D9
   }),
   writeAsStringAsync: jest.fn(async (p) => { mockFiles.add(p); }),
   copyAsync: jest.fn(async ({ to }) => { mockFiles.add(to); }),

@@ -337,12 +337,15 @@ export async function signUpWithEmail(email, password) {
   // flow this app began. beginAuthFlow records that and returns a nonce; see
   // authCallbackState.js for what that does and does not buy.
   // eslint-disable-next-line global-require
-  const nonce = await require('./authCallbackState').beginAuthFlow('signup');
-  return c.auth.signUp({
+  const nonce = await require('./authCallbackState').beginAuthFlow('signup', email);
+  if (!nonce) return { data: null, error: { message: 'Could not start a secure sign-up flow. Try again.' } };
+  const result = await c.auth.signUp({
     email,
     password,
-    options: nonce ? { emailRedirectTo: `${OAUTH_REDIRECT_URL}auth-callback?state=${nonce}` } : undefined,
+    options: { emailRedirectTo: `${OAUTH_REDIRECT_URL}auth-callback?state=${nonce}` },
   });
+  if (result?.error) await require('./authCallbackState').clearAuthFlow();
+  return result;
 }
 
 export async function signOut() {
@@ -361,11 +364,14 @@ export async function resetPassword(email) {
   // Same binding as sign-up: a recovery link is an email callback too, and it
   // is the more dangerous of the two to adopt from an unknown sender.
   // eslint-disable-next-line global-require
-  const nonce = await require('./authCallbackState').beginAuthFlow('recovery');
-  return c.auth.resetPasswordForEmail(
+  const nonce = await require('./authCallbackState').beginAuthFlow('recovery', email);
+  if (!nonce) return { data: null, error: { message: 'Could not start a secure recovery flow. Try again.' } };
+  const result = await c.auth.resetPasswordForEmail(
     email,
-    nonce ? { redirectTo: `${OAUTH_REDIRECT_URL}auth-callback?state=${nonce}` } : undefined,
+    { redirectTo: `${OAUTH_REDIRECT_URL}auth-callback?state=${nonce}` },
   );
+  if (result?.error) await require('./authCallbackState').clearAuthFlow();
+  return result;
 }
 
 // ─── OAuth (Google + Apple) ──────────────────────────────────────────────
@@ -391,11 +397,6 @@ async function _signInWithOAuthProvider(provider) {
     return { error: { message: 'Cloud sign-in is not available right now. Try again.' } };
   }
   try {
-    // Recorded for consistency and so sign-out can clear it. The OAuth path's
-    // own security does NOT rest on this: its code exchange needs the verifier
-    // supabase-js stored here, which no other app has.
-    // eslint-disable-next-line global-require
-    await require('./authCallbackState').beginAuthFlow('oauth');
     // 1. Ask Supabase for the provider auth URL. skipBrowserRedirect makes
     //    it return the URL instead of trying to navigate (which doesn't
     //    work in React Native).

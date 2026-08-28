@@ -23,6 +23,10 @@ import {
 
 jest.mock('expo-sqlite');
 jest.mock('progress-scan-image', () => ({ setExcludedFromBackup: jest.fn(async () => true) }));
+jest.mock('expo-image-manipulator', () => ({
+  manipulateAsync: jest.fn(async (uri) => ({ uri })),
+  SaveFormat: { JPEG: 'jpeg' },
+}));
 
 // Same stateful fake filesystem as wipeAllUserData.test.js: a flat "file
 // exists" set; deleteAsync removes by path prefix like a recursive delete.
@@ -38,7 +42,7 @@ jest.mock('expo-file-system/legacy', () => ({
     .filter((f) => f.startsWith(dir))
     .map((f) => f.slice(dir.length))
     .filter((rest) => rest && !rest.includes('/'))),
-  readAsStringAsync: jest.fn(async () => 'aGVsbG8='),
+  readAsStringAsync: jest.fn(async () => '/9j/2Q=='),
   writeAsStringAsync: jest.fn(async (p) => { mockFiles.add(p); }),
   copyAsync: jest.fn(async ({ to }) => { mockFiles.add(to); }),
   deleteAsync: jest.fn(async (p) => {
