@@ -2724,9 +2724,8 @@ const SCHEMA_MIGRATIONS = [
   // fail-open harm. NULL means 'propose', the standing default, so every
   // pre-migration row behaves byte-identically. Additive + idempotent.
   // Cloud counterpart: supabase/migrate_152_capability_adaptation_mode.sql
-  // (written 2026-08-28, NOT applied; founder-gated - pushes carry the
-  // field only for rows where it is set, so sync stays green for
-  // everyone else until the founder applies it).
+  // (APPLIED 2026-08-28 on the founder's named confirmation; pushes
+  // carry the field only when some pushed row sets it).
   [
     "ALTER TABLE capability_constraints ADD COLUMN adaptation_mode TEXT CHECK (adaptation_mode IN ('propose','hold'))",
   ],

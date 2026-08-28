@@ -26,8 +26,9 @@
 -- Applied locally:   YES (database.js SCHEMA_MIGRATIONS: guarded ALTER
 --                    with the same CHECK).
 --
--- Applied remotely:  NO - NOT RUN. Production requires the founder's exact
---                    phrase "run against production" (CC-F7).
+-- Applied remotely:  YES - APPLIED 2026-08-28 (founder authorisation via
+--                    explicit named confirmation in chat; MCP apply;
+--                    column + CHECK verified via information_schema).
 --
 -- Safe to re-run:    YES - the ALTER is guarded by an IF NOT EXISTS check.
 --

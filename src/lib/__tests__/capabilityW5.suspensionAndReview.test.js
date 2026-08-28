@@ -135,14 +135,19 @@ describe('T2-26 - the suspension core exists (section 25)', () => {
     expect(screen).toContain("setEpisodeAdaptationMode(userId, ep.groupId, 'propose')");
   });
 
-  test('the cloud migration is WRITTEN, guarded, and recorded as not applied', () => {
+  test('the cloud migration is guarded and its applied record matches reality', () => {
+    // Applied to production 2026-08-28 on the founder's named
+    // confirmation, minutes after being written - this pin moved from
+    // "recorded as not applied" to "recorded as applied" the same day,
+    // so file, README and live schema never disagree (the exact
+    // stale-comment defect the audit found on migrate_149's comments).
     const sql = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'supabase', 'migrate_152_capability_adaptation_mode.sql'), 'utf8');
     expect(sql).toContain('IF NOT EXISTS');
     expect(sql).toContain("CHECK (adaptation_mode IN ('propose', 'hold'))");
-    expect(sql).toContain('NOT RUN');
+    expect(sql).toContain('APPLIED 2026-08-28');
     const readme = fs.readFileSync(path.join(__dirname, '..', '..', '..', 'supabase', 'README.md'), 'utf8');
     expect(readme).toContain('migrate_152_capability_adaptation_mode.sql');
-    expect(readme).toContain('WRITTEN 2026-08-28, awaiting the founder phrase');
+    expect(readme).toContain('YES - APPLIED 2026-08-28');
   });
 });
 
