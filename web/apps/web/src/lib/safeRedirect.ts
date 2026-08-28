@@ -10,4 +10,3 @@ export function safeRedirectPath(value: string | null | undefined, fallback = '/
     return fallback;
   }
 }
-

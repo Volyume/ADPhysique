@@ -47,4 +47,3 @@ describe('private image deletion is exact-path and owner scoped', () => {
     expect(mockDelete).toHaveBeenCalledTimes(1);
   });
 });
-

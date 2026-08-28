@@ -15,4 +15,3 @@ describe('safeRedirectPath', () => {
     expect(safeRedirectPath(input)).toBe(expected);
   });
 });
-

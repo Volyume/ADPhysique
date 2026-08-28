@@ -18,4 +18,3 @@ describe('partner cheer daily rate boundary', () => {
     expect(MIGRATION).toMatch(/p\.status = 'active'/);
   });
 });
-

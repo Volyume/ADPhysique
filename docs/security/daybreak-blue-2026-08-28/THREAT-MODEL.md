@@ -1,7 +1,7 @@
 # Daybreak Blue threat model
 
-Date: 2026-08-28  
-Baseline: `ec37a32f7e4c39fd94264b260f15e179679abc14`  
+Date: 2026-08-28
+Baseline: `ec37a32f7e4c39fd94264b260f15e179679abc14`
 Branch: `security/daybreak-blue-2026-08-28`
 
 ## Scope and evidence boundary

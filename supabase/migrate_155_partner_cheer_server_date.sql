@@ -35,4 +35,3 @@ COMMIT;
 -- FROM pg_policies
 -- WHERE schemaname = 'public' AND tablename = 'partner_cheers'
 --   AND policyname = 'Sender writes own cheers';
-
