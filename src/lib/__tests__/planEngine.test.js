@@ -414,6 +414,46 @@ describe('generatePlan, personalisationSummary', () => {
   });
 });
 
+// ─── generatePlan, whyThis capability line (D112 R5, closes audit T1-16) ────
+// buildWhyThis is PURE: the capability fact arrives as an input
+// (capabilityShaped) rather than being derived inside the engine. Every
+// existing caller (BASE_INPUTS, with no capabilityShaped field at all)
+// gets byte-identical whyThis output - this is purely additive.
+
+describe('generatePlan, whyThis capability line', () => {
+  test('capabilityShaped unset: no capability key at all (every existing caller unaffected)', () => {
+    const plan = generatePlan(BASE_INPUTS);
+    expect(plan.whyThis).not.toHaveProperty('capability');
+  });
+
+  test('capabilityShaped true: emits the one calm line, nothing else', () => {
+    const plan = generatePlan({ ...BASE_INPUTS, capabilityShaped: true });
+    expect(plan.whyThis.capability).toBe('Built around how you train.');
+  });
+
+  test('capabilityShaped as a truthy count also emits the line (the input may be a boolean or a count)', () => {
+    const plan = generatePlan({ ...BASE_INPUTS, capabilityShaped: 2 });
+    expect(plan.whyThis.capability).toBe('Built around how you train.');
+  });
+
+  test('capabilityShaped false/0: no capability key (falsy is falsy, not just undefined)', () => {
+    const plan = generatePlan({ ...BASE_INPUTS, capabilityShaped: false });
+    expect(plan.whyThis).not.toHaveProperty('capability');
+  });
+
+  test('CAP-18: never names a condition or claims "safe to perform"', () => {
+    const plan = generatePlan({ ...BASE_INPUTS, capabilityShaped: true });
+    expect(plan.whyThis.capability).not.toMatch(/safe to perform/i);
+    expect(plan.whyThis.capability.length).toBeLessThan(40);
+  });
+
+  test('determinism: same inputs (including capabilityShaped), same whyThis.capability, repeated calls', () => {
+    const a = generatePlan({ ...BASE_INPUTS, capabilityShaped: true });
+    const b = generatePlan({ ...BASE_INPUTS, capabilityShaped: true });
+    expect(a.whyThis.capability).toBe(b.whyThis.capability);
+  });
+});
+
 // ─── generatePlan, equipment filtering ──────────────────────────────────────
 
 describe('generatePlan, equipment filtering', () => {

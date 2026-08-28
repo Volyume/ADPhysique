@@ -143,6 +143,54 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
 }
 
 /**
+ * D112 R2/R5 (closes audit T1-17): the session row count the logger will
+ * actually SERVE for one routine, not the base routine's raw row count.
+ * Mirrors applyEffectiveViewToSession's wiring above (capability state +
+ * the senior eligibility question) but only counts - it writes nothing
+ * and records no effects. Substituted rows still count (the session still
+ * happens, with a different exercise); only OMITTED rows drop the served
+ * count below the base total. Exercises are resolved from the LIBRARY by
+ * id, exactly as computeCapabilityPlanRewrite does - the routine rows'
+ * own embedded exercise objects carry no demand columns and would read as
+ * unknown-conflicts.
+ *
+ * Fail-safe: any error, or no applied episode rule, returns the base row
+ * count - a capability read must never block or shrink the Today card.
+ * Read-only, cheap: one call per focus (HomeScreen wires it).
+ *
+ * @param {string} userId
+ * @param {string} routineId
+ * @returns {Promise<number>} the served row count
+ */
+export async function countEffectiveSessionRows(userId, routineId) {
+  let baseCount = 0;
+  try {
+    if (!userId || !routineId) return 0;
+    const rows = await getRoutineExercisesWithDetails(routineId);
+    baseCount = Array.isArray(rows) ? rows.length : 0;
+    if (!baseCount) return 0;
+    const capState = await loadCapabilityResolveState(userId, {});
+    const hasApplied = !capState.empty && !capState.unavailable
+      && (capState.restrictions ?? []).some((r) => r.role === 'episode' && r.effectiveChoice === 'applied');
+    if (!hasApplied) return baseCount;
+    const library = await getAllExercises();
+    const byId = new Map((library ?? []).map((e) => [e.id, e]));
+    const baseRows = rows
+      .map((r) => ({ exercise: byId.get(r?.exercise?.id ?? r?.exerciseId) ?? null }))
+      .filter((r) => r.exercise);
+    if (!baseRows.length) return baseCount;
+    const intentState = await loadExerciseIntentState(userId, {});
+    const view = computeEffectiveSession(
+      baseRows, library, capState, (ex) => isEligibleExercise(intentState, ex),
+    );
+    const omitted = view.lines.filter((l) => l.effect === EFFECTIVE_EFFECT.OMITTED).length;
+    return Math.max(0, baseCount - omitted);
+  } catch (_e) {
+    return baseCount;
+  }
+}
+
+/**
  * D112 R1a/b (closes audit T1-03 and T2-01's rebuild half): the per-line
  * PLAN REWRITE proposal for capability rules against the ACTIVE plan.
  *

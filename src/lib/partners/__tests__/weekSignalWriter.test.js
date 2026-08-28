@@ -3,14 +3,24 @@
  * shared seam and pushes it to active pairs only. Locks the ED freeze (§5),
  * the STEP A milestone booleans (completed_block / hit_pb) and their ED freeze,
  * and the lapsed-partner data-layer gate (A1 §9.4).
+ *
+ * D112 R2 (closes audit T2-16, 2026-08-28): planTarget used to be read
+ * directly from getActivePlan/getRoutinesForPlan (a raw routine count,
+ * mocked here as a fixed 4-routine plan). It is now derived from
+ * getWeeklySessionStats' own planned/plannedIsEstimate fields (the CC29
+ * effective figure) instead, so those two mocks are gone from this file -
+ * every fixture below drives planTarget through getWeeklySessionStats
+ * alone. The pre-existing tests still pass unchanged (their fixtures'
+ * planned figure was always numerically equal to the routine count they
+ * modelled); the new "T2-16" describe block below pins the case that
+ * actually distinguishes the two: a constrained week whose effective
+ * planned figure is LOWER than what a raw routine count would have been.
  */
 jest.mock('../../database', () => ({
   getPartnershipsLocal: jest.fn(),
   getWeeklySessionStats: jest.fn(),
   getDeloadWeeksInRange: jest.fn().mockResolvedValue([]),
   getOpenEdPatternFlag: jest.fn().mockResolvedValue(null),
-  getActivePlan: jest.fn().mockResolvedValue({ id: 'plan1' }),
-  getRoutinesForPlan: jest.fn().mockResolvedValue([{}, {}, {}, {}]), // target 4
   getActiveBlock: jest.fn().mockResolvedValue(null),
   getWeeklyPRCount: jest.fn().mockResolvedValue(0),
 }));
@@ -31,8 +41,6 @@ const { computeCurrentWeekState, writeOwnWeekSignals } = require('../weekSignalW
 
 beforeEach(() => {
   jest.clearAllMocks();
-  db.getActivePlan.mockResolvedValue({ id: 'plan1' });
-  db.getRoutinesForPlan.mockResolvedValue([{}, {}, {}, {}]);
   db.getDeloadWeeksInRange.mockResolvedValue([]);
   db.getOpenEdPatternFlag.mockResolvedValue(null);
   db.getActiveBlock.mockResolvedValue(null);
@@ -104,6 +112,29 @@ describe('computeCurrentWeekState', () => {
     expect(ws.state).toBe('resting');
     expect(ws.completedBlock).toBe(false);
     expect(ws.hitPb).toBe(false);
+  });
+
+  describe('T2-16: "week met" judges the EFFECTIVE planned figure, not a raw routine count', () => {
+    test('a constrained week: the plan would raw-count 4 routines, but the effective planned figure is 3 (one session fully blocked by an applied episode rule) - completing everything effectively prescribed registers as met', async () => {
+      db.getWeeklySessionStats.mockResolvedValue({ completed: 3, planned: 3, plannedIsEstimate: false });
+      const ws = await computeCurrentWeekState('u1');
+      // Pre-T2-16 this read weekMet: false (done 3 < the raw routine
+      // count's target 4) - a constrained user could never register "week
+      // met" with their partner even after doing every session the plan
+      // could actually deliver.
+      expect(ws).toMatchObject({ planned: 3, done: 3, weekMet: true, state: 'training' });
+    });
+
+    test('plannedIsEstimate true (no active plan): planTarget stays null, preserving the no-plan session-count mode - a manual streak goal still stands alone', async () => {
+      db.getWeeklySessionStats.mockResolvedValue({ completed: 2, planned: 3, plannedIsEstimate: true });
+      const ws = await computeCurrentWeekState('u1');
+      // No plan target and no manual goal: nothing to be "met" against.
+      expect(ws.weekMet).toBe(false);
+      // The displayed planned count still shows the trailing-average
+      // estimate (consistency display is unaffected); only the pass/fail
+      // target is null.
+      expect(ws.planned).toBe(3);
+    });
   });
 });
 

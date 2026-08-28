@@ -856,6 +856,14 @@ export async function generateAndSavePlan(userId, profile, {
       demonstratedStructure: structureMemory,
       exerciseLibrary: generationLibrary,
       canonicalNames: canonicalNameSet(allExercises, replacementIds),
+      // CC33 D112 R5 (closes audit T1-16's caller half): the pre-call
+      // fact buildWhyThis consumes - did the capability lane drop
+      // anything from the pool this plan is built from? Known BEFORE the
+      // engine runs (unlike capabilityBlockedCount, which resolves the
+      // engine's output afterwards), deterministic, and identical on the
+      // dry-run twin below so the preview explains the same plan.
+      capabilityShaped: (filteredLibrary.dropped ?? [])
+        .some((d) => String(d.reason ?? '').startsWith('capability_')),
     });
   } catch (e) {
     // C1 (pre-release sweep 2026-07-27, LANE C): the raw e.message used to be
@@ -1066,6 +1074,10 @@ export async function generatePlanDryRun(userId, profile, { continuityProposal =
       demonstratedStructure: structureMemory,
       exerciseLibrary: generationLibrary,
       canonicalNames: canonicalNameSet(allExercises, replacementIds),
+      // CC33 D112 R5 (audit T1-16): same fact as the commit path above -
+      // the preview must explain the same plan the commit will build.
+      capabilityShaped: (filteredLibrary.dropped ?? [])
+        .some((d) => String(d.reason ?? '').startsWith('capability_')),
     });
   } catch (e) {
     // C1 (pre-release sweep 2026-07-27, LANE C): same fix as

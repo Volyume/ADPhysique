@@ -15,7 +15,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   getPartnershipsLocal, getWeeklySessionStats, getDeloadWeeksInRange,
-  getOpenEdPatternFlag, getActivePlan, getRoutinesForPlan,
+  getOpenEdPatternFlag,
   getActiveBlock, getWeeklyPRCount,
 } from '../database';
 import { localWeekStartMs } from '../dayKey';
@@ -60,17 +60,10 @@ async function deriveMilestones(userId, weekStartMs) {
 export async function computeCurrentWeekState(userId, scoffScore = 0) {
   const weekStart = localWeekStartMs(Date.now());
 
-  let planTarget = null;
-  try {
-    const plan = await getActivePlan(userId);
-    if (plan?.id) {
-      const routines = await getRoutinesForPlan(plan.id);
-      if (Array.isArray(routines) && routines.length > 0) planTarget = routines.length;
-    }
-  } catch (_) { /* no plan -> session-count mode */ }
-
   const [stats, deloadWeeks, edFlag, streakState] = await Promise.all([
-    getWeeklySessionStats(userId, weekStart).catch(() => ({ completed: 0, planned: 0 })),
+    // D112 R2 (closes audit T2-16): a read failure honestly reports itself
+    // as an estimate too (never a bare zero presented as a real target).
+    getWeeklySessionStats(userId, weekStart).catch(() => ({ completed: 0, planned: 0, plannedIsEstimate: true })),
     getDeloadWeeksInRange(userId, weekStart, weekStart + WEEK_MS).catch(() => []),
     // ED-safety, fail CLOSED: a transient flag read maps to the truthy
     // 'read_failed' sentinel (edSuppressed = !!edFlag || ... below), so the
@@ -79,6 +72,14 @@ export async function computeCurrentWeekState(userId, scoffScore = 0) {
     getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
     loadStreakState(userId).catch(() => ({ manualGoal: null, pauses: [] })),
   ]);
+
+  // D112 R2 (closes audit T2-16): planTarget is now the EFFECTIVE planned
+  // figure (CC29, getWeeklySessionStats' own planned) rather than a raw
+  // routine count, so "week met" judges a constrained week against what
+  // the plan can actually deliver, not what it would deliver unconstrained.
+  // null on the trailing-average estimate (no active plan), preserving the
+  // no-plan session-count mode below exactly as before.
+  const planTarget = (!stats?.plannedIsEstimate && Number.isFinite(stats?.planned)) ? stats.planned : null;
 
   const hasManual = Number.isFinite(streakState?.manualGoal);
   let target = null;

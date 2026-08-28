@@ -174,6 +174,15 @@ function CompactPlanRow({
   );
 }
 
+// D112 R5 (closes audit T1-12): after a successful generation, the count of
+// slots the capability lane blocked. Mirrors PlanUpdateScreen's dry-run
+// preview (the model), which is the source of the exact copy this pins.
+function capabilityBlockedNote(n) {
+  return n === 1
+    ? '1 movement sat outside how you train, so your plan works without it.'
+    : `${n} movements sat outside how you train, so your plan works without them.`;
+}
+
 export default function PlansScreen({ navigation }) {
   const toast = useToast();
   // Selector-scoped subscription: only re-render when these specific
@@ -514,6 +523,37 @@ export default function PlansScreen({ navigation }) {
             try {
               logInfo('PlansScreen.blockRestart', `intent=${intent}`);
               await runBlockActivation({ intent, refine: false });
+              // CC33 D112 R1a (closes audit T1-11): REPEAT MEANS REPEAT
+              // stands - the block just started is the literal same
+              // programme. But a plan whose rows now sit outside the
+              // user's BASELINE rules is never re-served in silence: the
+              // same rewrite proposal a new baseline rule fires is
+              // OFFERED here, after activation, and declining keeps the
+              // plan with its quiet markers. Best-effort: the offer can
+              // never fail the restart.
+              try {
+                // eslint-disable-next-line global-require
+                const { computeCapabilityPlanRewrite, applyCapabilityPlanRewrite } = require('../lib/sessionEffective');
+                const rw = await computeCapabilityPlanRewrite(user.id, {});
+                if (rw.lines.length && rw.substitutable > 0) {
+                  const n = rw.lines.length;
+                  const plural = n === 1 ? '' : 's';
+                  appAlert(
+                    'Update this plan to match how you train?',
+                    `${n} exercise${plural} in it ${n === 1 ? 'sits' : 'sit'} outside how you train. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit. Your history is not rewritten.`,
+                    [
+                      { text: 'Not now', style: 'cancel' },
+                      {
+                        text: 'Update my plan',
+                        onPress: async () => {
+                          const res = await applyCapabilityPlanRewrite(user.id, rw.lines);
+                          if (res.applied > 0) toast.show(`Updated. ${res.applied} exercise${res.applied === 1 ? '' : 's'} swapped to fit how you train.`);
+                        },
+                      },
+                    ],
+                  );
+                }
+              } catch (_e) { /* the offer is additive; the restart already stands */ }
             } catch (e) {
               logError('PlansScreen.handleRestartPlan', e, { userId: user?.id, planId: activePlan?.id, intent });
               toast.show("Couldn't restart plan, try again", { variant: 'error' });
@@ -638,6 +678,10 @@ export default function PlansScreen({ navigation }) {
           ledger: seedRanges, allowLearnedCarry: true,
         });
         toast.show('Your next block started with your current workouts', { variant: 'warning' });
+      } else if (result.capabilityBlockedCount > 0) {
+        // D112 R5 (closes audit T1-12): every generation entry reveals
+        // capability effects.
+        toast.show(capabilityBlockedNote(result.capabilityBlockedCount), { variant: 'info', duration: 5000 });
       }
     } else {
       // Review D5: on a repeat intent the activation must never reach for
@@ -1213,6 +1257,12 @@ export default function PlansScreen({ navigation }) {
               if (result.ok) {
                 await loadData();
                 toast.show('Your plan is active', { variant: 'success' });
+                // D112 R5 (closes audit T1-12): every generation entry
+                // reveals capability effects. Queued after the success
+                // toast (the toast host is FIFO), so both are seen.
+                if (result.capabilityBlockedCount > 0) {
+                  toast.show(capabilityBlockedNote(result.capabilityBlockedCount), { variant: 'info', duration: 5000 });
+                }
               } else {
                 logError('PlansScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
                 toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });

@@ -2762,6 +2762,16 @@ function buildWhyThis(inputs, splitType, effectiveDays, workouts, weakPointUILab
   // fact only.
   result.equipment = `Exercises were selected for ${eqLabel}. Every lift in the plan can be done with the equipment you specified, with no substitutions needed.`;
 
+  // capability (conditional; D112 R5, closes audit T1-16). PURE: the fact
+  // that generation was shaped by the user's capability rules arrives as
+  // an input (capabilityShaped - a boolean, or a truthy count of
+  // capability-blocked slots/exercises), never derived here. CAP-18: no
+  // condition names, no "safe to perform" claim (the equipment sentence
+  // above already had that claim removed, CC-D25) - one calm, generic line.
+  if (inputs.capabilityShaped) {
+    result.capability = 'Built around how you train.';
+  }
+
   // recovery (conditional)
   if (recoveryRating === 'poor') {
     result.recovery = `You flagged poor recovery (limited sleep or high life stress). The plan uses less volume than it would at average recovery, and sessions are kept to ${effectiveDays} days. Sleep and stress management will do more for your progress right now than adding sets.`;

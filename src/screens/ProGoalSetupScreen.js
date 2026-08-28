@@ -81,6 +81,15 @@ const RECOVERY_OPTIONS = [
 
 const NUTRITION_KEY = '@volyume_nutrition_targets';
 
+// D112 R5 (closes audit T1-12): after a successful generation, the count of
+// slots the capability lane blocked. Mirrors PlanUpdateScreen's dry-run
+// preview (the model), which is the source of the exact copy this pins.
+function capabilityBlockedNote(n) {
+  return n === 1
+    ? '1 movement sat outside how you train, so your plan works without it.'
+    : `${n} movements sat outside how you train, so your plan works without them.`;
+}
+
 export default function ProGoalSetupScreen({ navigation }) {
   const toast = useToast();
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
@@ -479,6 +488,10 @@ export default function ProGoalSetupScreen({ navigation }) {
       // tell the user the training plan was not rebuilt so they can retry.
       // D88: the raw caught message no longer reaches the user.
       toast.show('Goal and targets saved, but the training plan did not rebuild. Open Today and choose Start with a plan to retry', { variant: 'warning', duration: 5000 });
+    } else if (planResult.capabilityBlockedCount > 0) {
+      // D112 R5 (closes audit T1-12): every generation entry reveals
+      // capability effects.
+      toast.show(capabilityBlockedNote(planResult.capabilityBlockedCount), { variant: 'info', duration: 5000 });
     }
 
     // Navigate to the change-summary screen instead of just popping back so

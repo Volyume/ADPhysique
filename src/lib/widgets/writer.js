@@ -55,7 +55,11 @@ export async function gatherWidgetInputs(userId) {
   }
 
   const weekStart = localWeekStartMs(Date.now());
-  const stats = await getWeeklySessionStats(userId, weekStart).catch(() => ({ completed: 0, planned: 0 }));
+  // D112 R2 (closes audit T2-16): a read failure honestly reports itself as
+  // an estimate too (never a bare zero presented as a real denominator) -
+  // see plannedIsEstimate below.
+  const stats = await getWeeklySessionStats(userId, weekStart)
+    .catch(() => ({ completed: 0, planned: 0, plannedIsEstimate: true }));
   // ED-safety, fail CLOSED: a transient flag read maps to the truthy
   // 'read_failed' sentinel (edFlagOpen: !!edFlag below), so the persisted
   // widget snapshot carries the suppressed bit on a read error. Calm mode is
@@ -68,7 +72,13 @@ export async function gatherWidgetInputs(userId) {
   // trailing-average ESTIMATE, and the widget rendered it as "N of M
   // sessions this week" as though a plan prescribed M. No plan -> no
   // denominator; the widget falls to its honest plain-count mode.
-  const planned = (Array.isArray(routines) && routines.length) ? routines.length : null;
+  // D112 R2 (closes audit T2-16): the denominator itself is now the
+  // EFFECTIVE planned figure (CC29, getWeeklySessionStats), not a raw
+  // routine count - a constrained week whose plan cannot deliver every
+  // session is no longer over-counted as planned. plannedIsEstimate keeps
+  // RD6-9's contract: the trailing-average fallback still shows as no
+  // denominator, never smuggled in as though a plan prescribed it.
+  const planned = (!stats?.plannedIsEstimate && Number.isFinite(stats?.planned)) ? stats.planned : null;
 
   // Founder ruling (Today truth repair): the widget no longer carries a
   // weeks-running figure. The run/streak construct is rejected product-wide,

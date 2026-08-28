@@ -88,6 +88,35 @@ describe('gatherWidgetInputs', () => {
     AsyncStorage.getItem.mockRejectedValue(new Error('fs down'));
     expect((await gatherWidgetInputs('u1')).edFlagOpen).toBe(true);
   });
+
+  // D112 R2 (closes audit T2-16): consistency.planned now reads the
+  // EFFECTIVE planned figure (CC29, getWeeklySessionStats' own planned),
+  // not a raw routine count - §18 claimed this already, it did not.
+  describe('T2-16: the effective planned figure flows through, not a raw routine count', () => {
+    test('a constrained week: 4 routines exist, but the effective planned figure is 3 (one session fully blocked) - the widget shows 3, not 4', async () => {
+      db.getWeeklySessionStats.mockResolvedValue({ completed: 3, planned: 3, plannedIsEstimate: false });
+      const inputs = await gatherWidgetInputs('u1');
+      // db.getRoutinesForPlan's mock (beforeEach) still returns 4 routines -
+      // the widget's own routines read is no longer what planned derives
+      // from; it defers entirely to the stats function's own figure.
+      expect(inputs.consistency).toEqual({ completed: 3, planned: 3 });
+    });
+
+    test('plannedIsEstimate true (no active plan, trailing-average fallback): the honest null denominator stands (RD6-9)', async () => {
+      db.getWeeklySessionStats.mockResolvedValue({ completed: 2, planned: 3, plannedIsEstimate: true });
+      const inputs = await gatherWidgetInputs('u1');
+      expect(inputs.consistency).toEqual({ completed: 2, planned: null });
+    });
+
+    test('a getWeeklySessionStats read failure never smuggles a raw routine count in as the denominator', async () => {
+      db.getWeeklySessionStats.mockRejectedValue(new Error('db down'));
+      const inputs = await gatherWidgetInputs('u1');
+      // The catch fallback marks itself an estimate too, so a read failure
+      // reads the same honest "cannot say" as the no-plan case, never a
+      // bare zero presented as a real prescribed count.
+      expect(inputs.consistency).toEqual({ completed: 0, planned: null });
+    });
+  });
 });
 
 describe('writeWidgetSnapshot', () => {

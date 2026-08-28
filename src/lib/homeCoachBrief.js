@@ -12,6 +12,18 @@
 // to the brief about training working around a temporary change.
 // constraintSubject (natural coach-language order, 2026-08-21) is the short
 // honest name for what that change covers, or null for the generic line.
+// CC33 D112 R5 (closes audit T1-14/T2-31): the constraint line's own text,
+// factored out as a standalone pure helper so it can render independent of
+// whichever brief headline fired (or whether the brief itself was
+// dismissed) -- see HomeScreen.js's standalone render block. Byte-identical
+// wording to applyConstraintLine below; the rule logic (Rules 1-6) and
+// applyConstraintLine itself are untouched.
+export function constraintLineText(constraintSubject = null) {
+  return constraintSubject
+    ? `Training leaves ${constraintSubject} out at the moment.`
+    : 'Training works around your temporary change.';
+}
+
 export function buildCoachBrief({ fatigueHistory, deloadSuggestion, lastWorkoutDaysAgo, blockProgress: _blockProgress, activeConstraint = false, constraintSubject = null }) {
   // Helper to apply activeConstraint quiet line to any result
   const applyConstraintLine = (result) => {

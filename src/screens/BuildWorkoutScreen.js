@@ -225,13 +225,24 @@ export default function BuildWorkoutScreen({ navigation }) {
     // simply has nothing to match against and the slot is dropped rather
     // than silently reinstated.
     let library = all;
+    // D112 R5 (closes audit T1-23): carried out of the try block so the
+    // drop-classification pass below can read it too - the exact same
+    // capability state the library filter itself just used.
+    let capabilityState = null;
     try {
       const block = user?.id ? await getActiveBlock(user.id) : null;
       const state = await loadExerciseIntentState(user?.id, { activeMesocycleId: block?.id ?? null });
+      capabilityState = state?.capability ?? null;
       library = filterLibraryForGeneration(all, state).library;
     } catch (_) { /* additive: an intent read failure leaves the library whole */ }
     const plan = generateTravelPlan({ equipment: travelEquipment, daysPerWeek: 4, splitType: 'full_body' });
     const session = plan.sessions[0];
+    // D112 R5 (closes audit T1-23): named, not silent. Counts by class -
+    // capabilityBlockReason checked first, matching generationBlockReason's
+    // own precedence (section 4.1), so a movement that fails both reads as
+    // the capability reason and is never double counted.
+    let capabilityDrops = 0;
+    let preferenceDrops = 0;
     const newItems = session.exercises.map(ex => {
       const nameLower = ex.exerciseName.toLowerCase();
       const findIn = (list) => list.find(e => e.name.toLowerCase() === nameLower)
@@ -241,7 +252,18 @@ export default function BuildWorkoutScreen({ navigation }) {
       // the user set it aside. Drop the slot rather than reinstating it
       // through the unmatched-name placeholder below, which would put the
       // exercise back under its own name.
-      if (!match && findIn(all)) return null;
+      if (!match) {
+        const fullMatch = findIn(all);
+        if (fullMatch) {
+          try {
+            // eslint-disable-next-line global-require
+            const { capabilityBlockReason } = require('../lib/capability/resolve');
+            if (capabilityBlockReason(capabilityState, fullMatch)) capabilityDrops += 1;
+            else preferenceDrops += 1;
+          } catch (_) { preferenceDrops += 1; }
+          return null;
+        }
+      }
       const exercise = match ?? {
         id: `travel-${Date.now()}-${Math.random()}`,
         name: ex.exerciseName,
@@ -259,6 +281,18 @@ export default function BuildWorkoutScreen({ navigation }) {
       };
     });
     setExercises(newItems.filter(Boolean));
+    // D112 R5 (closes audit T1-23): one line per non-zero class, via the
+    // screen's toast. No behaviour change to the filtering itself above.
+    const dropLines = [];
+    if (capabilityDrops > 0) {
+      dropLines.push(`${capabilityDrops === 1 ? '1 movement' : `${capabilityDrops} movements`} left out for how you train.`);
+    }
+    if (preferenceDrops > 0) {
+      dropLines.push(`${preferenceDrops === 1 ? '1 movement' : `${preferenceDrops} movements`} left out for your avoided movements.`);
+    }
+    if (dropLines.length) {
+      toast.show(dropLines.join(' '), { variant: 'info', duration: 5000 });
+    }
   }
 
   function formatRest(secs) {

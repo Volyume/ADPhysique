@@ -44,7 +44,7 @@ import HomeChangeWorkoutSheet from '../components/HomeChangeWorkoutSheet';
 import BottomSheet from '../components/BottomSheet';
 import Chip from '../components/Chip';
 import * as haptics from '../lib/haptics';
-import { buildCoachBrief } from '../lib/homeCoachBrief';
+import { buildCoachBrief, constraintLineText } from '../lib/homeCoachBrief';
 import { isCompletedCoachDecision } from '../lib/coachDecision';
 import { isEnrolmentSeedWeight } from '../lib/checkinDerive';
 import {
@@ -151,6 +151,17 @@ const READINESS_ROWS = [
   },
 ];
 
+// D112 R5 (closes audit T1-12): after a successful generation, the count of
+// slots the capability lane blocked (PlanUpdateScreen's dry-run preview is
+// the model this mirrors - see its capabilityBlockedCount usage). Pure,
+// calm, one line; never conflated with the equipment/preference shortfall
+// copy (planShortfallNote), a different reason class entirely.
+function capabilityBlockedNote(n) {
+  return n === 1
+    ? '1 movement sat outside how you train, so your plan works without it.'
+    : `${n} movements sat outside how you train, so your plan works without them.`;
+}
+
 export default function HomeScreen({ navigation, route }) {
   const toast = useToast();
   // R9 (D70): insets and reduceMotion left with the raw intent Modal -
@@ -181,6 +192,9 @@ export default function HomeScreen({ navigation, route }) {
     // Campaign 22 Phase 2 Stage 2 (§7/§17 R5): the "Progress at a glance"
     // card is removed (3-way duplication fix); its live styles go with it.
     coachBriefLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    // D112 R5 (closes audit T1-14/T2-31, T1-15/T2-24): standalone
+    // constraint / AWAITING rows, same live-theme shape as the brief line.
+    constraintLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
     coachingNudge: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     coachingNudgeLeft: { backgroundColor: t.colors.primaryBg },
     coachingNudgeTitle: { ...t.type.label, color: t.colors.textPrimary },
@@ -289,6 +303,10 @@ export default function HomeScreen({ navigation, route }) {
   const [activePlan, setActivePlanData] = useState(null);
   const [nextWorkout, setNextWorkout] = useState(null);
   const [exerciseCounts, setExerciseCounts] = useState({});
+  // D112 R2 (closes audit T1-17): the effective (served) row count for the
+  // DISPLAYED session only - null until resolved, so the raw exerciseCounts
+  // figure (already loaded) shows first rather than nothing flashing.
+  const [effectiveSessionCount, setEffectiveSessionCount] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [seeded, setSeeded] = useState(false);
   const [planAllWorkouts, setPlanAllWorkouts] = useState([]);
@@ -1696,10 +1714,18 @@ export default function HomeScreen({ navigation, route }) {
   // CC31 (section BD-D8): detect active episode-role capability constraint.
   // Best-effort: error → false. Try to use composed intentState if available,
   // otherwise lazy-load the resolve state.
+  // D112 R5 (closes audit T1-14/T2-31): "applied" narrowed to match the
+  // gate serve-time substitution itself uses (sessionEffective.js) -- an
+  // episode rule that is only declared, not yet Applied, is not actually
+  // changing what the logger serves, so the line must not claim it is.
   const [activeConstraint, setActiveConstraint] = useState(false);
   // Natural coach-language order (2026-08-21): the short honest name for
   // what the temporary change covers, or null for the generic brief line.
   const [constraintSubject, setConstraintSubject] = useState(null);
+  // D112 R5 (closes audit T1-15/T2-24): the one episode group (if any)
+  // sitting in AWAITING_CONFIRMATION -- past its planned end, still
+  // applying (fail-safe), not yet answered. null when none is awaiting.
+  const [awaitingConstraint, setAwaitingConstraint] = useState(null);
   useEffect(() => {
     if (!user?.id) return;
     (async () => {
@@ -1708,19 +1734,71 @@ export default function HomeScreen({ navigation, route }) {
         const { loadCapabilityResolveState } = require('../lib/capability/resolve');
         const state = await loadCapabilityResolveState(user.id, {});
         const episodeRows = Array.isArray(state?.restrictions)
-          ? state.restrictions.filter(r => r.role === 'episode') : [];
+          // Lead tighten (W3 review, D112 R8): a HELD episode must not
+          // drive the "works around" line - the serve layer holds it, so
+          // the claim would be false. Applied-and-not-held only, matching
+          // the serve gate plus the hold filter it gained.
+          ? state.restrictions.filter(r => r.role === 'episode' && r.effectiveChoice === 'applied' && r.adaptationMode !== 'hold') : [];
         setActiveConstraint(episodeRows.length > 0);
         try {
           // eslint-disable-next-line global-require
           const { subjectPhrase } = require('../lib/capability/phrase');
           setConstraintSubject(subjectPhrase(episodeRows, {}));
         } catch (_) { setConstraintSubject(null); }
+        // T1-15/T2-24: grouped the same way the settings store groups
+        // episodes (capability/store.js's loadCapabilityState), from the
+        // rows this effect already has in hand -- no second DB read.
+        try {
+          // eslint-disable-next-line global-require
+          const { episodeStatus } = require('../lib/capability/model');
+          // eslint-disable-next-line global-require
+          const { subjectPhrase } = require('../lib/capability/phrase');
+          const groups = new Map();
+          for (const r of (state?.restrictions ?? [])) {
+            if (r.role !== 'episode' || !r.episodeGroupId) continue;
+            if (!groups.has(r.episodeGroupId)) groups.set(r.episodeGroupId, []);
+            groups.get(r.episodeGroupId).push(r);
+          }
+          let awaiting = null;
+          for (const rows of groups.values()) {
+            if (episodeStatus(rows, Date.now()) === 'awaiting_confirmation') {
+              awaiting = { subject: subjectPhrase(rows, {}) };
+              break;
+            }
+          }
+          setAwaitingConstraint(awaiting);
+        } catch (_) { setAwaitingConstraint(null); }
       } catch (_) {
         setActiveConstraint(false);
         setConstraintSubject(null);
+        setAwaitingConstraint(null);
       }
     })();
   }, [user?.id]);
+
+  // D112 R2 (closes audit T1-17): the DISPLAYED session's effective (served)
+  // row count. One call per focus (re-fires whenever the displayed routine
+  // changes, which includes each loadData() reload on focus). Fail-safe:
+  // countEffectiveSessionRows already returns the base count on any error;
+  // resetting to null here on a routine change just re-shows the raw
+  // exerciseCounts figure while the effective read is in flight.
+  useEffect(() => {
+    const routineId = displayWorkout?.routine?.id;
+    if (!user?.id || !routineId) { setEffectiveSessionCount(null); return undefined; }
+    let cancelled = false;
+    setEffectiveSessionCount(null);
+    (async () => {
+      try {
+        // eslint-disable-next-line global-require
+        const { countEffectiveSessionRows } = require('../lib/sessionEffective');
+        const n = await countEffectiveSessionRows(user.id, routineId);
+        if (!cancelled) setEffectiveSessionCount(n);
+      } catch (_) {
+        if (!cancelled) setEffectiveSessionCount(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, displayWorkout?.routine?.id]);
 
   const rawCoachBrief = showCoachBrief
     ? buildCoachBrief({
@@ -1729,8 +1807,13 @@ export default function HomeScreen({ navigation, route }) {
         deloadSuggestion,
         lastWorkoutDaysAgo,
         blockProgress,
-        activeConstraint,
-        constraintSubject,
+        // D112 R5 (closes audit T1-14/T2-31): the constraint line is no
+        // longer fed into the brief -- it renders as its own standalone
+        // row (below) independent of which headline fires or whether the
+        // brief is dismissed, so it must never also ride the brief's own
+        // text. activeConstraint/constraintSubject keep their default
+        // (false/null) here on purpose; buildCoachBrief's own CC31 branch
+        // is untouched for any other caller.
       })
     : null;
   // Suppress the default "Ready when you are" filler (founder 2026-06-30: it
@@ -1738,6 +1821,15 @@ export default function HomeScreen({ navigation, route }) {
   // hero). Only show the brief when it carries a real coaching signal.
   const coachBrief = rawCoachBrief && rawCoachBrief.headline !== 'Ready when you are'
     ? rawCoachBrief
+    : null;
+
+  // D112 R5 (closes audit T1-15/T2-24): the AWAITING prompt's line text.
+  // Matches HowYouTrainScreen.js's own episodeSub wording for the same
+  // state exactly (never invented new phrasing for the same state).
+  const awaitingConstraintLine = awaitingConstraint
+    ? (awaitingConstraint.subject
+      ? `You thought you'd be back to ${awaitingConstraint.subject} by about now. Still need it?`
+      : 'You thought this would be done by about now. Still need it?')
     : null;
 
   // S15#7: readiness aggregate. One calm line for the mesocycle chip,
@@ -2149,9 +2241,13 @@ export default function HomeScreen({ navigation, route }) {
                 programmePosition?.sessions ?? [],
               ) || displayWorkout?.routine?.name}
             </Text>
-            {exerciseCounts[displayWorkout?.routine?.id] ? (
+            {/* D112 R2 (closes audit T1-17): the served count, not the base
+                routine's raw row count. effectiveSessionCount is null until
+                resolved (or on a read failure), so the raw exerciseCounts
+                figure (already loaded) shows first rather than nothing. */}
+            {(effectiveSessionCount ?? exerciseCounts[displayWorkout?.routine?.id]) ? (
               <Text style={[styles.workoutMeta, live.workoutMeta]}>
-                {exerciseCounts[displayWorkout.routine.id]} exercises
+                {effectiveSessionCount ?? exerciseCounts[displayWorkout.routine.id]} exercises
               </Text>
             ) : null}
             {/* S15#7 readiness aggregate: tells the user where they are in
@@ -2294,6 +2390,11 @@ export default function HomeScreen({ navigation, route }) {
                   const result = await generateAndSavePlan(user.id, userProfile);
                   if (result.ok) {
                     await loadData();
+                    // D112 R5 (closes audit T1-12): every generation entry
+                    // reveals capability effects, not just PlanUpdateScreen.
+                    if (result.capabilityBlockedCount > 0) {
+                      toast.show(capabilityBlockedNote(result.capabilityBlockedCount), { variant: 'info', duration: 5000 });
+                    }
                   } else {
                     logError('HomeScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
                     toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
@@ -2363,6 +2464,45 @@ export default function HomeScreen({ navigation, route }) {
             )}
           </View>
         )}
+
+        {/* CC33 D112 R5 (closes audit T1-14/T2-31): the pre-workout quiet
+            constraint line, standalone now -- it renders whenever the
+            capability state has an active APPLIED episode rule and an
+            active plan exists, independent of which brief headline fired
+            (or none) and of whether the brief itself was dismissed. Same
+            quiet styling as the former in-brief line; now tappable
+            through to How you train. */}
+        {activeConstraint && activePlan ? (
+          <TouchableOpacity
+            style={styles.constraintLineRow}
+            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
+            accessibilityRole="button"
+            accessibilityLabel={`${constraintLineText(constraintSubject)} Open How you train`}
+          >
+            <Text style={[styles.constraintLineText, live.constraintLineText]}>
+              {constraintLineText(constraintSubject)}
+            </Text>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+
+        {/* CC33 D112 R5 (closes audit T1-15/T2-24): the §22 AWAITING
+            prompt, previously reachable only from HowYouTrain and the
+            weekly check-in. Quiet row, tappable through to How you train
+            to answer it there. */}
+        {awaitingConstraintLine ? (
+          <TouchableOpacity
+            style={styles.constraintLineRow}
+            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
+            accessibilityRole="button"
+            accessibilityLabel={`${awaitingConstraintLine} Open How you train`}
+          >
+            <Text style={[styles.constraintLineText, live.constraintLineText]}>
+              {awaitingConstraintLine}
+            </Text>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
 
         {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero
             evidence region. The weigh-in strip renders ONLY while today's
@@ -2854,6 +2994,26 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   coachBriefLineText: {
+    ...type.bodySm,
+    flex: 1,
+    color: colors.textSecondary,
+  },
+
+  // D112 R5 (closes audit T1-14/T2-31, T1-15/T2-24): the standalone
+  // constraint / AWAITING quiet rows, direct children of the scroll
+  // content container (styles.content already supplies the horizontal
+  // inset and the inter-row gap - no padding duplicated here). Same
+  // weight as coachBriefLineRow/Text above; a trailing chevron and
+  // full-row tap target since these navigate (the coach brief line
+  // never did).
+  constraintLineRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  constraintLineText: {
     ...type.bodySm,
     flex: 1,
     color: colors.textSecondary,

@@ -323,6 +323,15 @@ function QuestionGroup({ icon, title, sub, children }) {
   );
 }
 
+// D112 R5 (closes audit T1-12): after a successful generation, the count of
+// slots the capability lane blocked. Mirrors PlanUpdateScreen's dry-run
+// preview (the model), which is the source of the exact copy this pins.
+function capabilityBlockedNote(n) {
+  return n === 1
+    ? '1 movement sat outside how you train, so your plan works without it.'
+    : `${n} movements sat outside how you train, so your plan works without them.`;
+}
+
 export default function ProOnboardingScreen({ navigation }) {
   const {
     user, setUnits, bodyWeightUnits, setBodyWeightUnits, userProfile, saveLocalProfile,
@@ -1532,17 +1541,80 @@ export default function ProOnboardingScreen({ navigation }) {
           // a bare spinner. Flag it; the post-try block falls back to the form
           // with this alert and never plays a completion tick.
           planFailed = true;
-          // D88: the caught error is logged just above, never shown. It was
-          // being interpolated raw into this alert, so the last thing a new
-          // user saw at the end of setup could be a JS or database error.
-          appAlert(
-            'Plan setup didn\'t finish',
-            'Your profile is saved, but your training plan did not generate. Open Today and choose "Start with a plan" to retry.',
-          );
-        } else if (planResult.partial) {
-          // FF-003: the plan generated but couldn't fulfil every requested move
-          // (typically constrained equipment). Tell the user plainly.
-          appAlert('Plan ready', planShortfallNote(planResult.missedCount));
+          // D112 R5 (closes audit T1-13): a TOTAL capability block is a
+          // state, not an engine failure, so it gets its own honest graded
+          // alert instead of the generic retry-loop copy below. Gated on
+          // blockedByCapability specifically - a total block caused purely
+          // by the user's own set-aside exercises (preference lane, not
+          // capability) still reads as the plain generic failure, unchanged.
+          if (planResult.error === 'plan_blocked_by_exclusions' && planResult.blockedByCapability) {
+            appAlert(
+              'Volyume could not build a full plan inside how you train.',
+              'Your profile and targets are saved. Every session needed at least one movement that sits outside how you train right now.',
+              [
+                { text: 'Open How you train', onPress: () => navigation.navigate('HowYouTrain') },
+                // First run has no plan library route from this screen
+                // (AUDIT-A precedent, FreeStarterScreen's own fromFirstRun
+                // branch): a plain hold instead of a browse action that
+                // would silently do nothing.
+                { text: 'Not now', style: 'cancel' },
+                {
+                  text: 'Try again',
+                  onPress: async () => {
+                    try {
+                      const retryPreflight = await capabilityPreflight(user.id);
+                      const retryGoAhead = retryPreflight.proceed || await new Promise((resolve) => {
+                        offerCapabilityPreflightChoice({
+                          onHold: () => resolve(false),
+                          onContinue: () => resolve(true),
+                        });
+                      });
+                      if (!retryGoAhead) return;
+                      const retryResult = await generateAndSavePlan(user.id, planProfile);
+                      if (retryResult.ok) {
+                        if (retryResult.programmeId) {
+                          await markBuildProgress(user.id, { planId: retryResult.programmeId, planSignature });
+                        }
+                        appAlert('Plan ready', 'Your training plan is ready. Open Today to see it.');
+                      } else {
+                        // eslint-disable-next-line global-require
+                        try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan.retry', retryResult.error, { userId: user.id }); } catch (_) {}
+                        appAlert(
+                          'Plan setup didn\'t finish',
+                          'Your profile is saved, but your training plan did not generate. Open Today and choose "Start with a plan" to retry.',
+                        );
+                      }
+                    } catch (e) {
+                      // eslint-disable-next-line global-require
+                      try { require('../lib/errorLog').logError('ProOnboardingScreen.generateAndSavePlan.retry', e, { userId: user.id }); } catch (_) {}
+                    }
+                  },
+                },
+              ],
+            );
+          } else {
+            // D88: the caught error is logged just above, never shown. It was
+            // being interpolated raw into this alert, so the last thing a new
+            // user saw at the end of setup could be a JS or database error.
+            appAlert(
+              'Plan setup didn\'t finish',
+              'Your profile is saved, but your training plan did not generate. Open Today and choose "Start with a plan" to retry.',
+            );
+          }
+        } else {
+          if (planResult.partial) {
+            // FF-003: the plan generated but couldn't fulfil every requested
+            // move (typically constrained equipment). Tell the user plainly.
+            appAlert('Plan ready', planShortfallNote(planResult.missedCount));
+          }
+          // D112 R5 (closes audit T1-12): every generation entry reveals
+          // capability effects. Independent of the `partial` (equipment)
+          // alert above - the two reason classes never conflate, matching
+          // PlanUpdateScreen's dry-run preview, which shows both separately
+          // when both apply.
+          if (planResult.capabilityBlockedCount > 0) {
+            appAlert('Plan ready', capabilityBlockedNote(planResult.capabilityBlockedCount));
+          }
         }
       }
     } catch (e) {
