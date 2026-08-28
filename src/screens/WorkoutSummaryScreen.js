@@ -34,6 +34,7 @@ import {
   createAdaptationEvent, getCurrentMesocycleWeek,
   saveWeeklyCheckin, saveNextTimeNote, getRoutineWorkoutTonnages,
   getRoutineById, getWorkoutById, getOpenEdPatternFlag,
+  getSessionConstraintEffect,
 } from '../lib/database';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { claimMilestones } from '../lib/milestones';
@@ -77,6 +78,29 @@ function formatPartnerWinDate(value) {
 function partnerRecordLabel(pr = {}) {
   if (pr.type === 'heaviest_weight') return 'New heaviest weight';
   return 'New rep best';
+}
+
+/**
+ * CC33 W3 (D112 R5, closes audit T2-07/T2-22): the post-workout quiet line
+ * naming what a temporary capability change worked around this session.
+ * Pure - counts come straight from the session's session_constraint_effects
+ * record (written at serve time and on completion), never from the
+ * name-resolved detail list below it, so the top line always renders once
+ * the record itself resolves even if a particular exercise's name does not
+ * (the detail list's own "never fall back to the raw id" rule is scoped to
+ * ITS rows, not this count).
+ */
+function buildConstraintSummaryLine(substituted, omitted) {
+  if (substituted > 0 && omitted > 0) {
+    return `Today worked around your temporary change: ${substituted} swapped, ${omitted} left out.`;
+  }
+  if (substituted > 0) {
+    return `Today worked around your temporary change: ${substituted} exercise${substituted === 1 ? '' : 's'} swapped for ${substituted === 1 ? 'one that works' : 'ones that work'} right now.`;
+  }
+  if (omitted > 0) {
+    return `Today worked around your temporary change: ${omitted} exercise${omitted === 1 ? '' : 's'} left out, with nothing forced in their place.`;
+  }
+  return null;
 }
 
 function partnerCheerFailureMessage(error) {
@@ -275,6 +299,14 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // C5-P16-02 (D96): the next planned session in the plan's rotation.
   const [nextSessionName, setNextSessionName] = useState('');
 
+  // CC33 W3 (D112 R5, closes audit T2-07/T2-22): the post-workout quiet
+  // line naming what a temporary capability change worked around this
+  // session, and the "What changed" expand state for its detail list.
+  // null = nothing to say (no record, a read failure, or a record with no
+  // resolvable entries) - the line and the expander both render nothing.
+  const [constraintEffect, setConstraintEffect] = useState(null);
+  const [constraintDetailExpanded, setConstraintDetailExpanded] = useState(false);
+
   const feedbackDebounceRef = useRef(null);
 
   useEffect(() => {
@@ -340,6 +372,54 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     })();
     return () => { cancelled = true; };
   }, [routineId]);
+
+  // CC33 W3 (D112 R5, closes audit T2-07/T2-22): read the session's durable
+  // constraint-effects record (written by sessionEffective.js at serve time
+  // and by ActiveWorkoutScreen on removal/completion) and resolve each
+  // entry's names against the library. Runs for BOTH the live finish flow
+  // and a history reopen (this screen is reachable from history too - no
+  // separate history work needed), keyed only on workoutId + userId.
+  // Best-effort throughout: any read failure leaves constraintEffect null,
+  // so nothing renders - no crash, no error line.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!user?.id || !workoutId) return;
+        const record = await getSessionConstraintEffect(user.id, workoutId);
+        const effects = record?.effects;
+        if (!Array.isArray(effects) || !effects.length) return;
+        const library = await getAllExercises();
+        const byId = new Map(library.map((e) => [e.id, e]));
+        let substituted = 0;
+        let omitted = 0;
+        const lines = [];
+        effects.forEach((entry, i) => {
+          if (entry?.effect === 'substituted') {
+            substituted += 1;
+            const fromName = byId.get(entry.exerciseFrom)?.name;
+            const toName = entry.exerciseTo ? byId.get(entry.exerciseTo)?.name : null;
+            // Never fall back to the raw id: a name that doesn't resolve
+            // simply omits its detail line (the summary count above is
+            // unaffected - it counts the record's entries, not this list).
+            if (fromName && toName) {
+              lines.push({ key: `s-${i}-${entry.exerciseFrom}`, text: `${toName} in for ${fromName}` });
+            }
+          } else if (entry?.effect === 'omitted') {
+            omitted += 1;
+            const fromName = byId.get(entry.exerciseFrom)?.name;
+            if (fromName) {
+              lines.push({ key: `o-${i}-${entry.exerciseFrom}`, text: `${fromName} left out` });
+            }
+          }
+        });
+        if (cancelled) return;
+        if (!substituted && !omitted) return;
+        setConstraintEffect({ substituted, omitted, lines });
+      } catch (_e) { /* best-effort: no line, no crash */ }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id, workoutId]);
 
   // The post-workout beat surfaces EVERY currently active/resting paired
   // partner (L06-F4 fix), not just the single "primary" pair usePartners kept
@@ -1485,6 +1565,62 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </RevealSection>
         )}
 
+        {/* CC33 W3 (D112 R5, closes audit T2-07/T2-22): the post-workout
+            quiet line naming what a temporary capability change worked
+            around this session, secondary text style, never a banner - with
+            an expandable "What changed" detail in plain words and a quiet
+            link to How you train. Independent of showProgressLink/
+            showCoachLink above (readOnly-safe: reachable from history too,
+            since WorkoutSummaryScreen serves both the live finish flow and
+            a history reopen). */}
+        {constraintEffect ? (
+          <RevealSection delay={1380}>
+            <View style={styles.constraintEffectSection}>
+              <Text style={[styles.constraintEffectLine, live.constraintEffectLine]}>
+                {buildConstraintSummaryLine(constraintEffect.substituted, constraintEffect.omitted)}
+              </Text>
+              {constraintEffect.lines.length > 0 && (
+                <>
+                  <TouchableOpacity
+                    onPress={() => setConstraintDetailExpanded((v) => !v)}
+                    accessibilityRole="button"
+                    accessibilityState={{ expanded: constraintDetailExpanded }}
+                    accessibilityLabel={constraintDetailExpanded ? 'Hide what changed' : 'What changed'}
+                    hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                    style={[styles.volumeWhyToggle, live.volumeWhyToggle]}
+                  >
+                    <Text style={[styles.volumeWhyToggleText, live.volumeWhyToggleText]}>
+                      {constraintDetailExpanded ? 'Hide what changed' : 'What changed'}
+                    </Text>
+                    <Ionicons
+                      name={constraintDetailExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={14}
+                      color={t.colors.textSecondary}
+                    />
+                  </TouchableOpacity>
+                  {constraintDetailExpanded && (
+                    <View style={styles.constraintEffectDetail}>
+                      {constraintEffect.lines.map((line) => (
+                        <Text key={line.key} style={[styles.volumeWhyBody, live.volumeWhyBody]}>{line.text}</Text>
+                      ))}
+                    </View>
+                  )}
+                </>
+              )}
+              <TouchableOpacity
+                style={[styles.onwardLink, live.onwardLink]}
+                activeOpacity={0.85}
+                onPress={() => navigation.navigate('HowYouTrain')}
+                accessibilityRole="button"
+                accessibilityLabel="How you train"
+              >
+                <Ionicons name="body-outline" size={14} color={t.colors.textSecondary} />
+                <Text style={[styles.onwardLinkText, live.onwardLinkText]}>How you train</Text>
+              </TouchableOpacity>
+            </View>
+          </RevealSection>
+        ) : null}
+
         {/* Photos LOOP-3 (D4): the calm, opt-in "mark the moment" invitation,
             appended inside the celebration surface on a competence win only (a
             PB or a session-streak milestone). ProgressPhotoPrompt owns every
@@ -2164,6 +2300,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   onwardLinkText: { ...type.label, color: colors.textPrimary },
+  // CC33 W3 (D112 R5): the post-workout constraint-effect line, secondary
+  // text style (adjustedSummaryText's exact pairing), never a banner.
+  constraintEffectSection: { gap: spacing.xs },
+  constraintEffectLine: { ...type.bodySm, color: colors.textSecondary },
+  constraintEffectDetail: { gap: spacing.xxs, marginTop: spacing.xxs },
   divider: { height: 1, backgroundColor: colors.border },
   section: { gap: spacing.md },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -2439,6 +2580,7 @@ function buildLiveStyles(t) {
     prRowText: { ...t.type.label, color: t.colors.warning },
     onwardLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     onwardLinkText: { ...t.type.label, color: t.colors.textPrimary },
+    constraintEffectLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     divider: { backgroundColor: t.colors.border },
     sectionTitle: { ...t.type.title, color: t.colors.textPrimary },
     optionalLabel: { ...t.type.caption, color: t.colors.textMuted },

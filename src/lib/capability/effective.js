@@ -36,6 +36,17 @@ export function episodeConflicts(capabilityState, exercise) {
     .filter((c) => c.row?.role === 'episode');
 }
 
+/** The EPISODE-role conflicts that may DRIVE automation for one exercise,
+ *  or []. D112 R8 (section 25; audit T2-26): an episode the user set to
+ *  "hold my plan" still CONFLICTS (episodeConflicts above reports it, so
+ *  surfaces can say "you're holding this"), but it substitutes nothing,
+ *  omits nothing, excuses nothing and proposes nothing - the effective
+ *  view and the completion excusal consume THIS list, never the raw one. */
+export function actionableEpisodeConflicts(capabilityState, exercise) {
+  return episodeConflicts(capabilityState, exercise)
+    .filter((c) => c.row?.adaptationMode !== 'hold');
+}
+
 /** The BASELINE-role conflicts that still stand for one exercise, or [].
  *  Same decision layer. D112 R1's amendment to RT2-1 rides on this:
  *  baseline invisibility is correct only while the plan is
@@ -88,7 +99,9 @@ export function computeEffectiveSession(baseRows, library, capabilityState, isEl
   let undecidedCount = 0;
   (baseRows ?? []).forEach((row, i) => {
     const exercise = row?.exercise ?? row;
-    const conflicts = episodeConflicts(capabilityState, exercise);
+    // D112 R8: held episodes drive nothing here - a fully-held conflict
+    // set resolves UNCHANGED, so "hold my plan" genuinely holds it.
+    const conflicts = actionableEpisodeConflicts(capabilityState, exercise);
     if (!conflicts.length) {
       lines.push({ slot: i, exerciseFrom: exercise, effect: EFFECTIVE_EFFECT.UNCHANGED, exerciseTo: null, constraintIds: [], undecided: false });
       return;
@@ -141,7 +154,9 @@ export function computeCompletionEffects(sessionRows, capabilityState) {
     if (row?.performed) return;
     if (!exercise?.id) return;
     unperformedIds.push(exercise.id);
-    const conflicts = episodeConflicts(capabilityState, exercise);
+    // D112 R8: a held episode excuses nothing - skipping its exercise is
+    // an ordinary early stop, exactly like a declined rule's.
+    const conflicts = actionableEpisodeConflicts(capabilityState, exercise);
     // Red-team finding 4 (bundle): excusal requires the APPLIED choice on
     // EVERY driving rule, exactly as computeEffectiveSession requires it
     // for substitution. A declined or undecided rule leaves the row in

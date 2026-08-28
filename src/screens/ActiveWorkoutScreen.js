@@ -537,6 +537,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const [showStaleModal, setShowStaleModal] = useState(false);
   const [showSwapModal, setShowSwapModal] = useState(false);
   const [swapCandidates, setSwapCandidates] = useState([]);
+  // T2-08 (D112 R5, closes audit T2-08): how many structurally-valid
+  // candidates the capability lane alone narrowed out of the ranked list
+  // just built, so the sheet can say so instead of silently narrowing.
+  const [swapNarrowedCount, setSwapNarrowedCount] = useState(0);
   // D107-2: exercise-intent state kept at screen scope (not just inside
   // handleOpenSwap's local read) so the logger can show a quiet notice when
   // the CURRENT exercise's movement pattern is being avoided - "never
@@ -705,6 +709,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // a resumed session with logged sets is never rewritten, and any
   // failure serves the base session unchanged.
   const effectiveAppliedRef = useRef(null);
+  // T2-06 (D112 R5, closes audit T2-06): the session-level "unusually
+  // reduced" signal - how many rows this serve-time pass dropped outright
+  // (omitted, never substituted). Reset only when a genuinely NEW session
+  // starts, never on the re-run this same effect causes by writing
+  // workoutExercises itself (that would erase the count the instant after
+  // setting it).
+  const [omittedSessionCount, setOmittedSessionCount] = useState(0);
+  useEffect(() => {
+    setOmittedSessionCount(0);
+  }, [activeWorkout?.id]);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -731,6 +745,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         if (cancelled) return;
         effectiveAppliedRef.current = activeWorkout.id;
         if (served === baseRows) return; // nothing applied
+        // T2-06: applyEffectiveViewToSession drops an OMITTED row from the
+        // returned list entirely (a SUBSTITUTED row is still pushed, 1 for
+        // 1) - so the shortfall against baseRows.length is exactly the
+        // omitted count. The one case this misses (every row blocked) is
+        // the module's own fail-safe: it returns baseRows unchanged (===
+        // check above already bailed), which is the correct call there too
+        // - a session can never be served empty.
+        const omitted = baseRows.length - served.length;
+        if (omitted > 0) setOmittedSessionCount(omitted);
         const servedEntries = [];
         for (const row of served) {
           const idx = baseRows.findIndex((b) => b.id === (row._capabilityTemp?.fromId ?? row.id));
@@ -832,6 +855,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const constraintNotice = (() => {
     if (currentEntry?._capabilityTemp?.fromName) {
       return { kind: 'episode', copy: `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts` };
+    }
+    // D112 R8 (section 25): a fully-held conflict set says so instead of
+    // claiming Volyume is working around anything - the user asked it to
+    // wait, and the quiet line reflects their own instruction back.
+    if (constraintConflicts.length
+      && constraintConflicts.every((c) => c.row?.adaptationMode === 'hold')) {
+      return { kind: 'held', copy: "You're holding your plan as-is for this. Volyume changes nothing until you say so." };
     }
     if (constraintConflicts.length) {
       // Natural coach-language order (2026-08-21): name what the conflict
@@ -1174,7 +1204,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             // durable omission on this session's effects record. Removal
             // for any other reason writes nothing, exactly as before.
             if (constraintConflicts.length
-              && constraintConflicts.every(c => c.row?.effectiveChoice === 'applied')
+              && constraintConflicts.every(c => c.row?.effectiveChoice === 'applied'
+                // D112 R8: a held episode excuses nothing - removal under
+                // hold is an ordinary edit, never a recorded omission.
+                && c.row?.adaptationMode !== 'hold')
               && user?.id && activeWorkout?.id && exercise?.id) {
               // eslint-disable-next-line global-require
               const { appendSessionConstraintEffects } = require('../lib/database');
@@ -1213,6 +1246,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     const swapEquipment = useAppStore.getState().userProfile?.equipment ?? null;
     const ranked = rankSwaps(exercise, allExercises, { excludeIds: alreadyInWorkout, numResults: 20, excludeAssisted: !isBeginner, equipment: swapEquipment });
     let ordered = ranked.slice(0, 8);
+    // T2-08 (D112 R5, closes audit T2-08): declared outside the try, exactly
+    // like `ordered` above, so a personalisation failure still leaves a
+    // safe default (0 = say nothing) rather than a stale count from a
+    // previous open.
+    let narrowedCount = 0;
     try {
       const block = user?.id ? await getActiveBlock(user.id) : null;
       const state = await loadExerciseIntentState(user?.id, {
@@ -1224,6 +1262,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         fromExerciseId: exercise?.id,
         routineId: activeWorkout?.routineId ?? null,
       }).slice(0, 8);
+      // T2-08: counted over the STRUCTURAL list (ranked), before
+      // rankPersonalised's senior question (isEligibleExercise ->
+      // isCapabilityEligible) narrows it into `ordered` - this is exactly
+      // the set that would otherwise vanish from the sheet unremarked.
+      if (state?.capability && !state.capability.empty) {
+        // eslint-disable-next-line global-require
+        const { capabilityBlockReason } = require('../lib/capability/resolve');
+        narrowedCount = ranked.filter((c) => capabilityBlockReason(state.capability, c.exercise) !== null).length;
+      }
       setIntentState(state);
       // D109-2: the read failed open (structural list stands, nothing is
       // filtered by avoidance) - say so, rather than let the swap list look
@@ -1241,6 +1288,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       }
     } catch (_) { /* personalisation is additive: the structural list stands */ }
     setSwapCandidates(ordered);
+    setSwapNarrowedCount(narrowedCount);
     setShowSwapModal(true);
   }
 
@@ -3532,6 +3580,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           showFinish={!(targetComplete && !extraSetArmed && isLastExercise)}
         />
 
+        {/* T2-06 (D112 R5, closes audit T2-06): the session-level reduced
+            signal - quiet text, not a banner, rendered once per session at
+            the top of the outline area (never per-exercise, unlike the
+            capability strip notice below). */}
+        {omittedSessionCount > 0 ? (
+          <Text style={[styles.omittedSessionNote, live.omittedSessionNote]}>
+            {omittedSessionCount === 1
+              ? 'One exercise is left out of this session while your change lasts.'
+              : `${omittedSessionCount} exercises are left out of this session while your change lasts.`}
+          </Text>
+        ) : null}
+
         {/* COMP-013 starter-session banner moved into the collapsed "N notes"
             rail above the set-entry card (U-A-1). */}
 
@@ -3871,6 +3931,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             }
             return <StatusStrip items={items} />;
           })()}
+
+          {/* T2-20/T1-24 (D112 R5, closes audit T2-20/T1-24): the per-side
+              carve is currently silent - carvedForOneSide suppresses the
+              per-side logging prompt below with no word said. Read to the
+              end: isSideCarvedAvailable (src/lib/capability/resolve.js)
+              returns a plain boolean from a `.some()` over the matching
+              restriction rows; the side itself is never threaded back to
+              the caller, so only the generic line is honestly available
+              here - naming a side would mean re-deriving it independently
+              in this screen, a second source of truth this file's lane
+              cannot introduce. Near the same strip area the constraint
+              notices above use, but always visible (quiet text, not a
+              tap-to-expand chip) since there is no action to take here. */}
+          {carvedForOneSide ? (
+            <Text style={[styles.sideCarveNote, live.sideCarveNote]}>
+              Volyume counts this one side at a time, matching how you train.
+            </Text>
+          ) : null}
 
           {/* ONE continuous set sequence (phase 2B): completed rows above the
               active entry, upcoming previews below it - and, for ACTIVE-SET
@@ -5129,6 +5207,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               </TouchableOpacity>
             </View>
             <Text style={[styles.swapNote, live.swapNote]}>Choose a close match for today. Your plan is not changed, and sets you log count towards the new exercise's own muscle in your weekly volume.</Text>
+            {/* T2-08 (D112 R5, closes audit T2-08): the ranked list narrows
+                silently against the user's capability rules (rankPersonalised
+                -> isEligibleExercise); this says so instead, visibility only -
+                ranking and filtering are unchanged. */}
+            {swapNarrowedCount > 0 ? (
+              <Text style={[styles.swapNote, live.swapNote]}>
+                {swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for how you train.
+              </Text>
+            ) : null}
             <FlashList
               data={swapCandidates}
               keyExtractor={item => item.exercise.id}
@@ -5153,7 +5240,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               )}
               ListEmptyComponent={
                 <View style={styles.swapEmpty}>
-                  <Text style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>No close matches yet</Text>
+                  <Text style={[styles.swapEmptyTitle, live.swapEmptyTitle]}>
+                    {swapNarrowedCount > 0 ? 'No close matches inside how you train.' : 'No close matches yet'}
+                  </Text>
                   <Text style={[styles.swapEmptyText, live.swapEmptyText]}>Search the full library instead.</Text>
                 </View>
               }
@@ -5279,6 +5368,12 @@ const styles = StyleSheet.create({
   // type.num; brand amber in the header competed with the single filled
   // Log set CTA for attention.
   timerText: { ...type.num('title'), color: colors.textPrimary },
+  // T2-06/T2-20 (D112 R5): quiet standalone lines (swapNote's exact register
+  // - caption + textMuted), never a banner. Own horizontal padding since,
+  // unlike starterBanner/nextTimeBanner, these have no bordered container
+  // of their own to inset them.
+  omittedSessionNote: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.xxs },
+  sideCarveNote: { ...type.caption, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingTop: spacing.xs, paddingBottom: spacing.xxs },
   starterBanner: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
@@ -5801,6 +5896,8 @@ function buildLiveStyles(t) {
     // R5 (D66): headerFinishButton no longer carries colour keys (Button's
     // secondary variant owns them live), so it needs no live override.
     timerText: { ...t.type.num('title'), color: t.colors.textPrimary },
+    omittedSessionNote: { ...t.type.caption, color: t.colors.textMuted },
+    sideCarveNote: { ...t.type.caption, color: t.colors.textMuted },
     starterBanner: { backgroundColor: withAlpha(t.colors.primary, alpha.ghost), borderBottomColor: t.colors.border },
     starterBannerText: { ...t.type.bodySm, color: t.colors.textSecondary },
     inlineActionPill: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },

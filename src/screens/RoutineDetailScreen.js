@@ -51,6 +51,41 @@ import { GLOSSARY } from '../lib/coachGlossary';
 import * as haptics from '../lib/haptics';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
 
+/**
+ * T2-32 (D112 R5, closes audit T2-32): the plan-view marker for one routine
+ * row, in the capability lane's own vocabulary (D112 R6 - never the
+ * preference lane's "set aside", which is what openAvoidSheet below uses
+ * for the unrelated preference kind). Episode conflicts are checked before
+ * baseline, mirroring ActiveWorkoutScreen's constraintNotice precedence
+ * (episode is the acute, temporary state; baseline is the ambient "how you
+ * train" one). Pure; a read failure (or no exercise/capState) returns null
+ * so the row simply carries no marker rather than a wrong one.
+ */
+function capabilityPlanCaption(capState, exercise) {
+  if (!capState || capState.empty || !exercise) return null;
+  try {
+    // eslint-disable-next-line global-require
+    const { episodeConflicts, baselineConflicts } = require('../lib/capability/effective');
+    const episode = episodeConflicts(capState, exercise);
+    if (episode.length) {
+      // D112 R8: a fully-held episode holds - the marker reflects the
+      // user's own instruction, never a "swapped in sessions" claim the
+      // serve layer no longer makes.
+      if (episode.every((c) => c.row?.adaptationMode === 'hold')) {
+        return "Held as-is at your request.";
+      }
+      const allApplied = episode.every((c) => c.row?.effectiveChoice === 'applied');
+      return allApplied
+        ? 'Swapped in sessions while your change lasts.'
+        : 'Sits outside your temporary change.';
+    }
+    const baseline = baselineConflicts(capState, exercise);
+    return baseline.length ? 'Sits outside how you train.' : null;
+  } catch (_e) {
+    return null;
+  }
+}
+
 // Compute muscle coverage: { [muscleKey]: count } sorted by count descending
 function computeMuscleCoverage(exercises) {
   const counts = {};
@@ -148,6 +183,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
   const [editStartWeight, setEditStartWeight] = useState('');
   const [swapState, setSwapState] = useState(null);
   const [swapCandidates, setSwapCandidates] = useState([]);
+  // T2-08 (D112 R5, closes audit T2-08): how many structurally-valid
+  // candidates the capability lane alone narrowed out of the ranked list
+  // just built, so the sheet can say so instead of silently narrowing.
+  const [swapNarrowedCount, setSwapNarrowedCount] = useState(0);
   // C9: the canonical intent state for this screen's swap sheet, and the
   // "you usually choose X here" offer, if the evidence has earned one.
   const [intentState, setIntentState] = useState(null);
@@ -171,6 +210,37 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
+
+  // T2-32 (D112 R5): the exercise/id -> full library row map, the same
+  // lookup handleOpenSwap already builds locally (byId) for
+  // repeatedDefaultCandidate - lifted to component scope because the plan
+  // markers below need it per row, not just inside the swap flow. Routine
+  // rows carry partial exercise objects without the demand columns the
+  // resolver needs, so every conflict check resolves through this map.
+  const allExercisesById = useMemo(
+    () => new Map(allExercises.map((e) => [e.id, e])),
+    [allExercises],
+  );
+
+  // T2-32: the plan-view markers reuse the screen's own intent state
+  // (refreshIntentState already loads it on mount) where it has resolved;
+  // only before that first resolves does this load the capability state on
+  // its own, so the very first paint is never left with no answer at all.
+  const [fallbackCapState, setFallbackCapState] = useState(null);
+  useEffect(() => {
+    if (intentState?.capability || !user?.id) return undefined;
+    let cancelled = false;
+    (async () => {
+      try {
+        // eslint-disable-next-line global-require
+        const { loadCapabilityResolveState } = require('../lib/capability/resolve');
+        const state = await loadCapabilityResolveState(user.id, {});
+        if (!cancelled) setFallbackCapState(state);
+      } catch (_e) { /* best-effort: the row markers simply stay absent */ }
+    })();
+    return () => { cancelled = true; };
+  }, [intentState?.capability, user?.id]);
+  const planCapState = intentState?.capability ?? fallbackCapState ?? null;
 
   useEffect(() => {
     // Both are async and neither returns to a caller that could handle a
@@ -362,6 +432,11 @@ export default function RoutineDetailScreen({ navigation, route }) {
     });
     let ordered = ranked.slice(0, 12);
     let proposal = null;
+    // T2-08 (D112 R5, closes audit T2-08): declared outside the try, exactly
+    // like ordered/proposal above, so a personalisation failure still leaves
+    // a safe default (0 = say nothing) rather than a stale count from a
+    // previous open.
+    let narrowedCount = 0;
     try {
       const block = user?.id ? await getActiveBlock(user.id) : null;
       const state = await loadExerciseIntentState(user?.id, {
@@ -381,6 +456,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
       proposal = repeatedDefaultCandidate(state, exercise?.id, {
         routineId, getExercise: (id) => byId.get(id) ?? null,
       });
+      // T2-08: counted over the STRUCTURAL list (ranked), before
+      // rankPersonalised's senior question (isEligibleExercise ->
+      // isCapabilityEligible) narrows it into `ordered` - this is exactly
+      // the set that would otherwise vanish from the sheet unremarked.
+      if (state?.capability && !state.capability.empty) {
+        // eslint-disable-next-line global-require
+        const { capabilityBlockReason } = require('../lib/capability/resolve');
+        narrowedCount = ranked.filter((c) => capabilityBlockReason(state.capability, c.exercise) !== null).length;
+      }
       setIntentState(state);
       // D109-2: the read failed open (structural list stands, nothing is
       // filtered by avoidance) - say so, rather than let the swap list look
@@ -399,6 +483,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
     } catch (_) { /* personalisation is additive: the structural list stands */ }
     setSwapCandidates(ordered);
     setDefaultProposal(proposal);
+    setSwapNarrowedCount(narrowedCount);
     setSwapState({ routineExerciseId: routineExercise.id, exercise });
   }
 
@@ -796,6 +881,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 // recovery-narrow list, we don't know what muscle the
                 // original was so we can't filter intelligently.
                 setSwapCandidates(allExercises.map(e => ({ exercise: e })));
+                // T2-08: this is the unfiltered full library, not a
+                // capability-narrowed ranked list - no narrowing to report.
+                setSwapNarrowedCount(0);
                 return;
               }
               openEdit(routineExercise, exercise);
@@ -867,6 +955,21 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 const chosen = explainSelection(routineExercise.selectionReason);
                 const why = chosen ?? getExerciseWhyThis(exercise.name, exercise.subregion);
                 return why ? <Text style={[styles.exerciseWhy, live.exerciseWhy]}>{why}</Text> : null;
+              })()}
+              {/* T2-32 (D112 R5, closes audit T2-32): the plan-view marker
+                  for a row conflicted with the user's capability rules.
+                  Resolved from the FULL library (routine rows carry partial
+                  exercise objects without demand columns). Purely
+                  informational - the row's existing Swap icon is the
+                  action path, no new button. */}
+              {(() => {
+                // Lead tighten (W3 review): only a FULL library row is
+                // judged - the routine row's partial exercise object has no
+                // demand columns and would read unknown-conflicts, marking
+                // an unresolved row with a caption it cannot earn.
+                const fullRow = allExercisesById.get(exercise.id);
+                const note = fullRow ? capabilityPlanCaption(planCapState, fullRow) : null;
+                return note ? <Text style={[styles.exerciseCapabilityNote, live.exerciseCapabilityNote]}>{note}</Text> : null;
               })()}
             </View>
             {isReordering ? (
@@ -1142,6 +1245,15 @@ export default function RoutineDetailScreen({ navigation, route }) {
           <Text style={[styles.swapNote, live.swapNote]}>
             Choose a substitute. Your routine will be updated. Your set, rep and rest targets stay the same.
           </Text>
+          {/* T2-08 (D112 R5, closes audit T2-08): the ranked list narrows
+              silently against the user's capability rules (rankPersonalised
+              -> isEligibleExercise); this says so instead, visibility only -
+              ranking and filtering are unchanged. */}
+          {swapNarrowedCount > 0 ? (
+            <Text style={[styles.swapNote, live.swapNote]}>
+              {swapNarrowedCount} movement{swapNarrowedCount === 1 ? '' : 's'} left out for how you train.
+            </Text>
+          ) : null}
           <FlashList
             data={swapCandidates}
             keyExtractor={item => item.exercise.id}
@@ -1170,7 +1282,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
             )}
             ListEmptyComponent={
               <Text style={{ color: t.colors.textMuted, textAlign: 'center', marginTop: spacing.xl }}>
-                No close matches yet.
+                {swapNarrowedCount > 0 ? 'No close matches inside how you train.' : 'No close matches yet.'}
               </Text>
             }
             ListFooterComponent={
@@ -1302,6 +1414,9 @@ const styles = StyleSheet.create({
   exerciseMeta: { fontSize: fontSize.sm, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
   exerciseMuscle: { ...type.caption, color: colors.textMuted },
   exerciseWhy: { ...type.captionTight, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xxs },
+  // T2-32 (D112 R5): a plain status caption, not the "why" rationale voice
+  // above (no italic) - the capability lane states a fact, quietly.
+  exerciseCapabilityNote: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   splitRationale: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs, marginBottom: spacing.sm },
   divisionLine: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs },
   exerciseStartWeight: { ...type.num('caption'), color: colors.primary },
@@ -1451,6 +1566,7 @@ function buildLiveStyles(t) {
     exerciseMeta: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     exerciseMuscle: { ...t.type.caption, color: t.colors.textMuted },
     exerciseWhy: { ...t.type.captionTight, color: t.colors.textMuted },
+    exerciseCapabilityNote: { ...t.type.captionTight, color: t.colors.textMuted },
     splitRationale: { ...t.type.bodySm, color: t.colors.textMuted },
     divisionLine: { ...t.type.bodySm, color: t.colors.textMuted },
     exerciseStartWeight: { ...t.type.num('caption'), color: t.colors.primary },

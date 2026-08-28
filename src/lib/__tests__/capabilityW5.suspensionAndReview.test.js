@@ -14,10 +14,11 @@
  *
  * T2-26, the section 25 suspension: "just hold my plan" existed nowhere.
  * The core is pinned at source here (schema, writer, sync carry, coach
- * exclusions, the HowYouTrain valve, the WRITTEN-not-applied cloud
- * migration); the serve-time consumer edits land in the W5 wrap-up
- * (deferred while the W3 builders hold those files) and get their pins
- * there.
+ * exclusions, the HowYouTrain valve, the cloud migration - applied to
+ * production 2026-08-28); the serve-layer consumers landed in the W5
+ * wrap-up once the W3A lane freed, and their behaviour pins (hold
+ * genuinely holds; the conflict stays reported while the actionable
+ * list empties) are the final describe block below.
  *
  * T1-02 / T2-10, the resolver door: the two remaining raw-library
  * suggestion/diff paths in this lane now pass the standard capability
@@ -186,5 +187,41 @@ describe('D112 R2 - the resolver door stays shut (regression guard)', () => {
       if (!/isCapabilityEligible|rankPersonalised/.test(src)) offenders.push(f);
     }
     expect(offenders).toEqual([]);
+  });
+});
+
+describe('T2-26 - hold genuinely holds (the effective layer, real engine)', () => {
+  const { computeEffectiveSession, computeCompletionEffects, episodeConflicts, actionableEpisodeConflicts } = require('../capability/effective');
+  const NOW = 1_750_000_000_000;
+  const SQUAT = { id: 'ex-squat', name: 'Barbell Back Squat', primaryMuscle: 'quads', position: 'standing', floorAccess: 0, overheadPosition: 0, gripDemand: 'bar', unilateralLoadable: 0, bilateralUpper: 1, bilateralLower: 1, axialLoad: 1, impact: 0, balanceDemand: 'stable' };
+  const LEGPRESS = { id: 'ex-legpress', name: 'Leg Press', primaryMuscle: 'quads', position: 'seated', floorAccess: 0, overheadPosition: 0, gripDemand: 'supportive', unilateralLoadable: null, bilateralUpper: 0, bilateralLower: 1, axialLoad: 0, impact: 0, balanceDemand: 'supported' };
+  const heldState = (adaptationMode) => buildCapabilityResolveState([{
+    id: 'c1', userId: 'u1', role: 'episode', source: 'self', ruleKind: 'demand',
+    ruleValue: 'standing', laterality: null, startsAt: NOW - 1000, endsAt: null,
+    state: 'active', endedAt: null, endedReason: null, episodeGroupId: 'ep1',
+    deletedAt: null, effectiveChoice: 'applied', adaptationMode,
+  }], { atMs: NOW });
+
+  test('a held APPLIED episode serves the base row unchanged - no substitution, no conflicted marker', () => {
+    const view = computeEffectiveSession([{ exercise: SQUAT }], [SQUAT, LEGPRESS], heldState('hold'), () => true);
+    expect(view.lines[0].effect).toBe('unchanged');
+    expect(view.anyEffect).toBe(false);
+  });
+
+  test('the same rule un-held substitutes - hold is the only difference', () => {
+    const view = computeEffectiveSession([{ exercise: SQUAT }], [SQUAT, LEGPRESS], heldState(null), () => true);
+    expect(view.lines[0].effect).toBe('substituted');
+  });
+
+  test('a held episode excuses nothing at completion', () => {
+    const { entries, excusedIds } = computeCompletionEffects([{ exercise: SQUAT, performed: false }], heldState('hold'));
+    expect(entries).toEqual([]);
+    expect(excusedIds).toEqual([]);
+  });
+
+  test('the conflict is still REPORTED (episodeConflicts) while the actionable list is empty - surfaces can say "you are holding this"', () => {
+    const s = heldState('hold');
+    expect(episodeConflicts(s, SQUAT).length).toBeGreaterThan(0);
+    expect(actionableEpisodeConflicts(s, SQUAT)).toEqual([]);
   });
 });
