@@ -389,6 +389,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // announced as "your starting point". An empty list and an unread list
   // are not the same thing, and this ref is what tells them apart.
   const historyLoadedRef = useRef(false);
+  // CC33 D112 R6 (audit T2-28a): true only while a swap opened from the
+  // "Work around this" sheet is in flight - the ONE surface whose meaning
+  // is "this movement is a capability problem today", so its swap carries
+  // cause 'constraint' even before any rule exists (the narrow override
+  // ruled in recordExerciseSwap). Cleared on confirm and on every close.
+  const workAroundSwapRef = useRef(false);
   const [loggedSets, setLoggedSets] = useState([]);
   // Edit/delete an already-logged set mid-session (Hevy parity). `editingSet`
   // is the logged-set object being edited (null when the sheet is closed);
@@ -892,6 +898,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   })();
   const constraintNoticeCopy = constraintNotice?.copy ?? null;
 
+  // CC33 D112 R4 (closes audit T2-11): the preselect handed to How you
+  // train when "Work around this" notes a temporary change - built from
+  // whatever is actually driving THIS exercise's conflict right now
+  // (episode outranks baseline, same precedence constraintNotice uses
+  // above), or this exercise itself when nothing is driving one yet - the
+  // ordinary case, since the sheet is offered before any rule exists.
+  // Exercise names, never ids: HowYouTrainScreen resolves an exercise-kind
+  // preselect against the library by name (TrainingConsiderationsScreen.js
+  // is the contract this mirrors).
+  const workAroundPreselect = (() => {
+    if (!exercise) return null;
+    const driving = constraintConflicts.length ? constraintConflicts : baselineConflictsList;
+    const demandRule = driving.find((c) => c.ruleKind === 'demand');
+    if (demandRule) return { kind: 'demand', axes: [demandRule.ruleValue] };
+    return exercise.name ? { kind: 'exercise', exerciseNames: [exercise.name] } : null;
+  })();
+
   // COMP-015: this session's adjustment for the current exercise, if any. Only
   // Pro sessions ever carry adjustments; a reverted one is ignored. A nonzero
   // setDelta changes the working-set target everywhere recommendedSets drives
@@ -1327,8 +1350,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       recordExerciseSwap(user.id, exercise.id, newExercise.id, {
         routineId: activeWorkout?.routineId ?? null, explicit: true,
         scope: SWAP_SCOPE.SESSION,
+        // T2-28a: a Work-around-sheet swap is capability-motivated by the
+        // user's own declaration, rule or no rule yet.
+        causeOverride: workAroundSwapRef.current ? 'constraint' : null,
       }).catch(() => {});
     }
+    workAroundSwapRef.current = false;
     cancelAutoAdvance();
     setSwapCandidates([]);
     setShowSwapModal(false);
@@ -4798,15 +4825,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   setShowOverflow(false);
                   appAlert(
                     exercise?.name ? `Work around ${exercise.name} today?` : 'Work around this today?',
-                    'Swap it for something that works now. If this is more than a one-off, you can also note a temporary change so plans work around it.',
+                    'Swap it for something that works now. If this is more than a one-off, note a temporary change and plans work around it.',
                     [
                       { text: 'Cancel', style: 'cancel' },
-                      { text: 'Just swap it', onPress: () => handleOpenSwap() },
+                      { text: 'Just swap it', onPress: () => { workAroundSwapRef.current = true; handleOpenSwap(); } },
                       {
-                        text: 'Swap and note a temporary change',
+                        text: 'Note a temporary change',
                         onPress: () => {
-                          handleOpenSwap();
-                          try { navigation.navigate('HowYouTrain'); } catch (_e) { /* best effort */ }
+                          // T2-11: this used to ALSO open the swap sheet
+                          // while navigating with no params, so the sheet
+                          // opened orphaned underneath and How you train
+                          // landed cold. It navigates only now, pre-filled
+                          // from this exercise's own driving conflict
+                          // (workAroundPreselect above); "Just swap it"
+                          // above is unchanged.
+                          try {
+                            navigation.navigate('HowYouTrain', workAroundPreselect ? { preselect: workAroundPreselect } : undefined);
+                          } catch (_e) { /* best effort */ }
                         },
                       },
                     ],
@@ -5187,7 +5222,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         </WorkoutBottomSheet>
 
         {/* Exercise Swap Modal */}
-        <Modal visible={showSwapModal} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={() => setShowSwapModal(false)}>
+        <Modal visible={showSwapModal} animationType={reduceMotion ? 'none' : 'slide'} onRequestClose={() => { workAroundSwapRef.current = false; setShowSwapModal(false); }}>
           {showSwapModal ? (
             <>
           {/* Nested provider: a core RN <Modal> presents in its own window on
@@ -5202,7 +5237,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   {exercise?.name}
                 </Text>
               </View>
-              <TouchableOpacity style={[styles.swapCloseBtn, live.swapCloseBtn]} onPress={() => setShowSwapModal(false)} accessibilityRole="button" accessibilityLabel="Close swap">
+              <TouchableOpacity style={[styles.swapCloseBtn, live.swapCloseBtn]} onPress={() => { workAroundSwapRef.current = false; setShowSwapModal(false); }} accessibilityRole="button" accessibilityLabel="Close swap">
                 <Ionicons name="close" size={20} color={t.colors.textPrimary} />
               </TouchableOpacity>
             </View>

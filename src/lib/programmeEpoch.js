@@ -66,6 +66,10 @@ export const SLOT_REASON = Object.freeze({
   JOINT_DISCOMFORT: 'joint_discomfort',
   USER_SWAPPED_AWAY: 'user_swapped_away',
   CAPABILITY_HOLD: 'capability_hold',
+  // CC33 D112 R6 (audit T1-08): a BASELINE capability conflict replaces
+  // with its own honest reason - never disguised as USER_EXCLUDED (a
+  // preference) and never conflated with the episode KEEP above it.
+  CAPABILITY_EXCLUDED: 'capability_excluded',
   // Structural: the slot no longer fits the programme it sits in.
   EQUIPMENT_LOST: 'equipment_lost',
   NO_LONGER_AUTO_ELIGIBLE: 'no_longer_auto_eligible',
@@ -279,6 +283,12 @@ export function slotVerdict(evidence = {}, {
   // it is kept, with the capability reason; the user's own explicit exclusion
   // above still outranks it.
   if (evidence.capabilityAffected) return verdict(SLOT_VERDICT.KEEP, SLOT_REASON.CAPABILITY_HOLD);
+  // CC33 D112 R6/R1 (audit T1-08, T1-10): a BASELINE-ineligible incumbent
+  // is replaced with the capability reason - permanent shapes the
+  // document. Ranked after the episode KEEP (temporary is an overlay)
+  // and before every evidence rank: no amount of history keeps a
+  // movement the user cannot do.
+  if (evidence.capabilityIneligible) return verdict(SLOT_VERDICT.REPLACE, SLOT_REASON.CAPABILITY_EXCLUDED);
   // Repeated deliberate swaps are the user telling us by behaviour rather
   // than by switch. One swap is not evidence; a pattern is.
   if ((evidence.swappedAwayCount ?? 0) >= 2) {

@@ -6,8 +6,11 @@
  * UPDATE; the server purges tombstones on its standing schedule), mapped
  * to the migrate_145 shape with ISO timestamps, upserted in batches of
  * 200 on (user_id, id). The server-side refuse-stale trigger keeps
- * updated_at monotonic. Fails soft (queued retry) until migration 145 is
- * applied - founder-gated.
+ * updated_at monotonic. Migration 145 is APPLIED (2026-08-21, founder-
+ * confirmed "run against production" batch; verified live per
+ * supabase/README.md's 2026-08-21 entry) - the fail-soft queued-retry
+ * path below was the pre-application bridge and stands unchanged as
+ * ordinary transient-failure handling.
  *
  * Pull: select all for the user; the database.js applier does the
  * strictly-newer LWW compare, so a local unsynced write is never

@@ -2700,7 +2700,8 @@ const SCHEMA_MIGRATIONS = [
   // effective view stays a RESOLUTION LAYER (section 2.3) - this column
   // stores the user's standing choice, never a computed plan.
   // Cloud counterpart: supabase/migrate_149_swap_cause_effective_choice.sql
-  // (written, NOT applied; founder-gated).
+  // (APPLIED 2026-08-21 in the founder-confirmed "run against production"
+  // batch; verified live per supabase/README.md's 2026-08-21 entry).
   [
     migrateSwapCauseAndEffectiveChoice,
   ],
@@ -2709,8 +2710,9 @@ const SCHEMA_MIGRATIONS = [
   // push-up/quadruped class) reads as grip-free on the grip axis, so
   // wrist and hand restrictions could not be expressed without it.
   // Additive + idempotent; NULL = UNKNOWN (CAP-8). Cloud counterpart:
-  // supabase/migrate_151_weight_bearing_hands.sql (written, NOT applied;
-  // founder-gated).
+  // supabase/migrate_151_weight_bearing_hands.sql (APPLIED 2026-08-21 in
+  // the founder-confirmed "run against production" batch; verified live
+  // per supabase/README.md's 2026-08-21 entry).
   [
     'ALTER TABLE exercises ADD COLUMN weight_bearing_hands INTEGER',
     migrateWeightBearingHandsBackfill,
@@ -10581,7 +10583,7 @@ export async function getExerciseIntents(userId, { nowMs = Date.now() } = {}) {
  * Record an A->B replacement. Append-only: the log IS the evidence, and a
  * later swap away from B does not erase that B was once chosen.
  */
-export async function recordExerciseSwap(userId, fromExerciseId, toExerciseId, { routineId = null, mesocycleId = null, explicit = true, scope = null } = {}) {
+export async function recordExerciseSwap(userId, fromExerciseId, toExerciseId, { routineId = null, mesocycleId = null, explicit = true, scope = null, causeOverride = null } = {}) {
   if (!userId || !fromExerciseId || !toExerciseId) return null;
   if (fromExerciseId === toExerciseId) return null;
   const d = await db();
@@ -10593,7 +10595,18 @@ export async function recordExerciseSwap(userId, fromExerciseId, toExerciseId, {
   // cause='constraint', whichever sheet or shortcut it came through.
   // Never free text, never UI-path-keyed. Best-effort: a read failure
   // leaves cause NULL (unknown), which no reader ever counts.
-  let cause = null;
+  //
+  // CC33 D112 R6 (audit T2-28a): ONE narrow exception to the never-UI-
+  // path-keyed law, ruled at lead review. A swap taken from the in-session
+  // "Work around this" sheet BEFORE any rule exists is a capability-
+  // motivated action by the user's own declaration - central derivation
+  // legitimately finds no rule and returns NULL, and the swap then
+  // teaches the preference lane that the user dislikes the movement.
+  // causeOverride accepts exactly 'constraint' (nothing else), only ADDS
+  // provenance (it never suppresses a derived cause), and stays honest:
+  // the user tapped a sheet whose whole meaning is "this movement is a
+  // capability problem today".
+  let cause = causeOverride === 'constraint' ? 'constraint' : null;
   try {
     // eslint-disable-next-line global-require
     const { loadCapabilityResolveState, capabilityBlockReason } = require('./capability/resolve');
@@ -10602,7 +10615,7 @@ export async function recordExerciseSwap(userId, fromExerciseId, toExerciseId, {
       const from = await getExerciseById(fromExerciseId);
       if (from && capabilityBlockReason(state, from) !== null) cause = 'constraint';
     }
-  } catch (_e) { cause = null; }
+  } catch (_e) { /* derivation best-effort; an explicit override stands */ }
   await d.runAsync(
     `INSERT INTO exercise_swaps
        (id, user_id, from_exercise_id, to_exercise_id, routine_id, mesocycle_id, explicit, scope, cause, created_at, updated_at)

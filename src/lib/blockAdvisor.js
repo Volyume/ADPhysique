@@ -532,31 +532,32 @@ async function buildProgrammeReview(userId, activeBlock) {
         });
       } catch (_) { /* logging must never break the advisor */ }
     }
-    // D112 R2 (CC33 audit T1-10): the review finally asks whether the
-    // incumbent is capability-eligible AT ALL. Capability-only on
-    // purpose: preference exclusions already speak through `excluded`
-    // and the swap evidence at their own ranks, and an EPISODE conflict
-    // keeps its KEEP (capabilityAffected outranks autoEligible inside
-    // slotVerdict). What this closes: a BASELINE-ineligible incumbent
-    // was evidence-judged as ordinary and could be reported "nothing
-    // about this has stopped working" for a movement the user cannot
-    // do. A failed read leaves undefined - never REPLACE on a check
-    // that did not happen.
-    let autoEligible;
+    // D112 R2/R6 (CC33 audit T1-10, refined at the T1-08 root fix): the
+    // review asks whether the incumbent is capability-eligible AT ALL,
+    // through the PRECISE field - capabilityIneligible - never the shared
+    // autoEligible seam, whose meaning everywhere else is name-based
+    // obscure-lift gating (overloading it briefly let a stored KEEP of an
+    // obscure-named lift be overridden too, against R4). Capability-only
+    // on purpose: preference exclusions speak through `excluded`, and an
+    // EPISODE conflict keeps its KEEP (capabilityAffected outranks this
+    // inside slotVerdict). A failed read answers false - never REPLACE on
+    // a check that did not happen.
+    let capabilityIneligible = false;
     try {
       // eslint-disable-next-line global-require
       const { isCapabilityEligible } = require('./capability/resolve');
       const row = rowById.get(exerciseId);
-      autoEligible = (row && intentState?.capability && !intentState.capability.empty
-        && !intentState.capability.unavailable)
-        ? isCapabilityEligible(intentState.capability, row)
-        : undefined;
-    } catch (_e) { autoEligible = undefined; }
+      capabilityIneligible = !!(row && intentState?.capability && !intentState.capability.empty
+        && !intentState.capability.unavailable
+        && !isCapabilityEligible(intentState.capability, row)
+        && !capabilityAffected);
+    } catch (_e) { capabilityIneligible = false; }
     return {
       capabilityAffected,
+      capabilityIneligible,
       excluded: isExcluded(intentState, exerciseId) || isAvoidedThisBlock(intentState, exerciseId),
       swappedAwayCount: swappedAwayCount(intentState, exerciseId),
-      autoEligible,
+      autoEligible: undefined,
       sessions: facts.sessions,
       progressing: facts.progression === 'progressing',
       plateau: facts.plateau === true,

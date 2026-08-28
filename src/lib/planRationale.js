@@ -85,6 +85,11 @@ const REASON_COPY = Object.freeze({
   // Changed, and why.
   [SLOT_REASON.USER_EXCLUDED]:
     'You asked not to be suggested this.',
+  // CC33 D112 R6 (audit T1-08): the capability lane's own words - this
+  // line must never read as a preference ("asked not to be suggested")
+  // for a rule that means the movement sits outside how the user trains.
+  [SLOT_REASON.CAPABILITY_EXCLUDED]:
+    'This sits outside how you train.',
   [SLOT_REASON.USER_SWAPPED_AWAY]:
     'You have swapped this out of your plan more than once.',
   [SLOT_REASON.JOINT_DISCOMFORT]:

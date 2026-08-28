@@ -473,13 +473,37 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
       ? isEligibleExercise(intentState, row ?? { id: exerciseId })
       : true;
     const intentBlocked = intentState ? !isEligible(intentState, exerciseId) : false;
+    // CC33 D112 R6 (closes audit T1-08 at its root): the senior question
+    // fails for TWO different reasons - a preference (id or family
+    // avoidance) and a BASELINE capability conflict - and collapsing both
+    // into `excluded` sent capability exclusions to
+    // SLOT_REASON.USER_EXCLUDED, whose rationale reads "You asked not to
+    // be suggested this." for a rule that means "I cannot do this". The
+    // capability answer is asked directly so each lane keeps its own
+    // verdict reason; a failed read answers eligible (never REPLACE on a
+    // check that did not happen - the same posture as autoEligible's
+    // undefined at block review).
+    let capEligible = true;
+    try {
+      if (row && intentState?.capability && !intentState.capability.empty
+        && !intentState.capability.unavailable) {
+        // eslint-disable-next-line global-require
+        const { isCapabilityEligible } = require('./capability/resolve');
+        capEligible = isCapabilityEligible(intentState.capability, row);
+      }
+    } catch (_e) { capEligible = true; }
     return {
       // D107-2: an incumbent whose whole movement FAMILY is now avoided is
       // treated as excluded for continuity purposes too, not just an
       // incumbent excluded by id - so a rebuild does not carry a
       // family-avoided exercise forward as "retained". isEligibleExercise
-      // is a strict superset of the id-only check this replaces.
-      excluded: intentBlocked || (!senior && !capabilityAffected),
+      // is a strict superset of the id-only check this replaces - and the
+      // capability half of a senior failure now speaks through
+      // capabilityIneligible below, never through this preference field.
+      excluded: intentBlocked || (!senior && capEligible && !capabilityAffected),
+      // BASELINE conflicts only: an EPISODE-affected slot keeps its
+      // CAPABILITY_HOLD (temporary is an overlay; the document keeps it).
+      capabilityIneligible: !capEligible && !capabilityAffected,
       capabilityAffected,
       swappedAwayCount: intentState ? swappedAwayCount(intentState, exerciseId) : 0,
       // The exercise is no longer reachable with the equipment the user

@@ -195,7 +195,7 @@ export default function ExerciseConflictSheet({
           </ScrollView>
           {!blocked ? (
             <Text style={[styles.footnote, live.footnote]}>
-              Keeping one here does not change what Volyume suggests elsewhere. It stays set aside until you allow it again.
+              Keeping one here does not change what Volyume suggests elsewhere. It stays out of suggestions until you allow it again under How you train.
             </Text>
           ) : null}
           <Button

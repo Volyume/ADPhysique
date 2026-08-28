@@ -213,8 +213,10 @@ export function applyContinuity({
       // stands (their word), and stored keeps stand wherever capability
       // has no objection; only the KEEP-of-an-ineligible-movement case
       // falls through to the fresh verdict, which replaces it with the
-      // honest NO_LONGER_AUTO_ELIGIBLE reason.
-      const decided = (storedKeeps && evidence.autoEligible === false)
+      // honest CAPABILITY_EXCLUDED reason. Keyed on the PRECISE
+      // capability field, never the shared autoEligible seam (T1-08 root
+      // fix) - a stored keep of an obscure-NAMED lift stands untouched.
+      const decided = (storedKeeps && evidence.capabilityIneligible)
         ? slotVerdict(evidence, context)
         : (stored ?? slotVerdict(evidence, context));
       const { verdict, reason, prescriptionChange = null } = decided;

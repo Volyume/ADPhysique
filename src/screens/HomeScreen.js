@@ -1726,55 +1726,65 @@ export default function HomeScreen({ navigation, route }) {
   // sitting in AWAITING_CONFIRMATION -- past its planned end, still
   // applying (fail-safe), not yet answered. null when none is awaiting.
   const [awaitingConstraint, setAwaitingConstraint] = useState(null);
-  useEffect(() => {
-    if (!user?.id) return;
-    (async () => {
-      try {
-        // eslint-disable-next-line global-require
-        const { loadCapabilityResolveState } = require('../lib/capability/resolve');
-        const state = await loadCapabilityResolveState(user.id, {});
-        const episodeRows = Array.isArray(state?.restrictions)
-          // Lead tighten (W3 review, D112 R8): a HELD episode must not
-          // drive the "works around" line - the serve layer holds it, so
-          // the claim would be false. Applied-and-not-held only, matching
-          // the serve gate plus the hold filter it gained.
-          ? state.restrictions.filter(r => r.role === 'episode' && r.effectiveChoice === 'applied' && r.adaptationMode !== 'hold') : [];
-        setActiveConstraint(episodeRows.length > 0);
+  // T2-30 (D112 R6, verified at W4 build 2026-08-28): this read only ever
+  // re-ran on [user?.id], so a rule that arrived by sync while Home sat in
+  // the background (or a rule ended/changed on another screen) never
+  // updated this line until the app relaunched. useFocusEffect is this
+  // screen's own established pattern for "re-read when the user comes
+  // back" (loadData() above uses the same shape) - nothing about the read
+  // itself changes, it just runs on focus too now.
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) return;
+      (async () => {
         try {
           // eslint-disable-next-line global-require
-          const { subjectPhrase } = require('../lib/capability/phrase');
-          setConstraintSubject(subjectPhrase(episodeRows, {}));
-        } catch (_) { setConstraintSubject(null); }
-        // T1-15/T2-24: grouped the same way the settings store groups
-        // episodes (capability/store.js's loadCapabilityState), from the
-        // rows this effect already has in hand -- no second DB read.
-        try {
-          // eslint-disable-next-line global-require
-          const { episodeStatus } = require('../lib/capability/model');
-          // eslint-disable-next-line global-require
-          const { subjectPhrase } = require('../lib/capability/phrase');
-          const groups = new Map();
-          for (const r of (state?.restrictions ?? [])) {
-            if (r.role !== 'episode' || !r.episodeGroupId) continue;
-            if (!groups.has(r.episodeGroupId)) groups.set(r.episodeGroupId, []);
-            groups.get(r.episodeGroupId).push(r);
-          }
-          let awaiting = null;
-          for (const rows of groups.values()) {
-            if (episodeStatus(rows, Date.now()) === 'awaiting_confirmation') {
-              awaiting = { subject: subjectPhrase(rows, {}) };
-              break;
+          const { loadCapabilityResolveState } = require('../lib/capability/resolve');
+          const state = await loadCapabilityResolveState(user.id, {});
+          const episodeRows = Array.isArray(state?.restrictions)
+            // Lead tighten (W3 review, D112 R8): a HELD episode must not
+            // drive the "works around" line - the serve layer holds it, so
+            // the claim would be false. Applied-and-not-held only, matching
+            // the serve gate plus the hold filter it gained.
+            ? state.restrictions.filter(r => r.role === 'episode' && r.effectiveChoice === 'applied' && r.adaptationMode !== 'hold') : [];
+          setActiveConstraint(episodeRows.length > 0);
+          try {
+            // eslint-disable-next-line global-require
+            const { subjectPhrase } = require('../lib/capability/phrase');
+            setConstraintSubject(subjectPhrase(episodeRows, {}));
+          } catch (_) { setConstraintSubject(null); }
+          // T1-15/T2-24: grouped the same way the settings store groups
+          // episodes (capability/store.js's loadCapabilityState), from the
+          // rows this effect already has in hand -- no second DB read.
+          try {
+            // eslint-disable-next-line global-require
+            const { episodeStatus } = require('../lib/capability/model');
+            // eslint-disable-next-line global-require
+            const { subjectPhrase } = require('../lib/capability/phrase');
+            const groups = new Map();
+            for (const r of (state?.restrictions ?? [])) {
+              if (r.role !== 'episode' || !r.episodeGroupId) continue;
+              if (!groups.has(r.episodeGroupId)) groups.set(r.episodeGroupId, []);
+              groups.get(r.episodeGroupId).push(r);
             }
-          }
-          setAwaitingConstraint(awaiting);
-        } catch (_) { setAwaitingConstraint(null); }
-      } catch (_) {
-        setActiveConstraint(false);
-        setConstraintSubject(null);
-        setAwaitingConstraint(null);
-      }
-    })();
-  }, [user?.id]);
+            let awaiting = null;
+            for (const rows of groups.values()) {
+              if (episodeStatus(rows, Date.now()) === 'awaiting_confirmation') {
+                awaiting = { subject: subjectPhrase(rows, {}) };
+                break;
+              }
+            }
+            setAwaitingConstraint(awaiting);
+          } catch (_) { setAwaitingConstraint(null); }
+        } catch (_) {
+          setActiveConstraint(false);
+          setConstraintSubject(null);
+          setAwaitingConstraint(null);
+        }
+      })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.id]),
+  );
 
   // D112 R2 (closes audit T1-17): the DISPLAYED session's effective (served)
   // row count. One call per focus (re-fires whenever the displayed routine

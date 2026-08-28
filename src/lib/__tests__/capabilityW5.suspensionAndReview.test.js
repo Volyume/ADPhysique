@@ -38,10 +38,10 @@ describe('T1-10 - the stored review never outranks capability', () => {
   const INCUMBENT = [{ exerciseId: 'inc-squat', exerciseName: 'Barbell Back Squat', muscle: 'quads', family: 'squat' }];
   const familyOf = () => slotKey('quads', 'squat');
 
-  const run = ({ stored = null, autoEligible }) => applyContinuity({
+  const run = ({ stored = null, capabilityIneligible }) => applyContinuity({
     generated: GENERATED,
     incumbents: INCUMBENT,
-    evidenceFor: () => ({ autoEligible }),
+    evidenceFor: () => ({ capabilityIneligible }),
     verdictFor: stored ? () => stored : null,
     familyOf,
     context: { epochBlocks: 0 },
@@ -51,17 +51,17 @@ describe('T1-10 - the stored review never outranks capability', () => {
   test('a stored KEEP of a capability-ineligible incumbent falls to the fresh verdict', () => {
     const { workouts, decisions } = run({
       stored: { verdict: SLOT_VERDICT.KEEP, reason: 'still_productive' },
-      autoEligible: false,
+      capabilityIneligible: true,
     });
     expect(decisions[0].outcome).toBe('replaced');
-    expect(decisions[0].reason).toBe(SLOT_REASON.NO_LONGER_AUTO_ELIGIBLE);
+    expect(decisions[0].reason).toBe(SLOT_REASON.CAPABILITY_EXCLUDED);
     expect(workouts[0].exercises[0].exerciseId).toBe('gen-hacksquat');
   });
 
   test("the user's stored REPLACE always stands - their word", () => {
     const { decisions } = run({
       stored: { verdict: SLOT_VERDICT.REPLACE, reason: SLOT_REASON.USER_SWAPPED_AWAY },
-      autoEligible: false,
+      capabilityIneligible: true,
     });
     expect(decisions[0].outcome).toBe('replaced');
     expect(decisions[0].reason).toBe(SLOT_REASON.USER_SWAPPED_AWAY);
@@ -70,22 +70,47 @@ describe('T1-10 - the stored review never outranks capability', () => {
   test('a stored KEEP with no capability objection stands exactly as before', () => {
     const { workouts, decisions } = run({
       stored: { verdict: SLOT_VERDICT.KEEP, reason: 'still_productive' },
-      autoEligible: true,
+      capabilityIneligible: false,
     });
     expect(decisions[0].outcome).toBe('retained');
     expect(workouts[0].exercises[0].exerciseId).toBe('inc-squat');
   });
 
   test('with no stored verdict the fresh path replaces the ineligible incumbent too', () => {
-    const { decisions } = run({ stored: null, autoEligible: false });
+    const { decisions } = run({ stored: null, capabilityIneligible: true });
     expect(decisions[0].outcome).toBe('replaced');
-    expect(decisions[0].reason).toBe(SLOT_REASON.NO_LONGER_AUTO_ELIGIBLE);
+    expect(decisions[0].reason).toBe(SLOT_REASON.CAPABILITY_EXCLUDED);
   });
 
-  test('blockAdvisor supplies the answer, capability-only and fail-safe, at source', () => {
+  test('a stored KEEP of a merely obscure-NAMED lift stands - the gate keys on capability, never the shared autoEligible seam', () => {
+    // The T1-08 root fix caught a regression in this very gate: keyed on
+    // autoEligible === false, it also overrode stored keeps of lifts that
+    // had only lost NAME-based auto-eligibility, against R4 (the user's
+    // word). The precise field closes that.
+    const { decisions } = applyContinuity({
+      generated: GENERATED,
+      incumbents: INCUMBENT,
+      evidenceFor: () => ({ autoEligible: false, capabilityIneligible: false }),
+      verdictFor: () => ({ verdict: SLOT_VERDICT.KEEP, reason: 'still_productive' }),
+      familyOf,
+      context: { epochBlocks: 0 },
+      isRebuild: true,
+    });
+    expect(decisions[0].outcome).toBe('retained');
+  });
+
+  test('blockAdvisor supplies the answer through the PRECISE field, fail-safe, at source', () => {
     const src = read('lib/blockAdvisor.js');
     expect(src).toContain('isCapabilityEligible(intentState.capability, row)');
-    expect(src).toMatch(/catch \(_e\) { autoEligible = undefined; }/);
+    expect(src).toMatch(/catch \(_e\) { capabilityIneligible = false; }/);
+    // The shared name-based seam stays deliberately unconsulted at review.
+    expect(src).toContain('autoEligible: undefined,');
+  });
+
+  test('the whole chain speaks capability at source: evidence, verdict, rationale', () => {
+    expect(read('lib/planAutoGen.js')).toContain('capabilityIneligible: !capEligible && !capabilityAffected,');
+    expect(read('lib/programmeEpoch.js')).toContain("CAPABILITY_EXCLUDED: 'capability_excluded',");
+    expect(read('lib/planRationale.js')).toContain("'This sits outside how you train.'");
   });
 });
 

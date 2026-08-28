@@ -52,6 +52,7 @@ export default function AvoidedMovementsScreen({ navigation }) {
     rowSub: { color: t.colors.textMuted },
     removeBtnText: { color: t.colors.primary },
     noticeText: { color: t.colors.textMuted },
+    crossLaneText: { color: t.colors.textMuted },
   };
   const user = useAppStore(s => s.user);
   const toast = useToast();
@@ -101,6 +102,21 @@ export default function AvoidedMovementsScreen({ navigation }) {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top']}>
       <BackHeader title="Avoided movements" onBack={() => navigation.goBack()} />
+      {/* CC33 D112 R6 (closes audit T1-20): the two lanes never
+          cross-referenced each other. This is a preference surface -
+          things the body needs training built around belong to the
+          capability lane instead, so this quiet line points there. */}
+      <TouchableOpacity
+        onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
+        style={styles.crossLaneRow}
+        accessibilityRole="button"
+        accessibilityLabel="Things your body needs training built around live under How you train"
+      >
+        <Text style={[styles.crossLaneText, live.crossLaneText]}>
+          Things your body needs training built around live under How you train.
+        </Text>
+        <Ionicons name="chevron-forward" size={14} color={t.colors.textMuted} />
+      </TouchableOpacity>
       {unavailable ? (
         <View style={styles.noticeRow}>
           <Ionicons name="information-circle-outline" size={14} color={t.colors.textMuted} />
@@ -153,6 +169,11 @@ export default function AvoidedMovementsScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1 },
   list: { padding: spacing.lg, gap: spacing.sm },
+  crossLaneRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    gap: spacing.xs, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs,
+  },
+  crossLaneText: { ...type.caption, flex: 1 },
   noticeRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
     paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,

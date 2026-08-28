@@ -138,10 +138,14 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
     const sided = rulePhrase(first);
     return first.laterality && sided
       ? `You've said ${sided} does not work, and this one cannot be done a side at a time`
-      : `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you've set aside`;
+      : `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you keep out under how you train`;
   }
-  if (first?.ruleKind === 'family') return `Involves ${familyLabel(first.ruleValue)}, which you've set aside`;
-  return 'You set this movement aside in How you train';
+  // CC33 D112 R6 (closes audit T2-33/T1-19): the capability lane never
+  // borrows the preference lane's "set aside" (RoutineDetailScreen's own
+  // exclusion copy owns that verb). Every branch here names how the user
+  // trains, not what they set aside.
+  if (first?.ruleKind === 'family') return `Involves ${familyLabel(first.ruleValue)}, which you keep out under how you train`;
+  return 'You keep this movement out under How you train.';
 }
 
 // saveLabel / actionLabel are aliases for the create-form's save button text

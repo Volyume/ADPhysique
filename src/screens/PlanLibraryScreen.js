@@ -12,8 +12,9 @@ import { useFocusEffect } from '@react-navigation/native';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
-import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock, getActiveBlock, updateRoutineExerciseExercise } from '../lib/database';
+import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock, getActiveBlock, updateRoutineExerciseExercise, recordExerciseSwap } from '../lib/database';
 import { loadExerciseIntentState, findPlanIntentConflicts } from '../lib/exercise/intent';
+import { SWAP_SCOPE } from '../lib/exercise/swapScope';
 import ExerciseConflictSheet from '../components/ExerciseConflictSheet';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { seedRoutinesIfNeeded } from '../lib/seedRoutines';
@@ -556,6 +557,19 @@ export default function PlanLibraryScreen({ navigation }) {
     try {
       if (conflict?.routineExerciseId && picked?.id) {
         await updateRoutineExerciseExercise(conflict.routineExerciseId, picked.id);
+        // D112 R6 (closes audit T2-28b): install-time replacement is a real
+        // swap and belongs in the same provenance log as every other one -
+        // cause derives centrally (recordExerciseSwap re-checks capability
+        // eligibility on the FROM exercise at write time), so a
+        // preference-only conflict recorded here still gets cause NULL,
+        // exactly as it should.
+        if (conflict?.exerciseId && user?.id) {
+          await recordExerciseSwap(user.id, conflict.exerciseId, picked.id, {
+            routineId: conflict.routineId ?? null,
+            explicit: true,
+            scope: SWAP_SCOPE.PROGRAMME,
+          }).catch(() => { /* best effort */ });
+        }
       }
     } catch (_) { /* best effort */ }
   }
