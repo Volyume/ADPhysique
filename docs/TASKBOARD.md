@@ -793,12 +793,24 @@ injuries.
   understand and trust the surface that drives it; today the founder cannot,
   which predicts users cannot.
 
+**ORDER AMENDMENT (founder, 2026-08-28, second directive):** not limited to
+configuration screens. Trace complete end-to-end behaviour of every
+disability / long-term restriction / temporary injury setting through plan
+generation, existing-plan handling, exercise selection, swaps, active
+workouts, coaching, block transitions and future plan generation. Find where
+a setting is stored but its effect is invisible, not understandable, or not
+consistently honoured. AUDIT FIRST, redesign after. End state: one coherent
+capability, not a collection of settings. Audit schema:
+`docs/injury-disability-audit-2026-08-28/AUDIT-SPEC.md` (matrix rows R1-R11 x
+stages A-H, HONOURED/VISIBLE/EXPLAINED per cell, severities S1-S5).
+
 Stages: S1 recon+research (pair 1: Sonnet inventory read-only, Opus external
-research) -> S2 adversarial UX audit + integration matrix (pair 2: Opus audit,
-Sonnet trace) -> S3 lead design ruling (docs/injury-disability-audit-2026-08-28/,
-decisions to the D-register) -> S4 build waves (Sonnet surfaces, lead
-engine/safety-adjacent + review) -> S5 gate: lint + full suite + merge + device
-checklist.
+research) -> S2 END-TO-END TRACE per AUDIT-SPEC (pair 2, Opus x2 per the
+standing tier law - audits are the Opus lane: T1 generation half A/B/C/G/H,
+T2 live half D/E/F + lifecycle R10) -> S3 lead audit synthesis + design
+ruling (docs/injury-disability-audit-2026-08-28/, decisions to the
+D-register) -> S4 build waves (Sonnet surfaces, lead engine/safety-adjacent +
+review) -> S5 gate: lint + full suite + merge + device checklist.
 
 RECOVERY PATHS (recorded before dispatch, per operating model): S1/S2 agents
 are READ-ONLY (no repo writes) — a dead agent is re-dispatched with the same
