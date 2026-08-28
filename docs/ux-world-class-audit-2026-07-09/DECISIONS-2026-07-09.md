@@ -3102,3 +3102,51 @@ The API-36 analysis was NOT re-derived: it is taken from
   profile Status active, so an expo.dev deletion alone need not remove it
   - the Apple Developer portal copy has to go too. That omission is why
   the same advice had failed before.
+
+## D112 — CC33 injury/disability capability: audit verdict + coherent-capability design ruling (lead-ruled under D33, 2026-08-28)
+
+The CC33 end-to-end audit (four banked evidence lanes, 60 findings,
+lead-verified: `docs/injury-disability-audit-2026-08-28/`) CONFIRMS all
+five founder beliefs — not findable, not understandable, not easy to
+use, not explanatory, imperfectly integrated — and finds integration
+worse than believed: four S1 not-honoured defects (T1-01 ceilings never
+enforced; T1-03 baseline rule + installed plan changes nothing; T2-01
+promotion silently reverts substitutions; T2-02 user allowances ignored
+by every consumer but the picker), plus fail-open postures on the coach
+apply path and swaps. The engine core is sound; the defect is everything
+between the engine and the person (FINDINGS.md §2–3: six structural
+causes).
+
+RULED (full rationale in `DESIGN-RULING.md`, same folder): the coherence
+model "temporary is an overlay; permanent is the document", enacted by
+eight rulings — R1 baseline lifecycle completed (plan-rewrite proposal on
+baseline creation AND promotion; RT2-1 amended: baseline invisibility is
+correct only while the document is baseline-compatible); R2 the resolver
+is the only suggestion door (raw-library paths rerouted, guarded by
+regression tests); R3 one fail-safe posture (generation holds; serve
+says "could not check"; coach apply withholds — never body-wide on a
+failed read); R4 the user's word outranks the model inside the safety
+envelope (allowances everywhere, manual adds never overridden, per-line
+Apply/Decline + revisit surface, real-outcome previews, no words put in
+the user's mouth); R5 the specified quiet visibility layer actually
+built (post-workout line, plan markers, why-this, narrowing counts,
+effects history, Home line, graded total-block state); R6 one vocabulary
+per lane + uniform clinician standing (named decline confirm; provenance
+so capability swaps stop teaching the preference lane); R7 coaching
+truth (CONSTRAINED reachable on both drivers, substituted effects
+recorded, adherence gate defers when excused); R8 §25 "just hold my
+plan" built (per-episode adaptation_mode, additive migrate_152 written,
+founder phrase to apply).
+
+Residuals RULED, not parked: §20 neverClaim = invariant-pinned, runtime
+filter retired; §23.4 no-window stands with the block-boundary stamp gap
+closed; stale-vs-unavailable = one user-facing state; live session-length
+wiring ruled OUT (against the §14 control model). Unchanged: engine
+core, RT2-2 naming, FD-1 free tier, Article 9 lane, notifications lane,
+ED-safety, billing/tier. T2's migration question CLOSED by record +
+read-only production check: 145–149 + 151 live; the contrary code
+comments are stale (fix queued W4). Build: five waves (W1/W2/W5 lead
+hands-on — honour core, coaching truth, resolver door + suspension;
+W3/W4 Sonnet pairs under lead review — visibility, flows/vocabulary),
+then the S5 gate with device checklist. Truth field
+REAL-DISABLED-USER-VALIDATED stays NO.

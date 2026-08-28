@@ -1,6 +1,32 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-08-28 — CC33 INJURY/DISABILITY AUDIT COMPLETE, DESIGN RULED (D112); S4 BUILD WAVES NEXT ★
+
+Founder order 2026-08-28 (two directives: adversarial review of the
+injury/disability configuration; then end-to-end trace of every setting
+through generation, existing plans, selection, swaps, active workouts,
+coaching, block transitions and future generation — audit first, then
+one coherent capability). Campaign folder:
+`docs/injury-disability-audit-2026-08-28/` — AUDIT-SPEC.md (matrix +
+severities), four banked evidence lanes (S1 surface inventory, S1
+research evidence, S2-T1 generation trace 27 findings, S2-T2 live trace
+33 findings, both lead-verified), FINDINGS.md (verdict: all five founder
+beliefs CONFIRMED; four S1 not-honoured defects — T1-01 volume ceilings
+never enforced, T1-03 baseline+installed plan inert, T2-01 promotion
+silently reverts substitutions, T2-02 allowances ignored beyond the
+picker; six structural causes; 60-finding roll-up with wave map), and
+DESIGN-RULING.md (D112: "temporary is an overlay; permanent is the
+document"; rulings CC33-R1..R8; five-wave S4 plan — W1/W2/W5 lead
+hands-on, W3/W4 Sonnet pairs; §25 suspension built with migrate_152
+WRITTEN-not-applied, founder phrase required). T2's migration question
+CLOSED: 145–149+151 confirmed live (README record + read-only
+production column check); the contrary comments at database.js:2703 and
+sync/tables/capabilityConstraints.js:9 are stale (fix queued W4).
+Position on entering S4: W1 (honour core) is the lead's first build.
+Board: CC33 entry, section 1. Everything through S3 merged to main.
+
+===============================================================================
 ## ★ 2026-08-21 — CAPABILITY WORKSTREAM CC25–CC32 + GAP CLOSURE: COMPLETE, ON MAIN ★
 
 The whole capability/disability-inclusion workstream is CLOSED and

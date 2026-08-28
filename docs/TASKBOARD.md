@@ -820,8 +820,21 @@ promotion breaks serving, T2-02 allowances never consulted; T2's
 migration-149 question CLOSED: supabase/README:194 record + read-only
 production column check both confirm 145-149+151 live, the database.js:2703
 / capabilityConstraints.js:9 comments are STALE — comment fix queued for
-S4). All four evidence lanes complete: 60 findings. S3 IN PROGRESS (lead
-synthesis FINDINGS.md + design ruling to the D-register).
+S4). All four evidence lanes complete: 60 findings. S3 DELIVERED
+(2026-08-28): FINDINGS.md (verdict: all five founder beliefs CONFIRMED,
+four S1s, six structural causes, full 60-finding roll-up with wave map)
++ DESIGN-RULING.md (coherence model "temporary is an overlay; permanent
+is the document"; rulings CC33-R1..R8; residual dispositions; success
+criteria; five-wave build plan) + register entry D112. S4 NEXT: W1 lead
+hands-on (honour core: baseline rewrite proposal + promotion transaction
++ ceilings/§15, allowance seam, manual-add respect, posture unification,
+prescription rebuild) -> W2 lead (coaching truth) -> W3/W4 Sonnet pairs
+under lead review (visibility; flows+vocabulary) -> W5 lead (resolver
+door + §25 suspension + migrate_152 WRITTEN, founder phrase to apply)
+-> S5 gate. W3/W4 briefs derive from DESIGN-RULING.md §6 + FINDINGS.md
+roll-up; builder recovery per the standing path (named file lanes,
+campaign branch, dead builder's diff lead-reviewed then landed or
+reverted).
 
 RECOVERY PATHS (recorded before dispatch, per operating model): S1/S2 agents
 are READ-ONLY (no repo writes) — a dead agent is re-dispatched with the same
