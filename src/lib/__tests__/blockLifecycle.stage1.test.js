@@ -149,7 +149,7 @@ describe("the 'Continue with adjustments' seam exists for the Stage 6 ledger", (
     const SRC = read('lib/database.js');
     // Review D5 added the allowLearnedCarry gate beside the ledger option.
     expect(SRC).toMatch(/export async function activatePlanWithBlock\(userId, planId, planName, \{ ledger = null, allowLearnedCarry = true \} = \{\}\)/);
-    const fn = SRC.slice(SRC.indexOf('export async function activatePlanWithBlock'), SRC.indexOf('export async function activatePlanWithBlock') + 5700 /* window widened for the T-2 comment and the C8 Work 2 activation seed */);
+    const fn = SRC.slice(SRC.indexOf('export async function activatePlanWithBlock'), SRC.indexOf('export async function activatePlanWithBlock') + 7200 /* window widened for the T-2 comment, the C8 Work 2 activation seed, and the CC33 baseline-blocked derivation */);
     // C8 Work 2 (D97-9): the seam now threads `effectiveLedger` — the caller's
     // explicit ledger when there is one, otherwise the learned carry built at
     // activation — so an explicit ledger must still reach the seeded write.
@@ -159,7 +159,10 @@ describe("the 'Continue with adjustments' seam exists for the Stage 6 ledger", (
 
   test('generateInitialPlannedVolume consumes the resolved seed map (Stage 6)', () => {
     const SRC = read('lib/database.js');
-    expect(SRC).toMatch(/export async function generateInitialPlannedVolume\(mesocycleId, volumeLandmarks, ledger = null\)/);
+    // CC33 W1 (D112 R1): the signature gained the optional blockedMuscles
+    // option (honest zero rows for baseline-blocked muscles); the Stage 6
+    // ledger threading pinned here is unchanged.
+    expect(SRC).toMatch(/export async function generateInitialPlannedVolume\(mesocycleId, volumeLandmarks, ledger = null, \{ blockedMuscles = null \} = \{\}\)/);
     // The seeded write records its source per row so the explanation
     // layer can never claim a personalisation that is not there.
     expect(SRC).toMatch(/seed_\$\{seed\.source\}/);

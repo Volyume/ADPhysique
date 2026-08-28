@@ -4883,7 +4883,32 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   // covered by a test at all (C16 job 6).
   // eslint-disable-next-line global-require
   const { VOLUME_LANDMARKS } = require('./algorithms');
-  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS, effectiveLedger);
+  // CC33 D112 R1 (section 15; closes audit T1-01): muscles with no pool
+  // under the user's BASELINE rules seed honest zero rows instead of
+  // template fiction. Best-effort, failing to NOTHING BLOCKED: wrongly
+  // zeroing a healthy user's block is the harmful direction, and the
+  // template is the status quo. Episode-only restrictions never zero
+  // (their rows are the protected baseline reintroduction returns to).
+  let capabilityBlockedMuscles = null;
+  try {
+    // eslint-disable-next-line global-require
+    const { loadCapabilityResolveState, baselineBlockedMuscles } = require('./capability/resolve');
+    const capState = await loadCapabilityResolveState(userId, {});
+    if (!capState.empty && !capState.unavailable) {
+      const library = await getAllExercises();
+      capabilityBlockedMuscles = baselineBlockedMuscles(
+        capState, library, Object.keys(VOLUME_LANDMARKS),
+      );
+    }
+  } catch (e) {
+    capabilityBlockedMuscles = null;
+    logError('database.activatePlanWithBlock.capabilityRead', e, {
+      reason: 'baseline pool check failed; seeding template rows',
+    });
+  }
+  await generateInitialPlannedVolume(id, VOLUME_LANDMARKS, effectiveLedger, {
+    blockedMuscles: capabilityBlockedMuscles,
+  });
 
   // C12: refresh the weekly training reminders so their copy names the plan
   // that just became active. Read the name back from the persisted active plan
@@ -5346,7 +5371,7 @@ export async function getNextMesocycleWeek(currentWeekId) {
 // ranges from the Block Ledger replace the static ramp when evidence
 // exists; the underscore drops when it is consumed). Default behaviour is
 // byte-identical until then.
-export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks, ledger = null) {
+export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks, ledger = null, { blockedMuscles = null } = {}) {
   try {
     const d = await db();
     const weeks = await d.getAllAsync(
@@ -5373,11 +5398,26 @@ export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks,
     // eslint-disable-next-line global-require
     const { buildSeededWeeklyTargets } = seedRanges ? require('./blockLedgerGather') : {};
 
+    // CC33 D112 R1 (section 15; closes audit T1-01): a muscle whose pool
+    // is empty under the user's BASELINE rules gets honest zero rows -
+    // planned 0 every week, [mev, mrv] band [0, 0] so computeVolumeApply
+    // can never clamp an increase onto work that does not exist. The mav
+    // column keeps the research value as landmark metadata. EPISODE-only
+    // blocks never reach this set (see baselineBlockedMuscles): their
+    // rows stay at the template as the protected baseline reintroduction
+    // ramps back toward. The section 15 min itself goes through
+    // resolveEffectiveTargets, the canonical former.
+    // eslint-disable-next-line global-require
+    const { resolveEffectiveTargets } = require('./capability/resolve');
+    const blocked = blockedMuscles instanceof Set ? blockedMuscles : new Set(blockedMuscles ?? []);
+
     await runInTransaction(d, async () => {
       for (const [muscle, landmarks] of Object.entries(volumeLandmarks)) {
         const { mev, mav, mrv } = landmarks;
+        const isBlocked = blocked.has(muscle);
         const seed = seedRanges?.[muscle];
-        const seeded = seed && Number.isFinite(seed.startSets) && Number.isFinite(seed.peakSets);
+        const seeded = !isBlocked
+          && seed && Number.isFinite(seed.startSets) && Number.isFinite(seed.peakSets);
         const targets = seeded
           ? buildSeededWeeklyTargets({
             startSets: seed.startSets,
@@ -5399,17 +5439,22 @@ export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks,
         // row's mrv must accommodate the seeded peak or the coach's next
         // "add sets" apply would CLAMP the muscle back down. mev stays
         // the research floor anchor, untouched.
-        const rowMrv = seeded ? Math.max(mrv, seed.peakSets) : mrv;
+        const rowMrv = isBlocked ? 0 : (seeded ? Math.max(mrv, seed.peakSets) : mrv);
+        const rowMev = isBlocked ? 0 : mev;
         for (let i = 0; i < accWeeks.length; i++) {
           const week = accWeeks[i];
           const progress = totalAcc <= 1 ? 1 : i / (totalAcc - 1);
-          const planned = seeded ? targets[i] : Math.round(mev + (mav - mev) * progress);
+          const templatePlanned = seeded ? targets[i] : Math.round(mev + (mav - mev) * progress);
+          const planned = resolveEffectiveTargets(
+            { [muscle]: templatePlanned },
+            isBlocked ? { [muscle]: 0 } : {},
+          )[muscle].effectiveTarget;
           const id = `pmv_${week.id}_${muscle}`;
           await d.runAsync(
             `INSERT OR IGNORE INTO planned_muscle_volume
                (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, week.id, muscle, planned, mev, mav, rowMrv, source, now, now],
+            [id, week.id, muscle, planned, rowMev, mav, rowMrv, source, now, now],
           );
         }
         if (deloadWeek) {
@@ -5418,13 +5463,13 @@ export async function generateInitialPlannedVolume(mesocycleId, volumeLandmarks,
           // deloadFloor); every other source keeps the flat MEV recovery
           // week. The value is the ramp's own tail so the two can never
           // diverge (review #13).
-          const deloadPlanned = seeded ? targets[targets.length - 1] : mev;
+          const deloadPlanned = isBlocked ? 0 : (seeded ? targets[targets.length - 1] : mev);
           const id = `pmv_${deloadWeek.id}_${muscle}`;
           await d.runAsync(
             `INSERT OR IGNORE INTO planned_muscle_volume
                (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [id, deloadWeek.id, muscle, deloadPlanned, mev, mav, rowMrv, source, now, now],
+            [id, deloadWeek.id, muscle, deloadPlanned, rowMev, mav, rowMrv, source, now, now],
           );
         }
       }

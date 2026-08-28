@@ -392,3 +392,50 @@ export function resolveEffectiveTargets(plannedByMuscle = {}, compatibleVolumeBy
   }
   return out;
 }
+
+/**
+ * Section 15 / D112 R1 (closes audit T1-01): the muscles whose pool is
+ * empty under the user's BASELINE rules alone - the set whose block
+ * volume targets would be pure fiction if seeded from the template.
+ *
+ * Role scoping is the point. A BASELINE rule is the user's permanent
+ * normal, so a block activated under it must not carry targets for work
+ * that does not exist (permanent shapes the document). An EPISODE rule
+ * is temporary: the block's planned rows stay at the template as the
+ * protected baseline section 23's reintroduction ramps back toward -
+ * zeroing them would leave nothing to return to - and the effective
+ * layer (CC30 stamps, section 18 denominators, the serve-time view)
+ * absorbs the temporary gap instead.
+ *
+ * The eligibility judgement is the standard one (blockingConflicts via
+ * capabilityBlockReason), so allowances carve here exactly as they do
+ * everywhere else and a clinician rule stays un-carveable.
+ *
+ * Fails to NOTHING BLOCKED: on an empty or unavailable state this
+ * returns an empty set, because wrongly zeroing a healthy user's block
+ * is the harmful direction here - the template is the status quo.
+ *
+ * @param {object} state the resolver state
+ * @param {Array} library full exercise library rows
+ * @param {string[]} muscles the muscles under consideration
+ * @returns {Set<string>} muscles with no baseline-eligible exercise
+ */
+export function baselineBlockedMuscles(state, library, muscles = []) {
+  const out = new Set();
+  if (!state || state.empty || state.unavailable) return out;
+  if (!Array.isArray(library) || !library.length) return out;
+  const baselineRules = (state.restrictions ?? []).filter((r) => r.role === 'baseline');
+  if (!baselineRules.length) return out;
+  const view = {
+    ...state,
+    restrictions: baselineRules,
+    empty: false,
+  };
+  for (const muscle of muscles) {
+    const anyEligible = library.some(
+      (ex) => ex?.primaryMuscle === muscle && isCapabilityEligible(view, ex),
+    );
+    if (!anyEligible && library.some((ex) => ex?.primaryMuscle === muscle)) out.add(muscle);
+  }
+  return out;
+}
