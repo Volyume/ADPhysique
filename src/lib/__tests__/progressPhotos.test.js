@@ -30,6 +30,12 @@ jest.mock('expo-file-system/legacy', () => ({
   deleteAsync: jest.fn(async () => {}),
 }));
 
+const mockManipulateAsync = jest.fn(async () => ({ uri: 'file:///cache/sanitised.jpg' }));
+jest.mock('expo-image-manipulator', () => ({
+  manipulateAsync: (...args) => mockManipulateAsync(...args),
+  SaveFormat: { JPEG: 'jpeg' },
+}));
+
 const mockSetExcludedFromBackup = jest.fn(async () => true);
 jest.mock('progress-scan-image', () => ({
   setExcludedFromBackup: (...args) => mockSetExcludedFromBackup(...args),
@@ -149,14 +155,15 @@ describe('saveProgressPhoto (EXIF strip on save, safety-privacy-blueprint.md §6
   beforeEach(() => {
     jest.clearAllMocks();
     mockFs.getInfoAsync.mockResolvedValue({ exists: false });
-    mockFs.readAsStringAsync.mockResolvedValue(bytesToBase64(new Uint8Array([1, 2, 3])));
+    mockFs.readAsStringAsync.mockResolvedValue(bytesToBase64(new Uint8Array([0xFF, 0xD8, 0xFF, 0xD9])));
     mockFs.writeAsStringAsync.mockResolvedValue(undefined);
   });
 
   test('a free timestamp path reads the source, strips it, and writes it back as base64', async () => {
     const res = await saveProgressPhoto('src://a.jpg', 1000);
     expect(res).toEqual({ name: '1000.jpg', uri: `${photoDir()}1000.jpg`, ts: 1000 });
-    expect(mockFs.readAsStringAsync).toHaveBeenCalledWith('src://a.jpg', { encoding: 'base64' });
+    expect(mockManipulateAsync).toHaveBeenCalledWith('src://a.jpg', [], { compress: 0.92, format: 'jpeg' });
+    expect(mockFs.readAsStringAsync).toHaveBeenCalledWith('file:///cache/sanitised.jpg', { encoding: 'base64' });
     expect(mockFs.writeAsStringAsync).toHaveBeenCalledWith(
       `${photoDir()}1000.jpg`,
       expect.any(String),
@@ -218,10 +225,11 @@ describe('saveProgressPhoto (EXIF strip on save, safety-privacy-blueprint.md §6
     expect(writtenBytes).toEqual(stripJpegExifBytes(fixture));
   });
 
-  test('falls back to a raw byte copy if the strip plumbing throws', async () => {
+  test('fails closed without copying raw bytes if sanitisation throws', async () => {
     mockFs.readAsStringAsync.mockRejectedValueOnce(new Error('read failed'));
-    await saveProgressPhoto('src://e.jpg', 1000);
-    expect(mockFs.copyAsync).toHaveBeenCalledWith({ from: 'src://e.jpg', to: `${photoDir()}1000.jpg` });
+    await expect(saveProgressPhoto('src://e.jpg', 1000)).rejects.toThrow('read failed');
+    expect(mockFs.copyAsync).not.toHaveBeenCalled();
+    expect(mockFs.deleteAsync).toHaveBeenCalledWith(`${photoDir()}1000.jpg`, { idempotent: true });
   });
 });
 

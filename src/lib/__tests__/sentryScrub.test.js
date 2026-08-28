@@ -224,6 +224,17 @@ describe('string-value scrubbing', () => {
     expect(scrubValue('normal log line')).toBe('normal log line');
   });
 
+  test.each([
+    'login failed for victim@example.com',
+    'Authorization: Bearer super-secret',
+    'redirect?access_token=secret&x=1',
+    'eyJabcdefghijk.abcdefghijkl.abcdefghijkl',
+    'weight_kg=82.4',
+    'kcal: 2400',
+  ])('free-text secret or health value is redacted: %s', (value) => {
+    expect(scrubValue(value)).toBe('[redacted]');
+  });
+
   test('photo file:// URI is redacted', () => {
     expect(scrubValue('file:///data/user/0/app.volyume/cache/photo123.jpg')).toBe('[redacted]');
   });
@@ -282,6 +293,24 @@ describe('scrubEvent', () => {
     const event = { user: { email: 'a@b.com' } };
     const r = scrubEvent(event);
     expect(r.user).toEqual({});
+  });
+
+  test('request credentials and query data are removed, URL is de-queried', () => {
+    const event = {
+      request: {
+        url: 'https://api.example.test/callback?access_token=secret#fragment',
+        headers: { authorization: 'Bearer secret' },
+        cookies: 'session=secret',
+        query_string: 'access_token=secret',
+        env: { REMOTE_ADDR: '1.2.3.4' },
+        data: { email: 'victim@example.com', operation: 'callback' },
+      },
+    };
+    const r = scrubEvent(event);
+    expect(r.request).toEqual({
+      url: 'https://api.example.test/callback',
+      data: { email: '[redacted]', operation: 'callback' },
+    });
   });
 
   test('breadcrumbs nested in event are also scrubbed', () => {

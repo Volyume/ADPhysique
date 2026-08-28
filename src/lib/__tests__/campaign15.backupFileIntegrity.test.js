@@ -61,6 +61,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 // the rows that reach the database rather than about the file on disk.
 const mockState = { restored: null };
 jest.mock('../database', () => ({
+  BACKUP_TABLES: ['progress_scan_sessions', 'progress_scan_assets', 'progress_photo_meta', 'custom_foods'],
   dumpAllTables: jest.fn(async () => ({ schemaVersion: 1, tables: {} })),
   restoreAllTables: jest.fn(async (dump) => { mockState.restored = dump?.tables ?? null; }),
 }));
@@ -70,7 +71,7 @@ jest.mock('../progressPhotos', () => ({
 
 const DocumentPicker = require('expo-document-picker');
 const FileSystem = require('expo-file-system/legacy');
-const { importBackup } = require('../dataBackup');
+const { importBackup, MAX_BACKUP_BYTES } = require('../dataBackup');
 
 const U = 'user-1';
 const DIR = `file:///docs/photos/users/${U}/`;
@@ -111,12 +112,12 @@ function backupFile(overrides = {}) {
   };
 }
 
-async function runImport(file = backupFile()) {
+async function runImport(file = backupFile(), assetOverrides = {}) {
   DocumentPicker.getDocumentAsync.mockResolvedValue({
-    canceled: false, assets: [{ uri: 'file:///cache/b.json' }],
+    canceled: false, assets: [{ uri: 'file:///cache/b.json', ...assetOverrides }],
   });
   FileSystem.readAsStringAsync.mockResolvedValue(JSON.stringify(file));
-  return importBackup();
+  return importBackup(U);
 }
 
 beforeEach(() => {
@@ -129,6 +130,42 @@ beforeEach(() => {
   // re-installed here; otherwise the fail-closed case below would leak into
   // every test after it and make them pass for the wrong reason.
   FileSystem.getInfoAsync.mockImplementation(async uri => ({ exists: mockPresent.has(uri) }));
+});
+
+describe('hostile backup ownership and resource limits', () => {
+  test('a row for another account rejects the whole transaction', async () => {
+    const file = backupFile();
+    file.sqlite.custom_foods[0].user_id = 'attacker';
+    await expect(runImport(file)).rejects.toThrow(/different account/i);
+    expect(mockState.restored).toBeNull();
+  });
+
+  test('v2 owner binding rejects a backup labelled for another account', async () => {
+    const file = backupFile({});
+    file.formatVersion = 2;
+    file.ownerUserId = 'attacker';
+    await expect(runImport(file)).rejects.toThrow(/different account/i);
+    expect(mockState.restored).toBeNull();
+  });
+
+  test('declared oversized files are refused before the whole file is read', async () => {
+    await expect(runImport(backupFile(), { size: MAX_BACKUP_BYTES + 1 })).rejects.toThrow(/too large/i);
+    expect(FileSystem.readAsStringAsync).not.toHaveBeenCalled();
+  });
+
+  test('a traversal filename and app-private URI are dropped without probing the URI', async () => {
+    const dbUri = 'file:///docs/SQLite/volyume.db';
+    mockPresent.add(dbUri);
+    const file = backupFile();
+    file.sqlite.progress_scan_assets = [{
+      id: 'hostile', scan_id: 's-1', user_id: U, pose: 'front',
+      photo_name: '../../SQLite/volyume.db', uri: dbUri, taken_at: 1,
+    }];
+    const result = await runImport(file);
+    expect(mockState.restored.progress_scan_assets).toEqual([]);
+    expect(result.missingFiles.progress_scan_assets).toBe(1);
+    expect(FileSystem.getInfoAsync).not.toHaveBeenCalledWith(dbUri);
+  });
 });
 
 describe('C15-5 a restore leaves no dangling file reference (19)', () => {

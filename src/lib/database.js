@@ -7027,7 +7027,8 @@ export const BACKUP_TABLES = [
 
 // Returns { schemaVersion, tables: { tableName: [rawRows...] } }.
 // Raw rows (snake_case) are dumped as-is so a restore is a faithful round-trip.
-export async function dumpAllTables() {
+export async function dumpAllTables(userId) {
+  if (!userId) throw new Error('A signed-in user is required to export a backup.');
   const d = await db();
   let schemaVersion = 0;
   try {
@@ -7037,7 +7038,14 @@ export async function dumpAllTables() {
   const tables = {};
   for (const t of BACKUP_TABLES) {
     try {
-      tables[t] = await d.getAllAsync(`SELECT * FROM ${t}`);
+      const info = await d.getAllAsync(`PRAGMA table_info(${t})`);
+      const hasOwner = (info || []).some((column) => column.name === 'user_id');
+      // A table with no ownership column cannot safely travel in a per-account
+      // backup. Current schemas add user_id to every BACKUP_TABLES entry; skip
+      // rather than dump globally if an old/partial schema is encountered.
+      tables[t] = hasOwner
+        ? await d.getAllAsync(`SELECT * FROM ${t} WHERE user_id = ?`, [userId])
+        : [];
     } catch (_) {
       tables[t] = [];
     }
@@ -7048,7 +7056,8 @@ export async function dumpAllTables() {
 // Wipes BACKUP_TABLES and reinserts the supplied rows inside one
 // transaction. All-or-nothing: a failure rolls back and leaves the
 // existing data untouched.
-export async function restoreAllTables(dump) {
+export async function restoreAllTables(dump, userId) {
+  if (!userId) throw new Error('A signed-in user is required to restore a backup.');
   const d = await db();
   const tables = dump?.tables || {};
   await runInTransaction(d, async () => {
@@ -7060,8 +7069,15 @@ export async function restoreAllTables(dump) {
       // fixed BACKUP_TABLES name; only real columns survive the filter.
       const info = await d.getAllAsync(`PRAGMA table_info(${t})`);
       const allowed = new Set((info || []).map(c => c.name));
-      if (allowed.size === 0) continue;
-      await d.runAsync(`DELETE FROM ${t}`);
+      if (allowed.size === 0 || !allowed.has('user_id')) continue;
+      // Trusted-boundary check: dataBackup validates earlier for a friendly
+      // error, but the database primitive independently refuses cross-owner or
+      // unowned rows so another future caller cannot bypass that validation.
+      if (rows.some((row) => !row || typeof row !== 'object' || Array.isArray(row)
+        || row.user_id !== userId)) {
+        throw new Error(`Backup table ${t} contains rows for another account.`);
+      }
+      await d.runAsync(`DELETE FROM ${t} WHERE user_id = ?`, [userId]);
       for (const row of rows) {
         const cols = Object.keys(row).filter(c => allowed.has(c));
         if (cols.length === 0) continue;

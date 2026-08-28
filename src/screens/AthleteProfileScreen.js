@@ -373,7 +373,7 @@ export default function AthleteProfileScreen({ navigation }) {
   async function applyAvatarPreset(presetKey) {
     if (!user?.id) return;
     try {
-      if (avatarUri) await deleteAvatarPhoto(avatarUri);
+      if (avatarUri) await deleteAvatarPhoto(user.id, avatarUri);
       await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: null, avatarPreset: avatarPresetFor(presetKey).key });
       setAvatarSheetOpen(false);
       toast.show('Avatar updated', { variant: 'success' });
@@ -391,7 +391,7 @@ export default function AthleteProfileScreen({ navigation }) {
         text: 'Remove',
         style: 'destructive',
         onPress: async () => {
-          if (avatarUri) await deleteAvatarPhoto(avatarUri);
+          if (avatarUri) await deleteAvatarPhoto(user.id, avatarUri);
           await saveLocalProfile(user.id, { ...(userProfile || {}), avatarUri: null, avatarPreset: null });
           setAvatarSheetOpen(false);
         },

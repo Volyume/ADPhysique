@@ -29,7 +29,7 @@ import { useToast } from '../components/Toast';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import {
-  parseCSV, detectFormat, parseHevy, parseStrong,
+  parseCSV, detectFormat, parseHevy, parseStrong, MAX_CSV_CHARS,
   analyzeImport, runImport,
 } from '../lib/importExternal';
 import { logError, logInfo } from '../lib/errorLog';
@@ -103,6 +103,15 @@ export default function ImportScreen({ navigation }) {
       const uri = picked?.assets?.[0]?.uri || picked?.uri;
       if (!uri) {
         setError('Could not read that file. Try again.');
+        return;
+      }
+
+      const declaredSize = Number(picked?.assets?.[0]?.size ?? picked?.size ?? 0);
+      const info = await FileSystem.getInfoAsync(uri, { size: true });
+      const actualSize = Number(info?.size ?? 0);
+      if ((Number.isFinite(declaredSize) && declaredSize > MAX_CSV_CHARS)
+        || (Number.isFinite(actualSize) && actualSize > MAX_CSV_CHARS)) {
+        setError('That CSV is larger than the 12 MB import limit. Split it into smaller exports and try again.');
         return;
       }
 

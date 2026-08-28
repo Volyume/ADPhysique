@@ -12,12 +12,18 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 
-import { dumpAllTables, restoreAllTables } from './database';
+import { BACKUP_TABLES, dumpAllTables, restoreAllTables } from './database';
 import { photoDir } from './progressPhotos';
+import { isProfileAvatarUriForUser } from './profileAvatar';
 import { logInfo } from './errorLog';
 
 const BACKUP_FORMAT = 'volyume-backup';
-const BACKUP_FORMAT_VERSION = 1;
+const BACKUP_FORMAT_VERSION = 2;
+export const MAX_BACKUP_BYTES = 25 * 1024 * 1024;
+export const MAX_BACKUP_ROWS = 250000;
+const MAX_ROWS_PER_TABLE = 100000;
+const MAX_PREF_VALUE_CHARS = 1024 * 1024;
+const MAX_PREF_TOTAL_CHARS = 5 * 1024 * 1024;
 
 // Every Volyume preference key is namespaced "@volyume_". The crash log is
 // transient diagnostics and is deliberately excluded from backups.
@@ -27,24 +33,30 @@ const PREF_EXCLUDE = new Set(['@volyume_crash_log']);
 // It must never travel in a backup or be written by a restore: a crafted backup
 // could otherwise flip the local tier to 'pro' and unlock Pro UI before cloud
 // reconciliation (audit F-002). Matched against the @volyume_ key name.
-const SENSITIVE_PREF = /(tier|trial|paid|entitle|subscrip|purchase|billing|verified_at)/i;
+const SENSITIVE_PREF = /(tier|trial|paid|entitle|subscrip|purchase|billing|verified_at|last_supabase_user_id|auth|token|deletion|consent|sync)/i;
 function isRestorablePref(k) {
   return k.startsWith(PREF_PREFIX) && !PREF_EXCLUDE.has(k) && !SENSITIVE_PREF.test(k);
 }
 
-async function dumpPrefs() {
+function isProfilePrefForUser(key, userId) {
+  return key === `${PROFILE_PREF_PREFIX}${userId}`;
+}
+
+async function dumpPrefs(userId) {
   const allKeys = await AsyncStorage.getAllKeys();
-  const keys = allKeys.filter(isRestorablePref);
+  const keys = allKeys.filter((key) => isRestorablePref(key)
+    && (!key.startsWith(PROFILE_PREF_PREFIX) || isProfilePrefForUser(key, userId)));
   const pairs = await AsyncStorage.multiGet(keys);
   const prefs = {};
   for (const [k, v] of pairs) prefs[k] = v;
   return prefs;
 }
 
-async function restorePrefs(prefs) {
+async function restorePrefs(prefs, userId) {
   if (!prefs || typeof prefs !== 'object') return;
   const entries = Object.entries(prefs)
-    .filter(([k]) => isRestorablePref(k))
+    .filter(([k]) => isRestorablePref(k)
+      && (!k.startsWith(PROFILE_PREF_PREFIX) || isProfilePrefForUser(k, userId)))
     .map(([k, v]) => [k, v == null ? '' : String(v)]);
   if (entries.length) await AsyncStorage.multiSet(entries);
 }
@@ -102,16 +114,6 @@ async function restorePrefs(prefs) {
 // (avatarUri, written by saveLocalProfile in the store).
 const PROFILE_PREF_PREFIX = '@volyume_user_profile_';
 
-// Whether a value names a file on this device. http(s) and data values are not
-// local files, so they are out of scope here and left untouched.
-function isLocalFileRef(value) {
-  if (typeof value !== 'string') return false;
-  const v = value.trim();
-  if (!v) return false;
-  if (/^(?:https?|data):/i.test(v)) return false;
-  return v.startsWith('file://') || v.startsWith('content://') || v.startsWith('/');
-}
-
 // Existence probe with a per-restore cache (one backup can reference the same
 // file from several rows). A probe that throws counts as ABSENT: unreadable and
 // missing look identical to every consumer, so this fails closed.
@@ -137,7 +139,7 @@ function makeFileProbe() {
 // shared legacy directory for a null user id, which is exactly where a
 // pre-per-user row's photo sits.
 function photoPathFor(userId, name) {
-  if (!name) return null;
+  if (!userId || !/^\d+\.jpg$/.test(String(name || ''))) return null;
   return `${photoDir(userId ?? null)}${name}`;
 }
 
@@ -152,7 +154,7 @@ function photoKey(userId, name) {
 
 // Returns { tables, dropped } where `tables` is safe to write: no row in it
 // references a file that is not on this device.
-async function verifyTableFileReferences(tables, fileExists) {
+async function verifyTableFileReferences(tables, fileExists, currentUserId) {
   const out = { ...(tables || {}) };
   const dropped = {};
 
@@ -160,22 +162,17 @@ async function verifyTableFileReferences(tables, fileExists) {
   if (Array.isArray(out.progress_scan_assets)) {
     const kept = [];
     for (const row of out.progress_scan_assets) {
-      const stored = typeof row?.uri === 'string' ? row.uri : null;
-      // The absolute uri is baked in at capture time. If it no longer resolves
-      // but the photo IS still in this user's own photo directory under the
-      // same filename (an iOS container path changes between installs), point
-      // the row at the file that genuinely exists rather than drop history.
-      // Never a guess across accounts: photoDir is scoped to the row's own
-      // user_id.
-      const byName = photoPathFor(row?.user_id, row?.photo_name);
+      // Never trust an absolute URI carried by JSON, even when it happens to
+      // exist. Rebuild the only allowed location from the authenticated owner
+      // and a canonical Volyume filename; this closes path traversal and
+      // arbitrary app-private file deletion through a later gallery action.
+      const byName = photoPathFor(currentUserId, row?.photo_name);
       let resolved = null;
       // eslint-disable-next-line no-await-in-loop
-      if (stored && await fileExists(stored)) resolved = stored;
-      // eslint-disable-next-line no-await-in-loop
-      else if (byName && byName !== stored && await fileExists(byName)) resolved = byName;
+      if (byName && await fileExists(byName)) resolved = byName;
       if (!resolved) continue;
-      kept.push(resolved === row.uri ? row : { ...row, uri: resolved });
-      keptPhotos.add(photoKey(row?.user_id, row?.photo_name));
+      kept.push({ ...row, user_id: currentUserId, uri: resolved });
+      keptPhotos.add(photoKey(currentUserId, row?.photo_name));
     }
     dropped.progress_scan_assets = out.progress_scan_assets.length - kept.length;
     out.progress_scan_assets = kept;
@@ -184,9 +181,9 @@ async function verifyTableFileReferences(tables, fileExists) {
   if (Array.isArray(out.progress_photo_meta)) {
     const kept = [];
     for (const row of out.progress_photo_meta) {
-      const path = photoPathFor(row?.user_id, row?.name);
+      const path = photoPathFor(currentUserId, row?.name);
       // A kept scan asset has already proved that same file exists.
-      if (keptPhotos.has(photoKey(row?.user_id, row?.name))) {
+      if (keptPhotos.has(photoKey(currentUserId, row?.name))) {
         kept.push(row);
         continue;
       }
@@ -201,12 +198,12 @@ async function verifyTableFileReferences(tables, fileExists) {
     let cleared = 0;
     const rows = [];
     for (const row of out.custom_foods) {
-      if (!isLocalFileRef(row?.photo_url)) {
+      if (typeof row?.photo_url === 'string' && /^https:\/\//i.test(row.photo_url)
+        && row.photo_url.length <= 2048) {
         rows.push(row);
         continue;
       }
-      // eslint-disable-next-line no-await-in-loop
-      if (await fileExists(row.photo_url)) {
+      if (row?.photo_url == null || row.photo_url === '') {
         rows.push(row);
         continue;
       }
@@ -222,16 +219,21 @@ async function verifyTableFileReferences(tables, fileExists) {
 
 // The same law over the preference half of a backup: the profile blob's
 // avatarUri is a path into the app's private avatar directory.
-async function verifyPrefFileReferences(prefs, fileExists) {
+async function verifyPrefFileReferences(prefs, fileExists, currentUserId) {
   if (!prefs || typeof prefs !== 'object') return { prefs, cleared: 0 };
   const out = { ...prefs };
   let cleared = 0;
   for (const [key, value] of Object.entries(out)) {
-    if (!key.startsWith(PROFILE_PREF_PREFIX) || typeof value !== 'string') continue;
+    if (!isProfilePrefForUser(key, currentUserId) || typeof value !== 'string') continue;
     let profile = null;
     try { profile = JSON.parse(value); } catch (_) { continue; } // not a blob we can read; leave as-is
     if (!profile || typeof profile !== 'object' || Array.isArray(profile)) continue;
-    if (!isLocalFileRef(profile.avatarUri)) continue;
+    if (!profile.avatarUri) continue;
+    if (!isProfileAvatarUriForUser(currentUserId, profile.avatarUri)) {
+      out[key] = JSON.stringify({ ...profile, avatarUri: null });
+      cleared += 1;
+      continue;
+    }
     // eslint-disable-next-line no-await-in-loop
     if (await fileExists(profile.avatarUri)) continue;
     out[key] = JSON.stringify({ ...profile, avatarUri: null });
@@ -242,9 +244,10 @@ async function verifyPrefFileReferences(prefs, fileExists) {
 
 // Builds the backup object, writes it to a JSON file in the cache directory
 // and opens the native share sheet. Returns { fileUri, bytes }.
-export async function exportBackup() {
-  const { schemaVersion, tables } = await dumpAllTables();
-  const prefs = await dumpPrefs();
+export async function exportBackup(userId) {
+  if (!userId) throw new Error('Sign in before exporting a backup.');
+  const { schemaVersion, tables } = await dumpAllTables(userId);
+  const prefs = await dumpPrefs(userId);
 
   const payload = {
     format: BACKUP_FORMAT,
@@ -252,6 +255,7 @@ export async function exportBackup() {
     schemaVersion,
     exportedAt: new Date().toISOString(),
     app: 'Volyume',
+    ownerUserId: userId,
     sqlite: tables,
     prefs,
   };
@@ -264,20 +268,67 @@ export async function exportBackup() {
     encoding: FileSystem.EncodingType.UTF8,
   });
 
-  if (await Sharing.isAvailableAsync()) {
+  if (!(await Sharing.isAvailableAsync())) {
+    await FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+    throw new Error('Secure sharing is not available on this device.');
+  }
+  try {
     await Sharing.shareAsync(fileUri, {
       mimeType: 'application/json',
       dialogTitle: 'Save Volyume backup',
       UTI: 'public.json',
     });
+  } finally {
+    // The chosen target receives its own copy. Do not leave the plaintext
+    // Article 9 dataset behind in the app cache after the share sheet closes.
+    await FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
   }
 
-  return { fileUri, bytes: json.length };
+  return { fileUri: null, bytes: json.length, temporaryFileRemoved: true };
+}
+
+function assertBackupShape(parsed, currentUserId) {
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)
+    || !parsed.sqlite || typeof parsed.sqlite !== 'object' || Array.isArray(parsed.sqlite)) {
+    throw new Error('That file is not a Volyume backup.');
+  }
+  if (parsed.formatVersion >= 2 && parsed.ownerUserId !== currentUserId) {
+    throw new Error('That backup belongs to a different account.');
+  }
+  const allowedTables = new Set(BACKUP_TABLES);
+  let totalRows = 0;
+  for (const [table, rows] of Object.entries(parsed.sqlite)) {
+    if (!allowedTables.has(table) || !Array.isArray(rows) || rows.length > MAX_ROWS_PER_TABLE) {
+      throw new Error('That backup has an unsupported table shape.');
+    }
+    totalRows += rows.length;
+    if (totalRows > MAX_BACKUP_ROWS) throw new Error('That backup contains too many records.');
+    for (const row of rows) {
+      if (!row || typeof row !== 'object' || Array.isArray(row) || row.user_id !== currentUserId) {
+        throw new Error('That backup contains records for a different account.');
+      }
+    }
+  }
+  if (parsed.prefs != null && (typeof parsed.prefs !== 'object' || Array.isArray(parsed.prefs))) {
+    throw new Error('That backup has invalid preferences.');
+  }
+  let prefChars = 0;
+  for (const [key, value] of Object.entries(parsed.prefs || {})) {
+    if (typeof key !== 'string' || typeof value !== 'string' || value.length > MAX_PREF_VALUE_CHARS) {
+      throw new Error('That backup has invalid preferences.');
+    }
+    if (key.startsWith(PROFILE_PREF_PREFIX) && !isProfilePrefForUser(key, currentUserId)) {
+      throw new Error('That backup contains a profile for a different account.');
+    }
+    prefChars += value.length;
+    if (prefChars > MAX_PREF_TOTAL_CHARS) throw new Error('That backup contains too many preferences.');
+  }
 }
 
 // Lets the user pick a .json backup, validates it, and restores everything.
 // Returns { restored: true, counts } or { cancelled: true }.
-export async function importBackup() {
+export async function importBackup(currentUserId) {
+  if (!currentUserId) throw new Error('Sign in before restoring a backup.');
   const picked = await DocumentPicker.getDocumentAsync({
     type: ['application/json', 'text/plain', '*/*'],
     copyToCacheDirectory: true,
@@ -290,10 +341,15 @@ export async function importBackup() {
   const asset = picked?.assets?.[0];
   const uri = asset?.uri || picked?.uri;
   if (!uri) throw new Error('No file was selected.');
+  const declaredSize = Number(asset?.size ?? picked?.size);
+  if (Number.isFinite(declaredSize) && declaredSize > MAX_BACKUP_BYTES) {
+    throw new Error('That backup is too large to restore safely.');
+  }
 
   const raw = await FileSystem.readAsStringAsync(uri, {
     encoding: FileSystem.EncodingType.UTF8,
   });
+  if (raw.length > MAX_BACKUP_BYTES) throw new Error('That backup is too large to restore safely.');
 
   let parsed;
   try {
@@ -320,20 +376,21 @@ export async function importBackup() {
       'This backup was made by a newer version of Volyume. Update the app, then import again.',
     );
   }
+  assertBackupShape(parsed, currentUserId);
 
   // T-17: nothing that names a missing file reaches the database or the
   // preferences. This runs BEFORE the write, not as a clean-up afterwards,
   // so there is no window in which a dead reference exists at all.
   const fileExists = makeFileProbe();
   const { tables: safeTables, dropped } = await verifyTableFileReferences(
-    parsed.sqlite, fileExists,
+    parsed.sqlite, fileExists, currentUserId,
   );
   const { prefs: safePrefs, cleared: avatarsCleared } = await verifyPrefFileReferences(
-    parsed.prefs, fileExists,
+    parsed.prefs, fileExists, currentUserId,
   );
 
-  await restoreAllTables({ tables: safeTables });
-  await restorePrefs(safePrefs);
+  await restoreAllTables({ tables: safeTables }, currentUserId);
+  await restorePrefs(safePrefs, currentUserId);
 
   // Counts report what was actually RESTORED, not what the file contained,
   // so nothing downstream can tell the user an image came back when it did

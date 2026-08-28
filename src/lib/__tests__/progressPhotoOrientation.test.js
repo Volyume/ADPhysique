@@ -190,14 +190,15 @@ describe('jpegExifOrientation', () => {
 
 describe('the save path bakes orientation before stripping (source pin)', () => {
   const src = fs.readFileSync(path.resolve(__dirname, '..', 'progressPhotos.js'), 'utf8');
-  test('copyPhotoStrippingExif reads the tag, bakes when rotated, then strips', () => {
+  test('copyPhotoStrippingExif always re-encodes before stripping and never raw-copies', () => {
     const fnAt = src.indexOf('async function copyPhotoStrippingExif');
-    const readTagAt = src.indexOf('jpegExifOrientation(bytes)', fnAt);
     const bakeAt = src.indexOf('manipulateAsync(from, [],', fnAt);
     const stripAt = src.indexOf('stripJpegExifBytes(bytes)', fnAt);
+    const nextFnAt = src.indexOf('\nfunction safeUserSegment', fnAt);
+    const body = src.slice(fnAt, nextFnAt);
     expect(fnAt).toBeGreaterThan(-1);
-    expect(readTagAt).toBeGreaterThan(fnAt);
-    expect(bakeAt).toBeGreaterThan(readTagAt);
+    expect(bakeAt).toBeGreaterThan(fnAt);
     expect(stripAt).toBeGreaterThan(bakeAt);
+    expect(body).not.toContain('FileSystem.copyAsync');
   });
 });

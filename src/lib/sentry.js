@@ -87,6 +87,9 @@ export function initSentry({ environment } = {}) {
       // when chasing a specific perf regression. In dev we sample 100%
       // so local profiling is always visible.
       tracesSampleRate: __DEV__ ? 1.0 : 0.05,
+      // Keep this explicit even though it is currently the SDK default. A
+      // future SDK/default change must not start collecting IP or request PII.
+      sendDefaultPii: false,
       // Sentry's own session tracking, counts crash-free sessions
       // and users per release. Required for the release-health
       // dashboard view to populate.
@@ -153,8 +156,7 @@ export function setSentryUser(user) {
     }
     SentryNative.setUser({
       id: user.id,
-      email: user.email,
-      // Don't add username / ip, keeps PII surface small.
+      // Deliberately omit email / username / ip at the source.
     });
   } catch (_) {}
 }

@@ -102,7 +102,7 @@ describe('Week-boundary unification: no production caller uses the rolling defau
       const abs = path.join(__dirname, '..', '..', '..', f);
       const src = fs.readFileSync(abs, 'utf8');
       if (/buildWeeklyLoadSeries\(/.test(src) && !/export function buildWeeklyLoadSeries/.test(src)) {
-        callers.push({ file: f, src });
+        callers.push({ file: f.replace(/\\/g, '/'), src });
       }
     }
     expect(callers.length).toBe(1);

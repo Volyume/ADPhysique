@@ -137,6 +137,10 @@ export const SENSITIVE_VALUE_SUBSTRINGS = Object.freeze([
 
 const PHOTO_PATH_RE = /\b(file:\/\/|content:\/\/|\/storage\/|\/data\/user)[\w./%@\-:?#&=]*\.(jpe?g|png|webp|heic|heif|gif)\b/i;
 const BASE64_IMAGE_RE = /^data:image\/[a-z]+;base64,/i;
+const EMAIL_VALUE_RE = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
+const JWT_VALUE_RE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/;
+const CREDENTIAL_VALUE_RE = /(?:authorization\s*[:=]\s*bearer\s+[^\s&#]+|(?:access_token|refresh_token|token_hash|id_token|client_secret)\s*[:=]\s*[^\s&#]+)/i;
+const INLINE_HEALTH_RE = /\b(?:weight|body[._ -]?fat|bf[._ -]?pct|ffm|fm[._ -]?kg|kcal|protein|carbs?|fat|fibre|fiber|waist|chest|hips?|thigh|calf)\w*\s*[:=]\s*-?\d/i;
 
 // ────────────────────────────────────────────────────────────────────
 // Public API
@@ -186,6 +190,10 @@ function _scrubString(s) {
   if (typeof s !== 'string') return s;
   if (BASE64_IMAGE_RE.test(s)) return REDACTED;
   if (PHOTO_PATH_RE.test(s)) return REDACTED;
+  if (EMAIL_VALUE_RE.test(s)) return REDACTED;
+  if (JWT_VALUE_RE.test(s)) return REDACTED;
+  if (CREDENTIAL_VALUE_RE.test(s)) return REDACTED;
+  if (INLINE_HEALTH_RE.test(s)) return REDACTED;
   // Sensitive table name embedded in the string. The whole string is
   // suspect (it likely carries row data or SQL), so redact wholesale.
   for (const needle of SENSITIVE_VALUE_SUBSTRINGS) {
@@ -206,7 +214,18 @@ export function scrubEvent(event) {
   if (event.extra) event.extra = scrubObject(event.extra);
   if (event.contexts) event.contexts = scrubObject(event.contexts);
   if (event.tags) event.tags = scrubObject(event.tags);
-  if (event.request?.data) event.request.data = scrubObject(event.request.data);
+  if (event.request && typeof event.request === 'object') {
+    // Request metadata is SDK/transport controlled and can bypass caller key
+    // conventions. Never retain headers, cookies, query strings, or env.
+    delete event.request.headers;
+    delete event.request.cookies;
+    delete event.request.query_string;
+    delete event.request.env;
+    if (event.request.data) event.request.data = scrubValue(event.request.data);
+    if (typeof event.request.url === 'string') {
+      event.request.url = _scrubString(event.request.url.split(/[?#]/, 1)[0]);
+    }
+  }
 
   // User identity: keep `id` only (low-risk opaque uuid). Drop email,
   // username, ip, anything else Sentry attached automatically.

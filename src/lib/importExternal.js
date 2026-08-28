@@ -77,9 +77,12 @@ function getInvalidateExercisesCache() {
 // can't OOM the device. 100k rows is comfortably above the largest
 // realistic gym log (10 yrs × 5 sessions/wk × 30 sets ≈ 80k) so a
 // legitimate import is never blocked by this.
-const MAX_CSV_ROWS = 100_000;
+export const MAX_CSV_ROWS = 100_000;
+export const MAX_CSV_CHARS = 12 * 1024 * 1024;
 
 export function parseCSV(text) {
+  if (typeof text !== 'string') throw new TypeError('CSV input must be text');
+  if (text.length > MAX_CSV_CHARS) throw new Error('CSV exceeds the 12 MB import limit');
   const rows = [];
   let cur = [];
   let field = '';
@@ -121,7 +124,7 @@ export function parseCSV(text) {
     // Stop parsing once we've hit the row cap. The remaining bytes
     // get dropped rather than allocated; the partial result is still
     // a valid CSV import for the rows we did read.
-    if (truncated) break;
+    if (truncated) throw new Error('CSV exceeds the 100,000 row import limit');
   }
   // Trailing field / row without a final newline
   if (inQuote) {

@@ -223,45 +223,33 @@ export function jpegExifOrientation(bytes) {
   return null;
 }
 
-// Copies `from` to `to`, stripping Exif/GPS metadata along the way. Falls
-// back to a raw byte copy if the source can't be read/written as base64 for
-// any reason (matches the old copyAsync failure surface — a save should
-// never fail solely because the strip step's string plumbing hiccups).
-async function copyPhotoStrippingExif(from, to) {
+// Decode and re-encode every private photo, then strip any remaining APP1/COM
+// metadata before it reaches app storage. This is deliberately fail closed:
+// persisting attacker-controlled or GPS-bearing source bytes is worse than
+// asking the user to retry a failed save.
+export async function copyPhotoStrippingExif(from, to) {
+  let bakedUri = null;
   try {
-    let base64 = await FileSystem.readAsStringAsync(from, { encoding: FileSystem.EncodingType.Base64 });
-    let bytes = base64ToBytes(base64);
-    // Founder defect (2026-07-13): iOS saves sideways pixels + an EXIF
-    // "rotate me" tag; the strip below used to discard that tag while
-    // keeping the raw pixels, so a photo that previewed upright (viewers
-    // honour EXIF) saved sideways for the library AND the scorer. Bake the
-    // orientation into the pixels FIRST: an empty manipulate decodes with
-    // EXIF applied (all 8 tags, mirrored variants included) and re-encodes
-    // upright with orientation reset to 1 — then the strip is lossless by
-    // construction. This is the one choke point every save path crosses
-    // (camera capture, picker import, share-in). Fail-open: any bake
-    // failure falls through to stripping the original bytes, exactly the
-    // pre-existing behaviour.
-    const orientation = jpegExifOrientation(bytes);
-    if (orientation != null && orientation > 1) {
-      try {
-        // eslint-disable-next-line global-require, import/no-unresolved
-        const { manipulateAsync, SaveFormat } = require('expo-image-manipulator');
-        const baked = await manipulateAsync(from, [], { compress: 0.92, format: SaveFormat.JPEG });
-        if (baked?.uri) {
-          base64 = await FileSystem.readAsStringAsync(baked.uri, { encoding: FileSystem.EncodingType.Base64 });
-          bytes = base64ToBytes(base64);
-          FileSystem.deleteAsync(baked.uri, { idempotent: true }).catch(() => {});
-        }
-      } catch (bakeErr) {
-        logError('progressPhotos.orientationBake', bakeErr, { orientation });
-      }
+    // eslint-disable-next-line global-require, import/no-unresolved
+    const { manipulateAsync, SaveFormat } = require('expo-image-manipulator');
+    const baked = await manipulateAsync(from, [], { compress: 0.92, format: SaveFormat.JPEG });
+    if (!baked?.uri) throw new Error('Image sanitiser returned no output');
+    bakedUri = baked.uri;
+    const base64 = await FileSystem.readAsStringAsync(bakedUri, { encoding: FileSystem.EncodingType.Base64 });
+    const bytes = base64ToBytes(base64);
+    if (bytes.length < 4 || bytes[0] !== 0xFF || bytes[1] !== 0xD8) {
+      throw new Error('Image sanitiser output was not JPEG');
     }
     const stripped = stripJpegExifBytes(bytes);
     await FileSystem.writeAsStringAsync(to, bytesToBase64(stripped), { encoding: FileSystem.EncodingType.Base64 });
   } catch (e) {
     logError('progressPhotos.copyStrippingExif', e, {});
-    await FileSystem.copyAsync({ from, to });
+    await FileSystem.deleteAsync(to, { idempotent: true }).catch(() => {});
+    throw e;
+  } finally {
+    if (bakedUri && bakedUri !== from && bakedUri !== to) {
+      await FileSystem.deleteAsync(bakedUri, { idempotent: true }).catch(() => {});
+    }
   }
 }
 
@@ -358,7 +346,10 @@ function isLegacyPhotoUri(uri) {
 
 export function isProgressPhotoUriForUser(userId, uri) {
   if (typeof uri !== 'string') return false;
-  if (userId && uri.startsWith(photoDir(userId))) return true;
+  if (userId) {
+    const dir = photoDir(userId);
+    if (uri.startsWith(dir) && /^\d+\.jpg$/.test(uri.slice(dir.length))) return true;
+  }
   return isLegacyPhotoUri(uri);
 }
 
@@ -367,7 +358,7 @@ export async function deleteProgressPhoto(userIdOrUri, maybeUri) {
   const userId = hasUser ? userIdOrUri : null;
   const uri = hasUser ? maybeUri : userIdOrUri;
   if (hasUser && !isProgressPhotoUriForUser(userId, uri)) return false;
-  if (!hasUser && typeof uri === 'string' && !uri.startsWith(BASE_DIR)) return false;
+  if (!hasUser && !isLegacyPhotoUri(uri)) return false;
   try { await FileSystem.deleteAsync(uri, { idempotent: true }); return true; } catch (_) { return false; }
 }
 

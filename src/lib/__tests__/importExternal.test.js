@@ -1,10 +1,13 @@
 import {
-  parseCSV, detectFormat, parseHevy, parseStrong,
+  parseCSV, detectFormat, parseHevy, parseStrong, MAX_CSV_CHARS,
 } from '../importExternal';
 
 // ─── parseCSV: edge cases the formats actually contain ───────────────────
 
 describe('parseCSV', () => {
+  test('rejects oversized input before allocating row objects', () => {
+    expect(() => parseCSV('x'.repeat(MAX_CSV_CHARS + 1))).toThrow(/12 MB import limit/);
+  });
   test('parses a plain header + two rows', () => {
     const rows = parseCSV('a,b,c\n1,2,3\n4,5,6\n');
     expect(rows).toEqual([
