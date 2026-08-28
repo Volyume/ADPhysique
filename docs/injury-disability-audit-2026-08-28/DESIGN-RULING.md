@@ -92,6 +92,18 @@ cases, making T1-25 real where it applies.
 (d) Coaching consults baseline scope for exercise-level advice and
 adherence framing (the column-F hole); volume HOLDS remain episode-scoped
 — a permanent baseline is the user's normal, not a hold.
+R1d DISPOSITION (recorded at W2 build, 2026-08-28): the column-F
+baseline hole closes BY COMPOSITION, not by a new coach fact. With W1
+landed, a baseline user's plan is rewritten-compatible or quietly
+marked, their volume rows are honest zeros where the pool is empty (so
+adherence and the ledger stop reading them as behind), and the
+remaining exercise-advice surfaces (block review's senior question,
+reactivation) are W5 items. The weekly coach deliberately says NOTHING
+about a compatible baseline — that is RT2-1's dignity design working: a
+baseline-shaped plan is simply the user's plan, and coaching it
+normally IS the accommodation. The audit cell read "not consulted" as a
+defect pre-W1; post-W1 the non-consultation is correct, and what
+remains of the cell is tracked under W5 (T1-10, T1-11).
 
 **CC33-R2 — The resolver door (closes T1-02, T1-10, T1-11, T2-10, T2-12
 slope, T2-16, T1-17, T1-27, T2-03).** A single exported decision seam

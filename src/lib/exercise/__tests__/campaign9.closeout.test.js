@@ -29,7 +29,11 @@ describe('a slot with no valid exercise left asks the user', () => {
     expect(gen).toMatch(/blockedSlots/);
     expect(gen).toMatch(/needsChoice/);
     // The blocked branch must `continue` rather than write the exercise.
-    const from = gen.indexOf('if (blockedReason) {');
+    // CC33 W2 (D112, audit T1-07): the branch gained the _capabilityHold
+    // carve-out - a continuity keep of an EPISODE-affected incumbent is
+    // written (temporary is an overlay; serve-time works around it).
+    // The pinned refusal is unchanged for every genuinely blocked slot.
+    const from = gen.indexOf('if (blockedReason && !ex._capabilityHold) {');
     // Window ends at the branch's own `continue;` - the write call lives
     // AFTER it, which is precisely the point being pinned.
     const blocked = gen.slice(from, gen.indexOf('continue;', from) + 'continue;'.length);

@@ -640,7 +640,7 @@ export function resolvePlanAgainstLibrary(plan, exerciseMap, filteredLibrary) {
         if (missedNames.length < 5 && ex.exerciseName) missedNames.push(ex.exerciseName);
         continue;
       }
-      if (blockedReason) {
+      if (blockedReason && !ex._capabilityHold) {
         blockedSlots.push({
           exerciseId: dbEx.id,
           exerciseName: dbEx.name ?? ex.exerciseName ?? null,
@@ -650,10 +650,16 @@ export function resolvePlanAgainstLibrary(plan, exerciseMap, filteredLibrary) {
         });
         continue;
       }
+      // D112 R1 (CC33 audit T1-07): a continuity keep under
+      // CAPABILITY_HOLD is written even though the episode filter blocks
+      // the exercise right now - the document keeps the movement,
+      // serve-time works around it while the episode lasts, and the
+      // receipt's "kept as it is" is finally true of the saved plan.
       totalResolved++;
       // The catalogue's spelling and id win from here on, so downstream
-      // never re-derives identity from the engine's string.
-      resolved.push({ ...ex, exerciseId: dbEx.id, exerciseName: dbEx.name ?? ex.exerciseName });
+      // never re-derives identity from the engine's string. The
+      // continuity marker is transient and stops here.
+      resolved.push({ ...ex, _capabilityHold: undefined, exerciseId: dbEx.id, exerciseName: dbEx.name ?? ex.exerciseName });
     }
     workouts.push({ ...workout, exercises: resolved });
   }

@@ -61,7 +61,7 @@ const {
 const { computeAndStoreBlockLedger, restampLedgerEligibility } = require('../blockLedgerRunner');
 const { computeLearnedRange } = require('../learnedRange');
 const { priorLedgerEntries } = require('../blockLedgerGather');
-const { constrainedMusclesInWindow } = require('../capability/eligibility');
+const { constrainedMusclesInWindow, REINTRODUCTION_CARRY_MS } = require('../capability/eligibility');
 const { _resetCapabilityResolveCache } = require('../capability/resolve');
 
 const USER = 'u-replay';
@@ -229,7 +229,7 @@ describe('the six-week constrained block cannot become the durable baseline', ()
     expect(after.capabilityWatermark).toBeGreaterThanOrEqual(before.capabilityWatermark);
   });
 
-  test('after the episodes end, a later window constrains nothing - durable learning resumes', async () => {
+  test('after the episodes end, learning resumes once the return carry passes - never as the durable baseline', async () => {
     await endCapabilityConstraint(USER, episodeId, 'user_ended', { nowMs: BLOCK_END + DAY });
     // The backdated axial episode carried only a PLANNED end; an episode
     // past its planned end but unconfirmed still applies (fail safe,
@@ -240,7 +240,20 @@ describe('the six-week constrained block cannot become the durable baseline', ()
     _resetCapabilityResolveCache();
     const rows = await require('../database').getCapabilityConstraints(USER);
     const library = [{ id: 'rp-ohp', ...OHP }, { id: 'rp-squat', ...SQUAT }];
-    const later = constrainedMusclesInWindow(rows, library, BLOCK_END + 2 * DAY, BLOCK_END + 2 * WEEK);
-    expect(later.size).toBe(0);
+    // CC33 W2 (D112 §23.4 residual, audit T2-25): a window beginning
+    // INSIDE the two-week reintroduction carry still stamps the released
+    // muscles - the first sessions back are rebuilding capacity, and a
+    // block boundary must not launder them into learning evidence.
+    const inCarry = constrainedMusclesInWindow(rows, library, BLOCK_END + 2 * DAY, BLOCK_END + 2 * WEEK);
+    expect(inCarry.size).toBeGreaterThan(0);
+    // The suite's original law stands one carry later: the episodes can
+    // never become the durable baseline. Beyond the carry, nothing is
+    // constrained and durable learning resumes.
+    const afterCarry = constrainedMusclesInWindow(
+      rows, library,
+      BLOCK_END + DAY + REINTRODUCTION_CARRY_MS + DAY,
+      BLOCK_END + DAY + REINTRODUCTION_CARRY_MS + 2 * WEEK,
+    );
+    expect(afterCarry.size).toBe(0);
   });
 });

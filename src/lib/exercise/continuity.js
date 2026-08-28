@@ -47,7 +47,7 @@
  * "is there a reason to change". Absent a reason, the answer is keep.
  */
 
-import { SLOT_VERDICT, slotVerdict } from '../programmeEpoch';
+import { SLOT_VERDICT, SLOT_REASON, slotVerdict } from '../programmeEpoch';
 
 /** Why a generated slot ended up with the exercise it has. */
 export const SLOT_OUTCOME = Object.freeze({
@@ -248,6 +248,15 @@ export function applyContinuity({
         ...ex,
         exerciseId: incumbent.exerciseId,
         exerciseName: incumbent.exerciseName ?? ex.exerciseName,
+        // D112 R1 (CC33 audit T1-07): a slot retained under
+        // CAPABILITY_HOLD is a deliberate keep of a movement the episode
+        // filter would drop - temporary is an overlay, so the DOCUMENT
+        // keeps it and serve-time works around it while the episode
+        // lasts. The marker tells the resolver not to void this decision
+        // at write time, which is exactly the receipt/commit
+        // contradiction the audit found ("kept as it is" rendered beside
+        // the emptied slot).
+        ...(reason === SLOT_REASON.CAPABILITY_HOLD ? { _capabilityHold: true } : {}),
         // KEEP_WITH_PRESCRIPTION_CHANGE is only honest if the reviewed
         // prescription reaches the saved row. The proposal carries exact
         // values; continuity applies them without inventing a second rule.

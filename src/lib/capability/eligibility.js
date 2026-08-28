@@ -70,6 +70,12 @@ export function constrainedMusclesAt(rows, library, atMs) {
   return muscles;
 }
 
+/** The section 23.4 learning carry after an episode ends (D112, audit
+ *  T2-25): windows beginning within this span of an episode's end still
+ *  stamp its muscles constrained, so a block boundary cannot launder
+ *  return-period evidence into learning. */
+export const REINTRODUCTION_CARRY_MS = 14 * 24 * 60 * 60 * 1000;
+
 /**
  * The muscles constrained at ANY point inside [fromMs, toMs). Exact, not
  * sampled: scope only changes at row lifecycle boundaries, so evaluating
@@ -88,6 +94,22 @@ export function constrainedMusclesInWindow(rows, library, fromMs, toMs) {
   const out = new Set();
   for (const at of points) {
     for (const m of constrainedMusclesAt(rows, library, at)) out.add(m);
+  }
+  // D112 section 23.4 residual (CC33 audit T2-25): the first sessions
+  // back after an episode are rebuilding capacity, and when the episode
+  // ends near a block boundary the NEXT block's window saw none of it -
+  // its early evidence read fully learning-eligible. A muscle whose
+  // episode ended within the reintroduction carry BEFORE this window
+  // still counts constrained here: return-period evidence is confounded
+  // evidence, and the safe direction for LEARNING is out (CAP-12). Two
+  // weeks matches the weekly ramp's first honest steps. Window grain
+  // only - session-grain serving and filtering are untouched, so
+  // nothing about what the user is offered or served changes.
+  for (const r of scoped) {
+    if (!Number.isFinite(r?.endedAt)) continue;
+    if (r.endedAt <= fromMs && r.endedAt + REINTRODUCTION_CARRY_MS > fromMs) {
+      for (const m of constrainedMusclesAt(rows, library, r.endedAt - 1)) out.add(m);
+    }
   }
   return out;
 }

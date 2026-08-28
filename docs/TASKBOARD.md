@@ -839,16 +839,44 @@ sessionEffective, proposal on new baseline rule AND on promotion via
 minted ids - T2-01 closed; RT2-1 amendment notice in ActiveWorkout with
 lane-correct label). New suites: allowanceSeam,
 sessionEffective.serveGuard, capabilityPosture.w1.guard,
-baselineBlockedMuscles, capabilityPlanRewrite. NEXT: W2 lead (coaching
-truth: T2-12/13/14/15/17/18, R1d baseline coaching scope, T1-07
-receipt, T2-25 block-boundary stamp) -> W3/W4 Sonnet pairs under lead
-review (visibility; flows+vocabulary - W4 also wires the standing
-no-ids rewrite audit into the revisit surface for pre-existing baseline
-rules) -> W5 lead (resolver door + §25 suspension + migrate_152
-WRITTEN, founder phrase to apply) -> S5 gate. W3/W4 briefs derive from
-DESIGN-RULING.md §6 + FINDINGS.md roll-up; builder recovery per the
-standing path (named file lanes, campaign branch, dead builder's diff
-lead-reviewed then landed or reverted).
+baselineBlockedMuscles, capabilityPlanRewrite. W2 (lead) LANDED in three green landings merged to main: L5 mechanism
+(T2-12 slope over eligible sets + regression driver; T2-13 substituted
+effects entries + reshaped counter through stats/fact/context/classifier),
+L6 story+copy (T2-14 CONSTRAINED story/hold/watch lines; T2-15
+non-accusing adherence; T2-17 'fine' lands; T2-18 subject-first copy,
+words-in-mouth removed), L7 receipt+carry (T1-07 writer honours
+CAPABILITY_HOLD - document keeps the movement, serve overlays; T2-25
+two-week reintroduction carry at window grain; R1d disposition recorded
+in DESIGN-RULING §2 - closes by composition). Suites: constrainedTruth.w2,
+capabilityHoldAndCarry.w2; three stale copy pins updated in
+capabilityCoach.test.js.
+
+IN FLIGHT NEXT: W3 Sonnet pair (visibility surfaces) dispatched in two
+non-overlapping file lanes - agent W3A (session+plan surfaces):
+WorkoutSummaryScreen (T2-07 post-workout quiet line + T2-22 effects
+render), RoutineDetailScreen (T2-32 plan markers, T2-08 narrowing
+count), ActiveWorkoutScreen swap-sheet count only (T2-08) + session
+reduced signal (T2-06), laterality lines (T2-20/T1-24); agent W3B
+(home+generation surfaces): HomeScreen/homeCoachBrief (T1-14/T2-31
+ordinary-state line, T1-17 effective count, T1-15 Today AWAITING),
+generation reveals (T1-12 blocked-slot counts on all entries, T1-13
+graded total-block state), BuildWorkoutScreen travel naming (T1-23),
+widgets/writer + partners/weekSignalWriter effective denominators
+(T2-16), planEngine buildWhyThis capability line (T1-16). RECOVERY:
+agents work tree-only on the campaign branch, never commit/push/stash;
+a dead agent's uncommitted diff is lead-reviewed against its brief then
+landed or reverted; lanes above are exclusive, lead stays out of them
+while agents run. Lead runs W5-minus-PlansScreen concurrently (R8
+suspension schema/model/HowYouTrain + migrate_152 WRITTEN
+founder-gated; T1-10 blockAdvisor senior question; T1-02 divisionDiff;
+T2-10 ExerciseDetail) - PlansScreen items (T1-11) deferred until W3B
+lands to avoid a shared lane. THEN W4 Sonnet pair (flows+vocabulary:
+T2-11 capture, T2-23 per-line + revisit incl. the standing no-ids
+rewrite audit, T2-05 honest preview, T1-05/T1-06 re-propose,
+T2-33/T1-19/T1-08/T1-20 vocabulary + cross-refs, T1-26/T1-04 clinician
+standing, T2-28 provenance, stale migration comments, T2-27, T2-30),
+lead does T1-11 + adversarial Opus review of the whole build vs
+DESIGN-RULING -> S5 gate.
 
 RECOVERY PATHS (recorded before dispatch, per operating model): S1/S2 agents
 are READ-ONLY (no repo writes) — a dead agent is re-dispatched with the same
