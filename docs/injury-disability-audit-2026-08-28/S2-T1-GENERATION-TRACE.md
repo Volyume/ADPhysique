@@ -121,3 +121,25 @@ S5 (incoherent):
    muscle strictly below block peak (would make T1-25 non-inert there)?
 3. Does planEngine's divisionCoverage distinguish "absent from supplied
    library" from "absent for equipment"?
+
+## LEAD VERIFICATION (Fable, 2026-08-28) — the three UNVERIFIED items, closed
+
+1. CLOSED: no whyThis consumer merges blocked-slot data. ProSetupCompleteScreen
+   and PlanDetailScreen: zero matches for blockedSlots/blockedByCapability/
+   capabilityBlocked. T1-12 and T1-16 stand as written.
+2. CORRECTED AND CONFIRMED (T1-25): read reintroduction.js in full. In an
+   ascending seeded block the ramp DOES run (current-week planned < block
+   peak), so "out.ramped is normally empty" overstates; but what it writes is
+   approximately the template's own remaining trajectory, because the gap it
+   exists to close ("the gap the reduced effective dose opened", its own
+   header) is never persisted anywhere — T1-01 shows nothing ever writes a
+   capability-reduced planned volume. In a flat-template block nowPlanned ==
+   peak and it is literally inert. Severity unchanged: §23's mechanism does
+   not deliver §23's promise, and the "builds back up" toast can fire while
+   changing nothing real.
+3. CLOSED (T1-02 producer evidence): planEngine.js:3099 sets
+   cause = available ? 'not_selected' : 'not_available' from the SUPPLIED
+   library only. It cannot distinguish capability-filtered absence from
+   equipment absence; divisionDiff.js:180-186 then hard-attributes
+   'not_available' to equipment. On the two raw-library paths capability gaps
+   do not register at all; on filtered paths they are mislabelled equipment.
