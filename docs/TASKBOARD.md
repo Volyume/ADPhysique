@@ -812,6 +812,17 @@ ruling (docs/injury-disability-audit-2026-08-28/, decisions to the
 D-register) -> S4 build waves (Sonnet surfaces, lead engine/safety-adjacent +
 review) -> S5 gate: lint + full suite + merge + device checklist.
 
+STAGE LOG: S1 BANKED (S1-SURFACE-INVENTORY-BANKED.md, 7 entry points, zero
+post-session surface; S1-RESEARCH-EVIDENCE-BANKED.md, 20-pattern digest).
+S2 BANKED (S2-T1-GENERATION-TRACE.md, 27 findings, lead-verified;
+S2-T2-LIVE-TRACE.md, 33 findings, lead-verified — headline S1s: T2-01
+promotion breaks serving, T2-02 allowances never consulted; T2's
+migration-149 question CLOSED: supabase/README:194 record + read-only
+production column check both confirm 145-149+151 live, the database.js:2703
+/ capabilityConstraints.js:9 comments are STALE — comment fix queued for
+S4). All four evidence lanes complete: 60 findings. S3 IN PROGRESS (lead
+synthesis FINDINGS.md + design ruling to the D-register).
+
 RECOVERY PATHS (recorded before dispatch, per operating model): S1/S2 agents
 are READ-ONLY (no repo writes) — a dead agent is re-dispatched with the same
 brief, nothing to land. S4 builders work only in named file lanes on the
