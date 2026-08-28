@@ -541,6 +541,10 @@ function ProgressStack({ navigation }) {
           capabilityRoutesReachable.test.js, which caught this gap. */}
       <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
+      {/* SettingsWorkout is HowYouTrain's other outbound target (the
+          session-length row) - one more hop of the same transitive
+          closure the sweep enforces. */}
+      <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
