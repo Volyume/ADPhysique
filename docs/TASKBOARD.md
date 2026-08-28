@@ -864,16 +864,22 @@ dry-run. Gate closure resolved nine failures at root (five fixture
 offset bumps per the append convention, one shape pin, two annotated
 log-guards, one calendar-rotted fixture proved pre-existing on main and
 clock-pinned, one REAL route gap the nav sweep caught - HowYouTrain +
-SettingsWorkout registered in ProgressStack). IN FLIGHT: W4 Sonnet pair
-(final wave) - W4A flows (HowYouTrainScreen + sessionEffective: T2-23
+SettingsWorkout registered in ProgressStack). W4B LANDED reviewed
+(9d5b4a1b, branch): capture preselect, vocabulary sweep, provenance,
+T2-30, stale comments - plus the lead's root closures of its two STOPs
+(causeOverride wired end-to-end with the catch preserving the override;
+T1-08 capabilityIneligible chain planAutoGen -> programmeEpoch ->
+planRationale, blockAdvisor/continuity re-keyed off the shared
+name-based autoEligible seam, STOP suite converted to hold the fix).
+IN FLIGHT: W4A flows (HowYouTrainScreen + sessionEffective: T2-23
 per-line + revisit + standing audit row, T2-05 honest preview, T1-05,
 T1-06, T1-04/T1-26 clinician decline confirm, T2-27 honest copy, T1-20
-HowYouTrain-side cross-ref); W4B capture+vocabulary (ActiveWorkout
-T2-11 preselect, T2-33/T1-19/T1-08 sweep on pickers/sheets/rationale,
-T1-20 AvoidedMovements side, T2-28 provenance incl. install swap row,
-stale 149-era comments, T2-30 verify-first). Same recovery paths.
-THEN: adversarial Opus review against SCORECARD.md (attack all 86
-rows), S5 gate + device checklist.
+HowYouTrain-side cross-ref). Same recovery path. Adversarial review
+brief WRITTEN and recorded: REVIEW-BRIEF.md in the audit folder
+(authority, attack doctrine, priority targets, read-only bounds, report
+format, recovery path); dispatch (model 'opus', explicit) only after
+W4A lands + scorecard state refresh + full gate green. THEN: S5 gate +
+device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):
