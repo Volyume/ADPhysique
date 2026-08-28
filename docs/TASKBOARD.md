@@ -851,8 +851,32 @@ in DESIGN-RULING §2 - closes by composition). Suites: constrainedTruth.w2,
 capabilityHoldAndCarry.w2; three stale copy pins updated in
 capabilityCoach.test.js.
 
-IN FLIGHT NEXT: W3 Sonnet pair (visibility surfaces) dispatched in two
-non-overlapping file lanes - agent W3A (session+plan surfaces):
+W3 + W5 LANDED TO MAIN (bca83133, full gate 1,097 suites / 14,989
+green): W3A session+plan visibility and W3B home+generation visibility
+both lead-reviewed with corrections (held-episode filter on the Home
+line; unresolved rows earn no plan marker; two builder pins moved to
+the stricter shapes); W5 complete - §25 suspension end to end
+(migrate_152 APPLIED to production on the founder's named
+confirmation), block review asks the capability question with stored
+KEEPs never outranking it, resolver door shut on the last raw-library
+paths, T1-11 repeat-offer, capabilityShaped threaded through commit AND
+dry-run. Gate closure resolved nine failures at root (five fixture
+offset bumps per the append convention, one shape pin, two annotated
+log-guards, one calendar-rotted fixture proved pre-existing on main and
+clock-pinned, one REAL route gap the nav sweep caught - HowYouTrain +
+SettingsWorkout registered in ProgressStack). IN FLIGHT: W4 Sonnet pair
+(final wave) - W4A flows (HowYouTrainScreen + sessionEffective: T2-23
+per-line + revisit + standing audit row, T2-05 honest preview, T1-05,
+T1-06, T1-04/T1-26 clinician decline confirm, T2-27 honest copy, T1-20
+HowYouTrain-side cross-ref); W4B capture+vocabulary (ActiveWorkout
+T2-11 preselect, T2-33/T1-19/T1-08 sweep on pickers/sheets/rationale,
+T1-20 AvoidedMovements side, T2-28 provenance incl. install swap row,
+stale 149-era comments, T2-30 verify-first). Same recovery paths.
+THEN: adversarial Opus review against SCORECARD.md (attack all 86
+rows), S5 gate + device checklist.
+
+Superseded dispatch record (W3, kept for the recovery trail): agent
+W3A (session+plan surfaces):
 WorkoutSummaryScreen (T2-07 post-workout quiet line + T2-22 effects
 render), RoutineDetailScreen (T2-32 plan markers, T2-08 narrowing
 count), ActiveWorkoutScreen swap-sheet count only (T2-08) + session
