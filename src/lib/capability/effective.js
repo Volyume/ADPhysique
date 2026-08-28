@@ -14,7 +14,7 @@
  * (CAP-4 wall); substitutes are ranked by the existing generic
  * canonicality judgement - deterministic, explainable, no scores.
  */
-import { demandConflicts } from './resolve';
+import { blockingConflicts } from './resolve';
 import { tierRank } from '../exercise/canonicality';
 
 export const EFFECTIVE_EFFECT = Object.freeze({
@@ -24,11 +24,14 @@ export const EFFECTIVE_EFFECT = Object.freeze({
   CONFLICTED: 'conflicted', // declined/undecided: base row stands, visibly
 });
 
-/** The EPISODE-role conflicts for one exercise, or []. */
+/** The EPISODE-role conflicts that still stand for one exercise, or [].
+ *  Decision-layer (CC33 D112 R4): built on blockingConflicts, so a user
+ *  allowance carves substitution, excusal and the conflicted notice
+ *  exactly as it carves the picker - and never carves the clinician rank. */
 export function episodeConflicts(capabilityState, exercise) {
   if (!capabilityState || capabilityState.empty) return [];
   const byId = new Map((capabilityState.restrictions ?? []).map((r) => [r.id, r]));
-  return demandConflicts(capabilityState, exercise)
+  return blockingConflicts(capabilityState, exercise)
     .map((c) => ({ ...c, row: byId.get(c.constraintId) }))
     .filter((c) => c.row?.role === 'episode');
 }

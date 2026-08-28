@@ -1312,7 +1312,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       if (delta > 0) {
         try {
           // eslint-disable-next-line global-require
-          const { loadCapabilityResolveState, demandConflicts } = require('../lib/capability/resolve');
+          const { loadCapabilityResolveState, blockingConflicts } = require('../lib/capability/resolve');
           // eslint-disable-next-line global-require
           const { getAllExercises, getLatestCheckin } = require('../lib/database');
           const capState = await loadCapabilityResolveState(user.id, {});
@@ -1322,7 +1322,9 @@ export default function CoachOutputScreen({ navigation, route }) {
             const library = await getAllExercises();
             for (const ex of library) {
               if (!ex?.primaryMuscle) continue;
-              if (demandConflicts(capState, ex).some((c) => !c.unknown && episodeIds.has(c.constraintId))) {
+              // Decision layer (D112 R4): an exercise the user allowed no
+              // longer holds its muscle - unless the rule is clinician-set.
+              if (blockingConflicts(capState, ex).some((c) => !c.unknown && episodeIds.has(c.constraintId))) {
                 holdMuscles.add(ex.primaryMuscle);
               }
             }
@@ -1910,7 +1912,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       let physicalConstraint = null;
       try {
         // eslint-disable-next-line global-require
-        const { loadCapabilityResolveState, demandConflicts } = require('../lib/capability/resolve');
+        const { loadCapabilityResolveState, blockingConflicts } = require('../lib/capability/resolve');
         const capState = await loadCapabilityResolveState(user.id, {});
         const episodeIds = new Set((capState.restrictions ?? [])
           .filter((r) => r.role === 'episode').map((r) => r.id));
@@ -1923,7 +1925,9 @@ export default function CoachOutputScreen({ navigation, route }) {
           const affected = new Set();
           for (const ex of library) {
             if (!ex?.primaryMuscle) continue;
-            if (demandConflicts(capState, ex).some((c) => !c.unknown && episodeIds.has(c.constraintId))) {
+            // Decision layer (D112 R4): allowed exercises do not count a
+            // muscle as constraint-affected - clinician rules excepted.
+            if (blockingConflicts(capState, ex).some((c) => !c.unknown && episodeIds.has(c.constraintId))) {
               affected.add(ex.primaryMuscle);
             }
           }

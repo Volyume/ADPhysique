@@ -265,19 +265,39 @@ export function demandConflicts(state, exercise) {
 }
 
 /**
+ * The section 4.1 DECISION layer (CC33 D112 R4): the conflicts that still
+ * BLOCK this exercise after the user's own allowance carve.
+ * demandConflicts stays the EXPLANATION layer - it lists every conflict
+ * so surfaces can explain a rule's reach - while this answers "does
+ * anything actually stand in the way". The allowance carves rank-3/4
+ * conflicts (definite self-declared, unknown) and never rank 2 (definite
+ * clinician): the same carve capabilityBlockReason has always applied,
+ * exported so EVERY decision consumer shares it - substitution, excusal,
+ * the in-session notice, block review, rebuild receipts and coach holds
+ * must all honour "this one works for me", not the picker alone.
+ */
+export function blockingConflicts(state, exercise) {
+  if (!state || state.empty || !exercise) return [];
+  const conflicts = demandConflicts(state, exercise);
+  if (!conflicts.length) return conflicts;
+  const allowed = exercise.id ? !!state.allowances?.has(exercise.id) : false;
+  if (!allowed) return conflicts;
+  return conflicts.filter((c) => !c.unknown && c.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED);
+}
+
+/**
  * The section 4.1 first-match reason for this exercise, or null.
- * Rank 2 before rank 3 before rank 4; the allowance carves 3 and 4, never 2.
+ * Rank 2 before rank 3 before rank 4; the allowance carves 3 and 4, never
+ * 2 (the carve itself lives in blockingConflicts).
  */
 export function capabilityBlockReason(state, exercise) {
   if (!state || state.empty || !exercise) return null;
-  const conflicts = demandConflicts(state, exercise);
+  const conflicts = blockingConflicts(state, exercise);
   if (!conflicts.length) return null;
-  const allowed = exercise.id ? state.allowances.has(exercise.id) : false;
   // Rank 2: definite clinician conflict - un-carveable.
   if (conflicts.some((c) => !c.unknown && c.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED)) {
     return CAPABILITY_BLOCK.CLINICIAN;
   }
-  if (allowed) return null; // carves every remaining rank-3/4 entry
   // Rank 3: definite self-declared conflict.
   if (conflicts.some((c) => !c.unknown)) return CAPABILITY_BLOCK.DECLARED;
   // Rank 4: only unknowns remain.
