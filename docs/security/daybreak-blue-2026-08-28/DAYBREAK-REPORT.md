@@ -707,9 +707,11 @@ Neither caused a build failure or met the security finding standard.
 1. Wait for the concurrent independent QA re-audit to name its accepted main
    SHA; do not move that target or merge this branch directly.
 2. Create a disposable integration branch/worktree from that exact accepted SHA.
-3. Rebase or cherry-pick `4fa27234`, `dd80ee8b`, `bda8323a` and the final report
-   commit in order. Resolve auth/navigation/database/web/lockfile/workflow
-   conflicts by preserving both accepted QA behavior and the security invariants.
+3. Rebase the complete security branch, or cherry-pick the contiguous range after
+   baseline `ec37a32f` through the branch tip. Do not select only the three code
+   commits: the following report/hygiene commits are part of the handoff. Resolve
+   auth/navigation/database/web/lockfile/workflow conflicts by preserving both
+   accepted QA behavior and the security invariants.
 4. Review the complete integration diff and rerun every gate in §33, then all
    device tests in §37 and isolated external tests in §38.
 5. Obtain an independent security re-audit of the integrated SHA. Any RLS/RPC
