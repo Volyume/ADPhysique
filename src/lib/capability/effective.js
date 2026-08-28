@@ -36,6 +36,21 @@ export function episodeConflicts(capabilityState, exercise) {
     .filter((c) => c.row?.role === 'episode');
 }
 
+/** The BASELINE-role conflicts that still stand for one exercise, or [].
+ *  Same decision layer. D112 R1's amendment to RT2-1 rides on this:
+ *  baseline invisibility is correct only while the plan is
+ *  baseline-compatible, so a plan row whose exercise still conflicts
+ *  with the user's permanent rules is quietly marked (never silently
+ *  served as fine) until the user resolves it - by accepting the plan
+ *  rewrite, swapping it themselves, or allowing the exercise through. */
+export function baselineConflicts(capabilityState, exercise) {
+  if (!capabilityState || capabilityState.empty) return [];
+  const byId = new Map((capabilityState.restrictions ?? []).map((r) => [r.id, r]));
+  return blockingConflicts(capabilityState, exercise)
+    .map((c) => ({ ...c, row: byId.get(c.constraintId) }))
+    .filter((c) => c.row?.role === 'baseline');
+}
+
 /**
  * The best eligible substitute for a slot, or null: same primary muscle,
  * passes the injected senior question, ranked by the generic canonicality

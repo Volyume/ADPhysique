@@ -70,10 +70,25 @@ rows + apply the accepted rewrite in one transaction. The §24
 rebuild/adjust offer is part of the same surface. Serve-time substitution
 for the promoted rules therefore never "switches off" — its work is
 either written into the document or visibly declined.
-(c) Volume honour: enforceWeeklyFloorsAndCaps composes capability
-ceilings via resolveEffectiveTargets (T1-01), and the §15 honest line
-ships with it. Reintroduction then ramps against genuinely reduced
-targets, making T1-25 real in the normal case.
+(c) Volume honour: capability ceilings compose via
+resolveEffectiveTargets (T1-01), and the §15 honest line ships with it.
+IMPLEMENTATION REFINEMENT (recorded at W1 build, 2026-08-28): the
+ceiling lands at the SEEDING consumption point (block activation), not
+inside enforceWeeklyFloorsAndCaps, because reading the live mechanism
+showed the FQ-4 allocator (coachApply.computeWeeklySessionAllocation)
+scales existing entries with no per-entry cap - so for any muscle the
+plan trains at all, the ramp is deliverable by construction and a
+pre-build target cap is behaviourally equivalent to the post-build
+truth. The §15 min genuinely bites where the pool is EMPTY under
+BASELINE rules: those muscles seed honest zero rows ([mev, mrv] band
+[0, 0], so the §20 coach consumption point is enforced mechanically by
+computeVolumeApply's own clamp). EPISODE-blocked muscles are never
+zeroed: their planned rows are the protected baseline §23's
+reintroduction ramps back toward, and the effective layer (CC30
+stamps, §18 denominators, the serve overlay) absorbs the temporary
+gap - the volume-grain instance of "temporary is an overlay; permanent
+is the document". Reintroduction then ramps against true rows in both
+cases, making T1-25 real where it applies.
 (d) Coaching consults baseline scope for exercise-level advice and
 adherence framing (the column-F hole); volume HOLDS remain episode-scoped
 — a permanent baseline is the user's normal, not a hold.

@@ -9,10 +9,12 @@
 import {
   getActivePlan, getRoutinesForPlan, getRoutineExercisesWithDetails,
   getAllExercises, setConstraintEffectiveChoice, appendSessionConstraintEffects,
+  updateRoutineExerciseExercise, recordExerciseSwap,
 } from './database';
-import { loadCapabilityResolveState } from './capability/resolve';
-import { computeEffectiveSession, EFFECTIVE_EFFECT } from './capability/effective';
+import { loadCapabilityResolveState, blockingConflicts } from './capability/resolve';
+import { computeEffectiveSession, EFFECTIVE_EFFECT, bestEligibleSubstitute } from './capability/effective';
 import { loadExerciseIntentState, isEligibleExercise } from './exercise/intent';
+import { SWAP_SCOPE } from './exercise/swapScope';
 
 export { setConstraintEffectiveChoice };
 
@@ -128,4 +130,112 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
   } catch (_e) {
     return rows; // the base session always stands
   }
+}
+
+/**
+ * D112 R1a/b (closes audit T1-03 and T2-01's rebuild half): the per-line
+ * PLAN REWRITE proposal for capability rules against the ACTIVE plan.
+ *
+ * Permanent shapes the document. The episode overlay above is serve-time
+ * and reversible ("everything returns when you end it"); a BASELINE rule
+ * has no end to return from, so its conflicts are resolved by changing
+ * the plan itself - through the user's explicit choice, never silently.
+ * The same computation serves promotion: promoteEpisode returns the
+ * minted baseline row ids, and those ids are this function's ruleIds.
+ *
+ * Exercises are resolved from the LIBRARY by id (the routine rows carry
+ * partial exercise objects without demand columns, which would read as
+ * unknown-conflicts). Substitutes come from bestEligibleSubstitute under
+ * the injected senior question, exactly as serve-time substitution
+ * chooses them - so the plan the user accepts is the plan they were
+ * already being served. A line with no eligible substitute keeps its
+ * exercise (never silently emptied) and reports itself unsolvable.
+ *
+ * @param {string} userId
+ * @param {{ruleIds?: string[]|null}} opts limit to conflicts driven by
+ *   these constraint ids (a just-created or just-promoted group); null
+ *   judges every active BASELINE rule.
+ * @returns {Promise<{lines: Array<{routineId: string, routineName: string|null,
+ *   routineExerciseId: string, from: object, to: object|null,
+ *   constraintIds: string[]}>, substitutable: number, unsolvable: number}>}
+ */
+export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = {}) {
+  const out = { lines: [], substitutable: 0, unsolvable: 0 };
+  try {
+    if (!userId) return out;
+    const plan = await getActivePlan(userId);
+    if (!plan?.id) return out;
+    const [capState, intentState, library, routines] = await Promise.all([
+      loadCapabilityResolveState(userId, {}),
+      loadExerciseIntentState(userId, {}),
+      getAllExercises(),
+      getRoutinesForPlan(plan.id),
+    ]);
+    if (capState.empty || capState.unavailable) return out;
+    const byId = new Map((library ?? []).map((e) => [e.id, e]));
+    const roleById = new Map((capState.restrictions ?? []).map((r) => [r.id, r.role]));
+    const wanted = Array.isArray(ruleIds) && ruleIds.length ? new Set(ruleIds) : null;
+    for (const routine of routines ?? []) {
+      // eslint-disable-next-line no-await-in-loop
+      const rows = await getRoutineExercisesWithDetails(routine.id).catch(() => []);
+      for (const row of rows ?? []) {
+        const exercise = byId.get(row?.exercise?.id ?? row?.exerciseId) ?? null;
+        if (!exercise) continue;
+        let conflicts = blockingConflicts(capState, exercise);
+        conflicts = wanted
+          ? conflicts.filter((c) => wanted.has(c.constraintId))
+          // No ids means the standing audit: BASELINE rules only - an
+          // episode conflict is the overlay's business, not the document's.
+          : conflicts.filter((c) => roleById.get(c.constraintId) === 'baseline');
+        if (!conflicts.length) continue;
+        const substitute = bestEligibleSubstitute(
+          exercise, library, (ex) => isEligibleExercise(intentState, ex),
+        );
+        out.lines.push({
+          routineId: routine.id,
+          routineName: routine.name ?? null,
+          routineExerciseId: row.id,
+          from: exercise,
+          to: substitute,
+          constraintIds: conflicts.map((c) => c.constraintId),
+        });
+        if (substitute) out.substitutable += 1; else out.unsolvable += 1;
+      }
+    }
+  } catch (_e) { /* read-only proposal; empty means nothing to offer */ }
+  return out;
+}
+
+/**
+ * Apply the accepted rewrite lines: each substitutable line's routine row
+ * moves to its substitute through updateRoutineExerciseExercise (which
+ * rebuilds the prescription for the new movement), and the swap is
+ * recorded with PROGRAMME scope - cause derives centrally at write time,
+ * so a capability-driven rewrite carries cause='constraint' and never
+ * teaches the preference lane (CAP-13). Unsolvable lines are left
+ * exactly as they are: the quiet baseline-conflict notice marks them.
+ *
+ * Best-effort per line; one failed write never abandons the rest.
+ *
+ * @returns {Promise<{applied: number, failed: number}>}
+ */
+export async function applyCapabilityPlanRewrite(userId, lines = []) {
+  const out = { applied: 0, failed: 0 };
+  for (const line of Array.isArray(lines) ? lines : []) {
+    if (!line?.to?.id || !line?.routineExerciseId) continue;
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await updateRoutineExerciseExercise(line.routineExerciseId, line.to.id);
+      // eslint-disable-next-line no-await-in-loop
+      await recordExerciseSwap(userId, line.from?.id, line.to.id, {
+        routineId: line.routineId ?? null,
+        explicit: true,
+        scope: SWAP_SCOPE.PROGRAMME,
+      }).catch(() => { /* provenance is additive */ });
+      out.applied += 1;
+    } catch (_e) {
+      out.failed += 1;
+    }
+  }
+  return out;
 }

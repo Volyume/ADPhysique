@@ -825,16 +825,30 @@ S4). All four evidence lanes complete: 60 findings. S3 DELIVERED
 four S1s, six structural causes, full 60-finding roll-up with wave map)
 + DESIGN-RULING.md (coherence model "temporary is an overlay; permanent
 is the document"; rulings CC33-R1..R8; residual dispositions; success
-criteria; five-wave build plan) + register entry D112. S4 NEXT: W1 lead
-hands-on (honour core: baseline rewrite proposal + promotion transaction
-+ ceilings/§15, allowance seam, manual-add respect, posture unification,
-prescription rebuild) -> W2 lead (coaching truth) -> W3/W4 Sonnet pairs
-under lead review (visibility; flows+vocabulary) -> W5 lead (resolver
-door + §25 suspension + migrate_152 WRITTEN, founder phrase to apply)
--> S5 gate. W3/W4 briefs derive from DESIGN-RULING.md §6 + FINDINGS.md
-roll-up; builder recovery per the standing path (named file lanes,
-campaign branch, dead builder's diff lead-reviewed then landed or
-reverted).
+criteria; five-wave build plan) + register entry D112. S4 IN FLIGHT. W1 (lead, hands-on) LANDED in four
+green landings, each merged to main same-session: L1 allowance seam
+(blockingConflicts decision layer, 7 consumers, T2-02); L2 posture
+unification (T2-19 withhold, T1-09, T1-21, T1-22, T2-09 honest lane
+copy) + manual-add respect (T2-04, _userAdded through store and serve)
++ prescription rebuild (T2-03 shared helper); L3 honest block seeding
+(T1-01: baselineBlockedMuscles at activation, zero rows + [0,0] band
+for baseline-emptied pools, EPISODE rows protected for the §23 ramp -
+refinement recorded in DESIGN-RULING §2 R1c); L4 baseline plan rewrite
+(T1-03: computeCapabilityPlanRewrite/applyCapabilityPlanRewrite in
+sessionEffective, proposal on new baseline rule AND on promotion via
+minted ids - T2-01 closed; RT2-1 amendment notice in ActiveWorkout with
+lane-correct label). New suites: allowanceSeam,
+sessionEffective.serveGuard, capabilityPosture.w1.guard,
+baselineBlockedMuscles, capabilityPlanRewrite. NEXT: W2 lead (coaching
+truth: T2-12/13/14/15/17/18, R1d baseline coaching scope, T1-07
+receipt, T2-25 block-boundary stamp) -> W3/W4 Sonnet pairs under lead
+review (visibility; flows+vocabulary - W4 also wires the standing
+no-ids rewrite audit into the revisit surface for pre-existing baseline
+rules) -> W5 lead (resolver door + §25 suspension + migrate_152
+WRITTEN, founder phrase to apply) -> S5 gate. W3/W4 briefs derive from
+DESIGN-RULING.md §6 + FINDINGS.md roll-up; builder recovery per the
+standing path (named file lanes, campaign branch, dead builder's diff
+lead-reviewed then landed or reverted).
 
 RECOVERY PATHS (recorded before dispatch, per operating model): S1/S2 agents
 are READ-ONLY (no repo writes) — a dead agent is re-dispatched with the same

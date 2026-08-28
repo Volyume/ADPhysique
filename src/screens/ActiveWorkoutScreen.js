@@ -815,23 +815,52 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     } catch (_e) { return false; }
   })();
 
-  const constraintNoticeCopy = (() => {
-    if (currentEntry?._capabilityTemp?.fromName) {
-      return `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts`;
-    }
-    if (!constraintConflicts.length) return null;
-    // Natural coach-language order (2026-08-21): name what the conflict
-    // is about when the rules give it a short honest name.
+  // D112 R1 amendment to RT2-1 (closes audit T1-03's visible half): a
+  // baseline-shaped plan is simply the user's plan and carries no marker,
+  // but a plan row that CONTRADICTS the user's permanent rules is never
+  // silently served as fine. The quiet note below marks it until the user
+  // resolves it - the plan rewrite, a swap here, or an allowance.
+  const baselineConflictsList = (() => {
+    if (!exercise || !intentState?.capability || intentState.capability.empty) return [];
     try {
       // eslint-disable-next-line global-require
-      const { subjectPhrase } = require('../lib/capability/phrase');
-      const named = subjectPhrase(constraintConflicts.filter(c => c.ruleKind !== 'exercise'), {});
-      if (named) return `This one involves ${named}, which you're working around at the moment`;
-    } catch (_e) { /* fall through to the generic line */ }
-    return constraintConflicts.every(c => c.ruleKind === 'exercise')
-      ? "This is one you're working around at the moment"
-      : 'Today this works around your temporary change';
+      const { baselineConflicts } = require('../lib/capability/effective');
+      return baselineConflicts(intentState.capability, exercise);
+    } catch (_e) { return []; }
   })();
+
+  const constraintNotice = (() => {
+    if (currentEntry?._capabilityTemp?.fromName) {
+      return { kind: 'episode', copy: `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts` };
+    }
+    if (constraintConflicts.length) {
+      // Natural coach-language order (2026-08-21): name what the conflict
+      // is about when the rules give it a short honest name.
+      try {
+        // eslint-disable-next-line global-require
+        const { subjectPhrase } = require('../lib/capability/phrase');
+        const named = subjectPhrase(constraintConflicts.filter(c => c.ruleKind !== 'exercise'), {});
+        if (named) return { kind: 'episode', copy: `This one involves ${named}, which you're working around at the moment` };
+      } catch (_e) { /* fall through to the generic line */ }
+      return {
+        kind: 'episode',
+        copy: constraintConflicts.every(c => c.ruleKind === 'exercise')
+          ? "This is one you're working around at the moment"
+          : 'Today this works around your temporary change',
+      };
+    }
+    if (baselineConflictsList.length) {
+      try {
+        // eslint-disable-next-line global-require
+        const { subjectPhrase } = require('../lib/capability/phrase');
+        const named = subjectPhrase(baselineConflictsList.filter(c => c.ruleKind !== 'exercise'), {});
+        if (named) return { kind: 'baseline', copy: `This one involves ${named}, which sits outside how you train. Swap it when you're ready.` };
+      } catch (_e) { /* fall through to the generic line */ }
+      return { kind: 'baseline', copy: "This one sits outside how you train. Swap it when you're ready." };
+    }
+    return null;
+  })();
+  const constraintNoticeCopy = constraintNotice?.copy ?? null;
 
   // COMP-015: this session's adjustment for the current exercise, if any. Only
   // Pro sessions ever carry adjustments; a reverted one is ignored. A nonzero
@@ -3699,7 +3728,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             if (constraintNoticeCopy) {
               items.push({
                 key: 'capability-constraint',
-                label: 'Temporary change',
+                // The label follows the lane: a permanent rule is not a
+                // "temporary change" (D112 R6 vocabulary law).
+                label: constraintNotice?.kind === 'baseline' ? 'How you train' : 'Temporary change',
                 icon: 'body-outline',
                 iconColor: t.colors.warning,
                 content: (

@@ -316,6 +316,13 @@ export default function HowYouTrainScreen() {
     if (isEpisode && draft.kind !== 'allow' && Array.isArray(createdIds) && createdIds.length) {
       proposeEffectiveDiff(createdIds, subject).catch(() => { /* proposal is additive */ });
     }
+    // CC33 D112 R1a (closes audit T1-03): a NEW BASELINE rule with an
+    // installed plan proposes the plan rewrite - permanent shapes the
+    // document, so this goes through the document, not the serve-time
+    // overlay. Declining leaves the affected rows quietly marked.
+    if (!isEpisode && draft.kind !== 'allow' && Array.isArray(createdIds) && createdIds.length) {
+      proposeCapabilityPlanRewrite(createdIds, subject).catch(() => { /* proposal is additive */ });
+    }
   };
 
   const onConsent = async () => {
@@ -378,6 +385,67 @@ export default function HowYouTrainScreen() {
     } catch (_e) { /* proposal is additive; the save already stands */ }
   };
 
+  // CC33 D112 R1a/b (closes audit T1-03 and T2-01): the PLAN REWRITE
+  // proposal for BASELINE rules - a new permanent rule, or a promoted
+  // episode (the section 24 rebuild/adjust offer). Permanent shapes the
+  // document: unlike the episode overlay, accepting changes the plan
+  // itself; declining keeps it, with the affected rows quietly marked in
+  // sessions. The computation lives in lib/sessionEffective.js so this
+  // capability surface never imports the preference lane.
+  const proposeCapabilityPlanRewrite = async (ruleIds, subject = null) => {
+    try {
+      // eslint-disable-next-line global-require
+      const { computeCapabilityPlanRewrite, applyCapabilityPlanRewrite } = require('../lib/sessionEffective');
+      const rw = await computeCapabilityPlanRewrite(userId, { ruleIds });
+      const n = rw.lines.length;
+      if (!n) return;
+      const k = rw.substitutable;
+      const u = rw.unsolvable;
+      const plural = (c) => (c === 1 ? '' : 's');
+      const sits = n === 1 ? 'sits' : 'sit';
+      let body;
+      if (k === 0) {
+        body = `${n} exercise${plural(n)} in your current plan ${sits} outside how you train, and no close match fits right now. ${n === 1 ? 'It stays' : 'They stay'} in place with a quiet note, and you can swap ${n === 1 ? 'it' : 'them'} any time.`;
+      } else if (u === 0) {
+        body = `${n} exercise${plural(n)} in your current plan ${sits} outside how you train. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit. Your history is not rewritten.`;
+      } else {
+        body = `${n} exercises in your current plan sit outside how you train. Volyume can swap ${k} for movements that fit; ${u === 1 ? '1 has no close match and stays' : `${u} have no close match and stay`} in place with a quiet note. Your history is not rewritten.`;
+      }
+      if (k === 0) {
+        appAlert('Some of your plan sits outside this', body, [{ text: 'OK' }]);
+        return;
+      }
+      appAlert(
+        'Update your plan to match?',
+        body,
+        [
+          {
+            text: 'Not now',
+            style: 'cancel',
+            onPress: () => {
+              toast.show('Kept as it is. Affected exercises show a quiet note with a swap shortcut.');
+            },
+          },
+          {
+            text: 'Update my plan',
+            onPress: async () => {
+              const res = await applyCapabilityPlanRewrite(userId, rw.lines);
+              if (res.applied > 0) {
+                toast.show(subject
+                  ? `Updated. ${res.applied} exercise${plural(res.applied)} swapped to fit how you train with ${subject}.`
+                  : `Updated. ${res.applied} exercise${plural(res.applied)} swapped to fit how you train.`);
+              }
+              if (res.failed > 0) {
+                toast.show('Some swaps did not save. The affected exercises keep their quiet note, so nothing is lost.');
+              }
+              refresh();
+            },
+          },
+        ],
+      );
+    } catch (_e) { /* proposal is additive; the rule already stands */ }
+  };
+
   const confirmEndEpisode = (ep) => {
     const subject = groupSubject(ep.rows.filter(r => r.state === 'active'));
     appAlert(
@@ -420,7 +488,23 @@ export default function HowYouTrainScreen() {
         ? `Volyume will keep building your training around ${subject} from now on, with full progression and coaching. Your history is not rewritten.`
         : 'Volyume will keep these as your normal setup from now on, with full progression and coaching. Your history is not rewritten.', [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'This is how I train now', onPress: async () => { await promoteEpisode(userId, ep.groupId); refresh(); } },
+      {
+        text: 'This is how I train now',
+        onPress: async () => {
+          // CC33 D112 R1b (closes audit T2-01): promotion mints baseline
+          // rows, and the serve-time overlay for the old episode stops -
+          // so the section 24 rebuild offer runs IMMEDIATELY against the
+          // minted rules. Accepting writes the substitutions the user was
+          // already being served into the plan itself; declining keeps
+          // the plan with the affected rows quietly marked. Either way,
+          // nothing silently reverts to an excluded exercise.
+          const promotedIds = await promoteEpisode(userId, ep.groupId);
+          refresh();
+          if (Array.isArray(promotedIds) && promotedIds.length) {
+            proposeCapabilityPlanRewrite(promotedIds, subject).catch(() => { /* additive */ });
+          }
+        },
+      },
     ]);
   };
 
