@@ -769,6 +769,49 @@ queue paused here for the founder review per D55.
 
 ## 1. IN FLIGHT
 
+### CC33 — INJURY / DISABILITY CONFIGURATION: 10/10 SURFACE CAMPAIGN (founder order 2026-08-28) — IN FLIGHT
+
+**Founder order (chat, 2026-08-28, verbatim intent):** extensive review of the
+injury/disability configuration design and implementation. Founder's stated
+beliefs to test adversarially: not easily understandable; not easy to find; not
+easy to use; not explanatory enough; integration possibly imperfect. Lowest
+capable agent tiers for leverage work; lead does decisions/design. Target: a
+differentiator, 10/10 for people with disabilities AND short/long-term
+injuries.
+
+- CURRENT STATE (verified against board + tree): CC25 workstream engineering is
+  complete and on main (demand ontology, resolver, "How you train" surface
+  CAP-19, inclusive onboarding, Training considerations directory, family
+  plans, reintroduction, consent+erasure; migrations 145-149+151 applied). No
+  post-landing adversarial UX audit of the CONFIGURATION SURFACE has run; the
+  founder reports it fails on findability/comprehension/usability/explanation.
+- END STATE: audited-with-evidence UX + integration verdict; lead design ruling
+  recorded in the decisions register; rebuilt/repositioned configuration
+  surface landed to main green; device checklist; truth fields kept honest
+  (REAL-DISABLED-USER-VALIDATED stays NO until real users validate).
+- ELEVATES BECAUSE: the engine can only differentiate if users can find,
+  understand and trust the surface that drives it; today the founder cannot,
+  which predicts users cannot.
+
+Stages: S1 recon+research (pair 1: Sonnet inventory read-only, Opus external
+research) -> S2 adversarial UX audit + integration matrix (pair 2: Opus audit,
+Sonnet trace) -> S3 lead design ruling (docs/injury-disability-audit-2026-08-28/,
+decisions to the D-register) -> S4 build waves (Sonnet surfaces, lead
+engine/safety-adjacent + review) -> S5 gate: lint + full suite + merge + device
+checklist.
+
+RECOVERY PATHS (recorded before dispatch, per operating model): S1/S2 agents
+are READ-ONLY (no repo writes) — a dead agent is re-dispatched with the same
+brief, nothing to land. S4 builders work only in named file lanes on the
+campaign branch; a dead builder's uncommitted diff is lead-reviewed against its
+spec and landed or reverted, never blind-committed. Campaign branch:
+`claude/p0-01-db-authz-containment` (current session branch, == main at S1
+open), merge-to-main at green landings per the 2026-07-30 order.
+
+D37 note: CC25's blueprints are AUTHORITY for what exists, not for what to
+build; every S4 item carries its own CURRENT/END/ELEVATES against today's tree.
+
+
 ### CAPABILITY CAMPAIGN 25 (CC25) — capability-aware, disability-inclusive, restriction & injury-aware training intelligence. WORKSTREAM COMPLETE AND ON MAIN (2026-08-21): architecture + CC26 foundations + bundle 1 (CC27–29) + bundle 2 (CC30–32) + the founder's final GAP-CLOSURE order, all gated and merged. Remaining items are founder-side/external only (FOUNDER-ACTION-PACK.md).
 
 **Founder order 2026-08-20** (master brief in chat; architecture campaign
