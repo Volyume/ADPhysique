@@ -5,8 +5,8 @@
 // renew, fail-to-renew, expire, refund, revoke, ...).
 //
 // Pipeline:
-//   1. Decode the signedPayload (unverified) to read the notificationType /
-//      subtype and the signed transaction info.
+//   1. Verify signedPayload's Apple certificate chain and app/environment
+//      claims with Apple's official App Store Server Library.
 //   2. Re-fetch the AUTHORITATIVE subscription status from Apple's App Store
 //      Server API by originalTransactionId, and decide the tier from THAT, not
 //      from the (untrusted) POST body. A forged notification that claims EXPIRED
@@ -32,10 +32,18 @@
 //      Notifications: set the Production AND Sandbox V2 URLs to
 //      https://<project>.supabase.co/functions/v1/app-store-notifications
 //   3. Set the APP_STORE_* env vars (see app-store-verify) on the function.
-// Until the env vars are set the function ACKs (200) and logs rather than
-// acting, so Apple does not pile up retries.
+//   4. Set APP_STORE_APPLE_ID (numeric App Store app id) and
+//      APPLE_ROOT_CA_CERTS_BASE64 (JSON array of base64 DER Apple root
+//      certificates downloaded from Apple's PKI page).
+// Until the verification env vars are set the endpoint fails closed with 401;
+// configure them before registering the notification URL with Apple.
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { Buffer } from "node:buffer";
+import {
+  Environment,
+  SignedDataVerifier,
+} from "npm:@apple/app-store-server-library@3.1.0";
 import {
   APPLE_STATUS,
   AppleTransaction,
@@ -68,9 +76,63 @@ const TYPE_TO_ACTION: Record<string, "purchase" | "grace" | "expire" | "refund" 
   REVOKE: "refund",
 };
 
+const BUNDLE_ID = Deno.env.get("APP_STORE_BUNDLE_ID") ?? "app.volyume";
+const APPLE_APP_ID = Number(Deno.env.get("APP_STORE_APPLE_ID") ?? "");
+
+function appleRoots(): Buffer[] {
+  const raw = Deno.env.get("APPLE_ROOT_CA_CERTS_BASE64") ?? "";
+  if (!raw) return [];
+  try {
+    const entries = JSON.parse(raw) as unknown;
+    if (!Array.isArray(entries) || entries.length < 1 || entries.length > 8) return [];
+    return entries.map((entry) => {
+      if (typeof entry !== "string" || entry.length > 32768 || !/^[A-Za-z0-9+/=\r\n]+$/.test(entry)) {
+        throw new Error("invalid root certificate encoding");
+      }
+      return Buffer.from(entry.replace(/[\r\n]/g, ""), "base64");
+    });
+  } catch (_) {
+    return [];
+  }
+}
+
+async function verifyNotification(payload: string): Promise<DecodedNotification | null> {
+  if (!payload || payload.length > 65536
+    || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(payload)) return null;
+  const roots = appleRoots();
+  if (roots.length === 0) {
+    log("error", "notifications: APPLE_ROOT_CA_CERTS_BASE64 is missing/invalid; failing closed");
+    return null;
+  }
+  const candidates: Array<{ environment: Environment; appAppleId?: number }> = [
+    { environment: Environment.SANDBOX },
+  ];
+  if (Number.isSafeInteger(APPLE_APP_ID) && APPLE_APP_ID > 0) {
+    candidates.unshift({ environment: Environment.PRODUCTION, appAppleId: APPLE_APP_ID });
+  }
+  for (const candidate of candidates) {
+    try {
+      const verifier = new SignedDataVerifier(
+        roots,
+        true,
+        candidate.environment,
+        BUNDLE_ID,
+        candidate.appAppleId,
+      );
+      // eslint-disable-next-line no-await-in-loop
+      return await verifier.verifyAndDecodeNotification(payload) as DecodedNotification;
+    } catch (_) { /* try the other Apple environment */ }
+  }
+  return null;
+}
+
 serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
+  }
+  const contentLength = Number(req.headers.get("content-length") ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > 128 * 1024) {
+    return new Response("Payload too large", { status: 413 });
   }
   let body: { signedPayload?: string };
   try {
@@ -79,11 +141,10 @@ serve(async (req: Request) => {
     log("warn", "notifications: non-JSON body");
     return new Response("OK", { status: 200 });
   }
-  const decoded = decodeJwsPayload<DecodedNotification>(body?.signedPayload);
+  const decoded = await verifyNotification(body?.signedPayload ?? "");
   if (!decoded?.notificationType) {
-    log("warn", "notifications: could not decode signedPayload");
-    // ACK so Apple does not retry an unparseable message forever.
-    return new Response("OK", { status: 200 });
+    log("warn", "notifications: signedPayload verification failed");
+    return new Response("Unauthorized", { status: 401 });
   }
 
   const type = decoded.notificationType;

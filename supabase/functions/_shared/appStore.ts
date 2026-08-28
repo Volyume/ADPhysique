@@ -144,7 +144,7 @@ export interface AppleTransaction {
 // Authoritative transaction info for a transactionId.
 // GET /inApps/v1/transactions/{transactionId} -> { signedTransactionInfo: JWS }.
 export async function getTransactionInfo(transactionId: string): Promise<AppleTransaction | null> {
-  const data = await ascGet(`/inApps/v1/transactions/${transactionId}`);
+  const data = await ascGet(`/inApps/v1/transactions/${encodeURIComponent(transactionId)}`);
   return decodeJwsPayload<AppleTransaction>(data?.signedTransactionInfo as string | undefined);
 }
 
@@ -154,7 +154,7 @@ export async function getTransactionInfo(transactionId: string): Promise<AppleTr
 export async function getSubscriptionStatus(
   originalTransactionId: string,
 ): Promise<{ status: number; tx: AppleTransaction } | null> {
-  const data = await ascGet(`/inApps/v1/subscriptions/${originalTransactionId}`);
+  const data = await ascGet(`/inApps/v1/subscriptions/${encodeURIComponent(originalTransactionId)}`);
   try {
     const groups = (data?.data as Array<{ lastTransactions?: Array<{ status?: number; signedTransactionInfo?: string }> }>) ?? [];
     for (const group of groups) {

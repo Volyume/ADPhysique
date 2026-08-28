@@ -22,7 +22,18 @@
  */
 const {
   num, numMicro, MICRO_FIELDS, buildMicroLookup, microValuesForCode,
+  MAX_SOURCE_BYTES, EXPECTED_SOURCE_SHA256,
 } = require('../buildCofidSnapshot');
+
+describe('the vulnerable XLSX parser has a narrow source boundary', () => {
+  test('only the reviewed static government workbook can reach it', () => {
+    expect(MAX_SOURCE_BYTES).toBe(8 * 1024 * 1024);
+    expect(EXPECTED_SOURCE_SHA256).toMatch(/^[a-f0-9]{64}$/);
+    const source = require('fs').readFileSync(require.resolve('../buildCofidSnapshot'), 'utf8');
+    expect(source.indexOf('verifyCofidWorkbook(TMP_XLSX)'))
+      .toBeLessThan(source.indexOf('XLSX.readFile(TMP_XLSX)'));
+  });
+});
 
 // The 27-nutrient canonical list is an ES module (Metro/RN app code); babel-jest
 // transforms it fine under `import`.

@@ -74,6 +74,23 @@ describe('play-billing-rtdn → payment-failure push', () => {
 });
 
 describe('play-billing-rtdn → client verify surfaces a failed grant (SUB-001)', () => {
+  test('client verification authenticates and binds the store account to the caller', () => {
+    const fn = RTDN.slice(
+      RTDN.indexOf('async function handleClientVerify'),
+      RTDN.indexOf('serve(async (req'),
+    );
+    expect(fn).toMatch(/auth\.getUser\(bearer\)/);
+    expect(fn).toMatch(/if \(userId !== caller\.id\)/);
+    expect(fn.indexOf('auth.getUser(bearer)')).toBeLessThan(fn.indexOf('verifyWithPlayApi'));
+    expect(fn).toMatch(/account_mismatch/);
+  });
+
+  test('product ids are allowlisted and URL path values are encoded', () => {
+    expect(RTDN).toMatch(/subscriptionId === "pro_monthly"/);
+    expect(RTDN).toMatch(/subscriptionId === "pro_annual"/);
+    expect(RTDN).toMatch(/encodeURIComponent\(purchaseToken\)/);
+  });
+
   test('callUpgradeTier reports success/failure rather than void', () => {
     // Must return a result the caller can act on, not swallow RPC failures.
     expect(RTDN).toMatch(/callUpgradeTier\([\s\S]*?\):\s*Promise<\{\s*ok:\s*boolean/);

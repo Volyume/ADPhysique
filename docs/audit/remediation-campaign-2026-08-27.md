@@ -47,11 +47,11 @@ number on its own is noise. The question is what reaches a user's device.
 
 **Runtime, in the app bundle — one:**
 
-- `nanoid@3.3.12`, pulled in by `@react-navigation/native` (core and routers) and
+- `nanoid@3.3.18`, pulled in by `@react-navigation/native` (core and routers) and
   `@gorhom/portal`. Advisory GHSA-28wg-ghj8-5hjv, "non-secure generators can loop
   indefinitely with negative size", fixed in 3.3.16. **Not exploitable as used**:
   React Navigation calls `nanoid()` with no size argument to generate route keys,
-  so a negative size never occurs. The package is below the patched version.
+  so a negative size never occurs. The package is now above the patched version.
 
 **Build tooling only, never in the bundle — seven:** `uuid@7.0.3` (via
 `@expo/config-plugins` → `xcode`, prebuild), `postcss` (via `@expo/metro-config`,
@@ -60,11 +60,8 @@ bundler), `js-yaml`, `shell-quote`, `image-size`, `fast-uri`, `brace-expansion`
 
 No app source imports any of the eight directly; checked.
 
-**Not changed, and why.** Pinning `nanoid` to 3.3.16 through an npm `overrides`
-entry would close the only runtime one. That changes the dependency graph of a
-live app on a pinned Expo SDK, which is a founder decision under the
-new-dependency rule, and the advisory does not apply to how the package is used.
-Recorded rather than acted on.
+**Changed 2026-08-28.** The security campaign refreshed the lockfile to
+`nanoid@3.3.18`, closing the runtime advisory without changing the Expo major.
 
 ---
 
@@ -179,10 +176,10 @@ matrix as tests found two gaps that reading had not.
 the real `openEncryptedDb` through a SQLite fake that creates absent files the
 way the real one does.
 
-### 3. nanoid GHSA-28wg-ghj8-5hjv — CLOSED, ACCEPTED, NOT EXPLOITABLE
+### 3. nanoid GHSA-28wg-ghj8-5hjv — REMEDIATED 2026-08-28
 
 Advisory: non-secure generators loop indefinitely with a negative size, fixed in
-3.3.16. Installed 3.3.12. Evidence:
+3.3.16. Installed 3.3.18. Evidence:
 
 - The vulnerable function is `while (i--)` counting down from `size | 0`. Run
   against a negative size it was still looping after five million iterations.
@@ -193,12 +190,10 @@ Advisory: non-secure generators loop indefinitely with a negative size, fixed in
   is always the default 21 and no input of any kind reaches that parameter.
 - Volyume's own source does not import nanoid at all.
 
-Not upgraded. An `overrides` pin would silence the audit line while changing the
-dependency graph of a live app on a pinned Expo SDK, under a rule requiring a
-question first, to fix something no code path here can reach.
+The lockfile now resolves a patched release; no Expo major was changed.
 `src/__tests__/nanoidAdvisory.guard.test.js` makes the disposition falsifiable:
-it fails the moment any consumer passes an argument, or the installed version
-changes.
+it fails if the resolved version falls below the patched floor or any consumer
+starts passing an argument.
 
 ---
 

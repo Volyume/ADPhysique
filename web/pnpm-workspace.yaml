@@ -6,7 +6,12 @@ packages:
 # deploy fails packaging with a missing server.runtime.prod.js module.
 nodeLinker: hoisted
 overrides:
-  postcss: ^8.5.16
+  postcss: ^8.5.26
+  vite: ^6.4.3
+  sharp: ^0.35.4
+  'brace-expansion@1.1.15': 1.1.18
+  'brace-expansion@5.0.6': 5.0.9
+  'js-yaml@4.2.0': 4.3.1
 # pnpm blocks dependency build scripts unless approved. Approve the three
 # that need them so non-interactive CI (Vercel) can install.
 allowBuilds:

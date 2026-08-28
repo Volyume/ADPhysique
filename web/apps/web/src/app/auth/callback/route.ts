@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@volyume/supabase/server';
+import { safeRedirectPath } from '@/lib/safeRedirect';
 
 // OAuth / magic-link return. Exchanges the code for a cookie session, then
 // continues to the app. Mirrors the @supabase/ssr callback pattern.
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  const next = searchParams.get('next') ?? '/dashboard';
+  const next = safeRedirectPath(searchParams.get('next'));
 
   if (code) {
     const supabase = await createServerSupabase();

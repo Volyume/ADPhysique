@@ -5,7 +5,7 @@
 //
 //   1. Verifies the caller and inserts the cheer AS the caller (so RLS proves
 //      membership of an active partnership, and the UNIQUE(pair_id, sender_id,
-//      sent_on) constraint enforces the one-per-local-day rate limit — a
+//      sent_on) constraint enforces the one-per-UTC-day rate limit — a
 //      duplicate returns 429, never a second push).
 //   2. Resolves the recipient (the other member) from the partnership.
 //   3. Checks the recipient's open ED/wellbeing flag with the service role.
@@ -16,10 +16,8 @@
 //   4. Otherwise invokes send-push (service role) with the partner_cheer
 //      payload so the tap deep-links to the Progress partner row.
 //
-// Request body: { "pairId": "<uuid>", "sentOn"?: "YYYY-MM-DD" }
-//   sentOn is the caller's LOCAL day (the rate-limit key); defaults to UTC date
-//   if omitted. The client passes its local day so the limit follows the user's
-//   midnight, matching the in-app button reset.
+// Request body: { "pairId": "<uuid>", "kind"?: "<closed acknowledgement>" }
+//   The server stamps the UTC day. A legacy sentOn field is ignored.
 //
 // Response:
 //   { ok: true, delivered: 'push' | 'in_app' } on success
@@ -47,7 +45,6 @@ function jsonResponse(body: unknown, status: number): Response {
 
 interface CheerBody {
   pairId?: string
-  sentOn?: string
   kind?: string
 }
 
@@ -94,8 +91,13 @@ serve(async (req: Request) => {
     return jsonResponse({ ok: false, error: 'Bad JSON' }, 400)
   }
   const pairId = body.pairId
-  if (!pairId) return jsonResponse({ ok: false, error: 'pairId is required' }, 400)
-  const sentOn = body.sentOn || new Date().toISOString().slice(0, 10)
+  if (!pairId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(pairId)) {
+    return jsonResponse({ ok: false, error: 'valid pairId is required' }, 400)
+  }
+  // The rate key must never come from JSON. Migration 155 enforces the same
+  // UTC date for direct PostgREST inserts, so bypassing this function buys no
+  // additional cheer or push.
+  const sentOn = new Date().toISOString().slice(0, 10)
   const ackKind = resolveAckKey(body.kind)
 
   // Caller-scoped client: RLS applies, so reads/writes prove membership.

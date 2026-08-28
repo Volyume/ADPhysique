@@ -1,9 +1,9 @@
 /**
- * GHSA-28wg-ghj8-5hjv (nanoid) — CLOSED, ACCEPTED, NOT EXPLOITABLE IN CURRENT
- * USAGE. This file is the evidence and the thing that keeps it true.
+ * GHSA-28wg-ghj8-5hjv (nanoid) — REMEDIATED.
  *
  * THE ADVISORY. "nanoid: non-secure generators can loop indefinitely with
- * negative size", affecting < 3.3.16. Installed: 3.3.12.
+ * negative size", affecting < 3.3.16. The security campaign moved the lock to
+ * a patched 3.3.x release without changing the Expo major.
  *
  * THE VULNERABLE CODE, verbatim from node_modules/nanoid/non-secure/index.js:
  *
@@ -23,20 +23,15 @@
  *
  * WHAT VOLYUME ACTUALLY DOES. nanoid reaches the bundle through three runtime
  * dependencies -- @react-navigation/core, @react-navigation/routers and
- * @gorhom/portal -- all of which import `nanoid/non-secure`, so the vulnerable
- * module IS the one that ships. Every one of their call sites is `nanoid()`
+ * @gorhom/portal -- all of which import `nanoid/non-secure`. Every one of their call sites is `nanoid()`
  * with NO argument. A sweep of the compiled output for any call passing
  * anything at all returns nothing. The size parameter is therefore always the
  * default 21, and there is no data path from any input -- typed, synced, or
  * arriving on a deep link -- to it.
  *
- * WHY NOT JUST UPGRADE. An npm `overrides` entry pinning 3.3.16 would silence
- * the audit line. It would also change the dependency graph of a live app on a
- * pinned Expo SDK, under a rule that requires asking before dependency changes,
- * to fix a defect no code path in this app can reach. The honest disposition is
- * to record why it does not apply and to make that recording falsifiable, which
- * is what the sweep below does: the moment any consumer starts passing an
- * argument to nanoid, this fails and the disposition must be revisited.
+ * REMEDIATION. The lockfile now resolves nanoid to a patched 3.3.x release.
+ * The reachability sweep remains because it documents the actual runtime use
+ * and catches any future consumer that begins passing attacker-controlled size.
  */
 
 const fs = require('fs');
@@ -63,38 +58,25 @@ function jsFiles(dir, out = []) {
   return out;
 }
 
-describe('the advisory is real, and this is what it is', () => {
-  test('a negative size does not terminate', () => {
-    // The vulnerable function, copied verbatim. Bounded so the test ends.
-    const urlAlphabet = 'useandom-26T198340PX75pxJACKVERYMINDBUSHWOLF_GQZbfghjklqvwyzrict';
-    const vulnerable = (size = 21) => {
-      let id = '';
-      let i = size | 0;
-      let guard = 200000;
-      while (i-- && guard--) id += urlAlphabet[(Math.random() * 64) | 0];
-      return { id, exhausted: guard <= 0 };
-    };
-    expect(vulnerable(-1).exhausted).toBe(true);     // never reaches zero
-    expect(vulnerable(21).exhausted).toBe(false);    // terminates
-    expect(vulnerable(21).id).toHaveLength(21);
-  });
-
-  test('the installed copy still contains that code, so this is not stale', () => {
+describe('the advisory is patched in the installed dependency', () => {
+  test('the non-secure loop has an explicit positive bound', () => {
     const src = fs.readFileSync(path.join(NM, 'nanoid', 'non-secure', 'index.js'), 'utf8');
     expect(src).toMatch(/let i = size \| 0/);
-    expect(src).toMatch(/while \(i--\)/);
-    expect(src).not.toMatch(/RangeError/);          // unguarded, i.e. < 3.3.16
+    expect(src).toMatch(/while \(i-- > 0\)/);
+    expect(src).not.toMatch(/while \(i--\)\s*\{/);
   });
 
-  test('the secure generator is NOT affected, which is why only non-secure matters', () => {
+  test('the secure generator still rejects negative byte counts', () => {
     const src = fs.readFileSync(path.join(NM, 'nanoid', 'index.js'), 'utf8');
-    expect(src).toMatch(/if \(bytes < 0 \|\| bytes > 1024\) throw new RangeError/);
+    expect(src).toMatch(/if \(bytes < 0\) throw new RangeError/);
   });
 
-  test('the installed version is the one this disposition was written against', () => {
+  test('the installed version is at least the first patched 3.3 release', () => {
     const v = JSON.parse(fs.readFileSync(path.join(NM, 'nanoid', 'package.json'), 'utf8')).version;
-    // If this changes, the disposition needs re-deriving rather than assuming.
-    expect(v).toBe('3.3.12');
+    const [major, minor, patch] = v.split('.').map(Number);
+    expect(major).toBe(3);
+    expect(minor).toBe(3);
+    expect(patch).toBeGreaterThanOrEqual(16);
   });
 });
 

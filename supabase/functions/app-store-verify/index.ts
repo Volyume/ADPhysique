@@ -14,10 +14,8 @@
 // the real buyer of a real, active purchase — the same guarantee the Google
 // client-verify path gives via obfuscatedExternalAccountId.
 //
-// Deploy with JWT verification ON: the app calls it through an authenticated
-// supabase.functions.invoke (the user's session bearer token), so Supabase's
-// gateway already gates the caller; the Apple re-fetch is the substantive
-// control over what can be granted.
+// Deploy with JWT verification ON. The function also validates the bearer with
+// Auth and binds appAccountToken to that caller as defence in depth.
 //
 // Founder env vars (Edge Function settings):
 //   SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY  — already set for the other functions.
@@ -29,6 +27,7 @@
 // Until these are set the function deploys safely and logs rather than granting.
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   AppleTransaction,
   callUpgradeTier,
@@ -37,7 +36,10 @@ import {
   jsonResponse,
   log,
   setBillingPeriod,
+  SUPABASE_URL,
 } from "../_shared/appStore.ts";
+
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 
 interface VerifyBody {
   jws?: string;
@@ -48,6 +50,22 @@ serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
+  const contentLength = Number(req.headers.get("content-length") ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > 64 * 1024) {
+    return jsonResponse(413, { ok: false, error: "payload_too_large" });
+  }
+  const authHeader = req.headers.get("authorization") ?? "";
+  const bearer = authHeader.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !bearer || bearer.length > 8192) {
+    return jsonResponse(401, { ok: false, error: "unauthorized" });
+  }
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: { user: caller }, error: callerError } = await authClient.auth.getUser(bearer);
+  if (callerError || !caller?.id) {
+    return jsonResponse(401, { ok: false, error: "unauthorized" });
+  }
   let body: VerifyBody;
   try {
     body = await req.json();
@@ -56,7 +74,8 @@ serve(async (req: Request) => {
     return jsonResponse(400, { ok: false, error: "bad_request" });
   }
   const { jws, productId } = body;
-  if (!jws || typeof jws !== "string") {
+  if (!jws || typeof jws !== "string" || jws.length > 32768
+    || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(jws)) {
     return jsonResponse(400, { ok: false, error: "missing_jws" });
   }
 
@@ -64,7 +83,8 @@ serve(async (req: Request) => {
   // authoritative record from Apple. We trust Apple's copy, not the client's.
   const claimed = decodeJwsPayload<AppleTransaction>(jws);
   const transactionId = claimed?.transactionId;
-  if (!transactionId) {
+  if (!transactionId || typeof transactionId !== "string" || transactionId.length > 128
+    || !/^[A-Za-z0-9.-]+$/.test(transactionId)) {
     log("warn", "app-store-verify: JWS has no transactionId");
     return jsonResponse(400, { ok: false, error: "no_transaction_id" });
   }
@@ -79,6 +99,10 @@ serve(async (req: Request) => {
   if (!userId) {
     log("warn", "app-store-verify: transaction has no appAccountToken (buyer id)", { transactionId });
     return jsonResponse(400, { ok: false, error: "no_account_id" });
+  }
+  if (userId !== caller.id) {
+    log("warn", "app-store-verify: transaction account does not match caller", { transactionId });
+    return jsonResponse(403, { ok: false, error: "account_mismatch" });
   }
 
   // Active = not revoked and (no expiry or expiry in the future).

@@ -33,6 +33,11 @@ describe('_shared/appStore → Supabase RPC contract', () => {
 });
 
 describe('app-store-verify → trusts Apple, not the client JWS', () => {
+  test('validates the Supabase caller and binds appAccountToken to it', () => {
+    expect(VERIFY).toMatch(/auth\.getUser\(bearer\)/);
+    expect(VERIFY).toMatch(/if \(userId !== caller\.id\)/);
+    expect(VERIFY).toMatch(/account_mismatch/);
+  });
   test('re-fetches the authoritative transaction from Apple before granting', () => {
     expect(VERIFY).toMatch(/getTransactionInfo\(/);
   });
@@ -50,6 +55,16 @@ describe('app-store-verify → trusts Apple, not the client JWS', () => {
 });
 
 describe('app-store-notifications → authoritative-status guards', () => {
+  test('verifies the outer notification JWS with Apple official verifier before decoding fields', () => {
+    expect(NOTIFS).toMatch(/@apple\/app-store-server-library@3\.1\.0/);
+    expect(NOTIFS).toMatch(/verifyAndDecodeNotification\(payload\)/);
+    expect(NOTIFS).toMatch(/APPLE_ROOT_CA_CERTS_BASE64/);
+    expect(NOTIFS).toMatch(/APP_STORE_APPLE_ID/);
+    expect(NOTIFS).toMatch(/signedPayload verification failed/);
+    expect(NOTIFS).toMatch(/new Response\("Unauthorized", \{ status: 401 \}\)/);
+    expect(NOTIFS).not.toMatch(/decodeJwsPayload<DecodedNotification>/);
+  });
+
   test('decides tier from the re-fetched subscription status, not the POST body', () => {
     expect(NOTIFS).toMatch(/getSubscriptionStatus\(/);
   });

@@ -50,6 +50,8 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const https = require('node:https');
+const crypto = require('node:crypto');
+const { Transform } = require('node:stream');
 
 let XLSX;
 try {
@@ -67,6 +69,11 @@ const SHEET_NAME_INORGANICS = '1.4 Inorganics';
 const SHEET_NAME_VITAMINS = '1.5 Vitamins';
 const OUT_PATH = path.resolve(__dirname, '..', '..', 'assets', 'seed', 'cofid_uk.dat');
 const TMP_XLSX = path.join(require('node:os').tmpdir(), 'cofid-mw-2021.xlsx');
+// SheetJS 0.18 has no patched npm release. This reproducibility-only tool is
+// therefore restricted to the exact static government workbook reviewed for
+// the checked-in snapshot; arbitrary XLSX bytes never reach the parser.
+const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
+const EXPECTED_SOURCE_SHA256 = '436e9445ef2adb2a75f3d7edd51302de3adad25385f9795fc94ba58bd030e97d';
 
 // 0-indexed column positions in sheet "1.3 Proximates".
 const COL = {
@@ -254,7 +261,28 @@ function downloadXlsx(url, destPath) {
         try { fs.unlinkSync(destPath); } catch (_) { /* tolerate */ }
         return reject(new Error(`CoFID download returned HTTP ${res.statusCode}`));
       }
-      res.pipe(file);
+      const declared = Number(res.headers['content-length'] ?? 0);
+      if (Number.isFinite(declared) && declared > MAX_SOURCE_BYTES) {
+        res.destroy();
+        file.destroy();
+        try { fs.unlinkSync(destPath); } catch (_) { /* tolerate */ }
+        return reject(new Error('CoFID download exceeds the 8 MB safety limit'));
+      }
+      let received = 0;
+      const limiter = new Transform({
+        transform(chunk, _encoding, callback) {
+          received += chunk.length;
+          if (received > MAX_SOURCE_BYTES) callback(new Error('CoFID download exceeds the 8 MB safety limit'));
+          else callback(null, chunk);
+        },
+      });
+      limiter.on('error', (streamErr) => {
+        res.destroy();
+        file.destroy();
+        try { fs.unlinkSync(destPath); } catch (_) { /* tolerate */ }
+        reject(streamErr);
+      });
+      res.pipe(limiter).pipe(file);
       file.on('finish', () => {
         file.close((closeErr) => {
           if (closeErr) return reject(closeErr);
@@ -268,6 +296,18 @@ function downloadXlsx(url, destPath) {
     req.on('error', reject);
     req.setTimeout(60_000, () => req.destroy(new Error('download timed out')));
   });
+}
+
+function verifyCofidWorkbook(filePath) {
+  const stat = fs.statSync(filePath);
+  if (stat.size < 1024 || stat.size > MAX_SOURCE_BYTES) {
+    throw new Error('CoFID workbook size is outside the reviewed safety bounds');
+  }
+  const digest = crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+  if (digest !== EXPECTED_SOURCE_SHA256) {
+    throw new Error('CoFID workbook checksum changed; review the new government source before parsing it');
+  }
+  return { bytes: stat.size, sha256: digest };
 }
 
 function loadSheetGrid(wb, sheetName) {
@@ -289,6 +329,7 @@ async function main() {
     log(`using cached download: ${TMP_XLSX}`);
   }
 
+  verifyCofidWorkbook(TMP_XLSX);
   const wb = XLSX.readFile(TMP_XLSX);
 
   log(`parsing sheet "${SHEET_NAME}"`);
@@ -415,4 +456,7 @@ module.exports = {
   SHEET_NAME,
   SHEET_NAME_INORGANICS,
   SHEET_NAME_VITAMINS,
+  MAX_SOURCE_BYTES,
+  EXPECTED_SOURCE_SHA256,
+  verifyCofidWorkbook,
 };

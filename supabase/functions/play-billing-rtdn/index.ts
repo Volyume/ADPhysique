@@ -71,9 +71,11 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
 const PACKAGE_NAME = Deno.env.get("GOOGLE_PLAY_PACKAGE_NAME") ?? "app.volyume";
 
 // HP-4. A Pub/Sub push subscription signs each request with a Google OIDC
@@ -263,7 +265,7 @@ async function verifyWithPlayApi(
 ): Promise<GoogleSubscription | null> {
   const accessToken = await getGoogleAccessToken();
   if (!accessToken) return null;
-  const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PACKAGE_NAME}/purchases/subscriptions/${subscriptionId}/tokens/${purchaseToken}`;
+  const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(PACKAGE_NAME)}/purchases/subscriptions/${encodeURIComponent(subscriptionId)}/tokens/${encodeURIComponent(purchaseToken)}`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
@@ -396,16 +398,35 @@ function jsonResponse(status: number, obj: unknown): Response {
 // Pro can be granted server-side WITHOUT Pub/Sub being wired (the RTDN path
 // below still handles renewals / cancels / refunds once Pub/Sub is set up).
 //
-// Security: this branch is not OIDC-gated and the app's JWT is not trusted.
-// Safety comes from verifying the token against the Play Developer API: a fake
-// token resolves to nothing, and the user it grants to is read from Google's
-// own obfuscatedExternalAccountId (set to the buyer's id at purchase time), not
-// from anything the caller claims. So a caller can only ever grant Pro to the
-// real buyer of a real purchase.
+// Security: this branch is not OIDC-gated because the same endpoint accepts
+// Google Pub/Sub. It therefore validates the Supabase bearer token itself,
+// then requires Google's obfuscatedExternalAccountId to match that caller.
+// Store verification remains authoritative for the purchase state.
 async function handleClientVerify(
+  req: Request,
   body: { purchaseToken: string; subscriptionId: string },
 ): Promise<Response> {
   const { purchaseToken, subscriptionId } = body;
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return jsonResponse(500, { ok: false, error: "auth_unconfigured" });
+  }
+  if (!(subscriptionId === "pro_monthly" || subscriptionId === "pro_annual")
+    || purchaseToken.length < 16 || purchaseToken.length > 4096
+    || /[\s\x00-\x1f]/.test(purchaseToken)) {
+    return jsonResponse(400, { ok: false, error: "bad_request" });
+  }
+  const authHeader = req.headers.get("authorization") ?? "";
+  const bearer = authHeader.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
+  if (!bearer || bearer.length > 8192) {
+    return jsonResponse(401, { ok: false, error: "unauthorized" });
+  }
+  const authClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: { user: caller }, error: callerError } = await authClient.auth.getUser(bearer);
+  if (callerError || !caller?.id) {
+    return jsonResponse(401, { ok: false, error: "unauthorized" });
+  }
   const subscription = await verifyWithPlayApi(subscriptionId, purchaseToken);
   if (!subscription) {
     log("warn", "client verify: could not verify purchase with Play", { subscriptionId });
@@ -415,6 +436,10 @@ async function handleClientVerify(
   if (!userId) {
     log("warn", "client verify: purchase has no obfuscatedExternalAccountId");
     return jsonResponse(400, { ok: false, error: "no_account_id" });
+  }
+  if (userId !== caller.id) {
+    log("warn", "client verify: purchase account does not match caller", { subscriptionId });
+    return jsonResponse(403, { ok: false, error: "account_mismatch" });
   }
   // paymentState: 1 = received, 2 = free trial. Either grants Pro. Guard expiry.
   const expired = subscription.expiryTimeMillis != null &&
@@ -450,6 +475,10 @@ serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
+  const contentLength = Number(req.headers.get("content-length") ?? 0);
+  if (Number.isFinite(contentLength) && contentLength > 1024 * 1024) {
+    return new Response("Payload too large", { status: 413 });
+  }
   let body: PubSubPushBody & { purchaseToken?: string; subscriptionId?: string };
   try {
     body = await req.json();
@@ -459,7 +488,7 @@ serve(async (req: Request) => {
   }
   // Client purchase-confirmation call (not a Google Pub/Sub push).
   if (typeof body?.purchaseToken === "string" && typeof body?.subscriptionId === "string" && !body?.message) {
-    return await handleClientVerify({ purchaseToken: body.purchaseToken, subscriptionId: body.subscriptionId });
+    return await handleClientVerify(req, { purchaseToken: body.purchaseToken, subscriptionId: body.subscriptionId });
   }
   // Google Pub/Sub RTDN path. HP-4: authenticate the caller as Google's Pub/Sub
   // push before doing any work. 401 (not 200) on failure so a forged caller is
