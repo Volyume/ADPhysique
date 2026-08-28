@@ -532,11 +532,31 @@ async function buildProgrammeReview(userId, activeBlock) {
         });
       } catch (_) { /* logging must never break the advisor */ }
     }
+    // D112 R2 (CC33 audit T1-10): the review finally asks whether the
+    // incumbent is capability-eligible AT ALL. Capability-only on
+    // purpose: preference exclusions already speak through `excluded`
+    // and the swap evidence at their own ranks, and an EPISODE conflict
+    // keeps its KEEP (capabilityAffected outranks autoEligible inside
+    // slotVerdict). What this closes: a BASELINE-ineligible incumbent
+    // was evidence-judged as ordinary and could be reported "nothing
+    // about this has stopped working" for a movement the user cannot
+    // do. A failed read leaves undefined - never REPLACE on a check
+    // that did not happen.
+    let autoEligible;
+    try {
+      // eslint-disable-next-line global-require
+      const { isCapabilityEligible } = require('./capability/resolve');
+      const row = rowById.get(exerciseId);
+      autoEligible = (row && intentState?.capability && !intentState.capability.empty
+        && !intentState.capability.unavailable)
+        ? isCapabilityEligible(intentState.capability, row)
+        : undefined;
+    } catch (_e) { autoEligible = undefined; }
     return {
       capabilityAffected,
       excluded: isExcluded(intentState, exerciseId) || isAvoidedThisBlock(intentState, exerciseId),
       swappedAwayCount: swappedAwayCount(intentState, exerciseId),
-      autoEligible: undefined,
+      autoEligible,
       sessions: facts.sessions,
       progressing: facts.progression === 'progressing',
       plateau: facts.plateau === true,

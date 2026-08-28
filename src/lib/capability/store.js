@@ -141,6 +141,19 @@ export async function acknowledgeEpisode(userId, groupId, { nowMs = Date.now() }
   return acknowledgeCapabilityEpisode(userId, groupId, { nowMs });
 }
 
+// CC33 D112 R8 (section 25; closes audit T2-26): "just hold my plan" -
+// the per-episode agency valve. 'hold' pauses the app's own adaptation
+// for the episode (serve substitution, proposals, coach volume holds,
+// excusal); 'propose' resumes it. Suggestion surfaces keep honouring
+// the rules either way - offering excluded work would be the fail-open
+// harm. Not consent-gated: like acknowledge it mints nothing, it
+// records a choice about rows that already exist.
+export async function setEpisodeAdaptationMode(userId, groupId, mode, _opts = {}) {
+  // eslint-disable-next-line global-require
+  const { setCapabilityAdaptationMode } = require('../database');
+  return setCapabilityAdaptationMode(userId, groupId, mode);
+}
+
 export async function supersedeConstraint(userId, id, newInput, { nowMs = Date.now() } = {}) {
   if (!(await hasCapabilityConsent(userId))) {
     throw new Error('capability_consent_required');

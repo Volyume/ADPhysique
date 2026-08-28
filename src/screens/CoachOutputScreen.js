@@ -1319,8 +1319,11 @@ export default function CoachOutputScreen({ navigation, route }) {
           // eslint-disable-next-line global-require
           const { getAllExercises, getLatestCheckin } = require('../lib/database');
           const capState = await loadCapabilityResolveState(user.id, {});
+          // D112 R8: an episode the user set to "hold my plan" drives no
+          // coach volume holds - holding the plan means holding it, not
+          // freezing its muscles.
           const episodeIds = new Set((capState.restrictions ?? [])
-            .filter((r) => r.role === 'episode').map((r) => r.id));
+            .filter((r) => r.role === 'episode' && r.adaptationMode !== 'hold').map((r) => r.id));
           if (episodeIds.size) {
             const library = await getAllExercises();
             for (const ex of library) {
@@ -1923,8 +1926,10 @@ export default function CoachOutputScreen({ navigation, route }) {
         // eslint-disable-next-line global-require
         const { loadCapabilityResolveState, blockingConflicts } = require('../lib/capability/resolve');
         const capState = await loadCapabilityResolveState(user.id, {});
+        // D112 R8: held episodes drive no constraint-aware coaching -
+        // the user asked the app to wait, so the fact excludes them.
         const episodeIds = new Set((capState.restrictions ?? [])
-          .filter((r) => r.role === 'episode').map((r) => r.id));
+          .filter((r) => r.role === 'episode' && r.adaptationMode !== 'hold').map((r) => r.id));
         if (episodeIds.size) {
           // eslint-disable-next-line global-require
           const { getAllExercises } = require('../lib/database');
@@ -1954,7 +1959,8 @@ export default function CoachOutputScreen({ navigation, route }) {
             const { subjectPhrase } = require('../lib/capability/phrase');
             const byName = new Map(library.map((ex) => [ex.id, ex.name]));
             subject = subjectPhrase(
-              (capState.restrictions ?? []).filter((r) => r.role === 'episode'),
+              // Same scope as the fact: held episodes are excluded (R8).
+              (capState.restrictions ?? []).filter((r) => r.role === 'episode' && r.adaptationMode !== 'hold'),
               { nameOf: (exId) => byName.get(exId) ?? null },
             );
           } catch (_e) { subject = null; }

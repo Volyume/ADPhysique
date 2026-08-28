@@ -390,7 +390,28 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         // unset, which means no filter) so substitutes are both present and
         // actually performable with their kit.
         const swapEquipment = useAppStore.getState().userProfile?.equipment ?? null;
-        const swaps = rankSwaps(ex, allExercises, { equipment: swapEquipment });
+        // D112 R2 (CC33 audit T2-10): this was the only automatic
+        // suggestion surface ranking the RAW library - it offered
+        // movements the user's active rules exclude, unmarked. The
+        // resolver is the only door: candidates now pass the standard
+        // capability question (allowance-aware, clinician-ranked) before
+        // ranking. A failed read serves the unfiltered list unchanged -
+        // this surface is navigation-only (each card opens a detail
+        // page, it cannot write a plan or session), so the serve-class
+        // posture applies.
+        let pool = allExercises;
+        try {
+          // eslint-disable-next-line global-require
+          const { loadCapabilityResolveState, isCapabilityEligible } = require('../lib/capability/resolve');
+          const userId = useAppStore.getState().user?.id ?? null;
+          if (userId) {
+            const capState = await loadCapabilityResolveState(userId, {});
+            if (!capState.empty && !capState.unavailable) {
+              pool = allExercises.filter((row) => isCapabilityEligible(capState, row));
+            }
+          }
+        } catch (_) { pool = allExercises; }
+        const swaps = rankSwaps(ex, pool, { equipment: swapEquipment });
         setSubstitutes(swaps.slice(0, 4));
       } catch (_) {
         // swapEngine unavailable, hide section silently

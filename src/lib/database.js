@@ -2715,6 +2715,21 @@ const SCHEMA_MIGRATIONS = [
     'ALTER TABLE exercises ADD COLUMN weight_bearing_hands INTEGER',
     migrateWeightBearingHandsBackfill,
   ],
+  // CC33 D112 R8 (ARCHITECTURE section 25; closes audit T2-26): the
+  // per-episode "just hold my plan" choice. 'hold' stops the app's own
+  // adaptation for that episode - no serve-time substitution, no diff
+  // proposals, no coach volume holds, no adherence excusal - while
+  // user-initiated suggestion surfaces (pickers, generation) keep
+  // honouring the rules, because offering excluded work would be the
+  // fail-open harm. NULL means 'propose', the standing default, so every
+  // pre-migration row behaves byte-identically. Additive + idempotent.
+  // Cloud counterpart: supabase/migrate_152_capability_adaptation_mode.sql
+  // (written 2026-08-28, NOT applied; founder-gated - pushes carry the
+  // field only for rows where it is set, so sync stays green for
+  // everyone else until the founder applies it).
+  [
+    "ALTER TABLE capability_constraints ADD COLUMN adaptation_mode TEXT CHECK (adaptation_mode IN ('propose','hold'))",
+  ],
 ];
 
 // Backfill the new axis on canonical rows from the pure derivation, in
@@ -11486,6 +11501,8 @@ function _mapCapabilityRow(r) {
     // CC29 (section 14): the standing Apply/Decline; undefined on rows
     // read before the column migration ran maps to null (undecided).
     effectiveChoice: r.effective_choice ?? null,
+    // CC33 D112 R8 (section 25): 'hold' | 'propose' | null, null = propose.
+    adaptationMode: r.adaptation_mode ?? null,
     createdAt: r.created_at, updatedAt: r.updated_at, deletedAt: r.deleted_at,
   };
 }
@@ -11756,13 +11773,16 @@ export async function insertCapabilityConstraintFromCloud(localUserId, row) {
     `INSERT OR REPLACE INTO capability_constraints
        (id, user_id, role, source, rule_kind, rule_value, laterality,
         starts_at, ends_at, state, ended_at, ended_reason, episode_group_id,
-        acknowledged_at, effective_choice, created_at, updated_at, deleted_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        acknowledged_at, effective_choice, adaptation_mode, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [row.id, localUserId, row.role, row.source, row.rule_kind, row.rule_value,
       row.laterality ?? null, _tsToMs(row.starts_at), _tsToMs(row.ends_at),
       row.state, _tsToMs(row.ended_at), row.ended_reason ?? null,
       row.episode_group_id ?? null, _tsToMs(row.acknowledged_at),
       row.effective_choice ?? null,
+      // CC33 D112 R8: tolerant of a cloud without migrate_152 - absent
+      // reads null, which means 'propose', the standing default.
+      row.adaptation_mode ?? null,
       _tsToMs(row.created_at) ?? cloudUpdated,
       cloudUpdated, _tsToMs(row.deleted_at)],
   );
@@ -11779,6 +11799,25 @@ export async function setConstraintEffectiveChoice(userId, constraintId, choice)
   await d.runAsync(
     'UPDATE capability_constraints SET effective_choice = ?, updated_at = ? WHERE id = ? AND user_id = ?',
     [choice, Date.now(), constraintId, userId],
+  );
+  _scheduleSync();
+}
+
+// CC33 D112 R8 (section 25; closes audit T2-26): the per-episode "just
+// hold my plan" choice, written to every ACTIVE row of the group so the
+// whole episode holds or proposes as one. Only the mode column moves;
+// the rules themselves are never edited (CAP-14), and updated_at moves
+// because this IS a user decision. 'propose' is stored as NULL (the
+// default), keeping pre-migration rows and reset rows identical.
+export async function setCapabilityAdaptationMode(userId, episodeGroupId, mode) {
+  if (!userId || !episodeGroupId) return;
+  if (mode !== 'hold' && mode !== 'propose') return;
+  const d = await db();
+  await d.runAsync(
+    `UPDATE capability_constraints
+        SET adaptation_mode = ?, updated_at = ?
+      WHERE user_id = ? AND episode_group_id = ? AND state = 'active' AND deleted_at IS NULL`,
+    [mode === 'hold' ? 'hold' : null, Date.now(), userId, episodeGroupId],
   );
   _scheduleSync();
 }

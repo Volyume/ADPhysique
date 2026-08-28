@@ -178,8 +178,13 @@ export function divisionCoverageLine(goal, coverage) {
     ? names[0]
     : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`;
   const blocked = notable.every(u => u.cause === 'not_available');
+  // D112 R6 (CC33 audit T1-02): 'not_available' means "absent from the
+  // library the engine was given", and that library is filtered by BOTH
+  // equipment and capability - the old line blamed equipment alone for
+  // gaps how-you-train may have caused. The copy now names what is
+  // actually known, and nothing more.
   return blocked
-    ? `One piece of the ${GOAL_LABELS[goal] ?? goal} look is missing: your equipment has nothing that trains ${list} the way this category is judged. Everything else is here.`
+    ? `One piece of the ${GOAL_LABELS[goal] ?? goal} look is missing: nothing that fits your equipment and how you train covers ${list} the way this category is judged. Everything else is here.`
     : `Your ${list} work is lighter on the shaping side than this category usually wants. More session time, or a different exercise for that slot, would cover it.`;
 }
 

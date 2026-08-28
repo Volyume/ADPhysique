@@ -202,8 +202,21 @@ export function applyContinuity({
       // back. Generation filters exclusions upstream, so that was unlikely
       // rather than impossible, and "unlikely" is not a guarantee.
       const samePick = incumbent.exerciseId === ex.exerciseId;
-      const decided = verdictFor?.(incumbent.exerciseId)
-        ?? slotVerdict(evidenceFor(incumbent.exerciseId) ?? {}, context);
+      const evidence = evidenceFor(incumbent.exerciseId) ?? {};
+      const stored = verdictFor?.(incumbent.exerciseId) ?? null;
+      const storedKeeps = !!stored && (stored.verdict === SLOT_VERDICT.KEEP
+        || stored.verdict === SLOT_VERDICT.KEEP_WITH_PRESCRIPTION_CHANGE);
+      // D112 R2 (CC33 audit T1-10): a stored reviewed KEEP never outranks
+      // capability ineligibility - a review taken before a rule changed
+      // could retain a movement the user cannot do, and the review used
+      // to win unconditionally. The user's reviewed REPLACE always
+      // stands (their word), and stored keeps stand wherever capability
+      // has no objection; only the KEEP-of-an-ineligible-movement case
+      // falls through to the fresh verdict, which replaces it with the
+      // honest NO_LONGER_AUTO_ELIGIBLE reason.
+      const decided = (storedKeeps && evidence.autoEligible === false)
+        ? slotVerdict(evidence, context)
+        : (stored ?? slotVerdict(evidence, context));
       const { verdict, reason, prescriptionChange = null } = decided;
       const keeps = verdict === SLOT_VERDICT.KEEP
         || verdict === SLOT_VERDICT.KEEP_WITH_PRESCRIPTION_CHANGE;

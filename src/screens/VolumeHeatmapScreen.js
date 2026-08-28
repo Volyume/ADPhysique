@@ -185,7 +185,25 @@ export default function VolumeHeatmapScreen() {
           ? buildPlanInputs(userProfile)
           : null;
         if (inputs) {
-          const diff = computeDivisionDiff({ ...inputs, exerciseLibrary: allExercises });
+          // D112 R2 (CC33 audit T1-02): the fingerprint claims to
+          // recompute "exactly what was applied", which is only true
+          // through the SAME generation filter the plan generator used -
+          // this was one of two paths handing the engine the raw
+          // library, so a capability-shaped plan diffed against an
+          // unconstrained recompute. Best-effort: a failed intent read
+          // falls back to the raw library, and the markers stay absent
+          // on any failure exactly as before.
+          let generationLibrary = allExercises;
+          try {
+            // eslint-disable-next-line global-require
+            const { loadExerciseIntentState } = require('../lib/exercise/intent');
+            // eslint-disable-next-line global-require
+            const { filterLibraryForGeneration } = require('../lib/exercise/generation');
+            const intentState = await loadExerciseIntentState(user.id, {});
+            generationLibrary = filterLibraryForGeneration(allExercises, intentState).library;
+          } catch (_) { generationLibrary = allExercises; }
+          if (!isCurrentRequest()) return;
+          const diff = computeDivisionDiff({ ...inputs, exerciseLibrary: generationLibrary });
           setDivisionMarkers(fingerprintMarkers(diff));
           setDivisionLabel(GOAL_LABELS[goal] ?? null);
         } else {

@@ -38,6 +38,13 @@ export async function pushCapabilityConstraints(sb, { userId, localUserId } = {}
     if (!local?.length) return { count: 0, errors: 0 };
 
     const nowIso = new Date().toISOString();
+    // CC33 D112 R8: PostgREST rejects mixed-key batches, so the field is
+    // included for ALL rows or NONE, decided by whether any row carries
+    // it. A user who never used "hold my plan" pushes exactly the
+    // pre-152 shape and stays green before the cloud migration is
+    // applied (founder-gated); a hold user's push fails soft until then
+    // (queued retry, local durability - the 145/149 pre-apply posture).
+    const carryAdaptationMode = local.some((c) => c.adaptationMode != null);
     const rows = local.map((c) => ({
       id: c.id,
       user_id: userId,
@@ -56,6 +63,7 @@ export async function pushCapabilityConstraints(sb, { userId, localUserId } = {}
       // CC29 (section 14): the standing Apply/Decline on an episode rule's
       // session effect. Tolerated-mode until migrate_149 runs.
       effective_choice: c.effectiveChoice ?? null,
+      ...(carryAdaptationMode ? { adaptation_mode: c.adaptationMode ?? null } : {}),
       created_at: _toIso(c.createdAt) ?? nowIso,
       updated_at: _toIso(c.updatedAt) ?? nowIso,
       deleted_at: _toIso(c.deletedAt),

@@ -32,7 +32,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import {
   loadCapabilityState, createConstraints, endConstraint, endEpisode,
-  extendEpisode, promoteEpisode, acknowledgeEpisode, hasCapabilityConsent,
+  extendEpisode, promoteEpisode, acknowledgeEpisode, setEpisodeAdaptationMode, hasCapabilityConsent,
   buildCapabilityExport,
 } from '../lib/capability/store';
 import {
@@ -883,9 +883,17 @@ export default function HowYouTrainScreen() {
       ) : null}
       {state.episodes.map(ep => {
         const subject = groupSubject(ep.rows.filter(r => r.state === 'active'));
+        // D112 R8 (section 25; closes audit T2-26): the per-episode
+        // "just hold my plan" valve. Held: the app proposes nothing and
+        // adapts nothing for this episode - no serve-time substitution,
+        // no coach holds, no excusal - while pickers and generation keep
+        // honouring the rules. The card says so plainly.
+        const held = ep.rows.some(r => r.state === 'active' && r.adaptationMode === 'hold');
         return (
           <View key={ep.groupId}>
-            <SettingRow icon="time" label="Temporary change" sub={episodeSub(ep)} showArrow={false} />
+            <SettingRow icon="time" label="Temporary change"
+              sub={held ? `${episodeSub(ep)} · Holding your plan as-is; adaptation is paused, not your training` : episodeSub(ep)}
+              showArrow={false} />
             <View style={styles.episodeActions}>
               <Choice label="Done with it" onPress={() => confirmEndEpisode(ep)} t={t} compact />
               <Choice label="A while longer" onPress={async () => { haptics.selection(); await extendEpisode(userId, ep.groupId, Date.now() + 14 * DAY_MS); toast.show(subject ? `Extended by two weeks. Volyume will check in about ${subject} around then.` : 'Extended by two weeks. Volyume will ask again around then.'); refresh(); }} t={t} compact />
@@ -894,6 +902,11 @@ export default function HowYouTrainScreen() {
                 // the ask cadence without committing to a new end date.
                 <Choice label="Still going for now" onPress={async () => { haptics.selection(); await acknowledgeEpisode(userId, ep.groupId); toast.show(subject ? `Noted. Volyume will keep ${subject} out until you end it here.` : 'Noted. Volyume will keep working around this until you end it here.'); refresh(); }} t={t} compact />
               ) : null}
+              {held ? (
+                <Choice label="Work around it again" onPress={async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'propose'); toast.show('Volyume will work around this again from your next session.'); refresh(); }} t={t} compact />
+              ) : (
+                <Choice label="Hold my plan as-is" onPress={async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'hold'); toast.show('Volyume is holding your plan as-is for this. Adaptation is paused, not your training.'); refresh(); }} t={t} compact />
+              )}
               <Choice label="This is how I train now" onPress={() => confirmPromote(ep)} t={t} compact />
             </View>
           </View>
