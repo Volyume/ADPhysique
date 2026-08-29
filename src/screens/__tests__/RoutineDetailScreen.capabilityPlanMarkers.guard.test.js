@@ -45,7 +45,7 @@ function extractFunction(src, signature) {
 }
 
 describe('capabilityPlanCaption: copy and precedence (T2-32)', () => {
-  const FN = extractFunction(SRC, 'function capabilityPlanCaption(capState, exercise) {');
+  const FN = extractFunction(SRC, 'function capabilityPlanCaption(capState, exercise, serveOutcome = null) {');
 
   test('fails safe: no capState, an empty state, or no exercise all return null before touching the resolver', () => {
     expect(FN).toContain('if (!capState || capState.empty || !exercise) return null;');
@@ -73,8 +73,22 @@ describe('capabilityPlanCaption: copy and precedence (T2-32)', () => {
     expect(FN).toContain("const actionable = definiteEpisode.filter((c) => c.row?.adaptationMode !== 'hold');");
     expect(FN).toContain('const allApplied = actionable.length > 0');
     expect(FN).toContain("&& actionable.every((c) => c.row?.effectiveChoice === 'applied');");
-    expect(FN).toContain("? 'Swapped in sessions while your change lasts.'");
-    expect(FN).toContain("        : 'Sits outside your temporary change.';");
+    expect(FN).toContain("if (!allApplied) return 'Sits outside your temporary change.';");
+  });
+
+  test('R5-7: the applied caption speaks SERVE\'s answer - swapped, left out, or the no-promise line - never a blanket promise', () => {
+    // Round 5: "Swapped in sessions" used to be returned off the applied
+    // test alone, on rows serve would OMIT (no eligible substitute) or
+    // serve untouched (the fully-omitted fail-safe). The caption now
+    // branches on the serve outcome the screen's memo computed, and a
+    // null/unresolved outcome falls to the honest middle line rather
+    // than a promise.
+    expect(FN).toContain("if (serveOutcome === 'substituted') return 'Swapped in sessions while your change lasts.';");
+    expect(FN).toContain("if (serveOutcome === 'omitted') return 'Left out of sessions while your change lasts, with nothing forced in its place.';");
+    expect(FN).toContain("return 'Sits outside your temporary change.';");
+    // The promise is never unconditional: no bare ternary hands
+    // "Swapped" to every applied row any more.
+    expect(FN).not.toMatch(/allApplied\s*\?\s*'Swapped in sessions/);
   });
 
   test('baseline conflicts get the "how you train" line only when DEFINITE; unknown-only rows get the honest not-known line', () => {
@@ -106,8 +120,28 @@ describe('the row resolves the FULL library exercise by id, not the partial rout
     // not honestly carry. Only a full library row is judged now; a miss
     // renders no marker at all. Same pinned intent, stricter shape.
     expect(SRC).toContain('const fullRow = allExercisesById.get(exercise.id);');
-    expect(SRC).toContain('const note = fullRow ? capabilityPlanCaption(planCapState, fullRow) : null;');
+    expect(SRC).toContain('capabilityServeOutcomes?.get(routineExercise.id) ?? null,');
     expect(SRC).not.toMatch(/capabilityPlanCaption\(planCapState, [^)]*\?\? exercise\)/);
+  });
+
+  test('R5-7/I4: the serve outcomes come from ONE hoisted memo running serve\'s own computation, never per row', () => {
+    // bestEligibleSubstitute scans the library, so the substitute
+    // question may not be asked inline in a list row (I4). The memo runs
+    // computeEffectiveSession - taken-set and all - under the EXPORTED
+    // composed senior question (one answer, five consumers), and mirrors
+    // serve's never-served-empty fail-safe so a fully-omitted session's
+    // rows read as served, not "left out".
+    expect(SRC).toContain('const capabilityServeOutcomes = useMemo(() => {');
+    expect(SRC).toContain("const { computeEffectiveSession, EFFECTIVE_EFFECT } = require('../lib/capability/effective');");
+    expect(SRC).toContain("const { substituteSeniorQuestion } = require('../lib/sessionEffective');");
+    expect(SRC).toContain('substituteSeniorQuestion(planCapState, intentState),');
+    expect(SRC).toContain('const failSafe = view.lines.length > 0');
+    expect(SRC).toContain('&& view.lines.every((l) => l.effect === EFFECTIVE_EFFECT.OMITTED);');
+    expect(SRC).toContain("if (failSafe) { out.set(reId, 'served'); return; }");
+    // Serve's own gate: no applied episode rule, no outcomes (and so no
+    // swapped/left-out claims) at all.
+    expect(SRC).toContain(".some((r) => r.role === 'episode' && r.effectiveChoice === 'applied');");
+    expect(SRC).toContain('}, [planCapState, intentState, exercises, allExercises, allExercisesById]);');
   });
 });
 

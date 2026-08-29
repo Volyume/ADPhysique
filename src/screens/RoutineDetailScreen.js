@@ -61,7 +61,7 @@ import { parseDecimalInput } from '../lib/parseDecimalInput';
  * train" one). Pure; a read failure (or no exercise/capState) returns null
  * so the row simply carries no marker rather than a wrong one.
  */
-function capabilityPlanCaption(capState, exercise) {
+function capabilityPlanCaption(capState, exercise, serveOutcome = null) {
   if (!capState || capState.empty || !exercise) return null;
   try {
     // eslint-disable-next-line global-require
@@ -91,9 +91,21 @@ function capabilityPlanCaption(capState, exercise) {
       const actionable = definiteEpisode.filter((c) => c.row?.adaptationMode !== 'hold');
       const allApplied = actionable.length > 0
         && actionable.every((c) => c.row?.effectiveChoice === 'applied');
-      return allApplied
-        ? 'Swapped in sessions while your change lasts.'
-        : 'Sits outside your temporary change.';
+      if (!allApplied) return 'Sits outside your temporary change.';
+      // Round 5 (R5-7): the applied caption speaks serve's own answer,
+      // never a promise the applied test alone cannot back. serveOutcome
+      // comes from the screen's capabilityServeOutcomes memo - the same
+      // computeEffectiveSession serve runs, taken-set and
+      // never-served-empty fail-safe included:
+      //  - substituted: serve swaps this row, so "Swapped" is true;
+      //  - omitted: serve leaves it out, with nothing forced in its
+      //    place - the lane's own honest words for it;
+      //  - served (the fail-safe, an unresolvable row) or null (the
+      //    memo has not resolved yet): the row is in front of the user
+      //    despite the conflict, so the no-promise middle line holds.
+      if (serveOutcome === 'substituted') return 'Swapped in sessions while your change lasts.';
+      if (serveOutcome === 'omitted') return 'Left out of sessions while your change lasts, with nothing forced in its place.';
+      return 'Sits outside your temporary change.';
     }
     const baseline = baselineConflicts(capState, exercise);
     if (baseline.some((c) => !c.unknown)) return 'Sits outside how you train.';
@@ -261,6 +273,54 @@ export default function RoutineDetailScreen({ navigation, route }) {
     return () => { cancelled = true; };
   }, [intentState?.capability, user?.id]);
   const planCapState = intentState?.capability ?? fallbackCapState ?? null;
+
+  // Round 5 (R5-7): what serve would actually DO to each of this
+  // routine's rows, so the caption never promises a swap the serve
+  // layer will not make. The caption used to say "Swapped in sessions"
+  // off the applied test alone; a row with no eligible substitute is
+  // OMITTED at serve - or, when every row of the session is omitted,
+  // served untouched under the never-served-empty fail-safe (D116) -
+  // and three different serve outcomes shared one promise. This memo
+  // runs the SAME computation serve runs (computeEffectiveSession under
+  // the exported composed senior question - the substitute answer is
+  // one answer, five consumers) once per state change, never per row
+  // (I4: bestEligibleSubstitute scans the library, so an inline per-row
+  // call on a list surface is not acceptable). Keyed by the routine
+  // row's own id; rows the library cannot resolve are judged on what
+  // they carry, exactly as serve judges them. Before the screen's
+  // intent state resolves the map is null and the caption falls back to
+  // its no-promise line - honest for the one paint it lasts.
+  const capabilityServeOutcomes = useMemo(() => {
+    if (!planCapState || planCapState.empty || !intentState || !exercises.length) return null;
+    try {
+      // eslint-disable-next-line global-require
+      const { computeEffectiveSession, EFFECTIVE_EFFECT } = require('../lib/capability/effective');
+      // eslint-disable-next-line global-require
+      const { substituteSeniorQuestion } = require('../lib/sessionEffective');
+      const hasApplied = (planCapState.restrictions ?? [])
+        .some((r) => r.role === 'episode' && r.effectiveChoice === 'applied');
+      if (!hasApplied) return null;
+      const baseRows = exercises.map(({ exercise }) => ({
+        exercise: allExercisesById.get(exercise?.id) ?? exercise,
+      }));
+      const view = computeEffectiveSession(
+        baseRows, allExercises, planCapState,
+        substituteSeniorQuestion(planCapState, intentState),
+      );
+      const failSafe = view.lines.length > 0
+        && view.lines.every((l) => l.effect === EFFECTIVE_EFFECT.OMITTED);
+      const out = new Map();
+      view.lines.forEach((line, i) => {
+        const reId = exercises[i]?.routineExercise?.id;
+        if (!reId) return;
+        if (failSafe) { out.set(reId, 'served'); return; }
+        if (line.effect === EFFECTIVE_EFFECT.SUBSTITUTED) out.set(reId, 'substituted');
+        else if (line.effect === EFFECTIVE_EFFECT.OMITTED) out.set(reId, 'omitted');
+        else out.set(reId, 'served');
+      });
+      return out;
+    } catch (_e) { return null; }
+  }, [planCapState, intentState, exercises, allExercises, allExercisesById]);
 
   useEffect(() => {
     // Both are async and neither returns to a caller that could handle a
@@ -988,7 +1048,12 @@ export default function RoutineDetailScreen({ navigation, route }) {
                 // demand columns and would read unknown-conflicts, marking
                 // an unresolved row with a caption it cannot earn.
                 const fullRow = allExercisesById.get(exercise.id);
-                const note = fullRow ? capabilityPlanCaption(planCapState, fullRow) : null;
+                const note = fullRow
+                  ? capabilityPlanCaption(
+                    planCapState, fullRow,
+                    capabilityServeOutcomes?.get(routineExercise.id) ?? null,
+                  )
+                  : null;
                 return note ? <Text style={[styles.exerciseCapabilityNote, live.exerciseCapabilityNote]}>{note}</Text> : null;
               })()}
             </View>
