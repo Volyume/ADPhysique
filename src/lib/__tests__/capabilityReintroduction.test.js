@@ -157,4 +157,44 @@ describe('section 23: the return ramp', () => {
     expect(line).not.toMatch(/rehab|heal|safe|recover in|weeks|days|%/i);
     expect(line).not.toMatch(/restriction|episode/i);
   });
+
+  // CC33 D112 R5 (closes audit T2-25's copy half): the DURABLE side.
+  // The ramp stamps rows source 'reintroduction'; these helpers make the
+  // stamp readable so the coach output and the Home plan view can name
+  // the build-back on every week it is happening, not only in the one
+  // toast at episode end.
+  describe('the durable line (rampMusclesFromPlannedRows + reintroductionRampLine)', () => {
+    const { rampMusclesFromPlannedRows, reintroductionRampLine } = require('../capability/reintroduction');
+
+    test('reads exactly the stamped muscles off a week\'s planned rows, deduped', () => {
+      expect(rampMusclesFromPlannedRows([
+        { muscle: 'front_delts', planned_sets: 8, source: 'reintroduction' },
+        { muscle: 'front_delts', planned_sets: 8, source: 'reintroduction' },
+        { muscle: 'chest', planned_sets: 10, source: 'reintroduction' },
+        { muscle: 'quads', planned_sets: 12, source: 'coach' },
+        { muscle: 'back', planned_sets: 14, source: null },
+      ])).toEqual(['front_delts', 'chest']);
+      expect(rampMusclesFromPlannedRows([])).toEqual([]);
+      expect(rampMusclesFromPlannedRows(null)).toEqual([]);
+    });
+
+    test('the stamped weeks of the live ramp read back through it', async () => {
+      const w5 = await getPlannedMuscleVolume('riw5');
+      expect(rampMusclesFromPlannedRows(w5)).toEqual(['front_delts']);
+      // The deload week was never stamped, so it names nothing.
+      const w6 = await getPlannedMuscleVolume('riw6');
+      expect(rampMusclesFromPlannedRows(w6)).toEqual([]);
+    });
+
+    test('one calm sentence for one, two or three muscles - same trajectory words as the toast', () => {
+      expect(reintroductionRampLine(['Front delts']))
+        .toBe('Your front delts work builds back up to your plan from here.');
+      expect(reintroductionRampLine(['Front delts', 'Chest']))
+        .toBe('Your front delts and chest work builds back up to your plan from here.');
+      expect(reintroductionRampLine(['Front delts', 'Chest', 'Quads']))
+        .toBe('Your front delts, chest and quads work builds back up to your plan from here.');
+      expect(reintroductionRampLine([])).toBeNull();
+      expect(reintroductionRampLine(null)).toBeNull();
+    });
+  });
 });

@@ -12,8 +12,8 @@
  * Pins:
  *  - "Note a temporary change" navigates only - handleOpenSwap() is never
  *    called from that branch.
- *  - "Just swap it" is unchanged (still calls handleOpenSwap(), still no
- *    navigation).
+ *  - "Just swap it" opens the swap sheet with workAroundSwapRef set (the
+ *    causeOverride 'constraint' provenance), still no navigation.
  *  - The preselect payload is built from THIS exercise's driving conflict
  *    (episode conflicts outrank baseline, matching constraintNotice's own
  *    precedence), using the TrainingConsiderationsScreen.js contract shape
@@ -43,10 +43,15 @@ describe('T2-11: "Work around this" sheet actually captures', () => {
     expect(block).not.toMatch(/—/);
   });
 
-  test('"Just swap it" still calls handleOpenSwap() and does nothing else', () => {
+  test('"Just swap it" opens the swap sheet with the constraint provenance marked, no navigation', () => {
+    // Lead review of this wave wired workAroundSwapRef here: a swap made
+    // through the Work-around sheet is the ONE ruled place a UI path may
+    // key the swap's cause (causeOverride 'constraint'), so the learning
+    // shield never reads a worked-around movement as a preference signal.
+    // The ref is set before the sheet opens and cleared on confirm/close.
     const justSwapSite = block.indexOf("text: 'Just swap it'");
     const justSwapBlock = block.slice(justSwapSite, block.indexOf('},', justSwapSite));
-    expect(justSwapBlock).toContain('onPress: () => handleOpenSwap()');
+    expect(justSwapBlock).toContain('onPress: () => { workAroundSwapRef.current = true; handleOpenSwap(); }');
     expect(justSwapBlock).not.toMatch(/navigate/);
   });
 

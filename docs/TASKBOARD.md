@@ -871,15 +871,29 @@ T2-30, stale comments - plus the lead's root closures of its two STOPs
 T1-08 capabilityIneligible chain planAutoGen -> programmeEpoch ->
 planRationale, blockAdvisor/continuity re-keyed off the shared
 name-based autoEligible seam, STOP suite converted to hold the fix).
-IN FLIGHT: W4A flows (HowYouTrainScreen + sessionEffective: T2-23
-per-line + revisit + standing audit row, T2-05 honest preview, T1-05,
-T1-06, T1-04/T1-26 clinician decline confirm, T2-27 honest copy, T1-20
-HowYouTrain-side cross-ref). Same recovery path. Adversarial review
-brief WRITTEN and recorded: REVIEW-BRIEF.md in the audit folder
-(authority, attack doctrine, priority targets, read-only bounds, report
-format, recovery path); dispatch (model 'opus', explicit) only after
-W4A lands + scorecard state refresh + full gate green. THEN: S5 gate +
-device checklist.
+W4A LANDED reviewed with lead closures (settled gate: lint exit 0;
+npm test 1108 suites passed / 1 skipped, 15082 tests passed / 13
+skipped): honest preview (computePlanEffectiveLines; summary is its
+reduction), per-line review REWORKED by the lead to the representable
+model (self rules any-line-applied + allowance mints for kept lines
+through the landed carve seam; clinician all-or-nothing behind the
+named confirm - rank 2 has no carve), flare/sync re-propose, revisit
+row with honest empty tap, T2-27 copy. Two W4A-surfaced defects closed
+at root: the plan rewrite's apply no-op (row.id on the nested
+{routineExercise, exercise} shape; suite re-shaped to the REAL shape +
+would-have-caught pin) and capability-blind substitute selection (ONE
+composed senior question - intent AND zero blockingConflicts - now
+feeds serve/count/rewrite/preview; pinned at serve + rewrite). T1-20
+closed at its root (AvoidedMovements in all six stacks, cross-ref both
+ways, sweep watches the route). Ownership sweep caught two unowned
+items and closed them: T2-25's durable reintroduction line (stamp read
+back into a coach-story change with its own why + quiet Home plan-view
+row; three suites) and G1's banned-construction re-audit (clean, hits
+judged with mechanism read). SCORECARD refreshed post-W4 (all build
+rows LANDED; +I9 preview/serve/rewrite-agree; REVIEW ITEMS I4/I8/J3/
+J5/L4 + PARTIAL J1 stand for the reviewer). NEXT: dispatch the
+adversarial Opus reviewer per REVIEW-BRIEF.md (read-only; relaunch on
+death), then S5 gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

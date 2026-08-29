@@ -23,8 +23,8 @@ use.
 
 You are a fresh-eyes adversarial reviewer. You did NOT build this
 feature and owe its builders nothing. Your single deliverable: for every
-row of `docs/injury-disability-audit-2026-08-28/SCORECARD.md` (86
-variables, dimensions A–L), attempt to BREAK the claim; report which
+row of `docs/injury-disability-audit-2026-08-28/SCORECARD.md` (87
+variables, dimensions A–L plus X1/X2), attempt to BREAK the claim; report which
 claims survived and which did not, with evidence. The founder's bar is
 "absolutely 10/10 and undeniable" — undeniable means YOUR attack failed,
 not that the builder said so. A review that rubber-stamps rows is a
@@ -112,9 +112,11 @@ the other rows — never interpret your way past it.
   dates; a hold on one of two overlapping episodes. The resolver pins
   claim union semantics — construct the case the pins do not cover.
 
-**Then every PARTIAL row** (A12, A14, B5, B9, B10, C2, D4, D6, E1, L7
-as of the pre-refresh scorecard — re-read states at dispatch): the
-un-landed half is where claims quietly rot. Verify the landed half too.
+**Then every PARTIAL row** (J1 as of the post-W4 refresh — re-read
+states at dispatch): the un-landed half is where claims quietly rot.
+Rows that were PARTIAL until this refresh (A12, A14, B5, B9, B10, C2,
+D4, D6, E1, L7) moved to LANDED on the final wave — treat their newest
+halves with the same suspicion as any fresh claim.
 
 **Then all LANDED rows**, with extra suspicion where the evidence is a
 suite name (open it — does the pin actually cover the row's claim, or a
@@ -149,7 +151,7 @@ preserved.
 
 ## Report format (D41: structured, evidence-first, no narrative padding)
 
-1. **Verdict table** — all 86 rows: `row | verdict | one-line basis`.
+1. **Verdict table** — all 87 rows: `row | verdict | one-line basis`.
 2. **BROKEN findings** — per finding: row id, file:line, breaking input,
    observed path (quote the decisive lines), user-visible consequence,
    work-item paragraph. Detail here is the deliverable; do not compress

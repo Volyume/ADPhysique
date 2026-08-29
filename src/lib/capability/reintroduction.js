@@ -109,3 +109,39 @@ export function reintroductionCopy(muscleLabel) {
   const muscle = String(muscleLabel ?? 'that muscle').toLowerCase();
   return `Your ${muscle} work builds back up to your plan from here.`;
 }
+
+/**
+ * CC33 D112 R5 (closes audit T2-25's copy half): the DURABLE side of the
+ * same sentence. applyReintroductionRamp above stamps every stepped row
+ * `source: 'reintroduction'`, which until now nothing read back - the
+ * only copy was the one toast at episode end, so the weeks the ramp was
+ * actually happening said nothing. These two make the stamp readable:
+ * the muscles a week's planned rows are ramping, and the line the coach
+ * output and the Home plan view render for every such week.
+ *
+ * Pure; rows come straight from getPlannedMuscleVolume (snake_case).
+ */
+export function rampMusclesFromPlannedRows(rows) {
+  return [...new Set(
+    (Array.isArray(rows) ? rows : [])
+      .filter((r) => r?.source === 'reintroduction')
+      .map((r) => r.muscle)
+      .filter(Boolean),
+  )];
+}
+
+/**
+ * One calm sentence for one or more ramping muscles. Labels arrive
+ * display-ready (the caller resolves them; this module stays free of a
+ * naming dependency) and are lowercased into coach language: "a", "a and
+ * b", "a, b and c".
+ */
+export function reintroductionRampLine(muscleLabels) {
+  const labels = (Array.isArray(muscleLabels) ? muscleLabels : [])
+    .map((l) => String(l ?? '').toLowerCase()).filter(Boolean);
+  if (!labels.length) return null;
+  const joined = labels.length === 1
+    ? labels[0]
+    : `${labels.slice(0, -1).join(', ')} and ${labels[labels.length - 1]}`;
+  return `Your ${joined} work builds back up to your plan from here.`;
+}

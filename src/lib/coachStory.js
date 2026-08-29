@@ -167,7 +167,8 @@ export function whatItMeans(context, limiters) {
  * change carries its OWN reason, so a week that legitimately changes two
  * things reads as two independent decisions rather than one vague sweep.
  *
- * @param {object} changes { calorieKcal, trainingNote, volumeNote, exerciseChanges }
+ * @param {object} changes { calorieKcal, trainingNote, volumeNote,
+ *   exerciseChanges, reintroductionNote }
  */
 export function whatIsChanging(context, limiters, changes = {}) {
   const out = [];
@@ -202,6 +203,22 @@ export function whatIsChanging(context, limiters, changes = {}) {
     });
   }
 
+  // CC33 D112 R5 (closes audit T2-25's copy half): the reintroduction
+  // ramp gets a DURABLE line for every week it is stepping, not only the
+  // one toast at episode end. The sentence itself is built by
+  // capability/reintroduction.js (reintroductionRampLine) from the
+  // week's own planned rows stamped source 'reintroduction' - the screen
+  // passes it ready-made, exactly as volumeNote arrives above, so this
+  // module stays pure and the evidence key names the stamp it came from.
+  if (changes.reintroductionNote) {
+    out.push({
+      domain: 'training',
+      text: changes.reintroductionNote,
+      why: 'Your temporary change has ended, so the sets it reduced build back toward your plan, one week at a time.',
+      from: 'plan.reintroduction',
+    });
+  }
+
   return out;
 }
 
@@ -215,8 +232,12 @@ export function whatIsChanging(context, limiters, changes = {}) {
 export function whatStaysTheSame(context, limiters, changes = {}) {
   const out = [];
   const kcal = Number(changes.calorieKcal) || 0;
+  // The reintroduction ramp counts as a training change here: "your
+  // programme and your exercises stay as they are" beside "builds back
+  // up to your plan" would read as a contradiction, so the blanket line
+  // yields to the specific one on ramp weeks (T2-25).
   const trainingChanged = (Array.isArray(changes.exerciseChanges) && changes.exerciseChanges.length > 0)
-    || !!changes.volumeNote;
+    || !!changes.volumeNote || !!changes.reintroductionNote;
 
   if (kcal === 0) out.push(line('Your daily food target stays the same.', 'nutrition.coverage'));
   if (!trainingChanged) out.push(line('Your programme and your exercises stay as they are.', 'training.execution'));

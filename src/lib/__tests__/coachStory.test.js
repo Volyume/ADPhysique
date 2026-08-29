@@ -207,6 +207,30 @@ describe('THE CROSS-DOMAIN RECEIPT (job 12)', () => {
     expect(storyOf(GOING_WELL, { calorieKcal: -125 }).changing[0].text)
       .toBe('Your daily calorie target comes down by 125.');
   });
+
+  // CC33 D112 R5 (closes audit T2-25's copy half): the reintroduction
+  // ramp is a real change to the coming week and gets a durable line
+  // with its own why for every week it steps - not only the one toast
+  // at episode end.
+  test('REINTRODUCTION: the ramp line renders with its own why and evidence key', () => {
+    const note = 'Your front delts work builds back up to your plan from here.';
+    const story = storyOf(GOING_WELL, { reintroductionNote: note });
+    expect(story.changing).toHaveLength(1);
+    expect(story.changing[0]).toMatchObject({
+      domain: 'training',
+      text: note,
+      why: 'Your temporary change has ended, so the sets it reduced build back toward your plan, one week at a time.',
+      from: 'plan.reintroduction',
+    });
+    expect(story.isQuietWeek).toBe(false);
+    // The blanket "programme and exercises stay as they are" yields to
+    // the specific line - the two side by side would read as a
+    // contradiction.
+    expect(story.staying.map((l) => l.text))
+      .not.toContain('Your programme and your exercises stay as they are.');
+    // The food side is still explicitly named as unchanged.
+    expect(story.staying.map((l) => l.text)).toContain('Your daily food target stays the same.');
+  });
 });
 
 describe('A NUTRITION CO-OBSERVATION IS NOT A CAUSE (job 5)', () => {

@@ -111,3 +111,28 @@ test('the unmarked no-substitute row is still omitted AND recorded - excusal can
   const entries = appendSessionConstraintEffects.mock.calls[0][2];
   expect(entries).toEqual([expect.objectContaining({ effect: 'omitted', exerciseFrom: SQUAT.id })]);
 });
+
+test('serve never substitutes TO an exercise the user\'s own rules block (lead review, CC33)', async () => {
+  // The standing episode conflicts the squat; the seated leg press would
+  // be the substitute, but a second active rule keeps that exact
+  // exercise out. Serving it would put in the session the very movement
+  // the layer exists to keep out - the row must be OMITTED instead.
+  // Before the composed senior question (substituteSeniorQuestion in
+  // sessionEffective.js), this test failed with LEGPRESS served.
+  const base = appliedStandingEpisode();
+  loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState([
+    ...base.restrictions.map((r) => ({ ...r })),
+    {
+      id: 'c2', userId: 'u1', role: 'baseline', source: 'self', ruleKind: 'exercise',
+      ruleValue: LEGPRESS.id, laterality: null, startsAt: NOW - 1000, endsAt: null,
+      state: 'active', endedAt: null, endedReason: null, episodeGroupId: null,
+      deletedAt: null,
+    },
+  ], { atMs: NOW }));
+  const served = await applyEffectiveViewToSession('u1', 'w1', [SQUAT]);
+  expect(served.map((r) => r.id)).not.toContain(LEGPRESS.id);
+  expect(appendSessionConstraintEffects).toHaveBeenCalledTimes(1);
+  expect(appendSessionConstraintEffects.mock.calls[0][2]).toEqual([
+    expect.objectContaining({ effect: 'omitted', exerciseFrom: SQUAT.id }),
+  ]);
+});

@@ -67,10 +67,17 @@ beforeEach(() => {
   jest.clearAllMocks();
   getActivePlan.mockResolvedValue({ id: 'plan1' });
   getRoutinesForPlan.mockResolvedValue([{ id: 'r1', name: 'Lower A' }]);
-  // Partial exercise object on the row - no demand columns, on purpose.
+  // The REAL row shape: getRoutineExercisesWithDetails returns
+  // { routineExercise, exercise } (database.js:4516), never a flat
+  // { id, exercise }. This suite's first draft mocked the flat shape,
+  // which is exactly how the rewrite's `row.id` (undefined in
+  // production, so applyCapabilityPlanRewrite skipped every line and
+  // "Update my plan" silently did nothing) passed green here - the W4A
+  // review found it. Partial exercise object still on purpose: no
+  // demand columns, pinning library-by-id resolution.
   getRoutineExercisesWithDetails.mockResolvedValue([
-    { id: 're-squat', exercise: { id: SQUAT.id, name: SQUAT.name, primaryMuscle: 'quads' } },
-    { id: 're-bench', exercise: { id: BENCH.id, name: BENCH.name, primaryMuscle: 'chest' } },
+    { routineExercise: { id: 're-squat' }, exercise: { id: SQUAT.id, name: SQUAT.name, primaryMuscle: 'quads' } },
+    { routineExercise: { id: 're-bench' }, exercise: { id: BENCH.id, name: BENCH.name, primaryMuscle: 'chest' } },
   ]);
   getAllExercises.mockResolvedValue([SQUAT, LEGPRESS, LUNGE, BENCH]);
   updateRoutineExerciseExercise.mockResolvedValue(undefined);
@@ -118,6 +125,23 @@ describe('computeCapabilityPlanRewrite', () => {
     ));
     const rw = await computeCapabilityPlanRewrite('u1', {});
     expect(rw.lines).toHaveLength(0);
+  });
+
+  test('a substitute the user\'s OWN rules block is never proposed (lead review, CC33)', async () => {
+    // 'standing' conflicts the squat; the seated leg press would be the
+    // substitute, but a second rule keeps that exact exercise out. A
+    // rewrite that proposed it would write into the document the very
+    // thing the layer exists to keep out - the line must read
+    // unsolvable instead. Before the composed senior question
+    // (substituteSeniorQuestion), this test failed with to.id ===
+    // 'ex-legpress'.
+    loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState(
+      [rule(), rule({ id: 'c-no-legpress', ruleKind: 'exercise', ruleValue: LEGPRESS.id })], { atMs: NOW },
+    ));
+    const rw = await computeCapabilityPlanRewrite('u1', {});
+    const squatLine = rw.lines.find((l) => l.from.id === SQUAT.id);
+    expect(squatLine).toBeTruthy();
+    expect(squatLine.to).toBeNull();
   });
 
   test('no eligible substitute reads unsolvable, with the exercise kept', async () => {

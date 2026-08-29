@@ -982,6 +982,12 @@ export default function CoachOutputScreen({ navigation, route }) {
   // Loaded once on mount; null when there's no active block or the
   // current week is the last one (nothing to push volume into).
   const [nextTrainingWeekId, setNextTrainingWeekId] = useState(null);
+  // CC33 D112 R5 (closes audit T2-25's copy half): the durable
+  // reintroduction line - non-null while the current or next week's
+  // planned volume carries rows stamped source 'reintroduction' (the
+  // §23 ramp), so the build-back is named on every week it is
+  // happening, not only in the one toast at episode end.
+  const [rampNote, setRampNote] = useState(null);
   // Stage 1 (2026-08-09): when the active block is finished
   // (awaitingDecision) there is no upcoming week, so training applies
   // rightly disable; this flag lets the card SAY so instead of the apply
@@ -2324,6 +2330,27 @@ export default function CoachOutputScreen({ navigation, route }) {
         setBlockAwaitingDecision(!!cur?.awaitingDecision);
         // getNextMesocycleWeek returns the raw row (snake_case is_deload).
         setNextWeekIsDeload(next?.is_deload === 1);
+        // T2-25: the reintroduction ramp's durable line. Current week
+        // and next week both count - the account is written at the
+        // boundary about the coming week, and the line should hold
+        // from the run before the first stepped week to the last one.
+        try {
+          // eslint-disable-next-line global-require
+          const { rampMusclesFromPlannedRows, reintroductionRampLine } = require('../lib/capability/reintroduction');
+          // eslint-disable-next-line global-require
+          const { muscleDisplayName } = require('../lib/algorithms');
+          const [curRows, nextRows] = await Promise.all([
+            cur?.id ? getPlannedMuscleVolume(cur.id) : Promise.resolve([]),
+            next?.id ? getPlannedMuscleVolume(next.id) : Promise.resolve([]),
+          ]);
+          const muscles = [...new Set([
+            ...rampMusclesFromPlannedRows(curRows),
+            ...rampMusclesFromPlannedRows(nextRows),
+          ])];
+          setRampNote(muscles.length
+            ? reintroductionRampLine(muscles.map((m) => muscleDisplayName(m) ?? m))
+            : null);
+        } catch (_e) { setRampNote(null); }
         // FB-06: the signal was already loaded here, just never read.
         setCurrentWeekIsDeload(!!cur?.isDeload && !cur?.awaitingDecision);
         // C18: the GATED state, same as Home and Train.
@@ -2337,6 +2364,7 @@ export default function CoachOutputScreen({ navigation, route }) {
         setNextWeekIsDeload(false);
         setCurrentWeekIsDeload(false);
         setCurrentRecoveryState(null);
+        setRampNote(null);
       }
 
       // Load the last 5 outputs; skip the first (current week) for the history shelf
@@ -2533,6 +2561,10 @@ export default function CoachOutputScreen({ navigation, route }) {
     changes: {
       calorieKcal: adjustments?.calories?.change ?? 0,
       volumeNote: adjustments?.training?.signal === 'hold' ? 'Your training volume holds where it is.' : null,
+      // T2-25: ready-made by reintroductionRampLine from the weeks' own
+      // source-stamped rows (the load effect above); the story wraps it
+      // with its own why, exactly as volumeNote arrives.
+      reintroductionNote: rampNote,
     },
   });
 

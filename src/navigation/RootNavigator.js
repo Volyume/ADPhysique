@@ -464,6 +464,10 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
+      {/* CC33 T1-20: HowYouTrain's preference cross-reference row links to
+          AvoidedMovements (transitive closure; its only outbound link is
+          HowYouTrain, already above). */}
+      <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -541,6 +545,10 @@ function ProgressStack({ navigation }) {
           capabilityRoutesReachable.test.js, which caught this gap. */}
       <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
+      {/* CC33 T1-20: HowYouTrain's preference cross-reference row links to
+          AvoidedMovements, so it rides along here too (its own only
+          outbound link is HowYouTrain, already above - closure ends). */}
+      <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
       {/* SettingsWorkout is HowYouTrain's other outbound target (the
           session-length row) - one more hop of the same transitive
           closure the sweep enforces. */}
@@ -573,6 +581,10 @@ function ProfileStack({ navigation }) {
           Swept by navigation/__tests__/capabilityRoutesReachable.test.js. */}
       <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
+      {/* CC33 T1-20: HowYouTrain's preference cross-reference row links to
+          AvoidedMovements (transitive closure; its only outbound link is
+          HowYouTrain, already above). */}
+      <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsAccount" component={SettingsAccountScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsProfile" component={SettingsProfileScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsCoaching" component={SettingsCoachingScreen} options={{ headerShown: false }} />
@@ -743,6 +755,10 @@ function FirstRunStack() {
       <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
+      {/* CC33 T1-20: HowYouTrain's preference cross-reference row links to
+          AvoidedMovements (transitive closure; its only outbound link is
+          HowYouTrain, already above). */}
+      <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }
@@ -795,6 +811,10 @@ function ProOnboardingStack() {
       <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
       <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
+      {/* CC33 T1-20: HowYouTrain's preference cross-reference row links to
+          AvoidedMovements (transitive closure; its only outbound link is
+          HowYouTrain, already above). */}
+      <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );
 }

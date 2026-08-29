@@ -38,9 +38,13 @@ const ROOT_NAVIGATOR = path.join(NAV_DIR, 'RootNavigator.js');
 const source = fs.readFileSync(ROOT_NAVIGATOR, 'utf8');
 
 // The capability lane is free by law (CAP-19) and is offered from inside
-// onboarding, so these three are the routes whose silent loss is a user-visible
-// dead end rather than a developer inconvenience.
-const CAPABILITY_ROUTES = ['HowYouTrain', 'TrainingConsiderations', 'SettingsWorkout'];
+// onboarding, so these are the routes whose silent loss is a user-visible
+// dead end rather than a developer inconvenience. AvoidedMovements joined
+// the set when HowYouTrain gained its preference cross-reference row
+// (CC33 T1-20): the W4A builder found the row would have dead-tapped in
+// five of HowYouTrain's six stacks precisely because this sweep did not
+// yet watch that route.
+const CAPABILITY_ROUTES = ['HowYouTrain', 'TrainingConsiderations', 'SettingsWorkout', 'AvoidedMovements'];
 
 /**
  * Map a component identifier used in `component={X}` back to the screen file it

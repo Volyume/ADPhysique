@@ -13,7 +13,7 @@
  * capabilityGuards.test.js. Nothing here changes selection, coaching or
  * learning - those campaigns arrive later; this screen manages state.
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, AccessibilityInfo, TextInput } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
@@ -45,7 +45,7 @@ import {
 import { movementFamily, familyLabel } from '../lib/exercise/movementFamily';
 import {
   DEMAND_AXES, demandLabel, CONSTRAINT_ROLE, CONSTRAINT_SOURCE,
-  CONSTRAINT_RULE_KIND, EPISODE_STATUS, LATERALITY,
+  CONSTRAINT_RULE_KIND, CONSTRAINT_STATE, EPISODE_STATUS, LATERALITY,
 } from '../lib/capability/model';
 import {
   subjectPhrase, draftSubjectPhrase, sideBodyPart, sidedRuleLabel,
@@ -90,6 +90,27 @@ export default function HowYouTrainScreen() {
   // library, never hardcoded. Exercise search shares the same load.
   const [library, setLibrary] = useState([]);
   const [exerciseQuery, setExerciseQuery] = useState('');
+  // D112 R4 (closes audit T2-23): the per-line "Choose per exercise"
+  // review - see proposeEffectiveDiff, renderLineReview and
+  // saveLineReview below.
+  const [lineReview, setLineReview] = useState(null);
+  // D112 R4 (closes audit T2-23's recoverability half): whether the
+  // standing "Your plan and how you train" row has anything to offer
+  // right now. Computed on every refresh below.
+  const [canRevisit, setCanRevisit] = useState(false);
+  // T1-06/T2-23 shared guard: proposalPendingRef is set synchronously at
+  // the top of proposeEffectiveDiff (before its first await) and cleared
+  // in its finally, so any call dispatched in the same tick - the add
+  // flow's own explicit call racing the refresh-time sync-arrival
+  // detector below - sees it before that detector's async continuation
+  // ever runs. It never gates an explicit user action (add flow, flare
+  // restart, the revisit row); only the passive detector checks it.
+  // lastAutoProposedKeyRef additionally stops the detector repeating the
+  // identical still-undecided set on the next focus, so a user
+  // backgrounding/foregrounding the app while a proposal sits unanswered
+  // never accumulates duplicate alerts.
+  const proposalPendingRef = useRef(false);
+  const lastAutoProposedKeyRef = useRef(null);
 
   const refresh = useCallback(() => {
     if (!userId) return;
@@ -102,11 +123,37 @@ export default function HowYouTrainScreen() {
           'Volyume could not read this right now. Nothing has changed.',
         );
       }
+      // T1-06 (closes audit): a rule that arrived by sync, or was left
+      // undecided across an app relaunch, never got a proposal - the add
+      // flow was the only place one fired. Detected here, on the
+      // screen's own refresh/focus, exactly the same undecided-and-not-
+      // held episode rule ids the standing revisit row below computes,
+      // and proposed the same way (proposeEffectiveDiff). This is the
+      // SAME recoverability the revisit row offers on demand (T2-23);
+      // this just tries it automatically first, and the row stays as
+      // the durable fallback for whatever this best-effort pass misses.
+      const undecidedIds = undecidedEpisodeRuleIds(st.episodes);
+      if (!proposalPendingRef.current) {
+        const key = undecidedIds.slice().sort().join(',');
+        if (undecidedIds.length && key !== lastAutoProposedKeyRef.current) {
+          proposeEffectiveDiff(undecidedIds, null).catch(() => {});
+        }
+      }
+      // eslint-disable-next-line global-require
+      require('../lib/sessionEffective').hasCapabilityToRevisit(userId, undecidedIds)
+        .then(setCanRevisit).catch(() => setCanRevisit(false));
     }).catch(() => {});
     hasCapabilityConsent(userId).then(setConsented).catch(() => {});
     // Exercise-rule rows label by name; the library read is best-effort
     // (an id is still shown if it fails).
     getAllExercises().then(setLibrary).catch(() => {});
+    // proposeEffectiveDiff is intentionally omitted: it is redefined every
+    // render, so listing it would redefine refresh (and re-subscribe
+    // useFocusEffect) on every render too. Safe to omit because
+    // proposeEffectiveDiff only touches refs, state setters and userId -
+    // all stable/keyed on the same [userId] this callback already carries
+    // (see proposalPendingRef/lastAutoProposedKeyRef's comment above).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
   useFocusEffect(refresh);
 
@@ -125,6 +172,15 @@ export default function HowYouTrainScreen() {
   // falls back to the generic wording. Naming only, nothing else changes.
   const nameOf = (id) => library.find(e => e.id === id)?.name ?? null;
   const groupSubject = (rows) => subjectPhrase(rows ?? [], { nameOf });
+
+  // D112 R4 (closes audit T2-23/T1-06): the episode rule ids still
+  // waiting on an Apply/Decline choice - active, not held (a hold means
+  // the user said wait, D112 R8, so it drives no proposal either).
+  // Shared by the standing revisit row's visibility/tap handler and the
+  // sync-arrival/relaunch detector in refresh() above.
+  const undecidedEpisodeRuleIds = (episodes) => (episodes ?? []).flatMap((ep) => ep.rows
+    .filter((r) => r.state === CONSTRAINT_STATE.ACTIVE && r.effectiveChoice == null && r.adaptationMode !== 'hold')
+    .map((r) => r.id));
 
   const beginAdd = () => {
     haptics.selection();
@@ -337,22 +393,72 @@ export default function HowYouTrainScreen() {
     }
   };
 
+  // D112 R6 (closes audit T1-04/T1-26): the §14 decline path used to
+  // override a clinician-sourced rule exactly as silently as any
+  // self-declared one, while the picker refuses an inline override for
+  // the same source. Decline stays AVAILABLE here - the user's own
+  // document is theirs, no coercion - but never silent: this names the
+  // rule's standing before anything is recorded. "Keep it out" backs out
+  // of the decline with NOTHING recorded - not even 'applied', which the
+  // user never said - leaving the rule undecided and recoverable from
+  // the standing revisit row below. Shared by proposeEffectiveDiff's
+  // whole-group "Not now" and saveLineReview's per-line "Keep" path.
+  const confirmClinicianDecline = (subject, onDeclineAnyway) => {
+    appAlert(
+      'A clinician asked for this one',
+      `You told Volyume a clinician asked you to keep ${subject ?? 'this'} out. Declining means your sessions keep showing it. Volyume will not suggest it elsewhere.`,
+      [
+        { text: 'Keep it out', style: 'cancel' },
+        { text: 'Decline anyway', style: 'destructive', onPress: onDeclineAnyway },
+      ],
+    );
+  };
+
   // CC29 (section 14, CAP-11): the proposed diff for a new episode against
   // the active plan, grouped per rule (slot micro-approvals avoided). The
   // cross-lane computation lives in lib/sessionEffective.js, outside both
   // lanes, so this capability surface never imports the preference lane.
+  // D112 R4 (closes audit T2-23): a third action opens the per-line
+  // review (renderLineReview/saveLineReview below) without disturbing
+  // the two-button whole-group flow, which stays the primary path.
+  // D112 R6 (closes audit T1-04/T1-26): a clinician-sourced rule among
+  // createdIds gates the whole-group decline behind
+  // confirmClinicianDecline above - never silent, decline stays
+  // available. Callers (the add flow, a flare restart, the sync-arrival
+  // detector in refresh(), the revisit row below) never need to know
+  // any of this; they all just call this one function.
   const proposeEffectiveDiff = async (createdIds, subject = null) => {
+    proposalPendingRef.current = true;
+    lastAutoProposedKeyRef.current = (Array.isArray(createdIds) ? createdIds : []).slice().sort().join(',');
     try {
       // eslint-disable-next-line global-require
       // CC32 (section 29): recordEffectiveChoice = the same write plus its
       // aggregate counter, emitted from the neutral seam so this guarded
       // surface stays telemetry-free.
-      const { computePlanEffectiveSummary, recordEffectiveChoice } = require('../lib/sessionEffective');
-      const summary = await computePlanEffectiveSummary(userId, createdIds);
-      if (!summary.affected) return;
+      const {
+        computePlanEffectiveSummary, computePlanEffectiveLines,
+        clinicianSourcedIds, recordEffectiveChoice,
+      } = require('../lib/sessionEffective');
+      const [summary, clinicianIds] = await Promise.all([
+        computePlanEffectiveSummary(userId, createdIds),
+        clinicianSourcedIds(userId, createdIds),
+      ]);
+      // Lead review: the boolean tells the revisit row whether anything
+      // was actually offered, so its tap is never silent (an undecided
+      // rule that touches nothing in the current plan surfaces no alert
+      // here, and the row then says so honestly instead of doing
+      // nothing). Other callers ignore it.
+      if (!summary.affected) return false;
       const parts = [];
       if (summary.substituted) parts.push(`${summary.substituted} exercise${summary.substituted === 1 ? '' : 's'} swapped for something that works now`);
       if (summary.omitted) parts.push(`${summary.omitted} left out with nothing forced in their place`);
+      const declineNow = async () => {
+        for (const id of createdIds) {
+          // eslint-disable-next-line no-await-in-loop
+          await recordEffectiveChoice(userId, id, 'declined').catch(() => {});
+        }
+        toast.show('Kept as recorded. Affected exercises will show a quiet notice with a swap shortcut.');
+      };
       appAlert(
         'Apply this to your current plan?',
         `${subject ? `While ${subject} is out` : 'While this lasts'}, your sessions would show ${parts.join(', and ')}. Your plan itself is not changed, and everything returns when you end it.`,
@@ -360,12 +466,9 @@ export default function HowYouTrainScreen() {
           {
             text: 'Not now',
             style: 'cancel',
-            onPress: async () => {
-              for (const id of createdIds) {
-                // eslint-disable-next-line no-await-in-loop
-                await recordEffectiveChoice(userId, id, 'declined').catch(() => {});
-              }
-              toast.show('Kept as recorded. Affected exercises will show a quiet notice with a swap shortcut.');
+            onPress: () => {
+              if (clinicianIds.size) { confirmClinicianDecline(subject, declineNow); return; }
+              declineNow();
             },
           },
           {
@@ -380,9 +483,153 @@ export default function HowYouTrainScreen() {
                 : 'Applied. Your sessions will work around this until you end it.');
             },
           },
+          {
+            // D112 R4 (closes audit T2-23, §14 step 2 "as a whole or per
+            // line"): opens the per-line list below, defaulting every
+            // affected line to Apply so the user only has to touch the
+            // ones they want to flip.
+            text: 'Choose per exercise',
+            onPress: async () => {
+              const lines = await computePlanEffectiveLines(userId, createdIds).catch(() => []);
+              if (!lines.length) { toast.show('Nothing to review right now.'); return; }
+              setLineReview({
+                ruleIds: createdIds,
+                subject,
+                lines: lines.map((l, i) => ({
+                  key: l.routineExerciseId ?? `${l.routineId}-${i}`,
+                  fromName: l.from?.name ?? 'This exercise',
+                  toName: l.to?.name ?? null,
+                  // For the allowance mint in saveLineReview: a kept
+                  // exercise stays served through a per-exercise
+                  // allowance, and that write needs the id.
+                  exerciseId: l.from?.id ?? null,
+                  constraintIds: l.constraintIds,
+                  clinician: l.constraintIds.some((id) => clinicianIds.has(id)),
+                  apply: true,
+                })),
+                // Per-rule standing for the save's clinician branch: a
+                // line's `clinician` flag says "some driver is clinician",
+                // which is not enough to know whether one PARTICULAR rule
+                // id is - the save needs both.
+                clinicianRuleIds: [...clinicianIds],
+              });
+            },
+          },
         ],
       );
-    } catch (_e) { /* proposal is additive; the save already stands */ }
+      return true;
+    } catch (_e) { /* proposal is additive; the save already stands */ } finally {
+      proposalPendingRef.current = false;
+    }
+    return false;
+  };
+
+  // D112 R4 (closes audit T2-23): the per-line save, lead-ruled on the
+  // REPRESENTABLE model rather than a flat AND. effective_choice lives
+  // on the RULE row, and one rule can drive several lines (one axis
+  // conflicting across several exercises is the common case) - a flat
+  // "applied only if every line applied" would silently discard the
+  // user's Apply choices whenever they kept one exercise. The landed
+  // carve machinery already represents exactly that mix:
+  //
+  //  - a SELF-declared rule is recorded 'applied' if the user applied
+  //    ANY line it drives (or drives none - vacuous, same default the
+  //    whole-group Apply gives it), 'declined' only when they kept
+  //    every line;
+  //  - each KEPT line whose every driving rule ended 'applied' would
+  //    otherwise be substituted at serve, so it mints a per-exercise
+  //    ALLOWANCE (rule_kind exercise_allow - the same standing carve
+  //    the picker's "keep it in" flow writes), which carves its
+  //    conflicts at rank 3/4 and keeps it served as-is, visibly and
+  //    revocably, right on this screen;
+  //  - a kept line with a DECLINED driver needs no allowance - serve
+  //    already refuses to substitute it (conflicted, visible, owed);
+  //  - a CLINICIAN rule stays all-or-nothing: rank 2 is never
+  //    allowance-carved (CAP-7), so a kept line under an applied
+  //    clinician rule is unrepresentable - keeping ANY of its lines
+  //    declines the whole rule, behind the same named confirm the
+  //    whole-group decline uses (D112 R6). Its kept lines then have a
+  //    declined driver, so they mint nothing, consistently.
+  //
+  // Net effect: every per-line choice takes effect exactly as chosen,
+  // and the save's toast can say so truthfully.
+  const saveLineReview = async () => {
+    const review = lineReview;
+    if (!review) return;
+    const clinicianRules = new Set(review.clinicianRuleIds ?? []);
+    const keptClinician = review.lines.some((l) => !l.apply && l.clinician);
+    const commit = async () => {
+      try {
+        // eslint-disable-next-line global-require
+        const { recordEffectiveChoice } = require('../lib/sessionEffective');
+        const choiceFor = new Map();
+        for (const ruleId of review.ruleIds) {
+          const driven = review.lines.filter((l) => l.constraintIds.includes(ruleId));
+          const applied = clinicianRules.has(ruleId)
+            ? driven.every((l) => l.apply)
+            : (driven.length === 0 || driven.some((l) => l.apply));
+          choiceFor.set(ruleId, applied ? 'applied' : 'declined');
+          // eslint-disable-next-line no-await-in-loop
+          await recordEffectiveChoice(userId, ruleId, applied ? 'applied' : 'declined').catch(() => {});
+        }
+        let allowed = 0;
+        let allowFailed = 0;
+        for (const l of review.lines) {
+          if (l.apply || !l.exerciseId) continue;
+          const wouldSubstitute = l.constraintIds.length > 0
+            && l.constraintIds.every((id) => choiceFor.get(id) === 'applied');
+          if (!wouldSubstitute) continue;
+          // eslint-disable-next-line global-require
+          const { createConstraint } = require('../lib/capability/store');
+          // eslint-disable-next-line no-await-in-loop
+          await createConstraint(userId, {
+            role: 'baseline', source: 'self',
+            ruleKind: CONSTRAINT_RULE_KIND.EXERCISE_ALLOW, ruleValue: l.exerciseId,
+            startsAt: Date.now(),
+          }).then(() => { allowed += 1; }).catch(() => { allowFailed += 1; });
+        }
+        setLineReview(null);
+        if (allowFailed > 0) {
+          // A failed mint under all-applied drivers means serve WOULD
+          // still swap that exercise - say so rather than claiming the
+          // keep took effect.
+          toast.show('Saved, but a kept exercise could not be recorded as allowed. It may still be swapped in sessions. You can allow it from the exercise picker.', { variant: 'warning' });
+        } else {
+          toast.show(allowed > 0
+            ? 'Saved. Exercises you kept stay in your sessions, recorded as allowed here.'
+            : 'Saved your choices for each exercise.');
+        }
+        refresh();
+      } catch (e) {
+        logError('HowYouTrain.saveLineReview', e, {});
+        toast.show('That did not save. Try again.');
+      }
+    };
+    if (keptClinician) { confirmClinicianDecline(review.subject, commit); return; }
+    await commit();
+  };
+
+  // D112 R4 (closes audit T2-23's recoverability half): tapping the
+  // standing row re-runs both proposal paths fresh - undecided episode
+  // rules through the SAME shared proposeEffectiveDiff the add flow, a
+  // flare restart and the sync-arrival detector in refresh() all use,
+  // and any baseline conflict the plan rewrite has not yet resolved
+  // through proposeCapabilityPlanRewrite with no ids (which already
+  // judges every active baseline rule - see its own definition below).
+  // This is an explicit user action, so it is never gated behind
+  // proposalPendingRef; only the passive detector in refresh() backs off.
+  const revisitCapabilityPlan = async () => {
+    haptics.selection();
+    const ids = undecidedEpisodeRuleIds(state.episodes);
+    let surfaced = false;
+    if (ids.length) {
+      surfaced = !!(await proposeEffectiveDiff(ids, null).catch(() => false)) || surfaced;
+    }
+    surfaced = !!(await proposeCapabilityPlanRewrite(null, null).catch(() => false)) || surfaced;
+    // Lead review: an explicit tap never ends in silence. Undecided
+    // rules that touch nothing in the current plan, and a plan already
+    // matching every baseline rule, both land here.
+    if (!surfaced) toast.show('Nothing in your current plan needs a decision right now.');
   };
 
   // CC33 D112 R1a/b (closes audit T1-03 and T2-01): the PLAN REWRITE
@@ -398,7 +645,10 @@ export default function HowYouTrainScreen() {
       const { computeCapabilityPlanRewrite, applyCapabilityPlanRewrite } = require('../lib/sessionEffective');
       const rw = await computeCapabilityPlanRewrite(userId, { ruleIds });
       const n = rw.lines.length;
-      if (!n) return;
+      // Boolean mirrors proposeEffectiveDiff's: true whenever something
+      // was put in front of the user (the no-match information alert
+      // included), so the revisit row knows a tap was not silent.
+      if (!n) return false;
       const k = rw.substitutable;
       const u = rw.unsolvable;
       const plural = (c) => (c === 1 ? '' : 's');
@@ -413,7 +663,7 @@ export default function HowYouTrainScreen() {
       }
       if (k === 0) {
         appAlert('Some of your plan sits outside this', body, [{ text: 'OK' }]);
-        return;
+        return true;
       }
       appAlert(
         'Update your plan to match?',
@@ -443,7 +693,9 @@ export default function HowYouTrainScreen() {
           },
         ],
       );
+      return true;
     } catch (_e) { /* proposal is additive; the rule already stands */ }
+    return false;
   };
 
   const confirmEndEpisode = (ep) => {
@@ -615,11 +867,21 @@ export default function HowYouTrainScreen() {
               endsAt: null, // stays open until the user ends it
               source: h.source,
             }));
-            await writeConstraintRows(rows, now);
+            // T1-05 (closes audit): the restart always MINTS new rows
+            // (createCapabilityConstraints - confirmed against
+            // database.js:11552-11578: fresh uid() per row, never a
+            // reactivation of the ended ones), so createdIds here is the
+            // fresh group's own ids. Propose exactly as the add flow
+            // does (writeDraft above): the flare is back, so its effect
+            // on the current plan is offered again, not left silent.
+            const createdIds = await writeConstraintRows(rows, now);
             toast.show(subject
               ? `Started again from today. Volyume will keep ${subject} out until you end it here.`
               : 'Started again from today. Volyume will work around it until you end it here.');
             refresh();
+            if (Array.isArray(createdIds) && createdIds.length) {
+              proposeEffectiveDiff(createdIds, subject).catch(() => { /* proposal is additive */ });
+            }
           } catch (e) {
             logError('HowYouTrain.restartEpisode', e, {});
             toast.show('Could not start this again. Try once more.', { variant: 'error' });
@@ -817,6 +1079,43 @@ export default function HowYouTrainScreen() {
     return null;
   };
 
+  // D112 R4 (closes audit T2-23, §14 step 2): the "Choose per exercise"
+  // review, staged inline like the add flow above (same card pattern,
+  // no Modal - the R4 Modal-focus mitigation applies here too).
+  const renderLineReview = () => {
+    if (!lineReview) return null;
+    return (
+      <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+        <Text style={[styles.q, { color: t.colors.textPrimary }]}>Choose per exercise</Text>
+        <Text style={[styles.hint, { color: t.colors.textSecondary }]}>
+          {lineReview.subject ? `While ${lineReview.subject} is out, decide each exercise on its own. ` : 'Decide each exercise on its own. '}
+          Kept exercises stay in your sessions, recorded as allowed.
+        </Text>
+        {lineReview.lines.map((line, i) => (
+          <View key={line.key} style={styles.reviewLine}>
+            <Text style={[styles.body, { color: t.colors.textPrimary }]}>
+              {line.toName ? `${line.fromName} → ${line.toName}` : `${line.fromName}: no close match, stays with a note`}
+            </Text>
+            <View style={styles.episodeActions}>
+              <Choice label="Apply" selected={line.apply} compact t={t}
+                onPress={() => {
+                  haptics.selection();
+                  setLineReview((cur) => (cur ? { ...cur, lines: cur.lines.map((l, j) => (j === i ? { ...l, apply: true } : l)) } : cur));
+                }} />
+              <Choice label="Keep" selected={!line.apply} compact t={t}
+                onPress={() => {
+                  haptics.selection();
+                  setLineReview((cur) => (cur ? { ...cur, lines: cur.lines.map((l, j) => (j === i ? { ...l, apply: false } : l)) } : cur));
+                }} />
+            </View>
+          </View>
+        ))}
+        <Choice label="Save my choices" onPress={saveLineReview} t={t} primary />
+        <Choice label="Cancel" onPress={() => setLineReview(null)} t={t} />
+      </View>
+    );
+  };
+
   const episodeSub = (ep) => {
     const names = ep.rows.filter(r => r.state === 'active').map(r => ruleLabel(r)).join(', ');
     if (ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION) {
@@ -834,16 +1133,51 @@ export default function HowYouTrainScreen() {
         </Text>
       ) : null}
 
+      {renderLineReview()}
+
+      {/* D112 R4 (closes audit T2-23's recoverability half): the standing
+          revisit row. Visible whenever there is something to revisit
+          (canRevisit, computed in refresh() above from an active plan
+          plus either an undecided episode rule or an un-rewritten
+          baseline conflict) - undecided episodes no longer serve
+          conflicted rows in silence forever with no way back. */}
+      {canRevisit ? (
+        <SettingRow
+          icon="list-outline"
+          label="Your plan and how you train"
+          sub="Review what Volyume works around in your current plan."
+          onPress={revisitCapabilityPlan}
+        />
+      ) : null}
+
       {/* CC28 (section 33.12): energy-limited training's honest v1 home.
           No energy axis, no pacing computation - the card maps to the two
           EXISTING deterministic levers (session length, now free-editable
           in Workout settings; the episode machinery for bad spells) and
-          says so plainly. */}
+          says so plainly. T2-27 (closes audit): the row used to imply the
+          session-length lever takes effect straight away: it only shapes
+          the NEXT plan build (planEngine consumes it at generation only -
+          confirmed against S2-T2-LIVE-TRACE.md's T2-27 evidence), so the
+          copy says that plainly instead of over-claiming. */}
       <SettingRow
         icon="battery-half-outline"
         label="My energy varies, or I keep sessions short"
-        sub="Two levers help here: set a session length that actually fits under Workout and units, and add a temporary change here for a rough patch."
+        sub="Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch."
         onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
+      />
+
+      {/* CC33 D112 (closes audit T1-20, this side): the lanes name each
+          other in both directions. AvoidedMovementsScreen points here for
+          things the body needs training built around; this points there
+          for plain preference, so neither lane quietly absorbs the
+          other's entries. Registered alongside HowYouTrain in every
+          stack that carries it (RootNavigator), so the tap never
+          silently drops. */}
+      <SettingRow
+        icon="remove-circle-outline"
+        label="Movements you would rather not do"
+        sub="Preferences live under Avoided movements, so they never mix with what your body needs."
+        onPress={() => { haptics.selection(); navigation.navigate('AvoidedMovements'); }}
       />
 
       {/* Gap-closure Phase D (order section 25): the optional named-
@@ -1007,4 +1341,7 @@ const styles = StyleSheet.create({
   choiceLabel: { ...type.label },
   episodeActions: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   addWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  // D112 R4 (closes audit T2-23): one row of the "Choose per exercise"
+  // review - the line's own from/to text, then its Apply/Keep toggle.
+  reviewLine: { marginBottom: spacing.sm },
 });

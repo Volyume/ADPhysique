@@ -4838,7 +4838,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                           // landed cold. It navigates only now, pre-filled
                           // from this exercise's own driving conflict
                           // (workAroundPreselect above); "Just swap it"
-                          // above is unchanged.
+                          // above opens the sheet with workAroundSwapRef
+                          // set, so the swap records cause 'constraint'.
                           try {
                             navigation.navigate('HowYouTrain', workAroundPreselect ? { preselect: workAroundPreselect } : undefined);
                           } catch (_e) { /* best effort */ }

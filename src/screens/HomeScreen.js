@@ -316,6 +316,12 @@ export default function HomeScreen({ navigation, route }) {
   const [lastSession, setLastSession] = useState(null);
   const [lastSessionTonnage, setLastSessionTonnage] = useState(null);
   const [blockProgress, setBlockProgress] = useState([]);
+  // CC33 D112 R5 (closes audit T2-25's copy half): the durable
+  // reintroduction line for the plan view - non-null while this week's
+  // planned volume carries rows stamped source 'reintroduction' (the §23
+  // ramp wrote them), so the build-back is visible every week it is
+  // happening, not only in the one toast at episode end.
+  const [rampLine, setRampLine] = useState(null);
   const [currentMesoWeek, setCurrentMesoWeek] = useState(null);
   // Stage 8: block-start seed lines for the block sheet (written-plan truth).
   const [blockSeedLines, setBlockSeedLines] = useState([]);
@@ -1318,6 +1324,16 @@ export default function HomeScreen({ navigation, route }) {
         .slice(0, 8); // top 8 muscles by volume
 
       setBlockProgress(progress);
+      // T2-25: this week's rows already in hand - read the ramp stamp
+      // off them rather than fetching anything new.
+      try {
+        // eslint-disable-next-line global-require
+        const { rampMusclesFromPlannedRows, reintroductionRampLine } = require('../lib/capability/reintroduction');
+        const rampMuscles = rampMusclesFromPlannedRows(planned);
+        setRampLine(rampMuscles.length
+          ? reintroductionRampLine(rampMuscles.map((m) => MUSCLE_DISPLAY_NAMES[m] || m))
+          : null);
+      } catch (_e) { setRampLine(null); }
     } catch (_e) {}
   }
 
@@ -2512,6 +2528,19 @@ export default function HomeScreen({ navigation, route }) {
             </Text>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </TouchableOpacity>
+        ) : null}
+
+        {/* CC33 D112 R5 (closes audit T2-25's copy half): the durable
+            reintroduction line. Same quiet styling as the rows above but
+            NOT tappable - it asks nothing and reports the plan's own
+            trajectory while any of this week's planned rows carry the
+            §23 ramp's source stamp. Meaning is in the text alone (J3). */}
+        {rampLine ? (
+          <View style={styles.constraintLineRow}>
+            <Text style={[styles.constraintLineText, live.constraintLineText]}>
+              {rampLine}
+            </Text>
+          </View>
         ) : null}
 
         {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero

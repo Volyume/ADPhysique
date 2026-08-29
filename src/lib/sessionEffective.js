@@ -12,11 +12,34 @@ import {
   updateRoutineExerciseExercise, recordExerciseSwap,
 } from './database';
 import { loadCapabilityResolveState, blockingConflicts } from './capability/resolve';
-import { computeEffectiveSession, EFFECTIVE_EFFECT, bestEligibleSubstitute } from './capability/effective';
+import {
+  computeEffectiveSession, EFFECTIVE_EFFECT, bestEligibleSubstitute, actionableEpisodeConflicts,
+} from './capability/effective';
 import { loadExerciseIntentState, isEligibleExercise } from './exercise/intent';
 import { SWAP_SCOPE } from './exercise/swapScope';
+import { CONSTRAINT_SOURCE } from './capability/model';
 
 export { setConstraintEffectiveChoice };
+
+/**
+ * CC33 lead review (closes the substitute-eligibility gap W4A's preview
+ * made visible): the ONE senior question every substitute selection in
+ * this module asks. A substitute must clear BOTH lanes - the user's
+ * preference eligibility AND their capability rules - because swapping a
+ * conflicted movement for another movement the user's own rules block
+ * (a different axis, a baseline rule, a held episode's restriction)
+ * would put in their session the exact thing this whole layer exists to
+ * keep out. blockingConflicts is the decision layer: allowance-carved,
+ * clinician rank-2 never carveable, held episodes still counted (a hold
+ * means "do not change my plan", never "I can do this").
+ *
+ * Serve, the served-count mirror, the plan-rewrite proposal and the
+ * per-line preview all inject THIS, so what is previewed is what is
+ * served is what a rewrite would write - one answer, four consumers.
+ */
+const substituteSeniorQuestion = (capState, intentState) => (ex) => (
+  isEligibleExercise(intentState, ex) && blockingConflicts(capState, ex).length === 0
+);
 
 /**
  * The choice write. Its aggregate counter was RETIRED under the Q4
@@ -29,15 +52,50 @@ export async function recordEffectiveChoice(userId, constraintId, choice) {
 }
 
 /**
- * Section 14 step 1: the proposed diff summary for a NEW episode against
- * the active plan. Counts affected lines whose driving rules include the
- * just-created ones. Read-only.
+ * Section 14 step 1/2: the per-line detail behind both the proposal
+ * SUMMARY (computePlanEffectiveSummary, just below) and the per-line
+ * review list (HowYouTrainScreen's "Choose per exercise" - D112 R4,
+ * closes audit T2-23). One computation, two views: the summary is a
+ * reduction of these lines, never a second pass, so the aggregate
+ * counts and the per-line list can never disagree.
  *
- * @returns {Promise<{affected: number, substituted: number, omitted: number}>}
+ * D112 R4 (closes audit T2-05): the outcome is asked directly - is
+ * there an eligible substitute for this exercise, or not - rather than
+ * read off computeEffectiveSession's live SERVE-TIME gate. These rules
+ * are still undecided (effective_choice NULL) at proposal time, so that
+ * gate resolves every affected line CONFLICTED and never reaches
+ * SUBSTITUTED or OMITTED (this function's own prior comment admitted as
+ * much: "substituted or conflicted-pending"). The preview instead asks
+ * the same question serve-time substitution asks once a choice is
+ * 'applied' - bestEligibleSubstitute under the standard injected senior
+ * question - so a line with a substitute previews as substituted and a
+ * line with none previews as omitted, never the reverse, and
+ * conflicted-pending never masquerades as either.
+ *
+ * Held episodes (adaptationMode 'hold') drive no proposal either (D112
+ * R8): actionableEpisodeConflicts already excludes them, so a held
+ * rule's id can never surface a line here.
+ *
+ * Exercises are resolved from the LIBRARY by id, exactly as
+ * computeCapabilityPlanRewrite does below - the routine rows' own
+ * embedded exercise objects carry no demand columns and would read as
+ * unknown-conflicts.
+ *
+ * @param {string} userId
+ * @param {string[]} ruleIds the constraint ids to judge (a just-created
+ *   episode group, a restart's reactivated ids, or a batch of
+ *   still-undecided ids collected on refresh/revisit); empty means
+ *   nothing to offer, not "every rule" (unlike computeCapabilityPlanRewrite's
+ *   null-means-all-baseline convention - this function is episode-scoped).
+ * @returns {Promise<Array<{routineId: string, routineName: string|null,
+ *   routineExerciseId: string|null, from: object, to: object|null,
+ *   constraintIds: string[]}>>}
  */
-export async function computePlanEffectiveSummary(userId, createdIds = []) {
-  const out = { affected: 0, substituted: 0, omitted: 0 };
+export async function computePlanEffectiveLines(userId, ruleIds = []) {
+  const out = [];
   try {
+    const wanted = new Set(Array.isArray(ruleIds) ? ruleIds : []);
+    if (!wanted.size) return out;
     const plan = await getActivePlan(userId);
     if (!plan?.id) return out;
     const [capState, intentState, library, routines] = await Promise.all([
@@ -47,23 +105,108 @@ export async function computePlanEffectiveSummary(userId, createdIds = []) {
       getRoutinesForPlan(plan.id),
     ]);
     if (capState.empty || capState.unavailable) return out;
+    const byId = new Map((library ?? []).map((e) => [e.id, e]));
     for (const routine of routines ?? []) {
       // eslint-disable-next-line no-await-in-loop
       const rows = await getRoutineExercisesWithDetails(routine.id).catch(() => []);
-      const baseRows = (rows ?? []).map((r) => ({ exercise: r.exercise })).filter((r) => r.exercise);
-      const view = computeEffectiveSession(
-        baseRows, library, capState, (ex) => isEligibleExercise(intentState, ex),
-      );
-      for (const line of view.lines) {
-        if (line.effect === EFFECTIVE_EFFECT.UNCHANGED) continue;
-        if (!line.constraintIds.some((id) => createdIds.includes(id))) continue;
-        out.affected += 1;
-        if (line.effect === EFFECTIVE_EFFECT.OMITTED) out.omitted += 1;
-        else out.substituted += 1; // substituted or conflicted-pending
+      for (const row of rows ?? []) {
+        const exercise = byId.get(row?.exercise?.id ?? row?.exerciseId) ?? null;
+        if (!exercise) continue;
+        const conflicts = actionableEpisodeConflicts(capState, exercise)
+          .filter((c) => wanted.has(c.constraintId));
+        if (!conflicts.length) continue;
+        const substitute = bestEligibleSubstitute(
+          exercise, library, substituteSeniorQuestion(capState, intentState),
+        );
+        out.push({
+          routineId: routine.id,
+          routineName: routine.name ?? null,
+          // The routine_exercise row's OWN id lives nested under
+          // `.routineExercise` (getRoutineExercisesWithDetails returns
+          // { routineExercise, exercise }, not a flat { id, exercise } -
+          // confirmed against database.js:4450-4516 and duplicateRoutine's
+          // own destructure at :4695). Not needed by any caller of this
+          // function today (the episode overlay records choices against
+          // the RULE, never the row), but resolved correctly in case a
+          // future caller needs it.
+          routineExerciseId: row?.routineExercise?.id ?? null,
+          from: exercise,
+          to: substitute,
+          constraintIds: conflicts.map((c) => c.constraintId),
+        });
       }
     }
-  } catch (_e) { /* read-only summary; zero means no proposal */ }
+  } catch (_e) { /* read-only; empty means nothing to offer */ }
   return out;
+}
+
+/**
+ * Section 14 step 1: the proposed diff summary for a NEW episode against
+ * the active plan - a reduction of computePlanEffectiveLines (above),
+ * never a separate computation, so the counts and the per-line list can
+ * never disagree. Read-only.
+ *
+ * @returns {Promise<{affected: number, substituted: number, omitted: number}>}
+ */
+export async function computePlanEffectiveSummary(userId, createdIds = []) {
+  const lines = await computePlanEffectiveLines(userId, createdIds);
+  const out = { affected: lines.length, substituted: 0, omitted: 0 };
+  for (const line of lines) {
+    if (line.to) out.substituted += 1;
+    else out.omitted += 1;
+  }
+  return out;
+}
+
+/**
+ * D112 R6 (closes audit T1-04/T1-26): the ids among these that are
+ * clinician-sourced, read straight from the resolver's own state. The
+ * confirm gate for declining a clinician-driven proposal
+ * (HowYouTrainScreen's proposeEffectiveDiff / saveLineReview) reads this
+ * before recording anything, so it is never fooled by a caller's own
+ * partial row data (a synced-in rule, a multi-episode revisit batch).
+ *
+ * @returns {Promise<Set<string>>}
+ */
+export async function clinicianSourcedIds(userId, ruleIds = []) {
+  const wanted = new Set(Array.isArray(ruleIds) ? ruleIds : []);
+  if (!wanted.size) return new Set();
+  try {
+    const capState = await loadCapabilityResolveState(userId, {});
+    if (capState.empty) return new Set();
+    return new Set(
+      (capState.restrictions ?? [])
+        .filter((r) => wanted.has(r.id) && r.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED)
+        .map((r) => r.id),
+    );
+  } catch (_e) { return new Set(); }
+}
+
+/**
+ * D112 R4 (closes audit T2-23's recoverability half): whether the
+ * standing "Your plan and how you train" revisit row has anything to
+ * offer right now. Both proposal paths need an active plan to have
+ * anything to say, so that gates first; then either an undecided
+ * episode rule (the caller supplies its own already-loaded ids - no
+ * second capability read for something the screen already has in
+ * state) or an un-rewritten baseline conflict
+ * (computeCapabilityPlanRewrite with no ruleIds, which already judges
+ * every active baseline rule) makes the row worth showing. Read-only;
+ * fails to false - the row simply stays hidden on a read problem, never
+ * a crash, never a dead tap.
+ *
+ * @returns {Promise<boolean>}
+ */
+export async function hasCapabilityToRevisit(userId, undecidedEpisodeRuleIds = []) {
+  try {
+    const plan = await getActivePlan(userId);
+    if (!plan?.id) return false;
+    if (Array.isArray(undecidedEpisodeRuleIds) && undecidedEpisodeRuleIds.length) return true;
+    const rw = await computeCapabilityPlanRewrite(userId, {});
+    return rw.lines.length > 0;
+  } catch (_e) {
+    return false;
+  }
 }
 
 /**
@@ -94,7 +237,7 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
     ]);
     const view = computeEffectiveSession(
       rows.map((e) => ({ exercise: e })), library, capState,
-      (ex) => isEligibleExercise(intentState, ex),
+      substituteSeniorQuestion(capState, intentState),
     );
     if (!view.anyEffect) return rows;
     const served = [];
@@ -181,7 +324,7 @@ export async function countEffectiveSessionRows(userId, routineId) {
     if (!baseRows.length) return baseCount;
     const intentState = await loadExerciseIntentState(userId, {});
     const view = computeEffectiveSession(
-      baseRows, library, capState, (ex) => isEligibleExercise(intentState, ex),
+      baseRows, library, capState, substituteSeniorQuestion(capState, intentState),
     );
     const omitted = view.lines.filter((l) => l.effect === EFFECTIVE_EFFECT.OMITTED).length;
     return Math.max(0, baseCount - omitted);
@@ -214,7 +357,7 @@ export async function countEffectiveSessionRows(userId, routineId) {
  *   these constraint ids (a just-created or just-promoted group); null
  *   judges every active BASELINE rule.
  * @returns {Promise<{lines: Array<{routineId: string, routineName: string|null,
- *   routineExerciseId: string, from: object, to: object|null,
+ *   routineExerciseId: string|null, from: object, to: object|null,
  *   constraintIds: string[]}>, substitutable: number, unsolvable: number}>}
  */
 export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = {}) {
@@ -247,12 +390,19 @@ export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = 
           : conflicts.filter((c) => roleById.get(c.constraintId) === 'baseline');
         if (!conflicts.length) continue;
         const substitute = bestEligibleSubstitute(
-          exercise, library, (ex) => isEligibleExercise(intentState, ex),
+          exercise, library, substituteSeniorQuestion(capState, intentState),
         );
         out.lines.push({
           routineId: routine.id,
           routineName: routine.name ?? null,
-          routineExerciseId: row.id,
+          // The routine_exercise row's own id lives nested under
+          // `.routineExercise` - getRoutineExercisesWithDetails returns
+          // { routineExercise, exercise } (database.js:4516), never a
+          // flat { id }. The old `row.id` here was undefined for every
+          // row, so applyCapabilityPlanRewrite's guard skipped every
+          // accepted line and "Update my plan" silently did nothing
+          // (W4A review finding, closed at this root the same day).
+          routineExerciseId: row?.routineExercise?.id ?? null,
           from: exercise,
           to: substitute,
           constraintIds: conflicts.map((c) => c.constraintId),

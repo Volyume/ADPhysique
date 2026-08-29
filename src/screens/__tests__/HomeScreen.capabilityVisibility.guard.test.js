@@ -119,3 +119,26 @@ describe('T1-12: quick-generate reveals capability-blocked slots', () => {
     );
   });
 });
+
+// CC33 D112 R5 (closes audit T2-25's copy half; lead, post-W4): the
+// durable reintroduction line on the plan view. The §23 ramp stamps
+// planned rows source 'reintroduction'; Home reads the stamp off the
+// week's rows it already loads and renders one quiet, NON-tappable line
+// (it asks nothing), so the build-back is visible every week it is
+// happening rather than only in the one toast at episode end.
+describe('T2-25: durable reintroduction line', () => {
+  test('the line is derived from the already-loaded planned rows via the reintroduction helpers', () => {
+    expect(HOME).toContain("const { rampMusclesFromPlannedRows, reintroductionRampLine } = require('../lib/capability/reintroduction');");
+    expect(HOME).toContain('const rampMuscles = rampMusclesFromPlannedRows(planned);');
+    expect(HOME).toMatch(/reintroductionRampLine\(rampMuscles\.map\(\(m\) => MUSCLE_DISPLAY_NAMES\[m\] \|\| m\)\)/);
+  });
+
+  test('the row renders with the quiet constraint-line styling and no touch handler', () => {
+    const site = HOME.indexOf('{rampLine ? (');
+    expect(site).toBeGreaterThan(-1);
+    const block = HOME.slice(site, HOME.indexOf(') : null}', site));
+    expect(block).toContain('styles.constraintLineRow');
+    expect(block).toContain('{rampLine}');
+    expect(block).not.toMatch(/TouchableOpacity|onPress/);
+  });
+});
