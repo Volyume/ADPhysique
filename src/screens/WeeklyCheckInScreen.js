@@ -398,7 +398,14 @@ export default function WeeklyCheckInScreen({ navigation }) {
           // eslint-disable-next-line global-require
           const { constraintStatus, EPISODE_STATUS } = require('../lib/capability/model');
           const rows = await getCapabilityConstraints(user.id, { includeEnded: false });
-          const episodeRows = rows.filter(r => r.role === 'episode');
+          // Round 3 (R3-5): RESTRICTIONS only - raw DB rows include the
+          // per-line Keep's exercise_allow rows (D113 ruling 3), and
+          // counting or naming those here asked "how did you get on
+          // training without X?" about the exercise the user explicitly
+          // kept in, and asserted an active episode off a keep alone.
+          // Every other subjectPhrase caller reads the resolver's
+          // restrictions, where allowances are already split out.
+          const episodeRows = rows.filter(r => r.role === 'episode' && r.ruleKind !== 'exercise_allow');
           const overdue = episodeRows.some(
             r => constraintStatus(r, Date.now()) === EPISODE_STATUS.AWAITING_CONFIRMATION,
           );

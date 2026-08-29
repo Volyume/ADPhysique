@@ -747,39 +747,30 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const baseRows = workoutExercises.map((e) => (e?.exercise
           ? (e._userAdded ? { ...e.exercise, _userAdded: true } : e.exercise)
           : e));
-        const served = await applyEffectiveViewToSession(user.id, activeWorkout.id, baseRows);
+        const res = await applyEffectiveViewToSession(user.id, activeWorkout.id, baseRows);
         if (cancelled) return;
         effectiveAppliedRef.current = activeWorkout.id;
-        if (served === baseRows) return; // nothing applied
+        if (res.untouched) return; // nothing applied
         // T2-06: applyEffectiveViewToSession drops an OMITTED row from the
         // returned list entirely (a SUBSTITUTED row is still pushed, 1 for
         // 1) - so the shortfall against baseRows.length is exactly the
         // omitted count. The one case this misses (every row blocked) is
-        // the module's own fail-safe: it returns baseRows unchanged (===
-        // check above already bailed), which is the correct call there too
-        // - a session can never be served empty.
-        const omitted = baseRows.length - served.length;
+        // the module's own fail-safe: it answers untouched (already
+        // bailed above), which is the correct call there too - a session
+        // can never be served empty.
+        const omitted = baseRows.length - res.served.length;
         if (omitted > 0) setOmittedSessionCount(omitted);
-        const servedEntries = [];
-        // Round 2 (R2-7): a routine may legitimately hold the same
-        // exercise in two slots with different prescriptions (no
-        // uniqueness on routine_id + exercise_id, and the detail
-        // screen's add does not dedupe). A bare findIndex mapped both
-        // served rows onto the FIRST slot, serving slot two with slot
-        // one's prescription and sets - so each base index is claimed
-        // once, in order, which matches the view's own slot order.
-        const claimedIdx = new Set();
-        const claimIndexFor = (id) => {
-          for (let i = 0; i < baseRows.length; i += 1) {
-            if (!claimedIdx.has(i) && baseRows[i].id === id) { claimedIdx.add(i); return i; }
-          }
-          return -1;
-        };
-        for (const row of served) {
-          const idx = claimIndexFor(row._capabilityTemp?.fromId ?? row.id);
-          const original = idx >= 0 ? workoutExercises[idx] : null;
+        // Round 3 (R3-4, superseding R2-7's claimed-index scan): the
+        // module now RETURNS each served row's base index, so no id
+        // reconstruction happens here at all - the one place duplicate
+        // exercise ids and omission holes could cross wires (a relaunch
+        // once replaced a _userAdded entry with the plan row the app had
+        // just omitted) no longer exists.
+        const servedEntries = res.served.map((row, k) => {
+          const idx = res.baseIndexes[k];
+          const original = (idx >= 0 && idx < workoutExercises.length) ? workoutExercises[idx] : null;
           if (row._capabilityTemp) {
-            servedEntries.push({
+            return {
               ...(original ?? {}),
               exercise: { ...row, _capabilityTemp: undefined },
               // D112 R2 (closes audit T2-03): the slot's routineExercise
@@ -789,11 +780,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               routineExercise: rebuildRoutineExerciseFor(row, original?.routineExercise),
               _capabilityTemp: row._capabilityTemp,
               sets: [],
-            });
-          } else {
-            servedEntries.push(original ?? { exercise: row, sets: [] });
+            };
           }
-        }
+          return original ?? { exercise: row, sets: [] };
+        });
         useAppStore.getState().setWorkoutExercises(servedEntries);
       } catch (_e) { /* the base session stands */ }
     })();
@@ -909,21 +899,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (currentEntry?._capabilityTemp?.fromName) {
       return { kind: 'episode', copy: `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts` };
     }
+    // CC33 adversarial review F4 (+ round 3 R3-3): an UNKNOWN conflict
+    // must never be spoken as a fact - the held claim included, since
+    // "you're holding your plan as-is FOR THIS" asserts the hold covers
+    // this row. Definite conflicts computed first; every branch below,
+    // the held one included, speaks only from them - matching
+    // RoutineDetailScreen's caption exactly, so the two surfaces can
+    // never contradict each other about the same row again. Unknown-only
+    // rows fall to the honest not-known line at the bottom.
+    const definiteEpisode = constraintConflicts.filter((c) => !c.unknown);
+    const definiteBaseline = baselineConflictsList.filter((c) => !c.unknown);
     // D112 R8 (section 25): a fully-held conflict set says so instead of
     // claiming Volyume is working around anything - the user asked it to
     // wait, and the quiet line reflects their own instruction back.
-    if (constraintConflicts.length
-      && constraintConflicts.every((c) => c.row?.adaptationMode === 'hold')) {
+    if (definiteEpisode.length
+      && definiteEpisode.every((c) => c.row?.adaptationMode === 'hold')) {
       return { kind: 'held', copy: "You're holding your plan as-is for this. Volyume changes nothing until you say so." };
     }
-    // CC33 adversarial review F4: an UNKNOWN conflict must never be
-    // spoken as a fact ("This one involves standing work") - the
-    // resolver's own law is "never silently treated as fine, never
-    // silently treated as a conflict". Definite conflicts keep the
-    // lane's copy; unknown-only rows get the honest line the picker
-    // already uses, and mixed rows speak only from what is established.
-    const definiteEpisode = constraintConflicts.filter((c) => !c.unknown);
-    const definiteBaseline = baselineConflictsList.filter((c) => !c.unknown);
     if (definiteEpisode.length) {
       // Natural coach-language order (2026-08-21): name what the conflict
       // is about when the rules give it a short honest name.
@@ -3381,7 +3373,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // effects writes nothing. Best-effort: a failure here never blocks
       // the finish.
       try {
-        if (user?.id && activeWorkout?.id && intentState?.capability && !intentState.capability.empty) {
+        // Round 3 (QUALIFIED item 9): a FRESH capability read, not the
+        // screen's intentState - that state is keyed to exercise
+        // changes, so a rule created mid-session through "Work around
+        // this" was invisible here unless the user changed exercise
+        // afterwards, and the session's absences went unexcused. Falls
+        // back to the screen state on failure; both paths still excuse
+        // only on definite applied conflicts.
+        // eslint-disable-next-line global-require
+        const { loadCapabilityResolveState } = require('../lib/capability/resolve');
+        const capState = user?.id
+          ? await loadCapabilityResolveState(user.id, {}).catch(() => intentState?.capability ?? null)
+          : null;
+        if (user?.id && activeWorkout?.id && capState && !capState.empty) {
           // eslint-disable-next-line global-require
           const { computeCompletionEffects } = require('../lib/capability/effective');
           // Round 2 (R2-4): resolve each row from the library for
@@ -3401,7 +3405,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               const raw = e?.exercise ?? e;
               return { exercise: libById.get(raw?.id) ?? raw, performed: (e.sets?.length ?? 0) > 0 };
             }),
-            intentState.capability,
+            capState,
           );
           if (entries.length) {
             // eslint-disable-next-line global-require

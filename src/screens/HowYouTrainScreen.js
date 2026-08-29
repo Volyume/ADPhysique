@@ -139,8 +139,12 @@ export default function HowYouTrainScreen() {
           proposeEffectiveDiff(undecidedIds, null).catch(() => {});
         }
       }
+      // R3-2 limb b: applied rules that currently produce lines keep the
+      // revisit row alive too, so a vacuously-applied rule that later
+      // bites regains its review.
+      const appliedIds = appliedEpisodeRuleIds(st.episodes);
       // eslint-disable-next-line global-require
-      require('../lib/sessionEffective').hasCapabilityToRevisit(userId, undecidedIds)
+      require('../lib/sessionEffective').hasCapabilityToRevisit(userId, undecidedIds, appliedIds)
         .then(setCanRevisit).catch(() => setCanRevisit(false));
     }).catch(() => {});
     hasCapabilityConsent(userId).then(setConsented).catch(() => {});
@@ -188,6 +192,15 @@ export default function HowYouTrainScreen() {
       && r.adaptationMode !== 'hold'
       // F6: an episode-scoped allowance is a decision already made (the
       // per-line Keep), never an undecided restriction to propose over.
+      && r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW)
+    .map((r) => r.id));
+
+  // R3-2 limb b: the APPLIED-and-not-held episode rule ids - the revisit
+  // row's second reach. A rule recorded applied (vacuously or by choice)
+  // stays revisitable whenever it currently produces lines.
+  const appliedEpisodeRuleIds = (episodes) => (episodes ?? []).flatMap((ep) => ep.rows
+    .filter((r) => r.state === CONSTRAINT_STATE.ACTIVE && r.effectiveChoice === 'applied'
+      && r.adaptationMode !== 'hold'
       && r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW)
     .map((r) => r.id));
 
@@ -467,9 +480,16 @@ export default function HowYouTrainScreen() {
       // its visible notice and swap shortcut - the standing behaviour -
       // and the per-line review remains reachable from the plan surface.
       if (!summary.affected) {
-        for (const id of createdIds) {
-          // eslint-disable-next-line no-await-in-loop
-          await recordEffectiveChoice(userId, id, 'applied').catch(() => {});
+        // Round 3 (R3-2): the vacuous write fires ONLY on a completed
+        // check. A failed read returns the same empty lines, and
+        // recording 'applied' on it would fabricate a decision on
+        // nothing - the fail-open A15 forbids. Unchecked rules stay
+        // undecided; the focus detector and the revisit row try again.
+        if (summary.checked) {
+          for (const id of createdIds) {
+            // eslint-disable-next-line no-await-in-loop
+            await recordEffectiveChoice(userId, id, 'applied').catch(() => {});
+          }
         }
         return false;
       }
@@ -514,7 +534,7 @@ export default function HowYouTrainScreen() {
             // ones they want to flip.
             text: 'Choose per exercise',
             onPress: async () => {
-              const lines = await computePlanEffectiveLines(userId, createdIds).catch(() => []);
+              const { lines } = await computePlanEffectiveLines(userId, createdIds).catch(() => ({ lines: [], checked: false }));
               if (!lines.length) { toast.show('Nothing to review right now.'); return; }
               setLineReview({
                 ruleIds: createdIds,
@@ -671,6 +691,16 @@ export default function HowYouTrainScreen() {
     let surfaced = false;
     if (ids.length) {
       surfaced = !!(await proposeEffectiveDiff(ids, null).catch(() => false)) || surfaced;
+    } else {
+      // R3-2 limb b: with nothing undecided, an APPLIED rule that
+      // currently produces lines is re-proposed - the user may change
+      // their mind ("Not now" flips it declined; "Choose per exercise"
+      // opens the per-line review). The vacuous branch inside is a
+      // harmless re-record when nothing is affected.
+      const applied = appliedEpisodeRuleIds(state.episodes);
+      if (applied.length) {
+        surfaced = !!(await proposeEffectiveDiff(applied, null).catch(() => false)) || surfaced;
+      }
     }
     surfaced = !!(await proposeCapabilityPlanRewrite(null, null).catch(() => false)) || surfaced;
     // Lead review: an explicit tap never ends in silence. Undecided

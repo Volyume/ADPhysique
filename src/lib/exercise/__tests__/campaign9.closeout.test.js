@@ -32,8 +32,11 @@ describe('a slot with no valid exercise left asks the user', () => {
     // CC33 W2 (D112, audit T1-07): the branch gained the _capabilityHold
     // carve-out - a continuity keep of an EPISODE-affected incumbent is
     // written (temporary is an overlay; serve-time works around it).
-    // The pinned refusal is unchanged for every genuinely blocked slot.
-    const from = gen.indexOf('if (blockedReason && !ex._capabilityHold) {');
+    // Round 3 (R3-1): and the capability_unknown carve-out - an unknown
+    // reason never blocks a write (only continuity-retained incumbents
+    // can carry it; unknown drives nothing). The pinned refusal is
+    // unchanged for every DEFINITELY blocked slot.
+    const from = gen.indexOf("if (blockedReason && blockedReason !== 'capability_unknown' && !ex._capabilityHold) {");
     // Window ends at the branch's own `continue;` - the write call lives
     // AFTER it, which is precisely the point being pinned.
     const blocked = gen.slice(from, gen.indexOf('continue;', from) + 'continue;'.length);

@@ -10,7 +10,7 @@
  * This suite pins:
  *  1. The count is derived exactly where the audit named it - inside the
  *     serve-time effect (~line 700, applyEffectiveViewToSession), from
- *     `baseRows.length - served.length`, AFTER the `served === baseRows`
+ *     `baseRows.length - res.served.length`, AFTER the `res.untouched`
  *     ("nothing applied") early return - never recomputed elsewhere, never
  *     guessed from a different signal.
  *  2. It only sets state when omitted > 0 (a substituted-only session,
@@ -65,20 +65,22 @@ describe('the omittedSessionCount state and its reset (T2-06)', () => {
 
 describe('the count computation sits inside the real serve-time effect, after the "nothing applied" bail (T2-06)', () => {
   test('computed from baseRows.length - served.length, only set when positive', () => {
-    expect(BLOCK).toContain('const omitted = baseRows.length - served.length;');
+    expect(BLOCK).toContain('const omitted = baseRows.length - res.served.length;');
     expect(BLOCK).toContain('if (omitted > 0) setOmittedSessionCount(omitted);');
   });
 
   test('placed AFTER the served === baseRows early return, so a no-op session never fires it', () => {
-    const bailIdx = BLOCK.indexOf('if (served === baseRows) return; // nothing applied');
-    const omittedIdx = BLOCK.indexOf('const omitted = baseRows.length - served.length;');
+    // R3-4: the module now answers `untouched` explicitly instead of the
+    // identity check the screen used to re-derive.
+    const bailIdx = BLOCK.indexOf('if (res.untouched) return; // nothing applied');
+    const omittedIdx = BLOCK.indexOf('const omitted = baseRows.length - res.served.length;');
     expect(bailIdx).toBeGreaterThan(-1);
     expect(omittedIdx).toBeGreaterThan(bailIdx);
   });
 
   test('placed BEFORE the servedEntries rebuild - the count reflects the raw serve, not the rebuilt list', () => {
-    const omittedIdx = BLOCK.indexOf('const omitted = baseRows.length - served.length;');
-    const entriesIdx = BLOCK.indexOf('const servedEntries = [];');
+    const omittedIdx = BLOCK.indexOf('const omitted = baseRows.length - res.served.length;');
+    const entriesIdx = BLOCK.indexOf('const servedEntries = res.served.map((row, k) => {');
     expect(entriesIdx).toBeGreaterThan(omittedIdx);
   });
 

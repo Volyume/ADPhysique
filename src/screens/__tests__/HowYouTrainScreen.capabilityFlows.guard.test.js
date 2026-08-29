@@ -112,7 +112,7 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
   });
 
   test('the revisit tap re-runs both proposal paths: undecided episodes, then the baseline rewrite with no ids', () => {
-    const fn = screen.match(/const revisitCapabilityPlan = async[\s\S]{0,1100}?\n  };/)?.[0] ?? '';
+    const fn = screen.match(/const revisitCapabilityPlan = async[\s\S]{0,2200}?\n  };/)?.[0] ?? '';
     expect(fn).toContain('undecidedEpisodeRuleIds(state.episodes)');
     expect(fn).toContain('proposeEffectiveDiff(ids, null)');
     expect(fn).toContain('proposeCapabilityPlanRewrite(null, null)');
@@ -120,6 +120,10 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // paths report whether they surfaced anything, and a no-op tap gets
     // the honest line instead of nothing.
     expect(fn).toContain("if (!surfaced) toast.show('Nothing in your current plan needs a decision right now.');");
+    // R3-2 limb b: with nothing undecided, APPLIED rules that currently
+    // produce lines are re-proposed - a vacuously-applied rule that
+    // later bites regains its review.
+    expect(fn).toContain('appliedEpisodeRuleIds(state.episodes)');
   });
 
   test('undecided episode ids exclude held episodes and allowance rows (D112 R8 + F6)', () => {

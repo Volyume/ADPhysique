@@ -87,23 +87,23 @@ beforeEach(() => {
 describe('computePlanEffectiveLines / computePlanEffectiveSummary (T2-05)', () => {
   test('an undecided rule with an eligible substitute previews SUBSTITUTED, never conflicted-pending', async () => {
     loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState([rule()], { atMs: NOW }));
-    const lines = await computePlanEffectiveLines('u1', ['c-standing']);
+    const { lines } = await computePlanEffectiveLines('u1', ['c-standing']);
     expect(lines).toHaveLength(1);
     expect(lines[0].from.id).toBe(SQUAT.id);
     expect(lines[0].to.id).toBe(LEGPRESS.id);
     expect(lines[0].routineExerciseId).toBe('re-squat'); // resolved via .routineExercise.id, the real shape
     const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
-    expect(summary).toEqual({ affected: 1, substituted: 1, omitted: 0 });
+    expect(summary).toEqual({ affected: 1, substituted: 1, omitted: 0, checked: true });
   });
 
   test('an undecided rule with NO eligible substitute previews OMITTED - the path that was unreachable', async () => {
     getAllExercises.mockResolvedValue([SQUAT, LUNGE, BENCH]); // every quads option standing/conflicting
     loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState([rule()], { atMs: NOW }));
-    const lines = await computePlanEffectiveLines('u1', ['c-standing']);
+    const { lines } = await computePlanEffectiveLines('u1', ['c-standing']);
     expect(lines).toHaveLength(1);
     expect(lines[0].to).toBeNull();
     const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
-    expect(summary).toEqual({ affected: 1, substituted: 0, omitted: 1 });
+    expect(summary).toEqual({ affected: 1, substituted: 0, omitted: 1, checked: true });
   });
 
   test('mixed batch: one line substitutes, one omits, in the same undecided proposal', async () => {
@@ -119,8 +119,8 @@ describe('computePlanEffectiveLines / computePlanEffectiveSummary (T2-05)', () =
     getAllExercises.mockResolvedValue([SQUAT, LEGPRESS, CHEST_STANDING]); // CHEST_STANDING is the plan's only chest exercise
     loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState([rule()], { atMs: NOW }));
     const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
-    expect(summary).toEqual({ affected: 2, substituted: 1, omitted: 1 });
-    const lines = await computePlanEffectiveLines('u1', ['c-standing']);
+    expect(summary).toEqual({ affected: 2, substituted: 1, omitted: 1, checked: true });
+    const { lines } = await computePlanEffectiveLines('u1', ['c-standing']);
     expect(lines.find((l) => l.from.id === SQUAT.id).to.id).toBe(LEGPRESS.id);
     expect(lines.find((l) => l.from.id === CHEST_STANDING.id).to).toBeNull();
   });
@@ -135,7 +135,7 @@ describe('computePlanEffectiveLines / computePlanEffectiveSummary (T2-05)', () =
       { routineExercise: { id: 're-squat' }, exercise: { id: SQUAT.id, name: SQUAT.name } },
     ]);
     loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState([rule()], { atMs: NOW }));
-    const lines = await computePlanEffectiveLines('u1', ['c-standing']);
+    const { lines } = await computePlanEffectiveLines('u1', ['c-standing']);
     expect(lines).toHaveLength(1);
     expect(lines[0].from).toMatchObject({ position: 'standing', primaryMuscle: 'quads' }); // full library row, not the partial one
   });
@@ -144,33 +144,33 @@ describe('computePlanEffectiveLines / computePlanEffectiveSummary (T2-05)', () =
     loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState(
       [rule({ adaptationMode: 'hold' })], { atMs: NOW },
     ));
-    const lines = await computePlanEffectiveLines('u1', ['c-standing']);
+    const { lines } = await computePlanEffectiveLines('u1', ['c-standing']);
     expect(lines).toHaveLength(0);
-    expect(await computePlanEffectiveSummary('u1', ['c-standing'])).toEqual({ affected: 0, substituted: 0, omitted: 0 });
+    expect(await computePlanEffectiveSummary('u1', ['c-standing'])).toEqual({ affected: 0, substituted: 0, omitted: 0, checked: true });
   });
 
   test('ids not in ruleIds are ignored, even if they conflict', async () => {
     loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState([rule()], { atMs: NOW }));
-    const lines = await computePlanEffectiveLines('u1', ['c-unrelated']);
+    const { lines } = await computePlanEffectiveLines('u1', ['c-unrelated']);
     expect(lines).toHaveLength(0);
   });
 
   test('no active plan, empty ruleIds, or unavailable state all propose nothing', async () => {
     loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState([rule()], { atMs: NOW }));
     getActivePlan.mockResolvedValue(null);
-    expect(await computePlanEffectiveLines('u1', ['c-standing'])).toEqual([]);
+    expect((await computePlanEffectiveLines('u1', ['c-standing'])).lines).toEqual([]);
     getActivePlan.mockResolvedValue({ id: 'plan1' });
-    expect(await computePlanEffectiveLines('u1', [])).toEqual([]);
+    expect(await computePlanEffectiveLines('u1', [])).toEqual({ lines: [], checked: true });
     loadCapabilityResolveState.mockResolvedValue({
       ...buildCapabilityResolveState([rule()], { atMs: NOW }), unavailable: true,
     });
-    expect(await computePlanEffectiveLines('u1', ['c-standing'])).toEqual([]);
+    expect((await computePlanEffectiveLines('u1', ['c-standing'])).lines).toEqual([]);
   });
 
   test('the summary is a reduction of the lines - they can never disagree', async () => {
     getAllExercises.mockResolvedValue([SQUAT, LEGPRESS, LUNGE, BENCH]);
     loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState([rule()], { atMs: NOW }));
-    const lines = await computePlanEffectiveLines('u1', ['c-standing']);
+    const { lines } = await computePlanEffectiveLines('u1', ['c-standing']);
     const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
     expect(summary.affected).toBe(lines.length);
     expect(summary.substituted).toBe(lines.filter((l) => l.to).length);
@@ -247,5 +247,39 @@ describe('computeCapabilityPlanRewrite still runs against the real row shape', (
     const rw = await computeCapabilityPlanRewrite('u1', {});
     expect(rw.lines).toHaveLength(1);
     expect(rw.lines[0].from.id).toBe(SQUAT.id);
+  });
+});
+
+// Round 3 (R3-2): `checked` separates "nothing affected" from "could not
+// check", DRIVEN through the real entry point with a rejecting DB - the
+// vacuous-applied write may fire only on a completed check, so these
+// pins are what keeps a failed read from fabricating a user decision.
+describe('R3-2 - checked is earned, never assumed', () => {
+  test('a rejecting routine read answers checked: false, never a clean zero', async () => {
+    loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState([rule()], { atMs: NOW }));
+    getRoutineExercisesWithDetails.mockRejectedValue(new Error('db locked'));
+    const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
+    expect(summary.affected).toBe(0);
+    expect(summary.checked).toBe(false);
+  });
+
+  test('an unavailable capability state answers checked: false', async () => {
+    loadCapabilityResolveState.mockResolvedValue({
+      ...buildCapabilityResolveState([rule()], { atMs: NOW }), unavailable: true,
+    });
+    const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
+    expect(summary).toEqual({ affected: 0, substituted: 0, omitted: 0, checked: false });
+  });
+
+  test('a rejecting plan read answers checked: false', async () => {
+    getActivePlan.mockRejectedValue(new Error('db locked'));
+    const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
+    expect(summary.checked).toBe(false);
+  });
+
+  test('genuinely nothing to affect - no plan - is a COMPLETED check', async () => {
+    getActivePlan.mockResolvedValue(null);
+    const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
+    expect(summary).toEqual({ affected: 0, substituted: 0, omitted: 0, checked: true });
   });
 });

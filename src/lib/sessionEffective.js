@@ -92,23 +92,35 @@ export async function recordEffectiveChoice(userId, constraintId, choice) {
  *   constraintIds: string[]}>>}
  */
 export async function computePlanEffectiveLines(userId, ruleIds = []) {
+  // Round 3 (R3-2): `checked` distinguishes "nothing affected" from
+  // "could not check". A failed read and a genuinely unaffected plan
+  // used to be the same empty array, and the vacuous-applied write
+  // (D114 ruling 1) then recorded a decision on a read that FAILED - a
+  // silent fail-open, against A15 and this lane's own posture law.
+  // checked is true only when the computation genuinely ran: no plan
+  // and no wanted ids are completed checks (there is nothing to
+  // affect); an unavailable or empty capability state, a failed routine
+  // read, or any throw is NOT a check, and no caller may treat it as an
+  // answer.
   const out = [];
+  let checked = false;
   try {
     const wanted = new Set(Array.isArray(ruleIds) ? ruleIds : []);
-    if (!wanted.size) return out;
+    if (!wanted.size) return { lines: out, checked: true };
     const plan = await getActivePlan(userId);
-    if (!plan?.id) return out;
+    if (!plan?.id) return { lines: out, checked: true };
     const [capState, intentState, library, routines] = await Promise.all([
       loadCapabilityResolveState(userId, {}),
       loadExerciseIntentState(userId, {}),
       getAllExercises(),
       getRoutinesForPlan(plan.id),
     ]);
-    if (capState.empty || capState.unavailable) return out;
+    if (capState.empty || capState.unavailable) return { lines: out, checked: false };
+    checked = true;
     const byId = new Map((library ?? []).map((e) => [e.id, e]));
     for (const routine of routines ?? []) {
       // eslint-disable-next-line no-await-in-loop
-      const rows = await getRoutineExercisesWithDetails(routine.id).catch(() => []);
+      const rows = await getRoutineExercisesWithDetails(routine.id).catch(() => { checked = false; return []; });
       for (const row of rows ?? []) {
         const exercise = byId.get(row?.exercise?.id ?? row?.exerciseId) ?? null;
         if (!exercise) continue;
@@ -139,8 +151,8 @@ export async function computePlanEffectiveLines(userId, ruleIds = []) {
         });
       }
     }
-  } catch (_e) { /* read-only; empty means nothing to offer */ }
-  return out;
+  } catch (_e) { checked = false; /* read-only; empty-unchecked means "could not tell" */ }
+  return { lines: out, checked };
 }
 
 /**
@@ -149,11 +161,13 @@ export async function computePlanEffectiveLines(userId, ruleIds = []) {
  * never a separate computation, so the counts and the per-line list can
  * never disagree. Read-only.
  *
- * @returns {Promise<{affected: number, substituted: number, omitted: number}>}
+ * @returns {Promise<{affected: number, substituted: number, omitted: number,
+ *   checked: boolean}>} checked=false means the answer is "could not
+ *   tell", never "nothing affected" - callers must not act on it (R3-2).
  */
 export async function computePlanEffectiveSummary(userId, createdIds = []) {
-  const lines = await computePlanEffectiveLines(userId, createdIds);
-  const out = { affected: lines.length, substituted: 0, omitted: 0 };
+  const { lines, checked } = await computePlanEffectiveLines(userId, createdIds);
+  const out = { affected: lines.length, substituted: 0, omitted: 0, checked };
   for (const line of lines) {
     if (line.to) out.substituted += 1;
     else out.omitted += 1;
@@ -198,13 +212,23 @@ export async function clinicianSourcedIds(userId, ruleIds = []) {
  * fails to false - the row simply stays hidden on a read problem, never
  * a crash, never a dead tap.
  *
+ * Round 3 (R3-2 limb b): an APPLIED episode rule that currently produces
+ * lines against the plan also makes the row show - a rule recorded
+ * applied vacuously (nothing affected at the time, D114 ruling 1) must
+ * regain its review the moment it starts to bite, or the plan is
+ * reshaped by a decision the user cannot revisit.
+ *
  * @returns {Promise<boolean>}
  */
-export async function hasCapabilityToRevisit(userId, undecidedEpisodeRuleIds = []) {
+export async function hasCapabilityToRevisit(userId, undecidedEpisodeRuleIds = [], appliedEpisodeRuleIds = []) {
   try {
     const plan = await getActivePlan(userId);
     if (!plan?.id) return false;
     if (Array.isArray(undecidedEpisodeRuleIds) && undecidedEpisodeRuleIds.length) return true;
+    if (Array.isArray(appliedEpisodeRuleIds) && appliedEpisodeRuleIds.length) {
+      const { lines } = await computePlanEffectiveLines(userId, appliedEpisodeRuleIds);
+      if (lines.length) return true;
+    }
     const rw = await computeCapabilityPlanRewrite(userId, {});
     return rw.lines.length > 0;
   } catch (_e) {
@@ -222,18 +246,33 @@ export async function hasCapabilityToRevisit(userId, undecidedEpisodeRuleIds = [
  * conflicted notice handles those), and baseline rules never appear here
  * at all (RT2-1).
  *
+ * Round 3 (R3-4): the result carries each served row's BASE INDEX. The
+ * screen used to reconstruct the mapping by id, and any reconstruction
+ * breaks on duplicate exercise ids the moment an omission leaves a hole
+ * (the scan claimed the omitted plan slot for the user's own added row,
+ * so a relaunch replaced a _userAdded entry with the row the app had
+ * just omitted - against A10). The module knows the index; it says so.
+ *
  * @param {string} userId
  * @param {string|null} workoutId for the omission effects record
- * @param {Array} rows the session's exercise rows (full library rows)
- * @returns {Promise<Array>} the rows to serve
+ * @param {Array} rows the session's exercise rows
+ * @returns {Promise<{served: Array, baseIndexes: number[], untouched: boolean}>}
+ *   untouched=true means the base session stands exactly as given
+ *   (served IS the caller's own array); otherwise served[k] belongs to
+ *   base slot baseIndexes[k].
  */
 export async function applyEffectiveViewToSession(userId, workoutId, rows) {
+  const untouched = () => ({
+    served: rows,
+    baseIndexes: Array.isArray(rows) ? rows.map((_, i) => i) : [],
+    untouched: true,
+  });
   try {
-    if (!userId || !Array.isArray(rows) || !rows.length) return rows;
+    if (!userId || !Array.isArray(rows) || !rows.length) return untouched();
     const capState = await loadCapabilityResolveState(userId, {});
     const hasApplied = !capState.empty && !capState.unavailable
       && (capState.restrictions ?? []).some((r) => r.role === 'episode' && r.effectiveChoice === 'applied');
-    if (!hasApplied) return rows;
+    if (!hasApplied) return untouched();
     const [intentState, library] = await Promise.all([
       loadExerciseIntentState(userId, {}),
       getAllExercises(),
@@ -247,8 +286,8 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
     // places). Judge library-resolved rows instead - the same
     // by-id resolution every other consumer in this module already
     // performs. The ORIGINAL row objects still flow through the output
-    // (unchanged rows return rows[i]; the screen maps served rows back
-    // by id), so markers like _userAdded are judged and served intact.
+    // (unchanged rows return rows[i], paired with their base index), so
+    // markers like _userAdded are judged and served intact.
     // A row the library cannot resolve is judged on what it carries and
     // lands in the unknown lane, which drives nothing automatic.
     const byId = new Map((library ?? []).map((e) => [e.id, e]));
@@ -262,8 +301,9 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
       }), library, capState,
       substituteSeniorQuestion(capState, intentState),
     );
-    if (!view.anyEffect) return rows;
+    if (!view.anyEffect) return untouched();
     const served = [];
+    const baseIndexes = [];
     const effects = [];
     view.lines.forEach((line, i) => {
       // D112 R4 (CAP-2, closes audit T2-04): a row the user added to this
@@ -271,6 +311,7 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
       // explicit choice outranks the effective view, whatever it resolves.
       if (rows[i]?._userAdded) {
         served.push(rows[i]);
+        baseIndexes.push(i);
         return;
       }
       if (line.effect === EFFECTIVE_EFFECT.SUBSTITUTED && line.exerciseTo) {
@@ -281,6 +322,7 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
           _capabilityTemp: { fromId: line.exerciseFrom.id, fromName: line.exerciseFrom.name, constraintIds: line.constraintIds },
           sets: rows[i]?.sets ?? [],
         });
+        baseIndexes.push(i);
         // D112 R7 (section 20; closes audit T2-13): the substitution is
         // recorded too, so a week the restriction reshaped WITHOUT
         // omissions still reads reshaped - the CONSTRAINED limiter's
@@ -297,14 +339,17 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
         });
       } else {
         served.push(rows[i]);
+        baseIndexes.push(i);
       }
     });
     if (effects.length && workoutId) {
       await appendSessionConstraintEffects(userId, workoutId, effects).catch(() => {});
     }
-    return served.length ? served : rows;
+    return served.length
+      ? { served, baseIndexes, untouched: false }
+      : untouched(); // a session is never served empty
   } catch (_e) {
-    return rows; // the base session always stands
+    return untouched(); // the base session always stands
   }
 }
 

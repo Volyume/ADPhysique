@@ -25,6 +25,28 @@ root during the W4A lead review are recorded on their rows: the plan
 rewrite's apply no-op (row shape) on A2, and the capability-blind
 substitute selection on A5.
 
+ADVERSARIAL REVIEW ROUND 3 (2026-08-29, on 59a7daa4): NOT CLEAN - 8
+rows BROKEN from 5 roots, two of them round-2 regressions, and a
+process verdict acted on: round-2's fixes were pinned by source-string
+guards, so round-3's closures are mechanism-level with DRIVEN pins
+through the real entry points (D115, which also corrects two D114
+claims round 3 proved false). Closed same day: R3-1 (currentLibraryIds
+from ALL exercises by equipment alone + capability_unknown never blocks
+the resolution write; driven generatePlanDryRun pin retains a
+NULL-column custom lift into the RESOLVED plan, control proves definite
+blocks still replace with the capability reason), R3-2 (the `checked`
+tri-state - a failed read never records the vacuous applied, driven
+rejecting-DB pins; applied rules that later bite regain their review
+through the revisit row and tap), R3-3 (the in-session held notice
+gates on definite conflicts, matching the plan view), R3-4 (serve
+returns base indexes; driven duplicate+omitted+_userAdded pin), R3-5
+(check-in reads restrictions only; rulePhrase never names an allowance
+- "a name is never inverted"), plus the fresh-capability-state finish
+read. OPEN work item from the pin build: an untagged custom incumbent
+(no family tag) contests no continuity slot and a rebuild drops it
+silently with no receipt line - pre-existing, stated on A13, round 4
+attacks it. Round 4 re-runs before S5.
+
 ADVERSARIAL REVIEW ROUND 2 (2026-08-29, on 715ad90e): 7 BROKEN, 16
 QUALIFIED, 0 STOP, 69 HOLD - converging. All actionable round-2
 findings closed at root the same day (D114): the unknown-drives-nothing
@@ -69,12 +91,12 @@ fixed tree before S5 closes.
 | A7 | Block review honours (senior question; stored KEEP never outranks capability) | LANDED (round-1 BROKEN F2, fixed) | blockAdvisor judges library-resolved rows; REPLACE keys on DEFINITE blocking conflicts only; W5 pins updated to the new mechanism |
 | A8 | Plan reactivation honours | LANDED | T1-11 repeat-offer after runBlockActivation (9d5b4a1b) |
 | A9 | Allowances honoured by every consumer | LANDED | blockingConflicts seam W1 L1; allowanceSeam suite; per-line Keep now mints through the same seam |
-| A10 | Manual adds/overrides never reversed | LANDED | _userAdded W1 L2; serveGuard suite |
+| A10 | Manual adds/overrides never reversed | LANDED (round-3 BROKEN R3-4, fixed) | serve returns base indexes - no id reconstruction; driven duplicate+omitted+_userAdded pin serves the user's own object at its own slot |
 | A11 | Laterality honoured (side-carve serves) | LANDED | CC25 §16 + laterality suite |
 | A12 | Clinician standing uniform (never carved; distinct everywhere) | LANDED (round-1 BROKEN F5, fixed) | source outranks certainty (D113): unknown clinician conflicts survive the carve, rank CLINICIAN, route to the rule editor with honest both-facts copy; allowanceSeam F5 pins |
-| A13 | Custom exercises fail closed, carveable, honest receipt | LANDED (by composition) | CAP-8 + T1-07 writer + T1-10 autoEligible; recorded W5 commit |
+| A13 | Custom exercises fail closed, carveable, honest receipt | LANDED (round-3 BROKEN R3-1, fixed) with ONE STATED CONDITION | driven rebuild pin: a NULL-column custom lift survives a rebuild into the resolved plan, never equipment-lost, never capability-excluded. Condition (open work item, D115): an incumbent custom lift with NO family tag contests no continuity slot and a rebuild drops it silently with no receipt line - pre-existing family-keyed matching, round 4 attacks it |
 | A14 | "Hold my plan" honoured end-to-end | LANDED (round-1 BROKEN F3, fixed) | adaptation_mode travels unconditionally in sync pushes (the resume of the last held episode no longer resurrects cross-device); pinned by a DRIVEN round-trip test, not a source string |
-| A15 | Every failure posture fails safe (no silent fail-open) | LANDED | W1 L2 posture set; capabilityPosture.w1.guard; per-line save's failed allowance mint is TOLD, never absorbed |
+| A15 | Every failure posture fails safe (no silent fail-open) | LANDED (round-3 BROKEN R3-2, fixed) | the `checked` tri-state: a failed read is "could not tell", never "nothing affected"; the vacuous applied fires only on a completed check (driven rejecting-DB pins assert NO write) |
 
 ## B. Visibility — every effect the user can see
 

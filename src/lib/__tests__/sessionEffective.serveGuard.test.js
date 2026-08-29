@@ -78,7 +78,9 @@ beforeEach(() => {
 });
 
 test('an unmarked conflicted row is substituted - the baseline behaviour stands', async () => {
-  const served = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT)]);
+  const { served, baseIndexes, untouched } = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT)]);
+  expect(untouched).toBe(false);
+  expect(baseIndexes).toEqual([0]);
   expect(served).toHaveLength(1);
   expect(served[0].id).toBe(LEGPRESS.id);
   expect(served[0]._capabilityTemp?.fromId).toBe(SQUAT.id);
@@ -93,7 +95,7 @@ test('an unmarked conflicted row is substituted - the baseline behaviour stands'
 
 test('a _userAdded conflicted row is served exactly as given', async () => {
   const added = { ...asServed(SQUAT), _userAdded: true };
-  const served = await applyEffectiveViewToSession('u1', 'w1', [added]);
+  const { served } = await applyEffectiveViewToSession('u1', 'w1', [added]);
   expect(served).toHaveLength(1);
   expect(served[0]).toBe(added);            // same object, untouched
   expect(served[0]._capabilityTemp).toBeUndefined();
@@ -102,8 +104,9 @@ test('a _userAdded conflicted row is served exactly as given', async () => {
 
 test('mixed session: the added row survives while its unmarked twin substitutes', async () => {
   const added = { ...asServed(SQUAT), _userAdded: true };
-  const served = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), added]);
+  const { served, baseIndexes } = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), added]);
   expect(served).toHaveLength(2);
+  expect(baseIndexes).toEqual([0, 1]);
   expect(served[0].id).toBe(LEGPRESS.id);   // planned row: substituted
   expect(served[1]).toBe(added);            // user's own: untouched
 });
@@ -111,7 +114,7 @@ test('mixed session: the added row survives while its unmarked twin substitutes'
 test('a _userAdded row is never omitted, even with no substitute in the pool', async () => {
   getAllExercises.mockResolvedValue([SQUAT, LUNGE]); // every quads option conflicts
   const added = { ...asServed(SQUAT), _userAdded: true };
-  const served = await applyEffectiveViewToSession('u1', 'w1', [added]);
+  const { served } = await applyEffectiveViewToSession('u1', 'w1', [added]);
   expect(served).toHaveLength(1);
   expect(served[0]).toBe(added);
   expect(appendSessionConstraintEffects).not.toHaveBeenCalled();
@@ -119,8 +122,9 @@ test('a _userAdded row is never omitted, even with no substitute in the pool', a
 
 test('the unmarked no-substitute row is still omitted AND recorded - excusal cannot regress', async () => {
   getAllExercises.mockResolvedValue([SQUAT, LUNGE]);
-  const served = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), asServed(LEGPRESS)]);
+  const { served, baseIndexes } = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), asServed(LEGPRESS)]);
   expect(served.map((r) => r.id)).toEqual([LEGPRESS.id]); // squat dropped, leg press stands
+  expect(baseIndexes).toEqual([1]); // and it is slot 1's row, said so explicitly (R3-4)
   expect(appendSessionConstraintEffects).toHaveBeenCalledTimes(1);
   const entries = appendSessionConstraintEffects.mock.calls[0][2];
   expect(entries).toEqual([expect.objectContaining({ effect: 'omitted', exerciseFrom: SQUAT.id })]);
@@ -143,7 +147,7 @@ test('serve never substitutes TO an exercise the user\'s own rules block (lead r
       deletedAt: null,
     },
   ], { atMs: NOW }));
-  const served = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT)]);
+  const { served } = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT)]);
   expect(served.map((r) => r.id)).not.toContain(LEGPRESS.id);
   expect(appendSessionConstraintEffects).toHaveBeenCalledTimes(1);
   expect(appendSessionConstraintEffects.mock.calls[0][2]).toEqual([
@@ -160,8 +164,9 @@ test('F1 REGRESSION: compatible production-shaped rows are served untouched unde
   // entries written for each. The contract now: resolved rows judge
   // definite-compatible, nothing changes, nothing is recorded.
   const rows = [asServed(LEGPRESS)];
-  const served = await applyEffectiveViewToSession('u1', 'w1', rows);
-  expect(served).toBe(rows); // the untouched fast path: same array back
+  const res = await applyEffectiveViewToSession('u1', 'w1', rows);
+  expect(res.untouched).toBe(true);
+  expect(res.served).toBe(rows); // the untouched fast path: same array back
   expect(appendSessionConstraintEffects).not.toHaveBeenCalled();
 });
 
@@ -170,8 +175,28 @@ test('a row the library cannot resolve lands in the unknown lane and is never au
   // judged on what it carries, every axis unknown - and unknown drives
   // nothing automatic, so the row stays, visibly the user's own.
   const ghost = { id: 'ex-gone', name: 'Old Machine Press', primaryMuscle: 'chest' };
-  const served = await applyEffectiveViewToSession('u1', 'w1', [ghost]);
+  const { served } = await applyEffectiveViewToSession('u1', 'w1', [ghost]);
   expect(served).toHaveLength(1);
   expect(served[0]).toBe(ghost);
   expect(appendSessionConstraintEffects).not.toHaveBeenCalled();
+});
+
+test('R3-4 DRIVEN: an omitted duplicate never claims the _userAdded twin\'s slot', async () => {
+  // The round-3 breaking input, driven end to end: slot 0 is the plan's
+  // squat (definitely conflicted, no substitute in the pool - OMITTED);
+  // slot 1 is the SAME exercise the user added themselves. The old
+  // id-reconstruction (findIndex, then round 2's claimed-index scan)
+  // walked into the omission hole and handed the user's row slot 0's
+  // identity - a relaunch then replaced their add with the very row the
+  // app had just omitted, against A10. The module now states each served
+  // row's base index itself.
+  getAllExercises.mockResolvedValue([SQUAT, LUNGE]); // no eligible substitute
+  const added = { ...asServed(SQUAT), _userAdded: true };
+  const res = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), added]);
+  expect(res.untouched).toBe(false);
+  expect(res.served).toHaveLength(1);
+  expect(res.served[0]).toBe(added);       // the user's own object, untouched
+  expect(res.baseIndexes).toEqual([1]);    // and it is slot 1, never slot 0
+  const entries = appendSessionConstraintEffects.mock.calls[0][2];
+  expect(entries).toEqual([expect.objectContaining({ effect: 'omitted', slot: 0 })]);
 });

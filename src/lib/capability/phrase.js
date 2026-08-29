@@ -102,11 +102,18 @@ export function rulePhrase(rule, nameOf) {
     return sided ? sided(rule.laterality) : demandPhrase(rule.ruleValue);
   }
   if (kind === CONSTRAINT_RULE_KIND.FAMILY) return familyLabel(rule.ruleValue);
-  if (kind === CONSTRAINT_RULE_KIND.EXERCISE
-    || kind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW) {
+  if (kind === CONSTRAINT_RULE_KIND.EXERCISE) {
     const name = typeof nameOf === 'function' ? nameOf(rule.ruleValue) : null;
     return name || null;
   }
+  // Round 3 (R3-5): an ALLOWANCE has no honest place in these phrases -
+  // every consumer reads after "without", "around" or "back to", so a
+  // bare name here INVERTS the row's meaning ("How did you get on
+  // training without Leg press?" about the exercise the user kept in).
+  // The module's law "a name is never invented" extends to "a name is
+  // never inverted": null, and subjectPhrase's own one-unnameable-rule
+  // contract then falls the whole subject back to the generic copy.
+  if (kind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW) return null;
   return null;
 }
 

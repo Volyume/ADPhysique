@@ -603,8 +603,23 @@ async function withContinuity(
     // barbell incumbents back into a plan planEngine had already filtered
     // them out of correctly. The engine was never at fault; this layer
     // overwrote its correct answer. Equipment is now applied here too.
+    //
+    // CC33 review round 3 (R3-1): built from ALL exercises, never from
+    // filteredLibrary. "Equipment lost" must mean exactly that - the
+    // filtered library also excludes intent- and capability-dropped
+    // rows, and sourcing the set from it made every drop read as
+    // equipment loss for whichever incumbent survived the earlier
+    // verdict ranks. The reachable case: a custom lift with a NULL
+    // demand column (rank-4 unknown, dropped from generation per CAP-8)
+    // fell through the definite-only capability fields to
+    // EQUIPMENT_LOST and was REPLACED with "This needs equipment you no
+    // longer have." - a false claim on both halves. Intent- and
+    // capability-excluded incumbents never reach the equipmentLost rank
+    // (excluded and capabilityIneligible outrank it in slotVerdict), so
+    // this narrows nothing else: the capability lanes speak through
+    // their own fields, and unknown drives nothing.
     const currentLibraryIds = new Set(
-      (filteredLibrary?.library ?? allExercises ?? [])
+      (allExercises ?? [])
         .filter(ex => equipmentReachable(ex, equipment))
         .map(e => e.id)
         .filter(Boolean),
@@ -670,7 +685,15 @@ export function resolvePlanAgainstLibrary(plan, exerciseMap, filteredLibrary) {
         if (missedNames.length < 5 && ex.exerciseName) missedNames.push(ex.exerciseName);
         continue;
       }
-      if (blockedReason && !ex._capabilityHold) {
+      // CC33 round 3 (R3-1's resolution half): an UNKNOWN capability
+      // reason never blocks the write. Generation's own picks cannot
+      // carry it (rank-4 rows were filtered from the engine's pool), so
+      // an unknown-blocked entry here is always a continuity-retained
+      // incumbent - a user's own movement whose demand columns are
+      // simply unfilled - and dropping it would be unknown driving a
+      // removal. Definite reasons still block; the T1-07 hold marker
+      // still writes an episode keep through a definite block.
+      if (blockedReason && blockedReason !== 'capability_unknown' && !ex._capabilityHold) {
         blockedSlots.push({
           exerciseId: dbEx.id,
           exerciseName: dbEx.name ?? ex.exerciseName ?? null,

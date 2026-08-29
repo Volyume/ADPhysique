@@ -3245,3 +3245,69 @@ Past list, the hold caption speaks only for definite conflicts, the
 Choice label wraps inside its tick row, and the capability rows whose
 meaning lives in the sub speak it (additive accessibilityLabel
 override on SettingRow; Choice composes its own).
+
+## D115 — CC33 review round 3 closures + register corrections (lead-ruled under D33, 2026-08-29)
+
+Round 3 (on 59a7daa4) was NOT clean: 8 rows BROKEN from 5 roots, two of
+them regressions introduced by round 2's own closures, and a process
+verdict worth keeping verbatim: "each round's fixes are landing at the
+exact line the finding named, and the round after finds the next
+consumer along" - because three round-2 fixes were pinned by
+source-string guards and one by nothing. Round 3's closures are
+mechanism-level with DRIVEN pins through the real entry points.
+
+REGISTER CORRECTIONS (D114 made two claims round 3 proved false; they
+are corrected here, not softened): "custom lifts are never REPLACED on
+a NULL column" was false - the field fix passed and the slot fell to
+equipmentLost one rank later; and "the per-line review remains
+reachable from the plan surface" was false for a vacuously-applied rule
+that later bites. Both are now true of the tree, per the closures below.
+
+1. **R3-1.** currentLibraryIds derives from ALL exercises filtered by
+   equipment alone (never the generation-filtered library, whose
+   capability drops made every unknown incumbent read "equipment
+   lost"), and an UNKNOWN capability reason never blocks the resolution
+   write (only continuity-retained incumbents can carry one; the T1-07
+   hold carve-out stands for definite blocks). DRIVEN pin: a real
+   generatePlanDryRun rebuild retains a NULL-column custom lift into
+   the RESOLVED plan with no equipment/capability receipt line, beside
+   a control proving a definite block still replaces with the
+   capability reason (planAutoGen.capabilityRebuild.driven.test.js).
+   The unknown-episode KEEP round 3 called a regression is ruled
+   CORRECTLY retired: CAPABILITY_HOLD's receipt line asserts the
+   conflict as fact, so an unknown-episode slot is evidence-judged like
+   any other - unknown neither holds nor replaces; it says nothing.
+
+2. **R3-2.** computePlanEffectiveLines/Summary carry `checked`: a
+   failed read is "could not tell", never "nothing affected", and the
+   vacuous 'applied' fires only on a completed check (driven pins with
+   a rejecting DB assert NO write). Limb b: hasCapabilityToRevisit and
+   the revisit tap gain the APPLIED-rules reach, so a vacuously-applied
+   rule that later produces lines regains its review (Not now flips it
+   declined; Choose per exercise reopens the per-line list).
+
+3. **R3-3.** The in-session held notice gates on DEFINITE conflicts,
+   byte-matching the plan view's caption - the two surfaces can no
+   longer contradict each other about a held unknown row.
+
+4. **R3-4.** applyEffectiveViewToSession returns each served row's BASE
+   INDEX ({served, baseIndexes, untouched}); the screen consumes them
+   and reconstructs nothing. DRIVEN pin: duplicate exercise ids with an
+   omitted plan row and a _userAdded twin - the user's own object is
+   served, at its own slot, with the omission recorded for slot 0 only.
+
+5. **R3-5.** The weekly check-in reads restrictions only, and
+   rulePhrase returns null for EXERCISE_ALLOW ("a name is never
+   inverted") - a keep can never again be spoken as something trained
+   without. Also closed: the completion excusal reads a FRESH
+   capability state at finish (a rule captured mid-session excuses that
+   same session's absences).
+
+NEWLY DISCOVERED while building the R3-1 driven pin, recorded as an
+OPEN work item (not fixed this round; round 4 attacks it): an
+incumbent custom exercise whose name resolves NO movement family (no
+stored subregion tag) never contests any continuity slot, so a rebuild
+drops it SILENTLY with no receipt line at all - a pre-existing property
+of family-keyed matching, now a stated condition on A13. The fix is a
+design question (how an unclassifiable movement is carried) and is not
+rushed mid-round.

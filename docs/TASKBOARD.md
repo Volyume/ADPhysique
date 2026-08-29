@@ -919,9 +919,25 @@ claims); R2-5 vacuous applied on nothing-affected (Home ask-row always
 clears); R2-7 claimed-index serve mapping (duplicate slots keep their
 own prescriptions); R2-8 preselect definite-only; R2-9 Past "(kept
 in)"; R2-10 hold caption definite-only; R2-12 label wrap idiom; R2-13
-spoken subs (additive SettingRow override + Choice composes). NEXT:
-settled full gate + merge, adversarial review ROUND 3, then S5 gate +
-device checklist.
+spoken subs (additive SettingRow override + Choice composes). ROUND 3 RAN on 59a7daa4: NOT
+CLEAN - 8 BROKEN / 5 roots, two of them round-2 regressions; the
+reviewer's process verdict (fixes landing at the named line, next
+consumer along missed; source-string pins) ACTED ON: round-3 closures
+are mechanism-level with DRIVEN pins through real entry points
+(generatePlanDryRun rebuild retains a NULL-column custom lift into the
+RESOLVED plan + definite-block control; rejecting-DB pins assert no
+vacuous write; duplicate+omitted+_userAdded serve pin). Closures (D115,
+which also corrects two D114 claims round 3 falsified): R3-1
+currentLibraryIds equipment-only + capability_unknown never blocks the
+resolution write; R3-2 `checked` tri-state + applied-rules revisit
+reach; R3-3 held notice definite-only (matches plan view); R3-4 serve
+returns base indexes ({served, baseIndexes, untouched}); R3-5 check-in
+restrictions-only + rulePhrase never names an allowance; fresh
+capability state at finish. OPEN work item (D115, recorded not rushed):
+untagged custom incumbents contest no continuity slot - silent rebuild
+drop, pre-existing, stated on A13, round 4 attacks it. NEXT: settled
+full gate + merge, adversarial review ROUND 4, then S5 gate + device
+checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):
