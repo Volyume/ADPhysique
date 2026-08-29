@@ -67,20 +67,31 @@ function capabilityPlanCaption(capState, exercise) {
     // eslint-disable-next-line global-require
     const { episodeConflicts, baselineConflicts } = require('../lib/capability/effective');
     const episode = episodeConflicts(capState, exercise);
-    if (episode.length) {
+    if (episode.length && episode.every((c) => c.row?.adaptationMode === 'hold')) {
       // D112 R8: a fully-held episode holds - the marker reflects the
       // user's own instruction, never a "swapped in sessions" claim the
-      // serve layer no longer makes.
-      if (episode.every((c) => c.row?.adaptationMode === 'hold')) {
-        return "Held as-is at your request.";
-      }
-      const allApplied = episode.every((c) => c.row?.effectiveChoice === 'applied');
+      // serve layer no longer makes. True whatever the conflicts'
+      // certainty: the hold is about the rule's mode, not the movement.
+      return "Held as-is at your request.";
+    }
+    // CC33 adversarial review F4: an UNKNOWN conflict is never captioned
+    // as a fact. Definite conflicts speak the lane's copy; a row whose
+    // only conflicts are unknown (a custom exercise's NULL demand
+    // columns) gets the honest not-known line, matching the serve layer
+    // where unknown drives nothing automatic.
+    const definiteEpisode = episode.filter((c) => !c.unknown);
+    if (definiteEpisode.length) {
+      const allApplied = definiteEpisode.every((c) => c.row?.effectiveChoice === 'applied');
       return allApplied
         ? 'Swapped in sessions while your change lasts.'
         : 'Sits outside your temporary change.';
     }
     const baseline = baselineConflicts(capState, exercise);
-    return baseline.length ? 'Sits outside how you train.' : null;
+    if (baseline.some((c) => !c.unknown)) return 'Sits outside how you train.';
+    if (episode.length || baseline.length) {
+      return "Volyume doesn't know yet whether this fits how you train.";
+    }
+    return null;
   } catch (_e) {
     return null;
   }

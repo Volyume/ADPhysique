@@ -270,8 +270,9 @@ export function demandConflicts(state, exercise) {
  * demandConflicts stays the EXPLANATION layer - it lists every conflict
  * so surfaces can explain a rule's reach - while this answers "does
  * anything actually stand in the way". The allowance carves rank-3/4
- * conflicts (definite self-declared, unknown) and never rank 2 (definite
- * clinician): the same carve capabilityBlockReason has always applied,
+ * conflicts (self-declared, definite or unknown) and never a clinician
+ * conflict of ANY certainty (rank 2; F5 - source outranks certainty):
+ * the same carve capabilityBlockReason has always applied,
  * exported so EVERY decision consumer shares it - substitution, excusal,
  * the in-session notice, block review, rebuild receipts and coach holds
  * must all honour "this one works for me", not the picker alone.
@@ -282,7 +283,13 @@ export function blockingConflicts(state, exercise) {
   if (!conflicts.length) return conflicts;
   const allowed = exercise.id ? !!state.allowances?.has(exercise.id) : false;
   if (!allowed) return conflicts;
-  return conflicts.filter((c) => !c.unknown && c.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED);
+  // CC33 adversarial review F5: SOURCE outranks certainty (lead ruling,
+  // recorded in the decisions register). A clinician-reported rule's
+  // conflict survives the allowance carve whether definite OR unknown -
+  // the old `!c.unknown` term let a self-declared allowance silently
+  // carve a clinician rule whose axis the exercise had not established,
+  // which is exactly the silent override CAP-7 forbids.
+  return conflicts.filter((c) => c.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED);
 }
 
 /**
@@ -294,8 +301,11 @@ export function capabilityBlockReason(state, exercise) {
   if (!state || state.empty || !exercise) return null;
   const conflicts = blockingConflicts(state, exercise);
   if (!conflicts.length) return null;
-  // Rank 2: definite clinician conflict - un-carveable.
-  if (conflicts.some((c) => !c.unknown && c.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED)) {
+  // Rank 2: clinician conflict, definite or unknown - un-carveable, and
+  // the picker routes it to the rule editor, never an inline override
+  // (F5: source outranks certainty; an unknown clinician conflict must
+  // not fall through to the rank-4 "add anyway" flow).
+  if (conflicts.some((c) => c.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED)) {
     return CAPABILITY_BLOCK.CLINICIAN;
   }
   // Rank 3: definite self-declared conflict.

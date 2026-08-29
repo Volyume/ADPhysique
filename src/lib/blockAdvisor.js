@@ -465,7 +465,7 @@ async function buildProgrammeReview(userId, activeBlock) {
   // eslint-disable-next-line global-require
   const {
     getActivePlan, getAllProgrammes, getRoutinesForPlan,
-    getRoutineExercisesWithDetails, getAllMesocycles,
+    getRoutineExercisesWithDetails, getAllMesocycles, getAllExercises,
   } = require('./database');
   // eslint-disable-next-line global-require
   const { loadExerciseIntentState, exerciseEvidence, isExcluded, isAvoidedThisBlock,
@@ -478,6 +478,14 @@ async function buildProgrammeReview(userId, activeBlock) {
   const plan = await getActivePlan(userId);
   if (!plan?.id) return null;
   const routines = await getRoutinesForPlan(plan.id);
+  // CC33 adversarial review F2: the routine rows' embedded exercise
+  // objects carry NO demand columns (database.js:4482-4515), so judging
+  // them read every capability axis as null - a baseline demand rule
+  // marked EVERY slot capability-ineligible ("sits outside how you
+  // train", proposed for replacement) and an episode rule held every
+  // slot un-judged. Judge library-resolved rows; the routine row is only
+  // the display fallback for an unresolved FK.
+  const libraryById = new Map(((await getAllExercises().catch(() => [])) ?? []).map((e) => [e.id, e]));
   const slots = [];
   const structure = [];
   const rowById = new Map();
@@ -490,7 +498,7 @@ async function buildProgrammeReview(userId, activeBlock) {
       if (!ex.id) continue;
       slots.push({ exerciseId: ex.id, exerciseName: ex.name ?? null, workout: r.name ?? null });
       exercises.push({ exerciseId: ex.id });
-      rowById.set(ex.id, ex);
+      rowById.set(ex.id, libraryById.get(ex.id) ?? ex);
     }
     structure.push({ name: r.name, exercises });
   }
@@ -516,7 +524,12 @@ async function buildProgrammeReview(userId, activeBlock) {
       // eslint-disable-next-line global-require
       const { episodeConflicts } = require('./capability/effective');
       const row = rowById.get(exerciseId);
-      capabilityAffected = !!row && episodeConflicts(intentState?.capability, row).length > 0;
+      // Definite conflicts only (F2/F1 class): an UNKNOWN conflict - a
+      // custom exercise's NULL demand columns - must not hold the slot
+      // un-judged; unknown drives nothing automatic anywhere in the
+      // lane, and this reader matches serve's own gate.
+      capabilityAffected = !!row
+        && episodeConflicts(intentState?.capability, row).some((c) => !c.unknown);
     } catch (e) {
       // UNKNOWN IS NOT NONE (D112 R3, adopting planAutoGen's posture for
       // the same field): a capability read that did not happen says
@@ -545,11 +558,18 @@ async function buildProgrammeReview(userId, activeBlock) {
     let capabilityIneligible = false;
     try {
       // eslint-disable-next-line global-require
-      const { isCapabilityEligible } = require('./capability/resolve');
+      const { blockingConflicts } = require('./capability/resolve');
       const row = rowById.get(exerciseId);
+      // DEFINITE blocking conflicts only, not isCapabilityEligible (F2):
+      // suggestion eligibility treats unknown as not-suggestable (rank
+      // 4, correct for generation - CAP-8 custom lifts are never
+      // auto-picked), but REPLACING an incumbent the user is training
+      // demands an established fact. A custom lift under a demand rule
+      // is evidence-judged like any other slot, never told it "sits
+      // outside how you train" on a fact the app does not hold.
       capabilityIneligible = !!(row && intentState?.capability && !intentState.capability.empty
         && !intentState.capability.unavailable
-        && !isCapabilityEligible(intentState.capability, row)
+        && blockingConflicts(intentState.capability, row).some((c) => !c.unknown)
         && !capabilityAffected);
     } catch (_e) { capabilityIneligible = false; }
     return {

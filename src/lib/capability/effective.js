@@ -101,7 +101,17 @@ export function computeEffectiveSession(baseRows, library, capabilityState, isEl
     const exercise = row?.exercise ?? row;
     // D112 R8: held episodes drive nothing here - a fully-held conflict
     // set resolves UNCHANGED, so "hold my plan" genuinely holds it.
-    const conflicts = actionableEpisodeConflicts(capabilityState, exercise);
+    // CC33 adversarial review (F1 class): UNKNOWN conflicts drive nothing
+    // automatic either. The resolver's own law is "never silently treated
+    // as fine, never silently treated as a conflict" (resolve.js) - an
+    // exercise whose demand column is NULL (a custom lift; a row the
+    // library could not resolve) must not be swapped out of the user's
+    // session on a fact the app has not established. Unknowns stay for
+    // the VISIBLE notice layer (the screens read the raw conflict lists
+    // and say "doesn't know yet"); only definite conflicts substitute,
+    // omit, or count.
+    const conflicts = actionableEpisodeConflicts(capabilityState, exercise)
+      .filter((c) => !c.unknown);
     if (!conflicts.length) {
       lines.push({ slot: i, exerciseFrom: exercise, effect: EFFECTIVE_EFFECT.UNCHANGED, exerciseTo: null, constraintIds: [], undecided: false });
       return;
@@ -155,8 +165,13 @@ export function computeCompletionEffects(sessionRows, capabilityState) {
     if (!exercise?.id) return;
     unperformedIds.push(exercise.id);
     // D112 R8: a held episode excuses nothing - skipping its exercise is
-    // an ordinary early stop, exactly like a declined rule's.
-    const conflicts = actionableEpisodeConflicts(capabilityState, exercise);
+    // an ordinary early stop, exactly like a declined rule's. And an
+    // UNKNOWN conflict excuses nothing either (CC33 adversarial review,
+    // F1 class): excusing an absence on a fact the app has not
+    // established would silently treat unknown as conflict - the same
+    // definite-only gate computeEffectiveSession applies.
+    const conflicts = actionableEpisodeConflicts(capabilityState, exercise)
+      .filter((c) => !c.unknown);
     // Red-team finding 4 (bundle): excusal requires the APPLIED choice on
     // EVERY driving rule, exactly as computeEffectiveSession requires it
     // for substitution. A declined or undecided rule leaves the row in

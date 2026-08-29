@@ -1742,6 +1742,13 @@ export default function HomeScreen({ navigation, route }) {
   // sitting in AWAITING_CONFIRMATION -- past its planned end, still
   // applying (fail-safe), not yet answered. null when none is awaiting.
   const [awaitingConstraint, setAwaitingConstraint] = useState(null);
+  // CC33 adversarial review (E1): a rule that ARRIVED undecided - synced
+  // from another device, or left unanswered across a relaunch - was
+  // invisible here (the works-around line needs 'applied'), so the only
+  // surface that could offer the decision was HowYouTrain itself. One
+  // quiet ask-class row closes that; tapping through lands on the screen
+  // whose own focus detector (T1-06) proposes immediately.
+  const [undecidedConstraint, setUndecidedConstraint] = useState(false);
   // T2-30 (D112 R6, verified at W4 build 2026-08-28): this read only ever
   // re-ran on [user?.id], so a rule that arrived by sync while Home sat in
   // the background (or a rule ended/changed on another screen) never
@@ -1792,10 +1799,17 @@ export default function HomeScreen({ navigation, route }) {
             }
             setAwaitingConstraint(awaiting);
           } catch (_) { setAwaitingConstraint(null); }
+          // E1: undecided-and-not-held episode rules, from the same rows
+          // (allow rows never appear - the resolver's restrictions
+          // exclude them). Fails to false: the row simply stays hidden.
+          setUndecidedConstraint((state?.restrictions ?? []).some(
+            (r) => r.role === 'episode' && r.effectiveChoice == null && r.adaptationMode !== 'hold',
+          ));
         } catch (_) {
           setActiveConstraint(false);
           setConstraintSubject(null);
           setAwaitingConstraint(null);
+          setUndecidedConstraint(false);
         }
       })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2525,6 +2539,24 @@ export default function HomeScreen({ navigation, route }) {
           >
             <Text style={[styles.constraintLineText, live.constraintLineText]}>
               {awaitingConstraintLine}
+            </Text>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </TouchableOpacity>
+        ) : null}
+
+        {/* CC33 adversarial review E1: the undecided-rule ask. Shares the
+            AWAITING slot (one ask-class row at a time, J4); the works-
+            around statement line above may still coexist, exactly as it
+            does with AWAITING. */}
+        {undecidedConstraint && !awaitingConstraintLine ? (
+          <TouchableOpacity
+            style={styles.constraintLineRow}
+            onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
+            accessibilityRole="button"
+            accessibilityLabel="A change to how you train is waiting for your decision. Open How you train"
+          >
+            <Text style={[styles.constraintLineText, live.constraintLineText]}>
+              A change to how you train is waiting for your decision.
             </Text>
             <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </TouchableOpacity>

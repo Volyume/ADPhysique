@@ -11,8 +11,9 @@
  *
  * Pins, all against the REAL modules:
  *  - blockingConflicts carves definite self-declared AND unknown
- *    conflicts for an allowed exercise, and NEVER carves a definite
- *    clinician conflict (rank 2 stays un-carveable, section 4.1);
+ *    conflicts for an allowed exercise, and NEVER carves a clinician
+ *    conflict of any certainty (rank 2 stays un-carveable, section 4.1;
+ *    F5 - source outranks certainty);
  *  - with no allowance it answers exactly as demandConflicts does;
  *  - episodeConflicts is built on the carve, so computeEffectiveSession
  *    serves an allowed exercise UNCHANGED under an applied episode rule,
@@ -140,5 +141,34 @@ describe('source guard - the two consumers outside episodeConflicts', () => {
     // Both scans present: the Apply-time volume holds and affectedMuscles.
     const calls = src.match(/blockingConflicts\(capState, ex\)/g) ?? [];
     expect(calls.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+// CC33 adversarial review F5 (lead ruling, decisions register: SOURCE
+// OUTRANKS CERTAINTY). The old carve filter kept only DEFINITE clinician
+// conflicts, so a self allowance silently carved a clinician rule whose
+// axis the exercise had not established (a custom lift's NULL demand
+// columns), and the picker's rank-4 "Add, this works for me" flow never
+// mentioned the clinician rule at all.
+describe('F5 - an allowance never carves a clinician conflict of ANY certainty', () => {
+  test('the UNKNOWN clinician conflict survives the carve and ranks CLINICIAN', () => {
+    const s = buildCapabilityResolveState(
+      [row({ source: 'clinician_reported', ruleValue: 'axial_load' }), allow(MYSTERY.id)],
+      { atMs: NOW },
+    );
+    const blocking = blockingConflicts(s, MYSTERY);
+    expect(blocking.length).toBeGreaterThan(0);
+    expect(blocking.every((c) => c.source === 'clinician_reported')).toBe(true);
+    // Rank 2, not rank 4: the picker routes to the rule editor, never to
+    // the inline "Add, this works for me" override.
+    expect(capabilityBlockReason(s, MYSTERY)).toBe(CAPABILITY_BLOCK.CLINICIAN);
+  });
+
+  test('an unknown SELF conflict is still carved - the ruling narrows nothing for self-declared rules', () => {
+    const s = buildCapabilityResolveState(
+      [row({ ruleValue: 'axial_load' }), allow(MYSTERY.id)], { atMs: NOW },
+    );
+    expect(blockingConflicts(s, MYSTERY)).toHaveLength(0);
+    expect(capabilityBlockReason(s, MYSTERY)).toBeNull();
   });
 });

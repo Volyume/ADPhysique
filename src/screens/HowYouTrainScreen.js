@@ -170,8 +170,13 @@ export default function HowYouTrainScreen() {
   // Natural coach-language order (2026-08-21): alerts and toasts name the
   // actual thing whenever the rules give it a short honest name; null
   // falls back to the generic wording. Naming only, nothing else changes.
+  // F6: allowance rows (a per-line Keep's "kept in") never join the
+  // subject - "keep {kept-in exercise} out" would say the opposite of
+  // what the row means.
   const nameOf = (id) => library.find(e => e.id === id)?.name ?? null;
-  const groupSubject = (rows) => subjectPhrase(rows ?? [], { nameOf });
+  const groupSubject = (rows) => subjectPhrase(
+    (rows ?? []).filter((r) => r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW), { nameOf },
+  );
 
   // D112 R4 (closes audit T2-23/T1-06): the episode rule ids still
   // waiting on an Apply/Decline choice - active, not held (a hold means
@@ -179,7 +184,11 @@ export default function HowYouTrainScreen() {
   // Shared by the standing revisit row's visibility/tap handler and the
   // sync-arrival/relaunch detector in refresh() above.
   const undecidedEpisodeRuleIds = (episodes) => (episodes ?? []).flatMap((ep) => ep.rows
-    .filter((r) => r.state === CONSTRAINT_STATE.ACTIVE && r.effectiveChoice == null && r.adaptationMode !== 'hold')
+    .filter((r) => r.state === CONSTRAINT_STATE.ACTIVE && r.effectiveChoice == null
+      && r.adaptationMode !== 'hold'
+      // F6: an episode-scoped allowance is a decision already made (the
+      // per-line Keep), never an undecided restriction to propose over.
+      && r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW)
     .map((r) => r.id));
 
   const beginAdd = () => {
@@ -538,10 +547,17 @@ export default function HowYouTrainScreen() {
   //    every line;
   //  - each KEPT line whose every driving rule ended 'applied' would
   //    otherwise be substituted at serve, so it mints a per-exercise
-  //    ALLOWANCE (rule_kind exercise_allow - the same standing carve
-  //    the picker's "keep it in" flow writes), which carves its
-  //    conflicts at rank 3/4 and keeps it served as-is, visibly and
-  //    revocably, right on this screen;
+  //    ALLOWANCE - and (F6, adversarial review) an EPISODE-SCOPED one:
+  //    an allow row minted INTO each driving episode's own group, so
+  //    the keep lives exactly as long as the episode it answers, ends
+  //    with it, restarts with a flare, and becomes permanent only if
+  //    the user promotes the episode ("this is how I train now" - allow
+  //    rows promote with their group). The picker's identity-level
+  //    "this works for me" keeps its permanent baseline mint; a
+  //    per-line Keep is an answer about THIS change, and its reach
+  //    matches. While it lives, the carve speaks for the exercise
+  //    everywhere non-clinician (the standing baseline conversation
+  //    resumes when the episode ends);
   //  - a kept line with a DECLINED driver needs no allowance - serve
   //    already refuses to substitute it (conflicted, visible, owed);
   //  - a CLINICIAN rule stays all-or-nothing: rank 2 is never
@@ -574,29 +590,45 @@ export default function HowYouTrainScreen() {
         }
         let allowed = 0;
         let allowFailed = 0;
+        // ruleId -> its episode's group, for the episode-scoped mint.
+        const groupOfRule = new Map();
+        for (const ep of state.episodes ?? []) {
+          for (const r of ep.rows ?? []) groupOfRule.set(r.id, ep.groupId);
+        }
+        const minted = new Set(); // dedupe (group, exercise) across lines
         for (const l of review.lines) {
           if (l.apply || !l.exerciseId) continue;
           const wouldSubstitute = l.constraintIds.length > 0
             && l.constraintIds.every((id) => choiceFor.get(id) === 'applied');
           if (!wouldSubstitute) continue;
-          // eslint-disable-next-line global-require
-          const { createConstraint } = require('../lib/capability/store');
-          // eslint-disable-next-line no-await-in-loop
-          await createConstraint(userId, {
-            role: 'baseline', source: 'self',
-            ruleKind: CONSTRAINT_RULE_KIND.EXERCISE_ALLOW, ruleValue: l.exerciseId,
-            startsAt: Date.now(),
-          }).then(() => { allowed += 1; }).catch(() => { allowFailed += 1; });
+          // One allow row per DRIVING group: the carve must last until
+          // the last episode that could substitute this line has ended,
+          // and each group's row ends/restarts/promotes with its group.
+          const groups = [...new Set(l.constraintIds.map((id) => groupOfRule.get(id)).filter(Boolean))];
+          if (!groups.length) { allowFailed += 1; continue; }
+          for (const groupId of groups) {
+            const key = `${groupId}:${l.exerciseId}`;
+            if (minted.has(key)) continue;
+            minted.add(key);
+            // eslint-disable-next-line global-require
+            const { createConstraint } = require('../lib/capability/store');
+            // eslint-disable-next-line no-await-in-loop
+            await createConstraint(userId, {
+              role: 'episode', episodeGroupId: groupId, source: 'self',
+              ruleKind: CONSTRAINT_RULE_KIND.EXERCISE_ALLOW, ruleValue: l.exerciseId,
+              startsAt: Date.now(),
+            }).then(() => { allowed += 1; }).catch(() => { allowFailed += 1; });
+          }
         }
         setLineReview(null);
         if (allowFailed > 0) {
           // A failed mint under all-applied drivers means serve WOULD
           // still swap that exercise - say so rather than claiming the
           // keep took effect.
-          toast.show('Saved, but a kept exercise could not be recorded as allowed. It may still be swapped in sessions. You can allow it from the exercise picker.', { variant: 'warning' });
+          toast.show('Saved, but a kept exercise could not be recorded. It may still be swapped in sessions. You can allow it from the exercise picker.', { variant: 'warning' });
         } else {
           toast.show(allowed > 0
-            ? 'Saved. Exercises you kept stay in your sessions, recorded as allowed here.'
+            ? 'Saved. Exercises you kept stay in while this lasts, listed on its card here.'
             : 'Saved your choices for each exercise.');
         }
         refresh();
@@ -812,6 +844,18 @@ export default function HowYouTrainScreen() {
   };
 
   const endBaselineRow = (row) => {
+    // F6: removing an ALLOWANCE means the opposite of removing a
+    // restriction - rules that would leave the exercise out apply
+    // again. The confirm says which way this cut goes.
+    if (row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW) {
+      appAlert(
+        `Stop keeping ${ruleLabel(row)} in?`,
+        'Rules that would leave it out apply again from now on. Nothing in your history changes.', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', onPress: async () => { await endConstraint(userId, row.id); refresh(); } },
+      ]);
+      return;
+    }
     // Natural coach-language order (2026-08-21): the title named nothing
     // while the body named the rule; a person names it once, up front.
     const subject = groupSubject([row]);
@@ -1089,11 +1133,18 @@ export default function HowYouTrainScreen() {
         <Text style={[styles.q, { color: t.colors.textPrimary }]}>Choose per exercise</Text>
         <Text style={[styles.hint, { color: t.colors.textSecondary }]}>
           {lineReview.subject ? `While ${lineReview.subject} is out, decide each exercise on its own. ` : 'Decide each exercise on its own. '}
-          Kept exercises stay in your sessions, recorded as allowed.
+          Kept exercises stay in your sessions while this lasts, listed on its card here.
         </Text>
         {lineReview.lines.map((line, i) => (
           <View key={line.key} style={styles.reviewLine}>
-            <Text style={[styles.body, { color: t.colors.textPrimary }]}>
+            <Text
+              style={[styles.body, { color: t.colors.textPrimary }]}
+              // The arrow glyph's spoken treatment varies by screen
+              // reader, so the relationship is stated in words here.
+              accessibilityLabel={line.toName
+                ? `${line.fromName} would be replaced by ${line.toName}`
+                : `${line.fromName}: no close match, stays with a note`}
+            >
               {line.toName ? `${line.fromName} → ${line.toName}` : `${line.fromName}: no close match, stays with a note`}
             </Text>
             <View style={styles.episodeActions}>
@@ -1117,7 +1168,13 @@ export default function HowYouTrainScreen() {
   };
 
   const episodeSub = (ep) => {
-    const names = ep.rows.filter(r => r.state === 'active').map(r => ruleLabel(r)).join(', ');
+    // F6: an allowance row on the card is the user's per-line KEEP - it
+    // must never list as though it were another restriction, so it
+    // carries its meaning inline.
+    const names = ep.rows.filter(r => r.state === 'active')
+      .map(r => (r.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
+        ? `${ruleLabel(r)} (kept in)` : ruleLabel(r)))
+      .join(', ');
     if (ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION) {
       return `${names}. You thought this would be done by about now. Still need it?`;
     }
@@ -1198,12 +1255,20 @@ export default function HowYouTrainScreen() {
         </Text>
       ) : null}
       {state.baseline.map(row => (
-        <SettingRow key={row.id} icon="body" label={ruleLabel(row)}
-          sub={row.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED ? 'You told Volyume a clinician asked for this' : 'Part of your normal training'}
+        <SettingRow key={row.id} icon={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW ? 'checkmark-circle-outline' : 'body'}
+          label={ruleLabel(row)}
+          // F6: an allowance row means the OPPOSITE of a restriction row
+          // and must never render identically - the sub carries which
+          // way it cuts, and endBaselineRow's confirm matches.
+          sub={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
+            ? 'Kept in at your word, even where a rule would leave it out'
+            : (row.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED ? 'You told Volyume a clinician asked for this' : 'Part of your normal training')}
           showArrow={false}
           rightElement={(
             <PressableCard onPress={() => endBaselineRow(row)} accessibilityRole="button"
-              accessibilityLabel={`Remove ${ruleLabel(row)} from your setup`}>
+              accessibilityLabel={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
+                ? `Stop keeping ${ruleLabel(row)} in`
+                : `Remove ${ruleLabel(row)} from your setup`}>
               <Text style={{ ...type.label, color: t.colors.textSecondary, padding: spacing.sm }}>Remove</Text>
             </PressableCard>
           )} />
@@ -1303,11 +1368,21 @@ function Choice({ label, sub, onPress, t, selected, primary, disabled, compact }
       style={[
         styles.choice,
         compact && styles.choiceCompact,
+        // CC33 adversarial review F7 (J3): selection is never colour
+        // alone - the border doubles in weight and the label carries a
+        // visible tick (the set-type picker's own convention), so the
+        // state survives greyscale and colour-vision deficiency.
         { borderColor: selected ? t.colors.primary : t.colors.border, backgroundColor: primary ? t.colors.primaryBg : 'transparent' },
+        selected && styles.choiceSelected,
         disabled && { opacity: 0.4 },
       ]}
     >
-      <Text style={[styles.choiceLabel, { color: t.colors.textPrimary }]}>{label}</Text>
+      <View style={styles.choiceLabelRow}>
+        {selected ? (
+          <Text style={[styles.choiceTick, { color: t.colors.primary }]} importantForAccessibility="no">✓</Text>
+        ) : null}
+        <Text style={[styles.choiceLabel, { color: t.colors.textPrimary }]}>{label}</Text>
+      </View>
       {sub ? <Text style={[styles.hint, { color: t.colors.textSecondary }]}>{sub}</Text> : null}
     </PressableCard>
   );
@@ -1338,6 +1413,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   choiceCompact: { flexGrow: 1, marginRight: spacing.sm },
+  // F7 (J3): the non-colour halves of the selected state.
+  choiceSelected: { borderWidth: 2 },
+  choiceLabelRow: { flexDirection: 'row', alignItems: 'center' },
+  choiceTick: { ...type.label, marginRight: spacing.xs },
   choiceLabel: { ...type.label },
   episodeActions: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   addWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },

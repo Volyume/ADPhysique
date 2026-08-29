@@ -3150,3 +3150,55 @@ hands-on — honour core, coaching truth, resolver door + suspension;
 W3/W4 Sonnet pairs under lead review — visibility, flows/vocabulary),
 then the S5 gate with device checklist. Truth field
 REAL-DISABLED-USER-VALIDATED stays NO.
+
+## D113 — CC33 adversarial-review closure rulings (lead-ruled under D33, 2026-08-29)
+
+The fresh-eyes adversarial review (briefed against SCORECARD.md, run on
+main 1839143e) returned 12 BROKEN, 16 QUALIFIED, 1 STOP. Every finding
+was verified against the code before acting; fixes landed at root the
+same day. Three rulings, each on the absolute-best-for-users criterion:
+
+1. **UNKNOWN drives nothing automatic (F1/F2/F4 class).** An UNKNOWN
+   capability conflict (a NULL demand column: a custom lift, an
+   unresolved row) never substitutes, omits, excuses, proposes, marks a
+   review slot, or rewrites the document. It exists ONLY for visible,
+   honest notices ("Volyume doesn't know yet whether this involves…" —
+   the picker's own branch, now spoken by session and plan surfaces
+   too). Rationale: the resolver's own law is "never silently treated as
+   fine, never silently treated as a conflict"; automation on an
+   unestablished fact was both at once. Enforced at
+   computeEffectiveSession, computeCompletionEffects, the preview, the
+   rewrite, and blockAdvisor's two fields.
+
+2. **Source outranks certainty (F5).** A clinician-reported rule's
+   conflict is never allowance-carved and ranks CLINICIAN whatever its
+   certainty; an unknown clinician conflict routes to the rule editor
+   like a definite one, never to the inline "Add, this works for me"
+   flow, with copy stating both facts (the rule, and the not-knowing).
+   Rationale: CAP-7's no-silent-override posture cannot depend on
+   whether a movement's metadata is filled in; the conservative reading
+   is the only safe one on the clinical axis.
+
+3. **A per-line Keep is episode-scoped (F6).** The "Choose per
+   exercise" Keep mints its allowance INTO each driving episode's own
+   group (role episode, the group's id): it ends with the episode,
+   restarts with a flare, and becomes permanent only on promotion. The
+   picker's identity-level "this works for me" keeps its permanent
+   baseline mint — two scopes, both representable in the existing model,
+   no schema change. Allowance rows now render distinctly everywhere
+   (episode card "(kept in)", baseline row "Kept in at your word…",
+   reversed remove-confirm) — a keep must never read as a restriction.
+
+Also closed from the same report: F3 (adaptation_mode now travels
+unconditionally in sync pushes — the some()-gated carry served a
+pre-migrate_152 world that no longer exists, and lost the resume of the
+last held episode cross-device; pinned by a driven round-trip test, not
+a source string), F7 (Choice selection gains a tick and border weight —
+never colour alone), F8 (the pins that let F1/F2/F3 ship now drive the
+real mechanisms with production-shaped fixtures), Q4 (the portability
+export gains effective_choice and adaptation_mode), E1's gap (Home
+carries a quiet ask-row for arrived-but-undecided rules, sharing the
+AWAITING slot), and the J5 residual (the per-line arrow carries a
+spoken accessibility label). Founder-side items surfaced separately:
+the S1 phrase-gate record and CLAUDE.md's stale status block. The
+review re-runs against the fixed tree per the scorecard's own process.

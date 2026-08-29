@@ -69,15 +69,46 @@ describe('isSideCarvedAvailable, read to the end, exposes ONLY a boolean (the ev
 });
 
 describe('carvedForOneSide stays the ONLY consumer of isSideCarvedAvailable (T1-24: "sole caller")', () => {
-  test('exactly one call site in this screen, feeding carvedForOneSide', () => {
+  test('exactly one call site in this screen, feeding carvedForOneSide off the RESOLVED row', () => {
     const calls = SRC.match(/isSideCarvedAvailable\(/g) ?? [];
     expect(calls.length).toBe(1);
-    expect(SRC).toContain('return isSideCarvedAvailable(intentState.capability, exercise);');
+    // F1 (adversarial review): the entry's own exercise object has no
+    // demand columns, so `tri(undefined) !== true` returned false for
+    // EVERY planned row and the note could never fire. The call now
+    // judges the library-resolved row.
+    expect(SRC).toContain('return isSideCarvedAvailable(intentState.capability, judgedExercise);');
   });
 
   test('no other file gains a new caller (this screen\'s own lane cannot re-derive the side independently)', () => {
     const otherCallers = fs.readFileSync(path.join(__dirname, '..', 'RoutineDetailScreen.js'), 'utf8');
     expect(otherCallers).not.toContain('isSideCarvedAvailable');
+  });
+});
+
+describe('F8 (adversarial review): the mechanism is DRIVEN, not only read - production shape vs resolved row', () => {
+  // The suite's earlier drafts pinned the source without ever invoking
+  // it, so "the note can never fire" survived a green run. This drives
+  // the real function with both shapes.
+  // eslint-disable-next-line global-require
+  const { isSideCarvedAvailable, buildCapabilityResolveState } = require('../../lib/capability/resolve');
+  const NOW = 1_750_000_000_000;
+  const sidedGripRule = buildCapabilityResolveState([{
+    id: 'c-grip', userId: 'u1', role: 'baseline', source: 'self', ruleKind: 'demand',
+    ruleValue: 'grip_bar', laterality: 'left', startsAt: NOW - 1000, endsAt: null,
+    state: 'active', endedAt: null, endedReason: null, episodeGroupId: null, deletedAt: null,
+  }], { atMs: NOW });
+  const FULL_ROW = {
+    id: 'ex-db-row', name: 'Single-Arm Dumbbell Row', primaryMuscle: 'back',
+    unilateralLoadable: 1, gripDemand: 'bar',
+  };
+
+  test('a resolved row with the demand columns answers TRUE', () => {
+    expect(isSideCarvedAvailable(sidedGripRule, FULL_ROW)).toBe(true);
+  });
+
+  test('the production (demandless) shape answers FALSE - which is why the screen must resolve first', () => {
+    const partial = { id: FULL_ROW.id, name: FULL_ROW.name, primaryMuscle: FULL_ROW.primaryMuscle };
+    expect(isSideCarvedAvailable(sidedGripRule, partial)).toBe(false);
   });
 });
 

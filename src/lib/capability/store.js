@@ -199,6 +199,11 @@ export async function buildCapabilityExport(userId, { nowMs = Date.now() } = {})
       ended_reason: r.endedReason ?? null,
       episode_group_id: r.episodeGroupId ?? null,
       acknowledged_at: iso(r.acknowledgedAt),
+      // CC33 adversarial review Q4: both user-supplied decisions travel
+      // in the portability export too - the Apply/Decline standing and
+      // the hold valve are the user's own data, not derived state.
+      effective_choice: r.effectiveChoice ?? null,
+      adaptation_mode: r.adaptationMode ?? null,
       created_at: iso(r.createdAt),
       updated_at: iso(r.updatedAt),
     })),

@@ -41,13 +41,6 @@ export async function pushCapabilityConstraints(sb, { userId, localUserId } = {}
     if (!local?.length) return { count: 0, errors: 0 };
 
     const nowIso = new Date().toISOString();
-    // CC33 D112 R8: PostgREST rejects mixed-key batches, so the field is
-    // included for ALL rows or NONE, decided by whether any row carries
-    // it. A user who never used "hold my plan" pushes exactly the
-    // pre-152 shape and stays green before the cloud migration is
-    // applied (founder-gated); a hold user's push fails soft until then
-    // (queued retry, local durability - the 145/149 pre-apply posture).
-    const carryAdaptationMode = local.some((c) => c.adaptationMode != null);
     const rows = local.map((c) => ({
       id: c.id,
       user_id: userId,
@@ -64,9 +57,18 @@ export async function pushCapabilityConstraints(sb, { userId, localUserId } = {}
       episode_group_id: c.episodeGroupId ?? null,
       acknowledged_at: _toIso(c.acknowledgedAt),
       // CC29 (section 14): the standing Apply/Decline on an episode rule's
-      // session effect. Tolerated-mode until migrate_149 runs.
+      // session effect (migrate_149 APPLIED).
       effective_choice: c.effectiveChoice ?? null,
-      ...(carryAdaptationMode ? { adaptation_mode: c.adaptationMode ?? null } : {}),
+      // CC33 adversarial review F3: UNCONDITIONAL, exactly like
+      // effective_choice above. The old some()-gated inclusion existed
+      // for the pre-migrate_152 cloud (a hold user's push failed soft
+      // until the column landed) - but 152 is APPLIED (2026-08-28,
+      // supabase/README), and the condition it left behind was a live
+      // defect: resuming the LAST held episode made every local value
+      // NULL, the key was omitted from the push, the cloud row kept
+      // 'hold', and the other device re-applied the hold the user had
+      // just cancelled. NULL must travel like any other value.
+      adaptation_mode: c.adaptationMode ?? null,
       created_at: _toIso(c.createdAt) ?? nowIso,
       updated_at: _toIso(c.updatedAt) ?? nowIso,
       deleted_at: _toIso(c.deletedAt),

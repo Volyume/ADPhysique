@@ -802,6 +802,26 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return () => { cancelled = true; };
   }, [user?.id, exercise?.id]);
 
+  // CC33 adversarial review F1: the entry's own exercise object comes
+  // from getRoutineExercisesWithDetails and carries NO demand columns,
+  // so judging it read every axis as null - every capability question
+  // below answered UNKNOWN for every planned row. Resolve the full
+  // library row for JUDGEMENT only (display keeps the entry's object);
+  // a failed or missing resolve falls back to the partial row, which
+  // now lands in the unknown lane and drives nothing automatic.
+  const [resolvedExercise, setResolvedExercise] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!exercise?.id) { setResolvedExercise(null); return undefined; }
+    // eslint-disable-next-line global-require
+    const { getExerciseById } = require('../lib/database');
+    getExerciseById(exercise.id)
+      .then((row) => { if (!cancelled) setResolvedExercise(row ?? null); })
+      .catch(() => { if (!cancelled) setResolvedExercise(null); });
+    return () => { cancelled = true; };
+  }, [exercise?.id]);
+  const judgedExercise = resolvedExercise ?? exercise;
+
   // D107-2: is the exercise on screen right now under a movement-pattern
   // avoidance? Computed here (not inline in the StatusStrip builder below)
   // so both the notice chip and its accessibility label read the same facts.
@@ -826,21 +846,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // existing Swap shortcut; section 33.16's budget (one mention per
   // surface) holds because this is the strip's single constraint item.
   const constraintConflicts = (() => {
-    if (!exercise || !intentState?.capability || intentState.capability.empty) return [];
+    if (!judgedExercise || !intentState?.capability || intentState.capability.empty) return [];
     try {
       // eslint-disable-next-line global-require
       const { episodeConflicts } = require('../lib/capability/effective');
-      return episodeConflicts(intentState.capability, exercise);
+      return episodeConflicts(intentState.capability, judgedExercise);
     } catch (_e) { return []; }
   })();
   // True when this movement is available only because a sided rule was
-  // carved (the model answers, not this screen). Read-only.
+  // carved (the model answers, not this screen). Read-only. Judged on the
+  // resolved row (F1): on the partial row every demand read null and this
+  // could never answer true, so the side-carve note never fired.
   const carvedForOneSide = (() => {
-    if (!exercise || !intentState?.capability || intentState.capability.empty) return false;
+    if (!judgedExercise || !intentState?.capability || intentState.capability.empty) return false;
     try {
       // eslint-disable-next-line global-require
       const { isSideCarvedAvailable } = require('../lib/capability/resolve');
-      return isSideCarvedAvailable(intentState.capability, exercise);
+      return isSideCarvedAvailable(intentState.capability, judgedExercise);
     } catch (_e) { return false; }
   })();
 
@@ -850,11 +872,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // silently served as fine. The quiet note below marks it until the user
   // resolves it - the plan rewrite, a swap here, or an allowance.
   const baselineConflictsList = (() => {
-    if (!exercise || !intentState?.capability || intentState.capability.empty) return [];
+    if (!judgedExercise || !intentState?.capability || intentState.capability.empty) return [];
     try {
       // eslint-disable-next-line global-require
       const { baselineConflicts } = require('../lib/capability/effective');
-      return baselineConflicts(intentState.capability, exercise);
+      return baselineConflicts(intentState.capability, judgedExercise);
     } catch (_e) { return []; }
   })();
 
@@ -869,30 +891,48 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       && constraintConflicts.every((c) => c.row?.adaptationMode === 'hold')) {
       return { kind: 'held', copy: "You're holding your plan as-is for this. Volyume changes nothing until you say so." };
     }
-    if (constraintConflicts.length) {
+    // CC33 adversarial review F4: an UNKNOWN conflict must never be
+    // spoken as a fact ("This one involves standing work") - the
+    // resolver's own law is "never silently treated as fine, never
+    // silently treated as a conflict". Definite conflicts keep the
+    // lane's copy; unknown-only rows get the honest line the picker
+    // already uses, and mixed rows speak only from what is established.
+    const definiteEpisode = constraintConflicts.filter((c) => !c.unknown);
+    const definiteBaseline = baselineConflictsList.filter((c) => !c.unknown);
+    if (definiteEpisode.length) {
       // Natural coach-language order (2026-08-21): name what the conflict
       // is about when the rules give it a short honest name.
       try {
         // eslint-disable-next-line global-require
         const { subjectPhrase } = require('../lib/capability/phrase');
-        const named = subjectPhrase(constraintConflicts.filter(c => c.ruleKind !== 'exercise'), {});
+        const named = subjectPhrase(definiteEpisode.filter(c => c.ruleKind !== 'exercise'), {});
         if (named) return { kind: 'episode', copy: `This one involves ${named}, which you're working around at the moment` };
       } catch (_e) { /* fall through to the generic line */ }
       return {
         kind: 'episode',
-        copy: constraintConflicts.every(c => c.ruleKind === 'exercise')
+        copy: definiteEpisode.every(c => c.ruleKind === 'exercise')
           ? "This is one you're working around at the moment"
           : 'Today this works around your temporary change',
       };
     }
-    if (baselineConflictsList.length) {
+    if (definiteBaseline.length) {
       try {
         // eslint-disable-next-line global-require
         const { subjectPhrase } = require('../lib/capability/phrase');
-        const named = subjectPhrase(baselineConflictsList.filter(c => c.ruleKind !== 'exercise'), {});
+        const named = subjectPhrase(definiteBaseline.filter(c => c.ruleKind !== 'exercise'), {});
         if (named) return { kind: 'baseline', copy: `This one involves ${named}, which sits outside how you train. Swap it when you're ready.` };
       } catch (_e) { /* fall through to the generic line */ }
       return { kind: 'baseline', copy: "This one sits outside how you train. Swap it when you're ready." };
+    }
+    const unknowns = [...constraintConflicts, ...baselineConflictsList].filter((c) => c.unknown);
+    if (unknowns.length) {
+      try {
+        // eslint-disable-next-line global-require
+        const { subjectPhrase } = require('../lib/capability/phrase');
+        const named = subjectPhrase(unknowns.filter(c => c.ruleKind !== 'exercise'), {});
+        if (named) return { kind: 'unknown', copy: `Volyume doesn't know yet whether this involves ${named}, so it stays as planned.` };
+      } catch (_e) { /* fall through to the generic line */ }
+      return { kind: 'unknown', copy: "Volyume doesn't know yet how this fits how you train, so it stays as planned." };
     }
     return null;
   })();
@@ -3816,8 +3856,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               items.push({
                 key: 'capability-constraint',
                 // The label follows the lane: a permanent rule is not a
-                // "temporary change" (D112 R6 vocabulary law).
-                label: constraintNotice?.kind === 'baseline' ? 'How you train' : 'Temporary change',
+                // "temporary change" (D112 R6 vocabulary law). An UNKNOWN
+                // notice (F4) labels by the lane's settings home too - it
+                // is a fact about how-you-train knowledge, not a change.
+                label: (constraintNotice?.kind === 'baseline' || constraintNotice?.kind === 'unknown')
+                  ? 'How you train' : 'Temporary change',
                 icon: 'body-outline',
                 iconColor: t.colors.warning,
                 content: (

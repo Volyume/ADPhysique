@@ -201,10 +201,13 @@ describe('source wiring', () => {
 
   test('the in-session baseline conflict is quietly marked, in its own vocabulary', () => {
     const src = read('screens/ActiveWorkoutScreen.js');
-    expect(src).toContain('baselineConflicts(intentState.capability, exercise)');
+    // F1 (adversarial review): judged on the library-RESOLVED row - the
+    // entry's own exercise object has no demand columns.
+    expect(src).toContain('baselineConflicts(intentState.capability, judgedExercise)');
     expect(src).toContain('sits outside how you train. Swap it when you\'re ready.');
     // The strip label follows the lane - a permanent rule is never
-    // presented as a temporary change.
-    expect(src).toMatch(/kind === 'baseline' \? 'How you train' : 'Temporary change'/);
+    // presented as a temporary change, and the F4 unknown notice labels
+    // by the lane's settings home too.
+    expect(src).toMatch(/kind === 'baseline' \|\| constraintNotice\?\.kind === 'unknown'\)\s*\n\s*\? 'How you train' : 'Temporary change'/);
   });
 });

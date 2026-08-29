@@ -275,7 +275,10 @@ describe('the app never PROPOSES work the user has just ruled out', () => {
       path.resolve(__dirname, '../../../screens/ActiveWorkoutScreen.js'), 'utf8',
     );
     expect(src).toMatch(/if \(carvedForOneSide\) return;/);
-    expect(src).toMatch(/isSideCarvedAvailable\(intentState\.capability, exercise\)/);
+    // F1 (adversarial review): judged on the library-RESOLVED row - the
+    // entry's own partial exercise had no unilateralLoadable column, so
+    // this answered false for every planned row and the hold never held.
+    expect(src).toMatch(/isSideCarvedAvailable\(intentState\.capability, judgedExercise\)/);
     // The guard sits inside the suggestion effect, before the ask.
     const effect = src.slice(src.indexOf('const acknowledgedUnilateralRef'), src.indexOf('Log this one side at a time?'));
     expect(effect.length).toBeGreaterThan(200);

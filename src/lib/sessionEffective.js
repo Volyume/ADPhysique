@@ -112,8 +112,11 @@ export async function computePlanEffectiveLines(userId, ruleIds = []) {
       for (const row of rows ?? []) {
         const exercise = byId.get(row?.exercise?.id ?? row?.exerciseId) ?? null;
         if (!exercise) continue;
+        // Definite conflicts only (F1 class): proposing to swap a line on
+        // an UNKNOWN conflict would justify a change with a movement fact
+        // the app has not established - the same gate serve applies.
         const conflicts = actionableEpisodeConflicts(capState, exercise)
-          .filter((c) => wanted.has(c.constraintId));
+          .filter((c) => !c.unknown && wanted.has(c.constraintId));
         if (!conflicts.length) continue;
         const substitute = bestEligibleSubstitute(
           exercise, library, substituteSeniorQuestion(capState, intentState),
@@ -235,8 +238,28 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
       loadExerciseIntentState(userId, {}),
       getAllExercises(),
     ]);
+    // CC33 adversarial review F1, closed at this root: the rows a live
+    // session serves come from getRoutineExercisesWithDetails, whose
+    // embedded exercise literal carries NO demand columns
+    // (database.js:4482-4515) - judged raw, every demand check read
+    // null, every row resolved UNKNOWN, and an applied demand rule
+    // substituted the entire session (compatible movements traded
+    // places). Judge library-resolved rows instead - the same
+    // by-id resolution every other consumer in this module already
+    // performs. The ORIGINAL row objects still flow through the output
+    // (unchanged rows return rows[i]; the screen maps served rows back
+    // by id), so markers like _userAdded are judged and served intact.
+    // A row the library cannot resolve is judged on what it carries and
+    // lands in the unknown lane, which drives nothing automatic.
+    const byId = new Map((library ?? []).map((e) => [e.id, e]));
     const view = computeEffectiveSession(
-      rows.map((e) => ({ exercise: e })), library, capState,
+      rows.map((e) => {
+        const resolved = e?.id ? byId.get(e.id) : null;
+        // _userAdded must survive resolution - computeEffectiveSession
+        // does not read it, but the serve loop below reads it off the
+        // ORIGINAL rows[i], so only the judgement object is swapped.
+        return { exercise: resolved ?? e };
+      }), library, capState,
       substituteSeniorQuestion(capState, intentState),
     );
     if (!view.anyEffect) return rows;
@@ -382,7 +405,12 @@ export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = 
       for (const row of rows ?? []) {
         const exercise = byId.get(row?.exercise?.id ?? row?.exerciseId) ?? null;
         if (!exercise) continue;
-        let conflicts = blockingConflicts(capState, exercise);
+        // Definite conflicts only (F1 class): the document is never
+        // rewritten on an UNKNOWN conflict - a proposal reading "this
+        // sits outside how you train" about a movement fact the app has
+        // not established would be false. Unknown rows keep their honest
+        // quiet notice instead.
+        let conflicts = blockingConflicts(capState, exercise).filter((c) => !c.unknown);
         conflicts = wanted
           ? conflicts.filter((c) => wanted.has(c.constraintId))
           // No ids means the standing audit: BASELINE rules only - an

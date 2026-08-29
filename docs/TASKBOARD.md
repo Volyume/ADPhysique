@@ -890,10 +890,25 @@ items and closed them: T2-25's durable reintroduction line (stamp read
 back into a coach-story change with its own why + quiet Home plan-view
 row; three suites) and G1's banned-construction re-audit (clean, hits
 judged with mechanism read). SCORECARD refreshed post-W4 (all build
-rows LANDED; +I9 preview/serve/rewrite-agree; REVIEW ITEMS I4/I8/J3/
-J5/L4 + PARTIAL J1 stand for the reviewer). NEXT: dispatch the
-adversarial Opus reviewer per REVIEW-BRIEF.md (read-only; relaunch on
-death), then S5 gate + device checklist.
+rows LANDED; +I9 preview/serve/rewrite-agree). ADVERSARIAL REVIEW
+ROUND 1 RAN (Opus, on main 1839143e): 12 BROKEN, 16 QUALIFIED, 1 STOP,
+64 HOLD across the real 93 rows (the 86/87 headers under-counted; fixed).
+ALL actionable findings closed at root the same day, rulings recorded
+as D113: F1/F2 row-shape class at serve + block review (library
+resolution everywhere; UNKNOWN-drives-nothing law at every automation
+gate), F3 sync carry unconditional (driven round-trip pin replaces the
+source-string pin that let it ship), F4 honest unknown copy on session/
+plan surfaces, F5 clinician source-outranks-certainty (carve + rank +
+picker copy), F6 episode-scoped keeps + distinct allowance rendering +
+reversed remove confirm, F7 tick + border weight on Choice selection,
+F8 production-shaped fixtures (serveGuard asServed + drift guard,
+sideCarve driven both shapes), Q4 export completeness, E1 Home
+ask-row for arrived-undecided rules, J5 arrow spoken label. Q5 stands
+documented. FOUNDER-side from the review: S1 (migrate_152 record's
+phrase-gate equivalence vs CLAUDE.md's exact-phrase law - ratify or
+tighten) and CLAUDE.md's stale migration-status block. NEXT: settled
+full gate + merge, adversarial review RE-RUN against the fixed tree,
+then S5 gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

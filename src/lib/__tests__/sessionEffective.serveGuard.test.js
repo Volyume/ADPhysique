@@ -57,6 +57,20 @@ function appliedStandingEpisode() {
   }], { atMs: NOW });
 }
 
+// CC33 adversarial review F8: the PRODUCTION row shape. Live sessions are
+// built from getRoutineExercisesWithDetails, whose embedded exercise
+// literal carries NO demand columns (database.js:4482-4515) - this
+// suite's first draft fed full-shaped fixtures the producer never emits,
+// which is exactly how F1 (every compatible row substituted at serve)
+// stayed green here. Every session row below goes through this, so the
+// suite proves serve's own library resolution rather than assuming it.
+const asServed = (e) => ({ id: e.id, name: e.name, primaryMuscle: e.primaryMuscle });
+
+test('the production row shape really is demandless (fixture-drift guard)', () => {
+  expect(Object.keys(asServed(SQUAT))).toEqual(['id', 'name', 'primaryMuscle']);
+  expect(asServed(SQUAT).position).toBeUndefined();
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
   loadCapabilityResolveState.mockResolvedValue(appliedStandingEpisode());
@@ -64,7 +78,7 @@ beforeEach(() => {
 });
 
 test('an unmarked conflicted row is substituted - the baseline behaviour stands', async () => {
-  const served = await applyEffectiveViewToSession('u1', 'w1', [SQUAT]);
+  const served = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT)]);
   expect(served).toHaveLength(1);
   expect(served[0].id).toBe(LEGPRESS.id);
   expect(served[0]._capabilityTemp?.fromId).toBe(SQUAT.id);
@@ -78,7 +92,7 @@ test('an unmarked conflicted row is substituted - the baseline behaviour stands'
 });
 
 test('a _userAdded conflicted row is served exactly as given', async () => {
-  const added = { ...SQUAT, _userAdded: true };
+  const added = { ...asServed(SQUAT), _userAdded: true };
   const served = await applyEffectiveViewToSession('u1', 'w1', [added]);
   expect(served).toHaveLength(1);
   expect(served[0]).toBe(added);            // same object, untouched
@@ -87,8 +101,8 @@ test('a _userAdded conflicted row is served exactly as given', async () => {
 });
 
 test('mixed session: the added row survives while its unmarked twin substitutes', async () => {
-  const added = { ...SQUAT, _userAdded: true };
-  const served = await applyEffectiveViewToSession('u1', 'w1', [SQUAT, added]);
+  const added = { ...asServed(SQUAT), _userAdded: true };
+  const served = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), added]);
   expect(served).toHaveLength(2);
   expect(served[0].id).toBe(LEGPRESS.id);   // planned row: substituted
   expect(served[1]).toBe(added);            // user's own: untouched
@@ -96,7 +110,7 @@ test('mixed session: the added row survives while its unmarked twin substitutes'
 
 test('a _userAdded row is never omitted, even with no substitute in the pool', async () => {
   getAllExercises.mockResolvedValue([SQUAT, LUNGE]); // every quads option conflicts
-  const added = { ...SQUAT, _userAdded: true };
+  const added = { ...asServed(SQUAT), _userAdded: true };
   const served = await applyEffectiveViewToSession('u1', 'w1', [added]);
   expect(served).toHaveLength(1);
   expect(served[0]).toBe(added);
@@ -105,7 +119,7 @@ test('a _userAdded row is never omitted, even with no substitute in the pool', a
 
 test('the unmarked no-substitute row is still omitted AND recorded - excusal cannot regress', async () => {
   getAllExercises.mockResolvedValue([SQUAT, LUNGE]);
-  const served = await applyEffectiveViewToSession('u1', 'w1', [SQUAT, LEGPRESS]);
+  const served = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), asServed(LEGPRESS)]);
   expect(served.map((r) => r.id)).toEqual([LEGPRESS.id]); // squat dropped, leg press stands
   expect(appendSessionConstraintEffects).toHaveBeenCalledTimes(1);
   const entries = appendSessionConstraintEffects.mock.calls[0][2];
@@ -129,10 +143,35 @@ test('serve never substitutes TO an exercise the user\'s own rules block (lead r
       deletedAt: null,
     },
   ], { atMs: NOW }));
-  const served = await applyEffectiveViewToSession('u1', 'w1', [SQUAT]);
+  const served = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT)]);
   expect(served.map((r) => r.id)).not.toContain(LEGPRESS.id);
   expect(appendSessionConstraintEffects).toHaveBeenCalledTimes(1);
   expect(appendSessionConstraintEffects.mock.calls[0][2]).toEqual([
     expect.objectContaining({ effect: 'omitted', exerciseFrom: SQUAT.id }),
   ]);
+});
+
+test('F1 REGRESSION: compatible production-shaped rows are served untouched under an applied demand rule', async () => {
+  // The adversarial review's headline case: seated, genuinely compatible
+  // movements, judged from the demandless production shape. Before serve
+  // resolved rows through the library, every one of these read UNKNOWN
+  // on the standing axis and the whole session was substituted -
+  // compatible rows literally traded places, with durable effects
+  // entries written for each. The contract now: resolved rows judge
+  // definite-compatible, nothing changes, nothing is recorded.
+  const rows = [asServed(LEGPRESS)];
+  const served = await applyEffectiveViewToSession('u1', 'w1', rows);
+  expect(served).toBe(rows); // the untouched fast path: same array back
+  expect(appendSessionConstraintEffects).not.toHaveBeenCalled();
+});
+
+test('a row the library cannot resolve lands in the unknown lane and is never auto-swapped', async () => {
+  // Unresolved FK (a cloud-restored row from before deterministic ids):
+  // judged on what it carries, every axis unknown - and unknown drives
+  // nothing automatic, so the row stays, visibly the user's own.
+  const ghost = { id: 'ex-gone', name: 'Old Machine Press', primaryMuscle: 'chest' };
+  const served = await applyEffectiveViewToSession('u1', 'w1', [ghost]);
+  expect(served).toHaveLength(1);
+  expect(served[0]).toBe(ghost);
+  expect(appendSessionConstraintEffects).not.toHaveBeenCalled();
 });

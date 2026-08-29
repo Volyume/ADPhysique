@@ -101,7 +101,13 @@ describe('T1-10 - the stored review never outranks capability', () => {
 
   test('blockAdvisor supplies the answer through the PRECISE field, fail-safe, at source', () => {
     const src = read('lib/blockAdvisor.js');
-    expect(src).toContain('isCapabilityEligible(intentState.capability, row)');
+    // F2 (adversarial review): the review judges LIBRARY-resolved rows
+    // (the routine rows carry no demand columns) and keys REPLACE on a
+    // DEFINITE blocking conflict only - suggestion eligibility
+    // (isCapabilityEligible) treats unknown as not-suggestable, which is
+    // right for generation and wrong for replacing a trained incumbent.
+    expect(src).toContain('rowById.set(ex.id, libraryById.get(ex.id) ?? ex);');
+    expect(src).toContain('blockingConflicts(intentState.capability, row).some((c) => !c.unknown)');
     expect(src).toMatch(/catch \(_e\) { capabilityIneligible = false; }/);
     // The shared name-based seam stays deliberately unconsulted at review.
     expect(src).toContain('autoEligible: undefined,');
@@ -136,10 +142,40 @@ describe('T2-26 - the suspension core exists (section 25)', () => {
     expect(s.restrictions[0].adaptationMode).toBe('hold');
   });
 
-  test('sync: the field is carried uniformly per batch, and only when some row holds', () => {
-    const sync = read('lib/sync/tables/capabilityConstraints.js');
-    expect(sync).toContain('const carryAdaptationMode = local.some((c) => c.adaptationMode != null);');
-    expect(sync).toContain('...(carryAdaptationMode ? { adaptation_mode: c.adaptationMode ?? null } : {})');
+  test('sync: adaptation_mode travels UNCONDITIONALLY - a resumed hold pushes its NULL (F3)', async () => {
+    // CC33 adversarial review F3, converted from the source-string pin
+    // that let the defect ship: the old some()-gated carry omitted the
+    // key when the LAST held episode was resumed (every local value
+    // NULL), so the cloud kept 'hold' and the other device silently
+    // re-applied it. This drives the real push with a resumed-hold local
+    // set and asserts what actually leaves the device: every row carries
+    // the adaptation_mode key, value null.
+    jest.resetModules();
+    jest.doMock('../database', () => ({
+      getAllCapabilityConstraintsForUser: jest.fn().mockResolvedValue([{
+        id: 'c1', role: 'episode', source: 'self', ruleKind: 'demand',
+        ruleValue: 'standing', laterality: null, startsAt: 1, endsAt: null,
+        state: 'active', endedAt: null, endedReason: null, episodeGroupId: 'ep1',
+        acknowledgedAt: null, effectiveChoice: 'applied',
+        adaptationMode: null, // the resume: hold cancelled, stored as NULL
+        createdAt: 1, updatedAt: 2, deletedAt: null,
+      }]),
+    }));
+    let captured = null;
+    const sb = {
+      from: () => ({
+        upsert: (rows) => { captured = rows; return Promise.resolve({ error: null }); },
+      }),
+    };
+    // eslint-disable-next-line global-require
+    const { pushCapabilityConstraints } = require('../sync/tables/capabilityConstraints');
+    const res = await pushCapabilityConstraints(sb, { userId: 'cloud-u', localUserId: 'local-u' });
+    jest.dontMock('../database');
+    expect(res.errors).toBe(0);
+    expect(captured).toHaveLength(1);
+    expect(Object.prototype.hasOwnProperty.call(captured[0], 'adaptation_mode')).toBe(true);
+    expect(captured[0].adaptation_mode).toBeNull();
+    // And the applier still lands the value on pull.
     const db = read('lib/database.js');
     const applier = db.match(/export async function insertCapabilityConstraintFromCloud[\s\S]{0,1600}/)?.[0] ?? '';
     expect(applier).toContain('adaptation_mode');

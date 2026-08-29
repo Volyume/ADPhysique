@@ -62,14 +62,20 @@ describe('capabilityPlanCaption: copy and precedence (T2-32)', () => {
     expect(baselineIdx).toBeGreaterThan(episodeIdx);
   });
 
-  test('episode: every driving rule applied -> the "swapped" line; any declined/undecided -> "sits outside"', () => {
-    expect(FN).toContain("const allApplied = episode.every((c) => c.row?.effectiveChoice === 'applied');");
+  test('episode: every DEFINITE driving rule applied -> the "swapped" line; any declined/undecided -> "sits outside"', () => {
+    // F4 (adversarial review): the caption speaks only from established
+    // conflicts - an unknown one (a custom exercise's NULL demand
+    // columns) must never be captioned as a fact, so the applied test
+    // runs over the definite list.
+    expect(FN).toContain('const definiteEpisode = episode.filter((c) => !c.unknown);');
+    expect(FN).toContain("const allApplied = definiteEpisode.every((c) => c.row?.effectiveChoice === 'applied');");
     expect(FN).toContain("? 'Swapped in sessions while your change lasts.'");
     expect(FN).toContain("        : 'Sits outside your temporary change.';");
   });
 
-  test('baseline conflicts (with no episode conflict) get the "how you train" line', () => {
-    expect(FN).toContain("return baseline.length ? 'Sits outside how you train.' : null;");
+  test('baseline conflicts get the "how you train" line only when DEFINITE; unknown-only rows get the honest not-known line', () => {
+    expect(FN).toContain("if (baseline.some((c) => !c.unknown)) return 'Sits outside how you train.';");
+    expect(FN).toContain('"Volyume doesn\'t know yet whether this fits how you train."');
   });
 
   test('a resolver throw is caught and answered with null, never a crash', () => {

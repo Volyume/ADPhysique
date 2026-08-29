@@ -77,10 +77,17 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // The allowance mint fires ONLY where serve would otherwise swap the
     // kept line: every driver applied.
     expect(fn).toContain("l.constraintIds.every((id) => choiceFor.get(id) === 'applied');");
+    // F6 (adversarial review): EPISODE-SCOPED - the allow row is minted
+    // INTO each driving episode's group, so the keep lives exactly as
+    // long as the change it answers, never as an unscoped permanent
+    // carve that outlives the episode and switches off unrelated
+    // baseline rules.
+    expect(fn).toContain("role: 'episode', episodeGroupId: groupId, source: 'self',");
     expect(fn).toContain("ruleKind: CONSTRAINT_RULE_KIND.EXERCISE_ALLOW, ruleValue: l.exerciseId,");
+    expect(fn).not.toContain("role: 'baseline'");
     // Honest failure: a lost mint means the keep may not hold, and the
     // toast says so instead of claiming success.
-    expect(fn).toContain('could not be recorded as allowed. It may still be swapped in sessions.');
+    expect(fn).toContain('could not be recorded. It may still be swapped in sessions.');
   });
 
   test('dismissal (no choice) still records nothing - only the two named buttons write a choice', () => {
@@ -112,11 +119,13 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     expect(fn).toContain("if (!surfaced) toast.show('Nothing in your current plan needs a decision right now.');");
   });
 
-  test('undecided episode ids exclude held episodes (D112 R8: a hold proposes nothing)', () => {
-    const fn = screen.match(/const undecidedEpisodeRuleIds = [\s\S]{0,320}?\.map\(\(r\) => r\.id\)\);/)?.[0] ?? '';
+  test('undecided episode ids exclude held episodes and allowance rows (D112 R8 + F6)', () => {
+    const fn = screen.match(/const undecidedEpisodeRuleIds = [\s\S]{0,650}?\.map\(\(r\) => r\.id\)\);/)?.[0] ?? '';
     expect(fn).toContain("r.effectiveChoice == null");
     expect(fn).toContain("r.adaptationMode !== 'hold'");
     expect(fn).toContain('CONSTRAINT_STATE.ACTIVE');
+    // F6: a minted keep is a decision already made, never re-proposed.
+    expect(fn).toContain('r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW');
   });
 });
 

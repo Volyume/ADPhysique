@@ -122,9 +122,17 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
     // to add beyond the row itself.
     const clin = conflicts.find(c => c.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED && !c.unknown);
     const named = clin ? rulePhrase(clin) : null;
-    return named
-      ? `You told Volyume a clinician asked you to keep ${named} out`
-      : 'You told Volyume a clinician asked for this one to stay out';
+    if (named) return `You told Volyume a clinician asked you to keep ${named} out`;
+    // F5 (source outranks certainty): an UNKNOWN clinician conflict now
+    // ranks here rather than falling to the add-anyway flow - and the
+    // copy states BOTH facts honestly: the rule, and that the app does
+    // not know whether this movement involves it.
+    const clinUnknown = conflicts.find(c => c.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED && c.unknown);
+    if (clinUnknown) {
+      const label = demandLabel(clinUnknown.ruleValue).toLowerCase();
+      return `You told Volyume a clinician asked you to keep ${label} out, and Volyume doesn't know yet whether this involves it`;
+    }
+    return 'You told Volyume a clinician asked for this one to stay out';
   }
   if (reason === CAPABILITY_BLOCK.UNKNOWN) {
     const axis = conflicts.find(c => c.unknown)?.ruleValue;
