@@ -925,12 +925,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const named = subjectPhrase(definiteEpisode.filter(c => c.ruleKind !== 'exercise'), {});
         if (named) return { kind: 'episode', copy: `This one involves ${named}, which you're working around at the moment` };
       } catch (_e) { /* fall through to the generic line */ }
-      return {
-        kind: 'episode',
-        copy: definiteEpisode.every(c => c.ruleKind === 'exercise')
-          ? "This is one you're working around at the moment"
-          : 'Today this works around your temporary change',
-      };
+      // Round 5 (Q-1): the generic line asserts no adaptation. A row
+      // showing THIS notice is, by construction, being served as
+      // planned - a substituted row shows the _capabilityTemp line
+      // above and an omitted row is not here at all - so the old
+      // app-as-subject generic ("Today this works around...") was
+      // false in every reachable case (declined and undecided rules
+      // most of all: the app is doing nothing to those rows). The
+      // honest line states the conflict and leaves the action to the
+      // user, mirroring the baseline branch below word for word.
+      return { kind: 'episode', copy: "This one sits outside your temporary change. Swap it when you're ready." };
     }
     if (definiteBaseline.length) {
       try {

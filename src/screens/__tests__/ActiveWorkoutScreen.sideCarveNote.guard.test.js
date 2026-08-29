@@ -154,3 +154,23 @@ describe('style: quiet caption + textMuted (swapNote\'s register), never a banne
     expect(styleLine).not.toMatch(/backgroundColor|borderColor|borderWidth/);
   });
 });
+
+describe('Q-1 (round 5): the in-session episode notice never asserts an adaptation it is not making', () => {
+  test('the generic conflicted line states the conflict, mirroring the baseline branch, and the false claims are gone', () => {
+    // A row showing the constraintNotice is, by construction, being
+    // served as planned: a substituted row shows the _capabilityTemp
+    // line and an omitted row is absent. So "Today this works around
+    // your temporary change" (app as subject, claiming adaptation) was
+    // false in every reachable case - most of all for declined and
+    // undecided rules, where the app is doing nothing to the row.
+    expect(SRC).toContain(
+      `{ kind: 'episode', copy: "This one sits outside your temporary change. Swap it when you're ready." }`,
+    );
+    expect(SRC).not.toContain('Today this works around your temporary change');
+    expect(SRC).not.toContain("This is one you're working around at the moment");
+  });
+
+  test('the substituted row keeps its own truthful marker (the adaptation IS happening there)', () => {
+    expect(SRC).toContain('Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts');
+  });
+});
