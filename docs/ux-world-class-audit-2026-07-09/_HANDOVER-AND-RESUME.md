@@ -1,6 +1,26 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-08-29 — CC33 S4 BUILT + ADVERSARIAL REVIEW LOOP (ROUNDS 1–5 CLOSED); ROUND 6 NEXT ★
+
+All five S4 waves are built and merged; the campaign is in the
+scorecard's adversarial review loop (SCORECARD.md, 93 rows + X1/X2:
+each round attacks every row, every broken claim becomes a work item,
+the review re-runs until the attack fails). Rounds 1–5 have run; every
+actionable finding was closed same-day at mechanism level with driven
+pins — rulings D113 (round 1), D114 (round 2), D115 (round 3 + D114
+corrections), D116 (round 4), D117 (round 5 + D116 corrections; §18's
+predictive weekly-denominator reduction deleted, the substitute
+taken-set, the revisit chooser, receipt completeness on both
+renderers). Live position and per-round detail: the CC33 entry in
+`docs/TASKBOARD.md` (single live task source). NEXT: full settled gate
++ merge, dispatch adversarial review ROUND 6 (Opus, read-only, per
+REVIEW-BRIEF.md); on a clean round, S5 close-out — full gate, device
+checklist IN CHAT, final scored report stating X1
+(REAL-DISABLED-USER-VALIDATED = NO) and X2 (founder walk pending)
+plainly.
+
+===============================================================================
 ## ★ 2026-08-28 — CC33 INJURY/DISABILITY AUDIT COMPLETE, DESIGN RULED (D112); S4 BUILD WAVES NEXT ★
 
 Founder order 2026-08-28 (two directives: adversarial review of the

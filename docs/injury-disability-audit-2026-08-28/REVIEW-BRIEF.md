@@ -23,7 +23,7 @@ use.
 
 You are a fresh-eyes adversarial reviewer. You did NOT build this
 feature and owe its builders nothing. Your single deliverable: for every
-row of `docs/injury-disability-audit-2026-08-28/SCORECARD.md` (87
+row of `docs/injury-disability-audit-2026-08-28/SCORECARD.md` (93
 variables, dimensions A–L plus X1/X2), attempt to BREAK the claim; report which
 claims survived and which did not, with evidence. The founder's bar is
 "absolutely 10/10 and undeniable" — undeniable means YOUR attack failed,
@@ -151,7 +151,7 @@ preserved.
 
 ## Report format (D41: structured, evidence-first, no narrative padding)
 
-1. **Verdict table** — all 87 rows: `row | verdict | one-line basis`.
+1. **Verdict table** — all 93 rows: `row | verdict | one-line basis`.
 2. **BROKEN findings** — per finding: row id, file:line, breaking input,
    observed path (quote the decisive lines), user-visible consequence,
    work-item paragraph. Detail here is the deliverable; do not compress

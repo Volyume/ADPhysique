@@ -25,6 +25,38 @@ root during the W4A lead review are recorded on their rows: the plan
 rewrite's apply no-op (row shape) on A2, and the capability-blind
 substitute selection on A5.
 
+ADVERSARIAL REVIEW ROUND 5 (2026-08-29, on 88f45b5a): NOT CLEAN - 11
+rows BROKEN from 9 roots, FOUR of them round-4 regressions (Q2 and F-1
+each landed one consumer short - the D115 pattern verbatim), 6
+QUALIFIED, 0 STOP. ALL nine roots closed same day (D117), plus four
+qualified conditions and both documentation items: R5-8 the taken-set
+(one substitute never assigned twice; seeded with the session's own
+rows; serve, preview, count and the WRITTEN DOCUMENT all agree; the
+reviewer's probe had Back Squat and Walking Lunge both rewritten to
+Leg Press, permanently) with driven pins at all three entry points;
+R5-4 the count mirror shares serve's never-served-empty fail-safe
+(base count, never a falsy 0); R5-5 the §18 predictive weekly-
+denominator reduction DELETED (D117 ruling 3, correcting D116 ruling
+2: its premise was made false by D116's own never-served-empty ruling,
+and its weaker predicate meant every firing excused a session served
+in full - flattering, not conservative); R5-1/2/3 the receipt complete
+on BOTH renderers, drops counted into exerciseChanges (a drop-only
+rebuild now takes the rebuild path instead of silently reactivating
+the old plan), headline speaks the fourth count, accounting deduped,
+identity keys; R5-6+Q-3 the revisit row gathers every conversation and
+opens exactly one (chooser with true no-op cancel; no dialogue ever
+stacks on the per-line review); R5-9 {surfaced, checked} out of both
+proposal helpers + computeCapabilityPlanRewrite, honest could-not-read
+toast, detector key stamped only on a completed check; R5-7 the plan
+caption speaks serve's own answer via one hoisted memo (exported
+substituteSeniorQuestion - one answer, five consumers; three-way
+applied caption); Q-1 the in-session generic states the conflict, never
+an adaptation; Q-2 the clinician confirm speaks its frame (decline/
+stop/keep); Q-4 all three fall-through reasons pinned + headline +
+PlansScreen render pinned; Q-5 dissolved by R5-8 (N swaps can no longer
+land on one movement); D116's "Q5's row" reference corrected (the
+condition lives on B9); REVIEW-BRIEF 87->93. Round 6 re-runs before S5.
+
 ADVERSARIAL REVIEW ROUND 4 (2026-08-29, on 05a7f49d): NOT CLEAN - 7
 BROKEN from 4 roots, none a round-3 regression. ALL closed same day
 (D116) + the OPEN item + every actionable QUALIFIED: F-1 the applied
@@ -100,10 +132,10 @@ fixed tree before S5 closes.
 | # | Variable | State | Evidence |
 |---|---|---|---|
 | A1 | Fresh generation honours every rule kind | LANDED | CC25 filter + preflight on all six entries (T1-21/22 closed W1) |
-| A2 | Baseline rule meets an installed plan | LANDED | W1 L4 + root fix post-W4A: computeCapabilityPlanRewrite read `row.id` off the nested `{routineExercise, exercise}` shape, so apply skipped every line in production; fixed with the suite re-shaped to the REAL row shape + a would-have-caught pin |
+| A2 | Baseline rule meets an installed plan | LANDED | W1 L4 + root fix post-W4A: computeCapabilityPlanRewrite read `row.id` off the nested `{routineExercise, exercise}` shape, so apply skipped every line in production; fixed with the suite re-shaped to the REAL row shape + a would-have-caught pin; round 5 R5-8 closed: the rewrite threads a taken-set, so two conflicted rows of one muscle write two DIFFERENT movements (driven pin; the round-5 probe had both permanently rewritten to Leg Press) |
 | A3 | Pickers/selection honour rules | LANDED | CC25 + allowance seam W1 L1 |
-| A4 | All 12 swap surfaces honour | LANDED | T2 column D map; T2-10 closed W5 |
-| A5 | Serve-time honours (substitution/omission) | LANDED (round-1 BROKEN F1, fixed) | serve judges LIBRARY-resolved rows (the routine rows carry no demand columns; before the fix an applied demand rule substituted the whole session); unknown drives nothing automatic; composed senior question at all four substitute sites; serveGuard re-shaped to production fixtures + F1 regression pins |
+| A4 | All 12 swap surfaces honour | LANDED | T2 column D map; T2-10 closed W5; round 5 R5-8: substitute selection across surfaces shares the taken-set seam |
+| A5 | Serve-time honours (substitution/omission) | LANDED (round-1 BROKEN F1, fixed) | serve judges LIBRARY-resolved rows (the routine rows carry no demand columns; before the fix an applied demand rule substituted the whole session); unknown drives nothing automatic; composed senior question at all four substitute sites; serveGuard re-shaped to production fixtures + F1 regression pins; round 5 R5-8 closed: serve assigns distinct substitutes - taken-set seeded with the session's own rows (driven pins) |
 | A6 | Coaching honours (limiters, holds, proposals) | LANDED | W2 L5/L6; constrainedTruth.w2 suite |
 | A7 | Block review honours (senior question; stored KEEP never outranks capability) | LANDED (round-1 BROKEN F2, fixed) | blockAdvisor judges library-resolved rows; REPLACE keys on DEFINITE blocking conflicts only; W5 pins updated to the new mechanism |
 | A8 | Plan reactivation honours | LANDED | T1-11 repeat-offer after runBlockActivation (9d5b4a1b) |
@@ -111,9 +143,9 @@ fixed tree before S5 closes.
 | A10 | Manual adds/overrides never reversed | LANDED (round-3 BROKEN R3-4, fixed) | serve returns base indexes - no id reconstruction; driven duplicate+omitted+_userAdded pin serves the user's own object at its own slot |
 | A11 | Laterality honoured (side-carve serves) | LANDED | CC25 §16 + laterality suite |
 | A12 | Clinician standing uniform (never carved; distinct everywhere) | LANDED (round-1 BROKEN F5, fixed) | source outranks certainty (D113): unknown clinician conflicts survive the carve, rank CLINICIAN, route to the rule editor with honest both-facts copy; allowanceSeam F5 pins |
-| A13 | Custom exercises fail closed, carveable, honest receipt | LANDED (round-3 BROKEN R3-1, fixed) with ONE STATED CONDITION | driven rebuild pin: a NULL-column custom lift survives a rebuild into the resolved plan, never equipment-lost, never capability-excluded. Condition (open work item, D115): an incumbent custom lift with NO family tag contests no continuity slot and a rebuild drops it silently with no receipt line - pre-existing family-keyed matching, round 4 attacks it |
+| A13 | Custom exercises fail closed, carveable, honest receipt | LANDED (round-3 BROKEN R3-1, fixed) with ONE STATED CONDITION | driven rebuild pin: a NULL-column custom lift survives a rebuild into the resolved plan, never equipment-lost, never capability-excluded. Condition (open work item, D115): an incumbent custom lift with NO family tag contests no continuity slot and a rebuild drops it silently with no receipt line - pre-existing family-keyed matching, round 4 attacks it; round 5 R5-1/2/3 closed: the receipt is complete on BOTH renderers, drops count into exerciseChanges (a drop-only rebuild takes the rebuild path), the headline speaks the fourth count, accounting deduped, identity keys |
 | A14 | "Hold my plan" honoured end-to-end | LANDED (round-1 BROKEN F3, fixed) | adaptation_mode travels unconditionally in sync pushes (the resume of the last held episode no longer resurrects cross-device); pinned by a DRIVEN round-trip test, not a source string |
-| A15 | Every failure posture fails safe (no silent fail-open) | LANDED (round-3 BROKEN R3-2, fixed) | the `checked` tri-state: a failed read is "could not tell", never "nothing affected"; the vacuous applied fires only on a completed check (driven rejecting-DB pins assert NO write) |
+| A15 | Every failure posture fails safe (no silent fail-open) | LANDED (round-3 BROKEN R3-2, fixed) | the `checked` tri-state: a failed read is "could not tell", never "nothing affected"; the vacuous applied fires only on a completed check (driven rejecting-DB pins assert NO write); round 5 R5-9 closed: the revisit toast branches on checked - a failed read says 'could not read', never 'nothing needs a decision'; detector key stamped only on a completed check |
 
 ## B. Visibility — every effect the user can see
 
@@ -121,13 +153,13 @@ fixed tree before S5 closes.
 |---|---|---|---|
 | B1 | Generation reveals shaping (counts on all six entries) | LANDED | W3B (bca83133); T1-12 pins |
 | B2 | Total-block is a graded state, not an engine error | LANDED | W3B T1-13; graded paths pinned |
-| B3 | Plan view marks conflicted/substituted rows | LANDED | W3A T2-32 markers |
+| B3 | Plan view marks conflicted/substituted rows | LANDED | W3A T2-32 markers; round 5 R5-7 closed: the plan caption speaks serve's own answer (three-way applied caption off one hoisted memo under the exported senior question) |
 | B4 | Pre-session presence (Home line, ordinary state) | LANDED | W3B standalone line + lead hold-tighten; HomeScreen.capabilityVisibility.guard |
-| B5 | In-session notices (episode + baseline + reduced signal) | LANDED (round-1 BROKEN F1, fixed) | notices judge the resolved row; definite conflicts speak the lane's copy, unknowns the honest not-known line |
+| B5 | In-session notices (episode + baseline + reduced signal) | LANDED (round-1 BROKEN F1, fixed) | notices judge the resolved row; definite conflicts speak the lane's copy, unknowns the honest not-known line; round 5 Q-1 closed: the generic in-session line states the conflict and never claims an adaptation (a noticed row is by construction served as planned) |
 | B6 | Post-session line + what-changed detail | LANDED | W3A T2-07/T2-22 |
 | B7 | Coaching output shows the constrained story | LANDED | W2 L6; constrainedTruth.w2 |
 | B8 | Effects history renderable to its subject | LANDED | W3A T2-22 summary incl. past sessions |
-| B9 | Effective denominators everywhere (widget, partner, Today, adherence) | LANDED | stats/adherence W2; widget/partner/Today W3B T2-16/T1-17 |
+| B9 | Effective denominators everywhere (widget, partner, Today, adherence) | LANDED | stats/adherence W2; widget/partner/Today W3B T2-16/T1-17; round 5 R5-4 closed (the count mirror shares serve's never-served-empty fail-safe: base count, never a falsy 0) + R5-5 closed by D117 ruling 3, CORRECTING D116 ruling 2 (which pointed at a non-existent 'Q5' row): the §18 predictive weekly-denominator reduction is DELETED - its capability-only predicate was strictly weaker than serve's composed question, so every firing excused a session served in full; weekly stats read only actual effects records (source pin) |
 | B10 | Lifecycle visible (AWAITING on Today; reintroduction durable line) | LANDED | AWAITING W3B T1-15; T2-25 durable line landed post-W4 (rampMusclesFromPlannedRows reads the source stamp; coach story change with its own why + quiet Home plan-view row; three suites) |
 | B11 | Swap sheets state their narrowing | LANDED | W3A T2-08 |
 | B12 | Why-this explains capability shaping | LANDED | W3B T1-16 buildWhyThis line |
@@ -137,10 +169,10 @@ fixed tree before S5 closes.
 
 | # | Variable | State | Evidence |
 |---|---|---|---|
-| C1 | One vocabulary per lane, zero blur | LANDED | W4B sweep (9d5b4a1b): T2-33/T1-19; T1-08 capability lane's own words end-to-end |
-| C2 | Every automatic action carries its why | LANDED (round-1 BROKEN F4, fixed) | UNKNOWN is never spoken as fact: session strip and plan captions gained the picker's own \"doesn't know yet\" branch; mixed rows speak only from what is established |
-| C3 | Previews never over-promise | LANDED | W4A T2-05: computePlanEffectiveLines asks the substitute question directly (undecided rules no longer render every line "substituted"); summary is a reduction of the lines; planEffectiveSummary suite |
-| C4 | Effect preview at rule creation (real outcomes) | LANDED | same fix; substituted/omitted parts pattern live |
+| C1 | One vocabulary per lane, zero blur | LANDED | W4B sweep (9d5b4a1b): T2-33/T1-19; T1-08 capability lane's own words end-to-end; round 5 Q-2 closed: the clinician confirm speaks its frame (decline/stop/keep) - no mid-flow vocabulary switch, no cancel readable as 'keep the rule out' |
+| C2 | Every automatic action carries its why | LANDED (round-1 BROKEN F4, fixed) | UNKNOWN is never spoken as fact: session strip and plan captions gained the picker's own \"doesn't know yet\" branch; mixed rows speak only from what is established; round 5 R5-1/2 closed: no silent drop on PlansScreen, and the headline never denies the section beneath it |
+| C3 | Previews never over-promise | LANDED | W4A T2-05: computePlanEffectiveLines asks the substitute question directly (undecided rules no longer render every line "substituted"); summary is a reduction of the lines; planEffectiveSummary suite; round 5 R5-7/R5-8 closed: no over-promised swap, and the plural rewrite copy is true now substitutes are distinct |
+| C4 | Effect preview at rule creation (real outcomes) | LANDED | same fix; substituted/omitted parts pattern live; round 5 Q-5 dissolved by R5-8: N swaps can no longer land on one movement, and the per-line review names each from->to |
 | C5 | Lanes cross-reference both ways | LANDED | T1-20 both sides: W4B AvoidedMovements line + lead's HowYouTrain preference row, route registered in all six stacks, reachability sweep watches AvoidedMovements |
 | C6 | Name-by-effect, never diagnosis | LANDED | CC25 §11 + CAP-3; phrase module law |
 | C7 | Explanations name the side | LANDED | W3A + picker §16 |
@@ -150,7 +182,7 @@ fixed tree before S5 closes.
 | # | Variable | State | Evidence |
 |---|---|---|---|
 | D1 | Per-line Apply/Decline | LANDED (round-1 BROKEN F6, fixed) | keeps are EPISODE-SCOPED (allow rows minted into each driving group - end with the episode, restart with a flare, permanent only on promotion); clinician all-or-nothing; every choice takes effect exactly as chosen, for exactly as long as it was asked about |
-| D2 | Every choice revisitable (no one-shot) | LANDED (round-1 BROKEN F6, fixed) | allowance rows now render DISTINCTLY (episode card \"(kept in)\", baseline \"Kept in at your word\", reversed remove-confirm stating which way the cut goes); revisit row + honest empty tap stand |
+| D2 | Every choice revisitable (no one-shot) | LANDED (round-1 BROKEN F6, fixed) | allowance rows now render DISTINCTLY (episode card \"(kept in)\", baseline \"Kept in at your word\", reversed remove-confirm stating which way the cut goes); revisit row + honest empty tap stand; round 5 R5-6 closed: every applied group is reachable - the revisit row gathers all conversations and opens exactly one (chooser with a true no-op cancel) |
 | D3 | In-the-moment capture creates the episode | LANDED | W4B T2-11 preselect capture (9d5b4a1b) |
 | D4 | Suspension valve (hold/resume, per episode) | LANDED (round-1 BROKEN F3, fixed) | A14's sync fix; resume now survives cross-device |
 | D5 | Every check-in answer lands | LANDED | W2 L6 ('fine' acknowledged) |
@@ -210,10 +242,10 @@ fixed tree before S5 closes.
 | I3 | Deterministic engine, no AI, no randomness | LANDED (invariant) | engine purity pins |
 | I4 | Hot-path performance (resolver on list screens) | HOLDS (round 1, measured) | picker full-library pass 0.131 ms, 8-row markers 0.034 ms, worst-case 32-slot rewrite 0.519 ms at 300 exercises x 12 rules (Node; device confirmation rides X2) |
 | I5 | Migration hygiene (additive, idempotent, records true) | FOUNDER (round-1 STOP S1) | files and records additive and true (149/151-era comments corrected 9d5b4a1b; the sync file's own pre-152 comment corrected with F3); the one open item is founder-side: the migrate_152 record accepted a structured named confirmation as the phrase-gate equivalent, which contradicts CLAUDE.md's exact-phrase law - surfaced for the founder to ratify or tighten |
-| I6 | Invariant tests for every law + regression guards | LANDED (round-1 BROKEN F8, fixed) | the pins that let F1/F2/F3 ship now drive the real mechanisms with PRODUCTION-shaped fixtures (serveGuard asServed + drift guard; sideCarve driven both shapes; sync round-trip driven) |
+| I6 | Invariant tests for every law + regression guards | LANDED (round-1 BROKEN F8, fixed) | the pins that let F1/F2/F3 ship now drive the real mechanisms with PRODUCTION-shaped fixtures (serveGuard asServed + drift guard; sideCarve driven both shapes; sync round-trip driven); round 5 Q-4 closed: all three fall-through preference reasons pinned (EXCLUDED/AVOIDED_BLOCK/PATTERN_AVOID); receipt headline and PlansScreen render pinned |
 | I7 | FD-1: accommodation free-tier, guardrails tier-blind | LANDED (invariant) | proGate mandate; no tier reads in capability lane |
 | I8 | Kill/relaunch/restore correctness | LANDED (round-1 QUALIFIED, condition resolved) | markers persist, effects append dedupes, mid-alert deaths recover via the detector/revisit row; the one condition (\"the relaunch pass re-runs F1\") dissolved with F1's fix |
-| I9* | Preview/serve/rewrite agree by construction | LANDED | one seam: computePlanEffectiveLines feeds the summary; substituteSeniorQuestion feeds all four substitute sites |
+| I9* | Preview/serve/rewrite agree by construction | LANDED | one seam: computePlanEffectiveLines feeds the summary; substituteSeniorQuestion feeds all four substitute sites; round 5 R5-4/R5-7/R5-8 closed: serve, count mirror, preview, plan caption and rewrite share the taken-set and the never-served-empty fail-safe - one answer, five consumers |
 
 *I9 added at the lead review: the W4A finding class (two computations of
 "what will happen" drifting apart) earns its own standing row.
@@ -222,10 +254,10 @@ fixed tree before S5 closes.
 
 | # | Variable | State | Evidence |
 |---|---|---|---|
-| J1 | Screen-reader labels on every new control | PARTIAL — built surfaces carry roles/labels; reviewer to verify all W3/W4 surfaces | accessibilityRole/Label in landed diffs |
+| J1 | Screen-reader labels on every new control | LANDED | accessibilityRole/Label in landed diffs; round-5 reviewer verified round-4's controls carry meaningful labels (alert buttons via AppAlert.js:143-144, per-line rows, Home's three rows); round 5 W3 sweep (D117): W3 added NO interactive controls - its two notes are plain Text with no onPress, pinned as such by their own guard suites, and SettingsPrimitives' accessibilityLabel override is itself the accessibility fix |
 | J2 | Touch targets and contrast via tokens | LANDED (round-4 BROKEN F-4, fixed) | Home's three capability rows carry minHeight spacing.xxxl (48); first touch-target guard pin |
 | J3 | Meaning never carried by motion/colour alone | LANDED (round-1 BROKEN F7, fixed) | Choice selection carries a tick + border weight beside colour; every other surface HELD the round-1 attack (text-first throughout) |
-| J4 | Cognitive load: one question at a time, low-choice steps | LANDED pattern (CC25 §11/§12); per-line review is one binary per row, default Apply | R2 digest |
+| J4 | Cognitive load: one question at a time, low-choice steps | LANDED pattern (CC25 §11/§12); per-line review is one binary per row, default Apply | R2 digest; round 5 Q-3 closed: the rewrite is a chooser entry, never stacked on the per-line review; one conversation per tap |
 | J5 | Dynamic type tolerance on new lines | HOLDS (round 1) | no fixed heights, no capability numberOfLines, rows wrap; the arrow-glyph residual closed with a spoken label |
 
 ## K. The differentiator bar

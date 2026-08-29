@@ -948,9 +948,31 @@ order + POOL invariant pinned over the real seed, Q2 the silent
 rebuild drop closed at its reporting root (NO_LONGER_IN outcome + "No
 longer in your plan" receipt section + driven untagged-custom pin;
 carry-design question recorded for post-campaign ruling), Q3
-partial-read never proposes, Q4 one sweep per focus. NEXT: settled
-full gate + merge, adversarial review ROUND 5, then S5 gate + device
-checklist.
+partial-read never proposes, Q4 one sweep per focus. ROUND 5 RAN on
+88f45b5a: NOT CLEAN - 11 BROKEN / 9 roots, FOUR of them round-4
+regressions (Q2 and F-1 each landed one consumer short); ALL closed
+same day (D117) plus four qualified conditions and both documentation
+items: R5-8 the taken-set (bestEligibleSubstitute + serve/preview/
+count/rewrite thread it, seeded with the session's own rows; the probe
+had two rows permanently rewritten to one movement; driven pins at all
+three entry points), R5-4 count mirror shares the never-served-empty
+fail-safe, R5-5 §18 predictive weekly-denominator reduction DELETED
+(D117 ruling 3 correcting D116 ruling 2 - premise provably false in
+every firing; also fixes the "Q5's row" phantom reference: condition
+stated on B9), R5-1/2/3 receipt complete on BOTH renderers + drops
+count into exerciseChanges (drop-only rebuild takes the rebuild path,
+not reactivation) + headline speaks drops + dedupe + identity keys,
+R5-6/Q-3 revisit chooser (every conversation reachable, one per tap,
+nothing stacks on the per-line review), R5-9 {surfaced, checked}
+through both proposal helpers + honest could-not-read toast + detector
+key stamped only on completed checks, R5-7 caption speaks serve's
+answer off one hoisted memo (substituteSeniorQuestion exported - one
+answer, five consumers), Q-1 in-session generic states the conflict
+never an adaptation, Q-2 clinician confirm frames (decline/stop/keep),
+Q-4 fall-through + headline + PlansScreen pins, Q-5 dissolved by R5-8;
+REVIEW-BRIEF 87->93; J1 W3 sweep recorded (no interactive controls
+added by W3), J1 LANDED. NEXT: settled full gate + merge, adversarial
+review ROUND 6, then S5 gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

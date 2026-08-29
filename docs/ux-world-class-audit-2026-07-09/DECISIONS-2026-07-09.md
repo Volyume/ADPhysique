@@ -3376,3 +3376,118 @@ OPEN item and every actionable QUALIFIED. Rulings:
 Also: hasCapabilityToRevisit short-circuits baseline-first (Q4, one
 sweep on the common focus); the receipt copy stays inside the C16
 plain-English law (no "slot" reaches the user).
+
+## D117 — CC33 review round 5 closures + D116 corrections (lead-ruled under D33, 2026-08-29)
+
+Adversarial review round 5 (on main 88f45b5a): 11 rows BROKEN from 9
+roots (four of them round-4 regressions - Q2 and F-1 each landed one
+consumer short), 6 QUALIFIED, 0 STOP. All nine roots and four of the
+qualified conditions closed same-day. Rulings and corrections:
+
+1. **One session, one movement once - with memory (R5-8).**
+   bestEligibleSubstitute takes a taken-set; computeEffectiveSession,
+   computePlanEffectiveLines and computeCapabilityPlanRewrite thread the
+   substitutes already chosen for the same session/routine, seeded with
+   the session's own row ids (a substitute must not duplicate an
+   unaffected row either - the same law continuity.js states for the
+   generator). A slot whose candidates are exhausted falls to the next
+   rank, then to the existing honest omitted/unsolvable path - never a
+   duplicate, in serve, preview, count or the written document. The
+   preview walk additionally consumes substitutes for rows other
+   APPLIED groups are already substituting, in row order, so preview
+   names match serve assignments. Q-5's qualified condition (counts
+   silent about N swaps landing on one movement) dissolves with it: they
+   no longer can. Driven pins at serve, count and rewrite.
+
+2. **The mirror shares the fail-safe, not just the wiring (R5-4).**
+   countEffectiveSessionRows returns the BASE count when the reduction
+   would reach zero - the exact session serve's never-served-empty
+   fail-safe (D116 ruling 2) serves in full. The Today card line no
+   longer vanishes off a falsy 0.
+
+3. **The weekly denominator predicts nothing (R5-5) - CORRECTING D116
+   ruling 2.** D116 kept §18's predictive whole-session reduction as
+   "deliberate coaching conservatism". Its premise - that a
+   fully-omitted session is "not owed" - became false the moment D116
+   itself ruled such sessions are never served empty; and §18's
+   capability-only substitute test is strictly weaker than serve's
+   composed senior question, so serve's candidate pool is a subset of
+   §18's and every session §18 excused was one serve was about to serve
+   IN FULL. The reduction could only flatter completed/planned - the
+   direction was never conservative. DELETED. The weekly stats read
+   what a constraint actually did (effects records: excused, reshaped,
+   ended-early), never what one might do. Pinned at source.
+   Additionally corrected: D116 ruling 2 said this condition was
+   "stated on Q5's row" - the scorecard has no Q5 row (its 93 rows are
+   A1-L7 plus X1/X2). The condition now lives where a reader of the
+   yardstick can find it: B9's row.
+
+4. **A receipt reaches every renderer, and its headline never denies
+   its sections (R5-1/R5-2/R5-3).** PlansScreen's block-boundary sheet
+   renders the fourth section; exerciseChanges counts drops, so a
+   drop-only rebuild takes the REBUILD path instead of reactivating the
+   old plan (the receipt's drop now actually happens - the deeper
+   defect behind the silent render); receiptHeadline takes and speaks
+   the fourth count; the accounting loop dedupes by exercise id; both
+   renderers key the gone-list on previousExerciseId (names are not
+   unique). Driven pins for headline, dedupe and line identity; a new
+   guard suite pins both renderers.
+
+5. **Every conversation reachable, one per tap (R5-6 + Q-3).** The
+   revisit row gathers every available conversation - each applied
+   group currently producing lines, and the baseline rewrite - and
+   opens exactly one: directly when there is one, through a chooser
+   (true no-op cancel) when there are several. Round 4's first-group
+   break is gone, and the rewrite no longer stacks on the group
+   review's own result. reviewAppliedGroup itself was correct and is
+   unchanged.
+
+6. **The toast tells the truth about failed reads (R5-9).** Both
+   proposal helpers return {surfaced, checked};
+   computeCapabilityPlanRewrite carries checked (unavailable state,
+   failed routine read, or a caller's ids an empty state cannot
+   explain, all read "could not tell"); the revisit tap's terminal
+   line branches: "Volyume could not read your plan just now. Nothing
+   has changed. Try again in a moment." - never "nothing needs a
+   decision" off a failed read. The detector back-off key is stamped
+   only on a COMPLETED check, so a failed read no longer blocks the
+   passive retry for the life of the mounted screen.
+
+7. **The caption speaks serve's answer (R5-7).** RoutineDetailScreen
+   holds one hoisted memo (I4: never a per-row library scan) running
+   the same computeEffectiveSession serve runs, under the now-EXPORTED
+   substituteSeniorQuestion - one answer, five consumers - with the
+   fail-safe mirrored. The applied caption is three-way: "Swapped in
+   sessions while your change lasts." only when serve substitutes;
+   "Left out of sessions while your change lasts, with nothing forced
+   in its place." when serve omits; the no-promise "Sits outside your
+   temporary change." for the fail-safe, an unresolved row, or an
+   unresolved memo.
+
+8. **The in-session generic never claims an adaptation (Q-1).** A row
+   showing the constraint notice is by construction served as planned,
+   so the app-as-subject generic was false in every reachable case.
+   Both generics replaced with "This one sits outside your temporary
+   change. Swap it when you're ready." - mirroring the baseline
+   branch; the substituted row keeps its own truthful marker.
+
+9. **The clinician confirm speaks its frame (Q-2).** Three frames -
+   decline (original words, verbatim), stop ("Stopping means your
+   sessions show it again." / "Keep working around it" / "Stop
+   anyway"), keep ("Keeping it in means your sessions keep showing
+   it." / "Go back" / "Keep it in anyway") - one gate, no mid-flow
+   vocabulary switch, and no cancel readable as "keep the rule out".
+
+10. **Pin coverage follows the ruling, not the example (Q-4).** The
+    Q1 fall-through now has pins for all three preference reasons
+    (EXCLUDED, AVOIDED_BLOCK id-level, PATTERN_AVOID family-level);
+    the receipt headline and PlansScreen's render are pinned (R5-1/2
+    shipped green through 1,109 suites - a gap in pins, not in the
+    gate).
+
+Also: REVIEW-BRIEF.md's stale "87 rows" corrected to 93 (lines 26 and
+154); J1's W3 half swept - W3 added no interactive controls (both its
+notes are plain Text, pinned as such by their own guards; the
+SettingsPrimitives accessibilityLabel override is itself the
+accessibility fix), so J1's remaining condition is round-4's controls
+plus this recorded sweep.
