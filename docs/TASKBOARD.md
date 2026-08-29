@@ -988,8 +988,25 @@ B9 null-not-0 count on unreadable routine, C1 chooser cancel wording,
 J2 AppAlert 48dp, J4 label collisions dated, J5 alert actions scroll.
 Also: TRN fixture time-bomb repaired in its own commit (wall-clock
 fixtures for a wall-clock function; red on the unchanged base,
-proven). NEXT: settled full gate + merge, adversarial review ROUND 7,
-then S5 gate + device checklist.
+proven). ROUND 7 RAN on e2807c24: NOT CLEAN - 7 BROKEN / 6 roots + 8
+QUALIFIED; ALL closed same day (D119): R7-3 the side carve is a UNION
+per axis (left+right no longer combine into fully-available - the
+campaign's most safety-adjacent finding; note and block share one
+answer; six union pins), R7-1 per-workout retention guard (one
+incumbent never into two slots of one session; cross-day retention
+stays), R7-4 the fail-safe is TOLD (informational alert before the
+vacuous applied; fail-safed rules revisitable; honest group dialogue),
+R7-2 both divisionDiff paths rerouted block-scoped + door guard
+widened, R7-5 'Not now' only on the decline (source-guarded), R7-6
+alert actions bounded by maxHeight not flexShrink (D42 restored), B3
+single first load. Reviewer also proved the wall-clock fixture class
+empty (+90/+400-day full-suite runs, green). NEW FOUNDER-side items
+surfaced in chat (schema records are founder-gated, untouched):
+supabase has TWO files numbered migrate_152; README ledger rows
+missing for 152_p0/153/154; CLAUDE.md Section 1 migration counts stale
+(133 files/136 highest vs the tree's 152 files/154 highest). NEXT:
+settled full gate + merge, adversarial review ROUND 8, then S5 gate +
+device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

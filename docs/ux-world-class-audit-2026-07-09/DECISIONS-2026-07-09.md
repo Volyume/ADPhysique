@@ -3599,3 +3599,100 @@ and this round converted the substitute-selection pins to run the real
 senior question. X1 (REAL-DISABLED-USER-VALIDATED = NO) and X2
 (founder device walk) remain unclaimable; the round-6 I4 measurements
 are Node timings, not device timings.
+
+## D119 — CC33 review round 7 closures (lead-ruled under D33, 2026-08-29)
+
+Adversarial review round 7 (on main e2807c24): 7 rows BROKEN from 6
+roots — two of them round-6 regressions (R7-1 from the entry-keyed
+matching, R7-6 from the actions-scroll), one a round-6 wording fix
+landing one alert short (R7-5), one the round-6 fail-safe's blast
+radius (R7-4), and two pre-existing defects the deeper attack surfaced
+(R7-2, R7-3). All six closed same-day, plus the B3 double-load
+condition. Rulings:
+
+1. **The side carve is a UNION decision (R7-3 - the campaign's most
+   safety-adjacent finding).** Evaluated per rule, a LEFT rule and a
+   RIGHT rule on one carveable axis each carved independently - two
+   rules saying "not this side" combined into "fully available", the
+   exercise survived generation, was offered as a substitute, and the
+   one-side-at-a-time note told the user they could work the other
+   side when they had said they cannot do it on either. sideCarveByAxis
+   now decides per axis over the whole state: an axis carves only while
+   exactly ONE side is restricted and no unsided rule restricts it too;
+   isSideCarvedAvailable consumes the same answer so the note and the
+   block can never disagree. Sources are irrelevant to the union on
+   purpose (the clinician ranking lives in blockingConflicts). Pinned:
+   left+right blocked, left+left still carved, sided+unsided blocked,
+   clinician-left+self-right blocked at the clinician rank, different
+   axes never combine, and the both-hands movement unchanged.
+
+2. **Matching is per entry ACROSS days, per id WITHIN a session
+   (R7-1, correcting D118 ruling 4's blast radius).** The entry-keyed
+   matching let one incumbent be retained into two slots of ONE
+   session when the rebuilt session held two slots of the same slotKey
+   (ordinary for quads). A per-workout guard refuses an incumbent
+   whose exercise is already retained into that workout - the slot
+   falls through to the generator's own pick, exactly as the id-keyed
+   code did - while cross-workout double retention (the R6-5 case)
+   stays. Pinned both ways: cross-workout retains both rows,
+   same-workout never duplicates.
+
+3. **The fail-safe is TOLD, not silent (R7-4, completing D118 ruling
+   2).** Round 6 correctly stopped the proposal claiming reductions
+   serve would refuse to make - and folded the case into "nothing
+   affected", so the save toast's "Volyume will work around this"
+   stood as the only thing ever said about a rule the fail-safe means
+   it will not honour, recorded 'applied' with no proposal and no
+   revisit. computePlanEffectiveLines now reports failSafeRoutineIds
+   and the summary carries the count; the add-flow proposal shows an
+   informational alert ("Your sessions stay as they are ... rather
+   than serving you nothing, with a quiet note on each affected
+   exercise") BEFORE the vacuous write; hasCapabilityToRevisit counts
+   a fail-safed rule as revisitable; the revisit flow offers the group
+   as a conversation whose dialogue states the truth and keeps
+   stopping available. Driven pins through the real resolver.
+
+4. **Both divisionDiff paths are rerouted, block-scoped (R7-2).** The
+   design ruling said "both divisionDiff raw paths"; only the
+   heatmap's was. RoutineDetailScreen's fingerprint and coverage
+   recompute now run over filterLibraryForGeneration under
+   loadScopedIntentState - fed the raw library, the fingerprint
+   described a plan generation never built and the coverage line named
+   "how you train" as a cause it never checked. VolumeHeatmapScreen's
+   loader is scoped too (R6-1's class, one consumer along). The door
+   guard is widened: any screen calling computeDivisionDiff/Coverage
+   without filterLibraryForGeneration fails by name.
+
+5. **One phrase per meaning, completed (R7-5).** The plan-rewrite
+   alert's no-op cancel wore the decline's word ("Not now") one tap
+   from the chooser round 6 renamed. It takes the F-1 wording; a
+   source guard now permits 'Not now' only on the button that reaches
+   declineNow.
+
+6. **Alert actions are bounded by maxHeight, never by flexShrink
+   (R7-6, correcting D118 ruling 7's geometry).** Round 6's
+   flexShrink: 1 made the action region compete with the message for
+   the deficit at the 88% cap - Yoga's proportional shrink squeezed an
+   ordinary two-button row to a ~25dp sliver under a long message at a
+   large font scale, regressing the exact D42 guarantee. flexShrink: 0
+   (Yoga's View default, restored) plus maxHeight keeps ordinary
+   alerts at full action height with the message alone scrolling; only
+   an oversized stacked list scrolls within its own bound. The D42
+   guard's header contract is rewritten to state the true shape.
+
+7. **The mount effect owns the first load (B3).** RoutineDetail's
+   focus listener skips its registration focus (armed from
+   navigation.isFocused(), correct under every mount/param ordering),
+   so the division recompute no longer runs twice on first paint.
+
+Stated conditions kept, not closed: C3 (undecided co-driver optimism
+is deliberate, D118 ruling 2), I9 (the mirror is per planned routine;
+a live session's _userAdded rows are serve's business), J4's residual
+collisions (same-day starts, all-null startsAt), A13's id-keyed
+gone-accounting. FOUNDER-side, surfaced in chat: the round-1 I5 item
+plus two new ledger defects the reviewer found - supabase carries TWO
+files numbered migrate_152 (capability_adaptation_mode and
+p0_restrict_internal_security_definer_execute), and the README ledger
+table ends at row 152 with no rows for 152_p0/153/154 - and CLAUDE.md's
+Section 1 migration counts are stale. Migration records are
+founder-gated; not touched here.
