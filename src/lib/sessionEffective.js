@@ -141,19 +141,26 @@ export async function computePlanEffectiveLines(userId, ruleIds = [], { serveGat
   // read, or any throw is NOT a check, and no caller may treat it as an
   // answer.
   const out = [];
+  // Round 7 (R7-4): routines whose candidate lines the fail-safe mirror
+  // dropped. The fail-safe is REPORTED, never folded into "nothing
+  // affected" - folded, the add flow's save toast ("Volyume will work
+  // around this") was the only thing ever said about a rule the
+  // fail-safe means it will not honour, the rule was recorded 'applied'
+  // with no proposal, and the revisit row hid.
+  const failSafeRoutineIds = [];
   let checked = false;
   try {
     const wanted = new Set(Array.isArray(ruleIds) ? ruleIds : []);
-    if (!wanted.size) return { lines: out, checked: true };
+    if (!wanted.size) return { lines: out, checked: true, failSafeRoutineIds };
     const plan = await getActivePlan(userId);
-    if (!plan?.id) return { lines: out, checked: true };
+    if (!plan?.id) return { lines: out, checked: true, failSafeRoutineIds };
     const [capState, intentState, library, routines] = await Promise.all([
       loadCapabilityResolveState(userId, {}),
       loadScopedIntentState(userId),
       getAllExercises(),
       getRoutinesForPlan(plan.id),
     ]);
-    if (capState.empty || capState.unavailable) return { lines: out, checked: false };
+    if (capState.empty || capState.unavailable) return { lines: out, checked: false, failSafeRoutineIds };
     checked = true;
     const byId = new Map((library ?? []).map((e) => [e.id, e]));
     for (const routine of routines ?? []) {
@@ -245,11 +252,17 @@ export async function computePlanEffectiveLines(userId, ruleIds = [], { serveGat
       // R6-3: the fail-safe mirror. A routine with rows but nothing
       // served is one serve serves UNTOUCHED (D116, never served
       // empty) - its rows all stand, so no line about it is true.
-      if ((rows ?? []).length && !anyServed) continue;
+      // R7-4: a routine whose CANDIDATE lines the mirror dropped is
+      // reported by id, so callers can tell the user instead of
+      // reading it as "nothing affected".
+      if ((rows ?? []).length && !anyServed) {
+        if (routineLines.length) failSafeRoutineIds.push(routine.id);
+        continue;
+      }
       out.push(...routineLines);
     }
   } catch (_e) { checked = false; /* read-only; empty-unchecked means "could not tell" */ }
-  return { lines: out, checked };
+  return { lines: out, checked, failSafeRoutineIds };
 }
 
 /**
@@ -263,8 +276,13 @@ export async function computePlanEffectiveLines(userId, ruleIds = [], { serveGat
  *   tell", never "nothing affected" - callers must not act on it (R3-2).
  */
 export async function computePlanEffectiveSummary(userId, createdIds = []) {
-  const { lines, checked } = await computePlanEffectiveLines(userId, createdIds);
-  const out = { affected: lines.length, substituted: 0, omitted: 0, checked };
+  const { lines, checked, failSafeRoutineIds } = await computePlanEffectiveLines(userId, createdIds);
+  // R7-4: failSafeRoutines rides the summary so the proposal can TELL
+  // the fail-safe case instead of treating it as "nothing affected".
+  const out = {
+    affected: lines.length, substituted: 0, omitted: 0, checked,
+    failSafeRoutines: (failSafeRoutineIds ?? []).length,
+  };
   for (const line of lines) {
     if (line.to) out.substituted += 1;
     else out.omitted += 1;
@@ -335,8 +353,11 @@ export async function hasCapabilityToRevisit(userId, undecidedEpisodeRuleIds = [
     const rw = await computeCapabilityPlanRewrite(userId, {});
     if (rw.lines.length > 0) return true;
     if (Array.isArray(appliedEpisodeRuleIds) && appliedEpisodeRuleIds.length) {
-      const { lines } = await computePlanEffectiveLines(userId, appliedEpisodeRuleIds);
-      if (lines.length) return true;
+      const { lines, failSafeRoutineIds } = await computePlanEffectiveLines(userId, appliedEpisodeRuleIds);
+      // R7-4: a fail-safed applied rule is REVISITABLE - it used to
+      // hide the row entirely, leaving the episode card as the only
+      // route back to a decision recorded without a proposal.
+      if (lines.length || (failSafeRoutineIds ?? []).length) return true;
     }
     return false;
   } catch (_e) {

@@ -93,7 +93,7 @@ describe('computePlanEffectiveLines / computePlanEffectiveSummary (T2-05)', () =
     expect(lines[0].to.id).toBe(LEGPRESS.id);
     expect(lines[0].routineExerciseId).toBe('re-squat'); // resolved via .routineExercise.id, the real shape
     const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
-    expect(summary).toEqual({ affected: 1, substituted: 1, omitted: 0, checked: true });
+    expect(summary).toEqual({ affected: 1, substituted: 1, omitted: 0, checked: true, failSafeRoutines: 0 });
   });
 
   test('an undecided rule with NO eligible substitute previews OMITTED - the path that was unreachable', async () => {
@@ -103,7 +103,7 @@ describe('computePlanEffectiveLines / computePlanEffectiveSummary (T2-05)', () =
     expect(lines).toHaveLength(1);
     expect(lines[0].to).toBeNull();
     const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
-    expect(summary).toEqual({ affected: 1, substituted: 0, omitted: 1, checked: true });
+    expect(summary).toEqual({ affected: 1, substituted: 0, omitted: 1, checked: true, failSafeRoutines: 0 });
   });
 
   test('mixed batch: one line substitutes, one omits, in the same undecided proposal', async () => {
@@ -119,7 +119,7 @@ describe('computePlanEffectiveLines / computePlanEffectiveSummary (T2-05)', () =
     getAllExercises.mockResolvedValue([SQUAT, LEGPRESS, CHEST_STANDING]); // CHEST_STANDING is the plan's only chest exercise
     loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState([rule()], { atMs: NOW }));
     const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
-    expect(summary).toEqual({ affected: 2, substituted: 1, omitted: 1, checked: true });
+    expect(summary).toEqual({ affected: 2, substituted: 1, omitted: 1, checked: true, failSafeRoutines: 0 });
     const { lines } = await computePlanEffectiveLines('u1', ['c-standing']);
     expect(lines.find((l) => l.from.id === SQUAT.id).to.id).toBe(LEGPRESS.id);
     expect(lines.find((l) => l.from.id === CHEST_STANDING.id).to).toBeNull();
@@ -146,7 +146,7 @@ describe('computePlanEffectiveLines / computePlanEffectiveSummary (T2-05)', () =
     ));
     const { lines } = await computePlanEffectiveLines('u1', ['c-standing']);
     expect(lines).toHaveLength(0);
-    expect(await computePlanEffectiveSummary('u1', ['c-standing'])).toEqual({ affected: 0, substituted: 0, omitted: 0, checked: true });
+    expect(await computePlanEffectiveSummary('u1', ['c-standing'])).toEqual({ affected: 0, substituted: 0, omitted: 0, checked: true, failSafeRoutines: 0 });
   });
 
   test('ids not in ruleIds are ignored, even if they conflict', async () => {
@@ -160,7 +160,7 @@ describe('computePlanEffectiveLines / computePlanEffectiveSummary (T2-05)', () =
     getActivePlan.mockResolvedValue(null);
     expect((await computePlanEffectiveLines('u1', ['c-standing'])).lines).toEqual([]);
     getActivePlan.mockResolvedValue({ id: 'plan1' });
-    expect(await computePlanEffectiveLines('u1', [])).toEqual({ lines: [], checked: true });
+    expect(await computePlanEffectiveLines('u1', [])).toEqual({ lines: [], checked: true, failSafeRoutineIds: [] });
     loadCapabilityResolveState.mockResolvedValue({
       ...buildCapabilityResolveState([rule()], { atMs: NOW }), unavailable: true,
     });
@@ -268,7 +268,7 @@ describe('R3-2 - checked is earned, never assumed', () => {
       ...buildCapabilityResolveState([rule()], { atMs: NOW }), unavailable: true,
     });
     const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
-    expect(summary).toEqual({ affected: 0, substituted: 0, omitted: 0, checked: false });
+    expect(summary).toEqual({ affected: 0, substituted: 0, omitted: 0, checked: false, failSafeRoutines: 0 });
   });
 
   test('a rejecting plan read answers checked: false', async () => {
@@ -280,6 +280,6 @@ describe('R3-2 - checked is earned, never assumed', () => {
   test('genuinely nothing to affect - no plan - is a COMPLETED check', async () => {
     getActivePlan.mockResolvedValue(null);
     const summary = await computePlanEffectiveSummary('u1', ['c-standing']);
-    expect(summary).toEqual({ affected: 0, substituted: 0, omitted: 0, checked: true });
+    expect(summary).toEqual({ affected: 0, substituted: 0, omitted: 0, checked: true, failSafeRoutines: 0 });
   });
 });

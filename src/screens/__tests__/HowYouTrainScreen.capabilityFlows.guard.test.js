@@ -92,14 +92,16 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
 
   test('dismissal (no choice) still records nothing - only named paths write a choice', () => {
     const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,9500}?\n  };/)?.[0] ?? '';
-    // Exactly three recordEffectiveChoice sites: Not now's declineNow,
-    // Apply's inline loop, and (R2-5) the vacuous 'applied' when the
+    // Exactly four recordEffectiveChoice sites: Not now's declineNow,
+    // Apply's inline loop, (R2-5) the vacuous 'applied' when the
     // proposal finds NOTHING affected - a rule with no decision to make
-    // must not sit undecided forever behind a permanent Home ask-row.
-    // "Choose per exercise" still opens the list and writes nothing
-    // until saveLineReview runs, and dismissing the alert writes nothing.
+    // must not sit undecided forever behind a permanent Home ask-row -
+    // and (R7-4) the fail-safe path's 'applied', written only AFTER its
+    // informational alert has told the user their sessions stay as they
+    // are. "Choose per exercise" still opens the list and writes
+    // nothing until saveLineReview runs, and dismissing writes nothing.
     const writes = fn.match(/recordEffectiveChoice\(/g) ?? [];
-    expect(writes.length).toBe(3);
+    expect(writes.length).toBe(4);
     expect(fn).toContain("await recordEffectiveChoice(userId, id, 'applied').catch(() => {});");
   });
 
@@ -124,7 +126,7 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // dedicated dialogue, never as a flat union through the apply
     // proposal - the round-3 shape let one cancel-styled tap decline
     // every applied episode at once.
-    expect(fn).toContain('reviewAppliedGroup(g.ep, g.appliedIds, g.lines)');
+    expect(fn).toContain('reviewAppliedGroup(g.ep, g.appliedIds, g.lines, g.failSafe)');
     expect(fn).not.toMatch(/proposeEffectiveDiff\(applied/);
     // Round 5 (R5-6): EVERY group with lines is gathered - the round-4
     // loop broke on the first, and its true no-op cancel meant no tap
@@ -132,7 +134,7 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // group and the rewrite. Round 6 (C1): its cancel carries the F-1
     // no-op wording, never "Not now" - which is this same screen's
     // DECLINE on the apply proposal, one state apart.
-    expect(fn).toContain('groupChoices.push({ ep, appliedIds, lines });');
+    expect(fn).toContain('groupChoices.push({ ep, appliedIds, lines, failSafe });');
     expect(fn).not.toMatch(/if \(surfaced\) break;/);
     expect(fn).toContain("buttons.push({ text: 'Leave it as it is', style: 'cancel' });");
     expect(fn).not.toContain("buttons.push({ text: 'Not now'");
@@ -215,6 +217,32 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     expect(screen).toContain("confirmClinicianDecline(subject, stopNow, 'stop')");
     expect(screen).toContain("confirmClinicianDecline(review.subject, commit, 'keep')");
     expect(screen).toContain('confirmClinicianDecline(subject, declineNow);');
+  });
+
+  test('R7-4: the fail-safe case is TOLD everywhere it was silent', () => {
+    // The add-flow proposal shows the informational alert BEFORE the
+    // vacuous 'applied' write; the group review has a fail-safe body
+    // with stopping still available; the revisit loop offers a
+    // fail-safed group as a conversation.
+    expect(screen).toContain("'Your sessions stay as they are',");
+    expect(screen).toContain('rather than serving you nothing, with a quiet note on each affected exercise.');
+    expect(screen).toContain('if (summary.checked && (summary.failSafeRoutines ?? 0) > 0) {');
+    expect(screen).toContain('return { surfaced: true, checked: true };');
+    expect(screen).toContain('const failSafe = !lines.length && (failSafeRoutineIds?.length ?? 0) > 0;');
+    expect(screen).toContain("? 'This affects every exercise in at least one of your sessions, and nothing close enough fits in their place. Those sessions run as they are, with a quiet note on each affected exercise.'");
+  });
+
+  test('R7-5: "Not now" appears ONLY on the button that declines - one phrase per meaning', () => {
+    // On this screen 'Not now' writes 'declined' against every created
+    // rule (the apply proposal). Every other no-op cancel carries the
+    // F-1 wording. The plan-rewrite alert's cancel wore the decline's
+    // word while writing nothing - the exact blur round 6 renamed the
+    // chooser to remove, one alert short.
+    const hits = screen.match(/text: 'Not now'/g) ?? [];
+    expect(hits).toHaveLength(1);
+    const declineIdx = screen.indexOf("text: 'Not now'");
+    const declineBlock = screen.slice(declineIdx, declineIdx + 400);
+    expect(declineBlock).toContain('declineNow');
   });
 
   test('undecided episode ids exclude held episodes and allowance rows (D112 R8 + F6)', () => {

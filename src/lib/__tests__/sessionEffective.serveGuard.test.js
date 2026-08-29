@@ -60,7 +60,7 @@ const { loadExerciseIntentState } = require('../exercise/intent');
 const {
   applyEffectiveViewToSession, countEffectiveSessionRows,
   computeCapabilityPlanRewrite, applyCapabilityPlanRewrite,
-  computePlanEffectiveLines,
+  computePlanEffectiveLines, computePlanEffectiveSummary,
 } = require('../sessionEffective');
 
 // The real loader's shape, honouring the scope it was asked for - so a
@@ -500,6 +500,29 @@ test('R6-3 DRIVEN: both modes mirror the never-served-empty fail-safe - a routin
   const wouldIf = await computePlanEffectiveLines('u1', ['c1']);
   expect(wouldIf.lines).toHaveLength(0);
   expect(wouldIf.checked).toBe(true);
+});
+
+test('R7-4 DRIVEN: the fail-safe is REPORTED, never folded into "nothing affected"', async () => {
+  // Round 7: round 6's mirror correctly stopped the proposal claiming
+  // reductions serve would refuse to make - and folded the case into
+  // affected:0, so the rule was recorded 'applied' silently behind the
+  // save toast's promise, and the revisit row hid. The summary now
+  // carries the fail-safe count and the lines carry the routine ids.
+  getActivePlan.mockResolvedValue({ id: 'p1' });
+  getRoutinesForPlan.mockResolvedValue([{ id: 'r1', name: 'Legs' }]);
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([SQUAT, LUNGE]));
+  getAllExercises.mockResolvedValue([SQUAT, LUNGE]); // no eligible substitute anywhere
+  const summary = await computePlanEffectiveSummary('u1', ['c1']);
+  expect(summary).toEqual({
+    affected: 0, substituted: 0, omitted: 0, checked: true, failSafeRoutines: 1,
+  });
+  const gated = await computePlanEffectiveLines('u1', ['c1'], { serveGate: true });
+  expect(gated.failSafeRoutineIds).toEqual(['r1']);
+  // Control: a genuinely unaffected plan reports NO fail-safe.
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([LEGPRESS]));
+  const quiet = await computePlanEffectiveSummary('u1', ['c1']);
+  expect(quiet.failSafeRoutines).toBe(0);
+  expect(quiet.affected).toBe(0);
 });
 
 test('R6-3 control: an all-applied substitutable row IS a serve-gate line, named with serve\'s own assignment', async () => {

@@ -521,6 +521,27 @@ export default function HowYouTrainScreen() {
       // its visible notice and swap shortcut - the standing behaviour -
       // and the per-line review remains reachable from the plan surface.
       if (!summary.affected) {
+        // Round 7 (R7-4): the fail-safe case is TOLD, never silent.
+        // Round 6's mirror correctly stopped the alert claiming
+        // reductions serve would refuse to make - but folded the case
+        // into "nothing affected", so the save toast's "Volyume will
+        // work around this" stood as the only thing ever said about a
+        // rule the never-served-empty fail-safe means it will not
+        // honour, recorded 'applied' with no proposal. The
+        // informational alert states the truth before the record.
+        if (summary.checked && (summary.failSafeRoutines ?? 0) > 0) {
+          const plural = summary.failSafeRoutines > 1;
+          appAlert(
+            'Your sessions stay as they are',
+            `${subject ? `While ${subject} is out` : 'While this lasts'}, this affects every exercise in ${plural ? 'some of your sessions' : 'one of your sessions'}, and nothing close enough fits in their place. Volyume keeps ${plural ? 'those sessions' : 'that session'} as they are rather than serving you nothing, with a quiet note on each affected exercise.`,
+            [{ text: 'OK' }],
+          );
+          for (const id of createdIds) {
+            // eslint-disable-next-line no-await-in-loop
+            await recordEffectiveChoice(userId, id, 'applied').catch(() => {});
+          }
+          return { surfaced: true, checked: true };
+        }
         // Round 3 (R3-2): the vacuous write fires ONLY on a completed
         // check. A failed read returns the same empty lines, and
         // recording 'applied' on it would fabricate a decision on
@@ -751,7 +772,7 @@ export default function HowYouTrainScreen() {
   // stopping is explicit and group-scoped (clinician rules keep their
   // named confirm), and "Choose per exercise" opens the same per-line
   // review.
-  const reviewAppliedGroup = async (ep, appliedIds, lines) => {
+  const reviewAppliedGroup = async (ep, appliedIds, lines, failSafe = false) => {
     try {
       // eslint-disable-next-line global-require
       const { clinicianSourcedIds, recordEffectiveChoice } = require('../lib/sessionEffective');
@@ -770,10 +791,27 @@ export default function HowYouTrainScreen() {
         toast.show('Stopped. Affected exercises show a quiet notice with a swap shortcut.');
         refresh();
       };
+      // Round 7 (R7-4): a group whose rules the never-served-empty
+      // fail-safe is absorbing has no swap or omission to describe and
+      // no per-line list to offer - the dialogue states the truth (the
+      // sessions run as they are) and keeps stopping available, so the
+      // decision recorded on the user's behalf stays revisitable.
       appAlert(
         subject ? `Keep working around ${subject}?` : 'Keep working around this?',
-        `Your sessions currently show ${parts.join(', and ')}. Your plan itself is unchanged.`,
-        [
+        failSafe
+          ? 'This affects every exercise in at least one of your sessions, and nothing close enough fits in their place. Those sessions run as they are, with a quiet note on each affected exercise.'
+          : `Your sessions currently show ${parts.join(', and ')}. Your plan itself is unchanged.`,
+        failSafe ? [
+          { text: 'Leave it as it is', style: 'cancel' },
+          {
+            text: 'Stop working around it',
+            style: 'destructive',
+            onPress: () => {
+              if (clinicianIds.size) { confirmClinicianDecline(subject, stopNow, 'stop'); return; }
+              stopNow();
+            },
+          },
+        ] : [
           // A true no-op: looking is not deciding.
           { text: 'Leave it as it is', style: 'cancel' },
           {
@@ -847,11 +885,16 @@ export default function HowYouTrainScreen() {
       // applying would do. A group whose rows are all held in place by
       // a declined or undecided co-driver, or whose routine fail-safes,
       // produces no lines and is not offered as a conversation.
-      const { lines, checked } = await computePlanEffectiveLines(userId, appliedIds, { serveGate: true })
-        .catch(() => ({ lines: [], checked: false }));
+      const { lines, checked, failSafeRoutineIds } = await computePlanEffectiveLines(userId, appliedIds, { serveGate: true })
+        .catch(() => ({ lines: [], checked: false, failSafeRoutineIds: [] }));
       if (!checked) { couldNotRead = true; continue; }
-      if (!lines.length) continue;
-      groupChoices.push({ ep, appliedIds, lines });
+      // Round 7 (R7-4): a fail-safed group IS a conversation - its
+      // dialogue states that the sessions run as they are and keeps
+      // stopping available. Without it, a rule recorded 'applied' by
+      // the fail-safe path was unreachable from the only revisit door.
+      const failSafe = !lines.length && (failSafeRoutineIds?.length ?? 0) > 0;
+      if (!lines.length && !failSafe) continue;
+      groupChoices.push({ ep, appliedIds, lines, failSafe });
     }
     const rw = await computeCapabilityPlanRewrite(userId, {})
       .catch(() => ({ lines: [], checked: false }));
@@ -867,7 +910,7 @@ export default function HowYouTrainScreen() {
         : 'Nothing in your current plan needs a decision right now.');
       return;
     }
-    const openGroup = (g) => { reviewAppliedGroup(g.ep, g.appliedIds, g.lines).catch(() => {}); };
+    const openGroup = (g) => { reviewAppliedGroup(g.ep, g.appliedIds, g.lines, g.failSafe).catch(() => {}); };
     const openRewrite = () => { proposeCapabilityPlanRewrite(null, null).catch(() => {}); };
     if (groupChoices.length + (hasRewrite ? 1 : 0) === 1) {
       if (groupChoices.length) openGroup(groupChoices[0]); else openRewrite();
@@ -956,7 +999,11 @@ export default function HowYouTrainScreen() {
         body,
         [
           {
-            text: 'Not now',
+            // Round 7 (R7-5): the F-1 no-op wording here too - this
+            // button writes nothing, and on this same screen 'Not now'
+            // is the apply proposal's DECLINE. One phrase per meaning:
+            // 'Not now' may appear only on the button that declines.
+            text: 'Leave it as it is',
             style: 'cancel',
             onPress: () => {
               toast.show('Kept as it is. Affected exercises show a quiet note with a swap shortcut.');
