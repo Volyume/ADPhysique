@@ -142,6 +142,10 @@ export function buildChangeReceipt(decisions = []) {
   for (const d of decisions) {
     const line = {
       exerciseName: d.exerciseName ?? null,
+      // Round 6 (R6-5, extending R5-3): every line carries the
+      // exercise's ID - renders key on identity, never a display name,
+      // and names are not unique across custom and library lifts.
+      exerciseId: d.exerciseId ?? null,
       workout: d.workout ?? null,
       reason: d.reason ?? null,
       why: explainReason(d.reason),
@@ -153,7 +157,11 @@ export function buildChangeReceipt(decisions = []) {
     if (d.outcome === SLOT_OUTCOME.RETAINED) {
       stays.push({ ...line, insteadOfName: d.insteadOfName ?? null });
     } else if (d.outcome === SLOT_OUTCOME.REPLACED) {
-      changes.push({ ...line, previousExerciseName: d.previousExerciseName ?? null });
+      changes.push({
+        ...line,
+        previousExerciseName: d.previousExerciseName ?? null,
+        previousExerciseId: d.previousExerciseId ?? null,
+      });
     } else if (d.outcome === SLOT_OUTCOME.NO_LONGER_IN) {
       // CC33 round 4 (Q2): its own section, never folded into `added`
       // (which is where an unknown outcome used to land - the exact
@@ -175,7 +183,7 @@ export function buildChangeReceipt(decisions = []) {
   return {
     stays, changes, added, noLongerIn,
     prescriptionCount,
-    headline: receiptHeadline(stays.length, changes.length, prescriptionCount, noLongerIn.length),
+    headline: receiptHeadline(stays.length, changes.length, prescriptionCount, noLongerIn.length, added.length),
   };
 }
 
@@ -185,30 +193,42 @@ export function buildChangeReceipt(decisions = []) {
  * Never announces that the programme HAS changed: the receipt is shown
  * before the user confirms.
  *
- * Round 5 (R5-2): the headline speaks the no-longer-in count too. It
- * used to see only stays/changes, so a rebuild that retained every
- * matched incumbent and dropped one unmatched one read "Nothing is
- * changing" directly above "No longer in your plan" - a receipt that
- * denied its own content.
+ * Round 5 (R5-2) established the law - the headline never denies a
+ * section rendered beneath it - and round 6 (R6-5) made it structural:
+ * the headline is COMPOSED from every count the receipt renders
+ * (changes, additions, drops, rep targets), so no count can appear in a
+ * section while the headline claims nothing is changing. The old shape
+ * had no `added` parameter at all ("Nothing is changing" above "New in
+ * your plan"), and its drop branch returned before the rep-target one,
+ * so a drop suppressed the only statement of a prescription change and
+ * affirmed "The rest stays as it is" over moving rep targets.
  */
-export function receiptHeadline(stayCount, changeCount, prescriptionCount = 0, noLongerInCount = 0) {
-  const g = `${noLongerInCount} ${noLongerInCount === 1 ? 'exercise' : 'exercises'}`;
-  if (changeCount === 0) {
-    if (noLongerInCount > 0) {
-      return `${g} would no longer be in your plan, listed below with why. The rest stays as it is.`;
-    }
+export function receiptHeadline(stayCount, changeCount, prescriptionCount = 0, noLongerInCount = 0, addedCount = 0) {
+  const bits = [];
+  if (changeCount > 0) bits.push(`${changeCount} ${changeCount === 1 ? 'exercise' : 'exercises'} would change`);
+  if (addedCount > 0) bits.push(`${addedCount} would be new`);
+  if (noLongerInCount > 0) bits.push(`${noLongerInCount} would no longer be in your plan`);
+  // When the first spoken count is not the change count, it carries the
+  // noun itself so the sentence never opens with a bare number.
+  if (bits.length && changeCount === 0) {
+    bits[0] = bits[0].replace(/^(\d+) /, (_m, n) => `${n} ${n === '1' ? 'exercise' : 'exercises'} `);
+  }
+  const repTail = prescriptionCount > 0
+    ? ` ${prescriptionCount} rep target${prescriptionCount === 1 ? '' : 's'} would change too.`
+    : '';
+  if (!bits.length) {
     if (prescriptionCount > 0) {
       return `${prescriptionCount} rep target${prescriptionCount === 1 ? '' : 's'} would change. Your exercises stay.`;
     }
     return 'Nothing is changing. Your plan is still producing good evidence.';
   }
-  const c = `${changeCount} ${changeCount === 1 ? 'exercise' : 'exercises'}`;
-  if (noLongerInCount > 0) {
-    if (stayCount === 0) return `${c} would change and ${g} would no longer be in your plan.`;
-    return `Most of your plan stays. ${c} would change and ${g} would come out, each listed with why.`;
-  }
-  if (stayCount === 0) return `${c} would change.`;
-  return `Most of your plan stays. ${c} would change, and each one is listed with why.`;
+  const joined = bits.length > 1
+    ? `${bits.slice(0, -1).join(', ')} and ${bits[bits.length - 1]}`
+    : bits[0];
+  const totalMoved = changeCount + addedCount + noLongerInCount;
+  const listedTail = totalMoved === 1 ? 'listed below with why' : 'each listed with why';
+  if (stayCount === 0) return `${joined}.${repTail}`;
+  return `Most of your plan stays. ${joined}, ${listedTail}.${repTail}`;
 }
 
 /**

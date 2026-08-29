@@ -146,7 +146,17 @@ export function applyContinuity({
     if (!byKey.has(key)) byKey.set(key, []);
     byKey.get(key).push(inc);
   }
+  // Round 6 (R6-5, D118 ruling): matching consumes ENTRIES, accounting
+  // stays keyed on IDS. `used` (ids) answers "is this exercise retained
+  // or replaced somewhere in the new plan" for the gone-accounting
+  // below; `usedEntries` (object identity) answers "has this particular
+  // routine row been matched to a slot". Keyed on ids alone, an
+  // exercise deliberately programmed on two days could retain only its
+  // first row - the second slot found no free incumbent and the receipt
+  // called a lift the user has had for months "New in your plan" while
+  // also listing it under "What stays".
   const used = new Set();
+  const usedEntries = new Set();
 
   // Everything the generator itself placed. An incumbent that already
   // appears somewhere in the new plan must NOT be substituted into a second
@@ -163,7 +173,7 @@ export function applyContinuity({
       const key = familyOf(ex.exerciseId);
       const queue = key ? (byKey.get(key) ?? []) : [];
       let incumbent = queue.find(
-        i => !used.has(i.exerciseId)
+        i => !usedEntries.has(i)
           // Already placed by the generator elsewhere: nothing to retain.
           && (i.exerciseId === ex.exerciseId || !generatedIds.has(i.exerciseId)),
       );
@@ -180,7 +190,7 @@ export function applyContinuity({
       // programme coverage.
       if (!incumbent && key && verdictFor) {
         incumbent = incumbents.find(i => {
-          if (used.has(i.exerciseId) || generatedIds.has(i.exerciseId)) return false;
+          if (usedEntries.has(i) || generatedIds.has(i.exerciseId)) return false;
           if (!key.startsWith(`${i.muscle ?? '?'}::`)) return false;
           return verdictFor(i.exerciseId)?.verdict === SLOT_VERDICT.REPLACE;
         });
@@ -244,6 +254,7 @@ export function applyContinuity({
           prescriptionChange: null,
         });
         used.add(incumbent.exerciseId);
+        usedEntries.add(incumbent);
         return ex;
       }
 
@@ -252,6 +263,7 @@ export function applyContinuity({
       // the exercise identity changes back. This is why continuity cannot
       // alter what the plan delivers.
       used.add(incumbent.exerciseId);
+      usedEntries.add(incumbent);
       decisions.push({
         workout: w.name ?? null,
         exerciseId: incumbent.exerciseId,

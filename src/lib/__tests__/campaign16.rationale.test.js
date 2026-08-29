@@ -190,17 +190,57 @@ describe('C16-11 the change receipt', () => {
     expect(receiptHeadline(1, 0, 0, 0)).toMatch(/nothing is changing/i);
   });
 
-  test('R5-2: changes AND drops are both spoken, in one line that contradicts neither section', () => {
+  test('R5-2/R6-5: changes AND drops are both spoken, in one line that contradicts neither section', () => {
     const both = receiptHeadline(4, 2, 0, 1);
     expect(both).toMatch(/2 exercises would change/);
-    expect(both).toMatch(/1 exercise would come out/);
+    expect(both).toMatch(/1 would no longer be in your plan/);
     const noStays = receiptHeadline(0, 1, 0, 2);
-    expect(noStays).toMatch(/1 exercise would change and 2 exercises would no longer be in your plan/);
+    expect(noStays).toMatch(/1 exercise would change and 2 would no longer be in your plan/);
     // The headline still never announces a done deal (shown pre-confirm).
     for (const l of [both, noStays, receiptHeadline(1, 0, 0, 1)]) {
       expect(l).not.toMatch(/has changed|have changed|has been updated/i);
       expect(l).not.toMatch(/—/);
     }
+  });
+
+  test('R6-5: the headline speaks ADDITIONS - it never denies the "New in your plan" section beneath it', () => {
+    // The reviewer's executed probe, through buildChangeReceipt: retain
+    // everything matched, add one genuinely new slot. The old headline
+    // had no added parameter at all and read "Nothing is changing"
+    // directly above "New in your plan - Bulgarian Split Squat".
+    const r = buildChangeReceipt([
+      { outcome: SLOT_OUTCOME.RETAINED, exerciseId: 'ex-b', exerciseName: 'Barbell Bench Press', workout: 'Upper', reason: SLOT_REASON.STILL_PRODUCTIVE },
+      { outcome: SLOT_OUTCOME.NEW, exerciseId: 'ex-s', exerciseName: 'Bulgarian Split Squat', workout: 'Lower', reason: null },
+    ]);
+    expect(r.added).toHaveLength(1);
+    expect(r.headline).not.toMatch(/nothing is changing/i);
+    expect(r.headline).toMatch(/1 exercise would be new/);
+  });
+
+  test('R6-5: the rep-target statement SURVIVES drops and changes - additive, never suppressed', () => {
+    // Probe B: a prescription change beside one drop. The old drop
+    // branch returned first, so the only statement of the rep-target
+    // change was replaced by "The rest stays as it is" - an affirmative
+    // denial over moving rep targets.
+    const withDrop = receiptHeadline(2, 0, 1, 1);
+    expect(withDrop).toMatch(/1 exercise would no longer be in your plan/);
+    expect(withDrop).toMatch(/1 rep target would change too\./);
+    expect(withDrop).not.toMatch(/the rest stays as it is/i);
+    const withChanges = receiptHeadline(3, 2, 2, 0);
+    expect(withChanges).toMatch(/2 exercises would change/);
+    expect(withChanges).toMatch(/2 rep targets would change too\./);
+  });
+
+  test('R6-5: every receipt line carries the exercise id, so renders key on identity', () => {
+    const r = buildChangeReceipt([
+      { outcome: SLOT_OUTCOME.RETAINED, exerciseId: 'ex-a', exerciseName: 'Bench', workout: 'U', reason: SLOT_REASON.STILL_PRODUCTIVE },
+      { outcome: SLOT_OUTCOME.REPLACED, exerciseId: 'ex-b', exerciseName: 'Row', workout: 'U', reason: SLOT_REASON.PLATEAU, previousExerciseId: 'ex-c', previousExerciseName: 'Old Row' },
+      { outcome: SLOT_OUTCOME.NEW, exerciseId: 'ex-d', exerciseName: 'Curl', workout: 'U', reason: null },
+    ]);
+    expect(r.stays[0].exerciseId).toBe('ex-a');
+    expect(r.changes[0].exerciseId).toBe('ex-b');
+    expect(r.changes[0].previousExerciseId).toBe('ex-c');
+    expect(r.added[0].exerciseId).toBe('ex-d');
   });
 
   test('R5-3: a no-longer-in line carries the exercise ID, so renders key on identity, never a display name', () => {

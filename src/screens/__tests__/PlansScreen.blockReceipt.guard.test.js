@@ -72,4 +72,20 @@ describe('R5-3: both renderers key the gone-list on exercise IDENTITY, never a d
     expect(UPDATE).toContain('>No longer in your plan</Text>');
     expect(UPDATE).toContain('staged.receipt.noLongerIn.map');
   });
+
+  test('R6-5: the OTHER three lists key on identity too, on both renderers', () => {
+    expect(PLANS).toContain('key={`rv-stay-${l.exerciseId ?? l.exerciseName}-${i}`}');
+    expect(PLANS).toContain('key={`rv-chg-${l.exerciseId ?? l.exerciseName}-${i}`}');
+    expect(PLANS).toContain('key={`rv-new-${l.exerciseId ?? l.exerciseName}-${i}`}');
+    expect(UPDATE).toContain('key={`stay-${l.exerciseId ?? l.exerciseName}-${i}`}');
+    expect(UPDATE).toContain('key={`chg-${l.exerciseId ?? l.exerciseName}-${i}`}');
+    expect(UPDATE).toContain('key={`new-${l.exerciseId ?? l.exerciseName}-${i}`}');
+  });
+
+  test('R6-5: PlanUpdateScreen renders the rep-target change on its stays lines - the headline count has a section', () => {
+    // The headline says "N rep targets would change too"; this renderer
+    // used to carry no prescription copy at all, so with a drop present
+    // the count referred to nothing on screen.
+    expect(UPDATE).toContain("{l.prescriptionCopy ? ` ${l.prescriptionCopy}` : ''}");
+  });
 });

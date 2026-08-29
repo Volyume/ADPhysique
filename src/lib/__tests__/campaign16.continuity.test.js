@@ -329,6 +329,24 @@ describe('C16-5 the change receipt is machine-readable', () => {
     expect(summariseDecisions(decisions).noLongerIn).toBe(1);
   });
 
+  test('R6-5: an exercise deliberately programmed on two days RETAINS both rows - never relisted as "new"', () => {
+    // The reviewer's probe C: `used` was keyed on exerciseId, so the
+    // second slot of a twice-programmed lift found no free incumbent
+    // and was recorded NEW - the receipt listed a months-old lift under
+    // "New in your plan" while also listing it under "What stays", and
+    // the headline read "Nothing is changing" above both. Matching now
+    // consumes ENTRIES; the gone-accounting stays keyed on ids (an
+    // exercise still anywhere in the new plan is never "no longer in
+    // your plan").
+    const { decisions } = run(
+      generatedWith(EX.bench, EX.bench), [incumbent(EX.bench), incumbent(EX.bench)],
+    );
+    expect(decisions.map(d => d.outcome)).toEqual([SLOT_OUTCOME.RETAINED, SLOT_OUTCOME.RETAINED]);
+    expect(summariseDecisions(decisions)).toEqual({
+      retained: 2, replaced: 0, added: 0, noLongerIn: 0, total: 2,
+    });
+  });
+
   test('reasons come from the engine, never from reading exercise names', () => {
     const fs = require('fs');
     const path = require('path');

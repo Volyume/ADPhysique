@@ -1964,8 +1964,8 @@ export default function PlansScreen({ navigation }) {
         {(blockReview?.receipt?.stays?.length ?? 0) > 0 ? (
           <View style={styles.receiptRow}>
             <Text style={[styles.receiptRowTitle, live.receiptRowTitle]}>What stays</Text>
-            {blockReview.receipt.stays.slice(0, 6).map((l) => (
-              <Text key={`rv-stay-${l.exerciseName}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
+            {blockReview.receipt.stays.slice(0, 6).map((l, i) => (
+              <Text key={`rv-stay-${l.exerciseId ?? l.exerciseName}-${i}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
                 {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
                 {l.prescriptionCopy ? ` ${l.prescriptionCopy}` : ''}
               </Text>
@@ -1982,8 +1982,8 @@ export default function PlansScreen({ navigation }) {
         {(blockReview?.receipt?.changes?.length ?? 0) > 0 ? (
           <View style={styles.receiptRow}>
             <Text style={[styles.receiptRowTitle, live.receiptRowTitle]}>What changes</Text>
-            {blockReview.receipt.changes.map((l) => (
-              <Text key={`rv-chg-${l.exerciseName}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
+            {blockReview.receipt.changes.map((l, i) => (
+              <Text key={`rv-chg-${l.exerciseId ?? l.exerciseName}-${i}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
                 {l.previousExerciseName ? `${l.previousExerciseName} to ` : ''}{l.exerciseName}
                 {l.why ? ` - ${l.why}` : ''}
               </Text>
@@ -1994,8 +1994,8 @@ export default function PlansScreen({ navigation }) {
         {(blockReview?.receipt?.added?.length ?? 0) > 0 ? (
           <View style={styles.receiptRow}>
             <Text style={[styles.receiptRowTitle, live.receiptRowTitle]}>New in your plan</Text>
-            {blockReview.receipt.added.map((l) => (
-              <Text key={`rv-new-${l.exerciseName}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
+            {blockReview.receipt.added.map((l, i) => (
+              <Text key={`rv-new-${l.exerciseId ?? l.exerciseName}-${i}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
                 {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
               </Text>
             ))}

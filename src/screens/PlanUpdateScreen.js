@@ -470,9 +470,17 @@ export default function PlanUpdateScreen({ navigation }) {
                     {staged.receipt.stays.length > 0 ? (
                       <>
                         <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>What stays</Text>
-                        {staged.receipt.stays.map(l => (
-                          <Text key={`stay-${l.exerciseName}`} style={[styles.diffMoveText, live.diffMoveText]}>
+                        {/* Round 6 (R6-5): the rep-target change renders
+                            on the line it belongs to - the headline's
+                            count needs a section, and this renderer had
+                            none (PlansScreen already renders it). Keys
+                            are identity + index (R5-3's law; two rows of
+                            one deliberately twice-programmed lift share
+                            an id). */}
+                        {staged.receipt.stays.map((l, i) => (
+                          <Text key={`stay-${l.exerciseId ?? l.exerciseName}-${i}`} style={[styles.diffMoveText, live.diffMoveText]}>
                             {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
+                            {l.prescriptionCopy ? ` ${l.prescriptionCopy}` : ''}
                           </Text>
                         ))}
                       </>
@@ -480,8 +488,8 @@ export default function PlanUpdateScreen({ navigation }) {
                     {staged.receipt.changes.length > 0 ? (
                       <>
                         <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>What changes</Text>
-                        {staged.receipt.changes.map(l => (
-                          <Text key={`chg-${l.exerciseName}`} style={[styles.diffMoveText, live.diffMoveText]}>
+                        {staged.receipt.changes.map((l, i) => (
+                          <Text key={`chg-${l.exerciseId ?? l.exerciseName}-${i}`} style={[styles.diffMoveText, live.diffMoveText]}>
                             {l.previousExerciseName ? `${l.previousExerciseName} to ` : ''}{l.exerciseName}
                             {l.why ? ` - ${l.why}` : ''}
                           </Text>
@@ -491,8 +499,8 @@ export default function PlanUpdateScreen({ navigation }) {
                     {staged.receipt.added.length > 0 ? (
                       <>
                         <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>New in your plan</Text>
-                        {staged.receipt.added.map(l => (
-                          <Text key={`new-${l.exerciseName}`} style={[styles.diffMoveText, live.diffMoveText]}>
+                        {staged.receipt.added.map((l, i) => (
+                          <Text key={`new-${l.exerciseId ?? l.exerciseName}-${i}`} style={[styles.diffMoveText, live.diffMoveText]}>
                             {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
                           </Text>
                         ))}
