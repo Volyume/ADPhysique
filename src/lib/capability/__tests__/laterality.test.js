@@ -306,3 +306,63 @@ describe('the app never PROPOSES work the user has just ruled out', () => {
     }
   });
 });
+
+describe('R7-3 (round 7): the side carve is a UNION decision per axis, never per rule', () => {
+  // The round-7 reviewer's executed probe: a LEFT rule and a RIGHT rule
+  // on one carveable axis each carved independently, so two rules
+  // saying "not this side" combined into "fully available" - the
+  // exercise survived generation, was offered as a substitute, and the
+  // in-session note told the user Volyume counts it one side at a time
+  // when they had said they cannot do it on either.
+  const left = (over = {}) => rule({ id: 'r-left', laterality: LATERALITY.LEFT, ...over });
+  const right = (over = {}) => rule({ id: 'r-right', laterality: LATERALITY.RIGHT, ...over });
+
+  it('LEFT + RIGHT on one axis: both sides restricted, the carve is OFF and the exercise blocks', () => {
+    const s = stateOf([left(), right()]);
+    const conflicts = demandConflicts(s, oneSideLoadable).filter((c) => !c.unknown);
+    expect(conflicts.length).toBeGreaterThan(0);
+    expect(capabilityBlockReason(s, oneSideLoadable)).toBe(CAPABILITY_BLOCK.DECLARED);
+    // And the one-side-at-a-time note must agree with the block: never
+    // spoken about an axis whose carve no longer applies.
+    expect(isSideCarvedAvailable(s, oneSideLoadable)).toBe(false);
+  });
+
+  it('LEFT + LEFT (a duplicate side): still one restricted side, still carved', () => {
+    const s = stateOf([left(), left({ id: 'r-left-2' })]);
+    expect(demandConflicts(s, oneSideLoadable).filter((c) => !c.unknown)).toHaveLength(0);
+    expect(capabilityBlockReason(s, oneSideLoadable)).toBeNull();
+    expect(isSideCarvedAvailable(s, oneSideLoadable)).toBe(true);
+  });
+
+  it('a sided rule beside an UNSIDED rule on the same axis: the unsided rule already covers both sides - no carve', () => {
+    const s = stateOf([left(), rule({ id: 'r-unsided', laterality: null })]);
+    expect(capabilityBlockReason(s, oneSideLoadable)).toBe(CAPABILITY_BLOCK.DECLARED);
+    expect(isSideCarvedAvailable(s, oneSideLoadable)).toBe(false);
+  });
+
+  it('LEFT (clinician) + RIGHT (self): sources differ, both sides are still covered - blocked at the clinician rank', () => {
+    const s = stateOf([
+      left({ source: CONSTRAINT_SOURCE.CLINICIAN_REPORTED }),
+      right(),
+    ]);
+    expect(capabilityBlockReason(s, oneSideLoadable)).toBe(CAPABILITY_BLOCK.CLINICIAN);
+    expect(isSideCarvedAvailable(s, oneSideLoadable)).toBe(false);
+  });
+
+  it('sides on DIFFERENT axes never combine: left grip + right overhead each keep their own carve', () => {
+    const s = stateOf([
+      left(),
+      right({ id: 'r-oh', ruleValue: 'overhead_position' }),
+    ]);
+    const ohOneSide = { id: 'ex_db_press', name: 'Single-Arm Dumbbell Press', gripDemand: 'supportive', overheadPosition: true, unilateralLoadable: true };
+    // The grip fixture answers the overhead axis definitely here, so the
+    // cross-axis case is judged on facts, not unknowns.
+    expect(capabilityBlockReason(s, { ...oneSideLoadable, overheadPosition: false })).toBeNull();
+    expect(capabilityBlockReason(s, ohOneSide)).toBeNull();
+  });
+
+  it('a movement that needs both hands is blocked by ONE sided rule exactly as before - the union changes nothing there', () => {
+    const s = stateOf([left()]);
+    expect(capabilityBlockReason(s, needsBothHands)).toBe(CAPABILITY_BLOCK.DECLARED);
+  });
+});

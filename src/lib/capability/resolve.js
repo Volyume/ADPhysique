@@ -91,12 +91,44 @@ export function isSideCarveable(ruleKind, ruleValue) {
 export function isSideCarvedAvailable(state, exercise) {
   if (!state || state.empty || !exercise) return false;
   if (tri(exercise.unilateralLoadable) !== true) return false;
+  // Round 7 (R7-3): consumes the same UNION answer the carve itself
+  // uses, so the "one side at a time" note can never be spoken about an
+  // axis whose carve no longer applies (both sides restricted, or an
+  // unsided rule on the same axis) - the note and the block must agree.
+  const carve = sideCarveByAxis(state);
   return (state.restrictions ?? []).some((r) => (
     r.ruleKind === CONSTRAINT_RULE_KIND.DEMAND
     && r.laterality
     && SIDE_CARVEABLE.has(r.ruleValue)
+    && carve.has(r.ruleValue)
     && demandAxisConflict(r.ruleValue, exercise) === true
   ));
+}
+
+/**
+ * Round 7 (R7-3): the axes whose side carve APPLIES for this state - a
+ * union decision over every DEMAND rule, computed once per call site.
+ * An axis carves only while exactly ONE side of it is restricted and no
+ * unsided rule restricts it too: a left rule and a right rule together
+ * mean neither side can do it, and a sided rule beside an unsided rule
+ * on the same axis means the unsided rule already covers both. Source
+ * is irrelevant here on purpose - a clinician's left rule plus a
+ * self-declared right rule still covers both sides (the clinician
+ * ranking lives in blockingConflicts, not in the carve).
+ */
+function sideCarveByAxis(state) {
+  const byAxis = new Map();
+  for (const r of state?.restrictions ?? []) {
+    if (r.ruleKind !== CONSTRAINT_RULE_KIND.DEMAND || !SIDE_CARVEABLE.has(r.ruleValue)) continue;
+    let entry = byAxis.get(r.ruleValue);
+    if (!entry) { entry = { sides: new Set(), unsided: false }; byAxis.set(r.ruleValue, entry); }
+    if (r.laterality) entry.sides.add(r.laterality); else entry.unsided = true;
+  }
+  const carves = new Set();
+  for (const [axis, entry] of byAxis) {
+    if (!entry.unsided && entry.sides.size === 1) carves.add(axis);
+  }
+  return carves;
 }
 
 /**
@@ -230,13 +262,21 @@ export function demandConflicts(state, exercise) {
   if (!state || state.empty || !exercise) return [];
   const out = [];
   const family = familyOf(exercise);
+  const carve = sideCarveByAxis(state);
   for (const r of state.restrictions) {
     if (r.ruleKind === CONSTRAINT_RULE_KIND.DEMAND) {
       let hit = demandAxisConflict(r.ruleValue, exercise);
       // Section 33.8: a sided constraint on a body-side axis is satisfied
       // by one-side-loadable movements - the user works the other side.
+      // Round 7 (R7-3): the carve is a UNION decision per axis, never a
+      // per-rule one - see sideCarveByAxis. Evaluated rule-by-rule, a
+      // LEFT rule and a RIGHT rule on one axis each carved
+      // independently, and two rules saying "not this side" combined
+      // into "fully available" - the fail-open this lane exists to
+      // prevent, on the axis where the user was most explicit.
       if (hit === true && r.laterality && SIDE_CARVEABLE.has(r.ruleValue)
-        && tri(exercise.unilateralLoadable) === true) {
+        && tri(exercise.unilateralLoadable) === true
+        && carve.has(r.ruleValue)) {
         hit = false;
       }
       if (hit === true || hit === null) {
