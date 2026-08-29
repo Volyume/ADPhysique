@@ -13,7 +13,7 @@
 // non-component code (lib/*), exactly like Alert.alert. Mount <AppAlertHost />
 // once near the app root.
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { Modal, View, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
+import { Modal, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -120,19 +120,32 @@ export function AppAlertHost() {
           accessibilityViewIsModal
         >
           {/* D42 (founder defect, 2026-07-11): title/message are the only
-              unbounded-length part of the card, so they alone sit inside the
-              scroll region (styles.card caps maxHeight and clips overflow,
-              see that style's comment for the full geometry evidence). The
-              action row below stays a SIBLING, outside this ScrollView, so
-              the buttons are never carried off-screen inside scrollable
-              content and are always reachable without scrolling first --
-              the same "footer stays put, body scrolls" shape as the
-              sup-modal/BottomSheet convention. */}
+              unbounded-length part of the card in the ordinary case, so
+              they alone sit inside this scroll region (styles.card caps
+              maxHeight and clips overflow, see that style's comment for
+              the full geometry evidence). The action row below stays a
+              SIBLING, outside this ScrollView, so the buttons are never
+              carried off-screen inside scrollable content and are always
+              reachable without scrolling first -- the same "footer stays
+              put, body scrolls" shape as the sup-modal/BottomSheet
+              convention. Round 6 (CC33 J5): the action region is itself
+              a bounded ScrollView now, because a STACKED action list is
+              also unbounded (the CC33 revisit chooser renders one button
+              per conversation) - when actions alone exceed the capped
+              card at large type, they used to be clipped by the card's
+              overflow:'hidden' with the last buttons unreachable. Normal
+              alerts are unaffected (content shorter than the cap never
+              scrolls); the pathological case degrades to scrollable
+              actions instead of missing ones. */}
           <ScrollView style={styles.cardScroll} showsVerticalScrollIndicator={false}>
             {!!title && <Text style={[styles.title, live.title]} accessibilityRole="header">{title}</Text>}
             {!!message && <Text style={[styles.message, live.message]}>{message}</Text>}
           </ScrollView>
-          <View style={[styles.actions, stacked ? styles.actionsStacked : styles.actionsRow]}>
+          <ScrollView
+            style={styles.actionsScroll}
+            contentContainerStyle={[styles.actions, stacked ? styles.actionsStacked : styles.actionsRow]}
+            showsVerticalScrollIndicator={false}
+          >
             {buttons.map((b, i) => {
               const isCancel = b.style === 'cancel';
               const isDestructive = b.style === 'destructive';
@@ -164,7 +177,7 @@ export function AppAlertHost() {
                 </TouchableOpacity>
               );
             })}
-          </View>
+          </ScrollView>
         </TouchableOpacity>
       </TouchableOpacity>
     </Modal>
@@ -238,8 +251,18 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   actionsRow: { flexDirection: 'row', justifyContent: 'flex-end' },
   actionsStacked: { flexDirection: 'column' },
+  // CC33 round 6 (J5): the action region's own scroll wrapper. flexGrow 0
+  // keeps it at content height in every ordinary alert; flexShrink 1 +
+  // minHeight 0 let it yield and SCROLL - rather than be clipped by the
+  // card's overflow:'hidden' - when a long stacked action list meets the
+  // 88% cap at a large font scale.
+  actionsScroll: { flexGrow: 0, flexShrink: 1, minHeight: 0 },
   btn: {
-    minHeight: 44,
+    // CC33 round 6 (J2): spacing.xxxl = 48, the styling law's minimum
+    // touch target ("every interactive element >=48dp effective - gym,
+    // sweaty hands"), replacing an off-scale 44 literal. Every capability
+    // decision the campaign routes through alerts rides on this.
+    minHeight: spacing.xxxl,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,

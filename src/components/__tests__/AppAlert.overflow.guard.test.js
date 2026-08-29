@@ -95,4 +95,29 @@ describe('AppAlert overflow contract (D42)', () => {
 
     expect(onDelete).toHaveBeenCalled();
   });
+
+  test('CC33 round 6 (J5): the action region is its own BOUNDED scroll - a long stacked list scrolls, never clips', () => {
+    // The card clips overflow (correct), and the body ScrollView shrinks
+    // first - so a stacked action list taller than the capped card (the
+    // CC33 revisit chooser at a large font scale) used to be CLIPPED
+    // with its last buttons, the cancel included, unreachable. The
+    // actions now sit in their own shrinkable ScrollView: content
+    // height in every ordinary alert, scrollable past the cap.
+    const block = SOURCE.match(/actionsScroll:\s*\{[^}]*\}/)?.[0] ?? '';
+    expect(block).toContain('flexGrow: 0');
+    expect(block).toContain('flexShrink: 1');
+    expect(block).toContain('minHeight: 0');
+    expect(SOURCE).toContain('style={styles.actionsScroll}');
+    expect(SOURCE).toContain('contentContainerStyle={[styles.actions, stacked ? styles.actionsStacked : styles.actionsRow]}');
+  });
+
+  test('CC33 round 6 (J2): every alert button is a 48dp target from the spacing scale, not an off-scale literal', () => {
+    // docs/rules/styling.md: "every interactive element >=48dp effective
+    // - gym, sweaty hands"; 44 was also an off-scale literal by that
+    // file's own token law. Every capability decision the campaign
+    // routes through alerts rides on this.
+    const btnBlock = SOURCE.match(/\n  btn: \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(btnBlock).toContain('minHeight: spacing.xxxl');
+    expect(btnBlock).not.toContain('minHeight: 44');
+  });
 });
