@@ -25,6 +25,8 @@ jest.mock('../database', () => ({
   getAllExercises: jest.fn(),
   setConstraintEffectiveChoice: jest.fn(),
   appendSessionConstraintEffects: jest.fn().mockResolvedValue(undefined),
+  updateRoutineExerciseExercise: jest.fn().mockResolvedValue(undefined),
+  recordExerciseSwap: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock('../capability/resolve', () => {
   const actual = jest.requireActual('../capability/resolve');
@@ -38,15 +40,25 @@ jest.mock('../exercise/intent', () => ({
   isEligibleExercise: jest.fn((_state, ex) => ex?.position !== 'standing'),
 }));
 
-const { getAllExercises, appendSessionConstraintEffects } = require('../database');
+const {
+  getAllExercises, appendSessionConstraintEffects, getActivePlan,
+  getRoutinesForPlan, getRoutineExercisesWithDetails, updateRoutineExerciseExercise,
+} = require('../database');
 const { loadCapabilityResolveState, buildCapabilityResolveState } = require('../capability/resolve');
-const { applyEffectiveViewToSession } = require('../sessionEffective');
+const {
+  applyEffectiveViewToSession, countEffectiveSessionRows,
+  computeCapabilityPlanRewrite, applyCapabilityPlanRewrite,
+} = require('../sessionEffective');
 
 const NOW = 1_750_000_000_000;
 
 const SQUAT = { id: 'ex-squat', name: 'Barbell Back Squat', primaryMuscle: 'quads', position: 'standing', floorAccess: 0, overheadPosition: 0, gripDemand: 'bar', unilateralLoadable: 0, bilateralUpper: 1, bilateralLower: 1, axialLoad: 1, impact: 0, balanceDemand: 'stable' };
 const LEGPRESS = { id: 'ex-legpress', name: 'Leg Press', primaryMuscle: 'quads', position: 'seated', floorAccess: 0, overheadPosition: 0, gripDemand: 'supportive', unilateralLoadable: null, bilateralUpper: 0, bilateralLower: 1, axialLoad: 0, impact: 0, balanceDemand: 'supported' };
 const LUNGE = { id: 'ex-lunge', name: 'Walking Lunge', primaryMuscle: 'quads', position: 'standing', floorAccess: 0, overheadPosition: 0, gripDemand: 'supportive', unilateralLoadable: 1, bilateralUpper: 0, bilateralLower: 1, axialLoad: 1, impact: 0, balanceDemand: 'high' };
+// A second seated quads option, for the R5-8 taken-set pins: with TWO
+// eligible substitutes in the pool, two conflicted quads rows must get
+// two DIFFERENT movements.
+const LEGEXT = { id: 'ex-legext', name: 'Leg Extension', primaryMuscle: 'quads', position: 'seated', floorAccess: 0, overheadPosition: 0, gripDemand: 'none', unilateralLoadable: 1, bilateralUpper: 0, bilateralLower: 1, axialLoad: 0, impact: 0, balanceDemand: 'supported' };
 
 function appliedStandingEpisode() {
   return buildCapabilityResolveState([{
@@ -218,4 +230,127 @@ test('F-2 DRIVEN: a fully-omitted session fail-safes with ZERO durable effects w
   expect(res.untouched).toBe(true);
   expect(res.served).toBe(rows);
   expect(appendSessionConstraintEffects).not.toHaveBeenCalled();
+});
+
+// ---------------------------------------------------------------------------
+// Round 5 (R5-8): the taken-set. One substitute is never assigned twice
+// within a session, and a substitute never duplicates a row the session
+// already holds. Driven through serve, the count mirror and the rewrite.
+// ---------------------------------------------------------------------------
+
+test('R5-8 DRIVEN: two conflicted rows of one muscle are served two DIFFERENT substitutes', async () => {
+  // The reviewer's executed probe, kept closed: before the taken-set,
+  // Back Squat AND Walking Lunge both served as Leg Press - one movement
+  // twice, with two markers naming two different originals.
+  getAllExercises.mockResolvedValue([SQUAT, LUNGE, LEGPRESS, LEGEXT]);
+  const { served, untouched } = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), asServed(LUNGE)]);
+  expect(untouched).toBe(false);
+  expect(served).toHaveLength(2);
+  const ids = served.map((r) => r.id);
+  expect(new Set(ids).size).toBe(2); // never the same movement twice
+  expect(ids.sort()).toEqual([LEGEXT.id, LEGPRESS.id].sort());
+  expect(served[0]._capabilityTemp?.fromId).toBe(SQUAT.id);
+  expect(served[1]._capabilityTemp?.fromId).toBe(LUNGE.id);
+  const entries = appendSessionConstraintEffects.mock.calls[0][2];
+  expect(new Set(entries.map((e) => e.exerciseTo)).size).toBe(2);
+});
+
+test('R5-8 DRIVEN: when only one substitute exists, the second conflicted row falls to the honest OMITTED path', async () => {
+  getAllExercises.mockResolvedValue([SQUAT, LUNGE, LEGPRESS]);
+  const { served, baseIndexes } = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), asServed(LUNGE)]);
+  expect(served).toHaveLength(1);
+  expect(served[0].id).toBe(LEGPRESS.id); // slot 0 takes the one candidate
+  expect(baseIndexes).toEqual([0]);
+  const entries = appendSessionConstraintEffects.mock.calls[0][2];
+  expect(entries).toEqual([
+    expect.objectContaining({ effect: 'substituted', exerciseFrom: SQUAT.id, exerciseTo: LEGPRESS.id }),
+    expect.objectContaining({ effect: 'omitted', exerciseFrom: LUNGE.id }),
+  ]);
+});
+
+test('R5-8 DRIVEN: a substitute never duplicates an unaffected row already in the session', async () => {
+  // Leg Press is already IN the session (compatible, served as planned).
+  // The conflicted squat must not ALSO become Leg Press - the taken set
+  // is seeded with the session's own rows, so it falls to Leg Extension.
+  getAllExercises.mockResolvedValue([SQUAT, LEGPRESS, LEGEXT]);
+  const { served } = await applyEffectiveViewToSession('u1', 'w1', [asServed(LEGPRESS), asServed(SQUAT)]);
+  expect(served.map((r) => r.id)).toEqual([LEGPRESS.id, LEGEXT.id]);
+});
+
+// ---------------------------------------------------------------------------
+// Round 5 (R5-4): the served-count mirror shares serve's
+// never-served-empty fail-safe, not just its wiring.
+// ---------------------------------------------------------------------------
+
+const ROUTINE_ROWS = (list) => list.map((e, i) => ({ routineExercise: { id: `re-${i + 1}` }, exercise: asServed(e) }));
+
+test('R5-4 DRIVEN: the count mirror answers the BASE count for a fully-omitted session, exactly as serve serves it', async () => {
+  // F-2's own fixture, asked through the mirror: serve returns the base
+  // session intact, so the Today card's count must be the base count -
+  // the old 0 was falsy and the "N exercises" line vanished for a
+  // session the app was about to serve in full.
+  getAllExercises.mockResolvedValue([SQUAT, LUNGE]);
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([SQUAT, LUNGE]));
+  await expect(countEffectiveSessionRows('u1', 'r1')).resolves.toBe(2);
+});
+
+test('R5-4 control: a PARTIALLY omitted session still counts the reduction', async () => {
+  getAllExercises.mockResolvedValue([SQUAT, LUNGE]);
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([SQUAT, LEGPRESS]));
+  // Squat omitted (no eligible substitute in this pool), leg press served.
+  await expect(countEffectiveSessionRows('u1', 'r1')).resolves.toBe(1);
+});
+
+// ---------------------------------------------------------------------------
+// Round 5 (R5-8, rewrite half): the DOCUMENT is never written a duplicate.
+// ---------------------------------------------------------------------------
+
+function baselineStandingRule() {
+  return buildCapabilityResolveState([{
+    id: 'b1', userId: 'u1', role: 'baseline', source: 'self', ruleKind: 'demand',
+    ruleValue: 'standing', laterality: null, startsAt: NOW - 1000, endsAt: null,
+    state: 'active', endedAt: null, endedReason: null, episodeGroupId: null,
+    deletedAt: null,
+  }], { atMs: NOW });
+}
+
+test('R5-8 DRIVEN: the plan rewrite proposes and writes two DIFFERENT movements for two conflicted rows', async () => {
+  loadCapabilityResolveState.mockResolvedValue(baselineStandingRule());
+  getActivePlan.mockResolvedValue({ id: 'p1' });
+  getRoutinesForPlan.mockResolvedValue([{ id: 'r1', name: 'Legs' }]);
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([SQUAT, LUNGE]));
+  getAllExercises.mockResolvedValue([SQUAT, LUNGE, LEGPRESS, LEGEXT]);
+  const rw = await computeCapabilityPlanRewrite('u1', {});
+  expect(rw.checked).toBe(true);
+  expect(rw.lines).toHaveLength(2);
+  expect(rw.substitutable).toBe(2);
+  const targets = rw.lines.map((l) => l.to?.id);
+  expect(new Set(targets).size).toBe(2); // never one substitute twice
+  await applyCapabilityPlanRewrite('u1', rw.lines);
+  const written = updateRoutineExerciseExercise.mock.calls.map((c) => c[1]);
+  expect(new Set(written).size).toBe(2); // and the document gets both
+});
+
+test('R5-8 DRIVEN: with one candidate, the rewrite marks the second line unsolvable and writes ONE swap', async () => {
+  loadCapabilityResolveState.mockResolvedValue(baselineStandingRule());
+  getActivePlan.mockResolvedValue({ id: 'p1' });
+  getRoutinesForPlan.mockResolvedValue([{ id: 'r1', name: 'Legs' }]);
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([SQUAT, LUNGE]));
+  getAllExercises.mockResolvedValue([SQUAT, LUNGE, LEGPRESS]);
+  const rw = await computeCapabilityPlanRewrite('u1', {});
+  expect(rw.substitutable).toBe(1);
+  expect(rw.unsolvable).toBe(1); // kept in place with its quiet note - honest, never a duplicate
+  await applyCapabilityPlanRewrite('u1', rw.lines);
+  expect(updateRoutineExerciseExercise).toHaveBeenCalledTimes(1);
+});
+
+test('R5-9: an unavailable capability state answers checked=false, never "nothing to rewrite"', async () => {
+  loadCapabilityResolveState.mockResolvedValue({ empty: true, unavailable: true, restrictions: [], allowances: new Set() });
+  getActivePlan.mockResolvedValue({ id: 'p1' });
+  getRoutinesForPlan.mockResolvedValue([{ id: 'r1', name: 'Legs' }]);
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([SQUAT]));
+  getAllExercises.mockResolvedValue([SQUAT, LEGPRESS]);
+  const rw = await computeCapabilityPlanRewrite('u1', {});
+  expect(rw.lines).toHaveLength(0);
+  expect(rw.checked).toBe(false);
 });

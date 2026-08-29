@@ -68,12 +68,25 @@ export function baselineConflicts(capabilityState, exercise) {
  * tier then name (deterministic; personal evidence never promotes an
  * unsuitable movement here - this is a capability workaround, not a
  * preference surface).
+ *
+ * `taken` (CC33 round 5, R5-8): ids this selection may not choose - the
+ * substitutes already picked for earlier rows of the same session or
+ * routine, plus the session's own rows. Without it the ranking is
+ * deterministic PER ROW with no cross-row memory, so two conflicted rows
+ * of one muscle always received the same top-ranked substitute - served
+ * twice in one session, and written twice, permanently, by the plan
+ * rewrite. The same movement never appears in a session twice
+ * (continuity.js states the identical law for the generator); a slot
+ * whose every remaining candidate is taken falls to the next rank, and
+ * when none remains it resolves null - the existing honest
+ * omitted/unsolvable path, never a duplicate.
  */
-export function bestEligibleSubstitute(exercise, library, isEligibleRow) {
+export function bestEligibleSubstitute(exercise, library, isEligibleRow, taken = null) {
   if (!exercise?.primaryMuscle || !Array.isArray(library)) return null;
   const candidates = library
     .filter((e) => e.id !== exercise.id
       && e.primaryMuscle === exercise.primaryMuscle
+      && !(taken && taken.has(e.id))
       && isEligibleRow(e))
     .sort((a, b) => tierRank(a.name) - tierRank(b.name)
       || String(a.name).localeCompare(String(b.name)));
@@ -97,6 +110,16 @@ export function computeEffectiveSession(baseRows, library, capabilityState, isEl
   const lines = [];
   let anyEffect = false;
   let undecidedCount = 0;
+  // R5-8: one session never contains the same movement twice. Seeded
+  // with every base row's own id - a substitute must not duplicate an
+  // unaffected row that is staying in the session (a conflicted row's id
+  // costs nothing here: it is ineligible via the senior question anyway)
+  // - and each chosen substitute joins the set so later rows fall to the
+  // next canonical rank. Iteration order is session order, so the
+  // assignment stays deterministic.
+  const taken = new Set(
+    (baseRows ?? []).map((r) => (r?.exercise ?? r)?.id).filter(Boolean),
+  );
   (baseRows ?? []).forEach((row, i) => {
     const exercise = row?.exercise ?? row;
     // D112 R8: held episodes drive nothing here - a fully-held conflict
@@ -127,7 +150,8 @@ export function computeEffectiveSession(baseRows, library, capabilityState, isEl
       lines.push({ slot: i, exerciseFrom: exercise, effect: EFFECTIVE_EFFECT.CONFLICTED, exerciseTo: null, constraintIds, undecided });
       return;
     }
-    const substitute = bestEligibleSubstitute(exercise, library, isEligibleRow);
+    const substitute = bestEligibleSubstitute(exercise, library, isEligibleRow, taken);
+    if (substitute) taken.add(substitute.id);
     lines.push({
       slot: i,
       exerciseFrom: exercise,

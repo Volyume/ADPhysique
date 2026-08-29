@@ -113,13 +113,26 @@ describe('effective view semantics (section 14)', () => {
     const state = await loadCapabilityResolveState(USER, {});
     const library = [{ id: 'fx-squat', ...SQUAT }, { id: 'fx-legpress', ...LEGPRESS }];
 
+    // The conflicted row substitutes to the pool's seated option. Round 5
+    // (R5-8): the session here is the squat ALONE - a substitute may
+    // never duplicate a row the session already holds, so a session that
+    // already contained the leg press would (correctly) omit the squat
+    // instead. The two-row shape is pinned separately below.
     const view = computeEffectiveSession(
-      [{ exercise: library[0] }, { exercise: library[1] }], library, state, () => true,
+      [{ exercise: library[0] }], library, state, () => true,
     );
     expect(view.lines[0].effect).toBe(EFFECTIVE_EFFECT.SUBSTITUTED);
     expect(view.lines[0].exerciseTo.id).toBe('fx-legpress');
     expect(view.lines[0].constraintIds).toContain(ruleId);
-    expect(view.lines[1].effect).toBe(EFFECTIVE_EFFECT.UNCHANGED);
+
+    // R5-8: with the substitute already IN the session, serving it twice
+    // is the defect the taken-set closes - the conflicted row falls to
+    // the honest omitted path and the compatible row stands unchanged.
+    const viewTaken = computeEffectiveSession(
+      [{ exercise: library[0] }, { exercise: library[1] }], library, state, () => true,
+    );
+    expect(viewTaken.lines[0].effect).toBe(EFFECTIVE_EFFECT.OMITTED);
+    expect(viewTaken.lines[1].effect).toBe(EFFECTIVE_EFFECT.UNCHANGED);
 
     // No eligible substitute -> omitted.
     const viewNoSub = computeEffectiveSession(

@@ -33,11 +33,15 @@ export { setConstraintEffectiveChoice };
  * clinician rank-2 never carveable, held episodes still counted (a hold
  * means "do not change my plan", never "I can do this").
  *
- * Serve, the served-count mirror, the plan-rewrite proposal and the
- * per-line preview all inject THIS, so what is previewed is what is
- * served is what a rewrite would write - one answer, four consumers.
+ * Serve, the served-count mirror, the plan-rewrite proposal, the
+ * per-line preview and the plan-view caption memo all inject THIS, so
+ * what is captioned is what is previewed is what is served is what a
+ * rewrite would write - one answer, five consumers. Exported (round 5,
+ * R5-7) so RoutineDetailScreen's caption asks the same question rather
+ * than a weaker capability-only one - a weaker predicate predicts
+ * substitutes serve will not make (§18's own defect, R5-5).
  */
-const substituteSeniorQuestion = (capState, intentState) => (ex) => (
+export const substituteSeniorQuestion = (capState, intentState) => (ex) => (
   isEligibleExercise(intentState, ex) && blockingConflicts(capState, ex).length === 0
 );
 
@@ -121,18 +125,38 @@ export async function computePlanEffectiveLines(userId, ruleIds = []) {
     for (const routine of routines ?? []) {
       // eslint-disable-next-line no-await-in-loop
       const rows = await getRoutineExercisesWithDetails(routine.id).catch(() => { checked = false; return []; });
+      // R5-8: substitutes already spoken for within THIS routine - its
+      // own rows, then each substitute as it is chosen - so two
+      // conflicted rows of one muscle preview two different movements,
+      // exactly as serve now assigns them. Scope is per routine: the
+      // same movement on two different days is ordinary programming.
+      const taken = new Set(
+        (rows ?? []).map((r) => r?.exercise?.id ?? r?.exerciseId).filter(Boolean),
+      );
+      const isEligibleRow = substituteSeniorQuestion(capState, intentState);
       for (const row of rows ?? []) {
         const exercise = byId.get(row?.exercise?.id ?? row?.exerciseId) ?? null;
         if (!exercise) continue;
         // Definite conflicts only (F1 class): proposing to swap a line on
         // an UNKNOWN conflict would justify a change with a movement fact
         // the app has not established - the same gate serve applies.
-        const conflicts = actionableEpisodeConflicts(capState, exercise)
-          .filter((c) => !c.unknown && wanted.has(c.constraintId));
-        if (!conflicts.length) continue;
-        const substitute = bestEligibleSubstitute(
-          exercise, library, substituteSeniorQuestion(capState, intentState),
-        );
+        const definite = actionableEpisodeConflicts(capState, exercise)
+          .filter((c) => !c.unknown);
+        if (!definite.length) continue;
+        const conflicts = definite.filter((c) => wanted.has(c.constraintId));
+        if (!conflicts.length) {
+          // Not this proposal's line, but serve is already substituting
+          // it under other APPLIED rules - consume its substitute in row
+          // order so the lines below name the movements serve would
+          // actually assign, not the ones it has already spent.
+          if (definite.every((c) => c.row?.effectiveChoice === 'applied')) {
+            const spent = bestEligibleSubstitute(exercise, library, isEligibleRow, taken);
+            if (spent) taken.add(spent.id);
+          }
+          continue;
+        }
+        const substitute = bestEligibleSubstitute(exercise, library, isEligibleRow, taken);
+        if (substitute) taken.add(substitute.id);
         out.push({
           routineId: routine.id,
           routineName: routine.name ?? null,
@@ -410,7 +434,17 @@ export async function countEffectiveSessionRows(userId, routineId) {
       baseRows, library, capState, substituteSeniorQuestion(capState, intentState),
     );
     const omitted = view.lines.filter((l) => l.effect === EFFECTIVE_EFFECT.OMITTED).length;
-    return Math.max(0, baseCount - omitted);
+    // Round 5 (R5-4): serve's own never-served-empty fail-safe (D116),
+    // mirrored - not just serve's wiring. A routine whose every row
+    // would be omitted is SERVED IN FULL by applyEffectiveViewToSession
+    // (`if (!served.length) return untouched()`), so the count this
+    // function mirrors is the base count, never 0 - a 0 here made the
+    // Today card's "N exercises" line vanish (falsy) for a session the
+    // app was about to serve whole. Rows the library cannot resolve
+    // never reach `view.lines` but ARE served, so the subtraction runs
+    // against baseCount, matching serve's arithmetic exactly.
+    const served = baseCount - omitted;
+    return served > 0 ? served : baseCount;
   } catch (_e) {
     return baseCount;
   }
@@ -441,27 +475,53 @@ export async function countEffectiveSessionRows(userId, routineId) {
  *   judges every active BASELINE rule.
  * @returns {Promise<{lines: Array<{routineId: string, routineName: string|null,
  *   routineExerciseId: string|null, from: object, to: object|null,
- *   constraintIds: string[]}>, substitutable: number, unsolvable: number}>}
+ *   constraintIds: string[]}>, substitutable: number, unsolvable: number,
+ *   checked: boolean}>} checked=false means "could not tell" (R3-2's
+ *   distinction, extended here under R5-9): an unavailable capability
+ *   state, a failed routine read, or any throw. Callers must not present
+ *   an unchecked empty result as "nothing needs attention".
  */
 export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = {}) {
-  const out = { lines: [], substitutable: 0, unsolvable: 0 };
+  const out = {
+    lines: [], substitutable: 0, unsolvable: 0, checked: false,
+  };
   try {
     if (!userId) return out;
     const plan = await getActivePlan(userId);
-    if (!plan?.id) return out;
+    if (!plan?.id) { out.checked = true; return out; }
     const [capState, intentState, library, routines] = await Promise.all([
       loadCapabilityResolveState(userId, {}),
       loadExerciseIntentState(userId, {}),
       getAllExercises(),
       getRoutinesForPlan(plan.id),
     ]);
-    if (capState.empty || capState.unavailable) return out;
+    const wanted = Array.isArray(ruleIds) && ruleIds.length ? new Set(ruleIds) : null;
+    if (capState.unavailable) return out;
+    if (capState.empty) {
+      // No rules at all is a completed answer for the standing audit -
+      // but a caller holding SPECIFIC rule ids it could not find here
+      // has two reads that disagree, which is "could not tell".
+      out.checked = !wanted;
+      return out;
+    }
+    out.checked = true;
     const byId = new Map((library ?? []).map((e) => [e.id, e]));
     const roleById = new Map((capState.restrictions ?? []).map((r) => [r.id, r.role]));
-    const wanted = Array.isArray(ruleIds) && ruleIds.length ? new Set(ruleIds) : null;
+    const isEligibleRow = substituteSeniorQuestion(capState, intentState);
     for (const routine of routines ?? []) {
       // eslint-disable-next-line no-await-in-loop
-      const rows = await getRoutineExercisesWithDetails(routine.id).catch(() => []);
+      const rows = await getRoutineExercisesWithDetails(routine.id).catch(() => { out.checked = false; return []; });
+      // R5-8: the ids this routine already holds, then each substitute
+      // as it is chosen - the rewrite writes the DOCUMENT, so without
+      // this two conflicted rows of one muscle were both permanently
+      // rewritten to the same movement (the reviewer's executed probe:
+      // Back Squat and Walking Lunge both to Leg Press). A line whose
+      // candidates are all taken falls to the next rank, then to
+      // unsolvable - kept in place with its honest quiet note, never a
+      // duplicate.
+      const taken = new Set(
+        (rows ?? []).map((r) => r?.exercise?.id ?? r?.exerciseId).filter(Boolean),
+      );
       for (const row of rows ?? []) {
         const exercise = byId.get(row?.exercise?.id ?? row?.exerciseId) ?? null;
         if (!exercise) continue;
@@ -477,9 +537,8 @@ export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = 
           // episode conflict is the overlay's business, not the document's.
           : conflicts.filter((c) => roleById.get(c.constraintId) === 'baseline');
         if (!conflicts.length) continue;
-        const substitute = bestEligibleSubstitute(
-          exercise, library, substituteSeniorQuestion(capState, intentState),
-        );
+        const substitute = bestEligibleSubstitute(exercise, library, isEligibleRow, taken);
+        if (substitute) taken.add(substitute.id);
         out.lines.push({
           routineId: routine.id,
           routineName: routine.name ?? null,
@@ -498,7 +557,7 @@ export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = 
         if (substitute) out.substitutable += 1; else out.unsolvable += 1;
       }
     }
-  } catch (_e) { /* read-only proposal; empty means nothing to offer */ }
+  } catch (_e) { out.checked = false; /* read-only proposal; unchecked means "could not tell" */ }
   return out;
 }
 
