@@ -167,13 +167,25 @@ export function applyContinuity({
     (generated ?? []).flatMap(w => (w.exercises ?? []).map(e => e.exerciseId)).filter(Boolean),
   );
 
-  const workouts = (generated ?? []).map(w => ({
+  const workouts = (generated ?? []).map(w => {
+    // Round 7 (R7-1): incumbent ids already retained into THIS workout.
+    // R6-5's entry-keyed matching let one twice-programmed incumbent be
+    // retained into two slots of ONE session when the rebuilt session
+    // held two slots of the same slotKey (ordinary for quads, whose
+    // families collapse to two) - the same exercise back to back, which
+    // this module's own law below calls a duplicate, not continuity.
+    // Cross-WORKOUT double retention (the R6-5 case: one lift on two
+    // days) stays allowed; a second entry refused here falls through to
+    // the NEW branch exactly as the id-keyed code did.
+    const placedInWorkout = new Set();
+    return {
     ...w,
     exercises: (w.exercises ?? []).map((ex) => {
       const key = familyOf(ex.exerciseId);
       const queue = key ? (byKey.get(key) ?? []) : [];
       let incumbent = queue.find(
         i => !usedEntries.has(i)
+          && !placedInWorkout.has(i.exerciseId)
           // Already placed by the generator elsewhere: nothing to retain.
           && (i.exerciseId === ex.exerciseId || !generatedIds.has(i.exerciseId)),
       );
@@ -190,7 +202,7 @@ export function applyContinuity({
       // programme coverage.
       if (!incumbent && key && verdictFor) {
         incumbent = incumbents.find(i => {
-          if (usedEntries.has(i) || generatedIds.has(i.exerciseId)) return false;
+          if (usedEntries.has(i) || placedInWorkout.has(i.exerciseId) || generatedIds.has(i.exerciseId)) return false;
           if (!key.startsWith(`${i.muscle ?? '?'}::`)) return false;
           return verdictFor(i.exerciseId)?.verdict === SLOT_VERDICT.REPLACE;
         });
@@ -255,6 +267,7 @@ export function applyContinuity({
         });
         used.add(incumbent.exerciseId);
         usedEntries.add(incumbent);
+        placedInWorkout.add(incumbent.exerciseId);
         return ex;
       }
 
@@ -264,6 +277,7 @@ export function applyContinuity({
       // alter what the plan delivers.
       used.add(incumbent.exerciseId);
       usedEntries.add(incumbent);
+      placedInWorkout.add(incumbent.exerciseId);
       decisions.push({
         workout: w.name ?? null,
         exerciseId: incumbent.exerciseId,
@@ -302,7 +316,8 @@ export function applyContinuity({
         } : {}),
       };
     }),
-  }));
+    };
+  });
 
   // CC33 round 4 (Q2): every incumbent is accounted for. One not used by
   // any slot and not re-picked by the generator is NO LONGER IN the

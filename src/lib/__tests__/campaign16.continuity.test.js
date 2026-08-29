@@ -329,22 +329,44 @@ describe('C16-5 the change receipt is machine-readable', () => {
     expect(summariseDecisions(decisions).noLongerIn).toBe(1);
   });
 
-  test('R6-5: an exercise deliberately programmed on two days RETAINS both rows - never relisted as "new"', () => {
-    // The reviewer's probe C: `used` was keyed on exerciseId, so the
-    // second slot of a twice-programmed lift found no free incumbent
-    // and was recorded NEW - the receipt listed a months-old lift under
-    // "New in your plan" while also listing it under "What stays", and
-    // the headline read "Nothing is changing" above both. Matching now
-    // consumes ENTRIES; the gone-accounting stays keyed on ids (an
-    // exercise still anywhere in the new plan is never "no longer in
-    // your plan").
-    const { decisions } = run(
-      generatedWith(EX.bench, EX.bench), [incumbent(EX.bench), incumbent(EX.bench)],
+  test('R6-5: an exercise deliberately programmed on two DAYS retains both rows - never relisted as "new"', () => {
+    // Round-6 probe C: `used` was keyed on exerciseId, so the second
+    // entry of a twice-programmed lift found no free incumbent and was
+    // recorded NEW - the receipt listed a months-old lift under "New in
+    // your plan" while also listing it under "What stays". Matching
+    // consumes ENTRIES; the two retentions land on two different DAYS
+    // (round 7, R7-1: the fixture must be cross-workout - a
+    // single-workout version exercises the duplicate guard instead).
+    const slot = (e) => ({ exerciseId: e.id, exerciseName: e.name, sets: 3, repMin: 6, repMax: 10, restSec: 180, _slot: 0 });
+    const { workouts, decisions } = run(
+      [
+        { name: 'Upper A', exercises: [slot(EX.bench)] },
+        { name: 'Upper B', exercises: [slot(EX.bench)] },
+      ],
+      [incumbent(EX.bench), incumbent(EX.bench)],
     );
+    expect(workouts.map(w => w.exercises[0].exerciseId)).toEqual([EX.bench.id, EX.bench.id]);
     expect(decisions.map(d => d.outcome)).toEqual([SLOT_OUTCOME.RETAINED, SLOT_OUTCOME.RETAINED]);
     expect(summariseDecisions(decisions)).toEqual({
       retained: 2, replaced: 0, added: 0, noLongerIn: 0, total: 2,
     });
+  });
+
+  test('R7-1: one incumbent is NEVER retained into two slots of the SAME session', () => {
+    // Round-7 regression probe, kept closed: two entries of one lift
+    // and a rebuilt session holding two slots of that lift's slotKey
+    // (ordinary for quads, whose families collapse to two). Entry-keyed
+    // matching alone retained the incumbent into BOTH slots - the same
+    // exercise back to back, which this module's own law calls a
+    // duplicate, not continuity. The per-workout guard refuses the
+    // second entry, which falls through to the generator's own pick.
+    const { workouts, decisions } = run(
+      generatedWith(EX.bench, EX.dbBench), [incumbent(EX.bench), incumbent(EX.bench)],
+    );
+    const ids = workouts[0].exercises.map(e => e.exerciseId);
+    expect(new Set(ids).size).toBe(ids.length); // never the same movement twice in one session
+    expect(ids).toEqual([EX.bench.id, EX.dbBench.id]);
+    expect(decisions.map(d => d.outcome)).toEqual([SLOT_OUTCOME.RETAINED, SLOT_OUTCOME.NEW]);
   });
 
   test('reasons come from the engine, never from reading exercise names', () => {
