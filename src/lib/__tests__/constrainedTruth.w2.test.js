@@ -127,6 +127,23 @@ describe('source wiring', () => {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'CoachOutputScreen.js'), 'utf8');
     expect(src).toContain('reshapedThisWeek: sessionStats.constraintReshapedSessions ?? 0,');
   });
+
+  test('R5-5: the weekly denominator predicts nothing - every constraint fact it uses is a RECORD', () => {
+    // CC33 round 5 (D117, correcting D116 ruling 2): §18's predictive
+    // whole-session reduction of `planned` used a capability-only
+    // substitute test, strictly weaker than serve's composed senior
+    // question - so every session it excused was one serve's
+    // never-served-empty fail-safe was about to serve IN FULL, and the
+    // reduction could only flatter completed/planned. Deleted. The
+    // weekly stats read what a constraint actually DID (the effects
+    // records: excused, reshaped, ended-early), never what one might do.
+    const src = read('database.js');
+    const fn = src.match(/export async function getWeeklySessionStats[\s\S]*?\n}\n/)?.[0] ?? '';
+    expect(fn.length).toBeGreaterThan(0);
+    expect(fn).not.toContain('fullyOmitted');
+    expect(fn).not.toContain('capabilityBlockReason');
+    expect(fn).not.toContain('computeEffectiveSession');
+  });
 });
 
 // ── Landing 6: the story and copy layer (T2-14, T2-15, T2-17, T2-18) ──

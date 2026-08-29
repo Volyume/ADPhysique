@@ -8038,52 +8038,20 @@ export async function getWeeklySessionStats(userId, weekStart) {
     }
   } catch (_e) { /* pre-CC29 numbers stand */ }
 
-  let planned = plannedFromPlan != null
+  const planned = plannedFromPlan != null
     ? plannedFromPlan
     : Math.max(completed, Math.round(avgPrev) || 3);
 
-  // CC29 (section 18): a session FULLY omitted by the applied effective
-  // view reduces planned - a routine whose every exercise is blocked by
-  // an APPLIED episode rule with no eligible substitute is not owed.
-  // Conservative on purpose: only whole-session omission moves the
-  // denominator, and only while the episode rules are active and applied.
-  if (plannedFromPlan != null) {
-    try {
-      // eslint-disable-next-line global-require
-      const { loadCapabilityResolveState, capabilityBlockReason } = require('./capability/resolve');
-      // eslint-disable-next-line global-require
-      const { computeEffectiveSession } = require('./capability/effective');
-      const state = await loadCapabilityResolveState(userId, {});
-      const hasAppliedEpisode = !state.empty && !state.unavailable
-        && (state.restrictions ?? []).some((r) => r.role === 'episode' && r.effectiveChoice === 'applied');
-      if (hasAppliedEpisode) {
-        const plan = await getActivePlan(userId);
-        const routines = plan?.id ? await getRoutinesForPlan(plan.id) : [];
-        const library = await getAllExercises();
-        const byId = new Map(library.map((e) => [e.id, e]));
-        let fullyOmitted = 0;
-        for (const routine of routines ?? []) {
-          // eslint-disable-next-line no-await-in-loop
-          const exRows = await d.getAllAsync(
-            'SELECT exercise_id AS exerciseId FROM routine_exercises WHERE routine_id = ?', [routine.id],
-          ).catch(() => []);
-          const baseRows = (exRows ?? [])
-            .map((r) => ({ exercise: byId.get(r.exerciseId) }))
-            .filter((r) => r.exercise);
-          if (!baseRows.length) continue;
-          // Capability-only substitute test: if a capability-eligible
-          // substitute exists the session still happens (substituted),
-          // so it stays in planned; only a genuinely unfillable session
-          // reduces the denominator.
-          const view = computeEffectiveSession(
-            baseRows, library, state, (ex) => capabilityBlockReason(state, ex) === null,
-          );
-          if (view.lines.every((l) => l.effect === 'omitted')) fullyOmitted += 1;
-        }
-        if (fullyOmitted > 0) planned = Math.max(completed, planned - fullyOmitted);
-      }
-    } catch (_e) { /* pre-CC29 numbers stand */ }
-  }
+  // CC29 §18's predictive whole-session reduction of `planned` was
+  // DELETED here (CC33 round 5, R5-5; D117 ruling, correcting D116
+  // ruling 2's premise). It predicted a fully-omitted session with a
+  // capability-only substitute test, which is strictly weaker than
+  // serve's composed senior question - so every session it excused was
+  // one serve's never-served-empty fail-safe (D116) was about to serve
+  // IN FULL, and the reduction could only flatter completed/planned,
+  // never describe it. What a constraint actually did to a week is read
+  // from the session effects RECORDS by the two counters above and the
+  // ended-early excusal - facts, not predictions.
 
   // RD6-9: display surfaces must not present the trailing-average
   // estimate as though a plan prescribed it; plannedIsEstimate lets
