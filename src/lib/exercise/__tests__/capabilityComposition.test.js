@@ -245,4 +245,23 @@ describe('Q1 - unknown never masks a preference reason', () => {
     state.intents = new Map([['ex-squat', { exerciseId: 'ex-squat', kind: EXERCISE_INTENT.EXCLUDED }]]);
     expect(generationBlockReason(state, SQUAT)).toBe(GENERATION_BLOCK.CAPABILITY_DECLARED);
   });
+
+  // Round 5 (Q-4): the fall-through serves ALL THREE preference reasons,
+  // not just EXCLUDED - the round-4 pin covered one of three, so a
+  // regression on the other two arms would have shipped green.
+  test('avoided-this-block + capability-unknown reports AVOIDED_BLOCK', () => {
+    const state = emptyIntentState(buildCapabilityResolveState([capRow({ ruleValue: 'grip_bar' })], { atMs: NOW }));
+    state.activeMesocycleId = 'm1';
+    state.intents = new Map([['ex-m', { exerciseId: 'ex-m', kind: EXERCISE_INTENT.AVOIDED_BLOCK, scopeMesocycleId: 'm1' }]]);
+    expect(generationBlockReason(state, mystery)).toBe(GENERATION_BLOCK.AVOIDED_BLOCK);
+  });
+
+  test('pattern-avoid (family level) + capability-unknown reports PATTERN_AVOID', () => {
+    // The family resolves through the row's own subregion tag, so the
+    // family-level arm of the fall-through is genuinely exercised.
+    const inclineMystery = { id: 'ex-m2', name: 'Mystery Press', primaryMuscle: 'chest', subregion: 'incline', position: null, gripDemand: null };
+    const state = emptyIntentState(buildCapabilityResolveState([capRow({ ruleValue: 'grip_bar' })], { atMs: NOW }));
+    state.intents = new Map([['family:incline', { exerciseId: 'family:incline', kind: EXERCISE_INTENT.PATTERN_AVOID }]]);
+    expect(generationBlockReason(state, inclineMystery)).toBe(GENERATION_BLOCK.PATTERN_AVOID);
+  });
 });
