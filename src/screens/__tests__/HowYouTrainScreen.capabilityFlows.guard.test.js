@@ -111,8 +111,8 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     expect(screen).toContain('{canRevisit ? (');
   });
 
-  test('the revisit tap re-runs both proposal paths: undecided episodes, then the baseline rewrite with no ids', () => {
-    const fn = screen.match(/const revisitCapabilityPlan = async[\s\S]{0,2200}?\n  };/)?.[0] ?? '';
+  test('the revisit tap: undecided first, then per-GROUP applied review, then the baseline rewrite', () => {
+    const fn = screen.match(/const revisitCapabilityPlan = async[\s\S]{0,2600}?\n  };/)?.[0] ?? '';
     expect(fn).toContain('undecidedEpisodeRuleIds(state.episodes)');
     expect(fn).toContain('proposeEffectiveDiff(ids, null)');
     expect(fn).toContain('proposeCapabilityPlanRewrite(null, null)');
@@ -120,10 +120,27 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // paths report whether they surfaced anything, and a no-op tap gets
     // the honest line instead of nothing.
     expect(fn).toContain("if (!surfaced) toast.show('Nothing in your current plan needs a decision right now.');");
-    // R3-2 limb b: with nothing undecided, APPLIED rules that currently
-    // produce lines are re-proposed - a vacuously-applied rule that
-    // later bites regains its review.
-    expect(fn).toContain('appliedEpisodeRuleIds(state.episodes)');
+    // Round 4 (F-1): applied rules are revisited per GROUP through the
+    // dedicated dialogue, never as a flat union through the apply
+    // proposal - the round-3 shape let one cancel-styled tap decline
+    // every applied episode at once.
+    expect(fn).toContain('reviewAppliedGroup(ep, appliedIds, lines)');
+    expect(fn).not.toMatch(/proposeEffectiveDiff\(applied/);
+  });
+
+  test('F-1: the applied-group review dialogue - cancel is a TRUE no-op, stopping is explicit and group-scoped', () => {
+    const fn = screen.match(/const reviewAppliedGroup = async[\s\S]{0,4200}?\n  };/)?.[0] ?? '';
+    expect(fn).toContain("{ text: 'Leave it as it is', style: 'cancel' },");
+    // The cancel button carries no onPress at all - looking is not
+    // deciding.
+    expect(fn).not.toMatch(/'Leave it as it is', style: 'cancel', onPress/);
+    expect(fn).toContain("text: 'Stop working around it',");
+    expect(fn).toContain('if (clinicianIds.size) { confirmClinicianDecline(subject, stopNow); return; }');
+    // Group-scoped: the decline loop runs over appliedIds (this group's
+    // own ids), never a cross-episode union.
+    expect(fn).toContain('for (const id of appliedIds) {');
+    expect(fn).toContain('Keep working around');
+    expect(fn).toContain("text: 'Choose per exercise',");
   });
 
   test('undecided episode ids exclude held episodes and allowance rows (D112 R8 + F6)', () => {

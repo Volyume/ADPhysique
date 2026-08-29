@@ -493,6 +493,13 @@ export default function HowYouTrainScreen() {
         }
         return false;
       }
+      // Round 4 (Q3): a PARTIAL read never becomes a proposal either -
+      // the alert states counts as fact ("2 exercises swapped..."), and
+      // a plan the app failed to finish reading cannot honestly supply
+      // them. Nothing is recorded, so the rule stays undecided and the
+      // focus detector or the revisit row proposes again on a clean
+      // read.
+      if (!summary.checked) return false;
       const parts = [];
       if (summary.substituted) parts.push(`${summary.substituted} exercise${summary.substituted === 1 ? '' : 's'} swapped for something that works now`);
       if (summary.omitted) parts.push(`${summary.omitted} left out with nothing forced in their place`);
@@ -685,6 +692,74 @@ export default function HowYouTrainScreen() {
   // judges every active baseline rule - see its own definition below).
   // This is an explicit user action, so it is never gated behind
   // proposalPendingRef; only the passive detector in refresh() backs off.
+  // Round 4 (F-1): revisiting an ALREADY-APPLIED episode is its own
+  // dialogue, per GROUP, never a re-run of the apply proposal. The
+  // round-3 shape passed the flat union of every applied rule to
+  // proposeEffectiveDiff, whose cancel-styled "Not now" wrote
+  // 'declined' against ALL of them - one tap on the natural dismiss
+  // stopped Volyume working around every episode the user had. Here:
+  // the alert names its group's subject, the cancel is a TRUE no-op,
+  // stopping is explicit and group-scoped (clinician rules keep their
+  // named confirm), and "Choose per exercise" opens the same per-line
+  // review.
+  const reviewAppliedGroup = async (ep, appliedIds, lines) => {
+    try {
+      // eslint-disable-next-line global-require
+      const { clinicianSourcedIds, recordEffectiveChoice } = require('../lib/sessionEffective');
+      const clinicianIds = await clinicianSourcedIds(userId, appliedIds).catch(() => new Set());
+      const subject = groupSubject(ep.rows.filter((r) => r.state === CONSTRAINT_STATE.ACTIVE));
+      const substituted = lines.filter((l) => l.to).length;
+      const omitted = lines.length - substituted;
+      const parts = [];
+      if (substituted) parts.push(`${substituted} exercise${substituted === 1 ? '' : 's'} swapped for something that works now`);
+      if (omitted) parts.push(`${omitted} left out with nothing forced in their place`);
+      const stopNow = async () => {
+        for (const id of appliedIds) {
+          // eslint-disable-next-line no-await-in-loop
+          await recordEffectiveChoice(userId, id, 'declined').catch(() => {});
+        }
+        toast.show('Stopped. Affected exercises show a quiet notice with a swap shortcut.');
+        refresh();
+      };
+      appAlert(
+        subject ? `Keep working around ${subject}?` : 'Keep working around this?',
+        `Your sessions currently show ${parts.join(', and ')}. Your plan itself is unchanged.`,
+        [
+          // A true no-op: looking is not deciding.
+          { text: 'Leave it as it is', style: 'cancel' },
+          {
+            text: 'Stop working around it',
+            style: 'destructive',
+            onPress: () => {
+              if (clinicianIds.size) { confirmClinicianDecline(subject, stopNow); return; }
+              stopNow();
+            },
+          },
+          {
+            text: 'Choose per exercise',
+            onPress: () => {
+              setLineReview({
+                ruleIds: appliedIds,
+                subject,
+                lines: lines.map((l, i) => ({
+                  key: l.routineExerciseId ?? `${l.routineId}-${i}`,
+                  fromName: l.from?.name ?? 'This exercise',
+                  toName: l.to?.name ?? null,
+                  exerciseId: l.from?.id ?? null,
+                  constraintIds: l.constraintIds,
+                  clinician: l.constraintIds.some((id) => clinicianIds.has(id)),
+                  apply: true,
+                })),
+                clinicianRuleIds: [...clinicianIds],
+              });
+            },
+          },
+        ],
+      );
+      return true;
+    } catch (_e) { return false; }
+  };
+
   const revisitCapabilityPlan = async () => {
     haptics.selection();
     const ids = undecidedEpisodeRuleIds(state.episodes);
@@ -692,14 +767,24 @@ export default function HowYouTrainScreen() {
     if (ids.length) {
       surfaced = !!(await proposeEffectiveDiff(ids, null).catch(() => false)) || surfaced;
     } else {
-      // R3-2 limb b: with nothing undecided, an APPLIED rule that
-      // currently produces lines is re-proposed - the user may change
-      // their mind ("Not now" flips it declined; "Choose per exercise"
-      // opens the per-line review). The vacuous branch inside is a
-      // harmless re-record when nothing is affected.
-      const applied = appliedEpisodeRuleIds(state.episodes);
-      if (applied.length) {
-        surfaced = !!(await proposeEffectiveDiff(applied, null).catch(() => false)) || surfaced;
+      // R3-2 limb b, redesigned at round 4 (F-1): per GROUP, first group
+      // whose applied rules currently produce lines, through the
+      // dedicated revisit dialogue above.
+      // eslint-disable-next-line global-require
+      const { computePlanEffectiveLines } = require('../lib/sessionEffective');
+      for (const ep of state.episodes ?? []) {
+        const appliedIds = ep.rows
+          .filter((r) => r.state === CONSTRAINT_STATE.ACTIVE && r.effectiveChoice === 'applied'
+            && r.adaptationMode !== 'hold' && r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW)
+          .map((r) => r.id);
+        if (!appliedIds.length) continue;
+        // eslint-disable-next-line no-await-in-loop
+        const { lines, checked } = await computePlanEffectiveLines(userId, appliedIds)
+          .catch(() => ({ lines: [], checked: false }));
+        if (!checked || !lines.length) continue;
+        // eslint-disable-next-line no-await-in-loop
+        surfaced = !!(await reviewAppliedGroup(ep, appliedIds, lines)) || surfaced;
+        if (surfaced) break;
       }
     }
     surfaced = !!(await proposeCapabilityPlanRewrite(null, null).catch(() => false)) || surfaced;

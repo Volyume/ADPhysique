@@ -219,3 +219,30 @@ describe('thin-session report (section 33.14)', () => {
     expect(thinSessionReport(plan, [{ workoutName: 'A', reason: 'capability_declared' }])).toEqual([]);
   });
 });
+
+// Round 4 (Q1): an UNKNOWN capability reason never masks a definite
+// preference reason. The rank-4 short-circuit used to report
+// 'capability_unknown' for a row that was ALSO user-excluded - and
+// since an unknown reason no longer blocks the resolution write
+// (R3-1's carve), the mask was the one structural path by which a
+// user-excluded exercise could re-enter a written plan.
+describe('Q1 - unknown never masks a preference reason', () => {
+  const mystery = { id: 'ex-m', name: 'Mystery', primaryMuscle: 'chest', position: null, gripDemand: null };
+
+  test('excluded + capability-unknown reports EXCLUDED', () => {
+    const state = emptyIntentState(buildCapabilityResolveState([capRow({ ruleValue: 'grip_bar' })], { atMs: NOW }));
+    state.intents = new Map([['ex-m', { exerciseId: 'ex-m', kind: EXERCISE_INTENT.EXCLUDED }]]);
+    expect(generationBlockReason(state, mystery)).toBe(GENERATION_BLOCK.EXCLUDED);
+  });
+
+  test('capability-unknown alone still reports CAPABILITY_UNKNOWN', () => {
+    const state = emptyIntentState(buildCapabilityResolveState([capRow({ ruleValue: 'grip_bar' })], { atMs: NOW }));
+    expect(generationBlockReason(state, mystery)).toBe(GENERATION_BLOCK.CAPABILITY_UNKNOWN);
+  });
+
+  test('a DEFINITE capability reason still outranks the preference lane', () => {
+    const state = emptyIntentState(standingBlocked());
+    state.intents = new Map([['ex-squat', { exerciseId: 'ex-squat', kind: EXERCISE_INTENT.EXCLUDED }]]);
+    expect(generationBlockReason(state, SQUAT)).toBe(GENERATION_BLOCK.CAPABILITY_DECLARED);
+  });
+});

@@ -225,12 +225,16 @@ export async function hasCapabilityToRevisit(userId, undecidedEpisodeRuleIds = [
     const plan = await getActivePlan(userId);
     if (!plan?.id) return false;
     if (Array.isArray(undecidedEpisodeRuleIds) && undecidedEpisodeRuleIds.length) return true;
+    // Round 4 (Q4): the two full-plan sweeps short-circuit - the
+    // baseline rewrite check runs first, and the applied-lines sweep
+    // only when it found nothing, so the common focus pays one sweep.
+    const rw = await computeCapabilityPlanRewrite(userId, {});
+    if (rw.lines.length > 0) return true;
     if (Array.isArray(appliedEpisodeRuleIds) && appliedEpisodeRuleIds.length) {
       const { lines } = await computePlanEffectiveLines(userId, appliedEpisodeRuleIds);
       if (lines.length) return true;
     }
-    const rw = await computeCapabilityPlanRewrite(userId, {});
-    return rw.lines.length > 0;
+    return false;
   } catch (_e) {
     return false;
   }
@@ -342,12 +346,23 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
         baseIndexes.push(i);
       }
     });
+    // Round 4 (F-2): the durable record follows the SERVE decision,
+    // never precedes it. The append used to run before the
+    // served-length check, so a session whose every row was omitted
+    // wrote N omission effects and then fail-safed to serving the full
+    // base session - the summary said "N left out" about rows the user
+    // was shown, the week counted the session constraint-excused, an
+    // early walk-out was credited as completed, and the weekly
+    // denominator dropped a session the app served intact. A
+    // fully-omitted session is the fail-safe case (never served empty -
+    // lead ruling, D116: the rows serve with their visible conflict
+    // notices; a dead-end empty session helps nobody), and the record
+    // must describe what actually happened: nothing.
+    if (!served.length) return untouched();
     if (effects.length && workoutId) {
       await appendSessionConstraintEffects(userId, workoutId, effects).catch(() => {});
     }
-    return served.length
-      ? { served, baseIndexes, untouched: false }
-      : untouched(); // a session is never served empty
+    return { served, baseIndexes, untouched: false };
   } catch (_e) {
     return untouched(); // the base session always stands
   }

@@ -903,10 +903,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // must never be spoken as a fact - the held claim included, since
     // "you're holding your plan as-is FOR THIS" asserts the hold covers
     // this row. Definite conflicts computed first; every branch below,
-    // the held one included, speaks only from them - matching
-    // RoutineDetailScreen's caption exactly, so the two surfaces can
-    // never contradict each other about the same row again. Unknown-only
-    // rows fall to the honest not-known line at the bottom.
+    // the held one included, speaks only from them, the same
+    // definite-only gate RoutineDetailScreen's caption applies (round 4
+    // F-3 aligned its applied test onto the actionable rows too).
+    // Unknown-only rows fall to the honest not-known line at the bottom.
     const definiteEpisode = constraintConflicts.filter((c) => !c.unknown);
     const definiteBaseline = baselineConflictsList.filter((c) => !c.unknown);
     // D112 R8 (section 25): a fully-held conflict set says so instead of

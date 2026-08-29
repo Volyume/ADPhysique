@@ -70,6 +70,11 @@ export const SLOT_REASON = Object.freeze({
   // with its own honest reason - never disguised as USER_EXCLUDED (a
   // preference) and never conflated with the episode KEEP above it.
   CAPABILITY_EXCLUDED: 'capability_excluded',
+  // CC33 round 4 (Q2): an incumbent whose muscle/family job does not
+  // exist in the rebuilt plan (or resolves no family at all). Emitted by
+  // continuity's accounting pass, never by slotVerdict - it is a fact
+  // about the rebuilt structure, not a judgement of the exercise.
+  NO_MATCHING_SLOT: 'no_matching_slot',
   // Structural: the slot no longer fits the programme it sits in.
   EQUIPMENT_LOST: 'equipment_lost',
   NO_LONGER_AUTO_ELIGIBLE: 'no_longer_auto_eligible',

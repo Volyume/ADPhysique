@@ -62,13 +62,17 @@ describe('capabilityPlanCaption: copy and precedence (T2-32)', () => {
     expect(baselineIdx).toBeGreaterThan(episodeIdx);
   });
 
-  test('episode: every DEFINITE driving rule applied -> the "swapped" line; any declined/undecided -> "sits outside"', () => {
+  test('episode: the applied test runs over the ACTIONABLE definite rows - serve\'s own gate', () => {
     // F4 (adversarial review): the caption speaks only from established
-    // conflicts - an unknown one (a custom exercise's NULL demand
-    // columns) must never be captioned as a fact, so the applied test
-    // runs over the definite list.
+    // conflicts. Round 4 (F-3): AND the applied test excludes held
+    // rules, exactly as serve does (actionableEpisodeConflicts) - over
+    // the raw list, a row under one applied plus one HELD rule read
+    // "sits outside your temporary change" while serve swapped it. The
+    // fully-held branch stays on the raw definite list on purpose.
     expect(FN).toContain('const definiteEpisode = episode.filter((c) => !c.unknown);');
-    expect(FN).toContain("const allApplied = definiteEpisode.every((c) => c.row?.effectiveChoice === 'applied');");
+    expect(FN).toContain("const actionable = definiteEpisode.filter((c) => c.row?.adaptationMode !== 'hold');");
+    expect(FN).toContain('const allApplied = actionable.length > 0');
+    expect(FN).toContain("&& actionable.every((c) => c.row?.effectiveChoice === 'applied');");
     expect(FN).toContain("? 'Swapped in sessions while your change lasts.'");
     expect(FN).toContain("        : 'Sits outside your temporary change.';");
   });

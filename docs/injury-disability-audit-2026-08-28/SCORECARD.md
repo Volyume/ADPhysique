@@ -25,6 +25,23 @@ root during the W4A lead review are recorded on their rows: the plan
 rewrite's apply no-op (row shape) on A2, and the capability-blind
 substitute selection on A5.
 
+ADVERSARIAL REVIEW ROUND 4 (2026-08-29, on 05a7f49d): NOT CLEAN - 7
+BROKEN from 4 roots, none a round-3 regression. ALL closed same day
+(D116) + the OPEN item + every actionable QUALIFIED: F-1 the applied
+revisit is a per-GROUP dialogue with a true no-op cancel (the round-3
+flat union let one cancel-styled tap decline every applied episode);
+F-2 effects follow the serve decision (fully-omitted sessions fail-safe
+with ZERO records; never-served-empty RULED); F-3 the plan caption's
+applied test uses serve's actionable gate (all eight hold combinations
+agree); F-4 Home rows minHeight 48 + the campaign's first touch-target
+pin; Q1 unknown never masks a preference reason (generation order) +
+the POOL-never-NULL invariant pinned over the real seed; Q2 the silent
+rebuild drop closed at its reporting root (NO_LONGER_IN outcome, "No
+longer in your plan" receipt section, driven pin) with the
+carry-design question recorded for post-campaign ruling; Q3 a partial
+read never becomes a proposal; Q4 one sweep on the common focus. Round
+5 re-runs before S5.
+
 ADVERSARIAL REVIEW ROUND 3 (2026-08-29, on 59a7daa4): NOT CLEAN - 8
 rows BROKEN from 5 roots, two of them round-2 regressions, and a
 process verdict acted on: round-2's fixes were pinned by source-string
@@ -206,7 +223,7 @@ fixed tree before S5 closes.
 | # | Variable | State | Evidence |
 |---|---|---|---|
 | J1 | Screen-reader labels on every new control | PARTIAL — built surfaces carry roles/labels; reviewer to verify all W3/W4 surfaces | accessibilityRole/Label in landed diffs |
-| J2 | Touch targets and contrast via tokens | LANDED convention; reviewer spot-checks | theme-token law |
+| J2 | Touch targets and contrast via tokens | LANDED (round-4 BROKEN F-4, fixed) | Home's three capability rows carry minHeight spacing.xxxl (48); first touch-target guard pin |
 | J3 | Meaning never carried by motion/colour alone | LANDED (round-1 BROKEN F7, fixed) | Choice selection carries a tick + border weight beside colour; every other surface HELD the round-1 attack (text-first throughout) |
 | J4 | Cognitive load: one question at a time, low-choice steps | LANDED pattern (CC25 §11/§12); per-line review is one binary per row, default Apply | R2 digest |
 | J5 | Dynamic type tolerance on new lines | HOLDS (round 1) | no fixed heights, no capability numberOfLines, rows wrap; the arrow-glyph residual closed with a spoken label |

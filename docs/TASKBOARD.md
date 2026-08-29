@@ -935,8 +935,21 @@ returns base indexes ({served, baseIndexes, untouched}); R3-5 check-in
 restrictions-only + rulePhrase never names an allowance; fresh
 capability state at finish. OPEN work item (D115, recorded not rushed):
 untagged custom incumbents contest no continuity slot - silent rebuild
-drop, pre-existing, stated on A13, round 4 attacks it. NEXT: settled
-full gate + merge, adversarial review ROUND 4, then S5 gate + device
+drop, pre-existing, stated on A13, round 4 attacks it. ROUND 4 RAN on 05a7f49d: NOT CLEAN - 7 BROKEN / 4
+roots, none a round-3 regression; ALL closed same day (D116) + the
+OPEN item + every actionable QUALIFIED: F-1 per-GROUP applied-revisit
+dialogue (true no-op cancel; group-scoped stop behind the clinician
+confirm; the round-3 flat union could decline every episode on one
+cancel tap), F-2 effects follow the serve decision (fully-omitted =
+fail-safe with ZERO records; never-served-empty RULED), F-3 caption
+uses serve's actionable gate, F-4 Home rows minHeight 48 + first
+touch-target pin, Q1 unknown-never-masks-preference in generation
+order + POOL invariant pinned over the real seed, Q2 the silent
+rebuild drop closed at its reporting root (NO_LONGER_IN outcome + "No
+longer in your plan" receipt section + driven untagged-custom pin;
+carry-design question recorded for post-campaign ruling), Q3
+partial-read never proposes, Q4 one sweep per focus. NEXT: settled
+full gate + merge, adversarial review ROUND 5, then S5 gate + device
 checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent

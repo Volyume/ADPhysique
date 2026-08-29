@@ -147,8 +147,12 @@ test('serve never substitutes TO an exercise the user\'s own rules block (lead r
       deletedAt: null,
     },
   ], { atMs: NOW }));
-  const { served } = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT)]);
-  expect(served.map((r) => r.id)).not.toContain(LEGPRESS.id);
+  // A second, servable row (LEGPRESS's own conflict is the BASELINE
+  // exercise rule, which never drives serve) keeps the session from the
+  // fully-omitted fail-safe (F-2), so the omission is genuinely written
+  // and the refusal to substitute TO the blocked exercise is visible.
+  const { served } = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), asServed(LEGPRESS)]);
+  expect(served.map((r) => r.id)).toEqual([LEGPRESS.id]);
   expect(appendSessionConstraintEffects).toHaveBeenCalledTimes(1);
   expect(appendSessionConstraintEffects.mock.calls[0][2]).toEqual([
     expect.objectContaining({ effect: 'omitted', exerciseFrom: SQUAT.id }),
@@ -199,4 +203,19 @@ test('R3-4 DRIVEN: an omitted duplicate never claims the _userAdded twin\'s slot
   expect(res.baseIndexes).toEqual([1]);    // and it is slot 1, never slot 0
   const entries = appendSessionConstraintEffects.mock.calls[0][2];
   expect(entries).toEqual([expect.objectContaining({ effect: 'omitted', slot: 0 })]);
+});
+
+test('F-2 DRIVEN: a fully-omitted session fail-safes with ZERO durable effects written', async () => {
+  // Round 4: every row definitely conflicted, no substitute anywhere -
+  // the fail-safe serves the base session intact (D116: never served
+  // empty; the rows carry their visible notices), and the record must
+  // say NOTHING happened. Before the fix, N omission effects were
+  // written first and the summary/week/denominator all described a
+  // session the user was never actually reduced to.
+  getAllExercises.mockResolvedValue([SQUAT, LUNGE]); // every quads option conflicts
+  const rows = [asServed(SQUAT), asServed(LUNGE)];
+  const res = await applyEffectiveViewToSession('u1', 'w1', rows);
+  expect(res.untouched).toBe(true);
+  expect(res.served).toBe(rows);
+  expect(appendSessionConstraintEffects).not.toHaveBeenCalled();
 });

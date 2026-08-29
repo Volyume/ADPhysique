@@ -397,12 +397,19 @@ async function loadIncumbentSlots(userId) {
       const rows = await getRoutineExercisesWithDetails(r.id);
       for (const row of rows ?? []) {
         const ex = row.exercise ?? {};
-        if (!ex.id || !ex.primaryMuscle) continue;
+        if (!ex.id) continue;
+        // Round 4 (Q2): a row with no primary muscle is still LOADED so
+        // the receipt can account for it. Its null muscle/family key
+        // matches no generated slot by construction, so it can never be
+        // spliced anywhere - it simply lands in the "no longer in your
+        // plan" section instead of vanishing without a line.
         out.push({
           exerciseId: ex.id,
           exerciseName: ex.name ?? null,
-          muscle: ex.primaryMuscle,
-          family: movementFamily(ex.name, ex.primaryMuscle, ex.subregion ?? null),
+          muscle: ex.primaryMuscle ?? null,
+          family: ex.primaryMuscle
+            ? movementFamily(ex.name, ex.primaryMuscle, ex.subregion ?? null)
+            : null,
         });
       }
     }
@@ -686,13 +693,20 @@ export function resolvePlanAgainstLibrary(plan, exerciseMap, filteredLibrary) {
         continue;
       }
       // CC33 round 3 (R3-1's resolution half): an UNKNOWN capability
-      // reason never blocks the write. Generation's own picks cannot
-      // carry it (rank-4 rows were filtered from the engine's pool), so
-      // an unknown-blocked entry here is always a continuity-retained
-      // incumbent - a user's own movement whose demand columns are
-      // simply unfilled - and dropping it would be unknown driving a
-      // removal. Definite reasons still block; the T1-07 hold marker
-      // still writes an episode keep through a definite block.
+      // reason never blocks the write - dropping the row would be
+      // unknown driving a removal. Round 4 (Q1) corrected this
+      // comment's original justification and closed its structural
+      // hole: planEngine's thin-pool merge-back CAN hand a POOL name
+      // through with a drop reason (that is reasonByName's purpose), so
+      // "always a continuity-retained incumbent" was false - and an
+      // unknown reason used to MASK a user exclusion
+      // (generationBlockReason short-circuited capability-first for
+      // rank 4 too). generationBlockReason now reports the preference
+      // lane's own reason when rank 4 would mask one, so everything
+      // reaching this carve as 'capability_unknown' is genuinely
+      // blocked by nothing but absence of data. Definite reasons still
+      // block; the T1-07 hold marker still writes an episode keep
+      // through a definite block.
       if (blockedReason && blockedReason !== 'capability_unknown' && !ex._capabilityHold) {
         blockedSlots.push({
           exerciseId: dbEx.id,

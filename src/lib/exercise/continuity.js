@@ -57,6 +57,15 @@ export const SLOT_OUTCOME = Object.freeze({
   REPLACED: 'replaced',
   /** Nothing was there before: a genuinely new slot. */
   NEW: 'new',
+  /** CC33 round 4 (Q2): an incumbent that matched NO generated slot -
+   *  its muscle/family job does not exist in the rebuilt plan, or its
+   *  family could not be resolved at all (a custom lift with no stored
+   *  tag). Before this member existed such incumbents simply vanished
+   *  from the receipt: a rebuild silently dropped a user's own custom
+   *  exercise on 15 of 17 muscles with no line anywhere. The receipt is
+   *  a completeness contract; silence is the one outcome it may never
+   *  have. */
+  NO_LONGER_IN: 'no_longer_in',
 });
 
 /**
@@ -283,6 +292,25 @@ export function applyContinuity({
     }),
   }));
 
+  // CC33 round 4 (Q2): every incumbent is accounted for. One not used by
+  // any slot and not re-picked by the generator is NO LONGER IN the
+  // plan, and the receipt says so instead of silence. The plan itself
+  // is untouched - this is reporting, never a splice (the family-match
+  // guarantee above is what keeps continuity from altering coverage,
+  // and it stands).
+  for (const inc of incumbents) {
+    if (used.has(inc.exerciseId) || generatedIds.has(inc.exerciseId)) continue;
+    decisions.push({
+      workout: null,
+      exerciseId: null,
+      exerciseName: null,
+      previousExerciseId: inc.exerciseId,
+      previousExerciseName: inc.exerciseName ?? null,
+      outcome: SLOT_OUTCOME.NO_LONGER_IN,
+      reason: SLOT_REASON.NO_MATCHING_SLOT,
+    });
+  }
+
   return { workouts, decisions };
 }
 
@@ -294,5 +322,6 @@ export function summariseDecisions(decisions = []) {
   const retained = decisions.filter(d => d.outcome === SLOT_OUTCOME.RETAINED).length;
   const replaced = decisions.filter(d => d.outcome === SLOT_OUTCOME.REPLACED).length;
   const added = decisions.filter(d => d.outcome === SLOT_OUTCOME.NEW).length;
-  return { retained, replaced, added, total: decisions.length };
+  const noLongerIn = decisions.filter(d => d.outcome === SLOT_OUTCOME.NO_LONGER_IN).length;
+  return { retained, replaced, added, noLongerIn, total: decisions.length };
 }

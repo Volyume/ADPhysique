@@ -142,3 +142,17 @@ describe('T2-25: durable reintroduction line', () => {
     expect(block).not.toMatch(/TouchableOpacity|onPress/);
   });
 });
+
+// Round 4 (F-4, J2): the three quiet capability rows are real touch
+// targets and must meet the minimum. The campaign had no touch-target
+// guard at all, which is how 28px rows shipped on exactly the surface
+// built for users with the highest incidence of tremor and reduced
+// dexterity.
+describe('F-4: the capability rows meet the minimum touch target', () => {
+  test('constraintLineRow carries minHeight: spacing.xxxl (the scale\'s 48)', () => {
+    const site = HOME.indexOf('constraintLineRow: {');
+    expect(site).toBeGreaterThan(-1);
+    const block = HOME.slice(site, HOME.indexOf('},', site));
+    expect(block).toContain('minHeight: spacing.xxxl');
+  });
+});

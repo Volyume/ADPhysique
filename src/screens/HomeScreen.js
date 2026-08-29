@@ -3083,6 +3083,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.sm,
     paddingVertical: spacing.xs,
+    // Round 4 (F-4, J2): these quiet rows measured ~28px - below the
+    // WCAG 44pt minimum - on exactly the surface built so a disabled
+    // user can reach their capability state from Home. The text stays
+    // quiet; the target does not. xxxl is the scale's 48 (the same
+    // token Choice's minimum uses).
+    minHeight: spacing.xxxl,
   },
   constraintLineText: {
     ...type.bodySm,

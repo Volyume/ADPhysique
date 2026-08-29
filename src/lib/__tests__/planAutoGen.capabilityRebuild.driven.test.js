@@ -165,3 +165,24 @@ test('the control: a DEFINITE capability block on the incumbent still replaces i
   expect(aboutAxial.some((d) => d.reason === 'capability_excluded')).toBe(true);
   expect(aboutAxial.some((d) => d.reason === 'equipment_lost')).toBe(false);
 });
+
+test('Q2 DRIVEN: an UNTAGGED custom incumbent is never dropped in silence - the receipt says "no longer in"', async () => {
+  // The round-4 discovery, measured at 15 of 17 muscles: a custom lift
+  // whose name resolves no movement family (creation never records a
+  // subregion) contests no rebuilt slot, and before this pass it simply
+  // vanished from the plan with no receipt line anywhere.
+  const UNTAGGED = {
+    id: 'ex-untagged', name: 'My Weird Chest Thing', primaryMuscle: 'chest',
+    subregion: null, equipmentProfiles: null,
+  };
+  getAllExercises.mockResolvedValue([...LIBRARY, UNTAGGED]);
+  getRoutineExercisesWithDetails.mockResolvedValue([
+    { routineExercise: { id: 're-untagged' }, exercise: { id: UNTAGGED.id, name: UNTAGGED.name, primaryMuscle: 'chest', subregion: null } },
+  ]);
+  const res = await generatePlanDryRun('u1', PROFILE);
+  expect(res.ok).toBe(true);
+  const gone = (res.continuity.decisions ?? [])
+    .filter((d) => d.outcome === 'no_longer_in' && d.previousExerciseName === UNTAGGED.name);
+  expect(gone).toHaveLength(1);
+  expect(gone[0].reason).toBe('no_matching_slot');
+});

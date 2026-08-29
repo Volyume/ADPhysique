@@ -153,3 +153,31 @@ describe('weight_bearing_hands (gap-closure Phase C: the audited eleventh column
     expect(demandAxisConflict('weight_bearing_hands', {})).toBeNull();
   });
 });
+
+// Round 4 (Q1): the R3-1 resolution carve ("capability_unknown never
+// blocks the write") is structurally safe only while no planEngine.POOL
+// name carries a NULL demand axis - planEngine's thin-pool merge-back
+// is gated on the FULL catalogue on purpose, so a POOL row that ever
+// went unknown could ride the carve into a written plan. Round 4
+// measured the intersection at zero; this pins it there, so seed drift
+// fails loudly instead of quietly re-opening the hole. (The
+// generationBlockReason mask fix is the second, independent lock -
+// capabilityComposition.test.js.)
+test('no planEngine.POOL name resolves a NULL BLOCKABLE demand axis (the R3-1 carve invariant)', () => {
+  // eslint-disable-next-line global-require
+  const { POOL } = require('../../planEngine');
+  // unilateralLoadable is the side-carve metadata field, never a
+  // blockable rule axis, and its NULLs are the recorded deliberate
+  // machine-design class (see the floors comment above) - a rule can
+  // only ever go UNKNOWN on the other ten.
+  const blockable = DEMAND_FIELDS.filter((f) => f !== 'unilateralLoadable');
+  const derivedByName = new Map(derived.map((d) => [d.ex.name, d.meta]));
+  const offenders = [];
+  for (const entry of Object.values(POOL).flat()) {
+    const meta = derivedByName.get(entry.n);
+    if (!meta) { offenders.push({ name: entry.n, missing: 'not in seed' }); continue; }
+    const nullAxes = blockable.filter((f) => meta[f] === null || meta[f] === undefined);
+    if (nullAxes.length) offenders.push({ name: entry.n, nullAxes });
+  }
+  expect(offenders).toEqual([]);
+});

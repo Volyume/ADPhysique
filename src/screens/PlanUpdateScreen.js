@@ -498,6 +498,22 @@ export default function PlanUpdateScreen({ navigation }) {
                         ))}
                       </>
                     ) : null}
+                    {(staged.receipt.noLongerIn?.length ?? 0) > 0 ? (
+                      // CC33 round 4 (Q2): the receipt's completeness
+                      // section. An incumbent that matched no rebuilt
+                      // slot used to vanish with no line anywhere -
+                      // every custom exercise on most muscles, on every
+                      // rebuild. Silence is the one outcome a change
+                      // receipt may never have.
+                      <>
+                        <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>No longer in your plan</Text>
+                        {staged.receipt.noLongerIn.map(l => (
+                          <Text key={`gone-${l.exerciseName}`} style={[styles.diffMoveText, live.diffMoveText]}>
+                            {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
+                          </Text>
+                        ))}
+                      </>
+                    ) : null}
                   </View>
                 ) : (diff.movesAdded.length > 0 || diff.movesDropped.length > 0) ? (
                   <View style={styles.diffMoves}>

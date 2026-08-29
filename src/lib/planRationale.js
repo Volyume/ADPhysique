@@ -110,6 +110,11 @@ const REASON_COPY = Object.freeze({
     'Your numbers on this have stopped moving.',
   [SLOT_REASON.SYSTEMATIC_VARIATION]:
     'You have run this for several blocks, so it is worth trying something different here.',
+  // CC33 round 4 (Q2): the no-longer-in section's why - a fact about
+  // the rebuilt structure, stated without judging the exercise. "Add it
+  // back" stays the user's call and the copy does not pretend otherwise.
+  [SLOT_REASON.NO_MATCHING_SLOT]:
+    'The rebuilt plan has nothing doing the job this one did. You can add it back to any session yourself.',
 });
 
 /** Plain-English reason for a keep or change decision, or null. */
@@ -132,6 +137,7 @@ export function buildChangeReceipt(decisions = []) {
   const stays = [];
   const changes = [];
   const added = [];
+  const noLongerIn = [];
 
   for (const d of decisions) {
     const line = {
@@ -148,6 +154,11 @@ export function buildChangeReceipt(decisions = []) {
       stays.push({ ...line, insteadOfName: d.insteadOfName ?? null });
     } else if (d.outcome === SLOT_OUTCOME.REPLACED) {
       changes.push({ ...line, previousExerciseName: d.previousExerciseName ?? null });
+    } else if (d.outcome === SLOT_OUTCOME.NO_LONGER_IN) {
+      // CC33 round 4 (Q2): its own section, never folded into `added`
+      // (which is where an unknown outcome used to land - the exact
+      // wrong bucket for an exercise that is GONE).
+      noLongerIn.push({ ...line, exerciseName: d.previousExerciseName ?? null });
     } else {
       added.push(line);
     }
@@ -155,7 +166,7 @@ export function buildChangeReceipt(decisions = []) {
 
   const prescriptionCount = stays.filter(s => s.prescriptionChange).length;
   return {
-    stays, changes, added,
+    stays, changes, added, noLongerIn,
     prescriptionCount,
     headline: receiptHeadline(stays.length, changes.length, prescriptionCount),
   };

@@ -3311,3 +3311,68 @@ drops it SILENTLY with no receipt line at all - a pre-existing property
 of family-keyed matching, now a stated condition on A13. The fix is a
 design question (how an unclassifiable movement is carried) and is not
 rushed mid-round.
+
+## D116 — CC33 review round 4 closures (lead-ruled under D33, 2026-08-29)
+
+Round 4 (on 05a7f49d): 7 BROKEN from 4 roots, none a round-3
+regression - all seams the earlier fixes had not reached, the worst of
+them inside the lead's own round-3 revisit design. All closed, plus the
+OPEN item and every actionable QUALIFIED. Rulings:
+
+1. **Revisiting is not re-applying (F-1).** An already-applied episode
+   is revisited through its own per-GROUP dialogue: the alert names the
+   group's subject, its cancel is a TRUE no-op ("Leave it as it is" -
+   looking is not deciding), stopping is the explicit destructive
+   action gated by the clinician confirm, and "Choose per exercise"
+   opens the per-line review. The round-3 shape passed the flat union
+   of every applied rule to the APPLY proposal, whose cancel-styled
+   "Not now" declined all of them - one natural dismiss stopped Volyume
+   working around every episode the user had.
+
+2. **The record follows the serve decision (F-2).** Effects are written
+   only after the served-length decision; a fully-omitted session
+   fail-safes with ZERO records. And the fail-safe itself is RULED: a
+   session is never served empty - the rows serve with their visible
+   conflict notices, because an empty session is a dead end and the
+   rules are workarounds, not prohibitions. The weekly denominator's
+   predictive whole-session reduction (database.js CC29 §18) stays as
+   deliberate coaching conservatism, stated on Q5's row.
+
+3. **One gate, everywhere (F-3).** The plan caption's applied test runs
+   over the ACTIONABLE rows (held excluded), serve's own gate - the
+   eight hold/applied/declined combinations now agree across surfaces.
+
+4. **Touch targets are law on quiet rows too (F-4).** Home's three
+   capability rows carry minHeight 48; the campaign gains its first
+   touch-target guard pin.
+
+5. **An absence never outranks a fact (Q1).** generationBlockReason
+   reports the preference lane's own reason when rank-4 UNKNOWN would
+   mask one, so the R3-1 resolution carve cannot readmit a
+   user-excluded exercise; the POOL-never-NULL-on-blockable-axes
+   invariant is pinned over the real seed; planAutoGen's false comment
+   corrected in place.
+
+6. **Silence is the one outcome a receipt may never have (Q2).** The
+   OPEN item is closed at its reporting root: continuity accounts for
+   every incumbent - one matching no rebuilt slot lands in the new
+   NO_LONGER_IN outcome with reason no_matching_slot, rendered as "No
+   longer in your plan" ("The rebuilt plan has nothing doing the job
+   this one did. You can add it back to any session yourself."), and
+   muscle-less customs are loaded so they too are accounted for. The
+   plan itself is untouched - reporting, never a splice; the
+   family-match guarantee stands. The deeper design question (should an
+   unclassifiable movement be CARRIED - muscle-level fallback, or a
+   captured tag at creation) remains open by choice and is recorded on
+   the board for a post-campaign ruling; the defect was the silence,
+   and the silence is closed. Driven pin: an untagged custom incumbent
+   produces exactly one no_longer_in decision through a real
+   generatePlanDryRun.
+
+7. **A partial read is not a proposal (Q3).** checked=false with
+   affected lines defers the proposal entirely - counts are never
+   stated as fact off a plan the app failed to finish reading.
+
+Also: hasCapabilityToRevisit short-circuits baseline-first (Q4, one
+sweep on the common focus); the receipt copy stays inside the C16
+plain-English law (no "slot" reaches the user).

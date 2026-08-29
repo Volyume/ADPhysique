@@ -81,7 +81,16 @@ function capabilityPlanCaption(capState, exercise) {
       return "Held as-is at your request.";
     }
     if (definiteEpisode.length) {
-      const allApplied = definiteEpisode.every((c) => c.row?.effectiveChoice === 'applied');
+      // Round 4 (F-3): the applied test runs over the ACTIONABLE rows -
+      // held rules excluded - because that is serve's own gate
+      // (actionableEpisodeConflicts). Judged over the raw list, a row
+      // under one applied rule plus one HELD rule read "sits outside
+      // your temporary change" while serve swapped it. The fully-held
+      // branch above stays on the raw list on purpose: a hold must
+      // still read as the user's own instruction.
+      const actionable = definiteEpisode.filter((c) => c.row?.adaptationMode !== 'hold');
+      const allApplied = actionable.length > 0
+        && actionable.every((c) => c.row?.effectiveChoice === 'applied');
       return allApplied
         ? 'Swapped in sessions while your change lasts.'
         : 'Sits outside your temporary change.';

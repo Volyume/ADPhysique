@@ -308,7 +308,9 @@ describe('C16-5 the change receipt is machine-readable', () => {
       generatedWith(EX.chinUp, EX.row), [incumbent(EX.pulldown)],
     );
     expect(summariseDecisions(decisions)).toEqual({
-      retained: 1, replaced: 0, added: 1, total: 2,
+      // Round 4 (Q2): noLongerIn joined the summary - every incumbent
+      // is accounted for, including ones matching no rebuilt slot.
+      retained: 1, replaced: 0, added: 1, noLongerIn: 0, total: 2,
     });
   });
 

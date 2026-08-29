@@ -35,7 +35,7 @@ import {
 // filter through the SAME drop-report contract. Pure questions only; the
 // capability state rides `state.capability` (loaded by that lane's own
 // loader), so every existing caller inherits the check unchanged.
-import { capabilityBlockReason } from '../capability/resolve';
+import { capabilityBlockReason, CAPABILITY_BLOCK } from '../capability/resolve';
 
 /** Why a candidate may not be seeded. Mirrors EXERCISE_INTENT's kinds,
  *  plus the section 4.1 capability reason codes (ranks 2-4, reported
@@ -72,9 +72,31 @@ export function generationBlockReason(state, exercise) {
   // questions - the legacy bare-id shape skips this arm, which is safe
   // because both generation gates (the pre-engine filter and the
   // post-engine re-check) hold full library rows.
+  //
+  // Round 4 (Q1): DEFINITE capability reasons only outrank the
+  // preference lane. The rank-4 UNKNOWN used to short-circuit here too,
+  // so a row that was both user-EXCLUDED and capability-unknown
+  // reported 'capability_unknown' - and since an unknown reason never
+  // blocks the resolution write (R3-1's carve), the mask would have let
+  // a user-excluded exercise back into a written plan the moment any
+  // POOL name carried a NULL demand column. A definite preference
+  // reason is a fact; an unknown capability reason is the absence of
+  // one, and an absence never outranks a fact.
   if (typeof exercise === 'object' && state?.capability && !state.capability.empty) {
     const cap = capabilityBlockReason(state.capability, exercise);
-    if (cap) return cap;
+    if (cap && cap !== CAPABILITY_BLOCK.UNKNOWN) return cap;
+    if (cap) {
+      const id2 = id;
+      const preference = (state?.intents?.size && (isExcluded(state, id2) || isAvoidedThisBlock(state, id2)))
+        || (() => {
+          const fam = movementFamilyOf(exercise);
+          if (!fam || !state?.intents?.size) return false;
+          const t = familyTargetKey(fam);
+          return isExcluded(state, t) || isAvoidedThisBlock(state, t) || isPatternAvoided(state, t);
+        })();
+      if (!preference) return cap;
+      // fall through: the preference lane reports its own reason below.
+    }
   }
   if (!state?.intents?.size) return null;
   if (isExcluded(state, id)) return GENERATION_BLOCK.EXCLUDED;
