@@ -58,6 +58,12 @@ import {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+// R5-9/R6-6: the one honest could-not-read line. Both terminal messages
+// (the revisit row's toast and the per-line review's empty answer) share
+// this constant so the two sites cannot drift - a failed read is "could
+// not tell", never "nothing needs a decision" (A15).
+const COULD_NOT_READ_TOAST = 'Volyume could not read your plan just now. Nothing has changed. Try again in a moment.';
+
 // Backdating quick-pick (ARCHITECTURE section 5.1, RT1-7).
 const START_CHOICES = [
   { key: 'today', label: 'Today', days: 0 },
@@ -576,8 +582,16 @@ export default function HowYouTrainScreen() {
             // ones they want to flip.
             text: 'Choose per exercise',
             onPress: async () => {
-              const { lines } = await computePlanEffectiveLines(userId, createdIds).catch(() => ({ lines: [], checked: false }));
-              if (!lines.length) { toast.show('Nothing to review right now.'); return; }
+              const { lines, checked } = await computePlanEffectiveLines(userId, createdIds).catch(() => ({ lines: [], checked: false }));
+              if (!lines.length) {
+                // Round 6 (R6-6): a failed read is "could not tell",
+                // never "nothing to review" - one tap after the alert
+                // stated two exercises are affected, that false calm
+                // told the user to stop looking (A15's law, the same
+                // branch R5-9 gave the revisit toast).
+                toast.show(checked ? 'Nothing to review right now.' : COULD_NOT_READ_TOAST);
+                return;
+              }
               setLineReview({
                 ruleIds: createdIds,
                 subject,
@@ -827,7 +841,13 @@ export default function HowYouTrainScreen() {
         .map((r) => r.id);
       if (!appliedIds.length) continue;
       // eslint-disable-next-line no-await-in-loop
-      const { lines, checked } = await computePlanEffectiveLines(userId, appliedIds)
+      // Round 6 (R6-3): serve-gate mode - these lines feed a dialogue
+      // that speaks in the indicative ("Your sessions currently
+      // show..."), so they must describe what serve is DOING, not what
+      // applying would do. A group whose rows are all held in place by
+      // a declined or undecided co-driver, or whose routine fail-safes,
+      // produces no lines and is not offered as a conversation.
+      const { lines, checked } = await computePlanEffectiveLines(userId, appliedIds, { serveGate: true })
         .catch(() => ({ lines: [], checked: false }));
       if (!checked) { couldNotRead = true; continue; }
       if (!lines.length) continue;
@@ -843,7 +863,7 @@ export default function HowYouTrainScreen() {
       // matching every baseline rule, both land on the honest quiet
       // line; a read the app could not finish says so instead.
       toast.show(couldNotRead
-        ? 'Volyume could not read your plan just now. Nothing has changed. Try again in a moment.'
+        ? COULD_NOT_READ_TOAST
         : 'Nothing in your current plan needs a decision right now.');
       return;
     }
@@ -867,10 +887,28 @@ export default function HowYouTrainScreen() {
         onPress: () => openGroup(g),
       };
     });
+    // Round 6 (J4): two groups can label identically (the same subject
+    // phrase, or two unnameable ones). Colliding labels get the group's
+    // start date - identity carried in text, so the user can tell the
+    // buttons apart.
+    const labelCounts = new Map();
+    buttons.forEach((b) => labelCounts.set(b.text, (labelCounts.get(b.text) ?? 0) + 1));
+    buttons.forEach((b, i) => {
+      if ((labelCounts.get(b.text) ?? 1) < 2) return;
+      const started = Math.min(
+        ...groupChoices[i].ep.rows.map((r) => r.startsAt ?? Infinity),
+      );
+      if (Number.isFinite(started)) {
+        b.text = `${b.text} (from ${new Date(started).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })})`;
+      }
+    });
     if (hasRewrite) {
       buttons.push({ text: 'How your plan matches your permanent rules', onPress: openRewrite });
     }
-    buttons.push({ text: 'Not now', style: 'cancel' });
+    // Round 6 (C1): the F-1 no-op wording, not "Not now" - on this same
+    // screen "Not now" is the apply proposal's DECLINE, which writes a
+    // choice against every rule. One phrase per meaning.
+    buttons.push({ text: 'Leave it as it is', style: 'cancel' });
     appAlert(
       'More than one thing to look at',
       'Each of these affects your current plan. Pick one to review. The others stay here for another time.',

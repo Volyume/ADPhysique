@@ -35,7 +35,7 @@ const screen = fs.readFileSync(SCREEN_PATH, 'utf8');
 
 describe('T2-05 - the Apply preview stays wired to the real computation', () => {
   test('proposeEffectiveDiff calls computePlanEffectiveSummary and keeps the honest parts pattern', () => {
-    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,7200}?\n  };/)?.[0] ?? '';
+    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,9500}?\n  };/)?.[0] ?? '';
     expect(fn).toContain('computePlanEffectiveSummary(userId, createdIds)');
     expect(fn).toContain("parts.push(`${summary.substituted} exercise${summary.substituted === 1 ? '' : 's'} swapped for something that works now`)");
     expect(fn).toContain("parts.push(`${summary.omitted} left out with nothing forced in their place`)");
@@ -46,7 +46,7 @@ describe('T2-05 - the Apply preview stays wired to the real computation', () => 
 
 describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () => {
   test('the whole-group alert gains a third "Choose per exercise" action, primary flow untouched', () => {
-    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,7200}?\n  };/)?.[0] ?? '';
+    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,9500}?\n  };/)?.[0] ?? '';
     expect(fn).toContain("text: 'Not now'");
     expect(fn).toContain("text: 'Apply while it lasts'");
     expect(fn).toContain("text: 'Choose per exercise'");
@@ -91,7 +91,7 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
   });
 
   test('dismissal (no choice) still records nothing - only named paths write a choice', () => {
-    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,7800}?\n  };/)?.[0] ?? '';
+    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,9500}?\n  };/)?.[0] ?? '';
     // Exactly three recordEffectiveChoice sites: Not now's declineNow,
     // Apply's inline loop, and (R2-5) the vacuous 'applied' when the
     // proposal finds NOTHING affected - a rule with no decision to make
@@ -112,7 +112,7 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
   });
 
   test('the revisit tap: undecided first, then EVERY conversation gathered, then exactly one opened', () => {
-    const fn = screen.match(/const revisitCapabilityPlan = async[\s\S]{0,6200}?\n  };/)?.[0] ?? '';
+    const fn = screen.match(/const revisitCapabilityPlan = async[\s\S]{0,9000}?\n  };/)?.[0] ?? '';
     expect(fn).toContain('undecidedEpisodeRuleIds(state.episodes)');
     expect(fn).toContain('proposeEffectiveDiff(ids, null)');
     // Round 5 (Q-3/J4): one conversation per tap - a surfaced undecided
@@ -129,18 +129,39 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // Round 5 (R5-6): EVERY group with lines is gathered - the round-4
     // loop broke on the first, and its true no-op cancel meant no tap
     // sequence ever reached the second group. The chooser lists each
-    // group and the rewrite, and its own cancel is a true no-op.
+    // group and the rewrite. Round 6 (C1): its cancel carries the F-1
+    // no-op wording, never "Not now" - which is this same screen's
+    // DECLINE on the apply proposal, one state apart.
     expect(fn).toContain('groupChoices.push({ ep, appliedIds, lines });');
     expect(fn).not.toMatch(/if \(surfaced\) break;/);
-    expect(fn).toContain("buttons.push({ text: 'Not now', style: 'cancel' });");
+    expect(fn).toContain("buttons.push({ text: 'Leave it as it is', style: 'cancel' });");
+    expect(fn).not.toContain("buttons.push({ text: 'Not now'");
     expect(fn).toContain('More than one thing to look at');
+    // Round 6 (R6-3): the group dialogue speaks in the indicative, so
+    // its lines come from serve-gate mode - what serve is DOING, never
+    // what applying would do.
+    expect(fn).toContain("computePlanEffectiveLines(userId, appliedIds, { serveGate: true })");
+    // Round 6 (J4): colliding chooser labels are distinguished by the
+    // group's start date - identity in text.
+    expect(fn).toContain('const labelCounts = new Map();');
+    expect(fn).toContain("toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })");
     // Round 5 (R5-9): the terminal toast tells the truth about failed
     // reads - "could not read" is never spoken as "nothing needs a
     // decision", and a completed quiet check keeps the honest line.
-    expect(fn).toContain("? 'Volyume could not read your plan just now. Nothing has changed. Try again in a moment.'");
+    expect(fn).toContain('? COULD_NOT_READ_TOAST');
     expect(fn).toContain(": 'Nothing in your current plan needs a decision right now.');");
     expect(fn).toContain('if (!checked) { couldNotRead = true; continue; }');
     expect(fn).toContain('if (!rw.checked) couldNotRead = true;');
+  });
+
+  test('R6-6: the per-line review\'s empty answer branches on checked - never "nothing to review" off a failed read', () => {
+    // One tap after the alert stated "2 exercises swapped...", a failed
+    // read used to answer "Nothing to review right now." - a silent
+    // fail-open on the copy layer (A15). Both terminal messages share
+    // one module constant so the two sites cannot drift.
+    expect(screen).toContain("const COULD_NOT_READ_TOAST = 'Volyume could not read your plan just now. Nothing has changed. Try again in a moment.';");
+    expect(screen).toContain("toast.show(checked ? 'Nothing to review right now.' : COULD_NOT_READ_TOAST);");
+    expect(screen).not.toMatch(/const \{ lines \} = await computePlanEffectiveLines\(userId, createdIds\)/);
   });
 
   test('R5-9: the focus detector back-off key is stamped only on a COMPLETED check', () => {
@@ -257,7 +278,7 @@ describe('T1-04/T1-26 - the clinician decline confirm', () => {
   });
 
   test('gates the whole-group "Not now" decline', () => {
-    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,7800}?\n  };/)?.[0] ?? '';
+    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,9500}?\n  };/)?.[0] ?? '';
     expect(fn).toContain('clinicianSourcedIds(userId, createdIds)');
     expect(fn).toContain('if (clinicianIds.size) { confirmClinicianDecline(subject, declineNow); return; }');
   });
