@@ -923,7 +923,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         // eslint-disable-next-line global-require
         const { subjectPhrase } = require('../lib/capability/phrase');
         const named = subjectPhrase(definiteEpisode.filter(c => c.ruleKind !== 'exercise'), {});
-        if (named) return { kind: 'episode', copy: `This one involves ${named}, which you're working around at the moment` };
+        // Round 6 (R6-4): Q-1's own argument applies to the NAMED branch
+        // too - a row showing this notice is being served as planned, so
+        // the old line's claim of a workaround in progress was false on
+        // the dominant path (this branch fires for every demand and
+        // family rule; the generic below only for exercise rules or
+        // unnameable sets). Mirror the baseline named line: state the
+        // conflict, offer the action.
+        if (named) return { kind: 'episode', copy: `This one involves ${named}, which sits outside your temporary change. Swap it when you're ready.` };
       } catch (_e) { /* fall through to the generic line */ }
       // Round 5 (Q-1): the generic line asserts no adaptation. A row
       // showing THIS notice is, by construction, being served as

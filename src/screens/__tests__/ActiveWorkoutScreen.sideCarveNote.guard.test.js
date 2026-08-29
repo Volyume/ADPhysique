@@ -173,4 +173,15 @@ describe('Q-1 (round 5): the in-session episode notice never asserts an adaptati
   test('the substituted row keeps its own truthful marker (the adaptation IS happening there)', () => {
     expect(SRC).toContain('Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts');
   });
+
+  test('R6-4 (round 6): the NAMED episode line states the conflict too - the dominant branch, not just the generics', () => {
+    // Round 5 replaced the two generics; the named variant one line
+    // above them still claimed a workaround in progress - and the named
+    // branch is the one that fires for every demand and family rule
+    // (subjectPhrase names those), so the false claim survived on the
+    // dominant path. It now mirrors the baseline named line: state the
+    // conflict, offer the action.
+    expect(SRC).toContain('This one involves ${named}, which sits outside your temporary change. Swap it when you\'re ready.');
+    expect(SRC).not.toContain("working around at the moment");
+  });
 });
