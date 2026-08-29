@@ -298,8 +298,15 @@ export function applyContinuity({
   // is untouched - this is reporting, never a splice (the family-match
   // guarantee above is what keeps continuity from altering coverage,
   // and it stands).
+  // Round 5 (R5-3): deduped by exercise id, like every other path
+  // through `used`. Incumbents are one entry per routine_exercise row
+  // across all routines, so an exercise programmed on two days listed
+  // twice and counted one lost exercise as two.
+  const listedGone = new Set();
   for (const inc of incumbents) {
     if (used.has(inc.exerciseId) || generatedIds.has(inc.exerciseId)) continue;
+    if (listedGone.has(inc.exerciseId)) continue;
+    listedGone.add(inc.exerciseId);
     decisions.push({
       workout: null,
       exerciseId: null,

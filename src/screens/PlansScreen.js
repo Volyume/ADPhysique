@@ -599,8 +599,12 @@ export default function PlansScreen({ navigation }) {
       // decisions are all retentions, confirming reactivates the plan the
       // user already has: "if only volume changes are justified, do NOT
       // create needless exercise churn".
+      // Round 5 (R5-1): an incumbent no longer in the rebuilt plan IS an
+      // exercise change - without it in this count a drop-only rebuild
+      // took the reactivation path, so the receipt's "No longer in your
+      // plan" section described a drop the confirm would never make.
       const exerciseChanges = receipt
-        ? receipt.changes.length + receipt.added.length
+        ? receipt.changes.length + receipt.added.length + receipt.noLongerIn.length
         : 0;
       const prescriptionChanges = receipt?.prescriptionCount ?? 0;
       setBlockReview({
@@ -1992,6 +1996,22 @@ export default function PlansScreen({ navigation }) {
             <Text style={[styles.receiptRowTitle, live.receiptRowTitle]}>New in your plan</Text>
             {blockReview.receipt.added.map((l) => (
               <Text key={`rv-new-${l.exerciseName}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
+                {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
+              </Text>
+            ))}
+          </View>
+        ) : null}
+
+        {/* CC33 round 5 (R5-1): the receipt's completeness section, on
+            THIS renderer too - round 4 added it to PlanUpdateScreen only,
+            and the block-boundary sheet (the more travelled rebuild
+            route) still dropped incumbents in silence. Keys are the
+            exercise's ID (R5-3): names are not unique. */}
+        {(blockReview?.receipt?.noLongerIn?.length ?? 0) > 0 ? (
+          <View style={styles.receiptRow}>
+            <Text style={[styles.receiptRowTitle, live.receiptRowTitle]}>No longer in your plan</Text>
+            {blockReview.receipt.noLongerIn.map((l, i) => (
+              <Text key={`rv-gone-${l.previousExerciseId ?? i}`} style={[styles.receiptRowBody, live.receiptRowBody]}>
                 {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
               </Text>
             ))}

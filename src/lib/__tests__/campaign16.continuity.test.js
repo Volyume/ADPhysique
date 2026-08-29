@@ -314,6 +314,21 @@ describe('C16-5 the change receipt is machine-readable', () => {
     });
   });
 
+  test('R5-3: an exercise programmed on two days and dropped is listed ONCE, not once per row', () => {
+    // Incumbents are one entry per routine_exercise row across all
+    // routines. Before the dedupe, a twice-programmed dropped exercise
+    // produced two NO_LONGER_IN decisions - the receipt listed it twice
+    // and the summary counted one lost exercise as two (the reviewer's
+    // executed probe: noLongerIn = 2 for one exercise).
+    const { decisions } = run(
+      generatedWith(EX.chinUp), [incumbent(EX.pulldown), incumbent(EX.bench), incumbent(EX.bench)],
+    );
+    const gone = decisions.filter(d => d.outcome === SLOT_OUTCOME.NO_LONGER_IN);
+    expect(gone).toHaveLength(1);
+    expect(gone[0].previousExerciseId).toBe(EX.bench.id);
+    expect(summariseDecisions(decisions).noLongerIn).toBe(1);
+  });
+
   test('reasons come from the engine, never from reading exercise names', () => {
     const fs = require('fs');
     const path = require('path');

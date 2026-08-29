@@ -173,4 +173,41 @@ describe('C16-11 the change receipt', () => {
     const unmapped = Object.values(SLOT_REASON).filter(r => !explainReason(r));
     expect(unmapped).toEqual([]);
   });
+
+  test('R5-2: the headline speaks a drop-only rebuild - it never denies the section beneath it', () => {
+    // The reviewer's executed probe: retain every matched incumbent, drop
+    // one unmatched one. The old headline read "Nothing is changing"
+    // directly above "No longer in your plan - My Weird Chest Thing".
+    const r = buildChangeReceipt([
+      { outcome: SLOT_OUTCOME.RETAINED, exerciseName: 'Barbell Bench Press', workout: 'Upper', reason: SLOT_REASON.STILL_PRODUCTIVE },
+      { outcome: SLOT_OUTCOME.NO_LONGER_IN, previousExerciseName: 'My Weird Chest Thing', previousExerciseId: 'ex-custom-1', workout: null, reason: SLOT_REASON.NO_MATCHING_SLOT },
+    ]);
+    expect(r.noLongerIn).toHaveLength(1);
+    expect(r.headline).not.toMatch(/nothing is changing/i);
+    expect(r.headline).toMatch(/1 exercise would no longer be in your plan/);
+    // And the four-count arity directly:
+    expect(receiptHeadline(1, 0, 0, 1)).toMatch(/no longer be in your plan/);
+    expect(receiptHeadline(1, 0, 0, 0)).toMatch(/nothing is changing/i);
+  });
+
+  test('R5-2: changes AND drops are both spoken, in one line that contradicts neither section', () => {
+    const both = receiptHeadline(4, 2, 0, 1);
+    expect(both).toMatch(/2 exercises would change/);
+    expect(both).toMatch(/1 exercise would come out/);
+    const noStays = receiptHeadline(0, 1, 0, 2);
+    expect(noStays).toMatch(/1 exercise would change and 2 exercises would no longer be in your plan/);
+    // The headline still never announces a done deal (shown pre-confirm).
+    for (const l of [both, noStays, receiptHeadline(1, 0, 0, 1)]) {
+      expect(l).not.toMatch(/has changed|have changed|has been updated/i);
+      expect(l).not.toMatch(/—/);
+    }
+  });
+
+  test('R5-3: a no-longer-in line carries the exercise ID, so renders key on identity, never a display name', () => {
+    const r = buildChangeReceipt([
+      { outcome: SLOT_OUTCOME.NO_LONGER_IN, previousExerciseName: 'Bench Press', previousExerciseId: 'ex-a', workout: null, reason: SLOT_REASON.NO_MATCHING_SLOT },
+    ]);
+    expect(r.noLongerIn[0].previousExerciseId).toBe('ex-a');
+    expect(r.noLongerIn[0].exerciseName).toBe('Bench Press');
+  });
 });

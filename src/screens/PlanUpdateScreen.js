@@ -507,8 +507,12 @@ export default function PlanUpdateScreen({ navigation }) {
                       // receipt may never have.
                       <>
                         <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>No longer in your plan</Text>
-                        {staged.receipt.noLongerIn.map(l => (
-                          <Text key={`gone-${l.exerciseName}`} style={[styles.diffMoveText, live.diffMoveText]}>
+                        {/* Keys are the exercise's ID (round 5, R5-3):
+                            one exercise on two days used to render two
+                            identical name keys, and names are not
+                            unique across custom and library lifts. */}
+                        {staged.receipt.noLongerIn.map((l, i) => (
+                          <Text key={`gone-${l.previousExerciseId ?? i}`} style={[styles.diffMoveText, live.diffMoveText]}>
                             {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
                           </Text>
                         ))}

@@ -157,8 +157,15 @@ export function buildChangeReceipt(decisions = []) {
     } else if (d.outcome === SLOT_OUTCOME.NO_LONGER_IN) {
       // CC33 round 4 (Q2): its own section, never folded into `added`
       // (which is where an unknown outcome used to land - the exact
-      // wrong bucket for an exercise that is GONE).
-      noLongerIn.push({ ...line, exerciseName: d.previousExerciseName ?? null });
+      // wrong bucket for an exercise that is GONE). Round 5 (R5-3): the
+      // line carries the exercise's ID too - names are not unique (a
+      // custom lift can share a library exercise's name), and the render
+      // keys on identity, never on a display string.
+      noLongerIn.push({
+        ...line,
+        exerciseName: d.previousExerciseName ?? null,
+        previousExerciseId: d.previousExerciseId ?? null,
+      });
     } else {
       added.push(line);
     }
@@ -168,7 +175,7 @@ export function buildChangeReceipt(decisions = []) {
   return {
     stays, changes, added, noLongerIn,
     prescriptionCount,
-    headline: receiptHeadline(stays.length, changes.length, prescriptionCount),
+    headline: receiptHeadline(stays.length, changes.length, prescriptionCount, noLongerIn.length),
   };
 }
 
@@ -177,15 +184,29 @@ export function buildChangeReceipt(decisions = []) {
  *
  * Never announces that the programme HAS changed: the receipt is shown
  * before the user confirms.
+ *
+ * Round 5 (R5-2): the headline speaks the no-longer-in count too. It
+ * used to see only stays/changes, so a rebuild that retained every
+ * matched incumbent and dropped one unmatched one read "Nothing is
+ * changing" directly above "No longer in your plan" - a receipt that
+ * denied its own content.
  */
-export function receiptHeadline(stayCount, changeCount, prescriptionCount = 0) {
+export function receiptHeadline(stayCount, changeCount, prescriptionCount = 0, noLongerInCount = 0) {
+  const g = `${noLongerInCount} ${noLongerInCount === 1 ? 'exercise' : 'exercises'}`;
   if (changeCount === 0) {
+    if (noLongerInCount > 0) {
+      return `${g} would no longer be in your plan, listed below with why. The rest stays as it is.`;
+    }
     if (prescriptionCount > 0) {
       return `${prescriptionCount} rep target${prescriptionCount === 1 ? '' : 's'} would change. Your exercises stay.`;
     }
     return 'Nothing is changing. Your plan is still producing good evidence.';
   }
   const c = `${changeCount} ${changeCount === 1 ? 'exercise' : 'exercises'}`;
+  if (noLongerInCount > 0) {
+    if (stayCount === 0) return `${c} would change and ${g} would no longer be in your plan.`;
+    return `Most of your plan stays. ${c} would change and ${g} would come out, each listed with why.`;
+  }
   if (stayCount === 0) return `${c} would change.`;
   return `Most of your plan stays. ${c} would change, and each one is listed with why.`;
 }
