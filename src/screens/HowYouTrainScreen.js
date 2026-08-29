@@ -425,13 +425,37 @@ export default function HowYouTrainScreen() {
   // user never said - leaving the rule undecided and recoverable from
   // the standing revisit row below. Shared by proposeEffectiveDiff's
   // whole-group "Not now" and saveLineReview's per-line "Keep" path.
-  const confirmClinicianDecline = (subject, onDeclineAnyway) => {
+  // Round 5 (Q-2): the confirm speaks the frame it was reached from.
+  // Written for the decline frame, its words ("Declining means...",
+  // "Decline anyway") switched vocabulary mid-flow when reached from
+  // the revisit dialogue's "Stop working around it" or the per-line
+  // review's Keep - on the one gate where precision matters most, and
+  // with a cancel ("Keep it out") readable as "keep the rule out".
+  const CLINICIAN_CONFIRM_FRAMES = {
+    decline: {
+      consequence: 'Declining means your sessions keep showing it.',
+      cancel: 'Keep it out',
+      confirm: 'Decline anyway',
+    },
+    stop: {
+      consequence: 'Stopping means your sessions show it again.',
+      cancel: 'Keep working around it',
+      confirm: 'Stop anyway',
+    },
+    keep: {
+      consequence: 'Keeping it in means your sessions keep showing it.',
+      cancel: 'Go back',
+      confirm: 'Keep it in anyway',
+    },
+  };
+  const confirmClinicianDecline = (subject, onDeclineAnyway, frame = 'decline') => {
+    const words = CLINICIAN_CONFIRM_FRAMES[frame] ?? CLINICIAN_CONFIRM_FRAMES.decline;
     appAlert(
       'A clinician asked for this one',
-      `You told Volyume a clinician asked you to keep ${subject ?? 'this'} out. Declining means your sessions keep showing it. Volyume will not suggest it elsewhere.`,
+      `You told Volyume a clinician asked you to keep ${subject ?? 'this'} out. ${words.consequence} Volyume will not suggest it elsewhere.`,
       [
-        { text: 'Keep it out', style: 'cancel' },
-        { text: 'Decline anyway', style: 'destructive', onPress: onDeclineAnyway },
+        { text: words.cancel, style: 'cancel' },
+        { text: words.confirm, style: 'destructive', onPress: onDeclineAnyway },
       ],
     );
   };
@@ -449,9 +473,12 @@ export default function HowYouTrainScreen() {
   // available. Callers (the add flow, a flare restart, the sync-arrival
   // detector in refresh(), the revisit row below) never need to know
   // any of this; they all just call this one function.
+  // Round 5 (R5-9): returns { surfaced, checked }, not a bare boolean -
+  // the revisit row's terminal toast needs to know whether "nothing
+  // surfaced" means "nothing affected" or "could not tell", and only
+  // this function knows which branch it took.
   const proposeEffectiveDiff = async (createdIds, subject = null) => {
     proposalPendingRef.current = true;
-    lastAutoProposedKeyRef.current = (Array.isArray(createdIds) ? createdIds : []).slice().sort().join(',');
     try {
       // eslint-disable-next-line global-require
       // CC32 (section 29): recordEffectiveChoice = the same write plus its
@@ -465,6 +492,14 @@ export default function HowYouTrainScreen() {
         computePlanEffectiveSummary(userId, createdIds),
         clinicianSourcedIds(userId, createdIds),
       ]);
+      // Round 5 (R5-9): the detector's back-off key is stamped only on a
+      // COMPLETED check. Stamped before the read (as it was), a failed
+      // read blocked the passive detector from ever retrying this set
+      // for the life of the mounted screen - the explicit revisit row
+      // was the only recovery. An unchecked set stays retryable.
+      if (summary.checked) {
+        lastAutoProposedKeyRef.current = (Array.isArray(createdIds) ? createdIds : []).slice().sort().join(',');
+      }
       // Lead review: the boolean tells the revisit row whether anything
       // was actually offered, so its tap is never silent. Other callers
       // ignore it.
@@ -491,7 +526,7 @@ export default function HowYouTrainScreen() {
             await recordEffectiveChoice(userId, id, 'applied').catch(() => {});
           }
         }
-        return false;
+        return { surfaced: false, checked: summary.checked };
       }
       // Round 4 (Q3): a PARTIAL read never becomes a proposal either -
       // the alert states counts as fact ("2 exercises swapped..."), and
@@ -499,7 +534,7 @@ export default function HowYouTrainScreen() {
       // them. Nothing is recorded, so the rule stays undecided and the
       // focus detector or the revisit row proposes again on a clean
       // read.
-      if (!summary.checked) return false;
+      if (!summary.checked) return { surfaced: false, checked: false };
       const parts = [];
       if (summary.substituted) parts.push(`${summary.substituted} exercise${summary.substituted === 1 ? '' : 's'} swapped for something that works now`);
       if (summary.omitted) parts.push(`${summary.omitted} left out with nothing forced in their place`);
@@ -568,11 +603,11 @@ export default function HowYouTrainScreen() {
           },
         ],
       );
-      return true;
+      return { surfaced: true, checked: true };
     } catch (_e) { /* proposal is additive; the save already stands */ } finally {
       proposalPendingRef.current = false;
     }
-    return false;
+    return { surfaced: false, checked: false };
   };
 
   // D112 R4 (closes audit T2-23): the per-line save, lead-ruled on the
@@ -679,7 +714,7 @@ export default function HowYouTrainScreen() {
         toast.show('That did not save. Try again.');
       }
     };
-    if (keptClinician) { confirmClinicianDecline(review.subject, commit); return; }
+    if (keptClinician) { confirmClinicianDecline(review.subject, commit, 'keep'); return; }
     await commit();
   };
 
@@ -731,7 +766,7 @@ export default function HowYouTrainScreen() {
             text: 'Stop working around it',
             style: 'destructive',
             onPress: () => {
-              if (clinicianIds.size) { confirmClinicianDecline(subject, stopNow); return; }
+              if (clinicianIds.size) { confirmClinicianDecline(subject, stopNow, 'stop'); return; }
               stopNow();
             },
           },
@@ -762,36 +797,85 @@ export default function HowYouTrainScreen() {
 
   const revisitCapabilityPlan = async () => {
     haptics.selection();
+    // eslint-disable-next-line global-require
+    const { computePlanEffectiveLines, computeCapabilityPlanRewrite } = require('../lib/sessionEffective');
+    // Round 5 (R5-9): a failed read is "could not tell", never "nothing
+    // needs a decision" - the terminal toast says which one happened.
+    let couldNotRead = false;
     const ids = undecidedEpisodeRuleIds(state.episodes);
-    let surfaced = false;
     if (ids.length) {
-      surfaced = !!(await proposeEffectiveDiff(ids, null).catch(() => false)) || surfaced;
-    } else {
-      // R3-2 limb b, redesigned at round 4 (F-1): per GROUP, first group
-      // whose applied rules currently produce lines, through the
-      // dedicated revisit dialogue above.
-      // eslint-disable-next-line global-require
-      const { computePlanEffectiveLines } = require('../lib/sessionEffective');
-      for (const ep of state.episodes ?? []) {
-        const appliedIds = ep.rows
-          .filter((r) => r.state === CONSTRAINT_STATE.ACTIVE && r.effectiveChoice === 'applied'
-            && r.adaptationMode !== 'hold' && r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW)
-          .map((r) => r.id);
-        if (!appliedIds.length) continue;
-        // eslint-disable-next-line no-await-in-loop
-        const { lines, checked } = await computePlanEffectiveLines(userId, appliedIds)
-          .catch(() => ({ lines: [], checked: false }));
-        if (!checked || !lines.length) continue;
-        // eslint-disable-next-line no-await-in-loop
-        surfaced = !!(await reviewAppliedGroup(ep, appliedIds, lines)) || surfaced;
-        if (surfaced) break;
-      }
+      const r = await proposeEffectiveDiff(ids, null)
+        .catch(() => ({ surfaced: false, checked: false }));
+      // One conversation per tap (Q-3/J4): the undecided proposal is the
+      // highest-value one, and the row remains for everything else. Not
+      // surfaced but checked means the rules touch nothing (recorded
+      // applied vacuously inside) - fall through to the rest.
+      if (r.surfaced) return;
+      if (!r.checked) couldNotRead = true;
     }
-    surfaced = !!(await proposeCapabilityPlanRewrite(null, null).catch(() => false)) || surfaced;
-    // Lead review: an explicit tap never ends in silence. Undecided
-    // rules that touch nothing in the current plan, and a plan already
-    // matching every baseline rule, both land here.
-    if (!surfaced) toast.show('Nothing in your current plan needs a decision right now.');
+    // Round 5 (R5-6): gather EVERY conversation this row can offer -
+    // each applied episode group currently producing lines, and the
+    // baseline plan rewrite - then open exactly one. Round 4's loop
+    // broke on the first group, and since that group's cancel is a true
+    // no-op by design, no tap sequence ever reached the second group's
+    // review without first changing the first group's state.
+    const groupChoices = [];
+    for (const ep of state.episodes ?? []) {
+      const appliedIds = ep.rows
+        .filter((r) => r.state === CONSTRAINT_STATE.ACTIVE && r.effectiveChoice === 'applied'
+          && r.adaptationMode !== 'hold' && r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW)
+        .map((r) => r.id);
+      if (!appliedIds.length) continue;
+      // eslint-disable-next-line no-await-in-loop
+      const { lines, checked } = await computePlanEffectiveLines(userId, appliedIds)
+        .catch(() => ({ lines: [], checked: false }));
+      if (!checked) { couldNotRead = true; continue; }
+      if (!lines.length) continue;
+      groupChoices.push({ ep, appliedIds, lines });
+    }
+    const rw = await computeCapabilityPlanRewrite(userId, {})
+      .catch(() => ({ lines: [], checked: false }));
+    if (!rw.checked) couldNotRead = true;
+    const hasRewrite = rw.lines.length > 0;
+    if (!groupChoices.length && !hasRewrite) {
+      // Lead review: an explicit tap never ends in silence. Undecided
+      // rules that touch nothing in the current plan, and a plan already
+      // matching every baseline rule, both land on the honest quiet
+      // line; a read the app could not finish says so instead.
+      toast.show(couldNotRead
+        ? 'Volyume could not read your plan just now. Nothing has changed. Try again in a moment.'
+        : 'Nothing in your current plan needs a decision right now.');
+      return;
+    }
+    const openGroup = (g) => { reviewAppliedGroup(g.ep, g.appliedIds, g.lines).catch(() => {}); };
+    const openRewrite = () => { proposeCapabilityPlanRewrite(null, null).catch(() => {}); };
+    if (groupChoices.length + (hasRewrite ? 1 : 0) === 1) {
+      if (groupChoices.length) openGroup(groupChoices[0]); else openRewrite();
+      return;
+    }
+    // More than one conversation available: a chooser, so each stays
+    // reachable and only ONE dialogue opens per tap (Q-3) - the others
+    // wait here, and the cancel is a true no-op.
+    const buttons = groupChoices.map((g) => {
+      const active = g.ep.rows.filter((r) => r.state === CONSTRAINT_STATE.ACTIVE);
+      const subj = groupSubject(active);
+      const firstRule = active.find((r) => r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW);
+      return {
+        text: subj
+          ? `Working around ${subj}`
+          : (firstRule ? `Working around: ${ruleLabel(firstRule)}` : 'A temporary change'),
+        onPress: () => openGroup(g),
+      };
+    });
+    if (hasRewrite) {
+      buttons.push({ text: 'How your plan matches your permanent rules', onPress: openRewrite });
+    }
+    buttons.push({ text: 'Not now', style: 'cancel' });
+    appAlert(
+      'More than one thing to look at',
+      'Each of these affects your current plan. Pick one to review. The others stay here for another time.',
+      buttons,
+    );
   };
 
   // CC33 D112 R1a/b (closes audit T1-03 and T2-01): the PLAN REWRITE
@@ -807,10 +891,12 @@ export default function HowYouTrainScreen() {
       const { computeCapabilityPlanRewrite, applyCapabilityPlanRewrite } = require('../lib/sessionEffective');
       const rw = await computeCapabilityPlanRewrite(userId, { ruleIds });
       const n = rw.lines.length;
-      // Boolean mirrors proposeEffectiveDiff's: true whenever something
-      // was put in front of the user (the no-match information alert
-      // included), so the revisit row knows a tap was not silent.
-      if (!n) return false;
+      // The shape mirrors proposeEffectiveDiff's (round 5, R5-9):
+      // surfaced whenever something was put in front of the user (the
+      // no-match information alert included); checked=false whenever the
+      // computation could not tell, so the revisit row's terminal toast
+      // never reads a failed read as "nothing needs a decision".
+      if (!n) return { surfaced: false, checked: rw.checked };
       const k = rw.substitutable;
       const u = rw.unsolvable;
       const plural = (c) => (c === 1 ? '' : 's');
@@ -825,7 +911,7 @@ export default function HowYouTrainScreen() {
       }
       if (k === 0) {
         appAlert('Some of your plan sits outside this', body, [{ text: 'OK' }]);
-        return true;
+        return { surfaced: true, checked: true };
       }
       appAlert(
         'Update your plan to match?',
@@ -855,9 +941,9 @@ export default function HowYouTrainScreen() {
           },
         ],
       );
-      return true;
+      return { surfaced: true, checked: true };
     } catch (_e) { /* proposal is additive; the rule already stands */ }
-    return false;
+    return { surfaced: false, checked: false };
   };
 
   const confirmEndEpisode = (ep) => {

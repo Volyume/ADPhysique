@@ -111,21 +111,54 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     expect(screen).toContain('{canRevisit ? (');
   });
 
-  test('the revisit tap: undecided first, then per-GROUP applied review, then the baseline rewrite', () => {
-    const fn = screen.match(/const revisitCapabilityPlan = async[\s\S]{0,2600}?\n  };/)?.[0] ?? '';
+  test('the revisit tap: undecided first, then EVERY conversation gathered, then exactly one opened', () => {
+    const fn = screen.match(/const revisitCapabilityPlan = async[\s\S]{0,6200}?\n  };/)?.[0] ?? '';
     expect(fn).toContain('undecidedEpisodeRuleIds(state.episodes)');
     expect(fn).toContain('proposeEffectiveDiff(ids, null)');
-    expect(fn).toContain('proposeCapabilityPlanRewrite(null, null)');
-    // Lead review: an explicit tap never ends in silence - both propose
-    // paths report whether they surfaced anything, and a no-op tap gets
-    // the honest line instead of nothing.
-    expect(fn).toContain("if (!surfaced) toast.show('Nothing in your current plan needs a decision right now.');");
+    // Round 5 (Q-3/J4): one conversation per tap - a surfaced undecided
+    // proposal ends the tap, and the rewrite is a chooser entry, never
+    // an unconditional second dialogue stacked on the first's result.
+    expect(fn).toContain('if (r.surfaced) return;');
+    expect(fn).not.toMatch(/surfaced = !!\(await proposeCapabilityPlanRewrite/);
     // Round 4 (F-1): applied rules are revisited per GROUP through the
     // dedicated dialogue, never as a flat union through the apply
     // proposal - the round-3 shape let one cancel-styled tap decline
     // every applied episode at once.
-    expect(fn).toContain('reviewAppliedGroup(ep, appliedIds, lines)');
+    expect(fn).toContain('reviewAppliedGroup(g.ep, g.appliedIds, g.lines)');
     expect(fn).not.toMatch(/proposeEffectiveDiff\(applied/);
+    // Round 5 (R5-6): EVERY group with lines is gathered - the round-4
+    // loop broke on the first, and its true no-op cancel meant no tap
+    // sequence ever reached the second group. The chooser lists each
+    // group and the rewrite, and its own cancel is a true no-op.
+    expect(fn).toContain('groupChoices.push({ ep, appliedIds, lines });');
+    expect(fn).not.toMatch(/if \(surfaced\) break;/);
+    expect(fn).toContain("buttons.push({ text: 'Not now', style: 'cancel' });");
+    expect(fn).toContain('More than one thing to look at');
+    // Round 5 (R5-9): the terminal toast tells the truth about failed
+    // reads - "could not read" is never spoken as "nothing needs a
+    // decision", and a completed quiet check keeps the honest line.
+    expect(fn).toContain("? 'Volyume could not read your plan just now. Nothing has changed. Try again in a moment.'");
+    expect(fn).toContain(": 'Nothing in your current plan needs a decision right now.');");
+    expect(fn).toContain('if (!checked) { couldNotRead = true; continue; }');
+    expect(fn).toContain('if (!rw.checked) couldNotRead = true;');
+  });
+
+  test('R5-9: the focus detector back-off key is stamped only on a COMPLETED check', () => {
+    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,2400}/)?.[0] ?? '';
+    // The stamp lives AFTER the summary read, gated on summary.checked -
+    // stamped before the read, a failed read blocked the passive
+    // detector from retrying the same undecided set for the life of the
+    // mounted screen.
+    expect(fn).toContain('if (summary.checked) {');
+    expect(fn).toContain("lastAutoProposedKeyRef.current = (Array.isArray(createdIds) ? createdIds : []).slice().sort().join(',');");
+    const stampIdx = fn.indexOf('lastAutoProposedKeyRef.current =');
+    const readIdx = fn.indexOf('computePlanEffectiveSummary(userId, createdIds)');
+    expect(readIdx).toBeGreaterThan(-1);
+    expect(stampIdx).toBeGreaterThan(readIdx);
+    // And the helper reports { surfaced, checked }, never a bare boolean,
+    // so the revisit row can tell silence from failure.
+    expect(screen).toContain('return { surfaced: false, checked: summary.checked };');
+    expect(screen).toContain('return { surfaced: true, checked: true };');
   });
 
   test('F-1: the applied-group review dialogue - cancel is a TRUE no-op, stopping is explicit and group-scoped', () => {
@@ -135,12 +168,32 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // deciding.
     expect(fn).not.toMatch(/'Leave it as it is', style: 'cancel', onPress/);
     expect(fn).toContain("text: 'Stop working around it',");
-    expect(fn).toContain('if (clinicianIds.size) { confirmClinicianDecline(subject, stopNow); return; }');
+    expect(fn).toContain("if (clinicianIds.size) { confirmClinicianDecline(subject, stopNow, 'stop'); return; }");
     // Group-scoped: the decline loop runs over appliedIds (this group's
     // own ids), never a cross-episode union.
     expect(fn).toContain('for (const id of appliedIds) {');
     expect(fn).toContain('Keep working around');
     expect(fn).toContain("text: 'Choose per exercise',");
+  });
+
+  test('Q-2: the clinician confirm speaks the frame it was reached from - never decline words on a stop or keep', () => {
+    // One gate, three frames. Reached from the revisit dialogue's "Stop
+    // working around it" it must not answer with "Declining means..." /
+    // "Decline anyway" / a "Keep it out" cancel readable as "keep the
+    // rule out"; reached from the per-line review's Keep, likewise.
+    expect(screen).toContain("const confirmClinicianDecline = (subject, onDeclineAnyway, frame = 'decline') => {");
+    expect(screen).toContain("consequence: 'Declining means your sessions keep showing it.',");
+    expect(screen).toContain("consequence: 'Stopping means your sessions show it again.',");
+    expect(screen).toContain("consequence: 'Keeping it in means your sessions keep showing it.',");
+    expect(screen).toContain("cancel: 'Keep working around it',");
+    expect(screen).toContain("confirm: 'Stop anyway',");
+    expect(screen).toContain("cancel: 'Go back',");
+    expect(screen).toContain("confirm: 'Keep it in anyway',");
+    // Each caller names its frame: the group review stops, the per-line
+    // save keeps, the apply proposal's decline stays the default.
+    expect(screen).toContain("confirmClinicianDecline(subject, stopNow, 'stop')");
+    expect(screen).toContain("confirmClinicianDecline(review.subject, commit, 'keep')");
+    expect(screen).toContain('confirmClinicianDecline(subject, declineNow);');
   });
 
   test('undecided episode ids exclude held episodes and allowance rows (D112 R8 + F6)', () => {
@@ -184,23 +237,27 @@ describe('T1-06 - synced-in rules and app-relaunch undecided episodes propose on
 });
 
 describe('T1-04/T1-26 - the clinician decline confirm', () => {
-  test('exact copy: title, body and both button labels', () => {
+  test('exact copy: title, body template and the decline frame\'s exact words (round 5, Q-2: frames)', () => {
     const fn = screen.match(/const confirmClinicianDecline = \([\s\S]{0,700}?\n  };/)?.[0] ?? '';
     expect(fn).toContain("'A clinician asked for this one'");
-    expect(fn).toContain('You told Volyume a clinician asked you to keep ${subject ?? \'this\'} out. Declining means your sessions keep showing it. Volyume will not suggest it elsewhere.');
-    expect(fn).toContain("{ text: 'Keep it out', style: 'cancel' }");
-    expect(fn).toContain("{ text: 'Decline anyway', style: 'destructive', onPress: onDeclineAnyway }");
+    expect(fn).toContain('You told Volyume a clinician asked you to keep ${subject ?? \'this\'} out. ${words.consequence} Volyume will not suggest it elsewhere.');
+    expect(fn).toContain("{ text: words.cancel, style: 'cancel' }");
+    expect(fn).toContain("{ text: words.confirm, style: 'destructive', onPress: onDeclineAnyway }");
+    // The decline frame keeps its original words verbatim.
+    expect(screen).toContain("consequence: 'Declining means your sessions keep showing it.',");
+    expect(screen).toContain("cancel: 'Keep it out',");
+    expect(screen).toContain("confirm: 'Decline anyway',");
   });
 
-  test('"Keep it out" carries no onPress at all - nothing is recorded on that path', () => {
+  test('the cancel button carries no onPress at all - nothing is recorded on that path', () => {
     // A bare { text, style: 'cancel' } object with no onPress key: AppAlert
     // treats a missing onPress as a no-op dismiss (components/AppAlert.js
     // dismiss() only calls onPress if one was supplied).
-    expect(screen).toMatch(/\{ text: 'Keep it out', style: 'cancel' \},\s*\n\s*\{ text: 'Decline anyway'/);
+    expect(screen).toMatch(/\{ text: words\.cancel, style: 'cancel' \},\s*\n\s*\{ text: words\.confirm/);
   });
 
   test('gates the whole-group "Not now" decline', () => {
-    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,7200}?\n  };/)?.[0] ?? '';
+    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,7800}?\n  };/)?.[0] ?? '';
     expect(fn).toContain('clinicianSourcedIds(userId, createdIds)');
     expect(fn).toContain('if (clinicianIds.size) { confirmClinicianDecline(subject, declineNow); return; }');
   });
@@ -208,7 +265,7 @@ describe('T1-04/T1-26 - the clinician decline confirm', () => {
   test('gates the per-line "Keep" save path too, not only the whole-group flow', () => {
     const fn = screen.match(/const saveLineReview = async[\s\S]{0,4200}?\n  };/)?.[0] ?? '';
     expect(fn).toContain('const keptClinician = review.lines.some((l) => !l.apply && l.clinician);');
-    expect(fn).toContain('if (keptClinician) { confirmClinicianDecline(review.subject, commit); return; }');
+    expect(fn).toContain("if (keptClinician) { confirmClinicianDecline(review.subject, commit, 'keep'); return; }");
   });
 
   test('suggestion filtering is untouched - no change to the resolver/picker clinician carve', () => {
