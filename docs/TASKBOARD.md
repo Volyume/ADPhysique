@@ -971,8 +971,25 @@ answer, five consumers), Q-1 in-session generic states the conflict
 never an adaptation, Q-2 clinician confirm frames (decline/stop/keep),
 Q-4 fall-through + headline + PlansScreen pins, Q-5 dissolved by R5-8;
 REVIEW-BRIEF 87->93; J1 W3 sweep recorded (no interactive controls
-added by W3), J1 LANDED. NEXT: settled full gate + merge, adversarial
-review ROUND 6, then S5 gate + device checklist.
+added by W3), J1 LANDED. ROUND 6 RAN on 4584c860: NOT CLEAN - 8
+BROKEN / 6 roots + 8 QUALIFIED; ALL closed same day (D118, correcting
+two D117 claims): R6-1 the substitute pool honours "Avoid for this
+block" (scoped intent loader across all four seam paths; the reviewer
+had serve substituting IN the avoided machine and the rewrite writing
+it permanently; pins converted to run the REAL senior question - none
+ever had), R6-2 caption inputs match serve + focus re-read, R6-3
+serveGate mode (dialogues state only what serve is DOING; both modes
+mirror the fail-safe; declined co-drivers never produce lines), R6-4
+the NAMED in-session line states the conflict (the round-5 fix had
+missed the dominant branch), R6-5 composed headline + added count +
+additive rep-target statement + entry-keyed matching/id-keyed
+accounting + identity keys, R6-6 checked-aware per-line empty answer,
+B9 null-not-0 count on unreadable routine, C1 chooser cancel wording,
+J2 AppAlert 48dp, J4 label collisions dated, J5 alert actions scroll.
+Also: TRN fixture time-bomb repaired in its own commit (wall-clock
+fixtures for a wall-clock function; red on the unchanged base,
+proven). NEXT: settled full gate + merge, adversarial review ROUND 7,
+then S5 gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

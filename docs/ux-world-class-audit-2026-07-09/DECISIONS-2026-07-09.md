@@ -3491,3 +3491,111 @@ notes are plain Text, pinned as such by their own guards; the
 SettingsPrimitives accessibilityLabel override is itself the
 accessibility fix), so J1's remaining condition is round-4's controls
 plus this recorded sweep.
+
+## D118 — CC33 review round 6 closures + D117 corrections (lead-ruled under D33, 2026-08-29)
+
+Adversarial review round 6 (on main 4584c860): 8 rows BROKEN from 6
+roots, 8 QUALIFIED, 0 STOP. All six roots and five qualified
+conditions closed same-day. Two D117 claims round 6 proved false are
+corrected here, not softened:
+
+1. **The substitute pool honours every scope the user's word carries
+   (R6-1).** All four capability paths in sessionEffective loaded the
+   intent state without the active block's id, so "Avoid for this
+   block" rows compared their scope against null and went dormant -
+   serve substituted IN the exact movement the user had avoided, and
+   the rewrite offered to write it into the document permanently. One
+   scoped loader (loadScopedIntentState: getActiveBlock then
+   loadExerciseIntentState with the id, planAutoGen's own posture) now
+   feeds all four paths. CORRECTING D117 ruling 7: "one answer, five
+   consumers" was false as claimed - the fifth consumer (the caption
+   memo) was fed a block-scoped state while the other four were not;
+   the inputs now match. Driven through the REAL senior question,
+   which - the reviewer proved - no pin in the campaign had ever run
+   (the old serveGuard mock replaced isEligibleExercise with a
+   stand-in; only the loader is mocked now, honouring the scope it is
+   asked for, so an unthreaded caller fails the pins).
+
+2. **Dialogues speak in the indicative only about what serve is doing
+   (R6-3).** computePlanEffectiveLines gains serveGate mode: a line
+   exists only where serve's own substitution gate passes (every
+   definite actionable conflict applied). The applied-group revisit
+   dialogue and the revisit chooser read this mode, so "Your sessions
+   currently show 1 exercise swapped" is never claimed for a row a
+   declined or undecided co-driver holds in place - and a group serve
+   is not acting on is not offered as a conversation. Default
+   (would-if) mode is honest too: a DECLINED co-driver keeps its row
+   served whatever the proposal's answer, so it produces no line; an
+   undecided one is read optimistically (it has its own proposal
+   pending) - the one place the modes differ, pinned as such. BOTH
+   modes now mirror the never-served-empty fail-safe per routine: a
+   session serve would serve untouched yields no lines, so no proposal
+   can claim reductions serve will refuse to make.
+   hasCapabilityToRevisit deliberately stays on the would-if mode
+   (showing the review row is not a claim; hiding it would strand the
+   revisit) - noted in its docblock.
+
+3. **The named in-session line states the conflict (R6-4).**
+   CORRECTING D117 ruling 8: "both generics replaced" was true and
+   insufficient - the NAMED variant one line above them still claimed
+   a workaround in progress, and it is the branch that fires for every
+   demand and family rule. It now mirrors the baseline named line:
+   "This one involves X, which sits outside your temporary change.
+   Swap it when you're ready." - and it was the only conflict line of
+   four with no action offer, which this closes too.
+
+4. **The headline is COMPOSED from every rendered count (R6-5).**
+   receiptHeadline takes the added count (it had no parameter for it -
+   "Nothing is changing" rendered above "New in your plan") and speaks
+   changes, additions and drops in one line; the rep-target statement
+   is additive and survives drops and changes (it used to be
+   unreachable once a drop existed, replaced by "The rest stays as
+   it is" - an affirmative denial over moving rep targets).
+   PlanUpdateScreen renders prescriptionCopy on its stays lines so the
+   count has a section on both renderers. Continuity ruling: matching
+   consumes ENTRIES (a lift deliberately programmed on two days
+   retains both rows - it was relisted as "New in your plan" while
+   also under "What stays"), while the gone-accounting stays keyed on
+   IDS (an exercise still anywhere in the new plan is never "no longer
+   in your plan" - stated as A13's condition). Every receipt line
+   carries exerciseId and every list on both renderers keys on
+   identity plus index.
+
+5. **A failed read never says "nothing" anywhere (R6-6 + B9).** The
+   per-line review's empty answer branches on checked, sharing one
+   COULD_NOT_READ_TOAST constant with the revisit toast so the sites
+   cannot drift. countEffectiveSessionRows returns null - not a falsy
+   0 - when the routine itself could not be read, so HomeScreen's ??
+   fallback shows the raw count exactly as its comment always claimed;
+   0 now means only "this routine is empty".
+
+6. **The plan view re-reads on focus (R6-2 staleness limb).**
+   RoutineDetailScreen registers a focus listener re-running both
+   loaders: it stays mounted while the user trains in another tab, so
+   an episode captured mid-session left the captions and the
+   serve-outcome memo speaking a pre-capture answer with no refresh
+   path short of popping the screen. Cost: the round-6 review measured
+   the memo at 0.7 ms per recompute over a 300-exercise library.
+
+7. **Alert ergonomics are law-compliant (J2 + J5) and the chooser is
+   unambiguous (J4 + C1).** AppAlert buttons move from an off-scale
+   44dp literal to spacing.xxxl (48 - the styling law's minimum,
+   "gym, sweaty hands"); the action region becomes its own bounded
+   ScrollView, so a long stacked list (the revisit chooser at a large
+   font scale) scrolls instead of clipping its last buttons - D42's
+   footer-stays-put shape holds in every ordinary alert and the
+   pathological case degrades to scrollable, never unreachable. These
+   are global-component changes, made under the styling law's own
+   authority. The revisit chooser's cancel takes the F-1 no-op wording
+   ("Leave it as it is") - "Not now" is this same screen's DECLINE on
+   the apply proposal, one state apart - and colliding chooser labels
+   are distinguished by the group's start date.
+
+Also recorded: the round-5 handover banner overstated the pins
+("closed same-day at mechanism level with driven pins") - five of
+round 5's nine closures were pinned by source-string guards; the
+banner now says which halves are driven and which are source-pinned,
+and this round converted the substitute-selection pins to run the real
+senior question. X1 (REAL-DISABLED-USER-VALIDATED = NO) and X2
+(founder device walk) remain unclaimable; the round-6 I4 measurements
+are Node timings, not device timings.
