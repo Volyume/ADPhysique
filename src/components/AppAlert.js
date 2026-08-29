@@ -133,10 +133,14 @@ export function AppAlertHost() {
               also unbounded (the CC33 revisit chooser renders one button
               per conversation) - when actions alone exceed the capped
               card at large type, they used to be clipped by the card's
-              overflow:'hidden' with the last buttons unreachable. Normal
-              alerts are unaffected (content shorter than the cap never
-              scrolls); the pathological case degrades to scrollable
-              actions instead of missing ones. */}
+              overflow:'hidden' with the last buttons unreachable. Round
+              7 (R7-6): the region is bounded by a maxHeight cap and
+              NEVER by flexShrink - shrinkable, it competed with the
+              message for the deficit at the 88% cap and a long message
+              squeezed ordinary two-button rows to a sliver. Normal
+              alerts render actions at full height with the message
+              alone scrolling (D42's shape); only an oversized stacked
+              list scrolls within its own bound. */}
           <ScrollView style={styles.cardScroll} showsVerticalScrollIndicator={false}>
             {!!title && <Text style={[styles.title, live.title]} accessibilityRole="header">{title}</Text>}
             {!!message && <Text style={[styles.message, live.message]}>{message}</Text>}
@@ -251,12 +255,17 @@ const styles = StyleSheet.create({
   actions: { gap: spacing.sm },
   actionsRow: { flexDirection: 'row', justifyContent: 'flex-end' },
   actionsStacked: { flexDirection: 'column' },
-  // CC33 round 6 (J5): the action region's own scroll wrapper. flexGrow 0
-  // keeps it at content height in every ordinary alert; flexShrink 1 +
-  // minHeight 0 let it yield and SCROLL - rather than be clipped by the
-  // card's overflow:'hidden' - when a long stacked action list meets the
-  // 88% cap at a large font scale.
-  actionsScroll: { flexGrow: 0, flexShrink: 1, minHeight: 0 },
+  // CC33 round 6 (J5) + round 7 (R7-6): the action region's own scroll
+  // wrapper. flexGrow 0 keeps it at content height in every ordinary
+  // alert; flexShrink 0 - Yoga's own default for a View, restored -
+  // means it NEVER competes with the message for space (round 6's
+  // flexShrink 1 made a long message at a large font scale squeeze a
+  // two-button row to a ~25dp sliver, regressing D42's
+  // reachable-without-scrolling guarantee); the maxHeight cap is what
+  // bounds it instead, so only a genuinely oversized stacked list (the
+  // revisit chooser at a large font scale) scrolls within it, while
+  // cardScroll absorbs everything else exactly as D42 shipped.
+  actionsScroll: { flexGrow: 0, flexShrink: 0, maxHeight: '60%' },
   btn: {
     // CC33 round 6 (J2): spacing.xxxl = 48, the styling law's minimum
     // touch target ("every interactive element >=48dp effective - gym,

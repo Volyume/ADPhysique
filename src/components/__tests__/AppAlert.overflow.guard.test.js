@@ -14,9 +14,12 @@
  *   - the title/message region is wrapped in a ScrollView that can shrink
  *     to fit (flexShrink: 1, minHeight: 0), so long content scrolls rather
  *     than clipping
- *   - the action buttons sit OUTSIDE that ScrollView (a sibling, not a
- *     descendant) so they are always reachable without scrolling first,
- *     never carried off-screen inside scrollable content
+ *   - the action buttons sit outside the BODY ScrollView, in their own
+ *     bounded, non-shrinking action region (CC33 rounds 6-7): in every
+ *     ordinary alert they render at full height with the message alone
+ *     scrolling - the original D42 guarantee - and only a genuinely
+ *     oversized stacked action list scrolls within its own maxHeight
+ *     bound, so no button is ever clipped or unreachable either way
  *   - a long-message alert still renders its buttons, reachable and
  *     functional, proving the restructure did not silently drop or disable
  *     any action
@@ -96,17 +99,25 @@ describe('AppAlert overflow contract (D42)', () => {
     expect(onDelete).toHaveBeenCalled();
   });
 
-  test('CC33 round 6 (J5): the action region is its own BOUNDED scroll - a long stacked list scrolls, never clips', () => {
-    // The card clips overflow (correct), and the body ScrollView shrinks
-    // first - so a stacked action list taller than the capped card (the
-    // CC33 revisit chooser at a large font scale) used to be CLIPPED
-    // with its last buttons, the cancel included, unreachable. The
-    // actions now sit in their own shrinkable ScrollView: content
-    // height in every ordinary alert, scrollable past the cap.
+  test('CC33 rounds 6-7 (J5/R7-6): the action region is bounded by maxHeight and NEVER by flexShrink', () => {
+    // Round 6 made the actions a ScrollView so a long stacked list (the
+    // revisit chooser at a large font scale) scrolls instead of being
+    // clipped by the card's hidden overflow. Round 7 fixed how it is
+    // bounded: with flexShrink: 1 it competed with the message for the
+    // deficit at the 88% cap, and Yoga's proportional shrink squeezed an
+    // ordinary two-button row to a ~25dp sliver under a long message at
+    // a large font scale - regressing D42's reachable-without-scrolling
+    // guarantee. flexShrink: 0 (Yoga's own View default, restored) plus
+    // a maxHeight cap keeps ordinary alerts at full action height with
+    // the message alone scrolling, and bounds only the oversized list.
     const block = SOURCE.match(/actionsScroll:\s*\{[^}]*\}/)?.[0] ?? '';
     expect(block).toContain('flexGrow: 0');
-    expect(block).toContain('flexShrink: 1');
-    expect(block).toContain('minHeight: 0');
+    expect(block).toContain('flexShrink: 0');
+    expect(block).toContain('maxHeight:');
+    expect(block).not.toContain('flexShrink: 1');
+    // And the body scroll keeps its shrink, so IT absorbs the deficit.
+    const cardBlock = SOURCE.match(/cardScroll:\s*\{[^}]*\}/)?.[0] ?? '';
+    expect(cardBlock).toContain('flexShrink: 1');
     expect(SOURCE).toContain('style={styles.actionsScroll}');
     expect(SOURCE).toContain('contentContainerStyle={[styles.actions, stacked ? styles.actionsStacked : styles.actionsRow]}');
   });
