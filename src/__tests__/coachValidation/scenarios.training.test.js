@@ -18,7 +18,7 @@
  * buildNextBlockRecommendation are module-private, reachable only through
  * getBlockAdvice.
  */
-import { runScenarios, NOW, DAY } from './harness';
+import { runScenarios, DAY } from './harness';
 import { SCENARIOS } from './scenarios.training.data';
 
 runScenarios(SCENARIOS);
@@ -49,12 +49,22 @@ describe('TRN-A1..A3: T-PROGRAMME-08/10 blockAdvisor.getBlockAdvice (IO-mocked d
   // of 6 -- so getBlockAdvice reaches the masters/deload/heads-up branch
   // without touching the recovery or completed-block branches (which need
   // further DB reads this describe block deliberately does not mock).
-  const activeBlock = { startDate: NOW - 14 * DAY, plannedWeeks: 6, durationWeeks: 6 };
+  //
+  // WALL-CLOCK, not the harness NOW (time-bomb fix, 2026-08-29): unlike
+  // the engine functions runScenarios exercises (which take nowMs and are
+  // judged against the fixed harness NOW), getBlockAdvice reads the REAL
+  // clock for its recency gates (blockAdvisor.js: `Date.now() - t <= 14
+  // days` on check-in and training recency). Fixtures dated off the fixed
+  // NOW aged out of that window on 29 Aug 2026 and the suite went red on
+  // an unchanged tree. A wall-clock function gets wall-clock-relative
+  // fixtures; these stay inside every recency window forever.
+  const T0 = Date.now();
+  const activeBlock = { startDate: T0 - 14 * DAY, plannedWeeks: 6, durationWeeks: 6 };
 
   test('TRN-A1: masters (age>=40) drop the deload trigger to 1 high signal (ORACLE T-PROGRAMME-10, "deloadHighThreshold = 1 for masters")', async () => {
     mockGetRecentCheckins.mockResolvedValue([
-      { weekStart: NOW - 1 * DAY, energyScore: 1, sorenessScore: 2, sleepHours: 7 },
-      { weekStart: NOW - 8 * DAY, energyScore: 3, sorenessScore: 2, sleepHours: 7 },
+      { weekStart: T0 - 1 * DAY, energyScore: 1, sorenessScore: 2, sleepHours: 7 },
+      { weekStart: T0 - 8 * DAY, energyScore: 3, sorenessScore: 2, sleepHours: 7 },
     ]);
     const advice = await getBlockAdvice('u1', activeBlock, { age: 45 }, { isPro: true });
     expect(advice.action).toBe('early_deload');
@@ -62,8 +72,8 @@ describe('TRN-A1..A3: T-PROGRAMME-08/10 blockAdvisor.getBlockAdvice (IO-mocked d
 
   test('TRN-A2: the SAME single high signal does not trigger early_deload for a non-master (threshold 2), and falls through to heads_up instead (ORACLE T-PROGRAMME-10, masters threshold-halving)', async () => {
     mockGetRecentCheckins.mockResolvedValue([
-      { weekStart: NOW - 1 * DAY, energyScore: 1, sorenessScore: 2, sleepHours: 7 },
-      { weekStart: NOW - 8 * DAY, energyScore: 3, sorenessScore: 2, sleepHours: 7 },
+      { weekStart: T0 - 1 * DAY, energyScore: 1, sorenessScore: 2, sleepHours: 7 },
+      { weekStart: T0 - 8 * DAY, energyScore: 3, sorenessScore: 2, sleepHours: 7 },
     ]);
     const advice = await getBlockAdvice('u1', activeBlock, { age: 25 }, { isPro: true });
     expect(advice.action).toBe('heads_up');
@@ -72,7 +82,7 @@ describe('TRN-A1..A3: T-PROGRAMME-08/10 blockAdvisor.getBlockAdvice (IO-mocked d
 
   test('TRN-A3: a single check-in (hasEnoughHistory false) fires neither early_deload nor heads_up, however high the one signal reads -- a user one week into their first block is never told to drop their sets in half (ORACLE T-PROGRAMME-10 HOLD, hasEnoughHistory gate)', async () => {
     mockGetRecentCheckins.mockResolvedValue([
-      { weekStart: NOW - 1 * DAY, energyScore: 1, sorenessScore: 2, sleepHours: 7 },
+      { weekStart: T0 - 1 * DAY, energyScore: 1, sorenessScore: 2, sleepHours: 7 },
     ]);
     const advice = await getBlockAdvice('u1', activeBlock, { age: 45 }, { isPro: true });
     expect(advice.action).toBe('continue');
