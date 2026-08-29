@@ -9,7 +9,7 @@
 import {
   getActivePlan, getRoutinesForPlan, getRoutineExercisesWithDetails,
   getAllExercises, setConstraintEffectiveChoice, appendSessionConstraintEffects,
-  updateRoutineExerciseExercise, recordExerciseSwap,
+  updateRoutineExerciseExercise, recordExerciseSwap, getActiveBlock,
 } from './database';
 import { loadCapabilityResolveState, blockingConflicts } from './capability/resolve';
 import {
@@ -44,6 +44,27 @@ export { setConstraintEffectiveChoice };
 export const substituteSeniorQuestion = (capState, intentState) => (ex) => (
   isEligibleExercise(intentState, ex) && blockingConflicts(capState, ex).length === 0
 );
+
+/**
+ * Round 6 (R6-1): the intent state every capability path in this module
+ * judges substitutes against, loaded WITH the active block's id - the
+ * same scope the generator (planAutoGen.loadGenerationIntent), the
+ * pickers and every screen already use. Loaded without it, an "Avoid
+ * for this block" row compares its scopeMesocycleId against null and
+ * goes dormant, so serve substituted IN the exact movement the user had
+ * avoided for this block - and the plan rewrite offered to write it
+ * into the document permanently. A failed block read is not a reason to
+ * drop the preference lane: the state still loads, with block-scoped
+ * avoidances simply not applying (planAutoGen's own posture).
+ */
+export async function loadScopedIntentState(userId) {
+  let activeMesocycleId = null;
+  try {
+    const block = await getActiveBlock(userId);
+    activeMesocycleId = block?.id ?? null;
+  } catch (_e) { /* no block resolved: block-scoped avoidance simply doesn't apply */ }
+  return loadExerciseIntentState(userId, { activeMesocycleId });
+}
 
 /**
  * The choice write. Its aggregate counter was RETIRED under the Q4
@@ -85,17 +106,30 @@ export async function recordEffectiveChoice(userId, constraintId, choice) {
  * embedded exercise objects carry no demand columns and would read as
  * unknown-conflicts.
  *
+ * Round 6 (R6-3): two modes, one walk. The DEFAULT mode answers "what
+ * would serving look like once these rules are applied" - the apply
+ * proposal's question, judged with the wanted rules treated as applied.
+ * serveGate mode answers "what is serve DOING right now" - a line
+ * exists only where serve's own substitution gate passes (every
+ * definite actionable conflict already 'applied'), so the applied-group
+ * revisit dialogue and the revisit chooser never state a swap for a row
+ * a declined or undecided rule is holding in place. BOTH modes mirror
+ * serve's never-served-empty fail-safe (D116): a routine none of whose
+ * rows would be served resolves to NO lines - serve serves that session
+ * untouched, so there is nothing to claim about it.
+ *
  * @param {string} userId
  * @param {string[]} ruleIds the constraint ids to judge (a just-created
  *   episode group, a restart's reactivated ids, or a batch of
  *   still-undecided ids collected on refresh/revisit); empty means
  *   nothing to offer, not "every rule" (unlike computeCapabilityPlanRewrite's
  *   null-means-all-baseline convention - this function is episode-scoped).
+ * @param {{serveGate?: boolean}} opts
  * @returns {Promise<Array<{routineId: string, routineName: string|null,
  *   routineExerciseId: string|null, from: object, to: object|null,
  *   constraintIds: string[]}>>}
  */
-export async function computePlanEffectiveLines(userId, ruleIds = []) {
+export async function computePlanEffectiveLines(userId, ruleIds = [], { serveGate = false } = {}) {
   // Round 3 (R3-2): `checked` distinguishes "nothing affected" from
   // "could not check". A failed read and a genuinely unaffected plan
   // used to be the same empty array, and the vacuous-applied write
@@ -115,7 +149,7 @@ export async function computePlanEffectiveLines(userId, ruleIds = []) {
     if (!plan?.id) return { lines: out, checked: true };
     const [capState, intentState, library, routines] = await Promise.all([
       loadCapabilityResolveState(userId, {}),
-      loadExerciseIntentState(userId, {}),
+      loadScopedIntentState(userId),
       getAllExercises(),
       getRoutinesForPlan(plan.id),
     ]);
@@ -134,30 +168,64 @@ export async function computePlanEffectiveLines(userId, ruleIds = []) {
         (rows ?? []).map((r) => r?.exercise?.id ?? r?.exerciseId).filter(Boolean),
       );
       const isEligibleRow = substituteSeniorQuestion(capState, intentState);
+      // R6-3: lines buffer per routine, plus whether ANY of its rows
+      // would be served - the never-served-empty fail-safe (D116) is a
+      // per-session decision, so it must be mirrored per routine: when
+      // nothing would be served, serve serves the base session
+      // untouched and these lines must not exist.
+      const routineLines = [];
+      let anyServed = false;
       for (const row of rows ?? []) {
         const exercise = byId.get(row?.exercise?.id ?? row?.exerciseId) ?? null;
-        if (!exercise) continue;
+        // A row the library cannot resolve is served (unknown drives
+        // nothing automatic), so it counts toward the fail-safe test.
+        if (!exercise) { anyServed = true; continue; }
         // Definite conflicts only (F1 class): proposing to swap a line on
         // an UNKNOWN conflict would justify a change with a movement fact
         // the app has not established - the same gate serve applies.
         const definite = actionableEpisodeConflicts(capState, exercise)
           .filter((c) => !c.unknown);
-        if (!definite.length) continue;
+        if (!definite.length) { anyServed = true; continue; }
+        // R6-3: in serve-gate mode a row is a line only where serve's
+        // own substitution gate passes; a row any declined or undecided
+        // rule holds in place is SERVED conflicted, and no dialogue may
+        // claim a swap for it.
+        if (serveGate && !definite.every((c) => c.row?.effectiveChoice === 'applied')) {
+          anyServed = true;
+          continue;
+        }
+        // R6-3, default mode: the would-if premise treats the WANTED
+        // rules as applied and everything else by its standing choice.
+        // A DECLINED co-driver keeps the row served whatever this
+        // proposal's answer, so no line may claim it would move; an
+        // undecided co-driver is read optimistically (it has its own
+        // proposal pending), which is where the two modes differ.
+        if (!serveGate && definite.some(
+          (c) => !wanted.has(c.constraintId) && c.row?.effectiveChoice === 'declined',
+        )) {
+          anyServed = true;
+          continue;
+        }
         const conflicts = definite.filter((c) => wanted.has(c.constraintId));
         if (!conflicts.length) {
-          // Not this proposal's line, but serve is already substituting
-          // it under other APPLIED rules - consume its substitute in row
-          // order so the lines below name the movements serve would
-          // actually assign, not the ones it has already spent.
           if (definite.every((c) => c.row?.effectiveChoice === 'applied')) {
+            // Not this proposal's line, but serve is already substituting
+            // it under other APPLIED rules - consume its substitute in row
+            // order so the lines below name the movements serve would
+            // actually assign, not the ones it has already spent. With no
+            // substitute left, serve omits it - not served.
             const spent = bestEligibleSubstitute(exercise, library, isEligibleRow, taken);
-            if (spent) taken.add(spent.id);
+            if (spent) { taken.add(spent.id); anyServed = true; }
+          } else {
+            // Declined/undecided out-of-scope drivers keep the row in
+            // place, visibly conflicted - served.
+            anyServed = true;
           }
           continue;
         }
         const substitute = bestEligibleSubstitute(exercise, library, isEligibleRow, taken);
-        if (substitute) taken.add(substitute.id);
-        out.push({
+        if (substitute) { taken.add(substitute.id); anyServed = true; }
+        routineLines.push({
           routineId: routine.id,
           routineName: routine.name ?? null,
           // The routine_exercise row's OWN id lives nested under
@@ -174,6 +242,11 @@ export async function computePlanEffectiveLines(userId, ruleIds = []) {
           constraintIds: conflicts.map((c) => c.constraintId),
         });
       }
+      // R6-3: the fail-safe mirror. A routine with rows but nothing
+      // served is one serve serves UNTOUCHED (D116, never served
+      // empty) - its rows all stand, so no line about it is true.
+      if ((rows ?? []).length && !anyServed) continue;
+      out.push(...routineLines);
     }
   } catch (_e) { checked = false; /* read-only; empty-unchecked means "could not tell" */ }
   return { lines: out, checked };
@@ -242,6 +315,13 @@ export async function clinicianSourcedIds(userId, ruleIds = []) {
  * regain its review the moment it starts to bite, or the plan is
  * reshaped by a decision the user cannot revisit.
  *
+ * Round 6 (R6-3 note): this check deliberately stays on the DEFAULT
+ * would-if mode, not serveGate - showing the row for a rule whose
+ * effect is currently held off by a declined co-driver is not a false
+ * claim (the row says "review", it states no swap), and hiding it
+ * would strand the revisit. The dialogues the tap opens use serveGate
+ * for what they actually SAY.
+ *
  * @returns {Promise<boolean>}
  */
 export async function hasCapabilityToRevisit(userId, undecidedEpisodeRuleIds = [], appliedEpisodeRuleIds = []) {
@@ -302,7 +382,7 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
       && (capState.restrictions ?? []).some((r) => r.role === 'episode' && r.effectiveChoice === 'applied');
     if (!hasApplied) return untouched();
     const [intentState, library] = await Promise.all([
-      loadExerciseIntentState(userId, {}),
+      loadScopedIntentState(userId),
       getAllExercises(),
     ]);
     // CC33 adversarial review F1, closed at this root: the rows a live
@@ -404,18 +484,25 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
  * own embedded exercise objects carry no demand columns and would read as
  * unknown-conflicts.
  *
- * Fail-safe: any error, or no applied episode rule, returns the base row
- * count - a capability read must never block or shrink the Today card.
- * Read-only, cheap: one call per focus (HomeScreen wires it).
+ * Fail-safe: an error after the routine read returns the base row
+ * count, and no applied episode rule returns it untouched - a
+ * capability read must never block or shrink the Today card. Round 6
+ * (B9): a failure BEFORE the base count exists returns null - "could
+ * not count" - never 0, which is a real answer ("this routine is
+ * empty") and, being falsy, made HomeScreen's `??` fallback skip the
+ * raw count and hide the exercises line entirely, against that
+ * render's own stated contract. Read-only, cheap: one call per focus
+ * (HomeScreen wires it).
  *
  * @param {string} userId
  * @param {string} routineId
- * @returns {Promise<number>} the served row count
+ * @returns {Promise<number|null>} the served row count, or null when
+ *   the routine could not be read at all
  */
 export async function countEffectiveSessionRows(userId, routineId) {
-  let baseCount = 0;
+  let baseCount = null;
   try {
-    if (!userId || !routineId) return 0;
+    if (!userId || !routineId) return null;
     const rows = await getRoutineExercisesWithDetails(routineId);
     baseCount = Array.isArray(rows) ? rows.length : 0;
     if (!baseCount) return 0;
@@ -429,7 +516,7 @@ export async function countEffectiveSessionRows(userId, routineId) {
       .map((r) => ({ exercise: byId.get(r?.exercise?.id ?? r?.exerciseId) ?? null }))
       .filter((r) => r.exercise);
     if (!baseRows.length) return baseCount;
-    const intentState = await loadExerciseIntentState(userId, {});
+    const intentState = await loadScopedIntentState(userId);
     const view = computeEffectiveSession(
       baseRows, library, capState, substituteSeniorQuestion(capState, intentState),
     );
@@ -491,7 +578,7 @@ export async function computeCapabilityPlanRewrite(userId, { ruleIds = null } = 
     if (!plan?.id) { out.checked = true; return out; }
     const [capState, intentState, library, routines] = await Promise.all([
       loadCapabilityResolveState(userId, {}),
-      loadExerciseIntentState(userId, {}),
+      loadScopedIntentState(userId),
       getAllExercises(),
       getRoutinesForPlan(plan.id),
     ]);

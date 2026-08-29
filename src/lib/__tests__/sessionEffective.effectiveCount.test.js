@@ -102,10 +102,19 @@ test('fail-safe: a capability read failure returns the base count, never blocks 
   expect(n).toBe(2);
 });
 
-test('fail-safe: no userId or routineId returns 0 without touching the DB', async () => {
-  expect(await countEffectiveSessionRows(null, 'r1')).toBe(0);
-  expect(await countEffectiveSessionRows('u1', null)).toBe(0);
+test('fail-safe: no userId or routineId answers null - "could not count" - without touching the DB (round 6, B9)', async () => {
+  // The old 0 was a real answer ("this routine is empty") given for a
+  // question that was never asked - and, being falsy, it hid the Today
+  // card's raw-count fallback. null is "no count exists here", which
+  // the card's ?? fallback handles by showing the raw figure.
+  expect(await countEffectiveSessionRows(null, 'r1')).toBeNull();
+  expect(await countEffectiveSessionRows('u1', null)).toBeNull();
   expect(getRoutineExercisesWithDetails).not.toHaveBeenCalled();
+});
+
+test('B9 (round 6): a routine the module cannot READ answers null, never a falsy 0', async () => {
+  getRoutineExercisesWithDetails.mockRejectedValue(new Error('locked'));
+  expect(await countEffectiveSessionRows('u1', 'r1')).toBeNull();
 });
 
 test('a routine with zero rows returns 0 without a capability read', async () => {

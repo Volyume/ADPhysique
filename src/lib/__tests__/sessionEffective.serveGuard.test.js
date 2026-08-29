@@ -19,10 +19,12 @@
  * resolver's loader, and the intent lane's senior question.
  */
 jest.mock('../database', () => ({
+  EXERCISE_INTENT: { EXCLUDED: 'excluded', AVOIDED_BLOCK: 'avoided_block', PATTERN_AVOID: 'pattern_avoid' },
   getActivePlan: jest.fn(),
   getRoutinesForPlan: jest.fn(),
   getRoutineExercisesWithDetails: jest.fn(),
   getAllExercises: jest.fn(),
+  getActiveBlock: jest.fn().mockResolvedValue(null),
   setConstraintEffectiveChoice: jest.fn(),
   appendSessionConstraintEffects: jest.fn().mockResolvedValue(undefined),
   updateRoutineExerciseExercise: jest.fn().mockResolvedValue(undefined),
@@ -32,23 +34,42 @@ jest.mock('../capability/resolve', () => {
   const actual = jest.requireActual('../capability/resolve');
   return { ...actual, loadCapabilityResolveState: jest.fn() };
 });
-jest.mock('../exercise/intent', () => ({
-  loadExerciseIntentState: jest.fn().mockResolvedValue({}),
-  // The real senior question composes capability (the substitute pool is
-  // capability-filtered through it); this stand-in models that for the
-  // standing-rule fixtures so the OMITTED path is genuinely reachable.
-  isEligibleExercise: jest.fn((_state, ex) => ex?.position !== 'standing'),
-}));
+// Round 6 (R6-1/I6): the REAL intent lane, not a stand-in. The old mock
+// replaced isEligibleExercise with a `position !== 'standing'` stand-in,
+// so no pin in the campaign had ever run the real senior question -
+// which is exactly how R6-1 (the substitute pool blind to "Avoid for
+// this block") shipped green through five rounds. Only the LOADER is
+// mocked now, and it honours the activeMesocycleId option the way the
+// real loader does - so a caller that fails to thread the block id gets
+// a state whose block-scoped avoidances are genuinely dormant, and the
+// R6-1 pins below fail against exactly that defect. The capability
+// filtering the old stand-in modelled comes from the composed question's
+// own blockingConflicts clause, which runs the REAL resolver here.
+jest.mock('../exercise/intent', () => {
+  const actual = jest.requireActual('../exercise/intent');
+  return { ...actual, loadExerciseIntentState: jest.fn() };
+});
 
 const {
   getAllExercises, appendSessionConstraintEffects, getActivePlan,
   getRoutinesForPlan, getRoutineExercisesWithDetails, updateRoutineExerciseExercise,
+  getActiveBlock,
 } = require('../database');
 const { loadCapabilityResolveState, buildCapabilityResolveState } = require('../capability/resolve');
+const { loadExerciseIntentState } = require('../exercise/intent');
 const {
   applyEffectiveViewToSession, countEffectiveSessionRows,
   computeCapabilityPlanRewrite, applyCapabilityPlanRewrite,
+  computePlanEffectiveLines,
 } = require('../sessionEffective');
+
+// The real loader's shape, honouring the scope it was asked for - so a
+// block-scoped avoidance row is live exactly when the CALLER threaded
+// the active block's id, dormant when it did not (R6-1's defect).
+const intentStateWith = (intents, activeMesocycleId) => ({
+  intents, swaps: [], defaults: [], usage: new Map(), progression: new Map(),
+  activeMesocycleId, unavailable: false, capability: null,
+});
 
 const NOW = 1_750_000_000_000;
 
@@ -87,6 +108,10 @@ beforeEach(() => {
   jest.clearAllMocks();
   loadCapabilityResolveState.mockResolvedValue(appliedStandingEpisode());
   getAllExercises.mockResolvedValue([SQUAT, LEGPRESS, LUNGE]);
+  getActiveBlock.mockResolvedValue(null);
+  loadExerciseIntentState.mockImplementation(
+    async (_userId, { activeMesocycleId = null } = {}) => intentStateWith(new Map(), activeMesocycleId),
+  );
 });
 
 test('an unmarked conflicted row is substituted - the baseline behaviour stands', async () => {
@@ -342,6 +367,155 @@ test('R5-8 DRIVEN: with one candidate, the rewrite marks the second line unsolva
   expect(rw.unsolvable).toBe(1); // kept in place with its quiet note - honest, never a duplicate
   await applyCapabilityPlanRewrite('u1', rw.lines);
   expect(updateRoutineExerciseExercise).toHaveBeenCalledTimes(1);
+});
+
+// ---------------------------------------------------------------------------
+// Round 6 (R6-1): the substitute pool honours "Avoid for this block" -
+// driven through the REAL senior question, which no pin had ever run.
+// ---------------------------------------------------------------------------
+
+const OTHER = { id: 'ex-other', name: 'Other Machine', primaryMuscle: 'chest' }; // not in the pool: served via the unknown lane
+
+const blockAvoidedLegPress = (scopeMesocycleId) => new Map([
+  ['ex-legpress', { exerciseId: 'ex-legpress', kind: 'avoided_block', scopeMesocycleId }],
+]);
+
+test('R6-1 DRIVEN: serve never substitutes IN an exercise the user avoided for the CURRENT block', async () => {
+  getActiveBlock.mockResolvedValue({ id: 'block-1' });
+  loadExerciseIntentState.mockImplementation(
+    async (_u, { activeMesocycleId = null } = {}) => intentStateWith(blockAvoidedLegPress('block-1'), activeMesocycleId),
+  );
+  // Leg Press is the only capability-eligible quads candidate - and the
+  // user avoided it this block, so the conflicted squat falls to the
+  // honest OMITTED path. Before the block id was threaded, the
+  // avoidance compared its scope against null, went dormant, and the
+  // user found the exact machine they had avoided sitting in their
+  // session (and offered permanently by the rewrite).
+  const { served } = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), OTHER]);
+  expect(served.map((r) => r.id)).toEqual([OTHER.id]);
+  const entries = appendSessionConstraintEffects.mock.calls[0][2];
+  expect(entries).toEqual([expect.objectContaining({ effect: 'omitted', exerciseFrom: SQUAT.id })]);
+});
+
+test('R6-1 control: an avoidance scoped to a DIFFERENT block stays dormant - block scope means block scope', async () => {
+  getActiveBlock.mockResolvedValue({ id: 'block-1' });
+  loadExerciseIntentState.mockImplementation(
+    async (_u, { activeMesocycleId = null } = {}) => intentStateWith(blockAvoidedLegPress('block-2'), activeMesocycleId),
+  );
+  const { served } = await applyEffectiveViewToSession('u1', 'w1', [asServed(SQUAT), OTHER]);
+  expect(served.map((r) => r.id)).toEqual([LEGPRESS.id, OTHER.id]);
+});
+
+test('R6-1 DRIVEN: the plan REWRITE never proposes a block-avoided movement - the line goes unsolvable instead', async () => {
+  loadCapabilityResolveState.mockResolvedValue(baselineStandingRule());
+  getActiveBlock.mockResolvedValue({ id: 'block-1' });
+  loadExerciseIntentState.mockImplementation(
+    async (_u, { activeMesocycleId = null } = {}) => intentStateWith(blockAvoidedLegPress('block-1'), activeMesocycleId),
+  );
+  getActivePlan.mockResolvedValue({ id: 'p1' });
+  getRoutinesForPlan.mockResolvedValue([{ id: 'r1', name: 'Legs' }]);
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([SQUAT]));
+  getAllExercises.mockResolvedValue([SQUAT, LEGPRESS]);
+  const rw = await computeCapabilityPlanRewrite('u1', {});
+  expect(rw.lines).toHaveLength(1);
+  expect(rw.lines[0].to).toBeNull();
+  expect(rw.unsolvable).toBe(1);
+  await applyCapabilityPlanRewrite('u1', rw.lines);
+  expect(updateRoutineExerciseExercise).not.toHaveBeenCalled();
+});
+
+// ---------------------------------------------------------------------------
+// Round 6 (R6-3): serve-gate mode - lines state what serve is DOING.
+// ---------------------------------------------------------------------------
+
+const OHP = { id: 'ex-ohp', name: 'Overhead Press', primaryMuscle: 'shoulders', position: 'standing', floorAccess: 0, overheadPosition: 1, gripDemand: 'bar', unilateralLoadable: 1, bilateralUpper: 1, bilateralLower: 0, axialLoad: 1, impact: 0, balanceDemand: 'stable' };
+
+function overheadAppliedGripDeclined() {
+  return buildCapabilityResolveState([
+    {
+      id: 'r-overhead', userId: 'u1', role: 'episode', source: 'self', ruleKind: 'demand',
+      ruleValue: 'overhead_position', laterality: null, startsAt: NOW - 1000, endsAt: null,
+      state: 'active', endedAt: null, endedReason: null, episodeGroupId: 'ep1',
+      deletedAt: null, effectiveChoice: 'applied',
+    },
+    {
+      id: 'r-grip', userId: 'u1', role: 'episode', source: 'self', ruleKind: 'demand',
+      ruleValue: 'grip_bar', laterality: null, startsAt: NOW - 1000, endsAt: null,
+      state: 'active', endedAt: null, endedReason: null, episodeGroupId: 'ep2',
+      deletedAt: null, effectiveChoice: 'declined',
+    },
+  ], { atMs: NOW });
+}
+
+test('R6-3 DRIVEN: NO mode claims a line for a row a DECLINED co-driver holds in place', async () => {
+  // The reviewer's executed probe: ep1 applied + ep2 declined on one
+  // row. Serve leaves the row standing (its substitution gate needs
+  // EVERY definite conflict applied), so the applied-group dialogue
+  // must not say "Your sessions currently show 1 exercise swapped" -
+  // and the would-if proposal must not claim applying would move it
+  // either, because the declined rule keeps it served regardless.
+  loadCapabilityResolveState.mockResolvedValue(overheadAppliedGripDeclined());
+  getActivePlan.mockResolvedValue({ id: 'p1' });
+  getRoutinesForPlan.mockResolvedValue([{ id: 'r1', name: 'Push' }]);
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([OHP]));
+  getAllExercises.mockResolvedValue([OHP, LEGPRESS]);
+  const gated = await computePlanEffectiveLines('u1', ['r-overhead'], { serveGate: true });
+  expect(gated.checked).toBe(true);
+  expect(gated.lines).toHaveLength(0);
+  const wouldIf = await computePlanEffectiveLines('u1', ['r-overhead']);
+  expect(wouldIf.lines).toHaveLength(0);
+});
+
+test('R6-3 DRIVEN: an UNDECIDED co-driver is where the modes differ - premise proposes, serve-gate stays silent', async () => {
+  const base = overheadAppliedGripDeclined();
+  loadCapabilityResolveState.mockResolvedValue(buildCapabilityResolveState(
+    base.restrictions.map((r) => ({ ...r, effectiveChoice: r.id === 'r-grip' ? null : r.effectiveChoice })),
+    { atMs: NOW },
+  ));
+  getActivePlan.mockResolvedValue({ id: 'p1' });
+  getRoutinesForPlan.mockResolvedValue([{ id: 'r1', name: 'Push' }]);
+  // A compatible second row keeps the routine off the fail-safe, so the
+  // premise's omission line is genuinely on offer.
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([OHP, LEGPRESS]));
+  getAllExercises.mockResolvedValue([OHP, LEGPRESS]);
+  // Serve is not acting (r-grip undecided), so the indicative frame
+  // has nothing to say...
+  const gated = await computePlanEffectiveLines('u1', ['r-overhead'], { serveGate: true });
+  expect(gated.lines).toHaveLength(0);
+  // ...while the proposal frame reads the undecided co-driver
+  // optimistically (it has its own proposal pending) and offers the
+  // line.
+  const wouldIf = await computePlanEffectiveLines('u1', ['r-overhead']);
+  expect(wouldIf.lines).toHaveLength(1);
+});
+
+test('R6-3 DRIVEN: both modes mirror the never-served-empty fail-safe - a routine serve serves untouched yields NO lines', async () => {
+  getActivePlan.mockResolvedValue({ id: 'p1' });
+  getRoutinesForPlan.mockResolvedValue([{ id: 'r1', name: 'Legs' }]);
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([SQUAT, LUNGE]));
+  getAllExercises.mockResolvedValue([SQUAT, LUNGE]); // no eligible substitute anywhere
+  const gated = await computePlanEffectiveLines('u1', ['c1'], { serveGate: true });
+  expect(gated.lines).toHaveLength(0);
+  expect(gated.checked).toBe(true);
+  const wouldIf = await computePlanEffectiveLines('u1', ['c1']);
+  expect(wouldIf.lines).toHaveLength(0);
+  expect(wouldIf.checked).toBe(true);
+});
+
+test('R6-3 control: an all-applied substitutable row IS a serve-gate line, named with serve\'s own assignment', async () => {
+  getActivePlan.mockResolvedValue({ id: 'p1' });
+  getRoutinesForPlan.mockResolvedValue([{ id: 'r1', name: 'Legs' }]);
+  getRoutineExercisesWithDetails.mockResolvedValue(ROUTINE_ROWS([SQUAT, LEGEXT]));
+  getAllExercises.mockResolvedValue([SQUAT, LEGPRESS, LEGEXT]);
+  const gated = await computePlanEffectiveLines('u1', ['c1'], { serveGate: true });
+  expect(gated.lines).toHaveLength(1);
+  expect(gated.lines[0].from.id).toBe(SQUAT.id);
+  expect(gated.lines[0].to.id).toBe(LEGPRESS.id); // LEGEXT is the session\'s own row - taken
+});
+
+test('B9 (round 6): a routine the module cannot READ answers null, never a falsy 0 the Today card hides', async () => {
+  getRoutineExercisesWithDetails.mockRejectedValue(new Error('locked'));
+  await expect(countEffectiveSessionRows('u1', 'r1')).resolves.toBeNull();
 });
 
 test('R5-9: an unavailable capability state answers checked=false, never "nothing to rewrite"', async () => {
