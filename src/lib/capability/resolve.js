@@ -371,6 +371,12 @@ export function nearMissCandidates(state, library, { muscle = null, limit = 4 } 
     const conflicts = demandConflicts(state, ex);
     if (!conflicts.length) continue; // fully eligible: not a near miss
     if (conflicts.some((c) => !c.unknown)) continue; // definite conflict: out
+    // Review round 2 (R2-3), same law as F5: source outranks certainty.
+    // An unknown conflict on a CLINICIAN-reported rule is rank 2, and
+    // offering "you can still add it yourself" here would be the inline
+    // override the picker already refuses - the list never suggests work
+    // under a clinician rule, whatever the movement's data state.
+    if (conflicts.some((c) => c.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED)) continue;
     if (ex?.id && state.allowances.has(ex.id)) continue; // already allowed through
     out.push({
       exerciseId: ex?.id ?? null,

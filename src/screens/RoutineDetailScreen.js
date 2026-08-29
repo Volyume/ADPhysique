@@ -67,19 +67,19 @@ function capabilityPlanCaption(capState, exercise) {
     // eslint-disable-next-line global-require
     const { episodeConflicts, baselineConflicts } = require('../lib/capability/effective');
     const episode = episodeConflicts(capState, exercise);
-    if (episode.length && episode.every((c) => c.row?.adaptationMode === 'hold')) {
+    // CC33 adversarial review F4 (+ R2-10): an UNKNOWN conflict is never
+    // captioned as a fact - the hold claim included, since "held at your
+    // request" asserts the hold covers THIS row. Definite conflicts
+    // speak the lane's copy; a row whose only conflicts are unknown (a
+    // custom exercise's NULL demand columns) gets the honest not-known
+    // line, matching the serve layer where unknown drives nothing.
+    const definiteEpisode = episode.filter((c) => !c.unknown);
+    if (definiteEpisode.length && definiteEpisode.every((c) => c.row?.adaptationMode === 'hold')) {
       // D112 R8: a fully-held episode holds - the marker reflects the
       // user's own instruction, never a "swapped in sessions" claim the
-      // serve layer no longer makes. True whatever the conflicts'
-      // certainty: the hold is about the rule's mode, not the movement.
+      // serve layer no longer makes.
       return "Held as-is at your request.";
     }
-    // CC33 adversarial review F4: an UNKNOWN conflict is never captioned
-    // as a fact. Definite conflicts speak the lane's copy; a row whose
-    // only conflicts are unknown (a custom exercise's NULL demand
-    // columns) gets the honest not-known line, matching the serve layer
-    // where unknown drives nothing automatic.
-    const definiteEpisode = episode.filter((c) => !c.unknown);
     if (definiteEpisode.length) {
       const allApplied = definiteEpisode.every((c) => c.row?.effectiveChoice === 'applied');
       return allApplied

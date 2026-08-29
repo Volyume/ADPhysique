@@ -142,11 +142,24 @@ export function constraintStatus(row, nowMs) {
 }
 
 /** Status of an episode group: awaiting only when every live row is past
- *  its planned end; active while any row still runs. */
+ *  its planned end; active while any row still runs.
+ *
+ *  CC33 review round 2 (R2-2): status derives from the group's
+ *  RESTRICTIONS only. A per-line Keep mints an open-ended exercise_allow
+ *  row into the group (D113 ruling 3), and counting it here kept the
+ *  group ACTIVE forever - the "still need it?" prompt and the
+ *  acknowledge path became unreachable for exactly the users who
+ *  engaged most, while Home (which groups from the resolver's
+ *  restrictions, allowances already excluded) still asked. Excluding
+ *  allow rows makes the two loaders agree by construction. A group
+ *  whose only live rows are allowances falls back to judging those
+ *  rows, so it still reads ACTIVE rather than wrongly ENDED. */
 export function episodeStatus(rows = [], nowMs) {
   const live = rows.filter(r => r.state === CONSTRAINT_STATE.ACTIVE);
   if (!live.length) return EPISODE_STATUS.ENDED;
-  const statuses = live.map(r => constraintStatus(r, nowMs));
+  const restrictions = live.filter(r => r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW);
+  const judged = restrictions.length ? restrictions : live;
+  const statuses = judged.map(r => constraintStatus(r, nowMs));
   if (statuses.every(s => s === EPISODE_STATUS.AWAITING_CONFIRMATION)) {
     return EPISODE_STATUS.AWAITING_CONFIRMATION;
   }

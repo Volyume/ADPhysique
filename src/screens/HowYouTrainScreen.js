@@ -453,11 +453,26 @@ export default function HowYouTrainScreen() {
         clinicianSourcedIds(userId, createdIds),
       ]);
       // Lead review: the boolean tells the revisit row whether anything
-      // was actually offered, so its tap is never silent (an undecided
-      // rule that touches nothing in the current plan surfaces no alert
-      // here, and the row then says so honestly instead of doing
-      // nothing). Other callers ignore it.
-      if (!summary.affected) return false;
+      // was actually offered, so its tap is never silent. Other callers
+      // ignore it.
+      //
+      // Round 2 (R2-5): a rule that affects NOTHING in the current plan
+      // (or a user with no plan at all) has no decision to make - and
+      // leaving it undecided made Home's ask-row and the standing
+      // revisit row permanent, promising a decision no surface could
+      // offer. It is recorded 'applied' vacuously, the same default the
+      // whole-group Apply gives a no-effect rule and the same promise
+      // the add flow's own toast makes ("Volyume will work around it").
+      // If a conflicting exercise arrives later, serve substitutes with
+      // its visible notice and swap shortcut - the standing behaviour -
+      // and the per-line review remains reachable from the plan surface.
+      if (!summary.affected) {
+        for (const id of createdIds) {
+          // eslint-disable-next-line no-await-in-loop
+          await recordEffectiveChoice(userId, id, 'applied').catch(() => {});
+        }
+        return false;
+      }
       const parts = [];
       if (summary.substituted) parts.push(`${summary.substituted} exercise${summary.substituted === 1 ? '' : 's'} swapped for something that works now`);
       if (summary.omitted) parts.push(`${summary.omitted} left out with nothing forced in their place`);
@@ -1203,6 +1218,7 @@ export default function HowYouTrainScreen() {
           icon="list-outline"
           label="Your plan and how you train"
           sub="Review what Volyume works around in your current plan."
+          accessibilityLabel="Your plan and how you train. Review what Volyume works around in your current plan."
           onPress={revisitCapabilityPlan}
         />
       ) : null}
@@ -1220,6 +1236,7 @@ export default function HowYouTrainScreen() {
         icon="battery-half-outline"
         label="My energy varies, or I keep sessions short"
         sub="Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch."
+        accessibilityLabel="My energy varies, or I keep sessions short. Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch. Opens Workout and units."
         onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
       />
 
@@ -1234,6 +1251,7 @@ export default function HowYouTrainScreen() {
         icon="remove-circle-outline"
         label="Movements you would rather not do"
         sub="Preferences live under Avoided movements, so they never mix with what your body needs."
+        accessibilityLabel="Movements you would rather not do. Preferences live under Avoided movements, so they never mix with what your body needs. Opens Avoided movements."
         onPress={() => { haptics.selection(); navigation.navigate('AvoidedMovements'); }}
       />
 
@@ -1244,6 +1262,7 @@ export default function HowYouTrainScreen() {
         icon="search-outline"
         label="Looking for a specific condition or injury?"
         sub="Optional. Finding it selects better questions; you never need a name to get the same support."
+        accessibilityLabel="Looking for a specific condition or injury? Optional. Finding it selects better questions; you never need a name to get the same support."
         onPress={() => { haptics.selection(); navigation.navigate('TrainingConsiderations'); }}
       />
 
@@ -1330,7 +1349,11 @@ export default function HowYouTrainScreen() {
               && row.endedReason !== 'promoted';
             return (
               <View key={row.id}>
-                <SettingRow icon="checkmark" label={ruleLabel(row)}
+                {/* R2-9: an ended KEEP reads as what it was, never as an
+                    ended restriction for the same exercise. */}
+                <SettingRow icon="checkmark"
+                  label={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
+                    ? `${ruleLabel(row)} (kept in)` : ruleLabel(row)}
                   sub={row.endedReason === 'promoted' ? 'Became part of your setup' : 'Ended'} showArrow={false} />
                 {isEndedEpisode ? (
                   <View style={styles.episodeActions}>
@@ -1363,7 +1386,10 @@ function Choice({ label, sub, onPress, t, selected, primary, disabled, compact }
     <PressableCard
       onPress={disabled ? undefined : onPress}
       accessibilityRole="button"
-      accessibilityLabel={label}
+      // R2-13: the pressable container swallows child Text from the
+      // spoken output, so the sub - where an option's meaning often
+      // lives ("Part of your normal setup...") - must ride the label.
+      accessibilityLabel={sub ? `${label}. ${sub}` : label}
       accessibilityState={{ selected: !!selected, disabled: !!disabled }}
       style={[
         styles.choice,
@@ -1381,7 +1407,11 @@ function Choice({ label, sub, onPress, t, selected, primary, disabled, compact }
         {selected ? (
           <Text style={[styles.choiceTick, { color: t.colors.primary }]} importantForAccessibility="no">✓</Text>
         ) : null}
-        <Text style={[styles.choiceLabel, { color: t.colors.textPrimary }]}>{label}</Text>
+        {/* R2-12: the label wraps inside the row (the codebase's flex:1 +
+            minWidth:0 idiom, SettingsPrimitives' own note) - a long
+            label at large accessibility type must never push past the
+            card because the tick joined the row. */}
+        <Text style={[styles.choiceLabel, styles.choiceLabelInRow, { color: t.colors.textPrimary }]}>{label}</Text>
       </View>
       {sub ? <Text style={[styles.hint, { color: t.colors.textSecondary }]}>{sub}</Text> : null}
     </PressableCard>
@@ -1417,6 +1447,8 @@ const styles = StyleSheet.create({
   choiceSelected: { borderWidth: 2 },
   choiceLabelRow: { flexDirection: 'row', alignItems: 'center' },
   choiceTick: { ...type.label, marginRight: spacing.xs },
+  // R2-12: the safe wrapping idiom inside a row.
+  choiceLabelInRow: { flex: 1, minWidth: 0 },
   choiceLabel: { ...type.label },
   episodeActions: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   addWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },

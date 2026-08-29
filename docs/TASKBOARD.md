@@ -906,9 +906,22 @@ sideCarve driven both shapes), Q4 export completeness, E1 Home
 ask-row for arrived-undecided rules, J5 arrow spoken label. Q5 stands
 documented. FOUNDER-side from the review: S1 (migrate_152 record's
 phrase-gate equivalence vs CLAUDE.md's exact-phrase law - ratify or
-tighten) and CLAUDE.md's stale migration-status block. NEXT: settled
-full gate + merge, adversarial review RE-RUN against the fixed tree,
-then S5 gate + device checklist.
+tighten) and CLAUDE.md's stale migration-status block. ROUND 2 RAN on
+715ad90e: 7 BROKEN, 16 QUALIFIED, 0 STOP - converging; ALL actionable
+findings closed at root same day (D114): unknown-drives-nothing reached
+planAutoGen (excluded = preference lanes asked directly; ineligible =
+definite blockingConflicts, byte-matching blockAdvisor) + the
+completion-excusal caller (library-resolved rows); episodeStatus
+derives from restrictions (a Keep never disables its group's AWAITING;
+model pin); near-miss list obeys source-outranks-certainty (pin); R2-6
+stale-slot window CLOSED (id-stamped resolve, silence over wrong
+claims); R2-5 vacuous applied on nothing-affected (Home ask-row always
+clears); R2-7 claimed-index serve mapping (duplicate slots keep their
+own prescriptions); R2-8 preselect definite-only; R2-9 Past "(kept
+in)"; R2-10 hold caption definite-only; R2-12 label wrap idiom; R2-13
+spoken subs (additive SettingRow override + Choice composes). NEXT:
+settled full gate + merge, adversarial review ROUND 3, then S5 gate +
+device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

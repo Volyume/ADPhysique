@@ -40,7 +40,7 @@ import { applyContinuity, slotKey, summariseDecisions } from './exercise/continu
 import { movementFamily } from './exercise/movementFamily';
 import {
   exerciseEvidence, swappedAwayCount, EVIDENCE_MATURITY,
-  isEligibleExercise, isEligible,
+  isEligible, isFamilyBlocked, movementFamilyOf,
 } from './exercise/intent';
 import { isAutoEligible } from './exercise/canonicality';
 import { parseProfiles } from './poolGenerator';
@@ -451,7 +451,12 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
         // someone training around a temporary injury.
         // eslint-disable-next-line global-require
         const { episodeConflicts } = require('./capability/effective');
-        capabilityAffected = episodeConflicts(intentState.capability, row).length > 0;
+        // D113 ruling 1, applied here at review round 2 (R2-1): DEFINITE
+        // conflicts only. An UNKNOWN episode conflict (a custom lift's
+        // NULL demand column) must not hold the slot un-judged - unknown
+        // drives nothing automatic anywhere in the lane, and this reader
+        // now matches blockAdvisor's own gate exactly.
+        capabilityAffected = episodeConflicts(intentState.capability, row).some((c) => !c.unknown);
       } catch (e) {
         // UNKNOWN IS NOT NONE. A capability read we could not perform tells us
         // nothing about whether this user is training around something, so it
@@ -469,41 +474,42 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
         } catch (_) { /* logging must never break plan generation */ }
       }
     }
-    const senior = intentState
-      ? isEligibleExercise(intentState, row ?? { id: exerciseId })
-      : true;
     const intentBlocked = intentState ? !isEligible(intentState, exerciseId) : false;
-    // CC33 D112 R6 (closes audit T1-08 at its root): the senior question
-    // fails for TWO different reasons - a preference (id or family
-    // avoidance) and a BASELINE capability conflict - and collapsing both
-    // into `excluded` sent capability exclusions to
-    // SLOT_REASON.USER_EXCLUDED, whose rationale reads "You asked not to
-    // be suggested this." for a rule that means "I cannot do this". The
-    // capability answer is asked directly so each lane keeps its own
-    // verdict reason; a failed read answers eligible (never REPLACE on a
-    // check that did not happen - the same posture as autoEligible's
-    // undefined at block review).
-    let capEligible = true;
+    // D107-2: an incumbent whose whole movement FAMILY is now avoided is
+    // excluded for continuity purposes too, not just an id-level one - so
+    // a rebuild does not carry a family-avoided exercise forward as
+    // "retained". Asked of the PREFERENCE lane directly (id + family),
+    // never through the composite senior question: isEligibleExercise
+    // also consults capability, whose unknown rank made the composite
+    // unusable for attribution here (review round 2, R2-1 - see below).
+    const familyAvoided = intentState
+      ? isFamilyBlocked(intentState, movementFamilyOf(row ?? { id: exerciseId }))
+      : false;
+    // CC33 D112 R6 (T1-08 root) + D113 ruling 1 (R2-1): each lane speaks
+    // for itself, and UNKNOWN drives neither. The old shape keyed
+    // capabilityIneligible on isCapabilityEligible, whose rank 4 treats
+    // unknown as not-suggestable - right for generation's own picks
+    // (CAP-8: a custom lift is never auto-picked), wrong for REPLACING a
+    // trained incumbent: a custom lift under a demand rule was dropped
+    // from the plan with "This sits outside how you train." on a fact
+    // the app does not hold. REPLACE now demands a DEFINITE blocking
+    // conflict, exactly blockAdvisor's gate, so the two engines answer
+    // the same question the same way. A failed read answers false -
+    // never REPLACE on a check that did not happen.
+    let capDefiniteBlocked = false;
     try {
       if (row && intentState?.capability && !intentState.capability.empty
         && !intentState.capability.unavailable) {
         // eslint-disable-next-line global-require
-        const { isCapabilityEligible } = require('./capability/resolve');
-        capEligible = isCapabilityEligible(intentState.capability, row);
+        const { blockingConflicts } = require('./capability/resolve');
+        capDefiniteBlocked = blockingConflicts(intentState.capability, row).some((c) => !c.unknown);
       }
-    } catch (_e) { capEligible = true; }
+    } catch (_e) { capDefiniteBlocked = false; }
     return {
-      // D107-2: an incumbent whose whole movement FAMILY is now avoided is
-      // treated as excluded for continuity purposes too, not just an
-      // incumbent excluded by id - so a rebuild does not carry a
-      // family-avoided exercise forward as "retained". isEligibleExercise
-      // is a strict superset of the id-only check this replaces - and the
-      // capability half of a senior failure now speaks through
-      // capabilityIneligible below, never through this preference field.
-      excluded: intentBlocked || (!senior && capEligible && !capabilityAffected),
+      excluded: intentBlocked || familyAvoided,
       // BASELINE conflicts only: an EPISODE-affected slot keeps its
       // CAPABILITY_HOLD (temporary is an overlay; the document keeps it).
-      capabilityIneligible: !capEligible && !capabilityAffected,
+      capabilityIneligible: capDefiniteBlocked && !capabilityAffected,
       capabilityAffected,
       swappedAwayCount: intentState ? swappedAwayCount(intentState, exerciseId) : 0,
       // The exercise is no longer reachable with the equipment the user

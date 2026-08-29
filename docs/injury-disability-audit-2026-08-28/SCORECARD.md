@@ -25,6 +25,21 @@ root during the W4A lead review are recorded on their rows: the plan
 rewrite's apply no-op (row shape) on A2, and the capability-blind
 substitute selection on A5.
 
+ADVERSARIAL REVIEW ROUND 2 (2026-08-29, on 715ad90e): 7 BROKEN, 16
+QUALIFIED, 0 STOP, 69 HOLD - converging. All actionable round-2
+findings closed at root the same day (D114): the unknown-drives-nothing
+law reached planAutoGen (custom lifts are never REPLACED on a NULL
+column) and the completion-excusal caller; episode status derives from
+restrictions so a Keep cannot disable its group's AWAITING; the
+near-miss list obeys source-outranks-certainty; the R2-6 stale-slot
+window is closed (id-stamped resolves; silence over wrong claims);
+no-effect rules record the vacuous applied so Home's ask-row always
+clears; duplicate slots keep their own prescriptions; ended keeps read
+"(kept in)"; the hold caption speaks only for definite conflicts; the
+Choice label wraps; meaning-bearing subs are spoken. L4's condition is
+now STATED on its row (the carve is union-wide while the episode
+lives - deliberate, D113 ruling 3). Round 3 re-runs before S5.
+
 ADVERSARIAL REVIEW ROUND 1 (2026-08-29, on main 1839143e): 12 BROKEN,
 16 QUALIFIED, 1 STOP, 64 HOLD. Every BROKEN and actionable QUALIFIED
 was verified and closed at root the SAME DAY (rulings recorded as
@@ -192,7 +207,7 @@ fixed tree before S5 closes.
 | L1 | Blank sessions / first-add / restore | LANDED | W1 L2; serveGuard |
 | L2 | Mid-block episode start/end | LANDED | CC30 stamps + W2 carry |
 | L3 | Block-boundary crossings | LANDED | W2 L7 carry; boundary pins |
-| L4 | Overlapping rules (multi-episode, baseline+episode same exercise) | LANDED (round-1 QUALIFIED, gap fixed) | six multi-driver attacks survived; the one gap (the allowance's union-wide permanent carve) closed by F6's episode scoping |
+| L4 | Overlapping rules (multi-episode, baseline+episode same exercise) | LANDED (round-2 condition STATED) | six multi-driver attacks survived; F6's episode scoping closed the carve's PERMANENCE; while the episode lives the carve is deliberately union-wide (D113 ruling 3: the keep speaks for the exercise everywhere non-clinician, and the baseline conversation resumes when it ends) |
 | L5 | Family plans stay compatible (16 families) | LANDED | seed v14 + scenario matrix |
 | L6 | Nothing-fits is graded, never a dead end | LANDED | B2 |
 | L7 | Device-B arrivals (mid-week, mid-session) | LANDED (round-1 BROKEN F3, fixed) | the hold-resume resurrection closed; T2-30 re-read stands; E1's Home ask-row surfaces arrived-undecided rules |

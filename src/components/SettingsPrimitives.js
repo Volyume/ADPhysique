@@ -13,7 +13,7 @@ import SectionLabel from './SectionLabel';
 // rows and section cards the same way, with one source of truth for the
 // row press feel and the accessibility wiring.
 
-export function SettingRow({ icon, label, sub, value, onPress, destructive, rightElement, showArrow = true }) {
+export function SettingRow({ icon, label, sub, value, onPress, destructive, rightElement, showArrow = true, accessibilityLabel }) {
   // CP-10 stage 1: live theme (src/hooks/useTheme.js) instead of the static
   // colors/type imports, so a settings row re-renders correctly on a theme
   // change.
@@ -27,7 +27,11 @@ export function SettingRow({ icon, label, sub, value, onPress, destructive, righ
       style={[styles.settingRow, { borderBottomColor: t.colors.border }]}
       onPress={onPress}
       accessibilityRole={onPress ? 'button' : 'none'}
-      accessibilityLabel={value ? `${label}: ${value}` : label}
+      // CC33 R2-13: a pressable row is an accessibility container, so its
+      // child Text (the sub) is never spoken - callers whose meaning
+      // lives in the sub pass a composed label through this additive
+      // override; every existing call site is byte-identical without it.
+      accessibilityLabel={accessibilityLabel ?? (value ? `${label}: ${value}` : label)}
     >
       <View
         style={[

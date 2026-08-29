@@ -761,8 +761,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const omitted = baseRows.length - served.length;
         if (omitted > 0) setOmittedSessionCount(omitted);
         const servedEntries = [];
+        // Round 2 (R2-7): a routine may legitimately hold the same
+        // exercise in two slots with different prescriptions (no
+        // uniqueness on routine_id + exercise_id, and the detail
+        // screen's add does not dedupe). A bare findIndex mapped both
+        // served rows onto the FIRST slot, serving slot two with slot
+        // one's prescription and sets - so each base index is claimed
+        // once, in order, which matches the view's own slot order.
+        const claimedIdx = new Set();
+        const claimIndexFor = (id) => {
+          for (let i = 0; i < baseRows.length; i += 1) {
+            if (!claimedIdx.has(i) && baseRows[i].id === id) { claimedIdx.add(i); return i; }
+          }
+          return -1;
+        };
         for (const row of served) {
-          const idx = baseRows.findIndex((b) => b.id === (row._capabilityTemp?.fromId ?? row.id));
+          const idx = claimIndexFor(row._capabilityTemp?.fromId ?? row.id);
           const original = idx >= 0 ? workoutExercises[idx] : null;
           if (row._capabilityTemp) {
             servedEntries.push({
@@ -806,21 +820,32 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // from getRoutineExercisesWithDetails and carries NO demand columns,
   // so judging it read every axis as null - every capability question
   // below answered UNKNOWN for every planned row. Resolve the full
-  // library row for JUDGEMENT only (display keeps the entry's object);
-  // a failed or missing resolve falls back to the partial row, which
-  // now lands in the unknown lane and drives nothing automatic.
-  const [resolvedExercise, setResolvedExercise] = useState(null);
+  // library row for JUDGEMENT only (display keeps the entry's object).
+  //
+  // Round 2 (R2-6): the first fix held the PREVIOUS slot's row across an
+  // exercise change, so for a render pass the notices spoke about the
+  // wrong movement, and the mount pass judged the demandless entry row
+  // then flipped its own answer. The resolve is now stamped with the id
+  // it was read for and adopted only while it matches, and until it
+  // matches judgedExercise is null - the derivations below then say
+  // NOTHING for that pass rather than something wrong. A resolve that
+  // finds no row (an unresolved FK) adopts the partial entry, which
+  // lands in the unknown lane and drives nothing automatic.
+  const [resolvedExercise, setResolvedExercise] = useState(null); // { id, row|null }
   useEffect(() => {
     let cancelled = false;
-    if (!exercise?.id) { setResolvedExercise(null); return undefined; }
+    setResolvedExercise(null);
+    if (!exercise?.id) return undefined;
     // eslint-disable-next-line global-require
     const { getExerciseById } = require('../lib/database');
     getExerciseById(exercise.id)
-      .then((row) => { if (!cancelled) setResolvedExercise(row ?? null); })
-      .catch(() => { if (!cancelled) setResolvedExercise(null); });
+      .then((row) => { if (!cancelled) setResolvedExercise({ id: exercise.id, row: row ?? null }); })
+      .catch(() => { if (!cancelled) setResolvedExercise({ id: exercise.id, row: null }); });
     return () => { cancelled = true; };
   }, [exercise?.id]);
-  const judgedExercise = resolvedExercise ?? exercise;
+  const judgedExercise = (exercise?.id && resolvedExercise?.id === exercise.id)
+    ? (resolvedExercise.row ?? exercise)
+    : null;
 
   // D107-2: is the exercise on screen right now under a movement-pattern
   // avoidance? Computed here (not inline in the StatusStrip builder below)
@@ -950,7 +975,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const workAroundPreselect = (() => {
     if (!exercise) return null;
     const driving = constraintConflicts.length ? constraintConflicts : baselineConflictsList;
-    const demandRule = driving.find((c) => c.ruleKind === 'demand');
+    // Round 2 (R2-8): DEFINITE conflicts only pre-fill an axis. An
+    // unknown one would pre-answer the add flow with a movement fact the
+    // app has not established - the user still confirms, but the app
+    // must not put the answer in their mouth. Unknown-driven rows fall
+    // to the exercise-kind preselect, naming only the movement itself.
+    const demandRule = driving.find((c) => c.ruleKind === 'demand' && !c.unknown);
     if (demandRule) return { kind: 'demand', axes: [demandRule.ruleValue] };
     return exercise.name ? { kind: 'exercise', exerciseNames: [exercise.name] } : null;
   })();
@@ -3354,8 +3384,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         if (user?.id && activeWorkout?.id && intentState?.capability && !intentState.capability.empty) {
           // eslint-disable-next-line global-require
           const { computeCompletionEffects } = require('../lib/capability/effective');
+          // Round 2 (R2-4): resolve each row from the library for
+          // judgement - the snapshot's own exercise objects are the
+          // demandless routine literals for any row the serve pass did
+          // not replace (a resumed session, a rule applied after
+          // logging began), and with unknown excusing nothing a
+          // demand-axis excusal could never fire off them. Same by-id
+          // resolution serve itself performs; the memo-cached library
+          // read costs nothing after first call. An unresolved id keeps
+          // the partial row: unknown lane, excuses nothing, honestly.
+          // eslint-disable-next-line global-require
+          const { getAllExercises } = require('../lib/database');
+          const libById = new Map(((await getAllExercises().catch(() => [])) ?? []).map((x) => [x.id, x]));
           const { entries } = computeCompletionEffects(
-            snapshotExercises.map((e) => ({ exercise: e?.exercise ?? e, performed: (e.sets?.length ?? 0) > 0 })),
+            snapshotExercises.map((e) => {
+              const raw = e?.exercise ?? e;
+              return { exercise: libById.get(raw?.id) ?? raw, performed: (e.sets?.length ?? 0) > 0 };
+            }),
             intentState.capability,
           );
           if (entries.length) {

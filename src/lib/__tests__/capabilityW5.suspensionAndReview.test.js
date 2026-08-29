@@ -114,7 +114,9 @@ describe('T1-10 - the stored review never outranks capability', () => {
   });
 
   test('the whole chain speaks capability at source: evidence, verdict, rationale', () => {
-    expect(read('lib/planAutoGen.js')).toContain('capabilityIneligible: !capEligible && !capabilityAffected,');
+    // R2-1: the field keys on a DEFINITE blocking conflict (see
+    // planRationale.capabilityLaneStop.guard for the full split).
+    expect(read('lib/planAutoGen.js')).toContain('capabilityIneligible: capDefiniteBlocked && !capabilityAffected,');
     expect(read('lib/programmeEpoch.js')).toContain("CAPABILITY_EXCLUDED: 'capability_excluded',");
     expect(read('lib/planRationale.js')).toContain("'This sits outside how you train.'");
   });

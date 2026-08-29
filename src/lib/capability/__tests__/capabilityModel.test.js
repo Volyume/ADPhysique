@@ -89,6 +89,24 @@ describe('derived status - fail-safe awaiting, no clock reads', () => {
     expect(episodeStatus(rows, T0 + 31 * DAY)).toBe(EPISODE_STATUS.AWAITING_CONFIRMATION);
     expect(episodeStatus([], T0)).toBe(EPISODE_STATUS.ENDED);
   });
+
+  test('an open-ended KEEP row never blocks the group\'s AWAITING (review round 2, R2-2)', () => {
+    // A per-line Keep mints an open-ended exercise_allow row into the
+    // group (D113 ruling 3). Status derives from restrictions only, so
+    // the "still need it?" prompt and the acknowledge path stay
+    // reachable for exactly the users who engaged with the per-line
+    // review - and this loader agrees with Home's restriction-based one.
+    const kept = [
+      row({ endsAt: T0 + 30 * DAY }),
+      row({ ruleKind: 'exercise_allow', ruleValue: 'ex-legpress', endsAt: null }),
+    ];
+    expect(episodeStatus(kept, T0 + 8 * DAY)).toBe(EPISODE_STATUS.ACTIVE);
+    expect(episodeStatus(kept, T0 + 31 * DAY)).toBe(EPISODE_STATUS.AWAITING_CONFIRMATION);
+    // A group somehow holding ONLY live allow rows still reads ACTIVE,
+    // never wrongly ENDED.
+    expect(episodeStatus([row({ ruleKind: 'exercise_allow', ruleValue: 'x', endsAt: null })], T0))
+      .toBe(EPISODE_STATUS.ACTIVE);
+  });
 });
 
 describe('interval predicate (the provenance join, CAP-14)', () => {

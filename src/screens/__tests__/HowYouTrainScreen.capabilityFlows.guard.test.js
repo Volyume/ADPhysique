@@ -90,14 +90,17 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     expect(fn).toContain('could not be recorded. It may still be swapped in sessions.');
   });
 
-  test('dismissal (no choice) still records nothing - only the two named buttons write a choice', () => {
-    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,7200}?\n  };/)?.[0] ?? '';
-    // Exactly two onPress handlers touch recordEffectiveChoice inside the
-    // whole-group alert's own buttons (Not now's declineNow, Apply's
-    // inline loop); "Choose per exercise" only opens the list and writes
-    // nothing until saveLineReview runs.
+  test('dismissal (no choice) still records nothing - only named paths write a choice', () => {
+    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,7800}?\n  };/)?.[0] ?? '';
+    // Exactly three recordEffectiveChoice sites: Not now's declineNow,
+    // Apply's inline loop, and (R2-5) the vacuous 'applied' when the
+    // proposal finds NOTHING affected - a rule with no decision to make
+    // must not sit undecided forever behind a permanent Home ask-row.
+    // "Choose per exercise" still opens the list and writes nothing
+    // until saveLineReview runs, and dismissing the alert writes nothing.
     const writes = fn.match(/recordEffectiveChoice\(/g) ?? [];
-    expect(writes.length).toBe(2);
+    expect(writes.length).toBe(3);
+    expect(fn).toContain("await recordEffectiveChoice(userId, id, 'applied').catch(() => {});");
   });
 
   test('the standing revisit row: exact copy, and visible only when there is something to revisit', () => {

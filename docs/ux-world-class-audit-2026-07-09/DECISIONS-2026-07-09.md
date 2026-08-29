@@ -3202,3 +3202,46 @@ AWAITING slot), and the J5 residual (the per-line arrow carries a
 spoken accessibility label). Founder-side items surfaced separately:
 the S1 phrase-gate record and CLAUDE.md's stale status block. The
 review re-runs against the fixed tree per the scorecard's own process.
+
+## D114 — CC33 review round 2 closures (lead-ruled under D33, 2026-08-29)
+
+Round 2 (on 715ad90e) returned 7 BROKEN, 16 QUALIFIED, 0 STOP - all
+actionable findings closed at root the same day. Two new rulings; the
+rest apply D113's rulings to gates they had not reached:
+
+1. **A rule with nothing to decide is decided (R2-5).** When a proposal
+   finds NOTHING affected (a synced-in rule touching no current plan
+   row; a user with no plan), the rule records the vacuous 'applied' -
+   the same default the whole-group Apply gives a no-effect rule and
+   the same promise the add flow's toast makes. Rationale: leaving it
+   undecided made Home's ask-row and the standing revisit row
+   permanent, promising a decision no surface could offer; and serve's
+   later behaviour under 'applied' (substitute with the visible notice
+   and swap shortcut) is exactly the standing product promise.
+
+2. **Episode status derives from restrictions (R2-2).** episodeStatus
+   ignores exercise_allow rows (falling back to them only if a group
+   somehow holds nothing else), so a per-line Keep - an open-ended
+   allow row by design - can never pin its group ACTIVE past its
+   planned end. This makes the settings card agree with Home by
+   construction (the resolver's restrictions already exclude
+   allowances), and keeps the "still need it?" cadence reachable for
+   exactly the users who engaged with the per-line review.
+
+D113 ruling 1 (unknown drives nothing) reached its two missed gates:
+planAutoGen's evidence now asks each lane directly (excluded = id +
+family preference only; capabilityIneligible = DEFINITE blocking
+conflict, byte-matching blockAdvisor so the engines cannot drift -
+round 2's I9), and the completion-excusal caller resolves rows from
+the library before judging. D113 ruling 2 (source outranks certainty)
+reached the near-miss list (an unknown clinician conflict never earns
+"you can still add it yourself"). The R2-6 stale-slot window my F1 fix
+opened is CLOSED, not narrowed: resolves are id-stamped and adopted
+only on match, and until then the notices say nothing rather than
+something wrong. Also: duplicate-exercise slots serve their own
+prescriptions (claimed-index mapping), the capture preselect never
+pre-fills an axis from an unknown, ended keeps read "(kept in)" in the
+Past list, the hold caption speaks only for definite conflicts, the
+Choice label wraps inside its tick row, and the capability rows whose
+meaning lives in the sub speak it (additive accessibilityLabel
+override on SettingRow; Choice composes its own).

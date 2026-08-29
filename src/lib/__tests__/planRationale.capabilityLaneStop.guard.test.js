@@ -62,7 +62,21 @@ describe('T1-08 closed: capability exclusions carry their own reason and words',
     const fs = require('fs');
     const path = require('path');
     const gen = fs.readFileSync(path.join(__dirname, '..', 'planAutoGen.js'), 'utf8');
-    expect(gen).toContain('excluded: intentBlocked || (!senior && capEligible && !capabilityAffected),');
-    expect(gen).toContain('capabilityIneligible: !capEligible && !capabilityAffected,');
+    // Review round 2 (R2-1) re-keyed both fields: the preference lane is
+    // asked directly (id + family - the composite senior also consults
+    // capability, whose unknown rank made it unusable for attribution),
+    // and REPLACE demands a DEFINITE blocking conflict, exactly
+    // blockAdvisor's gate. Unknown drives neither field - a custom
+    // lift's NULL demand columns never earn "This sits outside how you
+    // train." nor a preference exclusion.
+    expect(gen).toContain('excluded: intentBlocked || familyAvoided,');
+    expect(gen).toContain('capabilityIneligible: capDefiniteBlocked && !capabilityAffected,');
+    expect(gen).toContain('capDefiniteBlocked = blockingConflicts(intentState.capability, row).some((c) => !c.unknown);');
+    expect(gen).toContain('capabilityAffected = episodeConflicts(intentState.capability, row).some((c) => !c.unknown);');
+    // And the block-review engine keeps the SAME two gates, so the two
+    // cannot drift apart again (round 2's I9 finding).
+    const adv = fs.readFileSync(path.join(__dirname, '..', 'blockAdvisor.js'), 'utf8');
+    expect(adv).toContain('episodeConflicts(intentState?.capability, row).some((c) => !c.unknown)');
+    expect(adv).toContain('blockingConflicts(intentState.capability, row).some((c) => !c.unknown)');
   });
 });

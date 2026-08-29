@@ -172,3 +172,20 @@ describe('F5 - an allowance never carves a clinician conflict of ANY certainty',
     expect(capabilityBlockReason(s, MYSTERY)).toBeNull();
   });
 });
+
+// Review round 2 (R2-3): the near-miss list obeys the same law.
+describe('R2-3 - near misses never suggest work under a clinician rule', () => {
+  // eslint-disable-next-line global-require
+  const { nearMissCandidates } = require('../resolve');
+
+  test('an unknown CLINICIAN conflict keeps the exercise off the list; an unknown SELF one lists it', () => {
+    const clinician = buildCapabilityResolveState(
+      [row({ source: 'clinician_reported', ruleValue: 'axial_load' })], { atMs: NOW },
+    );
+    expect(nearMissCandidates(clinician, [MYSTERY], { muscle: 'quads' })).toHaveLength(0);
+    const self = buildCapabilityResolveState(
+      [row({ ruleValue: 'axial_load' })], { atMs: NOW },
+    );
+    expect(nearMissCandidates(self, [MYSTERY], { muscle: 'quads' })).toHaveLength(1);
+  });
+});

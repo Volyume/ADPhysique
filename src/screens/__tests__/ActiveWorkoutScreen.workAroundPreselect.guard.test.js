@@ -80,7 +80,9 @@ describe('T2-11: workAroundPreselect builds the TrainingConsiderationsScreen pre
   test('an active demand-axis conflict (episode-first, matching constraintNotice precedence) wins as the preselected axis', () => {
     const block = SRC.slice(site, SRC.indexOf('})();', site));
     expect(block).toContain('const driving = constraintConflicts.length ? constraintConflicts : baselineConflictsList;');
-    expect(block).toContain("const demandRule = driving.find((c) => c.ruleKind === 'demand');");
+    // R2-8: only a DEFINITE conflict may pre-fill an axis - the app
+    // never pre-answers the add flow with an unestablished fact.
+    expect(block).toContain("const demandRule = driving.find((c) => c.ruleKind === 'demand' && !c.unknown);");
     expect(block).toContain("if (demandRule) return { kind: 'demand', axes: [demandRule.ruleValue] };");
   });
 
