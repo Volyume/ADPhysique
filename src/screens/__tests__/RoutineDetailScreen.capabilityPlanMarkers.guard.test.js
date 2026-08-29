@@ -143,6 +143,18 @@ describe('the row resolves the FULL library exercise by id, not the partial rout
     expect(SRC).toContain(".some((r) => r.role === 'episode' && r.effectiveChoice === 'applied');");
     expect(SRC).toContain('}, [planCapState, intentState, exercises, allExercises, allExercisesById]);');
   });
+
+  test('R6-2 (round 6): the plan view re-reads on FOCUS, so captions never speak a pre-capture answer', () => {
+    // The screen stays mounted in the Plans stack while the user trains
+    // in another tab; an episode captured mid-session left the caption
+    // memo speaking a stale answer with no refresh path short of
+    // popping the screen. The focus listener re-runs both loaders; the
+    // memo recompute costs under a millisecond (round-6 review
+    // measurement).
+    const fn = SRC.match(/navigation\.addListener\('focus'[\s\S]{0,400}/)?.[0] ?? '';
+    expect(fn).toContain('loadRoutine()');
+    expect(fn).toContain('refreshIntentState()');
+  });
 });
 
 describe('capState source: the screen\'s own intent state first, a lazy fallback only until that resolves', () => {

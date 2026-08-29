@@ -1819,9 +1819,10 @@ export default function HomeScreen({ navigation, route }) {
   // D112 R2 (closes audit T1-17): the DISPLAYED session's effective (served)
   // row count. One call per focus (re-fires whenever the displayed routine
   // changes, which includes each loadData() reload on focus). Fail-safe:
-  // countEffectiveSessionRows already returns the base count on any error;
-  // resetting to null here on a routine change just re-shows the raw
-  // exerciseCounts figure while the effective read is in flight.
+  // countEffectiveSessionRows returns the base count on any error after
+  // the routine read, and null when it could not read the routine at all
+  // (round 6, B9) - null falls through the ?? below to the raw
+  // exerciseCounts figure, exactly as while the read is in flight.
   useEffect(() => {
     const routineId = displayWorkout?.routine?.id;
     if (!user?.id || !routineId) { setEffectiveSessionCount(null); return undefined; }

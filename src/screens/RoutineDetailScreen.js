@@ -334,6 +334,27 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [routineId, user?.id]);
 
+  // Round 6 (R6-2, staleness limb): re-read on every FOCUS, not only on
+  // mount. This screen stays mounted in the Plans stack while the user
+  // trains (it navigates to ActiveWorkout in another tab), so an episode
+  // captured mid-session left the capability captions and the
+  // serve-outcome memo speaking a pre-capture answer, with no refresh
+  // path short of popping the screen. The recompute costs under a
+  // millisecond (round-6 review measured the memo at 0.7 ms over a
+  // 300-exercise library), so a focus re-read is affordable. The focus
+  // event also fires on initial mount, doubling the first load with the
+  // effect above - both are idempotent reads into the same state, so the
+  // duplication is a cheap price for keeping the routineId-change path
+  // (which fires no focus event) intact.
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      if (routineId) loadRoutine().catch((e) => logError('RoutineDetailScreen.loadRoutine', e, { routineId }));
+      refreshIntentState().catch((e) => logError('RoutineDetailScreen.refreshIntentState', e, { routineId }));
+    });
+    return unsubscribe;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigation, routineId, user?.id]);
+
   async function loadRoutine() {
     // Train-page audit 2026-08-26. These three reads had no try/catch, and the
     // useEffect above calls loadRoutine() without a .catch(), so any read
