@@ -222,10 +222,28 @@ describe('T1-02 / T2-10 - the remaining raw-library paths in this lane', () => {
     expect(src).toContain('rankSwaps(ex, pool,');
   });
 
-  test('the heatmap fingerprint recomputes through the SAME generation filter', () => {
+  test('the heatmap fingerprint recomputes through the SAME generation filter, block-scoped', () => {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'VolumeHeatmapScreen.js'), 'utf8');
     expect(src).toContain('filterLibraryForGeneration(allExercises, intentState).library');
     expect(src).toContain('exerciseLibrary: generationLibrary');
+    // Round 7 (R6-1's class, one consumer along): the SCOPED loader, so
+    // a block-scoped avoidance is live here exactly as it was for the
+    // generation this line claims to recompute.
+    expect(src).toContain('loadScopedIntentState(user.id)');
+    expect(src).not.toContain('loadExerciseIntentState(user.id, {})');
+  });
+
+  test('R7-2: T1-02\'s SECOND named path - RoutineDetailScreen\'s divisionDiff/coverage - is rerouted too', () => {
+    // The design ruling (CC33-R2) said "both divisionDiff raw paths";
+    // rounds 1-6 pinned only the heatmap's, and this screen kept
+    // handing the engine the raw library - its fingerprint described a
+    // plan generation never built, and its coverage line named "how you
+    // train" as a cause it never checked.
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'RoutineDetailScreen.js'), 'utf8');
+    expect(src).toContain('generationLibrary = filterLibraryForGeneration(all, scoped).library;');
+    expect(src).toContain('computeDivisionDiff({ ...inputs, exerciseLibrary: generationLibrary })');
+    expect(src).toContain('computeDivisionCoverage({ ...inputs, exerciseLibrary: generationLibrary })');
+    expect(src).not.toMatch(/computeDivision(Diff|Coverage)\(\{ \.\.\.inputs, exerciseLibrary: all \}\)/);
   });
 
   test('the coverage line no longer blames equipment alone', () => {
@@ -236,6 +254,22 @@ describe('T1-02 / T2-10 - the remaining raw-library paths in this lane', () => {
 });
 
 describe('D112 R2 - the resolver door stays shut (regression guard)', () => {
+  test('every divisionDiff/coverage caller passes a generation-filtered library, never the raw one (R7-2 widening)', () => {
+    // The rankSwaps guard below missed the divisionDiff class entirely
+    // - a screen can hand the engine the raw library through
+    // computeDivisionDiff/computeDivisionCoverage too. Any screen
+    // calling either must also call filterLibraryForGeneration.
+    const screensDir = path.join(__dirname, '..', '..', 'screens');
+    const offenders = [];
+    for (const f of fs.readdirSync(screensDir)) {
+      if (!f.endsWith('.js')) continue;
+      const src = fs.readFileSync(path.join(screensDir, f), 'utf8');
+      if (!/\bcomputeDivision(Diff|Coverage)\(/.test(src)) continue;
+      if (!/filterLibraryForGeneration/.test(src)) offenders.push(f);
+    }
+    expect(offenders).toEqual([]);
+  });
+
   test('no suggestion surface ranks the raw library: every rankSwaps caller filters', () => {
     // The guard that keeps T2-10 closed: any screen calling rankSwaps
     // must pass a capability-filtered pool (isCapabilityEligible) or go

@@ -151,9 +151,20 @@ describe('the row resolves the FULL library exercise by id, not the partial rout
     // popping the screen. The focus listener re-runs both loaders; the
     // memo recompute costs under a millisecond (round-6 review
     // measurement).
-    const fn = SRC.match(/navigation\.addListener\('focus'[\s\S]{0,400}/)?.[0] ?? '';
+    const fn = SRC.match(/navigation\.addListener\('focus'[\s\S]{0,500}/)?.[0] ?? '';
     expect(fn).toContain('loadRoutine()');
     expect(fn).toContain('refreshIntentState()');
+  });
+
+  test('B3 (round 7): the mount effect owns the FIRST load - the focus listener skips its own registration focus', () => {
+    // The focus event also fires on initial mount, which doubled the
+    // first load beside the mount effect (and the reload is not free:
+    // the division recompute alone runs three generatePlan passes,
+    // 5.6 ms measured). Armed from the CURRENT focus state at
+    // registration, so a genuine return always loads and no ordering of
+    // mount effect vs focus event double-loads or skips a real return.
+    expect(SRC).toContain('focusLoadArmedRef.current = navigation.isFocused();');
+    expect(SRC).toContain('if (!focusLoadArmedRef.current) { focusLoadArmedRef.current = true; return; }');
   });
 });
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Platform } from 'react-native';
 import { FlashList } from '@shopify/flash-list';
@@ -346,8 +346,23 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // effect above - both are idempotent reads into the same state, so the
   // duplication is a cheap price for keeping the routineId-change path
   // (which fires no focus event) intact.
+  // Round 7 (B3): the focus event also fires on initial mount, which
+  // doubled the first load beside the mount effect above - and the
+  // reload is not free (the division fingerprint recompute alone runs
+  // three generatePlan passes). The first focus after each
+  // registration is skipped; the mount effect owns that load, and the
+  // listener owns every RETURN to the screen.
+  const focusLoadArmedRef = useRef(false);
   useEffect(() => {
+    // Armed from the CURRENT focus state, not a constant: registered
+    // while already focused (a param change on-screen, or a mount whose
+    // focus event beat the listener), there is no pending mount-focus
+    // to skip and the next event is a genuine return; registered before
+    // focus settles, the first event is the mount's own and the mount
+    // effect owns that load.
+    focusLoadArmedRef.current = navigation.isFocused();
     const unsubscribe = navigation.addListener('focus', () => {
+      if (!focusLoadArmedRef.current) { focusLoadArmedRef.current = true; return; }
       if (routineId) loadRoutine().catch((e) => logError('RoutineDetailScreen.loadRoutine', e, { routineId }));
       refreshIntentState().catch((e) => logError('RoutineDetailScreen.refreshIntentState', e, { routineId }));
     });
@@ -382,10 +397,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
 
     // A4: division fingerprint. Pure re-presentation of the volume overlay
     // the generator already applied to this plan: diff the division plan's
-    // weekly set counts against the general plan for the SAME profile inputs
-    // (the engine is deterministic, so this recomputes exactly what was
-    // applied). Only shown when this routine is part of the ACTIVE generated
-    // division plan; best-effort, the line simply stays absent on failure.
+    // weekly set counts against the general plan for the SAME profile inputs.
+    // The engine is deterministic, so this recomputes exactly what was
+    // applied ONLY when fed the same generation library the generator saw
+    // (filtered below - R7-2); fed the raw library it described a plan
+    // generation never built. Only shown when this routine is part of the
+    // ACTIVE generated division plan; best-effort, the line simply stays
+    // absent on failure.
     try {
       const goal = userProfile?.trainingGoal;
       const active = r.programmeId && user?.id
@@ -393,10 +411,29 @@ export default function RoutineDetailScreen({ navigation, route }) {
         : null;
       if (active && r.programmeId === active.id && planWearsDivision(active.name, goal)) {
         const inputs = buildPlanInputs(userProfile);
-        const diff = inputs ? computeDivisionDiff({ ...inputs, exerciseLibrary: all }) : null;
+        // Round 7 (R7-2, closes T1-02's SECOND named path - the design
+        // ruling said "both divisionDiff raw paths" and only the
+        // heatmap's was rerouted): the recompute runs over the SAME
+        // generation library the plan generator used - filtered by
+        // equipment, preference AND capability, under the block-scoped
+        // intent state (loadScopedIntentState, the R6-1 loader). Fed the
+        // raw library, the fingerprint described a plan generation never
+        // built, and the coverage line named "how you train" as a cause
+        // it never checked. Best-effort: a failed read falls back to the
+        // raw library and the lines simply stay as before.
+        let generationLibrary = all;
+        try {
+          // eslint-disable-next-line global-require
+          const { loadScopedIntentState } = require('../lib/sessionEffective');
+          // eslint-disable-next-line global-require
+          const { filterLibraryForGeneration } = require('../lib/exercise/generation');
+          const scoped = await loadScopedIntentState(user.id);
+          generationLibrary = filterLibraryForGeneration(all, scoped).library;
+        } catch (_) { generationLibrary = all; }
+        const diff = inputs ? computeDivisionDiff({ ...inputs, exerciseLibrary: generationLibrary }) : null;
         setDivisionLine(diff ? divisionFingerprintLine(goal, diff) : null);
         const coverage = inputs
-          ? computeDivisionCoverage({ ...inputs, exerciseLibrary: all })
+          ? computeDivisionCoverage({ ...inputs, exerciseLibrary: generationLibrary })
           : null;
         setDivisionGapLine(divisionCoverageLine(goal, coverage));
       } else {

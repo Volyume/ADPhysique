@@ -195,11 +195,16 @@ export default function VolumeHeatmapScreen() {
           // on any failure exactly as before.
           let generationLibrary = allExercises;
           try {
+            // Round 7 (R6-1's class, one consumer along): the SCOPED
+            // loader, so a block-scoped avoidance is live here exactly
+            // as it was for the generation this line claims to recompute
+            // - unscoped, it compared its block against null and the
+            // fingerprint kept movements generation dropped.
             // eslint-disable-next-line global-require
-            const { loadExerciseIntentState } = require('../lib/exercise/intent');
+            const { loadScopedIntentState } = require('../lib/sessionEffective');
             // eslint-disable-next-line global-require
             const { filterLibraryForGeneration } = require('../lib/exercise/generation');
-            const intentState = await loadExerciseIntentState(user.id, {});
+            const intentState = await loadScopedIntentState(user.id);
             generationLibrary = filterLibraryForGeneration(allExercises, intentState).library;
           } catch (_) { generationLibrary = allExercises; }
           if (!isCurrentRequest()) return;
