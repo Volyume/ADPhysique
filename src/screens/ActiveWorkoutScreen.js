@@ -4083,18 +4083,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             return <StatusStrip items={items} />;
           })()}
 
-          {/* T2-20/T1-24 (D112 R5, closes audit T2-20/T1-24): the per-side
-              carve is currently silent - carvedForOneSide suppresses the
-              per-side logging prompt below with no word said. Read to the
-              end: isSideCarvedAvailable (src/lib/capability/resolve.js)
-              returns a plain boolean from a `.some()` over the matching
-              restriction rows; the side itself is never threaded back to
-              the caller, so only the generic line is honestly available
-              here - naming a side would mean re-deriving it independently
-              in this screen, a second source of truth this file's lane
-              cannot introduce. Near the same strip area the constraint
-              notices above use, but always visible (quiet text, not a
-              tap-to-expand chip) since there is no action to take here. */}
+          {/* T2-20/T1-24 (D112 R5; roles split in round 8, R8-1): this
+              note renders when the movement is actually side-carved for
+              this user (carvedForOneSide, the union carve). The per-side
+              logging PROMPT is gated separately, on sidedRuleBearsOnThis
+              (sidedRuleTouches): any sided rule bearing on the movement
+              suppresses the prompt whichever way the carve resolves, so
+              the two flags deliberately differ. The side itself is never
+              threaded back from the resolver (isSideCarvedAvailable is a
+              plain boolean over the matching rows), so only the generic
+              line is honestly available here - naming a side would mean
+              re-deriving it independently in this screen, a second source
+              of truth this file's lane cannot introduce. Always visible
+              (quiet text, not a tap-to-expand chip): no action to take. */}
           {carvedForOneSide ? (
             <Text style={[styles.sideCarveNote, live.sideCarveNote]}>
               Volyume counts this one side at a time, matching how you train.
