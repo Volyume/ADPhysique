@@ -222,6 +222,49 @@ export function removalExcusalConflicts(conflicts) {
   return applied ? live : [];
 }
 
+/**
+ * Round 15 (R15-1): the in-session notice's BRANCH SELECTION, extracted
+ * pure so the truth table is driven, not source-pinned - three
+ * consecutive rounds broke this chain one branch at a time (round 13
+ * let the marker outrank a definite conflict's arrival, round 14 let a
+ * held rule kill the marker, round 15 found the held line firing over
+ * a substituted row whenever a definite baseline conflict co-existed,
+ * denying both the substitution and the just-captured rule).
+ *
+ * The ranking, from the rulings:
+ *  - the MARKER (a serve substitution's provenance) yields only to
+ *    conflicts with LIVE automation or standing baseline facts -
+ *    unknowns and held rules drive nothing (D113 ruling 1; D120 ruling
+ *    2, D112 R8) and leave it;
+ *  - the HELD line ("Volyume changes nothing until you say so") speaks
+ *    only for a PURE held state: no marker (it would deny a change
+ *    Volyume made), no live driver, no definite baseline conflict (the
+ *    actionable truth outranks a rule that drives nothing);
+ *  - the EPISODE line speaks for live definite episode drivers (and is
+ *    NAMED from them alone - naming a held rule claimed too much);
+ *  - the BASELINE line for definite baseline conflicts (baseline rules
+ *    cannot be held: model.js refuses baseline episode groups and the
+ *    hold write is keyed by episode_group_id);
+ *  - the UNKNOWN line only when nothing definite exists at all.
+ *
+ * @returns {{kind: 'marker'|'held'|'episode'|'baseline'|'unknown'|null,
+ *   drivingEpisode: Array, definiteEpisode: Array, definiteBaseline: Array,
+ *   unknowns: Array}}
+ */
+export function constraintNoticeKind({ hasMarker = false, episodeConflicts: ep = [], baselineConflicts: base = [] } = {}) {
+  const definiteEpisode = (ep ?? []).filter((c) => !c?.unknown);
+  const definiteBaseline = (base ?? []).filter((c) => !c?.unknown);
+  const drivingEpisode = definiteEpisode.filter((c) => c?.row?.adaptationMode !== 'hold');
+  const unknowns = [...(ep ?? []), ...(base ?? [])].filter((c) => c?.unknown);
+  const out = { drivingEpisode, definiteEpisode, definiteBaseline, unknowns };
+  if (hasMarker && !drivingEpisode.length && !definiteBaseline.length) return { kind: 'marker', ...out };
+  if (definiteEpisode.length && !drivingEpisode.length && !hasMarker && !definiteBaseline.length) return { kind: 'held', ...out };
+  if (drivingEpisode.length) return { kind: 'episode', ...out };
+  if (definiteBaseline.length) return { kind: 'baseline', ...out };
+  if (unknowns.length) return { kind: 'unknown', ...out };
+  return { kind: null, ...out };
+}
+
 export function computeCompletionEffects(sessionRows, capabilityState) {
   const entries = [];
   const excusedIds = [];

@@ -256,26 +256,20 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
     expect(SRC).toContain('userChosen: !!e?._userAdded,');
   });
 
-  test('R13/R14 (B5): only conflicts with LIVE automation outrank the marker line', () => {
-    // Round 13: the marker branch returned before any conflict
-    // evaluation, so a rule captured mid-session against the SUBSTITUTE
-    // was never spoken on the row it bears on. Round 14 corrected the
-    // gate's class: the principle is "conflicts that DRIVE nothing
-    // leave the marker" - unknowns AND held rules (D120 ruling 2, D112
-    // R8) - and round 13 enumerated only unknowns, so a held-only
-    // definite set killed the marker and let the held line claim
-    // "Volyume changes nothing" over a row Volyume substituted in.
-    const site = SRC.indexOf("if (currentEntry?._capabilityTemp?.fromName");
-    expect(site).toBeGreaterThan(-1);
-    const block = SRC.slice(site, site + 300);
-    expect(block).toContain('&& !drivingEpisode.length && !definiteBaseline.length)');
-    // The driving list drops held rules from the definite list, and
-    // both are computed BEFORE the marker branch.
-    const drvSite = SRC.indexOf("const drivingEpisode = definiteEpisode.filter((c) => c.row?.adaptationMode !== 'hold');");
-    const defSite = SRC.indexOf('const definiteEpisode = constraintConflicts.filter((c) => !c.unknown);');
-    expect(defSite).toBeGreaterThan(-1);
-    expect(drvSite).toBeGreaterThan(defSite);
-    expect(drvSite).toBeLessThan(site);
+  test('R13-R15 (B5): the notice consumes constraintNoticeKind - branch selection is the DRIVEN helper, not an inline chain', () => {
+    // Rounds 13-15 corrected the inline branch order three times, one
+    // branch per round; the selection now lives in
+    // constraintNoticeKind (capability/effective.js), whose full truth
+    // table is driven in capabilityAdherence.test.js. This screen only
+    // words each kind, so a fourth ordering defect cannot hide here.
+    expect(SRC).toContain("const { constraintNoticeKind } = require('../lib/capability/effective');");
+    expect(SRC).toContain('const { kind, drivingEpisode, definiteBaseline, unknowns } = constraintNoticeKind({');
+    expect(SRC).toContain('hasMarker: !!currentEntry?._capabilityTemp?.fromName,');
+    // The episode line is NAMED from the driving rules alone (round 15:
+    // naming a held co-driver claimed the hold covered this row).
+    expect(SRC).toContain("const named = subjectPhrase(drivingEpisode.filter(c => c.ruleKind !== 'exercise'), {});");
+    // The inline ranking is gone.
+    expect(SRC).not.toContain('definiteEpisode.every((c) => c.row?.adaptationMode === ');
   });
 
   test('R14-2: the intent state reloads on focus, burst-window deduped, sequence-guarded', () => {

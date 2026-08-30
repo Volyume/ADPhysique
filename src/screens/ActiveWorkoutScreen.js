@@ -815,13 +815,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // older read landing late never overwrites a newer one.
   const intentLoadSeqRef = useRef(0);
   const intentLoadAtRef = useRef(0);
-  const reloadIntentState = useCallback(() => {
+  const reloadIntentState = useCallback((keepOnFailure = false) => {
     if (!user?.id) { setIntentState(null); return; }
     const seq = ++intentLoadSeqRef.current;
     getActiveBlock(user.id)
       .then(block => loadExerciseIntentState(user.id, { activeMesocycleId: block?.id ?? null }))
       .then(state => { if (seq === intentLoadSeqRef.current) setIntentState(state); })
-      .catch(() => { if (seq === intentLoadSeqRef.current) setIntentState(null); });
+      // Round 15 (A15/D3 conditions): a RELOAD failure keeps the last
+      // state (RoutineDetail's own additive-catch precedent) - nulling
+      // it erased a correct in-flight notice, side-carve note and
+      // substitution marker with no word said. A mount/exercise-change
+      // failure still clears: there the previous state describes a
+      // DIFFERENT slot, and keeping it would judge the wrong exercise.
+      .catch(() => { if (seq === intentLoadSeqRef.current && !keepOnFailure) setIntentState(null); });
   }, [user?.id]);
   useEffect(() => {
     intentLoadAtRef.current = Date.now();
@@ -831,7 +837,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   useEffect(() => {
     const unsub = navigation.addListener('focus', () => {
       if (Date.now() - intentLoadAtRef.current < 800) return;
-      reloadIntentState();
+      reloadIntentState(true);
     });
     return unsub;
   }, [navigation, reloadIntentState]);
@@ -947,65 +953,49 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // CC33 adversarial review F4 (+ round 3 R3-3): an UNKNOWN conflict
     // must never be spoken as a fact - the held claim included, since
     // "you're holding your plan as-is FOR THIS" asserts the hold covers
-    // this row. Definite conflicts computed first; every branch below,
-    // the held one included, speaks only from them, the same
-    // definite-only gate RoutineDetailScreen's caption applies (round 4
-    // F-3 aligned its applied test onto the actionable rows too).
-    // Unknown-only rows fall to the honest not-known line at the bottom.
-    const definiteEpisode = constraintConflicts.filter((c) => !c.unknown);
-    const definiteBaseline = baselineConflictsList.filter((c) => !c.unknown);
-    // Round 13 (B5): a DEFINITE conflict on the movement actually in
-    // front of the user outranks the provenance line. The marker branch
-    // used to return first, so a rule captured mid-session against the
-    // SUBSTITUTE itself was never spoken on the row it bears on. One
-    // mention per surface still holds - the row speaks the more
-    // consequential truth. Round 14 (R14-1) corrected the gate's CLASS:
-    // the principle is "conflicts that DRIVE nothing leave the marker",
-    // and round 13 enumerated only unknowns - a HELD definite conflict
-    // drives nothing either (D120 ruling 2; D112 R8), yet it killed the
-    // marker and let the held line claim "Volyume changes nothing" over
-    // a row Volyume itself substituted in. The marker now yields only
-    // to conflicts with live automation behind them.
-    const drivingEpisode = definiteEpisode.filter((c) => c.row?.adaptationMode !== 'hold');
-    if (currentEntry?._capabilityTemp?.fromName
-      && !drivingEpisode.length && !definiteBaseline.length) {
+    // this row. Rounds 13-15 then corrected the BRANCH ORDER three
+    // times, one branch per round (marker vs new conflicts; held vs
+    // marker; held vs baseline), so round 15 extracted the selection
+    // into constraintNoticeKind (capability/effective.js) - one pure,
+    // DRIVEN ranking instead of an inline chain whose truth table only
+    // a fresh review could see. This block now only words each kind.
+    // eslint-disable-next-line global-require
+    const { constraintNoticeKind } = require('../lib/capability/effective');
+    const { kind, drivingEpisode, definiteBaseline, unknowns } = constraintNoticeKind({
+      hasMarker: !!currentEntry?._capabilityTemp?.fromName,
+      episodeConflicts: constraintConflicts,
+      baselineConflicts: baselineConflictsList,
+    });
+    if (kind === 'marker') {
       return { kind: 'episode', copy: `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts` };
     }
-    // D112 R8 (section 25): a fully-held conflict set says so instead of
-    // claiming Volyume is working around anything - the user asked it to
-    // wait, and the quiet line reflects their own instruction back.
-    if (definiteEpisode.length
-      && definiteEpisode.every((c) => c.row?.adaptationMode === 'hold')) {
+    // D112 R8 (section 25): a PURE held state says so instead of
+    // claiming Volyume is working around anything - the user asked it
+    // to wait, and the quiet line reflects their own instruction back.
+    // Purity is the helper's ruling (round 15): no marker (the line
+    // would deny a change Volyume made) and no definite baseline
+    // conflict (the actionable truth outranks a rule driving nothing).
+    if (kind === 'held') {
       return { kind: 'held', copy: "You're holding your plan as-is for this. Volyume changes nothing until you say so." };
     }
-    if (definiteEpisode.length) {
+    if (kind === 'episode') {
       // Natural coach-language order (2026-08-21): name what the conflict
-      // is about when the rules give it a short honest name.
+      // is about when the rules give it a short honest name. Named from
+      // the DRIVING rules alone (round 15): naming a held co-driver
+      // claimed the hold covered this row.
       try {
         // eslint-disable-next-line global-require
         const { subjectPhrase } = require('../lib/capability/phrase');
-        const named = subjectPhrase(definiteEpisode.filter(c => c.ruleKind !== 'exercise'), {});
-        // Round 6 (R6-4): Q-1's own argument applies to the NAMED branch
-        // too - a row showing this notice is being served as planned, so
-        // the old line's claim of a workaround in progress was false on
-        // the dominant path (this branch fires for every demand and
-        // family rule; the generic below only for exercise rules or
-        // unnameable sets). Mirror the baseline named line: state the
-        // conflict, offer the action.
+        const named = subjectPhrase(drivingEpisode.filter(c => c.ruleKind !== 'exercise'), {});
+        // Round 6 (R6-4): state the conflict, offer the action - a
+        // workaround-in-progress claim was false on the dominant path.
         if (named) return { kind: 'episode', copy: `This one involves ${named}, which sits outside your temporary change. Swap it when you're ready.` };
       } catch (_e) { /* fall through to the generic line */ }
-      // Round 5 (Q-1): the generic line asserts no adaptation. A row
-      // showing THIS notice is either served as planned or (since the
-      // round-13 reorder) a substitute a NEW definite rule now bears
-      // on - in both cases the app is adapting nothing further, so the
-      // old app-as-subject generic ("Today this works around...") was
-      // false in every reachable case (declined and undecided rules
-      // most of all: the app is doing nothing to those rows). The
-      // honest line states the conflict and leaves the action to the
-      // user, mirroring the baseline branch below word for word.
+      // Round 5 (Q-1): the generic line asserts no adaptation - the app
+      // is adapting nothing further on a row showing this notice.
       return { kind: 'episode', copy: "This one sits outside your temporary change. Swap it when you're ready." };
     }
-    if (definiteBaseline.length) {
+    if (kind === 'baseline') {
       try {
         // eslint-disable-next-line global-require
         const { subjectPhrase } = require('../lib/capability/phrase');
@@ -1014,8 +1004,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       } catch (_e) { /* fall through to the generic line */ }
       return { kind: 'baseline', copy: "This one sits outside how you train. Swap it when you're ready." };
     }
-    const unknowns = [...constraintConflicts, ...baselineConflictsList].filter((c) => c.unknown);
-    if (unknowns.length) {
+    if (kind === 'unknown') {
       try {
         // eslint-disable-next-line global-require
         const { subjectPhrase } = require('../lib/capability/phrase');
@@ -1039,13 +1028,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // is the contract this mirrors).
   const workAroundPreselect = (() => {
     if (!exercise) return null;
-    const driving = constraintConflicts.length ? constraintConflicts : baselineConflictsList;
+    // Round 15 naming note: this list deliberately includes held and
+    // unknown rows (the preselect describes what BEARS on the row; the
+    // user confirms), unlike constraintNoticeKind's drivingEpisode -
+    // renamed so the two "driving" ideas cannot be read as one.
+    const prefillConflicts = constraintConflicts.length ? constraintConflicts : baselineConflictsList;
     // Round 2 (R2-8): DEFINITE conflicts only pre-fill an axis. An
     // unknown one would pre-answer the add flow with a movement fact the
     // app has not established - the user still confirms, but the app
     // must not put the answer in their mouth. Unknown-driven rows fall
     // to the exercise-kind preselect, naming only the movement itself.
-    const demandRule = driving.find((c) => c.ruleKind === 'demand' && !c.unknown);
+    const demandRule = prefillConflicts.find((c) => c.ruleKind === 'demand' && !c.unknown);
     if (demandRule) return { kind: 'demand', axes: [demandRule.ruleValue] };
     return exercise.name ? { kind: 'exercise', exerciseNames: [exercise.name] } : null;
   })();
@@ -1461,6 +1454,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const { capabilityBlockReason } = require('../lib/capability/resolve');
         narrowedCount = ranked.filter((c) => capabilityBlockReason(state.capability, c.exercise) !== null).length;
       }
+      // Round 15 (I8 condition closed): this write joins the sequence
+      // guard - bumping the counter invalidates any focus reload still
+      // in flight, so an older read landing late can never overwrite
+      // the sheet's newer one. (This state is the newest by
+      // construction: it was just read on the tap.)
+      intentLoadSeqRef.current += 1;
       setIntentState(state);
       // D109-2: the read failed open (structural list stands, nothing is
       // filtered by avoidance) - say so, rather than let the swap list look

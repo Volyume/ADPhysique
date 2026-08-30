@@ -722,6 +722,65 @@ describe('R12: record-keyed conversion, definite-only removal excusal, completed
     expect(removalExcusalConflicts(episodeConflicts(heldOnlyState, jump))).toEqual([]);
   });
 
+  test('R15-1: constraintNoticeKind - the DRIVEN truth table three rounds of inline ordering could not keep straight', () => {
+    const { constraintNoticeKind } = require('../capability/effective');
+    const live = { unknown: false, row: { adaptationMode: null } };
+    const held = { unknown: false, row: { adaptationMode: 'hold' } };
+    const unk = { unknown: true, row: {} };
+    const base = { unknown: false, row: {} };
+    const k = (hasMarker, ep, b) => constraintNoticeKind({ hasMarker, episodeConflicts: ep, baselineConflicts: b }).kind;
+    // The marker (a serve substitution's provenance) yields only to
+    // conflicts that DRIVE something.
+    expect(k(true, [], [])).toBe('marker');
+    expect(k(true, [unk], [])).toBe('marker');
+    expect(k(true, [held], [])).toBe('marker');
+    expect(k(true, [live], [])).toBe('episode');
+    expect(k(true, [held, live], [])).toBe('episode');
+    // R15-1's breaking state: marker + held-only + definite baseline
+    // rendered the held line - "Volyume changes nothing until you say
+    // so" over a row Volyume substituted in, with the just-captured
+    // baseline rule never spoken. The actionable truth wins now.
+    expect(k(true, [held], [base])).toBe('baseline');
+    // The held line speaks only for a PURE held state.
+    expect(k(false, [held], [])).toBe('held');
+    expect(k(false, [held], [base])).toBe('baseline');
+    expect(k(false, [held, live], [])).toBe('episode');
+    expect(k(false, [live], [base])).toBe('episode');
+    expect(k(false, [], [base])).toBe('baseline');
+    expect(k(false, [unk], [])).toBe('unknown');
+    expect(k(false, [], [])).toBe(null);
+  });
+
+  test('R15-1 driven at the REAL resolver: a held episode beside a baseline rule yields the baseline line, marker or not', async () => {
+    const { constraintNoticeKind, episodeConflicts, baselineConflicts } = require('../capability/effective');
+    const { loadCapabilityResolveState } = require('../capability/resolve');
+    const U18 = 'u-r15';
+    const epIds = await createCapabilityConstraints(U18, [{
+      role: 'episode', source: 'self', ruleKind: 'demand', ruleValue: 'axial_load',
+      startsAt: NOW - 1000, episodeGroupId: 'g_r15',
+    }], { nowMs: NOW - 1000 });
+    await setConstraintEffectiveChoice(U18, epIds[0], 'applied');
+    const { setCapabilityAdaptationMode } = require('../database');
+    await setCapabilityAdaptationMode(U18, 'g_r15', 'hold');
+    await createCapabilityConstraints(U18, [{
+      role: 'baseline', source: 'self', ruleKind: 'demand', ruleValue: 'impact',
+      startsAt: NOW - 1000,
+    }], { nowMs: NOW - 1000 });
+    _resetCapabilityResolveCache();
+    const state = await loadCapabilityResolveState(U18, {});
+    const jump = { id: 'fx-jump', name: 'Fixture Jump Squat', primaryMuscle: 'quads', axialLoad: true, impact: true, position: 'standing' };
+    const ep = episodeConflicts(state, jump);
+    const b = baselineConflicts(state, jump);
+    expect(ep.some((c) => !c.unknown && c.row?.adaptationMode === 'hold')).toBe(true);
+    expect(b.some((c) => !c.unknown)).toBe(true);
+    expect(constraintNoticeKind({ hasMarker: true, episodeConflicts: ep, baselineConflicts: b }).kind).toBe('baseline');
+    expect(constraintNoticeKind({ hasMarker: false, episodeConflicts: ep, baselineConflicts: b }).kind).toBe('baseline');
+    // Without the baseline conflict the pure held state still says so.
+    const still = { id: 'fx-squat2', name: 'Axial Only', primaryMuscle: 'quads', axialLoad: true, impact: false, position: 'standing' };
+    expect(constraintNoticeKind({ hasMarker: false, episodeConflicts: episodeConflicts(state, still), baselineConflicts: baselineConflicts(state, still) }).kind).toBe('held');
+    expect(constraintNoticeKind({ hasMarker: true, episodeConflicts: episodeConflicts(state, still), baselineConflicts: baselineConflicts(state, still) }).kind).toBe('marker');
+  });
+
   test('R13-3: Clear workout history tombstones the effects records with the sessions', async () => {
     const { clearWorkoutHistory } = require('../database');
     const U17 = 'u-r13b';
