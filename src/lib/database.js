@@ -6536,6 +6536,19 @@ export async function clearWorkoutHistory(userId) {
   await runInTransaction(d, async () => {
     await d.runAsync('DELETE FROM workout_sets WHERE user_id = ?', [userId]);
     await d.runAsync('DELETE FROM workouts WHERE user_id = ?', [userId]);
+    // Round 13 (R13-3): the THIRD workout-delete path - the settings
+    // screen's own words are "permanently deletes all your logged
+    // sessions", and the per-session capability effects records are
+    // part of exactly that. Rounds 11-12 tombstoned the discard and
+    // history-delete paths; this one left the records live, synced,
+    // and in the Article 20 export after every session was gone.
+    // Same tombstone discipline (the table syncs; deleted_at is its
+    // delete, and the replace preserves it).
+    const now = Date.now();
+    await d.runAsync(
+      'UPDATE session_constraint_effects SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND deleted_at IS NULL',
+      [now, now, userId],
+    );
   });
 }
 
@@ -11867,16 +11880,16 @@ export async function setCapabilityAdaptationMode(userId, episodeGroupId, mode) 
 // (effect, exerciseFrom) key silently collapsed the second slot's true
 // entry - the receipt said one swap where two happened. Writers stamp
 // rowId (the slot's own stable id) and the key is
-// (effect, exerciseFrom, rowId). Rounds 11-12 closed the keyless
-// sources one by one - round 11's "every live slot has an id" was
-// itself one source short (the round-12 review found the in-session
-// picker add): planned rows carry routineExercise.id, and all THREE
-// ad-hoc constructions mint one (BuildWorkout and repeat-as-is since
-// R11-2, addExerciseToWorkout since R12-3). A null rowId therefore
-// means a legacy record, or a session snapshot taken before its
-// upgrade landed; the tolerance for those is counted - one keyless
-// entry absorbs exactly one keyed re-derivation, never a whole slot
-// set. The `slot` field is
+// (effect, exerciseFrom, rowId). Rounds 11-13 closed the keyless
+// sources - and round 13 closed the CLASS after per-site minting
+// proved unwinnable (round 12 found a third source, round 13 a
+// fourth, Home's own repeat card): the store's withSetsArrays
+// chokepoint now mints a slot id for any keyless entry on every
+// fresh, restored or mutated session list, so no construction can
+// ship keyless again. A null rowId therefore means a legacy RECORD
+// written before the upgrades; the tolerance for those is counted -
+// one keyless entry absorbs exactly one keyed re-derivation, never a
+// whole slot set. The `slot` field is
 // informational only: each writer stamps its own list's index (serve
 // the pass's input, removal the current list, completion the
 // snapshot), so those spaces are not one space and slot is never part
