@@ -1025,7 +1025,15 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       try {
         // eslint-disable-next-line global-require
         const { subjectPhrase } = require('../lib/capability/phrase');
-        const named = subjectPhrase(unknowns.filter(c => c.ruleKind !== 'exercise'), {});
+        // Round 17 (Q4, C7): the third named branch joins the other two -
+        // a sided rule in a closed union phrases unsided here as well,
+        // so no branch of this notice can name one side of a union.
+        // eslint-disable-next-line global-require
+        const { sidedUnionShape: unionShape } = require('../lib/capability/phrase');
+        const capUnk = intentState?.capability ?? null;
+        const named = subjectPhrase(unknowns
+          .filter(c => c.ruleKind !== 'exercise')
+          .map(c => (unionShape(c, capUnk) ? { ...c, laterality: null } : c)), {});
         if (named) return { kind: 'unknown', copy: `Volyume doesn't know yet whether this involves ${named}, so it stays as planned.` };
       } catch (_e) { /* fall through to the generic line */ }
       return { kind: 'unknown', copy: "Volyume doesn't know yet how this fits how you train, so it stays as planned." };
@@ -1798,6 +1806,18 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   useEffect(() => {
     if (!unilateralPrefsLoaded || !exercise?.id) return;
     if (exercise.laterality !== 'unilateral') return;
+    // Round 17 (R17-1): the ask WAITS for its inputs. This prompt is an
+    // ACTION, not a rendered notice - R2-6's "stay silent until the
+    // resolve matches" posture is right for captions, but proceeding
+    // here was a fail-open: on an exercise change this effect ran in
+    // the same commit that cleared resolvedExercise, so judgedExercise
+    // was null, sidedRuleBearsOnThis answered false, and the both-sides
+    // ask fired for exactly the movement class it is most forbidden on
+    // (D120 ruling 1) - then self-tagged below, so the corrected gate
+    // could never re-open it. Both readiness terms are deps, so the
+    // effect re-runs and asks (or stays suppressed) once they settle.
+    if (!resolvedExercise || resolvedExercise.id !== exercise.id) return;
+    if (!intentState) return;
     // Laterality verification (founder order 2026-08-21): never PROPOSE
     // a both-sides flow for a movement a sided rule bears on - "do the
     // same reps on each side" would be asking for work the user has
@@ -1830,7 +1850,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // supersetHeadsUp is in the list so a deferred walkthrough fires the moment
   // the superset sheet closes (C5-P37-02).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp, sidedRuleBearsOnThis]);
+  }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp, sidedRuleBearsOnThis, resolvedExercise, intentState]);
 
   // First-use info tip: pulse the Info button until tapped. The pulse itself
   // is suppressed under Reduce Motion (the static badge still shows so the
@@ -3529,11 +3549,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // effects writes nothing. Best-effort: a failure here never blocks
       // the finish.
       try {
-        // Round 3 (QUALIFIED item 9): a FRESH capability read, not the
-        // screen's intentState - that state is keyed to exercise
-        // changes, so a rule created mid-session through "Work around
-        // this" was invisible here unless the user changed exercise
-        // afterwards, and the session's absences went unexcused. Falls
+        // Round 3 (QUALIFIED item 9), reason updated round 17: a FRESH
+        // capability read, not the screen's intentState. The original
+        // staleness rationale is gone (the state reloads on focus since
+        // R14-2), but the fresh read stays the right call: the finish
+        // must judge on the newest facts regardless of what the screen
+        // last rendered, and it costs one read at session end. Falls
         // back to the screen state on failure; both paths still excuse
         // only on definite applied conflicts.
         // eslint-disable-next-line global-require

@@ -272,6 +272,9 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
     // named line too.
     expect(SRC).toContain("const named = subjectPhrase(drivingEpisode");
     expect(SRC.match(/\.map\(c => \(sidedUnionShape\(c, capForPhrase\) \? \{ \.\.\.c, laterality: null \} : c\)\), \{\}\);/g)).toHaveLength(2);
+    // Round 17 (Q4): the THIRD named branch (unknown) unsides too, so
+    // no branch of this notice can name one side of a closed union.
+    expect(SRC).toContain(".map(c => (unionShape(c, capUnk) ? { ...c, laterality: null } : c)), {});");
     // The inline ranking is gone.
     expect(SRC).not.toContain('definiteEpisode.every((c) => c.row?.adaptationMode === ');
   });
@@ -288,6 +291,31 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
     expect(SRC).toContain('reloadIntentState();');
     expect(SRC).toContain('const seq = ++intentLoadSeqRef.current;');
     expect(SRC).toContain('if (seq === intentLoadSeqRef.current) setIntentState(state);');
+  });
+
+  test('R17-1: the both-sides ask WAITS for its inputs - readiness guards precede the gate and the self-tag', () => {
+    // On an exercise change this effect ran in the same commit that
+    // cleared resolvedExercise, so judgedExercise was null, the R8-1
+    // gate answered false, and the ask fired for exactly the movement
+    // class it is most forbidden on - then self-tagged, so the
+    // corrected gate could never re-open it. The ask is an ACTION, so
+    // pending inputs must hold it (R2-6's silence posture is for
+    // rendered notices only).
+    const effectSite = SRC.indexOf("if (!unilateralPrefsLoaded || !exercise?.id) return;");
+    expect(effectSite).toBeGreaterThan(-1);
+    const gateSite = SRC.indexOf('if (sidedRuleBearsOnThis) return;', effectSite);
+    const tagSite = SRC.indexOf('acknowledgedUnilateralRef.current.add(exercise.id);', effectSite);
+    const readyA = SRC.indexOf('if (!resolvedExercise || resolvedExercise.id !== exercise.id) return;', effectSite);
+    const readyB = SRC.indexOf('if (!intentState) return;', effectSite);
+    expect(readyA).toBeGreaterThan(effectSite);
+    expect(readyB).toBeGreaterThan(effectSite);
+    expect(readyA).toBeLessThan(gateSite);
+    expect(readyB).toBeLessThan(gateSite);
+    expect(gateSite).toBeLessThan(tagSite);
+    // And both readiness reads are deps, so the effect re-runs when
+    // they settle.
+    const deps = SRC.slice(tagSite, tagSite + 1400);
+    expect(deps).toContain('sidedRuleBearsOnThis, resolvedExercise, intentState]);');
   });
 
   test('R10-3: completion passes the session\'s performed ids, outside the capState gate', () => {
