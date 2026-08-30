@@ -1049,7 +1049,10 @@ const styles = StyleSheet.create({
   pickerSetAside: { ...type.caption, color: colors.textMuted },
   pickerAllowAgain: { ...type.caption, color: colors.primary },
   pickerAllowAgainBtn: { minHeight: spacing.xxxl, justifyContent: 'center', paddingHorizontal: spacing.xs },
-  showExcludedRow: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  // Round 15 (R15-2, J2): a caption plus 8dp of slop was ~39dp effective
+  // on the only control that reveals what the user's rules removed - the
+  // same shape D126 ruling 5 closed one style-line above. Real 48 now.
+  showExcludedRow: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm, minHeight: spacing.xxxl, justifyContent: 'center' },
   showExcludedText: { ...type.caption, color: colors.textMuted },
   constraintsUnavailableRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -1088,7 +1091,7 @@ const styles = StyleSheet.create({
   recentChip: { maxWidth: 180 },
   createSaveBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-    minHeight: 48,
+    minHeight: spacing.xxxl,
     backgroundColor: colors.primaryFill, borderRadius: radius.md, paddingVertical: spacing.sm, marginTop: spacing.sm,
   },
   createSaveBtnText: { ...type.label, color: colors.onPrimary },
