@@ -222,15 +222,22 @@ describe('T1-02 / T2-10 - the remaining raw-library paths in this lane', () => {
     expect(src).toContain('rankSwaps(ex, pool,');
   });
 
-  test('the heatmap fingerprint recomputes through the SAME generation filter, block-scoped', () => {
+  test('the heatmap fingerprint recomputes through the SAME generation filter, block-scoped, honest on failure', () => {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'VolumeHeatmapScreen.js'), 'utf8');
-    expect(src).toContain('filterLibraryForGeneration(allExercises, intentState).library');
+    expect(src).toContain('filterLibraryForGeneration(allExercises, scoped).library');
     expect(src).toContain('exerciseLibrary: generationLibrary');
     // Round 7 (R6-1's class, one consumer along): the SCOPED loader, so
     // a block-scoped avoidance is live here exactly as it was for the
     // generation this line claims to recompute.
     expect(src).toContain('loadScopedIntentState(user.id)');
     expect(src).not.toContain('loadExerciseIntentState(user.id, {})');
+    // Round 8 (A1): an unavailable lane read renders NO markers - never
+    // a raw-library recompute of a generation never built - and the
+    // recompute carries generation's structure and canonical-name
+    // inputs through generation's own exported paths.
+    expect(src).toContain('if (!scoped || scoped.unavailable || scoped.capability?.unavailable) {');
+    expect(src).toContain('canonicalNames: canonicalNameSet(allExercises),');
+    expect(src).toContain('demonstratedStructure: await readDemonstratedStructure(user.id, inputs?.daysPerWeek),');
   });
 
   test('R7-2: T1-02\'s SECOND named path - RoutineDetailScreen\'s divisionDiff/coverage - is rerouted too', () => {
@@ -241,9 +248,12 @@ describe('T1-02 / T2-10 - the remaining raw-library paths in this lane', () => {
     // train" as a cause it never checked.
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'RoutineDetailScreen.js'), 'utf8');
     expect(src).toContain('generationLibrary = filterLibraryForGeneration(all, scoped).library;');
-    expect(src).toContain('computeDivisionDiff({ ...inputs, exerciseLibrary: generationLibrary })');
-    expect(src).toContain('computeDivisionCoverage({ ...inputs, exerciseLibrary: generationLibrary })');
+    expect(src).toContain('computeDivisionDiff({ ...inputs, ...extras, exerciseLibrary: generationLibrary })');
+    expect(src).toContain('computeDivisionCoverage({ ...inputs, ...extras, exerciseLibrary: generationLibrary })');
     expect(src).not.toMatch(/computeDivision(Diff|Coverage)\(\{ \.\.\.inputs, exerciseLibrary: all \}\)/);
+    // Round 8 (A1): unavailable-lane honesty + generation's other inputs.
+    expect(src).toContain('if (!scoped || scoped.unavailable || scoped.capability?.unavailable) {');
+    expect(src).toContain('canonicalNames: canonicalNameSet(all),');
   });
 
   test('the coverage line no longer blames equipment alone', () => {

@@ -156,15 +156,16 @@ describe('the row resolves the FULL library exercise by id, not the partial rout
     expect(fn).toContain('refreshIntentState()');
   });
 
-  test('B3 (round 7): the mount effect owns the FIRST load - the focus listener skips its own registration focus', () => {
-    // The focus event also fires on initial mount, which doubled the
-    // first load beside the mount effect (and the reload is not free:
-    // the division recompute alone runs three generatePlan passes,
-    // 5.6 ms measured). Armed from the CURRENT focus state at
-    // registration, so a genuine return always loads and no ordering of
-    // mount effect vs focus event double-loads or skips a real return.
-    expect(SRC).toContain('focusLoadArmedRef.current = navigation.isFocused();');
-    expect(SRC).toContain('if (!focusLoadArmedRef.current) { focusLoadArmedRef.current = true; return; }');
+  test('B3 (round 8): the mount-adjacent focus is deduped by a burst window - a genuine return ALWAYS reloads', () => {
+    // Round 7's isFocused() arming misfired both ways (the round-8
+    // review read the navigation source): on a push the state already
+    // names the route focused when effects run, so the mount
+    // double-load survived; mounted unfocused, the first genuine focus
+    // was swallowed - the exact staleness R6-2 closed. The burst
+    // window's failure mode is one extra load, never staleness.
+    expect(SRC).toContain('lastMountLoadAtRef.current = Date.now();');
+    expect(SRC).toContain('if (Date.now() - lastMountLoadAtRef.current < 800) return;');
+    expect(SRC).not.toContain('navigation.isFocused()');
   });
 });
 

@@ -190,27 +190,43 @@ export default function VolumeHeatmapScreen() {
           // through the SAME generation filter the plan generator used -
           // this was one of two paths handing the engine the raw
           // library, so a capability-shaped plan diffed against an
-          // unconstrained recompute. Best-effort: a failed intent read
-          // falls back to the raw library, and the markers stay absent
-          // on any failure exactly as before.
-          let generationLibrary = allExercises;
+          // unconstrained recompute.
+          // Round 7 (R6-1's class): the SCOPED loader, so a block-scoped
+          // avoidance is live here exactly as it was for the generation.
+          // Round 8 (A1): an UNAVAILABLE lane read is a failed read -
+          // the old fallback rendered from the raw library, a
+          // fingerprint of a plan generation never built; the markers
+          // now stay absent instead. The recompute also carries
+          // generation's demonstrated-structure and canonical-name
+          // inputs through generation's own exported paths.
+          let scoped = null;
           try {
-            // Round 7 (R6-1's class, one consumer along): the SCOPED
-            // loader, so a block-scoped avoidance is live here exactly
-            // as it was for the generation this line claims to recompute
-            // - unscoped, it compared its block against null and the
-            // fingerprint kept movements generation dropped.
             // eslint-disable-next-line global-require
             const { loadScopedIntentState } = require('../lib/sessionEffective');
+            scoped = await loadScopedIntentState(user.id);
+          } catch (_) { scoped = null; }
+          if (!scoped || scoped.unavailable || scoped.capability?.unavailable) {
+            if (!isCurrentRequest()) return;
+            setDivisionMarkers(null);
+            setDivisionLabel(null);
+          } else {
             // eslint-disable-next-line global-require
             const { filterLibraryForGeneration } = require('../lib/exercise/generation');
-            const intentState = await loadScopedIntentState(user.id);
-            generationLibrary = filterLibraryForGeneration(allExercises, intentState).library;
-          } catch (_) { generationLibrary = allExercises; }
-          if (!isCurrentRequest()) return;
-          const diff = computeDivisionDiff({ ...inputs, exerciseLibrary: generationLibrary });
-          setDivisionMarkers(fingerprintMarkers(diff));
-          setDivisionLabel(GOAL_LABELS[goal] ?? null);
+            const generationLibrary = filterLibraryForGeneration(allExercises, scoped).library;
+            let extras = {};
+            try {
+              // eslint-disable-next-line global-require
+              const { readDemonstratedStructure, canonicalNameSet } = require('../lib/planAutoGen');
+              extras = {
+                canonicalNames: canonicalNameSet(allExercises),
+                demonstratedStructure: await readDemonstratedStructure(user.id, inputs?.daysPerWeek),
+              };
+            } catch (_) { extras = {}; }
+            if (!isCurrentRequest()) return;
+            const diff = computeDivisionDiff({ ...inputs, ...extras, exerciseLibrary: generationLibrary });
+            setDivisionMarkers(fingerprintMarkers(diff));
+            setDivisionLabel(GOAL_LABELS[goal] ?? null);
+          }
         } else {
           setDivisionMarkers(null);
           setDivisionLabel(null);

@@ -327,6 +327,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
     // rejection, so both are terminated here. Without this an unexpected
     // throw is an unhandled rejection: invisible in release, and it leaves
     // the screen mid-load with nothing on it.
+    lastMountLoadAtRef.current = Date.now();
     if (routineId) loadRoutine().catch((e) => logError('RoutineDetailScreen.loadRoutine', e, { routineId }));
     // C9: seed the intent state so a row already under an exclusion offers
     // "Allow again" straight away rather than only after a swap sheet opens.
@@ -339,30 +340,23 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // trains (it navigates to ActiveWorkout in another tab), so an episode
   // captured mid-session left the capability captions and the
   // serve-outcome memo speaking a pre-capture answer, with no refresh
-  // path short of popping the screen. The recompute costs under a
-  // millisecond (round-6 review measured the memo at 0.7 ms over a
-  // 300-exercise library), so a focus re-read is affordable. The focus
-  // event also fires on initial mount, doubling the first load with the
-  // effect above - both are idempotent reads into the same state, so the
-  // duplication is a cheap price for keeping the routineId-change path
-  // (which fires no focus event) intact.
-  // Round 7 (B3): the focus event also fires on initial mount, which
-  // doubled the first load beside the mount effect above - and the
-  // reload is not free (the division fingerprint recompute alone runs
-  // three generatePlan passes). The first focus after each
-  // registration is skipped; the mount effect owns that load, and the
-  // listener owns every RETURN to the screen.
-  const focusLoadArmedRef = useRef(false);
+  // path short of popping the screen.
+  // Round 8 (B3, replacing round 7's isFocused arming - the round-8
+  // review read the navigation source and showed that arming misfires
+  // both ways: on a push isFocused() is already true when effects run
+  // while the focus event arrives later, so the mount double-load
+  // survived; and a screen mounted unfocused swallowed its first
+  // genuine focus, which is the exact staleness R6-2 closed). The
+  // mount-adjacent focus is deduped by a short burst window instead:
+  // the mount effect stamps its load, and a focus event inside the
+  // window is that same mount's echo. The window's failure mode is one
+  // extra load (benign, the pre-B3 behaviour); a genuine return is
+  // seconds later and ALWAYS reloads - correctness over perfect
+  // dedupe, staleness never.
+  const lastMountLoadAtRef = useRef(0);
   useEffect(() => {
-    // Armed from the CURRENT focus state, not a constant: registered
-    // while already focused (a param change on-screen, or a mount whose
-    // focus event beat the listener), there is no pending mount-focus
-    // to skip and the next event is a genuine return; registered before
-    // focus settles, the first event is the mount's own and the mount
-    // effect owns that load.
-    focusLoadArmedRef.current = navigation.isFocused();
     const unsubscribe = navigation.addListener('focus', () => {
-      if (!focusLoadArmedRef.current) { focusLoadArmedRef.current = true; return; }
+      if (Date.now() - lastMountLoadAtRef.current < 800) return;
       if (routineId) loadRoutine().catch((e) => logError('RoutineDetailScreen.loadRoutine', e, { routineId }));
       refreshIntentState().catch((e) => logError('RoutineDetailScreen.refreshIntentState', e, { routineId }));
     });
@@ -421,21 +415,46 @@ export default function RoutineDetailScreen({ navigation, route }) {
         // built, and the coverage line named "how you train" as a cause
         // it never checked. Best-effort: a failed read falls back to the
         // raw library and the lines simply stay as before.
-        let generationLibrary = all;
+        let scoped = null;
         try {
           // eslint-disable-next-line global-require
           const { loadScopedIntentState } = require('../lib/sessionEffective');
+          scoped = await loadScopedIntentState(user.id);
+        } catch (_) { scoped = null; }
+        // Round 8 (A1): an UNAVAILABLE lane read is a failed read. The
+        // old fallback rendered the lines from the raw library - a
+        // fingerprint of a plan generation never built - so the lines
+        // now stay absent instead, which is this block's own stated
+        // posture for every other failure.
+        if (!scoped || scoped.unavailable || scoped.capability?.unavailable) {
+          setDivisionLine(null);
+          setDivisionGapLine(null);
+        } else {
           // eslint-disable-next-line global-require
           const { filterLibraryForGeneration } = require('../lib/exercise/generation');
-          const scoped = await loadScopedIntentState(user.id);
-          generationLibrary = filterLibraryForGeneration(all, scoped).library;
-        } catch (_) { generationLibrary = all; }
-        const diff = inputs ? computeDivisionDiff({ ...inputs, exerciseLibrary: generationLibrary }) : null;
-        setDivisionLine(diff ? divisionFingerprintLine(goal, diff) : null);
-        const coverage = inputs
-          ? computeDivisionCoverage({ ...inputs, exerciseLibrary: generationLibrary })
-          : null;
-        setDivisionGapLine(divisionCoverageLine(goal, coverage));
+          const generationLibrary = filterLibraryForGeneration(all, scoped).library;
+          // Round 8 (A1): the recompute carries generation's other
+          // inputs too - the demonstrated structure and the canonical
+          // name set - through the same exported code paths generation
+          // uses. The one input that is rebuild-time-only (reviewed
+          // replacement omissions, which live inside a continuity
+          // proposal) is stated on the scorecard, never approximated.
+          let extras = {};
+          try {
+            // eslint-disable-next-line global-require
+            const { readDemonstratedStructure, canonicalNameSet } = require('../lib/planAutoGen');
+            extras = {
+              canonicalNames: canonicalNameSet(all),
+              demonstratedStructure: await readDemonstratedStructure(user.id, inputs?.daysPerWeek),
+            };
+          } catch (_) { extras = {}; }
+          const diff = inputs ? computeDivisionDiff({ ...inputs, ...extras, exerciseLibrary: generationLibrary }) : null;
+          setDivisionLine(diff ? divisionFingerprintLine(goal, diff) : null);
+          const coverage = inputs
+            ? computeDivisionCoverage({ ...inputs, ...extras, exerciseLibrary: generationLibrary })
+            : null;
+          setDivisionGapLine(divisionCoverageLine(goal, coverage));
+        }
       } else {
         setDivisionLine(null);
         setDivisionGapLine(null);

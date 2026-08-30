@@ -544,7 +544,12 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
 }
 
 /** Every canonical name on this device, for the engine's fallback-pool gate. */
-function canonicalNameSet(allExercises, omittedIds = null) {
+// Exported (round 8, A1): the division fingerprint/coverage recompute
+// carries generation's canonical-name input through THIS code path
+// rather than approximating it. The reviewed-replacement omissions of
+// an original build are rebuild-time-only and stay unavailable to the
+// view-time recompute - stated on the scorecard, never approximated.
+export function canonicalNameSet(allExercises, omittedIds = null) {
   const names = new Set();
   for (const ex of allExercises ?? []) {
     if (omittedIds?.has(ex?.id)) continue;
