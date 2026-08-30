@@ -49,7 +49,10 @@ describe('CO-3: onward links use the quiet CO-2 link register, not a banner', ()
   test('renders as a pill row (onwardLink), reusing the planEditLink/volumeWhyToggle register', () => {
     expect(SOURCE).toMatch(/onwardLinksRow: \{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing\.sm \}/);
     expect(SOURCE).toMatch(/onwardLink: \{[\s\S]*borderRadius: radius\.full,[\s\S]*backgroundColor: colors\.surface2,/);
-    expect(SOURCE).toContain('onwardLinkText: { ...type.label, color: colors.textPrimary }');
+    // Round 13 (J5): the label carries the in-row wrapping idiom, so a
+    // long label at large type shrinks inside its pill instead of
+    // overflowing (R2-12's documented shape).
+    expect(SOURCE).toContain('onwardLinkText: { ...type.label, color: colors.textPrimary, flexShrink: 1, minWidth: 0 }');
   });
 
   test('the onward-link row style is never amber/primary tinted', () => {

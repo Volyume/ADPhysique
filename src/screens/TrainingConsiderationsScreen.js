@@ -207,17 +207,17 @@ const styles = StyleSheet.create({
   search: {
     ...type.body, borderWidth: 1, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.md,
-    minHeight: 44,
+    minHeight: spacing.xxxl,
   },
   row: {
     borderWidth: 1, borderRadius: radius.md, padding: spacing.md,
-    marginBottom: spacing.sm, minHeight: 44,
+    marginBottom: spacing.sm, minHeight: spacing.xxxl,
   },
   rowTitle: { ...type.bodyStrong },
   chip: { ...type.caption, marginTop: 2 },
   card: {
     borderWidth: 1, borderRadius: radius.md, padding: spacing.md,
-    marginBottom: spacing.sm, minHeight: 44,
+    marginBottom: spacing.sm, minHeight: spacing.xxxl,
   },
   cardTitle: { ...type.bodyStrong, marginBottom: 2 },
   cardWhy: { ...type.bodySm },
@@ -226,5 +226,5 @@ const styles = StyleSheet.create({
   proNote: {
     borderWidth: 1, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md,
   },
-  backRow: { minHeight: 44, justifyContent: 'center', marginBottom: spacing.sm },
+  backRow: { minHeight: spacing.xxxl, justifyContent: 'center', marginBottom: spacing.sm },
 });
