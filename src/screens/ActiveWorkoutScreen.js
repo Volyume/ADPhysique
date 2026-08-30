@@ -927,9 +927,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // reps on each side" proposal fired where it is MOST wrong: both
   // sides ruled out, not one. This asks the weaker question - does any
   // sided rule bear on this movement at all - so the prompt stays
-  // suppressed whichever way the carve resolves. Fails toward true
-  // (suppression) only via a real answer; a read failure answers false
-  // exactly as the note's own gate does.
+  // suppressed whichever way the carve resolves. This gate answers
+  // false on a failed or empty read - fine for a READER of it, and
+  // the note's gate does the same - but that is exactly why the ask
+  // effect holds on capabilityKnown BEFORE consulting it (round 18,
+  // R18-1): under D129 ruling 1 a rendered notice may stay silent on
+  // an unreadable input while an ACTION must wait, so the round-8
+  // analogy between this gate and the note's held only for readers.
   const sidedRuleBearsOnThis = (() => {
     if (!judgedExercise || !intentState?.capability || intentState.capability.empty) return false;
     try {
@@ -1410,21 +1414,51 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             // row the user chose themselves (_userAdded - a picker add
             // or a manual swap) is the user's own to remove: neither
             // records an excusal here.
-            // eslint-disable-next-line global-require
-            const { removalExcusalConflicts } = require('../lib/capability/effective');
-            const removalDefinite = removalExcusalConflicts(constraintConflicts);
-            if (!removedTemp && !removedEntry?._userAdded && removalDefinite.length
+            // Round 18 (A15): judged on a FRESH capability read at
+            // write time, like the completion writer - the screen's
+            // own constraintConflicts is pending-gated, so a removal
+            // during the mount window (or under a transient read
+            // failure the focus reload later recovers from) answered
+            // [] and a legitimate excusal was silently missed. The
+            // resolver cannot reject (it returns stale-known or
+            // unknown-empty on failure), and both failure shapes
+            // yield no conflicts here - the same conservative
+            // direction as before, now only for reads that genuinely
+            // know nothing. The judged row is re-fetched the same way
+            // the render-scope judgement resolves it; async on
+            // purpose - the write is best-effort and the UI removal
+            // below must not wait on it.
+            if (!removedTemp && !removedEntry?._userAdded
               && user?.id && activeWorkout?.id && exercise?.id) {
-              // eslint-disable-next-line global-require
-              const { appendSessionConstraintEffects } = require('../lib/database');
-              appendSessionConstraintEffects(user.id, activeWorkout.id, [{
-                slot: currentExerciseIndex,
-                // R10-1: the record keys per planned slot.
-                rowId: removedEntry?.routineExercise?.id ?? null,
-                exerciseFrom: exercise.id,
-                effect: 'omitted',
-                constraintIds: removalDefinite.map(c => c.constraintId),
-              }]).catch(() => { /* best effort; completion re-derives */ });
+              // removedRowId from the conversion above: with removedTemp
+              // null it is exactly this row's planned-slot id.
+              const removedSlot = currentExerciseIndex;
+              const removedExerciseId = exercise.id;
+              const judgedNow = judgedExercise;
+              (async () => {
+                try {
+                  // eslint-disable-next-line global-require
+                  const { loadCapabilityResolveState } = require('../lib/capability/resolve');
+                  // eslint-disable-next-line global-require
+                  const { episodeConflicts, removalExcusalConflicts } = require('../lib/capability/effective');
+                  // eslint-disable-next-line global-require
+                  const { getExerciseById, appendSessionConstraintEffects } = require('../lib/database');
+                  const fresh = await loadCapabilityResolveState(user.id, {});
+                  const row = judgedNow
+                    ?? (await getExerciseById(removedExerciseId).catch(() => null))
+                    ?? { id: removedExerciseId };
+                  const removalDefinite = removalExcusalConflicts(episodeConflicts(fresh, row));
+                  if (!removalDefinite.length) return;
+                  await appendSessionConstraintEffects(user.id, activeWorkout.id, [{
+                    slot: removedSlot,
+                    // R10-1: the record keys per planned slot.
+                    rowId: removedRowId,
+                    exerciseFrom: removedExerciseId,
+                    effect: 'omitted',
+                    constraintIds: removalDefinite.map(c => c.constraintId),
+                  }]);
+                } catch (_) { /* best effort; completion re-derives */ }
+              })();
             }
             cancelAutoAdvance();
             const store = useAppStore.getState();
@@ -1818,6 +1852,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // effect re-runs and asks (or stays suppressed) once they settle.
     if (!resolvedExercise || resolvedExercise.id !== exercise.id) return;
     if (!intentState) return;
+    // Round 18 (R18-1): presence is not knowledge. The round-17 terms
+    // above pass on a state the app could NOT read - a cold-start read
+    // failure hands the effect an unknown-empty capability state
+    // (unavailable, nothing known), the suppression gate answers false
+    // off it, and the ask fired for exactly the user it must never
+    // fire for, then self-tagged durably. Same for a judgement row the
+    // resolve could not fetch: no demand columns, no answer. An ACTION
+    // holds until the app actually KNOWS (D129 ruling 1, D130); both
+    // terms sit before the gate and before the self-tag, and both
+    // inputs are deps, so a later successful read re-runs this and
+    // asks (or suppresses) on real knowledge. Cost stated on the
+    // A11/A15 rows: under a persistent read failure the per-side
+    // suggestion stays silent for the session - the conservative
+    // direction the ruling demands.
+    // eslint-disable-next-line global-require
+    const { capabilityKnown } = require('../lib/capability/resolve');
+    if (!capabilityKnown(intentState.capability)) return;
+    if (!resolvedExercise.row) return;
     // Laterality verification (founder order 2026-08-21): never PROPOSE
     // a both-sides flow for a movement a sided rule bears on - "do the
     // same reps on each side" would be asking for work the user has
@@ -3549,18 +3601,21 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // effects writes nothing. Best-effort: a failure here never blocks
       // the finish.
       try {
-        // Round 3 (QUALIFIED item 9), reason updated round 17: a FRESH
-        // capability read, not the screen's intentState. The original
-        // staleness rationale is gone (the state reloads on focus since
-        // R14-2), but the fresh read stays the right call: the finish
-        // must judge on the newest facts regardless of what the screen
-        // last rendered, and it costs one read at session end. Falls
-        // back to the screen state on failure; both paths still excuse
-        // only on definite applied conflicts.
+        // Round 3 (QUALIFIED item 9), reason updated round 17, comment
+        // corrected round 18: a FRESH capability read, not the screen's
+        // intentState - the finish must judge on the newest facts
+        // regardless of what the screen last rendered, and it costs one
+        // read at session end. The resolver cannot reject (its whole
+        // body is one try/catch): a failed read returns the stale-known
+        // snapshot (usable) or the unknown-empty shape, which the
+        // `!capState.empty` gate below skips - so nothing is excused on
+        // a read that knows nothing. The round-17 claim of a
+        // fallback-to-screen-state .catch described a path that could
+        // never run; it is gone.
         // eslint-disable-next-line global-require
         const { loadCapabilityResolveState } = require('../lib/capability/resolve');
         const capState = user?.id
-          ? await loadCapabilityResolveState(user.id, {}).catch(() => intentState?.capability ?? null)
+          ? await loadCapabilityResolveState(user.id, {})
           : null;
         if (user?.id && activeWorkout?.id) {
           let entries = [];

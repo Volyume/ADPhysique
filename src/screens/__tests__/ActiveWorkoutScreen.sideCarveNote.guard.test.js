@@ -199,7 +199,11 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
   });
 
   test('the removal hook stamps its entry with the slot\'s planned-row id', () => {
-    expect(SRC).toContain("rowId: removedEntry?.routineExercise?.id ?? null,");
+    // Round 18 (A15): the writer moved to a fresh-read async block; the
+    // slot id is captured at tap time from the conversion's own
+    // derivation (removedTemp is null on this path, so removedRowId IS
+    // the planned-row id) and stamped verbatim.
+    expect(SRC).toContain('rowId: removedRowId,');
   });
 
   test('R10-2/R11-4: EVERY manual swap makes the row the user\'s own; a substitute swap also clears the marker and amends the entry', () => {
@@ -240,9 +244,12 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
     // "Volyume doesn't know yet". The gate now consumes
     // removalExcusalConflicts (capability/effective.js), the same
     // certainty and choice gates the completion writer applies.
-    expect(SRC).toContain("const { removalExcusalConflicts } = require('../lib/capability/effective');");
-    expect(SRC).toContain('const removalDefinite = removalExcusalConflicts(constraintConflicts);');
-    expect(SRC).toContain("if (!removedTemp && !removedEntry?._userAdded && removalDefinite.length");
+    // Round 18 (A15): the shared gate now takes the FRESH read's
+    // conflicts (the pending-gated screen state is no longer consulted);
+    // the definite-only and refusal terms are unchanged.
+    expect(SRC).toContain('const removalDefinite = removalExcusalConflicts(episodeConflicts(fresh, row));');
+    expect(SRC).toContain("if (!removedTemp && !removedEntry?._userAdded");
+    expect(SRC).toContain('if (!removalDefinite.length) return;');
     expect(SRC).toContain('constraintIds: removalDefinite.map(c => c.constraintId),');
     // The old unfiltered gate is gone.
     expect(SRC).not.toContain("if (constraintConflicts.length\n              && constraintConflicts.every(c => c.row?.effectiveChoice === 'applied'");
@@ -312,10 +319,75 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
     expect(readyA).toBeLessThan(gateSite);
     expect(readyB).toBeLessThan(gateSite);
     expect(gateSite).toBeLessThan(tagSite);
+    // Round 18 (R18-1): presence was not knowledge - an unknown-empty
+    // capability state (a cold-start read failure) and a judgement row
+    // the resolve could not fetch both PASSED the round-17 terms, the
+    // gate answered its permissive false off them, and the ask fired
+    // then durably self-tagged. The two knowledge terms sit between
+    // the presence terms and the gate. The fail DIRECTION of
+    // capabilityKnown itself is driven below, not source-pinned - an
+    // ordering pin cannot see which way a gate answers (I6, round 18).
+    const readyC = SRC.indexOf('if (!capabilityKnown(intentState.capability)) return;', effectSite);
+    const readyD = SRC.indexOf('if (!resolvedExercise.row) return;', effectSite);
+    expect(readyC).toBeGreaterThan(readyB);
+    expect(readyC).toBeLessThan(gateSite);
+    expect(readyD).toBeGreaterThan(readyB);
+    expect(readyD).toBeLessThan(gateSite);
     // And both readiness reads are deps, so the effect re-runs when
     // they settle.
     const deps = SRC.slice(tagSite, tagSite + 1400);
     expect(deps).toContain('sidedRuleBearsOnThis, resolvedExercise, intentState]);');
+  });
+
+  test('R18-1 driven: capabilityKnown answers false for exactly the shapes the resolver cannot vouch for', () => {
+    // The resolver returns three shapes and only three
+    // (capability/resolve.js, loadCapabilityResolveState): a successful
+    // read, a stale-but-known snapshot, and unknown-empty. Driven
+    // against the REAL loader with a failing then healthy database read
+    // - the fail direction the ordering pin above cannot see.
+    jest.resetModules();
+    let shouldFail = true;
+    jest.doMock('../../lib/database', () => ({
+      getCapabilityConstraints: jest.fn(() => (shouldFail
+        ? Promise.reject(new Error('db busy'))
+        : Promise.resolve([]))),
+    }));
+    // eslint-disable-next-line global-require
+    const resolve = require('../../lib/capability/resolve');
+    resolve._resetCapabilityResolveCache();
+    return (async () => {
+      // Cold start, read fails, nothing known: NOT usable - the ask holds.
+      const unknownEmpty = await resolve.loadCapabilityResolveState('u1', {});
+      expect(unknownEmpty.unavailable).toBe(true);
+      expect(resolve.capabilityKnown(unknownEmpty)).toBe(false);
+      // A successful read - even of an EMPTY rule set - IS knowledge.
+      shouldFail = false;
+      const healthy = await resolve.loadCapabilityResolveState('u1', {});
+      expect(resolve.capabilityKnown(healthy)).toBe(true);
+      // A later failure serves the stale-known snapshot: still knowledge
+      // (CAP-17 - the round-18 review proved stale-known suppresses
+      // correctly through the gate; holding on it would over-suppress).
+      shouldFail = true;
+      const staleKnown = await resolve.loadCapabilityResolveState('u1', {});
+      expect(staleKnown.stale).toBe(true);
+      expect(resolve.capabilityKnown(staleKnown)).toBe(true);
+      // No state at all (the whole lane load rejected): not knowledge.
+      expect(resolve.capabilityKnown(null)).toBe(false);
+      jest.dontMock('../../lib/database');
+    })();
+  });
+
+  test('R18 (A15): the removal excusal writer judges on a FRESH read at write time', () => {
+    // The screen's constraintConflicts is pending-gated; the writer no
+    // longer consumes it. Like the completion writer, it takes its own
+    // read at the moment it acts - both failure shapes yield no
+    // conflicts, so nothing is excused on a read that knows nothing.
+    const site = SRC.indexOf('if (!removedTemp && !removedEntry?._userAdded');
+    expect(site).toBeGreaterThan(-1);
+    const window = SRC.slice(site, site + 2200);
+    expect(window).toContain('const fresh = await loadCapabilityResolveState(user.id, {});');
+    expect(window).toContain('removalExcusalConflicts(episodeConflicts(fresh, row))');
+    expect(window).not.toContain('removalExcusalConflicts(constraintConflicts)');
   });
 
   test('R10-3: completion passes the session\'s performed ids, outside the capState gate', () => {

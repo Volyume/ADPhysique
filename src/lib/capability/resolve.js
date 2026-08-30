@@ -257,6 +257,28 @@ export function emptyCapabilityState(atMs = null) {
   return buildCapabilityResolveState([], { atMs: atMs ?? Date.now() });
 }
 
+/**
+ * Round 18 (R18-1): does this state carry a USABLE answer - one an
+ * ACTION may consult? loadCapabilityResolveState returns exactly three
+ * shapes: a successful read (no `unavailable`), a stale-but-known
+ * snapshot (`unavailable: true, stale: true` - the session proved this
+ * state earlier, so it is knowledge), and unknown-empty
+ * (`unavailable: true`, no `stale` - the read failed with nothing
+ * known). Only the last is NOT knowledge. D129 ruling 1's posture
+ * split: a rendered notice may stay silent on a pending or failed
+ * read, but an ACTION must hold until the app actually knows - the
+ * round-17 readiness guards tested presence, so an unknown-empty state
+ * passed them and the both-sides ask fired for a user whose sided rule
+ * the app simply could not read. Note the deliberate asymmetry with
+ * `empty`: a stale-known snapshot of a user with NO rules is
+ * unavailable AND empty yet still known - `stale` is the mechanism's
+ * own marker for "known", so this predicate reads it, not `empty`.
+ */
+export function capabilityKnown(state) {
+  if (!state) return false;
+  return !state.unavailable || state.stale === true;
+}
+
 // Last known good state per user, this session only (section 9.6): a read
 // failure serves the state the session already proved rather than
 // half-state, and `unavailable` tells the UI layer the truth either way.
