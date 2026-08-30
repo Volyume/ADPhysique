@@ -24,13 +24,23 @@ const path = require('path');
 
 const read = (rel) => fs.readFileSync(path.join(__dirname, '..', '..', rel), 'utf8');
 
+// Per style: [name, exact count of `styles.<name>` APPLICATION sites].
+// Round 18 (I6): the round-17 guard pinned style DEFINITIONS only -
+// deleting `style={styles.actionBtn}` from a button while leaving the
+// style block passed it. Definitions inside StyleSheet.create read
+// `name: {`; applications read `styles.name` - so an exact count of the
+// latter pins that every enumerated floor actually reaches its
+// control, and a deleted (or duplicated) application fails loudly.
 const ENUMERATED = [
-  ['components/ExercisePickerModal.js', ['pickerAllowAgainBtn', 'createNewBtn', 'showExcludedRow', 'createSaveBtn']],
-  ['screens/TrainingConsiderationsScreen.js', ['search', 'row', 'card', 'backRow']],
+  ['components/ExercisePickerModal.js', [['pickerAllowAgainBtn', 1], ['createNewBtn', 1], ['showExcludedRow', 2], ['createSaveBtn', 1]]],
+  ['screens/TrainingConsiderationsScreen.js', [['search', 1], ['row', 1], ['card', 2], ['backRow', 1]]],
   // Round 17 (J2): the install-conflict sheet's three sm buttons were
   // ~34dp effective (padding-sized, no hitSlop - invisible to the
-  // numeric-minHeight strays check, stated on the row).
-  ['components/ExerciseConflictSheet.js', ['actionBtn']],
+  // numeric-minHeight strays check, stated on the row). Round 18: the
+  // md primary ("Done"/"Finish later") was ~46dp - the fourth button on
+  // the same sheet, missed by the same round that floored the other
+  // three.
+  ['components/ExerciseConflictSheet.js', [['actionBtn', 3], ['doneBtn', 1]]],
 ];
 
 // Numeric minHeights that pre-date this guard and sit at or above 48:
@@ -47,7 +57,7 @@ const OFF_SCALE_ALLOWED = {
 describe('J2: the lane\'s enumerated touch targets sit on the 48 token', () => {
   test.each(ENUMERATED)('%s', (rel, styleNames) => {
     const src = read(rel);
-    for (const name of styleNames) {
+    for (const [name, applications] of styleNames) {
       // A style can be defined twice (static sheet + live-theme
       // override, e.g. createNewBtn); the geometry lives in whichever
       // block carries minHeight, so at least one must be on the token.
@@ -57,6 +67,10 @@ describe('J2: the lane\'s enumerated touch targets sit on the 48 token', () => {
       expect({ file: rel, style: name, found: sites.length > 0 }).toEqual({ file: rel, style: name, found: true });
       const onToken = sites.some((site) => src.slice(site, src.indexOf('},', site)).includes('minHeight: spacing.xxxl'));
       expect({ file: rel, style: name, onToken }).toEqual({ file: rel, style: name, onToken: true });
+      // Round 18 (I6): the floor must REACH its controls - exact
+      // application count, so a dropped `style={styles.X}` fails.
+      const applied = (src.match(new RegExp(`styles\\.${name}\\b`, 'g')) ?? []).length;
+      expect({ file: rel, style: name, applied }).toEqual({ file: rel, style: name, applied: applications });
     }
     const numeric = src.match(/minHeight: \d+/g) ?? [];
     const allowed = OFF_SCALE_ALLOWED[rel] ?? {};

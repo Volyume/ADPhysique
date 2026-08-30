@@ -244,7 +244,10 @@ const styles = StyleSheet.create({
   // wrapped row keeps every control at full height.
   actionBtn: { minHeight: spacing.xxxl },
   footnote: { ...type.captionTight, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
-  doneBtn: { marginHorizontal: spacing.lg, marginTop: spacing.md },
+  // Round 18 (J2): the md button is ~46dp effective (12+22+12) with no
+  // hitSlop - 2dp under the styling law's 48 minimum, on the very sheet
+  // round 17 floored. Same per-call-site floor as the sm actions above.
+  doneBtn: { marginHorizontal: spacing.lg, marginTop: spacing.md, minHeight: spacing.xxxl },
 });
 
 function buildLiveStyles(t) {
