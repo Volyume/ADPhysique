@@ -4155,3 +4155,83 @@ the substituted-only branch - the mixed sentence never carried the
 attribution. FOUNDER items unchanged (duplicate migrate_152
 filenames, README ledger rows, CLAUDE.md counts). X1 = NO and X2 =
 pending, as ever.
+
+## D125 — CC33 review round 13 closures + D124 corrections (lead-ruled under D33, 2026-08-30)
+
+Adversarial review round 13 (on main 3adfb9d8): 10 BROKEN rows from 4
+roots, 4 QUALIFIED, 0 STOP. Two of the four roots were the same defect
+CLASSES as earlier rounds surfacing at yet another instance, so round
+13 closes the classes, not only the instances. Rulings:
+
+1. **The keyless-slot class is closed at the CHOKEPOINT (R13-1,
+   correcting D124 ruling 3 and the round-12 records).** Home's own
+   repeat card was the FOURTH keyless session construction - rounds
+   11-12's "every live slot has an id" claims were each one source
+   short, and per-site minting is demonstrably unwinnable. The store's
+   withSetsArrays chokepoint (every fresh, restored or mutated session
+   list passes through it) now mints a slot id for any keyless entry,
+   idempotently - a fifth construction cannot ship keyless, and an
+   old pre-upgrade snapshot heals on restore. Home's branch also mints
+   per-site with the previous session's working-set count (mirroring
+   repeat-as-is), so the target line stays honest. Driven at the store;
+   the site source-pinned.
+
+2. **One shared excusal gate for BOTH writers (R13-2, correcting D124
+   ruling 2's parity claim and revising the round-12 held shape).**
+   The parity claim was false twice over: the completion writer's
+   projection dropped _userAdded (so a user's add-anyway row was
+   excused if left unlogged but not if deleted - fabricated
+   CONSTRAINED evidence off the user's own choice, the class D123
+   ruling 5 rejected), and the two writers disagreed on a held
+   co-driver (removal rejected the whole answer; completion excused on
+   the live rule). Both writers now consume removalExcusalConflicts,
+   which drops HELD rules BEFORE the applied test - the D120 ruling 2
+   direction (hold suspends a rule's OWN automation; a held rule
+   itself excuses nothing per D112 R8, but it neither vetoes the live
+   applied rule's excusal) and the shape the completion writer has
+   always been pinned to - and computeCompletionEffects refuses
+   user-chosen rows exactly as the removal writer does. The round-12
+   removal behaviour (reject on held co-driver) is REVISED, not
+   defended: parity on the ruled semantics outranks accidental extra
+   conservatism that made the record depend on whether the user
+   deleted a row or merely left it unlogged. Driven on one fixture at
+   both writers, constraintIds equal.
+
+3. **Erasure reaches the third delete path (R13-3).** "Clear workout
+   history" promises "permanently deletes all your logged sessions"
+   and left every per-session capability record live, synced, and in
+   the Article 20 export. The same tombstone discipline now runs
+   inside its transaction, scoped by user. Ruled lead-side under D33:
+   this strengthens erasure (more deletion, not less), touches no
+   consent gate, PII flow or residency, and is additive and
+   idempotent - the Section 2 GDPR gate binds against WEAKENING.
+   Driven.
+
+4. **48dp on the directory too (R13-4).** TrainingConsiderations
+   carried four off-scale minHeight 44 literals, two of them genuinely
+   44dp effective (the back control and the search field) on the
+   surface built for exactly the users with the highest incidence of
+   tremor and reduced dexterity. All four tokenised to spacing.xxxl.
+
+5. **A definite conflict on the substitute outranks the marker line
+   (B5).** The "Temporarily in for X" branch returned before any
+   conflict evaluation, so a rule captured mid-session against the
+   substitute itself was never spoken on the row it bears on. The
+   definite lists are computed first and the marker line renders only
+   when none exists; with unknown-only conflicts (which drive
+   nothing) the marker stays. One mention per surface holds - the row
+   speaks the more consequential truth.
+
+6. **The receipt's pill labels wrap safely (J5).** onwardLinkText
+   gains the codebase's own documented in-row idiom (flexShrink 1,
+   minWidth 0 - R2-12), so a long label at large accessibility type
+   shrinks inside its pill instead of overflowing.
+
+Stated, not closed: I6's driven-vs-source split for the removal
+caller's remaining composition (marker/user-chosen terms are source-
+pinned; the shared gate itself is driven at both writers now); the
+ambiguous-amend and one-shot-write conditions on I8 stand, with the
+round-12 reachability clause corrected by ruling 1 (the fourth source
+made it false; the chokepoint makes it true going forward). FOUNDER
+items unchanged (duplicate migrate_152 filenames, README ledger rows,
+CLAUDE.md counts). X1 = NO and X2 = pending, as ever.

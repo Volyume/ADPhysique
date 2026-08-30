@@ -1100,8 +1100,27 @@ tombstones into sync and the export), R12-5 the receipt's
 How-you-train link rises to 48dp (two sibling links rise with it - a
 visible change for the founder walk), C1/I6 the sweep gains the
 resolver/directory identifiers with WeeklyCheckIn's exclusion RULED.
-Five new driven pins. NEXT: settled full gate + merge, adversarial
-review ROUND 13, then S5 gate + device checklist.
+Five new driven pins. ROUND 13 RAN on 3adfb9d8: NOT CLEAN - 10
+BROKEN from 4 roots + 4 QUALIFIED, 0 STOP - two roots were earlier
+defect classes at yet another instance, so the closures close the
+CLASSES (D125, correcting D124 rulings 2 and 3): R13-1 Home's repeat
+card was the FOURTH keyless slot construction - per-site minting is
+unwinnable, so the store's withSetsArrays chokepoint now mints for
+any keyless entry on every fresh/restored/mutated list (fifth
+construction impossible; old snapshots heal; Home's site also mints
+with the honest working-set count), R13-2 ONE shared excusal gate at
+both writers (the completion projection dropped _userAdded - an
+add-anyway row was excused if left unlogged but not if deleted - and
+the writers disagreed on a held co-driver; held now drops BEFORE the
+applied test per D120 facts-vs-automation, the round-12 reject shape
+revised not defended; driven at both writers, constraintIds equal),
+R13-3 Clear workout history tombstones the effects records (the
+THIRD delete path; erasure strengthened, ruled lead-side), R13-4
+TrainingConsiderations' four 44dp literals tokenised to 48, B5 a
+definite conflict on the SUBSTITUTE outranks the marker line, J5 the
+receipt's pill labels carry the R2-12 wrapping idiom. NEXT: settled
+full gate + merge, adversarial review ROUND 14, then S5 gate + device
+checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):
