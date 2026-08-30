@@ -258,12 +258,21 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // quote both the trigger names and the button literal.
     const fs2 = require('fs');
     const path2 = require('path');
+    // Round 10 (I6): triggers widened again - the compute and write
+    // identifiers reach only the rewrite/proposal surfaces, and
+    // FreeStarterScreen's capability alert (reached through the lane's
+    // read identifiers) wore the decline word on a no-op outside the
+    // sweep. Any file touching the lane's loaders is swept now.
     const TRIGGERS = [
       'computeCapabilityPlanRewrite',
       'proposeEffectiveDiff',
       'applyCapabilityPlanRewrite',
       'recordEffectiveChoice',
+      'loadCapabilityResolveState',
+      'baselineBlockedMuscles',
     ];
+    // Both quote forms of the button literal (round 10, I6 condition 2).
+    const LITERALS = ["text: 'Not now'", 'text: "Not now"'];
     const files = [];
     const walk = (dir) => {
       for (const entry of fs2.readdirSync(dir, { withFileTypes: true })) {
@@ -287,12 +296,19 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
       if (!TRIGGERS.some((t) => src.includes(t))) continue;
       sweptAny = true;
       const rel = path2.relative(path2.join(__dirname, '..', '..'), f);
-      let idx = src.indexOf("text: 'Not now'");
-      while (idx !== -1) {
-        const window = src.slice(idx, idx + 500);
-        expect({ file: rel, reachesDecline: window.includes('declineNow') })
-          .toEqual({ file: rel, reachesDecline: true });
-        idx = src.indexOf("text: 'Not now'", idx + 1);
+      for (const literal of LITERALS) {
+        let idx = src.indexOf(literal);
+        while (idx !== -1) {
+          // Round 10 (I6 condition 3): the window is bounded to THIS
+          // button - it ends at the next button's own `text:` key - so a
+          // declineNow that merely appears nearby in another handler can
+          // no longer false-pass the check.
+          const nextText = src.indexOf('text:', idx + literal.length);
+          const window = src.slice(idx, nextText === -1 ? idx + 500 : Math.min(nextText, idx + 500));
+          expect({ file: rel, reachesDecline: window.includes('declineNow') })
+            .toEqual({ file: rel, reachesDecline: true });
+          idx = src.indexOf(literal, idx + 1);
+        }
       }
     }
     // The triggers still match real surfaces (a rename that emptied the

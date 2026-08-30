@@ -242,7 +242,12 @@ export default function FreeStarterScreen({ navigation, route }) {
           `${recOutside === 1 ? '1 movement in this plan sits' : `${recOutside} movements in this plan sit`} outside how you train. You can swap ${recOutside === 1 ? 'it' : 'them'} once the plan is running.`,
           fromFirstRun
             ? [
-              { text: 'Not now', style: 'cancel', onPress: () => resolve('hold') },
+              // Round 10 (C1): 'Not now' is the capability lane's
+              // decline word (it writes 'declined' on the proposal
+              // surfaces), and this cancel writes nothing - the same
+              // one-phrase-per-meaning blur D119/D120 closed twice.
+              // Action-phrased like its sibling instead.
+              { text: "Don't start it", style: 'cancel', onPress: () => resolve('hold') },
               { text: 'Start it anyway', onPress: () => resolve('start') },
             ]
             : [
