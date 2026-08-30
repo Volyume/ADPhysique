@@ -244,29 +244,60 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     expect(screen).not.toContain('this affects every exercise in');
   });
 
-  test('R8-3: no capability-rewrite surface wears "Not now" on a no-op - tree-wide, not one file', () => {
+  test('R8-3/R9: no capability-rewrite surface wears "Not now" on a no-op - recursive and write-side-triggered', () => {
     // R7-5's guard read HowYouTrainScreen only, and the identical
     // rewrite alert on PlansScreen kept the decline's word on a cancel
-    // that writes nothing. Every file that offers the capability plan
-    // rewrite is swept: 'Not now' may appear only where the press
-    // reaches the decline write.
+    // that writes nothing. Round 8 swept the two directories; round 9
+    // (C1/I6) closed the sweep's own two gaps: it now RECURSES into
+    // subdirectories (components/auth, components/food and friends were
+    // outside the flat readdir, so a surface moved or created in a
+    // folder silently left the sweep) and triggers on the WRITE-side
+    // identifiers too (applyCapabilityPlanRewrite, recordEffectiveChoice)
+    // so a surface that skips the compute helpers but writes the choice
+    // is still swept. __tests__ folders are excluded: pins legitimately
+    // quote both the trigger names and the button literal.
     const fs2 = require('fs');
     const path2 = require('path');
-    for (const dir of ['screens', 'components']) {
-      const full = path2.join(__dirname, '..', '..', dir);
-      for (const f of fs2.readdirSync(full)) {
-        if (!f.endsWith('.js')) continue;
-        const src = fs2.readFileSync(path2.join(full, f), 'utf8');
-        if (!src.includes('computeCapabilityPlanRewrite') && !src.includes('proposeEffectiveDiff')) continue;
-        let idx = src.indexOf("text: 'Not now'");
-        while (idx !== -1) {
-          const window = src.slice(idx, idx + 500);
-          expect({ file: f, reachesDecline: window.includes('declineNow') })
-            .toEqual({ file: f, reachesDecline: true });
-          idx = src.indexOf("text: 'Not now'", idx + 1);
+    const TRIGGERS = [
+      'computeCapabilityPlanRewrite',
+      'proposeEffectiveDiff',
+      'applyCapabilityPlanRewrite',
+      'recordEffectiveChoice',
+    ];
+    const files = [];
+    const walk = (dir) => {
+      for (const entry of fs2.readdirSync(dir, { withFileTypes: true })) {
+        const full = path2.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === '__tests__') continue;
+          walk(full);
+        } else if (entry.name.endsWith('.js')) {
+          files.push(full);
         }
       }
+    };
+    walk(path2.join(__dirname, '..', '..', 'screens'));
+    walk(path2.join(__dirname, '..', '..', 'components'));
+    // The walk really walked: the tree holds 200+ product files today,
+    // so a broken path resolving to a near-empty list must fail loudly.
+    expect(files.length).toBeGreaterThan(150);
+    let sweptAny = false;
+    for (const f of files) {
+      const src = fs2.readFileSync(f, 'utf8');
+      if (!TRIGGERS.some((t) => src.includes(t))) continue;
+      sweptAny = true;
+      const rel = path2.relative(path2.join(__dirname, '..', '..'), f);
+      let idx = src.indexOf("text: 'Not now'");
+      while (idx !== -1) {
+        const window = src.slice(idx, idx + 500);
+        expect({ file: rel, reachesDecline: window.includes('declineNow') })
+          .toEqual({ file: rel, reachesDecline: true });
+        idx = src.indexOf("text: 'Not now'", idx + 1);
+      }
     }
+    // The triggers still match real surfaces (a rename that emptied the
+    // sweep would otherwise pass vacuously).
+    expect(sweptAny).toBe(true);
   });
 
   test('R7-5: "Not now" appears ONLY on the button that declines - one phrase per meaning', () => {
