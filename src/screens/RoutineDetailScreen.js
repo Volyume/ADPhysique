@@ -413,8 +413,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
         // intent state (loadScopedIntentState, the R6-1 loader). Fed the
         // raw library, the fingerprint described a plan generation never
         // built, and the coverage line named "how you train" as a cause
-        // it never checked. Best-effort: a failed read falls back to the
-        // raw library and the lines simply stay as before.
+        // it never checked. Best-effort on failure: the lines render
+        // ABSENT (round 8's A1 posture, stated below) - the round-7
+        // wording here claimed a raw-library fallback that no longer
+        // exists (round 10, contradiction class of evidence rule 2).
         let scoped = null;
         try {
           // eslint-disable-next-line global-require
