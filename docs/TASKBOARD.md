@@ -1020,8 +1020,25 @@ canonical-name inputs and renders nothing on an unavailable read, B3
 re-closed with a burst window (isFocused premise disproven from the
 navigation source), I8 serve effects source-tagged + self-correcting
 (real-DB pin), J2/J5 alert rows bounded horizontally (long pairs
-stack, rows wrap, buttons shrink). NEXT: settled full gate + merge,
-adversarial review ROUND 9, then S5 gate + device checklist.
+stack, rows wrap, buttons shrink). ROUND 9 RAN on 71702dce: NOT CLEAN
+- 1 BROKEN + 9 QUALIFIED, 0 STOP - the strongest convergence yet, and
+the one broken row is round 8's own fix. Closed same day (D121): R9-1
+the replaceSource mechanism REVERTED (serve runs over the persisted
+reduced list, so a second pass cannot re-derive pass-1's omissions and
+the replace DELETED them; both scenarios D120 ruling 9 cited are
+unreachable; pure deduped merge restored, source tag forensics-only,
+driven two-pass real-DB pin; I8's revocation claim withdrawn on the
+row), B4/E1 Home renders one quiet non-tappable could-not-check line
+on the resolver's exact no-known-state signature (unavailable &&
+!stale, and the catch; stale-but-known serves per CAP-17), C1/I6 the
+'Not now' sweep made RECURSIVE (components/auth + components/food sat
+outside the flat readdir) and widened to the write-side identifiers,
+with walked-sanity + non-vacuity assertions, R8-1's stale suppression
+comment corrected in place. Conditions stated on rows: effects record
+corrects only FORWARD (manual re-add never revokes an omission -
+B6/B8/B9); division recompute reads TODAY's inputs (A1/I9); I4's two
+figures are different fixtures, both Node. NEXT: settled full gate +
+merge, adversarial review ROUND 10, then S5 gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

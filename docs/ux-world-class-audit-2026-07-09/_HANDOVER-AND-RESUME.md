@@ -1,24 +1,28 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-08-29 — CC33 S4 BUILT + ADVERSARIAL REVIEW LOOP (ROUNDS 1–8 CLOSED); ROUND 9 NEXT ★
+## ★ 2026-08-30 — CC33 S4 BUILT + ADVERSARIAL REVIEW LOOP (ROUNDS 1–9 CLOSED); ROUND 10 NEXT ★
 
 All five S4 waves are built and merged; the campaign is in the
 scorecard's adversarial review loop (SCORECARD.md, 93 rows + X1/X2:
 each round attacks every row, every broken claim becomes a work item,
-the review re-runs until the attack fails). Rounds 1–8 have run; every
+the review re-runs until the attack fails). Rounds 1–9 have run; every
 actionable finding was closed same-day at mechanism level — rulings
-D113 through D120, each later round also correcting any earlier
+D113 through D121, each later round also correcting any earlier
 ruling's claim it proved false (D115 corrects D114, D117 corrects
 D116, D118 corrects D117, D119 corrects D118's blast radii, D120
-corrects D119's and rules the hold-union fork). Pinning, stated precisely (round 6 called
+corrects D119's and rules the hold-union fork, D121 REVERTS D120's
+ruling 9 — round 9 proved the round-8 replaceSource mechanism deleted
+true records and both scenarios that justified it unreachable; the
+round-by-round trajectory is 12→7→5→4→9→6→6→4→1 roots, converging).
+Pinning, stated precisely (round 6 called
 out the earlier wording as broader than the pins): the engine and seam
 closures carry DRIVEN pins through the real entry points — since round
 6, through the REAL composed senior question; the screen-render halves
 are source-level guards per the screens' own established convention,
 each suite's header saying so. Live position and per-round detail: the
 CC33 entry in `docs/TASKBOARD.md` (single live task source). NEXT:
-full settled gate + merge, dispatch adversarial review ROUND 9 (Opus,
+full settled gate + merge, dispatch adversarial review ROUND 10 (Opus,
 read-only, per REVIEW-BRIEF.md); on a clean round, S5 close-out — full
 gate, device checklist IN CHAT, final scored report stating X1
 (REAL-DISABLED-USER-VALIDATED = NO) and X2 (founder walk pending)

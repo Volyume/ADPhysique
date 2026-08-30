@@ -3804,3 +3804,76 @@ optimism, J4's same-day/null-start collisions, I9's planned-vs-live
 mirror scope - all deliberate, all recorded on their rows. FOUNDER
 items unchanged (duplicate migrate_152 filenames, README ledger rows,
 CLAUDE.md counts). X1 = NO and X2 = pending, as ever.
+
+## D121 — CC33 review round 9 closures + D120 ruling 9 reverted (lead-ruled under D33, 2026-08-30)
+
+Adversarial review round 9 (on main 71702dce): 1 row BROKEN, 9
+QUALIFIED, 0 STOP - the strongest convergence yet, and the one broken
+row is round 8's OWN fix. Rulings:
+
+1. **D120 ruling 9 was wrong and is REVERTED (R9-1, I8).** The
+   round-8 replaceSource mechanism deleted true records: serve runs
+   over the PERSISTED reduced list, so a second pass's input no longer
+   contains pass-1's omitted rows, cannot re-derive their omission,
+   and the replace ERASED it - from the record four surfaces score
+   from. Both scenarios ruling 9 cited as justification are
+   UNREACHABLE: the served reduction is persisted (no later pass ever
+   sees the original rows again) and a session already carrying a
+   _capabilityTemp marker never re-serves (ActiveWorkoutScreen's
+   effective-apply guard returns before the pass). The append is
+   reverted to the pure deduped merge; the source:'serve' tag STAYS,
+   forensics only, replaced never. Driven two-pass pin on the real
+   database: both passes' omissions survive. The I8 row text is
+   corrected the same way - its "a declined-then-served row's omission
+   is revoked" claim was false and is withdrawn plainly.
+
+2. **The record corrects only forward, stated as a condition (B6/B8/
+   B9).** The real residual behind ruling 9's over-crediting worry is
+   the manual re-add path: a user re-adding an omitted movement never
+   revokes the recorded omission, so adherence surfaces are exactly as
+   true as the record - corrected forward by later serves, never
+   backward by manual edits. Stated on the rows, not patched: revoking
+   on manual re-add would require attributing the user's intent, and
+   the round-8 attribution probe already ruled that class out.
+
+3. **Home says when it could not check (B4/E1).** The resolver's
+   no-known-state failure synthesises an EMPTY state (unavailable
+   true, stale false - resolve.js section 9.6), so every capability
+   row on Home vanished silently and a failed check read as "nothing
+   going on". One quiet NON-tappable line in the lane's honesty
+   vocabulary ("Volyume could not check how you train just now.")
+   renders on exactly that signature, and on the effect's own catch.
+   Stale-but-KNOWN state keeps serving normally per CAP-17, exactly
+   as the tappable rows already do - the line must not fire on it.
+   Not tappable by ruling: it asks nothing, and How you train would
+   face the same failed read.
+
+4. **The sweep sweeps the whole tree (C1/I6).** The round-8 'Not now'
+   guard read only the top level of screens/ and components/ - the
+   flat readdir never entered components/auth, components/food and
+   friends, so a surface moved into a folder silently left the sweep -
+   and triggered only on the two compute identifiers. Now recursive
+   (tests excluded: pins quote the literals) and triggered on the
+   write-side identifiers too (applyCapabilityPlanRewrite,
+   recordEffectiveChoice), with a walked-sanity floor (150+ files) and
+   a non-vacuity assertion so a rename can never empty it silently.
+
+5. **The suppression comment tells the round-8 truth (contradiction
+   a).** ActiveWorkoutScreen's side-carve note comment still said
+   carvedForOneSide suppresses the logging prompt; since R8-1 the
+   prompt gates on sidedRuleTouches and the note alone keeps the carve
+   answer. Corrected in place - a comment contradicting a driven pin
+   is a defect (evidence rule 2), even with the code right.
+
+6. **Benchmark fixtures are named, not blended (I4).** Round 8's "six
+   times" and round 9's "2.7 times" are DIFFERENT fixtures (library
+   size and rule mix), both Node, neither a device number. Stated on
+   the row; the memoisation itself is unchanged and pinned.
+
+Stated, not closed: A1/I9's recompute reads TODAY's structure, library
+and profile - it reproduces the build only while those are unchanged
+since generation, and the reviewed-replacement omission is one of the
+rebuild-time-only inputs, not the only one (row corrected); I6's
+driven-vs-source-pinned halves are enumerated on the row. FOUNDER
+items unchanged (duplicate migrate_152 filenames, README ledger rows,
+CLAUDE.md counts). X1 = NO and X2 = pending, as ever.
