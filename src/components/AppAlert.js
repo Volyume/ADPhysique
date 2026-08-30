@@ -92,7 +92,18 @@ export function AppAlertHost() {
   };
   // Row layout for the common 1-2 button case (matches the native dialog's
   // bottom-aligned actions); stack when there are more.
-  const stacked = buttons.length > 2;
+  // CC33 round 8 (J2/J5, the horizontal axis): a two-button ROW has no
+  // wrap and no width bound, and this campaign's own long pairs ("Leave
+  // it as it is" + "Stop working around it") overflow a narrow card at
+  // default type - with overflow:'hidden', the leading button clipped.
+  // Long pairs stack instead (full-width buttons have no horizontal
+  // problem at all); the 26-character threshold keeps ordinary pairs
+  // (Cancel/Delete, OK) on one row. The row style also wraps and the
+  // buttons shrink as a safety net for anything the threshold misses at
+  // large font scales - a wrapped or narrowed button stays fully
+  // visible and tappable, where a clipped one did not.
+  const combinedLabelLength = buttons.reduce((n, b) => n + String(b?.text ?? '').length, 0);
+  const stacked = buttons.length > 2 || combinedLabelLength > 26;
 
   return (
     <Modal transparent animationType={reduceMotion ? 'none' : 'fade'} statusBarTranslucent onRequestClose={onBackdrop}>
@@ -253,7 +264,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   actions: { gap: spacing.sm },
-  actionsRow: { flexDirection: 'row', justifyContent: 'flex-end' },
+  // flexWrap (round 8, J2/J5): the row's own safety net - see the
+  // `stacked` derivation for the geometry.
+  actionsRow: { flexDirection: 'row', justifyContent: 'flex-end', flexWrap: 'wrap' },
   actionsStacked: { flexDirection: 'column' },
   // CC33 round 6 (J5) + round 7 (R7-6): the action region's own scroll
   // wrapper. flexGrow 0 keeps it at content height in every ordinary
@@ -271,6 +284,11 @@ const styles = StyleSheet.create({
     // touch target ("every interactive element >=48dp effective - gym,
     // sweaty hands"), replacing an off-scale 44 literal. Every capability
     // decision the campaign routes through alerts rides on this.
+    // Round 8 (J2/J5): shrinkable on the HORIZONTAL axis - a row button
+    // narrower than its text wraps the text (no numberOfLines, minHeight
+    // not a fixed height), where an unshrinkable one pushed its sibling
+    // off the clipped card edge.
+    flexShrink: 1,
     minHeight: spacing.xxxl,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.sm,

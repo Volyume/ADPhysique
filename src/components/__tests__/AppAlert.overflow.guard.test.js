@@ -122,6 +122,22 @@ describe('AppAlert overflow contract (D42)', () => {
     expect(SOURCE).toContain('contentContainerStyle={[styles.actions, stacked ? styles.actionsStacked : styles.actionsRow]}');
   });
 
+  test('CC33 round 8 (J2/J5): the HORIZONTAL axis is bounded too - long pairs stack, rows wrap, buttons shrink', () => {
+    // Rounds 6-7 bounded the action region vertically and left a
+    // two-button ROW unbounded and unwrapped horizontally - the
+    // campaign's own long pairs ("Leave it as it is" + "Stop working
+    // around it") exceed a narrow card's inner width at default type,
+    // and with overflow:'hidden' the leading button clipped. Long pairs
+    // stack (full-width buttons have no horizontal problem); wrap and
+    // shrink catch anything the threshold misses at large font scales.
+    expect(SOURCE).toContain('const combinedLabelLength = buttons.reduce((n, b) => n + String(b?.text ?? \'\').length, 0);');
+    expect(SOURCE).toContain('const stacked = buttons.length > 2 || combinedLabelLength > 26;');
+    const rowBlock = SOURCE.match(/actionsRow:\s*\{[^}]*\}/)?.[0] ?? '';
+    expect(rowBlock).toContain("flexWrap: 'wrap'");
+    const btnBlock = SOURCE.match(/\n  btn: \{[\s\S]*?\n  \}/)?.[0] ?? '';
+    expect(btnBlock).toContain('flexShrink: 1');
+  });
+
   test('CC33 round 6 (J2): every alert button is a 48dp target from the spacing scale, not an off-scale literal', () => {
     // docs/rules/styling.md: "every interactive element >=48dp effective
     // - gym, sweaty hands"; 44 was also an off-scale literal by that
