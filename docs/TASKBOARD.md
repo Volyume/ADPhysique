@@ -1037,8 +1037,30 @@ with walked-sanity + non-vacuity assertions, R8-1's stale suppression
 comment corrected in place. Conditions stated on rows: effects record
 corrects only FORWARD (manual re-add never revokes an omission -
 B6/B8/B9); division recompute reads TODAY's inputs (A1/I9); I4's two
-figures are different fixtures, both Node. NEXT: settled full gate +
-merge, adversarial review ROUND 10, then S5 gate + device checklist.
+figures are different fixtures, both Node. ROUND 10 RAN on d7816ec8:
+NOT CLEAN - 5 BROKEN from 3 roots (B5, B6, B8, B9, I8) + 8 QUALIFIED,
+0 STOP - all three roots in the effects-record seam. Closed same day
+(D122, which corrects D121 rulings 1 and 2 plainly): R10-1 the
+record's identity is the PLANNED SLOT - writers stamp rowId and the
+dedupe keys (effect, exerciseFrom, rowId), so a doubled exercise's two
+slots write two true entries (the old per-exercise key silently
+deleted the second; legacy tolerance both directions; driven on the
+real DB, twin omissions AND twin substitutions), R10-2 a manual swap
+over a serve substitute clears _capabilityTemp, makes the row the
+user's own, and amends the slot's entry to name what actually stood
+(toChosenByUser; swap-back revokes) - the quiet line stops claiming
+the app's workaround over the user's pick, R10-3 the record corrects
+FORWARD on workout_sets fact - completion passes performedIds, every
+performed omission renames 'omitted_revoked', and all strict-matching
+readers drop it with no change (the reshaped counter's any-record
+predicate corrected to live-entry LIKEs; driven 1/1 before, 0/0
+after), B4 cancellation guard on Home's capability effect, C1
+FreeStarter's first-run cancel action-phrased off the decline word,
+I6 sweep triggers widened to the lane's read identifiers + both quote
+forms + button-bounded window, contradictions a-e corrected in place
+(reachability wording, raw-library fallback comment, "no legitimate
+second write" premise, slot index spaces). NEXT: settled full gate +
+merge, adversarial review ROUND 11, then S5 gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

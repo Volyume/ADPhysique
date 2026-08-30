@@ -3877,3 +3877,105 @@ rebuild-time-only inputs, not the only one (row corrected); I6's
 driven-vs-source-pinned halves are enumerated on the row. FOUNDER
 items unchanged (duplicate migrate_152 filenames, README ledger rows,
 CLAUDE.md counts). X1 = NO and X2 = pending, as ever.
+
+## D122 — CC33 review round 10 closures + D121 corrections (lead-ruled under D33, 2026-08-30)
+
+Adversarial review round 10 (on main d7816ec8): 5 BROKEN rows from 3
+roots (B5, B6, B8, B9, I8), 8 QUALIFIED, 0 STOP - all three roots in
+the effects-record seam, all closed same day. Rulings:
+
+1. **The record's identity is the PLANNED SLOT (R10-1, closing B6/B8/
+   I8 and correcting the round-9 comment's premise).** "Within one
+   workout no legitimate second write for the same (effect,
+   exerciseFrom) exists" was false: one exercise filling two slots is
+   ordinary programming, and the per-exercise dedupe silently deleted
+   the second slot's true entry - the receipt said one swap where two
+   happened, and a served-and-trained substitute was never recorded at
+   all. Writers stamp rowId (the planned row's own stable id, which
+   survives both serve's rebuild and the manual swap's) and the key is
+   (effect, exerciseFrom, rowId). Legacy tolerance both directions: a
+   keyed entry never doubles a keyless record of the same fact and a
+   keyless entry never doubles anything. The `slot` field is
+   informational only - the three writers stamp different index spaces
+   (the round-10 review's contradiction e), now stated in the writer.
+   Driven on the real database: twin omitted slots both survive; twin
+   substituted slots carry two rowIds and two DIFFERENT substitutes.
+
+2. **The user's swap outranks the marker, and the record says whose
+   choice stood (R10-2, closing B5/C2).** Manually swapping away a
+   serve substitute cleared nothing: the spread carried _capabilityTemp
+   forward, the quiet line claimed "Temporarily in for X" over the
+   user's own pick, and the record kept naming a substitute the user
+   never trained. The swap now clears the marker and makes the row the
+   user's own (_userAdded - serve's standing law already serves those
+   untouched, which matters because clearing the last marker makes a
+   relaunch re-serve pass reachable), and the slot's substitution entry
+   is amended to name what actually stood in it, stamped toChosenByUser
+   so no surface attributes the user's choice to the app or the app's
+   to the user. A swap BACK to the original excluded movement revokes
+   the entry instead: the change did not keep the movement out.
+
+3. **The record corrects FORWARD on logged fact (R10-3, closing B9 and
+   correcting D121 ruling 2's justification).** D121 said revoking on
+   manual re-add "would require attributing the user's intent" - false
+   for the performed case: whether a movement was trained is
+   workout_sets fact, no intent needed, and the round-8 attribution
+   probe ruled out attributing a session's EMPTINESS, nothing about
+   performance. Completion passes performedIds and the writer renames
+   every performed omission 'omitted_revoked' - kept, never deleted
+   (renaming records a later fact about the slot; round 8's replacement
+   ERASED one - the R9-1 law distinguishes them). Every reader matches
+   strictly, so revoked entries drop from the receipt, the excusal
+   counter, the ended-early excusal and the block-ledger denominator
+   with no reader change; the reshaped counter's any-non-empty-record
+   predicate was the one exception and now requires a LIVE entry. ALL
+   omitted entries for a performed exercise revoke, duplicate slots
+   included: once the movement happened, the restriction explains no
+   shortfall in it, and CONSTRAINED evidence must be earned.
+   Reconciliation runs OUTSIDE the capState gate - it needs only the
+   record and the logged sets, and still fires when the rules
+   themselves ended mid-session. Driven end to end: both weekly
+   counters read 1 before reconciliation and 0 after.
+
+4. **Reachability corrected (contradictions b/c; correcting D121
+   ruling 1 and the I8 row text).** "A _capabilityTemp session never
+   re-serves" was overstated: removing or manually swapping away the
+   last marked row clears the markers the relaunch guard checks, so a
+   second serve pass IS reachable by ordinary user action. The
+   revert's conclusion is unchanged (a later pass still cannot
+   re-derive an earlier pass's omission, so replacement was still
+   deletion); the comments, this register and the row now state the
+   true reason.
+
+5. **Home's effect gains the cancellation guard it never had (B4).**
+   Two overlapping focus cycles resolving out of order could leave any
+   of the five capability flags describing the older read; blur now
+   cancels the in-flight application. The other two B4 conditions are
+   STATED, not patched: the line is unscoped to lane users (scoping
+   would need the very read that failed) and there is no in-focus
+   retry (matching every other lane surface).
+
+6. **The vocabulary guard reaches the lane it guards (C1/I6).**
+   FreeStarterScreen's first-run capability alert wore 'Not now' - the
+   lane's decline word - on a cancel that writes nothing, structurally
+   outside a sweep triggered only on rewrite/proposal identifiers. The
+   copy is action-phrased ("Don't start it", beside "Start it anyway")
+   and the sweep now triggers on the lane's read identifiers too
+   (loadCapabilityResolveState, baselineBlockedMuscles - seven more
+   files today), matches both quote forms of the literal, and bounds
+   its window to the button's own object so a nearby declineNow can no
+   longer false-pass it.
+
+7. **A comment contradicting a driven mechanism is a defect, again
+   (contradictions a and d).** RoutineDetail's recompute comment still
+   claimed the raw-library fallback round 8 deleted; the writer's
+   comment claimed no legitimate duplicate write exists. Both
+   corrected in place, same class as D121 ruling 5.
+
+Stated, not closed: I4's memo is per state OBJECT and two production
+paths spread the state past it - measured sub-millisecond in every
+shape including the memo-defeating ones, third fixture named on the
+row, no figure normative; I9's "one seam" now extends to the durable
+record through R10-1's per-slot key. FOUNDER items unchanged
+(duplicate migrate_152 filenames, README ledger rows, CLAUDE.md
+counts). X1 = NO and X2 = pending, as ever.
