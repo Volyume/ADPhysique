@@ -27,6 +27,10 @@ const read = (rel) => fs.readFileSync(path.join(__dirname, '..', '..', rel), 'ut
 const ENUMERATED = [
   ['components/ExercisePickerModal.js', ['pickerAllowAgainBtn', 'createNewBtn', 'showExcludedRow', 'createSaveBtn']],
   ['screens/TrainingConsiderationsScreen.js', ['search', 'row', 'card', 'backRow']],
+  // Round 17 (J2): the install-conflict sheet's three sm buttons were
+  // ~34dp effective (padding-sized, no hitSlop - invisible to the
+  // numeric-minHeight strays check, stated on the row).
+  ['components/ExerciseConflictSheet.js', ['actionBtn']],
 ];
 
 // Numeric minHeights that pre-date this guard and sit at or above 48:
@@ -37,6 +41,7 @@ const ENUMERATED = [
 const OFF_SCALE_ALLOWED = {
   'components/ExercisePickerModal.js': { 'minHeight: 54': 1 },
   'screens/TrainingConsiderationsScreen.js': {},
+  'components/ExerciseConflictSheet.js': {},
 };
 
 describe('J2: the lane\'s enumerated touch targets sit on the 48 token', () => {

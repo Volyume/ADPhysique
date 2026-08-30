@@ -152,6 +152,7 @@ export default function ExerciseConflictSheet({
                       <Button
                         title={blocked ? 'Choose an exercise' : 'Choose replacement'}
                         size="sm"
+                        style={styles.actionBtn}
                         onPress={() => setPickerFor(c)}
                         accessibilityLabel={`Choose a replacement for ${c.exerciseName}`}
                       />
@@ -164,6 +165,7 @@ export default function ExerciseConflictSheet({
                         <Button
                           title="Update How you train"
                           size="sm"
+                          style={styles.actionBtn}
                           variant="secondary"
                           onPress={() => {
                             onClose?.();
@@ -182,6 +184,7 @@ export default function ExerciseConflictSheet({
                         <Button
                           title="Keep it in this plan"
                           size="sm"
+                          style={styles.actionBtn}
                           variant="secondary"
                           onPress={() => { onKeep?.(c); markResolved(c, 'kept'); }}
                           accessibilityLabel={`Keep ${c.exerciseName} in this plan`}
@@ -235,6 +238,11 @@ const styles = StyleSheet.create({
   where: { ...type.captionTight, color: colors.textMuted },
   done: { ...type.captionTight, color: colors.primary },
   actions: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap', paddingTop: spacing.xs },
+  // Round 17 (J2): the sm button is ~34dp effective with no hitSlop -
+  // under the styling law's 48 minimum, on the lane's own install-
+  // conflict surface. The floor rides on the buttons themselves so a
+  // wrapped row keeps every control at full height.
+  actionBtn: { minHeight: spacing.xxxl },
   footnote: { ...type.captionTight, color: colors.textMuted, paddingHorizontal: spacing.lg, paddingTop: spacing.md },
   doneBtn: { marginHorizontal: spacing.lg, marginTop: spacing.md },
 });
