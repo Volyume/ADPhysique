@@ -1316,41 +1316,55 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           style: 'destructive',
           onPress: () => {
             audit('workout.exercise.removed', { exerciseId: exercise?.id });
-            // Round 11 (R11-1, the removal half): removing a row serve
-            // substituted IN ends that substitution with nothing in the
-            // slot - the excluded original never happened and nothing
-            // stands in its place, so the slot's entry converts to an
-            // omission. Without this the record (and the receipt) kept
-            // claiming a substitution the user deleted. Best-effort,
-            // like every effects write on this screen.
-            const removedTemp = workoutExercises[currentExerciseIndex]?._capabilityTemp;
-            if (removedTemp?.fromId && user?.id && activeWorkout?.id) {
+            // Round 11 (R11-1) + round 12 (R12-1): removing a row whose
+            // slot serve substituted INTO ends that substitution with
+            // nothing standing - the slot's entry converts to an
+            // omission. The conversion keys on the SLOT'S RECORD, never
+            // only the in-memory marker: a manual swap clears
+            // _capabilityTemp, so the round-11 marker-gated call left a
+            // swap-then-remove chain claiming a substitution the user
+            // had deleted. With the marker gone the slot's stable id
+            // finds the entry (rowId-only matching is exact in the
+            // helper, so a slot with no substitution entry is a clean
+            // no-op). Best-effort, like every effects write here.
+            const removedEntry = workoutExercises[currentExerciseIndex];
+            const removedTemp = removedEntry?._capabilityTemp;
+            const removedRowId = removedTemp?.rowId ?? removedEntry?.routineExercise?.id ?? null;
+            if ((removedTemp?.fromId || removedRowId != null) && user?.id && activeWorkout?.id) {
               // eslint-disable-next-line global-require
               const { convertSessionConstraintSubstitutionToOmission } = require('../lib/database');
               convertSessionConstraintSubstitutionToOmission(user.id, activeWorkout.id, {
-                exerciseFrom: removedTemp.fromId,
-                rowId: removedTemp.rowId ?? null,
+                exerciseFrom: removedTemp?.fromId ?? null,
+                rowId: removedRowId,
               }).catch(() => { /* best effort */ });
             }
             // CC29 (section 17; closes Audit G C3 for the constraint
             // cause): removing an EPISODE-affected exercise writes a
             // durable omission on this session's effects record. Removal
-            // for any other reason writes nothing, exactly as before.
-            if (constraintConflicts.length
-              && constraintConflicts.every(c => c.row?.effectiveChoice === 'applied'
-                // D112 R8: a held episode excuses nothing - removal under
-                // hold is an ordinary edit, never a recorded omission.
-                && c.row?.adaptationMode !== 'hold')
+            // for any other reason writes nothing. Round 12 (R12-2): the
+            // gate takes the shared removalExcusalConflicts answer - an
+            // UNKNOWN-only conflict excuses nothing (the same row's own
+            // notice says "Volyume doesn't know yet"; this writer must
+            // not contradict it into the record), matching the certainty
+            // and choice gates the completion writer has always applied.
+            // A substituted slot's story is the conversion above, and a
+            // row the user chose themselves (_userAdded - a picker add
+            // or a manual swap) is the user's own to remove: neither
+            // records an excusal here.
+            // eslint-disable-next-line global-require
+            const { removalExcusalConflicts } = require('../lib/capability/effective');
+            const removalDefinite = removalExcusalConflicts(constraintConflicts);
+            if (!removedTemp && !removedEntry?._userAdded && removalDefinite.length
               && user?.id && activeWorkout?.id && exercise?.id) {
               // eslint-disable-next-line global-require
               const { appendSessionConstraintEffects } = require('../lib/database');
               appendSessionConstraintEffects(user.id, activeWorkout.id, [{
                 slot: currentExerciseIndex,
                 // R10-1: the record keys per planned slot.
-                rowId: workoutExercises[currentExerciseIndex]?.routineExercise?.id ?? null,
+                rowId: removedEntry?.routineExercise?.id ?? null,
                 exerciseFrom: exercise.id,
                 effect: 'omitted',
-                constraintIds: constraintConflicts.map(c => c.constraintId),
+                constraintIds: removalDefinite.map(c => c.constraintId),
               }]).catch(() => { /* best effort; completion re-derives */ });
             }
             cancelAutoAdvance();

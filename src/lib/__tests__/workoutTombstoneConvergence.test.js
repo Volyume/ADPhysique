@@ -172,9 +172,13 @@ describe('a deleted session stops contributing to training evidence', () => {
 
     await deleteWorkoutAndSets(U, 'w-evidence');
 
-    // Nothing survives for any downstream reader to pick up - which is why
-    // the local side stays a hard delete rather than a local tombstone: no
-    // reader needs a new deleted_at filter to stay truthful.
+    // The workout and its sets are hard-deleted locally. Round 12
+    // corrected this comment's over-claim ("nothing survives for any
+    // downstream reader"): the session's constraint-effects record DID
+    // survive this path - it now gets a deleted_at tombstone inside
+    // deleteWorkoutAndSets (its table syncs, so that is its delete),
+    // driven in capabilityAdherence.test.js. The hard delete below
+    // still holds for workouts and sets themselves.
     expect(await getWorkoutSetsForWorkout('w-evidence')).toHaveLength(0);
     const live = await getAllWorkouts(U);
     expect(live.some((w) => w.id === 'w-evidence')).toBe(false);

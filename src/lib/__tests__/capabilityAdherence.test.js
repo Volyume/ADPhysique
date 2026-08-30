@@ -577,7 +577,7 @@ describe('R11: substituted-lane forward correction, counted legacy credit, bound
     expect(stats.constraintReshapedSessions).toBe(0);
   });
 
-  test('hygiene: discarding an incomplete workout tombstones its effects record', async () => {
+  test('hygiene: discarding an incomplete workout tombstones its effects record, and a later write cannot resurrect it', async () => {
     const { deleteIncompleteWorkout } = require('../database');
     const U12 = 'u-r11f';
     await appendSessionConstraintEffects(U12, 'w-r11f', [
@@ -592,5 +592,92 @@ describe('R11: substituted-lane forward correction, counted legacy credit, bound
     expect(await getSessionConstraintEffect(U12, 'w-r11f')).not.toBeNull();
     await deleteIncompleteWorkout('w-r11f');
     expect(await getSessionConstraintEffect(U12, 'w-r11f')).toBeNull();
+    // Round 12 (I2): the round-11 replace dropped deleted_at, so one
+    // racing best-effort effects write resurrected the dead record into
+    // sync and the export. deleted_at now survives every replace.
+    await appendSessionConstraintEffects(U12, 'w-r11f', [
+      { slot: 1, rowId: 're-f2', exerciseFrom: 'fx-legpress', effect: 'omitted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    expect(await getSessionConstraintEffect(U12, 'w-r11f')).toBeNull();
+  });
+});
+
+// Round 12 (R12-1/R12-2/R12-4, D124): the slot's record is the
+// conversion identity; unknown drives no removal excusal; the effects
+// record dies with a deleted COMPLETED workout too.
+describe('R12: record-keyed conversion, definite-only removal excusal, completed-delete tombstone', () => {
+  test('R12-1: swap-then-remove - the conversion finds the AMENDED entry by rowId alone (the marker is gone)', async () => {
+    const { amendSessionConstraintSubstitution, convertSessionConstraintSubstitutionToOmission } = require('../database');
+    const U13 = 'u-r12a';
+    await appendSessionConstraintEffects(U13, 'w-r12a', [
+      { slot: 0, rowId: 're-x1', exerciseFrom: 'fx-squat', exerciseTo: 'fx-legpress', effect: 'substituted', constraintIds: ['c1'], source: 'serve' },
+      { slot: 1, rowId: 're-x2', exerciseFrom: 'fx-squat', exerciseTo: 'fx-hack', effect: 'substituted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    // The user swaps slot re-x1's substitute for their own pick (the
+    // swap clears the in-memory marker) ...
+    await amendSessionConstraintSubstitution(U13, 'w-r12a', {
+      exerciseFrom: 'fx-squat', rowId: 're-x1', exerciseTo: 'fx-curl',
+    });
+    // ... then removes that row. Round 11's marker-gated call would
+    // never fire; the record-keyed conversion matches the slot exactly.
+    await convertSessionConstraintSubstitutionToOmission(U13, 'w-r12a', { rowId: 're-x1' });
+    const rec = await getSessionConstraintEffect(U13, 'w-r12a');
+    const x1 = rec.effects.find((e) => e.rowId === 're-x1');
+    expect(x1.effect).toBe('omitted');
+    expect(x1.exerciseTo).toBeUndefined();
+    expect(x1.toChosenByUser).toBeUndefined();
+    // The other slot's entry is untouched, and a rowId-only call for a
+    // slot with no substitution entry is a clean no-op.
+    expect(rec.effects.find((e) => e.rowId === 're-x2').effect).toBe('substituted');
+    expect(await convertSessionConstraintSubstitutionToOmission(U13, 'w-r12a', { rowId: 're-none' })).toBeNull();
+  });
+
+  test('R12-2: removalExcusalConflicts against the REAL resolver - unknown excuses nothing, definite applied does', async () => {
+    const { removalExcusalConflicts, actionableEpisodeConflicts } = require('../capability/effective');
+    const { loadCapabilityResolveState } = require('../capability/resolve');
+    const U14 = 'u-r12b';
+    const ids = await createCapabilityConstraints(U14, [{
+      role: 'episode', source: 'self', ruleKind: 'demand', ruleValue: 'axial_load',
+      startsAt: NOW - 1000, episodeGroupId: 'g_r12b',
+    }], { nowMs: NOW - 1000 });
+    await setConstraintEffectiveChoice(U14, ids[0], 'applied');
+    _resetCapabilityResolveCache();
+    const state = await loadCapabilityResolveState(U14, {});
+    // A custom lift with NULL demand columns: the conflict is UNKNOWN,
+    // the in-session notice says "doesn't know yet", and the removal
+    // writer must record nothing - the old gate had no certainty term.
+    const nullDemand = { id: 'fx-custom', name: 'Custom Lift', primaryMuscle: 'quads' };
+    const unknownConflicts = actionableEpisodeConflicts(state, nullDemand);
+    expect(unknownConflicts.length).toBeGreaterThan(0);
+    expect(unknownConflicts.every((c) => c.unknown)).toBe(true);
+    expect(removalExcusalConflicts(unknownConflicts)).toEqual([]);
+    // The definite control: the full-shape squat carries axial load.
+    const definiteConflicts = actionableEpisodeConflicts(state, { id: 'fx-squat', ...SQUAT });
+    expect(definiteConflicts.some((c) => !c.unknown)).toBe(true);
+    const answer = removalExcusalConflicts(definiteConflicts);
+    expect(answer.length).toBeGreaterThan(0);
+    expect(answer.every((c) => !c.unknown)).toBe(true);
+    // A definite conflict whose rule is not APPLIED excuses nothing.
+    await setConstraintEffectiveChoice(U14, ids[0], 'declined');
+    _resetCapabilityResolveCache();
+    const declinedState = await loadCapabilityResolveState(U14, {});
+    expect(removalExcusalConflicts(actionableEpisodeConflicts(declinedState, { id: 'fx-squat', ...SQUAT }))).toEqual([]);
+  });
+
+  test('R12-4: deleting a COMPLETED workout tombstones its effects record too', async () => {
+    const { deleteWorkoutAndSets } = require('../database');
+    const U15 = 'u-r12c';
+    await appendSessionConstraintEffects(U15, 'w-r12c', [
+      { slot: 0, rowId: 're-y1', exerciseFrom: 'fx-squat', effect: 'omitted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    const d = await db();
+    await d.runAsync(
+      `INSERT INTO workouts (id, user_id, routine_id, name, started_at, is_completed, created_at, updated_at)
+       VALUES ('w-r12c', ?, NULL, 'History-deleted session', ?, 1, ?, ?)`,
+      [U15, NOW, NOW, NOW],
+    );
+    expect(await getSessionConstraintEffect(U15, 'w-r12c')).not.toBeNull();
+    expect(await deleteWorkoutAndSets(U15, 'w-r12c')).toBe(true);
+    expect(await getSessionConstraintEffect(U15, 'w-r12c')).toBeNull();
   });
 });

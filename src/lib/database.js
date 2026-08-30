@@ -3644,6 +3644,18 @@ export async function deleteWorkoutAndSets(userId, workoutId) {
   if (!row) return false;
   await d.runAsync('DELETE FROM workout_sets WHERE workout_id = ?', [workoutId]);
   await d.runAsync('DELETE FROM workouts WHERE id = ?', [workoutId]);
+  // Round 12 (R12-4): the session's constraint-effects record dies with
+  // the workout on THIS delete path too - round 11 tombstoned only the
+  // incomplete-discard path, so deleting a completed session from
+  // history left its record live, synced, and in the Article 20 export.
+  // Tombstoned, not hard-deleted: the table syncs, so deleted_at is its
+  // delete (and createSessionConstraintEffect preserves it, so a racing
+  // best-effort write cannot resurrect the record).
+  const now = Date.now();
+  await d.runAsync(
+    'UPDATE session_constraint_effects SET deleted_at = ?, updated_at = ? WHERE workout_id = ? AND deleted_at IS NULL',
+    [now, now, workoutId],
+  );
   return true;
 }
 
@@ -11855,13 +11867,16 @@ export async function setCapabilityAdaptationMode(userId, episodeGroupId, mode) 
 // (effect, exerciseFrom) key silently collapsed the second slot's true
 // entry - the receipt said one swap where two happened. Writers stamp
 // rowId (the slot's own stable id) and the key is
-// (effect, exerciseFrom, rowId). Round 11 corrected the round-10
-// characterisation of keyless entries: every LIVE slot has an id
-// (planned rows carry routineExercise.id; the two ad-hoc entry points
-// mint one at construction since R11-2), so a null rowId means a
-// LEGACY record written by pre-round-10 code, and the tolerance for
-// those is counted - one legacy entry absorbs exactly one keyed
-// re-derivation, never a whole slot set. The `slot` field is
+// (effect, exerciseFrom, rowId). Rounds 11-12 closed the keyless
+// sources one by one - round 11's "every live slot has an id" was
+// itself one source short (the round-12 review found the in-session
+// picker add): planned rows carry routineExercise.id, and all THREE
+// ad-hoc constructions mint one (BuildWorkout and repeat-as-is since
+// R11-2, addExerciseToWorkout since R12-3). A null rowId therefore
+// means a legacy record, or a session snapshot taken before its
+// upgrade landed; the tolerance for those is counted - one keyless
+// entry absorbs exactly one keyed re-derivation, never a whole slot
+// set. The `slot` field is
 // informational only: each writer stamps its own list's index (serve
 // the pass's input, removal the current list, completion the
 // snapshot), so those spaces are not one space and slot is never part
@@ -11987,8 +12002,16 @@ export async function amendSessionConstraintSubstitution(userId, workoutId, { ex
 // stood). Without this the record kept claiming a substitution the user
 // deleted, and the receipt named a movement that was never trained.
 // Same single-entry discipline as the amend above.
-export async function convertSessionConstraintSubstitutionToOmission(userId, workoutId, { exerciseFrom, rowId = null } = {}) {
-  if (!userId || !workoutId || !exerciseFrom) return null;
+//
+// Round 12 (R12-1): the SLOT'S RECORD is the identity, never only the
+// in-memory marker - a swap clears _capabilityTemp, so a swap-then-
+// remove chain left the entry standing stale (amended to the user's
+// pick, then deleted, still rendered on the receipt). The caller may
+// now pass rowId ALONE; a rowId-only match is exact (both keyed and
+// equal), so it can never convert a different slot's entry, and a slot
+// with no substitution entry is a clean no-op.
+export async function convertSessionConstraintSubstitutionToOmission(userId, workoutId, { exerciseFrom = null, rowId = null } = {}) {
+  if (!userId || !workoutId || (!exerciseFrom && rowId == null)) return null;
   const d = await db();
   const id = `sce_${workoutId}`;
   const existing = await d.getFirstAsync(
@@ -12000,8 +12023,14 @@ export async function convertSessionConstraintSubstitutionToOmission(userId, wor
   let changed = false;
   entries = entries.map((e) => {
     if (changed) return e;
-    if (e?.effect !== 'substituted' || e.exerciseFrom !== exerciseFrom) return e;
-    if (rowId != null && e.rowId != null && e.rowId !== rowId) return e;
+    if (e?.effect !== 'substituted') return e;
+    if (exerciseFrom) {
+      if (e.exerciseFrom !== exerciseFrom) return e;
+      if (rowId != null && e.rowId != null && e.rowId !== rowId) return e;
+    } else {
+      // rowId-only: exact match, never ambiguous.
+      if (e.rowId == null || e.rowId !== rowId) return e;
+    }
     changed = true;
     const converted = { ...e, effect: 'omitted' };
     delete converted.exerciseTo;
@@ -12082,11 +12111,16 @@ export async function createSessionConstraintEffect(userId, workoutId, effects, 
   if (!userId || !workoutId) return null;
   const d = await db();
   const id = `sce_${workoutId}`;
+  // Round 12 (I2): deleted_at is PRESERVED across the replace, exactly
+  // as created_at is - the old column list silently reverted a
+  // tombstone to NULL, so one racing best-effort effects write after a
+  // discard resurrected the dead record into sync and the export.
   await d.runAsync(
     `INSERT OR REPLACE INTO session_constraint_effects
-       (id, user_id, workout_id, effects_json, created_at, updated_at)
-     VALUES (?, ?, ?, ?, COALESCE((SELECT created_at FROM session_constraint_effects WHERE id = ?), ?), ?)`,
-    [id, userId, workoutId, JSON.stringify(effects ?? []), id, nowMs, nowMs],
+       (id, user_id, workout_id, effects_json, created_at, updated_at, deleted_at)
+     VALUES (?, ?, ?, ?, COALESCE((SELECT created_at FROM session_constraint_effects WHERE id = ?), ?), ?,
+             (SELECT deleted_at FROM session_constraint_effects WHERE id = ?))`,
+    [id, userId, workoutId, JSON.stringify(effects ?? []), id, nowMs, nowMs, id],
   );
   _scheduleSync();
   return id;

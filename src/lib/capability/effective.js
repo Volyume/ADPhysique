@@ -190,6 +190,26 @@ export function computeEffectiveSession(baseRows, library, capabilityState, isEl
  * @returns {{entries: Array, excusedIds: string[], unperformedIds: string[],
  *   coversAllUnperformed: boolean}}
  */
+/**
+ * Round 12 (R12-2): the ONE answer to "does removing this row record a
+ * constraint omission?" - consumed by the mid-session removal hook,
+ * with exactly the certainty and choice gates computeCompletionEffects
+ * below applies at session end: definite conflicts only, and every
+ * definite driver APPLIED and not held. Returns the definite driving
+ * conflicts when the answer is yes, [] otherwise. An UNKNOWN-only
+ * conflict excuses nothing (D113 ruling 1) - the same row's own
+ * in-session notice says "Volyume doesn't know yet", and the removal
+ * writer must not contradict it into the durable record.
+ */
+export function removalExcusalConflicts(conflicts) {
+  const definite = (conflicts ?? []).filter((c) => !c?.unknown);
+  if (!definite.length) return [];
+  const applied = definite.every(
+    (c) => c?.row?.effectiveChoice === 'applied' && c?.row?.adaptationMode !== 'hold',
+  );
+  return applied ? definite : [];
+}
+
 export function computeCompletionEffects(sessionRows, capabilityState) {
   const entries = [];
   const excusedIds = [];

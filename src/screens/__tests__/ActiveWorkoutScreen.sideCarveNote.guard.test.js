@@ -199,7 +199,7 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
   });
 
   test('the removal hook stamps its entry with the slot\'s planned-row id', () => {
-    expect(SRC).toContain("rowId: workoutExercises[currentExerciseIndex]?.routineExercise?.id ?? null,");
+    expect(SRC).toContain("rowId: removedEntry?.routineExercise?.id ?? null,");
   });
 
   test('R10-2/R11-4: EVERY manual swap makes the row the user\'s own; a substitute swap also clears the marker and amends the entry', () => {
@@ -221,15 +221,31 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
     expect(SRC).toContain('exerciseTo: newExercise.id,');
   });
 
-  test('R11-1: removing a serve substitute converts the slot\'s entry to an omission', () => {
-    // Without this the record kept claiming a substitution the user
-    // deleted, and the receipt named a movement never trained. The
-    // conflict-gated omission hook below it cannot fire here - the
-    // substitute was chosen precisely because it does not conflict.
-    expect(SRC).toContain("const removedTemp = workoutExercises[currentExerciseIndex]?._capabilityTemp;");
+  test('R11-1/R12-1: removal converts the SLOT\'s substitution entry, keyed on the record, not only the marker', () => {
+    // Round 11 keyed the conversion on _capabilityTemp - which a manual
+    // swap clears, so a swap-then-remove chain left the entry standing
+    // stale (round 12, R12-1). The conversion now falls back to the
+    // slot's own stable id; rowId-only matching is exact in the helper.
+    expect(SRC).toContain("const removedTemp = removedEntry?._capabilityTemp;");
+    expect(SRC).toContain("const removedRowId = removedTemp?.rowId ?? removedEntry?.routineExercise?.id ?? null;");
     expect(SRC).toContain('convertSessionConstraintSubstitutionToOmission(user.id, activeWorkout.id, {');
-    expect(SRC).toContain('exerciseFrom: removedTemp.fromId,');
-    expect(SRC).toContain('rowId: removedTemp.rowId ?? null,');
+    expect(SRC).toContain('exerciseFrom: removedTemp?.fromId ?? null,');
+    expect(SRC).toContain('rowId: removedRowId,');
+  });
+
+  test('R12-2: the removal excusal gates on the SHARED definite-only answer, and never fires for a substituted or user-chosen slot', () => {
+    // The old inline gate had no certainty term, so removing a custom
+    // lift with null demand columns recorded a constraint omission off
+    // an UNKNOWN conflict - while the same row's own notice said
+    // "Volyume doesn't know yet". The gate now consumes
+    // removalExcusalConflicts (capability/effective.js), the same
+    // certainty and choice gates the completion writer applies.
+    expect(SRC).toContain("const { removalExcusalConflicts } = require('../lib/capability/effective');");
+    expect(SRC).toContain('const removalDefinite = removalExcusalConflicts(constraintConflicts);');
+    expect(SRC).toContain("if (!removedTemp && !removedEntry?._userAdded && removalDefinite.length");
+    expect(SRC).toContain('constraintIds: removalDefinite.map(c => c.constraintId),');
+    // The old unfiltered gate is gone.
+    expect(SRC).not.toContain("if (constraintConflicts.length\n              && constraintConflicts.every(c => c.row?.effectiveChoice === 'applied'");
   });
 
   test('R10-3: completion passes the session\'s performed ids, outside the capState gate', () => {
