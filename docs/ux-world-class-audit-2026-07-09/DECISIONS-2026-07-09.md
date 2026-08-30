@@ -4235,3 +4235,82 @@ round-12 reachability clause corrected by ruling 1 (the fourth source
 made it false; the chokepoint makes it true going forward). FOUNDER
 items unchanged (duplicate migrate_152 filenames, README ledger rows,
 CLAUDE.md counts). X1 = NO and X2 = pending, as ever.
+
+## D126 — CC33 review round 14 closures + D125 corrections (lead-ruled under D33, 2026-08-30)
+
+Adversarial review round 14 (on main c579e272): 4 BROKEN rows from 3
+roots, 7 QUALIFIED, 0 STOP - converging again, and the reviewer's
+special hostility toward the round-13 CLASS closures found both nets
+imperfect exactly as briefed. Rulings:
+
+1. **The marker yields only to conflicts with LIVE automation (R14-1,
+   correcting D125 ruling 5's class).** Round 13's principle was
+   "conflicts that drive nothing leave the marker", but it enumerated
+   only unknowns - a HELD definite conflict drives nothing either
+   (D120 ruling 2, D112 R8), yet it killed the marker and let the held
+   line claim "Volyume changes nothing until you say so" over a row
+   Volyume itself substituted in, erasing the substitution's only
+   provenance line in the app. The gate now filters held rules out of
+   the definite set before it can suppress the marker; a live definite
+   conflict still outranks it, per the round-13 ruling.
+
+2. **The in-session lists reload on focus (R14-2).** The round-13 B5
+   ruling exists for a rule captured mid-session through "Work around
+   this" - a flow that navigates away and back - yet intentState only
+   reloaded on exercise change or swap-sheet open, so the freshly
+   captured rule stayed invisible on the very row it was captured from
+   (the staleness class R6-2 closed on RoutineDetailScreen in round 6,
+   never applied to the surface the user trains on). A focus listener
+   re-runs the loader with B3's 800ms burst-window discipline and a
+   sequence guard replacing the cancelled flag, so an older read
+   landing late never overwrites a newer one. This also narrows A15's
+   input-state divergence between the two excusal writers: the removal
+   writer's state now refreshes on every return to the screen.
+
+3. **The lane's decline word is off the consent card, and the sweep
+   sees JSX forms (R14-3).** HowYouTrainScreen's own Article 9 consent
+   dismiss wore label="Not now" on a handler that writes nothing - the
+   D118 one-phrase-per-meaning blur, on the same screen whose apply
+   proposal writes 'declined' under that word, invisible to four
+   rounds of sweep widening because every widening grew the TRIGGER
+   list while the literal list stayed alert-buttons-only. The dismiss
+   is action-phrased ('Leave it for now', beside 'I agree - store this
+   information'; the sub-line already states what still works without
+   the agreement) - a copy change on the consent card, behaviour
+   untouched, flagged for the founder walk - and the sweep's literal
+   set now covers the codebase's render forms (text:/label=/title=
+   /text-node), which fails loudly on exactly this class.
+
+4. **The chokepoint's two proven holes are closed, and its claim is
+   scoped honestly (correcting D125 ruling 1 and the round-13
+   records).** "A fifth construction cannot ship keyless" was false as
+   written: a null entry slipped through the mint, and
+   addExerciseToWorkout appended outside the net with its own per-site
+   copy of it. The null shape now mints, the picker append routes
+   through withSetsArrays (the per-site copy deleted - duplicated
+   mints are exactly how the net grew holes), and every comment and
+   record states the precise scope: every path that CREATES session
+   entries runs through the chokepoint; the set-mutators only touch
+   sets on entries that already passed. Driven on both holes.
+
+5. **48dp reaches the picker (J2's stated residual, closed).** The
+   lane's own "Allow again" allowance control was a caption plus 8dp
+   of slop; createNewBtn sat at an off-scale 44. Both now carry
+   spacing.xxxl targets. The R2-12 citation on the receipt pills is
+   corrected in place (the adapted flexShrink form is right for a
+   content-sized pill; flex: 1 would collapse it - record the
+   adaptation, not the idiom name), and Home's "mirrors" wording now
+   names its one deliberate difference.
+
+Stated, not closed: D3/A15's residual sliver (a rule arriving by SYNC
+while the user stays on one exercise without leaving the screen is
+still invisible to the notices until focus, exercise change or the
+swap sheet - the completion record is unaffected, fresh read at
+finish); the legacy-record conditions on I8 stand unchanged. OBSERVED
+by the round-14 review, pre-existing and OUT of this campaign's scope,
+surfaced founder-side rather than acted on: clearWorkoutHistory
+deletes local workouts only (the cloud copies survive; the settings
+copy says "permanently deletes"), unlike deleteWorkoutAndSets whose
+caller pairs the cloud delete. FOUNDER items unchanged (duplicate
+migrate_152 filenames, README ledger rows, CLAUDE.md counts). X1 = NO
+and X2 = pending, as ever.

@@ -1118,9 +1118,24 @@ R13-3 Clear workout history tombstones the effects records (the
 THIRD delete path; erasure strengthened, ruled lead-side), R13-4
 TrainingConsiderations' four 44dp literals tokenised to 48, B5 a
 definite conflict on the SUBSTITUTE outranks the marker line, J5 the
-receipt's pill labels carry the R2-12 wrapping idiom. NEXT: settled
-full gate + merge, adversarial review ROUND 14, then S5 gate + device
-checklist.
+receipt's pill labels carry the R2-12 wrapping idiom. ROUND 14 RAN on c579e272: NOT CLEAN - 4 BROKEN from 3 roots + 7
+QUALIFIED, 0 STOP - converging; the briefed hostility toward the two
+round-13 class closures found both nets imperfect. Closed same day
+(D126, correcting D125 rulings 1 and 5): R14-1 the substitution
+marker yields only to conflicts with LIVE automation (a held-only
+definite set had killed it and let the held line deny the
+substitution), R14-2 the in-session conflict lists reload on FOCUS
+with B3's burst window + a sequence guard (the round-13 ruling's own
+mid-session-capture scenario had stayed invisible on the row it was
+captured from), R14-3 the Article 9 consent dismiss stops wearing the
+lane's decline word ('Leave it for now'; JSX-prop form invisible to
+four rounds of alert-literal sweeping - the sweep now matches
+text:/label=/title=/text-node forms), the chokepoint's two proven
+holes closed (null entries mint; the picker append routes through the
+net; per-site mint copy deleted; records re-scoped to "every path
+that CREATES entries"), and the picker's two undersized lane controls
+rise to 48. NEXT: settled full gate + merge, adversarial review ROUND
+15, then S5 gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):
