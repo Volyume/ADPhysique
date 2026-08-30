@@ -6550,6 +6550,11 @@ export async function clearWorkoutHistory(userId) {
       [now, now, userId],
     );
   });
+  // Round 16 (H2/I2): the tombstones' push is SCHEDULED like every
+  // other effects write - round 13 wrote them and left their sync to
+  // whatever unrelated write came next, so a new-device pull in the
+  // window returned the cleared history with live provenance.
+  _scheduleSync();
 }
 
 // ─── Full local wipe (sign out + sign in as different user, or delete account) ─

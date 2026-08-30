@@ -30,11 +30,13 @@ const ENUMERATED = [
 ];
 
 // Numeric minHeights that pre-date this guard and sit at or above 48:
-// compliant, off-scale, tolerated. Anything numeric NOT in this list
-// fails - new work uses the token.
+// compliant, off-scale, tolerated - at their EXACT current count, so a
+// copied duplicate of an allowlisted value fails as loudly as a new
+// number (round 16: the value-only allowlist would have passed any
+// number of copied 54s).
 const OFF_SCALE_ALLOWED = {
-  'components/ExercisePickerModal.js': ['minHeight: 54'],
-  'screens/TrainingConsiderationsScreen.js': [],
+  'components/ExercisePickerModal.js': { 'minHeight: 54': 1 },
+  'screens/TrainingConsiderationsScreen.js': {},
 };
 
 describe('J2: the lane\'s enumerated touch targets sit on the 48 token', () => {
@@ -52,8 +54,9 @@ describe('J2: the lane\'s enumerated touch targets sit on the 48 token', () => {
       expect({ file: rel, style: name, onToken }).toEqual({ file: rel, style: name, onToken: true });
     }
     const numeric = src.match(/minHeight: \d+/g) ?? [];
-    const allowed = OFF_SCALE_ALLOWED[rel] ?? [];
-    const strays = numeric.filter((m) => !allowed.includes(m));
-    expect({ file: rel, strays }).toEqual({ file: rel, strays: [] });
+    const allowed = OFF_SCALE_ALLOWED[rel] ?? {};
+    const counts = {};
+    for (const m of numeric) counts[m] = (counts[m] || 0) + 1;
+    expect({ file: rel, counts }).toEqual({ file: rel, counts: allowed });
   });
 });

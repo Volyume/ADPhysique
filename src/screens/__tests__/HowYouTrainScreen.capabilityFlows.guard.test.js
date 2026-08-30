@@ -293,11 +293,14 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // the template and title-expression forms). A label computed at
     // runtime cannot be swept statically - stated on the C1 row.
     const LITERALS = [
-      "text: 'Not now'", 'text: "Not now"',
+      "text: 'Not now'", 'text: "Not now"', 'text: `Not now`',
       'label="Not now"', "label={'Not now'}", 'label={`Not now`}',
       'title="Not now"', "title={'Not now'}", 'title={`Not now`}',
       '>Not now<',
     ];
+    // Stated limit (round 16, C1): '>Not now<' catches only a SAME-LINE
+    // text node; a wrapped multi-line text node and a label computed at
+    // runtime cannot be swept statically - both stated on the C1 row.
     const files = [];
     const walk = (dir) => {
       for (const entry of fs2.readdirSync(dir, { withFileTypes: true })) {

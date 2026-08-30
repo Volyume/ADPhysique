@@ -36,8 +36,8 @@ const EXPECTED_TABLES = [
   'meal_plans', // Theme G active-plan mirror (cloud migration 086)
   'plan_folders', // Hevy teardown R1 plan-folder organisation (cloud migration 089)
   'perday_target_offsets', // per-day calorie planning offsets, L05-PDT1 (cloud migration 110)
-  'capability_constraints', // CC26 capability lane (cloud migration 145, written not applied)
-  'session_constraint_effects', // CC26 per-workout effect provenance (cloud migration 146, written not applied)
+  'capability_constraints', // CC26 capability lane (cloud migration 145, APPLIED 2026-08-21 - supabase/README batch block)
+  'session_constraint_effects', // CC26 per-workout effect provenance (cloud migration 146, APPLIED 2026-08-21 - supabase/README batch block)
 ];
 
 describe('SYNC_REGISTRY shape', () => {
