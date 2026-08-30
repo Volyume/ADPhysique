@@ -5224,7 +5224,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   // this" was our internal vocabulary on a user's button.
                   appAlert(
                     exercise?.name ? `Can't do ${exercise.name}?` : "Can't do this exercise?",
-                    'Volyume will swap it for another exercise that works the same muscle. Choose whether that is just for today, or from now on.',
+                    'Volyume will swap it for another exercise that works the same muscle group. Choose whether that is just for today, or from now on.',
                     [
                       { text: 'Cancel', style: 'cancel' },
                       { text: 'Just for today', onPress: () => { workAroundSwapRef.current = true; handleOpenSwap(); } },

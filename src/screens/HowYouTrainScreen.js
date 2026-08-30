@@ -1542,7 +1542,7 @@ export default function HowYouTrainScreen() {
         </Text>
         <Text style={[styles.hint, { color: t.colors.textSecondary, marginTop: spacing.sm }]}>
           You do not need a diagnosis, or even a name for it. Just say what you cannot
-          do. Volyume leaves those movements out and trains the same muscles another way.
+          do. Volyume leaves those movements out and trains the same muscle groups another way.
         </Text>
       </View>
 

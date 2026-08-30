@@ -43,7 +43,7 @@ describe('T2-11: the "I can\'t do this" sheet actually captures', () => {
 
   test('the body copy matches the new behaviour, no em dash', () => {
     expect(block).toContain(
-      "'Volyume will swap it for another exercise that works the same muscle. Choose whether that is just for today, or from now on.'",
+      "'Volyume will swap it for another exercise that works the same muscle group. Choose whether that is just for today, or from now on.'",
     );
     expect(block).not.toMatch(/—/);
   });
