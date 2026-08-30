@@ -1004,9 +1004,24 @@ empty (+90/+400-day full-suite runs, green). NEW FOUNDER-side items
 surfaced in chat (schema records are founder-gated, untouched):
 supabase has TWO files numbered migrate_152; README ledger rows
 missing for 152_p0/153/154; CLAUDE.md Section 1 migration counts stale
-(133 files/136 highest vs the tree's 152 files/154 highest). NEXT:
-settled full gate + merge, adversarial review ROUND 8, then S5 gate +
-device checklist.
+(133 files/136 highest vs the tree's 152 files/154 highest). ROUND 8 RAN on c60ccc57: NOT CLEAN - 3 BROKEN / 4 roots + 11
+QUALIFIED - converging; ALL closed same day (D120): R8-1 both-sides
+prompt gates on sidedRuleTouches (the union rightly kills the carve
+with both sides restricted, which had un-suppressed the forbidden "do
+the same reps on each side" ask), R8-2 the fail-safe sentence is
+first-class (mixed proposal + group body; outcome-phrased, attribution
+banned), R8-3 'Not now' only-on-decline tree-wide (PlansScreen twin
+fixed; sweep guard), R8-4 the picker's sided reason three-way true,
+D120 ruling 2 the hold-union fork RULED (facts vs automation; per-
+consumer scoping rejected as reopening R7-3), I4 sideCarveByAxis
+memoised per state (6x allocation removed; round-1 figures superseded
+on the row), A1 division recompute carries generation's structure +
+canonical-name inputs and renders nothing on an unavailable read, B3
+re-closed with a burst window (isFocused premise disproven from the
+navigation source), I8 serve effects source-tagged + self-correcting
+(real-DB pin), J2/J5 alert rows bounded horizontally (long pairs
+stack, rows wrap, buttons shrink). NEXT: settled full gate + merge,
+adversarial review ROUND 9, then S5 gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

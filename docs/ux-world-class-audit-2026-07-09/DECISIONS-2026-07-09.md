@@ -3696,3 +3696,111 @@ p0_restrict_internal_security_definer_execute), and the README ledger
 table ends at row 152 with no rows for 152_p0/153/154 - and CLAUDE.md's
 Section 1 migration counts are stale. Migration records are
 founder-gated; not touched here.
+
+## D120 — CC33 review round 8 closures + the hold-union ruling (lead-ruled under D33, 2026-08-30)
+
+Adversarial review round 8 (on main c60ccc57): 3 rows BROKEN from 4
+roots, 11 QUALIFIED, 0 STOP - converging. All four roots closed
+same-day plus six qualified mechanisms; one genuine fork the reviewer
+correctly declined to pre-decide is RULED here. Rulings:
+
+1. **Suppression asks its own question (R8-1, correcting D119 ruling
+   1's blast radius).** The round-7 union rightly turned the side carve
+   OFF when both sides are restricted - which made carvedForOneSide
+   false for exactly that state, and the both-sides logging prompt
+   ("do the same reps on each side") fired where it is MOST forbidden:
+   both sides ruled out. The prompt now gates on sidedRuleTouches -
+   does ANY sided rule bear on this movement, whichever way the carve
+   resolves - while the one-side-at-a-time note keeps the carve
+   answer. Strictly more conservative; pinned both ways.
+
+2. **Facts versus automation, ruled (the A14/D4/L4 fork).** Hold and
+   decline suspend a rule's OWN automation, never the fact it records:
+   the side is still restricted, exactly as pickers and generation
+   already honour held and declined rules. So a held left-side rule
+   beside a live applied right-side rule correctly completes the union
+   - the live rule's conflict becomes definite and the live rule may
+   substitute; the automation is the applied rule's own, the held rule
+   contributed a fact. effective.js's docblock is corrected (its "it
+   substitutes nothing" wording was falsified by the round-8 probe);
+   the ruled behaviour is driven-pinned. Per-consumer union scoping
+   was REJECTED: it would reopen R7-3's fail-open.
+
+3. **The fail-safe sentence is first-class (R8-2, completing D119
+   ruling 3 at its second consumer).** One shared, outcome-phrased
+   sentence ("One of your sessions has nothing left that fits, so it
+   runs as it is, with a quiet note on each affected exercise") is
+   spoken by the standalone proposal, APPENDED to the mixed proposal
+   (round 7 told the case only when nothing else was affected), and
+   appended to the ordinary group-review body; the dedicated fail-safe
+   dialogue is kept for a group with only that, and its frame stops
+   presupposing a workaround ("Keep this applied?" / "Stop applying
+   it"). Outcome-phrased BY RULING: a fail-safed session's emptiness
+   can be several rules' doing (the round-8 attribution probe), so no
+   surface may say "this affects every exercise".
+
+4. **One phrase per meaning, tree-wide (R8-3, completing D119 ruling
+   5).** PlansScreen's identical rewrite alert kept 'Not now' on a
+   no-op cancel; it takes the F-1 wording, and the guard is widened
+   from one file to every screen and component that offers the
+   capability rewrite or proposal: 'Not now' may appear only where the
+   press reaches the decline write.
+
+5. **The sided reason states only true mechanics (R8-4).** Under the
+   union, a sided definite conflict on a one-side-loadable movement is
+   reachable - and the picker then said "cannot be done a side at a
+   time" about a movement that can, naming one of the user's two
+   rules. Three-way branch: the old sentence only for movements that
+   genuinely cannot; "does not work on either side" (naming the
+   movement fact, no invented side) when both sides are restricted;
+   the unsided wording when an unsided rule covers the axis.
+
+6. **The union is computed once per state (I4).** sideCarveByAxis ran
+   per exercise - O(exercises) Map/Set allocation that benchmarked at
+   six times the pre-union full-library cost. Memoised per state
+   object (WeakMap; states are rebuilt per load and never mutated),
+   and exported so no surface re-derives the answer. The scorecard's
+   stale round-1 numbers are corrected on the row.
+
+7. **Division recompute: honest inputs, honest absence (A1/I9).** An
+   UNAVAILABLE lane read now renders NO fingerprint/coverage lines
+   (the old fallback rendered from the raw library - a fingerprint of
+   a plan generation never built); the recompute carries generation's
+   demonstrated-structure and canonical-name inputs through
+   generation's own exported paths. The one input that is
+   rebuild-time-only (reviewed-replacement omissions, which live
+   inside a continuity proposal) is STATED on A1's row, never
+   approximated.
+
+8. **B3 re-closed without the false premise.** Round 7's isFocused()
+   arming misfired both ways (the round-8 review read the navigation
+   source: on a push the state already names the route focused when
+   effects run; mounted unfocused, the first genuine focus was
+   swallowed). Replaced with a burst window: the mount effect stamps
+   its load and a focus event within 800ms is its echo. The window's
+   failure mode is one extra load - never staleness; a genuine return
+   always reloads.
+
+9. **The effects record corrects itself per writer (I8).** Serve tags
+   its entries source:'serve' and replaces that set on each write -
+   the pure merge kept the first exerciseTo forever and never revoked
+   a serve-time omission, so history could name a movement the user
+   never saw and the excusal counter over-credited a declined-then-
+   trained row. The removal hook's and completion writer's entries
+   carry no source and are never replaced. Driven pin on the real
+   database.
+
+10. **Alert rows are bounded horizontally (J2/J5, completing D119
+    ruling 6's axis).** Long two-button pairs stack (full-width
+    buttons have no horizontal problem; threshold 26 combined
+    characters keeps Cancel/Delete-class pairs on one row), rows wrap
+    and buttons shrink as the safety net - a wrapped or narrowed
+    button stays visible and tappable where an unshrinkable one
+    pushed its sibling off the clipped card edge. Device confirmation
+    of the geometry rides X2, stated.
+
+Stated, not closed: A13's id-keyed gone-accounting, C3's undecided
+optimism, J4's same-day/null-start collisions, I9's planned-vs-live
+mirror scope - all deliberate, all recorded on their rows. FOUNDER
+items unchanged (duplicate migrate_152 filenames, README ledger rows,
+CLAUDE.md counts). X1 = NO and X2 = pending, as ever.
