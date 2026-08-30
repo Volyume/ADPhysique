@@ -270,6 +270,11 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
       'recordEffectiveChoice',
       'loadCapabilityResolveState',
       'baselineBlockedMuscles',
+      // Round 11 (R11-3): the preflight identifiers - ProOnboarding
+      // reaches the lane through these alone, and its total-block alert
+      // wore the decline word on a pure no-op outside the sweep.
+      'capabilityPreflight',
+      'offerCapabilityPreflightChoice',
     ];
     // Both quote forms of the button literal (round 10, I6 condition 2).
     const LITERALS = ["text: 'Not now'", 'text: "Not now"'];

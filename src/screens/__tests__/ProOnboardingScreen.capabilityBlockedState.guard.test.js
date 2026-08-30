@@ -43,17 +43,20 @@ describe('T1-13: the graded total-block state', () => {
     expect(end).toBeGreaterThan(site);
     const block = SOURCE.slice(site, end);
     const openIdx = block.indexOf("text: 'Open How you train'");
-    const notNowIdx = block.indexOf("text: 'Not now'");
+    // Round 11 (R11-3): the dismiss says 'Got it' - 'Not now' is the
+    // capability lane's decline word and this cancel writes nothing.
+    const dismissIdx = block.indexOf("text: 'Got it'");
     const tryAgainIdx = block.indexOf("text: 'Try again'");
     expect(openIdx).toBeGreaterThan(-1);
-    expect(notNowIdx).toBeGreaterThan(openIdx);
-    expect(tryAgainIdx).toBeGreaterThan(notNowIdx);
+    expect(dismissIdx).toBeGreaterThan(openIdx);
+    expect(tryAgainIdx).toBeGreaterThan(dismissIdx);
     // "Open How you train" navigates; the hold is a plain cancel dismiss
     // (no browse-plans action - first run has no library route from this
     // screen, matching FreeStarterScreen's own fromFirstRun precedent).
     expect(block).toMatch(/onPress: \(\) => navigation\.navigate\('HowYouTrain'\)/);
-    expect(block).toMatch(/\{ text: 'Not now', style: 'cancel' \}/);
+    expect(block).toMatch(/\{ text: 'Got it', style: 'cancel' \}/);
     expect(block).not.toMatch(/Browse plans/);
+    expect(block).not.toContain("text: 'Not now'");
   });
 
   test('Try again re-runs the SAME capability pre-flight before retrying generation - never a silent fail-open', () => {

@@ -197,7 +197,10 @@ describe('R9 B4/E1: the honest could-not-check line', () => {
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site - 900, site + 5200);
     expect(block).toContain('let cancelled = false;');
-    expect(block).toContain('if (cancelled) return;');
+    // Round 11 (contradiction 5): BOTH guarded sites - after the await
+    // AND at the top of the catch - or a cancelled failing read could
+    // still clear live rows. One occurrence is not enough.
+    expect(block.match(/if \(cancelled\) return;/g)).toHaveLength(2);
     expect(block).toContain('return () => { cancelled = true; };');
   });
 });

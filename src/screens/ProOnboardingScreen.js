@@ -1556,8 +1556,11 @@ export default function ProOnboardingScreen({ navigation }) {
                 // First run has no plan library route from this screen
                 // (AUDIT-A precedent, FreeStarterScreen's own fromFirstRun
                 // branch): a plain hold instead of a browse action that
-                // would silently do nothing.
-                { text: 'Not now', style: 'cancel' },
+                // would silently do nothing. Round 11 (C1): 'Not now' is
+                // the capability lane's decline word and this dismiss
+                // writes nothing - 'Got it' is the codebase's own word
+                // for acknowledging an informational alert.
+                { text: 'Got it', style: 'cancel' },
                 {
                   text: 'Try again',
                   onPress: async () => {
