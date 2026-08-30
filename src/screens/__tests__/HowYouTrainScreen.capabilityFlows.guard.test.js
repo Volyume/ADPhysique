@@ -126,7 +126,7 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // dedicated dialogue, never as a flat union through the apply
     // proposal - the round-3 shape let one cancel-styled tap decline
     // every applied episode at once.
-    expect(fn).toContain('reviewAppliedGroup(g.ep, g.appliedIds, g.lines, g.failSafe)');
+    expect(fn).toContain('reviewAppliedGroup(g.ep, g.appliedIds, g.lines, g.failSafeCount)');
     expect(fn).not.toMatch(/proposeEffectiveDiff\(applied/);
     // Round 5 (R5-6): EVERY group with lines is gathered - the round-4
     // loop broke on the first, and its true no-op cancel meant no tap
@@ -134,7 +134,7 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     // group and the rewrite. Round 6 (C1): its cancel carries the F-1
     // no-op wording, never "Not now" - which is this same screen's
     // DECLINE on the apply proposal, one state apart.
-    expect(fn).toContain('groupChoices.push({ ep, appliedIds, lines, failSafe });');
+    expect(fn).toContain('groupChoices.push({ ep, appliedIds, lines, failSafeCount });');
     expect(fn).not.toMatch(/if \(surfaced\) break;/);
     expect(fn).toContain("buttons.push({ text: 'Leave it as it is', style: 'cancel' });");
     expect(fn).not.toContain("buttons.push({ text: 'Not now'");
@@ -219,17 +219,54 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     expect(screen).toContain('confirmClinicianDecline(subject, declineNow);');
   });
 
-  test('R7-4: the fail-safe case is TOLD everywhere it was silent', () => {
-    // The add-flow proposal shows the informational alert BEFORE the
-    // vacuous 'applied' write; the group review has a fail-safe body
-    // with stopping still available; the revisit loop offers a
-    // fail-safed group as a conversation.
+  test('R7-4/R8-2: the fail-safe case is TOLD everywhere - standalone, MIXED, and on the group review', () => {
+    // Round 7 told the case only when nothing else was affected; round
+    // 8 made the sentence first-class: one shared, outcome-phrased
+    // constant (a fail-safed session's emptiness can be several rules'
+    // doing, so it states what happens, never which rule "affects
+    // every exercise"), appended to the ordinary proposal and the
+    // ordinary group body whenever a fail-safed routine exists, with
+    // the dedicated dialogue kept for a group that has ONLY that.
+    expect(screen).toContain('const failSafeSentence = (n) => (n === 1');
+    expect(screen).toContain("'One of your sessions has nothing left that fits, so it runs as it is, with a quiet note on each affected exercise.'");
     expect(screen).toContain("'Your sessions stay as they are',");
-    expect(screen).toContain('rather than serving you nothing, with a quiet note on each affected exercise.');
     expect(screen).toContain('if (summary.checked && (summary.failSafeRoutines ?? 0) > 0) {');
     expect(screen).toContain('return { surfaced: true, checked: true };');
-    expect(screen).toContain('const failSafe = !lines.length && (failSafeRoutineIds?.length ?? 0) > 0;');
-    expect(screen).toContain("? 'This affects every exercise in at least one of your sessions, and nothing close enough fits in their place. Those sessions run as they are, with a quiet note on each affected exercise.'");
+    // The MIXED proposal appends the sentence to the ordinary body.
+    expect(screen).toContain("${(summary.failSafeRoutines ?? 0) > 0 ? ` ${failSafeSentence(summary.failSafeRoutines)}` : ''}");
+    // The group review carries the count whether or not lines exist,
+    // and its dedicated fail-safe frame presupposes nothing false.
+    expect(screen).toContain('const failSafe = !lines.length && failSafeCount > 0;');
+    expect(screen).toContain("? (subject ? `Keep ${subject} applied?` : 'Keep this applied?')");
+    expect(screen).toContain("text: 'Stop applying it',");
+    expect(screen).toContain("Your plan itself is unchanged.${failSafeCount > 0 ? ` ${failSafeSentence(failSafeCount)}` : ''}");
+    // No branch states an attribution the probe disproved.
+    expect(screen).not.toContain('this affects every exercise in');
+  });
+
+  test('R8-3: no capability-rewrite surface wears "Not now" on a no-op - tree-wide, not one file', () => {
+    // R7-5's guard read HowYouTrainScreen only, and the identical
+    // rewrite alert on PlansScreen kept the decline's word on a cancel
+    // that writes nothing. Every file that offers the capability plan
+    // rewrite is swept: 'Not now' may appear only where the press
+    // reaches the decline write.
+    const fs2 = require('fs');
+    const path2 = require('path');
+    for (const dir of ['screens', 'components']) {
+      const full = path2.join(__dirname, '..', '..', dir);
+      for (const f of fs2.readdirSync(full)) {
+        if (!f.endsWith('.js')) continue;
+        const src = fs2.readFileSync(path2.join(full, f), 'utf8');
+        if (!src.includes('computeCapabilityPlanRewrite') && !src.includes('proposeEffectiveDiff')) continue;
+        let idx = src.indexOf("text: 'Not now'");
+        while (idx !== -1) {
+          const window = src.slice(idx, idx + 500);
+          expect({ file: f, reachesDecline: window.includes('declineNow') })
+            .toEqual({ file: f, reachesDecline: true });
+          idx = src.indexOf("text: 'Not now'", idx + 1);
+        }
+      }
+    }
   });
 
   test('R7-5: "Not now" appears ONLY on the button that declines - one phrase per meaning', () => {

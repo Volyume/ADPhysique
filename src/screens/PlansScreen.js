@@ -542,7 +542,12 @@ export default function PlansScreen({ navigation }) {
                     'Update this plan to match how you train?',
                     `${n} exercise${plural} in it ${n === 1 ? 'sits' : 'sit'} outside how you train. Volyume can swap ${n === 1 ? 'it' : 'them'} for movements that fit. Your history is not rewritten.`,
                     [
-                      { text: 'Not now', style: 'cancel' },
+                      // Round 8 (R8-3): the F-1 no-op wording here too -
+                      // this cancel writes nothing, and in the
+                      // capability lane 'Not now' is the word that
+                      // DECLINES (HowYouTrainScreen's apply proposal).
+                      // One phrase per meaning, on every screen.
+                      { text: 'Leave it as it is', style: 'cancel' },
                       {
                         text: 'Update my plan',
                         onPress: async () => {

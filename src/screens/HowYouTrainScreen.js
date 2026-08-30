@@ -64,6 +64,18 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // not tell", never "nothing needs a decision" (A15).
 const COULD_NOT_READ_TOAST = 'Volyume could not read your plan just now. Nothing has changed. Try again in a moment.';
 
+// Round 8 (R8-2): the ONE fail-safe sentence, spoken wherever the
+// never-served-empty fail-safe absorbs a routine - the standalone
+// proposal, the mixed proposal, and the group review - so the case is
+// told in the same words everywhere and no path can fall between the
+// branches. Outcome-phrased on purpose: a fail-safed session's
+// emptiness can be several rules' doing (round-8 probe B), so the
+// sentence states what happens, never which rule "affects every
+// exercise".
+const failSafeSentence = (n) => (n === 1
+  ? 'One of your sessions has nothing left that fits, so it runs as it is, with a quiet note on each affected exercise.'
+  : 'Some of your sessions have nothing left that fits, so they run as they are, with a quiet note on each affected exercise.');
+
 // Backdating quick-pick (ARCHITECTURE section 5.1, RT1-7).
 const START_CHOICES = [
   { key: 'today', label: 'Today', days: 0 },
@@ -530,10 +542,13 @@ export default function HowYouTrainScreen() {
         // honour, recorded 'applied' with no proposal. The
         // informational alert states the truth before the record.
         if (summary.checked && (summary.failSafeRoutines ?? 0) > 0) {
-          const plural = summary.failSafeRoutines > 1;
+          // Round 8 (R8-2, attribution root): outcome-phrased - a
+          // fail-safed session's emptiness can be partly another
+          // rule's doing, so the alert states what happens, never
+          // "this affects every exercise".
           appAlert(
             'Your sessions stay as they are',
-            `${subject ? `While ${subject} is out` : 'While this lasts'}, this affects every exercise in ${plural ? 'some of your sessions' : 'one of your sessions'}, and nothing close enough fits in their place. Volyume keeps ${plural ? 'those sessions' : 'that session'} as they are rather than serving you nothing, with a quiet note on each affected exercise.`,
+            `${subject ? `While ${subject} is out: ` : 'While this lasts: '}${failSafeSentence(summary.failSafeRoutines)}`,
             [{ text: 'OK' }],
           );
           for (const id of createdIds) {
@@ -574,7 +589,12 @@ export default function HowYouTrainScreen() {
       };
       appAlert(
         'Apply this to your current plan?',
-        `${subject ? `While ${subject} is out` : 'While this lasts'}, your sessions would show ${parts.join(', and ')}. Your plan itself is not changed, and everything returns when you end it.`,
+        // Round 8 (R8-2): the fail-safe rides the ORDINARY proposal
+        // too - it used to be told only when nothing else was affected,
+        // so a plan with one substitutable session and one fail-safed
+        // one heard about the swap and nothing about the session that
+        // would not be honoured at all.
+        `${subject ? `While ${subject} is out` : 'While this lasts'}, your sessions would show ${parts.join(', and ')}. Your plan itself is not changed, and everything returns when you end it.${(summary.failSafeRoutines ?? 0) > 0 ? ` ${failSafeSentence(summary.failSafeRoutines)}` : ''}`,
         [
           {
             text: 'Not now',
@@ -772,7 +792,12 @@ export default function HowYouTrainScreen() {
   // stopping is explicit and group-scoped (clinician rules keep their
   // named confirm), and "Choose per exercise" opens the same per-line
   // review.
-  const reviewAppliedGroup = async (ep, appliedIds, lines, failSafe = false) => {
+  const reviewAppliedGroup = async (ep, appliedIds, lines, failSafeCount = 0) => {
+    // Round 8 (R8-2): a group can have live lines AND a fail-safed
+    // routine at once - the fail-safe sentence rides the ordinary body
+    // then, and only a group with NO lines at all gets the dedicated
+    // fail-safe dialogue.
+    const failSafe = !lines.length && failSafeCount > 0;
     try {
       // eslint-disable-next-line global-require
       const { clinicianSourcedIds, recordEffectiveChoice } = require('../lib/sessionEffective');
@@ -796,15 +821,22 @@ export default function HowYouTrainScreen() {
       // no per-line list to offer - the dialogue states the truth (the
       // sessions run as they are) and keeps stopping available, so the
       // decision recorded on the user's behalf stays revisitable.
+      // Round 8 (R8-2/C1): its frame presupposes nothing false - the
+      // app is not "working around" anything for a fail-safed group,
+      // so the title asks about the applied RULE and the destructive
+      // action names the same; and a group with lines AND a fail-safed
+      // routine carries the fail-safe sentence on the ordinary body.
       appAlert(
-        subject ? `Keep working around ${subject}?` : 'Keep working around this?',
         failSafe
-          ? 'This affects every exercise in at least one of your sessions, and nothing close enough fits in their place. Those sessions run as they are, with a quiet note on each affected exercise.'
-          : `Your sessions currently show ${parts.join(', and ')}. Your plan itself is unchanged.`,
+          ? (subject ? `Keep ${subject} applied?` : 'Keep this applied?')
+          : (subject ? `Keep working around ${subject}?` : 'Keep working around this?'),
+        failSafe
+          ? failSafeSentence(failSafeCount)
+          : `Your sessions currently show ${parts.join(', and ')}. Your plan itself is unchanged.${failSafeCount > 0 ? ` ${failSafeSentence(failSafeCount)}` : ''}`,
         failSafe ? [
           { text: 'Leave it as it is', style: 'cancel' },
           {
-            text: 'Stop working around it',
+            text: 'Stop applying it',
             style: 'destructive',
             onPress: () => {
               if (clinicianIds.size) { confirmClinicianDecline(subject, stopNow, 'stop'); return; }
@@ -890,11 +922,12 @@ export default function HowYouTrainScreen() {
       if (!checked) { couldNotRead = true; continue; }
       // Round 7 (R7-4): a fail-safed group IS a conversation - its
       // dialogue states that the sessions run as they are and keeps
-      // stopping available. Without it, a rule recorded 'applied' by
-      // the fail-safe path was unreachable from the only revisit door.
-      const failSafe = !lines.length && (failSafeRoutineIds?.length ?? 0) > 0;
-      if (!lines.length && !failSafe) continue;
-      groupChoices.push({ ep, appliedIds, lines, failSafe });
+      // stopping available. Round 8 (R8-2): the fail-safe COUNT rides
+      // along whether or not the group also has lines, so the mixed
+      // shape is told too.
+      const failSafeCount = failSafeRoutineIds?.length ?? 0;
+      if (!lines.length && !failSafeCount) continue;
+      groupChoices.push({ ep, appliedIds, lines, failSafeCount });
     }
     const rw = await computeCapabilityPlanRewrite(userId, {})
       .catch(() => ({ lines: [], checked: false }));
@@ -910,7 +943,7 @@ export default function HowYouTrainScreen() {
         : 'Nothing in your current plan needs a decision right now.');
       return;
     }
-    const openGroup = (g) => { reviewAppliedGroup(g.ep, g.appliedIds, g.lines, g.failSafe).catch(() => {}); };
+    const openGroup = (g) => { reviewAppliedGroup(g.ep, g.appliedIds, g.lines, g.failSafeCount).catch(() => {}); };
     const openRewrite = () => { proposeCapabilityPlanRewrite(null, null).catch(() => {}); };
     if (groupChoices.length + (hasRewrite ? 1 : 0) === 1) {
       if (groupChoices.length) openGroup(groupChoices[0]); else openRewrite();
