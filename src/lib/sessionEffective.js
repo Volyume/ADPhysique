@@ -460,11 +460,11 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
         // the excusal counter's LIKE '%"omitted"%' is untouched by these.
         effects.push({
           slot: i, exerciseFrom: line.exerciseFrom.id, exerciseTo: line.exerciseTo.id,
-          effect: 'substituted', constraintIds: line.constraintIds,
+          effect: 'substituted', constraintIds: line.constraintIds, source: 'serve',
         });
       } else if (line.effect === EFFECTIVE_EFFECT.OMITTED) {
         effects.push({
-          slot: i, exerciseFrom: line.exerciseFrom.id, effect: 'omitted', constraintIds: line.constraintIds,
+          slot: i, exerciseFrom: line.exerciseFrom.id, effect: 'omitted', constraintIds: line.constraintIds, source: 'serve',
         });
       } else {
         served.push(rows[i]);
@@ -485,7 +485,12 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
     // must describe what actually happened: nothing.
     if (!served.length) return untouched();
     if (effects.length && workoutId) {
-      await appendSessionConstraintEffects(userId, workoutId, effects).catch(() => {});
+      // Round 8 (I8): serve REPLACES its own prior entries - the record
+      // states what the CURRENT serve did (a relaunch that resolved a
+      // different substitute, or that served a row a declined rule no
+      // longer omits, corrects itself) while the removal hook's and the
+      // completion writer's entries stay untouched.
+      await appendSessionConstraintEffects(userId, workoutId, effects, { replaceSource: 'serve' }).catch(() => {});
     }
     return { served, baseIndexes, untouched: false };
   } catch (_e) {

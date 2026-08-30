@@ -277,3 +277,30 @@ describe('section 5.5: eligibility-derived swap cause', () => {
     expect(fromLegPress.cause).toBeNull();
   });
 });
+
+
+describe('R8/I8: the effects record corrects itself per WRITER', () => {
+  test('serve-sourced entries are replaced on re-append; unsourced writers\' entries survive', async () => {
+    // The pure merge kept the FIRST exerciseTo forever and never revoked
+    // a serve-time omission - so a relaunch that resolved a different
+    // substitute recorded a movement the user never saw, and a declined
+    // rule left an omission on record for a row the user then trained.
+    // replaceSource scopes the correction to one writer's own entries.
+    const { appendSessionConstraintEffects, getSessionConstraintEffect } = require('../database');
+    await appendSessionConstraintEffects(USER, 'w-i8', [
+      { slot: 0, exerciseFrom: 'x1', exerciseTo: 'a', effect: 'substituted', constraintIds: ['c'], source: 'serve' },
+      { slot: 1, exerciseFrom: 'x2', effect: 'omitted', constraintIds: ['c'] },
+    ]);
+    await appendSessionConstraintEffects(USER, 'w-i8', [
+      { slot: 0, exerciseFrom: 'x1', exerciseTo: 'b', effect: 'substituted', constraintIds: ['c'], source: 'serve' },
+    ], { replaceSource: 'serve' });
+    const rec = await getSessionConstraintEffect(USER, 'w-i8');
+    const entries = rec.effects;
+    expect(entries).toHaveLength(2);
+    expect(entries).toEqual(expect.arrayContaining([
+      expect.objectContaining({ exerciseFrom: 'x2', effect: 'omitted' }),
+      expect.objectContaining({ exerciseFrom: 'x1', exerciseTo: 'b' }),
+    ]));
+    expect(entries.some((e) => e.exerciseTo === 'a')).toBe(false);
+  });
+});
