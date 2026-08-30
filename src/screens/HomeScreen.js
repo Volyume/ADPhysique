@@ -1766,12 +1766,19 @@ export default function HomeScreen({ navigation, route }) {
   // itself changes, it just runs on focus too now.
   useFocusEffect(
     useCallback(() => {
-      if (!user?.id) return;
+      if (!user?.id) return undefined;
+      // Round 10 (B4): the cancellation guard the effect's setters never
+      // had - two overlapping focus cycles resolving out of order (a
+      // slow failing read landing after a fast good one) could leave any
+      // of the five flags describing the older read. Blur cancels the
+      // in-flight application; only the current focus's read writes.
+      let cancelled = false;
       (async () => {
         try {
           // eslint-disable-next-line global-require
           const { loadCapabilityResolveState } = require('../lib/capability/resolve');
           const state = await loadCapabilityResolveState(user.id, {});
+          if (cancelled) return;
           const episodeRows = Array.isArray(state?.restrictions)
             // Lead tighten (W3 review, D112 R8): a HELD episode must not
             // drive the "works around" line - the serve layer holds it, so
@@ -1817,6 +1824,7 @@ export default function HomeScreen({ navigation, route }) {
           // no-known-state failure branch (the synthesised empty state).
           setCapabilityCheckFailed(!!state?.unavailable && !state?.stale);
         } catch (_) {
+          if (cancelled) return;
           setActiveConstraint(false);
           setConstraintSubject(null);
           setAwaitingConstraint(null);
@@ -1826,6 +1834,7 @@ export default function HomeScreen({ navigation, route }) {
           setCapabilityCheckFailed(true);
         }
       })();
+      return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]),
   );

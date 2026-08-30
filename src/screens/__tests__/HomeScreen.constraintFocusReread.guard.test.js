@@ -27,7 +27,11 @@ describe('T2-30: the constraint-detection effect re-reads on focus', () => {
 
   test('reads the real effect (sanity)', () => {
     expect(site).toBeGreaterThan(-1);
-    expect(HOME.slice(site - 200, site)).toContain('if (!user?.id) return;');
+    // Round 10 (B4): the effect gained a cancellation guard, so the
+    // user gate and the guard's flag now sit between the callback's
+    // opening and the read.
+    expect(HOME.slice(site - 900, site)).toContain('if (!user?.id) return undefined;');
+    expect(HOME.slice(site - 900, site)).toContain('let cancelled = false;');
   });
 
   test('the capability read sits inside useFocusEffect(useCallback(...)), not a bare useEffect', () => {

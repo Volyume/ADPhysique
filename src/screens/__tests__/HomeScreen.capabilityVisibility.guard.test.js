@@ -188,4 +188,16 @@ describe('R9 B4/E1: the honest could-not-check line', () => {
     expect(block).toContain('Volyume could not check how you train just now.');
     expect(block).not.toMatch(/TouchableOpacity|onPress/);
   });
+
+  test('round 10: the effect carries a cancellation guard, so overlapping focus cycles cannot land out of order', () => {
+    // A slow failing read resolving after a fast good one left any of
+    // the five flags describing the older read; blur now cancels the
+    // in-flight application before its setters run.
+    const site = HOME.indexOf("const { loadCapabilityResolveState } = require('../lib/capability/resolve');");
+    expect(site).toBeGreaterThan(-1);
+    const block = HOME.slice(site - 900, site + 5200);
+    expect(block).toContain('let cancelled = false;');
+    expect(block).toContain('if (cancelled) return;');
+    expect(block).toContain('return () => { cancelled = true; };');
+  });
 });
