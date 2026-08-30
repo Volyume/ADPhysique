@@ -1134,8 +1134,25 @@ text:/label=/title=/text-node forms), the chokepoint's two proven
 holes closed (null entries mint; the picker append routes through the
 net; per-site mint copy deleted; records re-scoped to "every path
 that CREATES entries"), and the picker's two undersized lane controls
-rise to 48. NEXT: settled full gate + merge, adversarial review ROUND
-15, then S5 gate + device checklist.
+rise to 48. ROUND 15 RAN on 1ff1a059: NOT CLEAN - 3 BROKEN from 2 roots + 9
+QUALIFIED, 0 STOP - strongest convergence since round 9; both roots
+were THIRD instances of twice-corrected chains, so the closures end
+the chains (D127, correcting D126 rulings 1, 2 and 5): R15-1 the
+notice's branch selection extracted into constraintNoticeKind - pure,
+twelve-state truth table DRIVEN plus the breaking state at the real
+resolver (the held line had fired over a substituted row whenever a
+definite baseline conflict co-existed; the episode line now names
+driving rules only; a held-only set beside a baseline conflict yields
+the actionable baseline line by ruling), R15-2 the picker's
+show-anyway/set-aside toggles rise from ~39dp to 48 and the lane gets
+its FIRST enumerated touch-target guard with a strays assertion, the
+reload failure branch keeps the last state (a transient read failure
+no longer erases a correct notice), the swap sheet's write joins the
+sequence guard, the sweep gains template/title forms with
+element-bounded JSX windows, the R13-3 clear-history sync asymmetry
+stated on H2/I2/B9, F7's stale cell corrected. NEXT: settled full
+gate + merge, adversarial review ROUND 16, then S5 gate + device
+checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

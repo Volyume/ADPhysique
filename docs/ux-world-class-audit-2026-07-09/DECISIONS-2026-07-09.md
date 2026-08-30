@@ -4314,3 +4314,89 @@ copy says "permanently deletes"), unlike deleteWorkoutAndSets whose
 caller pairs the cloud delete. FOUNDER items unchanged (duplicate
 migrate_152 filenames, README ledger rows, CLAUDE.md counts). X1 = NO
 and X2 = pending, as ever.
+
+## D127 — CC33 review round 15 closures + D126 corrections (lead-ruled under D33, 2026-08-30)
+
+Adversarial review round 15 (on main 1ff1a059): 3 BROKEN rows from 2
+roots, 9 QUALIFIED, 0 STOP - the strongest convergence since round 9,
+and both roots were third instances of chains the loop had already
+corrected twice. Rulings:
+
+1. **The notice's branch selection is a pure, DRIVEN helper (R15-1,
+   correcting D126 ruling 1's completeness and D125 ruling 5's cell
+   claims).** Rounds 13-15 corrected the inline branch chain three
+   times, one branch per round; round 15 found the held line firing
+   over a substituted row whenever a definite BASELINE conflict
+   co-existed - "Volyume changes nothing until you say so" about a row
+   Volyume put there, with the user's just-captured rule never spoken.
+   The selection now lives in constraintNoticeKind
+   (capability/effective.js): the marker yields only to live episode
+   drivers or definite baseline facts; the held line speaks only for a
+   PURE held state (no marker, no live driver, no definite baseline -
+   the actionable truth outranks a rule that drives nothing); the
+   episode line is NAMED from the driving rules alone (naming a held
+   co-driver claimed the hold covered the row); baseline rules cannot
+   be held (model.js refuses baseline episode groups), so the baseline
+   branch needs no hold filter. The full truth table is driven -
+   twelve synthetic states plus the breaking state at the real
+   resolver - and the screen only words each kind, so a fourth
+   ordering defect cannot hide in an inline chain. One behaviour
+   change beyond the fix is RULED: a held-only episode set beside a
+   definite baseline conflict now yields the BASELINE line even
+   without a marker (previously the held line) - the actionable truth
+   with a swap on offer outranks reflecting the hold back.
+
+2. **48dp reaches the picker's remaining controls (R15-2, correcting
+   D126 ruling 5's "closed" and the J2 cell).** The show-anyway and
+   set-aside toggles - the only routes to what the user's rules
+   removed - were a caption plus 8dp of slop, ~39dp effective, the
+   exact shape ruled undersized one style-line above them. Real 48
+   now; createSaveBtn's off-scale 48 literal tokenised in passing. And
+   the missing guard exists at last: one enumerated touch-target guard
+   over the lane's controls (the round-13 and round-14 closures had NO
+   pin, which is how a third instance shipped), with a strays
+   assertion so a new numeric minHeight fails loudly.
+
+3. **The reload's failure branch keeps the last state (A15/D3
+   conditions closed at mechanism).** A transient read failure on a
+   return-focus nulled a CORRECT in-flight state - erasing the notice,
+   side-carve note and substitution marker with no word said -
+   where RoutineDetail's own precedent keeps the last state. Reload
+   failures keep it now; mount and exercise-change failures still
+   clear, because there the previous state describes a different slot
+   and keeping it would judge the wrong exercise. The remaining
+   sliver is stated: a rule arriving by sync mid-focus stays invisible
+   until focus, exercise change or the swap sheet.
+
+4. **The swap sheet's write joins the sequence guard (I8 condition
+   closed; correcting D126 ruling 2's "never overwrites" claim).**
+   handleOpenSwap's setIntentState sat outside the counter, so a
+   focus reload started before the tap and resolving after it could
+   overwrite the sheet's newer read. The write bumps the counter now,
+   invalidating any in-flight reload.
+
+5. **The sweep covers the template and title-expression forms, and
+   JSX hits are element-bounded (C1/I6 conditions).** Three more
+   static literal forms; a JSX-prop hit's window now ends at its own
+   element's close, so a declineNow later in the file cannot vouch
+   for a JSX no-op. The honest limit is STATED on the row: a label
+   computed at runtime cannot be swept statically.
+
+6. **Conditions stated, records corrected.** The clear-history
+   asymmetry R13-3 created is stated on H2/I2/B9 (the effects
+   tombstone syncs while the local-only workout delete does not, so a
+   full re-pull returns history without its constraint provenance -
+   conservative direction, no fabricated CONSTRAINED evidence; the
+   wider clear-history cloud story remains the founder-side item D126
+   surfaced). F7's "untouched this campaign" cell is corrected (the
+   round-14 consent-dismiss copy change is ON the card; behaviour
+   verified fail-closed and un-bypassable). The preselect's `driving`
+   local is renamed prefillConflicts - it deliberately includes held
+   and unknown rows, the opposite of constraintNoticeKind's
+   drivingEpisode, and two "driving"s meaning opposite things in one
+   region is the comment-contradiction class this campaign keeps
+   paying for.
+
+FOUNDER items unchanged (duplicate migrate_152 filenames, README
+ledger rows, CLAUDE.md counts, clear-history cloud copies). X1 = NO
+and X2 = pending, as ever.
