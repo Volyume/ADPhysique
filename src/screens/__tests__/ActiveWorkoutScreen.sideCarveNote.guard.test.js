@@ -256,19 +256,40 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
     expect(SRC).toContain('userChosen: !!e?._userAdded,');
   });
 
-  test('R13 (B5): a definite conflict on the substitute outranks the marker line', () => {
-    // The marker branch returned before any conflict evaluation, so a
-    // rule captured mid-session against the SUBSTITUTE was never spoken
-    // on the row it bears on. With only unknown conflicts the marker
-    // stays (unknown drives nothing).
+  test('R13/R14 (B5): only conflicts with LIVE automation outrank the marker line', () => {
+    // Round 13: the marker branch returned before any conflict
+    // evaluation, so a rule captured mid-session against the SUBSTITUTE
+    // was never spoken on the row it bears on. Round 14 corrected the
+    // gate's class: the principle is "conflicts that DRIVE nothing
+    // leave the marker" - unknowns AND held rules (D120 ruling 2, D112
+    // R8) - and round 13 enumerated only unknowns, so a held-only
+    // definite set killed the marker and let the held line claim
+    // "Volyume changes nothing" over a row Volyume substituted in.
     const site = SRC.indexOf("if (currentEntry?._capabilityTemp?.fromName");
     expect(site).toBeGreaterThan(-1);
-    const block = SRC.slice(site, site + 260);
-    expect(block).toContain('&& !definiteEpisode.length && !definiteBaseline.length)');
-    // The definite lists are computed BEFORE the marker branch now.
+    const block = SRC.slice(site, site + 300);
+    expect(block).toContain('&& !drivingEpisode.length && !definiteBaseline.length)');
+    // The driving list drops held rules from the definite list, and
+    // both are computed BEFORE the marker branch.
+    const drvSite = SRC.indexOf("const drivingEpisode = definiteEpisode.filter((c) => c.row?.adaptationMode !== 'hold');");
     const defSite = SRC.indexOf('const definiteEpisode = constraintConflicts.filter((c) => !c.unknown);');
     expect(defSite).toBeGreaterThan(-1);
-    expect(defSite).toBeLessThan(site);
+    expect(drvSite).toBeGreaterThan(defSite);
+    expect(drvSite).toBeLessThan(site);
+  });
+
+  test('R14-2: the intent state reloads on focus, burst-window deduped, sequence-guarded', () => {
+    // The round-13 B5 ruling exists for a rule captured mid-session
+    // through "Work around this" - which navigates away and back - yet
+    // intentState only reloaded on exercise change or swap-sheet open,
+    // so the freshly captured rule stayed invisible on the very row it
+    // was captured from (the staleness class R6-2 closed on
+    // RoutineDetailScreen).
+    expect(SRC).toContain("const unsub = navigation.addListener('focus', () => {");
+    expect(SRC).toContain('if (Date.now() - intentLoadAtRef.current < 800) return;');
+    expect(SRC).toContain('reloadIntentState();');
+    expect(SRC).toContain('const seq = ++intentLoadSeqRef.current;');
+    expect(SRC).toContain('if (seq === intentLoadSeqRef.current) setIntentState(state);');
   });
 
   test('R10-3: completion passes the session\'s performed ids, outside the capState gate', () => {

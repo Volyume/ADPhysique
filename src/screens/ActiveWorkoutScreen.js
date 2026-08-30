@@ -803,15 +803,38 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // the exercise actually being logged, not a stale one from a previous
   // slot. Best-effort and additive: a failure simply means no notice shows,
   // never that logging is affected.
-  useEffect(() => {
-    let cancelled = false;
-    if (!user?.id) { setIntentState(null); return undefined; }
+  //
+  // Round 14 (R14-2): reload on FOCUS too. The round-13 B5 ruling exists
+  // for a rule captured mid-session through "Work around this" - which
+  // navigates to How you train and back - yet this state only ever
+  // reloaded on exercise change or swap-sheet open, so the freshly
+  // captured rule stayed invisible on the very row it was captured from
+  // (the class R6-2 closed on RoutineDetailScreen). Same burst-window
+  // discipline as B3: a focus within 800ms of the dep-triggered load is
+  // its own echo. A sequence guard replaces the cancelled flag so an
+  // older read landing late never overwrites a newer one.
+  const intentLoadSeqRef = useRef(0);
+  const intentLoadAtRef = useRef(0);
+  const reloadIntentState = useCallback(() => {
+    if (!user?.id) { setIntentState(null); return; }
+    const seq = ++intentLoadSeqRef.current;
     getActiveBlock(user.id)
       .then(block => loadExerciseIntentState(user.id, { activeMesocycleId: block?.id ?? null }))
-      .then(state => { if (!cancelled) setIntentState(state); })
-      .catch(() => { if (!cancelled) setIntentState(null); });
-    return () => { cancelled = true; };
-  }, [user?.id, exercise?.id]);
+      .then(state => { if (seq === intentLoadSeqRef.current) setIntentState(state); })
+      .catch(() => { if (seq === intentLoadSeqRef.current) setIntentState(null); });
+  }, [user?.id]);
+  useEffect(() => {
+    intentLoadAtRef.current = Date.now();
+    reloadIntentState();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadIntentState, exercise?.id]);
+  useEffect(() => {
+    const unsub = navigation.addListener('focus', () => {
+      if (Date.now() - intentLoadAtRef.current < 800) return;
+      reloadIntentState();
+    });
+    return unsub;
+  }, [navigation, reloadIntentState]);
 
   // CC33 adversarial review F1: the entry's own exercise object comes
   // from getRoutineExercisesWithDetails and carries NO demand columns,
@@ -936,10 +959,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // used to return first, so a rule captured mid-session against the
     // SUBSTITUTE itself was never spoken on the row it bears on. One
     // mention per surface still holds - the row speaks the more
-    // consequential truth; with only unknown conflicts (which drive
-    // nothing) the marker line stays.
+    // consequential truth. Round 14 (R14-1) corrected the gate's CLASS:
+    // the principle is "conflicts that DRIVE nothing leave the marker",
+    // and round 13 enumerated only unknowns - a HELD definite conflict
+    // drives nothing either (D120 ruling 2; D112 R8), yet it killed the
+    // marker and let the held line claim "Volyume changes nothing" over
+    // a row Volyume itself substituted in. The marker now yields only
+    // to conflicts with live automation behind them.
+    const drivingEpisode = definiteEpisode.filter((c) => c.row?.adaptationMode !== 'hold');
     if (currentEntry?._capabilityTemp?.fromName
-      && !definiteEpisode.length && !definiteBaseline.length) {
+      && !drivingEpisode.length && !definiteBaseline.length) {
       return { kind: 'episode', copy: `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts` };
     }
     // D112 R8 (section 25): a fully-held conflict set says so instead of
