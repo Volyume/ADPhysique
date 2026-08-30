@@ -258,13 +258,15 @@ export function emptyCapabilityState(atMs = null) {
 }
 
 /**
- * Round 18 (R18-1): does this state carry a USABLE answer - one an
- * ACTION may consult? loadCapabilityResolveState returns exactly three
- * shapes: a successful read (no `unavailable`), a stale-but-known
- * snapshot (`unavailable: true, stale: true` - the session proved this
- * state earlier, so it is knowledge), and unknown-empty
- * (`unavailable: true`, no `stale` - the read failed with nothing
- * known). Only the last is NOT knowledge. D129 ruling 1's posture
+ * Round 18 (R18-1), enumeration corrected round 19: does this state
+ * carry a USABLE answer - one an ACTION may consult?
+ * loadCapabilityResolveState returns four shapes: a successful read
+ * (no `unavailable`), the no-user empty state (also no `unavailable` -
+ * with no user there are no rules, a fact, not a failure), a
+ * stale-but-known snapshot (`unavailable: true, stale: true` - the
+ * session proved this state earlier, so it is knowledge), and
+ * unknown-empty (`unavailable: true`, no `stale` - the read failed
+ * with nothing known). Only the last is NOT knowledge. D129 ruling 1's posture
  * split: a rendered notice may stay silent on a pending or failed
  * read, but an ACTION must hold until the app actually knows - the
  * round-17 readiness guards tested presence, so an unknown-empty state

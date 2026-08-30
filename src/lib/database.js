@@ -10638,9 +10638,15 @@ export async function recordExerciseSwap(userId, fromExerciseId, toExerciseId, {
   let cause = causeOverride === 'constraint' ? 'constraint' : null;
   try {
     // eslint-disable-next-line global-require
-    const { loadCapabilityResolveState, capabilityBlockReason } = require('./capability/resolve');
+    const { loadCapabilityResolveState, capabilityBlockReason, capabilityKnown } = require('./capability/resolve');
     const state = await loadCapabilityResolveState(userId, {});
-    if (!state.empty && !state.unavailable) {
+    // Round 19 (F5): stale-known is knowledge (D130 ruling 1) - under
+    // the old `!unavailable` guard a capability-forced swap during a
+    // stale-known read recorded cause NULL and taught the preference
+    // lane a dislike the learning shield exists to prevent. A read
+    // that genuinely knows nothing still derives nothing (stated on
+    // the F5 row); the explicit causeOverride stands either way.
+    if (!state.empty && capabilityKnown(state)) {
       const from = await getExerciseById(fromExerciseId);
       if (from && capabilityBlockReason(state, from) !== null) cause = 'constraint';
     }

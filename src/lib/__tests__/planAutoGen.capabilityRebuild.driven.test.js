@@ -166,6 +166,40 @@ test('the control: a DEFINITE capability block on the incumbent still replaces i
   expect(aboutAxial.some((d) => d.reason === 'equipment_lost')).toBe(false);
 });
 
+test('R19-2 DRIVEN: a STALE-KNOWN capability read still replaces a baseline-blocked incumbent - no keep beside an emptied slot', async () => {
+  // Round 19. The baseline term refused the resolver's stale-known shape
+  // (unavailable: true, stale: true - one good read earlier this session,
+  // then a failure) while the WRITE-TIME carve honoured the same state. So
+  // slotVerdict fell to evidence and RETAINED the incumbent, continuity
+  // attached no _capabilityHold marker (only CAPABILITY_HOLD does), and
+  // resolvePlanAgainstLibrary then voided it: the receipt said "retained"
+  // beside a slot the saved plan no longer had - the exact T1-07
+  // receipt/commit contradiction. Stale-known is KNOWLEDGE (D130 ruling 1),
+  // so both must read it the same way.
+  const SQUATTY = {
+    id: 'ex-axial', name: 'Heavy Bench Press', primaryMuscle: 'chest',
+    subregion: 'flat', axialLoad: 1, equipmentProfiles: null,
+  };
+  getAllExercises.mockResolvedValue([...LIBRARY, SQUATTY]);
+  getRoutineExercisesWithDetails.mockResolvedValue([
+    { routineExercise: { id: 're-axial' }, exercise: { id: SQUATTY.id, name: SQUATTY.name, primaryMuscle: 'chest', subregion: 'flat' } },
+  ]);
+  // The one variable that differs from the control above.
+  loadExerciseIntentState.mockResolvedValue({
+    capability: { ...axialRule(), unavailable: true, stale: true }, unavailable: false,
+  });
+  const res = await generatePlanDryRun('u1', PROFILE);
+  expect(res.ok).toBe(true);
+  const about = (res.continuity.decisions ?? [])
+    .filter((d) => d.previousExerciseName === SQUATTY.name || d.exerciseName === SQUATTY.name);
+  expect(about.some((d) => d.reason === 'capability_excluded')).toBe(true);
+  // The receipt and the written plan agree: nothing is "kept" that the
+  // write then drops.
+  const kept = about.filter((d) => d.outcome === 'retained');
+  const names = res.plan.workouts.flatMap((w) => (w.exercises ?? []).map((e) => e.exerciseName));
+  expect(kept.length === 0 || names.includes(SQUATTY.name)).toBe(true);
+});
+
 test('Q2 DRIVEN: an UNTAGGED custom incumbent is never dropped in silence - the receipt says "no longer in"', async () => {
   // The round-4 discovery, measured at 15 of 17 muscles: a custom lift
   // whose name resolves no movement family (creation never records a

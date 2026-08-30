@@ -518,8 +518,17 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
     // never REPLACE on a check that did not happen.
     let capBaselineBlocked = false;
     try {
+      // Round 19 (R19-2): stale-known is KNOWLEDGE (D130 ruling 1). The
+      // old `!unavailable` guard refused the stale-known shape while
+      // the write-time carve honoured it, so a baseline-blocked
+      // incumbent was KEPT by evidence here and then voided at write -
+      // the receipt said "retained" beside an emptied slot, the exact
+      // T1-07 contradiction. capabilityKnown holds only a state the
+      // app cannot vouch for.
+      // eslint-disable-next-line global-require
+      const { capabilityKnown } = require('./capability/resolve');
       if (row && intentState?.capability && !intentState.capability.empty
-        && !intentState.capability.unavailable) {
+        && capabilityKnown(intentState.capability)) {
         // Round 18 (R18-2): the BASELINE question asked of the baseline
         // list itself (allowance-carved like every decision reader -
         // baselineConflicts rides on blockingConflicts), not of "all

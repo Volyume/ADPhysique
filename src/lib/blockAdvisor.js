@@ -581,8 +581,14 @@ async function buildProgrammeReview(userId, activeBlock) {
       // baselineConflicts rides on blockingConflicts), dropping the
       // `&& !capabilityAffected` proxy that let a held or declined
       // episode rule veto the replace. slotVerdict does the ranking.
+      // Round 19 (R19-2), matching planAutoGen: stale-known is
+      // knowledge - the `!unavailable` guard silently switched the
+      // review's capability REPLACE off under a state the rest of the
+      // lane honours.
+      // eslint-disable-next-line global-require
+      const { capabilityKnown } = require('./capability/resolve');
       capabilityIneligible = !!(row && intentState?.capability && !intentState.capability.empty
-        && !intentState.capability.unavailable
+        && capabilityKnown(intentState.capability)
         && baselineConflicts(intentState.capability, row).some((c) => !c.unknown));
     } catch (_e) { capabilityIneligible = false; }
     return {
