@@ -1420,7 +1420,12 @@ export default function HowYouTrainScreen() {
             delete all of it here at any time. Deleting it does not touch your account.
           </Text>
           <Choice label="I agree - store this information" onPress={onConsent} t={t} primary />
-          <Choice label="Not now" sub="You can still avoid specific exercises from Plan tools, and set your equipment - neither needs this agreement."
+          {/* Round 14 (R14-3): 'Not now' is this lane's decline word (it
+              writes 'declined' on the apply proposal one state away),
+              and this dismiss writes nothing - the D118 one-phrase-per-
+              meaning blur, on the consent card itself. Action-phrased
+              instead; the gate's behaviour is untouched. */}
+          <Choice label="Leave it for now" sub="You can still avoid specific exercises from Plan tools, and set your equipment - neither needs this agreement."
             onPress={() => { setAdding(null); setDraft(null); }} t={t} />
         </View>
       );

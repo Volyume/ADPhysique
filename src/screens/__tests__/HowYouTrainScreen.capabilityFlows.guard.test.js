@@ -286,8 +286,15 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
       'demandConflicts',
       'capability/directory',
     ];
-    // Both quote forms of the button literal (round 10, I6 condition 2).
-    const LITERALS = ["text: 'Not now'", 'text: "Not now"'];
+    // Every render form this codebase uses for a button's words (round
+    // 10 added the alert double-quote form; round 14 added the JSX prop
+    // and text-node forms after the consent card's label="Not now"
+    // no-op passed four rounds of alert-literal-only sweeping).
+    const LITERALS = [
+      "text: 'Not now'", 'text: "Not now"',
+      'label="Not now"', "label={'Not now'}",
+      'title="Not now"', '>Not now<',
+    ];
     const files = [];
     const walk = (dir) => {
       for (const entry of fs2.readdirSync(dir, { withFileTypes: true })) {
