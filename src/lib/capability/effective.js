@@ -248,36 +248,52 @@ export function removalExcusalConflicts(conflicts) {
  * a substituted row whenever a definite baseline conflict co-existed,
  * denying both the substitution and the just-captured rule).
  *
- * The ranking, from the rulings:
+ * The ranking, from the rulings (round 19, R19-3, mirrors slotVerdict's
+ * D130 order - the old branch order let a declined or undecided rule,
+ * which drives nothing, silence a definite baseline fact with
+ * "temporary" wording, the same veto class D130 ruling 3 closed at the
+ * rebuild):
  *  - the MARKER (a serve substitution's provenance) yields only to
  *    conflicts with LIVE automation or standing baseline facts -
- *    unknowns and held rules drive nothing (D113 ruling 1; D120 ruling
- *    2, D112 R8) and leave it;
+ *    unknowns, held, declined and undecided rules drive nothing (D113
+ *    ruling 1; D120 ruling 2, D112 R8) and leave it (the old
+ *    drivingEpisode term contradicted this docblock's own sentence);
  *  - the HELD line ("Volyume changes nothing until you say so") speaks
  *    only for a PURE held state: no marker (it would deny a change
- *    Volyume made), no live driver, no definite baseline conflict (the
- *    actionable truth outranks a rule that drives nothing);
- *  - the EPISODE line speaks for live definite episode drivers (and is
- *    NAMED from them alone - naming a held rule claimed too much);
+ *    Volyume made), no other definite episode conflict, no definite
+ *    baseline conflict (the actionable truth outranks a rule that
+ *    drives nothing);
+ *  - the EPISODE line ranks ABOVE baseline only while the overlay is
+ *    actually OPERATING - liveEpisode is the shared
+ *    removalExcusalConflicts answer (definite, not held, every live
+ *    driver applied: exactly when serve acts), the same gate the
+ *    writers and both rebuild builders consume;
  *  - the BASELINE line for definite baseline conflicts (baseline rules
  *    cannot be held: model.js refuses baseline episode groups and the
- *    hold write is keyed by episode_group_id);
+ *    hold write is keyed by episode_group_id) - ranked above the
+ *    remaining non-held definite episode conflicts, so a permanent
+ *    fact is never worded as temporary;
+ *  - the EPISODE line again for those remaining definite conflicts
+ *    (declined or undecided, no baseline fact beneath them) - their
+ *    "sits outside your temporary change" wording is true there;
  *  - the UNKNOWN line only when nothing definite exists at all.
  *
  * @returns {{kind: 'marker'|'held'|'episode'|'baseline'|'unknown'|null,
- *   drivingEpisode: Array, definiteEpisode: Array, definiteBaseline: Array,
- *   unknowns: Array}}
+ *   drivingEpisode: Array, liveEpisode: Array, definiteEpisode: Array,
+ *   definiteBaseline: Array, unknowns: Array}}
  */
 export function constraintNoticeKind({ hasMarker = false, episodeConflicts: ep = [], baselineConflicts: base = [] } = {}) {
   const definiteEpisode = (ep ?? []).filter((c) => !c?.unknown);
   const definiteBaseline = (base ?? []).filter((c) => !c?.unknown);
   const drivingEpisode = definiteEpisode.filter((c) => c?.row?.adaptationMode !== 'hold');
+  const liveEpisode = removalExcusalConflicts(definiteEpisode);
   const unknowns = [...(ep ?? []), ...(base ?? [])].filter((c) => c?.unknown);
-  const out = { drivingEpisode, definiteEpisode, definiteBaseline, unknowns };
-  if (hasMarker && !drivingEpisode.length && !definiteBaseline.length) return { kind: 'marker', ...out };
+  const out = { drivingEpisode, liveEpisode, definiteEpisode, definiteBaseline, unknowns };
+  if (hasMarker && !liveEpisode.length && !definiteBaseline.length) return { kind: 'marker', ...out };
   if (definiteEpisode.length && !drivingEpisode.length && !hasMarker && !definiteBaseline.length) return { kind: 'held', ...out };
-  if (drivingEpisode.length) return { kind: 'episode', ...out };
+  if (liveEpisode.length) return { kind: 'episode', ...out };
   if (definiteBaseline.length) return { kind: 'baseline', ...out };
+  if (drivingEpisode.length) return { kind: 'episode', ...out };
   if (unknowns.length) return { kind: 'unknown', ...out };
   return { kind: null, ...out };
 }

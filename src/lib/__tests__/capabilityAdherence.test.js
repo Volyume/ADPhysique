@@ -724,18 +724,31 @@ describe('R12: record-keyed conversion, definite-only removal excusal, completed
 
   test('R15-1: constraintNoticeKind - the DRIVEN truth table three rounds of inline ordering could not keep straight', () => {
     const { constraintNoticeKind } = require('../capability/effective');
-    const live = { unknown: false, row: { adaptationMode: null } };
+    // Round 19 (R19-3): `live` means the overlay OPERATES - definite,
+    // not held, applied (the shared removalExcusalConflicts answer).
+    // The old fixture carried no effectiveChoice, so the table never
+    // varied choice against a baseline co-driver, which is exactly
+    // where the ranking was wrong for four rounds.
+    const live = { unknown: false, row: { adaptationMode: null, effectiveChoice: 'applied' } };
+    const declined = { unknown: false, row: { adaptationMode: null, effectiveChoice: 'declined' } };
+    const undecided = { unknown: false, row: { adaptationMode: null, effectiveChoice: null } };
     const held = { unknown: false, row: { adaptationMode: 'hold' } };
     const unk = { unknown: true, row: {} };
     const base = { unknown: false, row: {} };
     const k = (hasMarker, ep, b) => constraintNoticeKind({ hasMarker, episodeConflicts: ep, baselineConflicts: b }).kind;
     // The marker (a serve substitution's provenance) yields only to
-    // conflicts that DRIVE something.
+    // conflicts with LIVE automation or standing baseline facts -
+    // held, declined, undecided and unknown rules drive nothing and
+    // leave it (R19-3 made the code match this, the docblock's own
+    // sentence since round 13).
     expect(k(true, [], [])).toBe('marker');
     expect(k(true, [unk], [])).toBe('marker');
     expect(k(true, [held], [])).toBe('marker');
+    expect(k(true, [declined], [])).toBe('marker');
+    expect(k(true, [undecided], [])).toBe('marker');
     expect(k(true, [live], [])).toBe('episode');
     expect(k(true, [held, live], [])).toBe('episode');
+    expect(k(true, [live], [base])).toBe('episode');
     // R15-1's breaking state: marker + held-only + definite baseline
     // rendered the held line - "Volyume changes nothing until you say
     // so" over a row Volyume substituted in, with the just-captured
@@ -745,7 +758,21 @@ describe('R12: record-keyed conversion, definite-only removal excusal, completed
     expect(k(false, [held], [])).toBe('held');
     expect(k(false, [held], [base])).toBe('baseline');
     expect(k(false, [held, live], [])).toBe('episode');
+    // The LIVE overlay outranks the baseline fact (D129 ruling 6, as
+    // at slotVerdict) - serve is genuinely working around the row.
     expect(k(false, [live], [base])).toBe('episode');
+    // R19-3's breaking states: a declined or undecided rule drives
+    // nothing and cannot silence the permanent fact with temporary
+    // wording. Without a baseline fact beneath it, the temporary
+    // wording is true and stands.
+    expect(k(false, [declined], [base])).toBe('baseline');
+    expect(k(false, [undecided], [base])).toBe('baseline');
+    expect(k(false, [declined], [])).toBe('episode');
+    expect(k(false, [undecided], [])).toBe('episode');
+    // A declined co-driver blocks the overlay (serve marks the row
+    // conflicted, it does not substitute), so the baseline fact speaks.
+    expect(k(false, [live, declined], [base])).toBe('baseline');
+    expect(k(false, [live, declined], [])).toBe('episode');
     expect(k(false, [], [base])).toBe('baseline');
     expect(k(false, [unk], [])).toBe('unknown');
     expect(k(false, [], [])).toBe(null);
