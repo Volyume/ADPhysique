@@ -1321,29 +1321,44 @@ export default function CoachOutputScreen({ navigation, route }) {
       if (delta > 0) {
         try {
           // eslint-disable-next-line global-require
-          const { loadCapabilityResolveState, blockingConflicts } = require('../lib/capability/resolve');
+          const { loadCapabilityResolveState, blockingConflicts, capabilityKnown } = require('../lib/capability/resolve');
           // eslint-disable-next-line global-require
           const { getAllExercises, getLatestCheckin } = require('../lib/database');
           const capState = await loadCapabilityResolveState(user.id, {});
-          // D112 R8: an episode the user set to "hold my plan" drives no
-          // coach volume holds - holding the plan means holding it, not
-          // freezing its muscles.
-          const episodeIds = new Set((capState.restrictions ?? [])
-            .filter((r) => r.role === 'episode' && r.adaptationMode !== 'hold').map((r) => r.id));
-          if (episodeIds.size) {
-            const library = await getAllExercises();
-            for (const ex of library) {
-              if (!ex?.primaryMuscle) continue;
-              // Decision layer (D112 R4): an exercise the user allowed no
-              // longer holds its muscle - unless the rule is clinician-set.
-              if (blockingConflicts(capState, ex).some((c) => !c.unknown && episodeIds.has(c.constraintId))) {
-                holdMuscles.add(ex.primaryMuscle);
+          // Round 19 (R19-1): knowledge is the withhold's trigger, not a
+          // throw. The resolver cannot reject - its whole body is one
+          // try/catch, so a cold read failure RETURNS the unknown-empty
+          // shape, episodeIds came back empty, nothing below threw, and
+          // the increase applied body-wide on a read that knew nothing -
+          // the exact posture D112 R3 forbids, shipped under a
+          // string-level guard that could not see a gate's fail
+          // direction (D130 ruling 5's class, on a pre-campaign gate).
+          // A stale-known state IS knowledge (D130 ruling 1) and
+          // computes real holds below; only a state the app cannot
+          // vouch for withholds.
+          if (!capabilityKnown(capState)) {
+            holdMuscles = null;
+          } else {
+            // D112 R8: an episode the user set to "hold my plan" drives no
+            // coach volume holds - holding the plan means holding it, not
+            // freezing its muscles.
+            const episodeIds = new Set((capState.restrictions ?? [])
+              .filter((r) => r.role === 'episode' && r.adaptationMode !== 'hold').map((r) => r.id));
+            if (episodeIds.size) {
+              const library = await getAllExercises();
+              for (const ex of library) {
+                if (!ex?.primaryMuscle) continue;
+                // Decision layer (D112 R4): an exercise the user allowed no
+                // longer holds its muscle - unless the rule is clinician-set.
+                if (blockingConflicts(capState, ex).some((c) => !c.unknown && episodeIds.has(c.constraintId))) {
+                  holdMuscles.add(ex.primaryMuscle);
+                }
               }
             }
-          }
-          const checkin = await getLatestCheckin(user.id).catch(() => null);
-          for (const m of String(checkin?.soreMuscles ?? '').split(',')) {
-            if (m.trim()) holdMuscles.add(m.trim());
+            const checkin = await getLatestCheckin(user.id).catch(() => null);
+            for (const m of String(checkin?.soreMuscles ?? '').split(',')) {
+              if (m.trim()) holdMuscles.add(m.trim());
+            }
           }
         } catch (_e) { holdMuscles = null; }
       }

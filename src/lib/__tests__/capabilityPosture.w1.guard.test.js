@@ -27,6 +27,23 @@ describe('T2-19 - the coach Apply hold re-check fails SAFE', () => {
     expect(src).toMatch(/holdMuscles === null/);
     expect(src).toMatch(/could not check how you train just now, so this increase waits/);
   });
+
+  test('round 19 (R19-1): the withhold triggers on KNOWLEDGE, not on a throw', () => {
+    // The catch was the gate's ONLY trigger, and loadCapabilityResolveState
+    // cannot reject - its whole body is one try/catch - so a cold read
+    // failure RETURNED the unknown-empty shape, nothing threw, holdMuscles
+    // stayed an empty Set and the increase applied body-wide on a read that
+    // knew nothing. Exactly the posture D112 R3 forbids, shipped under this
+    // suite's own string pins: a source guard cannot see a gate's fail
+    // direction (D130 ruling 5's class). capabilityKnown's fail direction is
+    // driven at the real loader in ActiveWorkoutScreen.sideCarveNote.guard.
+    expect(src).toContain('if (!capabilityKnown(capState)) {');
+    const gate = src.indexOf('if (!capabilityKnown(capState)) {');
+    const holds = src.indexOf('holdMuscles.add(ex.primaryMuscle)');
+    expect(gate).toBeGreaterThan(-1);
+    expect(gate).toBeLessThan(holds);
+    expect(src).toContain('const { loadCapabilityResolveState, blockingConflicts, capabilityKnown }');
+  });
 });
 
 describe('T1-09 - blockAdvisor adopts the fail-safe capability read', () => {
