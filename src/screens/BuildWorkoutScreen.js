@@ -15,7 +15,7 @@ import Stepper from '../components/Stepper';
 import TextField from '../components/TextField';
 import BottomSheet from '../components/BottomSheet';
 import Chip from '../components/Chip';
-import { getAllExercises, createWorkout, getActiveBlock } from '../lib/database';
+import { getAllExercises, createWorkout, getActiveBlock, uid } from '../lib/database';
 import { loadExerciseIntentState } from '../lib/exercise/intent';
 import { filterLibraryForGeneration } from '../lib/exercise/generation';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
@@ -162,6 +162,12 @@ export default function BuildWorkoutScreen({ navigation }) {
       const initialExercises = exercises.map(({ exercise, sets, repsMin, repsMax, restSeconds, startingWeight }) => ({
         exercise,
         routineExercise: {
+          // Round 11 (R11-2): a stable slot id, minted at construction.
+          // The session effects record keys per slot (rowId =
+          // routineExercise.id), and this ad-hoc literal carried no id -
+          // so a doubled exercise's second slot collapsed out of the
+          // record exactly as round 10 closed for planned sessions.
+          id: uid(),
           recommendedSets: sets,
           recommendedRepsMin: repsMin,
           recommendedRepsMax: repsMax,

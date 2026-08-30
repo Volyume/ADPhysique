@@ -20,7 +20,7 @@ import Card from '../components/Card';
 import Chip from '../components/Chip';
 import EmptyState from '../components/EmptyState';
 import SearchBar from '../components/SearchBar';
-import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets } from '../lib/database';
+import { getRecentCompletedWorkouts, getWorkoutSetsForWorkoutIds, getAllExercises, createWorkout, getWorkoutSetsForWorkout, getRoutineExercisesWithDetails, deleteWorkoutAndSets, uid } from '../lib/database';
 import { enqueueSyncOp } from '../lib/syncQueue';
 import { logError } from '../lib/errorLog';
 import { calculateTonnage, buildLoadSemanticsById } from '../lib/algorithms';
@@ -241,7 +241,10 @@ export default function WorkoutHistoryScreen({ navigation }) {
             const workingCount = exSets.filter(s => (s.setType ?? s.set_type ?? 'straight') !== 'warmup').length;
             return {
               exercise,
-              routineExercise: { recommendedSets: workingCount || exSets.length || 3 },
+              // Round 11 (R11-2): id minted at construction - the effects
+              // record keys per slot, and this repeat-as-is literal
+              // carried none, so duplicate slots collapsed in the record.
+              routineExercise: { id: uid(), recommendedSets: workingCount || exSets.length || 3 },
               sets: [],
             };
           })

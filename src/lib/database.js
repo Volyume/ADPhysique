@@ -3610,6 +3610,16 @@ export async function deleteIncompleteWorkout(workoutId) {
 
     await d.runAsync('DELETE FROM workout_sets WHERE workout_id = ?', [workoutId]);
     await d.runAsync('DELETE FROM workouts WHERE id = ? AND is_completed = 0', [workoutId]);
+    // Round 11 (hygiene): the session's constraint-effects record would
+    // otherwise outlive the discarded workout - invisible to the weekly
+    // counters (they join workouts) but persisted, synced, and present
+    // in the Article 20 export. Tombstoned, not hard-deleted: the table
+    // syncs, so deleted_at is its delete.
+    const now = Date.now();
+    await d.runAsync(
+      'UPDATE session_constraint_effects SET deleted_at = ?, updated_at = ? WHERE workout_id = ? AND deleted_at IS NULL',
+      [now, now, workoutId],
+    );
     return true;
   });
 }
@@ -7961,12 +7971,17 @@ export async function getWeeklySessionStats(userId, weekStart) {
   // field; a read failure honestly reports zero.
   let constraintExcusedSessions = 0;
   try {
+    // Round 11 (B9): completed sessions only - an opened-and-abandoned
+    // workout carries no training evidence, so it must not count as a
+    // week the restriction excused or reshaped (it counts for nothing
+    // in `completed` either). Same gate on both counters below.
     const excusedRow = await d.getFirstAsync(
       `SELECT COUNT(DISTINCT sce.workout_id) AS n
          FROM session_constraint_effects sce
          JOIN workouts w ON w.id = sce.workout_id
         WHERE sce.user_id = ? AND sce.deleted_at IS NULL
-          AND w.user_id = ? AND w.started_at >= ? AND w.started_at < ?
+          AND w.user_id = ? AND w.is_completed = 1
+          AND w.started_at >= ? AND w.started_at < ?
           AND sce.effects_json LIKE '%"omitted"%'`,
       [userId, userId, weekStartMs, weekEnd],
     ).catch(() => null);
@@ -7992,7 +8007,8 @@ export async function getWeeklySessionStats(userId, weekStart) {
          FROM session_constraint_effects sce
          JOIN workouts w ON w.id = sce.workout_id
         WHERE sce.user_id = ? AND sce.deleted_at IS NULL
-          AND w.user_id = ? AND w.started_at >= ? AND w.started_at < ?
+          AND w.user_id = ? AND w.is_completed = 1
+          AND w.started_at >= ? AND w.started_at < ?
           AND (sce.effects_json LIKE '%"omitted"%' OR sce.effects_json LIKE '%"substituted"%')`,
       [userId, userId, weekStartMs, weekEnd],
     ).catch(() => null);
@@ -11838,24 +11854,29 @@ export async function setCapabilityAdaptationMode(userId, episodeGroupId, mode) 
 // (a doubled quads movement is ordinary programming), and the old
 // (effect, exerciseFrom) key silently collapsed the second slot's true
 // entry - the receipt said one swap where two happened. Writers stamp
-// rowId (the planned row's own stable id) and the key is
-// (effect, exerciseFrom, rowId); an entry with no rowId (legacy
-// records, or a slot with no planned row behind it) keeps the old
-// per-exercise collapse, and a keyed entry never doubles a legacy
-// entry for the same exercise. The `slot` field is informational only:
-// each writer stamps its own list's index (serve the pass's input,
-// removal the current list, completion the snapshot), so those spaces
-// are not one space and slot is never part of the key.
+// rowId (the slot's own stable id) and the key is
+// (effect, exerciseFrom, rowId). Round 11 corrected the round-10
+// characterisation of keyless entries: every LIVE slot has an id
+// (planned rows carry routineExercise.id; the two ad-hoc entry points
+// mint one at construction since R11-2), so a null rowId means a
+// LEGACY record written by pre-round-10 code, and the tolerance for
+// those is counted - one legacy entry absorbs exactly one keyed
+// re-derivation, never a whole slot set. The `slot` field is
+// informational only: each writer stamps its own list's index (serve
+// the pass's input, removal the current list, completion the
+// snapshot), so those spaces are not one space and slot is never part
+// of the key.
 //
-// Round 10 (R10-3): the record corrects itself FORWARD on the
-// session's own logged facts. An omission the user overrode by
-// re-adding and TRAINING the movement is no longer a fact about what
-// the restriction did to this session - the completion writer passes
-// performedIds and any omitted entry whose exerciseFrom was performed
-// is renamed 'omitted_revoked' (kept, never deleted: the serve-time
-// omission still happened). Every reader matches effects strictly
-// ('omitted' / 'substituted', or the quoted-LIKE counters), so a
-// revoked entry drops out of every count without a reader change.
+// Round 10 (R10-3) + round 11 (R11-1): the record corrects itself
+// FORWARD on the session's own logged facts. A movement the user
+// overrode by re-adding and TRAINING is no longer something the
+// restriction kept out of this session - the completion writer passes
+// performedIds and any omitted OR substituted entry whose exerciseFrom
+// was performed is renamed with a _revoked suffix (kept, never
+// deleted: the serve-time fact still happened). Every reader matches
+// effects strictly ('omitted' / 'substituted', or the quoted-LIKE
+// counters), so a revoked entry drops out of every count without a
+// reader change.
 export async function appendSessionConstraintEffects(userId, workoutId, newEntries, { nowMs = Date.now(), performedIds = null } = {}) {
   const adds = Array.isArray(newEntries) ? newEntries : [];
   const performed = Array.isArray(performedIds) ? performedIds.filter(Boolean) : [];
@@ -11872,29 +11893,49 @@ export async function appendSessionConstraintEffects(userId, workoutId, newEntri
   const keyOf = (e) => `${e.effect}:${e.exerciseFrom}:${e.rowId ?? ''}`;
   const seen = new Set(entries.map(keyOf));
   // Per-exercise view of what already stands, for the two legacy shapes.
+  // Round 11 (R11-2): the legacy tolerance is COUNTED, not blanket - a
+  // keyless entry is one recorded fact, so it may absorb exactly ONE
+  // keyed re-derivation of that fact; the round-10 set let a single
+  // stale keyless entry suppress every keyed slot of the exercise, which
+  // deleted a true second slot the moment a legacy record met new code.
   const byExercise = new Set(entries.map((e) => `${e.effect}:${e.exerciseFrom}`));
-  const legacyByExercise = new Set(entries.filter((e) => e.rowId == null).map((e) => `${e.effect}:${e.exerciseFrom}`));
+  const legacyCredit = new Map();
+  for (const e of entries) {
+    if (e.rowId != null) continue;
+    const k = `${e.effect}:${e.exerciseFrom}`;
+    legacyCredit.set(k, (legacyCredit.get(k) ?? 0) + 1);
+  }
   let changed = false;
   for (const entry of adds) {
     const exKey = `${entry.effect}:${entry.exerciseFrom}`;
-    // A keyed entry never doubles a legacy record of the same fact, and
-    // a keyless entry never doubles ANY record of it.
-    if (entry.rowId != null && legacyByExercise.has(exKey)) continue;
+    // A keyed entry never doubles a legacy record of the same fact (one
+    // credit per legacy entry), and a keyless entry never doubles ANY
+    // record of it.
+    if (entry.rowId != null && (legacyCredit.get(exKey) ?? 0) > 0) {
+      legacyCredit.set(exKey, legacyCredit.get(exKey) - 1);
+      continue;
+    }
     if (entry.rowId == null && byExercise.has(exKey)) continue;
     const key = keyOf(entry);
     if (seen.has(key)) continue;
     seen.add(key);
     byExercise.add(exKey);
-    if (entry.rowId == null) legacyByExercise.add(exKey);
+    if (entry.rowId == null) legacyCredit.set(exKey, (legacyCredit.get(exKey) ?? 0) + 1);
     entries.push(entry);
     changed = true;
   }
   if (performed.length) {
     const performedSet = new Set(performed);
     entries = entries.map((e) => {
-      if (e?.effect === 'omitted' && performedSet.has(e.exerciseFrom)) {
+      // Round 11 (R11-1): the SUBSTITUTED lane corrects forward too.
+      // The excluded movement being performed falsifies both lanes'
+      // claims the same way - the restriction did not, in the end, keep
+      // it out - so a substitution whose original was trained revokes
+      // exactly as an omission does (the swap-back amend path already
+      // rules the in-session version of the same fact).
+      if ((e?.effect === 'omitted' || e?.effect === 'substituted') && performedSet.has(e.exerciseFrom)) {
         changed = true;
-        return { ...e, effect: 'omitted_revoked' };
+        return { ...e, effect: `${e.effect}_revoked` };
       }
       return e;
     });
@@ -11922,12 +11963,50 @@ export async function amendSessionConstraintSubstitution(userId, workoutId, { ex
   if (!entries.length) return null;
   let changed = false;
   entries = entries.map((e) => {
+    // Round 11 (R11-2): AT MOST ONE entry is ever amended. When either
+    // side lacks a rowId the match is ambiguous across duplicate slots,
+    // and the round-10 map rewrote every slot of the exercise off one
+    // swap; a single correction for a single swap is the honest bound.
+    if (changed) return e;
     if (e?.effect !== 'substituted' || e.exerciseFrom !== exerciseFrom) return e;
     // With both sides keyed, a different slot's entry stays untouched.
     if (rowId != null && e.rowId != null && e.rowId !== rowId) return e;
     changed = true;
     if (exerciseTo === exerciseFrom) return { ...e, effect: 'substituted_revoked' };
     return { ...e, exerciseTo, toChosenByUser: true };
+  });
+  if (!changed) return null;
+  return createSessionConstraintEffect(userId, workoutId, entries, { nowMs: Date.now() });
+}
+
+// Round 11 (R11-1, the removal half): removing a serve substitute ends
+// the substitution without anything standing in the slot - the excluded
+// original never happened and nothing did in its place, which is an
+// OMISSION in the record's own vocabulary, so the entry converts (same
+// rowId and drivers; the substitute's identity drops with the claim it
+// stood). Without this the record kept claiming a substitution the user
+// deleted, and the receipt named a movement that was never trained.
+// Same single-entry discipline as the amend above.
+export async function convertSessionConstraintSubstitutionToOmission(userId, workoutId, { exerciseFrom, rowId = null } = {}) {
+  if (!userId || !workoutId || !exerciseFrom) return null;
+  const d = await db();
+  const id = `sce_${workoutId}`;
+  const existing = await d.getFirstAsync(
+    'SELECT effects_json FROM session_constraint_effects WHERE id = ? AND deleted_at IS NULL', [id],
+  ).catch(() => null);
+  let entries = [];
+  try { entries = existing?.effects_json ? JSON.parse(existing.effects_json) : []; } catch (_e) { entries = []; }
+  if (!entries.length) return null;
+  let changed = false;
+  entries = entries.map((e) => {
+    if (changed) return e;
+    if (e?.effect !== 'substituted' || e.exerciseFrom !== exerciseFrom) return e;
+    if (rowId != null && e.rowId != null && e.rowId !== rowId) return e;
+    changed = true;
+    const converted = { ...e, effect: 'omitted' };
+    delete converted.exerciseTo;
+    delete converted.toChosenByUser;
+    return converted;
   });
   if (!changed) return null;
   return createSessionConstraintEffect(userId, workoutId, entries, { nowMs: Date.now() });

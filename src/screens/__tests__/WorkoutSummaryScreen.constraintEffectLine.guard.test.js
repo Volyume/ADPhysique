@@ -40,7 +40,7 @@ const SRC = fs.readFileSync(
 
 describe('buildConstraintSummaryLine - real execution, extracted from source', () => {
   function loadBuildConstraintSummaryLine() {
-    const start = SRC.indexOf('function buildConstraintSummaryLine(substituted, omitted) {');
+    const start = SRC.indexOf('function buildConstraintSummaryLine(substituted, omitted, userChosen = 0) {');
     expect(start).toBeGreaterThan(-1);
     const end = SRC.indexOf('\n}\n', start) + 2;
     expect(end).toBeGreaterThan(start);
@@ -87,6 +87,25 @@ describe('buildConstraintSummaryLine - real execution, extracted from source', (
   test('neither: null, so the caller renders nothing', () => {
     expect(buildConstraintSummaryLine(0, 0)).toBeNull();
   });
+
+  // Round 11 (R11-1): when any swapped slot holds the USER's own pick,
+  // "for one that works right now" would attribute their choice to the
+  // app - the neutral sentence states the count and the detail lines say
+  // whose pick each one was.
+  test('any user-chosen swap switches to the neutral sentence, singular and plural', () => {
+    expect(buildConstraintSummaryLine(1, 0, 1)).toBe(
+      'Today worked around your temporary change: 1 exercise swapped.',
+    );
+    expect(buildConstraintSummaryLine(2, 0, 1)).toBe(
+      'Today worked around your temporary change: 2 exercises swapped.',
+    );
+  });
+
+  test('the combined line is already neutral, so user-chosen swaps leave it unchanged', () => {
+    expect(buildConstraintSummaryLine(2, 1, 2)).toBe(
+      'Today worked around your temporary change: 2 swapped, 1 left out.',
+    );
+  });
 });
 
 describe('the constraint-effects read is reachable from BOTH the live finish flow and history (T2-07)', () => {
@@ -121,7 +140,15 @@ describe('the constraint-effects read is reachable from BOTH the live finish flo
 
   test('counts come from the effects array itself, not the name-resolved detail list', () => {
     expect(effectBlock).toContain('if (!substituted && !omitted) return;');
-    expect(effectBlock).toContain('setConstraintEffect({ substituted, omitted, lines });');
+    expect(effectBlock).toContain('setConstraintEffect({ substituted, omitted, userChosen, lines });');
+  });
+
+  test('R11-1: an amended entry is counted as the user\'s own and only live effects are read (revoked forms match nothing)', () => {
+    expect(effectBlock).toContain('if (entry.toChosenByUser) userChosen += 1;');
+    // Strict equality matching is the revocation contract: a renamed
+    // *_revoked entry falls through both branches and renders nowhere.
+    expect(effectBlock).toContain("if (entry?.effect === 'substituted') {");
+    expect(effectBlock).toContain("} else if (entry?.effect === 'omitted') {");
   });
 });
 
@@ -130,9 +157,11 @@ describe('detail-list names resolve via getAllExercises and never fall back to t
   const effectEnd = SRC.indexOf("}, [user?.id, workoutId]);", effectStart) + "}, [user?.id, workoutId]);".length;
   const effectBlock = SRC.slice(effectStart, effectEnd);
 
-  test('a substituted entry needs BOTH names resolved before it is listed', () => {
+  test('a substituted entry needs BOTH names resolved before it is listed, and says whose pick stood', () => {
     expect(effectBlock).toContain('if (fromName && toName) {');
-    expect(effectBlock).toContain("text: `${toName} in for ${fromName}`");
+    // Round 11 (R11-1): the app's wording never renders over the user's
+    // own swap - an amended entry gets the user-attributed line.
+    expect(effectBlock).toContain("text: entry.toChosenByUser ? `You chose ${toName} in for ${fromName}` : `${toName} in for ${fromName}`,");
   });
 
   test('an omitted entry needs its own name resolved before it is listed', () => {

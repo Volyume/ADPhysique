@@ -90,11 +90,18 @@ function partnerRecordLabel(pr = {}) {
  * (the detail list's own "never fall back to the raw id" rule is scoped to
  * ITS rows, not this count).
  */
-function buildConstraintSummaryLine(substituted, omitted) {
+function buildConstraintSummaryLine(substituted, omitted, userChosen = 0) {
   if (substituted > 0 && omitted > 0) {
     return `Today worked around your temporary change: ${substituted} swapped, ${omitted} left out.`;
   }
   if (substituted > 0) {
+    // Round 11 (R11-1): when any swapped slot holds the USER's own pick
+    // (toChosenByUser), "for one that works right now" would attribute
+    // their choice to the app - the neutral sentence states the count
+    // and the detail lines below say whose pick each one was.
+    if (userChosen > 0) {
+      return `Today worked around your temporary change: ${substituted} exercise${substituted === 1 ? '' : 's'} swapped.`;
+    }
     return `Today worked around your temporary change: ${substituted} exercise${substituted === 1 ? '' : 's'} swapped for ${substituted === 1 ? 'one that works' : 'ones that work'} right now.`;
   }
   if (omitted > 0) {
@@ -393,17 +400,25 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         const byId = new Map(library.map((e) => [e.id, e]));
         let substituted = 0;
         let omitted = 0;
+        let userChosen = 0;
         const lines = [];
         effects.forEach((entry, i) => {
           if (entry?.effect === 'substituted') {
             substituted += 1;
+            if (entry.toChosenByUser) userChosen += 1;
             const fromName = byId.get(entry.exerciseFrom)?.name;
             const toName = entry.exerciseTo ? byId.get(entry.exerciseTo)?.name : null;
             // Never fall back to the raw id: a name that doesn't resolve
             // simply omits its detail line (the summary count above is
             // unaffected - it counts the record's entries, not this list).
+            // Round 11 (R11-1): an amended entry names the USER's pick,
+            // so its line says whose choice stood - the app's wording on
+            // the user's own swap was the round-11 C2/B8 break.
             if (fromName && toName) {
-              lines.push({ key: `s-${i}-${entry.exerciseFrom}`, text: `${toName} in for ${fromName}` });
+              lines.push({
+                key: `s-${i}-${entry.exerciseFrom}`,
+                text: entry.toChosenByUser ? `You chose ${toName} in for ${fromName}` : `${toName} in for ${fromName}`,
+              });
             }
           } else if (entry?.effect === 'omitted') {
             omitted += 1;
@@ -415,7 +430,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         });
         if (cancelled) return;
         if (!substituted && !omitted) return;
-        setConstraintEffect({ substituted, omitted, lines });
+        setConstraintEffect({ substituted, omitted, userChosen, lines });
       } catch (_e) { /* best-effort: no line, no crash */ }
     })();
     return () => { cancelled = true; };
@@ -1577,7 +1592,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <RevealSection delay={1380}>
             <View style={styles.constraintEffectSection}>
               <Text style={[styles.constraintEffectLine, live.constraintEffectLine]}>
-                {buildConstraintSummaryLine(constraintEffect.substituted, constraintEffect.omitted)}
+                {buildConstraintSummaryLine(constraintEffect.substituted, constraintEffect.omitted, constraintEffect.userChosen)}
               </Text>
               {constraintEffect.lines.length > 0 && (
                 <>

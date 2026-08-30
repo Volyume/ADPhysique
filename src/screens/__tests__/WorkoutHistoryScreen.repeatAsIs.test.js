@@ -101,6 +101,8 @@ jest.mock('../../lib/database', () => ({
   getWorkoutSetsForWorkout: jest.fn(),
   getRoutineExercisesWithDetails: jest.fn(),
   deleteWorkoutAndSets: jest.fn(),
+  // R11-2: repeat-as-is mints a stable slot id per ad-hoc row.
+  uid: jest.fn(() => `uid-${global.__uidCounter = (global.__uidCounter ?? 0) + 1}`),
 }));
 jest.mock('../../lib/syncQueue', () => ({ enqueueSyncOp: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
@@ -198,15 +200,18 @@ describe('WorkoutHistoryScreen repeat-as-is on a routine-less session (T3)', () 
     expect(initialExercises).toEqual([
       {
         exercise: EXERCISES[0],
-        routineExercise: { recommendedSets: 2 },
+        // R11-2: each ad-hoc slot carries a minted stable id, so the
+        // session effects record can key per slot here too.
+        routineExercise: { id: expect.any(String), recommendedSets: 2 },
         sets: [],
       },
       {
         exercise: EXERCISES[1],
-        routineExercise: { recommendedSets: 1 },
+        routineExercise: { id: expect.any(String), recommendedSets: 1 },
         sets: [],
       },
     ]);
+    expect(initialExercises[0].routineExercise.id).not.toBe(initialExercises[1].routineExercise.id);
 
     expect(navigateCrossTab).toHaveBeenCalledWith(
       expect.objectContaining({ navigate: expect.any(Function) }),

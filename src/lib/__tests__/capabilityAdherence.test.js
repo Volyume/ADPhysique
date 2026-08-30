@@ -487,3 +487,110 @@ describe('R10-2: a manual swap over a substitute corrects the slot\'s record', (
     expect(rec.effects.find((e) => e.rowId === 're-m1').effect).toBe('substituted');
   });
 });
+
+// Round 11 (R11-1/R11-2, D123): the substituted lane corrects forward
+// too; the legacy tolerance is counted; ambiguous amends touch one
+// entry; the counters and the record honour the workout's own life.
+describe('R11: substituted-lane forward correction, counted legacy credit, bounded amends', () => {
+  test('R11-1: a substitution whose ORIGINAL was performed revokes at reconciliation, exactly like an omission', async () => {
+    const U7 = 'u-r11a';
+    await appendSessionConstraintEffects(U7, 'w-r11a', [
+      { slot: 0, rowId: 're-a1', exerciseFrom: 'fx-squat', exerciseTo: 'fx-legpress', effect: 'substituted', constraintIds: ['c1'], source: 'serve' },
+      { slot: 1, rowId: 're-a2', exerciseFrom: 'fx-curl', effect: 'omitted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    // The user trains the excluded squat (re-added via the picker) but
+    // never the omitted curl - only the squat entries' claims fall.
+    await appendSessionConstraintEffects(U7, 'w-r11a', [], { performedIds: ['fx-squat'] });
+    const rec = await getSessionConstraintEffect(U7, 'w-r11a');
+    expect(rec.effects.find((e) => e.rowId === 're-a1').effect).toBe('substituted_revoked');
+    expect(rec.effects.find((e) => e.rowId === 're-a2').effect).toBe('omitted');
+  });
+
+  test('R11-1: removing a serve substitute converts the slot to an omission; the other slot stays', async () => {
+    const { convertSessionConstraintSubstitutionToOmission } = require('../database');
+    const U8 = 'u-r11b';
+    await appendSessionConstraintEffects(U8, 'w-r11b', [
+      { slot: 0, rowId: 're-b1', exerciseFrom: 'fx-squat', exerciseTo: 'fx-legpress', effect: 'substituted', constraintIds: ['c1'], source: 'serve' },
+      { slot: 1, rowId: 're-b2', exerciseFrom: 'fx-squat', exerciseTo: 'fx-hack', effect: 'substituted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    await convertSessionConstraintSubstitutionToOmission(U8, 'w-r11b', {
+      exerciseFrom: 'fx-squat', rowId: 're-b1',
+    });
+    const rec = await getSessionConstraintEffect(U8, 'w-r11b');
+    const b1 = rec.effects.find((e) => e.rowId === 're-b1');
+    expect(b1.effect).toBe('omitted');
+    expect(b1.exerciseTo).toBeUndefined(); // the claim a substitute stood drops with it
+    expect(b1.constraintIds).toEqual(['c1']);
+    expect(rec.effects.find((e) => e.rowId === 're-b2').effect).toBe('substituted');
+  });
+
+  test('R11-2: one legacy entry absorbs exactly ONE keyed re-derivation - a true second slot still lands', async () => {
+    const U9 = 'u-r11c';
+    // Pre-round-10 record: one keyless omission.
+    await appendSessionConstraintEffects(U9, 'w-r11c', [
+      { slot: 0, exerciseFrom: 'fx-squat', effect: 'omitted', constraintIds: ['c1'] },
+    ]);
+    // New code re-serves a session with TWO squat slots: the first keyed
+    // entry is the legacy fact re-derived (absorbed), the second is a
+    // TRUE second slot the round-10 blanket suppression deleted.
+    await appendSessionConstraintEffects(U9, 'w-r11c', [
+      { slot: 0, rowId: 're-c1', exerciseFrom: 'fx-squat', effect: 'omitted', constraintIds: ['c1'], source: 'serve' },
+      { slot: 1, rowId: 're-c2', exerciseFrom: 'fx-squat', effect: 'omitted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    const rec = await getSessionConstraintEffect(U9, 'w-r11c');
+    const omitted = rec.effects.filter((e) => e.effect === 'omitted');
+    expect(omitted).toHaveLength(2);
+    expect(omitted.filter((e) => e.rowId == null)).toHaveLength(1);
+  });
+
+  test('R11-2: an ambiguous amend touches AT MOST ONE entry', async () => {
+    const { amendSessionConstraintSubstitution } = require('../database');
+    const U10 = 'u-r11d';
+    await appendSessionConstraintEffects(U10, 'w-r11d', [
+      { slot: 0, rowId: 're-d1', exerciseFrom: 'fx-squat', exerciseTo: 'fx-legpress', effect: 'substituted', constraintIds: ['c1'], source: 'serve' },
+      { slot: 1, rowId: 're-d2', exerciseFrom: 'fx-squat', exerciseTo: 'fx-hack', effect: 'substituted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    // A legacy-marker swap carries no rowId: the round-10 map rewrote
+    // BOTH slots off this one swap.
+    await amendSessionConstraintSubstitution(U10, 'w-r11d', {
+      exerciseFrom: 'fx-squat', rowId: null, exerciseTo: 'fx-curl',
+    });
+    const rec = await getSessionConstraintEffect(U10, 'w-r11d');
+    const amended = rec.effects.filter((e) => e.toChosenByUser === true);
+    expect(amended).toHaveLength(1);
+    expect(rec.effects.filter((e) => e.exerciseTo === 'fx-hack')).toHaveLength(1);
+  });
+
+  test('B9: the weekly constraint counters ignore an opened-and-abandoned session', async () => {
+    const U11 = 'u-r11e';
+    await appendSessionConstraintEffects(U11, 'w-r11e', [
+      { slot: 0, rowId: 're-e1', exerciseFrom: 'fx-squat', effect: 'omitted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    const d = await db();
+    await d.runAsync(
+      `INSERT INTO workouts (id, user_id, routine_id, name, started_at, is_completed, created_at, updated_at)
+       VALUES ('w-r11e', ?, NULL, 'Abandoned session', ?, 0, ?, ?)`,
+      [U11, NOW, NOW, NOW],
+    );
+    const stats = await getWeeklySessionStats(U11, WEEK);
+    expect(stats.constraintExcusedSessions).toBe(0);
+    expect(stats.constraintReshapedSessions).toBe(0);
+  });
+
+  test('hygiene: discarding an incomplete workout tombstones its effects record', async () => {
+    const { deleteIncompleteWorkout } = require('../database');
+    const U12 = 'u-r11f';
+    await appendSessionConstraintEffects(U12, 'w-r11f', [
+      { slot: 0, rowId: 're-f1', exerciseFrom: 'fx-squat', effect: 'omitted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    const d = await db();
+    await d.runAsync(
+      `INSERT INTO workouts (id, user_id, routine_id, name, started_at, is_completed, created_at, updated_at)
+       VALUES ('w-r11f', ?, NULL, 'Discarded session', ?, 0, ?, ?)`,
+      [U12, NOW, NOW, NOW],
+    );
+    expect(await getSessionConstraintEffect(U12, 'w-r11f')).not.toBeNull();
+    await deleteIncompleteWorkout('w-r11f');
+    expect(await getSessionConstraintEffect(U12, 'w-r11f')).toBeNull();
+  });
+});
