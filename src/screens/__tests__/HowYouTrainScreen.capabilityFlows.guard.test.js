@@ -285,6 +285,15 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
       'capabilityBlockReason',
       'demandConflicts',
       'capability/directory',
+      // Round 18 (C1): two lane surfaces no earlier trigger reached -
+      // the install-conflict sheet (renders the lane's own reason
+      // captions; matched by its capability_declared literal) and
+      // AvoidedMovements (the set-aside list; matched by its intent
+      // reader). Neither wears a decline word today, so the sweep is
+      // vacuous over them NOW - these triggers exist so a future
+      // regression there fails instead of passing unseen.
+      'capability_declared',
+      'listActiveMovementConstraints',
     ];
     // Every STATIC render form this codebase uses for a button's words
     // (round 10 added the alert double-quote form; round 14 the JSX
