@@ -2145,7 +2145,7 @@ export default function ProOnboardingScreen({ navigation }) {
           <ProOnboardingHeader
             step={step}
             title="Anything Volyume should build around?"
-            sub="Some people train seated, one-sided, without overhead work, or around other realities. If that is you, set it up now and every plan starts compatible. If not, skip straight past."
+            sub="If you have an injury, pain, a long-term health condition or a disability, set it up now and every plan starts compatible. Plenty of people train seated, one-sided or without overhead work. If not, skip straight past."
             onBack={goBack}
           />
 

@@ -1529,6 +1529,24 @@ export default function HowYouTrainScreen() {
         </Text>
       ) : null}
 
+      {/* CC33 close-out: the screen says what it is before it asks for
+          anything. Banked research: plain-language statements rather
+          than diagnosis or a body map (pattern 4), permission-first tone
+          (17), low cognitive load (19), and no self-classification at the
+          door - the recognisable words appear, the question "are you
+          disabled?" never does. */}
+      <View style={styles.introWrap}>
+        <Text style={[styles.body, { color: t.colors.textPrimary }]}>
+          If you have an injury, pain, a long-term health condition or a disability,
+          tell Volyume here and it builds your training around it. Your plans, your
+          swaps and every session follow what you add.
+        </Text>
+        <Text style={[styles.hint, { color: t.colors.textSecondary, marginTop: spacing.sm }]}>
+          You never need a diagnosis, or even a name for it. Say what does not work
+          and Volyume works around it, with full progression and coaching either way.
+        </Text>
+      </View>
+
       {renderLineReview()}
 
       {/* D112 R4 (closes audit T2-23's recoverability half): the standing
@@ -1546,38 +1564,6 @@ export default function HowYouTrainScreen() {
           onPress={revisitCapabilityPlan}
         />
       ) : null}
-
-      {/* CC28 (section 33.12): energy-limited training's honest v1 home.
-          No energy axis, no pacing computation - the card maps to the two
-          EXISTING deterministic levers (session length, now free-editable
-          in Workout settings; the episode machinery for bad spells) and
-          says so plainly. T2-27 (closes audit): the row used to imply the
-          session-length lever takes effect straight away: it only shapes
-          the NEXT plan build (planEngine consumes it at generation only -
-          confirmed against S2-T2-LIVE-TRACE.md's T2-27 evidence), so the
-          copy says that plainly instead of over-claiming. */}
-      <SettingRow
-        icon="battery-half-outline"
-        label="My energy varies, or I keep sessions short"
-        sub="Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch."
-        accessibilityLabel="My energy varies, or I keep sessions short. Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch. Opens Workout and units."
-        onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
-      />
-
-      {/* CC33 D112 (closes audit T1-20, this side): the lanes name each
-          other in both directions. AvoidedMovementsScreen points here for
-          things the body needs training built around; this points there
-          for plain preference, so neither lane quietly absorbs the
-          other's entries. Registered alongside HowYouTrain in every
-          stack that carries it (RootNavigator), so the tap never
-          silently drops. */}
-      <SettingRow
-        icon="remove-circle-outline"
-        label="Movements you would rather not do"
-        sub="Preferences live under Avoided movements, so they never mix with what your body needs."
-        accessibilityLabel="Movements you would rather not do. Preferences live under Avoided movements, so they never mix with what your body needs. Opens Avoided movements."
-        onPress={() => { haptics.selection(); navigation.navigate('AvoidedMovements'); }}
-      />
 
       {/* Gap-closure Phase D (order section 25): the optional named-
           condition and injury directory. Discovery only - selecting a
@@ -1660,6 +1646,44 @@ export default function HowYouTrainScreen() {
           <Choice label="Add something" onPress={beginAdd} t={t} primary />
         </View>
       )}
+
+      {/* CC33 close-out: the cross-lane rows sat ABOVE the user's own
+          setup and above "Add something", so a first-time arrival met
+          four navigation rows before the thing they came to do. They are
+          secondary routes, so they sit after the primary action now. */}
+      <SectionHeader title="More ways in" />
+      {/* CC28 (section 33.12): energy-limited training's honest v1 home.
+          No energy axis, no pacing computation - the card maps to the two
+          EXISTING deterministic levers (session length, now free-editable
+          in Workout settings; the episode machinery for bad spells) and
+          says so plainly. T2-27 (closes audit): the row used to imply the
+          session-length lever takes effect straight away: it only shapes
+          the NEXT plan build (planEngine consumes it at generation only -
+          confirmed against S2-T2-LIVE-TRACE.md's T2-27 evidence), so the
+          copy says that plainly instead of over-claiming. */}
+      <SettingRow
+        icon="battery-half-outline"
+        label="My energy varies, or I keep sessions short"
+        sub="Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch."
+        accessibilityLabel="My energy varies, or I keep sessions short. Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch. Opens Workout and units."
+        onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
+      />
+
+      {/* CC33 D112 (closes audit T1-20, this side): the lanes name each
+          other in both directions. AvoidedMovementsScreen points here for
+          things the body needs training built around; this points there
+          for plain preference, so neither lane quietly absorbs the
+          other's entries. Registered alongside HowYouTrain in every
+          stack that carries it (RootNavigator), so the tap never
+          silently drops. */}
+      <SettingRow
+        icon="remove-circle-outline"
+        label="Movements you would rather not do"
+        sub="Preferences live under Avoided movements, so they never mix with what your body needs."
+        accessibilityLabel="Movements you would rather not do. Preferences live under Avoided movements, so they never mix with what your body needs. Opens Avoided movements."
+        onPress={() => { haptics.selection(); navigation.navigate('AvoidedMovements'); }}
+      />
+
 
       {state.history.length > 0 ? (
         <>
@@ -1775,6 +1799,7 @@ const styles = StyleSheet.create({
   choiceLabelInRow: { flex: 1, minWidth: 0 },
   choiceLabel: { ...type.label },
   episodeActions: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
+  introWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
   addWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   // D112 R4 (closes audit T2-23): one row of the "Choose per exercise"
   // review - the line's own from/to text, then its Apply/Keep toggle.

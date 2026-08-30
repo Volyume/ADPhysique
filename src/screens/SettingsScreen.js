@@ -27,10 +27,22 @@ export default function SettingsScreen({ navigation }) {
   return (
     <SettingsPage title="Settings">
       <View style={[styles.section, live.section]}>
+        {/* CC33 close-out: the subtitle front-loads the recognisable
+            words. Banked research (S1-RESEARCH-EVIDENCE-BANKED.md, the
+            naming/entry section): the DfE teacher-training design history
+            moved disclosure from 4% to 15% across ~8,000 applications by
+            replacing a gatekeeping question with one ungated list of
+            recognisable words, and ONS shows an identity-first door
+            ("are you disabled?") misroutes under half the intended
+            audience - pain, fatigue and breathing limits are the commonly
+            missed ones. So the label keeps naming the EFFECT on training
+            (one door, no self-classification) and the subtitle carries the
+            words a person actually searches for. */}
         <SettingRow
           icon="body"
           label="How you train"
-          sub="Anything Volyume should build your training around"
+          sub="Injuries, pain, long-term conditions and disabilities. Anything Volyume should build your training around."
+          accessibilityLabel="How you train. Injuries, pain, long-term conditions and disabilities. Anything Volyume should build your training around."
           onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
         />
         <SettingRow
