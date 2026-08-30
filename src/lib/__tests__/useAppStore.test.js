@@ -27,6 +27,13 @@ describe('workout exercise + set state, concurrent updates', () => {
     expect(workoutExercises.length).toBe(2);
     expect(workoutExercises[0].exercise.id).toBe('a');
     expect(workoutExercises[1].exercise.id).toBe('b');
+    // Round 12 (R12-3): every in-session add mints a stable slot id -
+    // the session effects record keys per slot, and picker-added rows
+    // were the third keyless source (a "Start without a plan" session
+    // was entirely keyless, so duplicate slots collapsed in the record).
+    expect(workoutExercises[0].routineExercise?.id).toBeTruthy();
+    expect(workoutExercises[1].routineExercise?.id).toBeTruthy();
+    expect(workoutExercises[0].routineExercise.id).not.toBe(workoutExercises[1].routineExercise.id);
   });
 
   test('addSetToCurrentExercise appends to the current index without losing prior sets', () => {

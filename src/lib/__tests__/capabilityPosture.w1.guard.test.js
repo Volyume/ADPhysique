@@ -82,7 +82,9 @@ describe('T2-04 - the serve effect cannot re-fire onto a manual add', () => {
 
   test('the store stamps every in-session add as the user\'s own', () => {
     const src = read('store/useAppStore.js');
-    const fn = src.match(/addExerciseToWorkout:[\s\S]{0,700}/)?.[0] ?? '';
+    // Window widened round 12: the R12-3 slot-id mint sits between the
+    // action's opening and the _userAdded stamp now.
+    const fn = src.match(/addExerciseToWorkout:[\s\S]{0,1600}/)?.[0] ?? '';
     expect(fn).toMatch(/_userAdded: true/);
   });
 });

@@ -1500,6 +1500,16 @@ const useAppStore = create((set, get) => ({
   // double-tap on Add set / Add exercise) both land, the previous
   // get()+set() pair could read the same snapshot twice and drop one update.
   addExerciseToWorkout: (exercise, routineExercise = null) => {
+    // Round 12 (R12-3): the THIRD ad-hoc slot source mints its stable
+    // id too. The session effects record keys per slot (rowId =
+    // routineExercise.id), and rows added through the in-session picker
+    // carried none - so a "Start without a plan" session was entirely
+    // keyless and duplicate slots still collapsed in the record, the
+    // exact round-10 defect R11-2 closed for the other two entry
+    // points. Lazy require per the store's own convention.
+    // eslint-disable-next-line global-require
+    const { uid } = require('../lib/database');
+    const slotRoutineExercise = routineExercise ?? { id: uid() };
     set((state) => ({
       workoutExercises: [
         ...state.workoutExercises,
@@ -1509,7 +1519,7 @@ const useAppStore = create((set, get) => ({
         // (round 11, R11-4). It persists with the entry so the
         // capability effective view never substitutes or omits the
         // user's own choice - not even after a relaunch.
-        { exercise, routineExercise, sets: [], _userAdded: true },
+        { exercise, routineExercise: slotRoutineExercise, sets: [], _userAdded: true },
       ],
     }));
     _persistActiveWorkout(get());
