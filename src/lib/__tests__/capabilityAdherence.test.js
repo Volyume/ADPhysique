@@ -664,6 +664,81 @@ describe('R12: record-keyed conversion, definite-only removal excusal, completed
     expect(removalExcusalConflicts(actionableEpisodeConflicts(declinedState, { id: 'fx-squat', ...SQUAT }))).toEqual([]);
   });
 
+  test('R13-2: BOTH writers give one answer - a held co-driver neither excuses nor vetoes, and the constraintIds match', async () => {
+    // D120 ruling 2's own shape: a live APPLIED axial rule beside an
+    // applied-and-HELD impact rule, both definite on one movement. Round
+    // 12's helper rejected the whole answer on the held co-driver while
+    // the completion writer excused on the live rule - the two writers
+    // recorded different things for the same row depending on whether
+    // the user deleted it or left it unlogged. One shared gate now:
+    // held drops BEFORE the applied test (hold suspends a rule's OWN
+    // automation - D120 ruling 2; a held rule itself excuses nothing -
+    // D112 R8), so both writers excuse on exactly the live driver.
+    await insertExerciseWithId('fx-jump', {
+      name: 'Fixture Jump Squat', primaryMuscle: 'quads', equipment: 'bodyweight',
+      movementPattern: 'squat', compoundIsolation: 'compound', position: 'standing',
+      gripDemand: 'none', bilateralUpper: false, bilateralLower: true,
+      axialLoad: true, impact: true, floorAccess: false, overheadPosition: false,
+      unilateralLoadable: null, balanceDemand: 'stable', isCustom: false,
+    });
+    const { removalExcusalConflicts, episodeConflicts, computeCompletionEffects: cce } = require('../capability/effective');
+    const { loadCapabilityResolveState } = require('../capability/resolve');
+    const U16 = 'u-r13a';
+    const liveIds = await createCapabilityConstraints(U16, [{
+      role: 'episode', source: 'self', ruleKind: 'demand', ruleValue: 'axial_load',
+      startsAt: NOW - 1000, episodeGroupId: 'g_r13a1',
+    }], { nowMs: NOW - 1000 });
+    await setConstraintEffectiveChoice(U16, liveIds[0], 'applied');
+    const heldIds = await createCapabilityConstraints(U16, [{
+      role: 'episode', source: 'self', ruleKind: 'demand', ruleValue: 'impact',
+      startsAt: NOW - 1000, episodeGroupId: 'g_r13a2',
+    }], { nowMs: NOW - 1000 });
+    await setConstraintEffectiveChoice(U16, heldIds[0], 'applied');
+    const { setCapabilityAdaptationMode } = require('../database');
+    await setCapabilityAdaptationMode(U16, 'g_r13a2', 'hold');
+    _resetCapabilityResolveCache();
+    const state = await loadCapabilityResolveState(U16, {});
+    const jump = { id: 'fx-jump', name: 'Fixture Jump Squat', primaryMuscle: 'quads', axialLoad: true, impact: true, position: 'standing' };
+
+    // The removal writer's feed (raw, held included).
+    const removalAnswer = removalExcusalConflicts(episodeConflicts(state, jump));
+    expect(removalAnswer.length).toBeGreaterThan(0);
+    expect(removalAnswer.map((c) => c.constraintId)).toEqual([liveIds[0]]);
+
+    // The completion writer, same fixture, same movement, unperformed.
+    const { entries } = cce([{ exercise: jump, performed: false, rowId: 're-p1' }], state);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].constraintIds).toEqual([liveIds[0]]);
+
+    // R13-2's other half: a row the user chose themselves is NEVER
+    // excused at completion, exactly as the removal writer refuses it.
+    const { entries: none } = cce([{ exercise: jump, performed: false, rowId: 're-p2', userChosen: true }], state);
+    expect(none).toHaveLength(0);
+
+    // And a held-ONLY driver still excuses nothing anywhere (D112 R8).
+    await setConstraintEffectiveChoice(U16, liveIds[0], 'declined');
+    _resetCapabilityResolveCache();
+    const heldOnlyState = await loadCapabilityResolveState(U16, {});
+    expect(removalExcusalConflicts(episodeConflicts(heldOnlyState, jump))).toEqual([]);
+  });
+
+  test('R13-3: Clear workout history tombstones the effects records with the sessions', async () => {
+    const { clearWorkoutHistory } = require('../database');
+    const U17 = 'u-r13b';
+    await appendSessionConstraintEffects(U17, 'w-r13b', [
+      { slot: 0, rowId: 're-h1', exerciseFrom: 'fx-squat', effect: 'omitted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    const d = await db();
+    await d.runAsync(
+      `INSERT INTO workouts (id, user_id, routine_id, name, started_at, is_completed, created_at, updated_at)
+       VALUES ('w-r13b', ?, NULL, 'Cleared session', ?, 1, ?, ?)`,
+      [U17, NOW, NOW, NOW],
+    );
+    expect(await getSessionConstraintEffect(U17, 'w-r13b')).not.toBeNull();
+    await clearWorkoutHistory(U17);
+    expect(await getSessionConstraintEffect(U17, 'w-r13b')).toBeNull();
+  });
+
   test('R12-4: deleting a COMPLETED workout tombstones its effects record too', async () => {
     const { deleteWorkoutAndSets } = require('../database');
     const U15 = 'u-r12c';

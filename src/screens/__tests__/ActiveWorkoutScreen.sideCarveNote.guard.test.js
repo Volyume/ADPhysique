@@ -248,6 +248,29 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
     expect(SRC).not.toContain("if (constraintConflicts.length\n              && constraintConflicts.every(c => c.row?.effectiveChoice === 'applied'");
   });
 
+  test('R13-2: the completion projection carries the user-chosen marker, so both writers share one refusal', () => {
+    // The removal writer refused _userAdded rows since round 12; the
+    // completion projection dropped the marker, so the same row was
+    // excused if merely left unlogged instead of deleted - fabricated
+    // CONSTRAINED evidence off the user's own add-anyway choice.
+    expect(SRC).toContain('userChosen: !!e?._userAdded,');
+  });
+
+  test('R13 (B5): a definite conflict on the substitute outranks the marker line', () => {
+    // The marker branch returned before any conflict evaluation, so a
+    // rule captured mid-session against the SUBSTITUTE was never spoken
+    // on the row it bears on. With only unknown conflicts the marker
+    // stays (unknown drives nothing).
+    const site = SRC.indexOf("if (currentEntry?._capabilityTemp?.fromName");
+    expect(site).toBeGreaterThan(-1);
+    const block = SRC.slice(site, site + 260);
+    expect(block).toContain('&& !definiteEpisode.length && !definiteBaseline.length)');
+    // The definite lists are computed BEFORE the marker branch now.
+    const defSite = SRC.indexOf('const definiteEpisode = constraintConflicts.filter((c) => !c.unknown);');
+    expect(defSite).toBeGreaterThan(-1);
+    expect(defSite).toBeLessThan(site);
+  });
+
   test('R10-3: completion passes the session\'s performed ids, outside the capState gate', () => {
     const site = SRC.indexOf('const performedIds = snapshotExercises');
     expect(site).toBeGreaterThan(-1);

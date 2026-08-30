@@ -136,11 +136,13 @@ const isWorkingSetRow = (s) => (s?.setType ?? s?.set_type ?? 'straight') !== 'wa
 // Founder fix (2026-07-10): "the next exercise button ... doesn't always
 // happen, it goes on and adds more and more sets". Root cause: targetSets
 // below used to be adjustedSetCount ALONE, which resolves to undefined
-// whenever the current slot has no routineExercise row at all - a blank/
-// freeform workout (HomeScreen "Just want to log? Start a blank workout",
-// startWorkout(workout, [])) and ANY exercise added mid-session via the "+
-// Add exercise" picker (handlePickerSelect -> addExerciseToWorkout(ex), which
-// defaults its second arg to null in useAppStore.js) both land here.
+// whenever the current slot's routineExercise carries no set targets - a
+// blank/freeform workout (HomeScreen "Just want to log? Start a blank
+// workout", startWorkout(workout, [])) and ANY exercise added mid-session
+// via the "+ Add exercise" picker both land here. (Since R12-3/R13-1 such
+// slots DO carry a minted routineExercise {id} for the effects record's
+// per-slot identity, but it has no recommendedSets, so this fallback
+// fires exactly as it did when the field was null.)
 // `undefined && workingLogged >= undefined` is always falsy, so
 // targetComplete never becomes true and the target-reached bottom-bar swap
 // (Next exercise / Finish workout) never fires for these slots - the entry
@@ -621,7 +623,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   const finishingRef = useRef(false); // gates handleFinishWorkout so a rapid double-tap can't double-finish
   const shownNoteIdsRef = useRef(new Set()); // note IDs already shown in this session
   // D32 (2026-07-10, campaign item 20): workoutExercises entries carry no
-  // stable id of their own (a routineExercise-less ad-hoc add has none), so
+  // stable id of their own AS ENTRIES (since rounds 11-13 every slot's
+  // routineExercise carries a minted id, but this key predates that and
+  // keys the entry object, not the slot), so
   // the reorder sheet's DragReorderList needs SOME per-entry key. Object
   // identity is stable across a reorder (the array is only ever reshuffled,
   // never cloned per-entry, except where an entry is genuinely replaced --
@@ -917,9 +921,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   })();
 
   const constraintNotice = (() => {
-    if (currentEntry?._capabilityTemp?.fromName) {
-      return { kind: 'episode', copy: `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts` };
-    }
     // CC33 adversarial review F4 (+ round 3 R3-3): an UNKNOWN conflict
     // must never be spoken as a fact - the held claim included, since
     // "you're holding your plan as-is FOR THIS" asserts the hold covers
@@ -930,6 +931,17 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // Unknown-only rows fall to the honest not-known line at the bottom.
     const definiteEpisode = constraintConflicts.filter((c) => !c.unknown);
     const definiteBaseline = baselineConflictsList.filter((c) => !c.unknown);
+    // Round 13 (B5): a DEFINITE conflict on the movement actually in
+    // front of the user outranks the provenance line. The marker branch
+    // used to return first, so a rule captured mid-session against the
+    // SUBSTITUTE itself was never spoken on the row it bears on. One
+    // mention per surface still holds - the row speaks the more
+    // consequential truth; with only unknown conflicts (which drive
+    // nothing) the marker line stays.
+    if (currentEntry?._capabilityTemp?.fromName
+      && !definiteEpisode.length && !definiteBaseline.length) {
+      return { kind: 'episode', copy: `Temporarily in for ${currentEntry._capabilityTemp.fromName} while your change lasts` };
+    }
     // D112 R8 (section 25): a fully-held conflict set says so instead of
     // claiming Volyume is working around anything - the user asked it to
     // wait, and the quiet line reflects their own instruction back.
@@ -954,10 +966,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         if (named) return { kind: 'episode', copy: `This one involves ${named}, which sits outside your temporary change. Swap it when you're ready.` };
       } catch (_e) { /* fall through to the generic line */ }
       // Round 5 (Q-1): the generic line asserts no adaptation. A row
-      // showing THIS notice is, by construction, being served as
-      // planned - a substituted row shows the _capabilityTemp line
-      // above and an omitted row is not here at all - so the old
-      // app-as-subject generic ("Today this works around...") was
+      // showing THIS notice is either served as planned or (since the
+      // round-13 reorder) a substitute a NEW definite rule now bears
+      // on - in both cases the app is adapting nothing further, so the
+      // old app-as-subject generic ("Today this works around...") was
       // false in every reachable case (declined and undecided rules
       // most of all: the app is doing nothing to those rows). The
       // honest line states the conflict and leaves the action to the
@@ -3501,6 +3513,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   performed: (e.sets?.length ?? 0) > 0,
                   // R10-1: the record keys per planned slot.
                   rowId: e?.routineExercise?.id ?? null,
+                  // R13-2: the marker rides into the projection, so the
+                  // completion writer refuses the user's own rows
+                  // exactly as the removal writer does.
+                  userChosen: !!e?._userAdded,
                 };
               }),
               capState,

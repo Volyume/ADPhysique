@@ -181,33 +181,45 @@ export function computeEffectiveSession(baseRows, library, capabilityState, isEl
  * recorded them was wrong: audit T2-13). Pure - the caller supplies the
  * facts.
  *
- * @param {Array<{exercise: object, performed: boolean, rowId?: string|null}>}
+ * @param {Array<{exercise: object, performed: boolean, rowId?: string|null,
+ *   userChosen?: boolean}>}
  *   sessionRows the session's planned rows with whether any set was
  *   logged against each; rowId is the slot's stable planned-row id
  *   (R10-1: the effects record keys per slot, so a doubled exercise's
- *   two slots write two true entries)
+ *   two slots write two true entries); userChosen marks a row the user
+ *   picked themselves (_userAdded), which is never excused (R13-2)
  * @param {object} capabilityState
  * @returns {{entries: Array, excusedIds: string[], unperformedIds: string[],
  *   coversAllUnperformed: boolean}}
  */
 /**
- * Round 12 (R12-2): the ONE answer to "does removing this row record a
- * constraint omission?" - consumed by the mid-session removal hook,
- * with exactly the certainty and choice gates computeCompletionEffects
- * below applies at session end: definite conflicts only, and every
- * definite driver APPLIED and not held. Returns the definite driving
- * conflicts when the answer is yes, [] otherwise. An UNKNOWN-only
- * conflict excuses nothing (D113 ruling 1) - the same row's own
- * in-session notice says "Volyume doesn't know yet", and the removal
- * writer must not contradict it into the durable record.
+ * Round 12 (R12-2) + round 13 (R13-2): the ONE answer to "does this
+ * row's absence get recorded as a constraint omission?" - consumed by
+ * BOTH writers now (the mid-session removal hook and
+ * computeCompletionEffects below), so they cannot diverge again. The
+ * gates, in order:
+ *  - definite conflicts only: an UNKNOWN conflict excuses nothing
+ *    (D113 ruling 1) - the row's own notice says "doesn't know yet";
+ *  - HELD rules are dropped BEFORE the applied test, never rejected on
+ *    (round 13, correcting the round-12 shape): D120 ruling 2 says
+ *    hold suspends a rule's OWN automation, and D112 R8 says a held
+ *    rule excuses nothing - so a held co-driver neither excuses nor
+ *    vetoes the live applied rule's excusal. This is the shape the
+ *    completion writer has always applied (actionableEpisodeConflicts
+ *    drops held rows); round 12's helper rejected the whole answer on
+ *    a held co-driver, which made the two writers record different
+ *    things for the same row;
+ *  - every LIVE definite driver must be APPLIED (red-team finding 4:
+ *    declined or undecided leaves the row owed, never excused).
+ * Returns the live definite driving conflicts when the answer is yes,
+ * [] otherwise.
  */
 export function removalExcusalConflicts(conflicts) {
   const definite = (conflicts ?? []).filter((c) => !c?.unknown);
-  if (!definite.length) return [];
-  const applied = definite.every(
-    (c) => c?.row?.effectiveChoice === 'applied' && c?.row?.adaptationMode !== 'hold',
-  );
-  return applied ? definite : [];
+  const live = definite.filter((c) => c?.row?.adaptationMode !== 'hold');
+  if (!live.length) return [];
+  const applied = live.every((c) => c?.row?.effectiveChoice === 'applied');
+  return applied ? live : [];
 }
 
 export function computeCompletionEffects(sessionRows, capabilityState) {
@@ -218,31 +230,30 @@ export function computeCompletionEffects(sessionRows, capabilityState) {
     const exercise = row?.exercise ?? row;
     if (row?.performed) return;
     if (!exercise?.id) return;
+    // Round 13 (R13-2): a row the user chose themselves (a picker
+    // add-anyway, a manual swap) is outside the effective prescription -
+    // its absence is the user's own edit, never a constraint excusal.
+    // The removal writer has refused these since round 12; this writer
+    // excused the same row if it was merely left unlogged instead of
+    // deleted, which fabricated CONSTRAINED evidence off the user's own
+    // choice (the class D123 ruling 5 rejected).
+    if (row?.userChosen) return;
     unperformedIds.push(exercise.id);
-    // D112 R8: a held episode excuses nothing - skipping its exercise is
-    // an ordinary early stop, exactly like a declined rule's. And an
-    // UNKNOWN conflict excuses nothing either (CC33 adversarial review,
-    // F1 class): excusing an absence on a fact the app has not
-    // established would silently treat unknown as conflict - the same
-    // definite-only gate computeEffectiveSession applies.
-    const conflicts = actionableEpisodeConflicts(capabilityState, exercise)
-      .filter((c) => !c.unknown);
-    // Red-team finding 4 (bundle): excusal requires the APPLIED choice on
-    // EVERY driving rule, exactly as computeEffectiveSession requires it
-    // for substitution. A declined or undecided rule leaves the row in
-    // the effective prescription (section 14 step 3: "visibly
-    // conflicted" = still owed), so its absence is an ordinary early
-    // stop, never an excused one (section 18).
-    const applied = conflicts.length > 0
-      && conflicts.every((c) => c.row?.effectiveChoice === 'applied');
-    if (applied) {
+    // D112 R8 + D113 ruling 1 + red-team finding 4: the certainty and
+    // choice gates live in removalExcusalConflicts above - ONE shared
+    // answer for both writers since round 13 (held rules dropped before
+    // the applied test; unknown excuses nothing; every live definite
+    // driver must be APPLIED - a declined or undecided rule leaves the
+    // row owed, section 14 step 3 / section 18).
+    const excusers = removalExcusalConflicts(actionableEpisodeConflicts(capabilityState, exercise));
+    if (excusers.length) {
       excusedIds.push(exercise.id);
       entries.push({
         slot: i,
         rowId: row?.rowId ?? null,
         exerciseFrom: exercise.id,
         effect: 'omitted',
-        constraintIds: conflicts.map((c) => c.constraintId),
+        constraintIds: excusers.map((c) => c.constraintId),
       });
     }
   });
