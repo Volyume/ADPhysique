@@ -255,6 +255,30 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
     expect(SRC).not.toContain("if (constraintConflicts.length\n              && constraintConflicts.every(c => c.row?.effectiveChoice === 'applied'");
   });
 
+  test('R19-4: the removal excusal writer refuses a PERFORMED row, and performedIds come from the DB', () => {
+    // The completion writer has refused performed rows since it was
+    // written (computeCompletionEffects returns on row.performed); the
+    // removal writer had no such term, so logging sets, capturing a rule,
+    // then removing the exercise wrote a durable 'omitted' for a movement
+    // the user demonstrably trained - and it could never be revoked,
+    // because performedIds was derived from the list the removal had
+    // already emptied. Both halves pinned here.
+    expect(SRC).toContain('&& !(removedEntry?.sets?.length)');
+    const gate = SRC.indexOf('&& !(removedEntry?.sets?.length)');
+    const write = SRC.indexOf('appendSessionConstraintEffects(user.id, activeWorkout.id, [{', gate);
+    expect(gate).toBeGreaterThan(-1);
+    expect(gate).toBeLessThan(write);
+    // Reconciliation reads workout_sets, WK-2's own reasoning applied to
+    // the record: a removed row's sets stay in the DB, the row does not
+    // stay in the snapshot.
+    expect(SRC).toContain('const dbSetRows = await getWorkoutSetsForWorkout(activeWorkout.id);');
+    expect(SRC).toContain("performedIds = [...new Set((dbSetRows ?? []).map((s) => s?.exerciseId).filter(Boolean))];");
+    // And the false 'completion re-derives' comment is gone from the
+    // removal writer's catch (it cannot: the row has left the snapshot).
+    const site = SRC.indexOf('if (!removedTemp && !removedEntry?._userAdded');
+    expect(SRC.slice(site, site + 2600)).not.toContain('completion re-derives');
+  });
+
   test('R13-2: the completion projection carries the user-chosen marker, so both writers share one refusal', () => {
     // The removal writer refused _userAdded rows since round 12; the
     // completion projection dropped the marker, so the same row was
@@ -391,7 +415,9 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
   });
 
   test('R10-3: completion passes the session\'s performed ids, outside the capState gate', () => {
-    const site = SRC.indexOf('const performedIds = snapshotExercises');
+    // Round 19 (R19-4): performedIds is now DB-sourced with a snapshot
+    // fallback, so the anchor is the declaration itself.
+    const site = SRC.indexOf('let performedIds;');
     expect(site).toBeGreaterThan(-1);
     // The reconcile call fires when EITHER new entries or performed ids
     // exist - a session whose rules ended mid-way still reconciles.

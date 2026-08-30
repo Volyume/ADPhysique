@@ -1428,7 +1428,20 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             // the render-scope judgement resolves it; async on
             // purpose - the write is best-effort and the UI removal
             // below must not wait on it.
+            // Round 19 (R19-4): a PERFORMED row's absence is never
+            // excused - the same first-line refusal the completion
+            // writer has always had (computeCompletionEffects returns
+            // on row.performed), which this writer lacked entirely:
+            // logging sets, then capturing a rule via "Work around
+            // this", then removing the exercise wrote a durable
+            // 'omitted' for a movement the user demonstrably trained
+            // in that session - unrevocable, because the removed row
+            // vanishes from the completion snapshot (the fabricated-
+            // CONSTRAINED class D123 ruling 5 rejected). The entry's
+            // sets array is the same fact completion consumes as
+            // `performed`, read at tap time.
             if (!removedTemp && !removedEntry?._userAdded
+              && !(removedEntry?.sets?.length)
               && user?.id && activeWorkout?.id && exercise?.id) {
               // removedRowId from the conversion above: with removedTemp
               // null it is exactly this row's planned-slot id.
@@ -1457,7 +1470,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     effect: 'omitted',
                     constraintIds: removalDefinite.map(c => c.constraintId),
                   }]);
-                } catch (_) { /* best effort; completion re-derives */ }
+                } catch (_) {
+                  // Best effort, and honestly scoped (round 19, I8): a
+                  // write lost here is LOST - the removed row is gone
+                  // from the completion snapshot and performedIds only
+                  // revoke, never create, so completion cannot
+                  // re-derive this entry. Conservative direction: an
+                  // excusal missed, never fabricated.
+                }
               })();
             }
             cancelAutoAdvance();
@@ -3666,10 +3686,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // drops it. Runs OUTSIDE the capState gate: reconciliation
           // needs only the record and the logged sets, and must still
           // fire when the rules themselves ended mid-session.
-          const performedIds = snapshotExercises
-            .filter((e) => (e.sets?.length ?? 0) > 0)
-            .map((e) => (e?.exercise ?? e)?.id)
-            .filter(Boolean);
+          // Round 19 (R19-4): performed facts come from the DB, not
+          // the in-memory list - WK-2's own reasoning (:3406) applied
+          // to the record: sets logged on an exercise later REMOVED
+          // from the session stay in workout_sets, but the removed row
+          // is gone from snapshotExercises, so a snapshot-derived list
+          // could never revoke an entry for a movement the user
+          // demonstrably trained. Falls back to the snapshot only if
+          // the read itself fails.
+          let performedIds;
+          try {
+            const dbSetRows = await getWorkoutSetsForWorkout(activeWorkout.id);
+            performedIds = [...new Set((dbSetRows ?? []).map((s) => s?.exerciseId).filter(Boolean))];
+          } catch (_) {
+            performedIds = snapshotExercises
+              .filter((e) => (e.sets?.length ?? 0) > 0)
+              .map((e) => (e?.exercise ?? e)?.id)
+              .filter(Boolean);
+          }
           if (entries.length || performedIds.length) {
             // eslint-disable-next-line global-require
             const { appendSessionConstraintEffects } = require('../lib/database');

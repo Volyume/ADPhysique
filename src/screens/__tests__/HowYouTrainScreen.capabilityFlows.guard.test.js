@@ -294,6 +294,10 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
       // regression there fails instead of passing unseen.
       'capability_declared',
       'listActiveMovementConstraints',
+      // Round 19 (C1): the post-session summary - the lane's receipt
+      // line and its "What changed" expander - was the third lane
+      // surface outside every trigger. Its lane identifier.
+      'getSessionConstraintEffect',
     ];
     // Every STATIC render form this codebase uses for a button's words
     // (round 10 added the alert double-quote form; round 14 the JSX
