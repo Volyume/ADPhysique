@@ -37,13 +37,13 @@ describe('T2-11: the "I can\'t do this" sheet actually captures', () => {
 
   test('reads the real sheet block (sanity: both buttons are present)', () => {
     expect(site).toBeGreaterThan(-1);
-    expect(block).toContain("text: 'Swap it for today'");
-    expect(block).toContain('text: "It\'s more than today"');
+    expect(block).toContain("text: 'Just for today'");
+    expect(block).toContain("text: 'From now on'");
   });
 
   test('the body copy matches the new behaviour, no em dash', () => {
     expect(block).toContain(
-      "'Volyume will swap in another exercise for the same muscle. If it is more than today, say so once and your plans build around it until you tell Volyume otherwise.'",
+      "'Volyume will swap it for another exercise that works the same muscle. Choose whether that is just for today, or from now on.'",
     );
     expect(block).not.toMatch(/—/);
   });
@@ -54,14 +54,14 @@ describe('T2-11: the "I can\'t do this" sheet actually captures', () => {
     // key the swap's cause (causeOverride 'constraint'), so the learning
     // shield never reads a worked-around movement as a preference signal.
     // The ref is set before the sheet opens and cleared on confirm/close.
-    const justSwapSite = block.indexOf("text: 'Swap it for today'");
+    const justSwapSite = block.indexOf("text: 'Just for today'");
     const justSwapBlock = block.slice(justSwapSite, block.indexOf('},', justSwapSite));
     expect(justSwapBlock).toContain('onPress: () => { workAroundSwapRef.current = true; handleOpenSwap(); }');
     expect(justSwapBlock).not.toMatch(/navigate/);
   });
 
   test('the durable branch navigates with a preselect and never calls handleOpenSwap', () => {
-    const noteSite = block.indexOf('text: "It\'s more than today"');
+    const noteSite = block.indexOf("text: 'From now on'");
     expect(noteSite).toBeGreaterThan(-1);
     const noteBlock = block.slice(noteSite);
     expect(noteBlock).toContain(

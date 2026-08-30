@@ -5223,13 +5223,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   // translate a modification themselves. "Work around
                   // this" was our internal vocabulary on a user's button.
                   appAlert(
-                    exercise?.name ? `Can't do ${exercise.name} today?` : "Can't do this today?",
-                    'Volyume will swap in another exercise for the same muscle. If it is more than today, say so once and your plans build around it until you tell Volyume otherwise.',
+                    exercise?.name ? `Can't do ${exercise.name}?` : "Can't do this exercise?",
+                    'Volyume will swap it for another exercise that works the same muscle. Choose whether that is just for today, or from now on.',
                     [
                       { text: 'Cancel', style: 'cancel' },
-                      { text: 'Swap it for today', onPress: () => { workAroundSwapRef.current = true; handleOpenSwap(); } },
+                      { text: 'Just for today', onPress: () => { workAroundSwapRef.current = true; handleOpenSwap(); } },
                       {
-                        text: "It's more than today",
+                        text: 'From now on',
                         onPress: () => {
                           // T2-11: this used to ALSO open the swap sheet
                           // while navigating with no params, so the sheet

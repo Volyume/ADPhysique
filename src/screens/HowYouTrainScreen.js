@@ -1537,13 +1537,12 @@ export default function HowYouTrainScreen() {
           disabled?" never does. */}
       <View style={styles.introWrap}>
         <Text style={[styles.body, { color: t.colors.textPrimary }]}>
-          If you have an injury, pain, a long-term health condition or a disability,
-          tell Volyume here and it builds your training around it. Your plans, your
-          swaps and every session follow what you add.
+          If you have an injury, pain, a long-term condition or a disability, tell
+          Volyume about it here. It will build your plans and your workouts around it.
         </Text>
         <Text style={[styles.hint, { color: t.colors.textSecondary, marginTop: spacing.sm }]}>
-          You never need a diagnosis, or even a name for it. Say what does not work
-          and Volyume works around it, with full progression and coaching either way.
+          You do not need a diagnosis, or even a name for it. Just say what you cannot
+          do. Volyume leaves those movements out and trains the same muscles another way.
         </Text>
       </View>
 
