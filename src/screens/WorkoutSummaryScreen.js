@@ -2317,10 +2317,12 @@ const styles = StyleSheet.create({
     borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surface2,
   },
-  // Round 13 (J5): the safe in-row wrapping idiom (R2-12, mirrored from
-  // HowYouTrainScreen's choiceLabelInRow) - without it a long label at
-  // large accessibility type had nothing to shrink or wrap against
-  // inside its pill.
+  // Round 13 (J5): the in-row wrapping bound, ADAPTED from R2-12's
+  // choiceLabelInRow (that one is flex: 1, minWidth: 0 - correct in a
+  // full-width row; here flexShrink replaces flex because a
+  // flex-basis-0 label would collapse this content-sized pill to icon
+  // width). Without a bound a long label at large accessibility type
+  // had nothing to shrink or wrap against inside its pill.
   onwardLinkText: { ...type.label, color: colors.textPrimary, flexShrink: 1, minWidth: 0 },
   // CC33 W3 (D112 R5): the post-workout constraint-effect line, secondary
   // text style (adjustedSummaryText's exact pairing), never a banner.

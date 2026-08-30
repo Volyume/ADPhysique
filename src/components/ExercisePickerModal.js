@@ -943,6 +943,11 @@ export default function ExercisePickerModal({ visible, onClose, onSelect, saveLa
                       <TouchableOpacity
                         accessibilityRole="button"
                         accessibilityLabel={`Allow ${item.name} again`}
+                        // Round 14 (J2): a caption plus 8dp of slop was
+                        // well under the 48 minimum on the lane's own
+                        // allowance control; the style gives it a real
+                        // target and the slop stays as margin for error.
+                        style={styles.pickerAllowAgainBtn}
                         hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         onPress={async () => {
                           try {
@@ -1043,6 +1048,7 @@ const styles = StyleSheet.create({
   // C9: a set-aside row states its own status and offers the way back.
   pickerSetAside: { ...type.caption, color: colors.textMuted },
   pickerAllowAgain: { ...type.caption, color: colors.primary },
+  pickerAllowAgainBtn: { minHeight: spacing.xxxl, justifyContent: 'center', paddingHorizontal: spacing.xs },
   showExcludedRow: { paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   showExcludedText: { ...type.caption, color: colors.textMuted },
   constraintsUnavailableRow: {
@@ -1055,7 +1061,9 @@ const styles = StyleSheet.create({
   separator: { height: 1, backgroundColor: colors.borderSubtle },
   createNewBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs,
-    minHeight: 44,
+    // Round 14 (J2): 48 effective (the styling law's minimum), on the
+    // scale - 44 was both under it and an off-scale literal.
+    minHeight: spacing.xxxl,
     backgroundColor: colors.surface, borderRadius: radius.md,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     borderWidth: 1, borderColor: colors.borderSubtle,

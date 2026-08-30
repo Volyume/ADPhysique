@@ -1687,9 +1687,11 @@ export default function HomeScreen({ navigation, route }) {
         // three ad-hoc entry points while Home's own repeat card built
         // routineExercise: null, so the whole per-slot machinery
         // (conversion on removal included) silently degraded on exactly
-        // these sessions. Mirrors WorkoutHistoryScreen's repeat-as-is
-        // shape: minted id + the previous session's working-set count,
-        // so the target line stays honest too.
+        // these sessions. Adapted from WorkoutHistoryScreen's
+        // repeat-as-is shape (minted id + the previous session's
+        // working-set count, so the target line stays honest) - the one
+        // deliberate difference: an all-warm-up previous session falls
+        // to 3 here rather than the warm-up count.
         initialExercises = (
           await Promise.all(orderedExerciseIds.map(id => getExerciseById(id).catch(() => null)))
         )
