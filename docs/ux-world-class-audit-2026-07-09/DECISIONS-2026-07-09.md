@@ -4482,3 +4482,69 @@ design; stated on A15/D3); C1's static-sweep limits as above. FOUNDER
 items unchanged (duplicate migrate_152 filenames, README ledger rows,
 CLAUDE.md counts, clear-history cloud copies). X1 = NO and X2 =
 pending, as ever.
+
+## D129 — CC33 review round 17 closures (lead-ruled under D33, 2026-08-30)
+
+Adversarial review round 17 (on main 8ee4949d): 1 BROKEN row, 9
+QUALIFIED, 0 STOP - matching round 9's best convergence, and the one
+break is a hook-ordering hole no source pin could see. Rulings:
+
+1. **The both-sides ask WAITS for its inputs (R17-1, A11).** On an
+   exercise change the prompt effect ran in the same commit that
+   cleared the async library resolve, so judgedExercise was null, the
+   R8-1 suppression gate answered false, and the ask fired for exactly
+   the movement class it is most forbidden on (D120 ruling 1) - then
+   self-tagged, so the corrected gate could never re-open it, and the
+   wrong answer persisted per exercise. RULED as a posture split: R2-6's
+   "stay silent until the resolve matches" is right for RENDERED
+   notices (silence is safe); for an ACTION, a pending input must HOLD
+   it - proceeding is a fail-open. Two readiness terms now precede the
+   gate and the self-tag, both in the dep list so the effect re-runs
+   when they settle; source-pinned as ordering within the effect body
+   (the honest pin class available without the render harness this
+   screen's suites deliberately avoid - stated on I6).
+
+2. **RoutineDetail's intent writers join the sequence guard (Q1,
+   B3/I8).** The screen's mount, focus and swap-sheet reads wrote
+   intentState unordered - the exact shape rounds 14-16 closed on
+   ActiveWorkoutScreen - so an older read landing late could restore a
+   pre-capture capability state behind every plan caption and the
+   serve-outcome memo. One counter now orders all three, with tap-time
+   participation for the swap sheet, both directions.
+
+3. **Every effects tombstone schedules its own push (Q2, H2/I2,
+   correcting the round-16 comment's "like every other effects
+   write").** deleteWorkoutAndSets and deleteIncompleteWorkout
+   tombstoned without scheduling, so their tombstones waited for an
+   unrelated write - the exact state round 16 judged a defect on the
+   clear path. All three delete paths schedule now; the comment names
+   all three.
+
+4. **The lane's install-conflict sheet meets the floor (Q3, J2).**
+   Its three sm buttons were ~34dp effective (padding-sized, no
+   hitSlop - invisible to the numeric-minHeight strays check, which is
+   stated on the row). All three carry the 48 token now and the sheet
+   joins the guard's enumeration. Honest scope: Button size="sm" is a
+   global pre-campaign component; only the lane surface is floored
+   here.
+
+5. **The third named branch unsides (Q4, C7).** The unknown line
+   could still name one side of a closed union (reachable when an
+   allowance carves the self twin and a clinician rule survives). It
+   asserts no block, so the R8-4 harm never followed - but all three
+   branches now consume one union answer, and D128 ruling 3's "both
+   named lines" undercount is corrected by making it three.
+
+6. **Conditions stated; records corrected.** L4's KEEP-outranks-
+   REPLACE rebuild ranking is deliberate and now stated on the row
+   (while a definite episode conflict stands, a baseline-blocked
+   incumbent is kept and the receipt frames the keep as temporary;
+   the permanent conflict surfaces after the episode ends). A15
+   carries the general pending-read posture (permissive answers are
+   silence for notices and an explicit wait for actions). The stale
+   round-3 completion-read rationale is rewritten (the fresh read at
+   finish stays right; its staleness reason died with R14-2).
+
+FOUNDER items unchanged (duplicate migrate_152 filenames, README
+ledger rows, CLAUDE.md counts, clear-history cloud copies). X1 = NO
+and X2 = pending, as ever.

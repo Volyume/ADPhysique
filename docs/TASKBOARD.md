@@ -1167,8 +1167,19 @@ helper), R16-4 round 15's false reload rationale DELETED (the state
 is user-scoped - keep-last on every failed trigger; the swap write
 sequence-guarded both directions), clearWorkoutHistory schedules its
 tombstones' push, sweep + touch-guard hardened, two stale migration
-comments corrected. NEXT: settled full gate + merge, adversarial
-review ROUND 17, then S5 gate + device checklist.
+comments corrected. ROUND 17 RAN on 8ee4949d: NOT CLEAN - 1 BROKEN + 9 QUALIFIED, 0
+STOP - matching round 9's best convergence; the one break was a
+hook-ordering hole no source pin could see. Closed same day (D129):
+R17-1 the both-sides ask WAITS for its inputs (readiness terms
+precede the suppression gate and the self-tag; ruled as a posture
+split - silence for notices, an explicit wait for actions), Q1
+RoutineDetail's intent writers join the sequence guard, Q2 every
+effects tombstone schedules its own push (all three delete paths),
+Q3 the install-conflict sheet's three ~34dp buttons floored and
+enumerated, Q4 the unknown named line unsides, L4's deliberate
+rebuild ranking stated, the stale round-3 rationale rewritten. NEXT:
+settled full gate + merge, adversarial review ROUND 18, then S5 gate
++ device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):
