@@ -485,12 +485,14 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
     // must describe what actually happened: nothing.
     if (!served.length) return untouched();
     if (effects.length && workoutId) {
-      // Round 8 (I8): serve REPLACES its own prior entries - the record
-      // states what the CURRENT serve did (a relaunch that resolved a
-      // different substitute, or that served a row a declined rule no
-      // longer omits, corrects itself) while the removal hook's and the
-      // completion writer's entries stay untouched.
-      await appendSessionConstraintEffects(userId, workoutId, effects, { replaceSource: 'serve' }).catch(() => {});
+      // Round 9 (R9-1): a pure, deduped APPEND - round 8's replaceSource
+      // is reverted. A second serve pass (reachable only after an
+      // omission-only first pass) runs over the already-reduced list
+      // and cannot re-derive the earlier pass's omission, so replacing
+      // serve's prior entries DELETED a true record. The source tag
+      // stays for forensics; the merge in the writer is the whole
+      // correction story.
+      await appendSessionConstraintEffects(userId, workoutId, effects).catch(() => {});
     }
     return { served, baseIndexes, untouched: false };
   } catch (_e) {

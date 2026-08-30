@@ -279,28 +279,58 @@ describe('section 5.5: eligibility-derived swap cause', () => {
 });
 
 
-describe('R8/I8: the effects record corrects itself per WRITER', () => {
-  test('serve-sourced entries are replaced on re-append; unsourced writers\' entries survive', async () => {
-    // The pure merge kept the FIRST exerciseTo forever and never revoked
-    // a serve-time omission - so a relaunch that resolved a different
-    // substitute recorded a movement the user never saw, and a declined
-    // rule left an omission on record for a row the user then trained.
-    // replaceSource scopes the correction to one writer's own entries.
-    const { appendSessionConstraintEffects, getSessionConstraintEffect } = require('../database');
-    await appendSessionConstraintEffects(USER, 'w-i8', [
-      { slot: 0, exerciseFrom: 'x1', exerciseTo: 'a', effect: 'substituted', constraintIds: ['c'], source: 'serve' },
-      { slot: 1, exerciseFrom: 'x2', effect: 'omitted', constraintIds: ['c'] },
+describe("R9-1: a second serve pass never deletes the first pass's true record", () => {
+  test('an omission-only pass 1, then a pass 2 over the RESTORED reduced list: both omissions survive', async () => {
+    // Round 8's replaceSource wiped exactly this: pass 2 runs over the
+    // already-reduced list, cannot re-derive pass 1's omission for a
+    // row it can no longer see, and its replace deleted the record the
+    // post-session detail, the excusal counter, the ended-early
+    // excusal and the block-ledger denominator all score from. The
+    // merge is pure again; this drives the REAL serve twice through
+    // the restored list against the REAL database.
+    await insertExerciseWithId('fx-curl', {
+      name: 'Fixture Curl', primaryMuscle: 'biceps', equipment: 'dumbbell',
+      movementPattern: 'curl', compoundIsolation: 'isolation', position: 'seated',
+      gripDemand: 'supportive', bilateralUpper: false, bilateralLower: false,
+      axialLoad: false, impact: false, floorAccess: false, overheadPosition: false,
+      unilateralLoadable: true, balanceDemand: 'supported', isCustom: false,
+    });
+    const { applyEffectiveViewToSession } = require('../sessionEffective');
+    const { getSessionConstraintEffect } = require('../database');
+    const row = (id, name, muscle) => ({ id, name, primaryMuscle: muscle });
+    // A fresh user: the suite's earlier tests leave undecided rules on
+    // USER, whose conflicted-held rows would mask the omission path.
+    const U2 = 'u-r9';
+    const ids1 = await createCapabilityConstraints(U2, [{
+      role: 'episode', source: 'self', ruleKind: 'demand', ruleValue: 'standing',
+      startsAt: NOW - 1000, episodeGroupId: 'g_r9a',
+    }], { nowMs: NOW - 1000 });
+    await setConstraintEffectiveChoice(U2, ids1[0], 'applied');
+    _resetCapabilityResolveCache();
+    const pass1 = await applyEffectiveViewToSession(U2, 'w-r9', [
+      row('fx-squat', 'Fixture Squat', 'quads'),
+      row('fx-legpress', 'Fixture Leg Press', 'quads'),
+      row('fx-curl', 'Fixture Curl', 'biceps'),
     ]);
-    await appendSessionConstraintEffects(USER, 'w-i8', [
-      { slot: 0, exerciseFrom: 'x1', exerciseTo: 'b', effect: 'substituted', constraintIds: ['c'], source: 'serve' },
-    ], { replaceSource: 'serve' });
-    const rec = await getSessionConstraintEffect(USER, 'w-i8');
-    const entries = rec.effects;
-    expect(entries).toHaveLength(2);
-    expect(entries).toEqual(expect.arrayContaining([
-      expect.objectContaining({ exerciseFrom: 'x2', effect: 'omitted' }),
-      expect.objectContaining({ exerciseFrom: 'x1', exerciseTo: 'b' }),
-    ]));
-    expect(entries.some((e) => e.exerciseTo === 'a')).toBe(false);
+    expect(pass1.served.map((r) => r.id)).toEqual(['fx-legpress', 'fx-curl']);
+
+    // Mid-session, a second APPLIED rule arrives - an exercise-kind
+    // block on the leg press - and the screen remounts, re-serving the
+    // RESTORED (reduced) list.
+    const ids2 = await createCapabilityConstraints(U2, [{
+      role: 'episode', source: 'self', ruleKind: 'exercise', ruleValue: 'fx-legpress',
+      startsAt: NOW - 500, episodeGroupId: 'g_r9b',
+    }], { nowMs: NOW - 500 });
+    await setConstraintEffectiveChoice(U2, ids2[0], 'applied');
+    _resetCapabilityResolveCache();
+    const pass2 = await applyEffectiveViewToSession(U2, 'w-r9', [
+      row('fx-legpress', 'Fixture Leg Press', 'quads'),
+      row('fx-curl', 'Fixture Curl', 'biceps'),
+    ]);
+    expect(pass2.served.map((r) => r.id)).toEqual(['fx-curl']);
+
+    const rec = await getSessionConstraintEffect(U2, 'w-r9');
+    const omitted = rec.effects.filter((e) => e.effect === 'omitted').map((e) => e.exerciseFrom).sort();
+    expect(omitted).toEqual(['fx-legpress', 'fx-squat']);
   });
 });

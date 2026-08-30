@@ -11818,17 +11818,22 @@ export async function setCapabilityAdaptationMode(userId, episodeGroupId, mode) 
 // mid-session removal hook (section 17) and the completion writer never
 // duplicate or clobber each other's entries.
 //
-// Round 8 (I8): `replaceSource` lets ONE writer correct its own prior
-// entries without touching the others'. Serve tags its entries
-// source:'serve' and replaces that set wholesale on each write - the
-// pure merge kept the FIRST exerciseTo forever (a relaunch that
-// resolved a different substitute recorded a movement the user never
-// saw), and an omission written at serve was never revoked when the
-// rule was declined and the relaunch served the row (the excusal
-// counter then over-credited a session the user actually trained).
-// The removal hook's and the completion writer's entries carry no
-// source and are never replaced.
-export async function appendSessionConstraintEffects(userId, workoutId, newEntries, { nowMs = Date.now(), replaceSource = null } = {}) {
+// Round 9 (R9-1, REVERTING round 8's replaceSource): the merge is pure
+// again, and deliberately so. Round 8 let serve replace its own prior
+// entries wholesale - built on two correction scenarios the round-9
+// review proved UNREACHABLE (a relaunch restores the already-REDUCED
+// served list, and any substitution leaves a _capabilityTemp marker
+// that blocks a second serve pass outright), while the replacement
+// itself was a real deletion: a second serve pass runs over the
+// reduced list, cannot re-derive an omission an earlier pass made for
+// a row it can no longer see, and wiped the record four surfaces
+// score from (the post-session detail, the excusal counter, the
+// ended-early excusal, the block-ledger denominator). Entries are
+// facts about what happened to this workout; within one workout no
+// legitimate second write for the same (effect, exerciseFrom) exists,
+// so the dedupe below is the whole correction story. Serve still tags
+// its entries source:'serve' - forensics only, replaced never.
+export async function appendSessionConstraintEffects(userId, workoutId, newEntries, { nowMs = Date.now() } = {}) {
   if (!userId || !workoutId || !Array.isArray(newEntries) || !newEntries.length) return null;
   const d = await db();
   const id = `sce_${workoutId}`;
@@ -11837,7 +11842,6 @@ export async function appendSessionConstraintEffects(userId, workoutId, newEntri
   ).catch(() => null);
   let entries = [];
   try { entries = existing?.effects_json ? JSON.parse(existing.effects_json) : []; } catch (_e) { entries = []; }
-  if (replaceSource) entries = entries.filter((e) => e?.source !== replaceSource);
   const seen = new Set(entries.map((e) => `${e.effect}:${e.exerciseFrom}`));
   for (const entry of newEntries) {
     const key = `${entry.effect}:${entry.exerciseFrom}`;
