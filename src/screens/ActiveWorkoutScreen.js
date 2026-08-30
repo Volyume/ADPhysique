@@ -880,6 +880,24 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       return isSideCarvedAvailable(intentState.capability, judgedExercise);
     } catch (_e) { return false; }
   })();
+  // Round 8 (R8-1): the BOTH-SIDES prompt suppression consumes its own
+  // answer, never carvedForOneSide. The round-7 union correctly turned
+  // the carve OFF when both sides are restricted - which made
+  // carvedForOneSide false for exactly that state, and the "do the same
+  // reps on each side" proposal fired where it is MOST wrong: both
+  // sides ruled out, not one. This asks the weaker question - does any
+  // sided rule bear on this movement at all - so the prompt stays
+  // suppressed whichever way the carve resolves. Fails toward true
+  // (suppression) only via a real answer; a read failure answers false
+  // exactly as the note's own gate does.
+  const sidedRuleBearsOnThis = (() => {
+    if (!judgedExercise || !intentState?.capability || intentState.capability.empty) return false;
+    try {
+      // eslint-disable-next-line global-require
+      const { sidedRuleTouches } = require('../lib/capability/resolve');
+      return sidedRuleTouches(intentState.capability, judgedExercise);
+    } catch (_e) { return false; }
+  })();
 
   // D112 R1 amendment to RT2-1 (closes audit T1-03's visible half): a
   // baseline-shaped plan is simply the user's plan and carries no marker,
@@ -1657,13 +1675,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (!unilateralPrefsLoaded || !exercise?.id) return;
     if (exercise.laterality !== 'unilateral') return;
     // Laterality verification (founder order 2026-08-21): never PROPOSE
-    // a both-sides flow for a movement that is only here because the
-    // user told Volyume one side cannot do it - "do the same reps on
-    // each side" would be asking for work they have just ruled out. The
-    // manual toggle in the overflow sheet stays, because an explicit
-    // choice is theirs to make; only the app's own suggestion is held.
-    // Nothing about prescription changes either way.
-    if (carvedForOneSide) return;
+    // a both-sides flow for a movement a sided rule bears on - "do the
+    // same reps on each side" would be asking for work the user has
+    // ruled out. Round 8 (R8-1): gated on sidedRuleBearsOnThis, NOT on
+    // carvedForOneSide - the union carve is off when BOTH sides are
+    // restricted, and that is the strongest case for suppression, not
+    // an exemption from it. The manual toggle in the overflow sheet
+    // stays, because an explicit choice is theirs to make; only the
+    // app's own suggestion is held. Nothing about prescription changes
+    // either way.
+    if (sidedRuleBearsOnThis) return;
     if (unilateralAsked.has(exercise.id)) return;
     if (acknowledgedUnilateralRef.current.has(exercise.id)) return;
     if (supersetSheetOpenRef.current) return; // C5-P37-02: defer, do not stack
@@ -1685,7 +1706,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // supersetHeadsUp is in the list so a deferred walkthrough fires the moment
   // the superset sheet closes (C5-P37-02).
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp, carvedForOneSide]);
+  }, [exercise?.id, exercise?.laterality, exercise?.name, unilateralPrefsLoaded, unilateralAsked, supersetHeadsUp, sidedRuleBearsOnThis]);
 
   // First-use info tip: pulse the Info button until tapped. The pulse itself
   // is suppressed under Reduce Motion (the static badge still shows so the

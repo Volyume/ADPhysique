@@ -274,7 +274,14 @@ describe('the app never PROPOSES work the user has just ruled out', () => {
     const src = fs.readFileSync(
       path.resolve(__dirname, '../../../screens/ActiveWorkoutScreen.js'), 'utf8',
     );
-    expect(src).toMatch(/if \(carvedForOneSide\) return;/);
+    // Round 8 (R8-1): the suppression consumes sidedRuleTouches, NOT
+    // the carve answer - the union turns the carve off when BOTH sides
+    // are restricted, and that is the strongest case for holding the
+    // prompt, not an exemption. The one-side-at-a-time NOTE keeps
+    // isSideCarvedAvailable.
+    expect(src).toMatch(/if \(sidedRuleBearsOnThis\) return;/);
+    expect(src).not.toMatch(/if \(carvedForOneSide\) return;/);
+    expect(src).toMatch(/sidedRuleTouches\(intentState\.capability, judgedExercise\)/);
     // F1 (adversarial review): judged on the library-RESOLVED row - the
     // entry's own partial exercise had no unilateralLoadable column, so
     // this answered false for every planned row and the hold never held.
@@ -282,7 +289,7 @@ describe('the app never PROPOSES work the user has just ruled out', () => {
     // The guard sits inside the suggestion effect, before the ask.
     const effect = src.slice(src.indexOf('const acknowledgedUnilateralRef'), src.indexOf('Log this one side at a time?'));
     expect(effect.length).toBeGreaterThan(200);
-    expect(effect).toMatch(/carvedForOneSide/);
+    expect(effect).toMatch(/sidedRuleBearsOnThis/);
     // The manual per-side toggle is untouched.
     expect(src).toMatch(/accessibilityLabel=\{unilateralExercises\.has\(exercise\.id\) \? 'Stop logging this exercise per side'/);
   });
@@ -364,5 +371,42 @@ describe('R7-3 (round 7): the side carve is a UNION decision per axis, never per
   it('a movement that needs both hands is blocked by ONE sided rule exactly as before - the union changes nothing there', () => {
     const s = stateOf([left()]);
     expect(capabilityBlockReason(s, needsBothHands)).toBe(CAPABILITY_BLOCK.DECLARED);
+  });
+});
+
+describe('R8-1 + D120 (round 8): suppression asks its own question; a held rule contributes facts, not automation', () => {
+  const left = (over = {}) => rule({ id: 'r-left', laterality: LATERALITY.LEFT, ...over });
+  const right = (over = {}) => rule({ id: 'r-right', laterality: LATERALITY.RIGHT, ...over });
+
+  it('sidedRuleTouches answers true whenever ANY sided rule bears on the movement - both-sides included', () => {
+    // R8-1: the both-sides logging prompt is suppressed on THIS answer,
+    // never on isSideCarvedAvailable - the union correctly turns the
+    // carve OFF when both sides are restricted, which is the strongest
+    // case for suppressing "do the same reps on each side", not an
+    // exemption from it.
+    const { sidedRuleTouches } = require('../resolve');
+    expect(sidedRuleTouches(stateOf([left()]), oneSideLoadable)).toBe(true);
+    expect(sidedRuleTouches(stateOf([left(), right()]), oneSideLoadable)).toBe(true);
+    // No sided rule, or a movement the axis does not bear on: false.
+    expect(sidedRuleTouches(stateOf([rule({ laterality: null })]), oneSideLoadable)).toBe(false);
+    const gripless = { id: 'ex_legpress', name: 'Leg Press', gripDemand: 'supportive', unilateralLoadable: true };
+    expect(sidedRuleTouches(stateOf([left()]), gripless)).toBe(false);
+  });
+
+  it('D120: a HELD opposite-side rule completes the union; the LIVE rule substitutes, and that is ruled correct', () => {
+    // Hold and decline suspend a rule's own automation, never the fact
+    // it records - the side is still restricted, exactly as pickers and
+    // generation already honour it. So a held left rule beside a live
+    // applied right rule makes the live rule's conflict definite; the
+    // automation that follows is the applied rule's own.
+    const { actionableEpisodeConflicts } = require('../effective');
+    const s = stateOf([
+      left({ role: CONSTRAINT_ROLE.EPISODE, episodeGroupId: 'g1', adaptationMode: 'hold', effectiveChoice: 'applied' }),
+      right({ role: CONSTRAINT_ROLE.EPISODE, episodeGroupId: 'g2', effectiveChoice: 'applied' }),
+    ]);
+    expect(capabilityBlockReason(s, oneSideLoadable)).toBe(CAPABILITY_BLOCK.DECLARED);
+    expect(isSideCarvedAvailable(s, oneSideLoadable)).toBe(false);
+    // Only the live rule may DRIVE what happens next.
+    expect(actionableEpisodeConflicts(s, oneSideLoadable).map((c) => c.constraintId)).toEqual(['r-right']);
   });
 });

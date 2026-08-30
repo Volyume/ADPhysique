@@ -39,9 +39,17 @@ export function episodeConflicts(capabilityState, exercise) {
 /** The EPISODE-role conflicts that may DRIVE automation for one exercise,
  *  or []. D112 R8 (section 25; audit T2-26): an episode the user set to
  *  "hold my plan" still CONFLICTS (episodeConflicts above reports it, so
- *  surfaces can say "you're holding this"), but it substitutes nothing,
- *  omits nothing, excuses nothing and proposes nothing - the effective
- *  view and the completion excusal consume THIS list, never the raw one. */
+ *  surfaces can say "you're holding this"), but it drives no automation
+ *  OF ITS OWN - the effective view and the completion excusal consume
+ *  THIS list, never the raw one. Precision (D120, round 8): hold and
+ *  decline suspend a rule's own automation, never the FACT it records.
+ *  A held rule's restriction still binds pickers and generation, and it
+ *  still participates in the side-carve union (resolve.sideCarveByAxis)
+ *  - so a held left-side rule beside a live applied right-side rule
+ *  makes the LIVE rule's conflict definite, and the live rule may then
+ *  substitute. The automation is the applied rule's; the held rule
+ *  contributed a fact, which is exactly what pickers and generation
+ *  already take from it. */
 export function actionableEpisodeConflicts(capabilityState, exercise) {
   return episodeConflicts(capabilityState, exercise)
     .filter((c) => c.row?.adaptationMode !== 'hold');

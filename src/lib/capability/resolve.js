@@ -107,16 +107,32 @@ export function isSideCarvedAvailable(state, exercise) {
 
 /**
  * Round 7 (R7-3): the axes whose side carve APPLIES for this state - a
- * union decision over every DEMAND rule, computed once per call site.
- * An axis carves only while exactly ONE side of it is restricted and no
- * unsided rule restricts it too: a left rule and a right rule together
- * mean neither side can do it, and a sided rule beside an unsided rule
- * on the same axis means the unsided rule already covers both. Source
- * is irrelevant here on purpose - a clinician's left rule plus a
- * self-declared right rule still covers both sides (the clinician
- * ranking lives in blockingConflicts, not in the carve).
+ * union decision over every DEMAND rule. An axis carves only while
+ * exactly ONE side of it is restricted and no unsided rule restricts
+ * it too: a left rule and a right rule together mean neither side can
+ * do it, and a sided rule beside an unsided rule on the same axis
+ * means the unsided rule already covers both. Source is irrelevant
+ * here on purpose - a clinician's left rule plus a self-declared right
+ * rule still covers both sides (the clinician ranking lives in
+ * blockingConflicts, not in the carve). HELD and DECLINED rules
+ * participate too (D120): hold and decline suspend a rule's own
+ * AUTOMATION, never the fact it records - the side is still restricted,
+ * exactly as pickers and generation already honour it.
+ *
+ * Round 8 (I4): memoised per state object. Computed inline it ran once
+ * per exercise on the full-library pass - O(exercises) Map/Set
+ * allocation that benchmarked at six times the pre-union cost. States
+ * are rebuilt per load and never mutated after build, so the WeakMap
+ * entry lives exactly as long as the state it describes.
+ *
+ * Exported (R8-4) so surfaces explaining a sided conflict consume the
+ * SAME answer the carve uses instead of re-deriving it.
  */
-function sideCarveByAxis(state) {
+const _sideCarveCache = new WeakMap();
+export function sideCarveByAxis(state) {
+  if (!state || typeof state !== 'object') return new Set();
+  const cached = _sideCarveCache.get(state);
+  if (cached) return cached;
   const byAxis = new Map();
   for (const r of state?.restrictions ?? []) {
     if (r.ruleKind !== CONSTRAINT_RULE_KIND.DEMAND || !SIDE_CARVEABLE.has(r.ruleValue)) continue;
@@ -128,7 +144,30 @@ function sideCarveByAxis(state) {
   for (const [axis, entry] of byAxis) {
     if (!entry.unsided && entry.sides.size === 1) carves.add(axis);
   }
+  _sideCarveCache.set(state, carves);
   return carves;
+}
+
+/**
+ * Round 8 (R8-1): does ANY sided rule of this state bear on this
+ * movement - whether or not its axis still carves? The both-sides
+ * logging prompt is suppressed on THIS answer, never on
+ * isSideCarvedAvailable: with both sides restricted the carve is off
+ * (the exercise blocks), but proposing "do the same reps on each side"
+ * is then MORE wrong, not fine - it asks for work on two sides the
+ * user has ruled out. The one-side-at-a-time NOTE keeps
+ * isSideCarvedAvailable (it speaks only when working one side is
+ * genuinely how the user trains); the prompt suppression consumes
+ * this, so it holds whenever a sided rule touches the movement at all.
+ */
+export function sidedRuleTouches(state, exercise) {
+  if (!state || state.empty || !exercise) return false;
+  return (state.restrictions ?? []).some((r) => (
+    r.ruleKind === CONSTRAINT_RULE_KIND.DEMAND
+    && r.laterality
+    && SIDE_CARVEABLE.has(r.ruleValue)
+    && demandAxisConflict(r.ruleValue, exercise) === true
+  ));
 }
 
 /**
