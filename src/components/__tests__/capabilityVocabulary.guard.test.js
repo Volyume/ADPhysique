@@ -83,7 +83,7 @@ describe('R8-4 (round 8): the sided reason states only true mechanical facts und
   });
 
   test('both sides restricted names both facts, without inventing a side', () => {
-    expect(body).toContain("r.laterality && r.laterality !== first.laterality");
+    expect(body).toContain("const shape = sidedUnionShape(first, capabilityState);");
     expect(body).toContain('does not work on either side');
     // The unsided-rule-covers-the-axis case falls to the unsided
     // wording rather than a side-specific claim.

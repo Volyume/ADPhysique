@@ -25,7 +25,7 @@ import { loadExerciseIntentState, isEligible, intentFor, isFamilyBlocked, moveme
 // capability store (allowances) - the same door every capability write uses.
 import { capabilityBlockReason, demandConflicts, CAPABILITY_BLOCK } from '../lib/capability/resolve';
 import { demandLabel, CONSTRAINT_SOURCE } from '../lib/capability/model';
-import { rulePhrase } from '../lib/capability/phrase';
+import { rulePhrase, sidedUnionShape } from '../lib/capability/phrase';
 import { familyLabel } from '../lib/exercise/movementFamily';
 // Red-team finding 1 (bundle): the capability-unavailable notice is shown
 // only to users who actually turned the feature on, so everyone else never
@@ -158,13 +158,13 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
       // One-side-loadable yet still definitely conflicted: the axis no
       // longer carves. Both sides restricted names both facts; a sided
       // rule beside an unsided one falls to the unsided wording, which
-      // already covers the whole axis.
-      const bothSides = (capabilityState.restrictions ?? []).some((r) => (
-        r.ruleKind === 'demand' && r.ruleValue === first.ruleValue
-        && r.laterality && r.laterality !== first.laterality
-      ));
+      // already covers the whole axis. Round 16 (R16-3): the union
+      // question moved to sidedUnionShape so this surface and the
+      // in-session named line consume ONE answer - the inline scan here
+      // is how the law stayed picker-only for eight rounds.
+      const shape = sidedUnionShape(first, capabilityState);
       const base = rulePhrase({ ...first, laterality: null });
-      if (bothSides && base) return `You've said ${base} does not work on either side`;
+      if (shape === 'both_sides' && base) return `You've said ${base} does not work on either side`;
     }
     return `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you keep out under how you train`;
   }

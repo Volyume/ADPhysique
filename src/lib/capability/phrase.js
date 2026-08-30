@@ -90,6 +90,30 @@ export function demandPhrase(axisId) {
 }
 
 /**
+ * Round 16 (R16-3): the ONE union question both phrasing surfaces ask
+ * about a sided demand rule. Under the R7-3 union, a sided definite
+ * conflict on a one-side-loadable movement is reachable exactly when
+ * its axis no longer carves - some other rule restricts the rest of the
+ * axis (by ANY role, held included: facts complete the union, D120
+ * ruling 2). Naming one side then states a mechanical fact the movement
+ * contradicts and attributes the whole union to that side's lane - the
+ * R8-4 class, closed at the picker in round 8 and found again at the
+ * in-session named line in round 16, because the picker kept the scan
+ * inline. Returns 'both_sides' (an opposite-side rule completes the
+ * union), 'unsided_covered' (an unsided rule already covers the whole
+ * axis), or null (the side genuinely stands alone).
+ */
+export function sidedUnionShape(rule, capabilityState) {
+  if (!rule?.laterality || rule.ruleKind !== CONSTRAINT_RULE_KIND.DEMAND) return null;
+  const rows = capabilityState?.restrictions ?? [];
+  if (rows.some((r) => r.ruleKind === 'demand' && r.ruleValue === rule.ruleValue
+    && r.laterality && r.laterality !== rule.laterality)) return 'both_sides';
+  if (rows.some((r) => r.ruleKind === 'demand' && r.ruleValue === rule.ruleValue
+    && !r.laterality)) return 'unsided_covered';
+  return null;
+}
+
+/**
  * Mid-sentence phrase for one rule. `nameOf(exerciseId)` resolves
  * exercise names (screens pass a library lookup); without it, exercise
  * rules return null rather than a made-up name.

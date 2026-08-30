@@ -266,8 +266,12 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
     expect(SRC).toContain('const { kind, drivingEpisode, definiteBaseline, unknowns } = constraintNoticeKind({');
     expect(SRC).toContain('hasMarker: !!currentEntry?._capabilityTemp?.fromName,');
     // The episode line is NAMED from the driving rules alone (round 15:
-    // naming a held co-driver claimed the hold covered this row).
-    expect(SRC).toContain("const named = subjectPhrase(drivingEpisode.filter(c => c.ruleKind !== 'exercise'), {});");
+    // naming a held co-driver claimed the hold covered this row), and
+    // since round 16 a sided rule in a closed union phrases UNSIDED
+    // (sidedUnionShape - the shared R8-4 answer), for the baseline
+    // named line too.
+    expect(SRC).toContain("const named = subjectPhrase(drivingEpisode");
+    expect(SRC.match(/\.map\(c => \(sidedUnionShape\(c, capForPhrase\) \? \{ \.\.\.c, laterality: null \} : c\)\), \{\}\);/g)).toHaveLength(2);
     // The inline ranking is gone.
     expect(SRC).not.toContain('definiteEpisode.every((c) => c.row?.adaptationMode === ');
   });

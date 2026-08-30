@@ -815,19 +815,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // older read landing late never overwrites a newer one.
   const intentLoadSeqRef = useRef(0);
   const intentLoadAtRef = useRef(0);
-  const reloadIntentState = useCallback((keepOnFailure = false) => {
+  const reloadIntentState = useCallback(() => {
     if (!user?.id) { setIntentState(null); return; }
     const seq = ++intentLoadSeqRef.current;
     getActiveBlock(user.id)
       .then(block => loadExerciseIntentState(user.id, { activeMesocycleId: block?.id ?? null }))
       .then(state => { if (seq === intentLoadSeqRef.current) setIntentState(state); })
-      // Round 15 (A15/D3 conditions): a RELOAD failure keeps the last
-      // state (RoutineDetail's own additive-catch precedent) - nulling
-      // it erased a correct in-flight notice, side-carve note and
-      // substitution marker with no word said. A mount/exercise-change
-      // failure still clears: there the previous state describes a
-      // DIFFERENT slot, and keeping it would judge the wrong exercise.
-      .catch(() => { if (seq === intentLoadSeqRef.current && !keepOnFailure) setIntentState(null); });
+      // Round 16 (R16-4, deleting round 15's false rationale): this
+      // state is USER-scoped, not slot-scoped - loadExerciseIntentState
+      // takes no exercise, and the per-slot clearing lives in
+      // resolvedExercise, a different state with its own rule. So a
+      // failed refresh keeps the last real state on EVERY trigger
+      // (mount, exercise change, focus): a stale-but-true state beats
+      // an erased one, which silently removed the constraint notice,
+      // side-carve note and avoided-pattern chip. Only a missing user
+      // clears (above). The one rejection source here is
+      // getActiveBlock; loadExerciseIntentState cannot reject.
+      .catch(() => {});
   }, [user?.id]);
   useEffect(() => {
     intentLoadAtRef.current = Date.now();
@@ -837,7 +841,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   useEffect(() => {
     const unsub = navigation.addListener('focus', () => {
       if (Date.now() - intentLoadAtRef.current < 800) return;
-      reloadIntentState(true);
+      reloadIntentState();
     });
     return unsub;
   }, [navigation, reloadIntentState]);
@@ -982,11 +986,19 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       // Natural coach-language order (2026-08-21): name what the conflict
       // is about when the rules give it a short honest name. Named from
       // the DRIVING rules alone (round 15): naming a held co-driver
-      // claimed the hold covered this row.
+      // claimed the hold covered this row. Round 16 (R16-3): a sided
+      // rule whose axis is union-blocked phrases UNSIDED - naming one
+      // side stated a fact the movement may contradict and attributed
+      // the whole union to that side's lane (the R8-4 class, closed at
+      // the picker in round 8 and found again here; one shared answer
+      // now, sidedUnionShape).
       try {
         // eslint-disable-next-line global-require
-        const { subjectPhrase } = require('../lib/capability/phrase');
-        const named = subjectPhrase(drivingEpisode.filter(c => c.ruleKind !== 'exercise'), {});
+        const { subjectPhrase, sidedUnionShape } = require('../lib/capability/phrase');
+        const capForPhrase = intentState?.capability ?? null;
+        const named = subjectPhrase(drivingEpisode
+          .filter(c => c.ruleKind !== 'exercise')
+          .map(c => (sidedUnionShape(c, capForPhrase) ? { ...c, laterality: null } : c)), {});
         // Round 6 (R6-4): state the conflict, offer the action - a
         // workaround-in-progress claim was false on the dominant path.
         if (named) return { kind: 'episode', copy: `This one involves ${named}, which sits outside your temporary change. Swap it when you're ready.` };
@@ -998,8 +1010,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     if (kind === 'baseline') {
       try {
         // eslint-disable-next-line global-require
-        const { subjectPhrase } = require('../lib/capability/phrase');
-        const named = subjectPhrase(definiteBaseline.filter(c => c.ruleKind !== 'exercise'), {});
+        const { subjectPhrase, sidedUnionShape } = require('../lib/capability/phrase');
+        // R16-3 applies here too: a sided baseline rule in a closed
+        // union phrases unsided.
+        const capForPhrase = intentState?.capability ?? null;
+        const named = subjectPhrase(definiteBaseline
+          .filter(c => c.ruleKind !== 'exercise')
+          .map(c => (sidedUnionShape(c, capForPhrase) ? { ...c, laterality: null } : c)), {});
         if (named) return { kind: 'baseline', copy: `This one involves ${named}, which sits outside how you train. Swap it when you're ready.` };
       } catch (_e) { /* fall through to the generic line */ }
       return { kind: 'baseline', copy: "This one sits outside how you train. Swap it when you're ready." };
@@ -1417,6 +1434,13 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   }
 
   async function handleOpenSwap() {
+    // Round 16 (R16-4, replacing round 15's one-directional bump): the
+    // sheet's read PARTICIPATES in the sequence guard from the moment
+    // of the tap - so a reload in flight at tap time cannot overwrite
+    // this read, and a load the user triggers AFTER the tap (an
+    // exercise change) wins over it, both directions. Round 15's
+    // post-await bump could orphan that later, newer load.
+    const swapSeq = ++intentLoadSeqRef.current;
     const allExercises = await getAllExercises();
     const alreadyInWorkout = workoutExercises.map(e => e.exercise?.id).filter(Boolean);
     // C9 Work 3: ask for a wider structural slate than we show, then let the
@@ -1454,13 +1478,14 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const { capabilityBlockReason } = require('../lib/capability/resolve');
         narrowedCount = ranked.filter((c) => capabilityBlockReason(state.capability, c.exercise) !== null).length;
       }
-      // Round 15 (I8 condition closed): this write joins the sequence
-      // guard - bumping the counter invalidates any focus reload still
-      // in flight, so an older read landing late can never overwrite
-      // the sheet's newer one. (This state is the newest by
-      // construction: it was just read on the tap.)
-      intentLoadSeqRef.current += 1;
-      setIntentState(state);
+      // Round 16 (R16-4): the write lands only while the tap-time
+      // sequence still stands - a load the user triggered after the tap
+      // has a higher number and wins, exactly as this read wins over
+      // anything in flight when it was made. (Round 15's post-await
+      // bump claimed "newest by construction", which was false: the
+      // read is issued asynchronously and a later-started load can be
+      // newer.)
+      if (swapSeq === intentLoadSeqRef.current) setIntentState(state);
       // D109-2: the read failed open (structural list stands, nothing is
       // filtered by avoidance) - say so, rather than let the swap list look
       // like a clean slate when it may not be. D112 R3 (audit T2-09): the

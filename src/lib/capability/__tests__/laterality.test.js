@@ -410,3 +410,37 @@ describe('R8-1 + D120 (round 8): suppression asks its own question; a held rule 
     expect(actionableEpisodeConflicts(s, oneSideLoadable).map((c) => c.constraintId)).toEqual(['r-right']);
   });
 });
+
+// Round 16 (R16-3): the ONE union question both phrasing surfaces ask.
+// The picker held this scan inline for eight rounds while the
+// in-session named line named one side of a closed union on a movement
+// that CAN be loaded a side at a time - the R8-4 class at a second
+// consumer.
+describe('R16-3: sidedUnionShape - the shared union question for phrasing', () => {
+  const { sidedUnionShape } = require('../phrase');
+  const rule = (over) => ({ ruleKind: 'demand', ruleValue: 'overhead_position', laterality: 'left', ...over });
+  const state = (rows) => ({ restrictions: rows });
+
+  test('a side that genuinely stands alone phrases sided', () => {
+    expect(sidedUnionShape(rule(), state([rule()]))).toBe(null);
+  });
+
+  test('an opposite-side rule completes the union: both_sides', () => {
+    expect(sidedUnionShape(rule(), state([rule(), rule({ laterality: 'right' })]))).toBe('both_sides');
+  });
+
+  test('an unsided rule already covers the axis: unsided_covered', () => {
+    expect(sidedUnionShape(rule(), state([rule(), rule({ laterality: null })]))).toBe('unsided_covered');
+  });
+
+  test('role and choice do not matter - a held or baseline opposite side still completes the union (facts, D120 ruling 2)', () => {
+    expect(sidedUnionShape(rule(), state([rule(), rule({ laterality: 'right', role: 'baseline' })]))).toBe('both_sides');
+    expect(sidedUnionShape(rule(), state([rule(), { ...rule({ laterality: 'right' }), adaptationMode: 'hold' }]))).toBe('both_sides');
+  });
+
+  test('unsided rules, other axes and non-demand kinds never union-shape', () => {
+    expect(sidedUnionShape(rule({ laterality: null }), state([rule()]))).toBe(null);
+    expect(sidedUnionShape(rule(), state([rule({ ruleValue: 'impact', laterality: 'right' })]))).toBe(null);
+    expect(sidedUnionShape({ ruleKind: 'family', ruleValue: 'x', laterality: 'left' }, state([rule()]))).toBe(null);
+  });
+});
