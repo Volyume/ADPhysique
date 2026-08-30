@@ -202,15 +202,34 @@ describe('R10: slot-keyed record wiring and the swap correction', () => {
     expect(SRC).toContain("rowId: workoutExercises[currentExerciseIndex]?.routineExercise?.id ?? null,");
   });
 
-  test('R10-2: swapping away a substitute clears the marker, makes the row the user\'s own, and amends the slot\'s entry', () => {
+  test('R10-2/R11-4: EVERY manual swap makes the row the user\'s own; a substitute swap also clears the marker and amends the entry', () => {
     // The spread used to carry _capabilityTemp forward, so the quiet
     // line claimed "Temporarily in for X" over the user's own pick and
     // the record kept naming a substitute the user never trained.
-    expect(SRC).toContain("...(prevTemp ? { _capabilityTemp: undefined, _userAdded: true } : {}),");
+    // Round 11: the _userAdded marking is UNCONDITIONAL - the round-10
+    // conditional left an ordinary swapped row unmarked, and the
+    // reachable second serve pass substituted over the user's pick.
+    const site = SRC.indexOf('const prevTemp = updatedExercises[currentExerciseIndex]?._capabilityTemp;');
+    expect(site).toBeGreaterThan(-1);
+    const block = SRC.slice(site, site + 700);
+    expect(block).toContain('_userAdded: true,');
+    expect(block).toContain('...(prevTemp ? { _capabilityTemp: undefined } : {}),');
+    expect(block).not.toMatch(/prevTemp \? \{[^}]*_userAdded/);
     expect(SRC).toContain("amendSessionConstraintSubstitution(user.id, activeWorkout.id, {");
     expect(SRC).toContain('exerciseFrom: prevTemp.fromId,');
     expect(SRC).toContain('rowId: prevTemp.rowId ?? null,');
     expect(SRC).toContain('exerciseTo: newExercise.id,');
+  });
+
+  test('R11-1: removing a serve substitute converts the slot\'s entry to an omission', () => {
+    // Without this the record kept claiming a substitution the user
+    // deleted, and the receipt named a movement never trained. The
+    // conflict-gated omission hook below it cannot fire here - the
+    // substitute was chosen precisely because it does not conflict.
+    expect(SRC).toContain("const removedTemp = workoutExercises[currentExerciseIndex]?._capabilityTemp;");
+    expect(SRC).toContain('convertSessionConstraintSubstitutionToOmission(user.id, activeWorkout.id, {');
+    expect(SRC).toContain('exerciseFrom: removedTemp.fromId,');
+    expect(SRC).toContain('rowId: removedTemp.rowId ?? null,');
   });
 
   test('R10-3: completion passes the session\'s performed ids, outside the capState gate', () => {

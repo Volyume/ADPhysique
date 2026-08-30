@@ -1316,6 +1316,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           style: 'destructive',
           onPress: () => {
             audit('workout.exercise.removed', { exerciseId: exercise?.id });
+            // Round 11 (R11-1, the removal half): removing a row serve
+            // substituted IN ends that substitution with nothing in the
+            // slot - the excluded original never happened and nothing
+            // stands in its place, so the slot's entry converts to an
+            // omission. Without this the record (and the receipt) kept
+            // claiming a substitution the user deleted. Best-effort,
+            // like every effects write on this screen.
+            const removedTemp = workoutExercises[currentExerciseIndex]?._capabilityTemp;
+            if (removedTemp?.fromId && user?.id && activeWorkout?.id) {
+              // eslint-disable-next-line global-require
+              const { convertSessionConstraintSubstitutionToOmission } = require('../lib/database');
+              convertSessionConstraintSubstitutionToOmission(user.id, activeWorkout.id, {
+                exerciseFrom: removedTemp.fromId,
+                rowId: removedTemp.rowId ?? null,
+              }).catch(() => { /* best effort */ });
+            }
             // CC29 (section 17; closes Audit G C3 for the constraint
             // cause): removing an EPISODE-affected exercise writes a
             // durable omission on this session's effects record. Removal
@@ -1429,18 +1445,22 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // user overriding the app's workaround. The spread used to carry
     // _capabilityTemp forward, so the quiet line claimed "Temporarily in
     // for X" over the user's OWN pick, and the durable record kept
-    // naming a substitute the user never trained. The marker is cleared,
-    // the row becomes the user's own (_userAdded - serve's law already
-    // leaves those untouched, which matters because clearing the last
-    // marker makes a relaunch re-serve pass reachable), and the slot's
-    // substitution entry is amended to name what actually stood in it.
+    // naming a substitute the user never trained. The marker is cleared
+    // and the slot's substitution entry is amended to name what actually
+    // stood in it. Round 11 (R11-4): EVERY manual swap marks the row the
+    // user's own, not only a swap over a substitute - the round-10
+    // conditional left an unmarked swapped row for the relaunch re-serve
+    // pass (reachable once the last marker clears) to substitute over,
+    // against the user's word (D112 R4). _userAdded means "the user
+    // chose this row", and a swap is exactly that choice.
     const prevTemp = updatedExercises[currentExerciseIndex]?._capabilityTemp;
     updatedExercises[currentExerciseIndex] = {
       ...updatedExercises[currentExerciseIndex],
       exercise: newExercise,
       routineExercise: rebuiltRoutineEx,
       sets: [],
-      ...(prevTemp ? { _capabilityTemp: undefined, _userAdded: true } : {}),
+      _userAdded: true,
+      ...(prevTemp ? { _capabilityTemp: undefined } : {}),
     };
     store.setWorkoutExercises(updatedExercises);
     if (prevTemp?.fromId && user?.id && activeWorkout?.id && newExercise?.id) {
@@ -3481,7 +3501,9 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
           // the user performed. performedIds is not an intent judgement
           // (the class the round-8 attribution probe ruled out) - it is
           // workout_sets fact, and the writer renames a performed
-          // omission 'omitted_revoked' so every strict-matching reader
+          // omission OR substitution with a _revoked suffix (round 11,
+          // R11-1: both lanes' claims fall the same way once the
+          // excluded movement happened) so every strict-matching reader
           // drops it. Runs OUTSIDE the capState gate: reconciliation
           // needs only the record and the logged sets, and must still
           // fire when the rules themselves ended mid-session.
