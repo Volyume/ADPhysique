@@ -11880,16 +11880,16 @@ export async function setCapabilityAdaptationMode(userId, episodeGroupId, mode) 
 // (effect, exerciseFrom) key silently collapsed the second slot's true
 // entry - the receipt said one swap where two happened. Writers stamp
 // rowId (the slot's own stable id) and the key is
-// (effect, exerciseFrom, rowId). Rounds 11-13 closed the keyless
-// sources - and round 13 closed the CLASS after per-site minting
-// proved unwinnable (round 12 found a third source, round 13 a
-// fourth, Home's own repeat card): the store's withSetsArrays
-// chokepoint now mints a slot id for any keyless entry on every
-// fresh, restored or mutated session list, so no construction can
-// ship keyless again. A null rowId therefore means a legacy RECORD
-// written before the upgrades; the tolerance for those is counted -
-// one keyless entry absorbs exactly one keyed re-derivation, never a
-// whole slot set. The `slot` field is
+// (effect, exerciseFrom, rowId). Rounds 11-14 closed the keyless
+// sources, then the class: the store's withSetsArrays chokepoint
+// mints a slot id for any keyless entry, and since round 14 every
+// path that CREATES session entries runs through it (startWorkout,
+// restore, setWorkoutExercises, addExerciseToWorkout - the round-14
+// review proved the round-13 "cannot ship keyless" claim had two
+// holes, both closed: a null entry and the picker append). A null
+// rowId therefore means a legacy RECORD written before the upgrades;
+// the tolerance for those is counted - one keyless entry absorbs
+// exactly one keyed re-derivation, never a whole slot set. The `slot` field is
 // informational only: each writer stamps its own list's index (serve
 // the pass's input, removal the current list, completion the
 // snapshot), so those spaces are not one space and slot is never part

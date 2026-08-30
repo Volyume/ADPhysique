@@ -141,27 +141,32 @@ function boundedRestEndsAt(value, { clamp = false } = {}) {
 function withSetsArrays(list) {
   if (!Array.isArray(list)) return [];
   let changed = false;
+  let mintUid = null;
   const out = list.map((e) => {
     const needsSets = !(e && Array.isArray(e.sets));
-    // Round 13 (R13-1): the slot-identity net at the CHOKEPOINT. Every
-    // session list - fresh (startWorkout), restored (an old snapshot
-    // from before the minting rounds), or mutated (setWorkoutExercises)
-    // - passes through here, so a keyless slot gets its stable id
-    // minted whatever construction produced it. Rounds 11-13 chased
-    // keyless constructions one entry point at a time (BuildWorkout,
-    // repeat-as-is, the picker add, then Home's own repeat card - a
-    // FOURTH the round-13 review found); this closes the CLASS: a fifth
-    // construction cannot ship keyless. Idempotent - a slot with an id
-    // keeps it, so identity stays stable across mutations and restores.
-    const needsSlotId = e && !e.routineExercise?.id;
+    // Round 13 (R13-1): the slot-identity net at the CHOKEPOINT, after
+    // rounds 11-13 chased keyless constructions one entry point at a
+    // time (BuildWorkout, repeat-as-is, the picker add, then Home's own
+    // repeat card). Round 14 closed the net's own two holes the review
+    // proved (a null entry slipped through keyless, and
+    // addExerciseToWorkout appended outside the net) and states the
+    // scope precisely: every path that CREATES session entries runs
+    // through here - startWorkout, restoreActiveWorkout,
+    // setWorkoutExercises and addExerciseToWorkout; the set-mutators
+    // only touch sets on entries that already passed. Idempotent - a
+    // slot with an id keeps it, so identity stays stable across
+    // mutations and restores.
+    const needsSlotId = !e?.routineExercise?.id;
     if (!needsSets && !needsSlotId) return e;
     changed = true;
-    // eslint-disable-next-line global-require
-    const { uid } = require('../lib/database');
+    if (needsSlotId && !mintUid) {
+      // eslint-disable-next-line global-require
+      ({ uid: mintUid } = require('../lib/database'));
+    }
     return {
       ...(e || {}),
       ...(needsSets ? { sets: [] } : {}),
-      ...(needsSlotId ? { routineExercise: { ...(e.routineExercise ?? {}), id: uid() } } : {}),
+      ...(needsSlotId ? { routineExercise: { ...(e?.routineExercise ?? {}), id: mintUid() } } : {}),
     };
   });
   return changed ? out : list;
@@ -1518,18 +1523,13 @@ const useAppStore = create((set, get) => ({
   // double-tap on Add set / Add exercise) both land, the previous
   // get()+set() pair could read the same snapshot twice and drop one update.
   addExerciseToWorkout: (exercise, routineExercise = null) => {
-    // Round 12 (R12-3): the THIRD ad-hoc slot source mints its stable
-    // id too. The session effects record keys per slot (rowId =
-    // routineExercise.id), and rows added through the in-session picker
-    // carried none - so a "Start without a plan" session was entirely
-    // keyless and duplicate slots still collapsed in the record, the
-    // exact round-10 defect R11-2 closed for the other two entry
-    // points. Lazy require per the store's own convention.
-    // eslint-disable-next-line global-require
-    const { uid } = require('../lib/database');
-    const slotRoutineExercise = routineExercise ?? { id: uid() };
+    // Round 12 (R12-3) minted this source's slot id per-site; round 14
+    // routes the append through withSetsArrays instead, so this path
+    // shares the chokepoint's mint (and any future normalisation)
+    // rather than duplicating it - the round-14 review proved the
+    // per-site copy was exactly how the net grew holes.
     set((state) => ({
-      workoutExercises: [
+      workoutExercises: withSetsArrays([
         ...state.workoutExercises,
         // _userAdded (D112 R4, CAP-2): the marker means "the user chose
         // this row" - set here for an exercise picked into the session,
@@ -1537,8 +1537,8 @@ const useAppStore = create((set, get) => ({
         // (round 11, R11-4). It persists with the entry so the
         // capability effective view never substitutes or omits the
         // user's own choice - not even after a relaunch.
-        { exercise, routineExercise: slotRoutineExercise, sets: [], _userAdded: true },
-      ],
+        { exercise, routineExercise, sets: [], _userAdded: true },
+      ]),
     }));
     _persistActiveWorkout(get());
   },

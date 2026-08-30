@@ -58,6 +58,27 @@ describe('workout exercise + set state, concurrent updates', () => {
     expect(useAppStore.getState().workoutExercises[0].routineExercise.id).toBe(minted);
   });
 
+  test('R14: the chokepoint\'s two proven holes are closed - a null entry is normalised, and the picker append runs through the net', () => {
+    // The round-14 review disproved round 13's "a fifth construction
+    // cannot ship keyless" with exactly these two inputs: a null slot
+    // slipped through the mint (it got sets but no routineExercise),
+    // and addExerciseToWorkout appended outside withSetsArrays with its
+    // own per-site copy of the mint.
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    useAppStore.getState().startWorkout({ id: 'w-holes', userId: 'u1' }, [null]);
+    const first = useAppStore.getState().workoutExercises[0];
+    expect(Array.isArray(first.sets)).toBe(true);
+    expect(first.routineExercise?.id).toBeTruthy();
+    // The picker append: a caller-supplied routineExercise WITHOUT an id
+    // is keyed by the net now, and one with an id keeps it.
+    useAppStore.getState().addExerciseToWorkout({ id: 'c', name: 'Curl' }, { recommendedSets: 4 });
+    const added = useAppStore.getState().workoutExercises[1];
+    expect(added.routineExercise.id).toBeTruthy();
+    expect(added.routineExercise.recommendedSets).toBe(4);
+    expect(added._userAdded).toBe(true);
+  });
+
   test('addSetToCurrentExercise appends to the current index without losing prior sets', () => {
     // eslint-disable-next-line global-require
     const useAppStore = require('../../store/useAppStore').default;
