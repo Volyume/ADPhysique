@@ -4664,3 +4664,87 @@ a proxy term that meant something else. Rulings:
 
 X1 = NO (REAL-DISABLED-USER-VALIDATED) and X2 = founder device walk
 pending, unchanged by everything above.
+
+## D131 — CC33 review round 19 closures; the review LOOP STOPPED at the founder's call (2026-08-30)
+
+Adversarial review round 19 (on main 9c54c860): 9 BROKEN rows from 4
+roots, 9 QUALIFIED, 0 STOP. All four roots closed; the loop then
+STOPS - see ruling 6.
+
+1. **The coach volume withhold gates on knowledge (R19-1, A6/I6).**
+   Its only trigger was a thrown error, and
+   `loadCapabilityResolveState` cannot reject (its whole body is one
+   try/catch): a cold read failure RETURNED the unknown-empty shape,
+   the episode set came back empty, nothing threw, and the increase
+   applied body-wide on a read that knew nothing - the withhold fired
+   only when the capability read had SUCCEEDED. Now
+   `if (!capabilityKnown(capState)) holdMuscles = null;`. This is
+   D112 R3's own posture, and it had never once executed on the
+   failure it was written for.
+
+2. **The notice ranks on live overlays (R19-3, B3/B5/C2/I9;
+   corrects D130 ruling 3's scope).** D130 closed the
+   drives-nothing-cannot-veto class at the rebuild only.
+   `constraintNoticeKind` still ranked ANY non-held definite episode
+   conflict above a definite baseline fact, so a declined or
+   undecided rule (which drives nothing: serve marks the row
+   conflicted and substitutes nothing) described a PERMANENT
+   conflict as "sits outside your temporary change" - telling the
+   user to wait out something that never passes, while the rebuild
+   replaced the same row with the permanent wording. The helper now
+   mirrors slotVerdict: live overlay (shared
+   removalExcusalConflicts), then baseline, then the remaining
+   definite episode conflicts. The truth table gains the
+   effectiveChoice axis it never varied against a baseline
+   co-driver, which is why four rounds of pins passed over it.
+
+3. **Stale-known is honoured wherever the write honours it (R19-2,
+   A15/C2/I9, + A7 and F5).** Both rebuild builders' baseline terms
+   refused the stale-known shape while `filterLibraryForGeneration`
+   and the write-time carve accepted it: the incumbent was kept on
+   evidence, given no hold marker, then voided at write - "retained"
+   beside an emptied slot, the T1-07 contradiction D130 ruling 3
+   cited as its own grounds. Both now take `capabilityKnown`. The
+   swap `cause` derivation carried the identical guard, recording a
+   capability-forced swap as an unexplained one and feeding
+   `swappedAwayCount` - a preference learned from a capability
+   event, which the learning shield exists to prevent.
+
+4. **A performed movement is never excused (R19-4, A15/B6/B9).**
+   The removal excusal writer had no performed gate at all - the
+   completion writer has refused performed rows since it was
+   written. Logging sets, capturing a rule, then removing that
+   exercise wrote a durable `omitted` over the user's own logged
+   sets, unrevocable because `performedIds` was derived from the
+   in-memory list the removal had just emptied. Consequences, all
+   live: the receipt said "left out", the week counted a session
+   constraint-excused, the block ledger dropped the slot from its
+   denominator. The writer now refuses a row carrying sets, and
+   reconciliation reads `workout_sets` (WK-2's own reasoning, which
+   this file states 260 lines above the defect). Round 18 had
+   WIDENED this by making the writer fire in more states.
+
+5. **Records corrected.** The removal catch's "completion
+   re-derives" was false for that path and is gone. The resolver's
+   "exactly three shapes" is four (the no-user empty state). The
+   round-18 I9 and A15 scorecard sentences over-claimed and are
+   corrected on their rows.
+
+6. **THE REVIEW LOOP STOPS AT ROUND 19 (founder call, not
+   delegated).** The founder called nineteen rounds ridiculous and
+   reported 75% of the week's usage consumed. Round 20 is NOT
+   dispatched. This is recorded as what it is: an explicit founder
+   decision to stop, not a clean round. The honest reading of the
+   trajectory - 12→7→5→4→9→6→6→4→1→3→4→5→4→3→2→3→1→2→4 roots - is
+   that it was NOT converging to zero; rounds 10-19 were largely
+   my own closures landing one layer short, and rounds 18 and 19
+   each found defects created or widened by the previous round's
+   fix. The scorecard's "undeniable" bar (a clean adversarial pass)
+   is therefore NOT met and must never be claimed. What IS true:
+   every finding raised across nineteen rounds was closed at
+   mechanism level with pins, and the tree is green. The unverified
+   surface is stated on the rows and in the founder report: round
+   19's own closures have never been adversarially reviewed.
+
+X1 = NO (REAL-DISABLED-USER-VALIDATED) and X2 = founder device walk
+pending, unchanged.

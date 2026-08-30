@@ -1195,8 +1195,29 @@ voids unmarked conflicted incumbents, so plain evidence judgement
 would resurrect T1-07), the sheet's fourth button floored, the
 touch guard counts applications, the sweep reaches the sheet and
 AvoidedMovements, the unreachable completion .catch deleted with
-its false comment. NEXT: settled full gate + merge, adversarial
-review ROUND 19, then S5 gate + device checklist.
+its false comment. ROUND 19 RAN on 9c54c860: NOT CLEAN - 9 BROKEN
+from 4 roots + 9 QUALIFIED, 0 STOP. Closed same day (D131): R19-1
+the coach volume withhold could only fire on a throw and the
+resolver cannot throw (a cold read failure raised volume body-wide;
+it gates on capabilityKnown now), R19-3 the notice/caption let a
+declined or undecided rule outrank a definite baseline fact (a
+permanent conflict worded as temporary; the helper mirrors
+slotVerdict now), R19-2 both rebuild builders refused a stale-known
+state the write carve honoured (T1-07 again; capabilityKnown at
+both, and at the swap cause derivation), R19-4 the removal excusal
+writer had no performed gate (an unrevocable "left out" over the
+user's own logged sets, repeated by the receipt, the weekly
+counters and the block ledger).
+
+CC33 STATUS: THE REVIEW LOOP IS STOPPED at round 19 by FOUNDER
+DECISION (D131 ruling 6) - round 20 was not dispatched. The
+scorecard's "undeniable" bar (a clean adversarial pass) is NOT met
+and is not claimed. Every finding raised across 19 rounds is closed
+at mechanism level with pins over a green tree; round 19's own
+closures have never been adversarially reviewed. X1 = NO, X2 =
+founder device walk PENDING - the device checklist was delivered in
+chat. NEXT (founder-gated): the device walk, then whether to resume
+review at round 20 or close CC33 as-is.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

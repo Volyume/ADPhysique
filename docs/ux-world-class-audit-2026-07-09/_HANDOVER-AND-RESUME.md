@@ -1,12 +1,12 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-08-30 — CC33 S4 BUILT + ADVERSARIAL REVIEW LOOP (ROUNDS 1–18 CLOSED); ROUND 19 NEXT ★
+## ★ 2026-08-30 — CC33 S4 BUILT + ADVERSARIAL REVIEW (ROUNDS 1–19 CLOSED); LOOP STOPPED BY FOUNDER AT 19 ★
 
 All five S4 waves are built and merged; the campaign is in the
 scorecard's adversarial review loop (SCORECARD.md, 93 rows + X1/X2:
 each round attacks every row, every broken claim becomes a work item,
-the review re-runs until the attack fails). Rounds 1–18 have run;
+the review re-runs until the attack fails). Rounds 1–19 have run;
 every actionable finding was closed same-day at mechanism level —
 rulings D113 through D129, each later round also correcting any
 earlier ruling's claim it proved false (D115 corrects D114, D117
@@ -32,12 +32,18 @@ closures carry DRIVEN pins through the real entry points — since round
 6, through the REAL composed senior question; the screen-render halves
 are source-level guards per the screens' own established convention,
 each suite's header saying so. Live position and per-round detail: the
-CC33 entry in `docs/TASKBOARD.md` (single live task source). NEXT:
-full settled gate + merge, dispatch adversarial review ROUND 19 (Opus,
-read-only, per REVIEW-BRIEF.md); on a clean round, S5 close-out — full
-gate, device checklist IN CHAT, final scored report stating X1
-(REAL-DISABLED-USER-VALIDATED = NO) and X2 (founder walk pending)
-plainly.
+CC33 entry in `docs/TASKBOARD.md` (single live task source). THE LOOP IS STOPPED at round 19 by FOUNDER DECISION (D131 ruling 6:
+nineteen rounds called ridiculous, 75% of the week's usage consumed).
+Round 20 was NOT dispatched, and this is not a clean round — the
+scorecard's "undeniable" bar is NOT met and must never be claimed.
+The root trajectory (12,7,5,4,9,6,6,4,1,3,4,5,4,3,2,3,1,2,4) was not
+converging to zero: rounds 10–19 were largely closures landing one
+layer short, and rounds 18 and 19 each found defects the previous
+round's fix created or widened. Every finding raised was closed at
+mechanism level with pins over a green tree; round 19's own closures
+are unreviewed. NEXT, all founder-gated: the device walk (checklist
+delivered in chat), then whether to resume at round 20 or close CC33
+as it stands. X1 = NO and X2 = pending.
 
 ===============================================================================
 ## ★ 2026-08-28 — CC33 INJURY/DISABILITY AUDIT COMPLETE, DESIGN RULED (D112); S4 BUILD WAVES NEXT ★
