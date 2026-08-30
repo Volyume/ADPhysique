@@ -402,11 +402,17 @@ export default function ExerciseDetailScreen({ navigation, route }) {
         let pool = allExercises;
         try {
           // eslint-disable-next-line global-require
-          const { loadCapabilityResolveState, isCapabilityEligible } = require('../lib/capability/resolve');
+          const { loadCapabilityResolveState, isCapabilityEligible, capabilityKnown } = require('../lib/capability/resolve');
           const userId = useAppStore.getState().user?.id ?? null;
           if (userId) {
             const capState = await loadCapabilityResolveState(userId, {});
-            if (!capState.empty && !capState.unavailable) {
+            // CC33 census (D132): stale-known is knowledge (D130 ruling 1),
+            // and the user's own rules - even from earlier this session -
+            // filter better than no filter (CAP-17, the same reasoning
+            // FreeStarter already applied). The old `!unavailable` guard
+            // fell back to the UNFILTERED pool, so these swap suggestions
+            // could offer a movement the user's rules exclude.
+            if (!capState.empty && capabilityKnown(capState)) {
               pool = allExercises.filter((row) => isCapabilityEligible(capState, row));
             }
           }

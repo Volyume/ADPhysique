@@ -4949,9 +4949,12 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   let capabilityBlockedMuscles = null;
   try {
     // eslint-disable-next-line global-require
-    const { loadCapabilityResolveState, baselineBlockedMuscles } = require('./capability/resolve');
+    const { loadCapabilityResolveState, baselineBlockedMuscles, capabilityKnown } = require('./capability/resolve');
     const capState = await loadCapabilityResolveState(userId, {});
-    if (!capState.empty && !capState.unavailable) {
+    // CC33 census (D132): stale-known is knowledge - the old guard
+    // silently dropped the blocked-muscle facts under a state the rest
+    // of the lane honours.
+    if (!capState.empty && capabilityKnown(capState)) {
       const library = await getAllExercises();
       capabilityBlockedMuscles = baselineBlockedMuscles(
         capState, library, Object.keys(VOLUME_LANDMARKS),
