@@ -5224,7 +5224,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   // this" was our internal vocabulary on a user's button.
                   appAlert(
                     exercise?.name ? `Can't do ${exercise.name} today?` : "Can't do this today?",
-                    'Volyume can swap it now for something that trains the same thing. If it is more than today, tell Volyume once and every plan builds around it until you say otherwise.',
+                    'Volyume will swap in another exercise for the same muscle. If it is more than today, say so once and your plans build around it until you tell Volyume otherwise.',
                     [
                       { text: 'Cancel', style: 'cancel' },
                       { text: 'Swap it for today', onPress: () => { workAroundSwapRef.current = true; handleOpenSwap(); } },
