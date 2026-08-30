@@ -238,8 +238,34 @@ test('R3-4 DRIVEN: an omitted duplicate never claims the _userAdded twin\'s slot
   expect(res.served).toHaveLength(1);
   expect(res.served[0]).toBe(added);       // the user's own object, untouched
   expect(res.baseIndexes).toEqual([1]);    // and it is slot 1, never slot 0
+  // ONE entry is right for THIS fixture (the twin is _userAdded, so only
+  // slot 0 resolves) - two LIVE slots of one exercise write two entries,
+  // pinned in the R10-1 test below and driven against the real writer in
+  // capabilityAdherence.test.js.
   const entries = appendSessionConstraintEffects.mock.calls[0][2];
   expect(entries).toEqual([expect.objectContaining({ effect: 'omitted', slot: 0 })]);
+});
+
+test('R10-1 DRIVEN: two LIVE slots of one exercise pass TWO entries, each keyed to its planned row', async () => {
+  // The round-10 breaking input at the serve layer: a doubled quads
+  // movement, both slots live. The writer's old (effect, exerciseFrom)
+  // key collapsed whatever serve passed; serve itself must pass one
+  // entry per SLOT, carrying the caller's stable planned-row id, so the
+  // record can hold both facts.
+  getAllExercises.mockResolvedValue([SQUAT, LEGPRESS, LEGEXT]);
+  const res = await applyEffectiveViewToSession(
+    'u1', 'w1', [asServed(SQUAT), asServed(SQUAT)], { rowIds: ['re-1', 're-2'] },
+  );
+  expect(res.untouched).toBe(false);
+  expect(res.served).toHaveLength(2);
+  // R5-8: two different substitutes, and each marker knows its own slot.
+  expect(new Set(res.served.map((r) => r.id)).size).toBe(2);
+  expect(res.served.map((r) => r._capabilityTemp?.rowId).sort()).toEqual(['re-1', 're-2']);
+  const entries = appendSessionConstraintEffects.mock.calls[0][2];
+  expect(entries).toHaveLength(2);
+  expect(entries.map((e) => e.rowId).sort()).toEqual(['re-1', 're-2']);
+  expect(entries.every((e) => e.effect === 'substituted' && e.exerciseFrom === SQUAT.id)).toBe(true);
+  expect(new Set(entries.map((e) => e.exerciseTo)).size).toBe(2);
 });
 
 test('F-2 DRIVEN: a fully-omitted session fail-safes with ZERO durable effects written', async () => {

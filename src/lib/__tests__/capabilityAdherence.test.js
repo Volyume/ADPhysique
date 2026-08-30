@@ -334,3 +334,156 @@ describe("R9-1: a second serve pass never deletes the first pass's true record",
     expect(omitted).toEqual(['fx-legpress', 'fx-squat']);
   });
 });
+
+// Round 10 (R10-1/R10-3): the record's identity is the planned SLOT,
+// and it corrects itself FORWARD on the session's own logged facts.
+// Real serve, real writer, real database, real weekly-stats reader.
+describe('R10-1/R10-3: duplicate slots write two true entries; a performed omission is revoked', () => {
+  const U3 = 'u-r10';
+  const W3 = 'w-r10';
+  const row = (id, name, muscle) => ({ id, name, primaryMuscle: muscle });
+
+  test('two slots of one exercise, both omitted: BOTH entries survive the writer, then a re-add-and-train revokes them and every counter drops the session', async () => {
+    // A doubled quads movement is ordinary programming (the round-10
+    // breaking input). Standing rule blocks the squat; an exercise-kind
+    // rule blocks the only pool substitute, so BOTH squat slots omit -
+    // under the old (effect, exerciseFrom) key the second slot's entry
+    // silently vanished and the receipt said one where two happened.
+    const ids1 = await createCapabilityConstraints(U3, [{
+      role: 'episode', source: 'self', ruleKind: 'demand', ruleValue: 'standing',
+      startsAt: NOW - 1000, episodeGroupId: 'g_r10a',
+    }], { nowMs: NOW - 1000 });
+    await setConstraintEffectiveChoice(U3, ids1[0], 'applied');
+    const ids2 = await createCapabilityConstraints(U3, [{
+      role: 'episode', source: 'self', ruleKind: 'exercise', ruleValue: 'fx-legpress',
+      startsAt: NOW - 1000, episodeGroupId: 'g_r10b',
+    }], { nowMs: NOW - 1000 });
+    await setConstraintEffectiveChoice(U3, ids2[0], 'applied');
+    _resetCapabilityResolveCache();
+    const { applyEffectiveViewToSession } = require('../sessionEffective');
+    const pass = await applyEffectiveViewToSession(U3, W3, [
+      row('fx-squat', 'Fixture Squat', 'quads'),
+      row('fx-squat', 'Fixture Squat', 'quads'),
+      row('fx-curl', 'Fixture Curl', 'biceps'),
+    ], { rowIds: ['re-a', 're-b', 're-c'] });
+    expect(pass.served.map((r) => r.id)).toEqual(['fx-curl']);
+
+    const rec = await getSessionConstraintEffect(U3, W3);
+    const omitted = rec.effects.filter((e) => e.effect === 'omitted');
+    expect(omitted.map((e) => e.rowId).sort()).toEqual(['re-a', 're-b']);
+    expect(omitted.every((e) => e.exerciseFrom === 'fx-squat')).toBe(true);
+
+    // The week's counters see the session while the omissions stand.
+    const d = await db();
+    await d.runAsync(
+      `INSERT INTO workouts (id, user_id, routine_id, name, started_at, is_completed, created_at, updated_at)
+       VALUES (?, ?, NULL, 'R10 session', ?, 1, ?, ?)`,
+      [W3, U3, NOW, NOW, NOW],
+    );
+    const before = await getWeeklySessionStats(U3, WEEK);
+    expect(before.constraintExcusedSessions).toBe(1);
+    expect(before.constraintReshapedSessions).toBe(1);
+
+    // R10-3: the user re-adds the squat and TRAINS it. performedIds is
+    // workout_sets fact, not an intent judgement - the writer renames
+    // every performed omission and the strict-matching readers drop it.
+    const res = await appendSessionConstraintEffects(U3, W3, [], { performedIds: ['fx-squat'] });
+    expect(res).not.toBeNull();
+    const rec2 = await getSessionConstraintEffect(U3, W3);
+    expect(rec2.effects.filter((e) => e.effect === 'omitted')).toHaveLength(0);
+    const revoked = rec2.effects.filter((e) => e.effect === 'omitted_revoked');
+    expect(revoked.map((e) => e.rowId).sort()).toEqual(['re-a', 're-b']);
+
+    // Excused: the quoted LIKE no longer matches. Reshaped: a record
+    // whose every entry is revoked is no longer a reshaped session
+    // (round 10 corrected the non-empty-record predicate).
+    const after = await getWeeklySessionStats(U3, WEEK);
+    expect(after.constraintExcusedSessions).toBe(0);
+    expect(after.constraintReshapedSessions).toBe(0);
+  });
+
+  test('two slots of one exercise, both substituted: two entries, two DIFFERENT substitutes (the taken-set), two rowIds', async () => {
+    await insertExerciseWithId('fx-hack', {
+      name: 'Fixture Hack Press', primaryMuscle: 'quads', equipment: 'machine',
+      movementPattern: 'squat', compoundIsolation: 'compound', position: 'seated',
+      gripDemand: 'supportive', bilateralUpper: false, bilateralLower: true,
+      axialLoad: false, impact: false, floorAccess: false, overheadPosition: false,
+      unilateralLoadable: null, balanceDemand: 'supported', isCustom: false,
+    });
+    const U4 = 'u-r10s';
+    const ids = await createCapabilityConstraints(U4, [{
+      role: 'episode', source: 'self', ruleKind: 'demand', ruleValue: 'standing',
+      startsAt: NOW - 1000, episodeGroupId: 'g_r10c',
+    }], { nowMs: NOW - 1000 });
+    await setConstraintEffectiveChoice(U4, ids[0], 'applied');
+    _resetCapabilityResolveCache();
+    const { applyEffectiveViewToSession } = require('../sessionEffective');
+    const pass = await applyEffectiveViewToSession(U4, 'w-r10s', [
+      row('fx-squat', 'Fixture Squat', 'quads'),
+      row('fx-squat', 'Fixture Squat', 'quads'),
+    ], { rowIds: ['re-s1', 're-s2'] });
+    expect(pass.served).toHaveLength(2);
+    const servedIds = pass.served.map((r) => r.id).sort();
+    expect(new Set(servedIds).size).toBe(2); // R5-8: never the same substitute twice
+    const rec = await getSessionConstraintEffect(U4, 'w-r10s');
+    const subs = rec.effects.filter((e) => e.effect === 'substituted');
+    expect(subs.map((e) => e.rowId).sort()).toEqual(['re-s1', 're-s2']);
+    expect(new Set(subs.map((e) => e.exerciseTo)).size).toBe(2);
+  });
+
+  test('legacy tolerance: a keyed entry never doubles a keyless record of the same fact, and a keyless entry never doubles anything', async () => {
+    const U5 = 'u-r10l';
+    // A record written by pre-round-10 code: no rowId.
+    await appendSessionConstraintEffects(U5, 'w-r10l', [
+      { slot: 0, exerciseFrom: 'fx-squat', effect: 'omitted', constraintIds: ['c1'] },
+    ]);
+    // New code re-derives the same fact WITH a rowId: skipped.
+    await appendSessionConstraintEffects(U5, 'w-r10l', [
+      { slot: 0, rowId: 're-l1', exerciseFrom: 'fx-squat', effect: 'omitted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    // A keyless write meets a keyed record of the same fact: skipped.
+    await appendSessionConstraintEffects(U5, 'w-r10l', [
+      { slot: 1, rowId: 're-l2', exerciseFrom: 'fx-legpress', effect: 'omitted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    await appendSessionConstraintEffects(U5, 'w-r10l', [
+      { slot: 1, exerciseFrom: 'fx-legpress', effect: 'omitted', constraintIds: ['c1'] },
+    ]);
+    const rec = await getSessionConstraintEffect(U5, 'w-r10l');
+    expect(rec.effects.filter((e) => e.exerciseFrom === 'fx-squat')).toHaveLength(1);
+    expect(rec.effects.filter((e) => e.exerciseFrom === 'fx-legpress')).toHaveLength(1);
+  });
+});
+
+// Round 10 (R10-2): the user's own swap over a serve substitute amends
+// the slot's entry - the record names what actually stood in the slot,
+// stamped as the user's choice; a swap back to the original revokes.
+describe('R10-2: a manual swap over a substitute corrects the slot\'s record', () => {
+  test('amend names the user\'s pick on the right slot only; swap-back revokes; other slots untouched', async () => {
+    const { amendSessionConstraintSubstitution } = require('../database');
+    const U6 = 'u-r10m';
+    await appendSessionConstraintEffects(U6, 'w-r10m', [
+      { slot: 0, rowId: 're-m1', exerciseFrom: 'fx-squat', exerciseTo: 'fx-legpress', effect: 'substituted', constraintIds: ['c1'], source: 'serve' },
+      { slot: 1, rowId: 're-m2', exerciseFrom: 'fx-squat', exerciseTo: 'fx-hack', effect: 'substituted', constraintIds: ['c1'], source: 'serve' },
+    ]);
+    await amendSessionConstraintSubstitution(U6, 'w-r10m', {
+      exerciseFrom: 'fx-squat', rowId: 're-m1', exerciseTo: 'fx-curl',
+    });
+    let rec = await getSessionConstraintEffect(U6, 'w-r10m');
+    const m1 = rec.effects.find((e) => e.rowId === 're-m1');
+    const m2 = rec.effects.find((e) => e.rowId === 're-m2');
+    expect(m1.exerciseTo).toBe('fx-curl');
+    expect(m1.toChosenByUser).toBe(true);
+    expect(m1.effect).toBe('substituted');
+    expect(m2.exerciseTo).toBe('fx-hack');
+    expect(m2.toChosenByUser).toBeUndefined();
+
+    // Swapping the other slot BACK to the original excluded movement:
+    // the change did not keep it out, so the entry revokes.
+    await amendSessionConstraintSubstitution(U6, 'w-r10m', {
+      exerciseFrom: 'fx-squat', rowId: 're-m2', exerciseTo: 'fx-squat',
+    });
+    rec = await getSessionConstraintEffect(U6, 'w-r10m');
+    expect(rec.effects.find((e) => e.rowId === 're-m2').effect).toBe('substituted_revoked');
+    expect(rec.effects.find((e) => e.rowId === 're-m1').effect).toBe('substituted');
+  });
+});

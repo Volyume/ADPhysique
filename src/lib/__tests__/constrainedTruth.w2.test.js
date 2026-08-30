@@ -114,7 +114,13 @@ describe('source wiring', () => {
   test('the weekly stats carry the reshaped counter beside the excusal one', () => {
     const src = read('database.js');
     expect(src).toContain('let constraintReshapedSessions = 0;');
-    expect(src).toMatch(/effects_json IS NOT NULL AND sce\.effects_json != '\[\]'/);
+    // Round 10 (R10-3): a LIVE entry is required - the old any-non-empty
+    // -record predicate counted a session whose every entry had been
+    // revoked (the user re-added and trained the omitted movement). The
+    // quoted LIKEs match 'omitted'/'substituted' exactly, never their
+    // _revoked forms. Driven in capabilityAdherence.test.js.
+    expect(src).toMatch(/LIKE '%"omitted"%' OR sce\.effects_json LIKE '%"substituted"%'/);
+    expect(src).not.toMatch(/effects_json IS NOT NULL AND sce\.effects_json != '\[\]'/);
     expect(src).toContain('constraintExcusedSessions, constraintReshapedSessions,');
   });
 

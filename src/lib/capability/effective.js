@@ -181,8 +181,11 @@ export function computeEffectiveSession(baseRows, library, capabilityState, isEl
  * recorded them was wrong: audit T2-13). Pure - the caller supplies the
  * facts.
  *
- * @param {Array<{exercise: object, performed: boolean}>} sessionRows the
- *   session's planned rows with whether any set was logged against each
+ * @param {Array<{exercise: object, performed: boolean, rowId?: string|null}>}
+ *   sessionRows the session's planned rows with whether any set was
+ *   logged against each; rowId is the slot's stable planned-row id
+ *   (R10-1: the effects record keys per slot, so a doubled exercise's
+ *   two slots write two true entries)
  * @param {object} capabilityState
  * @returns {{entries: Array, excusedIds: string[], unperformedIds: string[],
  *   coversAllUnperformed: boolean}}
@@ -216,6 +219,7 @@ export function computeCompletionEffects(sessionRows, capabilityState) {
       excusedIds.push(exercise.id);
       entries.push({
         slot: i,
+        rowId: row?.rowId ?? null,
         exerciseFrom: exercise.id,
         effect: 'omitted',
         constraintIds: conflicts.map((c) => c.constraintId),

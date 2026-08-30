@@ -382,15 +382,24 @@ export async function hasCapabilityToRevisit(userId, undecidedEpisodeRuleIds = [
  * so a relaunch replaced a _userAdded entry with the row the app had
  * just omitted - against A10). The module knows the index; it says so.
  *
+ * Round 10 (R10-1): the effects record's identity is the PLANNED SLOT.
+ * The caller passes each row's stable planned-row id (rowIds[i], the
+ * routineExercise's own id) and every entry carries it, so one exercise
+ * filling two slots writes two true entries instead of collapsing to
+ * one in the writer's dedupe. A row with no planned id stamps null and
+ * keeps the old per-exercise collapse, stated in the writer.
+ *
  * @param {string} userId
  * @param {string|null} workoutId for the omission effects record
  * @param {Array} rows the session's exercise rows
+ * @param {{rowIds?: Array<string|null>}} [opts] rowIds[i] is base slot
+ *   i's stable planned-row id (or null)
  * @returns {Promise<{served: Array, baseIndexes: number[], untouched: boolean}>}
  *   untouched=true means the base session stands exactly as given
  *   (served IS the caller's own array); otherwise served[k] belongs to
  *   base slot baseIndexes[k].
  */
-export async function applyEffectiveViewToSession(userId, workoutId, rows) {
+export async function applyEffectiveViewToSession(userId, workoutId, rows, { rowIds = null } = {}) {
   const untouched = () => ({
     served: rows,
     baseIndexes: Array.isArray(rows) ? rows.map((_, i) => i) : [],
@@ -448,23 +457,31 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
           ...line.exerciseTo,
           // The quiet temporary marker (section 17): the substitute is
           // ordinary loggable content; only the marker line frames it.
-          _capabilityTemp: { fromId: line.exerciseFrom.id, fromName: line.exerciseFrom.name, constraintIds: line.constraintIds },
+          // rowId (R10-1) rides along so the manual-swap amend path can
+          // find this slot's own entry.
+          _capabilityTemp: {
+            fromId: line.exerciseFrom.id, fromName: line.exerciseFrom.name,
+            constraintIds: line.constraintIds, rowId: rowIds?.[i] ?? null,
+          },
           sets: rows[i]?.sets ?? [],
         });
         baseIndexes.push(i);
         // D112 R7 (section 20; closes audit T2-13): the substitution is
         // recorded too, so a week the restriction reshaped WITHOUT
         // omissions still reads reshaped - the CONSTRAINED limiter's
-        // missing evidence. The append dedupes on (effect, exerciseFrom),
-        // so a relaunch re-serving the same view writes nothing new, and
-        // the excusal counter's LIKE '%"omitted"%' is untouched by these.
+        // missing evidence. The append dedupes on (effect, exerciseFrom,
+        // rowId) - per planned slot since R10-1 - so a relaunch
+        // re-serving the same view writes nothing new, and the excusal
+        // counter's LIKE '%"omitted"%' is untouched by these.
         effects.push({
-          slot: i, exerciseFrom: line.exerciseFrom.id, exerciseTo: line.exerciseTo.id,
+          slot: i, rowId: rowIds?.[i] ?? null,
+          exerciseFrom: line.exerciseFrom.id, exerciseTo: line.exerciseTo.id,
           effect: 'substituted', constraintIds: line.constraintIds, source: 'serve',
         });
       } else if (line.effect === EFFECTIVE_EFFECT.OMITTED) {
         effects.push({
-          slot: i, exerciseFrom: line.exerciseFrom.id, effect: 'omitted', constraintIds: line.constraintIds, source: 'serve',
+          slot: i, rowId: rowIds?.[i] ?? null,
+          exerciseFrom: line.exerciseFrom.id, effect: 'omitted', constraintIds: line.constraintIds, source: 'serve',
         });
       } else {
         served.push(rows[i]);
@@ -486,12 +503,14 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows) {
     if (!served.length) return untouched();
     if (effects.length && workoutId) {
       // Round 9 (R9-1): a pure, deduped APPEND - round 8's replaceSource
-      // is reverted. A second serve pass (reachable only after an
-      // omission-only first pass) runs over the already-reduced list
-      // and cannot re-derive the earlier pass's omission, so replacing
-      // serve's prior entries DELETED a true record. The source tag
-      // stays for forensics; the merge in the writer is the whole
-      // correction story.
+      // is reverted. A second serve pass runs over the already-reduced
+      // list and cannot re-derive the earlier pass's omission, so
+      // replacing serve's prior entries DELETED a true record. The
+      // source tag stays for forensics. Round 10 corrected R9-1's
+      // reachability claim: a second pass is reachable whenever the
+      // last _capabilityTemp row is removed or manually swapped away
+      // (the relaunch guard checks the markers, and those actions clear
+      // them) - the revert's conclusion is unchanged by that.
       await appendSessionConstraintEffects(userId, workoutId, effects).catch(() => {});
     }
     return { served, baseIndexes, untouched: false };

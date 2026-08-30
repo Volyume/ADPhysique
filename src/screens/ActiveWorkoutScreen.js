@@ -747,7 +747,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const baseRows = workoutExercises.map((e) => (e?.exercise
           ? (e._userAdded ? { ...e.exercise, _userAdded: true } : e.exercise)
           : e));
-        const res = await applyEffectiveViewToSession(user.id, activeWorkout.id, baseRows);
+        // R10-1: each slot's stable planned-row id rides beside the rows,
+        // so the effects record can tell two slots of one exercise apart.
+        const rowIds = workoutExercises.map((e) => e?.routineExercise?.id ?? null);
+        const res = await applyEffectiveViewToSession(user.id, activeWorkout.id, baseRows, { rowIds });
         if (cancelled) return;
         effectiveAppliedRef.current = activeWorkout.id;
         if (res.untouched) return; // nothing applied
@@ -1327,6 +1330,8 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
               const { appendSessionConstraintEffects } = require('../lib/database');
               appendSessionConstraintEffects(user.id, activeWorkout.id, [{
                 slot: currentExerciseIndex,
+                // R10-1: the record keys per planned slot.
+                rowId: workoutExercises[currentExerciseIndex]?.routineExercise?.id ?? null,
                 exerciseFrom: exercise.id,
                 effect: 'omitted',
                 constraintIds: constraintConflicts.map(c => c.constraintId),
@@ -1420,13 +1425,33 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     // exercise's own defaults exactly as before.
     const newRepMin = rebuiltRoutineEx?.recommendedRepsMin
       ?? newExercise.defaultRepMin ?? newExercise.default_rep_min ?? 6;
+    // Round 10 (R10-2): swapping away a serve-substituted row is the
+    // user overriding the app's workaround. The spread used to carry
+    // _capabilityTemp forward, so the quiet line claimed "Temporarily in
+    // for X" over the user's OWN pick, and the durable record kept
+    // naming a substitute the user never trained. The marker is cleared,
+    // the row becomes the user's own (_userAdded - serve's law already
+    // leaves those untouched, which matters because clearing the last
+    // marker makes a relaunch re-serve pass reachable), and the slot's
+    // substitution entry is amended to name what actually stood in it.
+    const prevTemp = updatedExercises[currentExerciseIndex]?._capabilityTemp;
     updatedExercises[currentExerciseIndex] = {
       ...updatedExercises[currentExerciseIndex],
       exercise: newExercise,
       routineExercise: rebuiltRoutineEx,
       sets: [],
+      ...(prevTemp ? { _capabilityTemp: undefined, _userAdded: true } : {}),
     };
     store.setWorkoutExercises(updatedExercises);
+    if (prevTemp?.fromId && user?.id && activeWorkout?.id && newExercise?.id) {
+      // eslint-disable-next-line global-require
+      const { amendSessionConstraintSubstitution } = require('../lib/database');
+      amendSessionConstraintSubstitution(user.id, activeWorkout.id, {
+        exerciseFrom: prevTemp.fromId,
+        rowId: prevTemp.rowId ?? null,
+        exerciseTo: newExercise.id,
+      }).catch(() => { /* best effort; the swap itself must never fail */ });
+    }
     // C9 Work 3: a session swap is a deliberate choice, so it is evidence
     // too - even though it deliberately does NOT change the plan (the sheet
     // says so). Recorded with the routine it happened in, so the preference
@@ -3417,32 +3442,57 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
         const capState = user?.id
           ? await loadCapabilityResolveState(user.id, {}).catch(() => intentState?.capability ?? null)
           : null;
-        if (user?.id && activeWorkout?.id && capState && !capState.empty) {
-          // eslint-disable-next-line global-require
-          const { computeCompletionEffects } = require('../lib/capability/effective');
-          // Round 2 (R2-4): resolve each row from the library for
-          // judgement - the snapshot's own exercise objects are the
-          // demandless routine literals for any row the serve pass did
-          // not replace (a resumed session, a rule applied after
-          // logging began), and with unknown excusing nothing a
-          // demand-axis excusal could never fire off them. Same by-id
-          // resolution serve itself performs; the memo-cached library
-          // read costs nothing after first call. An unresolved id keeps
-          // the partial row: unknown lane, excuses nothing, honestly.
-          // eslint-disable-next-line global-require
-          const { getAllExercises } = require('../lib/database');
-          const libById = new Map(((await getAllExercises().catch(() => [])) ?? []).map((x) => [x.id, x]));
-          const { entries } = computeCompletionEffects(
-            snapshotExercises.map((e) => {
-              const raw = e?.exercise ?? e;
-              return { exercise: libById.get(raw?.id) ?? raw, performed: (e.sets?.length ?? 0) > 0 };
-            }),
-            capState,
-          );
-          if (entries.length) {
+        if (user?.id && activeWorkout?.id) {
+          let entries = [];
+          if (capState && !capState.empty) {
+            // eslint-disable-next-line global-require
+            const { computeCompletionEffects } = require('../lib/capability/effective');
+            // Round 2 (R2-4): resolve each row from the library for
+            // judgement - the snapshot's own exercise objects are the
+            // demandless routine literals for any row the serve pass did
+            // not replace (a resumed session, a rule applied after
+            // logging began), and with unknown excusing nothing a
+            // demand-axis excusal could never fire off them. Same by-id
+            // resolution serve itself performs; the memo-cached library
+            // read costs nothing after first call. An unresolved id keeps
+            // the partial row: unknown lane, excuses nothing, honestly.
+            // eslint-disable-next-line global-require
+            const { getAllExercises } = require('../lib/database');
+            const libById = new Map(((await getAllExercises().catch(() => [])) ?? []).map((x) => [x.id, x]));
+            ({ entries } = computeCompletionEffects(
+              snapshotExercises.map((e) => {
+                const raw = e?.exercise ?? e;
+                return {
+                  exercise: libById.get(raw?.id) ?? raw,
+                  performed: (e.sets?.length ?? 0) > 0,
+                  // R10-1: the record keys per planned slot.
+                  rowId: e?.routineExercise?.id ?? null,
+                };
+              }),
+              capState,
+            ));
+          }
+          // Round 10 (R10-3): the record corrects FORWARD on the
+          // session's own logged facts. A movement the user re-added and
+          // TRAINED was still carrying its serve-time omission, so the
+          // receipt said "left out" beside the user's own logged sets,
+          // the week counted a session constraint-excused that nothing
+          // excused, and the block ledger's denominator dropped a slot
+          // the user performed. performedIds is not an intent judgement
+          // (the class the round-8 attribution probe ruled out) - it is
+          // workout_sets fact, and the writer renames a performed
+          // omission 'omitted_revoked' so every strict-matching reader
+          // drops it. Runs OUTSIDE the capState gate: reconciliation
+          // needs only the record and the logged sets, and must still
+          // fire when the rules themselves ended mid-session.
+          const performedIds = snapshotExercises
+            .filter((e) => (e.sets?.length ?? 0) > 0)
+            .map((e) => (e?.exercise ?? e)?.id)
+            .filter(Boolean);
+          if (entries.length || performedIds.length) {
             // eslint-disable-next-line global-require
             const { appendSessionConstraintEffects } = require('../lib/database');
-            await appendSessionConstraintEffects(user.id, activeWorkout.id, entries).catch(() => {});
+            await appendSessionConstraintEffects(user.id, activeWorkout.id, entries, { performedIds }).catch(() => {});
           }
         }
       } catch (_e) { /* effects are additive; the finish must never block */ }

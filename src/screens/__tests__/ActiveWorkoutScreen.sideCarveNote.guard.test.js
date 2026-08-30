@@ -185,3 +185,42 @@ describe('Q-1 (round 5): the in-session episode notice never asserts an adaptati
     expect(SRC).not.toContain("working around at the moment");
   });
 });
+
+// Round 10 (R10-1/R10-2/R10-3): the screen's three writer sites key the
+// effects record to the planned slot, the manual swap corrects the
+// slot's record instead of inheriting the app's marker, and completion
+// reconciles performed omissions. The mechanism halves are driven in
+// capabilityAdherence.test.js and sessionEffective.serveGuard.test.js;
+// these pin the screen wiring per this suite's own convention.
+describe('R10: slot-keyed record wiring and the swap correction', () => {
+  test('serve is fed each slot\'s stable planned-row id', () => {
+    expect(SRC).toContain("const rowIds = workoutExercises.map((e) => e?.routineExercise?.id ?? null);");
+    expect(SRC).toContain('applyEffectiveViewToSession(user.id, activeWorkout.id, baseRows, { rowIds })');
+  });
+
+  test('the removal hook stamps its entry with the slot\'s planned-row id', () => {
+    expect(SRC).toContain("rowId: workoutExercises[currentExerciseIndex]?.routineExercise?.id ?? null,");
+  });
+
+  test('R10-2: swapping away a substitute clears the marker, makes the row the user\'s own, and amends the slot\'s entry', () => {
+    // The spread used to carry _capabilityTemp forward, so the quiet
+    // line claimed "Temporarily in for X" over the user's own pick and
+    // the record kept naming a substitute the user never trained.
+    expect(SRC).toContain("...(prevTemp ? { _capabilityTemp: undefined, _userAdded: true } : {}),");
+    expect(SRC).toContain("amendSessionConstraintSubstitution(user.id, activeWorkout.id, {");
+    expect(SRC).toContain('exerciseFrom: prevTemp.fromId,');
+    expect(SRC).toContain('rowId: prevTemp.rowId ?? null,');
+    expect(SRC).toContain('exerciseTo: newExercise.id,');
+  });
+
+  test('R10-3: completion passes the session\'s performed ids, outside the capState gate', () => {
+    const site = SRC.indexOf('const performedIds = snapshotExercises');
+    expect(site).toBeGreaterThan(-1);
+    // The reconcile call fires when EITHER new entries or performed ids
+    // exist - a session whose rules ended mid-way still reconciles.
+    expect(SRC).toContain('if (entries.length || performedIds.length) {');
+    expect(SRC).toContain('appendSessionConstraintEffects(user.id, activeWorkout.id, entries, { performedIds })');
+    // And the completion snapshot threads each slot's planned-row id.
+    expect(SRC).toContain("rowId: e?.routineExercise?.id ?? null,");
+  });
+});
