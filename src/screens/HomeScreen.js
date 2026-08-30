@@ -51,7 +51,7 @@ import {
   getAllWorkouts, getWorkoutSetsSince, getActivePlan, getRoutinesForPlan,
   recordSessionResolution,
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
-  getWorkoutSetsForWorkout, getExerciseById,
+  getWorkoutSetsForWorkout, getExerciseById, uid,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
   getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
   getRecentWorkoutFeedback, getLatestCoachOutput,
@@ -1670,17 +1670,35 @@ export default function HomeScreen({ navigation, route }) {
         const prevSets = await getWorkoutSetsForWorkout(lastSession.id);
         const seenIds = [];
         const orderedExerciseIds = [];
+        const setCounts = {};
         for (const s of prevSets) {
-          if (s.exerciseId && !seenIds.includes(s.exerciseId)) {
+          if (!s.exerciseId) continue;
+          if (!seenIds.includes(s.exerciseId)) {
             seenIds.push(s.exerciseId);
             orderedExerciseIds.push(s.exerciseId);
           }
+          if ((s.setType ?? s.set_type ?? 'straight') !== 'warmup') {
+            setCounts[s.exerciseId] = (setCounts[s.exerciseId] || 0) + 1;
+          }
         }
+        // Round 13 (R13-1): this was the FOURTH keyless slot construction
+        // - the session effects record keys per slot (rowId =
+        // routineExercise.id), and rounds 11-12 minted ids at the other
+        // three ad-hoc entry points while Home's own repeat card built
+        // routineExercise: null, so the whole per-slot machinery
+        // (conversion on removal included) silently degraded on exactly
+        // these sessions. Mirrors WorkoutHistoryScreen's repeat-as-is
+        // shape: minted id + the previous session's working-set count,
+        // so the target line stays honest too.
         initialExercises = (
           await Promise.all(orderedExerciseIds.map(id => getExerciseById(id).catch(() => null)))
         )
           .filter(Boolean)
-          .map(exercise => ({ exercise, routineExercise: null, sets: [] }));
+          .map(exercise => ({
+            exercise,
+            routineExercise: { id: uid(), recommendedSets: setCounts[exercise.id] || 3 },
+            sets: [],
+          }));
       }
 
       pendingStartRef.current = { routineId, initialExercises };

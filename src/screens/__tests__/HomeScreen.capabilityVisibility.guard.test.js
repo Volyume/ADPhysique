@@ -157,6 +157,22 @@ describe('F-4: the capability rows meet the minimum touch target', () => {
   });
 });
 
+// Round 13 (R13-1): Home's OWN repeat card was the fourth keyless slot
+// construction - rounds 11-12 minted ids at the other three ad-hoc
+// entry points while this branch built routineExercise: null, so the
+// per-slot effects machinery silently degraded on exactly these
+// sessions. The store's withSetsArrays chokepoint now also nets any
+// future keyless construction (driven in useAppStore.test.js); this
+// pins Home's honest per-site shape.
+describe('R13-1: the repeat-last-session fallback mints its slot ids', () => {
+  test('the no-routine branch builds keyed rows with the previous session\'s working-set count', () => {
+    expect(HOME).toContain("routineExercise: { id: uid(), recommendedSets: setCounts[exercise.id] || 3 },");
+    // The old keyless construction shape is gone (the comment above the
+    // new one may still name it as history).
+    expect(HOME).not.toContain('({ exercise, routineExercise: null, sets: [] })');
+  });
+});
+
 // Round 9 (B4/E1): when the capability read fails with NO known state,
 // loadCapabilityResolveState synthesises an EMPTY state (unavailable:
 // true, stale: false - resolve.js section 9.6), so every row above

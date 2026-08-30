@@ -36,6 +36,28 @@ describe('workout exercise + set state, concurrent updates', () => {
     expect(workoutExercises[0].routineExercise.id).not.toBe(workoutExercises[1].routineExercise.id);
   });
 
+  test('R13-1: the withSetsArrays chokepoint mints a slot id for ANY keyless entry - startWorkout included', () => {
+    // Rounds 11-13 chased keyless session constructions one entry point
+    // at a time (round 13 found a FOURTH, Home's repeat card). The
+    // chokepoint closes the class: every fresh, restored or mutated
+    // list passes through withSetsArrays, so a fifth construction
+    // cannot ship keyless. Ids are stable - an entry with one keeps it.
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    useAppStore.getState().startWorkout({ id: 'w-mint', userId: 'u1' }, [
+      { exercise: { id: 'a', name: 'Bench Press' }, routineExercise: null, sets: [] },
+      { exercise: { id: 'b', name: 'Squat' }, routineExercise: { id: 're-real', recommendedSets: 3 }, sets: [] },
+    ]);
+    const { workoutExercises } = useAppStore.getState();
+    expect(workoutExercises[0].routineExercise?.id).toBeTruthy();
+    expect(workoutExercises[1].routineExercise).toEqual({ id: 're-real', recommendedSets: 3 });
+    // And a later mutation through setWorkoutExercises keeps the minted
+    // id stable rather than re-minting.
+    const minted = workoutExercises[0].routineExercise.id;
+    useAppStore.getState().setWorkoutExercises((prev) => [...prev]);
+    expect(useAppStore.getState().workoutExercises[0].routineExercise.id).toBe(minted);
+  });
+
   test('addSetToCurrentExercise appends to the current index without losing prior sets', () => {
     // eslint-disable-next-line global-require
     const useAppStore = require('../../store/useAppStore').default;

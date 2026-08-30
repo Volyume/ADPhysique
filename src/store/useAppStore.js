@@ -142,9 +142,27 @@ function withSetsArrays(list) {
   if (!Array.isArray(list)) return [];
   let changed = false;
   const out = list.map((e) => {
-    if (e && Array.isArray(e.sets)) return e;
+    const needsSets = !(e && Array.isArray(e.sets));
+    // Round 13 (R13-1): the slot-identity net at the CHOKEPOINT. Every
+    // session list - fresh (startWorkout), restored (an old snapshot
+    // from before the minting rounds), or mutated (setWorkoutExercises)
+    // - passes through here, so a keyless slot gets its stable id
+    // minted whatever construction produced it. Rounds 11-13 chased
+    // keyless constructions one entry point at a time (BuildWorkout,
+    // repeat-as-is, the picker add, then Home's own repeat card - a
+    // FOURTH the round-13 review found); this closes the CLASS: a fifth
+    // construction cannot ship keyless. Idempotent - a slot with an id
+    // keeps it, so identity stays stable across mutations and restores.
+    const needsSlotId = e && !e.routineExercise?.id;
+    if (!needsSets && !needsSlotId) return e;
     changed = true;
-    return { ...(e || {}), sets: [] };
+    // eslint-disable-next-line global-require
+    const { uid } = require('../lib/database');
+    return {
+      ...(e || {}),
+      ...(needsSets ? { sets: [] } : {}),
+      ...(needsSlotId ? { routineExercise: { ...(e.routineExercise ?? {}), id: uid() } } : {}),
+    };
   });
   return changed ? out : list;
 }

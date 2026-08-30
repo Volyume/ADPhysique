@@ -21,6 +21,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 
 jest.mock('../../lib/database', () => ({
+  uid: jest.fn(() => `uid-${Math.random().toString(36).slice(2)}`),
   getWorkoutById: jest.fn(),
   wipeAllUserData: jest.fn().mockResolvedValue(undefined),
   wipeAllUserDataWithRetry: jest.fn().mockResolvedValue({ ok: true }),

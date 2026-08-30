@@ -14,6 +14,7 @@ jest.mock('@react-native-async-storage/async-storage', () =>
 // DB is consulted by restoreActiveWorkout to confirm the workout is still
 // incomplete. Mock just that surface.
 jest.mock('../../lib/database', () => ({
+  uid: jest.fn(() => `uid-${Math.random().toString(36).slice(2)}`),
   getWorkoutById: jest.fn(),
   wipeAllUserData: jest.fn().mockResolvedValue(undefined),
   wipeAllUserDataWithRetry: jest.fn().mockResolvedValue({ ok: true }),
