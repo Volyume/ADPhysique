@@ -1749,6 +1749,14 @@ export default function HomeScreen({ navigation, route }) {
   // quiet ask-class row closes that; tapping through lands on the screen
   // whose own focus detector (T1-06) proposes immediately.
   const [undecidedConstraint, setUndecidedConstraint] = useState(false);
+  // CC33 round 9 (B4/E1): when the capability read fails with NO known
+  // state this session, the resolver synthesises an EMPTY state
+  // (unavailable: true, stale: false - resolve.js section 9.6), every row
+  // above simply vanishes, and "could not check" was indistinguishable
+  // from "nothing going on". One quiet non-tappable line says so honestly.
+  // Stale-but-KNOWN state (unavailable && stale) keeps serving normally
+  // per CAP-17, exactly as the tappable rows already do.
+  const [capabilityCheckFailed, setCapabilityCheckFailed] = useState(false);
   // T2-30 (D112 R6, verified at W4 build 2026-08-28): this read only ever
   // re-ran on [user?.id], so a rule that arrived by sync while Home sat in
   // the background (or a rule ended/changed on another screen) never
@@ -1805,11 +1813,17 @@ export default function HomeScreen({ navigation, route }) {
           setUndecidedConstraint((state?.restrictions ?? []).some(
             (r) => r.role === 'episode' && r.effectiveChoice == null && r.adaptationMode !== 'hold',
           ));
+          // B4/E1: unavailable && !stale is exactly the resolver's
+          // no-known-state failure branch (the synthesised empty state).
+          setCapabilityCheckFailed(!!state?.unavailable && !state?.stale);
         } catch (_) {
           setActiveConstraint(false);
           setConstraintSubject(null);
           setAwaitingConstraint(null);
           setUndecidedConstraint(false);
+          // B4/E1: this catch is also a failed check (the require or the
+          // read path itself threw) - say so rather than showing nothing.
+          setCapabilityCheckFailed(true);
         }
       })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -2572,6 +2586,22 @@ export default function HomeScreen({ navigation, route }) {
           <View style={styles.constraintLineRow}>
             <Text style={[styles.constraintLineText, live.constraintLineText]}>
               {rampLine}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* CC33 round 9 (B4/E1): the honest could-not-check line. When the
+            capability read fails with no last-known state, every row above
+            vanishes silently and Home reads as "nothing going on" - this
+            quiet line (rampLine's non-tappable pattern) says the truth
+            instead, in the lane's established honesty vocabulary
+            (RoutineDetail and ActiveWorkout say the same at their swap
+            surfaces). Not tappable: it asks nothing, and How you train
+            would face the same failed read. */}
+        {capabilityCheckFailed ? (
+          <View style={styles.constraintLineRow}>
+            <Text style={[styles.constraintLineText, live.constraintLineText]}>
+              Volyume could not check how you train just now.
             </Text>
           </View>
         ) : null}

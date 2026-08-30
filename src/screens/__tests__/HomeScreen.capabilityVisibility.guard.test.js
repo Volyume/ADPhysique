@@ -156,3 +156,36 @@ describe('F-4: the capability rows meet the minimum touch target', () => {
     expect(block).toContain('minHeight: spacing.xxxl');
   });
 });
+
+// Round 9 (B4/E1): when the capability read fails with NO known state,
+// loadCapabilityResolveState synthesises an EMPTY state (unavailable:
+// true, stale: false - resolve.js section 9.6), so every row above
+// vanished silently and a failed check was indistinguishable from
+// "nothing going on". Home now says so with one quiet non-tappable line
+// in the lane's established honesty vocabulary. Stale-but-KNOWN state
+// (unavailable && stale) keeps serving normally per CAP-17, exactly as
+// the tappable rows already do - the line must NOT fire on it.
+describe('R9 B4/E1: the honest could-not-check line', () => {
+  test('capabilityCheckFailed is set from the resolver\'s exact no-known-state signature (unavailable && !stale), never from restrictions alone', () => {
+    expect(HOME).toMatch(
+      /setCapabilityCheckFailed\(!!state\?\.unavailable && !state\?\.stale\);/,
+    );
+  });
+
+  test('the effect\'s catch also sets it true (a thrown read is a failed check, not an empty one)', () => {
+    const site = HOME.indexOf('setActiveConstraint(false);');
+    expect(site).toBeGreaterThan(-1);
+    const block = HOME.slice(site, site + 600);
+    expect(block).toContain('setUndecidedConstraint(false);');
+    expect(block).toContain('setCapabilityCheckFailed(true);');
+  });
+
+  test('the row renders non-tappable with the lane\'s honesty copy', () => {
+    const site = HOME.indexOf('{capabilityCheckFailed ? (');
+    expect(site).toBeGreaterThan(-1);
+    const block = HOME.slice(site, HOME.indexOf(') : null}', site));
+    expect(block).toContain('styles.constraintLineRow');
+    expect(block).toContain('Volyume could not check how you train just now.');
+    expect(block).not.toMatch(/TouchableOpacity|onPress/);
+  });
+});
