@@ -3601,7 +3601,7 @@ export async function updateWorkout(id, data) {
 export async function deleteIncompleteWorkout(workoutId) {
   if (!workoutId) return false;
   const d = await db();
-  return runInTransaction(d, async () => {
+  const deleted = await runInTransaction(d, async () => {
     const workout = await d.getFirstAsync(
       'SELECT id, is_completed FROM workouts WHERE id = ?',
       [workoutId],
@@ -3622,6 +3622,11 @@ export async function deleteIncompleteWorkout(workoutId) {
     );
     return true;
   });
+  // Round 17 (Q2): the tombstone schedules its own push, like every
+  // other effects write - it used to wait for whatever unrelated write
+  // came next before travelling.
+  if (deleted) _scheduleSync();
+  return deleted;
 }
 
 // Hard-delete ANY workout and its sets (founder request 2026-06-12: remove a
@@ -3656,6 +3661,10 @@ export async function deleteWorkoutAndSets(userId, workoutId) {
     'UPDATE session_constraint_effects SET deleted_at = ?, updated_at = ? WHERE workout_id = ? AND deleted_at IS NULL',
     [now, now, workoutId],
   );
+  // Round 17 (Q2): schedule the tombstone's push here too - the caller
+  // pairs the WORKOUT's cloud delete directly, but this table travels
+  // by the sync queue.
+  _scheduleSync();
   return true;
 }
 
@@ -6550,10 +6559,10 @@ export async function clearWorkoutHistory(userId) {
       [now, now, userId],
     );
   });
-  // Round 16 (H2/I2): the tombstones' push is SCHEDULED like every
-  // other effects write - round 13 wrote them and left their sync to
-  // whatever unrelated write came next, so a new-device pull in the
-  // window returned the cleared history with live provenance.
+  // Round 16 (H2/I2), completed round 17 (Q2): the tombstones' push is
+  // SCHEDULED - and since round 17 all THREE delete paths schedule it
+  // (this clear, deleteWorkoutAndSets, deleteIncompleteWorkout), so no
+  // effects tombstone waits for an unrelated write before travelling.
   _scheduleSync();
 }
 
