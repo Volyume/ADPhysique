@@ -286,14 +286,17 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
       'demandConflicts',
       'capability/directory',
     ];
-    // Every render form this codebase uses for a button's words (round
-    // 10 added the alert double-quote form; round 14 added the JSX prop
-    // and text-node forms after the consent card's label="Not now"
-    // no-op passed four rounds of alert-literal-only sweeping).
+    // Every STATIC render form this codebase uses for a button's words
+    // (round 10 added the alert double-quote form; round 14 the JSX
+    // prop and text-node forms after the consent card's label="Not now"
+    // no-op passed four rounds of alert-literal-only sweeping; round 15
+    // the template and title-expression forms). A label computed at
+    // runtime cannot be swept statically - stated on the C1 row.
     const LITERALS = [
       "text: 'Not now'", 'text: "Not now"',
-      'label="Not now"', "label={'Not now'}",
-      'title="Not now"', '>Not now<',
+      'label="Not now"', "label={'Not now'}", 'label={`Not now`}',
+      'title="Not now"', "title={'Not now'}", 'title={`Not now`}',
+      '>Not now<',
     ];
     const files = [];
     const walk = (dir) => {
@@ -324,9 +327,13 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
           // Round 10 (I6 condition 3): the window is bounded to THIS
           // button - it ends at the next button's own `text:` key - so a
           // declineNow that merely appears nearby in another handler can
-          // no longer false-pass the check.
+          // no longer false-pass the check. Round 15: a JSX-prop hit is
+          // bounded to its own element too (the next `/>`), so a
+          // declineNow later in the file cannot vouch for a JSX no-op.
           const nextText = src.indexOf('text:', idx + literal.length);
-          const window = src.slice(idx, nextText === -1 ? idx + 500 : Math.min(nextText, idx + 500));
+          const jsxEnd = src.indexOf('/>', idx + literal.length);
+          const bounds = [nextText, jsxEnd, idx + 500].filter((b) => b !== -1);
+          const window = src.slice(idx, Math.min(...bounds));
           expect({ file: rel, reachesDecline: window.includes('declineNow') })
             .toEqual({ file: rel, reachesDecline: true });
           idx = src.indexOf(literal, idx + 1);
