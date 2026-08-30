@@ -4548,3 +4548,119 @@ break is a hook-ordering hole no source pin could see. Rulings:
 FOUNDER items unchanged (duplicate migrate_152 filenames, README
 ledger rows, CLAUDE.md counts, clear-history cloud copies). X1 = NO
 and X2 = pending, as ever.
+
+## D130 — CC33 review round 18 closures + D129 corrections (lead-ruled under D33, 2026-08-30)
+
+Adversarial review round 18 (on main 1eb99e66): 6 BROKEN rows from 2
+roots, 5 QUALIFIED, 0 STOP. Both roots are last round's own closures
+landing one layer short - the readiness fix tested presence where the
+break was readability, and the rebuild ranking was implemented through
+a proxy term that meant something else. Rulings:
+
+1. **Readiness means KNOWLEDGE, not presence (R18-1, A11/A15;
+   corrects D129 ruling 1's record).** D129's "the ask also WAITS for
+   its inputs" over-claimed: the round-17 terms held the both-sides
+   ask for a PENDING input and passed a settled-but-unreadable one -
+   a cold-start capability read failure hands the screen an
+   unknown-empty state (unavailable, nothing known), the suppression
+   gate answers its permissive false off it, and the ask fired for a
+   user whose sided rule the app simply could not read, then
+   self-tagged durably (AsyncStorage, across relaunches). Closed by
+   extraction: `capabilityKnown(state)` (capability/resolve.js) is
+   the one answer to "may an ACTION consult this state" - false only
+   for the resolver's unknown-empty shape and a missing state;
+   stale-but-known counts as knowledge (the review itself proved
+   CAP-17 stale suppression works, and a stale snapshot of an EMPTY
+   rule set is still knowledge - `stale` is the mechanism's marker,
+   `empty` is not). The ask holds on `!capabilityKnown` AND on a
+   judgement row the resolve could not fetch, both before the gate
+   and the self-tag, both dep-driven. Stated cost, deliberate: under
+   a persistent read failure the D9 per-side suggestion stays silent
+   for the session - the conservative direction D129 ruling 1
+   demands. The fail DIRECTION is driven (real loader, failing then
+   healthy DB) because an ordering pin cannot see it - that is
+   ruling 5.
+
+2. **The removal excusal writer joins the fresh-read posture (A15's
+   second action site).** The round-17 A15 sentence "an explicit WAIT
+   for anything that acts" was implemented at the ask alone; the
+   removal writer consumed the pending-gated screen conflicts and
+   silently missed legitimate excusals during the mount window (or a
+   transient failure the focus reload later recovers from). It now
+   takes its own capability read at write time, exactly like the
+   completion writer, judging the same shared
+   removalExcusalConflicts gate; both failure shapes yield no
+   conflicts, so nothing is ever excused on a read that knows
+   nothing. The old direction was conservative (missed, never
+   fabricated) - the fix removes the miss, not a fabrication.
+
+3. **A rule that drives nothing cannot veto a live baseline rewrite
+   (R18-2, A7/A14/D4/L4; corrects D129 ruling 6's wording and the
+   reviewer-surfaced fork RULED).** planAutoGen.buildSlotEvidence and
+   blockAdvisor.evidenceFor computed `capabilityAffected` from the
+   RAW definite episode list - held and declined included - and
+   `capabilityIneligible` as "any definite conflict minus affected",
+   so a held or declined episode rule (which drives nothing, D120
+   ruling 2) flipped a live BASELINE rule's REPLACE into a KEEP whose
+   receipt called a permanent conflict "your temporary change". Three
+   true facts now, both builders identical: `capabilityAffected` = a
+   LIVE overlay in force (the shared removalExcusalConflicts gate -
+   the same answer serve and both effects writers act on; fourth and
+   fifth consumers of the one gate); `capabilityIneligible` = the
+   definite BASELINE fact, asked of baselineConflicts itself
+   (allowance-carved); `capabilityEpisodeOpen` = any other definite
+   episode conflict (held/declined/undecided). slotVerdict ranks
+   them: live overlay KEEP, then baseline REPLACE, then open-episode
+   KEEP, each above every evidence rank; the user's own exclusion
+   above all. THE FORK (reviewer surfaced (a) keep-un-judged vs (b)
+   plain evidence judgement for held/declined-only slots; D33
+   lead-ruled): refined (a). Grounds, from reading the mechanism to
+   its end: the write-time carve (resolvePlanAgainstLibrary) voids
+   any conflicted incumbent that lacks the hold marker, so (b) would
+   let an evidence KEEP be silently emptied at write - the exact
+   T1-07 receipt/commit contradiction - and a rebuild swapping the
+   very movement a decline explicitly kept, or a hold explicitly
+   froze, acts against the user's word on precisely the slot their
+   choice is about, while the episode is still open. The episode is
+   temporary; the document waits for it. D129 ruling 6's ranking
+   sentence ("while a definite episode conflict stands...") was
+   right about LIVE conflicts and wrong to let the implementing term
+   count held/declined ones as rank-2; the KEEP copy ("while your
+   temporary change lasts") is now true wherever it renders.
+
+4. **The sheet's fourth button joins the floor (J2; corrects D129
+   ruling 4).** "The lane's install-conflict sheet meets the floor"
+   over-claimed: three of its four buttons did. The md primary
+   ("Done"/"Finish later") was ~46dp effective; it carries the 48
+   token now and the guard enumerates it.
+
+5. **Guards pin the fail direction and the application, not only the
+   order and the definition (I6).** Two structural blindnesses the
+   review named, both closed: an ordering pin cannot see which way a
+   gate answers on an unreadable input - capabilityKnown's three
+   resolver shapes are DRIVEN against the real loader; and a
+   style-definition pin cannot see a deleted `style={styles.X}` - the
+   touch guard now asserts an exact application count per enumerated
+   style (`styles.<name>` appears only at application sites).
+
+6. **The sweep reaches the lane's own surfaces (C1).**
+   ExerciseConflictSheet (renders the lane's reason captions) and
+   AvoidedMovementsScreen sat outside every trigger; two reach
+   triggers added (capability_declared, listActiveMovementConstraints).
+   Neither wears a decline word today - the sweep is vacuous over
+   them NOW, and a future regression fails instead of passing unseen.
+
+7. **Records corrected, mechanisms matched (contradictions 1-4).**
+   The completion writer's unreachable `.catch` fallback is DELETED
+   with its false comment (the resolver cannot reject; the empty gate
+   below is the real conservative path, now stated). The round-8 gate
+   comment's analogy to the note's fail direction is rewritten - it
+   held only for readers (D129 ruling 1), and the ask now holds on
+   knowledge upstream. blockAdvisor's stale "Baseline rules never
+   mark a slot (CAP-1)" intro is corrected to D112 R1's amendment.
+   I9's sixth computation of "what will happen" is gone (ruling 3
+   routes both builders through the shared gates), and C2's rebuild
+   receipt is true again by the same fix.
+
+X1 = NO (REAL-DISABLED-USER-VALIDATED) and X2 = founder device walk
+pending, unchanged by everything above.

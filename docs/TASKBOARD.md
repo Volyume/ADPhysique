@@ -1177,9 +1177,26 @@ RoutineDetail's intent writers join the sequence guard, Q2 every
 effects tombstone schedules its own push (all three delete paths),
 Q3 the install-conflict sheet's three ~34dp buttons floored and
 enumerated, Q4 the unknown named line unsides, L4's deliberate
-rebuild ranking stated, the stale round-3 rationale rewritten. NEXT:
-settled full gate + merge, adversarial review ROUND 18, then S5 gate
-+ device checklist.
+rebuild ranking stated, the stale round-3 rationale rewritten. ROUND
+18 RAN on 1eb99e66 (after a rate-limit relaunch): NOT CLEAN - 6
+BROKEN from 2 roots + 5 QUALIFIED, 0 STOP - both roots the round-17
+closures one layer short. Closed same day (D130, correcting D129
+rulings 1, 4 and 6): R18-1 readiness means KNOWLEDGE, not presence
+(capabilityKnown extracted and driven at the real loader; the ask
+holds on the unknown-empty resolver shape and an unfetchable
+judgement row; the removal excusal writer takes a FRESH read at
+write time like the completion writer), R18-2 a rule that drives
+nothing cannot veto a live baseline rewrite (both rebuild builders
+now consume the shared removalExcusalConflicts gate for the live
+overlay and baselineConflicts for the document question;
+slotVerdict ranks live KEEP > baseline REPLACE > open-episode KEEP;
+the held-only fork LEAD-RULED to keep deferring - the write carve
+voids unmarked conflicted incumbents, so plain evidence judgement
+would resurrect T1-07), the sheet's fourth button floored, the
+touch guard counts applications, the sweep reaches the sheet and
+AvoidedMovements, the unreachable completion .catch deleted with
+its false comment. NEXT: settled full gate + merge, adversarial
+review ROUND 19, then S5 gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

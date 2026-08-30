@@ -1,12 +1,12 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-08-30 — CC33 S4 BUILT + ADVERSARIAL REVIEW LOOP (ROUNDS 1–17 CLOSED); ROUND 18 NEXT ★
+## ★ 2026-08-30 — CC33 S4 BUILT + ADVERSARIAL REVIEW LOOP (ROUNDS 1–18 CLOSED); ROUND 19 NEXT ★
 
 All five S4 waves are built and merged; the campaign is in the
 scorecard's adversarial review loop (SCORECARD.md, 93 rows + X1/X2:
 each round attacks every row, every broken claim becomes a work item,
-the review re-runs until the attack fails). Rounds 1–17 have run;
+the review re-runs until the attack fails). Rounds 1–18 have run;
 every actionable finding was closed same-day at mechanism level —
 rulings D113 through D129, each later round also correcting any
 earlier ruling's claim it proved false (D115 corrects D114, D117
@@ -16,12 +16,16 @@ D120's ruling 9, D122 corrects D121's rulings 1 and 2, D123 corrects
 D122's rulings 2 and 3, D124 corrects D123's rulings 1 and 2, D125
 corrects D124's rulings 2 and 3, D126 corrects D125's rulings 1 and
 5, D127 corrects D126's rulings 1, 2 and 5, D128 corrects D127's
-rulings 3 and 4 — the long-running chains each ended by extraction
+rulings 3 and 4, D130 corrects D129's rulings 1, 4 and 6 — the
+long-running chains each ended by extraction
 to a driven mechanism (slot identity → the store chokepoint; the
 notice ranking → constraintNoticeKind, now consumed by BOTH its
 surfaces; the sided-union phrasing → sidedUnionShape, all three named
 branches); the round-by-round trajectory is
-12→7→5→4→9→6→6→4→1→3→4→5→4→3→2→3→1 roots).
+12→7→5→4→9→6→6→4→1→3→4→5→4→3→2→3→1→2 roots; round 18's two are the
+round-17 closures themselves, each landing one layer short —
+readiness tested presence where the break was readability, and the
+rebuild ranking rode a proxy term).
 Pinning, stated precisely (round 6 called
 out the earlier wording as broader than the pins): the engine and seam
 closures carry DRIVEN pins through the real entry points — since round
@@ -29,7 +33,7 @@ closures carry DRIVEN pins through the real entry points — since round
 are source-level guards per the screens' own established convention,
 each suite's header saying so. Live position and per-round detail: the
 CC33 entry in `docs/TASKBOARD.md` (single live task source). NEXT:
-full settled gate + merge, dispatch adversarial review ROUND 18 (Opus,
+full settled gate + merge, dispatch adversarial review ROUND 19 (Opus,
 read-only, per REVIEW-BRIEF.md); on a clean round, S5 close-out — full
 gate, device checklist IN CHAT, final scored report stating X1
 (REAL-DISABLED-USER-VALIDATED = NO) and X2 (founder walk pending)
