@@ -1209,8 +1209,19 @@ writer had no performed gate (an unrevocable "left out" over the
 user's own logged sets, repeated by the receipt, the weekly
 counters and the block ledger).
 
-CC33 STATUS: THE REVIEW LOOP IS STOPPED at round 19 by FOUNDER
-DECISION (D131 ruling 6) - round 20 was not dispatched. The
+CC33 STATUS: **CLOSED** (D132, founder order "find a way to
+satisfactorily close this off without crazy round after round"). The
+review loop stopped at round 19 and was REPLACED with a finite
+criterion: the capability census
+(src/lib/__tests__/capabilityCensus.guard.test.js) enumerates every
+site in the tree participating in the four classes the rounds kept
+re-finding, asserts each class invariant at each site, and fails by
+default on any new unclassified site. Its first run found three more
+class-1 instances in ONE pass (two fixed: exercise-detail served
+UNFILTERED swap suggestions under a stale-known read, and the volume
+landmarks dropped their blocked-muscle facts; one STATED, B7's coach
+fact, because closing it means an engine contract change). Round 20
+was not dispatched. The
 scorecard's "undeniable" bar (a clean adversarial pass) is NOT met
 and is not claimed. Every finding raised across 19 rounds is closed
 at mechanism level with pins over a green tree; round 19's own

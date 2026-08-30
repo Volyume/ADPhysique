@@ -4748,3 +4748,68 @@ STOPS - see ruling 6.
 
 X1 = NO (REAL-DISABLED-USER-VALIDATED) and X2 = founder device walk
 pending, unchanged.
+
+## D132 — CC33 CLOSED on a finite criterion: the capability census (founder order, 2026-08-30)
+
+Founder order, verbatim: "You need to find a way to satisfactorily
+close this task off without crazy round after round."
+
+**The diagnosis.** The loop could not terminate because its exit
+condition was unbounded: "a fresh adversarial reviewer fails to break
+any of 93 scorecard rows". A reviewer finds ONE INSTANCE of a defect
+class per round; the instance is closed; the next round finds the next
+instance of the SAME class elsewhere in the tree. The per-round root
+count (12,7,5,4,9,6,6,4,1,3,4,5,4,3,2,3,1,2,4) never reached zero
+because instance-by-instance closure cannot exhaust a class, and each
+round's own closures became the next round's surface.
+
+**The replacement criterion (ruled, and CC33 closes on it).** The four
+classes the rounds kept re-finding are each mechanically checkable
+across the WHOLE tree by enumeration rather than by judgement:
+
+  1. fail-open on an unreadable capability read (R17-1, R18-1, R19-1,
+     R19-2);
+  2. a rule that drives nothing (held/declined/undecided) driving
+     something (R18-2, R19-3);
+  3. two readers of one state giving two answers (R16-1/2, R19-2, I9);
+  4. excusing something the user performed or chose (R12-2, R13-2,
+     R19-4).
+
+`src/lib/__tests__/capabilityCensus.guard.test.js` enumerates every
+site in `src/` that participates in each class and asserts the class
+invariant at each, with an explicit exemption list carrying a stated
+reason per site and a validity check on each exemption. A NEW site
+fails by default, so the census extends itself: a future contributor
+cannot add an unclassified consumer without making the decision
+consciously. This is finite (a census either passes or names its
+offenders), re-runnable in CI forever, and it cannot silently regress -
+which is exactly what nineteen rounds of sampling could not achieve.
+
+**Its first run found three more class-1 instances**, in one pass,
+where the review found one per round:
+  - ExerciseDetailScreen fell back to the UNFILTERED pool under a
+    stale-known read, so its swap suggestions could offer a movement
+    the user's own rules exclude. FIXED.
+  - the volume landmarks' blocked-muscle read had the same guard.
+    FIXED.
+  - CoachOutputScreen's `physicalConstraint` fact passes null on an
+    unknown-empty read (round 19's B7). NOT fixed, and deliberately so:
+    closing it properly means giving the coach engine an "unknown"
+    fact shape, which is an engine contract change. STATED as a
+    condition on B7 rather than half-fixed. (An attempted quick fix
+    during this pass would have aborted the whole coach run - caught
+    in self-review before landing, and recorded here because it is
+    precisely the class of error that produced rounds 10-19.)
+
+**What is and is not claimed at close.** NOT claimed: the scorecard's
+"undeniable" bar - a clean adversarial pass - was never met, and round
+19's own closures have never been adversarially reviewed. Claimed, and
+true: every finding raised across nineteen rounds is closed at
+mechanism level; the four recurring classes are now closed by CENSUS
+over every site rather than by sample; the tree is green
+(lint exit 0; jest exit 0, 1112 suites, 15,240 tests).
+
+X1 = NO (REAL-DISABLED-USER-VALIDATED) and X2 = founder device walk
+PENDING. CC33 is CLOSED. Reopening is a founder decision, and the
+honest trigger for it is the device walk finding something, not
+another review round.

@@ -1,7 +1,7 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-08-30 — CC33 S4 BUILT + ADVERSARIAL REVIEW (ROUNDS 1–19 CLOSED); LOOP STOPPED BY FOUNDER AT 19 ★
+## ★ 2026-08-30 — CC33 CLOSED (ROUNDS 1–19 + THE CENSUS, D132); DEVICE WALK IS THE ONLY OPEN ITEM ★
 
 All five S4 waves are built and merged; the campaign is in the
 scorecard's adversarial review loop (SCORECARD.md, 93 rows + X1/X2:
@@ -41,9 +41,14 @@ converging to zero: rounds 10–19 were largely closures landing one
 layer short, and rounds 18 and 19 each found defects the previous
 round's fix created or widened. Every finding raised was closed at
 mechanism level with pins over a green tree; round 19's own closures
-are unreviewed. NEXT, all founder-gated: the device walk (checklist
-delivered in chat), then whether to resume at round 20 or close CC33
-as it stands. X1 = NO and X2 = pending.
+are unreviewed. CC33 IS CLOSED on the census criterion (D132): the four recurring
+defect classes are now closed by ENUMERATION over every site in the
+tree, not by sampling, and the census fails by default on any new
+unclassified consumer - so the loop has a terminating condition it
+never had. NEXT, founder-gated: the device walk (checklist delivered
+in chat). X1 = NO and X2 = pending; reopening CC33 is a founder call,
+and the honest trigger is the device walk finding something, not
+another review round.
 
 ===============================================================================
 ## ★ 2026-08-28 — CC33 INJURY/DISABILITY AUDIT COMPLETE, DESIGN RULED (D112); S4 BUILD WAVES NEXT ★
