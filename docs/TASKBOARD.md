@@ -1059,8 +1059,30 @@ FreeStarter's first-run cancel action-phrased off the decline word,
 I6 sweep triggers widened to the lane's read identifiers + both quote
 forms + button-bounded window, contradictions a-e corrected in place
 (reachability wording, raw-library fallback comment, "no legitimate
-second write" premise, slot index spaces). NEXT: settled full gate +
-merge, adversarial review ROUND 11, then S5 gate + device checklist.
+second write" premise, slot index spaces). ROUND 11 RAN on ea0b712f:
+NOT CLEAN - 8 BROKEN from 4 roots + 2 QUALIFIED, 0 STOP - the
+round-10 seam work landed one lane, one identity source, one sweep
+trigger and one marker short. Closed same day (D123, correcting D122
+rulings 2 and 3): R11-1 the SUBSTITUTED lane corrects forward too
+(performed-original substitutions revoke at reconciliation; a removed
+substitute CONVERTS to an omission; the receipt finally reads
+toChosenByUser - "You chose X in for Y", neutral headline on any
+user-chosen slot - D122's "no surface attributes" claim had no reader
+behind it), R11-2 the two ad-hoc entry points mint stable slot ids at
+construction (every rowId was null there - the round-10 collapse
+survived on build-a-workout and repeat-as-is), the legacy tolerance
+is COUNTED (one keyless entry absorbs exactly one keyed
+re-derivation) and ambiguous amends touch at most one entry, R11-3
+ProOnboarding's total-block dismiss says 'Got it' + sweep triggers on
+the preflight identifiers (WeeklyCheckIn checked, NOT dragged in),
+R11-4 EVERY manual swap marks the row the user's own (round 10's
+conditional left ordinary swaps reversible by the reachable second
+pass), B9 counters require is_completed = 1 + the all-revoke/ledger
+fork RULED (count-revoke rejected as fabricated CONSTRAINED
+evidence; conservative under-read stated), discard tombstones the
+effects record. Six new driven pins; 1/1→0/0 counter pin extended.
+NEXT: settled full gate + merge, adversarial review ROUND 12, then S5
+gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

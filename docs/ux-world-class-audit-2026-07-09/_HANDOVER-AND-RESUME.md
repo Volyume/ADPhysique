@@ -1,21 +1,23 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
-## ★ 2026-08-30 — CC33 S4 BUILT + ADVERSARIAL REVIEW LOOP (ROUNDS 1–10 CLOSED); ROUND 11 NEXT ★
+## ★ 2026-08-30 — CC33 S4 BUILT + ADVERSARIAL REVIEW LOOP (ROUNDS 1–11 CLOSED); ROUND 12 NEXT ★
 
 All five S4 waves are built and merged; the campaign is in the
 scorecard's adversarial review loop (SCORECARD.md, 93 rows + X1/X2:
 each round attacks every row, every broken claim becomes a work item,
-the review re-runs until the attack fails). Rounds 1–10 have run;
+the review re-runs until the attack fails). Rounds 1–11 have run;
 every actionable finding was closed same-day at mechanism level —
-rulings D113 through D122, each later round also correcting any
+rulings D113 through D123, each later round also correcting any
 earlier ruling's claim it proved false (D115 corrects D114, D117
 corrects D116, D118 corrects D117, D119 corrects D118's blast radii,
 D120 corrects D119's and rules the hold-union fork, D121 REVERTS
-D120's ruling 9, D122 corrects D121's rulings 1 and 2 — the round-10
-review broke the effects-record seam three ways: per-slot identity,
-the user's swap over a substitute, and forward correction on logged
-fact; the round-by-round trajectory is 12→7→5→4→9→6→6→4→1→3 roots).
+D120's ruling 9, D122 corrects D121's rulings 1 and 2, D123 corrects
+D122's rulings 2 and 3 — the effects-record seam took three rounds:
+per-slot identity, the user's swap, forward correction on logged
+fact, then round 11 caught the same fixes one lane, one identity
+source and one marker short; the round-by-round trajectory is
+12→7→5→4→9→6→6→4→1→3→4 roots).
 Pinning, stated precisely (round 6 called
 out the earlier wording as broader than the pins): the engine and seam
 closures carry DRIVEN pins through the real entry points — since round
@@ -23,7 +25,7 @@ closures carry DRIVEN pins through the real entry points — since round
 are source-level guards per the screens' own established convention,
 each suite's header saying so. Live position and per-round detail: the
 CC33 entry in `docs/TASKBOARD.md` (single live task source). NEXT:
-full settled gate + merge, dispatch adversarial review ROUND 11 (Opus,
+full settled gate + merge, dispatch adversarial review ROUND 12 (Opus,
 read-only, per REVIEW-BRIEF.md); on a clean round, S5 close-out — full
 gate, device checklist IN CHAT, final scored report stating X1
 (REAL-DISABLED-USER-VALIDATED = NO) and X2 (founder walk pending)

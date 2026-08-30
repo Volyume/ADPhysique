@@ -3979,3 +3979,91 @@ row, no figure normative; I9's "one seam" now extends to the durable
 record through R10-1's per-slot key. FOUNDER items unchanged
 (duplicate migrate_152 filenames, README ledger rows, CLAUDE.md
 counts). X1 = NO and X2 = pending, as ever.
+
+## D123 — CC33 review round 11 closures + D122 corrections (lead-ruled under D33, 2026-08-30)
+
+Adversarial review round 11 (on main ea0b712f): 8 BROKEN rows from 4
+roots, 2 QUALIFIED, 0 STOP - the round-10 seam work landed one lane,
+one identity source, one sweep trigger and one marker short. All four
+roots closed same day. Rulings:
+
+1. **The substituted lane corrects forward too (R11-1, correcting
+   D122 rulings 2 and 3).** D122 ruling 2 claimed "no surface
+   attributes the user's choice to the app or the app's to the user" -
+   false at the only surface that renders substitution entries:
+   toChosenByUser had NO reader, and the receipt said "swapped for one
+   that works right now" over the user's own pick. D122 ruling 3's
+   forward correction covered one lane. Closed at all three edges:
+   (i) reconciliation revokes a substitution whose ORIGINAL was
+   performed, exactly as it revokes an omission - both lanes' claims
+   fall the same way once the excluded movement happened; (ii)
+   removing a serve substitute CONVERTS the slot's entry to an
+   omission (the excluded original never happened and nothing stands -
+   the record's own vocabulary for that; the substitute's identity
+   drops with the claim it stood); (iii) the receipt reads the stamp:
+   an amended entry renders "You chose X in for Y" and any user-chosen
+   slot switches the headline to the neutral count sentence, so the
+   app's wording never covers the user's choice. Copy in the lane's
+   calm voice; every correction driven on the real database.
+
+2. **Every live slot has an identity (R11-2, correcting the round-10
+   writer comment).** The two ad-hoc entry points (BuildWorkout,
+   repeat-as-is) built routineExercise literals with no id, so every
+   rowId was null there and the round-10 collapse survived on exactly
+   those sessions; the comment's "a slot with no planned row behind
+   it" mischaracterised an ordinary user flow as an unreachable edge.
+   Both call sites mint a uid at construction (stable for the
+   session's life, persisted with the snapshot - a per-pass synthetic
+   key was rejected: pass indexes shift across relaunches, which would
+   break cross-pass dedupe). The legacy tolerance is now COUNTED - one
+   keyless entry absorbs exactly one keyed re-derivation, never a
+   whole slot set (the round-10 blanket deleted a true second slot the
+   moment a legacy record met new code) - and an ambiguous amend
+   (either side keyless) touches AT MOST ONE entry.
+
+3. **The vocabulary guard reaches the preflight surfaces (R11-3).**
+   ProOnboarding's total-block alert wore 'Not now' on a pure no-op
+   dismiss, reachable through the preflight identifiers alone. The
+   dismiss says 'Got it' (the codebase's own word for acknowledging an
+   informational alert - its siblings are actions, this is not one)
+   and the sweep triggers on capabilityPreflight /
+   offerCapabilityPreflightChoice. The reviewer's conditional warning
+   that this would drag WeeklyCheckIn's notification prompt into the
+   sweep was checked and disproven: that file contains none of the
+   eight triggers, so no exclusion ruling is needed.
+
+4. **A manual swap IS the user's word, every time (R11-4).** Round
+   10's conditional marked only a swap over a substitute; an ordinary
+   swapped row stayed unmarked, and the second serve pass (reachable
+   once the last marker clears) substituted over the user's pick -
+   against D112 R4 and A10's own title. _userAdded means "the user
+   chose this row" and is now set on every manual swap; the store's
+   marker comment says so.
+
+5. **All-revoke stands; the ledger condition is STATED (B9).** The
+   round-11 fork: revoking every duplicate-slot omission when the
+   movement was performed restores the full per-muscle planned dose,
+   under-reading adherence where the restriction genuinely removed a
+   slot. Count-based revocation was REJECTED: it would leave a live
+   omitted entry crediting the week as constraint-excused after the
+   user demonstrably performed the movement - fabricated CONSTRAINED
+   evidence, the harmful direction - and the ledger's planned-sets map
+   is keyed per exercise, not per slot, so per-slot arithmetic is not
+   even well-defined there. The conservative under-read is accepted
+   and stated on the row. The counters' second gap is FIXED, not
+   stated: both weekly constraint counters now require
+   is_completed = 1 (an opened-and-abandoned session carries no
+   training evidence and counted as a reshaped/excused week while
+   counting for nothing as training).
+
+6. **Hygiene closed with the seam (round-11 contradiction 6).**
+   Discarding an incomplete workout now tombstones its effects record
+   (deleted_at - the table syncs, so that is its delete); the orphan
+   previously outlived the workout into sync and the Article 20
+   export. And the B4 cancellation pin now requires BOTH guarded
+   sites (the catch's guard was unpinned - round-11 contradiction 5).
+
+Stated, not closed: B9's ledger condition (ruling 5 above); L1's
+record condition dissolves with R11-2 (ad-hoc slots are keyed now).
+FOUNDER items unchanged (duplicate migrate_152 filenames, README
+ledger rows, CLAUDE.md counts). X1 = NO and X2 = pending, as ever.
