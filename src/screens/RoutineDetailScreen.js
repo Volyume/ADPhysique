@@ -343,6 +343,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
   // seconds later and ALWAYS reloads - correctness over perfect
   // dedupe, staleness never.
   const lastMountLoadAtRef = useRef(0);
+  // Round 17 (Q1): orders every intentState write on this screen - the
+  // shape ActiveWorkoutScreen's writers carry since rounds 14-16.
+  const intentSeqRef = useRef(0);
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       if (Date.now() - lastMountLoadAtRef.current < 800) return;
@@ -559,6 +562,10 @@ export default function RoutineDetailScreen({ navigation, route }) {
   }
 
   async function handleOpenSwap(routineExercise, exercise) {
+    // Round 17 (Q1): tap-time sequence participation, both directions -
+    // the sheet's read wins over anything in flight at the tap, and a
+    // load the user triggers after the tap wins over the sheet's.
+    const swapSeq = ++intentSeqRef.current;
     const all = allExercises.length ? allExercises : await getAllExercises();
     const otherIds = exercises
       .map(({ exercise: ex }) => ex?.id)
@@ -613,7 +620,9 @@ export default function RoutineDetailScreen({ navigation, route }) {
         const { capabilityBlockReason } = require('../lib/capability/resolve');
         narrowedCount = ranked.filter((c) => capabilityBlockReason(state.capability, c.exercise) !== null).length;
       }
-      setIntentState(state);
+      // Round 17 (Q1): guarded write - a load the user triggered after
+      // this tap carries a higher sequence and wins.
+      if (swapSeq === intentSeqRef.current) setIntentState(state);
       // D109-2: the read failed open (structural list stands, nothing is
       // filtered by avoidance) - say so, rather than let the swap list look
       // like a clean slate when it may not be. D112 R3 (audit T2-09): the
@@ -750,9 +759,17 @@ export default function RoutineDetailScreen({ navigation, route }) {
   }
 
   async function refreshIntentState() {
+    // Round 17 (Q1): the same sequence guard ActiveWorkoutScreen's
+    // intent writers gained in rounds 14-16 - this screen's mount,
+    // focus and swap-sheet reads used to write intentState unordered,
+    // so an older read landing late could restore a pre-capture
+    // capability state behind every plan caption and the serve-outcome
+    // memo.
+    const seq = ++intentSeqRef.current;
     try {
       const block = user?.id ? await getActiveBlock(user.id) : null;
-      setIntentState(await loadExerciseIntentState(user?.id, { activeMesocycleId: block?.id ?? null }));
+      const state = await loadExerciseIntentState(user?.id, { activeMesocycleId: block?.id ?? null });
+      if (seq === intentSeqRef.current) setIntentState(state);
     } catch (_) { /* additive */ }
   }
 
