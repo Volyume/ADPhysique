@@ -4400,3 +4400,85 @@ corrected twice. Rulings:
 FOUNDER items unchanged (duplicate migrate_152 filenames, README
 ledger rows, CLAUDE.md counts, clear-history cloud copies). X1 = NO
 and X2 = pending, as ever.
+
+## D128 — CC33 review round 16 closures + D127 corrections (lead-ruled under D33, 2026-08-30)
+
+Adversarial review round 16 (on main 7ce82989): 7 BROKEN rows from 3
+roots, 10 QUALIFIED, 0 STOP - each root a consumer an earlier
+extraction or ruling did not reach. Rulings:
+
+1. **The plan caption consumes the extracted ranking (R16-1).** Round
+   15 extracted the notice ranking precisely because inline chains kept
+   shipping ordering defects - and RoutineDetail's plan caption was the
+   consumer the extraction did not reach: its own chain kept the
+   pre-round-15 order, so a held-only episode set outranked a definite
+   BASELINE conflict there ("Held as-is at your request." with the
+   standing permanent conflict never spoken on the very surface built
+   to resolve it) while the session strip said the opposite about the
+   same row. The caption now consumes constraintNoticeKind - one driven
+   answer for both surfaces - and its applied test runs over the
+   helper's drivingEpisode, so the two cannot diverge on what counts
+   as actionable. The source-ORDER pin that passed over this is
+   replaced by consumption pins; the ranking's truth table stays
+   driven at the helper.
+
+2. **A user-chosen row never reserves a substitute (R16-2).** The
+   effective view judged a _userAdded row, reserved the muscle's best
+   substitute for it in the taken-set, and serve then threw that
+   substitution away - so a later conflicted planned row of the same
+   muscle got a lower-ranked substitute or, with a small pool, was
+   OMITTED and durably excused while an eligible substitute sat idle
+   (and the plan caption's planned-only memo promised "Swapped" for
+   the row serve omitted). The user-chosen fact now lives IN the view:
+   such a row resolves UNCHANGED before any reservation, the serve
+   loop's duplicated early return is deleted (per-site copies of one
+   rule are how nets grow holes - D126 ruling 4), and the T2-04 law is
+   held by its driven pins plus a new driven pin proving the planned
+   row behind a user row now receives the substitute.
+
+3. **The sided-union phrasing is ONE shared answer (R16-3).** R8-4's
+   law - never name one side of a closed union on a movement that can
+   be loaded a side at a time - lived only in the picker's inline
+   scan, so the in-session named line said "involves overhead work
+   with your left shoulder" about a block the left rule alone would
+   not cause, attributing the whole union to the temporary change.
+   The union question is extracted to sidedUnionShape
+   (capability/phrase.js: both_sides / unsided_covered / null, role
+   and choice blind - facts complete the union, D120 ruling 2); the
+   picker consumes it for its three-way sentence and both in-session
+   named lines (episode AND baseline) phrase a union-blocked sided
+   rule UNSIDED. Driven table on the helper.
+
+4. **Round 15's reload rationale was false and is deleted, not
+   softened (R16-4, correcting D127 rulings 3 and 4).** The intent
+   state is USER-scoped - loadExerciseIntentState takes no exercise;
+   the per-slot clearing lives in resolvedExercise, a different state
+   - so the "a mount/exercise-change failure still clears because the
+   old state describes a different slot" reasoning attached R2-6's
+   rationale to the wrong state, and nulling could not have erased the
+   substitution marker either (it reads the store entry, not this
+   state). A failed refresh now keeps the last real state on EVERY
+   trigger; only a missing user clears. And the swap sheet's write
+   PARTICIPATES in the sequence guard from the moment of the tap
+   (round 15's post-await bump claimed "newest by construction",
+   which was false, and could orphan a genuinely newer exercise-change
+   load - both directions guarded now).
+
+5. **Smaller closures.** clearWorkoutHistory schedules its tombstones'
+   push (round 13 left their sync to whatever unrelated write came
+   next); the sweep gains the template alert form and STATES its two
+   static limits (same-line text nodes only; runtime-computed labels
+   unsweepable); the touch-target guard's allowlist is counted, so a
+   copied duplicate of an allowlisted off-scale value fails as loudly
+   as a new number; and the two stale "written not applied" migration
+   comments in the sync registry test are corrected to the README's
+   applied record (the W4 stale-comment class, two instances the
+   correction missed).
+
+Stated, not closed: the swap sheet still writes its fail-open
+empty-intents shape over a richer state on a preference-read failure,
+with the toast speaking only about the sheet (honest by D109-2's
+design; stated on A15/D3); C1's static-sweep limits as above. FOUNDER
+items unchanged (duplicate migrate_152 filenames, README ledger rows,
+CLAUDE.md counts, clear-history cloud copies). X1 = NO and X2 =
+pending, as ever.

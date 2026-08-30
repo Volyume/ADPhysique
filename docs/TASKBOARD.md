@@ -1150,9 +1150,25 @@ reload failure branch keeps the last state (a transient read failure
 no longer erases a correct notice), the swap sheet's write joins the
 sequence guard, the sweep gains template/title forms with
 element-bounded JSX windows, the R13-3 clear-history sync asymmetry
-stated on H2/I2/B9, F7's stale cell corrected. NEXT: settled full
-gate + merge, adversarial review ROUND 16, then S5 gate + device
-checklist.
+stated on H2/I2/B9, F7's stale cell corrected. ROUND 16 RAN on 7ce82989: NOT CLEAN - 7 BROKEN from 3 roots + 10
+QUALIFIED, 0 STOP - each root a consumer an earlier extraction or
+ruling did not reach. Closed same day (D128, correcting D127 rulings
+3 and 4): R16-1 the plan caption consumes constraintNoticeKind (its
+inline chain kept the pre-round-15 order - the held line silenced a
+definite baseline conflict on the surface built to resolve it, while
+the session strip said the opposite), R16-2 a user-chosen row never
+reserves a substitute (the taken-set leak omitted a planned row and
+durably excused it while an eligible substitute sat idle; the fact
+now lives IN the view, the serve loop's duplicated early return
+deleted, driven), R16-3 the sided-union phrasing is ONE shared
+answer (sidedUnionShape; both in-session named lines phrase a
+union-blocked sided rule UNSIDED; the picker consumes the same
+helper), R16-4 round 15's false reload rationale DELETED (the state
+is user-scoped - keep-last on every failed trigger; the swap write
+sequence-guarded both directions), clearWorkoutHistory schedules its
+tombstones' push, sweep + touch-guard hardened, two stale migration
+comments corrected. NEXT: settled full gate + merge, adversarial
+review ROUND 17, then S5 gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):
