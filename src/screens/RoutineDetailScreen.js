@@ -55,63 +55,52 @@ import { parseDecimalInput } from '../lib/parseDecimalInput';
  * T2-32 (D112 R5, closes audit T2-32): the plan-view marker for one routine
  * row, in the capability lane's own vocabulary (D112 R6 - never the
  * preference lane's "set aside", which is what openAvoidSheet below uses
- * for the unrelated preference kind). Episode conflicts are checked before
- * baseline, mirroring ActiveWorkoutScreen's constraintNotice precedence
- * (episode is the acute, temporary state; baseline is the ambient "how you
- * train" one). Pure; a read failure (or no exercise/capState) returns null
- * so the row simply carries no marker rather than a wrong one.
+ * for the unrelated preference kind). Pure; a read failure (or no
+ * exercise/capState) returns null so the row simply carries no marker
+ * rather than a wrong one.
+ *
+ * Round 16 (R16-1): the RANKING is constraintNoticeKind's - one driven
+ * answer shared with ActiveWorkoutScreen's in-session notice. Round 15
+ * extracted that ranking precisely because inline chains kept shipping
+ * ordering defects, and this caption was the consumer the extraction
+ * did not reach: its own chain kept the pre-round-15 order, so a
+ * held-only episode set outranked a definite BASELINE conflict here
+ * ("Held as-is at your request." with the standing permanent conflict
+ * never spoken on the very surface built to resolve it) while the
+ * session strip said the opposite about the same row.
  */
 function capabilityPlanCaption(capState, exercise, serveOutcome = null) {
   if (!capState || capState.empty || !exercise) return null;
   try {
     // eslint-disable-next-line global-require
-    const { episodeConflicts, baselineConflicts } = require('../lib/capability/effective');
+    const { episodeConflicts, baselineConflicts, constraintNoticeKind } = require('../lib/capability/effective');
     const episode = episodeConflicts(capState, exercise);
-    // CC33 adversarial review F4 (+ R2-10): an UNKNOWN conflict is never
-    // captioned as a fact - the hold claim included, since "held at your
-    // request" asserts the hold covers THIS row. Definite conflicts
-    // speak the lane's copy; a row whose only conflicts are unknown (a
-    // custom exercise's NULL demand columns) gets the honest not-known
-    // line, matching the serve layer where unknown drives nothing.
-    const definiteEpisode = episode.filter((c) => !c.unknown);
-    if (definiteEpisode.length && definiteEpisode.every((c) => c.row?.adaptationMode === 'hold')) {
-      // D112 R8: a fully-held episode holds - the marker reflects the
-      // user's own instruction, never a "swapped in sessions" claim the
-      // serve layer no longer makes.
+    const baseline = baselineConflicts(capState, exercise);
+    const { kind, drivingEpisode } = constraintNoticeKind({
+      hasMarker: false, episodeConflicts: episode, baselineConflicts: baseline,
+    });
+    if (kind === 'held') {
+      // D112 R8: a PURE held state holds - the marker reflects the
+      // user's own instruction (the helper guarantees no definite
+      // baseline conflict is being silenced beneath it).
       return "Held as-is at your request.";
     }
-    if (definiteEpisode.length) {
-      // Round 4 (F-3): the applied test runs over the ACTIONABLE rows -
-      // held rules excluded - because that is serve's own gate
-      // (actionableEpisodeConflicts). Judged over the raw list, a row
-      // under one applied rule plus one HELD rule read "sits outside
-      // your temporary change" while serve swapped it. The fully-held
-      // branch above stays on the raw list on purpose: a hold must
-      // still read as the user's own instruction.
-      const actionable = definiteEpisode.filter((c) => c.row?.adaptationMode !== 'hold');
-      const allApplied = actionable.length > 0
-        && actionable.every((c) => c.row?.effectiveChoice === 'applied');
+    if (kind === 'episode') {
+      // Round 4 (F-3) via the helper: drivingEpisode IS the actionable
+      // list (held rules excluded), serve's own gate.
+      const allApplied = drivingEpisode.every((c) => c.row?.effectiveChoice === 'applied');
       if (!allApplied) return 'Sits outside your temporary change.';
       // Round 5 (R5-7): the applied caption speaks serve's own answer,
       // never a promise the applied test alone cannot back. serveOutcome
       // comes from the screen's capabilityServeOutcomes memo - the same
       // computeEffectiveSession serve runs, taken-set and
-      // never-served-empty fail-safe included:
-      //  - substituted: serve swaps this row, so "Swapped" is true;
-      //  - omitted: serve leaves it out, with nothing forced in its
-      //    place - the lane's own honest words for it;
-      //  - served (the fail-safe, an unresolvable row) or null (the
-      //    memo has not resolved yet): the row is in front of the user
-      //    despite the conflict, so the no-promise middle line holds.
+      // never-served-empty fail-safe included.
       if (serveOutcome === 'substituted') return 'Swapped in sessions while your change lasts.';
       if (serveOutcome === 'omitted') return 'Left out of sessions while your change lasts, with nothing forced in its place.';
       return 'Sits outside your temporary change.';
     }
-    const baseline = baselineConflicts(capState, exercise);
-    if (baseline.some((c) => !c.unknown)) return 'Sits outside how you train.';
-    if (episode.length || baseline.length) {
-      return "Volyume doesn't know yet whether this fits how you train.";
-    }
+    if (kind === 'baseline') return 'Sits outside how you train.';
+    if (kind === 'unknown') return "Volyume doesn't know yet whether this fits how you train.";
     return null;
   } catch (_e) {
     return null;

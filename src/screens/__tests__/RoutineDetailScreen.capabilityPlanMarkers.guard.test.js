@@ -52,27 +52,31 @@ describe('capabilityPlanCaption: copy and precedence (T2-32)', () => {
   });
 
   test('reads the decision layer via a lazy require of capability/effective.js', () => {
-    expect(FN).toContain("const { episodeConflicts, baselineConflicts } = require('../lib/capability/effective');");
+    expect(FN).toContain("const { episodeConflicts, baselineConflicts, constraintNoticeKind } = require('../lib/capability/effective');");
   });
 
-  test('episode conflicts are checked BEFORE baseline conflicts (episode is acute; baseline is ambient)', () => {
-    const episodeIdx = FN.indexOf('const episode = episodeConflicts(capState, exercise);');
-    const baselineIdx = FN.indexOf('const baseline = baselineConflicts(capState, exercise);');
-    expect(episodeIdx).toBeGreaterThan(-1);
-    expect(baselineIdx).toBeGreaterThan(episodeIdx);
+  test('R16-1: the RANKING is constraintNoticeKind - one driven answer shared with the in-session notice', () => {
+    // The round-15 extraction did not reach this caption, so its inline
+    // chain kept the pre-round-15 order: a held-only episode set
+    // outranked a definite BASELINE conflict here ("Held as-is at your
+    // request." with the standing permanent conflict never spoken on
+    // the very surface built to resolve it) while the session strip
+    // said the opposite about the same row. A source-ORDER pin sat
+    // here and passed over that; the ranking's truth table is driven
+    // in capabilityAdherence.test.js, and this asserts only the
+    // consumption.
+    expect(FN).toContain('const { kind, drivingEpisode } = constraintNoticeKind({');
+    expect(FN).toContain('hasMarker: false, episodeConflicts: episode, baselineConflicts: baseline,');
+    expect(FN).not.toMatch(/definiteEpisode\.every/);
   });
 
-  test('episode: the applied test runs over the ACTIONABLE definite rows - serve\'s own gate', () => {
+  test('episode: the applied test runs over the DRIVING rows - serve\'s own gate, via the helper', () => {
     // F4 (adversarial review): the caption speaks only from established
     // conflicts. Round 4 (F-3): AND the applied test excludes held
-    // rules, exactly as serve does (actionableEpisodeConflicts) - over
-    // the raw list, a row under one applied plus one HELD rule read
-    // "sits outside your temporary change" while serve swapped it. The
-    // fully-held branch stays on the raw definite list on purpose.
-    expect(FN).toContain('const definiteEpisode = episode.filter((c) => !c.unknown);');
-    expect(FN).toContain("const actionable = definiteEpisode.filter((c) => c.row?.adaptationMode !== 'hold');");
-    expect(FN).toContain('const allApplied = actionable.length > 0');
-    expect(FN).toContain("&& actionable.every((c) => c.row?.effectiveChoice === 'applied');");
+    // rules, exactly as serve does - since R16-1 that list IS the
+    // helper's drivingEpisode, so the two surfaces cannot diverge on
+    // what counts as actionable.
+    expect(FN).toContain("const allApplied = drivingEpisode.every((c) => c.row?.effectiveChoice === 'applied');");
     expect(FN).toContain("if (!allApplied) return 'Sits outside your temporary change.';");
   });
 
@@ -92,7 +96,7 @@ describe('capabilityPlanCaption: copy and precedence (T2-32)', () => {
   });
 
   test('baseline conflicts get the "how you train" line only when DEFINITE; unknown-only rows get the honest not-known line', () => {
-    expect(FN).toContain("if (baseline.some((c) => !c.unknown)) return 'Sits outside how you train.';");
+    expect(FN).toContain("if (kind === 'baseline') return 'Sits outside how you train.';");
     expect(FN).toContain('"Volyume doesn\'t know yet whether this fits how you train."');
   });
 
