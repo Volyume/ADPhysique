@@ -25,20 +25,25 @@ const path = require('path');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'ActiveWorkoutScreen.js'), 'utf8');
 
-describe('T2-11: "Work around this" sheet actually captures', () => {
-  const site = SRC.indexOf("accessibilityLabel={exercise?.name ? `Work around ${exercise.name} today`");
+describe('T2-11: the "I can\'t do this" sheet actually captures', () => {
+  // CC33 close-out renamed the user-facing copy to the words a person
+  // actually uses (banked research: "I can't do this" is a first-class
+  // answer, digest pattern 5; the competitive teardown's sharpest
+  // complaint was a GOWOD review asking for exactly that option). The
+  // BEHAVIOUR this file pins is unchanged - only the anchors move.
+  const site = SRC.indexOf("accessibilityLabel={exercise?.name ? `I can't do ${exercise.name} today`");
   const alertSite = SRC.lastIndexOf('appAlert(', site);
   const block = SRC.slice(alertSite, site);
 
   test('reads the real sheet block (sanity: both buttons are present)', () => {
     expect(site).toBeGreaterThan(-1);
-    expect(block).toContain("text: 'Just swap it'");
-    expect(block).toContain("text: 'Note a temporary change'");
+    expect(block).toContain("text: 'Swap it for today'");
+    expect(block).toContain('text: "It\'s more than today"');
   });
 
   test('the body copy matches the new behaviour, no em dash', () => {
     expect(block).toContain(
-      "'Swap it for something that works now. If this is more than a one-off, note a temporary change and plans work around it.'",
+      "'Volyume can swap it now for something that trains the same thing. If it is more than today, tell Volyume once and every plan builds around it until you say otherwise.'",
     );
     expect(block).not.toMatch(/—/);
   });
@@ -49,14 +54,14 @@ describe('T2-11: "Work around this" sheet actually captures', () => {
     // key the swap's cause (causeOverride 'constraint'), so the learning
     // shield never reads a worked-around movement as a preference signal.
     // The ref is set before the sheet opens and cleared on confirm/close.
-    const justSwapSite = block.indexOf("text: 'Just swap it'");
+    const justSwapSite = block.indexOf("text: 'Swap it for today'");
     const justSwapBlock = block.slice(justSwapSite, block.indexOf('},', justSwapSite));
     expect(justSwapBlock).toContain('onPress: () => { workAroundSwapRef.current = true; handleOpenSwap(); }');
     expect(justSwapBlock).not.toMatch(/navigate/);
   });
 
-  test('"Note a temporary change" navigates with a preselect and never calls handleOpenSwap', () => {
-    const noteSite = block.indexOf("text: 'Note a temporary change'");
+  test('the durable branch navigates with a preselect and never calls handleOpenSwap', () => {
+    const noteSite = block.indexOf('text: "It\'s more than today"');
     expect(noteSite).toBeGreaterThan(-1);
     const noteBlock = block.slice(noteSite);
     expect(noteBlock).toContain(
@@ -65,8 +70,13 @@ describe('T2-11: "Work around this" sheet actually captures', () => {
     expect(noteBlock).not.toMatch(/handleOpenSwap\(\)/);
   });
 
-  test('the button label reads "Note a temporary change", not the old "Swap and note a temporary change"', () => {
+  test('the labels are the user\'s words, not the lane\'s internal vocabulary', () => {
     expect(SRC).not.toMatch(/Swap and note a temporary change/);
+    // "Work around this" was our term on the user's own button. It may
+    // still appear in prose ("Volyume will work around this") and in
+    // comments, but never again as a control the user has to decode.
+    expect(SRC).not.toMatch(/>Work around this</);
+    expect(SRC).not.toMatch(/label="Work around/);
   });
 });
 

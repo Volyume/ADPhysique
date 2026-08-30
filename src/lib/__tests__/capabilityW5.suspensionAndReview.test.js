@@ -197,7 +197,9 @@ describe('T2-26 - the suspension core exists (section 25)', () => {
   test('the HowYouTrain valve: hold and resume, in plain words', () => {
     const screen = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'HowYouTrainScreen.js'), 'utf8');
     expect(screen).toContain("label=\"Hold my plan as-is\"");
-    expect(screen).toContain("label=\"Work around it again\"");
+    // CC33 close-out: the resume control says what it does in a
+    // plain sentence rather than as a bare instruction.
+    expect(screen).toContain("label=\"Start working around it again\"");
     expect(screen).toContain('Holding your plan as-is; adaptation is paused, not your training');
     expect(screen).toContain("setEpisodeAdaptationMode(userId, ep.groupId, 'hold')");
     expect(screen).toContain("setEpisodeAdaptationMode(userId, ep.groupId, 'propose')");

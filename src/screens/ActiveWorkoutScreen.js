@@ -5213,14 +5213,23 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                 style={[styles.sheetOption, live.sheetOption]}
                 onPress={() => {
                   setShowOverflow(false);
+                  // CC33 close-out: the words a person actually uses.
+                  // Banked research: "I can't do this" is a first-class
+                  // answer (digest pattern 5), the sharpest complaint in
+                  // the whole competitive teardown was a GOWOD review
+                  // asking for exactly that option ("doesn't allow for
+                  // the option of 'can't get into the pose'"), and
+                  // Peloton's stated principle is never to make the user
+                  // translate a modification themselves. "Work around
+                  // this" was our internal vocabulary on a user's button.
                   appAlert(
-                    exercise?.name ? `Work around ${exercise.name} today?` : 'Work around this today?',
-                    'Swap it for something that works now. If this is more than a one-off, note a temporary change and plans work around it.',
+                    exercise?.name ? `Can't do ${exercise.name} today?` : "Can't do this today?",
+                    'Volyume can swap it now for something that trains the same thing. If it is more than today, tell Volyume once and every plan builds around it until you say otherwise.',
                     [
                       { text: 'Cancel', style: 'cancel' },
-                      { text: 'Just swap it', onPress: () => { workAroundSwapRef.current = true; handleOpenSwap(); } },
+                      { text: 'Swap it for today', onPress: () => { workAroundSwapRef.current = true; handleOpenSwap(); } },
                       {
-                        text: 'Note a temporary change',
+                        text: "It's more than today",
                         onPress: () => {
                           // T2-11: this used to ALSO open the swap sheet
                           // while navigating with no params, so the sheet
@@ -5239,11 +5248,11 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                   );
                 }}
                 accessibilityRole="button"
-                accessibilityLabel={exercise?.name ? `Work around ${exercise.name} today` : 'Work around this exercise today'}
+                accessibilityLabel={exercise?.name ? `I can't do ${exercise.name} today` : "I can't do this exercise today"}
               >
                 <View style={styles.overflowOptionRow}>
                   <Ionicons name="body-outline" size={18} color={t.colors.textSecondary} />
-                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>Work around this</Text>
+                  <Text style={[styles.sheetOptionLabel, live.sheetOptionLabel]}>{"I can't do this"}</Text>
                 </View>
               </TouchableOpacity>
               <TouchableOpacity

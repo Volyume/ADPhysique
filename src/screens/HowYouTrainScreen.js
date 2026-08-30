@@ -1631,7 +1631,7 @@ export default function HowYouTrainScreen() {
                 <Choice label="Still going for now" onPress={async () => { haptics.selection(); await acknowledgeEpisode(userId, ep.groupId); toast.show(subject ? `Noted. Volyume will keep ${subject} out until you end it here.` : 'Noted. Volyume will keep working around this until you end it here.'); refresh(); }} t={t} compact />
               ) : null}
               {held ? (
-                <Choice label="Work around it again" onPress={async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'propose'); toast.show('Volyume will work around this again from your next session.'); refresh(); }} t={t} compact />
+                <Choice label="Start working around it again" onPress={async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'propose'); toast.show('Volyume will work around this again from your next session.'); refresh(); }} t={t} compact />
               ) : (
                 <Choice label="Hold my plan as-is" onPress={async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'hold'); toast.show('Volyume is holding your plan as-is for this. Adaptation is paused, not your training.'); refresh(); }} t={t} compact />
               )}
