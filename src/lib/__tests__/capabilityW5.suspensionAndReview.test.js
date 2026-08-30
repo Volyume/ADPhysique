@@ -107,16 +107,20 @@ describe('T1-10 - the stored review never outranks capability', () => {
     // (isCapabilityEligible) treats unknown as not-suggestable, which is
     // right for generation and wrong for replacing a trained incumbent.
     expect(src).toContain('rowById.set(ex.id, libraryById.get(ex.id) ?? ex);');
-    expect(src).toContain('blockingConflicts(intentState.capability, row).some((c) => !c.unknown)');
+    // Round 18 (R18-2): the baseline question asked of the baseline
+    // list itself - the old blockingConflicts-minus-affected proxy let
+    // a held/declined episode rule veto a live baseline replace.
+    expect(src).toContain('baselineConflicts(intentState.capability, row).some((c) => !c.unknown)');
     expect(src).toMatch(/catch \(_e\) { capabilityIneligible = false; }/);
     // The shared name-based seam stays deliberately unconsulted at review.
     expect(src).toContain('autoEligible: undefined,');
   });
 
   test('the whole chain speaks capability at source: evidence, verdict, rationale', () => {
-    // R2-1: the field keys on a DEFINITE blocking conflict (see
+    // R2-1 keyed the field on DEFINITE conflicts; round 18 (R18-2) on
+    // the definite BASELINE fact alone (see
     // planRationale.capabilityLaneStop.guard for the full split).
-    expect(read('lib/planAutoGen.js')).toContain('capabilityIneligible: capDefiniteBlocked && !capabilityAffected,');
+    expect(read('lib/planAutoGen.js')).toContain('capabilityIneligible: capBaselineBlocked,');
     expect(read('lib/programmeEpoch.js')).toContain("CAPABILITY_EXCLUDED: 'capability_excluded',");
     expect(read('lib/planRationale.js')).toContain("'This sits outside how you train.'");
   });

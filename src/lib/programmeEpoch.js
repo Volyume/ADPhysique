@@ -284,16 +284,39 @@ export function slotVerdict(evidence = {}, {
 
   // 1. The user told us. Outranks everything, in any block.
   if (evidence.excluded) return verdict(SLOT_VERDICT.REPLACE, SLOT_REASON.USER_EXCLUDED);
-  // CC30 (section 7 matrix): an episode-affected slot is not evidence-judged —
-  // it is kept, with the capability reason; the user's own explicit exclusion
-  // above still outranks it.
+  // CC30 (section 7 matrix): a slot under a LIVE episode overlay is not
+  // evidence-judged - it is kept, with the capability reason; the user's
+  // own explicit exclusion above still outranks it. Round 18 (R18-2):
+  // `capabilityAffected` now means the overlay is actually OPERATING
+  // (definite, applied, not held - the evidence builders take the
+  // shared removalExcusalConflicts answer), because ranking it above
+  // the baseline REPLACE below is only right while serve is genuinely
+  // working around the movement (D129 ruling 6).
   if (evidence.capabilityAffected) return verdict(SLOT_VERDICT.KEEP, SLOT_REASON.CAPABILITY_HOLD);
   // CC33 D112 R6/R1 (audit T1-08, T1-10): a BASELINE-ineligible incumbent
   // is replaced with the capability reason - permanent shapes the
-  // document. Ranked after the episode KEEP (temporary is an overlay)
-  // and before every evidence rank: no amount of history keeps a
-  // movement the user cannot do.
+  // document. Ranked after the live-overlay KEEP (temporary is an
+  // overlay) and before every evidence rank: no amount of history keeps
+  // a movement the user cannot do. Round 18 (R18-2): the builders now
+  // feed this the true baseline fact (definite baselineConflicts), not
+  // `any definite conflict minus episode-affected` - the old proxy let
+  // a HELD or DECLINED episode rule, which drives nothing (D120 ruling
+  // 2), veto this replace and stamp a permanent conflict "temporary".
   if (evidence.capabilityIneligible) return verdict(SLOT_VERDICT.REPLACE, SLOT_REASON.CAPABILITY_EXCLUDED);
+  // Round 18 (R18-2, D130 ruling): a definite episode conflict with NO
+  // live overlay - held, declined or undecided - still DEFERS document
+  // judgement, ranked BELOW the baseline replace. Not because the rule
+  // drives it (it drives nothing): because the write-time carve
+  // (planAutoGen resolveExercises) voids any conflicted incumbent that
+  // lacks the hold marker, so "fall through to evidence" would let an
+  // evidence KEEP be silently emptied at write - the exact T1-07
+  // receipt/commit contradiction - and a rebuild swapping a movement
+  // the user explicitly kept (decline), or froze the plan around
+  // (hold), acts on the very slot their choice is about while the
+  // episode is still open. The episode is temporary; the document
+  // waits for it. Same verdict and copy as the live keep: both are
+  // "kept rather than judged while the temporary change lasts".
+  if (evidence.capabilityEpisodeOpen) return verdict(SLOT_VERDICT.KEEP, SLOT_REASON.CAPABILITY_HOLD);
   // Repeated deliberate swaps are the user telling us by behaviour rather
   // than by switch. One swap is not evidence; a pattern is.
   if ((evidence.swappedAwayCount ?? 0) >= 2) {

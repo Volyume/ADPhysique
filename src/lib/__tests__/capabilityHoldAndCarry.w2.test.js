@@ -71,6 +71,112 @@ describe('T1-07 - the writer honours CAPABILITY_HOLD', () => {
   });
 });
 
+describe('R18-2 - a rule that drives nothing cannot veto a live baseline rewrite', () => {
+  /**
+   * Round 18. The rebuild and block-review evidence builders computed
+   * `capabilityAffected` from the RAW definite episode list - held and
+   * declined rules included - and `capabilityIneligible` as "any
+   * definite conflict minus affected". So a held (or declined) episode
+   * rule, which drives nothing (D120 ruling 2), flipped a live BASELINE
+   * rule's REPLACE into a KEEP whose receipt called a permanent
+   * conflict "your temporary change". Driven here, at both layers the
+   * closure rides on: the term semantics against REAL resolver states
+   * (the builders' own expressions over episodeConflicts /
+   * removalExcusalConflicts / baselineConflicts - wiring pinned at
+   * source in planRationale.capabilityLaneStop.guard), and the
+   * slotVerdict ranking (D130): live overlay KEEP, then baseline
+   * REPLACE, then open-episode KEEP - each above every evidence rank.
+   * The write-carve chain for the open-episode keep is the T1-07 block
+   * above: CAPABILITY_HOLD -> continuity marker -> resolver writes it.
+   */
+  const { buildCapabilityResolveState } = require('../capability/resolve');
+  const { episodeConflicts, removalExcusalConflicts, baselineConflicts } = require('../capability/effective');
+  const { slotVerdict, SLOT_VERDICT, SLOT_REASON } = require('../programmeEpoch');
+
+  const NOW = 1_750_000_000_000;
+  const rule = (over) => ({
+    id: over.id, userId: 'u1', source: 'self', ruleKind: 'demand',
+    laterality: null, startsAt: NOW - 1000, endsAt: null, state: 'active',
+    endedAt: null, endedReason: null, deletedAt: null, acknowledgedAt: NOW,
+    ...over,
+  });
+  // The reviewer's breaking input: a permanent baseline rule (no axial
+  // load) plus a temporary standing episode the user HELD, both bearing
+  // on one standing axial incumbent (SQUAT above).
+  const heldPlusBaseline = buildCapabilityResolveState([
+    rule({ id: 'ep-stand', role: 'episode', ruleValue: 'standing', episodeGroupId: 'g1', effectiveChoice: 'applied', adaptationMode: 'hold' }),
+    rule({ id: 'base-axial', role: 'baseline', ruleValue: 'axial_load', effectiveChoice: null, adaptationMode: null }),
+  ], { atMs: NOW });
+  const terms = (state, ex) => {
+    const episodeDefinite = episodeConflicts(state, ex).filter((c) => !c.unknown);
+    const capabilityAffected = removalExcusalConflicts(episodeDefinite).length > 0;
+    return {
+      capabilityAffected,
+      capabilityEpisodeOpen: !capabilityAffected && episodeDefinite.length > 0,
+      capabilityIneligible: baselineConflicts(state, ex).some((c) => !c.unknown),
+    };
+  };
+
+  test('held episode + live baseline: the baseline fact stands and the slot REPLACES', () => {
+    const t = terms(heldPlusBaseline, SQUAT);
+    expect(t).toEqual({ capabilityAffected: false, capabilityEpisodeOpen: true, capabilityIneligible: true });
+    expect(slotVerdict(t, {})).toEqual(
+      { verdict: SLOT_VERDICT.REPLACE, reason: SLOT_REASON.CAPABILITY_EXCLUDED },
+    );
+  });
+
+  test('declined episode + live baseline: same - declined drives nothing either', () => {
+    const declined = buildCapabilityResolveState([
+      rule({ id: 'ep-stand', role: 'episode', ruleValue: 'standing', episodeGroupId: 'g1', effectiveChoice: 'declined', adaptationMode: null }),
+      rule({ id: 'base-axial', role: 'baseline', ruleValue: 'axial_load', effectiveChoice: null, adaptationMode: null }),
+    ], { atMs: NOW });
+    const t = terms(declined, SQUAT);
+    expect(t.capabilityAffected).toBe(false);
+    expect(slotVerdict(t, {})).toEqual(
+      { verdict: SLOT_VERDICT.REPLACE, reason: SLOT_REASON.CAPABILITY_EXCLUDED },
+    );
+  });
+
+  test('LIVE applied episode + baseline: the overlay outranks the replace (D129 ruling 6 preserved)', () => {
+    const live = buildCapabilityResolveState([
+      rule({ id: 'ep-stand', role: 'episode', ruleValue: 'standing', episodeGroupId: 'g1', effectiveChoice: 'applied', adaptationMode: null }),
+      rule({ id: 'base-axial', role: 'baseline', ruleValue: 'axial_load', effectiveChoice: null, adaptationMode: null }),
+    ], { atMs: NOW });
+    const t = terms(live, SQUAT);
+    expect(t.capabilityAffected).toBe(true);
+    expect(slotVerdict(t, {})).toEqual(
+      { verdict: SLOT_VERDICT.KEEP, reason: SLOT_REASON.CAPABILITY_HOLD },
+    );
+  });
+
+  test('held episode ALONE still defers document judgement, below the baseline rank (D130)', () => {
+    const heldOnly = buildCapabilityResolveState([
+      rule({ id: 'ep-stand', role: 'episode', ruleValue: 'standing', episodeGroupId: 'g1', effectiveChoice: 'applied', adaptationMode: 'hold' }),
+    ], { atMs: NOW });
+    const t = terms(heldOnly, SQUAT);
+    expect(t).toEqual({ capabilityAffected: false, capabilityEpisodeOpen: true, capabilityIneligible: false });
+    // Deferred even against strong replace-shaped evidence below it.
+    expect(slotVerdict({ ...t, swappedAwayCount: 3, plateau: true }, {})).toEqual(
+      { verdict: SLOT_VERDICT.KEEP, reason: SLOT_REASON.CAPABILITY_HOLD },
+    );
+  });
+
+  test('the slotVerdict ranking, driven as a table', () => {
+    const rows = [
+      [{ capabilityAffected: true }, SLOT_VERDICT.KEEP, SLOT_REASON.CAPABILITY_HOLD],
+      [{ capabilityIneligible: true }, SLOT_VERDICT.REPLACE, SLOT_REASON.CAPABILITY_EXCLUDED],
+      [{ capabilityEpisodeOpen: true }, SLOT_VERDICT.KEEP, SLOT_REASON.CAPABILITY_HOLD],
+      [{ capabilityAffected: true, capabilityIneligible: true }, SLOT_VERDICT.KEEP, SLOT_REASON.CAPABILITY_HOLD],
+      [{ capabilityEpisodeOpen: true, capabilityIneligible: true }, SLOT_VERDICT.REPLACE, SLOT_REASON.CAPABILITY_EXCLUDED],
+      // The user's own exclusion outranks all three, unchanged.
+      [{ excluded: true, capabilityAffected: true }, SLOT_VERDICT.REPLACE, SLOT_REASON.USER_EXCLUDED],
+    ];
+    for (const [evidence, verdict, reason] of rows) {
+      expect({ evidence, ...slotVerdict(evidence, {}) }).toEqual({ evidence, verdict, reason });
+    }
+  });
+});
+
 describe("T2-25 residual - the block boundary cannot launder return-period evidence", () => {
   const NOW = 1_750_000_000_000;
   const DAY = 24 * 60 * 60 * 1000;

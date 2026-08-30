@@ -515,21 +515,33 @@ async function buildProgrammeReview(userId, activeBlock) {
 
   const evidenceFor = (exerciseId) => {
     const facts = exerciseEvidence(intentState, exerciseId);
-    // CC30 (section 7 matrix): an EPISODE-affected slot is not
+    // CC30 (section 7 matrix): an episode-conflicted slot is not
     // evidence-judged - the verdict engine keeps it with the capability
-    // reason. Baseline rules never mark a slot (CAP-1), and the user's
-    // own exclusion below still outranks it inside slotVerdict.
+    // reason - while a definite BASELINE conflict replaces (D112 R1's
+    // amendment to CAP-1). The ranking between them is slotVerdict's
+    // (round 18, D130): live overlay KEEP, then baseline REPLACE, then
+    // open-episode KEEP; the user's own exclusion outranks all three.
     let capabilityAffected = false;
+    let capabilityEpisodeOpen = false;
     try {
       // eslint-disable-next-line global-require
-      const { episodeConflicts } = require('./capability/effective');
+      const { episodeConflicts, removalExcusalConflicts } = require('./capability/effective');
       const row = rowById.get(exerciseId);
-      // Definite conflicts only (F2/F1 class): an UNKNOWN conflict - a
-      // custom exercise's NULL demand columns - must not hold the slot
-      // un-judged; unknown drives nothing automatic anywhere in the
-      // lane, and this reader matches serve's own gate.
-      capabilityAffected = !!row
-        && episodeConflicts(intentState?.capability, row).some((c) => !c.unknown);
+      // Definite conflicts only (F2/F1 class): unknown drives nothing
+      // automatic anywhere in the lane. Round 18 (R18-2), matching
+      // planAutoGen's builder exactly: `capabilityAffected` is the LIVE
+      // overlay only (the shared removalExcusalConflicts gate -
+      // definite, not held, every live driver applied - the answer
+      // serve and both effects writers act on); a held or declined rule
+      // drives nothing (D120 ruling 2) and must not veto the baseline
+      // replace below. Any OTHER definite episode conflict is
+      // `capabilityEpisodeOpen`: slotVerdict keeps it un-judged BELOW
+      // the baseline replace (D130).
+      const episodeDefinite = row
+        ? episodeConflicts(intentState?.capability, row).filter((c) => !c.unknown)
+        : [];
+      capabilityAffected = removalExcusalConflicts(episodeDefinite).length > 0;
+      capabilityEpisodeOpen = !capabilityAffected && episodeDefinite.length > 0;
     } catch (e) {
       // UNKNOWN IS NOT NONE (D112 R3, adopting planAutoGen's posture for
       // the same field): a capability read that did not happen says
@@ -558,22 +570,24 @@ async function buildProgrammeReview(userId, activeBlock) {
     let capabilityIneligible = false;
     try {
       // eslint-disable-next-line global-require
-      const { blockingConflicts } = require('./capability/resolve');
+      const { baselineConflicts } = require('./capability/effective');
       const row = rowById.get(exerciseId);
-      // DEFINITE blocking conflicts only, not isCapabilityEligible (F2):
+      // DEFINITE conflicts only, not isCapabilityEligible (F2):
       // suggestion eligibility treats unknown as not-suggestable (rank
       // 4, correct for generation - CAP-8 custom lifts are never
       // auto-picked), but REPLACING an incumbent the user is training
-      // demands an established fact. A custom lift under a demand rule
-      // is evidence-judged like any other slot, never told it "sits
-      // outside how you train" on a fact the app does not hold.
+      // demands an established fact. Round 18 (R18-2): the BASELINE
+      // question asked of the baseline list itself (allowance-carved -
+      // baselineConflicts rides on blockingConflicts), dropping the
+      // `&& !capabilityAffected` proxy that let a held or declined
+      // episode rule veto the replace. slotVerdict does the ranking.
       capabilityIneligible = !!(row && intentState?.capability && !intentState.capability.empty
         && !intentState.capability.unavailable
-        && blockingConflicts(intentState.capability, row).some((c) => !c.unknown)
-        && !capabilityAffected);
+        && baselineConflicts(intentState.capability, row).some((c) => !c.unknown));
     } catch (_e) { capabilityIneligible = false; }
     return {
       capabilityAffected,
+      capabilityEpisodeOpen,
       capabilityIneligible,
       excluded: isExcluded(intentState, exerciseId) || isAvoidedThisBlock(intentState, exerciseId),
       swappedAwayCount: swappedAwayCount(intentState, exerciseId),

@@ -207,11 +207,14 @@ export function computeEffectiveSession(baseRows, library, capabilityState, isEl
  *   coversAllUnperformed: boolean}}
  */
 /**
- * Round 12 (R12-2) + round 13 (R13-2): the ONE answer to "does this
- * row's absence get recorded as a constraint omission?" - consumed by
- * BOTH writers now (the mid-session removal hook and
- * computeCompletionEffects below), so they cannot diverge again. The
- * gates, in order:
+ * Round 12 (R12-2) + round 13 (R13-2): the ONE answer to "do live
+ * definite drivers stand for this row?" - consumed by BOTH effects
+ * writers (the mid-session removal hook and computeCompletionEffects
+ * below), and since round 18 (R18-2) by both rebuild-verdict evidence
+ * builders (planAutoGen.buildSlotEvidence, blockAdvisor.evidenceFor),
+ * whose `capabilityAffected` means exactly this: a live overlay is in
+ * force. One gate, so none of the four can diverge again. The gates,
+ * in order:
  *  - definite conflicts only: an UNKNOWN conflict excuses nothing
  *    (D113 ruling 1) - the row's own notice says "doesn't know yet";
  *  - HELD rules are dropped BEFORE the applied test, never rejected on

@@ -444,6 +444,7 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
     // a rebuild should act on. The user's own id-level exclusion always
     // outranks the episode (checked separately below).
     let capabilityAffected = false;
+    let capabilityEpisodeOpen = false;
     if (intentState?.capability && row) {
       try {
         // Path fixed 2026-08-27 (adversarial audit). This required the module
@@ -457,13 +458,25 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
         // rebuild, which is precisely the outcome CC30 exists to prevent for
         // someone training around a temporary injury.
         // eslint-disable-next-line global-require
-        const { episodeConflicts } = require('./capability/effective');
-        // D113 ruling 1, applied here at review round 2 (R2-1): DEFINITE
-        // conflicts only. An UNKNOWN episode conflict (a custom lift's
-        // NULL demand column) must not hold the slot un-judged - unknown
-        // drives nothing automatic anywhere in the lane, and this reader
-        // now matches blockAdvisor's own gate exactly.
-        capabilityAffected = episodeConflicts(intentState.capability, row).some((c) => !c.unknown);
+        const { episodeConflicts, removalExcusalConflicts } = require('./capability/effective');
+        // D113 ruling 1 (R2-1): DEFINITE conflicts only - unknown drives
+        // nothing automatic anywhere in the lane. Round 18 (R18-2): the
+        // raw definite list also counted HELD and DECLINED rules, which
+        // drive nothing either (D120 ruling 2) - and because the old
+        // capabilityIneligible term was `capDefiniteBlocked &&
+        // !capabilityAffected`, a rule with no live automation vetoed a
+        // live BASELINE rule's replace at slotVerdict and the receipt
+        // called a permanent conflict temporary. Two true facts now:
+        // `capabilityAffected` is the LIVE overlay (the shared
+        // removalExcusalConflicts gate - definite, not held, every live
+        // driver applied - the same answer serve and both effects
+        // writers act on), and `capabilityEpisodeOpen` is any other
+        // definite episode conflict (held/declined/undecided), which
+        // slotVerdict keeps un-judged BELOW the baseline replace (D130).
+        const episodeDefinite = episodeConflicts(intentState.capability, row)
+          .filter((c) => !c.unknown);
+        capabilityAffected = removalExcusalConflicts(episodeDefinite).length > 0;
+        capabilityEpisodeOpen = !capabilityAffected && episodeDefinite.length > 0;
       } catch (e) {
         // UNKNOWN IS NOT NONE. A capability read we could not perform tells us
         // nothing about whether this user is training around something, so it
@@ -503,21 +516,28 @@ function buildSlotEvidence(intentState, currentLibraryIds, exercisesById) {
     // conflict, exactly blockAdvisor's gate, so the two engines answer
     // the same question the same way. A failed read answers false -
     // never REPLACE on a check that did not happen.
-    let capDefiniteBlocked = false;
+    let capBaselineBlocked = false;
     try {
       if (row && intentState?.capability && !intentState.capability.empty
         && !intentState.capability.unavailable) {
+        // Round 18 (R18-2): the BASELINE question asked of the baseline
+        // list itself (allowance-carved like every decision reader -
+        // baselineConflicts rides on blockingConflicts), not of "all
+        // definite conflicts minus episode-affected". The old proxy
+        // both under-fired (a held episode co-conflict hid a definite
+        // baseline fact) and could never say only what it meant.
         // eslint-disable-next-line global-require
-        const { blockingConflicts } = require('./capability/resolve');
-        capDefiniteBlocked = blockingConflicts(intentState.capability, row).some((c) => !c.unknown);
+        const { baselineConflicts } = require('./capability/effective');
+        capBaselineBlocked = baselineConflicts(intentState.capability, row).some((c) => !c.unknown);
       }
-    } catch (_e) { capDefiniteBlocked = false; }
+    } catch (_e) { capBaselineBlocked = false; }
     return {
       excluded: intentBlocked || familyAvoided,
-      // BASELINE conflicts only: an EPISODE-affected slot keeps its
-      // CAPABILITY_HOLD (temporary is an overlay; the document keeps it).
-      capabilityIneligible: capDefiniteBlocked && !capabilityAffected,
+      // The definite BASELINE fact, alone: slotVerdict ranks it under
+      // the live-overlay KEEP and above the open-episode KEEP (D130).
+      capabilityIneligible: capBaselineBlocked,
       capabilityAffected,
+      capabilityEpisodeOpen,
       swappedAwayCount: intentState ? swappedAwayCount(intentState, exerciseId) : 0,
       // The exercise is no longer reachable with the equipment the user
       // now says they have, so the slot is not valid regardless of history.

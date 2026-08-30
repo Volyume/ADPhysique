@@ -70,13 +70,22 @@ describe('T1-08 closed: capability exclusions carry their own reason and words',
     // lift's NULL demand columns never earn "This sits outside how you
     // train." nor a preference exclusion.
     expect(gen).toContain('excluded: intentBlocked || familyAvoided,');
-    expect(gen).toContain('capabilityIneligible: capDefiniteBlocked && !capabilityAffected,');
-    expect(gen).toContain('capDefiniteBlocked = blockingConflicts(intentState.capability, row).some((c) => !c.unknown);');
-    expect(gen).toContain('capabilityAffected = episodeConflicts(intentState.capability, row).some((c) => !c.unknown);');
-    // And the block-review engine keeps the SAME two gates, so the two
+    // Round 18 (R18-2) re-keyed the capability pair: REPLACE takes the
+    // definite BASELINE fact alone (allowance-carved via
+    // baselineConflicts), and the KEEP-ranking facts are the LIVE
+    // overlay (the shared removalExcusalConflicts gate) plus the
+    // open-episode remainder - the old proxy let a held or declined
+    // rule, which drives nothing (D120 ruling 2), veto a live baseline
+    // replace and call a permanent conflict temporary.
+    expect(gen).toContain('capabilityIneligible: capBaselineBlocked,');
+    expect(gen).toContain('capBaselineBlocked = baselineConflicts(intentState.capability, row).some((c) => !c.unknown);');
+    expect(gen).toContain('capabilityAffected = removalExcusalConflicts(episodeDefinite).length > 0;');
+    expect(gen).toContain('capabilityEpisodeOpen = !capabilityAffected && episodeDefinite.length > 0;');
+    // And the block-review engine keeps the SAME gates, so the two
     // cannot drift apart again (round 2's I9 finding).
     const adv = fs.readFileSync(path.join(__dirname, '..', 'blockAdvisor.js'), 'utf8');
-    expect(adv).toContain('episodeConflicts(intentState?.capability, row).some((c) => !c.unknown)');
-    expect(adv).toContain('blockingConflicts(intentState.capability, row).some((c) => !c.unknown)');
+    expect(adv).toContain('capabilityAffected = removalExcusalConflicts(episodeDefinite).length > 0;');
+    expect(adv).toContain('capabilityEpisodeOpen = !capabilityAffected && episodeDefinite.length > 0;');
+    expect(adv).toContain('baselineConflicts(intentState.capability, row).some((c) => !c.unknown)');
   });
 });

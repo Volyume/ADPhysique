@@ -78,20 +78,20 @@ describe('a failed capability read is never reported as "no restriction"', () =>
     // restore the original behaviour exactly, so it is pinned explicitly.
     const start = SRC.indexOf('let capabilityAffected = false;');
     expect(start).toBeGreaterThan(-1);
-    const window = SRC.slice(start, start + 2400);
+    const window = SRC.slice(start, start + 3600);
     expect(window).toMatch(/catch \(e\) \{[\s\S]*?capabilityAffected = true;/);
     expect(window).not.toMatch(/catch \(_e\) \{ capabilityAffected = false; \}/);
   });
 
   test('the failure is logged rather than swallowed', () => {
     const start = SRC.indexOf('let capabilityAffected = false;');
-    const window = SRC.slice(start, start + 2400);
+    const window = SRC.slice(start, start + 3600);
     expect(window).toMatch(/logError\('planAutoGen\.capabilityRead'/);
   });
 
   test('why the branch exists is written down so it is not "simplified" back', () => {
     const start = SRC.indexOf('let capabilityAffected = false;');
-    const window = SRC.slice(start, start + 2400);
+    const window = SRC.slice(start, start + 3600);
     expect(window).toMatch(/UNKNOWN IS NOT NONE/);
     expect(window).toMatch(/MODULE_NOT_FOUND/);
   });
