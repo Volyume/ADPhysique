@@ -432,10 +432,13 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows, { row
     const view = computeEffectiveSession(
       rows.map((e) => {
         const resolved = e?.id ? byId.get(e.id) : null;
-        // _userAdded must survive resolution - computeEffectiveSession
-        // does not read it, but the serve loop below reads it off the
-        // ORIGINAL rows[i], so only the judgement object is swapped.
-        return { exercise: resolved ?? e };
+        // R16-2: the user-chosen fact rides INTO the view now - it used
+        // to live only in the serve loop below, so the view judged the
+        // user's row, reserved a substitute for it in the taken-set,
+        // and the loop threw that substitution away (a later conflicted
+        // row of the same muscle lost its substitute, or was omitted
+        // with an eligible one sitting idle). One rule, one place.
+        return { exercise: resolved ?? e, userChosen: !!e?._userAdded };
       }), library, capState,
       substituteSeniorQuestion(capState, intentState),
     );
@@ -444,14 +447,13 @@ export async function applyEffectiveViewToSession(userId, workoutId, rows, { row
     const baseIndexes = [];
     const effects = [];
     view.lines.forEach((line, i) => {
-      // D112 R4 (CAP-2, closes audit T2-04): a row the user added to this
-      // session themselves is served exactly as they added it - their
-      // explicit choice outranks the effective view, whatever it resolves.
-      if (rows[i]?._userAdded) {
-        served.push(rows[i]);
-        baseIndexes.push(i);
-        return;
-      }
+      // D112 R4 (CAP-2, closes audit T2-04): a row the user added to
+      // this session themselves is served exactly as they added it.
+      // Since R16-2 the VIEW resolves such a row UNCHANGED before any
+      // substitute is reserved (userChosen above), so it flows through
+      // the plain else-branch below - the duplicated early return here
+      // was removed because per-site copies of one rule are how nets
+      // grow holes (D126 ruling 4); the T2-04 driven pins hold the law.
       if (line.effect === EFFECTIVE_EFFECT.SUBSTITUTED && line.exerciseTo) {
         served.push({
           ...line.exerciseTo,

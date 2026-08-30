@@ -130,6 +130,20 @@ export function computeEffectiveSession(baseRows, library, capabilityState, isEl
   );
   (baseRows ?? []).forEach((row, i) => {
     const exercise = row?.exercise ?? row;
+    // Round 16 (R16-2): a row the user chose themselves resolves
+    // UNCHANGED before ANY substitute is considered - the leak was
+    // here: the view judged the user's row, reserved the muscle's best
+    // substitute for it in the taken-set, and serve then threw that
+    // substitution away, so a later conflicted row of the same muscle
+    // got a lower-ranked substitute - or, with a small pool, was
+    // OMITTED and durably excused while an eligible substitute sat
+    // idle. The user-chosen fact lives HERE, in the view, as the one
+    // rule (D112 R4: their word outranks the model); the serve loop no
+    // longer duplicates it.
+    if (row?.userChosen) {
+      lines.push({ slot: i, exerciseFrom: exercise, effect: EFFECTIVE_EFFECT.UNCHANGED, exerciseTo: null, constraintIds: [], undecided: false });
+      return;
+    }
     // D112 R8: held episodes drive nothing here - a fully-held conflict
     // set resolves UNCHANGED, so "hold my plan" genuinely holds it.
     // CC33 adversarial review (F1 class): UNKNOWN conflicts drive nothing

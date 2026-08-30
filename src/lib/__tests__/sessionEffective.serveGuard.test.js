@@ -246,6 +246,29 @@ test('R3-4 DRIVEN: an omitted duplicate never claims the _userAdded twin\'s slot
   expect(entries).toEqual([expect.objectContaining({ effect: 'omitted', slot: 0 })]);
 });
 
+test('R16-2 DRIVEN: a user-chosen row never reserves a substitute - the next conflicted row of the muscle gets it', async () => {
+  // The leak: the view judged the _userAdded row, reserved the muscle's
+  // best substitute for it in the taken-set, and the serve loop threw
+  // that substitution away - so the PLANNED conflicted row behind it
+  // was OMITTED (durably excused) while the eligible substitute sat
+  // idle. The user-chosen fact now resolves UNCHANGED inside the view,
+  // before any reservation.
+  getAllExercises.mockResolvedValue([SQUAT, LEGPRESS, LUNGE]); // one eligible sub for quads
+  const added = { ...asServed(SQUAT), _userAdded: true };
+  const res = await applyEffectiveViewToSession(
+    'u1', 'w1', [added, asServed(LUNGE)], { rowIds: ['re-u', 're-p'] },
+  );
+  expect(res.untouched).toBe(false);
+  expect(res.served).toHaveLength(2);
+  expect(res.served[0]).toBe(added); // the user's own object, untouched
+  expect(res.served[1].id).toBe(LEGPRESS.id); // the planned row GETS the substitute
+  expect(res.served[1]._capabilityTemp?.fromId).toBe(LUNGE.id);
+  const entries = appendSessionConstraintEffects.mock.calls[0][2];
+  expect(entries).toEqual([
+    expect.objectContaining({ effect: 'substituted', exerciseFrom: LUNGE.id, exerciseTo: LEGPRESS.id, rowId: 're-p' }),
+  ]);
+});
+
 test('R10-1 DRIVEN: two LIVE slots of one exercise pass TWO entries, each keyed to its planned row', async () => {
   // The round-10 breaking input at the serve layer: a doubled quads
   // movement, both slots live. The writer's old (effect, exerciseFrom)
