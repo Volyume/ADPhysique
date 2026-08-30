@@ -4067,3 +4067,91 @@ Stated, not closed: B9's ledger condition (ruling 5 above); L1's
 record condition dissolves with R11-2 (ad-hoc slots are keyed now).
 FOUNDER items unchanged (duplicate migrate_152 filenames, README
 ledger rows, CLAUDE.md counts). X1 = NO and X2 = pending, as ever.
+
+## D124 — CC33 review round 12 closures + D123 corrections (lead-ruled under D33, 2026-08-30)
+
+Adversarial review round 12 (on main 68d35635): 9 BROKEN rows from 5
+roots, 4 QUALIFIED, 0 STOP - every root a reachable user chain through
+the round-11 closures. All five closed same day. Rulings:
+
+1. **The slot's RECORD is the conversion identity (R12-1, correcting
+   the I8 row and D123 ruling 1's completeness).** The round-11
+   conversion keyed on the in-memory _capabilityTemp marker - which
+   the manual swap clears - so a swap-then-remove chain left the
+   amended entry standing: the receipt told the user they chose a
+   movement for a slot they had deleted, and the week counted
+   reshaped off it. The conversion now falls back to the slot's own
+   stable id; a rowId-only match is EXACT in the helper (both keyed
+   and equal), so it can never convert a different slot's entry and a
+   slot with no substitution entry is a clean no-op. Driven: the full
+   amend-then-convert chain on the real database.
+
+2. **Unknown drives no removal excusal (R12-2, closing A15's last
+   writer).** The mid-session removal gate had no certainty term, so
+   removing a custom lift with null demand columns recorded a durable
+   constraint omission off an UNKNOWN conflict - while the same row's
+   own notice said "Volyume doesn't know yet". The gate now consumes
+   removalExcusalConflicts (capability/effective.js) - one exported
+   answer carrying exactly the certainty and choice gates the
+   completion writer has always applied - driven against the real
+   resolver with a null-demand exercise and a definite control. Two
+   adjacent removal-writer rulings land with it: a substituted slot's
+   story is the CONVERSION (the excusal append no longer double-writes
+   when a mid-session rule bears on the substitute - the round-12
+   review disproved the round-11 pin comment's "cannot fire here"),
+   and a row the user chose themselves (_userAdded: a picker add or a
+   manual swap) is the user's own to remove - its removal records no
+   excusal, the conservative direction (an excusal removed, never
+   added).
+
+3. **The THIRD keyless source mints (R12-3, correcting D123 ruling 2's
+   "every live slot has an id").** addExerciseToWorkout defaulted
+   routineExercise to null, so every picker-added row - and every
+   "Start without a plan" session in its entirety - was keyless, and
+   the round-10 duplicate-slot collapse survived on exactly the
+   sessions L1 is about. The store mints the slot id at add time
+   (lazy require per its own convention); the writer's comment now
+   names all three ad-hoc sources and what a null rowId still means.
+   Driven at the real store.
+
+4. **The effects record dies with the workout on BOTH delete paths,
+   durably (R12-4).** Round 11 tombstoned only the incomplete-discard
+   path; deleting a COMPLETED session from history left its record
+   live, synced, and in the Article 20 export - and
+   createSessionConstraintEffect's replace dropped deleted_at, so one
+   racing best-effort write resurrected any tombstone.
+   deleteWorkoutAndSets tombstones now, the replace PRESERVES
+   deleted_at (same COALESCE discipline as created_at), and
+   workoutTombstoneConvergence's "nothing survives" over-claim is
+   corrected in place. Driven: completed-delete tombstone, and a
+   post-tombstone write that stays dead.
+
+5. **48dp is the floor on the campaign's own surfaces too (R12-5,
+   J2).** The receipt's link into How you train shipped at minHeight
+   40 with no hitSlop - under styling.md's minimum and an off-scale
+   literal. Raised to spacing.xxxl; two pre-existing sibling links on
+   the same style rise with it (a visible row-height change, stated
+   for the founder walk); pinned on-scale. The touch-target guard now
+   covers this control beside Home's rows.
+
+6. **The sweep's allow-list is widened and its one exclusion is
+   RULED (C1/I6).** Triggers now include capabilityBlockReason,
+   demandConflicts and capability/directory, bringing
+   ExercisePickerModal (which renders the lane's own block reasons)
+   and TrainingConsiderations inside. WeeklyCheckIn stays outside
+   DELIBERATELY: its capability identifiers are disjoint from every
+   trigger, and its one 'Not now' is the notifications lane's
+   truthful deferral (the ask genuinely recurs) - renaming it would
+   make that lane's copy worse to satisfy this lane's guard.
+
+Stated, not closed (all on their rows): an ambiguous amend (either
+side keyless) lands on the first matching entry, which need not be
+the swapped slot's - reachable only for a session in flight across
+the R11-2 upgrade; the one-shot amend/convert writes have no recovery
+pass (unlike serve's re-derivable entries); an untrained-but-standing
+substitution keeps describing the served session; D123 ruling 1
+(iii)'s "any user-chosen slot switches the headline" is true only of
+the substituted-only branch - the mixed sentence never carried the
+attribution. FOUNDER items unchanged (duplicate migrate_152
+filenames, README ledger rows, CLAUDE.md counts). X1 = NO and X2 =
+pending, as ever.

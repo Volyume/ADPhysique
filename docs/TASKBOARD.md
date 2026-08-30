@@ -1081,8 +1081,27 @@ pass), B9 counters require is_completed = 1 + the all-revoke/ledger
 fork RULED (count-revoke rejected as fabricated CONSTRAINED
 evidence; conservative under-read stated), discard tombstones the
 effects record. Six new driven pins; 1/1→0/0 counter pin extended.
-NEXT: settled full gate + merge, adversarial review ROUND 12, then S5
-gate + device checklist.
+ROUND 12 RAN on 68d35635: NOT CLEAN - 9 BROKEN from 5 roots + 4
+QUALIFIED, 0 STOP - every root a reachable user chain through the
+round-11 closures. Closed same day (D124, correcting D123 rulings 1
+and 2): R12-1 the conversion keys on the slot's RECORD, not the
+marker the swap clears (swap-then-remove had left the amended entry
+standing - the receipt told the user they chose a movement for a
+deleted slot; rowId-only matching is exact), R12-2 the removal writer
+gains its certainty term (an UNKNOWN-only conflict wrote a durable
+excusal while the row's own notice said "doesn't know yet"; the gate
+now consumes the shared removalExcusalConflicts answer, a substituted
+slot's story is the conversion, and a user-chosen row's removal
+records no excusal), R12-3 the THIRD keyless source mints (picker
+adds; a "Start without a plan" session was entirely keyless), R12-4
+the effects record dies with a deleted COMPLETED workout and the
+replace preserves deleted_at (a racing write used to resurrect
+tombstones into sync and the export), R12-5 the receipt's
+How-you-train link rises to 48dp (two sibling links rise with it - a
+visible change for the founder walk), C1/I6 the sweep gains the
+resolver/directory identifiers with WeeklyCheckIn's exclusion RULED.
+Five new driven pins. NEXT: settled full gate + merge, adversarial
+review ROUND 13, then S5 gate + device checklist.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):
