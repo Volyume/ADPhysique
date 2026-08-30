@@ -275,6 +275,16 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
       // wore the decline word on a pure no-op outside the sweep.
       'capabilityPreflight',
       'offerCapabilityPreflightChoice',
+      // Round 12 (C1/I6): the resolver and directory identifiers - the
+      // picker (which renders the lane's own block reasons) and the
+      // training-considerations directory sat outside the allow-list.
+      // WeeklyCheckIn stays outside DELIBERATELY (D124): its own
+      // capability identifiers are disjoint from these, and its one
+      // 'Not now' is the notifications lane's truthful deferral, not
+      // this lane's decline word.
+      'capabilityBlockReason',
+      'demandConflicts',
+      'capability/directory',
     ];
     // Both quote forms of the button literal (round 10, I6 condition 2).
     const LITERALS = ["text: 'Not now'", 'text: "Not now"'];

@@ -2309,7 +2309,10 @@ const styles = StyleSheet.create({
   onwardLinksRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   onwardLink: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    alignSelf: 'flex-start', gap: spacing.xs, minHeight: 40,
+    // Round 12 (R12-5, J2): 48 effective (spacing.xxxl), per
+    // docs/rules/styling.md - the old 40 was both under the minimum and
+    // an off-scale literal. Shared by three onward links on this screen.
+    alignSelf: 'flex-start', gap: spacing.xs, minHeight: spacing.xxxl,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
     borderRadius: radius.full, borderWidth: 1, borderColor: colors.border,
     backgroundColor: colors.surface2,

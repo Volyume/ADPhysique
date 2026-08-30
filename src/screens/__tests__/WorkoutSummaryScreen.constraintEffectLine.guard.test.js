@@ -201,4 +201,16 @@ describe('the render: one quiet line, secondary text style, independent of readO
     expect(SRC).toContain("onPress={() => navigation.navigate('HowYouTrain')}");
     expect(SRC).toContain('accessibilityLabel="How you train"');
   });
+
+  test('R12-5 (J2): the onward link meets the 48dp minimum, on the scale, never an off-scale literal', () => {
+    // The campaign's only touch-target pin covered one style on one
+    // screen; this link into the capability lane shipped at 40dp with
+    // no hitSlop - under docs/rules/styling.md's minimum for exactly
+    // this app's stated use (gym, sweaty hands).
+    const site = SRC.indexOf('onwardLink: {');
+    expect(site).toBeGreaterThan(-1);
+    const block = SRC.slice(site, SRC.indexOf('},', site));
+    expect(block).toContain('minHeight: spacing.xxxl');
+    expect(block).not.toMatch(/minHeight: \d/);
+  });
 });
