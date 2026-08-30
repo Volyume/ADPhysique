@@ -142,11 +142,31 @@ function describeCapabilityConflict(capabilityState, exercise, reason) {
   const first = conflicts.find(c => !c.unknown);
   if (first?.ruleKind === 'demand') {
     // A sided rule says which side it is about, so the reason is never
-    // vaguer than what the user actually told Volyume.
+    // vaguer than what the user actually told Volyume. Round 8 (R8-4):
+    // branched on the movement fact and the rule union, because under
+    // the round-7 union a sided conflict on a ONE-SIDE-LOADABLE
+    // movement is reachable exactly when its axis no longer carves -
+    // and the old single sentence then stated a wrong mechanical fact
+    // ("cannot be done a side at a time" about a movement that can)
+    // while naming only one of the user's two rules.
     const sided = rulePhrase(first);
-    return first.laterality && sided
-      ? `You've said ${sided} does not work, and this one cannot be done a side at a time`
-      : `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you keep out under how you train`;
+    if (first.laterality && sided) {
+      const oneSideLoadable = exercise?.unilateralLoadable === true || exercise?.unilateralLoadable === 1;
+      if (!oneSideLoadable) {
+        return `You've said ${sided} does not work, and this one cannot be done a side at a time`;
+      }
+      // One-side-loadable yet still definitely conflicted: the axis no
+      // longer carves. Both sides restricted names both facts; a sided
+      // rule beside an unsided one falls to the unsided wording, which
+      // already covers the whole axis.
+      const bothSides = (capabilityState.restrictions ?? []).some((r) => (
+        r.ruleKind === 'demand' && r.ruleValue === first.ruleValue
+        && r.laterality && r.laterality !== first.laterality
+      ));
+      const base = rulePhrase({ ...first, laterality: null });
+      if (bothSides && base) return `You've said ${base} does not work on either side`;
+    }
+    return `Involves ${demandLabel(first.ruleValue).toLowerCase()}, which you keep out under how you train`;
   }
   // CC33 D112 R6 (closes audit T2-33/T1-19): the capability lane never
   // borrows the preference lane's "set aside" (RoutineDetailScreen's own

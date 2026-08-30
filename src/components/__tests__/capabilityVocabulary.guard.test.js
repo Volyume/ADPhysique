@@ -66,3 +66,27 @@ describe('T1-19: ExerciseConflictSheet footnote is capability-lane vocabulary', 
     expect(block).toMatch(/It stays out of suggestions until you allow it again under How you train\./);
   });
 });
+
+describe('R8-4 (round 8): the sided reason states only true mechanical facts under the union', () => {
+  const site = PICKER.indexOf('function describeCapabilityConflict(');
+  const body = PICKER.slice(site, PICKER.indexOf('\n}', site));
+
+  test('"cannot be done a side at a time" is said ONLY of movements that cannot', () => {
+    // Under the round-7 union a sided definite conflict on a
+    // one-side-loadable movement is reachable (both sides restricted,
+    // or a sided rule beside an unsided one). The old single sentence
+    // then stated a wrong mechanical fact and named only one of the
+    // user's two rules.
+    expect(body).toContain("const oneSideLoadable = exercise?.unilateralLoadable === true || exercise?.unilateralLoadable === 1;");
+    expect(body).toContain('if (!oneSideLoadable) {');
+    expect(body).toContain('does not work, and this one cannot be done a side at a time');
+  });
+
+  test('both sides restricted names both facts, without inventing a side', () => {
+    expect(body).toContain("r.laterality && r.laterality !== first.laterality");
+    expect(body).toContain('does not work on either side');
+    // The unsided-rule-covers-the-axis case falls to the unsided
+    // wording rather than a side-specific claim.
+    expect(body).toContain('which you keep out under how you train');
+  });
+});
