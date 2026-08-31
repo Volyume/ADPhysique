@@ -209,7 +209,10 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
+    // borderSubtle, matching Card's own edge: a meal card is a content
+    // container, and 5-8 of them stack down the diary. On `border` each one
+    // carried a brighter outline than every real Card beside it.
+    borderWidth: 1, borderColor: colors.borderSubtle,
     overflow: 'hidden',
     marginBottom: spacing.lg,
   },
@@ -312,7 +315,7 @@ const styles = StyleSheet.create({
 // actionHubDivided/entryRowOuter/entryFlex have no colour tokens.
 function buildLiveStyles(t) {
   return {
-    card: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    card: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
     mealName: { color: t.colors.textPrimary },
     subtotal: { color: t.colors.textMuted },
     usualChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },

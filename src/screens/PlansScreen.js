@@ -2146,7 +2146,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   folderBlock: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radius.lg,
     backgroundColor: colors.surface, overflow: 'hidden',
   },
   folderHeader: {
@@ -2255,7 +2255,7 @@ const styles = StyleSheet.create({
   // archived list; folder bodies reuse the existing folderBlock/folderBody
   // pair instead, since they already carry a header.
   compactListBody: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderSubtle, borderRadius: radius.lg,
     backgroundColor: colors.surface, overflow: 'hidden',
   },
   compactRow: {
@@ -2430,7 +2430,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     sectionSubtitle: { ...t.type.caption, color: t.colors.textMuted },
-    folderBlock: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    folderBlock: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
     folderName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     folderCount: { ...t.type.num('caption'), color: t.colors.textMuted },
     folderBody: { borderTopColor: t.colors.border },
@@ -2465,7 +2465,7 @@ function buildLiveStyles(t) {
     // its own useTheme() (sibling scope, matching NavRow's precedent), so
     // its tokens live here once and both callers (this screen and the row
     // component) read the identical entries.
-    compactListBody: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    compactListBody: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
     compactRow: { borderBottomColor: t.colors.borderSubtle },
     compactRowName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     compactRowNameArchived: { color: t.colors.textSecondary },
