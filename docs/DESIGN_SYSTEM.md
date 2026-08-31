@@ -47,6 +47,26 @@ calm, dense, exact tool — not Headspace/Calm softness or gym-bro hype.
 
 ---
 
+## Platform
+
+**Android is the primary platform.** Volyume ships live on Google Play; iOS
+goes out via TestFlight. One React Native codebase renders one design language
+on both, so this is not an "adaptive" product that changes its idiom per OS.
+
+Material 3 is therefore the structural rulebook: bottom navigation bar for
+3-5 destinations, system Back always works, edge-to-edge with window insets,
+tonal elevation rather than arbitrary shadows, and snackbar-shaped transient
+feedback. Brand expresses through the tokens below, inside that structure.
+iOS still owes its own hardware the OS guarantees on that device: safe-area
+insets, Reduce Motion, and the edge-swipe back gesture.
+
+Known gaps against the Material reference, recorded not fixed: touch targets
+(see Button style below), and expanded-width layout - the app is locked to
+portrait and ships the phone bottom bar unchanged on a tablet, with no
+navigation rail or width-class branch anywhere in the navigator.
+
+---
+
 ## Colour Palette
 
 All values are the live `theme.js` tokens. **Never hardcode hex in screen or
@@ -66,8 +86,15 @@ pull so layers read as distinct depths and tie subtly to the amber brand.
 | `surfaceElevated` | `#222220` | a card nested inside another card |
 | `surface2` | `#2A2A27` | inputs, chips, secondary cards |
 | `surface3` | `#343431` | skeletons, fills, highest |
-| `border` | `#6E6E6E` | 1px card edges / dividers (WCAG 1.4.11) |
-| `borderSubtle` | `#2E2E2C` | hairline dividers *inside* a card (low-contrast) |
+| `border` | `#6E6E6E` | the edge of a CONTROL that needs an identifiable boundary (WCAG 1.4.11): buttons, inputs, steppers, chips, selectable options |
+| `borderSubtle` | `#2E2E2C` | every card/container edge, and hairline dividers inside one |
+
+**Card edges use `borderSubtle`, not `border`.** This table previously said
+the opposite, and the app followed it: sections, list rows and hand-rolled
+cards drew bright grey outlines that read as a wireframe. `border` is the
+WCAG 1.4.11 edge for a control the user must be able to identify; a container
+is identified by its contents. `Card` has always used `borderSubtle`; the rest
+of the app was aligned to it in the premium UI pass.
 
 ### Accent — amber
 
@@ -83,7 +110,7 @@ pull so layers read as distinct depths and tie subtly to the amber brand.
 | Token | Value | Use |
 |---|---|---|
 | `success` | `#4CAF50` | completion, PRs, optimal volume, Finish Workout |
-| `warning` | `#FFC107` | near-MRV, caution |
+| `warning` | `#F0E442` | near-MRV, caution (Okabe-Ito yellow; retuned off the amber axis by COMP-027 so a 'watch' mark and an amber chip stay distinguishable) |
 | `error` | `#F44336` | over-MRV, destructive, crash |
 
 Each has a soft `…Bg` fill and a colour-blind-safe swap (`applyAccessibility`).
@@ -94,7 +121,7 @@ Each has a soft `…Bg` fill and a colour-blind-safe swap (`applyAccessibility`)
 |---|---|---|
 | `textPrimary` | `#FFFFFF` | headlines, data values |
 | `textSecondary` | `#9E9E9E` | labels, metadata |
-| `textMuted` | `#9B9B9B` | placeholders, timestamps |
+| `textMuted` | `#9C9C9C` | placeholders, timestamps |
 | `textDisabled` | `#727272` | disabled only |
 
 ### Accent discipline
@@ -112,10 +139,13 @@ gradient as the premium-dark position.
 
 ### Dark mode
 
-Dark-only is a deliberate decision (Whoop/Oura/Robinhood-after-hours
-precedent; functional for early-morning / gym-lighting use), not an omission.
-No light theme is planned. The accessibility contrast / colour-blind /
-larger-text swaps stay.
+Dark is the default and the designed-for scheme (Whoop/Oura/Robinhood-after-
+hours precedent; functional for early-morning / gym-lighting use). A full
+light palette now ships alongside it (COMP-029, `lightColors` in `theme.js`),
+selectable as dark / light / system; its hues still await the founder's
+on-device brand sign-off. The accessibility contrast / colour-blind /
+larger-text swaps apply to both. Dark carries elevation through the surface
+ladder; light uses shadow as the primary elevation cue.
 
 ---
 
@@ -123,32 +153,56 @@ larger-text swaps stay.
 
 ### Approach
 
-Platform system font (San Francisco on iOS, Roboto on Android). SF Pro does
-optical tracking automatically, which is why a custom font is *not* bundled
-at this stage. A custom face (Inter) is a deferred, optional upgrade; the
-type *ramp* below is what matters and applies regardless.
+**Inter is bundled and shipped** (`assets/fonts`, registered face-by-face in
+`src/styles/fonts.js`), with InterDisplay on the two largest roles. This
+section previously said the app used the platform system font and called Inter
+"a deferred, optional upgrade"; that stopped being true when the faces landed.
 
-**Use the `type` roles. Never hand-assemble `{ fontSize, fontWeight }`.** A CI
-guard flags raw `fontSize:`/`fontWeight:` literals in screens/components.
+Because each face is registered under its own family name, **`fontWeight`
+alone does not select a heavier face.** A style that sets `fontWeight` without
+naming a `fontFamily` asks a single-face family for a weight it does not
+contain, and the renderer either ignores the request or synthesises a smeared
+faux bold. 347 style blocks did exactly that before the premium UI pass.
+
+**Use the `type` roles. Never hand-assemble `{ fontSize, fontWeight }`.** When
+a role does not carry the weight you need, use the weight axis
+**`type.w(role, weight)`**, which returns that role with the matching Inter
+face AND the numeric weight set. It composes with `num()`:
+`type.w(type.num('h2'), 'bold')`. The role table deliberately carries one
+weight per size; `w()` is how you leave it.
+
+A CI guard flags raw `fontSize:`/`fontWeight:` literals in screens and
+components, and a second guard fails on any `type.*` role that does not exist
+(a phantom role spreads as `undefined` and silently drops family, size and
+line height).
 
 ### The type scale (`type.*` roles in `theme.js`)
 
-| Role | Size | Weight | Tracking | Line-height | Use |
-|---|---|---|---|---|---|
-| `display` | 40 | 800 | −0.5 | 1.2 | the one hero number on a screen |
-| `h1` | 32 | 700 | −0.5 | 1.2 | screen title when it's the focus |
-| `h2` | 24 | 700 | −0.25 | 1.35 | section headers |
-| `h3` | 20 | 600 | −0.25 | 1.35 | card titles |
-| `title` | 17 | 600 | 0 | 1.35 | list-row titles, exercise names |
-| `body` | 16 | 400 | 0 | 1.5 | running copy |
-| `bodyStrong` | 16 | 600 | 0 | 1.5 | emphasised body, primary data labels |
-| `label` | 13 | 500 | +0.2 | 1.35 | metadata, captions-with-weight |
-| `caption` | 11 | 400 | +0.4 | 1.35 | timestamps, finest print |
-| `captionStrong` | 11 | 600 | +0.4 | 1.35 | emphasised micro-label: form-field labels, chip/badge text (design audit 03 coverage AC-5) |
+Tracking is **0 on every role** except `overline` (+0.5) and the `wordmark`
+(+2). The negative display tracking this table used to specify was removed by
+the 2026-07-09 decision after it read as blocky on device; do not reintroduce
+it without a device walk.
 
-Rules: one `display` element per screen, max. Negative tracking on display/
-headings only; never on body or smaller; positive on labels/captions.
-Emphasis by weight and colour, never italic or underline.
+| Role | Size | Face | Line-height | Use |
+|---|---|---|---|---|
+| `display` | 40 | InterDisplay-Bold | 1.2 | the one hero number on a screen |
+| `h1` | 32 | InterDisplay-Bold | 1.2 | screen title (the five tab roots use it) |
+| `h2` | 24 | SemiBold | 1.35 | section headers |
+| `h3` | 20 | Medium | 1.35 | card titles |
+| `title` | 17 | Medium | 1.35 | list-row titles, exercise names |
+| `body` | 16 | Regular | 1.5 | running copy |
+| `bodyStrong` | 16 | Medium | 1.5 | emphasised body, primary data labels |
+| `bodySm` | 13 | Regular | 1.5 | small multi-line body copy |
+| `label` | 13 | Medium | 1.35 | metadata, captions-with-weight |
+| `overline` | 11 | Medium | 1.35 | uppercase eyebrow/section labels (the one tracked role) |
+| `caption` | 11 | Regular | 1.35 | timestamps, finest print |
+| `captionTight` | 11 | Regular | 1.45 | two-line caption copy |
+| `captionStrong` | 11 | SemiBold | 1.35 | emphasised micro-label: form-field labels, chip/badge text |
+| `micro` | 10 | Regular | 1.35 | dense chart-axis and data micro-labels |
+
+Rules: one `display` element per screen, max. Emphasis by weight and colour,
+never italic or underline. Every size above is multiplied by 1.2 under the
+larger-text accessibility setting, so a layout must survive that.
 
 ### Numbers are content — use tabular figures
 
@@ -160,13 +214,16 @@ typography rule. A lifter glancing between the bar and their phone must read
 
 ### Weight discipline
 
-| Weight | Usage |
+Named by Inter face, because the face is what actually renders. The numeric
+weight is set alongside it by `type.w()` for accessibility services.
+
+| Face | Usage |
 |---|---|
-| `900 / black` | the one hero number only |
-| `700 / bold` | section headers, button labels, exercise names |
-| `600 / semibold` | card titles, primary data points |
-| `500 / medium` | secondary labels, navigation |
-| `400 / regular` | body copy, metadata |
+| `heavy` (ExtraBold) | the one hero number only |
+| `bold` | section headers, button labels, exercise names |
+| `semibold` | card titles, primary data points |
+| `medium` | secondary labels, navigation |
+| `regular` | body copy, metadata |
 
 ---
 
@@ -175,8 +232,9 @@ typography rule. A lifter glancing between the bar and their phone must read
 - Use the `Card` primitive. Don't hand-roll `backgroundColor: colors.surface`
   blocks.
 - Background `surface`; nested card `elevated` (`surfaceElevated`).
-- Border `1px` `border`; in-card dividers `borderSubtle`.
-- Radius `radius.lg` (14) for cards; tiers below.
+- Border `1px` `borderSubtle` (the card edge AND in-card dividers). `border`
+  is for controls, not containers.
+- Radius `radius.lg` (16) for cards; tiers below.
 - **Depth from the tonal ladder, not shadows.** Only floating, temporary,
   above-everything surfaces (Toast, FAB, menus) carry a shadow, and it must
   come from the `shadow` token — no inline `'#000'` shadow blocks.
@@ -194,7 +252,7 @@ typography rule. A lifter glancing between the bar and their phone must read
 | `xs` | 4 | chart dots, tiny chips, micro-UI |
 | `sm` | 6 | tags, small controls |
 | `md` | 10 | inputs, search, chips, toast |
-| `lg` | 14 | cards, buttons |
+| `lg` | 16 | cards, buttons |
 | `xl` | 20 | modal / sheet top corners only |
 | `full` | 999 | pills |
 | `circle(size)` | helper | avatars, FABs, round icon buttons |
@@ -215,7 +273,18 @@ Use the `Button` primitive (one press model, one disabled/loading treatment).
 
 **COMPLETE SET is always the largest button on the active-workout screen**,
 with the deepest press and a `setLogged()` haptic. All other buttons are
-visually subordinate. Minimum tap target 48px.
+visually subordinate.
+
+**Touch targets: OPEN CONFLICT, needs a founder ruling.** This document says
+48px, which is also Material 3's minimum and the right number for an
+Android-first product. `src/styles/layout.js` defines BOTH `touchTarget.minimum:
+44` (the iOS figure) and `touchTarget.android: 48`. Every consumer uses the 44;
+`touchTarget.android` has zero references in app code and is asserted only by
+its own test. A further 78 sites hard-code `44` rather than reading the token
+at all, so moving the app to 48 is currently a 78-site edit instead of a
+one-line change. Consolidating those onto the token is a zero-visual-change
+refactor; raising 44 to 48 is a real density change across every screen and is
+the founder's call, not a sweep. Recorded rather than silently resolved.
 
 ---
 
