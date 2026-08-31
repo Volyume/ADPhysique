@@ -5936,7 +5936,7 @@ const styles = StyleSheet.create({
   swapItemReason: { ...type.caption, color: colors.textMuted, lineHeight: 16 },
   // C9: the personal reason, in the app's accent, above the structural one.
   swapItemTag: { ...type.caption, color: colors.primary, lineHeight: 16 },
-  swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, marginTop: spacing.md, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface },
+  swapBrowseBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, marginTop: spacing.md, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.sm, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle, backgroundColor: colors.surface },
   swapBrowseText: { ...type.label, color: colors.textPrimary },
   swapEmpty: { alignItems: 'center', paddingVertical: spacing.xl, gap: spacing.xs },
   swapEmptyTitle: { ...type.label, color: colors.textPrimary },
@@ -5962,6 +5962,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
     padding: spacing.xs,
     backgroundColor: colors.surface2,
+    // radius.md, not lg: this is the note pencil, an icon-only corner button
+    // sized by its 4px padding. It belongs to the logger's icon-button family
+    // (pinned in loggerHeaderCohesion.guard), and at ~26dp the card radius
+    // would read as a circle.
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -6011,7 +6015,7 @@ const styles = StyleSheet.create({
   // amber button with a clear label rather than a tinted outline. Dark label
   // for contrast on amber (white on amber fails WCAG). Warm-ups stay visually
   // secondary via the tinted-outline override below.
-  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.xs, backgroundColor: colors.primaryFill },
+  completeBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, paddingVertical: spacing.xs, backgroundColor: colors.primaryFill },
   btnDisabled: { opacity: 0.5 },
   completeBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   completeBtnWarmup: { backgroundColor: colors.warningBg || colors.surface, borderWidth: 1, borderColor: colors.warning },
@@ -6047,7 +6051,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.edge),
@@ -6082,7 +6086,7 @@ const styles = StyleSheet.create({
   },
   clusterAddBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
-    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.md,
+    borderWidth: 1, borderColor: withAlpha(colors.primary, 0.502), borderRadius: radius.lg,
     paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
     // Explicit transparent: the Button `tertiary` variant this now renders
     // as (components/Button.js) fills with colors.primaryBg by default;
@@ -6244,10 +6248,10 @@ const styles = StyleSheet.create({
   supStepNum: { color: colors.primary, fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, minWidth: 14 },
   supStepText: { ...type.bodySm, color: colors.textPrimary, flex: 1 },
   supTip: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xs },
-  supPrimaryBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
+  supPrimaryBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
   supPrimaryBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   supSecondaryRow: { flexDirection: 'row', gap: spacing.sm },
-  supSecondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
+  supSecondaryBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: 'transparent' },
   supSecondaryBtnText: { ...type.label, color: colors.textSecondary },
 
   staleOverlay: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'center', alignItems: 'center', padding: spacing.lg },
@@ -6264,7 +6268,7 @@ const styles = StyleSheet.create({
   discardSheet: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, width: '100%', maxHeight: '88%', gap: spacing.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   discardTitle: { ...type.h3, color: colors.textPrimary, textAlign: 'center' },
   discardBody: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center', marginBottom: spacing.xs },
-  keepTrainingBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
+  keepTrainingBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.lg, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center' },
   keepTrainingBtnText: { ...type.bodyStrong, color: colors.onPrimary },
   discardConfirmBtn: { alignItems: 'center', paddingVertical: spacing.md },
   discardConfirmBtnText: { ...type.label, color: colors.error },

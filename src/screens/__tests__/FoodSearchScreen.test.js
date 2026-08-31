@@ -235,7 +235,13 @@ describe('FoodSearchScreen selected plate sheet accessibility', () => {
     // CP-10 batch E (2026-07-10): live-themed, so style now carries the
     // style-array form [styles.footerBtn, live.footerBtn]. Same pin, new shape.
     expect(SCREEN_SOURCE).toMatch(/style=\{\[styles\.footerBtn, live\.footerBtn\]\}/);
-    expect(SCREEN_SOURCE).toMatch(/footerBtn: \{[\s\S]*borderRadius: radius\.md[\s\S]*backgroundColor: colors\.surface2/);
+    // footerBtn is a style override ON the shared <Button variant="secondary">,
+    // which draws radius.lg. Pinning md here forced the primitive to a radius
+    // it does not use anywhere else, so a small Button rendered a different
+    // corner depending on whether the screen overrode it. The rule this test
+    // states -- a bordered button surface, not an orange text link -- is
+    // unchanged; only the radius now agrees with the component.
+    expect(SCREEN_SOURCE).toMatch(/footerBtn: \{[\s\S]*borderRadius: radius\.lg[\s\S]*backgroundColor: colors\.surface2/);
     expect(SCREEN_SOURCE).toMatch(/footerBtnText: \{ \.\.\.type\.bodyStrong, color: colors\.textPrimary \}/);
   });
 });

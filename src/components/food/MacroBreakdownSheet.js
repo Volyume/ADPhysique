@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   totalLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   empty: { color: colors.textSecondary, fontSize: fontSize.sm, paddingVertical: spacing.lg, textAlign: 'center' },
   doneBtn: {
-    marginTop: spacing.lg, minHeight: 48, borderRadius: radius.md,
+    marginTop: spacing.lg, minHeight: 48, borderRadius: radius.lg,
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
   doneText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },

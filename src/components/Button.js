@@ -40,6 +40,7 @@ import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import { spacing, radius, motion, withAlpha, alpha, lineHeight } from '../styles/theme';
 import { fontFamily } from '../styles/fontFamily';
+import { touchTarget } from '../styles/layout';
 
 // CP-10 stage 1: VARIANTS (colour) and SIZES (fontSize) were module-scope
 // consts baked at import time from the static `colors`/`fontSize` singletons
@@ -124,6 +125,21 @@ export default function Button({
     disabled: isDisabled,
     busy: phase === 'loading',
   };
+
+  // Touch-target floor. A size="sm" Button draws at roughly
+  // spacing.sm*2 + a 13px line -- about 34dp, well under the platform
+  // minimum, and every compact CTA in the app is one of these. Growing the
+  // box would throw away the reason `sm` exists, so the shortfall is padded
+  // onto the TOUCH area instead: hitSlop is what the minimum actually
+  // governs. Horizontal padding is usually generous already, so only the
+  // vertical shortfall is made up. A caller that passes its own hitSlop
+  // keeps it untouched.
+  const drawnHeight = (s.pv * 2) + Math.round(s.font * lineHeight.snug);
+  const shortfall = Math.max(0, touchTarget.minimum - drawnHeight);
+  const autoHitSlop = shortfall > 0
+    ? { top: Math.ceil(shortfall / 2), bottom: Math.ceil(shortfall / 2), left: 0, right: 0 }
+    : undefined;
+  const effectiveHitSlop = hitSlop ?? autoHitSlop;
 
   const reduceMotion = useAppStore(st => st.accessibility?.reduceMotion);
 
@@ -229,7 +245,7 @@ export default function Button({
       accessibilityLabel={accessibilityLabel || title}
       accessibilityState={mergedAccessibilityState}
       testID={testID}
-      hitSlop={hitSlop}
+      hitSlop={effectiveHitSlop}
       style={[
         styles.base,
         {

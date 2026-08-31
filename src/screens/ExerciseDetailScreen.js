@@ -716,19 +716,29 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                     PR definition; the celebration toast stays clean. */}
                 <InfoTooltip text={GLOSSARY.pr} size={12} />
               </View>
+              {/* The headline record is the screen's hero number. It used to
+                  sit as one of up to three flex:1 cells in the row below,
+                  where a ~104dp cell caps the type at `title` (17px) before
+                  "142.5kg x 8" wraps -- so the one figure this whole screen
+                  exists to report rendered at list size. It now takes its own
+                  full-width line at `display`, which DESIGN_SYSTEM.md reserves
+                  for exactly this ("the one hero number on a screen", one per
+                  screen, and this screen had none). The supporting records
+                  keep the compact row underneath, so the hierarchy reads
+                  headline first, detail second. */}
+              {displayPR && (
+                <View style={styles.prHeroStat}>
+                  <Text style={[styles.prHeroValue, live.prHeroValue]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                    {safeToFixed(displayPR.value, 1)}{units}
+                  </Text>
+                  <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>
+                    {displayPR.record_type === '1rm_estimate' ? 'Est. max' : 'Heaviest weight'}
+                  </Text>
+                </View>
+              )}
               <View style={styles.prHighlightRow}>
-                {displayPR && (
-                  <View style={styles.prHighlightStat}>
-                    <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
-                      {safeToFixed(displayPR.value, 1)}{units}
-                    </Text>
-                    <Text style={[styles.prHighlightStatLabel, live.prHighlightStatLabel]}>
-                      {displayPR.record_type === '1rm_estimate' ? 'Est. max' : 'Heaviest weight'}
-                    </Text>
-                  </View>
-                )}
                 {prHeavy && displayPR !== prHeavy && (
-                  <View style={[styles.prHighlightStat, styles.prHighlightStatBordered, live.prHighlightStatBordered]}>
+                  <View style={[styles.prHighlightStat, live.prHighlightStatBordered]}>
                     <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
                       {finiteOr(prHeavy.value, '-')}{units} x {finiteOr(prHeavy.reps, '-')}
                     </Text>
@@ -736,7 +746,7 @@ export default function ExerciseDetailScreen({ navigation, route }) {
                   </View>
                 )}
                 {prReps && (
-                  <View style={[styles.prHighlightStat, styles.prHighlightStatBordered, live.prHighlightStatBordered]}>
+                  <View style={[styles.prHighlightStat, prHeavy && displayPR !== prHeavy ? styles.prHighlightStatBordered : null, live.prHighlightStatBordered]}>
                     <Text style={[styles.prHighlightStatValue, live.prHighlightStatValue]}>
                       {finiteOr(prReps.value, '-')}{units} x {finiteOr(prReps.reps, '-')}
                     </Text>
@@ -1312,6 +1322,12 @@ const styles = StyleSheet.create({
     borderLeftWidth: 1,
     borderLeftColor: colors.border,
   },
+  // The hero record: full width, so it is not capped by a flex:1 cell.
+  prHeroStat: { gap: spacing.xxs, marginBottom: spacing.sm },
+  prHeroValue: {
+    ...type.num('display'),
+    color: colors.primary,
+  },
   prHighlightStatValue: {
     ...type.num('title'),
     color: colors.primary,
@@ -1521,6 +1537,7 @@ function buildLiveStyles(t) {
     subCardName: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     subCardEquipment: { ...t.type.caption, color: t.colors.textMuted },
     prHighlightStatBordered: { borderLeftColor: t.colors.border },
+    prHeroValue: { ...t.type.num('display'), color: t.colors.primary },
     prHighlightStatValue: { ...t.type.num('title'), color: t.colors.primary },
     prHighlightStatLabel: { ...t.type.caption, color: t.colors.textMuted },
     prHighlightDate: { ...t.type.caption, color: t.colors.textMuted },

@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
   },
   cancelText: { color: colors.textSecondary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   logBtn: {
-    flex: 1, paddingVertical: spacing.md, borderRadius: radius.md,
+    flex: 1, paddingVertical: spacing.md, borderRadius: radius.lg,
     backgroundColor: colors.primaryFill, alignItems: 'center',
   },
   logText: { color: colors.onPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },

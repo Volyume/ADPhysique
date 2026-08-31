@@ -180,6 +180,10 @@ export default function MealSection({
           </Text>
           <TouchableOpacity
             style={[styles.markEatenButton, live.markEatenButton]}
+            // Drawn at 36dp to sit inside the planned-meal row without
+            // dominating it; the shortfall against the platform minimum is
+            // padded onto the touch area rather than the box.
+            hitSlop={{ top: 6, bottom: 6, left: 8, right: 8 }}
             onPress={onConfirmPlanned}
             accessibilityRole="button"
             accessibilityLabel={`Mark ${slot.label} as eaten`}
@@ -260,7 +264,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     flex: 1,
     minHeight: touchTarget.minimum,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.surface2,
@@ -297,7 +301,7 @@ const styles = StyleSheet.create({
   },
   plannedRowText: { ...type.bodySm, color: colors.textMuted, flex: 1 },
   markEatenButton: {
-    backgroundColor: colors.primaryFill, borderRadius: radius.md,
+    backgroundColor: colors.primaryFill, borderRadius: radius.lg,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs, minHeight: 36,
     alignItems: 'center', justifyContent: 'center',
   },

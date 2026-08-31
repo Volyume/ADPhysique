@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg, textAlign: 'center',
   },
   applyBtn: {
-    marginTop: spacing.lg, minHeight: 48, borderRadius: radius.md,
+    marginTop: spacing.lg, minHeight: 48, borderRadius: radius.lg,
     backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center',
   },
   applyBtnDisabled: { opacity: 0.5 },

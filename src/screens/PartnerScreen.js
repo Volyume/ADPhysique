@@ -2197,7 +2197,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     borderWidth: 1,
     borderColor: colors.border,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface2,
     paddingVertical: spacing.md,
     minHeight: 48,

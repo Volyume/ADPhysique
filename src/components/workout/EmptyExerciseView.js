@@ -140,7 +140,7 @@ const styles = StyleSheet.create({
   emptyContent: { flex: 1, alignItems: 'center', justifyContent: 'flex-start', paddingTop: spacing.xxxl, gap: spacing.md, paddingHorizontal: spacing.xl },
   emptyTitle: { ...type.title, color: colors.textPrimary, textAlign: 'center' },
   emptySubtitle: { ...type.body, color: colors.textSecondary, textAlign: 'center' },
-  addFirstBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: workoutLoggerSize.addExerciseMinHeight, backgroundColor: colors.primaryFill, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginTop: spacing.sm },
+  addFirstBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs, minHeight: workoutLoggerSize.addExerciseMinHeight, backgroundColor: colors.primaryFill, borderRadius: radius.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, marginTop: spacing.sm },
   addFirstBtnText: { ...type.label, color: colors.onPrimary },
 });
 
