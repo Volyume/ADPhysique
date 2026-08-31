@@ -16,6 +16,7 @@ import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
+import PressableCard from '../components/PressableCard';
 import { ProBadge } from '../components/ProGate';
 import { Skeleton } from '../components/Skeleton';
 import SectionLabel from '../components/SectionLabel';
@@ -95,8 +96,8 @@ function NavRow({ icon, label, sub, onPress, pro }) {
     ? () => { haptics.selection(); onPress(); }
     : onPress;
   return (
-    <Card
-      style={styles.navRow}
+    <PressableCard
+      style={[styles.navRow, live.navRow]}
       onPress={handlePress}
       accessibilityLabel={pro ? `${label}. Part of Pro.` : label}
     >
@@ -111,7 +112,31 @@ function NavRow({ icon, label, sub, onPress, pro }) {
         {sub ? <Text style={[styles.navRowSub, live.navRowSub]}>{sub}</Text> : null}
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-    </Card>
+    </PressableCard>
+  );
+}
+
+/**
+ * NavGroup
+ *
+ * One grouped list for a run of NavRows. Each row used to be its own Card,
+ * so a section of four links rendered as four separate surfaces with four
+ * borders and four sets of padding -- ten near-identical boxes down the
+ * screen, with the athlete's own profile card carrying exactly the same
+ * weight as a link to a settings page. Nothing ranked.
+ *
+ * The rows now share one container and are separated by the hairline the
+ * rest of the app uses, which is the same shape Settings has always had
+ * (SettingsPrimitives' `section` + SettingRow), so the two nav surfaces
+ * finally read as one system. The hero cards above keep the Card treatment
+ * and are once again the only card-weight objects on the screen.
+ */
+function NavGroup({ children }) {
+  const t = useTheme();
+  return (
+    <View style={[styles.navGroup, { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle }]}>
+      {children}
+    </View>
   );
 }
 
@@ -593,6 +618,7 @@ export default function YouScreen({ navigation }) {
         {isPro ? (
           <View style={styles.section}>
             <SectionLabel>This week</SectionLabel>
+            <NavGroup>
             {/* R2-7 (remediation 2026-07-11, founder device walk build 2684):
                 the subtitle is ONE calm line - the readiness title only (a
                 short date fact like "First check-in 19 July", or the open/
@@ -628,10 +654,12 @@ export default function YouScreen({ navigation }) {
               sub="Training, eating, weighing in and the coach's decision, in one place."
               onPress={() => navigation.navigate('WeeklyStory')}
             />
+            </NavGroup>
           </View>
         ) : hasCoachHistory ? (
           <View style={styles.section}>
             <SectionLabel>Coach</SectionLabel>
+            <NavGroup>
             {/* R8 (D68): the "Upgrade to Pro" NavRow is gone - the pitch
                 card above is now the single, tappable upgrade path. Only
                 the history row remains, when there is history to read. */}
@@ -641,12 +669,14 @@ export default function YouScreen({ navigation }) {
               sub="Past Pro decisions stay readable. View-only on the free plan."
               onPress={() => navigation.navigate('CoachHeldHistory')}
             />
+            </NavGroup>
           </View>
         ) : null}
 
         {isPro ? (
           <View style={styles.section}>
             <SectionLabel>Setup</SectionLabel>
+            <NavGroup>
             <NavRow
               icon="flag-outline"
               label="Update goal and phase"
@@ -678,11 +708,13 @@ export default function YouScreen({ navigation }) {
               // stacks, not ProfileTab; cross-tab helper or the tap is dead.
               onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'VolumeHeatmap')}
             />
+            </NavGroup>
           </View>
         ) : null}
 
         <View style={styles.section}>
           <SectionLabel>Support</SectionLabel>
+          <NavGroup>
           <NavRow
             icon="people-outline"
             label="Partners"
@@ -690,6 +722,7 @@ export default function YouScreen({ navigation }) {
             pro={!isPro}
             onPress={openPartners}
           />
+          </NavGroup>
         </View>
 
         {/* W-8 / C5-P7-07 (D96): this section used to sit inside the isPro
@@ -705,6 +738,7 @@ export default function YouScreen({ navigation }) {
             threshold, flag or floor is changed by this move. */}
         <View style={styles.section}>
           <SectionLabel>Safety checks</SectionLabel>
+          <NavGroup>
           <NavRow
             icon="shield-checkmark-outline"
             label="Goal lock"
@@ -719,6 +753,7 @@ export default function YouScreen({ navigation }) {
             sub="Update the questions behind your safety checks."
             onPress={() => navigation.navigate('WellbeingCheck')}
           />
+          </NavGroup>
         </View>
 
       </ScrollView>
@@ -748,7 +783,7 @@ const styles = StyleSheet.create({
   },
   profileInfo: { flex: 1, gap: spacing.xxs },
   profileNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  profileName: { ...type.title, color: colors.textPrimary, flexShrink: 1 },
+  profileName: { ...type.h3, color: colors.textPrimary, flexShrink: 1 },
   profileStat: { ...type.num('caption'), color: colors.textSecondary },
   profileFocus: { ...type.captionTight, color: colors.textMuted },
   loadErrorCard: {
@@ -784,10 +819,20 @@ const styles = StyleSheet.create({
   statusTitle: { ...type.bodyStrong, color: colors.textPrimary },
   statusBody: { ...type.bodySm, color: colors.textSecondary },
   section: { gap: spacing.md },
+  navGroup: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    overflow: 'hidden',
+  },
   navRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
+    padding: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
   },
   navRowIcon: {
     width: 36,
@@ -817,7 +862,7 @@ function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
     settingsGear: { backgroundColor: t.colors.surface2 },
-    profileName: { ...t.type.title, color: t.colors.textPrimary },
+    profileName: { ...t.type.h3, color: t.colors.textPrimary },
     profileStat: { ...t.type.num('caption'), color: t.colors.textSecondary },
     profileFocus: { ...t.type.captionTight, color: t.colors.textMuted },
     loadErrorCard: { borderColor: t.colors.warning },
@@ -827,6 +872,7 @@ function buildLiveStyles(t) {
     statusIcon: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     statusTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     statusBody: { ...t.type.bodySm, color: t.colors.textSecondary },
+    navRow: { borderBottomColor: t.colors.borderSubtle },
     navRowIcon: { backgroundColor: t.colors.primaryBg },
     navRowLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     navRowSub: { ...t.type.caption, color: t.colors.textSecondary },
