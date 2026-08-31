@@ -277,8 +277,6 @@ const styles = StyleSheet.create({
   scanInsightLabel: { ...type.caption, color: colors.textMuted },
   scanInsightValue: { ...type.label, color: colors.textPrimary, lineHeight: 18, flexShrink: 1 },
   scanReasonBox: {
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
     backgroundColor: colors.surface2,
     borderRadius: radius.lg,
     padding: spacing.md,
@@ -308,7 +306,7 @@ function buildLiveStyles(t) {
     scanInsightCell: { backgroundColor: t.colors.surface2 },
     scanInsightLabel: { color: t.colors.textMuted },
     scanInsightValue: { color: t.colors.textPrimary },
-    scanReasonBox: { borderLeftColor: t.colors.primary, backgroundColor: t.colors.surface2 },
+    scanReasonBox: { backgroundColor: t.colors.surface2 },
     scanAssetImage: { backgroundColor: t.colors.surface2 },
     scanAssetPose: { color: t.colors.textMuted },
   };

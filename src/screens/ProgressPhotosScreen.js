@@ -2369,8 +2369,6 @@ const styles = StyleSheet.create({
   // score integer.
   libraryScoreValue: { ...type.label, color: colors.textPrimary, lineHeight: 18 },
   scanReceiptBlock: {
-    borderLeftWidth: 3,
-    borderLeftColor: colors.primary,
     backgroundColor: colors.surface2,
     borderRadius: radius.md,
     padding: spacing.md,
@@ -2611,7 +2609,7 @@ function buildLiveStyles(t) {
     libraryScoreCell: { backgroundColor: t.colors.surface2 },
     libraryScoreLabel: { ...t.type.caption, color: t.colors.textMuted },
     libraryScoreValue: { ...t.type.label, color: t.colors.textPrimary },
-    scanReceiptBlock: { borderLeftColor: t.colors.primary, backgroundColor: t.colors.surface2 },
+    scanReceiptBlock: { backgroundColor: t.colors.surface2 },
     scanReceiptSentence: { ...t.type.bodySm, color: t.colors.textSecondary },
     scanRecalibrationNote: { ...t.type.caption, color: t.colors.textMuted },
     scanCheckInValueLine: { ...t.type.caption, color: t.colors.textMuted },

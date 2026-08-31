@@ -249,7 +249,7 @@ const styles = StyleSheet.create({
   bulletDot: { width: 5, height: 5, borderRadius: 2.5, backgroundColor: colors.primary, marginTop: spacing.sm },
   bulletText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
 
-  keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.primary, marginTop: spacing.xs },
+  keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xs },
   keypointText: { ...type.bodySm, color: colors.textPrimary, flex: 1, fontWeight: fontWeight.medium },
 
   footer: { ...type.captionTight, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
@@ -279,7 +279,7 @@ function buildLiveStyles(t) {
     strong: { color: t.colors.textPrimary },
     bulletDot: { backgroundColor: t.colors.primary },
     bulletText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    keypoint: { backgroundColor: t.colors.primaryBg, borderLeftColor: t.colors.primary },
+    keypoint: { backgroundColor: t.colors.primaryBg },
     keypointText: { ...t.type.bodySm, color: t.colors.textPrimary },
     footer: { ...t.type.captionTight, color: t.colors.textMuted },
   };

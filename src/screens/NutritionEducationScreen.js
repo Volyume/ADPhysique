@@ -299,7 +299,7 @@ const styles = StyleSheet.create({
   body: { ...type.bodySm, color: colors.textPrimary },
   strong: { color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 
-  keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.primary, marginTop: spacing.xs },
+  keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, marginTop: spacing.xs },
   keypointText: { ...type.bodySm, color: colors.textPrimary, flex: 1, fontWeight: fontWeight.medium },
 
   macroLine: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs, borderTopWidth: 1, borderTopColor: colors.borderSubtle, paddingTop: spacing.sm },
@@ -338,7 +338,7 @@ function buildLiveStyles(t) {
     sectionTitle: { ...t.type.title, color: t.colors.textPrimary },
     body: { ...t.type.bodySm, color: t.colors.textPrimary },
     strong: { color: t.colors.textPrimary },
-    keypoint: { backgroundColor: t.colors.primaryBg, borderLeftColor: t.colors.primary },
+    keypoint: { backgroundColor: t.colors.primaryBg },
     keypointText: { ...t.type.bodySm, color: t.colors.textPrimary },
     macroLine: { borderTopColor: t.colors.borderSubtle },
     macroName: { ...t.type.bodyStrong, color: t.colors.textPrimary },
