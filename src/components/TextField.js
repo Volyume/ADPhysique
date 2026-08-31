@@ -4,6 +4,7 @@ import { spacing, radius, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { InsideBottomSheetContext } from './BottomSheet';
+import { touchTarget } from '../styles/layout';
 
 // CP-10 stage 1: SURFACES (colour) and SIZES (fontSize) were module-scope
 // consts baked at import time (class 2, CP-10 plan section 1.4). Built
@@ -251,7 +252,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   keyboardDoneBtn: {
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',

@@ -8,6 +8,7 @@ import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
 import { SwipeableEntryRow } from './EntryRow';
 import AnimatedRow from '../AnimatedRow';
+import { touchTarget } from '../../styles/layout';
 
 // One meal as a single contained card (diary-tab redesign 2026-06-01). Replaces
 // the old containerless section (a bare uppercase label over a dashed "Add
@@ -258,7 +259,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.xs,
     flex: 1,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,

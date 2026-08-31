@@ -21,6 +21,7 @@ import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
 import ModalHeader from './ModalHeader';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
+import { touchTarget } from '../styles/layout';
 import {
   buildTrendPoints,
   trendLadderLabel,
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     paddingVertical: spacing.xs,
   },
   marker: { width: 14, height: 14, borderRadius: 7 },

@@ -67,6 +67,7 @@ import { deriveWeightTrend } from '../lib/weightTrend';
 import { validateBodyMetricForm } from '../lib/bodyMetricValidate';
 import { mergeMorningWeightsIntoHistory } from '../lib/bodyMetricsHistoryMerge';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
+import { touchTarget } from '../styles/layout';
 
 const PHYSIQUE_PREF_KEY = '@volyume_physique_tracking_enabled';
 
@@ -1868,7 +1869,7 @@ const styles = StyleSheet.create({
   formSplitFieldContainer: { flex: 1 },
   formField: {
     borderRadius: radius.sm,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
   },
   formInputText: {
     paddingHorizontal: spacing.md,

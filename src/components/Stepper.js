@@ -15,6 +15,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
 import { colors, fontWeight, spacing, radius, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { touchTarget } from '../styles/layout';
 
 // AX-15: compact button is 30x34dp. 8dp uniform hit slop on every edge
 // brings the effective touch target to 46x50dp (>= the 44x44 minimum in
@@ -160,8 +161,8 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   btn: {
-    width: 44,
-    height: 44,
+    width: touchTarget.minimum,
+    height: touchTarget.minimum,
     borderRadius: radius.md,
     backgroundColor: colors.surface2,
     borderWidth: 1,

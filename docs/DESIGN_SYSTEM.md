@@ -60,10 +60,10 @@ feedback. Brand expresses through the tokens below, inside that structure.
 iOS still owes its own hardware the OS guarantees on that device: safe-area
 insets, Reduce Motion, and the edge-swipe back gesture.
 
-Known gaps against the Material reference, recorded not fixed: touch targets
-(see Button style below), and expanded-width layout - the app is locked to
-portrait and ships the phone bottom bar unchanged on a tablet, with no
-navigation rail or width-class branch anywhere in the navigator.
+Known gap against the Material reference, recorded not fixed: expanded-width
+layout. The app is locked to portrait and ships the phone bottom bar unchanged
+on a tablet, with no navigation rail or width-class branch anywhere in the
+navigator. (Touch targets were the other gap; resolved, see Button style.)
 
 ---
 
@@ -275,16 +275,23 @@ Use the `Button` primitive (one press model, one disabled/loading treatment).
 with the deepest press and a `setLogged()` haptic. All other buttons are
 visually subordinate.
 
-**Touch targets: OPEN CONFLICT, needs a founder ruling.** This document says
-48px, which is also Material 3's minimum and the right number for an
-Android-first product. `src/styles/layout.js` defines BOTH `touchTarget.minimum:
-44` (the iOS figure) and `touchTarget.android: 48`. Every consumer uses the 44;
-`touchTarget.android` has zero references in app code and is asserted only by
-its own test. A further 78 sites hard-code `44` rather than reading the token
-at all, so moving the app to 48 is currently a 78-site edit instead of a
-one-line change. Consolidating those onto the token is a zero-visual-change
-refactor; raising 44 to 48 is a real density change across every screen and is
-the founder's call, not a sweep. Recorded rather than silently resolved.
+**Minimum touch target: 48dp**, from `touchTarget.minimum` in
+`src/styles/layout.js`. Material 3's floor, and it also clears iOS's 44pt, so
+one number serves both platforms; `touchTarget.android` is kept as an explicit
+alias and a test asserts the two agree, so the old two-number split cannot
+return. Read the token; never hard-code the number.
+
+Resolved 2026-08-31. It had been 44 (the iOS figure) with `android: 48`
+unreferenced by any app code, and 78 further sites hard-coding 44 outright.
+Those were consolidated onto the token first (zero visual change), then the
+token was raised. Sixteen literal 44s remain and are correct: they are
+decorative dimensions -- a text column, an avatar, an icon circle, a container
+whose children are the real targets -- and must not reference a touch-target
+token.
+
+One deliberate exception stands: `workoutLoggerSize.setEntryStepperButton` is
+36 and is pinned BELOW the minimum with its own recorded reason, reaching a
+full target through `hitSlop` instead.
 
 ---
 

@@ -69,6 +69,7 @@ import ProgressPhotoImage from './ProgressPhotoImage';
 import { colors, spacing, radius, type, motion, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { formatProgressPhotoDay } from '../lib/progressPhotoDates';
+import { touchTarget } from '../styles/layout';
 
 const POSES = [
   { key: 'front', label: 'Front' },
@@ -907,7 +908,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
   },
   keyboardDoneBtn: {
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',

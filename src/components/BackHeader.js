@@ -27,8 +27,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { spacing, hitSlop } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { touchTarget } from '../styles/layout';
 
-const SIDE_WIDTH = 44;
+// The platform minimum touch target, so the back chevron and the balancing
+// spacer track it rather than a magic number (they must match ModalHeader's
+// close target, which reads the same token).
+const SIDE_WIDTH = touchTarget.minimum;
 
 export default function BackHeader({ title, onBack, right }) {
   // CP-10 stage 1: live theme instead of the static colors/type imports —

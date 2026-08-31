@@ -24,9 +24,9 @@ describe('shared consent checkbox rows', () => {
     // its copy are unchanged.
     expect(article9).toMatch(/<Ionicons name="document-text-outline" size=\{16\} color=\{t\.colors\.textSecondary\} \/>/);
     expect(article9).toMatch(/<Ionicons name="help-circle-outline" size=\{16\} color=\{t\.colors\.textSecondary\} \/>/);
-    expect(article9).toMatch(/ctaGhost: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
-    expect(article9).toMatch(/declineLink: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
-    expect(article9).toMatch(/declineAction: \{[\s\S]*minHeight: 44,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(article9).toMatch(/ctaGhost: \{[\s\S]*minHeight: touchTarget\.minimum,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
+    expect(article9).toMatch(/declineLink: \{[\s\S]*minHeight: touchTarget\.minimum,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface/);
+    expect(article9).toMatch(/declineAction: \{[\s\S]*minHeight: touchTarget\.minimum,[\s\S]*backgroundColor: colors\.surface2/);
     expect(article9).not.toMatch(/ctaGhostText: \{[\s\S]*textDecorationLine: 'underline'/);
     expect(article9).not.toMatch(/declineLinkText: \{[\s\S]*textDecorationLine: 'underline'/);
   });

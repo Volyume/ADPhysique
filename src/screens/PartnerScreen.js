@@ -61,6 +61,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 import { planHeadingName } from '../lib/planDisplay';
+import { touchTarget } from '../styles/layout';
 
 // Milestone moments (DESIGN-SPEC B6). C3 delivers src/lib/partners/moments.js
 // in parallel to the exact B6 contract. Consume it defensively so a not-yet-
@@ -1747,7 +1748,7 @@ const styles = StyleSheet.create({
   partnerNameBlock: { flex: 1, minWidth: 0, gap: 2 },
   pairName: { ...type.title, color: colors.textPrimary, flexShrink: 1 },
   pairKicker: { ...type.caption, color: colors.textSecondary },
-  ellipsis: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  ellipsis: { width: touchTarget.minimum, height: touchTarget.minimum, alignItems: 'center', justifyContent: 'center' },
 
   partnerStatusBand: {
     gap: spacing.md,
@@ -1800,7 +1801,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     alignSelf: 'flex-start',
   },
   supportPlanActionText: { ...type.label, color: colors.onPrimary },
@@ -1870,7 +1871,7 @@ const styles = StyleSheet.create({
   },
   reconnectMain: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, flexShrink: 1 },
   reconnectText: { ...type.body, color: colors.textPrimary, flexShrink: 1 },
-  reconnectDismiss: { paddingHorizontal: spacing.xs, minHeight: 44, justifyContent: 'center' },
+  reconnectDismiss: { paddingHorizontal: spacing.xs, minHeight: touchTarget.minimum, justifyContent: 'center' },
   reconnectDismissText: { ...type.label, color: colors.textSecondary },
 
   // D5-B1 acknowledgement rows
@@ -1964,7 +1965,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     borderWidth: 1,
     borderColor: colors.border,
     borderRadius: radius.sm,
@@ -2074,7 +2075,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: withAlpha(colors.error, alpha.edge),
@@ -2117,7 +2118,7 @@ const styles = StyleSheet.create({
   },
   codeField: {
     borderRadius: radius.md,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
   },
   codeInput: {
     paddingHorizontal: spacing.md,
@@ -2127,7 +2128,7 @@ const styles = StyleSheet.create({
   codeBtn: {
     borderRadius: radius.md,
     paddingHorizontal: spacing.lg,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     minWidth: 88,
     flexShrink: 0,
   },

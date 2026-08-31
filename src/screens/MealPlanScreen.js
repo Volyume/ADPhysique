@@ -74,6 +74,7 @@ import { buildGroceryList, formatGroceryListForShare } from '../lib/food/grocery
 import { getMealAdditions, filterAdditionsForProfile, ADDITIONS_INTRO } from '../lib/food/mealAdditions';
 import { formatNumber, formatEnergy, energyUnitLabel } from '../lib/format';
 import { logError } from '../lib/errorLog';
+import { touchTarget } from '../styles/layout';
 
 // The week is scheduled onto real dates when added to the diary (day i ->
 // today + i, see applyPlanWeekToDiary), so the picker labels each day with its
@@ -1909,7 +1910,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexBasis: '30%',
     minWidth: 108,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -1954,7 +1955,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     alignSelf: 'flex-start',
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,

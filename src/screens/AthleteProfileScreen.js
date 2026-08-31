@@ -41,6 +41,7 @@ import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
 import { isApplePrivateRelayEmail } from '../lib/appleIdentity';
+import { touchTarget } from '../styles/layout';
 import {
   formatVolyumeScore,
   progressScanAssessmentForDisplay,
@@ -791,7 +792,7 @@ const styles = StyleSheet.create({
   avatarSheetTitle: { ...type.h3, color: colors.textPrimary },
   avatarSheetIntro: { ...type.bodySm, color: colors.textSecondary },
   avatarClearButton: {
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     justifyContent: 'center',
     borderRadius: radius.full,
     paddingHorizontal: spacing.md,

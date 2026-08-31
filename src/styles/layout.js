@@ -1,5 +1,16 @@
+// The platform minimum touch target. 48dp is Material 3's floor and the
+// figure docs/DESIGN_SYSTEM.md has always mandated; Android is Volyume's
+// primary platform (live on Google Play, iOS via TestFlight from the same
+// codebase). One number serves both, because 48 also clears iOS's 44pt floor
+// -- a target larger than the minimum is never a violation.
+//
+// It was 44, the iOS figure, while `android: 48` sat unreferenced by any app
+// code; 78 further sites hard-coded 44 outright, so this was a 78-site edit
+// rather than a one-line change until those were consolidated onto the token.
+// `android` is kept as an explicit alias so a reader looking for the Material
+// number finds it and sees it agrees.
 export const touchTarget = Object.freeze({
-  minimum: 44,
+  minimum: 48,
   android: 48,
 });
 

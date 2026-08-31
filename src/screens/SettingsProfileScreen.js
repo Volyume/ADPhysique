@@ -18,6 +18,7 @@ import * as haptics from '../lib/haptics';
 import { useToast } from '../components/Toast';
 import { DIETS } from '../lib/food/curatedMeals';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
+import { touchTarget } from '../styles/layout';
 
 // AC-08 (Codex adversarial audit, 2026-07-12): height/age feed BMR and
 // calorie-floor maths same as weight/body fat, but saveHeight/saveAge below
@@ -351,7 +352,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'stretch',
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
   },
   // Diet preference now renders 4 options (finding #2 fix) instead of the
   // 2/3-option rows above that share dietChips/dietChip with equal-width

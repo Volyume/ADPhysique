@@ -26,6 +26,7 @@ import {
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
+import { touchTarget } from '../styles/layout';
 
 function openUrl(url) {
   Linking.openURL(url).catch(() => {});
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   linkButton: {
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,

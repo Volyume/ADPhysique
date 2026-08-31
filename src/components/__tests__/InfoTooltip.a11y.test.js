@@ -24,6 +24,7 @@ import { join } from 'path';
 import { Modal, StyleSheet } from 'react-native';
 import { create, act } from 'react-test-renderer';
 import InfoTooltip from '../InfoTooltip';
+import { touchTarget } from '../../styles/layout';
 
 const EXPLANATION = 'Your maintenance calories, estimated from your logged bodyweight trend.';
 
@@ -80,8 +81,8 @@ describe('InfoTooltip accessibility (AX-01)', () => {
     const closeBtn = findByLabel(tree, 'Close')[0];
     expect(closeBtn.props.accessibilityRole).toBe('button');
     const style = StyleSheet.flatten(closeBtn.props.style);
-    expect(style.width).toBe(44);
-    expect(style.height).toBe(44);
+    expect(style.width).toBe(touchTarget.minimum);
+    expect(style.height).toBe(touchTarget.minimum);
   });
 
   test('the trigger is unchanged: labelled "More information" with a 44dp hit region', async () => {

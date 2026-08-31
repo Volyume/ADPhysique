@@ -16,6 +16,7 @@ import useTheme from '../hooks/useTheme';
 import { selection as hapticSelection } from '../lib/haptics';
 import { CANCEL_REASONS, FREE_TEXT_REASONS, FREE_TEXT_PROMPT } from '../lib/cancelReason';
 import TextField from './TextField';
+import { touchTarget } from '../styles/layout';
 
 export default function ReasonPicker({ reason, text, onSelectReason, onChangeText }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
@@ -84,7 +85,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: radius.md,

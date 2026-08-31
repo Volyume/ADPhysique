@@ -13,6 +13,7 @@ import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 import { ONBOARDING_QUIZ_FIRST } from '../lib/onboarding/quizFlow';
+import { touchTarget } from '../styles/layout';
 
 const HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     alignSelf: 'center',
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     borderRadius: radius.full,
     borderWidth: 1,
     borderColor: colors.border,

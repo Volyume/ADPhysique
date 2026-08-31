@@ -14,6 +14,7 @@ import { getSupabaseClient } from '../lib/supabase';
 import { logError, logInfo } from '../lib/errorLog';
 import { isLocalDbEncrypted } from '../lib/database';
 import { audit } from '../lib/observability';
+import { touchTarget } from '../styles/layout';
 
 /**
  * Article 9 health-data consent screen.
@@ -425,7 +426,7 @@ const styles = StyleSheet.create({
   ctaPrimaryText: { ...type.bodyStrong, color: colors.onPrimary },
   ctaGhost: {
     marginTop: spacing.sm,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -444,7 +445,7 @@ const styles = StyleSheet.create({
   // policy link so it reads as information, not a competing call to action.
   declineLink: {
     marginTop: spacing.xs,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
@@ -475,7 +476,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,

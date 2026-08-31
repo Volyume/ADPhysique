@@ -65,7 +65,7 @@ describe('AthleteProfileScreen physique tile', () => {
     expect(source).toMatch(/styles\.avatarPresetGrid/);
     expect(source).toMatch(/AVATAR_PRESETS\.map\(\(preset\) => \{/);
     expect(source).toMatch(/accessibilityLabel="Clear current avatar"/);
-    expect(source).toMatch(/avatarClearButton: \{[\s\S]*minHeight: 44/);
+    expect(source).toMatch(/avatarClearButton: \{[\s\S]*minHeight: touchTarget\.minimum/);
     expect(source).toMatch(/borderColor: withAlpha\(colors\.error, alpha\.edge\)/);
     expect(source).toMatch(/Photo from phone/);
     expect(source).toMatch(/avatarPresetGrid: \{[\s\S]*justifyContent: 'space-between'/);

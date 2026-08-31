@@ -145,7 +145,10 @@ describe('R2-3 RestTimer row cannot clip a control off the right edge', () => {
     // and the controls keep their full 44dp height inside the strip.
     expect((REST.match(/flexShrink: 0/g) || []).length).toBeGreaterThanOrEqual(2);
     expect(REST).toMatch(/timerReadout: \{\s*flex: 1,\s*minWidth: 0,/);
-    expect((REST.match(/minHeight: 44/g) || []).length).toBeGreaterThanOrEqual(2);
+    // The rule is that both controls carry a fixed thumb-sized height so they
+    // cannot shrink off the edge; the value now comes from touchTarget.minimum
+    // rather than a hard-coded 44.
+    expect((REST.match(/minHeight: touchTarget\.minimum/g) || []).length).toBeGreaterThanOrEqual(2);
   });
 });
 

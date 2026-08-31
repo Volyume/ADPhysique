@@ -28,7 +28,7 @@ describe('Coach and weekly check-in copy polish', () => {
     // below (fastExpandBtn/fastExpandText) is byte-identical to before, so
     // this is a mechanical update, not a weakening.
     expect(weeklyCheckInSource).toContain('<Ionicons name="create-outline" size={16} color={t.colors.textSecondary} />');
-    expect(weeklyCheckInSource).toMatch(/fastExpandBtn: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(weeklyCheckInSource).toMatch(/fastExpandBtn: \{[\s\S]*minHeight: touchTarget\.minimum,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(weeklyCheckInSource).toContain('fastExpandText: { ...type.label, color: colors.textPrimary }');
     expect(weeklyCheckInSource).not.toMatch(/fastExpandText: \{ fontSize: fontSize\.sm,[\s\S]*color: colors\.primary/);
   });

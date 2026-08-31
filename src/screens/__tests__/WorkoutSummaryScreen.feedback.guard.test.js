@@ -10,7 +10,7 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toContain(': Array.from({ length: max }, (_, i) => i + 1);');
     expect(SOURCE).toContain('hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}');
     expect(SOURCE).toMatch(/ratingBtns: \{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing\.xs, minHeight: 44 \}/);
-    expect(SOURCE).toMatch(/ratingBtn: \{\s*width: 44, height: 44, minWidth: 44,/);
+    expect(SOURCE).toMatch(/ratingBtn: \{\s*width: touchTarget\.minimum, height: touchTarget\.minimum, minWidth: touchTarget\.minimum,/);
   });
 
   test('keeps completed-workout footer compact and stable', () => {
@@ -42,8 +42,8 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*flex: 1/);
-    expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*minHeight: 44/);
-    expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*flexShrink: 0,[\s\S]*minWidth: 108,[\s\S]*minHeight: 44/);
+    expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*minHeight: touchTarget\.minimum/);
+    expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*flexShrink: 0,[\s\S]*minWidth: 108,[\s\S]*minHeight: touchTarget\.minimum/);
     expect(SOURCE).not.toMatch(/shareFooterBtn: \{\s*flex: 1,/);
     expect(SOURCE).toMatch(/doneBtnText: \{\s*\.\.\.type\.label,/);
     expect(SOURCE).toMatch(/shareFooterBtnText: \{\s*\.\.\.type\.label,/);

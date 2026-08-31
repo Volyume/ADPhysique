@@ -28,7 +28,7 @@ describe('Eat meal-card polish', () => {
     expect(MEAL_SECTION).toContain('style={[styles.addFoodButton, live.addFoodButton]}');
     expect(MEAL_SECTION).toContain('<Text style={[styles.addFoodText, live.addFoodText]}>Add food</Text>');
     expect(MEAL_SECTION).toContain('<Ionicons name="search-outline" size={16} color={t.colors.textSecondary} />');
-    expect(MEAL_SECTION).toMatch(/addFoodButton: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(MEAL_SECTION).toMatch(/addFoodButton: \{[\s\S]*minHeight: touchTarget\.minimum,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(MEAL_SECTION).toContain('addFoodText: { ...type.label, color: colors.textPrimary }');
     expect(MEAL_SECTION).not.toContain('style={styles.shortcutButton}');
     expect(MEAL_SECTION).not.toContain('accessibilityLabel={`Add saved meal to ${slot.label}`}');

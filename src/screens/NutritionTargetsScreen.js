@@ -45,6 +45,7 @@ import { formatBodyWeight, formatBodyWeightRate } from '../lib/units';
 import HeightFeetInchesField from '../components/HeightFeetInchesField';
 import AgeYearsField from '../components/AgeYearsField';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
+import { touchTarget } from '../styles/layout';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -1838,7 +1839,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
     backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md, minHeight: 44,
+    paddingHorizontal: spacing.md, minHeight: touchTarget.minimum,
   },
   explainerRowText: { flex: 1, minWidth: 0, ...type.bodySm, color: colors.textPrimary },
   explainerSheet: { gap: spacing.md },
@@ -2143,9 +2144,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   mealCountChip: {
-    width: 44,
-    height: 44,
-    borderRadius: circle(44),
+    width: touchTarget.minimum,
+    height: touchTarget.minimum,
+    borderRadius: circle(touchTarget.minimum),
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,

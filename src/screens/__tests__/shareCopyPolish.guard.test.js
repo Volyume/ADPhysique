@@ -73,7 +73,7 @@ describe('share copy polish', () => {
     const upgrade = read('ProUpgradeScreen.js');
     const credits = read('CreditsScreen.js');
 
-    expect(welcome).toMatch(/signInLink: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(welcome).toMatch(/signInLink: \{[\s\S]*minHeight: touchTarget\.minimum,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(welcome).toContain('signInAction: { ...type.label, color: colors.textPrimary }');
     expect(welcome).not.toContain('signInAction: { ...type.label, color: colors.primary }');
 
@@ -97,7 +97,7 @@ describe('share copy polish', () => {
     // trust links now carry the style-array form [styles.linkButton,
     // live.linkButton]. Same pin (three contained links), new shape.
     expect(credits.match(/style=\{\[styles\.linkButton, live\.linkButton\]\}/g)?.length).toBe(3);
-    expect(credits).toMatch(/linkButton: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(credits).toMatch(/linkButton: \{[\s\S]*minHeight: touchTarget\.minimum,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(credits).toContain('link: {\n    ...type.label,\n    color: colors.textPrimary,');
     expect(credits).not.toMatch(/link: \{[\s\S]*color: colors\.primary/);
 

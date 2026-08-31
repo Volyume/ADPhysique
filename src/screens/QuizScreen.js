@@ -20,6 +20,7 @@ import Chip from '../components/Chip';
 import useAppStore from '../store/useAppStore';
 import { PHYSIQUE_GOALS, GOAL_LABELS, TRAINING_PHASES, PHASE_LABELS } from '../lib/coachingGoals';
 import { PHASE_PRE_ACCOUNT } from '../lib/onboarding/quizFlow';
+import { touchTarget } from '../styles/layout';
 
 // Onboarding finish (quiz progress indicator): every sibling wizard in the
 // first-run path shows the user how far through they are (ProOnboarding's
@@ -201,7 +202,7 @@ const styles = StyleSheet.create({
   section: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, marginTop: spacing.lg, marginBottom: spacing.sm },
   q: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.md, marginBottom: spacing.xs },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  quizChip: { minHeight: 44 },
+  quizChip: { minHeight: touchTarget.minimum },
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   cta: { backgroundColor: colors.primaryFill, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
   ctaOff: { opacity: 0.5 },

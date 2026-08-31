@@ -12,6 +12,7 @@ import { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, re
 import { audit } from '../lib/observability';
 import { useToast } from '../components/Toast';
 import { authErrorMessage, isDuplicateSignup, AUTH_COPY } from '../lib/authErrorCopy';
+import { touchTarget } from '../styles/layout';
 
 export default function LoginScreen({ navigation, route }) {
   // Sign in with Apple/Google, PLUS an email + password option (founder
@@ -515,8 +516,8 @@ const styles = StyleSheet.create({
   emailSubmit: { marginTop: spacing.xs },
   emailToggle: { ...type.caption, color: colors.primary, textAlign: 'center', marginTop: spacing.xs },
   eyeBtn: {
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: touchTarget.minimum,
+    minHeight: touchTarget.minimum,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xs,

@@ -129,6 +129,7 @@ import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, letterSpacing, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { touchTarget } from '../styles/layout';
 // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): NO haptics
 // import here. coachOutputApplyMorph.guard.test.js pins this screen as
 // haptics-free by construction (a hold path must never accidentally buzz);
@@ -3370,7 +3371,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingVertical: spacing.xs,
     paddingHorizontal: spacing.md,
-    minHeight: 44, // U-B-1 §5: WCAG/iOS touch target
+    minHeight: touchTarget.minimum, // U-B-1 §5: WCAG/iOS touch target
     marginBottom: spacing.md,
     borderRadius: radius.full,
     backgroundColor: withAlpha(colors.success, alpha.tint),
@@ -3612,7 +3613,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.full,
     paddingHorizontal: spacing.lg,
     minWidth: 84,
-    minHeight: 44, // U-B-1 §5: WCAG/iOS touch target
+    minHeight: touchTarget.minimum, // U-B-1 §5: WCAG/iOS touch target
   },
   applySlot: { alignSelf: 'center' },
   applySlotStart: { alignSelf: 'flex-start', marginTop: spacing.md },

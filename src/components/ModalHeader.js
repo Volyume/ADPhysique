@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { spacing, hitSlop } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { touchTarget } from '../styles/layout';
 
 function CloseButton({ onClose, style, iconColor }) {
   return (
@@ -49,8 +50,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
   side: {
-    width: 44,
-    minHeight: 44,
+    width: touchTarget.minimum,
+    minHeight: touchTarget.minimum,
     alignItems: 'center',
     justifyContent: 'center',
   },

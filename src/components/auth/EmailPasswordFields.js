@@ -3,6 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { spacing } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import TextField from '../TextField';
+import { touchTarget } from '../../styles/layout';
 
 // The email + password inputs shared by the LoginScreen and the Pro onboarding
 // account step. Presentational only: it owns the focus styling and the
@@ -73,8 +74,8 @@ const styles = StyleSheet.create({
   block: { gap: spacing.lg },
   group: { gap: spacing.sm },
   eyeBtn: {
-    minWidth: 44,
-    minHeight: 44,
+    minWidth: touchTarget.minimum,
+    minHeight: touchTarget.minimum,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.xs,

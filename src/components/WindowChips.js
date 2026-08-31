@@ -8,6 +8,7 @@ import { View, StyleSheet } from 'react-native';
 import Chip from './Chip';
 import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { touchTarget } from '../styles/layout';
 
 export default function WindowChips({ windows, selectedKey, onSelect, accessibilityPrefix = 'time window' }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
@@ -43,7 +44,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44, // 44pt touch target
+    minHeight: touchTarget.minimum, // 44pt touch target
   },
   chipText: { ...type.label, color: colors.textSecondary },
   chipTextActive: { color: colors.primary },

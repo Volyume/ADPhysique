@@ -174,7 +174,11 @@ describe('ActiveWorkoutScreen gym-use polish', () => {
 
   test('set entry stays compact while keeping thumb-sized steppers', () => {
     expect(SET_ENTRY).toContain('const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };');
-    expect(SET_ENTRY).toContain("import { workoutLoggerSize } from '../styles/layout';");
+    // Regex, not a literal: the rule is that SetEntry reads its sizes from
+    // the layout tokens, not which tokens it happens to import. `touchTarget`
+    // joined `workoutLoggerSize` there when the hard-coded 44s were
+    // consolidated onto the platform minimum.
+    expect(SET_ENTRY).toMatch(/import \{[^}]*\bworkoutLoggerSize\b[^}]*\} from '\.\.\/styles\/layout';/);
     expect(SET_ENTRY).toMatch(/fieldLabelWrap: \{\s*minWidth: workoutLoggerSize\.setEntryLabelWidth,[\s\S]*flexBasis: workoutLoggerSize\.setEntryLabelWidth,[\s\S]*flexShrink: 0,/);
     expect(SET_ENTRY).toMatch(/stepBtn: \{\s*minWidth: workoutLoggerSize\.setEntryStepperButton,[\s\S]*minHeight: workoutLoggerSize\.setEntryStepperButton,[\s\S]*aspectRatio: 1,/);
     expect(SET_ENTRY).toContain("...type.num('bodyStrong')");

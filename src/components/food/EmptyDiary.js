@@ -13,6 +13,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, radius, type, hitSlop, iconSize } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import Button from '../Button';
+import { touchTarget } from '../../styles/layout';
 
 export const EMPTY_DIARY_COPY = 'Nothing logged for this day yet.';
 
@@ -124,7 +125,7 @@ const styles = StyleSheet.create({
   planCopy: { flex: 1, minWidth: 0, alignItems: 'flex-start' },
   planTitle: { ...type.label, color: colors.textPrimary },
   planText: { ...type.caption, color: colors.textSecondary, marginTop: 2, textAlign: 'left' },
-  actionButton: { minHeight: 44 },
+  actionButton: { minHeight: touchTarget.minimum },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the

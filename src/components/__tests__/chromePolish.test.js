@@ -17,6 +17,7 @@ import BackHeader from '../BackHeader';
 import ModalHeader from '../ModalHeader';
 import EmptyState from '../EmptyState';
 import { colors } from '../../styles/theme';
+import { touchTarget } from '../../styles/layout';
 
 const BUTTON = require('fs').readFileSync(
   require('path').resolve(__dirname, '../Button.js'),
@@ -51,7 +52,7 @@ describe('shared chrome polish', () => {
     const title = tree.root.findAllByType(Text).find((node) => node.props.children === 'Details');
     const header = title.parent;
     expect(flatten(header.props.style).borderBottomColor).toBe(colors.borderSubtle);
-    expect(flatten(tree.root.findByProps({ accessibilityLabel: 'Go back' }).props.style).width).toBe(44);
+    expect(flatten(tree.root.findByProps({ accessibilityLabel: 'Go back' }).props.style).width).toBe(touchTarget.minimum);
   });
 
   test('ModalHeader uses the same quiet divider language', () => {
@@ -60,7 +61,7 @@ describe('shared chrome polish', () => {
     const title = tree.root.findAllByType(Text).find((node) => node.props.children === 'Choose date');
     const header = title.parent;
     expect(flatten(header.props.style).borderBottomColor).toBe(colors.borderSubtle);
-    expect(flatten(tree.root.findByProps({ accessibilityLabel: 'Close' }).props.style).width).toBe(44);
+    expect(flatten(tree.root.findByProps({ accessibilityLabel: 'Close' }).props.style).width).toBe(touchTarget.minimum);
   });
 
   test('EmptyState headline is primary, not muted placeholder text', () => {

@@ -12,6 +12,7 @@ import useAppStore from '../store/useAppStore';
 import { restCountdown, restDone, selection as hapticSelection } from '../lib/haptics';
 import { playRestBeep, preloadRestBeeps } from '../lib/restSound';
 import { clampRestDelta } from '../lib/restTimerMath';
+import { touchTarget } from '../styles/layout';
 // Live lock-screen rest-timer notification (U1 / 13-engagement R3). The old
 // "Set N of M" bug that disabled the workout notification is solved by
 // countProgressSets (workoutHelpers); this surface shows only the rest
@@ -540,7 +541,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     gap: spacing.md,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
   },
   // R2-3 (2026-07-11, founder build 2684): the readout absorbs the row's
   // free space (flex: 1) and may shrink (minWidth: 0) so the ±15 / Skip
@@ -571,15 +572,15 @@ const styles = StyleSheet.create({
   // Quiet text controls (phase 2B): the bordered pill chrome is retired -
   // the strip's affordances are its labels. Full 44dp tap height retained.
   skipBtn: {
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     flexShrink: 0,
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
   skipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   adjBtn: {
-    minHeight: 44,
-    minWidth: 44,
+    minHeight: touchTarget.minimum,
+    minWidth: touchTarget.minimum,
     flexShrink: 0,
     alignItems: 'center',
     justifyContent: 'center',

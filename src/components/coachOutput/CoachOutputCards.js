@@ -5,6 +5,7 @@ import SectionLabel from '../SectionLabel';
 import InfoTooltip from '../InfoTooltip';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, iconSize, alpha, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
+import { touchTarget } from '../../styles/layout';
 
 // L04-11: an optional `tooltip` string reuses the same InfoTooltip + glossary
 // pattern already shipped on 26 other files (BodyMetricsScreen, EngineLog,
@@ -206,7 +207,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     justifyContent: 'space-between',
     borderRadius: radius.md,
     backgroundColor: colors.surface2,

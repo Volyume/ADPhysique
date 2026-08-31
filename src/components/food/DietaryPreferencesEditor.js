@@ -11,6 +11,7 @@ import { DIETS } from '../../lib/food/curatedMeals';
 import { ALLERGENS } from '../../lib/food/foodRoles';
 import { CURATED_FOODS } from '../../lib/food/curatedFoods';
 import * as haptics from '../../lib/haptics';
+import { touchTarget } from '../../styles/layout';
 
 const DIET_LABELS = {
   omnivore: 'Omnivore',
@@ -212,7 +213,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
   },
   chipText: {
     ...type.label,
@@ -233,7 +234,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing.md,
     paddingVertical: spacing.sm,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
   },
   foodName: {
     ...type.body,
@@ -241,7 +242,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   removeChip: {
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     justifyContent: 'center',
   },
   removeChipText: {

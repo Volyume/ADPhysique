@@ -162,7 +162,9 @@ Established requirements, all shipped:
 - Reduce Motion gates every animation.
 - Screen-reader labels, roles and heading semantics on shared chrome.
 
-Open gap, recorded not resolved: **touch targets are sized to iOS's 44pt on
-an Android-first product.** Material 3 and `docs/DESIGN_SYSTEM.md` both
-require 48dp; `touchTarget.android: 48` exists in `src/styles/layout.js` and
-has zero references in app code.
+Touch targets are **48dp**, Material 3's floor, from one token
+(`touchTarget.minimum`). This was 44 -- the iOS figure -- until 2026-08-31.
+
+Open gap: expanded-width layout. Portrait-locked, no window-size classes, and
+the phone bottom navigation bar ships unchanged to tablets. Whether tablets
+are in scope is an unstated product decision.

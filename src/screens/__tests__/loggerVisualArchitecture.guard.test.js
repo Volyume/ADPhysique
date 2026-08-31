@@ -56,7 +56,7 @@ describe('rest is a compact strip docked outside the workspace scroll (failure 2
     expect(REST).not.toMatch(/container: \{[^}]*borderRadius/s);
     expect(REST).not.toMatch(/minHeight: 64/);
     expect(REST).not.toMatch(/fontSize: 26/);
-    expect(REST).toMatch(/row: \{[\s\S]{0,200}?minHeight: 44/);
+    expect(REST).toMatch(/row: \{[\s\S]{0,200}?minHeight: touchTarget\.minimum/);
     // The drain indication survives as a 2dp line.
     expect(REST).toMatch(/drainTrack: \{\s*\n?\s*height: 2,/);
     // Every control keeps its behaviour and labels.

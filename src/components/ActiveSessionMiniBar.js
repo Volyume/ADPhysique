@@ -33,8 +33,11 @@ import useAppStore from '../store/useAppStore';
 import PressableCard from './PressableCard';
 import { colors, spacing, fontSize, fontWeight, circle, shadow, motion, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { touchTarget } from '../styles/layout';
 
-const BAR_HEIGHT = 44;
+// The whole bar is the tap target (PressableCard, below), so its height is
+// the platform minimum rather than a magic number.
+const BAR_HEIGHT = touchTarget.minimum;
 
 // Self-subscribing status slot: rest countdown while resting, set progress
 // otherwise, never a timer at 00:00, and never "Set 3 of 2" (past the

@@ -34,6 +34,7 @@ import VolyumeChart from '../components/VolyumeChart';
 import { VOLUME_WINDOWS, windowByKey, volumeTakeaway } from '../lib/chartWindows';
 import { track } from '../lib/engineTelemetry';
 import { trainingRecency } from '../lib/trainingRecency';
+import { touchTarget } from '../styles/layout';
 
 const WINDOW_OPTIONS = [
   { weeks: 1, label: '1 week' },
@@ -1041,7 +1042,7 @@ const styles = StyleSheet.create({
     // operable path for the volume-by-muscle data (the diagram above is a
     // decorative/summary image for assistive tech), so it carries the same
     // >=44dp minimum target/focus height as any other operable control.
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
   },
   muscleName: {
     ...type.label,

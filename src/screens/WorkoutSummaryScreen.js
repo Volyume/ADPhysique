@@ -58,6 +58,7 @@ import { localWeekStartMs } from '../lib/dayKey';
 import { formatNumber, formatWithUnit } from '../lib/format';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { logError } from '../lib/errorLog';
+import { touchTarget } from '../styles/layout';
 
 // COMP-008: soreness, energy and sleep moved to the pre-workout intent prompt
 // (captured where they are accurate). The post-workout block keeps only the
@@ -2233,7 +2234,7 @@ const styles = StyleSheet.create({
   },
   phaseActionText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary },
   phaseShareBtn: {
-    width: 44, height: 44, borderRadius: radius.md,
+    width: touchTarget.minimum, height: touchTarget.minimum, borderRadius: radius.md,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
   },
@@ -2405,7 +2406,7 @@ const styles = StyleSheet.create({
   feedbackPurpose: { ...type.caption, color: colors.textMuted },
   ratingBtns: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, minHeight: 44 },
   ratingBtn: {
-    width: 44, height: 44, minWidth: 44, borderRadius: radius.md, backgroundColor: colors.surface,
+    width: touchTarget.minimum, height: touchTarget.minimum, minWidth: touchTarget.minimum, borderRadius: radius.md, backgroundColor: colors.surface,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
   // D3: selected state uses the app-wide chip grammar (tint + amber edge,
@@ -2461,7 +2462,7 @@ const styles = StyleSheet.create({
   // completion action does not become two competing large buttons.
   doneBtn: {
     flex: 1,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     backgroundColor: colors.surface2,
     borderWidth: 1,
     borderColor: colors.border,
@@ -2481,7 +2482,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     flexShrink: 0,
     minWidth: 108,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.strong),

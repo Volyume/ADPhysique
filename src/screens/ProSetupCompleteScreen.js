@@ -28,6 +28,7 @@ import { planReady } from '../lib/haptics';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
 import { isPhotoSuppressed } from '../hooks/usePhotoSuppression';
 import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
+import { touchTarget } from '../styles/layout';
 
 // Order the rationale reads top-to-bottom: how the week is structured,
 // then why the volume and progression, then exercise selection and the
@@ -645,7 +646,7 @@ const styles = StyleSheet.create({
   readyItem: {
     flexGrow: 1,
     flexBasis: 150,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -721,7 +722,7 @@ const styles = StyleSheet.create({
   },
   goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   eduLearnRow: {
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,

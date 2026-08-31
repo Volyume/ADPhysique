@@ -56,6 +56,7 @@ import { SkeletonCard } from '../components/Skeleton';
 // date the trial moment promises can never drift apart.
 import { FIRST_CHECKIN_MIN_DAYS, MIN_WEIGH_INS, firstReviewUnlockDate } from '../lib/trialActivation';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
+import { touchTarget } from '../styles/layout';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 const DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -2239,7 +2240,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.xs,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,

@@ -5,7 +5,7 @@ import { colors, spacing, radius, type, withAlpha, alpha } from '../styles/theme
 import useTheme from '../hooks/useTheme';
 import { formatSeconds, parseTimeToSeconds } from '../lib/workoutHelpers';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { workoutLoggerSize } from '../styles/layout';
+import { workoutLoggerSize, touchTarget } from '../styles/layout';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
 
 const STEPPER_HIT_SLOP = { top: 8, bottom: 8, left: 8, right: 8 };
@@ -603,7 +603,7 @@ const styles = StyleSheet.create({
   },
   rirBtn: {
     flex: 1,
-    height: 44,
+    height: touchTarget.minimum,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.surface2,
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.border,
   },
   keyboardDoneBtn: {
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     paddingHorizontal: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',

@@ -1033,7 +1033,7 @@ describe('manage sheet: block confirm', () => {
   });
 
   test('share-win utility rows use neutral contained chrome, not amber links', () => {
-    expect(PARTNER_SCREEN_SOURCE).toMatch(/shareWinPrivacyToggle: \{[\s\S]*minHeight: 44,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
+    expect(PARTNER_SCREEN_SOURCE).toMatch(/shareWinPrivacyToggle: \{[\s\S]*minHeight: touchTarget\.minimum,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(PARTNER_SCREEN_SOURCE).toContain('shareWinPrivacyToggleText: { ...type.caption, color: colors.textPrimary');
     // DD96 (design-consistency-audit-2026-08-06): this style's role moved
     // caption -> captionTight (hand-rolled lineHeight:18 override absorbed

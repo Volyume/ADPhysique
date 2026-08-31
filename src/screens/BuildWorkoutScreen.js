@@ -27,6 +27,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
 import { logError } from '../lib/errorLog';
 import * as haptics from '../lib/haptics';
+import { touchTarget } from '../styles/layout';
 
 const DEFAULT_SETS = 3;
 // The shipped global default rest (defaultRestSeconds starts at 90, Hevy
@@ -665,7 +666,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     borderWidth: 1, borderColor: colors.border,
     borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     backgroundColor: colors.surface, alignSelf: 'stretch',
   },
   travelChipText: { ...type.label, color: colors.textPrimary, flex: 1 },

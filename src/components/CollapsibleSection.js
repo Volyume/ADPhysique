@@ -2,6 +2,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, spacing, fontSize, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { touchTarget } from '../styles/layout';
 
 // Shared collapsible section, extracted from MethodologyScreen (U-B-1 §3) and
 // generalised: renders `children` when given, otherwise the legacy `body`
@@ -45,7 +46,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
   },
   // ≥44px header tap target (U-B-1 §5).
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 44 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: touchTarget.minimum },
   sectionTitle: { ...type.bodyStrong, color: colors.textPrimary, flex: 1, paddingRight: spacing.md },
   sectionBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 22, marginTop: spacing.md },
   sectionChildren: { marginTop: spacing.md, gap: spacing.md },

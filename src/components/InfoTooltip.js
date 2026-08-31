@@ -6,6 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
 import { colors, spacing, radius, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import { touchTarget } from '../styles/layout';
 
 export default function InfoTooltip({ text, size = 14 }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
@@ -129,8 +130,8 @@ const styles = StyleSheet.create({
   // so it hugs the corner without enlarging the card, while the touch target
   // stays a full 44x44 (plus hitSlop).
   close: {
-    width: 44,
-    height: 44,
+    width: touchTarget.minimum,
+    height: touchTarget.minimum,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-end',

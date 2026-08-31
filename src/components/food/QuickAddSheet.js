@@ -14,6 +14,7 @@ import { useToast } from '../Toast';
 import { pickerMealSlots } from '../../lib/food/mealSlots';
 import { fromEnergy, toEnergy, energyUnitLabel } from '../../lib/format';
 import { parseDecimalInput } from '../../lib/parseDecimalInput';
+import { touchTarget } from '../../styles/layout';
 
 /**
  * Quick add: log a bare calorie figure (and optional protein, carbs, fat)
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   mealRow: { flexDirection: 'row', gap: spacing.xs },
-  mealChip: { flex: 1, alignSelf: 'stretch', justifyContent: 'center', minHeight: 44 },
+  mealChip: { flex: 1, alignSelf: 'stretch', justifyContent: 'center', minHeight: touchTarget.minimum },
   mealChipLabel: { textAlign: 'center' },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   actionButton: { flex: 1 },

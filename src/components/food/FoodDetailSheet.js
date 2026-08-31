@@ -26,6 +26,7 @@ import EatenTimePicker from './EatenTimePicker';
 // Ultimate-Audit item 16 (MN-1), D22 16b: separate file, see its own header
 // for why (another agent's WIP was live in this file at build time).
 import MicronutrientDetail from './MicronutrientDetail';
+import { touchTarget } from '../../styles/layout';
 
 // Ultimate-Audit item 12 (raw/cooked basis toggle): the curated food key
 // behind a food_ref, or null for anything that isn't a curated staple
@@ -542,7 +543,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: spacing.sm, paddingHorizontal: spacing.sm,
     alignSelf: 'stretch',
-    alignItems: 'center', justifyContent: 'center', minHeight: 44,
+    alignItems: 'center', justifyContent: 'center', minHeight: touchTarget.minimum,
   },
   unitBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   unitBtnTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
@@ -611,7 +612,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   deleteBtn: {
-    width: 44, height: 44,
+    width: touchTarget.minimum, height: touchTarget.minimum,
     borderRadius: radius.md,
     borderWidth: 1, borderColor: colors.border,
     alignItems: 'center', justifyContent: 'center',
