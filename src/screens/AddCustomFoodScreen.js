@@ -477,8 +477,8 @@ const styles = StyleSheet.create({
   dupeBanner: {
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.md, marginBottom: spacing.lg,
   },
   dupeText: { ...type.bodySm, color: colors.textSecondary },

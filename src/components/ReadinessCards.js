@@ -380,7 +380,7 @@ const styles = StyleSheet.create({
   section: { gap: spacing.md },
   milestoneCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border, gap: spacing.md,
+    borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
   },
   milestoneTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   milestoneUnlocked: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
 
   recoveryCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.lg, borderWidth: 1, borderColor: colors.border, gap: spacing.md,
+    padding: spacing.lg, borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
   },
   recoveryGrid: {
     flexDirection: 'row', gap: spacing.sm,
@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
 
   mfCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    borderWidth: 1, borderColor: colors.border, gap: spacing.md,
+    borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md,
   },
   mfHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   mfIconWrap: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },

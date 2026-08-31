@@ -1749,8 +1749,8 @@ const styles = StyleSheet.create({
   readOnlyCard: {
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.md,
   },
   readOnlyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
@@ -1771,7 +1771,7 @@ const styles = StyleSheet.create({
   readOnlyCta: { ...type.label, color: colors.textPrimary },
   confirmCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
-    borderWidth: 1, borderColor: colors.border, gap: spacing.md, alignItems: 'flex-start',
+    borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md, alignItems: 'flex-start',
   },
   confirmTitle: { ...type.h3, color: colors.textPrimary },
   confirmBody: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 21 },
@@ -1849,7 +1849,7 @@ const styles = StyleSheet.create({
   logBtnText: { ...type.title, color: colors.onPrimary },
   formCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    gap: spacing.md, borderWidth: 1, borderColor: colors.border,
+    gap: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
   },
   formTitle: { ...type.title, color: colors.textPrimary },
   formRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

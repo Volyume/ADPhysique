@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated ?? colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     padding: spacing.xl,
     overflow: 'hidden',
   },

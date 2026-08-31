@@ -1517,7 +1517,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
   },
   // Visual variant for rows whose exercise_id couldn't be resolved
   // against the local exercises table (cloud-restored from a build

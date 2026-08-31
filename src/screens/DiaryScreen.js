@@ -2208,8 +2208,8 @@ const styles = StyleSheet.create({
   offCard: {
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.md, marginBottom: spacing.lg,
   },
   // E10 read-only lapse views: the view-only notice card and the plain
@@ -2217,8 +2217,8 @@ const styles = StyleSheet.create({
   readOnlyCard: {
     gap: spacing.sm,
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.md, marginBottom: spacing.lg,
   },
   readOnlyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },

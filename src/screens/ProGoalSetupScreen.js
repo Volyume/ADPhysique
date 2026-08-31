@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
   phaseCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, marginBottom: spacing.sm,
   },
   phaseCardActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },

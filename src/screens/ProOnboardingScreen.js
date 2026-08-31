@@ -2766,7 +2766,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.xl,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     padding: spacing.lg,
     gap: spacing.lg,
   },
@@ -2811,7 +2811,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1.5,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     padding: spacing.md,
     marginBottom: spacing.xl,
   },
@@ -2933,7 +2933,7 @@ const styles = StyleSheet.create({
   // Notifications
   notifSection: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1.5, borderColor: colors.border,
+    borderWidth: 1.5, borderColor: colors.borderSubtle,
     padding: spacing.md, marginBottom: spacing.md,
   },
   notifHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
@@ -2958,7 +2958,7 @@ const styles = StyleSheet.create({
 
   coachCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1.5, borderColor: colors.border,
+    borderWidth: 1.5, borderColor: colors.borderSubtle,
     padding: spacing.md, marginBottom: spacing.xl,
   },
   coachCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, marginBottom: spacing.sm },

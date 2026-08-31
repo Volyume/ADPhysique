@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
   // C3 (D71): Play-review social-proof card, ported from PaywallScreen and
   // matched to this screen's card idiom.
   reviewCard: {
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle,
     backgroundColor: colors.surface, padding: spacing.md,
     marginTop: spacing.lg, gap: spacing.xs,
   },

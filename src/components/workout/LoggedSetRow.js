@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
   // D43 S4: in-place editor block, replaces the modal sheet's chrome with a
   // house Card-adjacent surface local to the row -- same radius/border
   // language as loggedSetRow, no new one-off idiom.
-  editingWrap: { gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.border },
+  editingWrap: { gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.sm, borderWidth: 1, borderColor: colors.borderSubtle },
   editingTitle: { ...type.label, color: colors.textPrimary },
   editingActions: { flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: spacing.md },
   // Destructive Delete on the LEFT of the action row (marginRight:'auto' pushes

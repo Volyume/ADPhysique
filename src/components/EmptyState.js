@@ -107,7 +107,12 @@ export default function EmptyState({
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    // radius.lg, not md: Card's own docblock records the 2026-07-09 fix (A-1)
+    // that moved the card radius to lg precisely so two different corner radii
+    // never sit side by side on one screen. EmptyState was missed by that
+    // sweep and kept md, so on every screen that shows an empty state beside
+    // a Card the two boxes had visibly different corners.
+    borderRadius: radius.lg,
     padding: spacing.xxl,
     borderWidth: 1,
     borderColor: colors.borderSubtle,

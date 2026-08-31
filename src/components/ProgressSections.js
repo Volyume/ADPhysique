@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
   },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
 
@@ -370,7 +370,7 @@ const styles = StyleSheet.create({
   // ── Calendar ──
   calWrap: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
     gap: spacing.md,
   },
   calGrid:       { flexDirection: 'row', gap: 3 },
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
   // ── Session Duration Trend ──
   durationWrap: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
     gap: spacing.md,
   },
   durationBarsRow: {
@@ -414,7 +414,7 @@ const styles = StyleSheet.create({
   // ── Muscle Frequency Table ──
   freqWrap: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
     gap: spacing.xxs,
   },
   freqRow: {
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     padding: spacing.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     gap: spacing.md,
   },
   workloadTitle: {

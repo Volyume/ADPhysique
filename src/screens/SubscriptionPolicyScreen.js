@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
 
   intro: { color: colors.textSecondary, fontSize: fontSize.md, lineHeight: 22 },
 
-  section: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md, borderWidth: 1, borderColor: colors.border },
+  section: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, gap: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   sectionIconWrap: { width: 32, height: 32, borderRadius: circle(32), alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { ...type.title, color: colors.textPrimary, flex: 1 },

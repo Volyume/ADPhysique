@@ -2294,7 +2294,7 @@ const styles = StyleSheet.create({
   // (16, the one card radius), colors.surface, 1px border - matching Card.
   statBox: {
     flex: 1, backgroundColor: colors.surface, borderRadius: radius.lg,
-    padding: spacing.md, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.border,
+    padding: spacing.md, alignItems: 'center', gap: spacing.xs, borderWidth: 1, borderColor: colors.borderSubtle,
   },
   statValue: { ...type.num('h3'), color: colors.textPrimary },
   statLabel: { ...type.caption, color: colors.textSecondary },

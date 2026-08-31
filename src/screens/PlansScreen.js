@@ -2352,7 +2352,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md, paddingTop: spacing.md,
     borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.xxs,
   },
-  programmeVerdictTitle: { ...type.labelSm, color: colors.textPrimary },
+  programmeVerdictTitle: { ...type.w('bodySm', 'semibold'), color: colors.textPrimary },
   programmeVerdictBody: { ...type.bodySm, color: colors.textSecondary },
 
   // Signal chips
@@ -2488,7 +2488,7 @@ function buildLiveStyles(t) {
     blockCardBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     blockReviewHeadsUp: { ...t.type.bodySm, color: t.colors.textSecondary },
     programmeVerdict: { borderTopColor: t.colors.border },
-    programmeVerdictTitle: { ...t.type.labelSm, color: t.colors.textPrimary },
+    programmeVerdictTitle: { ...t.type.w('bodySm', 'semibold'), color: t.colors.textPrimary },
     programmeVerdictBody: { ...t.type.bodySm, color: t.colors.textSecondary },
     signalChip: { backgroundColor: t.colors.surface2, borderColor: withAlpha(t.colors.warning, alpha.mid) },
     signalChipHigh: { borderColor: withAlpha(t.colors.error, alpha.strong), backgroundColor: withAlpha(t.colors.error, alpha.ghost) },

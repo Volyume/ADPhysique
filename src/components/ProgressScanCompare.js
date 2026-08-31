@@ -254,10 +254,10 @@ const styles = StyleSheet.create({
   summaryPanel: {
     flex: 1,
     minWidth: 142,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     padding: spacing.md,
     gap: spacing.xxs,
   },

@@ -1117,9 +1117,9 @@ const styles = StyleSheet.create({
   suggestCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     backgroundColor: colors.surface,
-    borderWidth: 1, borderColor: colors.border,
+    borderWidth: 1, borderColor: colors.borderSubtle,
     borderLeftWidth: 3, borderLeftColor: colors.primary,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     marginHorizontal: spacing.md, marginTop: spacing.sm,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },

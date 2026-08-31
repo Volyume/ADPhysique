@@ -70,9 +70,9 @@ export default function HeldDecisionCard({ type, body, onWhy }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     padding: spacing.md,
     marginVertical: spacing.sm,
   },

@@ -418,14 +418,14 @@ const styles = StyleSheet.create({
 
   narrativeCard: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, gap: spacing.md,
   },
   narrativeLine: { ...type.body, color: colors.textSecondary },
 
   section: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, gap: spacing.sm,
   },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.xs },
@@ -460,7 +460,7 @@ const styles = StyleSheet.create({
 
   nextSection: {
     backgroundColor: colors.surface,
-    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border,
+    borderRadius: radius.lg, borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.lg, gap: spacing.md,
   },
   nextTitle: { ...type.bodyStrong, color: colors.textPrimary },

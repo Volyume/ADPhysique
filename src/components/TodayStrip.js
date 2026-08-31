@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     // padding/gap stays as-is, the density is deliberate.
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
     gap: spacing.sm,

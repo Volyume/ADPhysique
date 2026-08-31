@@ -672,7 +672,7 @@ const styles = StyleSheet.create({
   // it keeps its own full chrome rather than going through Card.
   routineCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1.5, borderColor: colors.border,
+    borderWidth: 1.5, borderColor: colors.borderSubtle,
     padding: spacing.lg, marginBottom: spacing.md,
   },
   routineCardOpen: { borderColor: withAlpha(colors.primary, 0.314) },

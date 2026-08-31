@@ -560,7 +560,7 @@ const styles = StyleSheet.create({
   // Meso list cards
   mesoCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg,
-    gap: spacing.md, borderWidth: 1, borderColor: colors.border,
+    gap: spacing.md, borderWidth: 1, borderColor: colors.borderSubtle,
   },
   mesoCardActive: { borderColor: colors.primary },
   activeBadge: {

@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
   },

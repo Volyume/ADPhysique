@@ -10,7 +10,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { colors, fontWeight, fontSize, spacing, radius } from '../styles/theme';
+import { colors, fontWeight, fontSize, spacing, radius, type } from '../styles/theme';
 
 const SRC = path.resolve(__dirname, '..');
 
@@ -31,6 +31,39 @@ const FAMILIES = [
   ['spacing', spacing],
   ['radius', radius],
 ];
+
+describe('theme token guard: no component spreads a type role that does not exist', () => {
+  // The same failure as the colours case above, one family later: PlansScreen
+  // spread `type.labelSm`, which buildTypeRoles never defined. Spreading
+  // undefined is silent -- the style object keeps only its own keys, so the
+  // block-review verdict title rendered with a colour and NO fontFamily,
+  // fontSize or lineHeight, falling back to React Native's bare default while
+  // every test passed. The FAMILIES table above cannot catch it because `type`
+  // is built from getters, not a flat token map.
+  //
+  // `t.type.X` is always the theme (the useTheme() convention). A bare
+  // `type.X` is only the theme in a file that imports `type` from the theme --
+  // src/lib/partners/shareWins.js has its own local `type` callback parameter
+  // and must not be flagged.
+  const files = listJsFiles(SRC);
+  const known = new Set(Object.keys(type));
+
+  test('every type.* role resolves', () => {
+    const offences = [];
+    for (const file of files) {
+      const text = fs.readFileSync(file, 'utf8');
+      const importsType = /^import\s*\{[^}]*\btype\b[^}]*\}\s*from\s*'[^']*styles\/theme'/m.test(text);
+      const re = /\b(t\.)?type\.([a-zA-Z0-9_]+)/g;
+      let m;
+      while ((m = re.exec(text)) !== null) {
+        const viaHook = Boolean(m[1]);
+        if (!viaHook && !importsType) continue;
+        if (!known.has(m[2])) offences.push(`${path.relative(SRC, file)}: ${m[0]}`);
+      }
+    }
+    expect(offences).toEqual([]);
+  });
+});
 
 describe('theme token guard: no component references a token that does not exist', () => {
   const files = listJsFiles(SRC);

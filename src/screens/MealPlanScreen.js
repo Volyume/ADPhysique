@@ -1973,7 +1973,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     backgroundColor: colors.surface,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     borderRadius: radius.lg,
     padding: spacing.md,
   },
@@ -2002,7 +2002,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     backgroundColor: colors.surface2,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
   },
   prefRow: { gap: spacing.xs },
   prefLabel: {},
@@ -2024,7 +2024,7 @@ const styles = StyleSheet.create({
   // Campaign 17B job 4: the stated-vs-observed question.
   habitCard: {
     backgroundColor: colors.surface2,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     padding: spacing.md,
     gap: spacing.xs,
     marginBottom: spacing.sm,

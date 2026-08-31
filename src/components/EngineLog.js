@@ -159,7 +159,7 @@ export default function EngineLog({ userId }) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface, borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.border, padding: spacing.lg, gap: spacing.md,
+    borderWidth: 1, borderColor: colors.borderSubtle, padding: spacing.lg, gap: spacing.md,
   },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   headerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, flex: 1 },

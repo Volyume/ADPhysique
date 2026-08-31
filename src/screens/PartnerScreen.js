@@ -1708,9 +1708,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     backgroundColor: colors.surface,
     padding: spacing.md,
   },
@@ -1721,7 +1721,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     borderWidth: 1,
     borderColor: withAlpha(colors.primary, alpha.edge),
     backgroundColor: colors.surface2,
@@ -1751,7 +1751,7 @@ const styles = StyleSheet.create({
 
   partnerStatusBand: {
     gap: spacing.md,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface2,
     padding: spacing.md,
   },
@@ -1937,7 +1937,7 @@ const styles = StyleSheet.create({
   },
   shareWinReceipt: {
     gap: spacing.xs,
-    borderRadius: radius.md,
+    borderRadius: radius.lg,
     backgroundColor: colors.surface2,
     padding: spacing.md,
   },
