@@ -150,7 +150,14 @@ describe('T2-25: durable reintroduction line', () => {
 // dexterity.
 describe('F-4: the capability rows meet the minimum touch target', () => {
   test('constraintLineRow carries minHeight: spacing.xxxl (the scale\'s 48)', () => {
-    const site = HOME.indexOf('constraintLineRow: {');
+    // Anchored inside the frozen StyleSheet, not the first textual match:
+    // buildLiveStyles now also carries a `constraintLineRow` key (the row's
+    // divider colour, so the grouped list follows a theme flip), and it sits
+    // EARLIER in the file. The layout property this test protects lives in
+    // the frozen block, so that is the one to read.
+    const sheet = HOME.indexOf('const styles = StyleSheet.create(');
+    expect(sheet).toBeGreaterThan(-1);
+    const site = HOME.indexOf('constraintLineRow: {', sheet);
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site, HOME.indexOf('},', site));
     expect(block).toContain('minHeight: spacing.xxxl');

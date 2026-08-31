@@ -593,7 +593,11 @@ export default function YouScreen({ navigation }) {
                 <Ionicons name="git-branch-outline" size={20} color={t.colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <SectionLabel tone="primary">Coach</SectionLabel>
+                {/* The "COACH" kicker that sat here is gone. It restated the
+                    heading directly below it ("Weekly coach update") beside an
+                    icon that already says the same thing -- the category was
+                    marked three times over. The heading carries its own
+                    weight. */}
                 <Text style={[styles.statusTitle, live.statusTitle]}>
                   {isPro
                     ? `Weekly coach update${reviewDate ? `: ${reviewDate}` : ''}`

@@ -228,7 +228,10 @@ describe('DiaryScreen date navigation polish', () => {
     expect(SRC).toMatch(/Ionicons name="chevron-forward" size=\{21\} color=\{t\.colors\.textSecondary\}/);
     expect(dateClusterStyle).toMatch(/borderWidth: 1/);
     expect(dateClusterStyle).toMatch(/backgroundColor: colors\.surface/);
-    expect(dateClusterStyle).toMatch(/minHeight: 44/);
+    // The rail's height moved onto touchTarget.minimum when the app's
+    // hard-coded 44s were consolidated and raised to Material's 48dp. The
+    // rule is that the rail carries a full touch target, not the number.
+    expect(dateClusterStyle).toMatch(/minHeight: touchTarget\.minimum/);
     expect(SRC).toMatch(/dayPagerNav: \{[\s\S]*width: 42,[\s\S]*height: 42/);
     expect(SRC).toMatch(/dayPagerNav: \{[\s\S]*backgroundColor: 'transparent'/);
     expect(SRC).toMatch(/todayPillText: \{ \.\.\.type\.caption, color: colors\.textPrimary/);

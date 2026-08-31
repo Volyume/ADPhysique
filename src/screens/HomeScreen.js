@@ -194,6 +194,8 @@ export default function HomeScreen({ navigation, route }) {
     coachBriefLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
     // D112 R5 (closes audit T1-14/T2-31, T1-15/T2-24): standalone
     // constraint / AWAITING rows, same live-theme shape as the brief line.
+    constraintGroup: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    constraintLineRow: { borderBottomColor: t.colors.borderSubtle },
     constraintLineText: { ...t.type.bodySm, color: t.colors.textSecondary },
     coachingNudge: { backgroundColor: t.colors.surface, borderColor: withAlpha(t.colors.primary, alpha.edge) },
     coachingNudgeLeft: { backgroundColor: t.colors.primaryBg },
@@ -1916,6 +1918,17 @@ export default function HomeScreen({ navigation, route }) {
       : 'You thought this would be done by about now. Still need it?')
     : null;
 
+  // Premium UI pass: does the capability lane have anything to say on Home?
+  // Mirrors the render conditions of the five rows in the grouped list below
+  // exactly, so the heading and its container never render around nothing.
+  const hasConstraintRows = Boolean(
+    (activeConstraint && activePlan)
+    || awaitingConstraintLine
+    || (undecidedConstraint && !awaitingConstraintLine)
+    || rampLine
+    || capabilityCheckFailed,
+  );
+
   // S15#7: readiness aggregate. One calm line for the mesocycle chip,
   // composed from signals HomeScreen already loads (block phase, the
   // shouldDeload signal, last session's soreness/sleep/energy facts, recent
@@ -2556,9 +2569,22 @@ export default function HomeScreen({ navigation, route }) {
             (or none) and of whether the brief itself was dismissed. Same
             quiet styling as the former in-brief line; now tappable
             through to How you train. */}
+        {/* Premium UI pass. These rows are the capability lane's presence on
+            Home, and they were five loose sentences floating on the
+            background between two cards: no container, no heading, nothing
+            grouping them, so the squint test resolved no group here at all
+            and the one surface a user with an injury looks for read as
+            stray text. They are now one grouped list under its own heading,
+            the same shape Settings and the Coach tab use. The rows keep
+            their quiet 13px voice, their targets and their behaviour; only
+            the grouping is new. */}
+        {hasConstraintRows ? (
+        <View style={styles.constraintSection}>
+          <SectionLabel tone="muted">How you train</SectionLabel>
+          <View style={[styles.constraintGroup, live.constraintGroup]}>
         {activeConstraint && activePlan ? (
           <TouchableOpacity
-            style={styles.constraintLineRow}
+            style={[styles.constraintLineRow, live.constraintLineRow]}
             onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
             accessibilityRole="button"
             accessibilityLabel={`${constraintLineText(constraintSubject)} Open How you train`}
@@ -2576,7 +2602,7 @@ export default function HomeScreen({ navigation, route }) {
             to answer it there. */}
         {awaitingConstraintLine ? (
           <TouchableOpacity
-            style={styles.constraintLineRow}
+            style={[styles.constraintLineRow, live.constraintLineRow]}
             onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
             accessibilityRole="button"
             accessibilityLabel={`${awaitingConstraintLine} Open How you train`}
@@ -2594,7 +2620,7 @@ export default function HomeScreen({ navigation, route }) {
             does with AWAITING. */}
         {undecidedConstraint && !awaitingConstraintLine ? (
           <TouchableOpacity
-            style={styles.constraintLineRow}
+            style={[styles.constraintLineRow, live.constraintLineRow]}
             onPress={() => { haptics.selection(); navigation.navigate('HowYouTrain'); }}
             accessibilityRole="button"
             accessibilityLabel="A change to how you train is waiting for your decision. Open How you train"
@@ -2612,7 +2638,7 @@ export default function HomeScreen({ navigation, route }) {
             trajectory while any of this week's planned rows carry the
             §23 ramp's source stamp. Meaning is in the text alone (J3). */}
         {rampLine ? (
-          <View style={styles.constraintLineRow}>
+          <View style={[styles.constraintLineRow, live.constraintLineRow]}>
             <Text style={[styles.constraintLineText, live.constraintLineText]}>
               {rampLine}
             </Text>
@@ -2628,11 +2654,14 @@ export default function HomeScreen({ navigation, route }) {
             surfaces). Not tappable: it asks nothing, and How you train
             would face the same failed read. */}
         {capabilityCheckFailed ? (
-          <View style={styles.constraintLineRow}>
+          <View style={[styles.constraintLineRow, live.constraintLineRow]}>
             <Text style={[styles.constraintLineText, live.constraintLineText]}>
               Volyume could not check how you train just now.
             </Text>
           </View>
+        ) : null}
+          </View>
+        </View>
         ) : null}
 
         {/* ── Campaign 26 (founder device order 2026-08-17): the post-hero
@@ -3137,11 +3166,25 @@ const styles = StyleSheet.create({
   // weight as coachBriefLineRow/Text above; a trailing chevron and
   // full-row tap target since these navigate (the coach brief line
   // never did).
+  // The capability lane's grouped list on Home. Same shape as Settings'
+  // section and the Coach tab's NavGroup: one container, hairline-divided
+  // rows, heading outside the box.
+  constraintSection: { gap: spacing.md },
+  constraintGroup: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.borderSubtle,
+    overflow: 'hidden',
+  },
   constraintLineRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderSubtle,
     paddingVertical: spacing.xs,
     // Round 4 (F-4, J2): these quiet rows measured ~28px - below the
     // WCAG 44pt minimum - on exactly the surface built so a disabled

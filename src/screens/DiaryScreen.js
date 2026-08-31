@@ -76,6 +76,7 @@ import { scaleMacros } from '../lib/food/macros';
 import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { parseLocalDay } from '../lib/dayKey';
+import { touchTarget } from '../styles/layout';
 
 // Audit item 6: same 7-day freshness window HomeScreen's coach banner uses
 // (showCoachBanner), so "recent" reads consistently across the app.
@@ -2122,12 +2123,16 @@ const styles = StyleSheet.create({
   dateCluster: {
     flex: 1,
     minWidth: 0,
-    minHeight: 44,
+    minHeight: touchTarget.minimum,
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.border,
+    // The date rail is navigation chrome, not a primary control. surface2
+    // sits HIGHER on the elevation ladder than the meal cards it navigates,
+    // which inverts the hierarchy, so it keeps `surface`. The button-shaped
+    // controls on this screen took the unified surface2 vocabulary instead.
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.xxs,
   },
@@ -2154,7 +2159,8 @@ const styles = StyleSheet.create({
   dateLabel: { ...type.label, color: colors.textPrimary, textAlign: 'center' },
   dateSubLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center', marginTop: -2 },
   todayPill: {
-    minHeight: 42,
+    // Was 42, below the platform minimum on a control users tap every day.
+    minHeight: touchTarget.minimum,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
@@ -2181,7 +2187,7 @@ const styles = StyleSheet.create({
   macroRingsWrap: { marginBottom: spacing.lg },
   bankRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, minHeight: 48,
+    gap: spacing.xs, minHeight: touchTarget.minimum,
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
     backgroundColor: colors.surface2,
     marginBottom: spacing.md,
@@ -2255,8 +2261,8 @@ const styles = StyleSheet.create({
   offCardCta: { ...type.label, color: colors.textPrimary },
   addMealRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, minHeight: 48,
-    backgroundColor: colors.surface,
+    gap: spacing.xs, minHeight: touchTarget.minimum,
+    backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
     marginBottom: spacing.sm,
   },
@@ -2265,7 +2271,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     gap: spacing.sm, minHeight: 70,
     backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     marginBottom: spacing.lg,
@@ -2379,7 +2385,7 @@ function buildLiveStyles(t) {
     dateCluster: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     dateLabel: { ...t.type.label, color: t.colors.textPrimary },
     dateSubLabel: { ...t.type.caption, color: t.colors.textMuted },
-    todayPill: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
+    todayPill: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     todayPillText: { ...t.type.caption, color: t.colors.textPrimary },
     dayPagerMore: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
     bankRow: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
@@ -2398,7 +2404,7 @@ function buildLiveStyles(t) {
     offCardButtonMuted: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     offCardDismiss: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     offCardCta: { ...t.type.label, color: t.colors.textPrimary },
-    addMealRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
+    addMealRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     addMealLabel: { ...t.type.label, color: t.colors.textPrimary },
     buildPlanBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     buildPlanIcon: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
