@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { appAlert } from './AppAlert';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 // D2: all haptics ride the named vocabulary so the reduce-motion setting
@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: spacing.sm,
   },
-  skipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  skipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   adjBtn: {
     minHeight: 44,
     minWidth: 44,
@@ -587,7 +587,7 @@ const styles = StyleSheet.create({
   },
   adjBtnText: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.primary,
     fontVariant: ['tabular-nums'],
   },
@@ -613,7 +613,7 @@ const styles = StyleSheet.create({
   },
   doneText: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     // AY-2/D7: onSuccessBg is the text-on-tint ink (the flat `success` mark
     // fails 4.5:1 composited on successBg in light theme at every elevation).
     color: colors.onSuccessBg,

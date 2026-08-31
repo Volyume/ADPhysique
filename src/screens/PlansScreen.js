@@ -9,7 +9,7 @@ import { planHeadingName } from '../lib/planDisplay';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
@@ -2228,8 +2228,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.strong),
   },
-  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.black },
-  activePlanName: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black },
+  activePlanName: { fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   activePlanMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
   activePlanWeek: { ...type.num('caption'), color: colors.textMuted },
   activePlanActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
@@ -2299,7 +2299,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.edge),
   },
-  actionCardBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary },
+  actionCardBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.primary },
   actionCardDesc: { ...type.captionTight, color: colors.textMuted },
   actionCardFeatured: {
     borderColor: withAlpha(colors.primary, alpha.edge),
@@ -2369,7 +2369,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.error, alpha.ghost),
   },
   signalChipText: {
-    fontSize: fontSize.xs, color: colors.warning, fontWeight: fontWeight.medium,
+    fontSize: fontSize.xs, color: colors.warning, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
   signalChipTextHigh: {
     color: colors.error,
@@ -2381,7 +2381,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md, gap: spacing.sm,
   },
   nextBlockPreLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textMuted,
   },
   nextBlockHeadline: {
@@ -2393,7 +2393,7 @@ const styles = StyleSheet.create({
   // Stage 8: the block-end ledger story under the decision body.
   ledgerStory: { marginTop: spacing.sm, gap: spacing.xs },
   ledgerStoryLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted,
+    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textMuted,
   },
   ledgerStoryLine: { ...type.bodySm, color: colors.textSecondary },
 
@@ -2404,7 +2404,7 @@ const styles = StyleSheet.create({
   blockOption: { gap: spacing.xs },
   blockOptionTags: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   blockOptionFlag: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.primary,
+    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary,
   },
   blockOptionDetail: { ...type.caption, color: colors.textSecondary },
 

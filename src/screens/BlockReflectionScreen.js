@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
 
   content: { padding: spacing.lg, gap: spacing.lg, paddingBottom: spacing.xxxl },
   blockTitle: { gap: spacing.xs },
-  blockName: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  blockName: { fontSize: fontSize.xxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   blockDates: { fontSize: fontSize.sm, color: colors.textMuted },
 
   statsRow: {
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
     flex: 1, alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.xs,
   },
   statIcon: { marginBottom: spacing.xxs },
-  statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
+  statValue: { fontSize: fontSize.lg, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   statLabelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   statLabel: { ...type.caption, color: colors.textMuted },
 

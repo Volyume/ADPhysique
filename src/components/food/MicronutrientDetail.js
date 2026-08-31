@@ -35,7 +35,7 @@
  */
 import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, type, letterSpacing } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, letterSpacing, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import CollapsibleSection from '../CollapsibleSection';
 import InfoTooltip from '../InfoTooltip';
@@ -137,10 +137,10 @@ const styles = StyleSheet.create({
     gap: spacing.xxs, marginBottom: spacing.xs,
   },
   nrvHeaderLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted,
+    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textMuted,
   },
   groupLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted,
+    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textMuted,
     textTransform: 'uppercase', letterSpacing: letterSpacing.overline, marginBottom: spacing.xs,
   },
   groupLabelSpacer: { marginTop: spacing.md },

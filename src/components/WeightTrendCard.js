@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import VolyumeChart from './VolyumeChart';
 import { formatBodyWeight, formatBodyWeightRate } from '../lib/units';
@@ -178,12 +178,12 @@ const styles = StyleSheet.create({
   chartWrap: { width: '100%' },
   statRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' },
   ewmaValue: { ...type.num('h3'), color: colors.textPrimary },
-  rateValue: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold, fontVariant: ['tabular-nums'] },
+  rateValue: { fontSize: fontSize.sm, color: colors.textSecondary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, fontVariant: ['tabular-nums'] },
   insightRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs2 },
   dot: { width: 6, height: 6, borderRadius: circle(6), marginTop: 6 },
   insight: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   maintenanceBlock: { gap: spacing.xxs },
-  maintenanceValue: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  maintenanceValue: { fontSize: fontSize.sm, color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   maintenanceLabel: { ...type.caption, color: colors.textMuted },
   maintenanceBuilding: { ...type.bodySm, color: colors.textMuted },
   stepTrendLine: { ...type.captionTight, color: colors.textMuted, fontStyle: 'italic' },

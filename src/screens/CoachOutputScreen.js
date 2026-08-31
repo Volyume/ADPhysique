@@ -127,7 +127,7 @@ import SectionLabel from '../components/SectionLabel';
 import Reanimated, { FadeIn, FadeOut, FadeInDown } from 'react-native-reanimated';
 import { selectCoachOutputZones } from '../lib/coachOutputZones';
 import { isGreatWeek } from '../lib/shareCard/greatWeek';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, letterSpacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, letterSpacing, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 // CP-10 stage 3 (theming, item 1 coach-half polish, 2026-07-10): NO haptics
 // import here. coachOutputApplyMorph.guard.test.js pins this screen as
@@ -3331,7 +3331,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.md, marginTop: spacing.sm, gap: spacing.xs,
   },
-  planEditHead: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  planEditHead: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   planEditBody: { ...type.bodySm, color: colors.textSecondary },
   // D86: scanAssessmentBlock/scanAssessmentHeadline deleted with the receipt
   // sub-block; the compact card renders headline via planEditBody and one
@@ -3381,7 +3381,7 @@ const styles = StyleSheet.create({
   },
   insufficientTitle: {
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
     textAlign: 'center',
@@ -3422,7 +3422,7 @@ const styles = StyleSheet.create({
   },
   weekLabel: {
     fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.primary,
   },
   weekRange: {
@@ -3652,7 +3652,7 @@ const styles = StyleSheet.create({
   },
   dietBreakTitle: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
   },
   // A1 verdict: heading-size title when the diet break IS the decision.
@@ -3743,14 +3743,14 @@ const styles = StyleSheet.create({
   },
   edLockoutHeader: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.warning,
     textTransform: 'uppercase',
     letterSpacing: letterSpacing.overline,
   },
   edLockoutTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
   edLockoutBody: {
@@ -3786,7 +3786,7 @@ const styles = StyleSheet.create({
   },
   edLockoutCtaPrimaryText: {
     color: colors.onPrimary,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     fontSize: fontSize.sm,
   },
   edLockoutCtaGhost: {
@@ -3799,7 +3799,7 @@ const styles = StyleSheet.create({
   },
   edLockoutCtaGhostText: {
     color: colors.textSecondary,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     fontSize: fontSize.sm,
   },
   edLockoutBottomNote: {
@@ -3820,14 +3820,14 @@ const styles = StyleSheet.create({
   },
   edClearedHeader: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.success,
     textTransform: 'uppercase',
     letterSpacing: letterSpacing.overline,
   },
   edClearedTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
   edClearedBody: {
@@ -3849,7 +3849,7 @@ const styles = StyleSheet.create({
   heldHistoryShelf: { marginTop: spacing.md },
   heldHistoryTitle: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textMuted,
     marginBottom: spacing.sm,
   },

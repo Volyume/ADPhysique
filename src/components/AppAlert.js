@@ -15,7 +15,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Modal, Text, TouchableOpacity, ScrollView, StyleSheet } from 'react-native';
 import useAppStore from '../store/useAppStore';
-import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 let _enqueue = null;
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
   cardScroll: { flexShrink: 1, minHeight: 0 },
   title: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     marginBottom: spacing.sm,
   },
@@ -300,8 +300,8 @@ const styles = StyleSheet.create({
   btnPrimary: { backgroundColor: colors.primaryFill },
   btnDestructive: { backgroundColor: 'transparent' },
   btnCancel: { backgroundColor: 'transparent' },
-  btnText: { fontSize: fontSize.md, fontWeight: fontWeight.semibold },
-  btnTextPrimary: { color: colors.onPrimary, fontWeight: fontWeight.bold },
+  btnText: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  btnTextPrimary: { color: colors.onPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   btnTextDestructive: { color: colors.error },
   btnTextCancel: { color: colors.textMuted },
 });

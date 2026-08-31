@@ -14,7 +14,7 @@
  */
 import { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   eyebrow: { ...type.captionStrong, color: colors.primary },
-  title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
+  title: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   sub: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
   plates: { gap: spacing.sm },
   plate: {
@@ -91,9 +91,9 @@ const styles = StyleSheet.create({
     borderRadius: radius.md, padding: spacing.sm, gap: 2,
   },
   plateHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  plateSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold, textTransform: 'uppercase' },
+  plateSlot: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, textTransform: 'uppercase' },
   plateKcal: { color: colors.textSecondary, fontSize: fontSize.xs, fontVariant: ['tabular-nums'] },
-  plateName: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  plateName: { color: colors.textPrimary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   totalRow: { paddingTop: spacing.xs, alignItems: 'flex-end' },
   totalText: { color: colors.textSecondary, fontSize: fontSize.xs, fontVariant: ['tabular-nums'] },
   foot: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.sm },

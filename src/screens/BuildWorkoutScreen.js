@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -569,7 +569,7 @@ const styles = StyleSheet.create({
   },
   indexNum: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textSecondary,
   },
   exerciseInfo: { flex: 1 },
@@ -595,7 +595,7 @@ const styles = StyleSheet.create({
   controlLabel: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     textAlign: 'center',
   },
   repRow: {
@@ -615,7 +615,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     paddingVertical: 0,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     textAlign: 'center',
   },
   repSep: {
@@ -634,7 +634,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     paddingVertical: 0,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     textAlign: 'center',
   },
   addBtn: {
@@ -651,7 +651,7 @@ const styles = StyleSheet.create({
   addBtnText: {
     fontSize: fontSize.md,
     color: colors.primary,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
   footer: {
     padding: spacing.lg,

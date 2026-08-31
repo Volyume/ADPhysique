@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
-import { colors, fontSize, fontWeight, spacing } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import BottomSheet from '../BottomSheet';
 import Button from '../Button';
@@ -76,7 +76,7 @@ export default function SavedMealDetailSheet({ visible, meal, energyUnit = 'kcal
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  title: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
   scroll: { maxHeight: 360 },
   section: { gap: spacing.xs, paddingTop: spacing.sm },

@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, shadow } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, shadow, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from '../components/BrandMark';
 import SegmentedControl from '../components/SegmentedControl';
@@ -2717,7 +2717,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 7, paddingVertical: spacing.xxs,
   },
   proBadgeText: {
-    fontSize: fontSize.micro, fontWeight: fontWeight.black,
+    fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.onPrimary,
   },
 
@@ -2872,7 +2872,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: 1,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.188),
   },
-  recBadgeText: { fontSize: fontSize.micro, color: colors.primary, fontWeight: fontWeight.semibold },
+  recBadgeText: { fontSize: fontSize.micro, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   // Weak-point selector (step 3). Chip grid, division-scoped options.
   wpSection: { marginTop: spacing.lg, marginBottom: spacing.sm },
@@ -2880,7 +2880,7 @@ const styles = StyleSheet.create({
     ...type.captionStrong,
     color: colors.textMuted, marginBottom: spacing.xs,
   },
-  wpOptional: { color: colors.textMuted, fontWeight: fontWeight.regular },
+  wpOptional: { color: colors.textMuted, fontFamily: fontFamily.regular, fontWeight: fontWeight.regular },
   wpHint: { ...type.captionTight, color: colors.textMuted, marginBottom: spacing.md },
   wpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
   inputField: { borderRadius: radius.md },
@@ -2923,7 +2923,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
     borderRadius: radius.sm - 2, alignItems: 'center',
   },
-  segmentTextSmall: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted },
+  segmentTextSmall: { fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textMuted },
 
   // Shared by the compact height-units toggle (ft+in / cm). The full-width
   // sex and body-weight-unit pickers now use the shared SegmentedControl.
@@ -2977,8 +2977,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   hourChipActive: { backgroundColor: colors.primaryFill, borderColor: colors.primary },
-  hourChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  hourChipTextActive: { color: colors.onPrimary, fontWeight: fontWeight.bold },
+  hourChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  hourChipTextActive: { color: colors.onPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 
   // Beta offer card
   offerCard: {
@@ -2993,8 +2993,8 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', backgroundColor: colors.primaryFill,
     borderRadius: 4, paddingHorizontal: spacing.sm, paddingVertical: 3,
   },
-  offerBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary },
-  offerHeadline: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },
+  offerBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.onPrimary },
+  offerHeadline: { fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.sm, lineHeight: 26 },
   offerBody: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.md },
   offerPerks: { gap: spacing.xs },
   offerPerk: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -3006,7 +3006,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     marginBottom: spacing.md,
   },
-  primaryBtnText: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  primaryBtnText: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.onPrimary },
   primaryBtnDisabled: { opacity: 0.4 },
   oauthBusy: { alignItems: 'center', paddingVertical: spacing.lg },
   skipBtn: { alignItems: 'center', paddingVertical: spacing.md },

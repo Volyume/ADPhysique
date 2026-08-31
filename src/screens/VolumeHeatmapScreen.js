@@ -3,7 +3,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getEffectiveLandmarks } from '../lib/effectiveLandmarks';
@@ -969,7 +969,7 @@ const trendStyles = StyleSheet.create({
     // preserved). R2 (2026-07-11): current set-count readout gains tabular
     // figures so the trend column doesn't jitter.
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     textAlign: 'right',
     fontVariant: ['tabular-nums'],
   },
@@ -1082,7 +1082,7 @@ const styles = StyleSheet.create({
     // preserved). R2 (2026-07-11): this is the per-muscle set-count readout,
     // so it gains tabular figures so the counts column doesn't jitter.
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     textAlign: 'right',
     fontVariant: ['tabular-nums'],
   },
@@ -1099,7 +1099,7 @@ const styles = StyleSheet.create({
   lastTrainedChip: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
   lastTrainedRecent: {
     color: colors.warning,
@@ -1143,7 +1143,7 @@ const styles = StyleSheet.create({
   // FOOD-DESIGN-STANDARD.md section 4). Was radius.sm.
   editInputField: { borderRadius: radius.md },
   // Numeric target input: tabular figures so the min/target/max values align.
-  editInputText: { textAlign: 'center', fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
+  editInputText: { textAlign: 'center', fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
   editActions: { flexDirection: 'row', gap: spacing.md },
   editActionButton: {
     flex: 1,

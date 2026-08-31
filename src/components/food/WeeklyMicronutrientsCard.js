@@ -25,7 +25,7 @@
  */
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, type, letterSpacing } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, letterSpacing, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import Card from '../Card';
 import SectionLabel from '../SectionLabel';
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
   },
   introText: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.sm },
   groupLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold, color: colors.textMuted,
+    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textMuted,
     textTransform: 'uppercase', letterSpacing: letterSpacing.overline, marginBottom: spacing.xs,
   },
   groupLabelSpacer: { marginTop: spacing.md },
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   rowLabel: { color: colors.textMuted, fontSize: fontSize.sm },
-  rowValue: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  rowValue: { color: colors.textPrimary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   cardFootnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.md },
 });
 

@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
@@ -808,7 +808,7 @@ const styles = StyleSheet.create({
   footerNoteText: { ...type.captionTight, flex: 1, color: colors.textMuted },
 
   approachRange: {
-    fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.medium,
+    fontSize: fontSize.xs, color: colors.textMuted, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
   approachRangeActive: { color: colors.primaryDim },
   suggestedBadge: {

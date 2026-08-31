@@ -31,7 +31,7 @@ import BackHeader from '../components/BackHeader';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { useToast } from '../components/Toast';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { logBodyMetric, updateBodyMetric, deleteBodyMetric, getBodyMetricLog, getMorningWeights, getOpenEdPatternFlag, getWorkoutSetsSince, getAllExercises, updateMorningWeightById, deleteMorningWeightById, getUserBodyProfile } from '../lib/database';
@@ -1727,7 +1727,7 @@ function DeltaBadge({ delta, units, small }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xxs }}>
       <Ionicons name={isUp ? 'trending-up' : 'trending-down'} size={small ? 11 : 14} color={t.colors.textMuted} />
-      <Text style={{ fontSize: small ? 10 : t.fontSize.xs, color: t.colors.textPrimary, fontWeight: fontWeight.semibold }}>
+      <Text style={{ fontSize: small ? 10 : t.fontSize.xs, color: t.colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold }}>
         {isUp ? '+' : ''}{delta} {units}
       </Text>
     </View>
@@ -1744,7 +1744,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
-  photosRowText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  photosRowText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   // E10 read-only lapse views: the view-only notice card.
   readOnlyCard: {
     gap: spacing.sm,
@@ -1799,7 +1799,7 @@ const styles = StyleSheet.create({
   weightRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   unitLinkRow: { alignSelf: 'flex-start', paddingVertical: spacing.xs },
   unitLinkText: { ...type.caption, color: colors.textMuted },
-  weightValue: { fontSize: fontSize.xxxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  weightValue: { fontSize: fontSize.xxxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   trendHint: { ...type.caption, color: colors.textMuted, fontStyle: 'italic' },
   bodyFatBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
   recompBlock: { gap: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md },
@@ -1841,7 +1841,7 @@ const styles = StyleSheet.create({
   },
   measureTabActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   measureTabText: { ...type.captionStrong, color: colors.textSecondary },
-  measureTabTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  measureTabTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   logBtn: {
     paddingVertical: spacing.lg,

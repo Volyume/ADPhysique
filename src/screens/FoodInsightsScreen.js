@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { toEnergy, energyUnitLabel, formatEnergy } from '../lib/format';
 import BackHeader from '../components/BackHeader';
@@ -738,7 +738,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface,
   },
   windowChipOn: { borderColor: colors.primary, backgroundColor: colors.surface2 },
-  windowChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  windowChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   windowChipTextOn: { color: colors.primary },
 
   sectionLabelSpacing: { marginBottom: spacing.sm },
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
 
   summaryValue: { ...type.title, color: colors.textPrimary },
   summaryCaption: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
-  summaryDelta: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold, marginTop: spacing.sm },
+  summaryDelta: { fontSize: fontSize.sm, color: colors.textSecondary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, marginTop: spacing.sm },
 
   barRow: { flexDirection: 'row', alignItems: 'center', marginBottom: spacing.sm },
   barDay: { color: colors.textSecondary, fontSize: fontSize.sm, width: 48 }, // fits weekly date labels (e.g. "30 Jun")
@@ -795,7 +795,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   nutrientLabel: { color: colors.textMuted, fontSize: fontSize.sm },
-  nutrientValue: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  nutrientValue: { color: colors.textPrimary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   exportSecondary: { marginTop: spacing.sm },
 });

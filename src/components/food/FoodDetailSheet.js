@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { appAlert } from '../AppAlert';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -527,12 +527,12 @@ function MacroPill({ label, value }) {
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  title: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
   lastVerified: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   fieldLabel: {
     fontSize: fontSize.xs, color: colors.textSecondary,
-    textTransform: 'uppercase', fontWeight: fontWeight.semibold,
+    textTransform: 'uppercase', fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     marginTop: spacing.xs,
   },
   // Unit selector (household serving vs grams) + amount stepper. The common
@@ -544,8 +544,8 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center', justifyContent: 'center', minHeight: 44,
   },
-  unitBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
-  unitBtnTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  unitBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  unitBtnTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   // Ultimate-Audit item 15 (D22 15b): the eaten-at button reuses unitBtn's
   // shape but stays visually neutral (border, not a selected-chip fill) --
   // it is a value to open, not a radio choice.
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
   },
   stepInput: {
     paddingVertical: spacing.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     textAlign: 'center',
   },
   gramHint: {
@@ -590,7 +590,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.sm,
     alignItems: 'center',
   },
-  macroPillValue: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  macroPillValue: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   macroPillLabel: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   // gap #16: a quiet secondary line for extra per-food nutrients, below the
   // primary kcal/P/C/F pills so it never competes with the macros that matter.
@@ -604,8 +604,8 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
     alignItems: 'center',
   },
-  mealBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
-  mealBtnTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  mealBtnText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  mealBtnTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   actions: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     marginTop: spacing.sm,
@@ -619,7 +619,7 @@ const styles = StyleSheet.create({
   cancelBtn: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
-  cancelText: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  cancelText: { color: colors.textSecondary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   saveBtn: {
     flex: 1,
     paddingVertical: spacing.md,
@@ -627,7 +627,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill,
     alignItems: 'center',
   },
-  saveText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  saveText: { color: colors.onPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the

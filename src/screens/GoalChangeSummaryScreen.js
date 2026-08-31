@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Card from '../components/Card';
 import Button from '../components/Button';
@@ -360,9 +360,9 @@ const styles = StyleSheet.create({
   macroLabel: { ...type.label, color: colors.textSecondary },
   macroValues: { flexDirection: 'row', alignItems: 'center' },
   macroPrev: { fontSize: fontSize.sm, color: colors.textMuted, textDecorationLine: 'line-through' },
-  macroNext: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.bold },
+  macroNext: { fontSize: fontSize.sm, color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   macroUnchanged: { ...type.label, color: colors.textPrimary },
-  macroDelta: { fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
+  macroDelta: { fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   macroDeltaUp: { color: colors.primary },
   macroDeltaDown: { color: colors.warning },
 

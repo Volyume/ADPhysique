@@ -9,7 +9,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as hapticsVocab from '../lib/haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, motion, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, motion, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { workoutLoggerSize } from '../styles/layout';
 import RestTimer from '../components/RestTimer';
@@ -6204,11 +6204,11 @@ const styles = StyleSheet.create({
   adjustedReason: { ...type.bodySm, color: colors.textPrimary },
   adjustedSignal: { ...type.caption, color: colors.textMuted },
   adjustedRevertBtn: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginTop: spacing.xs, paddingVertical: spacing.xs },
-  adjustedRevertText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  adjustedRevertText: { fontSize: fontSize.sm, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   targetBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.successBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.success },
   // AY-2/D7: onSuccessBg is the text-on-tint ink (the flat `success` mark
   // fails 4.5:1 composited on successBg in light theme at every elevation).
-  targetBannerText: { fontSize: fontSize.sm, color: colors.onSuccessBg, fontWeight: fontWeight.semibold, flex: 1 },
+  targetBannerText: { fontSize: fontSize.sm, color: colors.onSuccessBg, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, flex: 1 },
   // D44: transient banner naming the destination exercise after a
   // superset/giant-set group-driven focus change (forward jump or
   // round-return). Same shape as targetBanner above, primary tint instead of
@@ -6216,7 +6216,7 @@ const styles = StyleSheet.create({
   // primary-on-primaryBg combination already used by navTabActive/
   // navTabTextActive elsewhere in this file.
   groupFocusBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, borderWidth: 1, borderColor: colors.primary, marginBottom: spacing.sm },
-  groupFocusBannerText: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold, flex: 1 },
+  groupFocusBannerText: { fontSize: fontSize.sm, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, flex: 1 },
   // Superset heads-up modal (shared with the unilateral-suggest modal below
   // -- both use supOverlay/supSheet/supSheetContent). D36a (item 17 modal
   // tails, 2026-07-10): this stays a raw Modal (education moment with its
@@ -6241,7 +6241,7 @@ const styles = StyleSheet.create({
   supPairConnector: { width: 2, height: 14, backgroundColor: colors.border, marginLeft: 10 },
   supSteps: { gap: spacing.sm, marginTop: spacing.xs },
   supStep: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  supStepNum: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold, minWidth: 14 },
+  supStepNum: { color: colors.primary, fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, minWidth: 14 },
   supStepText: { ...type.bodySm, color: colors.textPrimary, flex: 1 },
   supTip: { ...type.caption, color: colors.textMuted, fontStyle: 'italic', marginTop: spacing.xs },
   supPrimaryBtn: { backgroundColor: colors.primaryFill, borderRadius: radius.md, minHeight: workoutLoggerSize.primaryActionMinHeight, alignItems: 'center', justifyContent: 'center', marginTop: spacing.sm },
@@ -6304,7 +6304,7 @@ const styles = StyleSheet.create({
     padding: spacing.md, borderWidth: 1, borderColor: colors.warning,
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 },
-  deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.warning },
+  deloadBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.warning },
   deloadBannerSub: { ...type.caption, color: colors.textMuted },
 });
 

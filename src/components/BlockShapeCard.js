@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, type, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, withAlpha, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 /**
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
   },
   dotRecovery: { backgroundColor: withAlpha(colors.primary, 0.22), borderColor: withAlpha(colors.primary, 0.45) },
   dotLabel: { fontSize: fontSize.micro, color: colors.textMuted },
-  dotLabelCurrent: { color: colors.primary, fontWeight: fontWeight.semibold },
+  dotLabelCurrent: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   line: { ...type.body, fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: 19 },
 });
 

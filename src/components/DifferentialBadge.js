@@ -15,7 +15,7 @@
 import { useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, radius, fontSize, fontWeight } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 // paywall_shown impressions already sent this JS session, keyed by trigger.
@@ -108,7 +108,7 @@ const styles = StyleSheet.create({
   headerText: {
     color: colors.primary,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   body: {
     color: colors.textPrimary,
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   ctaText: {
     color: colors.primary,
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   dismissBtn: {
     paddingVertical: spacing.sm,

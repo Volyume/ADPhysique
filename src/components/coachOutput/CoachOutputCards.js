@@ -3,7 +3,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Card from '../Card';
 import SectionLabel from '../SectionLabel';
 import InfoTooltip from '../InfoTooltip';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, iconSize, alpha } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, type, iconSize, alpha, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 
 // L04-11: an optional `tooltip` string reuses the same InfoTooltip + glossary
@@ -158,7 +158,7 @@ const styles = StyleSheet.create({
   },
   statChipValue: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
   statChipLabel: {
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   },
   whyLabel: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textMuted,
   },
   whyText: {
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
   },
   rapidLossTitle: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.error,
   },
   rapidLossBody: {

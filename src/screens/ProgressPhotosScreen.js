@@ -14,9 +14,7 @@ import EmptyState from '../components/EmptyState';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
 import { SkeletonCard } from '../components/Skeleton';
-import {
-  colors, spacing, radius, fontWeight, type, iconSize, motion,
-} from '../styles/theme';
+import { colors, spacing, radius, fontWeight, type, iconSize, motion, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { useToast } from '../components/Toast';
 import useAppStore from '../store/useAppStore';
@@ -2237,7 +2235,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceElevated,
   },
   segmentText: { ...type.label, color: colors.textMuted },
-  segmentTextActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  segmentTextActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   libraryToolsRow: {
     flexDirection: 'row',
     alignItems: 'stretch',
@@ -2273,7 +2271,7 @@ const styles = StyleSheet.create({
   },
   dateButtonActive: { backgroundColor: colors.surfaceElevated },
   dateButtonText: { ...type.label, color: colors.textMuted, flex: 1, minWidth: 0 },
-  dateButtonTextActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  dateButtonTextActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   dateClearButton: {
     width: 40,
     minHeight: 40,

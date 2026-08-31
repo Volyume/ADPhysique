@@ -41,7 +41,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from './Button';
 import { logError } from '../lib/errorLog';
@@ -224,7 +224,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     textAlign: 'center',
     marginTop: spacing.md,

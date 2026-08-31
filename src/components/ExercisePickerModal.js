@@ -14,7 +14,7 @@ import { KeyboardAwareScrollView, KeyboardGestureArea } from 'react-native-keybo
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getAllExercises, insertExercise, getRecentlyUsedExerciseIds, getActiveBlock, clearExerciseIntent } from '../lib/database';
@@ -1085,7 +1085,7 @@ const styles = StyleSheet.create({
   },
   filterChip: { paddingVertical: spacing.xs, paddingHorizontal: spacing.sm },
   filterChipText: { ...type.label, color: colors.textSecondary },
-  filterChipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  filterChipTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   recentSection: { paddingTop: spacing.sm },
   recentLabel: { paddingHorizontal: spacing.lg },
   recentChip: { maxWidth: 180 },

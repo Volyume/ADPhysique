@@ -11,7 +11,7 @@
  */
 
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, radius, circle } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { selection as hapticSelection } from '../lib/haptics';
 import { CANCEL_REASONS, FREE_TEXT_REASONS, FREE_TEXT_PROMPT } from '../lib/cancelReason';
@@ -117,12 +117,12 @@ const styles = StyleSheet.create({
   rowText: {
     flex: 1,
     fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     color: colors.textSecondary,
   },
   rowTextSelected: {
     color: colors.textPrimary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   inputContainer: {
     gap: 0,

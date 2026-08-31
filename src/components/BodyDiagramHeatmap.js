@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { G, Ellipse, Rect, Path, Line } from 'react-native-svg';
-import { colors, fontSize, fontWeight, spacing, radius, letterSpacing, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, letterSpacing, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   figureLabel: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     letterSpacing: letterSpacing.overline,
     textTransform: 'uppercase',
   },

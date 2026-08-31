@@ -36,9 +36,7 @@ import Card from './Card';
 import Button from './Button';
 import usePhotoSuppression from '../hooks/usePhotoSuppression';
 import useAppStore from '../store/useAppStore';
-import {
-  colors, spacing, fontSize, fontWeight, withAlpha, circle, radius, type,
-} from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, withAlpha, circle, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { todayLocalKey } from '../lib/dayKey';
 import { track } from '../lib/telemetry';
@@ -239,7 +237,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
     marginBottom: spacing.xxs,
   },

@@ -54,7 +54,7 @@ import {
 } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, motion, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, motion, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import * as haptics from '../lib/haptics';
@@ -194,7 +194,7 @@ export default PeekMenu;
 const styles = StyleSheet.create({
   title: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
   subtitle: {
@@ -213,7 +213,7 @@ const styles = StyleSheet.create({
   },
   itemText: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
   },
   cancel: {
@@ -225,7 +225,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
   },
 });

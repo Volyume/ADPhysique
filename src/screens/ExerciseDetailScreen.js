@@ -15,7 +15,7 @@ import {
 } from '../lib/chartWindows';
 import { track } from '../lib/engineTelemetry';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, motion, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -1230,7 +1230,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   chartToggleBtnActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  chartToggleBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  chartToggleBtnText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   chartToggleBtnTextActive: { color: colors.primary },
   e1rmNote: { ...type.caption, color: colors.textMuted, marginTop: spacing.xs, fontStyle: 'italic' },
   chartContainer: {
@@ -1246,7 +1246,7 @@ const styles = StyleSheet.create({
   historyCard: {
     gap: spacing.sm,
   },
-  historyDate: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  historyDate: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   historySets: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
   historySetText: { fontSize: fontSize.sm, color: colors.textSecondary },
   historyEst: { ...type.num('caption'), color: colors.textMuted },
@@ -1271,7 +1271,7 @@ const styles = StyleSheet.create({
   },
   subCardName: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     lineHeight: 17,
   },
@@ -1339,7 +1339,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: spacing.hair,
   },
-  stepNumberText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.primary },
+  stepNumberText: { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.primary },
   stepText: { ...type.bodySm, flex: 1, color: colors.textSecondary },
   cueCard: {
     flexDirection: 'row',
@@ -1421,7 +1421,7 @@ const styles = StyleSheet.create({
   goalBarCaption: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
   // Congrats banner
   congratsBanner: {
@@ -1456,7 +1456,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     textAlign: 'center',
   },
   dateField: {

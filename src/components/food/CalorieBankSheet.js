@@ -16,7 +16,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-nativ
 import Ionicons from '@expo/vector-icons/Ionicons';
 import BottomSheet from '../BottomSheet';
 import SectionLabel from '../SectionLabel';
-import { colors, fontSize, fontWeight, spacing, radius, circle, type } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, circle, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -202,7 +202,7 @@ export default function CalorieBankSheet({
 }
 
 const styles = StyleSheet.create({
-  title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  title: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   intro: { ...type.bodySm, color: colors.textMuted, marginTop: spacing.xs },
   // Campaign 17B job 6: what the bank is, and what it is not.
   rules: { marginTop: spacing.sm, gap: spacing.xxs },
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md, gap: spacing.sm,
   },
   activeText: { flex: 1, color: colors.textSecondary, fontSize: fontSize.sm },
-  clearText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold },
+  clearText: { color: colors.primary, fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   sectionLabel: {
     marginTop: spacing.lg, marginBottom: spacing.sm,
   },
@@ -225,8 +225,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
   },
   dayChipActive: { backgroundColor: colors.primaryFill, borderColor: colors.primary },
-  dayChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.medium },
-  dayChipTextActive: { color: colors.onPrimary, fontWeight: fontWeight.bold },
+  dayChipText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  dayChipTextActive: { color: colors.onPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: spacing.xl, alignSelf: 'center' },
   stepBtn: {
     width: 48, height: 48, borderRadius: circle(48),
@@ -235,7 +235,7 @@ const styles = StyleSheet.create({
   },
   stepBtnDisabled: { opacity: 0.5 },
   stepValue: {
-    color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold,
+    color: colors.textPrimary, fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     minWidth: 88, textAlign: 'center', fontVariant: ['tabular-nums'],
   },
   preview: {
@@ -253,7 +253,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center',
   },
   applyBtnDisabled: { opacity: 0.5 },
-  applyText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  applyText: { color: colors.onPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the

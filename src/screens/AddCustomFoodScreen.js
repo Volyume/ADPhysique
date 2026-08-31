@@ -18,7 +18,7 @@ import { View, Text, StyleSheet } from 'react-native';
 // keyboard handling, matching iOS's native behaviour on Android too.
 import { KeyboardAwareScrollView, KeyboardGestureArea } from 'react-native-keyboard-controller';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import ModalHeader from '../components/ModalHeader';
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
   numWrapUnsure: { borderColor: colors.primary },
   unsureNote: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: -spacing.xs, marginBottom: spacing.sm },
   // L05-ACF2 (2026-07-09 design audit): the live portion-calorie preview.
-  portionPreview: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, marginTop: -spacing.xs, marginBottom: spacing.sm },
+  portionPreview: { color: colors.textPrimary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, marginTop: -spacing.xs, marginBottom: spacing.sm },
 
   saveBtn: { marginTop: spacing.xl },
 });

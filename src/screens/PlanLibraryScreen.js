@@ -10,7 +10,7 @@ import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { getLibraryPlans, getPlanWorkoutCounts, copyPlanFromLibrary, activatePlanWithBlock, getActiveBlock, updateRoutineExerciseExercise, recordExerciseSwap } from '../lib/database';
 import { loadExerciseIntentState, findPlanIntentConflicts } from '../lib/exercise/intent';
@@ -928,7 +928,7 @@ const styles = StyleSheet.create({
   },
   collectionChip: { minHeight: 36, justifyContent: 'center', paddingVertical: spacing.xxs },
   collectionChipText: { ...type.label, color: colors.textSecondary },
-  collectionChipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
+  collectionChipTextActive: { color: colors.primary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 
   // Division grid
   divisionSection: {
@@ -937,7 +937,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   divisionGroupLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textMuted,
     marginBottom: spacing.sm,
   },
@@ -951,8 +951,8 @@ const styles = StyleSheet.create({
   divisionChip: {
     paddingHorizontal: spacing.md, paddingVertical: 6,
   },
-  divisionChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
-  divisionChipTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
+  divisionChipText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  divisionChipTextActive: { color: colors.primary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   // Card owns background/radius/padding/border here.
   divisionDesc: {
     marginTop: spacing.md,
@@ -979,7 +979,7 @@ const styles = StyleSheet.create({
     width: 40, height: 40, borderRadius: radius.xl,
     backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
   },
-  quizBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  quizBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   quizBannerBody: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
 
   // Plan card. Card owns background/radius/border; overflow clips the
@@ -999,7 +999,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
   },
   badgeAmber: { backgroundColor: colors.surface2, borderColor: withAlpha(colors.primary, alpha.edge) },
-  badgeText: { fontSize: fontSize.micro, color: colors.textMuted, fontWeight: fontWeight.semibold },
+  badgeText: { fontSize: fontSize.micro, color: colors.textMuted, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   badgeTextAmber: { color: colors.primary },
   workoutCount: { ...type.caption, color: colors.textMuted, marginLeft: spacing.sm },
   planName: { ...type.bodyStrong, color: colors.textPrimary },
@@ -1042,7 +1042,7 @@ const styles = StyleSheet.create({
   },
   quizDotActive: { backgroundColor: colors.primary },
   quizQuestion: {
-    fontSize: fontSize.lg, fontWeight: fontWeight.black,
+    fontSize: fontSize.lg, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary, textAlign: 'center',
     marginBottom: spacing.xs,
   },
@@ -1051,14 +1051,14 @@ const styles = StyleSheet.create({
   quizOptionBtn: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
   },
-  quizOptionText: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, fontWeight: fontWeight.medium },
+  quizOptionText: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   quizSkip: { alignSelf: 'center', paddingVertical: spacing.sm },
   quizSkipText: { fontSize: fontSize.sm, color: colors.textMuted },
 
   // Quiz result
   quizResultIcon: { alignSelf: 'center', marginBottom: spacing.xs },
   quizResultTitle: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.black,
+    fontSize: fontSize.xl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary, textAlign: 'center',
   },
   // Card owns background/radius/padding/border here.
@@ -1078,7 +1078,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md, alignItems: 'center',
     borderWidth: 1, borderColor: colors.border,
   },
-  quizBrowseText: { fontSize: fontSize.md, fontWeight: fontWeight.medium, color: colors.textPrimary },
+  quizBrowseText: { fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium, color: colors.textPrimary },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-

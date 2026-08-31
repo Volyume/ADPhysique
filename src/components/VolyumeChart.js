@@ -34,7 +34,7 @@ import Svg, {
 } from 'react-native-svg';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
-import { colors as theme, withAlpha, alpha, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors as theme, withAlpha, alpha, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import {
   plotPoints, linePath, smoothPath, areaPath, ticks, paddedDomain, nearestPointIndex,
@@ -478,7 +478,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
   },
-  tooltipTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: theme.textPrimary },
+  tooltipTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: theme.textPrimary },
   tooltipSub: { ...type.caption, color: theme.textSecondary },
   // AX-02 "View data" text alternative.
   viewDataWrap: { marginTop: spacing.xs },

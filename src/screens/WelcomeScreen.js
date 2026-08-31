@@ -4,7 +4,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, motion, shadow } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, motion, shadow, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
 import Card from '../components/Card';
@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   logoImg: { width: 150, height: Math.round(150 / HERO_ASPECT) },
   wordmark: {
     // eslint-disable-next-line no-restricted-syntax -- welcome hero title, intentional display size
-    fontSize: 28, fontWeight: fontWeight.black, color: colors.textPrimary,
+    fontSize: 28, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary,
     marginTop: spacing.xs,
   },
   tagline: { fontSize: fontSize.sm, color: colors.textMuted },
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
   },
   proTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  proTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.black, color: colors.textPrimary },
+  proTitle: { fontSize: fontSize.lg, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   proSubtitle: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
 
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.lg },
@@ -262,7 +262,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryFill, paddingVertical: spacing.md, margin: spacing.md,
     borderRadius: radius.lg,
   },
-  proCtaText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  proCtaText: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.onPrimary },
 
   // Free card. backgroundColor/borderWidth/borderColor/padding now come
   // from Card's defaults (surface, 1px colors.border, spacing.lg); only
@@ -275,7 +275,7 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: radius.md,
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
-  freeTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  freeTitle: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   freeSubtitle: { ...type.caption, color: colors.textMuted, marginTop: spacing.hair },
   freeBullets: { gap: spacing.xs, paddingLeft: spacing.xs },
   freeBulletText: { ...type.caption, color: colors.textMuted, flex: 1 },

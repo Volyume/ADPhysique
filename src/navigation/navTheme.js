@@ -27,6 +27,7 @@
  */
 import { useMemo } from 'react';
 import useTheme from '../hooks/useTheme';
+import { fontFamily } from '../styles/theme';
 
 // Pure: React Navigation's NavigationContainer `theme` prop shape, built
 // from a resolved theme object (useTheme()'s return value, or
@@ -64,7 +65,7 @@ export function useStackOptions() {
   return useMemo(() => ({
     headerStyle: { backgroundColor: t.colors.surface, borderBottomColor: t.colors.border },
     headerTintColor: t.colors.textPrimary,
-    headerTitleStyle: { fontWeight: '700', color: t.colors.textPrimary },
+    headerTitleStyle: { fontFamily: fontFamily.bold, fontWeight: '700', color: t.colors.textPrimary },
     cardStyle: { backgroundColor: t.colors.background },
     // No header sync indicator. Founder call 2026-05-31: sync is automatic and
     // failures surface in logs and Sentry, so a permanent status badge in the

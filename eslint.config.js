@@ -88,6 +88,12 @@ module.exports = [
       // linting them double-counts every file (and lints old/other branch
       // states), the same reason jest ignores this path. Not app source.
       '.claude/**',
+      // Vendored agent-skill tooling (a mirror of .claude/skills for the
+      // GitHub-side runner). Same reason as .claude/** above: not app source,
+      // and it ships minified browser bundles that produce phantom no-undef
+      // errors under the React Native config.
+      '.github/skills/**',
+      '.github/agents/**',
       'android/**',
       'ios/**',
       'coverage/**',

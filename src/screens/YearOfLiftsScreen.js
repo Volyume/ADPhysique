@@ -22,7 +22,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle, withAlpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 // M4 (audit 03b §2.2 item 1): the story tap zones were the flagship dead
 // tap, no pressed state, no haptic. The tick goes through the self-gating
@@ -903,7 +903,7 @@ const styles = StyleSheet.create({
     // eslint-disable-next-line no-restricted-syntax -- Year-of-Lifts hero number, 96px by design
     fontSize: 96,
     lineHeight: 100,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
   },
@@ -925,7 +925,7 @@ const styles = StyleSheet.create({
     // eslint-disable-next-line no-restricted-syntax -- Year-of-Lifts secondary hero number
     fontSize: 44,
     lineHeight: 48,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary,
   },
   heroSubline: {
@@ -940,7 +940,7 @@ const styles = StyleSheet.create({
     // preserved). R2 (2026-07-11): list headlines render prose ("Your top
     // lifts", "Personal records"), not a pure readout, so no tabular.
     fontSize: fontSize.xxl,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary,
   },
   listSubline: {
@@ -959,7 +959,7 @@ const styles = StyleSheet.create({
     // Theme gap: no lg + black type role exists; the raw pair stays (weight
     // preserved). R2 (2026-07-11): the rank (1-5) is a pure readout -> tabular.
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.primary,
     textAlign: 'center',
     fontVariant: ['tabular-nums'],

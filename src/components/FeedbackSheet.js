@@ -42,7 +42,7 @@ import {
 } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as haptics from '../lib/haptics';
-import { colors, fontSize, fontWeight, spacing, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import useAppStore from '../store/useAppStore';
 import { submitFeedback, markPromptShown } from '../lib/feedback';
@@ -326,7 +326,7 @@ const FeedbackSheet = forwardRef(function FeedbackSheet(_, ref) {
 const styles = StyleSheet.create({
   title: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     marginBottom: spacing.xxs,
   },
@@ -347,12 +347,12 @@ const styles = StyleSheet.create({
   },
   sentimentChipText: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     color: colors.textSecondary,
   },
   sentimentChipTextSelected: {
     color: colors.textPrimary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
 
   inputContainer: {
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   },
   cancelText: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
   },
   submitBtn: {
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
   },
   submitText: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.onPrimary,
   },
 
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
   },
   doneTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
   doneSub: {

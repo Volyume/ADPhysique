@@ -12,7 +12,7 @@ const SPLASH_HERO = require('../../assets/volyume-wordmark.png');
 const HERO_ASPECT = 1032 / 277;
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, spacing, motion, type, fontSize, fontWeight } from '../styles/theme';
+import { colors, spacing, motion, type, fontSize, fontWeight, fontFamily } from '../styles/theme';
 // CP-10 stage 2 (docs/ux-world-class-audit-2026-07-09/
 // CP-10-restart-free-theming-plan.md, "Stage 2 — Root chrome"): the
 // NavigationContainer theme prop and the stackOptions header/card colours
@@ -2116,7 +2116,7 @@ const dbErrorStyles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     textAlign: 'center',
     marginTop: spacing.md,

@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, Switch, TouchableOpacity, ScrollView, Linking, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import { requestNotificationPermissions, getNotificationPermissionStatus } from '../lib/notifications';
@@ -878,7 +878,7 @@ const styles = StyleSheet.create({
   toggleLabel: {
     flex: 1,
     fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     color: colors.textPrimary,
   },
 
@@ -920,7 +920,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fontSize.md,
     color: colors.textPrimary,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
   timePickerValue: {
     ...type.num('bodyStrong'),

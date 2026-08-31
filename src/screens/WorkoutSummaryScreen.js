@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, withAlpha, alpha, circle, motion, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, buildVolumeStatusColor, withAlpha, alpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
@@ -2198,7 +2198,7 @@ const styles = StyleSheet.create({
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   completionTitle: { ...type.h2, color: colors.textPrimary },
   completionDate: { fontSize: fontSize.sm, color: colors.textMuted },
-  firstSessionLine: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary, marginTop: spacing.xs },
+  firstSessionLine: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary, marginTop: spacing.xs },
   // D1 early-win milestone card. Gold accent (an achievement beat, kin to the
   // PR row) but calm: a soft surface card, no confetti, no full-screen takeover.
   milestoneCard: {
@@ -2209,7 +2209,7 @@ const styles = StyleSheet.create({
     backgroundColor: withAlpha(colors.gold, 0.125),
     alignItems: 'center', justifyContent: 'center',
   },
-  milestoneTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  milestoneTitle: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   milestoneBody: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
   milestoneShareBtn: {
     width: 36, height: 36, borderRadius: circle(36),
@@ -2221,8 +2221,8 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   phaseHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  phaseTitle: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  phaseName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  phaseTitle: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  phaseName: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary },
   phaseRecap: { ...type.bodySm, color: colors.textSecondary },
   phaseNext: { ...type.captionTight, color: colors.textMuted },
   phaseActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.xxs },
@@ -2231,7 +2231,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md, borderRadius: radius.md,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
   },
-  phaseActionText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  phaseActionText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary },
   phaseShareBtn: {
     width: 44, height: 44, borderRadius: radius.md,
     alignItems: 'center', justifyContent: 'center',
@@ -2269,7 +2269,7 @@ const styles = StyleSheet.create({
   blockArcSection: {
     gap: spacing.sm,
   },
-  blockArcName: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  blockArcName: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   // D3 hero: the one elevated object on the screen (surfaceElevated ranks
   // the hero, design audit 03 rule 4), carrying the display-size tonnage.
   heroCard: {
@@ -2411,9 +2411,9 @@ const styles = StyleSheet.create({
   // D3: selected state uses the app-wide chip grammar (tint + amber edge,
   // see components/Chip.js), not a full amber fill.
   ratingBtnActive: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
-  ratingBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  ratingBtnText: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textSecondary },
   ratingBtnTextActive: { color: colors.primary },
-  ratingValueLabel: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.medium },
+  ratingValueLabel: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   notesField: { borderRadius: radius.md },
   notesInput: { ...type.body, padding: spacing.lg, minHeight: 80, textAlignVertical: 'top' },
   nextTimeNoteField: { borderRadius: radius.md },

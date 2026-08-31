@@ -14,7 +14,7 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, fontSize, fontWeight, type, circle } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, type, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Chip from '../components/Chip';
 import useAppStore from '../store/useAppStore';
@@ -196,16 +196,16 @@ const styles = StyleSheet.create({
   dot: { width: 8, height: 8, borderRadius: circle(8), backgroundColor: colors.border },
   dotActive: { backgroundColor: colors.primary },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  h1: { color: colors.textPrimary, fontSize: fontSize.xxl, fontWeight: fontWeight.black },
+  h1: { color: colors.textPrimary, fontSize: fontSize.xxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black },
   lede: { ...type.body, color: colors.textSecondary, marginTop: spacing.xs, marginBottom: spacing.lg },
-  section: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold, marginTop: spacing.lg, marginBottom: spacing.sm },
+  section: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, marginTop: spacing.lg, marginBottom: spacing.sm },
   q: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.md, marginBottom: spacing.xs },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   quizChip: { minHeight: 44 },
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   cta: { backgroundColor: colors.primaryFill, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
   ctaOff: { opacity: 0.5 },
-  ctaText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.heavy },
+  ctaText: { color: colors.onPrimary, fontSize: fontSize.md, fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy },
 });
 
 // CP-10 batch F (2026-07-11): the frozen `styles` block above stays byte-

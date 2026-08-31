@@ -16,7 +16,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Text, StyleSheet, AppState } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
@@ -160,7 +160,7 @@ export function PostLapseSheetHost() {
 const styles = StyleSheet.create({
   title: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
   body: {

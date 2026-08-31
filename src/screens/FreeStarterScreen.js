@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, BackHan
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -569,11 +569,11 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.md, gap: spacing.sm,
   },
-  optionText: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, fontWeight: fontWeight.medium },
+  optionText: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
 
   resultIcon: { alignSelf: 'center', marginTop: spacing.lg },
   resultTitle: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.black,
+    fontSize: fontSize.xl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary, textAlign: 'center',
   },
   resultIntro: {
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
   },
-  resultBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.primary },
+  resultBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.primary },
   resultName: { ...type.bodyStrong, color: colors.textPrimary },
   resultDesc: { ...type.bodySm, color: colors.textSecondary },
   resultMeta: { ...type.caption, color: colors.textMuted },

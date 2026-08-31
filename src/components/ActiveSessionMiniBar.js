@@ -31,7 +31,7 @@ import Animated, {
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import PressableCard from './PressableCard';
-import { colors, spacing, fontSize, fontWeight, circle, shadow, motion, type } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, circle, shadow, motion, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 const BAR_HEIGHT = 44;
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   exercise: { ...type.label, color: colors.textPrimary, flex: 1 },
   statusWrap: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs },
   statusTimer: {
-    color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold,
+    color: colors.primary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     fontVariant: ['tabular-nums'],
   },
   statusText: { ...type.captionStrong, color: colors.textMuted },

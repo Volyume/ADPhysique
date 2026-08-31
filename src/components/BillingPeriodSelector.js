@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { annualSavingsPct } from '../lib/payments/catalogue';
 
@@ -69,8 +69,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   buttonActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  label: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textSecondary },
-  price: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  label: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textSecondary },
+  price: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   textActive: { color: colors.primary },
   saveBadge: {
     position: 'absolute',
@@ -81,7 +81,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm,
     paddingVertical: 1,
   },
-  saveBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary },
+  saveBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.onPrimary },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the

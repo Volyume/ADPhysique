@@ -5,9 +5,7 @@ import {
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
-import {
-  colors, fontSize, fontWeight, spacing, radius, circle, type,
-} from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, circle, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
@@ -391,7 +389,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center',
   },
   sheetTitle: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary,
+    fontSize: fontSize.xl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary,
     textAlign: 'center',
   },
   sheetBody: {
@@ -411,7 +409,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   lockedTitle: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.black,
+    fontSize: fontSize.xl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary, textAlign: 'center',
   },
   lockedBody: {
@@ -428,7 +426,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.xxl, alignSelf: 'stretch',
   },
-  lockedBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  lockedBtnText: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.onPrimary },
   lockedBack: { paddingVertical: spacing.sm },
   lockedBackText: { fontSize: fontSize.sm, color: colors.textMuted },
   lockedRestore: {
@@ -451,7 +449,7 @@ const styles = StyleSheet.create({
   },
   badgeSm: { paddingHorizontal: 5, paddingVertical: spacing.xxs },
   badgeMd: { paddingHorizontal: 7, paddingVertical: 3 },
-  badgeText: { fontWeight: fontWeight.black, color: colors.onPrimary },
+  badgeText: { fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.onPrimary },
   badgeTextSm: { fontSize: fontSize.micro },
   badgeTextMd: { fontSize: fontSize.micro },
 });

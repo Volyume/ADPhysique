@@ -10,7 +10,7 @@ import { getBlockStatus, BLOCK_PLANNED_WEEKS } from '../lib/mesocycle';
 import SvgBarSparkline from '../components/SvgBarSparkline';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
 import { SkeletonCard } from '../components/Skeleton';
@@ -568,7 +568,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
   },
   activeBadgeText: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black, color: colors.primary,
+    fontSize: fontSize.xs, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.primary,
   },
   mesoName:   { ...type.title, color: colors.textPrimary },
   mesoMeta:   { flexDirection: 'row', gap: spacing.lg, flexWrap: 'wrap' },
@@ -581,7 +581,7 @@ const styles = StyleSheet.create({
   },
   planCardHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, justifyContent: 'space-between' },
   planCardTag: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.black,
+    fontSize: fontSize.xs, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.primary,
   },
   planCardName: { ...type.h3, color: colors.textPrimary },
@@ -608,7 +608,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm, borderWidth: 1, borderColor: withAlpha(colors.primary, 0.314),
     backgroundColor: colors.primaryBg,
   },
-  summaryBtnText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  summaryBtnText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   // Plan card week indicator
   planWeekRow:       { gap: spacing.xs, marginTop: spacing.sm },

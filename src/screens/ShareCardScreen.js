@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -887,7 +887,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
   },
   templateLabel: { ...type.caption, color: colors.textMuted },
-  templateLabelActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  templateLabelActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   formatHint: { ...type.captionTight, color: colors.textMuted },
   segmentRow: {
     flexDirection: 'row', gap: spacing.xs,
@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.sm,
   },
   segmentActive: { backgroundColor: colors.surface3 },
-  segmentText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.semibold },
+  segmentText: { fontSize: fontSize.sm, color: colors.textMuted, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   segmentTextActive: { color: colors.textPrimary },
   previewOuter: { alignSelf: 'center' },
   previewPlaceholder: {
@@ -931,7 +931,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface, gap: 2,
   },
   prChipActive: { borderColor: colors.primary, backgroundColor: colors.primaryBg },
-  prChipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.semibold },
+  prChipText: { fontSize: fontSize.sm, color: colors.textSecondary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   prChipTextActive: { color: colors.primary },
   prChipSub: { fontSize: fontSize.xs, color: colors.textMuted },
   prChipSubActive: { color: colors.primary },

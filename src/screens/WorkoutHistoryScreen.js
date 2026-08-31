@@ -11,7 +11,7 @@ import { getDay } from 'date-fns/getDay';
 import { addMonths } from 'date-fns/addMonths';
 import { subMonths } from 'date-fns/subMonths';
 import { isSameDay } from 'date-fns/isSameDay';
-import { colors, fontSize, fontWeight, spacing, radius, type, circle, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import PressableCard from '../components/PressableCard';
@@ -965,7 +965,7 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: colors.primary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
 
   // ── Calendar ───────────────────────────────────────────────────────────────
@@ -1018,11 +1018,11 @@ const styles = StyleSheet.create({
   },
   dayNumTrained: {
     color: colors.primary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   dayNumSelected: {
     color: colors.onPrimary,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
   },
   clearDayBtn: {
     marginTop: spacing.xs,
@@ -1069,7 +1069,7 @@ const styles = StyleSheet.create({
     // ("7 Jul 2026"), so it gains tabular figures like every other numeral
     // readout on this screen (FOOD-DESIGN-STANDARD.md section 7.2 table date).
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
   },

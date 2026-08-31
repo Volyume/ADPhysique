@@ -6,7 +6,7 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, motion, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, motion, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { VolyumeIcon } from '../components/BrandMark';
 import Button from '../components/Button';
@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
   proBadge: {
     backgroundColor: colors.primaryFill, borderRadius: 4, paddingHorizontal: 7, paddingVertical: spacing.xxs,
   },
-  proBadgeText: { fontSize: fontSize.micro, fontWeight: fontWeight.black, color: colors.onPrimary },
+  proBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.onPrimary },
 
   // Matched to the wizard's continuous track, drawn full here (setup complete).
   progressTrack: {
@@ -696,7 +696,7 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   // eslint-disable-next-line no-restricted-syntax -- setup-complete hero numeral
-  ringValue: { fontSize: 34, fontWeight: fontWeight.bold, color: colors.textPrimary, lineHeight: 38, fontVariant: ['tabular-nums'] },
+  ringValue: { fontSize: 34, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, lineHeight: 38, fontVariant: ['tabular-nums'] },
   ringSub: { fontSize: fontSize.xs, color: colors.textMuted, marginTop: spacing.xxs },
   // Macro bars, matched to the Nutrition tab's MacroRings so the reveal and the
   // place the user tracks every day read as one component.
@@ -706,10 +706,10 @@ const styles = StyleSheet.create({
   },
   macroBar: { gap: spacing.xs2 },
   macroBarTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  macroBarLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
-  macroBarLabelPrimary: { color: colors.textSecondary, fontWeight: fontWeight.semibold },
+  macroBarLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
+  macroBarLabelPrimary: { color: colors.textSecondary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   macroBarValue: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'] },
-  macroBarValuePrimary: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  macroBarValuePrimary: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   macroTrack: { height: 6, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
   macroFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
   goalRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs,
     borderWidth: 1, borderColor: withAlpha(colors.primary, 0.188),
   },
-  goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  goalChipText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   eduLearnRow: {
     minHeight: 44,
     flexDirection: 'row',
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: colors.border,
   },
-  splitBadgeText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  splitBadgeText: { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textSecondary },
   splitName: { ...type.label, color: colors.textPrimary, flex: 1 },
   whyPlanWrap: { marginTop: spacing.md, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.sm },
   // B-5: whyPlanTitle's typography now comes from SectionLabel (default tone).

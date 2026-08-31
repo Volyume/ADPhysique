@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator } from 'react-native';
-import { colors, fontSize, fontWeight, spacing } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import BottomSheet from '../BottomSheet';
 import Button from '../Button';
@@ -107,7 +107,7 @@ export default function RecipeDetailSheet({
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  title: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
   subtitleWhole: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.xxs },
   loadingRow: { paddingVertical: spacing.md, alignItems: 'center' },

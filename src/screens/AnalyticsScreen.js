@@ -8,7 +8,7 @@ import { useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 import { safeDate, safeFormatDate } from '../lib/safeFormat';
 
-import { colors, fontSize, fontWeight, spacing, radius, buildVolumeStatusColor, type, circle, iconSize, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, buildVolumeStatusColor, type, circle, iconSize, withAlpha, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import Button from '../components/Button';
@@ -784,7 +784,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
-  recapCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  recapCardText: { flex: 1, fontSize: fontSize.sm, color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   // ── Volume snapshot (R4) ──
   volEmptyText: { fontSize: fontSize.sm, color: colors.textMuted },
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
   volStackBar:     { flexDirection: 'row', height: 8, gap: spacing.xxs },
   volStackSegment: { borderRadius: radius.hair },
   volSummaryMain:  { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs },
-  volSummaryCount: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  volSummaryCount: { fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   volSummaryLabel: { fontSize: fontSize.sm, color: colors.textSecondary },
   volSummaryFlags: { flex: 1, alignItems: 'flex-end', gap: spacing.xxs },
   volSummaryFlagText: { fontSize: fontSize.micro, color: colors.textSecondary, fontVariant: ['tabular-nums'] },
@@ -815,7 +815,7 @@ const styles = StyleSheet.create({
   // every other numeral here (volSummaryCount). fontSize.xs +
   // fontWeight.bold has no exact type.* role (theme gap logged in the R2
   // report), so the raw weight stays rather than dropping emphasis.
-  diffText:     { fontSize: fontSize.xs, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
+  diffText:     { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'] },
 
   // ── Utilities (R6) ──
   navGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },

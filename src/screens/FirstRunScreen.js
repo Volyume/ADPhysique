@@ -3,7 +3,7 @@ import { appAlert } from '../components/AppAlert';
 import { Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontWeight, spacing, type } from '../styles/theme';
+import { colors, fontWeight, spacing, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.lg,
   },
   hintText: { ...type.captionTight, flex: 1, color: colors.textSecondary },
-  hintBold: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  hintBold: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 });
 
 // CP-10 batch D (2026-07-10): the frozen `styles` block above stays

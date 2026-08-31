@@ -18,7 +18,7 @@
 
 import { useState, useCallback } from 'react';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BottomSheet from './BottomSheet';
 import Button from './Button';
@@ -147,7 +147,7 @@ export default function CancelReasonSheet({
 const styles = StyleSheet.create({
   title: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
   sub: {
@@ -163,7 +163,7 @@ const styles = StyleSheet.create({
   },
   breakPrompt: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     color: colors.textPrimary,
   },
   chipRow: {

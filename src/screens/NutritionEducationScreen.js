@@ -12,7 +12,7 @@ import { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
   sectionBody: { gap: spacing.sm },
 
   body: { ...type.bodySm, color: colors.textPrimary },
-  strong: { color: colors.textPrimary, fontWeight: fontWeight.bold },
+  strong: { color: colors.textPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 
   keypoint: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, backgroundColor: colors.primaryBg, borderRadius: radius.md, padding: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.primary, marginTop: spacing.xs },
   keypointText: { ...type.bodySm, color: colors.textPrimary, flex: 1, fontWeight: fontWeight.medium },
@@ -306,18 +306,18 @@ const styles = StyleSheet.create({
   macroDot: { width: 10, height: 10, borderRadius: circle(10), marginTop: 6 },
   macroHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm },
   macroName: { ...type.bodyStrong, color: colors.textPrimary },
-  macroKcal: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  macroKcal: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   macroRole: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xxs },
 
   phaseLine: { backgroundColor: colors.surface2, borderRadius: radius.md, padding: spacing.md, gap: spacing.xxs },
   phaseHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', gap: spacing.sm, flexWrap: 'wrap' },
   phaseName: { ...type.bodyStrong, color: colors.textPrimary },
-  phaseRate: { color: colors.primary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  phaseRate: { color: colors.primary, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   phaseGist: { ...type.bodySm, color: colors.textSecondary },
 
   bulletRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm, paddingVertical: spacing.xs },
   bulletChip: { width: 22, height: 22, borderRadius: circle(22), backgroundColor: colors.primaryFill, alignItems: 'center', justifyContent: 'center' },
-  bulletChipText: { color: colors.onPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.bold },
+  bulletChipText: { color: colors.onPrimary, fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 
   footer: { ...type.captionTight, color: colors.textMuted, textAlign: 'center', marginTop: spacing.sm, fontStyle: 'italic' },
 });

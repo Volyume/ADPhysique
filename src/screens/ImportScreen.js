@@ -21,7 +21,7 @@ import BackHeader from '../components/BackHeader';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system/legacy';
 
-import { colors, fontSize, fontWeight, spacing, type, circle, letterSpacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, type, circle, letterSpacing, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { formatNumber } from '../lib/format';
 import useAppStore from '../store/useAppStore';
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   },
   unmappedHead: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
     marginBottom: spacing.xxs,
     textTransform: 'uppercase',

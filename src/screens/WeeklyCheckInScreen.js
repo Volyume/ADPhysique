@@ -44,7 +44,7 @@ import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import { getRollupsForRange, getPlannedDaysInRange, confirmPlannedDay } from '../lib/food/db';
 import { getCycleTracking, shouldShowCycleQuestion } from '../lib/cyclePrefs';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { requestNotificationPermissions, getNotificationPermissionStatus, scheduleNextCheckinReminder, scheduleWeeklyCoachReady, scheduleMissedCheckinFollowups } from '../lib/notifications';
 import { logError, logWarn } from '../lib/errorLog';
@@ -2021,7 +2021,7 @@ const styles = StyleSheet.create({
   headerCenter: { flex: 1, alignItems: 'center', gap: spacing.xs },
   headerTitle: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
   headerSpacer: { width: 32 },
@@ -2140,7 +2140,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.lg, marginTop: spacing.xs,
   },
   scanPromptActionPrimary: {
-    fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary,
+    fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.primary,
   },
   scanPromptActionSecondary: {
     fontSize: fontSize.sm, color: colors.textMuted,
@@ -2172,7 +2172,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
   notesFieldContainer: { gap: 0 },
   notesField: {
@@ -2197,7 +2197,7 @@ const styles = StyleSheet.create({
   },
   perfCardSelected: { backgroundColor: colors.primaryBg, borderColor: colors.primary },
   perfCardText: { ...type.label, color: colors.textSecondary, flex: 1 },
-  perfCardTextSelected: { color: colors.primary, fontWeight: fontWeight.semibold },
+  perfCardTextSelected: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   ctaRow: { marginTop: spacing.lg },
   ctaBtn: {
@@ -2208,7 +2208,7 @@ const styles = StyleSheet.create({
   // opacity 1 counteracts the Button primitive's default disabled dim so the
   // incomplete-form state keeps its shipped look (solid surface3, muted text).
   ctaBtnDisabled: { backgroundColor: colors.surface3, opacity: 1 },
-  ctaBtnText: { fontSize: fontSize.md, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  ctaBtnText: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.onPrimary },
   ctaBtnTextDisabled: { color: colors.textMuted },
   ctaHint: { textAlign: 'center', fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm },
 
@@ -2268,7 +2268,7 @@ const styles = StyleSheet.create({
 
   ritualIntroTitle: {
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary,
     textAlign: 'center',
   },

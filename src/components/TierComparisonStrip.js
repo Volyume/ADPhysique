@@ -13,7 +13,7 @@
  * numbers always match the SKU the buy CTA will purchase.
  */
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { colors, spacing, radius, fontSize, fontWeight, type } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { usePlayPrices } from '../lib/payments/usePlayPrices';
 
@@ -127,13 +127,13 @@ const styles = StyleSheet.create({
   colHeader: {
     color: colors.textPrimary,
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     marginBottom: spacing.xs,
   },
   colPrice: {
     color: colors.textPrimary,
     fontSize: fontSize.xxl,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   colCadence: {
     ...type.caption,

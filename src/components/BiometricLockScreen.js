@@ -15,9 +15,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import {
-  colors, fontSize, fontWeight, spacing, circle, type,
-} from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, circle, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from './Button';
 
@@ -72,7 +70,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   title: {
-    fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary, textAlign: 'center',
+    fontSize: fontSize.xl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary, textAlign: 'center',
   },
   body: {
     ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 21,

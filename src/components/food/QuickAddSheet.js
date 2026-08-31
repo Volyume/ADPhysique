@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, fontSize, fontWeight, spacing } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import useAppStore from '../../store/useAppStore';
 import * as haptics from '../../lib/haptics';
@@ -173,22 +173,22 @@ export default function QuickAddSheet({ visible, initialMealSlot = 'snack', onSa
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  title: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
   fieldLabel: {
     fontSize: fontSize.xs, color: colors.textSecondary,
-    textTransform: 'uppercase', fontWeight: fontWeight.semibold,
+    textTransform: 'uppercase', fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     marginTop: spacing.xs,
   },
   calorieInput: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   macroRow: { flexDirection: 'row', gap: spacing.sm },
   macroField: { flex: 1 },
   macroInput: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     textAlign: 'center',
   },
   mealRow: { flexDirection: 'row', gap: spacing.xs },

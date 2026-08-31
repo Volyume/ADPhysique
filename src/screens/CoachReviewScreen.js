@@ -7,7 +7,7 @@ import { endOfWeek } from 'date-fns/endOfWeek';
 import { format } from 'date-fns/format';
 import { isWithinInterval } from 'date-fns/isWithinInterval';
 import { useNavigation } from '@react-navigation/native';
-import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, alpha } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, type, withAlpha, circle, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { getAllWorkouts, getCompletedWorkoutSets, getAllExercises, getRecentCheckins, getCurrentMesocycleWeek } from '../lib/database';
 import { calculateWeeklyVolume, getVolumeStatus, shouldDeload, MUSCLE_DISPLAY_NAMES, detectLaggingMuscles, summariseWorkoutSets, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.heavy,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy,
     color: colors.textPrimary,
     textAlign: 'center',
   },
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
   volumeMuscleName: {
     flex: 1,
     fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     color: colors.textPrimary,
   },
   volumeSetCount: {
@@ -798,7 +798,7 @@ const styles = StyleSheet.create({
   },
   volumeBadgeText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
 
   // Insight rows
@@ -847,7 +847,7 @@ const styles = StyleSheet.create({
   },
   recIndexText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.primary,
   },
   recText: {

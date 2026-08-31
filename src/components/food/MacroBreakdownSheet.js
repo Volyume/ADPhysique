@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
-import { colors, fontSize, fontWeight, spacing, radius } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -134,14 +134,14 @@ export default function MacroBreakdownSheet({ visible, entries, dateLabel, onClo
 
 const styles = StyleSheet.create({
   header: { marginBottom: spacing.md },
-  title: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.semibold },
+  title: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   subtitle: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
   row: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  rowLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  rowLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   macroCell: { alignItems: 'flex-end' },
   rowMacros: { color: colors.textMuted, fontSize: fontSize.sm },
   // Descriptive sub-lines: the per-macro kcal breakdown (so the energy total
@@ -149,13 +149,13 @@ const styles = StyleSheet.create({
   rowMacroKcal: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs },
   rowMacroSplit: { color: colors.textMuted, fontSize: fontSize.xs, marginTop: spacing.xxs, fontVariant: ['tabular-nums'] },
   totalRow: { borderBottomWidth: 0, marginTop: spacing.xs },
-  totalLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  totalLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   empty: { color: colors.textSecondary, fontSize: fontSize.sm, paddingVertical: spacing.lg, textAlign: 'center' },
   doneBtn: {
     marginTop: spacing.lg, minHeight: 48, borderRadius: radius.md,
     backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
   },
-  doneText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  doneText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the

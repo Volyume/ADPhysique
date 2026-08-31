@@ -28,7 +28,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, radius, type } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import BillingPeriodSelector from '../components/BillingPeriodSelector';
@@ -449,7 +449,7 @@ const styles = StyleSheet.create({
   recapTitle: {
     color: colors.textMuted,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     marginBottom: spacing.xs,
   },
   recapLine: {

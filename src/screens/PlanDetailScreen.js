@@ -6,7 +6,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
@@ -637,28 +637,28 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start', backgroundColor: colors.surface2, borderRadius: radius.full,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderWidth: 1, borderColor: colors.border,
   },
-  libraryBadgeText: { fontSize: fontSize.xs, color: colors.textMuted, fontWeight: fontWeight.semibold },
+  libraryBadgeText: { fontSize: fontSize.xs, color: colors.textMuted, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   activeBadge: {
     alignSelf: 'flex-start', backgroundColor: colors.primaryBg, borderRadius: radius.full,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderWidth: 1, borderColor: withAlpha(colors.primary, 0.376),
   },
-  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold },
+  activeBadgeText: { fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   featuredBadge: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xxs,
     alignSelf: 'flex-start', backgroundColor: colors.primaryFill, borderRadius: radius.full,
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs,
   },
-  featuredBadgeText: { fontSize: fontSize.xs, color: colors.onPrimary, fontWeight: fontWeight.bold },
-  planName: { fontSize: fontSize.xxl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  featuredBadgeText: { fontSize: fontSize.xs, color: colors.onPrimary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
+  planName: { fontSize: fontSize.xxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   planDesc: { ...type.bodySm, color: colors.textSecondary },
   planStats: { flexDirection: 'row', gap: spacing.xl },
   planStat: { gap: spacing.xxs },
-  planStatValue: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary },
+  planStatValue: { fontSize: fontSize.xl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
   planStatLabel: { ...type.caption, color: colors.textMuted },
   section: { gap: spacing.md },
   sectionHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  reorderToggleText: { fontSize: fontSize.sm, color: colors.textSecondary, fontWeight: fontWeight.regular },
-  reorderToggleTextActive: { color: colors.primary, fontWeight: fontWeight.bold },
+  reorderToggleText: { fontSize: fontSize.sm, color: colors.textSecondary, fontFamily: fontFamily.regular, fontWeight: fontWeight.regular },
+  reorderToggleTextActive: { color: colors.primary, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   reorderActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   reorderBtn: {
     width: 32,
@@ -681,7 +681,7 @@ const styles = StyleSheet.create({
     width: 32, height: 32, borderRadius: circle(32), backgroundColor: colors.surface2,
     alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border,
   },
-  workoutIndexText: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  workoutIndexText: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textSecondary },
   workoutInfo: { flex: 1, gap: spacing.xxs },
   workoutName: { ...type.bodyStrong, color: colors.textPrimary },
   workoutMeta: { ...type.caption, color: colors.textSecondary },

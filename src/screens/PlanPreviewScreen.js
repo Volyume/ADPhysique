@@ -8,7 +8,7 @@
  */
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, radius, fontSize, fontWeight, type, letterSpacing } from '../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, type, letterSpacing, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -59,16 +59,16 @@ export default function PlanPreviewScreen({ navigation }) {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xxl },
-  kicker: { color: colors.textSecondary, fontSize: fontSize.sm, letterSpacing: letterSpacing.overline, fontWeight: fontWeight.semibold },
-  h1: { color: colors.textPrimary, fontSize: fontSize.xxl, fontWeight: fontWeight.black, marginTop: spacing.xs, marginBottom: spacing.lg },
+  kicker: { color: colors.textSecondary, fontSize: fontSize.sm, letterSpacing: letterSpacing.overline, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  h1: { color: colors.textPrimary, fontSize: fontSize.xxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, marginTop: spacing.xs, marginBottom: spacing.lg },
   card: { gap: spacing.sm },
-  splitName: { color: colors.primary, fontSize: fontSize.xl, fontWeight: fontWeight.heavy },
+  splitName: { color: colors.primary, fontSize: fontSize.xl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy },
   structure: { ...type.body, color: colors.textPrimary },
   phase: { ...type.body, color: colors.textSecondary },
   note: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.lg },
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.borderSubtle },
   cta: { backgroundColor: colors.primaryFill, borderRadius: radius.lg, alignItems: 'center', paddingVertical: spacing.md, minHeight: 50, justifyContent: 'center' },
-  ctaText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.heavy },
+  ctaText: { color: colors.onPrimary, fontSize: fontSize.md, fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy },
   fine: { color: colors.textSecondary, fontSize: fontSize.sm, textAlign: 'center', marginTop: spacing.sm },
 });
 

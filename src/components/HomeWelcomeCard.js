@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, circle, withAlpha, alpha, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, circle, withAlpha, alpha, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Card from './Card';
 
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
   },
   welcomeTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
   welcomeStep: {
@@ -111,12 +111,12 @@ const styles = StyleSheet.create({
   },
   welcomeStepNumText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.primary,
   },
   welcomeStepTitle: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textPrimary,
   },
   welcomeStepBody: {

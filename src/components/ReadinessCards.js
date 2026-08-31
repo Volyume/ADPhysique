@@ -14,7 +14,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, type, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, circle, type, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from './AnimatedEntrance';
 import InfoTooltip from './InfoTooltip';
@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   },
   milestoneTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   milestoneUnlocked: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  milestoneUnlockedText: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.gold },
+  milestoneUnlockedText: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.gold },
   milestoneNext: { ...type.caption, color: colors.textMuted },
   milestoneBarTrack: { height: 4, borderRadius: radius.full, backgroundColor: colors.surface2, overflow: 'hidden' },
   milestoneBarFill: { height: '100%', borderRadius: radius.full, backgroundColor: colors.primary },
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
   },
   gaugeItem: { flex: 1, alignItems: 'center', gap: spacing.xs },
   gaugeDot: { width: 12, height: 12, borderRadius: radius.sm },
-  gaugeValue: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  gaugeValue: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   gaugeLabel: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   gaugeScale: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
   recoveryNote: { ...type.caption, color: colors.textMuted, textAlign: 'center' },
@@ -420,7 +420,7 @@ const styles = StyleSheet.create({
   },
   mfHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   mfIconWrap: { width: 40, height: 40, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
-  mfTitle: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  mfTitle: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   mfSub: { ...type.captionTight, color: colors.textMuted, marginTop: spacing.xxs },
   mfChipGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   mfChip: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs2, paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.full, borderWidth: 1 },

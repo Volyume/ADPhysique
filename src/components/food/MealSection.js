@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, iconSize } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import { getMealAdditionsForEntries, filterAdditionsForProfile } from '../../lib/food/mealAdditions';
@@ -297,13 +297,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md, paddingVertical: spacing.xs, minHeight: 36,
     alignItems: 'center', justifyContent: 'center',
   },
-  markEatenText: { color: colors.onPrimary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
+  markEatenText: { color: colors.onPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
   seasonRow: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
   },
   seasonText: { ...type.bodySm, color: colors.textSecondary },
-  seasonLabel: { color: colors.textMuted, fontWeight: fontWeight.bold },
+  seasonLabel: { color: colors.textMuted, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the

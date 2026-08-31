@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { format } from 'date-fns/format';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { formatEnergy, energyUnitLabel } from '../lib/format';
 import BackHeader from '../components/BackHeader';
@@ -1715,7 +1715,7 @@ export default function NutritionTargetsScreen({ navigation }) {
                     </Text>
                   </View>
                   <View style={[styles.calcRow, { marginTop: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: t.colors.border }]}>
-                    <Text style={[styles.calcKey, live.calcKey, { fontWeight: fontWeight.bold }]}>Macro method</Text>
+                    <Text style={[styles.calcKey, live.calcKey, { fontFamily: fontFamily.bold, fontWeight: fontWeight.bold }]}>Macro method</Text>
                   </View>
                   <View style={styles.calcRow}>
                     <Text style={[styles.calcKey, live.calcKey]}>Protein basis</Text>
@@ -1843,7 +1843,7 @@ const styles = StyleSheet.create({
   explainerRowText: { flex: 1, minWidth: 0, ...type.bodySm, color: colors.textPrimary },
   explainerSheet: { gap: spacing.md },
   explainerTitle: {
-    fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary,
+    fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary,
   },
   explainerSection: { gap: spacing.xxs },
   explainerHeading: { ...type.overline, color: colors.textMuted },
@@ -1852,7 +1852,7 @@ const styles = StyleSheet.create({
   planReviewSheet: { gap: spacing.sm },
   planReviewTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     marginBottom: spacing.xs,
   },
@@ -1867,7 +1867,7 @@ const styles = StyleSheet.create({
   eduCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, borderLeftWidth: 3, borderLeftColor: colors.border, marginTop: spacing.sm },
   // U-C-1: "Set it for me" fast-path card.
   fastCard: { marginTop: spacing.md, gap: spacing.md },
-  fastTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  fastTitle: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   fastSubtitle: { ...type.bodySm, color: colors.textSecondary },
   fineTuneLink: { alignSelf: 'center', marginTop: spacing.xs },
   eduIconWrap: { width: 32, height: 32, borderRadius: circle(32), backgroundColor: colors.primaryBg, alignItems: 'center', justifyContent: 'center' },
@@ -1898,7 +1898,7 @@ const styles = StyleSheet.create({
   },
   fieldHintKg: { ...type.caption, color: colors.textMuted, marginBottom: spacing.xs },
   optional: {
-    fontWeight: fontWeight.regular,
+    fontFamily: fontFamily.regular, fontWeight: fontWeight.regular,
     color: colors.textMuted,
   },
   numInputField: {
@@ -2032,12 +2032,12 @@ const styles = StyleSheet.create({
   },
   macroGrams: {
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary,
   },
   macroLabel: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textSecondary,
   },
   macroPerKg: {
@@ -2076,7 +2076,7 @@ const styles = StyleSheet.create({
   },
   perMealHeading: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textMuted,
   },
   perMealCenter: {
@@ -2086,7 +2086,7 @@ const styles = StyleSheet.create({
   },
   perMealValue: {
     fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     // D3: neutral, the daily kcal numeral is this screen's one amber
     // object; a second amber hero numeral competed with it.
     color: colors.textPrimary,
@@ -2114,7 +2114,7 @@ const styles = StyleSheet.create({
   // where it renders).
   mealCountSectionLabel: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textMuted,
     textAlign: 'center',
     textTransform: 'uppercase',
@@ -2301,7 +2301,7 @@ const styles = StyleSheet.create({
   easeNudgeText: {
     fontSize: fontSize.sm,
     color: colors.primary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
 
   // U6: female iron/micronutrient awareness card. D3: neutral surface,
@@ -2318,7 +2318,7 @@ const styles = StyleSheet.create({
   awarenessTitle: {
     fontSize: fontSize.md,
     color: colors.textPrimary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   awarenessIntro: {
     ...type.bodySm,
@@ -2331,7 +2331,7 @@ const styles = StyleSheet.create({
   awarenessNutrientName: {
     fontSize: fontSize.sm,
     color: colors.textPrimary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   awarenessNutrientBody: {
     ...type.bodySm,
@@ -2426,7 +2426,7 @@ const styles = StyleSheet.create({
   },
   reconfigureBtnText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.primary,
   },
 
@@ -2456,7 +2456,7 @@ const styles = StyleSheet.create({
   },
   approachCardLabel: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     flex: 1,
   },
@@ -2464,7 +2464,7 @@ const styles = StyleSheet.create({
   approachCardRange: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
   approachCardRangeActive: { color: colors.primaryDim },
   approachCardDesc: {
@@ -2480,7 +2480,7 @@ const styles = StyleSheet.create({
   },
   recommendedBadgeText: {
     fontSize: fontSize.micro,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.primary,
   },
   customProteinRow: {
@@ -2565,7 +2565,7 @@ const styles = StyleSheet.create({
   whySectionTitle: {
     flex: 1,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
   },
   whySectionBody: {

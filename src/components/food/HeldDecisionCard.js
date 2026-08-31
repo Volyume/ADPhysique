@@ -11,7 +11,7 @@
  */
 import { View, Text, Pressable, StyleSheet, Linking } from 'react-native';
 import { appAlert } from '../AppAlert';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 
 const BEAT_URL = 'https://www.beateatingdisorders.org.uk/';
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
   why: {
     color: colors.primary,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     marginTop: spacing.xs,
   },
   supportButton: {
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   supportText: {
     color: colors.primary,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
 });
 

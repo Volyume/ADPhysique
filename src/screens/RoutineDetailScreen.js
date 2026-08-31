@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Platform }
 import { FlashList } from '@shopify/flash-list';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize, hitSlop } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize, hitSlop, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -993,7 +993,7 @@ export default function RoutineDetailScreen({ navigation, route }) {
       accessibilityRole="button"
       accessibilityLabel={isReordering ? 'Done reordering' : 'Reorder exercises'}
     >
-      <Text style={{ fontSize: t.fontSize.md, color: isReordering ? t.colors.primary : t.colors.textSecondary, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
+      <Text style={{ fontSize: t.fontSize.md, color: isReordering ? t.colors.primary : t.colors.textSecondary, fontFamily: isReordering ? fontFamily.bold : fontFamily.regular, fontWeight: isReordering ? fontWeight.bold : fontWeight.regular }}>
         {isReordering ? 'Done' : 'Reorder'}
       </Text>
     </TouchableOpacity>
@@ -1537,7 +1537,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   orderBadgeUnresolved: { backgroundColor: withAlpha(colors.warning, 0.251) },
-  orderNum: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textSecondary },
+  orderNum: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textSecondary },
   exerciseInfo: { flex: 1, gap: spacing.xxs },
   exerciseTitleRow: {
     flexDirection: 'row',
@@ -1560,7 +1560,7 @@ const styles = StyleSheet.create({
   },
   relinkChipText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.warning,
   },
   supersetChip: {
@@ -1574,7 +1574,7 @@ const styles = StyleSheet.create({
   },
   supersetChipText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.primary,
   },
   // R9 (D70): tabular numerals ("3 sets, 6-12 reps" is data), and colour
@@ -1603,7 +1603,7 @@ const styles = StyleSheet.create({
   reorderBtnDisabled: { opacity: 0.3 },
   // BottomSheet supplies the backdrop, panel chrome and drag handle now
   // (D36a migration) -- only the content-level styles below remain.
-  editTitle: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
+  editTitle: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
   editRow: { flexDirection: 'row', gap: spacing.md },
   editField: { flex: 1 },
   editInputField: { borderRadius: radius.md },
@@ -1611,7 +1611,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     textAlign: 'center',
   },
   editSaveBtn: {
@@ -1632,7 +1632,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.lg,
     marginTop: spacing.md,
   },
-  addBtnText: { fontSize: fontSize.md, color: colors.primary, fontWeight: fontWeight.medium },
+  addBtnText: { fontSize: fontSize.md, color: colors.primary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   empty: { alignItems: 'center', paddingVertical: spacing.xl },
   emptyText: { ...type.body, color: colors.textMuted },
   swapSafe: { flex: 1, backgroundColor: colors.background },
@@ -1697,7 +1697,7 @@ const tagStyles = StyleSheet.create({
   },
   chipText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   chipTextLow: {
     color: colors.textMuted,

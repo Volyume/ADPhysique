@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Platform, KeyboardAvoidingView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, shadow } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, shadow, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { track as trackEvent } from '../lib/engineTelemetry';
 import Button from '../components/Button';
@@ -685,7 +685,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center', marginBottom: spacing.lg,
   },
   title: {
-    fontSize: fontSize.xxxl, fontWeight: fontWeight.black,
+    fontSize: fontSize.xxxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary, textAlign: 'center',
     marginBottom: spacing.sm,
   },
@@ -736,7 +736,7 @@ const styles = StyleSheet.create({
 
   section: { marginBottom: spacing.lg },
   fieldLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textMuted,
     marginBottom: spacing.sm,
   },
@@ -758,7 +758,7 @@ const styles = StyleSheet.create({
 
   switchBtn: { alignItems: 'center', paddingVertical: spacing.md },
   switchText: { fontSize: fontSize.sm, color: colors.textMuted },
-  switchAction: { color: colors.primary, fontWeight: fontWeight.semibold },
+  switchAction: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   laterBtn: { alignItems: 'center', paddingVertical: spacing.md, marginTop: spacing.xs },
   // C7: the paywall's legal links row (terms of use + privacy policy).
@@ -782,7 +782,7 @@ const styles = StyleSheet.create({
     ...shadow.glow,
   },
   successTitle: {
-    fontSize: fontSize.xxxl, fontWeight: fontWeight.black,
+    fontSize: fontSize.xxxl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary,
   },
   successBody: {

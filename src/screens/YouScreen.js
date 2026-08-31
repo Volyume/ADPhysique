@@ -11,7 +11,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
 import ScreenHeader from '../components/ScreenHeader';
@@ -802,7 +802,7 @@ const styles = StyleSheet.create({
   navRowLabel: { ...type.bodyStrong, color: colors.textPrimary },
   navRowSub: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   about: { alignItems: 'center', paddingTop: spacing.md, gap: spacing.xs },
-  aboutName: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textMuted },
+  aboutName: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textMuted },
   aboutVersion: { ...type.caption, color: colors.textMuted },
 });
 

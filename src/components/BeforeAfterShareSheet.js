@@ -35,9 +35,7 @@ import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {
-  colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion,
-} from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, motion, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { useToast } from './Toast';
 import { appAlert } from './AppAlert';
@@ -737,7 +735,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs, paddingVertical: spacing.sm, borderRadius: radius.sm,
   },
   segmentActive: { backgroundColor: colors.surface3 },
-  segmentText: { fontSize: fontSize.sm, color: colors.textMuted, fontWeight: fontWeight.semibold },
+  segmentText: { fontSize: fontSize.sm, color: colors.textMuted, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   segmentTextActive: { color: colors.textPrimary },
   previewOuter: { alignSelf: 'center' },
   previewPlaceholder: {

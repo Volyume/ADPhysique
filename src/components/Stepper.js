@@ -13,7 +13,7 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import PressableCard from './PressableCard';
-import { colors, fontWeight, spacing, radius } from '../styles/theme';
+import { colors, fontWeight, spacing, radius, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 // AX-15: compact button is 30x34dp. 8dp uniform hit slop on every edge
@@ -179,7 +179,7 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.5 },
   value: {
     textAlign: 'center',
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
   },

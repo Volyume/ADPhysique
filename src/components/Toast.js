@@ -28,7 +28,7 @@ import { createContext, useContext, useRef, useState, useEffect, useCallback, us
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Easing, AccessibilityInfo } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { fontWeight, spacing, radius, motion, letterSpacing } from '../styles/theme';
+import { fontWeight, spacing, radius, motion, letterSpacing, fontFamily } from '../styles/theme';
 import useAppStore from '../store/useAppStore';
 import useTheme from '../hooks/useTheme';
 
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   actionText: {
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     letterSpacing: letterSpacing.overline,
     textTransform: 'uppercase',
   },

@@ -13,7 +13,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
 
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { MUSCLE_DISPLAY_NAMES } from '../lib/algorithms';
 import { getRecentAdaptationEvents, getCompletedWorkoutSets, getAllExercises } from '../lib/database';
@@ -167,13 +167,13 @@ const styles = StyleSheet.create({
     width: 36, height: 36, borderRadius: radius.md, backgroundColor: colors.primaryBg,
     alignItems: 'center', justifyContent: 'center',
   },
-  headerLabel: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  headerLabel: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   headerSub: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   body: { borderTopWidth: 1, borderTopColor: colors.border, paddingTop: spacing.md, gap: spacing.md },
   row: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
   headerRight: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   regTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  muscle: { fontSize: fontSize.sm, color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  muscle: { fontSize: fontSize.sm, color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   reason: { ...type.captionTight, color: colors.textSecondary, marginTop: spacing.xxs },
   date: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
 });

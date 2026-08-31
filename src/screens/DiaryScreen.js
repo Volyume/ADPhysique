@@ -19,7 +19,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, shadow, circle, type, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import Card from '../components/Card';
@@ -2046,7 +2046,7 @@ const styles = StyleSheet.create({
   selCount: { ...type.bodyStrong, color: colors.textPrimary },
   selActions: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   selAction: { flex: 1, alignItems: 'center', gap: spacing.xxs },
-  selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  selActionLabel: { color: colors.textPrimary, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   moveTitle: {
     paddingHorizontal: spacing.sm, paddingTop: spacing.xs, paddingBottom: spacing.sm,
   },
@@ -2054,7 +2054,7 @@ const styles = StyleSheet.create({
     minHeight: 48, justifyContent: 'center',
     paddingHorizontal: spacing.sm, borderRadius: radius.md,
   },
-  moveOptionText: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  moveOptionText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   copyRowMeta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: 2 },
   diaryToolRow: {
     minHeight: 64,
@@ -2192,7 +2192,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xxs, marginTop: spacing.sm,
   },
-  targetModeText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  targetModeText: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   // Audit item 6: the quiet coach-receipt chip, same row shape as
   // targetModeRow but sits ABOVE the rings and is always a link (never just
   // informational), so it reads distinctly from the NU-2 exit rows below.
@@ -2200,7 +2200,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: spacing.xxs, marginBottom: spacing.sm,
   },
-  targetsChangedText: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  targetsChangedText: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   bankOffNote: {
     color: colors.textMuted, fontSize: fontSize.xs, textAlign: 'center',
     marginTop: spacing.sm, paddingHorizontal: spacing.lg,
@@ -2251,7 +2251,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.surface2,
   },
-  offCardDismiss: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.textMuted },
+  offCardDismiss: { fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textMuted },
   offCardCta: { ...type.label, color: colors.textPrimary },
   addMealRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -2298,7 +2298,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, minHeight: 40,
     alignItems: 'center', justifyContent: 'center',
   },
-  plannedBtnPrimaryText: { color: colors.onPrimary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
+  plannedBtnPrimaryText: { color: colors.onPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
   plannedBtnGhostButton: {
     borderRadius: radius.md,
     borderWidth: 1,
@@ -2319,7 +2319,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   waterLeft: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  waterLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  waterLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   waterValue: { color: colors.textMuted, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], marginRight: spacing.xs },
   waterButtons: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   waterBtn: {

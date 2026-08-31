@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
 
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
   dropdownItemBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
   dropdownItemActive: { backgroundColor: colors.primaryBg },
   dropdownItemLabel: { ...type.body, color: colors.textSecondary, marginBottom: spacing.hair },
-  dropdownItemLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  dropdownItemLabelActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   dropdownItemSub: { ...type.captionTight, color: colors.textMuted },
 });
 

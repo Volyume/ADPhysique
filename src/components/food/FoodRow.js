@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, iconSize } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, iconSize, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -119,7 +119,7 @@ const styles = StyleSheet.create({
     minHeight: 64,
   },
   rowMain: { flex: 1, minWidth: 0, paddingRight: spacing.sm },
-  rowName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  rowName: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   rowNameMuted: { color: colors.textMuted, textDecorationLine: 'line-through' },
   rowMeta: { color: colors.textMuted, fontSize: fontSize.sm, marginTop: spacing.xxs },
   rowMetaMuted: { color: colors.textMuted, opacity: 0.7 },
@@ -134,7 +134,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  addBtnText: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  addBtnText: { color: colors.primary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   rowChevron: { marginLeft: spacing.xs },
 });
 

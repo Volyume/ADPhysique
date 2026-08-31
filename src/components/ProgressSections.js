@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import SvgBarSparkline from './SvgBarSparkline';
 import InfoTooltip from './InfoTooltip';
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
     // fontSize.micro + fontWeight.semibold has no exact type.* role (theme
     // gap logged in the R2 report); the raw pair stays rather than dropping
     // emphasis.
-    fontSize: fontSize.micro, color: colors.textSecondary, fontWeight: fontWeight.semibold,
+    fontSize: fontSize.micro, color: colors.textSecondary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     fontVariant: ['tabular-nums'],
   },
   durationBarLabel: {
@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
     // the table. fontSize.sm + fontWeight.bold has no exact type.* role (theme
     // gap logged in the R2 report); the raw pair stays rather than dropping
     // emphasis.
-    fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.textPrimary,
+    fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary,
     fontVariant: ['tabular-nums'],
   },
   freqCountUp: {

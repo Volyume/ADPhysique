@@ -12,7 +12,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as haptics from '../lib/haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius, motion, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, motion, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 
 const NUM_PARTICLES = 40;
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
   toastValue: {
     fontSize: fontSize.md,
     color: colors.textPrimary,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     marginTop: spacing.hair,
   },
 });

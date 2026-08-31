@@ -3,7 +3,7 @@ import { appAlert } from '../components/AppAlert';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Share } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Chip from '../components/Chip';
@@ -215,15 +215,15 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: spacing.lg, paddingTop: 0, gap: spacing.sm, paddingBottom: spacing.xxl },
   crashCard: { backgroundColor: colors.errorBg, borderRadius: radius.md, borderWidth: 1, borderColor: colors.error, padding: spacing.md, gap: spacing.xs, marginBottom: spacing.sm },
-  crashTitle: { color: colors.error, fontSize: fontSize.sm, fontWeight: fontWeight.bold },
+  crashTitle: { color: colors.error, fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   crashWhen: { ...type.num('caption'), color: colors.textMuted },
   crashMsg: { ...type.label, color: colors.textPrimary },
   crashStack: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: 'monospace' },
   loadingStack: { gap: spacing.sm },
   entry: { backgroundColor: colors.surface, borderRadius: radius.md, borderLeftWidth: 3, padding: spacing.md, gap: spacing.xs },
   entryHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  entryLevel: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, textTransform: 'uppercase', minWidth: 44 },
-  entryScope: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.medium, flex: 1 },
+  entryLevel: { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, textTransform: 'uppercase', minWidth: 44 },
+  entryScope: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium, flex: 1 },
   entryWhen: { ...type.num('caption'), color: colors.textMuted },
   entryMessage: { color: colors.textPrimary, fontSize: fontSize.sm },
   entryContext: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: 'monospace' },

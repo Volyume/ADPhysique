@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useSharedValue, useDerivedValue, withTiming } from 'react-native-reanimated';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import RollingNumber from '../RollingNumber';
-import { colors, fontSize, fontWeight, spacing, radius, motion } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, motion, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     // Hero numeral. Token-based so it scales with the Larger-Text accessibility
     // setting (MFP-parity audit #21) instead of the old fixed 34.
     fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     lineHeight: Math.round(fontSize.xxxl * 1.1),
     fontVariant: ['tabular-nums'],
   },
@@ -410,7 +410,7 @@ const styles = StyleSheet.create({
   kcalPlanned: {
     color: colors.primary,
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     marginTop: spacing.xxs,
   },
   // The eaten total is now the quiet reference beside the remaining hero
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
   kcalEatenValue: {
     color: colors.textSecondary,
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     fontVariant: ['tabular-nums'],
   },
   kcalEatenLabel: {
@@ -446,7 +446,7 @@ const styles = StyleSheet.create({
   dayTypeChipText: {
     color: colors.textSecondary,
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   macroRow: {
     gap: spacing.md,
@@ -458,11 +458,11 @@ const styles = StyleSheet.create({
   macroBarLabel: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
   macroBarLabelPrimary: {
     color: colors.textSecondary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   macroBarValue: {
     color: colors.textSecondary,
@@ -471,7 +471,7 @@ const styles = StyleSheet.create({
   },
   macroBarValuePrimary: {
     color: colors.textPrimary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   macroTrack: {
     height: 6,
@@ -496,7 +496,7 @@ const styles = StyleSheet.create({
   macroBarPlanned: {
     color: colors.textMuted,
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
   },
   // Quiet descriptive sub-row under a bar: protein g/kg on the left, the
   // factual remaining ("Ng to go" / "Ng over") on the right. Both adherence-

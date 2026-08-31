@@ -1,5 +1,12 @@
 import { fontFamily } from './fontFamily';
 
+// Re-exported so a call site needing a specific Inter FACE gets it from the
+// same `../styles/theme` import it already has, instead of a second import
+// from './fontFamily'. Required by the weight axis below: on a custom font
+// registered face-by-face (src/styles/fonts.js), `fontWeight` alone does not
+// select another face, so any weight above regular must name its own family.
+export { fontFamily };
+
 // Base tokens. `colors` and `fontSize` are exported as MUTABLE objects so
 // applyAccessibility() can swap values in place at app boot before any
 // screen module evaluates its StyleSheet.create. After that point the
@@ -636,6 +643,14 @@ function buildTypeRoles(fontSizeTable) {
         fontWeight: fontWeight.semibold,
         lineHeight: Math.round(fontSizeTable.xs * lineHeight.snug), letterSpacing: letterSpacing.caption };
     },
+    // 10px, the dense chart-axis / data micro-label size. Named here because
+    // ~11 sites hand-assembled `fontSize.micro` + a weight and therefore lost
+    // the font face (see `w` below); `caption` (11px) is the nearest role but
+    // is a different size, so mapping them onto it would have resized them.
+    get micro() {
+      return { fontFamily: fontFamily.regular, fontSize: fontSizeTable.micro,
+        lineHeight: Math.round(fontSizeTable.micro * lineHeight.snug), letterSpacing: letterSpacing.caption };
+    },
   };
   // Numerals are the hero. Any text node rendering a number the user reads
   // as data (weight, reps, sets, %, kcal, timer, table date) should use
@@ -658,6 +673,31 @@ function buildTypeRoles(fontSizeTable) {
   // either screen mounted -- a crash, not just a stale colour. Attaching
   // `num` per-table here fixes both the legacy singleton and every future
   // `resolveTheme()` result identically.
+  // The WEIGHT AXIS. The role table carries exactly one weight per size, so a
+  // call site wanting (say) 13px semibold had no role to reach for and
+  // hand-assembled `{ fontSize: fontSize.sm, fontWeight: fontFamily: fontFamily.semibold, fontWeight.semibold }`
+  // instead -- 344 such blocks app-wide. That loses the FONT FACE: the app
+  // registers Inter face-by-face (Inter-Regular, Inter-SemiBold, ... in
+  // src/styles/fonts.js) and installs `fontFamily: Inter-Regular` as the Text
+  // default, so a `fontWeight` with no `fontFamily` asks a single-face family
+  // for a weight it does not contain. The renderer then either ignores the
+  // request or synthesises a smeared faux bold; neither is the real face.
+  //
+  // `w` returns a role at a chosen weight with BOTH the matching Inter face and
+  // the numeric fontWeight set, so the face is correct on every platform and
+  // the semantic weight still reads to accessibility services. `roleName` may
+  // be a key of `roles` OR an already-built role object, so it composes with
+  // num(): type.w(type.num('h2'), 'bold'). `weightName` is a key of fontWeight;
+  // `black` and `heavy` are both '800' and resolve to the one ExtraBold face.
+  roles.w = function w(roleName = 'body', weightName = 'semibold') {
+    const role = typeof roleName === 'string' ? (roles[roleName] || roles.body) : roleName;
+    const family = fontFamily[weightName === 'black' ? 'heavy' : weightName];
+    return {
+      ...role,
+      fontFamily: family || role.fontFamily,
+      fontWeight: fontWeight[weightName] || fontWeight.semibold,
+    };
+  };
   roles.num = function num(roleName = 'body') {
     const role = roles[roleName] || roles.body;
     return { ...role, fontVariant: ['tabular-nums'] };

@@ -18,7 +18,7 @@ import InfoTooltip from '../components/InfoTooltip';
 import DragReorderList from '../components/DragReorderList';
 import { useDragAutoScrollBridge } from '../components/DragReorderList';
 
-import { colors, fontSize, fontWeight, spacing, radius, type, hitSlop } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, hitSlop, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import {
   createProgramme, createRoutine, addExerciseToRoutine,
@@ -1453,7 +1453,7 @@ const styles = StyleSheet.create({
   },
   dayNumber: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.primary,
     minWidth: 44,
   },
@@ -1531,7 +1531,7 @@ const styles = StyleSheet.create({
   },
   ssChipText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.primary,
   },
   groupBtnRow: {
@@ -1554,7 +1554,7 @@ const styles = StyleSheet.create({
   },
   exName: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     color: colors.textPrimary,
   },
   // Target steppers (S5): compact layout around the shared Stepper primitive.
@@ -1571,7 +1571,7 @@ const styles = StyleSheet.create({
   controlLabel: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     textAlign: 'center',
   },
   addExBtn: {
@@ -1599,7 +1599,7 @@ const styles = StyleSheet.create({
   },
   addDayText: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.medium, fontWeight: fontWeight.medium,
     color: colors.textSecondary,
   },
   actionRow: {
@@ -1632,7 +1632,7 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: fontSize.xxl,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary,
   },
   successName: {
@@ -1724,7 +1724,7 @@ const balanceStyles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textSecondary,
   },
   grid: {
@@ -1751,7 +1751,7 @@ const balanceStyles = StyleSheet.create({
   setCount: {
     fontSize: fontSize.xs,
     color: colors.textMuted,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     minWidth: 24,
     textAlign: 'right',
   },

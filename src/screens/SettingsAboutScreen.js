@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, TouchableOpacity, Share, Platform, Linking } from 'react-native';
 import Constants from 'expo-constants';
-import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { useFeedback } from '../components/FeedbackSheet';
 import { SettingsPage, SettingRow, settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
@@ -162,7 +162,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xxl,
     paddingBottom: spacing.lg,
   },
-  appName: { fontSize: fontSize.xl, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: letterSpacing.wordmark },
+  appName: { fontSize: fontSize.xl, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary, letterSpacing: letterSpacing.wordmark },
   appNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   betaBadge: {
     paddingHorizontal: spacing.sm,
@@ -172,7 +172,7 @@ const styles = StyleSheet.create({
   },
   betaBadgeText: {
     fontSize: fontSize.micro,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.onPrimary,
   },
   appVersion: { fontSize: fontSize.sm, color: colors.textMuted },

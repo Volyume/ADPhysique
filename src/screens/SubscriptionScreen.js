@@ -14,7 +14,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, Platform, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, fontSize, fontWeight, type } from '../styles/theme';
+import { colors, spacing, fontSize, fontWeight, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Button from '../components/Button';
@@ -245,7 +245,7 @@ const styles = StyleSheet.create({
   cardValue: {
     color: colors.textPrimary,
     fontSize: fontSize.xxl,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     marginBottom: spacing.xs,
   },
   cardSub: {

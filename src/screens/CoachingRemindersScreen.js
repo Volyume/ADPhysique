@@ -22,7 +22,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import {
   scheduleMorningWeightNotification,
@@ -683,7 +683,7 @@ const styles = StyleSheet.create({
   cardTitle: { ...type.bodyStrong, color: colors.textPrimary },
   toggleTitle: { flex: 1 },
   pickerLabel: {
-    fontSize: fontSize.xs, fontWeight: fontWeight.semibold,
+    fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     color: colors.textMuted,
     paddingHorizontal: spacing.lg, marginBottom: spacing.sm,
   },
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
   },
   helperText: { ...type.bodySm, color: colors.textMuted },
   savedText: {
-    fontSize: fontSize.xs, color: colors.primary, fontWeight: fontWeight.semibold,
+    fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     textAlign: 'center', marginTop: spacing.sm,
   },
 });

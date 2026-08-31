@@ -27,7 +27,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { SkeletonRow } from '../components/Skeleton';
 import EmptyState from '../components/EmptyState';
@@ -1081,7 +1081,7 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     paddingBottom: spacing.sm,
   },
-  tabLabelActive: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  tabLabelActive: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   tabUnderline: {
     height: 2, width: '100%', backgroundColor: 'transparent',
     borderRadius: radius.hair,
@@ -1170,14 +1170,14 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.md,
     borderBottomWidth: 1, borderBottomColor: colors.border,
   },
-  plateItemName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  plateItemName: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   plateItemMeta: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   plateModalActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.lg },
   plateClearBtn: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
   },
-  plateClearText: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  plateClearText: { color: colors.textSecondary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   plateLogBtnWide: {
     flex: 1, alignItems: 'center',
     backgroundColor: colors.primaryFill,

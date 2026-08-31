@@ -33,7 +33,7 @@ import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { appAlert } from '../components/AppAlert';
 import * as haptics from '../lib/haptics';
 import useAppStore from '../store/useAppStore';
-import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type, circle } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, hitSlop, type, circle, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { mealSlotLabel } from '../lib/food/mealSlots';
 import { todayLocalKey, parseLocalDay } from '../lib/dayKey';
@@ -1809,7 +1809,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.primaryBg,
   },
-  emptyTitle: { color: colors.textPrimary, fontSize: fontSize.xl, fontWeight: fontWeight.bold, textAlign: 'center' },
+  emptyTitle: { color: colors.textPrimary, fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, textAlign: 'center' },
   emptyBody: { ...type.body, color: colors.textSecondary, textAlign: 'center', lineHeight: 21, marginBottom: spacing.md },
   emptySteps: {
     alignSelf: 'stretch',
@@ -1833,7 +1833,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   planOptionHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  planOptionTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
+  planOptionTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   planOptionDesc: { ...type.bodySm, color: colors.textSecondary, marginBottom: spacing.xs },
   scroll: { padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl },
   dietaryChipRow: { flexDirection: 'row' },
@@ -1869,9 +1869,9 @@ const styles = StyleSheet.create({
   dayTitleGroup: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexShrink: 1 },
   dayLabel: { ...type.label, color: colors.textPrimary },
   typeChip: { backgroundColor: colors.surface, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: 4, borderWidth: 1, borderColor: colors.border },
-  typeChipText: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.semibold },
-  dayKcal: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'], textAlign: 'right', flexShrink: 0 },
-  dayKcalTarget: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.regular },
+  typeChipText: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  dayKcal: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, fontVariant: ['tabular-nums'], textAlign: 'right', flexShrink: 0 },
+  dayKcalTarget: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.regular, fontWeight: fontWeight.regular },
   cycleNote: { ...type.bodySm, color: colors.textSecondary },
   honesty: { ...type.bodySm, color: colors.textSecondary, fontStyle: 'italic' },
   // Campaign 1 P0-3: dietary-needs staleness notice.
@@ -1939,16 +1939,16 @@ const styles = StyleSheet.create({
   weightChoiceLabel: { color: colors.textMuted, fontSize: fontSize.xs },
   weightChoiceChip: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xxs, minHeight: 0 },
   weightChoiceChipText: { fontSize: fontSize.xs },
-  weightChoiceChipTextActive: { color: colors.primary, fontWeight: fontWeight.semibold },
+  weightChoiceChipTextActive: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   macroLine: { color: colors.textSecondary, fontSize: fontSize.sm, marginTop: spacing.xs, fontVariant: ['tabular-nums'] },
   seasonIntro: { ...type.bodySm, color: colors.textMuted, marginBottom: spacing.sm },
   seasonWrap: {
     marginTop: spacing.sm, paddingTop: spacing.sm,
     borderTopWidth: 1, borderTopColor: colors.border, gap: spacing.xxs,
   },
-  seasonLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.bold, marginBottom: 2 },
+  seasonLabel: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, marginBottom: 2 },
   seasonLine: { ...type.bodySm, color: colors.textSecondary },
-  seasonName: { color: colors.textPrimary, fontWeight: fontWeight.semibold },
+  seasonName: { color: colors.textPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   swapBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1962,9 +1962,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
   },
-  swapText: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  swapText: { color: colors.textPrimary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   totalsRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: spacing.xs },
-  totalsLabel: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  totalsLabel: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   totalsText: { color: colors.textSecondary, fontSize: fontSize.sm, fontVariant: ['tabular-nums'], textAlign: 'right', flexShrink: 1 },
   // Prominent, but not shouty: the settings block sits before the meal list so
   // people see the controls that shape the plan before they review the meals.
@@ -2010,14 +2010,14 @@ const styles = StyleSheet.create({
   prefOpt: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface, minHeight: 40, justifyContent: 'center' },
   prefOptOn: { borderColor: colors.textSecondary, backgroundColor: colors.surface },
   prefOptDisabled: { opacity: 0.6 },
-  prefOptText: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  prefOptText: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   prefOptTextOn: { color: colors.textPrimary },
   prefHelp: { ...type.caption, color: colors.textMuted, lineHeight: 17 },
   dietaryDoneBtn: { marginTop: spacing.md },
   reviewHeader: { gap: spacing.xxs, marginTop: spacing.xs },
   reviewTitle: { ...type.label, color: colors.textPrimary },
   reviewSub: { ...type.bodySm, color: colors.textSecondary, lineHeight: 19 },
-  swapSheetTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
+  swapSheetTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   swapSheetSub: { ...type.bodySm, color: colors.textSecondary, marginTop: -spacing.xs },
   // Campaign 17A closeout: Swap and Keep sit side by side on a meal card.
   mealActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
@@ -2068,7 +2068,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.md,
   },
   groceryName: { ...type.body, color: colors.textPrimary, flexShrink: 1 },
-  groceryQty: { color: colors.textSecondary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold },
+  groceryQty: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   swapOption: {
     backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, gap: spacing.xs, minHeight: 56, justifyContent: 'center',

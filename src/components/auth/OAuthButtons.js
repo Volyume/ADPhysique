@@ -1,6 +1,6 @@
 import { View, Text, TouchableOpacity, Platform, StyleSheet } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, spacing, radius, fontSize, fontWeight, type } from '../../styles/theme';
+import { colors, spacing, radius, fontSize, fontWeight, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 
 // expo-apple-authentication is iOS-only; require it lazily and only on iOS so
@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   btnDisabled: { opacity: 0.55 },
   divider: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
   dividerLine: { flex: 1, height: 1, backgroundColor: colors.border },
-  dividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontWeight: fontWeight.medium },
+  dividerText: { color: colors.textMuted, fontSize: fontSize.xs, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the

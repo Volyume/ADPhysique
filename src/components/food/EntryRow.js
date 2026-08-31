@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../../lib/format';
 import useAppStore from '../../store/useAppStore';
@@ -214,7 +214,7 @@ const styles = StyleSheet.create({
   // Ultimate-Audit item 15 (D22 15a): name + meal tag share a row so the tag
   // reads as a quiet label on the food, not a second heading.
   entryNameRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  entryName: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.medium, flexShrink: 1 },
+  entryName: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium, flexShrink: 1 },
   mealTag: {
     paddingHorizontal: spacing.xs, paddingVertical: 1,
     borderRadius: radius.full,
@@ -236,7 +236,7 @@ const styles = StyleSheet.create({
   entryBrand: { ...type.caption, color: colors.textMuted, marginTop: spacing.hair },
   entryQuantity: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   entryMacros: { alignItems: 'flex-end' },
-  entryKcal: { color: colors.textPrimary, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+  entryKcal: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   entryMacroLine: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
   swipeDelete: {
     backgroundColor: colors.error,

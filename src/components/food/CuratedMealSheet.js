@@ -1,6 +1,6 @@
 import { View, Text, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { colors, fontSize, fontWeight, spacing, radius, type } from '../../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../../styles/theme';
 import useTheme from '../../hooks/useTheme';
 import BottomSheet from '../BottomSheet';
 import SectionLabel from '../SectionLabel';
@@ -123,7 +123,7 @@ export default function CuratedMealSheet({
 }
 
 const styles = StyleSheet.create({
-  title: { fontSize: fontSize.lg, fontWeight: fontWeight.bold, color: colors.textPrimary },
+  title: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   subtitle: { fontSize: fontSize.sm, color: colors.textMuted, marginTop: -spacing.xs },
   scroll: { maxHeight: 360 },
   section: { gap: spacing.xs, paddingTop: spacing.sm },
@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderTopWidth: 1, borderTopColor: colors.border,
   },
-  addName: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.textPrimary },
+  addName: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   addWhy: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.hair },
   footnote: { ...type.caption, color: colors.textMuted, marginTop: spacing.sm },
   actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginTop: spacing.sm },
@@ -147,12 +147,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
     borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
   },
-  cancelText: { color: colors.textSecondary, fontSize: fontSize.md, fontWeight: fontWeight.medium },
+  cancelText: { color: colors.textSecondary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   logBtn: {
     flex: 1, paddingVertical: spacing.md, borderRadius: radius.md,
     backgroundColor: colors.primaryFill, alignItems: 'center',
   },
-  logText: { color: colors.onPrimary, fontSize: fontSize.md, fontWeight: fontWeight.bold },
+  logText: { color: colors.onPrimary, fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the

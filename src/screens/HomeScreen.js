@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect, useScrollToTop } from '@react-navigation/native';
 import { format } from 'date-fns/format';
 
-import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, circle, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
@@ -3068,7 +3068,7 @@ const styles = StyleSheet.create({
   heroEyebrow: {},
   workoutName: {
     fontSize: fontSize.xxl,
-    fontWeight: fontWeight.black,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.textPrimary,
     lineHeight: 30,
   },
@@ -3082,7 +3082,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.border,
   },
-  mesoBriefText: { fontSize: fontSize.xs, color: colors.textSecondary, fontWeight: fontWeight.medium },
+  mesoBriefText: { fontSize: fontSize.xs, color: colors.textSecondary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   // B-5/Button adoption: box, fill, radius, padding and label typography now
   // come from the shared <Button> primitive; only the local margin survives.
   primaryBtn: {
@@ -3278,7 +3278,7 @@ const styles = StyleSheet.create({
   },
   readinessChipTextActive: {
     color: colors.primary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
   },
   intentSkip: {
     alignItems: 'center',
@@ -3320,7 +3320,7 @@ const styles = StyleSheet.create({
   // D3: the trial-banner and free-coach-line styles moved to AttentionCard
   // with their JSX (one card class, internal priority recorded there).
   coachBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  coachBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
+  coachBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   coachBannerBody: { ...type.bodySm, color: colors.textSecondary },
   deloadBanner: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -3329,7 +3329,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: withAlpha(colors.primary, alpha.mid),
   },
   deloadBannerLeft: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, flex: 1 },
-  deloadBannerTitle: { fontSize: fontSize.sm, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
+  deloadBannerTitle: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.primary, marginBottom: spacing.xxs },
   deloadBannerBody: { ...type.bodySm, color: colors.textSecondary },
 
   // B3 lift plateau banner; one line plus tap-through, matches the banner

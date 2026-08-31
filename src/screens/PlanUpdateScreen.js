@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
@@ -676,20 +676,20 @@ const styles = StyleSheet.create({
   saveBtn: { marginTop: spacing.xxl },
 
   // Plan diff/preview sheet
-  diffTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontWeight: fontWeight.bold },
+  diffTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   diffSub: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xs },
   diffTable: { marginTop: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
   diffHeadRow: { flexDirection: 'row', backgroundColor: colors.surface2, paddingVertical: spacing.xs },
   diffRow: { flexDirection: 'row', paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, alignItems: 'center' },
   diffCell: { flex: 1, paddingHorizontal: spacing.sm, fontSize: fontSize.sm, color: colors.textPrimary },
   diffCellLabel: { color: colors.textSecondary },
-  diffHeadText: { fontSize: fontSize.xs, fontWeight: fontWeight.bold, color: colors.textMuted, textTransform: 'uppercase' },
+  diffHeadText: { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textMuted, textTransform: 'uppercase' },
   diffNow: { color: colors.textMuted },
   diffAfter: { color: colors.textPrimary },
-  diffAfterChanged: { fontWeight: fontWeight.bold },
+  diffAfterChanged: { fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
   diffMoves: { marginTop: spacing.md, gap: spacing.xxs },
-  diffMovesLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontWeight: fontWeight.bold, textTransform: 'uppercase', letterSpacing: letterSpacing.overline },
-  diffReceiptHead: { color: colors.textPrimary, fontSize: fontSize.sm, fontWeight: fontWeight.semibold, marginTop: spacing.sm, marginBottom: spacing.xxs },
+  diffMovesLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, textTransform: 'uppercase', letterSpacing: letterSpacing.overline },
+  diffReceiptHead: { color: colors.textPrimary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, marginTop: spacing.sm, marginBottom: spacing.xxs },
   diffMoveText: { color: colors.textPrimary, fontSize: fontSize.sm },
   diffShortfall: { ...type.bodySm, marginTop: spacing.md, color: colors.textSecondary },
   thinSessionBanner: {

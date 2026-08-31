@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { safeDate, safeFormatDate, safeNumber, safeToFixed } from '../lib/safeFormat';
 import { useFocusEffect } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import AnimatedEntrance from '../components/AnimatedEntrance';
@@ -703,7 +703,7 @@ const styles = StyleSheet.create({
   standingLabel: {
     color: colors.primary,
     fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.heavy,
+    fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy,
     lineHeight: 36,
     fontVariant: ['tabular-nums'],
   },
@@ -792,14 +792,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xs,
     paddingVertical: 1,
   },
-  prTagText: { fontSize: fontSize.micro, fontWeight: fontWeight.bold, color: colors.primary },
+  prTagText: { fontSize: fontSize.micro, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.primary },
   meta: { ...type.caption, color: colors.textMuted },
   lastTime: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
   statRow: { flexDirection: 'row', alignItems: 'baseline', gap: spacing.xs, marginTop: spacing.xxs },
   // Theme gap: no lg+heavy type role exists; the raw pair stays (weight
   // preserved). R2 (2026-07-11): headline is a weight/e1RM readout, so it
   // gains tabular figures like the delta beside it.
-  statValue: { fontSize: fontSize.lg, fontWeight: fontWeight.heavy, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  statValue: { fontSize: fontSize.lg, fontFamily: fontFamily.heavy, fontWeight: fontWeight.heavy, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
   statLabel: { ...type.caption, color: colors.textMuted },
   delta: { ...type.num('label'), marginLeft: spacing.xs },
   // O29: the since-first-log clarifier under the +N% badge, in the same
