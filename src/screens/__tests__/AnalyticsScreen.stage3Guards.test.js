@@ -187,7 +187,12 @@ describe('§24 density budget: primary evidence container ceiling, source-counte
 
   test('above-the-fold ceiling: the Answer Block is the first bordered container, immediately after the header, before any other container', () => {
     const headerIdx = ANALYTICS_SRC.indexOf('Header (R1)');
-    const answerBlockIdx = ANALYTICS_SRC.indexOf('<Card padding="none" style={styles.answerBlock}>');
+    // Anchored on styles.answerBlock, the stable identifier, rather than on
+    // the full opening tag: the tag gained surface="surfaceElevated" (D3, the
+    // hero is the screen's only elevated object) and a literal locator broke
+    // on a prop change that does not touch the ordering rule this test pins.
+    const answerBlockMatch = ANALYTICS_SRC.match(/<Card [^>]*style=\{styles\.answerBlock\}>/);
+    const answerBlockIdx = answerBlockMatch ? answerBlockMatch.index : -1;
     const evidenceTrailIdx = ANALYTICS_SRC.indexOf('Evidence trail (R3');
     expect(headerIdx).toBeGreaterThan(-1);
     expect(answerBlockIdx).toBeGreaterThan(headerIdx);

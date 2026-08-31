@@ -264,7 +264,17 @@ export default function AnalyticsScreen({ navigation, route }) {
           <SkeletonCard height={168} />
         ) : (
           <AnimatedEntrance>
-            <Card padding="none" style={styles.answerBlock}>
+            {/* D3 (design audit 03): the hero is the screen's ONLY elevated
+                object, so surfaceElevated ranks it above every flat surface
+                card in the stack. The Answer Block is what the Progress tab
+                is FOR -- it says where training, body and photos stand -- but
+                it rendered on plain `surface`, pixel-identical to each
+                session card listed beneath it, so the screen's answer had no
+                more weight than one row of its evidence. Its two internal
+                dividers deliberately stay on `border`: on the raised surface
+                borderSubtle falls to 1.17:1 and the three pillars would run
+                together. */}
+            <Card padding="none" surface="surfaceElevated" style={styles.answerBlock}>
               <PillarRow
                 icon="barbell-outline"
                 label="Training"
