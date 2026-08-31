@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   rowLabel: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   macroCell: { alignItems: 'flex-end' },
@@ -166,7 +166,7 @@ function buildLiveStyles(t) {
   return {
     title: { color: t.colors.textPrimary },
     subtitle: { color: t.colors.textMuted },
-    row: { borderBottomColor: t.colors.border },
+    row: { borderBottomColor: t.colors.borderSubtle },
     rowLabel: { color: t.colors.textPrimary },
     rowMacros: { color: t.colors.textMuted },
     rowMacroKcal: { color: t.colors.textMuted },

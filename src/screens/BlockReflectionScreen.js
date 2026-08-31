@@ -435,7 +435,7 @@ const styles = StyleSheet.create({
   prRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: spacing.xs,
-    borderTopWidth: 1, borderTopColor: colors.border,
+    borderTopWidth: 1, borderTopColor: colors.borderSubtle,
   },
   prInfo: { flex: 1, gap: spacing.xxs },
   prExercise: { ...type.label, color: colors.textPrimary },
@@ -483,7 +483,7 @@ function buildLiveStyles(t) {
     narrativeCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     narrativeLine: { ...t.type.body, color: t.colors.textSecondary },
     section: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    prRow: { borderTopColor: t.colors.border },
+    prRow: { borderTopColor: t.colors.borderSubtle },
     ledgerLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     prExercise: { ...t.type.label, color: t.colors.textPrimary },
     prType: { ...t.type.caption, color: t.colors.textMuted },

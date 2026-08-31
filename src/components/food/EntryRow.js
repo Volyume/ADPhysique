@@ -194,7 +194,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     backgroundColor: colors.surface,
     paddingVertical: spacing.md, paddingHorizontal: spacing.lg,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
     minHeight: 48,
   },
   entryRowSelected: {
@@ -259,7 +259,7 @@ const styles = StyleSheet.create({
 // entryMacros have no colour tokens.
 function buildLiveStyles(t) {
   return {
-    entryRow: { backgroundColor: t.colors.surface, borderTopColor: t.colors.border },
+    entryRow: { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle },
     entryRowSelected: { backgroundColor: t.colors.surface2 },
     checkbox: { borderColor: t.colors.border },
     checkboxOn: { backgroundColor: t.colors.primaryFill, borderColor: t.colors.primary },

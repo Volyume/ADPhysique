@@ -56,7 +56,7 @@ export default function DietaryPreferencesEditor() {
   const t = useTheme();
   const live = useSettingsStyles();
   const liveText = {
-    block: { borderBottomColor: t.colors.border },
+    block: { borderBottomColor: t.colors.borderSubtle },
     chipText: { ...t.type.label },
     caption: { ...t.type.caption, color: t.colors.textMuted },
     emptyRow: { ...t.type.body, color: t.colors.textMuted },
@@ -191,7 +191,7 @@ const styles = StyleSheet.create({
   block: {
     padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSubtle,
   },
   lastBlock: {
     borderBottomWidth: 0,

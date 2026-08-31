@@ -87,7 +87,7 @@ export default function SettingsProfileScreen() {
   const t = useTheme();
   const live = useSettingsStyles();
   const liveText = {
-    dietBlock: { borderBottomColor: t.colors.border },
+    dietBlock: { borderBottomColor: t.colors.borderSubtle },
     dietChipText: { ...t.type.label },
   };
 
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
   dietBlock: {
     padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSubtle,
   },
   dietHeader: {
     flexDirection: 'row',

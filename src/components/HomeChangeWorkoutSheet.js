@@ -32,7 +32,7 @@ function HomeChangeWorkoutSheet({
     sheetActionIcon: { backgroundColor: t.colors.primaryBg },
     sheetActionTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     sheetActionSub: { ...t.type.caption, color: t.colors.textSecondary },
-    pickerRow: { borderBottomColor: t.colors.border },
+    pickerRow: { borderBottomColor: t.colors.borderSubtle },
     pickerRowActive: { backgroundColor: t.colors.primaryBg },
     dayBadge: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     dayBadgeActive: { backgroundColor: t.colors.primaryBg, borderColor: withAlpha(t.colors.primary, alpha.strong) },
@@ -182,7 +182,7 @@ const styles = StyleSheet.create({
   },
   pickerRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border,
+    paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   pickerRowActive: {
     backgroundColor: colors.primaryBg,

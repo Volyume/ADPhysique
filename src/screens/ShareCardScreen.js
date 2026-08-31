@@ -918,7 +918,7 @@ const styles = StyleSheet.create({
   toggleRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   toggleRowLast: { borderBottomWidth: 0 },
   toggleLabel: { fontSize: fontSize.sm, color: colors.textPrimary },
@@ -963,7 +963,7 @@ function buildLiveStyles(t) {
     previewPlaceholder: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     previewErrorText: { ...t.type.bodySm, color: t.colors.textSecondary },
     togglesCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    toggleRow: { borderBottomColor: t.colors.border },
+    toggleRow: { borderBottomColor: t.colors.borderSubtle },
     toggleLabel: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     privacyNote: { ...t.type.captionTight, color: t.colors.textMuted },
     prChip: { borderColor: t.colors.border, backgroundColor: t.colors.surface },

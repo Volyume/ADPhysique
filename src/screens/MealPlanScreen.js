@@ -2065,7 +2065,7 @@ const styles = StyleSheet.create({
   },
   groceryRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.border, gap: spacing.md,
+    paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle, gap: spacing.md,
   },
   groceryName: { ...type.body, color: colors.textPrimary, flexShrink: 1 },
   groceryQty: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
@@ -2164,7 +2164,7 @@ function buildLiveStyles(t) {
     swapSheetSub: { ...t.type.bodySm, color: t.colors.textSecondary },
     groceryShareBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     groceryShareBtnText: { ...t.type.caption, color: t.colors.textPrimary },
-    groceryRow: { borderBottomColor: t.colors.border },
+    groceryRow: { borderBottomColor: t.colors.borderSubtle },
     groceryName: { ...t.type.body, color: t.colors.textPrimary },
     groceryQty: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
     swapOption: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },

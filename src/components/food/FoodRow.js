@@ -115,7 +115,7 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
     minHeight: 64,
   },
   rowMain: { flex: 1, minWidth: 0, paddingRight: spacing.sm },
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
 // colour tokens.
 function buildLiveStyles(t) {
   return {
-    row: { borderBottomColor: t.colors.border },
+    row: { borderBottomColor: t.colors.borderSubtle },
     rowName: { color: t.colors.textPrimary },
     rowNameMuted: { color: t.colors.textMuted },
     rowMeta: { color: t.colors.textMuted },

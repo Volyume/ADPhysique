@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
   scanBody: { ...type.bodySm, color: colors.textMuted },
   scanEntry: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: colors.borderSubtle,
     paddingTop: spacing.md,
     gap: spacing.sm,
   },
@@ -301,7 +301,7 @@ function buildLiveStyles(t) {
     scanTitle: { color: t.colors.textPrimary },
     scanDate: { color: t.colors.textMuted },
     scanBody: { color: t.colors.textMuted },
-    scanEntry: { borderTopColor: t.colors.border },
+    scanEntry: { borderTopColor: t.colors.borderSubtle },
     scanEntryTitle: { color: t.colors.textPrimary },
     confidencePill: { backgroundColor: t.colors.primaryBg },
     confidencePillText: { color: t.colors.primary },

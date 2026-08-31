@@ -767,7 +767,7 @@ const styles = StyleSheet.create({
   },
   volumeRowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSubtle,
   },
   volumeRow: {
     flexDirection: 'row',
@@ -876,7 +876,7 @@ function buildLiveStyles(t) {
     statLabel: { ...t.type.caption, color: t.colors.textSecondary },
     statDivider: { backgroundColor: t.colors.border },
     sectionSubtext: { ...t.type.captionTight, color: t.colors.textMuted },
-    volumeRowBorder: { borderBottomColor: t.colors.border },
+    volumeRowBorder: { borderBottomColor: t.colors.borderSubtle },
     volumeMuscleName: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     volumeSetCount: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     insightText: { ...t.type.bodySm, color: t.colors.textPrimary },

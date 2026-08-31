@@ -2502,7 +2502,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSubtle,
     gap: spacing.xs,
   },
   exerciseListName: {
@@ -2641,7 +2641,7 @@ function buildLiveStyles(t) {
     doneBtnText: { ...t.type.label, color: t.colors.textPrimary },
     shareFooterBtn: { borderColor: withAlpha(t.colors.primary, alpha.strong), backgroundColor: t.colors.primaryBg },
     shareFooterBtnText: { ...t.type.label, color: t.colors.primary },
-    exerciseListRow: { borderBottomColor: t.colors.border },
+    exerciseListRow: { borderBottomColor: t.colors.borderSubtle },
     exerciseListName: { ...t.type.label, color: t.colors.textPrimary },
     exerciseListMeta: { ...t.type.num('caption'), color: t.colors.textSecondary },
     exerciseSetChip: { ...t.type.num('caption'), color: t.colors.textSecondary, backgroundColor: t.colors.surface2 ?? t.colors.background, borderColor: t.colors.border },

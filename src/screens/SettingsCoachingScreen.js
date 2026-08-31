@@ -119,7 +119,7 @@ export default function SettingsCoachingScreen() {
   const t = useTheme();
   const live = useSettingsStyles();
   const liveText = {
-    toneBlock: { borderBottomColor: t.colors.border },
+    toneBlock: { borderBottomColor: t.colors.borderSubtle },
     toneLabel: { ...t.type.body, color: t.colors.textPrimary },
     toneSub: { ...t.type.caption, color: t.colors.textMuted },
   };
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSubtle,
     gap: spacing.xs,
   },
   toneLabel: { ...type.body, color: colors.textPrimary },

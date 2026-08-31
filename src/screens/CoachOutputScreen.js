@@ -3856,7 +3856,7 @@ const styles = StyleSheet.create({
   heldHistoryEntry: {
     paddingVertical: spacing.sm,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSubtle,
     gap: spacing.xs,
   },
   heldHistoryDate: { ...type.caption, color: colors.textMuted },
@@ -3967,7 +3967,7 @@ function buildLiveStyles(t) {
     edClearedBody: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
     heldText: { ...t.type.bodySm, color: t.colors.textSecondary },
     heldHistoryTitle: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    heldHistoryEntry: { borderBottomColor: t.colors.border },
+    heldHistoryEntry: { borderBottomColor: t.colors.borderSubtle },
     heldHistoryDate: { ...t.type.caption, color: t.colors.textMuted },
     heldHistoryText: { ...t.type.bodySm, color: t.colors.textSecondary },
     heldHistoryEmptyText: { ...t.type.caption, color: t.colors.textMuted },

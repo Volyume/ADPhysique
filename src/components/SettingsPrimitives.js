@@ -24,7 +24,7 @@ export function SettingRow({ icon, label, sub, value, onPress, destructive, righ
   const Wrapper = onPress ? PressableCard : View;
   return (
     <Wrapper
-      style={[styles.settingRow, { borderBottomColor: t.colors.border }]}
+      style={[styles.settingRow, { borderBottomColor: t.colors.borderSubtle }]}
       onPress={onPress}
       accessibilityRole={onPress ? 'button' : 'none'}
       // CC33 R2-13: a pressable row is an accessibility container, so its
@@ -128,8 +128,8 @@ export function useSettingsStyles() {
   const t = useTheme();
   return {
     safe: { backgroundColor: t.colors.background },
-    section: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    settingRow: { borderBottomColor: t.colors.border },
+    section: { backgroundColor: t.colors.surface, borderColor: t.colors.borderSubtle },
+    settingRow: { borderBottomColor: t.colors.borderSubtle },
     settingIcon: { backgroundColor: t.colors.primaryBg },
     settingLabel: { ...t.type.body, color: t.colors.textPrimary },
     settingSub: { ...t.type.captionTight, color: t.colors.textMuted },
@@ -147,11 +147,20 @@ export const settingsStyles = StyleSheet.create({
     paddingTop: spacing.lg,
     paddingBottom: spacing.sm,
   },
+  // Quiet edges (premium UI pass). `border` (#6E6E6E, 3.45:1 on surface) is
+  // the WCAG 1.4.11 edge for a CONTROL that needs an identifiable boundary; a
+  // settings SECTION is a grouping container and its rows are identified by
+  // their own label, icon and chevron, so the strong edge drew a bright grey
+  // outline around every group and a bright rule between every row. That is
+  // the wireframe look. `borderSubtle` is the token documented for exactly
+  // this job ("hairline dividers INSIDE a card") and is what the shared Card
+  // primitive already uses for its own edge, so this also makes Settings
+  // consistent with every other card surface in the app.
   section: {
     backgroundColor: colors.surface,
     borderRadius: radius.lg,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: colors.borderSubtle,
     overflow: 'hidden',
   },
   settingRow: {
@@ -160,12 +169,12 @@ export const settingsStyles = StyleSheet.create({
     gap: spacing.lg,
     padding: spacing.lg,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSubtle,
   },
   settingIcon: {
     width: 34,
     height: 34,
-    borderRadius: 9,
+    borderRadius: radius.md,
     backgroundColor: colors.primaryBg,
     alignItems: 'center',
     justifyContent: 'center',

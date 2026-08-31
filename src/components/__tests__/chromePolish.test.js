@@ -91,7 +91,11 @@ describe('shared chrome polish', () => {
     // unchanged, only the source shape moved.
     expect(CHIP).toContain('{ ...t.type.label, color: t.colors.textSecondary }');
     expect(CHIP).not.toContain('fontWeight: fontWeight.semibold');
-    expect(SCREEN_HEADER).toContain('...t.type.h3');
+    // Premium UI pass: the tab-screen title moved h3 -> h1. The rule this
+    // line pins is "a bundled type role, not a hand-rolled fontWeight", not
+    // which role; h3 had left the five tab roots with no typographic anchor
+    // (the page title rendered smaller than the card titles under it).
+    expect(SCREEN_HEADER).toContain('...t.type.h1');
     expect(TAB_BAR).toContain('label: { ...type.caption, fontFamily: type.label.fontFamily }');
   });
 

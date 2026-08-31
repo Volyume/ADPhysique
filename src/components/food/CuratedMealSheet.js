@@ -137,7 +137,7 @@ const styles = StyleSheet.create({
   intro: { fontSize: fontSize.sm, color: colors.textSecondary, lineHeight: fontSize.sm + 5, marginBottom: spacing.xs },
   addRow: {
     paddingVertical: spacing.xs,
-    borderTopWidth: 1, borderTopColor: colors.border,
+    borderTopWidth: 1, borderTopColor: colors.borderSubtle,
   },
   addName: { fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textPrimary },
   addWhy: { fontSize: fontSize.sm, color: colors.textSecondary, marginTop: spacing.hair },
@@ -166,7 +166,7 @@ function buildLiveStyles(t) {
     itemName: { color: t.colors.textPrimary },
     itemMeta: { color: t.colors.textMuted },
     intro: { color: t.colors.textSecondary },
-    addRow: { borderTopColor: t.colors.border },
+    addRow: { borderTopColor: t.colors.borderSubtle },
     addName: { color: t.colors.textPrimary },
     addWhy: { color: t.colors.textSecondary },
     footnote: { color: t.colors.textMuted },

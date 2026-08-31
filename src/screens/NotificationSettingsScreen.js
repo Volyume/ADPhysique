@@ -899,7 +899,7 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.lg,
     paddingTop: spacing.xs,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: colors.borderSubtle,
     marginTop: spacing.xs,
   },
   helperText: {
@@ -977,7 +977,7 @@ function buildLiveStyles(t) {
     toggleIconWrap: { backgroundColor: t.colors.primaryBg },
     toggleLabel: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     divider: { backgroundColor: t.colors.border },
-    helperRow: { borderTopColor: t.colors.border },
+    helperRow: { borderTopColor: t.colors.borderSubtle },
     helperText: { ...t.type.bodySm, color: t.colors.textMuted },
     timePickerLabel: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
     timePickerValue: { ...t.type.num('bodyStrong'), color: t.colors.primary },

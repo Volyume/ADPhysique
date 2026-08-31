@@ -2377,7 +2377,7 @@ const styles = StyleSheet.create({
 
   // Next block section
   nextBlockSection: {
-    borderTopWidth: 1, borderTopColor: colors.border,
+    borderTopWidth: 1, borderTopColor: colors.borderSubtle,
     paddingTop: spacing.md, gap: spacing.sm,
   },
   nextBlockPreLabel: {
@@ -2494,7 +2494,7 @@ function buildLiveStyles(t) {
     signalChipHigh: { borderColor: withAlpha(t.colors.error, alpha.strong), backgroundColor: withAlpha(t.colors.error, alpha.ghost) },
     signalChipText: { fontSize: t.fontSize.xs, color: t.colors.warning },
     signalChipTextHigh: { color: t.colors.error },
-    nextBlockSection: { borderTopColor: t.colors.border },
+    nextBlockSection: { borderTopColor: t.colors.borderSubtle },
     nextBlockPreLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     nextBlockHeadline: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     nextBlockBody: { ...t.type.bodySm, color: t.colors.textSecondary },

@@ -7,11 +7,20 @@
  * repeated app chrome uses the V so the page title remains the readable
  * anchor.
  *
+ * The title is `h1` (32px InterDisplay-Bold). It had drifted to `h3` (20px
+ * Inter-Medium), which left the five tab roots with no typographic anchor:
+ * the page's own name rendered SMALLER than the card titles beneath it and
+ * smaller than the 34px brand chip beside it, so nothing on the screen
+ * ranked first. h1 is the app's existing screen-title size and sits in the
+ * band Android's large top app bar (28sp) and iOS's large title (34pt) use.
+ *
  * Constants:
  *   - BRAND_BOX (34): matches the compact Eat header treatment and gives
- *     the transparent V a consistent black backing on every tab screen.
- *   - BRAND_ICON_HEIGHT (19): keeps the V optically aligned with a 24pt
- *     bold title without dominating the row.
+ *     the transparent V a consistent black backing on every tab screen. At
+ *     h1 the chip finally reads as secondary to the title, not as the
+ *     largest mark in the row.
+ *   - BRAND_ICON_HEIGHT (19): keeps the V optically aligned with the title
+ *     without dominating the row.
  *   - paddingBottom keeps the same airy gap below the header that
  *     the previous design used.
  *
@@ -45,7 +54,7 @@ export default function ScreenHeader({ title, subtitle, right }) {
     <View style={styles.wrap}>
       <View style={styles.titleRow}>
         <Text
-          style={[styles.title, { ...t.type.h3, color: t.colors.textPrimary }]}
+          style={[styles.title, { ...t.type.h1, color: t.colors.textPrimary }]}
           numberOfLines={1}
           accessibilityRole="header"
         >
@@ -78,7 +87,7 @@ const styles = StyleSheet.create({
     // a subtitle below doesn't push the wordmark off-axis.
     alignItems: 'center',
     justifyContent: 'space-between',
-    minHeight: 32,
+    minHeight: 40,
   },
   title: {
     flex: 1,

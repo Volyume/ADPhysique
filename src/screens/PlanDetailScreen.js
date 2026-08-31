@@ -701,7 +701,7 @@ const styles = StyleSheet.create({
   },
   manageRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.md,
-    padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.border,
+    padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   manageRowLast: { borderBottomWidth: 0 },
   manageRowText: { flex: 1, ...type.body, color: colors.textPrimary },
@@ -745,7 +745,7 @@ function buildLiveStyles(t) {
     workoutMeta: { ...t.type.caption, color: t.colors.textSecondary },
     editWorkoutBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     startWorkoutBtn: { backgroundColor: t.colors.primaryFill },
-    manageRow: { borderBottomColor: t.colors.border },
+    manageRow: { borderBottomColor: t.colors.borderSubtle },
     manageRowText: { ...t.type.body, color: t.colors.textPrimary },
     whyBullet: { backgroundColor: t.colors.primary },
     whyText: { ...t.type.bodySm, color: t.colors.textSecondary },

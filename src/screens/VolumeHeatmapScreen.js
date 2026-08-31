@@ -1126,7 +1126,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingBottom: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.border,
+    borderBottomColor: colors.borderSubtle,
   },
   editMuscleName: { ...type.label, color: colors.textSecondary },
   editRowHeader: {
@@ -1176,7 +1176,7 @@ function buildLiveStyles(t) {
     resetButtonText: { color: t.colors.error },
     editTitle: { ...t.type.title, color: t.colors.textPrimary },
     editSubtitle: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    editRow: { borderBottomColor: t.colors.border },
+    editRow: { borderBottomColor: t.colors.borderSubtle },
     editMuscleName: { ...t.type.label, color: t.colors.textSecondary },
     editRowClear: { ...t.type.caption, color: t.colors.primary },
     editInputLabel: { ...t.type.caption, color: t.colors.textMuted },

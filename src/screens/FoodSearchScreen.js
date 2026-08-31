@@ -1099,7 +1099,7 @@ const styles = StyleSheet.create({
   ctaRow: {
     flexDirection: 'row', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   ctaText: { ...type.bodyStrong, color: colors.textPrimary, marginLeft: spacing.md, flex: 1 },
 
@@ -1168,7 +1168,7 @@ const styles = StyleSheet.create({
   plateItem: {
     flexDirection: 'row', alignItems: 'center',
     paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   plateItemName: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
   plateItemMeta: { ...type.caption, color: colors.textMuted, marginTop: spacing.xxs },
@@ -1200,7 +1200,7 @@ function buildLiveStyles(t) {
     tabLabelActive: { color: t.colors.textPrimary },
     tabUnderlineActive: { backgroundColor: t.colors.primary },
     provenanceNote: { ...t.type.captionTight, color: t.colors.textMuted },
-    ctaRow: { borderBottomColor: t.colors.border },
+    ctaRow: { borderBottomColor: t.colors.borderSubtle },
     ctaText: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     suggestHint: { ...t.type.caption, color: t.colors.textMuted },
     suggestNote: { ...t.type.caption, color: t.colors.textMuted, lineHeight: t.fontSize.sm + 5 },
@@ -1219,7 +1219,7 @@ function buildLiveStyles(t) {
     plateLogBtn: { backgroundColor: t.colors.primaryFill },
     plateLogText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
     plateModalTitle: { ...t.type.title, color: t.colors.textPrimary },
-    plateItem: { borderBottomColor: t.colors.border },
+    plateItem: { borderBottomColor: t.colors.borderSubtle },
     plateItemName: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
     plateItemMeta: { ...t.type.caption, color: t.colors.textMuted },
     plateClearBtn: { borderColor: t.colors.border },

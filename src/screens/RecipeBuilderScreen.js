@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   ingEmpty: { color: colors.textMuted, fontSize: fontSize.sm, paddingVertical: spacing.md },
   ingRow: {
     flexDirection: 'row', alignItems: 'center',
-    paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border,
+    paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
   },
   ingName: { color: colors.textPrimary, ...type.body },
   ingBrand: { color: colors.textMuted, ...type.caption, marginTop: spacing.xxs },
@@ -609,7 +609,7 @@ function buildLiveStyles(t) {
     addIngredientBtn: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     addLink: { ...t.type.label, color: t.colors.textPrimary },
     ingEmpty: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
-    ingRow: { borderBottomColor: t.colors.border },
+    ingRow: { borderBottomColor: t.colors.borderSubtle },
     ingName: { color: t.colors.textPrimary, ...t.type.body },
     ingBrand: { color: t.colors.textMuted, ...t.type.caption },
     qtyInput: { fontSize: t.fontSize.md },

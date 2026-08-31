@@ -377,7 +377,7 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   row: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
-    borderBottomWidth: 1, borderBottomColor: colors.border,
+    borderBottomWidth: 1, borderBottomColor: colors.borderSubtle,
     gap: spacing.sm,
   },
   rowMain: {
@@ -429,7 +429,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    row: { borderBottomColor: t.colors.border },
+    row: { borderBottomColor: t.colors.borderSubtle },
     name: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     meta: { color: t.colors.textMuted, fontSize: t.fontSize.sm },
     logPill: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.border },

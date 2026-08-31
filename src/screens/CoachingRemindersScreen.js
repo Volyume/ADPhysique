@@ -702,7 +702,7 @@ const styles = StyleSheet.create({
   },
   helperBlock: {
     paddingHorizontal: spacing.lg, paddingTop: spacing.md,
-    borderTopWidth: 1, borderTopColor: colors.border, marginTop: spacing.xs,
+    borderTopWidth: 1, borderTopColor: colors.borderSubtle, marginTop: spacing.xs,
   },
   helperText: { ...type.bodySm, color: colors.textMuted },
   savedText: {
@@ -731,7 +731,7 @@ function buildLiveStyles(t) {
     pickerLabel: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     scheduleText: { ...t.type.label, color: t.colors.primary },
     scheduleSubText: { ...t.type.captionTight, color: t.colors.textSecondary },
-    helperBlock: { borderTopColor: t.colors.border },
+    helperBlock: { borderTopColor: t.colors.borderSubtle },
     helperText: { ...t.type.bodySm, color: t.colors.textMuted },
     savedText: { fontSize: t.fontSize.xs, color: t.colors.primary },
   };

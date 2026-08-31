@@ -281,7 +281,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.surface,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: colors.border,
+    borderTopColor: colors.borderSubtle,
   },
   // Per-meal "mark eaten" (food audit item 1). Same visual language as the
   // day-level planned banner (DiaryScreen `plannedBtnPrimary`): a quiet
@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   markEatenText: { color: colors.onPrimary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
   seasonRow: {
     paddingHorizontal: spacing.lg, paddingVertical: spacing.sm,
-    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border,
+    borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle,
   },
   seasonText: { ...type.bodySm, color: colors.textSecondary },
   seasonLabel: { color: colors.textMuted, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
@@ -320,11 +320,11 @@ function buildLiveStyles(t) {
     emptySlotText: { color: t.colors.textMuted },
     addFoodButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     addFoodText: { color: t.colors.textPrimary },
-    entryChevron: { backgroundColor: t.colors.surface, borderTopColor: t.colors.border },
+    entryChevron: { backgroundColor: t.colors.surface, borderTopColor: t.colors.borderSubtle },
     plannedRowText: { color: t.colors.textMuted },
     markEatenButton: { backgroundColor: t.colors.primaryFill },
     markEatenText: { color: t.colors.onPrimary },
-    seasonRow: { borderTopColor: t.colors.border },
+    seasonRow: { borderTopColor: t.colors.borderSubtle },
     seasonText: { color: t.colors.textSecondary },
     seasonLabel: { color: t.colors.textMuted },
   };

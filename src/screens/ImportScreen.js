@@ -465,7 +465,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
     paddingTop: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.border,
+    borderTopColor: colors.borderSubtle,
   },
   unmappedHead: {
     fontSize: fontSize.xs,
@@ -526,7 +526,7 @@ function buildLiveStyles(t) {
     statValue: { ...t.type.num('h2'), color: t.colors.textPrimary },
     statLabel: { ...t.type.caption, color: t.colors.textMuted },
     breakdownText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
-    unmappedBlock: { borderTopColor: t.colors.border },
+    unmappedBlock: { borderTopColor: t.colors.borderSubtle },
     unmappedHead: { fontSize: t.fontSize.xs, color: t.colors.textPrimary },
     unmappedText: { ...t.type.bodySm, color: t.colors.textSecondary },
     unmappedHint: { ...t.type.caption, color: t.colors.textMuted },
