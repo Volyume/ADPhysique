@@ -271,6 +271,21 @@ Use the `Button` primitive (one press model, one disabled/loading treatment).
 | **Secondary** | `surface2` fill, light label, 1px `border` |
 | **Tertiary / ghost** | no fill, amber label |
 
+**One button shape.** Every labelled button draws at `radius.lg`, the radius
+the shared `Button` primitive uses for all three of its sizes. Two deliberate
+exceptions, both a different component class rather than drift: a FIXED-SIZE
+square control (the stepper's +/-, the rating buttons, the logger's swap-close,
+the note pencil) keeps `radius.md`, because the card radius on a 48dp square
+reads as a circle; and a pill-shaped chip or toggle keeps `radius.full`. A
+style override that forces the shared Button to a different radius is a defect,
+not a variant.
+
+**The primitive owns the touch floor.** A `size="sm"` Button draws at about
+34dp, under the 48dp minimum. `Button` computes its own shortfall and pads the
+TOUCH area with hitSlop rather than growing the box, so a compact button stays
+compact and still meets the minimum. Do not add a minHeight at the call site
+to fix a small button; it is already handled.
+
 **COMPLETE SET is always the largest button on the active-workout screen**,
 with the deepest press and a `setLogged()` haptic. All other buttons are
 visually subordinate.
