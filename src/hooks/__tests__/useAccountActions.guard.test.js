@@ -81,8 +81,8 @@ describe('SC-2: RPC-only fallback is reported as partial success', () => {
 
 describe('SC-2: sign-in retry seam (Wave-3 review fix)', () => {
   test('the retry is awaited at the top of the sign-in pipeline, never fire-and-forget beside it', () => {
-    expect(NAV).toMatch(/const retry = await retryPendingAuthDeletion\(session\.user\.id\);/);
-    expect(NAV).not.toMatch(/retryPendingAuthDeletion\(session\.user\.id\)\.catch\(\(\) => \{\}\);/);
+    expect(NAV).toMatch(/const retry = await retryPendingAuthDeletion\(incomingUid\);/);
+    expect(NAV).not.toMatch(/retryPendingAuthDeletion\(incomingUid\)\.catch\(\(\) => \{\}\);/);
   });
   test('a standing marker blocks the session: sign-out + explanation + return before any restore', () => {
     const gateAt = NAV.indexOf('if (retry.attempted || retry.pending)');
@@ -92,7 +92,8 @@ describe('SC-2: sign-in retry seam (Wave-3 review fix)', () => {
     // and the boot path, which a deleted account cannot reach).
     expect(NAV.indexOf('restoreSessionFromCloud(', gateAt)).toBeGreaterThan(gateAt);
     const block = NAV.slice(gateAt, gateAt + 1600);
-    expect(block).toMatch(/client\.auth\.signOut\(\)/);
-    expect(block).toMatch(/return;/);
+    expect(block).toMatch(/queueIncomingSessionRefusal\(client\)/);
+    expect(block).toMatch(/return \{ ok: false, reason: 'account_deletion_pending' \};/);
+    expect(NAV).toMatch(/const queueIncomingSessionRefusal = \(client\) => \{[\s\S]*client\.auth\.signOut\(\)/);
   });
 });

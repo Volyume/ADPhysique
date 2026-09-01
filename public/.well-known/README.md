@@ -42,6 +42,16 @@ they don't require Play-side verification.
 
 ## apple-app-site-association
 
-Not shipped. iOS is locked-deferred per CLAUDE.md release policy
-2026-05-25 founder override ("iOS deferred indefinitely") and per
-`app.json`'s lack of an Apple team-ID config. Add when iOS lands.
+The repository contains the association payload for the authoritative
+`volyume.app` domain and the known Apple application identifier
+`K79JA5JUF8.app.volyume`. It prepares `/partner/*` and the bounded auth callback
+paths `/auth/callback` and `/auth/callback/`.
+
+This is preparation, not proof of an effective Universal Link. The iOS
+Associated Domains entitlement deliberately remains absent from `app.json`:
+the stored provisioning profile predates that capability and enabling it made
+the iOS archive fail. Before rollout, create/refresh a profile containing
+`applinks:volyume.app`, ship the AASA file with the required JSON content type
+and no redirect, verify it from a real signed build, and only then move Supabase
+email/OAuth redirects from the legacy custom scheme to HTTPS. See
+`docs/security/daybreak-blue-2026-08-28/UNIVERSAL-LINKS-ROLLOUT.md`.

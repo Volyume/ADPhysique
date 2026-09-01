@@ -31,6 +31,17 @@ describe('private image deletion is exact-path and owner scoped', () => {
     expect(mockDelete).toHaveBeenCalledTimes(1);
   });
 
+  test('similar-prefix, malformed owner and ownerless legacy deletion are refused', async () => {
+    const sibling = 'file:///private/progress_photos/users/user-aa/1700000000000.jpg';
+    const legacy = 'file:///private/progress_photos/1700000000000.jpg';
+    expect(isProgressPhotoUriForUser('user-a', sibling)).toBe(false);
+    expect(isProgressPhotoUriForUser('../user-a', legacy)).toBe(false);
+    expect(await deleteProgressPhoto(legacy)).toBe(false);
+    expect(await deleteProgressPhoto('user-a', legacy)).toBe(false);
+    expect(await deleteProgressPhoto(undefined, legacy)).toBe(false);
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
   test('avatar deletion accepts only the current user exact generated filename', async () => {
     const own = 'file:///private/profile_avatars/user-a_1700000000000.jpg';
     expect(isProfileAvatarUriForUser('user-a', own)).toBe(true);

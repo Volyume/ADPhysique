@@ -84,6 +84,17 @@ export const SENSITIVE_KEY_PATTERNS = Object.freeze([
   /^phone/i,
   /^address/i,
 
+  // Authentication / session material. Opaque refresh tokens and one-time
+  // codes do not look like JWTs, so their key is the only reliable signal.
+  /^(?:access|refresh|id)[._-]?token$/i,
+  /^token[._-]?hash$/i,
+  /^authorization$/i,
+  /^cookies?$/i,
+  /^password$/i,
+  /^client[._-]?secret$/i,
+  /^(?:auth|authorization|verification)[._-]?code$/i,
+  /^otp$/i,
+
   // Body measurements (existing locked list)
   /^waist/i,
   /^chest/i,
@@ -139,7 +150,7 @@ const PHOTO_PATH_RE = /\b(file:\/\/|content:\/\/|\/storage\/|\/data\/user)[\w./%
 const BASE64_IMAGE_RE = /^data:image\/[a-z]+;base64,/i;
 const EMAIL_VALUE_RE = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
 const JWT_VALUE_RE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/;
-const CREDENTIAL_VALUE_RE = /(?:authorization\s*[:=]\s*bearer\s+[^\s&#]+|(?:access_token|refresh_token|token_hash|id_token|client_secret)\s*[:=]\s*[^\s&#]+)/i;
+const CREDENTIAL_VALUE_RE = /(?:authorization\s*[:=]\s*bearer\s+[^\s&#]+|(?:access_token|refresh_token|token_hash|id_token|client_secret|auth_code|authorization_code|verification_code|otp)\s*[:=]\s*[^\s&#]+)/i;
 const INLINE_HEALTH_RE = /\b(?:weight|body[._ -]?fat|bf[._ -]?pct|ffm|fm[._ -]?kg|kcal|protein|carbs?|fat|fibre|fiber|waist|chest|hips?|thigh|calf)\w*\s*[:=]\s*-?\d/i;
 
 // ────────────────────────────────────────────────────────────────────

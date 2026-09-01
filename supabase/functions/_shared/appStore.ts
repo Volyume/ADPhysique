@@ -141,6 +141,10 @@ export interface AppleTransaction {
   type?: string;
 }
 
+export function isProProductId(value: unknown): value is "pro_monthly" | "pro_annual" {
+  return value === "pro_monthly" || value === "pro_annual";
+}
+
 // Authoritative transaction info for a transactionId.
 // GET /inApps/v1/transactions/{transactionId} -> { signedTransactionInfo: JWS }.
 export async function getTransactionInfo(transactionId: string): Promise<AppleTransaction | null> {

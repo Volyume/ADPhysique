@@ -255,11 +255,15 @@ export async function copyPhotoStrippingExif(from, to) {
 
 function safeUserSegment(userId) {
   if (!userId) return null;
-  return String(userId).replace(/[^a-zA-Z0-9._-]/g, '_');
+  const raw = String(userId);
+  // Account directory segments are identifiers, not paths. Refuse dots,
+  // separators, controls and truncation/collision-prone sanitisation.
+  return /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(raw) ? raw : null;
 }
 
 export function photoDir(userId) {
   const safe = safeUserSegment(userId);
+  if (userId != null && !safe) throw new Error('Invalid progress-photo owner id');
   return safe ? `${BASE_DIR}users/${safe}/` : BASE_DIR;
 }
 
@@ -337,28 +341,23 @@ export async function saveProgressPhoto(srcUri, nowMs, userId) {
   return { name: `${ts}.jpg`, uri, ts };
 }
 
-function isLegacyPhotoUri(uri) {
-  if (typeof uri !== 'string') return false;
-  if (!uri.startsWith(BASE_DIR)) return false;
-  if (uri.startsWith(`${BASE_DIR}users/`)) return false;
-  return /^\d+\.jpg$/.test(uri.slice(BASE_DIR.length));
-}
-
 export function isProgressPhotoUriForUser(userId, uri) {
   if (typeof uri !== 'string') return false;
   if (userId) {
-    const dir = photoDir(userId);
+    let dir = null;
+    try { dir = photoDir(userId); } catch (_) { return false; }
     if (uri.startsWith(dir) && /^\d+\.jpg$/.test(uri.slice(dir.length))) return true;
   }
-  return isLegacyPhotoUri(uri);
+  return false;
 }
 
 export async function deleteProgressPhoto(userIdOrUri, maybeUri) {
   const hasUser = maybeUri !== undefined;
   const userId = hasUser ? userIdOrUri : null;
   const uri = hasUser ? maybeUri : userIdOrUri;
-  if (hasUser && !isProgressPhotoUriForUser(userId, uri)) return false;
-  if (!hasUser && !isLegacyPhotoUri(uri)) return false;
+  // A legacy one-argument call has no owner evidence. It may not delete a
+  // shared top-level photo merely because its filename looks familiar.
+  if (!hasUser || !userId || !isProgressPhotoUriForUser(userId, uri)) return false;
   try { await FileSystem.deleteAsync(uri, { idempotent: true }); return true; } catch (_) { return false; }
 }
 

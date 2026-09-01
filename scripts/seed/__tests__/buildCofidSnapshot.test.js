@@ -23,6 +23,7 @@
 const {
   num, numMicro, MICRO_FIELDS, buildMicroLookup, microValuesForCode,
   MAX_SOURCE_BYTES, EXPECTED_SOURCE_SHA256,
+  TRUSTED_SOURCE_HOST, MAX_REDIRECTS, assertTrustedCofidUrl,
 } = require('../buildCofidSnapshot');
 
 describe('the vulnerable XLSX parser has a narrow source boundary', () => {
@@ -32,6 +33,36 @@ describe('the vulnerable XLSX parser has a narrow source boundary', () => {
     const source = require('fs').readFileSync(require.resolve('../buildCofidSnapshot'), 'utf8');
     expect(source.indexOf('verifyCofidWorkbook(TMP_XLSX)'))
       .toBeLessThan(source.indexOf('XLSX.readFile(TMP_XLSX)'));
+  });
+
+  test('redirects stay HTTPS on the exact reviewed government host and are bounded', () => {
+    expect(TRUSTED_SOURCE_HOST).toBe('assets.publishing.service.gov.uk');
+    expect(MAX_REDIRECTS).toBe(3);
+    expect(assertTrustedCofidUrl('/media/reviewed.xlsx'))
+      .toBe('https://assets.publishing.service.gov.uk/media/reviewed.xlsx');
+    for (const hostile of [
+      'http://assets.publishing.service.gov.uk/file.xlsx',
+      'https://assets.publishing.service.gov.uk.evil.test/file.xlsx',
+      'https://evil.test/file.xlsx',
+      'https://user:pass@assets.publishing.service.gov.uk/file.xlsx',
+    ]) expect(() => assertTrustedCofidUrl(hostile)).toThrow(/reviewed government HTTPS origin/);
+  });
+
+  test('XLSX is absent from mobile runtime source and remains a maintainer-only import', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const srcRoot = path.resolve(__dirname, '../../../src');
+    const stack = [srcRoot];
+    const hits = [];
+    while (stack.length) {
+      const current = stack.pop();
+      for (const entry of fs.readdirSync(current, { withFileTypes: true })) {
+        const target = path.join(current, entry.name);
+        if (entry.isDirectory()) stack.push(target);
+        else if (/\.[jt]sx?$/.test(entry.name) && /(?:require\(['"]xlsx['"]\)|from ['"]xlsx['"])/.test(fs.readFileSync(target, 'utf8'))) hits.push(target);
+      }
+    }
+    expect(hits).toEqual([]);
   });
 });
 

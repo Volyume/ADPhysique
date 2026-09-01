@@ -3,6 +3,7 @@
 const mockSecure = new Map();
 let mockSecureFailure = null;
 let mockSilentDeleteFailure = false;
+let mockSilentWriteFailure = false;
 
 jest.mock('expo-secure-store', () => ({
   AFTER_FIRST_UNLOCK: 'afterFirstUnlock',
@@ -12,7 +13,7 @@ jest.mock('expo-secure-store', () => ({
   }),
   setItemAsync: jest.fn(async (key, value) => {
     if (mockSecureFailure === 'write') throw new Error('keychain unavailable');
-    mockSecure.set(key, value);
+    if (!mockSilentWriteFailure) mockSecure.set(key, value);
   }),
   deleteItemAsync: jest.fn(async (key) => {
     if (mockSecureFailure === 'delete') throw new Error('keychain unavailable');
@@ -32,7 +33,8 @@ jest.mock('../lib/errorLog', () => ({
 
 const {
   beginAuthFlow, consumeAuthFlow, clearAuthFlow, AUTH_FLOW_WINDOW_MS,
-  _resetAuthFlowQueueForTests,
+  stageAuthCallbackAdmission, clearAuthCallbackAdmission,
+  validatePendingAuthCallbackAdmission, _resetAuthFlowQueueForTests,
 } = require('../lib/authCallbackState');
 const {
   handleAuthDeepLink, parseAuthParams, isVolyumeLink,
@@ -45,15 +47,27 @@ const REFRESH = 'v1.opaqueRefreshToken_0123456789';
 
 function fakeSupabase({
   verifiedEmail = 'victim@example.com', verifiedId = 'victim-id',
-  getUserError = null, setSessionError = null, exchangeError = null, otpError = null,
+  installedEmail = verifiedEmail, installedId = verifiedId,
+  getUserError = null, installedGetUserError = null,
+  setSessionError = null, setSessionReturnsIdentity = true,
+  exchangeError = null, otpError = null,
 } = {}) {
-  const user = { id: verifiedId, email: verifiedEmail };
+  const verifiedUser = { id: verifiedId, email: verifiedEmail };
+  const installedUser = installedId ? { id: installedId, email: installedEmail } : null;
   return {
     auth: {
-      getUser: jest.fn(async () => ({ data: { user: getUserError ? null : user }, error: getUserError })),
-      setSession: jest.fn(async () => ({ data: { session: { user }, user }, error: setSessionError })),
-      verifyOtp: jest.fn(async () => ({ data: {}, error: otpError })),
+      getUser: jest.fn(async (token) => (token
+        ? { data: { user: getUserError ? null : verifiedUser }, error: getUserError }
+        : { data: { user: installedGetUserError ? null : installedUser }, error: installedGetUserError })),
+      setSession: jest.fn(async () => ({
+        data: setSessionReturnsIdentity
+          ? { session: { user: installedUser }, user: installedUser }
+          : { session: null, user: null },
+        error: setSessionError,
+      })),
+      verifyOtp: jest.fn(async () => ({ data: { user: installedUser, session: { user: installedUser } }, error: otpError })),
       exchangeCodeForSession: jest.fn(async () => ({ data: {}, error: exchangeError })),
+      signOut: jest.fn(async () => ({ error: null })),
     },
   };
 }
@@ -67,6 +81,7 @@ beforeEach(() => {
   mockSecure.clear();
   mockSecureFailure = null;
   mockSilentDeleteFailure = false;
+  mockSilentWriteFailure = false;
   mockLog.error.mockClear();
   mockLog.info.mockClear();
   _resetAuthFlowQueueForTests();
@@ -83,20 +98,38 @@ describe('account-substitution resistance', () => {
   });
 
   test.each(['signup', 'recovery'])('%s window cannot be reused for an attacker identity', async (kind) => {
-    await beginAuthFlow(kind, 'victim@example.com');
+    const nonce = await beginAuthFlow(kind, 'victim@example.com');
     const sb = fakeSupabase({ verifiedEmail: 'attacker@example.com', verifiedId: 'attacker-id' });
-    const result = await handleAuthDeepLink(implicitUrl(ATTACKER_ACCESS), { supabase: sb });
+    const result = await handleAuthDeepLink(implicitUrl(ATTACKER_ACCESS, REFRESH, nonce), { supabase: sb });
     expect(result).toMatchObject({ action: 'refused', reason: 'identity_mismatch' });
     expect(sb.auth.setSession).not.toHaveBeenCalled();
   });
 
-  test('the genuine no-state legacy template succeeds only for the bound identity', async () => {
-    await beginAuthFlow('signup', ' Victim@Example.COM ');
+  test('a new flow requires its nonce and succeeds only for the bound identity', async () => {
+    const nonce = await beginAuthFlow('signup', ' Victim@Example.COM ');
     const sb = fakeSupabase();
-    await expect(handleAuthDeepLink(implicitUrl(), { supabase: sb }))
+    await expect(handleAuthDeepLink(implicitUrl(ACCESS, REFRESH, nonce), { supabase: sb }))
       .resolves.toEqual({ action: 'signedIn', via: 'implicit' });
-    expect(sb.auth.getUser).toHaveBeenCalledWith(ACCESS);
+    expect(sb.auth.getUser).toHaveBeenNthCalledWith(1, ACCESS);
+    expect(sb.auth.getUser).toHaveBeenNthCalledWith(2);
     expect(sb.auth.setSession).toHaveBeenCalledWith({ access_token: ACCESS, refresh_token: REFRESH });
+  });
+
+  test('missing state is refused for every newly-created flow', async () => {
+    await beginAuthFlow('signup', 'victim@example.com');
+    const sb = fakeSupabase();
+    expect((await handleAuthDeepLink(implicitUrl(), { supabase: sb })).reason).toBe('state_missing');
+    expect(sb.auth.getUser).not.toHaveBeenCalled();
+    expect(sb.auth.setSession).not.toHaveBeenCalled();
+  });
+
+  test('a version-less pending record gets one bounded compatibility window', async () => {
+    const legacyNonce = 'ab'.repeat(24);
+    mockSecure.set('volyume.authCallbackState', JSON.stringify({
+      nonce: legacyNonce, kind: 'signup', expectedEmail: 'victim@example.com', at: Date.now(),
+    }));
+    await expect(handleAuthDeepLink(implicitUrl(), { supabase: fakeSupabase() }))
+      .resolves.toEqual({ action: 'signedIn', via: 'implicit' });
   });
 
   test('a wrong nonce consumes the flow', async () => {
@@ -135,26 +168,107 @@ describe('credential validation and exchange failures', () => {
   });
 
   test('server token validation failure never reaches setSession', async () => {
-    await beginAuthFlow('signup', 'victim@example.com');
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
     const sb = fakeSupabase({ getUserError: { message: 'invalid JWT' } });
-    expect((await handleAuthDeepLink(implicitUrl(), { supabase: sb })).reason).toBe('token_invalid');
+    expect((await handleAuthDeepLink(implicitUrl(ACCESS, REFRESH, nonce), { supabase: sb })).reason).toBe('token_invalid');
     expect(sb.auth.setSession).not.toHaveBeenCalled();
   });
 
   test('a returned setSession error is not mistaken for success', async () => {
-    await beginAuthFlow('signup', 'victim@example.com');
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
     const sb = fakeSupabase({ setSessionError: { message: 'refresh rejected' } });
-    expect(await handleAuthDeepLink(implicitUrl(), { supabase: sb }))
+    expect(await handleAuthDeepLink(implicitUrl(ACCESS, REFRESH, nonce), { supabase: sb }))
       .toEqual({ action: 'failed', via: 'implicit' });
   });
 
   test.each([
-    ['volyume://?token_hash=hash&type=signup', 'token_hash', 'verifyOtp', 'otpError'],
-    ['volyume://?code=pkce-code', 'code', 'exchangeCodeForSession', 'exchangeError'],
-  ])('%s reports a returned API error', async (url, via, method, errorOption) => {
-    const sb = fakeSupabase({ [errorOption]: { message: 'rejected' } });
-    expect(await handleAuthDeepLink(url, { supabase: sb })).toEqual({ action: 'failed', via });
-    expect(sb.auth[method]).toHaveBeenCalled();
+    ['missing identity', { setSessionReturnsIdentity: false }],
+    ['different returned identity', { installedId: 'attacker-id', installedEmail: 'victim@example.com' }],
+    ['unreadable installed session', { installedGetUserError: { message: 'unreadable' } }],
+  ])('%s is signed out and never reported as success', async (_label, options) => {
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
+    const sb = fakeSupabase(options);
+    expect(await handleAuthDeepLink(implicitUrl(ACCESS, REFRESH, nonce), { supabase: sb }))
+      .toEqual({ action: 'failed', via: 'implicit' });
+    expect(sb.auth.signOut).toHaveBeenCalled();
+  });
+
+  test('token-hash reports a returned API error after consuming a matching flow', async () => {
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
+    const sb = fakeSupabase({ otpError: { message: 'rejected' } });
+    const url = `volyume://auth-callback?state=${nonce}&token_hash=hash&type=signup`;
+    expect(await handleAuthDeepLink(url, { supabase: sb })).toEqual({ action: 'failed', via: 'token_hash' });
+    expect(sb.auth.verifyOtp).toHaveBeenCalled();
+  });
+
+  test('PKCE code exchange reports a returned API error', async () => {
+    const url = 'volyume://?code=pkce-code';
+    const sb = fakeSupabase({ exchangeError: { message: 'rejected' } });
+    expect(await handleAuthDeepLink(url, { supabase: sb })).toEqual({ action: 'failed', via: 'code' });
+    expect(sb.auth.exchangeCodeForSession).toHaveBeenCalled();
+  });
+
+  test('token-hash identity and flow kind are independently bound', async () => {
+    const nonce = await beginAuthFlow('recovery', 'victim@example.com');
+    const wrongKind = `volyume://auth-callback?state=${nonce}&token_hash=hash&type=signup`;
+    const sb = fakeSupabase();
+    expect((await handleAuthDeepLink(wrongKind, { supabase: sb })).reason).toBe('wrong_flow_kind');
+    expect(sb.auth.verifyOtp).not.toHaveBeenCalled();
+
+    const nonce2 = await beginAuthFlow('signup', 'victim@example.com');
+    const wrongIdentity = fakeSupabase({ installedId: 'attacker-id', installedEmail: 'attacker@example.com' });
+    const url = `volyume://auth-callback?state=${nonce2}&token_hash=hash&type=signup`;
+    expect((await handleAuthDeepLink(url, { supabase: wrongIdentity })).reason).toBe('identity_mismatch');
+    expect(wrongIdentity.auth.signOut).toHaveBeenCalled();
+  });
+
+  test('token-hash stages identity before an auth event can publish it', async () => {
+    expect(await stageAuthCallbackAdmission('signup', 'victim@example.com')).toBe(true);
+    const mismatch = await validatePendingAuthCallbackAdmission({
+      id: 'attacker-id', email: 'attacker@example.com',
+    });
+    expect(mismatch).toMatchObject({ ok: false, gated: true, reason: 'admission_identity_mismatch' });
+
+    // A racing old-account event cannot consume the latch. The independently
+    // verified identity can still pass, exactly once, at RootNavigator.
+    const match = await validatePendingAuthCallbackAdmission({
+      id: 'victim-id', email: 'Victim@Example.com',
+    });
+    expect(match).toMatchObject({ ok: true, gated: true, reason: 'admission_matched' });
+    expect(await validatePendingAuthCallbackAdmission({
+      id: 'victim-id', email: 'victim@example.com',
+    })).toMatchObject({ ok: true, gated: false });
+  });
+
+  test('token-hash exchange never starts when the pre-admission latch cannot persist', async () => {
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
+    mockSilentWriteFailure = true;
+    const sb = fakeSupabase();
+    const url = `volyume://auth-callback?state=${nonce}&token_hash=hash&type=signup`;
+    expect(await handleAuthDeepLink(url, { supabase: sb }))
+      .toMatchObject({ action: 'refused', reason: 'admission_unavailable' });
+    expect(sb.auth.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  test('failed token-hash exchange clears the latch and signs out any partial session', async () => {
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
+    const sb = fakeSupabase({ otpError: { message: 'rejected' } });
+    const url = `volyume://auth-callback?state=${nonce}&token_hash=hash&type=signup`;
+    await handleAuthDeepLink(url, { supabase: sb });
+    expect(sb.auth.signOut).toHaveBeenCalled();
+    expect(await validatePendingAuthCallbackAdmission({
+      id: 'victim-id', email: 'victim@example.com',
+    })).toMatchObject({ ok: true, gated: false });
+  });
+
+  test('expired admission latches fail closed and are removed', async () => {
+    const now = Date.now();
+    await stageAuthCallbackAdmission('recovery', 'victim@example.com');
+    jest.spyOn(Date, 'now').mockReturnValue(now + AUTH_FLOW_WINDOW_MS + 1);
+    expect(await validatePendingAuthCallbackAdmission({
+      id: 'victim-id', email: 'victim@example.com',
+    })).toMatchObject({ ok: false, reason: 'admission_expired' });
+    expect(await clearAuthCallbackAdmission()).toBe(true);
   });
 });
 
@@ -170,9 +284,10 @@ describe('ambiguous callbacks, replay, and storage failures', () => {
   });
 
   test('token_hash has precedence over code and tokens', async () => {
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
     const sb = fakeSupabase();
     const result = await handleAuthDeepLink(
-      `volyume://?token_hash=h&type=signup&code=c#access_token=${ACCESS}&refresh_token=${REFRESH}`,
+      `volyume://?state=${nonce}&token_hash=h&type=signup&code=c#access_token=${ACCESS}&refresh_token=${REFRESH}`,
       { supabase: sb },
     );
     expect(result.via).toBe('token_hash');
@@ -193,27 +308,53 @@ describe('ambiguous callbacks, replay, and storage failures', () => {
   });
 
   test('expired state is rejected', async () => {
-    await beginAuthFlow('signup', 'victim@example.com');
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
     const now = Date.now();
     jest.spyOn(Date, 'now').mockReturnValue(now + AUTH_FLOW_WINDOW_MS + 1);
-    expect((await consumeAuthFlow(null)).reason).toBe('expired');
+    expect((await consumeAuthFlow(nonce)).reason).toBe('expired');
   });
 
-  test.each(['read', 'delete'])('%s failure refuses the callback', async (failure) => {
-    await beginAuthFlow('signup', 'victim@example.com');
-    mockSecureFailure = failure;
-    expect((await consumeAuthFlow(null)).ok).toBe(false);
+  test('clock rollback is rejected', async () => {
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
+    const now = Date.now();
+    jest.spyOn(Date, 'now').mockReturnValue(now - 1);
+    expect((await consumeAuthFlow(nonce)).reason).toBe('expired');
   });
 
-  test('a silently failed delete is detected before authorization', async () => {
-    await beginAuthFlow('signup', 'victim@example.com');
+  test('a SecureStore read failure refuses the callback', async () => {
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
+    mockSecureFailure = 'read';
+    expect((await consumeAuthFlow(nonce)).ok).toBe(false);
+  });
+
+  test('a delete exception is safe when the invalidation tombstone persisted', async () => {
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
+    mockSecureFailure = 'delete';
+    expect(await consumeAuthFlow(nonce)).toMatchObject({ ok: true });
+    mockSecureFailure = null;
+    expect((await consumeAuthFlow(nonce)).ok).toBe(false);
+  });
+
+  test('a silently failed delete leaves only a verified non-authorising tombstone', async () => {
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
     mockSilentDeleteFailure = true;
-    expect(await consumeAuthFlow(null)).toEqual({ ok: false, reason: 'state_not_consumed' });
+    expect(await consumeAuthFlow(nonce)).toMatchObject({ ok: true });
+    expect((await consumeAuthFlow(nonce)).ok).toBe(false);
+    expect(mockSecure.get('volyume.authCallbackState')).toContain('"invalidated":true');
+  });
+
+  test.each([
+    ['throwing write', () => { mockSecureFailure = 'write'; }],
+    ['silent write mismatch', () => { mockSilentWriteFailure = true; }],
+  ])('%s cannot open a callback window', async (_label, arrange) => {
+    arrange();
+    expect(await beginAuthFlow('signup', 'victim@example.com')).toBeNull();
   });
 
   test('unbound or corrupt state is rejected', async () => {
-    mockSecure.set('volyume.authCallbackState', JSON.stringify({ nonce: 'n', kind: 'signup', at: Date.now() }));
-    expect((await consumeAuthFlow('n')).reason).toBe('identity_unbound');
+    const nonce = 'ab'.repeat(24);
+    mockSecure.set('volyume.authCallbackState', JSON.stringify({ nonce, kind: 'signup', at: Date.now() }));
+    expect((await consumeAuthFlow(nonce)).reason).toBe('identity_unbound');
     mockSecure.set('volyume.authCallbackState', 'not-json');
     expect((await consumeAuthFlow(null)).reason).toBe('state_malformed');
   });
@@ -221,6 +362,43 @@ describe('ambiguous callbacks, replay, and storage failures', () => {
   test('clear verifies absence', async () => {
     await beginAuthFlow('signup', 'victim@example.com');
     expect(await clearAuthFlow()).toBe(true);
+  });
+
+  test('logout invalidation survives a delete failure and refuses the old callback', async () => {
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
+    mockSilentDeleteFailure = true;
+    expect(await clearAuthFlow()).toBe(true);
+    const sb = fakeSupabase();
+    expect((await handleAuthDeepLink(implicitUrl(ACCESS, REFRESH, nonce), { supabase: sb })).action)
+      .toBe('refused');
+    expect(sb.auth.setSession).not.toHaveBeenCalled();
+  });
+
+  test('account switch clears both callback capabilities and refuses the old callback', async () => {
+    const nonce = await beginAuthFlow('recovery', 'account-a@example.com');
+    expect(await stageAuthCallbackAdmission('recovery', 'account-a@example.com')).toBe(true);
+
+    // RootNavigator performs this same account-boundary invalidation for every
+    // SIGNED_OUT event, including a switch to account B.
+    expect(await clearAuthFlow()).toBe(true);
+
+    const sb = fakeSupabase({ email: 'account-a@example.com' });
+    const result = await handleAuthDeepLink(
+      implicitUrl(ACCESS, REFRESH, nonce),
+      { supabase: sb },
+    );
+    expect(result).toEqual(expect.objectContaining({ action: 'refused' }));
+    expect(sb.auth.setSession).not.toHaveBeenCalled();
+    expect(await validatePendingAuthCallbackAdmission({ id: 'a', email: 'account-a@example.com' }))
+      .toEqual(expect.objectContaining({ gated: false }));
+  });
+
+  test('implicit callback type must match the bound flow kind', async () => {
+    const nonce = await beginAuthFlow('recovery', 'victim@example.com');
+    const url = `${implicitUrl(ACCESS, REFRESH, nonce)}&type=signup`;
+    const sb = fakeSupabase();
+    expect((await handleAuthDeepLink(url, { supabase: sb })).reason).toBe('wrong_flow_kind');
+    expect(sb.auth.getUser).not.toHaveBeenCalled();
   });
 });
 
@@ -241,8 +419,8 @@ describe('parser, origin, and privacy invariants', () => {
   });
 
   test('no credential material is logged on success or refusal', async () => {
-    await beginAuthFlow('signup', 'victim@example.com');
-    await handleAuthDeepLink(implicitUrl(), { supabase: fakeSupabase() });
+    const nonce = await beginAuthFlow('signup', 'victim@example.com');
+    await handleAuthDeepLink(implicitUrl(ACCESS, REFRESH, nonce), { supabase: fakeSupabase() });
     await handleAuthDeepLink(implicitUrl(ATTACKER_ACCESS), { supabase: fakeSupabase() });
     const logged = JSON.stringify([mockLog.error.mock.calls, mockLog.info.mock.calls]);
     expect(logged).not.toContain(ACCESS);

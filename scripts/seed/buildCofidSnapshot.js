@@ -74,6 +74,8 @@ const TMP_XLSX = path.join(require('node:os').tmpdir(), 'cofid-mw-2021.xlsx');
 // the checked-in snapshot; arbitrary XLSX bytes never reach the parser.
 const MAX_SOURCE_BYTES = 8 * 1024 * 1024;
 const EXPECTED_SOURCE_SHA256 = '436e9445ef2adb2a75f3d7edd51302de3adad25385f9795fc94ba58bd030e97d';
+const TRUSTED_SOURCE_HOST = 'assets.publishing.service.gov.uk';
+const MAX_REDIRECTS = 3;
 
 // 0-indexed column positions in sheet "1.3 Proximates".
 const COL = {
@@ -243,18 +245,36 @@ function microValuesForCode(code, inorganicsLookup, vitaminsLookup) {
   return out;
 }
 
-function downloadXlsx(url, destPath) {
+function assertTrustedCofidUrl(value, base = SOURCE_URL) {
+  const parsed = new URL(value, base);
+  if (parsed.protocol !== 'https:' || parsed.hostname !== TRUSTED_SOURCE_HOST
+    || parsed.port || parsed.username || parsed.password) {
+    throw new Error('CoFID redirect left the reviewed government HTTPS origin');
+  }
+  return parsed.toString();
+}
+
+function downloadXlsx(url, destPath, redirects = 0) {
   return new Promise((resolve, reject) => {
-    log(`downloading ${url}`);
+    let trustedUrl;
+    try { trustedUrl = assertTrustedCofidUrl(url); } catch (error) { reject(error); return; }
+    log(`downloading ${trustedUrl}`);
     const t0 = Date.now();
     const file = fs.createWriteStream(destPath);
-    const req = https.get(url, {
+    const req = https.get(trustedUrl, {
       headers: { 'User-Agent': USER_AGENT },
     }, (res) => {
-      if (res.statusCode === 301 || res.statusCode === 302) {
+      if ([301, 302, 303, 307, 308].includes(res.statusCode)) {
         file.close();
         try { fs.unlinkSync(destPath); } catch (_) { /* tolerate */ }
-        return downloadXlsx(res.headers.location, destPath).then(resolve, reject);
+        if (!res.headers.location || redirects >= MAX_REDIRECTS) {
+          return reject(new Error('CoFID download exceeded the trusted redirect limit'));
+        }
+        let redirectUrl;
+        try { redirectUrl = assertTrustedCofidUrl(res.headers.location, trustedUrl); } catch (error) {
+          return reject(error);
+        }
+        return downloadXlsx(redirectUrl, destPath, redirects + 1).then(resolve, reject);
       }
       if (res.statusCode !== 200) {
         file.close();
@@ -458,5 +478,8 @@ module.exports = {
   SHEET_NAME_VITAMINS,
   MAX_SOURCE_BYTES,
   EXPECTED_SOURCE_SHA256,
+  TRUSTED_SOURCE_HOST,
+  MAX_REDIRECTS,
+  assertTrustedCofidUrl,
   verifyCofidWorkbook,
 };

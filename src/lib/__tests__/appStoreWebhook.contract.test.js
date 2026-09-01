@@ -44,8 +44,15 @@ describe('app-store-verify → trusts Apple, not the client JWS', () => {
   test('routes the grant by Apple-returned appAccountToken (the buyer id)', () => {
     expect(VERIFY).toMatch(/const userId = tx\.appAccountToken/);
   });
+  test('only an authoritative Volyume Pro product can grant entitlement', () => {
+    expect(SHARED).toMatch(/isProProductId/);
+    expect(VERIFY).toMatch(/!isProProductId\(tx\.productId\)/);
+    expect(VERIFY).toMatch(/unsupported_product/);
+  });
   test('rejects an inactive (revoked/expired) transaction', () => {
     expect(VERIFY).toMatch(/not_active/);
+    expect(VERIFY).toMatch(/malformedExpiry/);
+    expect(VERIFY).toMatch(/Number\.isSafeInteger\(expiresAt\)/);
   });
   test('returns 502 when the grant does not persist (matches the Google contract)', () => {
     expect(VERIFY).toMatch(/const upgrade = await callUpgradeTier\(/);
@@ -60,6 +67,8 @@ describe('app-store-notifications → authoritative-status guards', () => {
     expect(NOTIFS).toMatch(/verifyAndDecodeNotification\(payload\)/);
     expect(NOTIFS).toMatch(/APPLE_ROOT_CA_CERTS_BASE64/);
     expect(NOTIFS).toMatch(/APP_STORE_APPLE_ID/);
+    expect(NOTIFS).toMatch(/!BUNDLE_ID/);
+    expect(NOTIFS).toMatch(/!Number\.isSafeInteger\(APPLE_APP_ID\)/);
     expect(NOTIFS).toMatch(/signedPayload verification failed/);
     expect(NOTIFS).toMatch(/new Response\("Unauthorized", \{ status: 401 \}\)/);
     expect(NOTIFS).not.toMatch(/decodeJwsPayload<DecodedNotification>/);
@@ -67,6 +76,13 @@ describe('app-store-notifications → authoritative-status guards', () => {
 
   test('decides tier from the re-fetched subscription status, not the POST body', () => {
     expect(NOTIFS).toMatch(/getSubscriptionStatus\(/);
+  });
+  test('ignores authoritative transactions for products outside the Pro allowlist', () => {
+    expect(NOTIFS).toMatch(/!isProProductId\(authoritative\.tx\.productId\)/);
+    const guardAt = NOTIFS.indexOf('!isProProductId(authoritative.tx.productId)');
+    const switchAt = NOTIFS.indexOf('switch (action)');
+    expect(guardAt).toBeGreaterThan(0);
+    expect(guardAt).toBeLessThan(switchAt);
   });
   test('a purchase grant requires an active/grace authoritative status', () => {
     const block = NOTIFS.slice(NOTIFS.indexOf('case "purchase":'), NOTIFS.indexOf('case "grace":'));
@@ -85,6 +101,9 @@ describe('app-store-notifications → authoritative-status guards', () => {
     expect(NOTIFS).toMatch(/authoritative Apple lookup failed; no tier change/);
     expect(NOTIFS).toMatch(/const userId = authoritative\.tx\.appAccountToken/);
     expect(NOTIFS).not.toMatch(/authoritative\?\.tx\.appAccountToken\s*\?\?/);
+  });
+  test('authoritative buyer routing requires the expected Supabase UUID shape', () => {
+    expect(NOTIFS).toMatch(/USER_UUID_RE\.test\(userId\)/);
   });
   test('refund/revoke cannot downgrade an Apple-active transaction', () => {
     const block = NOTIFS.slice(NOTIFS.indexOf('case "refund":'), NOTIFS.indexOf('case "ignore":'));

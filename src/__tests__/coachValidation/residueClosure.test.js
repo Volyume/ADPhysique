@@ -198,9 +198,13 @@ describe('T-PROGRAMME-07: next-block recommendation branches (real getBlockAdvic
 
   // A block in its recovery week (week 6 of 6): getBlockAdvice reaches the
   // next-block recommendation branch (phase 'recovery').
-  const recoveryBlock = { startDate: NOW - 36 * DAY, plannedWeeks: 6, durationWeeks: 6 };
+  // getBlockAdvice's lapse protection uses Date.now(), so this IO-backed
+  // integration fixture must stay live-relative. The pure scenario harness
+  // still uses its fixed NOW value.
+  const liveNow = Date.now();
+  const recoveryBlock = { startDate: liveNow - 36 * DAY, plannedWeeks: 6, durationWeeks: 6 };
   const freshCheckin = (daysAgo, energy = 4, soreness = 1) => ({
-    weekStart: NOW - daysAgo * DAY, energyScore: energy, sorenessScore: soreness, sleepHours: 8,
+    weekStart: liveNow - daysAgo * DAY, energyScore: energy, sorenessScore: soreness, sleepHours: 8,
   });
 
   test('no high signals and readiness >= 60: repeat', async () => {

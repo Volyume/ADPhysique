@@ -524,6 +524,14 @@ jobs:
             android/app/build/outputs/apk/release/app-release.apk \
             android/app/build/outputs/bundle/release/app-release.aab
 
+      - name: Write immutable artifact provenance
+        run: |
+          {
+            echo "git_sha=${GITHUB_SHA}"
+            sha256sum android/app/build/outputs/apk/release/app-release.apk
+            sha256sum android/app/build/outputs/bundle/release/app-release.aab
+          } > artifact-provenance.txt
+
       # 2026-08-21: artifact storage quota exhaustion broke every build
       # from run 3400 onward (the gradle build succeeded; the uploads
       # failed with "Artifact storage quota has been hit"). Each push
@@ -536,16 +544,20 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: volyume-release-apk-${{ github.run_number }}
-          path: android/app/build/outputs/apk/release/app-release.apk
+          name: volyume-release-apk-${{ github.sha }}
+          path: |
+            android/app/build/outputs/apk/release/app-release.apk
+            artifact-provenance.txt
           retention-days: 3
 
       - name: Upload AAB artifact (Play Store)
         if: github.ref == 'refs/heads/main'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: volyume-release-aab-${{ github.run_number }}
-          path: android/app/build/outputs/bundle/release/app-release.aab
+          name: volyume-release-aab-${{ github.sha }}
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            artifact-provenance.txt
           retention-days: 3
 
       # Status report written as a workflow artifact instead of a

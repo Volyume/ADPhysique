@@ -6,8 +6,10 @@ import { safeRedirectPath } from '@/lib/safeRedirect';
 // continues to the app. Mirrors the @supabase/ssr callback pattern.
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get('code');
-  const next = safeRedirectPath(searchParams.get('next'));
+  const codes = searchParams.getAll('code');
+  const nextValues = searchParams.getAll('next');
+  const code = codes.length === 1 ? codes[0] : null;
+  const next = nextValues.length <= 1 ? safeRedirectPath(nextValues[0]) : '/dashboard';
 
   if (code) {
     const supabase = await createServerSupabase();

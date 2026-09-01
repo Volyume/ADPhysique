@@ -43,6 +43,9 @@ env:
 
 jobs:
   apply:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

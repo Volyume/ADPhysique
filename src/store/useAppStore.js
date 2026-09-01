@@ -316,6 +316,15 @@ const useAppStore = create((set, get) => ({
     }
     set({ user });
   },
+  // Cross-account admission uses a full initial-state replacement after the
+  // persistent stores are verified clean and before the incoming identity is
+  // published. Resetting a hand-maintained subset is unsafe: any newly-added
+  // user-scoped field would otherwise become account A residue visible to B.
+  resetAccountMemoryForTransition: () => {
+    const initial = useAppStore.getInitialState?.();
+    if (!initial) throw new Error('Zustand initial state is unavailable');
+    set(initial, true);
+  },
   setSession: (session) => set({ session }),
   setUserProfile: (userProfile) => {
     // Stamp every editable field in the incoming profile with

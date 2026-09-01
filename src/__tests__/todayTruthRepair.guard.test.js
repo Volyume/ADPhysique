@@ -101,7 +101,10 @@ describe('Ruling 1: the weekly run/streak construct is gone from Today', () => {
     // independent derivation.
     const offenders = [];
     for (const file of productionFiles()) {
-      const rel = path.relative(SRC, file);
+      // Normalize Windows separators before applying the documented prose and
+      // partner-lane allowlists. The old forward-slash-only comparison made
+      // intentional coaching prose fail only on Windows.
+      const rel = path.relative(SRC, file).split(path.sep).join('/');
       if (rel.startsWith('lib/partners/') || rel === 'screens/PartnerScreen.js') continue;
       if (rel.startsWith('lib/notifications/partnerBeats.js')) continue;
       const body = fs.readFileSync(file, 'utf8')

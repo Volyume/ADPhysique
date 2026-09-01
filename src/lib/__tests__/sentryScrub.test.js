@@ -132,6 +132,15 @@ describe('isSensitiveKey (locked patterns)', () => {
     'phone',
     'phoneNumber',
     'address',
+    'access_token',
+    'refresh_token',
+    'token_hash',
+    'authorization',
+    'cookie',
+    'password',
+    'auth_code',
+    'verification_code',
+    'otp',
   ])('PII identifier: %s is sensitive', (k) => {
     expect(isSensitiveKey(k)).toBe(true);
   });
@@ -228,6 +237,8 @@ describe('string-value scrubbing', () => {
     'login failed for victim@example.com',
     'Authorization: Bearer super-secret',
     'redirect?access_token=secret&x=1',
+    'callback?auth_code=one-time-secret',
+    'verification_code: 123456',
     'eyJabcdefghijk.abcdefghijkl.abcdefghijkl',
     'weight_kg=82.4',
     'kcal: 2400',
@@ -343,6 +354,39 @@ describe('scrubEvent', () => {
   test('non-object event returned unchanged', () => {
     expect(scrubEvent(null)).toBeNull();
     expect(scrubEvent(undefined)).toBeUndefined();
+  });
+
+  test('a serialized synthetic envelope contains no credential, PII, or health values', () => {
+    const secrets = [
+      'victim@example.com', 'opaque-refresh-secret', 'one-time-otp',
+      '82.4', '2400', 'Bearer synthetic-bearer',
+    ];
+    const event = {
+      message: 'login failed for victim@example.com',
+      exception: { values: [{ type: 'Error', value: 'otp=one-time-otp' }] },
+      extra: {
+        refresh_token: 'opaque-refresh-secret',
+        nested: [{ body_weight: 82.4 }, { kcal_target: 2400 }],
+      },
+      contexts: { auth: { authorization: 'Bearer synthetic-bearer' } },
+      tags: { email: 'victim@example.com', route: 'auth-callback' },
+      user: { id: 'synthetic-user-id', email: 'victim@example.com' },
+      request: {
+        url: 'https://volyume.app/auth/confirm?access_token=synthetic-access#refresh_token=x',
+        headers: { authorization: 'Bearer synthetic-bearer' },
+        cookies: 'session=opaque-refresh-secret',
+        query_string: 'access_token=synthetic-access',
+        data: { verification_code: 'one-time-otp', protein_g: 180 },
+      },
+      breadcrumbs: [{
+        message: 'callback auth_code=one-time-otp',
+        data: { body_fat_pct: 18.5, access_token: 'synthetic-access' },
+      }],
+    };
+    const envelope = JSON.stringify(scrubEvent(event));
+    for (const secret of secrets) expect(envelope).not.toContain(secret);
+    expect(envelope).toContain('auth-callback');
+    expect(envelope).toContain('synthetic-user-id');
   });
 });
 

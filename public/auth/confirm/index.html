@@ -54,6 +54,7 @@
     </div>
   </main>
 
+<script src="./security.js"></script>
 <script>
   (function(){
     // Public Supabase project endpoint. Carries the one-time token straight
@@ -61,21 +62,17 @@
     // unchanged; only the link's domain (volyume.app) changes, which is what
     // keeps the email out of spam.
     var SUPABASE = 'https://sujrylzzxcqxxfygptns.supabase.co';
-    var q = new URLSearchParams(location.search);
-    var token = q.get('token') || q.get('token_hash');
-    var type = q.get('type') || 'signup';
-    var redirectTo = q.get('redirect_to') || 'volyume://';
-
-    if (!token) {
+    var request = window.VolyumeConfirmSecurity.parseConfirmRequest(location.search);
+    if (!request.ok) {
       document.getElementById('main').style.display = 'none';
       document.getElementById('err').style.display = 'block';
       return;
     }
 
     var url = SUPABASE + '/auth/v1/verify'
-      + '?token=' + encodeURIComponent(token)
-      + '&type=' + encodeURIComponent(type)
-      + '&redirect_to=' + encodeURIComponent(redirectTo);
+      + '?token=' + encodeURIComponent(request.token)
+      + '&type=' + encodeURIComponent(request.type)
+      + '&redirect_to=' + encodeURIComponent(request.redirectTo);
 
     document.getElementById('go').setAttribute('href', url);
     // Small delay so the page paints first, then hand off to Supabase.

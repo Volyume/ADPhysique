@@ -6669,6 +6669,128 @@ const PARTNER_LOCAL_WIPE_TABLES = [
   'partnerships',
 ];
 
+/**
+ * Prove that a missing AsyncStorage owner marker really represents a first
+ * account, rather than marker loss over another account's SQLite residue.
+ * Unknown/query failure is unsafe. This is deliberately stricter than the
+ * diagnostic conflict report: it is an admission decision.
+ */
+export async function verifyNoForeignLocalData(incomingUserId) {
+  if (!incomingUserId) return { ok: false, step: 'missing_incoming_user' };
+  const d = await db();
+
+  for (const table of WIPE_DIRECT_TABLES) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const row = await d.getFirstAsync(
+        `SELECT 1 AS found FROM ${table}
+         WHERE user_id IS NULL OR user_id <> ? LIMIT 1`,
+        [incomingUserId],
+      );
+      if (row) return { ok: false, step: table };
+    } catch (e) {
+      if (!isMissingTableError(e)) return { ok: false, step: table };
+    }
+  }
+
+  const childChecks = [
+    ['routine_exercises', `SELECT 1 AS found FROM routine_exercises re
+      LEFT JOIN routines r ON r.id = re.routine_id
+      WHERE r.user_id IS NULL OR r.user_id <> ? LIMIT 1`],
+    ['mesocycle_weeks', `SELECT 1 AS found FROM mesocycle_weeks mw
+      LEFT JOIN mesocycles m ON m.id = mw.mesocycle_id
+      WHERE m.user_id IS NULL OR m.user_id <> ? LIMIT 1`],
+    ['planned_muscle_volume', `SELECT 1 AS found FROM planned_muscle_volume pmv
+      LEFT JOIN mesocycle_weeks mw ON mw.id = pmv.mesocycle_week_id
+      LEFT JOIN mesocycles m ON m.id = mw.mesocycle_id
+      WHERE m.user_id IS NULL OR m.user_id <> ? LIMIT 1`],
+    ['adaptation_events', `SELECT 1 AS found FROM adaptation_events ae
+      LEFT JOIN mesocycle_weeks mw ON mw.id = ae.mesocycle_week_id
+      LEFT JOIN mesocycles m ON m.id = mw.mesocycle_id
+      WHERE m.user_id IS NULL OR m.user_id <> ? LIMIT 1`],
+  ];
+  for (const [table, sql] of childChecks) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      if (await d.getFirstAsync(sql, [incomingUserId])) return { ok: false, step: table };
+    } catch (e) {
+      if (!isMissingTableError(e)) return { ok: false, step: table };
+    }
+  }
+
+  // Pair mirrors are not user-keyed. Without the owner marker, any row is
+  // unassignable and therefore cannot be admitted to an incoming account.
+  for (const table of PARTNER_LOCAL_WIPE_TABLES) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      if (await d.getFirstAsync(`SELECT 1 AS found FROM ${table} LIMIT 1`)) {
+        return { ok: false, step: table };
+      }
+    } catch (e) {
+      if (!isMissingTableError(e)) return { ok: false, step: table };
+    }
+  }
+
+  try {
+    if (await d.getFirstAsync('SELECT 1 AS found FROM exercises WHERE is_custom = 1 LIMIT 1')) {
+      return { ok: false, step: 'custom_exercises' };
+    }
+  } catch (e) {
+    if (!isMissingTableError(e)) return { ok: false, step: 'custom_exercises' };
+  }
+
+  // Files do not carry a SQLite row reliably (a crash can orphan one), so a
+  // missing owner marker must also prove that every private file namespace is
+  // either empty or belongs to the incoming account.
+  try {
+    // eslint-disable-next-line global-require
+    const FileSystem = require('expo-file-system/legacy');
+    // eslint-disable-next-line global-require
+    const { photoDir } = require('./progressPhotos');
+    const incomingDir = photoDir(incomingUserId);
+    const usersRoot = `${FileSystem.documentDirectory}progress_photos/users/`;
+    const usersInfo = await FileSystem.getInfoAsync(usersRoot);
+    if (usersInfo?.exists) {
+      const entries = await FileSystem.readDirectoryAsync(usersRoot);
+      const incomingName = incomingDir.slice(usersRoot.length).replace(/\/$/, '');
+      if (entries.some((name) => name !== incomingName)) {
+        return { ok: false, step: 'foreign_photo_files' };
+      }
+    }
+
+    const legacyRoot = `${FileSystem.documentDirectory}progress_photos/`;
+    const legacyInfo = await FileSystem.getInfoAsync(legacyRoot);
+    if (legacyInfo?.exists) {
+      const entries = await FileSystem.readDirectoryAsync(legacyRoot);
+      if (entries.some((name) => /^\d+\.jpg$/.test(name))) {
+        return { ok: false, step: 'legacy_photo_files' };
+      }
+    }
+
+    // eslint-disable-next-line global-require
+    const { SNAP_DIR } = require('./dbSnapshot');
+    const snapshotInfo = await FileSystem.getInfoAsync(SNAP_DIR);
+    if (snapshotInfo?.exists && (await FileSystem.readDirectoryAsync(SNAP_DIR)).length > 0) {
+      return { ok: false, step: 'snapshots' };
+    }
+
+    // eslint-disable-next-line global-require
+    const { profileAvatarDir, isProfileAvatarUriForUser } = require('./profileAvatar');
+    const avatarDir = profileAvatarDir();
+    const avatarInfo = await FileSystem.getInfoAsync(avatarDir);
+    if (avatarInfo?.exists) {
+      const names = await FileSystem.readDirectoryAsync(avatarDir);
+      if (names.some((name) => !isProfileAvatarUriForUser(incomingUserId, `${avatarDir}${name}`))) {
+        return { ok: false, step: 'foreign_profile_avatars' };
+      }
+    }
+  } catch (_) {
+    return { ok: false, step: 'private_files_unreadable' };
+  }
+
+  return { ok: true };
+}
+
 // "no such table" from an older schema means the table holds no data, so a
 // fatal wipe step has nothing to remove there. Fail-closed protects data that
 // exists, not tables that don't - without this a single missing fatal table
@@ -6784,6 +6906,15 @@ export async function wipeAllUserData(userId) {
     } catch (e) {
       logError('database.wipeAllUserData.progress_photo_files', e, { userId });
       e.wipeStep = 'photo_files';
+      throw e;
+    }
+
+    try {
+      // eslint-disable-next-line global-require
+      await require('./profileAvatar').wipeProfileAvatarsForUser(userId);
+    } catch (e) {
+      logError('database.wipeAllUserData.profile_avatar_files', e, { userId });
+      e.wipeStep = 'profile_avatar_files';
       throw e;
     }
 
@@ -6916,6 +7047,25 @@ export async function verifyUserWipeClean(userId) {
     }
   } catch (_) {
     residue.push('snapshots');
+  }
+
+
+  try {
+    // eslint-disable-next-line global-require
+    const { profileAvatarDir, isProfileAvatarUriForUser } = require('./profileAvatar');
+    // eslint-disable-next-line global-require
+    const FileSystem = require('expo-file-system/legacy');
+    const dir = profileAvatarDir();
+    const info = await FileSystem.getInfoAsync(dir);
+    if (info?.exists) {
+      const names = await FileSystem.readDirectoryAsync(dir).catch(() => null);
+      if (names === null
+        || names.some((name) => isProfileAvatarUriForUser(userId, `${dir}${name}`))) {
+        residue.push('profile_avatar_files');
+      }
+    }
+  } catch (_) {
+    residue.push('profile_avatar_files');
   }
 
   return { clean: residue.length === 0, residue };
@@ -7058,8 +7208,36 @@ export async function dumpAllTables(userId) {
 // existing data untouched.
 export async function restoreAllTables(dump, userId) {
   if (!userId) throw new Error('A signed-in user is required to restore a backup.');
-  const d = await db();
   const tables = dump?.tables || {};
+
+  // Validate the complete caller-supplied snapshot before opening the
+  // destructive transaction. The public primitive must be safe even when a
+  // future caller bypasses dataBackup's friendlier outer validation.
+  const allowedTables = new Set(BACKUP_TABLES);
+  for (const [table, rows] of Object.entries(tables)) {
+    if (!allowedTables.has(table) || !Array.isArray(rows)) {
+      throw new Error(`Backup table ${table} is not supported.`);
+    }
+    const ids = new Set();
+    for (const row of rows) {
+      if (!row || typeof row !== 'object' || Array.isArray(row) || row.user_id !== userId) {
+        throw new Error(`Backup table ${table} contains rows for another account.`);
+      }
+      for (const value of Object.values(row)) {
+        if (value !== null && !['string', 'number'].includes(typeof value)) {
+          throw new Error(`Backup table ${table} contains a nested record value.`);
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(row, 'id')) {
+        if (typeof row.id !== 'string' || !row.id || ids.has(row.id)) {
+          throw new Error(`Backup table ${table} contains duplicate or invalid record identifiers.`);
+        }
+        ids.add(row.id);
+      }
+    }
+  }
+
+  const d = await db();
   await runInTransaction(d, async () => {
     for (const t of BACKUP_TABLES) {
       const rows = tables[t];
@@ -7070,13 +7248,6 @@ export async function restoreAllTables(dump, userId) {
       const info = await d.getAllAsync(`PRAGMA table_info(${t})`);
       const allowed = new Set((info || []).map(c => c.name));
       if (allowed.size === 0 || !allowed.has('user_id')) continue;
-      // Trusted-boundary check: dataBackup validates earlier for a friendly
-      // error, but the database primitive independently refuses cross-owner or
-      // unowned rows so another future caller cannot bypass that validation.
-      if (rows.some((row) => !row || typeof row !== 'object' || Array.isArray(row)
-        || row.user_id !== userId)) {
-        throw new Error(`Backup table ${t} contains rows for another account.`);
-      }
       await d.runAsync(`DELETE FROM ${t} WHERE user_id = ?`, [userId]);
       for (const row of rows) {
         const cols = Object.keys(row).filter(c => allowed.has(c));

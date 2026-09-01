@@ -1,0 +1,59 @@
+{
+  "_instructions": "This is a schema-valid fragment, not a runnable partial matrix. Copy it, add every target required by supabase-matrix.targets.json using actual isolated-project A/B fixture UUIDs and required columns, then run the executor. It refuses incomplete coverage and treats non-policy constraint errors as inconclusive.",
+  "tables": [
+    {
+      "table": "routines",
+      "foreignFilter": { "id": "REPLACE_WITH_B_ROUTINE_UUID" },
+      "select": "*",
+      "nestedSelect": "*,routine_exercises(*)",
+      "expectations": {
+        "select_foreign": "deny",
+        "nested_select_foreign": "deny",
+        "insert_as_foreign": "deny",
+        "update_foreign": "deny",
+        "delete_foreign": "deny",
+        "upsert_foreign": "deny",
+        "bulk_insert_foreign": "deny"
+      },
+      "insertAsForeign": {
+        "id": "REPLACE_WITH_UNIQUE_HOSTILE_UUID",
+        "user_id": "${B_UID}",
+        "name": "daybreak-hostile"
+      },
+      "updateForeign": { "name": "daybreak-hostile-update" },
+      "upsertAsForeign": {
+        "id": "REPLACE_WITH_UNIQUE_HOSTILE_UPSERT_UUID",
+        "user_id": "${B_UID}",
+        "name": "daybreak-hostile-upsert"
+      },
+      "onConflict": "id",
+      "bulkInsertAsForeign": [
+        { "id": "REPLACE_WITH_UNIQUE_BULK_UUID_1", "user_id": "${B_UID}", "name": "REPLACE_WITH_DEDICATED_BULK_CLEANUP_VALUE" },
+        { "id": "REPLACE_WITH_UNIQUE_BULK_UUID_2", "user_id": "${B_UID}", "name": "REPLACE_WITH_DEDICATED_BULK_CLEANUP_VALUE" }
+      ],
+      "cleanupFilterByAttack": {
+        "insert_as_foreign": { "id": "REPLACE_WITH_UNIQUE_HOSTILE_UUID" },
+        "upsert_foreign": { "id": "REPLACE_WITH_UNIQUE_HOSTILE_UPSERT_UUID" },
+        "bulk_insert_foreign": { "name": "REPLACE_WITH_DEDICATED_BULK_CLEANUP_VALUE" }
+      }
+    },
+    {
+      "table": "routine_exercises",
+      "foreignFilter": { "routine_id": "REPLACE_WITH_B_ROUTINE_UUID" },
+      "foreignParentAttachment": {
+        "id": "REPLACE_WITH_UNIQUE_HOSTILE_CHILD_UUID",
+        "routine_id": "REPLACE_WITH_B_ROUTINE_UUID",
+        "exercise_id": "REPLACE_WITH_VALID_GLOBAL_EXERCISE_UUID"
+      },
+      "updateForeign": { "position": 999 },
+      "deleteForeign": true,
+      "cleanupFilter": { "id": "REPLACE_WITH_UNIQUE_HOSTILE_CHILD_UUID" }
+    }
+  ],
+  "rpcs": [
+    {
+      "name": "clear_goal_lock",
+      "args": { "p_user_id": "${B_UID}" }
+    }
+  ]
+}

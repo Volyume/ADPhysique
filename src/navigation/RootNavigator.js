@@ -1163,6 +1163,141 @@ export default function RootNavigator() {
   }, []);
 
   useEffect(() => {
+    const queueIncomingSessionRefusal = (client) => {
+      setTimeout(() => { client.auth.signOut().catch(() => {}); }, 0);
+    };
+
+    // One admission boundary for EVERY session-bearing source: cold-start
+    // getSession, INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED and USER_UPDATED.
+    // Identity publication must never happen in a sibling path that skips the
+    // same owner/residue/wipe checks.
+    async function preflightIncomingSession(client, session) {
+      const incomingUid = session?.user?.id ?? null;
+      if (!incomingUid) return { ok: false, reason: 'missing_incoming_user' };
+
+      // verifyOtp installs a session before its promise resolves. Enforce the
+      // callback's expected email here, at the actual identity-publication
+      // boundary, so a synchronous auth event cannot briefly publish a
+      // substituted account before authDeepLink validates the return value.
+      try {
+        // eslint-disable-next-line global-require
+        const callbackAdmission = await require('../lib/authCallbackState')
+          .validatePendingAuthCallbackAdmission(session.user);
+        if (!callbackAdmission.ok) {
+          queueIncomingSessionRefusal(client);
+          return { ok: false, reason: callbackAdmission.reason };
+        }
+      } catch (e) {
+        _bootLog('error', 'RootNavigator.accountAdmission.callbackIdentity', e);
+        queueIncomingSessionRefusal(client);
+        return { ok: false, reason: 'callback_admission_failed' };
+      }
+
+      try {
+        // eslint-disable-next-line global-require
+        const { retryPendingAuthDeletion } = require('../lib/deletionRetry');
+        const retry = await retryPendingAuthDeletion(incomingUid);
+        if (retry.attempted || retry.pending) {
+          try {
+            // eslint-disable-next-line global-require
+            require('../components/AppAlert').appAlert(
+              retry.ok === true ? 'Account deletion complete' : 'Account deletion still pending',
+              retry.ok === true
+                ? 'Your earlier account deletion has now finished and your sign-in details have been removed. You can create a fresh account any time.'
+                : 'You asked us to delete this account and one step is still pending. Connect to the internet and sign in once more to finish removing your sign-in details.',
+              [{ text: 'OK' }],
+            );
+          } catch (_) { /* alert module is optional; refusal still signs out */ }
+          queueIncomingSessionRefusal(client);
+          return { ok: false, reason: 'account_deletion_pending' };
+        }
+      } catch (e) {
+        _bootLog('error', 'RootNavigator.accountAdmission.deletionCheck', e);
+        queueIncomingSessionRefusal(client);
+        return { ok: false, reason: 'deletion_check_failed' };
+      }
+
+      // eslint-disable-next-line global-require
+      const { prepareIncomingAccount } = require('../lib/accountTransitionGuard');
+      const transition = await prepareIncomingAccount({
+        incomingUid,
+        readDeviceOwner: () => AsyncStorage.getItem('@volyume_last_supabase_user_id'),
+        verifyFirstAccountClean: async (uid) => {
+          const publishedUid = useAppStore.getState().user?.id ?? null;
+          if (publishedUid && publishedUid !== uid) {
+            return { ok: false, step: 'published_user_without_owner_marker' };
+          }
+          // eslint-disable-next-line global-require
+          const databaseClean = await require('../lib/database').verifyNoForeignLocalData(uid);
+          if (!databaseClean.ok) return databaseClean;
+          // eslint-disable-next-line global-require
+          return require('../lib/deviceWipe').verifyNoForeignAccountStorage(uid);
+        },
+        chooseAccountSwitch: async () => {
+          // eslint-disable-next-line global-require
+          const { appAlert } = require('../components/AppAlert');
+          return new Promise((resolve) => {
+            let settled = false;
+            const pick = (value) => { if (!settled) { settled = true; resolve(value); } };
+            appAlert(
+              'You\'re signing in to a different account',
+              'This device currently holds data for another account. Switching removes that local copy before this account opens. Data already synced to the previous account remains in its cloud account.',
+              [
+                { text: 'Keep this device\'s data', style: 'cancel', onPress: () => pick('keep') },
+                { text: 'Switch accounts', style: 'destructive', onPress: () => pick('switch') },
+              ],
+              { cancelable: false },
+            );
+          });
+        },
+        // eslint-disable-next-line global-require
+        beginAccountEpoch: () => require('../lib/accountEpoch').beginNewAccountEpoch(),
+        quiesceAccountWork: async () => {
+          try {
+            // eslint-disable-next-line global-require
+            require('../lib/sync').cancelScheduledSync();
+            // eslint-disable-next-line global-require
+            require('../lib/sync/signOutGuard').setSignOutWiping(true);
+            // eslint-disable-next-line global-require
+            const idle = await require('../lib/sync/runner').whenSyncIdle({ timeoutMs: 5000 });
+            return idle ? { ok: true } : { ok: false, step: 'sync_still_running' };
+          } catch (_) {
+            return { ok: false, step: 'sync_quiesce_error' };
+          }
+        },
+        // eslint-disable-next-line global-require
+        wipeNotifications: () => require('../lib/deviceWipe').wipeScheduledNotificationsWithRetry(),
+        // eslint-disable-next-line global-require
+        wipeDatabase: (uid) => require('../lib/database').wipeAllUserDataWithRetry(uid),
+        // eslint-disable-next-line global-require
+        wipeStorage: () => require('../lib/deviceWipe').wipeAsyncStorageWithRetry(),
+        resetMemory: () => useAppStore.getState().resetAccountMemoryForTransition(),
+        writeDeviceOwner: (uid) => AsyncStorage.setItem('@volyume_last_supabase_user_id', uid),
+      });
+      if (!transition.ok) {
+        try {
+          // eslint-disable-next-line global-require
+          require('../lib/errorLog').logError(
+            'SignIn.accountBoundary.refused',
+            new Error(`incoming account refused (${transition.reason})`),
+            { incoming: incomingUid, previous: transition.previousUid ?? null, step: transition.step ?? null },
+          );
+        } catch (_) { /* logging must not weaken the fail-closed refusal */ }
+        if (transition.reason !== 'kept_device_data') {
+          try {
+            // eslint-disable-next-line global-require
+            require('../components/AppAlert').appAlert(
+              "Couldn't switch accounts safely",
+              'The previous account could not be fully removed from this device, so the new account was not opened. Try again in a moment.',
+              [{ text: 'OK' }],
+            );
+          } catch (_) { /* alert module is optional; refusal still signs out */ }
+        }
+        queueIncomingSessionRefusal(client);
+      }
+      return transition;
+    }
+
     async function bootstrap() {
       try {
         // checkFirstRun / checkTier are AsyncStorage-only (see
@@ -1195,6 +1330,8 @@ export default function RootNavigator() {
           if (client) {
             const { data: { session } } = await client.auth.getSession();
             if (session?.user) {
+              const admission = await preflightIncomingSession(client, session);
+              if (!admission.ok) return;
               setSession(session);
               setUser(session.user);
 
@@ -1359,6 +1496,15 @@ export default function RootNavigator() {
           // bundle reload (dev / Expo Go) would skip the restore + tier + sync.
           if (event === 'SIGNED_OUT') {
             _lastAuthEnter = { uid: null, at: 0 };
+            // Every sign-out is an account boundary, including sign-outs
+            // initiated outside the normal UI wrapper (sync recovery, token
+            // revocation, rejected account switch). Invalidate both the
+            // unconsumed callback nonce and the exchange admission latch so a
+            // callback begun by the old account cannot publish afterwards.
+            try {
+              // eslint-disable-next-line global-require
+              await require('../lib/authCallbackState').clearAuthFlow();
+            } catch (_) { /* callback state remains fail-closed on read */ }
             // The verified sign-out wipe clears the owner marker. Do not clear
             // it merely because an auth event fired: the account-switch "keep"
             // path deliberately signs the incoming account back out while the
@@ -1382,87 +1528,12 @@ export default function RootNavigator() {
             (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') &&
             session?.user?.id;
 
-          // Account B must not become visible in React/Sentry/observability
-          // while account A still owns either local store. Perform the entire
-          // account-boundary decision and verified wipe before publishing the
-          // incoming session anywhere. A failure queues sign-out outside this
-          // auth callback (Supabase holds an auth lock while invoking it).
-          if (isAuthEnter) {
-            // A pending deletion marker for this uid is also a pre-admission
-            // condition: never publish or restore an account whose auth-row
-            // deletion is still being completed.
-            try {
-              // eslint-disable-next-line global-require
-              const { retryPendingAuthDeletion } = require('../lib/deletionRetry');
-              const retry = await retryPendingAuthDeletion(session.user.id);
-              if (retry.attempted || retry.pending) {
-                try {
-                  // eslint-disable-next-line global-require
-                  require('../components/AppAlert').appAlert(
-                    retry.ok === true ? 'Account deletion complete' : 'Account deletion still pending',
-                    retry.ok === true
-                      ? 'Your earlier account deletion has now finished and your sign-in details have been removed. You can create a fresh account any time.'
-                      : 'You asked us to delete this account and one step is still pending. Connect to the internet and sign in once more to finish removing your sign-in details.',
-                    [{ text: 'OK' }],
-                  );
-                } catch (_) { /* alert module is optional; refusal still signs out */ }
-                setTimeout(() => { client.auth.signOut().catch(() => {}); }, 0);
-                return;
-              }
-            } catch (_) { /* no marker / module unavailable: continue */ }
-
-            // eslint-disable-next-line global-require
-            const { prepareIncomingAccount } = require('../lib/accountTransitionGuard');
-            const transition = await prepareIncomingAccount({
-              incomingUid: session.user.id,
-              readDeviceOwner: () => AsyncStorage.getItem('@volyume_last_supabase_user_id'),
-              chooseAccountSwitch: async () => {
-                // eslint-disable-next-line global-require
-                const { appAlert } = require('../components/AppAlert');
-                return new Promise((resolve) => {
-                  let settled = false;
-                  const pick = (value) => { if (!settled) { settled = true; resolve(value); } };
-                  appAlert(
-                    'You\'re signing in to a different account',
-                    'This device currently holds data for another account. Switching removes that local copy before this account opens. Data already synced to the previous account remains in its cloud account.',
-                    [
-                      { text: 'Keep this device\'s data', style: 'cancel', onPress: () => pick('keep') },
-                      { text: 'Switch accounts', style: 'destructive', onPress: () => pick('switch') },
-                    ],
-                    { cancelable: false },
-                  );
-                });
-              },
-              // eslint-disable-next-line global-require
-              beginAccountEpoch: () => require('../lib/accountEpoch').beginNewAccountEpoch(),
-              // eslint-disable-next-line global-require
-              wipeDatabase: (uid) => require('../lib/database').wipeAllUserDataWithRetry(uid),
-              // eslint-disable-next-line global-require
-              wipeStorage: () => require('../lib/deviceWipe').wipeAsyncStorageWithRetry(),
-              writeDeviceOwner: (uid) => AsyncStorage.setItem('@volyume_last_supabase_user_id', uid),
-            });
-            if (!transition.ok) {
-              try {
-                // eslint-disable-next-line global-require
-                require('../lib/errorLog').logError(
-                  'SignIn.accountBoundary.refused',
-                  new Error(`incoming account refused (${transition.reason})`),
-                  { incoming: session.user.id, previous: transition.previousUid ?? null, step: transition.step ?? null },
-                );
-              } catch (_) { /* logging must not weaken the fail-closed refusal */ }
-              if (transition.reason !== 'kept_device_data') {
-                try {
-                  // eslint-disable-next-line global-require
-                  require('../components/AppAlert').appAlert(
-                    "Couldn't switch accounts safely",
-                    'The previous account could not be fully removed from this device, so the new account was not opened. Try again in a moment.',
-                    [{ text: 'OK' }],
-                  );
-                } catch (_) { /* alert module is optional; refusal still signs out */ }
-              }
-              setTimeout(() => { client.auth.signOut().catch(() => {}); }, 0);
-              return;
-            }
+          // Guard every event carrying a session. A stale TOKEN_REFRESHED or
+          // USER_UPDATED event for another uid is just as capable of replacing
+          // identity as SIGNED_IN if it bypasses account admission.
+          if (session?.user?.id) {
+            const admission = await preflightIncomingSession(client, session);
+            if (!admission.ok) return;
           }
           // eslint-disable-next-line global-require
           try { require('../lib/errorLog').logInfo('auth.event', event, { uid: session?.user?.id ?? null, prevLocal: localUserIdBeforeSignIn }); } catch (_) {}

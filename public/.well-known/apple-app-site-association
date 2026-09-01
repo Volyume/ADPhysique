@@ -4,7 +4,11 @@
     "details": [
       {
         "appID": "K79JA5JUF8.app.volyume",
-        "paths": ["/partner/*"]
+        "paths": [
+          "/partner/*",
+          "/auth/callback",
+          "/auth/callback/"
+        ]
       }
     ]
   }

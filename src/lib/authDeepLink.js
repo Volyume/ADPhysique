@@ -1,10 +1,16 @@
-import { consumeAuthFlow, clearAuthFlow, normalizeAuthEmail } from './authCallbackState';
+import {
+  consumeAuthFlow,
+  clearAuthFlow,
+  normalizeAuthEmail,
+  stageAuthCallbackAdmission,
+  clearAuthCallbackAdmission,
+} from './authCallbackState';
 import { logError, logInfo } from './errorLog';
 
 const AUTH_KEYS = new Set([
   'token_hash', 'type', 'code', 'access_token', 'refresh_token', 'state',
 ]);
-const OTP_TYPES = new Set(['signup', 'recovery', 'invite', 'magiclink', 'email', 'email_change']);
+const OTP_TYPES = new Set(['signup', 'recovery']);
 
 export function isVolyumeLink(url) {
   const s = String(url ?? '');
@@ -68,20 +74,45 @@ export async function handleAuthDeepLink(url, { supabase, notifyAuthLinkFailed }
   const duplicate = (params._duplicates ?? []).find((key) => AUTH_KEYS.has(key));
   if (duplicate) return fail(notifyAuthLinkFailed, 'auth.deepLink.duplicateParameter', 'duplicate_parameter');
 
-  if (params.token_hash || params.type) {
+  if (params.token_hash) {
     if (!params.token_hash || !OTP_TYPES.has(params.type) || params.token_hash.length > 4096) {
       return fail(notifyAuthLinkFailed, 'auth.deepLink.malformedTokenHash', 'malformed_token_hash');
     }
+    const gate = await consumeAuthFlow(params.state ?? null);
+    if (!gate.ok) {
+      return fail(notifyAuthLinkFailed, 'auth.deepLink.unsolicitedTokenHash', gate.reason);
+    }
+    if (gate.kind !== params.type) {
+      return fail(notifyAuthLinkFailed, 'auth.deepLink.tokenHashKindMismatch', 'wrong_flow_kind');
+    }
+    if (!(await stageAuthCallbackAdmission(gate.kind, gate.expectedEmail))) {
+      return fail(notifyAuthLinkFailed, 'auth.deepLink.tokenHashAdmissionStage', 'admission_unavailable');
+    }
     try {
-      const { error } = await supabase.auth.verifyOtp({ token_hash: params.token_hash, type: params.type });
+      const { data, error } = await supabase.auth.verifyOtp({
+        token_hash: params.token_hash,
+        type: params.type,
+      });
       if (error) throw error;
+      const installedUser = data?.user ?? data?.session?.user ?? null;
+      if (!installedUser?.id
+        || normalizeAuthEmail(installedUser.email) !== normalizeAuthEmail(gate.expectedEmail)) {
+        await clearAuthCallbackAdmission();
+        try { await supabase.auth.signOut?.(); } catch (_) { /* refusal remains closed */ }
+        return fail(notifyAuthLinkFailed, 'auth.deepLink.tokenHashIdentityMismatch', 'identity_mismatch');
+      }
       logInfo('auth.deepLink.tokenHash', 'session established from a server-verified token hash');
-      await clearAuthFlow();
       return { action: 'signedIn', via: 'token_hash' };
     } catch (_) {
+      await clearAuthCallbackAdmission();
+      try { await supabase.auth.signOut?.(); } catch (_) { /* refusal remains closed */ }
       notifyAuthLinkFailed?.();
       return { action: 'failed', via: 'token_hash' };
     }
+  }
+
+  if (params.type && !params.access_token && !params.refresh_token && !params.code) {
+    return fail(notifyAuthLinkFailed, 'auth.deepLink.malformedTokenHash', 'malformed_token_hash');
   }
 
   if (params.code) {
@@ -107,6 +138,9 @@ export async function handleAuthDeepLink(url, { supabase, notifyAuthLinkFailed }
     if (!gate.ok) {
       return fail(notifyAuthLinkFailed, 'auth.deepLink.unsolicitedImplicitCallback', gate.reason);
     }
+    if (params.type && params.type !== gate.kind) {
+      return fail(notifyAuthLinkFailed, 'auth.deepLink.implicitKindMismatch', 'wrong_flow_kind');
+    }
 
     // Validate the access token against Supabase Auth without installing it.
     // The legacy no-state template is safe only because the verified identity is
@@ -131,9 +165,17 @@ export async function handleAuthDeepLink(url, { supabase, notifyAuthLinkFailed }
       });
       if (error) throw error;
       const installedUid = data?.user?.id ?? data?.session?.user?.id ?? null;
-      if (installedUid && installedUid !== verifiedUser.id) throw new Error('installed session identity changed');
+      if (installedUid !== verifiedUser.id) throw new Error('installed session identity changed');
+      // Validate the session actually installed in Supabase's auth storage,
+      // not only the object returned by setSession. A success-shaped response
+      // with no/different persisted identity must not be treated as admission.
+      const installed = await supabase.auth.getUser();
+      if (installed?.error || installed?.data?.user?.id !== verifiedUser.id) {
+        throw new Error('installed session could not be revalidated');
+      }
       return { action: 'signedIn', via: 'implicit' };
     } catch (_) {
+      try { await supabase.auth.signOut?.(); } catch (_) { /* refusal remains closed */ }
       notifyAuthLinkFailed?.();
       return { action: 'failed', via: 'implicit' };
     }

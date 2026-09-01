@@ -86,8 +86,9 @@ describe('play-billing-rtdn → client verify surfaces a failed grant (SUB-001)'
   });
 
   test('product ids are allowlisted and URL path values are encoded', () => {
-    expect(RTDN).toMatch(/subscriptionId === "pro_monthly"/);
-    expect(RTDN).toMatch(/subscriptionId === "pro_annual"/);
+    expect(RTDN).toMatch(/value === "pro_monthly"/);
+    expect(RTDN).toMatch(/value === "pro_annual"/);
+    expect(RTDN).toMatch(/!isProSubscriptionId\(subscriptionId\)/);
     expect(RTDN).toMatch(/encodeURIComponent\(purchaseToken\)/);
   });
 
@@ -108,6 +109,41 @@ describe('play-billing-rtdn → client verify surfaces a failed grant (SUB-001)'
     expect(fn).toMatch(/const upgrade = await callUpgradeTier\(/);
     expect(fn).toMatch(/if\s*\(\s*!upgrade\.ok\s*\)/);
     expect(fn).toMatch(/jsonResponse\(502/);
+  });
+});
+
+describe('play-billing-rtdn → authoritative RTDN state and product binding', () => {
+  const rtdn = RTDN.slice(RTDN.indexOf('const sub = payload.subscriptionNotification'));
+
+  test('authenticated Pub/Sub data still crosses the Pro-product/token allowlist', () => {
+    expect(rtdn).toMatch(/!isProSubscriptionId\(sub\.subscriptionId\)/);
+    expect(rtdn).toMatch(/!isValidPurchaseToken\(sub\.purchaseToken\)/);
+    expect(rtdn.indexOf('!isProSubscriptionId(sub.subscriptionId)'))
+      .toBeLessThan(rtdn.indexOf('verifyWithPlayApi(sub.subscriptionId'));
+  });
+
+  test('purchase/restart grants only when the re-fetched subscription is active', () => {
+    const block = rtdn.slice(rtdn.indexOf('case "purchase":'), rtdn.indexOf('case "expire":'));
+    expect(block).toMatch(/authoritativeState !== "active"/);
+    expect(block).toMatch(/no grant/);
+    expect(block.indexOf('authoritativeState !== "active"'))
+      .toBeLessThan(block.indexOf('callUpgradeTier(userId, "pro"'));
+  });
+
+  test('stale terminal events cannot downgrade a currently active or unknown purchase', () => {
+    for (const [start, end] of [['case "expire":', 'case "refund":'], ['case "refund":', 'case "grace":']]) {
+      const block = rtdn.slice(rtdn.indexOf(start), rtdn.indexOf(end));
+      expect(block).toMatch(/authoritativeState !== "inactive"/);
+      expect(block).toMatch(/no downgrade/);
+      expect(block.indexOf('authoritativeState !== "inactive"'))
+        .toBeLessThan(block.indexOf('callUpgradeTier(userId, "free"'));
+    }
+  });
+
+  test('malformed/missing expiry is unknown, never active by NaN comparison', () => {
+    expect(RTDN).toMatch(/function authoritativePlayState/);
+    expect(RTDN).toMatch(/!Number\.isSafeInteger\(expiry\)/);
+    expect(RTDN).toMatch(/return "unknown"/);
   });
 });
 

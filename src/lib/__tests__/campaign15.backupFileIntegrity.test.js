@@ -35,8 +35,10 @@ const path = require('path');
 // exactly one of the referenced files, so the "keeps what really exists"
 // half is proved alongside the "drops what does not".
 const mockPresent = new Set();
+let mockDeleteFailure = false;
 jest.mock('expo-file-system/legacy', () => ({
   getInfoAsync: jest.fn(async uri => ({ exists: mockPresent.has(uri) })),
+  deleteAsync: jest.fn(async () => { if (mockDeleteFailure) throw new Error('delete failed'); }),
   readAsStringAsync: jest.fn(),
   writeAsStringAsync: jest.fn(),
   cacheDirectory: 'file:///cache/',
@@ -48,22 +50,35 @@ jest.mock('expo-document-picker', () => ({ getDocumentAsync: jest.fn() }));
 jest.mock('../errorLog', () => ({ logInfo: jest.fn(), logError: jest.fn(), logWarn: jest.fn() }));
 
 const mockPrefs = new Map();
+let mockPrefWriteFailure = false;
 jest.mock('@react-native-async-storage/async-storage', () => ({
   __esModule: true,
   default: {
     getAllKeys: jest.fn(async () => [...mockPrefs.keys()]),
     multiGet: jest.fn(async ks => ks.map(k => [k, mockPrefs.get(k) ?? null])),
-    multiSet: jest.fn(async es => { for (const [k, v] of es) mockPrefs.set(k, String(v)); }),
+    multiSet: jest.fn(async es => {
+      for (const [k, v] of es) {
+        mockPrefs.set(k, String(v));
+        if (mockPrefWriteFailure) {
+          mockPrefWriteFailure = false;
+          throw new Error('preference write failed');
+        }
+      }
+    }),
+    multiRemove: jest.fn(async ks => { for (const k of ks) mockPrefs.delete(k); }),
   },
 }));
 
 // Capture what the restore actually writes, so the assertions are about
 // the rows that reach the database rather than about the file on disk.
-const mockState = { restored: null };
+const mockState = { restored: null, restoreFailure: null };
 jest.mock('../database', () => ({
   BACKUP_TABLES: ['progress_scan_sessions', 'progress_scan_assets', 'progress_photo_meta', 'custom_foods'],
   dumpAllTables: jest.fn(async () => ({ schemaVersion: 1, tables: {} })),
-  restoreAllTables: jest.fn(async (dump) => { mockState.restored = dump?.tables ?? null; }),
+  restoreAllTables: jest.fn(async (dump) => {
+    if (mockState.restoreFailure) throw mockState.restoreFailure;
+    mockState.restored = dump?.tables ?? null;
+  }),
 }));
 jest.mock('../progressPhotos', () => ({
   photoDir: uid => (uid ? `file:///docs/photos/users/${uid}/` : 'file:///docs/photos/'),
@@ -71,7 +86,9 @@ jest.mock('../progressPhotos', () => ({
 
 const DocumentPicker = require('expo-document-picker');
 const FileSystem = require('expo-file-system/legacy');
-const { importBackup, MAX_BACKUP_BYTES } = require('../dataBackup');
+const {
+  importBackup, MAX_BACKUP_BYTES, assertBackupShape, removeTemporaryBackupFile,
+} = require('../dataBackup');
 
 const U = 'user-1';
 const DIR = `file:///docs/photos/users/${U}/`;
@@ -122,6 +139,9 @@ async function runImport(file = backupFile(), assetOverrides = {}) {
 
 beforeEach(() => {
   mockState.restored = null;
+  mockState.restoreFailure = null;
+  mockDeleteFailure = false;
+  mockPrefWriteFailure = false;
   mockPrefs.clear();
   mockPresent.clear();
   mockPresent.add(KEPT_PHOTO);        // only this one is really on the device
@@ -148,8 +168,56 @@ describe('hostile backup ownership and resource limits', () => {
     expect(mockState.restored).toBeNull();
   });
 
+  test('v2 owner binding rejects a missing owner marker', async () => {
+    const file = backupFile();
+    file.formatVersion = 2;
+    await expect(runImport(file)).rejects.toThrow(/different account/i);
+    expect(mockState.restored).toBeNull();
+  });
+
+  test('unknown tables and duplicate record ids fail before restore', async () => {
+    const unknown = backupFile();
+    unknown.sqlite.attacker_table = [];
+    await expect(runImport(unknown)).rejects.toThrow(/unsupported table shape/i);
+
+    const duplicate = backupFile();
+    duplicate.sqlite.custom_foods[1].id = duplicate.sqlite.custom_foods[0].id;
+    await expect(runImport(duplicate)).rejects.toThrow(/duplicate or invalid/i);
+    expect(mockState.restored).toBeNull();
+  });
+
+  test.each([
+    ['forbidden control preference', '@volyume_auth_token', 'secret'],
+    ['entitlement preference', '@volyume_tier', 'pro'],
+    ['foreign profile', '@volyume_user_profile_attacker', '{}'],
+  ])('%s is rejected instead of silently ignored', async (_label, key, value) => {
+    const file = backupFile();
+    file.prefs[key] = value;
+    await expect(runImport(file)).rejects.toThrow(/preferences|different account/i);
+    expect(mockState.restored).toBeNull();
+  });
+
+  test('nested row values and malformed profile JSON are inadmissible', async () => {
+    const nested = backupFile();
+    nested.sqlite.custom_foods[0].payload = { nested: true };
+    await expect(runImport(nested)).rejects.toThrow(/record shape/i);
+
+    const malformed = backupFile();
+    malformed.prefs[`@volyume_user_profile_${U}`] = '{nope';
+    await expect(runImport(malformed)).rejects.toThrow(/malformed profile/i);
+    expect(mockState.restored).toBeNull();
+  });
+
   test('declared oversized files are refused before the whole file is read', async () => {
     await expect(runImport(backupFile(), { size: MAX_BACKUP_BYTES + 1 })).rejects.toThrow(/too large/i);
+    expect(FileSystem.readAsStringAsync).not.toHaveBeenCalled();
+  });
+
+  test('actual file size defeats a lying small declared size', async () => {
+    FileSystem.getInfoAsync.mockImplementation(async uri => (uri.endsWith('/b.json')
+      ? { exists: true, size: MAX_BACKUP_BYTES + 1 }
+      : { exists: mockPresent.has(uri) }));
+    await expect(runImport(backupFile(), { size: 1 })).rejects.toThrow(/too large/i);
     expect(FileSystem.readAsStringAsync).not.toHaveBeenCalled();
   });
 
@@ -275,7 +343,10 @@ describe('C15-5 the restore never claims an image came back (21)', () => {
 
 describe('C15-5 the same law covers every reference this path can restore (22)', () => {
   test('an unreadable file counts as absent, so the check fails closed', async () => {
-    FileSystem.getInfoAsync.mockRejectedValue(new Error('EACCES'));
+    FileSystem.getInfoAsync.mockImplementation(async uri => {
+      if (uri.endsWith('/b.json')) return { exists: true, size: 1000 };
+      throw new Error('EACCES');
+    });
     await runImport();
     expect(mockState.restored.progress_scan_assets).toEqual([]);
     expect(mockState.restored.progress_photo_meta).toEqual([]);
@@ -309,5 +380,33 @@ describe('C15-5 the same law covers every reference this path can restore (22)',
     const result = await runImport(file);
     expect(mockState.restored.custom_foods).toHaveLength(1);
     expect(result.restored).toBe(true);
+  });
+});
+
+describe('restore and export failure atomicity', () => {
+  test('a partial preference failure is rolled back before database restore starts', async () => {
+    mockPrefs.set('@volyume_units', 'lb');
+    mockPrefWriteFailure = true;
+    await expect(runImport()).rejects.toThrow(/preference write failed/i);
+    expect(mockPrefs.get('@volyume_units')).toBe('lb');
+    expect(mockState.restored).toBeNull();
+  });
+
+  test('a database failure rolls preferences back to their exact prior values', async () => {
+    mockPrefs.set('@volyume_units', 'lb');
+    mockState.restoreFailure = new Error('database transaction failed');
+    await expect(runImport()).rejects.toThrow(/database transaction failed/i);
+    expect(mockPrefs.get('@volyume_units')).toBe('lb');
+  });
+
+  test('plaintext cleanup failure is surfaced rather than reported as removed', async () => {
+    mockDeleteFailure = true;
+    await expect(removeTemporaryBackupFile('file:///cache/plain.json')).rejects.toThrow(/delete failed/i);
+  });
+
+  test('the lowest-level shape validator rejects mixed owners directly', () => {
+    const file = backupFile();
+    file.sqlite.custom_foods[2].user_id = 'attacker';
+    expect(() => assertBackupShape(file, U)).toThrow(/different account/i);
   });
 });

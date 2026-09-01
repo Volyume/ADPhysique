@@ -40,6 +40,7 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { Buffer } from "node:buffer";
+import { readBoundedJson, RequestBodyError } from "../_shared/boundedJson.ts";
 import {
   Environment,
   SignedDataVerifier,
@@ -50,6 +51,7 @@ import {
   callUpgradeTier,
   decodeJwsPayload,
   getSubscriptionStatus,
+  isProProductId,
   log,
   sendPaymentFailurePush,
   setBillingPeriod,
@@ -76,8 +78,9 @@ const TYPE_TO_ACTION: Record<string, "purchase" | "grace" | "expire" | "refund" 
   REVOKE: "refund",
 };
 
-const BUNDLE_ID = Deno.env.get("APP_STORE_BUNDLE_ID") ?? "app.volyume";
+const BUNDLE_ID = Deno.env.get("APP_STORE_BUNDLE_ID") ?? "";
 const APPLE_APP_ID = Number(Deno.env.get("APP_STORE_APPLE_ID") ?? "");
+const USER_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function appleRoots(): Buffer[] {
   const raw = Deno.env.get("APPLE_ROOT_CA_CERTS_BASE64") ?? "";
@@ -100,16 +103,15 @@ async function verifyNotification(payload: string): Promise<DecodedNotification 
   if (!payload || payload.length > 65536
     || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(payload)) return null;
   const roots = appleRoots();
-  if (roots.length === 0) {
-    log("error", "notifications: APPLE_ROOT_CA_CERTS_BASE64 is missing/invalid; failing closed");
+  if (roots.length === 0 || !BUNDLE_ID
+    || !Number.isSafeInteger(APPLE_APP_ID) || APPLE_APP_ID <= 0) {
+    log("error", "notifications: Apple verifier configuration is missing/invalid; failing closed");
     return null;
   }
   const candidates: Array<{ environment: Environment; appAppleId?: number }> = [
+    { environment: Environment.PRODUCTION, appAppleId: APPLE_APP_ID },
     { environment: Environment.SANDBOX },
   ];
-  if (Number.isSafeInteger(APPLE_APP_ID) && APPLE_APP_ID > 0) {
-    candidates.unshift({ environment: Environment.PRODUCTION, appAppleId: APPLE_APP_ID });
-  }
   for (const candidate of candidates) {
     try {
       const verifier = new SignedDataVerifier(
@@ -130,15 +132,14 @@ serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
-  const contentLength = Number(req.headers.get("content-length") ?? 0);
-  if (Number.isFinite(contentLength) && contentLength > 128 * 1024) {
-    return new Response("Payload too large", { status: 413 });
-  }
   let body: { signedPayload?: string };
   try {
-    body = await req.json();
-  } catch (_) {
+    body = await readBoundedJson<{ signedPayload?: string }>(req, 128 * 1024);
+  } catch (error) {
     log("warn", "notifications: non-JSON body");
+    if (error instanceof RequestBodyError && error.status === 413) {
+      return new Response("Payload too large", { status: 413 });
+    }
     return new Response("OK", { status: 200 });
   }
   const decoded = await verifyNotification(body?.signedPayload ?? "");
@@ -169,13 +170,17 @@ serve(async (req: Request) => {
   }
 
   const userId = authoritative.tx.appAccountToken;
-  if (!userId) {
+  if (!userId || !USER_UUID_RE.test(userId)) {
     log("warn", "notifications: authoritative transaction has no appAccountToken; no tier change", {
       type, originalTransactionId,
     });
     return new Response("OK", { status: 200 });
   }
-  const productId = authoritative.tx.productId ?? "pro_monthly";
+  if (!isProProductId(authoritative.tx.productId)) {
+    log("warn", "notifications: authoritative transaction product is not a Pro product; no tier change");
+    return new Response("OK", { status: 200 });
+  }
+  const productId = authoritative.tx.productId;
   const status = authoritative.status;
   const paymentRef = authoritative.tx.transactionId ?? originalTransactionId;
 

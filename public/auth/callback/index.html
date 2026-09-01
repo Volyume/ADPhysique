@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Open Volyume</title>
+<meta name="theme-color" content="#0D0D0D">
+<style>
+  html{color-scheme:dark}body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+  padding:24px;background:#0d0d0d;color:#fff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  main{max-width:440px;text-align:center;background:#191917;border:1px solid #2e2e2c;border-radius:20px;padding:40px 32px}
+  p{color:#aaa;line-height:1.6}.btn{display:inline-block;background:#e08c0b;color:#0d0d0d;font-weight:700;
+  text-decoration:none;border-radius:12px;padding:13px 24px}
+</style>
+</head>
+<body>
+  <main>
+    <h1>Continue in Volyume</h1>
+    <p>If Volyume is installed, open it to finish this secure sign-in.</p>
+    <a id="open" class="btn" href="volyume://auth-callback">Open Volyume</a>
+    <p>If the app is not installed, install it and request a new email link. Authentication details are not displayed on this page.</p>
+  </main>
+<script>
+  (function(){
+    // Compatibility fallback only. The HTTPS URL is the authoritative route
+    // once the signed app and AASA are live; older builds still understand the
+    // custom-scheme equivalent. Preserve the query/fragment verbatim and never
+    // copy them into the DOM or telemetry.
+    var target = 'volyume://auth-callback' + location.search + location.hash;
+    document.getElementById('open').setAttribute('href', target);
+    setTimeout(function(){ window.location.replace(target); }, 500);
+  }());
+</script>
+</body>
+</html>

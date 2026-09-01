@@ -79,6 +79,9 @@ function getInvalidateExercisesCache() {
 // legitimate import is never blocked by this.
 export const MAX_CSV_ROWS = 100_000;
 export const MAX_CSV_CHARS = 12 * 1024 * 1024;
+export const MAX_CSV_FIELD_CHARS = 64 * 1024;
+const MAX_CSV_COLUMNS = 128;
+const MAX_CSV_CELLS = 2_000_000;
 
 export function parseCSV(text) {
   if (typeof text !== 'string') throw new TypeError('CSV input must be text');
@@ -89,13 +92,23 @@ export function parseCSV(text) {
   let inQuote = false;
   let truncated = false;
 
-  function pushField() { cur.push(field); field = ''; }
+  function append(value) {
+    field += value;
+    if (field.length > MAX_CSV_FIELD_CHARS) {
+      throw new Error('CSV contains an individual field that is too large');
+    }
+  }
+  function pushField() {
+    if (cur.length >= MAX_CSV_COLUMNS) throw new Error('CSV contains too many columns');
+    cur.push(field);
+    field = '';
+  }
   function pushRow() {
     if (cur.length || field !== '') {
       pushField();
       rows.push(cur);
       cur = [];
-      if (rows.length >= MAX_CSV_ROWS) truncated = true;
+      if (rows.length > MAX_CSV_ROWS + 1) truncated = true;
     }
   }
 
@@ -103,13 +116,15 @@ export function parseCSV(text) {
     const c = text[i];
     if (inQuote) {
       if (c === '"') {
-        if (text[i + 1] === '"') { field += '"'; i++; }
+        if (text[i + 1] === '"') { append('"'); i++; }
         else { inQuote = false; }
       } else {
-        field += c;
+        if (c === '\r' || c === '\n') throw new Error('CSV contains a malformed quoted row');
+        append(c);
       }
     } else {
       if (c === '"') {
+        if (field !== '') throw new Error('CSV contains a malformed quoted field');
         inQuote = true;
       } else if (c === ',') {
         pushField();
@@ -118,7 +133,8 @@ export function parseCSV(text) {
       } else if (c === '\r') {
         // swallow; \r\n handled by the \n branch
       } else {
-        field += c;
+        if (c === '\u0000' || c === '\uFFFD') throw new Error('CSV contains malformed text');
+        append(c);
       }
     }
     // Stop parsing once we've hit the row cap. The remaining bytes
@@ -128,15 +144,24 @@ export function parseCSV(text) {
   }
   // Trailing field / row without a final newline
   if (inQuote) {
-    // Unterminated quote, treat the rest as the field
-    inQuote = false;
+    throw new Error('CSV contains an unterminated quoted field');
   }
   if (field !== '' || cur.length) pushRow();
 
   if (rows.length < 2) return [];
   const header = rows[0].map(h => String(h || '').trim());
-  return rows.slice(1)
-    .filter(r => r.some(c => String(c).trim() !== ''))
+  if (header.some((key) => !key || ['__proto__', 'prototype', 'constructor'].includes(key))
+    || new Set(header).size !== header.length) {
+    throw new Error('CSV contains invalid or duplicate column names');
+  }
+  const body = rows.slice(1).filter(r => r.some(c => String(c).trim() !== ''));
+  if (body.some((row) => row.length !== header.length)) {
+    throw new Error('CSV contains a malformed row');
+  }
+  if (body.length * header.length > MAX_CSV_CELLS) {
+    throw new Error('CSV expands to too many values');
+  }
+  return body
     .map(r => {
       const obj = {};
       for (let i = 0; i < header.length; i++) obj[header[i]] = r[i] ?? '';

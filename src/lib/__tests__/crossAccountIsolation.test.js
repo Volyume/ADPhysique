@@ -21,7 +21,12 @@
  * wipe we merely hope happened.
  */
 
-import { wipeAsyncStorageWithRetry, wipeAuthTokensWithRetry } from '../deviceWipe';
+import {
+  wipeAsyncStorageWithRetry,
+  wipeAuthTokensWithRetry,
+  wipeScheduledNotificationsWithRetry,
+  verifyNoForeignAccountStorage,
+} from '../deviceWipe';
 import {
   currentEpoch, beginNewAccountEpoch, isEpochCurrent, __resetAccountEpochForTests,
 } from '../accountEpoch';
@@ -29,6 +34,11 @@ import {
 jest.mock('@react-native-async-storage/async-storage', () => ({
   clear: jest.fn(async () => {}),
   getAllKeys: jest.fn(async () => []),
+  getItem: jest.fn(async () => null),
+}));
+jest.mock('expo-notifications', () => ({
+  cancelAllScheduledNotificationsAsync: jest.fn(async () => {}),
+  getAllScheduledNotificationsAsync: jest.fn(async () => []),
 }));
 jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(async () => {}),
@@ -40,14 +50,60 @@ jest.mock('../errorLog', () => ({
 
 const AsyncStorage = require('@react-native-async-storage/async-storage');
 const SecureStore = require('expo-secure-store');
+const Notifications = require('expo-notifications');
 
 beforeEach(() => {
   jest.clearAllMocks();
   AsyncStorage.clear.mockImplementation(async () => {});
   AsyncStorage.getAllKeys.mockImplementation(async () => []);
+  AsyncStorage.getItem.mockImplementation(async () => null);
   SecureStore.deleteItemAsync.mockImplementation(async () => {});
   SecureStore.getItemAsync.mockImplementation(async () => null);
+  Notifications.cancelAllScheduledNotificationsAsync.mockImplementation(async () => {});
+  Notifications.getAllScheduledNotificationsAsync.mockImplementation(async () => []);
   __resetAccountEpochForTests();
+});
+
+describe('first-account marker loss is not treated as ownership proof', () => {
+  test('foreign profile storage blocks admission', async () => {
+    AsyncStorage.getAllKeys.mockResolvedValue(['@volyume_user_profile_user-A']);
+    await expect(verifyNoForeignAccountStorage('user-B'))
+      .resolves.toMatchObject({ ok: false, step: 'foreign_profile_storage' });
+  });
+
+  test('foreign and malformed active-workout snapshots block admission', async () => {
+    AsyncStorage.getAllKeys.mockResolvedValue(['@volyume_active_workout']);
+    AsyncStorage.getItem.mockResolvedValue(JSON.stringify({ userId: 'user-A', workout: {} }));
+    await expect(verifyNoForeignAccountStorage('user-B'))
+      .resolves.toMatchObject({ ok: false, step: 'foreign_active_workout' });
+    AsyncStorage.getItem.mockResolvedValue('{broken');
+    await expect(verifyNoForeignAccountStorage('user-B'))
+      .resolves.toMatchObject({ ok: false, step: 'active_workout_malformed' });
+  });
+
+  test('account-tagged storage for the incoming account is admissible', async () => {
+    AsyncStorage.getAllKeys.mockResolvedValue([
+      '@volyume_user_profile_user-B', '@volyume_user_profile_ts_user-B', '@volyume_active_workout',
+    ]);
+    AsyncStorage.getItem.mockResolvedValue(JSON.stringify({ userId: 'user-B' }));
+    await expect(verifyNoForeignAccountStorage('user-B')).resolves.toEqual({ ok: true });
+  });
+});
+
+describe('scheduled notification wipe is verified', () => {
+  test('success requires an empty scheduler readback', async () => {
+    await expect(wipeScheduledNotificationsWithRetry())
+      .resolves.toEqual({ ok: true });
+  });
+
+  test('residue and verifier errors fail closed after retry', async () => {
+    Notifications.getAllScheduledNotificationsAsync.mockResolvedValue([{ identifier: 'A-secret' }]);
+    await expect(wipeScheduledNotificationsWithRetry({ attempts: 2, delaysMs: [0] }))
+      .resolves.toMatchObject({ ok: false, step: 'notification_residue_or_unreadable' });
+    Notifications.getAllScheduledNotificationsAsync.mockRejectedValue(new Error('OS unavailable'));
+    await expect(wipeScheduledNotificationsWithRetry({ attempts: 1, delaysMs: [] }))
+      .resolves.toMatchObject({ ok: false });
+  });
 });
 
 describe('AsyncStorage wipe fails closed', () => {

@@ -71,7 +71,8 @@
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createRemoteJWKSet, jwtVerify } from "https://esm.sh/jose@5.9.6";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.43.4";
+import { readBoundedJson, RequestBodyError } from "../_shared/boundedJson.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -259,6 +260,29 @@ interface GoogleSubscription {
   orderId?: string;
 }
 
+const USER_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isProSubscriptionId(value: unknown): value is "pro_monthly" | "pro_annual" {
+  return value === "pro_monthly" || value === "pro_annual";
+}
+
+function isValidPurchaseToken(value: unknown): value is string {
+  return typeof value === "string"
+    && value.length >= 16 && value.length <= 4096
+    && !/[\s\x00-\x1f]/.test(value);
+}
+
+function authoritativePlayState(subscription: GoogleSubscription): "active" | "inactive" | "unknown" {
+  if (typeof subscription.expiryTimeMillis !== "string"
+    || !/^\d{10,17}$/.test(subscription.expiryTimeMillis)) return "unknown";
+  const expiry = Number(subscription.expiryTimeMillis);
+  if (!Number.isSafeInteger(expiry) || expiry <= 0) return "unknown";
+  if (expiry <= Date.now()) return "inactive";
+  return subscription.paymentState === 1 || subscription.paymentState === 2
+    ? "active"
+    : "inactive";
+}
+
 async function verifyWithPlayApi(
   subscriptionId: string,
   purchaseToken: string,
@@ -410,9 +434,7 @@ async function handleClientVerify(
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return jsonResponse(500, { ok: false, error: "auth_unconfigured" });
   }
-  if (!(subscriptionId === "pro_monthly" || subscriptionId === "pro_annual")
-    || purchaseToken.length < 16 || purchaseToken.length > 4096
-    || /[\s\x00-\x1f]/.test(purchaseToken)) {
+  if (!isProSubscriptionId(subscriptionId) || !isValidPurchaseToken(purchaseToken)) {
     return jsonResponse(400, { ok: false, error: "bad_request" });
   }
   const authHeader = req.headers.get("authorization") ?? "";
@@ -441,13 +463,13 @@ async function handleClientVerify(
     log("warn", "client verify: purchase account does not match caller", { subscriptionId });
     return jsonResponse(403, { ok: false, error: "account_mismatch" });
   }
-  // paymentState: 1 = received, 2 = free trial. Either grants Pro. Guard expiry.
-  const expired = subscription.expiryTimeMillis != null &&
-    Number(subscription.expiryTimeMillis) < Date.now();
-  const paid = subscription.paymentState === 1 || subscription.paymentState === 2;
-  if (expired || !paid) {
+  // paymentState: 1 = received, 2 = free trial. Expiry must be a finite,
+  // authoritative millisecond epoch; malformed/missing store state never
+  // becomes an accidental active purchase through Number(NaN) comparisons.
+  const purchaseState = authoritativePlayState(subscription);
+  if (purchaseState !== "active") {
     log("warn", "client verify: purchase not active", {
-      paymentState: subscription.paymentState ?? null, expired,
+      paymentState: subscription.paymentState ?? null, purchaseState,
     });
     return jsonResponse(400, { ok: false, error: "not_active" });
   }
@@ -475,15 +497,17 @@ serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
-  const contentLength = Number(req.headers.get("content-length") ?? 0);
-  if (Number.isFinite(contentLength) && contentLength > 1024 * 1024) {
-    return new Response("Payload too large", { status: 413 });
-  }
   let body: PubSubPushBody & { purchaseToken?: string; subscriptionId?: string };
   try {
-    body = await req.json();
-  } catch (_) {
+    body = await readBoundedJson<PubSubPushBody & { purchaseToken?: string; subscriptionId?: string }>(
+      req,
+      1024 * 1024,
+    );
+  } catch (error) {
     log("warn", "non-JSON body");
+    if (error instanceof RequestBodyError && error.status === 413) {
+      return new Response("Payload too large", { status: 413 });
+    }
     return new Response("Bad request", { status: 400 });
   }
   // Client purchase-confirmation call (not a Google Pub/Sub push).
@@ -522,6 +546,14 @@ serve(async (req: Request) => {
   if (!sub?.notificationType || !sub.purchaseToken || !sub.subscriptionId) {
     return new Response("OK", { status: 200 });
   }
+  // Pub/Sub is authenticated, but subscriptionId and purchaseToken are still
+  // event data. Only the products Volyume sells may reach the authoritative
+  // lookup/tier boundary; old/unknown products are acknowledged without any
+  // mutation.
+  if (!isProSubscriptionId(sub.subscriptionId) || !isValidPurchaseToken(sub.purchaseToken)) {
+    log("warn", "unsupported or malformed RTDN subscription reference; no tier change");
+    return new Response("OK", { status: 200 });
+  }
 
   const action = TYPE_TO_ACTION[sub.notificationType] ?? "ignore";
   const subscription = await verifyWithPlayApi(sub.subscriptionId, sub.purchaseToken);
@@ -531,27 +563,42 @@ serve(async (req: Request) => {
     return new Response("OK", { status: 200 });
   }
   const userId = subscription.obfuscatedExternalAccountId;
-  if (!userId) {
+  if (!userId || !USER_UUID_RE.test(userId)) {
     log("warn", "no obfuscatedExternalAccountId; can't route to a user", {
       sub: sub.subscriptionId,
     });
     return new Response("OK", { status: 200 });
   }
   const paymentRef = subscription.orderId ?? sub.purchaseToken;
+  const authoritativeState = authoritativePlayState(subscription);
 
   switch (action) {
     case "purchase":
-    case "restart":
+    case "restart": {
+      if (authoritativeState !== "active") {
+        log("info", `notificationType=${sub.notificationType} is stale/not active; no grant`);
+        break;
+      }
       await callUpgradeTier(userId, "pro", "user_paid", paymentRef, "play_billing_rtdn");
-      // Store the plan they bought (pro_annual -> annual, else monthly).
       await setBillingPeriod(userId, sub.subscriptionId === "pro_annual" ? "annual" : "monthly");
       break;
-    case "expire":
+    }
+    case "expire": {
+      if (authoritativeState !== "inactive") {
+        log("info", `notificationType=${sub.notificationType} but current state=${authoritativeState}; no downgrade`);
+        break;
+      }
       await callUpgradeTier(userId, "free", "user_cancelled", paymentRef, "play_billing_rtdn");
       break;
-    case "refund":
+    }
+    case "refund": {
+      if (authoritativeState !== "inactive") {
+        log("info", `notificationType=${sub.notificationType} but current state=${authoritativeState}; no downgrade`);
+        break;
+      }
       await callUpgradeTier(userId, "free", "refunded", paymentRef, "play_billing_rtdn");
       break;
+    }
     case "grace":
       // SUBSCRIPTION_ON_HOLD / IN_GRACE_PERIOD: a renewal charge
       // failed. No tier change (the 3-day grace timer is client-side

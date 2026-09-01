@@ -114,7 +114,7 @@ describe('navigator wiring (Wave-3 review fixes, source-level pins)', () => {
   const hook = fs.readFileSync(path.join(__dirname, '..', '..', 'hooks', 'useAccountActions.js'), 'utf8');
 
   test('the retry is AWAITED inside the sign-in pipeline, before the cross-account gate', () => {
-    const retryAt = nav.indexOf('await retryPendingAuthDeletion(session.user.id)');
+    const retryAt = nav.indexOf('await retryPendingAuthDeletion(incomingUid)');
     const boundaryAt = nav.indexOf('await prepareIncomingAccount({', retryAt);
     expect(retryAt).toBeGreaterThan(-1);
     expect(boundaryAt).toBeGreaterThan(-1);
@@ -124,8 +124,10 @@ describe('navigator wiring (Wave-3 review fixes, source-level pins)', () => {
   test('a standing marker never lets the sign-in proceed: both outcomes sign out', () => {
     expect(nav).toMatch(/if \(retry\.attempted \|\| retry\.pending\)/);
     const block = nav.slice(nav.indexOf('if (retry.attempted || retry.pending)'));
-    expect(block.indexOf('client.auth.signOut()')).toBeGreaterThan(-1);
-    expect(block.indexOf('return;')).toBeGreaterThan(-1);
+    expect(block.indexOf('queueIncomingSessionRefusal(client)')).toBeGreaterThan(-1);
+    expect(block.indexOf("return { ok: false, reason: 'account_deletion_pending' };"))
+      .toBeGreaterThan(-1);
+    expect(nav).toMatch(/const queueIncomingSessionRefusal = \(client\) => \{[\s\S]*client\.auth\.signOut\(\)/);
   });
 
   test('the partial-success alert no longer promises completion on a plain restart', () => {

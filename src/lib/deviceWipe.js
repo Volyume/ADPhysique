@@ -56,6 +56,42 @@ function residualKeys(keys) {
 }
 
 /**
+ * Admission check for the marker-loss case. Account-tagged AsyncStorage must
+ * not silently become the first account's state merely because the separate
+ * last-user marker disappeared.
+ */
+export async function verifyNoForeignAccountStorage(incomingUserId) {
+  if (!incomingUserId) return { ok: false, step: 'missing_incoming_user' };
+  let keys;
+  try { keys = await AsyncStorage.getAllKeys(); } catch (_) {
+    return { ok: false, step: 'async_storage_unreadable' };
+  }
+  const profilePrefixes = ['@volyume_user_profile_ts_', '@volyume_user_profile_'];
+  for (const key of keys) {
+    const prefix = profilePrefixes.find((candidate) => key.startsWith(candidate));
+    if (prefix && key !== `${prefix}${incomingUserId}`) {
+      return { ok: false, step: 'foreign_profile_storage' };
+    }
+  }
+
+  if (keys.includes('@volyume_active_workout')) {
+    let raw = null;
+    try { raw = await AsyncStorage.getItem('@volyume_active_workout'); } catch (_) {
+      return { ok: false, step: 'active_workout_unreadable' };
+    }
+    if (raw != null) {
+      let snapshot = null;
+      try { snapshot = JSON.parse(raw); } catch (_) {
+        return { ok: false, step: 'active_workout_malformed' };
+      }
+      const owner = snapshot?.userId ?? snapshot?.user_id ?? null;
+      if (owner !== incomingUserId) return { ok: false, step: 'foreign_active_workout' };
+    }
+  }
+  return { ok: true };
+}
+
+/**
  * Clear AsyncStorage and prove it is empty.
  *
  * @returns {Promise<{ok: boolean, step?: string, residueCount?: number}>}
@@ -105,6 +141,49 @@ export async function wipeAsyncStorageWithRetry({ attempts = 3, delaysMs = [300,
       residueCount: residue.length,
     });
   return { ok: false, step: 'async_storage_residue', residueCount: residue.length };
+}
+
+/**
+ * Cancel account A's scheduled notifications and prove none remain before B
+ * can be published. Notification copy and payloads are user-scoped state even
+ * though they live in the OS scheduler rather than SQLite/AsyncStorage.
+ */
+export async function wipeScheduledNotificationsWithRetry(
+  { attempts = 3, delaysMs = [300, 1000] } = {},
+) {
+  let Notifications;
+  try {
+    // eslint-disable-next-line global-require
+    Notifications = require('expo-notifications');
+  } catch (e) {
+    logError('deviceWipe.notifications.module', e, {});
+    return { ok: false, step: 'notification_module_unavailable' };
+  }
+  if (typeof Notifications.cancelAllScheduledNotificationsAsync !== 'function'
+    || typeof Notifications.getAllScheduledNotificationsAsync !== 'function') {
+    return { ok: false, step: 'notification_verifier_unavailable' };
+  }
+
+  for (let i = 0; i < attempts; i += 1) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await Notifications.cancelAllScheduledNotificationsAsync();
+      // eslint-disable-next-line no-await-in-loop
+      const residue = await Notifications.getAllScheduledNotificationsAsync();
+      if (Array.isArray(residue) && residue.length === 0) return { ok: true };
+      logError('deviceWipe.notifications.residue',
+        new Error(`OS scheduler still holds ${Array.isArray(residue) ? residue.length : 'unknown'} notifications`),
+        { residueCount: Array.isArray(residue) ? residue.length : null });
+    } catch (e) {
+      logError('deviceWipe.notifications.failed', e, { attempt: i + 1, attempts });
+    }
+    if (i < attempts - 1) {
+      const wait = delaysMs[Math.min(i, delaysMs.length - 1)] ?? 0;
+      // eslint-disable-next-line no-await-in-loop
+      if (wait > 0) await new Promise((resolve) => { setTimeout(resolve, wait); });
+    }
+  }
+  return { ok: false, step: 'notification_residue_or_unreadable' };
 }
 
 /**

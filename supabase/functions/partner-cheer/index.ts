@@ -27,8 +27,9 @@
 // Founder deployment: `supabase functions deploy partner-cheer`. Needs the
 // auto-populated SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY + SUPABASE_ANON_KEY.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.43.4'
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { readBoundedJson, RequestBodyError } from '../_shared/boundedJson.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -86,8 +87,11 @@ serve(async (req: Request) => {
 
   let body: CheerBody
   try {
-    body = await req.json()
-  } catch (_) {
+    body = await readBoundedJson<CheerBody>(req, 4096)
+  } catch (error) {
+    if (error instanceof RequestBodyError && error.status === 413) {
+      return jsonResponse({ ok: false, error: 'Payload too large' }, 413)
+    }
     return jsonResponse({ ok: false, error: 'Bad JSON' }, 400)
   }
   const pairId = body.pairId

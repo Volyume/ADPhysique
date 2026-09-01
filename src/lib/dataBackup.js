@@ -24,6 +24,10 @@ export const MAX_BACKUP_ROWS = 250000;
 const MAX_ROWS_PER_TABLE = 100000;
 const MAX_PREF_VALUE_CHARS = 1024 * 1024;
 const MAX_PREF_TOTAL_CHARS = 5 * 1024 * 1024;
+const MAX_PREF_KEYS = 4096;
+const MAX_ROW_COLUMNS = 256;
+const MAX_ROW_VALUE_CHARS = 1024 * 1024;
+const FORBIDDEN_OBJECT_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 
 // Every Volyume preference key is namespaced "@volyume_". The crash log is
 // transient diagnostics and is deliberately excluded from backups.
@@ -52,13 +56,67 @@ async function dumpPrefs(userId) {
   return prefs;
 }
 
-async function restorePrefs(prefs, userId) {
-  if (!prefs || typeof prefs !== 'object') return;
+function restorablePrefEntries(prefs, userId) {
+  if (!prefs || typeof prefs !== 'object') return [];
   const entries = Object.entries(prefs)
     .filter(([k]) => isRestorablePref(k)
       && (!k.startsWith(PROFILE_PREF_PREFIX) || isProfilePrefForUser(k, userId)))
     .map(([k, v]) => [k, v == null ? '' : String(v)]);
-  if (entries.length) await AsyncStorage.multiSet(entries);
+  return entries;
+}
+
+async function preparePreferenceRestore(prefs, userId) {
+  const entries = restorablePrefEntries(prefs, userId);
+  const keys = entries.map(([key]) => key);
+  const before = keys.length ? await AsyncStorage.multiGet(keys) : [];
+  let applied = false;
+
+  return {
+    async apply() {
+      if (!entries.length) return;
+      try {
+        await AsyncStorage.multiSet(entries);
+        const readBack = await AsyncStorage.multiGet(keys);
+        if (readBack.length !== entries.length
+          || readBack.some(([key, value], index) => key !== entries[index][0] || value !== entries[index][1])) {
+          throw new Error('preference restore write did not persist');
+        }
+        applied = true;
+      } catch (error) {
+        await this.rollback();
+        throw error;
+      }
+    },
+    async rollback() {
+      if (!entries.length) return;
+      const restore = before.filter(([, value]) => value != null);
+      const remove = before.filter(([, value]) => value == null).map(([key]) => key);
+      if (restore.length) await AsyncStorage.multiSet(restore);
+      if (remove.length) await AsyncStorage.multiRemove(remove);
+      const readBack = await AsyncStorage.multiGet(keys);
+      const restored = readBack.length === before.length
+        && readBack.every(([key, value], index) => key === before[index][0] && value === before[index][1]);
+      if (!restored) throw new Error('preference rollback could not be verified');
+      applied = false;
+    },
+    get applied() { return applied; },
+  };
+}
+
+function utf8ByteLength(value) {
+  let bytes = 0;
+  for (let i = 0; i < value.length; i += 1) {
+    const code = value.charCodeAt(i);
+    if (code < 0x80) bytes += 1;
+    else if (code < 0x800) bytes += 2;
+    else if (code >= 0xD800 && code <= 0xDBFF && i + 1 < value.length
+      && value.charCodeAt(i + 1) >= 0xDC00 && value.charCodeAt(i + 1) <= 0xDFFF) {
+      bytes += 4;
+      i += 1;
+    } else bytes += 3;
+    if (bytes > MAX_BACKUP_BYTES) return bytes;
+  }
+  return bytes;
 }
 
 // ─── Local-file integrity on restore (T-17) ─────────────────────────────────
@@ -244,6 +302,15 @@ async function verifyPrefFileReferences(prefs, fileExists, currentUserId) {
 
 // Builds the backup object, writes it to a JSON file in the cache directory
 // and opens the native share sheet. Returns { fileUri, bytes }.
+export async function removeTemporaryBackupFile(fileUri) {
+  await FileSystem.deleteAsync(fileUri, { idempotent: true });
+  const residue = await FileSystem.getInfoAsync(fileUri);
+  if (residue?.exists !== false) {
+    throw new Error('Could not verify removal of the temporary plaintext backup.');
+  }
+  return true;
+}
+
 export async function exportBackup(userId) {
   if (!userId) throw new Error('Sign in before exporting a backup.');
   const { schemaVersion, tables } = await dumpAllTables(userId);
@@ -269,7 +336,7 @@ export async function exportBackup(userId) {
   });
 
   if (!(await Sharing.isAvailableAsync())) {
-    await FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+    await removeTemporaryBackupFile(fileUri);
     throw new Error('Secure sharing is not available on this device.');
   }
   try {
@@ -281,13 +348,13 @@ export async function exportBackup(userId) {
   } finally {
     // The chosen target receives its own copy. Do not leave the plaintext
     // Article 9 dataset behind in the app cache after the share sheet closes.
-    await FileSystem.deleteAsync(fileUri, { idempotent: true }).catch(() => {});
+    await removeTemporaryBackupFile(fileUri);
   }
 
   return { fileUri: null, bytes: json.length, temporaryFileRemoved: true };
 }
 
-function assertBackupShape(parsed, currentUserId) {
+export function assertBackupShape(parsed, currentUserId) {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)
     || !parsed.sqlite || typeof parsed.sqlite !== 'object' || Array.isArray(parsed.sqlite)) {
     throw new Error('That file is not a Volyume backup.');
@@ -303,9 +370,28 @@ function assertBackupShape(parsed, currentUserId) {
     }
     totalRows += rows.length;
     if (totalRows > MAX_BACKUP_ROWS) throw new Error('That backup contains too many records.');
+    const ids = new Set();
     for (const row of rows) {
       if (!row || typeof row !== 'object' || Array.isArray(row) || row.user_id !== currentUserId) {
         throw new Error('That backup contains records for a different account.');
+      }
+      const columns = Object.entries(row);
+      if (columns.length > MAX_ROW_COLUMNS) {
+        throw new Error('That backup has an unsupported record shape.');
+      }
+      for (const [key, value] of columns) {
+        if (!key || key.length > 128 || FORBIDDEN_OBJECT_KEYS.has(key)
+          || (value !== null && !['string', 'number'].includes(typeof value))
+          || (typeof value === 'number' && !Number.isFinite(value))
+          || (typeof value === 'string' && value.length > MAX_ROW_VALUE_CHARS)) {
+          throw new Error('That backup has an unsupported record shape.');
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(row, 'id')) {
+        if (typeof row.id !== 'string' || !row.id || ids.has(row.id)) {
+          throw new Error('That backup contains duplicate or invalid record identifiers.');
+        }
+        ids.add(row.id);
       }
     }
   }
@@ -313,12 +399,24 @@ function assertBackupShape(parsed, currentUserId) {
     throw new Error('That backup has invalid preferences.');
   }
   let prefChars = 0;
+  let prefCount = 0;
   for (const [key, value] of Object.entries(parsed.prefs || {})) {
-    if (typeof key !== 'string' || typeof value !== 'string' || value.length > MAX_PREF_VALUE_CHARS) {
+    prefCount += 1;
+    if (prefCount > MAX_PREF_KEYS || typeof key !== 'string' || FORBIDDEN_OBJECT_KEYS.has(key)
+      || !isRestorablePref(key) || typeof value !== 'string' || value.length > MAX_PREF_VALUE_CHARS) {
       throw new Error('That backup has invalid preferences.');
     }
     if (key.startsWith(PROFILE_PREF_PREFIX) && !isProfilePrefForUser(key, currentUserId)) {
       throw new Error('That backup contains a profile for a different account.');
+    }
+    if (isProfilePrefForUser(key, currentUserId)) {
+      let profile = null;
+      try { profile = JSON.parse(value); } catch (_) {
+        throw new Error('That backup contains a malformed profile.');
+      }
+      if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+        throw new Error('That backup contains a malformed profile.');
+      }
     }
     prefChars += value.length;
     if (prefChars > MAX_PREF_TOTAL_CHARS) throw new Error('That backup contains too many preferences.');
@@ -342,14 +440,27 @@ export async function importBackup(currentUserId) {
   const uri = asset?.uri || picked?.uri;
   if (!uri) throw new Error('No file was selected.');
   const declaredSize = Number(asset?.size ?? picked?.size);
-  if (Number.isFinite(declaredSize) && declaredSize > MAX_BACKUP_BYTES) {
+  if (Number.isFinite(declaredSize) && (declaredSize < 0 || declaredSize > MAX_BACKUP_BYTES)) {
+    throw new Error('That backup is too large to restore safely.');
+  }
+
+  // DocumentPicker size is attacker-controlled metadata on some providers.
+  // Probe the copied cache file itself before allocating the whole JSON string.
+  let actualInfo = null;
+  try { actualInfo = await FileSystem.getInfoAsync(uri, { size: true }); } catch (_) {
+    throw new Error('Could not verify the selected backup size safely.');
+  }
+  const actualSize = Number(actualInfo?.size);
+  if (Number.isFinite(actualSize) && actualSize > MAX_BACKUP_BYTES) {
     throw new Error('That backup is too large to restore safely.');
   }
 
   const raw = await FileSystem.readAsStringAsync(uri, {
     encoding: FileSystem.EncodingType.UTF8,
   });
-  if (raw.length > MAX_BACKUP_BYTES) throw new Error('That backup is too large to restore safely.');
+  if (raw.length > MAX_BACKUP_BYTES || utf8ByteLength(raw) > MAX_BACKUP_BYTES) {
+    throw new Error('That backup is too large to restore safely.');
+  }
 
   let parsed;
   try {
@@ -389,8 +500,23 @@ export async function importBackup(currentUserId) {
     parsed.prefs, fileExists, currentUserId,
   );
 
-  await restoreAllTables({ tables: safeTables }, currentUserId);
-  await restorePrefs(safePrefs, currentUserId);
+  // Preferences are staged and verified before SQLite's all-or-nothing
+  // transaction. If the database transaction fails, preferences are restored
+  // to their exact prior state; a preference write failure never starts the
+  // destructive database phase at all.
+  const preferenceRestore = await preparePreferenceRestore(safePrefs, currentUserId);
+  await preferenceRestore.apply();
+  try {
+    await restoreAllTables({ tables: safeTables }, currentUserId);
+  } catch (error) {
+    try { await preferenceRestore.rollback(); } catch (rollbackError) {
+      logInfo('dataBackup.importBackup.rollbackFailed', 'restore rollback could not be verified', {
+        message: rollbackError?.message ?? 'unknown',
+      });
+      throw new Error('Restore failed and the previous preferences could not be verified. Restart the app before continuing.');
+    }
+    throw error;
+  }
 
   // Counts report what was actually RESTORED, not what the file contained,
   // so nothing downstream can tell the user an image came back when it did

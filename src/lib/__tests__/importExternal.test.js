@@ -1,5 +1,5 @@
 import {
-  parseCSV, detectFormat, parseHevy, parseStrong, MAX_CSV_CHARS,
+  parseCSV, detectFormat, parseHevy, parseStrong, MAX_CSV_CHARS, MAX_CSV_FIELD_CHARS,
 } from '../importExternal';
 
 // ─── parseCSV: edge cases the formats actually contain ───────────────────
@@ -38,6 +38,27 @@ describe('parseCSV', () => {
 
   test('returns [] when there is no body row', () => {
     expect(parseCSV('a,b\n')).toEqual([]);
+  });
+
+  test.each([
+    ['replacement character', 'a,b\n1,\uFFFD\n', /malformed text/],
+    ['unterminated quote', 'a,b\n"one,two\n', /unterminated|malformed quoted/],
+    ['uneven row', 'a,b\n1\n', /malformed row/],
+    ['duplicate header', 'a,a\n1,2\n', /duplicate column/],
+    ['prototype header', '__proto__,b\n1,2\n', /invalid or duplicate/],
+  ])('rejects malformed CSV: %s', (_label, csv, error) => {
+    expect(() => parseCSV(csv)).toThrow(error);
+  });
+
+  test('rejects one giant field before object expansion', () => {
+    expect(() => parseCSV(`a,b\n${'x'.repeat(MAX_CSV_FIELD_CHARS + 1)},ok\n`))
+      .toThrow(/individual field/i);
+  });
+
+  test('permits exactly 100,000 body rows and rejects the next one', () => {
+    const exact = `a\n${'1\n'.repeat(100_000)}`;
+    expect(parseCSV(exact)).toHaveLength(100_000);
+    expect(() => parseCSV(`${exact}1\n`)).toThrow(/100,000 row/i);
   });
 });
 

@@ -27,12 +27,14 @@
 // Until these are set the function deploys safely and logs rather than granting.
 
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.43.4";
+import { readBoundedJson, RequestBodyError } from "../_shared/boundedJson.ts";
 import {
   AppleTransaction,
   callUpgradeTier,
   decodeJwsPayload,
   getTransactionInfo,
+  isProProductId,
   jsonResponse,
   log,
   setBillingPeriod,
@@ -50,10 +52,6 @@ serve(async (req: Request) => {
   if (req.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
-  const contentLength = Number(req.headers.get("content-length") ?? 0);
-  if (Number.isFinite(contentLength) && contentLength > 64 * 1024) {
-    return jsonResponse(413, { ok: false, error: "payload_too_large" });
-  }
   const authHeader = req.headers.get("authorization") ?? "";
   const bearer = authHeader.match(/^Bearer\s+(.+)$/i)?.[1] ?? "";
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !bearer || bearer.length > 8192) {
@@ -68,12 +66,16 @@ serve(async (req: Request) => {
   }
   let body: VerifyBody;
   try {
-    body = await req.json();
-  } catch (_) {
+    body = await readBoundedJson<VerifyBody>(req, 64 * 1024);
+  } catch (error) {
     log("warn", "app-store-verify: non-JSON body");
-    return jsonResponse(400, { ok: false, error: "bad_request" });
+    const status = error instanceof RequestBodyError ? error.status : 400;
+    return jsonResponse(status, { ok: false, error: status === 413 ? "payload_too_large" : "bad_request" });
   }
   const { jws, productId } = body;
+  if (productId != null && !isProProductId(productId)) {
+    return jsonResponse(400, { ok: false, error: "unsupported_product" });
+  }
   if (!jws || typeof jws !== "string" || jws.length > 32768
     || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(jws)) {
     return jsonResponse(400, { ok: false, error: "missing_jws" });
@@ -104,13 +106,22 @@ serve(async (req: Request) => {
     log("warn", "app-store-verify: transaction account does not match caller", { transactionId });
     return jsonResponse(403, { ok: false, error: "account_mismatch" });
   }
+  if (!isProProductId(tx.productId)) {
+    log("warn", "app-store-verify: authoritative transaction product is not a Pro product", { transactionId });
+    return jsonResponse(400, { ok: false, error: "unsupported_product" });
+  }
 
   // Active = not revoked and (no expiry or expiry in the future).
   const now = Date.now();
   const revoked = tx.revocationDate != null;
-  const expired = tx.expiresDate != null && Number(tx.expiresDate) < now;
-  if (revoked || expired) {
-    log("warn", "app-store-verify: transaction not active", { transactionId, revoked, expired });
+  const hasExpiry = tx.expiresDate != null;
+  const expiresAt = Number(tx.expiresDate);
+  const malformedExpiry = hasExpiry && (!Number.isSafeInteger(expiresAt) || expiresAt <= 0);
+  const expired = hasExpiry && !malformedExpiry && expiresAt < now;
+  if (revoked || malformedExpiry || expired) {
+    log("warn", "app-store-verify: transaction not active", {
+      transactionId, revoked, malformedExpiry, expired,
+    });
     return jsonResponse(400, { ok: false, error: "not_active" });
   }
 
@@ -127,7 +138,7 @@ serve(async (req: Request) => {
     return jsonResponse(502, { ok: false, error: "grant_failed" });
   }
   // Display-only; failure must not fail the grant.
-  await setBillingPeriod(userId, tx.productId ?? productId ?? "pro_monthly");
-  log("info", "app-store-verify: granted pro", { userId, productId: tx.productId ?? productId });
+  await setBillingPeriod(userId, tx.productId);
+  log("info", "app-store-verify: granted pro", { userId, productId: tx.productId });
   return jsonResponse(200, { ok: true, tier: "pro" });
 });

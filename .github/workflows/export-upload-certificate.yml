@@ -43,6 +43,9 @@ env:
 
 jobs:
   export:
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
     name: Export public certificate
     runs-on: ubuntu-latest
     timeout-minutes: 10

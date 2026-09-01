@@ -62,10 +62,6 @@ on:
         description: 'Submit to TestFlight after the build finishes'
         type: boolean
         default: true
-      skip_build:
-        description: 'Skip the EAS build and submit the latest existing build (no build credit spent)'
-        type: boolean
-        default: false
       allow_unsymbolicated:
         description: 'DANGER: build without Sentry symbols. A native crash will be unreadable without hand-disassembly.'
         type: boolean
@@ -80,8 +76,12 @@ concurrency:
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
+permissions:
+  contents: read
+
 jobs:
   build:
+    if: github.ref == 'refs/heads/main'
     name: EAS iOS build + submit
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -218,7 +218,6 @@ jobs:
       # credentials are already usable. The cloud builder itself is hardened in
       # eas.json with the pinned Node version used for dependency install.
       - name: Build iOS (EAS, waits for completion)
-        if: ${{ !inputs.skip_build }}
         env:
           EXPO_ASC_API_KEY_PATH: ${{ runner.temp }}/asc-api-key.p8
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
@@ -244,6 +243,21 @@ jobs:
           exit [lindex $result 3]
           EOF
 
+      - name: Resolve the finished EAS build for this exact Git SHA
+        if: ${{ inputs.submit }}
+        run: |
+          eas build:list --platform ios --status finished --limit 20 --json --non-interactive > "$RUNNER_TEMP/eas-builds.json"
+          node - <<'NODE'
+          const fs = require('fs');
+          const builds = JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP + '/eas-builds.json', 'utf8'));
+          const build = builds.find((item) => item.gitCommitHash === process.env.GITHUB_SHA);
+          if (!build?.id) {
+            console.error(`No finished iOS EAS build is traceable to ${process.env.GITHUB_SHA}; refusing latest-build substitution.`);
+            process.exit(1);
+          }
+          fs.appendFileSync(process.env.GITHUB_ENV, `EAS_BUILD_ID=${build.id}\n`);
+          NODE
+
       # eas submit needs submit.production.ios.ascAppId (the App Store Connect
       # numeric app id). Rather than commit it, resolve it at submit time from the
       # same ASC API key (a free API call, no build credit) and patch eas.json.
@@ -265,8 +279,6 @@ jobs:
       # Submit ONLY on a manual run with the toggle ticked. A push-triggered
       # run (the temporary launch-branch verification) builds without
       # submitting, so nothing reaches TestFlight except by explicit choice.
-      # With skip_build ticked, a manual run submits the latest existing EAS
-      # build, no new build credit.
       - name: Submit to TestFlight
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.submit }}
         env:
@@ -274,4 +286,4 @@ jobs:
           EXPO_ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           EXPO_ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           EXPO_APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: eas submit --platform ios --latest --non-interactive
+        run: eas submit --platform ios --id "$EAS_BUILD_ID" --non-interactive
