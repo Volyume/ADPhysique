@@ -111,7 +111,7 @@ describe('T1-10 - the stored review never outranks capability', () => {
     // list itself - the old blockingConflicts-minus-affected proxy let
     // a held/declined episode rule veto a live baseline replace.
     expect(src).toContain('baselineConflicts(intentState.capability, row).some((c) => !c.unknown)');
-    expect(src).toMatch(/catch \(_e\) { capabilityIneligible = false; }/);
+    expect(src).toMatch(/catch \(e\) \{[\s\S]*?capabilityIneligible = false;[\s\S]*?capabilityAffected = true;/);
     // The shared name-based seam stays deliberately unconsulted at review.
     expect(src).toContain('autoEligible: undefined,');
   });
@@ -190,7 +190,8 @@ describe('T2-26 - the suspension core exists (section 25)', () => {
 
   test('held episodes drive no coach holds, no affected fact, no subject', () => {
     const screen = fs.readFileSync(path.join(__dirname, '..', '..', 'screens', 'CoachOutputScreen.js'), 'utf8');
-    const scans = screen.match(/r\.role === 'episode' && r\.adaptationMode !== 'hold'/g) ?? [];
+    const safety = fs.readFileSync(path.join(__dirname, '..', 'coachApplySafety.js'), 'utf8');
+    const scans = `${screen}\n${safety}`.match(/r(?:ule)?\.role === 'episode' && r(?:ule)?\.adaptationMode !== 'hold'/g) ?? [];
     expect(scans.length).toBe(3);
   });
 

@@ -590,7 +590,19 @@ async function buildProgrammeReview(userId, activeBlock) {
       capabilityIneligible = !!(row && intentState?.capability && !intentState.capability.empty
         && capabilityKnown(intentState.capability)
         && baselineConflicts(intentState.capability, row).some((c) => !c.unknown));
-    } catch (_e) { capabilityIneligible = false; }
+    } catch (e) {
+      // A failed baseline check cannot license a replacement through another
+      // evidence lane. Treat the incumbent as possibly capability-affected,
+      // which is the conservative KEEP verdict, and record the defect.
+      capabilityIneligible = false;
+      capabilityAffected = true;
+      try {
+        // eslint-disable-next-line global-require
+        require('./errorLog').logError('blockAdvisor.capabilityBaselineRead', e, {
+          reason: 'baseline conflict check failed; preserving incumbent',
+        });
+      } catch (_) { /* logging must never break the advisor */ }
+    }
     return {
       capabilityAffected,
       capabilityEpisodeOpen,

@@ -17,13 +17,15 @@ const read = (rel) => fs.readFileSync(path.join(__dirname, '..', '..', rel), 'ut
 
 describe('T2-19 - the coach Apply hold re-check fails SAFE', () => {
   const src = read('screens/CoachOutputScreen.js');
+  const safety = read('lib/coachApplySafety.js');
 
   test('the catch no longer resets holds to an empty set (the body-wide fail-open)', () => {
     expect(src).not.toMatch(/catch\s*\(_?e?\)\s*{\s*holdMuscles\s*=\s*new Set\(\)/);
   });
 
   test('a failed re-check withholds the increase and says so', () => {
-    expect(src).toMatch(/holdMuscles\s*=\s*null/);
+    expect(safety).toMatch(/return null/);
+    expect(src).toMatch(/holdMuscles\s*=\s*await loadVolumeIncreaseHolds/);
     expect(src).toMatch(/holdMuscles === null/);
     expect(src).toMatch(/could not check how you train just now, so this increase waits/);
   });
@@ -37,12 +39,12 @@ describe('T2-19 - the coach Apply hold re-check fails SAFE', () => {
     // suite's own string pins: a source guard cannot see a gate's fail
     // direction (D130 ruling 5's class). capabilityKnown's fail direction is
     // driven at the real loader in ActiveWorkoutScreen.sideCarveNote.guard.
-    expect(src).toContain('if (!capabilityKnown(capState)) {');
-    const gate = src.indexOf('if (!capabilityKnown(capState)) {');
-    const holds = src.indexOf('holdMuscles.add(ex.primaryMuscle)');
+    expect(safety).toContain('if (!capability.capabilityKnown(capState)) return null;');
+    const gate = safety.indexOf('if (!capability.capabilityKnown(capState)) return null;');
+    const holds = safety.indexOf('holdMuscles.add(exercise.primaryMuscle)');
     expect(gate).toBeGreaterThan(-1);
     expect(gate).toBeLessThan(holds);
-    expect(src).toContain('const { loadCapabilityResolveState, blockingConflicts, capabilityKnown }');
+    expect(safety).toContain('loadCapabilityResolveState(userId, {})');
   });
 });
 

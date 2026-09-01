@@ -75,7 +75,7 @@ jest.mock('../lib/dbCrypto', () => {
 jest.mock('expo-sqlite');
 jest.mock('../lib/sync', () => ({ scheduleSync: () => {} }));
 
-const { db, runMigrations } = require('../lib/database');
+const { db, runMigrations, CURRENT_SCHEMA_VERSION } = require('../lib/database');
 const { __raw: liveRaw } = require('../lib/dbCrypto');
 
 function adapt(raw) {
@@ -86,26 +86,6 @@ function adapt(raw) {
     runAsync: async (sql, params = []) => raw.prepare(sql).run(...params),
     withTransactionAsync: async (fn) => fn(),
     isInTransactionSync: () => false,
-  };
-}
-
-// Same probe technique as migrations.cardioLog / database.bicepsSubregion /
-// database.coachOutputReid: run the pipeline against a db that executes
-// nothing, and read the final PRAGMA the runner sets — that IS
-// SCHEMA_MIGRATIONS.length, with no hard-coded number to drift.
-function fakeProbeDb() {
-  let version = 0;
-  return {
-    getFirstAsync: async (sql) => (/user_version/i.test(String(sql)) ? { user_version: version } : null),
-    getAllAsync: async () => [],
-    runAsync: async () => ({}),
-    execAsync: async (sql) => {
-      const m = /PRAGMA user_version = (\d+)/.exec(String(sql));
-      if (m) version = Number(m[1]);
-    },
-    withTransactionAsync: async (fn) => fn(),
-    isInTransactionSync: () => false,
-    get _version() { return version; },
   };
 }
 
@@ -133,9 +113,7 @@ beforeAll(async () => {
 
 describe('Phase 12 — clean install', () => {
   test('the real init path lands on the head schema version', async () => {
-    const probe = fakeProbeDb();
-    await runMigrations(probe);
-    expect(headVersion).toBe(probe._version);
+    expect(headVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(headVersion).toBeGreaterThan(0);
   });
 

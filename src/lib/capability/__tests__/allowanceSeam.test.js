@@ -138,8 +138,12 @@ describe('source guard - the two consumers outside episodeConflicts', () => {
       path.join(__dirname, '..', '..', '..', 'screens', 'CoachOutputScreen.js'), 'utf8',
     );
     expect(src).not.toMatch(/\bdemandConflicts\b/);
-    // Both scans present: the Apply-time volume holds and affectedMuscles.
-    const calls = src.match(/blockingConflicts\(capState, ex\)/g) ?? [];
+    const safety = fs.readFileSync(
+      path.join(__dirname, '..', '..', 'coachApplySafety.js'), 'utf8',
+    );
+    // Both real consumers remain gated: Apply-time holds moved into the
+    // fail-closed safety seam; affectedMuscles stays on the screen path.
+    const calls = `${src}\n${safety}`.match(/blockingConflicts\(capState, ex(?:ercise)?\)/g) ?? [];
     expect(calls.length).toBeGreaterThanOrEqual(2);
   });
 });

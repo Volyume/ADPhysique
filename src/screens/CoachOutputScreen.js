@@ -43,8 +43,7 @@ import {
   getCurrentMesocycleWeek,
   getNextMesocycleWeek,
   getPlannedMuscleVolume,
-  upsertPlannedMuscleVolume,
-  setMesocycleWeekDeload,
+  applyCoachTrainingAdjustmentAtomically,
   getActivePeakWeekPlan,
 } from '../lib/database';
 import { getProgressScanCoachSummary } from '../lib/progressScanStore';
@@ -87,6 +86,7 @@ import {
 } from '../lib/effectiveMaintenanceService';
 import { effectiveMaintenanceReceipt, resolveEffectiveMaintenance } from '../lib/effectiveMaintenance';
 import { computeCalorieTargets, computeVolumeApply, computeDeloadVolume, deloadShare, computeDietBreakTargets, markApplied, isApplied, markDeclined, isDeclined } from '../lib/coachApply';
+import { loadVolumeIncreaseHolds } from '../lib/coachApplySafety';
 // A1 (NU-3/4/6): pure display classifiers + row strings for honest Apply rows.
 // They only CALL coachApply's real policy functions; nothing is recomputed.
 import {
@@ -1320,48 +1320,9 @@ export default function CoachOutputScreen({ navigation, route }) {
       // capability lane fails safe, never body-wide on a guess.
       let holdMuscles = new Set();
       if (delta > 0) {
-        try {
-          // eslint-disable-next-line global-require
-          const { loadCapabilityResolveState, blockingConflicts, capabilityKnown } = require('../lib/capability/resolve');
-          // eslint-disable-next-line global-require
-          const { getAllExercises, getLatestCheckin } = require('../lib/database');
-          const capState = await loadCapabilityResolveState(user.id, {});
-          // Round 19 (R19-1): knowledge is the withhold's trigger, not a
-          // throw. The resolver cannot reject - its whole body is one
-          // try/catch, so a cold read failure RETURNS the unknown-empty
-          // shape, episodeIds came back empty, nothing below threw, and
-          // the increase applied body-wide on a read that knew nothing -
-          // the exact posture D112 R3 forbids, shipped under a
-          // string-level guard that could not see a gate's fail
-          // direction (D130 ruling 5's class, on a pre-campaign gate).
-          // A stale-known state IS knowledge (D130 ruling 1) and
-          // computes real holds below; only a state the app cannot
-          // vouch for withholds.
-          if (!capabilityKnown(capState)) {
-            holdMuscles = null;
-          } else {
-            // D112 R8: an episode the user set to "hold my plan" drives no
-            // coach volume holds - holding the plan means holding it, not
-            // freezing its muscles.
-            const episodeIds = new Set((capState.restrictions ?? [])
-              .filter((r) => r.role === 'episode' && r.adaptationMode !== 'hold').map((r) => r.id));
-            if (episodeIds.size) {
-              const library = await getAllExercises();
-              for (const ex of library) {
-                if (!ex?.primaryMuscle) continue;
-                // Decision layer (D112 R4): an exercise the user allowed no
-                // longer holds its muscle - unless the rule is clinician-set.
-                if (blockingConflicts(capState, ex).some((c) => !c.unknown && episodeIds.has(c.constraintId))) {
-                  holdMuscles.add(ex.primaryMuscle);
-                }
-              }
-            }
-            const checkin = await getLatestCheckin(user.id).catch(() => null);
-            for (const m of String(checkin?.soreMuscles ?? '').split(',')) {
-              if (m.trim()) holdMuscles.add(m.trim());
-            }
-          }
-        } catch (_e) { holdMuscles = null; }
+        // Capability and soreness are one fail-closed read unit. In particular,
+        // a rejected check-in query is unknown soreness, never "no soreness".
+        holdMuscles = await loadVolumeIncreaseHolds(user.id);
       }
       if (delta > 0 && holdMuscles === null) {
         // D112 R3: the re-check did not happen, so nothing is known about
@@ -1370,15 +1331,6 @@ export default function CoachOutputScreen({ navigation, route }) {
         return;
       }
       const changes = computeVolumeApply(rows, delta, holdMuscles);
-      for (const c of changes) {
-        await upsertPlannedMuscleVolume({
-          mesocycleWeekId: nextTrainingWeekId,
-          muscle: c.muscle,
-          plannedSets: c.plannedSets,
-          mev: c.mev, mav: c.mav, mrv: c.mrv,
-          source: 'coach',
-        });
-      }
       const updated = markApplied(output, 'training', {
         volumeDelta: delta, musclesChanged: changes.length,
         // Campaign 18: same record, training side. Judged on recovery and
@@ -1409,7 +1361,13 @@ export default function CoachOutputScreen({ navigation, route }) {
           goalPhase: output?.goalPhase ?? null,
         }),
       });
-      await saveCoachOutput(user.id, { weekStart, ...updated });
+      await applyCoachTrainingAdjustmentAtomically({
+        userId: user.id,
+        weekStart,
+        mesocycleWeekId: nextTrainingWeekId,
+        changes,
+        coachOutput: { weekStart, ...updated },
+      });
       setOutput(updated);
       setApplySettling(s => ({ ...s, training: true }));
     } catch (e) {
@@ -1436,10 +1394,6 @@ export default function CoachOutputScreen({ navigation, route }) {
     applyingRef.current = true;
     setApplyingKey('deload');
     try {
-      await setMesocycleWeekDeload(nextTrainingWeekId);
-      // Stage 4: the target week IS a deload row from this moment; keep
-      // the upward-apply guard's premise fresh for the rest of the session.
-      setNextWeekIsDeload(true);
       const rows = await getPlannedMuscleVolume(nextTrainingWeekId);
       // Stage 7 (§3.4): the deload lands at the strain-scaled share of
       // each muscle's ACHIEVED peak this block rather than a flat MEV
@@ -1451,15 +1405,6 @@ export default function CoachOutputScreen({ navigation, route }) {
       const strainScore = output.recoveryFlag === 'deload_suggested' ? 4
         : output.recoveryFlag === 'concerned' ? 2 : 0;
       const changes = computeDeloadVolume(rows, peaks ? { peaks, strainScore } : null);
-      for (const c of changes) {
-        await upsertPlannedMuscleVolume({
-          mesocycleWeekId: nextTrainingWeekId,
-          muscle: c.muscle,
-          plannedSets: c.plannedSets,
-          mev: c.mev, mav: c.mav, mrv: c.mrv,
-          source: 'coach',
-        });
-      }
       const updated = markApplied(output, 'deload', {
         weekId: nextTrainingWeekId, musclesChanged: changes.length,
         // Stage 8 (§3.6): the applied share, so the card can explain the
@@ -1467,7 +1412,17 @@ export default function CoachOutputScreen({ navigation, route }) {
         // legacy flat cut ran (no peaks available).
         sharePct: peaks ? Math.round(deloadShare(strainScore) * 100) : null,
       });
-      await saveCoachOutput(user.id, { weekStart, ...updated });
+      await applyCoachTrainingAdjustmentAtomically({
+        userId: user.id,
+        weekStart,
+        mesocycleWeekId: nextTrainingWeekId,
+        changes,
+        coachOutput: { weekStart, ...updated },
+        setDeload: true,
+      });
+      // Only publish deload UI truth after the week, every volume target and
+      // the applied receipt committed together.
+      setNextWeekIsDeload(true);
       setOutput(updated);
       setApplySettling(s => ({ ...s, deload: true }));
     } catch (e) {
@@ -1946,8 +1901,9 @@ export default function CoachOutputScreen({ navigation, route }) {
       let physicalConstraint = null;
       try {
         // eslint-disable-next-line global-require
-        const { loadCapabilityResolveState, blockingConflicts } = require('../lib/capability/resolve');
+        const { loadCapabilityResolveState, capabilityKnown, blockingConflicts } = require('../lib/capability/resolve');
         const capState = await loadCapabilityResolveState(user.id, {});
+        if (!capabilityKnown(capState)) throw new Error('capability state unavailable');
         // D112 R8: held episodes drive no constraint-aware coaching -
         // the user asked the app to wait, so the fact excludes them.
         const episodeIds = new Set((capState.restrictions ?? [])

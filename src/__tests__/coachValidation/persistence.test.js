@@ -117,7 +117,7 @@
 // surface), PLUS the CFL-20 winback pattern's own principle: mock the IO/
 // computation BOUNDARY, never the decision under test. Here the decision
 // under test is computeVolumeApply's clamp and the screen's wiring of it to
-// upsertPlannedMuscleVolume -- NOT runWeeklyCoach's own weekly-signal
+// applyCoachTrainingAdjustmentAtomically -- NOT runWeeklyCoach's own weekly-signal
 // arithmetic, which the rest of coachValidation already exhaustively proves
 // (e.g. NUT-63's identical fixture, reused verbatim below). So
 // runWeeklyCoach is mocked to return its OWN real, byte-identical output
@@ -127,7 +127,7 @@
 describe('GAP C(i): CoachOutputScreen Apply (training) persists the clamped value', () => {
   jest.setTimeout(15000);
 
-  test('upsertPlannedMuscleVolume is called with the per-muscle CLAMPED plannedSets, never the raw uniform delta', async () => {
+  test('the atomic apply receives per-muscle CLAMPED plannedSets, never the raw uniform delta', async () => {
     jest.resetModules();
     jest.doMock('expo-haptics', () => ({
       impactAsync: jest.fn(() => Promise.resolve()),
@@ -189,7 +189,7 @@ describe('GAP C(i): CoachOutputScreen Apply (training) persists the clamped valu
       { muscle: 'chest', planned_sets: 21, mev: 6, mav: 14, mrv: 22 },
       { muscle: 'shoulders', planned_sets: 22, mev: 6, mav: 14, mrv: 22 },
     ]));
-    const mockUpsertPlannedMuscleVolume = jest.fn(() => Promise.resolve());
+    const mockApplyCoachTrainingAdjustmentAtomically = jest.fn(() => Promise.resolve('receipt-id'));
 
     jest.doMock('../../lib/database', () => {
       const actual = jest.requireActual('../../lib/database');
@@ -199,9 +199,14 @@ describe('GAP C(i): CoachOutputScreen Apply (training) persists the clamped valu
         getCurrentMesocycleWeek: (...a) => mockGetCurrentMesocycleWeek(...a),
         getNextMesocycleWeek: (...a) => mockGetNextMesocycleWeek(...a),
         getPlannedMuscleVolume: (...a) => mockGetPlannedMuscleVolume(...a),
-        upsertPlannedMuscleVolume: (...a) => mockUpsertPlannedMuscleVolume(...a),
+        applyCoachTrainingAdjustmentAtomically: (...a) => mockApplyCoachTrainingAdjustmentAtomically(...a),
       };
     });
+    // This test owns the clamp/persistence seam. Capability/check-in failure
+    // posture is driven independently in coachApplySafety.test.js.
+    jest.doMock('../../lib/coachApplySafety', () => ({
+      loadVolumeIncreaseHolds: jest.fn(async () => new Set()),
+    }));
 
     global.__DEV__ = false;
     if (typeof global.requestAnimationFrame === 'undefined') {
@@ -270,7 +275,10 @@ describe('GAP C(i): CoachOutputScreen Apply (training) persists the clamped valu
     // The training row starts collapsed inside the "More adjustments"
     // disclosure at this signal magnitude; expand it before looking for the
     // Apply control (same behaviour a real user drives through).
-    const moreButtons = tree.root.findAllByProps({ accessibilityLabel: 'More adjustments (2)' });
+    const moreButtons = tree.root.findAll((node) => (
+      typeof node.props?.accessibilityLabel === 'string'
+      && node.props.accessibilityLabel.startsWith('More adjustments')
+    ));
     if (moreButtons.length) {
       await TestRenderer.act(async () => {
         moreButtons[0].props.onPress?.();
@@ -289,22 +297,19 @@ describe('GAP C(i): CoachOutputScreen Apply (training) persists the clamped valu
       for (let i = 0; i < 10; i++) await Promise.resolve();
     });
 
-    expect(mockUpsertPlannedMuscleVolume).toHaveBeenCalledTimes(1);
-    expect(mockUpsertPlannedMuscleVolume).toHaveBeenCalledWith(
-      expect.objectContaining({
-        mesocycleWeekId: 'mw-next',
+    expect(mockApplyCoachTrainingAdjustmentAtomically).toHaveBeenCalledTimes(1);
+    const atomicCall = mockApplyCoachTrainingAdjustmentAtomically.mock.calls[0][0];
+    expect(atomicCall).toEqual(expect.objectContaining({
+      mesocycleWeekId: 'mw-next',
+      changes: [expect.objectContaining({
         muscle: 'chest',
         plannedSets: 22, // CLAMPED to mrv, not the naive raw 21+2=23
-        source: 'coach',
-      }),
-    );
+      })],
+    }));
     // shoulders (already at its 22-set ceiling) must never be written at all
     // -- the raw proposal (22+2=24) is withheld entirely, not silently
     // capped-and-written.
-    const shoulderCalls = mockUpsertPlannedMuscleVolume.mock.calls.filter(
-      ([arg]) => arg.muscle === 'shoulders',
-    );
-    expect(shoulderCalls).toHaveLength(0);
+    expect(atomicCall.changes.some((change) => change.muscle === 'shoulders')).toBe(false);
 
     TestRenderer.act(() => { tree.unmount(); });
     jest.dontMock('expo-haptics');

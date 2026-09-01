@@ -8,7 +8,7 @@
  * Adaptive TDEE: computeEWMA, computeWeeklyWeightChange, computeAdaptiveTDEEAdjustment
  */
 
-import { localDayKey } from './dayKey';
+import { civilDayDifference, localDayKey } from './dayKey';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -237,27 +237,27 @@ export function ewmaValues(values, alpha = EWMA_ALPHA) {
 export function computeWeeklyWeightChange(ewmaData) {
   if (!ewmaData || ewmaData.length < 2) return null;
   const last = ewmaData[ewmaData.length - 1];
-  const lastMs = last && last.date != null ? Date.parse(last.date) : NaN;
+  const lastDay = last && last.date != null ? last.date : null;
+  const lastOrdinal = civilDayDifference(lastDay, '1970-01-01');
 
   // Date-aware path: normalise to a true 7-day rate from timestamps, so a
   // user who logs several times a day (or skips days) gets a correct
   // kg/week rather than "index -8 == 7 days ago". Requires ~a week of span
   // so the rate isn't extrapolated from a day or two of noise.
-  if (Number.isFinite(lastMs)) {
+  if (Number.isFinite(lastOrdinal)) {
     const MIN_SPAN_DAYS = 6;
     let older = null;
-    let olderMs = NaN;
+    let spanDays = NaN;
     for (let i = ewmaData.length - 2; i >= 0; i--) {
-      const ms = ewmaData[i].date != null ? Date.parse(ewmaData[i].date) : NaN;
-      if (!Number.isFinite(ms)) continue;
-      if (lastMs - ms >= MIN_SPAN_DAYS * 86400000) {
+      const candidateSpan = civilDayDifference(lastDay, ewmaData[i].date);
+      if (!Number.isFinite(candidateSpan)) continue;
+      if (candidateSpan >= MIN_SPAN_DAYS) {
         older = ewmaData[i];
-        olderMs = ms;
+        spanDays = candidateSpan;
         break; // newest entry that is at least ~a week back
       }
     }
     if (!older) return null;
-    const spanDays = (lastMs - olderMs) / 86400000;
     if (spanDays <= 0) return null;
     const ratePerWeek = ((last.ewma - older.ewma) / spanDays) * 7;
     return parseFloat(ratePerWeek.toFixed(3));
@@ -1149,9 +1149,8 @@ export function shouldSuggestDietBreak(deficitStartDate, currentDate = new Date(
   if (!Number.isFinite(startMs)) {
     return { suggest: false, weeksInDeficit: 0 };
   }
-  const weeksInDeficit = Math.floor(
-    (currentDate - startMs) / (7 * 24 * 60 * 60 * 1000),
-  );
+  const spanDays = civilDayDifference(currentDate, new Date(startMs));
+  const weeksInDeficit = Number.isFinite(spanDays) ? Math.floor(spanDays / 7) : 0;
 
   if (weeksInDeficit >= DIET_BREAK_THRESHOLD_WEEKS) {
     return {

@@ -225,6 +225,17 @@ describe('computeWeeklyWeightChange', () => {
     const decimals = result.toString().split('.')[1] ?? '';
     expect(decimals.length).toBeLessThanOrEqual(3);
   });
+
+  test.each([
+    ['UK spring DST', '2025-03-30T00:00:00+00:00', '2025-04-06T00:00:00+01:00'],
+    ['UK autumn DST', '2025-10-26T00:00:00+01:00', '2025-11-02T00:00:00+00:00'],
+    ['timezone-travel-stable day keys', '2025-03-30', '2025-04-06'],
+  ])('%s remains an exact civil-week rate', (_label, olderDate, laterDate) => {
+    expect(computeWeeklyWeightChange([
+      { date: olderDate, ewma: 80.0 },
+      { date: laterDate, ewma: 80.7 },
+    ])).toBe(0.7);
+  });
 });
 
 // ─── computeAdaptiveTDEEAdjustment ───────────────────────────────────────────
