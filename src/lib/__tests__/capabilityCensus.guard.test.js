@@ -215,7 +215,7 @@ const SHARED_ANSWERS = [
   ['sidedUnionShape', 'does a sided rule cover this movement outright',
     ['components/ExercisePickerModal.js', 'screens/ActiveWorkoutScreen.js']],
   ['capabilityKnown', 'may an action consult this capability state',
-    ['screens/ActiveWorkoutScreen.js', 'screens/CoachOutputScreen.js', 'lib/planAutoGen.js', 'lib/blockAdvisor.js', 'lib/database.js']],
+    ['screens/ActiveWorkoutScreen.js', 'screens/CoachOutputScreen.js', 'lib/coachApplySafety.js', 'lib/planAutoGen.js', 'lib/blockAdvisor.js', 'lib/database.js']],
 ];
 
 test('CLASS 3: every shared answer is consumed by every surface that asks it', () => {

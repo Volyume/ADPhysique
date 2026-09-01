@@ -5,6 +5,8 @@ import { pickBestLift } from './bestLift';
 import { logError, logWarn } from './errorLog';
 import { localDayKey, localWeekStartMs, localWeekEndMs } from './dayKey';
 import { openEncryptedDb } from './dbCrypto';
+import { guardSqliteConnection } from './sqliteBoundary';
+import { recoverInterruptedSnapshotRestore } from './dbSnapshot';
 import { weekWindowsEndingAt as buildWeekWindowsEndingAt } from './weekWindows';
 import { createActivityRepository } from './database/activity';
 import { createBodyMetricsRepository } from './database/bodyMetrics';
@@ -30,6 +32,16 @@ let _dbEncrypted = null;
  *  fallback), or null (DB not opened yet). Read by privacy/consent surfaces. */
 export function isLocalDbEncrypted() {
   return _dbEncrypted;
+}
+
+export async function closeDatabaseHandle(handle) {
+  if (!handle) return;
+  const rows = await handle.getAllAsync('PRAGMA wal_checkpoint(TRUNCATE);');
+  const checkpoint = rows?.[0];
+  if (checkpoint && Number(checkpoint.busy ?? 0) !== 0) {
+    throw new Error('database WAL checkpoint remained busy');
+  }
+  await handle.closeAsync();
 }
 
 /**
@@ -130,9 +142,14 @@ const planFoldersRepository = createPlanFoldersRepository({
 // in-memory handle.
 export async function closeDatabase() {
   const handle = _db;
+  if (!handle) return;
+
+  // Snapshot restore is the only caller and it will mutate the database file.
+  // A failed/busy checkpoint or close means the live file is not a complete,
+  // quiescent rollback source, so propagate and leave the handle published.
+  await closeDatabaseHandle(handle);
   _db = null;
   _initPromise = null;
-  try { await handle?.closeAsync?.(); } catch (_) { /* tolerate */ }
 }
 
 export function initDatabase() {
@@ -155,12 +172,18 @@ export function initDatabase() {
 }
 
 async function _doInit() {
+  // A process may have died between the two atomic renames of snapshot
+  // promotion. Repair from the durable restore journal before any SQLite open
+  // can fabricate a new empty volyume.db at the missing live path.
+  await recoverInterruptedSnapshotRestore();
+
   // F-004: open the DB SQLCipher-encrypted, migrating an existing plaintext DB
   // in place on first run. openEncryptedDb sets `PRAGMA key` as the first
   // statement and falls back to a working plaintext handle if encryption fails,
   // so the app never bricks or loses data. `PRAGMA key` MUST precede any other
   // statement, so this runs before `PRAGMA journal_mode`.
-  const { db: opened, encrypted } = await openEncryptedDb(SQLite);
+  const { db: rawOpened, encrypted } = await openEncryptedDb(SQLite);
+  const opened = guardSqliteConnection(rawOpened);
   // Do NOT publish `_db` yet (audit 2026-07-01 race): all schema + migration
   // work below runs on the local `opened` handle, and `_db` is assigned only
   // AFTER everything completes (bottom of this function). Publishing early let a
@@ -2589,7 +2612,8 @@ const SCHEMA_MIGRATIONS = [
   // failure mode migrate_137's header describes for exercise_swaps.scope -
   // logged, swallowed, retried on the next sync tick, device data is safe.
   // Additive: yes (one nullable column). Safe to re-run: yes (the runner
-  // treats a duplicate-column error as benign, isBenignMigrationError).
+  // proves the exact duplicate column exists before treating the error as
+  // benign).
   // Rollback: leave the column in place and ignore it; every reader treats
   // NULL as "no expiry", which is the pre-migration behaviour for every kind
   // except PATTERN_AVOID, and no PATTERN_AVOID row can exist on a device
@@ -2733,14 +2757,32 @@ const SCHEMA_MIGRATIONS = [
   ],
 ];
 
-// CC33 D112 R8: guarded like migrateSwapCauseAndEffectiveChoice above - a
-// bare-string ALTER aborts the whole chain on a re-run (duplicate column)
-// or a fixture built without this table, which is exactly what the five
-// migration fixture suites caught at the W3 gate.
+// Tests and diagnostics may compare a database's durable marker with the
+// actual migration head without executing the pipeline against a schema-less
+// fake (which can mask missing-table defects in function migrations).
+export const CURRENT_SCHEMA_VERSION = SCHEMA_MIGRATIONS.length;
+
+async function addColumnIfMissing(d, table, column, ddl) {
+  const columns = await d.getAllAsync(`PRAGMA table_info(${table})`);
+  if (!Array.isArray(columns) || columns.length === 0) {
+    throw new Error(`required migration table ${table} is missing`);
+  }
+  if (columns.some((entry) => entry?.name === column)) return false;
+  await d.execAsync(ddl);
+  const readback = await d.getAllAsync(`PRAGMA table_info(${table})`);
+  if (!readback.some((entry) => entry?.name === column)) {
+    throw new Error(`migration column ${table}.${column} did not persist`);
+  }
+  return true;
+}
+
 async function migrateCapabilityAdaptationMode(d) {
-  try {
-    await d.execAsync("ALTER TABLE capability_constraints ADD COLUMN adaptation_mode TEXT CHECK (adaptation_mode IN ('propose','hold'))");
-  } catch (_e) { /* duplicate column (re-run) or fixture without the table */ }
+  await addColumnIfMissing(
+    d,
+    'capability_constraints',
+    'adaptation_mode',
+    "ALTER TABLE capability_constraints ADD COLUMN adaptation_mode TEXT CHECK (adaptation_mode IN ('propose','hold'))",
+  );
 }
 
 // Backfill the new axis on canonical rows from the pure derivation, in
@@ -2748,63 +2790,53 @@ async function migrateCapabilityAdaptationMode(d) {
 // NULL - asked, never guessed), best-effort per row, failed rows stay
 // NULL which reads as UNKNOWN.
 async function migrateWeightBearingHandsBackfill(d) {
-  let derive;
-  try {
-    // eslint-disable-next-line global-require
-    ({ deriveDemandMetadata: derive } = require('./capability/demands'));
-  } catch (_e) { return; }
+  // eslint-disable-next-line global-require
+  const { deriveDemandMetadata: derive } = require('./capability/demands');
   const rows = await d.getAllAsync(
     `SELECT id, name, equipment, movement_pattern AS movementPattern,
             primary_muscle AS primaryMuscle, compound_isolation AS compoundIsolation
        FROM exercises WHERE is_custom = 0`,
-  ).catch(() => []);
+  );
   for (const r of rows ?? []) {
-    try {
-      const m = derive(r);
-      const v = m.weightBearingHands === true ? 1 : m.weightBearingHands === false ? 0 : null;
-      // eslint-disable-next-line no-await-in-loop
-      await d.runAsync('UPDATE exercises SET weight_bearing_hands = ? WHERE id = ?', [v, r.id]);
-    } catch (_e) { /* row stays NULL = unknown */ }
+    const m = derive(r);
+    const v = m.weightBearingHands === true ? 1 : m.weightBearingHands === false ? 0 : null;
+    // eslint-disable-next-line no-await-in-loop
+    await d.runAsync('UPDATE exercises SET weight_bearing_hands = ? WHERE id = ?', [v, r.id]);
   }
 }
 
 // CC29 columns, guarded per the migrateLoadSemanticsBackfill convention:
-// migration-window fixtures build only the tables their target migration
-// touches, and a duplicate column on a re-run is equally tolerable - a
-// genuinely missing table on a real device would have failed far earlier
-// migrations first.
+// Both tables are guaranteed by earlier shipped migrations. A missing table is
+// therefore corruption/incomplete migration state, not a benign fixture case.
 async function migrateSwapCauseAndEffectiveChoice(d) {
-  try {
-    await d.execAsync('ALTER TABLE exercise_swaps ADD COLUMN cause TEXT');
-  } catch (_e) { /* duplicate column (re-run) or fixture without the table */ }
-  try {
-    await d.execAsync("ALTER TABLE capability_constraints ADD COLUMN effective_choice TEXT CHECK (effective_choice IN ('applied','declined'))");
-  } catch (_e) { /* duplicate column (re-run) or fixture without the table */ }
+  await addColumnIfMissing(d, 'exercise_swaps', 'cause', 'ALTER TABLE exercise_swaps ADD COLUMN cause TEXT');
+  await addColumnIfMissing(
+    d,
+    'capability_constraints',
+    'effective_choice',
+    "ALTER TABLE capability_constraints ADD COLUMN effective_choice TEXT CHECK (effective_choice IN ('applied','declined'))",
+  );
 }
 
 // CC27: backfill canonical exercises' demand columns from the pure
 // derivation in capability/demands.js (lazy require; no import cycle - the
 // module is dependency-free). Canonical rows only: custom rows stay NULL
 // (CAP-8 - unknown is honest; the owner supplies axes progressively).
-// Best-effort per row; a failed row stays NULL, which reads as UNKNOWN,
-// the safe direction for this lane.
+// Any read or write failure aborts this version. Advancing user_version after a
+// partial backfill would make the omitted rows permanent and unrecoverable.
 async function migrateDemandMetadataBackfill(d) {
-  let derive;
-  try {
-    // eslint-disable-next-line global-require
-    ({ deriveDemandMetadata: derive } = require('./capability/demands'));
-  } catch (_e) { return; }
+  // eslint-disable-next-line global-require
+  const { deriveDemandMetadata: derive } = require('./capability/demands');
   const rows = await d.getAllAsync(
     `SELECT id, name, equipment, movement_pattern AS movementPattern,
             primary_muscle AS primaryMuscle, compound_isolation AS compoundIsolation
        FROM exercises WHERE is_custom = 0`,
-  ).catch(() => []);
+  );
   const asInt = (v) => (v === true ? 1 : v === false ? 0 : null);
   for (const r of rows ?? []) {
-    try {
-      const m = derive(r);
-      // eslint-disable-next-line no-await-in-loop
-      await d.runAsync(
+    const m = derive(r);
+    // eslint-disable-next-line no-await-in-loop
+    await d.runAsync(
         `UPDATE exercises SET
            position = ?, floor_access = ?, overhead_position = ?, grip_demand = ?,
            unilateral_loadable = ?, bilateral_upper = ?, bilateral_lower = ?,
@@ -2816,8 +2848,7 @@ async function migrateDemandMetadataBackfill(d) {
           asInt(m.bilateralLower), asInt(m.axialLoad), asInt(m.impact),
           m.balanceDemand ?? null, r.id,
         ],
-      );
-    } catch (_e) { /* row stays NULL = unknown */ }
+    );
   }
   // Section 34.1 (CC-D26): custom rows never received EQUIPMENT metadata,
   // which is what the pool-entry requirements read - so custom parity was
@@ -2826,20 +2857,18 @@ async function migrateDemandMetadataBackfill(d) {
   // for customs that carry an equipment string but no category yet. DEMAND
   // axes stay NULL on customs by design (section 8.4: they are ASKED, one
   // axis at a time, never guessed from a user-invented name).
-  try {
-    // eslint-disable-next-line global-require
-    const { deriveExerciseMetadata } = require('./exerciseMetadata');
-    const customs = await d.getAllAsync(
+  // eslint-disable-next-line global-require
+  const { deriveExerciseMetadata } = require('./exerciseMetadata');
+  const customs = await d.getAllAsync(
       `SELECT id, name, equipment, movement_pattern AS movementPattern,
               compound_isolation AS compoundIsolation
          FROM exercises
         WHERE is_custom = 1 AND equipment IS NOT NULL AND equipment_category IS NULL`,
-    ).catch(() => []);
-    for (const r of customs ?? []) {
-      try {
-        const m = deriveExerciseMetadata(r);
-        // eslint-disable-next-line no-await-in-loop
-        await d.runAsync(
+  );
+  for (const r of customs ?? []) {
+    const m = deriveExerciseMetadata(r);
+    // eslint-disable-next-line no-await-in-loop
+    await d.runAsync(
           `UPDATE exercises SET
              equipment_category = ?, machine_type = ?, force = ?, laterality = ?,
              difficulty = ?, machine_ok = ?, home_ok = ?, equipment_profiles = ?
@@ -2851,45 +2880,39 @@ async function migrateDemandMetadataBackfill(d) {
             m.equipmentProfiles ? JSON.stringify(m.equipmentProfiles) : null,
             r.id,
           ],
-        );
-      } catch (_e) { /* row keeps coarse-equipment fallback behaviour */ }
-    }
-  } catch (_e) { /* metadata module unavailable: customs keep fallback */ }
+    );
+  }
 }
 
 // Backfill canonical exercises' load_semantics from the seed's own
 // derivation (single source of truth in seedExercises.js - lazy require to
 // avoid the import cycle; both modules are fully loaded by migration time).
 // The local custom_exercises mirror table gains the column here too, guarded
-// separately: migration-window test fixtures build only the tables their
-// target migration touches (their documented convention), and a genuinely
-// missing table on a real device would have failed far earlier migrations
-// first. Best-effort by design - a failed backfill leaves rows NULL, which
-// every reader treats as 'total', today's behaviour.
+// separately. Both tables are guaranteed by earlier shipped migrations; a
+// missing table or failed backfill aborts the version so it can be retried from
+// the transaction boundary rather than permanently recording partial work.
 async function migrateLoadSemanticsBackfill(d) {
-  try {
-    await d.execAsync('ALTER TABLE custom_exercises ADD COLUMN load_semantics TEXT');
-  } catch (_e) { /* duplicate column (re-run) or fixture without the mirror table */ }
-  try {
-    // eslint-disable-next-line global-require
-    const { deriveLoadSemantics } = require('./seedExercises');
-    const rows = await d.getAllAsync(
-      'SELECT id, name, equipment, exercise_type AS exerciseType FROM exercises WHERE is_custom = 0',
-    );
-    for (const r of rows ?? []) {
-      const sem = deriveLoadSemantics(r);
-      if (sem !== 'total') {
-        await d.runAsync('UPDATE exercises SET load_semantics = ? WHERE id = ?', [sem, r.id]);
-      }
+  await addColumnIfMissing(
+    d, 'custom_exercises', 'load_semantics',
+    'ALTER TABLE custom_exercises ADD COLUMN load_semantics TEXT',
+  );
+  // eslint-disable-next-line global-require
+  const { deriveLoadSemantics } = require('./seedExercises');
+  const rows = await d.getAllAsync(
+    'SELECT id, name, equipment, exercise_type AS exerciseType FROM exercises WHERE is_custom = 0',
+  );
+  for (const r of rows ?? []) {
+    const sem = deriveLoadSemantics(r);
+    if (sem !== 'total') {
+      // eslint-disable-next-line no-await-in-loop
+      await d.runAsync('UPDATE exercises SET load_semantics = ? WHERE id = ?', [sem, r.id]);
     }
-    await d.runAsync("UPDATE exercises SET load_semantics = 'total' WHERE load_semantics IS NULL");
-  } catch (e) {
-    logWarn('database.migrateLoadSemanticsBackfill', e?.message || String(e));
   }
+  await d.runAsync("UPDATE exercises SET load_semantics = 'total' WHERE load_semantics IS NULL");
 }
 
 async function migrateProgressPhotoMetaUserScope(d) {
-  const cols = await d.getAllAsync('PRAGMA table_info(progress_photo_meta)').catch(() => []);
+  const cols = await d.getAllAsync('PRAGMA table_info(progress_photo_meta)');
   if (!Array.isArray(cols) || cols.length === 0) {
     await d.execAsync(`CREATE TABLE IF NOT EXISTS progress_photo_meta (
       user_id    TEXT,
@@ -2998,23 +3021,29 @@ export async function ensureFoodSearchIndex(d) {
       await d.execAsync(`INSERT INTO custom_foods_fts(custom_foods_fts) VALUES('rebuild')`);
 }
 
-// Errors that are safe to ignore when re-applying additive migrations on
-// installs that pre-date version tracking (the column/table already exists).
-function isBenignMigrationError(err) {
-  const m = String(err?.message || err).toLowerCase();
-  return m.includes('duplicate column')
-    || m.includes('already exists')
-    || m.includes('duplicate column name');
+// Suppress only a duplicate-column error whose exact column can be proved to
+// exist in the live schema. Message matching alone previously converted disk,
+// fixture and arbitrary helper failures into a successful version bump.
+async function isProvenBenignMigrationError(d, op, err) {
+  if (typeof op !== 'string' || !/duplicate column/i.test(String(err?.message || err))) return false;
+  const match = /^\s*ALTER TABLE\s+([A-Za-z0-9_]+)\s+ADD COLUMN\s+([A-Za-z0-9_]+)/i.exec(op);
+  if (!match) return false;
+  try {
+    const columns = await d.getAllAsync(`PRAGMA table_info(${match[1]})`);
+    return Array.isArray(columns) && columns.some((column) => column?.name === match[2]);
+  } catch (_) {
+    return false;
+  }
 }
 
 // Exported for the migration ordering regression test (cardio_log incident,
 // 2026-06-03). Takes a database handle so the test can drive it with a fake.
 export async function runMigrations(d) {
-  let current = 0;
-  try {
-    const row = await d.getFirstAsync('PRAGMA user_version');
-    current = row?.user_version ?? 0;
-  } catch (_) { current = 0; }
+  const row = await d.getFirstAsync('PRAGMA user_version');
+  const current = row?.user_version;
+  if (!Number.isInteger(current) || current < 0) {
+    throw new Error('Could not establish a valid local schema version.');
+  }
 
   // COMP-009: take a byte-for-byte snapshot once, only when migrations are
   // actually pending, BEFORE the first op runs — so a failed migration is
@@ -3095,7 +3124,7 @@ export async function runMigrations(d) {
             await d.execAsync(op);
           }
         } catch (e) {
-          if (isBenignMigrationError(e)) continue;
+          if (await isProvenBenignMigrationError(d, op, e)) continue;
           // Logged HERE rather than at the throw site outside the transaction.
           // withTransactionAsync rolls back before rethrowing and does not
           // guard that ROLLBACK, so on the pathological path the caller can
@@ -5383,13 +5412,17 @@ export async function getCurrentMesocycleWeek(userId) {
 // scheduled recovery week. is_deload is in the cloud push payload, so the
 // flag syncs; the planned-volume cut to the floor is written separately
 // by the caller via upsertPlannedMuscleVolume.
-export async function setMesocycleWeekDeload(weekId, { isDeload = true, rirTarget = 4 } = {}) {
-  if (!weekId) return;
-  const d = await db();
+async function setMesocycleWeekDeloadInTx(d, weekId, { isDeload = true, rirTarget = 4 } = {}) {
+  if (!weekId) throw new Error('A mesocycle week is required.');
   await d.runAsync(
     'UPDATE mesocycle_weeks SET is_deload = ?, rir_target = ?, updated_at = ? WHERE id = ?',
     [isDeload ? 1 : 0, rirTarget, Date.now(), weekId],
   );
+}
+
+export async function setMesocycleWeekDeload(weekId, options = {}) {
+  const d = await db();
+  await setMesocycleWeekDeloadInTx(d, weekId, options);
   _scheduleSync();
 }
 
@@ -5986,19 +6019,23 @@ export async function getWeek1SetsForExercise(mesocycleId, exerciseId) {
 }
 
 // Write or update planned muscle volume for a week (engine writes here)
-export async function upsertPlannedMuscleVolume({ mesocycleWeekId, muscle, plannedSets, mev, mav, mrv, source = 'engine' }) {
-  try {
-    const d = await db();
-    const id = `pmv_${mesocycleWeekId}_${muscle}`;
-    const now = Date.now();
-    await d.runAsync(
-      `INSERT INTO planned_muscle_volume (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(id) DO UPDATE SET planned_sets = excluded.planned_sets, source = excluded.source, updated_at = excluded.updated_at`,
-      [id, mesocycleWeekId, muscle, plannedSets, mev, mav, mrv, source, now, now],
-    );
-    _scheduleSync();
-  } catch (_e) {}
+async function upsertPlannedMuscleVolumeInTx(d, {
+  mesocycleWeekId, muscle, plannedSets, mev, mav, mrv, source = 'engine',
+}) {
+  const id = `pmv_${mesocycleWeekId}_${muscle}`;
+  const now = Date.now();
+  await d.runAsync(
+    `INSERT INTO planned_muscle_volume (id, mesocycle_week_id, muscle, planned_sets, mev, mav, mrv, source, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET planned_sets = excluded.planned_sets, source = excluded.source, updated_at = excluded.updated_at`,
+    [id, mesocycleWeekId, muscle, plannedSets, mev, mav, mrv, source, now, now],
+  );
+}
+
+export async function upsertPlannedMuscleVolume(args) {
+  const d = await db();
+  await upsertPlannedMuscleVolumeInTx(d, args);
+  _scheduleSync();
 }
 
 // Stage 6 (2026-08-09): the dead createMesocycle function is DELETED. It
@@ -7111,17 +7148,11 @@ export async function wipeAllUserDataWithRetry(userId, { attempts = 3, delaysMs 
 
 // ─── Full local backup / restore ────────────────────────────────────────────
 //
-// Every user-owned table. The `exercises` table is intentionally excluded: its
-// canonical rows are seed data, re-seeded on launch, so dumping ~150 of them
-// would only bloat the backup.
-// CAVEAT (audit 2026-06-21): this local backup does NOT include custom exercises
-// — neither `exercises` rows with is_custom=1 nor the `custom_exercises` table is
-// listed — so a LOCAL-only restore onto a fresh install will not recreate a
-// user's custom exercise definitions (workout_sets that reference them would be
-// left pointing at unknown ids). Custom exercises ARE preserved across devices
-// via cloud sync (custom_exercises is in the sync table set), which is the path
-// most restores take. Add `custom_exercises` here if local backup must be
-// self-contained.
+// Every durable user-owned table needed for a self-contained local restore.
+// Shared seed/reference tables, cloud-authoritative security/control state and
+// transient projections are classified explicitly below rather than silently
+// omitted.  Ordering is parent-before-child for insertion; deletion reverses
+// it so referential structure survives both halves of the transaction.
 export const BACKUP_TABLES = [
   'workouts',
   'workout_sets',
@@ -7144,6 +7175,11 @@ export const BACKUP_TABLES = [
   'morning_weights',
   'weekly_checkins',
   'coach_outputs',
+  'exercise_user_notes',
+  'workout_notes',
+  'workout_notes_v2',
+  'exercise_goals',
+  'custom_exercises',
   // E10-F1(a): the food domain. These are the user's own Article 9 health
   // records; leaving them out of the free backup meant a lapsed trial user
   // had NO self-service portability path for 14 days of logged food (GDPR
@@ -7160,12 +7196,23 @@ export const BACKUP_TABLES = [
   // Rollups are derived but only recomputed on new writes for a day, so
   // restore them too or historic diary days would render empty totals.
   'daily_intake_rollups',
+  'daily_steps',
+  // Retired cardio has no writer, but existing local rows remain the user's
+  // history and must survive an offline/local-only restore.
+  'cardio_log',
+  'food_swaps',
+  'plan_folders',
   // Device-local physique-photo records. The backup carries the SQLite
   // metadata and scan rows so a restore does not drop the user's own history;
   // image files themselves remain private app documents, not JSON rows.
   'progress_photo_meta',
   'progress_scan_sessions',
   'progress_scan_assets',
+  'progress_scan_classification_history',
+  'exercise_intent',
+  'exercise_swaps',
+  'exercise_slot_defaults',
+  'session_resolutions',
   // CC26 capability lane (CAP-20: exportable): the user's own Article 9
   // capability records travel in the full local export like the food domain
   // above, and restore with it. Restored rows re-imply consent by the
@@ -7173,40 +7220,134 @@ export const BACKUP_TABLES = [
   // your own data; withdrawal afterwards still tombstones everywhere.
   'capability_constraints',
   'session_constraint_effects',
+  'effective_maintenance_memos',
 ];
+
+export const BACKUP_TABLE_DISPOSITION = Object.freeze({
+  included: BACKUP_TABLES,
+  sharedReseedable: Object.freeze({
+    exercises: 'canonical exercise library is bundled/reseeded; per-user definitions are in custom_exercises',
+    foods: 'shared CoFID/OFF reference cache is bundled or pulled again',
+  }),
+  cloudReconstructed: Object.freeze({
+    ed_pattern_flags: 'server-authoritative safety flags are pull-only and must not be client-restored',
+    tier_history: 'server-authoritative entitlement history is pull-only',
+    notification_preferences: 'SQLite sync projection is rebuilt from restored namespaced preferences or cloud',
+    partnerships: 'pair-scoped server authority, not an owner-scoped backup row',
+    partner_week_signals: 'pair-scoped derived/server data',
+    partner_cheers: 'server-validated pair-scoped data',
+    partner_shared_blocks: 'pair-scoped server data',
+    partner_weekly_intentions: 'pair-scoped server data',
+    partner_win_cards: 'pair-scoped server data',
+  }),
+  transient: Object.freeze({
+    pending_sync_ops: 'retry queue reconstructed from durable rows',
+    planned_muscle_volume_sync: 'cloud transport mirror; canonical planned_muscle_volume is included',
+    adaptation_events_sync: 'cloud transport mirror; canonical adaptation_events is included',
+    sync_meta: 'transport watermark',
+    engine_telemetry: 'diagnostic delivery buffer',
+    food_frequents: 'derived top-food cache',
+    food_slot_recents: 'derived recency cache',
+  }),
+  preferenceBacked: Object.freeze({
+    perday_target_offsets: 'retired values and their clock are restored from namespaced AsyncStorage',
+  }),
+});
+
+const INDIRECT_BACKUP_TABLES = new Set(['planned_muscle_volume', 'adaptation_events']);
+
+const BACKUP_EXPORT_QUERIES = Object.freeze({
+  planned_muscle_volume: `SELECT pmv.*, m.user_id AS user_id
+    FROM planned_muscle_volume pmv
+    JOIN mesocycle_weeks mw ON mw.id = pmv.mesocycle_week_id
+    JOIN mesocycles m ON m.id = mw.mesocycle_id
+    WHERE m.user_id = ?`,
+  adaptation_events: `SELECT ae.*, m.user_id AS user_id
+    FROM adaptation_events ae
+    JOIN mesocycle_weeks mw ON mw.id = ae.mesocycle_week_id
+    JOIN mesocycles m ON m.id = mw.mesocycle_id
+    WHERE m.user_id = ?`,
+});
+
+function backupFailure(table, error) {
+  const wrapped = new Error(`Backup export failed for ${table}: ${error?.message ?? 'read failed'}`);
+  wrapped.cause = error;
+  wrapped.backupTable = table;
+  return wrapped;
+}
 
 // Returns { schemaVersion, tables: { tableName: [rawRows...] } }.
 // Raw rows (snake_case) are dumped as-is so a restore is a faithful round-trip.
-export async function dumpAllTables(userId) {
+export async function dumpAllTablesFromDb(d, userId) {
   if (!userId) throw new Error('A signed-in user is required to export a backup.');
-  const d = await db();
-  let schemaVersion = 0;
+  let schemaVersion;
   try {
     const v = await d.getFirstAsync('PRAGMA user_version');
-    schemaVersion = v?.user_version ?? 0;
-  } catch (_) {}
+    if (!Number.isInteger(v?.user_version) || v.user_version < 0) {
+      throw new Error('invalid PRAGMA user_version result');
+    }
+    schemaVersion = v.user_version;
+  } catch (error) {
+    throw backupFailure('PRAGMA user_version', error);
+  }
   const tables = {};
   for (const t of BACKUP_TABLES) {
     try {
       const info = await d.getAllAsync(`PRAGMA table_info(${t})`);
+      if (!Array.isArray(info) || info.length === 0) throw new Error('required table is missing');
       const hasOwner = (info || []).some((column) => column.name === 'user_id');
-      // A table with no ownership column cannot safely travel in a per-account
-      // backup. Current schemas add user_id to every BACKUP_TABLES entry; skip
-      // rather than dump globally if an old/partial schema is encountered.
-      tables[t] = hasOwner
-        ? await d.getAllAsync(`SELECT * FROM ${t} WHERE user_id = ?`, [userId])
-        : [];
-    } catch (_) {
-      tables[t] = [];
+      if (!hasOwner && !INDIRECT_BACKUP_TABLES.has(t)) {
+        throw new Error('required ownership column is missing');
+      }
+      const rows = BACKUP_EXPORT_QUERIES[t]
+        ? await d.getAllAsync(BACKUP_EXPORT_QUERIES[t], [userId])
+        : await d.getAllAsync(`SELECT * FROM ${t} WHERE user_id = ?`, [userId]);
+      if (!Array.isArray(rows) || rows.some((row) => row?.user_id !== userId)) {
+        throw new Error('owner-scoped read returned an invalid row set');
+      }
+      tables[t] = rows;
+    } catch (error) {
+      throw backupFailure(t, error);
     }
   }
   return { schemaVersion, tables };
 }
 
+export async function dumpAllTables(userId) {
+  const d = await db();
+  return dumpAllTablesFromDb(d, userId);
+}
+
+function requireReference(tables, childTable, column, parentTable, { optional = false } = {}) {
+  const parentIds = new Set((tables[parentTable] || []).map((row) => row.id));
+  for (const row of tables[childTable] || []) {
+    const value = row[column];
+    if (optional && value == null) continue;
+    if (typeof value !== 'string' || !value || !parentIds.has(value)) {
+      throw new Error(`Backup reference ${childTable}.${column} does not resolve to ${parentTable}.`);
+    }
+  }
+}
+
+function validateBackupReferences(tables) {
+  requireReference(tables, 'workout_sets', 'workout_id', 'workouts');
+  requireReference(tables, 'routine_exercises', 'routine_id', 'routines');
+  requireReference(tables, 'mesocycle_weeks', 'mesocycle_id', 'mesocycles');
+  requireReference(tables, 'planned_muscle_volume', 'mesocycle_week_id', 'mesocycle_weeks');
+  requireReference(tables, 'adaptation_events', 'mesocycle_week_id', 'mesocycle_weeks');
+  requireReference(tables, 'recipe_ingredients', 'recipe_id', 'recipes');
+  requireReference(tables, 'progress_scan_assets', 'scan_id', 'progress_scan_sessions');
+  requireReference(tables, 'workout_notes_v2', 'workout_id', 'workouts');
+  requireReference(tables, 'session_constraint_effects', 'workout_id', 'workouts');
+  requireReference(tables, 'session_resolutions', 'mesocycle_week_id', 'mesocycle_weeks');
+  requireReference(tables, 'session_resolutions', 'routine_id', 'routines');
+  requireReference(tables, 'session_resolutions', 'workout_id', 'workouts', { optional: true });
+}
+
 // Wipes BACKUP_TABLES and reinserts the supplied rows inside one
 // transaction. All-or-nothing: a failure rolls back and leaves the
 // existing data untouched.
-export async function restoreAllTables(dump, userId) {
+export async function restoreAllTablesIntoDb(d, dump, userId) {
   if (!userId) throw new Error('A signed-in user is required to restore a backup.');
   const tables = dump?.tables || {};
 
@@ -7214,6 +7355,11 @@ export async function restoreAllTables(dump, userId) {
   // destructive transaction. The public primitive must be safe even when a
   // future caller bypasses dataBackup's friendlier outer validation.
   const allowedTables = new Set(BACKUP_TABLES);
+  const suppliedTables = Object.keys(tables);
+  const missingTables = BACKUP_TABLES.filter((table) => !suppliedTables.includes(table));
+  if (missingTables.length > 0) {
+    throw new Error(`Backup is incomplete; missing ${missingTables.join(', ')}.`);
+  }
   for (const [table, rows] of Object.entries(tables)) {
     if (!allowedTables.has(table) || !Array.isArray(rows)) {
       throw new Error(`Backup table ${table} is not supported.`);
@@ -7224,7 +7370,9 @@ export async function restoreAllTables(dump, userId) {
         throw new Error(`Backup table ${table} contains rows for another account.`);
       }
       for (const value of Object.values(row)) {
-        if (value !== null && !['string', 'number'].includes(typeof value)) {
+        if (value !== null && (!['string', 'number'].includes(typeof value)
+          || (typeof value === 'number'
+            && (!Number.isFinite(value) || Math.abs(value) > Number.MAX_SAFE_INTEGER)))) {
           throw new Error(`Backup table ${table} contains a nested record value.`);
         }
       }
@@ -7236,22 +7384,43 @@ export async function restoreAllTables(dump, userId) {
       }
     }
   }
+  validateBackupReferences(tables);
 
-  const d = await db();
+  const schemas = {};
+  for (const table of BACKUP_TABLES) {
+    const info = await d.getAllAsync(`PRAGMA table_info(${table})`);
+    if (!Array.isArray(info) || info.length === 0) throw new Error(`Required restore table ${table} is missing.`);
+    const allowed = new Set(info.map((column) => column.name));
+    if (!allowed.has('user_id') && !INDIRECT_BACKUP_TABLES.has(table)) {
+      throw new Error(`Required restore ownership column is missing from ${table}.`);
+    }
+    schemas[table] = allowed;
+  }
+
   await runInTransaction(d, async () => {
+    // Delete deepest children first while their owner-bearing parents still
+    // exist. The two canonical mesocycle child tables have no user_id column.
+    for (const table of ['adaptation_events', 'planned_muscle_volume']) {
+      await d.runAsync(
+        `DELETE FROM ${table} WHERE mesocycle_week_id IN (
+          SELECT mw.id FROM mesocycle_weeks mw
+          JOIN mesocycles m ON m.id = mw.mesocycle_id
+          WHERE m.user_id = ?
+        )`,
+        [userId],
+      );
+    }
+    for (const table of [...BACKUP_TABLES].reverse()) {
+      if (INDIRECT_BACKUP_TABLES.has(table)) continue;
+      await d.runAsync(`DELETE FROM ${table} WHERE user_id = ?`, [userId]);
+    }
+
     for (const t of BACKUP_TABLES) {
       const rows = tables[t];
-      if (!Array.isArray(rows)) continue;
-      // Allowlist columns from the LIVE schema so a crafted backup can't inject
-      // arbitrary identifiers into the INSERT column list (audit F-005). t is a
-      // fixed BACKUP_TABLES name; only real columns survive the filter.
-      const info = await d.getAllAsync(`PRAGMA table_info(${t})`);
-      const allowed = new Set((info || []).map(c => c.name));
-      if (allowed.size === 0 || !allowed.has('user_id')) continue;
-      await d.runAsync(`DELETE FROM ${t} WHERE user_id = ?`, [userId]);
+      const allowed = schemas[t];
       for (const row of rows) {
-        const cols = Object.keys(row).filter(c => allowed.has(c));
-        if (cols.length === 0) continue;
+        const cols = Object.keys(row).filter((column) => allowed.has(column));
+        if (cols.length === 0) throw new Error(`Backup table ${t} has no restorable columns.`);
         const placeholders = cols.map(() => '?').join(', ');
         const values = cols.map(c => row[c]);
         await d.runAsync(
@@ -7260,7 +7429,17 @@ export async function restoreAllTables(dump, userId) {
         );
       }
     }
+
+    const foreignKeyFailures = await d.getAllAsync('PRAGMA foreign_key_check');
+    if (Array.isArray(foreignKeyFailures) && foreignKeyFailures.length > 0) {
+      throw new Error('Backup restore failed referential-integrity verification.');
+    }
   });
+}
+
+export async function restoreAllTables(dump, userId) {
+  const d = await db();
+  return restoreAllTablesIntoDb(d, dump, userId);
 }
 
 // ─── Adaptive Volume Landmarks ──────────────────────────────────────────────
@@ -8927,8 +9106,7 @@ export function preserveAppliedAdjustments(existingOutputJson, data) {
   return merged;
 }
 
-export async function saveCoachOutput(userId, data) {
-  const d = await db();
+async function saveCoachOutputInTx(d, userId, data) {
   const now = Date.now();
   const existing = await d.getFirstAsync(
     'SELECT id, output_json FROM coach_outputs WHERE user_id = ? AND week_start = ?',
@@ -8962,7 +9140,6 @@ export async function saveCoachOutput(userId, data) {
         now, existing.id,
       ],
     );
-    _scheduleSync();
     return existing.id;
   }
   const json = JSON.stringify(data);
@@ -8993,8 +9170,79 @@ export async function saveCoachOutput(userId, data) {
   // Campaign 1 P0-8 D7: stamp updated_at at birth too (same honest-age
   // rule as the UPDATE branch above).
   await d.runAsync('UPDATE coach_outputs SET updated_at = ? WHERE id = ?', [now, id]);
+  return id;
+}
+
+export async function saveCoachOutput(userId, data) {
+  const d = await db();
+  const id = await saveCoachOutputInTx(d, userId, data);
   _scheduleSync();
   return id;
+}
+
+function validateCoachVolumeChanges(changes) {
+  if (!Array.isArray(changes)) throw new Error('Coach volume changes must be an array.');
+  const muscles = new Set();
+  for (const change of changes) {
+    if (!change || typeof change.muscle !== 'string' || !change.muscle.trim()
+      || muscles.has(change.muscle)
+      || !Number.isInteger(change.plannedSets) || change.plannedSets < 0 || change.plannedSets > 100) {
+      throw new Error('Coach volume changes are malformed.');
+    }
+    for (const key of ['mev', 'mav', 'mrv']) {
+      if (change[key] != null && (!Number.isFinite(change[key]) || change[key] < 0 || change[key] > 100)) {
+        throw new Error('Coach volume landmarks are malformed.');
+      }
+    }
+    muscles.add(change.muscle);
+  }
+}
+
+/**
+ * F-07: consequential coach mutation and its applied receipt are one commit.
+ * Absolute per-muscle targets plus a deterministic user/week receipt make a
+ * retry idempotent; any injected failure rolls back every preceding write.
+ */
+export async function applyCoachTrainingAdjustmentWithDb(d, {
+  userId,
+  weekStart,
+  mesocycleWeekId,
+  changes,
+  coachOutput,
+  setDeload = false,
+}) {
+  if (!userId || !mesocycleWeekId || !Number.isFinite(weekStart)
+    || coachOutput?.weekStart !== weekStart) {
+    throw new Error('Coach adjustment identity is invalid.');
+  }
+  validateCoachVolumeChanges(changes);
+  return runInTransaction(d, async () => {
+    const ownedWeek = await d.getFirstAsync(
+      `SELECT mw.id FROM mesocycle_weeks mw
+       JOIN mesocycles m ON m.id = mw.mesocycle_id
+       WHERE mw.id = ? AND m.user_id = ?`,
+      [mesocycleWeekId, userId],
+    );
+    if (!ownedWeek) throw new Error('Coach adjustment target week is not owned by the current account.');
+
+    if (setDeload) await setMesocycleWeekDeloadInTx(d, mesocycleWeekId);
+    for (const change of changes) {
+      // eslint-disable-next-line no-await-in-loop
+      await upsertPlannedMuscleVolumeInTx(d, {
+        mesocycleWeekId,
+        ...change,
+        source: 'coach',
+      });
+    }
+    return saveCoachOutputInTx(d, userId, coachOutput);
+  });
+}
+
+export async function applyCoachTrainingAdjustmentAtomically(args) {
+  const d = await db();
+  const receiptId = await applyCoachTrainingAdjustmentWithDb(d, args);
+  _scheduleSync();
+  return receiptId;
 }
 
 export async function getLatestCoachOutput(userId) {

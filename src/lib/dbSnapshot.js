@@ -14,12 +14,16 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { logWarn } from './errorLog';
 
+const SQLITE_DIR = `${FileSystem.documentDirectory}SQLite/`;
 // expo-sqlite's fixed location for openDatabaseAsync('volyume.db').
-const DB_PATH = `${FileSystem.documentDirectory}SQLite/volyume.db`;
+const DB_PATH = `${SQLITE_DIR}volyume.db`;
 // Exported for verifyUserWipeClean (database.js), which checks this
 // directory directly during the sign-out wipe-verify pass.
 export const SNAP_DIR = `${FileSystem.documentDirectory}snapshots/`;
 const KEEP = 3; // rolling-N retention (a full DB copy is larger than a delta)
+const RESTORE_STAGE = `${SQLITE_DIR}volyume-restore-stage.db`;
+const RESTORE_ROLLBACK = `${SQLITE_DIR}volyume-restore-rollback.db`;
+const RESTORE_STATE = `${SQLITE_DIR}volyume-restore-state.json`;
 
 // ── Pure helpers (unit-tested; no FS) ────────────────────────────────────────
 
@@ -148,12 +152,14 @@ export async function verifySnapshot(uri) {
     let mode = null;
     try {
       // eslint-disable-next-line global-require
-      const { getOrCreateDbKey } = require('./dbCrypto');
+      const { getOrCreateDbKey, attestSqlCipherConnection } = require('./dbCrypto');
       const { key } = await getOrCreateDbKey();
       if (key) {
-        await handle.execAsync(`PRAGMA key = '${String(key).replace(/'/g, "''")}'`);
-        await handle.getAllAsync('SELECT count(*) FROM sqlite_master');
-        mode = 'encrypted';
+        const { applied } = await attestSqlCipherConnection(handle, key);
+        if (applied) {
+          await handle.getAllAsync('SELECT count(*) FROM sqlite_master');
+          mode = 'encrypted';
+        }
       }
     } catch (_) { mode = null; }
 
@@ -276,10 +282,101 @@ export async function listSnapshots() {
   }
 }
 
+async function fileExists(uri) {
+  return (await FileSystem.getInfoAsync(uri).catch(() => ({ exists: false })))?.exists === true;
+}
+
+async function deleteDatabaseFamily(uri) {
+  for (const suffix of ['', '-wal', '-shm']) {
+    await FileSystem.deleteAsync(`${uri}${suffix}`, { idempotent: true }).catch(() => {});
+  }
+}
+
+function validRestoreState(value) {
+  return value?.version === 1
+    && ['prepared', 'live_moved', 'promoted', 'verified'].includes(value.phase)
+    && typeof value.preRestore === 'string'
+    && value.preRestore.startsWith(SNAP_DIR)
+    && value.preRestore.endsWith('.db');
+}
+
+async function readRestoreState() {
+  if (!(await fileExists(RESTORE_STATE))) return null;
+  let parsed;
+  try { parsed = JSON.parse(await FileSystem.readAsStringAsync(RESTORE_STATE)); }
+  catch (e) { throw new Error(`snapshot restore journal is unreadable: ${e?.message ?? 'invalid JSON'}`); }
+  if (!validRestoreState(parsed)) throw new Error('snapshot restore journal is invalid');
+  return parsed;
+}
+
+async function writeRestoreState(state) {
+  const payload = JSON.stringify({ version: 1, ...state });
+  await FileSystem.writeAsStringAsync(RESTORE_STATE, payload);
+  const readback = await FileSystem.readAsStringAsync(RESTORE_STATE);
+  if (readback !== payload) throw new Error('snapshot restore journal readback mismatch');
+}
+
+/**
+ * Repairs an interrupted restore before the main database is opened.
+ * A rollback file always wins until the promoted live file was verified and
+ * that fact was durably journalled.  This makes every process-death point
+ * converge to either the original live database or a verified replacement.
+ */
+export async function recoverInterruptedSnapshotRestore() {
+  const state = await readRestoreState();
+  const rollbackExists = await fileExists(RESTORE_ROLLBACK);
+
+  if (!state) {
+    if (rollbackExists) {
+      throw new Error('orphaned snapshot rollback preserved for recovery');
+    }
+    await deleteDatabaseFamily(RESTORE_STAGE);
+    return false;
+  }
+
+  const liveExists = await fileExists(DB_PATH);
+  if (state.phase === 'verified' && liveExists && !rollbackExists) {
+    await deleteDatabaseFamily(RESTORE_STAGE);
+    await FileSystem.deleteAsync(RESTORE_STATE, { idempotent: true });
+    return true;
+  }
+
+  if (rollbackExists) {
+    // The original live DB was renamed only after an independently verified
+    // safety snapshot existed.  Restore it; any promoted candidate still
+    // exists at the user's source snapshot and is not the last valid copy.
+    if (liveExists) await deleteDatabaseFamily(DB_PATH);
+    await FileSystem.moveAsync({ from: RESTORE_ROLLBACK, to: DB_PATH });
+  } else if (state.phase === 'prepared' && liveExists) {
+    // The process died before touching live. Nothing to roll back.
+  } else {
+    // The rollback rename may have completed while its directory entry was
+    // later lost. Reconstruct from the already verified pre-restore copy
+    // before touching whatever currently occupies the live path.
+    if (!(await fileExists(state.preRestore))) {
+      throw new Error('interrupted restore has no recoverable live database copy');
+    }
+    await FileSystem.copyAsync({ from: state.preRestore, to: RESTORE_ROLLBACK });
+    const safety = await verifySnapshot(RESTORE_ROLLBACK);
+    if (!safety.ok) throw new Error(`restore safety copy is unusable (${safety.reason})`);
+    if (liveExists) await deleteDatabaseFamily(DB_PATH);
+    await FileSystem.moveAsync({ from: RESTORE_ROLLBACK, to: DB_PATH });
+  }
+
+  const restored = await verifySnapshot(DB_PATH);
+  if (!restored.ok) throw new Error(`rolled-back live database is unusable (${restored.reason})`);
+  await deleteDatabaseFamily(RESTORE_STAGE);
+  await deleteDatabaseFamily(RESTORE_ROLLBACK);
+  await FileSystem.deleteAsync(RESTORE_STATE, { idempotent: true });
+  return true;
+}
+
 // Restore: copy a snapshot back over the live DB. The caller MUST close the DB
 // handle first (closeDatabase) and force a relaunch afterwards — writing over an
 // open SQLite file risks corruption. Throws on failure so the UI can report it.
 export async function restoreSnapshot(uri) {
+  await recoverInterruptedSnapshotRestore();
+
   // Finding 5: verify BEFORE overwriting. Restoring an unusable snapshot used
   // to destroy the live database on the way to failing, leaving the user with
   // neither copy — the opposite of what this screen is for.
@@ -291,26 +388,59 @@ export async function restoreSnapshot(uri) {
     throw err;
   }
 
-  // And keep a way back. If the copy below fails part-way the live database is
-  // already damaged, so the pre-restore state has to exist somewhere first.
-  // Best-effort by necessity — a full disk must not block a restore the user
-  // has asked for — but it costs nothing when it works.
+  // A restore is refused unless the live database exists and a VERIFIED safety
+  // copy can be made. Full disk is exactly when continuation is least safe.
+  if (!(await fileExists(DB_PATH))) throw new Error('live database is missing');
   const preRestore = `${SNAP_DIR}${snapshotName('prerestore', {})}`;
-  try {
-    await FileSystem.makeDirectoryAsync(SNAP_DIR, { intermediates: true }).catch(() => {});
-    await FileSystem.copyAsync({ from: DB_PATH, to: preRestore });
-    await pruneSnapshots(KEEP);
-  } catch (e) {
-    logWarn('database.snapshot.preRestore', e?.message ?? 'pre-restore copy failed');
+  await FileSystem.makeDirectoryAsync(SNAP_DIR, { intermediates: true });
+  await FileSystem.copyAsync({ from: DB_PATH, to: preRestore });
+  const safety = await verifySnapshot(preRestore);
+  if (!safety.ok) {
+    await FileSystem.deleteAsync(preRestore, { idempotent: true }).catch(() => {});
+    const err = new Error(`pre-restore safety copy is unusable (${safety.reason})`);
+    err.code = 'SNAPSHOT_SAFETY_COPY_FAILED';
+    throw err;
   }
 
-  await FileSystem.copyAsync({ from: uri, to: DB_PATH });
-  // Drop the WAL/SHM sidecars of the OLD database (audit 2026-07-01): WAL mode
-  // is on, so leaving volyume.db-wal / -shm in place means the reopened DB
-  // replays the old, pre-restore commits over the file we just restored,
-  // silently undoing the restore. Mirrors the ['','-wal','-shm'] cleanup
-  // dbCrypto.js does at its swap points. Best-effort; a missing sidecar is fine.
-  for (const s of ['-wal', '-shm']) {
-    try { await FileSystem.deleteAsync(`${DB_PATH}${s}`, { idempotent: true }); } catch (_) { /* best-effort */ }
+  // Stage and independently verify the exact bytes that will be promoted.
+  await deleteDatabaseFamily(RESTORE_STAGE);
+  await FileSystem.copyAsync({ from: uri, to: RESTORE_STAGE });
+  const staged = await verifySnapshot(RESTORE_STAGE);
+  if (!staged.ok) {
+    await deleteDatabaseFamily(RESTORE_STAGE);
+    const err = new Error(`staged snapshot is unusable (${staged.reason})`);
+    err.code = 'SNAPSHOT_UNUSABLE';
+    err.reason = staged.reason;
+    throw err;
+  }
+
+  const state = { phase: 'prepared', preRestore };
+  await writeRestoreState(state);
+  try {
+    await FileSystem.moveAsync({ from: DB_PATH, to: RESTORE_ROLLBACK });
+    await writeRestoreState({ ...state, phase: 'live_moved' });
+    // The old WAL was checkpointed before closeDatabase returned. Delete its
+    // now-stale sidecars only after both rollback copies and the journal exist.
+    for (const suffix of ['-wal', '-shm']) {
+      await FileSystem.deleteAsync(`${DB_PATH}${suffix}`, { idempotent: true }).catch(() => {});
+    }
+    await FileSystem.moveAsync({ from: RESTORE_STAGE, to: DB_PATH });
+    await writeRestoreState({ ...state, phase: 'promoted' });
+
+    const promoted = await verifySnapshot(DB_PATH);
+    if (!promoted.ok) throw new Error(`promoted snapshot is unusable (${promoted.reason})`);
+    await writeRestoreState({ ...state, phase: 'verified' });
+
+    await deleteDatabaseFamily(RESTORE_ROLLBACK);
+    await FileSystem.deleteAsync(RESTORE_STATE, { idempotent: true });
+    await pruneSnapshots(KEEP);
+  } catch (e) {
+    logWarn('database.snapshot.restore', e?.message ?? 'restore failed');
+    try { await recoverInterruptedSnapshotRestore(); }
+    catch (rollbackError) {
+      e.rollbackError = rollbackError;
+      e.code = 'SNAPSHOT_ROLLBACK_FAILED';
+    }
+    throw e;
   }
 }

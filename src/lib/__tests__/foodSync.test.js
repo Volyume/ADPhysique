@@ -219,15 +219,14 @@ describe('applyFavouriteFromCloud', () => {
 });
 
 describe('applyWaterFromCloud', () => {
-  test('clamps negative ml values to 0', async () => {
+  test('rejects negative ml values instead of binding or silently clamping them', async () => {
     const { applyWaterFromCloud } = require('../food/db');
     await applyWaterFromCloud(UID, {
       entry_date: '2026-05-23',
       ml: -250,
       updated_at: '2026-05-23T09:00:00Z',
     });
-    const { params } = writes[0];
-    expect(params[2]).toBe(0);
+    expect(writes).toHaveLength(0);
   });
 
   test('only overwrites when the cloud row is fresher', async () => {

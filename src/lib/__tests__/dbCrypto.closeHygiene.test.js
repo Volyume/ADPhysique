@@ -47,6 +47,9 @@ const FileSystem = require('expo-file-system/legacy');
 function handle({ isReadable, closeThrows = false }) {
   return {
     execAsync: jest.fn(async () => {}),
+    getFirstAsync: jest.fn(async (sql) => (
+      /cipher_version/i.test(sql) ? { cipher_version: '4.6.1 community' } : { user_version: 0 }
+    )),
     getAllAsync: jest.fn(async (sql) => {
       if (sql.includes('sqlite_master') && !isReadable) throw new Error('file is not a database');
       return [];

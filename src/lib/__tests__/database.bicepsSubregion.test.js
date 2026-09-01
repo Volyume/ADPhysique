@@ -73,7 +73,7 @@
  */
 
 const { DatabaseSync } = require('node:sqlite');
-const { runMigrations } = require('../database');
+const { runMigrations, CURRENT_SCHEMA_VERSION } = require('../database');
 
 function adapt(raw) {
   return {
@@ -91,26 +91,8 @@ function adapt(raw) {
 // database.frontDeltMigration.test.js: probe from version 0 and read the
 // final PRAGMA user_version the runner sets, which equals
 // SCHEMA_MIGRATIONS.length.
-function fakeProbeDb() {
-  let version = 0;
-  return {
-    getFirstAsync: async (sql) => (/user_version/i.test(String(sql)) ? { user_version: version } : null),
-    getAllAsync: async () => [],
-    runAsync: async () => ({}),
-    execAsync: async (sql) => {
-      const m = /PRAGMA user_version = (\d+)/.exec(String(sql));
-      if (m) version = Number(m[1]);
-    },
-    withTransactionAsync: async (fn) => fn(),
-    isInTransactionSync: () => false,
-    get _version() { return version; },
-  };
-}
-
 async function totalMigrationCount() {
-  const probe = fakeProbeDb();
-  await runMigrations(probe);
-  return probe._version;
+  return CURRENT_SCHEMA_VERSION;
 }
 
 function freshExercisesDb() {
@@ -118,9 +100,24 @@ function freshExercisesDb() {
   raw.exec(`CREATE TABLE exercises (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
+    equipment TEXT,
+    movement_pattern TEXT,
+    compound_isolation TEXT,
+    exercise_type TEXT,
+    is_custom INTEGER DEFAULT 0,
     primary_muscle TEXT,
-    subregion TEXT
+    subregion TEXT,
+    equipment_category TEXT,
+    machine_type TEXT,
+    force TEXT,
+    laterality TEXT,
+    difficulty INTEGER,
+    machine_ok INTEGER,
+    home_ok INTEGER,
+    equipment_profiles TEXT
   );`);
+  raw.exec('CREATE TABLE custom_exercises (id TEXT PRIMARY KEY, user_id TEXT, updated_at INTEGER);');
+  raw.exec('CREATE TABLE exercise_swaps (id TEXT PRIMARY KEY, user_id TEXT, from_exercise_id TEXT);');
   // v66 (Ultimate-Audit item 12) and v67 (Ultimate-Audit item 15) now also
   // run alongside v64/v65 in this same harness and both touch food_entries:
   // v66 ALTERs it (weight_state), v67 ALTERs it again (eaten_at) AND

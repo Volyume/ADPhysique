@@ -32,7 +32,7 @@
  */
 
 const { DatabaseSync } = require('node:sqlite');
-const { runMigrations, runInTransaction } = require('../database');
+const { runMigrations, runInTransaction, CURRENT_SCHEMA_VERSION } = require('../database');
 
 /**
  * expo-sqlite's async surface over node:sqlite, with two test affordances:
@@ -74,6 +74,32 @@ function adapt(raw, onStatement = () => {}) {
 
 const version = (raw) => raw.prepare('PRAGMA user_version').get().user_version;
 const columns = (raw, table) => raw.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+
+function strictAdapt(raw, { beforeExec = () => {}, beforeGetAll = () => {} } = {}) {
+  return {
+    execAsync: async (sql) => {
+      beforeExec(String(sql));
+      raw.exec(String(sql));
+    },
+    getAllAsync: async (sql, params = []) => {
+      beforeGetAll(String(sql));
+      return raw.prepare(sql).all(...params);
+    },
+    getFirstAsync: async (sql, params = []) => raw.prepare(sql).get(...params) ?? null,
+    runAsync: async (sql, params = []) => raw.prepare(sql).run(...params),
+    withTransactionAsync: async (fn) => {
+      raw.exec('BEGIN');
+      try {
+        await fn();
+        raw.exec('COMMIT');
+      } catch (error) {
+        raw.exec('ROLLBACK');
+        throw error;
+      }
+    },
+    isInTransactionSync: () => raw.isTransaction,
+  };
+}
 
 /** v1 is frozen by the append-only rule, so these two landmarks are stable. */
 const V1_EARLY_COLUMN = 'starting_weight';               // first op of v1
@@ -180,6 +206,102 @@ describe('the benign-error skip still behaves as it did', () => {
     await expect(runMigrations(second)).rejects.toThrow('stop');
     expect(version(raw)).toBe(1);
     expect(columns(raw, 'routine_exercises')).toContain(V1_EARLY_COLUMN);
+  });
+});
+
+describe('current function migrations fail closed under real storage faults', () => {
+  test('an unreadable user_version aborts before a transaction or write starts', async () => {
+    const d = {
+      getFirstAsync: jest.fn(async () => { throw new Error('disk I/O error reading header'); }),
+      withTransactionAsync: jest.fn(),
+      execAsync: jest.fn(),
+    };
+    await expect(runMigrations(d)).rejects.toThrow('disk I/O error reading header');
+    expect(d.withTransactionAsync).not.toHaveBeenCalled();
+    expect(d.execAsync).not.toHaveBeenCalled();
+  });
+
+  test('load-semantics disk-full rolls back the earlier column and version marker', async () => {
+    const raw = new DatabaseSync(':memory:');
+    raw.exec(`CREATE TABLE exercises (
+      id TEXT PRIMARY KEY, name TEXT, equipment TEXT, exercise_type TEXT,
+      is_custom INTEGER DEFAULT 0
+    )`);
+    raw.exec('CREATE TABLE custom_exercises (id TEXT PRIMARY KEY)');
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 6}`);
+    const d = strictAdapt(raw, {
+      beforeExec(sql) {
+        if (/ALTER TABLE custom_exercises ADD COLUMN load_semantics/i.test(sql)) {
+          throw new Error('database or disk is full');
+        }
+      },
+    });
+
+    await expect(runMigrations(d)).rejects.toThrow('database or disk is full');
+    expect(version(raw)).toBe(CURRENT_SCHEMA_VERSION - 6);
+    expect(columns(raw, 'exercises')).not.toContain('load_semantics');
+    expect(columns(raw, 'custom_exercises')).not.toContain('load_semantics');
+  });
+
+  test('a failed schema readback rolls back the DDL instead of recording success', async () => {
+    const raw = new DatabaseSync(':memory:');
+    raw.exec(`CREATE TABLE exercises (
+      id TEXT PRIMARY KEY, name TEXT, equipment TEXT, exercise_type TEXT,
+      is_custom INTEGER DEFAULT 0
+    )`);
+    raw.exec('CREATE TABLE custom_exercises (id TEXT PRIMARY KEY)');
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 6}`);
+    let customReads = 0;
+    const d = strictAdapt(raw, {
+      beforeGetAll(sql) {
+        if (/PRAGMA table_info\(custom_exercises\)/i.test(sql) && ++customReads === 2) {
+          throw new Error('disk I/O error during schema readback');
+        }
+      },
+    });
+
+    await expect(runMigrations(d)).rejects.toThrow('schema readback');
+    expect(version(raw)).toBe(CURRENT_SCHEMA_VERSION - 6);
+    expect(columns(raw, 'exercises')).not.toContain('load_semantics');
+    expect(columns(raw, 'custom_exercises')).not.toContain('load_semantics');
+  });
+
+  test('a later helper failure rolls back earlier helper DDL in the same version', async () => {
+    const raw = new DatabaseSync(':memory:');
+    raw.exec('CREATE TABLE exercise_swaps (id TEXT PRIMARY KEY)');
+    raw.exec('CREATE TABLE capability_constraints (id TEXT PRIMARY KEY)');
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 3}`);
+    const d = strictAdapt(raw, {
+      beforeExec(sql) {
+        if (/ALTER TABLE capability_constraints ADD COLUMN effective_choice/i.test(sql)) {
+          throw new Error('synthetic I/O failure on second ALTER');
+        }
+      },
+    });
+
+    await expect(runMigrations(d)).rejects.toThrow('second ALTER');
+    expect(version(raw)).toBe(CURRENT_SCHEMA_VERSION - 3);
+    expect(columns(raw, 'exercise_swaps')).not.toContain('cause');
+    expect(columns(raw, 'capability_constraints')).not.toContain('effective_choice');
+  });
+
+  test('an exact already-present schema rerun advances without message-based swallowing', async () => {
+    const raw = new DatabaseSync(':memory:');
+    raw.exec('CREATE TABLE exercise_swaps (id TEXT PRIMARY KEY, cause TEXT)');
+    raw.exec('CREATE TABLE capability_constraints (id TEXT PRIMARY KEY, effective_choice TEXT)');
+    raw.exec(`CREATE TABLE exercises (
+      id TEXT PRIMARY KEY, name TEXT, equipment TEXT, movement_pattern TEXT,
+      primary_muscle TEXT, compound_isolation TEXT, is_custom INTEGER DEFAULT 0
+    )`);
+    raw.exec(`PRAGMA user_version = ${CURRENT_SCHEMA_VERSION - 3}`);
+
+    await expect(runMigrations(strictAdapt(raw))).resolves.not.toThrow();
+    expect(version(raw)).toBe(CURRENT_SCHEMA_VERSION);
+    expect(columns(raw, 'exercise_swaps')).toContain('cause');
+    expect(columns(raw, 'capability_constraints')).toEqual(expect.arrayContaining([
+      'effective_choice', 'adaptation_mode',
+    ]));
+    expect(columns(raw, 'exercises')).toContain('weight_bearing_hands');
   });
 });
 

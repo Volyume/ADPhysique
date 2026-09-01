@@ -27,7 +27,13 @@ function makeFakeDb(startVersion) {
       if (/user_version/i.test(String(sql))) return { user_version: version };
       return null;
     },
-    getAllAsync: async () => [],
+    getAllAsync: async (sql) => (/PRAGMA table_info/i.test(String(sql)) ? [
+      { name: 'load_semantics' },
+      { name: 'cause' },
+      { name: 'effective_choice' },
+      { name: 'weight_bearing_hands' },
+      { name: 'adaptation_mode' },
+    ] : []),
     runAsync: async () => ({}),
     execAsync: async (sql) => {
       const s = String(sql);

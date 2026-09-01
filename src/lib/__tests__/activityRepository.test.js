@@ -20,34 +20,43 @@ function makeRepo({ firstRows = [], allRows = [], now = 1700000000000 } = {}) {
     db: jest.fn(() => Promise.resolve(dbHandle)),
     rowToCamel,
     scheduleSync,
-    dayKey: (ms) => `day-${ms}`,
+    dayKey: () => '2026-07-05',
     now: () => now,
   });
   return { repo, dbHandle, scheduleSync };
 }
 
 describe('activity database repository', () => {
-  test('daily steps use the injected local day key, clamp values and schedule sync after write', async () => {
+  test('daily steps use the injected local day key and schedule sync after a bounded write', async () => {
     const { repo, dbHandle, scheduleSync } = makeRepo();
 
-    expect(repo.activityDayKey(123)).toBe('day-123');
-    const result = await repo.setDailySteps('u1', { steps: 999999, source: 'watch' });
+    expect(repo.activityDayKey(123)).toBe('2026-07-05');
+    const result = await repo.setDailySteps('u1', { steps: 200000, source: 'watch' });
 
     expect(result).toEqual({
-      entryDate: 'day-1700000000000',
+      entryDate: '2026-07-05',
       steps: 200000,
       source: 'watch',
       updatedAt: 1700000000000,
     });
     expect(dbHandle.runAsync).toHaveBeenCalledWith(expect.stringContaining('INSERT INTO daily_steps'), [
       'u1',
-      'day-1700000000000',
+      '2026-07-05',
       200000,
       'watch',
       1700000000000,
     ]);
     expect(scheduleSync).toHaveBeenCalledTimes(1);
   });
+
+  test.each([NaN, Infinity, -Infinity, Number.MAX_VALUE, 200001, -1, '8123', '', null])(
+    'rejects unsafe local steps %p before opening SQLite',
+    async (steps) => {
+      const { repo, dbHandle } = makeRepo();
+      await expect(repo.setDailySteps('u1', { steps, source: 'manual' })).rejects.toThrow(/invalid activity/);
+      expect(dbHandle.runAsync).not.toHaveBeenCalled();
+    },
+  );
 
   // insertCardioLog/updateCardioLog were removed with the cardio-logging
   // product boundary (D95, Campaign 4): no local writer remains. deleteCardioLog
@@ -81,5 +90,26 @@ describe('activity database repository', () => {
       'watch',
       new Date('2026-07-05T10:15:30.000Z').getTime(),
     ]);
+  });
+
+  test.each([
+    { entry_date: '2026-07-05', steps: NaN, source: 'watch', updated_at: '2026-07-05T10:15:30Z' },
+    { entry_date: '2026-07-05', steps: '8123', source: 'watch', updated_at: '2026-07-05T10:15:30Z' },
+    { entry_date: '2026-02-30', steps: 8123, source: 'watch', updated_at: '2026-07-05T10:15:30Z' },
+    { entry_date: '2026-07-05', steps: 8123, source: 'bogus', updated_at: '2026-07-05T10:15:30Z' },
+    { entry_date: '2026-07-05', steps: 8123, source: 'watch', updated_at: 'not-a-date' },
+  ])('skips a malformed cloud steps row without touching SQLite', async (row) => {
+    const { repo, dbHandle } = makeRepo();
+    await expect(repo.insertDailyStepsFromCloud('u1', row)).resolves.toBe(false);
+    expect(dbHandle.runAsync).not.toHaveBeenCalled();
+  });
+
+  test('skips malformed legacy cardio rows without resurrecting a writer or poisoning sync', async () => {
+    const { repo, dbHandle } = makeRepo();
+    await expect(repo.insertCardioLogFromCloud('u1', {
+      id: 'legacy-1', entry_date: '2026-07-05', duration_min: Infinity,
+      activity_name: 'Walk', source: 'manual',
+    })).resolves.toBe(false);
+    expect(dbHandle.runAsync).not.toHaveBeenCalled();
   });
 });

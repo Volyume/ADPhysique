@@ -18,7 +18,7 @@ import { isProfileAvatarUriForUser } from './profileAvatar';
 import { logInfo } from './errorLog';
 
 const BACKUP_FORMAT = 'volyume-backup';
-const BACKUP_FORMAT_VERSION = 2;
+export const BACKUP_FORMAT_VERSION = 3;
 export const MAX_BACKUP_BYTES = 25 * 1024 * 1024;
 export const MAX_BACKUP_ROWS = 250000;
 const MAX_ROWS_PER_TABLE = 100000;
@@ -323,6 +323,7 @@ export async function exportBackup(userId) {
     exportedAt: new Date().toISOString(),
     app: 'Volyume',
     ownerUserId: userId,
+    tableManifest: BACKUP_TABLES.map((name) => ({ name, rows: tables[name].length })),
     sqlite: tables,
     prefs,
   };
@@ -351,7 +352,7 @@ export async function exportBackup(userId) {
     await removeTemporaryBackupFile(fileUri);
   }
 
-  return { fileUri: null, bytes: json.length, temporaryFileRemoved: true };
+  return { fileUri: null, bytes: utf8ByteLength(json), temporaryFileRemoved: true };
 }
 
 export function assertBackupShape(parsed, currentUserId) {
@@ -363,6 +364,26 @@ export function assertBackupShape(parsed, currentUserId) {
     throw new Error('That backup belongs to a different account.');
   }
   const allowedTables = new Set(BACKUP_TABLES);
+  const tableNames = Object.keys(parsed.sqlite);
+  if (tableNames.some((table) => !allowedTables.has(table))) {
+    throw new Error('That backup has an unsupported table shape.');
+  }
+  if (tableNames.length !== BACKUP_TABLES.length
+    || BACKUP_TABLES.some((table) => !Object.prototype.hasOwnProperty.call(parsed.sqlite, table))) {
+    throw new Error('That backup is incomplete and cannot safely replace current data.');
+  }
+  if (!Array.isArray(parsed.tableManifest)
+    || parsed.tableManifest.length !== BACKUP_TABLES.length) {
+    throw new Error('That backup is missing its integrity manifest.');
+  }
+  for (let i = 0; i < BACKUP_TABLES.length; i += 1) {
+    const expected = BACKUP_TABLES[i];
+    const entry = parsed.tableManifest[i];
+    if (entry?.name !== expected || !Number.isInteger(entry?.rows) || entry.rows < 0
+      || entry.rows !== parsed.sqlite[expected]?.length) {
+      throw new Error('That backup failed its integrity manifest check.');
+    }
+  }
   let totalRows = 0;
   for (const [table, rows] of Object.entries(parsed.sqlite)) {
     if (!allowedTables.has(table) || !Array.isArray(rows) || rows.length > MAX_ROWS_PER_TABLE) {
@@ -477,9 +498,9 @@ export async function importBackup(currentUserId) {
   // false), so v0 / pre-version backups would be applied to current tables
   // with potentially incompatible row shapes.
   const fv = parsed.formatVersion;
-  if (typeof fv !== 'number' || fv < 1) {
+  if (typeof fv !== 'number' || fv < BACKUP_FORMAT_VERSION) {
     throw new Error(
-      'This backup is missing a version marker. It may be from a pre-release build; export a fresh backup from this version of the app.',
+      'This backup predates complete owner-bound exports. Export a fresh backup from the latest Volyume before restoring.',
     );
   }
   if (fv > BACKUP_FORMAT_VERSION) {

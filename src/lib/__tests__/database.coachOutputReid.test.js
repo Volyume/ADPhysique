@@ -23,7 +23,7 @@
  */
 
 const { DatabaseSync } = require('node:sqlite');
-const { runMigrations } = require('../database');
+const { runMigrations, CURRENT_SCHEMA_VERSION } = require('../database');
 
 jest.mock('expo-sqlite');
 
@@ -38,27 +38,7 @@ function adapt(raw) {
   };
 }
 
-function fakeProbeDb() {
-  let version = 0;
-  return {
-    getFirstAsync: async (sql) => (/user_version/i.test(String(sql)) ? { user_version: version } : null),
-    getAllAsync: async () => [],
-    runAsync: async () => ({}),
-    execAsync: async (sql) => {
-      const m = /PRAGMA user_version = (\d+)/.exec(String(sql));
-      if (m) version = Number(m[1]);
-    },
-    withTransactionAsync: async (fn) => fn(),
-    isInTransactionSync: () => false,
-    get _version() { return version; },
-  };
-}
-
-async function totalMigrationCount() {
-  const probe = fakeProbeDb();
-  await runMigrations(probe);
-  return probe._version;
-}
+async function totalMigrationCount() { return CURRENT_SCHEMA_VERSION; }
 
 function freshDb() {
   const raw = new DatabaseSync(':memory:');
@@ -70,7 +50,12 @@ function freshDb() {
   // C16 job 10 (v76) adds a column to routine_exercises, so the fixture has
   // to declare the table this migration list touches.
   raw.exec('CREATE TABLE routine_exercises (id TEXT PRIMARY KEY, routine_id TEXT, exercise_id TEXT);');
-  raw.exec(`CREATE TABLE exercises (id TEXT PRIMARY KEY, name TEXT, primary_muscle TEXT, subregion TEXT);`);
+  raw.exec(`CREATE TABLE exercises (
+    id TEXT PRIMARY KEY, name TEXT, primary_muscle TEXT, subregion TEXT,
+    equipment TEXT, movement_pattern TEXT, compound_isolation TEXT,
+    exercise_type TEXT, is_custom INTEGER, equipment_category TEXT
+  );`);
+  raw.exec('CREATE TABLE custom_exercises (id TEXT PRIMARY KEY, name TEXT);');
   // C18 block progression widened this window by two, which pulls a migration
   // touching exercise_swaps into range. Same reasoning as the tables above:
   // it exists on a real device, and empty is enough because this suite

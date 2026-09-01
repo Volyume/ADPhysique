@@ -72,8 +72,9 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 // Capture what the restore actually writes, so the assertions are about
 // the rows that reach the database rather than about the file on disk.
 const mockState = { restored: null, restoreFailure: null };
+const mockBackupTables = ['progress_scan_sessions', 'progress_scan_assets', 'progress_photo_meta', 'custom_foods'];
 jest.mock('../database', () => ({
-  BACKUP_TABLES: ['progress_scan_sessions', 'progress_scan_assets', 'progress_photo_meta', 'custom_foods'],
+  BACKUP_TABLES: mockBackupTables,
   dumpAllTables: jest.fn(async () => ({ schemaVersion: 1, tables: {} })),
   restoreAllTables: jest.fn(async (dump) => {
     if (mockState.restoreFailure) throw mockState.restoreFailure;
@@ -96,11 +97,12 @@ const KEPT_PHOTO = `${DIR}1000.jpg`;   // the one file that survived
 const GONE_PHOTO = `${DIR}2000.jpg`;   // referenced, absent
 
 function backupFile(overrides = {}) {
-  return {
+  const file = {
     format: 'volyume-backup',
-    formatVersion: 1,
+    formatVersion: 3,
     schemaVersion: 1,
     exportedAt: '2026-08-01T00:00:00.000Z',
+    ownerUserId: U,
     sqlite: {
       progress_scan_sessions: [
         { id: 's-1', user_id: U, captured_at: 1, estimated_body_fat: 18.2, signals_json: '{}' },
@@ -127,9 +129,12 @@ function backupFile(overrides = {}) {
       ...(overrides.prefs ?? {}),
     },
   };
+  file.tableManifest = mockBackupTables.map((name) => ({ name, rows: file.sqlite[name].length }));
+  return file;
 }
 
 async function runImport(file = backupFile(), assetOverrides = {}) {
+  file.tableManifest = mockBackupTables.map((name) => ({ name, rows: file.sqlite[name]?.length ?? -1 }));
   DocumentPicker.getDocumentAsync.mockResolvedValue({
     canceled: false, assets: [{ uri: 'file:///cache/b.json', ...assetOverrides }],
   });
@@ -160,17 +165,16 @@ describe('hostile backup ownership and resource limits', () => {
     expect(mockState.restored).toBeNull();
   });
 
-  test('v2 owner binding rejects a backup labelled for another account', async () => {
+  test('v3 owner binding rejects a backup labelled for another account', async () => {
     const file = backupFile({});
-    file.formatVersion = 2;
     file.ownerUserId = 'attacker';
     await expect(runImport(file)).rejects.toThrow(/different account/i);
     expect(mockState.restored).toBeNull();
   });
 
-  test('v2 owner binding rejects a missing owner marker', async () => {
+  test('v3 owner binding rejects a missing owner marker', async () => {
     const file = backupFile();
-    file.formatVersion = 2;
+    delete file.ownerUserId;
     await expect(runImport(file)).rejects.toThrow(/different account/i);
     expect(mockState.restored).toBeNull();
   });

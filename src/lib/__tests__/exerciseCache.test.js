@@ -20,7 +20,13 @@ jest.mock('expo-sqlite', () => {
       }
       return Promise.resolve([]);
     }),
-    getFirstAsync: jest.fn(() => Promise.resolve(null)),
+    getFirstAsync: jest.fn((sql) => {
+      if (/PRAGMA\s+cipher_version/i.test(String(sql))) {
+        return Promise.resolve({ cipher_version: 'test-sqlcipher-4' });
+      }
+      if (/PRAGMA\s+user_version/i.test(String(sql))) return Promise.resolve({ user_version: 10000 });
+      return Promise.resolve(null);
+    }),
     withTransactionAsync: jest.fn(async (fn) => { await fn(); }),
     isInTransactionSync: jest.fn(() => false),
     closeAsync: jest.fn(() => Promise.resolve()),

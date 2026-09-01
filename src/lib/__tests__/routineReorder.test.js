@@ -168,6 +168,15 @@ describe('SCHEMA_MIGRATIONS v61 (routines.position)', () => {
       },
       getAllAsync: async (sql) => {
         if (/SELECT id, programme_id FROM routines/i.test(String(sql))) return existingRoutines;
+        if (/PRAGMA\s+table_info\(custom_exercises\)/i.test(String(sql))) {
+          return [{ name: 'id' }, { name: 'load_semantics' }];
+        }
+        if (/PRAGMA\s+table_info\(exercise_swaps\)/i.test(String(sql))) {
+          return [{ name: 'id' }, { name: 'cause' }];
+        }
+        if (/PRAGMA\s+table_info\(capability_constraints\)/i.test(String(sql))) {
+          return [{ name: 'id' }, { name: 'effective_choice' }, { name: 'adaptation_mode' }];
+        }
         return [];
       },
       runAsync: async (sql, params) => { updates.push([sql, params]); return {}; },

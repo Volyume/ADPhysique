@@ -17,7 +17,7 @@
 // CC29 appended one further migration (swap cause + effective choice
 // columns; inert here), so the window widens by one more.
 const { DatabaseSync } = require('node:sqlite');
-const { runMigrations } = require('../database');
+const { runMigrations, CURRENT_SCHEMA_VERSION } = require('../database');
 const { deriveDemandMetadata } = require('../capability/demands');
 
 jest.mock('expo-sqlite');
@@ -33,35 +33,22 @@ function adapt(raw) {
   };
 }
 
-function fakeProbeDb() {
-  let version = 0;
-  return {
-    getFirstAsync: async (sql) => (/user_version/i.test(String(sql)) ? { user_version: version } : null),
-    getAllAsync: async () => [],
-    runAsync: async () => ({}),
-    execAsync: async (sql) => {
-      const m = /PRAGMA user_version = (\d+)/.exec(String(sql));
-      if (m) version = Number(m[1]);
-    },
-    withTransactionAsync: async (fn) => fn(),
-    isInTransactionSync: () => false,
-    get _version() { return version; },
-  };
-}
-
 async function totalMigrationCount() {
-  const probe = fakeProbeDb();
-  await runMigrations(probe);
-  return probe._version;
+  return CURRENT_SCHEMA_VERSION;
 }
 
 function freshDb() {
   const raw = new DatabaseSync(':memory:');
   raw.exec(`CREATE TABLE exercises (
     id TEXT PRIMARY KEY, name TEXT, primary_muscle TEXT, equipment TEXT,
-    movement_pattern TEXT, compound_isolation TEXT, subregion TEXT,
-    is_custom INTEGER DEFAULT 0, updated_at INTEGER
+    movement_pattern TEXT, compound_isolation TEXT, exercise_type TEXT, subregion TEXT,
+    is_custom INTEGER DEFAULT 0, updated_at INTEGER,
+    equipment_category TEXT, machine_type TEXT, force TEXT, laterality TEXT,
+    difficulty INTEGER, machine_ok INTEGER, home_ok INTEGER, equipment_profiles TEXT
   )`);
+  raw.exec('CREATE TABLE custom_exercises (id TEXT PRIMARY KEY, user_id TEXT, updated_at INTEGER);');
+  raw.exec('CREATE TABLE exercise_swaps (id TEXT PRIMARY KEY, user_id TEXT, from_exercise_id TEXT);');
+  raw.exec('CREATE TABLE capability_constraints (id TEXT PRIMARY KEY, user_id TEXT, state TEXT, episode_group_id TEXT);');
   raw.prepare('INSERT INTO exercises (id, name, primary_muscle, equipment, movement_pattern, compound_isolation, is_custom, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     .run('ex-squat', 'Barbell Back Squat', 'quads', 'barbell', 'squat', 'compound', 0, 111);
   raw.prepare('INSERT INTO exercises (id, name, primary_muscle, equipment, movement_pattern, compound_isolation, is_custom, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
@@ -108,14 +95,6 @@ test('a pre-CC27 database upgrades: canonical rows derive, matching the seed der
 
 test('a custom with an equipment string gains EQUIPMENT metadata (section 34.1), demands stay NULL', async () => {
   const raw = freshDb();
-  raw.exec('ALTER TABLE exercises ADD COLUMN equipment_category TEXT');
-  raw.exec('ALTER TABLE exercises ADD COLUMN machine_type TEXT');
-  raw.exec('ALTER TABLE exercises ADD COLUMN force TEXT');
-  raw.exec('ALTER TABLE exercises ADD COLUMN laterality TEXT');
-  raw.exec('ALTER TABLE exercises ADD COLUMN difficulty INTEGER');
-  raw.exec('ALTER TABLE exercises ADD COLUMN machine_ok INTEGER');
-  raw.exec('ALTER TABLE exercises ADD COLUMN home_ok INTEGER');
-  raw.exec('ALTER TABLE exercises ADD COLUMN equipment_profiles TEXT');
   raw.prepare("UPDATE exercises SET equipment = 'dumbbell' WHERE id = 'ex-custom'").run();
   await runLast(raw, 4);
 

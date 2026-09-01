@@ -36,6 +36,18 @@ jest.mock('expo-file-system/legacy', () => ({
     if (!(from in mockFiles)) throw new Error(`no such file: ${from}`);
     mockFiles[to] = { ...mockFiles[from] };
   }),
+  moveAsync: jest.fn(async ({ from, to }) => {
+    if (!(from in mockFiles)) throw new Error(`no such file: ${from}`);
+    mockFiles[to] = { ...mockFiles[from] };
+    delete mockFiles[from];
+  }),
+  writeAsStringAsync: jest.fn(async (uri, content) => {
+    mockFiles[uri] = { content, size: String(content).length };
+  }),
+  readAsStringAsync: jest.fn(async (uri) => {
+    if (!(uri in mockFiles)) throw new Error(`no such file: ${uri}`);
+    return mockFiles[uri].content;
+  }),
   deleteAsync: jest.fn(async (uri) => { delete mockFiles[uri]; }),
   getInfoAsync: jest.fn(async (uri) => (
     uri in mockFiles ? { exists: true, size: mockFiles[uri].size } : { exists: false }
@@ -66,8 +78,11 @@ jest.mock('expo-sqlite', () => ({
         if (/type = 'table'/.test(sql)) return [{ n: file.tables ?? 12 }];
         return [{ 'count(*)': 1 }];
       },
-      getFirstAsync: async () => {
+      getFirstAsync: async (sql) => {
         if (!readOk()) throw new Error('file is not a database');
+        if (/PRAGMA\s+cipher_version/i.test(String(sql))) {
+          return keyed && behaviour === 'encrypted' ? { cipher_version: 'test-sqlcipher-4' } : null;
+        }
         return { user_version: 71 };
       },
       closeAsync: async () => {},
@@ -77,6 +92,11 @@ jest.mock('expo-sqlite', () => ({
 
 jest.mock('../dbCrypto', () => ({
   getOrCreateDbKey: jest.fn(async () => ({ key: 'test-key', status: 'ok' })),
+  attestSqlCipherConnection: jest.fn(async (db, key) => {
+    await db.execAsync(`PRAGMA key = '${key}'`);
+    const row = await db.getFirstAsync('PRAGMA cipher_version');
+    return { applied: Boolean(row?.cipher_version), cipherVersion: row?.cipher_version ?? null };
+  }),
 }));
 
 jest.mock('../database', () => ({ checkpointWal: jest.fn(async () => {}) }));
@@ -243,7 +263,7 @@ describe('restore refuses to destroy the live database for an unusable snapshot'
     expect(mockFiles[pre[0]].content).toBe('good');   // the data as it was
   });
 
-  test('a failed pre-restore copy does not block a restore the user asked for', async () => {
+  test('a failed pre-restore copy blocks restore and preserves the live database', async () => {
     // Targeted at the pre-restore destination specifically: verification copies
     // first, so a blanket "fail the next copy" would hit the wrong call and
     // prove nothing.
@@ -255,9 +275,8 @@ describe('restore refuses to destroy the live database for an unusable snapshot'
       return real(args);
     });
     try {
-      await expect(restoreSnapshot(`${SNAP}ok.db`)).resolves.toBeUndefined();
-      expect(mockFiles[DB_PATH].content).toBe('plain');
-      expect(mockWarn).toHaveBeenCalledWith('database.snapshot.preRestore', expect.any(String));
+      await expect(restoreSnapshot(`${SNAP}ok.db`)).rejects.toThrow('disk full');
+      expect(mockFiles[DB_PATH].content).toBe('good');
     } finally {
       FS.copyAsync.mockImplementation(real);
     }

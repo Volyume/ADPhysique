@@ -3,7 +3,7 @@
 // CC29 appended one further migration (swap cause + effective choice
 // columns; inert here), so the window widens by one more.
 const { DatabaseSync } = require('node:sqlite');
-const { runMigrations } = require('../database');
+const { runMigrations, CURRENT_SCHEMA_VERSION } = require('../database');
 
 jest.mock('expo-sqlite');
 
@@ -19,20 +19,7 @@ function adapt(raw) {
 }
 
 async function migrationCount() {
-  let version = 0;
-  const probe = {
-    getFirstAsync: async sql => (/user_version/i.test(String(sql)) ? { user_version: version } : null),
-    getAllAsync: async () => [],
-    runAsync: async () => ({}),
-    execAsync: async sql => {
-      const found = /PRAGMA user_version = (\d+)/.exec(String(sql));
-      if (found) version = Number(found[1]);
-    },
-    withTransactionAsync: async fn => fn(),
-    isInTransactionSync: () => false,
-  };
-  await runMigrations(probe);
-  return version;
+  return CURRENT_SCHEMA_VERSION;
 }
 
 // CC26 (capability foundations) appended one further migration (two new
@@ -51,7 +38,13 @@ function withExerciseIntent(raw) {
     scope_mesocycle_id TEXT, reason TEXT,
     created_at INTEGER, updated_at INTEGER, deleted_at INTEGER
   )`);
-  raw.exec('CREATE TABLE exercises (id TEXT PRIMARY KEY, name TEXT)');
+  raw.exec(`CREATE TABLE exercises (
+    id TEXT PRIMARY KEY, name TEXT, primary_muscle TEXT, equipment TEXT,
+    movement_pattern TEXT, compound_isolation TEXT, exercise_type TEXT,
+    is_custom INTEGER, equipment_category TEXT
+  )`);
+  raw.exec('CREATE TABLE custom_exercises (id TEXT PRIMARY KEY, name TEXT)');
+  raw.exec('CREATE TABLE exercise_swaps (id TEXT PRIMARY KEY)');
   return raw;
 }
 

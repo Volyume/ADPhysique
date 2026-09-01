@@ -1,3 +1,13 @@
+import {
+  isBoundedString,
+  isLocalDayKey,
+  isPersistedEpochMs,
+  isStrictNumberInRange,
+  parseCloudEpochMs,
+} from '../numericBoundary';
+
+const STEP_SOURCES = new Set(['manual', 'auto', 'watch', 'apple_health', 'health_connect', 'google_fit']);
+
 export function createActivityRepository({
   db,
   rowToCamel,
@@ -11,10 +21,16 @@ export function createActivityRepository({
 
   async function setDailySteps(userId, { entryDate, steps, source = 'manual' } = {}) {
     if (!userId) return null;
-    const d = await db();
     const day = entryDate || activityDayKey();
     const updatedAt = now();
-    const value = Math.max(0, Math.min(200000, Math.round(Number(steps) || 0)));
+    if (!isLocalDayKey(day)
+      || !isStrictNumberInRange(steps, 0, 200000)
+      || !STEP_SOURCES.has(source)
+      || !isPersistedEpochMs(updatedAt)) {
+      throw new TypeError('setDailySteps: invalid activity values');
+    }
+    const value = Math.round(steps);
+    const d = await db();
     await d.runAsync(
       `INSERT INTO daily_steps (user_id, entry_date, steps, source, updated_at)
        VALUES (?, ?, ?, ?, ?)
@@ -57,8 +73,9 @@ export function createActivityRepository({
 
   async function deleteCardioLog(userId, id) {
     if (!userId || !id) return false;
-    const d = await db();
     const updatedAt = now();
+    if (!isPersistedEpochMs(updatedAt)) throw new TypeError('deleteCardioLog: invalid timestamp');
+    const d = await db();
     await d.runAsync(
       'UPDATE cardio_log SET deleted_at = ?, updated_at = ? WHERE user_id = ? AND id = ?',
       [updatedAt, updatedAt, userId, id],
@@ -78,9 +95,32 @@ export function createActivityRepository({
   }
 
   async function insertCardioLogFromCloud(userId, row) {
-    if (!userId || !row?.id) return null;
+    if (!userId || !isBoundedString(row?.id, 200) || !isLocalDayKey(row?.entry_date)) return false;
+    const fallbackNow = now();
+    const createdAt = parseCloudEpochMs(row.created_at, { fallback: fallbackNow });
+    const updatedAt = parseCloudEpochMs(row.updated_at, { fallback: createdAt });
+    const deletedAt = parseCloudEpochMs(row.deleted_at, { nullable: true });
+    const duration = row.duration_min ?? 0;
+    const met = row.met ?? null;
+    const calories = row.est_kcal ?? null;
+    const distance = row.distance ?? null;
+    const avgHr = row.avg_hr ?? null;
+    const optionalText = [
+      [row.activity_id, 200], [row.activity_name, 300], [row.category, 100],
+      [row.recovery_impact, 100], [row.impact_type, 100], [row.notes, 5000],
+      [row.ext_id, 300],
+    ];
+    if (!isPersistedEpochMs(fallbackNow)
+      || createdAt === undefined || updatedAt === undefined || deletedAt === undefined
+      || !isStrictNumberInRange(duration, 0, 1440)
+      || (met != null && !isStrictNumberInRange(met, 0, 50))
+      || (calories != null && !isStrictNumberInRange(calories, 0, 50000))
+      || (distance != null && !isStrictNumberInRange(distance, 0, 1000000))
+      || (avgHr != null && !isStrictNumberInRange(avgHr, 0, 300))
+      || (row.intensity != null && !isBoundedString(row.intensity, 40))
+      || (row.source != null && !STEP_SOURCES.has(row.source))
+      || optionalText.some(([value, limit]) => value != null && !isBoundedString(value, limit))) return false;
     const d = await db();
-    const toMs = (t) => (t == null ? null : (typeof t === 'number' ? t : Date.parse(t) || null));
     await d.runAsync(
       `INSERT INTO cardio_log (user_id, id, entry_date, activity_id, activity_name,
          category, duration_min, intensity, met, est_kcal, recovery_impact,
@@ -105,12 +145,12 @@ export function createActivityRepository({
          deleted_at = excluded.deleted_at,
          ext_id = excluded.ext_id`,
       [userId, row.id, row.entry_date, row.activity_id ?? null, row.activity_name ?? 'Cardio',
-        row.category ?? null, Math.round(Number(row.duration_min) || 0), row.intensity ?? 'moderate',
-        row.met != null ? Number(row.met) : null, row.est_kcal != null ? Math.round(Number(row.est_kcal)) : null,
+        row.category ?? null, Math.round(duration), row.intensity ?? 'moderate',
+        met, calories != null ? Math.round(calories) : null,
         row.recovery_impact ?? null, row.impact_type ?? null,
-        row.distance != null ? Number(row.distance) : null, row.avg_hr != null ? Math.round(Number(row.avg_hr)) : null,
+        distance, avgHr != null ? Math.round(avgHr) : null,
         row.source ?? 'manual', row.notes ?? null,
-        toMs(row.created_at) ?? now(), toMs(row.updated_at) ?? now(), toMs(row.deleted_at),
+        createdAt, updatedAt, deletedAt,
         row.ext_id ?? null],
     );
     return true;
@@ -138,20 +178,24 @@ export function createActivityRepository({
   }
 
   async function insertDailyStepsFromCloud(userId, row) {
-    if (!userId || !row?.entry_date) return;
+    if (!userId || !isLocalDayKey(row?.entry_date)
+      || !isStrictNumberInRange(row?.steps, 0, 200000)
+      || !STEP_SOURCES.has(row?.source ?? 'manual')) return false;
+    const updatedAt = parseCloudEpochMs(row.updated_at, { fallback: now() });
+    if (updatedAt === undefined) return false;
     const d = await db();
-    const toMs = (v) => v == null ? now() : (typeof v === 'string' ? new Date(v).getTime() : v);
     await d.runAsync(
       `INSERT OR REPLACE INTO daily_steps (user_id, entry_date, steps, source, updated_at)
        VALUES (?, ?, ?, ?, ?)`,
       [
         userId,
         row.entry_date,
-        Math.max(0, Math.round(Number(row.steps) || 0)),
+        Math.round(row.steps),
         row.source ?? 'manual',
-        toMs(row.updated_at),
+        updatedAt,
       ],
     );
+    return true;
   }
 
   return {

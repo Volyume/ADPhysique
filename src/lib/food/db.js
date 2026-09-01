@@ -18,6 +18,13 @@ import { todayLocalKey, localDayKey, parseLocalDay } from '../dayKey';
 // Single id generator (A2-036); aliased to keep the local uid() call sites.
 import { generateUUID as uid } from '../uuid';
 import { FOOD_SWAP_SCOPE, isFoodSwapScope } from './foodSwapScope';
+import {
+  isBoundedString,
+  isLocalDayKey,
+  isPersistedEpochMs,
+  isStrictNumberInRange,
+  parseCloudEpochMs,
+} from '../numericBoundary';
 
 // ─── food_entries (the diary) ────────────────────────────────────────────
 
@@ -26,6 +33,25 @@ import { FOOD_SWAP_SCOPE, isFoodSwapScope } from './foodSwapScope';
 // else (missing, stale client, corrupt sync payload) falls back to
 // 'as_weighed' -- today's implicit meaning -- rather than guessing a basis.
 const VALID_WEIGHT_STATES = new Set(['as_weighed', 'raw', 'cooked']);
+const MAX_FOOD_METRIC = 100000;
+const validFoodMetric = (value, { nullable = false } = {}) => (
+  value == null ? nullable : isStrictNumberInRange(value, 0, MAX_FOOD_METRIC)
+);
+const validFoodIdentity = (entryDate, mealSlot, foodRef) => (
+  isLocalDayKey(entryDate)
+  && isBoundedString(mealSlot, 80)
+  && isBoundedString(foodRef, 500)
+);
+
+function validDiaryNumbers(entry, { allowQuickZero = false } = {}) {
+  const quantity = entry?.quantityG ?? entry?.quantity_g;
+  const quickZero = allowQuickZero && quantity === 0;
+  return typeof quantity === 'number'
+    && (quickZero || isValidEntryGrams(quantity))
+    && [entry?.kcal, entry?.proteinG ?? entry?.protein_g, entry?.carbsG ?? entry?.carbs_g,
+      entry?.fatG ?? entry?.fat_g].every((value) => validFoodMetric(value))
+    && validFoodMetric(entry?.fibreG ?? entry?.fibre_g, { nullable: true });
+}
 function _normaliseWeightState(v) {
   return VALID_WEIGHT_STATES.has(v) ? v : 'as_weighed';
 }
@@ -58,8 +84,6 @@ function _normaliseWeightState(v) {
  * @returns {Promise<string>} id of the new entry
  */
 export async function logFoodEntry(userId, entry) {
-  const d = await db();
-  const id = uid();
   const now = Date.now();
   // Defence in depth (FOOD-001): the amount eaten must reconcile with the
   // scaled macros. A quick-add carries no grams by design (foodRef 'quick:*',
@@ -72,7 +96,7 @@ export async function logFoodEntry(userId, entry) {
   // used: the macros are already scaled by the caller for the passed grams, so
   // silently changing the grams here would re-introduce the very mismatch.
   const isQuickAdd = typeof entry.foodRef === 'string' && entry.foodRef.startsWith('quick:');
-  const qtyIn = Number(entry.quantityG);
+  const qtyIn = entry.quantityG;
   if (isQuickAdd) {
     if (qtyIn !== 0 && !isValidEntryGrams(qtyIn)) {
       throw new Error('logFoodEntry: quick-add quantity must be 0 or between 1 and 5000 g');
@@ -80,13 +104,14 @@ export async function logFoodEntry(userId, entry) {
   } else if (!isValidEntryGrams(qtyIn)) {
     throw new Error('logFoodEntry: quantity must be between 1 and 5000 g');
   }
-  // The five numeric columns (quantity_g, kcal, protein_g, carbs_g, fat_g) are
-  // all NOT NULL. A non-finite macro (a NaN from a bad upstream calc) would bind
-  // as NULL and throw an opaque constraint error, crashing a diary write the
-  // user can do dozens of times a day. Coerce to a finite number (default 0)
-  // so logging never hard-fails on the macros; a stray entry is editable. The
-  // quantity is already validated above. fibre_g is nullable, so it keeps null.
-  const finite = (v) => (Number.isFinite(v) ? v : 0);
+  if (!validFoodIdentity(entry.entryDate, entry.mealSlot, entry.foodRef)
+    || !validDiaryNumbers(entry, { allowQuickZero: isQuickAdd })
+    || !isPersistedEpochMs(now)
+    || (entry.eatenAt !== undefined && entry.eatenAt !== null && !isPersistedEpochMs(entry.eatenAt))) {
+    throw new TypeError('logFoodEntry: invalid food values');
+  }
+  const d = await db();
+  const id = uid();
   // is_planned=1 marks a meal-plan entry as scaffolding: excluded from the
   // rollup/adherence/FFM/sync until the user confirms they ate it (adherence
   // model 2026-06-15). Defaults to an actual (0).
@@ -106,9 +131,9 @@ export async function logFoodEntry(userId, entry) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       id, userId, entry.entryDate, entry.mealSlot, entry.foodRef,
-      finite(entry.quantityG), finite(entry.kcal), finite(entry.proteinG),
-      finite(entry.carbsG), finite(entry.fatG),
-      Number.isFinite(entry.fibreG) ? entry.fibreG : null, now,
+      entry.quantityG, entry.kcal, entry.proteinG,
+      entry.carbsG, entry.fatG,
+      entry.fibreG ?? null, now,
       isPlanned, weightState, eatenAt, now, now,
     ]
   );
@@ -183,6 +208,14 @@ async function _rebuildSlotRecentFromActuals(d, userId, mealSlot, foodRef) {
 }
 
 export async function updateFoodEntry(id, userId, patch) {
+  if (!isBoundedString(id, 300) || !isBoundedString(userId, 300)
+    || !validDiaryNumbers(patch, { allowQuickZero: patch?.foodRef?.startsWith?.('quick:') })
+    || !isBoundedString(patch?.mealSlot, 80)
+    || !isBoundedString(patch?.foodRef, 500)
+    || (patch?.entryDate !== undefined && !isLocalDayKey(patch.entryDate))
+    || (patch?.eatenAt !== undefined && patch.eatenAt !== null && !isPersistedEpochMs(patch.eatenAt))) {
+    throw new TypeError('updateFoodEntry: invalid food values');
+  }
   const d = await db();
   const now = Date.now();
   const existing = await d.getFirstAsync(
@@ -1006,14 +1039,17 @@ export async function getDislikes(userId) {
 // ─── daily_water ─────────────────────────────────────────────────────────
 
 export async function setWater(userId, entryDate, ml) {
-  const d = await db();
   const now = Date.now();
+  if (!isBoundedString(userId, 300) || !isLocalDayKey(entryDate)
+    || !isStrictNumberInRange(ml, 0, 20000, { integer: true })
+    || !isPersistedEpochMs(now)) throw new TypeError('setWater: invalid hydration values');
+  const d = await db();
   // Setting water clears any prior tombstone (D1-#8): re-logging water on a
   // previously deleted day brings the row back to life.
   await d.runAsync(
     `INSERT INTO daily_water (user_id, entry_date, ml, updated_at, deleted_at) VALUES (?, ?, ?, ?, NULL)
      ON CONFLICT(user_id, entry_date) DO UPDATE SET ml = excluded.ml, updated_at = excluded.updated_at, deleted_at = NULL`,
-    [userId, entryDate, Math.max(0, ml), now]
+    [userId, entryDate, ml, now]
   );
   _scheduleSync();
 }
@@ -1959,6 +1995,16 @@ function _isoToMs(iso) {
   return Number.isFinite(t) ? t : null;
 }
 
+function _cloudTimes(row, fallbackNow = Date.now()) {
+  if (!isPersistedEpochMs(fallbackNow)) return null;
+  const loggedAt = parseCloudEpochMs(row.logged_at, { fallback: fallbackNow });
+  const createdAt = parseCloudEpochMs(row.created_at, { fallback: loggedAt });
+  const updatedAt = parseCloudEpochMs(row.updated_at, { fallback: createdAt });
+  const deletedAt = parseCloudEpochMs(row.deleted_at, { nullable: true });
+  if ([loggedAt, createdAt, updatedAt, deletedAt].some((value) => value === undefined)) return null;
+  return { loggedAt, createdAt, updatedAt, deletedAt };
+}
+
 // F1: last-write-wins gate for the core food appliers. Every other handler
 // (cardio_log, daily_steps, recipe_ingredients, body_composition, and the
 // daily_water / food_favourites food tables) already skips a cloud row when
@@ -1978,12 +2024,14 @@ async function _localUpdatedMs(d, table, id, userId) {
 }
 
 export async function applyFoodEntryFromCloud(userId, row) {
-  if (!row?.id) return null;
+  const quick = typeof row?.food_ref === 'string' && row.food_ref.startsWith('quick:');
+  const times = _cloudTimes(row ?? {});
+  if (!isBoundedString(userId, 300) || !isBoundedString(row?.id, 300)
+    || !isBoundedString(row?.meal_slot, 80) || !isBoundedString(row?.food_ref, 500)
+    || !validDiaryNumbers(row, { allowQuickZero: quick }) || !times
+    || (row.eaten_at != null && parseCloudEpochMs(row.eaten_at, { nullable: true }) === undefined)) return null;
+  const { loggedAt, createdAt, updatedAt, deletedAt } = times;
   const d = await db();
-  const loggedAt = _isoToMs(row.logged_at) ?? Date.now();
-  const createdAt = _isoToMs(row.created_at) ?? loggedAt;
-  const updatedAt = _isoToMs(row.updated_at) ?? createdAt;
-  const deletedAt = _isoToMs(row.deleted_at);
   // F1: keep a newer/equal local edit rather than overwriting it with an
   // older cloud row. Returns null so the caller does not recompute the rollup.
   const localMs = await _localUpdatedMs(d, 'food_entries', row.id, userId);
@@ -2017,11 +2065,19 @@ export async function applyFoodEntryFromCloud(userId, row) {
 }
 
 export async function applyCustomFoodFromCloud(userId, row) {
-  if (!row?.id) return;
+  const times = _cloudTimes({ ...row, logged_at: row?.created_at });
+  const microValues = row ? microValuesFromRow(row) : [];
+  const optionalText = [row?.brand, row?.serving_label, row?.photo_url, row?.notes, row?.barcode_ean];
+  if (!isBoundedString(userId, 300) || !isBoundedString(row?.id, 300)
+    || !isBoundedString(row?.name, 500) || !isStrictNumberInRange(row?.serving_g, 0.1, 5000)
+    || ![row?.kcal_100g, row?.protein_100g, row?.carbs_100g, row?.fat_100g]
+      .every((value) => validFoodMetric(value))
+    || ![row?.fibre_100g, row?.sodium_100g, row?.sugar_100g, ...microValues]
+      .every((value) => validFoodMetric(value, { nullable: true }))
+    || optionalText.some((value) => value != null && !isBoundedString(value, 5000))
+    || !times) return false;
+  const { createdAt, updatedAt, deletedAt } = times;
   const d = await db();
-  const createdAt = _isoToMs(row.created_at) ?? Date.now();
-  const updatedAt = _isoToMs(row.updated_at) ?? createdAt;
-  const deletedAt = _isoToMs(row.deleted_at);
   // F1: keep a newer/equal local edit rather than overwriting it.
   const localMs = await _localUpdatedMs(d, 'custom_foods', row.id, userId);
   if (localMs != null && localMs >= updatedAt) return;
@@ -2064,23 +2120,25 @@ export async function applyCustomFoodFromCloud(userId, row) {
       row.serving_g, row.serving_label ?? null,
       row.kcal_100g, row.protein_100g, row.carbs_100g, row.fat_100g,
       row.fibre_100g ?? null, row.sodium_100g ?? null, row.sugar_100g ?? null,
-      ...microValuesFromRow(row),
+      ...microValues,
       row.photo_url ?? null, row.notes ?? null,
       row.barcode_ean ?? null,
       deletedAt, createdAt, updatedAt,
     ]
   );
+  return true;
 }
 
 export async function applySavedMealFromCloud(userId, row) {
-  if (!row?.id) return;
-  const d = await db();
-  const createdAt = _isoToMs(row.created_at) ?? Date.now();
-  const updatedAt = _isoToMs(row.updated_at) ?? createdAt;
-  const deletedAt = _isoToMs(row.deleted_at);
+  const times = _cloudTimes({ ...row, logged_at: row?.created_at });
+  if (!isBoundedString(userId, 300) || !isBoundedString(row?.id, 300)
+    || !isBoundedString(row?.name, 500) || !times) return false;
+  const { createdAt, updatedAt, deletedAt } = times;
   const itemsJson = typeof row.items_json === 'string'
     ? row.items_json
     : JSON.stringify(row.items_json ?? []);
+  if (!isBoundedString(itemsJson, 2_000_000)) return false;
+  const d = await db();
   // F1: keep a newer/equal local edit rather than overwriting it.
   const localMs = await _localUpdatedMs(d, 'saved_meals', row.id, userId);
   if (localMs != null && localMs >= updatedAt) return;
@@ -2090,14 +2148,18 @@ export async function applySavedMealFromCloud(userId, row) {
     ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [row.id, userId, row.name, itemsJson, deletedAt, createdAt, updatedAt]
   );
+  return true;
 }
 
 export async function applyRecipeFromCloud(userId, row) {
-  if (!row?.id) return;
+  const servings = row?.servings ?? row?.total_servings ?? 1;
+  const times = _cloudTimes({ ...row, logged_at: row?.created_at });
+  if (!isBoundedString(userId, 300) || !isBoundedString(row?.id, 300)
+    || !isBoundedString(row?.name, 500)
+    || !isStrictNumberInRange(servings, 0.01, 1000)
+    || (row?.notes != null && !isBoundedString(row.notes, 5000)) || !times) return false;
+  const { createdAt, updatedAt, deletedAt } = times;
   const d = await db();
-  const createdAt = _isoToMs(row.created_at) ?? Date.now();
-  const updatedAt = _isoToMs(row.updated_at) ?? createdAt;
-  const deletedAt = _isoToMs(row.deleted_at);
   // F1: keep a newer/equal local edit rather than overwriting it.
   const localMs = await _localUpdatedMs(d, 'recipes', row.id, userId);
   if (localMs != null && localMs >= updatedAt) return;
@@ -2109,20 +2171,22 @@ export async function applyRecipeFromCloud(userId, row) {
     [
       // Cloud sends `servings` (migrate_021/023); tolerate the legacy
       // `total_servings` key, default 1 so a recipe never lands with NULL servings.
-      row.id, userId, row.name, row.servings ?? row.total_servings ?? 1, row.notes ?? null,
+      row.id, userId, row.name, servings, row.notes ?? null,
       deletedAt, createdAt, updatedAt,
     ]
   );
+  return true;
 }
 
 export async function applyFavouriteFromCloud(userId, row) {
-  if (!row?.food_ref) return;
-  const d = await db();
-  const lastUsedAt = _isoToMs(row.last_used_at) ?? Date.now();
+  const lastUsedAt = parseCloudEpochMs(row?.last_used_at, { fallback: Date.now() });
   // D1-#8: carry the tombstone so a remote delete reaches this device. Under the
   // same last_used_at LWW gate below, a newer cloud row with deleted_at set
   // tombstones the local row (and a newer cloud un-delete revives it).
-  const deletedAt = _isoToMs(row.deleted_at);
+  const deletedAt = parseCloudEpochMs(row?.deleted_at, { nullable: true });
+  if (!isBoundedString(userId, 300) || !isBoundedString(row?.food_ref, 500)
+    || lastUsedAt === undefined || deletedAt === undefined) return false;
+  const d = await db();
   // Cloud rows that pre-date mig 048 don't have `kind`; default to
   // 'fav' so they keep behaving exactly as before. Reject anything
   // outside the validated set so a malformed row can't poison local
@@ -2146,12 +2210,14 @@ export async function applyFavouriteFromCloud(userId, row) {
 }
 
 export async function applyWaterFromCloud(userId, row) {
-  if (!row?.entry_date) return;
-  const d = await db();
-  const updatedAt = _isoToMs(row.updated_at) ?? Date.now();
+  const updatedAt = parseCloudEpochMs(row?.updated_at, { fallback: Date.now() });
   // D1-#8: carry the tombstone so a remote delete reaches this device, gated by
   // the same updated_at LWW comparison.
-  const deletedAt = _isoToMs(row.deleted_at);
+  const deletedAt = parseCloudEpochMs(row?.deleted_at, { nullable: true });
+  if (!isBoundedString(userId, 300) || !isLocalDayKey(row?.entry_date)
+    || !isStrictNumberInRange(row?.ml, 0, 20000, { integer: true })
+    || updatedAt === undefined || deletedAt === undefined) return false;
+  const d = await db();
   await d.runAsync(
     `INSERT INTO daily_water (user_id, entry_date, ml, updated_at, deleted_at)
      VALUES (?, ?, ?, ?, ?)
@@ -2160,8 +2226,9 @@ export async function applyWaterFromCloud(userId, row) {
        updated_at = excluded.updated_at,
        deleted_at = excluded.deleted_at
      WHERE excluded.updated_at >= daily_water.updated_at`,
-    [userId, row.entry_date, Math.max(0, row.ml ?? 0), updatedAt, deletedAt]
+    [userId, row.entry_date, row.ml, updatedAt, deletedAt]
   );
+  return true;
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────

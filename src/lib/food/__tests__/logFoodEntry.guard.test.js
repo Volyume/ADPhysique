@@ -3,12 +3,9 @@
  *
  * Two guards on the diary write:
  *
- *  1. Macro coercion. The four macro columns (kcal, protein_g, carbs_g, fat_g)
- *     are NOT NULL. A non-finite value (a NaN from a bad upstream calc) would
- *     bind as NULL and throw an opaque constraint error, crashing a diary write
- *     the user does many times a day. logFoodEntry coerces those to a finite
- *     number (default 0) so logging never hard-fails on the macros; fibre_g is
- *     nullable and keeps its null. Finite values pass through untouched.
+ *  1. Macro validation. Missing/non-finite macros are not equivalent to zero
+ *     nutrition and are rejected before the SQLite native boundary. Finite
+ *     values, including a deliberate zero, pass through untouched.
  *
  *  2. Quantity safety bound (FOOD-001, defence in depth). The amount eaten must
  *     reconcile with the scaled macros, so a real food must fall inside the
@@ -52,33 +49,21 @@ beforeEach(() => {
 });
 
 // params index: id0 user1 date2 slot3 ref4 qty5 kcal6 pro7 carb8 fat9 fibre10
-describe('logFoodEntry numeric coercion', () => {
-  test('NaN macros are coerced to 0, fibre to null (quantity valid)', async () => {
-    await food.logFoodEntry('u1', {
+describe('logFoodEntry numeric validation', () => {
+  test('NaN macros are rejected before SQLite (quantity valid)', async () => {
+    await expect(food.logFoodEntry('u1', {
       entryDate: '2026-06-07', mealSlot: 'lunch', foodRef: 'custom:x',
       quantityG: 80, kcal: NaN, proteinG: NaN, carbsG: NaN, fatG: NaN, fibreG: NaN,
-    });
-    const p = insertParams();
-    expect(p).not.toBeNull();
-    expect(p[5]).toBe(80); // quantity_g (valid, untouched)
-    expect(p[6]).toBe(0); // kcal
-    expect(p[7]).toBe(0); // protein_g
-    expect(p[8]).toBe(0); // carbs_g
-    expect(p[9]).toBe(0); // fat_g
-    expect(p[10]).toBeNull(); // fibre_g (nullable)
+    })).rejects.toThrow(/invalid food values/);
+    expect(insertParams()).toBeNull();
   });
 
-  test('undefined/null macros are coerced to 0, never bound as NULL on NOT NULL columns', async () => {
-    await food.logFoodEntry('u1', {
+  test('undefined/null required macros are rejected, never bound as native NULL', async () => {
+    await expect(food.logFoodEntry('u1', {
       entryDate: '2026-06-07', mealSlot: 'lunch', foodRef: 'custom:x',
       quantityG: 80, kcal: null, proteinG: undefined, carbsG: null, fatG: undefined,
-    });
-    const p = insertParams();
-    expect(p[5]).toBe(80);
-    expect(p[6]).toBe(0);
-    expect(p[7]).toBe(0);
-    expect(p[8]).toBe(0);
-    expect(p[9]).toBe(0);
+    })).rejects.toThrow(/invalid food values/);
+    expect(insertParams()).toBeNull();
   });
 
   test('finite values (including a legitimate 0 macro) pass through untouched', async () => {

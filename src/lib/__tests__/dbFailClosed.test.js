@@ -30,11 +30,22 @@
 const mockFiles = new Map();          // path -> { encrypted: bool, empty: bool }
 const VALID_KEY = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 let mockKeyState = { stored: VALID_KEY, readThrows: false, writeThrows: false, locked: false };
-let mockSqlcipherWorks = true;
+// `silent` reproduces ordinary SQLite accurately: unknown PRAGMAs resolve and
+// return no rows.  That is the adversarial case F-02 was about; a fake that
+// only throws on PRAGMA key cannot prove positive encryption truth.
+let mockSqlcipherMode = 'works'; // works | throws | silent
 const mockLog = { logError: jest.fn(), logInfo: jest.fn(), logWarn: jest.fn() };
 
 const DIR = '/doc/SQLite/';
 const LIVE = `${DIR}volyume.db`;
+const BACKUP = `${DIR}volyume-plain-backup.db`;
+const ENCRYPTED_CANDIDATE = `${DIR}volyume-enc.db`;
+
+async function mockMoveFile({ from, to }) {
+  if (!mockFiles.has(from)) throw new Error(`no such file: ${from}`);
+  mockFiles.set(to, mockFiles.get(from));
+  mockFiles.delete(from);
+}
 
 // Driven through SecureStore rather than by stubbing getOrCreateDbKey.
 // openEncryptedDb calls that function by its module-internal binding, so a
@@ -64,11 +75,7 @@ jest.mock('expo-file-system/legacy', () => ({
   get documentDirectory() { return '/doc/'; },
   getInfoAsync: jest.fn(async (p) => (mockFiles.has(p) ? { exists: true, size: 4096 } : { exists: false })),
   deleteAsync: jest.fn(async (p) => { mockFiles.delete(p); }),
-  moveAsync: jest.fn(async ({ from, to }) => {
-    if (!mockFiles.has(from)) throw new Error(`no such file: ${from}`);
-    mockFiles.set(to, mockFiles.get(from));
-    mockFiles.delete(from);
-  }),
+  moveAsync: jest.fn(mockMoveFile),
   copyAsync: jest.fn(async ({ from, to }) => { mockFiles.set(to, mockFiles.get(from)); }),
   makeDirectoryAsync: jest.fn(async () => {}),
 }), { virtual: true });
@@ -92,15 +99,29 @@ jest.mock('expo-sqlite', () => ({
       execAsync: jest.fn(async (sql) => {
         const m = /PRAGMA key = '([^']*)'/.exec(sql);
         if (m) {
-          if (!mockSqlcipherWorks) throw new Error('no such pragma: key');
+          if (mockSqlcipherMode === 'throws') throw new Error('no such pragma: key');
+          if (mockSqlcipherMode === 'silent') return;
           handle._keyed = true;
           handle._key = m[1];
           // A brand-new empty file becomes encrypted, under THIS key, the
           // moment it is keyed.
           if (file.empty) { file.encrypted = true; file.key = m[1]; }
         }
+        const attached = /ATTACH DATABASE '([^']+)' AS encrypted KEY '([^']+)'/i.exec(sql);
+        if (attached) {
+          handle._attachedPath = attached[1];
+          handle._attachedKey = attached[2];
+        }
       }),
-      getAllAsync: jest.fn(async () => {
+      getAllAsync: jest.fn(async (sql) => {
+        if (/wal_checkpoint/i.test(String(sql))) return [{ busy: 0, log: 0, checkpointed: 0 }];
+        if (/sqlcipher_export/i.test(String(sql))) {
+          if (!handle._attachedPath) throw new Error('encrypted database is not attached');
+          mockFiles.set(handle._attachedPath, {
+            ...file, encrypted: true, empty: false, key: handle._attachedKey,
+          });
+          return [{ sqlcipher_export: 1 }];
+        }
         if (file.encrypted) {
           // The wrong key reads exactly like a corrupt file, which is the
           // whole difficulty of telling states C and D apart.
@@ -110,7 +131,12 @@ jest.mock('expo-sqlite', () => ({
         if (handle._keyed && !file.empty) throw new Error('file is not a database');
         return [{ n: 1 }];
       }),
-      getFirstAsync: jest.fn(async () => ({ user_version: 0 })),
+      getFirstAsync: jest.fn(async (sql) => {
+        if (/cipher_version/i.test(sql)) {
+          return mockSqlcipherMode === 'works' ? { cipher_version: '4.6.1 community' } : null;
+        }
+        return { user_version: 0 };
+      }),
       closeAsync: jest.fn(async () => {}),
     };
     mockOpened.push(handle);
@@ -131,11 +157,14 @@ const SQLite = require('expo-sqlite');
 function reset() {
   mockFiles.clear();
   mockOpened.length = 0;
-  mockSqlcipherWorks = true;
+  mockSqlcipherMode = 'works';
   mockKeyState = { stored: VALID_KEY, readThrows: false, writeThrows: false, locked: false };
   mockLog.logError.mockClear();
   mockLog.logInfo.mockClear();
   jest.restoreAllMocks();
+  const FS = require('expo-file-system/legacy');
+  FS.moveAsync.mockReset();
+  FS.moveAsync.mockImplementation(mockMoveFile);
 }
 
 /** Runs the REAL open, including the real key retrieval. */
@@ -274,46 +303,43 @@ describe('state D: key genuinely unrecoverable', () => {
     mockKeyState = { stored: 'c'.repeat(64), readThrows: false, writeThrows: false, locked: false };
   });
 
-  test('the old database is preserved, never deleted', async () => {
-    await open().catch(() => {});
-    const preserved = mockFiles.get(`${DIR}volyume-unreadable.db`);
-    expect(preserved).toMatchObject({ encrypted: true, empty: false, key: VALID_KEY });
+  test('fails closed and keeps the old database at its canonical path', async () => {
+    await expect(open()).rejects.toMatchObject({ dbCryptoAbort: true });
+    expect(mockFiles.get(LIVE)).toMatchObject({ encrypted: true, empty: false, key: VALID_KEY });
   });
 
-  test('it is not overwritten in place', async () => {
+  test('it is not moved aside, overwritten, or replaced', async () => {
     await open().catch(() => {});
-    // Whatever now sits at the live path, it is not the old encrypted file
-    // having been written over: that file still exists under its own name.
-    expect(mockFiles.has(`${DIR}volyume-unreadable.db`)).toBe(true);
+    expect([...mockFiles.keys()]).toEqual([LIVE]);
   });
 
-  test('the preservation is recorded, so it is not a silent event', async () => {
+  test('the preservation failure is recorded, so it is not a silent event', async () => {
     await open().catch(() => {});
     expect(mockLog.logError).toHaveBeenCalledWith(
-      'dbCrypto.unreadableMovedAside', expect.any(Error), expect.anything(),
+      'dbCrypto.abort', expect.any(Error), { stage: 'unreadable_existing_database' },
     );
   });
 });
 
 describe('the plaintext fallbacks that remain are not downgrades of encrypted data', () => {
-  test('SQLCipher unavailable on the build reports encrypted:false honestly', async () => {
+  test('ordinary SQLite silently accepting PRAGMA key never reports encrypted:true', async () => {
     // Found by this test before the fix: keyed() swallowed a failing PRAGMA
     // key, an empty file then read perfectly well without one, and the caller
     // concluded the database was encrypted. The app claimed encryption on a
     // build that has none -- and the Article 9 consent screen now reads that
     // flag to decide what to tell the user about their health data, so a false
     // positive there defeats the honesty fix in exactly its own case.
-    mockSqlcipherWorks = false;
+    mockSqlcipherMode = 'silent';
     const result = await open().catch((e) => e);
-    expect(result).not.toBeInstanceOf(Error);
-    expect(result.encrypted).toBe(false);
-    expect(plaintextFallbacks().length).toBeGreaterThan(0);
+    expect(result).toBeInstanceOf(Error);
+    expect(result).toMatchObject({ dbCryptoAbort: true });
+    expect(mockFiles.has(LIVE)).toBe(false);
   });
 
   test('readable alone is not enough to claim encryption', async () => {
     // The distinction the fix turns on, as an executed fact: an empty database
     // reads fine with no key at all.
-    mockSqlcipherWorks = false;
+    mockSqlcipherMode = 'silent';
     const h = await SQLite.openDatabaseAsync('volyume.db');
     await expect(h.getAllAsync('SELECT 1')).resolves.toBeTruthy();
   });
@@ -327,6 +353,13 @@ describe('the plaintext fallbacks that remain are not downgrades of encrypted da
     const result = await open();
     expect(result.encrypted).toBe(false);
     expect(plaintextFallbacks().length).toBeGreaterThan(0);
+  });
+
+  test('an existing plaintext database is reported plaintext when key PRAGMA silently resolves', async () => {
+    mockFiles.set(LIVE, { encrypted: false, empty: false });
+    mockSqlcipherMode = 'silent';
+    await expect(open()).resolves.toMatchObject({ encrypted: false });
+    expect(mockFiles.get(LIVE)).toMatchObject({ encrypted: false, empty: false });
   });
 });
 
@@ -345,9 +378,100 @@ describe('the law, stated as one assertion', () => {
       const result = await open().catch((e) => e);
       if (result instanceof Error) continue;                 // failed closed
       if (result.encrypted) continue;                        // opened encrypted
-      // A plaintext handle was returned. That is only lawful if the original
-      // encrypted file was preserved rather than adopted.
-      expect(mockFiles.has(`${DIR}volyume-unreadable.db`)).toBe(true);
+      throw new Error('encrypted input returned a plaintext handle');
     }
+  });
+});
+
+describe('interrupted plaintext migration recovery', () => {
+  test('primary absent + backup present promotes the backup without fabricating an empty DB first', async () => {
+    mockFiles.set(BACKUP, { encrypted: false, empty: false });
+    await open();
+    expect(mockFiles.has(BACKUP)).toBe(false);
+    expect(mockFiles.has(LIVE)).toBe(true);
+  });
+
+  test('a failed backup promotion aborts and preserves the only copy', async () => {
+    mockFiles.set(BACKUP, { encrypted: false, empty: false });
+    const FS = require('expo-file-system/legacy');
+    FS.moveAsync.mockRejectedValueOnce(new Error('disk full'));
+    await expect(open()).rejects.toMatchObject({ dbCryptoAbort: true });
+    expect(mockFiles.get(BACKUP)).toMatchObject({ empty: false });
+    expect(mockFiles.has(LIVE)).toBe(false);
+  });
+
+  test('newer unreadable primary + older backup preserves both instead of restoring on ambiguous evidence', async () => {
+    mockFiles.set(LIVE, { encrypted: true, empty: false, key: 'different-key' });
+    mockFiles.set(BACKUP, { encrypted: false, empty: false });
+    await expect(open()).rejects.toMatchObject({ dbCryptoAbort: true });
+    expect(mockFiles.has(LIVE)).toBe(true);
+    expect(mockFiles.has(BACKUP)).toBe(true);
+  });
+});
+
+describe('plaintext-to-SQLCipher swap is non-destructive under injected failures', () => {
+  test('the executed happy path promotes a positively verified encrypted copy', async () => {
+    mockFiles.set(LIVE, { encrypted: false, empty: false, marker: 'history' });
+    await expect(open()).resolves.toMatchObject({ encrypted: true });
+    expect(mockFiles.get(LIVE)).toMatchObject({ encrypted: true, marker: 'history', key: VALID_KEY });
+    expect(mockFiles.has(BACKUP)).toBe(false);
+  });
+
+  test('candidate promotion failure restores and verifies plaintext without creating an empty live DB', async () => {
+    mockFiles.set(LIVE, { encrypted: false, empty: false, marker: 'history' });
+    const FS = require('expo-file-system/legacy');
+    let injected = false;
+    FS.moveAsync.mockImplementation(async (args) => {
+      if (!injected && args.from === ENCRYPTED_CANDIDATE && args.to === LIVE) {
+        injected = true;
+        throw new Error('promotion failed');
+      }
+      return mockMoveFile(args);
+    });
+
+    await expect(open()).resolves.toMatchObject({ encrypted: false });
+    expect(mockFiles.get(LIVE)).toMatchObject({ encrypted: false, empty: false, marker: 'history' });
+    expect(mockFiles.has(BACKUP)).toBe(false);
+  });
+
+  test('failed post-promotion verification preserves the candidate until plaintext rollback verifies', async () => {
+    mockFiles.set(LIVE, { encrypted: false, empty: false, marker: 'history' });
+    const FS = require('expo-file-system/legacy');
+    FS.moveAsync.mockImplementation(async (args) => {
+      await mockMoveFile(args);
+      if (args.from === ENCRYPTED_CANDIDATE && args.to === LIVE) {
+        mockFiles.get(LIVE).key = 'corrupted-after-promotion';
+      }
+    });
+
+    await expect(open()).resolves.toMatchObject({ encrypted: false });
+    expect(mockFiles.get(LIVE)).toMatchObject({ encrypted: false, empty: false, marker: 'history' });
+    expect(mockFiles.has(BACKUP)).toBe(false);
+    expect(mockFiles.has(ENCRYPTED_CANDIDATE)).toBe(false);
+  });
+
+  test('rollback move failure preserves both candidates and the second launch recovers', async () => {
+    mockFiles.set(LIVE, { encrypted: false, empty: false, marker: 'history' });
+    const FS = require('expo-file-system/legacy');
+    let rollbackBlocked = true;
+    FS.moveAsync.mockImplementation(async (args) => {
+      if (rollbackBlocked && args.from === BACKUP && args.to === LIVE) {
+        rollbackBlocked = false;
+        throw new Error('rollback move failed');
+      }
+      await mockMoveFile(args);
+      if (args.from === ENCRYPTED_CANDIDATE && args.to === LIVE) {
+        mockFiles.get(LIVE).key = 'corrupted-after-promotion';
+      }
+    });
+
+    await expect(open()).rejects.toMatchObject({ dbCryptoAbort: true });
+    expect(mockFiles.get(BACKUP)).toMatchObject({ marker: 'history' });
+    expect(mockFiles.has(ENCRYPTED_CANDIDATE)).toBe(true);
+    expect(mockFiles.has(LIVE)).toBe(false);
+
+    FS.moveAsync.mockImplementation(mockMoveFile);
+    await expect(open()).resolves.toMatchObject({ encrypted: true });
+    expect(mockFiles.get(LIVE)).toMatchObject({ encrypted: true, marker: 'history', key: VALID_KEY });
   });
 });

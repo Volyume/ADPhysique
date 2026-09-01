@@ -56,6 +56,8 @@ jest.mock('expo-sqlite', () => {
     }),
     getAllAsync: jest.fn(() => Promise.resolve([])),
     getFirstAsync: jest.fn((sql) => {
+      if (/PRAGMA\s+cipher_version/i.test(sql)) return Promise.resolve({ cipher_version: 'test-sqlcipher-4' });
+      if (/PRAGMA\s+user_version/i.test(sql)) return Promise.resolve({ user_version: 10000 });
       // The "same name, different id" merge lookup: no collisions in this suite.
       if (/SELECT id FROM exercises WHERE LOWER\(name\)/.test(sql)) return Promise.resolve(null);
       return Promise.resolve(null);
