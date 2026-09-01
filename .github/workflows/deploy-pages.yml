@@ -2,18 +2,10 @@ name: Deploy public/ to GitHub Pages
 
 # Re-trigger after lifting the github-pages environment branch restriction.
 
-# Production site deploys from main ONLY (launch hardening, 2026-07-12).
-# claude/** was in the trigger list historically, which let any feature-branch
-# push overwrite the live volyume.app site with unreviewed content -- including
-# the served App Links / Universal Links association files. workflow_dispatch
-# remains for a manual re-publish.
+# Production site deployment is manual-only. In particular, merging AASA or
+# auth-callback preparation must not silently cut production over before the
+# signed-device and redirect-allowlist gates have passed.
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'public/**'
-      - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
 permissions:

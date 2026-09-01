@@ -24,15 +24,9 @@ on:
     # Sunday 03:00 UTC. Off-peak; OFF's CDN is happiest then.
     - cron: '0 3 * * 0'
   workflow_dispatch:
-  # Auto-run when the workflow itself or either seed script changes.
-  # Keeps "merge to main and you get a fresh snapshot" working without
-  # anyone needing to click the manual button.
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/refresh-off-snapshot.yml'
-      - 'scripts/seed/buildOffSnapshot.js'
-      - 'scripts/seed/uploadOffToSupabase.js'
+  # Do not run from a source push: this job uploads to production Supabase and
+  # writes back to main. The standing weekly schedule and explicit dispatch
+  # remain the only authorized entry points.
 
 permissions:
   contents: write   # so the job can commit the refreshed snapshot back

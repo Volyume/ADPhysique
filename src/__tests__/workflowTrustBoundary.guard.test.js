@@ -29,6 +29,16 @@ describe('GitHub workflow trust boundary', () => {
   });
 
   test.each([
+    'deploy-functions.yml',
+    'deploy-migrations.yml',
+    'deploy-pages.yml',
+    'refresh-off-snapshot.yml',
+  ])('%s cannot mutate production from a source push', (name) => {
+    const triggers = YAML.parse(source[name]).on;
+    expect(triggers).not.toHaveProperty('push');
+  });
+
+  test.each([
     ['build-android.yml', 'build'],
     ['build-ios.yml', 'build'],
     ['deploy-functions.yml', 'deploy'],

@@ -16,18 +16,8 @@ name: Deploy Supabase functions
 # Google Pub/Sub calls it with OIDC, not a Supabase JWT.
 
 on:
-  # Auto-deploy when an Edge Function changes on main, so deployment never needs
-  # a manual button-press (founder direction 2026-06-06: "I do not deploy
-  # anything"). Redeploying a function is stateless and idempotent. A function
-  # missing its runtime env vars (e.g. play-billing-rtdn before its Google keys
-  # are set) deploys safely and logs rather than acting, by design.
-  push:
-    branches: [main]
-    paths:
-      - 'supabase/functions/**'
-      # The deploy list lives in this file, so a change to it (e.g. wiring a
-      # new function) redeploys on merge, same as a function-code change.
-      - '.github/workflows/deploy-functions.yml'
+  # Production deployment is deliberately manual. Merging reviewed function
+  # source must not deploy an un-staged SHA before the external security gates.
   workflow_dispatch:
     inputs:
       function:
