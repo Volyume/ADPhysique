@@ -34,6 +34,56 @@ function stripComments(src) {
   return src.replace(/(^|[^:])\/\/.*$/gm, '$1');
 }
 
+// Regex alone cannot tell executable `require('./x')` from the same text in a
+// guard-test assertion such as `expect(src).toContain("... require('./x')")`.
+// Build a lightweight lexical mask so matches whose first token is inside a
+// quoted string, template literal, or block comment are ignored. Import path
+// quotes remain available to the regex; only the match's starting position is
+// classified.
+function buildCodeMask(src) {
+  const mask = new Uint8Array(src.length);
+  let quote = null;
+  let escaped = false;
+  let blockComment = false;
+
+  for (let i = 0; i < src.length; i += 1) {
+    const ch = src[i];
+    const next = src[i + 1];
+
+    if (blockComment) {
+      if (ch === '*' && next === '/') {
+        blockComment = false;
+        i += 1;
+      }
+      continue;
+    }
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (ch === '\\') {
+        escaped = true;
+      } else if (ch === quote) {
+        quote = null;
+      }
+      continue;
+    }
+
+    if (ch === '/' && next === '*') {
+      blockComment = true;
+      i += 1;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === '`') {
+      quote = ch;
+      continue;
+    }
+    mask[i] = 1;
+  }
+
+  return mask;
+}
+
 function resolveFile(fromFile, spec) {
   const base = path.resolve(path.dirname(fromFile), spec);
   for (const e of exts) if (fs.existsSync(base + e)) return base + e;
@@ -104,11 +154,13 @@ const patterns = [
 ];
 for (const f of files) {
   const s = stripComments(fs.readFileSync(f, 'utf8'));
+  const codeMask = buildCodeMask(s);
   let m;
   const seen = new Set();
   for (const re of patterns) {
     re.lastIndex = 0;
     while ((m = re.exec(s))) {
+      if (!codeMask[m.index]) continue;
       const key = m[1] + '@' + m.index;
       if (seen.has(key)) continue;
       seen.add(key);
@@ -118,6 +170,7 @@ for (const f of files) {
   // Named import of a missing export (relative targets only).
   const reNamed = /^\s*import\s*(?:[A-Za-z0-9_$]+\s*,\s*)?\{([^}]*)\}\s*from\s*['"](\.[^'"]+)['"]/gm;
   while ((m = reNamed.exec(s))) {
+    if (!codeMask[m.index]) continue;
     const tgt = resolveFile(f, m[2]);
     if (!tgt) continue;
     const exp = namedExports(tgt);
