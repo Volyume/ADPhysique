@@ -27,6 +27,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { dispatchPeekMenuAction } = require('../peekMenuDispatch');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', 'PeekMenu.js'), 'utf8');
 const code = SRC.split('\n')
@@ -46,7 +47,7 @@ function makeDispatcher({ onError } = {}) {
       closeSheet();
       timer = setTimeout(() => {
         timer = null;
-        try { item.onPress?.(); } catch (e) { onError?.(e, item); }
+        void dispatchPeekMenuAction(item, onError);
       }, 0);
     },
   };
@@ -122,6 +123,29 @@ describe('a failing action is reported, not swallowed', () => {
     await settle();
   });
 
+  test('a rejected async action reaches the same handler', async () => {
+    const onError = jest.fn();
+    const boom = new Error('async delete failed');
+    const d = makeDispatcher({ onError });
+    d.open();
+    d.handleItem({ label: 'Delete routine', onPress: async () => { throw boom; } });
+    await settle();
+    expect(onError).toHaveBeenCalledWith(boom, expect.objectContaining({ label: 'Delete routine' }));
+  });
+
+  test('a slow successful promise completes without a false failure', async () => {
+    const onError = jest.fn();
+    let release;
+    const completed = jest.fn();
+    const action = new Promise((resolve) => { release = resolve; });
+    const pending = dispatchPeekMenuAction({ onPress: () => action.then(completed) }, onError);
+    expect(completed).not.toHaveBeenCalled();
+    release('ok');
+    await expect(pending).resolves.toBeUndefined();
+    expect(completed).toHaveBeenCalledTimes(1);
+    expect(onError).not.toHaveBeenCalled();
+  });
+
   test('an item with no onPress at all is a clean no-op', async () => {
     const onError = jest.fn();
     const d = makeDispatcher({ onError });
@@ -160,7 +184,7 @@ describe('the component keeps both properties', () => {
   test('the label sent to logging is only ever a string', () => {
     // Menu labels can be elements. Sending one to Sentry would be both useless
     // and a data-minimisation risk.
-    expect(code).toMatch(/typeof item\?\.label === 'string' \? item\.label : null/);
+    expect(code).toMatch(/typeof failedItem\?\.label === 'string' \? failedItem\.label : null/);
   });
 
   test('the toast itself stays best-effort, so it cannot mask the real error', () => {

@@ -14,6 +14,8 @@ import {
   DELETION_AUTH_PENDING_PREFIX,
   deletionAuthPendingKey,
   markAuthDeletionPending,
+  establishAuthDeletionBackstop,
+  clearDeletedAccountStorage,
   clearAuthDeletionPending,
   retryPendingAuthDeletion,
   _resetRetryGuardForTests,
@@ -45,9 +47,62 @@ describe('marker helpers', () => {
     expect(await AsyncStorage.getItem(deletionAuthPendingKey('uid-1'))).toBeNull();
   });
 
+  test('mark requires exact readback, not merely a fulfilled write', async () => {
+    AsyncStorage.setItem.mockResolvedValueOnce(undefined);
+    AsyncStorage.getItem
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce('wrong-marker');
+    expect(await markAuthDeletionPending('uid-mismatch')).toBe(false);
+  });
+
   test('mark without a uid is refused', async () => {
     expect(await markAuthDeletionPending(null)).toBe(false);
     expect(await markAuthDeletionPending('')).toBe(false);
+  });
+});
+
+describe('destructive-flow backstop establishment', () => {
+  test('resolved Supabase error plus failed local marker is not durable', async () => {
+    const rpcError = new Error('RLS denied');
+    const result = await establishAuthDeletionBackstop('uid-1', {
+      recordServer: async () => ({ data: null, error: rpcError }),
+      markLocal: async () => false,
+    });
+    expect(result).toEqual(expect.objectContaining({
+      durable: false, serverRecorded: false, localRecorded: false, serverError: rpcError,
+    }));
+  });
+
+  test('thrown server failure is safe when the local marker is verified', async () => {
+    const result = await establishAuthDeletionBackstop('uid-1', {
+      recordServer: async () => { throw new Error('network down'); },
+      markLocal: async () => true,
+    });
+    expect(result).toEqual(expect.objectContaining({
+      durable: true, serverRecorded: false, localRecorded: true,
+    }));
+  });
+
+  test('server record is sufficient when device storage is unavailable', async () => {
+    const result = await establishAuthDeletionBackstop('uid-1', {
+      recordServer: async () => ({ data: { recorded: true }, error: null }),
+      markLocal: async () => false,
+    });
+    expect(result).toEqual(expect.objectContaining({
+      durable: true, serverRecorded: true, localRecorded: false,
+    }));
+  });
+
+  test('account storage wipe continuously preserves the only local marker', async () => {
+    await AsyncStorage.multiSet([
+      [deletionAuthPendingKey('uid-1'), '123'],
+      ['@volyume_profile', 'secret'],
+      ['unprefixed-setting', 'value'],
+    ]);
+    await expect(clearDeletedAccountStorage('uid-1', true)).resolves.toBe(true);
+    expect(await AsyncStorage.getItem(deletionAuthPendingKey('uid-1'))).toBe('123');
+    expect(await AsyncStorage.getItem('@volyume_profile')).toBeNull();
+    expect(await AsyncStorage.getItem('unprefixed-setting')).toBeNull();
   });
 });
 

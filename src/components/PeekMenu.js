@@ -61,6 +61,7 @@ import * as haptics from '../lib/haptics';
 import BottomSheet from './BottomSheet';
 import { useToast } from './Toast';
 import { logError } from '../lib/errorLog';
+import { dispatchPeekMenuAction } from './peekMenuDispatch';
 
 const PeekMenu = forwardRef(function PeekMenu(_, ref) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
@@ -121,14 +122,12 @@ const PeekMenu = forwardRef(function PeekMenu(_, ref) {
     // the close animation would have finished, not the instant the tap lands.
     closeTimerRef.current = setTimeout(() => {
       closeTimerRef.current = null;
-      try {
-        item.onPress?.();
-      } catch (e) {
-        logError('PeekMenu.action', e, { label: typeof item?.label === 'string' ? item.label : null });
+      void dispatchPeekMenuAction(item, (e, failedItem) => {
+        logError('PeekMenu.action', e, { label: typeof failedItem?.label === 'string' ? failedItem.label : null });
         // Calm, and honest that nothing happened. The user chose an action and
         // is entitled to know it did not run.
         try { toast?.show?.("That didn't work. Please try again.", { variant: 'error' }); } catch (_) { /* toast is best-effort */ }
-      }
+      });
     }, reduceMotion ? 0 : motion.state);
   }
 

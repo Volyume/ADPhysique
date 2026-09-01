@@ -291,6 +291,9 @@ describe('C15-8 nothing ships without an entry in the contract', () => {
     'tier_history', 'profiles',                         // billing / identity
     'notification_preferences',                         // the projection, contracted above
     'partner_signals', 'plan_folders',
+    'exercise_user_notes', 'exercise_goals',
+    'workout_notes', 'workout_notes_v2',
+    'food_swaps', 'progress_scan_classification_history', 'session_resolutions',
     // Surfaced by the completeness guard below rather than remembered:
     'peak_week_plans',      // Peak Week: migration 049 is HELD, do not touch
     'weekly_checkins',      // legacy table, superseded by weekly_checkins_v2

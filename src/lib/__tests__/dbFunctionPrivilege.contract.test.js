@@ -249,4 +249,21 @@ describe('the privilege class is permanently closed, not just this instance', ()
     }
     expect(NO_UID_BY_DESIGN).toEqual(['current_pricing_window']);
   });
+
+  test('deployment executes the behavioral owner/default-ACL probe', () => {
+    const probe = fs.readFileSync(
+      path.join(ROOT, 'supabase', 'verify_application_function_acl.sql'), 'utf8',
+    );
+    const workflow = fs.readFileSync(
+      path.join(ROOT, '.github', 'workflows', 'deploy-migrations.yml'), 'utf8',
+    );
+    expect(probe).toContain("current_user <> 'postgres'");
+    expect(probe).toContain("n.nspname IN ('public', 'private')");
+    expect(probe).toContain('CREATE FUNCTION public._volyume_function_acl_probe()');
+    expect(probe).toContain("has_function_privilege('anon'");
+    expect(probe).toContain("has_function_privilege('authenticated'");
+    expect(probe).toContain("has_function_privilege('service_role'");
+    expect(probe).toMatch(/BEGIN;[\s\S]*ROLLBACK;/);
+    expect(workflow).toContain('-f supabase/verify_application_function_acl.sql');
+  });
 });

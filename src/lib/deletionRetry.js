@@ -18,8 +18,9 @@
  *     never proceeds into restore/sync: the navigator signs the session
  *     out with a calm explanation whether the retry succeeded or not.
  *
- * Everything here is best-effort: a failure logs and returns; it never
- * throws into a boot path.
+ * Boot retries are best-effort. Establishing the retry record during the
+ * destructive deletion flow is not: the caller must prove at least one
+ * durable server/device backstop before it signs out and wipes local state.
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
@@ -42,12 +43,66 @@ export function deletionAuthPendingKey(userId) {
 export async function markAuthDeletionPending(userId) {
   if (!userId) return false;
   try {
-    await AsyncStorage.setItem(deletionAuthPendingKey(userId), String(Date.now()));
-    return true;
+    const key = deletionAuthPendingKey(userId);
+    const existing = await AsyncStorage.getItem(key);
+    if (typeof existing === 'string' && existing.length > 0) return true;
+    const marker = String(Date.now());
+    await AsyncStorage.setItem(key, marker);
+    return (await AsyncStorage.getItem(key)) === marker;
   } catch (e) {
     logError('deletionRetry.mark', e, { userId });
     return false;
   }
+}
+
+/**
+ * Attempt both independent durable retry channels. Supabase clients resolve
+ * many failures as `{ error }`, so a fulfilled promise alone is never counted
+ * as a server record.
+ */
+export async function establishAuthDeletionBackstop(
+  userId,
+  { recordServer, markLocal = markAuthDeletionPending } = {},
+) {
+  let serverRecorded = false;
+  let serverError = null;
+  try {
+    if (typeof recordServer !== 'function') throw new Error('server deletion backstop unavailable');
+    const result = await recordServer();
+    if (result?.error) throw result.error;
+    serverRecorded = true;
+  } catch (error) {
+    serverError = error;
+  }
+
+  let localRecorded = false;
+  let localError = null;
+  try {
+    localRecorded = (await markLocal(userId)) === true;
+    if (!localRecorded) localError = new Error('device deletion marker was not durably verified');
+  } catch (error) {
+    localError = error;
+  }
+  return {
+    durable: serverRecorded || localRecorded,
+    serverRecorded,
+    localRecorded,
+    serverError,
+    localError,
+  };
+}
+
+/** Remove every AsyncStorage key except an already-durable retry marker. */
+export async function clearDeletedAccountStorage(userId, preserveAuthDeletionMarker) {
+  if (!preserveAuthDeletionMarker) {
+    await AsyncStorage.clear();
+    return true;
+  }
+  const keep = deletionAuthPendingKey(userId);
+  const keys = await AsyncStorage.getAllKeys();
+  const remove = keys.filter((key) => key !== keep);
+  if (remove.length) await AsyncStorage.multiRemove(remove);
+  return typeof (await AsyncStorage.getItem(keep)) === 'string';
 }
 
 export async function clearAuthDeletionPending(userId) {

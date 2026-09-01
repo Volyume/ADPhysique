@@ -2,13 +2,16 @@ import { useState } from 'react';
 import { appAlert } from '../components/AppAlert';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import { getSupabaseClient, signOut } from '../lib/supabase';
 import { wipeAllUserDataWithRetry } from '../lib/database';
 import { logError } from '../lib/errorLog';
-import { markAuthDeletionPending } from '../lib/deletionRetry';
+import {
+  markAuthDeletionPending,
+  establishAuthDeletionBackstop,
+  clearDeletedAccountStorage,
+} from '../lib/deletionRetry';
 import { audit } from '../lib/observability';
 
 // The account-level destructive flows (sign-out, delete account, withdraw
@@ -204,6 +207,8 @@ export default function useAccountActions() {
     // user is told honestly and a device-local marker drives an automatic
     // retry on the next launch (src/lib/deletionRetry.js).
     let authRemovalPending = false;
+    let serverAuthRetryRecorded = false;
+    let localAuthRetryRecorded = false;
     try {
       if (!user?.isLocal) {
         // Server-side wipe via the delete-account Edge Function. The
@@ -270,14 +275,27 @@ export default function useAccountActions() {
               // still there. Not full success: mark it pending so the
               // Edge Function is retried on the next sign-in.
               authRemovalPending = true;
+              // Establish BOTH available backstops before sign-out/local
+              // destruction. A resolved Supabase `{ error }` is a failure,
+              // and at least one server/device record must be verified.
               // Server backstop (founder decision 2026-07-02): log the
               // fallback deletion so the scheduled sweeper (migration 098)
               // finishes the auth-row removal even if this user never signs
               // in again. The RPC verifies the wipe actually happened
               // before logging, so it cannot be used to enqueue a live
-              // account. Best-effort: the client retry path stands anyway.
-              try { await sb.rpc('record_rpc_fallback_deletion'); }
-              catch (e) { logError('SettingsScreen.deleteAccount.logFallback', e, { userId }); }
+              // account.
+              const backstop = await establishAuthDeletionBackstop(userId, {
+                recordServer: () => sb.rpc('record_rpc_fallback_deletion'),
+              });
+              serverAuthRetryRecorded = backstop.serverRecorded;
+              localAuthRetryRecorded = backstop.localRecorded;
+              if (backstop.serverError) {
+                logError('SettingsScreen.deleteAccount.logFallback', backstop.serverError, { userId });
+              }
+              if (backstop.localError) {
+                logError('SettingsScreen.deleteAccount.markAuthPending', backstop.localError, { userId });
+              }
+              if (!backstop.durable) cloudOk = false;
             }
           }
         } else {
@@ -294,8 +312,10 @@ export default function useAccountActions() {
         // and leave the session alone so they can retry or contact us.
         if (!cloudOk) {
           appAlert(
-            "Couldn't delete your account",
-            'Try again.',
+            authRemovalPending ? 'Account deletion needs attention' : "Couldn't delete your account",
+            authRemovalPending
+              ? 'Your account data was deleted, but removal of the remaining sign-in record could not be safely scheduled. You are still signed in on this device. Try deletion again or contact support.'
+              : 'Try again.',
           );
           setDeletingAccount(false);
           return;
@@ -323,22 +343,34 @@ export default function useAccountActions() {
       // @volyume_ prefix wipe used to miss three keys that don't carry
       // the @ (volyume_review_prompted, volyume_notif_prompt_seen,
       // volyume_sessions_since_install) and any future un-prefixed key.
-      // AsyncStorage.clear() is scoped to this app only, so it's the
-      // right hammer here. Without this, next launch sees a stale
+      // The storage helper removes every app-scoped key, except a verified
+      // auth-deletion retry marker when that is the only durable backstop.
+      // Without this, next launch sees a stale
       // firstRunComplete=true and re-routes into the home flow as a
       // phantom user.
       try {
-        await AsyncStorage.clear();
-      } catch (e) { logError('SettingsScreen.deleteAccount.wipeAsyncStorage', e); }
+        // When the device marker is the only durable retry channel, retain it
+        // continuously rather than clearing it and hoping a later rewrite
+        // succeeds. Every other app-scoped key is still removed.
+        localAuthRetryRecorded = await clearDeletedAccountStorage(
+          userId,
+          authRemovalPending && localAuthRetryRecorded,
+        );
+      } catch (e) {
+        localAuthRetryRecorded = false;
+        logError('SettingsScreen.deleteAccount.wipeAsyncStorage', e);
+      }
 
-      // SC-2: persist the pending-auth-removal marker AFTER the
-      // AsyncStorage.clear() above so it survives to the next launch.
+      // SC-2: re-verify/persist the pending-auth-removal marker AFTER the
+      // account storage wipe so it survives to the next launch.
       // RootNavigator's auth listener retries the Edge Function once
       // when it sees the marker for this uid. Best-effort.
       if (authRemovalPending) {
-        try { await markAuthDeletionPending(userId); }
+        try { localAuthRetryRecorded = await markAuthDeletionPending(userId); }
         catch (e) { logError('SettingsScreen.deleteAccount.markAuthPending', e, { userId }); }
       }
+
+      const authRetryDurable = !authRemovalPending || serverAuthRetryRecorded || localAuthRetryRecorded;
 
       // Belt-and-braces SecureStore wipe. signOut() above should have
       // cleared the supabase-js auth tokens, but if the network call
@@ -361,11 +393,20 @@ export default function useAccountActions() {
       // sign-in credentials could not be removed yet (Edge Function
       // unreachable); say so plainly instead of reporting full success.
       // The reload waits for the acknowledgement so the alert is read.
-      if (authRemovalPending) {
+      if (authRemovalPending && authRetryDurable) {
         await new Promise((resolve) => {
           appAlert(
             'Account data deleted',
             'All your data has been deleted. One step is still pending: removing your sign-in details, which we could not reach just now. If you ever sign in again with the same Apple or Google account, we will finish removing them automatically before anything else happens.',
+            [{ text: 'OK', onPress: resolve }],
+            { cancelable: false },
+          );
+        });
+      } else if (authRemovalPending) {
+        await new Promise((resolve) => {
+          appAlert(
+            'Sign-in removal needs support',
+            'Your account data was deleted, but this device could not safely schedule removal of the remaining sign-in record. Contact support before trying to use this sign-in again.',
             [{ text: 'OK', onPress: resolve }],
             { cancelable: false },
           );

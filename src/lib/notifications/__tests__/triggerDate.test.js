@@ -19,7 +19,7 @@
  * previously reached native and killed the app.
  */
 
-import { safeTriggerDate, scheduleCheckedNotification } from '../triggerDate';
+import { safeTriggerDate, safeWeeklyTrigger, scheduleCheckedNotification } from '../triggerDate';
 
 jest.mock('expo-notifications', () => ({
   SchedulableTriggerInputTypes: { DATE: 'date', WEEKLY: 'weekly', TIME_INTERVAL: 'timeInterval' },
@@ -130,7 +130,7 @@ describe('scheduleCheckedNotification is the choke point', () => {
     expect(sent.trigger.channelId).toBe('coaching_reminders');
   });
 
-  test('non-DATE triggers pass through untouched: they cannot trap', async () => {
+  test('a valid WEEKLY trigger passes through untouched', async () => {
     const cfg = {
       identifier: 'weekly',
       content: { title: 't' },
@@ -138,6 +138,44 @@ describe('scheduleCheckedNotification is the choke point', () => {
     };
     await scheduleCheckedNotification(cfg);
     expect(Notifications.scheduleNotificationAsync).toHaveBeenCalledWith(cfg);
+  });
+
+  test.each([
+    ['wrong type', { type: 'WEEKLY', weekday: 2, hour: 8, minute: 0 }],
+    ['missing type', { weekday: 2, hour: 8, minute: 0 }],
+    ['missing weekday', { type: 'weekly', hour: 8, minute: 0 }],
+    ['weekday zero', { type: 'weekly', weekday: 0, hour: 8, minute: 0 }],
+    ['weekday eight', { type: 'weekly', weekday: 8, hour: 8, minute: 0 }],
+    ['weekday NaN', { type: 'weekly', weekday: NaN, hour: 8, minute: 0 }],
+    ['weekday infinity', { type: 'weekly', weekday: Infinity, hour: 8, minute: 0 }],
+    ['fractional weekday', { type: 'weekly', weekday: 2.5, hour: 8, minute: 0 }],
+    ['string weekday from persisted state', { type: 'weekly', weekday: '2', hour: 8, minute: 0 }],
+    ['negative hour', { type: 'weekly', weekday: 2, hour: -1, minute: 0 }],
+    ['hour 24', { type: 'weekly', weekday: 2, hour: 24, minute: 0 }],
+    ['hour NaN', { type: 'weekly', weekday: 2, hour: NaN, minute: 0 }],
+    ['fractional hour', { type: 'weekly', weekday: 2, hour: 8.5, minute: 0 }],
+    ['negative minute', { type: 'weekly', weekday: 2, hour: 8, minute: -1 }],
+    ['minute 60', { type: 'weekly', weekday: 2, hour: 8, minute: 60 }],
+    ['minute infinity', { type: 'weekly', weekday: 2, hour: 8, minute: Infinity }],
+    ['fractional minute', { type: 'weekly', weekday: 2, hour: 8, minute: 0.5 }],
+  ])('corrupt persisted WEEKLY state (%s) is rejected before native', async (_label, trigger) => {
+    const config = { identifier: 'corrupt-weekly', content: { title: 't' }, trigger };
+    expect(safeWeeklyTrigger(trigger, { category: 'training_reminder' })).toBeNull();
+    expect(await scheduleCheckedNotification(config, { category: 'training_reminder' })).toBeNull();
+    expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+  });
+
+  test('WEEKLY rejection telemetry exposes only the invalid field, never its value', async () => {
+    await scheduleCheckedNotification({
+      identifier: 'corrupt-weekly',
+      content: { title: 't' },
+      trigger: { type: 'weekly', weekday: NaN, hour: 8, minute: 0 },
+    }, { category: 'training_reminder' });
+    expect(trackNotificationFailed).toHaveBeenCalledWith({
+      category: 'training_reminder',
+      reason: 'invalid_weekly_trigger',
+      payload: { raw: 'invalid-weekday', scope: 'corrupt-weekly' },
+    });
   });
 
   test('a null trigger (fire now) passes through untouched', async () => {

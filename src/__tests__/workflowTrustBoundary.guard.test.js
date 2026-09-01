@@ -66,4 +66,24 @@ describe('GitHub workflow trust boundary', () => {
     expect(source['build-ios.yml']).toContain('eas submit --platform ios --id "$EAS_BUILD_ID"');
     expect(source['build-ios.yml']).not.toContain('eas submit --platform ios --latest');
   });
+
+  test.each([
+    { skipBuild: false, submit: false, accepted: true },
+    { skipBuild: false, submit: true, accepted: true },
+    { skipBuild: true, submit: false, accepted: false },
+    { skipBuild: true, submit: true, accepted: false },
+  ])(
+    'iOS dispatch state skip_build=$skipBuild submit=$submit is accepted=$accepted',
+    ({ skipBuild, submit, accepted }) => {
+      const doc = YAML.parse(source['build-ios.yml']);
+      const inputs = doc.on.workflow_dispatch.inputs;
+      const dispatchStateIsExpressible = !skipBuild && typeof submit === 'boolean';
+
+      expect(inputs).not.toHaveProperty('skip_build');
+      expect(dispatchStateIsExpressible).toBe(accepted);
+      expect(source['build-ios.yml']).not.toContain('inputs.skip_build');
+      expect(source['build-ios.yml']).toContain('item.gitCommitHash === process.env.GITHUB_SHA');
+      expect(source['build-ios.yml']).toContain('eas submit --platform ios --id "$EAS_BUILD_ID"');
+    },
+  );
 });

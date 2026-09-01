@@ -47,6 +47,7 @@ import { CATEGORY } from '../lib/notifications/categories';
 import { getQuietHours, shiftHourMinuteOutOfQuietHours } from '../lib/notifications/quietHours';
 import useAppStore from '../store/useAppStore';
 import { useToast } from '../components/Toast';
+import { computeNextCheckinFireDate } from '../lib/notifications/nextCheckinDate';
 
 const NOTIF_PREFS_KEY = '@volyume_notification_prefs';
 
@@ -63,36 +64,6 @@ function formatHour(hour) {
 
 function formatDayHour(dayIndex, hour) {
   return `${DAYS[dayIndex]} at ${formatHour(hour)}`;
-}
-
-function computeNextCheckinFireDate(weekday, hour, minute, lastCheckinMs, minGapDays = 7) {
-  const after = new Date();
-  const target = new Date(after);
-  const currentDow = target.getDay();
-  let daysUntil = (weekday - currentDow + 7) % 7;
-  target.setHours(hour, minute, 0, 0);
-  if (daysUntil === 0 && target.getTime() <= after.getTime()) daysUntil = 7;
-  target.setDate(target.getDate() + daysUntil);
-  if (lastCheckinMs > 0 && minGapDays > 0) {
-    // Correctness fix: lastCheckinMs is the reviewed week's Monday-anchored
-    // weekStart (saveWeeklyCheckin stores weekStart, not the submit date),
-    // not the actual day the check-in fired on. Measuring the gap straight
-    // off that Monday pushed the displayed next-check-in date a whole week
-    // later than the true next occurrence whenever the configured check-in
-    // weekday falls before Monday in the week (e.g. Sunday, day 0): the
-    // correct next Sunday sits only 6 days after that Monday, reads as
-    // "too soon" against a 7-day gap measured from the Monday itself, and
-    // gets bumped an extra week. Normalise lastCheckinMs onto the SAME
-    // configured weekday first, so the gap is measured check-in-day to
-    // check-in-day, matching what the check-in screen's own "come back on
-    // [day]" gate assumes.
-    const lastAnchor = new Date(lastCheckinMs);
-    const lastDow = lastAnchor.getDay();
-    lastAnchor.setDate(lastAnchor.getDate() + ((weekday - lastDow + 7) % 7));
-    const earliest = lastAnchor.getTime() + minGapDays * 24 * 60 * 60 * 1000;
-    while (target.getTime() < earliest) target.setDate(target.getDate() + 7);
-  }
-  return target;
 }
 
 function formatNextFire(date) {

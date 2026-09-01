@@ -103,3 +103,6 @@ jobs:
           if [ "$applied_any" = "0" ]; then
             echo "No pending migrations to apply."
           fi
+
+          echo "Verifying application function owner/default-ACL contract…"
+          psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 -f supabase/verify_application_function_acl.sql

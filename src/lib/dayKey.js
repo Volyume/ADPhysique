@@ -63,6 +63,49 @@ export function todayLocalKey() {
 }
 
 /**
+ * Ordinal for a user's civil calendar day. Unlike subtracting epoch
+ * milliseconds, this remains exactly one day across DST transitions. Exact
+ * YYYY-MM-DD storage keys are interpreted directly and are timezone-travel
+ * stable; other values use the local calendar date containing the instant.
+ */
+export function civilDayOrdinal(value) {
+  if (value == null) return NaN;
+  let y;
+  let m;
+  let d;
+  const keyMatch = typeof value === 'string'
+    ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(value)
+    : null;
+  if (keyMatch) {
+    y = Number(keyMatch[1]);
+    m = Number(keyMatch[2]);
+    d = Number(keyMatch[3]);
+  } else {
+    const date = value instanceof Date ? value : new Date(value);
+    if (!Number.isFinite(date.getTime())) return NaN;
+    y = date.getFullYear();
+    m = date.getMonth() + 1;
+    d = date.getDate();
+  }
+  const utc = new Date(Date.UTC(y, m - 1, d));
+  if (utc.getUTCFullYear() !== y || utc.getUTCMonth() !== m - 1 || utc.getUTCDate() !== d) return NaN;
+  return Math.trunc(utc.getTime() / 86400000);
+}
+
+export function civilDayDifference(later, earlier) {
+  const end = civilDayOrdinal(later);
+  const start = civilDayOrdinal(earlier);
+  return Number.isFinite(end) && Number.isFinite(start) ? end - start : NaN;
+}
+
+export function addLocalCalendarDays(value, count) {
+  const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+  if (!Number.isFinite(date.getTime()) || !Number.isInteger(count)) return new Date(NaN);
+  date.setDate(date.getDate() + count);
+  return date;
+}
+
+/**
  * Reverse a 'YYYY-MM-DD' day-key back to a Date at LOCAL midnight. Use this
  * (not `new Date(isoStr)`, which parses as UTC) whenever a stored day-key is
  * turned back into a Date for navigation or labelling, so it stays on the

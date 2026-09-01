@@ -101,8 +101,9 @@ export function safeTriggerDate(value, { category = 'unknown', scope = '' } = {}
  * because the alternative is not a missed notification, it is the app being
  * killed by a native trap the user cannot recover from.
  *
- * Non-DATE triggers (WEEKLY, DAILY, TIME_INTERVAL, null) pass through
- * untouched: they never reach DateTriggerRecord, so they cannot trap here.
+ * WEEKLY triggers are independently proved to contain finite integer calendar
+ * components before they cross the native boundary. Other trigger kinds pass
+ * through unchanged.
  *
  * A rejection is attributed by the notification's own `identifier`, which is
  * a distinct constant per scheduler, so telemetry names the producing
@@ -114,6 +115,24 @@ export function safeTriggerDate(value, { category = 'unknown', scope = '' } = {}
  */
 export async function scheduleCheckedNotification(config, { category = 'unknown' } = {}) {
   const trigger = config?.trigger;
+  const hasExplicitType = trigger && typeof trigger === 'object'
+    && Object.prototype.hasOwnProperty.call(trigger, 'type');
+  const hasUntypedScheduleFields = trigger && typeof trigger === 'object'
+    && ['weekday', 'hour', 'minute', 'date', 'seconds', 'repeats', 'year', 'month', 'day']
+      .some((field) => Object.prototype.hasOwnProperty.call(trigger, field));
+  if (trigger && typeof trigger === 'object'
+    && ((hasExplicitType && !isKnownTriggerType(trigger.type))
+      || (!hasExplicitType && hasUntypedScheduleFields))) {
+    trackNotificationFailed({
+      category,
+      reason: 'invalid_trigger_type',
+      payload: {
+        raw: 'invalid-type',
+        scope: typeof config?.identifier === 'string' ? config.identifier : '',
+      },
+    });
+    return null;
+  }
   // Compare defensively: a DATE trigger is identified by the library enum
   // where it exists, and by the literal 'date' otherwise, so this can never
   // itself throw on a partial module (or a test double) that omits the enum.
@@ -129,7 +148,66 @@ export async function scheduleCheckedNotification(config, { category = 'unknown'
       trigger: { ...trigger, date: safe },
     });
   }
+  const WEEKLY = Notifications?.SchedulableTriggerInputTypes?.WEEKLY ?? 'weekly';
+  if (trigger && (trigger.type === WEEKLY || trigger.type === 'weekly')) {
+    const safe = safeWeeklyTrigger(trigger, {
+      category,
+      scope: typeof config?.identifier === 'string' ? config.identifier : '',
+    });
+    if (!safe) return null;
+  }
   return Notifications.scheduleNotificationAsync(config);
+}
+
+function isKnownTriggerType(type) {
+  const libraryTypes = Notifications?.SchedulableTriggerInputTypes;
+  const valid = new Set([
+    'calendar', 'daily', 'weekly', 'monthly', 'yearly', 'date', 'timeInterval',
+    ...Object.values(libraryTypes ?? {}),
+  ]);
+  return valid.has(type);
+}
+
+/**
+ * Prove an Expo WEEKLY trigger is safe before native calendar conversion.
+ * Expo's own range comparisons fail open for NaN and accept fractional
+ * values, so merely relying on the library to throw is not a sufficient
+ * native-boundary defence.
+ */
+export function safeWeeklyTrigger(trigger, { category = 'unknown', scope = '' } = {}) {
+  const WEEKLY = Notifications?.SchedulableTriggerInputTypes?.WEEKLY ?? 'weekly';
+  const valid = trigger != null
+    && typeof trigger === 'object'
+    && (trigger.type === WEEKLY || trigger.type === 'weekly')
+    && isIntegerInRange(trigger.weekday, 1, 7)
+    && isIntegerInRange(trigger.hour, 0, 23)
+    && isIntegerInRange(trigger.minute, 0, 59);
+
+  if (valid) return trigger;
+
+  trackNotificationFailed({
+    category,
+    reason: 'invalid_weekly_trigger',
+    payload: { raw: describeWeeklyRejection(trigger), scope },
+  });
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    logWarn('notifications.safeWeeklyTrigger', `rejected ${describeWeeklyRejection(trigger)} for ${category}`);
+  }
+  return null;
+}
+
+function isIntegerInRange(value, min, max) {
+  return Number.isFinite(value) && Number.isInteger(value) && value >= min && value <= max;
+}
+
+function describeWeeklyRejection(trigger) {
+  if (trigger == null || typeof trigger !== 'object') return 'not-object';
+  const WEEKLY = Notifications?.SchedulableTriggerInputTypes?.WEEKLY ?? 'weekly';
+  if (trigger.type !== WEEKLY && trigger.type !== 'weekly') return 'invalid-type';
+  if (!isIntegerInRange(trigger.weekday, 1, 7)) return 'invalid-weekday';
+  if (!isIntegerInRange(trigger.hour, 0, 23)) return 'invalid-hour';
+  if (!isIntegerInRange(trigger.minute, 0, 59)) return 'invalid-minute';
+  return 'invalid-shape';
 }
 
 /**

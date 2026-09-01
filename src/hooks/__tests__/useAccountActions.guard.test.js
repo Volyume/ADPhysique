@@ -54,17 +54,22 @@ describe('SC-2: RPC-only fallback is reported as partial success', () => {
     expect(HOOK).toMatch(/\} else \{[\s\S]{0,400}?authRemovalPending = true;/);
   });
   test('the marker is written AFTER AsyncStorage.clear() so it survives it', () => {
-    const clearAt = HOOK.indexOf('await AsyncStorage.clear();');
+    const clearAt = HOOK.indexOf('await clearDeletedAccountStorage(');
     const markAt = HOOK.indexOf('await markAuthDeletionPending(userId);');
     expect(clearAt).toBeGreaterThan(-1);
     expect(markAt).toBeGreaterThan(-1);
     expect(markAt).toBeGreaterThan(clearAt);
   });
+  test('resolved server errors and failed local persistence cannot reach the destructive path', () => {
+    expect(HOOK).toMatch(/if \(!backstop\.durable\) cloudOk = false;/);
+    expect(HOOK).toMatch(/serverAuthRetryRecorded = backstop\.serverRecorded;/);
+    expect(HOOK).toMatch(/localAuthRetryRecorded = backstop\.localRecorded;/);
+  });
   test('the user is told honestly that credential removal is pending', () => {
     // Wave-3 review fix: the alert names the TRUE trigger (a future sign-in
     // with the same identity), never a plain app restart, which the delete
     // flow makes session-less by design.
-    expect(HOOK).toMatch(/if \(authRemovalPending\) \{[\s\S]{0,900}?sign in again with the same Apple or Google account/);
+    expect(HOOK).toMatch(/if \(authRemovalPending && authRetryDurable\) \{[\s\S]{0,900}?sign in again with the same Apple or Google account/);
     expect(HOOK).not.toMatch(/completes automatically the next time the app starts/);
   });
   test('account flows never reload the bundle (black-screen class, 2026-07-13)', () => {
