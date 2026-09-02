@@ -14,21 +14,46 @@
  * capabilityDirectoryDiscovery.test.js. Condition names are permitted
  * on this surface alone (GC-D4); function/benefit vocabulary is banned
  * by the directory schema validator over every profile string.
+ *
+ * VISUAL (restyle 2026-09-02): this screen had grown its own parallel
+ * design system - hand-rolled bordered rectangles, a hand-rolled search
+ * input and no icons - so it read as a different app from Today, Train
+ * and Progress. It now composes from the same shared primitives every
+ * other list surface uses: `settingsStyles.section` groups holding
+ * `SettingRow`s, the shared `TextField`, `Card` for quiet notes and
+ * `EmptyState` for no-results. Those primitives also carry the capability
+ * lane's 48dp touch-target rule by construction (SettingRow pads to ~56,
+ * TextField's md size to 50), which is what capabilityTouchTargets.guard
+ * exists to protect. No logic, routing, copy law or persistence changed.
  */
 import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TextInput, AccessibilityInfo } from 'react-native';
+import { View, Text, StyleSheet, AccessibilityInfo } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import useTheme from '../hooks/useTheme';
-import { type, spacing, radius } from '../styles/theme';
+import { type, spacing, iconSize } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
 import PressableCard from '../components/PressableCard';
+import Card from '../components/Card';
+import TextField from '../components/TextField';
+import EmptyState from '../components/EmptyState';
 import * as haptics from '../lib/haptics';
-import { SettingsPage, SectionHeader } from '../components/SettingsPrimitives';
+import {
+  SettingsPage, SettingRow, SectionHeader, settingsStyles, useSettingsStyles,
+} from '../components/SettingsPrimitives';
 import {
   searchProfiles, profileById, OTHER_PROFILE,
 } from '../lib/capability/directory';
 import { PROFILE_KIND, QUESTION_KIND } from '../lib/capability/directory/schema';
 
 const kindChip = (p) => (p.kind === PROFILE_KIND.INJURY ? 'Injury' : 'Long-term');
+
+// Icon per profile kind, from the vocabulary already used elsewhere in the
+// app. The OTHER route is not a condition, so it never wears a condition icon.
+const profileIcon = (p) => {
+  if (p.id === OTHER_PROFILE.id) return 'ellipsis-horizontal-circle-outline';
+  return p.kind === PROFILE_KIND.INJURY ? 'medkit-outline' : 'body-outline';
+};
 
 // The question's functional content, shaped for the How you train add
 // flow's preselect contract (GC-D1: a suggestion, never a write).
@@ -47,6 +72,7 @@ function preselectFor(question) {
 
 export default function TrainingConsiderationsScreen() {
   const t = useTheme();
+  const live = useSettingsStyles();
   const navigation = useNavigation();
   const [query, setQuery] = useState('');
   const [openId, setOpenId] = useState(null);
@@ -90,75 +116,88 @@ export default function TrainingConsiderationsScreen() {
     const appNotes = open.accessibilityConsiderations ?? [];
     return (
       <SettingsPage title={open.canonicalName}>
+        {/* In-screen back: the profile is local state, so the page's own
+            back chevron would leave the feature entirely. */}
         <PressableCard
           accessibilityRole="button"
           accessibilityLabel="Back to all training considerations"
           onPress={() => { haptics.selection(); setOpenId(null); }}
           style={styles.backRow}
         >
-          <Text style={[styles.hint, { color: t.colors.primary }]}>All considerations</Text>
+          <Ionicons name="arrow-back" size={iconSize.sm} color={t.colors.primary} />
+          <Text style={[styles.backLabel, { color: t.colors.primary }]}>All considerations</Text>
         </PressableCard>
-        <Text style={[styles.body, { color: t.colors.textSecondary }]}>{open.variability}</Text>
-        <View style={[styles.proNote, { backgroundColor: t.colors.inputBg, borderColor: t.colors.border }]}>
-          <Text style={[styles.body, { color: t.colors.textPrimary }]}>{open.professionalNote}</Text>
+
+        <View style={styles.intro}>
+          <Text style={[styles.introBody, { color: t.colors.textSecondary }]}>{open.variability}</Text>
+        </View>
+
+        <View style={styles.block}>
+          <Card>
+            <Text style={[styles.noteText, { color: t.colors.textPrimary }]}>{open.professionalNote}</Text>
+          </Card>
         </View>
         {open.clinicianBoundary ? (
-          <View style={[styles.proNote, { backgroundColor: t.colors.inputBg, borderColor: t.colors.border }]}>
-            <Text style={[styles.body, { color: t.colors.textPrimary }]}>{open.clinicianBoundary}</Text>
+          <View style={styles.block}>
+            <Card>
+              <Text style={[styles.noteText, { color: t.colors.textPrimary }]}>{open.clinicianBoundary}</Text>
+            </Card>
           </View>
         ) : null}
 
         <SectionHeader title="Set up what applies to you" />
-        <Text style={[styles.hint, { color: t.colors.textSecondary }]}>
-          People differ, so nothing is assumed. Tapping one opens How you train with the answer filled in, ready for you to confirm, change or skip.
-        </Text>
-        {(questions ?? []).map(q => (
-          <PressableCard
-            key={q.id}
-            accessibilityRole="button"
-            accessibilityLabel={q.wording}
-            accessibilityHint="Opens How you train with this ready to confirm"
-            onPress={() => goToAddFlow(preselectFor(q))}
-            style={[styles.card, { backgroundColor: t.colors.surface, borderColor: t.colors.border }]}
-          >
-            <Text style={[styles.cardTitle, { color: t.colors.textPrimary }]}>{q.wording}</Text>
-            <Text style={[styles.cardWhy, { color: t.colors.textSecondary }]}>{q.whyAsked}</Text>
-          </PressableCard>
-        ))}
-        <PressableCard
-          accessibilityRole="button"
-          accessibilityLabel="Something else about how you train"
-          onPress={() => goToAddFlow(null)}
-          style={[styles.card, { backgroundColor: t.colors.surface, borderColor: t.colors.border }]}
-        >
-          <Text style={[styles.cardTitle, { color: t.colors.textPrimary }]}>Something else</Text>
-          <Text style={[styles.cardWhy, { color: t.colors.textSecondary }]}>
-            If none of these fit, How you train covers anything else.
+        <View style={styles.lead}>
+          <Text style={[styles.leadText, { color: t.colors.textSecondary }]}>
+            People differ, so nothing is assumed. Tapping one opens How you train with the answer filled in, ready for you to confirm, change or skip.
           </Text>
-        </PressableCard>
+        </View>
+        <View style={[settingsStyles.section, live.section]}>
+          {(questions ?? []).map(q => (
+            <SettingRow
+              key={q.id}
+              icon="help-circle-outline"
+              label={q.wording}
+              sub={q.whyAsked}
+              accessibilityLabel={q.wording}
+              accessibilityHint="Opens How you train with this ready to confirm"
+              onPress={() => goToAddFlow(preselectFor(q))}
+            />
+          ))}
+          <SettingRow
+            icon="ellipsis-horizontal-circle-outline"
+            label="Something else"
+            sub="If none of these fit, How you train covers anything else."
+            accessibilityLabel="Something else about how you train"
+            onPress={() => goToAddFlow(null)}
+          />
+        </View>
 
         {notes.length ? <SectionHeader title="Worth knowing" /> : null}
         {notes.map((n, i) => (
-          <View key={`n${i}`} style={styles.note}>
-            <Text style={[styles.body, { color: t.colors.textPrimary }]}>{n.text}</Text>
-            {n.source ? (
-              <Text style={[styles.source, { color: t.colors.textSecondary }]}>
-                Source: {n.source.source}, {n.source.year}
-              </Text>
-            ) : null}
+          <View key={`n${i}`} style={styles.block}>
+            <Card>
+              <Text style={[styles.noteText, { color: t.colors.textPrimary }]}>{n.text}</Text>
+              {n.source ? (
+                <Text style={[styles.source, { color: t.colors.textMuted }]}>
+                  Source: {n.source.source}, {n.source.year}
+                </Text>
+              ) : null}
+            </Card>
           </View>
         ))}
 
         {appNotes.length ? <SectionHeader title="Using Volyume" /> : null}
         {appNotes.map((text, i) => (
-          <View key={`a${i}`} style={styles.note}>
-            <Text style={[styles.body, { color: t.colors.textPrimary }]}>{text}</Text>
+          <View key={`a${i}`} style={styles.block}>
+            <Card>
+              <Text style={[styles.noteText, { color: t.colors.textPrimary }]}>{text}</Text>
+            </Card>
           </View>
         ))}
 
         {open.familyRelevance?.length ? (
-          <View style={styles.note}>
-            <Text style={[styles.hint, { color: t.colors.textSecondary }]}>
+          <View style={styles.lead}>
+            <Text style={[styles.leadText, { color: t.colors.textMuted }]}>
               Plans that often fit: {open.familyRelevance.join(', ')}. All plans stay open to everyone; these are starting points, not labels.
             </Text>
           </View>
@@ -170,61 +209,66 @@ export default function TrainingConsiderationsScreen() {
   // ── Search and list mode ────────────────────────────────────────────
   return (
     <SettingsPage title="Training considerations">
-      <Text style={[styles.body, { color: t.colors.textSecondary }]}>
-        Entirely optional. If a condition or an injury shapes how you train, finding it here brings up the questions that matter for it. You never need a name: describing how you train under How you train gives you the same support.
-      </Text>
-      <TextInput
-        value={query}
-        onChangeText={setQuery}
-        placeholder="Search, for example MS, shoulder, wheelchair"
-        placeholderTextColor={t.colors.textSecondary}
-        accessibilityLabel="Search conditions and injuries"
-        style={[styles.search, {
-          backgroundColor: t.colors.surface, borderColor: t.colors.border, color: t.colors.textPrimary,
-        }]}
-      />
-      {results.map(p => (
-        <PressableCard
-          key={p.id}
-          accessibilityRole="button"
-          accessibilityLabel={p.id === OTHER_PROFILE.id ? `${p.canonicalName}. Opens the ordinary flow` : `${p.canonicalName}, ${kindChip(p)}`}
-          onPress={() => openProfile(p)}
-          style={[styles.row, { backgroundColor: t.colors.surface, borderColor: t.colors.border }]}
-        >
-          <Text style={[styles.rowTitle, { color: t.colors.textPrimary }]}>{p.canonicalName}</Text>
-          {p.id === OTHER_PROFILE.id
-            ? <Text style={[styles.cardWhy, { color: t.colors.textSecondary }]}>{p.routeNote}</Text>
-            : <Text style={[styles.chip, { color: t.colors.textSecondary }]}>{kindChip(p)}</Text>}
-        </PressableCard>
-      ))}
+      <View style={styles.intro}>
+        <Text style={[styles.introBody, { color: t.colors.textPrimary }]}>
+          Entirely optional. If a condition or an injury shapes how you train, finding it here brings up the questions that matter for it.
+        </Text>
+        <Text style={[styles.introHint, { color: t.colors.textSecondary }]}>
+          You never need a name: describing how you train under How you train gives you the same support.
+        </Text>
+      </View>
+
+      <View style={styles.searchWrap}>
+        <TextField
+          value={query}
+          onChangeText={setQuery}
+          placeholder="Search, for example MS, shoulder, wheelchair"
+          accessibilityLabel="Search conditions and injuries"
+          autoCorrect={false}
+          leading={<Ionicons name="search-outline" size={iconSize.md} color={t.colors.textMuted} />}
+        />
+      </View>
+
+      {results.length === 0 ? (
+        <EmptyState
+          icon="search-outline"
+          title="Nothing matches that"
+          text="Try a different word, or describe how you train under How you train instead. You never need a name to get the same support."
+          compact
+        />
+      ) : (
+        <View style={[settingsStyles.section, live.section]}>
+          {results.map(p => (
+            <SettingRow
+              key={p.id}
+              icon={profileIcon(p)}
+              label={p.canonicalName}
+              sub={p.id === OTHER_PROFILE.id ? p.routeNote : kindChip(p)}
+              accessibilityLabel={p.id === OTHER_PROFILE.id ? `${p.canonicalName}. Opens the ordinary flow` : `${p.canonicalName}, ${kindChip(p)}`}
+              onPress={() => openProfile(p)}
+            />
+          ))}
+        </View>
+      )}
     </SettingsPage>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { ...type.body, marginBottom: spacing.md },
-  hint: { ...type.bodySm, marginBottom: spacing.sm },
-  search: {
-    ...type.body, borderWidth: 1, borderRadius: radius.md,
-    paddingHorizontal: spacing.md, paddingVertical: spacing.sm, marginBottom: spacing.md,
-    minHeight: spacing.xxxl,
+  // Screen-edge blocks match the Settings family's own rhythm: the shared
+  // page already pads its scroll content, so these only add vertical space.
+  intro: { paddingHorizontal: spacing.xs, paddingBottom: spacing.md, gap: spacing.sm },
+  introBody: { ...type.body },
+  introHint: { ...type.bodySm },
+  lead: { paddingHorizontal: spacing.xs, paddingBottom: spacing.sm },
+  leadText: { ...type.bodySm },
+  searchWrap: { paddingBottom: spacing.md },
+  block: { paddingBottom: spacing.sm, gap: spacing.xs },
+  noteText: { ...type.bodySm },
+  source: { ...type.caption, marginTop: spacing.xs },
+  backRow: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    minHeight: touchTarget.minimum, paddingHorizontal: spacing.xs,
   },
-  row: {
-    borderWidth: 1, borderRadius: radius.md, padding: spacing.md,
-    marginBottom: spacing.sm, minHeight: spacing.xxxl,
-  },
-  rowTitle: { ...type.bodyStrong },
-  chip: { ...type.caption, marginTop: 2 },
-  card: {
-    borderWidth: 1, borderRadius: radius.md, padding: spacing.md,
-    marginBottom: spacing.sm, minHeight: spacing.xxxl,
-  },
-  cardTitle: { ...type.bodyStrong, marginBottom: 2 },
-  cardWhy: { ...type.bodySm },
-  note: { marginBottom: spacing.md },
-  source: { ...type.caption, marginTop: 2 },
-  proNote: {
-    borderWidth: 1, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.md,
-  },
-  backRow: { minHeight: spacing.xxxl, justifyContent: 'center', marginBottom: spacing.sm },
+  backLabel: { ...type.label },
 });

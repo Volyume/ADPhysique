@@ -33,7 +33,17 @@ const read = (rel) => fs.readFileSync(path.join(__dirname, '..', '..', rel), 'ut
 // control, and a deleted (or duplicated) application fails loudly.
 const ENUMERATED = [
   ['components/ExercisePickerModal.js', [['pickerAllowAgainBtn', 1], ['createNewBtn', 1], ['showExcludedRow', 2], ['createSaveBtn', 1]]],
-  ['screens/TrainingConsiderationsScreen.js', [['search', 1], ['row', 1], ['card', 2], ['backRow', 1]]],
+  // The shared primitives the lane delegates to. SettingRow carries the
+  // floor for every settings-shaped row in the app, so a surface that
+  // renders its rows through it inherits the rule structurally instead of
+  // re-declaring a local minHeight per screen.
+  ['components/SettingsPrimitives.js', [['settingRow', 1]]],
+  // Restyle 2026-09-02: this screen's hand-rolled `search`/`row`/`card`
+  // rectangles were replaced by TextField and SettingRow (both >=48 by
+  // construction), leaving only the in-screen back control local to it.
+  // Its delegation is asserted separately below, so removing those three
+  // styles did not remove their coverage.
+  ['screens/TrainingConsiderationsScreen.js', [['backRow', 1]]],
   // Round 17 (J2): the install-conflict sheet's three sm buttons were
   // ~34dp effective (padding-sized, no hitSlop - invisible to the
   // numeric-minHeight strays check, stated on the row). Round 18: the
@@ -65,7 +75,14 @@ describe('J2: the lane\'s enumerated touch targets sit on the 48 token', () => {
       let at = src.indexOf(`${name}: {`);
       while (at !== -1) { sites.push(at); at = src.indexOf(`${name}: {`, at + 1); }
       expect({ file: rel, style: name, found: sites.length > 0 }).toEqual({ file: rel, style: name, found: true });
-      const onToken = sites.some((site) => src.slice(site, src.indexOf('},', site)).includes('minHeight: spacing.xxxl'));
+      // Either 48 token counts. `spacing.xxxl` is the historical one;
+      // `touchTarget.minimum` is the platform token (asserted === 48 in
+      // styles/__tests__/layout.test.js) and is the semantically correct
+      // one for a touch target, so a surface may sit on either.
+      const onToken = sites.some((site) => {
+        const b = src.slice(site, src.indexOf('},', site));
+        return b.includes('minHeight: spacing.xxxl') || b.includes('minHeight: touchTarget.minimum');
+      });
       expect({ file: rel, style: name, onToken }).toEqual({ file: rel, style: name, onToken: true });
       // Round 18 (I6): the floor must REACH its controls - exact
       // application count, so a dropped `style={styles.X}` fails.
@@ -77,5 +94,30 @@ describe('J2: the lane\'s enumerated touch targets sit on the 48 token', () => {
     const counts = {};
     for (const m of numeric) counts[m] = (counts[m] || 0) + 1;
     expect({ file: rel, counts }).toEqual({ file: rel, counts: allowed });
+  });
+});
+
+describe('J2: a surface that deleted its local floors delegates to a primitive that has one', () => {
+  // The counterpart to the enumeration above. TrainingConsiderations used to
+  // declare `search`, `row` and `card` with their own minHeight; the restyle
+  // replaced them with the shared primitives. That is only safe while the
+  // screen genuinely renders through those primitives, so pin it: if someone
+  // hand-rolls a bordered row back onto this screen, the floor silently stops
+  // applying to it and this fails.
+  const src = read('screens/TrainingConsiderationsScreen.js');
+
+  test('its interactive rows are SettingRow, and its search is TextField', () => {
+    expect(src).toMatch(/import TextField from '\.\.\/components\/TextField';/);
+    expect(src).toMatch(/SettingsPage, SettingRow, SectionHeader/);
+    expect((src.match(/<SettingRow\b/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((src.match(/<TextField\b/g) ?? []).length).toBe(1);
+  });
+
+  test('it declares no hand-rolled pressable rectangle of its own', () => {
+    // A local style carrying BOTH a border and a background is the shape the
+    // restyle removed; PressableCard/SettingRow own that treatment now.
+    const sheet = src.slice(src.indexOf('StyleSheet.create('));
+    expect(sheet).not.toMatch(/borderWidth: 1/);
+    expect(sheet).not.toMatch(/backgroundColor:/);
   });
 });

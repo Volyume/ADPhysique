@@ -7,6 +7,7 @@ import useTheme from '../hooks/useTheme';
 import PressableCard from './PressableCard';
 import BackHeader from './BackHeader';
 import SectionLabel from './SectionLabel';
+import { touchTarget } from '../styles/layout';
 
 // Shared building blocks for the Settings landing page and its sub-pages.
 // Pulled out of the old single-screen Settings so every sub-page renders
@@ -168,6 +169,12 @@ export const settingsStyles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.lg,
     padding: spacing.lg,
+    // Explicit platform floor. Padding plus a 34dp icon chip already put
+    // this near 66dp, so this is a no-op at rest -- but it makes the touch
+    // target a GUARANTEE of the primitive rather than a side effect of its
+    // content, which is what lets a surface delegate its rows here and
+    // inherit the capability lane's 48dp rule (capabilityTouchTargets.guard).
+    minHeight: touchTarget.minimum,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderSubtle,
   },

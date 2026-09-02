@@ -26,8 +26,9 @@ import PressableCard from '../components/PressableCard';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
 import {
-  SettingsPage, SettingRow, SectionHeader,
+  SettingsPage, SettingRow, SectionHeader, settingsStyles, useSettingsStyles,
 } from '../components/SettingsPrimitives';
+import EmptyState from '../components/EmptyState';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import {
@@ -91,6 +92,7 @@ const END_CHOICES = [
 
 export default function HowYouTrainScreen() {
   const t = useTheme();
+  const live = useSettingsStyles();
   const navigation = useNavigation();
   const toast = useToast();
   const { user } = useAppStore(useShallow(s => ({ user: s.user })));
@@ -1554,34 +1556,44 @@ export default function HowYouTrainScreen() {
           plus either an undecided episode rule or an un-rewritten
           baseline conflict) - undecided episodes no longer serve
           conflicted rows in silence forever with no way back. */}
-      {canRevisit ? (
-        <SettingRow
-          icon="list-outline"
-          label="Your plan and how you train"
-          sub="Review what Volyume works around in your current plan."
-          accessibilityLabel="Your plan and how you train. Review what Volyume works around in your current plan."
-          onPress={revisitCapabilityPlan}
-        />
-      ) : null}
+      {/* Restyle 2026-09-02: these entry rows were rendered bare, so their
+          dividers floated on the page background instead of closing a card.
+          One grouped container, the same shape Settings and the Coach tab
+          use. Behaviour, routing and copy unchanged. */}
+      <View style={[settingsStyles.section, live.section]}>
+        {canRevisit ? (
+          <SettingRow
+            icon="list-outline"
+            label="Your plan and how you train"
+            sub="Review what Volyume works around in your current plan."
+            accessibilityLabel="Your plan and how you train. Review what Volyume works around in your current plan."
+            onPress={revisitCapabilityPlan}
+          />
+        ) : null}
 
       {/* Gap-closure Phase D (order section 25): the optional named-
           condition and injury directory. Discovery only - selecting a
           profile stores nothing (GC-D1); its questions land back here. */}
-      <SettingRow
-        icon="search-outline"
-        label="Looking for a specific condition or injury?"
-        sub="Optional. Finding it selects better questions; you never need a name to get the same support."
-        accessibilityLabel="Looking for a specific condition or injury? Optional. Finding it selects better questions; you never need a name to get the same support."
-        onPress={() => { haptics.selection(); navigation.navigate('TrainingConsiderations'); }}
-      />
+        <SettingRow
+          icon="search-outline"
+          label="Looking for a specific condition or injury?"
+          sub="Optional. Finding it selects better questions; you never need a name to get the same support."
+          accessibilityLabel="Looking for a specific condition or injury? Optional. Finding it selects better questions; you never need a name to get the same support."
+          onPress={() => { haptics.selection(); navigation.navigate('TrainingConsiderations'); }}
+        />
+      </View>
 
       <SectionHeader title="Your setup" />
       {state.baseline.length === 0 && !adding ? (
-        <Text style={[styles.hint, { color: t.colors.textSecondary, marginHorizontal: spacing.lg }]}>
-          Nothing here yet. If there is anything Volyume should build your training around, add it -
-          it stays part of your normal training, with full progression and coaching.
-        </Text>
+        <EmptyState
+          icon="body-outline"
+          title="Nothing here yet"
+          text="If there is anything Volyume should build your training around, add it. It stays part of your normal training, with full progression and coaching."
+          compact
+        />
       ) : null}
+      {state.baseline.length > 0 ? (
+      <View style={[settingsStyles.section, live.section]}>
       {state.baseline.map(row => (
         <SettingRow key={row.id} icon={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW ? 'checkmark-circle-outline' : 'body'}
           label={ruleLabel(row)}
@@ -1601,12 +1613,17 @@ export default function HowYouTrainScreen() {
             </PressableCard>
           )} />
       ))}
+      </View>
+      ) : null}
 
       <SectionHeader title="Temporary, right now" />
       {state.episodes.length === 0 && !adding ? (
-        <Text style={[styles.hint, { color: t.colors.textSecondary, marginHorizontal: spacing.lg }]}>
-          No temporary changes at the moment.
-        </Text>
+        <EmptyState
+          icon="time-outline"
+          title="No temporary changes"
+          text="If something is bothering you for a while, add it here and Volyume works around it until you say it has passed."
+          compact
+        />
       ) : null}
       {state.episodes.map(ep => {
         const subject = groupSubject(ep.rows.filter(r => r.state === 'active'));
