@@ -146,11 +146,16 @@ export const SENSITIVE_VALUE_SUBSTRINGS = Object.freeze([
 // Photo paths + binary payloads
 // ────────────────────────────────────────────────────────────────────
 
-const PHOTO_PATH_RE = /\b(file:\/\/|content:\/\/|\/storage\/|\/data\/user)[\w./%@\-:?#&=]*\.(jpe?g|png|webp|heic|heif|gif)\b/i;
+// Native image/file APIs frequently return opaque content:// identifiers with
+// no filename extension (for example media/123), and native decoder errors can
+// echo those identifiers verbatim. A scheme/path is already private device
+// location evidence; requiring an image extension leaks the common Android
+// shape. Redact the whole string whenever one occurs.
+const PRIVATE_FILE_URI_RE = /\b(?:file|content):\/\/[^\s"'<>]+|(?:\/storage\/|\/data\/user\/)[^\s"'<>]+/i;
 const BASE64_IMAGE_RE = /^data:image\/[a-z]+;base64,/i;
 const EMAIL_VALUE_RE = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i;
 const JWT_VALUE_RE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/;
-const CREDENTIAL_VALUE_RE = /(?:authorization\s*[:=]\s*bearer\s+[^\s&#]+|(?:access_token|refresh_token|token_hash|id_token|client_secret|auth_code|authorization_code|verification_code|otp)\s*[:=]\s*[^\s&#]+)/i;
+const CREDENTIAL_VALUE_RE = /(?:authorization\s*[:=]\s*bearer\s+[^\s&#]+|(?:access_token|refresh_token|token_hash|id_token|client_secret|auth_code|authorization_code|verification_code|otp)\s*[:=]\s*[^\s&#]+|[?&#]code=[^\s&#]+)/i;
 const INLINE_HEALTH_RE = /\b(?:weight|body[._ -]?fat|bf[._ -]?pct|ffm|fm[._ -]?kg|kcal|protein|carbs?|fat|fibre|fiber|waist|chest|hips?|thigh|calf)\w*\s*[:=]\s*-?\d/i;
 
 // ────────────────────────────────────────────────────────────────────
@@ -200,7 +205,7 @@ export function scrubObject(obj, depth = 0) {
 function _scrubString(s) {
   if (typeof s !== 'string') return s;
   if (BASE64_IMAGE_RE.test(s)) return REDACTED;
-  if (PHOTO_PATH_RE.test(s)) return REDACTED;
+  if (PRIVATE_FILE_URI_RE.test(s)) return REDACTED;
   if (EMAIL_VALUE_RE.test(s)) return REDACTED;
   if (JWT_VALUE_RE.test(s)) return REDACTED;
   if (CREDENTIAL_VALUE_RE.test(s)) return REDACTED;

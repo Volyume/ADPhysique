@@ -250,12 +250,19 @@ describe('string-value scrubbing', () => {
     expect(scrubValue('file:///data/user/0/app.volyume/cache/photo123.jpg')).toBe('[redacted]');
   });
 
-  test('photo content:// URI is redacted', () => {
-    expect(scrubValue('content://media/external/images/media/123')).toBe('content://media/external/images/media/123');
-    // Note: scheme alone doesn't match; needs the .ext. This is by
-    // design, we don't want to redact every content URI, only ones
-    // we can confirm are images.
+  test('opaque and extension-bearing content:// URIs are redacted', () => {
+    expect(scrubValue('content://media/external/images/media/123')).toBe('[redacted]');
     expect(scrubValue('content://com.app/files/img.heic')).toBe('[redacted]');
+  });
+
+  test('extensionless private file paths are redacted', () => {
+    expect(scrubValue('decoder failed for file:///data/user/0/app/cache/opaque')).toBe('[redacted]');
+    expect(scrubValue('could not read /storage/emulated/0/DCIM/opaque')).toBe('[redacted]');
+  });
+
+  test('standard PKCE callback code parameters are redacted', () => {
+    expect(scrubValue('callback?code=one-time-secret&state=public')).toBe('[redacted]');
+    expect(scrubValue('callback?state=public&code=one-time-secret')).toBe('[redacted]');
   });
 
   test('base64-encoded image data is redacted', () => {
