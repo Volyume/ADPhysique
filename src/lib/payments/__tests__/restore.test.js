@@ -1,8 +1,9 @@
 /**
  * SUB-003: restore re-verifies the entitlement server-side, AWAITED (not
  * fire-and-forget), matching the purchase paths. A failed confirm does not fail
- * the restore (Play already reported the entitlement and payAt unlocked
- * optimistically); the outcome is returned as serverConfirmed.
+ * the restore. Store-local entitlement presence is not proof that the signed-in
+ * Supabase caller owns the purchase, so payAt must remain untouched until the
+ * buyer-bound server verifier succeeds.
  */
 jest.mock('../playBilling');
 jest.mock('../cascade');
@@ -35,7 +36,7 @@ describe('restorePurchases server confirmation (SUB-003)', () => {
     expect(res.serverConfirmed).toBe(true);
   });
 
-  test('a failed confirm does not fail the restore (optimistic unlock holds)', async () => {
+  test('a failed buyer-bound confirmation fails closed without optimistic unlock', async () => {
     playBilling.restorePurchases.mockResolvedValue({
       activeEntitlements: ['pro'],
       latestPurchaseToken: 'tok',
@@ -45,8 +46,39 @@ describe('restorePurchases server confirmation (SUB-003)', () => {
 
     const res = await restorePurchases();
 
-    expect(res.ok).toBe(true);
-    expect(res.serverConfirmed).toBe(false);
+    expect(res).toEqual({ ok: false, error: 'invoke_failed' });
+    expect(payAt).not.toHaveBeenCalled();
+  });
+
+  test('a store entitlement without verifier material fails closed', async () => {
+    playBilling.restorePurchases.mockResolvedValue({
+      activeEntitlements: ['pro'],
+      latestTransactionId: 'tx-without-token',
+    });
+
+    const res = await restorePurchases();
+
+    expect(res).toEqual({ ok: false, error: 'missing_purchase_token' });
+    expect(confirmPurchase).not.toHaveBeenCalled();
+    expect(payAt).not.toHaveBeenCalled();
+  });
+
+  test('already-current restore still proves buyer binding before success', async () => {
+    playBilling.restorePurchases.mockResolvedValue({
+      activeEntitlements: ['pro'],
+      latestPurchaseToken: 'tok',
+      activeSku: 'pro_monthly',
+      latestTransactionId: 'tx1',
+    });
+    confirmPurchase.mockResolvedValue({ ok: true });
+
+    const res = await restorePurchases({ currentTrialState: 'paid_pro' });
+
+    expect(res).toEqual({
+      ok: true, tier: 'pro', alreadyCurrent: true, serverConfirmed: true,
+    });
+    expect(confirmPurchase).toHaveBeenCalledTimes(1);
+    expect(payAt).not.toHaveBeenCalled();
   });
 
   test('nothing to restore short-circuits without a confirm call', async () => {

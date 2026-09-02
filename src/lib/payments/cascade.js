@@ -249,6 +249,15 @@ export async function confirmPurchase({ purchaseToken, subscriptionId } = {}) {
       logWarn('payments.cascade.confirmPurchase.invoke', error.message ?? 'invoke_failed', {});
       return { ok: false, error: error.message ?? 'invoke_failed' };
     }
+    // A transport-level success is not entitlement proof. Both hardened store
+    // verifiers return { ok: true, tier: 'pro' } only after authoritative store
+    // lookup, product validation, caller=buyer binding and the server tier
+    // write. Reject empty/malformed/resolved-failure bodies before any caller
+    // can treat the confirmation as a grant.
+    if (data?.ok !== true || data?.tier !== 'pro') {
+      logWarn('payments.cascade.confirmPurchase.response', 'verification_failed', {});
+      return { ok: false, error: 'verification_failed' };
+    }
     // Pull the server-written tier so Pro is confirmed straight away.
     try {
       // eslint-disable-next-line global-require

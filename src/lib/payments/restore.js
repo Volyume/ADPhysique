@@ -47,42 +47,39 @@ export async function restorePurchases({ currentTrialState = null } = {}) {
     return { ok: true, tier: null, alreadyCurrent: false };
   }
 
-  // Skip the unlock if local state already matches.
-  if (currentTrialState === `paid_${restoredTier}`) {
-    return { ok: true, tier: restoredTier, alreadyCurrent: true };
+  // A restore is different from a purchase initiated for the current app
+  // account: the device store can expose a subscription bought for another
+  // Supabase identity. Require the buyer-bound server verifier before granting
+  // or reporting success. In particular, never let payAt's optimistic local
+  // unlock run for caller A when the authoritative store buyer is B.
+  if (!info?.latestPurchaseToken || !info?.activeSku) {
+    logWarn('payments.restore.confirm', 'missing_purchase_token', {});
+    return { ok: false, error: 'missing_purchase_token' };
+  }
+  const confirm = await confirmPurchase({
+    purchaseToken: info.latestPurchaseToken, subscriptionId: info.activeSku,
+  });
+  if (!confirm.ok) {
+    logWarn('payments.restore.confirm', confirm.error ?? 'unknown', {});
+    return { ok: false, error: confirm.error ?? 'verification_failed' };
   }
 
-  // C-1: restore is server-authoritative like a purchase. The active
-  // entitlement Play reports was originally written to the server by its
-  // purchase RTDN, so payAt unlocks Pro optimistically and the next
-  // refreshTierFromCloud reconciles to the server tier. The client does not
-  // write its own paid tier (migration 067).
+  // The server has now re-fetched the store transaction, checked caller=buyer,
+  // and written/refreshed the authoritative tier. If local state already
+  // matches there is nothing left to unlock.
+  if (currentTrialState === `paid_${restoredTier}`) {
+    return {
+      ok: true, tier: restoredTier, alreadyCurrent: true, serverConfirmed: true,
+    };
+  }
+
   const ref = info?.latestTransactionId ?? null;
   const result = await payAt(restoredTier, ref ?? 'restore', 'restore_purchases');
-  // M-3 / SUB-003: server-verify the restored subscription so the authoritative
-  // tier is (re)written server-side, not just optimistically unlocked. Without
-  // this a device whose server tier is stale would revert to free after the
-  // optimistic window. AWAITED (not fire-and-forget) so the server write is
-  // attempted to completion before the restore reports success, matching the
-  // purchase paths. A failed confirm does NOT fail the restore: Play already
-  // reported the entitlement and payAt unlocked optimistically, and the next
-  // refreshTierFromCloud reconciles. The outcome is returned as serverConfirmed
-  // so callers can tell a server-confirmed restore from an optimistic one.
-  let serverConfirmed = false;
-  if (info?.latestPurchaseToken && info?.activeSku) {
-    const confirm = await confirmPurchase({
-      purchaseToken: info.latestPurchaseToken, subscriptionId: info.activeSku,
-    });
-    serverConfirmed = !!confirm.ok;
-    if (!confirm.ok) {
-      logWarn('payments.restore.confirm', confirm.error ?? 'unknown', {});
-    }
-  }
   return {
     ok: result.ok,
     tier: restoredTier,
     alreadyCurrent: false,
-    serverConfirmed,
+    serverConfirmed: true,
     error: result.ok ? undefined : result.error,
   };
 }

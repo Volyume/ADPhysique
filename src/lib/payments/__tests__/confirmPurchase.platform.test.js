@@ -22,7 +22,7 @@ const { confirmPurchase } = require('../cascade');
 describe('confirmPurchase platform routing', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockInvoke.mockResolvedValue({ data: { ok: true }, error: null });
+    mockInvoke.mockResolvedValue({ data: { ok: true, tier: 'pro' }, error: null });
   });
 
   afterAll(() => { Platform.OS = 'android'; });
@@ -51,5 +51,22 @@ describe('confirmPurchase platform routing', () => {
     expect(res.ok).toBe(false);
     expect(res.error).toBe('missing_purchase_token');
     expect(mockInvoke).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    null,
+    {},
+    { ok: false, error: 'buyer_mismatch' },
+    { ok: true },
+    { ok: true, tier: 'free' },
+  ])('resolved but non-authoritative response %# fails closed', async (data) => {
+    mockInvoke.mockResolvedValue({ data, error: null });
+
+    const res = await confirmPurchase({
+      purchaseToken: 'play-tok', subscriptionId: 'pro_monthly',
+    });
+
+    expect(res).toEqual({ ok: false, error: 'verification_failed' });
+    expect(mockRefresh).not.toHaveBeenCalled();
   });
 });
