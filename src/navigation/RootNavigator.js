@@ -3,6 +3,7 @@ import { NavigationContainer, createNavigationContainerRef } from '@react-naviga
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { StackActions } from '@react-navigation/native';
+import { safeGetStateFromPath } from './safeGetStateFromPath';
 export const navigationRef = createNavigationContainerRef();
 import { View, Image, Text, StyleSheet, Animated, Easing, useWindowDimensions } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -841,6 +842,7 @@ function ProOnboardingStack() {
 // is a SEPARATE mechanism and is untouched by this config.
 const linking = {
   prefixes: ['volyume://', 'https://volyume.app'],
+  getStateFromPath: safeGetStateFromPath,
   config: {
     screens: {
       // Bottom-tab → stack-screen tree. Keys are the tab route names in
