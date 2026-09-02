@@ -117,6 +117,12 @@ export async function getOrCreateDbKey() {
   const fresh = toHex(await Crypto.getRandomBytesAsync(32));
   try {
     await SecureStore.setItemAsync(KEY_ID, fresh, KEY_OPTS);
+    // A resolved keychain write is not positive persistence evidence. Never
+    // authorize database creation/migration until the exact key can be read
+    // back; otherwise a silent adapter failure encrypts data under an
+    // ephemeral key that is lost on the next launch.
+    const persisted = await SecureStore.getItemAsync(KEY_ID, KEY_OPTS);
+    if (persisted !== fresh) throw new Error('database key write did not persist');
   } catch (e) {
     logError('dbCrypto.setKey', e, {});
     return { key: null, status: 'unavailable' };

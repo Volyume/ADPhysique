@@ -21,9 +21,10 @@
  * lazily-populated object would be empty when dbCrypto reads it.
  */
 
+let mockStoredKey;
 jest.mock('expo-secure-store', () => ({
-  getItemAsync: jest.fn(),
-  setItemAsync: jest.fn(),
+  getItemAsync: jest.fn(async () => mockStoredKey),
+  setItemAsync: jest.fn(async (_key, value) => { mockStoredKey = value; }),
   AFTER_FIRST_UNLOCK: 'AFTER_FIRST_UNLOCK',
 }));
 
@@ -49,10 +50,12 @@ const SEQ_HEX = '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1
 const VALID = 'a'.repeat(64);
 
 beforeEach(() => {
-  jest.clearAllMocks();
-  SecureStore.getItemAsync.mockResolvedValue(null);
-  SecureStore.setItemAsync.mockResolvedValue(undefined);
-  Crypto.getRandomBytesAsync.mockResolvedValue(seq32());
+  mockStoredKey = null;
+  SecureStore.getItemAsync.mockReset().mockImplementation(async () => mockStoredKey);
+  SecureStore.setItemAsync.mockReset().mockImplementation(async (_key, value) => {
+    mockStoredKey = value;
+  });
+  Crypto.getRandomBytesAsync.mockReset().mockResolvedValue(seq32());
 });
 
 describe('getOrCreateDbKey', () => {
@@ -142,6 +145,15 @@ describe('getOrCreateDbKey', () => {
 
     const res = await getOrCreateDbKey();
 
+    expect(res).toEqual({ key: null, status: 'unavailable' });
+  });
+
+  test('a resolved but non-durable write returns {unavailable}', async () => {
+    SecureStore.setItemAsync.mockResolvedValueOnce(undefined);
+
+    const res = await getOrCreateDbKey();
+
+    expect(SecureStore.getItemAsync).toHaveBeenCalledTimes(2);
     expect(res).toEqual({ key: null, status: 'unavailable' });
   });
 });
