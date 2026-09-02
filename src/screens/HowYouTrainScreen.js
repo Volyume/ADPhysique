@@ -14,15 +14,19 @@
  * learning - those campaigns arrive later; this screen manages state.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, AccessibilityInfo, TextInput } from 'react-native';
+import { View, Text, StyleSheet, AccessibilityInfo } from 'react-native';
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native';
 import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import useTheme from '../hooks/useTheme';
-import { type, spacing, radius } from '../styles/theme';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { type, spacing, radius, iconSize } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
 import { useToast } from '../components/Toast';
 import { appAlert } from '../components/AppAlert';
 import PressableCard from '../components/PressableCard';
+import Card from '../components/Card';
+import TextField from '../components/TextField';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
 import {
@@ -89,6 +93,26 @@ const END_CHOICES = [
   { key: 'fortnight', label: 'Two weeks', days: 14 },
   { key: 'month', label: 'A month', days: 30 },
 ];
+
+// Past entries split into contiguous runs by whether the entry carries its
+// own "Start this again" action. An entry with an action must be its own
+// card - SettingRow's divider falls between the row and its button, so in a
+// shared card the button reads as belonging to the row BELOW it. Plain ended
+// rules have no action and group into one card like every other list.
+// Chronological order is preserved: runs are formed in place, never sorted.
+function groupHistory(rows) {
+  const runs = [];
+  rows.forEach((row) => {
+    // A PROMOTED episode's rules live on as baseline now (section 24) -
+    // restarting it would duplicate the user's own setup as an episode, so
+    // only genuinely ended ones offer the section 21 flare re-start.
+    const restartable = row.role === CONSTRAINT_ROLE.EPISODE && row.endedReason !== 'promoted';
+    const last = runs[runs.length - 1];
+    if (last && !last.restartable && !restartable) last.rows.push(row);
+    else runs.push({ restartable, rows: [row] });
+  });
+  return runs;
+}
 
 export default function HowYouTrainScreen() {
   const t = useTheme();
@@ -1274,19 +1298,19 @@ export default function HowYouTrainScreen() {
   const renderAddFlow = () => {
     if (adding === 'role') {
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+        <Card>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>Is this about how you train generally, or something temporary right now?</Text>
           <Choice label="How I train generally" sub="Part of your normal setup. Full progression and coaching, no special labels."
             onPress={() => chooseRole(CONSTRAINT_ROLE.BASELINE)} t={t} />
           <Choice label="Temporary, for now" sub="Volyume takes it as a passing change and will help you build back up when it ends."
             onPress={() => chooseRole(CONSTRAINT_ROLE.EPISODE)} t={t} />
-        </View>
+        </Card>
       );
     }
     if (adding === 'kind') {
       const isBaseline = draft.role === CONSTRAINT_ROLE.BASELINE;
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+        <Card>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>What kind of thing is it?</Text>
           <Choice label="A kind of movement or position" sub="Standing work, overhead positions, gripping a bar and so on."
             onPress={() => chooseKind('demand')} t={t} />
@@ -1298,7 +1322,7 @@ export default function HowYouTrainScreen() {
             <Choice label="An exercise that is always fine for me" sub="Overrides the rest of your setup for that exercise."
               onPress={() => chooseKind('allow')} t={t} />
           ) : null}
-        </View>
+        </Card>
       );
     }
     if (adding === 'family') {
@@ -1308,7 +1332,7 @@ export default function HowYouTrainScreen() {
         .map(e => movementFamily(e.name, e.primaryMuscle, e.subregion))
         .filter(Boolean))].sort((a, b) => String(familyLabel(a)).localeCompare(String(familyLabel(b))));
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+        <Card>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>Which movement patterns?</Text>
           <Text style={[styles.hint, { color: t.colors.textSecondary }]}>Pick anything that applies. You never need to say why.</Text>
           {familyKeys.map(key => (
@@ -1320,7 +1344,7 @@ export default function HowYouTrainScreen() {
             onPress={() => setDraft(d => ({ ...d, clinician: !d.clinician }))} t={t} />
           <Choice label="Continue" disabled={!draft.families.length}
             onPress={() => setAdding(draft.role === CONSTRAINT_ROLE.EPISODE ? 'dates' : 'readback')} t={t} primary />
-        </View>
+        </Card>
       );
     }
     if (adding === 'exercise') {
@@ -1330,18 +1354,20 @@ export default function HowYouTrainScreen() {
         ? library.filter(e => e.name.toLowerCase().includes(q)).slice(0, 8)
         : [];
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+        <Card>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>
             {isAllow ? 'Which exercise is always fine?' : 'Which exercise should Volyume build around?'}
           </Text>
-          <TextInput
-            accessibilityLabel="Search exercises"
-            value={exerciseQuery}
-            onChangeText={setExerciseQuery}
-            placeholder="Search exercises"
-            placeholderTextColor={t.colors.textMuted}
-            style={[styles.search, { color: t.colors.textPrimary, borderColor: t.colors.borderSubtle, backgroundColor: t.colors.inputBg }]}
-          />
+          <View style={styles.searchWrap}>
+            <TextField
+              accessibilityLabel="Search exercises"
+              value={exerciseQuery}
+              onChangeText={setExerciseQuery}
+              placeholder="Search exercises"
+              autoCorrect={false}
+              leading={<Ionicons name="search-outline" size={iconSize.md} color={t.colors.textMuted} />}
+            />
+          </View>
           {draft.exercises.map(ex => (
             <Choice key={ex.id} label={ex.name} selected
               onPress={() => toggleExercise(ex)} t={t} />
@@ -1356,12 +1382,12 @@ export default function HowYouTrainScreen() {
           ) : null}
           <Choice label="Continue" disabled={!draft.exercises.length}
             onPress={() => setAdding(draft.role === CONSTRAINT_ROLE.EPISODE && !isAllow ? 'dates' : 'readback')} t={t} primary />
-        </View>
+        </Card>
       );
     }
     if (adding === 'axes') {
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+        <Card>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>What should Volyume build around?</Text>
           <Text style={[styles.hint, { color: t.colors.textSecondary }]}>Pick anything that applies. You never need to say why.</Text>
           {DEMAND_AXES.map(a => (
@@ -1373,13 +1399,13 @@ export default function HowYouTrainScreen() {
             onPress={() => setDraft(d => ({ ...d, clinician: !d.clinician }))} t={t} />
           <Choice label="Continue" disabled={!draft.axes.length}
             onPress={() => setAdding(afterRuleStage(draft))} t={t} primary />
-        </View>
+        </Card>
       );
     }
     if (adding === 'side') {
       const ask = sideAsk(draft);
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+        <Card>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>{ask.question}</Text>
           <Text style={[styles.hint, { color: t.colors.textSecondary }]}>
             If it is one side, Volyume can still include movements you can do one side at a
@@ -1388,12 +1414,12 @@ export default function HowYouTrainScreen() {
           <Choice label={ask.left} onPress={() => chooseSide(LATERALITY.LEFT)} t={t} />
           <Choice label={ask.right} onPress={() => chooseSide(LATERALITY.RIGHT)} t={t} />
           <Choice label={ask.both} onPress={() => chooseSide(null)} t={t} />
-        </View>
+        </Card>
       );
     }
     if (adding === 'dates') {
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+        <Card>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>Since when?</Text>
           {START_CHOICES.map(c => (
             <Choice key={c.key} label={c.label} selected={draft.startDays === c.days}
@@ -1406,12 +1432,12 @@ export default function HowYouTrainScreen() {
               onPress={() => setDraft(d => ({ ...d, endDays: c.days }))} t={t} />
           ))}
           <Choice label="Continue" onPress={() => setAdding('readback')} t={t} primary />
-        </View>
+        </Card>
       );
     }
     if (adding === 'consent') {
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+        <Card>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>One thing first</Text>
           <Text style={[styles.body, { color: t.colors.textPrimary }]}>
             To build training around your body, Volyume stores what you choose here: the training
@@ -1429,7 +1455,7 @@ export default function HowYouTrainScreen() {
               instead; the gate's behaviour is untouched. */}
           <Choice label="Leave it for now" sub="You can still avoid specific exercises from Plan tools, and set your equipment - neither needs this agreement."
             onPress={() => { setAdding(null); setDraft(null); }} t={t} />
-        </View>
+        </Card>
       );
     }
     if (adding === 'readback') {
@@ -1448,7 +1474,7 @@ export default function HowYouTrainScreen() {
         ? 'side'
         : draft.kind === 'demand' ? 'axes' : draft.kind === 'family' ? 'family' : 'exercise';
       return (
-        <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+        <Card>
           <Text style={[styles.q, { color: t.colors.textPrimary }]}>
             {isAllow
               ? `Always fine for you: ${labels}.`
@@ -1458,7 +1484,7 @@ export default function HowYouTrainScreen() {
           </Text>
           <Choice label="Save" onPress={saveDraft} t={t} primary />
           <Choice label="Back" onPress={() => setAdding(backStage)} t={t} />
-        </View>
+        </Card>
       );
     }
     return null;
@@ -1470,7 +1496,7 @@ export default function HowYouTrainScreen() {
   const renderLineReview = () => {
     if (!lineReview) return null;
     return (
-      <View style={[styles.card, { backgroundColor: t.colors.surface }]}>
+      <Card>
         <Text style={[styles.q, { color: t.colors.textPrimary }]}>Choose per exercise</Text>
         <Text style={[styles.hint, { color: t.colors.textSecondary }]}>
           {lineReview.subject ? `While ${lineReview.subject} is out, decide each exercise on its own. ` : 'Decide each exercise on its own. '}
@@ -1488,7 +1514,7 @@ export default function HowYouTrainScreen() {
             >
               {line.toName ? `${line.fromName} → ${line.toName}` : `${line.fromName}: no close match, stays with a note`}
             </Text>
-            <View style={styles.episodeActions}>
+            <View style={styles.reviewActions}>
               <Choice label="Apply" selected={line.apply} compact t={t}
                 onPress={() => {
                   haptics.selection();
@@ -1504,7 +1530,7 @@ export default function HowYouTrainScreen() {
         ))}
         <Choice label="Save my choices" onPress={saveLineReview} t={t} primary />
         <Choice label="Cancel" onPress={() => setLineReview(null)} t={t} />
-      </View>
+      </Card>
     );
   };
 
@@ -1571,9 +1597,9 @@ export default function HowYouTrainScreen() {
           />
         ) : null}
 
-      {/* Gap-closure Phase D (order section 25): the optional named-
-          condition and injury directory. Discovery only - selecting a
-          profile stores nothing (GC-D1); its questions land back here. */}
+        {/* Gap-closure Phase D (order section 25): the optional named-
+            condition and injury directory. Discovery only - selecting a
+            profile stores nothing (GC-D1); its questions land back here. */}
         <SettingRow
           icon="search-outline"
           label="Looking for a specific condition or injury?"
@@ -1594,25 +1620,26 @@ export default function HowYouTrainScreen() {
       ) : null}
       {state.baseline.length > 0 ? (
       <View style={[settingsStyles.section, live.section]}>
-      {state.baseline.map(row => (
-        <SettingRow key={row.id} icon={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW ? 'checkmark-circle-outline' : 'body'}
-          label={ruleLabel(row)}
-          // F6: an allowance row means the OPPOSITE of a restriction row
-          // and must never render identically - the sub carries which
-          // way it cuts, and endBaselineRow's confirm matches.
-          sub={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
-            ? 'Kept in at your word, even where a rule would leave it out'
-            : (row.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED ? 'You told Volyume a clinician asked for this' : 'Part of your normal training')}
-          showArrow={false}
-          rightElement={(
-            <PressableCard onPress={() => endBaselineRow(row)} accessibilityRole="button"
-              accessibilityLabel={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
-                ? `Stop keeping ${ruleLabel(row)} in`
-                : `Remove ${ruleLabel(row)} from your setup`}>
-              <Text style={{ ...type.label, color: t.colors.textSecondary, padding: spacing.sm }}>Remove</Text>
-            </PressableCard>
-          )} />
-      ))}
+        {state.baseline.map(row => (
+          <SettingRow key={row.id} icon={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW ? 'checkmark-circle-outline' : 'body'}
+            label={ruleLabel(row)}
+            // F6: an allowance row means the OPPOSITE of a restriction row
+            // and must never render identically - the sub carries which
+            // way it cuts, and endBaselineRow's confirm matches.
+            sub={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
+              ? 'Kept in at your word, even where a rule would leave it out'
+              : (row.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED ? 'You told Volyume a clinician asked for this' : 'Part of your normal training')}
+            showArrow={false}
+            rightElement={(
+              <PressableCard onPress={() => endBaselineRow(row)} accessibilityRole="button"
+                style={styles.rowAction}
+                accessibilityLabel={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
+                  ? `Stop keeping ${ruleLabel(row)} in`
+                  : `Remove ${ruleLabel(row)} from your setup`}>
+                <Text style={[styles.rowActionLabel, { color: t.colors.textSecondary }]}>Remove</Text>
+              </PressableCard>
+            )} />
+        ))}
       </View>
       ) : null}
 
@@ -1634,7 +1661,7 @@ export default function HowYouTrainScreen() {
         // honouring the rules. The card says so plainly.
         const held = ep.rows.some(r => r.state === 'active' && r.adaptationMode === 'hold');
         return (
-          <View key={ep.groupId}>
+          <View key={ep.groupId} style={[settingsStyles.section, live.section]}>
             <SettingRow icon="time" label="Temporary change"
               sub={held ? `${episodeSub(ep)} · Holding your plan as-is; adaptation is paused, not your training` : episodeSub(ep)}
               showArrow={false} />
@@ -1668,77 +1695,77 @@ export default function HowYouTrainScreen() {
           four navigation rows before the thing they came to do. They are
           secondary routes, so they sit after the primary action now. */}
       <SectionHeader title="More ways in" />
-      {/* CC28 (section 33.12): energy-limited training's honest v1 home.
-          No energy axis, no pacing computation - the card maps to the two
-          EXISTING deterministic levers (session length, now free-editable
-          in Workout settings; the episode machinery for bad spells) and
-          says so plainly. T2-27 (closes audit): the row used to imply the
-          session-length lever takes effect straight away: it only shapes
-          the NEXT plan build (planEngine consumes it at generation only -
-          confirmed against S2-T2-LIVE-TRACE.md's T2-27 evidence), so the
-          copy says that plainly instead of over-claiming. */}
-      <SettingRow
-        icon="battery-half-outline"
-        label="My energy varies, or I keep sessions short"
-        sub="Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch."
-        accessibilityLabel="My energy varies, or I keep sessions short. Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch. Opens Workout and units."
-        onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
-      />
+      <View style={[settingsStyles.section, live.section]}>
+        {/* CC28 (section 33.12): energy-limited training's honest v1 home.
+            No energy axis, no pacing computation - the card maps to the two
+            EXISTING deterministic levers (session length, now free-editable
+            in Workout settings; the episode machinery for bad spells) and
+            says so plainly. T2-27 (closes audit): the row used to imply the
+            session-length lever takes effect straight away: it only shapes
+            the NEXT plan build (planEngine consumes it at generation only -
+            confirmed against S2-T2-LIVE-TRACE.md's T2-27 evidence), so the
+            copy says that plainly instead of over-claiming. */}
+        <SettingRow
+          icon="battery-half-outline"
+          label="My energy varies, or I keep sessions short"
+          sub="Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch."
+          accessibilityLabel="My energy varies, or I keep sessions short. Two levers help here: set a session length under Workout and units, which shapes your next plan build, and add a temporary change here for a rough patch. Opens Workout and units."
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
+        />
 
-      {/* CC33 D112 (closes audit T1-20, this side): the lanes name each
-          other in both directions. AvoidedMovementsScreen points here for
-          things the body needs training built around; this points there
-          for plain preference, so neither lane quietly absorbs the
-          other's entries. Registered alongside HowYouTrain in every
-          stack that carries it (RootNavigator), so the tap never
-          silently drops. */}
-      <SettingRow
-        icon="remove-circle-outline"
-        label="Movements you would rather not do"
-        sub="Preferences live under Avoided movements, so they never mix with what your body needs."
-        accessibilityLabel="Movements you would rather not do. Preferences live under Avoided movements, so they never mix with what your body needs. Opens Avoided movements."
-        onPress={() => { haptics.selection(); navigation.navigate('AvoidedMovements'); }}
-      />
+        {/* CC33 D112 (closes audit T1-20, this side): the lanes name each
+            other in both directions. AvoidedMovementsScreen points here for
+            things the body needs training built around; this points there
+            for plain preference, so neither lane quietly absorbs the
+            other's entries. Registered alongside HowYouTrain in every
+            stack that carries it (RootNavigator), so the tap never
+            silently drops. */}
+        <SettingRow
+          icon="remove-circle-outline"
+          label="Movements you would rather not do"
+          sub="Preferences live under Avoided movements, so they never mix with what your body needs."
+          accessibilityLabel="Movements you would rather not do. Preferences live under Avoided movements, so they never mix with what your body needs. Opens Avoided movements."
+          onPress={() => { haptics.selection(); navigation.navigate('AvoidedMovements'); }}
+        />
+      </View>
 
 
       {state.history.length > 0 ? (
         <>
           <SectionHeader title="Past" />
-          {state.history.slice(0, 12).map(row => {
-            // A PROMOTED episode's rules live on as baseline now (section
-            // 24) - restarting it would duplicate the user's own setup as
-            // an episode, so only genuinely ended ones offer the section
-            // 21 flare re-start.
-            const isEndedEpisode = row.role === CONSTRAINT_ROLE.EPISODE
-              && row.endedReason !== 'promoted';
-            return (
-              <View key={row.id}>
-                {/* R2-9: an ended KEEP reads as what it was, never as an
-                    ended restriction for the same exercise. */}
-                <SettingRow icon="checkmark"
-                  label={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
-                    ? `${ruleLabel(row)} (kept in)` : ruleLabel(row)}
-                  sub={row.endedReason === 'promoted' ? 'Became part of your setup' : 'Ended'} showArrow={false} />
-                {isEndedEpisode ? (
-                  <View style={styles.episodeActions}>
-                    <Choice label="Start this again" onPress={() => confirmRestartEpisode(row)} t={t} compact />
-                  </View>
-                ) : null}
-              </View>
-            );
-          })}
+          {groupHistory(state.history.slice(0, 12)).map((run, ri) => (
+            <View key={`past${ri}`} style={[settingsStyles.section, live.section]}>
+              {run.rows.map(row => (
+                <View key={row.id}>
+                  {/* R2-9: an ended KEEP reads as what it was, never as an
+                      ended restriction for the same exercise. */}
+                  <SettingRow icon="checkmark"
+                    label={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
+                      ? `${ruleLabel(row)} (kept in)` : ruleLabel(row)}
+                    sub={row.endedReason === 'promoted' ? 'Became part of your setup' : 'Ended'} showArrow={false} />
+                  {run.restartable ? (
+                    <View style={styles.episodeActions}>
+                      <Choice label="Start this again" onPress={() => confirmRestartEpisode(row)} t={t} compact />
+                    </View>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          ))}
         </>
       ) : null}
 
       {consented ? (
         <>
           <SectionHeader title="Your data" />
-          <SettingRow icon="download" label="Export this information"
-            sub="A readable file of everything you have added here"
-            onPress={exportCapabilityData} showArrow={false} />
-          <SettingRow icon="trash" label="Delete this information" destructive
-            sub="Removes everything here on all devices and turns the feature off"
-            onPress={confirmWithdraw} showArrow={false} />
+          <View style={[settingsStyles.section, live.section]}>
+            <SettingRow icon="download" label="Export this information"
+              sub="A readable file of everything you have added here"
+              onPress={exportCapabilityData} showArrow={false} />
+            <SettingRow icon="trash" label="Delete this information" destructive
+              sub="Removes everything here on all devices and turns the feature off"
+              onPress={confirmWithdraw} showArrow={false} />
+          </View>
         </>
       ) : null}
     </SettingsPage>
@@ -1783,15 +1810,24 @@ function Choice({ label, sub, onPress, t, selected, primary, disabled, compact }
 }
 
 const styles = StyleSheet.create({
-  search: {
-    ...type.body,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.sm,
+  // Restyle 2026-09-02: the add flow's own `card` and `search` are gone.
+  // `card` was a bare rounded rectangle with `margin: spacing.lg` INSIDE a
+  // page that already pads by lg, so every step of the wizard sat 32dp in
+  // from the edge, borderless, out of line with the sections beneath it -
+  // the single biggest reason this feature read as a different app. Both
+  // are the shared primitives now (Card, TextField), which carry the
+  // border, radius, padding and 48dp field height by construction.
+  searchWrap: { marginBottom: spacing.sm },
+  // The per-row "Remove" was a bare label with 8dp of padding - about 36dp
+  // effective, under the lane's 48 floor (docs/rules/styling.md; pinned by
+  // capabilityTouchTargets.guard). The floor is the style's now, not a
+  // side effect of the word's length.
+  rowAction: {
+    minHeight: touchTarget.minimum,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
   },
-  card: { borderRadius: radius.lg, padding: spacing.lg, margin: spacing.lg },
+  rowActionLabel: { ...type.label },
   q: { ...type.h3, marginBottom: spacing.sm },
   body: { ...type.body, marginBottom: spacing.md },
   hint: { ...type.caption, marginBottom: spacing.sm },
@@ -1815,9 +1851,18 @@ const styles = StyleSheet.create({
   choiceLabelInRow: { flex: 1, minWidth: 0 },
   choiceLabel: { ...type.label },
   episodeActions: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
-  introWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md },
-  addWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  // Both used to add ANOTHER spacing.lg on top of the page's own lg
+  // padding, so the intro copy and the primary action stood 32dp in while
+  // every card beside them stood 16dp in - a visible ragged left edge down
+  // the whole screen. They sit on the page's inset now, xs to match the
+  // Settings family's own copy blocks.
+  introWrap: { paddingHorizontal: spacing.xs, paddingTop: spacing.sm, paddingBottom: spacing.md },
+  addWrap: { paddingTop: spacing.sm },
   // D112 R4 (closes audit T2-23): one row of the "Choose per exercise"
   // review - the line's own from/to text, then its Apply/Keep toggle.
   reviewLine: { marginBottom: spacing.sm },
+  // The same strip as episodeActions, minus the horizontal inset: this one
+  // sits inside a Card that already pads by lg, where episodeActions sits
+  // inside a padding-less section whose rows pad themselves.
+  reviewActions: { flexDirection: 'row', flexWrap: 'wrap' },
 });

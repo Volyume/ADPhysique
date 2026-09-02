@@ -51,6 +51,19 @@ const ENUMERATED = [
   // the same sheet, missed by the same round that floored the other
   // three.
   ['components/ExerciseConflictSheet.js', [['actionBtn', 3], ['doneBtn', 1]]],
+  // Restyle 2026-09-02 (round 19): the feature restyle read the two lanes
+  // end to end and found two more sub-48 controls with no pin behind them,
+  // which is the exact pattern rounds 13-15 recorded. HowYouTrain's
+  // per-row "Remove" was a bare label with 8dp of padding (~36dp, no
+  // hitSlop); its add-flow "Choice" was already on the token and is
+  // enumerated here so it stays there.
+  ['screens/HowYouTrainScreen.js', [['rowAction', 1], ['choice', 1]]],
+  // AvoidedMovements is the preference lane HowYouTrain cross-links to, so
+  // it is held to the same floor. `crossLaneRow` is a real route control
+  // that stood ~30dp with no hitSlop; `removeBtn` cleared the floor only
+  // through hitSlop, which is invisible to a user and to the numeric
+  // strays check below - both carry the box themselves now.
+  ['screens/AvoidedMovementsScreen.js', [['crossLaneRow', 1], ['removeBtn', 1]]],
 ];
 
 // Numeric minHeights that pre-date this guard and sit at or above 48:
@@ -62,6 +75,8 @@ const OFF_SCALE_ALLOWED = {
   'components/ExercisePickerModal.js': { 'minHeight: 54': 1 },
   'screens/TrainingConsiderationsScreen.js': {},
   'components/ExerciseConflictSheet.js': {},
+  'screens/HowYouTrainScreen.js': {},
+  'screens/AvoidedMovementsScreen.js': {},
 };
 
 describe('J2: the lane\'s enumerated touch targets sit on the 48 token', () => {

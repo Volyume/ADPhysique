@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, circle, iconSize, fontFamily } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
 import useTheme from '../hooks/useTheme';
 import Button from '../components/Button';
 import Card from '../components/Card';
@@ -568,6 +569,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface2, borderRadius: radius.lg,
     borderWidth: 1, borderColor: colors.border,
     padding: spacing.md, gap: spacing.sm,
+    // 12dp of padding around a 20dp line drew ~44dp with no hitSlop, under
+    // the platform floor (docs/rules/styling.md) - and these are the only
+    // controls in the free starter, the capability step's included. The
+    // shared Button makes its own shortfall up in hitSlop; a hand-rolled
+    // row has to carry it in the box.
+    minHeight: touchTarget.minimum,
   },
   optionText: { flex: 1, fontSize: fontSize.md, color: colors.textPrimary, fontFamily: fontFamily.medium, fontWeight: fontWeight.medium },
 

@@ -15,15 +15,18 @@
  * intent.js) — it never touches workouts, sets or PRs.
  */
 import { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useFocusEffect } from '@react-navigation/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { spacing, radius, type, hitSlop } from '../styles/theme';
+import { touchTarget } from '../styles/layout';
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
-import Card from '../components/Card';
 import EmptyState from '../components/EmptyState';
+import {
+  SettingRow, settingsStyles, useSettingsStyles,
+} from '../components/SettingsPrimitives';
 import { Skeleton } from '../components/Skeleton';
 import { getActiveBlock, EXERCISE_INTENT } from '../lib/database';
 import {
@@ -46,10 +49,8 @@ function untilText(row) {
 
 export default function AvoidedMovementsScreen({ navigation }) {
   const t = useTheme();
+  const settings = useSettingsStyles();
   const live = {
-    rowIcon: { backgroundColor: t.colors.surface },
-    rowLabel: { color: t.colors.textPrimary },
-    rowSub: { color: t.colors.textMuted },
     removeBtnText: { color: t.colors.primary },
     noticeText: { color: t.colors.textMuted },
     crossLaneText: { color: t.colors.textMuted },
@@ -125,53 +126,71 @@ export default function AvoidedMovementsScreen({ navigation }) {
           </Text>
         </View>
       ) : null}
-      {loading ? (
-        <View style={styles.list}>
-          <Skeleton height={64} radius={radius.lg} />
-          <Skeleton height={64} radius={radius.lg} />
-        </View>
-      ) : rows.length === 0 ? (
-        <EmptyState
-          icon="shield-checkmark-outline"
-          title="Nothing avoided"
-          text="When you avoid a movement pattern from an exercise's options, it shows up here so you can see what's active and remove it any time."
-        />
-      ) : (
-        <View style={styles.list}>
-          {rows.map(row => (
-            <Card key={row.family} style={styles.row} accessibilityLabel={`${row.label}, ${untilText(row)}`}>
-              <View style={[styles.rowIcon, live.rowIcon]}>
-                <Ionicons name="shield-outline" size={20} color={t.colors.textSecondary} />
-              </View>
-              <View style={styles.rowBody}>
-                <Text style={[styles.rowLabel, live.rowLabel]} numberOfLines={1}>
-                  {row.label.charAt(0).toUpperCase() + row.label.slice(1)}
-                </Text>
-                <Text style={[styles.rowSub, live.rowSub]}>{untilText(row)}</Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleRemove(row)}
-                hitSlop={hitSlop}
-                accessibilityRole="button"
-                accessibilityLabel={`Allow ${row.label} again`}
-                style={styles.removeBtn}
-              >
-                <Text style={[styles.removeBtnText, live.removeBtnText]}>Remove</Text>
-              </TouchableOpacity>
-            </Card>
-          ))}
-        </View>
-      )}
+      {/* Restyle 2026-09-02: the list had no scroll container at all, so a
+          long list simply ran off the bottom of the screen with no way to
+          reach it. It scrolls now, on the same content padding the Settings
+          family uses. */}
+      <ScrollView contentContainerStyle={styles.list}>
+        {loading ? (
+          <>
+            <Skeleton height={64} radius={radius.lg} />
+            <Skeleton height={64} radius={radius.lg} />
+          </>
+        ) : rows.length === 0 ? (
+          <EmptyState
+            icon="shield-checkmark-outline"
+            title="Nothing avoided"
+            text="When you avoid a movement pattern from an exercise's options, it shows up here so you can see what's active and remove it any time."
+          />
+        ) : (
+          /* Restyle 2026-09-02: each avoided movement was its own bordered
+             Card, so the screen read as a stack of loose boxes rather than
+             one list - and its icon chip was `surface` ON a `surface` card,
+             i.e. invisible. The rows are the shared SettingRow inside one
+             grouped section now, exactly like the sibling capability lane
+             (How you train) this screen points at, so the two surfaces read
+             as one feature. Copy, ordering and the remove action are
+             unchanged. */
+          <View style={[settingsStyles.section, settings.section]}>
+            {rows.map(row => (
+              <SettingRow
+                key={row.family}
+                icon="shield-outline"
+                label={row.label.charAt(0).toUpperCase() + row.label.slice(1)}
+                sub={untilText(row)}
+                showArrow={false}
+                accessibilityLabel={`${row.label}, ${untilText(row)}`}
+                rightElement={(
+                  <TouchableOpacity
+                    onPress={() => handleRemove(row)}
+                    hitSlop={hitSlop}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Allow ${row.label} again`}
+                    style={styles.removeBtn}
+                  >
+                    <Text style={[styles.removeBtnText, live.removeBtnText]}>Remove</Text>
+                  </TouchableOpacity>
+                )}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  list: { padding: spacing.lg, gap: spacing.sm },
+  list: { padding: spacing.lg, gap: spacing.sm, paddingBottom: spacing.xxl },
   crossLaneRow: {
+    // The row is a real control (it routes to How you train), and a caption
+    // between 8dp and 4dp of padding stood about 30dp tall - under the 48dp
+    // floor in docs/rules/styling.md. Floored on the token; the line stays
+    // exactly as quiet as T1-20 specified.
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
     gap: spacing.xs, paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xs,
+    minHeight: touchTarget.minimum,
   },
   crossLaneText: { ...type.caption, flex: 1 },
   noticeRow: {
@@ -179,14 +198,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
   },
   noticeText: { ...type.caption, flex: 1 },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  rowIcon: {
-    width: 36, height: 36, borderRadius: radius.md,
-    alignItems: 'center', justifyContent: 'center',
+  // ~26dp of box relying on hitSlop to clear the floor. Slop is invisible:
+  // it does not show the user where to press and adjacent slop regions
+  // steal each other's taps. The box carries the floor itself now (the
+  // shape How you train's own per-row Remove uses), and hitSlop stays as
+  // the belt to that braces. Pinned by capabilityTouchTargets.guard.
+  removeBtn: {
+    minHeight: touchTarget.minimum,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.sm,
   },
-  rowBody: { flex: 1, gap: spacing.xxs },
-  rowLabel: { ...type.bodyStrong },
-  rowSub: { ...type.caption },
-  removeBtn: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
   removeBtnText: { ...type.label },
 });
