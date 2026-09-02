@@ -156,4 +156,14 @@ describe('getOrCreateDbKey', () => {
     expect(SecureStore.getItemAsync).toHaveBeenCalledTimes(2);
     expect(res).toEqual({ key: null, status: 'unavailable' });
   });
+
+  test('a mismatched readback returns {unavailable}, never the generated key', async () => {
+    SecureStore.getItemAsync
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce('b'.repeat(64));
+
+    const res = await getOrCreateDbKey();
+
+    expect(res).toEqual({ key: null, status: 'unavailable' });
+  });
 });

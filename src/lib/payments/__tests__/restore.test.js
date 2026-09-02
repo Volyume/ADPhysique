@@ -1,6 +1,6 @@
 /**
  * SUB-003: restore re-verifies the entitlement server-side, AWAITED (not
- * fire-and-forget), matching the purchase paths. A failed confirm does not fail
+ * fire-and-forget), matching the purchase paths. A failed confirm fails
  * the restore. Store-local entitlement presence is not proof that the signed-in
  * Supabase caller owns the purchase, so payAt must remain untouched until the
  * buyer-bound server verifier succeeds.
@@ -47,6 +47,18 @@ describe('restorePurchases server confirmation (SUB-003)', () => {
     const res = await restorePurchases();
 
     expect(res).toEqual({ ok: false, error: 'invoke_failed' });
+    expect(payAt).not.toHaveBeenCalled();
+  });
+
+  test('an unexpected confirmation rejection cannot optimistically unlock', async () => {
+    playBilling.restorePurchases.mockResolvedValue({
+      activeEntitlements: ['pro'],
+      latestPurchaseToken: 'tok',
+      activeSku: 'pro_monthly',
+    });
+    confirmPurchase.mockRejectedValue(new Error('verifier unavailable'));
+
+    await expect(restorePurchases()).rejects.toThrow('verifier unavailable');
     expect(payAt).not.toHaveBeenCalled();
   });
 
