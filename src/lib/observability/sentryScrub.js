@@ -158,6 +158,25 @@ const JWT_VALUE_RE = /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8
 const CREDENTIAL_VALUE_RE = /(?:authorization\s*[:=]\s*bearer\s+[^\s&#]+|(?:access_token|refresh_token|token_hash|id_token|client_secret|auth_code|authorization_code|verification_code|otp)\s*[:=]\s*[^\s&#]+|[?&#]code=[^\s&#]+)/i;
 const INLINE_HEALTH_RE = /\b(?:weight|body[._ -]?fat|bf[._ -]?pct|ffm|fm[._ -]?kg|kcal|protein|carbs?|fat|fibre|fiber|waist|chest|hips?|thigh|calf)\w*\s*[:=]\s*-?\d/i;
 
+// Error strings can contain nested/encoded URLs (for example a callback URL
+// inside a redirect parameter) and native APIs may percent-encode a private
+// file URI before echoing it. Decode ASCII escapes for CLASSIFICATION only so
+// those values cannot bypass the plaintext patterns above. This is deliberately
+// bounded to three linear passes: it catches ordinary, double and triple
+// encoding without invoking a permissive URI decoder or risking unbounded
+// canonicalisation work on attacker-controlled telemetry.
+function _canonicalizePercentEncodedAscii(s) {
+  let current = s;
+  for (let pass = 0; pass < 3 && current.includes('%'); pass += 1) {
+    const next = current.replace(/%([0-7][0-9a-f])/gi, (_match, hex) => (
+      String.fromCharCode(Number.parseInt(hex, 16))
+    ));
+    if (next === current) break;
+    current = next;
+  }
+  return current;
+}
+
 // ────────────────────────────────────────────────────────────────────
 // Public API
 // ────────────────────────────────────────────────────────────────────
@@ -204,16 +223,17 @@ export function scrubObject(obj, depth = 0) {
 
 function _scrubString(s) {
   if (typeof s !== 'string') return s;
-  if (BASE64_IMAGE_RE.test(s)) return REDACTED;
-  if (PRIVATE_FILE_URI_RE.test(s)) return REDACTED;
-  if (EMAIL_VALUE_RE.test(s)) return REDACTED;
-  if (JWT_VALUE_RE.test(s)) return REDACTED;
-  if (CREDENTIAL_VALUE_RE.test(s)) return REDACTED;
-  if (INLINE_HEALTH_RE.test(s)) return REDACTED;
+  const classified = _canonicalizePercentEncodedAscii(s);
+  if (BASE64_IMAGE_RE.test(classified)) return REDACTED;
+  if (PRIVATE_FILE_URI_RE.test(classified)) return REDACTED;
+  if (EMAIL_VALUE_RE.test(classified)) return REDACTED;
+  if (JWT_VALUE_RE.test(classified)) return REDACTED;
+  if (CREDENTIAL_VALUE_RE.test(classified)) return REDACTED;
+  if (INLINE_HEALTH_RE.test(classified)) return REDACTED;
   // Sensitive table name embedded in the string. The whole string is
   // suspect (it likely carries row data or SQL), so redact wholesale.
   for (const needle of SENSITIVE_VALUE_SUBSTRINGS) {
-    if (s.indexOf(needle) !== -1) return REDACTED;
+    if (classified.indexOf(needle) !== -1) return REDACTED;
   }
   return s;
 }

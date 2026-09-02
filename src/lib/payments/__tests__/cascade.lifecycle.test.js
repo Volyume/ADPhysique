@@ -11,7 +11,7 @@ jest.mock('../../supabase', () => ({
   getSupabaseClient: () => ({ rpc: mockRpc }),
 }));
 // _trackTransition reads the store lazily (no signed-in user, returns early);
-// payAt calls setOptimisticPaid (C-1 optimistic unlock), captured here.
+// Any payAt call must leave local entitlement state untouched.
 const mockSetOptimisticPaid = jest.fn();
 jest.mock('../../../store/useAppStore', () => ({
   default: { getState: () => ({ user: null, setOptimisticPaid: mockSetOptimisticPaid }) },
@@ -29,12 +29,10 @@ beforeEach(() => {
 });
 
 describe('cascade lifecycle verbs call upgrade_tier with the right payload', () => {
-  test('payAt(pro) unlocks optimistically and does NOT write the tier (C-1)', async () => {
-    // The paid grant is server-authoritative (RTDN). payAt must NOT call
-    // upgrade_tier; it only sets the optimistic local unlock.
+  test('payAt(pro) records no local or RPC entitlement grant', async () => {
     const r = await payAt('pro', 'gpa.123', 'paywall');
-    expect(r).toEqual({ ok: true, optimistic: true });
-    expect(mockSetOptimisticPaid).toHaveBeenCalled();
+    expect(r).toEqual({ ok: true, authoritativeGrantRequired: true });
+    expect(mockSetOptimisticPaid).not.toHaveBeenCalled();
     expect(mockRpc).not.toHaveBeenCalledWith('upgrade_tier', expect.objectContaining({ _reason: 'user_paid' }));
   });
 
@@ -85,7 +83,7 @@ describe('cascade lifecycle verbs call upgrade_tier with the right payload', () 
 
   test('an RPC error surfaces as { ok:false } and never throws', async () => {
     mockRpc.mockResolvedValue({ data: null, error: { message: 'boom' } });
-    // Use a verb that still hits the RPC (payAt is now optimistic/no-RPC).
+    // Use a verb that still hits the RPC (payAt is transition-only/no-RPC).
     const r = await skipToFree('day14_gate');
     expect(r.ok).toBe(false);
     expect(r.error).toBe('boom');

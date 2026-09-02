@@ -416,6 +416,26 @@ describe('scrubBreadcrumb', () => {
   });
 });
 
+describe('encoded private-value canonicalisation', () => {
+  test.each([
+    'callback=https%3A%2F%2Fvolyume.app%2Fauth-callback%3Fcode%3Done-time-secret',
+    'native=content%3A%2F%2Fmedia%2F12345',
+    'native=file%3A%2F%2F%2Fdata%2Fuser%2F0%2Fprivate.jpg',
+    'nested=access_token%3Dsynthetic-access-secret',
+    'double=content%253A%252F%252Fmedia%252F12345',
+  ])('redacts recoverable percent-encoded private data: %s', (value) => {
+    expect(scrubValue(value)).toBe('[redacted]');
+  });
+
+  test.each([
+    'source=weekly%20summary',
+    'ordinary%2Fpublic%2Froute',
+    'malformed=%GG',
+  ])('preserves non-sensitive encoded strings: %s', (value) => {
+    expect(scrubValue(value)).toBe(value);
+  });
+});
+
 // ────────────────────────────────────────────────────────────────────
 // Schema audit (quarterly per locked spec)
 // ────────────────────────────────────────────────────────────────────

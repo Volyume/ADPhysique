@@ -179,22 +179,19 @@ export default function ProUpgradeScreen({ navigation, route }) {
       // win-back notification. Inert (normal purchase) if no offer is configured.
       const pr = await playBilling.purchasePackage(sku.id, { preferWinback: !!route?.params?.fromWinback });
       const ref = pr?.transactionId ?? `client_${Date.now()}`;
-      await cascade.payAt('pro', ref, 'pro_upgrade');
       // Server-authoritative grant: verify the token with Google, write Pro
       // server-side. Awaited (not fire-and-forget) so the button stays in its
       // loading state until the server confirms, and a failed grant is seen
-      // rather than swallowed. The optimistic unlock from payAt still holds, so
-      // a confirm failure does not deny the access they just paid for: the
-      // the store verification path and the next cloud refresh reconcile it. We
-      // surface the delay rather than silently showing a Pro screen on a server
-      // that never granted it.
+      // rather than swallowed. No local Pro state is published first.
       const confirm = await cascade.confirmPurchase({
         purchaseToken: pr?.purchaseToken, subscriptionId: sku.id,
       });
       if (!confirm.ok) {
         logError('ProUpgrade.confirmPurchase', confirm.error ?? 'confirm_failed', {});
         toast.show('Payment received. Finishing activation, this can take a moment', { variant: 'info', duration: 5000 });
+        return;
       }
+      await cascade.payAt('pro', ref, 'pro_upgrade');
       setDone(true);
     } catch (e) {
       const msg = e?.message ?? '';

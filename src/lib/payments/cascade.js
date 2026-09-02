@@ -182,13 +182,11 @@ export async function startCascade() {
   return r;
 }
 
-// C-1 (2026-06-06): the paid 'pro' grant is server-authoritative. The client no
-// longer writes its own tier (the authenticated upgrade_tier rejects 'pro',
-// migration 067), which closes the self-grant hole. On a confirmed purchase we
-// unlock Pro optimistically in-memory for instant UX; the per-store verifier
-// (Google Play Developer API or App Store Server API) writes the real tier via
-// upgrade_tier_for_user, and refreshTierFromCloud reconciles to it within the
-// optimistic window. A purchase that never reached the server reverts to free.
+// The paid 'pro' grant is server-authoritative. This helper records a purchase
+// transition only AFTER confirmPurchase succeeds; it is intentionally unable
+// to mutate entitlement state. Keeping an exported client helper capable of
+// calling setOptimisticPaid let a modified client self-grant temporary Pro with
+// any non-empty payment reference, even when caller/buyer verification failed.
 export async function payAt(targetTier, paymentRef, sourceSurface = null) {
   if (!paymentRef) {
     return { ok: false, error: 'payment_ref_required' };
@@ -197,13 +195,8 @@ export async function payAt(targetTier, paymentRef, sourceSurface = null) {
   if (targetTier !== 'pro') {
     return { ok: false, error: 'invalid_target_tier' };
   }
-  try {
-    // eslint-disable-next-line global-require
-    const useAppStore = require('../../store/useAppStore').default;
-    await useAppStore.getState().setOptimisticPaid();
-  } catch (_) { /* tolerate; the RTDN grant + next refresh still unlock */ }
   _trackTransition({ reason: 'user_paid', sourceSurface, targetTier, paymentRef });
-  return { ok: true, optimistic: true };
+  return { ok: true, authoritativeGrantRequired: true };
 }
 
 /**
@@ -211,8 +204,8 @@ export async function payAt(targetTier, paymentRef, sourceSurface = null) {
  * purchase, send the verification token to the store's Edge Function, which
  * verifies it against the store's server API and grants Pro via the
  * service-role upgrade_tier_for_user. The client never writes its own paid
- * tier. On success we pull the authoritative tier so the optimistic unlock is
- * reconciled immediately rather than waiting for the next foreground refresh.
+ * tier. On success we pull the authoritative tier immediately rather than
+ * waiting for the next foreground refresh.
  *
  * Per-store, independent paths (the token shape and verifier differ):
  *   - Android → play-billing-rtdn, body { purchaseToken, subscriptionId },
@@ -225,10 +218,9 @@ export async function payAt(targetTier, paymentRef, sourceSurface = null) {
  * SUB-003: the purchase surfaces (ProUpgrade, Paywall, CascadeGate) and the
  * restore path all AWAIT this and check `ok`, surfacing a "finishing
  * activation" message on failure rather than swallowing it. It never throws:
- * it always resolves to { ok, error? }. The optimistic local unlock from payAt
- * has already happened, so a slow or failed grant never denies paid access; the
- * store's server notification and the next cloud refresh (within the optimistic
- * window) do the reconcile.
+ * it always resolves to { ok, error? }. No local entitlement changes before
+ * this succeeds; store notifications and later refreshes can still reconcile a
+ * legitimate purchase whose immediate verification was temporarily unavailable.
  */
 export async function confirmPurchase({ purchaseToken, subscriptionId } = {}) {
   if (!purchaseToken || !subscriptionId) {

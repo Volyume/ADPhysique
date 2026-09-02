@@ -138,7 +138,13 @@ export async function retryPendingAuthDeletion(userId, { client } = {}) {
   if (!userId) return { attempted: false, pending: false };
   let marker = null;
   try { marker = await AsyncStorage.getItem(deletionAuthPendingKey(userId)); }
-  catch (_) { return { attempted: false, pending: false }; }
+  catch (e) {
+    // An unreadable marker is not evidence that no deletion is pending. Root
+    // admission treats pending=true as a hard refusal, so a transient storage
+    // failure cannot reopen a partially deleted account.
+    logError('deletionRetry.markerRead', e, { userId });
+    return { attempted: false, pending: true };
+  }
   if (!marker) return { attempted: false, pending: false };
   if (_attemptedThisLaunch) return { attempted: false, pending: true };
   _attemptedThisLaunch = true;

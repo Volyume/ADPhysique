@@ -21,7 +21,7 @@ jest.mock('../errorLog', () => ({
   logInfo: jest.fn(),
 }));
 
-// payAt now does an optimistic local unlock (C-1) instead of an RPC tier write.
+// payAt records a transition but cannot mutate local or remote entitlement.
 const mockSetOptimisticPaid = jest.fn();
 jest.mock('../../store/useAppStore', () => ({
   default: { getState: () => ({ user: null, setOptimisticPaid: mockSetOptimisticPaid }) },
@@ -60,12 +60,10 @@ describe('startCascade', () => {
 });
 
 describe('payAt', () => {
-  test('paying for pro unlocks optimistically; the real grant is server-side (C-1)', async () => {
-    // C-1: the client must not write its own paid tier. payAt unlocks Pro
-    // optimistically in-memory; the Play RTDN writes the authoritative tier.
+  test('payAt cannot grant local Pro before the server-authoritative grant', async () => {
     const r = await cascade.payAt('pro', 'txn_123', 'cascade_day21_gate');
-    expect(r).toEqual({ ok: true, optimistic: true });
-    expect(mockSetOptimisticPaid).toHaveBeenCalled();
+    expect(r).toEqual({ ok: true, authoritativeGrantRequired: true });
+    expect(mockSetOptimisticPaid).not.toHaveBeenCalled();
     expect(mockRpc).not.toHaveBeenCalled();
   });
 

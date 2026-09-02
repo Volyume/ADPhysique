@@ -13,11 +13,12 @@ export function safeGetStateFromPath(path, options) {
 
   const queryStart = path.indexOf('?');
   if (queryStart !== -1) {
-    const hashStart = path.indexOf('#', queryStart + 1);
-    const query = path.slice(
-      queryStart + 1,
-      hashStart === -1 ? path.length : hashStart,
-    );
+    // React Navigation 6 obtains its query with `path.split('?')[1]` and
+    // therefore sends the fragment through query-string as well. Validate and
+    // bound that exact parser input. Stopping at `#` leaves a bypass where a
+    // short valid query is followed by a malformed fragment, allowing the
+    // fragment to reach decode-uri-component's super-linear recovery path.
+    const query = path.slice(queryStart + 1);
 
     if (query.length > MAX_DEEP_LINK_QUERY_LENGTH) return undefined;
 

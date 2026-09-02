@@ -43,6 +43,29 @@ describe('safeGetStateFromPath', () => {
     },
   );
 
+  test.each([1, 50, 100, 200, 400, 700])(
+    'rejects malformed fragment input of size %i before query parsing',
+    (count) => {
+      // React Navigation 6 parses everything after the first `?`, including
+      // the fragment. A validator that stops at `#` therefore lets this exact
+      // shape bypass the boundary and reach decode-uri-component.
+      const startedAt = performance.now();
+      expect(safeGetStateFromPath(
+        `diary?source=owned#value=${'%ab'.repeat(count)}`,
+        config,
+      )).toBeUndefined();
+      expect(performance.now() - startedAt).toBeLessThan(50);
+    },
+  );
+
+  test('rejects the fragment bypass through an owned external URL', () => {
+    const startedAt = performance.now();
+    expect(stateFromExternalURL(
+      `volyume://diary?source=owned#value=${'%ab'.repeat(700)}`,
+    )).toBeUndefined();
+    expect(performance.now() - startedAt).toBeLessThan(50);
+  });
+
   test.each(['diary?value=%', 'diary?value=%2', 'diary?value=%GG'])(
     'rejects syntactically malformed percent encoding: %s',
     (path) => {

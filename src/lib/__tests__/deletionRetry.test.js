@@ -107,6 +107,14 @@ describe('destructive-flow backstop establishment', () => {
 });
 
 describe('retryPendingAuthDeletion', () => {
+  test('an unreadable marker fails closed and blocks account admission', async () => {
+    AsyncStorage.getItem.mockRejectedValueOnce(new Error('storage unavailable'));
+    const client = fakeClient();
+    const res = await retryPendingAuthDeletion('uid-1', { client });
+    expect(res).toEqual({ attempted: false, pending: true });
+    expect(client.functions.invoke).not.toHaveBeenCalled();
+  });
+
   test('no marker: nothing is attempted and nothing is invoked', async () => {
     const client = fakeClient();
     const res = await retryPendingAuthDeletion('uid-1', { client });

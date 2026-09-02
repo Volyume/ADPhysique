@@ -234,24 +234,20 @@ export default function CascadeGateScreen({ navigation, route }) {
       return;
     }
     try {
-      // Initiate purchase. The webhook posts back the tier change;
-      // we also call cascade.payAt optimistically so the local state
-      // updates immediately (idempotent, webhook will reconcile).
+      // Initiate purchase, then require the buyer-bound server verifier before
+      // recording success or dismissing the gate. Local state is never
+      // entitlement authority.
       const purchaseResult = await playBilling.purchasePackage(sku.id);
       const ref = purchaseResult?.transactionId ?? `client_${Date.now()}`;
-      await cascade.payAt(targetTier, ref, content.surface);
-      // SUB-003: verify the token with Google and write Pro server-side,
-      // AWAITED (not fire-and-forget) so a failed grant is surfaced. The
-      // optimistic unlock from payAt holds, so a confirm failure never denies
-      // the paid access; the Play RTDN push and the next cloud refresh
-      // reconcile it.
       const confirm = await cascade.confirmPurchase({
         purchaseToken: purchaseResult?.purchaseToken, subscriptionId: sku.id,
       });
       if (!confirm.ok) {
         logError('CascadeGate.confirmPurchase', confirm.error ?? 'confirm_failed', { targetTier });
         toast.show('Payment received. Finishing activation, this can take a moment', { variant: 'info', duration: 5000 });
+        return;
       }
+      await cascade.payAt(targetTier, ref, content.surface);
       logInfo('CascadeGate.paid', `tier=${targetTier} sku=${sku.id}`);
       dismiss();
     } catch (e) {
