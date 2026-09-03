@@ -1294,6 +1294,16 @@ flashes once (HYT-03). Guards re-anchored: T1-06 (detect-and-show, never
 propose-on-focus), R5-9 (no back-off key to stamp). NEXT: slice C
 (check-in card: the question as a heading, two answers, the rest behind
 More options), D (edit), E (arrival context + a11y).
+Slice C LANDED (this entry): the check-in card asks one question as a
+heading ("Still need this?") with two answers (Still going / Done with
+it) and an Options row; every other action (extend, hold or resume, make
+permanent, still-going) lives in a bottom sheet where each row says what
+it does before it is tapped (HYT-09, HYT-17). The five co-equal pills
+are gone. Pinned D112 R8 labels and the hold sentence kept. NEXT: slice
+D (edit a permanent rule: tap a row, change a line, save; old row ends,
+new row starts). Arrival context and a11y (E) landed inside A and B: the
+wizard names the source profile and pre-selects its suggested role,
+announces and focuses each step, and multi-selects are checkboxes.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

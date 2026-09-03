@@ -26,6 +26,7 @@ import { appAlert } from '../components/AppAlert';
 import PressableCard from '../components/PressableCard';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import BottomSheet from '../components/BottomSheet';
 import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
 import {
@@ -156,6 +157,8 @@ export default function HowYouTrainScreen() {
   // card scrolls into view and flashes once, so the flow ends on the
   // thing it created.
   const [flashId, setFlashId] = useState(null);
+  // D133 slice C (HYT-09): the episode whose options sheet is open.
+  const [optionsFor, setOptionsFor] = useState(null);
   const scrollRef = useRef(null);
   const cardYRef = useRef(new Map());
   const pendingHighlightRef = useRef(null);
@@ -931,6 +934,15 @@ export default function HowYouTrainScreen() {
     return { surfaced: false, checked: false };
   };
 
+  // "Still going": the section 33.7 third option - resets the ask cadence
+  // without committing to a new end date. Nothing ends.
+  const stillGoing = async (ep, subject) => {
+    haptics.selection();
+    await acknowledgeEpisode(userId, ep.groupId);
+    toast.show(subject ? `Noted. Volyume will keep ${subject} out until you end it here.` : 'Noted. Volyume will keep working around this until you end it here.');
+    refresh();
+  };
+
   const confirmEndEpisode = (ep) => {
     const subject = groupSubject(ep.rows.filter(r => r.state === 'active'));
     appAlert(
@@ -1218,6 +1230,7 @@ export default function HowYouTrainScreen() {
     ? groupSubject(state.episodes.flatMap((ep) => ep.rows).filter((r) => pendingIds.includes(r.id)))
     : null;
   const awaiting = state.episodes.filter((ep) => ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION);
+  const optionsEp = optionsFor ? state.episodes.find((ep) => ep.groupId === optionsFor) ?? null : null;
   const nothingYet = !state.baseline.length && !state.episodes.length && !state.history.length;
   const flashStyle = (id) => (flashId != null && flashId === id ? { borderColor: t.colors.primary } : null);
   const onCardLayout = (id) => (e) => {
@@ -1385,20 +1398,29 @@ export default function HowYouTrainScreen() {
                 Holding your plan as-is; adaptation is paused, not your training.
               </Text>
             ) : null}
-            <View style={styles.episodeActions}>
-              <Choice label="Done with it" onPress={() => confirmEndEpisode(ep)} t={t} compact />
-              <Choice label="A while longer" onPress={async () => { haptics.selection(); await extendEpisode(userId, ep.groupId, Date.now() + 14 * DAY_MS); toast.show(subject ? `Extended by two weeks. Volyume will check in about ${subject} around then.` : 'Extended by two weeks. Volyume will ask again around then.'); refresh(); }} t={t} compact />
-              {ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION ? (
-                // Section 33.7's third option: an explicit continue that resets
-                // the ask cadence without committing to a new end date.
-                <Choice label="Still going for now" onPress={async () => { haptics.selection(); await acknowledgeEpisode(userId, ep.groupId); toast.show(subject ? `Noted. Volyume will keep ${subject} out until you end it here.` : 'Noted. Volyume will keep working around this until you end it here.'); refresh(); }} t={t} compact />
-              ) : null}
-              {held ? (
-                <Choice label="Start working around it again" onPress={async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'propose'); toast.show('Volyume will work around this again from your next session.'); refresh(); }} t={t} compact />
-              ) : (
-                <Choice label="Hold my plan as-is" onPress={async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'hold'); toast.show('Volyume is holding your plan as-is for this. Adaptation is paused, not your training.'); refresh(); }} t={t} compact />
-              )}
-              <Choice label="This is how I train now" onPress={() => confirmPromote(ep)} t={t} compact />
+            {/* D133 slice C (HYT-09): the card asks ONE question, as a heading,
+                with two answers - not five co-equal pills answering three
+                different questions. Everything else lives behind Options,
+                where each row says what it does before it is tapped. */}
+            {ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION ? (
+              <View style={styles.askBlock}>
+                <Text style={[styles.askHeading, { color: t.colors.textPrimary }]}>Still need this?</Text>
+                <Text style={[styles.hint, { color: t.colors.textSecondary }]}>
+                  Nothing ends until you say so. Volyume keeps working around it either way.
+                </Text>
+                <View style={styles.askButtons}>
+                  <Button title="Still going" onPress={() => stillGoing(ep, subject)} fullWidth={false} style={styles.askButton} />
+                  <Button title="Done with it" variant="secondary" onPress={() => confirmEndEpisode(ep)} fullWidth={false} style={styles.askButton} />
+                </View>
+              </View>
+            ) : null}
+            <View style={[styles.optionsRowWrap, { borderTopColor: t.colors.borderSubtle }]}>
+              <SettingRow
+                icon="ellipsis-horizontal-circle-outline"
+                label={ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION ? 'More options' : 'Options'}
+                sub="End it, extend it, hold your plan as it is, or make it part of how you train."
+                onPress={() => { haptics.selection(); setOptionsFor(ep.groupId); }}
+              />
             </View>
           </View>
         );
@@ -1487,6 +1509,55 @@ export default function HowYouTrainScreen() {
           </View>
         </>
       ) : null}
+
+      {/* D133 slice C: every episode action, each with its consequence in
+          plain words, one tap away. Rows close the sheet first so a confirm
+          never presents over a dismissing sheet. */}
+      <BottomSheet visible={!!optionsEp} onClose={() => setOptionsFor(null)} accessibilityLabel="Options for this temporary change">
+        {optionsEp ? (() => {
+          const ep = optionsEp;
+          const subject = groupSubject(ep.rows.filter(r => r.state === 'active'));
+          const held = ep.rows.some(r => r.state === 'active' && r.adaptationMode === 'hold');
+          const awaitingNow = ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION;
+          const after = (fn) => { setOptionsFor(null); setTimeout(fn, 260); };
+          return (
+            <View style={styles.sheetBody}>
+              <Text style={[styles.sheetTitle, { color: t.colors.textPrimary }]}>{episodeNames(ep)}</Text>
+              <Text style={[styles.hint, { color: t.colors.textSecondary }]}>Each option says what it does. Nothing here happens by itself.</Text>
+              <View style={[settingsStyles.section, live.section]}>
+                <SettingRow icon="checkmark-circle-outline" label="Done with it"
+                  sub="Everything comes back straight away, and training builds back up to your plan over the coming weeks."
+                  onPress={() => after(() => confirmEndEpisode(ep))} />
+                <SettingRow icon="time-outline" label="A while longer"
+                  sub={`Adds two weeks. Volyume checks with you again around ${shortDate(Date.now() + 14 * DAY_MS)}.`}
+                  onPress={() => after(async () => {
+                    haptics.selection();
+                    await extendEpisode(userId, ep.groupId, Date.now() + 14 * DAY_MS);
+                    toast.show(subject ? `Extended by two weeks. Volyume will check in about ${subject} around then.` : 'Extended by two weeks. Volyume will ask again around then.');
+                    refresh();
+                  })} />
+                {awaitingNow ? (
+                  <SettingRow icon="play-outline" label="Still going for now"
+                    sub="Keeps working around it until you end it here. Volyume stops asking for now."
+                    onPress={() => after(() => stillGoing(ep, subject))} />
+                ) : null}
+                {held ? (
+                  <SettingRow icon="refresh-outline" label="Start working around it again"
+                    sub="Volyume works around this again from your next session."
+                    onPress={() => after(async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'propose'); toast.show('Volyume will work around this again from your next session.'); refresh(); })} />
+                ) : (
+                  <SettingRow icon="pause-outline" label="Hold my plan as-is"
+                    sub="Volyume changes nothing for this until you say so. Your plan runs exactly as it is."
+                    onPress={() => after(async () => { haptics.selection(); await setEpisodeAdaptationMode(userId, ep.groupId, 'hold'); toast.show('Volyume is holding your plan as-is for this. Adaptation is paused, not your training.'); refresh(); })} />
+                )}
+                <SettingRow icon="body-outline" label="This is how I train now"
+                  sub="Becomes part of your normal setup, with full progression and coaching."
+                  onPress={() => after(() => confirmPromote(ep))} />
+              </View>
+            </View>
+          );
+        })() : null}
+      </BottomSheet>
     </SettingsPage>
   );
 }
@@ -1574,6 +1645,14 @@ const styles = StyleSheet.create({
   statusText: { ...type.body },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, paddingHorizontal: spacing.lg, paddingBottom: spacing.xs },
   statusPill: { ...type.captionTight, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.sm, overflow: 'hidden' },
+  // D133 slice C: the card's one question, two answers, and the options row.
+  askBlock: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.md, gap: spacing.xs },
+  askHeading: { ...type.h3 },
+  askButtons: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  askButton: { flex: 1 },
+  optionsRowWrap: { borderTopWidth: 1 },
+  sheetBody: { padding: spacing.lg, paddingTop: spacing.sm, gap: spacing.sm },
+  sheetTitle: { ...type.h3 },
   // D112 R4 (closes audit T2-23): one row of the "Choose per exercise"
   // review - the line's own from/to text, then its Apply/Keep toggle.
   reviewLine: { marginBottom: spacing.sm },

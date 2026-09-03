@@ -690,7 +690,7 @@ its evidence).
 
 ===============================================================================
 
-### 2026-09-03 — HOW YOU TRAIN FLOW BUILD (D133) — SLICES 0, A, B LANDED, C–E NEXT
+### 2026-09-03 — HOW YOU TRAIN FLOW BUILD (D133) — SLICES 0, A, B, C LANDED, D NEXT
 Founder order after the audit: make every variant understandable to
 "the most stupid human". Rulings D133 (register). Slice 0: HYT-01
 hotfix. Slice A: the add flow is its own wizard screen
@@ -699,7 +699,9 @@ hotfix. Slice A: the add flow is its own wizard screen
 gained a real primary button and a preselect forwarder. Slice B: the
 home screen reads as state (Waiting for you, Your plan, dated cards with
 chips, Past with durations) and never fires a modal on focus. Full suite
-green at each landing. Resume at slice C in TASKBOARD's CC33 block.
+green at each landing. Slice C: the check-in card asks one question
+with two answers; everything else is an options sheet with consequences.
+Resume at slice D (edit) in TASKBOARD's CC33 block.
 
 ### 2026-09-03 — HOW YOU TRAIN FLOW AUDIT — COMPLETE, LANDED
 Docs-only landing. Founder device-walked the injury/disability feature
