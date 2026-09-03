@@ -676,6 +676,17 @@ export default function WeeklyCheckInScreen({ navigation }) {
           setGateState('day_late');
         } else {
           setGateState('open');
+          // Activation funnel (lead activation ruling, 2026-09-03): the form
+          // actually opened, not a gate screen. `first` reuses the same
+          // getLatestCoachOutput read this screen already makes (priorOutput,
+          // above) rather than a second query or a new seen-key scheme.
+          if (user?.id) {
+            try {
+              // eslint-disable-next-line global-require
+              const { track } = require('../lib/telemetry');
+              track(user.id, 'checkin_started', { first: !priorOutput }).catch(() => {});
+            } catch (_) { /* best-effort telemetry */ }
+          }
         }
       } catch (e) {
         // PIPE-006: do NOT fail open. A load failure means the weight, session
@@ -892,6 +903,16 @@ export default function WeeklyCheckInScreen({ navigation }) {
           soreMuscles.length > 0 ? `Sore: ${soreMuscles.join(', ')}.` : '',
         ].filter(Boolean).join(' ') || null,
       });
+
+      // Activation funnel (lead activation ruling, 2026-09-03): anchored on
+      // the audit('checkin.weekly.submit') call above, but fired only once
+      // saveWeeklyCheckin has actually landed -- a genuine successful submit,
+      // not the tap. trackFirst's own durable seen-key gates "first".
+      try {
+        // eslint-disable-next-line global-require
+        const { trackFirst } = require('../lib/telemetry/firsts');
+        trackFirst(userId, 'first_checkin_completed').catch(() => {});
+      } catch (_) { /* best-effort telemetry */ }
 
       // D18 (plan-F §4.3): record the deterministic scan classification for
       // this check-in into the device-local history (assessment + status enums

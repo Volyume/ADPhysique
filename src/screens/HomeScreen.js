@@ -1046,6 +1046,14 @@ export default function HomeScreen({ navigation, route }) {
     setSavingWeight(true);
     try {
       await logMorningWeight(user.id, { weightKg, loggedAt: Date.now() });
+      // Activation funnel: a deliberate weigh-in from Today, once per user,
+      // count only, never the value (same event BodyMetricsScreen emits on
+      // its own form; the onboarding auto-seed is deliberately excluded).
+      try {
+        // eslint-disable-next-line global-require
+        const { trackFirst } = require('../lib/telemetry/firsts');
+        trackFirst(user.id, 'first_weigh_in').catch(() => {});
+      } catch (_) { /* best-effort telemetry */ }
     } catch (e) {
       // Revert the optimistic update and surface the failure.
       setTodayWeight(previousTodayWeight);

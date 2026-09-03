@@ -251,6 +251,56 @@ export const TELEMETRY_EVENTS = Object.freeze([
   // Server allow-list: supabase/migrate_104_photo_prompt_telemetry.sql.
   { name: 'photo_prompt_shown',              deferred: false, panel: 1 },
   { name: 'photo_prompt_accepted',           deferred: false, panel: 1 },
+
+  // Activation-funnel elevation (lead activation ruling, 2026-09-03): the
+  // business-visible drop-off between install and first coaching payoff.
+  // Counts/flags/small enums only, per the standing rule -- never a weight,
+  // a calorie value, or free text. first_* fire once per user (trackFirst,
+  // durable via AsyncStorage) except where noted. Second workout is NOT a
+  // new event: it is derived server-side as the second workout_completed row
+  // per user. Server allow-list: supabase/migrate_156_activation_funnel_telemetry.sql.
+  //   first_workout_started       first-ever workout session started
+  //                                (alongside the existing workout_started,
+  //                                database.js).
+  //   first_weigh_in               first-ever morning/body weight saved
+  //                                (BodyMetricsScreen new-entry save path).
+  //   checkin_started              WeeklyCheckInScreen opened into the
+  //                                'open' gate state (the form itself, not
+  //                                the too_soon/need_weights gates).
+  //                                { first } derived from whether any prior
+  //                                coach output exists (hasPriorReview, the
+  //                                same getLatestCoachOutput read the screen
+  //                                already makes).
+  //   first_checkin_completed      first successful weekly check-in submit
+  //                                (anchored on the existing
+  //                                audit('checkin.weekly.submit') site).
+  //   coach_result_viewed          CoachOutputScreen renders a completed
+  //                                coaching decision (isCompletedCoachDecision),
+  //                                once per mount. { first, hold } -- hold is
+  //                                true when the decision carried a data
+  //                                hold (heldDecisions non-empty).
+  //   coach_recommendation_accepted / _declined  a coach suggestion was
+  //                                applied or declined. { kind } is a small
+  //                                closed enum: 'calories' | 'volume' |
+  //                                'deload' | 'other' (dietBreak). Never the
+  //                                magnitude or the resulting number.
+  //   notification_permission_requested  the OS permission prompt result,
+  //                                { status: 'granted' | 'denied' |
+  //                                'undetermined' | 'unknown' }, emitted
+  //                                inside requestNotificationPermissions()
+  //                                itself so every caller is covered.
+  { name: 'first_workout_started',           deferred: false, panel: 1 },
+  { name: 'first_weigh_in',                  deferred: false, panel: 1 },
+  { name: 'checkin_started',                 deferred: false, panel: 1 },
+  { name: 'first_checkin_completed',         deferred: false, panel: 1 },
+  { name: 'coach_result_viewed',             deferred: false, panel: 1 },
+  { name: 'coach_recommendation_accepted',   deferred: false, panel: 1 },
+  { name: 'coach_recommendation_declined',   deferred: false, panel: 1 },
+  { name: 'notification_permission_requested', deferred: false, panel: 6 },
+  // No signup_started event: it would fire before an account exists, and
+  // this pipeline attributes rows to auth.uid() only (no anonymous install
+  // id, by the standing privacy posture). The pre-account gap is read as
+  // store installs against account_created, the first attributable event.
 ]);
 
 /**

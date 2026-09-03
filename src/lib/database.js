@@ -3577,6 +3577,16 @@ export async function createWorkout(
   // LB-8: a session was started. from_routine distinguishes plan-driven
   // starts from free/empty sessions; no training content in the payload.
   _trackEvent(userId, 'workout_started', { from_routine: !!routineId });
+  // Activation funnel (lead activation ruling, 2026-09-03): the first-ever
+  // session start, once per user, durably. Fire-and-forget alongside the
+  // event above, never in place of it.
+  if (userId) {
+    try {
+      // eslint-disable-next-line global-require
+      const { trackFirst } = require('./telemetry/firsts');
+      trackFirst(userId, 'first_workout_started').catch(() => {});
+    } catch (_) { /* tolerate test env without telemetry */ }
+  }
   return { id, userId, routineId, mesocycleId, mesocycleWeekId, startedAt: now, isCompleted: 0, preWorkoutIntent: intent, soreness24hBefore, sleepQuality, energyScore, createdAt: now, updatedAt: now };
 }
 

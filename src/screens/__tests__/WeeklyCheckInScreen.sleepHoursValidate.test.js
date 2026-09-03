@@ -57,6 +57,11 @@ jest.mock('../../lib/database', () => ({
   getNutritionTargets: jest.fn(async () => null),
   getUserBodyProfile: jest.fn(async () => ({ sex: 'male' })),
   getLatestCoachOutput: jest.fn(async () => null),
+  // Activation-funnel telemetry (first_checkin_completed/checkin_started)
+  // routes through the real telemetry/firsts -> engineTelemetry -> transport
+  // chain, which persists locally via this same module's recordEngineTelemetry.
+  // Mocked so the real submit path this suite drives doesn't throw.
+  recordEngineTelemetry: jest.fn(async () => 'telemetry-1'),
 }));
 
 import { act, create } from 'react-test-renderer';

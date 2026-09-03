@@ -1111,6 +1111,32 @@ export default function CoachOutputScreen({ navigation, route }) {
     return () => { cancelled = true; };
   }, [user?.id, userProfile?.trainingGoal, countdownScoffPositive]);
 
+  // Activation funnel (lead activation ruling, 2026-09-03): fires once per
+  // mount, the moment this screen actually renders a completed coaching
+  // decision (isCompletedCoachDecision -- the same predicate that gates
+  // Home's own "this week's decision" banner), never on a later re-render
+  // caused by an Apply tap updating `output`. `hold` reads the same
+  // heldDecisions array the held-decision card already renders from.
+  // `first` uses a trackFirst-style seen key (AsyncStorage) rather than a
+  // second query, since the event itself isn't a first_* name.
+  const coachResultViewedRef = useRef(false);
+  useEffect(() => {
+    if (coachResultViewedRef.current) return;
+    if (!user?.id || !isCompletedCoachDecision(output, checkin)) return;
+    coachResultViewedRef.current = true;
+    (async () => {
+      try {
+        const key = `@volyume_seen_coach_result_${user.id}`;
+        const seen = await AsyncStorage.getItem(key).catch(() => null);
+        if (!seen) await AsyncStorage.setItem(key, '1').catch(() => {});
+        trackEngineEvent(user.id, 'coach_result_viewed', {
+          first: !seen,
+          hold: !!(output.heldDecisions && output.heldDecisions.length > 0),
+        }).catch(() => {});
+      } catch (_) { /* best-effort telemetry */ }
+    })();
+  }, [user?.id, output, checkin]);
+
   // Confirm-then-apply: write the suggested calorie change to
   // nutrition_targets only when the user taps Apply, then record it on
   // the coach output so the row flips to "Applied" and can't be applied
@@ -1219,6 +1245,9 @@ export default function CoachOutputScreen({ navigation, route }) {
       }
       setOutput(updated);
       setApplySettling(s => ({ ...s, calories: true }));
+      // Activation funnel: the write has landed regardless of the receipt
+      // outcome above, so the acceptance is real either way.
+      trackEngineEvent(user.id, 'coach_recommendation_accepted', { kind: 'calories' }).catch(() => {});
       if (!receiptOk) {
         setApplyNotice(n => ({
           ...n,
@@ -1287,6 +1316,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       });
       await saveCoachOutput(user.id, { weekStart, ...updated });
       setOutput(updated);
+      trackEngineEvent(user.id, 'coach_recommendation_declined', { kind: 'calories' }).catch(() => {});
     } catch (e) {
       logError('CoachOutputScreen.handleDeclineCalories', e, { userId: user?.id });
     }
@@ -1370,6 +1400,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       });
       setOutput(updated);
       setApplySettling(s => ({ ...s, training: true }));
+      trackEngineEvent(user.id, 'coach_recommendation_accepted', { kind: 'volume' }).catch(() => {});
     } catch (e) {
       logError('CoachOutputScreen.handleApplyTraining', e, { userId: user?.id });
     } finally {
@@ -1425,6 +1456,7 @@ export default function CoachOutputScreen({ navigation, route }) {
       setNextWeekIsDeload(true);
       setOutput(updated);
       setApplySettling(s => ({ ...s, deload: true }));
+      trackEngineEvent(user.id, 'coach_recommendation_accepted', { kind: 'deload' }).catch(() => {});
     } catch (e) {
       logError('CoachOutputScreen.handleApplyDeload', e, { userId: user?.id });
     } finally {
@@ -1514,6 +1546,9 @@ export default function CoachOutputScreen({ navigation, route }) {
       }
       setOutput(updated);
       setApplySettling(s => ({ ...s, dietBreak: true }));
+      // kind: 'other' -- dietBreak is not one of the calories/volume/deload
+      // buckets and stays out of the small enum rather than growing it.
+      trackEngineEvent(user.id, 'coach_recommendation_accepted', { kind: 'other' }).catch(() => {});
       if (!receiptOk) {
         setApplyNotice(n => ({
           ...n,

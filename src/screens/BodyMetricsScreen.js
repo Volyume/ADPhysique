@@ -1016,6 +1016,18 @@ export default function BodyMetricsScreen() {
       // the optimistic entry and show a toast.
       try {
         await logBodyMetric(user.id, data);
+        // Activation funnel (lead activation ruling, 2026-09-03): a genuine
+        // deliberate weigh-in through this form, once per user, count only
+        // -- never the value. Deliberately excludes the onboarding auto-seed
+        // and the legacy AsyncStorage migration above (both automated writes,
+        // not a user weighing in).
+        if (data.weightKg != null) {
+          try {
+            // eslint-disable-next-line global-require
+            const { trackFirst } = require('../lib/telemetry/firsts');
+            trackFirst(user.id, 'first_weigh_in').catch(() => {});
+          } catch (_) { /* best-effort telemetry */ }
+        }
         if (session?.user?.id) {
           // E12 step 1: push through the registry runner (the legacy per-save
           // syncBodyMetric dual writer is retired; the body_composition_log
