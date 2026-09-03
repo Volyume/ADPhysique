@@ -335,6 +335,64 @@ describe('MealPlanScreen — shopping-list share (audit §15 item 6)', () => {
   });
 });
 
+describe('MealPlanScreen — grocery list check-off (D138)', () => {
+  test('ticking an item persists per plan id, in AsyncStorage only, and survives reopening the sheet', async () => {
+    mockGetItem.mockImplementation(() => Promise.resolve(null));
+    const tree = await mountLoaded(); // record.id = 'rec1' (see makePlan/mountLoaded above)
+
+    const groceryBtn = buttons(tree).find((b) => b.props.accessibilityLabel === 'Shopping list');
+    act(() => groceryBtn.props.onPress());
+    await act(async () => { await Promise.resolve(); });
+
+    const checkboxes = () => tree.root.findAll((n) => n.props.accessibilityRole === 'checkbox');
+    expect(checkboxes().length).toBeGreaterThan(0);
+    expect(checkboxes()[0].props.accessibilityState.checked).toBe(false);
+
+    act(() => { checkboxes()[0].props.onPress(); });
+
+    // Persisted per PLAN id, not globally.
+    const ticksCall = mockSetItem.mock.calls.find(([key]) => key === '@volyume_grocery_ticks_rec1');
+    expect(ticksCall).toBeTruthy();
+    const savedRaw = ticksCall[1];
+    expect(Object.keys(JSON.parse(savedRaw))).toHaveLength(1);
+
+    // The row itself now renders ticked, without closing the sheet.
+    expect(checkboxes()[0].props.accessibilityState.checked).toBe(true);
+
+    // Close and reopen the sheet: the tick reloads from AsyncStorage, not
+    // component state (which the sheet visibility already tore down).
+    mockGetItem.mockImplementation((key) => (
+      key === '@volyume_grocery_ticks_rec1' ? Promise.resolve(savedRaw) : Promise.resolve(null)
+    ));
+    act(() => { groceryBtn.props.onPress(); });
+    await act(async () => { await Promise.resolve(); });
+
+    expect(checkboxes()[0].props.accessibilityState.checked).toBe(true);
+  });
+
+  test('a freshly regenerated plan (new record id) opens its shopping list with no ticks', async () => {
+    // The regenerate/generate flow always writes a NEW plan row (a fresh id
+    // via saveActiveMealPlan), so a previous plan's AsyncStorage key is
+    // simply never read for the new one -- this pins that natural behaviour
+    // rather than any explicit "clear on regenerate" step.
+    mockGetItem.mockImplementation((key) => (
+      key === '@volyume_grocery_ticks_rec1' ? Promise.resolve('{"Proteins::Chicken breast fillet (cooked)":true}') : Promise.resolve(null)
+    ));
+    const { loadActiveMealPlan } = require('../../lib/food/mealPlanService');
+    loadActiveMealPlan.mockResolvedValue({ id: 'rec2', plan: makePlan() });
+    let tree;
+    await act(async () => { tree = create(<MealPlanScreen navigation={nav} />); });
+
+    const groceryBtn = buttons(tree).find((b) => b.props.accessibilityLabel === 'Shopping list');
+    act(() => groceryBtn.props.onPress());
+    await act(async () => { await Promise.resolve(); });
+
+    const checkboxes = tree.root.findAll((n) => n.props.accessibilityRole === 'checkbox');
+    expect(checkboxes.length).toBeGreaterThan(0);
+    expect(checkboxes.every((c) => c.props.accessibilityState.checked === false)).toBe(true);
+  });
+});
+
 describe('MealPlanScreen review-before-add flow', () => {
   const source = require('fs').readFileSync(require('path').join(__dirname, '..', 'MealPlanScreen.js'), 'utf8');
 
@@ -352,7 +410,7 @@ describe('MealPlanScreen review-before-add flow', () => {
     expect(source).not.toContain('<Text style={styles.emptyTitle}>Create meals</Text>');
     expect(source).not.toContain('title="Plan this day"');
     expect(source).not.toContain('title="Plan the week"');
-    expect(source).toContain('Nothing is logged until you add it');
+    expect(source).toContain('Nothing counts until you mark it eaten');
     expect(source.indexOf('{/* Day totals')).toBeLessThan(source.indexOf('<View style={[styles.planActionPanel, live.planActionPanel]}>'));
     expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('Review meals'));
     expect(source.indexOf('Meal preferences')).toBeLessThan(source.indexOf('<View style={[styles.planActionPanel, live.planActionPanel]}>'));

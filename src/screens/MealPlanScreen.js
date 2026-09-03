@@ -610,6 +610,41 @@ export default function MealPlanScreen({ navigation, route }) {
     try { await Share.share({ message }); } catch (_) { /* user dismissed */ }
   }, [grocerySheet]);
 
+  // D138: check off items while shopping. Purely a per-device shopping aid,
+  // ticked state per PLAN (keyed on record.id, never on the food name alone,
+  // so an old list's ticks never bleed into a new one), persisted in
+  // AsyncStorage only -- no backend, no sync. Every generate/regenerate
+  // writes a fresh plan row with a new id (saveActiveMealPlan), so a
+  // regenerated plan naturally opens with no ticks; there is nothing to
+  // explicitly clear.
+  const [groceryTicks, setGroceryTicks] = useState({}); // { [sectionLabel::itemName]: true }
+  const groceryTickKey = (label, name) => `${label}::${name}`;
+  const openGroceryList = useCallback(() => {
+    setGrocerySheet(buildGroceryList(plan));
+    const planId = record?.id;
+    if (!planId) { setGroceryTicks({}); return; }
+    AsyncStorage.getItem(`@volyume_grocery_ticks_${planId}`)
+      .then((raw) => {
+        if (!raw) { setGroceryTicks({}); return; }
+        try {
+          const parsed = JSON.parse(raw);
+          setGroceryTicks(parsed && typeof parsed === 'object' ? parsed : {});
+        } catch (_) { setGroceryTicks({}); }
+      })
+      .catch(() => setGroceryTicks({}));
+  }, [plan, record?.id]);
+  const toggleGroceryTick = useCallback((key) => {
+    setGroceryTicks((prev) => {
+      const next = { ...prev };
+      if (next[key]) delete next[key]; else next[key] = true;
+      const planId = record?.id;
+      if (planId) {
+        AsyncStorage.setItem(`@volyume_grocery_ticks_${planId}`, JSON.stringify(next)).catch(() => {});
+      }
+      return next;
+    });
+  }, [record?.id]);
+
   // Open the swap sheet for a slot: the engine returns the closest
   // replacement plus a style-diverse pool of alternatives (rethink §3.3,
   // founder directive: a generous scrollable list, not a single "next").
@@ -1070,7 +1105,7 @@ export default function MealPlanScreen({ navigation, route }) {
             </View>
             <View style={[styles.emptyStep, live.emptyStep]}>
               <Ionicons name="checkmark-circle-outline" size={16} color={t.colors.primary} />
-              <Text style={[styles.emptyStepText, live.emptyStepText]}>Nothing is logged until you add it</Text>
+              <Text style={[styles.emptyStepText, live.emptyStepText]}>Nothing counts until you mark it eaten</Text>
             </View>
           </View>
 
@@ -1448,7 +1483,7 @@ export default function MealPlanScreen({ navigation, route }) {
               <Button
                 title="Shopping list"
                 icon="basket-outline"
-                onPress={() => setGrocerySheet(buildGroceryList(plan))}
+                onPress={openGroceryList}
                 disabled={busy}
                 variant="secondary"
                 size="sm"
@@ -1693,16 +1728,37 @@ export default function MealPlanScreen({ navigation, route }) {
                   {grocerySheet.sections.map((section) => (
                     <View key={section.label} style={styles.grocerySection}>
                       <SectionLabel style={styles.grocerySectionLabel}>{section.label}</SectionLabel>
-                      {section.items.map((item, i) => (
-                        <View key={`${section.label}-${item.name}-${i}`} style={[styles.groceryRow, live.groceryRow]}>
-                          <Text style={[styles.groceryName, live.groceryName]}>
-                            {item.name}{item.count ? ` x${item.count}` : ''}
-                          </Text>
-                          {item.grams != null ? (
-                            <Text style={[styles.groceryQty, live.groceryQty]}>{formatNumber(item.grams)} g</Text>
-                          ) : null}
-                        </View>
-                      ))}
+                      {section.items.map((item, i) => {
+                        const tickKey = groceryTickKey(section.label, item.name);
+                        const ticked = !!groceryTicks[tickKey];
+                        return (
+                          <TouchableOpacity
+                            key={`${section.label}-${item.name}-${i}`}
+                            style={[styles.groceryRow, live.groceryRow]}
+                            onPress={() => toggleGroceryTick(tickKey)}
+                            accessibilityRole="checkbox"
+                            accessibilityState={{ checked: ticked }}
+                            accessibilityLabel={`${item.name}${item.count ? ` x${item.count}` : ''}${item.grams != null ? `, ${formatNumber(item.grams)} g` : ''}`}
+                          >
+                            <Ionicons
+                              name={ticked ? 'checkbox' : 'square-outline'}
+                              size={20}
+                              color={ticked ? t.colors.primary : t.colors.textMuted}
+                              style={styles.groceryCheckbox}
+                            />
+                            <Text
+                              style={[styles.groceryName, live.groceryName, ticked && [styles.groceryNameTicked, live.groceryNameTicked]]}
+                            >
+                              {item.name}{item.count ? ` x${item.count}` : ''}
+                            </Text>
+                            {item.grams != null ? (
+                              <Text style={[styles.groceryQty, live.groceryQty, ticked && [styles.groceryQtyTicked, live.groceryQtyTicked]]}>
+                                {formatNumber(item.grams)} g
+                              </Text>
+                            ) : null}
+                          </TouchableOpacity>
+                        );
+                      })}
                     </View>
                   ))}
                 </ScrollView>
@@ -2065,11 +2121,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxs,
   },
   groceryRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'center',
     paddingVertical: spacing.xs, borderBottomWidth: 1, borderBottomColor: colors.borderSubtle, gap: spacing.md,
   },
-  groceryName: { ...type.body, color: colors.textPrimary, flexShrink: 1 },
+  groceryCheckbox: { marginRight: -spacing.xs },
+  groceryName: { ...type.body, color: colors.textPrimary, flex: 1, flexShrink: 1 },
+  groceryNameTicked: { color: colors.textMuted, textDecorationLine: 'line-through' },
   groceryQty: { color: colors.textSecondary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
+  groceryQtyTicked: { color: colors.textMuted },
   swapOption: {
     backgroundColor: colors.surface2, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border,
     paddingHorizontal: spacing.md, paddingVertical: spacing.md, gap: spacing.xs, minHeight: 56, justifyContent: 'center',
@@ -2167,7 +2226,9 @@ function buildLiveStyles(t) {
     groceryShareBtnText: { ...t.type.caption, color: t.colors.textPrimary },
     groceryRow: { borderBottomColor: t.colors.borderSubtle },
     groceryName: { ...t.type.body, color: t.colors.textPrimary },
+    groceryNameTicked: { color: t.colors.textMuted },
     groceryQty: { color: t.colors.textSecondary, fontSize: t.fontSize.sm },
+    groceryQtyTicked: { color: t.colors.textMuted },
     swapOption: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     swapOptionOn: { borderColor: t.colors.primary },
     swapOptionName: { ...t.type.bodyStrong, color: t.colors.textPrimary },

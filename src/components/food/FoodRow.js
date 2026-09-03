@@ -42,9 +42,16 @@ export default function FoodRow({
   onPress,
   onLongPress,
   onAdd,
-  addLabel = 'Plate',
+  addLabel = 'Add',
   addAccessibilityLabel,
   longPressHint,
+  // D138: a plain edit affordance for a custom food (the Custom tab only).
+  // A trailing pencil, matching the house pattern of a small icon button
+  // beside a row's primary control (see LoggedSetRow's edit chrome) rather
+  // than overloading the existing long-press (already the favourite/exclude
+  // preference cycle on every row).
+  onEdit,
+  editAccessibilityLabel,
 }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
@@ -93,13 +100,24 @@ export default function FoodRow({
       {pref === 'dislike'
         ? <Ionicons name="close-circle" size={20} color={t.colors.textMuted} style={{ marginRight: spacing.sm }} />
         : null}
+      {onEdit ? (
+        <TouchableOpacity
+          style={styles.editBtn}
+          onPress={onEdit}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel={editAccessibilityLabel || `Edit ${food.name}`}
+        >
+          <Ionicons name="pencil-outline" size={18} color={t.colors.textMuted} />
+        </TouchableOpacity>
+      ) : null}
       {onAdd ? (
         <TouchableOpacity
           style={[styles.addBtn, live.addBtn]}
           onPress={onAdd}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           accessibilityRole="button"
-          accessibilityLabel={addAccessibilityLabel || `Add ${food.name} to plate`}
+          accessibilityLabel={addAccessibilityLabel || `Add ${food.name}`}
         >
           <Ionicons name="add" size={16} color={t.colors.primary} />
           <Text style={[styles.addBtnText, live.addBtnText]}>{addLabel}</Text>
@@ -136,6 +154,11 @@ const styles = StyleSheet.create({
   },
   addBtnText: { color: colors.primary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
   rowChevron: { marginLeft: spacing.xs },
+  editBtn: {
+    minWidth: 32, minHeight: 32,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: spacing.xs,
+  },
 });
 
 // CP-10 theming batch (component sweep, 2026-07-10): live override for the

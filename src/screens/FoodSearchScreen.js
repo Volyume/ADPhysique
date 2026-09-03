@@ -35,7 +35,7 @@ import {
   logFoodEntry, deleteFoodEntry, getFavourites,
   getDislikes, cycleFoodPreference, getAllCustomFoods, getFoodFrequents,
   getRollupForDay, getLoggedMealSlotsForDay, applyCuratedMealToDiary,
-  upsertSlotRecent, getSlotRecents, getSlotRecentQuantities, resolveSlotRecentRef,
+  upsertSlotRecent, getSlotRecents, getSlotRecentQuantities, resolveSlotRecentRefs,
 } from '../lib/food/db';
 import { getNutritionTargets } from '../lib/database';
 import { getCuratedCandidates } from '../lib/food/curatedMeals';
@@ -49,7 +49,7 @@ import {
 } from '../lib/food/searchTabs';
 import { searchFoods } from '../lib/food/waterfall';
 import NetInfo from '@react-native-community/netinfo';
-import { resolveFoodRef } from '../lib/food/sources/localCache';
+import { resolveFoodRefs } from '../lib/food/sources/localCache';
 // Campaign 17A job 6: the ONE exclusion predicate, at the food-ref level.
 import { foodRefExcluded } from '../lib/food/foodRoles';
 import { audit } from '../lib/observability';
@@ -121,6 +121,11 @@ export default function FoodSearchScreen({ navigation, route }) {
   const isRecipePick = route?.params?.pickMode === 'recipe';
   const [results, setResults] = useState([]);
   const [recents, setRecents] = useState([]);
+  // D138: the search box should grab the keyboard for a new-food user (an
+  // empty recents list means there is nothing to tap instead), but keep the
+  // repeat path showing its list untouched. Starts false so a first render
+  // never steals focus before loadBrowse has actually reported back.
+  const [recentsLoaded, setRecentsLoaded] = useState(false);
   // food_ref -> last portion used in THIS slot (Campaign 17B job 2).
   const [slotPortions, setSlotPortions] = useState(() => new Map());
   const [favouriteRows, setFavouriteRows] = useState([]);
@@ -165,12 +170,18 @@ export default function FoodSearchScreen({ navigation, route }) {
         getDislikes(userId),
         getAllCustomFoods(userId),
       ]);
+      // D138 latency ruling: one batched resolve for every recent ref instead
+      // of a round-trip per row. resolveSlotRecentRefs mirrors
+      // resolveSlotRecentRef row-for-row, including the saved meal's
+      // synthetic 'meal:<id>' branch (no per-100g profile to resolve) and
+      // deferring everything else, a recipe's 'recipe:<id>' ref included, to
+      // the same resolution resolveFoodRefs would give it.
+      const recentRefMap = recentRows.length
+        ? await resolveSlotRecentRefs(userId, recentRows.map((r) => r.food_ref))
+        : new Map();
       const recentResolved = [];
       for (const r of recentRows) {
-        // resolveSlotRecentRef handles a saved meal's synthetic 'meal:<id>'
-        // ref (no per-100g profile to resolve) and defers everything else,
-        // including a recipe's 'recipe:<id>' ref, to resolveFoodRef unchanged.
-        const food = await resolveSlotRecentRef(userId, r.food_ref);
+        const food = recentRefMap.get(r.food_ref);
         if (food) recentResolved.push({ ...food, last_quantity_g: r.last_quantity_g });
       }
       setRecents(recentResolved);
@@ -184,9 +195,15 @@ export default function FoodSearchScreen({ navigation, route }) {
         .catch(() => {});
 
       setFavouriteRefs(new Set(favRows.map((f) => f.food_ref)));
+      // D138 latency ruling: one batched resolve instead of one round-trip
+      // per favourite row.
+      const favSlice = favRows.slice(0, 50);
+      const favRefMap = favSlice.length
+        ? await resolveFoodRefs(userId, favSlice.map((f) => f.food_ref))
+        : new Map();
       const favResolved = [];
-      for (const f of favRows.slice(0, 50)) {
-        const food = await resolveFoodRef(userId, f.food_ref);
+      for (const f of favSlice) {
+        const food = favRefMap.get(f.food_ref);
         if (food) favResolved.push(food);
       }
       setFavouriteRows(favResolved);
@@ -199,6 +216,12 @@ export default function FoodSearchScreen({ navigation, route }) {
         source: 'custom',
       })));
     } catch (_) { /* tolerate */ }
+    finally {
+      // D138: gate the search box's autoFocus on this having actually
+      // reported back (success or failure), never on the pre-load empty
+      // state, so a genuine "no recents" case autofocuses exactly once.
+      setRecentsLoaded(true);
+    }
   }, [userId, mealSlot]);
 
   // Frequents is server-computed; pull a fresh snapshot if the local
@@ -209,9 +232,14 @@ export default function FoodSearchScreen({ navigation, route }) {
     try {
       await refreshFrequentsIfStale(userId);
       const rows = await getFoodFrequents(userId, 20);
+      // D138 latency ruling: one batched resolve instead of one round-trip
+      // per frequent row.
+      const refMap = rows.length
+        ? await resolveFoodRefs(userId, rows.map((r) => r.food_ref))
+        : new Map();
       const resolved = [];
       for (const r of rows) {
-        const food = await resolveFoodRef(userId, r.food_ref);
+        const food = refMap.get(r.food_ref);
         if (food) resolved.push(food);
       }
       setFrequentRows(resolved);
@@ -745,6 +773,11 @@ export default function FoodSearchScreen({ navigation, route }) {
     const preference = favouriteRefs.has(food.food_ref) ? 'fav'
       : dislikeRefs.has(food.food_ref) ? 'dislike'
       : null;
+    // D138: a custom food is the user's own, so it stays editable from the
+    // More tab it lives on -- a trailing pencil that opens AddCustomFood in
+    // edit mode, never gated behind the row's own long-press (already the
+    // favourite/exclude preference cycle).
+    const isEditableCustomFood = activeTab === 'custom' && food.source === 'custom' && !!food.id;
     return (
       <FoodRow
         food={food}
@@ -752,6 +785,9 @@ export default function FoodSearchScreen({ navigation, route }) {
         onPress={() => openPicker(food)}
         onLongPress={() => onLongPress(food)}
         onAdd={isRecipePick ? undefined : () => addToPlate(food)}
+        onEdit={isEditableCustomFood
+          ? () => navigation.navigate('AddCustomFood', { mealSlot, entryDate, editFoodId: food.id })
+          : undefined}
       />
     );
   }
@@ -902,11 +938,18 @@ export default function FoodSearchScreen({ navigation, route }) {
           2+ char query is a database search from any tab (selectTabRows), so
           typing here shows results and clearing returns to the suggestions. */}
       <SearchBar
+        // D138: RN's autoFocus only fires at mount, so remounting once the
+        // recents list has actually reported back (rather than flipping the
+        // prop on a live instance) is what makes the flag take effect. A
+        // repeat user with a populated recents list never remounts, so
+        // their list keeps focus exactly as before.
+        key={recentsLoaded ? 'search-loaded' : 'search-loading'}
         value={query}
         onChangeText={setQuery}
         placeholder="Search foods or brands"
         accessibilityLabel="Search foods or brands"
         loading={searching}
+        autoFocus={recentsLoaded && recents.length === 0}
         style={styles.searchBar}
       />
 
@@ -953,7 +996,7 @@ export default function FoodSearchScreen({ navigation, route }) {
             accessibilityRole="button"
             accessibilityLabel="Review selected foods"
           >
-            <Text style={[styles.plateCount, live.plateCount]}>{plate.length} selected</Text>
+            <Text style={[styles.plateCount, live.plateCount]}>{plate.length} to log</Text>
             <Text style={[styles.plateKcalLine, live.plateKcalLine]}>~{toEnergy(plateKcal, energyUnit)} {energyUnitLabel(energyUnit)} - tap to review</Text>
           </TouchableOpacity>
           <Button

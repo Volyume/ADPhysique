@@ -71,7 +71,13 @@ jest.mock('../../lib/food/db', () => ({
     { food_ref: 'off:chicken', last_quantity_g: 150, log_count: 2 },
     { food_ref: 'meal:sm-1', last_quantity_g: 0, log_count: 5 },
   ])),
-  resolveSlotRecentRef: jest.fn((userId, ref) => Promise.resolve(
+  // D138: loadBrowse now resolves every recent ref in ONE batched call
+  // (resolveSlotRecentRefs) instead of looping resolveSlotRecentRef per row.
+  // This mock mirrors resolveSlotRecentRef's own per-ref branching exactly,
+  // just batched into a Map, so the mixed food + saved-meal pool below still
+  // exercises the real 'meal:' branch this suite pins.
+  resolveSlotRecentRefs: jest.fn((userId, refs) => Promise.resolve(new Map(refs.map((ref) => [
+    ref,
     ref === 'meal:sm-1'
       ? {
         food_ref: 'meal:sm-1', savedMealId: 'sm-1', itemCount: 2,
@@ -82,7 +88,7 @@ jest.mock('../../lib/food/db', () => ({
         food_ref: 'off:chicken', name: 'Chicken breast', source: 'off',
         kcal_100g: 165, protein_100g: 31, carbs_100g: 0, fat_100g: 3.6,
       },
-  )),
+  ]))))
 }));
 jest.mock('../../lib/database', () => ({ getNutritionTargets: jest.fn(() => Promise.resolve(null)) }));
 jest.mock('../../lib/food/curatedMeals', () => ({ getCuratedCandidates: jest.fn(() => []) }));

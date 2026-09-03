@@ -25,7 +25,7 @@ import ModalHeader from '../components/ModalHeader';
 import SectionLabel from '../components/SectionLabel';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
-import { insertCustomFood, logFoodEntry } from '../lib/food/db';
+import { insertCustomFood, updateCustomFood, getCustomFoodById, logFoodEntry } from '../lib/food/db';
 import { queueContribution, getConsent, markScanChainCompleted } from '../lib/food/writeback';
 import { checkFoodSanity } from '../lib/food/sanityChecks';
 import { fieldNeedsCheck } from '../lib/food/ocrParser';
@@ -51,6 +51,11 @@ export default function AddCustomFoodScreen({ navigation, route }) {
 
   const mealSlot = route?.params?.mealSlot ?? 'snack';
   const entryDate = route?.params?.entryDate ?? todayLocalKey();
+  // D138: opened from the More tab's edit affordance on an existing custom
+  // food, rather than the create-and-log flow. Mutually exclusive with the
+  // OCR prefill params below (a scan never carries editFoodId).
+  const editFoodId = route?.params?.editFoodId ?? null;
+  const isEditMode = !!editFoodId;
   // Set when arriving from a barcode-scan miss. Displayed as a hint
   // so the user knows what was scanned. Persisting the barcode to
   // custom_foods is a phase 3 follow-up (needs a schema column +
@@ -90,14 +95,23 @@ export default function AddCustomFoodScreen({ navigation, route }) {
       .catch(() => {});
     return () => { cancelled = true; };
   }, [prefillBarcode, userId]);
-  const [servingG, setServingG] = useState(_num(prefillMacros?.servingG) || '100');
+  // D138: a drink label reads its serving in ml, not g ("Serving size 330
+  // ml"). There is no separate ml column (custom_foods stores one serving
+  // figure), so it goes into serving_g exactly as an existing per-100ml
+  // global food is represented (usdaToFood.js's 1 ml ~= 1 g approximation),
+  // with serving_label set to 'ml' so the figure still reads honestly.
+  const [servingG, setServingG] = useState(
+    _num(prefillMacros?.servingG) || _num(prefillMacros?.servingMl) || '100'
+  );
   // L05-ACF1 (2026-07-09 design audit): the named/household unit for the
   // Serving (g) figure above, e.g. "slice" when Serving (g) is 30 (one
   // slice = 30 g). Optional; no OCR/barcode source ever prefills it, so it
   // always starts blank. Persisted as custom_foods.serving_label, the
   // column insertCustomFood already writes (db.js:389,396) but the form
   // never populated until now.
-  const [servingLabel, setServingLabel] = useState('');
+  const [servingLabel, setServingLabel] = useState(
+    (!prefillMacros?.servingG && prefillMacros?.servingMl) ? 'ml' : ''
+  );
   const [kcal, setKcal] = useState(_num(prefillMacros?.kcal100g));
   const [protein, setProtein] = useState(_num(prefillMacros?.protein100g));
   const [carbs, setCarbs] = useState(_num(prefillMacros?.carbs100g));
@@ -129,6 +143,40 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     return out;
   }, [microInputs]);
 
+  // D138 edit mode: prefill every field from the existing row. barcode_ean/
+  // photo_url/notes have no form control (there was never one), so they are
+  // carried through from this fetched row rather than the create flow's
+  // route-param sources, so editing never silently wipes them.
+  const [existingFood, setExistingFood] = useState(null);
+  useEffect(() => {
+    if (!isEditMode || !userId) return;
+    let cancelled = false;
+    getCustomFoodById(editFoodId, userId)
+      .then((row) => {
+        if (cancelled || !row) return;
+        setExistingFood(row);
+        setName(row.name ?? '');
+        setBrand(row.brand ?? '');
+        setServingG(_num(row.serving_g) || '100');
+        setServingLabel(row.serving_label ?? '');
+        setKcal(_num(row.kcal_100g));
+        setProtein(_num(row.protein_100g));
+        setCarbs(_num(row.carbs_100g));
+        setFat(_num(row.fat_100g));
+        setFibre(_num(row.fibre_100g));
+        const microState = {};
+        for (const n of MICRONUTRIENTS) {
+          const v = row[n.column];
+          if (v != null) microState[n.key] = String(v);
+        }
+        setMicroInputs(microState);
+        setMicrosOpen(Object.keys(microState).length > 0);
+      })
+      .catch(() => { if (!cancelled) toast.show("Couldn't load this food. Try again.", { variant: 'error' }); });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditMode, editFoodId, userId]);
+
   const food = useMemo(() => ({
     name: name.trim(),
     brand: brand.trim() || null,
@@ -139,9 +187,11 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     carbs100g: Number(carbs) || 0,
     fat100g: Number(fat) || 0,
     fibre100g: fibre.trim() ? Number(fibre) : null,
-    barcodeEan: prefillBarcode || null,
+    barcodeEan: isEditMode ? (existingFood?.barcode_ean ?? null) : (prefillBarcode || null),
+    photoUrl: isEditMode ? (existingFood?.photo_url ?? null) : null,
+    notes: isEditMode ? (existingFood?.notes ?? null) : null,
     micros,
-  }), [name, brand, servingG, servingLabel, kcal, protein, carbs, fat, fibre, prefillBarcode, micros]);
+  }), [name, brand, servingG, servingLabel, kcal, protein, carbs, fat, fibre, prefillBarcode, micros, isEditMode, existingFood]);
 
   // Hard-block non-finite / negative numbers here (audit F-006): an entry like
   // 1e400 parses to Infinity, which is >= 0, and would scale to Infinity then be
@@ -183,8 +233,43 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     };
   }, [quantityG, kcal, protein, carbs, fat, servingG, servingLabel]);
 
+  // D138: editing an existing custom food only ever updates the food row --
+  // it never logs a new diary entry, so this skips the eaten-amount gate and
+  // the create-flow's log/contribution steps entirely. Logged entries keep
+  // their own already-scaled macros (see updateCustomFood's doc comment in
+  // db.js), so this changes only future logs of the food.
+  async function onSaveEdit() {
+    if (!canSave || saving) return;
+    setSaving(true);
+    try {
+      const sanity = checkFoodSanity(food);
+      if (!sanity.valid) {
+        const confirmed = await new Promise((resolve) => {
+          appAlert(
+            'Numbers look off',
+            sanity.reason,
+            [
+              { text: 'Edit', style: 'cancel', onPress: () => resolve(false) },
+              { text: 'Save anyway', style: 'destructive', onPress: () => resolve(true) },
+            ],
+            { cancelable: false }
+          );
+        });
+        if (!confirmed) { setSaving(false); return; }
+      }
+      await updateCustomFood(userId, editFoodId, food);
+      audit('food.custom.update', { hasFibre: food.fibre100g != null });
+      toast.show('Food updated.');
+      navigation.goBack();
+    } catch (_err) {
+      toast.show('Couldn\'t save. Try again.', { variant: 'error' });
+      setSaving(false);
+    }
+  }
+
   async function onSave() {
     if (!canSave || saving) return;
+    if (isEditMode) return onSaveEdit();
     // FOOD-001: the amount eaten must fall inside the shared 1 to 5000 g safety
     // bound (isValidEntryGrams), the same gate FoodDetailSheet enforces, so a
     // negative, zero, blank or extreme quantity can never be logged as a diary
@@ -198,6 +283,29 @@ export default function AddCustomFoodScreen({ navigation, route }) {
     }
     setSaving(true);
     try {
+      // D138: a prefilled low-confidence field the user never touched must
+      // never save silently -- ask first, the same appAlert confirm pattern
+      // the sanity gate just below already uses, so the choice is the
+      // user's, not a lost guess.
+      if (prefillConfidence) {
+        const vals = { kcal100g: kcal, protein100g: protein, carbs100g: carbs, fat100g: fat, fibre100g: fibre };
+        const stillUnsure = Object.keys(vals).some((k) => _unsure(k, vals[k]));
+        if (stillUnsure) {
+          const proceed = await new Promise((resolve) => {
+            appAlert(
+              "Some figures weren't read clearly",
+              'Save anyway?',
+              [
+                { text: 'Check first', style: 'cancel', onPress: () => resolve(false) },
+                { text: 'Save anyway', style: 'destructive', onPress: () => resolve(true) },
+              ],
+              { cancelable: false }
+            );
+          });
+          if (!proceed) { setSaving(false); return; }
+        }
+      }
+
       const sanity = checkFoodSanity(food);
       if (!sanity.valid) {
         const confirmed = await new Promise((resolve) => {
@@ -312,7 +420,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-      <ModalHeader title="New food" onClose={() => navigation.goBack()} />
+      <ModalHeader title={isEditMode ? 'Edit food' : 'New food'} onClose={() => navigation.goBack()} />
 
       {/* L03-C5 (2026-07-09 design audit) originally standardised this on the
           app's KeyboardAvoidingView pattern (same behavior prop as
@@ -321,7 +429,16 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           plus interactive dismiss, no fixed footer below this scroll. */}
       <KeyboardGestureArea interpolator="ios" style={styles.keyboardAvoid}>
       <KeyboardAwareScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        <Text style={[styles.contextLabel, live.contextLabel]}>Save this food, then add it to your diary.</Text>
+        <Text style={[styles.contextLabel, live.contextLabel]}>
+          {isEditMode ? 'Edit this food\'s details.' : 'Save this food, then add it to your diary.'}
+        </Text>
+        {/* D138: historical integrity, one line -- an edit must never look
+            like it silently rewrites what was already logged. */}
+        {isEditMode ? (
+          <Text style={[styles.unsureNote, live.unsureNote]}>
+            Logged entries keep the numbers they were logged with. This changes only future logs of this food.
+          </Text>
+        ) : null}
         {prefillBarcode ? (
           <Text style={[styles.barcodeHint, live.barcodeHint]}>Scanned barcode: {prefillBarcode}</Text>
         ) : null}
@@ -357,7 +474,7 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         </View>
         <NumField label="Fibre (optional)" value={fibre} onChange={setFibre} suffix="g" unsure={_unsure('fibre100g', fibre)} />
 
-        <SectionLabel style={styles.sectionLabelSpacing}>QUANTITY EATEN</SectionLabel>
+        <SectionLabel style={styles.sectionLabelSpacing}>{isEditMode ? 'SERVING' : 'QUANTITY EATEN'}</SectionLabel>
         {/* L05-ACF1 (2026-07-09 design audit): name the Serving (g) amount as
             a household unit ("slice", "cup", "tin"), stored as
             custom_foods.serving_label alongside the gram figure. Optional;
@@ -368,20 +485,29 @@ export default function AddCustomFoodScreen({ navigation, route }) {
           onChange={setServingLabel}
           placeholder="e.g. slice, cup, tin"
         />
-        <View style={styles.row}>
+        {/* D138: editing a food's own details logs nothing, so the "Eaten"
+            amount (today's log quantity, not part of the food itself) has no
+            place here -- Serving (g) is the only gram field this mode needs. */}
+        {isEditMode ? (
           <NumField label="Serving (g)" value={servingG} onChange={setServingG} suffix="g" />
-          <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" />
-        </View>
-        {/* L05-ACF3 (2026-07-09 design audit): the two gram fields sat side by
-            side with no explanation of which drives what. */}
-        <Text style={[styles.unsureNote, live.unsureNote]}>
-          Serving is this food's usual portion, saved for next time. Eaten is how much you had today, logged now.
-        </Text>
-        {portionPreview ? (
-          <Text style={[styles.portionPreview, live.portionPreview]}>
-            {`${quantityG} g${portionPreview.unitPrefix} works out to ${portionPreview.kcal} kcal - P ${portionPreview.protein}g - C ${portionPreview.carbs}g - F ${portionPreview.fat}g.`}
-          </Text>
-        ) : null}
+        ) : (
+          <>
+            <View style={styles.row}>
+              <NumField label="Serving (g)" value={servingG} onChange={setServingG} suffix="g" />
+              <NumField label="Eaten (g)" value={quantityG} onChange={setQuantityG} suffix="g" />
+            </View>
+            {/* L05-ACF3 (2026-07-09 design audit): the two gram fields sat side
+                by side with no explanation of which drives what. */}
+            <Text style={[styles.unsureNote, live.unsureNote]}>
+              Serving is this food's usual portion, saved for next time. Eaten is how much you had today, logged now.
+            </Text>
+            {portionPreview ? (
+              <Text style={[styles.portionPreview, live.portionPreview]}>
+                {`${quantityG} g${portionPreview.unitPrefix} works out to ${portionPreview.kcal} kcal - P ${portionPreview.protein}g - C ${portionPreview.carbs}g - F ${portionPreview.fat}g.`}
+              </Text>
+            ) : null}
+          </>
+        )}
 
         {/* MN-1 (audit §15 item 2): fully optional per-100g vitamin/mineral
             entry. Collapsed by default so the common case (just the macros
@@ -406,8 +532,8 @@ export default function AddCustomFoodScreen({ navigation, route }) {
         </View>
 
         <Button
-          title="Save and add to diary"
-          accessibilityLabel="Save food and add to diary"
+          title={isEditMode ? 'Save changes' : 'Save and add to diary'}
+          accessibilityLabel={isEditMode ? 'Save changes to food' : 'Save food and add to diary'}
           size="lg"
           loading={saving}
           disabled={!canSave}

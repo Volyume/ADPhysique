@@ -30,9 +30,28 @@ export function buildServingUnits(food) {
 // diverge). With no prior portion, add defaults to ONE named serving (zero
 // keystrokes) when the food has one, else 100 g. `mode` is retained in the
 // signature for call-site clarity but no longer gates the prior-portion branch.
+//
+// D138: a remembered portion that is (near enough) a half-serving multiple of
+// the food's own named serving reopens in THAT unit, not grams — a user who
+// thinks in slices/scoops/servings should see "2 slices" again, not "62 g".
+// "Near enough" is within 2% of the nearest half-serving (0.5, 1, 1.5, 2...),
+// so a genuinely rounded-off gram figure (not a real multiple) still opens in
+// grams exactly as before.
 export function initialServingState(food, mode, initialQuantityG) {
   const servingG = Number(food?.serving_g) || 0;
   if (initialQuantityG != null && initialQuantityG > 0) {
+    if (servingG > 0) {
+      const halfServingG = servingG / 2;
+      const nearestHalves = Math.round(initialQuantityG / halfServingG);
+      if (nearestHalves > 0) {
+        const roundedServings = nearestHalves * 0.5;
+        const roundedGrams = roundedServings * servingG;
+        const withinTolerance = Math.abs(initialQuantityG - roundedGrams) <= initialQuantityG * 0.02;
+        if (withinTolerance) {
+          return { unitKey: 'serving', amount: String(roundedServings) };
+        }
+      }
+    }
     return { unitKey: 'g', amount: String(Math.round(initialQuantityG)) };
   }
   if (servingG > 0) return { unitKey: 'serving', amount: '1' };

@@ -45,6 +45,41 @@ describe('initialServingState', () => {
   test('edit with no/zero quantity falls through to the add default', () => {
     expect(initialServingState(slice, 'edit', 0)).toEqual({ unitKey: 'serving', amount: '1' });
   });
+
+  // D138: a remembered gram figure that is (near enough) a half-serving
+  // multiple reopens in the serving unit, so a user who thinks in slices
+  // sees "2 slices" again, not "62 g".
+  describe('D138: a near-multiple of half a serving reopens in the serving unit', () => {
+    const oneSlice = { serving_g: 31, serving_label: 'slice' };
+
+    test('an exact whole-serving multiple snaps to the serving unit (62g on a 31g slice -> 2)', () => {
+      expect(initialServingState(oneSlice, 'add', 62)).toEqual({ unitKey: 'serving', amount: '2' });
+    });
+
+    test('an exact half-serving multiple also snaps (46.5g on a 31g slice -> 1.5)', () => {
+      expect(initialServingState(oneSlice, 'add', 46.5)).toEqual({ unitKey: 'serving', amount: '1.5' });
+    });
+
+    test('within 2% of a multiple still snaps (63g is 1.6% over 2 x 31g)', () => {
+      expect(initialServingState(oneSlice, 'add', 63)).toEqual({ unitKey: 'serving', amount: '2' });
+    });
+
+    test('a non-multiple gram figure stays in grams (150g on a 36g slice, ~4% off 4 x 36g)', () => {
+      expect(initialServingState(slice, 'add', 150)).toEqual({ unitKey: 'g', amount: '150' });
+    });
+
+    test('just outside the 2% tolerance stays in grams (65g is ~4.8% over 2 x 31g)', () => {
+      expect(initialServingState(oneSlice, 'add', 65)).toEqual({ unitKey: 'g', amount: '65' });
+    });
+
+    test('no serving_g on the food stays in grams regardless of the figure', () => {
+      expect(initialServingState(noServing, 'add', 62)).toEqual({ unitKey: 'g', amount: '62' });
+    });
+
+    test('edit mode gets the same snap (this is a display choice, not an add/edit distinction)', () => {
+      expect(initialServingState(oneSlice, 'edit', 62)).toEqual({ unitKey: 'serving', amount: '2' });
+    });
+  });
 });
 
 describe('resolveGrams — count × unit grams, never NaN', () => {
