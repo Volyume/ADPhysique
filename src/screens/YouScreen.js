@@ -11,6 +11,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useFocusEffect } from '@react-navigation/native';
+// D134 (founder 2026-09-03): the tier-blind How you train row's live line.
+import { loadCapabilityState } from '../lib/capability/store';
+import { howYouTrainSummary } from '../lib/capability/summary';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import * as haptics from '../lib/haptics';
@@ -34,6 +37,7 @@ import {
   getLatestCoachOutput,
   getMorningWeightsLast14Days,
   getOpenEdPatternFlag,
+  getAllExercises,
 } from '../lib/database';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import usePartners from '../hooks/usePartners';
@@ -234,6 +238,22 @@ export default function YouScreen({ navigation }) {
   const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  // D134: the live How you train line, tier-blind, refreshed on focus. Its
+  // own small loader so the tab's main load stays exactly as it was.
+  const [hytSummary, setHytSummary] = useState(() => howYouTrainSummary(null));
+  useFocusEffect(useCallback(() => {
+    let alive = true;
+    (async () => {
+      if (!user?.id) return;
+      try {
+        const [state, library] = await Promise.all([loadCapabilityState(user.id), getAllExercises().catch(() => [])]);
+        if (alive) setHytSummary(howYouTrainSummary(state, { nameOf: (id) => library.find((e) => e.id === id)?.name ?? null }));
+      } catch (_) {
+        if (alive) setHytSummary(howYouTrainSummary({ baseline: [], episodes: [], history: [], unavailable: true }));
+      }
+    })();
+    return () => { alive = false; };
+  }, [user?.id]));
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
@@ -618,6 +638,21 @@ export default function YouScreen({ navigation }) {
             </Text>
           </Card>
         ) : null}
+
+        {/* D134 (founder 2026-09-03): tier-blind, above the Pro-only Setup.
+            The first thing the coach builds from is free by law (CAP-19), so
+            every account sees it here, with its live line. */}
+        <View style={styles.section}>
+          <SectionLabel>Your body</SectionLabel>
+          <NavGroup>
+            <NavRow
+              icon="body-outline"
+              label="How you train"
+              sub={hytSummary.sub}
+              onPress={() => navigation.navigate('HowYouTrain')}
+            />
+          </NavGroup>
+        </View>
 
         {isPro ? (
           <View style={styles.section}>

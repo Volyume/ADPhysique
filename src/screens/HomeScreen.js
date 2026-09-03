@@ -37,6 +37,7 @@ import { useToast } from '../components/Toast';
 // shared tone-colour source for the readiness chip below and stays imported.
 import { buildBriefIconColor } from '../components/CoachBriefCard';
 import HomeWelcomeCard from '../components/HomeWelcomeCard';
+import HomeHowYouTrainOfferCard from '../components/HomeHowYouTrainOfferCard';
 import HomeProTeaserCard from '../components/HomeProTeaserCard';
 import HomeLastSessionCard from '../components/HomeLastSessionCard';
 import HomeBlockShapeSheet from '../components/HomeBlockShapeSheet';
@@ -364,6 +365,11 @@ export default function HomeScreen({ navigation, route }) {
   // saved flag is read; the loader reveals it for a brand-new user (no sessions
   // logged) who hasn't dismissed it. Auto-clears once totalSessions > 0.
   const [welcomeDismissed, setWelcomeDismissed] = useState(true);
+  // D134 (founder 2026-09-03): the one-time How you train offer. Defaults
+  // dismissed so it never flashes before the stored flag is read; shown only
+  // for a person with NOTHING set up (no rows at all, history included).
+  const [hytOfferDismissed, setHytOfferDismissed] = useState(true);
+  const [hytNothingSetUp, setHytNothingSetUp] = useState(false);
   const [showCoachingNudge, setShowCoachingNudge] = useState(false);
   const [totalSessions, setTotalSessions] = useState(0);
   const [showIntentPrompt, setShowIntentPrompt] = useState(false);
@@ -516,6 +522,7 @@ export default function HomeScreen({ navigation, route }) {
         loadFatigueTrend(),
         loadBriefDismissal(),
         loadWelcome(),
+        loadHytOffer(),
         loadActivationNudge(), // S6: tier-blind, computes from workouts + account age + ED flag
         ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstReviewFacts()] : []),
         ...(tier === 'free' ? [loadFreeCoachLine()] : []),
@@ -719,6 +726,22 @@ export default function HomeScreen({ navigation, route }) {
   }
 
   const welcomeKey = user?.id ? `@volyume_home_welcome_${user.id}` : null;
+  const hytOfferKey = user?.id ? `@volyume_hyt_offer_${user.id}` : null;
+
+  async function loadHytOffer() {
+    if (!hytOfferKey) return;
+    try {
+      const v = await AsyncStorage.getItem(hytOfferKey);
+      setHytOfferDismissed(v === 'true');
+    } catch (_) {
+      setHytOfferDismissed(true);
+    }
+  }
+
+  const dismissHytOffer = useCallback(() => {
+    setHytOfferDismissed(true);
+    if (hytOfferKey) AsyncStorage.setItem(hytOfferKey, 'true').catch(() => {});
+  }, [hytOfferKey]);
 
   async function loadWelcome() {
     if (!welcomeKey) return;
@@ -1801,6 +1824,15 @@ export default function HomeScreen({ navigation, route }) {
           const { loadCapabilityResolveState } = require('../lib/capability/resolve');
           const state = await loadCapabilityResolveState(user.id, {});
           if (cancelled) return;
+          // D134: the offer card retires by itself the moment anything is
+          // set up; "nothing" means no rows at all, history included, so a
+          // person who set something up and ended it is never re-offered.
+          try {
+            // eslint-disable-next-line global-require
+            const { loadCapabilityState } = require('../lib/capability/store');
+            const full = await loadCapabilityState(user.id);
+            if (!cancelled) setHytNothingSetUp(!full.unavailable && !full.baseline.length && !full.episodes.length && !full.history.length);
+          } catch (_) { if (!cancelled) setHytNothingSetUp(false); }
           const episodeRows = Array.isArray(state?.restrictions)
             // Lead tighten (W3 review, D112 R8): a HELD episode must not
             // drive the "works around" line - the serve layer holds it, so
@@ -2297,6 +2329,19 @@ export default function HomeScreen({ navigation, route }) {
             the card can tell each user the truth. */}
         {!initialLoading && totalSessions === 0 && !welcomeDismissed && activePlan && nextWorkout && (
           <HomeWelcomeCard onDismiss={dismissWelcome} isPro={tier === 'pro'} />
+        )}
+
+        {/* D134 (founder 2026-09-03): one calm, one-time offer for a person
+            with nothing set up, once the welcome card has retired, and only
+            when no ranked banner holds the attention slot (D14's cap). An
+            offer in the person's words, never a question about the person.
+            Either button dismisses it forever; it also retires by itself
+            the moment anything is set up. */}
+        {!initialLoading && hytNothingSetUp && !hytOfferDismissed && (totalSessions > 0 || welcomeDismissed) && shownBannerKey == null && (
+          <HomeHowYouTrainOfferCard
+            onSetUp={() => { haptics.selection(); dismissHytOffer(); navigation.navigate('HowYouTrainAdd'); }}
+            onDismiss={() => { haptics.selection(); dismissHytOffer(); }}
+          />
         )}
 
         {/* ── Primary workout area ── */}

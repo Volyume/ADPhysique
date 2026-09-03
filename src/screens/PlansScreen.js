@@ -26,8 +26,7 @@ import {
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
   activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
   archivePlan, unarchivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
-  getPlanFolders, createPlanFolder, renamePlanFolder, deletePlanFolder, setPlanFolder,
-} from '../lib/database';
+  getPlanFolders, createPlanFolder, renamePlanFolder, deletePlanFolder, setPlanFolder, getAllExercises } from '../lib/database';
 import { getBlockAdvice, buildNextBlockOptions, applyAdjustEvidence } from '../lib/blockAdvisor';
 import { adjustPreviewLines } from '../lib/nextBlockPreview';
 import { ProBadge } from '../components/ProGate';
@@ -41,6 +40,9 @@ import { generateAndSavePlan } from '../lib/planAutoGen';
 import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { loadExerciseIntentState, listActiveMovementConstraints } from '../lib/exercise/intent';
+// D134 (founder 2026-09-03): the How you train row's live line.
+import { loadCapabilityState } from '../lib/capability/store';
+import { howYouTrainSummary } from '../lib/capability/summary';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -243,6 +245,8 @@ export default function PlansScreen({ navigation }) {
   // the row hidden, which is the correct degrade (D109-2 fail-open: never
   // block, and there is nothing to filter here, only a count to show).
   const [avoidedMovementsCount, setAvoidedMovementsCount] = useState(0);
+  // D134: the live one-line status under the How you train row.
+  const [hytSummary, setHytSummary] = useState(() => howYouTrainSummary(null));
   // EP-09/P-06 (Codex end-user-polish audit): whether the most recent
   // loadData() attempt failed. Previously the catch block swallowed the
   // exception entirely (`catch (_e) {}`), so a rejected read still landed on
@@ -280,9 +284,19 @@ export default function PlansScreen({ navigation }) {
     useCallback(() => {
       loadData();
       loadAvoidedMovementsCount();
+      loadHowYouTrainSummary();
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.id]),
   );
+
+  /** D134: the How you train line, refreshed on every focus so a change made there shows here on the way back. */
+  async function loadHowYouTrainSummary() {
+    if (!user?.id) { setHytSummary(howYouTrainSummary(null)); return; }
+    try {
+      const [state, library] = await Promise.all([loadCapabilityState(user.id), getAllExercises().catch(() => [])]);
+      setHytSummary(howYouTrainSummary(state, { nameOf: (id) => library.find((e) => e.id === id)?.name ?? null }));
+    } catch (_) { setHytSummary(howYouTrainSummary({ baseline: [], episodes: [], history: [], unavailable: true })); }
+  }
 
   /** D109-3: refreshed on every focus, so a Remove on AvoidedMovementsScreen updates this count on the way back. */
   async function loadAvoidedMovementsCount() {
@@ -1589,6 +1603,23 @@ export default function PlansScreen({ navigation }) {
             unifying label change. */}
         <View style={styles.section}>
           <SectionLabel>Plan tools</SectionLabel>
+          {/* D134 (founder 2026-09-03): the FIRST row, always shown - the
+              thing every plan is built from lives where plans are built.
+              Same card as the rows beneath; only the live line is new. */}
+          <Card
+            style={styles.trainingBlocksRow}
+            onPress={() => navigation.navigate('HowYouTrain')}
+            accessibilityLabel={`How you train. ${hytSummary.sub}`}
+          >
+            <View style={[styles.trainingBlocksIcon, live.trainingBlocksIcon]}>
+              <Ionicons name="body-outline" size={20} color={hytSummary.attention ? t.colors.primary : t.colors.textSecondary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.trainingBlocksLabel, live.trainingBlocksLabel]}>How you train</Text>
+              <Text style={[styles.trainingBlocksSub, live.trainingBlocksSub]}>{hytSummary.sub}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+          </Card>
           <Card
             style={styles.trainingBlocksRow}
             onPress={() => navigation.navigate('MesocycleBuilder')}

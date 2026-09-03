@@ -4884,3 +4884,43 @@ the intro, no orphaned headings, status cards with dates and state,
 pending decisions as cards, Past with dates). C: the check-in card. D:
 edit. E: arrival context and accessibility. Each lands green and merged
 before the next starts.
+
+---
+
+## D134 — Where "How you train" lives (FOUNDER decision, 2026-09-03)
+
+**Founder, verbatim.** "I don't think I should be heading within settings
+either. Perhaps we should have it in [the UI] in a reasonably prominent
+place... Heading in settings seems a little bit hard to find. People are
+not gonna see it organically or anything like that, and it's a key
+feature." On the options presented: **"B, do all three."**
+
+**What this overrides.** CC33's design ruling listed "'How you train'
+name and Settings home (RT2-2)" under "what does not change"
+(`docs/injury-disability-audit-2026-08-28/DESIGN-RULING.md` §4). The
+NAME stays. The Settings ROW stays. The primary entries move out of
+Settings by this decision.
+
+**Evidence the decision rests on.** CC33 FINDINGS §1.1 ("three taps deep
+in Settings; a user has to already know the feature exists"); the banked
+DfE result (one ungated door took disclosure from 4% to 15%); Fitbod's
+placement under My Plan; the D109-3 precedent (the sibling preference
+lane already lives in the Train tab's Plan tools); D14's one-banner cap
+and §33.16's "always available, never repeated" for the Home card.
+
+**The three moves.**
+1. Train tab, Plan tools, FIRST row, always shown: "How you train" with
+   a live one-line status (`lib/capability/summary.js`).
+2. Coach tab, a tier-blind group above the Pro-only Setup, one row: the
+   same live status. Free users see it; it is the first thing the coach
+   builds from and it is free by law (CAP-19).
+3. Home, one calm one-time card for a person with nothing set up (no
+   rows at all, history included), shown only once the welcome card has
+   retired and only when no ranked banner holds the attention slot;
+   "Set it up" opens the add wizard, "No thanks" dismisses; either
+   dismisses forever; it also retires by itself the moment anything is
+   set up. An offer in the person's words, never "are you disabled?".
+
+**Unchanged.** Every need-moment entry (Home rows, workout summary,
+picker, conflict sheet, workout), the onboarding steps, the Settings row,
+the free tier, the vocabulary laws, the consent gate.

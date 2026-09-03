@@ -1329,6 +1329,18 @@ OPEN (founder-raised 2026-09-03): WHERE the primary entry lives. Today
 Coach tab > Settings > How you train (RT2-2 / D112 §4 ruled the Settings
 home). Options and evidence delivered in chat; awaiting the founder's
 choice before any move.
+FOUNDER CHOSE B (2026-09-03): "do all three" - register D134; ARCHITECTURE
+section 12 amended. LANDED (this entry): (1) Train tab, Plan tools, first
+row, always shown, live one-line status (lib/capability/summary.js,
+tested); (2) Coach tab, tier-blind "Your body" group above the Pro-only
+Setup with the same live line; (3) Home, a one-time offer card for a
+person with nothing set up (no rows at all, history included), once the
+welcome card has retired and only when no ranked banner holds the
+attention slot; "Set it up" opens the add wizard, "No thanks" dismisses;
+either dismisses forever; retires by itself when anything is set up.
+Pinned by howYouTrainEntries.guard.test.js. Settings row and every
+need-moment entry unchanged. NEXT: founder device walk (checklist in
+chat).
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

@@ -819,6 +819,8 @@ the first build; blocked-slot reporting surfaces during preview.
 
 ## 12. SETTINGS / HEALTH UX (deliverable 12)
 
+> **Amendment 2026-09-03 (founder decision D134, register).** The surface keeps its name and its Settings row, but its PRIMARY entries now live where people look: first row of the Train tab's Plan tools (always shown, live status), a tier-blind row on the Coach tab, and a one-time Home card for anyone with nothing set up. This supersedes the "Settings home" half of RT2-2 as carried in CC33's design ruling §4. The add flow is its own screen since D133.
+
 New surface "How you train" (free tier, CAP-19; RENAMED from
 "Movement & capability" per RT2-2 — that name reads, to a UK
 audience, like the DWP Work Capability Assessment; final wording gets
