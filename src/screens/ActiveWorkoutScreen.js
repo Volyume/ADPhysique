@@ -104,6 +104,12 @@ import { DEFAULT_BAR_KG } from '../lib/warmupRamp';
 import { warmupRamp } from '../lib/warmupRamp';
 import { shareSessionName } from '../lib/sessionShareData';
 import { parseDecimalInput } from '../lib/parseDecimalInput';
+import HintCaption from '../components/HintCaption';
+// Activation ruling (first-run coherence pass): the rest strip's first
+// appearance is also the first moment a lock-screen rest countdown could
+// be delivered. Both helpers are non-prompting reads plus the single ask;
+// nothing here touches quiet hours, categories or suppression.
+import { getNotificationPermissionStatus, requestNotificationPermissions } from '../lib/notifications/permissions';
 
 // FQ-3 (D96): rir defaults to NULL. The per-set RIR picker is permanently
 // removed (D14/D19), so no set carries a genuine per-set effort rating, and
@@ -170,6 +176,20 @@ const UNILATERAL_WALKTHROUGH_SEEN_KEY = '@volyume_seen_unilateral_walkthrough';
 // keeps the full sheet; afterwards the StatusStrip's superset chip carries
 // the announcement.
 const SUPERSET_WALKTHROUGH_SEEN_KEY = '@volyume_seen_superset_walkthrough';
+
+// Activation ruling (first-run coherence pass): the rest timer starts itself
+// the moment a set is logged, which on a first workout arrives unannounced -
+// a counting strip appears at the thumb with no explanation of where it came
+// from. One caption, the first time the strip is ever seen on this install,
+// same once-ever '@volyume_seen_*' convention as the two keys above.
+const REST_HINT_SEEN_KEY = '@volyume_seen_rest_hint';
+
+// The same first appearance is the honest moment to ask for notification
+// access: the lock-screen rest countdown this app already builds
+// (lib/notifications/activeWorkout.js, restForeground.js) cannot show
+// without it. Asked at most ONCE per install, in context, and only when the
+// user has not already answered the OS prompt either way.
+const REST_NOTIF_ASKED_KEY = '@volyume_rest_notif_asked';
 
 // B8: keep-awake tag so this screen's activate/deactivate can never release
 // a keep-awake hold some other surface owns. Per-INSTANCE suffix because the
@@ -332,6 +352,10 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     barWeight,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
+  // Single boolean selector (not the per-second remaining count): this flips
+  // twice per rest, so it cannot re-introduce the per-tick re-render the
+  // shallow selector above exists to prevent.
+  const restTimerActive = useAppStore(s => s.restTimerActive);
   // Founder device order 2026-08-18: publish the measured bottom-chrome
   // height (rest strip + bottom bar) so the PR toast docks just above the
   // rest bar's amber line. Read via getState in the handler (no re-render
@@ -1943,6 +1967,50 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return () => { infoPulseLoop.current?.stop(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reduceMotion]);
+
+  // Activation ruling (first-run coherence pass), rest strip introduction.
+  //
+  // Two things happen at the FIRST rest of this install, in this order:
+  //   1. the caption below the strip explains where the countdown came from
+  //      (it auto-starts on a logged set, so a first-time user meets it
+  //      without asking for it), and
+  //   2. if - and only if - the OS prompt has never been answered, the
+  //      notification ask runs once, so the lock-screen countdown the rest
+  //      code already builds is allowed to appear.
+  // A user who has already granted or denied is never asked again, and the
+  // ask never fires on mount - only when a rest is actually running.
+  // RestTimer's own exact-alarm ask is untouched and keeps its own key.
+  const [showRestHint, setShowRestHint] = useState(false);
+  const restHintCheckedRef = useRef(false);
+  useEffect(() => {
+    if (!restTimerActive) {
+      // "Dismiss automatically when the timer ends" - the caption belongs to
+      // the running rest, not to the screen.
+      setShowRestHint(false);
+      return;
+    }
+    if (restHintCheckedRef.current) return;
+    restHintCheckedRef.current = true;
+    (async () => {
+      try {
+        if (await AsyncStorage.getItem(REST_HINT_SEEN_KEY) === 'true') return;
+        await AsyncStorage.setItem(REST_HINT_SEEN_KEY, 'true');
+        setShowRestHint(true);
+        if (await AsyncStorage.getItem(REST_NOTIF_ASKED_KEY) === 'true') return;
+        // Non-prompting read first: 'granted' or 'denied' means the user has
+        // already decided and we say nothing.
+        const status = await getNotificationPermissionStatus();
+        if (status !== 'undetermined') return;
+        await AsyncStorage.setItem(REST_NOTIF_ASKED_KEY, 'true');
+        await requestNotificationPermissions();
+      } catch (e) {
+        // Never interrupt a rest over a hint or a permission read.
+        logError('ActiveWorkoutScreen.restHint', e, {});
+      }
+    })();
+  }, [restTimerActive]);
+
+  const dismissRestHint = useCallback(() => { setShowRestHint(false); }, []);
 
   // Workout timer, always derived from workoutStartTime so backgrounding never
   // causes drift. Re-syncs on every tick and on app-foreground events.
@@ -4508,13 +4576,31 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                     setCurrentSet(s => ({ ...s, weight: String(prev.weight ?? 0), reps: prev.actualReps ?? s.reps, isGhost: false }));
                   },
                 };
+              } else if (workingLogged === 0) {
+                // Activation ruling (first-run coherence pass): the quiet
+                // first-time line returns, rewritten. Phase 2B retired the
+                // old one because it REPEATED the range the position line
+                // already carries ("Set 1 of 6 - Working · 8-12 reps" then
+                // "First time - Target 8-12 reps" on the founder's S22
+                // shots). The repetition was the objection, not the row: a
+                // user standing at a machine with an empty weight box and no
+                // history has nothing to act on. This line never restates the
+                // range string; it says, in words, how to choose the first
+                // load and that the number is kept. Quiet (non-tappable)
+                // variant - there is no history to apply, so there is nothing
+                // to tap. Shown on the FIRST working set of the exercise only
+                // (workingLogged === 0), never on a warm-up, and never
+                // instead of the recovery-week or Last session rows above.
+                const bandMax = currentPrescription
+                  ? currentPrescription.repsBand.max
+                  : (routineExercise?.recommendedRepsMax ?? null);
+                prefill = {
+                  label: 'First time on this lift.',
+                  valueLabel: bandMax != null
+                    ? `Pick a weight you could lift about ${bandMax} times, with a couple in reserve. It is saved for next time.`
+                    : 'Pick a weight you could lift for the full rep range, with a couple in reserve. It is saved for next time.',
+                };
               }
-              // Phase 2B density pass: the quiet first-time line is retired.
-              // It repeated the exact range the position line above already
-              // shows ("Set 1 of 6 - Working · 8-12 reps" then "First time -
-              // Target 8-12 reps" on the founder's S22 shots). The TAPPABLE
-              // prefill variants (Last session / Recovery week) carry real
-              // information and stay.
             }
 
             return (
@@ -4714,6 +4800,16 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
             header. Measurement only - layout is unchanged (a plain
             full-width View in the same column). */}
         <View onLayout={handleBottomChromeLayout}>
+        {/* Activation ruling (first-run coherence pass): the once-ever rest
+            introduction sits directly above the strip it explains, inside the
+            measured bottom chrome so the PR toast still docks clear of both.
+            Gone on "Got it" or the moment the rest ends. */}
+        {showRestHint && restTimerActive ? (
+          <HintCaption
+            text="Rest started because you logged a set. Adjust with the buttons, or skip it."
+            onDismiss={dismissRestHint}
+          />
+        ) : null}
         <RestTimer />
 
         {cluster ? null : (
