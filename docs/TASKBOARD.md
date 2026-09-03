@@ -1314,6 +1314,21 @@ endEpisode reason 'superseded'), so nothing lapses in between and Past
 says what happened. The bare per-row Remove became a sheet row with its
 consequence stated (HYT-21, HYT-17). D133 build COMPLETE on main; the
 founder device walk is the next gate (checklist in chat).
+Fresh-eyes adversarial review (Sonnet, 2026-09-03) of the whole build:
+seven findings, six verified and FIXED in one landing: a failed supersede
+was swallowed behind "Saved" (now counted and told, on the Done screen and
+in a toast); a failed plan check rendered like "nothing to decide" (now
+told); the end-of-flow scroll-and-flash only worked for episodes (now
+keys the baseline section); a failed exercise-library load left a blank
+screen (now a retry state); the consent grant had no error path; "Change"
+from the check step walked forward through every step (now returns to
+the check once the rest is answered). Guards: a dedicated wizard guard
+(HowYouTrainAddScreen.wizard.guard.test.js), the wizard added to the
+touch-target enumeration and the em-dash sweep.
+OPEN (founder-raised 2026-09-03): WHERE the primary entry lives. Today
+Coach tab > Settings > How you train (RT2-2 / D112 §4 ruled the Settings
+home). Options and evidence delivered in chat; awaiting the founder's
+choice before any move.
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

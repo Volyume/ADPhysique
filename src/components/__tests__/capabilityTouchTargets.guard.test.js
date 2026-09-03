@@ -66,6 +66,10 @@ const ENUMERATED = [
   // through hitSlop, which is invisible to a user and to the numeric
   // strays check below - both carry the box themselves now.
   ['screens/AvoidedMovementsScreen.js', [['crossLaneRow', 1], ['removeBtn', 1]]],
+  // D133 (2026-09-03): the add wizard's two local controls; its option
+  // cards, rows, chips, switch and buttons are shared primitives with
+  // their own floors.
+  ['screens/HowYouTrainAddScreen.js', [['cancelBtn', 1], ['disclosure', 1]]],
 ];
 
 // Numeric minHeights that pre-date this guard and sit at or above 48:
@@ -79,6 +83,7 @@ const OFF_SCALE_ALLOWED = {
   'components/ExerciseConflictSheet.js': {},
   'screens/HowYouTrainScreen.js': {},
   'screens/AvoidedMovementsScreen.js': {},
+  'screens/HowYouTrainAddScreen.js': {},
 };
 
 describe('J2: the lane\'s enumerated touch targets sit on the 48 token', () => {

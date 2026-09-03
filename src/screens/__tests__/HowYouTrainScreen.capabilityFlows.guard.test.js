@@ -500,6 +500,11 @@ describe('no em dash in the copy this wave shipped (closes the eslint TemplateEl
   test.each([
     ['HowYouTrainScreen.js', SCREEN_PATH],
     ['sessionEffective.js', ENGINE_PATH],
+    // D133 (2026-09-03): the add wizard and its pure core carry most of the
+    // lane's new copy now.
+    ['HowYouTrainAddScreen.js', path.join(__dirname, '..', 'HowYouTrainAddScreen.js')],
+    ['addFlow.js', path.join(__dirname, '..', '..', 'lib', 'capability', 'addFlow.js')],
+    ['lineChoices.js', path.join(__dirname, '..', '..', 'lib', 'capability', 'lineChoices.js')],
   ])('%s contains no U+2014 em dash anywhere', (_name, file) => {
     const src = fs.readFileSync(file, 'utf8');
     expect(src).not.toMatch(/—/);

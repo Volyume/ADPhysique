@@ -104,7 +104,15 @@ export default function HowYouTrainAddScreen() {
   const [draft, setDraft] = useState(() => (edit ? null : emptyDraft(preselect)));
   const [consented, setConsented] = useState(null);
   const [library, setLibrary] = useState([]);
+  // Review finding 4: a swallowed library failure left a title bar over
+  // nothing, forever, for exercise preselects and edits. The status is
+  // shown and retryable.
+  const [libraryStatus, setLibraryStatus] = useState('loading');
   const [step, setStep] = useState(null);
+  // Review finding 6: "Change" from the check step means change ONE thing.
+  // Continue (and Back) return to the check as soon as every step between
+  // here and it is already answered.
+  const [returnToCheck, setReturnToCheck] = useState(false);
   const [familyQuery, setFamilyQuery] = useState('');
   const [exerciseQuery, setExerciseQuery] = useState('');
   const [busy, setBusy] = useState(false);
@@ -119,11 +127,17 @@ export default function HowYouTrainAddScreen() {
   const ctx = useMemo(() => ({ consented: consented !== false }), [consented]);
 
   // ── Loads ─────────────────────────────────────────────────────────────
+  const loadLibrary = useCallback(() => {
+    setLibraryStatus('loading');
+    getAllExercises()
+      .then((rows) => { setLibrary(rows ?? []); setLibraryStatus('ready'); })
+      .catch(() => setLibraryStatus('failed'));
+  }, []);
   useEffect(() => {
     if (!userId) return;
     hasCapabilityConsent(userId).then(setConsented).catch(() => setConsented(false));
-    getAllExercises().then((rows) => setLibrary(rows ?? [])).catch(() => {});
-  }, [userId]);
+    loadLibrary();
+  }, [userId, loadLibrary]);
 
   // A preselect with exercise names waits for the library so names resolve
   // (the contract TrainingConsiderationsScreen and ActiveWorkoutScreen
@@ -196,6 +210,7 @@ export default function HowYouTrainAddScreen() {
       if (leavingRef.current || saved) return;
       const prev = step ? prevStep(draft, step, ctx) : null;
       e.preventDefault();
+      if (returnToCheck) { setReturnToCheck(false); setStep(ADD_STEP.CHECK); return; }
       if (prev) { setStep(prev); return; }
       if (!draftTouched(draft)) { leavingRef.current = true; navigation.dispatch(e.data.action); return; }
       appAlert('Leave without saving?', 'Your answers here will not be kept.', [
@@ -204,17 +219,24 @@ export default function HowYouTrainAddScreen() {
       ]);
     });
     return unsub;
-  }, [navigation, draft, step, ctx, saved]);
+  }, [navigation, draft, step, ctx, saved, returnToCheck]);
 
   const goBackStep = () => {
     haptics.selection();
+    if (returnToCheck) { setReturnToCheck(false); setStep(ADD_STEP.CHECK); return; }
     const prev = step ? prevStep(draft, step, ctx) : null;
     if (prev) setStep(prev); else confirmLeave();
   };
 
   const goNext = () => {
     haptics.selection();
+    if (returnToCheck) {
+      const steps = planSteps(draft, ctx);
+      const rest = steps.slice(steps.indexOf(step) + 1, steps.indexOf(ADD_STEP.CHECK));
+      if (rest.every((s) => canContinue(draft, s))) { setReturnToCheck(false); setStep(ADD_STEP.CHECK); return; }
+    }
     const n = nextStep(draft, step, ctx);
+    if (n === ADD_STEP.CHECK) setReturnToCheck(false);
     if (n) setStep(n);
   };
 
@@ -231,19 +253,27 @@ export default function HowYouTrainAddScreen() {
       const createdIds = await createConstraints(userId, rows, { nowMs });
       // Edit = supersede (ARCHITECTURE section 12): the new rows are in
       // before the old ones end, so nothing ever lapses in between.
+      // Review finding 1: a failed close is COUNTED and TOLD - never
+      // swallowed into a "Saved" screen while two rules stay live.
+      let supersedeFailed = 0;
       if (draft.editing) {
         if (draft.editing.groupId) {
-          await endEpisode(userId, draft.editing.groupId, { nowMs, reason: 'superseded' }).catch((e) => logError('HowYouTrainAdd.supersedeGroup', e, {}));
+          await endEpisode(userId, draft.editing.groupId, { nowMs, reason: 'superseded' })
+            .catch((e) => { supersedeFailed += 1; logError('HowYouTrainAdd.supersedeGroup', e, {}); });
         } else {
           for (const id of draft.editing.ids ?? []) {
             // eslint-disable-next-line no-await-in-loop
-            await markConstraintSuperseded(userId, id, { nowMs }).catch((e) => logError('HowYouTrainAdd.supersede', e, {}));
+            await markConstraintSuperseded(userId, id, { nowMs })
+              .catch((e) => { supersedeFailed += 1; logError('HowYouTrainAdd.supersede', e, {}); });
           }
         }
       }
+      if (supersedeFailed > 0) {
+        toast.show('Saved, but the old version could not be closed. It still applies alongside this one until you remove it under How you train.', { variant: 'warning' });
+      }
       const isEpisode = draft.role === CONSTRAINT_ROLE.EPISODE && draft.kind !== ADD_KIND.ALLOW;
       const subject = draftSubject(draft);
-      setSaved({ createdIds: Array.isArray(createdIds) ? createdIds : [], groupId: isEpisode ? groupId : null, subject, nowMs, planDecision: null });
+      setSaved({ createdIds: Array.isArray(createdIds) ? createdIds : [], groupId: isEpisode ? groupId : null, subject, nowMs, planDecision: null, supersedeFailed, planUnchecked: false });
       if (draft.kind === ADD_KIND.ALLOW || !Array.isArray(createdIds) || !createdIds.length) {
         setStep(ADD_STEP.DONE);
         return;
@@ -271,7 +301,11 @@ export default function HowYouTrainAddScreen() {
 
   const onAgreeAndSave = async () => {
     haptics.selection();
-    const ok = await grantCapabilityConsent(userId, {});
+    if (busy) return;
+    setBusy(true);
+    let ok = false;
+    try { ok = await grantCapabilityConsent(userId, {}); } catch (e) { logError('HowYouTrainAdd.consent', e, {}); ok = false; }
+    setBusy(false);
     if (!ok) { toast.show('That did not save - you can try again.', { variant: 'error' }); return; }
     setConsented(true);
     await save();
@@ -287,8 +321,10 @@ export default function HowYouTrainAddScreen() {
     ]);
     if (!summary.checked) {
       // Could not read the plan: the rule stays undecided and How you
-      // train's own detector and revisit row offer it again (A15: never
-      // "nothing to decide" off a failed read).
+      // train's "Waiting for you" card offers it again. Review finding 2:
+      // the PERSON is told too (A15: a failed read is never rendered as
+      // "nothing to decide").
+      setSaved((s) => (s ? { ...s, planUnchecked: true } : s));
       setStep(ADD_STEP.DONE);
       return;
     }
@@ -334,7 +370,8 @@ export default function HowYouTrainAddScreen() {
     // eslint-disable-next-line global-require
     const { computeCapabilityPlanRewrite } = require('../lib/sessionEffective');
     const rw = await computeCapabilityPlanRewrite(userId, { ruleIds: createdIds }).catch(() => ({ lines: [], checked: false }));
-    if (!rw.checked || !rw.lines.length) { setStep(ADD_STEP.DONE); return; }
+    if (!rw.checked) { setSaved((s) => (s ? { ...s, planUnchecked: true } : s)); setStep(ADD_STEP.DONE); return; }
+    if (!rw.lines.length) { setStep(ADD_STEP.DONE); return; }
     setPlan({
       mode: 'baseline', subject, lines: rw.lines,
       total: rw.lines.length, substitutable: rw.substitutable ?? 0, unsolvable: rw.unsolvable ?? 0,
@@ -453,7 +490,7 @@ export default function HowYouTrainAddScreen() {
     leavingRef.current = true;
     navigation.navigate('HowYouTrain', {
       preselect: undefined,
-      highlight: saved?.groupId ?? saved?.createdIds?.[0] ?? null,
+      highlight: saved?.groupId ?? 'baseline',
     });
   };
 
@@ -484,6 +521,23 @@ export default function HowYouTrainAddScreen() {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top', 'bottom']}>
         <BackHeader title={screenTitle} onBack={confirmLeave} />
+        <View style={styles.content}>
+          {libraryStatus === 'failed' ? (
+            <>
+              <Card>
+                <Text style={[styles.body, { color: t.colors.textPrimary }]}>
+                  Volyume could not load your exercise list just now. Nothing has changed.
+                </Text>
+              </Card>
+              <View style={styles.retryWrap}>
+                <Button title="Try again" onPress={loadLibrary} />
+                <Button title="Back" variant="secondary" onPress={confirmLeave} />
+              </View>
+            </>
+          ) : (
+            <Text style={[styles.help, { color: t.colors.textSecondary }]} accessibilityLiveRegion="polite">Getting things ready.</Text>
+          )}
+        </View>
       </SafeAreaView>
     );
   }
@@ -640,7 +694,7 @@ export default function HowYouTrainAddScreen() {
                   sub={l.label}
                   showArrow={false}
                   accessibilityLabel={`${l.label}: ${l.value}${l.step ? '. Change' : ''}`}
-                  onPress={l.step ? () => { haptics.selection(); setStep(l.step); } : undefined}
+                  onPress={l.step ? () => { haptics.selection(); setReturnToCheck(true); setStep(l.step); } : undefined}
                   rightElement={l.step ? <Text style={[styles.changeText, { color: t.colors.primary }]}>Change</Text> : null}
                 />
               ))}
@@ -718,6 +772,14 @@ export default function HowYouTrainAddScreen() {
             </Card>
             <Text style={[styles.subheading, { color: t.colors.textPrimary }]}>What happens next</Text>
             <View style={[settingsStyles.section, live.section]}>
+              {saved?.supersedeFailed ? (
+                <SettingRow icon="alert-circle-outline" destructive showArrow={false}
+                  label="The old version could not be closed. It still applies alongside this one until you remove it under How you train." />
+              ) : null}
+              {saved?.planUnchecked ? (
+                <SettingRow icon="alert-circle-outline" showArrow={false}
+                  label="Volyume could not check your current plan just now. It will ask you about this under How you train." />
+              ) : null}
               {whatHappensNext(draft, { nowMs: saved?.nowMs ?? Date.now(), planDecision: saved?.planDecision === 'mixed' ? 'applied' : saved?.planDecision }).map((s, i) => (
                 <SettingRow key={i} icon="arrow-forward-outline" label={s} showArrow={false} />
               ))}
@@ -882,5 +944,6 @@ const styles = StyleSheet.create({
   doneIconWrap: { alignItems: 'center', marginBottom: spacing.md },
   doneIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center' },
   footer: { padding: spacing.lg, paddingTop: spacing.md, borderTopWidth: 1, gap: spacing.sm },
+  retryWrap: { gap: spacing.sm, marginTop: spacing.md },
   footerHint: { ...type.captionTight, textAlign: 'center' },
 });
