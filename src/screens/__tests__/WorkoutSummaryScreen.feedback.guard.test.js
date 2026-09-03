@@ -22,6 +22,9 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     // style assertions below are unchanged. The "Saving"/"Close" text swap
     // and the share icon are now Button props (title/icon), not raw JSX, so
     // those two assertions are re-pointed at the Button call sites.
+    // Coherence pass (2026-09-03): Close became the primary "Done" (the
+    // terminal action of the core loop, same register as Today's Start
+    // workout); doneBtn keeps its layout keys and drops its own fill.
     expect(SOURCE).toMatch(/stickyFooter: \{[\s\S]*paddingTop: spacing\.sm,[\s\S]*minHeight: 68/);
     // CP-10 stage 3 (theming FINAL batch, 2026-07-10): WorkoutSummaryScreen
     // now reads a live theme (src/hooks/useTheme.js); stickyFooter gained a
@@ -37,7 +40,8 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toMatch(/<View style=\{\[styles\.stickyFooter, live\.stickyFooter, \{ paddingBottom: spacing\.lg \}\]\}>/);
     expect(SOURCE).not.toMatch(/setFooterHeight/);
     expect(SOURCE).toContain('<TouchableOpacity');
-    expect(SOURCE).toContain("title={saving ? 'Saving' : 'Close'}");
+    expect(SOURCE).toContain("title={saving ? 'Saving' : 'Done'}");
+    expect(SOURCE).toMatch(/title=\{saving \? 'Saving' : 'Done'\}[\s\S]*?variant="primary"/);
     expect(SOURCE).toMatch(/title="Share"[\s\S]*?icon="share-social-outline"[\s\S]*?variant="tertiary"[\s\S]*?size="sm"/);
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*paddingVertical: spacing\.md/);
     expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*paddingVertical: spacing\.md/);
@@ -45,7 +49,9 @@ describe('WorkoutSummaryScreen feedback controls', () => {
     expect(SOURCE).toMatch(/doneBtn: \{[\s\S]*minHeight: touchTarget\.minimum/);
     expect(SOURCE).toMatch(/shareFooterBtn: \{[\s\S]*flexShrink: 0,[\s\S]*minWidth: 108,[\s\S]*minHeight: touchTarget\.minimum/);
     expect(SOURCE).not.toMatch(/shareFooterBtn: \{\s*flex: 1,/);
-    expect(SOURCE).toMatch(/doneBtnText: \{\s*\.\.\.type\.label,/);
+    // Done's label typography now comes from Button variant="primary"; the
+    // screen no longer carries a doneBtnText override of its own.
+    expect(SOURCE).not.toMatch(/doneBtnText/);
     expect(SOURCE).toMatch(/shareFooterBtnText: \{\s*\.\.\.type\.label,/);
   });
 

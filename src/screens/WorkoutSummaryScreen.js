@@ -1188,7 +1188,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     try {
       const { createWorkoutTemplateFromWorkout } = require('../lib/database');
       await createWorkoutTemplateFromWorkout(user.id, name, exerciseData);
-      toast.show(`"${name}" saved to Workout Templates`, { variant: 'success' });
+      toast.show(`"${name}" saved to Workout templates`, { variant: 'success' });
     } catch (_) {
       toast.show('Could not save template. Try again.', { variant: 'error' });
     }
@@ -1571,10 +1571,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
                   activeOpacity={0.85}
                   onPress={() => navigateCrossTab(navigation, 'ProfileTab', 'CoachOutput')}
                   accessibilityRole="button"
-                  accessibilityLabel="See this week's coaching review"
+                  accessibilityLabel="See this week's coaching decision"
                 >
                   <Ionicons name="pulse-outline" size={14} color={t.colors.textSecondary} />
-                  <Text style={[styles.onwardLinkText, live.onwardLinkText]}>See this week&apos;s coaching review</Text>
+                  <Text style={[styles.onwardLinkText, live.onwardLinkText]}>See this week&apos;s coaching decision</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -1990,14 +1990,17 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           </View>
         ) : null}
         <View style={styles.footerRow}>
+          {/* Coherence pass: the terminal action of the core training loop
+              is the screen's primary CTA, in the same register as Today's
+              "Start workout" that began it. "Done" closes the loop; "Close"
+              read as dismissing a dialog. */}
           <Button
-            title={saving ? 'Saving' : 'Close'}
-            variant="secondary"
+            title={saving ? 'Saving' : 'Done'}
+            variant="primary"
             onPress={handleDone}
             disabled={saving}
-            style={[styles.doneBtn, live.doneBtn]}
-            textStyle={[styles.doneBtnText, live.doneBtnText]}
-            accessibilityLabel="Close"
+            style={styles.doneBtn}
+            accessibilityLabel="Done"
             accessibilityState={{ disabled: saving }}
           />
           {/* R11/L2 (share-card audit 2026-07-27): a zero-working-set session
@@ -2460,20 +2463,14 @@ const styles = StyleSheet.create({
   },
   // D3: Close owns the footer. Share stays available, but compact, so the
   // completion action does not become two competing large buttons.
+  // Fill, radius and label typography come from the shared Button primitive
+  // (variant="primary"); the local layout keys survive.
   doneBtn: {
     flex: 1,
     minHeight: touchTarget.minimum,
-    backgroundColor: colors.surface2,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
     paddingVertical: spacing.md,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  doneBtnText: {
-    ...type.label,
-    color: colors.textPrimary,
   },
   shareFooterBtn: {
     flexDirection: 'row',
@@ -2638,8 +2635,6 @@ function buildLiveStyles(t) {
     stickyFooter: { borderTopColor: t.colors.border, backgroundColor: t.colors.background },
     saveErrorCard: { backgroundColor: withAlpha(t.colors.error, 0.12), borderColor: withAlpha(t.colors.error, 0.28) },
     saveErrorText: { ...t.type.caption, color: t.colors.textPrimary },
-    doneBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    doneBtnText: { ...t.type.label, color: t.colors.textPrimary },
     shareFooterBtn: { borderColor: withAlpha(t.colors.primary, alpha.strong), backgroundColor: t.colors.primaryBg },
     shareFooterBtnText: { ...t.type.label, color: t.colors.primary },
     exerciseListRow: { borderBottomColor: t.colors.borderSubtle },
