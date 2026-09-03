@@ -49,9 +49,21 @@ export async function moveEntriesToSlot(userId, entries, mealSlot) {
   }
 }
 
-export async function copyEntriesToDate(userId, entries, entryDate) {
+/**
+ * Replay a set of entries onto another date.
+ *
+ * D138 (per-meal "Copy from yesterday"): an optional `mealSlot` filter copies
+ * ONE slot's rows rather than a whole day, and the created entry ids are
+ * returned so the caller can offer a single Undo that removes every copied
+ * row (the multi-entry undo pattern MyMealsScreen already uses for a saved
+ * meal). Callers that copy a whole day pass no options and may ignore the
+ * return, so the previous behaviour is unchanged.
+ */
+export async function copyEntriesToDate(userId, entries, entryDate, { mealSlot = null } = {}) {
+  const createdIds = [];
   for (const e of entries) {
-    await logFoodEntry(userId, {
+    if (mealSlot && e.meal_slot !== mealSlot) continue;
+    const id = await logFoodEntry(userId, {
       entryDate,
       mealSlot: e.meal_slot,
       foodRef: e.food_ref,
@@ -63,5 +75,7 @@ export async function copyEntriesToDate(userId, entries, entryDate) {
       fibreG: e.fibre_g ?? null,
       weightState: e.weight_state,
     });
+    createdIds.push(id);
   }
+  return createdIds;
 }

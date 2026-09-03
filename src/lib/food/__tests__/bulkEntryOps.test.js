@@ -101,4 +101,31 @@ describe('copyEntriesToDate', () => {
     expect(payload.kcal).toBe(200);
     expect(payload).not.toHaveProperty('id'); // a copy, not the same row
   });
+
+  // D138 item 2: the per-meal "Copy from yesterday" chip copies ONE slot.
+  test('a mealSlot filter copies only that slot, leaving the rest of the day alone', async () => {
+    await copyEntriesToDate('u1', [
+      entry({ id: 'a', meal_slot: 'meal_1' }),
+      entry({ id: 'b', meal_slot: 'meal_2' }),
+      entry({ id: 'c', meal_slot: 'meal_1' }),
+    ], '2026-06-01', { mealSlot: 'meal_1' });
+    expect(logFoodEntry).toHaveBeenCalledTimes(2);
+    logFoodEntry.mock.calls.forEach(([, payload]) => {
+      expect(payload.mealSlot).toBe('meal_1');
+      expect(payload.entryDate).toBe('2026-06-01');
+    });
+  });
+
+  test('the created entry ids come back so one Undo can remove every copied row', async () => {
+    logFoodEntry
+      .mockResolvedValueOnce('copy-1')
+      .mockResolvedValueOnce('copy-2');
+    const ids = await copyEntriesToDate('u1', [entry({ id: 'a' }), entry({ id: 'b' })], '2026-06-01');
+    expect(ids).toEqual(['copy-1', 'copy-2']);
+  });
+
+  test('no filter still copies the whole day (existing callers unchanged)', async () => {
+    await copyEntriesToDate('u1', [entry({ meal_slot: 'meal_1' }), entry({ meal_slot: 'meal_2' })], '2026-06-01');
+    expect(logFoodEntry).toHaveBeenCalledTimes(2);
+  });
 });

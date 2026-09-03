@@ -8,6 +8,16 @@
  * (Breakfast, Lunch, Dinner, Pre/Post-workout, Snacks), search-based add,
  * barcode scan, swipe-delete, multi-select bulk tools, copy yesterday, and a
  * designed empty state (diary-tab redesign 2026-06-01).
+ *
+ * D138 (the diary as a daily workspace): a usual chip on an empty meal logs
+ * its remembered portion in ONE tap (portion stated on the chip, undo toast
+ * after, hold to change it first); an empty meal whose slot had food
+ * yesterday offers "Yesterday's <meal>" to copy just that meal across; the
+ * two-line meal-builder row and the standalone banking button are one
+ * compact chip row (Meal builder / Higher-calorie day / Trends) under the
+ * meals; and a user with no targets gets a way out from under the rings.
+ * The canonical add path (Add food -> search -> Add to diary) is unchanged:
+ * this is a shorter path for repeats, not a replacement for it.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { appAlert } from '../components/AppAlert';
@@ -27,12 +37,17 @@ import {
   getFoodEntriesForDay, getRecentLoggedDays, deleteFoodEntry, restoreFoodEntry, updateFoodEntry, getRollupForDay,
   applyCuratedMealToDiary,
   setWater, getWater, createSavedMeal, confirmPlannedDay, clearPlannedDay,
-  getSlotRecents,
+  getSlotRecents, logFoodEntry, upsertSlotRecent,
 } from '../lib/food/db';
+// D138 one-tap usual: the SAME payload builders FoodSearchScreen's confirmLog
+// uses, so a chip-logged entry and a sheet-logged entry are byte-identical.
+import { buildFoodEntryPayload, buildSlotRecentPayload } from '../lib/food/loggingPayloads';
 import { isoDate, shiftDate, weekDatesMon, weekdayShort, friendlyDate } from '../lib/food/diaryDates';
 import { createRaceGuard } from '../lib/food/loadRaceGuard';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
-import { resolveFoodRef } from '../lib/food/sources/localCache';
+// resolveFoodRefs batches the diary's list reads (D138 item 6); resolveFoodRef
+// stays for the single lookup the edit sheet makes when one row is opened.
+import { resolveFoodRef, resolveFoodRefs } from '../lib/food/sources/localCache';
 import { getNutritionTargets, getOpenEdPatternFlag, getLatestBodyWeight, getLatestBodyComposition, getLatestCoachOutput } from '../lib/database';
 import { computeFFMFloor } from '../lib/nutritionEngine';
 import { targetWasFloored } from '../lib/food/mealPlanAssembler';
@@ -61,12 +76,13 @@ import BottomSheet from '../components/BottomSheet';
 import EmptyDiary from '../components/food/EmptyDiary';
 import EmptyState from '../components/EmptyState';
 import { SkeletonRow } from '../components/Skeleton';
-import MealSection from '../components/food/MealSection';
+import MealSection, { usualPortionText } from '../components/food/MealSection';
 import HintCaption from '../components/HintCaption';
 import { friendlyFoodName } from '../components/food/EntryRow';
 import ScreenHeader from '../components/ScreenHeader';
 import Button from '../components/Button';
 import SectionLabel from '../components/SectionLabel';
+import Chip from '../components/Chip';
 import TextField from '../components/TextField';
 import { useToast } from '../components/Toast';
 import { deleteEntries, restoreEntries, moveEntriesToSlot, copyEntriesToDate } from '../lib/food/bulkEntryOps';
@@ -77,6 +93,14 @@ import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { parseLocalDay } from '../lib/dayKey';
 import { touchTarget } from '../styles/layout';
+
+// D138 item 6: the diary resolves its food refs in ONE batched read (the
+// day's entries, and the usual chips per slot) via resolveFoodRefs.
+async function resolveRefsBatched(userId, refs) {
+  const unique = [...new Set((refs ?? []).filter(Boolean))];
+  if (!unique.length) return new Map();
+  return resolveFoodRefs(userId, unique);
+}
 
 // Audit item 6: same 7-day freshness window HomeScreen's coach banner uses
 // (showCoachBanner), so "recent" reads consistently across the app.
@@ -171,6 +195,14 @@ export default function DiaryScreen({ navigation, route }) {
   // EmptyDiary's optional "Copy yesterday" action; the premium meal builder
   // now owns planning for a day with no history.
   const [yesterdayHasFood, setYesterdayHasFood] = useState(false);
+  // D138 item 2: yesterday's rows, kept so an empty meal can offer to copy
+  // just THAT meal across. Loaded by the same (conditional) read that feeds
+  // yesterdayHasFood, never a second query.
+  const [yesterdayEntries, setYesterdayEntries] = useState([]);
+  // The slot ladder currently on screen, for load()'s "is any meal empty?"
+  // test. A ref, not a dep: adding mealSlots to load() would rebuild it (and
+  // re-fire the focus effect) every time "Add meal" is tapped.
+  const mealSlotKeysRef = useRef([]);
   // Audit item 6 (coach receipt chip): the latest coach output, read only for
   // Pro (free never reaches CoachOutputScreen so never has an applied
   // adjustment to point at). Used solely to detect a recent coach-applied
@@ -198,7 +230,7 @@ export default function DiaryScreen({ navigation, route }) {
     // failure never wipes entries/rollup/etc already on screen (see catch
     // below); only the try's own success path commits fresh values.
     try {
-      const [es, r, w, targetsRow, edFlag, bodyWeight, bodyComp, yEntries, coachOut] = await Promise.all([
+      const [es, r, w, targetsRow, edFlag, bodyWeight, bodyComp, coachOut] = await Promise.all([
         getFoodEntriesForDay(userId, selectedDate),
         getRollupForDay(userId, selectedDate),
         getWater(userId, selectedDate),
@@ -210,7 +242,6 @@ export default function DiaryScreen({ navigation, route }) {
         getOpenEdPatternFlag(userId).catch(() => 'read_failed'),
         getLatestBodyWeight(userId).catch(() => null),
         getLatestBodyComposition(userId).catch(() => null),
-        getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => []),
         // Audit item 6: best-effort. A read failure just hides the "Targets
         // updated" chip, it never blocks the rest of the diary load.
         getLatestCoachOutput(userId).catch(() => null),
@@ -233,23 +264,33 @@ export default function DiaryScreen({ navigation, route }) {
           floor = safeDayFloorKcal({ sex, ffmFloorKcal: ffm?.floorKcal });
         } catch (_) { /* keep sex floor */ }
       }
-      // Resolve each entry's actual food name + brand from the foods /
-      // custom_foods tables. food_entries denormalises macros at log
-      // time but NOT the name, so without this enrichment the row
-      // falls through to a generic "Food" label. SQLite local reads,
-      // fast even for 10-20 entries.
-      const enriched = await Promise.all((es ?? []).map(async (entry) => {
-        try {
-          const food = await resolveFoodRef(userId, entry.food_ref);
-          return {
-            ...entry,
-            _name: food?.name ?? null,
-            _brand: food?.brand ?? null,
-          };
-        } catch (_) {
-          return { ...entry, _name: null, _brand: null };
-        }
-      }));
+      // D138 item 5: yesterday's entries are only READ when this day can
+      // actually use them - the day is empty (the EmptyDiary "Copy yesterday"
+      // CTA) or at least one visible meal is empty (the per-meal
+      // "Yesterday's <meal>" chip). A day with every meal already filled
+      // pays nothing for a fetch it cannot show. mealSlotKeysRef carries the
+      // currently rendered slot ladder (assigned during render below).
+      const loggedSlotKeys = new Set((es ?? []).map((e) => e.meal_slot));
+      const needYesterday = (es ?? []).length === 0
+        || (mealSlotKeysRef.current ?? []).some((k) => !loggedSlotKeys.has(k));
+      // Resolve every entry's actual food name + brand from the foods /
+      // custom_foods tables in ONE batched read (D138 item 6; food_entries
+      // denormalises macros at log time but NOT the name, so without this
+      // enrichment the row falls through to a generic "Food" label).
+      const [foodMap, yEntries] = await Promise.all([
+        resolveRefsBatched(userId, (es ?? []).map((e) => e.food_ref)).catch(() => new Map()),
+        needYesterday
+          ? getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => [])
+          : Promise.resolve([]),
+      ]);
+      const enriched = (es ?? []).map((entry) => {
+        const food = foodMap?.get?.(entry.food_ref) ?? null;
+        return {
+          ...entry,
+          _name: food?.name ?? null,
+          _brand: food?.brand ?? null,
+        };
+      });
       // Check again: the enrichment await above is itself a second point where
       // a newer load could have started and already committed its own result.
       if (!loadGuardRef.current.isCurrent(loadToken)) return;
@@ -259,6 +300,10 @@ export default function DiaryScreen({ navigation, route }) {
       setTargets(targetsRow);
       setEdFlagOpen(!!edFlag);
       setFloorKcal(floor);
+      // Only meaningful when the fetch actually ran; it gates the EmptyDiary
+      // "Copy yesterday" CTA, which can only render on a day with no entries
+      // at all - exactly one of the cases that forces the fetch above.
+      setYesterdayEntries(yEntries ?? []);
       setYesterdayHasFood((yEntries?.length ?? 0) > 0);
       setLatestCoachOutput(coachOut ?? null);
       setLoadError(false);
@@ -615,6 +660,10 @@ export default function DiaryScreen({ navigation, route }) {
     return keys[0] ?? null;
   }, [mealSlots, selectedDate]);
   const visibleSlots = mealSlots;
+  // Assigned during render (derived purely from the memo above) so load()'s
+  // conditional yesterday read always tests the ladder that is actually on
+  // screen, without making load() depend on it.
+  mealSlotKeysRef.current = mealSlots.map((m) => m.key);
 
   // GAP #5: usual-food shortcuts for empty meal slots. Each slot offers up to three
   // of the foods most logged into THAT slot (the same `food_slot_recents`
@@ -628,38 +677,137 @@ export default function DiaryScreen({ navigation, route }) {
     if (!userId) { setSlotUsuals({}); return; }
     let active = true;
     (async () => {
+      const rowsPerSlot = await Promise.all(
+        mealSlots.map((slot) => getSlotRecents(userId, slot.key, 3).catch(() => [])),
+      );
+      // D138 item 6: one batched resolve for every slot's recents together,
+      // instead of a resolve per row per slot (up to 3 x slots round trips).
+      const refs = rowsPerSlot.flat().map((row) => row?.food_ref).filter(Boolean);
+      const foodMap = await resolveRefsBatched(userId, refs).catch(() => new Map());
       const next = {};
-      await Promise.all(mealSlots.map(async (slot) => {
-        try {
-          const rows = await getSlotRecents(userId, slot.key, 3);
-          const foods = await Promise.all((rows ?? []).map(async (row) => {
-            try {
-              const food = await resolveFoodRef(userId, row.food_ref);
-              if (!food) return null;
-              // Carry the remembered portion into FoodDetailSheet so the user
-              // can confirm their last weight instead of starting from 100 g.
-              return { ...food, food_ref: row.food_ref, last_quantity_g: row.last_quantity_g };
-            } catch (_) { return null; }
-          }));
-          const valid = foods.filter(Boolean);
-          if (valid.length) next[slot.key] = valid;
-        } catch (_) { /* slot has no recents */ }
-      }));
+      mealSlots.forEach((slot, i) => {
+        const foods = (rowsPerSlot[i] ?? []).map((row) => {
+          const food = foodMap?.get?.(row.food_ref) ?? null;
+          if (!food) return null;
+          // Carry the remembered portion through: it is what the chip states
+          // and what a one-tap log writes (and what FoodDetailSheet opens on
+          // when the user holds the chip to change it).
+          return { ...food, food_ref: row.food_ref, last_quantity_g: row.last_quantity_g };
+        }).filter(Boolean);
+        if (foods.length) next[slot.key] = foods;
+      });
       if (active) setSlotUsuals(next);
     })();
     return () => { active = false; };
   }, [userId, selectedDate, mealSlots]);
 
-  // A remembered food is only a preselection. The shared detail sheet still
-  // confirms grams, meal and date before its normal write path runs.
-  const onLogUsual = useCallback((food, slotKey) => {
+  // Hold a usual chip (or tap one with no remembered portion): the food is
+  // only a preselection, and the shared detail sheet still confirms grams,
+  // meal and date before its normal write path runs. This is the path that
+  // existed before D138 and it stays exactly as it was.
+  const onEditUsual = useCallback((food, slotKey) => {
     if (!userId || !food) return;
+    haptics.selection();
     navigation.navigate('FoodSearch', {
       entryDate: selectedDate,
       mealSlot: slotKey,
       preselectedFood: food,
     });
   }, [userId, selectedDate, navigation]);
+
+  // D138 item 1: ONE tap logs the remembered portion the chip already states.
+  // The write is the diary's canonical one (buildFoodEntryPayload ->
+  // logFoodEntry -> upsertSlotRecent -> reload), the same calls
+  // FoodSearchScreen's confirmLog makes, followed by the undo-variant toast
+  // every other log path shows. No haptic on the write itself: a diary-marking
+  // moment is the recorded no-haptic exception (docs/remediation-2026-07-11/
+  // FOOD-DESIGN-STANDARD.md, "Haptics vocabulary"), so only the neutral
+  // navigation on hold ticks. A food with no remembered weight falls back to
+  // the sheet rather than guessing one.
+  const loggingUsualRef = useRef(false);
+  const onLogUsual = useCallback(async (food, slotKey) => {
+    if (!userId || !food) return;
+    const quantityG = Math.round(Number(food.last_quantity_g) || 0);
+    if (!(quantityG > 0)) { onEditUsual(food, slotKey); return; }
+    if (loggingUsualRef.current) return; // a fast double tap logs once
+    loggingUsualRef.current = true;
+    try {
+      audit('food.add', {
+        source: food.source ?? 'unknown',
+        mealSlot: slotKey,
+        fromScan: false,
+        surface: 'diary_usual',
+      });
+      const entryId = await logFoodEntry(userId, buildFoodEntryPayload({
+        entryDate: selectedDate,
+        mealSlot: slotKey,
+        foodRef: food.food_ref,
+        quantityG,
+        food,
+      }));
+      await upsertSlotRecent(userId, buildSlotRecentPayload({
+        mealSlot: slotKey,
+        foodRef: food.food_ref,
+        quantityG,
+      })).catch(() => {}); // derived memory only; never fail the log
+      await load();
+      const portion = usualPortionText({ ...food, last_quantity_g: quantityG });
+      toast.show(`${food.name ?? 'Food'} logged, ${portion ?? `${quantityG} g`}.`, {
+        variant: 'undo',
+        action: {
+          label: 'Undo',
+          onPress: async () => {
+            try { await deleteFoodEntry(entryId, userId); } catch (_) { /* already gone */ }
+            await load();
+          },
+        },
+      });
+    } catch (e) {
+      logError('DiaryScreen.logUsual', e, { userId, slotKey });
+      toast.show("Couldn't log that. Try again.", { variant: 'error' });
+    } finally {
+      loggingUsualRef.current = false;
+    }
+  }, [userId, selectedDate, load, toast, onEditUsual]);
+
+  // D138 item 2: yesterday's rows for THIS day's view, bucketed by meal and
+  // limited to real intake. A planned-but-unconfirmed row was never eaten, so
+  // it is not part of "yesterday's breakfast" and is never copied forward.
+  const yesterdaySlotEntries = useMemo(() => {
+    const out = {};
+    for (const e of (yesterdayEntries ?? [])) {
+      if (e.is_planned) continue;
+      (out[e.meal_slot] ??= []).push(e);
+    }
+    return out;
+  }, [yesterdayEntries]);
+
+  // Copy ONE of yesterday's meals into the same meal today. Same per-entry
+  // primitive as every other copy path (copyEntriesToDate -> logFoodEntry), so
+  // rollups, sync and telemetry stay consistent; the created ids drive a
+  // single Undo that removes every copied row (MyMealsScreen's saved-meal
+  // undo pattern).
+  const copyYesterdaySlot = useCallback(async (slotKey, slotLabel) => {
+    const rows = yesterdaySlotEntries[slotKey] ?? [];
+    if (!userId || !rows.length) return;
+    try {
+      const ids = await copyEntriesToDate(userId, rows, selectedDate, { mealSlot: slotKey });
+      await load();
+      toast.show(`${slotLabel} copied from yesterday, ${ids.length} ${ids.length === 1 ? 'entry' : 'entries'}.`, {
+        variant: 'undo',
+        action: {
+          label: 'Undo',
+          onPress: async () => {
+            try { await Promise.all(ids.map((id) => deleteFoodEntry(id, userId))); } catch (_) { /* already gone */ }
+            await load();
+          },
+        },
+      });
+    } catch (e) {
+      logError('DiaryScreen.copyYesterdaySlot', e, { userId, slotKey });
+      toast.show("Couldn't copy that meal. Try again.", { variant: 'error' });
+    }
+  }, [userId, selectedDate, yesterdaySlotEntries, load, toast]);
 
   // Founder must-fix #6 phase 2: a genuine meal suggestion for an empty
   // pre/post-workout slot, not just a visible-but-empty card. Reuses the
@@ -1275,6 +1423,25 @@ export default function DiaryScreen({ navigation, route }) {
             dayTypeLabel={dayTypeChip}
             onPress={viewEntries.length ? () => setBreakdownVisible(true) : undefined}
           />
+          {/* D138 item 4: a user with no nutrition targets sees rings with
+              nothing to aim at and, until now, no way out of that state from
+              the diary at all. Same copy and same destination as the "no
+              targets" empty state in food search's Suggested tab
+              (FoodSearchScreen.js renderSuggested), so the one way out reads
+              identically wherever it is met. MacroRings' own target-less
+              render is untouched: the rings still show the day's intake. */}
+          {loaded && !effectiveTargets ? (
+            <View style={styles.noTargetsWrap}>
+              <EmptyState
+                compact
+                icon="restaurant-outline"
+                text="Set your targets first and Volyume can suggest meals that fit them."
+                actionLabel="Set nutrition targets"
+                onAction={() => navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets')}
+                actionAccessibilityLabel="Set nutrition targets"
+              />
+            </View>
+          ) : null}
           {/* Founder device order 2026-08-17: the C5-P21-03 (D96) "New to
               macros? Read the 5-minute guide" row under the rings is
               removed. The guide itself (NutritionEducation) and its other
@@ -1405,6 +1572,15 @@ export default function DiaryScreen({ navigation, route }) {
                     entries={entriesBySlot[slot.key] ?? []}
                     usuals={(entriesBySlot[slot.key]?.length) ? null : (slotUsuals[slot.key] ?? null)}
                     onLogUsual={(food) => onLogUsual(food, slot.key)}
+                    onEditUsual={(food) => onEditUsual(food, slot.key)}
+                    /* D138 item 2: only on an empty meal, and only when
+                       yesterday actually had food in this same meal. */
+                    yesterdayCopy={
+                      (entriesBySlot[slot.key]?.length || !(yesterdaySlotEntries[slot.key]?.length))
+                        ? null
+                        : { label: `Yesterday's ${slot.label}`, count: yesterdaySlotEntries[slot.key].length }
+                    }
+                    onCopyYesterday={() => copyYesterdaySlot(slot.key, slot.label)}
                     mealSuggestion={(entriesBySlot[slot.key]?.length) ? null : (slotMealSuggestion[slot.key] ?? null)}
                     onLogMealSuggestion={(suggestion) => onLogMealSuggestion(suggestion, slot.key)}
                     onAdd={() => addFood(slot.key)}
@@ -1454,43 +1630,48 @@ export default function DiaryScreen({ navigation, route }) {
                   textStyle={[styles.addMealLabel, live.addMealLabel]}
                   accessibilityLabel="Add another meal"
                 />
-                {/* Keep planning reachable after food is logged without adding
-                    another diary summary block above the meals. */}
-                <TouchableOpacity
-                  style={[styles.buildPlanBtn, live.buildPlanBtn]}
-                  onPress={() => { lightTap(); navigation.navigate('MealPlan', { entryDate: selectedDate }); }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Open meal builder for this day or week"
-                >
-                  <View style={[styles.buildPlanIcon, live.buildPlanIcon]}>
-                    <Ionicons name="restaurant-outline" size={18} color={t.colors.textSecondary} />
-                  </View>
-                  <View style={styles.buildPlanCopy}>
-                    <Text style={[styles.buildPlanLabel, live.buildPlanLabel]}>Meal builder</Text>
-                    <Text style={[styles.buildPlanSub, live.buildPlanSub]}>Create today or the week from your targets. You review everything before it is logged.</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-                </TouchableOpacity>
               </>
             ) : null}
           </>
         )}
 
-        {/* "Plan a higher-calorie day" (calorie banking, CB-1). Moved down here,
-            below the meals / build-a-plan actions and just above water, so it
-            sits with the day's other food actions instead of competing with the
-            ring at the top (founder 2026-06-20). Only when banking is allowed
-            (not floored / ED flag). */}
-        {bankingAvailable && !selectionMode ? (
-          <Button
-            title="Plan a higher-calorie day"
-            icon="restaurant-outline"
-            onPress={() => setBankSheetVisible(true)}
-            variant="secondary"
-            style={[styles.bankRow, live.bankRow]}
-            textStyle={[styles.bankRowText, live.bankRowText]}
-            accessibilityLabel="Plan a higher-calorie day"
-          />
+        {/* D138 item 3: one compact chip row carries the day's remaining
+            doors, replacing the two-line "Meal builder" nav row and the
+            standalone "Plan a higher-calorie day" button that used to stack
+            here. Fewer competing blocks under the meals, and trends finally
+            have a door on the surface itself rather than only inside the Day
+            tools sheet (which still lists both, unchanged).
+            "Higher-calorie day" keeps the EXACT banking gate the button had
+            (bankingAvailable: targets present, not floored, no open ED flag)
+            and its accessibility label, so the ED-safety carve-out reads and
+            tests the same. On a day with nothing logged, EmptyDiary carries
+            its own meal-builder promo, so the chip is dropped there rather
+            than repeated. */}
+        {loaded && !selectionMode ? (
+          <View style={styles.dayToolsRow}>
+            {viewEntries.length > 0 ? (
+              <Chip
+                label="Meal builder"
+                icon="restaurant-outline"
+                onPress={() => { lightTap(); navigation.navigate('MealPlan', { entryDate: selectedDate }); }}
+                accessibilityLabel="Open meal builder for this day or week"
+              />
+            ) : null}
+            {bankingAvailable ? (
+              <Chip
+                label="Higher-calorie day"
+                icon="trending-up-outline"
+                onPress={() => setBankSheetVisible(true)}
+                accessibilityLabel="Plan a higher-calorie day"
+              />
+            ) : null}
+            <Chip
+              label="Trends"
+              icon="analytics-outline"
+              onPress={() => { lightTap(); navigation.navigate('FoodInsights'); }}
+              accessibilityLabel="Open nutrition trends and export"
+            />
+          </View>
         ) : null}
         <WaterRow
           ml={waterMl}
@@ -2094,14 +2275,15 @@ const styles = StyleSheet.create({
   // so the water card / last food rows always scroll out from under it.
   scrollContent: { padding: spacing.lg, paddingBottom: spacing.sm + 56 + spacing.xl },
   macroRingsWrap: { marginBottom: spacing.lg },
-  bankRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.xs, minHeight: touchTarget.minimum,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
-    backgroundColor: colors.surface2,
+  // D138 item 4: the no-targets way out, tucked under the rings.
+  noTargetsWrap: { marginTop: spacing.md },
+  // D138 item 3: the day's remaining doors as one wrapping chip row (shared
+  // Chip primitive, so no colour or type is set here).
+  dayToolsRow: {
+    flexDirection: 'row', flexWrap: 'wrap',
+    gap: spacing.xs,
     marginBottom: spacing.md,
   },
-  bankRowText: { ...type.label, color: colors.textPrimary },
   // NU-2: quiet mode rows under the rings and the banking-paused note.
   targetModeRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
@@ -2152,28 +2334,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   addMealLabel: { ...type.label, color: colors.textPrimary },
-  buildPlanBtn: {
-    flexDirection: 'row', alignItems: 'center',
-    gap: spacing.sm, minHeight: 70,
-    backgroundColor: colors.surface2,
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    marginBottom: spacing.lg,
-  },
-  buildPlanIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  buildPlanCopy: { flex: 1, minWidth: 0 },
-  buildPlanLabel: { ...type.bodyStrong, color: colors.textPrimary },
-  buildPlanSub: { ...type.caption, color: colors.textSecondary, marginTop: 2 },
   plannedBanner: {
     backgroundColor: colors.surface2,
     borderWidth: 1, borderColor: colors.primary,
@@ -2273,8 +2433,6 @@ function buildLiveStyles(t) {
     todayPill: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     todayPillText: { ...t.type.caption, color: t.colors.textPrimary },
     dayPagerMore: { borderColor: t.colors.border, backgroundColor: t.colors.surface },
-    bankRow: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    bankRowText: { ...t.type.label, color: t.colors.textPrimary },
     targetModeText: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     targetsChangedText: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
     bankOffNote: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
@@ -2286,10 +2444,6 @@ function buildLiveStyles(t) {
     offCardCta: { ...t.type.label, color: t.colors.textPrimary },
     addMealRow: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
     addMealLabel: { ...t.type.label, color: t.colors.textPrimary },
-    buildPlanBtn: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
-    buildPlanIcon: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    buildPlanLabel: { ...t.type.bodyStrong, color: t.colors.textPrimary },
-    buildPlanSub: { ...t.type.caption, color: t.colors.textSecondary },
     plannedBanner: { backgroundColor: t.colors.surface2, borderColor: t.colors.primary },
     plannedBannerText: { ...t.type.bodySm, color: t.colors.textPrimary },
     plannedBtnPrimary: { backgroundColor: t.colors.primaryFill },

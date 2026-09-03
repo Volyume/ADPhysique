@@ -171,18 +171,27 @@ describe('DiaryScreen diary tools', () => {
 });
 
 describe('DiaryScreen meal-planning entry point', () => {
+  // D138 item 3: the two-line "Meal builder" nav row under the meals became
+  // one chip in the day-tools chip row (with the standalone "Plan a
+  // higher-calorie day" button and a new "Trends" door). The pinned contract
+  // is unchanged in substance: meal planning is still ONE plain route out of
+  // the diary carrying the day in view, never another summary block. The
+  // two-line promo copy itself survives where it still earns its space, on
+  // the empty state (EmptyDiary.js, pinned by foodComponents.test.js).
   test('meal planning stays as one plain route, not another summary block', () => {
     expect(SRC).toMatch(/navigation\.navigate\('MealPlan', \{ entryDate: selectedDate \}\)/);
     expect(SRC).toMatch(/accessibilityLabel="Open meal builder for this day or week"/);
-    // CP-10 batch E (2026-07-10): live-themed, so the Ionicons colour prop
-    // now reads t.colors.textSecondary instead of the frozen colors import,
-    // and buildPlanLabel/buildPlanIcon carry a live.* style-array override.
-    // Same pins, new shape; the frozen buildPlanIcon definition below (still
-    // colors.surface/colors.border) is untouched.
-    expect(SRC).toMatch(/<Ionicons name="restaurant-outline" size=\{18\} color=\{t\.colors\.textSecondary\} \/>/);
-    expect(SRC).toMatch(/<Text style=\{\[styles\.buildPlanLabel, live\.buildPlanLabel\]\}>Meal builder<\/Text>/);
-    expect(SRC).toMatch(/Create today or the week from your targets\. You review everything before it is logged\./);
-    expect(SRC).toMatch(/buildPlanIcon: \{[\s\S]*backgroundColor: colors\.surface,[\s\S]*borderColor: colors\.border/);
+    expect(SRC).toMatch(/<Chip\s+label="Meal builder"/);
+    // No second diary summary block came back with it.
+    expect(SRC).not.toMatch(/buildPlanBtn/);
+    expect(SRC).not.toMatch(/Create today or the week from your targets/);
+  });
+
+  test('the day-tools chip row keeps the banking gate and adds a trends door', () => {
+    // The ED-safety carve-out is unchanged: the higher-calorie-day chip is
+    // still gated on bankingAvailable and still announces itself the same way.
+    expect(SRC).toMatch(/\{bankingAvailable \? \([\s\S]{0,320}accessibilityLabel="Plan a higher-calorie day"/);
+    expect(SRC).toMatch(/<Chip\s+label="Trends"[\s\S]{0,240}navigation\.navigate\('FoodInsights'\)/);
   });
 
   test('small diary actions use button chrome instead of loose text links', () => {
@@ -198,14 +207,15 @@ describe('DiaryScreen meal-planning entry point', () => {
     expect(SRC).toContain('plannedBtnGhost: { ...type.label, color: colors.textPrimary }');
     expect(SRC).toMatch(/offCardRow: \{[\s\S]*flexWrap: 'wrap'/);
     expect(SRC).toMatch(/plannedBannerRow: \{[\s\S]*flexWrap: 'wrap'/);
-    // Batch 2 wave B (B-2 Button adoption): bankRow's hand-rolled TouchableOpacity
-    // + Ionicons + Text now renders as <Button icon="restaurant-outline" variant="secondary">,
-    // so the icon is a prop, not a raw <Ionicons> child.
-    // CP-10 batch E: bankRow's style prop also gained a live.bankRow override.
-    expect(SRC).toMatch(/icon="restaurant-outline"[\s\S]{0,80}variant="secondary"[\s\S]{0,60}style=\{\[styles\.bankRow, live\.bankRow\]\}/);
-    expect(SRC).toMatch(/bankRow: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(SRC).toContain('bankRowText: { ...type.label, color: colors.textPrimary }');
-    expect(SRC).not.toMatch(/bankRowText: \{ color: colors\.primary/);
+    // D138 item 3: the banking entry (previously the hand-rolled bankRow
+    // TouchableOpacity, then a <Button variant="secondary">) is now a chip in
+    // the day-tools row. The pin moves to the shared Chip primitive, which
+    // owns the chrome, and to the row's own layout-only style: no colour or
+    // type is set locally for it any more, which is the point of the rule
+    // this test guards.
+    expect(SRC).not.toMatch(/bankRow/);
+    expect(SRC).toMatch(/<Chip\s+label="Higher-calorie day"/);
+    expect(SRC).toMatch(/dayToolsRow: \{[\s\S]*flexWrap: 'wrap'/);
     expect(SRC).not.toMatch(/offCardCta: \{[\s\S]*color: colors\.primary/);
     expect(SRC).not.toMatch(/plannedBtnGhost: \{[\s\S]*color: colors\.primary/);
   });

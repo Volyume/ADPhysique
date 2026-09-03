@@ -16,9 +16,75 @@ import { touchTarget } from '../../styles/layout';
 // in-card rows; the header carries the per-meal subtotal (calories AND protein,
 // the number a training user defends); the add affordance is a quiet in-card
 // hub, not a dashed placeholder box.
+//
+// D138 (diary as a daily workspace): an empty slot's chip row is now a
+// one-tap repeat surface. Each usual chip states the portion it will log
+// ("Porridge oats · 60 g") and logs it on tap (hold to change the portion);
+// where yesterday had food in this same slot, a "Yesterday's <meal>" chip
+// leads the row and copies that meal across. Both write paths are the
+// diary's own (logFoodEntry + an undo toast), never a silent shortcut.
+// D138 (one-tap usual): a usual chip now LOGS on tap, so it must disclose the
+// portion it will write before the tap, not after. `pluralise` keeps a
+// household serving readable ("2 slices", "1 slice"); a label that already
+// ends in an s is left alone.
+function pluralise(label, n) {
+  const l = String(label).trim();
+  if (n === 1 || /s$/i.test(l)) return l;
+  return `${l}s`;
+}
+
+/**
+ * The portion a one-tap log of this usual would write, as the user reads it.
+ * Household serving ("2 slices") when the food carries a named serving AND the
+ * remembered grams divide cleanly to a half serving; otherwise grams. Returns
+ * null when there is no remembered portion at all (the chip then falls back to
+ * the edit path rather than guessing a weight).
+ */
+export function usualPortion(food) {
+  const grams = Math.round(Number(food?.last_quantity_g) || 0);
+  if (!(grams > 0)) return null;
+  const servingG = Number(food?.serving_g) || 0;
+  const label = food?.serving_label ? String(food.serving_label).trim() : '';
+  if (servingG > 0 && label) {
+    const halves = (grams / servingG) * 2;
+    const rounded = Math.round(halves);
+    if (rounded > 0 && Math.abs(halves - rounded) < 0.02) {
+      const n = rounded / 2;
+      const text = `${n} ${pluralise(label, n)}`;
+      return { text, spoken: text };
+    }
+  }
+  return { text: `${grams} g`, spoken: `${grams} ${grams === 1 ? 'gram' : 'grams'}` };
+}
+
+// "60 g" / "2 slices" / null. Used by the chip label and by the diary's
+// post-log toast, so the two always quote the same portion.
+export function usualPortionText(food) {
+  return usualPortion(food)?.text ?? null;
+}
+
+// "Porridge oats · 60 g"
+export function usualChipLabel(food) {
+  const name = food?.name ?? 'Food';
+  const portion = usualPortion(food);
+  return portion ? `${name} · ${portion.text}` : name;
+}
+
+// "Log porridge oats, 60 grams" - the portion is spoken, never implied.
+export function usualChipAccessibilityLabel(food, slotLabel) {
+  const name = food?.name ?? 'food';
+  const portion = usualPortion(food);
+  return portion ? `Log ${name}, ${portion.spoken}` : `Log ${name} to ${slotLabel}`;
+}
+
 export default function MealSection({
   slot, entries, onAdd, onEdit, onDelete,
-  usuals = null, onLogUsual,
+  usuals = null, onLogUsual, onEditUsual,
+  // D138: on an EMPTY slot where yesterday had food in the SAME slot, the
+  // first chip in the usuals row copies that meal across. Shape:
+  // { label: "Yesterday's Breakfast", count: 3 }; null when there is nothing
+  // to copy.
+  yesterdayCopy = null, onCopyYesterday,
   mealSuggestion = null, onLogMealSuggestion,
   selectionMode = false, selectedIds, onLongPressEntry, onToggleSelect,
   readOnly = false,
@@ -48,13 +114,19 @@ export default function MealSection({
   // E10 read-only lapse views: never in read-only either, logging a usual is
   // a write.
   const showUsuals = !hasEntries && !selectionMode && !readOnly && Array.isArray(usuals) && usuals.length > 0;
+  // D138: the copy-yesterday chip lives in the same row and under the same
+  // conditions (empty slot, writable, not a selection target), so the row can
+  // appear for it alone on a slot with no recents yet.
+  const showYesterdayCopy = !hasEntries && !selectionMode && !readOnly
+    && !!yesterdayCopy && typeof onCopyYesterday === 'function';
+  const showUsualsRow = showUsuals || showYesterdayCopy;
   // Founder must-fix #6 phase 2: a genuine curated-meal suggestion for an
   // empty pre/post-workout slot (mealSuggestion is only ever populated for
   // those two slots - see DiaryScreen). Personal history (usuals) wins when
   // both exist, so a user's own established habit is offered before a
   // generic library pick; the suggestion only shows once usuals have
   // nothing to offer.
-  const showMealSuggestion = !hasEntries && !selectionMode && !readOnly && !showUsuals && !!mealSuggestion;
+  const showMealSuggestion = !hasEntries && !selectionMode && !readOnly && !showUsualsRow && !!mealSuggestion;
   const showEmptyActions = !hasEntries && !selectionMode && !readOnly;
   const showActionHub = !selectionMode && !readOnly;
   // Season to taste (founder 2026-07-01): once a curated / meal-plan meal is on
@@ -109,20 +181,38 @@ export default function MealSection({
           </TouchableOpacity>
         </View>
       ) : null}
-      {showUsuals ? (
+      {showUsualsRow ? (
         <View style={styles.usuals}>
-          {usuals.map((food) => (
+          {showYesterdayCopy ? (
+            <TouchableOpacity
+              style={[styles.usualChip, live.usualChip]}
+              onPress={() => onCopyYesterday?.()}
+              accessibilityRole="button"
+              accessibilityLabel={
+                `${yesterdayCopy.label}, copy ${yesterdayCopy.count} `
+                + `${yesterdayCopy.count === 1 ? 'entry' : 'entries'} into ${slot.label}`
+              }
+            >
+              <Ionicons name="copy-outline" size={14} color={t.colors.primary} />
+              <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{yesterdayCopy.label}</Text>
+            </TouchableOpacity>
+          ) : null}
+          {showUsuals ? usuals.map((food) => (
+            // D138: one tap LOGS the remembered portion (the label states it);
+            // a hold opens the search/detail path to change the portion first.
             <TouchableOpacity
               key={food.food_ref}
               style={[styles.usualChip, live.usualChip]}
               onPress={() => onLogUsual?.(food)}
+              onLongPress={() => onEditUsual?.(food)}
               accessibilityRole="button"
-              accessibilityLabel={`Add ${food.name ?? 'food'} to ${slot.label}`}
+              accessibilityLabel={usualChipAccessibilityLabel(food, slot.label)}
+              accessibilityHint="Hold to change the portion first"
             >
               <Ionicons name="add" size={14} color={t.colors.primary} />
-              <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{food.name ?? 'Food'}</Text>
+              <Text style={[styles.usualChipText, live.usualChipText]} numberOfLines={1}>{usualChipLabel(food)}</Text>
             </TouchableOpacity>
-          ))}
+          )) : null}
         </View>
       ) : null}
       {/* D2: rows animate in/out and siblings glide into freed space, so a

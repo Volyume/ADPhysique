@@ -1,17 +1,20 @@
 /**
  * Mount + snapshot tests for the src/components/food/ component set
  * per UI_FLOWS_LOCKED.md lines 18-28. Covers the four added in the
- * prior batch (EmptyDiary, SourceChip, HeldDecisionCard, ServingPicker)
- * plus the three extracted from inline DiaryScreen / FoodSearchScreen
- * (MealSection, EntryRow, FoodRow).
+ * prior batch (EmptyDiary, SourceChip) plus the three extracted from inline
+ * DiaryScreen / FoodSearchScreen (MealSection, EntryRow, FoodRow).
+ *
+ * D138: HeldDecisionCard and ServingPicker were deleted (zero live
+ * importers - the coach's held-decision copy and the serving picker both
+ * live inside their real surfaces now), so their blocks went with them.
  *
  * Also locks the EmptyDiary copy to the exact spec string
  * (UI_FLOWS_LOCKED.md line 275) so any future drift breaks here.
  */
-import { create, act as actRender } from 'react-test-renderer';
+import { create } from 'react-test-renderer';
 
-// HeldDecisionCard's support fallback now raises the themed in-app dialog
-// (appAlert), not the native Alert.alert (06-06 change, commit 7b9197d).
+// Several of these components reach the themed in-app dialog (appAlert)
+// rather than the native Alert.alert.
 jest.mock('../../AppAlert', () => ({ appAlert: jest.fn(), AppAlertHost: () => null }));
 
 // EmptyDiary now uses Button, which reaches the haptic vocabulary. Expo's
@@ -33,8 +36,6 @@ jest.mock('react-native-gesture-handler/Swipeable', () => {
 
 import EmptyDiary, { EMPTY_DIARY_COPY } from '../EmptyDiary';
 import SourceChip from '../SourceChip';
-import HeldDecisionCard from '../HeldDecisionCard';
-import ServingPicker from '../ServingPicker';
 import MealSection from '../MealSection';
 import { EntryRow, SwipeableEntryRow, friendlyFoodName } from '../EntryRow';
 import FoodRow, { SOURCE_LABEL, kcalForServing } from '../FoodRow';
@@ -89,81 +90,6 @@ describe('SourceChip', () => {
   ])('source %s renders label %s', (source, label) => {
     const tree = create(<SourceChip source={source} />).toJSON();
     expect(JSON.stringify(tree)).toContain(label);
-  });
-});
-
-describe('HeldDecisionCard', () => {
-  test('renders body + amber badge', () => {
-    const tree = create(<HeldDecisionCard type="ffm_floor" body="We held your cut." />).toJSON();
-    const txt = JSON.stringify(tree);
-    expect(txt).toContain('Held this week');
-    expect(txt).toContain('We held your cut.');
-  });
-
-  test('shows Get support button only for ed_pattern type', () => {
-    const ed = create(<HeldDecisionCard type="ed_pattern" body="x" />).toJSON();
-    expect(JSON.stringify(ed)).toContain('Get support');
-    const fm = create(<HeldDecisionCard type="ffm_floor" body="x" />).toJSON();
-    expect(JSON.stringify(fm)).not.toContain('Get support');
-  });
-
-  test('Why? link present only when onWhy provided', () => {
-    const without = create(<HeldDecisionCard type="ffm_floor" body="x" />).toJSON();
-    expect(JSON.stringify(without)).not.toContain('Why?');
-    const with_ = create(<HeldDecisionCard type="ffm_floor" body="x" onWhy={() => {}} />).toJSON();
-    expect(JSON.stringify(with_)).toContain('Why?');
-  });
-
-  test('Get support opens the Beat link', () => {
-    const { Linking } = require('react-native');
-    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue();
-    let tree;
-    actRender(() => { tree = create(<HeldDecisionCard type="ed_pattern" body="x" />); });
-    const link = tree.root.findByProps({ accessibilityRole: 'link' });
-    actRender(() => link.props.onPress());
-    expect(openURL).toHaveBeenCalledWith('https://www.beateatingdisorders.org.uk/');
-    openURL.mockRestore();
-  });
-
-  test('Get support falls back to an in-app dialog when the link cannot open (no dead-end)', async () => {
-    const { Linking } = require('react-native');
-    const { appAlert } = require('../../AppAlert');
-    const openURL = jest.spyOn(Linking, 'openURL').mockRejectedValue(new Error('no handler'));
-    appAlert.mockClear();
-    let tree;
-    actRender(() => { tree = create(<HeldDecisionCard type="ed_pattern" body="x" />); });
-    const link = tree.root.findByProps({ accessibilityRole: 'link' });
-    await actRender(async () => { await link.props.onPress(); });
-    expect(appAlert).toHaveBeenCalled();
-    expect(appAlert.mock.calls[0][1]).toContain('beateatingdisorders');
-    openURL.mockRestore();
-  });
-});
-
-describe('ServingPicker', () => {
-  test('renders quantity + units', () => {
-    const tree = create(
-      <ServingPicker quantity="150" unit="g" onChangeQuantity={() => {}} onChangeUnit={() => {}} />
-    ).toJSON();
-    const txt = JSON.stringify(tree);
-    expect(txt).toContain('150');
-    expect(txt).toContain('"g"');
-    expect(txt).toContain('"oz"');
-  });
-
-  test('accepts custom unit list', () => {
-    const tree = create(
-      <ServingPicker
-        quantity="1"
-        unit="slice"
-        units={['slice', 'cup']}
-        onChangeQuantity={() => {}}
-        onChangeUnit={() => {}}
-      />
-    ).toJSON();
-    const txt = JSON.stringify(tree);
-    expect(txt).toContain('slice');
-    expect(txt).toContain('cup');
   });
 });
 
@@ -509,6 +435,59 @@ describe('FoodRow', () => {
     const tree = create(<FoodRow food={baseFood} isFav={false} onPress={() => {}} />).toJSON();
     const txt = JSON.stringify(tree);
     expect(txt).toContain('89 kcal');
+  });
+
+  // D138: the fastest path (a bare row + button, no sheet) must be named
+  // plainly -- "Add", not the internal "Plate" concept the multi-add tray
+  // used to leak into the label.
+  test('the plus-button default label reads "Add", with a plain a11y name', () => {
+    const tree = create(<FoodRow food={baseFood} isFav={false} onPress={() => {}} onAdd={() => {}} />);
+    const btn = tree.root.findByProps({ accessibilityLabel: 'Add Wholemeal bread' });
+    expect(btn).toBeTruthy();
+    const labelTexts = btn.findAll((n) => n.children?.some((c) => typeof c === 'string'))
+      .map((n) => n.children.join(''));
+    expect(labelTexts).toContain('Add');
+  });
+
+  test('an explicit addLabel/addAccessibilityLabel still overrides the default', () => {
+    const tree = create(
+      <FoodRow food={baseFood} isFav={false} onPress={() => {}} onAdd={() => {}} addLabel="Log" addAccessibilityLabel="Custom label" />
+    );
+    const btn = tree.root.findByProps({ accessibilityLabel: 'Custom label' });
+    const labelTexts = btn.findAll((n) => n.children?.some((c) => typeof c === 'string'))
+      .map((n) => n.children.join(''));
+    expect(labelTexts).toContain('Log');
+  });
+
+  // D138 item 6: the More tab's edit affordance -- a trailing pencil, never
+  // gated behind the row's own long-press (already the favourite/exclude
+  // preference cycle).
+  test('onEdit renders a trailing pencil with a plain a11y label, independent of onAdd', () => {
+    const tree = create(
+      <FoodRow food={baseFood} isFav={false} onPress={() => {}} onLongPress={() => {}} onEdit={() => {}} />
+    );
+    const editBtn = tree.root.findByProps({ accessibilityLabel: 'Edit Wholemeal bread' });
+    expect(editBtn).toBeTruthy();
+    expect(editBtn.props.accessibilityRole).toBe('button');
+  });
+
+  test('no onEdit prop renders no edit affordance', () => {
+    const tree = create(<FoodRow food={baseFood} isFav={false} onPress={() => {}} />);
+    expect(tree.root.findAll((n) => n.props?.accessibilityLabel === 'Edit Wholemeal bread')).toHaveLength(0);
+  });
+
+  test('tapping the edit pencil calls onEdit without touching onPress/onLongPress', () => {
+    const onPress = jest.fn();
+    const onLongPress = jest.fn();
+    const onEdit = jest.fn();
+    const tree = create(
+      <FoodRow food={baseFood} isFav={false} onPress={onPress} onLongPress={onLongPress} onEdit={onEdit} />
+    );
+    const editBtn = tree.root.findByProps({ accessibilityLabel: 'Edit Wholemeal bread' });
+    editBtn.props.onPress();
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(onPress).not.toHaveBeenCalled();
+    expect(onLongPress).not.toHaveBeenCalled();
   });
 });
 

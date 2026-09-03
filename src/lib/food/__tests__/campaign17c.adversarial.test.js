@@ -177,11 +177,22 @@ describe('WORK 2: repeat logging and serving confirmation contracts', () => {
     expect(meals).toMatch(/title="Add meal"[\s\S]*onPress=\{confirmLog\}/);
   });
 
-  test('diary usuals carry remembered grams into the picker rather than silently logging', () => {
+  test('diary usuals log the DISCLOSED remembered portion in one tap, with undo; hold still opens the picker (D138)', () => {
+    // D138 (nutrition masterpass, 2026-09-03) supersedes the 17B "carry into
+    // the picker" contract for the diary chip only: the chip states the
+    // portion it will log, the write is the canonical one, Undo follows, and
+    // a food with no remembered weight still falls back to the picker. The
+    // search screen's rows keep their row -> sheet -> confirm contract (the
+    // tests above).
     const start = diary.indexOf('const onLogUsual');
-    const usual = diary.slice(start, diary.indexOf('// Founder must-fix', start));
-    expect(usual).not.toMatch(/logFoodEntry/);
-    expect(usual).toMatch(/preselectedFood: food/);
+    const usual = diary.slice(start, diary.indexOf('// D138 item 2', start));
+    expect(usual).toMatch(/if \(!\(quantityG > 0\)\) \{ onEditUsual\(food, slotKey\); return; \}/);
+    expect(usual).toMatch(/logFoodEntry\(userId, buildFoodEntryPayload\(/);
+    expect(usual).toMatch(/variant: 'undo'/);
+    const edit = diary.slice(diary.indexOf('const onEditUsual'), start);
+    expect(edit).toMatch(/preselectedFood: food/);
+    const mealSection = source('src/components/food/MealSection.js');
+    expect(mealSection).toMatch(/onLongPress/);
   });
 
   test('planned-only rows cannot become serving-memory evidence', () => {
