@@ -1308,6 +1308,13 @@ export default function RoutineDetailScreen({ navigation, route }) {
         accessibilityLabel={editingExercise?.exercise?.name ? `Edit ${editingExercise.exercise.name}` : 'Edit exercise'}
       >
             <Text style={[styles.editTitle, live.editTitle]}>{editingExercise?.exercise?.name}</Text>
+            {/* D139: truthful scope line -- an edit here rewrites this
+                routine's own template row only; it never touches the
+                block's weekly set-target ledger (that only moves on a
+                rebuild). */}
+            <Text style={[styles.editScopeNote, live.editScopeNote]}>
+              This changes this workout only. Your weekly set targets stay with the block.
+            </Text>
             <View style={styles.editRow}>
               <TextField
                 label="Sets"
@@ -1604,6 +1611,7 @@ const styles = StyleSheet.create({
   // BottomSheet supplies the backdrop, panel chrome and drag handle now
   // (D36a migration) -- only the content-level styles below remain.
   editTitle: { fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary, marginBottom: spacing.xs },
+  editScopeNote: { ...type.captionTight, color: colors.textMuted, marginBottom: spacing.sm },
   editRow: { flexDirection: 'row', gap: spacing.md },
   editField: { flex: 1 },
   editInputField: { borderRadius: radius.md },
@@ -1742,6 +1750,7 @@ function buildLiveStyles(t) {
     exerciseStartWeight: { ...t.type.num('caption'), color: t.colors.primary },
     reorderBtn: { backgroundColor: t.colors.surface2 },
     editTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
+    editScopeNote: { ...t.type.captionTight, color: t.colors.textMuted },
     editInput: { fontSize: t.fontSize.md },
     editSaveBtnText: { ...t.type.bodyStrong, color: t.colors.onPrimary },
     addBtn: { borderColor: t.colors.primary },

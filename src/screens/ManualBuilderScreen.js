@@ -28,12 +28,14 @@ import {
 } from '../lib/database';
 import { MUSCLE_DISPLAY_NAMES, VOLUME_LANDMARKS } from '../lib/algorithms';
 import { suggestRestSeconds } from '../lib/restSuggest';
-import { classifySupersetPair } from '../lib/planEngine';
+import { classifySupersetPair, estimateWorkoutMinutes } from '../lib/planEngine';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { BLOCK_START_SENTENCE } from '../lib/blockExplain';
 import { logError } from '../lib/errorLog';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { swapAdjacentBlocks } from '../lib/reorder';
+import { appAlert } from '../components/AppAlert';
+import { track } from '../lib/engineTelemetry';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
@@ -69,6 +71,20 @@ function formatRest(secs) {
   const m = Math.floor(secs / 60);
   const s = secs % 60;
   return s === 0 ? `${m}m` : `${m}m ${s}s`;
+}
+
+// D139 (lead programme ruling): a day's session length, so the builder can
+// tell someone how long a day takes before they leave the screen. Reuses
+// the engine's own pure estimator (planEngine.js's estimateWorkoutMinutes,
+// the same maths BuildWorkoutScreen's plan-fit surfaces trust) rather than
+// inventing a second one -- it takes only { sets, restSec } per exercise, so
+// this is a plain field-name adapter, not a new estimate.
+function estimateDayMinutes(day) {
+  const exercises = (day.exercises || []).map(ex => ({
+    sets: ex.sets || DEFAULT_SETS,
+    restSec: ex.restSeconds ?? DEFAULT_REST,
+  }));
+  return Math.round(estimateWorkoutMinutes(exercises));
 }
 
 // ─── Plan Balance Helpers ─────────────────────────────────────────────────────
@@ -127,7 +143,8 @@ function PlanBalanceCard({ days }) {
   const live = useMemo(() => buildBalanceLiveStyles(t), [t]);
   const statusColor = useMemo(() => buildStatusColor(t.colors), [t]);
   const volume = computePlanVolume(days);
-  const hasAnyExercise = days.some(d => d.exercises.length > 0);
+  const daysWithWork = days.filter(d => d.exercises.length > 0);
+  const hasAnyExercise = daysWithWork.length > 0;
   if (!hasAnyExercise) return null;
 
   const rows = PRIORITY_MUSCLES.map(m => {
@@ -138,6 +155,12 @@ function PlanBalanceCard({ days }) {
 
   const warnings = rows.filter(r => r.status === 'none' || r.status === 'low');
   const overloaded = rows.filter(r => r.status === 'over');
+  // D139: the typical (mean) session length across days that actually have
+  // exercises, so an empty day someone hasn't got to yet never drags the
+  // figure toward zero.
+  const typicalMinutes = Math.round(
+    daysWithWork.reduce((sum, d) => sum + estimateDayMinutes(d), 0) / daysWithWork.length,
+  );
 
   return (
     <Card style={balanceStyles.card}>
@@ -150,6 +173,12 @@ function PlanBalanceCard({ days }) {
             shown on BodyDiagramHeatmap.js, same InfoTooltip+GLOSSARY pattern. */}
         <InfoTooltip text={GLOSSARY.volumeBands} size={14} />
       </View>
+
+      {/* D139: how long a day takes, so this reads before someone leaves the
+          screen rather than only being discovered mid-workout. */}
+      <Text style={[balanceStyles.durationLine, live.durationLine]}>
+        {`Typical session: ~${typicalMinutes} min`}
+      </Text>
 
       <View style={balanceStyles.grid}>
         {rows.map(({ muscle, sets, status }) => (
@@ -266,7 +295,6 @@ export default function ManualBuilderScreen({ navigation, route }) {
   const [planName, setPlanName]       = useState('');
   const [selectedGoal, setGoal]       = useState('hypertrophy');
   const [daysPerWeek, setDaysPerWeek] = useState(4);
-  const [creating, setCreating]       = useState(false);
 
   // Page 2 state
   const [programmeId, setProgrammeId]         = useState(null);
@@ -345,9 +373,40 @@ export default function ManualBuilderScreen({ navigation, route }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [planId]);
 
-  // ── Page 1: create programme ──────────────────────────────────────────────
+  // D139: hardware back / header back / swipe-back off page 2 with unsaved
+  // exercises must ask before discarding them. Nothing has been written yet
+  // at this point (the programme row is created by ensureProgramme on Save,
+  // never before), so there is no row to clean up here -- this is purely
+  // the confirm a person who put in real work deserves. Edit mode is
+  // unchanged (S5): leaving an edit session was never gated like this and
+  // this build does not add it. Guards navigation.addListener defensively
+  // (a test-mounted screen, or an isolated render, may hand in a
+  // navigation object without it), the same tolerance BackHeader's own
+  // useNavigation() try/catch carries.
+  useEffect(() => {
+    if (isEditMode || page !== 2) return undefined;
+    if (typeof navigation?.addListener !== 'function') return undefined;
+    const hasWork = days.some(d => d.exercises.length > 0);
+    const unsub = navigation.addListener('beforeRemove', (e) => {
+      if (!hasWork) return;
+      e.preventDefault();
+      appAlert('Discard this plan?', 'The workouts you added here will not be saved.', [
+        { text: 'Keep editing', style: 'cancel' },
+        { text: 'Discard', style: 'destructive', onPress: () => navigation.dispatch(e.data.action) },
+      ]);
+    });
+    return unsub;
+  }, [navigation, isEditMode, page, days]);
 
-  async function handleCreatePlan() {
+  // ── Page 1: move to page 2 (no write yet) ─────────────────────────────────
+  // D139 (lead programme ruling): this used to write the programme row
+  // immediately, so abandoning page 2 left an empty plan behind in My
+  // plans. Page 1's inputs (planName/selectedGoal/daysPerWeek) already live
+  // in state and stay there; the real programme row is created on the
+  // FIRST save, by ensureProgramme() below (called from persistDays'
+  // three callers), when there is finally something worth keeping.
+
+  function handleCreatePlan() {
     if (!planName.trim()) {
       toast.show('Enter a name for your plan', { variant: 'warning' });
       return;
@@ -356,28 +415,17 @@ export default function ManualBuilderScreen({ navigation, route }) {
       toast.show('Setting up your profile, try again in a second', { variant: 'info' });
       return;
     }
-    setCreating(true);
-    try {
-      const goalLabel = GOALS.find(g => g.key === selectedGoal)?.label ?? selectedGoal;
-      const prog = await createProgramme(user.id, planName.trim(), goalLabel, 0);
-      if (!prog?.id) throw new Error('Could not create plan.');
-      setProgrammeId(prog.id);
-      setEditableName(planName.trim());
-      setDayList(
-        Array.from({ length: daysPerWeek }, (_, i) => ({
-          localId:   `day-${i}-${Date.now()}`,
-          name:      `Day ${i + 1}`,
-          exercises: [],
-          routineId: null,
-        })),
-      );
-      setPage(2);
-    } catch (e) {
-      logError('ManualBuilderScreen.handleCreatePlan', e);
-      toast.show("Couldn't create your plan, try again", { variant: 'error' });
-    } finally {
-      setCreating(false);
-    }
+    setEditableName(planName.trim());
+    setDayList(
+      Array.from({ length: daysPerWeek }, (_, i) => ({
+        localId:   `day-${i}-${Date.now()}`,
+        name:      `Day ${i + 1}`,
+        exercises: [],
+        routineId: null,
+      })),
+    );
+    setPage(2);
+    track(user.id, 'manual_plan_started', {})?.catch?.(() => {});
   }
 
   // ── Page 2: day & exercise management ────────────────────────────────────
@@ -721,7 +769,13 @@ export default function ManualBuilderScreen({ navigation, route }) {
     return true;
   }
 
-  async function persistDays() {
+  // D139: the programme row itself no longer exists by the time a save
+  // handler calls this -- it is created HERE, on the first save, not on
+  // page 1. `pid` is threaded in explicitly (rather than read off the
+  // `programmeId` state) so a brand-new id from ensureProgramme() is used
+  // immediately in the same save, with no stale-closure risk from waiting
+  // on the setProgrammeId state update to land.
+  async function persistDays(pid) {
     const d = await db();
     // Atomic: the edit path clear-and-reinserts a day's routine_exercises, so an
     // interruption between the delete (removeExerciseFromRoutine) and the
@@ -753,7 +807,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
           user.id,
           day.name.trim() || `Day ${i + 1}`,
           null, null, 0, null,
-          programmeId,
+          pid,
         );
         routineId = routine.id;
       }
@@ -772,6 +826,19 @@ export default function ManualBuilderScreen({ navigation, route }) {
       await softDeleteRoutine(routineId);
     }
     });
+  }
+
+  // D139: the programme row is created here, on the FIRST save, using page
+  // 1's inputs (still sitting in state since handleCreatePlan stopped
+  // writing them immediately). Edit mode never calls this -- programmeId is
+  // already set from the load effect, so this is a no-op return for it.
+  async function ensureProgramme() {
+    if (programmeId) return programmeId;
+    const goalLabel = GOALS.find(g => g.key === selectedGoal)?.label ?? selectedGoal;
+    const prog = await createProgramme(user.id, planName.trim() || 'My Plan', goalLabel, 0);
+    if (!prog?.id) throw new Error('Could not create plan.');
+    setProgrammeId(prog.id);
+    return prog.id;
   }
 
   const [successModal, setSuccessModal] = useState(false);
@@ -804,9 +871,11 @@ export default function ManualBuilderScreen({ navigation, route }) {
       // modal below both reflect the name they last saw on screen (matches
       // handleSaveDraft/handleSaveEdit, which persist editablePlanName too).
       const finalName = editablePlanName.trim() || planName.trim() || 'My Plan';
-      await updateProgrammeName(programmeId, finalName);
-      await persistDays();
-      await activatePlanWithBlock(user.id, programmeId, finalName);
+      const pid = await ensureProgramme();
+      await updateProgrammeName(pid, finalName);
+      await persistDays(pid);
+      await activatePlanWithBlock(user.id, pid, finalName);
+      track(user.id, 'manual_plan_saved', { activated: true })?.catch?.(() => {});
       setSavedPlanName(finalName);
       setSuccessModal(true);
     } catch (e) {
@@ -824,8 +893,10 @@ export default function ManualBuilderScreen({ navigation, route }) {
     try {
       // Persist any rename made on the builder page (persistDays writes only
       // the routines, not the programme name).
-      await updateProgrammeName(programmeId, editablePlanName.trim() || 'My Plan');
-      await persistDays();
+      const pid = await ensureProgramme();
+      await updateProgrammeName(pid, editablePlanName.trim() || 'My Plan');
+      await persistDays(pid);
+      track(user.id, 'manual_plan_saved', { activated: false })?.catch?.(() => {});
       navigation.navigate('PlansTab');
     } catch (e) {
       logError('ManualBuilderScreen.handleSaveDraft', e);
@@ -950,10 +1021,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
               size="lg"
               style={styles.primaryBtn}
               onPress={handleCreatePlan}
-              disabled={creating}
-              loading={creating}
               accessibilityLabel="Create plan and add workouts"
-              accessibilityState={{ disabled: creating }}
             />
           </ScrollView>
         </KeyboardAvoidingView>
@@ -1000,7 +1068,16 @@ export default function ManualBuilderScreen({ navigation, route }) {
           <Card key={day.localId} style={styles.dayCard}>
             {/* Day header */}
             <View style={[styles.dayHeader, live.dayHeader]}>
-              <Text style={[styles.dayNumber, live.dayNumber]}>Day {dayIdx + 1}</Text>
+              <View style={styles.dayHeaderLabel}>
+                <Text style={[styles.dayNumber, live.dayNumber]}>Day {dayIdx + 1}</Text>
+                {/* D139: how long this day takes, before someone leaves the
+                    screen -- muted, so it reads as an estimate not a target. */}
+                {day.exercises.length > 0 && (
+                  <Text style={[styles.dayDuration, live.dayDuration]}>
+                    {`~${estimateDayMinutes(day)} min`}
+                  </Text>
+                )}
+              </View>
               <TextField
                 accessibilityLabel={`Name for day ${dayIdx + 1}`}
                 containerStyle={styles.dayNameFieldContainer}
@@ -1445,11 +1522,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
+  dayHeaderLabel: {
+    minWidth: 44,
+  },
   dayNumber: {
     fontSize: fontSize.xs,
     fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
     color: colors.primary,
-    minWidth: 44,
+  },
+  dayDuration: {
+    ...type.captionTight,
+    color: colors.textMuted,
+    marginTop: 2,
   },
   dayNameFieldContainer: {
     flex: 1,
@@ -1684,6 +1768,7 @@ function buildLiveStyles(t) {
     planNameInput: { ...t.type.h2 },
     dayHeader: { borderBottomColor: t.colors.border },
     dayNumber: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    dayDuration: { ...t.type.captionTight, color: t.colors.textMuted },
     dayNameInput: { ...t.type.bodyStrong },
     exRow: { borderBottomColor: t.colors.surface3 },
     exRowSelected: { backgroundColor: t.colors.primaryBg },
@@ -1719,6 +1804,10 @@ const balanceStyles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: fontFamily.bold, fontWeight: fontWeight.bold,
     color: colors.textSecondary,
+  },
+  durationLine: {
+    ...type.captionTight,
+    color: colors.textMuted,
   },
   grid: {
     flexDirection: 'row',
@@ -1775,6 +1864,7 @@ const balanceStyles = StyleSheet.create({
 function buildBalanceLiveStyles(t) {
   return {
     title: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
+    durationLine: { ...t.type.captionTight, color: t.colors.textMuted },
     dot: { fontSize: t.fontSize.sm },
     muscleName: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     setCount: { fontSize: t.fontSize.xs, color: t.colors.textMuted },

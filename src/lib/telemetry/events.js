@@ -309,6 +309,46 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'notification_permission_requested', deferred: false, panel: 6 },
   { name: 'setup_started',                   deferred: false, panel: 1 },
   { name: 'first_home_landed',               deferred: false, panel: 1 },
+
+  // D139 (lead programme ruling, 2026-09-03): the plan-generation preview
+  // funnel plus the manual-builder start/save funnel. Counts/flags/small
+  // enums only, per the standing rule -- never training content. Server
+  // allow-list: supabase/migrate_156_activation_funnel_telemetry.sql.
+  //   plan_preview_shown/_confirmed/_dismissed  { source: 'home' | 'plans' |
+  //                                'update' | 'goal' } -- which surface
+  //                                triggered the plan-generation preview
+  //                                sheet. Emitter lives in the new
+  //                                PlanPreviewSheet, owned by another lane;
+  //                                not wired yet, so deferred: true here.
+  //   block_decision               { intent: 'repeat' | 'adjust' | 'change' }
+  //                                -- the choice made at a finished block.
+  //                                Emitter lands in PlansScreen, another
+  //                                lane; deferred: true until it does.
+  //   library_plan_previewed       {} -- a library plan's detail preview
+  //                                opened before adopting it. Emitter lands
+  //                                in PlanDetailScreen, another lane;
+  //                                deferred: true until it does.
+  //   manual_plan_started          {} -- Manual Builder's page 1 -> page 2
+  //                                transition ("Create plan and add
+  //                                workouts"). Wired in this build
+  //                                (ManualBuilderScreen.js).
+  //   manual_plan_saved            { activated: boolean } -- a manual
+  //                                plan's first save; true for Save &
+  //                                Activate, false for Save draft. Wired in
+  //                                this build (ManualBuilderScreen.js).
+  //   plan_replaced                 {} -- activatePlanWithBlock replaced an
+  //                                already-active training block, rather
+  //                                than a user's first-ever activation.
+  //                                Wired in this build (database.js).
+  { name: 'plan_preview_shown', deferred: false, panel: 1 },
+  { name: 'plan_preview_confirmed', deferred: false, panel: 1 },
+  { name: 'plan_preview_dismissed', deferred: false, panel: 1 },
+  { name: 'block_decision', deferred: false, panel: 1 },
+  { name: 'library_plan_previewed', deferred: false, panel: 1 },
+  { name: 'manual_plan_started',             deferred: false, panel: 1 },
+  { name: 'manual_plan_saved',               deferred: false, panel: 1 },
+  { name: 'plan_replaced',                   deferred: false, panel: 1 },
+
   // No signup_started event: it would fire before an account exists, and
   // this pipeline attributes rows to auth.uid() only (no anonymous install
   // id, by the standing privacy posture). The pre-account gap is read as

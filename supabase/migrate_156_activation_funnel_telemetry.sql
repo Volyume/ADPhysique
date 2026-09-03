@@ -48,6 +48,42 @@
 --                                 completes (trackFirst). Emitter lives in
 --                                 HomeScreen.
 --
+-- ADDENDUM (lead programme ruling, D139, same date): eight more names for
+-- the plan-generation preview funnel and the manual-builder start/save
+-- funnel, added to this same unapplied migration rather than a new one.
+-- Counts / flags / small enums only, same rule as above.
+--   plan_preview_shown            { source } the plan-generation preview
+--   plan_preview_confirmed        { source } sheet (PlanPreviewSheet) was
+--   plan_preview_dismissed        { source } shown / confirmed / dismissed.
+--                                 source is 'home' | 'plans' | 'update' |
+--                                 'goal'. Emitter lands in PlanPreviewSheet,
+--                                 owned by another lane; NOT wired yet, so
+--                                 the client catalogue currently carries
+--                                 these three as deferred: true.
+--   block_decision                { intent } the choice made at a finished
+--                                 block: 'repeat' | 'adjust' | 'change'.
+--                                 Emitter lands in PlansScreen, another
+--                                 lane; NOT wired yet, deferred: true.
+--   library_plan_previewed        {} a library plan's detail preview
+--                                 opened before adopting it. Emitter lands
+--                                 in PlanDetailScreen, another lane; NOT
+--                                 wired yet, deferred: true.
+--   manual_plan_started           {} Manual Builder's page 1 -> page 2
+--                                 transition. Wired (ManualBuilderScreen.js).
+--   manual_plan_saved             { activated } a manual plan's first save;
+--                                 true for Save & Activate, false for Save
+--                                 draft. Wired (ManualBuilderScreen.js).
+--   plan_replaced                  {} activatePlanWithBlock replaced an
+--                                 already-active training block rather than
+--                                 a first-ever activation. Wired
+--                                 (database.js).
+-- This CHECK list is additive regardless of the client's deferred flags --
+-- the server allow-list only says an event MAY be sent, so listing the
+-- three not-yet-wired preview events and block_decision/
+-- library_plan_previewed here now means nothing else needs to touch this
+-- migration once those other lanes wire their emitters and flip their
+-- catalogue rows to deferred: false.
+--
 -- No 'signup_started' event exists: it would fire before an account does,
 -- and this pipeline attributes rows to auth.uid() only (no anonymous install
 -- id, by the standing privacy posture). The pre-account gap is read as store
@@ -61,7 +97,8 @@
 -- nothing is lost, transport.js's client-side retry (getUnpushedEngineTelemetry
 -- / markEngineTelemetryPushed) keeps unpushed rows queued locally and
 -- re-attempts them on every flush cycle. Reproduces the migration 104
--- COMPLETE list plus ten new names, so 156 is the complete canonical
+-- COMPLETE list plus eighteen new names (the original ten activation-funnel
+-- names plus the D139 addendum's eight), so 156 is the complete canonical
 -- allow-list and should be the last one applied.
 --
 -- Applied locally:  NOT APPLIED - awaits the founder's exact phrase "run
@@ -71,8 +108,9 @@
 --                   against production".
 -- Safe to re-run:   YES. CREATE OR REPLACE; no schema change, no data
 --                   migration, purely additive to the allow-list.
--- Rollback:         re-apply migration 104 to drop the ten new names (104
---                   is the complete canonical list minus these ten).
+-- Rollback:         re-apply migration 104 to drop the eighteen new names
+--                   (104 is the complete canonical list minus these
+--                   eighteen).
 
 CREATE OR REPLACE FUNCTION record_engine_telemetry(
   _event text,
@@ -191,7 +229,16 @@ BEGIN
     'coach_recommendation_declined',
     'notification_permission_requested',
     'setup_started',
-    'first_home_landed'
+    'first_home_landed',
+    -- D139 addendum (see header): plan-preview + manual-builder funnels.
+    'plan_preview_shown',
+    'plan_preview_confirmed',
+    'plan_preview_dismissed',
+    'block_decision',
+    'library_plan_previewed',
+    'manual_plan_started',
+    'manual_plan_saved',
+    'plan_replaced'
   ) THEN
     RAISE EXCEPTION 'Unknown engine telemetry event: %', _event;
   END IF;

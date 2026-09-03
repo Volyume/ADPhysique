@@ -4879,7 +4879,23 @@ export async function setActivePlan(userId, planId) {
 // build threads into seeding. Accepted now so the "Continue with
 // adjustments" path has a real parameter to carry it; unused until Stage 6.
 export async function activatePlanWithBlock(userId, planId, planName, { ledger = null, allowLearnedCarry = true } = {}) {
+  // Activation-funnel elevation (lead programme ruling, D139): plan_replaced
+  // must fire only on a genuine replacement, never a user's first-ever
+  // activation, so read whether an active block already exists BEFORE
+  // setActivePlan below deactivates it (setActivePlan's own is_active=0
+  // UPDATE would otherwise make every activation look like a fresh start).
+  const _dPlanReplacedCheck = await db();
+  const _priorActiveBlock = await _dPlanReplacedCheck.getFirstAsync(
+    'SELECT id FROM mesocycles WHERE user_id = ? AND is_active = 1 LIMIT 1',
+    [userId],
+  );
   await setActivePlan(userId, planId);
+  if (_priorActiveBlock) {
+    // Next to plan_activated (fired inside setActivePlan just above): the
+    // business-visible signal is whether this activation replaced a
+    // running block, not merely that a plan became active.
+    _trackEvent(userId, 'plan_replaced', null);
+  }
 
   // C8 Work 2 (D97-9): muscle-level learned evidence survives a
   // legitimate activation. Only "Continue with adjustments" ever passed
