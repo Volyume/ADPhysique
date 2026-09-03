@@ -22,6 +22,7 @@ import { localDayKey } from './dayKey';
 import { robustTrackingLatest, robustTrackingSevenDaysAgoPoint } from './robustTrend';
 import { detectEdPatternFlag, hasEdPatternCleared } from './edPatternDetector';
 import { detectDifferentialTrigger } from './differentialPaywall';
+import { FULL_ACCESS_FOR_ALL } from './proGate';
 import { cycleTrendAnnotation } from './cyclePhase';
 // Campaign 23 R2 (D99): the one shared scan-vs-trend classification, so the
 // corroboration direction is resolved against this run's own emitted trend
@@ -2331,7 +2332,18 @@ export function runWeeklyCoach(inputs) {
   // ── DIFFERENTIAL PAYWALL (Move #4) ────────────────────────────────────────
   // Pure detector. Returns { shown:false } for paid users, when the
   // adherence 2-of-3 gate fails, or when no context signal matches.
-  const differential_output = detectDifferentialTrigger({
+  //
+  // FULLY-FREE PRODUCT (founder decision 2026-09-03, src/lib/proGate.js).
+  // The trigger's whole purpose was to WITHHOLD: on a match it emitted
+  // `with_food_data_message` - a line telling a free user what their food
+  // log COULD have shown - plus a `paywall_cta`. Nothing is withheld any
+  // more; the nutrition insight this pointed at is simply available. So the
+  // engine never produces the trigger while the override is on. This is the
+  // smallest possible change: FULL_ACCESS_FOR_ALL is a module constant, so
+  // the run stays pure and deterministic (identical inputs, identical
+  // outputs), `detectDifferentialTrigger` is untouched and still unit-tested
+  // directly, and every other field of the coach output is byte-identical.
+  const differential_output = FULL_ACCESS_FOR_ALL ? { shown: false } : detectDifferentialTrigger({
     userTier,
     hasUsedTrial,
     calsAdherence,

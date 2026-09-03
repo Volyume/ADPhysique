@@ -31,6 +31,20 @@ const PRO_TRIAL_ENDS_KEY = '@volyume_pro_trial_ends_at';
 // entitlement for longer than the grace period locks itself down locally until
 // it can verify again online. Defence in depth alongside the Play RTDN.
 const PAID_VERIFIED_AT_KEY = '@volyume_paid_verified_at';
+
+// FULLY-FREE PRODUCT (founder decision 2026-09-03, src/lib/proGate.js).
+// Every tier WRITER in this store funnels through here, so there is one
+// place that decides what the app actually stores and renders as the
+// user's tier. While the override is on the answer is always 'pro': no
+// trial, no expiry, no downgrade, no paywall. With it off the caller's
+// own value passes straight through, so the dormant entitlement logic
+// (cloud tier, local trial expiry, stale-paid lockdown) is preserved
+// exactly as written and comes back by flipping one constant.
+function _effectiveTier(t) {
+  // eslint-disable-next-line global-require
+  const { FULL_ACCESS_FOR_ALL } = require('../lib/proGate');
+  return FULL_ACCESS_FOR_ALL ? 'pro' : t;
+}
 // Crash/kill recovery for an in-progress workout. The store holds the
 // session (activeWorkout + workoutExercises, which carries the logged sets)
 // in memory only; on app kill it was lost and the workouts row stayed
@@ -806,8 +820,11 @@ const useAppStore = create((set, get) => ({
   // unverifiable past the grace window.
   lockStalePaidEntitlement: async () => {
     set({ _optimisticPaidUntil: 0 });
-    try { await AsyncStorage.setItem(TIER_KEY, 'free'); } catch (_) { /* tolerate */ }
-    await get().setTier('free', 'cascade.lockStalePaidEntitlement');
+    // Fully-free product (2026-09-03): there is nothing to lock down, so the
+    // local free write is skipped and setTier resolves back to full access.
+    const locked = _effectiveTier('free');
+    try { await AsyncStorage.setItem(TIER_KEY, locked); } catch (_) { /* tolerate */ }
+    await get().setTier(locked, 'cascade.lockStalePaidEntitlement');
   },
 
   // Cloud sync status surface. Set from RootNavigator when a fresh
@@ -866,7 +883,13 @@ const useAppStore = create((set, get) => ({
       // sub lapsed without the server). The legacy "first-run done ⇒ pro"
       // grant was removed (audit M-3): it could grant Pro on a cleared tier
       // cache, and the cloud read is the real source of truth.
-      if (tier === 'pro') {
+      // Fully-free product (2026-09-03): there is no trial to expire, so the
+      // local demotion below is skipped entirely. Kept, not deleted, so the
+      // dormant entitlement path is preserved verbatim for a future
+      // monetisation flip.
+      // eslint-disable-next-line global-require
+      const { FULL_ACCESS_FOR_ALL } = require('../lib/proGate');
+      if (!FULL_ACCESS_FOR_ALL && tier === 'pro') {
         const ts = await AsyncStorage.getItem(TRIAL_STATE_KEY);
         const endsRaw = await AsyncStorage.getItem(PRO_TRIAL_ENDS_KEY);
         const endMs = endsRaw ? Date.parse(endsRaw) : NaN;
@@ -875,9 +898,10 @@ const useAppStore = create((set, get) => ({
           try { await AsyncStorage.setItem(TIER_KEY, 'free'); } catch (_) { /* tolerate */ }
         }
       }
-      set({ tier, tierChecked: true });
+      set({ tier: _effectiveTier(tier), tierChecked: true });
     } catch (_e) {
-      set({ tier: null, tierChecked: true });
+      // tierChecked is still set in every branch: the splash gate waits on it.
+      set({ tier: _effectiveTier(null), tierChecked: true });
     }
   },
 
@@ -887,7 +911,13 @@ const useAppStore = create((set, get) => ({
   // the only reliable way to know who triggered a tier change. Falls back
   // to the auto-captured stack for un-tagged callers (early returns
   // when off-thread for now).
-  setTier: async (tier, callerScope) => {
+  setTier: async (tierArg, callerScope) => {
+    // Fully-free product (2026-09-03): the stored tier is always the
+    // full-access one. Resolving here (rather than at each caller) also
+    // keeps the tier_changed telemetry honest - it fires on a real change
+    // of the EFFECTIVE tier, never on a caller asking for 'free' while the
+    // override answers 'pro'.
+    const tier = _effectiveTier(tierArg);
     const prev = get().tier;
     if (prev !== tier) {
       try {
@@ -978,12 +1008,15 @@ const useAppStore = create((set, get) => ({
     };
     if (staleUid()) return;
 
-    // Beta tier policy, every cloud-authenticated user is Pro during beta.
+    // Fully-free product (2026-09-03): every signed-in user is full access.
+    // Same shape as the old beta override it replaces - one early write so
+    // the navigator's onboarding branch never sees a null/free tier.
     // eslint-disable-next-line global-require
-    const { PRO_BETA_ACTIVE } = require('../lib/proGate');
-    if (PRO_BETA_ACTIVE) {
-      try { await AsyncStorage.setItem(TIER_KEY, 'pro'); } catch (_) {}
-      set({ tier: 'pro', tierChecked: true });
+    const { FULL_ACCESS_FOR_ALL } = require('../lib/proGate');
+    if (FULL_ACCESS_FOR_ALL) {
+      const full = _effectiveTier(null);
+      try { await AsyncStorage.setItem(TIER_KEY, full); } catch (_) {}
+      set({ tier: full, tierChecked: true });
     }
 
     // ── Step 1: instant routing decision based on local cues ─────────
@@ -1122,8 +1155,13 @@ const useAppStore = create((set, get) => ({
         // screens resolve a user's paid/trial stage off userProfile via
         // lib/payments/cascade, so these must ride along with the profile or
         // every signed-in user reads back as 'free' / unstarted.
-        trialState: cloudData.trial_state ?? null,
-        proTrialEndsAt: cloudData.pro_trial_ends_at ?? null,
+        // Fully free product (D137): the trial columns are never mirrored
+        // onto a fresh profile either, for the same reason refreshTierFromCloud
+        // suppresses them -- the mirror is what re-arms every trial surface.
+        ...(_effectiveTier('free') === 'pro' ? {} : {
+          trialState: cloudData.trial_state ?? null,
+          proTrialEndsAt: cloudData.pro_trial_ends_at ?? null,
+        }),
         // U2: restore biological sex from the profile row (present only after
         // migrate_094). Redundant with the user_body_profile pull, so sex
         // survives even if that row is missing. Only accept the enforced values.
@@ -1225,9 +1263,11 @@ const useAppStore = create((set, get) => ({
         // there. Any cloud-signed-in user is Pro during beta because the
         // cloud column is unusable as truth (DB default 'free', trigger
         // blocks writes, no webhook yet).
-        // eslint-disable-next-line global-require
-        const { PRO_BETA_ACTIVE } = require('../lib/proGate');
-        let effectiveTier = PRO_BETA_ACTIVE ? 'pro' : data.tier;
+        // Fully-free product (2026-09-03): _effectiveTier answers 'pro'
+        // whatever the cloud column says, so a stale/never-written server
+        // tier can never demote a user. With the override off the server
+        // value governs again, exactly as before.
+        let effectiveTier = _effectiveTier(data.tier);
         // C-1: don't clobber a just-purchased optimistic unlock while the Play
         // RTDN is still writing the server tier. Within the optimistic window we
         // never downgrade pro→free; once it lapses the server value governs.
@@ -1236,7 +1276,7 @@ const useAppStore = create((set, get) => ({
         }
         // Persist BEFORE setting in-memory state so a crash between the
         // two doesn't leave AsyncStorage out of sync with the store.
-        await AsyncStorage.setItem(TIER_KEY, effectiveTier);
+        await AsyncStorage.setItem(TIER_KEY, _effectiveTier(effectiveTier));
         // Cache trial_state + end so checkTier can enforce trial expiry locally
         // at the next launch (C-3/H1). Server is the source of truth here.
         try {
@@ -1259,10 +1299,21 @@ const useAppStore = create((set, get) => ({
         // cascade stage correctly. This is the always-runs path (it fires on
         // session-restore where the profile is already loaded from cache),
         // so it's the reliable place to keep the cascade fields fresh.
+        //
+        // FULLY-FREE PRODUCT (2026-09-03): while FULL_ACCESS_FOR_ALL is on
+        // that mirror is NOT written. Copying trial_state /
+        // pro_trial_ends_at back onto userProfile re-arms every trial
+        // surface that reads the cascade stage off the profile (the trial
+        // banner, the day-3 push, the cascade gates, reconcilePaidEntitlement)
+        // on the very next cloud read, undoing the one-shot free conversion.
+        // The columns are still SELECTED above, so re-enabling the mirror is
+        // a one-line change, not a re-plumb.
+        // eslint-disable-next-line global-require
+        const { FULL_ACCESS_FOR_ALL: _fullAccess } = require('../lib/proGate');
         set((s) => ({
-          tier: effectiveTier,
+          tier: _effectiveTier(effectiveTier),
           billingPeriod: data.billing_period ?? null,
-          userProfile: s.userProfile
+          userProfile: (!_fullAccess && s.userProfile)
             ? {
                 ...s.userProfile,
                 trialState: data.trial_state ?? null,

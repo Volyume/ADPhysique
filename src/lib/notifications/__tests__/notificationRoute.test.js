@@ -1,8 +1,11 @@
 /**
- * Every notification type the scheduler sets must have a tap route, or the
- * notification dead-ends. This locks the mapping, in particular the day-14
- * trial gate (cascade_gate) and the weekly-coach-ready tap, which both
- * previously fell through the navigator's inline router.
+ * Every notification type the scheduler sets must have a DECIDED tap
+ * treatment, or the notification dead-ends by accident. This locks the
+ * mapping: a real destination, or an explicit non-navigating decision.
+ *
+ * Updated 2026-09-03 (fully-free product, founder decision): the four
+ * billing-lifecycle types (cascade_gate, trial_day3, winback,
+ * subscription_payment_failure) are now the explicit non-navigating kind.
  */
 import { routeForNotificationType } from '../notificationRoute';
 
@@ -19,10 +22,16 @@ describe('routeForNotificationType', () => {
     });
   });
 
-  test('cascade_gate opens the trial gate with the day14 variant (the conversion moment)', () => {
-    expect(routeForNotificationType('cascade_gate')).toEqual({
-      tab: 'ProfileTab', screen: 'CascadeGate', params: { variant: 'day14' },
-    });
+  // FULLY-FREE PRODUCT (founder decision 2026-09-03). INVERTED PINS: these
+  // four used to assert the billing destinations (CascadeGate, the check-in
+  // gate / Home for the day-3 trial moment, Subscription for the win-back and
+  // for a payment failure). Volyume has no trial, no paywall and no
+  // subscription surface registered any more, so each of those would now be a
+  // false deep link or an outright dead route. The intent this suite pins is
+  // therefore the opposite one: a billing-lifecycle tap opens the app and
+  // navigates nowhere.
+  test('cascade_gate no longer routes anywhere (no trial gate to convert at)', () => {
+    expect(routeForNotificationType('cascade_gate')).toBeNull();
   });
 
   test('weekly_coach_ready opens Precision Coaching', () => {
@@ -31,33 +40,32 @@ describe('routeForNotificationType', () => {
     });
   });
 
-  test('trial_day3 S1/S2 land on the check-in gate screen', () => {
-    expect(routeForNotificationType('trial_day3', { variant: 'S1' })).toEqual({
-      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
-    });
-    expect(routeForNotificationType('trial_day3', { variant: 'S2' })).toEqual({
-      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
-    });
+  test('trial_day3 no longer routes anywhere, whatever variant it carries', () => {
+    for (const variant of ['S1', 'S2', 'S3']) {
+      expect(routeForNotificationType('trial_day3', { variant })).toBeNull();
+    }
+    expect(routeForNotificationType('trial_day3')).toBeNull();
   });
 
-  test('trial_day3 S3 (no sessions yet) lands on Home for re-onboarding', () => {
-    expect(routeForNotificationType('trial_day3', { variant: 'S3' })).toEqual({
-      tab: 'HomeTab',
-    });
+  test('winback no longer routes to Subscription (no offer to return to)', () => {
+    expect(routeForNotificationType('winback')).toBeNull();
   });
 
-  test('trial_day3 with no variant data defaults to the check-in gate (not a dead-end)', () => {
-    expect(routeForNotificationType('trial_day3')).toEqual({
-      tab: 'ProfileTab', screen: 'WeeklyCheckIn',
-    });
+  test('subscription_payment_failure no longer routes to Subscription (dead route)', () => {
+    // The screen is not registered in any navigator now, so a route string
+    // here would be a silent no-op tap.
+    expect(routeForNotificationType('subscription_payment_failure')).toBeNull();
   });
 
-  test('winback opens the Subscription screen in the Coach tab (COMP-025-A/B)', () => {
-    expect(routeForNotificationType('winback')).toEqual({
-      // COMP-025-B: fromWinback carries through so the resubscribe prefers the
-      // win-back Play offer (inert when none is configured).
-      tab: 'ProfileTab', screen: 'Subscription', params: { fromWinback: true },
-    });
+  test('each of the four is an EXPLICIT case, not a default fall-through', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.resolve(__dirname, '..', 'notificationRoute.js'), 'utf8',
+    );
+    for (const type of ['cascade_gate', 'winback', 'trial_day3', 'subscription_payment_failure']) {
+      expect(src).toMatch(new RegExp(`case '${type}':`));
+    }
   });
 
   // Campaign 14 job 5 (routing truth) RE-ANCHOR: this test used to pin

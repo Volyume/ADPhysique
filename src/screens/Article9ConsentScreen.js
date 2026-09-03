@@ -69,11 +69,10 @@ export default function Article9ConsentScreen({ navigation }) {
       const sb = getSupabaseClient();
       if (!sb) throw new Error('Cloud client unavailable');
       // Make sure a profile row exists first. A brand-new account may not
-      // have one yet, and both record_health_consent (an UPDATE) and
-      // start_cascade (which raises 'profile not found' on a missing row)
-      // need it. Without this the post-beta trial never starts for a new
-      // user, so they fall through to the free setup instead of Pro
-      // onboarding. The protect-tier trigger forces the new row to 'free'.
+      // have one yet, and record_health_consent is an UPDATE, so without the
+      // row the consent audit write silently matches nothing. (This also
+      // used to be what start_cascade needed; that call is gone with the
+      // trial - see the note further down.)
       if (user?.id) {
         try {
           await sb.from('users_profile').upsert({ id: user.id }, { onConflict: 'id' });
@@ -132,37 +131,16 @@ export default function Article9ConsentScreen({ navigation }) {
           }).catch(() => {});
         } catch (_) {}
       }
-      // Trial cascade starts at Article 9 consent per
-      // SUBSCRIPTION_AND_PAYMENT_LOCKED.md line 106. RPC is
-      // idempotent (no-ops for already-started users) and tolerates
-      // network failure. Fire-and-forget; cascade catches up on next
-      // sync if this one round-trip fails.
-      try {
-        // eslint-disable-next-line global-require
-        const { cascade } = require('../lib/payments');
-        // Await so the trial grant (tier='pro') lands before the navigator
-        // re-renders on healthConsentGranted; otherwise a new user briefly
-        // flashes the free setup before the cloud catches up. Failure is
-        // tolerated: they proceed and can upgrade later.
-        // C6 P-1 (D97-20): startCascade NEVER rejects - _call converts
-        // every failure into a resolved { ok: false, error } - so the old
-        // .catch queue path was dead code and the FQ-6.1 retry never
-        // armed. Queue on the RESULT. The law is unchanged: a
-        // network-shaped failure must not permanently cost a new user
-        // their trial; a definitive server answer is not queued; the tier
-        // is never touched locally.
-        const grant = await cascade.startCascade().catch((e) => ({ ok: false, error: e?.message ?? 'threw' }));
-        if (grant && grant.ok === false) {
-          const err = new Error(String(grant.error ?? 'unknown'));
-          logError('Article9.consent.startCascade', err, { uid: user?.id });
-          try {
-            // eslint-disable-next-line global-require
-            require('../lib/payments/pendingCascade').queuePendingCascade(user?.id, err).catch(() => {});
-          } catch (_) { /* best-effort */ }
-        }
-      } catch (e) {
-        logError('Article9.consent.startCascade.require', e);
-      }
+      // CONSENT NEVER STARTS A TRIAL (founder decision 2026-09-03, fully-free
+      // product). Article 9 consent used to be the moment start_cascade
+      // granted the 14-day trial, and a failed grant was queued for retry
+      // (FQ-6.1). Volyume has no trial and no paywall now: every signed-in
+      // user resolves to full access via src/lib/proGate.js
+      // (FULL_ACCESS_FOR_ALL), so there is nothing to grant, nothing to
+      // queue and nothing to catch up on. The consent record itself - the
+      // cloud RPC, the fail-closed local flag, the pending-consent queue,
+      // the article9_consent_recorded telemetry and the navigation below -
+      // is unchanged; this screen remains the un-skippable health-data gate.
       healthConsentGranted?.();
       // F2 (audit SC-1): the sign-in cloud restore is consent-gated
       // (fail closed), so for a user who granted consent on THIS screen it

@@ -3,8 +3,9 @@
  *
  * Kept separate from RootNavigator so it can be unit-tested without the
  * navigator: the navigator owns only "given this target, navigate". The day-14
- * trial gate (`cascade_gate`) dead-ending is the bug this module first closed:
- * with the beta override off, that tap is the conversion moment.
+ * trial gate (`cascade_gate`) dead-ending is the bug this module first closed;
+ * under the fully-free product (2026-09-03) that type, `winback` and
+ * `trial_day3` are deliberately non-navigating again - see their case below.
  *
  * ROUTING TRUTH (Campaign 14 job 5, founder ruling). Every LIVE notification
  * type gets exactly one of two treatments, and nothing else:
@@ -46,9 +47,33 @@ export function routeForNotificationType(type, data = {}) {
       // carried on the static notification route.
       return { tab: 'ProgressTab', screen: 'Analytics' };
     case 'cascade_gate':
-      // The in-app trial-ending gate. Variant default matches the 14+7 trial
-      // (the 'day14' content is the generic "trial winding down" copy).
-      return { tab: 'ProfileTab', screen: 'CascadeGate', params: { variant: 'day14' } };
+    case 'winback':
+    case 'trial_day3':
+    case 'subscription_payment_failure':
+      // FULLY-FREE PRODUCT (founder decision 2026-09-03, src/lib/proGate.js):
+      // treatment B, INTENTIONALLY non-navigating, listed explicitly so it
+      // reads as a decision rather than an accidental fall-through.
+      //
+      // All three are billing-lifecycle pushes and none is laid any more (the
+      // schedulers self-cancel while FULL_ACCESS_FOR_ALL is on). Their old
+      // destinations were CascadeGate (the day-14 trial gate), Subscription
+      // (the +30-day win-back offer) and the check-in gate / Home (the day-3
+      // trial moment). Two of those screens are being unregistered with the
+      // paywall, and all three would be a false deep link now: there is no
+      // trial to end, no offer to return to and no gate to convert at. A
+      // survivor already in a user's OS queue therefore just opens the app.
+      // The `notification_tapped` open event still fires in listeners.js,
+      // which runs before and independently of this mapping.
+      //
+      // `subscription_payment_failure` joins them for the DEAD-ROUTE reason
+      // rather than the trial reason: it is a server-sent push (the
+      // play-billing-rtdn / app-store Edge Functions), so it can still
+      // technically arrive for a legacy subscription, but the Subscription
+      // screen it used to open is no longer registered in any navigator.
+      // Navigating to an unregistered route is a silent no-op, which is
+      // exactly the dead-route defect this module exists to prevent, so the
+      // decision is written down here instead.
+      return null;
     case 'block_ready_to_review':
       // C16 phase C: the block-complete review. The decision card - the
       // programme verdict, what stays, what changes and the next-block
@@ -85,12 +110,6 @@ export function routeForNotificationType(type, data = {}) {
       // in-app banner version of it already routes to the next workout on
       // Home. Same destination, so the two cannot disagree.
       return { tab: 'HomeTab', screen: 'Home' };
-    case 'winback':
-      // COMP-025-A: the +30-day win-back. Lands on the Subscription screen,
-      // which shows the returning offer when one is store-eligible (§4c).
-      // COMP-025-B: fromWinback carries through to the resubscribe so the
-      // win-back Play offer is preferred (inert if none is configured).
-      return { tab: 'ProfileTab', screen: 'Subscription', params: { fromWinback: true } };
     case 'partner_cheer':
     case 'partner_streak':
     case 'partner_joined':
@@ -124,13 +143,6 @@ export function routeForNotificationType(type, data = {}) {
       // is registered as the Pro-guarded GatedDiary, so the tier gate is
       // unchanged.
       return { tab: 'DiaryTab', screen: 'Diary' };
-    case 'subscription_payment_failure':
-      // Campaign 14 job 5: the server-sent billing push (Edge Functions
-      // play-billing-rtdn + _shared/appStore) had no mapping. Its body tells
-      // the user to update their billing to keep Pro; the Subscription screen
-      // is where the plan state and the "open subscription settings" route to
-      // the store live. Navigation only, no billing behaviour is touched.
-      return { tab: 'ProfileTab', screen: 'Subscription' };
     case 'rest_timer':
     case 'rest_end':
       // Campaign 14 job 5: INTENTIONALLY non-navigating, listed explicitly so
@@ -172,14 +184,6 @@ export function routeForNotificationType(type, data = {}) {
       return DAY_KEY_RE.test(data?.date)
         ? { tab: 'DiaryTab', screen: 'Diary', params: { date: data.date } }
         : { tab: 'DiaryTab', screen: 'Diary' };
-    case 'trial_day3':
-      // COMP-023 day-3 value moment. S1/S2 land on the check-in gate screen
-      // (which shows the countdown made visible); S3 (no sessions yet) lands on
-      // Home, where the session hero is the re-onboarding. The variant is baked
-      // into the notification `data` at schedule time.
-      return data?.variant === 'S3'
-        ? { tab: 'HomeTab' }
-        : { tab: 'ProfileTab', screen: 'WeeklyCheckIn' };
     default:
       return null;
   }

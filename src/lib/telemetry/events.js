@@ -242,7 +242,11 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'first_plan_generated',            deferred: false, panel: 1 },
   { name: 'first_workout_logged',            deferred: false, panel: 1 },
   { name: 'first_food_logged',               deferred: false, panel: 1 },
-  { name: 'trial_lapse_day1_return',         deferred: false, panel: 1 },
+  // D137 (fully-free product): the win-back scheduler that emitted this on a
+  // cascade-expired user's return was removed with the billing surfaces.
+  // Catalogue entry kept for history/dashboard mapping; no live emitter.
+  { name: 'trial_lapse_day1_return',         deferred: true,  panel: 1,
+    deferralReason: 'dormant billing surface (fully free product, D137)' },
 
   // Photos LOOP-3 (D4): the milestone-adjacent photo-capture invitation take
   // rate. Feature key only, no PII, no values — never a photo, a weight, a body
@@ -289,6 +293,12 @@ export const TELEMETRY_EVENTS = Object.freeze([
   //                                'undetermined' | 'unknown' }, emitted
   //                                inside requestNotificationPermissions()
   //                                itself so every caller is covered.
+  //   setup_started                first-ever mount of the account-setup
+  //                                wizard's first visible step, for a
+  //                                signed-in user (trackFirst, once).
+  //   first_home_landed            first-ever landing on Home after setup
+  //                                completes (trackFirst, once). Emitter
+  //                                lives in HomeScreen.
   { name: 'first_workout_started',           deferred: false, panel: 1 },
   { name: 'first_weigh_in',                  deferred: false, panel: 1 },
   { name: 'checkin_started',                 deferred: false, panel: 1 },
@@ -297,6 +307,8 @@ export const TELEMETRY_EVENTS = Object.freeze([
   { name: 'coach_recommendation_accepted',   deferred: false, panel: 1 },
   { name: 'coach_recommendation_declined',   deferred: false, panel: 1 },
   { name: 'notification_permission_requested', deferred: false, panel: 6 },
+  { name: 'setup_started',                   deferred: false, panel: 1 },
+  { name: 'first_home_landed',               deferred: false, panel: 1 },
   // No signup_started event: it would fire before an account exists, and
   // this pipeline attributes rows to auth.uid() only (no anonymous install
   // id, by the standing privacy posture). The pre-account gap is read as

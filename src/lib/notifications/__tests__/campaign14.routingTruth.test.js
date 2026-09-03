@@ -149,25 +149,20 @@ const DECISIONS = {
     tab: 'PlansTab', screen: 'Plans',
     file: 'src/screens/PlansScreen.js', marker: /programmeReview/,
   },
-  cascade_gate: {
-    tab: 'ProfileTab', screen: 'CascadeGate',
-    file: 'src/screens/CascadeGateScreen.js', marker: /params\?\.variant/,
-  },
-  trial_day3: {
-    tab: 'ProfileTab', screen: 'WeeklyCheckIn',
-    file: 'src/screens/WeeklyCheckInScreen.js', marker: /[Cc]heck-[Ii]n/,
-  },
-  winback: {
-    tab: 'ProfileTab', screen: 'Subscription',
-    file: 'src/screens/SubscriptionScreen.js', marker: /subscription settings/,
-  },
-  subscription_payment_failure: {
-    tab: 'ProfileTab', screen: 'Subscription',
-    // The push says "update your billing to keep your Pro features"; this is
-    // the screen that carries the plan state and the route into the store's
-    // own subscription settings.
-    file: 'src/screens/SubscriptionScreen.js', marker: /payment method/,
-  },
+  // Option B, FULLY-FREE PRODUCT (founder decision 2026-09-03). These four
+  // used to be option A: CascadeGate (the day-14 trial gate), the check-in
+  // gate / Home (the day-3 trial moment) and Subscription (the win-back offer
+  // and the payment-failure fix-up). Volyume has no trial, no paywall and no
+  // expiry now, and CascadeGateScreen / SubscriptionScreen are no longer
+  // registered in any navigator, so every one of those destinations would be
+  // either a false deep link (defect class 2) or an outright dead route
+  // (defect class 1) - the two things this suite exists to make impossible.
+  // The ruling's option B is the correct treatment, and it is written down
+  // here and as an explicit `case` in notificationRoute.js.
+  cascade_gate: { tab: null, screen: null },
+  trial_day3: { tab: null, screen: null },
+  winback: { tab: null, screen: null },
+  subscription_payment_failure: { tab: null, screen: null },
   year_of_lifts_unlock: {
     tab: 'ProgressTab', screen: 'YearOfLifts',
     file: 'src/screens/YearOfLiftsScreen.js', marker: /[Yy]ear of [Ll]ifts/,
@@ -313,14 +308,13 @@ describe('(19) every routed live type reaches a route a navigator registers', ()
     expect(read(file)).toMatch(marker);
   });
 
-  test('trial_day3 S3 targets a bare tab, and that tab is registered', () => {
-    // The one live target with no `screen`: the S3 variant lands on the Today
-    // tab root, where the session hero is the re-onboarding. RootNavigator
-    // passes `screen: undefined` straight through, which React Navigation
-    // resolves to the tab's initial route rather than a dead route.
-    const target = routeForNotificationType('trial_day3', { variant: 'S3' });
-    expect(target).toEqual({ tab: 'HomeTab' });
-    expect(Object.keys(TAB_TO_STACK)).toContain(target.tab);
+  test('trial_day3 navigates nowhere, whatever variant it carries', () => {
+    // Was: the S3 variant landed on the Today tab root and S1/S2 on the
+    // check-in gate. Under the fully-free product there is no trial and no
+    // day-3 moment to open, so every variant is non-navigating.
+    for (const variant of ['S1', 'S2', 'S3', undefined]) {
+      expect(routeForNotificationType('trial_day3', { variant })).toBeNull();
+    }
   });
 
   test('checkin_missed follow-up lands on the trend view it promises, not the wrong-day check-in gate', () => {
@@ -368,9 +362,15 @@ describe('(20) no partner notification routes to an unrelated surface', () => {
     expect(src).toMatch(/partnership/i);
   });
 
-  test('the Partner route keeps its Pro guard (routing never widens a tier gate)', () => {
-    expect(NAV).toMatch(/const GatedPartner\s*=[\s\S]*?withProGuard\(/);
-    expect(NAV).toMatch(/<Stack\.Screen name="Partner" component=\{GatedPartner\}/);
+  test('the Partner route is registered, so the tap is never a dead route', () => {
+    // INVERTED 2026-09-03 (fully-free product, founder decision). This used to
+    // pin `GatedPartner = withProGuard(...)` and its registration, on the rule
+    // that "routing never widens a tier gate". There is no tier gate any more:
+    // Volyume has no Free/Pro split, so the Pro guard came off Partner along
+    // with every other Pro wrapper. The property this test actually protects -
+    // that the destination this suite routes to is really registered - is
+    // pinned directly instead, and it is what a notification tap depends on.
+    expect(NAV).toMatch(/<Stack\.Screen name="Partner" component=\{PartnerScreen\}/);
   });
 
   test('no pairId is forwarded (PartnerScreen reads route.params.pairId as a share target)', () => {
@@ -384,8 +384,21 @@ describe('(20) no partner notification routes to an unrelated surface', () => {
 describe('(21) intentionally non-navigating types are safe', () => {
   const NON_NAVIGATING = LIVE_TYPES.filter((t) => DECISIONS[t].screen === null);
 
-  test('the non-navigating set is exactly the two live-workout notifications', () => {
-    expect(NON_NAVIGATING).toEqual(['rest_end', 'rest_timer']);
+  test('the non-navigating set is the two live-workout notifications plus the four dormant billing ones', () => {
+    // rest_end / rest_timer: the tap happens mid-session, so the OS already
+    // restores the Active Workout screen. cascade_gate / trial_day3 /
+    // winback / subscription_payment_failure: fully-free product, 2026-09-03
+    // - nothing to convert at, no offer to return to, and their old screens
+    // are unregistered. Any NEW type appearing here still has to be a
+    // deliberate decision, which is what this list enforces.
+    expect(NON_NAVIGATING).toEqual([
+      'cascade_gate',
+      'rest_end',
+      'rest_timer',
+      'subscription_payment_failure',
+      'trial_day3',
+      'winback',
+    ]);
   });
 
   test.each(NON_NAVIGATING)('%s returns null, never undefined and never a partial target', (type) => {

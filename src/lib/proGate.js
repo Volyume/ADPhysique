@@ -23,9 +23,30 @@
  * ED-pattern lockout, rapid-loss compression) MUST NOT consult tier.
  */
 
-// Production launch 2026-06-06: beta override OFF. Tier now resolves from
-// the user's real trial / subscription state, not a blanket 'pro'.
-export const PRO_BETA_ACTIVE = false;
+// FOUNDER DECISION 2026-09-03: Volyume is FULLY FREE. No trial, no
+// Free/Pro split, no paywall, no expiry. Every signed-in user resolves to
+// 'pro' (the full-access tier) and nothing in the runtime experience may
+// suggest otherwise.
+//
+// The store/billing infrastructure (catalogue, playBilling, cascade,
+// restore, lapseDetect, winbackState, the differential paywall detector)
+// is RETAINED DORMANT behind an inactive boundary
+// (src/lib/payments/index.js) so it stays compiled and unit-tested. It is
+// not deleted, and the live product IDs pro_monthly / pro_annual are
+// unchanged.
+//
+// Reintroducing monetisation is a deliberate act, not an accident: flip
+// this constant to false AND re-register the dormant surfaces (the
+// paywall / upgrade / subscription screens, the cascade scheduling calls
+// and the cascade pg_cron job paused by supabase/migrate_157). Nothing
+// below this line silently re-arms on its own.
+export const FULL_ACCESS_FOR_ALL = true;
+
+// Historic name for the same override. Kept exported as an ALIAS so every
+// existing import site keeps compiling and keeps meaning "force 'pro'".
+// It was the closed-test beta override (false at the 2026-06-06 production
+// launch); it is now the fully-free override.
+export const PRO_BETA_ACTIVE = FULL_ACCESS_FOR_ALL;
 
 /**
  * Pure tier resolver. Exported as `_resolveTier` so tests can drive the
@@ -55,8 +76,9 @@ export function _resolveTier(trialState, betaActive) {
 /**
  * Resolve the user's current effective tier: 'free' | 'pro'.
  *
- * During the beta every signed-in user gets 'pro'. Post-beta, reads
- * userProfile.trialState (mirrors users_profile.trial_state via the
+ * While FULL_ACCESS_FOR_ALL is true (the fully-free product, founder
+ * decision 2026-09-03) every user gets 'pro'. With the override off it
+ * reads userProfile.trialState (mirrors users_profile.trial_state via the
  * registry).
  */
 export function isPaidTier(userProfile) {

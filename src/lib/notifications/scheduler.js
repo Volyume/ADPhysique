@@ -744,6 +744,14 @@ const CASCADE_21_COPY = {
  */
 export async function scheduleCascadeGateNotifications(trialEndsAt) {
   if (Platform.OS === 'web') return;
+  // FULLY-FREE PRODUCT (founder decision 2026-09-03, src/lib/proGate.js).
+  // There is no trial, no cascade gate and no churn, so this family is a
+  // no-op. The function, its ids and its copy module stay compiled and
+  // tested; only the scheduling is stood down, and any already-laid push is
+  // cancelled so an existing user's queue drains rather than firing a
+  // notification about a trial that no longer exists.
+  // eslint-disable-next-line global-require
+  if (require('../proGate').FULL_ACCESS_FOR_ALL) { await cancelCascadeGateNotifications(); return; }
   const endMs = trialEndsAt instanceof Date
     ? trialEndsAt.getTime()
     : (typeof trialEndsAt === 'number' ? trialEndsAt : Date.parse(trialEndsAt));
@@ -822,6 +830,14 @@ export async function cancelTrialDay3Notification() {
 
 export async function scheduleTrialDay3Notification(userId, profile) {
   if (Platform.OS === 'web') return;
+  // FULLY-FREE PRODUCT (founder decision 2026-09-03, src/lib/proGate.js).
+  // There is no trial, no cascade gate and no churn, so this family is a
+  // no-op. The function, its ids and its copy module stay compiled and
+  // tested; only the scheduling is stood down, and any already-laid push is
+  // cancelled so an existing user's queue drains rather than firing a
+  // notification about a trial that no longer exists.
+  // eslint-disable-next-line global-require
+  if (require('../proGate').FULL_ACCESS_FOR_ALL) { await cancelTrialDay3Notification(); return; }
   try {
     // eslint-disable-next-line global-require
     const { stageOf } = require('../payments/cascade');
@@ -921,6 +937,14 @@ export async function cancelWinbackNotification() {
 
 export async function scheduleWinbackNotification(userId) {
   if (Platform.OS === 'web') return;
+  // FULLY-FREE PRODUCT (founder decision 2026-09-03, src/lib/proGate.js).
+  // There is no trial, no cascade gate and no churn, so this family is a
+  // no-op. The function, its ids and its copy module stay compiled and
+  // tested; only the scheduling is stood down, and any already-laid push is
+  // cancelled so an existing user's queue drains rather than firing a
+  // notification about a trial that no longer exists.
+  // eslint-disable-next-line global-require
+  if (require('../proGate').FULL_ACCESS_FOR_ALL) { await cancelWinbackNotification(); return; }
   try {
     const episode = await getWinbackEpisode();
     if (!episode) { await cancelWinbackNotification(); return; }
@@ -1647,34 +1671,15 @@ export async function restoreNotifications(prefs, userId = null) {
     }
   }
 
-  // cancelAllNotifications above wiped the trial-window pushes too. They were
-  // previously laid once at startCascade and never restored, so on the next app
-  // launch the cascade-gate pushes (legacy ids _19/_21, which fire at trial
-  // end−2d and trial end — i.e. day 12 and day 14 of the 14-day trial) and the
-  // COMP-023 day-3 push silently vanished. Re-lay them from the stored trial end
-  // date so they survive.
-  // Both helpers are idempotent and no-op when the user isn't in a Pro trial.
-  try {
-    // eslint-disable-next-line global-require
-    const store = require('../../store/useAppStore').default;
-    const profile = store.getState().userProfile;
-    // eslint-disable-next-line global-require
-    const { stageOf } = require('../payments/cascade');
-    if (profile && stageOf(profile) === 'pro_trial') {
-      const endsAt = profile.proTrialEndsAt ?? profile.pro_trial_ends_at ?? null;
-      if (endsAt) await scheduleCascadeGateNotifications(endsAt);
-      await scheduleTrialDay3Notification(userId ?? store.getState().user?.id ?? null, profile);
-    }
-  } catch (_) { /* trial re-lay is best-effort */ }
-
-  // COMP-025-A: the win-back was wiped by cancelAllNotifications too. Re-lay it
-  // so it survives launches; the helper self-guards (no-op when there's no open
-  // churn episode, when ED-suppressed, or when the fire date has passed).
-  try {
-    // eslint-disable-next-line global-require
-    const store = require('../../store/useAppStore').default;
-    await scheduleWinbackNotification(userId ?? store.getState().user?.id ?? null);
-  } catch (_) { /* win-back re-lay is best-effort */ }
+  // TRIAL RE-LAY REMOVED (founder decision 2026-09-03, fully-free product).
+  // This block used to re-lay the cascade-gate pushes (ids _19/_21) and the
+  // COMP-023 day-3 push after cancelAllNotifications wiped them, reading the
+  // trial stage off userProfile. Volyume has no trial, so there is nothing to
+  // re-lay and reading the stage here would only reanimate a trial an existing
+  // user is no longer on. cancelAllNotifications above already drains any
+  // survivor from the OS queue, and both schedulers self-cancel while
+  // FULL_ACCESS_FOR_ALL is on. The win-back re-lay went with it: there is no
+  // churn episode to serve while the product is free.
 
   // OPP-C03: the missed check-in follow-ups were wiped by
   // cancelAllNotifications too (the same historic wipe pattern that lost the

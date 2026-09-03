@@ -76,12 +76,22 @@ test('the retry never rejects even if the mocked grant throws', async () => {
   expect(await hasPendingCascade(UID)).toBe(true);
 });
 
-test('the consent screen queues on the RESULT, not a rejection that never happens', () => {
+// INVERTED 2026-09-03 (fully-free product, founder decision). This test used
+// to pin that the Article 9 consent screen calls startCascade and queues the
+// retry on an ok:false RESULT (D97-20 / C6 P-1). Volyume has no trial, so
+// consent must NOT start one - there is nothing to grant and nothing to queue.
+// The queue module itself stays dormant and fully covered by the behavioural
+// tests above; what changes is that no screen arms it any more.
+test('CONSENT NEVER STARTS A TRIAL: the consent screen neither calls the cascade nor queues one', () => {
   const fs = require('fs');
   const path = require('path');
   const src = fs.readFileSync(
     path.join(__dirname, '..', '..', '..', 'screens', 'Article9ConsentScreen.js'), 'utf8',
   );
-  expect(src).toMatch(/const grant = await cascade\.startCascade\(\)/);
-  expect(src).toMatch(/if \(grant && grant\.ok === false\)/);
+  expect(src).not.toMatch(/startCascade/);
+  expect(src).not.toMatch(/queuePendingCascade/);
+  // The consent record itself is untouched: the RPC, the fail-closed local
+  // flag and the pending-CONSENT queue (a different module) all stay.
+  expect(src).toMatch(/record_health_consent/);
+  expect(src).toMatch(/queuePendingConsent/);
 });

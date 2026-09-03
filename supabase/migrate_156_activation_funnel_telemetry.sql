@@ -41,6 +41,12 @@
 --                                 'undetermined' | 'unknown'. Emitted inside
 --                                 requestNotificationPermissions() itself so
 --                                 every caller is covered.
+--   setup_started                 first-ever mount of the account-setup
+--                                 wizard's first visible step, for a
+--                                 signed-in user (trackFirst).
+--   first_home_landed             first-ever landing on Home after setup
+--                                 completes (trackFirst). Emitter lives in
+--                                 HomeScreen.
 --
 -- No 'signup_started' event exists: it would fire before an account does,
 -- and this pipeline attributes rows to auth.uid() only (no anonymous install
@@ -55,7 +61,7 @@
 -- nothing is lost, transport.js's client-side retry (getUnpushedEngineTelemetry
 -- / markEngineTelemetryPushed) keeps unpushed rows queued locally and
 -- re-attempts them on every flush cycle. Reproduces the migration 104
--- COMPLETE list plus the eight new names, so 156 is the complete canonical
+-- COMPLETE list plus ten new names, so 156 is the complete canonical
 -- allow-list and should be the last one applied.
 --
 -- Applied locally:  NOT APPLIED - awaits the founder's exact phrase "run
@@ -65,8 +71,8 @@
 --                   against production".
 -- Safe to re-run:   YES. CREATE OR REPLACE; no schema change, no data
 --                   migration, purely additive to the allow-list.
--- Rollback:         re-apply migration 104 to drop the eight new names (104
---                   is the complete canonical list minus these eight).
+-- Rollback:         re-apply migration 104 to drop the ten new names (104
+--                   is the complete canonical list minus these ten).
 
 CREATE OR REPLACE FUNCTION record_engine_telemetry(
   _event text,
@@ -183,7 +189,9 @@ BEGIN
     'coach_result_viewed',
     'coach_recommendation_accepted',
     'coach_recommendation_declined',
-    'notification_permission_requested'
+    'notification_permission_requested',
+    'setup_started',
+    'first_home_landed'
   ) THEN
     RAISE EXCEPTION 'Unknown engine telemetry event: %', _event;
   END IF;

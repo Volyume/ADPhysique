@@ -9,6 +9,12 @@
  * fire date → not scheduled; the 180-day floor blocks a fresh episode's first
  * lay; a re-lay refreshes counts under one identifier; the laid notification
  * carries data.type 'winback'.
+ *
+ * 2026-09-03 (fully-free product, founder decision): the scheduler is a no-op
+ * while proGate.FULL_ACCESS_FOR_ALL is true. proGate is mocked here with a
+ * switchable flag so the live no-op AND the dormant §4c behaviour are both
+ * pinned - the machinery is retained, not deleted, so its contract must not
+ * quietly rot.
  */
 
 let mockPlatformOS = 'android';
@@ -51,6 +57,21 @@ jest.mock('../../../store/useAppStore', () => ({
   default: { getState: () => ({ user: { id: 'u1' }, userProfile: null }) },
 }));
 
+// FULLY-FREE PRODUCT (founder decision 2026-09-03). scheduleWinbackNotification
+// is a no-op while FULL_ACCESS_FOR_ALL is on: there is no subscription, so
+// there is no churn to win back from. The dormant machinery below is kept and
+// still pinned, so this mock makes the override switchable and the suite
+// covers BOTH states - the live one (no-op + cancel) and the dormant one
+// (every original §4c guarantee).
+let mockFullAccess = true;
+jest.mock('../../proGate', () => ({
+  __esModule: true,
+  get FULL_ACCESS_FOR_ALL() { return mockFullAccess; },
+  get PRO_BETA_ACTIVE() { return mockFullAccess; },
+  _resolveTier: (state, override) => (override ? 'pro' : 'free'),
+  isPaidTier: () => 'pro',
+}));
+
 const AsyncStorage = require('@react-native-async-storage/async-storage').default;
 const { scheduleWinbackNotification } = require('../scheduler');
 const winbackState = require('../../payments/winbackState');
@@ -67,6 +88,34 @@ beforeEach(async () => {
   mockGetAllWorkouts.mockResolvedValue([]);
   mockFailed.mockClear();
   mockPlatformOS = 'android';
+  // Default the dormant path ON for the §4c behavioural tests below; the
+  // live fully-free behaviour has its own describe block.
+  mockFullAccess = false;
+});
+
+describe('fully-free product: the win-back is stood down', () => {
+  test('an open episode with a future fire date lays NOTHING', async () => {
+    mockFullAccess = true;
+    await winbackState.openEpisode(Date.now());
+    await scheduleWinbackNotification('u1', null);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('any already-laid win-back is cancelled, so an existing device drains', async () => {
+    mockFullAccess = true;
+    await winbackState.openEpisode(Date.now());
+    await scheduleWinbackNotification('u1', null);
+    expect(mockCancelAsync).toHaveBeenCalledWith('volyume_winback');
+  });
+
+  test('the episode state is left alone (the scheduler is not the state machine)', async () => {
+    mockFullAccess = true;
+    await winbackState.openEpisode(Date.now());
+    await scheduleWinbackNotification('u1', null);
+    const ep = await winbackState.getEpisode();
+    expect(ep).not.toBeNull();
+    expect(ep.winbackLaid).toBeFalsy();
+  });
 });
 
 function laidContent() {
