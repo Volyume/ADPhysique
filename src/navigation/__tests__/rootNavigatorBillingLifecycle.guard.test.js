@@ -1,5 +1,8 @@
 /**
  * Release-blocker fix (final release gate, baseline a50fba85):
+ * D137 (fully free product): every call site now goes through the payments
+ * barrel (src/lib/payments/index.js), the billing-disabled boundary, so the
+ * lifecycle is a no-op while FULL_ACCESS_FOR_ALL is on and re-arms with it.
  * playBilling.initialise() registers the purchase-completion listener, and
  * purchasePackage() settles its parked promise ONLY from that listener. But
  * initialise() was called from exactly ONE place - bootstrap()'s cold-launch
@@ -36,7 +39,7 @@ describe('billing is initialised on the auth-enter path, not only on cold launch
     expect(enterIdx).toBeGreaterThan(-1);
     const block = src.slice(enterIdx);
     expect(block).toMatch(
-      /require\('\.\.\/lib\/payments\/playBilling'\);[\s\S]{0,200}?ensureBillingForUser\(session\.user\.id\)/,
+      /require\('\.\.\/lib\/payments'\);[\s\S]{0,200}?ensureBillingForUser\(session\.user\.id\)/,
     );
   });
 
@@ -55,7 +58,7 @@ describe('billing is initialised on the auth-enter path, not only on cold launch
   test('the cold-launch bootstrap path still initialises billing (unchanged behaviour)', () => {
     const bootstrapIdx = src.indexOf('async function bootstrap()');
     const enterIdx = src.indexOf('if (isAuthEnter) {');
-    const coldIdx = src.indexOf("require('../lib/payments/playBilling')", bootstrapIdx);
+    const coldIdx = src.indexOf("require('../lib/payments')", bootstrapIdx);
     expect(coldIdx).toBeGreaterThan(bootstrapIdx);
     expect(coldIdx).toBeLessThan(enterIdx);
   });
@@ -64,7 +67,7 @@ describe('billing is initialised on the auth-enter path, not only on cold launch
     // Three existing suites mock playBilling with an object that has no
     // initialise/ensureBillingForUser key; the try/require/.catch shape is
     // what keeps those green (and what the cold-launch site already used).
-    const calls = src.match(/require\('\.\.\/lib\/payments\/playBilling'\)/g) || [];
+    const calls = src.match(/require\('\.\.\/lib\/payments'\)/g) || [];
     expect(calls.length).toBeGreaterThanOrEqual(3);
     for (const m of ['ensureBillingForUser(session.user.id)', 'logOut?.()']) {
       const i = src.indexOf(m);
@@ -80,13 +83,13 @@ describe('sign-out releases the billing session so a user switch cannot inherit 
     const idx = src.indexOf("if (event === 'SIGNED_OUT') {");
     expect(idx).toBeGreaterThan(-1);
     const block = src.slice(idx, src.indexOf('const isAuthEnter', idx));
-    expect(block).toMatch(/require\('\.\.\/lib\/payments\/playBilling'\)\.logOut\?\.\(\)/);
+    expect(block).toMatch(/require\('\.\.\/lib\/payments'\)\.playBilling\.logOut\?\.\(\)/);
   });
 
   test('it is best-effort and can never block or fail the sign-out', () => {
     const idx = src.indexOf("if (event === 'SIGNED_OUT') {");
     const block = src.slice(idx, src.indexOf('const isAuthEnter', idx));
     expect(block).toMatch(/\.catch\(\(\) => \{\}\)/);
-    expect(block).not.toMatch(/await require\('\.\.\/lib\/payments\/playBilling'\)/);
+    expect(block).not.toMatch(/await require\('\.\.\/lib\/payments'\)/);
   });
 });

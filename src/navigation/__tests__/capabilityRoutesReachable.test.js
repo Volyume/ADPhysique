@@ -197,8 +197,12 @@ describe('capability-lane routes are registered in every stack that navigates to
     expect(resolvedScreenFiles.length).toBeGreaterThanOrEqual(20);
   });
 
-  it('sees the capability routes registered in both onboarding stacks', () => {
-    ['FirstRunStack', 'ProOnboardingStack'].forEach((stackName) => {
+  it('sees the capability routes registered in the onboarding stack', () => {
+    // FirstRunStack (the free "name only" quick setup) was deleted: founder
+    // decision, Volyume is fully free, no Free/Pro split, so
+    // ProOnboardingStack's six-step wizard is now the ONE onboarding stack
+    // for every user.
+    ['ProOnboardingStack'].forEach((stackName) => {
       const registered = Object.keys(parseRegistrations(stackBodies[stackName]));
       CAPABILITY_ROUTES.forEach((route) => {
         expect({ stack: stackName, route, registered: registered.includes(route) })

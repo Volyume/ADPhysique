@@ -129,20 +129,15 @@ const AvoidedMovementsScreen = lazyScreen(() => require('../screens/AvoidedMovem
 const ShareCardScreen = lazyScreen(() => require('../screens/ShareCardScreen').default);
 const ManualBuilderScreen = lazyScreen(() => require('../screens/ManualBuilderScreen').default);
 const PlanLibraryScreen = lazyScreen(() => require('../screens/PlanLibraryScreen').default);
-const FirstRunScreen = lazyScreen(() => require('../screens/FirstRunScreen').default);
-const FreeStarterScreen = lazyScreen(() => require('../screens/FreeStarterScreen').default);
 const Article9ConsentScreen = lazyScreen(() => require('../screens/Article9ConsentScreen').default);
 const MethodologyScreen = lazyScreen(() => require('../screens/MethodologyScreen').default);
 const GoalChangeSummaryScreen = lazyScreen(() => require('../screens/GoalChangeSummaryScreen').default);
 const GoalLockConsentScreen = lazyScreen(() => require('../screens/GoalLockConsentScreen').default);
 const NotificationSettingsScreen = lazyScreen(() => require('../screens/NotificationSettingsScreen').default);
-const SubscriptionScreen = lazyScreen(() => require('../screens/SubscriptionScreen').default);
-const CascadeGateScreen = lazyScreen(() => require('../screens/CascadeGateScreen').default);
 const CreditsScreen = lazyScreen(() => require('../screens/CreditsScreen').default);
 const ImportScreen = lazyScreen(() => require('../screens/ImportScreen').default);
 const ProOnboardingScreen = lazyScreen(() => require('../screens/ProOnboardingScreen').default);
 const ProSetupCompleteScreen = lazyScreen(() => require('../screens/ProSetupCompleteScreen').default);
-const ProUpgradeScreen = lazyScreen(() => require('../screens/ProUpgradeScreen').default);
 const CoachHeldHistoryScreen = lazyScreen(() => require('../screens/CoachHeldHistoryScreen').default);
 const CoachReviewScreen = lazyScreen(() => require('../screens/CoachReviewScreen').default);
 const BlockReflectionScreen = lazyScreen(() => require('../screens/BlockReflectionScreen').default);
@@ -151,8 +146,15 @@ const WellbeingCheckScreen = lazyScreen(() => require('../screens/WellbeingCheck
 const PrivacyPolicyScreen = lazyScreen(() => require('../screens/PrivacyPolicyScreen').default);
 const DebugLogScreen = lazyScreen(() => require('../screens/DebugLogScreen').default);
 const NutritionEducationScreen = lazyScreen(() => require('../screens/NutritionEducationScreen').default);
-const SubscriptionPolicyScreen = lazyScreen(() => require('../screens/SubscriptionPolicyScreen').default);
-import { withProGuard, withReadOnlyProGuard } from '../components/ProGate';
+// Dormant billing surfaces (founder decision: Volyume is fully free, no
+// Free/Pro split, no trial, no paywall). SubscriptionScreen, CascadeGateScreen,
+// ProUpgradeScreen and SubscriptionPolicyScreen remain on disk at
+// src/screens/{Subscription,CascadeGate,ProUpgrade,SubscriptionPolicy}Screen.js
+// but are no longer required/registered anywhere in this navigator, so they
+// are not lazyScreen-wrapped here either -- an unused lazyScreen const would
+// only be dead weight. Re-wire them (lazyScreen const + Stack.Screen
+// registration in the relevant stack(s)) only on a deliberate future
+// monetisation decision, never incidentally.
 import { withScreenBoundaries } from '../components/ScreenBoundary';
 import VolyumeTabBar from '../components/VolyumeTabBar';
 // CP-7 (design-usability audit 2026-07-09, coverage-06-competitive-hps.md):
@@ -198,7 +200,10 @@ let _lastAuthEnter = { uid: null, at: 0 };
 function _reconcilePaidEntitlement(userId = null) {
   try {
     // eslint-disable-next-line global-require
-    const { reconcilePaidEntitlement } = require('../lib/payments/cascade');
+    // Through the payments barrel, which is the billing-disabled boundary
+    // (fully free product, D137): while FULL_ACCESS_FOR_ALL is on this
+    // resolves to { ok: false, checked: false } without touching the network.
+    const { cascade: { reconcilePaidEntitlement } } = require('../lib/payments');
     return Promise.resolve(reconcilePaidEntitlement(useAppStore.getState().userProfile))
       .then((result) => {
         // COMP-025-A: an authoritative paid_pro→free lapse arms the post-churn
@@ -207,7 +212,7 @@ function _reconcilePaidEntitlement(userId = null) {
         // entitlement decision; it only reads this result.
         try {
           // eslint-disable-next-line global-require
-          const { handlePotentialLapse } = require('../lib/payments/lapseDetect');
+          const { handlePotentialLapse } = require('../lib/payments');
           handlePotentialLapse(result, userId ?? useAppStore.getState().user?.id ?? null).catch(() => {});
         } catch (_) { /* best-effort */ }
         return result;
@@ -217,49 +222,34 @@ function _reconcilePaidEntitlement(userId = null) {
   }
 }
 
-// Pro-only screens. The guard renders an upgrade prompt for free users,
-// enforcing Pro access no matter how the route is reached.
-const GatedWeeklyCheckIn    = lazyScreen(() => withProGuard(require('../screens/WeeklyCheckInScreen').default, 'Weekly check-in'));
-const GatedNutritionTargets = lazyScreen(() => withProGuard(require('../screens/NutritionTargetsScreen').default, 'Nutrition targets'));
-const GatedMealNames = lazyScreen(() => withProGuard(require('../screens/MealNamesScreen').default, 'Meal names'));
-// E10 read-only lapse views (founder decision 2026-07-02): these three screens
-// use the history-aware guard. A free user WITH data in the domain sees the
-// screen in its view-only state (the screen itself hides every write affordance
-// when tier !== 'pro'); a free user with NO data keeps the plain ProLocked gate.
-// Every other Pro route below stays hard-locked, so no mutation surface
-// (FoodSearch, ScanBarcode, MealPlan, recipes...) leaks via deep link.
-const GatedBodyMetrics      = lazyScreen(() => withReadOnlyProGuard(require('../screens/BodyMetricsScreen').default, 'Body metrics', (userId) => require('../lib/database').getBodyMetricLog(userId, 1).then((rows) => (rows ?? []).length > 0)));
-const GatedProgressPhotos   = lazyScreen(() => withReadOnlyProGuard(require('../screens/ProgressPhotosScreen').default, 'Progress photos and Volyume Score', (userId) => require('../lib/progressPhotos').photosViewableBy(userId)));
-// NEW-002 partner is a PRO domain (blueprint §5 gating: free sees the upgrade
-// path, never the live feature). The guard is the upgrade path, matching how
-// BodyMetrics / ProgressPhotos gate while leaving their Progress NavTile visible.
-const GatedPartner          = lazyScreen(() => withProGuard(require('../screens/PartnerScreen').default, 'Training partner'));
-const GatedCoachOutput      = lazyScreen(() => withProGuard(require('../screens/CoachOutputScreen').default, 'Coaching decision'));
-// §15 item 1: the connected weekly story surface. Narrates nutrition/coach
-// content (targets, weight trend, the coach's decision), so it is gated the
-// same way as CoachOutput/WeeklyCheckIn.
-const GatedWeeklyStory      = lazyScreen(() => withProGuard(require('../screens/WeeklyStoryScreen').default, 'Your week'));
-const GatedProGoalSetup     = lazyScreen(() => withProGuard(require('../screens/ProGoalSetupScreen').default, 'Pro goal setup'));
-const GatedPlanUpdate       = lazyScreen(() => withProGuard(require('../screens/PlanUpdateScreen').default, 'Adjust training'));
-const GatedCoachingReminders = lazyScreen(() => withProGuard(require('../screens/CoachingRemindersScreen').default, 'Coaching reminders'));
-// Diary domain is Pro (free is Plan Library, custom training, Progress, You).
-// Gating the Nutrition tab root covers the food sub-screens, which are only
-// reached from it.
-const GatedDiary            = lazyScreen(() => withReadOnlyProGuard(require('../screens/DiaryScreen').default, 'Nutrition', (userId) => require('../lib/food/db').hasAnyFoodEntries(userId)));
-// Defence-in-depth (food review U-M1): the Nutrition tab root is gated and these
-// sub-screens are only reached from it today, but a stray deep-link, push
-// notification route, or a second registration elsewhere would otherwise expose
-// a Pro feature with no paywall. Guard each directly too; withProGuard is a
-// no-op for Pro users, so this only ever protects, never blocks.
-const GatedMealPlan         = lazyScreen(() => withProGuard(require('../screens/MealPlanScreen').default, 'Meal plan'));
-const GatedFoodSearch       = lazyScreen(() => withProGuard(require('../screens/FoodSearchScreen').default, 'Nutrition'));
-const GatedAddCustomFood    = lazyScreen(() => withProGuard(require('../screens/AddCustomFoodScreen').default, 'Nutrition'));
-const GatedScanBarcode      = lazyScreen(() => withProGuard(require('../screens/ScanBarcodeScreen').default, 'Barcode scanning'));
-const GatedScanLabel        = lazyScreen(() => withProGuard(require('../screens/ScanLabelScreen').default, 'Label scanning'));
-const GatedFoodInsights     = lazyScreen(() => withProGuard(require('../screens/FoodInsightsScreen').default, 'Food insights'));
-const GatedMyRecipes        = lazyScreen(() => withProGuard(require('../screens/MyRecipesScreen').default, 'Recipes'));
-const GatedMyMeals          = lazyScreen(() => withProGuard(require('../screens/MyMealsScreen').default, 'Saved meals'));
-const GatedRecipeBuilder    = lazyScreen(() => withProGuard(require('../screens/RecipeBuilderScreen').default, 'Recipes'));
+// Formerly Pro-only screens. Founder decision (fully-free product, no
+// Free/Pro split, no trial, no paywall): every screen below was previously
+// wrapped in withProGuard / withReadOnlyProGuard from ../components/ProGate.
+// ProGate.js stays on disk as a DORMANT module (its exports are unused by
+// this file now) in case a future deliberate monetisation decision brings
+// tiered access back; until then these are plain, ungated registrations
+// like every other screen in this file.
+const WeeklyCheckInScreen = lazyScreen(() => require('../screens/WeeklyCheckInScreen').default);
+const NutritionTargetsScreen = lazyScreen(() => require('../screens/NutritionTargetsScreen').default);
+const MealNamesScreen = lazyScreen(() => require('../screens/MealNamesScreen').default);
+const BodyMetricsScreen      = lazyScreen(() => require('../screens/BodyMetricsScreen').default);
+const ProgressPhotosScreen   = lazyScreen(() => require('../screens/ProgressPhotosScreen').default);
+const PartnerScreen          = lazyScreen(() => require('../screens/PartnerScreen').default);
+const CoachOutputScreen      = lazyScreen(() => require('../screens/CoachOutputScreen').default);
+const WeeklyStoryScreen      = lazyScreen(() => require('../screens/WeeklyStoryScreen').default);
+const ProGoalSetupScreen     = lazyScreen(() => require('../screens/ProGoalSetupScreen').default);
+const PlanUpdateScreen       = lazyScreen(() => require('../screens/PlanUpdateScreen').default);
+const CoachingRemindersScreen = lazyScreen(() => require('../screens/CoachingRemindersScreen').default);
+const DiaryScreen            = lazyScreen(() => require('../screens/DiaryScreen').default);
+const MealPlanScreen         = lazyScreen(() => require('../screens/MealPlanScreen').default);
+const FoodSearchScreen       = lazyScreen(() => require('../screens/FoodSearchScreen').default);
+const AddCustomFoodScreen    = lazyScreen(() => require('../screens/AddCustomFoodScreen').default);
+const ScanBarcodeScreen      = lazyScreen(() => require('../screens/ScanBarcodeScreen').default);
+const ScanLabelScreen        = lazyScreen(() => require('../screens/ScanLabelScreen').default);
+const FoodInsightsScreen     = lazyScreen(() => require('../screens/FoodInsightsScreen').default);
+const MyRecipesScreen        = lazyScreen(() => require('../screens/MyRecipesScreen').default);
+const MyMealsScreen          = lazyScreen(() => require('../screens/MyMealsScreen').default);
+const RecipeBuilderScreen    = lazyScreen(() => require('../screens/RecipeBuilderScreen').default);
 
 // CP-10 stage 2: `useStackOptions` (was a module-scope `stackOptions` const
 // baked from the static `colors` singleton at import time, class 2, CP-10
@@ -380,57 +370,55 @@ function DiaryStack({ navigation }) {
   }, [navigation]);
   return (
     <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
-      <Stack.Screen name="Diary" component={GatedDiary} options={{ headerShown: false }} />
+      <Stack.Screen name="Diary" component={DiaryScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="MealPlan"
-        component={GatedMealPlan}
+        component={MealPlanScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
         name="FoodSearch"
-        component={GatedFoodSearch}
+        component={FoodSearchScreen}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="AddCustomFood"
-        component={GatedAddCustomFood}
+        component={AddCustomFoodScreen}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="ScanBarcode"
-        component={GatedScanBarcode}
+        component={ScanBarcodeScreen}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="ScanLabel"
-        component={GatedScanLabel}
+        component={ScanLabelScreen}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="FoodInsights"
-        component={GatedFoodInsights}
+        component={FoodInsightsScreen}
         options={{ headerShown: false }}
       />
       <Stack.Screen
         name="MyRecipes"
-        component={GatedMyRecipes}
+        component={MyRecipesScreen}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="MyMeals"
-        component={GatedMyMeals}
+        component={MyMealsScreen}
         options={{ headerShown: false, presentation: 'modal' }}
       />
       <Stack.Screen
         name="RecipeBuilder"
-        component={GatedRecipeBuilder}
+        component={RecipeBuilderScreen}
         options={{ headerShown: false, presentation: 'modal' }}
       />
-      {/* Every screen in this stack is Pro-gated, so its ProGate/ProLocked
-          surfaces navigate('ProUpgrade'). React Navigation silently DROPS a
-          navigate to a route the stack has not registered (the F4 bug class),
-          so ProUpgrade must be registered here like every other tab stack. */}
-      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
+      {/* ProUpgrade is a dormant billing surface (fully-free product) and is
+          no longer registered here -- see the dormant-screens comment near
+          the lazyScreen declarations above. */}
     </Stack.Navigator>
   );
 }
@@ -454,14 +442,17 @@ function HomeStack({ navigation }) {
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CoachReview" component={CoachReviewScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
-      {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
-      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
-      {/* ActiveWorkout's "Swap and note a temporary change" and the Home-side
-          FreeStarter both navigate here. ActiveWorkout wraps its call in
-          try/catch, which never caught anything: an unregistered route is
-          dropped silently rather than thrown, so the tap simply did nothing.
-          All three are free by law (CAP-19) and unguarded in the main stack.
+      {/* ProUpgrade and FreeStarter are removed: ProUpgrade is a dormant
+          billing surface (fully-free product, no Free/Pro split); FreeStarter
+          and the free-tier no-plan card that linked to it were deleted with
+          the free onboarding path (src/screens/FreeStarterScreen.js,
+          src/lib/onboarding/freeStarter.js's screen consumer removed --
+          see RootNavigator's dormant-screens comment above). */}
+      {/* ActiveWorkout's "Swap and note a temporary change" navigates here.
+          It wraps its call in try/catch, which never caught anything: an
+          unregistered route is dropped silently rather than thrown, so the
+          tap simply did nothing. All three are free by law (CAP-19) and
+          unguarded in the main stack.
           Swept by navigation/__tests__/capabilityRoutesReachable.test.js. */}
       <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
       <Stack.Screen name="HowYouTrainAdd" component={HowYouTrainAddScreen} options={{ headerShown: false }} />
@@ -488,7 +479,7 @@ function PlansStack({ navigation }) {
   return (
     <Stack.Navigator screenOptions={{ ...useStackOptions(), ...(useStackMotionOverride() || {}) }}>
       <Stack.Screen name="Plans" component={PlansScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="PlanUpdate" component={GatedPlanUpdate} options={{ headerShown: false }} />
+      <Stack.Screen name="PlanUpdate" component={PlanUpdateScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PlanDetail" component={PlanDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="RoutineDetail" component={RoutineDetailScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={heroZoomOptions({ headerShown: false })} />
@@ -509,9 +500,8 @@ function PlansStack({ navigation }) {
           only moves the dead tap one screen along. See the sweep in
           navigation/__tests__/capabilityRoutesReachable.test.js. */}
       <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
-      {/* B2: the free starter micro-quiz, reached from the no-plan card. */}
-      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} options={{ headerShown: false }} />
+      {/* ProUpgrade and FreeStarter removed -- see the dormant-screens
+          comment near the lazyScreen declarations above. */}
     </Stack.Navigator>
   );
 }
@@ -532,11 +522,11 @@ function ProgressStack({ navigation }) {
       <Stack.Screen name="WorkoutHistory" component={WorkoutHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WorkoutSummary" component={WorkoutSummaryScreen} options={{ headerShown: false, ...heroZoomTransition }} />
       <Stack.Screen name="VolumeHeatmap" component={VolumeHeatmapScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ headerShown: false }} />
-      <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />
+      <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ProgressPhotos" component={ProgressPhotosScreen} options={{ headerShown: false }} />
       <Stack.Screen name="LiftProgress" component={LiftProgressScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Consistency" component={ConsistencyScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Partner" component={GatedPartner} options={{ headerShown: false }} />
+      <Stack.Screen name="Partner" component={PartnerScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ExerciseDetail" component={ExerciseDetailScreen} options={heroZoomOptions({ headerShown: false })} />
       <Stack.Screen name="YearOfLifts" component={YearOfLiftsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="RecapStory" component={YearOfLiftsScreen} options={{ headerShown: false }} />
@@ -558,7 +548,8 @@ function ProgressStack({ navigation }) {
           session-length row) - one more hop of the same transitive
           closure the sweep enforces. */}
       <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
+      {/* ProUpgrade removed -- dormant billing surface, see the comment near
+          the lazyScreen declarations above. */}
     </Stack.Navigator>
   );
 }
@@ -602,36 +593,38 @@ function ProfileStack({ navigation }) {
       <Stack.Screen name="SettingsPrivacy" component={SettingsPrivacyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsAbout" component={SettingsAboutScreen} options={{ headerShown: false }} />
       <Stack.Screen name="SettingsFaq" component={SettingsFaqScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="NutritionTargets" component={GatedNutritionTargets} options={{ headerShown: false }} />
+      <Stack.Screen name="NutritionTargets" component={NutritionTargetsScreen} options={{ headerShown: false }} />
       {/* Retained by founder order 2026-07-13 and deliberately unreachable:
           the "Meal names" settings row was removed (SettingsScreen.js:67-70),
           the screen and route stay registered in case meal renaming returns.
           Not a stale registration - do not "clean it up" (D95). */}
-      <Stack.Screen name="MealNames" component={GatedMealNames} options={{ headerShown: false }} />
+      <Stack.Screen name="MealNames" component={MealNamesScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NutritionEducation" component={NutritionEducationScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="BodyMetrics" component={GatedBodyMetrics} options={{ headerShown: false }} />
-      <Stack.Screen name="ProgressPhotos" component={GatedProgressPhotos} options={{ headerShown: false }} />
-      <Stack.Screen name="WeeklyCheckIn" component={GatedWeeklyCheckIn} options={{ headerShown: false }} />
-      <Stack.Screen name="CoachOutput" component={GatedCoachOutput} options={{ headerShown: false }} />
-      <Stack.Screen name="WeeklyStory" component={GatedWeeklyStory} options={{ headerShown: false }} />
+      <Stack.Screen name="BodyMetrics" component={BodyMetricsScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="ProgressPhotos" component={ProgressPhotosScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="WeeklyCheckIn" component={WeeklyCheckInScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="CoachOutput" component={CoachOutputScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="WeeklyStory" component={WeeklyStoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="ShareCard" component={ShareCardScreen} options={{ headerShown: false }} />
       <Stack.Screen name="CoachHeldHistory" component={CoachHeldHistoryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="BlockReflection" component={BlockReflectionScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ProGoalSetup" component={GatedProGoalSetup} options={{ headerShown: false }} />
+      <Stack.Screen name="ProGoalSetup" component={ProGoalSetupScreen} options={{ headerShown: false }} />
       <Stack.Screen name="GoalChangeSummary" component={GoalChangeSummaryScreen} options={{ headerShown: false }} />
       <Stack.Screen name="GoalLockConsent" component={GoalLockConsentScreen} options={{ headerShown: false }} />
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Import" component={ImportScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CoachingReminders" component={GatedCoachingReminders} options={{ headerShown: false }} />
+      <Stack.Screen name="CoachingReminders" component={CoachingRemindersScreen} options={{ headerShown: false }} />
       <Stack.Screen name="WellbeingCheck" component={WellbeingCheckScreen} options={{ headerShown: false }} />
       <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} options={{ headerShown: false }} />
       <Stack.Screen name="DebugLog" component={DebugLogScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="SubscriptionPolicy" component={SubscriptionPolicyScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="Subscription" component={SubscriptionScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="CascadeGate" component={CascadeGateScreen} options={{ headerShown: false, presentation: 'modal' }} />
+      {/* SubscriptionPolicy, Subscription, CascadeGate and ProUpgrade are
+          dormant billing surfaces (founder decision: fully-free product, no
+          Free/Pro split, no trial, no paywall) and are no longer registered
+          here -- see the dormant-screens comment near the lazyScreen
+          declarations above. Re-register only on a deliberate future
+          monetisation decision. */}
       <Stack.Screen name="Credits" component={CreditsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="ProUpgrade" component={ProUpgradeScreen} options={{ headerShown: false, presentation: 'modal' }} />
     </Stack.Navigator>
   );
 }
@@ -734,46 +727,20 @@ function WelcomeStack() {
   );
 }
 
-function FirstRunStack() {
-  return (
-    <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
-      <Stack.Screen name="FirstRunBranch" component={FirstRunScreen} />
-      {/* B2: free guided on-ramp (founder decision 4a). Three plain questions
-          straight after the name screen install + activate a difficulty-0
-          starter plan, so the new free user lands on Home with today's
-          session already answered. Skipping completes first run as before. */}
-      <Stack.Screen name="FreeStarter" component={FreeStarterScreen} />
-      {/* PlanLibrary / PlanDetail / ActiveWorkout were registered here for a
-          pre-B2 onboarding shape that no longer exists: FreeStarter binds its
-          browse handler only when NOT in first run, so nothing in this stack
-          could reach them. Removed under D95 (AUDIT-ROUTES 5.7). If a "browse
-          the library during onboarding" step ever returns, it needs a
-          navigator, not these registrations. */}
-      {/* FreeStarter offers "Yes, let's set that up" and links to HowYouTrain.
-          Without an in-stack registration React Navigation drops that tap in
-          silence, which is the third time this navigator has lost a tap that
-          way: NotificationSettings and Methodology in ProOnboardingStack carry
-          the same note. TrainingConsiderations and SettingsWorkout ride along
-          because HowYouTrain links to both and neither leads anywhere further
-          (transitive closure), so without them the NEXT tap dies instead. All
-          three are free by law (CAP-19), copied unguarded from the main stack.
-          Swept by navigation/__tests__/capabilityRoutesReachable.test.js. */}
-      <Stack.Screen name="HowYouTrain" component={HowYouTrainScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="HowYouTrainAdd" component={HowYouTrainAddScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="TrainingConsiderations" component={TrainingConsiderationsScreen} options={{ headerShown: false }} />
-      <Stack.Screen name="SettingsWorkout" component={SettingsWorkoutScreen} options={{ headerShown: false }} />
-      {/* CC33 T1-20: HowYouTrain's preference cross-reference row links to
-          AvoidedMovements (transitive closure; its only outbound link is
-          HowYouTrain, already above). */}
-      <Stack.Screen name="AvoidedMovements" component={AvoidedMovementsScreen} options={{ headerShown: false }} />
-    </Stack.Navigator>
-  );
-}
+// FirstRunStack (the free "name only" quick setup, with its FreeStarter
+// micro-quiz) was DELETED (founder decision: Volyume is fully free, no
+// Free/Pro split -- ProOnboardingScreen's six-step wizard is now the ONE
+// setup path for every user, so there is no second, lighter onboarding
+// branch to choose between). Its screen files (FirstRunScreen.js,
+// FreeStarterScreen.js) are deleted; src/lib/onboarding/freeStarter.js stays
+// on disk because PlanDetailScreen.js and PlanLibraryScreen.js still import
+// pure helpers from it (getPlanDays / planEquipmentAllows /
+// scorePlanRecommendation) unrelated to the onboarding screen itself.
 
 // Article 9 consent gate. Single-screen stack; the consent screen
 // itself doesn't navigate anywhere -- on submission the store flips
 // healthConsent to true and the navigator re-renders into the
-// normal flow (FirstRunStack / ProOnboardingStack / MainTabs).
+// normal flow (ProOnboardingStack / MainTabs).
 function Article9ConsentStack() {
   return (
     <Stack.Navigator screenOptions={{ ...useStackOptions(), headerShown: false, ...(useStackMotionOverride() || {}) }}>
@@ -803,7 +770,7 @@ function ProOnboardingStack() {
           CoachingReminders rides along because NotificationSettings links
           to it and has no further outbound targets (transitive closure). */}
       <Stack.Screen name="NotificationSettings" component={NotificationSettingsScreen} />
-      <Stack.Screen name="CoachingReminders" component={GatedCoachingReminders} />
+      <Stack.Screen name="CoachingReminders" component={CoachingRemindersScreen} />
       {/* Wave A B3: the hand-off screen links "How Precision Coaching works"
           so the trial is never a black box before the first check-in. */}
       <Stack.Screen name="Methodology" component={MethodologyScreen} options={{ headerShown: false }} />
@@ -836,14 +803,12 @@ function ProOnboardingStack() {
 //
 // Auth gating is implicit and safe: this config only names screens that live
 // inside MainTabs. When the user is signed out (WelcomeStack mounted) or
-// mid-onboarding (FirstRun/ProOnboarding/Article9 stacks mounted), none of
-// these routes exist in the active navigator, so React Navigation can't
-// resolve the URL and simply leaves the user on whatever stack is mounted
-// (Welcome) instead of crashing. Once signed in and on MainTabs, the same
-// link resolves to the right tab + screen. Pro-gated destinations (Nutrition)
-// still render their withProGuard upgrade prompt for free users, exactly as
-// when reached by tab press, the link only navigates, it never bypasses a
-// gate.
+// mid-onboarding (ProOnboarding/Article9 stacks mounted), none of these
+// routes exist in the active navigator, so React Navigation can't resolve
+// the URL and simply leaves the user on whatever stack is mounted (Welcome)
+// instead of crashing. Once signed in and on MainTabs, the same link
+// resolves to the right tab + screen -- every destination below is a plain,
+// ungated screen (fully-free product, no Free/Pro split).
 //
 // Notification-tap routing (navigationRef.navigate in the onTap effect above)
 // is a SEPARATE mechanism and is untouched by this config.
@@ -863,7 +828,7 @@ const linking = {
       },
       DiaryTab: {
         screens: {
-          // volyume://diary(/:date) → Nutrition tab root (Pro-gated screen).
+          // volyume://diary(/:date) → Nutrition tab root.
           // The trailing `:date?` is OPTIONAL (react-navigation path syntax):
           // volyume://diary still opens today, volyume://diary/2026-07-08
           // opens that specific day. DiaryScreen reads route.params.date as a
@@ -890,10 +855,7 @@ const linking = {
       },
       // §15 item 8: coach output + weekly check-in, the two most-requested
       // notification re-engagement targets (Scout 1's "only 4 deep-link
-      // paths" gap). Both screens are already withProGuard-wrapped at
-      // registration (RootNavigator ProfileStack), so a free user tapping
-      // either link lands on the normal Pro upgrade prompt, never the
-      // screen itself, exactly as when reached via the Coach tab.
+      // paths" gap).
       ProfileTab: {
         screens: {
           // volyume://coach → Coach tab → latest coaching decision.
@@ -942,7 +904,9 @@ export default function RootNavigator() {
   const firstRunChecked = useAppStore(s => s.firstRunChecked);
   const healthConsent = useAppStore(s => s.healthConsent);
   const healthConsentChecked = useAppStore(s => s.healthConsentChecked);
-  const tier = useAppStore(s => s.tier);
+  // `tier` itself is no longer read here (founder decision: fully-free
+  // product, no Free/Pro onboarding branch) -- tierChecked stays, it still
+  // gates the boot splash below.
   const tierChecked = useAppStore(s => s.tierChecked);
   // restoringSession removed, restoreSessionFromCloud is now
   // optimistic (routes on local cues, syncs cloud in background).
@@ -1386,7 +1350,9 @@ export default function RootNavigator() {
               // than crashing.
               try {
                 // eslint-disable-next-line global-require
-                const playBilling = require('../lib/payments/playBilling');
+                // Through the payments barrel, the billing-disabled boundary
+                // (fully free product, D137): initialise is a no-op there.
+                const { playBilling } = require('../lib/payments');
                 playBilling.initialise({ appUserID: session.user.id }).catch(() => {});
               } catch (_) { /* lib not loadable in this env */ }
 
@@ -1402,6 +1368,20 @@ export default function RootNavigator() {
               // edit or a timezone change. Restore here with the REAL user
               // id. Fire-and-forget; every scheduler inside self-gates on
               // permission, tier, toggles, push budget and ED flags.
+              // FULLY-FREE PRODUCT (founder decision 2026-09-03, see
+              // src/lib/proGate.js). One-shot per signed-in user: drain the
+              // trial/win-back residue an existing device is still carrying
+              // (queued cascade-gate + day-3 + win-back pushes, the churn
+              // episode, the queued start_cascade retry, the cached trial
+              // keys and the Home trial-end gate flag). AWAITED, and placed
+              // BEFORE restoreNotifications, so the restore below never
+              // re-lays anything the conversion is about to cancel. Best
+              // effort and never throws; a failure is logged inside.
+              try {
+                // eslint-disable-next-line global-require
+                await require('../lib/payments/freeConversion')
+                  .runFreeConversionOnce(session.user.id);
+              } catch (_e) { /* best effort: must never block the launch path */ }
               try {
                 const raw = await AsyncStorage.getItem('@volyume_notification_prefs');
                 if (raw) {
@@ -1529,7 +1509,7 @@ export default function RootNavigator() {
             // never block or fail a sign-out.
             try {
               // eslint-disable-next-line global-require
-              require('../lib/payments/playBilling').logOut?.().catch(() => {});
+              require('../lib/payments').playBilling.logOut?.().catch(() => {});
             } catch (_) { /* lib not loadable in this env */ }
           }
 
@@ -1663,7 +1643,9 @@ export default function RootNavigator() {
             // readiness check rather than depending on this having landed.
             try {
               // eslint-disable-next-line global-require
-              const playBilling = require('../lib/payments/playBilling');
+              // Through the payments barrel (D137): a no-op while billing
+              // is dormant, so no store SDK runs on sign-in.
+              const { playBilling } = require('../lib/payments');
               playBilling.ensureBillingForUser(session.user.id).catch(() => {});
             } catch (_) { /* lib not loadable in this env */ }
 
@@ -1999,12 +1981,12 @@ export default function RootNavigator() {
   // 2. Signed-in + Article 9 consent missing → Article9ConsentStack
   //    (compliance gate per IDENTITY_AND_OWNERSHIP_LOCKED.md +
   //    PRIVACY_CONSENT_LOCKED.md). Blocks the rest of the app until
-  //    the user explicitly agrees to health-data processing. The Article 9
-  //    step is where start_cascade grants the 14-day Pro trial, which sets
-  //    tier='pro' for a new user.
-  // 3. Pro + first-run not done → ProOnboardingStack (guided setup)
-  // 4. Free + first-run not done → FirstRunStack (quick setup)
-  // 5. Both done → MainTabs
+  //    the user explicitly agrees to health-data processing.
+  // 3. First-run not done → ProOnboardingStack (the six-step guided setup),
+  //    the ONE setup path for every user (founder decision: fully free, no
+  //    Free/Pro split -- the old tier-branch to a lighter FirstRunStack is
+  //    gone).
+  // 4. Done → MainTabs
   function renderNavigator() {
     // Gate on whether the user is SIGNED IN, not on tier. Post-beta a
     // freshly authenticated account has no tier yet (no cloud profile row,
@@ -2049,7 +2031,11 @@ export default function RootNavigator() {
       return <Article9ConsentStack />;
     }
     if (!firstRunComplete) {
-      return tier === 'pro' ? <ProOnboardingStack /> : <FirstRunStack />;
+      // Founder decision (fully-free product, no Free/Pro split): the
+      // ProOnboardingScreen six-step wizard is now THE setup path for
+      // every user, regardless of tier. The old tier === 'pro' branch to
+      // the lighter FirstRunStack is gone (FirstRunStack deleted).
+      return <ProOnboardingStack />;
     }
     // CP-7: LockedMainTabs wraps MainTabs with the opt-in biometric app-lock
     // overlay. This is the ONLY change to this function; every branch above
