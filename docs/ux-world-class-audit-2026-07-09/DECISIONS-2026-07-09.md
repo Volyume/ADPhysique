@@ -5300,3 +5300,97 @@ density limit; "Targets updated. See why" and Trends carry the link);
 the meal planner's structure, the absence of a "skipped" state (a schema
 change to planned rows with no evidence consumer); origin badges on
 planned rows; nutrition targets and coaching engines untouched.
+
+## D139 — Programme creation and planning masterpass (lead-ruled under D33, 2026-09-03)
+
+**Founder order.** Make choosing, creating, understanding, editing and
+progressing a programme feel simple, personal and under the user's
+control, without touching the engine.
+
+**Research that shaped the rulings.** Three clear entry points; a short
+generation wizard; a full preview before commit, never generate straight
+into active; one plain-language reason per major decision drawn from real
+inputs; edits treated as inputs, not breakage; a visible block position;
+a structured end-of-block moment; no restart when life changes; one term
+per concept; warn before overwriting. Recurring complaints elsewhere:
+long questionnaires, opaque decisions, generic plans, constrained
+"editing", fear that edits break progression, routine/programme/block
+confusion.
+
+**Preserved unchanged (judged strongest).** The next-block review sheet
+built from a dry run of the same generator the confirm runs; both
+next-block options always reachable with advice as a tag, never a gate;
+"what continuing with adjustments would change: nothing" when it is
+true; the shared block-start and activation sentences; the swap sheet
+(named target, per-candidate reasons, honest capability count, full
+escape hatch, undo, a proposal never an auto-default); the capability
+lane's temporary-limitation model (sessions adapt, the plan is not
+rewritten, everything returns); computed, never tagged, library
+compatibility; the onboarding build sequence; the state-specific mid-
+block dialogues; continuity-first rebuilds that default to keep and
+always receipt a drop; evidence placed at the decision; repeat means
+repeat.
+
+**Highest-friction findings.** The most-promoted adjustment route
+(PlanUpdate) silently ended the running block and was the only plan-
+changing screen without the block sentence; every generation archived
+all other plans without a word; week-one activations passed with no
+confirm; "Start with a plan" generated straight into active with no
+preview although a dry run exists and powers PlanUpdate; the goal-change
+flow regenerated blind; the continuity message ("you have trained well
+with this split across N blocks") was a six-second toast after commit
+and appeared on no commit path's preview; two block-boundary labels
+("Build a new plan", "Review with coach") named one destination
+("Adjust training"); "Adjust training plan" rendered with no plan to
+adjust; two no-plan states differed between Home and Train; the
+library's "N to swap" fact vanished on the deciding screen; five words
+(day, workout, routine, template, session) named one object; the one
+good block definition sat behind a tooltip on a secondary screen while
+"Week N of M" hid whenever the advisor was not on "continue"; the manual
+builder wrote an empty programme before a single exercise; no edit
+stated its scope.
+
+**Rulings.**
+1. One shared preview sheet, extracted from PlanUpdate, used by "Start
+   with a plan" (Home and Train), PlanUpdate and the goal change. It
+   shows the continuity line before confirm, the change receipt, the
+   block sentence and, when a block is running, "Confirming ends your
+   current block at week N of M and starts a new one from week 1",
+   the count of other plans moving to Archived plans, and that hand
+   edits to current workouts are not carried over.
+2. PlanUpdate goes through the mid-block confirm like every other
+   activation. Week-one activations with a live block use the first-
+   activation dialogue; only a genuinely blockless state passes silently.
+3. Both no-plan states offer Start with a plan and Browse plans; the
+   Train tab's tools show Adjust only with an active plan.
+4. The active plan card always states the week (recovery week, block
+   finished) with the block definition one tooltip away, shared with
+   Training blocks.
+5. Block-boundary secondaries say "Change my training setup"; the dead
+   free-tier option copy goes.
+6. One word: "workout". Saved workouts, not templates.
+7. The library preview carries the compatibility badge and names up to
+   three exercises that would be swapped; every preview carries a split
+   rationale when the engine's per-plan reasons are absent.
+8. The manual builder writes on first save only and shows a per-day
+   duration when a pure estimator exists; a set/rep edit states its
+   scope: this workout only, weekly set targets stay with the block.
+9. Funnel telemetry: preview shown/confirmed/dismissed by source, block
+   decision by intent, library preview, manual plan started/saved, plan
+   replaced. Counts and enums only.
+
+**Gates.** `npm run lint` clean; `tsc --noEmit` clean; full suite 1160
+suites passed (1 skipped), 15853 tests passed (16 skipped). No engine
+module changed except label strings in blockAdvisor and one shared
+constant in blockExplain. The library card's session-length estimate was
+not added: no pure estimator is reachable without a new bulk query
+(recorded, not built).
+
+**Deliberately unchanged, with the reason.** Volume mathematics,
+adaptation thresholds, seed resolution, exercise scoring and the block
+state machine (engine law); a lightweight "keep my block, just make it
+three days" (a new continuity rule across a structure change; the
+disclosure fixes the trust problem now, the rule is a founder question);
+a weekday model for sessions (the plan is ordered, not scheduled; a new
+model); the library quiz; goal-based defaults in the manual builder;
+Training blocks' week-count fallbacks (latent, both columns written).

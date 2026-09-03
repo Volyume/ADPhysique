@@ -1,6 +1,14 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-03 — PROGRAMME CREATION & PLANNING MASTERPASS LANDED (D139) ★
+
+Founder order: make the deterministic programme engine feel simple.
+Three discovery lanes, three implementation packages. Record: D139;
+board entry with the device checklist and one open founder question
+(keep the block across a days-only change).
+
+===============================================================================
 ## ★ 2026-09-03 — NUTRITION EXPERIENCE MASTERPASS LANDED (D138) ★
 
 Founder order: the daily food path. Four discovery lanes (experience

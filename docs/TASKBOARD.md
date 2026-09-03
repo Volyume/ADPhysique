@@ -3416,3 +3416,49 @@ and a few days of food logged).**
     favourites (batch resolution).
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
+
+## PROGRAMME CREATION & PLANNING MASTERPASS (2026-09-03) — COMPLETE, MERGED TO MAIN. Ruling D139.
+
+Branch `claude/volyume-coherence-pass-6s991m`. Founder order: make the
+programme engine feel simple to operate. Research, preserved list,
+findings, rulings and the unchanged list: D139.
+
+**Gates.** Lint clean, typecheck clean, full suite 1160 suites / 15853
+tests passing; engine untouched (labels and one shared constant only).
+
+**Founder question (not decided here).** Should a days-per-week change
+that keeps every exercise also keep the running block (no restart), as a
+new continuity rule? Today the preview discloses the restart honestly.
+Options: A. Yes, keep the block when only days change. B. No, a rebuild
+always starts a block. C. Keep the block only in weeks 1 and 2.
+
+**Device checklist (Android, EAS build).**
+1. Fresh account, Today or Train, "Start with a plan": a preview sheet
+   appears (days, split, session length, workouts, the block sentence)
+   with "Start this plan" and "Not yet". Nothing is created until
+   confirmed. "Browse plans" is offered on both tabs.
+2. Train tab with an active plan in week 3: the plan card reads "Week 3
+   of 6" with an info tooltip explaining the block. In a recovery week it
+   reads "Recovery week, week 6 of 6".
+3. Plan tools: "Adjust training plan" only with an active plan.
+4. Adjust training plan, change 4 days to 3, Review: the sheet shows the
+   continuity line (if you have history), the receipt, "Confirming ends
+   your current block at week 3 of 6...", "Your other N plans move to
+   Archived plans", and the hand-edits line. Confirm asks the mid-block
+   question before rebuilding.
+5. Coach tab, change goal: the same preview appears before the plan is
+   rebuilt; targets behave exactly as before.
+6. Library: open a plan; the preview shows "Fits how you train" or "N to
+   swap" and names the exercises; a rationale line appears under the
+   workouts.
+7. Block finished: the third option reads "Change my training setup".
+8. Train tab: the section reads "Saved workouts"; finishing a session
+   offers "Save this workout to reuse".
+9. Create your own: fill page 1, go to page 2, press back without saving:
+   no plan appears in My plans. Save draft creates it. Day headers show
+   "~N min" if estimated.
+10. Edit a workout's sets: the sheet says "This changes this workout
+    only. Your weekly set targets stay with the block."
+11. Week 1 of a new block, activate another plan from the library: a
+    confirm appears (no silent switch).
+ED-safety and engine: no floors, thresholds, seeds or scoring touched.
