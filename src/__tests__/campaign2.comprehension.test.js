@@ -65,7 +65,11 @@ describe('TRAINING comprehension', () => {
     // The fresh-look recommendation keeps its own suggestion as the
     // secondary action, and marks NEITHER option as recommended.
     const rebuildBlock = stripped.slice(stripped.indexOf('consider_rebuild'));
-    expect(rebuildBlock).toContain("secondaryLabel: 'Review with coach'");
+    // Re-anchored (D139, programme creation masterpass, 2026-09-03): the
+    // block-boundary secondaries ("Build a new plan", "Review with coach")
+    // named one destination two ways; both now say what they do
+    // ("Adjust training" is PlanUpdate's own header).
+    expect(rebuildBlock).toContain("secondaryLabel: 'Change my training setup'");
   });
 
   test('a retained dose never reads as an increase; an increase names its evidence', () => {

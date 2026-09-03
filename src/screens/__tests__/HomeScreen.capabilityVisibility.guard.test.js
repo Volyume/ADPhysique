@@ -102,10 +102,16 @@ describe('T1-17: Today\'s card counts the effective session', () => {
 });
 
 describe('T1-12: quick-generate reveals capability-blocked slots', () => {
+  // RE-ANCHORED (D139): the no-plan action previews before it commits, so the
+  // generation moved from an inline generateAndSavePlan in the EmptyState's
+  // onAction to handleConfirmStartWithPlan, the sheet's confirm handler
+  // (commitStartWithPlan -> generateAndSavePlan). The pinned RULE is
+  // unchanged: the success path still reveals capability-blocked slots, and
+  // the failure copy is still the calm fixed one.
   test('the Pro no-plan "Start with a plan" success path toasts capabilityBlockedCount', () => {
-    const site = HOME.indexOf("const result = await generateAndSavePlan(user.id, userProfile);");
+    const site = HOME.indexOf("result = await commitStartWithPlan(user.id, userProfile);");
     expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, HOME.indexOf('}}', site) + 2);
+    const block = HOME.slice(site, HOME.indexOf('\n  }', site) + 4);
     expect(block).toMatch(/if \(result\.capabilityBlockedCount > 0\) \{/);
     expect(block).toMatch(/capabilityBlockedNote\(result\.capabilityBlockedCount\)/);
     // The pinned failure copy (HomeScreen.planGenErrorCopy.guard.test.js)

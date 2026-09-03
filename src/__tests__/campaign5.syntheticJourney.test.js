@@ -315,12 +315,14 @@ describe('BLOCK END: no ratings means no judgement, and the story says so', () =
 // ── NEXT BLOCK: Continue with adjustments ──────────────────────────────
 
 describe('NEXT BLOCK: both options open, the receipt tells the truth (FQ-2 / RA-2)', () => {
-  test('both options render for Pro, adjust is locked for Free, labels never vary', () => {
+  test('both options render for every account, nothing is ever locked, labels never vary', () => {
     const pro = buildNextBlockOptions({ recommendation: null, isPro: true });
     const free = buildNextBlockOptions({ recommendation: null, isPro: false });
     expect(pro.map((o) => o.intent).sort()).toEqual(['adjust', 'repeat']);
     expect(pro.every((o) => !o.locked)).toBe(true);
-    expect(free.find((o) => o.intent === 'adjust').locked).toBe(true);
+    // D139/D137: fully free, no tier split -- the adjust option is never
+    // locked for either caller.
+    expect(free.find((o) => o.intent === 'adjust').locked).toBe(false);
     expect(free.find((o) => o.intent === 'repeat').locked).toBe(false);
     for (const o of [...pro, ...free]) {
       expect(o.label).toBe(NEXT_BLOCK_OPTION_LABELS[o.intent]);

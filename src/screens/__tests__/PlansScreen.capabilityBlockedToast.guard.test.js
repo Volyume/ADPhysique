@@ -17,16 +17,26 @@ describe('T1-12: PlansScreen reveals capability-blocked slots after generation',
     );
   });
 
-  test('the Pro no-plan "Start with a plan" path (~1204) toasts on success with capabilityBlockedCount, after the existing success toast', () => {
-    const site = source.indexOf("toast.show('Your plan is active'");
+  // RE-ANCHORED (D139, programme creation masterpass, 2026-09-03): the
+  // no-plan "Start with a plan" CTA now previews before it generates
+  // (lib/startWithPlan.js), same two-step shape as HomeScreen's own no-plan
+  // CTA. The success toast this test used to anchor on ("Your plan is
+  // active") is retired to match that sibling surface (the sheet closing on
+  // confirm is the visible feedback); the capability-blocked disclosure
+  // this test protects moved with it, into handleConfirmStartWithPlan.
+  test('the no-plan "Start with a plan" preview\'s commit step toasts capabilityBlockedCount on success', () => {
+    const site = source.indexOf('async function handleConfirmStartWithPlan()');
     expect(site).toBeGreaterThan(-1);
-    const block = source.slice(site, site + 550);
+    const block = source.slice(site, source.indexOf('async function handleRestartPlan'));
+    expect(block).toContain('commitStartWithPlan(user.id, userProfile)');
     expect(block).toMatch(/if \(result\.capabilityBlockedCount > 0\) \{/);
     expect(block).toMatch(/toast\.show\(capabilityBlockedNote\(result\.capabilityBlockedCount\), \{ variant: 'info', duration: 5000 \}\);/);
   });
 
-  test('the generateAndSavePlan(user.id, userProfile) call itself is untouched (PlansScreen.hierarchy.guard.test.js\'s own pin)', () => {
-    expect(source).toContain('generateAndSavePlan(user.id, userProfile)');
+  test('the no-plan path runs through the shared prepare/commit helper (D139), not a direct call; the reviewed-adjust generateAndSavePlan(user.id, userProfile, {...}) call is untouched', () => {
+    expect(source).toContain("prepareStartWithPlan(user.id, userProfile, { mode: 'first' })");
+    expect(source).toContain('commitStartWithPlan(user.id, userProfile)');
+    expect(source).toMatch(/generateAndSavePlan\(user\.id, userProfile, \{/);
   });
 
   test('capabilityBlockedNote is a local pure helper with the exact singular/plural copy', () => {

@@ -146,7 +146,9 @@ describe('WorkoutSummary food-design-standard compliance (remediation 2026-07-11
 
   test('no blocking Alert on a non-destructive guard: it is a calm toast (checklist 11)', () => {
     expect(summary).not.toMatch(/appAlert/);
-    expect(summary).toMatch(/toast\.show\('No exercise data to save as a template\.'/);
+    // RE-ANCHORED (D139: one word, "workout", not "template"; Saved
+    // workouts, not templates).
+    expect(summary).toMatch(/toast\.show\('Nothing to save from this session\.'/);
   });
 
   test('data numerals carry tabular figures (checklist 5)', () => {

@@ -26,10 +26,29 @@ describe('ManualBuilderScreen never shows a raw exception message to the user', 
     expect(src).not.toMatch(/toast\.show\(e\?\.message/);
   });
 
-  test('handleCreatePlan logs the cause and shows calm, stable copy', () => {
-    expect(src).toMatch(
-      /logError\('ManualBuilderScreen\.handleCreatePlan', e\);\s*\n\s*toast\.show\("Couldn't create your plan, try again", \{ variant: 'error' \}\);/,
+  // D139 (lead programme ruling): handleCreatePlan no longer writes the
+  // programme row (that moved to ensureProgramme, called from the Save
+  // handlers below), so it does no I/O and carries no catch block of its
+  // own any more. Its old "Couldn't create your plan, try again" copy
+  // moved with the write: ensureProgramme's failure has no dedicated toast
+  // of its own now -- it throws, and is caught by whichever Save handler
+  // called it, reusing that handler's own existing catch/toast pinned
+  // below (handleSaveAndActivate/handleSaveDraft), so a create-on-save
+  // failure was never left unhandled.
+  test('handleCreatePlan is synchronous and carries no create-plan catch block', () => {
+    const fn = src.slice(
+      src.indexOf('function handleCreatePlan'),
+      src.indexOf('function handleCreatePlan') + 700,
     );
+    expect(fn).not.toMatch(/^\s*async function handleCreatePlan/m);
+    expect(fn).not.toContain('try {');
+    expect(fn).not.toContain("logError('ManualBuilderScreen.handleCreatePlan'");
+  });
+
+  test('ensureProgramme creates the deferred programme row on first save, not on page 1', () => {
+    expect(src).toMatch(/async function ensureProgramme\(\)\s*\{/);
+    expect(src).toMatch(/if \(programmeId\) return programmeId;/);
+    expect(src).toContain('const prog = await createProgramme(user.id, planName.trim()');
   });
 
   test('handleSaveAndActivate logs the cause and shows calm, stable copy', () => {

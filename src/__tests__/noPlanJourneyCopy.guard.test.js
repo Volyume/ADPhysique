@@ -31,6 +31,11 @@ describe('no-plan / start-plan copy', () => {
     const block = HOME.slice(HOME.indexOf('<View style={styles.noPlanSection}>'), HOME.indexOf('{/* CC33 D112 R5 (closes audit T1-14/T2-31)'));
     expect(block).toContain('No active plan yet');
     expect(block).toContain('Start with a plan');
+    // RE-ANCHORED (D139): the escape hatch is back, as the same real second
+    // action PlansScreen offers (pinned below) rather than the retired
+    // free-tier text link -- someone with no plan should not have to accept a
+    // generated one to see what else exists.
+    expect(block).toContain('Browse plans');
     expect(block).not.toContain('Find my plan');
     expect(block).not.toContain('Build my plan');
   });
@@ -60,7 +65,11 @@ describe('no-plan / start-plan copy', () => {
     expect(block).toContain('No active plan yet');
     expect(block).toContain('Start with a plan');
     expect(block).toContain('Browse plans');
-    expect(block).toContain('generateAndSavePlan');
+    // RE-ANCHORED (D139): the action may reach the generator directly or
+    // through the shared prepare/commit helper that previews first
+    // (lib/startWithPlan.js). Either way the CTA must actually generate a
+    // plan, which is what this line has always been guarding.
+    expect(block).toMatch(/generateAndSavePlan|handleStartWithPlanPress|prepareStartWithPlan/);
     expect(block).not.toContain('icon="compass-outline"');
     expect(block).not.toContain('Browse the library');
     expect(block).not.toContain('Find my plan');

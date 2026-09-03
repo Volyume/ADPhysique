@@ -174,9 +174,9 @@ describe('180-DAY E2E: the product thesis', () => {
     expect(b4.entry.proposal.startSets).toBe(b4.seed.startSets);
   });
 
-  test('the Free/Pro boundary is intact at every decision', () => {
+  test('no option is ever locked; the product has no tier split (D139/D137)', () => {
     const free = buildNextBlockOptions({ recommendation: null, isPro: false });
-    expect(free.find((o) => o.intent === 'adjust').locked).toBe(true);
+    expect(free.find((o) => o.intent === 'adjust').locked).toBe(false);
     expect(free.find((o) => o.intent === 'repeat').locked).toBe(false);
   });
 });

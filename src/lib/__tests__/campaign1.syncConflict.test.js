@@ -448,11 +448,23 @@ describe('D4 the workout attributor picks the active block deterministically', (
   // transaction over a stub connection), so this is a source guard: the
   // ordering clause is the whole fix and its removal is the regression.
   test('the active-mesocycle lookup orders by created_at DESC', () => {
-    const unordered = /SELECT id FROM mesocycles WHERE user_id = \? AND is_active = 1 LIMIT 1/;
-    expect(DB_SRC).not.toMatch(unordered);
     expect(DB_SRC).toMatch(
       /SELECT id FROM mesocycles WHERE user_id = \? AND is_active = 1 ORDER BY created_at DESC LIMIT 1/,
     );
+    // D139: activatePlanWithBlock added a second, unordered read of the
+    // same WHERE clause, but only to answer "does ANY active block already
+    // exist" for the plan_replaced signal - existence is order-independent
+    // (any one of several is_active=1 rows proves the answer is yes), so
+    // it is not the attribution read the ordering fix protects. The
+    // invariant this test actually guards is narrower than "the literal
+    // string never repeats": no OTHER, unaccounted-for unordered read may
+    // exist, and the one that does must be provably the boolean-existence
+    // check, not attribution.
+    const unordered = /SELECT id FROM mesocycles WHERE user_id = \? AND is_active = 1 LIMIT 1/g;
+    const matches = [...DB_SRC.matchAll(unordered)];
+    expect(matches.length).toBe(1);
+    const context = DB_SRC.slice(Math.max(0, matches[0].index - 400), matches[0].index);
+    expect(context).toMatch(/_priorActiveBlock|_dPlanReplacedCheck/);
   });
 });
 

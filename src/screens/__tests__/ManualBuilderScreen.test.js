@@ -23,6 +23,7 @@ jest.mock('react-native-safe-area-context', () => ({
 jest.mock('@expo/vector-icons', () => ({ Ionicons: () => null }));
 jest.mock('../../components/BackHeader', () => () => null);
 jest.mock('../../components/ExercisePickerModal', () => () => null);
+jest.mock('../../lib/engineTelemetry', () => ({ track: jest.fn(() => Promise.resolve()) }));
 jest.mock('../../components/Toast', () => ({
   useToast: () => ({ show: jest.fn() }),
 }));
@@ -77,6 +78,7 @@ import {
   getProgrammeById, getRoutinesForPlan, updateRoutineName,
   removeExerciseFromRoutine, softDeleteRoutine, updateProgrammeName,
 } from '../../lib/database';
+import { track } from '../../lib/engineTelemetry';
 import ManualBuilderScreen from '../ManualBuilderScreen';
 
 const store = { user: { id: 'user-1' }, accessibility: { reduceMotion: true } };
@@ -530,5 +532,123 @@ describe('ManualBuilderScreen — reorder exercises (T7)', () => {
     expect(ss[0][9]).toBe(ss[1][9]);            // same group
     const orders = ss.map(c => c[2]).sort((a, b) => a - b);
     expect(orders[1] - orders[0]).toBe(1);      // still adjacent after the reorder
+  });
+});
+
+describe('ManualBuilderScreen — deferred programme creation (D139)', () => {
+  test('moving from page 1 to page 2 does not write a programme row, and tracks manual_plan_started', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Deferred Plan');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    // Page 2 renders (four empty day cards, the untouched default), but
+    // nothing was written to get there.
+    expect(pressables(tree, 'Add exercise')).toHaveLength(4);
+    expect(createProgramme).not.toHaveBeenCalled();
+    expect(track).toHaveBeenCalledWith('user-1', 'manual_plan_started', {});
+  });
+
+  test('abandoning page 2 with no exercises added never creates a programme row', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Abandoned Plan');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+    // No exercises added anywhere; nothing else can happen on this screen
+    // that would create the row.
+    expect(createProgramme).not.toHaveBeenCalled();
+  });
+
+  test('Save draft creates the programme row for the first time and reports activated: false', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Draft Plan');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Bench Press', primaryMuscle: 'chest' }); });
+
+    expect(createProgramme).not.toHaveBeenCalled();
+    await act(async () => { press(tree, 'Save draft'); });
+
+    expect(createProgramme).toHaveBeenCalledTimes(1);
+    expect(createProgramme).toHaveBeenCalledWith('user-1', 'Draft Plan', 'Build muscle', 0);
+    expect(createRoutine).toHaveBeenCalled();
+    expect(track).toHaveBeenCalledWith('user-1', 'manual_plan_saved', { activated: false });
+    expect(nav.navigate).toHaveBeenCalledWith('PlansTab');
+  });
+
+  test('Save and activate creates the programme row for the first time and reports activated: true', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Activate Plan');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Bench Press', primaryMuscle: 'chest' }); });
+    press(tree, 'Remove Day 2');
+
+    await act(async () => { press(tree, 'Save and activate'); });
+
+    expect(createProgramme).toHaveBeenCalledTimes(1);
+    expect(activatePlanWithBlock).toHaveBeenCalledWith('user-1', 'prog-1', 'Activate Plan');
+    expect(track).toHaveBeenCalledWith('user-1', 'manual_plan_saved', { activated: true });
+  });
+
+  test('editing an existing plan never calls createProgramme (unchanged S5 behaviour)', async () => {
+    let tree;
+    await act(async () => {
+      tree = create(<ManualBuilderScreen navigation={nav} route={{ params: { planId: 'plan-1' } }} />);
+    });
+    await act(async () => {});
+    await act(async () => { press(tree, 'Save changes'); });
+    expect(createProgramme).not.toHaveBeenCalled();
+    // Edit mode is not part of the manual-builder start/save funnel.
+    expect(track).not.toHaveBeenCalledWith(expect.anything(), 'manual_plan_started', expect.anything());
+    expect(track).not.toHaveBeenCalledWith(expect.anything(), 'manual_plan_saved', expect.anything());
+  });
+});
+
+describe('ManualBuilderScreen — day duration estimate (D139)', () => {
+  test('a day with one exercise (3 sets, 90s rest) shows ~14 min in its header', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Duration Plan');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    // No duration shown before any exercise exists (empty days stay silent
+    // rather than claiming a 0-minute session).
+    expect(tree.root.findAll(
+      n => typeof n.props?.children === 'string' && /^~\d+ min$/.test(n.props.children),
+    ).length).toBe(0);
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Bench Press', primaryMuscle: 'chest' }); });
+
+    // estimateWorkoutMinutes([{ sets: 3, restSec: 90 }]): overhead 7.5min +
+    // (3*60 + 2*90)s = 450 + 360 = 810s -> ceil(810/60) = 14.
+    expect(tree.root.findAll(n => n.props && n.props.children === '~14 min').length).toBeGreaterThan(0);
+  });
+
+  test('the plan summary shows the typical session length once a day has exercises', async () => {
+    let tree;
+    act(() => { tree = create(<ManualBuilderScreen navigation={nav} />); });
+    setPlanName(tree, 'Summary Plan');
+    press(tree, '2 training days per week');
+    await act(async () => { press(tree, 'Create plan and add workouts'); });
+
+    const picker = tree.root.findAll(n => n.props && typeof n.props.onSelect === 'function')[0];
+    press(tree, 'Add exercise');
+    act(() => { picker.props.onSelect({ id: 'ex-a', name: 'Bench Press', primaryMuscle: 'chest' }); });
+
+    expect(tree.root.findAll(
+      n => n.props && n.props.children === 'Typical session: ~14 min',
+    ).length).toBeGreaterThan(0);
   });
 });

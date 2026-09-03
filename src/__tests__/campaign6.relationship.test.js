@@ -135,10 +135,10 @@ describe('SHOW ME WHY binds SAFETY: memory cannot climb over a suppression', () 
 });
 
 describe('FREE-PRO: self-directed continuity, never implied coaching', () => {
-  test('Free keeps repeat (continuity) and is locked out of adjust (coaching), at the decision itself', () => {
+  test('every account reaches both options; no tier lock any more (fully free, D139/D137)', () => {
     const options = buildNextBlockOptions({ recommendation: null, isPro: false });
     expect(options.find((o) => o.intent === 'repeat').locked).toBe(false);
-    expect(options.find((o) => o.intent === 'adjust').locked).toBe(true);
+    expect(options.find((o) => o.intent === 'adjust').locked).toBe(false);
   });
 
   test('no surface claims Volyume has been coaching a Free user all along', () => {

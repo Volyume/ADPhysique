@@ -100,7 +100,21 @@ describe('T1-22 - the start-plan flow never silently falls to the unfiltered poo
 
   test('an unknown capability state (no last-known at all) gates activation with an explicit choice', () => {
     expect(preflight).toMatch(/return \{ proceed: false, state \};/);
+    // RE-ANCHORED (D139): the "Start with a plan" surfaces preview before they
+    // commit, so the gate + the explicit choice moved into the shared prepare
+    // step (lib/startWithPlan.js) that both call, in the same position: the
+    // pre-flight, then the choice, then a refusal that writes nothing, then
+    // the READ-ONLY dry run. A surface that still inlines the gate is pinned
+    // exactly as before.
+    const helper = read('lib/startWithPlan.js');
     for (const src of [home, plans]) {
+      if (/prepareStartWithPlan\(/.test(src)) {
+        expect(helper).toMatch(/capabilityPreflight\(userId\)/);
+        expect(helper).toMatch(/offerCapabilityPreflightChoice/);
+        expect(helper).toMatch(/if \(!goAhead\) return \{ ok: false, reason: 'preflight_hold'/);
+        expect(helper.indexOf('capabilityPreflight(')).toBeLessThan(helper.indexOf('generatePlanDryRun('));
+        continue;
+      }
       // Window widened 700 -> 900 (D137): HomeScreen's action now carries a
       // re-entrancy guard ahead of the preflight; the three pins are unchanged.
       const start = src.match(/onAction=\{async \(\) => \{[\s\S]{0,900}/)?.[0] ?? '';

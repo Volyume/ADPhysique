@@ -172,8 +172,13 @@ describe('Campaign 25: Set-active affordance (previous rows keep it, archived ro
 });
 
 describe('Campaign 25: free/pro tier logic is retired (FOUNDER DECISION: fully free, no tier split)', () => {
-  test('actionCards resolves to the coached-builder set unconditionally now', () => {
-    expect(source).toContain('const actionCards = ACTION_CARDS_PRO_SWITCH;');
+  // RE-ANCHORED (D139, programme creation masterpass, 2026-09-03, finding:
+  // "'Adjust training plan' rendered with no plan to adjust"): actionCards is
+  // no longer unconditional -- it is gated on having an active plan, never on
+  // tier. With no active plan only "Create your own" renders (the library is
+  // already offered by the no-plan EmptyState's own "Browse plans").
+  test('actionCards is gated on having an active plan, never on tier', () => {
+    expect(source).toMatch(/const actionCards = activePlan\s*\n\s*\? ACTION_CARDS_PRO_SWITCH\s*\n\s*: ACTION_CARDS_PRO_SWITCH\.filter\(\(card\) => card\.id === 'manual'\);/);
     // Comments stripped: a retirement note may name the retired constant in
     // prose without that counting as it surviving in code.
     const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
@@ -188,8 +193,15 @@ describe('Campaign 25: free/pro tier logic is retired (FOUNDER DECISION: fully f
     expect(block).toContain('Your check-ins, PRs, and coach output keep working whichever plan you choose. Activating a new plan starts a fresh training block.');
   });
 
-  test('FreeStarter/quiz is retired; the coach-built generateAndSavePlan no-plan entry is the only one', () => {
+  test('FreeStarter/quiz is retired; the coach-built no-plan entry is the only one', () => {
     expect(source).not.toContain("navigation.navigate('FreeStarter')");
-    expect(source).toContain('generateAndSavePlan(user.id, userProfile)');
+    // RE-ANCHORED (D139): the no-plan CTA now previews before it generates
+    // (lib/startWithPlan.js), so the direct generateAndSavePlan(user.id,
+    // userProfile) call is gone from this handler -- the real generation
+    // (commitStartWithPlan) still ends in generateAndSavePlan, just one hop
+    // away and only after the athlete confirms in PlanPreviewSheet.
+    expect(source).toContain('handleStartWithPlanPress');
+    expect(source).toContain("prepareStartWithPlan(user.id, userProfile, { mode: 'first' })");
+    expect(source).toContain('commitStartWithPlan(user.id, userProfile)');
   });
 });

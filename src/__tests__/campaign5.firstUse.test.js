@@ -436,9 +436,15 @@ describe('PLAN: the library answers what it is asking of you (C5-P10-02/03/04/09
     const start = block.indexOf('icon="barbell-outline"');
     expect(start).toBeGreaterThan(-1);
     const empty = block.slice(start, block.indexOf('{/* Folders'));
-    expect(empty).toContain('generateAndSavePlan');
+    // D139: the no-plan CTA now previews before generating (prepareStartWithPlan
+    // -> PlanPreviewSheet -> commitStartWithPlan, src/lib/startWithPlan.js), so
+    // the action wired here is the preview-step handler, not a direct call to
+    // generateAndSavePlan; the actual generation call lives in the shared
+    // startWithPlan.js module the handler calls through to.
+    expect(empty).toContain('onAction={handleStartWithPlanPress}');
     expect(empty).toContain('Browse plans');
     expect(stripComments(block)).not.toContain('No active plan · Start with a plan, browse the library');
+    expect(read('lib/startWithPlan.js')).toContain('generateAndSavePlan');
   });
 });
 
@@ -599,13 +605,21 @@ describe('BLOCK: the first block explains itself and never advances on its own (
   test('nothing describes a block as an optional layer the user configures', () => {
     // C5-P11-03: the Train side's only block definition described controls
     // (start date, duration, recovery week) that do not exist.
+    // D139: the copy moved out of this screen into the shared
+    // BLOCK_DEFINITION constant (src/lib/blockExplain.js), consumed here as
+    // `text={BLOCK_DEFINITION}` - the contract (what the block definition
+    // says, and what it must never say) is pinned against that constant now.
     const src = stripComments(read('screens/MesocycleBuilderScreen.js'));
     expect(src).not.toMatch(/optional layer you add on top/);
     expect(src).not.toMatch(/Set a start date,\s*\n?\s*duration and recovery week/);
-    expect(src).toMatch(/Nothing rolls into a new block on its own/);
+    expect(src).toContain('text={BLOCK_DEFINITION}');
+    const def = read('lib/blockExplain.js');
+    expect(def).not.toMatch(/optional layer you add on top/);
+    expect(def).not.toMatch(/Set a start date,\s*\n?\s*duration and recovery week/);
+    expect(def).toMatch(/Nothing rolls into a new block on its own/);
     // FB-20: and it no longer promises the block moves to Past blocks the
     // moment the last week completes.
-    expect(src).not.toMatch(/the block closes and moves to Past blocks below/);
+    expect(def).not.toMatch(/the block closes and moves to Past blocks below/);
   });
 
   test('block completion does not auto-transition (FB-34/35 mechanisms stay intact)', () => {
@@ -884,15 +898,18 @@ describe('BLOCK DECISION: both options, advice that cannot gate, entitlement fro
     expect(plans).toMatch(/const receipt = seedIntent === 'adjust'/);
   });
 
-  test('FREE: the adjusted path is Pro-marked and locked; the repeat is not', () => {
+  test('FREE param: buildNextBlockOptions locks nothing any more (fully free, D139/D137)', () => {
     // "Free's repeat path (run the plan again) keeps working -- that is core
-    // training, not coaching."
+    // training, not coaching." The adjusted path used to render Pro-marked
+    // and locked for isPro: false; D139 retired that dead gating (the
+    // product has had no tier split since D137) so BOTH options are always
+    // reachable and the "Part of Pro" detail line is gone outright.
     const [repeat, adjust] = buildNextBlockOptions({ recommendation: 'adjust', isPro: false });
     expect(repeat.locked).toBe(false);
     expect(repeat.requiresPro).toBe(false);
-    expect(adjust.locked).toBe(true);
-    expect(adjust.requiresPro).toBe(true);
-    expect(adjust.detail).toContain('Part of Pro');
+    expect(adjust.locked).toBe(false);
+    expect(adjust.requiresPro).toBe(false);
+    expect(adjust.detail).not.toContain('Part of Pro');
     // No advisor recommendation reaches a free user at all.
     expect(repeat.recommended).toBe(false);
     expect(adjust.recommended).toBe(false);
@@ -1980,9 +1997,10 @@ describe('REVIEW B: the interruption and state findings stay fixed (RB-1..RB-12,
     const db = read('lib/database.js');
     const act = db.slice(db.indexOf('export async function activatePlanWithBlock'));
     // Window widened for the C8 Work 2 activation seed and its review-D5
-    // gate, which sit above the transaction. The pin is unchanged: the two
+    // gate, and again for D139's plan_replaced prior-active-block read
+    // (both sit above the transaction). The pin is unchanged: the two
     // writes stay in ONE transaction.
-    expect(act.slice(0, 4200)).toMatch(/runInTransaction\(d, async \(\) => \{/);
+    expect(act.slice(0, 5000)).toMatch(/runInTransaction\(d, async \(\) => \{/);
   });
 
   test('RB-4: only the newest PlansScreen load may paint any of its state', () => {

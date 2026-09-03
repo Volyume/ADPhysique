@@ -214,7 +214,7 @@ describe('PHASES 9 + 44: plan lifecycle laws (D97-11..17)', () => {
   test('P44-05: an abandoned block ends the day the user switches away', () => {
     const src = read('lib/database.js');
     const act = src.slice(src.indexOf('export async function activatePlanWithBlock'));
-    expect(act.slice(0, 4300)).toMatch(/SET end_date = date\('now'\)/); // window widened for the T-2 comment, then again for C8 Work 2's activation seed, then again as that seed's own header comment grew
+    expect(act.slice(0, 5300)).toMatch(/SET end_date = date\('now'\)/); // window widened for the T-2 comment, then again for C8 Work 2's activation seed, then again as that seed's own header comment grew, then again for D139's plan_replaced prior-active-block read
   });
 
   test('P9-06: a mature user is never told they lack personal history', () => {

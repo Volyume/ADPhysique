@@ -103,7 +103,11 @@ describe('TIER routing honesty', () => {
     // account now opens PlanUpdate directly, with no ProUpgrade branch left
     // anywhere in the file (see proUpgradeTelemetry.guard.test.js).
     const src = stripComments(read('screens/PlansScreen.js'));
-    expect(src).toMatch(/onPress=\{\(\) => navigation\.navigate\('PlanUpdate'\)\}/);
+    // D139 item 9 wrapped the call in a handler that fires block_decision
+    // funnel telemetry first, so the onPress body is a block, not a bare
+    // arrow expression - the pin now matches the handler shape, not just
+    // the one-line call.
+    expect(src).toMatch(/onPress=\{\(\) => \{[\s\S]{0,300}navigation\.navigate\('PlanUpdate'\);/);
     expect(src).not.toMatch(/recommendation === 'consider_rebuild'/);
     expect(src).not.toContain("navigate('ProUpgrade'");
   });

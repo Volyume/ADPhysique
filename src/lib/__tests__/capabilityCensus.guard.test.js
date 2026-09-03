@@ -94,6 +94,8 @@ const CLASS1_EXEMPT = {
     'Renders compatibility badges. An unreadable read shows NO badge rather than a wrong one - absence of information, never a false claim.',
   'screens/RoutineDetailScreen.js':
     'Captions only; the notice ranking is the shared helper\'s and answers null on an empty state.',
+  'screens/PlanDetailScreen.js':
+    'D139: runs the same computePlanCompatibility PlanLibraryScreen runs for the grid, just for this one plan\'s own exercises, to render badges. Explicitly checks `!capState.unavailable` before computing and sets compatibility to null (no badge) otherwise - an unreadable read yields NO badge, never a wrong one, same posture as PlanLibraryScreen.',
 };
 
 test('CLASS 1: every capability read that ACTS gates on capabilityKnown', () => {

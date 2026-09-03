@@ -84,13 +84,18 @@ describe('C16-LIVE job 11: the rebuild receipt is rendered', () => {
     expect(s).toMatch(/dry\.continuity\?\.decisions/);
   });
 
+  // RE-ANCHORED (D139): the receipt is rendered by the shared
+  // components/PlanPreviewSheet.js now, so all four generation moments show
+  // it. Adjust training still BUILDS it from the dry run it will commit
+  // (pinned above); this pins the rendering where it lives.
   test('it renders what stayed, what changed and why', () => {
-    const s = screen('PlanUpdateScreen.js');
+    const s = require('fs').readFileSync(
+      require('path').resolve(__dirname, '../../components/PlanPreviewSheet.js'), 'utf8');
     for (const heading of ['What stays', 'What changes', 'New in your plan']) {
       expect(s).toContain(heading);
     }
-    expect(s).toMatch(/staged\.receipt\.stays\.map/);
-    expect(s).toMatch(/staged\.receipt\.changes\.map/);
+    expect(s).toMatch(/receipt\.stays\.map/);
+    expect(s).toMatch(/receipt\.changes\.map/);
     // The why is rendered, not dropped.
     expect(s).toMatch(/l\.why \? ` - \$\{l\.why\}` : ''/);
   });

@@ -88,6 +88,23 @@ describe('the gate lives OUTSIDE the engine, at every generation surface (source
     'screens/HomeScreen.js',
   ])('%s runs capabilityPreflight before generateAndSavePlan', (f) => {
     const src = read(f);
+    // D139: the surfaces that preview before they commit run the SAME gate in
+    // the SAME position through lib/startWithPlan.js's prepare step
+    // (pre-flight, then the READ-ONLY dry run, then the sheet, then the
+    // generation). Follow the delegation rather than losing the pin: the rule
+    // is that no generation surface reaches the engine without the gate.
+    if (/prepareStartWithPlan\(/.test(src)) {
+      expect(src).toMatch(/commitStartWithPlan\(/);
+      const helper = read('lib/startWithPlan.js');
+      const gate = helper.indexOf('capabilityPreflight(');
+      const dryRun = helper.indexOf('generatePlanDryRun(');
+      const commit = helper.indexOf('generateAndSavePlan(');
+      expect(gate).toBeGreaterThan(-1);
+      expect(gate).toBeLessThan(dryRun);
+      expect(gate).toBeLessThan(commit);
+      expect(helper).toMatch(/offerCapabilityPreflightChoice/);
+      return;
+    }
     const gate = src.indexOf('capabilityPreflight(');
     const call = src.indexOf('generateAndSavePlan(user.id');
     expect(gate).toBeGreaterThan(-1);

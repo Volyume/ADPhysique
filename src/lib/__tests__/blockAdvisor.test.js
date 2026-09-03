@@ -119,8 +119,13 @@ test('FREE: a finished block gets no adaptive coaching, whatever the check-ins s
   const options = buildNextBlockOptions({
     recommendation: advice.nextBlock.recommendation, isPro: false,
   });
+  // D139: the product is fully free (D137) -- buildNextBlockOptions no
+  // longer locks the adjust option for a Free caller (the dead "Part of
+  // Pro" gating is retired). Free still gets no COACHED recommendation
+  // (asserted above via advice.nextBlock.recommendation/coached), which is
+  // the real tier-blind fact this test protects.
   expect(options.find((o) => o.intent === 'repeat').locked).toBe(false);
-  expect(options.find((o) => o.intent === 'adjust').locked).toBe(true);
+  expect(options.find((o) => o.intent === 'adjust').locked).toBe(false);
 });
 
 test('a caller that forgets the entitlement fails closed to no coaching', async () => {

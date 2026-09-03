@@ -114,6 +114,13 @@ describe('resolving the conflict still writes the correct plan', () => {
 describe('the preview states the blocked slot honestly', () => {
   const screen = require('fs').readFileSync(
     require('path').resolve(__dirname, '../../screens/PlanUpdateScreen.js'), 'utf8');
+  // RE-ANCHORED (D139): the preview sheet itself is now the shared
+  // components/PlanPreviewSheet.js, rendered by all four generation moments
+  // instead of only Adjust training. The copy contract is unchanged and moved
+  // with the JSX; the SCREEN still owns the dry run that feeds it, which is
+  // what the second test below pins.
+  const sheet = require('fs').readFileSync(
+    require('path').resolve(__dirname, '../../components/PlanPreviewSheet.js'), 'utf8');
 
   test('it says a choice is needed and why, without naming a prescription', () => {
     // CC27 (section 9.5 / CC-D25) split the single "Exercise choice
@@ -121,8 +128,8 @@ describe('the preview states the blocked slot honestly', () => {
     // are different facts and each is named in its own words. The
     // campaign 9 contract stands - the preview states why a slot is
     // empty, and never shows a set-aside exercise as the prescription.
-    expect(screen).toMatch(/would normally use exercises you have set aside/);
-    expect(screen).toMatch(/no match inside how you train/);
+    expect(sheet).toMatch(/would normally use exercises you have set aside/);
+    expect(sheet).toMatch(/no match inside how you train/);
   });
 
   test('the screen passes the dry run\'s own blocked list to the summariser', () => {
@@ -130,8 +137,8 @@ describe('the preview states the blocked slot honestly', () => {
   });
 
   test('it neither chooses a replacement nor restores an exclusion', () => {
-    const anchor = screen.indexOf('no match inside how you train');
-    const block = screen.slice(anchor - 900, anchor + 500);
+    const anchor = sheet.indexOf('no match inside how you train');
+    const block = sheet.slice(anchor - 900, anchor + 500);
     expect(block).not.toMatch(/clearExerciseIntent|setExerciseIntent|updateRoutineExerciseExercise/);
   });
 });
