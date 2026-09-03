@@ -690,6 +690,22 @@ its evidence).
 
 ===============================================================================
 
+### 2026-09-03 — HOW YOU TRAIN FLOW AUDIT — COMPLETE, LANDED
+Docs-only landing. Founder device-walked the injury/disability feature
+(CC33's pending X2) and returned a flow verdict: after any tap it is not
+clear what to do or what happens next; "bolted together". Full audit at
+`docs/how-you-train-usability-audit-2026-09-03/AUDIT.md`: every flow
+traced stage by stage (section 1), 21 findings with file:line (section
+2), the 25-piece provenance table that proves the bolting (0.2), the
+spec-vs-built table (0.3), prior-audit reconciliation (4), constraints
+(5) and the five founder forks (6). One correctness defect found:
+HYT-01, dismissing the apply proposal records a decline. The 2026-09-02
+visual restyle of the same feature (be4c7c7e, 6fedf6a5) is recorded as
+closed there and in TASKBOARD's CC33 block. Snapshot persisted at
+`.impeccable/critique/2026-09-03T06-00-14Z__src-screens-howyoutrainscreen-js.md`.
+No production code touched. Next: founder answers section 6; a redesign
+session builds from the audit, HYT-01 first and alone.
+
 ### 2026-08-18 — CAMPAIGNS 30/31/32 (share revamp, injury constraints, load semantics) — COMPLETE, ALL ON MAIN
 All three landed in the founder's order and merged continually (C30
 renderer 847ab8af + B3 screen e8313c68, C31 f672c590, C32 26d1a39b;

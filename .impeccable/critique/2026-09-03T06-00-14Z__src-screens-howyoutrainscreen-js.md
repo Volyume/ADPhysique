@@ -1,3 +1,13 @@
+---
+target: How you train feature (HowYouTrainScreen + TrainingConsiderations + AvoidedMovements)
+total_score: 18
+max_score: 40
+na_heuristics: 
+p0_count: 4
+p1_count: 7
+timestamp: 2026-09-03T06-00-14Z
+slug: src-screens-howyoutrainscreen-js
+---
 # How you train — flow audit (2026-09-03)
 
 **Founder brief, verbatim, in order.**

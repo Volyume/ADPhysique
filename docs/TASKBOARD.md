@@ -1230,6 +1230,32 @@ founder device walk PENDING - the device checklist was delivered in
 chat. NEXT (founder-gated): the device walk, then whether to resume
 review at round 20 or close CC33 as-is.
 
+**2026-09-03 UPDATE — X2 HAPPENED; FLOW AUDIT LANDED.** The founder
+device-walked the feature and returned the verdict in chat, verbatim:
+"It's when you click on one thing like Add Something, it's not clear what
+or if you have to do anything next. There's no clear understandable flow
+that a normal human will understand ... It just seems bolted together."
+Lead-run flow audit (impeccable critique method, dual-agent, every P0/P1
+verified against source) landed at
+`docs/how-you-train-usability-audit-2026-09-03/AUDIT.md` (commits
+125236d7 + this landing). Thirteen flows traced stage by stage against
+start / place / end / result / next; 21 findings (HYT-01..21: 4 P0, 7 P1);
+25 separately-landed pieces enumerated with their provenance (the
+"bolted together" evidence); eight items the original spec asked for and
+CC33 never built (ARCHITECTURE §12 time remaining + edit + waiting-to-
+confirm, §22 "never a modal ambush", §33.7 badge decay, §33.16 one-
+sentence readback). Section 4.2 lists the CC33 findings closed at
+mechanism level that are still open as experience (T2-11, T2-23,
+T1-15/T2-24, T2-25, T2-26). Off-board commits since 8050bc0b now recorded
+there (b0829ba1, 20cb3b66, be4c7c7e, 6fedf6a5).
+**HYT-01 is a correctness defect** (backdrop-dismiss of the apply
+proposal records a decline, AppAlert.js:78-92 + HowYouTrainScreen.js:626-
+632): to land first, alone, with its own test, before any flow work.
+NEXT (founder-gated): the five product forks in AUDIT.md section 6
+(flow container, where plan decisions live, the check-in card's shape,
+edit, consent placement), then the redesign session builds from the
+audit. X1 = NO unchanged.
+
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):
 WorkoutSummaryScreen (T2-07 post-workout quiet line + T2-22 effects
