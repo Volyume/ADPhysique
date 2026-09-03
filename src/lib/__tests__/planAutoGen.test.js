@@ -11,6 +11,7 @@ jest.mock('../database', () => ({
   addExerciseToRoutine: jest.fn(),
   getAllExercises: jest.fn(),
   activatePlanWithBlock: jest.fn(),
+  activatePlanKeepingBlock: jest.fn(),
   archiveOtherUserPlans: jest.fn(),
   getAllProgrammes: jest.fn(),
   db: jest.fn(),
@@ -24,7 +25,7 @@ import { buildPlanInputs, generateAndSavePlan, generatePlanDryRun } from '../pla
 import { POOL } from '../planEngine';
 import {
   getAllExercises, createProgramme, createRoutine, addExerciseToRoutine,
-  activatePlanWithBlock, archiveOtherUserPlans, getAllProgrammes,
+  activatePlanWithBlock, activatePlanKeepingBlock, archiveOtherUserPlans, getAllProgrammes,
   db, runInTransaction, deleteProgrammeCascade, deleteProgrammeCascadeInTx,
 } from '../database';
 
@@ -168,9 +169,40 @@ describe('generateAndSavePlan atomic persistence', () => {
     createRoutine.mockImplementation(async () => ({ id: `routine-${routineIndex++}` }));
     addExerciseToRoutine.mockResolvedValue({ id: 'routine-exercise-1' });
     activatePlanWithBlock.mockResolvedValue('mesocycle-1');
+    activatePlanKeepingBlock.mockResolvedValue(null);
     archiveOtherUserPlans.mockResolvedValue(undefined);
     deleteProgrammeCascade.mockResolvedValue(undefined);
     deleteProgrammeCascadeInTx.mockResolvedValue(undefined);
+  });
+
+  // D140 (founder decision 2026-09-03): a rebuild that keeps every exercise
+  // keeps the running block. Only an explicit keepBlock takes the keep path.
+  test('D140: by default the block is never kept (activatePlanWithBlock runs, blockKept false)', async () => {
+    const result = await generateAndSavePlan('u1', profile);
+    expect(result.ok).toBe(true);
+    expect(result.blockKept).toBe(false);
+    expect(activatePlanKeepingBlock).not.toHaveBeenCalled();
+    expect(activatePlanWithBlock).toHaveBeenCalledWith('u1', 'programme-1', expect.any(String), { ledger: null, allowLearnedCarry: true });
+  });
+
+  test('D140: keepBlock swaps the programme under the running block and writes no new one', async () => {
+    activatePlanKeepingBlock.mockResolvedValue('mesocycle-kept');
+    const result = await generateAndSavePlan('u1', profile, { keepBlock: true });
+    expect(result.ok).toBe(true);
+    expect(result.blockKept).toBe(true);
+    expect(activatePlanKeepingBlock).toHaveBeenCalledWith('u1', 'programme-1');
+    expect(activatePlanWithBlock).not.toHaveBeenCalled();
+    // The rest of the commit is unchanged: other plans still archive.
+    expect(archiveOtherUserPlans).toHaveBeenCalledWith('u1', 'programme-1');
+  });
+
+  test('D140: keepBlock with no active block falls back to the usual activation', async () => {
+    activatePlanKeepingBlock.mockResolvedValue(null);
+    const result = await generateAndSavePlan('u1', profile, { keepBlock: true });
+    expect(result.ok).toBe(true);
+    expect(result.blockKept).toBe(false);
+    expect(activatePlanKeepingBlock).toHaveBeenCalledTimes(1);
+    expect(activatePlanWithBlock).toHaveBeenCalledTimes(1);
   });
 
   test('writes the plan in one transaction and suppresses intermediate sync', async () => {

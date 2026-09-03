@@ -29,7 +29,7 @@ import {
 import { PLAN_FIT } from '../lib/planFit';
 import { buildChangeReceipt } from '../lib/planRationale';
 import { getAllPlansForUser } from '../lib/database';
-import { diffPlans, summariseProspectivePlan } from '../lib/planDiff';
+import { diffPlans, summariseProspectivePlan, keepsBlockOnRebuild } from '../lib/planDiff';
 // D139: the preview sheet is shared with the three other generation moments
 // (Today and Train's no-plan empty states, and a goal/phase change), so all
 // four say the same things in the same order before anything is written.
@@ -204,7 +204,14 @@ export default function PlanUpdateScreen({ navigation }) {
       // archive.
       const blockStatus = await readActiveBlockStatus(user.id).catch(() => null);
       const otherPlans = await getAllPlansForUser(user.id).catch(() => []);
-      setDiff(diffPlans(nowSummary, afterSummary));
+      const nextDiff = diffPlans(nowSummary, afterSummary);
+      // C16 job 11: the reason-coded receipt. Built from the SAME
+      // continuity decisions the commit will act on, so the sheet cannot
+      // describe a change the rebuild is not about to make.
+      const receipt = dry.continuity?.decisions?.length
+        ? buildChangeReceipt(dry.continuity.decisions)
+        : null;
+      setDiff(nextDiff);
       setStaged({
         profile: updatedProfile,
         plan: dry.plan,
@@ -213,6 +220,10 @@ export default function PlanUpdateScreen({ navigation }) {
         // is named BEFORE they confirm, not in a receipt toast afterwards.
         structureMemory: dry.structureMemory ?? null,
         blockStatus,
+        // D140 (founder decision 2026-09-03): a rebuild that keeps every
+        // exercise keeps the running block. Ruled here by the one pure rule
+        // the commit re-reads below, so the sheet's line and the write agree.
+        keepBlock: keepsBlockOnRebuild({ diff: nextDiff, receipt, blockStatus }),
         currentPlanName: nowSummary?.planName ?? null,
         otherPlansCount: Array.isArray(otherPlans) ? otherPlans.length : 0,
         partial: !!dry.partial,
@@ -232,12 +243,7 @@ export default function PlanUpdateScreen({ navigation }) {
           && (fit.state === PLAN_FIT.VALID_TIME_CONSTRAINED
             || fit.state === PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN)
           ? fit : null,
-        // C16 job 11: the reason-coded receipt. Built from the SAME
-        // continuity decisions the commit will act on, so the sheet cannot
-        // describe a change the rebuild is not about to make.
-        receipt: dry.continuity?.decisions?.length
-          ? buildChangeReceipt(dry.continuity.decisions)
-          : null,
+        receipt,
       });
     } catch (e) {
       logError('PlanUpdateScreen.reviewRebuild', e, { userId: user?.id });
@@ -271,15 +277,24 @@ export default function PlanUpdateScreen({ navigation }) {
       });
       if (!goAhead) { setSaving(false); return; }
     }
+    // D140: re-rule "keep the block" against the block's position NOW, not
+    // the one the preview read. If the block finished between preview and
+    // confirm, the rule flips to a restart and the dialogue below says so
+    // honestly, rather than keeping a finished block the preview never saw.
+    const blockStatusNow = await readActiveBlockStatus(user.id).catch(() => null);
+    const keepBlock = keepsBlockOnRebuild({ diff, receipt: staged.receipt ?? null, blockStatus: blockStatusNow });
     // D139: the same mid-block confirm every other plan-replacing path runs,
     // in its usual position (before the write, with the rebuild wording).
-    // The preview above already SAYS the block restarts; this is the explicit
-    // yes to it. Abort leaves the setup and the active plan untouched.
-    const proceed = await confirmPlanSwitchMidBlock(user.id, { mode: 'rebuild' });
+    // The preview above already SAYS what happens to the block; this is the
+    // explicit yes to a restart. With the block kept (D140) nothing at block
+    // level is lost, so the sheet's confirm is the explicit yes and the
+    // dialogue is skipped. Abort leaves the setup and the active plan
+    // untouched.
+    const proceed = await confirmPlanSwitchMidBlock(user.id, { mode: 'rebuild', keepBlock });
     if (!proceed) { setSaving(false); return; }
     let planResult = { ok: false, error: 'not attempted' };
     try {
-      planResult = await generateAndSavePlan(user.id, updatedProfile);
+      planResult = await generateAndSavePlan(user.id, updatedProfile, { keepBlock });
     } catch (e) {
       // C1: log the real exception here, the diagnostic must survive even
       // though planResult.error below is never shown to the user.
@@ -316,6 +331,9 @@ export default function PlanUpdateScreen({ navigation }) {
         structureMemoryCopy(planResult.structureMemory, SPLIT_LABELS[planResult.plan?.splitType] ?? planResult.plan?.splitType),
         { variant: 'success', duration: 6000 },
       );
+    } else if (planResult.blockKept) {
+      // D140: say what the preview promised, in the same terms.
+      toast.show('Plan rebuilt around your new training setup. Your block carries on where it was', { variant: 'success', duration: 5000 });
     } else {
       toast.show('Plan rebuilt around your new training setup', { variant: 'success' });
     }

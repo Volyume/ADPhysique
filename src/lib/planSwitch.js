@@ -46,11 +46,19 @@ export async function readActiveBlockStatus(userId) {
 //
 // Otherwise shows an Alert and resolves to the user's choice.
 export async function confirmPlanSwitchMidBlock(userId, opts = {}) {
-  const { newPlanName, mode = 'switch' } = opts;
+  const { newPlanName, mode = 'switch', keepBlock = false } = opts;
   if (!userId) return true;
 
   const status = await readActiveBlockStatus(userId);
   if (!status) return true;
+
+  // D140 (founder decision 2026-09-03): a rebuild that keeps every exercise
+  // keeps the running block, so there is no block-level loss to warn about
+  // and the preview sheet's own confirm is the explicit yes. Only a block
+  // that is genuinely running can be kept; a finished block waiting on its
+  // decision falls through to its own dialogue below, which is honest
+  // because the commit starts a new block in that state.
+  if (keepBlock && (status.status === 'active' || status.status === 'recovery')) return true;
 
   // D139: week 1 used to pass SILENTLY, so the one moment where a plan is
   // replaced with nothing yet lost was also the one moment nothing was said.
@@ -77,13 +85,17 @@ export async function confirmPlanSwitchMidBlock(userId, opts = {}) {
   // decision. Those two states now get their own honest dialogue; the
   // block's evidence itself survives either way (the P9-01 backfill
   // judges switched-away finished blocks when history is next read).
-  if (status.status === 'in_recovery' || status.status === 'completed_awaiting_decision') {
-    const stateBody = status.status === 'in_recovery'
+  // D140: getBlockStatus reports the recovery week as 'recovery' (never
+  // 'in_recovery', which is blockAdvisor's ACTION name). This branch matched
+  // the wrong string, so a recovery-week switch fell through to the
+  // "anything not 'active' passes" line and went silent after all.
+  if (status.status === 'recovery' || status.status === 'completed_awaiting_decision') {
+    const stateBody = status.status === 'recovery'
       ? `You're in your recovery week. Switching now starts a new block today${newPlanName ? ` on "${newPlanName}"` : ''}, and this block's results will still appear under Past blocks. Your workout history and PRs are kept.`
       : `Your finished block's decision is still open. Switching now starts a new block today${newPlanName ? ` on "${newPlanName}"` : ''} instead; what this block showed stays available under Past blocks. Your workout history and PRs are kept.`;
     return new Promise(resolve => {
       appAlert(
-        status.status === 'in_recovery' ? 'Switch during your recovery week?' : 'Skip the open block decision?',
+        status.status === 'recovery' ? 'Switch during your recovery week?' : 'Skip the open block decision?',
         stateBody,
         [
           { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },

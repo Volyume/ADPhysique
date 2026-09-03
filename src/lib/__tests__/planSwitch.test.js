@@ -130,3 +130,58 @@ describe('readActiveBlockStatus', () => {
     expect(await readActiveBlockStatus(null)).toBeNull();
   });
 });
+
+describe('D140: a rebuild that keeps every exercise keeps the block, and asks nothing', () => {
+  test('mid-block with keepBlock proceeds silently', async () => {
+    getActiveBlock.mockResolvedValue({ startDate: weeksAgo(2), plannedWeeks: 6 });
+    await expect(confirmPlanSwitchMidBlock('u1', { mode: 'rebuild', keepBlock: true })).resolves.toBe(true);
+    expect(appAlert).not.toHaveBeenCalled();
+  });
+
+  test('week 1 with keepBlock proceeds silently too (nothing block-level is lost)', async () => {
+    getActiveBlock.mockResolvedValue({ startDate: Date.now(), plannedWeeks: 6 });
+    await expect(confirmPlanSwitchMidBlock('u1', { mode: 'rebuild', keepBlock: true })).resolves.toBe(true);
+    expect(appAlert).not.toHaveBeenCalled();
+  });
+
+  test('the recovery week with keepBlock proceeds silently', async () => {
+    getActiveBlock.mockResolvedValue({ startDate: weeksAgo(5), plannedWeeks: 6 });
+    await expect(confirmPlanSwitchMidBlock('u1', { mode: 'rebuild', keepBlock: true })).resolves.toBe(true);
+    expect(appAlert).not.toHaveBeenCalled();
+  });
+
+  test('a finished block is never kept: keepBlock still gets the open-decision dialogue', async () => {
+    getActiveBlock.mockResolvedValue({ startDate: weeksAgo(7), plannedWeeks: 6 });
+    answerWith('Cancel');
+    await expect(confirmPlanSwitchMidBlock('u1', { mode: 'rebuild', keepBlock: true })).resolves.toBe(false);
+    expect(appAlert.mock.calls[0][0]).toBe('Skip the open block decision?');
+  });
+
+  test('without keepBlock the mid-block restart dialogue is unchanged', async () => {
+    getActiveBlock.mockResolvedValue({ startDate: weeksAgo(2), plannedWeeks: 6 });
+    answerWith('Cancel');
+    await expect(confirmPlanSwitchMidBlock('u1', { mode: 'rebuild', keepBlock: false })).resolves.toBe(false);
+    expect(appAlert.mock.calls[0][0]).toBe('Restart your training block?');
+  });
+});
+
+describe('D140: the recovery week gets its own dialogue (the branch matched the wrong status string)', () => {
+  test('a switch in the recovery week asks, and Cancel means cancel', async () => {
+    // getBlockStatus reports the final week as 'recovery'; the branch used
+    // to test 'in_recovery' (blockAdvisor's action name) and never fired.
+    getActiveBlock.mockResolvedValue({ startDate: weeksAgo(5), plannedWeeks: 6 });
+    answerWith('Cancel');
+    await expect(confirmPlanSwitchMidBlock('u1', { newPlanName: 'Push Pull Legs' })).resolves.toBe(false);
+    const [title, body] = appAlert.mock.calls[0];
+    expect(title).toBe('Switch during your recovery week?');
+    expect(body).toContain("You're in your recovery week.");
+    expect(body).toContain('on "Push Pull Legs"');
+    expect(body).toContain('Your workout history and PRs are kept.');
+  });
+
+  test('the recovery-week dialogue can be accepted', async () => {
+    getActiveBlock.mockResolvedValue({ startDate: weeksAgo(5), plannedWeeks: 6 });
+    answerWith('Switch plan');
+    await expect(confirmPlanSwitchMidBlock('u1', {})).resolves.toBe(true);
+  });
+});

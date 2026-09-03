@@ -102,6 +102,20 @@ export const blockRestartSentence = (currentWeek, totalWeeks) =>
   `Confirming ends your current block at week ${currentWeek} of ${totalWeeks} `
   + 'and starts a new one from week 1. Your workout history and PRs are kept.';
 
+/**
+ * D140 (founder decision 2026-09-03): the counterpart for a rebuild that
+ * keeps every exercise. The block carries on where it is; nothing restarts.
+ * Same shape as blockRestartSentence so the sheet swaps one for the other
+ * and the athlete reads the week they are in either way.
+ *
+ * @param {number} currentWeek the week the running block is in
+ * @param {number} totalWeeks  its planned length
+ */
+export const blockKeptSentence = (currentWeek, totalWeeks) =>
+  'Every exercise stays, so your current block carries on at '
+  + `week ${currentWeek} of ${totalWeeks} rather than restarting. `
+  + 'Your workout history and PRs are kept.';
+
 const SOURCE_CLAUSE = Object.freeze({
   seed_ledger: 'set by how your last block went',
   seed_learned: 'set by what past blocks have shown',

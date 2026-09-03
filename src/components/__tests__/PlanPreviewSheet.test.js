@@ -40,7 +40,7 @@ jest.mock('../../lib/planAutoGen', () => ({
   planShortfallNote: (n) => `${n} moves couldn't be matched to your equipment.`,
 }));
 
-import PlanPreviewSheet, { blockRestartLine, otherPlansLine, HAND_EDITS_LINE } from '../PlanPreviewSheet';
+import PlanPreviewSheet, { blockRestartLine, blockKeptLine, otherPlansLine, HAND_EDITS_LINE } from '../PlanPreviewSheet';
 import { BLOCK_START_SENTENCE } from '../../lib/blockExplain';
 
 function flattenText(node) {
@@ -250,5 +250,42 @@ describe('PlanPreviewSheet: confirm and cancel', () => {
   test('no preview means no sheet', () => {
     const { tree } = render({ preview: null });
     expect(tree.toJSON()).toBeNull();
+  });
+});
+
+describe('PlanPreviewSheet: D140, a rebuild that keeps every exercise keeps the block', () => {
+  test('with keepBlock the sheet says the block carries on, and never claims a restart or a new block', () => {
+    const { tree } = render({ preview: { ...REBUILD_PREVIEW, keepBlock: true } });
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain('Every exercise stays, so your current block carries on at week 3 of 6 rather than restarting. Your workout history and PRs are kept.');
+    expect(text).not.toContain('Confirming ends your current block');
+    expect(text).not.toContain(BLOCK_START_SENTENCE);
+    // The other consequences still hold: workouts are rebuilt.
+    expect(text).toContain(HAND_EDITS_LINE);
+  });
+
+  test('without keepBlock the restart disclosure is exactly as before', () => {
+    const { tree } = render({ preview: { ...REBUILD_PREVIEW, keepBlock: false } });
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain(BLOCK_START_SENTENCE);
+    expect(text).toContain('Confirming ends your current block at week 3 of 6');
+    expect(text).not.toContain('carries on at week');
+  });
+
+  test('keepBlock with no running block falls back to the honest block-start line', () => {
+    const { tree } = render({ preview: { ...REBUILD_PREVIEW, keepBlock: true, blockStatus: null } });
+    const text = flattenText(tree.toJSON());
+    expect(text).toContain(BLOCK_START_SENTENCE);
+    expect(text).not.toContain('carries on at week');
+  });
+
+  test('blockKeptLine is null for anything but a running block', () => {
+    expect(blockKeptLine({ status: 'active', currentWeek: 2, totalWeeks: 6 })).toContain('week 2 of 6');
+    expect(blockKeptLine({ status: 'recovery', currentWeek: 6, totalWeeks: 6 })).toContain('week 6 of 6');
+    expect(blockKeptLine({ status: 'completed_awaiting_decision', currentWeek: 7, totalWeeks: 6 })).toBeNull();
+    expect(blockKeptLine(null)).toBeNull();
+    const line = blockKeptLine({ status: 'active', currentWeek: 2, totalWeeks: 6 });
+    expect(line).not.toContain('—');
+    expect(line).not.toMatch(/must|need to|failed|lost/i);
   });
 });

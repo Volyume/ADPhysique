@@ -136,3 +136,46 @@ export function diffPlans(now, after) {
 
   return { days, split, sessionLength, movesAdded, movesDropped, identical };
 }
+
+/**
+ * D140 (founder decision 2026-09-03, answering the D139 question): a rebuild
+ * that keeps every exercise keeps the running training block.
+ *
+ * The block is the multi-week shape of the WEEKLY set targets per muscle
+ * (mesocycles, mesocycle_weeks, planned_muscle_volume), keyed to the user,
+ * never to a programme or to how many days those sets are spread across. So
+ * a change to days, session length, split or the other setup fields that
+ * leaves the exercise list intact cannot invalidate it, and restarting it
+ * from week 1 threw away the athlete's ramp for nothing. When the exercise
+ * list itself changes (something added, dropped or replaced) the block still
+ * restarts, exactly as before.
+ *
+ * Pure and deterministic: the same inputs always give the same answer, and
+ * the preview sheet and the commit both read it so they cannot disagree.
+ *
+ * @param {object} args
+ * @param {object|null} args.diff        diffPlans view-model
+ * @param {object|null} args.receipt     planRationale.buildChangeReceipt output, or null
+ * @param {object|null} args.blockStatus planSwitch.readActiveBlockStatus output, or null
+ * @returns {boolean} true when the running block is kept across this rebuild
+ */
+export function keepsBlockOnRebuild({ diff = null, receipt = null, blockStatus = null } = {}) {
+  // A block that is over and waiting on its decision is not running: a
+  // rebuild from "Change my training setup" IS that decision and must start
+  // the next block. No block at all means nothing to keep.
+  if (!blockStatus || !blockStatus.currentWeek || !blockStatus.totalWeeks) return false;
+  if (blockStatus.status !== 'active' && blockStatus.status !== 'recovery') return false;
+  if (!diff) return false;
+  const added = Array.isArray(diff.movesAdded) ? diff.movesAdded : [];
+  const dropped = Array.isArray(diff.movesDropped) ? diff.movesDropped : [];
+  if (added.length > 0 || dropped.length > 0) return false;
+  // The reason-coded receipt is the commit's own account of the exercise
+  // list; when it is present it has the final say.
+  if (receipt) {
+    const changes = Array.isArray(receipt.changes) ? receipt.changes : [];
+    const newIn = Array.isArray(receipt.added) ? receipt.added : [];
+    const gone = Array.isArray(receipt.noLongerIn) ? receipt.noLongerIn : [];
+    if (changes.length > 0 || newIn.length > 0 || gone.length > 0) return false;
+  }
+  return true;
+}

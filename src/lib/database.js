@@ -5042,6 +5042,41 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   return id;
 }
 
+/**
+ * D140 (founder decision 2026-09-03): activate a rebuilt programme WITHOUT
+ * touching the running training block. The block (mesocycles,
+ * mesocycle_weeks, planned_muscle_volume) is keyed to the user and to
+ * muscles, never to a programme, so a rebuild that keeps every exercise can
+ * swap the programme underneath it and the block carries on at the week it
+ * is in. Nothing here writes to any mesocycle table.
+ *
+ * Returns the kept block's id, or null when there is no active block to
+ * keep - the caller then activates through activatePlanWithBlock as usual,
+ * so a user with no block still gets one. That fallback is the caller's,
+ * not this function's, so this function can be pinned as never inserting a
+ * mesocycle.
+ */
+export async function activatePlanKeepingBlock(userId, planId) {
+  if (!userId || !planId) return null;
+  const d = await db();
+  const active = await d.getFirstAsync(
+    'SELECT id FROM mesocycles WHERE user_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1',
+    [userId],
+  );
+  if (!active?.id) return null;
+  await setActivePlan(userId, planId);
+  // Same reminder refresh activatePlanWithBlock performs, for the same
+  // reason: the push copy names the plan the Train tab shows. Best-effort.
+  try {
+    const activeForReminder = await getActivePlan(userId).catch(() => null);
+    // eslint-disable-next-line global-require
+    require('./notifications/trainingReminders')
+      .scheduleTrainingReminders(activeForReminder?.name)
+      .catch(() => {});
+  } catch (_) { /* notifications layer unavailable -- reminders refresh on next schedule */ }
+  return active.id;
+}
+
 export async function getAllPlansForUser(userId) {
   const d = await db();
   const rows = await d.getAllAsync(

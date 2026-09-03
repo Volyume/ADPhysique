@@ -22,6 +22,10 @@
  *                                    the caller to the states worth surfacing
  *                        blockStatus { currentWeek, totalWeeks, status } from
  *                                    planSwitch.readActiveBlockStatus, or null
+ *                        keepBlock   boolean (D140): the caller's ruling from
+ *                                    planDiff.keepsBlockOnRebuild; when true
+ *                                    the sheet says the block carries on
+ *                                    instead of restarting
  *   currentPlanName  - the plan being replaced, when there is one
  *   otherPlansCount  - how many other non-archived plans the athlete has
  *   confirmLabel     - the confirm button's title
@@ -41,7 +45,7 @@ import { fitCopy, alternativeCopy } from '../lib/planFit';
 import { demandLabel } from '../lib/capability/model';
 import { structureMemoryCopy } from '../lib/programmeStructureMemory';
 import { splitLabel } from '../lib/planDiff';
-import { BLOCK_START_SENTENCE, blockRestartSentence } from '../lib/blockExplain';
+import { BLOCK_START_SENTENCE, blockRestartSentence, blockKeptSentence } from '../lib/blockExplain';
 import { track } from '../lib/telemetry';
 
 // D139: the three disclosures every confirm-before-commit moment owes the
@@ -54,6 +58,17 @@ export function blockRestartLine(blockStatus) {
   if (!blockStatus || blockStatus.status === 'completed_awaiting_decision') return null;
   if (!blockStatus.currentWeek || !blockStatus.totalWeeks) return null;
   return blockRestartSentence(blockStatus.currentWeek, blockStatus.totalWeeks);
+}
+
+// D140 (founder decision 2026-09-03): the line for a rebuild that keeps
+// every exercise. The block carries on, so neither the "starts a block"
+// sentence nor the restart line is true; this replaces both. Null whenever
+// the block is not genuinely running, which is the same set of states
+// planDiff.keepsBlockOnRebuild refuses to keep.
+export function blockKeptLine(blockStatus) {
+  if (!blockStatus || !blockStatus.currentWeek || !blockStatus.totalWeeks) return null;
+  if (blockStatus.status !== 'active' && blockStatus.status !== 'recovery') return null;
+  return blockKeptSentence(blockStatus.currentWeek, blockStatus.totalWeeks);
 }
 
 export function otherPlansLine(n) {
@@ -116,6 +131,7 @@ export default function PlanPreviewSheet({
     ? structureMemoryCopy(preview.structureMemory, splitLabel(preview.plan?.splitType))
     : null;
   const blockLine = blockRestartLine(preview.blockStatus);
+  const keptLine = preview.keepBlock ? blockKeptLine(preview.blockStatus) : null;
   const plansLine = otherPlansLine(otherPlansCount);
 
   return (
@@ -356,7 +372,7 @@ export default function PlanPreviewSheet({
           travel with a rebuild. */}
       <View style={styles.consequences}>
         <Text style={[styles.diffShortfall, live.diffShortfall]}>
-          {BLOCK_START_SENTENCE}{blockLine ? ` ${blockLine}` : ''}
+          {keptLine ?? `${BLOCK_START_SENTENCE}${blockLine ? ` ${blockLine}` : ''}`}
         </Text>
         {plansLine ? (
           <Text style={[styles.diffShortfall, live.diffShortfall]}>{plansLine}</Text>

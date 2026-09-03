@@ -19,6 +19,7 @@ import {
   addExerciseToRoutine,
   getAllExercises,
   activatePlanWithBlock,
+  activatePlanKeepingBlock,
   archiveOtherUserPlans,
   getAllProgrammes,
   db,
@@ -909,7 +910,7 @@ export function thinSessionReport(plan, blockedSlots) {
  * the error is 'plan_blocked_by_exclusions'.
  */
 export async function generateAndSavePlan(userId, profile, {
-  ledger = null, allowLearnedCarry = true, continuityProposal = null,
+  ledger = null, allowLearnedCarry = true, continuityProposal = null, keepBlock = false,
 } = {}) {
   if (!userId) return { ok: false, error: 'No user' };
   const inputs = buildPlanInputs(profile);
@@ -1080,7 +1081,21 @@ export async function generateAndSavePlan(userId, profile, {
     // ledger it already resolved, so a refined next programme starts on the
     // learned volume rather than re-deriving it. Every other caller passes
     // nothing and behaves exactly as before.
-    await activatePlanWithBlock(userId, prog.id, planName, { ledger, allowLearnedCarry });
+    // D140 (founder decision 2026-09-03): a rebuild that keeps every
+    // exercise keeps the running block. The caller decides that from the
+    // same pure rule the preview showed (keepsBlockOnRebuild, which this
+    // commit never consults itself); here the programme is swapped under
+    // the block and no mesocycle is written.
+    // With no active block to keep, the usual activation runs so the user
+    // is never left with a plan and no block.
+    let blockKept = false;
+    if (keepBlock) {
+      const keptBlockId = await activatePlanKeepingBlock(userId, prog.id);
+      blockKept = !!keptBlockId;
+    }
+    if (!blockKept) {
+      await activatePlanWithBlock(userId, prog.id, planName, { ledger, allowLearnedCarry });
+    }
     // Pro auto-gen is the "single managed plan" path: rerolling on goal
     // change creates a fresh programme each time, and the previous ones
     // pile up in My plans on the Train tab. Archive everything except
@@ -1097,6 +1112,9 @@ export async function generateAndSavePlan(userId, profile, {
     const result = {
       ok: true,
       programmeId: prog.id,
+      // D140: true when the running block carried on across this rebuild,
+      // so the caller's receipt can say so instead of "new block".
+      blockKept,
       continuity: {
         isRebuild: continuity.isRebuild,
         decisions: continuity.decisions,
