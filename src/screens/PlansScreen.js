@@ -30,13 +30,20 @@ import {
 import { getBlockAdvice, buildNextBlockOptions, applyAdjustEvidence } from '../lib/blockAdvisor';
 import { adjustPreviewLines } from '../lib/nextBlockPreview';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
-import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, buildSeedReceipt } from '../lib/blockExplain';
+import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, buildSeedReceipt, BLOCK_DEFINITION } from '../lib/blockExplain';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 // CC27 (section 9.6) red-team finding 1: every generateAndSavePlan surface
 // runs the capability pre-flight first - never a silent fail-open.
 import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
+// D139: "Start with a plan" previews before it generates. prepareStartWithPlan
+// owns the capability pre-flight and the READ-ONLY dry run; commitStartWithPlan
+// is the real generation, run only after the athlete confirms in
+// PlanPreviewSheet (same shared helper and sheet HomeScreen's own no-plan CTA
+// uses, so the app's one first-plan route behaves identically everywhere).
+import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan';
+import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { loadExerciseIntentState, listActiveMovementConstraints } from '../lib/exercise/intent';
 // D134 (founder 2026-09-03): the How you train row's live line.
@@ -45,6 +52,7 @@ import { howYouTrainSummary } from '../lib/capability/summary';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useToast } from '../components/Toast';
+import { track } from '../lib/telemetry';
 import { logError, logInfo } from '../lib/errorLog';
 import * as haptics from '../lib/haptics';
 
@@ -239,9 +247,17 @@ export default function PlansScreen({ navigation }) {
   // resets the plan/folder state that's already on screen (see loadData's
   // catch branch), so a refresh failure preserves whatever was showing.
   const [loadError, setLoadError] = useState(false);
+  // D139: "Start with a plan" preview state -- { preview, otherPlansCount }
+  // once prepareStartWithPlan resolves, null otherwise (drives the sheet's
+  // `visible`). `startingPlan` is the commit's own busy flag.
+  const [planPreview, setPlanPreview] = useState(null);
+  const [startingPlan, setStartingPlan] = useState(false);
 
   const scrollRef = useRef(null);
   const peekRef = useRef(null);
+  // D139: double-tap guard on the preview step (the dry run is real work;
+  // the commit step has its own guard via `startingPlan`).
+  const startWithPlanRef = useRef(false);
   // Stage 6: re-entry guard for the block restart (the seed build is
   // real work; a re-confirmed alert must never run two activations).
   const restartingRef = useRef(false);
@@ -460,6 +476,56 @@ export default function PlansScreen({ navigation }) {
     setRefreshing(false);
   }
 
+  // ── D139: "Start with a plan", in two steps (same shape as HomeScreen's
+  // own no-plan CTA, so the app's one route to a first plan behaves
+  // identically wherever it is reached). Step 1 previews: the capability
+  // pre-flight and the READ-ONLY dry run live inside prepareStartWithPlan,
+  // then the sheet. Nothing is generated, saved or activated here. ──────────
+  async function handleStartWithPlanPress() {
+    if (startWithPlanRef.current) return;
+    startWithPlanRef.current = true;
+    try {
+      const prep = await prepareStartWithPlan(user.id, userProfile, { mode: 'first' });
+      if (!prep.ok) {
+        // A hold at the pre-flight leaves the empty state in place to try
+        // again, and says nothing extra: the choice was the athlete's.
+        if (prep.reason === 'dry_run_failed') {
+          logError('PlansScreen.startWithPlanPreview', new Error(prep.error ?? 'plan_generation_failed'), { userId: user?.id });
+          toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+        }
+        return;
+      }
+      setPlanPreview({ preview: prep.preview, otherPlansCount: prep.otherPlansCount });
+    } finally {
+      startWithPlanRef.current = false;
+    }
+  }
+
+  // Step 2 commits, only from the sheet's confirm button.
+  async function handleConfirmStartWithPlan() {
+    if (startingPlan) return;
+    setStartingPlan(true);
+    let result = { ok: false, error: 'not attempted' };
+    try {
+      result = await commitStartWithPlan(user.id, userProfile);
+    } catch (e) {
+      result = { ok: false, error: e?.message ?? 'unknown' };
+    }
+    setStartingPlan(false);
+    if (result.ok) {
+      setPlanPreview(null);
+      await loadData();
+      // D112 R5 (closes audit T1-12): every generation entry reveals
+      // capability effects.
+      if (result.capabilityBlockedCount > 0) {
+        toast.show(capabilityBlockedNote(result.capabilityBlockedCount), { variant: 'info', duration: 5000 });
+      }
+    } else {
+      logError('PlansScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
+      toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+    }
+  }
+
   // Stage 1 seam (2026-08-09, blueprint §3.5): `intent` is the advisor
   // recommendation the user tapped ('repeat' | 'adjust' |
   // 'consider_rebuild'). Stage 6 branches here to build the Block Ledger
@@ -477,6 +543,10 @@ export default function PlansScreen({ navigation }) {
     // buttons used to queue two confirms.
     if (restartingRef.current) return;
     restartingRef.current = true;
+    // D139 item 9: funnel telemetry, the block decision by intent. Fired the
+    // moment the athlete picks an option, independent of the review/confirm
+    // that follows -- counts and enums only, fire-and-forget.
+    if (user?.id) track(user.id, 'block_decision', { intent }).catch(() => {});
 
     // C16 phase C (completion pass): "Continue with adjustments" now REVIEWS
     // before it acts. It gathers what the next block would actually be -
@@ -779,7 +849,11 @@ export default function PlansScreen({ navigation }) {
     if (restartingRef.current) return;
     restartingRef.current = true;
     try {
-      if (!activePlan) {
+      // D139: planSwitch now shows this same dialogue itself whenever a block
+      // exists (week 1 included), so this local copy is only for the truly
+      // first activation with no block at all; otherwise two identical
+      // dialogues would run back to back.
+      if (!activePlan && !blockAdvice?.blockStatus) {
         const confirmed = await new Promise((resolve) => {
           appAlert(
             'Make this your active plan?',
@@ -993,7 +1067,7 @@ export default function PlansScreen({ navigation }) {
         text: 'Delete',
         style: 'destructive',
         onPress: () => appAlert(
-          'Delete template?',
+          'Delete saved workout?',
           `"${routine.name}" will be removed.`,
           [
             { text: 'Cancel', style: 'cancel' },
@@ -1079,7 +1153,13 @@ export default function PlansScreen({ navigation }) {
   // FOUNDER DECISION (fully free, no tier split): every account gets the
   // coached-builder card set now (it used to be Pro-only); the Free default
   // order (library first, manual second) is retired.
-  const actionCards = ACTION_CARDS_PRO_SWITCH;
+  // D139 (finding: "'Adjust training plan' rendered with no plan to
+  // adjust"): with no active plan there is nothing for it to adjust, and
+  // the library card duplicates the no-plan EmptyState's own "Browse
+  // plans" route, so the no-plan state offers only "Create your own".
+  const actionCards = activePlan
+    ? ACTION_CARDS_PRO_SWITCH
+    : ACTION_CARDS_PRO_SWITCH.filter((card) => card.id === 'manual');
 
   // Group the non-active plans by folder. Plans whose folder_id is null (or
   // points at a now-deleted folder) fall through to the unfiled "My plans"
@@ -1156,10 +1236,25 @@ export default function PlansScreen({ navigation }) {
                   {planWorkoutCounts[activePlan.id]} workout{planWorkoutCounts[activePlan.id] !== 1 ? 's' : ''}
                 </Text>
               ) : null}
-              {blockAdvice?.action === 'continue' && blockAdvice.blockStatus && (
-                <Text style={[styles.activePlanWeek, live.activePlanWeek]}>
-                  Week {blockAdvice.blockStatus.currentWeek} of {blockAdvice.blockStatus.totalWeeks}
-                </Text>
+              {/* D139 (finding: "the one good block definition sat behind a
+                  tooltip on a secondary screen while 'Week N of M' hid
+                  whenever the advisor was not on 'continue'"): the block
+                  position now renders whenever a block exists, on every
+                  advisor branch, not only 'continue' -- with a state-aware
+                  label (recovery week; block finished, awaiting a decision)
+                  and the same block definition MesocycleBuilderScreen's own
+                  tooltip carries, from the one shared constant. */}
+              {blockAdvice?.blockStatus && (
+                <View style={styles.activePlanWeekRow}>
+                  <Text style={[styles.activePlanWeek, live.activePlanWeek]}>
+                    {blockAdvice.blockStatus.status === 'recovery'
+                      ? `Recovery week, week ${blockAdvice.blockStatus.currentWeek} of ${blockAdvice.blockStatus.totalWeeks}`
+                      : blockAdvice.blockStatus.status === 'completed_awaiting_decision'
+                        ? 'Block finished'
+                        : `Week ${blockAdvice.blockStatus.currentWeek} of ${blockAdvice.blockStatus.totalWeeks}`}
+                  </Text>
+                  <InfoTooltip text={BLOCK_DEFINITION} size={13} />
+                </View>
               )}
               {/* FB-04 (D96): the only forward warning in the product --
                   "One more week before your recovery week. Push hard this
@@ -1214,33 +1309,7 @@ export default function PlansScreen({ navigation }) {
             title="No active plan yet"
             text={`Start with a plan and we'll build one from your profile, or browse the library and pick one yourself. ${BLOCK_START_SENTENCE}`}
             actionLabel="Start with a plan"
-            onAction={async () => {
-              // CC27 (section 9.6) red-team finding 1: pre-flight before
-              // the generator, like every generation surface. Holding
-              // leaves the empty state in place to try again later.
-              const preflight = await capabilityPreflight(user.id);
-              const goAhead = preflight.proceed || await new Promise((resolve) => {
-                offerCapabilityPreflightChoice({
-                  onHold: () => resolve(false),
-                  onContinue: () => resolve(true),
-                });
-              });
-              if (!goAhead) return;
-              const result = await generateAndSavePlan(user.id, userProfile);
-              if (result.ok) {
-                await loadData();
-                toast.show('Your plan is active', { variant: 'success' });
-                // D112 R5 (closes audit T1-12): every generation entry
-                // reveals capability effects. Queued after the success
-                // toast (the toast host is FIFO), so both are seen.
-                if (result.capabilityBlockedCount > 0) {
-                  toast.show(capabilityBlockedNote(result.capabilityBlockedCount), { variant: 'info', duration: 5000 });
-                }
-              } else {
-                logError('PlansScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
-                toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
-              }
-            }}
+            onAction={handleStartWithPlanPress}
             actionAccessibilityLabel="Start with a plan built from your profile"
             secondaryLabel="Browse plans"
             onSecondary={() => navigation.navigate('PlanLibrary')}
@@ -1469,7 +1538,13 @@ export default function PlansScreen({ navigation }) {
                     <Button
                       variant="secondary"
                       title={blockAdvice.nextBlock.secondaryLabel}
-                      onPress={() => navigation.navigate('PlanUpdate')}
+                      onPress={() => {
+                        // D139 item 9: funnel telemetry, the block decision
+                        // by intent -- 'change' for the "Change my training
+                        // setup" route.
+                        if (user?.id) track(user.id, 'block_decision', { intent: 'change' }).catch(() => {});
+                        navigation.navigate('PlanUpdate');
+                      }}
                       accessibilityLabel={blockAdvice.nextBlock.secondaryLabel}
                     />
                   </View>
@@ -1817,7 +1892,7 @@ export default function PlansScreen({ navigation }) {
             that used to sit after it were named for relocation. */}
         {templates.length > 0 && (
           <View style={styles.section}>
-            <SectionLabel>Workout templates</SectionLabel>
+            <SectionLabel>Saved workouts</SectionLabel>
             <Text style={[styles.sectionSubtitle, live.sectionSubtitle]}>Saved workouts you can start directly.</Text>
             {templates.map(routine => (
               <Card key={routine.id} style={styles.templateCard}>
@@ -1857,6 +1932,22 @@ export default function PlansScreen({ navigation }) {
 
       </ScrollView>
       <PeekMenu ref={peekRef} />
+
+      {/* D139: the first plan is previewed before it is built. The sheet
+          shows the prospective week, what a block is, and what happens to
+          the plans already on the device; the generator runs on confirm. */}
+      <PlanPreviewSheet
+        userId={user?.id ?? null}
+        source="plans"
+        visible={!!planPreview}
+        preview={planPreview?.preview ?? null}
+        currentPlanName={planPreview?.preview?.currentPlanName ?? null}
+        otherPlansCount={planPreview?.otherPlansCount ?? 0}
+        confirmLabel="Start this plan"
+        onConfirm={handleConfirmStartWithPlan}
+        onClose={() => { if (!startingPlan) setPlanPreview(null); }}
+        busy={startingPlan}
+      />
 
       {/* FB-24 (D96): the receipt for "Continue with adjustments". Every
           line is composed from the ledger the decision card already showed
@@ -2201,6 +2292,9 @@ const styles = StyleSheet.create({
   activePlanName: { fontSize: fontSize.xl, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
   activePlanMeta: { fontSize: fontSize.sm, color: colors.textSecondary },
   activePlanWeek: { ...type.num('caption'), color: colors.textMuted },
+  // D139: the block-position line plus its InfoTooltip, as true row
+  // siblings (AX-11 law: never nest a touchable inside another).
+  activePlanWeekRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
   activePlanActions: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.xs },
   // R9 (D70): startNextBtn/startNextBtnText/viewPlanBtn/viewPlanBtnText
   // deleted - converted to the shared Button primitive (primary/secondary).

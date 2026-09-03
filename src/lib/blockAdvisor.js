@@ -195,6 +195,15 @@ export const NEXT_BLOCK_OPTION_LABELS = {
   adjust: 'Continue with adjustments',
 };
 
+// D139 (programme creation masterpass, 2026-09-03): the product has no
+// tier split (D137, fully free) -- every option has always been reachable
+// since then, but these two fields still derived their value from `isPro`,
+// which meant a Free caller still saw `locked: true` / `requiresPro: true`
+// on the adjust option and its detail line still read "Part of Pro. ...".
+// Both fields are kept (some callers still read them) but are now pinned to
+// the free-for-all state via this constant rather than derived from tier.
+const NEXT_BLOCK_OPTION_GATING = Object.freeze({ requiresPro: false, locked: false });
+
 export function buildNextBlockOptions({ recommendation = null, isPro = false } = {}) {
   return [
     {
@@ -203,19 +212,16 @@ export function buildNextBlockOptions({ recommendation = null, isPro = false } =
       // A true repeat: the next block is seeded with this block's own
       // observed start and planned peak (blockSeed's intent === 'repeat').
       detail: 'Same workouts, and the same weekly set targets as last time.',
-      // Running your plan again is training, not coaching: free on both tiers.
-      requiresPro: false,
-      locked: false,
+      ...NEXT_BLOCK_OPTION_GATING,
       recommended: isPro && recommendation === 'repeat',
     },
     {
       intent: 'adjust',
       label: NEXT_BLOCK_OPTION_LABELS.adjust,
-      detail: isPro
-        ? 'Same workouts, with next block\'s weekly set targets starting from what this block showed, muscle by muscle.'
-        : 'Part of Pro. Your next block\'s weekly set targets start from what this block showed, muscle by muscle.',
-      requiresPro: true,
-      locked: !isPro,
+      // D139: the free-tier "Part of Pro. ..." variant is dead copy on a
+      // fully free product -- this is the only detail line now.
+      detail: 'Same workouts, with next block\'s weekly set targets starting from what this block showed, muscle by muscle.',
+      ...NEXT_BLOCK_OPTION_GATING,
       recommended: isPro && recommendation === 'adjust',
     },
   ];
@@ -268,7 +274,7 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
       body: finished
         ? 'You can run this plan again whenever you are ready. Same workouts, same set targets as last time.'
         : 'Once your recovery week is done you can run this plan again. Same workouts, same set targets as last time.',
-      secondaryLabel: 'Build a new plan',
+      secondaryLabel: 'Change my training setup',
     };
   }
 
@@ -306,7 +312,7 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
       // (NEXT_BLOCK_OPTION_LABELS.repeat). FQ-2: recommending the repeat no
       // longer removes the adjusted option from the card, and the ledger the
       // block just produced is shown either way.
-      secondaryLabel: 'Build a new plan',
+      secondaryLabel: 'Change my training setup',
     };
   }
 
@@ -325,7 +331,7 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
       body: finished
         ? "The structure is working. Your next block starts from what this block showed, muscle by muscle."
         : "The structure is working. After your recovery week, your next block starts from what this block showed, muscle by muscle.",
-      secondaryLabel: 'Build a new plan',
+      secondaryLabel: 'Change my training setup',
     };
   }
 
@@ -346,7 +352,7 @@ function buildNextBlockRecommendation(checkins, userProfile, signals, phase = 'r
     // its own suggestion is the fresh look below. That also resolves FB-33:
     // "anyway" framed repeating as going against advice, and there is no
     // longer any need to frame either option as the wrong one.
-    secondaryLabel: 'Review with coach',
+    secondaryLabel: 'Change my training setup',
   };
 }
 

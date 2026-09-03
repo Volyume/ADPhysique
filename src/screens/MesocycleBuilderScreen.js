@@ -7,6 +7,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { safeDate, safeFormatDate } from '../lib/safeFormat';
 import { getBlockStatus, BLOCK_PLANNED_WEEKS } from '../lib/mesocycle';
+// D139: the block definition lives once, shared with the Train tab's own
+// active-plan card tooltip (PlansScreen.js).
+import { BLOCK_DEFINITION } from '../lib/blockExplain';
 import SvgBarSparkline from '../components/SvgBarSparkline';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -215,16 +218,7 @@ export default function MesocycleBuilderScreen({ navigation }) {
                       you start the next block) are kept. */}
                   <InfoTooltip
                     size={14}
-                    text={
-                      'A training block is the multi-week shape of your training: your weekly sets climb for a few weeks, ' +
-                      'then drop back for a lighter recovery week so your body can absorb the work.\n\n' +
-                      `Your plan is the workouts and exercises. Making a plan active also starts a block of ${BLOCK_PLANNED_WEEKS} weeks, ` +
-                      'the last of them the recovery week. There is nothing to set up.\n\n' +
-                      'When the block finishes:\n' +
-                      '• Your plan keeps going. The workouts are still there.\n' +
-                      '• Nothing rolls into a new block on its own. You choose what comes next\n' +
-                      '• The finished block moves to Past blocks once your next block starts'
-                    }
+                    text={BLOCK_DEFINITION}
                   />
                 </View>
                 <Text style={[styles.planCardName, live.planCardName]}>{planHeadingName(activePlan.name)}</Text>

@@ -1173,7 +1173,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       // / checklist 11): a non-destructive "nothing to do here" guard is a calm
       // toast, not a blocking alert. A blocking confirm stays reserved for
       // genuinely destructive actions (there are none on this screen).
-      toast.show('No exercise data to save as a template.', { variant: 'info' });
+      toast.show('Nothing to save from this session.', { variant: 'info' });
       return;
     }
     setTemplateName(exerciseNames.slice(0, 2).join(' & ') || 'My Workout');
@@ -1187,9 +1187,9 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     try {
       const { createWorkoutTemplateFromWorkout } = require('../lib/database');
       await createWorkoutTemplateFromWorkout(user.id, name, exerciseData);
-      toast.show(`"${name}" saved to Workout templates`, { variant: 'success' });
+      toast.show(`"${name}" saved to Saved workouts`, { variant: 'success' });
     } catch (_) {
-      toast.show('Could not save template. Try again.', { variant: 'error' });
+      toast.show('Could not save this workout. Try again.', { variant: 'error' });
     }
   }
 
@@ -1960,13 +1960,13 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
           <RevealSection delay={1700}>
           <View style={styles.secondaryActions}>
             <Button
-              title="Save as workout template"
+              title="Save this workout to reuse"
               variant="secondary"
               icon="bookmark-outline"
               style={styles.templateBtn}
               textStyle={[styles.templateBtnText, live.templateBtnText]}
               onPress={handleSaveAsTemplate}
-              accessibilityLabel="Save as workout template"
+              accessibilityLabel="Save this workout to reuse"
             />
           </View>
           </RevealSection>
@@ -2044,15 +2044,15 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         visible={templateModalVisible}
         onClose={() => setTemplateModalVisible(false)}
         keyboardAvoiding
-        accessibilityLabel="Save as workout template"
+        accessibilityLabel="Save this workout to reuse"
       >
-        <Text style={[styles.templateModalTitle, live.templateModalTitle]}>Save as workout template</Text>
-        <TextField accessibilityLabel="Workout template name"
+        <Text style={[styles.templateModalTitle, live.templateModalTitle]}>Save this workout to reuse</Text>
+        <TextField accessibilityLabel="Workout name"
           fieldStyle={styles.templateModalField}
           inputStyle={[styles.templateModalInput, live.templateModalInput]}
           value={templateName}
           onChangeText={setTemplateName}
-          placeholder="Template name"
+          placeholder="Workout name"
           placeholderTextColor={t.colors.textMuted}
           autoFocus
           returnKeyType="done"
@@ -2075,7 +2075,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             style={[styles.templateModalSave, live.templateModalSave]}
             onPress={confirmSaveTemplate}
             disabled={!templateName.trim()}
-            accessibilityLabel="Save template"
+            accessibilityLabel="Save workout"
             accessibilityState={{ disabled: !templateName.trim() }}
             textStyle={[styles.templateModalSaveText, live.templateModalSaveText]}
           />

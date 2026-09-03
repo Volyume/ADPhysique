@@ -27,6 +27,8 @@ import { useShallow } from 'zustand/react/shallow';
 import { logError } from '../lib/errorLog';
 import { useToast } from '../components/Toast';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
+import { getSplitRationale } from '../lib/whyThisTemplates';
+import { track } from '../lib/telemetry';
 import Card from '../components/Card';
 import SectionLabel from '../components/SectionLabel';
 import DragReorderList from '../components/DragReorderList';
@@ -57,6 +59,11 @@ export default function PlanDetailScreen({ navigation, route }) {
   const [setCounts, setSetCounts] = useState({});
   const [activePlan, setActivePlanData] = useState(null);
   const [whyThis, setWhyThis] = useState(null);
+  // D139 (finding: "the library's 'N to swap' fact vanished on the deciding
+  // screen"): the same capability-computed compatibility verdict the
+  // library grid shows, recomputed for this plan's own exercises so the
+  // fact survives onto the preview it is deciding from.
+  const [compatibility, setCompatibility] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [isReordering, setIsReordering] = useState(false);
   // D35: edge auto-scroll for the workouts drag-reorder list below -- this
@@ -77,6 +84,17 @@ export default function PlanDetailScreen({ navigation, route }) {
   useFocusEffect(
     // eslint-disable-next-line react-hooks/exhaustive-deps
     useCallback(() => { loadData(); }, [planId]),
+  );
+
+  // D139 item 9 (funnel telemetry: library preview, counts and enums only).
+  // Fire-and-forget: a telemetry failure must never affect the preview.
+  useFocusEffect(
+    useCallback(() => {
+      if (isLibrary && user?.id) track(user.id, 'library_plan_previewed', {}).catch(() => {});
+    // planId is deliberately a dependency (a new plan previewed is a new
+    // event) even though the body doesn't read it directly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isLibrary, planId, user?.id]),
   );
 
   async function loadData() {
@@ -107,6 +125,32 @@ export default function PlanDetailScreen({ navigation, route }) {
           const parsed = raw ? JSON.parse(raw) : null;
           setWhyThis(parsed && typeof parsed === 'object' ? parsed : null);
         } catch (_) { setWhyThis(null); }
+      }
+      // D139: the same capability compatibility computation
+      // PlanLibraryScreen runs for the whole grid (CC28, section 9.2.5),
+      // here for just this plan's own exercises. Best-effort -- without it
+      // the preview renders exactly as before, no badge, no swap line.
+      if (user?.id) {
+        try {
+          // eslint-disable-next-line global-require
+          const { loadCapabilityResolveState } = require('../lib/capability/resolve');
+          // eslint-disable-next-line global-require
+          const { computePlanCompatibility } = require('../lib/capability/planCompat');
+          const capState = await loadCapabilityResolveState(user.id, {});
+          if (capState && !capState.empty && !capState.unavailable) {
+            const exerciseRows = [];
+            for (const routine of (routines ?? [])) {
+              // eslint-disable-next-line no-await-in-loop
+              const withEx = await getRoutineExercisesWithDetails(routine.id).catch(() => []);
+              for (const row of (withEx ?? [])) if (row?.exercise) exerciseRows.push(row.exercise);
+            }
+            setCompatibility(computePlanCompatibility(capState, exerciseRows));
+          } else {
+            setCompatibility(null);
+          }
+        } catch (_) { setCompatibility(null); }
+      } else {
+        setCompatibility(null);
       }
     } catch (e) {
       logError('PlanDetailScreen.loadData', e, { planId, userId: user?.id });
@@ -335,6 +379,12 @@ export default function PlanDetailScreen({ navigation, route }) {
   );
   // C5-P10-02 (D96): days a week, read from the plan's existing days:N tag.
   const planDays = getPlanDays(plan);
+  // D139 (finding: "every preview carries a rationale line"): the split
+  // rationale, for library, saved and manual plans alike -- copyPlanFromLibrary
+  // and the manual/auto-gen createProgramme calls never carry a split type
+  // onto the PROGRAMME row (it stays null there), but duplicateRoutine does
+  // carry it onto each ROUTINE row, so this reads the routine, not the plan.
+  const splitRationale = workouts[0]?.splitType ? getSplitRationale(workouts[0].splitType) : null;
 
   if (!plan) {
     // Mirror the loaded layout (header block, primary button, workout rows)
@@ -394,11 +444,45 @@ export default function PlanDetailScreen({ navigation, route }) {
             <View style={[styles.libraryBadge, live.libraryBadge]}>
               <Text style={[styles.libraryBadgeText, live.libraryBadgeText]}>{planEquipmentLabel(plan)}</Text>
             </View>
+            {/* D139 (finding: "the library's 'N to swap' fact vanished on
+                the deciding screen"): the same computed-never-tagged badge
+                the library grid shows (PlanLibraryScreen's PlanBadge),
+                carried onto the preview that actually decides. */}
+            {compatibility?.fullyCompatible === true && (
+              <View style={[styles.libraryBadge, live.libraryBadge]}>
+                <Text style={[styles.libraryBadgeText, live.libraryBadgeText]}>Fits how you train</Text>
+              </View>
+            )}
+            {compatibility && compatibility.fullyCompatible === false && (
+              <View style={[styles.libraryBadge, live.libraryBadge]}>
+                <Text style={[styles.libraryBadgeText, live.libraryBadgeText]}>
+                  {compatibility.conflicts.length + compatibility.unknowns.length} to swap
+                </Text>
+              </View>
+            )}
           </View>
           <Text style={[styles.planName, live.planName]}>{planHeadingName(plan.name)}</Text>
           {plan.description ? (
             <Text style={[styles.planDesc, live.planDesc]}>{plan.description}</Text>
           ) : null}
+          {/* The conflicting exercises themselves, named -- the badge above
+              says how many, this says which. Named directly up to two;
+              beyond that the rest are counted rather than listed, so a
+              heavily constrained plan does not turn the header into a
+              wall of names. */}
+          {compatibility && compatibility.fullyCompatible === false && (() => {
+            const names = [...compatibility.conflicts, ...compatibility.unknowns]
+              .map((c) => c.row?.name)
+              .filter(Boolean);
+            if (!names.length) return null;
+            let list;
+            if (names.length === 1) list = names[0];
+            else if (names.length === 2) list = `${names[0]} and ${names[1]}`;
+            else list = `${names[0]}, ${names[1]}, and ${names.length - 2} more`;
+            return (
+              <Text style={[styles.planDesc, live.planDesc]}>Would be swapped: {list}.</Text>
+            );
+          })()}
           <View style={styles.planStats}>
             {/* C5-P10-02 (D96): days per week, from the plan's own days:N
                 tag via the existing getPlanDays() helper. The library used
@@ -564,7 +648,7 @@ export default function PlanDetailScreen({ navigation, route }) {
         {/* Why this plan, for you. Only on the active auto-generated plan,
             mirroring the enrollment reveal so the rationale is here any
             time, not just right after setup. */}
-        {isActive && !isLibrary && whyThis && WHY_ORDER.some(k => whyThis[k]) && (
+        {isActive && !isLibrary && whyThis && WHY_ORDER.some(k => whyThis[k]) ? (
           <View style={styles.section}>
             <SectionLabel>Why this plan, for you</SectionLabel>
             <Card style={styles.whyCard}>
@@ -576,7 +660,24 @@ export default function PlanDetailScreen({ navigation, route }) {
               ))}
             </Card>
           </View>
-        )}
+        ) : splitRationale ? (
+          // D139 (finding: "every preview carries a rationale line"): the
+          // richer per-plan whyThis reveal is only ever recorded for the
+          // active auto-generated plan, so a library plan, a saved-but-not-
+          // active copy or a manual build never carried any rationale at
+          // all. The split's own template line (whyThisTemplates.js, the
+          // same source the auto-generated reveal itself draws on) fills
+          // that gap for every plan that has a split type.
+          <View style={styles.section}>
+            <SectionLabel>Why this plan, for you</SectionLabel>
+            <Card style={styles.whyCard}>
+              <View style={styles.whyItem}>
+                <View style={[styles.whyBullet, live.whyBullet]} />
+                <Text style={[styles.whyText, live.whyText]}>{splitRationale}</Text>
+              </View>
+            </Card>
+          </View>
+        ) : null}
 
         {/* RC-1 (D96, Review C): Edit and Archive show to every account (the
             builder is a free feature). FOUNDER DECISION (fully free, no
