@@ -5390,7 +5390,89 @@ not added: no pure estimator is reachable without a new bulk query
 adaptation thresholds, seed resolution, exercise scoring and the block
 state machine (engine law); a lightweight "keep my block, just make it
 three days" (a new continuity rule across a structure change; the
-disclosure fixes the trust problem now, the rule is a founder question);
-a weekday model for sessions (the plan is ordered, not scheduled; a new
+disclosure fixes the trust problem now, the rule is a founder question,
+ANSWERED the same day: see D140); a weekday model for sessions (the plan is ordered, not scheduled; a new
 model); the library quiz; goal-based defaults in the manual builder;
 Training blocks' week-count fallbacks (latent, both columns written).
+
+## D140 — A rebuild that keeps every exercise keeps the running block (founder decision, 2026-09-03)
+
+**Founder decision.** Asked at the D139 closure: "should a days-per-week
+change that keeps every exercise also keep the running block rather than
+restart it? A. Yes, keep the block when only days change. B. No, a rebuild
+always starts a block. C. Keep it only in weeks one and two." Founder:
+"Yes" (option A).
+
+**Rule as built.** From Adjust training, a rebuild whose exercise list is
+unchanged (no exercise added, dropped or replaced) keeps the running
+block; the new programme is activated underneath it and the block carries
+on at the week it is in. Any change to the exercise list restarts the
+block exactly as before. Ruled by one pure function,
+`keepsBlockOnRebuild` in `src/lib/planDiff.js`, read by the preview sheet
+and again by the commit, so the sentence shown and the write made cannot
+disagree.
+
+**Why the rule is "every exercise stays", not literally "only days".**
+The block (mesocycles, mesocycle_weeks, planned_muscle_volume) is keyed
+to the user and to muscles. It is the multi-week shape of the weekly set
+targets per muscle; it knows nothing about a programme or how many days
+those sets are spread across. Days, session length, split and the other
+setup fields cannot invalidate it. What can is the exercise list: the
+learned seeds and the ramp are read per exercise, so a replaced or
+dropped exercise is a genuinely different block. "Only days" would have
+kept the block for a 4-to-3 change and restarted it for a 4-to-3 change
+that also shortened the session, with the same exercises either way,
+which no user could predict. The exercise list is the one honest line,
+and days-only is its headline case. Best-for-user under D33.
+
+**States.** Kept while the block is 'active' or in its 'recovery' week.
+Never kept when the block is finished and awaiting its decision: a
+rebuild from "Change my training setup" IS that decision and must start
+the next block. With no block at all the usual activation runs, so nobody
+ends with a plan and no block. The commit re-reads the block's position
+at confirm time; if the block finished between preview and confirm, the
+rule flips to a restart and the existing open-decision dialogue says so.
+
+**Explicit confirm.** The preview sheet is the explicit yes. With the
+block kept nothing at block level is lost, so the "Restart your training
+block?" dialogue is skipped (it would be asking about a restart that is
+not happening). With the block restarting, the dialogue runs exactly as
+D139 left it.
+
+**Copy.** Sheet: "Every exercise stays, so your current block carries on
+at week N of M rather than restarting. Your workout history and PRs are
+kept." replaces both the block-start sentence and the restart line.
+Receipt toast: "Plan rebuilt around your new training setup. Your block
+carries on where it was". Hand-edits and archived-plans lines still show:
+the workouts are rebuilt.
+
+**Defect fixed on the way, in the same function.** `confirmPlanSwitchMidBlock`
+matched the recovery week against 'in_recovery' (blockAdvisor's ACTION
+name); `getBlockStatus` reports it as 'recovery'. The branch never fired,
+so a recovery-week switch fell through to "anything not 'active' passes"
+and went silent, which is the state C6 P9-07 (D97) believed it had closed.
+Corrected to 'recovery' and pinned. The keep rule needed the true status
+value, which is how it surfaced.
+
+**Telemetry.** No new event. `plan_activated` still fires on the kept
+path (inside setActivePlan); `plan_replaced` does not, because no block
+was replaced. `plan_preview_confirmed {source:'update'}` counts the
+rebuild.
+
+**Scope.** Adjust training only. The Coach tab's goal change
+(ProGoalSetup → startWithPlan) still starts a block: it changes the
+training phase the engine plans around and was not in the founder's
+question. Recorded as unchanged, not parked; raise it if wanted.
+
+**Engine untouched.** No volume mathematics, adaptation thresholds, seed
+resolution, exercise scoring or block state machine changed. The block
+writer gained a sibling that writes no mesocycle at all
+(`activatePlanKeepingBlock`, source-guarded).
+
+**Tests.** `planDiff.keepsBlock.test.js` (the rule),
+`activatePlanKeepingBlock.guard.test.js` (no mesocycle write; commit
+fallback), `planSwitch.test.js` (keepBlock silence, finished block never
+kept, recovery-week dialogue now fires), `PlanPreviewSheet.test.js`
+(kept line replaces restart line), `planAutoGen.test.js` (default path
+unchanged, keep path, fallback), `PlanUpdateScreen.previewWiring.guard`
+(one rule on both sides, re-ruled at confirm).

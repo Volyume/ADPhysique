@@ -3417,6 +3417,56 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## KEEP THE BLOCK ACROSS AN EXERCISE-PRESERVING REBUILD (2026-09-03) — COMPLETE, MERGED TO MAIN. Founder decision D140.
+
+Branch `claude/volyume-coherence-pass-6s991m`. Founder answered the D139
+question "Yes" (A): a days-per-week change that keeps every exercise
+keeps the running block. Rule, rationale, states, copy and the
+recovery-week dialogue fix: D140.
+
+**What changed.** `planDiff.keepsBlockOnRebuild` (pure rule);
+`database.activatePlanKeepingBlock` (activates the new programme, writes
+no mesocycle); `generateAndSavePlan({ keepBlock })` with
+`activatePlanWithBlock` fallback; `confirmPlanSwitchMidBlock({ keepBlock })`
+plus the 'recovery' status fix; PlanPreviewSheet kept line;
+PlanUpdateScreen rules once for the sheet and again at confirm. Engine
+untouched.
+
+**Gates.** Lint clean, typecheck clean, full suite green (exact counts in
+the closure report).
+
+**Device checklist (Android, EAS build).**
+1. Active plan in week 3 of 6. Train tab, Adjust training plan, change
+   4 days to 3, leave everything else, Review. Expected: the sheet's
+   receipt shows every exercise under "Stays" and the block line reads
+   "Every exercise stays, so your current block carries on at week 3 of
+   6 rather than restarting. Your workout history and PRs are kept." No
+   "This starts a six-week training block" sentence. Hand-edits line and
+   "Your other N plans move to Archived plans" still show.
+2. Confirm and rebuild. Expected: NO "Restart your training block?"
+   dialogue; toast "Plan rebuilt around your new training setup. Your
+   block carries on where it was"; Train tab plan card still reads "Week
+   3 of 6"; Training blocks screen shows the same block, same start date,
+   no new block in Past blocks; the new plan has 3 workouts.
+3. Same start, but also change equipment so at least one exercise is
+   replaced or dropped, Review. Expected: the sheet reads "This starts a
+   six-week training block ... Confirming ends your current block at week
+   3 of 6 and starts a new one from week 1." Confirm: the "Restart your
+   training block?" dialogue appears; after Switch plan, "Week 1 of 6".
+4. Block in its recovery week (week 6 of 6), days-only change. Expected:
+   sheet reads "carries on at week 6 of 6"; no dialogue; block stays.
+5. Block finished (decision open), "Change my training setup", days-only
+   change. Expected: sheet shows the block-start sentence (no "carries
+   on"); confirm shows "Skip the open block decision?"; a new block
+   starts at week 1.
+6. Recovery week, Plan library, activate another plan. Expected: "Switch
+   during your recovery week?" dialogue (previously silent). Cancel
+   leaves the plan and block untouched.
+7. Fresh account with a plan but somehow no block (not normally
+   reachable): a days-only rebuild still creates a block (fallback).
+ED-safety and engine: no floors, thresholds, seeds or scoring touched;
+nothing weight or food adjacent.
+
 ## PROGRAMME CREATION & PLANNING MASTERPASS (2026-09-03) — COMPLETE, MERGED TO MAIN. Ruling D139.
 
 Branch `claude/volyume-coherence-pass-6s991m`. Founder order: make the
@@ -3426,11 +3476,10 @@ findings, rulings and the unchanged list: D139.
 **Gates.** Lint clean, typecheck clean, full suite 1160 suites / 15853
 tests passing; engine untouched (labels and one shared constant only).
 
-**Founder question (not decided here).** Should a days-per-week change
-that keeps every exercise also keep the running block (no restart), as a
-new continuity rule? Today the preview discloses the restart honestly.
-Options: A. Yes, keep the block when only days change. B. No, a rebuild
-always starts a block. C. Keep the block only in weeks 1 and 2.
+**Founder question: ANSWERED "Yes" (option A) the same day. Built as
+D140, entry above.** (Was: should a days-per-week change that keeps every
+exercise also keep the running block? A. Yes. B. No. C. Weeks 1 and 2
+only.)
 
 **Device checklist (Android, EAS build).**
 1. Fresh account, Today or Train, "Start with a plan": a preview sheet

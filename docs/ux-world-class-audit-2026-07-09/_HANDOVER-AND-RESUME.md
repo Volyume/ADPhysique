@@ -1,6 +1,15 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-03 — KEEP THE BLOCK ACROSS AN EXERCISE-PRESERVING REBUILD (D140) ★
+
+Founder answered the D139 question "Yes": a days-per-week change that
+keeps every exercise keeps the running block. Built as one pure rule
+(`planDiff.keepsBlockOnRebuild`) read by the preview sheet and the
+commit, a mesocycle-free activation writer, and a fixed recovery-week
+dialogue. Record: D140; board entry with the device checklist.
+
+===============================================================================
 ## ★ 2026-09-03 — PROGRAMME CREATION & PLANNING MASTERPASS LANDED (D139) ★
 
 Founder order: make the deterministic programme engine feel simple.
