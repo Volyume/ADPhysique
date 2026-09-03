@@ -20,7 +20,6 @@ import { getSplitRationale, getSetupReceiptLine } from '../lib/whyThisTemplates'
 import { getActivePlan, getRoutinesForPlan, getMorningWeightsLast14Days, getOpenEdPatternFlag } from '../lib/database';
 import { getNotificationPermissionStatus } from '../lib/notifications/permissions';
 import { firstReviewUnlockDate } from '../lib/trialActivation';
-import { trialEndsLabel } from '../lib/payments/cascade';
 import { formatUnlockDate } from '../lib/coachLedger';
 import { planNextWeek } from '../lib/food/mealPlanService';
 import { PLAN_WHYTHIS_KEY } from '../lib/planAutoGen';
@@ -253,9 +252,6 @@ export default function ProSetupCompleteScreen({ navigation }) {
           <Animated.View entering={stage(0, motion.hero)}>
           <View style={styles.brandRow}>
             <VolyumeIcon size={22} />
-            <View style={[styles.proBadge, live.proBadge]}>
-              <Text style={[styles.proBadgeText, live.proBadgeText]}>PRO</Text>
-            </View>
           </View>
 
           <View style={[styles.progressTrack, live.progressTrack]}>
@@ -277,17 +273,6 @@ export default function ProSetupCompleteScreen({ navigation }) {
               <Ionicons name="barbell-outline" size={15} color={t.colors.primary} />
               <Text style={[styles.readyText, live.readyText]}>{hasPlan ? 'Plan ready' : 'Plan pending'}</Text>
             </View>
-            {/* RA-10 (D96, Review A): the user tapped "Start your 14 days"
-                and nothing ever confirmed the trial began. Rendered ONLY
-                when the entitlement genuinely resolves an active trial end
-                (FQ-6.2's single source), so a direct subscriber or an
-                unresolved grant never sees a false claim. */}
-            {trialEndsLabel(userProfile) ? (
-              <View style={[styles.readyItem, live.readyItem]}>
-                <Ionicons name="time-outline" size={15} color={t.colors.primary} />
-                <Text style={[styles.readyText, live.readyText]}>Your 14 days run to {trialEndsLabel(userProfile)}</Text>
-              </View>
-            ) : null}
             <TouchableOpacity
               style={[styles.readyItem, live.readyItem]}
               onPress={notifPermissionGranted ? undefined : () => navigation.navigate('NotificationSettings')}
@@ -574,13 +559,6 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 <Text style={[styles.routineBody, live.routineBody]}>
                   The more sessions you log, the better the coach can work out how much training you need, and when to give you an easier week.
                 </Text>
-                {/* Wave A B3: the trial arc, stated once, calmly, so day 14
-                    is never a surprise. Facts mirror the subscription FAQ. */}
-                <Text style={[styles.routineBody, live.routineBody]}>
-                  Your full access runs for 14 days. If you decide not to
-                  continue after that, your training log, plans and personal
-                  bests stay free forever.
-                </Text>
               </View>
             </View>
             {/* Wave A B3: Precision Coaching is named twice on this screen;
@@ -616,11 +594,6 @@ const styles = StyleSheet.create({
   brandRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.lg,
   },
-  proBadge: {
-    backgroundColor: colors.primaryFill, borderRadius: 4, paddingHorizontal: 7, paddingVertical: spacing.xxs,
-  },
-  proBadgeText: { fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.onPrimary },
-
   // Matched to the wizard's continuous track, drawn full here (setup complete).
   progressTrack: {
     height: 3, borderRadius: radius.hair, backgroundColor: colors.border,
@@ -776,8 +749,6 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    proBadge: { backgroundColor: t.colors.primaryFill },
-    proBadgeText: { fontSize: t.fontSize.micro, color: t.colors.onPrimary },
     progressTrack: { backgroundColor: t.colors.border },
     progressFill: { backgroundColor: t.colors.primary },
     doneEyebrow: { ...t.type.num('caption'), color: t.colors.primary },

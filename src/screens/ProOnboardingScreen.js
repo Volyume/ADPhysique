@@ -275,9 +275,6 @@ function ProOnboardingHeader({ step, title, sub, onBack }) {
           </TouchableOpacity>
         ) : null}
         <VolyumeIcon size={22} />
-        <View style={[styles.proBadge, live.proBadge]}>
-          <Text style={[styles.proBadgeText, live.proBadgeText]}>PRO</Text>
-        </View>
       </View>
       <ProOnboardingProgressBar step={step} />
       <Text style={[styles.stepCount, live.stepCount]}>Step {displayStepOf(step).n} of {displayStepOf(step).total} - {stepLabel}</Text>
@@ -360,6 +357,21 @@ export default function ProOnboardingScreen({ navigation }) {
   // real user: nothing in src/ produces isLocal) saw the sign-in step they
   // had just completed flash for a frame before landing on step 2.
   const [step, setStep] = useState(() => (user && !user.isLocal ? 2 : 1));
+
+  // Activation funnel: setup_started fires once, on the first visible step's
+  // mount (whichever step that is for this user), for a signed-in user only.
+  // trackFirst is durably deduped per (user, event) in AsyncStorage, so a
+  // remount never double-counts; fire-and-forget, never blocks the paint.
+  useEffect(() => {
+    if (user?.id && !user.isLocal) {
+      try {
+        // eslint-disable-next-line global-require
+        const { trackFirst } = require('../lib/telemetry/firsts');
+        trackFirst(user.id, 'setup_started').catch(() => {});
+      } catch (_) { /* tolerate */ }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // A4 (pre-release sweep 2026-07-27): feet/inches and stone/lbs are both
   // numeric-pad pairs (no Return key on iOS, so returnKeyType/
@@ -1671,14 +1683,14 @@ export default function ProOnboardingScreen({ navigation }) {
           <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
             <ProOnboardingHeader
               step={step}
-              title="Set up your Pro account safely"
+              title="Set up your account safely"
               sub="Sign in once so your plan, weight history and coaching updates can be restored if you change device."
             />
 
             <QuestionGroup
               icon="person-circle-outline"
               title="Your account"
-              sub="This keeps your Pro plan and coaching history tied to you. The training setup comes next."
+              sub="This keeps your plan and coaching history tied to you. The training setup comes next."
             >
               {/* OAuth only (Apple on iOS, Google on Android). The email +
                   password path was removed (founder 2026-07-01); OAuth needs no
@@ -2481,9 +2493,6 @@ export default function ProOnboardingScreen({ navigation }) {
             <Animated.View style={[styles.seqWrap, { opacity: sequenceFade }]}>
               <View style={styles.brandRow}>
                 <VolyumeIcon size={22} />
-                <View style={[styles.proBadge, live.proBadge]}>
-                  <Text style={[styles.proBadgeText, live.proBadgeText]}>PRO</Text>
-                </View>
               </View>
               <View style={[styles.progressTrack, live.progressTrack]}>
                 <View style={[styles.progressFill, live.progressFill, { width: '100%' }]} />
@@ -2722,15 +2731,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  proBadge: {
-    backgroundColor: colors.primaryFill, borderRadius: 4,
-    paddingHorizontal: 7, paddingVertical: spacing.xxs,
-  },
-  proBadgeText: {
-    fontSize: fontSize.micro, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black,
-    color: colors.onPrimary,
-  },
-
   progressTrack: {
     height: 3, borderRadius: radius.hair, backgroundColor: colors.border,
     overflow: 'hidden', marginBottom: spacing.sm,
@@ -3042,8 +3042,6 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
-    proBadge: { backgroundColor: t.colors.primaryFill },
-    proBadgeText: { fontSize: t.fontSize.micro, color: t.colors.onPrimary },
     progressTrack: { backgroundColor: t.colors.border },
     progressFill: { backgroundColor: t.colors.primary },
     stepCount: { ...t.type.num('caption'), color: t.colors.textMuted },

@@ -29,16 +29,24 @@ export default function LoginScreen({ navigation, route }) {
   // in to an existing account and creating a new one.
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // E-1 (D96): Welcome's single hero CTA is "Start your 14 days", a SIGN-UP
-  // intent, and it passes { intent: 'pro_signup' }. The form used to open in
-  // sign-in mode regardless, so a brand-new user typed a new password into a
-  // button that said "Sign in" and was told their details were wrong for an
-  // account that did not exist yet. Reading the param makes the CTA land on
-  // the form it promised; "Already have an account?" navigates without it and
-  // still opens sign-in. The toggle below switches either way, as before.
+  // E-1 (D96): Welcome's hero CTA can open this screen straight into
+  // create-account mode, passing { intent: 'pro_signup' } (the param name
+  // stays; the app has no Pro tier any more, only the "open in create-account
+  // mode" behaviour it carries). The form used to open in sign-in mode
+  // regardless, so a brand-new user typed a new password into a button that
+  // said "Sign in" and was told their details were wrong for an account that
+  // did not exist yet. Reading the param makes the CTA land on the form it
+  // promised; "Already have an account?" navigates without it and still
+  // opens sign-in. The toggle below switches either way, as before.
   const [emailMode, setEmailMode] = useState(
     route?.params?.intent === 'pro_signup' ? 'signup' : 'signin',
   );
+  // The email + password fields sit behind a "Continue with email" tertiary
+  // button in create-account mode (a lightweight, OAuth-first account step);
+  // sign-in mode keeps them visible immediately, since a returning user
+  // already knows what they want. Switching mode re-collapses into create-
+  // account's default and always re-opens for sign-in.
+  const [emailFormOpen, setEmailFormOpen] = useState(emailMode !== 'signup');
   const [emailSubmitting, setEmailSubmitting] = useState(false);
   // E-8 / E-2 / E-3 (D96): outcomes the user has to ACT on (confirm your
   // email, this address already has an account, we have sent a reset link)
@@ -230,6 +238,13 @@ export default function LoginScreen({ navigation, route }) {
     }
   }
 
+  // Switching mode also resets the collapse: signup starts collapsed behind
+  // "Continue with email" every time it is entered, sign-in is always open.
+  function switchEmailMode(next) {
+    setEmailMode(next);
+    setEmailFormOpen(next !== 'signup');
+  }
+
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>
       {/* Decorative background wordmark, faint and centred */}
@@ -262,9 +277,15 @@ export default function LoginScreen({ navigation, route }) {
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          {/* ── Brand block ── */}
+          {/* ── Brand block ──
+              The heading is the largest text on the screen and carries the
+              mode: "Create your account" for a new signup, "Welcome back"
+              for a returning sign-in. The tagline stays, small, underneath. */}
           <View style={styles.brand}>
             <VolyumeMark size={56} style={styles.brandMark} />
+            <Text style={[styles.heading, live.heading]}>
+              {emailMode === 'signup' ? 'Create your account' : 'Welcome back'}
+            </Text>
             <Text style={[styles.brandTagline, live.brandTagline]}>Less thinking. More lifting.</Text>
           </View>
 
@@ -277,18 +298,11 @@ export default function LoginScreen({ navigation, route }) {
               flow auto-advances past, so it never rendered for anyone. Same
               sentence, on the form that asks. One line, not a privacy
               lecture; the full account and data story stays in the Article 9
-              gate that follows. */}
+              gate that follows. Founder ruling: Volyume is fully free, so
+              this is the one why-account line, with no trial mention. */}
           <Text style={[styles.whyAccount, live.whyAccount]}>
-            Sign in once so your plan, weight history and coaching updates can be restored if you change device.
+            Your plan and history are saved to your account, so nothing is lost if you change phone.
           </Text>
-          {/* RA-8 (D96, Review A): "Start your 14 days" landed on a screen
-              that never mentioned the trial again. One line carries the
-              thread; the grant itself still happens at consent. */}
-          {route?.params?.intent === 'pro_signup' ? (
-            <Text style={[styles.whyAccount, live.whyAccount]}>
-              Your 14-day free trial starts once your account is set up.
-            </Text>
-          ) : null}
 
           {/* ── OAuth sign-in ──
               Apple on iOS, Google on Android (see OAuthButtons for the
@@ -346,68 +360,81 @@ export default function LoginScreen({ navigation, route }) {
           ) : null}
 
           <View style={styles.emailForm}>
-            <TextField
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              accessibilityLabel="Email address"
-              placeholder="you@example.com"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              textContentType="emailAddress"
-              editable={!emailSubmitting}
-              // A5: email is a genuine text keyboard (Return key exists), so
-              // unlike the numeric-pad sibling pairs elsewhere in the app,
-              // returnKeyType/onSubmitEditing are live here, not dead props.
-              returnKeyType="next"
-              onSubmitEditing={() => passwordRef.current?.focus()}
-              blurOnSubmit={false}
-            />
-            <TextField
-              ref={passwordRef}
-              label="Password"
-              value={password}
-              onChangeText={setPassword}
-              accessibilityLabel="Password"
-              secureTextEntry={!showPassword}
-              autoCapitalize="none"
-              autoCorrect={false}
-              textContentType={emailMode === 'signup' ? 'newPassword' : 'password'}
-              returnKeyType="go"
-              onSubmitEditing={handleEmailAuth}
-              editable={!emailSubmitting}
-              // A5: show/hide toggle, mirrored from EmailPasswordFields.js
-              // (same icon, same accessibility label convention) rather than
-              // swapping LoginScreen over to that component -- primary
-              // sign-in funnel, smaller blast radius per the ruling.
-              trailing={(
-                <TouchableOpacity
-                  style={styles.eyeBtn}
-                  onPress={() => setShowPassword(v => !v)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  accessibilityRole="button"
-                  accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={19} color={t.colors.textMuted} />
-                </TouchableOpacity>
-              )}
-            />
-            <Button
-              title={emailMode === 'signup' ? 'Create account' : 'Sign in'}
-              onPress={handleEmailAuth}
-              loading={emailSubmitting}
-              disabled={loading || emailSubmitting}
-              style={styles.emailSubmit}
-              accessibilityLabel={emailMode === 'signup' ? 'Create account with email' : 'Sign in with email'}
-            />
-            {emailMode === 'signup' ? (
-              <Text style={[styles.whyAccount, live.whyAccount]}>
-                No payment card. Works fully offline. Your data exports anytime.
-              </Text>
-            ) : null}
+            {/* Create-account mode collapses the email + password fields
+                behind a tertiary "Continue with email" button, so the
+                account step reads OAuth-first and lightweight. Sign-in mode
+                keeps the fields visible immediately: a returning user
+                already knows they want email, and hiding it would cost them
+                a tap for no benefit. */}
+            {(emailMode === 'signin' || emailFormOpen) ? (
+              <>
+                <TextField
+                  label="Email"
+                  value={email}
+                  onChangeText={setEmail}
+                  accessibilityLabel="Email address"
+                  placeholder="you@example.com"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType="emailAddress"
+                  editable={!emailSubmitting}
+                  // A5: email is a genuine text keyboard (Return key exists), so
+                  // unlike the numeric-pad sibling pairs elsewhere in the app,
+                  // returnKeyType/onSubmitEditing are live here, not dead props.
+                  returnKeyType="next"
+                  onSubmitEditing={() => passwordRef.current?.focus()}
+                  blurOnSubmit={false}
+                />
+                <TextField
+                  ref={passwordRef}
+                  label="Password"
+                  value={password}
+                  onChangeText={setPassword}
+                  accessibilityLabel="Password"
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  textContentType={emailMode === 'signup' ? 'newPassword' : 'password'}
+                  returnKeyType="go"
+                  onSubmitEditing={handleEmailAuth}
+                  editable={!emailSubmitting}
+                  // A5: show/hide toggle, mirrored from EmailPasswordFields.js
+                  // (same icon, same accessibility label convention) rather than
+                  // swapping LoginScreen over to that component -- primary
+                  // sign-in funnel, smaller blast radius per the ruling.
+                  trailing={(
+                    <TouchableOpacity
+                      style={styles.eyeBtn}
+                      onPress={() => setShowPassword(v => !v)}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      accessibilityRole="button"
+                      accessibilityLabel={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={19} color={t.colors.textMuted} />
+                    </TouchableOpacity>
+                  )}
+                />
+                <Button
+                  title={emailMode === 'signup' ? 'Create account' : 'Sign in'}
+                  onPress={handleEmailAuth}
+                  loading={emailSubmitting}
+                  disabled={loading || emailSubmitting}
+                  style={styles.emailSubmit}
+                  accessibilityLabel={emailMode === 'signup' ? 'Create account with email' : 'Sign in with email'}
+                />
+              </>
+            ) : (
+              <Button
+                title="Continue with email"
+                variant="tertiary"
+                onPress={() => setEmailFormOpen(true)}
+                style={styles.emailSubmit}
+                accessibilityLabel="Continue with email"
+              />
+            )}
             <TouchableOpacity
-              onPress={() => setEmailMode(emailMode === 'signup' ? 'signin' : 'signup')}
+              onPress={() => switchEmailMode(emailMode === 'signup' ? 'signin' : 'signup')}
               accessibilityRole="button"
               accessibilityLabel={emailMode === 'signup' ? 'Switch to signing in' : 'Switch to creating an account'}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
@@ -433,6 +460,13 @@ export default function LoginScreen({ navigation, route }) {
               </TouchableOpacity>
             ) : null}
           </View>
+
+          {/* Trust line, shown under the form in both modes (founder
+              ruling: no trial talk, no payment-card mention -- the app has
+              neither). */}
+          <Text style={[styles.whyAccount, live.whyAccount]}>
+            Works fully offline. Your data exports anytime. No ads.
+          </Text>
 
           {/* "Continue without an account" removed per
               IDENTITY_AND_OWNERSHIP_LOCKED.md decision 1 (no anonymous mode). */}
@@ -491,6 +525,11 @@ const styles = StyleSheet.create({
   brandMark: {
     marginBottom: spacing.sm,
   },
+  // The largest text on the screen: it carries the mode (create vs sign in).
+  heading: {
+    ...type.h2,
+    color: colors.textPrimary,
+  },
   brandTagline: {
     fontSize: fontSize.sm,
     color: colors.textMuted,
@@ -539,6 +578,7 @@ const styles = StyleSheet.create({
 function buildLiveStyles(t) {
   return {
     safe: { backgroundColor: t.colors.background },
+    heading: { ...t.type.h2, color: t.colors.textPrimary },
     brandTagline: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     whyAccount: { ...t.type.caption, color: t.colors.textSecondary },
     brandDivider: { backgroundColor: t.colors.border },

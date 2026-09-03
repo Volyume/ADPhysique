@@ -175,6 +175,13 @@ describe('LoginScreen email + password (founder 2026-07-21)', () => {
     act(() => { pwField.props.onChangeText(p); });
   }
 
+  // Create-account mode starts with the fields collapsed behind a
+  // "Continue with email" tertiary button; expand before typing into them.
+  function openEmailForm(tree) {
+    const openBtn = tree.root.findByProps({ accessibilityLabel: 'Continue with email' });
+    act(() => { openBtn.props.onPress(); });
+  }
+
   test('sign in calls signInWithEmail and shows no toast on a returned session (onAuthStateChange drives)', async () => {
     signInWithEmail.mockResolvedValue({ data: { session: { user: { id: 'u1' } } }, error: null });
     let tree;
@@ -214,6 +221,7 @@ describe('LoginScreen email + password (founder 2026-07-21)', () => {
     await act(async () => { tree = create(<LoginScreen />); });
     const toggle = tree.root.findByProps({ accessibilityLabel: 'Switch to creating an account' });
     act(() => { toggle.props.onPress(); });
+    openEmailForm(tree);
     typeCreds(tree, 'new@volyume.app', 'freshpw12');
     const submit = tree.root.findByProps({ accessibilityLabel: 'Create account with email' });
     await act(async () => { await submit.props.onPress(); });
@@ -235,18 +243,26 @@ describe('LoginScreen entry honesty and recovery (Wave B, D96)', () => {
     const emailField = tree.root.findByProps({ accessibilityLabel: 'Email address' });
     act(() => { emailField.props.onChangeText(e); });
   }
+  function openEmailForm(tree) {
+    const openBtn = tree.root.findByProps({ accessibilityLabel: 'Continue with email' });
+    act(() => { openBtn.props.onPress(); });
+  }
   const html = (tree) => JSON.stringify(tree.toJSON());
 
-  test('E-1: the sign-up intent opens the form in create-account mode', async () => {
+  test('E-1: the sign-up intent opens the form in create-account mode, fields collapsed behind "Continue with email"', async () => {
     let tree;
     await act(async () => {
       tree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
     });
-    expect(() => tree.root.findByProps({ accessibilityLabel: 'Create account with email' })).not.toThrow();
+    expect(() => tree.root.findByProps({ accessibilityLabel: 'Continue with email' })).not.toThrow();
+    expect(() => tree.root.findByProps({ accessibilityLabel: 'Create account with email' })).toThrow();
     expect(() => tree.root.findByProps({ accessibilityLabel: 'Sign in with email' })).toThrow();
+
+    openEmailForm(tree);
+    expect(() => tree.root.findByProps({ accessibilityLabel: 'Create account with email' })).not.toThrow();
   });
 
-  test('E-1: arriving without the intent still opens sign-in ("Already have an account?")', async () => {
+  test('E-1: arriving without the intent still opens sign-in ("Already have an account?"), fields visible immediately', async () => {
     let tree;
     await act(async () => { tree = create(<LoginScreen route={{ params: {} }} />); });
     expect(() => tree.root.findByProps({ accessibilityLabel: 'Sign in with email' })).not.toThrow();
@@ -263,6 +279,7 @@ describe('LoginScreen entry honesty and recovery (Wave B, D96)', () => {
     await act(async () => {
       tree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
     });
+    openEmailForm(tree);
     typeEmail(tree, 'already@volyume.app');
     const pw = tree.root.findByProps({ accessibilityLabel: 'Password' });
     act(() => { pw.props.onChangeText('freshpw12'); });
@@ -285,6 +302,7 @@ describe('LoginScreen entry honesty and recovery (Wave B, D96)', () => {
     await act(async () => {
       tree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
     });
+    openEmailForm(tree);
     typeEmail(tree, 'new@volyume.app');
     const pw = tree.root.findByProps({ accessibilityLabel: 'Password' });
     act(() => { pw.props.onChangeText('freshpw12'); });
@@ -384,6 +402,49 @@ describe('LoginScreen entry honesty and recovery (Wave B, D96)', () => {
     let tree;
     await act(async () => { tree = create(<LoginScreen />); });
     expect(html(tree)).not.toMatch(/without an account|continue as guest|skip for now/i);
+  });
+});
+
+// Volyume is fully free (founder ruling): no trial, no Pro, no pricing, no
+// upgrade. This pins the account step's tier-free framing: the mode heading,
+// the single why-account line, and the trust line in both modes, plus the
+// absence of any trial/Pro/payment-card copy.
+describe('LoginScreen fully-free account step framing', () => {
+  const html = (tree) => JSON.stringify(tree.toJSON());
+
+  test('heading reads "Create your account" in create-account mode, "Welcome back" in sign-in mode', async () => {
+    let signupTree;
+    await act(async () => {
+      signupTree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
+    });
+    expect(html(signupTree)).toContain('Create your account');
+    expect(html(signupTree)).not.toContain('Welcome back');
+
+    let signinTree;
+    await act(async () => { signinTree = create(<LoginScreen route={{ params: {} }} />); });
+    expect(html(signinTree)).toContain('Welcome back');
+    expect(html(signinTree)).not.toContain('Create your account');
+  });
+
+  test('the one why-account line names the account benefit, with no trial mention', async () => {
+    let tree;
+    await act(async () => { tree = create(<LoginScreen />); });
+    expect(html(tree)).toContain('Your plan and history are saved to your account, so nothing is lost if you change phone.');
+  });
+
+  test('the trust line shows in both modes and names no payment card, no trial, no Pro', async () => {
+    let signupTree;
+    await act(async () => {
+      signupTree = create(<LoginScreen route={{ params: { intent: 'pro_signup' } }} />);
+    });
+    expect(html(signupTree)).toContain('Works fully offline. Your data exports anytime. No ads.');
+
+    let signinTree;
+    await act(async () => { signinTree = create(<LoginScreen route={{ params: {} }} />); });
+    expect(html(signinTree)).toContain('Works fully offline. Your data exports anytime. No ads.');
+
+    expect(html(signupTree)).not.toMatch(/trial|\bPro\b|payment card|14 day/i);
+    expect(html(signinTree)).not.toMatch(/trial|\bPro\b|payment card|14 day/i);
   });
 });
 

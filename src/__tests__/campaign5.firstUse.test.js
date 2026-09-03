@@ -202,11 +202,14 @@ describe('ACCOUNT: Back cannot bypass consent or required-safe data (C5-P30-01/0
     expect(stripComments(read('screens/Article9ConsentScreen.js'))).not.toMatch(/BackHandler/);
   });
 
-  test('FreeStarter hardware Back mirrors its chevron instead of discarding the quiz', () => {
-    const src = stripComments(read('screens/FreeStarterScreen.js'));
-    expect(src).toMatch(/BackHandler\.addEventListener\('hardwareBackPress'/);
-    expect(src).toMatch(/if \(step > 0\) \{ setStep\(s => s - 1\); return true; \}/);
-  });
+  // 'FreeStarter hardware Back mirrors its chevron instead of discarding the
+  // quiz' removed (D137, fully free product): FreeStarterScreen.js (the
+  // free-tier quiz) is deleted outright -- there is no separate quiz wizard
+  // for a hardware Back press to discard any more. The consent-bypass
+  // guarantee this describe block exists for is still covered above by the
+  // wizard-Back and consent-stack-Back tests against ProOnboardingScreen.js
+  // and Article9ConsentScreen.js, the surfaces every account now goes
+  // through.
 });
 
 describe('ACCOUNT: the consent latch failsafe fails CLOSED (C5-P29-04, D96)', () => {
@@ -234,34 +237,41 @@ describe('ACCOUNT: the consent latch failsafe fails CLOSED (C5-P29-04, D96)', ()
   });
 });
 
-describe('ACCOUNT: first use never duplicates the starter plan (C5-P29-02, D96)', () => {
-  test('the starter copy is idempotent by plan identity and guarded synchronously', () => {
-    const src = stripComments(read('screens/FreeStarterScreen.js'));
-    expect(src).toMatch(/if \(startingRef\.current\) return;/);
-    expect(src).toMatch(/getAllPlansForUser\(user\.id\)/);
-    // RB-6 (Review B, D96) re-anchor, same meaning made sharper: the copy
-    // is identified by PROVENANCE (copyPlanFromLibrary stamps
-    // sourceProgrammeId), with the name check surviving only for legacy
-    // null-provenance copies.
-    expect(src).toMatch(/existingPlans\.find\(p => p\.sourceProgrammeId === recommendation\.id\)/);
-    expect(src).toMatch(/!p\.sourceProgrammeId && p\.name === recommendation\.name/);
-    // An already-active copy is never re-activated (that restarted the block).
-    expect(src).toMatch(/if \(existing\?\.isActive\)/);
-  });
-});
+// 'ACCOUNT: first use never duplicates the starter plan (C5-P29-02, D96)'
+// removed (D137, fully free product): FreeStarterScreen.js (the free-tier
+// quiz) is deleted outright, and with it the COPY-based mechanism this test
+// pinned (`copyPlanFromLibrary` stamping `sourceProgrammeId`, `startingRef`
+// as a synchronous re-entrancy guard, and the by-provenance existing-plan
+// lookup). The "Start with a plan" successor on HomeScreen.js/PlansScreen.js
+// GENERATES a fresh plan (`generateAndSavePlan`) rather than copying a named
+// library recommendation, so there is no `sourceProgrammeId`/`recommendation`
+// pair for an idempotency check to key on -- the behaviour this test pinned
+// does not exist in the new mechanism. NOTE for the lead: neither onAction
+// handler carries a synchronous re-entrancy guard equivalent to the deleted
+// `startingRef.current` check, so a rapid double-tap is not proven safe
+// against a duplicate generateAndSavePlan call; flagged as an observation
+// only, since this is a test-only reconciliation task and no src/ file may
+// be touched to add one.
 
-describe('ACCOUNT: the free path does not block on a display name (C5-P29-03 / C5-P1-09, D96)', () => {
+describe('ACCOUNT: onboarding does not block on a display name (C5-P29-03 / C5-P1-09, D96)', () => {
+  // RE-POINTED (D137, fully free product): FirstRunScreen.js (the free
+  // path) is deleted outright -- ProOnboardingScreen.js is now the ONLY
+  // onboarding surface, reached by every account regardless of tier, and it
+  // carries the identical appleFirstName prefill contract this test pins.
   test('Continue is never disabled by the name, and the field prefills', () => {
-    const src = stripComments(read('screens/FirstRunScreen.js'));
-    // 2026-08-19: the initialiser now goes through appleFirstName, which reads
+    const src = stripComments(read('screens/ProOnboardingScreen.js'));
+    // The initialiser goes through appleFirstName, which reads
     // storedProfile.firstName FIRST and falls back to what Apple gave at the
     // sign-in button. The claim this pins is unchanged - the saved name still
     // seeds the field - so it is asserted through that call.
-    expect(src).toMatch(/useState\(\s*\(\) => appleFirstName\(\{ sessionUser: user, storedProfile: userProfile \}\)/);
-    expect(src).not.toMatch(/disabled=\{!hasName\}/);
-    expect(src).not.toMatch(/if \(!hasName\) return;/);
+    expect(src).toMatch(/useState\(\s*\(\) => appleFirstName\(\{ sessionUser: user, storedProfile: userProfile \}\) \|\| ''/);
+    // Step 2's canContinue gate (biological sex, weight, age, height) never
+    // consults firstName, so the name can never disable Continue.
+    const step2 = src.match(/if \(step === 2\) \{[\s\S]{0,1400}/)?.[0] ?? '';
+    expect(step2).toMatch(/const canContinue =/);
+    expect(step2).not.toMatch(/firstName/);
     // An empty field must not write a blank over a stored name.
-    expect(src).toMatch(/if \(hasName\) merged\.firstName = firstName\.trim\(\);/);
+    expect(src).toMatch(/if \(firstName\.trim\(\)\) merged\.firstName = firstName\.trim\(\);/);
   });
 });
 
@@ -282,7 +292,11 @@ describe('ACCOUNT: the final build survives a retry (C5-P29-07, D96)', () => {
 
 describe('CARDIO: no onboarding resurrection (standing boundary)', () => {
   test('onboarding and first-run surfaces carry no cardio input or promise', () => {
-    for (const f of ['screens/ProOnboardingScreen.js', 'screens/FirstRunScreen.js', 'screens/FreeStarterScreen.js', 'screens/ProSetupCompleteScreen.js']) {
+    // FirstRunScreen.js and FreeStarterScreen.js removed from this
+    // enumeration (D137, fully free product): both are deleted outright.
+    // ProOnboardingScreen.js is now the only onboarding surface, reached by
+    // every account regardless of tier.
+    for (const f of ['screens/ProOnboardingScreen.js', 'screens/ProSetupCompleteScreen.js']) {
       expect(stripComments(read(f))).not.toMatch(/[Cc]ardio/);
     }
   });
@@ -478,6 +492,10 @@ describe('HOME: zero history has one clear next action and claims no history (C5
   // is retired with the card, so the original concern ("the top card leads
   // to the session it names, or stops claiming to") is now trivially true:
   // there is no top trial card on Home left to mislead anyone.
+  // FOUNDER DECISION (fully free, no tier split, no trial): AttentionCard
+  // itself is deleted (its trial/free_line/differential variants are all
+  // retired), so the inert-fallback contract this test pinned no longer
+  // has a component to live on.
   test('the top card on a zero-history Home leads to the session it names, or stops claiming to', () => {
     // C5-P12-01: the S3 variant (completed sessions <= 0) scrolled to y=0,
     // where the user already was, from the first element on the screen.
@@ -485,13 +503,7 @@ describe('HOME: zero history has one clear next action and claims no history (C5
     expect(home).not.toMatch(/variant === 'S3'\)\s*\{\s*\n\s*scrollRef\.current\?\.scrollTo/);
     // The everyday trial card's variant JSX is gone from Home entirely.
     expect(home).not.toMatch(/variant="trial"/);
-    // The AttentionCard component's inert-fallback contract (renders a
-    // non-chevroned View, not a dead-end button, when it has no honest
-    // destination) is untouched and still exercised wherever the component
-    // is used today (the free-tier attention footer slot).
-    const card = read('components/AttentionCard.js');
-    expect(card).toMatch(/const Wrapper = onTrialPress \? TouchableOpacity : View;/);
-    expect(card).toMatch(/\{onTrialPress \? <Ionicons name="chevron-forward"/);
+    expect(() => read('components/AttentionCard.js')).toThrow();
   });
 
   test('no surface presupposes a check-in that has never happened', () => {
@@ -666,7 +678,9 @@ describe('BLOCK: the first block explains itself and never advances on its own (
     expect(plans).toMatch(/the same set targets as last time/);
     expect(plans).toContain('Your set targets');
     expect(plans).toContain('Only your set targets move.');
-    expect(plans).toMatch(/const seedIntent = intent === 'adjust' && tier === 'pro' \? 'adjust' : 'repeat';/);
+    // FOUNDER DECISION (fully free, no tier split): every account reaches
+    // 'adjust' now, so the entitlement check is retired from this line.
+    expect(plans).toMatch(/const seedIntent = intent === 'adjust' \? 'adjust' : 'repeat';/);
   });
 
   test('continuing with adjustments leaves a receipt naming what changed and what held', () => {
@@ -852,7 +866,10 @@ describe('BLOCK DECISION: both options, advice that cannot gate, entitlement fro
     // (RA-2 re-anchor, same meaning: the rows are built once as allRows so
     // the unjudged check can see every entry, then sliced for display.)
     expect(plans).toMatch(/const allRows = buildLedgerReflectionRows\(ledger\)/);
-    expect(plans).toMatch(/rows: tier === 'pro' \? allRows\.slice\(0, 4\) : \[\]/);
+    // FOUNDER DECISION (fully free, no tier split): every account sees the
+    // rows now, so the tier ternary that gave Free an empty array is
+    // retired.
+    expect(plans).toMatch(/rows: allRows\.slice\(0, 4\),/);
     expect(stripComments(plans)).not.toMatch(/recommendation === 'adjust'/);
     // And with both options on the card, the forward claims say which
     // option applies them.
@@ -861,7 +878,7 @@ describe('BLOCK DECISION: both options, advice that cannot gate, entitlement fro
   });
 
   test('PRO: the adjust path consumes the ledger; the repeat path stays a true repeat', () => {
-    expect(plans).toMatch(/const seedIntent = intent === 'adjust' && tier === 'pro' \? 'adjust' : 'repeat';/);
+    expect(plans).toMatch(/const seedIntent = intent === 'adjust' \? 'adjust' : 'repeat';/);
     expect(plans).toMatch(/buildSeedRangesForNextBlock\(user\.id, \{\s*\n\s*intent: seedIntent,/);
     expect(plans).toMatch(/recordSeedOutcome\(user\.id, seedRanges\.sourceMesocycleId, \{\s*\n\s*intent: seedIntent/);
     expect(plans).toMatch(/const receipt = seedIntent === 'adjust'/);
@@ -894,21 +911,21 @@ describe('BLOCK DECISION: both options, advice that cannot gate, entitlement fro
     const withPlaceholderAdvice = buildNextBlockOptions({ recommendation: 'adjust', isPro: false });
     const withNoAdvice = buildNextBlockOptions({ recommendation: null, isPro: false });
     expect(withPlaceholderAdvice.map((o) => o.locked)).toEqual(withNoAdvice.map((o) => o.locked));
-    // The entitlement travels explicitly, from the store's real tier.
-    expect(plans).toMatch(/getBlockAdvice\(user\.id, block, userProfile, \{ isPro: tier === 'pro' \}\)/);
+    // FOUNDER DECISION (fully free, no tier split): every account gets
+    // adaptive next-block coaching now, so isPro is always true.
+    expect(plans).toMatch(/getBlockAdvice\(user\.id, block, userProfile, \{ isPro: true \}\)/);
     expect(advisor).toMatch(/export async function getBlockAdvice\(userId, activeBlock, userProfile, \{ isPro = false \} = \{\}\)/);
   });
 
-  test('FREE: no adaptive coaching applied, and the locked tap goes to the upgrade flow', () => {
-    // The screen renders the option Pro-marked (the app-wide entitlement UX)
-    // and the handler holds a second lock, so no route reaches the adaptive
-    // seed without Pro.
-    expect(plans).toContain('<ProBadge size="sm" />');
-    expect(plans).toMatch(/navigation\.navigate\('ProUpgrade', \{ source: 'block_decision' \}\)/);
-    expect(plans).toMatch(/if \(intent === 'adjust' && tier !== 'pro'\) \{/);
-    // And the advisor composes no adaptive narrative for a free user.
-    const free = stripComments(advisor);
-    expect(free).toMatch(/if \(!isPro\) \{\s*\n\s*return \{\s*\n\s*recommendation: null,/);
+  // FOUNDER DECISION (fully free, no tier split): the Pro-marked/locked UI
+  // (ProBadge, the second `tier !== 'pro'` lock, the ProUpgrade route) is
+  // retired entirely from PlansScreen -- there is no Free-locked state left.
+  // The advisor lib itself is untouched: it still supports isPro:false for
+  // any caller that passes it (checked directly on the lib, above).
+  test('the Pro-marked/locked UI (ProBadge, the second lock, ProUpgrade) is retired from PlansScreen', () => {
+    expect(plans).not.toContain('<ProBadge size="sm" />');
+    expect(plans).not.toMatch(/navigation\.navigate\('ProUpgrade'/);
+    expect(plans).not.toMatch(/tier !== 'pro'/);
   });
 
   test('the explicit confirm and the no-auto-transition guards survive the new options (FB-34/35)', () => {
@@ -922,9 +939,10 @@ describe('BLOCK DECISION: both options, advice that cannot gate, entitlement fro
     expect(plans).toMatch(/onPress=\{confirmNextBlockReview\}/);
     expect(plans).toMatch(/if \(restartingRef\.current\) return;/);
     expect(advisor).not.toMatch(/autoStart|automaticTransition/);
-    // Every option press still goes through the confirming handler (or, when
-    // locked, to the upgrade flow) -- nothing activates a block directly.
-    expect(plans).toMatch(/: handleRestartPlan\(opt\.intent\)\)/);
+    // FOUNDER DECISION (fully free, no tier split): every option press goes
+    // straight to the confirming handler now -- the locked/ProUpgrade branch
+    // of the ternary is retired, nothing activates a block directly.
+    expect(plans).toMatch(/onPress=\{\(\) => handleRestartPlan\(opt\.intent\)\}/);
   });
 });
 
@@ -967,17 +985,22 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
     const policy = read('screens/SubscriptionPolicyScreen.js');
     const account = read('screens/SettingsAccountScreen.js');
     // WeeklyCheckIn and NutritionTargets are hard withProGuard locks, not
-    // read-only ones, so neither may be promised as "stays viewable".
+    // read-only ones, so neither may be promised as "stays viewable". This
+    // copy-level contract on the DORMANT downgrade-policy screen is
+    // unchanged and still checked (SubscriptionPolicyScreen.js stays on
+    // disk unregistered, D137, in case a future monetisation decision
+    // revives it, and its copy must not have drifted wrong in the meantime).
     expect(policy).not.toContain("Past check-ins stay viewable");
     expect(policy).not.toContain('Nutrition targets last set on Pro stay visible');
     expect(account).not.toMatch(/Past coach decisions, check-ins, training blocks and PRs remain readable/);
     // The three screens the founder's 2026-07-02 read-only decision covers.
     expect(policy).toMatch(/Body measurements, progress photos and your food diary stay viewable/);
-    const nav = read('navigation/RootNavigator.js');
-    expect(nav).toMatch(/const GatedWeeklyCheckIn\s*= lazyScreen\(\(\) => withProGuard\(/);
-    expect(nav).toMatch(/const GatedNutritionTargets = lazyScreen\(\(\) => withProGuard\(/);
-    expect(nav).toContain('name="WeeklyCheckIn" component={GatedWeeklyCheckIn}');
-    expect(nav).toContain('name="NutritionTargets" component={GatedNutritionTargets}');
+    // The RootNavigator cross-check against a live withProGuard lock is
+    // dropped (D137): there is no guard of any kind on WeeklyCheckIn or
+    // NutritionTargets any more (see proScreenGating.guard.test.js) -- the
+    // "what the guards actually keep readable" question this test title
+    // asks has no live answer to check while the dormant screen's copy is
+    // never shown to a real user.
   });
 
   test('one canonical "what stays free" list, and the shorter surfaces point at it (C5-P7-09)', () => {
@@ -993,20 +1016,21 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
     expect(paywall).toContain('What stays if you switch back to Free later');
   });
 
-  test('the tier is named calmly, before a lock names it (C5-P7-10)', () => {
+  // FOUNDER DECISION (fully free, no tier split): the "You're on Free" tier
+  // signal is retired entirely -- there is no tier to state any more.
+  test('the tier signal is retired: no account is ever told it is "on Free"', () => {
     const coach = read('screens/YouScreen.js');
-    expect(coach).toContain("You&apos;re on Free");
-    // Stated, never sold: no price, trial or CTA rides the line.
-    const line = coach.slice(coach.indexOf("You&apos;re on Free") - 400, coach.indexOf("You&apos;re on Free") + 200);
-    expect(line).not.toMatch(/trial|upgrade|ProUpgrade|£/i);
+    expect(coach).not.toContain("You&apos;re on Free");
   });
 
-  test('the Coach tab tells a free user what it becomes, not what it is doing (C5-P7-08)', () => {
+  // FOUNDER DECISION (fully free, no tier split): the Coach tab's Free pitch
+  // (and its ProUpgrade route) is retired -- every account reads the Pro
+  // status card content, always.
+  test('the Coach tab always carries the real coaching status card, never a Free pitch', () => {
     const coach = stripComments(read('screens/YouScreen.js'));
-    expect(coach).not.toContain('Your coach reads your logs, applies safety limits, and explains every decision.');
-    expect(coach).toContain('On Pro this tab carries your weekly check-in');
-    // Copy only: the pitch card still opens the same upgrade route.
-    expect(coach).toContain("navigation.navigate('ProUpgrade', { source: 'coach_pitch_card' })");
+    expect(coach).not.toContain('Coach is available on Pro');
+    expect(coach).not.toMatch(/navigation\.navigate\('ProUpgrade', \{ source: 'coach_pitch_card' \}\)/);
+    expect(coach).toContain('What changed, what was held, and the exact signals behind it.');
   });
 
   test('the free column carries the tier word, never a hardcoded currency (C5-P8-01)', () => {
@@ -1027,27 +1051,20 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
     expect(src).toContain("One of your lifts hasn't moved in three weeks.");
   });
 
-  test('the Pro teaser ends, like every other card on Home (FM-05)', () => {
-    const card = read('components/HomeProTeaserCard.js');
-    // The per-week dismissal the free weekly line already uses, keyed per
-    // user per local week. Frequency only: who sees it and when it first
-    // appears are unchanged (HomeScreen still gates on tier + 3 sessions).
-    expect(card).toContain('@volyume_pro_teaser_dismissed_');
-    expect(card).toContain('localWeekStartMs()');
-    expect(card).toContain('if (dismissed) return null;');
-    expect(card).toContain('accessibilityLabel="Dismiss the Pro suggestion"');
-    // Defaults to hidden so a dismissed card never flashes before the read.
-    expect(card).toMatch(/useState\(true\)/);
-    expect(read('screens/HomeScreen.js')).toMatch(/tier === 'free' && totalSessions >= 3/);
+  // FOUNDER DECISION (fully free, no tier split): the Pro teaser card is
+  // deleted entirely -- there is no upsell left to end.
+  test('the Pro teaser is retired entirely (FM-05 superseded)', () => {
+    expect(() => read('components/HomeProTeaserCard.js')).toThrow();
+    expect(read('screens/HomeScreen.js')).not.toMatch(/HomeProTeaserCard/);
   });
 
-  test('the Progress empty state promises a free user only free destinations (C5-P35-01)', () => {
+  // FOUNDER DECISION (fully free, no tier split): every destination is
+  // genuinely open to every account now, so there is one sentence, not a
+  // tier fork -- the old Free-only "consistency, lifts" sentence is retired.
+  test('the Progress empty state promises the same, real destinations to every account (C5-P35-01 superseded)', () => {
     const src = read('screens/AnalyticsScreen.js');
-    // Body metrics, progress photos and scans are all Pro-locked for a
-    // zero-history free user: their read-only guards probe a history that
-    // does not exist, so each tap lands on the hard gate.
-    expect(src).toMatch(/tier === 'pro'\s*\n?\s*\? 'Training charts appear here once sessions are logged\. Body metrics/);
-    expect(src).toContain('Your consistency, lifts and full history are still available below.');
+    expect(src).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
+    expect(src).not.toContain('Your consistency, lifts and full history are still available below.');
   });
 
   test('the safety screener is reachable on every tier (W-8 / C5-P7-07)', () => {
@@ -1074,13 +1091,13 @@ describe('FREE: the tier is told the truth about itself (C5-P7-*, C5-P8-*, D96)'
 });
 
 describe('FREE: zero-history Home claims no history it does not have (C5-P7-05 / C5-P1-08, D96)', () => {
-  test('the welcome card promises a coach only to the tier that has one', () => {
-    const card = read('components/HomeWelcomeCard.js');
-    expect(card).toContain("isPro ? 'Your coach learns as you train' : 'Your progress builds as you train'");
-    // The free sentence names only what free genuinely accumulates, and both
-    // sentences stay future-facing (third first-use law).
-    expect(card).toContain('Every session you log builds your history, your records and your weekly volume.');
-    expect(read('screens/HomeScreen.js')).toContain("<HomeWelcomeCard onDismiss={dismissWelcome} isPro={tier === 'pro'} />");
+  // FOUNDER DECISION (fully free, no tier split): every account has a
+  // coach now, so the isPro fork is retired -- one sentence for everyone.
+  test('the welcome card promises a coach to every account (superseded)', () => {
+    const card = stripComments(read('components/HomeWelcomeCard.js'));
+    expect(card).toContain('Your coach learns as you train');
+    expect(card).not.toMatch(/isPro/);
+    expect(read('screens/HomeScreen.js')).toContain('<HomeWelcomeCard onDismiss={dismissWelcome} />');
   });
 
   test('the free welcome copy claims no past training and no personalisation from it', () => {
@@ -1096,8 +1113,13 @@ describe('PRO: setup hands over live features only, and no removed one (D96)', (
   test('the hand-off states that a training block is already running (C5-P10-01)', () => {
     // The wave C carry-over: setup generates AND activates a plan, so a block
     // is live, and the user first met "Week 1 of 6" days later.
+    // RE-POINTED (D137, fully free product): FreeStarterScreen.js (the free
+    // path) is deleted outright; HomeScreen.js and PlansScreen.js's merged
+    // "Start with a plan" no-plan state (see noPlanJourneyCopy.guard.test.js)
+    // is the one surviving hand-off surface and carries the same sentence.
     expect(read('screens/ProSetupCompleteScreen.js')).toContain('BLOCK_START_SENTENCE');
-    expect(read('screens/FreeStarterScreen.js')).toContain('BLOCK_START_SENTENCE');
+    expect(read('screens/HomeScreen.js')).toContain('BLOCK_START_SENTENCE');
+    expect(read('screens/PlansScreen.js')).toContain('BLOCK_START_SENTENCE');
   });
 
   test('every hand-off destination is a registered, live route', () => {
@@ -1111,11 +1133,15 @@ describe('PRO: setup hands over live features only, and no removed one (D96)', (
   });
 
   test('no cardio promise survives on any first-use surface, either tier', () => {
+    // FirstRunScreen.js and FreeStarterScreen.js removed from this
+    // enumeration (D137, fully free product): both are deleted outright.
+    // HomeScreen.js and PlansScreen.js added: they carry the merged
+    // "Start with a plan" no-plan hand-off that replaced them.
     for (const f of [
       'screens/ProSetupCompleteScreen.js',
       'screens/ProOnboardingScreen.js',
-      'screens/FreeStarterScreen.js',
-      'screens/FirstRunScreen.js',
+      'screens/HomeScreen.js',
+      'screens/PlansScreen.js',
       'screens/WelcomeScreen.js',
       'screens/SubscriptionPolicyScreen.js',
       'components/TierComparisonStrip.js',
@@ -1226,12 +1252,11 @@ describe('HIERARCHY: two instructional sheets never stack (C5-P37-02, D96)', () 
 describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, D96)', () => {
   test('the coach gloss on the app\'s first screen actually renders (C5-P34-01)', () => {
     const src = read('screens/WelcomeScreen.js');
-    // String.includes is case-sensitive and no bullet carries a capital
-    // "Coach", so the authored gloss never rendered at all.
-    expect(stripComments(src)).not.toContain("b.includes('Coach')");
-    expect(src).toContain("b.toLowerCase().includes('coach')");
-    // The bullet the gate is meant to catch still exists.
-    expect(src).toMatch(/A coach that explains every change, and why\./);
+    // D137 (fully free product, 2026-09-03): the first screen shows an
+    // example week instead of bullets. The coach gloss now rides the
+    // example's Coach row, unconditionally, so it always renders.
+    expect(stripComments(src)).toContain('<InfoTooltip text={GLOSSARY.precisionCoaching}');
+    expect(src).toMatch(/Targets adjusted from your weigh-ins\. See why\./);
   });
 
   test('the record line is glossed on the surface a novice first meets it (C5-P34-02)', () => {
@@ -1346,16 +1371,21 @@ describe('WELLBEING + ACCOUNT: the two settings sentences (W-3/W-4, E-7, D96)', 
       expect(literal).not.toMatch(/SCOFF|threshold|detector|flag count/i);
     }
     expect(src).toContain('await setWellbeingMode(mode)');
-    // Still tier-blind, still outside the Pro block.
-    const calmRow = src.slice(src.indexOf('label="Calmer coaching"'));
-    expect(calmRow.indexOf("{tier === 'pro' && (")).toBeGreaterThan(0);
+    // Still tier-blind. AMENDED 2026-09-03 (fully-free product, founder
+    // decision): there is no Pro block left on this screen to sit outside
+    // of any more (SettingsCoachingScreen.js carries no tier read at all).
+    expect(src).not.toMatch(/\btier\s*===\s*'pro'/);
   });
 
   test('the sign-in screen says why an account is needed (E-7)', () => {
     const login = read('screens/LoginScreen.js');
     // The approved sentence existed only on a wizard step the live flow
-    // auto-advances past, so nobody ever read it.
-    expect(login).toContain('Sign in once so your plan, weight history and coaching updates can be restored if you change device.');
+    // auto-advances past, so nobody ever read it. AMENDED 2026-09-03
+    // (fully-free product, founder decision): the wording changed to drop
+    // the word "device" ambiguity ("phone") and read cleanly without a
+    // trial thread; the why-account law itself (one line, said once, here)
+    // is what this test still pins.
+    expect(login).toContain('Your plan and history are saved to your account, so nothing is lost if you change phone.');
     // One line, not a privacy lecture: the Article 9 gate that follows is
     // still the place the full data story is told, so no consent copy is
     // duplicated onto this screen.
@@ -1502,10 +1532,12 @@ describe('CHECK-IN: one weigh-in cannot become a week of evidence (C5-P22-02, D9
     expect(src).toMatch(/computeEWMA\(weekWeights\)/);
   });
 
+  // FOUNDER DECISION (fully free, no tier split): the nudge's gate is no
+  // longer Pro-only -- it runs for every account with 3+ completed sessions.
   test("Home's check-in nudge mirrors the same unit", () => {
     const src = read('screens/HomeScreen.js');
     // The nudge's own gate, which mirrors the WeeklyCheckIn gate exactly.
-    const nudge = src.slice(src.indexOf("if (tier === 'pro' && completed.length >= 3)"));
+    const nudge = src.slice(src.indexOf('if (completed.length >= 3)'));
     expect(nudge.slice(0, 2000)).toMatch(/const weighIns7d = new Set\(/);
     expect(nudge.slice(0, 2000)).toMatch(/weighIns7d >= MIN_WEIGH_INS/);
   });
@@ -1580,18 +1612,15 @@ describe('CHECK-IN: no false-confidence recommendation from a week with no check
     expect(src).toMatch(/scheduleWeeklyCoachReady\([\s\S]{0,160}weekStart: weekStart\.getTime\(\)/);
   });
 
-  test('the week-one ledger survives a visit made before the first review', () => {
-    // RE-PINNED (Campaign 22 Phase 2 Stage 2, FOUNDER-RULINGS-PHASE2 R3): the
-    // trial banner (and this retirement predicate) rehomed from Home to
-    // YouScreen.js. Same PM-03/PM-06 point, same predicate -- retirement
-    // keys on a COMPLETED decision, never the mere existence of a persisted
-    // row -- now expressed via `latestDecision`, the SAME
-    // isCompletedCoachDecision-backed variable this hub's own status card
-    // already computes and reads (never a second, parallel check).
+  // FOUNDER DECISION (fully free, no tier split, no trial): the trial
+  // banner (and this retirement predicate) is retired entirely, not merely
+  // rehomed -- YouScreen carries no trial-banner state at all any more.
+  // The surviving PM-03/PM-06 point (a completed decision, never the mere
+  // existence of a persisted row) is still true of the status card itself.
+  test('the week-one ledger point survives: retirement still keys on a completed decision, not a persisted row', () => {
     const src = read('screens/YouScreen.js');
-    expect(stripComments(src)).not.toMatch(/if \(latest\) \{ setTrialBanner\(null\); return; \}/);
+    expect(src).not.toMatch(/trialBanner/);
     expect(src).toMatch(/const latestDecision = isCompletedCoachDecision\(latest, checkin\) \? latest : null;/);
-    expect(src).toMatch(/&& !latestDecision\) \{/);
   });
 
   test('the engine files are untouched by this fix', () => {
@@ -1749,13 +1778,17 @@ describe('NOTIFICATIONS: the displayed reminder state is the real one (C5-P28-01
 });
 
 describe('TIER: a Pro feature never fails silently on a Free phone (FM-01, FM-04/FM-08, PM-04/PM-05, D96)', () => {
-  test('meal reminders are Pro at the offer AND at scheduling', () => {
+  // AMENDED 2026-09-03 (fully-free product, founder decision): meal
+  // reminders are offered to everyone now, so the UI's isPro gate is gone
+  // (NotificationSettingsScreen.js). The scheduler-side gate this used to
+  // pin is retained-but-inactive infrastructure (proGate.js
+  // FULL_ACCESS_FOR_ALL resolves tier to 'pro' for every signed-in user),
+  // untouched here per lane boundaries.
+  test('meal reminders are offered at the setting, unconditionally', () => {
     const settings = read('screens/NotificationSettingsScreen.js');
     const section = settings.slice(settings.indexOf('Meal-log reminders (opt-in'));
-    expect(section).toMatch(/\{isPro && \(/);
-    const sched = read('lib/notifications/scheduler.js');
-    const fn = sched.slice(sched.indexOf('export async function scheduleMealReminders'));
-    expect(fn.slice(0, 900)).toMatch(/tier !== 'pro'\) return;/);
+    expect(section).not.toMatch(/\{isPro && \(/);
+    expect(settings).not.toMatch(/\bisPro\b/);
   });
 
   test('training reminders stay tier-blind: they are not a Pro feature', () => {
@@ -1849,16 +1882,17 @@ describe('REVIEW A: the brand-new-user findings stay fixed (RA-1..RA-10, D96)', 
     expect(plans).toMatch(/both options start the next block from the same targets/);
   });
 
-  test('RA-1: a days answer the starter library cannot honour is acknowledged, not ignored', () => {
-    const src = read('screens/FreeStarterScreen.js');
-    expect(src).toMatch(/answers\.days !== recDays/);
-    expect(src).toMatch(/This plan runs \$\{recDays\} days a week/);
-  });
-
-  test('RA-9: sets and reps are glossed at their likeliest first exposure', () => {
-    const src = read('screens/FreeStarterScreen.js');
-    expect(src).toMatch(/InfoTooltip text=\{`\$\{GLOSSARY\.set\} \$\{GLOSSARY\.rep\}`\}/);
-  });
+  // RA-1 and RA-9 removed (D137, fully free product): both pinned
+  // FreeStarterScreen.js's quiz-and-recommendation UI (a `days` mismatch
+  // acknowledgement against a picked-from-a-pool library plan, and a
+  // glossary tooltip on that recommendation card), and the file is deleted
+  // outright. The successor "Start with a plan" flow (HomeScreen.js /
+  // PlansScreen.js) GENERATES a plan from the athlete's actual onboarding
+  // answers via generateAndSavePlan rather than recommending a pre-built
+  // library plan that might not match them, so a "days the library cannot
+  // honour" mismatch cannot occur in the new mechanism, and there is no
+  // recommendation-preview card left for a glossary tooltip to sit on.
+  // Both behaviours no longer exist.
 
   test('RA-3: the wizard neither paints the finished sign-in step nor counts it', () => {
     const src = read('screens/ProOnboardingScreen.js');
@@ -1888,11 +1922,9 @@ describe('REVIEW A: the brand-new-user findings stay fixed (RA-1..RA-10, D96)', 
     expect(d).toBeGreaterThan(c);
   });
 
-  test('RA-10: the trial confirmation chip renders only from the resolved entitlement', () => {
-    const src = read('screens/ProSetupCompleteScreen.js');
-    expect(src).toMatch(/\{trialEndsLabel\(userProfile\) \? \(/);
-    expect(src).toMatch(/Your 14 days run to \{trialEndsLabel\(userProfile\)\}/);
-  });
+  // RA-10 (trial confirmation chip) removed: Volyume is fully free (founder
+  // ruling), no trial exists any more, and the chip + trialEndsLabel import
+  // are gone from ProSetupCompleteScreen.js.
 
   test('RA-6: the block decision glosses the term the whole choice rests on', () => {
     const src = read('screens/PlansScreen.js');
@@ -1901,11 +1933,10 @@ describe('REVIEW A: the brand-new-user findings stay fixed (RA-1..RA-10, D96)', 
     expect(src.slice(i, i + 300)).toMatch(/InfoTooltip text=\{GLOSSARY\.volume\}/);
   });
 
-  test('RA-8: the pro_signup sign-in screen carries the trial thread', () => {
-    const src = read('screens/LoginScreen.js');
-    expect(src).toMatch(/intent === 'pro_signup' \? \(/);
-    expect(src).toMatch(/Your 14-day free trial starts once your account is set up\./);
-  });
+  // RA-8 (trial thread on the pro_signup sign-in screen) removed: Volyume
+  // is fully free (founder ruling), so LoginScreen.js carries no trial
+  // copy any more. The pro_signup param still opens create-account mode
+  // (LoginScreen.test.js E-1 pins that behaviour).
 });
 
 describe('REVIEW B: the interruption and state findings stay fixed (RB-1..RB-12, D96)', () => {
@@ -1987,15 +2018,18 @@ describe('REVIEW B: the interruption and state findings stay fixed (RB-1..RB-12,
 });
 
 describe('REVIEW C: the experienced-user findings stay fixed (RC-1..RC-9, D96)', () => {
-  test('RC-1: every tier can open the editor on its own plan; Duplicate stays free-only', () => {
+  // FOUNDER DECISION (fully free, no tier split): every account opens the
+  // editor on its own plan, and Duplicate (the Free-only action) is retired
+  // entirely -- every account now runs one always-active plan, the same
+  // rationale that used to keep it Free-only.
+  test('RC-1: every account can open the editor on its own plan; Duplicate is retired', () => {
     const src = read('screens/PlanDetailScreen.js');
     expect(stripComments(src)).not.toMatch(/!isLibrary && tier !== 'pro' &&/);
     const manage = src.slice(src.indexOf('<SectionLabel>Manage</SectionLabel>'));
     const editAt = manage.indexOf('Edit plan');
-    const dupGateAt = manage.indexOf("{tier !== 'pro' && (");
     expect(editAt).toBeGreaterThan(-1);
-    expect(dupGateAt).toBeGreaterThan(editAt); // Edit renders before, and outside, the free-only gate
-    expect(manage.indexOf('Duplicate plan')).toBeGreaterThan(dupGateAt);
+    expect(manage).not.toContain('Duplicate plan');
+    expect(manage).not.toContain('handleDuplicate');
   });
 
   test('RC-2: the coach register reads the experience key the profile actually has', () => {
@@ -2022,17 +2056,15 @@ describe('REVIEW C: the experienced-user findings stay fixed (RC-1..RC-9, D96)',
     expect(src).not.toContain('Technical terms appear in brackets after the plain ones on coaching explanations.');
   });
 
-  test('RC-6: the free result describes the plan, never the reader', () => {
-    const src = stripComments(read('screens/FreeStarterScreen.js'));
-    expect(src).not.toContain('Built for people starting out');
-    expect(src).toMatch(/New to these movements\?/);
-  });
-
-  test('RC-8: the first-run skip line says what skipping does', () => {
-    const src = stripComments(read('screens/FirstRunScreen.js'));
-    expect(src).not.toContain('browse the library instead');
-    expect(src).toMatch(/choose from the plan library on Home/);
-  });
+  // RC-6 and RC-8 removed (D137, fully free product): both pinned copy on
+  // FreeStarterScreen.js's recommendation result card and FirstRunScreen.js's
+  // skip line, and both files are deleted outright. Neither the "free
+  // result" recommendation card nor a first-run skip-to-library affordance
+  // survives in the merged "Start with a plan" flow (HomeScreen.js /
+  // PlansScreen.js already offer "Browse plans" as a real, always-visible
+  // secondary action rather than a skip link, per
+  // noPlanJourneyCopy.guard.test.js) -- the specific copy these pinned no
+  // longer exists.
 
   test('RC-9: opening exercise details retires the novice Help pulse too', () => {
     // Re-anchored 2026-08-17: the name-tap's label is "Exercise details"
