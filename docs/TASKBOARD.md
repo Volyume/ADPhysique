@@ -3326,3 +3326,54 @@ phrase when ready; until then the new events queue on device.
 ED-safety: the first-session line and readiness chip carry no weight or
 food content; calm/ED suppression on the summary line verified by pin;
 floors, gates and notification suppression untouched.
+
+## FREE PRODUCT + FIRST LAUNCH (2026-09-03) — COMPLETE, MERGED TO MAIN. Ruling D137.
+
+Branch `claude/volyume-coherence-pass-6s991m`. Founder decision: Volyume
+is a complete free product; first launch rebuilt from research. Full
+architecture, removals, first-launch design, analytics and the external
+follow-up list: DECISIONS D137. CLAUDE.md Section 1 (Tier, Payments) and
+Section 2 (the gating law) updated to the new truth.
+
+**Gates.** Lint clean, typecheck clean, full suite 1140 suites / 15673
+tests passing; ED fail-closed, coach validation, identity and capability
+guards unweakened.
+
+**Founder-side.** (1) Play Console + App Store Connect: paste the
+refreshed listings from `docs/PLAY_STORE_LISTING.md` and
+`docs/APP_STORE_CONNECT_LISTING.md`; deactivate (do not delete) the two
+subscription products and the subscription group; replace any paywall
+screenshot; update review notes ("free, no purchase"). (2) volyume.app
+live site: same pass on pricing/FAQ (outside this repo). (3) Apply
+`migrate_156` (funnel telemetry) and `migrate_157` (pause the cascade
+cron) with the exact phrase when ready. (4) Answer the quiz-first
+question carried from D136.
+
+**Device checklist (Android, EAS build).**
+A. Fresh install. 1. First screen: wordmark, "Less thinking. More
+   lifting.", one promise line, the example-week card (Train / Coach /
+   Progress rows, block dots), "An example week. Yours is built around
+   you.", orange "Get started", "Already have an account? Sign in", the
+   trust row. No price, no trial, no bullets. 2. Get started: "Create your
+   account", one why-account line, Apple/Google first, "Continue with
+   email" reveals the fields, trust line under the form. 3. Consent gate
+   unchanged. 4. Setup: six steps as before, no PRO badge, no trial
+   mention; body-composition step still offers "Skip for now". 5. Setup
+   complete: no "Your 14 days run to" row; "Start training" lands on
+   Today with the plan hero and the welcome card. 6. Nutrition tab opens
+   the diary directly (no lock). Coach tab: no "Coach is available on
+   Pro" card; the check-in row shows the readiness countdown. Progress:
+   Body and Progress photos pillars open directly. 7. Settings: Account
+   shows email only (no Plan/Subscription/Go Pro rows); Nutrition targets,
+   Dietary needs and Coaching reminders rows always present; FAQ has no
+   free-vs-Pro or subscription entries.
+B. Existing account that was on the free tier or an expired trial.
+   1. Sign in: no paywall, no cascade gate, no "trial ending" line; all
+   Pro surfaces open. 2. No win-back or trial reminder notification
+   arrives over the following days. 3. Morning-weight and check-in
+   reminders re-lay if they were on.
+C. Logger and summary unchanged from D136 apart from the pre-workout
+   prompt now showing the coaching sentence for everyone.
+ED-safety: floors, gates, calm mode, notification suppression untouched;
+the ED fail-closed guard still pins every remaining read (count updated
+for the two removed free branches).

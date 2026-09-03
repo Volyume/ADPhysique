@@ -1,6 +1,18 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-03 — VOLYUME IS A COMPLETE FREE PRODUCT; FIRST LAUNCH REBUILT (D137) ★
+
+Founder decision: fully free, no trial, no Free/Pro split. One flag
+(`FULL_ACCESS_FOR_ALL`, proGate.js) clamps every tier write; the payments
+barrel is the dormant boundary; consent no longer starts the cascade;
+guards and tier routing removed; free branches removed from every screen;
+first screen rebuilt as an example week; account step OAuth-first. Full
+record: DECISIONS D137; board entry "FREE PRODUCT + FIRST LAUNCH" with the
+device checklist and founder-side follow-ups (store consoles, live site,
+migrations 156 and 157). CLAUDE.md updated.
+
+===============================================================================
 ## ★ 2026-09-03 — FIRST 14 DAYS / ACTIVATION PASS LANDED (D136) ★
 
 Founder order: the first fourteen days, install → account → setup →

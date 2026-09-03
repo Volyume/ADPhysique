@@ -40,7 +40,7 @@ database is the source of truth on device. Local migrations run via
 **Backend: Supabase EU-Dublin** (`@supabase/supabase-js`). EU data residency
 is absolute — all user data stays in Dublin. Components NEVER query Supabase
 directly; everything flows through the sync layer. Cloud schema lives in
-`supabase/migrate_NNN_*.sql` (133 files, highest `migrate_136`; migrations are canonical,
+`supabase/migrate_NNN_*.sql` (highest `migrate_157`; migrations are canonical,
 `schema.sql`/`setup_complete.sql` are stale snapshots).
 
 **Sync layer.** Registry-driven engine in `src/lib/sync/` (`registry.js`,
@@ -71,14 +71,21 @@ Article 9 consent, first-run, and tier.
   `poolGenerator.js`
 - Safety: `edPatternDetector.js`, `wellbeing.js` (Beat UK + calm mode)
 
-**Payments.** `react-native-iap` 15.3.1 wrapped by `src/lib/payments/`
-(`playBilling.js`, `catalogue.js`, `restore.js`, `cascade.js` for the
-trial→downgrade cascade, `lapseDetect.js`, `winbackState.js`). Google Play
-Billing is live.
+**Payments (DORMANT since D137).** `react-native-iap` 15.3.1 wrapped by
+`src/lib/payments/` (`playBilling.js`, `catalogue.js`, `restore.js`,
+`cascade.js`, `lapseDetect.js`, `winbackState.js`, `freeConversion.js`).
+Compiled and unit-tested, unreachable at runtime while
+`FULL_ACCESS_FOR_ALL` is on. Product IDs `pro_monthly`/`pro_annual` never
+change.
 
-**Tier.** `src/lib/proGate.js` — binary free/pro, resolved from real
-trial/subscription state (`PRO_BETA_ACTIVE = false`). Pro screens wrap in
-`withProGuard`.
+**Tier.** Volyume is a FULLY FREE product (founder decision 2026-09-03,
+D137). `src/lib/proGate.js` exports `FULL_ACCESS_FOR_ALL = true`; the store
+clamps every tier write to full access; no route is guarded. The billing
+surfaces (ProUpgrade, CascadeGate, Subscription, SubscriptionPolicy,
+ProGate, `src/lib/payments/*`) stay on disk DORMANT and unregistered
+behind the payments barrel (`src/lib/payments/index.js` refuses while the
+flag is on). Re-arming monetisation is a deliberate two-step: flip the flag
+AND re-register the surfaces.
 
 **Observability.** Sentry (`src/lib/sentry.js`, scrubbing in
 `src/lib/observability/sentryScrub.js`, tracesSampleRate 0.05) +
@@ -161,11 +168,11 @@ workflow is manual-dispatch only (push trigger retired, E0). `supabase db push/r
 local/staging only; production requires the exact phrase "run against
 production".
 
-**Free/Pro gating is absolute and binary.** Free: Plan Library, builder,
-workout logging, exercise library, PRs, progress stats. Pro: everything
-nutrition/coaching (food diary, barcode, meal suggestions, targets, macros,
-check-ins, Precision Coaching, division plans, wearables). Never
-expose Pro to free; never gate a free feature. When in doubt: ask.
+**The product is fully free (founder decision 2026-09-03, D137).** No
+trial, no Free/Pro split, no paywall, no pricing, no expiry anywhere in the
+user experience. Never reintroduce a tier gate, upsell, trial or price
+without an explicit founder decision. The dormant billing infrastructure
+must never leak into the runtime experience.
 
 **Identity.** No anonymous mode, no local-user migration paths
 (`IDENTITY_AND_OWNERSHIP_LOCKED.md`; enforced by

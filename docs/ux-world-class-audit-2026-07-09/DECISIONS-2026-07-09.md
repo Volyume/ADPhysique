@@ -5110,3 +5110,96 @@ suites passed (1 skipped), 15693 tests passed (13 skipped), 49 new pins.
 validator returns `data.weightKg` (possible undefined save on edit;
 flagged by the telemetry agent, not touched); check-in gate versus engine
 weigh-in count.
+
+## D137 — Volyume is a complete free product; first launch rebuilt (FOUNDER decision on the product; lead-ruled execution under D33, 2026-09-03)
+
+**Founder, verbatim.** "VOLYUME IS FREE. Not a 14-day trial; freemium; a
+founder promotion... From the user's perspective there should simply be:
+VOLYUME with the full current product available." And on setup:
+"Onboarding as it is now is very valuable and attractive, do not reduce
+that in amount of questions if it's adding real value." This decision is
+the permission `docs/rules/billing.md` requires. Product IDs
+`pro_monthly`/`pro_annual` are untouched.
+
+**Architecture (lead-ruled).** One flag, `FULL_ACCESS_FOR_ALL = true` in
+`src/lib/proGate.js` (`PRO_BETA_ACTIVE` kept as its alias). The store's
+private `_effectiveTier` clamps every tier write (checkTier incl. the
+local trial-expiry demotion, setTier, restoreSessionFromCloud,
+refreshTierFromCloud, lockStalePaidEntitlement) and neither restore path
+mirrors `trial_state`/`pro_trial_ends_at` onto the profile any more; that
+mirror was what re-armed every trial surface. The payments barrel
+`src/lib/payments/index.js` is the inactive boundary: while the flag is
+on, startCascade / payAt / confirmPurchase / reconcilePaidEntitlement /
+restorePurchases / handlePotentialLapse and the Play Billing entry points
+resolve to `{ ok: false, error: 'billing_disabled' }` without touching the
+network or the store (pinned by billingBoundary.test.js). Consent no
+longer starts the cascade. Cascade-gate, trial day-3 and win-back
+scheduling are no-ops that also cancel; `restoreNotifications` no longer
+re-lays them; their notification types are non-navigating. The engine's
+differential paywall output is `{ shown: false }` while the flag is on:
+nothing is withheld behind an offer, every other coach output byte-
+identical. Existing users get a one-shot `runFreeConversionOnce` before
+`restoreNotifications` at session restore: cancels the three push
+families, clears the win-back episode, pending cascade and day-14 gate
+flag, removes the trial keys, caches tier as full.
+`supabase/migrate_157_pause_cascade_cron.sql` unschedules the server's
+cascade advance job (NOT applied; awaits the phrase). Re-arming
+monetisation is a deliberate two-step: flip the flag and re-register the
+dormant surfaces.
+
+**Removed from the runtime.** All 23 `withProGuard`/`withReadOnlyProGuard`
+wrappers; the tier routing (everyone goes consent → the six-step setup →
+setup complete → Today); FirstRunScreen, FreeStarterScreen and the free
+no-plan branches; ProUpgrade, CascadeGate, Subscription and
+SubscriptionPolicy route registrations; HomeProTeaserCard,
+DifferentialBadge and AttentionCard (no variant left); the free branches
+and read-only-lapse paths on Home, You, Progress, Plans, Plan detail,
+Diary, Body metrics, Progress photos, Athlete profile, Partners, Workout
+summary, the logger and the Settings screens; the PRO badges and trial
+rows in setup; the Settings plan section, FAQ entries and subscription
+page on the web dashboard; the store listings' trial and IAP sections;
+the landing page's offer line. Kept dormant on disk: the billing screens
+and components, `src/lib/payments/*`, `differentialPaywall.js`, the
+win-back copy, the telemetry catalogue entries (now `deferred`) and
+`FEATURE_LOCKED` history.
+
+**First launch (lead-ruled from research).** Principles that carried:
+show the product working before asking anything; one OAuth tap for the
+account with email secondary; setup questions that visibly build the
+plan; contextual permission asks; no landing on a blank slate; deck-of-
+cards tutorials do not help (NN/g). Because the account must come first
+here (identity law), the first screen SHOWS an example week rendered from
+the app's own components: a planned session carrying last time's numbers,
+a coaching decision with its reason (glossed), and the block dots. One
+headline, one line of promise, one "Get started", the sign-in link, the
+trust row. No bullets, no price, no tier. The account step gained a
+heading ("Create your account" / "Welcome back"), one why-account line,
+OAuth first, email behind one tertiary button in create mode, and the
+trust line. The wizard keeps every question; only its tier chrome went.
+The quiz-first flag stays off (founder decision 2026-06-26, question
+still open from D136).
+
+**Analytics.** `setup_started` (wizard mount) and `first_home_landed`
+(first Today render) added to the catalogue and to `migrate_156` (still
+unapplied). Pre-account events (first open, intro viewed) cannot be
+attributed by this pipeline (auth.uid only, no anonymous install id);
+the pre-account gap is read as store installs against `account_created`.
+
+**Deliberately unchanged.** Article 9 consent (locked); the setup
+questions and their order; the calm-coaching pointer on setup complete;
+the Coach tab's absence of a pre-decision status card (founder verdict);
+`lib/onboarding/freeStarter.js` (still feeds plan scoring in PlanDetail
+and PlanLibrary); the quiz-first flag.
+
+**Gates.** `npm run lint` clean; `tsc --noEmit` clean; full suite 1140
+suites passed (1 skipped), 15673 tests passed (16 skipped). The ED
+fail-closed, coach validation, identity and capability guards all green,
+unweakened.
+
+**External follow-ups (founder).** Play Console and App Store Connect:
+paste the refreshed listings, deactivate (do not delete) the two
+subscription products and the subscription group, replace paywall
+screenshots, update review notes. volyume.app: the live site is outside
+this repo; its pricing/FAQ copy needs the same pass. Internal marketing-HQ
+docs and email/retention playbooks built on the trial cadence need a
+separate content pass (flagged, not done).
