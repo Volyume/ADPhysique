@@ -3377,3 +3377,42 @@ C. Logger and summary unchanged from D136 apart from the pre-workout
 ED-safety: floors, gates, calm mode, notification suppression untouched;
 the ED fail-closed guard still pins every remaining read (count updated
 for the two removed free branches).
+
+## NUTRITION EXPERIENCE MASTERPASS (2026-09-03) — COMPLETE, MERGED TO MAIN. Ruling D138.
+
+Branch `claude/volyume-coherence-pass-6s991m`. Founder order: make the
+daily nutrition experience stand beside a dedicated food app. Research,
+findings, the preserved list, rulings and the unchanged list: D138.
+
+**Gates.** Lint clean, typecheck clean, full suite 1146 suites / 15741
+tests passing; tap-count guard and planned/eaten pins unchanged.
+
+**Device checklist (Android, EAS build; account with nutrition targets set
+and a few days of food logged).**
+1. Nutrition tab: after the meals and "Add meal", one chip row reads
+   Meal builder · Higher-calorie day (if allowed) · Trends. No separate
+   Meal builder row or banking button. Trends opens Food Insights.
+2. Empty slot with a usual: chip reads "Porridge oats · 60 g" (or the
+   serving, e.g. "Toast · 2 slices"). One tap logs it; toast offers Undo;
+   Undo removes it. Long-press opens the portion editor instead.
+3. Log breakfast today. Lunch slot (empty) shows "Yesterday's lunch" when
+   yesterday had lunch; tapping copies only lunch; Undo removes all rows.
+4. Add food (with recents): list shows immediately, keyboard closed. Add
+   food on a fresh account: keyboard opens on arrival. Row button reads
+   "Add"; bar reads "2 to log · Log 2".
+5. Reopen a food logged as 2 slices: sheet opens at 2 servings, not 62 g.
+6. Scan a label in poor light, leave an amber figure untouched, Save:
+   confirm "Some figures weren't read clearly. Save anyway?". Scan a drink
+   label: serving arrives as ml.
+7. More tab: edit a custom food (pencil / long-press), change kcal, save.
+   A previously logged entry keeps its old kcal; a new log uses the new.
+8. Remove your nutrition targets (or a fresh account): under the rings a
+   compact card says "Set your targets first" and opens Nutrition
+   targets.
+9. Meal builder empty state bullet reads "Nothing counts until you mark
+   it eaten". Grocery list: tick items, close, reopen: ticks persist;
+   rebuild the plan: ticks clear.
+10. Diary open, date swipes and add-food open feel immediate with 40+
+    favourites (batch resolution).
+ED-safety: floors, calm mode, planned/eaten filters and evidence
+untouched; no shaming copy added; usual chips follow the rings' gating.

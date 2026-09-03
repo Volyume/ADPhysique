@@ -1,6 +1,14 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-03 — NUTRITION EXPERIENCE MASTERPASS LANDED (D138) ★
+
+Founder order: the daily food path. Four discovery lanes (experience
+audit, search plumbing, meal-planning evidence law, competitor
+logging-speed research), three implementation packages. Record: D138;
+board entry "NUTRITION EXPERIENCE MASTERPASS" with the device checklist.
+
+===============================================================================
 ## ★ 2026-09-03 — VOLYUME IS A COMPLETE FREE PRODUCT; FIRST LAUNCH REBUILT (D137) ★
 
 Founder decision: fully free, no trial, no Free/Pro split. One flag

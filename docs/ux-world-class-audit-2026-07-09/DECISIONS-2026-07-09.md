@@ -5203,3 +5203,100 @@ screenshots, update review notes. volyume.app: the live site is outside
 this repo; its pricing/FAQ copy needs the same pass. Internal marketing-HQ
 docs and email/retention playbooks built on the trial cadence need a
 separate content pass (flagged, not done).
+
+## D138 — Nutrition experience masterpass: the daily food path (lead-ruled under D33, 2026-09-03)
+
+**Founder order.** Make daily nutrition good enough that a person who
+would otherwise use a dedicated food app has little reason to leave
+Volyume to log food. Not "add a calorie tracker": make the whole daily
+experience fast while keeping depth. Audit first; preserve what is
+excellent.
+
+**Research that shaped the rulings.** The fastest current loggers win on
+action count, not catalogue size: one add surface, recents and frequents
+before typing keyed to the meal, last-used portion memory, barcode miss
+chaining into label capture, whole-meal and yesterday copy, per-meal
+subtotals always visible, missed days treated as neutral. The most-cited
+competitor failures are a 2026 redesign that hid per-meal totals behind
+taps, a core input (barcode) paywalled, crowdsourced duplicate-choked
+databases, AI capture that is slow or wrong, and no offline search.
+
+**What the audit found already excellent, preserved unchanged.** The
+remaining-first MacroRings hero (adherence-neutral by construction, with
+protein g/kg and P/C/F split); absence never converted into evidence
+(logged days only, stated in every insight headline, no shaming copy
+anywhere); slot-aware portion memory; personal-history merge into search;
+planned never conflated with eaten (every read path filters
+`is_planned = 0`, confirmation is the only promotion, unlogged days drop
+out of averages rather than scoring zero); honest failure states; the
+barcode-miss recovery loop with the barcode attached; the calorie-banking
+copy; undo on every log path; micronutrient restraint. The UK-first data
+advantage is real (bundled UK Open Food Facts snapshot plus CoFID, local
+FTS first, live only when local is weak) and needs no badges.
+
+**Highest-friction findings.** No one-tap re-log of a daily food from
+the diary (three taps, a push and a sheet, for a food whose grams the app
+already knows); "Copy yesterday" vanishes the moment one item is logged;
+the add-food screen resolves up to sixty food references one at a time
+before it can render, and the diary does the same per row and per slot;
+the diary re-fetches yesterday on every load to gate one button; a user
+with no targets sees a dead ring and no way out; Food Insights had one
+door, three taps deep behind an unlabelled icon; uncertain label-scan
+figures saved silently; a custom food could never be edited; the
+remembered portion reopened in grams, discarding the household unit;
+search did not focus the keyboard for a new food; the fastest path was
+labelled "Plate"; scanned drink labels dropped their millilitre serving;
+two dead components shipped on the surface; the planner's "Nothing is
+logged until you add it" contradicted the confirm step; the grocery list
+could not be ticked.
+
+**Rulings.**
+1. One-tap usual from the diary. The usual chip shows the portion in its
+   label and logs directly with an undo toast; a long-press opens the
+   portion editor. The search screen keeps its row → sheet → confirm
+   contract (the tap-count guard protects "confirm the portion before a
+   repeat", which the disclosed portion and undo satisfy).
+2. Per-meal "Yesterday's {meal}" chip on an empty slot, copying only that
+   slot, with a multi-row undo.
+3. The daily surface trades the Meal builder row and the banking button
+   for one chip row: Meal builder, Higher-calorie day (when allowed),
+   Trends. Trends is the door to Food Insights.
+4. No targets: a compact EmptyState under the rings with the same copy
+   and action the search screen already uses.
+5. Batch food-reference resolution (one query per kind) on the diary, the
+   add-food screen and the per-slot usuals; live-search cache promotion
+   runs concurrently; the yesterday fetch runs only when a slot is empty.
+6. Label OCR: uncertain, untouched figures go through a confirm before
+   saving; millilitre servings are kept.
+7. Custom foods become editable; logged entries keep their stored macros.
+8. The remembered portion reopens in the household unit when it divides
+   cleanly into the serving.
+9. Search focuses the keyboard only when there are no recents to show;
+   "Plate" becomes "Add" and the bar reads "N to log".
+10. Planner copy: "Nothing counts until you mark it eaten." Grocery ticks
+    persist per plan on device.
+11. Dead components (HeldDecisionCard, ServingPicker) deleted.
+
+**Superseded contract.** Campaign 17C's adversarial guard pinned that a
+diary usual "carries remembered grams into the picker rather than
+silently logging". No founder law backed it; it was 17B's own design.
+Ruling 1 supersedes it for the diary chip only, on the founder's order
+that repeat logging be one or two taps: the chip discloses the portion,
+the write is canonical, Undo follows, a food with no remembered weight
+still falls back to the picker, and the search screen's rows keep their
+row → sheet → confirm contract. The guard now pins that.
+
+**Gates.** `npm run lint` clean; `tsc --noEmit` clean; full suite 1146
+suites passed (1 skipped), 15741 tests passed (16 skipped). The tap-count
+guard and every planned/eaten and evidence pin unchanged and green.
+
+**Deliberately unchanged, with the reason.** Numbered meal slots (the
+founder removed meal renaming on 2026-07-13 as not needed); search
+ranking, source order, the strong-local short-circuit and cross-source
+dedupe (a ranking change without measured evidence is speculation);
+empty meal cards stay full (their usuals row IS the fast path); no new
+coach or evidence row on the diary (the surface is already at its
+density limit; "Targets updated. See why" and Trends carry the link);
+the meal planner's structure, the absence of a "skipped" state (a schema
+change to planned rows with no evidence consumer); origin badges on
+planned rows; nutrition targets and coaching engines untouched.
