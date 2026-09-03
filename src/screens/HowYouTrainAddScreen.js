@@ -260,7 +260,12 @@ export default function HowYouTrainAddScreen() {
 
   const onSave = async () => {
     haptics.selection();
-    if (!(await hasCapabilityConsent(userId))) { setStep(ADD_STEP.CONSENT); return; }
+    // Fails closed: a consent read that errors is treated as "not yet
+    // agreed" and the consent step is shown - agreeing again is harmless,
+    // saving without agreement is not.
+    let ok = false;
+    try { ok = await hasCapabilityConsent(userId); } catch (_e) { ok = false; }
+    if (!ok) { setStep(ADD_STEP.CONSENT); return; }
     await save();
   };
 
