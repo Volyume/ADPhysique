@@ -31,7 +31,6 @@ import { logError } from '../lib/errorLog';
 import {
   SettingsPage, SettingRow, SectionHeader, settingsStyles, useSettingsStyles,
 } from '../components/SettingsPrimitives';
-import EmptyState from '../components/EmptyState';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import {
@@ -47,6 +46,7 @@ import {
 // vocabulary module (no user data); the exercise list is the ordinary
 // library read.
 import { familyLabel } from '../lib/exercise/movementFamily';
+import { shortDate } from '../lib/capability/addFlow';
 import {
   demandLabel, CONSTRAINT_ROLE, CONSTRAINT_SOURCE,
   CONSTRAINT_RULE_KIND, CONSTRAINT_STATE, EPISODE_STATUS,
@@ -98,6 +98,29 @@ function groupHistory(rows) {
   return runs;
 }
 
+// D133 helpers: dates and durations in the person's words.
+function durationText(ms) {
+  const days = Math.max(1, Math.round(ms / DAY_MS));
+  if (days < 14) return `${days} day${days === 1 ? '' : 's'}`;
+  if (days < 60) { const w = Math.round(days / 7); return `${w} week${w === 1 ? '' : 's'}`; }
+  const m = Math.round(days / 30); return `${m} month${m === 1 ? '' : 's'}`;
+}
+
+// D133 (HYT-08): the plan status in the indicative. Null status means the
+// read has not landed yet; an unchecked one is told, never rendered as
+// "matches" (A15).
+function planStatusSentence(st) {
+  if (!st) return 'Checking your current plan.';
+  if (!st.checked) return 'Volyume could not read your plan just now.';
+  const bits = [];
+  if (st.substituted) bits.push(`${st.substituted} exercise${st.substituted === 1 ? '' : 's'} swapped`);
+  if (st.omitted) bits.push(`${st.omitted} left out`);
+  const parts = [];
+  if (bits.length) parts.push(`Right now: ${bits.join(', ')} while you work around a temporary change.`);
+  if (st.rewriteCount) parts.push(`${st.rewriteCount} exercise${st.rewriteCount === 1 ? '' : 's'} in your plan sit${st.rewriteCount === 1 ? 's' : ''} outside how you train.`);
+  return parts.length ? parts.join(' ') : 'Your current plan matches how you train.';
+}
+
 export default function HowYouTrainScreen() {
   const t = useTheme();
   const live = useSettingsStyles();
@@ -120,17 +143,22 @@ export default function HowYouTrainScreen() {
   const [canRevisit, setCanRevisit] = useState(false);
   // T1-06/T2-23 shared guard: proposalPendingRef is set synchronously at
   // the top of proposeEffectiveDiff (before its first await) and cleared
-  // in its finally, so any call dispatched in the same tick - the add
-  // flow's own explicit call racing the refresh-time sync-arrival
-  // detector below - sees it before that detector's async continuation
-  // ever runs. It never gates an explicit user action (add flow, flare
-  // restart, the revisit row); only the passive detector checks it.
-  // lastAutoProposedKeyRef additionally stops the detector repeating the
-  // identical still-undecided set on the next focus, so a user
-  // backgrounding/foregrounding the app while a proposal sits unanswered
-  // never accumulates duplicate alerts.
+  // in its finally, so two taps in the same tick cannot open two
+  // proposals. It never gates an explicit user action.
   const proposalPendingRef = useRef(false);
-  const lastAutoProposedKeyRef = useRef(null);
+  // D133: undecided episode rule ids, shown as a "Waiting for you" card
+  // rather than proposed by a focus-fired modal (HYT-14).
+  const [pendingIds, setPendingIds] = useState([]);
+  // D133 (HYT-08): what the current plan is doing for these rules, read
+  // after every refresh and said in the indicative above the review row.
+  const [planStatus, setPlanStatus] = useState(null);
+  // D133 (HYT-03): the wizard returns with the id of what it made; the
+  // card scrolls into view and flashes once, so the flow ends on the
+  // thing it created.
+  const [flashId, setFlashId] = useState(null);
+  const scrollRef = useRef(null);
+  const cardYRef = useRef(new Map());
+  const pendingHighlightRef = useRef(null);
 
   const refresh = useCallback(() => {
     if (!userId) return;
@@ -145,20 +173,16 @@ export default function HowYouTrainScreen() {
       }
       // T1-06 (closes audit): a rule that arrived by sync, or was left
       // undecided across an app relaunch, never got a proposal - the add
-      // flow was the only place one fired. Detected here, on the
-      // screen's own refresh/focus, exactly the same undecided-and-not-
-      // held episode rule ids the standing revisit row below computes,
-      // and proposed the same way (proposeEffectiveDiff). This is the
-      // SAME recoverability the revisit row offers on demand (T2-23);
-      // this just tries it automatically first, and the row stays as
-      // the durable fallback for whatever this best-effort pass misses.
+      // flow was the only place one fired. Detected here, on the screen's
+      // own refresh/focus, exactly the same undecided-and-not-held episode
+      // rule ids the standing revisit row below computes. D133 (flow
+      // audit 2026-09-03, HYT-14): no longer PROPOSED from here - a modal
+      // firing by itself on arrival is the ambush ARCHITECTURE section 22
+      // forbids. SHOWN instead, as a "Waiting for you" card that stays
+      // until answered; its tap runs proposeEffectiveDiff - the
+      // SAME recoverability the revisit row offers on demand (T2-23).
       const undecidedIds = undecidedEpisodeRuleIds(st.episodes);
-      if (!proposalPendingRef.current) {
-        const key = undecidedIds.slice().sort().join(',');
-        if (undecidedIds.length && key !== lastAutoProposedKeyRef.current) {
-          proposeEffectiveDiff(undecidedIds, null).catch(() => {});
-        }
-      }
+      setPendingIds(undecidedIds);
       // R3-2 limb b: applied rules that currently produce lines keep the
       // revisit row alive too, so a vacuously-applied rule that later
       // bites regains its review.
@@ -176,7 +200,7 @@ export default function HowYouTrainScreen() {
     // useFocusEffect) on every render too. Safe to omit because
     // proposeEffectiveDiff only touches refs, state setters and userId -
     // all stable/keyed on the same [userId] this callback already carries
-    // (see proposalPendingRef/lastAutoProposedKeyRef's comment above).
+    // (see proposalPendingRef's comment above).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
   useFocusEffect(refresh);
@@ -237,13 +261,43 @@ export default function HowYouTrainScreen() {
     navigation.setParams({ preselect: undefined });
     navigation.navigate('HowYouTrainAdd', { preselect });
   }, [preselect, navigation]);
-  // The wizard returns with the id of what it made (`highlight`); consumed
-  // here so a later focus never re-announces it.
+  // The wizard returns with the id of what it made (`highlight`). The card
+  // may not exist until the next refresh lands, so the id is parked and the
+  // card's own onLayout does the scroll and flash when it appears.
   const highlight = route.params?.highlight;
   useEffect(() => {
     if (highlight == null) return;
+    pendingHighlightRef.current = highlight;
     navigation.setParams({ highlight: undefined });
   }, [highlight, navigation]);
+
+  // D133 (HYT-08): the plan status sentence. One read per refresh, outside
+  // refresh() itself so that callback stays small and synchronous.
+  useEffect(() => {
+    if (!userId || !canRevisit) { setPlanStatus(null); return undefined; }
+    let cancelled = false;
+    (async () => {
+      try {
+        // eslint-disable-next-line global-require
+        const { computePlanEffectiveLines, computeCapabilityPlanRewrite } = require('../lib/sessionEffective');
+        let substituted = 0; let omitted = 0; let groups = 0; let checked = true;
+        for (const ep of state.episodes ?? []) {
+          const appliedIds = appliedEpisodeRuleIds([ep]);
+          if (!appliedIds.length) continue;
+          // eslint-disable-next-line no-await-in-loop
+          const r = await computePlanEffectiveLines(userId, appliedIds, { serveGate: true }).catch(() => ({ lines: [], checked: false }));
+          if (!r.checked) { checked = false; continue; }
+          const sub = r.lines.filter((l) => l.to).length;
+          substituted += sub; omitted += r.lines.length - sub; if (r.lines.length) groups += 1;
+        }
+        const rw = await computeCapabilityPlanRewrite(userId, {}).catch(() => ({ lines: [], checked: false }));
+        if (!rw.checked) checked = false;
+        if (!cancelled) setPlanStatus({ substituted, omitted, groups, rewriteCount: rw.lines?.length ?? 0, checked });
+      } catch (_e) { if (!cancelled) setPlanStatus(null); }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state, userId, canRevisit]);
 
   // CC-D27: the ONE write door for capability rows - every path (the add
   // flow AND the section 21 flare re-start) lands through this single
@@ -328,14 +382,6 @@ export default function HowYouTrainScreen() {
         computePlanEffectiveSummary(userId, createdIds),
         clinicianSourcedIds(userId, createdIds),
       ]);
-      // Round 5 (R5-9): the detector's back-off key is stamped only on a
-      // COMPLETED check. Stamped before the read (as it was), a failed
-      // read blocked the passive detector from ever retrying this set
-      // for the life of the mounted screen - the explicit revisit row
-      // was the only recovery. An unchecked set stays retryable.
-      if (summary.checked) {
-        lastAutoProposedKeyRef.current = (Array.isArray(createdIds) ? createdIds : []).slice().sort().join(',');
-      }
       // Lead review: the boolean tells the revisit row whether anything
       // was actually offered, so its tap is never silent. Other callers
       // ignore it.
@@ -1134,22 +1180,58 @@ export default function HowYouTrainScreen() {
     );
   };
 
+  // D133 (HYT-05): the card's title is what it is about; the sub says since
+  // when and until when; the chip says what state it is in.
+  const episodeNames = (ep) => ep.rows.filter(r => r.state === 'active')
+    .map(r => (r.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW ? `${ruleLabel(r)} (kept in)` : ruleLabel(r)))
+    .join(', ');
   const episodeSub = (ep) => {
-    // F6: an allowance row on the card is the user's per-line KEEP - it
-    // must never list as though it were another restriction, so it
-    // carries its meaning inline.
-    const names = ep.rows.filter(r => r.state === 'active')
-      .map(r => (r.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
-        ? `${ruleLabel(r)} (kept in)` : ruleLabel(r)))
-      .join(', ');
+    const live0 = ep.rows.filter(r => r.state === 'active');
+    const started = Math.min(...live0.map(r => r.startsAt ?? Infinity));
+    const ends = live0.map(r => r.endsAt).filter(Number.isFinite);
+    const until = ends.length ? Math.max(...ends) : null;
+    const since = Number.isFinite(started) ? `Since ${shortDate(started)}` : null;
+    const untilText = until != null ? `you said until about ${shortDate(until)}` : 'until you end it';
+    const line = [since, untilText].filter(Boolean).join(' · ');
     if (ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION) {
-      return `${names}. You thought this would be done by about now. Still need it?`;
+      return `${line}. You thought this would be done by about now. Still need it?`;
     }
-    return names;
+    return line;
+  };
+  const episodeStateChip = (ep, held) => {
+    if (ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION) return { label: 'Checking with you', attention: true };
+    if (held) return { label: 'On hold', attention: false };
+    const rules = ep.rows.filter(r => r.state === 'active' && r.ruleKind !== CONSTRAINT_RULE_KIND.EXERCISE_ALLOW);
+    if (rules.some(r => r.effectiveChoice == null)) return { label: 'Waiting for your decision', attention: true };
+    if (rules.length && rules.every(r => r.effectiveChoice === 'declined')) return { label: 'Not applied to your current plan', attention: false };
+    return { label: 'Working around it', attention: false };
+  };
+  const sinceText = (row) => (Number.isFinite(row.startsAt) ? `Since ${shortDate(row.startsAt)} · ` : '');
+  const pastSub = (row) => {
+    const what = row.endedReason === 'promoted' ? 'Became part of your setup' : 'Ended';
+    const when = Number.isFinite(row.endedAt) ? ` ${shortDate(row.endedAt)}` : '';
+    const lasted = Number.isFinite(row.endedAt) && Number.isFinite(row.startsAt) ? durationText(row.endedAt - row.startsAt) : null;
+    return `${what}${when}${lasted ? ` · lasted ${lasted}` : ''}`;
+  };
+
+  const pendingSubject = pendingIds.length
+    ? groupSubject(state.episodes.flatMap((ep) => ep.rows).filter((r) => pendingIds.includes(r.id)))
+    : null;
+  const awaiting = state.episodes.filter((ep) => ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION);
+  const nothingYet = !state.baseline.length && !state.episodes.length && !state.history.length;
+  const flashStyle = (id) => (flashId != null && flashId === id ? { borderColor: t.colors.primary } : null);
+  const onCardLayout = (id) => (e) => {
+    cardYRef.current.set(id, e.nativeEvent.layout.y);
+    if (pendingHighlightRef.current === id) {
+      pendingHighlightRef.current = null;
+      scrollRef.current?.scrollTo?.({ y: Math.max(0, e.nativeEvent.layout.y - spacing.lg), animated: true });
+      setFlashId(id);
+      setTimeout(() => setFlashId(null), 2500);
+    }
   };
 
   return (
-    <SettingsPage title="How you train">
+    <SettingsPage title="How you train" scrollRef={scrollRef}>
       {state.unavailable ? (
         <Text style={[styles.hint, { color: t.colors.textSecondary, margin: spacing.lg }]}
           accessibilityLiveRegion="polite">
@@ -1157,12 +1239,11 @@ export default function HowYouTrainScreen() {
         </Text>
       ) : null}
 
-      {/* CC33 close-out: the screen says what it is before it asks for
-          anything. Banked research: plain-language statements rather
-          than diagnosis or a body map (pattern 4), permission-first tone
-          (17), low cognitive load (19), and no self-classification at the
-          door - the recognisable words appear, the question "are you
-          disabled?" never does. */}
+      {/* D133 (flow audit 2026-09-03): the screen says what it is in two
+          sentences and then offers the ONE thing to do. The primary action
+          sits here, first, on every visit - never fifth behind two empty
+          cards. Banked research still holds: plain words, permission-first,
+          no self-classification at the door. */}
       <View style={styles.introWrap}>
         <Text style={[styles.body, { color: t.colors.textPrimary }]}>
           If you have an injury, pain, a long-term condition or a disability, tell
@@ -1173,21 +1254,66 @@ export default function HowYouTrainScreen() {
           do. Volyume leaves those movements out and trains the same muscle groups another way.
         </Text>
       </View>
+      <View style={styles.addWrap}>
+        <Button
+          title="Add something"
+          onPress={() => { haptics.selection(); navigation.navigate('HowYouTrainAdd'); }}
+          accessibilityLabel="Add something Volyume should build your training around"
+        />
+        {nothingYet ? (
+          <Text style={[styles.hint, { color: t.colors.textMuted, marginTop: spacing.sm }]}>
+            Takes about a minute. Whatever you add is either part of how you train from now on, or worked around for a while, and you can change or remove it here any time.
+          </Text>
+        ) : null}
+      </View>
 
       {renderLineReview()}
 
-      {/* D112 R4 (closes audit T2-23's recoverability half): the standing
-          revisit row. Visible whenever there is something to revisit
-          (canRevisit, computed in refresh() above from an active plan
-          plus either an undecided episode rule or an un-rewritten
-          baseline conflict) - undecided episodes no longer serve
-          conflicted rows in silence forever with no way back. */}
-      {/* Restyle 2026-09-02: these entry rows were rendered bare, so their
-          dividers floated on the page background instead of closing a card.
-          One grouped container, the same shape Settings and the Coach tab
-          use. Behaviour, routing and copy unchanged. */}
-      <View style={[settingsStyles.section, live.section]}>
-        {canRevisit ? (
+      {/* D133 (HYT-14): decisions that used to fire as a modal the moment
+          this screen came into focus now sit here until answered. */}
+      {(pendingIds.length || awaiting.length) ? (
+        <>
+          <SectionHeader title="Waiting for you" />
+          <View style={[settingsStyles.section, live.section]}>
+            {pendingIds.length ? (
+              <SettingRow
+                icon="help-circle-outline"
+                label="Apply a change to your current plan?"
+                sub={pendingSubject
+                  ? `Volyume can work around ${pendingSubject} in your current plan. Tap to see what would change and decide.`
+                  : 'Volyume can work around a temporary change in your current plan. Tap to see what would change and decide.'}
+                onPress={() => { haptics.selection(); proposeEffectiveDiff(pendingIds, pendingSubject).catch(() => {}); }}
+              />
+            ) : null}
+            {awaiting.map((ep) => (
+              <SettingRow
+                key={`await-${ep.groupId}`}
+                icon="time-outline"
+                label="Still need this?"
+                sub={`${episodeNames(ep)}. You thought this would be done by about now. Tap to answer.`}
+                onPress={() => {
+                  haptics.selection();
+                  const y = cardYRef.current.get(ep.groupId);
+                  if (y != null) scrollRef.current?.scrollTo?.({ y: Math.max(0, y - spacing.lg), animated: true });
+                  setFlashId(ep.groupId);
+                  setTimeout(() => setFlashId(null), 2500);
+                }}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      {/* D133 (HYT-08): what Volyume is doing to the current plan, said in
+          the indicative before any question is asked. The review row
+          beneath it is the D112 R4 standing revisit surface, unchanged. */}
+      {canRevisit ? (
+        <>
+          <SectionHeader title="Your plan" />
+          <View style={[settingsStyles.section, live.section]}>
+            <View style={styles.statusBlock}>
+              <Text style={[styles.statusText, { color: t.colors.textPrimary }]}>{planStatusSentence(planStatus)}</Text>
+            </View>
           <SettingRow
             icon="list-outline"
             label="Your plan and how you train"
@@ -1195,63 +1321,39 @@ export default function HowYouTrainScreen() {
             accessibilityLabel="Your plan and how you train. Review what Volyume works around in your current plan."
             onPress={revisitCapabilityPlan}
           />
-        ) : null}
-
-        {/* Gap-closure Phase D (order section 25): the optional named-
-            condition and injury directory. Discovery only - selecting a
-            profile stores nothing (GC-D1); its questions land back here. */}
-        <SettingRow
-          icon="search-outline"
-          label="Looking for a specific condition or injury?"
-          sub="Optional. Finding it selects better questions; you never need a name to get the same support."
-          accessibilityLabel="Looking for a specific condition or injury? Optional. Finding it selects better questions; you never need a name to get the same support."
-          onPress={() => { haptics.selection(); navigation.navigate('TrainingConsiderations'); }}
-        />
-      </View>
-
-      <SectionHeader title="Your setup" />
-      {state.baseline.length === 0 ? (
-        <EmptyState
-          icon="body-outline"
-          title="Nothing here yet"
-          text="If there is anything Volyume should build your training around, add it. It stays part of your normal training, with full progression and coaching."
-          compact
-        />
+          </View>
+        </>
       ) : null}
+
       {state.baseline.length > 0 ? (
-      <View style={[settingsStyles.section, live.section]}>
-        {state.baseline.map(row => (
-          <SettingRow key={row.id} icon={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW ? 'checkmark-circle-outline' : 'body'}
-            label={ruleLabel(row)}
-            // F6: an allowance row means the OPPOSITE of a restriction row
-            // and must never render identically - the sub carries which
-            // way it cuts, and endBaselineRow's confirm matches.
-            sub={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
-              ? 'Kept in at your word, even where a rule would leave it out'
-              : (row.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED ? 'You told Volyume a clinician asked for this' : 'Part of your normal training')}
-            showArrow={false}
-            rightElement={(
-              <PressableCard onPress={() => endBaselineRow(row)} accessibilityRole="button"
-                style={styles.rowAction}
-                accessibilityLabel={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
-                  ? `Stop keeping ${ruleLabel(row)} in`
-                  : `Remove ${ruleLabel(row)} from your setup`}>
-                <Text style={[styles.rowActionLabel, { color: t.colors.textSecondary }]}>Remove</Text>
-              </PressableCard>
-            )} />
-        ))}
-      </View>
+        <>
+          <SectionHeader title="Your setup" />
+          <View style={[settingsStyles.section, live.section, flashStyle('baseline')]} onLayout={onCardLayout('baseline')}>
+            {state.baseline.map(row => (
+              <SettingRow key={row.id} icon={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW ? 'checkmark-circle-outline' : 'body'}
+                label={ruleLabel(row)}
+                // F6: an allowance row means the OPPOSITE of a restriction row
+                // and must never render identically - the sub carries which
+                // way it cuts, and endBaselineRow's confirm matches.
+                sub={`${sinceText(row)}${row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
+                  ? 'Kept in at your word, even where a rule would leave it out'
+                  : (row.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED ? 'You told Volyume a clinician asked for this' : 'Part of your normal training')}`}
+                showArrow={false}
+                rightElement={(
+                  <PressableCard onPress={() => endBaselineRow(row)} accessibilityRole="button"
+                    style={styles.rowAction}
+                    accessibilityLabel={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
+                      ? `Stop keeping ${ruleLabel(row)} in`
+                      : `Remove ${ruleLabel(row)} from your setup`}>
+                    <Text style={[styles.rowActionLabel, { color: t.colors.textSecondary }]}>Remove</Text>
+                  </PressableCard>
+                )} />
+            ))}
+          </View>
+        </>
       ) : null}
 
-      <SectionHeader title="Temporary, right now" />
-      {state.episodes.length === 0 ? (
-        <EmptyState
-          icon="time-outline"
-          title="No temporary changes"
-          text="If something is bothering you for a while, add it here and Volyume works around it until you say it has passed."
-          compact
-        />
-      ) : null}
+      {state.episodes.length > 0 ? <SectionHeader title="Temporary, right now" /> : null}
       {state.episodes.map(ep => {
         const subject = groupSubject(ep.rows.filter(r => r.state === 'active'));
         // D112 R8 (section 25; closes audit T2-26): the per-episode
@@ -1260,11 +1362,29 @@ export default function HowYouTrainScreen() {
         // no coach holds, no excusal - while pickers and generation keep
         // honouring the rules. The card says so plainly.
         const held = ep.rows.some(r => r.state === 'active' && r.adaptationMode === 'hold');
+        const chip = episodeStateChip(ep, held);
         return (
-          <View key={ep.groupId} style={[settingsStyles.section, live.section]}>
-            <SettingRow icon="time" label="Temporary change"
-              sub={held ? `${episodeSub(ep)} · Holding your plan as-is; adaptation is paused, not your training` : episodeSub(ep)}
+          <View key={ep.groupId} style={[settingsStyles.section, live.section, flashStyle(ep.groupId)]} onLayout={onCardLayout(ep.groupId)}>
+            {/* D133 (HYT-05): the card is titled by what it is about, and
+                says since when, until when, and what state it is in. */}
+            <SettingRow icon="time" label={episodeNames(ep)}
+              sub={episodeSub(ep)}
               showArrow={false} />
+            <View style={styles.chipRow}>
+              <Text style={[styles.statusPill, { backgroundColor: chip.attention ? t.colors.primaryBg : t.colors.surface2, color: chip.attention ? t.colors.primary : t.colors.textSecondary }]}>
+                {chip.label}
+              </Text>
+              {ep.rows.some(r => r.state === 'active' && r.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED) ? (
+                <Text style={[styles.statusPill, { backgroundColor: t.colors.surface2, color: t.colors.textSecondary }]}>A clinician asked for this</Text>
+              ) : null}
+            </View>
+            {/* D112 R8: the hold explained in the lane's own plain words,
+                under its chip rather than fused into the caption. */}
+            {held ? (
+              <Text style={[styles.hint, { color: t.colors.textSecondary, paddingHorizontal: spacing.lg }]}>
+                Holding your plan as-is; adaptation is paused, not your training.
+              </Text>
+            ) : null}
             <View style={styles.episodeActions}>
               <Choice label="Done with it" onPress={() => confirmEndEpisode(ep)} t={t} compact />
               <Choice label="A while longer" onPress={async () => { haptics.selection(); await extendEpisode(userId, ep.groupId, Date.now() + 14 * DAY_MS); toast.show(subject ? `Extended by two weeks. Volyume will check in about ${subject} around then.` : 'Extended by two weeks. Volyume will ask again around then.'); refresh(); }} t={t} compact />
@@ -1284,23 +1404,18 @@ export default function HowYouTrainScreen() {
         );
       })}
 
-      {/* Flow audit 2026-09-03 (D133): the add flow is its own screen now.
-          This is the feature's primary action, so it is the app's primary
-          button, not an option pill. */}
-      <View style={styles.addWrap}>
-        <Button
-          title="Add something"
-          onPress={() => { haptics.selection(); navigation.navigate('HowYouTrainAdd'); }}
-          accessibilityLabel="Add something Volyume should build your training around"
-        />
-      </View>
-
-      {/* CC33 close-out: the cross-lane rows sat ABOVE the user's own
-          setup and above "Add something", so a first-time arrival met
-          four navigation rows before the thing they came to do. They are
-          secondary routes, so they sit after the primary action now. */}
-      <SectionHeader title="More ways in" />
+      <SectionHeader title="Related" />
       <View style={[settingsStyles.section, live.section]}>
+        {/* Gap-closure Phase D (order section 25): the optional named-
+            condition and injury directory. Discovery only - selecting a
+            profile stores nothing (GC-D1); its questions land back here. */}
+        <SettingRow
+          icon="search-outline"
+          label="Looking for a specific condition or injury?"
+          sub="Optional. Finding it selects better questions; you never need a name to get the same support."
+          accessibilityLabel="Looking for a specific condition or injury? Optional. Finding it selects better questions; you never need a name to get the same support."
+          onPress={() => { haptics.selection(); navigation.navigate('TrainingConsiderations'); }}
+        />
         {/* CC28 (section 33.12): energy-limited training's honest v1 home.
             No energy axis, no pacing computation - the card maps to the two
             EXISTING deterministic levers (session length, now free-editable
@@ -1334,7 +1449,6 @@ export default function HowYouTrainScreen() {
         />
       </View>
 
-
       {state.history.length > 0 ? (
         <>
           <SectionHeader title="Past" />
@@ -1347,7 +1461,7 @@ export default function HowYouTrainScreen() {
                   <SettingRow icon="checkmark"
                     label={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
                       ? `${ruleLabel(row)} (kept in)` : ruleLabel(row)}
-                    sub={row.endedReason === 'promoted' ? 'Became part of your setup' : 'Ended'} showArrow={false} />
+                    sub={pastSub(row)} showArrow={false} />
                   {run.restartable ? (
                     <View style={styles.episodeActions}>
                       <Choice label="Start this again" onPress={() => confirmRestartEpisode(row)} t={t} compact />
@@ -1454,7 +1568,12 @@ const styles = StyleSheet.create({
   // the whole screen. They sit on the page's inset now, xs to match the
   // Settings family's own copy blocks.
   introWrap: { paddingHorizontal: spacing.xs, paddingTop: spacing.sm, paddingBottom: spacing.md },
-  addWrap: { paddingTop: spacing.sm },
+  addWrap: { paddingTop: spacing.sm, paddingBottom: spacing.sm },
+  // D133: the plan status sentence and the per-card state pills.
+  statusBlock: { padding: spacing.lg, paddingBottom: spacing.sm },
+  statusText: { ...type.body },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, paddingHorizontal: spacing.lg, paddingBottom: spacing.xs },
+  statusPill: { ...type.captionTight, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.sm, overflow: 'hidden' },
   // D112 R4 (closes audit T2-23): one row of the "Choose per exercise"
   // review - the line's own from/to text, then its Apply/Keep toggle.
   reviewLine: { marginBottom: spacing.sm },

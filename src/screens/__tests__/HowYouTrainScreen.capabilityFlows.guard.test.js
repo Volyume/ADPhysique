@@ -166,20 +166,19 @@ describe('T2-23 - per-line Apply/Decline and the standing revisit surface', () =
     expect(screen).not.toMatch(/const \{ lines \} = await computePlanEffectiveLines\(userId, createdIds\)/);
   });
 
-  test('R5-9: the focus detector back-off key is stamped only on a COMPLETED check', () => {
-    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,2400}/)?.[0] ?? '';
-    // The stamp lives AFTER the summary read, gated on summary.checked -
-    // stamped before the read, a failed read blocked the passive
-    // detector from retrying the same undecided set for the life of the
-    // mounted screen.
-    expect(fn).toContain('if (summary.checked) {');
-    expect(fn).toContain("lastAutoProposedKeyRef.current = (Array.isArray(createdIds) ? createdIds : []).slice().sort().join(',');");
-    const stampIdx = fn.indexOf('lastAutoProposedKeyRef.current =');
-    const readIdx = fn.indexOf('computePlanEffectiveSummary(userId, createdIds)');
-    expect(readIdx).toBeGreaterThan(-1);
-    expect(stampIdx).toBeGreaterThan(readIdx);
-    // And the helper reports { surfaced, checked }, never a bare boolean,
+  test('R5-9: a failed read never records a decision, and the helper reports { surfaced, checked }', () => {
+    // D133 (2026-09-03): the focus detector's back-off key is gone with the
+    // focus-fired proposal itself (HYT-14) - undecided rules now sit as a
+    // "Waiting for you" card until answered, so there is nothing to back
+    // off. What R5-9 protected survives: the vacuous 'applied' write fires
+    // only on a COMPLETED check (a failed read leaves the rule undecided
+    // and the card standing), and the helper reports { surfaced, checked }
     // so the revisit row can tell silence from failure.
+    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,9500}?\n  };/)?.[0] ?? '';
+    expect(screen).not.toContain('lastAutoProposedKeyRef');
+    const vacuous = fn.slice(fn.indexOf('if (!summary.affected) {'), fn.indexOf('if (!summary.checked) return { surfaced: false, checked: false };'));
+    expect(vacuous).toContain('if (summary.checked) {');
+    expect(vacuous).toMatch(/if \(summary\.checked\) \{[\s\S]{0,300}recordEffectiveChoice\(userId, id, 'applied'\)/);
     expect(screen).toContain('return { surfaced: false, checked: summary.checked };');
     expect(screen).toContain('return { surfaced: true, checked: true };');
   });
@@ -393,13 +392,27 @@ describe('T1-05 - a flare restart proposes again', () => {
   });
 });
 
-describe('T1-06 - synced-in rules and app-relaunch undecided episodes propose on focus', () => {
-  test('refresh() detects undecided-and-not-held episode rules and proposes them', () => {
+describe('T1-06 - synced-in rules and app-relaunch undecided episodes are surfaced on focus', () => {
+  // D133 (flow audit 2026-09-03, HYT-14): the detector no longer fires a
+  // modal by itself on focus (ARCHITECTURE section 22: "never a modal
+  // ambush"). It stores the undecided ids and the screen renders them as
+  // a "Waiting for you" card that stays until answered; the card's tap
+  // runs the same proposeEffectiveDiff. The intent T1-06 closed - a rule
+  // that arrived by sync or survived a relaunch is never silently
+  // undecided - is kept, and made durable instead of one-shot.
+  test('refresh() detects undecided-and-not-held episode rules and surfaces them', () => {
     const fn = screen.match(/const refresh = useCallback\(\(\) => \{[\s\S]{0,2700}?\}, \[userId\]\);/)?.[0] ?? '';
     expect(fn).toContain('const undecidedIds = undecidedEpisodeRuleIds(st.episodes);');
-    expect(fn).toContain('proposeEffectiveDiff(undecidedIds, null)');
-    // The shared guard: never fires while a proposal is already pending.
-    expect(fn).toContain('if (!proposalPendingRef.current) {');
+    expect(fn).toContain('setPendingIds(undecidedIds);');
+    // Never proposed from focus any more.
+    expect(fn).not.toContain('proposeEffectiveDiff(undecidedIds');
+  });
+
+  test('the "Waiting for you" card proposes on tap, through the shared proposeEffectiveDiff', () => {
+    const card = screen.slice(screen.indexOf('<SectionHeader title="Waiting for you" />'), screen.indexOf('<SectionHeader title="Your plan" />'));
+    expect(card).toContain('label="Apply a change to your current plan?"');
+    expect(card).toContain('proposeEffectiveDiff(pendingIds, pendingSubject)');
+    expect(card).toContain('{pendingIds.length ? (');
   });
 
   test('the guard is set synchronously at the top of proposeEffectiveDiff, cleared in finally', () => {

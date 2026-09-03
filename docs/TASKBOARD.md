@@ -1279,6 +1279,21 @@ orphaned headings, status cards with dates and state, pending decisions
 as cards instead of the focus-fired modal, Past with dates), then C
 (check-in card), D (edit), E (arrival context + a11y). Founder device
 walk of slice A is in chat.
+Slice B LANDED (this entry): the home screen. The primary button sits
+under the two-sentence intro on every visit; the two empty-state cards
+and the orphaned section headings are gone (one hint line when nothing
+is set up). "Waiting for you" holds decisions that used to fire as a
+modal on focus (HYT-14) and the past-planned-end question; "Your plan"
+says in the indicative what the current plan is doing (HYT-08) above the
+D112 R4 review row; episode cards are titled by what they are about with
+since/until and a state chip (Working around it / Not applied / On hold /
+Waiting for your decision / Checking with you; HYT-05); setup rows carry
+"Since"; Past rows carry the end date and duration (HYT-15); "More ways
+in" is "Related"; the card the wizard just made scrolls into view and
+flashes once (HYT-03). Guards re-anchored: T1-06 (detect-and-show, never
+propose-on-focus), R5-9 (no back-off key to stamp). NEXT: slice C
+(check-in card: the question as a heading, two answers, the rest behind
+More options), D (edit), E (arrival context + a11y).
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

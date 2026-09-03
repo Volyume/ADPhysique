@@ -87,7 +87,9 @@ export function SectionHeader({ title }) {
 // header; the SafeAreaView then owns the top inset too, since no native bar
 // is left to claim it. Screens not yet converted omit `title` and keep
 // relying on the stack header, so this stays a no-op for them.
-export function SettingsPage({ title, children }) {
+// `scrollRef` (additive, 2026-09-03, D133): How you train scrolls to the
+// card the add wizard just made, so a flow ends on the thing it created.
+export function SettingsPage({ title, children, scrollRef }) {
   // CP-10 stage 3: live theme (src/hooks/useTheme.js) for the page
   // background, so every SettingsPage-hosted sub-screen's backdrop follows a
   // theme change instead of staying on the frozen boot-time colour while its
@@ -103,7 +105,7 @@ export function SettingsPage({ title, children }) {
           every SettingsPage sub-page consistently. A no-op for sub-pages
           with no text input. */}
       <KeyboardAvoidingView style={styles.keyboardAvoid} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <ScrollView contentContainerStyle={styles.content}>{children}</ScrollView>
+        <ScrollView ref={scrollRef} contentContainerStyle={styles.content}>{children}</ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
