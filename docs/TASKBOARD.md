@@ -3209,3 +3209,65 @@ also carry its headline items (equipment-aware plan updates, background
 rest cues, tap-to-edit a logged set, the share-card rebuild) because those
 users are coming from 1.2.0. Recorded as UNKNOWN in PRODUCT-FACTS section H
 rather than guessed.
+
+## ONE PRODUCT COHERENCE PASS (2026-09-03) — COMPLETE, MERGED TO MAIN. Ruling D135.
+
+Branch `claude/volyume-coherence-pass-6s991m`. Founder order: one
+autonomous product-coherence pass over the CURRENT app; not a feature
+campaign. Rulings, evidence and the deliberately-unchanged list:
+`docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md` D135.
+
+**Landed.**
+- One name per concept: "coaching decision" (summary link, You status
+  title), tab/header "Nutrition", "block" in partner sharing (screen +
+  `lib/partners/shareWins.js`), "Coaching log", "food library" (scan +
+  search error copy), "Working sets" on the block summary, "targets" on
+  the Settings row, sentence-case "Nutrition targets" / "Workout
+  templates" in toasts.
+- Progress: duplicate Body Metrics / Lifts tiles removed from "More
+  stats"; "Full history" sentence case. BlockProgressCard no longer
+  restates the week and is tappable on Consistency (opens the heatmap).
+- Workout summary ends on a primary "Done".
+- Shared Button rendered as itself on the weekly check-in, partner and
+  plan-builder CTAs; MyRecipes / MyMeals use ModalHeader.
+
+**Gates.** `npm run lint` clean. Full suite: 1135 suites passed (1
+skipped), 15644 tests passed (13 skipped). New pins:
+`src/components/__tests__/BlockProgressCard.test.js`; updated pins in the
+Analytics state matrix, partner placement spine, workout summary
+feedback/cohesion guards, YouScreen load-state guard, food search /
+barcode copy tests, partner screen and shareWins tests, MyRecipes /
+MyMeals tests (mock ModalHeader instead of BackHeader).
+
+**Device checklist (Android, EAS build).**
+1. Nutrition tab: header reads "Nutrition". Expected: matches the tab.
+2. Progress tab: "More stats" shows Consistency, Full history, Recaps,
+   Partners (Year of Lifts only once unlocked). Expected: no Body
+   Metrics or Lifts tiles; Training and Body pillars above still open
+   Lift progress and Body metrics.
+3. Progress > Consistency (with an active block): "This week's plan"
+   card shows "Effort N/5" (or "Recovery week") on the right, not "Week
+   N/M"; tapping the card opens the volume heatmap.
+4. Finish any workout: footer shows an orange primary "Done" beside
+   Share; Done returns to Today. If a coaching decision exists this week,
+   the quiet link reads "See this week's coaching decision".
+5. Coach tab (Pro): status title reads "Weekly coaching decision: <date>".
+6. Coach tab > held decisions history: the collapsible card is titled
+   "Coaching log".
+7. Weekly check-in: the step CTA looks like every other primary button;
+   while a step is incomplete it is dimmed, not solid grey.
+8. Partners with a shared block: every line says "block name", never
+   "phase".
+9. Nutrition > scan a barcode offline: copy says "food library".
+10. Nutrition > Recipes and Saved meals: modal header with a close
+    control, "New recipe" plus icon still on Recipes.
+11. Train > Build a plan manually: "Create plan and add workouts" is the
+    standard large primary button.
+ED-safety cases: none of the above touches floors, gates, calm mode or
+notification suppression; check-in flow and copy unchanged (only its
+button styling).
+
+**Follow-ups recorded, not built (D135):** single deload-signal
+resolver across Home / Consistency / Plans / readiness; one editor for
+days / equipment / experience; the "for now" vocabulary collision;
+dead `WeightTrendCard.js` and `CoachBriefCard` default export.

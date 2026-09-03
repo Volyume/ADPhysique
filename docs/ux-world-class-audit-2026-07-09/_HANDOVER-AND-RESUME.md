@@ -1,6 +1,19 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-03 — ONE PRODUCT COHERENCE PASS LANDED (D135) ★
+
+Founder order: one autonomous pass to make the CURRENT app feel like one
+product. Four read-only discovery lanes (navigation, visual system,
+journeys, language/state), lead verification of every claim built on,
+then three implementation packages. Landed on main. Rulings and the
+deliberately-unchanged list with reasons: DECISIONS D135. Board entry
+(with the device checklist and recorded follow-ups): `docs/TASKBOARD.md`
+"ONE PRODUCT COHERENCE PASS". Gates at landing: lint clean, 1135 suites /
+15644 tests passing. Rendered inspection was not possible in the session
+container; the founder's device walk is the visual check.
+
+===============================================================================
 ## ★ 2026-08-30 — CC33 CLOSED (ROUNDS 1–19 + THE CENSUS, D132); DEVICE WALK IS THE ONLY OPEN ITEM ★
 
 All five S4 waves are built and merged; the campaign is in the

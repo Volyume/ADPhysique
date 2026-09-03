@@ -4924,3 +4924,90 @@ and §33.16's "always available, never repeated" for the Home card.
 **Unchanged.** Every need-moment entry (Home rows, workout summary,
 picker, conflict sheet, workout), the onboarding steps, the Settings row,
 the free tier, the vocabulary laws, the consent gate.
+
+## D135 — The "one product" coherence pass: what changed, what deliberately did not (lead-ruled under D33, 2026-09-03)
+
+**Founder order.** A single autonomous end-to-end pass to make Volyume
+feel like one intelligently designed product, not a set of strong
+features built at different times. Understand once, decide, implement,
+verify; no second audit of the same material; no feature creep.
+
+**Discovery (agents, read-only).** Four lanes over the CURRENT tree:
+navigation model, visual/component system, journey trace (J1 Home to
+J7 You), language/state/interaction patterns. Findings that held up on
+the lead's own read of the mechanism:
+- Token discipline is near-perfect (two hex literals, both in comments;
+  one `rgba` on a camera viewfinder). The fractures are component-reuse
+  and naming, not colour or spacing.
+- The Progress tab listed LiftProgress and BodyMetrics twice: once as
+  Answer Block pillars, again as "More stats" tiles (`AnalyticsScreen.js`).
+- The Consistency screen stated the block week three times in three
+  syntaxes (BlockShapeCard "Week N of M", MesocyclePulseCard "Week N of
+  M, focus", BlockProgressCard "Week N/M · Effort X/5"), and the
+  muscle-by-muscle bars were a plain View with nowhere to go.
+- One weekly coach artefact had four names: "Coaching decision"
+  (its own header), "Weekly coach update" (You), "this week's coaching
+  review" (workout summary), "This week's coaching decision" (Today).
+- The Nutrition tab's screen was headed "Eat"; every other tab's header
+  matched its tab label.
+- Partner sharing alone called the user's block a "phase".
+- "Engine Log" was a visible card title; three food screens said
+  "database" in error copy; "Sets" and "Working sets" labelled the same
+  value on adjacent screens; the Nutrition targets row's subtitle said
+  "goals".
+- The terminal action of the core loop (workout summary) was a
+  secondary "Close" beside a tertiary Share, while the loop opens on a
+  primary "Start workout".
+- Hand-tuned overrides on shared Buttons (check-in CTA, partner CTAs,
+  plan builder) and two food modals wearing a pushed-screen header.
+
+**Rulings (all lead-ruled, one criterion: the best product for the end
+user; every Section 2 inviolable untouched).**
+1. One name per concept, propagated: coaching decision; Nutrition;
+   block (never phase); Coaching log; food library; Working sets;
+   targets. Free-tier "Training review" (CoachReviewScreen) is a
+   different artefact and keeps its name.
+2. Progress lists each destination once: the duplicate tiles go; tile
+   labels are sentence case like the pillar rows.
+3. The block is stated once per screen. BlockProgressCard's header
+   carries only what the BlockShapeCard above does not (effort, recovery
+   week, finished); with `onPress` it becomes a PressableCard opening the
+   volume heatmap.
+4. The workout summary ends on a primary "Done". Same register as the
+   Start that began it.
+5. Shared primitives render as themselves: Button overrides removed on
+   the check-in, partner and plan-builder CTAs (Button's own disabled
+   state replaces the screens' bespoke dim); MyRecipes and MyMeals carry
+   ModalHeader like their sibling food modals.
+
+**Deliberately left unchanged, with the reason.**
+- The Home hero's "On track for this block." keeps no week number: the
+  C22 single-counter law (readinessSummary.js) forbids a second "N of M"
+  on the hero; the week is one tap away in the block sheet.
+- HomeBlockShapeSheet's four glossary paragraphs stay in their D93 /
+  C5-P11 order: the sheet is the block's ruled education surface.
+- `shouldDeload` is computed on Home and in useProgressData and narrated
+  in four phrasings. A single resolver is the right shape (recoveryState
+  already proved it) but touches coaching-adjacent logic across four
+  surfaces; recorded as follow-up, not done in a presentation pass.
+- Days/equipment/experience are editable from PlanUpdate, ProGoalSetup
+  and ManualBuilder. Consolidation changes Pro onboarding-derived flow;
+  follow-up, not done here.
+- The Free Home has no evidence region (TodayStrip and EvidencePanel are
+  Pro). Showing locked rows would be a gating-surface decision; the
+  existing teaser card stands.
+- The "for now" collision (recovery "lighter for now" vs How you train
+  "Temporary, right now") is real but the capability lane's vocabulary
+  is CC33-pinned; recorded.
+- Four "dead-end" inline empty states reported by discovery were false
+  positives on a full read (each sits inside a tappable card, a row meta
+  line, a fallback with its own button, or a feature bullet).
+- Dead code noted, not removed (CLAUDE.md: mention, don't fix):
+  `WeightTrendCard.js` has no importers; `CoachBriefCard`'s default
+  export is never rendered; `MealNames` is registered but unreachable by
+  founder order.
+
+**Gates.** `npm run lint` clean; full suite 1135 passed, 1 skipped,
+15644 tests passed (13 skipped). Rendered inspection was not possible in
+the session container (no emulator, no web target, SQLCipher and camera
+natives at boot); the device checklist is in the board entry.
