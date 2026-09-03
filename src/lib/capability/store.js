@@ -112,6 +112,16 @@ export async function endConstraint(userId, id, { nowMs = Date.now() } = {}) {
   return endCapabilityConstraint(userId, id, ENDED_REASON.USER_ENDED, { nowMs });
 }
 
+// D133 slice D (ARCHITECTURE section 12: "edit = supersede"): the edit
+// wizard writes its NEW rows first (one batch, consent-gated), then ends
+// each old row with this reason, so history says what happened and there
+// is never a gap in which nothing applies. An edit may change the number
+// of rows, which is why this ends rather than the one-for-one
+// supersedeConstraint below. Not consent-gated: ending never extends the lane.
+export async function markConstraintSuperseded(userId, id, { nowMs = Date.now() } = {}) {
+  return endCapabilityConstraint(userId, id, ENDED_REASON.SUPERSEDED, { nowMs });
+}
+
 export async function endEpisode(userId, groupId, { nowMs = Date.now(), reason = ENDED_REASON.USER_ENDED } = {}) {
   return endCapabilityEpisode(userId, groupId, reason, { nowMs });
 }

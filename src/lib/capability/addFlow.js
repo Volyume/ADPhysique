@@ -111,6 +111,44 @@ export function emptyDraft(preselect = null) {
   };
 }
 
+/**
+ * D133 slice D: a draft rebuilt from the live rows of a permanent rule or
+ * an episode group, so "Change this" opens the wizard on the check step
+ * with every line filled in and changeable. The full path stays on the
+ * plan (preselected: false) so a Change link lands on a numbered step.
+ * `nameOf(exerciseId)` resolves exercise names from the library; a row
+ * whose name cannot be resolved is still carried, labelled by the screen.
+ */
+export function draftFromRows(rows = [], { nowMs, nameOf = () => null, groupId = null } = {}) {
+  const live = rows.filter((r) => !r.state || r.state === 'active');
+  const first = live[0] ?? null;
+  const kindOf = (rk) => (rk === CONSTRAINT_RULE_KIND.DEMAND ? ADD_KIND.DEMAND
+    : rk === CONSTRAINT_RULE_KIND.FAMILY ? ADD_KIND.FAMILY
+      : rk === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW ? ADD_KIND.ALLOW : ADD_KIND.EXERCISE);
+  const kind = first ? kindOf(first.ruleKind) : null;
+  const axes = live.filter((r) => r.ruleKind === CONSTRAINT_RULE_KIND.DEMAND).map((r) => r.ruleValue);
+  const families = live.filter((r) => r.ruleKind === CONSTRAINT_RULE_KIND.FAMILY).map((r) => r.ruleValue);
+  const exercises = live
+    .filter((r) => r.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE || r.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW)
+    .map((r) => ({ id: r.ruleValue, name: nameOf(r.ruleValue) ?? 'An exercise' }));
+  const sided = live.find((r) => r.laterality);
+  const carves = axes.some((a) => isSideCarveable(CONSTRAINT_RULE_KIND.DEMAND, a));
+  const side = sided ? sided.laterality : (carves ? 'both' : null);
+  const role = kind === ADD_KIND.ALLOW ? CONSTRAINT_ROLE.BASELINE : (first?.role ?? null);
+  const starts = live.map((r) => r.startsAt).filter(Number.isFinite);
+  const ends = live.map((r) => r.endsAt).filter(Number.isFinite);
+  const startDays = starts.length && Number.isFinite(nowMs) ? Math.max(0, Math.round((nowMs - Math.min(...starts)) / DAY_MS)) : 0;
+  const endsAt = ends.length ? Math.max(...ends) : null;
+  const endDays = endsAt != null && Number.isFinite(nowMs) && endsAt > nowMs ? Math.max(1, Math.round((endsAt - nowMs) / DAY_MS)) : null;
+  return {
+    kind, axes, families, exercises, side, role, startDays, endDays,
+    clinician: live.some((r) => r.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED),
+    from: null,
+    preselected: false,
+    editing: { ids: live.map((r) => r.id), groupId },
+  };
+}
+
 /** Resolve a preselect's exercise names against the library, by name,
  *  exactly as the old inline effect did. Unknown names are dropped. */
 export function applyPreselect(draft, preselect, library = []) {
@@ -266,7 +304,7 @@ export function untilDate(endDays, nowMs) {
 export function summaryLines(draft, { nowMs } = {}) {
   const lines = [];
   const kindOpt = KIND_OPTIONS.find((k) => k.kind === draft.kind);
-  lines.push({ key: 'what', label: kindOpt ? kindOpt.label : 'What', value: whichLabel(draft) || 'Nothing chosen yet', step: draft.preselected ? null : ADD_STEP.WHICH });
+  lines.push({ key: 'what', label: kindOpt ? kindOpt.label : 'What', value: whichLabel(draft) || 'Nothing chosen yet', step: draft.preselected && !draft.editing ? null : ADD_STEP.WHICH });
   if (draft.kind === ADD_KIND.ALLOW) {
     lines.push({ key: 'when', label: 'Applies', value: 'Always. It stays part of how you train.', step: null });
   } else if (draft.role === CONSTRAINT_ROLE.EPISODE) {

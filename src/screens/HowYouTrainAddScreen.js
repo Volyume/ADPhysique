@@ -50,12 +50,12 @@ import * as haptics from '../lib/haptics';
 import { logError } from '../lib/errorLog';
 import { getAllExercises, uid } from '../lib/database';
 import { movementFamily, familyLabel } from '../lib/exercise/movementFamily';
-import { createConstraints, createConstraint, hasCapabilityConsent } from '../lib/capability/store';
+import { createConstraints, createConstraint, hasCapabilityConsent, markConstraintSuperseded, endEpisode } from '../lib/capability/store';
 import { grantCapabilityConsent } from '../lib/consent/capabilityConsent';
 import { DEMAND_AXES, CONSTRAINT_ROLE, LATERALITY } from '../lib/capability/model';
 import {
   ADD_STEP, ADD_KIND, KIND_OPTIONS, ROLE_OPTIONS, START_CHOICES, END_CHOICES,
-  emptyDraft, applyPreselect, planSteps, stepPosition, nextStep, prevStep, canContinue,
+  emptyDraft, applyPreselect, draftFromRows, planSteps, stepPosition, nextStep, prevStep, canContinue,
   draftTouched, sideQuestion, summaryLines, draftRows, draftSubject, savedSentence,
   whatHappensNext,
 } from '../lib/capability/addFlow';
@@ -96,8 +96,12 @@ export default function HowYouTrainAddScreen() {
   const toast = useToast();
   const userId = useAppStore((s) => s.user?.id);
   const preselect = route.params?.preselect ?? null;
+  // D133 slice D: { rows, groupId } - the live rows of a permanent rule or
+  // an episode group. The wizard opens on the check step with every line
+  // filled in; saving writes the new rows and supersedes the old.
+  const edit = route.params?.edit ?? null;
 
-  const [draft, setDraft] = useState(() => emptyDraft(preselect));
+  const [draft, setDraft] = useState(() => (edit ? null : emptyDraft(preselect)));
   const [consented, setConsented] = useState(null);
   const [library, setLibrary] = useState([]);
   const [step, setStep] = useState(null);
@@ -136,15 +140,25 @@ export default function HowYouTrainAddScreen() {
   // the suggestion has been applied - otherwise an exercise preselect would
   // open on WHICH (asking what the directory already answered) and drop
   // that step from under the person the moment the library resolved.
-  const [ready, setReady] = useState(!preselect);
+  const [ready, setReady] = useState(!preselect && !edit);
   useEffect(() => {
     if (preselect && preselectApplied.current) setReady(true);
   }, [preselect, draft]);
+  // An edit draft needs the library for exercise names; built once.
   useEffect(() => {
-    if (step || consented === null || !ready) return;
-    setStep(planSteps(draft, ctx)[0]);
+    if (!edit || draft || !library.length) return;
+    setDraft(draftFromRows(edit.rows ?? [], {
+      nowMs: Date.now(),
+      nameOf: (id) => library.find((e) => e.id === id)?.name ?? null,
+      groupId: edit.groupId ?? null,
+    }));
+    setReady(true);
+  }, [edit, draft, library]);
+  useEffect(() => {
+    if (step || consented === null || !ready || !draft) return;
+    setStep(edit ? ADD_STEP.CHECK : planSteps(draft, ctx)[0]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [consented, ready]);
+  }, [consented, ready, draft]);
 
   // ── Focus and announcement on every step ──────────────────────────────
   const stepTitle = useMemo(() => headingFor(step, draft, saved), [step, draft, saved]);
@@ -215,6 +229,18 @@ export default function HowYouTrainAddScreen() {
       // The ONE write door (CC-D27): batched, one transaction, consent-gated
       // inside the store so no surface can bypass it.
       const createdIds = await createConstraints(userId, rows, { nowMs });
+      // Edit = supersede (ARCHITECTURE section 12): the new rows are in
+      // before the old ones end, so nothing ever lapses in between.
+      if (draft.editing) {
+        if (draft.editing.groupId) {
+          await endEpisode(userId, draft.editing.groupId, { nowMs, reason: 'superseded' }).catch((e) => logError('HowYouTrainAdd.supersedeGroup', e, {}));
+        } else {
+          for (const id of draft.editing.ids ?? []) {
+            // eslint-disable-next-line no-await-in-loop
+            await markConstraintSuperseded(userId, id, { nowMs }).catch((e) => logError('HowYouTrainAdd.supersede', e, {}));
+          }
+        }
+      }
       const isEpisode = draft.role === CONSTRAINT_ROLE.EPISODE && draft.kind !== ADD_KIND.ALLOW;
       const subject = draftSubject(draft);
       setSaved({ createdIds: Array.isArray(createdIds) ? createdIds : [], groupId: isEpisode ? groupId : null, subject, nowMs, planDecision: null });
@@ -448,10 +474,11 @@ export default function HowYouTrainAddScreen() {
     exercises: d.exercises.some((x) => x.id === ex.id) ? d.exercises.filter((x) => x.id !== ex.id) : [...d.exercises, { id: ex.id, name: ex.name }],
   }));
 
-  if (!step) {
+  const screenTitle = edit ? 'Change this' : 'Add something';
+  if (!step || !draft) {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top', 'bottom']}>
-        <BackHeader title="Add something" onBack={confirmLeave} />
+        <BackHeader title={screenTitle} onBack={confirmLeave} />
       </SafeAreaView>
     );
   }
@@ -463,7 +490,7 @@ export default function HowYouTrainAddScreen() {
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: t.colors.background }]} edges={['top', 'bottom']}>
       <BackHeader
-        title="Add something"
+        title={screenTitle}
         onBack={postSave ? finish : goBackStep}
         right={postSave ? null : (
           <PressableCard onPress={confirmLeave} accessibilityRole="button" accessibilityLabel="Cancel adding this" style={styles.cancelBtn}>
@@ -739,7 +766,9 @@ function helpFor(step, draft, plan) {
     case ADD_STEP.WHEN: return 'You can change this later. Next: a quick check of everything, then save.';
     case ADD_STEP.SINCE: return 'A rough guess is fine.';
     case ADD_STEP.UNTIL: return 'A rough guess is fine. Volyume checks with you rather than assuming. Nothing ends until you say so.';
-    case ADD_STEP.CHECK: return 'Tap Change on anything to go back to it. After you save, if this affects your current plan, Volyume shows you what would change and asks before doing anything.';
+    case ADD_STEP.CHECK: return draft?.editing
+      ? 'Tap Change on anything. Saving replaces what you had with this; nothing in your history is rewritten. If it affects your current plan, Volyume shows you what would change and asks before doing anything.'
+      : 'Tap Change on anything to go back to it. After you save, if this affects your current plan, Volyume shows you what would change and asks before doing anything.';
     case ADD_STEP.CONSENT: return 'Volyume needs your agreement to keep what you have just chosen.';
     case ADD_STEP.PLAN:
       if (plan?.mode === 'failSafe') return 'Nothing to decide here. Your plan is unchanged.';

@@ -1304,6 +1304,16 @@ D (edit a permanent rule: tap a row, change a line, save; old row ends,
 new row starts). Arrival context and a11y (E) landed inside A and B: the
 wizard names the source profile and pre-selects its suggested role,
 announces and focuses each step, and multi-selects are checkboxes.
+Slice D LANDED (this entry): edit, as ARCHITECTURE section 12
+specified ("edit = supersede"). Tapping a setup row or an episode's
+Options opens "Change what this covers"; the wizard opens on the check
+step with every line filled in (addFlow.draftFromRows, round-trip
+tested) and titled "Change this"; saving writes the new rows first and
+then marks the old ones superseded (store.markConstraintSuperseded /
+endEpisode reason 'superseded'), so nothing lapses in between and Past
+says what happened. The bare per-row Remove became a sheet row with its
+consequence stated (HYT-21, HYT-17). D133 build COMPLETE on main; the
+founder device walk is the next gate (checklist in chat).
 
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):

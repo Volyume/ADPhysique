@@ -17,7 +17,7 @@
 import {
   ADD_STEP, ADD_KIND, emptyDraft, applyPreselect, planSteps, stepPosition, nextStep, prevStep,
   canContinue, draftTouched, sideQuestion, summaryLines, draftRows, savedSentence, whatHappensNext,
-  whichLabel, START_CHOICES, END_CHOICES,
+  whichLabel, START_CHOICES, END_CHOICES, draftFromRows,
 } from '../addFlow';
 import { CONSTRAINT_ROLE, CONSTRAINT_SOURCE, CONSTRAINT_RULE_KIND } from '../model';
 
@@ -194,5 +194,44 @@ describe('savedSentence / whatHappensNext - the flow ends by saying what it did'
     expect(whichLabel(demandDraft({ axes: ['overhead_position'], side: 'right' }))).toBe('Overhead work with your right shoulder');
     expect(START_CHOICES.map((c) => c.days)).toEqual([0, 7, 14]);
     expect(END_CHOICES.map((c) => c.days)).toEqual([null, 7, 14, 30]);
+  });
+});
+
+describe('draftFromRows - "Change this" rebuilds the draft from live rows (D133 slice D)', () => {
+  const nameOf = (id) => ({ e1: 'Bench press' }[id] ?? null);
+  test('a sided temporary demand group round-trips through draftRows', () => {
+    const rows = [
+      { id: 'a', role: CONSTRAINT_ROLE.EPISODE, source: CONSTRAINT_SOURCE.SELF, ruleKind: CONSTRAINT_RULE_KIND.DEMAND, ruleValue: 'overhead_position', laterality: 'left', startsAt: NOW - 7 * DAY, endsAt: NOW + 14 * DAY, state: 'active', episodeGroupId: 'g' },
+      { id: 'b', role: CONSTRAINT_ROLE.EPISODE, source: CONSTRAINT_SOURCE.SELF, ruleKind: CONSTRAINT_RULE_KIND.DEMAND, ruleValue: 'standing', laterality: null, startsAt: NOW - 7 * DAY, endsAt: NOW + 14 * DAY, state: 'active', episodeGroupId: 'g' },
+    ];
+    const d = draftFromRows(rows, { nowMs: NOW, nameOf, groupId: 'g' });
+    expect(d).toMatchObject({ kind: ADD_KIND.DEMAND, axes: ['overhead_position', 'standing'], side: 'left', role: CONSTRAINT_ROLE.EPISODE, startDays: 7, endDays: 14, clinician: false, preselected: false });
+    expect(d.editing).toEqual({ ids: ['a', 'b'], groupId: 'g' });
+    // The full path is on the plan, so every Change link lands on a numbered step.
+    expect(planSteps(d)).toEqual([ADD_STEP.WHAT, ADD_STEP.WHICH, ADD_STEP.SIDE, ADD_STEP.WHEN, ADD_STEP.SINCE, ADD_STEP.UNTIL, ADD_STEP.CHECK]);
+    expect(summaryLines(d, { nowMs: NOW })[0].step).toBe(ADD_STEP.WHICH);
+    const again = draftRows(d, { nowMs: NOW, groupId: 'g2' });
+    expect(again.map((r) => [r.ruleValue, r.laterality, r.episodeGroupId])).toEqual([['overhead_position', 'left', 'g2'], ['standing', null, 'g2']]);
+    expect(again[0].startsAt).toBe(NOW - 7 * DAY);
+    expect(again[0].endsAt).toBe(NOW + 14 * DAY);
+  });
+  test('a permanent clinician-reported exercise rule keeps its source and name', () => {
+    const rows = [{ id: 'x', role: CONSTRAINT_ROLE.BASELINE, source: CONSTRAINT_SOURCE.CLINICIAN_REPORTED, ruleKind: CONSTRAINT_RULE_KIND.EXERCISE, ruleValue: 'e1', laterality: null, startsAt: NOW - 30 * DAY, endsAt: null, state: 'active' }];
+    const d = draftFromRows(rows, { nowMs: NOW, nameOf });
+    expect(d).toMatchObject({ kind: ADD_KIND.EXERCISE, exercises: [{ id: 'e1', name: 'Bench press' }], role: CONSTRAINT_ROLE.BASELINE, clinician: true, endDays: null, startDays: 30 });
+    expect(draftRows(d, { nowMs: NOW, groupId: 'g' })[0]).toMatchObject({ role: CONSTRAINT_ROLE.BASELINE, source: CONSTRAINT_SOURCE.CLINICIAN_REPORTED, ruleValue: 'e1', episodeGroupId: null });
+  });
+  test('an allowance edits as an allowance; a whole-body carveable axis reads as both sides', () => {
+    const allow = draftFromRows([{ id: 'k', role: CONSTRAINT_ROLE.BASELINE, source: CONSTRAINT_SOURCE.SELF, ruleKind: CONSTRAINT_RULE_KIND.EXERCISE_ALLOW, ruleValue: 'e1', startsAt: NOW, state: 'active' }], { nowMs: NOW, nameOf });
+    expect(allow.kind).toBe(ADD_KIND.ALLOW);
+    expect(planSteps(allow)).toEqual([ADD_STEP.WHAT, ADD_STEP.WHICH, ADD_STEP.CHECK]);
+    const both = draftFromRows([{ id: 'o', role: CONSTRAINT_ROLE.BASELINE, source: CONSTRAINT_SOURCE.SELF, ruleKind: CONSTRAINT_RULE_KIND.DEMAND, ruleValue: 'overhead_position', laterality: null, startsAt: NOW, state: 'active' }], { nowMs: NOW, nameOf });
+    expect(both.side).toBe('both');
+    expect(canContinue(both, ADD_STEP.SIDE)).toBe(true);
+  });
+  test('an episode already past its planned end comes back open-ended, for the person to re-decide', () => {
+    const d = draftFromRows([{ id: 'p', role: CONSTRAINT_ROLE.EPISODE, source: CONSTRAINT_SOURCE.SELF, ruleKind: CONSTRAINT_RULE_KIND.DEMAND, ruleValue: 'standing', startsAt: NOW - 20 * DAY, endsAt: NOW - 6 * DAY, state: 'active', episodeGroupId: 'g' }], { nowMs: NOW, groupId: 'g' });
+    expect(d.endDays).toBeNull();
+    expect(d.startDays).toBe(20);
   });
 });

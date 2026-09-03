@@ -57,7 +57,9 @@ const ENUMERATED = [
   // per-row "Remove" was a bare label with 8dp of padding (~36dp, no
   // hitSlop); its add-flow "Choice" was already on the token and is
   // enumerated here so it stays there.
-  ['screens/HowYouTrainScreen.js', [['rowAction', 1], ['choice', 1]]],
+  // D133 slice D: the per-row Remove became a row in the options sheet
+  // (SettingRow, floored by construction), so only `choice` is local now.
+  ['screens/HowYouTrainScreen.js', [['choice', 1]]],
   // AvoidedMovements is the preference lane HowYouTrain cross-links to, so
   // it is held to the same floor. `crossLaneRow` is a real route control
   // that stood ~30dp with no hitSlop; `removeBtn` cleared the floor only

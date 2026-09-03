@@ -20,7 +20,6 @@ import { useShallow } from 'zustand/react/shallow';
 import useAppStore from '../store/useAppStore';
 import useTheme from '../hooks/useTheme';
 import { type, spacing, radius } from '../styles/theme';
-import { touchTarget } from '../styles/layout';
 import { useToast } from '../components/Toast';
 import { appAlert } from '../components/AppAlert';
 import PressableCard from '../components/PressableCard';
@@ -1230,7 +1229,8 @@ export default function HowYouTrainScreen() {
     ? groupSubject(state.episodes.flatMap((ep) => ep.rows).filter((r) => pendingIds.includes(r.id)))
     : null;
   const awaiting = state.episodes.filter((ep) => ep.status === EPISODE_STATUS.AWAITING_CONFIRMATION);
-  const optionsEp = optionsFor ? state.episodes.find((ep) => ep.groupId === optionsFor) ?? null : null;
+  const optionsEp = optionsFor && !String(optionsFor).startsWith('row:') ? state.episodes.find((ep) => ep.groupId === optionsFor) ?? null : null;
+  const optionsRow = optionsFor && String(optionsFor).startsWith('row:') ? state.baseline.find((r) => `row:${r.id}` === optionsFor) ?? null : null;
   const nothingYet = !state.baseline.length && !state.episodes.length && !state.history.length;
   const flashStyle = (id) => (flashId != null && flashId === id ? { borderColor: t.colors.primary } : null);
   const onCardLayout = (id) => (e) => {
@@ -1351,16 +1351,8 @@ export default function HowYouTrainScreen() {
                 sub={`${sinceText(row)}${row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
                   ? 'Kept in at your word, even where a rule would leave it out'
                   : (row.source === CONSTRAINT_SOURCE.CLINICIAN_REPORTED ? 'You told Volyume a clinician asked for this' : 'Part of your normal training')}`}
-                showArrow={false}
-                rightElement={(
-                  <PressableCard onPress={() => endBaselineRow(row)} accessibilityRole="button"
-                    style={styles.rowAction}
-                    accessibilityLabel={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
-                      ? `Stop keeping ${ruleLabel(row)} in`
-                      : `Remove ${ruleLabel(row)} from your setup`}>
-                    <Text style={[styles.rowActionLabel, { color: t.colors.textSecondary }]}>Remove</Text>
-                  </PressableCard>
-                )} />
+                accessibilityHint="Opens options to change or remove this"
+                onPress={() => { haptics.selection(); setOptionsFor(`row:${row.id}`); }} />
             ))}
           </View>
         </>
@@ -1513,7 +1505,27 @@ export default function HowYouTrainScreen() {
       {/* D133 slice C: every episode action, each with its consequence in
           plain words, one tap away. Rows close the sheet first so a confirm
           never presents over a dismissing sheet. */}
-      <BottomSheet visible={!!optionsEp} onClose={() => setOptionsFor(null)} accessibilityLabel="Options for this temporary change">
+      <BottomSheet visible={!!optionsEp || !!optionsRow} onClose={() => setOptionsFor(null)} accessibilityLabel={optionsRow ? 'Options for this part of how you train' : 'Options for this temporary change'}>
+        {optionsRow ? (() => {
+          const row = optionsRow;
+          const after = (fn) => { setOptionsFor(null); setTimeout(fn, 260); };
+          return (
+            <View style={styles.sheetBody}>
+              <Text style={[styles.sheetTitle, { color: t.colors.textPrimary }]}>{ruleLabel(row)}</Text>
+              <Text style={[styles.hint, { color: t.colors.textSecondary }]}>Each option says what it does. Nothing here happens by itself.</Text>
+              <View style={[settingsStyles.section, live.section]}>
+                <SettingRow icon="create-outline" label="Change what this covers"
+                  sub="Opens it with every line filled in. Saving replaces it; your history is not rewritten."
+                  onPress={() => after(() => navigation.navigate('HowYouTrainAdd', { edit: { rows: [row], groupId: null } }))} />
+                <SettingRow icon="trash-outline" label={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW ? 'Stop keeping it in' : 'Remove'} destructive
+                  sub={row.ruleKind === CONSTRAINT_RULE_KIND.EXERCISE_ALLOW
+                    ? 'Rules that would leave it out apply again from now on.'
+                    : 'Volyume plans and suggests it normally again from now on. Nothing in your history changes.'}
+                  onPress={() => after(() => endBaselineRow(row))} />
+              </View>
+            </View>
+          );
+        })() : null}
         {optionsEp ? (() => {
           const ep = optionsEp;
           const subject = groupSubject(ep.rows.filter(r => r.state === 'active'));
@@ -1553,6 +1565,9 @@ export default function HowYouTrainScreen() {
                 <SettingRow icon="body-outline" label="This is how I train now"
                   sub="Becomes part of your normal setup, with full progression and coaching."
                   onPress={() => after(() => confirmPromote(ep))} />
+                <SettingRow icon="create-outline" label="Change what this covers"
+                  sub="Opens it with every line filled in. Saving replaces it; your history is not rewritten."
+                  onPress={() => after(() => navigation.navigate('HowYouTrainAdd', { edit: { rows: ep.rows.filter(r => r.state === 'active'), groupId: ep.groupId } }))} />
               </View>
             </View>
           );
@@ -1600,16 +1615,6 @@ function Choice({ label, sub, onPress, t, selected, primary, disabled, compact }
 }
 
 const styles = StyleSheet.create({
-  // The per-row "Remove" was a bare label with 8dp of padding - about 36dp
-  // effective, under the lane's 48 floor (docs/rules/styling.md; pinned by
-  // capabilityTouchTargets.guard). The floor is the style's now, not a
-  // side effect of the word's length.
-  rowAction: {
-    minHeight: touchTarget.minimum,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.sm,
-  },
-  rowActionLabel: { ...type.label },
   q: { ...type.h3, marginBottom: spacing.sm },
   body: { ...type.body, marginBottom: spacing.md },
   hint: { ...type.caption, marginBottom: spacing.sm },

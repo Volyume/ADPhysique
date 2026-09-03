@@ -189,7 +189,10 @@ describe('the disability guidance that was hidden now has a rendering path', () 
     const flow = read('lib/capability/addFlow.js');
     expect(flow).toMatch(/if \(sidedAxes\(draft\)\.length\) steps\.push\(ADD_STEP\.SIDE\)/);
     expect(flow).toMatch(/laterality: isSideCarveable\(CONSTRAINT_RULE_KIND\.DEMAND, axis\) \? \(side \?\? null\) : null/);
-    const draftShape = flow.slice(flow.indexOf('export function emptyDraft'), flow.indexOf('export function applyPreselect'));
+    // The DRAFT SHAPE only (emptyDraft's body): draftFromRows, which
+    // rebuilds a draft from stored rows, legitimately reads row.laterality.
+    const draftStart = flow.indexOf('export function emptyDraft');
+    const draftShape = flow.slice(draftStart, flow.indexOf('\n}\n', draftStart));
     expect(draftShape.length).toBeGreaterThan(50);
     expect(draftShape).toMatch(/side: null,/);
     expect(draftShape).not.toMatch(/laterality/);
