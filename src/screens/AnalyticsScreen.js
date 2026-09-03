@@ -464,10 +464,13 @@ export default function AnalyticsScreen({ navigation, route }) {
         <View style={styles.section}>
           <SectionLabel>More stats</SectionLabel>
           <View style={styles.navGrid}>
-            <NavTile icon="body" color={t.colors.warning} label="Body Metrics" pro={tier !== 'pro'} onPress={() => navigation.navigate('BodyMetrics')} />
-            <NavTile icon="barbell" color={t.colors.primary} label="Lifts" onPress={() => navigation.navigate('LiftProgress')} />
+            {/* Body Metrics and Lifts are removed here: the Answer Block's
+                pillar rows above already cover the same destinations
+                (Body -> BodyMetrics, Training -> LiftProgress), so keeping
+                them in the grid too meant the Progress tab listed the same
+                two screens twice. */}
             <NavTile icon="pulse" color={t.colors.success} label="Consistency" onPress={() => navigation.navigate('Consistency')} />
-            <NavTile icon="time" color={t.colors.textSecondary} label="Full History" onPress={() => navigation.navigate('WorkoutHistory')} />
+            <NavTile icon="time" color={t.colors.textSecondary} label="Full history" onPress={() => navigation.navigate('WorkoutHistory')} />
             {(() => {
               // COMP-005: Recaps replaces the year-long locked Year-of-Lifts
               // tile. It unlocks after 10 logged sessions (~a fortnight, not a

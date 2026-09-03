@@ -13,7 +13,10 @@
  *      DEMOTE to utilities grid; feature KEEP" -- superseding the earlier
  *      promoted full-width row this suite used to pin. §22 R6 lists the
  *      grid order explicitly with Partners last, so it is now AFTER Full
- *      History, not before it).
+ *      history, not before it. Label went sentence case, and the grid's
+ *      Body Metrics/Lifts tiles were later removed as duplicates of the
+ *      Answer Block's pillar rows above -- neither changes Partners'
+ *      position relative to Full history).
  *   4. HomeScreen stays free of any partner entry — the one-banner invariant.
  */
 import fs from 'fs';
@@ -67,9 +70,9 @@ describe('AnalyticsScreen Partners tile', () => {
   // row into the utilities grid, ordered last per §22 R6's explicit list
   // ("Body Metrics, Lifts, Consistency, Full History, Recaps..., Year of
   // Lifts..., Partners").
-  test('is demoted into the utilities grid, after Full History (no longer a promoted row)', () => {
+  test('is demoted into the utilities grid, after Full history (no longer a promoted row)', () => {
     const partnersIdx = ANALYTICS.indexOf('label="Partners"');
-    const fullHistoryIdx = ANALYTICS.indexOf('label="Full History"');
+    const fullHistoryIdx = ANALYTICS.indexOf('label="Full history"');
     expect(partnersIdx).toBeGreaterThan(-1);
     expect(fullHistoryIdx).toBeGreaterThan(-1);
     expect(partnersIdx).toBeGreaterThan(fullHistoryIdx);

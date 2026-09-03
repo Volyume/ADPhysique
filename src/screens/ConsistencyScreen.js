@@ -146,7 +146,11 @@ export default function ConsistencyScreen({ navigation }) {
             onBuild={() => navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary')}
           />
           <FatigueTrendCard sessions={fatigueSessions} />
-          <BlockProgressCard blockProgress={blockProgress} currentMesoWeek={currentMesoWeek} />
+          <BlockProgressCard
+            blockProgress={blockProgress}
+            currentMesoWeek={currentMesoWeek}
+            onPress={() => navigation.navigate('VolumeHeatmap')}
+          />
         </View>
         </AnimatedEntrance>
         ) : null}

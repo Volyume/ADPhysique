@@ -2,6 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import { colors, fontSize, fontWeight, spacing, radius, withAlpha, alpha, type, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
+import PressableCard from './PressableCard';
 import { GLOSSARY } from '../lib/coachGlossary';
 
 /**
@@ -12,8 +13,16 @@ import { GLOSSARY } from '../lib/coachGlossary';
  * Props:
  *   blockProgress     [{ muscle, label, actual, planned }]
  *   currentMesoWeek   { weekIndex, plannedWeeks, isDeload, rirTarget } | null
+ *   onPress           optional. When provided the card renders through the
+ *                      shared PressableCard primitive (accessibilityRole
+ *                      "button", a hint that it opens the volume-by-muscle
+ *                      heatmap) instead of a plain View. Used on
+ *                      ConsistencyScreen, which sits directly under
+ *                      BlockShapeCard's "Week N of M" statement -- this
+ *                      card's own header therefore no longer restates the
+ *                      week, only the effort/recovery state for it.
  */
-export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
+export default function BlockProgressCard({ blockProgress, currentMesoWeek, onPress }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
@@ -21,22 +30,26 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
   const live = buildLiveStyles(t);
   if (!blockProgress || blockProgress.length === 0) return null;
 
-  return (
-    <View style={[styles.card, live.card]}>
+  // The header's right-hand text used to restate "Week N/M". The screen
+  // that renders this card (ConsistencyScreen) already states "Week N of
+  // M · <phase>" via BlockShapeCard directly above, so this only carries
+  // whatever that statement does not: the effort level, or that it's a
+  // recovery week, or that the block is finished.
+  const weekText = currentMesoWeek?.awaitingDecision
+    ? 'Block finished'
+    : currentMesoWeek?.isDeload
+      ? 'Recovery week'
+      : currentMesoWeek?.rirTarget != null
+        ? `Effort ${5 - currentMesoWeek.rirTarget}/5`
+        : null;
+
+  const cardContent = (
+    <>
       <View style={styles.header}>
         <Text style={[styles.title, live.title]}>This week's plan</Text>
-        {currentMesoWeek && (
+        {currentMesoWeek && weekText && (
           <View style={styles.weekGroup}>
-            <Text style={[styles.week, live.week]}>
-              {/* Stage 1 (2026-08-09): a finished block never claims a live
-                  recovery week; targets genuinely hold at the final row's
-                  volume, so the bars stay honest either way. */}
-              {currentMesoWeek.awaitingDecision
-                ? 'Block finished'
-                : `Week ${currentMesoWeek.weekIndex}/${currentMesoWeek.plannedWeeks}${currentMesoWeek.isDeload
-                  ? ' · Recovery week'
-                  : ` · Effort ${currentMesoWeek.rirTarget != null ? `${5 - currentMesoWeek.rirTarget}/5` : '–'}`}`}
-            </Text>
+            <Text style={[styles.week, live.week]}>{weekText}</Text>
             {/* O15: GLOSSARY.effort, same term already defined for the app's
                 other effort chips (pattern: HomeBlockShapeSheet.js's GLOSSARY
                 use beside the block-shape chip it explains). */}
@@ -67,6 +80,25 @@ export default function BlockProgressCard({ blockProgress, currentMesoWeek }) {
           </View>
         );
       })}
+    </>
+  );
+
+  if (onPress) {
+    return (
+      <PressableCard
+        style={[styles.card, live.card]}
+        onPress={onPress}
+        accessibilityRole="button"
+        accessibilityHint="Opens weekly volume by muscle"
+      >
+        {cardContent}
+      </PressableCard>
+    );
+  }
+
+  return (
+    <View style={[styles.card, live.card]}>
+      {cardContent}
     </View>
   );
 }

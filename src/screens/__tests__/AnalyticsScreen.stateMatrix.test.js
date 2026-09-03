@@ -607,8 +607,11 @@ describe('State matrix — A: established Pro, all progressing, photos current',
     expect(flattenText(tree)).toMatch(/\d\s+sessions?\s+this week/);
     // R4 plan evidence (a set landed inside the current Monday-anchored week)
     expect(flattenText(tree)).toContain("This week's volume");
-    // R6 utilities
-    expect(flattenText(tree)).toContain('Body Metrics');
+    // R6 utilities. Body Metrics and Lifts were removed from this grid as
+    // duplicates of the Answer Block's pillar rows above (Body ->
+    // BodyMetrics, Training -> LiftProgress), so Consistency now stands in
+    // for "the utilities grid renders".
+    expect(flattenText(tree)).toContain('Consistency');
     expect(flattenText(tree)).toContain('Partners');
 
     // Retired idioms never render on the landing.
@@ -865,7 +868,7 @@ describe('State matrix — K: Free user, Training live, Body/Visual locked, page
     expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Part of Pro.');
     // Utilities and evidence trail remain fully live for Free.
     expect(flattenText(tree)).toContain('Recent sessions');
-    expect(flattenText(tree)).toContain('Body Metrics');
+    expect(flattenText(tree)).toContain('Consistency');
     // Free tier's useVisualPillar gate (`tier !== 'pro'`) never even calls
     // the scan store, matching useVisualPillar.test.js's own hook-level pin
     // -- checked here at the integration level too, against the SAME
