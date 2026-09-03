@@ -1,6 +1,18 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-03 — FIRST 14 DAYS / ACTIVATION PASS LANDED (D136) ★
+
+Founder order: the first fourteen days, install → account → setup →
+first workout → return → first coaching payoff. Four discovery lanes,
+lead verification, four implementation packages, landed on main.
+Rulings and the open founder question (the quiz-first flag) in DECISIONS
+D136; board entry with the device checklist in `docs/TASKBOARD.md`
+"FIRST 14 DAYS / ACTIVATION PASS". Cloud migration `migrate_156` written,
+NOT applied. Rendered inspection was not possible in the session
+container; the founder's device walk is the visual check.
+
+===============================================================================
 ## ★ 2026-09-03 — ONE PRODUCT COHERENCE PASS LANDED (D135) ★
 
 Founder order: one autonomous pass to make the CURRENT app feel like one

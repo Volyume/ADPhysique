@@ -3271,3 +3271,58 @@ button styling).
 resolver across Home / Consistency / Plans / readiness; one editor for
 days / equipment / experience; the "for now" vocabulary collision;
 dead `WeightTrendCard.js` and `CoachBriefCard` default export.
+
+## FIRST 14 DAYS / ACTIVATION PASS (2026-09-03) — COMPLETE, MERGED TO MAIN. Ruling D136.
+
+Branch `claude/volyume-coherence-pass-6s991m`. Founder order: make the
+first fourteen days exceptionally good; treat install → account as a
+product funnel. Rulings, evidence, the unchanged list and the open founder
+question (quiz-first flag): DECISIONS D136.
+
+**Landed.** Welcome and Login lighter with trust at the ask; wizard skip
+for body composition; logger first-time load guidance, rest-timer
+introduction and in-context notification ask; summary first-session
+memory line; honest zero-history readiness chip; free-tier prompt copy;
+welcome card without a plan; check-in purpose line; seven funnel
+telemetry events plus `migrate_156` (NOT applied).
+
+**Gates.** Lint clean, typecheck clean, full suite 1139 suites / 15693
+tests passing (49 new pins across the logger, summary, readiness, Home,
+check-in, coach output, body metrics and permissions).
+
+**Founder-side.** (1) Answer the quiz-first question in D136. (2) Apply
+`supabase/migrate_156_activation_funnel_telemetry.sql` with the exact
+phrase when ready; until then the new events queue on device.
+
+**Device checklist (Android, EAS build, fresh install).**
+1. First open: wordmark, "Less thinking. More lifting.", one line "A
+   training plan that adjusts to what you log.", one card with three
+   bullets, one sentence on the trial with the price, an orange "Start
+   your 14 days" button, one muted line about the free version, the
+   trust row, "Already have an account? Sign in".
+2. Tap Start: create-account screen shows the trust line under the
+   Create account button. Sign up with Google or email.
+3. Consent gate unchanged. Wizard step 2 shows "Skip for now" under
+   Continue; tapping it moves on without a body-fat value.
+4. Reminder rows still read "Part of your coaching".
+5. Today with no session: chip under the workout name reads "First
+   session of your plan. Nothing to read yet." Welcome card shows even
+   if no plan was generated.
+6. Start workout (free account): prompt sub-line reads "Saved with your
+   session, and read back to you on Today before your next one."
+7. First lift: quiet line "First time on this lift. Pick a weight you
+   could lift about N times, with a couple in reserve. It is saved for
+   next time." Not repeated on set 2.
+8. Log the set: rest strip appears with the caption above it; the OS
+   notification prompt appears once (only if never answered). "Got it"
+   clears the caption; kill and relaunch, log a set: no caption, no
+   second prompt.
+9. Finish: summary hero shows "First time on this session. Every set is
+   saved. Next time, these numbers show as Last session while you lift."
+   Not shown under calm mode or an open ED flag. Second session: the
+   usual comparison row instead.
+10. Pro account, check-in due: Today line reads "Your weekly check-in is
+    ready. It shapes this week's coaching decision."
+ED-safety: the first-session line and readiness chip carry no weight or
+food content; calm/ED suppression on the summary line verified by pin;
+floors, gates and notification suppression untouched.

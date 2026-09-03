@@ -5011,3 +5011,102 @@ user; every Section 2 inviolable untouched).**
 15644 tests passed (13 skipped). Rendered inspection was not possible in
 the session container (no emulator, no web target, SQLCipher and camera
 natives at boot); the device checklist is in the board entry.
+
+## D136 — First 14 days: activation and the first "this app understands my training" moment (lead-ruled under D33, 2026-09-03)
+
+**Founder order.** One autonomous pass over INSTALL → account → setup →
+first value → return → first personalisation → first coaching payoff.
+Business context: people install and some never create an account.
+Activation and retention only; no new monetisation friction.
+
+**Discovery (four read-only agent lanes, lead-verified where built on).**
+Funnel: Welcome → Login → Article 9 (grants the 14-day trial) → six-step
+Pro wizard → setup-complete → Today. Eleven surfaces before "Start
+workout"; the account wall is screen two. The pre-account quiz and plan
+preview (`lib/onboarding/quizFlow.js`, `QuizScreen`, `PlanPreviewScreen`)
+are built and OFF by founder decision 2026-06-26 ("a free-style quiz on
+the Pro CTA broke the Pro flow"); the wizard does not prefill from the
+quiz slice, so with the flag on the training week and goal would be asked
+twice. Welcome carried two competing cards, eight bullets and a
+three-sentence pricing paragraph before one tap. The login screen carried
+no trust line at the identity ask. The wizard's body-composition step said
+"skip this" and offered only Continue. In the logger, a lift with no
+history showed a blank weight box and said nothing (the quiet first-time
+line had been retired for repeating the rep range); the rest timer
+appeared unannounced; notification access was never requested on the
+training path, so the lock-screen countdown the code builds never showed
+for a free user. The first workout summary rendered no comparison row at
+all where session two shows one. Today's readiness chip said "On track
+for this block." with zero history. The pre-workout prompt promised free
+users an easing that only Pro applies. The welcome card was gated on a
+plan existing, so a person with no plan got no orientation. The check-in
+line said it was ready but not what it was for. The check-in and coach
+output surfaces themselves (purpose copy, WhyBlock, confidence caption,
+held decisions, "See how Precision Coaching decides") were judged strong
+and left alone. Telemetry: first-party pipeline exists (`track`,
+`trackFirst`, catalogue guard, server allow-list) with first_plan /
+first_workout_logged / first_food_logged; nothing for first workout
+started, weigh-in, check-in, coach result viewed, accept/decline, or the
+permission prompt result.
+
+**Rulings.**
+1. Welcome leads with what the app does, three outcome bullets, one
+   honest trial sentence (price still stated), the shared primary button,
+   and the free version as one line under the card. Trial-first (OB-1)
+   preserved: one CTA, free stated as what remains.
+2. Login carries "No payment card. Works fully offline. Your data exports
+   anytime." in create-account mode.
+3. The body-composition step offers the skip it promised. The reminder
+   pill keeps "Part of your coaching": its own comment records that the
+   reminder is non-optional (D7), so "Recommended" would be untrue.
+4. Logger: a quiet first-time line on the first working set of a lift
+   with no history says how to choose a load and that it is kept, in
+   words that never repeat the range string. A once-ever caption
+   introduces the rest strip; at that same first rest, notification access
+   is requested once, only if never answered.
+5. First-exposure records stay celebrated (founder ruling 2026-08-23,
+   pinned in prDetectionRace / detectPR.firstLift); the proposed
+   session-one suppression was NOT built.
+6. Summary: the 'first' comparison verdict renders "First time on this
+   session. Every set is saved. Next time, these numbers show as Last
+   session while you lift." Calm/ED suppression applies to this line only;
+   the existing comparison verdicts keep their behaviour.
+7. Readiness chip with no session: "First session of your plan. Nothing
+   to read yet." (no second counter, per C22).
+8. Free-tier pre-workout prompt: "Saved with your session, and read back
+   to you on Today before your next one." Pro copy unchanged.
+9. Welcome card renders for any zero-session user, plan or not.
+10. Check-in Today line: "...It shapes this week's coaching decision."
+11. Telemetry: first_workout_started, first_weigh_in (Today quick weigh-in
+    and the Body metrics form; the onboarding seed excluded),
+    checkin_started {first}, first_checkin_completed, coach_result_viewed
+    {first, hold}, coach_recommendation_accepted/declined {kind enum},
+    notification_permission_requested {status}. Server allow-list in
+    `supabase/migrate_156_activation_funnel_telemetry.sql`, NOT applied
+    (awaits the founder's phrase); rejected rows re-push until it is. No
+    signup_started: it would fire before an account exists and the
+    pipeline attributes to auth.uid() only.
+
+**Founder question (not decided here).** Flip `ONBOARDING_QUIZ_FIRST` so
+the plan takes shape before the account wall? It reverses the 2026-06-26
+decision. If yes, the wizard must first prefill its training-week and
+goal steps from the quiz slice so nothing is asked twice; that wiring is
+recorded as the precondition, not built.
+
+**Deliberately unchanged.** Article 9 consent text and gate (locked);
+the setup-complete screen's calm-coaching pointer (safety); the
+session-one feedback sheet (deliberate "is this for you?" beat); the
+Coach tab's absence of a pre-decision status card (founder verdict, the
+row already carries the concrete countdown); Diary's Pro lock for free
+users (monetisation surface); the engine's own data-hold re-check
+disagreeing with the check-in screen's gate count (consequential logic,
+recorded as follow-up).
+
+**Gates.** `npm run lint` clean; `tsc --noEmit` clean; full suite 1139
+suites passed (1 skipped), 15693 tests passed (13 skipped), 49 new pins.
+
+**Follow-ups recorded.** Quiz-first prefill wiring (above);
+`BodyMetricsScreen.js` edit path passes `data.body_weight` where the
+validator returns `data.weightKg` (possible undefined save on edit;
+flagged by the telemetry agent, not touched); check-in gate versus engine
+weigh-in count.
