@@ -492,3 +492,24 @@ describe('no em dash in the copy this wave shipped (closes the eslint TemplateEl
     expect(src).not.toMatch(/—/);
   });
 });
+
+describe('HYT-01 (flow audit 2026-09-03) - the apply proposal cannot be declined by dismissal', () => {
+  // AppAlert.js runs the cancel slot's onPress on a backdrop tap or Android
+  // Back (onBackdrop -> dismiss(cancelBtn.onPress)). On this one alert the
+  // cancel slot is declineNow, which writes 'declined' against every rule
+  // of the change the person just saved - so trying to get back to the
+  // page was a recorded decision. The proposal passes cancelable: false and
+  // is answered only by a named button. The no-op cancels elsewhere on the
+  // screen (F-1) keep the default and stay dismissable.
+  test('the apply proposal passes { cancelable: false } and no other alert does', () => {
+    const fn = screen.match(/const proposeEffectiveDiff = async[\s\S]{0,9500}?\n  };/)?.[0] ?? '';
+    const apply = fn.slice(fn.indexOf("'Apply this to your current plan?'"));
+    expect(apply).toMatch(/\],\s*(?:\/\/[^\n]*\n\s*)*\{ cancelable: false \},\s*\);/);
+    expect(screen.match(/cancelable: false/g)).toHaveLength(1);
+  });
+  test('the AppAlert backdrop path still runs the cancel handler by default (the reason the flag exists)', () => {
+    const alert = fs.readFileSync(path.join(__dirname, '..', '..', 'components', 'AppAlert.js'), 'utf8');
+    expect(alert).toContain("const cancelable = options.cancelable !== false;");
+    expect(alert).toMatch(/cancelBtn\?\.onPress\?\.\(\)/);
+  });
+});

@@ -683,6 +683,9 @@ export default function HowYouTrainScreen() {
             },
           },
         ],
+        // HYT-01: the cancel slot RECORDS a decline, and AppAlert runs it
+        // on backdrop/Back - so this one alert answers only by a named button.
+        { cancelable: false },
       );
       return { surfaced: true, checked: true };
     } catch (_e) { /* proposal is additive; the save already stands */ } finally {
