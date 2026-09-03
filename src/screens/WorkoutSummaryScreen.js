@@ -178,12 +178,11 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     sessionAdjustments = [],
   } = route.params || {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, units, userProfile, session, tier, hasUnseenCoachChange } = useAppStore(useShallow(s => ({
+  const { user, units, userProfile, session, hasUnseenCoachChange } = useAppStore(useShallow(s => ({
     user: s.user,
     units: s.units,
     userProfile: s.userProfile,
     session: s.session,
-    tier: s.tier,
     // CO-3 (cohesion audit 2026-07-09): the SAME unseen-coach-change signal
     // that drives the Coach-tab icon badge (T2), reused here so the summary
     // only ever links to Coach when there's a genuinely relevant, fresh
@@ -199,7 +198,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // NEW-002 rebuild: the post-workout partner beat (Duolingo's post-lesson
   // nudge is the highest-value re-engagement moment). Renders only when
   // paired, live path, and not calm/ED-suppressed.
-  const partners = usePartners(user?.id, tier);
+  const partners = usePartners(user?.id);
   // Renamed to feedbackSheet to avoid clashing with the per-set
   // feedback state below (sessionDifficulty, overallPump, etc.).
   // Both live in the same scope, JS doesn't let two consts share a
@@ -439,10 +438,10 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
 
   // The post-workout beat surfaces EVERY currently active/resting paired
   // partner (L06-F4 fix), not just the single "primary" pair usePartners kept
-  // for the legacy single-pair consumers. Pro-only, never read-only, never
-  // under calm/ED suppression — the same gating the single-partner beat always
-  // had, just applied per pair instead of to one partnership.
-  const activeBeatPairs = (!readOnly && !calmSuppressed && tier === 'pro')
+  // for the legacy single-pair consumers. Never read-only, never under
+  // calm/ED suppression — the same gating the single-partner beat always had,
+  // just applied per pair instead of to one partnership.
+  const activeBeatPairs = (!readOnly && !calmSuppressed)
     ? (partners.pairs || []).filter((pp) => pp.rowState === 'active' || pp.rowState === 'resting')
     : [];
   const beatEligible = activeBeatPairs.length > 0;
@@ -719,7 +718,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
       getAllExercises(),
       getAllWorkouts(user.id),
     ]);
-    const resolved = await getEffectiveLandmarks(user.id, { tier }).catch(() => null);
+    const resolved = await getEffectiveLandmarks(user.id).catch(() => null);
     setLandmarkResolution(resolved);
     const recentSets = allSets.filter(s => s.createdAt >= sessionWeekStart && s.createdAt < sessionWeekEnd);
     const exerciseMap = Object.fromEntries(allExercises.map(e => [e.id, e]));
@@ -1218,12 +1217,8 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
     : 'See your progress';
 
   // Coach: only when there is a genuinely relevant state to point at, never
-  // a generic upsell. tier is re-checked here even though hasUnseenCoachChange
-  // is only ever set true for a pro user (HomeScreen's showCoachBanner
-  // mirror) -- the same defence-in-depth this screen already applies to the
-  // partner beat below, and the CoachOutput route itself is withProGuard-
-  // wrapped in RootNavigator.js, so a free-tier tap still can't reach it.
-  const showCoachLink = !readOnly && tier === 'pro' && hasUnseenCoachChange;
+  // a generic upsell.
+  const showCoachLink = !readOnly && hasUnseenCoachChange;
 
   // Photos LOOP-3 (D4): the competence-event id the photo invitation dedupes on.
   // COMPETENCE ONLY — a claimed session/consistency milestone (its stable rung
@@ -1231,7 +1226,7 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
   // per session). Never a weigh-in, bodyweight, body-composition or appearance
   // event. Null on the read-only history view and when no competence win fired,
   // so ProgressPhotoPrompt renders nothing. The prompt re-gates on suppression /
-  // Pro / opt-out / frequency itself.
+  // opt-out / frequency itself.
   const photoPromptMilestoneId = readOnly
     ? null
     : milestone?.key
@@ -1651,13 +1646,12 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
         {/* Photos LOOP-3 (D4): the calm, opt-in "mark the moment" invitation,
             appended inside the celebration surface on a competence win only (a
             PB or a session-streak milestone). ProgressPhotoPrompt owns every
-            gate itself (fail-closed suppression, Pro, permanent opt-out, ≤1/day
+            gate itself (fail-closed suppression, permanent opt-out, ≤1/day
             + per-milestone dedupe); a null milestone id renders nothing. */}
         {photoPromptMilestoneId ? (
           <RevealSection delay={1400}>
             <ProgressPhotoPrompt
               milestoneId={photoPromptMilestoneId}
-              tier={tier}
               onAddPhoto={() => navigateCrossTab(navigation, 'ProgressTab', 'ProgressPhotos')}
             />
           </RevealSection>

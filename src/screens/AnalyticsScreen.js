@@ -17,7 +17,6 @@ import SectionLabel from '../components/SectionLabel';
 import ScreenHeader from '../components/ScreenHeader';
 import { SkeletonCard } from '../components/Skeleton';
 import AnimatedEntrance from '../components/AnimatedEntrance';
-import { ProBadge } from '../components/ProGate';
 import EmptyState from '../components/EmptyState';
 import InfoTooltip from '../components/InfoTooltip';
 import useAppStore from '../store/useAppStore';
@@ -119,10 +118,10 @@ export default function AnalyticsScreen({ navigation, route }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
 
-  // COMP-004 "Body pillar": Pro-only weight-trend read (morning weighing is a
-  // Pro feature). The hook always runs (hooks are unconditional); the pillar
-  // shows its honest locked affordance for free tier instead.
-  const weightTrend = useWeightTrend(tier === 'pro' ? user?.id : null);
+  // COMP-004 "Body pillar". FOUNDER DECISION (fully free, no tier split):
+  // morning weighing runs for every account now, so the Pro-only ternary
+  // that withheld the userId is retired.
+  const weightTrend = useWeightTrend(user?.id);
   // Campaign 23 R1 (§16/§22 R2): the Visual pillar's derived signal. Fails
   // closed under calm mode/open ED flag regardless of tier (usePhotoSuppression
   // inside the hook); only fetches scan data for a Pro user once suppression
@@ -287,9 +286,8 @@ export default function AnalyticsScreen({ navigation, route }) {
                 <PillarRow
                   icon="body-outline"
                   label="Body"
-                  proGated={tier !== 'pro'}
-                  stateText={tier === 'pro' ? bodyCopy.state : null}
-                  evidenceText={tier === 'pro' ? bodyCopy.evidence : null}
+                  stateText={bodyCopy.state}
+                  evidenceText={bodyCopy.evidence}
                   onPress={() => navigation.navigate('BodyMetrics')}
                 />
               </View>
@@ -302,9 +300,8 @@ export default function AnalyticsScreen({ navigation, route }) {
                   <PillarRow
                     icon="camera-outline"
                     label="Progress photos"
-                    proGated={tier !== 'pro'}
-                    stateText={tier === 'pro' && !visualPillar.loading ? visualCopy.state : null}
-                    evidenceText={tier === 'pro' && !visualPillar.loading ? visualCopy.evidence : null}
+                    stateText={!visualPillar.loading ? visualCopy.state : null}
+                    evidenceText={!visualPillar.loading ? visualCopy.evidence : null}
                     onPress={() => navigation.navigate('ProgressPhotos')}
                   />
                 </>
@@ -334,20 +331,17 @@ export default function AnalyticsScreen({ navigation, route }) {
 
         {/* ── Empty state (U-D-4: encouragement-framed, matching BodyMetrics) ──
             C5-P35-01 (D96): the second sentence named three destinations
-            (body metrics, progress photos, scans) that are ALL Pro-locked
-            for a free user with no history - the read-only guards probe a
-            history they do not have, so each tap lands on the hard gate.
-            The one piece of copy on an otherwise empty screen was a promise
-            the tier could not keep. Each tier now reads the destinations
-            that are genuinely open to it. No gate and no tier scope changes;
-            the sentence simply matches the guard that already exists. */}
+            (body metrics, progress photos, scans) that were Pro-locked for a
+            free user with no history - the read-only guards probe a history
+            they do not have, so each tap lands on the hard gate.
+            FOUNDER DECISION (fully free, no tier split): every destination
+            is now genuinely open to every account, so there is one sentence,
+            not a tier fork. */}
         {!loading && !loadError && allSets.length === 0 && (
           <EmptyState
             icon="analytics-outline"
             title="No training trends yet"
-            text={tier === 'pro'
-              ? 'Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.'
-              : 'Training charts appear here once sessions are logged. Your consistency, lifts and full history are still available below.'}
+            text="Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below."
           />
         )}
 
@@ -523,7 +517,6 @@ export default function AnalyticsScreen({ navigation, route }) {
               icon="people"
               color={t.colors.primary}
               label="Partners"
-              pro={tier !== 'pro'}
               onPress={() => {
                 trackPartnerSurfaceView('progress_tile');
                 navigation.navigate('Partner', { source: 'progress_tile' });
@@ -538,17 +531,14 @@ export default function AnalyticsScreen({ navigation, route }) {
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
-// Campaign 23 (§21/§22 R2): one row inside the Answer Block. `proGated` mirrors
-// NavTile's `pro` idiom exactly (icon stays its normal colour, a ProBadge
-// shows, no invented data is displayed) -- never the separate "not enough
-// data yet" dimmed treatment, which for these pillars is carried by their
-// own honest state/evidence copy instead.
-function PillarRow({ icon, label, stateText, evidenceText, proGated, onPress }) {
+// Campaign 23 (§21/§22 R2): one row inside the Answer Block.
+// FOUNDER DECISION (fully free, no tier split): the `proGated` variant
+// (ProBadge + "Part of Pro" dimmed treatment) is retired -- every pillar
+// always shows its real state/evidence copy now.
+function PillarRow({ icon, label, stateText, evidenceText, onPress }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  const a11y = proGated
-    ? `${label}. Part of Pro.`
-    : [label, stateText, evidenceText].filter(Boolean).join('. ');
+  const a11y = [label, stateText, evidenceText].filter(Boolean).join('. ');
   return (
     <TouchableOpacity
       style={styles.pillarRow}
@@ -561,21 +551,14 @@ function PillarRow({ icon, label, stateText, evidenceText, proGated, onPress }) 
       <View style={styles.pillarTextWrap}>
         <View style={styles.pillarLabelRow}>
           <Text style={[styles.pillarLabel, live.pillarLabel]}>{label}</Text>
-          {proGated ? <ProBadge size="sm" /> : null}
         </View>
-        {proGated ? (
-          <Text style={[styles.pillarEvidence, live.pillarEvidence]} numberOfLines={1}>Part of Pro</Text>
-        ) : (
-          <>
-            {/* Founder device order 2026-08-17: the two-line clamps cut
-                pillar sentences mid-word ("Maintenance comes fr..."), so
-                nearly every box at the top of Progress ran out of space.
-                Evidence text wraps in full now; the row grows instead of
-                truncating. */}
-            {stateText ? <Text style={[styles.pillarState, live.pillarState]}>{stateText}</Text> : null}
-            {evidenceText ? <Text style={[styles.pillarEvidence, live.pillarEvidence]}>{evidenceText}</Text> : null}
-          </>
-        )}
+        {/* Founder device order 2026-08-17: the two-line clamps cut
+            pillar sentences mid-word ("Maintenance comes fr..."), so
+            nearly every box at the top of Progress ran out of space.
+            Evidence text wraps in full now; the row grows instead of
+            truncating. */}
+        {stateText ? <Text style={[styles.pillarState, live.pillarState]}>{stateText}</Text> : null}
+        {evidenceText ? <Text style={[styles.pillarEvidence, live.pillarEvidence]}>{evidenceText}</Text> : null}
       </View>
       <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
     </TouchableOpacity>
@@ -705,17 +688,15 @@ function SessionCard({ workout, onPress }) {
   );
 }
 
-function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
+function NavTile({ icon, color, label, onPress, locked, lockedSub }) {
   // `locked` = not-enough-data-yet (the Recaps countdown pattern): dimmed
   // tile, a progress icon and a countdown sub-line, so it reads as "keep
   // going" rather than a paywall. Tapping fires an inline explanation
   // rather than navigating. Used for features that need accumulated
   // training data (e.g. Recaps needs RECAP_GATE logged sessions).
-  // `pro` marks a tile whose destination is Pro-gated, shown to free users
-  // only as an undimmed icon + PRO badge. The two never share a look (T6,
-  // world-class-audit-2026-07-03/01-newbie-journey.md #11: both used to
-  // read as the same dimmed padlock; time-outline replaces the padlock
-  // here so a not-enough-data tile can never be misread as a paywall).
+  // FOUNDER DECISION (fully free, no tier split): the `pro` variant
+  // (undimmed icon + PRO badge for a Pro-gated destination) is retired --
+  // no tile on this screen is tier-gated any more.
   // CP-10 batch G (2026-07-11): sibling function-component scope, own
   // useTheme() call (same reasoning as PillarRow above), same shared
   // buildLiveStyles(t). `color` arrives pre-resolved from the caller
@@ -730,7 +711,7 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
       onPress={() => { haptics.selection(); onPress?.(); }}
       activeOpacity={0.75}
       accessibilityRole="button"
-      accessibilityLabel={locked ? `${label}. ${lockedSub ?? 'Not ready yet.'}` : pro ? `${label}. Part of Pro.` : label}
+      accessibilityLabel={locked ? `${label}. ${lockedSub ?? 'Not ready yet.'}` : label}
       accessibilityState={{ disabled: !!locked }}
     >
       <Ionicons
@@ -740,7 +721,6 @@ function NavTile({ icon, color, label, onPress, locked, lockedSub, pro }) {
       />
       <View style={styles.navTileLabelRow}>
         <Text style={[styles.navTileLabel, live.navTileLabel, locked && [styles.navTileLabelLocked, live.navTileLabelLocked]]}>{label}</Text>
-        {pro ? <ProBadge size="sm" /> : null}
       </View>
       {locked && lockedSub ? (
         <Text style={[styles.navTileSub, live.navTileSub]} numberOfLines={1}>{lockedSub}</Text>

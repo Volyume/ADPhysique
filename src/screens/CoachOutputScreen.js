@@ -2079,7 +2079,9 @@ export default function CoachOutputScreen({ navigation, route }) {
         // the differential-paywall trigger can't disagree with the gates;
         // isPaidTier is the fallback before the store tier has hydrated.
         userTier: storeTier ?? require('../lib/proGate').isPaidTier(userProfile),
-        hasUsedTrial: !require('../lib/payments/cascade').canStillTrial(userProfile),
+        // Fully free product (D137): there is no trial to have used; the
+        // engine's differential paywall output is disabled regardless.
+        hasUsedTrial: false,
       });
       // Learning is observational. An ED/FFM/manual-target intervention hold
       // cannot erase a valid energy-balance observation; only an evidence

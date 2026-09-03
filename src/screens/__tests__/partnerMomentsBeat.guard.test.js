@@ -19,9 +19,10 @@
  *     renders 1 row and 3 pairs render 3 rows through the same code path,
  *     i.e. single-partner behaviour is not a separate branch that could
  *     drift from the multi-partner path);
- *   - gates the whole beat behind !readOnly && !calmSuppressed &&
- *     tier === 'pro', so free tier, read-only history views and calm/ED
- *     suppression still hide it completely;
+ *   - gates the whole beat behind !readOnly && !calmSuppressed (Volyume is
+ *     fully free, founder decision 2026-09-03, so there is no tier gate any
+ *     more), so read-only history views and calm/ED suppression still hide
+ *     it completely;
  *   - tracks the in-flight cheer send PER PAIR (sendingCheerPairIds keyed by
  *     pairId) so sending to one partner never disables another's button;
  *   - marks every still-shown moment seen on unmount, not just one;
@@ -44,8 +45,8 @@ describe('WorkoutSummaryScreen partner-beat: every paired partner, not just one'
     );
   });
 
-  test('derives the beat pair list from partners.pairs, gated pro/live/non-calm', () => {
-    expect(src).toMatch(/const activeBeatPairs = \(!readOnly && !calmSuppressed && tier === 'pro'\)/);
+  test('derives the beat pair list from partners.pairs, gated live/non-calm', () => {
+    expect(src).toMatch(/const activeBeatPairs = \(!readOnly && !calmSuppressed\)/);
     expect(src).toMatch(
       /\(partners\.pairs \|\| \[\]\)\.filter\(\(pp\) => pp\.rowState === 'active' \|\| pp\.rowState === 'resting'\)/,
     );
@@ -104,8 +105,9 @@ describe('WorkoutSummaryScreen partner-beat: every paired partner, not just one'
     expect(src).toContain('Partner cheers need the latest app update before they can send.');
   });
 
-  test('the beat keeps its existing gating (free tier / read-only / calm never see it)', () => {
-    expect(src).toMatch(/!readOnly && !calmSuppressed && tier === 'pro'/);
+  test('the beat keeps its existing gating (read-only / calm never see it; no tier gate any more)', () => {
+    expect(src).toMatch(/!readOnly && !calmSuppressed/);
+    expect(src).not.toMatch(/tier === 'pro'/);
   });
 
   test('preview win can target the specific pair its row belongs to', () => {

@@ -70,9 +70,13 @@ describe('Audit §15#1: WeeklyStoryScreen wiring', () => {
     }
   });
 
-  test('registered in RootNavigator Pro-gated, exactly like CoachOutput/WeeklyCheckIn', () => {
-    expect(NAVIGATOR).toMatch(/const GatedWeeklyStory\s*=\s*lazyScreen\(\(\) => withProGuard\(require\('\.\.\/screens\/WeeklyStoryScreen'\)\.default, 'Your week'\)\);/);
-    expect(NAVIGATOR).toMatch(/<Stack\.Screen name="WeeklyStory" component=\{GatedWeeklyStory\} options=\{\{ headerShown: false \}\} \/>/);
+  // D137 (fully free product): every withProGuard wrap is retired
+  // (proScreenGating.guard.test.js) -- WeeklyStory is a plain registration
+  // now, exactly like CoachOutput/WeeklyCheckIn.
+  test('registered in RootNavigator as a plain route, exactly like CoachOutput/WeeklyCheckIn (D137)', () => {
+    expect(NAVIGATOR).toMatch(/const WeeklyStoryScreen\s*=\s*lazyScreen\(\(\) => require\('\.\.\/screens\/WeeklyStoryScreen'\)\.default\);/);
+    expect(NAVIGATOR).toMatch(/<Stack\.Screen name="WeeklyStory" component=\{WeeklyStoryScreen\} options=\{\{ headerShown: false \}\} \/>/);
+    expect(NAVIGATOR).not.toMatch(/GatedWeeklyStory/);
   });
 
   test('has exactly one entry point, from the Coach tab\'s existing "This week" section', () => {

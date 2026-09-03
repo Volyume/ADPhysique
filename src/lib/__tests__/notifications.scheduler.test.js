@@ -58,6 +58,19 @@ jest.mock('../../store/useAppStore', () => ({
 // by default so the restore path is exercisable; the E10-F4 tier-gate tests
 // below steer tier through mockGetState.
 const mockPermissionStatus = jest.fn(() => Promise.resolve('granted'));
+// FULLY-FREE PRODUCT (founder decision 2026-09-03). The cascade-gate family
+// is a no-op while proGate.FULL_ACCESS_FOR_ALL is on: there is no trial to
+// warn anyone about. The machinery is retained, not deleted, so this mock
+// makes the override switchable and the suite pins BOTH states.
+let mockFullAccess = true;
+jest.mock('../proGate', () => ({
+  __esModule: true,
+  get FULL_ACCESS_FOR_ALL() { return mockFullAccess; },
+  get PRO_BETA_ACTIVE() { return mockFullAccess; },
+  _resolveTier: (state, override) => (override ? 'pro' : 'free'),
+  isPaidTier: () => 'pro',
+}));
+
 jest.mock('../notifications/permissions', () => ({
   getNotificationPermissionStatus: (...args) => mockPermissionStatus(...args),
 }));
@@ -561,8 +574,33 @@ describe('restoreNotifications', () => {
 
 // ─── scheduleCascadeGateNotifications ──────────────────────────────
 
-describe('scheduleCascadeGateNotifications', () => {
+describe('scheduleCascadeGateNotifications: stood down (fully-free product)', () => {
   const DAY = 86400000;
+
+  test('a future trial end lays NOTHING while FULL_ACCESS_FOR_ALL is on', async () => {
+    await scheduler.scheduleCascadeGateNotifications(Date.now() + 10 * DAY);
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+
+  test('any already-laid gate is cancelled, so an existing device drains', async () => {
+    await scheduler.scheduleCascadeGateNotifications(Date.now() + 10 * DAY);
+    expect(mockCancelAsync).toHaveBeenCalledWith('volyume_cascade_day19');
+    expect(mockCancelAsync).toHaveBeenCalledWith('volyume_cascade_day21');
+  });
+
+  test('an invalid date is still a silent no-op, not a throw', async () => {
+    await expect(scheduler.scheduleCascadeGateNotifications('not-a-date'))
+      .resolves.toBeUndefined();
+    expect(mockScheduleAsync).not.toHaveBeenCalled();
+  });
+});
+
+// The DORMANT schedule. Retained and still pinned in full, so flipping
+// FULL_ACCESS_FOR_ALL back restores known behaviour, not untested behaviour.
+describe('scheduleCascadeGateNotifications (dormant: override off)', () => {
+  const DAY = 86400000;
+  beforeEach(() => { mockFullAccess = false; });
+  afterEach(() => { mockFullAccess = true; });
 
   test('schedules day-19 and day-21 one-shots from a future trial end', async () => {
     const endsAt = Date.now() + 10 * DAY; // 10 days out, both gates future

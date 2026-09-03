@@ -26,8 +26,11 @@
  *   5. Recovery adjustment / deload suggestion affecting today
  *   6. Re-entry question
  *   7. Nutrition-phase mismatch
- *   8. Trial ENDING with genuine payment action
  *   -> null (nothing eligible)
+ *
+ * FOUNDER DECISION (fully free, no trial, no expiry): rank 8, "Trial ENDING
+ * with genuine payment action", is retired along with the trial itself --
+ * resolveTrialEnding and its TODAY_LINE_RANKS slot are gone.
  *
  * RANK 1 NOTE. "ED/calm/photo suppression gates untouched and still senior"
  * (CLAUDE.md, PRESERVATION CONTRACT). Today, ED-flag/calm-mode safety acts
@@ -181,23 +184,6 @@ function resolvePhaseMismatch(facts) {
   };
 }
 
-// Rank 8 — trial ENDING with genuine payment action. FOUNDER-RULINGS-PHASE2
-// R3: only this state, never the everyday S1/S2/S3 value banner, may occupy
-// the Today line. Spec §18 mock G literal wording.
-function resolveTrialEnding(facts) {
-  const f = facts?.trialEnding;
-  if (!f?.eligible) return null;
-  const when = f.daysRemaining <= 0 ? 'today' : 'tomorrow';
-  const text = `Your trial ends ${when}. Keep your coaching.`;
-  return {
-    key: 'trial_ending',
-    text,
-    onPress: f.onPress,
-    onDismiss: null,
-    accessibilityLabel: text,
-  };
-}
-
 // Rank 1 — reserved safety-consequential slot. See module header note.
 function resolveSafety(facts) {
   const f = facts?.safety;
@@ -222,7 +208,6 @@ export const TODAY_LINE_RANKS = [
   resolveRecovery,
   resolveReEntry,
   resolvePhaseMismatch,
-  resolveTrialEnding,
 ];
 
 /**

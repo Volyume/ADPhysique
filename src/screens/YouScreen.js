@@ -20,14 +20,9 @@ import * as haptics from '../lib/haptics';
 import ScreenHeader from '../components/ScreenHeader';
 import Card from '../components/Card';
 import PressableCard from '../components/PressableCard';
-import { ProBadge } from '../components/ProGate';
 import { Skeleton } from '../components/Skeleton';
 import SectionLabel from '../components/SectionLabel';
 import ProfileAvatarMark from '../components/ProfileAvatarMark';
-// Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §14; FOUNDER-RULINGS-
-// PHASE2 R3): the everyday trial value card rehomes here from Home. Same
-// component, same variant, same content builders as it always used.
-import AttentionCard from '../components/AttentionCard';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -48,16 +43,7 @@ import { GOAL_LABELS, PHASE_LABELS } from '../lib/coachingGoals';
 import { buildCoachLedger } from '../lib/coachLedger';
 import { localWeekStartMs, localDayKey } from '../lib/dayKey';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
-import { stageOf, trialEndsLabel } from '../lib/payments/cascade';
 import { isApplePrivateRelayEmail } from '../lib/appleIdentity';
-import {
-  trialStartFromEndsAt,
-  selectTrialVariant,
-  firstReviewUnlockDate,
-  dayName,
-  trialBannerLine,
-  TRIAL_LENGTH_DAYS,
-} from '../lib/trialActivation';
 
 function formatDate(ms) {
   if (!ms) return null;
@@ -90,7 +76,10 @@ function formatShortDate(ms) {
 // prop-drilled `live`/`t` from YouScreen, matching NutritionTargetsScreen's
 // MacroCard/WhySection precedent from batch E), own useTheme() call and the
 // shared buildLiveStyles(t) (same `styles` block this component reads).
-function NavRow({ icon, label, sub, onPress, pro }) {
+// FOUNDER DECISION (fully free, no tier split): the `pro` flag (ProBadge +
+// "Part of Pro" accessibility suffix) is retired -- no row on this screen
+// gates on tier any more.
+function NavRow({ icon, label, sub, onPress }) {
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   // R9 (D70): the house selection() beat on every nav-row tap, added once
@@ -103,7 +92,7 @@ function NavRow({ icon, label, sub, onPress, pro }) {
     <PressableCard
       style={[styles.navRow, live.navRow]}
       onPress={handlePress}
-      accessibilityLabel={pro ? `${label}. Part of Pro.` : label}
+      accessibilityLabel={label}
     >
       <View style={[styles.navRowIcon, live.navRowIcon]}>
         <Ionicons name={icon} size={18} color={t.colors.primary} />
@@ -111,7 +100,6 @@ function NavRow({ icon, label, sub, onPress, pro }) {
       <View style={styles.navRowText}>
         <View style={styles.navRowLabelRow}>
           <Text style={[styles.navRowLabel, live.navRowLabel]}>{label}</Text>
-          {pro ? <ProBadge size="sm" /> : null}
         </View>
         {sub ? <Text style={[styles.navRowSub, live.navRowSub]}>{sub}</Text> : null}
       </View>
@@ -232,10 +220,6 @@ export default function YouScreen({ navigation }) {
   const [latestReview, setLatestReview] = useState(null);
   const [hasCoachHistory, setHasCoachHistory] = useState(false);
   const [coachReadiness, setCoachReadiness] = useState(null);
-  // Campaign 22 Phase 2 Stage 2 (FOUNDER-RULINGS-PHASE2 R3): the everyday
-  // trial value card, rehomed here from Home. { line, variant } | null.
-  const [trialBanner, setTrialBanner] = useState(null);
-  const [trialBannerDismissed, setTrialBannerDismissed] = useState(false);
   const [loadError, setLoadError] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   // D134: the live How you train line, tier-blind, refreshed on focus. Its
@@ -285,12 +269,13 @@ export default function YouScreen({ navigation }) {
           // no completed decision for the current week (e.g. Monday's new
           // output before this week's check-in is answered).
           getCoachOutputHistory(user.id, 1),
-          tier === 'pro' ? getMorningWeightsLast14Days(user.id) : Promise.resolve([]),
-          tier === 'pro' ? AsyncStorage.getItem('@volyume_notification_prefs') : Promise.resolve(null),
-          tier === 'pro' ? getOpenEdPatternFlag(user.id) : Promise.resolve(null),
-          tier === 'pro'
-            ? AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified')
-            : Promise.resolve('unspecified'),
+          // FOUNDER DECISION (fully free, no tier split): these four used to
+          // read Free as an empty/absent placeholder; they run unconditionally
+          // now, for everyone.
+          getMorningWeightsLast14Days(user.id),
+          AsyncStorage.getItem('@volyume_notification_prefs'),
+          getOpenEdPatternFlag(user.id),
+          AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified'),
         ]);
         if (!alive) return;
         const failed = [workoutsResult, latestResult, checkinResult, historyResult].some((r) => r.status === 'rejected');
@@ -331,74 +316,25 @@ export default function YouScreen({ navigation }) {
           || (Number.isFinite(userProfile?.scoffScore) && userProfile.scoffScore >= 2)
           || wellbeing === 'read_failed'
           || isCalm(wellbeing);
-        const ledger = tier === 'pro'
-          ? buildCoachLedger({
-              weighIns7d,
-              completedSessions: completed.length,
-              firstWeightAt: Number.isFinite(firstWeightAt) ? firstWeightAt : null,
-              checkinDay,
-              edFlagOpen: edSuppressed,
-            })
-          : null;
+        // FOUNDER DECISION (fully free, no tier split): the ledger runs for
+        // everyone now, not only Pro.
+        const ledger = buildCoachLedger({
+          weighIns7d,
+          completedSessions: completed.length,
+          firstWeightAt: Number.isFinite(firstWeightAt) ? firstWeightAt : null,
+          checkinDay,
+          edFlagOpen: edSuppressed,
+        });
         if (workoutsResult.status === 'fulfilled') setSessions(completed.length);
         if (latestResult.status === 'fulfilled' && checkinResult.status === 'fulfilled') setLatestReview(latestDecision);
         if (historyResult.status === 'fulfilled') setHasCoachHistory((history || []).length > 0);
-        setCoachReadiness(ledger ? {
+        setCoachReadiness({
           ledger,
           unlockLabel: ledger.unlockLabel,
           unlockDateMs: ledger.unlockDate ? ledger.unlockDate.getTime() : null,
           firstWeightAt: Number.isFinite(firstWeightAt) ? firstWeightAt : null,
           edSuppressed,
-        } : null);
-
-        // Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §14;
-        // FOUNDER-RULINGS-PHASE2 R3): the everyday trial value presence,
-        // rehomed from Home's retired loadTrialBanner. Same
-        // selectTrialVariant/trialBannerLine logic, same day-0-to-trial-end
-        // window, same completed-decision retirement predicate (latestDecision,
-        // computed above by the SAME isCompletedCoachDecision this hub already
-        // applies to its own status card) and the SAME per-trial dismissal key
-        // (@volyume_trial_value_banner_dismissed_${user.id}, reused with its
-        // historical meaning). Reuses the weighIns7d/firstWeightAt/checkinDay/
-        // edSuppressed facts this effect already gathered for coachReadiness
-        // above -- never a parallel computation of the same counts.
-        if (tier === 'pro' && stageOf(userProfile) === 'pro_trial') {
-          // Re-lay the day-3 push on every Coach-tab open during the trial so
-          // its baked variant/copy/unlock-day track the freshest counters
-          // (byte-identical side effect to the retired Home loader; it simply
-          // fires from here now that the surface has moved).
-          try {
-            // eslint-disable-next-line global-require
-            require('../lib/notifications').scheduleTrialDay3Notification(user.id, userProfile)?.catch?.(() => {});
-          } catch (_) { /* best-effort */ }
-
-          const endsAt = userProfile?.proTrialEndsAt ?? userProfile?.pro_trial_ends_at ?? null;
-          const trialStart = trialStartFromEndsAt(endsAt);
-          const trialDay = trialStart != null ? Math.floor((Date.now() - trialStart) / 86400000) : null;
-          if (trialStart != null && trialDay >= 0 && trialDay <= TRIAL_LENGTH_DAYS && !latestDecision) {
-            const completedSessions = (workouts || []).filter(
-              (w) => !!(w.isCompleted ?? w.is_completed) && Number(w.startedAt ?? w.started_at ?? 0) >= trialStart,
-            ).length;
-            const variant = selectTrialVariant({ completedSessions, weighIns7d });
-            const unlock = firstReviewUnlockDate(firstWeightAt, checkinDay);
-            let line = trialBannerLine({
-              variant, completedSessions, weighIns7d,
-              unlockDayName: dayName(unlock), trialDay, edFlagOpen: edSuppressed,
-            });
-            const endsLabel = trialEndsLabel(userProfile);
-            if (line && endsLabel) line = `${line} Your free trial runs to ${endsLabel}.`;
-            const dKey = `@volyume_trial_value_banner_dismissed_${user.id}`;
-            // Read the per-trial dismissal BEFORE revealing the banner so a
-            // banner the user already dismissed can't flash for a frame.
-            const dv = await AsyncStorage.getItem(dKey).catch(() => null);
-            setTrialBannerDismissed(dv === 'true');
-            setTrialBanner({ line, variant });
-          } else {
-            setTrialBanner(null);
-          }
-        } else {
-          setTrialBanner(null);
-        }
+        });
 
         setLoadError(failed);
       } catch (e) {
@@ -410,12 +346,7 @@ export default function YouScreen({ navigation }) {
     }
     load();
     return () => { alive = false; };
-    // Campaign 22 Phase 2 Stage 2: the rehomed trial banner reads several
-    // more userProfile fields (proTrialEndsAt, pro_trial_ends_at) beyond the
-    // scoffScore this effect already depended on, so the whole object is the
-    // correct dependency now -- a genuine improvement, not just satisfying
-    // the lint rule: the trial banner recomputes when its inputs change.
-  }, [user?.id, tier, reloadKey, userProfile]));
+  }, [user?.id, reloadKey, userProfile]));
 
   // The e-mail fallback is a nicety for people whose address carries their
   // name. Apple's Hide My Email gives a random token instead, so that fallback
@@ -425,58 +356,25 @@ export default function YouScreen({ navigation }) {
       ? null
       : user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim())
     || 'Athlete';
-  const isPro = tier === 'pro';
   const avatarUri = userProfile?.avatarUri || null;
   const reviewDate = latestReview ? formatDate(latestReview.weekStart) : null;
   const profileFocus = profileFocusLine(userProfile);
   const pendingCoachCopy = buildPendingCoachCopy(coachReadiness);
 
-  const partners = usePartners(isPro ? user?.id : null, tier);
-  const partnersSub = isPro
-    ? partnerRowLine({
-        rowState: partners.rowState,
-        partnerName: partners.partnership?.partnerFirstName,
-        partnerWeek: partners.partnerWeek,
-      })
-    : 'Quiet accountability with someone you trust';
+  // FOUNDER DECISION (fully free, no tier split): every account reaches
+  // Partners now, so the free placeholder line and the ternary that
+  // withheld `user?.id` are retired. `tier` still passes through to
+  // usePartners (its own cap logic lives in lib/partners/signals.js,
+  // outside this lane).
+  const partners = usePartners(user?.id, tier);
+  const partnersSub = partnerRowLine({
+    rowState: partners.rowState,
+    partnerName: partners.partnership?.partnerFirstName,
+    partnerWeek: partners.partnerWeek,
+  });
   const openPartners = useCallback(() => {
     trackPartnerSurfaceView('coach_row');
     navigateCrossTab(navigation, 'ProgressTab', 'Partner', { source: 'coach_row' });
-  }, [navigation]);
-
-  // Campaign 22 Phase 2 Stage 2: same AsyncStorage key the retired Home
-  // loader used, reused with its historical meaning (a user who already
-  // dismissed the trial value banner on Home stays dismissed here).
-  const dismissTrialBanner = useCallback(() => {
-    setTrialBannerDismissed(true);
-    if (user?.id) {
-      AsyncStorage.setItem(`@volyume_trial_value_banner_dismissed_${user.id}`, 'true').catch(() => {});
-    }
-  }, [user?.id]);
-  // The trial card's tap target, per variant (lead ruling, Stage 2 review;
-  // D33 register). S3's copy is "One session starts your first coaching
-  // review" -- with zero completed sessions the weekly check-in opens a
-  // hold receipt, not the promised session, so S3 leads to the Today tab's
-  // Start hero instead (the C5-P12-01 principle: the card leads to the
-  // session it names, or stops claiming to). Every other variant is
-  // review/weigh-in-voiced and opens the weekly check-in directly.
-  const openTrialSurface = useCallback(() => {
-    haptics.selection();
-    if (trialBanner?.variant === 'S3') {
-      navigateCrossTab(navigation, 'HomeTab', 'Home');
-      return;
-    }
-    navigation.navigate('WeeklyCheckIn');
-  }, [navigation, trialBanner?.variant]);
-  const openTrialMethodology = useCallback(() => {
-    haptics.selection();
-    // Wave C item 3 (whole-app coherence campaign 24, 2026-08-17,
-    // WAVE-C-FINDINGS.md STATE_DEFECT): every other Methodology entry point
-    // passes a source so methodology_opened telemetry attributes correctly
-    // (CoachOutputScreen.js 'why_block'/'held_decisions',
-    // ProSetupCompleteScreen.js 'setup_complete'). This was the sole
-    // unlabelled call site, silently logging 'unknown'.
-    navigation.navigate('Methodology', { source: 'trial_banner' });
   }, [navigation]);
 
   return (
@@ -547,15 +445,7 @@ export default function YouScreen({ navigation }) {
           <View style={styles.profileInfo}>
             <View style={styles.profileNameRow}>
               <Text style={[styles.profileName, live.profileName]} numberOfLines={1}>{displayName}</Text>
-              {isPro ? <ProBadge size="sm" /> : null}
             </View>
-            {/* C5-P7-10 (D96): a Free user was never told which tier they
-                were on. The first tier signal in the whole product was
-                hitting a lock. One calm line, stated where Pro already
-                states itself with a badge. No CTA, no upsell, no price. */}
-            {!isPro ? (
-              <Text style={[styles.profileStat, live.profileStat]}>You&apos;re on Free</Text>
-            ) : null}
             {sessions != null ? (
               <Text style={[styles.profileStat, live.profileStat]}>{sessions} completed session{sessions === 1 ? '' : 's'}</Text>
             ) : user?.id ? (
@@ -566,47 +456,30 @@ export default function YouScreen({ navigation }) {
           <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
         </Card>
 
-        {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §14;
-            FOUNDER-RULINGS-PHASE2 R3): the everyday trial value presence,
-            rehomed from Home's Today-line top slot. Same AttentionCard
-            component and variant='trial' content Home always rendered; only
-            the surface and the tap destination (this hub's own Weekly
-            check-in, see openTrialSurface above) changed. */}
-        {trialBanner && !trialBannerDismissed ? (
-          <AttentionCard
-            variant="trial"
-            trialBanner={trialBanner}
-            onTrialPress={openTrialSurface}
-            onTrialDismiss={dismissTrialBanner}
-            onMethodology={openTrialMethodology}
-          />
-        ) : null}
+        {/* FOUNDER DECISION (fully free, no tier split): the everyday trial
+            value card (AttentionCard variant="trial") is retired along with
+            the trial itself. */}
 
         {/* R8 (D68, founder: "cobbled together mess with duplication"):
             the status card is no longer a third voice restating what the
-            rows below already say. It renders in exactly two cases, and it
-            is now TAPPABLE - it IS the thing it describes:
-            - Pro with a completed decision: the weekly update hero, opens
-              CoachOutput directly (the old card said "Open it" but was not
-              pressable; the duplicate "Coaching decision" NavRow did the
-              opening one card down).
-            - Free: the single Pro pitch, opens ProUpgrade (replaces the
-              old non-tappable pitch card PLUS the duplicate "Upgrade to
-              Pro" NavRow underneath it).
-            Pro with no completed decision renders NO status card at all:
+            rows below already say. It is TAPPABLE - it IS the thing it
+            describes - and renders only once a completed decision exists:
+            the weekly update hero, opening CoachOutput directly (the old
+            card said "Open it" but was not pressable; the duplicate
+            "Coaching decision" NavRow did the opening one card down).
+            With no completed decision it renders NO status card at all:
             "Getting to know you" said nothing (founder verdict) and its
             body just pointed at the check-in row, which already carries
-            the full, specific readiness status (pendingCoachCopy). */}
-        {(!isPro || latestReview) ? (
+            the full, specific readiness status (pendingCoachCopy).
+            FOUNDER DECISION (fully free, no tier split): the Free pitch
+            branch (opening ProUpgrade) is retired -- there is nothing left
+            to pitch. */}
+        {latestReview ? (
           <Card
             style={styles.statusCard}
-            tone={isPro && latestReview ? 'primary' : undefined}
-            onPress={isPro
-              ? () => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)
-              : () => navigation.navigate('ProUpgrade', { source: 'coach_pitch_card' })}
-            accessibilityLabel={isPro
-              ? `Open your weekly coach update${reviewDate ? ` from ${reviewDate}` : ''}`
-              : 'Coach is available on Pro. Opens the upgrade screen.'}
+            tone="primary"
+            onPress={() => navigation.navigate('CoachOutput', latestReview?.weekStart ? { weekStart: latestReview.weekStart } : undefined)}
+            accessibilityLabel={`Open your weekly coach update${reviewDate ? ` from ${reviewDate}` : ''}`}
           >
             <View style={styles.statusTop}>
               <View style={[styles.statusIcon, live.statusIcon]}>
@@ -619,29 +492,20 @@ export default function YouScreen({ navigation }) {
                     category was marked three times over. The heading carries
                     its own weight. */}
                 <Text style={[styles.statusTitle, live.statusTitle]}>
-                  {isPro
-                    ? `Weekly coaching decision${reviewDate ? `: ${reviewDate}` : ''}`
-                    : 'Coach is available on Pro'}
+                  {`Weekly coaching decision${reviewDate ? `: ${reviewDate}` : ''}`}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
             </View>
             <Text style={[styles.statusBody, live.statusBody]}>
-              {/* C5-P7-08 (D96): for a Free user this tab is named "Coach"
-                  and the pitch described a coach in the present tense, as
-                  though it were reading their logs already. It now says what
-                  the tab BECOMES on Pro, and what is here either way. Copy
-                  only: no gating, no IA and no tier scope changes. */}
-              {isPro
-                ? 'What changed, what was held, and the exact signals behind it.'
-                : 'On Pro this tab carries your weekly check-in, the decision your coach made and the reason for it. Your profile and safety checks stay here either way.'}
+              What changed, what was held, and the exact signals behind it.
             </Text>
           </Card>
         ) : null}
 
-        {/* D134 (founder 2026-09-03): tier-blind, above the Pro-only Setup.
-            The first thing the coach builds from is free by law (CAP-19), so
-            every account sees it here, with its live line. */}
+        {/* D134 (founder 2026-09-03): tier-blind, above Setup. The first
+            thing the coach builds from is free by law (CAP-19), so every
+            account sees it here, with its live line. */}
         <View style={styles.section}>
           <SectionLabel>Your body</SectionLabel>
           <NavGroup>
@@ -654,102 +518,88 @@ export default function YouScreen({ navigation }) {
           </NavGroup>
         </View>
 
-        {isPro ? (
-          <View style={styles.section}>
-            <SectionLabel>This week</SectionLabel>
-            <NavGroup>
-            {/* R2-7 (remediation 2026-07-11, founder device walk build 2684):
-                the subtitle is ONE calm line - the readiness title only (a
-                short date fact like "First check-in 19 July", or the open/
-                needs-more one-liner). The explanatory sentence
-                (pendingCoachCopy.body) is NOT concatenated here; it is already
-                conveyed in full on WeeklyCheckInScreen (the row's destination),
-                so this row sits level with its one-line siblings instead of
-                wrapping to a four-line paragraph. */}
+        {/* FOUNDER DECISION (fully free, no tier split): "This week" is the
+            only version of this section now -- the Free "Coach"/"Coaching
+            history" branch is retired. */}
+        <View style={styles.section}>
+          <SectionLabel>This week</SectionLabel>
+          <NavGroup>
+          {/* R2-7 (remediation 2026-07-11, founder device walk build 2684):
+              the subtitle is ONE calm line - the readiness title only (a
+              short date fact like "First check-in 19 July", or the open/
+              needs-more one-liner). The explanatory sentence
+              (pendingCoachCopy.body) is NOT concatenated here; it is already
+              conveyed in full on WeeklyCheckInScreen (the row's destination),
+              so this row sits level with its one-line siblings instead of
+              wrapping to a four-line paragraph. */}
+          <NavRow
+            icon="clipboard-outline"
+            label="Weekly check-in"
+            sub={latestReview
+              ? "Answer this week's questions so the coach has context."
+              : pendingCoachCopy.title}
+            onPress={() => navigation.navigate('WeeklyCheckIn')}
+          />
+          {/* R8 (D68): when a completed decision exists the tappable hero
+              card above IS the decision surface, so this row would be a
+              duplicate. It renders only as the archive path: no completed
+              decision for the current week, but past decisions exist
+              (e.g. a new Monday output before the check-in is answered). */}
+          {!latestReview && hasCoachHistory ? (
             <NavRow
-              icon="clipboard-outline"
-              label="Weekly check-in"
-              sub={latestReview
-                ? "Answer this week's questions so the coach has context."
-                : pendingCoachCopy.title}
-              onPress={() => navigation.navigate('WeeklyCheckIn')}
+              icon="pulse-outline"
+              label="Coaching decision"
+              sub="Your latest decision stays readable here."
+              onPress={() => navigation.navigate('CoachOutput')}
             />
-            {/* R8 (D68): when a completed decision exists the tappable hero
-                card above IS the decision surface, so this row would be a
-                duplicate. It renders only as the archive path: no completed
-                decision for the current week, but past decisions exist
-                (e.g. a new Monday output before the check-in is answered). */}
-            {!latestReview && hasCoachHistory ? (
-              <NavRow
-                icon="pulse-outline"
-                label="Coaching decision"
-                sub="Your latest decision stays readable here."
-                onPress={() => navigation.navigate('CoachOutput')}
-              />
-            ) : null}
-            <NavRow
-              icon="book-outline"
-              label="Your week"
-              sub="Training, eating, weighing in and the coach's decision, in one place."
-              onPress={() => navigation.navigate('WeeklyStory')}
-            />
-            </NavGroup>
-          </View>
-        ) : hasCoachHistory ? (
-          <View style={styles.section}>
-            <SectionLabel>Coach</SectionLabel>
-            <NavGroup>
-            {/* R8 (D68): the "Upgrade to Pro" NavRow is gone - the pitch
-                card above is now the single, tappable upgrade path. Only
-                the history row remains, when there is history to read. */}
-            <NavRow
-              icon="book-outline"
-              label="Coaching history"
-              sub="Past Pro decisions stay readable. View-only on the free plan."
-              onPress={() => navigation.navigate('CoachHeldHistory')}
-            />
-            </NavGroup>
-          </View>
-        ) : null}
+          ) : null}
+          <NavRow
+            icon="book-outline"
+            label="Your week"
+            sub="Training, eating, weighing in and the coach's decision, in one place."
+            onPress={() => navigation.navigate('WeeklyStory')}
+          />
+          </NavGroup>
+        </View>
 
-        {isPro ? (
-          <View style={styles.section}>
-            <SectionLabel>Setup</SectionLabel>
-            <NavGroup>
-            <NavRow
-              icon="flag-outline"
-              label="Update goal and phase"
-              sub="Change goal, phase, schedule, equipment or experience."
-              onPress={() => navigation.navigate('ProGoalSetup')}
-            />
-            <NavRow
-              icon="nutrition-outline"
-              label="Nutrition targets"
-              sub="Calories, macros, protein level and target rationale."
-              onPress={() => navigation.navigate('NutritionTargets')}
-            />
-            <NavRow
-              icon="notifications-outline"
-              label="Coaching reminders"
-              sub="Check-in, weigh-in and adherence reminders that feed the weekly loop."
-              onPress={() => navigation.navigate('CoachingReminders')}
-            />
-            {/* D94 (Campaign 3, Phase 9): the volume-target editor's only
-                other route is data-gated through Analytics, so a coached
-                user with sparse data had no path to the one control whose
-                manual numbers outrank the coach. Direct row, canonical
-                editor unchanged. */}
-            <NavRow
-              icon="stats-chart-outline"
-              label="Volume targets"
-              sub="Weekly set ranges per muscle. Your own numbers take precedence."
-              // Review A finding 3: VolumeHeatmap lives in the Home and Progress
-              // stacks, not ProfileTab; cross-tab helper or the tap is dead.
-              onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'VolumeHeatmap')}
-            />
-            </NavGroup>
-          </View>
-        ) : null}
+        {/* FOUNDER DECISION (fully free, no tier split): Setup renders for
+            everyone now. */}
+        <View style={styles.section}>
+          <SectionLabel>Setup</SectionLabel>
+          <NavGroup>
+          <NavRow
+            icon="flag-outline"
+            label="Update goal and phase"
+            sub="Change goal, phase, schedule, equipment or experience."
+            onPress={() => navigation.navigate('ProGoalSetup')}
+          />
+          <NavRow
+            icon="nutrition-outline"
+            label="Nutrition targets"
+            sub="Calories, macros, protein level and target rationale."
+            onPress={() => navigation.navigate('NutritionTargets')}
+          />
+          <NavRow
+            icon="notifications-outline"
+            label="Coaching reminders"
+            sub="Check-in, weigh-in and adherence reminders that feed the weekly loop."
+            onPress={() => navigation.navigate('CoachingReminders')}
+          />
+          {/* D94 (Campaign 3, Phase 9): the volume-target editor's only
+              other route is data-gated through Analytics, so a coached
+              user with sparse data had no path to the one control whose
+              manual numbers outrank the coach. Direct row, canonical
+              editor unchanged. */}
+          <NavRow
+            icon="stats-chart-outline"
+            label="Volume targets"
+            sub="Weekly set ranges per muscle. Your own numbers take precedence."
+            // Review A finding 3: VolumeHeatmap lives in the Home and Progress
+            // stacks, not ProfileTab; cross-tab helper or the tap is dead.
+            onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'VolumeHeatmap')}
+          />
+          </NavGroup>
+        </View>
 
         <View style={styles.section}>
           <SectionLabel>Support</SectionLabel>
@@ -758,7 +608,6 @@ export default function YouScreen({ navigation }) {
             icon="people-outline"
             label="Partners"
             sub={partnersSub}
-            pro={!isPro}
             onPress={openPartners}
           />
           </NavGroup>

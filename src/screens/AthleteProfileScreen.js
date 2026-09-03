@@ -10,7 +10,6 @@ import { colors, fontWeight, spacing, radius, type, withAlpha, alpha, iconSize }
 import useTheme from '../hooks/useTheme';
 import BackHeader from '../components/BackHeader';
 import Card from '../components/Card';
-import { ProBadge } from '../components/ProGate';
 import { Skeleton, SkeletonCard, SkeletonRow } from '../components/Skeleton';
 import { appAlert } from '../components/AppAlert';
 import { useToast } from '../components/Toast';
@@ -214,9 +213,9 @@ function profileStatusTile(freshness) {
 // CP-10 batch G (2026-07-11): rendered directly by the parent (not a list
 // row), so `t`/`live` are passed as plain props from the one screen-level
 // useTheme() call rather than a second useTheme() call here.
-function Row({ icon, label, sub, onPress, pro, status = null, t, live }) {
+function Row({ icon, label, sub, onPress, status = null, t, live }) {
   const statusLabel = profileRowStatusLabel(status);
-  const accessibility = buildProfileRowAccessibility({ label, sub, status, pro });
+  const accessibility = buildProfileRowAccessibility({ label, sub, status });
   return (
     <Card
       style={styles.row}
@@ -230,7 +229,6 @@ function Row({ icon, label, sub, onPress, pro, status = null, t, live }) {
       <View style={{ flex: 1 }}>
         <View style={styles.rowLabelLine}>
           <Text style={[styles.rowLabel, live.rowLabel]}>{label}</Text>
-          {pro ? <ProBadge size="sm" /> : null}
         </View>
         {sub ? <Text style={[styles.rowSub, live.rowSub]}>{sub}</Text> : null}
       </View>
@@ -246,10 +244,9 @@ function Row({ icon, label, sub, onPress, pro, status = null, t, live }) {
 
 export default function AthleteProfileScreen({ navigation }) {
   const toast = useToast();
-  const { user, userProfile, tier, units, bodyWeightUnits, saveLocalProfile } = useAppStore(useShallow(s => ({
+  const { user, userProfile, units, bodyWeightUnits, saveLocalProfile } = useAppStore(useShallow(s => ({
     user: s.user,
     userProfile: s.userProfile,
-    tier: s.tier,
     units: s.units,
     bodyWeightUnits: s.bodyWeightUnits,
     saveLocalProfile: s.saveLocalProfile,
@@ -287,7 +284,6 @@ export default function AthleteProfileScreen({ navigation }) {
       ? null
       : user?.email?.split('@')[0]?.replace(/[^a-zA-Z]/g, ' ').trim())
     || 'Athlete';
-  const isPro = tier === 'pro';
   const avatarUri = userProfile?.avatarUri || null;
   const avatarPreset = userProfile?.avatarPreset || null;
 
@@ -467,7 +463,6 @@ export default function AthleteProfileScreen({ navigation }) {
           <View style={styles.heroInfo}>
             <View style={styles.nameLine}>
               <Text style={[styles.name, live.name]} numberOfLines={1}>{displayName}</Text>
-              {isPro ? <ProBadge size="sm" /> : null}
             </View>
             {loading ? (
               <Skeleton width={120} height={12} />
@@ -572,7 +567,6 @@ export default function AthleteProfileScreen({ navigation }) {
                 label={freshness.bodyMetrics.label}
                 sub={freshness.bodyMetrics.sub}
                 status={freshnessTone(freshness.bodyMetrics.state)}
-                pro={!isPro}
                 onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'BodyMetrics')}
               />
               <Row
@@ -582,7 +576,6 @@ export default function AthleteProfileScreen({ navigation }) {
                 label={freshness.progressScan.label}
                 sub={freshness.progressScan.sub}
                 status={freshnessTone(freshness.progressScan.state)}
-                pro={!isPro}
                 onPress={() => navigateCrossTab(navigation, 'ProgressTab', 'ProgressPhotos')}
               />
               <Row
@@ -621,7 +614,7 @@ export default function AthleteProfileScreen({ navigation }) {
             live={live}
             icon="settings-outline"
             label="Account settings"
-            sub="Account, subscription, privacy and app preferences."
+            sub="Account, privacy and app preferences."
             onPress={() => navigation.navigate('Settings')}
           />
         </View>

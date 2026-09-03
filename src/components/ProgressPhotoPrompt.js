@@ -16,11 +16,10 @@
  *   1. usePhotoSuppression() — true (calm mode OR open ED flag OR any read
  *      failure) → NEVER render. Starts suppressed; only shows once it resolves
  *      false. Reused exactly; no parallel gate.
- *   2. Pro tier only — the caller passes the screen's live tier.
- *   3. Permanent opt-out — a one-tap "Don't ask again" persists OPTOUT_KEY
+ *   2. Permanent opt-out — a one-tap "Don't ask again" persists OPTOUT_KEY
  *      ('photo_prompt_optout'); once set, never render again. A read failure of
  *      the flag fails closed (treated as opted out).
- *   4. Frequency ceiling — at most once per calendar day AND never twice for the
+ *   3. Frequency ceiling — at most once per calendar day AND never twice for the
  *      same milestone id, persisted in SHOWN_KEY (mirrors the partner-moment
  *      ≤1/day + per-id dedupe idiom).
  *
@@ -100,10 +99,9 @@ async function recordShown(milestoneId) {
  * @param {string|null} props.milestoneId  The competence-event id (a PB or a
  *   session-streak milestone). Falsy → never renders. The caller passes this
  *   ONLY for a competence win, never for a body/weight event.
- * @param {string} props.tier  The screen's live tier; only 'pro' renders.
  * @param {() => void} props.onAddPhoto  Routes to the existing photo add flow.
  */
-export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
+export default function ProgressPhotoPrompt({ milestoneId, onAddPhoto }) {
   // CP-10 theming batch (component sweep, 2026-07-10): live theme.
   const t = useTheme();
   const live = buildLiveStyles(t);
@@ -113,9 +111,9 @@ export default function ProgressPhotoPrompt({ milestoneId, tier, onAddPhoto }) {
   // this mount, a benign re-render never re-fires telemetry or re-stamps state.
   const impressedRef = useRef(null);
 
-  // Competence + Pro + not-suppressed. Suppression starts true, so this is false
-  // on first paint and the card never flashes before the gate resolves.
-  const eligible = !!milestoneId && tier === 'pro' && !suppressed;
+  // Competence + not-suppressed. Suppression starts true, so this is false on
+  // first paint and the card never flashes before the gate resolves.
+  const eligible = !!milestoneId && !suppressed;
 
   useEffect(() => {
     let alive = true;

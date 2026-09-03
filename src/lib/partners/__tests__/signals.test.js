@@ -1,6 +1,6 @@
 /**
  * NEW-002 partner-row signal helpers — ticks, cheer rate limit, row state,
- * and the free/Pro partner cap (one free, three on Pro).
+ * and the flat three-partner cap.
  */
 import {
   ticksLabel, cheerAllowed, lastCheerCaption, partnerRowState, partnerRowLine,
@@ -57,25 +57,18 @@ describe('partnerRowLine (shared by PartnerRow and the You-tab row)', () => {
     expect(partnerRowLine({ rowState: 'resting' })).toBe('Your partner: resting this week'));
 });
 
-// WAVE-D-FINDINGS.md DEAD-STALE_SURFACE (lead ruling item 4, RE-PINNED): the
-// free/Pro tier split was removed -- PartnerScreen (this module's only
-// caller chain, via usePartners.js) is withProGuard-wrapped at the
-// navigator (RootNavigator.js:223), so `tier` was always 'pro' by the time
-// any of this ran live; the 'free' branch was dead code. The cap is now a
-// flat 3 regardless of the `tier` argument, which stays accepted (unused)
-// so canAddPartner's existing call shape needs no change.
-describe('partner cap (§4.9, flat -- Pro-only surface)', () => {
-  test('cap is 3 regardless of tier', () => {
-    expect(maxPartnersForTier('pro')).toBe(3);
-    expect(maxPartnersForTier('free')).toBe(3);
-    expect(maxPartnersForTier(undefined)).toBe(3);
+// Volyume is fully free (founder decision 2026-09-03): the old free/Pro
+// tier split is gone, and so is the tier parameter. The cap is a flat 3 for
+// every user.
+describe('partner cap (§4.9, flat for every user)', () => {
+  test('cap is 3', () => {
+    expect(maxPartnersForTier()).toBe(3);
   });
-  test('at 3 active, cannot add a fourth (any tier value)', () => {
-    expect(canAddPartner({ tier: 'pro', activeCount: 3 })).toBe(false);
-    expect(canAddPartner({ tier: 'free', activeCount: 3 })).toBe(false);
+  test('at 3 active, cannot add a fourth', () => {
+    expect(canAddPartner({ activeCount: 3 })).toBe(false);
   });
-  test('under 3 active, can add (any tier value)', () => {
-    expect(canAddPartner({ tier: 'pro', activeCount: 2 })).toBe(true);
-    expect(canAddPartner({ tier: 'free', activeCount: 0 })).toBe(true);
+  test('under 3 active, can add', () => {
+    expect(canAddPartner({ activeCount: 2 })).toBe(true);
+    expect(canAddPartner({ activeCount: 0 })).toBe(true);
   });
 });

@@ -76,20 +76,38 @@ describe('T1-21 - pre-flight on the paths that were missing it', () => {
   });
 });
 
-describe('T1-22 - the free starter never silently falls to the unfiltered pool', () => {
-  const src = read('screens/FreeStarterScreen.js');
+describe('T1-22 - the start-plan flow never silently falls to the unfiltered pool', () => {
+  // RE-POINTED (D137, fully free product): FreeStarterScreen.js (the
+  // hand-rolled quiz that implemented this class itself, per the
+  // capabilityCensus CLASS1_EXEMPT comment: "Already implements the class
+  // by hand (CAP-17)") is deleted outright. Its CAP-17 gate is not lost --
+  // it was generalised into the shared lib/capability/preflight.js module
+  // this file already documents as the canonical implementation, and every
+  // "Start with a plan" surface (HomeScreen.js, PlansScreen.js) now calls
+  // it before generating, in place of the quiz's bespoke pool filter.
+  const preflight = read('lib/capability/preflight.js');
+  const home = read('screens/HomeScreen.js');
+  const plans = read('screens/PlansScreen.js');
 
-  test('the discard-last-known gate is gone', () => {
-    // The defect shape: `if (!st.empty && !st.unavailable)` threw away a
-    // served last-known state and recommended from the raw pool.
-    expect(src).not.toMatch(/!st\.empty && !st\.unavailable/);
+  test('a last-known (stale) capability state is kept, never discarded', () => {
+    // The defect shape this test used to pin directly on FreeStarterScreen:
+    // `if (!st.empty && !st.unavailable)` threw away a served last-known
+    // state and recommended from the raw pool. The shared preflight module
+    // now owns this decision for every surface: an unavailable-but-stale
+    // read still proceeds ON that last-known state (never discards it).
+    expect(preflight).toMatch(/if \(state\.stale\) return \{ proceed: true, state \};/);
   });
 
-  test('an unknown capability state is tracked and gates activation', () => {
-    expect(src).toMatch(/capabilityUnknown/);
-    const start = src.match(/async function handleStartPlan[\s\S]{0,1600}/)?.[0] ?? '';
-    expect(start).toMatch(/capabilityUnknown/);
-    expect(start).toMatch(/offerCapabilityPreflightChoice/);
+  test('an unknown capability state (no last-known at all) gates activation with an explicit choice', () => {
+    expect(preflight).toMatch(/return \{ proceed: false, state \};/);
+    for (const src of [home, plans]) {
+      // Window widened 700 -> 900 (D137): HomeScreen's action now carries a
+      // re-entrancy guard ahead of the preflight; the three pins are unchanged.
+      const start = src.match(/onAction=\{async \(\) => \{[\s\S]{0,900}/)?.[0] ?? '';
+      expect(start).toMatch(/capabilityPreflight/);
+      expect(start).toMatch(/offerCapabilityPreflightChoice/);
+      expect(start).toMatch(/if \(!goAhead\) return;/);
+    }
   });
 });
 

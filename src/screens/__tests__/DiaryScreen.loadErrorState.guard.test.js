@@ -40,7 +40,7 @@ describe('DiaryScreen EP-07/UI-02 load try/catch/finally wiring', () => {
   test('load() wraps its body in try/catch/finally', () => {
     const start = SRC.indexOf('const load = useCallback(async () => {');
     expect(start).toBeGreaterThan(-1);
-    const end = SRC.indexOf('}, [userId, selectedDate, sex, readOnly]);', start);
+    const end = SRC.indexOf('}, [userId, selectedDate, sex]);', start);
     expect(end).toBeGreaterThan(start);
     const body = SRC.slice(start, end);
     expect(body).toMatch(/if \(!userId\) return;\s*\n\s*const loadToken = loadGuardRef\.current\.next\(\);\s*\n[\s\S]*?\n\s*try \{/);
@@ -92,7 +92,7 @@ describe('DiaryScreen EP-09/P-06 false empty-state guard', () => {
   test('a failed load with nothing to show renders a retryable error, ahead of the real empty state', () => {
     const idxSkeleton = SRC.indexOf('{!loaded ? (');
     const idxError = SRC.indexOf('loadError && viewEntries.length === 0 ? (');
-    const idxEmpty = SRC.indexOf('viewEntries.length === 0 ? (\n          readOnly ? (');
+    const idxEmpty = SRC.indexOf('viewEntries.length === 0 ? (\n          <EmptyDiary');
     expect(idxSkeleton).toBeGreaterThan(-1);
     expect(idxError).toBeGreaterThan(idxSkeleton);
     expect(idxEmpty).toBeGreaterThan(idxError);

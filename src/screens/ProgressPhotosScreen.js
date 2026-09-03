@@ -153,13 +153,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   // and every scan/photo write path are untouched.
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  // E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
-  // no"): a non-Pro user reaches this screen only through withReadOnlyProGuard
-  // (they have photos), and it renders view-only: the timeline and Compare
-  // stay; add, delete and the editable viewer are hidden. Derived from the
-  // store inside the screen.
-  const tier = useAppStore((s) => s.tier);
-  const readOnly = tier !== 'pro';
   // WAVE-D-FINDINGS.md UNIT_DEFECT (:1263): the check-in card's own weight
   // readout hard-coded 'kg' regardless of the user's chosen body-weight
   // unit, unlike the already-correct sibling BeforeAfterShareSheet.js:148.
@@ -167,7 +160,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   const userId = useAppStore((s) => s.user?.id);
   const user = useAppStore((s) => s.user);
   const userSex = useAppStore((s) => s.userProfile?.sex ?? null);
-  const canWrite = useCallback(() => useAppStore.getState().tier === 'pro', []);
 
   // Shared ED-safety gate (spec §3.2, PART 2). Fail-closed calm-OR-open-ED read
   // that withholds the NEW high-risk surfaces (comparison entry, the share
@@ -175,13 +167,12 @@ export default function ProgressPhotosScreen({ navigation }) {
   // wellbeing read below (which the wellbeingFailClosed guard pins byte-exact).
   const photoSuppressed = usePhotoSuppression(userId);
 
-  // Owner marker (hostile review E10 #2): stamp whose photos these are while
-  // a Pro user is on the screen, so the read-only lapse guard can later
-  // refuse the gallery to a DIFFERENT account on the same device. Best-effort
-  // and idempotent.
+  // Owner marker: stamp whose photos these are, so a photos-ownership check
+  // can later refuse the gallery to a DIFFERENT account on the same device.
+  // Best-effort and idempotent.
   useEffect(() => {
-    if (!readOnly && userId) markPhotosOwner(userId);
-  }, [readOnly, userId]);
+    if (userId) markPhotosOwner(userId);
+  }, [userId]);
 
   const [photos, setPhotos] = useState([]);
   const [metaMap, setMetaMap] = useState({});
@@ -330,9 +321,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   }, []);
 
   async function pickFrom(source) {
-    // Live-tier re-check (hostile review E10 #1 class): the add alert can be
-    // open when the tier flips pro-to-free; its callback must not save then.
-    if (!canWrite()) return;
     setScanFlow(null);
     setCapturePose(null);
     if (!ImagePicker) { toast.show("Photo library isn't available on this device.", { variant: 'warning' }); return; }
@@ -361,10 +349,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   async function pickScanPoseFromLibrary(flow = scanFlow, pose = capturePose) {
-    if (!canWrite()) {
-      if (flow?.scanId) await abandonLapsedScanFlow(flow);
-      return;
-    }
     if (!flow?.scanId || !pose) {
       pickFrom('library');
       return;
@@ -390,18 +374,10 @@ export default function ProgressPhotosScreen({ navigation }) {
         await abandonLapsedScanFlow(flow);
         return;
       }
-      if (!canWrite()) {
-        await abandonLapsedScanFlow(flow);
-        return;
-      }
       const uid = useAppStore.getState().user?.id ?? userId;
       const saved = await saveProgressPhoto(uri, undefined, uid);
       savedPhoto = saved;
       if (!saved?.name || !saved?.uri) throw new Error('progress_scan_library_save_failed');
-      if (!canWrite()) {
-        await abandonLapsedScanFlow(flow, saved.name, saved);
-        return;
-      }
       const scanTakenAt = Number.isFinite(flow?.capturedAt) ? flow.capturedAt : (saved.ts ?? Date.now());
       try {
         await upsertPhotoMeta(uid, saved.name, { takenAt: scanTakenAt, pose }, { throwOnError: true });
@@ -414,10 +390,6 @@ export default function ProgressPhotosScreen({ navigation }) {
           deletePhotoMeta,
         });
         throw e;
-      }
-      if (!canWrite()) {
-        await abandonLapsedScanFlow(flow, saved.name, saved);
-        return;
       }
       setBusy(false);
       setScanReview({
@@ -466,9 +438,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   async function onDetailsConfirm({ takenAt, pose }) {
-    // Live-tier re-check (the add-alert write-guard class): a pro-to-free flip
-    // with the sheet open must not save or write metadata.
-    if (!canWrite()) { resetPending(); return; }
     const uid = useAppStore.getState().user?.id;
     setBusy(true);
     let savedPhoto = null;
@@ -572,12 +541,14 @@ export default function ProgressPhotosScreen({ navigation }) {
       nextPoseLabel: completeness.nextPoseLabel,
     };
   }, [allCheckIns]);
+  // buildProgressStudioCaptureRoutes's readOnly option is a lib API outside
+  // this screen's lane; Volyume is fully free, so it is always false.
   const captureRoutes = useMemo(() => buildProgressStudioCaptureRoutes({
     latestPartial: latestPartialCapture,
     canScan: !!userId,
-    readOnly,
+    readOnly: false,
     includeScan: true,
-  }), [latestPartialCapture, readOnly, userId]);
+  }), [latestPartialCapture, userId]);
   const openPartnerProgressCardPreview = useCallback((progressCardSharePayload) => {
     setShareOpen(false);
     navigation?.navigate?.('Partner', {
@@ -595,7 +566,6 @@ export default function ProgressPhotosScreen({ navigation }) {
     : 'Any dates';
 
   function openGhostCapture() {
-    if (!canWrite()) return;
     setScanFlow(null);
     // Seed the overlay against the remembered reference when set, else the
     // latest photo of the pose in view (or the latest overall). Carry that
@@ -616,7 +586,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   function openScanImportDateStep() {
-    if (!canWrite()) return;
     if (scanDateOpen || scanDatePickerOpen || scanFlow || progressScanOpeningRef.current) return;
     setScanDateMs(Date.now());
     setScanDatePickerOpen(false);
@@ -635,7 +604,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   async function openProgressScan(mode = 'guided', opts = {}) {
-    if (!canWrite() || !userId) return;
+    if (!userId) return;
     const capturedAt = Number.isFinite(opts.capturedAt) ? opts.capturedAt : Date.now();
     const cadence = shouldGateProgressScanStart(scans, capturedAt, PROGRESS_SCAN_MIN_INTERVAL_MS);
     if (cadence.gated && !opts.skipCadence) {
@@ -649,7 +618,6 @@ export default function ProgressPhotosScreen({ navigation }) {
     progressScanOpeningRef.current = true;
     try {
       const capturePrefs = await getProgressScanCapturePreferences();
-      if (!canWrite()) return;
       const session = await createProgressScanSession(userId, { ...capturePrefs, capturedAt });
       if (!session?.id) throw new Error('No scan session');
       const flow = { scanId: session.id, pose: 'front', mode, capturedAt };
@@ -693,18 +661,10 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (finishScanInFlightRef.current.has(scanId)) return;
     finishScanInFlightRef.current.add(scanId);
     try {
-      if (!canWrite()) {
-        await abandonLapsedScanFlow({ scanId });
-        return;
-      }
       let finished = false;
       try {
         const profile = useAppStore.getState().userProfile || {};
         const bodyProfile = await getUserBodyProfile(userId).catch(() => null);
-        if (!canWrite()) {
-          await abandonLapsedScanFlow({ scanId });
-          return;
-        }
         await finishProgressScanSession(userId, scanId, buildProgressScanFinishPayload(profile, bodyProfile, userSex));
         finished = true;
       } catch (e) {
@@ -738,7 +698,6 @@ export default function ProgressPhotosScreen({ navigation }) {
         {
           text: 'Continue',
           onPress: () => {
-            if (!canWrite()) { abandonLapsedScanFlow(flow); return; }
             if (flow?.mode === 'library') pickScanPoseFromLibrary(nextFlow, 'back');
             else setCaptureOpen(true);
           },
@@ -749,7 +708,6 @@ export default function ProgressPhotosScreen({ navigation }) {
     if (pose === 'back') {
       const nextFlow = { ...flow, pose: 'side' };
       const continueToSide = () => {
-        if (!canWrite()) { abandonLapsedScanFlow(flow); return; }
         setScanFlow(nextFlow);
         setCapturePose('side');
         if (flow?.mode === 'library') pickScanPoseFromLibrary(nextFlow, 'side');
@@ -763,7 +721,7 @@ export default function ProgressPhotosScreen({ navigation }) {
           text: flow?.mode === 'library' ? 'Import side' : 'Take side',
           onPress: continueToSide,
         },
-        { text: 'Finish without side', onPress: () => { if (!canWrite()) { abandonLapsedScanFlow(flow); return; } setScanFlow(null); finishScan(flow.scanId); } },
+        { text: 'Finish without side', onPress: () => { setScanFlow(null); finishScan(flow.scanId); } },
       ], { cancelable: false });
       return;
     }
@@ -773,10 +731,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   async function saveScanAssetAndContinue(flow, pose, name, saved, vision, isFirstPose = false) {
-    if (!canWrite()) {
-      await abandonLapsedScanFlow(flow, name, saved);
-      return;
-    }
     const saveKey = [flow?.scanId, pose, name].filter(Boolean).join(':');
     if (saveKey && scanSaveInFlightRef.current.has(saveKey)) return;
     if (saveKey) scanSaveInFlightRef.current.add(saveKey);
@@ -809,10 +763,6 @@ export default function ProgressPhotosScreen({ navigation }) {
 
   async function retakeScanPose(flow, pose, name, saved) {
     try {
-      if (!canWrite()) {
-        await abandonLapsedScanFlow(flow, name, saved);
-        return;
-      }
       await cleanupRetakenScanPose({
         userId,
         name,
@@ -878,10 +828,6 @@ export default function ProgressPhotosScreen({ navigation }) {
       openDetailsForCaptured(name, pose);
       return;
     }
-    if (!canWrite()) {
-      await abandonLapsedScanFlow(flow, name, saved);
-      return;
-    }
     if (!saved?.previewApproved) {
       setScanReview({
         name,
@@ -899,10 +845,6 @@ export default function ProgressPhotosScreen({ navigation }) {
       setBusy(true);
       const vision = await analyseProgressScanPhoto({ uri: saved.uri, pose });
       setBusy(false);
-      if (!canWrite()) {
-        await abandonLapsedScanFlow(flow, name, saved);
-        return;
-      }
       const retakeCopy = retakeCopyForVisionResult(vision);
       if (retakeCopy) {
         appAlert('Retake this photo?', isFirstPose ? firstPoseRetakeCopy(retakeCopy) : retakeCopy, [
@@ -935,7 +877,6 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   function onAdd() {
-    if (!canWrite()) return;
     setCaptureRouteOpen(true);
   }
 
@@ -946,7 +887,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   function openCheckInPoseCapture(item, pose) {
-    if (!canWrite() || !item?.cover?.uri || !pose) return;
+    if (!item?.cover?.uri || !pose) return;
     setScanFlow(null);
     setCaptureReference({
       uri: item.cover.uri,
@@ -958,7 +899,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   }
 
   async function onCaptureRoutePress(route) {
-    if (!route || route.disabled || !canWrite() || captureRouteActionRef.current) return;
+    if (!route || route.disabled || captureRouteActionRef.current) return;
     captureRouteActionRef.current = true;
     setCaptureRouteOpen(false);
     try {
@@ -996,10 +937,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   );
 
   // Real delete wiring: remove the file AND its metadata row, then refresh.
-  // Re-checks the live tier (a pro-to-free flip with the confirm open must not
-  // delete); the viewer also re-checks before calling this.
   const onViewerDelete = useCallback(async (name) => {
-    if (!canWrite()) return;
     const uid = useAppStore.getState().user?.id ?? userId;
     const owningScan = findScanForPhotoName(visibleScans, name);
     let deletingSet = false;
@@ -1048,7 +986,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     }
     setViewerOpen(false);
     await refresh();
-  }, [canWrite, checkInByPhotoName, photos, refresh, toast, userId, visibleScans]);
+  }, [checkInByPhotoName, photos, refresh, toast, userId, visibleScans]);
 
   const viewerDeleteModeForPhoto = useCallback(
     (name) => {
@@ -1109,7 +1047,7 @@ export default function ProgressPhotosScreen({ navigation }) {
   const viewerPhotos = scanPhotoNames.has(viewerName) ? enriched : filtered;
   const canCompareScans = !loading && scoredScans.length >= 2 && !suppressed;
   const canCompare = !loading && photos.length >= 2 && !suppressed;
-  const canShare = !loading && !readOnly && (scanShareItems.length >= 2 || photos.length >= 2) && !suppressed;
+  const canShare = !loading && (scanShareItems.length >= 2 || photos.length >= 2) && !suppressed;
   const showShareAction = canShare;
   // Trend entry (results-ui-and-copy-blueprint.md §4): withheld under
   // suppression like every other score surface (fail-closed double guard,
@@ -1288,7 +1226,7 @@ export default function ProgressPhotosScreen({ navigation }) {
     // viewer) and suppression fail-closed (receipt is already null when
     // suppressed, so this adds the tier + latest-scan checks on top).
     const isLatestScanCard = !!scanForDay && !!latestScan && scanForDay.id === latestScan.id;
-    const showCheckInValueLine = isLatestScanCard && !readOnly && receipt?.outcome === 'scored';
+    const showCheckInValueLine = isLatestScanCard && receipt?.outcome === 'scored';
     const metaText = [weightText, poseSummary].filter(Boolean).join(' - ');
     const cover = item.cover || item.photos[0];
     // Per-render node holder for the tapped thumbnail so the hero morph grows
@@ -1306,15 +1244,9 @@ export default function ProgressPhotosScreen({ navigation }) {
     return (
       <TouchableOpacity
         key={item.key}
-        // E10 read-only: opening the editable viewer would expose writes
-        // (pose/date/note), so a plain tap is inert in the view-only state;
-        // Compare (pure viewing) stays available below.
-        onPress={readOnly ? undefined : openWithMorph}
-        disabled={readOnly}
-        accessibilityRole={readOnly ? 'image' : 'button'}
-        accessibilityLabel={readOnly
-          ? `Photos from ${dateLabel}.`
-          : `Photos from ${dateLabel}. Tap to open.`}
+        onPress={openWithMorph}
+        accessibilityRole="button"
+        accessibilityLabel={`Photos from ${dateLabel}. Tap to open.`}
         style={[styles.checkInCard, live.checkInCard]}
       >
         <View ref={(n) => { coverNode = n; }} style={[styles.checkInCover, live.checkInCover]}>
@@ -1345,7 +1277,7 @@ export default function ProgressPhotosScreen({ navigation }) {
                 {metaText}
               </Text>
             </View>
-            {!readOnly ? <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} /> : null}
+            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
           </View>
           {scanSummary ? (
             <View style={styles.libraryScoreRow}>
@@ -1435,7 +1367,7 @@ export default function ProgressPhotosScreen({ navigation }) {
               Front, back and side photos are saved together.
             </Text>
           )}
-          {!readOnly && nextMissingPose ? (
+          {nextMissingPose ? (
             <TouchableOpacity
               onPress={() => openCheckInPoseCapture(item, nextMissingPose)}
               style={[styles.completeCheckInButton, live.completeCheckInButton]}
@@ -1484,18 +1416,16 @@ export default function ProgressPhotosScreen({ navigation }) {
             </Text>
 
             <View style={styles.heroActions}>
-              {!readOnly ? (
-                <Button
-                  title="Add photos"
-                  icon="camera-outline"
-                  variant="outline"
-                  size="sm"
-                  onPress={onAdd}
-                  fullWidth={false}
-                  style={styles.heroActionButton}
-                  accessibilityLabel="Add photos"
-                />
-              ) : null}
+              <Button
+                title="Add photos"
+                icon="camera-outline"
+                variant="outline"
+                size="sm"
+                onPress={onAdd}
+                fullWidth={false}
+                style={styles.heroActionButton}
+                accessibilityLabel="Add photos"
+              />
               {(canCompareScans || canCompare) ? (
                 <Button
                   title="Compare"
@@ -1522,9 +1452,6 @@ export default function ProgressPhotosScreen({ navigation }) {
               ) : null}
             </View>
 
-            {readOnly ? (
-              <Text style={[styles.readOnlyNote, live.readOnlyNote]}>View-only on the free plan. Your photos stay yours.</Text>
-            ) : null}
           </View>
         </Card>
 
@@ -1679,8 +1606,8 @@ export default function ProgressPhotosScreen({ navigation }) {
       return (
         <EmptyState
           icon="camera-outline"
-          title={readOnly ? undefined : 'No saved photos yet'}
-          text={readOnly ? 'No photos on this device.' : 'Add front, back and side photos to start.\n\nThe scale can\'t tell muscle from water. Photos can.'}
+          title="No saved photos yet"
+          text="Add front, back and side photos to start.\n\nThe scale can't tell muscle from water. Photos can."
         />
       );
     }
@@ -1710,7 +1637,6 @@ export default function ProgressPhotosScreen({ navigation }) {
         style={styles.timelineList}
         data={loading || photos.length === 0 || timeline.length === 0 ? [] : timeline}
         extraData={{
-          readOnly,
           loading,
           photosCount: photos.length,
           timelineCount: timeline.length,
@@ -2194,7 +2120,6 @@ const styles = StyleSheet.create({
   loadErrorTitle: { ...type.bodyStrong, color: colors.textPrimary },
   loadErrorBody: { ...type.bodySm, color: colors.textSecondary, lineHeight: 20 },
   loadErrorButton: { alignSelf: 'flex-start' },
-  readOnlyNote: { ...type.caption, color: colors.textMuted },
   libraryHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -2587,7 +2512,6 @@ function buildLiveStyles(t) {
     loadErrorCard: { borderColor: t.colors.warning },
     loadErrorTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     loadErrorBody: { ...t.type.bodySm, color: t.colors.textSecondary },
-    readOnlyNote: { ...t.type.caption, color: t.colors.textMuted },
     libraryTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     libraryControls: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.surface },
     segmentTrack: { borderColor: t.colors.borderSubtle, backgroundColor: t.colors.background },

@@ -30,7 +30,6 @@ function fullFacts(overrides = {}) {
     },
     reEntry: { eligible: true, onPress: noop },
     phaseMismatch: { eligible: true, savedPhaseLabel: 'a cut', onPress: noop, onDismiss: noop },
-    trialEnding: { eligible: true, daysRemaining: 1, onPress: noop },
     ...overrides,
   };
 }
@@ -38,9 +37,11 @@ function fullFacts(overrides = {}) {
 describe('todayLineArbiter — rank order constant', () => {
   // RE-PINNED (Stage 2 lead review): §17 R4 adds the first-review readiness
   // line at rank 4.5 on conflict days ("weigh-in wins; readiness line moves
-  // to R2 slot rank 4.5"), so the 8 spec ranks become 9 resolver entries.
-  it('declares exactly the 9 resolver entries in order (8 spec ranks + rank 4.5, §17 R4)', () => {
-    expect(TODAY_LINE_RANKS).toHaveLength(9);
+  // to R2 slot rank 4.5"), so the 8 spec ranks became 9 resolver entries.
+  // FOUNDER DECISION (fully free, no trial, no expiry): rank 8 (trial
+  // ending) is retired along with the trial itself, back down to 8.
+  it('declares exactly the 8 resolver entries in order (7 spec ranks + rank 4.5, §17 R4)', () => {
+    expect(TODAY_LINE_RANKS).toHaveLength(8);
   });
 });
 
@@ -207,15 +208,9 @@ describe('todayLineArbiter — each rank in isolation', () => {
     expect(result.text).toContain('a lean bulk');
   });
 
-  it('rank 8: trial ending today', () => {
-    const result = resolveTodayLine({ trialEnding: { eligible: true, daysRemaining: 0, onPress: noop } });
-    expect(result.text).toBe('Your trial ends today. Keep your coaching.');
-  });
-
-  it('rank 8: trial ending tomorrow (spec §18 mock G literal)', () => {
-    const result = resolveTodayLine({ trialEnding: { eligible: true, daysRemaining: 1, onPress: noop } });
-    expect(result.text).toBe('Your trial ends tomorrow. Keep your coaching.');
-  });
+  // FOUNDER DECISION (fully free, no trial, no expiry): rank 8 (trial
+  // ending) and its resolver are retired; there is no trial state left to
+  // isolate here.
 });
 
 describe('todayLineArbiter — adversarial: every rank eligible at once', () => {
@@ -233,7 +228,7 @@ describe('todayLineArbiter — adversarial: every rank eligible at once', () => 
     let facts = fullFacts();
     const expectedOrder = [
       'block_complete', 'coach_decision', 'check_in', 'first_review',
-      'recovery_state', 're_entry', 'phase_mismatch', 'trial_ending',
+      'recovery_state', 're_entry', 'phase_mismatch',
     ];
     for (const expectedKey of expectedOrder) {
       const result = resolveTodayLine(facts);
@@ -267,7 +262,6 @@ describe('todayLineArbiter — static occupant text stays inside the ~90 char P1
     ['block_complete', resolveTodayLine({ blockComplete: { eligible: true, onPress: noop } })],
     ['check_in', resolveTodayLine({ checkIn: { eligible: true, onPress: noop, onDismiss: noop } })],
     ['coach_decision (no calorie change)', resolveTodayLine({ coachDecision: { eligible: true, caloriesKcal: null, onPress: noop, onDismiss: noop } })],
-    ['trial_ending', resolveTodayLine({ trialEnding: { eligible: true, daysRemaining: 1, onPress: noop } })],
   ])('%s', (_label, result) => {
     expect(result.text.length).toBeLessThanOrEqual(90);
   });
@@ -291,7 +285,6 @@ function disable(facts, key) {
       break;
     case 're_entry': next.reEntry = { ...next.reEntry, eligible: false }; break;
     case 'phase_mismatch': next.phaseMismatch = { ...next.phaseMismatch, eligible: false }; break;
-    case 'trial_ending': next.trialEnding = { ...next.trialEnding, eligible: false }; break;
     default: break;
   }
   return next;

@@ -171,12 +171,16 @@ describe('Campaign 25: Set-active affordance (previous rows keep it, archived ro
   });
 });
 
-describe('Campaign 25: free/pro tier logic and Pro-no-plan path are untouched by the relocation', () => {
-  test('actionCards still resolves from the same tier constants, unchanged', () => {
-    expect(source).toContain("const actionCards = tier === 'pro' ? ACTION_CARDS_PRO_SWITCH : ACTION_CARDS_DEFAULT;");
+describe('Campaign 25: free/pro tier logic is retired (FOUNDER DECISION: fully free, no tier split)', () => {
+  test('actionCards resolves to the coached-builder set unconditionally now', () => {
+    expect(source).toContain('const actionCards = ACTION_CARDS_PRO_SWITCH;');
+    // Comments stripped: a retirement note may name the retired constant in
+    // prose without that counting as it surviving in code.
+    const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toContain('ACTION_CARDS_DEFAULT');
   });
 
-  test('the Pro-with-plan subtitle sentence still renders, now inside Plan tools', () => {
+  test('the "check-ins keep working" subtitle sentence still renders, now inside Plan tools, gated on having a plan (not tier)', () => {
     const planToolsIdx = idx('{/* Plan tools. Campaign 25');
     const previousIdx = idx('{/* Previous plans. Campaign 25');
     const block = source.slice(planToolsIdx, previousIdx);
@@ -184,8 +188,8 @@ describe('Campaign 25: free/pro tier logic and Pro-no-plan path are untouched by
     expect(block).toContain('Your check-ins, PRs, and coach output keep working whichever plan you choose. Activating a new plan starts a fresh training block.');
   });
 
-  test('FreeStarter/quiz and the Pro no-plan generateAndSavePlan entries are unchanged', () => {
-    expect(source).toContain("navigation.navigate('FreeStarter')");
+  test('FreeStarter/quiz is retired; the coach-built generateAndSavePlan no-plan entry is the only one', () => {
+    expect(source).not.toContain("navigation.navigate('FreeStarter')");
     expect(source).toContain('generateAndSavePlan(user.id, userProfile)');
   });
 });

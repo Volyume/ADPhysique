@@ -800,7 +800,11 @@ export async function restampLedgerEligibility(userId) {
  * Memory persists; actionability expires.
  */
 export async function buildLearnedSeedRangesForActivation(userId, { userProfile = null, tier = 'free' } = {}) {
-  if (!userId || tier !== 'pro') return null;
+  // Volyume is fully free (founder decision 2026-09-03): the old Pro gate
+  // is gone, so this now runs for every user with eligible history. `tier`
+  // stays an accepted (unused-here) option only for the pass-through call
+  // to getAdaptedLandmarks below.
+  if (!userId) return null;
   try {
     // CC30 (section 33.4): stale eligibility self-corrects at the durable
     // decision doors, before any ledger entry is consulted.

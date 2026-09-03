@@ -93,13 +93,19 @@ describe('CP-8: SettingsProfileScreen is free-tier reachable, unlike the Pro Nut
     );
   });
 
-  test('NutritionTargets, by contrast, IS withProGuard-wrapped (the surface CP-8 says is Pro-only)', () => {
+  // RE-ANCHORED (D137, fully free product): NutritionTargetsScreen was the
+  // Pro-only contrast case this test named -- withProGuard is retired from
+  // every route (proScreenGating.guard.test.js), so there is no more
+  // Pro-vs-free contrast to draw. Both screens are now plain registrations;
+  // this pins that NutritionTargets specifically did not keep a stray guard.
+  test('NutritionTargets is also a plain registration now, no withProGuard wrap (D137)', () => {
     expect(NAV).toMatch(
-      /const GatedNutritionTargets = lazyScreen\(\(\) => withProGuard\(require\('\.\.\/screens\/NutritionTargetsScreen'\)\.default, 'Nutrition targets'\)\);/,
+      /const NutritionTargetsScreen = lazyScreen\(\(\) => require\('\.\.\/screens\/NutritionTargetsScreen'\)\.default\);/,
     );
     expect(NAV).toMatch(
-      /<Stack\.Screen name="NutritionTargets" component=\{GatedNutritionTargets\}/,
+      /<Stack\.Screen name="NutritionTargets" component=\{NutritionTargetsScreen\}/,
     );
+    expect(NAV).not.toMatch(/GatedNutritionTargets/);
   });
 
   test('Settings root "Profile" row is a plain row, not gated behind tier === \'pro\' like the Nutrition targets row', () => {

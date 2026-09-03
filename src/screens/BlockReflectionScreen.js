@@ -175,8 +175,8 @@ export default function BlockReflectionScreen({ navigation, route }) {
         // PlansScreen - Free must not read them here either (free/pro
         // gating is binary, Section 2). Free keeps the reflection's
         // training facts; the coach's per-muscle story is Pro's.
-        const tierNow = require('../store/useAppStore').default.getState().tier;
-        if (isCurrentRequest()) setLedgerRows(tierNow === 'pro' ? buildLedgerReflectionRows(ledger) : []);
+        // Fully free product (D137): the ledger rows show for everyone.
+        if (isCurrentRequest()) setLedgerRows(buildLedgerReflectionRows(ledger));
       } catch (_e) { if (isCurrentRequest()) setLedgerRows([]); }
     } catch (_) {
       if (!isCurrentRequest()) return;

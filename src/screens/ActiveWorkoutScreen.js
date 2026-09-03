@@ -339,7 +339,6 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     sessionAdjustments: s.sessionAdjustments,
     revertSessionAdjustment: s.revertSessionAdjustment,
     dismissReadinessTweak: s.dismissReadinessTweak,
-    tier: s.tier,
     barWeight: s.barWeight,
   })));
   const {
@@ -348,7 +347,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     updateSetInCurrentExercise, removeSetFromCurrentExercise, session,
     startRestTimer, defaultRestSeconds, autoStartRestTimer, workoutPrefsLoaded, loadWorkoutPrefs,
     showPRCelebration, endWorkout, workoutStartTime,
-    lastActivityAt, updateLastActivity, sessionAdjustments, revertSessionAdjustment, dismissReadinessTweak, tier,
+    lastActivityAt, updateLastActivity, sessionAdjustments, revertSessionAdjustment, dismissReadinessTweak,
     barWeight,
   } = store;
   const reduceMotion = useAppStore(s => s.accessibility?.reduceMotion);
@@ -1096,12 +1095,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
     return exercise.name ? { kind: 'exercise', exerciseNames: [exercise.name] } : null;
   })();
 
-  // COMP-015: this session's adjustment for the current exercise, if any. Only
-  // Pro sessions ever carry adjustments; a reverted one is ignored. A nonzero
-  // setDelta changes the working-set target everywhere recommendedSets drives
-  // the session (orientation row, target line, persistent notification); a
-  // hold (delta 0) carries only a coaching line.
-  const sessionAdjustment = (tier === 'pro' && exercise?.id)
+  // COMP-015: this session's adjustment for the current exercise, if any. A
+  // reverted one is ignored. A nonzero setDelta changes the working-set
+  // target everywhere recommendedSets drives the session (orientation row,
+  // target line, persistent notification); a hold (delta 0) carries only a
+  // coaching line.
+  const sessionAdjustment = exercise?.id
     ? (sessionAdjustments || []).find(a => a.exerciseId === exercise.id && !a.reverted) ?? null
     : null;
   // FQ-4 (D96): the session's working-set BASE is the week's persisted
@@ -1127,15 +1126,12 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
   // matching COMP-015's R0 (deload owns the session) - the re-entry
   // amendment leaves every existing structural authority senior.
   //
-  // The intent-sheet reading stays Pro-only (unchanged); re-entry easing is
-  // NOT tier-gated - it is the athlete's own explicit answer to a question
-  // asked at every tier, and reusing this machinery must not make it Pro-only.
   // resolveSessionEasingTweak never stacks the two: at most one downward step
   // is ever produced.
   const reEntryEaseActive = !isDeloadWeek && !!activeWorkout?.reEntryEaseApplied;
   const readinessTweak = !isDeloadWeek
     ? resolveSessionEasingTweak({
-      intent: tier === 'pro' ? activeWorkout?.preWorkoutIntent : null,
+      intent: activeWorkout?.preWorkoutIntent ?? null,
       chips: { sleepQuality: activeWorkout?.sleepQuality, energyScore: activeWorkout?.energyScore },
       reEntryEaseActive,
     })
@@ -2340,7 +2336,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
       const localReEntryEaseActive = !localIsDeloadWeek && !!activeWorkout?.reEntryEaseApplied;
       const localReadinessTweak = !localIsDeloadWeek
         ? resolveSessionEasingTweak({
-          intent: tier === 'pro' ? activeWorkout?.preWorkoutIntent : null,
+          intent: activeWorkout?.preWorkoutIntent ?? null,
           chips: { sleepQuality: activeWorkout?.sleepQuality, energyScore: activeWorkout?.energyScore },
           reEntryEaseActive: localReEntryEaseActive,
         })

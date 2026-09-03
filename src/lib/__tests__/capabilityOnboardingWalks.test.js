@@ -124,20 +124,17 @@ describe('red-team finding 2 (bundle): the full-pool fallback is real and never 
     expect(verdict.fullyCompatible).toBe(false);
   });
 
-  test('the screen surfaces the fallback: caveat on the card and an explicit choice before activation', () => {
-    const src = fs.readFileSync(path.resolve(__dirname, '../../screens/FreeStarterScreen.js'), 'utf8');
-    // The shown pick's verdict is computed, the card says so before the
-    // decision, and starting is an explicit choice - never silent.
-    expect(src).toMatch(/const recOutside = useMemo/);
-    expect(src).toMatch(/No starter plan fits everything in how you train just now\./);
-    expect(src).toMatch(/Not a full fit for how you train/);
-    expect(src).toMatch(/Browse plans that fit/);
-    expect(src).toMatch(/Start it anyway/);
-    const gate = src.indexOf('if (recOutside > 0) {');
-    const activate = src.indexOf('activatePlanWithBlock(user.id, planId');
-    expect(gate).toBeGreaterThan(-1);
-    expect(gate).toBeLessThan(activate);
-  });
+  // FreeStarterScreen.js (the free-tier micro-quiz UI that surfaced this
+  // fallback with a caveat card + explicit "Start it anyway" choice) was
+  // deleted (founder decision: Volyume is fully free, no Free/Pro split;
+  // ProOnboardingScreen's six-step wizard is now the ONE setup path for
+  // every user). The UI-copy assertion this test made against that screen
+  // no longer has a file to read. The underlying behaviour it protected --
+  // a zero-compatible-plans state still yields a pick, and that pick is
+  // correctly flagged as not a full fit -- is the real logic under test
+  // here and stays proven by the sibling test above
+  // ('zero compatible plans still yields a pick...'), which exercises
+  // getCapabilityAwareStarterRecommendation directly.
 });
 
 test('the compatible pools come from NORMAL browse content, never a segregated shelf (Amendment section 13)', () => {

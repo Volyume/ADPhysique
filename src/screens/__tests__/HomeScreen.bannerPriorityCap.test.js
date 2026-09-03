@@ -5,31 +5,33 @@
  *
  * WHAT CHANGED. The seven-slot BANNER_PRIORITY cap (coach > trial > deload >
  * phase > plateau > activation > attention) is SPLIT:
- *  - coach, trial(-ending only), deload/recovery, phase, check-in and
- *    block-complete now compete for the single Today line (P1) via the pure
- *    `todayLineArbiter` resolver (see src/lib/home/__tests__/
- *    todayLineArbiter.test.js for that ranking's own adversarial coverage);
- *  - plateau, activation and the free/differential attention slot are
- *    UNCHANGED P3 content -- same three-way one-banner cap mechanism as
- *    before, just with the four senior slots removed from the array (they
- *    would otherwise still suppress plateau/activation whenever eligible,
- *    even though nothing renders their old JSX any more). Their own move
- *    into a full P3 footer redesign is Stage 2's scope (marked `// Stage 2:`
- *    at the array site in HomeScreen.js), untouched here.
+ *  - coach, deload/recovery, phase, check-in and block-complete now compete
+ *    for the single Today line (P1) via the pure `todayLineArbiter` resolver
+ *    (see src/lib/home/__tests__/todayLineArbiter.test.js for that ranking's
+ *    own adversarial coverage);
+ *  - plateau and activation are UNCHANGED P3 content -- same one-banner cap
+ *    mechanism as before, just with the senior slots removed from the array
+ *    (they would otherwise still suppress plateau/activation whenever
+ *    eligible, even though nothing renders their old JSX any more).
+ *
+ * FOUNDER DECISION (fully free, no tier split): the trial(-ending) occupant
+ * and the free-tier/differential "attention" P3 slot are RETIRED along with
+ * the trial and the tier split -- there is nothing left to upsell. The P3
+ * stack is now plateau > activation only.
  *
  * This screen has no full render test (per HomeScreen.progressScanNudge.test.js:
  * "cannot safely be `require`'d in this Jest environment"), so these are
  * scoped source guards in the same established convention.
  *
  * Pins:
- *  1. BANNER_PRIORITY now lists exactly the three P3 slots, in order:
- *     plateau > activation > attention.
+ *  1. BANNER_PRIORITY now lists exactly the two P3 slots, in order:
+ *     plateau > activation.
  *  2. Exactly one entry of that list is chosen as shownBannerKey; every
  *     show* flag reduces to a straight equality check against it.
- *  3. coach/trial/deload/phase/check-in/block-complete are NOT in the array
- *     -- they feed the arbiter's facts instead, each carrying its exact
+ *  3. coach/deload/phase/check-in/block-complete are NOT in the array --
+ *     they feed the arbiter's facts instead, each carrying its exact
  *     original tap-through and dismissal.
- *  4. None of the three P3 triggers reads an ED flag or wellbeing/calm-mode
+ *  4. None of the two P3 triggers reads an ED flag or wellbeing/calm-mode
  *     signal directly (suppression already happens inside their own
  *     loaders, untouched by this change).
  */
@@ -39,17 +41,18 @@ const path = require('path');
 const HOME = fs.readFileSync(path.resolve(__dirname, '../HomeScreen.js'), 'utf8');
 
 describe('D14 + Campaign 22 Phase 2 Stage 1: the P3 banner stack is priority-ranked and capped to exactly one', () => {
-  test('BANNER_PRIORITY lists exactly the three P3 slots in order', () => {
+  test('BANNER_PRIORITY lists exactly the two P3 slots in order', () => {
     const site = HOME.indexOf('const BANNER_PRIORITY = [');
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site, HOME.indexOf('];', site));
-    const keys = ['plateau', 'activation', 'attention'];
+    const keys = ['plateau', 'activation'];
     const positions = keys.map((key) => block.indexOf(`key: '${key}'`));
     expect(positions.every((i) => i > -1)).toBe(true);
     expect(positions).toEqual([...positions].sort((a, b) => a - b));
-    // The four senior ranks are gone from this array -- they compete for the
-    // Today line instead, not this cap.
-    expect(block).not.toMatch(/key: '(coach|trial|deload|phase)'/);
+    // The senior ranks are gone from this array -- they compete for the
+    // Today line instead, not this cap. The free/differential "attention"
+    // slot is retired outright (FOUNDER DECISION: fully free).
+    expect(block).not.toMatch(/key: '(coach|trial|deload|phase|attention)'/);
   });
 
   test('exactly one banner key is chosen: the highest-ranked eligible entry', () => {
@@ -62,16 +65,17 @@ describe('D14 + Campaign 22 Phase 2 Stage 1: the P3 banner stack is priority-ran
     expect(HOME).not.toMatch(/topBannerKeys/);
   });
 
-  test('every one of the three show* flags renders from a plain equality check against shownBannerKey', () => {
+  test('every one of the two show* flags renders from a plain equality check against shownBannerKey', () => {
     const perBanner = {
       showPlateauBanner: 'plateau',
       showActivationBanner: 'activation',
-      showAttentionSlot: 'attention',
     };
     for (const [flag, key] of Object.entries(perBanner)) {
       const re = new RegExp(`const ${flag} = shownBannerKey === '${key}';`);
       expect(HOME).toMatch(re);
     }
+    // The free/differential "attention" slot is retired outright.
+    expect(HOME).not.toMatch(/showAttentionSlot|showFreeCoachLine|showDifferentialBadge/);
   });
 
   test('there is no "reveal the rest" affordance left in the JSX', () => {
@@ -81,19 +85,19 @@ describe('D14 + Campaign 22 Phase 2 Stage 1: the P3 banner stack is priority-ran
   });
 
   test('the ranking arithmetic picks exactly one and leaves the rest waiting (worked example)', () => {
-    const eligible = { plateau: true, activation: true, attention: true };
-    const BANNER_PRIORITY = ['plateau', 'activation', 'attention']
+    const eligible = { plateau: true, activation: true };
+    const BANNER_PRIORITY = ['plateau', 'activation']
       .map((key) => ({ key, eligible: eligible[key] }))
       .filter((b) => b.eligible);
     const shownBannerKey = BANNER_PRIORITY[0]?.key ?? null;
     expect(shownBannerKey).toBe('plateau');
 
-    const eligible2 = { plateau: false, activation: true, attention: true };
-    const rank2 = ['plateau', 'activation', 'attention']
+    const eligible2 = { plateau: false, activation: true };
+    const rank2 = ['plateau', 'activation']
       .map((key) => ({ key, eligible: eligible2[key] }))
       .filter((b) => b.eligible);
     expect(rank2[0]?.key ?? null).toBe('activation');
-    expect(rank2.length).toBe(2);
+    expect(rank2.length).toBe(1);
     expect(new Set([rank2[0]?.key ?? null]).size).toBe(1);
   });
 
@@ -106,8 +110,6 @@ describe('D14 + Campaign 22 Phase 2 Stage 1: the P3 banner stack is priority-ran
     const dismissers = [
       { fn: 'dismissPlateauBanner', setter: 'setPlateauBannerDismissed' },
       { fn: 'dismissActivationNudge', setter: 'setActivationNudgeDismissed' },
-      { fn: 'dismissFreeCoachLine', setter: 'setFreeCoachLineDismissed' },
-      { fn: 'dismissDifferentialBanner', setter: 'setDifferentialDismissed' },
     ];
     for (const { fn, setter } of dismissers) {
       const start = HOME.indexOf(`function ${fn}(`);
@@ -128,14 +130,19 @@ describe('Campaign 22 Phase 2 Stage 1: the senior ranks moved to the Today line 
     const site = HOME.indexOf('const todayLineItem = resolveTodayLine({');
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site, HOME.indexOf('  });', site));
-    for (const key of ['blockComplete', 'coachDecision', 'checkIn', 'recovery', 'reEntry', 'phaseMismatch', 'trialEnding']) {
+    for (const key of ['blockComplete', 'coachDecision', 'checkIn', 'recovery', 'reEntry', 'phaseMismatch']) {
       expect(block).toMatch(new RegExp(`${key}: \\{`));
     }
+    // FOUNDER DECISION (fully free, no trial, no expiry): trialEnding is
+    // retired, not merely moved.
+    expect(block).not.toMatch(/trialEnding: \{/);
   });
 
   test('coach decision keeps its exact original tap-through, dismissal key and store mirror', () => {
+    // FOUNDER DECISION (fully free, no tier split): the coach decision
+    // banner is no longer Pro-gated -- every account gets it.
     expect(HOME).toMatch(
-      /const showCoachBanner = tier === 'pro' && !!latestCoachOutput && latestCoachDecisionComplete\s*\n\s*&& !coachBannerDismissed\s*\n\s*&& \(Date\.now\(\) - \(latestCoachOutput\.weekStart \?\? 0\) < 7 \* 86400000\);/,
+      /const showCoachBanner = !!latestCoachOutput && latestCoachDecisionComplete\s*\n\s*&& !coachBannerDismissed\s*\n\s*&& \(Date\.now\(\) - \(latestCoachOutput\.weekStart \?\? 0\) < 7 \* 86400000\);/,
     );
     // Still its own trigger, not routed through shownBannerKey -- and still
     // mirrored into the store for the You-tab badge, exactly as before.
@@ -155,10 +162,10 @@ describe('Campaign 22 Phase 2 Stage 1: the senior ranks moved to the Today line 
     expect(HOME).toMatch(/onDismiss: dismissPhaseBanner,/);
   });
 
-  test('trial ending is derived read-only from cascade.js, never a re-derivation of trial state', () => {
-    expect(HOME).toMatch(/const trialEndMs = trialEndsAtMs\(userProfile\);/);
-    expect(HOME).toMatch(/daysRemaining: daysRemaining\(userProfile\) \?\? 0,/);
-    // The everyday S0-S3 variant machinery is gone; only the ending fact remains.
+  test('FOUNDER DECISION (fully free, no trial, no expiry): trial ending is retired, not re-derived', () => {
+    expect(HOME).not.toMatch(/trialEndsAtMs/);
+    expect(HOME).not.toMatch(/const trialEndMs/);
+    expect(HOME).not.toMatch(/daysRemaining\(userProfile\)/);
     expect(HOME).not.toMatch(/variant="trial"/);
   });
 
@@ -168,26 +175,29 @@ describe('Campaign 22 Phase 2 Stage 1: the senior ranks moved to the Today line 
 });
 
 describe('D14: no P3 trigger is ED-safety/wellbeing/calm-mode, so none is exempt from the cap', () => {
-  test('none of the three P3 eligibility triggers reads an ED flag or wellbeing/calm-mode signal directly', () => {
+  test('neither P3 eligibility trigger reads an ED flag or wellbeing/calm-mode signal directly', () => {
     const site = HOME.indexOf('const plateauBannerEligible = !!plateauBanner');
     const end = HOME.indexOf('const BANNER_PRIORITY = [');
     const triggerBlock = HOME.slice(site, end);
     expect(triggerBlock).not.toMatch(/edFlag|isCalm|WELLBEING_KEY|openEdPatternFlag/i);
   });
 
-  test('ED-flag/calm-mode suppression that already existed for the activation nudge and differential badge is untouched (their loaders, not their render gate)', () => {
+  test('ED-flag/calm-mode suppression that already existed for the activation nudge is untouched (its loader, not its render gate)', () => {
     const activationLoader = HOME.slice(HOME.indexOf('async function loadActivationNudge'));
     expect(activationLoader.slice(0, 1000)).toMatch(/edFlag \|\| wellbeing === 'read_failed' \|\| isCalm\(wellbeing\)/);
-    const differentialLoader = HOME.slice(HOME.indexOf('async function loadDifferentialBanner'));
-    expect(differentialLoader.slice(0, 1200)).toMatch(/edFlag \|\| wellbeing === 'read_failed' \|\| isCalm\(wellbeing\)/);
   });
 
   test('the cap governs only the P3 stack, and no ED/wellbeing surface was funnelled into it', () => {
-    const declared = ['plateau', 'activation', 'attention'];
+    const declared = ['plateau', 'activation'];
     const gated = HOME.match(/const show\w+ = shownBannerKey === '(\w+)';/g) || [];
     expect(gated.length).toBeGreaterThan(0);
     for (const line of gated) {
       expect(declared).toContain(line.match(/=== '(\w+)'/)[1]);
     }
+  });
+
+  test('FOUNDER DECISION (fully free, no tier split): the differential paywall loader is retired from Home', () => {
+    expect(HOME).not.toMatch(/loadDifferentialBanner/);
+    expect(HOME).not.toMatch(/loadFreeCoachLine/);
   });
 });

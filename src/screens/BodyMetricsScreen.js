@@ -493,12 +493,11 @@ function buildChartLiveStyles(t) {
 
 export default function BodyMetricsScreen() {
   const navigation = useNavigation();
-  const { user, session, units, bodyWeightUnits, tier, userProfile } = useAppStore(useShallow(s => ({
+  const { user, session, units, bodyWeightUnits, userProfile } = useAppStore(useShallow(s => ({
     user: s.user,
     session: s.session,
     units: s.units,
     bodyWeightUnits: s.bodyWeightUnits,
-    tier: s.tier,
     userProfile: s.userProfile,
   })));
   // Energy DISPLAY unit (kcal | kj) for the average-intake readout below.
@@ -514,12 +513,6 @@ export default function BodyMetricsScreen() {
   // Memoised: this screen renders a mapped measurement/history list.
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
-  // E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
-  // no"): a non-Pro user reaches this screen only through withReadOnlyProGuard
-  // (they have logged body metrics), and it renders view-only: history, trends
-  // and charts stay; the Log Weight form and the auto-seed write are hidden.
-  // Derived from the store inside the screen, never trusted from a prop.
-  const readOnly = tier !== 'pro';
   const [physiqueEnabled, setPhysiqueEnabled] = useState(null); // null = loading
   const [calm, setCalm] = useState(false);
   const [edFlagOpen, setEdFlagOpen] = useState(false);
@@ -655,15 +648,14 @@ export default function BodyMetricsScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      // Volyume is fully free (founder decision 2026-09-03): physique
+      // tracking is force-enabled for every user, same as it always was for
+      // a Pro user before this.
       AsyncStorage.getItem(PHYSIQUE_PREF_KEY).then(v => {
-        if (v === 'true' || tier === 'pro') {
-          if (tier === 'pro' && v !== 'true') {
-            AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'true').catch(() => {});
-          }
-          setPhysiqueEnabled(true);
-        } else {
-          setPhysiqueEnabled(false);
+        if (v !== 'true') {
+          AsyncStorage.setItem(PHYSIQUE_PREF_KEY, 'true').catch(() => {});
         }
+        setPhysiqueEnabled(true);
       });
       // COMP-019: suppress the weight takeaway's rate-of-change under an open ED
       // pattern flag (COMP-004 safety behaviour), in addition to calmer mode.
@@ -686,16 +678,10 @@ export default function BodyMetricsScreen() {
   );
 
   useEffect(() => {
-    // Read-only users skip the opt-in gate (see the render below), so their
-    // data load must not wait on the physique pref either. null still means
-    // "pref not read yet" and defers the load one tick.
-    if (physiqueEnabled === null || (!physiqueEnabled && !readOnly)) return;
+    // null still means "pref not read yet" and defers the load one tick.
+    if (physiqueEnabled === null) return;
     (async () => {
-      // Hostile review (E10 #3): the legacy AsyncStorage migration WRITES
-      // body-metric rows (logBodyMetric + a sync schedule), so like the
-      // auto-seed it never runs in the view-only state. It resumes if the
-      // user returns to Pro.
-      if (!readOnly) await migrateFromAsyncStorage();
+      await migrateFromAsyncStorage();
       await loadHistory();
       await loadNutritionTargets();
       await loadRecentIntake();
@@ -759,9 +745,7 @@ export default function BodyMetricsScreen() {
       // entries doesn't re-create them on next visit.
       const SEED_KEY = `@volyume_body_metric_seeded_${user.id}`;
       const onboardingKg = userProfile?.weightKg ?? userProfile?.bodyWeightKg ?? null;
-      // E10 read-only: the auto-seed is a WRITE (it logs a body metric row),
-      // so it never runs in the view-only state.
-      if (rows.length === 0 && onboardingKg && onboardingKg > 0 && !readOnly) {
+      if (rows.length === 0 && onboardingKg && onboardingKg > 0) {
         const alreadySeeded = await AsyncStorage.getItem(SEED_KEY).catch(() => null);
         if (!alreadySeeded) {
           try {
@@ -863,7 +847,6 @@ export default function BodyMetricsScreen() {
   // user's display unit (mirrors TodayStrip's kg -> st/lb prefill) so editing
   // in stone-and-pounds never shows a raw kilogram figure.
   function startEditEntry(entry) {
-    if (useAppStore.getState().tier !== 'pro') return;
     const hasMeasurements = MEASUREMENTS.some(m => entry[m.key] != null);
     let body_weight = '';
     let body_weight_st = '';
@@ -907,7 +890,6 @@ export default function BodyMetricsScreen() {
   // idiom (appAlert, neutral "Cancel"/"Delete" pair, no haptics). Plain,
   // factual copy only, no judgement of the values being removed.
   function confirmDeleteEntry(entry) {
-    if (useAppStore.getState().tier !== 'pro') return;
     appAlert(
       'Delete this entry?',
       'The weight and any measurements logged for this date are removed from your history. This cannot be undone.',
@@ -919,7 +901,6 @@ export default function BodyMetricsScreen() {
   }
 
   async function deleteMetricEntry(entry) {
-    if (useAppStore.getState().tier !== 'pro') return;
     const prevHistory = history;
     // Optimistic removal; restored on failure.
     setHistory(prev => prev.filter(h => h.id !== entry.id));
@@ -945,9 +926,6 @@ export default function BodyMetricsScreen() {
   }
 
   async function saveMetrics() {
-    // Live-tier re-check (hostile review E10 #1 class): a pro-to-free flip
-    // while the form is open must not let this closure write.
-    if (useAppStore.getState().tier !== 'pro') return;
     // DATA-001: one shared, pure save-gate. "At least one measurement" now means
     // ANY non-empty VALID field (body weight, body fat, or any single
     // circumference, not just chest), and any impossible value (non-finite,
@@ -1059,13 +1037,9 @@ export default function BodyMetricsScreen() {
   }
 
   // L04-7 (design audit 2026-07-09): the opt-in gate that used to render here
-  // was confirmed dead code — Pro users have physiqueEnabled force-set true
-  // above before this point ever runs, and read-only (free) users are
-  // excluded by the readOnly guard itself, so no real user could ever reach
-  // it. Removed rather than re-gated: there is no live scenario today where a
-  // user should see a tracking pitch on a screen they were already routed
-  // into (Pro users already have tracking on; free users only land here via
-  // withReadOnlyProGuard once they already have history to view).
+  // was confirmed dead code -- physiqueEnabled is force-set true above
+  // before this point ever runs, so no real user could ever reach it.
+  // Removed rather than re-gated.
 
   // Calmer experience: gentle re-confirmation once per app session.
   if (calm && !sessionConfirmed) {
@@ -1124,29 +1098,6 @@ export default function BodyMetricsScreen() {
         // keyboard -- the user has to tap twice.
         keyboardShouldPersistTaps="handled"
       >
-
-        {/* E10 read-only lapse views: say plainly what this state is, and keep
-            the one honest way out. Calm voice, no shame. */}
-        {readOnly ? (
-          <View style={[styles.readOnlyCard, live.readOnlyCard]}>
-            <View style={styles.readOnlyRow}>
-              <Ionicons name="eye-outline" size={16} color={t.colors.textSecondary} />
-              <Text style={[styles.readOnlyText, live.readOnlyText]}>
-                Your history is view-only on the free plan. Everything you logged is safe and stays yours.
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.readOnlyCtaButton, live.readOnlyCtaButton]}
-              onPress={() => navigation.navigate('ProUpgrade', { source: 'body_metrics' })}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel="Upgrade to Pro to log weight again"
-            >
-              <Ionicons name="lock-open-outline" size={16} color={t.colors.textSecondary} />
-              <Text style={[styles.readOnlyCta, live.readOnlyCta]}>Log weight again with Pro</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
 
         {/* Progress photos (gap #9): private, device-local only. */}
         <TouchableOpacity
@@ -1359,36 +1310,32 @@ export default function BodyMetricsScreen() {
           <EmptyState
             icon="body-outline"
             title="No body metrics yet"
-            text={onboardingWeightKg && !readOnly
+            text={onboardingWeightKg
               ? `We have your onboarding body weight saved as a starting point (${formatBodyWeightShort(onboardingWeightKg, bodyWeightUnits)}). Log a fresh weight to start the trend.`
               : 'Log body weight or measurements when you want this trend to start.'}
           />
         )}
 
-        {/* Log Button. E10 read-only: logging is a write; the button and the
-            form below never render in the view-only state. */}
-        {!readOnly && (
-          <Button
-            title={showForm ? 'Cancel' : 'Log weight'}
-            icon={showForm ? 'chevron-up' : 'add-circle'}
-            style={styles.logBtn}
-            onPress={() => {
-              // D16 (NAV-2): opening fresh always starts a new entry, even if
-              // the form was last left mid-edit; closing always clears edit
-              // state too, so a stray editingId can never redirect a later
-              // "Log weight" tap into silently overwriting a past entry.
-              if (showForm) closeMetricForm();
-              else { setEditingId(null); setShowForm(true); setShowMeasurements(false); }
-            }}
-            accessibilityState={{ expanded: showForm }}
-            accessibilityLabel={showForm ? 'Cancel' : 'Log weight'}
-            size="lg"
-            textStyle={styles.logBtnText}
-          />
-        )}
+        <Button
+          title={showForm ? 'Cancel' : 'Log weight'}
+          icon={showForm ? 'chevron-up' : 'add-circle'}
+          style={styles.logBtn}
+          onPress={() => {
+            // D16 (NAV-2): opening fresh always starts a new entry, even if
+            // the form was last left mid-edit; closing always clears edit
+            // state too, so a stray editingId can never redirect a later
+            // "Log weight" tap into silently overwriting a past entry.
+            if (showForm) closeMetricForm();
+            else { setEditingId(null); setShowForm(true); setShowMeasurements(false); }
+          }}
+          accessibilityState={{ expanded: showForm }}
+          accessibilityLabel={showForm ? 'Cancel' : 'Log weight'}
+          size="lg"
+          textStyle={styles.logBtnText}
+        />
 
         {/* Log / Edit Form */}
-        {!readOnly && showForm && (
+        {showForm && (
           <View style={[styles.formCard, live.formCard]}>
             <Text style={[styles.formTitle, live.formTitle]}>{editingId ? 'Edit entry' : 'New entry'}</Text>
             <View style={styles.formRow}>
@@ -1603,9 +1550,7 @@ export default function BodyMetricsScreen() {
         {/* History. D16 (NAV-2): full weigh-in management, edit any entry,
             delete entries, visible history list, so this now shows from a
             single logged entry (not only once there are 2+), and every row
-            carries a calm edit/delete pair for Pro (view-only free users see
-            the list with no write affordances, matching the rest of this
-            screen). */}
+            carries a calm edit/delete pair. */}
         {history.length > 0 && (
           <View style={styles.section}>
             <SectionLabel>History</SectionLabel>
@@ -1631,28 +1576,26 @@ export default function BodyMetricsScreen() {
                       update/soft-delete pair, so the actions render for them
                       too and route to the owning table (see saveMetrics /
                       deleteMetricEntry). The old silent no-op is gone. */}
-                  {!readOnly && (
-                    <View style={styles.historyActions}>
-                      <TouchableOpacity
-                        style={[styles.historyActionBtn, live.historyActionBtn]}
-                        onPress={() => startEditEntry(entry)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Edit entry from ${entryLabel}`}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons name="pencil-outline" size={16} color={t.colors.textSecondary} />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.historyActionBtn, live.historyActionBtn]}
-                        onPress={() => confirmDeleteEntry(entry)}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Delete entry from ${entryLabel}`}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Ionicons name="trash-outline" size={16} color={t.colors.textSecondary} />
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                  <View style={styles.historyActions}>
+                    <TouchableOpacity
+                      style={[styles.historyActionBtn, live.historyActionBtn]}
+                      onPress={() => startEditEntry(entry)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Edit entry from ${entryLabel}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="pencil-outline" size={16} color={t.colors.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.historyActionBtn, live.historyActionBtn]}
+                      onPress={() => confirmDeleteEntry(entry)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete entry from ${entryLabel}`}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="trash-outline" size={16} color={t.colors.textSecondary} />
+                    </TouchableOpacity>
+                  </View>
                 </Card>
               );
             })}
@@ -1758,30 +1701,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg, paddingVertical: spacing.md,
   },
   photosRowText: { color: colors.textPrimary, fontSize: fontSize.md, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
-  // E10 read-only lapse views: the view-only notice card.
-  readOnlyCard: {
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle,
-    padding: spacing.md,
-  },
-  readOnlyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  readOnlyText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
-  readOnlyCtaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: spacing.xs,
-    minHeight: 40,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  readOnlyCta: { ...type.label, color: colors.textPrimary },
   confirmCard: {
     backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.xl,
     borderWidth: 1, borderColor: colors.borderSubtle, gap: spacing.md, alignItems: 'flex-start',
@@ -1968,10 +1887,6 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     photosRow: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     photosRowText: { color: t.colors.textPrimary, fontSize: t.fontSize.md },
-    readOnlyCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    readOnlyText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    readOnlyCtaButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    readOnlyCta: { ...t.type.label, color: t.colors.textPrimary },
     confirmCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     confirmTitle: { ...t.type.h3, color: t.colors.textPrimary },
     confirmBody: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },

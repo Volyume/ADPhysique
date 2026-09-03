@@ -389,23 +389,6 @@ test('setting the imported photo set date to the past indexes the set under that
   }));
 });
 
-test('a pro-to-free flip with the photo set date sheet open blocks the import', async () => {
-  mockAppAlert.mockImplementation(() => {});
-  const tree = await render();
-  await openImportScanDateStep(tree);
-  await flush();
-
-  // Tier lapses while the sheet is open.
-  useAppStore.getState = () => ({ tier: 'free', user: { id: USER_ID } });
-
-  await pressLabel(tree, 'Import photos for this photo set');
-  await flush();
-
-  expect(createProgressScanSession).not.toHaveBeenCalled();
-  expect(saveProgressPhoto).not.toHaveBeenCalled();
-  expect(upsertPhotoMeta).not.toHaveBeenCalled();
-});
-
 // Progress-photos wave 2 (founder gate F2 = tag route, F3 baseline framing).
 // The quick camera/library route is reached today via the guided ghost
 // camera's fallback (onFallback -> pickFrom('library') when no scan flow is

@@ -7,7 +7,7 @@
  *    is withheld entirely when it is true (the E1 numeric-over-a-body gate,
  *    fail-closed) — mocked both ways;
  *  - delete calls onDelete(name) only AFTER the confirm's destructive action
- *    fires (and behind the live-tier re-check);
+ *    fires;
  *  - changing the pose writes through upsertPhotoMeta.
  *
  * Gesture recognisers and the metadata/suppression layers are mocked: the
@@ -135,7 +135,6 @@ beforeEach(() => {
   act(() => {
     useAppStore.setState({
       user: { id: USER_ID },
-      tier: 'pro',
       bodyWeightUnits: 'kg',
       accessibility: { reduceMotion: false },
     });
@@ -233,21 +232,6 @@ test('date delete copy is explicit and separate from scored scan sets', async ()
   expect(message).not.toContain('saved Volyume Score');
   expect(buttons.find((b) => b.style === 'destructive').text).toBe('Delete all from this date');
   expect(props.onDelete).toHaveBeenCalledWith(NAME_A);
-});
-
-test('delete is blocked when the live tier is no longer pro', async () => {
-  const props = baseProps();
-  mockAppAlert.mockImplementation((title, message, buttons) => {
-    const del = buttons.find((b) => b.style === 'destructive');
-    del?.onPress?.();
-  });
-  const tree = await mount(props);
-  act(() => { useAppStore.setState({ tier: 'free' }); });
-
-  const [delBtn] = findByLabel(tree, 'Remove this photo');
-  await act(async () => { delBtn.props.onPress(); });
-
-  expect(props.onDelete).not.toHaveBeenCalled();
 });
 
 test('changing the pose writes through upsertPhotoMeta', async () => {

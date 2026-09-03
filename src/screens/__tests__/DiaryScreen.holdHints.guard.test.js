@@ -92,9 +92,9 @@ describe('DiaryScreen hold-to-discover hints (Wave A C7)', () => {
     expect(SRC).not.toMatch(/Hold a food to select several/);
   });
 
-  test('the water caption renders inside WaterRow, gated off in read-only', () => {
+  test('the water caption renders inside WaterRow', () => {
     expect(SRC).toMatch(
-      /\{showHint && !readOnly \? \(\s*<HintCaption\s*text="Hold to add 500 ml\."\s*onDismiss=\{onDismissHint\}\s*style=\{styles\.waterHint\}\s*\/>\s*\) : null\}/,
+      /\{showHint \? \(\s*<HintCaption\s*text="Hold to add 500 ml\."\s*onDismiss=\{onDismissHint\}\s*style=\{styles\.waterHint\}\s*\/>\s*\) : null\}/,
     );
   });
 

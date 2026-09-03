@@ -15,12 +15,10 @@
  * open ED-pattern flag, or a failed read of either -- the SAME
  * usePhotoSuppression hook every other high-risk photo surface uses, which
  * itself starts suppressed and only lifts once both reads confirm a safe
- * state. `suppressed` is reported independently of tier so the caller can
- * hide the pillar ENTIRELY (not even a locked-Pro affordance) for every
- * tier under suppression -- a photo-adjacent surface follows the same rule
- * as any other weight/food-adjacent one: suppression is never weakened by
- * "but this user cannot see photo data anyway". Scan data itself is only
- * ever fetched for a Pro user once suppression is confirmed lifted.
+ * state. `suppressed` hides the pillar ENTIRELY under suppression -- a
+ * photo-adjacent surface follows the same rule as any other weight/food-
+ * adjacent one. Scan data itself is only ever fetched once suppression is
+ * confirmed lifted.
  */
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -37,7 +35,7 @@ const PILLAR_WINDOW_DAYS = 3650;
 
 const EMPTY_DATA = { hasScan: false, hasNote: false, packet: null, capturedAt: null };
 
-export default function useVisualPillar(userId, tier) {
+export default function useVisualPillar(userId) {
   // Fail CLOSED (usePhotoSuppression's own contract): starts suppressed and
   // only lifts once both the wellbeing mode and open-ED-flag reads confirm a
   // safe state.
@@ -45,7 +43,7 @@ export default function useVisualPillar(userId, tier) {
   const [data, setData] = useState({ ...EMPTY_DATA, loading: true });
 
   const load = useCallback(async () => {
-    if (!userId || tier !== 'pro' || suppressed) {
+    if (!userId || suppressed) {
       setData({ ...EMPTY_DATA, loading: false });
       return;
     }
@@ -72,7 +70,7 @@ export default function useVisualPillar(userId, tier) {
     } catch (_e) {
       setData({ ...EMPTY_DATA, loading: false });
     }
-  }, [userId, tier, suppressed]);
+  }, [userId, suppressed]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 

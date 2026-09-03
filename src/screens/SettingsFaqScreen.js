@@ -42,11 +42,6 @@ export const FAQS = [
     a: 'Precision Coaching follows clear, fixed rules, never a guess. Each week it reads your logged training, your weight trend, your food data if you use the food diary, and your weekly check-in answers, then decides what should change, what should hold, and explains why. A held week is Precision Coaching working, not doing nothing. "How Precision Coaching works" has the full explanation, reachable from any coaching decision.',
   },
   {
-    key: 'free-vs-pro',
-    q: "What's free, and what needs Pro?",
-    a: 'Free covers the Plan Library, the workout builder, workout logging, the exercise library, personal records and progress stats. Pro adds everything nutrition and coaching related: the food diary, barcode and label scanning, meal suggestions, calorie and macro targets, weekly check-ins, Precision Coaching, and division-style plans.',
-  },
-  {
     key: 'food-diary',
     q: 'How do I use the food diary, and mark meals as eaten?',
     a: "Log food by searching, scanning a barcode, or adding your own foods and meals. If you've built a meal plan, tick each planned meal off as you eat it, or mark everything eaten at once from the bottom of the day. Either way works; pick whichever fits how your day goes.",
@@ -79,11 +74,6 @@ export const FAQS = [
     key: 'delete-account',
     q: 'How do I delete my account?',
     a: 'Go to Settings > Account > Delete account. This permanently removes your account and app data, both on your device and in the cloud, and cannot be undone.',
-  },
-  {
-    key: 'subscription',
-    q: 'How do I manage my subscription or restore a purchase?',
-    a: 'Open Settings > Account > Subscription to see your plan, manage billing, or restore a previous purchase if a new device or a reinstall does not show your Pro access straight away.',
   },
   {
     key: 'notifications',
@@ -121,7 +111,7 @@ export default function SettingsFaqScreen() {
   return (
     <SettingsPage title="Help & FAQ">
       <Text style={[styles.intro, live.intro]}>
-        Answers to what people ask most. Nothing here needs a connection, and it works the same whether you are on Free or Pro.
+        Answers to what people ask most. Nothing here needs a connection.
       </Text>
       <View style={styles.list}>
         {FAQS.map((item) => (

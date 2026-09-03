@@ -17,12 +17,11 @@ import Chip from '../components/Chip';
 // Coaching: the levers that shape what the coach asks for and adjusts.
 // Cycle tracking shows for users whose body profile records a female sex.
 export default function SettingsCoachingScreen() {
-  const { user, userProfile, saveLocalProfile, tier } = useAppStore(
+  const { user, userProfile, saveLocalProfile } = useAppStore(
     useShallow(s => ({
       user: s.user,
       userProfile: s.userProfile,
       saveLocalProfile: s.saveLocalProfile,
-      tier: s.tier,
     })),
   );
 
@@ -155,18 +154,13 @@ export default function SettingsCoachingScreen() {
           icon="pulse-outline"
           label="Session readiness check"
           sub={readinessAsk
-            // Session adjustment from the answers is Pro-only
-            // (ActiveWorkoutScreen readinessTweak), so the Free copy must not
-            // promise it (comprehension-trust audit 2026-08-06, T16). Free
-            // answers ARE kept: they write to the workout row and feed the
-            // Home readiness line.
+            // Volyume is fully free (founder ruling): session adjustment
+            // from these answers (ActiveWorkoutScreen readinessTweak)
+            // applies to everyone, so the ON copy always names it.
             // C10D: the ON copy names the DIRECTION, matching the
             // pre-session sheet: poor recovery can ease the session, and a
-            // good answer never adds work above the plan. Free still gets
-            // no promise of session adjustment - that stays Pro-only.
-            ? (tier === 'pro'
-              ? 'Asks how you are feeling before each session. Poor sleep or heavy soreness can ease that session; answering well never adds work above the plan.'
-              : 'Asks how you are feeling before each session and keeps it with your training history.')
+            // good answer never adds work above the plan.
+            ? 'Asks how you are feeling before each session. Poor sleep or heavy soreness can ease that session; answering well never adds work above the plan.'
             // RC-4 (D96, Review C): the off state names its SECOND
             // consequence too - these answers are the block ledger's main
             // recovery evidence, so leaving them off keeps next-block set
@@ -187,117 +181,109 @@ export default function SettingsCoachingScreen() {
             />
           }
         />
-        {tier === 'pro' && (
-          <>
-            {/* C1: coaching tone register. Same facts, same decisions, same
-                honesty rules in every tone; only the prose shape changes.
-                Safety copy is identical whatever is chosen. */}
-            <View style={[styles.toneBlock, liveText.toneBlock]}>
-              <Text style={[styles.toneLabel, liveText.toneLabel]}>Coaching tone</Text>
-              <Text style={[styles.toneSub, liveText.toneSub]}>
-                {coachTone === 'supportive'
-                  ? 'Plainer wording with a little more explanation.'
-                  : coachTone === 'precise'
-                    ? 'Terser. Numbers first, no padding.'
-                    : 'The coach matches its wording to your training experience.'}
-              </Text>
-              <View style={styles.toneChips}>
-                {[
-                  { key: 'automatic', label: 'Automatic' },
-                  { key: 'supportive', label: 'Supportive' },
-                  { key: 'precise', label: 'Precise' },
-                ].map(({ key, label }) => {
-                  const sel = coachTone === key;
-                  return (
-                    <Chip
-                      key={key}
-                      label={label}
-                      selected={sel}
-                      onPress={() => setTone(key)}
-                      accessibilityRole="radio"
-                      accessibilityLabel={`Coaching tone ${label}`}
-                      style={styles.toneChipFlex}
-                      labelStyle={styles.toneChipLabel}
-                    />
-                  );
-                })}
-              </View>
-            </View>
-            {/* Ultimate-Audit item 11: autonomy (apply-control). Every mode
-                shows the same decision and reason; only who confirms it
-                differs. A safety hold (deload, poor recovery, safety hold,
-                FFM floor, ED flag, rapid loss, calm mode) always forces
-                confirm-first, whatever mode is chosen (D16), so Coached is
-                never a promise to bypass a hold. */}
-            <View style={[styles.toneBlock, liveText.toneBlock]}>
-              <Text style={[styles.toneLabel, liveText.toneLabel]}>Autonomy</Text>
-              <Text style={[styles.toneSub, liveText.toneSub]}>
-                {coachAutonomy === 'coached'
-                  // D93 (Campaign 2, Phase 12): the D16 rule was a source
-                  // comment only - a Coached user whose week reverted to
-                  // confirm-first was told nothing. One honest sentence.
-                  ? "The coach applies each week's changes for you. Anything safety-related still waits for your confirmation."
-                  : coachAutonomy === 'manual'
-                    ? 'The coach shows each change and the reason. You make the change yourself.'
-                    : 'The coach suggests each change. You tap to apply it.'}
-              </Text>
-              <View style={styles.toneChips}>
-                {[
-                  { key: 'coached', label: 'Coached' },
-                  { key: 'collaborative', label: 'Collaborative' },
-                  { key: 'manual', label: 'Manual' },
-                ].map(({ key, label }) => {
-                  const sel = coachAutonomy === key;
-                  return (
-                    <Chip
-                      key={key}
-                      label={label}
-                      selected={sel}
-                      onPress={() => setAutonomy(key)}
-                      accessibilityRole="radio"
-                      accessibilityLabel={`Autonomy ${label}`}
-                      style={styles.toneChipFlex}
-                      labelStyle={styles.toneChipLabel}
-                    />
-                  );
-                })}
-              </View>
-            </View>
-            {/* C2: the opt-in science layer. Off by default; everything stays
-                plain English. On adds the technical term in brackets after the
-                plain one on the coach's explanation surfaces. */}
-            <SettingRow
-              icon="flask-outline"
-              label="Show the science"
-              // RC-5 (D96, Review C): the old sub promised plural "terms"
-              // on plural "explanations"; the layer's one live mapping is
-              // the weight-trend term. Say what it does. (No live coach
-              // sentence states a "weekly target range" today, so the
-              // doc-example MEV/MRV pair has nothing to attach to; wiring
-              // it stays recorded in the register for the day one does.)
-              sub={showScience
-                ? 'On. The technical name appears in brackets where the coach reports your weight trend.'
-                : 'Off. Everything stays in plain English.'}
-              showArrow={false}
-              rightElement={
-                <Switch
-                  value={showScience}
-                  onValueChange={toggleScience}
-                  trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
-                  thumbColor={showScience ? t.colors.primary : t.colors.textMuted}
+        {/* C1: coaching tone register. Same facts, same decisions, same
+            honesty rules in every tone; only the prose shape changes.
+            Safety copy is identical whatever is chosen. */}
+        <View style={[styles.toneBlock, liveText.toneBlock]}>
+          <Text style={[styles.toneLabel, liveText.toneLabel]}>Coaching tone</Text>
+          <Text style={[styles.toneSub, liveText.toneSub]}>
+            {coachTone === 'supportive'
+              ? 'Plainer wording with a little more explanation.'
+              : coachTone === 'precise'
+                ? 'Terser. Numbers first, no padding.'
+                : 'The coach matches its wording to your training experience.'}
+          </Text>
+          <View style={styles.toneChips}>
+            {[
+              { key: 'automatic', label: 'Automatic' },
+              { key: 'supportive', label: 'Supportive' },
+              { key: 'precise', label: 'Precise' },
+            ].map(({ key, label }) => {
+              const sel = coachTone === key;
+              return (
+                <Chip
+                  key={key}
+                  label={label}
+                  selected={sel}
+                  onPress={() => setTone(key)}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`Coaching tone ${label}`}
+                  style={styles.toneChipFlex}
+                  labelStyle={styles.toneChipLabel}
                 />
-              }
+              );
+            })}
+          </View>
+        </View>
+        {/* Ultimate-Audit item 11: autonomy (apply-control). Every mode
+            shows the same decision and reason; only who confirms it
+            differs. A safety hold (deload, poor recovery, safety hold,
+            FFM floor, ED flag, rapid loss, calm mode) always forces
+            confirm-first, whatever mode is chosen (D16), so Coached is
+            never a promise to bypass a hold. */}
+        <View style={[styles.toneBlock, liveText.toneBlock]}>
+          <Text style={[styles.toneLabel, liveText.toneLabel]}>Autonomy</Text>
+          <Text style={[styles.toneSub, liveText.toneSub]}>
+            {coachAutonomy === 'coached'
+              // D93 (Campaign 2, Phase 12): the D16 rule was a source
+              // comment only - a Coached user whose week reverted to
+              // confirm-first was told nothing. One honest sentence.
+              ? "The coach applies each week's changes for you. Anything safety-related still waits for your confirmation."
+              : coachAutonomy === 'manual'
+                ? 'The coach shows each change and the reason. You make the change yourself.'
+                : 'The coach suggests each change. You tap to apply it.'}
+          </Text>
+          <View style={styles.toneChips}>
+            {[
+              { key: 'coached', label: 'Coached' },
+              { key: 'collaborative', label: 'Collaborative' },
+              { key: 'manual', label: 'Manual' },
+            ].map(({ key, label }) => {
+              const sel = coachAutonomy === key;
+              return (
+                <Chip
+                  key={key}
+                  label={label}
+                  selected={sel}
+                  onPress={() => setAutonomy(key)}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`Autonomy ${label}`}
+                  style={styles.toneChipFlex}
+                  labelStyle={styles.toneChipLabel}
+                />
+              );
+            })}
+          </View>
+        </View>
+        {/* C2: the opt-in science layer. Off by default; everything stays
+            plain English. On adds the technical term in brackets after the
+            plain one on the coach's explanation surfaces. */}
+        <SettingRow
+          icon="flask-outline"
+          label="Show the science"
+          // RC-5 (D96, Review C): the old sub promised plural "terms"
+          // on plural "explanations"; the layer's one live mapping is
+          // the weight-trend term. Say what it does. (No live coach
+          // sentence states a "weekly target range" today, so the
+          // doc-example MEV/MRV pair has nothing to attach to; wiring
+          // it stays recorded in the register for the day one does.)
+          sub={showScience
+            ? 'On. The technical name appears in brackets where the coach reports your weight trend.'
+            : 'Off. Everything stays in plain English.'}
+          showArrow={false}
+          rightElement={
+            <Switch
+              value={showScience}
+              onValueChange={toggleScience}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={showScience ? t.colors.primary : t.colors.textMuted}
             />
-          </>
-        )}
-        {/* D94 (Campaign 3, F10): the only consumer of this flag is the
-            Pro weekly check-in, so a free user's toggle was inert - it
-            saved a preference nothing read. Gated to Pro like its reader;
-            the sex gate is unchanged (Article 9 surface). */}
-        {/* Review B finding 8: a lapsed user with the flag ON must keep
-            the revocation path (Article 9 opt-in). The row therefore also
-            renders whenever the flag is currently on, whatever the tier. */}
-        {(tier === 'pro' || cycleEnabled) && bioSex === 'female' && (
+          }
+        />
+        {/* D94 (Campaign 3, F10): cycle tracking's only consumer is the
+            weekly check-in, which everyone now has (Volyume is fully
+            free); the sex gate is unchanged (Article 9 surface). */}
+        {bioSex === 'female' && (
           <SettingRow
             icon="calendar-outline"
             label="Cycle tracking"

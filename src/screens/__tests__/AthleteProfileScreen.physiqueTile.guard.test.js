@@ -89,12 +89,13 @@ describe('AthleteProfileScreen physique tile', () => {
     // CP-10 batch G: profileFocus gained its live-theme override, same
     // contract-preserving widening as heroFocus above.
     expect(coachSource).toMatch(/<Text style=\{(?:styles\.profileFocus|\[styles\.profileFocus, live\.profileFocus\])\} numberOfLines=\{2\}>\{profileFocus\}<\/Text>/);
-    // R8 (D68, 2026-07-11): the free tier's "Upgrade to Pro" NavRow was a
-    // duplicate of the pitch card directly above it; the card is now the
-    // single, tappable upgrade path. Re-anchored to pin that path instead.
-    expect(coachSource).toMatch(/Coach is available on Pro/);
-    // C2 (2026-07-11): the pitch-card navigate now carries its entry source.
-    expect(coachSource).toMatch(/navigation\.navigate\('ProUpgrade', \{ source: 'coach_pitch_card' \}\)/);
-    expect(coachSource).toMatch(/pro=\{!isPro\}/);
+    // The "Coach is available on Pro" pitch card / "Upgrade to Pro" NavRow
+    // pin REMOVED (D137, fully free product): every account has a coach
+    // now, so there is nothing left to pitch -- YouScreen.js's own comment
+    // says so directly ("the Free pitch branch (opening ProUpgrade) is
+    // retired -- there is nothing left to pitch"). Confirmed gone from
+    // source, not merely reworded.
+    expect(coachSource).not.toMatch(/Coach is available on Pro/);
+    expect(coachSource).not.toContain("navigate('ProUpgrade'");
   });
 });

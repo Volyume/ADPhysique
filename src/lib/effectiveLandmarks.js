@@ -15,9 +15,8 @@
  *      (@volyume_landmarks_<userId>, VolumeHeatmapScreen). A hand-set value
  *      always beats the engine: explicit user intent wins.
  *   2. ADAPTED — computeAdaptiveLandmarks output, only when that muscle has
- *      enough data (isAdapted, 3+ points) AND the user is Pro (adaptation is
- *      coaching-engine output, same gate as the session adjustments that
- *      already consume it). Deterministic: same history, same numbers.
+ *      enough data (isAdapted, 3+ points). Deterministic: same history,
+ *      same numbers.
  *   3. PLAN — planVolumeTargets.buildPlanLandmarks: what the athlete's own
  *      plan programs for that muscle each week, inside the floor and
  *      ceiling their own profile produces. Founder ruling 2026-08-23: the
@@ -29,11 +28,10 @@
  *   4. RESEARCH — VOLUME_LANDMARKS, the population starting points, now
  *      only reached with neither a plan nor a profile to go on.
  *
- * The plan layer is tier-blind: a Free athlete's plan is as much theirs as
- * a Pro's, and reading what it programs is not coaching-engine output. The
- * ADAPTED layer keeps its Pro gate. No ED-safety surface is involved
- * (training volume bands, not calories); tier-blindness rules apply to ED
- * guardrails only.
+ * Volyume is fully free (founder decision 2026-09-03): there is no Free/Pro
+ * split, so the old ADAPTED-layer Pro gate is gone -- the adapted table is
+ * available to every user with enough data. No ED-safety surface is
+ * involved (training volume bands, not calories).
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { VOLUME_LANDMARKS, computeAdaptiveLandmarks } from './algorithms';
@@ -99,10 +97,10 @@ export function mergeLandmarkPrecedence({ manual = null, adapted = null, plan = 
  * read: any failure degrades that layer to absent, never throws — a volume
  * chart must render even if a pref read fails.
  */
-export async function getEffectiveLandmarks(userId, { tier = 'free', userProfile = null } = {}) {
+export async function getEffectiveLandmarks(userId, { userProfile = null } = {}) {
   if (!userId) return mergeLandmarkPrecedence({});
   const manual = await getManualLandmarks(userId);
-  const adapted = await getAdaptedLandmarks(userId, { tier });
+  const adapted = await getAdaptedLandmarks(userId);
   const plan = await getPlanLandmarks(userId, { userProfile });
   return mergeLandmarkPrecedence({ manual, adapted, plan });
 }
@@ -207,12 +205,16 @@ export async function getManualVolumeMuscles(userId) {
 }
 
 /**
- * The session-grain adapted table (Pro only), or null. Exported (Stage 6)
- * for the runner's adaptedMrv ceiling clamp — same lazy require, same
- * fail-open posture as before.
+ * The session-grain adapted table, or null. Exported (Stage 6) for the
+ * runner's adaptedMrv ceiling clamp — same lazy require, same fail-open
+ * posture as before.
+ *
+ * Volyume is fully free (founder decision 2026-09-03): the old Pro gate is
+ * gone. `tier` stays an accepted (unused) option only because call sites
+ * outside this module's lane still pass it through unchanged.
  */
-export async function getAdaptedLandmarks(userId, { tier = 'free' } = {}) {
-  if (!userId || tier !== 'pro') return null;
+export async function getAdaptedLandmarks(userId) {
+  if (!userId) return null;
   try {
     // Lazy require: database.js requires heavy native modules; keeping it
     // out of module scope lets pure consumers (tests, the merge) import

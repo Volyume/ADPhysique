@@ -13,13 +13,11 @@ describe('athleteProfileAccessibility', () => {
       label: 'Progress photos',
       sub: 'Last photo set 29 days ago. Retake when light, pose and timing are consistent.',
       status: 'attention',
-      pro: true,
     });
 
     expect(out.accessibilityLabel).toBe('Progress photos');
     expect(out.accessibilityHint).toContain('Status: Update.');
     expect(out.accessibilityHint).toContain('Last photo set 29 days ago');
-    expect(out.accessibilityHint).toContain('Pro plan may be required.');
   });
 
   test('omits empty hints for plain rows', () => {

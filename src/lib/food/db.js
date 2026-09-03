@@ -343,18 +343,14 @@ export async function getRecentLoggedDays(userId, asOfDate, limit = 14) {
 }
 
 /**
- * Whether the user has ANY live food entry at all (E10 read-only lapse views).
- * Drives the route guard's lock-vs-view branch: a lapsed user with logged days
- * gets the view-only diary; a user with nothing logged keeps the ProLocked
- * show-then-sell gate. Cheap indexed existence read, no rows materialised.
+ * Whether the user has ANY live food entry at all. Cheap indexed existence
+ * read, no rows materialised.
  */
 export async function hasAnyFoodEntries(userId) {
   if (!userId) return false;
   const d = await db();
   // is_planned = 0: unconfirmed meal-plan scaffolding is not logged history
-  // (hostile review E10 #4) — a user whose only rows are un-eaten planned
-  // meals keeps the ProLocked gate, not a read-only view of food they never
-  // ate.
+  // (hostile review E10 #4).
   const row = await d.getFirstAsync(
     `SELECT 1 AS one FROM food_entries
      WHERE user_id = ? AND deleted_at IS NULL AND is_planned = 0 LIMIT 1`,

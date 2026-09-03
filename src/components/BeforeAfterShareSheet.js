@@ -14,8 +14,6 @@
  *     OR calm mode). The suppression check sits BEFORE compose/encode/share, so
  *     a suppressed user never reaches the two-photo export at all (§3.8, PART 2).
  *     The whole card is withheld, not merely weight-stripped.
- *   - Pro-gated: generation re-checks tier live (a pro-to-free flip mid-flow
- *     must not generate), and the sheet renders nothing for a non-Pro user.
  *   - Weight-on-card is a FOUNDER-APPROVED override of the locked "share cards
  *     never include bodyweight" rule (DECISIONS #2). It is an explicit opt-in
  *     toggle per export and is bounded by the suppression withhold above;
@@ -141,7 +139,6 @@ export default function BeforeAfterShareSheet({
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const toast = useToast();
   const suppressed = usePhotoSuppression();
-  const tier = useAppStore((s) => s.tier);
   const userId = useAppStore((s) => s.user?.id);
   const bodyWeightUnits = useAppStore((s) => s.bodyWeightUnits) || 'kg';
   const reduceMotion = useAppStore((s) => s.accessibility?.reduceMotion);
@@ -185,7 +182,7 @@ export default function BeforeAfterShareSheet({
   const [sharing, setSharing] = useState(false);
   const [savingToGallery, setSavingToGallery] = useState(false);
 
-  const active = visible && !suppressed && tier === 'pro';
+  const active = visible && !suppressed;
 
   // Default the pair to earliest vs latest each time the sheet opens.
   useEffect(() => {
@@ -385,10 +382,10 @@ export default function BeforeAfterShareSheet({
     );
   }, []);
 
-  // Guarded generation: re-check tier live, validate BOTH images are present
-  // before compositing, and calm-abort (never open the share sheet) otherwise.
+  // Guarded generation: validate BOTH images are present before compositing,
+  // and calm-abort (never open the share sheet) otherwise.
   const withGeneratedFile = useCallback(async (consume) => {
-    if (useAppStore.getState().tier !== 'pro' || suppressed) return;
+    if (suppressed) return;
     if (!Skia || !FileSystem || !typefaces) {
       // P-16: a missing native module reads as "this device can't do this",
       // never as "you're on an incomplete build".
@@ -463,7 +460,7 @@ export default function BeforeAfterShareSheet({
 
   // WITHHELD ENTIRELY under suppression, and rendered only for Pro. The
   // suppression gate sits ahead of every compose/encode/share path above.
-  if (!visible || suppressed || tier !== 'pro') return null;
+  if (!visible || suppressed) return null;
 
   const isSquare = aspect !== 'story';
   // EP-11/UI-03: the preview used to hard-code a 300dp width inside the

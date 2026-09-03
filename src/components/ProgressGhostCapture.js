@@ -46,8 +46,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 import useAppStore from '../store/useAppStore';
-import { deleteProgressPhoto, saveProgressPhoto } from '../lib/progressPhotos';
-import { deletePhotoMeta, upsertPhotoMeta } from '../lib/progressPhotoMeta';
+import { saveProgressPhoto } from '../lib/progressPhotos';
+import { upsertPhotoMeta } from '../lib/progressPhotoMeta';
 import { logError } from '../lib/errorLog';
 import {
   getProgressScanCapturePreferences,
@@ -278,10 +278,6 @@ export default function ProgressGhostCapture({
 
   const capture = useCallback(async () => {
     if (capturing) return;
-    // Live-tier re-check (ProgressPhotosScreen write-guard class): capture is a
-    // write. If the camera is open across a pro-to-free flip, the shutter must
-    // not save a photo. Mirrors the viewer-delete and library-add guards.
-    if (useAppStore.getState().tier !== 'pro') return;
     const cam = cameraRef.current;
     if (!cam?.takePictureAsync) return;
     setCapturing(true);
@@ -290,7 +286,6 @@ export default function ProgressGhostCapture({
       // makes one) drives the normaliser below.
       const pic = await cam.takePictureAsync({ quality: 0.92, exif: true });
       if (!pic?.uri) return;
-      if (useAppStore.getState().tier !== 'pro') return;
       // Founder defect (2026-07-13): a propped/flat phone confuses the
       // platform's portrait-vs-landscape guess, so the camera wrote sideways
       // frames; the scorer then saw a rotated body (camera_tilted abstention)
@@ -307,7 +302,6 @@ export default function ProgressGhostCapture({
         exifOrientation: pic.exif?.Orientation ?? null,
         rollSign: rollRef.current != null ? (Math.sign(rollRef.current) || null) : null,
       });
-      if (useAppStore.getState().tier !== 'pro') return;
       setPendingCaptureUri(norm.uri);
     } catch (e) {
       logError('ProgressGhostCapture.capture', e, { pose });
@@ -319,26 +313,11 @@ export default function ProgressGhostCapture({
 
   const confirmCapturedPhoto = useCallback(async () => {
     if (!pendingCaptureUri || savingCapture) return;
-    if (useAppStore.getState().tier !== 'pro') {
-      setPendingCaptureUri(null);
-      return;
-    }
     setSavingCapture(true);
     try {
       const saved = await saveProgressPhoto(pendingCaptureUri, undefined, userId);
       if (!saved?.name) return;
-      if (useAppStore.getState().tier !== 'pro') {
-        await deleteProgressPhoto(userId, saved.uri).catch(() => false);
-        setPendingCaptureUri(null);
-        return;
-      }
       await upsertPhotoMeta(userId, saved.name, { pose });
-      if (useAppStore.getState().tier !== 'pro') {
-        await deletePhotoMeta(userId, saved.name).catch(() => false);
-        await deleteProgressPhoto(userId, saved.uri).catch(() => false);
-        setPendingCaptureUri(null);
-        return;
-      }
       setPendingCaptureUri(null);
       onCaptured?.(saved.name, { ...saved, previewApproved: true });
     } catch (e) {

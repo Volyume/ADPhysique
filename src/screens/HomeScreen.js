@@ -38,7 +38,6 @@ import { useToast } from '../components/Toast';
 import { buildBriefIconColor } from '../components/CoachBriefCard';
 import HomeWelcomeCard from '../components/HomeWelcomeCard';
 import HomeHowYouTrainOfferCard from '../components/HomeHowYouTrainOfferCard';
-import HomeProTeaserCard from '../components/HomeProTeaserCard';
 import HomeLastSessionCard from '../components/HomeLastSessionCard';
 import HomeBlockShapeSheet from '../components/HomeBlockShapeSheet';
 import HomeChangeWorkoutSheet from '../components/HomeChangeWorkoutSheet';
@@ -54,32 +53,22 @@ import {
   getAllRoutineExerciseCounts, createWorkout, getRoutineExercisesWithDetails,
   getWorkoutSetsForWorkout, getExerciseById, uid,
   getCurrentMesocycleWeek, getPlannedMuscleVolume, getAllExercises,
-  getMorningWeightToday, getMorningWeights, logMorningWeight, getProgressionTeaser,
+  getMorningWeightToday, getMorningWeights, logMorningWeight,
   getRecentWorkoutFeedback, getLatestCoachOutput,
   getMorningWeightsLast14Days, getOpenEdPatternFlag,
-  getRecentCheckins, getNutritionTargets, getLatestCheckin,
+  getLatestCheckin,
   getAllWeeklyCheckinsForUser,
 } from '../lib/database';
-import {
-  stageOf, canStillTrial, trialEndsAtMs, daysRemaining,
-} from '../lib/payments/cascade';
 import {
   FIRST_CHECKIN_MIN_DAYS,
   MIN_WEIGH_INS,
 } from '../lib/trialActivation';
 import { computeAndLogSessionAdjustments } from '../lib/sessionAdjustments';
-import { buildFreeCoachLine } from '../lib/coachResponse';
 import { activePlanLine, planHeadingName } from '../lib/planDisplay';
 import { resolveActivationNudge, activationBannerLine, NUDGE_STAGE, NUDGE_WINDOW_GRACE_MS } from '../lib/activationNudge';
 import { navigateCrossTab } from '../navigation/navigateCrossTab';
 import { localWeekStartMs, localWeekEndMs, localDayKey } from '../lib/dayKey';
 import { isCalm, WELLBEING_KEY } from '../lib/wellbeing';
-// NAV-4 (founder decision): the differential paywall re-homed here from the
-// Pro-guarded CoachOutput, where its only audience (free tier) could never
-// see it. Pure detection (the locked Move #4 detector) fed from data Home
-// already loads; the badge only navigates to ProUpgrade.
-import AttentionCard, { pickAttentionVariant } from '../components/AttentionCard';
-import { detectDifferentialTrigger } from '../lib/differentialPaywall';
 // Campaign 22 Phase 2 Stage 1 (HOME-TODAY-UX-SPEC.md §13/§17 region R2):
 // the single unified P1 "Today line" and its pure priority arbiter.
 import TodayLine from '../components/home/TodayLine';
@@ -92,9 +81,7 @@ import { resolveTodayLine } from '../lib/home/todayLineArbiter';
 import EvidencePanel from '../components/home/EvidencePanel';
 import { resolveEvidencePanel } from '../lib/home/evidencePanel';
 import { formatBodyWeight } from '../lib/units';
-import { mapCalsAdherence } from '../lib/weeklyCoach';
 import { getRecentIntakeSummary } from '../lib/food/db';
-import { track as trackEngineEvent } from '../lib/engineTelemetry';
 import { generateAndSavePlan } from '../lib/planAutoGen';
 // CC27 (section 9.6) red-team finding 1: every generateAndSavePlan surface
 // runs the capability pre-flight first - never a silent fail-open.
@@ -167,8 +154,11 @@ export default function HomeScreen({ navigation, route }) {
   const toast = useToast();
   // R9 (D70): insets and reduceMotion left with the raw intent Modal -
   // the shared BottomSheet owns both now.
-  const { user, userProfile, startWorkout, activeWorkout, tier, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
-    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, tier: s.tier, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
+  // FOUNDER DECISION (fully free, no tier split): `tier` is no longer read
+  // here -- every branch that used to fork on it now runs the single
+  // full-access behaviour for everyone (see proGate.js FULL_ACCESS_FOR_ALL).
+  const { user, userProfile, startWorkout, activeWorkout, bodyWeightUnits, restoreActiveWorkout, migrateFoodDayKeysOnce, setSessionAdjustments } = useAppStore(
+    useShallow(s => ({ user: s.user, userProfile: s.userProfile, startWorkout: s.startWorkout, activeWorkout: s.activeWorkout, bodyWeightUnits: s.bodyWeightUnits, restoreActiveWorkout: s.restoreActiveWorkout, migrateFoodDayKeysOnce: s.migrateFoodDayKeysOnce, setSessionAdjustments: s.setSessionAdjustments }))
   );
 
   // CP-10 stage 3 (theming batch 2): live theme (src/hooks/useTheme.js).
@@ -260,42 +250,6 @@ export default function HomeScreen({ navigation, route }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
 
-  // H-2 (trial-subscription audit): present the subscribe-or-Free gate once when
-  // the 14-day trial has ended, so it does not depend on the user having granted
-  // notification permission (the only other way to reach it). One-time per user
-  // via a flag; the gate itself is dismissible, so this is a prompt, not a wall.
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      if (!user?.id) return;
-      const ts = userProfile?.trialState ?? null;
-      // Only after a trial that actually expired to Free (not paid, not a user
-      // who chose Free up front and never trialled).
-      if (ts !== 'cascade_expired' || tier !== 'free') return;
-      // E7.2 activation funnel: a trial-lapsed (cascade_expired) user reached
-      // Home, i.e. they came back after lapsing. Durable once-per-user; the
-      // dashboard derives day-1-vs-later from the timestamp against the lapse
-      // date. Fires independently of the gate-shown flag below.
-      try {
-        // eslint-disable-next-line global-require
-        const { trackFirst } = require('../lib/telemetry/firsts');
-        trackFirst(user.id, 'trial_lapse_day1_return').catch(() => {});
-      } catch (_) { /* tolerate */ }
-      const key = `@volyume_trial_end_gate_shown_${user.id}`;
-      try {
-        if (await AsyncStorage.getItem(key)) return;
-        await AsyncStorage.setItem(key, 'true');
-      } catch (_) { return; }
-      if (cancelled) return;
-      try {
-        // T3: the helper hardcodes initial: false (F6b lazy-tab rule), so a
-        // never-focused tab keeps its root beneath the pushed screen.
-        navigateCrossTab(navigation, 'ProfileTab', 'CascadeGate', { variant: 'day14' });
-      } catch (_) { /* navigation not ready; the notification path still covers it */ }
-    })();
-    return () => { cancelled = true; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, userProfile?.trialState, tier]);
   // Cloud-sync version bumps when pullFromCloud finishes; HomeScreen
   // re-runs loadData so the empty state swaps for real data without
   // the user navigating away and back.
@@ -341,12 +295,6 @@ export default function HomeScreen({ navigation, route }) {
   // by loadFirstReviewFacts. Null until loaded, so the line never flashes
   // before real data is read.
   const [firstReviewFacts, setFirstReviewFacts] = useState(null);
-  // Free-tier weekly one-liner (founder decision 4c): one read-only
-  // sentence built from training plus weight direction only. Dismissed
-  // per week; defaults dismissed so it never flashes before the stored
-  // dismissal has been read.
-  const [freeCoachLine, setFreeCoachLine] = useState(null);
-  const [freeCoachLineDismissed, setFreeCoachLineDismissed] = useState(true);
   // First-load flag, flipped false in loadData. While true, the
   // home screen renders skeleton cards in place of the main cards so
   // the user sees structure instantly on cold launch rather than a
@@ -377,6 +325,10 @@ export default function HomeScreen({ navigation, route }) {
   // repeat-last-session). Synchronous ref, so a double-tap or a second
   // surface can never queue a second intent-sheet open that would resolve
   // after the workout has already begun.
+  // The merged "Start with a plan" action (D137) generates the whole plan
+  // from the empty state; a second tap while the first run is still awaiting
+  // preflight or the generator would start a second generation.
+  const startWithPlanRef = useRef(false);
   const startFlowRef = useRef(false);
   // COMP-008: the three "walked-in-with" readiness facts, captured on the
   // pre-workout prompt where they are accurate rather than recalled after the
@@ -388,7 +340,6 @@ export default function HomeScreen({ navigation, route }) {
     sleepQuality: null,
     energyScore: null,
   });
-  const [teaserInsight, setTeaserInsight] = useState(null);
   const [deloadSuggestion, setDeloadSuggestion] = useState(null);
   const [deloadDismissed, setDeloadDismissed] = useState(false);
   // C18 recovery visibility. NOT a dismissal: the card only collapses once the
@@ -421,12 +372,6 @@ export default function HomeScreen({ navigation, route }) {
   const [plateauBanner, setPlateauBanner] = useState(null);
   const [plateauBannerDismissed, setPlateauBannerDismissed] = useState(true);
 
-  // NAV-4: differential paywall banner (free tier only). The detector result
-  // ({ shown, trigger, with_food_data_message, paywall_cta }) or null.
-  // Defaults dismissed so it never flashes before the stored per-week
-  // dismissal has been read (the plateau/free-coach-line pattern).
-  const [differentialBanner, setDifferentialBanner] = useState(null);
-  const [differentialDismissed, setDifferentialDismissed] = useState(true);
   // S6: the in-app half of the activation lever, for a still-present but stalled
   // brand-new user (the push reaches the gone-quiet one). Tier-blind.
   const [activationNudge, setActivationNudge] = useState(null);
@@ -504,15 +449,7 @@ export default function HomeScreen({ navigation, route }) {
     // their own errors, but Promise.all rejects on the first unhandled
     // throw and would otherwise skip setInitialLoading(false).
     try {
-      // Positions 0 and 5 are read below by the differential loader (NAV-4):
-      // loadWeekStats returns { deloadSuggested }, loadPlateauBanner returns
-      // the picked plateau ({ exerciseId, weeks } | null). Keep them in place.
-      // WARNING: this destructure is POSITIONAL. Inserting, removing or
-      // reordering entries in the array below silently feeds the WRONG
-      // loader's result into the differential paywall context (index 0 =
-      // loadWeekStats, index 5 = loadPlateauBanner), adjust the holes in the
-      // destructure together with any change to the array.
-      const [weekSignals, , , , , plateauPick] = await Promise.all([
+      await Promise.all([
         loadWeekStats(),
         loadNextWorkout(),
         loadExerciseCounts(),
@@ -524,16 +461,19 @@ export default function HomeScreen({ navigation, route }) {
         loadWelcome(),
         loadHytOffer(),
         loadActivationNudge(), // S6: tier-blind, computes from workouts + account age + ED flag
-        ...(tier === 'pro' ? [loadTodayWeight(), loadLatestCoachOutput(), loadFirstReviewFacts()] : []),
-        ...(tier === 'free' ? [loadFreeCoachLine()] : []),
+        loadTodayWeight(),
+        loadLatestCoachOutput(),
+        loadFirstReviewFacts(),
       ]);
-      // NAV-4: the differential paywall's deload and stalled-lift contexts
-      // come from what the loaders above computed, so it runs after them.
-      if (tier === 'free') {
-        await loadDifferentialBanner({
-          deloadSuggested: !!weekSignals?.deloadSuggested,
-          weeksLiftStalled: plateauPick?.weeks ?? null,
-        });
+      // FOUNDER DECISION (fully free, no tier split): activation-funnel
+      // marker for a signed-in user's first successful Home render.
+      // Fire-and-forget, no payload; trackFirst is durably once-per-user.
+      if (user?.id) {
+        try {
+          // eslint-disable-next-line global-require
+          const { trackFirst } = require('../lib/telemetry/firsts');
+          trackFirst(user.id, 'first_home_landed').catch(() => {});
+        } catch (_) { /* best-effort telemetry */ }
       }
     } finally {
       setInitialLoading(false);
@@ -652,55 +592,6 @@ export default function HomeScreen({ navigation, route }) {
       });
     } catch (_) {
       setFirstReviewFacts(null);
-    }
-  }
-
-  // Free-tier weekly one-liner (founder decision 4c). Free-safe data
-  // only: completed sessions this week plus the direction of any logged
-  // morning weights. No rates, no figures, no targets, no food data and
-  // no Pro functionality; the card is a read-only sentence with a Pro
-  // footer. Suppressed to a training-only line under an open ED flag or
-  // calm mode, per the existing COMP-004/COMP-023 rules.
-  async function loadFreeCoachLine() {
-    try {
-      if (!user?.id) { setFreeCoachLine(null); return; }
-      const weekStartMs = localWeekStartMs();
-      const dKey = `@volyume_free_coach_line_dismissed_${user.id}_${weekStartMs}`;
-      const [workouts, weights, edFlag, wellbeing, dismissed] = await Promise.all([
-        getAllWorkouts(user.id).catch(() => []),
-        getMorningWeightsLast14Days(user.id).catch(() => []),
-        // Fail closed: a flag-read error maps to a truthy sentinel (suppresses
-        // via !!edFlag), and wellbeing is read raw so a genuine failure is
-        // distinguishable from 'unspecified' (getWellbeingMode swallows it).
-        getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
-        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
-        AsyncStorage.getItem(dKey).catch(() => null),
-      ]);
-      const sessionsThisWeek = workouts.filter(
-        w => w.isCompleted && (w.startedAt ?? 0) >= weekStartMs,
-      ).length;
-      const line = buildFreeCoachLine({
-        sessionsThisWeek,
-        morningWeights: weights,
-        edFlagOpen: !!edFlag,
-        calmMode: isCalm(wellbeing) || wellbeing === 'read_failed',
-      });
-      // Read the dismissal BEFORE revealing the card so a line the user
-      // already dismissed can't flash for a frame (trial-banner pattern).
-      setFreeCoachLineDismissed(dismissed === 'true');
-      setFreeCoachLine(line);
-    } catch (_) {
-      setFreeCoachLine(null);
-    }
-  }
-
-  function dismissFreeCoachLine() {
-    setFreeCoachLineDismissed(true);
-    if (user?.id) {
-      AsyncStorage.setItem(
-        `@volyume_free_coach_line_dismissed_${user.id}_${localWeekStartMs()}`,
-        'true',
-      ).catch(() => {});
     }
   }
 
@@ -847,8 +738,6 @@ export default function HomeScreen({ navigation, route }) {
         // actually chose between several qualifying plateaus.
         line: plateauBannerLine(ex.name, picked.weeks, picked.sessions, picked.selectedFrom),
       });
-      // NAV-4: the picked plateau ({ exerciseId, weeks }) doubles as the
-      // stalled-lift context for the differential loader.
       return picked;
     } catch (_) {
       setPlateauBanner(null);
@@ -861,85 +750,6 @@ export default function HomeScreen({ navigation, route }) {
     if (user?.id && plateauBanner) {
       AsyncStorage.setItem(
         `@volyume_plateau_banner_dismissed_${user.id}_${plateauBanner.exerciseId}_${localWeekStartMs()}`,
-        'true',
-      ).catch(() => {});
-    }
-  }
-
-  // NAV-4 (founder decision): the differential paywall, re-homed from the
-  // Pro-guarded CoachOutput to the one surface its free-tier audience can
-  // see. One honest pure evaluation of the locked Move #4 detector: the
-  // stored check-in answers are mapped onto the engine vocabulary with each
-  // week's own logged intake (the CoachOutput PIPE-005 read), and the deload
-  // and stalled-lift contexts come from what Home's loaders already
-  // computed. missing_tdee and block_summary need an engine run Home cannot
-  // do, so they simply never fire here (the detector treats them as absent).
-  // ED-safety: the trigger keys off adherence gaps, so any open ED flag or
-  // calm mode suppresses it entirely (COMP-004 scope). Dismissible per week;
-  // lowest slot in the banner stack, so the one-banner invariant holds.
-  async function loadDifferentialBanner({ deloadSuggested = false, weeksLiftStalled = null } = {}) {
-    try {
-      if (!user?.id || tier !== 'free') { setDifferentialBanner(null); return; }
-      // ED-safety, fail CLOSED: this is a food-adjacent monetisation surface,
-      // so a FAILED flag/wellbeing read suppresses the banner. The usual
-      // banner-loader pattern fails open on read errors, but a transient
-      // failure here must never surface a nutrition upsell over a possibly
-      // open ED flag or calm mode ('read_failed' is truthy for edFlag and
-      // checked explicitly for wellbeing).
-      const [edFlag, wellbeing] = await Promise.all([
-        getOpenEdPatternFlag(user.id).catch(() => 'read_failed'),
-        AsyncStorage.getItem(WELLBEING_KEY).then((v) => v || 'unspecified').catch(() => 'read_failed'),
-      ]);
-      if (edFlag || wellbeing === 'read_failed' || isCalm(wellbeing)) { setDifferentialBanner(null); return; }
-      const [checkins, targets] = await Promise.all([
-        getRecentCheckins(user.id, 3).catch(() => []),
-        getNutritionTargets(user.id).catch(() => null),
-      ]);
-      // C6 RD6-13 (D97-25): the gate's contract is "2 of the last 3
-      // WEEKS", but getRecentCheckins is row-limited - a lapsed-Pro
-      // user's year-old check-ins could open a nutrition upsell. Only
-      // rows genuinely inside the last three calendar weeks (plus the
-      // running week) count; this can only ever show the banner LESS.
-      const paywallWindowStart = Date.now() - 28 * 86400000;
-      const checkinsInWindow = checkins.filter(
-        (ci) => Number.isFinite(Number(ci?.weekStart)) && Number(ci.weekStart) >= paywallWindowStart,
-      );
-      if (!checkinsInWindow.length) { setDifferentialBanner(null); return; }
-      const mapped = await Promise.all(checkinsInWindow.map(async (ci) => {
-        let weekAvg = null;
-        if (ci.weekStart) {
-          try {
-            const weekEndKey = localDayKey(ci.weekStart + 6 * 86400000);
-            weekAvg = (await getRecentIntakeSummary(user.id, weekEndKey))?.avgKcal ?? null;
-          } catch (_) { /* leave null; a plain 'no' stays a neutral off-target */ }
-        }
-        return mapCalsAdherence(ci.calsAdherence, weekAvg, targets?.targetKcal);
-      }));
-      const diff = detectDifferentialTrigger({
-        userTier: tier,
-        hasUsedTrial: !canStillTrial(userProfile),
-        calsAdherence: mapped[0] ?? null,
-        recentWeeklyHistory: mapped.slice(1).map(a => ({ adherence: a })),
-        deloadSuggested,
-        weeksLiftStalled,
-      });
-      if (!diff?.shown) { setDifferentialBanner(null); return; }
-      // Read the per-week dismissal BEFORE revealing the banner so a badge
-      // the user already dismissed can't flash for a frame (plateau pattern).
-      const dKey = `@volyume_differential_banner_dismissed_${user.id}_${localWeekStartMs()}`;
-      const dv = await AsyncStorage.getItem(dKey).catch(() => null);
-      setDifferentialDismissed(dv === 'true');
-      setDifferentialBanner(diff);
-    } catch (_) {
-      setDifferentialBanner(null);
-    }
-  }
-
-  function dismissDifferentialBanner() {
-    setDifferentialDismissed(true);
-    if (user?.id) {
-      AsyncStorage.setItem(
-        `@volyume_differential_banner_dismissed_${user.id}_${localWeekStartMs()}`,
         'true',
       ).catch(() => {});
     }
@@ -1067,10 +877,9 @@ export default function HomeScreen({ navigation, route }) {
     try {
       // X5 (cross-surface consistency audit 2026-07-30): this used to use a
       // rolling trailing-7-day window, which could show a different "sessions
-      // this week" figure than the free coach line on the SAME screen
-      // (loadFreeCoachLine, above), which is Monday-anchored. Every "this
-      // week" boundary now comes from the shared dayKey.js helpers so the two
-      // can never disagree.
+      // this week" figure than other Monday-anchored counts on this screen.
+      // Every "this week" boundary now comes from the shared dayKey.js
+      // helpers so they can never disagree.
       const weekStartMs = localWeekStartMs();
       const weekEndMs = localWeekEndMs(weekStartMs);
       const fourWeeksAgo = Date.now() - 28 * 24 * 60 * 60 * 1000;
@@ -1102,7 +911,7 @@ export default function HomeScreen({ navigation, route }) {
       // scheduled day AND >= FIRST_CHECKIN_MIN_DAYS since the earliest
       // morning weight AND >= MIN_WEIGH_INS weigh-ins in the trailing week
       // (the same last-14-days query the gate reads).
-      if (tier === 'pro' && completed.length >= 3) {
+      if (completed.length >= 3) {
         try {
           const seen = await AsyncStorage.getItem('@volyume_seen_coaching_nudge');
           if (seen !== 'true') {
@@ -1155,22 +964,6 @@ export default function HomeScreen({ navigation, route }) {
         setLastSessionTonnage(tonnage > 0 ? tonnage : null);
       } else {
         setLastSessionTonnage(null);
-      }
-
-      // Progression teaser, free tier only, needs 2+ sessions to compare.
-      // C6 RD6-6 (D97-25): "last session" is a present-tense progression
-      // claim, so it needs a recent pair - the two newest workouts were
-      // previously of ANY age. Outside the app's standing 14-day
-      // boundary the card falls back to its existing untimed variants
-      // ("N sessions logged...") instead of narrating an old comparison
-      // as current.
-      const teaserLastAt = Number(completed[0]?.endedAt ?? completed[0]?.startedAt);
-      const teaserRecent = Number.isFinite(teaserLastAt)
-        && (Date.now() - teaserLastAt) <= 14 * 86400000;
-      if (tier === 'free' && completed.length >= 2 && teaserRecent) {
-        getProgressionTeaser(user.id, completed[0].id, completed[1].id)
-          .then(t => setTeaserInsight(t))
-          .catch(() => {});
       }
 
       // Deload suggestion, build last-4-weeks summary and run shouldDeload
@@ -1642,15 +1435,14 @@ export default function HomeScreen({ navigation, route }) {
         starterSession: !!pending.starter,
         starterRoutineName: pending.routineName,
       });
-      // COMP-015 (Pro): compute + log this session's adjustments in the
-      // background so it never delays the session opening. The line appears a
-      // moment later once the local reads resolve. Runs once per start; a
-      // crash-recovery restore rehydrates the result instead of recomputing.
-      if (tier === 'pro') {
-        computeAndLogSessionAdjustments({ userId: user.id, workout, exercises: pending.initialExercises })
-          .then(setSessionAdjustments)
-          .catch(() => {});
-      }
+      // COMP-015 (FOUNDER DECISION: fully free, applies to everyone now):
+      // compute + log this session's adjustments in the background so it
+      // never delays the session opening. The line appears a moment later
+      // once the local reads resolve. Runs once per start; a crash-recovery
+      // restore rehydrates the result instead of recomputing.
+      computeAndLogSessionAdjustments({ userId: user.id, workout, exercises: pending.initialExercises })
+        .then(setSessionAdjustments)
+        .catch(() => {});
     } catch (e) {
       setIsStartingWorkout(false);
       logError('HomeScreen.confirmStart', e, { userId: user?.id, routineId: pending?.routineId, intent });
@@ -2021,7 +1813,7 @@ export default function HomeScreen({ navigation, route }) {
   // replaces the bare hasEnoughData test. hasEnoughData is still required (it
   // is inside the predicate), so the founder's 2026-06-21 rule that the
   // baseline weeks never advertise a ready review is unchanged.
-  const showCoachBanner = tier === 'pro' && !!latestCoachOutput && latestCoachDecisionComplete
+  const showCoachBanner = !!latestCoachOutput && latestCoachDecisionComplete
     && !coachBannerDismissed
     && (Date.now() - (latestCoachOutput.weekStart ?? 0) < 7 * 86400000);
   // T2 (world-class-audit-2026-07-03/05-cohesion.md #4): today this signal
@@ -2080,24 +1872,18 @@ export default function HomeScreen({ navigation, route }) {
   // the two stall stages render a banner. Per-stage dismissible.
   const activationBannerEligible = !!activationNudge && activationNudge.stage !== NUDGE_STAGE.COLD_START
     && !activationNudgeDismissed;
-  // Free-tier weekly one-liner (founder decision 4c) and the NAV-4
-  // differential paywall badge share the lowest-priority slot; AttentionCard's
-  // own pickAttentionVariant already decides between the two when both apply.
-  const freeCoachLineEligible = tier === 'free' && !!freeCoachLine && !freeCoachLineDismissed;
-  const differentialBadgeEligible = tier === 'free' && !!differentialBanner?.shown && !differentialDismissed;
 
   // Campaign 22 Phase 2 Stage 1: coach/trial/deload/phase moved OUT of this
   // array onto the Today line (arbiter ranks 2-3, 5, 7-8 below) -- leaving
-  // them in here would wrongly let them keep suppressing plateau/activation/
-  // attention whenever eligible, even though nothing renders their old JSX
-  // any more. // Stage 2: plateau and activation stay exactly as they are
-  // (P3, still capped to one at a time against each other and the free/
-  // differential attention slot) -- their own move into the full P3 footer
-  // redesign is Stage 2's scope, left untouched here per the build brief.
+  // them in here would wrongly let them keep suppressing plateau/activation
+  // whenever eligible, even though nothing renders their old JSX any more.
+  // FOUNDER DECISION (fully free, no tier split): the free-tier weekly line
+  // and the differential paywall badge are retired, so the lowest-priority
+  // "attention" slot they shared is gone; plateau and activation are the
+  // only two banners left to arbitrate.
   const BANNER_PRIORITY = [
     { key: 'plateau', eligible: plateauBannerEligible },
     { key: 'activation', eligible: activationBannerEligible },
-    { key: 'attention', eligible: freeCoachLineEligible || differentialBadgeEligible },
   ].filter(b => b.eligible);
   // The single decision point for the cap: whichever eligible banner ranks
   // highest takes the one visible slot; everything else waits its turn.
@@ -2105,10 +1891,6 @@ export default function HomeScreen({ navigation, route }) {
 
   const showPlateauBanner = shownBannerKey === 'plateau';
   const showActivationBanner = shownBannerKey === 'activation';
-  const showAttentionSlot = shownBannerKey === 'attention';
-  // Free line still outranks the differential badge within their shared slot.
-  const showFreeCoachLine = freeCoachLineEligible && showAttentionSlot;
-  const showDifferentialBadge = differentialBadgeEligible && !freeCoachLineEligible && showAttentionSlot;
 
   // ── Campaign 22 Phase 2 Stage 1: the single P1 occupant (spec §13) ──────
   // Facts only: every occupant's action/dismissal below reuses the exact
@@ -2116,15 +1898,8 @@ export default function HomeScreen({ navigation, route }) {
   // AsyncStorage dismissal keys, same trial/recovery logic read, never
   // re-derived). The arbiter is a pure function; it only decides which one,
   // if any, wins the one slot.
-  const trialEndMs = trialEndsAtMs(userProfile);
-  const msToTrialEnd = trialEndMs != null ? trialEndMs - Date.now() : null;
-  // "Trial ENDING" (spec §14 / FOUNDER-RULINGS-PHASE2 R3): the last 48h of
-  // the trial, or past its end with the auto-downgrade not yet applied --
-  // the one trial state genuinely requiring a payment action. Read-only
-  // against cascade.js's single authoritative end instant; trial state
-  // transitions themselves are untouched.
-  const trialEndingEligible = stageOf(userProfile) === 'pro_trial'
-    && msToTrialEnd != null && msToTrialEnd <= 48 * 60 * 60 * 1000;
+  // FOUNDER DECISION (fully free, no trial, no expiry): the trial-ENDING
+  // occupant (spec §14 rank 8) is retired along with the trial itself.
   // ── Campaign 26 (founder device order 2026-08-17): the evidence pane
   // view-model - the RECURRING weekly evidence read, every week, never
   // framed as a first review (founder correction, same day). The C22
@@ -2133,9 +1908,8 @@ export default function HomeScreen({ navigation, route }) {
   // until loadFirstReviewFacts resolves so it never flashes on cold load.
   // everCheckedIn/sessionsSinceCheckin come from real check-in HISTORY in
   // the loader, never from the current week's decision predicate.
-  const evidencePanelItem = tier === 'pro' && firstReviewFacts
+  const evidencePanelItem = firstReviewFacts
     ? resolveEvidencePanel({
-        tier,
         hasCheckedInEver: firstReviewFacts.everCheckedIn,
         weighIns7d: firstReviewFacts.weighIns7d,
         firstWeightAt: firstReviewFacts.firstWeightAt,
@@ -2206,11 +1980,6 @@ export default function HomeScreen({ navigation, route }) {
       onPress: () => { haptics.selection(); navigateCrossTab(navigation, 'ProfileTab', 'NutritionTargets'); },
       onDismiss: dismissPhaseBanner,
     },
-    trialEnding: {
-      eligible: trialEndingEligible,
-      daysRemaining: daysRemaining(userProfile) ?? 0,
-      onPress: () => { haptics.selection(); navigation.navigate('ProUpgrade', { source: 'home_trial_ending' }); },
-    },
     hasActiveWorkout,
   });
 
@@ -2222,7 +1991,6 @@ export default function HomeScreen({ navigation, route }) {
   // components below, so passing them as props doesn't defeat the memo.
   // (openFirstReviewSurface lives above the arbiter call with the line it
   // serves.)
-  const goToProUpgrade = useCallback(() => navigation.navigate('ProUpgrade', { source: 'home' }), [navigation]);
   const goToWorkoutHistory = useCallback(() => navigation.navigate('WorkoutHistory'), [navigation]);
   const closeBlockShape = useCallback(() => setShowBlockShape(false), []);
   const closeChangeWorkout = useCallback(() => setShowChangeWorkout(false), []);
@@ -2332,9 +2100,9 @@ export default function HomeScreen({ navigation, route }) {
             orients without competing with the hero / starter cards. Research:
             docs competitive-mastery (Cronometer drip-one-pointer) + NN/G empty
             states. No weight/calorie line here (ED-safety).
-            C5-P7-05 / C5-P1-08 (D96): the card's second step promised a coach
-            to every tier. The tier is read here, where it already lives, so
-            the card can tell each user the truth.
+            FOUNDER DECISION (fully free, no tier split): the card's second
+            step promises a coach to every user now, so the isPro prop it
+            used to fork on is gone.
             Lead activation ruling (this brief): dropped the `activePlan &&
             nextWorkout` gate. A zero-session user with no plan at all got NO
             orientation whatsoever (this card was the only one), left staring
@@ -2342,7 +2110,7 @@ export default function HomeScreen({ navigation, route }) {
             card's own copy already covers this ("Begin from your plan... or
             just log freely"), so no new copy variant is needed. */}
         {!initialLoading && totalSessions === 0 && !welcomeDismissed && (
-          <HomeWelcomeCard onDismiss={dismissWelcome} isPro={tier === 'pro'} />
+          <HomeWelcomeCard onDismiss={dismissWelcome} />
         )}
 
         {/* D134 (founder 2026-09-03): one calm, one-time offer for a person
@@ -2516,65 +2284,49 @@ export default function HomeScreen({ navigation, route }) {
           </Card>
         ) : (
           <View style={styles.noPlanSection}>
-            {/* D1 sweep (DD40): both the Pro and Free no-plan branches route
-                through the shared EmptyState primitive instead of the
-                hand-rolled noPlanHero/noPlanIconWrap/noPlanTitle/noPlanSub/
-                starterCard local clone -- EmptyState already renders this
-                exact icon-circle + title + subtitle + action(s) shape,
-                including two CTAs via actionLabel/secondaryLabel for the
-                free branch. */}
-            {tier === 'pro' ? (
-              <EmptyState
-                icon="barbell-outline"
-                title="No active plan yet"
-                /* C5-P10-01 (D96): the Pro "Start with a plan" action
-                   creates a training block too, so it says so first. */
-                text={`If you just signed in, we may still be pulling your data from the cloud. If nothing arrives, start with a plan and we'll rebuild it from your profile. ${BLOCK_START_SENTENCE}`}
-                actionLabel="Start with a plan"
-                onAction={async () => {
-                  // CC27 (section 9.6) red-team finding 1: pre-flight
-                  // before the generator, like every generation surface.
-                  // Holding leaves the empty state in place to try again.
-                  const preflight = await capabilityPreflight(user.id);
-                  const goAhead = preflight.proceed || await new Promise((resolve) => {
-                    offerCapabilityPreflightChoice({
-                      onHold: () => resolve(false),
-                      onContinue: () => resolve(true),
-                    });
+            {/* FOUNDER DECISION (fully free, no tier split): the free
+                no-plan branch (FreeStarter quiz) is retired -- the full-tier
+                EmptyState below is the only no-plan state now, via the
+                shared EmptyState primitive (D1 sweep, DD40). */}
+            <EmptyState
+              icon="barbell-outline"
+              title="No active plan yet"
+              /* C5-P10-01 (D96): the "Start with a plan" action creates a
+                 training block too, so it says so first. */
+              text={`Start with a plan and Volyume builds one from your setup. If you just signed in on this phone, your existing plan may still be arriving. ${BLOCK_START_SENTENCE}`}
+              actionLabel="Start with a plan"
+              onAction={async () => {
+                if (startWithPlanRef.current) return;
+                startWithPlanRef.current = true;
+                try {
+                // CC27 (section 9.6) red-team finding 1: pre-flight
+                // before the generator, like every generation surface.
+                // Holding leaves the empty state in place to try again.
+                const preflight = await capabilityPreflight(user.id);
+                const goAhead = preflight.proceed || await new Promise((resolve) => {
+                  offerCapabilityPreflightChoice({
+                    onHold: () => resolve(false),
+                    onContinue: () => resolve(true),
                   });
-                  if (!goAhead) return;
-                  const result = await generateAndSavePlan(user.id, userProfile);
-                  if (result.ok) {
-                    await loadData();
-                    // D112 R5 (closes audit T1-12): every generation entry
-                    // reveals capability effects, not just PlanUpdateScreen.
-                    if (result.capabilityBlockedCount > 0) {
-                      toast.show(capabilityBlockedNote(result.capabilityBlockedCount), { variant: 'info', duration: 5000 });
-                    }
-                  } else {
-                    logError('HomeScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
-                    toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+                });
+                if (!goAhead) return;
+                const result = await generateAndSavePlan(user.id, userProfile);
+                if (result.ok) {
+                  await loadData();
+                  // D112 R5 (closes audit T1-12): every generation entry
+                  // reveals capability effects, not just PlanUpdateScreen.
+                  if (result.capabilityBlockedCount > 0) {
+                    toast.show(capabilityBlockedNote(result.capabilityBlockedCount), { variant: 'info', duration: 5000 });
                   }
-                }}
-              />
-            ) : (
-              /* B2: the free "what do I do today" answer. One strong, calm
-                 card: the micro-quiz first, the library second. Replaces the
-                 old low-emphasis welcome + stacked builder cards. */
-              <EmptyState
-                icon="compass-outline"
-                title="No active plan yet"
-                text={lastSession == null
-                  ? "Answer three quick questions and we'll suggest a starter plan. You can also browse the library."
-                  : "You've been training without a set plan. Answer three quick questions and we'll suggest a starter plan, or browse the library."}
-                actionLabel="Start with a plan"
-                onAction={() => navigation.navigate('FreeStarter')}
-                actionAccessibilityLabel="Answer three quick questions to start with a plan"
-                secondaryLabel="Browse plans"
-                onSecondary={() => navigation.navigate('PlansTab', { screen: 'PlanLibrary', initial: false })}
-                secondaryAccessibilityLabel="Browse the plan library"
-              />
-            )}
+                } else {
+                  logError('HomeScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
+                  toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+                }
+                } finally {
+                  startWithPlanRef.current = false;
+                }
+              }}
+            />
 
             {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §7/§17 R5,
                 the 3-way duplication fix): "Progress at a glance" is
@@ -2585,39 +2337,23 @@ export default function HomeScreen({ navigation, route }) {
                 here replaces the dropped "sessions this week" figure, which
                 the Progress tab still carries. */}
 
-            {/* Pro keeps the quick-start escape hatch while cloud restore
-                lands. The free path's blank-session route is the quiet link
-                below the starter card instead. */}
-            {tier === 'pro' && (
-              <PressableCard
-                style={[styles.quickStartCard, live.quickStartCard]}
-                onPress={() => startBlankSession()}
-                accessibilityLabel="Start your first workout"
-              >
-                <View style={[styles.quickStartIcon, live.quickStartIcon]}>
-                  <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
-                  <Text style={[styles.quickStartSub, live.quickStartSub]}>Log your sets as you go. You don't need a plan to start, and next time Volyume will start you at the weights you log today.</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-              </PressableCard>
-            )}
-
-            {tier !== 'pro' && (
-              <Button
-                variant="secondary"
-                size="sm"
-                fullWidth={false}
-                title="Just want to log? Start a blank workout"
-                icon="play-outline"
-                trailingIcon="chevron-forward"
-                onPress={() => startBlankSession()}
-                accessibilityLabel="Just want to log? Start a blank workout"
-                style={styles.blankSessionLink}
-              />
-            )}
+            {/* FOUNDER DECISION (fully free, no tier split): everyone keeps
+                the quick-start escape hatch while cloud restore lands; the
+                Free-only text-link variant is retired. */}
+            <PressableCard
+              style={[styles.quickStartCard, live.quickStartCard]}
+              onPress={() => startBlankSession()}
+              accessibilityLabel="Start your first workout"
+            >
+              <View style={[styles.quickStartIcon, live.quickStartIcon]}>
+                <Ionicons name="barbell-outline" size={28} color={t.colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.quickStartTitle, live.quickStartTitle]}>Start your first workout</Text>
+                <Text style={[styles.quickStartSub, live.quickStartSub]}>Log your sets as you go. You don't need a plan to start, and next time Volyume will start you at the weights you log today.</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+            </PressableCard>
           </View>
         )}
 
@@ -2733,7 +2469,7 @@ export default function HomeScreen({ navigation, route }) {
             check-in, weigh-in and session evidence - honouring the Today
             truth-repair ruling with real counts (progress "N of 3" only
             while short, the ACTUAL count once met, never a clamp). ── */}
-        {tier === 'pro' && user?.id && todayWeight == null && (
+        {user?.id && todayWeight == null && (
           <TodayStrip
             bwu={bwu}
             todayWeight={todayWeight}
@@ -2747,7 +2483,7 @@ export default function HomeScreen({ navigation, route }) {
             everLogged={hasEverLoggedWeight}
           />
         )}
-        {tier === 'pro' && user?.id && evidencePanelItem && (
+        {user?.id && evidencePanelItem && (
           <EvidencePanel
             panel={evidencePanelItem}
             onPress={openFirstReviewSurface}
@@ -2757,11 +2493,11 @@ export default function HomeScreen({ navigation, route }) {
 
         {/* ── Campaign 22 Phase 2 Stage 2: the context footer (region R5,
             §17). Last-session slim row first (absorbs the glance card),
-            then the Pro teaser, then the P3 attention stack -- plateau,
-            activation and the free/differential slot, re-sited here from
-            above the hero. Same one-slot cap (BANNER_PRIORITY,
-            shownBannerKey), same per-banner handlers, only the location
-            moved. ── */}
+            then the P3 attention stack -- plateau and activation, re-sited
+            here from above the hero. FOUNDER DECISION (fully free, no tier
+            split): the Pro teaser and the free/differential attention slot
+            are retired. Same one-slot cap (BANNER_PRIORITY, shownBannerKey),
+            same per-banner handlers, only the location moved. ── */}
         {lastSession && (
           <HomeLastSessionCard
             lastSession={lastSession}
@@ -2769,15 +2505,6 @@ export default function HomeScreen({ navigation, route }) {
             relativeDay={lastSessionRelativeDay}
             onOpenHistory={goToWorkoutHistory}
             onRepeat={handleRepeatLastSession}
-          />
-        )}
-
-        {/* ── Pro teaser (free tier only, after 3+ sessions). ── */}
-        {tier === 'free' && totalSessions >= 3 && (
-          <HomeProTeaserCard
-            totalSessions={totalSessions}
-            teaserInsight={teaserInsight}
-            onPress={goToProUpgrade}
           />
         )}
 
@@ -2845,38 +2572,10 @@ export default function HomeScreen({ navigation, route }) {
           </TouchableOpacity>
         )}
 
-        {/* ── D3: the "worth your attention" card, low slot (free tier). The
-            internal priority, free_line over differential, is decided by
-            pickAttentionVariant, the card class's single decision point. ── */}
-        {(showFreeCoachLine || showDifferentialBadge) && (
-          <AttentionCard
-            variant={pickAttentionVariant({
-              freeLine: showFreeCoachLine,
-              differential: showDifferentialBadge,
-            })}
-            freeCoachLine={freeCoachLine}
-            onFreeLineDismiss={dismissFreeCoachLine}
-            onUpgrade={() => navigation.navigate('ProUpgrade', { source: 'home_attention_card' })}
-            differential={differentialBanner}
-            onDifferentialCta={(action) => {
-              if (action === 'shown') {
-                trackEngineEvent(user?.id, 'paywall_shown', {
-                  surface: `differential_${differentialBanner.trigger}`,
-                  trigger: differentialBanner.trigger,
-                  user_pricing_window: userProfile?.lockedInPriceTier ?? 'open_beta',
-                }).catch(() => {});
-              } else if (action === 'pay') {
-                navigation.navigate('ProUpgrade', { source: `differential_${differentialBanner.trigger}` });
-              } else if (action === 'dismiss') {
-                trackEngineEvent(user?.id, 'paywall_tapped_cta', {
-                  surface: `differential_${differentialBanner.trigger}`,
-                  cta: 'dismiss',
-                }).catch(() => {});
-                dismissDifferentialBanner();
-              }
-            }}
-          />
-        )}
+        {/* FOUNDER DECISION (fully free, no tier split): the "worth your
+            attention" card (free-tier weekly line / differential paywall
+            badge, AttentionCard) is retired entirely -- there is no upsell
+            left to show. */}
 
         {/* D14 (Home banner cap): no "reveal the rest" affordance. Exactly
             one attention banner shows at a time (whichever above won the
@@ -2977,15 +2676,11 @@ export default function HomeScreen({ navigation, route }) {
             it. "Can" and "when coaching is active" keep it truthful - not
             every answer changes something, and the easing only happens
             where coaching is actually available.
-            Lead activation ruling (this brief): that easing IS the Pro
-            coaching adjustment, so a free user (no coaching engine reading
-            these answers) must not be told it can happen to them. Free gets
-            the honest alternative: the answer is saved and read back next
-            time, never a promised adjustment it does not get. */}
+            FOUNDER DECISION (fully free, no tier split): that easing is the
+            coaching adjustment every user now gets, so this is the one
+            sentence for everyone; the free alternative sentence is retired. */}
         <Text style={[styles.intentSub, live.intentSub]}>
-          {tier === 'pro'
-            ? "Takes a second. When coaching is active, poor sleep or heavy soreness can ease today's session. Answering well never makes it harder than planned."
-            : 'Takes a second. Saved with your session, and read back to you on Today before your next one.'}
+          Takes a second. When coaching is active, poor sleep or heavy soreness can ease today's session. Answering well never makes it harder than planned.
         </Text>
         {/* R2-10 (founder decision "Reorder", 2026-07-11): the optional
             readiness rows sit ABOVE the intent options, compacted to one
@@ -3202,12 +2897,6 @@ const styles = StyleSheet.create({
 
   // No plan, plan-first section
   noPlanSection: { gap: spacing.md },
-  // R9/D70: box/fill/radius/padding/label now come from the shared <Button
-  // variant="secondary">; only the self-centering survives (this pill sits
-  // alone under the starter card, not stretched full width).
-  blankSessionLink: {
-    alignSelf: 'center',
-  },
 
   // Campaign 22 Phase 2 Stage 2 (§7/§17 R5): "Progress at a glance" removed,
   // absorbed into the last-session row (3-way duplication fix).

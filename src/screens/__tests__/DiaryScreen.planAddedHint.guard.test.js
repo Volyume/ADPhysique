@@ -67,9 +67,9 @@ describe('DiaryScreen: one-time plan-added teach', () => {
     );
   });
 
-  test('the hint is gated on planned meals actually being present, read-write, and not mid-selection', () => {
+  test('the hint is gated on planned meals actually being present and not mid-selection', () => {
     expect(SRC).toMatch(
-      /\{plannedCount > 0 && !selectionMode && !readOnly && showPlanAddedHint \? \(\s*<HintCaption/,
+      /\{plannedCount > 0 && !selectionMode && showPlanAddedHint \? \(\s*<HintCaption/,
     );
   });
 

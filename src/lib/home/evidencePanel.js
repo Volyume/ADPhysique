@@ -46,8 +46,11 @@ function plural(n, word) {
  * exact title the original runway used); after that, "Since your
  * check-in". Never re-introduce first-review wording here.
  *
+ * FOUNDER DECISION (fully free, no tier split): the pane is no longer
+ * Pro-gated -- check-ins apply to every account now, so the `tier` param
+ * and its gate are retired.
+ *
  * @param {object} facts
- * @param {'free'|'pro'} facts.tier - Pro only; check-ins are Precision Coaching.
  * @param {boolean} [facts.hasCheckedInEver] - a REAL weekly check-in row
  *   (energy score present) exists in history. NOT "is the latest coach
  *   output complete" - that predicate is about the current week's
@@ -75,7 +78,6 @@ function plural(n, word) {
  *   rows:Array<{key:string, done:boolean, label:string}>}|null}
  */
 export function resolveEvidencePanel({
-  tier,
   hasCheckedInEver = false,
   weighIns7d = 0,
   firstWeightAt = null,
@@ -87,8 +89,6 @@ export function resolveEvidencePanel({
   todayWeightLabel = null,
   now = Date.now(),
 } = {}) {
-  if (tier !== 'pro') return null;
-
   const ledger = buildCoachLedger({
     weighIns7d, completedSessions, firstWeightAt, checkinDay, edFlagOpen, now,
   });

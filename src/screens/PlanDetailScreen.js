@@ -11,7 +11,7 @@ import useTheme from '../hooks/useTheme';
 import AnimatedEntrance from '../components/AnimatedEntrance';
 import {
   getProgrammeById, getRoutinesForPlan, getAllRoutineExerciseCounts,
-  activatePlanWithBlock, archivePlan, duplicatePlan, copyPlanFromLibrary,
+  activatePlanWithBlock, archivePlan, copyPlanFromLibrary,
   createWorkout, getRoutineExercisesWithDetails, getActivePlan, getAllRoutineSetCounts,
   updateRoutinePosition,
 } from '../lib/database';
@@ -41,10 +41,11 @@ const WHY_ORDER = ['schedule', 'goal', 'experience', 'progression', 'equipment',
 export default function PlanDetailScreen({ navigation, route }) {
   const { planId, isLibrary = false } = route.params || {};
   // F7: subscribe to just these fields (a bare useAppStore() re-renders on every store mutation).
-  const { user, startWorkout, tier } = useAppStore(useShallow(s => ({
+  // FOUNDER DECISION (fully free, no tier split): `tier` is no longer read
+  // here -- the Duplicate action it used to gate is retired.
+  const { user, startWorkout } = useAppStore(useShallow(s => ({
     user: s.user,
     startWorkout: s.startWorkout,
-    tier: s.tier,
   })));
   const toast = useToast();
   // C6 P9-04 (D97): the one activation entry point RB-3 missed - the
@@ -313,15 +314,8 @@ export default function PlanDetailScreen({ navigation, route }) {
     );
   }
 
-  async function handleDuplicate() {
-    try {
-      const copy = await duplicatePlan(planId, user.id);
-      navigation.replace('PlanDetail', { planId: copy.id, isLibrary: false });
-    } catch (e) {
-      logError('PlanDetailScreen.handleDuplicate', e, { userId: user?.id, planId });
-      toast.show("Couldn't duplicate plan, try again", { variant: 'error' });
-    }
-  }
+  // FOUNDER DECISION (fully free, no tier split): handleDuplicate is retired
+  // with the Duplicate row below (it was the Free-only action).
 
   // S5: opens the manual builder directly on this plan's days/exercises
   // (route param only, ManualBuilderScreen owns the load + save). Additive:
@@ -584,19 +578,11 @@ export default function PlanDetailScreen({ navigation, route }) {
           </View>
         )}
 
-        {/* RC-1 (D96, Review C): this whole block was gated tier !== 'pro',
-            with a rationale ("Pro users manage their plan through the
-            goal-change wizard") that is untrue of that wizard - PlanUpdate
-            REBUILDS from answers, it does not edit, and past week 1 it
-            restarts the block. handleEditPlan is the only navigation in the
-            app that opens ManualBuilder on an existing plan, so a paying
-            user could never add a day, reorder days or create a superset on
-            the plan the wizard built for them, while RoutineDetail points
-            them at "the plan builder" for exactly that. The builder is a
-            FREE feature (SubscriptionPolicy lists it), so showing Edit and
-            Archive to every tier moves no free/pro boundary; Duplicate
-            keeps its own recorded free-only rationale (Pro runs one
-            always-active plan). */}
+        {/* RC-1 (D96, Review C): Edit and Archive show to every account (the
+            builder is a free feature). FOUNDER DECISION (fully free, no
+            tier split): Duplicate is now retired entirely -- every account
+            runs one always-active plan, the rationale that used to keep
+            Duplicate Pro-only. */}
         {!isLibrary && (
           <View style={styles.section}>
             <SectionLabel>Manage</SectionLabel>
@@ -606,13 +592,6 @@ export default function PlanDetailScreen({ navigation, route }) {
                 <Text style={[styles.manageRowText, live.manageRowText]}>Edit plan</Text>
                 <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
               </TouchableOpacity>
-              {tier !== 'pro' && (
-              <TouchableOpacity style={[styles.manageRow, live.manageRow]} onPress={handleDuplicate} accessibilityRole="button" accessibilityLabel="Duplicate plan">
-                <Ionicons name="copy-outline" size={18} color={t.colors.primary} />
-                <Text style={[styles.manageRowText, live.manageRowText]}>Duplicate plan</Text>
-                <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-              </TouchableOpacity>
-              )}
               {!isActive && (
                 <TouchableOpacity style={[styles.manageRow, live.manageRow, styles.manageRowLast]} onPress={handleArchive} accessibilityRole="button" accessibilityLabel="Archive plan">
                   <Ionicons name="archive-outline" size={18} color={t.colors.error} />

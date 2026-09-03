@@ -15,9 +15,9 @@ import { isHealthAvailable, getHealthProviderLabel } from '../lib/health';
 // sub-page" contract. Moved wholesale into SettingsWorkoutScreen.js; this
 // screen now just links to it like every other row.
 export default function SettingsScreen({ navigation }) {
-  const { user, tier } = useAppStore(useShallow(s => ({
+  // Volyume is fully free (founder ruling): no tier, no Pro rows to gate.
+  const { user } = useAppStore(useShallow(s => ({
     user: s.user,
-    tier: s.tier,
   })));
   const healthOn = isHealthAvailable();
   // CP-10 stage 3: live theme override appended after the frozen static
@@ -48,7 +48,7 @@ export default function SettingsScreen({ navigation }) {
         <SettingRow
           icon="person-circle-outline"
           label="Account"
-          sub={user?.email || (tier === 'pro' ? 'Volyume Pro' : 'Free plan')}
+          sub={user?.email || ''}
           onPress={() => { haptics.selection(); navigation.navigate('SettingsAccount'); }}
         />
         <SettingRow
@@ -74,40 +74,34 @@ export default function SettingsScreen({ navigation }) {
           sub="Body weight unit, default rest timer and rest alerts"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsWorkout'); }}
         />
-        {tier === 'pro' ? (
-          <SettingRow
-            icon="nutrition-outline"
-            label="Nutrition targets"
-            sub="Your calorie and macro targets"
-            onPress={() => { haptics.selection(); navigation.navigate('NutritionTargets'); }}
-          />
-        ) : null}
+        <SettingRow
+          icon="nutrition-outline"
+          label="Nutrition targets"
+          sub="Your calorie and macro targets"
+          onPress={() => { haptics.selection(); navigation.navigate('NutritionTargets'); }}
+        />
         {/* Founder order (2026-07-13): the "Meal names" settings row is
             REMOVED - not needed. The MealNames screen and its route stay
             registered (harmless, unreachable from Settings) in case meal
             renaming ever returns by founder decision. */}
-        {tier === 'pro' ? (
-          <SettingRow
-            icon="leaf-outline"
-            label="Dietary needs"
-            sub="Diet, allergies and foods to avoid"
-            onPress={() => { haptics.selection(); navigation.navigate('SettingsDietary'); }}
-          />
-        ) : null}
+        <SettingRow
+          icon="leaf-outline"
+          label="Dietary needs"
+          sub="Diet, allergies and foods to avoid"
+          onPress={() => { haptics.selection(); navigation.navigate('SettingsDietary'); }}
+        />
         <SettingRow
           icon="notifications-outline"
           label="Notifications and reminders"
           sub="Training, meals, check-ins and quiet hours"
           onPress={() => { haptics.selection(); navigation.navigate('NotificationSettings'); }}
         />
-        {tier === 'pro' ? (
-          <SettingRow
-            icon="pulse-outline"
-            label="Coaching reminders"
-            sub="Morning weight log and weekly check-in"
-            onPress={() => { haptics.selection(); navigation.navigate('CoachingReminders'); }}
-          />
-        ) : null}
+        <SettingRow
+          icon="pulse-outline"
+          label="Coaching reminders"
+          sub="Morning weight log and weekly check-in"
+          onPress={() => { haptics.selection(); navigation.navigate('CoachingReminders'); }}
+        />
         <SettingRow
           icon="contrast-outline"
           label="Display and accessibility"

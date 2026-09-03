@@ -10,16 +10,19 @@
  * duplicate near-identical assertions); this covers a representative sample
  * of the two shapes every other file in the batch repeats: (a) a
  * presentational card/sheet with no store dependency (HomeWelcomeCard,
- * WeeklyStreakStrip, CoachBriefCard, AttentionCard, TodayStrip), and (b) a
- * component that ALSO reads the live store for its own data
- * (ActiveSessionMiniBar, VolyumeTabBar).
+ * WeeklyStreakStrip, CoachBriefCard, TodayStrip), and (b) a component that
+ * ALSO reads the live store for its own data (ActiveSessionMiniBar,
+ * VolyumeTabBar).
+ *
+ * FOUNDER DECISION (fully free, no tier split): AttentionCard is deleted
+ * (its trial/free_line/differential variants are all retired), so its own
+ * flip-live pin is retired with it.
  */
 import { create, act } from 'react-test-renderer';
 import { StyleSheet } from 'react-native';
 import useAppStore from '../../store/useAppStore';
 import HomeWelcomeCard from '../HomeWelcomeCard';
 import CoachBriefCard from '../CoachBriefCard';
-import AttentionCard from '../AttentionCard';
 import TodayStrip from '../TodayStrip';
 import ActiveSessionMiniBar from '../ActiveSessionMiniBar';
 import VolyumeTabBar from '../VolyumeTabBar';
@@ -83,24 +86,6 @@ describe('CP-10 stage 3 (Home family): flips live, no remount', () => {
     setTheme('light');
     const lightColor = flat(tree.root.findByProps({ children: 'Ready to train' })).color;
     expect(lightColor).not.toBe(darkColor);
-  });
-
-  test('AttentionCard (trial variant): banner background flips live', () => {
-    setTheme('dark');
-    const trialBanner = { line: 'Day 3 of your trial' };
-    let tree;
-    act(() => {
-      tree = create(
-        <AttentionCard variant="trial" trialBanner={trialBanner} onTrialPress={() => {}} onTrialDismiss={() => {}} onMethodology={() => {}} />,
-      );
-    });
-    const banner = tree.root.findByProps({ accessibilityLabel: trialBanner.line });
-    const darkBg = flat(banner).backgroundColor;
-    expect(darkBg).toBe(theme.resolveTheme({ theme: 'dark' }).colors.primaryBg);
-
-    setTheme('light');
-    const lightBg = flat(tree.root.findByProps({ accessibilityLabel: trialBanner.line })).backgroundColor;
-    expect(lightBg).not.toBe(darkBg);
   });
 
   test('TodayStrip: the empty-state card background flips live', () => {

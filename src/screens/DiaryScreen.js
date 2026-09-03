@@ -96,14 +96,13 @@ function isValidDayKey(value) {
 export default function DiaryScreen({ navigation, route }) {
   const insets = useSafeAreaInsets();
   const {
-    user, calorieBank, sex, energyUnit, tier, periWorkoutSlots,
+    user, calorieBank, sex, energyUnit, periWorkoutSlots,
     dietPreference, mealPlanExcludeFoods, mealPlanExcludeTags,
   } = useAppStore(useShallow((s) => ({
     user: s.user,
     calorieBank: s.userProfile?.calorieBank ?? null,
     sex: s.userProfile?.sex ?? null,
     energyUnit: s.accessibility?.energyUnit ?? 'kcal',
-    tier: s.tier,
     // Pre/Post-workout meal cards are opt-in (off by default, 2026-07-11
     // fix): the same "Around training" preference the meal-plan generator
     // already gates on (MealPlanScreen.js), so one toggle controls both.
@@ -124,21 +123,6 @@ export default function DiaryScreen({ navigation, route }) {
   // AddCustomFoodScreen's/FoodInsightsScreen's own precedent (batch D/E).
   const t = useTheme();
   const live = buildLiveStyles(t);
-
-  // E10 read-only lapse views (founder decision 2026-07-02, "view yes, log
-  // no"): a non-Pro user reaches this screen only through withReadOnlyProGuard
-  // (they have logged days), and it renders view-only. Derived from the store
-  // INSIDE the screen, not trusted from a prop, so no alternative registration
-  // or stale nav state can ever mount a mutable diary for a free user. Every
-  // write affordance below checks this flag; reads (day pager, rings, entries,
-  // water total, macro breakdown) stay.
-  const readOnly = tier !== 'pro';
-  // Hostile review (E10 #1): callbacks capture readOnly at render time, so a
-  // handler created BEFORE a pro-to-free flip could still write after it (tab
-  // screens stay mounted across tab switches, and the tier can flip while a
-  // sheet is open: account switch, entitlement reconcile, cascade expiry).
-  // Every write handler below re-checks the LIVE store tier at execution time.
-  const canWrite = useCallback(() => useAppStore.getState().tier === 'pro', []);
 
   // COMP-004's "Your trend" card was removed from the Diary (founder decision
   // 2026-06-16: a weight trend has nothing to do with the food diary). The
@@ -227,9 +211,9 @@ export default function DiaryScreen({ navigation, route }) {
         getLatestBodyWeight(userId).catch(() => null),
         getLatestBodyComposition(userId).catch(() => null),
         getFoodEntriesForDay(userId, shiftDate(selectedDate, -1)).catch(() => []),
-        // Audit item 6: Pro-only, best-effort. A read failure just hides the
-        // "Targets updated" chip, it never blocks the rest of the diary load.
-        !readOnly ? getLatestCoachOutput(userId).catch(() => null) : Promise.resolve(null),
+        // Audit item 6: best-effort. A read failure just hides the "Targets
+        // updated" chip, it never blocks the rest of the diary load.
+        getLatestCoachOutput(userId).catch(() => null),
       ]);
       // A newer load has started since this one began; drop this stale result
       // before doing any more work with it (never mind committing it).
@@ -290,27 +274,25 @@ export default function DiaryScreen({ navigation, route }) {
       // never leave the skeleton spinning forever (EP-07/UI-02).
       if (loadGuardRef.current.isCurrent(loadToken)) setLoaded(true);
     }
-  }, [userId, selectedDate, sex, readOnly]);
+  }, [userId, selectedDate, sex]);
 
   // Planned scaffolding from a meal plan (adherence model): shown with a
   // confirm banner so it counts towards adherence only once the user says they
   // ate it. "Mark as eaten" flips the day's planned meals to actuals; "Clear"
   // discards them. Future days only offer Clear (you can't have eaten yet).
-  // Hostile review (E10 #4): in read-only, unconfirmed meal-plan scaffolding
-  // (is_planned = 1) must not read as food the user ate, it can never be
-  // confirmed or cleared from a view-only diary. Filter it from everything
-  // the read-only state displays; the Pro diary is untouched.
   // Count distinct planned MEALS (meal slots), not individual food items. A
   // day plan is ~6 meals of several foods each, so counting entries made the
   // banner read "20 planned meals" for a single planned day (QA 2026-06-16).
+  // deriveDiaryDayViewModel's readOnly option is a lib API outside this
+  // screen's lane; Volyume is fully free, so it is always false here.
   const { viewEntries, plannedCount, plannedTotals } = useMemo(
-    () => deriveDiaryDayViewModel(entries, { readOnly }),
-    [entries, readOnly],
+    () => deriveDiaryDayViewModel(entries, { readOnly: false }),
+    [entries],
   );
   const isFutureDay = selectedDate > isoDate(new Date());
 
   const handleConfirmPlanned = useCallback(async () => {
-    if (!userId || !canWrite()) return;
+    if (!userId) return;
     try {
       const n = await confirmPlannedDay(userId, selectedDate);
       await load();
@@ -320,7 +302,7 @@ export default function DiaryScreen({ navigation, route }) {
     } catch (_) {
       toast.show("Couldn't update. Try again.", { variant: 'error' });
     }
-  }, [canWrite, userId, selectedDate, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
+  }, [userId, selectedDate, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
 
   // Food audit item 1 ("mark planned meal eaten", one tap): confirm just ONE
   // meal's planned rows, not the whole day, so staging a plan into the diary
@@ -329,7 +311,7 @@ export default function DiaryScreen({ navigation, route }) {
   // meal_slot; MealSection only renders the button when that slot actually
   // holds planned rows.
   const handleConfirmPlannedSlot = useCallback(async (slotKey) => {
-    if (!userId || !canWrite() || !slotKey) return;
+    if (!userId || !slotKey) return;
     try {
       const n = await confirmPlannedDay(userId, selectedDate, slotKey);
       await load();
@@ -341,10 +323,10 @@ export default function DiaryScreen({ navigation, route }) {
     } catch (_) {
       toast.show("Couldn't update. Try again.", { variant: 'error' });
     }
-  }, [canWrite, userId, selectedDate, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
+  }, [userId, selectedDate, load, toast, dismissMarkEatenHint, dismissPlanAddedHint]);
 
   const handleClearPlanned = useCallback(async () => {
-    if (!userId || !canWrite()) return;
+    if (!userId) return;
     try {
       await clearPlannedDay(userId, selectedDate);
       await load();
@@ -352,7 +334,7 @@ export default function DiaryScreen({ navigation, route }) {
     } catch (_) {
       toast.show("Couldn't update. Try again.", { variant: 'error' });
     }
-  }, [canWrite, userId, selectedDate, load, toast]);
+  }, [userId, selectedDate, load, toast]);
 
   // Calorie banking (CB-1) availability: disabled when the target was
   // floored/compressed or an ED-pattern flag is open. (The carb-cycle and
@@ -393,8 +375,7 @@ export default function DiaryScreen({ navigation, route }) {
   const coachTargetsChange = latestCoachOutput?.appliedAdjustments?.calories
     ?? latestCoachOutput?.appliedAdjustments?.dietBreak
     ?? null;
-  const targetsChangedRecently = !readOnly
-    && !!coachTargetsChange?.appliedAt
+  const targetsChangedRecently = !!coachTargetsChange?.appliedAt
     && (Date.now() - coachTargetsChange.appliedAt) < TARGETS_CHANGED_WINDOW_MS;
 
   // Banking handlers (CB-1). bankingAvailable is computed above (governs the
@@ -408,8 +389,7 @@ export default function DiaryScreen({ navigation, route }) {
   const bankActiveThisWeek = !!calorieBank && weekDates.includes(calorieBank.bigDayKey);
 
   const applyBank = useCallback(async (bank) => {
-    if (!canWrite()) return;
-    // CB-1b: move the planned FOOD to match the new per-day targets, not just the
+        // CB-1b: move the planned FOOD to match the new per-day targets, not just the
     // target number. The food rewrite is the write boundary: a failed rewrite
     // must not leave an applied target whose visible meals still describe the
     // ordinary week.
@@ -452,11 +432,10 @@ export default function DiaryScreen({ navigation, route }) {
     } else {
       toast.show('Higher-calorie day planned. Your weekly total stays the same.', { variant: 'success' });
     }
-  }, [canWrite, setCalorieBank, toast, userId, floorKcal, load]);
+  }, [setCalorieBank, toast, userId, floorKcal, load]);
 
   const clearBank = useCallback(async () => {
-    if (!canWrite()) return;
-    // Restore the original (un-banked) planned food before clearing the bank.
+        // Restore the original (un-banked) planned food before clearing the bank.
     try {
       await restoreUnbankedPlannedFood(userId, {
         perDayDeltaKcal: calorieBank?.perDayDeltaKcal, startDate: isoDate(new Date()),
@@ -469,7 +448,7 @@ export default function DiaryScreen({ navigation, route }) {
     setBankSheetVisible(false);
     await load();
     toast.show('Higher-calorie day cleared.', { variant: 'info' });
-  }, [canWrite, setCalorieBank, toast, userId, calorieBank, load]);
+  }, [setCalorieBank, toast, userId, calorieBank, load]);
 
   // BUG-1: this used to also fire from a plain `useEffect(() => { load(); },
   // [load])` alongside the useFocusEffect below. useFocusEffect already
@@ -635,13 +614,7 @@ export default function DiaryScreen({ navigation, route }) {
     if (selectedDate === isoDate(new Date())) return inferMealSlotForHour(new Date().getHours(), keys);
     return keys[0] ?? null;
   }, [mealSlots, selectedDate]);
-  // E10 read-only lapse views: only render meals that actually have food. An
-  // empty ladder slot exists to be added to; with the add affordances hidden
-  // it would just be a dead header-only card.
-  const visibleSlots = useMemo(
-    () => (readOnly ? mealSlots.filter((s) => (viewEntries.some((e) => e.meal_slot === s.key))) : mealSlots),
-    [readOnly, mealSlots, viewEntries],
-  );
+  const visibleSlots = mealSlots;
 
   // GAP #5: usual-food shortcuts for empty meal slots. Each slot offers up to three
   // of the foods most logged into THAT slot (the same `food_slot_recents`
@@ -652,9 +625,7 @@ export default function DiaryScreen({ navigation, route }) {
   // log (recents shift) or a date change, and never on every render.
   const [slotUsuals, setSlotUsuals] = useState({});
   useEffect(() => {
-    // Read-only diary shows no usuals (a usual is a one-tap WRITE), so skip
-    // the per-slot recents reads entirely.
-    if (!userId || readOnly) { setSlotUsuals({}); return; }
+    if (!userId) { setSlotUsuals({}); return; }
     let active = true;
     (async () => {
       const next = {};
@@ -677,18 +648,18 @@ export default function DiaryScreen({ navigation, route }) {
       if (active) setSlotUsuals(next);
     })();
     return () => { active = false; };
-  }, [userId, readOnly, selectedDate, mealSlots]);
+  }, [userId, selectedDate, mealSlots]);
 
   // A remembered food is only a preselection. The shared detail sheet still
   // confirms grams, meal and date before its normal write path runs.
   const onLogUsual = useCallback((food, slotKey) => {
-    if (!userId || !food || !canWrite()) return;
+    if (!userId || !food) return;
     navigation.navigate('FoodSearch', {
       entryDate: selectedDate,
       mealSlot: slotKey,
       preselectedFood: food,
     });
-  }, [canWrite, userId, selectedDate, navigation]);
+  }, [userId, selectedDate, navigation]);
 
   // Founder must-fix #6 phase 2: a genuine meal suggestion for an empty
   // pre/post-workout slot, not just a visible-but-empty card. Reuses the
@@ -702,10 +673,10 @@ export default function DiaryScreen({ navigation, route }) {
   // single manual pick instead of a whole generated day. Only ever computed
   // for a slot that is enabled (mealSlots already gates on periWorkoutSlots)
   // and currently empty; a slot with food already logged never shows a
-  // suggestion. Read-only diary shows none (a suggestion is a one-tap WRITE).
+  // suggestion.
   const [slotMealSuggestion, setSlotMealSuggestion] = useState({});
   useEffect(() => {
-    if (!userId || readOnly) { setSlotMealSuggestion({}); return; }
+    if (!userId) { setSlotMealSuggestion({}); return; }
     const periSlots = mealSlots.filter(
       (s) => (s.key === 'preworkout' || s.key === 'postworkout') && !(entriesBySlot[s.key]?.length),
     );
@@ -752,7 +723,7 @@ export default function DiaryScreen({ navigation, route }) {
     })();
     return () => { active = false; };
   }, [
-    userId, readOnly, selectedDate, mealSlots, entriesBySlot, viewEntries, mealsPerDay,
+    userId, selectedDate, mealSlots, entriesBySlot, viewEntries, mealsPerDay,
     dietPreference, mealPlanExcludeFoods, mealPlanExcludeTags,
   ]);
 
@@ -764,7 +735,7 @@ export default function DiaryScreen({ navigation, route }) {
   // the slot stays empty for the user to try again or pick manually.
   const loggingMealSuggestionRef = useRef(false);
   const onLogMealSuggestion = useCallback(async (suggestion, slotKey) => {
-    if (!userId || !suggestion?.id || loggingMealSuggestionRef.current || !canWrite()) return;
+    if (!userId || !suggestion?.id || loggingMealSuggestionRef.current) return;
     loggingMealSuggestionRef.current = true;
     audit('food.suggestMeal', { surface: 'diary_periworkout', mealId: suggestion.id, mealSlot: slotKey });
     try {
@@ -777,7 +748,7 @@ export default function DiaryScreen({ navigation, route }) {
     } finally {
       loggingMealSuggestionRef.current = false;
     }
-  }, [canWrite, userId, selectedDate, load, toast]);
+  }, [userId, selectedDate, load, toast]);
 
   // Haptics completion pass (2026-07-10): the haptic lives INSIDE the
   // handler (not wrapped at the JSX callsite) so the swipe gesture, which
@@ -857,8 +828,7 @@ export default function DiaryScreen({ navigation, route }) {
   }
 
   async function confirmQuickAdd({ kcal, protein, carbs, fat, mealSlot }) {
-    if (!canWrite()) return;
-    // food_ref 'quick:adhoc' has no resolvable name, so the diary shows it
+        // food_ref 'quick:adhoc' has no resolvable name, so the diary shows it
     // as "Quick add" with no gram weight.
     // eslint-disable-next-line global-require
     const { logFoodEntry } = require('../lib/food/db');
@@ -894,23 +864,6 @@ export default function DiaryScreen({ navigation, route }) {
   }, []);
   const [copyDays, setCopyDays] = useState(null); // recent logged days | null (picker hidden)
   const [diaryToolsOpen, setDiaryToolsOpen] = useState(false);
-
-  // Hostile review (E10 #1): the write SURFACES render on their own state, so
-  // one already open when the tier flips pro-to-free would stay live for a
-  // now-free user. The moment the diary turns read-only, close them all; the
-  // render conditions below also carry !readOnly as defence in depth.
-  useEffect(() => {
-    if (!readOnly) return;
-    setSelectionMode(false);
-    setSelectedIds(new Set());
-    setEditSheet(null);
-    setQuickAddSlot(null);
-    setMovePickerVisible(false);
-    setSaveMealItems(null);
-    setCopyDays(null);
-    setDiaryToolsOpen(false);
-    setBankSheetVisible(false);
-  }, [readOnly]);
 
   // Leaving the day, or deselecting the last row, drops selection mode
   // so the toolbar never lingers empty.
@@ -960,7 +913,7 @@ export default function DiaryScreen({ navigation, route }) {
   // stay deleted, the commit already happened.
   const doDeleteSelected = useCallback(async () => {
     const sel = selectedEntries();
-    if (sel.length === 0 || !canWrite()) return;
+    if (sel.length === 0) return;
     const n = sel.length;
     audit('food.delete', { mealSlot: 'multi', count: n });
     await deleteEntries(userId, sel);
@@ -974,11 +927,11 @@ export default function DiaryScreen({ navigation, route }) {
       variant: 'undo',
       action: { label: 'Undo', onPress: async () => { await restoreEntries(userId, sel); await load(); } },
     });
-  }, [canWrite, selectedEntries, userId, exitSelection, load, toast]);
+  }, [selectedEntries, userId, exitSelection, load, toast]);
 
   const doCopySelectedToToday = useCallback(async () => {
     const sel = selectedEntries();
-    if (sel.length === 0 || !canWrite()) return;
+    if (sel.length === 0) return;
     const today = isoDate(new Date());
     await copyEntriesToDate(userId, sel, today);
     exitSelection();
@@ -993,11 +946,11 @@ export default function DiaryScreen({ navigation, route }) {
   const doMoveSelected = useCallback(async (slot) => {
     const sel = selectedEntries();
     setMovePickerVisible(false);
-    if (sel.length === 0 || !canWrite()) return;
+    if (sel.length === 0) return;
     await moveEntriesToSlot(userId, sel, slot);
     exitSelection();
     await load();
-  }, [canWrite, selectedEntries, userId, exitSelection, load]);
+  }, [selectedEntries, userId, exitSelection, load]);
 
   // "Save as meal": snapshot the selected entries into a reusable saved
   // meal. Capture the items now (before the name prompt) so exiting
@@ -1020,7 +973,6 @@ export default function DiaryScreen({ navigation, route }) {
   }, [selectedEntries]);
 
   const submitSaveMeal = useCallback(async () => {
-    if (!canWrite()) { setSaveMealItems(null); return; }
     const name = saveMealName.trim();
     const items = saveMealItems;
     if (!name || !items || items.length === 0) { setSaveMealItems(null); return; }
@@ -1052,8 +1004,7 @@ export default function DiaryScreen({ navigation, route }) {
   }
 
   async function saveEditSheet({ quantityG, mealSlot, entryDate, weightState, eatenAt }) {
-    if (!canWrite()) return;
-    const { entry, food } = editSheet;
+        const { entry, food } = editSheet;
     await updateFoodEntry(entry.id, userId, {
       entryDate,
       mealSlot,
@@ -1074,7 +1025,7 @@ export default function DiaryScreen({ navigation, route }) {
   }
 
   async function deleteFromEditSheet() {
-    if (!editSheet?.entry || !canWrite()) return;
+    if (!editSheet?.entry) return;
     const removed = editSheet.entry;
     await deleteFoodEntry(removed.id, userId);
     await load();
@@ -1090,8 +1041,7 @@ export default function DiaryScreen({ navigation, route }) {
   }
 
   async function logWaterDelta(deltaMl) {
-    if (!canWrite()) return;
-    if (deltaMl > 0) lightTap();
+        if (deltaMl > 0) lightTap();
     const next = Math.max(0, waterMl + deltaMl);
     await setWater(userId, selectedDate, next);
     setWaterMl(next);
@@ -1101,7 +1051,6 @@ export default function DiaryScreen({ navigation, route }) {
   // (food audit F-1): a swipe removes the row immediately and the toast offers
   // an 8s window to restore it, rather than a confirm dialog on every swipe.
   const requestDelete = useCallback(async (entry, closeSwipe) => {
-    if (!canWrite()) { closeSwipe?.(); return; }
     audit('food.delete', { mealSlot: entry?.mealSlot ?? 'unknown' });
     try {
       await deleteFoodEntry(entry.id, userId);
@@ -1117,7 +1066,7 @@ export default function DiaryScreen({ navigation, route }) {
     } catch (_) {
       closeSwipe?.();
     }
-  }, [canWrite, userId, load, toast]);
+  }, [userId, load, toast]);
 
   // Shared copy core: replay a source day's entries into the day in view.
   // Re-uses logFoodEntry (via the food-domain layer) so the rollup trigger and
@@ -1125,7 +1074,7 @@ export default function DiaryScreen({ navigation, route }) {
   // swallowing them (food review U-M6). Used by both "Copy yesterday" and the
   // "copy a previous day" picker (food audit F-3).
   const copyFromDate = useCallback(async (sourceDate) => {
-    if (!userId || !sourceDate || !canWrite()) return;
+    if (!userId || !sourceDate) return;
     const srcEntries = await getFoodEntriesForDay(userId, sourceDate).catch(() => []);
     if (!srcEntries || srcEntries.length === 0) {
       toast.show('Nothing logged that day to copy.', { variant: 'info' });
@@ -1165,7 +1114,7 @@ export default function DiaryScreen({ navigation, route }) {
       // added, so they are entries here too.
       toast.show(`Copied ${ok} ${ok === 1 ? 'entry' : 'entries'}.`, { variant: 'success' });
     }
-  }, [canWrite, userId, selectedDate, load, toast]);
+  }, [userId, selectedDate, load, toast]);
 
   // "Copy yesterday" quick action (empty-state CTA): confirm, then copy.
   const copyYesterday = useCallback(async () => {
@@ -1195,9 +1144,8 @@ export default function DiaryScreen({ navigation, route }) {
   }, [userId, selectedDate]);
 
   const openDiaryActions = useCallback(() => {
-    if (readOnly) return;
     setDiaryToolsOpen(true);
-  }, [readOnly]);
+  }, []);
 
   const todayIso = isoDate(new Date());
   const isViewingToday = selectedDate === todayIso;
@@ -1287,40 +1235,16 @@ export default function DiaryScreen({ navigation, route }) {
               <Text style={[styles.todayPillText, live.todayPillText]}>Today</Text>
             </TouchableOpacity>
           ) : null}
-          {!readOnly ? (
-            <TouchableOpacity
-              onPress={() => { haptics.selection(); openDiaryActions(); }}
-              hitSlop={12}
-              style={[styles.dayPagerMore, live.dayPagerMore]}
-              accessibilityRole="button"
-              accessibilityLabel="Open diary tools"
-            >
-              <Ionicons name="options-outline" size={19} color={t.colors.textSecondary} />
-            </TouchableOpacity>
-          ) : null}
+          <TouchableOpacity
+            onPress={() => { haptics.selection(); openDiaryActions(); }}
+            hitSlop={12}
+            style={[styles.dayPagerMore, live.dayPagerMore]}
+            accessibilityRole="button"
+            accessibilityLabel="Open diary tools"
+          >
+            <Ionicons name="options-outline" size={19} color={t.colors.textSecondary} />
+          </TouchableOpacity>
         </View>
-
-        {/* E10 read-only lapse views: say plainly what this state is, and keep
-            the one honest way out. Calm voice, no shame, no countdown. */}
-        {readOnly ? (
-          <View style={[styles.readOnlyCard, live.readOnlyCard]}>
-            <View style={styles.readOnlyRow}>
-              <Ionicons name="eye-outline" size={16} color={t.colors.textSecondary} />
-              <Text style={[styles.readOnlyText, live.readOnlyText]}>
-                Your diary is view-only on the free plan. Everything you logged is safe and stays yours.
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={() => { haptics.selection(); navigation.navigate('ProUpgrade', { source: 'diary' }); }}
-              hitSlop={8}
-              style={[styles.readOnlyCtaButton, live.readOnlyCtaButton]}
-              accessibilityRole="button"
-              accessibilityLabel="Upgrade to Pro to log food again"
-            >
-              <Text style={[styles.readOnlyCta, live.readOnlyCta]}>Upgrade to keep logging</Text>
-            </TouchableOpacity>
-          </View>
-        ) : null}
 
         <View style={styles.macroRingsWrap}>
           {/* Audit item 6: quiet coach receipt chip. Shown only when the coach
@@ -1359,7 +1283,7 @@ export default function DiaryScreen({ navigation, route }) {
               education row to the Diary without a founder order. */}
         </View>
 
-        {showOffCard && !readOnly && selectedDate === isoDate(new Date()) ? (
+        {showOffCard && selectedDate === isoDate(new Date()) ? (
           <View style={[styles.offCard, live.offCard]}>
             <Text style={[styles.offCardText, live.offCardText]}>
               Share barcode fixes? This helps food searches improve for everyone. It is off by default and you choose.
@@ -1418,21 +1342,13 @@ export default function DiaryScreen({ navigation, route }) {
             />
           </View>
         ) : viewEntries.length === 0 ? (
-          readOnly ? (
-            // Read-only empty day: a plain fact, not a call to action (the
-            // standard empty state's three CTAs are all writes).
-            <View style={styles.readOnlyEmpty}>
-              <Text style={[styles.readOnlyEmptyText, live.readOnlyEmptyText]}>Nothing logged this day.</Text>
-            </View>
-          ) : (
-            <EmptyDiary
-              onAdd={() => addFood(likelyMealSlot || 'meal_1')}
-              addLabel="Add food"
-              addAccessibilityLabel="Add food"
-              onCopyYesterday={yesterdayHasFood ? copyYesterday : undefined}
-              onPlanDay={() => navigation.navigate('MealPlan', { entryDate: selectedDate })}
-            />
-          )
+          <EmptyDiary
+            onAdd={() => addFood(likelyMealSlot || 'meal_1')}
+            addLabel="Add food"
+            addAccessibilityLabel="Add food"
+            onCopyYesterday={yesterdayHasFood ? copyYesterday : undefined}
+            onPlanDay={() => navigation.navigate('MealPlan', { entryDate: selectedDate })}
+          />
         ) : (
           <>
             {/* Founder ask (2026-07-09): the moment meals from the meal
@@ -1446,7 +1362,7 @@ export default function DiaryScreen({ navigation, route }) {
                 still covers every other time planned meals appear if this
                 one somehow never fires (e.g. an older, already-planned day
                 reached without a fresh add). */}
-            {plannedCount > 0 && !selectionMode && !readOnly && showPlanAddedHint ? (
+            {plannedCount > 0 && !selectionMode && showPlanAddedHint ? (
               <HintCaption
                 text="Your meals are in the diary. Mark each one eaten as you go, or mark them all at the end of the day."
                 onDismiss={dismissPlanAddedHint}
@@ -1465,7 +1381,7 @@ export default function DiaryScreen({ navigation, route }) {
                 fresh plan-add always dismisses both discovery signals
                 together, see dismissMarkEatenHint/dismissPlanAddedHint in
                 handleConfirmPlanned/handleConfirmPlannedSlot). */}
-            {plannedCount > 0 && !selectionMode && !readOnly && !showPlanAddedHint && showMarkEatenHint ? (
+            {plannedCount > 0 && !selectionMode && !showPlanAddedHint && showMarkEatenHint ? (
               <HintCaption
                 text="Tick meals off one by one as you eat, or mark them all as eaten at once from the bottom of the page."
                 onDismiss={dismissMarkEatenHint}
@@ -1515,17 +1431,19 @@ export default function DiaryScreen({ navigation, route }) {
                     selectedIds={selectedIds}
                     onLongPressEntry={enterSelection}
                     onToggleSelect={toggleSelect}
-                    readOnly={readOnly}
+                    // readOnly is a MealSection prop outside this screen's
+                    // lane; Volyume is fully free, so it is always false.
+                    readOnly={false}
                     // One-tap "mark eaten" per meal (food audit item 1). Only
-                    // offered when a write is possible and the day has
-                    // happened; MealSection itself decides whether THIS slot
-                    // has any planned rows to confirm.
-                    onConfirmPlanned={!readOnly && !isFutureDay ? () => handleConfirmPlannedSlot(slot.key) : undefined}
+                    // offered when the day has happened; MealSection itself
+                    // decides whether THIS slot has any planned rows to
+                    // confirm.
+                    onConfirmPlanned={!isFutureDay ? () => handleConfirmPlannedSlot(slot.key) : undefined}
                   />
                 </AnimatedEntrance>
               </View>
             ))}
-            {!selectionMode && !readOnly ? (
+            {!selectionMode ? (
               <>
                 <Button
                   title="Add meal"
@@ -1563,7 +1481,7 @@ export default function DiaryScreen({ navigation, route }) {
             sits with the day's other food actions instead of competing with the
             ring at the top (founder 2026-06-20). Only when banking is allowed
             (not floored / ED flag). */}
-        {bankingAvailable && !selectionMode && !readOnly ? (
+        {bankingAvailable && !selectionMode ? (
           <Button
             title="Plan a higher-calorie day"
             icon="restaurant-outline"
@@ -1580,7 +1498,6 @@ export default function DiaryScreen({ navigation, route }) {
           onAdd={(amount) => { logWaterDelta(amount); if (amount >= 500) dismissWaterHint(); }}
           onSub={(amount) => { logWaterDelta(-amount); if (amount >= 500) dismissWaterHint(); }}
           onEditTarget={changeWaterTarget}
-          readOnly={readOnly}
           showHint={showWaterHint}
           onDismissHint={dismissWaterHint}
         />
@@ -1591,7 +1508,7 @@ export default function DiaryScreen({ navigation, route }) {
             onConfirmPlanned, wired above) is the primary interaction; this
             is the same confirm/clear pair and gating that used to sit above
             the meal sections, unchanged in behaviour, just relocated. */}
-        {plannedCount > 0 && !selectionMode && !readOnly ? (
+        {plannedCount > 0 && !selectionMode ? (
           <View style={[styles.plannedBanner, live.plannedBanner]}>
             <Text style={[styles.plannedBannerText, live.plannedBannerText]}>
               {plannedCount} planned {plannedCount === 1 ? 'meal' : 'meals'} for this day.
@@ -1627,7 +1544,7 @@ export default function DiaryScreen({ navigation, route }) {
       </GestureDetector>
 
       <FoodDetailSheet
-        visible={!!editSheet && !readOnly}
+        visible={!!editSheet}
         mode="edit"
         food={editSheet?.food}
         initialQuantityG={editSheet?.entry?.quantity_g}
@@ -1652,14 +1569,14 @@ export default function DiaryScreen({ navigation, route }) {
       />
 
       <QuickAddSheet
-        visible={!!quickAddSlot && !readOnly}
+        visible={!!quickAddSlot}
         initialMealSlot={quickAddSlot ?? 'snack'}
         onSave={confirmQuickAdd}
         onClose={() => setQuickAddSlot(null)}
       />
 
       <BottomSheet
-        visible={!!savedPickerSlot && !readOnly}
+        visible={!!savedPickerSlot}
         onClose={() => setSavedPickerSlot(null)}
         accessibilityLabel="Saved meals and recipes"
       >
@@ -1708,7 +1625,7 @@ export default function DiaryScreen({ navigation, route }) {
       {/* FABs hide while selecting so the bottom toolbar owns the
           action space, and on the read-only diary (a scan is a write,
           and ScanBarcode is a hard-locked Pro route anyway). */}
-      {!selectionMode && !readOnly ? (
+      {!selectionMode ? (
         <TouchableOpacity
           style={scanFabStyle}
           onPress={() => {
@@ -1725,7 +1642,7 @@ export default function DiaryScreen({ navigation, route }) {
         </TouchableOpacity>
       ) : null}
 
-      {selectionMode && !readOnly ? (
+      {selectionMode ? (
         <View style={selectionBarStyle}>
           <View style={styles.selTopRow}>
             <TouchableOpacity onPress={() => { haptics.selection(); exitSelection(); }} hitSlop={10} style={styles.selCancel} accessibilityRole="button" accessibilityLabel="Cancel selection">
@@ -1759,7 +1676,7 @@ export default function DiaryScreen({ navigation, route }) {
       ) : null}
 
       <BottomSheet
-        visible={movePickerVisible && !readOnly}
+        visible={movePickerVisible}
         onClose={() => setMovePickerVisible(false)}
         accessibilityLabel="Move selected foods"
       >
@@ -1778,7 +1695,7 @@ export default function DiaryScreen({ navigation, route }) {
       </BottomSheet>
 
       <BottomSheet
-        visible={!!saveMealItems && !readOnly}
+        visible={!!saveMealItems}
         onClose={() => setSaveMealItems(null)}
         keyboardAvoiding
         accessibilityLabel="Save as meal"
@@ -1826,7 +1743,7 @@ export default function DiaryScreen({ navigation, route }) {
       </BottomSheet>
 
       <BottomSheet
-        visible={diaryToolsOpen && !readOnly}
+        visible={diaryToolsOpen}
         onClose={() => setDiaryToolsOpen(false)}
         accessibilityLabel="Diary tools"
       >
@@ -1867,7 +1784,7 @@ export default function DiaryScreen({ navigation, route }) {
       </BottomSheet>
 
       <BottomSheet
-        visible={copyDays != null && !readOnly}
+        visible={copyDays != null}
         onClose={() => setCopyDays(null)}
         accessibilityLabel="Copy from another day"
       >
@@ -1896,7 +1813,7 @@ export default function DiaryScreen({ navigation, route }) {
         )}
       </BottomSheet>
       <CalorieBankSheet
-        visible={bankSheetVisible && !readOnly}
+        visible={bankSheetVisible}
         onClose={() => setBankSheetVisible(false)}
         weekDates={weekDates}
         defaultBigDay={selectedDate}
@@ -1939,7 +1856,7 @@ const DIARY_MARKEATEN_HINT_KEY = '@volyume_seen_diary_markeaten_hint';
 const DIARY_PLANADDED_HINT_KEY = '@volyume_seen_diary_planadded_hint';
 
 function WaterRow({
-  ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget, readOnly = false,
+  ml, targetMl = WATER_TARGET_ML, onAdd, onSub, onEditTarget,
   showHint = false, onDismissHint,
 }) {
   // CP-10 batch E (2026-07-10): sibling function-component scope (not
@@ -1959,45 +1876,37 @@ function WaterRow({
           <Text style={[styles.waterLabel, live.waterLabel]}>Water</Text>
         </View>
         <View style={styles.waterButtons}>
-          {/* NU-9: the value doubles as the target editor. E10 read-only: the
-              value is a plain fact; +/- and the target editor are writes. */}
+          {/* NU-9: the value doubles as the target editor. */}
           <TouchableOpacity
-            onPress={readOnly ? undefined : () => { haptics.selection(); onEditTarget?.(); }}
-            disabled={readOnly}
+            onPress={() => { haptics.selection(); onEditTarget?.(); }}
             hitSlop={8}
-            accessibilityRole={readOnly ? 'text' : 'button'}
-            accessibilityLabel={readOnly
-              ? `Water ${litres} of ${targetL} litres.`
-              : `Water ${litres} of ${targetL} litres. Tap to change your daily target.`}
+            accessibilityRole="button"
+            accessibilityLabel={`Water ${litres} of ${targetL} litres. Tap to change your daily target.`}
           >
             <Text style={[styles.waterValue, live.waterValue]}>{litres} / {targetL} L</Text>
           </TouchableOpacity>
           {/* NU-9: long-press moves a bottle (500 ml) at a time, so a full day
               of water no longer needs 12 taps. */}
-          {!readOnly ? (
-            <>
-              <TouchableOpacity
-                style={[styles.waterBtn, live.waterBtn]}
-                onPress={() => onSub(250)}
-                onLongPress={() => onSub(500)}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Remove 250 millilitres of water. Long press to remove 500."
-              >
-                <Ionicons name="remove" size={16} color={t.colors.textPrimary} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.waterBtn, live.waterBtn]}
-                onPress={() => onAdd(250)}
-                onLongPress={() => onAdd(500)}
-                hitSlop={8}
-                accessibilityRole="button"
-                accessibilityLabel="Add 250 millilitres of water. Long press to add 500."
-              >
-                <Ionicons name="add" size={16} color={t.colors.textPrimary} />
-              </TouchableOpacity>
-            </>
-          ) : null}
+          <TouchableOpacity
+            style={[styles.waterBtn, live.waterBtn]}
+            onPress={() => onSub(250)}
+            onLongPress={() => onSub(500)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Remove 250 millilitres of water. Long press to remove 500."
+          >
+            <Ionicons name="remove" size={16} color={t.colors.textPrimary} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.waterBtn, live.waterBtn]}
+            onPress={() => onAdd(250)}
+            onLongPress={() => onAdd(500)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Add 250 millilitres of water. Long press to add 500."
+          >
+            <Ionicons name="add" size={16} color={t.colors.textPrimary} />
+          </TouchableOpacity>
         </View>
       </View>
       <View
@@ -2010,7 +1919,7 @@ function WaterRow({
       </View>
       {/* Wave A C7: the +/- long-press-for-500 move had no visible affordance
           (accessibilityLabel only). Gone once discovered or dismissed. */}
-      {showHint && !readOnly ? (
+      {showHint ? (
         <HintCaption
           text="Hold to add 500 ml."
           onDismiss={onDismissHint}
@@ -2218,30 +2127,6 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.borderSubtle,
     padding: spacing.md, marginBottom: spacing.lg,
   },
-  // E10 read-only lapse views: the view-only notice card and the plain
-  // empty-day fact line.
-  readOnlyCard: {
-    gap: spacing.sm,
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1, borderColor: colors.borderSubtle,
-    padding: spacing.md, marginBottom: spacing.lg,
-  },
-  readOnlyRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
-  readOnlyText: { ...type.bodySm, color: colors.textSecondary, flex: 1 },
-  readOnlyCtaButton: {
-    alignSelf: 'flex-end',
-    minHeight: 40,
-    justifyContent: 'center',
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surface2,
-    paddingHorizontal: spacing.md,
-  },
-  readOnlyCta: { ...type.label, color: colors.textPrimary },
-  readOnlyEmpty: { alignItems: 'center', paddingVertical: spacing.xxl },
-  readOnlyEmptyText: { ...type.bodySm, color: colors.textMuted },
   offCardText: { ...type.bodySm, color: colors.textSecondary },
   offCardRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, flexWrap: 'wrap' },
   offCardButton: {
@@ -2394,11 +2279,6 @@ function buildLiveStyles(t) {
     targetsChangedText: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
     bankOffNote: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     offCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    readOnlyCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    readOnlyText: { ...t.type.bodySm, color: t.colors.textSecondary },
-    readOnlyCtaButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
-    readOnlyCta: { ...t.type.label, color: t.colors.textPrimary },
-    readOnlyEmptyText: { ...t.type.bodySm, color: t.colors.textMuted },
     offCardText: { ...t.type.bodySm, color: t.colors.textSecondary },
     offCardButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     offCardButtonMuted: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },

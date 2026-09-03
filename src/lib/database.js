@@ -4888,32 +4888,31 @@ export async function activatePlanWithBlock(userId, planId, planName, { ledger =
   // user re-ramped from research values. When no explicit seed was
   // handed in, derive one from the user's own judged block history.
   //
-  // Conservative by construction: the helper is Pro-only (FREE HAS NO
-  // COACHING), has no current-block proposal to apply, and returns null
-  // unless something was genuinely carried - so manual overrides,
-  // suppression, research floors and evidence sufficiency all keep
-  // winning, and an activation with nothing to carry keeps the honest
-  // template ramp. Best-effort: activation must never fail on this.
+  // Conservative by construction: the helper has no current-block proposal
+  // to apply, and returns null unless something was genuinely carried - so
+  // manual overrides, suppression, research floors and evidence sufficiency
+  // all keep winning, and an activation with nothing to carry keeps the
+  // honest template ramp. Best-effort: activation must never fail on this.
   //
   // Review D5: a caller that MEANT a repeat passes allowLearnedCarry
   // false. Its seed build can return null on a transient read failure,
   // and "the same set targets as last time" must then fall back to the
   // template ramp as it always did - never to the learned band, which
   // would break P-6 behind an alert promising the opposite.
+  //
+  // Volyume is fully free (founder decision 2026-09-03): the old Pro-only
+  // gate here is gone -- every user's own judged block history is theirs
+  // to carry forward.
   let effectiveLedger = ledger;
   if (!effectiveLedger && allowLearnedCarry) {
     try {
       // eslint-disable-next-line global-require
       const store = require('../store/useAppStore').default.getState();
-      const tier = store?.tier ?? 'free';
-      if (tier === 'pro') {
-        // eslint-disable-next-line global-require
-        const { buildLearnedSeedRangesForActivation } = require('./blockLedgerRunner');
-        effectiveLedger = await buildLearnedSeedRangesForActivation(userId, {
-          userProfile: store?.userProfile ?? null,
-          tier,
-        });
-      }
+      // eslint-disable-next-line global-require
+      const { buildLearnedSeedRangesForActivation } = require('./blockLedgerRunner');
+      effectiveLedger = await buildLearnedSeedRangesForActivation(userId, {
+        userProfile: store?.userProfile ?? null,
+      });
     } catch (_) { effectiveLedger = null; /* honest template ramp */ }
   }
 

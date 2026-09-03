@@ -16,8 +16,8 @@
  *      below the meal sections, WaterRow, and banking rows, to the true
  *      bottom of the scrollable diary page. Per-meal marking
  *      (onConfirmPlanned on MealSection) stays the primary interaction and is
- *      unmoved. Same gating (`plannedCount > 0 && !selectionMode && !readOnly`)
- *      and the same two buttons/copy, just relocated.
+ *      unmoved. Same gating (`plannedCount > 0 && !selectionMode`) and the
+ *      same two buttons/copy, just relocated.
  *   3. A one-time hint (the existing '@volyume_seen_*' once-ever convention,
  *      same idiom as showFoodHint/showWaterHint) teaches that planned meals
  *      can be confirmed one by one or all at once, since the bulk control no
@@ -55,7 +55,7 @@ describe('D12 item 2: bulk mark-as-eaten demoted to the bottom of the page', () 
     // (src/hooks/useTheme.js); styles.plannedBanner gained a live.plannedBanner
     // override. The pinned contract (gating + which frozen style backs the
     // banner) is unchanged -- widened only to allow the insertion.
-    expect(SRC).toMatch(/\{plannedCount > 0 && !selectionMode && !readOnly \? \(\s*<View style=\{\[styles\.plannedBanner, live\.plannedBanner\]\}>/);
+    expect(SRC).toMatch(/\{plannedCount > 0 && !selectionMode \? \(\s*<View style=\{\[styles\.plannedBanner, live\.plannedBanner\]\}>/);
     expect(SRC).toMatch(/title="Mark as eaten"/);
     expect(SRC).toMatch(/onPress=\{handleConfirmPlanned\}/);
     expect(SRC).toMatch(/title="Clear"/);
@@ -63,7 +63,7 @@ describe('D12 item 2: bulk mark-as-eaten demoted to the bottom of the page', () 
   });
 
   test('per-meal marking (the primary interaction) is still wired on MealSection, unmoved', () => {
-    expect(SRC).toMatch(/onConfirmPlanned=\{!readOnly && !isFutureDay \? \(\) => handleConfirmPlannedSlot\(slot\.key\) : undefined\}/);
+    expect(SRC).toMatch(/onConfirmPlanned=\{!isFutureDay \? \(\) => handleConfirmPlannedSlot\(slot\.key\) : undefined\}/);
   });
 
   test('the bulk banner now renders AFTER WaterRow (true bottom of the page), not before the meal sections', () => {
@@ -104,13 +104,13 @@ describe('D12 item 3: one-time hint teaching mark-as-eaten', () => {
     );
   });
 
-  test('the hint is gated on planned meals actually being present, read-write, and not mid-selection', () => {
+  test('the hint is gated on planned meals actually being present and not mid-selection', () => {
     // L08-teach (founder ask 2026-07-09, ux-world-class-audit-2026-07-09):
     // this hint now also stays hidden while the more specific plan-added
     // teach (showPlanAddedHint) is showing, so the two never stack; every
-    // other D12 gate (plannedCount, selectionMode, readOnly) is unchanged.
+    // other D12 gate (plannedCount, selectionMode) is unchanged.
     expect(SRC).toMatch(
-      /\{plannedCount > 0 && !selectionMode && !readOnly && !showPlanAddedHint && showMarkEatenHint \? \(\s*<HintCaption/,
+      /\{plannedCount > 0 && !selectionMode && !showPlanAddedHint && showMarkEatenHint \? \(\s*<HintCaption/,
     );
   });
 

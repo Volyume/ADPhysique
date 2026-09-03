@@ -57,8 +57,11 @@ const { getSupabaseClient } = require('../supabase');
 const AsyncStorage = require('@react-native-async-storage/async-storage').default
   ?? require('@react-native-async-storage/async-storage');
 
-// Production (PRO_BETA_ACTIVE = false): tier is authoritative from the
-// cloud users_profile.tier, read by refreshTierFromCloud.
+// FULLY-FREE PRODUCT (founder decision 2026-09-03): every tier writer in the
+// store funnels through _effectiveTier, which answers 'pro' while
+// proGate.FULL_ACCESS_FOR_ALL is on. The scenarios below that used to assert a
+// 'free' or null tier are INVERTED in place, each annotated; the auth, routing
+// and cross-account-isolation properties they also cover are untouched.
 // restoreSessionFromCloud restores the profile + first-run flag but not
 // tier. The real onAuthStateChange runs both, so the scenarios below do
 // too where the end-state tier matters.
@@ -97,11 +100,15 @@ describe('Scenario: Welcome → pick Pro', () => {
 
 // ─── Scenario 2: Welcome → pick Free ─────────────────────────────────────────
 
-describe('Scenario: Welcome → pick Free', () => {
-  test('setTier(free) lands free in store + storage', async () => {
+describe('Scenario: Welcome (there is no Free to pick any more)', () => {
+  // INVERTED 2026-09-03 (fully-free product, founder decision). Volyume has no
+  // Free/Pro split, so useAppStore._effectiveTier resolves every tier write to
+  // the full-access tier. A caller asking for 'free' - including any dormant
+  // billing path - cannot put a user on a reduced tier.
+  test('setTier(free) resolves to full access, in store and in storage', async () => {
     await useAppStore.getState().setTier('free');
-    expect(useAppStore.getState().tier).toBe('free');
-    expect(await AsyncStorage.getItem('@volyume_tier')).toBe('free');
+    expect(useAppStore.getState().tier).toBe('pro');
+    expect(await AsyncStorage.getItem('@volyume_tier')).toBe('pro');
   });
 });
 
@@ -165,14 +172,21 @@ describe('Scenario: cloud trial state lands on userProfile', () => {
     await useAppStore.getState().refreshTierFromCloud(getSupabaseClient(), 'u1');
 
     const p = useAppStore.getState().userProfile;
-    expect(p.trialState).toBe('trialing');
-    expect(p.proTrialEndsAt).toBe('2026-06-20T00:00:00.000Z');
-    // The cached fields survive the merge.
+    // INVERTED 2026-09-03 (fully-free product, founder decision). The mirror is
+    // NOT written while FULL_ACCESS_FOR_ALL is on: copying trial_state /
+    // pro_trial_ends_at back onto userProfile re-arms every trial surface that
+    // reads the cascade stage off the profile, on the very next cloud read,
+    // undoing the one-shot free conversion. The columns are still SELECTED, so
+    // re-enabling this is one line.
+    expect(p.trialState).toBeUndefined();
+    expect(p.proTrialEndsAt).toBeUndefined();
+    // The cached fields survive untouched, and the non-trial cloud fields still
+    // land.
     expect(p.firstName).toBe('Allan');
     expect(useAppStore.getState().billingPeriod).toBe('annual');
   });
 
-  test('restoreSessionFromCloud hydrates trial fields on a fresh profile', async () => {
+  test('restoreSessionFromCloud never mirrors trial fields onto a fresh profile (fully free)', async () => {
     mockCloudProfile = {
       first_name: 'Allan',
       training_focus: 'bodybuilding',
@@ -189,8 +203,12 @@ describe('Scenario: cloud trial state lands on userProfile', () => {
     await useAppStore.getState().restoreSessionFromCloud('u1');
 
     const p = useAppStore.getState().userProfile;
-    expect(p.trialState).toBe('expired');
-    expect(p.proTrialEndsAt).toBe('2026-05-01T00:00:00.000Z');
+    // D137 (fully free product): the trial columns are never mirrored onto a
+    // fresh profile -- that mirror is what re-armed every trial surface. The
+    // rest of the profile still hydrates.
+    expect(p.firstName).toBe('Allan');
+    expect(p.trialState).toBeUndefined();
+    expect(p.proTrialEndsAt).toBeUndefined();
   });
 });
 
@@ -327,12 +345,15 @@ describe('Scenario: sign-out aborts when the cloud push does not complete', () =
 // ─── Scenario 4: Sign in with deleted account (no cloud profile) ─────────────
 
 describe('Scenario: Sign-in with deleted account (cloud profile missing)', () => {
-  test('no cloud profile leaves tier null and firstRunComplete false (onboarding)', async () => {
+  test('no cloud profile still routes to onboarding, now with full access', async () => {
     await useAppStore.getState().clearAuthStateForSignOut();
     mockCloudProfile = null;
     await signInFlow('u1');
-    // No cloud row -> nothing to grant; the user is routed to onboarding.
-    expect(useAppStore.getState().tier).toBeNull();
+    // INVERTED 2026-09-03 (fully-free product): there is no entitlement to
+    // grant or withhold, so a missing cloud row cannot leave a signed-in user
+    // on a reduced tier. The routing property this scenario exists for is
+    // unchanged: onboarding is still not complete.
+    expect(useAppStore.getState().tier).toBe('pro');
     expect(useAppStore.getState().firstRunComplete).toBe(false);
   });
 });
@@ -340,13 +361,15 @@ describe('Scenario: Sign-in with deleted account (cloud profile missing)', () =>
 // ─── Scenario 5: App restart while signed in as Pro ──────────────────────────
 
 describe('Scenario: App restart, cloud tier is authoritative', () => {
-  test('refreshTierFromCloud adopts the cloud tier, correcting a stale local pro', async () => {
+  test('INVERTED: a cloud tier of free can no longer demote a user', async () => {
     await AsyncStorage.setItem('@volyume_tier', 'pro');
     await useAppStore.getState().checkTier();
     expect(useAppStore.getState().tier).toBe('pro');
 
-    // Cloud says this user is on Free (trial ended / never paid). Post-beta
-    // the cloud is the source of truth, so the stale local 'pro' is corrected.
+    // The cloud column still says 'free' for most rows (the DB default, and
+    // the cascade cron that used to write it is being unscheduled by
+    // supabase/migrate_157). Under the fully-free product that value must not
+    // reach the user: _effectiveTier answers 'pro' whatever the server says.
     const fakeClient = {
       from: () => ({
         select: () => ({
@@ -357,7 +380,8 @@ describe('Scenario: App restart, cloud tier is authoritative', () => {
       }),
     };
     await useAppStore.getState().refreshTierFromCloud(fakeClient, 'u1');
-    expect(useAppStore.getState().tier).toBe('free');
+    expect(useAppStore.getState().tier).toBe('pro');
+    expect(await AsyncStorage.getItem('@volyume_tier')).toBe('pro');
   });
 
   test('refreshTierFromCloud keeps pro when the cloud says pro', async () => {
@@ -414,38 +438,42 @@ describe('Scenario: App launch, checkTier loads persisted value', () => {
     expect(useAppStore.getState().tierChecked).toBe(true);
   });
 
-  test('persisted free round-trips', async () => {
+  // INVERTED 2026-09-03 (fully-free product, founder decision). checkTier used
+  // to round-trip a persisted 'free' and to leave tier null when nothing was
+  // cached. There is no reduced tier and no unentitled state any more, so every
+  // cached value resolves to full access. tierChecked semantics are unchanged
+  // and pinned below: RootNavigator's splash gate waits on it.
+  test('INVERTED: a persisted free is lifted to full access', async () => {
     await AsyncStorage.setItem('@volyume_tier', 'free');
     await useAppStore.getState().checkTier();
-    expect(useAppStore.getState().tier).toBe('free');
+    expect(useAppStore.getState().tier).toBe('pro');
   });
 
-  test('no tier + completed first-run no longer auto-grants pro (audit M-3)', async () => {
-    // The legacy "first-run done ⇒ pro" heuristic was removed (trial-subscription
-    // audit M-3): it could grant Pro on a cleared tier cache. The cloud read
-    // (refreshTierFromCloud) is now the source of truth; until it lands the user
-    // is unentitled.
+  test('INVERTED (audit M-3): no cached tier resolves to full access, not null', async () => {
     await AsyncStorage.setItem('@volyume_first_run_complete', 'true');
     await useAppStore.getState().checkTier();
-    expect(useAppStore.getState().tier).toBeNull();
+    expect(useAppStore.getState().tier).toBe('pro');
     expect(useAppStore.getState().tierChecked).toBe(true);
   });
 
-  test('no tier + no first-run leaves tier=null', async () => {
+  test('INVERTED: no tier + no first-run also resolves to full access', async () => {
     await useAppStore.getState().checkTier();
-    expect(useAppStore.getState().tier).toBeNull();
+    expect(useAppStore.getState().tier).toBe('pro');
     expect(useAppStore.getState().tierChecked).toBe(true);
   });
 });
 
 // ─── Scenario 9: Pro switches to Free in Settings ────────────────────────────
 
-describe('Scenario: Pro user explicitly switches to Free', () => {
-  test('setTier(free) lands free + storage', async () => {
+describe('Scenario: nothing can switch a user to Free any more', () => {
+  test('INVERTED: a pro -> free write resolves back to full access', async () => {
+    // Fully-free product (2026-09-03). The "switch to Free" affordance is gone
+    // with the paywall; this pins that even a direct store write cannot strand
+    // a user on a reduced tier while FULL_ACCESS_FOR_ALL is on.
     await useAppStore.getState().setTier('pro');
     await useAppStore.getState().setTier('free');
-    expect(useAppStore.getState().tier).toBe('free');
-    expect(await AsyncStorage.getItem('@volyume_tier')).toBe('free');
+    expect(useAppStore.getState().tier).toBe('pro');
+    expect(await AsyncStorage.getItem('@volyume_tier')).toBe('pro');
   });
 });
 
@@ -577,10 +605,13 @@ describe('Scenario: User A signs out, User B signs in (different cloud account)'
 // ─── Scenario 14: setTier(null) is a no-op via API (shouldn't be possible) ───
 
 describe('Scenario: setTier with falsy value', () => {
-  test('setTier(null) still writes null but does not throw', async () => {
+  test('INVERTED: setTier(null) cannot blank the tier, and still does not throw', async () => {
+    // Fully-free product: _effectiveTier resolves any argument - including a
+    // falsy one from a dormant billing path - to full access, so no code path
+    // can drop a signed-in user out of entitlement.
     await useAppStore.getState().setTier('pro');
-    await useAppStore.getState().setTier(null);
-    expect(useAppStore.getState().tier).toBeNull();
+    await expect(useAppStore.getState().setTier(null)).resolves.toBeUndefined();
+    expect(useAppStore.getState().tier).toBe('pro');
   });
 });
 

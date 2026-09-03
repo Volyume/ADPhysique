@@ -14,7 +14,8 @@
  *     happened (C5-P12-04's truth rule, kept through the restore).
  *  4. The morning weight folds in as a quiet done-row only on a logged
  *     day, and never under suppression.
- *  5. Pro-only; free tier gets nothing from this resolver.
+ *  5. FOUNDER DECISION (fully free, no tier split): the resolver no longer
+ *     gates on tier -- every account gets it now.
  */
 import { resolveEvidencePanel } from '../evidencePanel';
 
@@ -22,7 +23,6 @@ const MONDAY = new Date(2026, 7, 10, 12, 0, 0).getTime(); // Mon 10 Aug 2026, lo
 const DAY = 86400000;
 
 const BASE = {
-  tier: 'pro',
   hasCheckedInEver: false,
   weighIns7d: 0,
   firstWeightAt: MONDAY - 10 * DAY,
@@ -33,12 +33,6 @@ const BASE = {
   todayWeightLabel: null,
   now: MONDAY,
 };
-
-describe('tier gate', () => {
-  test('free tier resolves to null', () => {
-    expect(resolveEvidencePanel({ ...BASE, tier: 'free' })).toBeNull();
-  });
-});
 
 describe('ED-safety: the suppression chain fails closed to the neutral variant', () => {
   test('no counts, no weight line, no weight ask under an open flag', () => {

@@ -16,10 +16,8 @@
  * this is the calm, date-neutral view of the user's own body.
  *
  * Everything is device-local: the metadata reads/writes go through
- * progressPhotoMeta (never synced), the actions are pure callbacks the
- * integrator wires (delete / compare-from-here / set-reference), and the
- * destructive action re-checks the live tier at execution time so a
- * pro-to-free flip with the confirm already open cannot delete.
+ * progressPhotoMeta (never synced), and the actions are pure callbacks the
+ * integrator wires (delete / compare-from-here / set-reference).
  *
  * Motion: pinch/zoom and the swipe settle on the named spring family; Reduce
  * Motion flattens them to an instant set and the Modal opens without a fade.
@@ -32,7 +30,7 @@
  *   onClose()                            dismiss the viewer
  *   onDelete(name)                       remove the photo + its meta (the
  *                                        integrator owns the actual delete;
- *                                        called only after confirm + tier check)
+ *                                        called only after confirm)
  *   deleteModeForPhoto(name)             return 'scan-set' when deleting this
  *                                        photo removes the full saved photo set
  *   onCompareFrom(name)                  open the comparison seeded from here
@@ -546,12 +544,7 @@ export default function ProgressPhotoViewer({
       {
         text: deleteCopy.buttonTitle,
         style: 'destructive',
-        onPress: () => {
-          // Live-tier re-check: a delete prompt open across a pro-to-free flip
-          // must not delete (the ProgressPhotosScreen write-guard class).
-          if (useAppStore.getState().tier !== 'pro') return;
-          onDelete?.(name);
-        },
+        onPress: () => onDelete?.(name),
       },
     ]);
   }

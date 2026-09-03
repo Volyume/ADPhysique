@@ -71,8 +71,9 @@ describe('X5/X11: HomeScreen "this week" counts are Monday-anchored, not rolling
     expect(body).not.toMatch(/Date\.now\(\) - 7 \* 86400000/);
   });
 
-  test('loadFreeCoachLine (the free-tier "this week" line) already used the Monday-anchored helper', () => {
-    const body = fnBody(HOME, 'async function loadFreeCoachLine()');
-    expect(body).toMatch(/const weekStartMs = localWeekStartMs\(\);/);
+  // FOUNDER DECISION (fully free, no tier split): loadFreeCoachLine (the
+  // free-tier "this week" line) is retired along with the tier split.
+  test('loadFreeCoachLine is gone, so Home has one fewer "this week" window to keep aligned', () => {
+    expect(HOME).not.toMatch(/loadFreeCoachLine/);
   });
 });

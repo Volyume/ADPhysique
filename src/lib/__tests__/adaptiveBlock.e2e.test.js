@@ -375,12 +375,15 @@ describe('cross-device and provenance authority (source pins)', () => {
   });
 
   test("the Plans buttons map by LABEL semantics: only 'adjust' applies the proposal", () => {
-    // Re-anchored under FQ-2 (D96), same meaning: only the "Continue with
-    // adjustments" option applies the ledger proposal and everything else is
-    // a true repeat. The mapping now carries the entitlement too, because
-    // the adjusted path is Pro (founder tier law: FREE DOES NOT HAVE
-    // COACHING), so an adjust intent without Pro also seeds a true repeat.
-    expect(read('screens/PlansScreen.js')).toMatch(/intent === 'adjust' && tier === 'pro' \? 'adjust' : 'repeat'/);
+    // Re-anchored under D137 (fully free product, no tier split): only the
+    // "Continue with adjustments" option applies the ledger proposal and
+    // everything else is a true repeat. The entitlement clause is gone --
+    // there is no tier to check any more (PlansScreen.js:634's own comment:
+    // "only the 'adjust' option applies the full ledger, now with no
+    // entitlement to check") -- but the LABEL semantics this test is really
+    // pinning are unchanged: label 'adjust' seeds 'adjust', every other
+    // label seeds a true repeat.
+    expect(read('screens/PlansScreen.js')).toMatch(/intent === 'adjust' \? 'adjust' : 'repeat'/);
   });
 });
 

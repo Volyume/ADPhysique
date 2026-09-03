@@ -5,13 +5,12 @@ export function profileRowStatusLabel(status) {
   return null;
 }
 
-export function buildProfileRowAccessibility({ label, sub, status, pro } = {}) {
+export function buildProfileRowAccessibility({ label, sub, status } = {}) {
   const statusLabel = profileRowStatusLabel(status);
   const hintParts = [];
 
   if (statusLabel) hintParts.push(`Status: ${statusLabel}.`);
   if (sub) hintParts.push(sub);
-  if (pro) hintParts.push('Pro plan may be required.');
 
   return {
     accessibilityLabel: label,

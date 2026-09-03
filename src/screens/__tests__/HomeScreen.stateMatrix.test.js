@@ -439,12 +439,16 @@ const algorithmsMod = require('../../lib/algorithms');
 const activationNudgeMod = require('../../lib/activationNudge');
 const reEntryCheckMod = require('../../lib/reEntryCheck');
 const coachDecisionMod = require('../../lib/coachDecision');
-const cascadeMod = require('../../lib/payments/cascade');
 const plateauSurfacingMod = require('../../lib/plateauSurfacing');
-const coachResponseMod = require('../../lib/coachResponse');
-const differentialPaywallMod = require('../../lib/differentialPaywall');
 const AsyncStorage = require('@react-native-async-storage/async-storage').default;
 
+// FOUNDER DECISION (fully free, no tier split, no trial): HomeScreen no
+// longer imports lib/payments/cascade, lib/coachResponse or
+// lib/differentialPaywall at all (the trial-ending fact, the free-tier
+// weekly line and the differential paywall badge are retired), so their
+// module handles and DEFAULT_LIB/LIB_MODULES entries (stageOf,
+// canStillTrial, trialEndsAtMs, daysRemaining, buildFreeCoachLine,
+// detectDifferentialTrigger) are retired with them.
 const DEFAULT_DB = {
   getActivePlan: async () => null,
   getRoutinesForPlan: async () => [],
@@ -458,13 +462,10 @@ const DEFAULT_DB = {
   getMorningWeights: async () => [],
   getMorningWeightsLast14Days: async () => [],
   getOpenEdPatternFlag: async () => false,
-  getRecentCheckins: async () => [],
-  getNutritionTargets: async () => null,
   getAllRoutineExerciseCounts: async () => ({}),
   getRecentWorkoutFeedback: async () => [],
   getPlannedMuscleVolume: async () => [],
   getAllExercises: async () => [],
-  getProgressionTeaser: async () => null,
   getPlannedMuscleVolumeForBlock: async () => [],
   getAllMesocyclesForUser: async () => [],
   getRoutineExercisesWithDetails: async () => [],
@@ -476,13 +477,7 @@ const DEFAULT_LIB = {
   resolveActivationNudge: () => null,
   reEntryCheckDue: () => null,
   isCompletedCoachDecision: () => false,
-  stageOf: () => 'complete_trial',
-  canStillTrial: () => false,
-  trialEndsAtMs: () => null,
-  daysRemaining: () => null,
   selectPlateauForBanner: () => null,
-  buildFreeCoachLine: () => null,
-  detectDifferentialTrigger: () => ({ shown: false }),
 };
 
 const LIB_MODULES = {
@@ -491,13 +486,7 @@ const LIB_MODULES = {
   resolveActivationNudge: activationNudgeMod,
   reEntryCheckDue: reEntryCheckMod,
   isCompletedCoachDecision: coachDecisionMod,
-  stageOf: cascadeMod,
-  canStillTrial: cascadeMod,
-  trialEndsAtMs: cascadeMod,
-  daysRemaining: cascadeMod,
   selectPlateauForBanner: plateauSurfacingMod,
-  buildFreeCoachLine: coachResponseMod,
-  detectDifferentialTrigger: differentialPaywallMod,
 };
 
 let dbOriginals = null;
@@ -735,10 +724,13 @@ describe('State matrix — S9: block finished, awaiting decision', () => {
   });
 });
 
-// ─── S10 — established Free, normal day ────────────────────────────────────
-describe('State matrix — S10: established Free, normal day, no plan gaps', () => {
-  test('hero + footer render; no TodayStrip (Free excluded); Today line silent', async () => {
-    useAppStore.setState(FREE_USER);
+// ─── S10 — established user, normal day ────────────────────────────────────
+// FOUNDER DECISION (fully free, no tier split): TodayStrip is no longer
+// Free-excluded -- it renders for every account, exactly as the Pro branch
+// always did (S3, above).
+describe('State matrix — S10: established user, normal day, no plan gaps', () => {
+  test('hero + TodayStrip + footer render; Today line silent', async () => {
+    useAppStore.setState(PRO_USER);
     applyFixture({
       db: {
         ...withPlan(),
@@ -749,7 +741,7 @@ describe('State matrix — S10: established Free, normal day, no plan gaps', () 
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
     expect(REGION.heroPlanned(tree)).toBe(true);
-    expect(REGION.todayStrip(tree)).toBe(false);
+    expect(REGION.todayStrip(tree)).toBe(true);
     expect(REGION.footerLastSession(tree)).toBe(true);
     expect(REGION.todayLine(tree)).toBe(false);
   });
@@ -773,31 +765,15 @@ describe('State matrix — S11: Free, no plan, session history', () => {
   });
 });
 
-// ─── S12 — Free, free-coach-line eligible ──────────────────────────────────
-describe('State matrix — S12: Free, free-coach-line eligible', () => {
-  test('the free weekly one-liner renders in the P3 footer slot, never above the hero', async () => {
-    useAppStore.setState(FREE_USER);
-    applyFixture({
-      db: { ...withPlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
-      lib: {
-        resolveProgrammePosition: programmePosition(null),
-        buildFreeCoachLine: () => 'You trained once this week.',
-      },
-    });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    expect(flattenText(tree)).toContain('You trained once this week.');
-    const txt = flattenText(tree);
-    // Order proof: the free line's own text appears AFTER the hero's stable
-    // marker text, i.e. below it, never in the P1/above-hero slot.
-    expect(txt.indexOf('Push Day')).toBeLessThan(txt.indexOf('You trained once this week.'));
-  });
-});
-
-// ─── S13 — Free, differential paywall badge eligible ───────────────────────
-describe('State matrix — S13: Free, differential badge eligible', () => {
-  test('the differential badge renders in the same P3 footer slot as the free line, never both at once', async () => {
-    useAppStore.setState(FREE_USER);
+// ─── S12/S13 — retired: FOUNDER DECISION (fully free, no tier split) ──────
+// The free-coach-line weekly one-liner and the differential paywall badge
+// (their shared P3 "attention" slot) are retired entirely along with the
+// tier split -- there is no upsell content left to show, so these states no
+// longer exist to test. Covered by
+// HomeScreen.bannerPriorityCap.test.js's "attention" retirement pins.
+describe('State matrix — S12/S13: the free-coach-line and differential-badge attention slot is gone', () => {
+  test('neither ever renders, whatever the fixtures say', async () => {
+    useAppStore.setState(PRO_USER);
     applyFixture({
       db: {
         ...withPlan(),
@@ -805,37 +781,24 @@ describe('State matrix — S13: Free, differential badge eligible', () => {
         getRecentCheckins: async () => [{ weekStart: Date.now() - 86400000, calsAdherence: 'no' }],
         getNutritionTargets: async () => ({ targetKcal: 2200 }),
       },
-      lib: {
-        resolveProgrammePosition: programmePosition(null),
-        buildFreeCoachLine: () => null,
-        detectDifferentialTrigger: () => ({
-          shown: true, trigger: 'deload',
-          with_food_data_message: 'Your training is pointing to a lighter week.',
-          paywall_cta: 'try_pro_14d',
-        }),
-      },
+      lib: { resolveProgrammePosition: programmePosition(null) },
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    expect(flattenText(tree)).toContain('Your training is pointing to a lighter week.');
-    // Only one P3 attention occupant: the free line's own text is absent.
     expect(flattenText(tree)).not.toContain('You trained once this week.');
+    expect(flattenText(tree)).not.toContain('Your training is pointing to a lighter week.');
   });
 });
 
-// ─── S14/S15 — early trial: nothing renders on Home at all (R3 rehome) ────
-describe('State matrix — S14/S15: early trial, no first review yet', () => {
-  test('Home shows no trial content whatsoever while more than 48h remain (R3: rehomed to You)', async () => {
+// ─── S14/S15 — retired: FOUNDER DECISION (fully free, no trial, no expiry) ─
+// The trial (and its rank-8 "trial ending" Today-line occupant) is gone
+// entirely, not merely rehomed -- there is no trial state left to isolate.
+describe('State matrix — S14/S15: the trial is fully retired', () => {
+  test('Home shows no trial content whatsoever, whatever the fixtures say', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({
       db: { ...withPlan(), getAllWorkouts: async () => [completedWorkout('w1', 1)] },
-      lib: {
-        resolveProgrammePosition: programmePosition(null),
-        stageOf: () => 'pro_trial',
-        trialEndsAtMs: () => Date.now() + 10 * 86400000, // 10 days out
-        daysRemaining: () => 10,
-        canStillTrial: () => true,
-      },
+      lib: { resolveProgrammePosition: programmePosition(null) },
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
@@ -845,35 +808,11 @@ describe('State matrix — S14/S15: early trial, no first review yet', () => {
     // trial-flavoured content ever reaches Home, checked directly.
     expect(flattenText(tree).toLowerCase()).not.toMatch(/trial/);
   });
-
-  test('trial ENDING (within 48h) is the ONE trial state that earns the Today line (spec §18 mock G)', async () => {
-    useAppStore.setState(PRO_USER);
-    applyFixture({
-      db: {
-        ...withPlan(),
-        getAllWorkouts: async () => [completedWorkout('w1', 1)],
-        // Today's weigh-in already logged: the first-review conflict-day
-        // rule (rank 4.5) does not apply, so trial-ending (rank 8) is the
-        // only remaining eligible occupant and this test isolates it.
-        getMorningWeightToday: async () => ({ weightKg: 82 }),
-      },
-      lib: {
-        resolveProgrammePosition: programmePosition(null),
-        stageOf: () => 'pro_trial',
-        trialEndsAtMs: () => Date.now() + 20 * 60 * 60 * 1000, // 20h out
-        daysRemaining: () => 1,
-        canStillTrial: () => true,
-      },
-    });
-    const { tree, errors } = await mountHome({});
-    expect(errors).toEqual([]);
-    expect(REGION.todayLineText(tree)).toBe('Your trial ends tomorrow. Keep your coaching.');
-  });
 });
 
-// ─── S16 — check-in day: rank 4 wins over trial-ending (rank 8) ───────────
+// ─── S16 — check-in day ────────────────────────────────────────────────────
 describe('State matrix — S16: check-in due on the scheduled day', () => {
-  test('the weekly check-in occupies the Today line even with trial-ending simultaneously eligible', async () => {
+  test('the weekly check-in occupies the Today line', async () => {
     useAppStore.setState(PRO_USER);
     const today = new Date().getDay();
     await AsyncStorage.setItem('@volyume_notification_prefs', JSON.stringify({ checkinDay: today }));
@@ -889,13 +828,7 @@ describe('State matrix — S16: check-in due on the scheduled day', () => {
         getMorningWeightsLast14Days: async () => weights,
         getMorningWeightToday: async () => ({ weightKg: 80 }),
       },
-      lib: {
-        resolveProgrammePosition: programmePosition(null),
-        stageOf: () => 'pro_trial',
-        trialEndsAtMs: () => Date.now() + 20 * 60 * 60 * 1000,
-        daysRemaining: () => 1,
-        canStillTrial: () => true,
-      },
+      lib: { resolveProgrammePosition: programmePosition(null) },
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
@@ -905,9 +838,9 @@ describe('State matrix — S16: check-in due on the scheduled day', () => {
   });
 });
 
-// ─── S17 — brand-new Pro, plan not yet generated ───────────────────────────
-describe('State matrix — S17: brand-new Pro, plan not yet generated', () => {
-  test('the Pro no-plan EmptyState renders; TodayStrip still renders (tier-gated, not plan-gated)', async () => {
+// ─── S17 — brand-new user, plan not yet generated ──────────────────────────
+describe('State matrix — S17: brand-new user, plan not yet generated', () => {
+  test('the no-plan EmptyState renders; TodayStrip still renders (plan-gated only, not tier-gated)', async () => {
     useAppStore.setState(PRO_USER);
     applyFixture({ db: { getActivePlan: async () => null } });
     const { tree, errors } = await mountHome({});

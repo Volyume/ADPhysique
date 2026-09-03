@@ -2,18 +2,12 @@
  * Partners cap guard on the redeem path (2026-07-03). The partner cap
  * (canAddPartner) must hold INSIDE redeem itself, not only via the surfaces
  * that gate around it: every caller (deep link, code entry, resurfaced
- * paywall invite) inherits it. These pin that a redeem at the cap is refused
- * before the RPC, and allowed while under it.
+ * invite) inherits it. These pin that a redeem at the cap is refused before
+ * the RPC, and allowed while under it.
  *
- * WAVE-D-FINDINGS.md DEAD-STALE_SURFACE (lead ruling item 4, RE-PINNED): the
- * cap used to differ by tier (free=1/pro=3); it is now a flat 3 for every
- * tier value, since PartnerScreen (this hook's only caller) is
- * withProGuard-wrapped at the navigator (RootNavigator.js:223) and `tier`
- * is therefore always 'pro' in the live app -- see
- * src/lib/partners/signals.js's maxPartnersForTier for the full
- * unreachability proof. The 'free' tier cases below now exercise the same
- * flat cap as 'pro' (the hook still accepts a tier argument; only the cap
- * value stopped differing by it).
+ * Volyume is fully free (founder decision 2026-09-03): there is no Free/Pro
+ * split any more, and usePartners no longer takes a tier argument. The cap
+ * is a flat 3 for every user.
  */
 import { create, act } from 'react-test-renderer';
 
@@ -94,10 +88,10 @@ const db = require('../../lib/database');
 const service = require('../../lib/partners/service');
 const usePartners = require('../usePartners').default;
 
-function renderHook(tier) {
+function renderHook() {
   const ref = {};
   function Probe() {
-    Object.assign(ref, usePartners('me', tier));
+    Object.assign(ref, usePartners('me'));
     return null;
   }
   act(() => { create(<Probe />); });
@@ -112,36 +106,18 @@ beforeEach(() => {
 });
 
 describe('usePartners redeem enforces the partner cap', () => {
-  test('free at the flat cap (3 active) refuses without calling the RPC', async () => {
+  test('at the flat cap (3 active) refuses without calling the RPC', async () => {
     db.getActivePartnerCount.mockResolvedValue(3);
-    const ref = renderHook('free');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.redeem('CODE1234'); });
     expect(r).toEqual({ ok: false, error: 'at_cap' });
     expect(service.redeemPartnerInvite).not.toHaveBeenCalled();
   });
 
-  test('pro at the cap (3 active) refuses without calling the RPC', async () => {
-    db.getActivePartnerCount.mockResolvedValue(3);
-    const ref = renderHook('pro');
-    let r;
-    await act(async () => { r = await ref.redeem('CODE1234'); });
-    expect(r).toEqual({ ok: false, error: 'at_cap' });
-    expect(service.redeemPartnerInvite).not.toHaveBeenCalled();
-  });
-
-  test('free under the cap (0 active) redeems through to the RPC', async () => {
-    db.getActivePartnerCount.mockResolvedValue(0);
-    const ref = renderHook('free');
-    let r;
-    await act(async () => { r = await ref.redeem('CODE1234'); });
-    expect(service.redeemPartnerInvite).toHaveBeenCalledWith('me', 'CODE1234');
-    expect(r.ok).toBe(true);
-  });
-
-  test('pro under the cap (2 active) redeems through to the RPC', async () => {
+  test('under the cap (2 active) redeems through to the RPC', async () => {
     db.getActivePartnerCount.mockResolvedValue(2);
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.redeem('CODE1234'); });
     expect(service.redeemPartnerInvite).toHaveBeenCalledWith('me', 'CODE1234');
@@ -152,7 +128,7 @@ describe('usePartners redeem enforces the partner cap', () => {
     const partnership = { id: 'p1', member_a: 'them', member_b: 'me', status: 'active', partner_first_name: 'Sam' };
     db.getActivePartnerCount.mockResolvedValue(0);
     service.redeemPartnerInvite.mockResolvedValueOnce({ ok: true, data: { partnershipId: 'p1', partnership } });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.redeem('CODE1234'); });
     expect(r.ok).toBe(true);
@@ -175,7 +151,7 @@ describe('usePartners redeem enforces the partner cap', () => {
       ok: true,
       data: { partnershipId: 'p1', partnerFirstName: 'Sam', partnership },
     });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.redeem('CODE1234'); });
     expect(r.ok).toBe(true);
@@ -200,7 +176,7 @@ describe('usePartners redeem enforces the partner cap', () => {
       ok: true,
       data: { partnershipId: 'p1', partnerFirstName: 'Sam' },
     });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.redeem('CODE1234'); });
     expect(r).toEqual(expect.objectContaining({ ok: true, pendingLocalMirror: true }));
@@ -213,7 +189,7 @@ describe('usePartners redeem enforces the partner cap', () => {
       ok: true,
       data: { partnershipId: 'p1', partnerFirstName: 'Sam' },
     });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.redeem('CODE1234'); });
     expect(r).toEqual(expect.objectContaining({ ok: true, pendingLocalMirror: true }));
@@ -249,7 +225,7 @@ describe('usePartners redeem enforces the partner cap', () => {
       ok: true,
       data: { partnershipId: 'p1', partnerFirstName: 'Sam', partnership },
     });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.redeem('CODE1234'); });
     expect(r.ok).toBe(true);
@@ -275,7 +251,7 @@ describe('usePartners redeem enforces the partner cap', () => {
     service.sendCheer
       .mockResolvedValueOnce({ ok: false, error: 'not_active' })
       .mockResolvedValueOnce({ ok: true, data: { delivered: 'in_app' } });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.cheer('p1', 'proud', true); });
     expect(r.ok).toBe(true);
@@ -309,7 +285,7 @@ describe('usePartners redeem enforces the partner cap', () => {
     service.sendCheer
       .mockResolvedValueOnce({ ok: false, error: 'not_active' })
       .mockResolvedValueOnce({ ok: true, data: { delivered: 'in_app' } });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.cheer('p1', 'proud', true); });
     expect(r.ok).toBe(true);
@@ -337,7 +313,7 @@ describe('usePartners redeem enforces the partner cap', () => {
     service.sendCheer
       .mockResolvedValueOnce({ ok: false, error: 'partner_auth_required' })
       .mockResolvedValueOnce({ ok: true, data: { delivered: 'in_app' } });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.cheer('p1', 'proud', true); });
     expect(r.ok).toBe(true);
@@ -353,7 +329,7 @@ describe('usePartners redeem enforces the partner cap', () => {
   test('cheer reports syncing instead of a hard failure when the accepted pair is not visible yet', async () => {
     service.sendCheer
       .mockResolvedValueOnce({ ok: false, error: 'not_active' });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.cheer('p1', 'proud', true); });
     expect(r).toEqual({ ok: false, error: 'partner_syncing' });
@@ -375,7 +351,7 @@ describe('usePartners redeem enforces the partner cap', () => {
     service.sendPartnerWinCard
       .mockResolvedValueOnce({ ok: false, error: 'not_active' })
       .mockResolvedValueOnce({ ok: true, data: { id: 'win1', pair_id: 'p1' } });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.shareWin('p1', { draft: { type: 'workout_summary', title: 'Big session', summary: 'Done', detail: 'Upper body' } }); });
     expect(r.ok).toBe(true);
@@ -397,7 +373,7 @@ describe('usePartners redeem enforces the partner cap', () => {
     service.revokePartnerWinCard
       .mockResolvedValueOnce({ ok: false, error: 'partner_auth_required' })
       .mockResolvedValueOnce({ ok: true, data: { id: 'win1', pair_id: 'p1', revoked_at: '2026-07-07T10:00:00.000Z' } });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.revokeWin('win1', 'p1'); });
     expect(r.ok).toBe(true);
@@ -410,7 +386,7 @@ describe('usePartners redeem enforces the partner cap', () => {
       ok: true,
       data: { partnershipId: 'p-new', code: 'ABCD1234EF', shareMessage: 'Join me' },
     });
-    const ref = renderHook('pro');
+    const ref = renderHook();
     let r;
     await act(async () => { r = await ref.invite({ streakEnabled: false }); });
     expect(r.ok).toBe(true);

@@ -1,8 +1,9 @@
 /**
  * effectiveLandmarks.test.js — pins the ONE landmark precedence
- * (D90 #3, 2026-08-06): manual > adapted(Pro, isAdapted) > research.
- * Behavioural tests against the real merge; the loader's tier gate and
- * fail-open reads are pinned with mocked layers.
+ * (D90 #3, 2026-08-06): manual > adapted(isAdapted) > research.
+ * Behavioural tests against the real merge; the loader's fail-open reads
+ * are pinned with mocked layers. Volyume is fully free (founder decision
+ * 2026-09-03), so the adapted layer's old Pro gate is gone.
  */
 jest.mock('@react-native-async-storage/async-storage', () => ({ getItem: jest.fn() }));
 jest.mock('../database', () => ({ getAdaptiveLandmarkHistory: jest.fn() }));
@@ -57,15 +58,15 @@ describe('getEffectiveLandmarks', () => {
     getAdaptiveLandmarkHistory.mockResolvedValue([]);
   });
 
-  test('Free tier never reads the adaptive history: research plus manual only', async () => {
+  test('manual layer reads without touching the adaptive history', async () => {
     AsyncStorage.getItem.mockResolvedValue(JSON.stringify({ chest: { mev: 9, mav: 15, mrv: 23 } }));
-    const { table, source } = await getEffectiveLandmarks('u1', { tier: 'free' });
-    expect(getAdaptiveLandmarkHistory).not.toHaveBeenCalled();
+    getAdaptiveLandmarkHistory.mockResolvedValue([]);
+    const { table, source } = await getEffectiveLandmarks('u1');
     expect(source.chest).toBe('manual');
     expect(table.back).toMatchObject(VOLUME_LANDMARKS.back);
   });
 
-  test('Pro tier resolves adapted values through the REAL engine', async () => {
+  test('resolves adapted values through the REAL engine for every user', async () => {
     // Real computeAdaptiveLandmarks: 3+ entries flips isAdapted for that
     // muscle; the merge then prefers it over research.
     getAdaptiveLandmarkHistory.mockResolvedValue([
@@ -73,7 +74,7 @@ describe('getEffectiveLandmarks', () => {
       { muscle: 'chest', pumpScore: 4, sorenessScore: 2, jointDiscomfort: 0, performanceTrend: 1, prFrequency: 1, missedReps: 0, weeklyVolume: 16 },
       { muscle: 'chest', pumpScore: 4, sorenessScore: 1, jointDiscomfort: 0, performanceTrend: 1, prFrequency: 1, missedReps: 0, weeklyVolume: 18 },
     ]);
-    const { source } = await getEffectiveLandmarks('u1', { tier: 'pro' });
+    const { source } = await getEffectiveLandmarks('u1');
     expect(source.chest).toBe('adapted');
     expect(source.quads).toBe('research');
   });
@@ -81,7 +82,7 @@ describe('getEffectiveLandmarks', () => {
   test('a failed pref read fails open to research, never throws', async () => {
     AsyncStorage.getItem.mockRejectedValue(new Error('fs down'));
     getAdaptiveLandmarkHistory.mockRejectedValue(new Error('db down'));
-    const { table, source } = await getEffectiveLandmarks('u1', { tier: 'pro' });
+    const { table, source } = await getEffectiveLandmarks('u1');
     expect(source.chest).toBe('research');
     expect(table.chest).toMatchObject(VOLUME_LANDMARKS.chest);
   });

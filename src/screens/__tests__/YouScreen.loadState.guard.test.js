@@ -76,18 +76,16 @@ describe('Audit item 3: Coach-tab root leads with coach content, not settings', 
   });
 });
 
-// Wave C item 3 (whole-app coherence campaign 24, 2026-08-17,
-// WAVE-C-FINDINGS.md STATE_DEFECT): every other Methodology entry point
-// passes a `source` so methodology_opened telemetry attributes the open
-// correctly (CoachOutputScreen.js `source: 'why_block'`/`'held_decisions'`,
-// ProSetupCompleteScreen.js `source: 'setup_complete'`). The trial banner's
-// "Learn about coaching" tap was the sole exception, silently logging
-// `source: 'unknown'` even though the visible section happened to land
-// correctly by coincidence. No copy change; telemetry attribution only.
-describe('Wave C item 3: trial-banner Methodology tap is attributed, not "unknown"', () => {
-  test('openTrialMethodology passes source: "trial_banner"', () => {
-    expect(source).toMatch(
-      /const openTrialMethodology = useCallback\(\(\) => \{[\s\S]*?navigation\.navigate\('Methodology', \{ source: 'trial_banner' \}\);[\s\S]*?\}, \[navigation\]\);/,
-    );
+// FOUNDER DECISION (fully free, no tier split, no trial): the everyday
+// trial value card and its openTrialMethodology tap (Wave C item 3,
+// 2026-08-17) are retired along with the trial itself -- there is no
+// "trial_banner" Methodology source left to attribute.
+describe('Retired: the trial banner and its Methodology attribution', () => {
+  test('openTrialMethodology, the trial banner state and its callbacks are gone', () => {
+    expect(source).not.toMatch(/openTrialMethodology/);
+    expect(source).not.toMatch(/openTrialSurface/);
+    expect(source).not.toMatch(/dismissTrialBanner/);
+    expect(source).not.toMatch(/trialBanner/);
+    expect(source).not.toMatch(/source: 'trial_banner'/);
   });
 });

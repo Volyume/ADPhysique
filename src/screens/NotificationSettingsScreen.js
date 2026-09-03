@@ -68,12 +68,9 @@ const QUIET_END_PRESETS = ['05:00', '06:00', '06:30', '07:00', '07:30', '08:00',
 // have silently dropped every key it did not know about.
 
 export default function NotificationSettingsScreen({ navigation }) {
-  // Morning weight + weekly check-in reminders are Pro coaching inputs;
-  // they drive the weekly coaching loop. Training reminders are
-  // a general utility (any user benefits from "remember to train") so they
-  // stay visible to Free users too.
-  const tier = useAppStore(s => s.tier);
-  const isPro = tier === 'pro';
+  // Volyume is fully free (founder ruling): morning weight, weekly check-in
+  // and meal reminders are coaching inputs available to everyone, same as
+  // the general-utility training reminders. No tier read on this screen.
   // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
   // Memoised: this screen renders mapped meal-reminder rows.
   const t = useTheme();
@@ -557,35 +554,33 @@ export default function NotificationSettingsScreen({ navigation }) {
         )}
 
         {/* Morning weight + weekly check-in reminders moved to a dedicated
-            Pro screen (Settings > Coaching reminders). The toggles here
+            screen (Settings > Coaching reminders). The toggles here
             were misleading. Those reminders are non-optional inputs to
             the Coach, so flipping them off broke the coaching
             loop. CoachingRemindersScreen exposes the day + hour pickers
-            without toggles; both reminders are always scheduled for Pro
-            users. This screen now only handles training reminders. */}
-        {isPro && (
-          <TouchableOpacity
-            style={[styles.crossLink, live.crossLink]}
-            onPress={() => navigation.navigate('CoachingReminders')}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityLabel="Coaching reminders"
-          >
-            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
-              <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.crossLinkTitle, live.crossLinkTitle]}>Coaching reminders</Text>
-              <Text style={[styles.crossLinkSub, live.crossLinkSub]}>
-                Weigh-in and check-in times, check-in follow-ups, meal-plan reminders and partner cheers.
-              </Text>
-            </View>
-            <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
-          </TouchableOpacity>
-        )}
+            without toggles; both reminders are always scheduled. This
+            screen now only handles training reminders. */}
+        <TouchableOpacity
+          style={[styles.crossLink, live.crossLink]}
+          onPress={() => navigation.navigate('CoachingReminders')}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Coaching reminders"
+        >
+          <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+            <Ionicons name="pulse-outline" size={18} color={t.colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.crossLinkTitle, live.crossLinkTitle]}>Coaching reminders</Text>
+            <Text style={[styles.crossLinkSub, live.crossLinkSub]}>
+              Weigh-in and check-in times, check-in follow-ups, meal-plan reminders and partner cheers.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+        </TouchableOpacity>
 
 
-        {/* Section 3, Training reminders (available to all tiers) */}
+        {/* Section 3, Training reminders */}
         <SectionLabel style={styles.sectionLabel}>Training reminders</SectionLabel>
         <Card style={styles.card}>
           {/* Toggle row */}
@@ -665,15 +660,9 @@ export default function NotificationSettingsScreen({ navigation }) {
         </Card>
 
         {/* Meal-log reminders (opt-in, gap #4): convenience-only, never a
-            streak. FM-01 (D96): Pro only. The diary these point at is Pro
-            (DiaryScreen sets readOnly for every other tier), so offering them
-            to Free scheduled a daily nudge into a feature the user cannot
-            use -- a Pro feature failing silently, which Phase 31 forbids. The
-            same gate is enforced inside scheduleMealReminders, so the launch
-            re-lay cannot put them back either. Matches the tier gates the
-            sibling schedulers already carry. */}
-        {isPro && (
-        <>
+            streak. Volyume is fully free (founder ruling), so this is
+            available to everyone; the diary it points at carries no tier
+            gate either. */}
         <SectionLabel style={styles.sectionLabel}>Meal reminders</SectionLabel>
         <Card style={styles.card}>
           {mealReminders.map((r, i) => (
@@ -721,8 +710,6 @@ export default function NotificationSettingsScreen({ navigation }) {
             </Text>
           </View>
         </Card>
-        </>
-        )}
 
         {/* Quiet hours (E2.2): the window every reminder respects. */}
         <SectionLabel style={styles.sectionLabel}>Quiet hours</SectionLabel>

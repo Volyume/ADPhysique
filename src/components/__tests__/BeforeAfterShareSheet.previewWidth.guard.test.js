@@ -22,7 +22,7 @@ describe('BeforeAfterShareSheet EP-11/UI-03 responsive preview width guard', () 
 
   test('useWindowDimensions is read unconditionally, before the component\'s early return', () => {
     const hookIdx = SRC.indexOf('const { width: windowWidth } = useWindowDimensions();');
-    const earlyReturnIdx = SRC.indexOf("if (!visible || suppressed || tier !== 'pro') return null;");
+    const earlyReturnIdx = SRC.indexOf('if (!visible || suppressed) return null;');
     expect(hookIdx).toBeGreaterThan(-1);
     expect(earlyReturnIdx).toBeGreaterThan(hookIdx);
   });

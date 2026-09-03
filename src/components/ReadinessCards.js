@@ -136,7 +136,11 @@ export function computeRecoveryTrendInsight(checkins, nowMs = Date.now()) {
   return null;
 }
 
-export default function ReadinessCards({ userId, tier }) {
+// FOUNDER DECISION (fully free, no tier split): every reader below used to
+// fork on `tier` (muscle freshness, the recovery-trend insight, and the
+// learning-promise tooltip copy); the component no longer takes a tier prop
+// and always runs the full behaviour.
+export default function ReadinessCards({ userId }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
@@ -210,17 +214,15 @@ export default function ReadinessCards({ userId, tier }) {
       });
     } catch (_) {}
 
-    if (tier === 'pro') {
-      try {
-        const data = await getLastTrainedPerMuscle(userId);
-        setMuscleFreshness(data || {});
-      } catch (_) {}
-      try {
-        const checkins = await getRecentCheckins(userId, 6);
-        if (checkins.length >= 3) setRecoveryTrendInsight(computeRecoveryTrendInsight(checkins));
-      } catch (_) {}
-    }
-  }, [userId, tier]);
+    try {
+      const data = await getLastTrainedPerMuscle(userId);
+      setMuscleFreshness(data || {});
+    } catch (_) {}
+    try {
+      const checkins = await getRecentCheckins(userId, 6);
+      if (checkins.length >= 3) setRecoveryTrendInsight(computeRecoveryTrendInsight(checkins));
+    } catch (_) {}
+  }, [userId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -256,15 +258,12 @@ export default function ReadinessCards({ userId, tier }) {
             {next && (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
                 <Text style={[styles.milestoneNext, live.milestoneNext]}>{next.sessions - totalWorkouts} to go: {next.label}</Text>
-                {/* C6 RD6-10 (D97-25): the learning promise forks on tier,
-                    exactly as HomeWelcomeCard already does - the three
-                    coaching capabilities (weights, rep-slip detection,
-                    lighter-week timing) are Pro; free genuinely gets
-                    history, records and progress stats. The consistency
-                    message itself is true for both tiers and stays. */}
-                <InfoTooltip size={11} text={tier === 'pro'
-                  ? "Consistency is the biggest predictor of long-term progress. The more sessions you log, the better Volyume understands how your body responds, so it can suggest the right weights, spot when your reps are slipping, and time your lighter weeks correctly.\n\nBuilding the habit is the foundation everything else sits on."
-                  : "Consistency is the biggest predictor of long-term progress. Every session you log builds your history, your records and your progress stats, and the plan you built stays exactly yours.\n\nBuilding the habit is the foundation everything else sits on."} />
+                {/* FOUNDER DECISION (fully free, no tier split): the
+                    learning promise no longer forks on tier -- every user
+                    gets the three coaching capabilities (weights, rep-slip
+                    detection, lighter-week timing), so this is the one
+                    sentence for everyone. */}
+                <InfoTooltip size={11} text={'Consistency is the biggest predictor of long-term progress. The more sessions you log, the better Volyume understands how your body responds, so it can suggest the right weights, spot when your reps are slipping, and time your lighter weeks correctly.\n\nBuilding the habit is the foundation everything else sits on.'} />
               </View>
             )}
           </View>
@@ -290,7 +289,7 @@ export default function ReadinessCards({ userId, tier }) {
           </View>
           <Text style={[styles.recoveryNote, live.recoveryNote]}>Scale 1-5 · Lower is better for soreness & fatigue</Text>
 
-          {tier === 'pro' && freshnessEntries.length > 0 && (
+          {freshnessEntries.length > 0 && (
             <>
               <View style={[styles.recoveryDivider, live.recoveryDivider]} />
               <View style={styles.mfHeaderRow}>
@@ -318,7 +317,7 @@ export default function ReadinessCards({ userId, tier }) {
           )}
         </View>
 
-        {tier === 'pro' && recoveryTrendInsight && (
+        {recoveryTrendInsight && (
           <View style={[styles.trendInsightCard, recoveryTrendInsight.type === 'good' ? [styles.trendInsightGood, live.trendInsightGood] : [styles.trendInsightWarn, live.trendInsightWarn]]}>
             <Ionicons
               name={recoveryTrendInsight.type === 'good' ? 'trending-up-outline' : 'alert-circle-outline'}

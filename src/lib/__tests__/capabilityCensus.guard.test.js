@@ -87,8 +87,9 @@ const CLASS1_EXEMPT = {
     'RULED (D109-2 + R5-9): the `checked` tri-state is this layer\'s answer - an unavailable read returns checked:false, which renders "could not check" copy. It claims nothing, so it needs no knowledge gate; it deliberately under-reads a stale-known state rather than risk a false claim.',
   'screens/HomeScreen.js':
     'Renders the "works around" line only. An unreadable read yields no restrictions and therefore no line (silence), and the could-not-check line beside it speaks for the failure (B4).',
-  'screens/FreeStarterScreen.js':
-    'Already implements the class by hand (CAP-17): keeps the last-known state and filters with it, and says so when nothing at all is known.',
+  // 'screens/FreeStarterScreen.js' exemption REMOVED (D137, fully free
+  // product): the file is deleted outright, so its CAP-17 hand-rolled
+  // last-known-state filtering no longer exists anywhere to exempt.
   'screens/PlanLibraryScreen.js':
     'Renders compatibility badges. An unreadable read shows NO badge rather than a wrong one - absence of information, never a false claim.',
   'screens/RoutineDetailScreen.js':

@@ -6,7 +6,7 @@
  *
  * Pins:
  *  - multiple active pairs render as isolated cards, in paired-at order;
- *  - free tier never shows the "invite another" affordance (cap = 1);
+ *  - the flat 3-pair cap hides the "invite another" affordance once reached;
  *  - the empty state carries the short pitch, while the invite consent step
  *    carries the full privacy receipt (both columns, exact copy);
  *  - the invite journey mints exactly ONE code and every channel reuses it;
@@ -24,7 +24,7 @@ const PARTNER_SCREEN_SOURCE = fs.readFileSync(path.resolve(__dirname, '../Partne
 
 const mockToastShow = jest.fn();
 
-const mockState = { user: { id: 'u1' }, tier: 'pro', accessibility: { reduceMotion: true } };
+const mockState = { user: { id: 'u1' }, accessibility: { reduceMotion: true } };
 jest.mock('../../store/useAppStore', () => {
   const useAppStore = (sel) => (sel ? sel(mockState) : mockState);
   useAppStore.getState = () => mockState;
@@ -128,7 +128,6 @@ async function press(tree, label, i = 0) {
 }
 
 beforeEach(() => {
-  mockState.tier = 'pro';
   mockAlertCalls.length = 0;
   mockToastShow.mockClear();
   mockGetVisibleMoments.mockReset().mockResolvedValue([]);
@@ -550,15 +549,14 @@ describe('connected state: isolated pair cards', () => {
     expect(text).not.toContain('Share an update');
   });
 
-  test('pro under the cap offers "Invite another partner"', async () => {
+  test('under the cap offers "Invite another partner"', async () => {
     mockHook.value = base({ pairs: [pair()] });
     const tree = await mount();
     expect(allText(tree)).toContain('Invite another partner');
   });
 
-  test('free tier renders at most one card and no invite-another affordance', async () => {
-    mockState.tier = 'free';
-    mockHook.value = base({ pairs: [pair()], canAdd: false });
+  test('at the flat cap (3 pairs) hides the invite-another affordance', async () => {
+    mockHook.value = base({ pairs: [pair({ id: 'p1' }), pair({ id: 'p2' }), pair({ id: 'p3' })], canAdd: false });
     const tree = await mount();
     expect(findPress(tree, 'Manage partnership with Sam').length).toBeGreaterThan(0);
     expect(allText(tree)).not.toContain('Invite another partner');
@@ -954,16 +952,10 @@ describe('invite journey', () => {
     expect(redeem).toHaveBeenCalledWith('ABCD1234');
   });
 
-  // WAVE-D-FINDINGS.md DEAD-STALE_SURFACE (lead ruling item 4, RE-PINNED):
-  // the limit this deep-link handler checks is now a flat 3
-  // (PRO_MAX_PAIRS) for every tier value -- PartnerScreen is Pro-only
-  // (withProGuard at the navigator, RootNavigator.js:223), so the old
-  // free=1/pro=3 split was dead code and was removed (see
-  // src/lib/partners/signals.js's maxPartnersForTier for the full
-  // unreachability proof). This test now hits the real limit (3 pairs)
-  // rather than the old free-tier limit of 1.
+  // Volyume is fully free (founder decision 2026-09-03): the deep-link
+  // handler checks a flat 3-pair cap (MAX_PAIRS) for every user, no tier
+  // read involved.
   test('deep-linked invite at the partner limit explains why it cannot join', async () => {
-    mockState.tier = 'free';
     const redeem = jest.fn(async () => ({ ok: true }));
     mockHook.value = base({
       pairs: [pair({ id: 'p1' }), pair({ id: 'p2' }), pair({ id: 'p3' })],
@@ -978,12 +970,10 @@ describe('invite journey', () => {
     );
   });
 
-  test('deep-linked invite under the (now tier-independent) limit keeps waiting rather than claiming the spaces are full', () => {
+  test('deep-linked invite under the limit keeps waiting rather than claiming the spaces are full', () => {
     // Below the flat 3-pair limit: the handler enters the "not yet room"
     // branch but does NOT show the "full" toast -- it waits for canAdd to
-    // resolve true (mirrors the "waits until partner capacity has loaded"
-    // test above), same as a Pro user with one pair used to behave.
-    mockState.tier = 'free';
+    // resolve true.
     const redeem = jest.fn(async () => ({ ok: true }));
     mockHook.value = base({ pairs: [pair({ id: 'p1' })], canAdd: false, redeem });
     return mount({ code: 'abcd1234' }).then(() => {

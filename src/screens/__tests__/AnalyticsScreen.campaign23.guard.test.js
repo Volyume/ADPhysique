@@ -88,9 +88,11 @@ describe('The Answer Block (§21/§22 R2)', () => {
     expect(SRC).toMatch(/label="Progress photos"[\s\S]{0,300}?navigation\.navigate\('ProgressPhotos'\)/);
   });
 
-  test('the Body and Progress photos pillars carry the Pro-gated affordance; Training never does', () => {
-    expect(SRC).toMatch(/label="Body"[\s\S]{0,200}?proGated=\{tier !== 'pro'\}/);
-    expect(SRC).toMatch(/label="Progress photos"[\s\S]{0,200}?proGated=\{tier !== 'pro'\}/);
+  // FOUNDER DECISION (fully free, no tier split): the Pro-gated affordance
+  // is retired entirely -- no pillar carries it any more.
+  test('no pillar carries a Pro-gated affordance', () => {
+    const code = SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toMatch(/proGated/);
   });
 
   test('the Visual pillar row is gated on the fail-closed suppression flag', () => {

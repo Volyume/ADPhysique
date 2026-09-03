@@ -5,9 +5,9 @@
  * the deliberate exceptions — pairing is "the one online-required step" (§4.2).
  *
  * v1 surfaces a single primary partnership; the three-partner list is a
- * follow-on (the cap is a flat 3 -- see signals.js's maxPartnersForTier;
- * WAVE-D-FINDINGS.md item 4 removed the old free/pro split as dead code,
- * this route being Pro-only). Recomputes on focus so a synced cheer or week
+ * follow-on (the cap is a flat 3 -- see signals.js's maxPartnersForTier).
+ * Volyume is fully free (founder decision 2026-09-03), so there is no tier
+ * to read here any more. Recomputes on focus so a synced cheer or week
  * signal reflects immediately.
  */
 import { useState, useCallback, useEffect, useRef } from 'react';
@@ -321,7 +321,7 @@ async function safeEnrichPair(partnership, userId) {
 }
 
 function applyOptimisticPairState(prev, {
-  partnership, optimisticPair, tier, activeCount, load,
+  partnership, optimisticPair, activeCount, load,
 }) {
   if (!partnership || !optimisticPair) return prev;
   return {
@@ -342,12 +342,12 @@ function applyOptimisticPairState(prev, {
     lastReceived: optimisticPair.lastReceived,
     sharedBlock: optimisticPair.sharedBlock,
     cheerEnabled: optimisticPair.cheerEnabled,
-    canAdd: canAddPartner({ tier, activeCount: activeCount + 1 }),
+    canAdd: canAddPartner({ activeCount: activeCount + 1 }),
     reload: load,
   };
 }
 
-export default function usePartners(userId, tier) {
+export default function usePartners(userId) {
   const [state, setState] = useState(EMPTY);
   // Guards the one-shot re-surface of a paywall-preserved invite (A1 s9.3).
   const pendingTriedRef = useRef(false);
@@ -373,20 +373,20 @@ export default function usePartners(userId, tier) {
         partnerships.filter((p) => p.status === 'active').length,
       );
       if (!isCurrentRequest()) return;
-      let canAdd = canAddPartner({ tier, activeCount });
+      let canAdd = canAddPartner({ activeCount });
 
-      // Re-surface a paywall-preserved invite (A1 s9.3): a user bounced at the
-      // Pro gate with a code kept it. Now that they are eligible (Pro) and not
-      // already paired, auto-open the redemption path once, expiry respected.
-      // Runs before the render branches so a successful redeem lands the active
-      // pairing on this same load pass.
+      // Re-surface a preserved invite (A1 s9.3): a user bounced away with a
+      // code kept it. If they are not already paired, auto-open the
+      // redemption path once, expiry respected. Runs before the render
+      // branches so a successful redeem lands the active pairing on this
+      // same load pass.
       // Outcome is surfaced (not just acted on) so the screen can show a calm
       // one-shot toast either way — a silently-failing held invite was the
       // audit's only complaint about this path (L06-F8); local var, not ref,
       // so it naturally resets to null on every later load once
       // pendingTriedRef.current is true and this block is skipped.
       let pendingInviteOutcome = null;
-      if (tier === 'pro' && !pendingTriedRef.current && !partnerships.some((p) => p.status === 'active')) {
+      if (!pendingTriedRef.current && !partnerships.some((p) => p.status === 'active')) {
         const storedCode = await readPendingPartnerCode();
         if (!isCurrentRequest()) return;
         pendingTriedRef.current = true;
@@ -414,7 +414,7 @@ export default function usePartners(userId, tier) {
             if (!isCurrentRequest()) return;
             activeCount = await getActivePartnerCount(userId).catch(() => activeCount);
             if (!isCurrentRequest()) return;
-            canAdd = canAddPartner({ tier, activeCount });
+            canAdd = canAddPartner({ activeCount });
           } else {
             pendingInviteOutcome = 'failed';
           }
@@ -482,7 +482,7 @@ export default function usePartners(userId, tier) {
         return { ...EMPTY, loading: false, error: true, localReadIssue: false, reload: load };
       });
     }
-  }, [userId, tier]);
+  }, [userId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -535,14 +535,13 @@ export default function usePartners(userId, tier) {
   }, [userId]);
 
   const redeem = useCallback(async (code) => {
-    // Cap guard on the redeem path itself (flat 3-partner cap, WAVE-D-
-    // FINDINGS.md item 4: the old free/pro split was removed as dead code --
-    // see signals.js's maxPartnersForTier): every caller inherits it, not
+    // Cap guard on the redeem path itself (flat 3-partner cap -- see
+    // signals.js's maxPartnersForTier): every caller inherits it, not
     // just the surfaces that happen to gate around it. Read the live active
     // count so a just-synced pairing counts. Refuse before the RPC when at
     // the limit; the caller surfaces the calm at-limit toast.
     const activeCount = await getActivePartnerCount(userId).catch(() => 0);
-    if (!canAddPartner({ tier, activeCount })) return { ok: false, error: 'at_cap' };
+    if (!canAddPartner({ activeCount })) return { ok: false, error: 'at_cap' };
     const r = await redeemPartnerInvite(userId, code);
     if (r.ok) {
       clearCachedInvite();
@@ -554,7 +553,6 @@ export default function usePartners(userId, tier) {
         setState((prev) => applyOptimisticPairState(prev, {
           partnership: optimisticPartnership,
           optimisticPair,
-          tier,
           activeCount,
           load,
         }));
@@ -574,7 +572,7 @@ export default function usePartners(userId, tier) {
       await load();
     }
     return r;
-  }, [userId, tier, load]);
+  }, [userId, load]);
 
   const cheer = useCallback(async (pairId, kind, reciprocal) => {
     let r = await sendCheer(userId, { pairId, kind, reciprocal });

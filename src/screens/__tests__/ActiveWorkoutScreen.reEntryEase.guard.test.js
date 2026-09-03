@@ -3,10 +3,11 @@
  *
  * The session's readiness tweak now composes the intent-sheet reading with
  * an active re-entry-ease decision (resolveSessionEasingTweak), instead of
- * calling getReadinessTweak directly. Re-entry easing is NOT tier-gated,
- * unlike the intent-sheet reading it composes with (which stays Pro-only,
- * unchanged). The bound session's finish (full completion OR ended-early -
- * both land in doFinish) retires the pending decision it consumed.
+ * calling getReadinessTweak directly. Volyume is fully free (founder
+ * decision 2026-09-03), so neither the intent-sheet reading nor re-entry
+ * easing carries a tier gate any more. The bound session's finish (full
+ * completion OR ended-early - both land in doFinish) retires the pending
+ * decision it consumed.
  *
  * Source guard: a full render test of this ~4000-line screen is
  * prohibitively heavy for this narrow a check (see the HomeScreen sibling
@@ -31,16 +32,14 @@ describe('C18 re-entry: the session tweak composes intent + re-entry without sta
     expect(SCREEN).not.toMatch(/getReadinessTweak\(/);
   });
 
-  test('re-entry easing is NOT wrapped in the tier === \'pro\' gate the intent-sheet reading uses', () => {
+  test('neither re-entry easing nor the intent-sheet reading carries a tier gate (Volyume is fully free)', () => {
     const idx = SCREEN.indexOf('const reEntryEaseActive = ');
     expect(idx).toBeGreaterThan(-1);
     const chunk = SCREEN.slice(idx, idx + 700);
     expect(chunk).toMatch(/reEntryEaseActive = !isDeloadWeek && !!activeWorkout\?\.reEntryEaseApplied/);
     expect(chunk).toMatch(/const readinessTweak = !isDeloadWeek/);
-    // The intent-sheet reading passed in is STILL tier-gated (unchanged
-    // behaviour); only the outer gate on the whole tweak must NOT be
-    // tier==='pro' anymore.
-    expect(chunk).toMatch(/intent: tier === 'pro' \? activeWorkout\?\.preWorkoutIntent : null/);
+    expect(chunk).toMatch(/intent: activeWorkout\?\.preWorkoutIntent \?\? null/);
+    expect(chunk).not.toMatch(/tier === 'pro'/);
     expect(chunk).not.toMatch(/const readinessTweak = \(tier === 'pro' && !isDeloadWeek\)/);
   });
 

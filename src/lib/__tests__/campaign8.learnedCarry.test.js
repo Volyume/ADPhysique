@@ -15,7 +15,6 @@
  *
  *   - mature user -> a different compatible plan (carry)
  *   - phase change (carry: the band is muscle-level, not phase-level)
- *   - Free history -> Pro (no carry claimed for a Free past)
  *   - manual override present (the user's setting wins and is labelled)
  *   - safety suppression present (no upward carry during calm/ED)
  *   - genuinely incompatible context (nothing to carry -> template ramp)
@@ -23,6 +22,11 @@
  * Review D1 is pinned here too: the returned map contains ONLY muscles
  * that genuinely carried something, so one manual override can never
  * hand the whole body a profile-prior ramp.
+ *
+ * Volyume is fully free (founder decision 2026-09-03): the old Pro gate
+ * on buildLearnedSeedRangesForActivation is gone, so the calls below still
+ * pass `tier: 'pro'` only because it is a harmless unused option now, not
+ * because it is required for the carry to run.
  */
 import { VOLUME_LANDMARKS } from '../algorithms';
 import { buildSeededWeeklyTargets } from '../blockLedgerGather';
@@ -198,15 +202,6 @@ describe('Work 2: learned evidence survives a legitimate activation', () => {
     expect(Object.keys(out.ranges)).toEqual(['chest']);
     expect(out.ranges.quads).toBeUndefined();
     expect(out.ranges.hamstrings).toBeUndefined();
-  });
-
-  test('FREE gets nothing: no coaching, and no claim that Volyume coached a free past', async () => {
-    mockGetAllMesocyclesForUser.mockResolvedValue(maturityFor('chest'));
-    expect(await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'free' })).toBeNull();
-    // The same history, once the user IS Pro, is usable - it is their own
-    // training record, not a retroactive coaching claim.
-    const pro = await buildLearnedSeedRangesForActivation('u1', { userProfile: PROFILE, tier: 'pro' });
-    expect(pro?.ranges?.chest?.source).toBe('ledger');
   });
 
   test('a manual override outranks the carry and is labelled as the user\'s own', async () => {

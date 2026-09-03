@@ -22,14 +22,11 @@ import Card from './Card';
 // user with no plan yet also sees this orientation (step 1's "Begin from your
 // plan, or just log freely" already covers that user; no new copy needed).
 //
-// C5-P7-05 / C5-P1-08 (D96): step 2 promised "Your coach learns as you
-// train" to BOTH tiers, with no tier gate anywhere on the render path.
-// Free has no coach (weekly coaching, adaptive plan updates and the coach
-// output are all Pro), and the Free user's Coach tab then says so, so the
-// very first orientation card contradicted the product minutes later.
-// `isPro` picks the true sentence for each tier; nothing is gated, added or
-// removed, and neither version claims history the app does not have.
-function HomeWelcomeCard({ onDismiss, isPro = false }) {
+// FOUNDER DECISION (fully free, no tier split): step 2 promises "Your
+// coach learns as you train" to every user now, so the `isPro` prop this
+// component used to fork copy on is retired -- there is one sentence for
+// everyone.
+function HomeWelcomeCard({ onDismiss }) {
   // CP-10 stage 3 (theming batch 2): live theme (src/hooks/useTheme.js).
   // `styles` below stays frozen (byte-identical StyleSheet.create, matching
   // batch 1's pattern); `live` carries the colour AND fontSize-bearing keys
@@ -68,12 +65,10 @@ function HomeWelcomeCard({ onDismiss, isPro = false }) {
         <View style={[styles.welcomeStepNum, live.welcomeStepNum]}><Text style={[styles.welcomeStepNumText, live.welcomeStepNumText]}>2</Text></View>
         <View style={{ flex: 1 }}>
           <Text style={[styles.welcomeStepTitle, live.welcomeStepTitle]}>
-            {isPro ? 'Your coach learns as you train' : 'Your progress builds as you train'}
+            Your coach learns as you train
           </Text>
           <Text style={[styles.welcomeStepBody, live.welcomeStepBody]}>
-            {isPro
-              ? 'Every session you log sharpens your plan. There is nothing to set up.'
-              : 'Every session you log builds your history, your records and your weekly volume. There is nothing to set up.'}
+            Every session you log sharpens your plan. There is nothing to set up.
           </Text>
         </View>
       </View>

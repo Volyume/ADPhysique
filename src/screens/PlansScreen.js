@@ -25,11 +25,10 @@ import {
   getActivePlan, getAllPlansForUser, getArchivedPlansForUser,
   getWorkoutTemplates, getPlanWorkoutCounts, getAllRoutineExerciseCounts,
   activatePlanWithBlock, getRoutinesForPlan, createWorkout, getRoutineExercisesWithDetails,
-  archivePlan, unarchivePlan, duplicatePlan, softDeleteRoutine, getActiveBlock,
+  archivePlan, unarchivePlan, softDeleteRoutine, getActiveBlock,
   getPlanFolders, createPlanFolder, renamePlanFolder, deletePlanFolder, setPlanFolder, getAllExercises } from '../lib/database';
 import { getBlockAdvice, buildNextBlockOptions, applyAdjustEvidence } from '../lib/blockAdvisor';
 import { adjustPreviewLines } from '../lib/nextBlockPreview';
-import { ProBadge } from '../components/ProGate';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE, buildSeedReceipt } from '../lib/blockExplain';
 import InfoTooltip from '../components/InfoTooltip';
@@ -54,25 +53,9 @@ import * as haptics from '../lib/haptics';
 const BLOCK_SNOOZE_KEY_FOR = (uid) => `@volyume_block_snooze_${uid ?? 'anon'}`;
 
 
-const ACTION_CARDS_DEFAULT = [
-  {
-    id: 'library',
-    icon: 'library-outline',
-    title: 'Plan library',
-    description: 'Browse ready-made plans by split, experience level and goal.',
-    screen: 'PlanLibrary',
-    badge: 'Recommended',
-  },
-  {
-    id: 'manual',
-    icon: 'create-outline',
-    title: 'Create your own',
-    description: 'Create a custom multi-day plan and choose every exercise yourself.',
-    screen: 'ManualBuilder',
-  },
-];
-
-// Pro users with an active plan see "switch your active plan" framings.
+// FOUNDER DECISION (fully free, no tier split): every account sees "switch
+// your active plan" framings now -- the Free ACTION_CARDS_DEFAULT set
+// (library first, manual second, no Adjust card) is retired.
 // "Adjust training plan" sits at the top: it rebuilds the plan via the
 // training-only PlanUpdate screen. Goal and calorie/macro changes live in the
 // Coach tab (Update goal and phase / Nutrition targets), so this Train-side flow never
@@ -362,10 +345,9 @@ export default function PlansScreen({ navigation }) {
       setExerciseCounts(exc);
 
       if (block) {
-        // FQ-2 (D96): the entitlement travels with the request, from the
-        // store's real tier. Free receives no adaptive next-block coaching;
-        // nothing about that decision reads check-in rows any more.
-        const advice = await getBlockAdvice(user.id, block, userProfile, { isPro: tier === 'pro' })
+        // FOUNDER DECISION (fully free, no tier split): every account gets
+        // adaptive next-block coaching now, so isPro is always true.
+        const advice = await getBlockAdvice(user.id, block, userProfile, { isPro: true })
           .catch(() => null);
         // RB-4: re-check after the await; the advice carries the closure's
         // tier, so a stale request must never paint it.
@@ -412,22 +394,21 @@ export default function PlansScreen({ navigation }) {
             // ranges the "Continue with adjustments" button would
             // actually use, diff them against what Repeat gives (the
             // block's observed numbers), and keep both the lines and
-            // the evidence. Pro only: this IS coaching output.
+            // the evidence. FOUNDER DECISION (fully free, no tier split):
+            // this IS coaching output, and it runs for everyone now.
             let preview = null;
-            if (tier === 'pro') {
-              try {
-                // eslint-disable-next-line global-require
-                const { buildSeedRangesForNextBlock } = require('../lib/blockLedgerRunner');
-                // eslint-disable-next-line global-require
-                const { buildAdjustPreview } = require('../lib/nextBlockPreview');
-                const seeded = await buildSeedRangesForNextBlock(user.id, { intent: 'adjust', userProfile, tier });
-                if (req !== ledgerLoadRef.current) return;
-                preview = buildAdjustPreview({ ranges: seeded?.ranges ?? null, ledger });
-              } catch (_) { preview = null; }
-            }
+            try {
+              // eslint-disable-next-line global-require
+              const { buildSeedRangesForNextBlock } = require('../lib/blockLedgerRunner');
+              // eslint-disable-next-line global-require
+              const { buildAdjustPreview } = require('../lib/nextBlockPreview');
+              const seeded = await buildSeedRangesForNextBlock(user.id, { intent: 'adjust', userProfile, tier });
+              if (req !== ledgerLoadRef.current) return;
+              preview = buildAdjustPreview({ ranges: seeded?.ranges ?? null, ledger });
+            } catch (_) { preview = null; }
             setAdjustPreview(preview);
             setLedgerStory({
-              rows: tier === 'pro' ? allRows.slice(0, 4) : [],
+              rows: allRows.slice(0, 4),
               // RA-2 (D96, Review A): judged on EVERY entry, not the sliced
               // four. When the whole ledger is INSUFFICIENT_DATA the two
               // options produce the same targets, and the framing line must
@@ -488,14 +469,9 @@ export default function PlansScreen({ navigation }) {
   // observability so the seam is live, not decorative.
   async function handleRestartPlan(intent = null) {
     if (!activePlan) return;
-    // FQ-2 (D96): the adjusted path is Pro. The card already renders it
-    // Pro-marked for a free user and sends the tap to the upgrade flow; this
-    // is the second lock, so no route (a stale card, a re-render mid-lapse)
-    // can reach the adaptive seed without the entitlement.
-    if (intent === 'adjust' && tier !== 'pro') {
-      navigation.navigate('ProUpgrade', { source: 'block_decision' });
-      return;
-    }
+    // FOUNDER DECISION (fully free, no tier split): the adjusted path's
+    // second entitlement lock (FQ-2, D96) is retired -- every account can
+    // reach the adaptive seed now.
     // RB-3 (D96, Review B): the guard is at the TOP, before anything is
     // shown. appAlert is a queue, so two same-frame taps on the two decision
     // buttons used to queue two confirms.
@@ -652,9 +628,10 @@ export default function PlansScreen({ navigation }) {
   async function runBlockActivation({ intent, refine, review = null }) {
     // eslint-disable-next-line global-require
     const { buildSeedRangesForNextBlock, recordSeedOutcome } = require('../lib/blockLedgerRunner');
-    // FQ-2 (D96): only the 'adjust' option applies the full ledger, and only
-    // with the entitlement; everything else is a true repeat.
-    const seedIntent = intent === 'adjust' && tier === 'pro' ? 'adjust' : 'repeat';
+    // FOUNDER DECISION (fully free, no tier split): only the 'adjust' option
+    // applies the full ledger, now with no entitlement to check; everything
+    // else is a true repeat.
+    const seedIntent = intent === 'adjust' ? 'adjust' : 'repeat';
     // REPEAT MEANS REPEAT, enforced here and not only at the call site: a
     // repeat intent may never rebuild the programme, whatever it was asked
     // for. This is the assertion the epoch module's own header promised.
@@ -940,9 +917,10 @@ export default function PlansScreen({ navigation }) {
     // R9 (D70): every peek-menu-opening tap ticks selection().
     haptics.selection();
     const isActiveForUser = activePlan?.id === plan.id;
-    // Pro users keep an always-active plan as part of Precision Coaching,
-    // so they don't get the Duplicate action. They CAN archive inactive
-    // plans though, with restore available from the Archived section.
+    // FOUNDER DECISION (fully free, no tier split): every account keeps an
+    // always-active plan as part of Precision Coaching now, so nobody gets
+    // the Duplicate action (it applied to Free only). Archiving inactive
+    // plans stays available, with restore from the Archived section.
     const items = [
       {
         icon: 'eye-outline',
@@ -960,17 +938,6 @@ export default function PlansScreen({ navigation }) {
         onPress: () => handleMovePlanOptions(plan),
       },
     ];
-    if (tier !== 'pro') {
-      items.push({
-        icon: 'copy-outline',
-        label: 'Duplicate',
-        onPress: async () => {
-          const copy = await duplicatePlan(plan.id, user.id);
-          await loadData();
-          navigation.navigate('PlanDetail', { planId: copy.id, isLibrary: false });
-        },
-      });
-    }
     if (!isActiveForUser) {
       items.push({
         icon: 'archive-outline',
@@ -1089,35 +1056,30 @@ export default function PlansScreen({ navigation }) {
         finished: blockAdvice.action === 'post_recovery',
       })
     : null;
+  // FOUNDER DECISION (fully free, no tier split): isPro is always true, so
+  // buildNextBlockOptions never marks an option locked any more.
   const nextBlockOptions = nextBlockDecided
     ? buildNextBlockOptions({
         recommendation: nextBlockDecided.recommendation,
-        isPro: tier === 'pro',
+        isPro: true,
       })
     : [];
   const reachableOptions = nextBlockOptions.filter((o) => !o.locked);
   const anyRecommended = nextBlockOptions.some((o) => o.recommended);
   function optionVariant(opt) {
-    if (opt.locked) return 'secondary';
     if (opt.recommended) return 'primary';
-    // With nothing recommended and only one option reachable (a free user,
-    // whose repeat is simply the action this card offers), that option
+    // With nothing recommended and only one option reachable, that option
     // carries the card. Two reachable options stay visually equal unless the
     // advisor has actually suggested one.
     if (!anyRecommended && reachableOptions.length === 1) return 'primary';
     return 'secondary';
   }
 
-  const isProWithPlan = tier === 'pro' && !!activePlan;
-  // Two card sets cover three audiences:
-  //   * Pro with an active plan → switch framings (update goals / library / manual)
-  //   * Pro without a plan (rare, just after first sign-up) → same Pro set
-  //   * Free → default order (library first, manual second)
-  // Every Pro user gets the coached-builder card set, not only those who
-  // already have an active plan. A new Pro user with no plan previously fell
-  // through to the Free default set and had no way to reach the coach builder
-  // from the Train tab (onboarding audit, C8).
-  const actionCards = tier === 'pro' ? ACTION_CARDS_PRO_SWITCH : ACTION_CARDS_DEFAULT;
+  const isProWithPlan = !!activePlan;
+  // FOUNDER DECISION (fully free, no tier split): every account gets the
+  // coached-builder card set now (it used to be Pro-only); the Free default
+  // order (library first, manual second) is retired.
+  const actionCards = ACTION_CARDS_PRO_SWITCH;
 
   // Group the non-active plans by folder. Plans whose folder_id is null (or
   // points at a now-deleted folder) fall through to the unfiled "My plans"
@@ -1211,11 +1173,11 @@ export default function PlansScreen({ navigation }) {
               {blockAdvice?.action === 'continue' && showPeakWeekNote && (
                 <Text style={[styles.proCoachNote, live.proCoachNote]}>{blockAdvice.body}</Text>
               )}
-              {tier === 'pro' && (
-                <Text style={[styles.proCoachNote, live.proCoachNote]}>
-                  Your coach adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
-                </Text>
-              )}
+              {/* FOUNDER DECISION (fully free, no tier split): this note
+                  renders for every account now. */}
+              <Text style={[styles.proCoachNote, live.proCoachNote]}>
+                Your coach adjusts this plan as you progress and check in. Change training setup or switch plans from the options below.
+              </Text>
               <View style={styles.activePlanActions}>
                 {/* R9 (D70): startNextBtn -> shared Button primary (fires its
                     own selection() tick on press). */}
@@ -1236,27 +1198,15 @@ export default function PlansScreen({ navigation }) {
               </View>
             </Card>
           </View>
-        ) : tier !== 'pro' ? (
-          /* B2: the free no-plan state is a proper card, sitting where the
-             active plan card would be, so a new user never scrolls past
-             empty sections looking for a way in. Quiz first, library second. */
-          <EmptyState
-            icon="compass-outline"
-            title="No active plan yet"
-            text="Answer a few quick questions and we'll suggest a starter plan, or browse the library if you'd rather choose yourself."
-            actionLabel="Start with a plan"
-            onAction={() => navigation.navigate('FreeStarter')}
-            actionAccessibilityLabel="Answer three quick questions to start with a plan"
-            secondaryLabel="Browse plans"
-            onSecondary={() => navigation.navigate('PlanLibrary')}
-            secondaryAccessibilityLabel="Browse the plan library"
-          />
         ) : (
-          /* C5-P10-09 (D96): the Pro no-plan state used to be an inert Card
+          /* FOUNDER DECISION (fully free, no tier split): the Free no-plan
+             branch (FreeStarter quiz) is retired -- this is the only
+             no-plan state now.
+             C5-P10-09 (D96): the Pro no-plan state used to be an inert Card
              naming an action it did not offer ("Start with a plan" is the
              FREE path's route to the starter quiz; there was no Pro
              affordance with that name, no onPress and no button). It gets
-             the same real two-CTA EmptyState shape the free branch has,
+             the same real two-CTA EmptyState shape the free branch had,
              with the coach-built plan Home's Pro branch already offers, so
              the verb and the action finally agree. */
           <EmptyState
@@ -1484,29 +1434,26 @@ export default function PlansScreen({ navigation }) {
                         {/* R9 (D70): the shared Button primitive. Primary
                             fires its own selection() tick, so no manual
                             haptic here. */}
+                        {/* FOUNDER DECISION (fully free, no tier split):
+                            nextBlockOptions is built with isPro: true now,
+                            so no option is ever locked -- the ProUpgrade
+                            route and the ProBadge/"Part of Pro" tag below
+                            are retired. */}
                         <Button
                           variant={optionVariant(opt)}
                           icon={opt.intent === 'repeat' ? 'refresh-outline' : 'trending-up-outline'}
                           title={opt.label}
-                          // A locked option is truthful, not silent: it routes
-                          // to the same upgrade flow every other Pro surface
-                          // uses. handleRestartPlan holds the second lock.
-                          onPress={() => (opt.locked
-                            ? navigation.navigate('ProUpgrade', { source: 'block_decision' })
-                            : handleRestartPlan(opt.intent))}
+                          onPress={() => handleRestartPlan(opt.intent)}
                           // The adjusted route reads the plan and dry-runs the
                           // generator before it can show the review, so the
                           // button reports that rather than sitting inert.
                           loading={preparingReview && opt.intent === 'adjust'}
                           disabled={preparingReview}
-                          accessibilityLabel={opt.locked ? `${opt.label}. Part of Pro.` : opt.label}
+                          accessibilityLabel={opt.label}
                         />
-                        {(opt.locked || opt.recommended) ? (
+                        {opt.recommended ? (
                           <View style={styles.blockOptionTags}>
-                            {opt.locked ? <ProBadge size="sm" /> : null}
-                            {opt.recommended ? (
-                              <Text style={[styles.blockOptionFlag, live.blockOptionFlag]}>Suggested</Text>
-                            ) : null}
+                            <Text style={[styles.blockOptionFlag, live.blockOptionFlag]}>Suggested</Text>
                           </View>
                         ) : null}
                         <Text style={[styles.blockOptionDetail, live.blockOptionDetail]}>
@@ -1515,23 +1462,14 @@ export default function PlansScreen({ navigation }) {
                       </View>
                     ))}
 
+                    {/* FOUNDER DECISION (fully free, no tier split): this
+                        always opens PlanUpdate now -- the Free route to
+                        PlanLibrary/ProUpgrade (D94, Campaign 3, F1) is
+                        retired. */}
                     <Button
                       variant="secondary"
                       title={blockAdvice.nextBlock.secondaryLabel}
-                      // D94 (Campaign 3, F1): a free user tapping "Build a
-                      // new plan" was sent to the paywall for a feature the
-                      // same screen offers free. Building a plan routes to
-                      // the free plan library; only "Review with coach"
-                      // (consider_rebuild's secondary, a genuinely Pro
-                      // flow) keeps the upgrade route for free users.
-                      onPress={() => {
-                        if (tier === 'pro') { navigation.navigate('PlanUpdate'); return; }
-                        navigation.navigate(
-                          nextBlockDecided.recommendation === 'consider_rebuild'
-                            ? 'ProUpgrade'
-                            : 'PlanLibrary',
-                        );
-                      }}
+                      onPress={() => navigation.navigate('PlanUpdate')}
                       accessibilityLabel={blockAdvice.nextBlock.secondaryLabel}
                     />
                   </View>

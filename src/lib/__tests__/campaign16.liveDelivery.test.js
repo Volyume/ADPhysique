@@ -205,7 +205,10 @@ describe('C16-LIVE repeat cannot consume elective refinement', () => {
 
   test('consider_rebuild is a repeat, not an adjustment', () => {
     // Its label states a plain repeat, so its behaviour must match the label.
-    expect(s()).toMatch(/seedIntent = intent === 'adjust' && tier === 'pro' \? 'adjust' : 'repeat'/);
+    // D137 (fully free product, no tier split): the entitlement clause is
+    // gone (PlansScreen.js:634), but the semantics this test pins are
+    // unchanged -- only the 'adjust' label seeds 'adjust'.
+    expect(s()).toMatch(/seedIntent = intent === 'adjust' \? 'adjust' : 'repeat'/);
   });
 
   test('the repeat alert still promises the same targets', () => {

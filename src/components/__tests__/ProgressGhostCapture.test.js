@@ -19,7 +19,6 @@ import { create, act } from 'react-test-renderer';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import ProgressGhostCapture from '../ProgressGhostCapture';
-import useAppStore from '../../store/useAppStore';
 
 const SOURCE = fs.readFileSync(path.resolve(__dirname, '../ProgressGhostCapture.js'), 'utf8');
 
@@ -28,7 +27,7 @@ const SOURCE = fs.readFileSync(path.resolve(__dirname, '../ProgressGhostCapture.
 let mockPermission = { granted: true, canAskAgain: true };
 const mockRequestPermission = jest.fn(async () => mockPermission);
 const mockTakePicture = jest.fn(async () => ({ uri: 'file:///captured.jpg' }));
-let mockStoreState = { tier: 'pro', accessibility: { reduceMotion: false } };
+let mockStoreState = { accessibility: { reduceMotion: false } };
 
 jest.mock('../../store/useAppStore', () => {
   const store = jest.fn((selector) => (typeof selector === 'function' ? selector(mockStoreState) : mockStoreState));
@@ -64,28 +63,20 @@ jest.mock('expo-sensors', () => ({
 // Order tracker for the capture pipeline.
 const order = [];
 jest.mock('../../lib/progressPhotos', () => ({
-  deleteProgressPhoto: jest.fn(async () => {
-    order.push('delete-photo');
-    return true;
-  }),
   saveProgressPhoto: jest.fn(async () => {
     order.push('save');
     return { name: '1700000000000.jpg', uri: 'file:///photos/1700000000000.jpg', ts: 1700000000000 };
   }),
 }));
 jest.mock('../../lib/progressPhotoMeta', () => ({
-  deletePhotoMeta: jest.fn(async () => {
-    order.push('delete-meta');
-    return true;
-  }),
   upsertPhotoMeta: jest.fn(async () => {
     order.push('meta');
     return {};
   }),
 }));
 
-const { deleteProgressPhoto, saveProgressPhoto } = require('../../lib/progressPhotos');
-const { deletePhotoMeta, upsertPhotoMeta } = require('../../lib/progressPhotoMeta');
+const { saveProgressPhoto } = require('../../lib/progressPhotos');
+const { upsertPhotoMeta } = require('../../lib/progressPhotoMeta');
 
 const REF = { uri: 'file:///photos/ref.jpg' };
 
@@ -98,8 +89,8 @@ async function render(props = {}) {
 }
 
 // The launch default is now a 5s timer, so the shutter reads "Start 5 second
-// timer" and begins a countdown. The pipeline/tier-guard tests below exercise
-// the IMMEDIATE-capture path, so they select "Timer off" first to isolate it
+// timer" and begins a countdown. The pipeline test below exercises the
+// IMMEDIATE-capture path, so it selects "Timer off" first to isolate it
 // from the countdown (which has its own default-state coverage).
 async function selectTimerOff(tree) {
   const off = tree.root.find((n) => n.props?.accessibilityLabel === 'Timer off');
@@ -112,7 +103,7 @@ beforeEach(async () => {
   // persists 0 into the mock store and contaminates the default assertions.
   await AsyncStorage.clear();
   mockPermission = { granted: true, canAskAgain: true };
-  mockStoreState = { tier: 'pro', accessibility: { reduceMotion: false } };
+  mockStoreState = { accessibility: { reduceMotion: false } };
   order.length = 0;
   jest.clearAllMocks();
 });
@@ -194,7 +185,6 @@ test('exposes an adjustable opacity control for the overlay', async () => {
 });
 
 test('capture previews the photo, then saves, records the pose, and calls onCaptured when approved', async () => {
-  act(() => { useAppStore.setState({ tier: 'pro' }); });
   const onCaptured = jest.fn();
   const tree = await render({ referencePhoto: REF, pose: 'side', onCaptured });
 
@@ -242,76 +232,6 @@ test('opens self-facing with a 5s timer selected and advises it on screen (launc
   expect(fiveChip.props.accessibilityState).toMatchObject({ selected: true });
   // The on-screen advice tells the user the front camera + timer are on.
   expect(json).toContain('Front camera and a 5-second timer are on');
-});
-
-test('capture is blocked when the live tier is no longer pro (mid-modal flip)', async () => {
-  act(() => { useAppStore.setState({ tier: 'pro' }); });
-  const onCaptured = jest.fn();
-  const tree = await render({ referencePhoto: REF, pose: 'side', onCaptured });
-
-  // The tier flips to free while the capture modal is open.
-  act(() => { useAppStore.setState({ tier: 'free' }); });
-
-  await selectTimerOff(tree);
-  const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
-  await act(async () => {
-    await captureBtn.props.onPress();
-  });
-
-  // No write, no meta, no callback: the shutter is inert for a lapsed user.
-  expect(saveProgressPhoto).not.toHaveBeenCalled();
-  expect(upsertPhotoMeta).not.toHaveBeenCalled();
-  expect(onCaptured).not.toHaveBeenCalled();
-});
-
-test('capture re-checks the live tier after the native camera returns', async () => {
-  act(() => { useAppStore.setState({ tier: 'pro' }); });
-  mockTakePicture.mockImplementationOnce(async () => {
-    act(() => { useAppStore.setState({ tier: 'free' }); });
-    return { uri: 'file:///captured.jpg' };
-  });
-  const onCaptured = jest.fn();
-  const tree = await render({ referencePhoto: REF, pose: 'front', onCaptured });
-
-  await selectTimerOff(tree);
-  const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
-  await act(async () => {
-    await captureBtn.props.onPress();
-  });
-
-  expect(saveProgressPhoto).not.toHaveBeenCalled();
-  expect(upsertPhotoMeta).not.toHaveBeenCalled();
-  expect(deleteProgressPhoto).not.toHaveBeenCalled();
-  expect(deletePhotoMeta).not.toHaveBeenCalled();
-  expect(onCaptured).not.toHaveBeenCalled();
-});
-
-test('capture cleans up a saved file if the tier lapses before metadata is written', async () => {
-  act(() => { useAppStore.setState({ tier: 'pro' }); });
-  saveProgressPhoto.mockImplementationOnce(async () => {
-    order.push('save');
-    act(() => { useAppStore.setState({ tier: 'free' }); });
-    return { name: '1700000000000.jpg', uri: 'file:///photos/1700000000000.jpg', ts: 1700000000000 };
-  });
-  const onCaptured = jest.fn();
-  const tree = await render({ referencePhoto: REF, pose: 'front', onCaptured });
-
-  await selectTimerOff(tree);
-  const captureBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Take photo');
-  await act(async () => {
-    await captureBtn.props.onPress();
-  });
-
-  const usePhotoBtn = tree.root.find((n) => n.props?.accessibilityLabel === 'Use photo');
-  await act(async () => {
-    await usePhotoBtn.props.onPress();
-  });
-
-  expect(saveProgressPhoto).toHaveBeenCalledWith('file:///captured.jpg', undefined, undefined);
-  expect(deleteProgressPhoto).toHaveBeenCalledWith(undefined, 'file:///photos/1700000000000.jpg');
-  expect(upsertPhotoMeta).not.toHaveBeenCalled();
-  expect(onCaptured).not.toHaveBeenCalled();
-  expect(order).toEqual(['save', 'delete-photo']);
 });
 
 test('a hard-denied permission shows the calm photo-library fallback, no crash', async () => {

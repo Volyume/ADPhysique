@@ -26,22 +26,20 @@ describe('CO-3: onward links render only under a genuinely relevant state', () =
     // Reuses T2's hasUnseenCoachChange (useAppStore), the exact flag that
     // drives the Coach-tab icon badge -- not a new independent condition.
     expect(SOURCE).toContain('hasUnseenCoachChange: s.hasUnseenCoachChange,');
-    expect(SOURCE).toContain("const showCoachLink = !readOnly && tier === 'pro' && hasUnseenCoachChange;");
+    expect(SOURCE).toContain('const showCoachLink = !readOnly && hasUnseenCoachChange;');
   });
 
   test('both links are gated out entirely on the read-only history view', () => {
     expect(SOURCE).toMatch(/const showProgressLink = !readOnly/);
-    expect(SOURCE).toMatch(/const showCoachLink = !readOnly && tier === 'pro'/);
+    expect(SOURCE).toMatch(/const showCoachLink = !readOnly && hasUnseenCoachChange;/);
   });
 
-  test('the Coach link never renders for a free-tier user, even if the store flag were somehow stale', () => {
-    // Defence in depth, matching this screen's own pattern for the partner
-    // beat (tier === 'pro' re-checked locally rather than trusting a single
-    // upstream gate). The route itself is also withProGuard-wrapped in
-    // RootNavigator.js, so this is a belt-and-braces check, not the only one.
-    const site = SOURCE.indexOf("const showCoachLink =");
+  // Volyume is fully free (founder decision 2026-09-03): the old Pro-only
+  // re-check on this link is gone.
+  test('the Coach link carries no tier gate any more', () => {
+    const site = SOURCE.indexOf('const showCoachLink =');
     expect(site).toBeGreaterThan(-1);
-    expect(SOURCE.slice(site, site + 120)).toMatch(/tier === 'pro'/);
+    expect(SOURCE.slice(site, site + 120)).not.toMatch(/tier/);
   });
 });
 

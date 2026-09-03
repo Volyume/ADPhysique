@@ -35,8 +35,10 @@ describe('Coach home Partners row', () => {
     expect(COACH).toMatch(/label="Partners"/);
   });
 
-  test('is lock-aware for free tier (pro affordance)', () => {
-    expect(COACH).toMatch(/pro=\{!isPro\}/);
+  // The pro lock affordance ('pro={!isPro}') is REMOVED (D137, fully free
+  // product), not inverted: there is no tier to lock behind any more.
+  test('carries no pro-lock affordance any more (D137, fully free)', () => {
+    expect(COACH).not.toMatch(/pro=\{!isPro\}/);
   });
 
   test('reuses the shared line derivation, not a duplicated string', () => {
@@ -78,8 +80,10 @@ describe('AnalyticsScreen Partners tile', () => {
     expect(partnersIdx).toBeGreaterThan(fullHistoryIdx);
   });
 
-  test('keeps the pro lock and attributes the view with a source param', () => {
-    expect(ANALYTICS).toMatch(/label="Partners"[\s\S]*?pro=\{tier !== 'pro'\}/);
+  // The pro lock ('pro={tier !== 'pro'}') is REMOVED (D137, fully free
+  // product), not inverted: there is no tier to lock behind any more.
+  test('carries no pro lock, and attributes the view with a source param', () => {
+    expect(ANALYTICS).not.toMatch(/pro=\{tier !== 'pro'\}/);
     expect(ANALYTICS).toMatch(/trackPartnerSurfaceView\('progress_tile'\)/);
     expect(ANALYTICS).toMatch(/navigation\.navigate\('Partner', \{ source: 'progress_tile' \}\)/);
   });

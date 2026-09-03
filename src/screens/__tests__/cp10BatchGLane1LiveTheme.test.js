@@ -289,7 +289,9 @@ describe('CP-10 batch G lane 1: screen chrome flips live, no remount', () => {
 // definition.
 describe('CP-10 batch G lane 1: remaining screens carry the live-theme wiring', () => {
   test.each([
-    'FreeStarterScreen.js',
+    // FreeStarterScreen.js deleted (D137, fully free product): the
+    // free-onboarding quiz no longer exists, so it is removed from this
+    // enumeration rather than asserted against a missing file.
     'ProGoalSetupScreen.js',
     'ProOnboardingScreen.js',
     'ProSetupCompleteScreen.js',

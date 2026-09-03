@@ -62,34 +62,21 @@ const EVIDENCE_PANEL = fs.readFileSync(
   path.resolve(__dirname, '../../lib/home/evidencePanel.js'), 'utf8',
 );
 
-describe('Presentation guard — trial-ending-only commerce in P1 (spec §14, FOUNDER-RULINGS-PHASE2 R3)', () => {
-  test('trialEndingEligible reads only the exact 48-hour window, tier-gated to pro_trial, nothing looser', () => {
-    expect(HOME).toMatch(
-      /const trialEndingEligible = stageOf\(userProfile\) === 'pro_trial'\s*\n\s*&& msToTrialEnd != null && msToTrialEnd <= 48 \* 60 \* 60 \* 1000;/,
-    );
+describe('Presentation guard — the trial is fully retired (FOUNDER DECISION: fully free, no trial, no expiry)', () => {
+  test('trialEndingEligible, the cascade-gate flag and every trial-aware fact block are gone from Home entirely', () => {
+    expect(HOME).not.toMatch(/trialEndingEligible/);
+    expect(HOME).not.toMatch(/trialEnding: \{/);
+    expect(HOME).not.toMatch(/@volyume_trial_end_gate_shown/);
+    expect(HOME).not.toMatch(/CascadeGate/);
+    expect(HOME).not.toMatch(/stageOf\(/);
+    expect(HOME).not.toMatch(/canStillTrial/);
   });
 
-  test('the trialEnding fact block passed to the arbiter carries only eligibility, daysRemaining and onPress — no everyday trial content', () => {
-    const site = HOME.indexOf('trialEnding: {');
-    expect(site).toBeGreaterThan(-1);
-    const block = HOME.slice(site, HOME.indexOf('},', site) + 2);
-    expect(block).toMatch(/eligible: trialEndingEligible,/);
-    expect(block).toMatch(/daysRemaining: daysRemaining\(userProfile\) \?\? 0,/);
-    // No S0-S3 variant machinery, no "runs to" end-date sentence, no
-    // methodology button, no everyday-value fields of any kind.
-    expect(block).not.toMatch(/variant|trialBanner|endsLabel|methodology/i);
-  });
-
-  test('no OTHER fact block feeding the arbiter references trial state at all — trialEnding is the single trial-aware occupant', () => {
+  test('no fact block feeding the arbiter references trial state at all', () => {
     const arbiterCallSite = HOME.indexOf('const todayLineItem = resolveTodayLine({');
     const arbiterCallEnd = HOME.indexOf('  });', arbiterCallSite);
     const block = HOME.slice(arbiterCallSite, arbiterCallEnd);
-    // Strip the trialEnding sub-block itself, then confirm nothing else in
-    // the facts object mentions trial-flavoured identifiers.
-    const trialSite = block.indexOf('trialEnding: {');
-    const trialEnd = block.indexOf('},', trialSite) + 2;
-    const withoutTrialEnding = block.slice(0, trialSite) + block.slice(trialEnd);
-    expect(withoutTrialEnding).not.toMatch(/trial/i);
+    expect(block).not.toMatch(/trial/i);
   });
 
   test('the everyday trial value card (S0-S3 variants, AttentionCard variant="trial") is gone from Home entirely', () => {
@@ -123,7 +110,7 @@ describe('Presentation guard — honest denominators (the evidence pane never sh
 
   test('HomeScreen feeds the loader\'s raw weighIns7d straight through, never pre-clamped before it reaches the resolver', () => {
     const site = HOME.indexOf('async function loadFirstReviewFacts()');
-    const end = HOME.indexOf('async function loadFreeCoachLine()');
+    const end = HOME.indexOf('async function loadBriefDismissal()');
     const loader = HOME.slice(site, end);
     expect(loader).toMatch(/const weighIns7d = new Set\(/);
     expect(loader).not.toMatch(/Math\.min\(weighIns7d/);
@@ -134,7 +121,7 @@ describe('Presentation guard — honest denominators (the evidence pane never sh
 describe('ED-safety — D98-2 suppression parity (moved here from the deleted firstReviewLine.test.js, never lapsed)', () => {
   test('the loader\'s edSuppressed chain carries all four conditions, fail closed, matching the You tab formula', () => {
     const site = HOME.indexOf('async function loadFirstReviewFacts()');
-    const end = HOME.indexOf('async function loadFreeCoachLine()');
+    const end = HOME.indexOf('async function loadBriefDismissal()');
     const loader = HOME.slice(site, end);
     expect(loader).toMatch(/const edSuppressed = !!edFlag\s*\n\s*\|\| \(Number\.isFinite\(userProfile\?\.scoffScore\) && userProfile\.scoffScore >= 2\)\s*\n\s*\|\| wellbeing === 'read_failed'\s*\n\s*\|\| isCalm\(wellbeing\);/);
     // The flag read itself fails CLOSED (truthy sentinel on error).

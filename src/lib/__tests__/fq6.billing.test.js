@@ -10,6 +10,15 @@
  * 6.4 truthful subscription management: no local tier forgery, the platform
  *     surface owns cancellation, entitlement expiry decides Free.
  * Billing invariants: product IDs and the 14+7 trial shape untouched.
+ *
+ * AMENDED 2026-09-03 (fully-free product, founder decision). Volyume has no
+ * trial, no Free/Pro split, no paywall and no expiry; the store/billing
+ * infrastructure is retained DORMANT behind the inactive boundary in
+ * lib/payments/index.js. Two pins are inverted and two are skipped, each
+ * annotated in place: the consent screen no longer starts a trial, and the
+ * trial-end / manage-subscription SURFACES no longer have to exist. The
+ * billing INVARIANTS (product IDs, the documented 14+7 shape, "the retry
+ * never invents a local entitlement") are untouched and still enforced.
  */
 import fs from 'fs';
 import path from 'path';
@@ -41,7 +50,21 @@ describe('FQ-6.2: one authoritative trial end date', () => {
     expect(daysRemaining(activeProfile, Date.UTC(2026, 7, 20))).toBe(4);
   });
 
-  test('both surfaces read the shared label, not their own maths', () => {
+  test('no surface invents its own trial maths (the shared label is the only source)', () => {
+    // RELAXED 2026-09-03 (fully-free product). This used to REQUIRE the trial
+    // banner on SettingsAccountScreen and YouScreen. There is no trial and no
+    // banner to require any more, and those surfaces are being unwound. The
+    // invariant that still matters, and the only one this test ever really
+    // protected, is the negative: no screen derives a trial end date itself.
+    for (const f of ['screens/SettingsAccountScreen.js', 'screens/YouScreen.js', 'screens/HomeScreen.js']) {
+      let src;
+      try { src = read(f); } catch (_) { continue; } // screen may be gone
+      const stripped = stripComments(src);
+      expect(stripped).not.toMatch(/proTrialEndsAt[\s\S]{0,80}Date\.now\(\)/);
+    }
+  });
+
+  test.skip('both surfaces read the shared label, not their own maths', () => {
     // RE-PINNED (Campaign 22 Phase 2 Stage 2, FOUNDER-RULINGS-PHASE2 R3): the
     // trial banner -- and with it, this line -- rehomed from HomeScreen.js to
     // YouScreen.js in full (billing-adjacent flag for review: cascade.js and
@@ -66,12 +89,16 @@ describe('FQ-6.1: the trial-grant retry', () => {
     expect(isNetworkShapedError(new Error('trial already used'))).toBe(false);
   });
 
-  test('the consent screen queues only on failure, and the runner drains the queue', () => {
-    // Re-anchored under D97-20 (C6 P-1): startCascade NEVER rejects, so the
-    // queue arms on the RESULT (ok:false), not a .catch that never fires.
+  test('INVERTED (fully free, 2026-09-03): consent never starts a trial, so nothing is queued', () => {
+    // Was: the consent screen calls startCascade and queues the retry on an
+    // ok:false RESULT (D97-20 / C6 P-1). Volyume has no trial now, so the call
+    // and its queue arming are both gone from the consent path. The drain in
+    // the sync runner is deliberately LEFT: it is idempotent, it self-exits
+    // when the queue is empty, and it is the thing that finishes any retry a
+    // pre-conversion device still had queued.
     const consent = read('screens/Article9ConsentScreen.js');
-    expect(consent).toMatch(/const grant = await cascade\.startCascade\(\)/);
-    expect(consent).toMatch(/queuePendingCascade\(user\?\.id, err\)/);
+    expect(consent).not.toMatch(/startCascade/);
+    expect(consent).not.toMatch(/queuePendingCascade/);
     const runner = read('lib/sync/runner.js');
     expect(runner).toMatch(/flushPendingCascade\(userId\)/);
   });
@@ -96,18 +123,53 @@ describe('FQ-6.1: the trial-grant retry', () => {
 describe('FQ-6.4: truthful subscription management', () => {
   test('no surface forges a local Free tier any more', () => {
     for (const f of ['screens/SettingsAccountScreen.js', 'screens/SubscriptionPolicyScreen.js']) {
-      const src = stripComments(read(f));
+      let src;
+      try { src = stripComments(read(f)); } catch (_) { continue; } // screen may be gone
       expect(src).not.toMatch(/setTier\('free'/);
       expect(src).not.toMatch(/Switch to Free/);
     }
   });
 
-  test('the manage flow routes to the platform subscription surface and states the expiry semantics', () => {
+  // DORMANT 2026-09-03 (fully-free product, founder decision). The manage-
+  // subscription flow is part of the retained-but-inactive billing surface;
+  // there is no subscription for a user to manage while Volyume is free, and
+  // the screens carrying this copy are being unregistered. Kept, skipped, so
+  // the contract is still written down for a future monetisation flip rather
+  // than deleted and re-guessed.
+  test.skip('the manage flow routes to the platform subscription surface and states the expiry semantics', () => {
     const src = read('screens/SettingsAccountScreen.js');
     expect(src).toMatch(/Manage subscription/);
     expect(src).toMatch(/apps\.apple\.com\/account\/subscriptions/);
     expect(src).toMatch(/play\.google\.com\/store\/account\/subscriptions/);
     expect(src).toMatch(/Pro stays active until your current period ends/);
+  });
+});
+
+// The billing invariants below are UNTOUCHED by the fully-free decision and
+// must stay green exactly as written: the live product identifiers and the
+// documented trial shape are the things a future flip depends on being intact.
+describe('fully-free product: the boundary is inactive, the infrastructure is retained', () => {
+  test('the override is on and the barrel is the boundary', () => {
+    const gate = read('lib/proGate.js');
+    expect(gate).toMatch(/export const FULL_ACCESS_FOR_ALL = true;/);
+    expect(gate).toMatch(/export const PRO_BETA_ACTIVE = FULL_ACCESS_FOR_ALL;/);
+    const barrel = read('lib/payments/index.js');
+    expect(barrel).toMatch(/billing_disabled/);
+  });
+
+  test('no billing module was deleted: the dormant infrastructure is all still there', () => {
+    for (const f of [
+      'lib/payments/cascade.js',
+      'lib/payments/catalogue.js',
+      'lib/payments/playBilling.js',
+      'lib/payments/restore.js',
+      'lib/payments/lapseDetect.js',
+      'lib/payments/pendingCascade.js',
+      'lib/payments/winbackState.js',
+      'lib/differentialPaywall.js',
+    ]) {
+      expect(() => read(f)).not.toThrow();
+    }
   });
 });
 

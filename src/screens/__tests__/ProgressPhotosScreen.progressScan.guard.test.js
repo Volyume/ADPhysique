@@ -50,12 +50,12 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).not.toMatch(/<ProgressScanHistoryCard/);
     expect(SCREEN).toMatch(/const scanSummary = libraryScanSummary\(scanForDay\);/);
     expect(SCREEN).toMatch(/scanSummary\.map/);
-    // Pin updated for the grid -> viewer hero morph (D31): the card now taps
-    // through openWithMorph, which measures the tapped thumbnail's window rect
-    // and opens the SAME full-size viewer for the cover photo. The read-only
-    // gate (inert tap in view-only state) is unchanged and still pinned; the
-    // second assertion locks that the tap still opens the cover's viewer.
-    expect(SCREEN).toMatch(/onPress=\{readOnly \? undefined : openWithMorph\}/);
+    // Pin updated for the grid -> viewer hero morph (D31): the card taps
+    // through openWithMorph, which measures the tapped thumbnail's window
+    // rect and opens the SAME full-size viewer for the cover photo. Volyume
+    // is fully free (founder decision 2026-09-03), so there is no read-only
+    // gate on the tap any more.
+    expect(SCREEN).toMatch(/onPress=\{openWithMorph\}/);
     expect(SCREEN).toMatch(/openViewer\(cover\.name, \{ x, y, width, height \}\)/);
   });
 
@@ -150,12 +150,11 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/ProgressPhotos\.finishScan\.refreshPhotos/);
   });
 
-  test('post-capture scan writes re-check the live tier and abandon drafts on lapse', () => {
-    expect(SCREEN).toMatch(/const canWrite = useCallback\(\(\) => useAppStore\.getState\(\)\.tier === 'pro', \[\]\);/);
-    expect(SCREEN).toMatch(/abandonLapsedScanFlow/);
-    expect(SCREEN).toMatch(/if \(!canWrite\(\)\) \{\s*await abandonLapsedScanFlow\(flow, name, saved\);/);
-    expect(SCREEN).toMatch(/const vision = await analyseProgressScanPhoto\(\{ uri: saved\.uri, pose \}\);[\s\S]*if \(!canWrite\(\)\) \{[\s\S]*await abandonLapsedScanFlow\(flow, name, saved\);/);
-    expect(SCREEN).toMatch(/if \(!canWrite\(\)\) \{ abandonLapsedScanFlow\(flow\); return; \}[\s\S]*else setCaptureOpen\(true\);/);
+  test('the abandon-draft helper survives for genuine abort reasons, with no tier gate (Volyume is fully free, founder decision 2026-09-03)', () => {
+    expect(SCREEN).toMatch(/async function abandonLapsedScanFlow\(flow, name = null, saved = null\) \{/);
+    expect(SCREEN).not.toMatch(/canWrite/);
+    // Still called for a genuinely cancelled/failed pick, not a tier flip.
+    expect(SCREEN).toMatch(/if \(result\?\.canceled\) \{\s*await abandonLapsedScanFlow\(flow\);/);
   });
 
   test('viewer delete detaches scan analysis before deleting the source photo', () => {
@@ -285,7 +284,7 @@ describe('ProgressPhotosScreen Progress Scan flagship guards', () => {
     expect(SCREEN).toMatch(/const progressScanOpeningRef = useRef\(false\);/);
     expect(SCREEN).toMatch(/if \(progressScanOpeningRef\.current\) return;/);
     expect(SCREEN).toMatch(/if \(scanDateOpen \|\| scanDatePickerOpen \|\| scanFlow \|\| progressScanOpeningRef\.current\) return;/);
-    expect(SCREEN).toMatch(/if \(!route \|\| route\.disabled \|\| !canWrite\(\) \|\| captureRouteActionRef\.current\) return;/);
+    expect(SCREEN).toMatch(/if \(!route \|\| route\.disabled \|\| captureRouteActionRef\.current\) return;/);
     expect(SCREEN).toMatch(/await openProgressScan\('guided'\);/);
     expect(SCREEN).toMatch(/const scanByPhotoName = useMemo/);
     expect(SCREEN).toMatch(/const scansByDateKey = useMemo/);

@@ -398,96 +398,22 @@ afterEach(() => {
 });
 
 // ── The free route ──────────────────────────────────────────────────────────
-describe('FirstRunScreen (free onboarding)', () => {
-  const Screen = () => require('../FirstRunScreen').default;
-
-  test('CONTROL: a Google user still gets the name field', async () => {
-    const tree = await mount(Screen(), { user: googleUser(), tier: 'free' });
-    expect(labels(tree)).toContain(NAME_LABEL);
-  });
-
-  test('first Apple signup: no name field', async () => {
-    noteAppleCredential({ givenName: 'Ada' });
-    const tree = await mount(Screen(), { user: appleUser(), tier: 'free' });
-    expect(labels(tree)).not.toContain(NAME_LABEL);
-  });
-
-  test('the name Apple gave is PERSISTED, not merely not-asked-for', async () => {
-    // The other half of the fix. Hiding the box without keeping the name
-    // would quietly lose the name the athlete already gave, so the greeting
-    // would go blank. Apple hands it over once per Apple ID ever, to
-    // signInWithApple and nobody else, which is why it is stashed at that
-    // call and picked up here at the next profile write.
-    const saveLocalProfile = jest.fn(() => Promise.resolve());
-    noteAppleCredential({ givenName: 'Ada' });
-    const tree = await mount(Screen(), { user: appleUser(), tier: 'free', saveLocalProfile });
-
-    const cont = tree.root.findAll(
-      (n) => n.props?.accessibilityLabel === 'Continue' && typeof n.props?.onPress === 'function',
-      { deep: true },
-    )[0];
-    await TestRenderer.act(async () => { cont.props.onPress(); });
-
-    expect(saveLocalProfile).toHaveBeenCalledTimes(1);
-    expect(saveLocalProfile.mock.calls[0][1].firstName).toBe('Ada');
-  });
-
-  test('a name the athlete already has is never overwritten by Apple', async () => {
-    const saveLocalProfile = jest.fn(() => Promise.resolve());
-    noteAppleCredential({ givenName: 'Ada' });
-    const tree = await mount(Screen(), {
-      user: appleUser(), tier: 'free', saveLocalProfile,
-      userProfile: { firstName: 'Bear' },
-    });
-    const cont = tree.root.findAll(
-      (n) => n.props?.accessibilityLabel === 'Continue' && typeof n.props?.onPress === 'function',
-      { deep: true },
-    )[0];
-    await TestRenderer.act(async () => { cont.props.onPress(); });
-    expect(saveLocalProfile.mock.calls[0][1].firstName).toBe('Bear');
-  });
-
-  test('repeat Apple sign-in: credential null, stored profile answers, still no field', async () => {
-    const tree = await mount(Screen(), {
-      user: appleUser(), tier: 'free', userProfile: { firstName: 'Ada' },
-    });
-    expect(labels(tree)).not.toContain(NAME_LABEL);
-  });
-
-  test("no name anywhere: STILL no field - this is the founder's own case", async () => {
-    // The exact state a re-install lands in. Apple returned nothing because
-    // this Apple ID has authorised the app before, and no profile has been
-    // written yet, so every name source is empty. The first attempt showed the
-    // box here, which is the screenshot the founder sent from TestFlight.
-    const tree = await mount(Screen(), { user: appleUser(), tier: 'free', userProfile: null });
-    expect(labels(tree)).not.toContain(NAME_LABEL);
-  });
-
-  test('a private relay address alone is enough to suppress the field', async () => {
-    // Even with no provider metadata at all: the address can only be Apple's.
-    noteAppleCredential({ givenName: 'Ada' });
-    const tree = await mount(Screen(), {
-      user: { id: 'u-relay', email: RELAY }, tier: 'free',
-    });
-    expect(labels(tree)).not.toContain(NAME_LABEL);
-  });
-
-  test('the copy does not invite a name we already hold', async () => {
-    noteAppleCredential({ givenName: 'Ada' });
-    const tree = await mount(Screen(), { user: appleUser(), tier: 'free' });
-    expect(texts(tree).join(' ')).not.toMatch(/Add your name/i);
-  });
-
-  test('onboarding is not blocked: Continue renders with no name anywhere', async () => {
-    const tree = await mount(Screen(), { user: appleUser(), tier: 'free', userProfile: null });
-    expect(labels(tree)).toContain('Continue');
-  });
-
-  test('no e-mail is ever asked for', async () => {
-    const tree = await mount(Screen(), { user: appleUser(), tier: 'free' });
-    expect(emailInputs(tree)).toHaveLength(0);
-  });
-});
+// 'FirstRunScreen (free onboarding)' describe block REMOVED (D137, fully free
+// product): FirstRunScreen.js is deleted outright -- there is no separate
+// free-onboarding route any more. ProOnboardingScreen (below) is now the
+// ONLY onboarding surface, reached by every account regardless of tier, so
+// the Apple-no-name capability this block existed to protect is not lost:
+// it is pinned below against the screen that now actually carries it
+// (CONTROL/google, first Apple signup, repeat sign-in, no-name-anywhere, a
+// linked Google+Apple account, and no-email-ever-asked). A private-relay-
+// only case and a byte-identical "PERSISTED, not merely not-asked-for" /
+// "never overwritten" pair are not re-added here: ProOnboardingScreen's
+// name field only ever writes on the wizard's final build step (a full
+// multi-step flow, not a single Continue tap), so those two specific
+// mount-and-tap assertions do not have a like-for-like equivalent at this
+// suite's mount depth; the underlying rule (an empty field never overwrites
+// a stored name; Apple's name only fills an empty field) is visible
+// unchanged in source at ProOnboardingScreen.js:1396-1400 and :856.
 
 // ── The Pro route ───────────────────────────────────────────────────────────
 describe('ProOnboardingScreen (Pro onboarding)', () => {
@@ -512,12 +438,23 @@ describe('ProOnboardingScreen (Pro onboarding)', () => {
   });
 
   test("no name anywhere: STILL no field - this is the founder's own case", async () => {
-    // See the free route's twin above. This is the screen in the screenshot:
-    // "Step 1 of 5 - Baseline", reached straight after the Apple button.
+    // This is the screen in the screenshot: "Step 1 of 5 - Baseline",
+    // reached straight after the Apple button.
     const tree = await mount(Screen(), {
       user: appleUser(), proOnboardingAccountCreated: true, userProfile: null,
     });
     expect(labels(tree)).not.toContain(NAME_LABEL);
+    // D137: onboarding is not blocked by the missing name -- Continue still
+    // renders (formerly pinned on the now-deleted FirstRunScreen).
+    expect(labels(tree)).toContain('Continue');
+  });
+
+  test('the copy does not invite a name we already hold', async () => {
+    // Formerly pinned on the now-deleted FirstRunScreen; re-pointed at the
+    // one surviving onboarding screen (D137).
+    noteAppleCredential({ givenName: 'Ada' });
+    const tree = await mount(Screen(), { user: appleUser(), proOnboardingAccountCreated: true });
+    expect(texts(tree).join(' ')).not.toMatch(/Add your name/i);
   });
 
   test('a Google account that later linked Apple counts as Apple', async () => {

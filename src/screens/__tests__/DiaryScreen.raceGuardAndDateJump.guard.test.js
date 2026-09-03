@@ -192,10 +192,8 @@ describe('DiaryScreen meal-planning entry point', () => {
     expect(SRC).toMatch(/style=\{\[styles\.offCardButton, live\.offCardButton, styles\.offCardButtonMuted, live\.offCardButtonMuted\]\}/);
     expect(SRC).toMatch(/style=\{\[styles\.offCardButton, live\.offCardButton\]\}/);
     expect(SRC).toMatch(/style=\{\[styles\.plannedBtnGhostButton, live\.plannedBtnGhostButton\]\}/);
-    expect(SRC).toMatch(/readOnlyCtaButton: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(SRC).toMatch(/offCardButton: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(SRC).toMatch(/plannedBtnGhostButton: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(SRC).toContain('readOnlyCta: { ...type.label, color: colors.textPrimary }');
     expect(SRC).toContain('offCardCta: { ...type.label, color: colors.textPrimary }');
     expect(SRC).toContain('plannedBtnGhost: { ...type.label, color: colors.textPrimary }');
     expect(SRC).toMatch(/offCardRow: \{[\s\S]*flexWrap: 'wrap'/);
@@ -208,7 +206,6 @@ describe('DiaryScreen meal-planning entry point', () => {
     expect(SRC).toMatch(/bankRow: \{[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(SRC).toContain('bankRowText: { ...type.label, color: colors.textPrimary }');
     expect(SRC).not.toMatch(/bankRowText: \{ color: colors\.primary/);
-    expect(SRC).not.toMatch(/readOnlyCta: \{[\s\S]*color: colors\.primary/);
     expect(SRC).not.toMatch(/offCardCta: \{[\s\S]*color: colors\.primary/);
     expect(SRC).not.toMatch(/plannedBtnGhost: \{[\s\S]*color: colors\.primary/);
   });

@@ -752,14 +752,16 @@ describe('State matrix — F/L: zero-data (lead ruling: immature pillar lines AN
     expect(flattenText(tree)).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
   });
 
-  test('L (Free, zero data / new user): same factual shape, free-tier copy, no marketing/welcome voice', async () => {
+  // FOUNDER DECISION (fully free, no tier split): the Free-tier EmptyState
+  // copy fork is retired -- every account reads the same sentence (state F's
+  // copy) now, whatever the store's `tier` field says.
+  test('L (zero data / new user): same factual shape and copy as state F, no marketing/welcome voice', async () => {
     useAppStore.setState(FREE_USER);
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
     expect(training[0].props.accessibilityLabel).toBe('Training. No sessions logged yet. Log your first session to start your training evidence.');
-    // Free tier's own EmptyState body copy (tier-specific destinations only).
-    expect(flattenText(tree)).toContain('Your consistency, lifts and full history are still available below.');
+    expect(flattenText(tree)).toContain('Training charts appear here once sessions are logged. Body metrics, progress photos and scans are still available below.');
     expect(flattenText(tree)).not.toMatch(/welcome/i);
     expect(flattenText(tree)).not.toMatch(/get started/i);
   });
@@ -843,9 +845,13 @@ describe('State matrix — J: recent programme adjustment (source guard — see 
   });
 });
 
-// ─── State K — Free user ────────────────────────────────────────────────
-describe('State matrix — K: Free user, Training live, Body/Visual locked, page coherent', () => {
-  test('Training pillar carries real evidence; Body/Visual show the locked affordance, not Pro data', async () => {
+// ─── State K — retired: FOUNDER DECISION (fully free, no tier split) ─────
+// The Body/Visual "Part of Pro" locked pillar affordance is retired --
+// PillarRow no longer has a proGated variant at all, so there is no
+// Free-locked state left to test. Every account now reads real Body/Visual
+// evidence exactly like the Pro states (A-J) already cover.
+describe('State matrix — K: no pillar is ever shown locked, whatever the store\'s tier field says', () => {
+  test('Body and Progress photos never render "Part of Pro"', async () => {
     useAppStore.setState(FREE_USER);
     applyFixture({
       db: {
@@ -853,27 +859,15 @@ describe('State matrix — K: Free user, Training live, Body/Visual locked, page
         getCompletedWorkoutSets: improvingTrainingSets,
         getAllExercises: EXERCISES,
       },
-      // Free tier never reaches the scan store (useVisualPillar's own
-      // tier-before-suppression gate, pinned in useVisualPillar.test.js) —
-      // supplying a scan anyway proves it is never consulted.
       scan: scanSummary({}),
     });
     const { tree, errors } = await mountAnalytics({});
     expect(errors).toEqual([]);
     const training = pillarRow(tree, 'Training');
     expect(training[0].props.accessibilityLabel).toMatch(/^Training\. Strength up on \d of \d lifts this month/);
-    const body = pillarRow(tree, 'Body');
-    expect(body[0].props.accessibilityLabel).toBe('Body. Part of Pro.');
-    const visual = pillarRow(tree, 'Progress photos');
-    expect(visual[0].props.accessibilityLabel).toBe('Progress photos. Part of Pro.');
-    // Utilities and evidence trail remain fully live for Free.
+    expect(flattenText(tree)).not.toMatch(/Part of Pro/);
     expect(flattenText(tree)).toContain('Recent sessions');
     expect(flattenText(tree)).toContain('Consistency');
-    // Free tier's useVisualPillar gate (`tier !== 'pro'`) never even calls
-    // the scan store, matching useVisualPillar.test.js's own hook-level pin
-    // -- checked here at the integration level too, against the SAME
-    // jest.fn() the fixture harness swaps in.
-    expect(progressScanStore.getProgressScanCoachSummary).not.toHaveBeenCalled();
   });
 });
 

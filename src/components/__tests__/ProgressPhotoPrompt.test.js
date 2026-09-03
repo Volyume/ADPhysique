@@ -3,7 +3,7 @@
  * Pins, against the REAL component, the fail-closed gating that makes this
  * ED-safety-adjacent surface safe:
  *   - it renders the calm invitation ONLY on a competence milestone when
- *     unsuppressed + Pro + not opted out;
+ *     unsuppressed + not opted out;
  *   - usePhotoSuppression() true → NEVER renders (calm mode / open ED flag /
  *     any read failure all suppress);
  *   - a persisted opt-out ('photo_prompt_optout') → NEVER renders;
@@ -61,7 +61,6 @@ async function flush() {
 async function render(props = {}) {
   const merged = {
     milestoneId: 'milestone:sessions_50',
-    tier: 'pro',
     onAddPhoto: jest.fn(),
     ...props,
   };
@@ -129,11 +128,6 @@ describe('ProgressPhotoPrompt, fail-closed gates', () => {
     expect(isRendered(tree)).toBe(false);
     expect(tree.toJSON()).toBeNull();
     expect(track).not.toHaveBeenCalled();
-  });
-
-  test('does NOT render when not on the Pro tier', async () => {
-    const { tree } = await render({ tier: 'free' });
-    expect(isRendered(tree)).toBe(false);
   });
 
   test('does NOT render without a competence milestone id', async () => {

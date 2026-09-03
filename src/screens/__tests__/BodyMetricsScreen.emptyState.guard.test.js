@@ -43,18 +43,20 @@ describe('BodyMetricsScreen empty-state design guard', () => {
     expect(errorBlock).toMatch(/onAction=\{loadHistory\}/);
   });
 
-  test('read-only and recomposition CTAs are contained controls, not loose amber text', () => {
-    // CP-10 batch G lane 1: readOnlyCtaButton gained its live-theme override
-    // and both icons' ink now resolves from the live theme; the contained-
-    // neutral-chrome contract is unchanged.
-    expect(source).toContain('style={[styles.readOnlyCtaButton, live.readOnlyCtaButton]}');
-    expect(source).toContain('<Ionicons name="lock-open-outline" size={16} color={t.colors.textSecondary} />');
+  test('the recomposition CTA is a contained control, not loose amber text', () => {
+    // CP-10 batch G lane 1: both icons' ink resolves from the live theme;
+    // the contained-neutral-chrome contract is unchanged.
     expect(source).toContain('<Ionicons name="image-outline" size={16} color={t.colors.textSecondary} />');
-    expect(source).toMatch(/readOnlyCtaButton: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
     expect(source).toMatch(/recompCtaRow: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(source).toContain('readOnlyCta: { ...type.label, color: colors.textPrimary }');
     expect(source).toContain('recompCta: { ...type.label, color: colors.textPrimary }');
-    expect(source).not.toMatch(/readOnlyCta: \{ fontSize: fontSize\.sm,[\s\S]*color: colors\.primary/);
     expect(source).not.toMatch(/recompCta: \{ fontSize: fontSize\.sm,[\s\S]*color: colors\.primary/);
+  });
+
+  test('the free/Pro read-only upsell card is gone (Volyume is fully free, founder decision 2026-09-03)', () => {
+    expect(source).not.toMatch(/readOnlyCard/);
+    expect(source).not.toMatch(/readOnlyCtaButton/);
+    expect(source).not.toMatch(/readOnlyCta\b/);
+    expect(source).not.toMatch(/view-only on the free plan/i);
+    expect(source).not.toMatch(/Log weight again with Pro/i);
   });
 });

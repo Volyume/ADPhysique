@@ -75,7 +75,7 @@ try {
   if (m && typeof m.getVisibleMoments === 'function') momentsApi = m;
 } catch (_) { /* lands with C3; until then, no moments */ }
 
-const PRO_MAX_PAIRS = 3;
+const MAX_PAIRS = 3;
 const REDEEM_SYNC_POLL_ENABLED = !(typeof process !== 'undefined' && process.env?.JEST_WORKER_ID);
 // Persisted dismissal of the archived-streak reconnection surface, so it never
 // nags: once dismissed for a pair it stays hidden across launches (D5-B3).
@@ -587,12 +587,12 @@ function ProgressDots({ active }) {
 }
 
 export default function PartnerScreen({ route }) {
-  const { user, tier } = useAppStore(useShallow((s) => ({ user: s.user, tier: s.tier })));
+  const { user } = useAppStore(useShallow((s) => ({ user: s.user })));
   // CP-10 batch G (2026-07-11): live theme (src/hooks/useTheme.js).
   const t = useTheme();
   const live = useMemo(() => buildLiveStyles(t), [t]);
   const toast = useToast();
-  const p = usePartners(user?.id, tier);
+  const p = usePartners(user?.id);
   const retryPartners = p.refresh || p.reload;
 
   // Invite journey (three-beat full-screen modal).
@@ -705,12 +705,7 @@ export default function PartnerScreen({ route }) {
     setCode(incomingCode);
     if (!p.canAdd) {
       const visiblePairs = (p.pairs || []).length;
-      // WAVE-D-FINDINGS.md DEAD-STALE_SURFACE (lead ruling item 4, removed):
-      // this screen is only reachable Pro (RootNavigator.js:223,
-      // withProGuard), so `tier` is always 'pro' here -- the free-tier
-      // branch was dead code. See signals.js's maxPartnersForTier for the
-      // full unreachability proof.
-      const limit = PRO_MAX_PAIRS;
+      const limit = MAX_PAIRS;
       if (visiblePairs >= limit) {
         handledCodeRef.current = incomingCode;
         setCodeEntryOpen(true);
@@ -721,7 +716,7 @@ export default function PartnerScreen({ route }) {
     handledCodeRef.current = incomingCode;
     handleRedeem(incomingCode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [incomingCode, p.loading, p.canAdd, p.pairs, tier]);
+  }, [incomingCode, p.loading, p.canAdd, p.pairs]);
 
   useEffect(() => {
     if (redeemSyncing && (p.pairs || []).length > 0) setRedeemSyncing(false);
@@ -1071,7 +1066,7 @@ export default function PartnerScreen({ route }) {
   const pairs = p.pairs || [];
   const pending = p.pendingInvite;
   const connected = pairs.length > 0;
-  const canInviteAnother = tier === 'pro' && pairs.length < PRO_MAX_PAIRS;
+  const canInviteAnother = pairs.length < MAX_PAIRS;
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top', 'bottom']}>

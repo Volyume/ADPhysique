@@ -14,21 +14,16 @@ import path from 'path';
 const ANALYTICS_SRC = fs.readFileSync(path.join(__dirname, '..', 'AnalyticsScreen.js'), 'utf8');
 const USE_PROGRESS_DATA_SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'hooks', 'useProgressData.js'), 'utf8');
 
-// ─── Visual pillar suppression seniority (JSX shape, not just presence) ───
+// ─── Visual pillar suppression (JSX shape, not just presence) ─────────────
 //
-// HOLE FOUND: AnalyticsScreen.campaign23.guard.test.js only pins that the
-// string `!visualPillar.suppressed` appears somewhere in the file
-// (`expect(SRC).toMatch(/!visualPillar\.suppressed/)`) — it does not prove
-// the check WRAPS OUTSIDE the tier check, i.e. that suppression hides the
-// row for EVERY tier (including a free user, who would otherwise see the
-// "Part of Pro" locked affordance). useVisualPillar.test.js thoroughly pins
-// the HOOK's own fail-closed contract (tier-then-suppression gate on the
-// DATA fetch) but never touches the SCREEN's JSX nesting. This closes that
-// gap: the suppression condition must be the outermost wrapper around the
-// entire Visual PillarRow, with `proGated={tier !== 'pro'}` nested INSIDE
-// it, so a suppressed free user renders nothing (not even the lock icon),
-// never the tier-gated affordance.
-describe('Visual pillar suppression seniority: the suppression check wraps OUTSIDE the tier check (§16/§22 R2 fail-closed contract)', () => {
+// FOUNDER DECISION (fully free, no tier split): PillarRow's `proGated`
+// variant ("Part of Pro" locked affordance) is retired outright, so there
+// is no tier-gated content left for the suppression check to sit outside
+// of. What remains, and what this closes the gap on: the suppression
+// condition is still the sole gate around the entire Visual PillarRow
+// block, so a suppressed user (ED flag/calm mode) sees nothing at all —
+// never even the real evidence copy.
+describe('Visual pillar suppression: the suppression check is the sole gate around the Visual PillarRow block', () => {
   test('the suppression condition is the sole gate around the entire Visual PillarRow block', () => {
     const marker = "{!visualPillar.suppressed && (";
     const markerIdx = ANALYTICS_SRC.indexOf(marker);
@@ -39,9 +34,9 @@ describe('Visual pillar suppression seniority: the suppression check wraps OUTSI
     // Extract from the marker to the next top-level "))}" that closes this
     // fragment (the JSX shape is `{!visualPillar.suppressed && (\n  <>\n
     // ... <PillarRow ... />\n  </>\n)}`), and confirm the ENTIRE Visual
-    // PillarRow call — label, proGated, state/evidence text — is nested
-    // inside it (i.e. every one of these tokens appears strictly AFTER the
-    // opening marker and BEFORE the block's own closing, never before).
+    // PillarRow call is nested inside it (i.e. every one of these tokens
+    // appears strictly AFTER the opening marker and BEFORE the block's own
+    // closing, never before).
     const closeIdx = ANALYTICS_SRC.indexOf('</>\n              )}', markerIdx);
     expect(closeIdx).toBeGreaterThan(markerIdx);
     const block = ANALYTICS_SRC.slice(markerIdx, closeIdx);
@@ -49,28 +44,24 @@ describe('Visual pillar suppression seniority: the suppression check wraps OUTSI
     // Re-pinned 2026-08-17 (founder device order): the pillar is labelled
     // "Progress photos" now — "Visual" was internal vocabulary.
     expect(block).toMatch(/label="Progress photos"/);
-    expect(block).toMatch(/proGated=\{tier !== 'pro'\}/);
+    expect(block).not.toMatch(/proGated/);
     expect(block).toMatch(/onPress=\{\(\) => navigation\.navigate\('ProgressPhotos'\)\}/);
 
     // Between the suppression marker and the PillarRow itself, the only
     // JSX is the fragment wrapper and the divider — no SECOND `&&` gate
-    // (e.g. a `tier === 'pro' &&`) sits between them narrowing visibility
-    // further. `proGated` is a PROP passed to PillarRow (toggles CONTENT:
-    // "Part of Pro" vs real copy), never a second visibility wrapper — the
-    // row's mounting is controlled by the suppression check alone, exactly
-    // once, exactly here.
+    // sits between them narrowing visibility further. The row's mounting
+    // is controlled by the suppression check alone, exactly once, exactly
+    // here.
     const beforeLabel = block.slice(marker.length, block.indexOf('label="Progress photos"'));
     expect((beforeLabel.match(/&&/g) || []).length).toBe(0);
   });
 
-  test('a suppressed Visual pillar renders nothing for Pro OR Free (no branch bypasses the gate)', () => {
-    // Structural proof, not a duplicate of useVisualPillar.test.js's hook
-    // suite: PillarRow's own `proGated` prop only ever changes CONTENT
-    // (icon colour stays, "Part of Pro" text vs real copy) — it never
-    // controls whether the row mounts at all. The row's mounting is
-    // controlled SOLELY by the suppression `&&` gate above it, so there is
-    // no tier value for which a suppressed pillar can still appear.
-    expect(ANALYTICS_SRC).not.toMatch(/tier === 'pro'[\s\S]{0,50}visualPillar\.suppressed/);
+  test('no proGated/"Part of Pro" affordance survives anywhere on the landing', () => {
+    // Comments stripped: a retirement note may name the retired identifier
+    // in prose without that counting as a surviving affordance.
+    const code = ANALYTICS_SRC.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
+    expect(code).not.toMatch(/proGated/);
+    expect(code).not.toMatch(/Part of Pro/);
   });
 });
 

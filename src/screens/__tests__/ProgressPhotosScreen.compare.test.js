@@ -9,15 +9,17 @@
  *   - the dated, pose-typed photo-set timeline (month headers, card dates) built from
  *     getPhotoMetaMap, newest-first;
  *   - a tap opens the full-size VIEWER (not delete); delete flows through the
- *     viewer's onDelete → deleteProgressPhoto + deletePhotoMeta + refresh, with
- *     a live-tier re-check;
+ *     viewer's onDelete → deleteProgressPhoto + deletePhotoMeta + refresh;
  *   - the Compare entry opens ProgressPhotoCompare AND is withheld (hidden)
  *     under the shared fail-closed suppression gate — a double guard with the
  *     component's own self-suppression;
- *   - the Share entry is Pro-gated AND withheld under suppression;
- *   - the suppression copy stays neutral and does not show analysis pressure;
- *   - the E10 read-only (free-tier) rules: no add, cards inert (no editable
- *     viewer, no delete), Compare still available (pure viewing).
+ *   - the Share entry is withheld under suppression;
+ *   - the suppression copy stays neutral and does not show analysis pressure.
+ *
+ * Volyume is fully free (founder decision 2026-09-03): there is no Free/Pro
+ * split, so the render helper's `tier` option is accepted but ignored by the
+ * real screen -- kept only because some tests still pass it for historical
+ * reasons. There is no tier-based read-only state to pin any more.
  */
 import { create, act } from 'react-test-renderer';
 
@@ -371,7 +373,7 @@ describe('ProgressPhotosScreen tap opens the viewer, not delete', () => {
     expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(true);
   });
 
-  test('viewer onDelete removes the file AND its meta, then refreshes (live-tier checked)', async () => {
+  test('viewer onDelete removes the file AND its meta, then refreshes', async () => {
     const tree = await render();
     await pressCheckIn(tree, OLD);
     const viewer = hostNode(tree, 'ProgressPhotoViewer');
@@ -530,14 +532,14 @@ describe('ProgressPhotosScreen ED-safety suppression gate', () => {
     expect(flashList(tree).props.data.length).toBeGreaterThan(0);
   });
 
-  test('not suppressed and Pro: both Compare and Share are offered', async () => {
-    const tree = await render([NEW, MID, OLD], { suppressed: false, tier: 'pro' });
+  test('not suppressed: both Compare and Share are offered', async () => {
+    const tree = await render([NEW, MID, OLD], { suppressed: false });
     expect(findPressable(tree, 'Compare two photo sets')).toBeDefined();
     expect(findPressable(tree, 'Share photos')).toBeDefined();
   });
 
   test('share sheet can preview the progress card with Partners', async () => {
-    const tree = await render([NEW, MID, OLD], { suppressed: false, tier: 'pro' });
+    const tree = await render([NEW, MID, OLD], { suppressed: false });
     await press(tree, 'Share photos');
     const sheet = hostNode(tree, 'BeforeAfterShareSheet');
     expect(sheet.props.onPreviewForPartner).toEqual(expect.any(Function));
@@ -556,10 +558,6 @@ describe('ProgressPhotosScreen ED-safety suppression gate', () => {
     });
   });
 
-  test('Share is Pro-gated: never offered on the free plan even when unsuppressed', async () => {
-    const tree = await render([NEW, MID, OLD], { suppressed: false, tier: 'free' });
-    expect(findPressable(tree, 'Share photos')).toBeUndefined();
-  });
 });
 
 describe('ProgressPhotosScreen suppression copy', () => {
@@ -580,37 +578,27 @@ describe('ProgressPhotosScreen suppression copy', () => {
   });
 });
 
-// E10 read-only lapse views (founder decision 2026-07-02, "view yes, log no"):
-// a free user with photos sees the timeline and Compare, but no add, no
-// editable viewer and no delete. Pinned against the real screen with tier free.
-describe('ProgressPhotosScreen read-only lapse state (E10)', () => {
-  test('free tier hides the add button and says the state plainly', async () => {
+// Volyume is fully free (founder decision 2026-09-03): the old E10
+// read-only lapse view is gone. This is now the inverse pin -- the screen
+// carries no tier-based read-only state at all, regardless of what a mock
+// store happens to report for `tier` (the screen no longer reads it).
+describe('ProgressPhotosScreen has no tier-based read-only state', () => {
+  test('the add button is always present and there is no free-plan upsell copy', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
-    expect(findPressable(tree, 'Add photos')).toBeUndefined();
-    expect(flattenText(tree.toJSON())).toContain('View-only on the free plan.');
+    expect(findPressable(tree, 'Add photos')).toBeDefined();
+    expect(flattenText(tree.toJSON())).not.toContain('View-only on the free plan.');
   });
 
-  test('free tier: a progress photo card is inert (no editable viewer, no delete path)', async () => {
+  test('a progress photo card is always interactive: tap opens the viewer', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
-    const checkIn = checkInFor(tree, NEW);
-    expect(checkIn.props.onPress).toBeUndefined();
-    expect(checkIn.props.disabled).toBe(true);
-    expect(checkIn.props.accessibilityLabel).not.toContain('Tap to open');
-    expect(hostNode(tree, 'ProgressPhotoViewer')).toBeUndefined();
-    expect(appAlert).not.toHaveBeenCalled();
+    await pressCheckIn(tree, NEW);
+    expect(hostNode(tree, 'ProgressPhotoViewer')).toBeDefined();
   });
 
-  test('free tier keeps Compare available (viewing is not a write)', async () => {
+  test('Compare is available', async () => {
     const tree = await render([NEW, OLD], { tier: 'free' });
     expect(findPressable(tree, 'Compare two photo sets')).toBeDefined();
     await press(tree, 'Compare two photo sets');
     expect(surfaceOpen(tree, 'ProgressPhotoCompare')).toBe(true);
-  });
-
-  test('pro tier is unchanged: add button present, tap opens the viewer', async () => {
-    const tree = await render([NEW, OLD], { tier: 'pro' });
-    expect(findPressable(tree, 'Add photos')).toBeDefined();
-    await pressCheckIn(tree, NEW);
-    expect(hostNode(tree, 'ProgressPhotoViewer')).toBeDefined();
   });
 });

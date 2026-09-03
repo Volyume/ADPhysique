@@ -21,11 +21,9 @@ const read = (p) => fs.readFileSync(path.resolve(__dirname, p), 'utf8');
 const DIARY = read('../DiaryScreen.js');
 
 describe('Audit item 6: Diary coach-receipt chip', () => {
-  test('reads the latest coach output, Pro-only and best-effort', () => {
+  test('reads the latest coach output, best-effort', () => {
     expect(DIARY).toMatch(/import \{[^}]*getLatestCoachOutput[^}]*\} from '\.\.\/lib\/database'/);
-    // Pro-only: free tier never reaches CoachOutputScreen, so never has an
-    // applied adjustment to point at.
-    expect(DIARY).toMatch(/!readOnly \? getLatestCoachOutput\(userId\)\.catch\(\(\) => null\) : Promise\.resolve\(null\)/);
+    expect(DIARY).toMatch(/getLatestCoachOutput\(userId\)\.catch\(\(\) => null\)/);
   });
 
   test('the visibility signal is a COACH-applied adjustment, not any targets write', () => {
@@ -41,7 +39,7 @@ describe('Audit item 6: Diary coach-receipt chip', () => {
 
   test('only recent (within the 7-day coach-banner window) applies show the chip', () => {
     expect(DIARY).toContain('const TARGETS_CHANGED_WINDOW_MS = 7 * 86400000;');
-    expect(DIARY).toMatch(/const targetsChangedRecently = !readOnly\s*\n\s*&& !!coachTargetsChange\?\.appliedAt\s*\n\s*&& \(Date\.now\(\) - coachTargetsChange\.appliedAt\) < TARGETS_CHANGED_WINDOW_MS;/);
+    expect(DIARY).toMatch(/const targetsChangedRecently = !!coachTargetsChange\?\.appliedAt\s*\n\s*&& \(Date\.now\(\) - coachTargetsChange\.appliedAt\) < TARGETS_CHANGED_WINDOW_MS;/);
   });
 
   test('the chip links to the EXISTING coach receipt screen for that exact week, not a new surface', () => {

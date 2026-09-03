@@ -7,10 +7,10 @@
  * downgraded/baseline/not-comparable/withheld), the most recent scan's card
  * gains one value line: "If you check in this week, the coach can use this
  * as context." Conditions: the LATEST scan only (never every eligible scan
- * in the library), Pro tier only (check-ins are a Pro feature; this line
- * must never advertise Pro to a free/read-only viewer), and photo
- * suppression not active (buildScanReceipt already returns null under
- * suppression, so the line is naturally absent there too).
+ * in the library), and photo suppression not active (buildScanReceipt
+ * already returns null under suppression, so the line is naturally absent
+ * there too). Volyume is fully free (founder decision 2026-09-03), so there
+ * is no tier gate here any more.
  *
  * Reuses the render/mock scaffold from ProgressPhotosScreen.compare.test.js
  * (the screen has real transitive dependencies -- Reanimated, the live
@@ -211,12 +211,6 @@ describe('ProgressPhotosScreen check-in value line', () => {
       deltaExplanation: { comparisonStatus: 'not_comparable', summary: 'This scan is saved, but the setup changed too much for a fair comparison.' },
     })];
     const tree = await render([NEW, OLD], { scans });
-    expect(JSON.stringify(checkInFor(tree, NEW))).not.toContain(VALUE_LINE);
-  });
-
-  test('absent on the free/read-only tier, even when the latest scan is eligible (check-ins are a Pro feature)', async () => {
-    const scans = [eligibleScan('scan-new', NEW)];
-    const tree = await render([NEW, OLD], { scans, tier: 'free' });
     expect(JSON.stringify(checkInFor(tree, NEW))).not.toContain(VALUE_LINE);
   });
 

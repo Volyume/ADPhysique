@@ -11,8 +11,8 @@
  *     surface, same bar as the rest of Body Metrics);
  *   - no haptics anywhere on this screen (weight-adjacent surface: no
  *     celebration, no haptic feedback on log/edit/delete);
- *   - edit/delete controls are gated behind !readOnly, same as every other
- *     write affordance on this screen (E10 read-only lapse views);
+ *   - edit/delete controls always render (Volyume is fully free, founder
+ *     decision 2026-09-03 -- there is no more free/lapsed read-only state);
  *   - the History section now renders from a single entry, not only once
  *     there are 2+ (full management means the one entry a user has is still
  *     editable/deletable, not hidden behind a 2-entry threshold).
@@ -53,13 +53,14 @@ describe('BodyMetricsScreen edit/delete (D16 NAV-2) source guard', () => {
     expect(source).not.toMatch(/great progress|well done|great job|amazing|fantastic|awesome|crush(ed)?|smash(ed)?|keep it up/i);
   });
 
-  test('edit/delete controls are gated behind !readOnly like every other write affordance', () => {
+  test('edit/delete controls always render, with no tier-based read-only gate', () => {
     // Re-anchored under C6 R-8 (D97-22): morning_weights rows now have
     // their own update/soft-delete pair, so the actions render for them
     // too and route to the owning table - the old exclusion (which left a
-    // mistyped weigh-in permanent) is deliberately GONE. The readOnly
-    // gate stands unchanged.
-    expect(source).toMatch(/\{!readOnly && \(\s*<View style=\{styles\.historyActions\}>/);
+    // mistyped weigh-in permanent) is gone. Volyume is fully free (founder
+    // decision 2026-09-03), so the old readOnly gate is gone too.
+    expect(source).toMatch(/<View style=\{styles\.historyActions\}>/);
+    expect(source).not.toMatch(/readOnly/);
     expect(source).toMatch(/entry\.source === 'morning_weight'\s*\? await deleteMorningWeightById\(user\.id, entry\.id\)/);
     expect(source).toMatch(/\? await updateMorningWeightById\(user\.id, targetId, \{ weightKg: data\.body_weight \}\)/);
   });

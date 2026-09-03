@@ -69,21 +69,14 @@ export function partnerRowState({ partnership = null, partnerWeek = null } = {})
 /**
  * Partner cap: up to three partnerships (§4.9, founder §7).
  *
- * WAVE-D-FINDINGS.md DEAD-STALE_SURFACE (lead ruling item 4, removed): this
- * used to branch `tier === 'pro' ? 3 : 1`, but every caller of this module
- * (usePartners.js, consumed only by PartnerScreen.js) is unreachable for a
- * free-tier user -- the `Partner` route is `withProGuard`-wrapped at the
- * navigator (RootNavigator.js:223, the GatedPartner lazyScreen wrapper
- * around PartnerScreen), so `tier` is always 'pro' by the time any of this module's
- * functions run in the live app. The free-tier branch was dead code, not a
- * live tier-gating leak; `tier` stays a parameter (rather than dropped
- * outright) only because canAddPartner's call sites already pass it and
- * removing the parameter is a wider, unrelated signature change.
+ * Volyume is fully free (founder decision 2026-09-03): there is no Free/Pro
+ * split any more, so the old tier parameter is gone. The cap is a flat 3 for
+ * every user.
  */
-export function maxPartnersForTier(_tier) {
+export function maxPartnersForTier() {
   return 3;
 }
 
-export function canAddPartner({ tier, activeCount = 0 } = {}) {
-  return activeCount < maxPartnersForTier(tier);
+export function canAddPartner({ activeCount = 0 } = {}) {
+  return activeCount < maxPartnersForTier();
 }

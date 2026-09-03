@@ -73,6 +73,18 @@ describe('navigation integrity', () => {
     expect(registered.size).toBeGreaterThanOrEqual(30);
   });
 
+  // D137 (fully free product): these billing/paywall components stay on
+  // disk DORMANT and unregistered per the founder's fully-free conversion
+  // (ProUpgradeScreen/CascadeGateScreen/SubscriptionScreen/etc are no longer
+  // wired into RootNavigator). Their internal navigate() calls to those
+  // now-unregistered routes are dead code, not live navigation, and are
+  // confirmed unimported from any live screen/component. Excluded here
+  // rather than deleted so the dormant surfaces remain intact on disk.
+  const DORMANT_SURFACES = new Set([
+    'src/components/PostLapseSheet.js',
+    'src/components/ProGate.js',
+  ]);
+
   test('every navigation target is registered somewhere', () => {
     // Tab roots (HomeTab/PlansTab/ProgressTab/YouTab) and pseudo-screens
     // used by nested navigators count as valid.
@@ -81,7 +93,7 @@ describe('navigation integrity', () => {
       // Add any deliberately-unregistered targets here if they're handled
       // by deep linking or external navigation.
     ]);
-    const unknown = refs.filter(r => !allowed.has(r.target));
+    const unknown = refs.filter(r => !allowed.has(r.target) && !DORMANT_SURFACES.has(r.file));
     if (unknown.length > 0) {
       const lines = unknown.map(r => `  ${r.file}:${r.line} → navigate('${r.target}')`).join('\n');
       throw new Error(`Unknown navigation targets:\n${lines}`);
