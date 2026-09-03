@@ -95,7 +95,7 @@ export default function EngineLog({ userId }) {
             <Ionicons name="pulse" size={18} color={t.colors.primary} />
           </View>
           <View>
-            <Text style={[styles.headerLabel, live.headerLabel]}>Engine Log</Text>
+            <Text style={[styles.headerLabel, live.headerLabel]}>Coaching log</Text>
             <Text style={[styles.headerSub, live.headerSub]}>{repWarnings.length + adaptationHistory.length} recent coaching decisions</Text>
           </View>
         </View>

@@ -13,7 +13,7 @@
  *
  * Two entry contexts:
  *   - With prefillBarcode (from a ScanBarcode miss): top banner
- *     surfaces "Barcode {ean} not in our database" + guidance.
+ *     surfaces "Barcode {ean} not in our food library" + guidance.
  *   - Without prefillBarcode (direct "snap a label" entry): default
  *     "Frame the nutrition panel" hint.
  *
@@ -342,7 +342,7 @@ export default function ScanLabelScreen({ navigation, route }) {
             <Text style={[styles.missTitle, live.missTitle]}>
               {offline
                 ? `Barcode ${prefillBarcode}`
-                : `Barcode ${prefillBarcode} not in our database`}
+                : `Barcode ${prefillBarcode} not in our food library`}
             </Text>
             <Text style={[styles.missBody, live.missBody]}>
               {!ocrAvailable
@@ -404,7 +404,7 @@ export default function ScanLabelScreen({ navigation, route }) {
           <View style={[styles.choiceScrim, live.choiceScrim]} />
           <View style={[styles.choiceCard, live.choiceCard]}>
             <Text style={[styles.choiceTitle, live.choiceTitle]}>
-              {offline ? "Couldn't check the full database" : 'Not in the database yet'}
+              {offline ? "Couldn't check the full food library" : 'Not in the food library yet'}
             </Text>
             <Text style={[styles.choiceBody, live.choiceBody]}>
               {offline

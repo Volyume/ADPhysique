@@ -78,7 +78,7 @@ export default function SettingsScreen({ navigation }) {
           <SettingRow
             icon="nutrition-outline"
             label="Nutrition targets"
-            sub="Your calorie and macro goals"
+            sub="Your calorie and macro targets"
             onPress={() => { haptics.selection(); navigation.navigate('NutritionTargets'); }}
           />
         ) : null}

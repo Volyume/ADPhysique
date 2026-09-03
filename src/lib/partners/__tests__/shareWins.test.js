@@ -27,7 +27,7 @@ describe('partner shareable wins policy', () => {
     expect(SHARE_WIN_TYPES.map((type) => type.title)).toEqual([
       'Workout summary',
       'Personal record',
-      'Training phase milestone',
+      'Training block milestone',
       'Progress comparison',
     ]);
   });

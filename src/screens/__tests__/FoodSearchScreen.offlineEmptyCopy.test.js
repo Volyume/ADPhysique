@@ -159,7 +159,7 @@ describe('FoodSearchScreen live-search empty copy: offline vs genuine miss (item
     expect(mockNetInfoFetch).toHaveBeenCalled();
     expect(treeHasText(
       tree,
-      "You're offline, so live search can't check the food database. Saved foods still work, or add a custom food."
+      "You're offline, so live search can't check the food library. Saved foods still work, or add a custom food."
     )).toBe(true);
     expect(treeHasText(tree, 'No matches for')).toBe(false);
   });

@@ -614,13 +614,13 @@ export default function YouScreen({ navigation }) {
               </View>
               <View style={{ flex: 1 }}>
                 {/* The "COACH" kicker that sat here is gone. It restated the
-                    heading directly below it ("Weekly coach update") beside an
-                    icon that already says the same thing -- the category was
-                    marked three times over. The heading carries its own
-                    weight. */}
+                    heading directly below it ("Weekly coaching decision")
+                    beside an icon that already says the same thing -- the
+                    category was marked three times over. The heading carries
+                    its own weight. */}
                 <Text style={[styles.statusTitle, live.statusTitle]}>
                   {isPro
-                    ? `Weekly coach update${reviewDate ? `: ${reviewDate}` : ''}`
+                    ? `Weekly coaching decision${reviewDate ? `: ${reviewDate}` : ''}`
                     : 'Coach is available on Pro'}
                 </Text>
               </View>

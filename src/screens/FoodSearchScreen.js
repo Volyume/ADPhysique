@@ -764,7 +764,7 @@ export default function FoodSearchScreen({ navigation, route }) {
         <EmptyState
           icon={searchOffline ? 'cloud-offline-outline' : 'search-outline'}
           text={searchOffline
-            ? "You're offline, so live search can't check the food database. Saved foods still work, or add a custom food."
+            ? "You're offline, so live search can't check the food library. Saved foods still work, or add a custom food."
             : `No matches for "${query.trim()}".`}
           actionLabel="Add custom food"
           onAction={gotoCustomReplace}

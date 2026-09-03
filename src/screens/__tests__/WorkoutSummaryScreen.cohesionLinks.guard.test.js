@@ -79,8 +79,8 @@ describe('CO-3: training-only copy, no weight/body/intake references', () => {
   });
 
   test('Coach link copy is the calm, generic "this week\'s review" line', () => {
-    expect(SOURCE).toContain('See this week&apos;s coaching review');
-    expect(SOURCE).toContain('accessibilityLabel="See this week\'s coaching review"');
+    expect(SOURCE).toContain('See this week&apos;s coaching decision');
+    expect(SOURCE).toContain('accessibilityLabel="See this week\'s coaching decision"');
   });
 
   test('neither link string mentions weight, calories, kg or intake', () => {

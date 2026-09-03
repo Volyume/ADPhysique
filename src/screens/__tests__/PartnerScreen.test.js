@@ -201,8 +201,8 @@ describe('connected state: isolated pair cards', () => {
     expect(text).not.toContain('Shared with Sam');
     expect(text).not.toContain('Full workouts and lift numbers');
     expect(text).not.toContain('This week: you 2 of 4. Sam 3 of 4. No weights, food, photos or Coach notes are shared.');
-    expect(text).toContain('Shared training phase');
-    expect(text).toContain('Upper Lower is shared as a phase name only. Your workouts, exercises, weights and notes stay private.');
+    expect(text).toContain('Shared training block');
+    expect(text).toContain('Upper Lower is shared as a block name only. Your workouts, exercises, weights and notes stay private.');
     expect(text).toContain('Sharing settings');
     expect(text).not.toContain('Manage label');
   });
@@ -257,7 +257,7 @@ describe('connected state: isolated pair cards', () => {
     expect(text).toContain('Your wider lift history and other records stay private.');
     expect(text).toContain('Workout complete');
     expect(text).toContain('Personal record');
-    expect(text).toContain('Training phase milestone');
+    expect(text).toContain('Training block milestone');
     expect(text).toContain('Progress comparison');
     expect(text).toContain('No passive feed, leaderboard, workout history browsing, food diary, coach notes, body metrics or automatic photo sharing.');
   });

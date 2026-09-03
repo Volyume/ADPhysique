@@ -212,7 +212,7 @@ export default function ScanBarcodeScreen({ navigation, route }) {
       toast.show(
         offline
           ? "You're offline. Check your connection and try again."
-          : "Couldn't reach the food database. Try again.",
+          : "Couldn't reach the food library. Try again.",
         { variant: 'error' }
       );
       scanLock.current = false;

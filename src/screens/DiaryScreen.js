@@ -1240,7 +1240,7 @@ export default function DiaryScreen({ navigation, route }) {
         contentContainerStyle={styles.scrollContent}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={t.colors.primary} />}
       >
-        <ScreenHeader title="Eat" />
+        <ScreenHeader title="Nutrition" />
 
         {/* Day pager + compact options. Sits under the standard
             ScreenHeader so the Nutrition tab now matches Today, Train,

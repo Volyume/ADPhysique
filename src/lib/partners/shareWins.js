@@ -13,8 +13,8 @@ export const SHARE_WIN_TYPES = Object.freeze([
   }),
   Object.freeze({
     key: 'block_milestone',
-    title: 'Training phase milestone',
-    shared: 'The phase name and milestone you choose to share.',
+    title: 'Training block milestone',
+    shared: 'The block name and milestone you choose to share.',
     private: 'Plan contents, exercise selection and loading stay private.',
   }),
   Object.freeze({
@@ -49,7 +49,7 @@ export const SHARE_WIN_REVIEW_STEPS = Object.freeze([
   Object.freeze({
     key: 'choose',
     title: 'Choose the moment',
-    body: 'Pick one workout, record, training phase milestone or progress comparison.',
+    body: 'Pick one workout, record, training block milestone or progress comparison.',
   }),
   Object.freeze({
     key: 'preview',
@@ -169,11 +169,11 @@ export function buildShareWinDraft(typeKey, payload = {}) {
   }
 
   if (typeKey === 'block_milestone') {
-    const blockName = cleanText(safePayload.blockName || 'Training phase');
+    const blockName = cleanText(safePayload.blockName || 'Training block');
     const milestone = cleanText(safePayload.milestone || safePayload.milestoneLabel || 'Milestone reached', 64);
     return baseDraft(
       typeKey,
-      'Training phase milestone',
+      'Training block milestone',
       `${blockName}: ${milestone}.`,
       'Plan contents, exercise selection and loading stay private.',
     );

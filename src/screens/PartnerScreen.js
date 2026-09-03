@@ -225,20 +225,20 @@ function blockStatusCopy(block, partnerName, userId) {
   if (!block) return null;
   if (block.status === 'active') {
     return {
-      title: 'Shared training phase',
-      copy: `${block.blockName} is shared as a phase name only. Your workouts, exercises, weights and notes stay private.`,
+      title: 'Shared training block',
+      copy: `${block.blockName} is shared as a block name only. Your workouts, exercises, weights and notes stay private.`,
     };
   }
   if (block.status === 'proposed' && block.proposedBy === userId) {
     return {
-      title: 'Phase name sent',
-      copy: `Waiting for ${name}. Only the phase name would be visible. Nothing changes in either plan.`,
+      title: 'Block name sent',
+      copy: `Waiting for ${name}. Only the block name would be visible. Nothing changes in either plan.`,
     };
   }
   if (block.status === 'proposed') {
     return {
-      title: 'Phase name suggested',
-      copy: `${name} suggested ${block.blockName}. Accepting shares the phase name only; it will not change either plan.`,
+      title: 'Block name suggested',
+      copy: `${name} suggested ${block.blockName}. Accepting shares the block name only; it will not change either plan.`,
     };
   }
   return null;
@@ -406,7 +406,7 @@ function BlockStatusCard({ block, partnerName, userId, onOpen }) {
       padding="md"
       style={styles.blockStatusCard}
       onPress={onOpen}
-      accessibilityLabel={`Training phase sharing, ${status.title}`}
+      accessibilityLabel={`Training block sharing, ${status.title}`}
     >
       <View style={styles.blockStatusHead}>
         <Ionicons name="barbell-outline" size={iconSize.sm} color={t.colors.primary} />
@@ -1019,7 +1019,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.proposeBlock(pair.id, name);
     if (!r.ok) {
       logError('PartnerScreen.proposeBlock', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not share the phase name right now. Refresh Partners, then try once more.', { variant: 'error' });
+      toast.show('Could not share the block name right now. Refresh Partners, then try once more.', { variant: 'error' });
     }
   }
   async function adoptBlock(pair) {
@@ -1027,7 +1027,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.adoptBlock(pair.id);
     if (!r.ok) {
       logError('PartnerScreen.adoptBlock', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not share that phase name right now. Refresh Partners, then try once more.', { variant: 'error' });
+      toast.show('Could not share that block name right now. Refresh Partners, then try once more.', { variant: 'error' });
     }
   }
   async function leaveBlock(pair) {
@@ -1035,7 +1035,7 @@ export default function PartnerScreen({ route }) {
     const r = await p.leaveBlock(pair.id);
     if (!r.ok) {
       logError('PartnerScreen.leaveBlock', new Error(r.error || 'unknown'), { userId: user?.id });
-      toast.show('Could not update that phase name right now. Refresh Partners, then try once more.', { variant: 'error' });
+      toast.show('Could not update that block name right now. Refresh Partners, then try once more.', { variant: 'error' });
     }
   }
 
@@ -1156,8 +1156,6 @@ export default function PartnerScreen({ route }) {
 
             <Button
               title="Invite someone you train with"
-              style={styles.primaryBtn}
-              textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               onPress={openJourney}
               accessibilityLabel="Invite someone you train with"
             />
@@ -1257,7 +1255,7 @@ export default function PartnerScreen({ route }) {
       <BottomSheet
         visible={!!blockSheetPair}
         onClose={closeBlockSheet}
-        accessibilityLabel="Training phase sharing"
+        accessibilityLabel="Training block sharing"
         scroll
         sheetStyle={styles.partnerActionSheet}
       >
@@ -1564,8 +1562,6 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
               <Text style={[styles.beatLine, live.beatLine]}>Just whether you each trained against your current plan.</Text>
               <Button
                 title="Continue"
-                style={styles.primaryBtn}
-                textStyle={[styles.primaryBtnText, live.primaryBtnText]}
                 onPress={onContinue}
                 accessibilityLabel="Continue"
               />
@@ -1580,8 +1576,6 @@ function InviteJourney({ visible, beat, minting, minted, onClose, onContinue, on
               </Text>
               <Button
                 title="Agree and get my code"
-                style={[styles.primaryBtn, minting && styles.primaryBtnDisabled]}
-                textStyle={[styles.primaryBtnText, live.primaryBtnText]}
                 onPress={onAgree}
                 disabled={minting}
                 loading={minting}
@@ -1645,9 +1639,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'active') {
     return (
       <View style={styles.sheetBody}>
-        <Text style={[styles.sheetHeading, live.sheetHeading]}>Shared training phase</Text>
-        <Text style={[styles.blockPitch, live.blockPitch]}>Your partner can see the phase name only. Your workouts, exercises, weights and notes stay private.</Text>
-        <SheetRow icon="exit-outline" label="Stop sharing this phase name" onPress={() => onLeave(pair)} />
+        <Text style={[styles.sheetHeading, live.sheetHeading]}>Shared training block</Text>
+        <Text style={[styles.blockPitch, live.blockPitch]}>Your partner can see the block name only. Your workouts, exercises, weights and notes stay private.</Text>
+        <SheetRow icon="exit-outline" label="Stop sharing this block name" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1655,9 +1649,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy === userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text style={[styles.sheetHeading, live.sheetHeading]}>Phase name sent</Text>
-        <Text style={[styles.blockPitch, live.blockPitch]}>You sent {block.blockName} as a phase name only. Waiting for {name}.</Text>
-        <SheetRow icon="close-circle-outline" label="Withdraw phase name" onPress={() => onLeave(pair)} />
+        <Text style={[styles.sheetHeading, live.sheetHeading]}>Block name sent</Text>
+        <Text style={[styles.blockPitch, live.blockPitch]}>You sent {block.blockName} as a block name only. Waiting for {name}.</Text>
+        <SheetRow icon="close-circle-outline" label="Withdraw block name" onPress={() => onLeave(pair)} />
       </View>
     );
   }
@@ -1665,9 +1659,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   if (block?.status === 'proposed' && block.proposedBy !== userId) {
     return (
       <View style={styles.sheetBody}>
-        <Text style={[styles.sheetHeading, live.sheetHeading]}>Phase name suggested</Text>
-        <Text style={[styles.blockPitch, live.blockPitch]}>{name} suggested {block.blockName} as a shared phase name only. Accepting will not change either plan.</Text>
-        <SheetRow icon="checkmark-circle-outline" label="Share this phase name" onPress={() => onAdopt(pair)} />
+        <Text style={[styles.sheetHeading, live.sheetHeading]}>Block name suggested</Text>
+        <Text style={[styles.blockPitch, live.blockPitch]}>{name} suggested {block.blockName} as a shared block name only. Accepting will not change either plan.</Text>
+        <SheetRow icon="checkmark-circle-outline" label="Share this block name" onPress={() => onAdopt(pair)} />
         <SheetRow icon="close-circle-outline" label="Decline" onPress={() => onLeave(pair)} />
       </View>
     );
@@ -1676,9 +1670,9 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
   // No block yet: suggest one from the user's programmes.
   return (
     <View style={styles.sheetBody}>
-      <Text style={[styles.sheetHeading, live.sheetHeading]}>Share phase name</Text>
+      <Text style={[styles.sheetHeading, live.sheetHeading]}>Share block name</Text>
       <Text style={[styles.blockPitch, live.blockPitch]}>
-        Choose the phase name to show {name}. This does not share workouts, weights or notes.
+        Choose the block name to show {name}. This does not share workouts, weights or notes.
       </Text>
       {programmes === null ? (
         <ActivityIndicator color={t.colors.primary} />
@@ -1694,7 +1688,7 @@ function BlockSheetBody({ pair, programmes, userId, onPropose, onAdopt, onLeave 
           />
         ))
       )}
-      <Text style={[styles.blockFooter, live.blockFooter]}>You can stop sharing the phase name at any time.</Text>
+      <Text style={[styles.blockFooter, live.blockFooter]}>You can stop sharing the block name at any time.</Text>
     </View>
   );
 }
@@ -2134,13 +2128,6 @@ const styles = StyleSheet.create({
   },
   codeBtnText: { ...type.label },
 
-  // Primary button
-  primaryBtn: {
-    minHeight: 50,
-  },
-  primaryBtnDisabled: { opacity: 0.5 },
-  primaryBtnText: { ...type.label, color: colors.onPrimary },
-
   // ── Sheets ──
   partnerActionSheet: {
     alignSelf: 'stretch',
@@ -2341,7 +2328,6 @@ function buildLiveStyles(t) {
     incomingShareNoticeText: { ...t.type.bodySm, color: t.colors.textSecondary, lineHeight: 20 },
     codeInput: { ...t.type.body },
     codeBtnText: { ...t.type.label },
-    primaryBtnText: { ...t.type.label, color: t.colors.onPrimary },
     sheetHeading: { ...t.type.title, color: t.colors.textPrimary },
     sheetRowText: { ...t.type.body, color: t.colors.textPrimary },
     sheetRowDanger: { color: t.colors.error },

@@ -259,7 +259,7 @@ export default function BlockReflectionScreen({ navigation, route }) {
             {/* 4-stat row */}
             <View style={[styles.statsRow, live.statsRow]}>
               <StatBlock icon="barbell-outline" value={String(data.totalSessions)} label="Sessions" />
-              <StatBlock icon="layers-outline" value={data.totalSets.toLocaleString('en-GB')} label="Sets" tooltip={GLOSSARY.workingSets} />
+              <StatBlock icon="layers-outline" value={data.totalSets.toLocaleString('en-GB')} label="Working sets" tooltip={GLOSSARY.workingSets} />
               <StatBlock
                 icon="trending-up-outline"
                 // WAVE-A-FINDINGS.md UNIT_DEFECT (:262): hard-coded 'kg';

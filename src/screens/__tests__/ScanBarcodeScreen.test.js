@@ -112,7 +112,7 @@ describe('ScanBarcodeScreen lookup failure (ST-2)', () => {
     await scan();
 
     expect(mockToastShow).toHaveBeenCalledWith(
-      "Couldn't reach the food database. Try again.",
+      "Couldn't reach the food library. Try again.",
       expect.objectContaining({ variant: 'error' }),
     );
     expect(nav.replace).not.toHaveBeenCalled();

@@ -399,7 +399,7 @@ export default function ProGoalSetupScreen({ navigation }) {
         // Stale-but-real beats fabricated: the stored targets stay and the
         // user is told where to complete the profile. The goal save itself
         // proceeds; only the nutrition recalculation is withheld.
-        toast.show('Goal saved, but calorie targets were not updated. Complete sex, age and height in your profile, then open Nutrition Targets to refresh', { variant: 'warning', duration: 5000 });
+        toast.show('Goal saved, but calorie targets were not updated. Complete sex, age and height in your profile, then open Nutrition targets to refresh', { variant: 'warning', duration: 5000 });
         throw Object.assign(new Error('profile biology incomplete'), { _handled: true });
       }
       const engineInputs = buildNutritionEngineInputs({
@@ -433,7 +433,7 @@ export default function ProGoalSetupScreen({ navigation }) {
       // so they know targets weren't updated this time. The incomplete-
       // biology skip above already showed its own specific message.
       if (!_e?._handled) {
-        toast.show("Goal saved, but targets didn't recalculate. Open Nutrition Targets to refresh", { variant: 'warning', duration: 5000 });
+        toast.show("Goal saved, but targets didn't recalculate. Open Nutrition targets to refresh", { variant: 'warning', duration: 5000 });
       }
     }
 
