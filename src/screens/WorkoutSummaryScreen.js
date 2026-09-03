@@ -1351,12 +1351,23 @@ export default function WorkoutSummaryScreen({ navigation, route }) {
             tooltip={'Total weight moved this session: sets x reps x weight added together. A rough measure of how much work you did. More is not always better; quality of effort matters more than raw numbers.'}
           />
           {/* 4-week comparison verdict, fused into the hero so "your number"
-              and "how it compares" read as one statement. Only when we have
-              at least one prior session of this routine. */}
-          {comparison && comparison.priorCount > 0 && (() => {
+              and "how it compares" read as one statement. Renders once we
+              have either a prior session to compare against, or the 'first'
+              verdict (no prior session at all - lead ruling: a session with
+              nothing to compare against still deserves an honest line about
+              what was saved, rather than silence). The 'first' line alone is
+              suppressed under calm mode / an open ED flag, exactly like
+              firstSessionLine; the established comparison verdicts keep their
+              existing behaviour. Comparison itself is never computed in
+              readOnly mode, so this is already live-summary-only. */}
+          {comparison && (comparison.priorCount > 0 || (comparison.verdict === 'first' && !calmSuppressed)) && (() => {
             const { verdict, pct, position, total, priorCount } = comparison;
             let headline, sub, accent;
-            if (verdict === 'best') {
+            if (verdict === 'first') {
+              headline = 'First time on this session';
+              sub = 'Every set is saved. Next time, these numbers show as Last session while you lift.';
+              accent = t.colors.textPrimary;
+            } else if (verdict === 'best') {
               headline = `Strongest workout in 4 weeks`;
               sub = `Top of ${total} sessions logged for this routine.`;
               accent = t.colors.gold;

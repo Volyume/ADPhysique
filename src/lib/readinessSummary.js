@@ -159,6 +159,15 @@ export function buildReadinessSummary({
     }
   }
 
+  // Priority 4.5 (lead activation ruling, this brief): no last session at
+  // all yet -- the same "most recent session" input Priority 3 reads. With
+  // nothing logged, "On track for this block" below would claim a track
+  // record that does not exist. No second "N of M" counter here either,
+  // per the C22 single-counter law the Priority 5 note above documents.
+  if (!lastSession) {
+    return { tone: 'go', line: 'First session of your plan. Nothing to read yet.' };
+  }
+
   // Priority 5: default block-phase read.
   // RE-DECIDED (Campaign 22 Phase 2 Stage 2, HOME-TODAY-UX-SPEC.md §7/§15
   // item 4/§17 R3: "the hero shows a SINGLE counter"). C5-P12-02's own fix

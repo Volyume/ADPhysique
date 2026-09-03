@@ -95,7 +95,7 @@ describe('todayLineArbiter — each rank in isolation', () => {
   it('rank 4: check-in due — one sentence, no scan subline (copy item 5)', () => {
     const result = resolveTodayLine({ checkIn: { eligible: true, onPress: noop, onDismiss: noop } });
     expect(result.key).toBe('check_in');
-    expect(result.text).toBe('Your weekly check-in is ready.');
+    expect(result.text).toBe("Your weekly check-in is ready. It shapes this week's coaching decision.");
     expect(result.text).not.toMatch(/scan/i);
     expect(result.text).not.toMatch(/skipping/i);
   });

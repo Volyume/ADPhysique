@@ -2326,8 +2326,14 @@ export default function HomeScreen({ navigation, route }) {
             states. No weight/calorie line here (ED-safety).
             C5-P7-05 / C5-P1-08 (D96): the card's second step promised a coach
             to every tier. The tier is read here, where it already lives, so
-            the card can tell each user the truth. */}
-        {!initialLoading && totalSessions === 0 && !welcomeDismissed && activePlan && nextWorkout && (
+            the card can tell each user the truth.
+            Lead activation ruling (this brief): dropped the `activePlan &&
+            nextWorkout` gate. A zero-session user with no plan at all got NO
+            orientation whatsoever (this card was the only one), left staring
+            at the no-plan EmptyState below with no welcome above it. The
+            card's own copy already covers this ("Begin from your plan... or
+            just log freely"), so no new copy variant is needed. */}
+        {!initialLoading && totalSessions === 0 && !welcomeDismissed && (
           <HomeWelcomeCard onDismiss={dismissWelcome} isPro={tier === 'pro'} />
         )}
 
@@ -2962,8 +2968,17 @@ export default function HomeScreen({ navigation, route }) {
             rough night can ease the session, and a good one never adds to
             it. "Can" and "when coaching is active" keep it truthful - not
             every answer changes something, and the easing only happens
-            where coaching is actually available. */}
-        <Text style={[styles.intentSub, live.intentSub]}>Takes a second. When coaching is active, poor sleep or heavy soreness can ease today's session. Answering well never makes it harder than planned.</Text>
+            where coaching is actually available.
+            Lead activation ruling (this brief): that easing IS the Pro
+            coaching adjustment, so a free user (no coaching engine reading
+            these answers) must not be told it can happen to them. Free gets
+            the honest alternative: the answer is saved and read back next
+            time, never a promised adjustment it does not get. */}
+        <Text style={[styles.intentSub, live.intentSub]}>
+          {tier === 'pro'
+            ? "Takes a second. When coaching is active, poor sleep or heavy soreness can ease today's session. Answering well never makes it harder than planned."
+            : 'Takes a second. Saved with your session, and read back to you on Today before your next one.'}
+        </Text>
         {/* R2-10 (founder decision "Reorder", 2026-07-11): the optional
             readiness rows sit ABOVE the intent options, compacted to one
             aligned line each, because the intent tap below starts the

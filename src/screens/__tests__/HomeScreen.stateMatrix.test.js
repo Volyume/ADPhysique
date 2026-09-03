@@ -899,7 +899,7 @@ describe('State matrix — S16: check-in due on the scheduled day', () => {
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    expect(REGION.todayLineText(tree)).toBe('Your weekly check-in is ready.');
+    expect(REGION.todayLineText(tree)).toBe("Your weekly check-in is ready. It shapes this week's coaching decision.");
     // The old bottom-of-screen nudge idiom is gone; this is the only mention.
     expect(flattenText(tree)).not.toMatch(/It's your check-in day/);
   });
@@ -992,6 +992,6 @@ describe('Presentation guard — R2 single occupancy at the HomeScreen fact-feed
     expect(findByTestID(tree, 'today-line').length).toBe(1);
     expect(REGION.todayLineText(tree)).toBe("Block complete. Choose what's next.");
     expect(flattenText(tree)).not.toContain('1999 kcal');
-    expect(flattenText(tree)).not.toBe('Your weekly check-in is ready.');
+    expect(flattenText(tree)).not.toBe("Your weekly check-in is ready. It shapes this week's coaching decision.");
   });
 });

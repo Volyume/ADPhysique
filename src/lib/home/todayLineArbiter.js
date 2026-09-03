@@ -92,7 +92,7 @@ function resolveCheckIn(facts) {
   if (!f?.eligible) return null;
   return {
     key: 'check_in',
-    text: 'Your weekly check-in is ready.',
+    text: "Your weekly check-in is ready. It shapes this week's coaching decision.",
     onPress: f.onPress,
     onDismiss: f.onDismiss,
     accessibilityLabel: 'Your weekly check-in is ready. Tap to open.',

@@ -16,8 +16,11 @@ import Card from './Card';
 // states. No weight/calorie line here (ED-safety).
 //
 // The gating condition (!initialLoading && totalSessions === 0 &&
-// !welcomeDismissed && activePlan && nextWorkout) stays in HomeScreen.js;
-// this component only renders the card's own content.
+// !welcomeDismissed) stays in HomeScreen.js; this component only renders the
+// card's own content. Lead activation ruling (this brief): dropped the
+// `activePlan && nextWorkout` clause the gate used to carry, so a zero-session
+// user with no plan yet also sees this orientation (step 1's "Begin from your
+// plan, or just log freely" already covers that user; no new copy needed).
 //
 // C5-P7-05 / C5-P1-08 (D96): step 2 promised "Your coach learns as you
 // train" to BOTH tiers, with no tier gate anywhere on the render path.

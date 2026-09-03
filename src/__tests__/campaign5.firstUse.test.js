@@ -442,17 +442,32 @@ describe('HOME: zero history has one clear next action and claims no history (C5
   // dropped figure is one tap away in the block-shape sheet this same chip
   // opens.
   test('the block chip carries no counter of its own, so it can never duplicate the eyebrow\'s', () => {
+    // RE-PINNED (lead activation ruling, this brief): a zero-history user
+    // (lastSession: null - no session ever logged) must not be told "On
+    // track for this block", which claims a track record that does not
+    // exist. That copy now belongs to a user with at least one session; the
+    // zero-history case gets its own honest line, still counter-free.
     const summary = buildReadinessSummary({
       currentMesoWeek: { isDeload: false, weekIndex: 1, plannedWeeks: 6, rirTarget: 3 },
       deloadSuggestion: null,
       fatigueHistory: [],
       lastSession: null,
     });
-    // RE-PINNED AGAIN (founder device order 2026-08-17): the default line
-    // dropped the "Stop N short of failure" effort wording for the block
-    // fact - still counter-free, which is this test's guarantee.
-    expect(summary.line).toBe('On track for this block.');
+    expect(summary.line).toBe('First session of your plan. Nothing to read yet.');
     expect(summary.line).not.toMatch(/\d+ of \d+/);
+
+    // The default block-phase read still holds, counter-free, once a
+    // session exists (RE-PINNED AGAIN, founder device order 2026-08-17: the
+    // default line dropped the "Stop N short of failure" effort wording for
+    // the block fact).
+    const afterFirstSession = buildReadinessSummary({
+      currentMesoWeek: { isDeload: false, weekIndex: 1, plannedWeeks: 6, rirTarget: 3 },
+      deloadSuggestion: null,
+      fatigueHistory: [],
+      lastSession: { soreness24hBefore: 1, sleepQuality: 4, energyScore: 4 },
+    });
+    expect(afterFirstSession.line).toBe('On track for this block.');
+    expect(afterFirstSession.line).not.toMatch(/\d+ of \d+/);
   });
 
   // RE-PINNED (Campaign 22 Phase 2 Stage 1, FOUNDER-RULINGS-PHASE2 R3): the
@@ -1216,7 +1231,7 @@ describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, 
     expect(stripComments(src)).not.toContain("b.includes('Coach')");
     expect(src).toContain("b.toLowerCase().includes('coach')");
     // The bullet the gate is meant to catch still exists.
-    expect(src).toMatch(/Your coach explains what changed, what stayed the same, and why\./);
+    expect(src).toMatch(/A coach that explains every change, and why\./);
   });
 
   test('the record line is glossed on the surface a novice first meets it (C5-P34-02)', () => {

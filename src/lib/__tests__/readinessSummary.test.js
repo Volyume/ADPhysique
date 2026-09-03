@@ -173,11 +173,14 @@ describe('buildReadinessSummary', () => {
     // nothing to do with the block details the chip opens. The default is
     // the block fact for every input now; the week's shape (including its
     // effort target) stays in the block-shape sheet.
+    // A last session must exist here (see the "no session at all" branch
+    // pinned below) with clean readiness facts, so this still reaches
+    // Priority 5 rather than the zero-history branch above it.
     const result = buildReadinessSummary({
       currentMesoWeek: BASE_MESO,
       deloadSuggestion: null,
       fatigueHistory: [],
-      lastSession: null,
+      lastSession: { soreness24hBefore: 1, sleepQuality: 4, energyScore: 4 },
     });
     expect(result).toEqual({ tone: 'go', line: 'On track for this block.' });
   });
@@ -187,9 +190,23 @@ describe('buildReadinessSummary', () => {
       currentMesoWeek: { isDeload: false, weekIndex: 1, plannedWeeks: null, rirTarget: null },
       deloadSuggestion: null,
       fatigueHistory: [],
-      lastSession: null,
+      lastSession: { soreness24hBefore: 1, sleepQuality: 4, energyScore: 4 },
     });
     expect(result).toEqual({ tone: 'go', line: 'On track for this block.' });
+  });
+
+  // Lead activation ruling (this brief): a user with an active block but no
+  // completed session yet must not be told "On track for this block" -- there
+  // is no track record. lastSession is the same "most recent session" input
+  // Priority 3 reads; its absence means no session has ever been logged.
+  test('no last session at all reads as the zero-history line, not the default', () => {
+    const result = buildReadinessSummary({
+      currentMesoWeek: BASE_MESO,
+      deloadSuggestion: null,
+      fatigueHistory: [],
+      lastSession: null,
+    });
+    expect(result).toEqual({ tone: 'go', line: 'First session of your plan. Nothing to read yet.' });
   });
 
   test('deterministic: identical inputs produce an identical result', () => {
