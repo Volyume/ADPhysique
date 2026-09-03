@@ -30,12 +30,9 @@ re-verified before reuse if the app has been updated since this date.
   - Google Play: https://play.google.com/store/apps/details?id=app.volyume
   - App Store:   https://apps.apple.com/gb/app/volyume/id6777083702
   Copy may therefore say the app is available for iPhone and Android, and
-  may link to both. iOS-specific TRIAL mechanics are still UNKNOWN: only
-  the in-app 14-day trial (mechanism 1 in Section C) is verified as
-  platform-neutral, and the 7-day store offer in Section C is configured
-  in the Play Console, so it must not be claimed on an iOS surface.
+  may link to both.
 - Zero users at build date; no marketing has been done before this system.
-- The customer is the end user paying for Pro (not gyms, not coaches).
+- The end user (not gyms, not coaches) is the intended audience.
 - The problem: users of workout loggers (Strong/Hevy), nutrition apps
   (MacroFactor/MyFitnessPal) and personal notes still have to work out what
   to change each week themselves. Volyume makes the weekly decision (change
@@ -75,7 +72,7 @@ re-verified before reuse if the app has been updated since this date.
   own. Say it works out what SHOULD change, recommends, or makes the
   change-or-hold call, and leave the acting with the athlete. Caught
   2026-08-25 by the founder on the /get/ landing page.
-- Progress Scan / Progress Photos (KEY Pro feature, founder-stated
+- Progress Scan / Progress Photos (KEY feature, founder-stated
   2026-07-12): a physique-scoring algorithm produces a progress score from the
   user's own photos with a stated confidence level; it may abstain from
   scoring. It is NOT a body-fat measurement, NOT a medical assessment, and
@@ -98,53 +95,30 @@ re-verified before reuse if the app has been updated since this date.
 
 ---
 
-## B. Free vs Pro (founder-stated)
+## B. Access and pricing (founder-stated 2026-09-03)
 
-**Free (permanent, a real product on its own):**
+Volyume is fully free. Every feature listed in this file is available to
+every signed-in account at no cost. There is no Pro tier, no trial, no
+subscription, and no in-app purchase. Founder decision, 2026-09-03.
+
+**Everything is included, permanently:**
 - Full workout logging
 - Plan library and plan use
 - Custom plan building
 - Training history
-- Progress tracking (training progress: PBs, lift and volume trends — NOT
-  bodyweight)
-
-**Pro:**
+- Progress tracking (training progress: PBs, lift and volume trends)
+- Bodyweight / morning weight logging and weight-trend tracking
 - Nutrition, macros, food diary
 - Barcode scanning
 - Meal planning
 - Progress Scan
 - Weekly Precision Coaching
 - Advanced progression
-- **Bodyweight / morning weight logging and weight-trend tracking** (Pro-only;
-  hidden for free users — founder correction 2026-07-12)
 
----
-
-## C. Pricing and Trial (founder-stated + code-verified)
-
-- **Pricing:** £1.99/month (product ID `pro_monthly`), £19.99/year (product
-  ID `pro_annual`) — verified at `src/lib/payments/catalogue.js:36-46`.
-  CORRECTED 2026-08-25: this read £2.99. The monthly price was reduced to
-  £1.99 by founder order on 2026-08-18 (`catalogue.js:6`) and this file had
-  not followed, so copy written from here would have quoted a price the app
-  does not charge. Founder confirmed £1.99 the same day.
-  The price Google Play displays at the point of purchase is authoritative;
-  this file's figures are for copy drafting only.
-- **Trial mechanism 1 — in-app trial:** 14-day full-Pro trial inside the app,
-  no card required — verified `TRIAL_LENGTH_DAYS = 14` at
-  `src/lib/trialActivation.js:18`.
-- **Trial mechanism 2 — store offer:** after the in-app trial, the user opts
-  into the Play subscription, which carries a separate 7-day Google Play
-  introductory free period, configured per product in the Play Console
-  (referenced at `src/lib/payments/catalogue.js:11` and `cascade.js`) before
-  the first charge.
-- **Total possible access:** up to roughly 21 days combined. Only the first
-  14 of those days are cardless. Never merge the two mechanisms into a
-  single "X days free" claim in copy — they are distinct and must be
-  described as two separate steps.
-- **Check-ins during trial:** two proper weekly check-ins are possible within
-  the window if the user logs enough data. This is an opportunity, never a
-  guarantee — do not promise it will happen.
+Do not mention a price, a trial length, a subscription, or a "Pro" tier in
+any public copy. Do not describe former pricing, "for now" framing, or
+future plans; state plainly that the app is free with no card and no time
+limit.
 
 ---
 
@@ -188,18 +162,9 @@ Each figure below is tied to a specific file reference, verified
   `coachLedger.test.js` and `weeklyCoach.f10.test.js`; in-app hold message:
   "Need at least 3 morning weights for a reliable trend."). Verified
   2026-07-12 after the compliance gate flagged the number as untraced.
-- **Barcode scanning is Pro-gated** (`withProGuard`,
-  `src/navigation/RootNavigator.js:249`) — never describe barcode scanning
-  as free.
-- **Workout logging, plan library and progress screens are NOT Pro-gated**
-  (`src/navigation/RootNavigator.js:88,91,108,118,497`) — the free training
-  core is real and may be described as such without qualification.
-- **Trial copy consistency**: shipped screens consistently show 14-day
-  in-app trial messaging (`WelcomeScreen.js:95`,
-  `ProUpgradeScreen.js:411-412`, `SubscriptionPolicyScreen.js:105`) and
-  7-day store-offer messaging on the purchase surface
-  (`PaywallScreen.js:186,196-197`). There is no contradiction between these;
-  see Section C for how to describe both without merging them.
+- **Every screen and feature is available to every signed-in account** — see
+  section B (founder decision, 2026-09-03). Do not describe any feature as
+  gated, locked, or tier-limited in public copy.
 
 ---
 
@@ -259,11 +224,9 @@ voice, which is what the in-app screen already says.
   affects, and for how long. The screen's own words are "What should
   Volyume build around?" and "Pick anything that applies. You never need
   to say why." Verified `src/screens/HowYouTrainScreen.js:639-640, 745`.
-- **Tier: free.** `HowYouTrain` and `TrainingConsiderations` are registered
-  in the navigator with no Pro guard, and the second is annotated as a
-  free-tier discovery surface (CAP-19). Verified
-  `src/navigation/RootNavigator.js:464-465, 497-499`. Copy may say it is
-  available on the free tier as well as Pro.
+- **Available to everyone.** `HowYouTrain` and `TrainingConsiderations` are
+  registered in the navigator with no tier guard. Verified
+  `src/navigation/RootNavigator.js:464-465, 497-499`.
 - **Adapted setup notes.** Where an exercise is set up differently for a
   given user, the exercise's setup notes state how rather than assuming
   one way. Verified `src/lib/exercise/adaptedSetup.js` and its consumer
@@ -288,11 +251,9 @@ voice, which is what the in-app screen already says.
 - **Session summary wording.** The count is one entry per lift, not per
   record, and now says so: "New bests on 4 lifts". Verified commit
   `aabf5ec` against `detectedPRs` / `bestPRPerExercise`.
-- **Weekly set targets.** Resolved by precedence manual > adapted (Pro) >
-  plan > profile > research, so the target reflects the user's own plan and
-  profile rather than a population table. The plan layer is tier-blind; the
-  adapted layer stays Pro. The volume screen itself carries no Pro guard
-  (`RootNavigator.js:526`). Verified commit `416269c`.
+- **Weekly set targets.** Resolved by precedence manual > adapted > plan >
+  profile > research, so the target reflects the user's own plan and
+  profile rather than a population table. Verified commit `416269c`.
 - **Session share cards.** Redrawn (frame, plan-name pill, hero label, stat
   icons) and the intensity badge is retired, so a session is no longer
   graded on the card. Verified commit `6f32275`.

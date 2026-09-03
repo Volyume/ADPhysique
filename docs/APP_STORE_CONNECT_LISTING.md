@@ -10,9 +10,11 @@
 > D95-RULINGS.md); this banner marks the staleness without rewriting
 > listing copy.
 
-> **Status 2026-07-08: CURRENT iOS listing/setup copy.** Volyume now has
-> StoreKit/App Store purchase wiring alongside Google Play Billing. Product
-> IDs must match the shared in-app catalogue: `pro_monthly` and `pro_annual`.
+> **Status 2026-09-03: Volyume is fully free (founder decision).** No Pro
+> tier, no trial, no subscription, no in-app purchase. This listing's
+> in-app purchase/subscription setup steps are removed. `pro_monthly` and
+> `pro_annual` are the historical product IDs; deactivating them in App
+> Store Connect is a founder-side action, listed separately.
 
 _Production-ready. Paste each field directly into App Store Connect._
 _All character counts verified against Apple's limits._
@@ -66,39 +68,13 @@ Log smarter. Grow faster.
 ### Promotional Text
 **Limit: 170 characters — can be updated without a new submission**
 
-FOR THE REVIEW SUBMISSION (2026-08-25). Written to give App Review nothing
-to check: no price, no trial mechanics, no health framing. The field can be
-changed at any time without resubmitting, so the trial hook below can go in
-once the app is approved.
+Written to give App Review nothing to check: no price, no health framing.
 
 ```
-New: tell Volyume which movements and positions to leave out, and your plan is built around them. It works on the free tier as well as Pro.
+New: tell Volyume which movements and positions to leave out, and your plan is built around them. Free, no card, no time limit.
 ```
 
-> Character count: 139 ✓
-
-AFTER APPROVAL, if the founder wants the trial hook back (their call: pricing
-and trial claims are FOUNDER-ONLY under OPERATING-CHARTER autonomy
-boundaries):
-
-```
-New: tell Volyume which movements and positions to leave out, and your plan is built around them. Pro starts with 14 days of full access, no card needed.
-```
-
-> Character count: 153 ✓
-
-WITHDRAWN, and why. The previous text read "Pro is free for 14 days, no card
-needed. Personalised coaching, nutrition targets, weekly check-ins. Keep it
-for a 7-day store free trial, then £2.99 a month." The 7-day figure traces
-only to the Google Play introductory offer configured per product in the Play
-Console (PRODUCT-FACTS section C, trial mechanism 2). Nothing in
-PRODUCT-FACTS verifies an equivalent App Store introductory offer, so on this
-listing it was an unverified claim under the Claim Rule, and an unverified
-subscription claim is exactly what a reviewer checks against the live IAP
-configuration. The in-app 14-day trial IS verified in code
-(`src/lib/trialActivation.js:18`) and is app-side, so it holds on either
-platform, which is why the post-approval option keeps that half alone and
-drops the store-side half and the price.
+> Character count: 127 ✓
 
 ---
 
@@ -118,9 +94,9 @@ Volyume is designed for anyone who trains with intent. Whether you're building y
 
 Log weight, reps, and effort for every set. See your previous performance alongside the current set, so you always know whether you're progressing. A rest timer starts automatically after each working set so you never lose track.
 
-PRECISION COACHING (PRO)
+PRECISION COACHING
 
-The Pro tier builds your personalised training plan based on your goal, schedule, recovery capacity, and available equipment. It adjusts week to week based on how your body responds.
+Volyume builds your personalised training plan based on your goal, schedule, recovery capacity, and available equipment. It adjusts week to week based on how your body responds.
 
 Set your physique goal — whether that's building muscle, staying lean, competing, or improving your strength. Choose your training phase: building, cutting, maintaining, or contest preparation. Your plan and nutrition targets update immediately.
 
@@ -159,28 +135,28 @@ Body
 • Progress photos stored on your device
 • Volyume Score, result confidence and progress change from progress photos
 
-Nutrition (Pro)
+Nutrition
 • Daily calorie and macro targets
 • Adjusts automatically to your training phase
 • Three protein levels: Standard, Optimised, and Advanced
 • Targets adapt as your weight changes
 
-Coaching (Pro)
+Coaching
 • Personalised plan generation
 • Weekly check-ins and plan adjustments
 • Recovery week detection
 • Volume adjustment based on your response
 
-YOUR FREE TRIAL
+FREE
 
-Try Pro free for 14 days. No card needed. Keep it after that for a 7-day store free trial before your first payment, then £2.99 a month or £19.99 a year. Cancel anytime. The Free tier stays free with no time limit.
+Volyume is free. No card, no time limit, no subscription.
 
 NOT MEDICAL ADVICE
 
 Volyume provides training and nutrition guidance based on established scientific principles. This is not medical advice. Consult a qualified professional before making significant changes to your diet or exercise programme.
 ```
 
-> Character count: 2,888 ✓ (well within 4,000)
+> Character count: 3,543 ✓ (well within 4,000)
 
 ---
 
@@ -214,7 +190,7 @@ same health-metadata scrutiny, and that decision is recorded here so the two
 fields are known to differ on purpose.
 
 ```
-You can now tell Volyume which movements and positions to keep out of your plan, and it builds around them. Set it up in Settings, under How you train. Choose a whole movement family or a single exercise, keep it in place for a few weeks or leave it open, and allow individual exercises back in whenever you want. It works on the free tier as well as Pro.
+You can now tell Volyume which movements and positions to keep out of your plan, and it builds around them. Set it up in Settings, under How you train. Choose a whole movement family or a single exercise, keep it in place for a few weeks or leave it open, and allow individual exercises back in whenever you want.
 
 The personal best alert now fires every time you beat your best during a session, not only the first time. The summary still shows one per exercise, and says how many lifts you beat a best on.
 
@@ -227,46 +203,7 @@ Session share cards have been redrawn, and they no longer grade your session.
 Some people were missing 16 of the 47 library plans. That is fixed, and the library fills itself back in on the next launch.
 ```
 
-> Character count: 962 ✓ (within 4,000)
-
----
-
-## In-App Purchases
-
-### Subscription: Volyume Pro
-
-| Field | Value |
-|---|---|
-| **Reference name** | Volyume Pro Monthly |
-| **Product ID** | pro_monthly |
-| **Type** | Auto-Renewable Subscription |
-| **Subscription group name** | Volyume Pro |
-| **Duration** | 1 Month |
-| **Price** | £2.99 / month (annual plan £19.99 / year) |
-| **Free trial** | 14-day in-app cardless trial, then a 7-day store intro free trial on subscribe |
-
-Create the annual sibling in the same subscription group:
-
-| Field | Value |
-|---|---|
-| **Reference name** | Volyume Pro Annual |
-| **Product ID** | pro_annual |
-| **Type** | Auto-Renewable Subscription |
-| **Duration** | 1 Year |
-| **Price** | £19.99 / year |
-| **Free trial** | Same 7-day store intro free trial |
-
-**Display name (shown to users):**
-```
-Volyume Pro
-```
-
-**Description (shown in App Store and on purchase sheet):**
-```
-Unlock personalised coaching, weekly check-ins, and nutrition targets. Your plan adjusts every week based on how you train and recover.
-```
-
-> Character count: 138 ✓
+> Character count: 921 ✓ (within 4,000)
 
 ---
 
@@ -324,7 +261,7 @@ _30-second script outline — for production by video editor. Do not produce vid
 | 14–18 | PR screen animates in with confetti/highlight | "Every personal record. Automatically detected." |
 | 18–23 | Coaching plan screen — structured weekly programme visible | "Your personalised plan. Adjusts every week." |
 | 23–27 | Nutrition targets screen — macros displayed cleanly | "Targets that move with your training phase." |
-| 27–30 | App icon + name + "Free for 14 days, no card" + App Store badge | "Volyume. Log smarter. Grow faster." |
+| 27–30 | App icon + name + "Free. No card, no time limit." + App Store badge | "Volyume. Log smarter. Grow faster." |
 
 ---
 
@@ -433,8 +370,7 @@ Before submitting for review, confirm each item:
 - [ ] 6 screenshots uploaded (iPhone 6.9" required; 6.5" recommended)
 - [ ] App Preview video uploaded (optional but recommended)
 - [ ] Screenshot captions entered for each screenshot
-- [ ] In-App Purchases `pro_monthly` and `pro_annual` created and approved
-- [ ] Subscription group `Volyume Pro` created
+- [ ] `pro_monthly` and `pro_annual` in-app purchases deactivated (app is fully free, no IAP)
 - [ ] Age rating questionnaire completed — target 4+
 - [ ] Privacy Nutrition Label completed
 - [ ] Support URL confirmed live: https://volyume.app/support

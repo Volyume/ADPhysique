@@ -49,9 +49,6 @@ export default async function AccountPage() {
       </section>
 
       <nav className="mt-xl flex flex-col gap-sm">
-        <Link href="/account/subscription" className="type-body text-primary hover:underline">
-          Subscription
-        </Link>
         <Link href="/settings" className="type-body text-primary hover:underline">
           Settings
         </Link>

@@ -10,6 +10,11 @@
 > D95-RULINGS.md); this banner marks the staleness without rewriting
 > listing copy.
 
+> **STATUS 2026-09-03: Volyume is fully free (founder decision).** No Pro
+> tier, no trial, no subscription, no in-app purchase. `pro_monthly` and
+> `pro_annual` are historical product IDs; deactivating them in Google Play
+> Console is a founder-side action, listed separately.
+
 _Ready to paste into Google Play Console. All fields comply with Play Store policies._
 
 ---
@@ -44,10 +49,10 @@ Volyume is a workout tracker, food diary and coaching app for serious lifters an
 TRAIN
 Build your own training plan or start from the plan library. Log every set, rep and weight with fast gym logging that works fully offline. Browse a full exercise library, follow proven training plans, and watch your strength climb with personal bests, lift progress and volume by muscle. Built for hypertrophy and strength training, with progressive overload handled for you.
 
-EAT (Pro)
+EAT
 A food diary with a barcode scanner and a large food database. Track macros, calories, protein, carbs and fat against targets worked out from your body, your training and your goal. Get meal suggestions, build recipes, and keep your nutrition on track without the guesswork.
 
-COACHING (Pro)
+COACHING
 Every week, a short check-in reads your weight trend, your food and your training. Precision Coaching then adjusts your calories, steps, cardio and training volume, and tells you exactly what changed and why. Built for cutting, lean bulking, maintenance and contest prep, with safety limits that hold changes until there is real data and protect your recovery.
 
 PROGRESS
@@ -60,15 +65,12 @@ WHO IT'S FOR
 Serious lifters, bodybuilders and physique athletes who want one app for training, nutrition and coaching, in plain numbers with no fluff.
 
 FREE
-Plan library, custom plan builder, unlimited workout logging, exercise library, personal bests and full progress stats. No time limit.
-
-PRO
-Food diary, macros, nutrition targets, cardio, steps, weekly check-ins and Precision Coaching. Free for 14 days, plus a free week on Google Play when you subscribe. Then a monthly subscription. Cancel in Google Play.
+Everything above, free. Plan library, custom plan builder, unlimited workout logging, exercise library, personal bests and full progress stats, food diary, macros, nutrition targets, weekly check-ins and Precision Coaching. No card, no time limit, no subscription.
 
 Made in the UK. Works in kg and stone. Built for the way you actually train. No ads, and your data is never sold.
 ```
 
-(~2,700 chars — room to extend toward 4,000 with more keyword-bearing prose if
+(~2,370 chars — room to extend toward 4,000 with more keyword-bearing prose if
 wanted. British spelling throughout, no "AI" claims, no funnel recital.)
 
 ### Keywords to weave through the long description
@@ -132,9 +134,9 @@ the current one, and a rest timer starts automatically after each working set.
 
 ---
 
-PRECISION COACHING (PRO)
+PRECISION COACHING
 
-The Pro tier builds your personalised training plan based on your goal, schedule,
+Volyume builds your personalised training plan based on your goal, schedule,
 recovery capacity, and available equipment. It adjusts week to week based on how
 your body responds.
 
@@ -150,7 +152,7 @@ plan for the next week based on your feedback.
 
 ---
 
-FOOD DIARY (PRO)
+FOOD DIARY
 
 Log what you eat in seconds. Search a food database, scan a barcode, or point
 your camera at a nutrition label and Volyume reads it on your device. Build
@@ -194,36 +196,34 @@ Progress
 - Strength-to-bodyweight comparisons
 - Workout history with session details
 
-Body (Pro)
+Body
 - Body weight log with trend chart
 - Body measurements tracking (waist, chest, arms, etc.)
 
-Food diary (Pro)
+Food diary
 - Search a food database and log in seconds
 - Scan a barcode to add a food
 - Scan a nutrition label, read on your device
 - Build recipes and log them as one line, save your regular meals, quick add
 - Daily protein, carb, and fat rings against your targets
 
-Nutrition (Pro)
+Nutrition
 - Daily calorie and macro targets that adjust to your training phase
 - Three protein levels: Standard, Optimised, and Advanced
 
-Cardio (Pro)
+Cardio
 - Log any cardio session with duration and effort, and see the energy it cost
 
-Coaching (Pro)
+Coaching
 - Personalised plan generation
 - Weekly check-ins and plan adjustments
 - Recovery week detection
 
 ---
 
-YOUR FREE TRIAL
+FREE
 
-Try Pro free for 14 days. No card needed. Keep it after that and Google Play adds
-a further 7 days free before your first payment. Then it's £2.99 a month, or
-£19.99 a year. Cancel anytime. The Free tier stays free with no time limit.
+Volyume is free. No card, no time limit, no subscription.
 
 ---
 
@@ -237,7 +237,7 @@ qualified professional before making significant changes to your diet or exercis
 
 ## What's New (Release Notes, v1.3.0)
 
-**Limit: 500 characters, plain text. This draft: 456.**
+**Limit: 500 characters, plain text. This draft: 428.**
 
 Gated 2026-08-25 against CLAIMS-STANDARDS (Claim Rule, section 9A capability
 claims, prohibited list, qualified claims, ASA/CAP, tone, section 9 human
@@ -246,7 +246,7 @@ all-NO marketing readiness matrix; the capability line uses the neutral
 in-app framing only. Facts trace to PRODUCT-FACTS section H.
 
 ```
-Tell Volyume what to build your training around, and which side it affects. You never need to say why. Look for How you train in Settings. You do not need Pro for it.
+Tell Volyume what to build your training around, and which side it affects. You never need to say why. Look for How you train in Settings.
 
 The personal best alert now fires every time you beat your best, not only the first time. The summary still shows one per exercise.
 
@@ -284,9 +284,9 @@ Pro starts with a 14-day free trial, no card needed.
 2. Active workout, set logging with rest timer
 3. PR celebration screen
 4. Volume tracking per muscle group
-5. Coaching plan screen (Pro)
-6. Food diary with barcode scan (Pro)
-7. Nutrition targets screen (Pro)
+5. Coaching plan screen
+6. Food diary with barcode scan
+7. Nutrition targets screen
 
 ---
 
@@ -330,8 +330,8 @@ Sentry (crash reporting) are service providers / processors, so their data is
 | Diagnostics (performance) | App info & performance | Yes (Sentry) | No | No | Yes | n/a | Diagnostics |
 | Push token | Device or other IDs | Yes | No | Yes | Yes | Yes | Push notifications |
 
-**Data NOT collected:** Financial / payment info (Google Play handles the
-purchase; the app never receives card data), location, contacts, messages,
+**Data NOT collected:** Financial / payment info (the app has no purchase or
+subscription of any kind), location, contacts, messages,
 calendar, web-browsing history, audio. **Photos / camera:** barcode and
 nutrition-label scans are processed on-device (MLKit / vision-camera) and are
 not uploaded or stored by Volyume. Progress photo image files
@@ -345,7 +345,6 @@ are stored on-device only unless the user chooses to share or export them.
   id-only. Flagged, not changed.*
 - **OpenFoodFacts / USDA FoodData Central**: barcode or food-name lookups only,
   no personal data is sent.
-- **Google Play Billing**: subscription purchase; Google owns the payment data.
 - **Expo push**: device push token for notifications.
 
 **Security practices to declare:** data encrypted in transit (TLS; cleartext
