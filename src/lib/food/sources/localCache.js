@@ -282,3 +282,206 @@ export async function resolveFoodRef(userId, foodRef) {
   }
   return null;
 }
+
+// IN (...) queries are chunked at 200 ids per statement, matching seed.js's
+// CHUNK_SIZE -- a single VALUES/IN list of thousands of placeholders is both
+// a SQLite param-count risk and, on the add-food/diary screens this batch
+// API exists for, always far more than one screen's worth of refs anyway.
+const REF_CHUNK_SIZE = 200;
+function _chunk(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+/**
+ * Batch form of resolveFoodRef (D138 latency ruling): resolves many refs in
+ * one query per ref kind (global/custom/recipe -- curated needs no query)
+ * instead of the caller looping resolveFoodRef per ref, which was up to 60
+ * sequential round-trips on the add-food screen and one per diary row.
+ *
+ * Every branch mirrors resolveFoodRef's SELECT columns and post-processing
+ * exactly (batched via IN (...), chunked at 200 ids -- seed.js's pattern),
+ * so a resolved row here is byte-for-byte what resolveFoodRef(userId, ref)
+ * would have returned for that ref. Recipe ingredients are resolved via one
+ * recursive batch call across every requested recipe (recipes never nest
+ * recipes, so this can't cycle) rather than per-ingredient, which also
+ * de-duplicates a staple ingredient shared across recipes.
+ *
+ * Returns a Map<ref, food-shaped-row|null>; an unresolvable/unknown ref
+ * (bad shape, soft-deleted, missing id, unrecognised scope) maps to null,
+ * exactly as resolveFoodRef would return null for it.
+ *
+ * @param {string} userId
+ * @param {string[]} refs
+ * @returns {Promise<Map<string, object|null>>}
+ */
+export async function resolveFoodRefs(userId, refs) {
+  const result = new Map();
+  const list = Array.isArray(refs) ? refs : [];
+  const uniqueRefs = [...new Set(list.filter((r) => r != null).map((r) => String(r)))];
+  if (uniqueRefs.length === 0) return result;
+
+  const globalIds = [];
+  const customIds = [];
+  const recipeIds = [];
+
+  for (const ref of uniqueRefs) {
+    const [scope, id] = ref.split(':');
+    if (!id) { result.set(ref, null); continue; }
+    if (scope === 'curated') {
+      const f = CURATED_FOODS[id];
+      result.set(ref, f ? {
+        food_ref: `curated:${id}`,
+        source: 'curated',
+        name: f.name,
+        brand: null,
+        serving_g: null,
+        serving_label: null,
+        kcal_100g: f.kcal,
+        protein_100g: f.protein,
+        carbs_100g: f.carbs,
+        fat_100g: f.fat,
+        fibre_100g: null,
+      } : null);
+    } else if (scope === 'global') {
+      globalIds.push(id);
+    } else if (scope === 'custom') {
+      customIds.push(id);
+    } else if (scope === 'recipe') {
+      recipeIds.push(id);
+    } else {
+      result.set(ref, null);
+    }
+  }
+
+  if (globalIds.length > 0) {
+    const d = await db();
+    for (const chunk of _chunk(globalIds, REF_CHUNK_SIZE)) {
+      const placeholders = chunk.map(() => '?').join(', ');
+      const rows = await d.getAllAsync(
+        `SELECT 'global:' || id AS food_ref, source, name, brand,
+                serving_g, serving_label,
+                kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
+                sodium_100g, sugar_100g, ${microSqlColumns},
+                source_id, barcode_ean, fetched_at
+         FROM foods WHERE id IN (${placeholders})`,
+        chunk
+      );
+      for (const row of rows) result.set(row.food_ref, row);
+    }
+    for (const id of globalIds) {
+      const ref = `global:${id}`;
+      if (!result.has(ref)) result.set(ref, null);
+    }
+  }
+
+  if (customIds.length > 0) {
+    const d = await db();
+    for (const chunk of _chunk(customIds, REF_CHUNK_SIZE)) {
+      const placeholders = chunk.map(() => '?').join(', ');
+      const rows = await d.getAllAsync(
+        `SELECT 'custom:' || id AS food_ref, 'custom' AS source, name, brand,
+                serving_g, serving_label,
+                kcal_100g, protein_100g, carbs_100g, fat_100g, fibre_100g,
+                sodium_100g, sugar_100g, ${microSqlColumns}
+         FROM custom_foods
+         WHERE id IN (${placeholders}) AND user_id = ? AND deleted_at IS NULL`,
+        [...chunk, userId]
+      );
+      for (const row of rows) result.set(row.food_ref, row);
+    }
+    for (const id of customIds) {
+      const ref = `custom:${id}`;
+      if (!result.has(ref)) result.set(ref, null);
+    }
+  }
+
+  if (recipeIds.length > 0) {
+    await _resolveRecipesBatch(userId, recipeIds, result);
+  }
+
+  return result;
+}
+
+async function _resolveRecipesBatch(userId, recipeIds, result) {
+  const d = await db();
+
+  const recipesById = new Map();
+  for (const chunk of _chunk(recipeIds, REF_CHUNK_SIZE)) {
+    const placeholders = chunk.map(() => '?').join(', ');
+    const rows = await d.getAllAsync(
+      `SELECT id, name, total_servings FROM recipes
+       WHERE id IN (${placeholders}) AND user_id = ? AND deleted_at IS NULL`,
+      [...chunk, userId]
+    );
+    for (const r of rows) recipesById.set(r.id, r);
+  }
+
+  const ingredientsByRecipe = new Map();
+  for (const chunk of _chunk(recipeIds, REF_CHUNK_SIZE)) {
+    const placeholders = chunk.map(() => '?').join(', ');
+    const rows = await d.getAllAsync(
+      `SELECT recipe_id, food_ref, quantity_g FROM recipe_ingredients
+       WHERE recipe_id IN (${placeholders}) AND user_id = ? AND deleted_at IS NULL`,
+      [...chunk, userId]
+    );
+    for (const row of rows) {
+      if (!ingredientsByRecipe.has(row.recipe_id)) ingredientsByRecipe.set(row.recipe_id, []);
+      ingredientsByRecipe.get(row.recipe_id).push(row);
+    }
+  }
+
+  // Every non-recipe ingredient ref across every requested recipe, resolved
+  // together in one recursive batch call -- de-dupes a staple shared across
+  // recipes and keeps this to one query per ref kind, same as the top level.
+  // Recipes never nest recipes (the builder only adds foods), so this can't
+  // recurse on itself.
+  const allIngredientRefs = [];
+  for (const id of recipeIds) {
+    for (const ing of ingredientsByRecipe.get(id) || []) {
+      const q = Number(ing.quantity_g);
+      if (!Number.isFinite(q) || q <= 0 || String(ing.food_ref).startsWith('recipe:')) continue;
+      allIngredientRefs.push(ing.food_ref);
+    }
+  }
+  const ingredientFoods = allIngredientRefs.length > 0
+    ? await resolveFoodRefs(userId, allIngredientRefs)
+    : new Map();
+
+  for (const id of recipeIds) {
+    const ref = `recipe:${id}`;
+    const recipe = recipesById.get(id);
+    if (!recipe) { result.set(ref, null); continue; }
+    let kcal = 0, protein = 0, carbs = 0, fat = 0, fibre = 0, grams = 0;
+    for (const ing of ingredientsByRecipe.get(id) || []) {
+      const q = Number(ing.quantity_g);
+      if (!Number.isFinite(q) || q <= 0 || String(ing.food_ref).startsWith('recipe:')) continue;
+      const f = ingredientFoods.get(ing.food_ref);
+      if (!f) continue;
+      const factor = q / 100;
+      kcal += (f.kcal_100g ?? 0) * factor;
+      protein += (f.protein_100g ?? 0) * factor;
+      carbs += (f.carbs_100g ?? 0) * factor;
+      fat += (f.fat_100g ?? 0) * factor;
+      fibre += (f.fibre_100g ?? 0) * factor;
+      grams += q;
+    }
+    if (grams <= 0) { result.set(ref, null); continue; }
+    const servings = Math.max(Number(recipe.total_servings) || 1, 0.01);
+    const per100 = (v) => Math.round((v / grams) * 100 * 10) / 10;
+    result.set(ref, {
+      food_ref: ref,
+      source: 'recipe',
+      name: recipe.name,
+      brand: null,
+      serving_g: Math.round((grams / servings) * 10) / 10,
+      serving_label: 'serving',
+      kcal_100g: Math.round((kcal / grams) * 100),
+      protein_100g: per100(protein),
+      carbs_100g: per100(carbs),
+      fat_100g: per100(fat),
+      fibre_100g: per100(fibre),
+    });
+  }
+}

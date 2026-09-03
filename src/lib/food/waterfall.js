@@ -184,9 +184,16 @@ async function _promoteToLocal(row, userId = null, { refresh = false } = {}) {
 }
 
 async function _promoteAll(rows, userId = null) {
-  const out = [];
-  for (const r of rows) out.push(await _promoteToLocal(r, userId));
-  return out;
+  // D138 latency ruling: these writes were previously awaited one at a time
+  // (up to NETWORK_SEARCH_FANOUT_LIMIT sequential SQLite round-trips per live
+  // search). Promise.all issues them concurrently while Promise.all's own
+  // contract keeps `out`'s order matching `rows`' order regardless of which
+  // write settles first. Dedupe on (source, source_id) is unaffected: each
+  // _promoteToLocal call still does its own existing-row check before
+  // inserting, and the pre-existing unique-index race handler (re-read on
+  // insert conflict) is exactly what makes two concurrent promotions of the
+  // same source_id safe to run in parallel.
+  return Promise.all(rows.map((r) => _promoteToLocal(r, userId)));
 }
 
 /**

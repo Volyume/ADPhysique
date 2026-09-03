@@ -3,8 +3,9 @@
  *
  * Parses raw OCR output from a nutrition label into a structured
  * macro set ({ kcal100g, protein100g, carbs100g, fat100g, fibre100g,
- * servingG }). Deterministic + regex-based; works the same against
- * MLKit output, cloud Vision output, or hand-typed text in tests.
+ * servingG, servingMl, servingUnit }). Deterministic + regex-based;
+ * works the same against MLKit output, cloud Vision output, or
+ * hand-typed text in tests.
  *
  * Locked in MOVE_1_5_BARCODE_AND_OCR.md. Confidence is reported
  * alongside each field so the UI can flag unsure values; the user
@@ -109,13 +110,21 @@ function _kcalFromKj(kj) {
 /**
  * Parse OCR text into a macros candidate. Returns
  * { fields: { kcal100g, protein100g, carbs100g, fat100g, fibre100g,
- *             servingG },
- *   confidence: { kcal100g, protein100g, ... } each 'high' | 'low' }.
+ *             servingG, servingMl, servingUnit },
+ *   confidence: { kcal100g, protein100g, ..., servingG } each 'high' | 'low' | 'missing' }.
  *
  * `kcal100g` is high-confidence only when a "per 100g" anchor is
  * present in the source. Without an anchor we still extract values
  * (so the user has something to edit) but mark them low-confidence
  * so the UI can flag them.
+ *
+ * Serving size: a drink label prints its serving in ml ("Serving size
+ * 330 ml"), not g. This used to be dropped to null on an ml match (the
+ * scanned serving was silently lost for every drink); it's now kept as
+ * `servingMl` alongside a `servingUnit` tag ('g' | 'ml' | null) so a
+ * caller can tell which unit was read, additive next to the existing
+ * `servingG` field -- callers that only ever read `servingG` (a gram
+ * serving) see no change.
  */
 /**
  * Should a scanned macro field be flagged for the user to double-check?
@@ -172,6 +181,8 @@ export function parseNutritionLabel(rawText) {
       fat100g: fat?.value ?? null,
       fibre100g: fibre?.value ?? null,
       servingG: serving?.unit === 'g' ? serving.value : null,
+      servingMl: serving?.unit === 'ml' ? serving.value : null,
+      servingUnit: serving?.unit ?? null,
     },
     confidence: {
       kcal100g: conf(kcal),
@@ -179,7 +190,8 @@ export function parseNutritionLabel(rawText) {
       carbs100g: conf(carbs),
       fat100g: conf(fat),
       fibre100g: conf(fibre),
-      servingG: serving ? 'high' : 'missing',
+      servingG: serving?.unit === 'g' ? 'high' : 'missing',
+      servingMl: serving?.unit === 'ml' ? 'high' : 'missing',
     },
     hasAnchor,
   };

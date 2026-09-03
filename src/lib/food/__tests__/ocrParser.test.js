@@ -70,8 +70,31 @@ describe('parseNutritionLabel', () => {
   });
 
   test('reads a serving size in grams; missing serving is flagged missing', () => {
-    expect(parseNutritionLabel('per 100g Serving size 30g Protein 10g').fields.servingG).toBe(30);
-    expect(parseNutritionLabel('per 100g Protein 10g').confidence.servingG).toBe('missing');
+    const { fields, confidence } = parseNutritionLabel('per 100g Serving size 30g Protein 10g');
+    expect(fields.servingG).toBe(30);
+    expect(fields.servingMl).toBeNull();
+    expect(fields.servingUnit).toBe('g');
+    expect(confidence.servingG).toBe('high');
+    expect(confidence.servingMl).toBe('missing');
+
+    const missing = parseNutritionLabel('per 100g Protein 10g');
+    expect(missing.confidence.servingG).toBe('missing');
+    expect(missing.confidence.servingMl).toBe('missing');
+    expect(missing.fields.servingUnit).toBeNull();
+  });
+
+  test('a drink label\'s ml serving is preserved, not dropped to null (data-loss fix)', () => {
+    // Real label shape: "Serving size 330 ml", macros given per 100 ml.
+    const label = 'Typical values per 100ml Serving size 330 ml Energy 42 kcal Protein 0.1g';
+    const { fields, confidence } = parseNutritionLabel(label);
+    expect(fields.servingMl).toBe(330);
+    expect(fields.servingG).toBeNull();
+    expect(fields.servingUnit).toBe('ml');
+    expect(confidence.servingMl).toBe('high');
+    expect(confidence.servingG).toBe('missing');
+    // Everything else extracts exactly as it would for a g-based label.
+    expect(fields.kcal100g).toBe(42);
+    expect(fields.protein100g).toBe(0.1);
   });
 
   test('carbs keyword falls back from "carbohydrate" to "carbs"', () => {

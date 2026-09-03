@@ -11,7 +11,7 @@
  */
 import { db, runInTransaction } from '../database';
 import { CURATED_MEALS, mealItems } from './curatedMeals';
-import { resolveFoodRef } from './sources/localCache';
+import { resolveFoodRef, resolveFoodRefs } from './sources/localCache';
 import { microSqlColumns, microSqlPlaceholders, microSqlUpsertExcluded, microValuesFromRow, microValuesFromInput } from './micronutrients';
 import { isValidEntryGrams } from './servingEntry';
 import { todayLocalKey, localDayKey, parseLocalDay } from '../dayKey';
@@ -624,6 +624,51 @@ export async function insertCustomFood(userId, food) {
       food.photoUrl ?? null, food.notes ?? null,
       food.barcodeEan ?? null,
       now, now,
+    ]
+  );
+  _scheduleSync();
+  return id;
+}
+
+// D138: edit an existing custom food in place. Mirrors insertCustomFood's
+// column handling exactly (same fields, same micro-column SQL fragments),
+// scoped to this user's own, non-deleted row so one user can never edit
+// another's food, or resurrect a soft-deleted one by surprise.
+//
+// Sync note (read against src/lib/sync/tables/foodDomain.js + registry.js):
+// custom_foods is bidirectional/last-write-wins, keyed off `updated_at` --
+// foodDomain.js's _bucketFoodRow (line ~79) buckets a row as 'created' only
+// when created_at === updated_at, else 'updated', and
+// getAllCustomFoodsSince(userId, sinceMs) (this file) selects
+// WHERE updated_at > sinceMs. Stamping a fresh updated_at below is therefore
+// both what makes the edit sync-eligible at all and what correctly
+// classifies the push as an update rather than a duplicate create.
+//
+// Logged entries keep their own stored macros (scaleMacros denormalises into
+// food_entries at log time), so this changes only FUTURE logs of the food;
+// past diary rows are untouched -- historical integrity, not this call's job.
+export async function updateCustomFood(userId, id, food) {
+  const d = await db();
+  const now = Date.now();
+  const microCols = microSqlColumns.split(', ');
+  await d.runAsync(
+    `UPDATE custom_foods SET
+      name = ?, brand = ?, serving_g = ?, serving_label = ?,
+      kcal_100g = ?, protein_100g = ?, carbs_100g = ?, fat_100g = ?,
+      fibre_100g = ?, sodium_100g = ?, sugar_100g = ?,
+      ${microCols.map((c) => `${c} = ?`).join(', ')},
+      photo_url = ?, notes = ?, barcode_ean = ?, updated_at = ?
+     WHERE id = ? AND user_id = ? AND deleted_at IS NULL`,
+    [
+      food.name, food.brand ?? null,
+      food.servingG, food.servingLabel ?? null,
+      food.kcal100g, food.protein100g, food.carbs100g, food.fat100g,
+      food.fibre100g ?? null, food.sodium100g ?? null, food.sugar100g ?? null,
+      ...microValuesFromInput(food.micros),
+      food.photoUrl ?? null, food.notes ?? null,
+      food.barcodeEan ?? null,
+      now,
+      id, userId,
     ]
   );
   _scheduleSync();
@@ -1661,6 +1706,94 @@ export async function resolveSlotRecentRef(userId, foodRef) {
     };
   }
   return resolveFoodRef(userId, foodRef);
+}
+
+// Same 200-id chunking as localCache.js's REF_CHUNK_SIZE / seed.js's
+// CHUNK_SIZE -- kept as its own local constant since it's the only batch
+// query in this file that needs it (the food/custom/recipe batching lives
+// in localCache.js's resolveFoodRefs, reused below).
+const REF_CHUNK_SIZE = 200;
+function _chunkRefs(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+/**
+ * Batch form of resolveSlotRecentRef (D138 latency ruling): the diary's
+ * "Add again" rail resolves one row per recent-slot ref, so this collapses
+ * that into one query for every 'meal:<id>' ref plus one call into
+ * resolveFoodRefs for everything else (global/custom/curated/recipe),
+ * instead of a per-row round-trip. Mirrors resolveSlotRecentRef's own
+ * split exactly: a 'meal:' ref gets the saved-meal-as-one-row shape (with
+ * the same 100g-basis convention resolveFoodRef uses for a curated food
+ * with no serving size); every other ref passes straight through to
+ * resolveFoodRefs unchanged, so results match resolveSlotRecentRef ref for
+ * ref.
+ *
+ * Returns a Map<ref, row|null>; an unresolvable ref (unknown saved meal id,
+ * or anything resolveFoodRefs itself resolves to null) maps to null.
+ *
+ * @param {string} userId
+ * @param {string[]} refs
+ * @returns {Promise<Map<string, object|null>>}
+ */
+export async function resolveSlotRecentRefs(userId, refs) {
+  const result = new Map();
+  const list = Array.isArray(refs) ? refs : [];
+  const uniqueRefs = [...new Set(list.filter((r) => r != null).map((r) => String(r)))];
+  if (uniqueRefs.length === 0) return result;
+
+  const mealIds = [];
+  const otherRefs = [];
+  for (const ref of uniqueRefs) {
+    if (ref.startsWith('meal:')) mealIds.push(ref.slice('meal:'.length));
+    else otherRefs.push(ref);
+  }
+
+  if (mealIds.length > 0) {
+    const d = await db();
+    for (const chunk of _chunkRefs(mealIds, REF_CHUNK_SIZE)) {
+      const placeholders = chunk.map(() => '?').join(', ');
+      const rows = await d.getAllAsync(
+        `SELECT id, name, items_json, created_at, updated_at
+         FROM saved_meals
+         WHERE id IN (${placeholders}) AND user_id = ? AND deleted_at IS NULL`,
+        [...chunk, userId]
+      );
+      for (const row of rows) {
+        const items = _parseSavedMealItems(row.items_json);
+        const itemCount = items.length;
+        const totals = computeSavedMealTotals(items);
+        const ref = `meal:${row.id}`;
+        result.set(ref, {
+          food_ref: ref,
+          savedMealId: row.id,
+          itemCount,
+          name: row.name,
+          source: null,
+          brand: null,
+          serving_g: null,
+          serving_label: `${itemCount} ${itemCount === 1 ? 'food' : 'foods'}`,
+          kcal_100g: totals.kcal,
+          protein_100g: totals.protein,
+          carbs_100g: totals.carbs,
+          fat_100g: totals.fat,
+        });
+      }
+    }
+    for (const id of mealIds) {
+      const ref = `meal:${id}`;
+      if (!result.has(ref)) result.set(ref, null);
+    }
+  }
+
+  if (otherRefs.length > 0) {
+    const resolved = await resolveFoodRefs(userId, otherRefs);
+    for (const [ref, food] of resolved) result.set(ref, food);
+  }
+
+  return result;
 }
 
 /**
