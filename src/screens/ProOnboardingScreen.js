@@ -2041,6 +2041,16 @@ export default function ProOnboardingScreen({ navigation }) {
               textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               accessibilityLabel="Continue"
             />
+            {/* The sub above says this is skippable, but Continue was the only
+                affordance offered. Skips exactly as Continue does; the field
+                is left as typed (or blank), never coerced, so nothing is
+                saved that was not actually entered. */}
+            <Button
+              variant="tertiary"
+              title="Skip for now"
+              onPress={() => { setBodyFat(''); advanceFrom3(); }}
+              accessibilityLabel="Skip for now"
+            />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>

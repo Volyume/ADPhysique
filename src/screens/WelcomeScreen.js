@@ -8,6 +8,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, motion, shadow, fo
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from '../components/InfoTooltip';
 import Card from '../components/Card';
+import Button from '../components/Button';
 import { GLOSSARY } from '../lib/coachGlossary';
 import { storeName } from '../lib/storeName';
 import useAppStore from '../store/useAppStore';
@@ -25,17 +26,9 @@ const HERO_ASPECT = 1032 / 277;
 // actually happens, and the free tier is stated as what remains after the
 // trial rather than sold as a competing choice.
 const TRIAL_BULLETS = [
-  'A plan built around your schedule, goals, and experience level.',
-  'Your training and nutrition adjust as your body responds.',
-  'Personalised calorie and protein targets, updated as your goals change.',
-  'Your coach explains what changed, what stayed the same, and why.',
-];
-
-const AFTER_TRIAL_BULLETS = [
-  'Unlimited workout logging',
-  'Exercise library and personal records',
-  'Plan library and create your own plans',
-  'Training blocks and full progress stats',
+  'A plan built around your schedule, goals and experience.',
+  'Calorie and protein targets that update as your body responds.',
+  'A coach that explains every change, and why.',
 ];
 
 export default function WelcomeScreen({ navigation }) {
@@ -84,6 +77,7 @@ export default function WelcomeScreen({ navigation }) {
         <Animated.View style={[styles.hero, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
           <Image source={HERO} style={styles.logoImg} resizeMode="contain" />
           <Text style={[styles.tagline, live.tagline]}>Less thinking. More lifting.</Text>
+          <Text style={[styles.valueLine, live.valueLine]}>A training plan that adjusts to what you log.</Text>
         </Animated.View>
 
         <Animated.View style={[styles.cards, { opacity: fadeIn, transform: [{ translateY: slideUp }] }]}>
@@ -99,7 +93,6 @@ export default function WelcomeScreen({ navigation }) {
                 <View style={styles.proTitleRow}>
                   <Text style={[styles.proTitle, live.proTitle]}>The full app, free for 14 days</Text>
                 </View>
-                <Text style={[styles.proSubtitle, live.proSubtitle]}>Clear coaching that adjusts from your logged training.</Text>
               </View>
             </View>
 
@@ -126,39 +119,24 @@ export default function WelcomeScreen({ navigation }) {
 
             <Text style={[styles.trialNote, live.trialNote]}>
               {monthlyPrice
-                ? `No payment card needed. When the 14 days end, Pro stops unless you subscribe for ${monthlyPrice} a month on ${storeName()}. If you don't, you move to the free version below and keep using it for as long as you like.`
-                : `No payment card needed. When the 14 days end, Pro stops unless you subscribe on ${storeName()}. If you don't, you move to the free version below and keep using it for as long as you like.`}
+                ? `No payment card needed. After 14 days, Pro is ${monthlyPrice} a month on ${storeName()}, or you keep the free version.`
+                : `No payment card needed. After 14 days you subscribe on ${storeName()}, or you keep the free version.`}
             </Text>
 
-            <View style={[styles.proCtaRow, live.proCtaRow]}>
-              <Text style={[styles.proCtaText, live.proCtaText]}>Start your 14 days</Text>
-              <Ionicons name="arrow-forward" size={16} color={t.colors.onPrimary} />
+            <View style={styles.proCtaWrap}>
+              <Button variant="primary" title="Start your 14 days" onPress={startTrial} accessibilityLabel="Start your 14 days" />
             </View>
           </Card>
+        </Animated.View>
 
-          {/* OB-1: the free tier stated honestly as what remains after the
-              trial. Informational, not a competing choice (the old Free CTA
-              was a dead control: it routed to the identical sign-up). */}
-          <Card radius="xl" style={styles.freeCard}>
-            <View style={styles.freeCardHeader}>
-              <View style={[styles.freeIconWrap, live.freeIconWrap]}>
-                <Ionicons name="create-outline" size={18} color={t.colors.textSecondary} />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.freeTitle, live.freeTitle]}>The free version</Text>
-                <Text style={[styles.freeSubtitle, live.freeSubtitle]}>What you keep if you don&apos;t subscribe. No time limit, no card.</Text>
-              </View>
-            </View>
-
-            <View style={styles.freeBullets}>
-              {AFTER_TRIAL_BULLETS.map(b => (
-                <View key={b} style={styles.bulletRow}>
-                  <Ionicons name="checkmark" size={14} color={t.colors.textSecondary} />
-                  <Text style={[styles.freeBulletText, live.freeBulletText]}>{b}</Text>
-                </View>
-              ))}
-            </View>
-          </Card>
+        {/* OB-1: the free tier stated honestly as what remains after the
+            trial, in place of the old second "free version" card.
+            Informational, not a competing choice (the old Free CTA was a
+            dead control: it routed to the identical sign-up). */}
+        <Animated.View style={{ opacity: fadeIn }}>
+          <Text style={[styles.freeNote, live.freeNote]}>
+            The free version stays yours after the trial, no card and no time limit: workout logging, exercise library and records, plans and progress stats.
+          </Text>
         </Animated.View>
 
         {/* Trust row (COMP-012): one muted, non-interactive line that
@@ -214,6 +192,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   tagline: { fontSize: fontSize.sm, color: colors.textMuted },
+  valueLine: { ...type.bodySm, color: colors.textSecondary, textAlign: 'center' },
 
   cards: { gap: spacing.md },
 
@@ -238,7 +217,6 @@ const styles = StyleSheet.create({
   },
   proTitleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   proTitle: { fontSize: fontSize.lg, fontFamily: fontFamily.heavy, fontWeight: fontWeight.black, color: colors.textPrimary },
-  proSubtitle: { ...type.caption, color: colors.textSecondary, marginTop: spacing.xxs },
 
   divider: { height: 1, backgroundColor: colors.border, marginHorizontal: spacing.lg },
 
@@ -258,28 +236,14 @@ const styles = StyleSheet.create({
   trustText: { fontSize: fontSize.xs, color: colors.textMuted },
   trustDot: { fontSize: fontSize.xs, color: colors.textMuted },
 
-  proCtaRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
-    backgroundColor: colors.primaryFill, paddingVertical: spacing.md, margin: spacing.md,
-    borderRadius: radius.lg,
-  },
-  proCtaText: { fontSize: fontSize.sm, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.onPrimary },
+  proCtaWrap: { paddingHorizontal: spacing.lg, paddingBottom: spacing.lg },
 
-  // Free card. backgroundColor/borderWidth/borderColor/padding now come
-  // from Card's defaults (surface, 1px colors.border, spacing.lg); only
-  // the radius="xl" override and this card's own gap stay local.
-  freeCard: {
-    gap: spacing.sm,
+  // Muted caption stating the free tier stays, in place of the old second
+  // "free version" card (OB-1: informational, not a competing choice).
+  freeNote: {
+    ...type.bodySm, color: colors.textSecondary, textAlign: 'center',
+    paddingHorizontal: spacing.lg,
   },
-  freeCardHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  freeIconWrap: {
-    width: 36, height: 36, borderRadius: radius.md,
-    backgroundColor: colors.surface2, alignItems: 'center', justifyContent: 'center',
-  },
-  freeTitle: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textPrimary },
-  freeSubtitle: { ...type.caption, color: colors.textMuted, marginTop: spacing.hair },
-  freeBullets: { gap: spacing.xs, paddingLeft: spacing.xs },
-  freeBulletText: { ...type.caption, color: colors.textMuted, flex: 1 },
 
   signInLink: {
     flexDirection: 'row',
@@ -314,21 +278,16 @@ function buildLiveStyles(t) {
     // (intentional hero size, theme-invariant) -- only its ink is mirrored.
     wordmark: { color: t.colors.textPrimary },
     tagline: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
+    valueLine: { ...t.type.bodySm, color: t.colors.textSecondary },
     proCard: { borderColor: t.colors.primary },
     proIconWrap: { backgroundColor: t.colors.primaryBg },
     proTitle: { fontSize: t.fontSize.lg, color: t.colors.textPrimary },
-    proSubtitle: { ...t.type.caption, color: t.colors.textSecondary },
     divider: { backgroundColor: t.colors.border },
     bulletText: { fontSize: t.fontSize.sm, color: t.colors.textSecondary },
     trialNote: { ...t.type.captionTight, color: t.colors.textMuted },
     trustText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     trustDot: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    proCtaRow: { backgroundColor: t.colors.primaryFill },
-    proCtaText: { fontSize: t.fontSize.sm, color: t.colors.onPrimary },
-    freeIconWrap: { backgroundColor: t.colors.surface2 },
-    freeTitle: { fontSize: t.fontSize.md, color: t.colors.textPrimary },
-    freeSubtitle: { ...t.type.caption, color: t.colors.textMuted },
-    freeBulletText: { ...t.type.caption, color: t.colors.textMuted },
+    freeNote: { ...t.type.bodySm, color: t.colors.textSecondary },
     signInLink: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     signInText: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     signInAction: { ...t.type.label, color: t.colors.textPrimary },

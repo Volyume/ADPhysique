@@ -401,6 +401,11 @@ export default function LoginScreen({ navigation, route }) {
               style={styles.emailSubmit}
               accessibilityLabel={emailMode === 'signup' ? 'Create account with email' : 'Sign in with email'}
             />
+            {emailMode === 'signup' ? (
+              <Text style={[styles.whyAccount, live.whyAccount]}>
+                No payment card. Works fully offline. Your data exports anytime.
+              </Text>
+            ) : null}
             <TouchableOpacity
               onPress={() => setEmailMode(emailMode === 'signup' ? 'signin' : 'signup')}
               accessibilityRole="button"
