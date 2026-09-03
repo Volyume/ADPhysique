@@ -29,9 +29,13 @@ describe('SETTINGS ownership', () => {
     expect(src).toMatch(/proteinApproach \?\? t\?\.protein_approach/);
   });
 
-  test('cycle tracking is gated to the tier of its only reader', () => {
-    expect(stripComments(read('screens/SettingsCoachingScreen.js')))
-      .toMatch(/\(tier === 'pro' \|\| cycleEnabled\) && bioSex === 'female'/);
+  // AMENDED 2026-09-03 (fully-free product, founder decision): the weekly
+  // check-in this row feeds is now available to everyone, so the tier half
+  // of the gate is gone; only the sex gate (Article 9 surface) remains.
+  test('cycle tracking is gated on sex only, its tier gate retired with the free product', () => {
+    const src = stripComments(read('screens/SettingsCoachingScreen.js'));
+    expect(src).toMatch(/\{bioSex === 'female' && \(/);
+    expect(src).not.toMatch(/tier === 'pro'/);
   });
 
   test('partner cheers has a reachable toggle writing the flag the sender reads', () => {
@@ -90,9 +94,18 @@ describe('GESTURES: no important action is gesture-only', () => {
 });
 
 describe('TIER routing honesty', () => {
-  test('a free user building a new plan reaches the free library; only review-with-coach upgrades', () => {
+  test('every account building a new plan reaches PlanUpdate directly (D137, fully free)', () => {
+    // RE-ANCHORED (D137, fully free product): the tier fork this test
+    // pinned (recommendation 'consider_rebuild' -> ProUpgrade, else ->
+    // PlanLibrary) is retired outright, not inverted -- PlansScreen.js's own
+    // comment at the call site says so: "the Free route to
+    // PlanLibrary/ProUpgrade (D94, Campaign 3, F1) is retired." Every
+    // account now opens PlanUpdate directly, with no ProUpgrade branch left
+    // anywhere in the file (see proUpgradeTelemetry.guard.test.js).
     const src = stripComments(read('screens/PlansScreen.js'));
-    expect(src).toMatch(/recommendation === 'consider_rebuild'\s*\?\s*'ProUpgrade'\s*:\s*'PlanLibrary'/);
+    expect(src).toMatch(/onPress=\{\(\) => navigation\.navigate\('PlanUpdate'\)\}/);
+    expect(src).not.toMatch(/recommendation === 'consider_rebuild'/);
+    expect(src).not.toContain("navigate('ProUpgrade'");
   });
 });
 

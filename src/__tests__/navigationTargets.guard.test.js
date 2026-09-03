@@ -137,20 +137,23 @@ describe('cross-stack navigation guard (F4 / NAV-1/2/3)', () => {
       .toMatch(/if\s*\(openWeightSignal\)\s*setEditing\(true\)/);
   });
 
-  test('every tab stack with a Pro-gated surface registers ProUpgrade', () => {
-    // Same silent-drop bug class as above, inside a single stack: ProGate /
-    // ProLocked surfaces call navigate('ProUpgrade'), which React Navigation
-    // silently drops unless the caller's OWN stack registers the route.
-    // DiaryStack (every screen gated) shipped without it — a free user tapping
-    // Upgrade in the Diary got a dead control. Pin all five tab stacks.
+  test('ProUpgrade is a dormant billing surface: no tab stack registers it (fully-free product)', () => {
+    // Founder decision: Volyume is fully free, no Free/Pro split, no trial,
+    // no paywall. ProGate.js (withProGuard / withReadOnlyProGuard) is no
+    // longer used anywhere in RootNavigator, so nothing navigates to
+    // ProUpgrade any more, and the route itself is unregistered in every
+    // stack -- it stays a dormant screen on disk
+    // (src/screens/ProUpgradeScreen.js), re-registered only by a deliberate
+    // future monetisation decision.
     const nav = read('src/navigation/RootNavigator.js');
     for (const stack of ['DiaryStack', 'HomeStack', 'PlansStack', 'ProgressStack', 'ProfileStack']) {
       const start = nav.indexOf(`function ${stack}(`);
       expect(start).toBeGreaterThan(-1);
       const end = nav.indexOf('\nfunction ', start + 1);
       const body = nav.slice(start, end === -1 ? nav.length : end);
-      expect(body).toMatch(/name="ProUpgrade"\s+component=\{ProUpgradeScreen\}\s+options=\{\{\s*headerShown:\s*false,\s*presentation:\s*'modal'\s*\}\}/);
+      expect(body).not.toMatch(/name="ProUpgrade"/);
     }
+    expect(nav).not.toMatch(/withProGuard\(|withReadOnlyProGuard\(/);
   });
 
   test('MesocycleBuilder ("Training Blocks") stays FREE (founder 2026-07-02)', () => {

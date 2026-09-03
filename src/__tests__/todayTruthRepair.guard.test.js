@@ -45,7 +45,6 @@ const SRC = path.join(__dirname, '..');
 const read = (p) => fs.readFileSync(path.join(SRC, p), 'utf8');
 
 const HOME = read('screens/HomeScreen.js');
-const ATTENTION = read('components/AttentionCard.js');
 const YOU = read('screens/YouScreen.js');
 
 // Every production surface a user can actually look at. Excludes __tests__,
@@ -183,18 +182,14 @@ describe('Ruling 2: Today shows no first-review threshold counters', () => {
     expect(HOME).not.toContain('loadCoachRunway');
   });
 
-  test('the trial banner keeps its line but renders no ledger rows', () => {
-    expect(ATTENTION).not.toContain('trialBanner.ledger');
-    expect(ATTENTION).not.toContain('trialLedger');
-    // The banner itself, its dismissal and its methodology link are untouched.
-    expect(ATTENTION).toContain('trialBanner.line');
-    expect(ATTENTION).toContain('Dismiss trial banner');
-    expect(ATTENTION).toContain('How Precision Coaching works');
-    // RE-PINNED (Campaign 22 Phase 2 Stage 2, FOUNDER-RULINGS-PHASE2 R3): the
-    // everyday trial card, and the loader that computes its line, rehomed to
-    // YouScreen.js in full -- Home carries no trial-banner state at all.
+  // FOUNDER DECISION (fully free, no tier split, no trial): the everyday
+  // trial banner (and AttentionCard, the component that rendered it) is
+  // retired entirely, not merely rehomed -- neither Home nor YouScreen
+  // carries any trial-banner state any more.
+  test('the trial banner is retired entirely: no state on Home or YouScreen, and AttentionCard is deleted', () => {
     expect(HOME).not.toContain('setTrialBanner');
-    expect(YOU).toContain('setTrialBanner({ line, variant });');
+    expect(YOU).not.toMatch(/trialBanner/);
+    expect(fs.existsSync(path.join(SRC, 'components/AttentionCard.js'))).toBe(false);
   });
 
   test('"What your coach is reading" is unreachable from Today', () => {
@@ -202,7 +197,6 @@ describe('Ruling 2: Today shows no first-review threshold counters', () => {
     // render it), but nothing on Today can put it on screen.
     expect(read('lib/coachLedger.js')).toContain('What your coach is reading');
     expect(HOME).not.toContain('What your coach is reading');
-    expect(ATTENTION).not.toContain('What your coach is reading');
   });
 });
 

@@ -620,8 +620,9 @@ const SCREENS_TO_SWEEP = [
   'ConsistencyScreen',
   'PartnerScreen',
   'DebugLogScreen',
-  'FirstRunScreen',
-  'FreeStarterScreen',
+  // FirstRunScreen and FreeStarterScreen were deleted (founder decision:
+  // Volyume is fully free, no Free/Pro split; ProOnboardingScreen's
+  // six-step wizard is now the ONE setup path for every user).
   'GoalChangeSummaryScreen',
   'HomeScreen',
   'ImportScreen',

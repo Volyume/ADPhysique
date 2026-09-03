@@ -44,6 +44,16 @@ describe('CAP-19: core capability accommodation is never Pro-gated', () => {
     expect(add).not.toMatch(/withProGuard/);
     expect(nav).toMatch(/name="HowYouTrainAdd" component=\{HowYouTrainAddScreen\}/);
   });
+  test('CAP-19 now holds trivially: NO route is gated at all (fully-free product)', () => {
+    // Founder decision: Volyume is fully free, no Free/Pro split. Every
+    // withProGuard / withReadOnlyProGuard wrapper was removed from
+    // RootNavigator, so the capability lane's "never Pro-gated" law is no
+    // longer a special case carved out of a gated navigator -- there is no
+    // gated route left for it to be an exception to.
+    const nav = read('navigation/RootNavigator.js');
+    expect(nav).not.toMatch(/withProGuard\(|withReadOnlyProGuard\(/);
+    expect(nav).not.toMatch(/from '\.\.\/components\/ProGate'/);
+  });
   test('no capability module consults the tier gate', () => {
     for (const f of CAPABILITY_FILES) {
       const src = read(f);

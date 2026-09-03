@@ -61,24 +61,36 @@ describe('C2: ProUpgrade funnel telemetry', () => {
     }
   });
 
-  test('entry source is threaded at every ProUpgrade navigation call site', () => {
-    const sites = [
-      ['components/ProGate.js', 3],
-      ['screens/BodyMetricsScreen.js', 1],
-      ['screens/SettingsAccountScreen.js', 1],
-      // Campaign 22 Phase 2 Stage 1: +1 site (source: 'home_trial_ending'),
-      // the Today line's trial-ENDING occupant (spec §13 rank 8) navigating
-      // to ProUpgrade for the one state genuinely requiring payment action.
-      ['screens/HomeScreen.js', 4],
-      ['screens/DiaryScreen.js', 1],
-      ['screens/YouScreen.js', 1],
+  // D137 (fully-free product): every LIVE surface that used to navigate to
+  // ProUpgrade had that call site removed with the Pro-gating/paywall UI
+  // (BodyMetricsScreen, SettingsAccountScreen, HomeScreen, DiaryScreen,
+  // YouScreen no longer reference ProUpgrade at all). ProGate.js itself
+  // stays on disk DORMANT and unregistered (see proScreenGating.guard.test.js
+  // and navigation.test.js's DORMANT_SURFACES exclusion) -- its own 3
+  // entry-sourced call sites are untouched dead code, kept intact in case a
+  // future deliberate monetisation decision revives the guard.
+  test('no LIVE surface navigates to ProUpgrade any more', () => {
+    const liveFiles = [
+      'screens/BodyMetricsScreen.js',
+      'screens/SettingsAccountScreen.js',
+      'screens/HomeScreen.js',
+      'screens/DiaryScreen.js',
+      'screens/YouScreen.js',
     ];
-    for (const [rel, count] of sites) {
+    for (const rel of liveFiles) {
       const src = read(rel);
-      const bare = src.match(/navigate\('ProUpgrade'\)/g) ?? [];
-      expect({ file: rel, bareCalls: bare.length }).toEqual({ file: rel, bareCalls: 0 });
-      const sourced = src.match(/navigate\('ProUpgrade', \{ source: /g) ?? [];
-      expect({ file: rel, sourced: sourced.length }).toEqual({ file: rel, sourced: count });
+      expect({ file: rel, hasProUpgradeNav: /navigate\('ProUpgrade'/.test(src) }).toEqual({
+        file: rel,
+        hasProUpgradeNav: false,
+      });
     }
+  });
+
+  test('the dormant ProGate.js still threads entry source on its own (unregistered) call sites', () => {
+    const src = read('components/ProGate.js');
+    const bare = src.match(/navigate\('ProUpgrade'\)/g) ?? [];
+    expect(bare.length).toBe(0);
+    const sourced = src.match(/navigate\('ProUpgrade', \{ source: /g) ?? [];
+    expect(sourced.length).toBe(3);
   });
 });

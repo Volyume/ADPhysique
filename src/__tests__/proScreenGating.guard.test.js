@@ -1,38 +1,21 @@
 /**
- * Source guard: every Pro-designated screen ships wrapped in a Pro guard.
+ * Source guard: the formerly-Pro screen block is now fully free (D137).
  *
- * WHY THIS EXISTS: free/Pro gating is absolute and binary (CLAUDE.md §2 --
- * "never expose Pro to free"). RootNavigator.js declares every Pro-only
- * screen inside one deliberately fenced block (the "Pro-only screens."
- * comment through to the `heroZoomTransition` declaration) as a
- * `const Gated<Name> = lazyScreen(() => withProGuard(...))` or
- * `withReadOnlyProGuard(...)` wrapper (see src/components/ProGate.js for the
- * HOCs). That fenced block is the app's single canonical enumeration of every
- * Pro screen: nothing outside it declares a `Gated*` constant. If a future
- * Pro feature (food diary, barcode, meal suggestions, targets, macros,
- * check-ins, Precision Coaching, division plans, training partners,
- * progress-photos/body-metrics history, ...) is added to that block without
- * a guard call, a free user would reach it with no paywall -- silently
- * breaking the binary free/pro constitution. This guard would fail.
+ * WHY THIS EXISTS: founder decision D137 made Volyume fully free -- binary
+ * free/pro gating (CLAUDE.md pre-D137 rule) no longer applies. Every screen
+ * that used to ship wrapped in `withProGuard` / `withReadOnlyProGuard`
+ * (food diary, barcode, meal suggestions, targets, macros, check-ins,
+ * Precision Coaching, division plans, training partners, progress-photos/
+ * body-metrics history) is now a plain, ungated registration like any other
+ * screen in RootNavigator.js -- see that file's own "Formerly Pro-only
+ * screens" comment. `ProGate.js` (the guard HOCs) stays on disk DORMANT and
+ * unimported, in case a future deliberate monetisation decision brings
+ * tiered access back.
  *
- * STRATEGY CHOSEN (hybrid of the brief's (a) and (b), matching the
- * partnerPlacementSpine.guard.test.js fs.readFileSync + regex idiom):
- *   (a) self-maintaining sweep -- every `const Gated<Name>` declaration
- *       inside the fenced block must call withProGuard or
- *       withReadOnlyProGuard. This covers ANY future addition to the block
- *       with zero maintenance, so a new Pro screen dropped in ungated is
- *       caught automatically.
- *   (b) explicit critical-route cross-check -- a hard-coded list of today's
- *       known-critical Pro routes (lifted from the CLAUDE.md Pro feature
- *       set) is checked two ways: that its `Gated<Name>` constant exists and
- *       is guard-wrapped, AND that every `<Stack.Screen name="...">`
- *       registration for that route name wires the guarded `Gated<Name>`
- *       component, never the bare unguarded screen. (a) alone would miss a
- *       regression where the guard wrapper still exists but a screen
- *       registration is quietly repointed at the raw component (or a second
- *       registration is added elsewhere referencing the raw component); (b)
- *       alone would miss a wholly new Pro screen never added to this list.
- *       Together they close both gaps.
+ * This guard pins the NEW invariant: no route in that block is guarded, and
+ * no live registration wires a `Gated*` / guard-wrapped component. If a
+ * future change re-introduces a guard wrapper on any of these routes without
+ * an explicit founder decision, this test fails.
  *
  * Pure fs.readFileSync + regex against the real source; no rendering, no
  * React Navigation instantiation.
@@ -45,55 +28,48 @@ const NAV = fs.readFileSync(
   'utf8'
 );
 
-// Isolate the fenced "Pro-only screens" block: from its header comment to the
-// `heroZoomTransition` declaration that immediately follows it (CP-10 stage 2,
-// docs/ux-world-class-audit-2026-07-09/CP-10-restart-free-theming-plan.md --
-// the old module-scope `stackOptions` const that used to anchor this end
-// moved into its own ./navTheme module for testability, so the boundary now
-// anchors on the next stable declaration instead). This is the file's own
-// canonical enumeration -- every Pro screen in the app is declared here,
-// nowhere else (see the comment on that block in RootNavigator.js itself:
-// "Pro-only screens. The guard renders an upgrade prompt for free users,
-// enforcing Pro access no matter how the route is reached.").
-const blockStart = NAV.indexOf('// Pro-only screens.');
+// Isolate the fenced "Formerly Pro-only screens" block: from its header
+// comment to the `heroZoomTransition` declaration that immediately follows
+// it (same anchor the pre-D137 guard used).
+const blockStart = NAV.indexOf('// Formerly Pro-only screens.');
 const blockEnd = NAV.indexOf('\nconst heroZoomTransition', blockStart);
 if (blockStart === -1 || blockEnd === -1) {
   throw new Error(
-    'proScreenGating.guard.test.js: could not locate the fenced "Pro-only ' +
-    'screens" block in RootNavigator.js (expected between the ' +
-    '"// Pro-only screens." comment and the `heroZoomTransition` declaration). ' +
-    'Has it been renamed or restructured? Update this guard to match before ' +
-    'trusting it.'
+    'proScreenGating.guard.test.js: could not locate the fenced "Formerly ' +
+    'Pro-only screens" block in RootNavigator.js (expected between the ' +
+    '"// Formerly Pro-only screens." comment and the `heroZoomTransition` ' +
+    'declaration). Has it been renamed or restructured? Update this guard ' +
+    'to match before trusting it.'
   );
 }
-const PRO_BLOCK = NAV.slice(blockStart, blockEnd);
+const FORMER_PRO_BLOCK = NAV.slice(blockStart, blockEnd);
 
-// Every `const Gated<Name> = ...` declaration line inside the block.
-const gatedDeclLines = PRO_BLOCK
+// Every `const <Name>Screen = ...` declaration line inside the block.
+const screenDeclLines = FORMER_PRO_BLOCK
   .split('\n')
-  .filter((line) => /^const Gated\w+\s*=/.test(line.trim()));
+  .filter((line) => /^const \w+Screen\s*=/.test(line.trim()));
 
-describe('Pro-only screens block (RootNavigator.js): self-maintaining sweep', () => {
-  test('the fenced block actually declares Pro screens (this guard has something to check)', () => {
-    expect(gatedDeclLines.length).toBeGreaterThan(0);
+describe('Formerly Pro-only screens block (RootNavigator.js): fully-free sweep', () => {
+  test('the fenced block actually declares the formerly-Pro screens (this guard has something to check)', () => {
+    expect(screenDeclLines.length).toBeGreaterThan(0);
   });
 
-  test('every Gated<Name> declaration wraps its screen in withProGuard or withReadOnlyProGuard', () => {
-    const unguarded = gatedDeclLines.filter(
-      (line) => !/with(ReadOnly)?ProGuard\(/.test(line)
+  test('no declaration in the block wraps its screen in withProGuard or withReadOnlyProGuard', () => {
+    const guarded = screenDeclLines.filter(
+      (line) => /with(ReadOnly)?ProGuard\(/.test(line)
     );
-    expect(unguarded).toEqual([]);
+    expect(guarded).toEqual([]);
   });
 
-  test('every Gated<Name> declaration names a real screen file under src/screens/', () => {
-    const screenRefs = [...PRO_BLOCK.matchAll(/require\('\.\.\/screens\/(\w+)'\)/g)].map(
+  test('no Gated<Name> constant survives anywhere in the block', () => {
+    expect(FORMER_PRO_BLOCK).not.toMatch(/const Gated\w+\s*=/);
+  });
+
+  test('every declaration names a real screen file under src/screens/', () => {
+    const screenRefs = [...FORMER_PRO_BLOCK.matchAll(/require\('\.\.\/screens\/(\w+)'\)/g)].map(
       (m) => m[1]
     );
-    // One require(...screens/X) per Gated<Name> declaration -- a mismatch
-    // means a declaration references something other than a direct screen
-    // require (e.g. re-exporting an already-gated constant), which this
-    // guard is not built to follow.
-    expect(screenRefs.length).toBe(gatedDeclLines.length);
+    expect(screenRefs.length).toBe(screenDeclLines.length);
     for (const name of screenRefs) {
       const exists = fs.existsSync(path.join(__dirname, '..', 'screens', `${name}.js`));
       expect(exists).toBe(true);
@@ -101,55 +77,52 @@ describe('Pro-only screens block (RootNavigator.js): self-maintaining sweep', ()
   });
 });
 
-// Today's known-critical Pro routes, lifted from the CLAUDE.md binary
-// free/pro constitution: food diary, barcode/label scanning, meal
-// suggestions/plan/recipes, nutrition targets/macros, check-ins,
-// Precision Coaching, division/plan updates, and training partners, plus the
-// read-only lapse views (body metrics, progress photos). Each entry pairs
-// the `Gated<Name>` wrapper constant with every navigator route `name` it is
-// registered under.
-const CRITICAL_PRO_SCREENS = [
-  { gated: 'GatedDiary', routes: ['Diary'] },
-  { gated: 'GatedMealPlan', routes: ['MealPlan'] },
-  { gated: 'GatedFoodSearch', routes: ['FoodSearch'] },
-  { gated: 'GatedAddCustomFood', routes: ['AddCustomFood'] },
-  { gated: 'GatedScanBarcode', routes: ['ScanBarcode'] },
-  { gated: 'GatedScanLabel', routes: ['ScanLabel'] },
-  { gated: 'GatedFoodInsights', routes: ['FoodInsights'] },
-  { gated: 'GatedMyRecipes', routes: ['MyRecipes'] },
-  { gated: 'GatedMyMeals', routes: ['MyMeals'] },
-  { gated: 'GatedRecipeBuilder', routes: ['RecipeBuilder'] },
-  { gated: 'GatedNutritionTargets', routes: ['NutritionTargets'] },
-  { gated: 'GatedMealNames', routes: ['MealNames'] },
+// The routes that were Pro-gated pre-D137 (lifted from the old guard's
+// CRITICAL_PRO_SCREENS list), now expected to be plain ungated
+// registrations pointing straight at the unguarded screen component.
+const FORMERLY_CRITICAL_ROUTES = [
+  { component: 'DiaryScreen', routes: ['Diary'] },
+  { component: 'MealPlanScreen', routes: ['MealPlan'] },
+  { component: 'FoodSearchScreen', routes: ['FoodSearch'] },
+  { component: 'AddCustomFoodScreen', routes: ['AddCustomFood'] },
+  { component: 'ScanBarcodeScreen', routes: ['ScanBarcode'] },
+  { component: 'ScanLabelScreen', routes: ['ScanLabel'] },
+  { component: 'FoodInsightsScreen', routes: ['FoodInsights'] },
+  { component: 'MyRecipesScreen', routes: ['MyRecipes'] },
+  { component: 'MyMealsScreen', routes: ['MyMeals'] },
+  { component: 'RecipeBuilderScreen', routes: ['RecipeBuilder'] },
+  { component: 'NutritionTargetsScreen', routes: ['NutritionTargets'] },
+  { component: 'MealNamesScreen', routes: ['MealNames'] },
   // BodyMetrics and ProgressPhotos are each registered in more than one tab
-  // stack (Home and Progress) so free deep-linking cannot bypass the guard
-  // via either entry point -- the regex below matches every occurrence of
+  // stack (Home and Progress); the regex below matches every occurrence of
   // the route name across the whole file, so one list entry still checks
   // ALL of a route's registrations.
-  { gated: 'GatedWeeklyCheckIn', routes: ['WeeklyCheckIn'] },
-  { gated: 'GatedCoachOutput', routes: ['CoachOutput'] },
-  { gated: 'GatedProGoalSetup', routes: ['ProGoalSetup'] },
-  { gated: 'GatedPlanUpdate', routes: ['PlanUpdate'] },
-  { gated: 'GatedCoachingReminders', routes: ['CoachingReminders'] },
-  { gated: 'GatedBodyMetrics', routes: ['BodyMetrics'] },
-  { gated: 'GatedProgressPhotos', routes: ['ProgressPhotos'] },
-  { gated: 'GatedPartner', routes: ['Partner'] },
+  { component: 'WeeklyCheckInScreen', routes: ['WeeklyCheckIn'] },
+  { component: 'CoachOutputScreen', routes: ['CoachOutput'] },
+  { component: 'ProGoalSetupScreen', routes: ['ProGoalSetup'] },
+  { component: 'PlanUpdateScreen', routes: ['PlanUpdate'] },
+  { component: 'CoachingRemindersScreen', routes: ['CoachingReminders'] },
+  { component: 'BodyMetricsScreen', routes: ['BodyMetrics'] },
+  { component: 'ProgressPhotosScreen', routes: ['ProgressPhotos'] },
+  { component: 'PartnerScreen', routes: ['Partner'] },
 ];
 
-describe('Critical Pro routes: declared with a guard AND registered via the guarded wrapper', () => {
-  test.each(CRITICAL_PRO_SCREENS)(
-    '$gated is declared in the fenced block with a guard HOC',
-    ({ gated }) => {
-      const declRegex = new RegExp(
-        `const ${gated}\\s*=\\s*lazyScreen\\(\\(\\) => with(ReadOnly)?ProGuard\\(`
+describe('Formerly-critical Pro routes: no guard, registered via the plain screen component', () => {
+  test.each(FORMERLY_CRITICAL_ROUTES)(
+    '$component is declared in the fenced block with NO guard HOC',
+    ({ component }) => {
+      const declRegex = new RegExp(`const ${component}\\s*=\\s*lazyScreen\\(\\(\\) =>`);
+      expect(FORMER_PRO_BLOCK).toMatch(declRegex);
+      const guardedDeclRegex = new RegExp(
+        `const ${component}\\s*=\\s*lazyScreen\\(\\(\\) => with(ReadOnly)?ProGuard\\(`
       );
-      expect(PRO_BLOCK).toMatch(declRegex);
+      expect(FORMER_PRO_BLOCK).not.toMatch(guardedDeclRegex);
     }
   );
 
-  test.each(CRITICAL_PRO_SCREENS)(
-    'every Stack.Screen registration for $gated\'s route(s) wires the guarded component',
-    ({ gated, routes }) => {
+  test.each(FORMERLY_CRITICAL_ROUTES)(
+    'every Stack.Screen registration for $component\'s route(s) wires the plain component, never a Gated wrapper',
+    ({ component, routes }) => {
       for (const route of routes) {
         // name="Route" and component={X} sit on the same JSX tag, at most a
         // few short attributes apart (possibly across lines) -- bound the
@@ -164,7 +137,8 @@ describe('Critical Pro routes: declared with a guard AND registered via the guar
         // the navigator entirely is also a drift this guard should surface.
         expect(matches.length).toBeGreaterThan(0);
         for (const m of matches) {
-          expect(m[1]).toBe(gated);
+          expect(m[1]).toBe(component);
+          expect(m[1]).not.toMatch(/^Gated/);
         }
       }
     }

@@ -29,26 +29,19 @@ describe('S6: activation banner priority slot (D7 ranked-list mechanics)', () =>
   // RE-PINNED (Campaign 22 Phase 2 Stage 1): coach/trial/deload/phase moved
   // off this array onto the Today line arbiter (see
   // HomeScreen.bannerPriorityCap.test.js) -- they no longer compete for
-  // this P3 stack's slot at all, so activation's remaining peers here are
-  // only plateau and attention.
-  test('ranks below plateau; above the attention slot', () => {
+  // this P3 stack's slot at all.
+  // FOUNDER DECISION (fully free, no tier split): the free-tier/differential
+  // "attention" slot activation used to rank above is retired entirely
+  // (see differentialBanner.guard.test.js), so activation's only remaining
+  // peer here is plateau.
+  test('ranks below plateau; the retired attention slot is gone', () => {
     const site = HOME.indexOf('const BANNER_PRIORITY = [');
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site, HOME.indexOf('];', site));
-    const order = ['plateau', 'activation', 'attention']
-      .map((key) => block.indexOf(`key: '${key}'`));
+    const order = ['plateau', 'activation'].map((key) => block.indexOf(`key: '${key}'`));
     expect(order.every((i) => i > -1)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));
-  });
-
-  test('the free-tier/differential attention slot yields to it (it outranks them)', () => {
-    // Under the ranked-list mechanics the attention slot's own eligibility
-    // (freeCoachLineEligible || differentialBadgeEligible) does not reference
-    // activation directly; precedence instead comes from BANNER_PRIORITY
-    // order, already pinned above. Confirm the attention slot still checks
-    // showAttentionSlot, which is derived from that same ranked list.
-    expect(HOME).toMatch(/const showFreeCoachLine = freeCoachLineEligible && showAttentionSlot;/);
-    expect(HOME).toMatch(/const showDifferentialBadge = differentialBadgeEligible && !freeCoachLineEligible && showAttentionSlot;/);
+    expect(block).not.toMatch(/key: 'attention'/);
   });
 
   test('renders only when it is the single highest-priority eligible banner, and shows the stage copy, not a hardcoded string', () => {

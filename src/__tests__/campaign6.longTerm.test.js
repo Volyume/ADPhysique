@@ -214,7 +214,7 @@ describe('PHASES 9 + 44: plan lifecycle laws (D97-11..17)', () => {
   test('P44-05: an abandoned block ends the day the user switches away', () => {
     const src = read('lib/database.js');
     const act = src.slice(src.indexOf('export async function activatePlanWithBlock'));
-    expect(act.slice(0, 4200)).toMatch(/SET end_date = date\('now'\)/); // window widened for the T-2 comment, then again for C8 Work 2's activation seed
+    expect(act.slice(0, 4300)).toMatch(/SET end_date = date\('now'\)/); // window widened for the T-2 comment, then again for C8 Work 2's activation seed, then again as that seed's own header comment grew
   });
 
   test('P9-06: a mature user is never told they lack personal history', () => {
@@ -232,7 +232,15 @@ describe('PHASES 9 + 44: plan lifecycle laws (D97-11..17)', () => {
     const db = read('lib/database.js');
     const dup = db.slice(db.indexOf('export async function duplicatePlan'));
     expect(dup.slice(0, 1200)).toMatch(/SET source_programme_id = \?/);
-    expect(read('screens/FreeStarterScreen.js')).toMatch(/archived\.find\(p => p\.sourceProgrammeId === recommendation\.id\)/);
+    // The archived.find(...) half REMOVED (D137, fully free product):
+    // FreeStarterScreen.js (the quiz that duplicated a picked library plan
+    // and reused an archived copy by provenance) is deleted outright, and
+    // no live screen calls duplicatePlan any more (grep confirms zero
+    // consumers in src/screens/) -- the merged "Start with a plan" flow
+    // generates a plan from the athlete's own profile (generateAndSavePlan)
+    // instead of copying one. duplicatePlan() itself is untouched and still
+    // stamps provenance for any future caller, which the assertion above
+    // still pins.
   });
 });
 
@@ -426,12 +434,27 @@ describe('S-14/S-15 (D97-23): the corrected 135 contract and its client half', (
   });
 });
 
-describe('M-13 (D97-24): the reflection ledger story is Pro-gated like its PlansScreen sibling', () => {
-  test('Free receives no adaptive rationale rows on BlockReflection', () => {
+describe('M-13 (D97-24): the reflection ledger rows reach every account (D137, fully free)', () => {
+  // RE-ANCHORED (D137, fully free product): the tier check this test pinned
+  // is no longer a live gate on either sibling. proGate.js's own header
+  // (FULL_ACCESS_FOR_ALL) resolves every signed-in user's tier to 'pro'
+  // unconditionally, so `tierNow === 'pro'` in BlockReflectionScreen.js is
+  // dead-but-harmless (always true for a real user, never withholds rows)
+  // -- it was simply not cleaned up when PlansScreen.js's identical literal
+  // check WAS removed outright (PlansScreen.js:411, now
+  // `rows: allRows.slice(0, 4)` unconditionally). Both are checked below,
+  // matching what is actually on disk, since neither produces different
+  // behaviour for a real user; PlansScreen's line is the accurate remaining
+  // pin, BlockReflectionScreen's vestigial conditional is noted rather than
+  // silently inverted.
+  test('Free receives the same adaptive rationale rows as everyone else on BlockReflection', () => {
     const src = read('screens/BlockReflectionScreen.js');
-    expect(src).toMatch(/setLedgerRows\(tierNow === 'pro' \? buildLedgerReflectionRows\(ledger\) : \[\]\)/);
-    // And the sibling gate it mirrors stays in place.
-    expect(read('screens/PlansScreen.js')).toMatch(/rows: tier === 'pro' \? allRows\.slice\(0, 4\) : \[\]/);
+    // D137 lead cleanup: the vestigial tier ternary is gone; the rows are
+    // set for everyone unconditionally.
+    expect(src).toMatch(/setLedgerRows\(buildLedgerReflectionRows\(ledger\)\)/);
+    expect(src).not.toMatch(/tierNow === 'pro'/);
+    // The sibling literal tier check was removed outright (D137).
+    expect(read('screens/PlansScreen.js')).toMatch(/rows: allRows\.slice\(0, 4\),/);
   });
 });
 

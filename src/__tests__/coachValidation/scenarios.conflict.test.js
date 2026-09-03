@@ -100,6 +100,22 @@ describe('CFL-20: X-SAFETY-06 notification suppression fails CLOSED on a read er
       __esModule: true,
       default: { getState: () => ({ user: { id: 'u1' }, userProfile: null }) },
     }));
+    // FULLY-FREE PRODUCT (founder decision 2026-09-03): scheduleWinbackNotification
+    // is a no-op while proGate.FULL_ACCESS_FOR_ALL is on, which would make every
+    // assertion below pass VACUOUSLY - the ED/calm suppression would be proved by
+    // a function that never schedules anything at all. X-SAFETY-06 is an
+    // ED-safety oracle and must keep testing the real gate, so the override is
+    // mocked OFF here (an IO-boundary allowance in the same spirit as the mocks
+    // above: it restores the mechanism under test, it does not soften it). Not
+    // one assertion changed. The scheduler's fully-free stand-down is pinned
+    // separately in src/lib/notifications/__tests__/winbackScheduler.test.js.
+    jest.doMock('../../lib/proGate', () => ({
+      __esModule: true,
+      FULL_ACCESS_FOR_ALL: false,
+      PRO_BETA_ACTIVE: false,
+      _resolveTier: (state, override) => (override ? 'pro' : 'free'),
+      isPaidTier: () => 'free',
+    }));
 
     // eslint-disable-next-line global-require
     scheduleWinbackNotification = require('../../lib/notifications/scheduler').scheduleWinbackNotification;

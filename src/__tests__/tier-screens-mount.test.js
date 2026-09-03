@@ -173,48 +173,10 @@ describe('SubscriptionScreen mount', () => {
   });
 });
 
-describe('DifferentialBadge mount', () => {
-  test('shown=false renders nothing', async () => {
-    const Badge = require('../components/DifferentialBadge').default;
-    const r = await mount(Badge, {
-      differential: { shown: false },
-    });
-    expect(r.toJSON()).toBeNull();
-  });
-
-  test('try_pro_14d CTA renders the trial-mode label', async () => {
-    const Badge = require('../components/DifferentialBadge').default;
-    const r = await mount(Badge, {
-      differential: {
-        shown: true,
-        trigger: 'deload',
-        // Same-meaning re-anchor (C5-P7-06 / FB-13, D96): the deload variant
-        // no longer attributes the lighter week to the Pro engine a free
-        // reader does not have. This is a prop fixture, not a copy pin.
-        with_food_data_message: "Your training is pointing to a lighter week. Your food log could show whether fuel is the cause.",
-        paywall_cta: 'try_pro_14d',
-      },
-      pricingWindow: 'open_beta',
-      onTapCta: jest.fn(),
-    });
-    expect(r.toJSON()).toBeTruthy();
-  });
-
-  test('buy_pro CTA uses the buy-mode label', async () => {
-    const Badge = require('../components/DifferentialBadge').default;
-    const r = await mount(Badge, {
-      differential: {
-        shown: true,
-        trigger: 'block_summary',
-        with_food_data_message: "Your training block just ended. With your food log, Precision Coaching could show how fuel shaped your results.",
-        paywall_cta: 'buy_pro',
-      },
-      pricingPriceText: '£2.99/month',
-      onTapCta: jest.fn(),
-    });
-    expect(r.toJSON()).toBeTruthy();
-  });
-});
+// DifferentialBadge mount cases removed: src/components/DifferentialBadge.js
+// was deleted (founder decision, fully-free product -- the component pitched
+// Pro's food-data differential against a free reader, which no longer
+// exists as a distinct tier).
 
 // C3 (D71), 2026-07-11: the three PaywallScreen mount cases were removed with
 // the screen itself. PaywallScreen was an orphaned duplicate upgrade surface

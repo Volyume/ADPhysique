@@ -50,16 +50,19 @@ describe('B3 plateau banner priority slot (D7 ranked-list mechanics)', () => {
   // RE-PINNED (Campaign 22 Phase 2 Stage 1): coach/trial/deload/phase moved
   // off this array onto the Today line arbiter (see
   // HomeScreen.bannerPriorityCap.test.js) -- they no longer compete for
-  // this P3 stack's slot at all, so plateau's remaining peers here are only
-  // activation and attention.
-  test('ranks above the activation and attention slots', () => {
+  // this P3 stack's slot at all, so plateau's remaining peer here was
+  // activation and attention. RE-PINNED AGAIN (D137, fully free product):
+  // the 'attention' slot (AttentionCard.js, a free-tier-only surface) is
+  // deleted outright, so plateau's one remaining peer is activation.
+  test('ranks above the activation slot', () => {
     const site = HOME.indexOf('const BANNER_PRIORITY = [');
     expect(site).toBeGreaterThan(-1);
     const block = HOME.slice(site, HOME.indexOf('];', site));
-    const order = ['plateau', 'activation', 'attention']
+    const order = ['plateau', 'activation']
       .map((key) => block.indexOf(`key: '${key}'`));
     expect(order.every((i) => i > -1)).toBe(true);
     expect(order).toEqual([...order].sort((a, b) => a - b));
+    expect(block).not.toContain("key: 'attention'");
   });
 
   test('renders only when it is the single highest-priority eligible banner', () => {

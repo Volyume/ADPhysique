@@ -32,7 +32,12 @@ describe('premium tab IA', () => {
     // tab BECOMES on Pro, and what is here either way. The Pro half of the
     // card (the property this test pins for a Pro user) is unchanged.
     expect(COACH).toContain('What changed, what was held, and the exact signals behind it.');
-    expect(COACH).toContain('On Pro this tab carries your weekly check-in');
+    // 'On Pro this tab carries your weekly check-in' pinned the Free-vs-Pro
+    // pitch copy on this card. D137 (fully free product) retired that whole
+    // branch -- YouScreen.js:474-476 says so directly ("the Free pitch
+    // branch (opening ProUpgrade) is retired -- there is nothing left to
+    // pitch"). The behaviour it described no longer exists, so the
+    // assertion is removed rather than inverted.
     expect(COACH).not.toMatch(/chatbot|No chat|AI chat/i);
     expect(COACH).toContain("navigation.navigate('AthleteProfile')");
   });

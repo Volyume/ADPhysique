@@ -12,57 +12,59 @@ const read = rel => fs.readFileSync(path.resolve(__dirname, '..', rel), 'utf8');
 const HOME = read('screens/HomeScreen.js');
 const PLANS = read('screens/PlansScreen.js');
 const PROGRESS_SECTIONS = read('components/ProgressSections.js');
-const FREE_STARTER = read('screens/FreeStarterScreen.js');
+// D137 (fully free product): FreeStarterScreen.js (the free-onboarding quiz)
+// is deleted -- the sub-test that read it is removed below (see the note
+// there) rather than this top-level read pointing at a file that no longer
+// exists.
 
 describe('no-plan / start-plan copy', () => {
   test('HomeScreen uses one no-plan title and the shared start CTA', () => {
     // Anchor re-pinned (Campaign 22 Phase 2 Stage 2, §7/§17 R5): "Progress at
-    // a glance" is deleted outright (3-way duplication fix), so the end
-    // anchor moves to the next stable comment after the no-plan branch.
-    const block = HOME.slice(HOME.indexOf('<View style={styles.noPlanSection}>'), HOME.indexOf('{/* Pro keeps the quick-start escape hatch'));
+    // a glance" is deleted outright (3-way duplication fix). RE-ANCHORED
+    // AGAIN (D137, fully free, no tier split): the free no-plan branch
+    // (FreeStarter quiz) is retired -- the full-tier EmptyState is the only
+    // no-plan state now, and it no longer offers a secondary "Browse plans"
+    // escape hatch (HomeScreen.js:2282-2316). The whole no-plan section
+    // (EmptyState + the once-Pro-only quickStartCard, now shown to
+    // everyone) is one block, so the end anchor moves past both to the next
+    // stable comment outside the noPlanSection View.
+    const block = HOME.slice(HOME.indexOf('<View style={styles.noPlanSection}>'), HOME.indexOf('{/* CC33 D112 R5 (closes audit T1-14/T2-31)'));
     expect(block).toContain('No active plan yet');
     expect(block).toContain('Start with a plan');
-    expect(block).toContain('Browse plans');
     expect(block).not.toContain('Find my plan');
     expect(block).not.toContain('Build my plan');
   });
 
-  test('HomeScreen blank-workout fallback is a contained neutral control', () => {
-    // R9/D70 (design-cohesion sweep, 2026-07-11): the hand-rolled
-    // TouchableOpacity pill (bespoke blankSessionLink/blankSessionLinkText
-    // style blocks, asserted here up to 2026-07-11) was converted onto the
-    // shared <Button variant="secondary"> primitive per
-    // docs/remediation-2026-07-11/FOOD-DESIGN-STANDARD.md section 4 ("every
-    // CTA is the shared Button primitive"). The RULE this test pins is
-    // UNCHANGED -- a contained neutral control, never a loose text link --
-    // Button's secondary variant IS that contained neutral treatment
-    // (raised surface2 fill, textPrimary ink, a visible border,
-    // Button.js:54), just expressed through the shared primitive instead of
-    // a bespoke style block, so there is no longer a static
-    // blankSessionLink/blankSessionLinkText pair to assert byte-for-byte.
-    expect(HOME).toMatch(/variant="secondary"[\s\S]{0,200}title="Just want to log\? Start a blank workout"/);
-    expect(HOME).toContain('icon="play-outline"');
-    expect(HOME).toContain('trailingIcon="chevron-forward"');
-    expect(HOME).not.toContain('blankSessionLinkText: { fontSize: fontSize.sm, color: colors.textMuted }');
-  });
+  // 'HomeScreen blank-workout fallback is a contained neutral control'
+  // removed (D137): that test pinned the FREE-ONLY `Button variant="secondary"
+  // title="Just want to log? Start a blank workout"` text link
+  // (`tier !== 'pro'` branch). Fully free, no tier split -- that branch is
+  // deleted outright, not restyled: "the Free-only text-link variant is
+  // retired" (HomeScreen.js, the comment above the surviving PressableCard).
+  // Everyone now gets the single quickStartCard (formerly Pro-only), which
+  // the preceding test's block slice already covers as part of the no-plan
+  // section. The specific behaviour this sub-test pinned no longer exists.
 
-  test('PlansScreen free no-plan copy matches the shared verb', () => {
-    // DD8 (design-consistency-audit-2026-08-06): the bespoke noPlanCard
-    // became the shared EmptyState primitive, so the slice anchors moved to
-    // the EmptyState's icon prop. The pinned copy inside the block is
-    // unchanged -- that copy contract is what this guard exists for.
-    // Re-anchored under C5-P10-09 (D96): the Pro no-plan branch below is no
-    // longer an inert `noActivePlanRow` Card, so the free block's end
-    // anchor moved to the Pro branch's own EmptyState icon. The pinned copy
-    // contract inside the free block is unchanged.
-    const start = PLANS.indexOf('icon="compass-outline"');
+  // D137 (fully free product): the separate free (icon="compass-outline")
+  // and Pro (icon="barbell-outline") no-plan branches this test used to
+  // straddle are MERGED into one branch now (PlansScreen.js:1201-1245's own
+  // comment: "the Free no-plan branch (FreeStarter quiz) is retired -- this
+  // is the only no-plan state now"). The copy contract this guard protects
+  // (shared verb, a real secondary action, no older fallback phrasing) is
+  // unchanged, so the two tests that used to check each branch separately
+  // are combined into one covering the single surviving block.
+  test('PlansScreen no-plan state uses the shared verb and offers a real action', () => {
+    const start = PLANS.indexOf('icon="barbell-outline"');
     expect(start).toBeGreaterThan(-1);
-    const block = PLANS.slice(start, PLANS.indexOf('icon="barbell-outline"'));
+    const block = PLANS.slice(start, PLANS.indexOf('{/* Folders'));
     expect(block).toContain('No active plan yet');
     expect(block).toContain('Start with a plan');
     expect(block).toContain('Browse plans');
+    expect(block).toContain('generateAndSavePlan');
+    expect(block).not.toContain('icon="compass-outline"');
     expect(block).not.toContain('Browse the library');
     expect(block).not.toContain('Find my plan');
+    expect(block).not.toContain('Build one');
   });
 
   test('PlansScreen tools section carries one unifying label, and no older fallback phrasing lingers', () => {
@@ -78,19 +80,6 @@ describe('no-plan / start-plan copy', () => {
     expect(PLANS).not.toContain('Start or build a plan');
   });
 
-  test('PlansScreen Pro no-plan state uses the same verb and offers a real action', () => {
-    // Re-anchored under C5-P10-09 (D96): the Pro branch was an inert Card
-    // that NAMED "Start with a plan" while offering no Pro affordance at
-    // all (no onPress, no button) -- the free branch two lines above got a
-    // full two-CTA EmptyState. Same shared verb, now attached to the
-    // coach-built plan action Home's Pro branch already offers.
-    const block = PLANS.slice(PLANS.indexOf('icon="barbell-outline"'), PLANS.indexOf('{/* Folders'));
-    expect(block).toContain('Start with a plan');
-    expect(block).toContain('Browse plans');
-    expect(block).toContain('generateAndSavePlan');
-    expect(block).not.toContain('Build one');
-  });
-
   test('Progress no-plan card uses a contained neutral Browse plans control', () => {
     // 2026-07-10 (CP-10 stage 4 batch C, theming): ProgressSections now reads
     // a live theme (src/hooks/useTheme.js), so this inline colour prop moved
@@ -104,12 +93,8 @@ describe('no-plan / start-plan copy', () => {
     expect(PROGRESS_SECTIONS).not.toContain('mesoEmptyBtnText: { ...type.label, color: colors.primary }');
   });
 
-  test('FreeStarter fallback choices are quiet contained controls, not footnote links', () => {
-    // CP-10 batch G lane 1: both icons' ink now resolves from the live theme.
-    expect(FREE_STARTER).toContain('Ionicons name="library-outline" size={14} color={t.colors.textSecondary}');
-    expect(FREE_STARTER).toContain('Ionicons name="arrow-forward" size={14} color={t.colors.textSecondary}');
-    expect(FREE_STARTER).toMatch(/skipLink: \{[\s\S]*minHeight: 40,[\s\S]*borderColor: colors\.border,[\s\S]*backgroundColor: colors\.surface2/);
-    expect(FREE_STARTER).toContain('skipLinkText: { ...type.label, color: colors.textPrimary }');
-    expect(FREE_STARTER).not.toContain('skipLinkText: { fontSize: fontSize.sm, color: colors.textMuted }');
-  });
+  // 'FreeStarter fallback choices are quiet contained controls, not footnote
+  // links' removed (D137): FreeStarterScreen.js (the free-onboarding quiz)
+  // is deleted outright -- there is no free-tier fallback quiz any more for
+  // this control to live on, so the behaviour itself no longer exists.
 });

@@ -118,11 +118,13 @@ describe('ED-safety: getOpenEdPatternFlag reads on safety surfaces fail CLOSED',
   });
 
   // 6. HomeScreen — the trial banner feed plus the sibling loaders.
-  //    RE-ANCHORED (Today truth repair): loadCoachRunway was one of these
-  //    reads and is DELETED with the "what your coach is reading" runway it
-  //    fed. The RULE is unchanged - EVERY remaining read on this screen must
-  //    still fail closed - so the count follows the surviving loaders rather
-  //    than being weakened: it is now pinned exactly, not as a floor.
+  //    RE-ANCHORED (D137, fully-free conversion): two of the four reads were
+  //    on free-tier branches (the pro-upsell paths) removed with the tier
+  //    split, so only two loaders remain: loadFirstReviewFacts
+  //    (HomeScreen.js:521) and loadActivationNudge (HomeScreen.js:762). The
+  //    RULE is unchanged - EVERY remaining read on this screen must still
+  //    fail closed - so the count follows the surviving loaders rather than
+  //    being weakened: it is now pinned exactly, not as a floor.
   test('HomeScreen ED-flag reads fail closed', () => {
     const matches = FILES.home.match(
       /getOpenEdPatternFlag\(user\.id\)\.catch\(\(\)\s*=>\s*'read_failed'\)/g,
@@ -130,7 +132,7 @@ describe('ED-safety: getOpenEdPatternFlag reads on safety surfaces fail CLOSED',
     const allReads = FILES.home.match(/getOpenEdPatternFlag\(user\.id\)/g) || [];
     // Every single read on this screen fails closed - no read is exempt.
     expect(matches.length).toBe(allReads.length);
-    expect(matches.length).toBe(4);
+    expect(matches.length).toBe(2);
   });
 
   // 7. ProSetupCompleteScreen — the dated first-review line.

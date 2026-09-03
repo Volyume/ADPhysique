@@ -37,7 +37,13 @@ describe('CP-7 app-lock gate sits after auth + Article 9 consent, never inside t
     expect(fnBody).toMatch(/healthConsentChecked\s*&&\s*\(healthConsent === false/);
     expect(fnBody).toMatch(/Article9ConsentStack/);
     expect(fnBody).toMatch(/consentUnresolvedForNewUser/);
-    expect(fnBody).toMatch(/tier === 'pro' \? <ProOnboardingStack \/> : <FirstRunStack \/>/);
+    // D137 (fully free product): the tier fork to the lighter FirstRunStack
+    // is gone (FirstRunStack deleted) -- ProOnboardingScreen is now THE
+    // setup path for every user, regardless of tier.
+    expect(fnBody).toMatch(/if \(!firstRunComplete\) \{[\s\S]{0,300}return <ProOnboardingStack \/>;/);
+    // The comment above that branch names FirstRunStack only to record that
+    // it was deleted; there is no longer a live `<FirstRunStack />` render.
+    expect(fnBody).not.toMatch(/return <FirstRunStack \/>/);
   });
 
   test('the final branch now renders LockedMainTabs, wrapping (not replacing) MainTabs', () => {
@@ -84,7 +90,9 @@ describe('CP-7 LockedMainTabs wraps MainTabs and is scoped away from the pre-Mai
     'function WelcomeStack()',
     'function Article9ConsentStack()',
     'function ProOnboardingStack()',
-    'function FirstRunStack()',
+    // 'function FirstRunStack()' removed (D137, fully free product): the
+    // function is deleted outright -- ProOnboardingScreen is the only
+    // setup stack now, already covered above.
   ])('%s does not reference the app-lock gate', (marker) => {
     const start = NAV.indexOf(marker);
     expect(start).toBeGreaterThan(-1);
