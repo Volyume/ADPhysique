@@ -2,6 +2,31 @@
 import { getActiveBlock } from './database';
 import { appAlert } from '../components/AppAlert';
 import { getBlockStatus } from './mesocycle';
+import { BLOCK_START_SENTENCE, ACTIVATION_MEANING_SENTENCE } from './blockExplain';
+
+/**
+ * D139: the athlete's block position, read exactly the way the mid-block
+ * confirm below reads it, so a plan preview and the dialogue that follows it
+ * can never disagree about which week the block is in. Returns null when
+ * there is no user, no active block, or the read fails.
+ *
+ * @returns {Promise<{status: string, currentWeek: number, totalWeeks: number}|null>}
+ */
+export async function readActiveBlockStatus(userId) {
+  if (!userId) return null;
+  let block;
+  try { block = await getActiveBlock(userId); }
+  catch { return null; }
+  if (!block) return null;
+  return getBlockStatus(
+    block.startDate ?? block.createdAt ?? Date.now(),
+    // Wave 2 (2026-07-30): plannedWeeks is authoritative; durationWeeks is
+    // kept in lockstep as a fallback only, never a hardcoded default (see
+    // blockAdvisor.js's identical comment -- getBlockStatus no longer
+    // accepts one).
+    block.plannedWeeks ?? block.durationWeeks ?? 5,
+  );
+}
 
 // Asks the user to confirm before activating a new plan when the current
 // training block has meaningful progress. `activatePlanWithBlock` always
@@ -12,30 +37,39 @@ import { getBlockStatus } from './mesocycle';
 // Returns true (proceed silently) when:
 //   - no userId
 //   - getActiveBlock throws or returns null
-//   - the block is in week 1 (no real progress yet)
 //   - the block is in recovery or completed_awaiting_decision (about to roll
 //     over anyway; anything not 'active' passes)
+//
+// D139: week 1 no longer passes silently. With a block in week 1 the athlete
+// gets the first-activation dialogue PlansScreen writes ("Make this your
+// active plan?"), so no plan is ever replaced without an explicit yes.
 //
 // Otherwise shows an Alert and resolves to the user's choice.
 export async function confirmPlanSwitchMidBlock(userId, opts = {}) {
   const { newPlanName, mode = 'switch' } = opts;
   if (!userId) return true;
 
-  let block;
-  try { block = await getActiveBlock(userId); }
-  catch { return true; }
-  if (!block) return true;
+  const status = await readActiveBlockStatus(userId);
+  if (!status) return true;
 
-  const status = getBlockStatus(
-    block.startDate ?? block.createdAt ?? Date.now(),
-    // Wave 2 (2026-07-30): plannedWeeks is authoritative; durationWeeks is
-    // kept in lockstep as a fallback only, never a hardcoded default (see
-    // blockAdvisor.js's identical comment -- getBlockStatus no longer
-    // accepts one).
-    block.plannedWeeks ?? block.durationWeeks ?? 5,
-  );
-
-  if (status.currentWeek <= 1) return true;
+  // D139: week 1 used to pass SILENTLY, so the one moment where a plan is
+  // replaced with nothing yet lost was also the one moment nothing was said.
+  // Silence is now reserved for "there is no block at all" (handled above);
+  // in week 1 the athlete gets the same first-activation dialogue PlansScreen
+  // shows, in the same wording, so activation is always an explicit choice.
+  if (status.currentWeek <= 1) {
+    return new Promise(resolve => {
+      appAlert(
+        'Make this your active plan?',
+        `${BLOCK_START_SENTENCE} ${ACTIVATION_MEANING_SENTENCE}`,
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          { text: 'Set as active', onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) },
+      );
+    });
+  }
   // C6 P9-07 (D97): the old blanket "anything not 'active' passes" was
   // justified as "about to roll over anyway" - but nothing rolls over on
   // its own (no automatic transitions), so a switch during the recovery

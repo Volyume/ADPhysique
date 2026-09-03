@@ -65,6 +65,43 @@ export const BLOCK_START_SENTENCE =
 export const ACTIVATION_MEANING_SENTENCE =
   'Today then leads with this plan, and you can still change the workouts afterwards.';
 
+/**
+ * D139 (programme creation and planning masterpass, 2026-09-03, finding:
+ * "the one good block definition sat behind a tooltip on a secondary
+ * screen while 'Week N of M' hid whenever the advisor was not on
+ * 'continue'"): the training-block explanation, moved here VERBATIM from
+ * MesocycleBuilderScreen.js's InfoTooltip (the only place it lived) so the
+ * Train tab's own active-plan card can carry the same fact wherever the
+ * block position is shown, not only on the secondary Training-blocks
+ * screen. MesocycleBuilderScreen now reads this constant too, so both
+ * surfaces speak from the one definition.
+ */
+export const BLOCK_DEFINITION =
+  'A training block is the multi-week shape of your training: your weekly sets climb for a few weeks, '
+  + 'then drop back for a lighter recovery week so your body can absorb the work.\n\n'
+  + `Your plan is the workouts and exercises. Making a plan active also starts a block of ${BLOCK_PLANNED_WEEKS} weeks, `
+  + 'the last of them the recovery week. There is nothing to set up.\n\n'
+  + 'When the block finishes:\n'
+  + '• Your plan keeps going. The workouts are still there.\n'
+  + '• Nothing rolls into a new block on its own. You choose what comes next\n'
+  + '• The finished block moves to Past blocks once your next block starts';
+
+/**
+ * D139 (programme creation and planning masterpass, 2026-09-03): what
+ * confirming a new plan does to the block ALREADY running. Every plan
+ * generation restarts the block from week 1, and until now the only place
+ * that was said before the write was planSwitch's dialogue - the preview
+ * sheets described the new plan and said nothing about the one being ended.
+ * Shared from here so the sheet and the dialogue cannot drift apart, and so
+ * any future surface says it in the same words.
+ *
+ * @param {number} currentWeek the week the running block is in
+ * @param {number} totalWeeks  its planned length
+ */
+export const blockRestartSentence = (currentWeek, totalWeeks) =>
+  `Confirming ends your current block at week ${currentWeek} of ${totalWeeks} `
+  + 'and starts a new one from week 1. Your workout history and PRs are kept.';
+
 const SOURCE_CLAUSE = Object.freeze({
   seed_ledger: 'set by how your last block went',
   seed_learned: 'set by what past blocks have shown',

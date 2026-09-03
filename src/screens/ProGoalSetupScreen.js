@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   KeyboardAvoidingView, Platform,
@@ -35,8 +35,12 @@ import {
 import { ageYearsFromDateOfBirth } from '../lib/profileAge';
 import { computeEWMA } from '../lib/weeklyCoach';
 import { formatBodyWeightShort } from '../lib/units';
-import { generateAndSavePlan } from '../lib/planAutoGen';
-import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
+// D139: the goal/phase change rebuilds the plan, so it previews first.
+// prepareStartWithPlan owns the capability pre-flight this path already took
+// (CC27 section 9.6) plus the READ-ONLY dry run; commitStartWithPlan is the
+// generation, run only after the athlete confirms in PlanPreviewSheet.
+import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan';
+import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { confirmPlanSwitchMidBlock } from '../lib/planSwitch';
 
 const APPROACH_SHORT = {
@@ -119,6 +123,13 @@ export default function ProGoalSetupScreen({ navigation }) {
     return () => { cancelled = true; };
   }, []);
   const [selectedPhase, setSelectedPhase] = useState(userProfile?.trainingPhase ?? 'lean_gain');
+  // D139: the staged plan preview for the rebuild half of this save, and the
+  // resolver the sheet's two buttons settle. Nothing about the plan is
+  // written while it is open; the goal and nutrition targets are already
+  // saved by then, exactly as they were before the preview existed.
+  const [planPreview, setPlanPreview] = useState(null);
+  const [planCommitting, setPlanCommitting] = useState(false);
+  const planPreviewResolveRef = useRef(null);
   const [proteinApproach, setProteinApproach] = useState(
     userProfile?.proteinApproach
     ?? (ADVANCED_PROTEIN_GOALS.includes(userProfile?.trainingGoal) ? 'advanced' : 'optimised')
@@ -466,24 +477,43 @@ export default function ProGoalSetupScreen({ navigation }) {
     // the choice is the user's - hold, or continue without those checks.
     // Holding skips only the REBUILD (the goal itself saved above); the
     // existing not-rebuilt path already tells the user how to retry.
+    // D139: the rebuild is previewed before it runs. The pre-flight moved
+    // inside prepareStartWithPlan, in the same position (before the engine);
+    // a hold there still skips ONLY the rebuild, and so does "Not yet".
     let planResult = { ok: false, error: 'not attempted' };
-    const preflight = await capabilityPreflight(user.id);
-    const goAhead = preflight.proceed || await new Promise((resolve) => {
-      offerCapabilityPreflightChoice({
-        onHold: () => resolve(false),
-        onContinue: () => resolve(true),
-      });
+    let previewDeclined = false;
+    const prep = await prepareStartWithPlan(user.id, updatedProfile, {
+      mode: 'goal',
+      currentSessionLengthMinutes: userProfile?.sessionLengthMinutes ?? null,
     });
-    if (goAhead) {
-      try {
-        planResult = await generateAndSavePlan(user.id, updatedProfile);
-      } catch (e) {
-        planResult = { ok: false, error: e?.message ?? 'unknown' };
-      }
+    if (!prep.ok) {
+      planResult = { ok: false, error: prep.reason ?? 'plan_preview_failed' };
     } else {
-      planResult = { ok: false, error: 'capability_preflight_hold' };
+      const confirmed = await new Promise((resolve) => {
+        planPreviewResolveRef.current = resolve;
+        setPlanPreview({ preview: prep.preview, otherPlansCount: prep.otherPlansCount });
+      });
+      planPreviewResolveRef.current = null;
+      if (!confirmed) {
+        previewDeclined = true;
+        setPlanPreview(null);
+        planResult = { ok: false, error: 'plan_preview_declined' };
+      } else {
+        setPlanCommitting(true);
+        try {
+          planResult = await commitStartWithPlan(user.id, updatedProfile);
+        } catch (e) {
+          planResult = { ok: false, error: e?.message ?? 'unknown' };
+        }
+        setPlanCommitting(false);
+        setPlanPreview(null);
+      }
     }
-    if (!planResult.ok) {
+    if (previewDeclined) {
+      // The athlete chose not to rebuild. That is a valid answer, so it gets
+      // no warning: the change summary below already reports the plan as not
+      // rerolled, and Adjust training rebuilds whenever they want it.
+    } else if (!planResult.ok) {
       // Don't block navigation, the goal is saved, nutrition updated. Just
       // tell the user the training plan was not rebuilt so they can retry.
       // D88: the raw caught message no longer reaches the user.
@@ -749,6 +779,23 @@ export default function ProGoalSetupScreen({ navigation }) {
         />
       </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* D139: a goal or phase change rebuilds the plan and restarts the
+          block. It said so only AFTER the write (GoalChangeSummary); now the
+          same sheet the other three generation moments use shows what the
+          rebuild would do, and the generator runs on confirm. */}
+      <PlanPreviewSheet
+        userId={user?.id ?? null}
+        source="goal"
+        visible={!!planPreview}
+        preview={planPreview?.preview ?? null}
+        currentPlanName={planPreview?.preview?.currentPlanName ?? null}
+        otherPlansCount={planPreview?.otherPlansCount ?? 0}
+        confirmLabel="Confirm and rebuild"
+        onConfirm={() => planPreviewResolveRef.current?.(true)}
+        onClose={() => { if (!planCommitting) planPreviewResolveRef.current?.(false); }}
+        busy={planCommitting}
+      />
     </SafeAreaView>
   );
 }

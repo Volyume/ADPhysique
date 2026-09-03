@@ -27,7 +27,10 @@ const PLANS = fs.readFileSync(
   'utf8',
 );
 const UPDATE = fs.readFileSync(
-  path.join(__dirname, '..', 'PlanUpdateScreen.js'),
+  // D139: the receipt renderer moved from PlanUpdateScreen into the shared
+  // PlanPreviewSheet (used by PlanUpdate, Home, Train and the goal change);
+  // the identity-keying contract is pinned on the sheet now.
+  path.join(__dirname, '..', '..', 'components', 'PlanPreviewSheet.js'),
   'utf8',
 );
 
@@ -68,9 +71,13 @@ describe('R5-3: both renderers key the gone-list on exercise IDENTITY, never a d
     expect(UPDATE).not.toContain('key={`gone-${l.exerciseName}`}');
   });
 
-  test('PlanUpdateScreen still renders the section itself (round 4, Q2)', () => {
+  test('PlanPreviewSheet still renders the section itself (round 4, Q2)', () => {
+    // D139: the renderer moved from PlanUpdateScreen (where it read the
+    // staged-preview local `staged.receipt`) into PlanPreviewSheet, which
+    // takes the dry-run result straight as its `preview` prop and reads
+    // `receipt` off it directly - same contract, new variable name.
     expect(UPDATE).toContain('>No longer in your plan</Text>');
-    expect(UPDATE).toContain('staged.receipt.noLongerIn.map');
+    expect(UPDATE).toContain('receipt.noLongerIn.map');
   });
 
   test('R6-5: the OTHER three lists key on identity too, on both renderers', () => {

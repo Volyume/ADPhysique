@@ -5,7 +5,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import useAppStore from '../store/useAppStore';
 import { useShallow } from 'zustand/react/shallow';
-import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing, fontFamily } from '../styles/theme';
+import { colors, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import Dropdown from '../components/Dropdown';
 import SegmentedControl from '../components/SegmentedControl';
@@ -23,15 +23,19 @@ import {
   GOALS_WITH_WEAK_POINTS, WEAK_POINT_MUSCLES,
 } from '../lib/coachingGoals';
 import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
-import { demandLabel } from '../lib/capability/model';
 import {
   generateAndSavePlan, generatePlanDryRun, planShortfallNote, assessScheduleFit, thinSessionReport,
 } from '../lib/planAutoGen';
-import { PLAN_FIT, fitCopy, alternativeCopy } from '../lib/planFit';
+import { PLAN_FIT } from '../lib/planFit';
 import { buildChangeReceipt } from '../lib/planRationale';
-import { getActivePlan, getRoutinesForPlan, getRoutineExercisesWithDetails } from '../lib/database';
-import { diffPlans, summariseProspectivePlan, summariseCurrentPlan } from '../lib/planDiff';
-import BottomSheet from '../components/BottomSheet';
+import { getAllPlansForUser } from '../lib/database';
+import { diffPlans, summariseProspectivePlan } from '../lib/planDiff';
+// D139: the preview sheet is shared with the three other generation moments
+// (Today and Train's no-plan empty states, and a goal/phase change), so all
+// four say the same things in the same order before anything is written.
+import PlanPreviewSheet from '../components/PlanPreviewSheet';
+import { readActivePlanSummary } from '../lib/startWithPlan';
+import { confirmPlanSwitchMidBlock, readActiveBlockStatus } from '../lib/planSwitch';
 
 // Training setup options, mirror the lists in ProOnboardingScreen and
 // ProGoalSetupScreen so a re-run here produces the same plan structure as a
@@ -142,21 +146,10 @@ export default function PlanUpdateScreen({ navigation }) {
   // Read the current active plan into a comparable summary (NA-coaching-13:
   // getActivePlan → getRoutinesForPlan → getRoutineExercisesWithDetails).
   // Returns null when there is no active plan or the read fails; the diff then
-  // shows everything in the prospective plan as new.
+  // shows everything in the prospective plan as new. D139: the same reader the
+  // other three generation surfaces use, so no two previews can drift.
   async function readCurrentPlanSummary() {
-    try {
-      const active = await getActivePlan(user.id);
-      if (!active?.id) return null;
-      const routines = await getRoutinesForPlan(active.id);
-      const withExercises = [];
-      for (const r of (routines || [])) {
-        const rows = await getRoutineExercisesWithDetails(r.id).catch(() => []);
-        withExercises.push({ ...r, exercises: (rows || []).map(x => ({ name: x?.exercise?.name })) });
-      }
-      return summariseCurrentPlan(withExercises, userProfile?.sessionLengthMinutes ?? null);
-    } catch (_) {
-      return null;
-    }
+    return readActivePlanSummary(user.id, userProfile?.sessionLengthMinutes ?? null);
   }
 
   // Step 1 (NEW): the review button runs a dry-run + diff and opens the preview.
@@ -205,9 +198,23 @@ export default function PlanUpdateScreen({ navigation }) {
         durationOptions: SESSION_LENGTH_OPTIONS.map(o => o.value),
         dayOptions: DAYS_OPTIONS,
       }).catch(() => null);
+      // D139: the same two facts every preview now carries - where the
+      // block stands (read through planSwitch, so the sheet and the confirm
+      // dialogue can never disagree), and how many plans the commit will
+      // archive.
+      const blockStatus = await readActiveBlockStatus(user.id).catch(() => null);
+      const otherPlans = await getAllPlansForUser(user.id).catch(() => []);
       setDiff(diffPlans(nowSummary, afterSummary));
       setStaged({
         profile: updatedProfile,
+        plan: dry.plan,
+        sessionLengthMinutes: dry.sessionLengthMinutes ?? null,
+        // CAMPAIGN 18 JOB C (moved forward, D139): the athlete's own history
+        // is named BEFORE they confirm, not in a receipt toast afterwards.
+        structureMemory: dry.structureMemory ?? null,
+        blockStatus,
+        currentPlanName: nowSummary?.planName ?? null,
+        otherPlansCount: Array.isArray(otherPlans) ? otherPlans.length : 0,
         partial: !!dry.partial,
         missedCount: dry.missedCount ?? 0,
         blockedCount: afterSummary.blockedCount ?? 0,
@@ -218,7 +225,13 @@ export default function PlanUpdateScreen({ navigation }) {
         capabilityBlockedCount: dry.capabilityBlockedCount ?? 0,
         capabilityNearMisses: dry.capabilityNearMisses ?? null,
         thinSessions: thinSessionReport(dry.plan, dry.blockedSlots ?? []),
-        fit: fit?.ok ? fit : null,
+        // Schedule fit, from the shared resolver. Only staged when the new
+        // schedule cannot carry the plan comfortably: telling someone their
+        // week works every single time they rebuild is noise, not guidance.
+        fit: fit?.ok
+          && (fit.state === PLAN_FIT.VALID_TIME_CONSTRAINED
+            || fit.state === PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN)
+          ? fit : null,
         // C16 job 11: the reason-coded receipt. Built from the SAME
         // continuity decisions the commit will act on, so the sheet cannot
         // describe a change the rebuild is not about to make.
@@ -258,6 +271,12 @@ export default function PlanUpdateScreen({ navigation }) {
       });
       if (!goAhead) { setSaving(false); return; }
     }
+    // D139: the same mid-block confirm every other plan-replacing path runs,
+    // in its usual position (before the write, with the rebuild wording).
+    // The preview above already SAYS the block restarts; this is the explicit
+    // yes to it. Abort leaves the setup and the active plan untouched.
+    const proceed = await confirmPlanSwitchMidBlock(user.id, { mode: 'rebuild' });
+    if (!proceed) { setSaving(false); return; }
     let planResult = { ok: false, error: 'not attempted' };
     try {
       planResult = await generateAndSavePlan(user.id, updatedProfile);
@@ -417,239 +436,24 @@ export default function PlanUpdateScreen({ navigation }) {
         />
       </ScrollView>
 
-      {/* Plan diff/preview (ULTIMATE-PLANDIFF-01): the before/after of what the
-          rebuild would change, shown BEFORE the active plan is overwritten. The
-          real commit only runs on confirm; backing out writes nothing. */}
-      <BottomSheet
+      {/* Plan diff/preview (ULTIMATE-PLANDIFF-01, shared out under D139): the
+          before/after of what the rebuild would change, shown BEFORE the
+          active plan is overwritten, in the same sheet the other three
+          generation moments use. The real commit only runs on confirm;
+          backing out writes nothing. */}
+      <PlanPreviewSheet
+        userId={user?.id ?? null}
+        source="update"
         visible={!!diff}
+        preview={diff && staged ? { ...staged, mode: 'rebuild', diff } : null}
+        currentPlanName={staged?.currentPlanName ?? null}
+        otherPlansCount={staged?.otherPlansCount ?? 0}
+        confirmLabel="Confirm and rebuild"
+        onConfirm={handleConfirmRebuild}
         onClose={() => { if (!saving) { setDiff(null); setStaged(null); } }}
-        accessibilityLabel="Plan changes preview"
-        scroll
-        contentContainerStyle={styles.diffSheetContent}
-      >
-        {diff ? (
-          <>
-            <Text style={[styles.diffTitle, live.diffTitle]}>Before you rebuild</Text>
-            {diff.identical ? (
-              <Text style={[styles.diffSub, live.diffSub]}>
-                Your training days, split and moves already match this setup. Rebuilding refreshes your sets and volume.
-              </Text>
-            ) : (
-              <>
-                <Text style={[styles.diffSub, live.diffSub]}>
-                  Here's what changes. Your current plan stays until you confirm.
-                </Text>
-                <View style={[styles.diffTable, live.diffTable]}>
-                  <View style={[styles.diffHeadRow, live.diffHeadRow]}>
-                    <Text style={[styles.diffCell, live.diffCell, styles.diffCellLabel, live.diffCellLabel]} />
-                    <Text style={[styles.diffCell, live.diffCell, styles.diffHeadText, live.diffHeadText]}>Now</Text>
-                    <Text style={[styles.diffCell, live.diffCell, styles.diffHeadText, live.diffHeadText]}>After</Text>
-                  </View>
-                  <DiffRow live={live} label="Training days" now={diff.days.now} after={diff.days.after} changed={diff.days.changed} />
-                  <DiffRow live={live} label="Split" now={diff.split.now ?? '-'} after={diff.split.after ?? '-'} changed={diff.split.changed} />
-                  <DiffRow
-                    live={live}
-                    label="Session length"
-                    now={diff.sessionLength.now != null ? `${diff.sessionLength.now} min` : '-'}
-                    after={diff.sessionLength.after != null ? `${diff.sessionLength.after} min` : '-'}
-                    changed={diff.sessionLength.changed}
-                  />
-                </View>
-                {/* C16 job 11 (completion pass): the change receipt, built
-                    from the reasons the continuity engine actually recorded.
-                    WHAT STAYED is a section in its own right, not the
-                    leftovers, and every line carries the why. The generic
-                    Added/Dropped list below is the fallback for a rebuild
-                    that produced no decision record (a first plan, or an
-                    engine path that did not run continuity). */}
-                {staged?.receipt ? (
-                  <View style={styles.diffMoves}>
-                    <Text style={[styles.diffMovesLabel, live.diffMovesLabel]}>
-                      {staged.receipt.headline}
-                    </Text>
-                    {staged.receipt.stays.length > 0 ? (
-                      <>
-                        <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>What stays</Text>
-                        {/* Round 6 (R6-5): the rep-target change renders
-                            on the line it belongs to - the headline's
-                            count needs a section, and this renderer had
-                            none (PlansScreen already renders it). Keys
-                            are identity + index (R5-3's law; two rows of
-                            one deliberately twice-programmed lift share
-                            an id). */}
-                        {staged.receipt.stays.map((l, i) => (
-                          <Text key={`stay-${l.exerciseId ?? l.exerciseName}-${i}`} style={[styles.diffMoveText, live.diffMoveText]}>
-                            {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
-                            {l.prescriptionCopy ? ` ${l.prescriptionCopy}` : ''}
-                          </Text>
-                        ))}
-                      </>
-                    ) : null}
-                    {staged.receipt.changes.length > 0 ? (
-                      <>
-                        <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>What changes</Text>
-                        {staged.receipt.changes.map((l, i) => (
-                          <Text key={`chg-${l.exerciseId ?? l.exerciseName}-${i}`} style={[styles.diffMoveText, live.diffMoveText]}>
-                            {l.previousExerciseName ? `${l.previousExerciseName} to ` : ''}{l.exerciseName}
-                            {l.why ? ` - ${l.why}` : ''}
-                          </Text>
-                        ))}
-                      </>
-                    ) : null}
-                    {staged.receipt.added.length > 0 ? (
-                      <>
-                        <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>New in your plan</Text>
-                        {staged.receipt.added.map((l, i) => (
-                          <Text key={`new-${l.exerciseId ?? l.exerciseName}-${i}`} style={[styles.diffMoveText, live.diffMoveText]}>
-                            {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
-                          </Text>
-                        ))}
-                      </>
-                    ) : null}
-                    {(staged.receipt.noLongerIn?.length ?? 0) > 0 ? (
-                      // CC33 round 4 (Q2): the receipt's completeness
-                      // section. An incumbent that matched no rebuilt
-                      // slot used to vanish with no line anywhere -
-                      // every custom exercise on most muscles, on every
-                      // rebuild. Silence is the one outcome a change
-                      // receipt may never have.
-                      <>
-                        <Text style={[styles.diffReceiptHead, live.diffReceiptHead]}>No longer in your plan</Text>
-                        {/* Keys are the exercise's ID (round 5, R5-3):
-                            one exercise on two days used to render two
-                            identical name keys, and names are not
-                            unique across custom and library lifts. */}
-                        {staged.receipt.noLongerIn.map((l, i) => (
-                          <Text key={`gone-${l.previousExerciseId ?? i}`} style={[styles.diffMoveText, live.diffMoveText]}>
-                            {l.exerciseName}{l.why ? ` - ${l.why}` : ''}
-                          </Text>
-                        ))}
-                      </>
-                    ) : null}
-                  </View>
-                ) : (diff.movesAdded.length > 0 || diff.movesDropped.length > 0) ? (
-                  <View style={styles.diffMoves}>
-                    <Text style={[styles.diffMovesLabel, live.diffMovesLabel]}>Moves changed</Text>
-                    {diff.movesAdded.map(m => (
-                      <Text key={`add-${m}`} style={[styles.diffMoveText, live.diffMoveText]}>Added: {m}</Text>
-                    ))}
-                    {diff.movesDropped.map(m => (
-                      <Text key={`drop-${m}`} style={[styles.diffMoveText, live.diffMoveText]}>Dropped: {m}</Text>
-                    ))}
-                  </View>
-                ) : null}
-                {staged?.partial ? (
-                  <Text style={[styles.diffShortfall, live.diffShortfall]}>{planShortfallNote(staged.missedCount)}</Text>
-                ) : null}
-                {/* C9 cosmetic patch: a slot whose candidates the user has
-                    set aside shows its real state instead of naming the
-                    exercise. Resolving it stays the job of the existing
-                    conflict flow; nothing is chosen or restored here. */}
-                {/* CC27 (section 33.14): a session losing over a third of
-                    its slots to capability constraints says so up front,
-                    with the honest way forward - never a quiet husk. */}
-                {staged?.thinSessions?.length ? (
-                  <View style={styles.thinSessionBanner}>
-                    <Text style={[styles.diffShortfall, live.diffShortfall]}>
-                      {staged.thinSessions.map(ts => `${ts.workoutName} is unusually reduced: ${ts.omitted} of ${ts.requested} exercises have no match inside how you train.`).join(' ')}
-                      {' '}You can pick replacements yourself, create a custom exercise, or keep the reduced session. Volyume will not add lower-quality work to hit a number.
-                    </Text>
-                  </View>
-                ) : null}
-                {/* CC27 (section 33.11): near misses - movements held back
-                    only because an axis is UNKNOWN, each naming that axis,
-                    so the way forward is actionable rather than a wall. */}
-                {staged?.capabilityNearMisses ? (
-                  Object.entries(staged.capabilityNearMisses).map(([muscle, list]) => (
-                    <View key={muscle}>
-                      {list.map(nm => (
-                        <Text key={nm.exerciseId} style={[styles.diffShortfall, live.diffShortfall]}>
-                          {nm.name}: Volyume doesn't know yet whether this involves {nm.unknownAxes.map(a => demandLabel(a).toLowerCase()).join(', ')}. You can still add it yourself.
-                        </Text>
-                      ))}
-                    </View>
-                  ))
-                ) : null}
-                {staged?.blockedCount > 0 ? (
-                  (() => {
-                    const capabilityCount = staged.capabilityBlockedCount ?? 0;
-                    const intentCount = Math.max(0, staged.blockedCount - capabilityCount);
-                    return (
-                      <Text style={[styles.diffShortfall, live.diffShortfall]}>
-                        {intentCount > 0
-                          ? `${intentCount === 1 ? 'One slot' : `${intentCount} slots`} would normally use exercises you have set aside. `
-                          : ''}
-                        {capabilityCount > 0
-                          ? `${capabilityCount === 1 ? 'One slot has' : `${capabilityCount} slots have`} no match inside how you train.`
-                          : ''}
-                      </Text>
-                    );
-                  })()
-                ) : null}
-                {/* Schedule fit, from the shared resolver. Only surfaced
-                    when the new schedule cannot carry the plan comfortably:
-                    telling someone their week works every single time they
-                    rebuild is noise, not guidance. */}
-                {staged?.fit
-                  && (staged.fit.state === PLAN_FIT.VALID_TIME_CONSTRAINED
-                    || staged.fit.state === PLAN_FIT.INSUFFICIENT_FOR_VALID_PLAN) ? (
-                    <View style={styles.diffMoves}>
-                      <Text style={[styles.diffMovesLabel, live.diffMovesLabel]}>
-                        {fitCopy(staged.fit.state, staged.fit).title}
-                      </Text>
-                      <Text style={[styles.diffShortfall, live.diffShortfall]}>
-                        {fitCopy(staged.fit.state, staged.fit).body}
-                      </Text>
-                      {(staged.fit.alternatives ?? []).map((alt) => (
-                        <Text
-                          key={`${alt.kind}-${alt.daysPerWeek}-${alt.sessionLengthMinutes}`}
-                          style={[styles.diffMoveText, live.diffMoveText]}
-                        >
-                          {alternativeCopy(alt).label}: {alternativeCopy(alt).detail}
-                        </Text>
-                      ))}
-                    </View>
-                  ) : null}
-              </>
-            )}
-
-            <Button
-              title="Confirm and rebuild"
-              onPress={handleConfirmRebuild}
-              loading={saving}
-              disabled={saving}
-              accessibilityLabel="Confirm and rebuild"
-              style={styles.saveBtn}
-            />
-            <Button
-              title="Back"
-              variant="tertiary"
-              style={styles.diffBackBtn}
-              textStyle={[styles.diffBackText, live.diffBackText]}
-              onPress={() => { if (!saving) { setDiff(null); setStaged(null); } }}
-              disabled={saving}
-              accessibilityLabel="Back"
-            />
-          </>
-        ) : null}
-      </BottomSheet>
+        busy={saving}
+      />
     </SafeAreaView>
-  );
-}
-
-// One Now/After row in the diff table. Class-neutral: a changed row is emphasised
-// by weight, not a valence colour (a plan change is neither good nor bad).
-// CP-10 batch G (2026-07-11): rendered directly by the parent (not a list
-// row), so `live` is passed as a plain prop from the one screen-level
-// useTheme() call rather than a second useTheme() call here.
-function DiffRow({ label, now, after, changed, live }) {
-  const fmt = (v) => (v == null ? '-' : String(v));
-  return (
-    <View style={[styles.diffRow, live.diffRow]}>
-      <Text style={[styles.diffCell, live.diffCell, styles.diffCellLabel, live.diffCellLabel]}>{label}</Text>
-      <Text style={[styles.diffCell, live.diffCell, styles.diffNow, live.diffNow]}>{fmt(now)}</Text>
-      <Text style={[styles.diffCell, live.diffCell, styles.diffAfter, live.diffAfter, changed && styles.diffAfterChanged]}>{fmt(after)}</Text>
-    </View>
   );
 }
 
@@ -674,30 +478,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   saveBtn: { marginTop: spacing.xxl },
-
-  // Plan diff/preview sheet
-  diffTitle: { color: colors.textPrimary, fontSize: fontSize.lg, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
-  diffSub: { ...type.bodySm, color: colors.textSecondary, marginTop: spacing.xs },
-  diffTable: { marginTop: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' },
-  diffHeadRow: { flexDirection: 'row', backgroundColor: colors.surface2, paddingVertical: spacing.xs },
-  diffRow: { flexDirection: 'row', paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.borderSubtle, alignItems: 'center' },
-  diffCell: { flex: 1, paddingHorizontal: spacing.sm, fontSize: fontSize.sm, color: colors.textPrimary },
-  diffCellLabel: { color: colors.textSecondary },
-  diffHeadText: { fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.textMuted, textTransform: 'uppercase' },
-  diffNow: { color: colors.textMuted },
-  diffAfter: { color: colors.textPrimary },
-  diffAfterChanged: { fontFamily: fontFamily.bold, fontWeight: fontWeight.bold },
-  diffMoves: { marginTop: spacing.md, gap: spacing.xxs },
-  diffMovesLabel: { color: colors.textSecondary, fontSize: fontSize.xs, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, textTransform: 'uppercase', letterSpacing: letterSpacing.overline },
-  diffReceiptHead: { color: colors.textPrimary, fontSize: fontSize.sm, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, marginTop: spacing.sm, marginBottom: spacing.xxs },
-  diffMoveText: { color: colors.textPrimary, fontSize: fontSize.sm },
-  diffShortfall: { ...type.bodySm, marginTop: spacing.md, color: colors.textSecondary },
-  thinSessionBanner: {
-    marginTop: spacing.sm,
-  },
-  diffBackBtn: { marginTop: spacing.sm },
-  diffBackText: { color: colors.textSecondary, ...type.bodyStrong },
-  diffSheetContent: { gap: spacing.md },
 });
 
 // CP-10 batch G (2026-07-11): the frozen `styles` block above stays byte-
@@ -713,20 +493,5 @@ function buildLiveStyles(t) {
     safe: { backgroundColor: t.colors.background },
     sectionSub: { ...t.type.captionTight, color: t.colors.textMuted },
     optionalTag: { ...t.type.caption, color: t.colors.textMuted },
-    diffTitle: { color: t.colors.textPrimary, fontSize: t.fontSize.lg },
-    diffSub: { ...t.type.bodySm, color: t.colors.textSecondary },
-    diffTable: { borderColor: t.colors.border },
-    diffHeadRow: { backgroundColor: t.colors.surface2 },
-    diffRow: { borderTopColor: t.colors.borderSubtle },
-    diffCell: { fontSize: t.fontSize.sm, color: t.colors.textPrimary },
-    diffCellLabel: { color: t.colors.textSecondary },
-    diffHeadText: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    diffNow: { color: t.colors.textMuted },
-    diffAfter: { color: t.colors.textPrimary },
-    diffMovesLabel: { color: t.colors.textSecondary, fontSize: t.fontSize.xs },
-    diffReceiptHead: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
-    diffMoveText: { color: t.colors.textPrimary, fontSize: t.fontSize.sm },
-    diffShortfall: { ...t.type.bodySm, color: t.colors.textSecondary },
-    diffBackText: { color: t.colors.textSecondary, ...t.type.bodyStrong },
   };
 }

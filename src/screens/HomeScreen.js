@@ -82,10 +82,13 @@ import EvidencePanel from '../components/home/EvidencePanel';
 import { resolveEvidencePanel } from '../lib/home/evidencePanel';
 import { formatBodyWeight } from '../lib/units';
 import { getRecentIntakeSummary } from '../lib/food/db';
-import { generateAndSavePlan } from '../lib/planAutoGen';
-// CC27 (section 9.6) red-team finding 1: every generateAndSavePlan surface
-// runs the capability pre-flight first - never a silent fail-open.
-import { capabilityPreflight, offerCapabilityPreflightChoice } from '../lib/capability/preflight';
+// D139: the no-plan "Start with a plan" action previews before it commits.
+// prepareStartWithPlan owns the capability pre-flight (CC27 section 9.6 red-team
+// finding 1: every generation surface runs it first, never a silent fail-open)
+// and the READ-ONLY dry run; commitStartWithPlan is the real generation, run
+// only after the athlete confirms in PlanPreviewSheet.
+import { prepareStartWithPlan, commitStartWithPlan } from '../lib/startWithPlan';
+import PlanPreviewSheet from '../components/PlanPreviewSheet';
 import { logError, logWarn } from '../lib/errorLog';
 import { calculateTonnage, buildLoadSemanticsById, calculateWeeklyVolume, MUSCLE_DISPLAY_NAMES, shouldDeload, buildLast4WeekDeloadBuckets } from '../lib/algorithms';
 import { selectPlateauForBanner, plateauBannerLine } from '../lib/plateauSurfacing';
@@ -329,6 +332,11 @@ export default function HomeScreen({ navigation, route }) {
   // from the empty state; a second tap while the first run is still awaiting
   // preflight or the generator would start a second generation.
   const startWithPlanRef = useRef(false);
+  // D139: the staged first-plan preview, { preview, otherPlansCount }. Set by
+  // the empty state's prepare step, cleared on confirm or "Not yet". Nothing
+  // is written while it is open.
+  const [planPreview, setPlanPreview] = useState(null);
+  const [startingPlan, setStartingPlan] = useState(false);
   const startFlowRef = useRef(false);
   // COMP-008: the three "walked-in-with" readiness facts, captured on the
   // pre-workout prompt where they are accurate rather than recalled after the
@@ -1337,6 +1345,54 @@ export default function HomeScreen({ navigation, route }) {
     ]);
   }
 
+  // ── D139: "Start with a plan", in two steps. ────────────────────────────
+  // Step 1 previews: the capability pre-flight and the READ-ONLY dry run,
+  // then the sheet. Nothing is generated, saved or activated here.
+  async function handleStartWithPlanPress() {
+    if (startWithPlanRef.current) return;
+    startWithPlanRef.current = true;
+    try {
+      const prep = await prepareStartWithPlan(user.id, userProfile, { mode: 'first' });
+      if (!prep.ok) {
+        // A hold at the pre-flight leaves the empty state in place to try
+        // again, and says nothing extra: the choice was the athlete's.
+        if (prep.reason === 'dry_run_failed') {
+          logError('HomeScreen.startWithPlanPreview', new Error(prep.error ?? 'plan_generation_failed'), { userId: user?.id });
+          toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+        }
+        return;
+      }
+      setPlanPreview({ preview: prep.preview, otherPlansCount: prep.otherPlansCount });
+    } finally {
+      startWithPlanRef.current = false;
+    }
+  }
+
+  // Step 2 commits, only from the sheet's confirm button.
+  async function handleConfirmStartWithPlan() {
+    if (startingPlan) return;
+    setStartingPlan(true);
+    let result = { ok: false, error: 'not attempted' };
+    try {
+      result = await commitStartWithPlan(user.id, userProfile);
+    } catch (e) {
+      result = { ok: false, error: e?.message ?? 'unknown' };
+    }
+    setStartingPlan(false);
+    if (result.ok) {
+      setPlanPreview(null);
+      await loadData();
+      // D112 R5 (closes audit T1-12): every generation entry
+      // reveals capability effects, not just PlanUpdateScreen.
+      if (result.capabilityBlockedCount > 0) {
+        toast.show(capabilityBlockedNote(result.capabilityBlockedCount), { variant: 'info', duration: 5000 });
+      }
+    } else {
+      logError('HomeScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
+      toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
+    }
+  }
+
   async function handleRefresh() {
     setRefreshing(true);
     // If there's an active cloud session, fire pullFromCloud first so a
@@ -2295,37 +2351,9 @@ export default function HomeScreen({ navigation, route }) {
                  training block too, so it says so first. */
               text={`Start with a plan and Volyume builds one from your setup. If you just signed in on this phone, your existing plan may still be arriving. ${BLOCK_START_SENTENCE}`}
               actionLabel="Start with a plan"
-              onAction={async () => {
-                if (startWithPlanRef.current) return;
-                startWithPlanRef.current = true;
-                try {
-                // CC27 (section 9.6) red-team finding 1: pre-flight
-                // before the generator, like every generation surface.
-                // Holding leaves the empty state in place to try again.
-                const preflight = await capabilityPreflight(user.id);
-                const goAhead = preflight.proceed || await new Promise((resolve) => {
-                  offerCapabilityPreflightChoice({
-                    onHold: () => resolve(false),
-                    onContinue: () => resolve(true),
-                  });
-                });
-                if (!goAhead) return;
-                const result = await generateAndSavePlan(user.id, userProfile);
-                if (result.ok) {
-                  await loadData();
-                  // D112 R5 (closes audit T1-12): every generation entry
-                  // reveals capability effects, not just PlanUpdateScreen.
-                  if (result.capabilityBlockedCount > 0) {
-                    toast.show(capabilityBlockedNote(result.capabilityBlockedCount), { variant: 'info', duration: 5000 });
-                  }
-                } else {
-                  logError('HomeScreen.startWithPlan', new Error(result.error ?? 'plan_generation_failed'), { userId: user?.id });
-                  toast.show("Couldn't start your plan, try again", { variant: 'error', duration: 5000 });
-                }
-                } finally {
-                  startWithPlanRef.current = false;
-                }
-              }}
+              onAction={handleStartWithPlanPress}
+              secondaryLabel="Browse plans"
+              onSecondary={() => { haptics.selection(); navigateCrossTab(navigation, 'PlansTab', 'PlanLibrary'); }}
             />
 
             {/* Campaign 22 Phase 2 Stage 2 (HOME-TODAY-UX-SPEC.md §7/§17 R5,
@@ -2781,6 +2809,22 @@ export default function HomeScreen({ navigation, route }) {
         </TouchableOpacity>
       </BottomSheet>
       {/* Sharpener: one dismissible what's-new sheet per update. */}
+      {/* D139: the first plan is previewed before it is built. The sheet
+          shows the prospective week, what a block is, and what happens to
+          the plans already on the device; the generator runs on confirm. */}
+      <PlanPreviewSheet
+        userId={user?.id ?? null}
+        source="home"
+        visible={!!planPreview}
+        preview={planPreview?.preview ?? null}
+        currentPlanName={planPreview?.preview?.currentPlanName ?? null}
+        otherPlansCount={planPreview?.otherPlansCount ?? 0}
+        confirmLabel="Start this plan"
+        onConfirm={handleConfirmStartWithPlan}
+        onClose={() => { if (!startingPlan) setPlanPreview(null); }}
+        busy={startingPlan}
+      />
+
       <WhatsNewSheet />
     </SafeAreaView>
   );
