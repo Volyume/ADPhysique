@@ -192,8 +192,14 @@ describe('source wiring', () => {
   const read = (rel) => fs.readFileSync(path.join(__dirname, '..', '..', rel), 'utf8');
 
   test('a new baseline rule and a promotion both reach the rewrite proposal', () => {
+    // D133 (2026-09-03): a NEW baseline rule is saved by the add wizard,
+    // where the rewrite is the flow's last step (loadBaselinePlan) rather
+    // than a modal; promotion stays on the settings home.
+    const wizard = read('screens/HowYouTrainAddScreen.js');
+    expect(wizard).toMatch(/if \(isEpisode\) await loadEpisodePlan\(createdIds, subject\);\s*else await loadBaselinePlan\(createdIds, subject\);/);
+    expect(wizard).toMatch(/computeCapabilityPlanRewrite\(userId, \{ ruleIds: createdIds \}\)/);
+    expect(wizard).toMatch(/applyCapabilityPlanRewrite\(userId, plan\.lines\)/);
     const src = read('screens/HowYouTrainScreen.js');
-    expect(src).toMatch(/if \(!isEpisode && draft\.kind !== 'allow'[\s\S]{0,120}proposeCapabilityPlanRewrite\(createdIds, subject\)/);
     const promote = src.match(/confirmPromote[\s\S]{0,1600}/)?.[0] ?? '';
     expect(promote).toContain('const promotedIds = await promoteEpisode(userId, ep.groupId);');
     expect(promote).toContain('proposeCapabilityPlanRewrite(promotedIds, subject)');

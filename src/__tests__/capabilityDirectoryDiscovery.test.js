@@ -40,17 +40,24 @@ describe('CAP-19: free-tier registration', () => {
 });
 
 describe('preselect contract', () => {
-  test('HowYouTrain consumes the param exactly once and keeps every confirmation stage', () => {
+  // Flow audit 2026-09-03 (D133): HowYouTrain consumes the param exactly
+  // once and FORWARDS it to the add wizard, which still asks permanent-
+  // or-temporary, dates, consent and readback itself - the profile's kind
+  // is a suggestion carried on `from`, never a skipped question.
+  const flow = read('../lib/capability/addFlow.js');
+  const wizard = read('../screens/HowYouTrainAddScreen.js');
+  test('HowYouTrain consumes the param exactly once and forwards it to the wizard', () => {
     expect(hyt).toMatch(/route\.params\?\.preselect/);
     expect(hyt).toMatch(/navigation\.setParams\(\{ preselect: undefined \}\)/);
-    // The preselected draft still starts at the role stage - durability,
-    // dates, consent and readback are never skipped.
-    expect(hyt).toMatch(/setDraft\(\{\s*role: null,\s*kind: preselect\.kind \?\? null/);
-    const effect = hyt.slice(hyt.indexOf('const preselect = route.params?.preselect'));
-    expect(effect.slice(0, 1200)).toMatch(/setAdding\('role'\)/);
+    expect(hyt).toMatch(/navigation\.navigate\('HowYouTrainAdd', \{ preselect \}\)/);
+  });
+  test('the preselected draft never skips the role question', () => {
+    expect(flow).toMatch(/kind: preselect\?\.kind \?\? null/);
+    expect(flow).toMatch(/role: null,/);
+    expect(flow).toMatch(/if \(!allow\) steps\.push\(ADD_STEP\.WHEN\)/);
   });
   test('exercise-name preselects wait for the library so names resolve', () => {
-    expect(hyt).toMatch(/preselect\.kind === 'exercise' && !library\.length/);
+    expect(wizard).toMatch(/preselect\.kind === 'exercise' && !library\.length/);
   });
 });
 

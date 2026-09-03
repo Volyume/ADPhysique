@@ -91,47 +91,49 @@ describe('a chosen side survives the round trip into storage', () => {
 });
 
 describe('the interface actually writes the side it collects', () => {
-  const src = fs.readFileSync(
-    path.resolve(__dirname, '../../../screens/HowYouTrainScreen.js'), 'utf8',
-  );
+  // Flow audit 2026-09-03 (D133): the add flow moved to its own wizard
+  // (HowYouTrainAddScreen) on a pure core (lib/capability/addFlow.js).
+  // Same intent, re-anchored: the draft carries a side, the write puts it
+  // on the row gated by the model's own predicate, the question is asked
+  // from the model, the side step is on the path, and the words a person
+  // reads name a body part.
+  const flow = fs.readFileSync(path.resolve(__dirname, '../addFlow.js'), 'utf8');
+  const wizard = fs.readFileSync(path.resolve(__dirname, '../../../screens/HowYouTrainAddScreen.js'), 'utf8');
 
   it('the draft carries a side and the write puts it on the row', () => {
-    expect(src).toMatch(/side: null/);
-    // The value reaches the row, gated by the model's own predicate -
-    // this is the half that was missing entirely.
-    expect(src).toMatch(/laterality: isSideCarveable\(CONSTRAINT_RULE_KIND\.DEMAND, axis\)\s*\?\s*\(draft\.side \?\? null\)\s*:\s*null/);
+    const draftShape = flow.slice(flow.indexOf('export function emptyDraft'), flow.indexOf('export function applyPreselect'));
+    expect(draftShape).toMatch(/side: null/);
+    // "Both sides" stores no side; a chosen side reaches the row only where
+    // the model says the axis carves - the half that was missing entirely.
+    expect(flow).toMatch(/const side = draft\.side === 'both' \? null : draft\.side;/);
+    expect(flow).toMatch(/laterality: isSideCarveable\(CONSTRAINT_RULE_KIND\.DEMAND, axis\)\s*\?\s*\(side \?\? null\)\s*:\s*null/);
   });
 
   it('the question is asked from the model, never from a list kept here', () => {
-    expect(src).toMatch(/import \{ isSideCarveable \}/);
-    expect(src).toMatch(/adding === 'side'/);
+    expect(flow).toMatch(/import \{ isSideCarveable \} from '\.\/resolve'/);
+    expect(wizard).toMatch(/step === ADD_STEP\.SIDE/);
     // No hand-maintained copy of which axes are sided.
-    expect(src).not.toMatch(/SIDE_CARVEABLE\s*=/);
+    expect(flow).not.toMatch(/SIDE_CARVEABLE\s*=/);
+    expect(wizard).not.toMatch(/SIDE_CARVEABLE\s*=/);
   });
 
-  it('the side stage is reachable and leads onward', () => {
-    expect(src).toMatch(/if \(sidedAxes\(d\)\.length\) return 'side';/);
-    expect(src).toMatch(/setAdding\(afterRuleStage\(draft\)\)/);
-    expect(src).toMatch(/const afterSideStage = /);
+  it('the side stage is on the path exactly when a chosen axis carves, and leads onward', () => {
+    expect(flow).toMatch(/if \(sidedAxes\(draft\)\.length\) steps\.push\(ADD_STEP\.SIDE\)/);
+    // It sits after WHICH and before WHEN in the plan, so Continue leads on.
+    const plan = flow.slice(flow.indexOf('export function planSteps'), flow.indexOf('export function stepPosition'));
+    expect(plan.indexOf('ADD_STEP.WHICH')).toBeLessThan(plan.indexOf('ADD_STEP.SIDE'));
+    expect(plan.indexOf('ADD_STEP.SIDE')).toBeLessThan(plan.indexOf('ADD_STEP.WHEN'));
   });
 
   it('the words the user reads name a body part, never "laterality"', () => {
-    const stage = src.slice(src.indexOf("adding === 'side'"), src.indexOf("adding === 'dates'"));
+    expect(flow).toMatch(/question: `Which \$\{part\}\?`/);
+    expect(flow).toMatch(/left: `Left \$\{part\}`/);
+    expect(flow).toMatch(/both: `Both \$\{part\}s`/);
+    const stage = wizard.slice(wizard.indexOf('step === ADD_STEP.SIDE ? (() => {'), wizard.indexOf('step === ADD_STEP.WHEN ?'));
     expect(stage.length).toBeGreaterThan(200);
-    expect(stage).toMatch(/Which \$\{part\}\?|ask\.question/);
     // Scoped to what a user can actually read: the LATERALITY enum is
     // code and legitimately appears here, the words it renders may not.
     const stageText = (stage.match(/'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g) ?? []).join(' ');
     expect(stageText).not.toMatch(/laterality|bilateral|unilateral/i);
-    // Options are real labels ("Left hand"), not "option one".
-    expect(src).toMatch(/left: part \? `Left \$\{part\}`/);
-    expect(src).toMatch(/both: part \? `Both \$\{part\}s`/);
-  });
-
-  it('no user-facing string on the screen says laterality', () => {
-    const literals = src
-      .replace(/\/\*[^]*?\*\//g, ' ').replace(/\/\/[^\n]*/g, ' ')
-      .match(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g) ?? [];
-    for (const lit of literals) expect(lit).not.toMatch(/laterality/i);
   });
 });

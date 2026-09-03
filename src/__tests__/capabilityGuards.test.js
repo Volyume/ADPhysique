@@ -28,6 +28,9 @@ const CAPABILITY_FILES = [
   'lib/sync/tables/capabilityConstraints.js',
   'lib/sync/tables/sessionConstraintEffects.js',
   'screens/HowYouTrainScreen.js',
+  'screens/HowYouTrainAddScreen.js',
+  'lib/capability/addFlow.js',
+  'lib/capability/lineChoices.js',
 ];
 
 describe('CAP-19: core capability accommodation is never Pro-gated', () => {
@@ -36,6 +39,10 @@ describe('CAP-19: core capability accommodation is never Pro-gated', () => {
     const reg = nav.match(/const HowYouTrainScreen = [^\n]+/)?.[0] ?? '';
     expect(reg).not.toMatch(/withProGuard/);
     expect(nav).toMatch(/name="HowYouTrain" component=\{HowYouTrainScreen\}/);
+    // The add wizard (D133) sits beside it, unguarded, in every stack.
+    const add = nav.match(/const HowYouTrainAddScreen = [^\n]+/)?.[0] ?? '';
+    expect(add).not.toMatch(/withProGuard/);
+    expect(nav).toMatch(/name="HowYouTrainAdd" component=\{HowYouTrainAddScreen\}/);
   });
   test('no capability module consults the tier gate', () => {
     for (const f of CAPABILITY_FILES) {
@@ -162,32 +169,39 @@ describe('the C31 pinned contracts are untouched (section 33 preservation)', () 
 });
 
 describe('CC-D27: the family/exercise/allow add surfaces (CC27)', () => {
+  // Flow audit 2026-09-03 (D133): the add flow moved from an inline card
+  // on HowYouTrainScreen to its own screen (HowYouTrainAddScreen) with a
+  // pure core (lib/capability/addFlow.js). Every intent pinned here is
+  // unchanged; only the files carrying it moved.
+  const flow = read('lib/capability/addFlow.js');
+  const wizard = read('screens/HowYouTrainAddScreen.js');
   const scr = read('screens/HowYouTrainScreen.js');
-  test('the kind stage offers all three rule kinds, and allowances only under baseline', () => {
-    expect(scr).toMatch(/A movement pattern/);
-    expect(scr).toMatch(/A specific exercise/);
-    expect(scr).toMatch(/always fine for me/);
-    const kindStage = scr.slice(scr.indexOf("adding === 'kind'"), scr.indexOf("adding === 'family'"));
-    expect(kindStage).toMatch(/isBaseline \?/);
+  test('the kind step offers all three rule kinds, and an allowance is always baseline', () => {
+    expect(flow).toMatch(/A movement pattern/);
+    expect(flow).toMatch(/A specific exercise/);
+    expect(flow).toMatch(/always fine for me/);
+    // An allowance never asks permanent-or-temporary: baseline by construction.
+    expect(flow).toMatch(/const role = draft\.kind === ADD_KIND\.ALLOW \? CONSTRAINT_ROLE\.BASELINE : draft\.role/);
+    expect(flow).toMatch(/if \(!allow\) steps\.push\(ADD_STEP\.WHEN\)/);
   });
   test('the family list is COMPUTED from the library (section 33.3), never hardcoded', () => {
-    const fam = scr.slice(scr.indexOf("adding === 'family'"), scr.indexOf("adding === 'exercise'"));
-    expect(fam).toMatch(/movementFamily\(e\.name, e\.primaryMuscle, e\.subregion\)/);
-    expect(fam).not.toMatch(/\[\s*'vertical_pull'/);
+    expect(wizard).toMatch(/movementFamily\(e\.name, e\.primaryMuscle, e\.subregion\)/);
+    expect(wizard).not.toMatch(/\[\s*'vertical_pull'/);
+    expect(flow).not.toMatch(/\[\s*'vertical_pull'/);
   });
-  test('an allowance always writes as the user\'s own call (source self)', () => {
-    const write = scr.slice(scr.indexOf('const rows = ['), scr.indexOf('await writeConstraintRows'));
+  test("an allowance always writes as the user's own call (source self)", () => {
+    const write = flow.slice(flow.indexOf('export function draftRows'), flow.indexOf('export function draftSubject'));
     expect(write).toMatch(/EXERCISE_ALLOW/);
-    expect(write).toMatch(/source: draft\.kind === 'allow' \? CONSTRAINT_SOURCE\.SELF : source/);
+    expect(write).toMatch(/source: draft\.kind === ADD_KIND\.ALLOW \? CONSTRAINT_SOURCE\.SELF : source/);
   });
   test('every kind lands through the same batched, consent-gated write', () => {
-    // CC31 strengthened the door rather than the count: writeConstraintRows
-    // is the ONE place createConstraints is called, and both the add flow
-    // and the section 21 flare re-start go through it (the re-start with
-    // its own consent gate).
+    // The ONE door is store.createConstraints (consent-gated inside it).
+    // The wizard calls it exactly once; the settings home calls it exactly
+    // once (writeConstraintRows, the section 21 flare re-start), and the
+    // re-start re-checks consent itself.
+    expect(wizard.match(/createConstraints\(userId/g)).toHaveLength(1);
     expect(scr.match(/createConstraints\(userId/g)).toHaveLength(1);
-    expect(scr.match(/await writeConstraintRows\(/g).length).toBeGreaterThanOrEqual(2);
-    const restart = scr.slice(scr.indexOf('const confirmRestartEpisode'), scr.indexOf('const renderAddFlow'));
+    const restart = scr.slice(scr.indexOf('const confirmRestartEpisode'), scr.indexOf('const renderLineReview'));
     expect(restart).toMatch(/hasCapabilityConsent\(userId\)/);
     expect(restart).toMatch(/await writeConstraintRows\(/);
   });

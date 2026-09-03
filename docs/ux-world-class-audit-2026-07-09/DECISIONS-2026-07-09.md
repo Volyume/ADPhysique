@@ -4813,3 +4813,74 @@ X1 = NO (REAL-DISABLED-USER-VALIDATED) and X2 = founder device walk
 PENDING. CC33 is CLOSED. Reopening is a founder decision, and the
 honest trigger for it is the device walk finding something, not
 another review round.
+
+---
+
+## D133 — How you train: the flows are designed, not accreted (lead-ruled, 2026-09-03)
+
+**Authority.** Founder order 2026-09-03, verbatim: "Go through all variants
+and make it very easily understandable for even the most stupid human."
+Source: `docs/how-you-train-usability-audit-2026-09-03/AUDIT.md` (thirteen
+flows traced stage by stage; 21 findings; the 25-piece provenance table
+that proves the "bolted together" verdict; the spec-versus-built table).
+Decision delegation under D33: product forks ruled on the one criterion,
+the best solution for the app and its users, never on effort. Every
+Section 2 inviolable and every law in the audit's section 0.4 stays
+binding on these rulings.
+
+**The principle every ruling serves.** After any tap in this feature a
+person must be able to see, without inferring: what this is, what they are
+being asked to do, what will happen when they do it, and what comes next.
+A flow is titled, counted, steppable backwards and cancellable. A flow ends
+on the thing it made and says what happens next. A follow-up decision is a
+step in the flow that caused it, never a surprise dialog.
+
+**The five forks, ruled.**
+
+1. **Where a flow lives → its own pushed screen** (`HowYouTrainAddScreen`,
+   route `HowYouTrainAdd`, registered unguarded beside `HowYouTrain` in
+   every stack). Rationale: a screen has a title, a back button and a place
+   by construction; the inline card (chosen in CC26 to avoid Modal focus
+   problems, section 33.18) had none and could not be given them without
+   re-inventing a screen. A pushed screen is not a Modal; focus moves to it
+   natively and each step announces its question, which the inline card
+   never did (one announcement in 1,880 lines).
+2. **Where plan decisions live → the last step of the flow that caused
+   them.** The episode diff ("Apply this to your current plan?") and the
+   baseline rewrite ("Update your plan to match?") render as the wizard's
+   post-save step, foreshadowed on the check step, with one primary and
+   one secondary button and no way to decide by dismissal. The settings
+   home's own dialogs stay for the restart, revisit and sync-arrival paths
+   until slice B converts those to "Waiting for you" cards. One phrase per
+   meaning is kept: "Not now" declines, "Leave it as it is" is the no-op.
+3. **The check-in card → the question as a heading, two answers, the rest
+   behind "More options"** with a one-line consequence each (slice C).
+4. **Editing → add it**, as ARCHITECTURE section 12 specified ("edit =
+   supersede"): tap a row, change a line, save; the old row ends, a new one
+   starts (slice D).
+5. **Consent → stays at the save, made legible.** The words are the lane's
+   own and unchanged; the button says "Agree and save" because it saves,
+   the decline says the answers are not kept, and the check step says the
+   question is coming. Moving consent to the door would add a gate before a
+   person has decided to add anything and would re-open the DPIA record for
+   no gain in honesty.
+
+**Order the flow asks in.** WHAT (kind → which → side) before WHEN
+(permanent-or-temporary → since → until), then CHECK. A person thinks "my
+shoulder cannot go overhead, for a few weeks", not "temporary; a movement".
+For a directory preselect the WHAT is already answered, so the first
+question is WHEN, with the profile's kind pre-selected and labelled
+"Suggested", never skipped (GC-D1). An allowance is baseline by
+construction and skips WHEN.
+
+**Step numbering.** Counted up to the save ("Step 3 of 6"); the count
+assumes the longer path while the role is unknown so it only ever shrinks.
+The post-save steps are named ("Your current plan", "Saved") because the
+check step has already said they may come.
+
+**Slices.** 0: HYT-01 (`cancelable: false` on the apply proposal) — landed
+`605c1330`. A: the wizard. B: the home screen (one primary action under
+the intro, no orphaned headings, status cards with dates and state,
+pending decisions as cards, Past with dates). C: the check-in card. D:
+edit. E: arrival context and accessibility. Each lands green and merged
+before the next starts.

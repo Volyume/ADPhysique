@@ -174,17 +174,24 @@ describe('the disability guidance that was hidden now has a rendering path', () 
     expect(screen).toMatch(/title="Using Volyume"/);
   });
 
-  it('the side-picker claim never returns (it does not exist in the app)', () => {
-    // The add flow stores no laterality: its draft has no such field and
-    // writeDraft never sets one. Copy promising a per-answer side picker
-    // would be a false promise, so it is pinned out here.
+  it('the side-picker claim never returns as directory copy; a side is asked only where it carves', () => {
+    // Directory copy promising a per-answer "side picker" would be a false
+    // promise, so it is pinned out of every profile string. (The original
+    // comment here also claimed the add flow stored no laterality; that
+    // became stale on 2026-08-21 when the side stage landed, and the slice
+    // it read was too small to notice. Re-anchored 2026-09-03 with the
+    // wizard: the truthful invariant is that a side is ASKED only when a
+    // chosen axis carves by side, and STORED only where it carves.)
     const claim = /side picker|answer takes a side/i;
     for (const p of conditions) {
       for (const text of renderedStrings(p)) expect(text).not.toMatch(claim);
     }
-    const howYouTrain = read('screens/HowYouTrainScreen.js');
-    const draftShape = howYouTrain.slice(howYouTrain.indexOf('role: null, kind: null'), howYouTrain.indexOf('setAdding(\'role\')'));
-    expect(draftShape.length).toBeGreaterThan(50); // the slice is real code, not empty
+    const flow = read('lib/capability/addFlow.js');
+    expect(flow).toMatch(/if \(sidedAxes\(draft\)\.length\) steps\.push\(ADD_STEP\.SIDE\)/);
+    expect(flow).toMatch(/laterality: isSideCarveable\(CONSTRAINT_RULE_KIND\.DEMAND, axis\) \? \(side \?\? null\) : null/);
+    const draftShape = flow.slice(flow.indexOf('export function emptyDraft'), flow.indexOf('export function applyPreselect'));
+    expect(draftShape.length).toBeGreaterThan(50);
+    expect(draftShape).toMatch(/side: null,/);
     expect(draftShape).not.toMatch(/laterality/);
   });
 

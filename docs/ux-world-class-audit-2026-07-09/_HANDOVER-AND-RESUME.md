@@ -690,6 +690,15 @@ its evidence).
 
 ===============================================================================
 
+### 2026-09-03 — HOW YOU TRAIN FLOW BUILD (D133) — SLICES 0 + A LANDED, B–E NEXT
+Founder order after the audit: make every variant understandable to
+"the most stupid human". Rulings D133 (register). Slice 0: HYT-01
+hotfix. Slice A: the add flow is its own wizard screen
+(`HowYouTrainAddScreen`) on a pure, tested core (`addFlow.js`,
+`lineChoices.js`); the home screen lost 415 lines of inline flow and
+gained a real primary button and a preselect forwarder. Full suite green
+at landing. Resume at slice B in TASKBOARD's CC33 block.
+
 ### 2026-09-03 — HOW YOU TRAIN FLOW AUDIT — COMPLETE, LANDED
 Docs-only landing. Founder device-walked the injury/disability feature
 (CC33's pending X2) and returned a flow verdict: after any tap it is not

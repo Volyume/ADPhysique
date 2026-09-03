@@ -160,7 +160,13 @@ export default function TrainingConsiderationsScreen() {
               sub={q.whyAsked}
               accessibilityLabel={q.wording}
               accessibilityHint="Opens How you train with this ready to confirm"
-              onPress={() => goToAddFlow(preselectFor(q))}
+              // D133: the wizard shows where the person came from and
+              // pre-selects (never skips) the role this profile's kind
+              // suggests. `from` is additive to the GC-D1 preselect shape.
+              onPress={() => goToAddFlow({
+                ...preselectFor(q),
+                from: { name: open.canonicalName, kind: open.kind === PROFILE_KIND.INJURY ? 'injury' : 'long_term', question: q.wording },
+              })}
             />
           ))}
           <SettingRow

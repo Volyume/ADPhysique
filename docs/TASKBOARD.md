@@ -1256,6 +1256,30 @@ NEXT (founder-gated): the five product forks in AUDIT.md section 6
 edit, consent placement), then the redesign session builds from the
 audit. X1 = NO unchanged.
 
+**2026-09-03 BUILD (D133) — IN FLIGHT, slices land one at a time.**
+Founder order: "Go through all variants and make it very easily
+understandable for even the most stupid human." The five forks are
+lead-ruled under D33 (register D133). Slice 0 LANDED `605c1330`
+(HYT-01: the apply proposal cannot be declined by dismissal). Slice A
+LANDED (this entry): the add flow is its own screen,
+`src/screens/HowYouTrainAddScreen.js` (route `HowYouTrainAdd`, every
+stack, unguarded), on a pure core `src/lib/capability/addFlow.js`
+(computed step plan, full readback, byte-equivalent rows, the saved
+sentence and what-happens-next) and `lineChoices.js` (the representable
+per-line model, I/O injected). Titled, "Step N of M", Back on every
+step, Cancel always, one question per step, the plan decision as the
+last step, a Saved screen that says what happens next; the home
+screen's "Add something" is the shared Button and forwards every
+preselect. Guards re-anchored to intent with header notes:
+capabilityGuards CC-D27, capabilityDirectoryDiscovery preselect,
+capabilityCopyLeakage side-picker (its screen half had been stale since
+the side stage landed 2026-08-21), capabilityRoutesReachable (+route).
+NEXT: slice B (home screen: one primary action under the intro, no
+orphaned headings, status cards with dates and state, pending decisions
+as cards instead of the focus-fired modal, Past with dates), then C
+(check-in card), D (edit), E (arrival context + a11y). Founder device
+walk of slice A is in chat.
+
 Superseded dispatch record (W3, kept for the recovery trail): agent
 W3A (session+plan surfaces):
 WorkoutSummaryScreen (T2-07 post-workout quiet line + T2-22 effects

@@ -44,7 +44,11 @@ const source = fs.readFileSync(ROOT_NAVIGATOR, 'utf8');
 // (CC33 T1-20): the W4A builder found the row would have dead-tapped in
 // five of HowYouTrain's six stacks precisely because this sweep did not
 // yet watch that route.
-const CAPABILITY_ROUTES = ['HowYouTrain', 'TrainingConsiderations', 'SettingsWorkout', 'AvoidedMovements'];
+// HowYouTrainAdd joined the set on 2026-09-03 (flow audit, D133): the add
+// flow became its own screen, reached from HowYouTrain's "Add something"
+// and from every preselect hand-off, so its silent loss in any stack
+// would dead-end the feature's primary action.
+const CAPABILITY_ROUTES = ['HowYouTrain', 'HowYouTrainAdd', 'TrainingConsiderations', 'SettingsWorkout', 'AvoidedMovements'];
 
 /**
  * Map a component identifier used in `component={X}` back to the screen file it

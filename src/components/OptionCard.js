@@ -7,7 +7,10 @@ import useTheme from '../hooks/useTheme';
 // checkmark when selected. Shared by the onboarding wizard and the coached
 // builder for choices that read better with a description visible (experience,
 // equipment, focus, recovery) so the two flows use the same control.
-export default function OptionCard({ icon, label, detail, active, onPress, iconSize = 18 }) {
+// `accessibilityRole` (additive, 2026-09-03): the How you train wizard uses
+// this card for multi-select steps too, where a screen reader must hear
+// "checkbox, checked" rather than "radio, selected". Default unchanged.
+export default function OptionCard({ icon, label, detail, active, onPress, iconSize = 18, accessibilityRole = 'radio' }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
@@ -18,8 +21,8 @@ export default function OptionCard({ icon, label, detail, active, onPress, iconS
       style={[styles.card, live.card, active && [styles.cardActive, live.cardActive]]}
       onPress={onPress}
       activeOpacity={0.75}
-      accessibilityRole="radio"
-      accessibilityState={{ selected: active }}
+      accessibilityRole={accessibilityRole}
+      accessibilityState={accessibilityRole === 'checkbox' ? { checked: !!active } : { selected: !!active }}
       accessibilityLabel={label}
     >
       <View style={[styles.iconWrap, live.iconWrap]}>
