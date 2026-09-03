@@ -20,7 +20,8 @@ describe('MyRecipesScreen servings stepper', () => {
   test('does not carry local serving plus-minus or modal chrome', () => {
     expect(source).not.toMatch(/styles\.step(?:per|Btn|BtnDisabled|Value)/);
     expect(source).not.toMatch(/stepServings/);
-    expect(source).not.toMatch(/<Modal/);
+    // \b: the shared ModalHeader chrome is not the hand-rolled <Modal> this pins against.
+    expect(source).not.toMatch(/<Modal\b/);
     expect(source).not.toMatch(/styles\.(?:backdrop|logBtn|logBtnText)/);
   });
 });

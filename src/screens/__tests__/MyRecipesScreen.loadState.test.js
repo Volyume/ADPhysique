@@ -1,10 +1,10 @@
 import { create, act } from 'react-test-renderer';
 
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
-jest.mock('../../components/BackHeader', () => {
+jest.mock('../../components/ModalHeader', () => {
   const React = require('react');
   const { Text, View } = require('react-native');
-  return ({ title, right }) => React.createElement(View, null, React.createElement(Text, null, title), right);
+  return ({ title, rightAccessory }) => React.createElement(View, null, React.createElement(Text, null, title), rightAccessory);
 });
 jest.mock('../../components/Button', () => {
   const React = require('react');

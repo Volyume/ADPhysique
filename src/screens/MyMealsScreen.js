@@ -32,7 +32,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, spacing, type } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { toEnergy, energyUnitLabel } from '../lib/format';
-import BackHeader from '../components/BackHeader';
+import ModalHeader from '../components/ModalHeader';
 import BottomSheet from '../components/BottomSheet';
 import Button from '../components/Button';
 import EmptyState from '../components/EmptyState';
@@ -233,7 +233,9 @@ export default function MyMealsScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-      <BackHeader title="Saved meals" />
+      {/* Coherence pass: presented as a modal (RootNavigator DiaryStack),
+          so it uses the shared ModalHeader like its sibling food modals. */}
+      <ModalHeader title="Saved meals" onClose={() => navigation.goBack()} />
 
       {loading ? (
         <View style={{ paddingHorizontal: spacing.lg }}>

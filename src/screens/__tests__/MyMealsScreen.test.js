@@ -31,7 +31,7 @@ jest.mock('@react-navigation/native', () => ({
 }));
 jest.mock('../../components/Toast', () => ({ useToast: () => ({ show: mockToastShow }) }));
 jest.mock('../../components/Skeleton', () => ({ SkeletonRow: () => null }));
-jest.mock('../../components/BackHeader', () => () => null);
+jest.mock('../../components/ModalHeader', () => () => null);
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
 jest.mock('../../lib/observability', () => ({ audit: jest.fn() }));
 jest.mock('../../lib/errorLog', () => ({ logError: jest.fn() }));
@@ -111,7 +111,10 @@ beforeEach(() => {
 
 describe('MyMealsScreen saved-meal confirmation', () => {
   test('uses the same Saved meals label as the food search entry point', () => {
-    expect(SOURCE).toContain('<BackHeader title="Saved meals" />');
+    // Coherence pass (2026-09-03): the screen is a DiaryStack modal and now
+    // carries the shared ModalHeader like its sibling food modals; the pin
+    // is on the label, not the chrome.
+    expect(SOURCE).toContain('<ModalHeader title="Saved meals" onClose={() => navigation.goBack()} />');
     expect(SOURCE).not.toContain('title="My meals"');
   });
 

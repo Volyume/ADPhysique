@@ -948,8 +948,7 @@ export default function ManualBuilderScreen({ navigation, route }) {
               title="Create plan and add workouts"
               icon="add-circle"
               size="lg"
-              style={[styles.primaryBtn, creating && styles.btnDisabled]}
-              textStyle={[styles.primaryBtnText, live.primaryBtnText]}
+              style={styles.primaryBtn}
               onPress={handleCreatePlan}
               disabled={creating}
               loading={creating}
@@ -1401,15 +1400,10 @@ const styles = StyleSheet.create({
     ...type.captionTight,
     color: colors.textMuted,
   },
+  // Coherence pass: label typography and the disabled state come from the
+  // shared Button primitive (size="lg"), so only the local margin survives.
   primaryBtn: {
     marginTop: spacing.sm,
-  },
-  primaryBtnText: {
-    ...type.title,
-    color: colors.onPrimary,
-  },
-  btnDisabled: {
-    opacity: 0.5,
   },
 
   // ── Page 2 ──────────────────────────────────────────────────────────────────
@@ -1686,7 +1680,6 @@ function buildLiveStyles(t) {
     textInput: { ...t.type.body },
     pillText: { ...t.type.label },
     hintText: { ...t.type.captionTight, color: t.colors.textMuted },
-    primaryBtnText: { ...t.type.title, color: t.colors.onPrimary },
     planNameField: { borderBottomColor: t.colors.borderLight },
     planNameInput: { ...t.type.h2 },
     dayHeader: { borderBottomColor: t.colors.border },

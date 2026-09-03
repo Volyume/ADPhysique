@@ -26,7 +26,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { colors, fontSize, spacing, type, radius, circle } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import { SkeletonRow } from '../components/Skeleton';
-import BackHeader from '../components/BackHeader';
+import ModalHeader from '../components/ModalHeader';
 import EmptyState from '../components/EmptyState';
 import Stepper from '../components/Stepper';
 import BottomSheet from '../components/BottomSheet';
@@ -290,9 +290,14 @@ export default function MyRecipesScreen({ navigation, route }) {
 
   return (
     <SafeAreaView style={[styles.safe, live.safe]} edges={['top']}>
-      <BackHeader
+      {/* Coherence pass: this screen is presented as a modal (RootNavigator
+          DiaryStack), so it carries the same ModalHeader chrome as its
+          sibling food modals (Add food, Scan, Recipe builder) rather than a
+          pushed-screen BackHeader. */}
+      <ModalHeader
         title="Recipes"
-        right={(
+        onClose={() => navigation.goBack()}
+        rightAccessory={(
           <TouchableOpacity onPress={() => { haptics.selection(); onCreate(); }} hitSlop={12} accessibilityRole="button" accessibilityLabel="New recipe">
             <Ionicons name="add" size={26} color={t.colors.primary} />
           </TouchableOpacity>

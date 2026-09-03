@@ -1896,19 +1896,15 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 disabled={!fastCanSubmit}
                 state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}
                 onSettled={handleSubmitSettled}
-                style={[styles.ctaBtn, !fastCanSubmit && styles.ctaBtnDisabled, live.ctaBtn, !fastCanSubmit && live.ctaBtnDisabled]}
-                textStyle={[styles.ctaBtnText, !fastCanSubmit && styles.ctaBtnTextDisabled, live.ctaBtnText, !fastCanSubmit && live.ctaBtnTextDisabled]}
               />
             ) : step < TOTAL_STEPS - 1 ? (
               <Button
                 title="Next"
                 trailingIcon="arrow-forward"
-                style={[styles.ctaBtn, !stepCanAdvance(step) && styles.ctaBtnDisabled, live.ctaBtn, !stepCanAdvance(step) && live.ctaBtnDisabled]}
                 onPress={() => setStep(s => s + 1)}
                 disabled={!stepCanAdvance(step)}
                 accessibilityState={{ disabled: !stepCanAdvance(step) }}
                 accessibilityLabel="Next"
-                textStyle={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled, live.ctaBtnText, !stepCanAdvance(step) && live.ctaBtnTextDisabled]}
               />
             ) : (
               <Button
@@ -1917,8 +1913,6 @@ export default function WeeklyCheckInScreen({ navigation }) {
                 disabled={!stepCanAdvance(step)}
                 state={submitSuccess ? 'success' : busy ? 'loading' : 'idle'}
                 onSettled={handleSubmitSettled}
-                style={[styles.ctaBtn, !stepCanAdvance(step) && styles.ctaBtnDisabled, live.ctaBtn, !stepCanAdvance(step) && live.ctaBtnDisabled]}
-                textStyle={[styles.ctaBtnText, !stepCanAdvance(step) && styles.ctaBtnTextDisabled, live.ctaBtnText, !stepCanAdvance(step) && live.ctaBtnTextDisabled]}
               />
             )}
           </View>
@@ -2201,16 +2195,6 @@ const styles = StyleSheet.create({
   perfCardTextSelected: { color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold },
 
   ctaRow: { marginTop: spacing.lg },
-  ctaBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: spacing.sm, backgroundColor: colors.primaryFill,
-    borderRadius: radius.lg, height: 52,
-  },
-  // opacity 1 counteracts the Button primitive's default disabled dim so the
-  // incomplete-form state keeps its shipped look (solid surface3, muted text).
-  ctaBtnDisabled: { backgroundColor: colors.surface3, opacity: 1 },
-  ctaBtnText: { fontSize: fontSize.md, fontFamily: fontFamily.bold, fontWeight: fontWeight.bold, color: colors.onPrimary },
-  ctaBtnTextDisabled: { color: colors.textMuted },
   ctaHint: { textAlign: 'center', fontSize: fontSize.sm, color: colors.textMuted, marginTop: spacing.sm },
 
   // -- COMP-008 Fast Check-In ------------------------------------------------
@@ -2337,10 +2321,6 @@ function buildLiveStyles(t) {
     perfCardSelected: { backgroundColor: t.colors.primaryBg, borderColor: t.colors.primary },
     perfCardText: { ...t.type.label, color: t.colors.textSecondary },
     perfCardTextSelected: { color: t.colors.primary },
-    ctaBtn: { backgroundColor: t.colors.primaryFill },
-    ctaBtnDisabled: { backgroundColor: t.colors.surface3 },
-    ctaBtnText: { fontSize: t.fontSize.md, color: t.colors.onPrimary },
-    ctaBtnTextDisabled: { color: t.colors.textMuted },
     ctaHint: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
     headerQuickTag: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
     fastSummaryCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },

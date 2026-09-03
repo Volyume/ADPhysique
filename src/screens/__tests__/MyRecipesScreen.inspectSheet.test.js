@@ -16,7 +16,7 @@
  *   4. Closing it is a pure UI action with no write.
  *
  * Mocking follows MyRecipesScreen.loadState.test.js / .rowMacros.test.js
- * (same heavy-mount boundaries: BackHeader, Button, BottomSheet, Skeleton,
+ * (same heavy-mount boundaries: ModalHeader, Button, BottomSheet, Skeleton,
  * FlashList, nav, store, food/db, errorLog), extended with
  * getRecipeWithIngredients and lib/food/sources/localCache's resolveFoodRef,
  * the two reads RecipeDetailSheet's data needs that MyMealsScreen's sibling
@@ -26,10 +26,10 @@
 import { create, act } from 'react-test-renderer';
 
 jest.mock('../../components/AppAlert', () => ({ appAlert: jest.fn() }));
-jest.mock('../../components/BackHeader', () => {
+jest.mock('../../components/ModalHeader', () => {
   const React = require('react');
   const { Text, View } = require('react-native');
-  return ({ title, right }) => React.createElement(View, null, React.createElement(Text, null, title), right);
+  return ({ title, rightAccessory }) => React.createElement(View, null, React.createElement(Text, null, title), rightAccessory);
 });
 jest.mock('../../components/Button', () => {
   const React = require('react');
