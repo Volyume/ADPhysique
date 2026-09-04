@@ -22,7 +22,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily } from '../styles/theme';
+import { colors, fontSize, fontWeight, spacing, radius, type, fontFamily, iconSize } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import {
   scheduleMorningWeightNotification,
@@ -193,7 +193,7 @@ function ChipRow({ items, selected, onSelect, formatter = (v) => String(v), acce
   );
 }
 
-export default function CoachingRemindersScreen() {
+export default function CoachingRemindersScreen({ navigation }) {
   const toast = useToast();
   // CP-10 batch G lane 1 (2026-07-11): live theme (src/hooks/useTheme.js).
   // Memoised: this screen renders mapped ChipRow options.
@@ -435,6 +435,33 @@ export default function CoachingRemindersScreen() {
             </TouchableOpacity>
           </View>
         )}
+
+        {/* Item 9(b) (D141): the reciprocal of NotificationSettingsScreen's
+            own cross-link row (that screen already links forward to this
+            one). Same visual component/pattern, styles copied verbatim from
+            NotificationSettingsScreen's crossLink/crossLinkTitle/crossLinkSub
+            rather than invented. Training reminders are independent and
+            managed by NotificationSettings (see the comment on that screen's
+            own cross-link), so it is genuinely the other half of the
+            reminder settings, not owned here. */}
+        <TouchableOpacity
+          style={[styles.crossLink, live.crossLink]}
+          onPress={() => navigation.navigate('NotificationSettings')}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications and reminders"
+        >
+          <View style={[styles.iconWrap, live.iconWrap]}>
+            <Ionicons name="notifications-outline" size={18} color={t.colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.crossLinkTitle, live.crossLinkTitle]}>Notifications and reminders</Text>
+            <Text style={[styles.crossLinkSub, live.crossLinkSub]}>
+              Training reminder, meal reminders and quiet hours.
+            </Text>
+          </View>
+          <Ionicons name="chevron-forward" size={iconSize.sm} color={t.colors.textMuted} />
+        </TouchableOpacity>
 
         {/* Morning weight */}
         <SectionLabel style={styles.sectionLabelSpacing}>Morning weight</SectionLabel>
@@ -680,6 +707,27 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs, color: colors.primary, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold,
     textAlign: 'center', marginTop: spacing.sm,
   },
+  // Item 9(b) (D141): copied verbatim from NotificationSettingsScreen's own
+  // crossLink/crossLinkTitle/crossLinkSub, its reciprocal cross-link row.
+  crossLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: colors.surface2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: spacing.md,
+  },
+  crossLinkTitle: {
+    ...type.bodyStrong,
+    color: colors.textPrimary,
+  },
+  crossLinkSub: {
+    ...type.captionTight,
+    color: colors.textMuted,
+    marginTop: spacing.xxs,
+  },
 });
 
 // CP-10 batch G lane 1 (2026-07-11): the frozen `styles` block above stays
@@ -705,5 +753,8 @@ function buildLiveStyles(t) {
     helperBlock: { borderTopColor: t.colors.borderSubtle },
     helperText: { ...t.type.bodySm, color: t.colors.textMuted },
     savedText: { fontSize: t.fontSize.xs, color: t.colors.primary },
+    crossLink: { backgroundColor: t.colors.surface2, borderColor: t.colors.border },
+    crossLinkTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
+    crossLinkSub: { ...t.type.captionTight, color: t.colors.textMuted },
   };
 }

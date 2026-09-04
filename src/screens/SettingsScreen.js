@@ -90,16 +90,23 @@ export default function SettingsScreen({ navigation }) {
           sub="Diet, allergies and foods to avoid"
           onPress={() => { haptics.selection(); navigation.navigate('SettingsDietary'); }}
         />
+        {/* Item 9(a) (D141): both subtitles used to say "check-ins", but only
+            CoachingRemindersScreen owns check-in reminders -- this screen's
+            own check-in toggles were removed and now live there (see
+            NotificationSettingsScreen's "Morning weight + weekly check-in
+            reminders moved to a dedicated screen" comment). Rewritten to
+            name only what each destination screen actually owns, so the two
+            rows no longer overlap. */}
         <SettingRow
           icon="notifications-outline"
           label="Notifications and reminders"
-          sub="Training, meals, check-ins and quiet hours"
+          sub="Training reminder, meal reminders and quiet hours"
           onPress={() => { haptics.selection(); navigation.navigate('NotificationSettings'); }}
         />
         <SettingRow
           icon="pulse-outline"
           label="Coaching reminders"
-          sub="Morning weight log and weekly check-in"
+          sub="Weigh-in and weekly check-in schedule"
           onPress={() => { haptics.selection(); navigation.navigate('CoachingReminders'); }}
         />
         <SettingRow

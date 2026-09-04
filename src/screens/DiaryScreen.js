@@ -93,6 +93,9 @@ import { deriveDiaryDayViewModel } from '../lib/food/diaryViewModel';
 import { toEnergy, energyUnitLabel } from '../lib/format';
 import { parseLocalDay } from '../lib/dayKey';
 import { touchTarget } from '../styles/layout';
+import { getRecentIntakeSummary } from '../lib/food/db';
+import { WELLBEING_KEY, isCalm } from '../lib/wellbeing';
+import { resolveMealReminderOfferEligible, MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR } from '../lib/food/mealReminderOffer';
 
 // D138 item 6: the diary resolves its food refs in ONE batched read (the
 // day's entries, and the usual chips per slot) via resolveFoodRefs.
@@ -549,6 +552,80 @@ export default function DiaryScreen({ navigation, route }) {
     setShowOffCard(false);
     dismissOffConsentCard().catch(() => {});
   }, []);
+
+  // Item 9(c) (D141): a calm, one-time, dismissible offer for the opt-in
+  // meal-log reminder (Settings -> Notifications and reminders -> Meal
+  // reminders), shown only on today's diary when the diary itself shows
+  // the gap the reminder would help close. Pure eligibility
+  // (resolveMealReminderOfferEligible) computed from facts this screen
+  // already loads (targets, edFlagOpen -- both fail CLOSED per this
+  // screen's own load(), see edFlagOpen's comment above) plus three small
+  // reads: the existing 7-day intake summary (day-level presence, reused
+  // rather than a new query), the meal-reminders AsyncStorage flag, and
+  // this offer's own per-user dismissal marker. Calm mode has no existing
+  // read on this screen, so it is read directly here and, like the ED
+  // flag, fails CLOSED (a read failure suppresses the offer -- CLAUDE.md
+  // forbids a food-adjacent nudge under either signal, on doubt or not).
+  const [mealReminderOfferVisible, setMealReminderOfferVisible] = useState(false);
+  useEffect(() => {
+    let active = true;
+    if (!loaded || !userId || selectedDate !== isoDate(new Date())) {
+      setMealReminderOfferVisible(false);
+      return undefined;
+    }
+    // scheduler.js pulls in expo-notifications at module scope; a static
+    // import of it here would drag that into every test that mounts this
+    // whole screen (DiaryScreen.bankingAvailable.test.js,
+    // DiaryScreen.dailyWorkspace.test.js), which do not mock it. Lazy
+    // require, guarded, with a literal fallback that matches the exported
+    // constant -- the same value either way, this only changes WHEN the
+    // module graph is walked.
+    let mealRemindersKey = '@volyume_meal_reminders'; // MEAL_REMINDERS_KEY, src/lib/notifications/scheduler.js
+    try {
+      // eslint-disable-next-line global-require
+      mealRemindersKey = require('../lib/notifications/scheduler').MEAL_REMINDERS_KEY;
+    } catch (_) { /* keep the literal fallback above */ }
+    (async () => {
+      // Best-effort, wrapped whole: any read failing (including a
+      // synchronous throw, not just a rejection) must only suppress the
+      // offer, never break the diary screen around it.
+      try {
+        const [summary, remindersRaw, wellbeingRaw, dismissedRaw] = await Promise.all([
+          Promise.resolve().then(() => getRecentIntakeSummary(userId)).catch(() => null),
+          AsyncStorage.getItem(mealRemindersKey).catch(() => null),
+          AsyncStorage.getItem(WELLBEING_KEY).catch(() => 'read_failed'),
+          AsyncStorage.getItem(MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR(userId)).catch(() => null),
+        ]);
+        if (!active) return;
+        let mealRemindersEnabled = false;
+        try {
+          const parsedReminders = remindersRaw ? JSON.parse(remindersRaw) : null;
+          mealRemindersEnabled = Array.isArray(parsedReminders) && parsedReminders.some((r) => r?.enabled === true);
+        } catch (_) { mealRemindersEnabled = false; }
+        // A null read (key never set) legitimately means 'unspecified', not
+        // a failure; only the .catch above maps an actual read error to the
+        // 'read_failed' sentinel, matching every other fail-closed read on
+        // this screen (edFlagOpen above, HomeScreen's identical convention).
+        const wellbeing = wellbeingRaw || 'unspecified';
+        setMealReminderOfferVisible(resolveMealReminderOfferEligible({
+          hasAccount: !!userId,
+          hasNutritionTargets: !!targets,
+          daysLoggedLast7: summary?.daysLogged,
+          mealRemindersEnabled,
+          calmMode: wellbeingRaw === 'read_failed' || isCalm(wellbeing),
+          edFlagOpen: !!edFlagOpen,
+          dismissed: dismissedRaw === 'true',
+        }));
+      } catch (_) {
+        if (active) setMealReminderOfferVisible(false);
+      }
+    })();
+    return () => { active = false; };
+  }, [loaded, userId, targets, edFlagOpen, selectedDate]);
+  const dismissMealReminderOffer = useCallback(() => {
+    setMealReminderOfferVisible(false);
+    AsyncStorage.setItem(MEAL_REMINDER_OFFER_DISMISSED_KEY_FOR(userId), 'true').catch(() => {});
+  }, [userId]);
   useFocusEffect(useCallback(() => {
     let active = true;
     AsyncStorage.getItem('@volyume_meals_per_day').then((v) => {
@@ -1493,6 +1570,50 @@ export default function DiaryScreen({ navigation, route }) {
           </View>
         ) : null}
 
+        {/* Item 9(c) (D141): calm, dismissible, one-time discovery offer for
+            the opt-in meal-log reminder. Same card shape as the OFF-consent
+            card above (offCard styles reused, not duplicated), with a title
+            line added since this offer needs one. */}
+        {mealReminderOfferVisible ? (
+          <View style={[styles.offCard, live.offCard]}>
+            <Text style={[styles.mealReminderOfferTitle, live.mealReminderOfferTitle]}>
+              Want a nudge to log?
+            </Text>
+            <Text style={[styles.offCardText, live.offCardText]}>
+              A gentle reminder at your usual meal times can make logging easier. You choose the times, and you can turn it off any time.
+            </Text>
+            <View style={styles.offCardRow}>
+              <Button
+                title="Not now"
+                onPress={dismissMealReminderOffer}
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                style={[styles.offCardButton, live.offCardButton, styles.offCardButtonMuted, live.offCardButtonMuted]}
+                textStyle={[styles.offCardDismiss, live.offCardDismiss]}
+                accessibilityLabel="Not now"
+              />
+              <Button
+                title="Set up reminders"
+                // NotificationSettings lives in ProfileStack, so this diary
+                // (DiaryStack) must cross-tab, same idiom as the OFF-consent
+                // card's "Sharing settings" button just above. Navigate
+                // first, then dismiss, so the tap is never lost.
+                onPress={() => {
+                  navigateCrossTab(navigation, 'ProfileTab', 'NotificationSettings');
+                  dismissMealReminderOffer();
+                }}
+                variant="secondary"
+                size="sm"
+                fullWidth={false}
+                style={[styles.offCardButton, live.offCardButton]}
+                textStyle={[styles.offCardCta, live.offCardCta]}
+                accessibilityLabel="Set up meal reminders"
+              />
+            </View>
+          </View>
+        ) : null}
+
         {!loaded ? (
           <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
             <SkeletonRow />
@@ -2316,6 +2437,9 @@ const styles = StyleSheet.create({
     padding: spacing.md, marginBottom: spacing.lg,
   },
   offCardText: { ...type.bodySm, color: colors.textSecondary },
+  // Item 9(c) (D141): the meal-reminder offer's title line, the offCard
+  // shape's only user with a heading above the body text.
+  mealReminderOfferTitle: { ...type.bodyStrong, color: colors.textPrimary },
   offCardRow: { flexDirection: 'row', justifyContent: 'flex-end', gap: spacing.sm, flexWrap: 'wrap' },
   offCardButton: {
     minHeight: 40,
@@ -2444,6 +2568,7 @@ function buildLiveStyles(t) {
     bankOffNote: { color: t.colors.textMuted, fontSize: t.fontSize.xs },
     offCard: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     offCardText: { ...t.type.bodySm, color: t.colors.textSecondary },
+    mealReminderOfferTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },
     offCardButton: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     offCardButtonMuted: { borderColor: t.colors.border, backgroundColor: t.colors.surface2 },
     offCardDismiss: { fontSize: t.fontSize.sm, color: t.colors.textMuted },
