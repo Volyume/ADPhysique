@@ -5726,10 +5726,17 @@ invented numbers on the app's first screen.
 pairs, plus a one-line tagline commit) but sat as small muted caption text
 under the wordmark until 2026-09-03, when the D137 first-screen rebuild
 promoted it to the h1 headline. The defect users saw is D137's, in builds
-3560 onwards, not the May sweep's. The `src/lib/mesocycle.js` week labels
-have the same shape but no caller outside the engine file renders them;
-they have never been shown and are left alone. The web page's hero
-sub-line still describes a Free/Pro split (pre-D137); flagged, not
-changed.
+3560 onwards, not the May sweep's.
+
+**Scope of the rule, founder-corrected.** The ban is on slogan-shaped
+fragment pairs used for effect ("Less thinking. More lifting."). It is
+NOT a ban on a status label followed by a sentence: "Week 3 of 5 · Build.
+Recovery week in 2 weeks.", "Recovery week. Training is deliberately
+lighter. What that means.", "Block finished. Targets hold at
+recovery-week volume until you choose what comes next." are fine and
+stay as written. The lead rewrote them anyway (d7b26e02) and the founder
+rejected it; reverted in full (cd6c4445). The engine's unrendered week
+labels were never shown and are untouched. The web page's hero sub-line
+still describes a Free/Pro split (pre-D137); flagged, not changed.
 
 **Engine, ED-safety, consent, billing: untouched.**

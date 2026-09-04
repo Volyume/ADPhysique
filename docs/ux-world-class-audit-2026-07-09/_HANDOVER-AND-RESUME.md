@@ -8,8 +8,9 @@ clipped slogan copy the voice rules ban; the welcome sizes were mismatched;
 the mocked example week looked bad. The tagline is retired everywhere
 (one constant, `src/lib/brand.js`: "Your plan adjusts to what you log."),
 the mock-up is gone, the welcome is wordmark, h2 headline, one sentence,
-CTA. Open founder question in chat: the mesocycle week labels ("Build
-week. Push a little harder.") have the same shape. Record: D144.
+CTA. Founder scoped the rule the same day: it bans slogan fragment pairs
+only; status-label-then-sentence copy (block dots line, recovery lines) is
+fine and a rewrite of it was reverted. Record: D144.
 
 ===============================================================================
 ## ★ 2026-09-04 — FRESH-INSTALL INCIDENT FIXED (D143); FOUNDER CONFIRMATION PENDING ★
