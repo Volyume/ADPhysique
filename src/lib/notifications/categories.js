@@ -48,6 +48,11 @@ export const CATEGORY = Object.freeze({
   REST_TIMER: 'rest_timer', // U1/F3: live lock-screen rest timer with actions
   MEAL_LOG_REMINDER: 'meal_log_reminder', // gap #4: opt-in, convenience-only meal-log nudge
   ACTIVATION_NUDGE: 'activation_nudge', // S6: early-activation re-engagement (0/1/2-session stall)
+  // D142 (founder decision C, 2026-09-04): ONE calm note after three weeks
+  // without the app being opened, for an established user with a plan. Laid
+  // ahead and re-laid on every open, so by construction it fires only after
+  // genuine absence. Its own toggle (Settings -> Notifications and reminders).
+  RETURN_NUDGE: 'return_nudge',
 });
 
 /**
@@ -156,6 +161,9 @@ export const CATEGORY_CHANNELS = Object.freeze({
   // quiet hours, the push budget, the one-tap toggle and the single-shot-per-
   // stage flags all live in the scheduler + handler, exactly like CHECKIN_MISSED.
   [CATEGORY.ACTIVATION_NUDGE]: [CHANNEL.PUSH, CHANNEL.IN_APP],
+  // D142: push only. There is no in-app half - the whole point is a user
+  // who is not in the app; once they are back the plan card says it all.
+  [CATEGORY.RETURN_NUDGE]: [CHANNEL.PUSH],
 });
 
 /**
@@ -217,6 +225,7 @@ export function categoryForDataType(type) {
     case 'partner_joined': return CATEGORY.PARTNER_CHEER;
     case 'checkin_missed': return CATEGORY.CHECKIN_MISSED;
     case 'activation_nudge': return CATEGORY.ACTIVATION_NUDGE;
+    case 'return_nudge': return CATEGORY.RETURN_NUDGE;
     case 'planned_meal_confirm': return CATEGORY.PLANNED_MEAL_CONFIRM;
     // Campaign 14 job 5 (routing truth, telemetry clause): the meal-log
     // reminder baked this data.type (scheduleMealReminders) but had no entry

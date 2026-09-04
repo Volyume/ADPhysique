@@ -104,6 +104,12 @@ export const CATEGORY_PREFS = Object.freeze({
     legacyKey: null,
     defaultEnabled: true,
   },
+  // D142: the return nudge's one-tap switch, default on.
+  [CATEGORY.RETURN_NUDGE]: {
+    blobField: 'returnNudgeEnabled',
+    legacyKey: null,
+    defaultEnabled: true,
+  },
 });
 
 async function readBlob() {

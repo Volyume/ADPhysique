@@ -110,6 +110,11 @@ export function routeForNotificationType(type, data = {}) {
       // in-app banner version of it already routes to the next workout on
       // Home. Same destination, so the two cannot disagree.
       return { tab: 'HomeTab', screen: 'Home' };
+    case 'return_nudge':
+      // D142: "your plan is still here" lands on Home, where the session
+      // hero and "Start workout" are, so the tap goes straight to the plan
+      // the note is about.
+      return { tab: 'HomeTab', screen: 'Home' };
     case 'partner_cheer':
     case 'partner_streak':
     case 'partner_joined':

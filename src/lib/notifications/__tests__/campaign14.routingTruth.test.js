@@ -131,6 +131,12 @@ const DECISIONS = {
     tab: 'HomeTab', screen: 'Home',
     file: 'src/screens/HomeScreen.js', marker: /Start workout/,
   },
+  // D142: "your plan is still here" lands where the plan and Start workout
+  // live, the same destination as the getting-started nudge.
+  return_nudge: {
+    tab: 'HomeTab', screen: 'Home',
+    file: 'src/screens/HomeScreen.js', marker: /Start workout/,
+  },
   weekly_checkin: {
     tab: 'ProfileTab', screen: 'WeeklyCheckIn',
     file: 'src/screens/WeeklyCheckInScreen.js', marker: /[Cc]heck-[Ii]n/,
@@ -259,6 +265,7 @@ describe('live notification type inventory is derived, not assumed', () => {
       'planned_meal_confirm',
       'rest_end',
       'rest_timer',
+      'return_nudge',
       'subscription_payment_failure',
       'training_reminder',
       'trial_day3',

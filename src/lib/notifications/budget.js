@@ -48,6 +48,10 @@ export const EVENT_PRIORITY = Object.freeze([
   // activation nudge outranks an already-engaged user's missed-check-in push.
   CATEGORY.ACTIVATION_NUDGE,
   CATEGORY.CHECKIN_MISSED,
+  // D142: an established user's return note. Below the missed check-in
+  // (an engaged user's live loop) and above the lifecycle/recap pushes; in
+  // practice it fires only when nothing else has for three weeks.
+  CATEGORY.RETURN_NUDGE,
   CATEGORY.TRIAL_DAY3,
   CATEGORY.WINBACK,
   CATEGORY.YEAR_OF_LIFTS_UNLOCK,

@@ -1263,6 +1263,140 @@ export async function scheduleActivationNudge(userId) {
   }
 }
 
+// ─── D142: the return nudge (founder decision C, 2026-09-04) ─────────────────
+const NOTIF_ID_RETURN_NUDGE = 'volyume_return_nudge';
+const RETURN_NUDGE_LAID_KEY = '@volyume_return_nudge_laid_at';
+export const RETURN_NUDGE_ABSENCE_DAYS = 21;
+export const RETURN_NUDGE_HOUR = 10;
+// Re-laying on every single foreground would cost reads for no gain; the
+// 21-day clock only needs to move once in a while. Six hours keeps the
+// fire time within a quarter of a day of "21 days since last open".
+const RETURN_NUDGE_RELAY_AFTER_MS = 6 * 60 * 60 * 1000;
+
+/**
+ * D142 copy. Calm, no shame: never "you missed", never "behind", never a
+ * streak. Pure, exported for the copy tests.
+ */
+export function returnNudgePush() {
+  return {
+    title: 'Your plan is still here',
+    body: 'Whenever you are ready, your next session is waiting for you. Nothing has been lost.',
+  };
+}
+
+export async function cancelReturnNudge() {
+  try { await Notifications.cancelScheduledNotificationAsync(NOTIF_ID_RETURN_NUDGE); } catch {}
+}
+
+/**
+ * D142 (founder decision C, 2026-09-04): one calm note after three weeks of
+ * genuine absence.
+ *
+ * MECHANISM. There is no background execution in this app, so nothing can
+ * observe an absent user. Instead the note is laid AHEAD, for
+ * RETURN_NUDGE_ABSENCE_DAYS from now, and re-laid (cancel, then lay again)
+ * every time the app opens. While the user keeps opening the app the fire
+ * date keeps moving away and it never fires; it fires exactly once, only
+ * after the app has not been opened for the whole window. Nothing chases
+ * it afterwards: the next lay happens only when the app runs again.
+ *
+ * GATES, each honoured here rather than assumed:
+ *   - the user's own toggle (returnNudgeEnabled, default on);
+ *   - an established user only: at least one completed workout AND an
+ *     active plan, so there is something true to say "is still here". A
+ *     brand-new user is the activation nudge's domain (S6), whose window
+ *     hard-stops on its own;
+ *   - never under an open ED/wellbeing flag or calm mode, both failing
+ *     CLOSED on an unreadable value;
+ *   - quiet hours shift it; the push budget can refuse it; one fixed
+ *     identifier so it can never stack.
+ *
+ * @param {string|null} userId
+ * @param {{ force?: boolean }} [opts] force skips the six-hour re-lay throttle
+ */
+export async function scheduleReturnNudge(userId, { force = false } = {}) {
+  if (Platform.OS === 'web') return;
+  try {
+    // eslint-disable-next-line global-require
+    const useAppStore = require('../../store/useAppStore').default;
+    const uid = userId ?? useAppStore.getState()?.user?.id ?? null;
+    if (!uid) { await cancelReturnNudge(); return; }
+
+    let prefs = {};
+    try {
+      const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
+      if (raw) prefs = JSON.parse(raw) ?? {};
+    } catch (_) { /* defaults below */ }
+    if (prefs.returnNudgeEnabled === false) { await cancelReturnNudge(); return; }
+
+    if (!force) {
+      try {
+        const laidRaw = await AsyncStorage.getItem(RETURN_NUDGE_LAID_KEY);
+        const laid = laidRaw == null ? null : Number(laidRaw);
+        if (Number.isFinite(laid) && Date.now() - laid < RETURN_NUDGE_RELAY_AFTER_MS) return;
+      } catch (_) { /* unreadable stamp: lay */ }
+    }
+
+    // ED-safety and calm mode, both fail CLOSED: an unreadable value
+    // suppresses (and retires anything laid).
+    // eslint-disable-next-line global-require
+    const db = require('../database');
+    const edFlag = await db.getOpenEdPatternFlag(uid).catch(() => 'read_failed');
+    if (edFlag) { await cancelReturnNudge(); return; }
+    let wellbeing;
+    try {
+      // eslint-disable-next-line global-require
+      const { WELLBEING_KEY } = require('../wellbeing');
+      wellbeing = await AsyncStorage.getItem(WELLBEING_KEY);
+    } catch (_) { wellbeing = 'read_failed'; }
+    if (wellbeing === 'calm' || wellbeing === 'read_failed') { await cancelReturnNudge(); return; }
+
+    // Established user with something to come back to. A read failure
+    // stands down (leaves whatever is laid; the next open re-runs).
+    let workouts;
+    let plan;
+    try {
+      workouts = await db.getAllWorkouts(uid);
+      plan = await db.getActivePlan(uid);
+    } catch (_) { return; }
+    const hasCompleted = Array.isArray(workouts) && workouts.some((w) => w.isCompleted);
+    if (!hasCompleted || !plan) { await cancelReturnNudge(); return; }
+
+    await cancelReturnNudge();
+    const now = new Date();
+    const fireAt = new Date(
+      now.getFullYear(), now.getMonth(), now.getDate() + RETURN_NUDGE_ABSENCE_DAYS,
+      RETURN_NUDGE_HOUR, 0, 0, 0,
+    );
+    const quiet = await getQuietHours();
+    const { date: shifted } = shiftDateOutOfQuietHours(fireAt, quiet);
+    const slot = await requestEventPushSlot({ category: CATEGORY.RETURN_NUDGE, fireDate: shifted });
+    if (!slot.allowed) return;
+    const copy = returnNudgePush();
+    await scheduleCheckedNotification({
+      identifier: NOTIF_ID_RETURN_NUDGE,
+      content: {
+        title: copy.title,
+        body: copy.body,
+        data: { type: 'return_nudge' },
+        sound: false,
+      },
+      trigger: {
+        channelId: COACHING_REMINDERS_CHANNEL,
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: shifted,
+      },
+    });
+    await AsyncStorage.setItem(RETURN_NUDGE_LAID_KEY, String(Date.now())).catch(() => {});
+  } catch (e) {
+    trackNotificationFailed({
+      category: CATEGORY.RETURN_NUDGE,
+      reason: 'schedule_threw',
+      payload: { message: e?.message ?? 'unknown' },
+    });
+  }
+}
+
 // ─── F3: planned-meal confirm reminder ───────────────────────────────────────
 const NOTIF_ID_PLANNED_MEAL_CONFIRM = 'volyume_planned_meal_confirm';
 
@@ -1797,6 +1931,14 @@ export async function restoreNotifications(prefs, userId = null) {
     const store = require('../../store/useAppStore').default;
     await scheduleBlockReadyForActiveBlock(userId ?? store.getState().user?.id ?? null);
   } catch (_) { /* block-ready re-lay is best-effort */ }
+
+  // D142: the return nudge is laid ahead and re-laid on every open; this
+  // is the launch re-lay (forced: the cancel-all above just wiped it).
+  try {
+    // eslint-disable-next-line global-require
+    const store = require('../../store/useAppStore').default;
+    await scheduleReturnNudge(userId ?? store.getState().user?.id ?? null, { force: true });
+  } catch (_) { /* return-nudge re-lay is best-effort */ }
 }
 
 // ─── Year of Lifts unlock ─────────────────────────────────────────────────────

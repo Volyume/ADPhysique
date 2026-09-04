@@ -21,7 +21,7 @@ import {
 } from '../lib/notifications/preferences';
 import { setCategoryEnabled, isCategoryEnabled } from '../lib/notifications/categoryPrefs';
 import { CATEGORY } from '../lib/notifications/categories';
-import { scheduleMealReminders, scheduleActivationNudge, cancelActivationNudge, MEAL_REMINDERS_KEY } from '../lib/notifications/scheduler';
+import { scheduleMealReminders, scheduleActivationNudge, cancelActivationNudge, scheduleReturnNudge, cancelReturnNudge, MEAL_REMINDERS_KEY } from '../lib/notifications/scheduler';
 import { restoreNotifications } from '../lib/notifications';
 import {
   getQuietHours,
@@ -90,12 +90,15 @@ export default function NotificationSettingsScreen({ navigation }) {
   // S6: the early-activation nudge is tier-blind with its own one-tap disable.
   // Blob-backed (the source the scheduler reads); default on.
   const [activationNudgeEnabled, setActivationNudgeEnabled] = useState(true);
+  // D142: the return nudge's own one-tap switch, blob-backed, default on.
+  const [returnNudgeEnabled, setReturnNudgeEnabled] = useState(true);
   useEffect(() => {
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(NOTIF_PREFS_KEY);
         const blob = raw ? (JSON.parse(raw) ?? {}) : {};
         setActivationNudgeEnabled(blob.activationNudgeEnabled !== false);
+        setReturnNudgeEnabled(blob.returnNudgeEnabled !== false);
       } catch (_) { /* default on */ }
     })();
   }, []);
@@ -385,6 +388,24 @@ export default function NotificationSettingsScreen({ navigation }) {
     } catch (_) {}
   }
 
+  // D142: same shape as the activation-nudge toggle below.
+  async function handleReturnNudgeToggle(value) {
+    setReturnNudgeEnabled(value);
+    try {
+      const userId = useAppStore.getState().user?.id;
+      await setCategoryEnabled(userId, CATEGORY.RETURN_NUDGE, value);
+      if (value) {
+        await scheduleReturnNudge(userId ?? null, { force: true });
+      } else {
+        await cancelReturnNudge();
+      }
+    } catch (e) {
+      // eslint-disable-next-line global-require
+      try { require('../lib/errorLog').logError('NotificationSettings.returnNudgeToggle', e, { value }); } catch (_) {}
+      setReturnNudgeEnabled(!value);
+    }
+  }
+
   async function handleActivationNudgeToggle(value) {
     setActivationNudgeEnabled(value);
     try {
@@ -655,6 +676,28 @@ export default function NotificationSettingsScreen({ navigation }) {
           <View style={[styles.helperRow, live.helperRow]}>
             <Text style={[styles.helperText, live.helperText]}>
               A gentle reminder in your first couple of weeks if you have not logged a session yet. It stops on its own once you are into a routine.
+            </Text>
+          </View>
+          {/* D142: the return nudge. One calm note after three weeks without
+              opening the app; never repeated, never under calm mode or an
+              open wellbeing flag. */}
+          <View style={styles.toggleRow}>
+            <View style={[styles.toggleIconWrap, live.toggleIconWrap]}>
+              <Ionicons name="leaf-outline" size={18} color={t.colors.primary} />
+            </View>
+            <Text style={[styles.toggleLabel, live.toggleLabel]}>Welcome-back note</Text>
+            <Switch
+              value={returnNudgeEnabled}
+              onValueChange={handleReturnNudgeToggle}
+              trackColor={{ false: t.colors.surface3, true: withAlpha(t.colors.primary, alpha.half) }}
+              thumbColor={t.colors.primary}
+              ios_backgroundColor={t.colors.surface2}
+              accessibilityLabel="Welcome-back note toggle"
+            />
+          </View>
+          <View style={[styles.helperRow, live.helperRow]}>
+            <Text style={[styles.helperText, live.helperText]}>
+              One calm note if three weeks pass without you opening Volyume, so you know your plan is still here. Never more than one.
             </Text>
           </View>
         </Card>

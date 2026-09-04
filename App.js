@@ -956,9 +956,13 @@ export default function App() {
         // their quiet-hours-shifted hour is recomputed. No-op when unchanged.
         try {
           // eslint-disable-next-line global-require
-          const { rescheduleForTimezoneIfChanged, refreshWeighInHorizonIfStale } = require('./src/lib/notifications');
+          const { rescheduleForTimezoneIfChanged, refreshWeighInHorizonIfStale, scheduleReturnNudge } = require('./src/lib/notifications');
           const uid = useAppStore.getState().user?.id ?? null;
           rescheduleForTimezoneIfChanged(uid).catch(() => {});
+          // D142: the return nudge is laid 21 days ahead and moved on every
+          // open, so it fires only after genuine absence. Self-throttled to
+          // once per six hours; every gate lives inside.
+          scheduleReturnNudge(uid).catch(() => {});
           // C8 Work 5 review D6: the weigh-in prompts now run on a bounded
           // 14-day horizon, so an app that stays resident for weeks would
           // run out mid-use. Top it up at most once a week on foreground.
