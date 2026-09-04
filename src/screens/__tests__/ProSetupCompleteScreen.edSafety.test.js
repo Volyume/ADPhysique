@@ -173,7 +173,14 @@ describe('ProSetupCompleteScreen ED-safety copy', () => {
     expect(SOURCE).not.toContain('accessibilityRole="link"');
     expect(SOURCE).not.toContain('Diary &gt; Plan my week');
     expect(SOURCE).not.toContain('Open Plans to build or pick a routine');
-    expect(SOURCE).toContain('Create or choose a routine before your first session.');
+    // D141 item 10b: the "create or choose a routine" copy described a
+    // flow D137 already retired, and the row toggled `planOpen` on tap
+    // even though the chevron/content never render without a plan -- an
+    // inert control right after a failed generation. It is now a
+    // non-interactive row (no toggle) that names the real route: the
+    // Train tab's "Start with a plan" action.
+    expect(SOURCE).not.toContain('Create or choose a routine before your first session.');
+    expect(SOURCE).toContain('Head to the Train tab and start with a plan to get your split going.');
     expect(SOURCE).toMatch(/eduLearnRow: \{[\s\S]*minHeight: touchTarget\.minimum/);
     expect(SOURCE).toMatch(/eduLearnText: \{ color: colors\.textPrimary/);
   });

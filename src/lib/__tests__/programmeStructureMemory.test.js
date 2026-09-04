@@ -230,10 +230,20 @@ describe('THE PRODUCTION PATH', () => {
     expect(src).toMatch(/catch \(_\) \{ structureMemory = null; \}/);
   });
 
-  test('THE USER IS TOLD their own history shaped it', () => {
+  test('THE USER IS TOLD their own history shaped it, on the preview before they confirm (D139/D141)', () => {
+    // D141 item 10c: the post-commit toast branch this test used to pin
+    // (`else if (planResult.structureMemory)` in PlanUpdateScreen.js) was
+    // dead code -- generateAndSavePlan's commit-side success result never
+    // carries `structureMemory` (only its read-only twin generatePlanDryRun
+    // does), so that branch could never fire. The moment moved forward to
+    // the preview sheet, read BEFORE confirm (D139): PlanUpdateScreen stages
+    // the dry run's structureMemory for PlanPreviewSheet, which renders it
+    // via the same structureMemoryCopy this suite pins below.
     const screen = read('../../screens/PlanUpdateScreen.js');
-    expect(screen).toMatch(/planResult\.structureMemory/);
-    expect(screen).toMatch(/structureMemoryCopy\(planResult\.structureMemory/);
+    expect(screen).toMatch(/structureMemory: dry\.structureMemory \?\? null/);
+    expect(screen).not.toMatch(/planResult\.structureMemory/);
+    const sheet = read('../../components/PlanPreviewSheet.js');
+    expect(sheet).toMatch(/structureMemoryCopy\(preview\.structureMemory/);
   });
 
   test('and the copy names the evidence, not the algorithm', () => {

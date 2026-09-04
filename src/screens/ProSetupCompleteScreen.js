@@ -308,14 +308,35 @@ export default function ProSetupCompleteScreen({ navigation }) {
 
 
           {/* 2. Train your split (RA-5: moved above the button, renumbered) */}
+          {/* Item 10b (D141): a failed generation leaves hasPlan false, but
+              the chevron and the expandable content below only ever render
+              when hasPlan -- so the row used to toggle `planOpen` on every
+              press regardless, an inert tap exactly in the one state where
+              a user might expect it to do something. Now the row is only
+              a button (toggle, accessibilityState.expanded, chevron) when
+              it has a plan to expand; with no plan it renders as a plain,
+              non-interactive View -- no onPress, no accessibilityRole,
+              no expanded state -- and its body honestly says where a plan
+              actually comes from: the Train tab's "Start with a plan"
+              action (D137's EmptyState is the one route to a first plan;
+              the old "create or choose a routine" copy described a
+              separate flow that no longer exists). */}
           <Animated.View entering={stage(2)}>
-          <TouchableOpacity
+          {(() => {
+            const RowWrapper = hasPlan ? TouchableOpacity : View;
+            const rowProps = hasPlan
+              ? {
+                onPress: () => setPlanOpen(v => !v),
+                activeOpacity: 0.85,
+                accessibilityRole: 'button',
+                accessibilityState: { expanded: planOpen },
+                accessibilityLabel: 'Train your split',
+              }
+              : {};
+            return (
+          <RowWrapper
             style={[styles.routineCard, live.routineCard, planOpen && [styles.routineCardOpen, live.routineCardOpen]]}
-            onPress={() => setPlanOpen(v => !v)}
-            activeOpacity={0.85}
-            accessibilityRole="button"
-            accessibilityState={{ expanded: hasPlan ? planOpen : undefined }}
-            accessibilityLabel="Train your split"
+            {...rowProps}
           >
             <View style={styles.routineHeader}>
               <View style={[styles.routineIconWrap, live.routineIconWrap]}>
@@ -341,7 +362,7 @@ export default function ProSetupCompleteScreen({ navigation }) {
                   </>
                 ) : (
                   <Text style={[styles.routineBody, live.routineBody]}>
-                    Create or choose a routine before your first session.
+                    No plan yet. Head to the Train tab and start with a plan to get your split going.
                   </Text>
                 )}
               </View>
@@ -381,7 +402,9 @@ export default function ProSetupCompleteScreen({ navigation }) {
                 ) : null}
               </View>
             )}
-          </TouchableOpacity>
+          </RowWrapper>
+            );
+          })()}
           </Animated.View>
 
 
