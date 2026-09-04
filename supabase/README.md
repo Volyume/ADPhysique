@@ -63,6 +63,28 @@ contract must not delegate its authority to a superseded audit.
 - **HELD: 049 only.** `migrate_049_drop_peak_week_plans.sql` is
   destructive and its client-side prerequisites have not landed. It must
   not be applied. See its own header and the row below.
+- **156-157 APPLIED 2026-09-04** (founder's exact phrase, Claude-run via
+  MCP, project `sujrylzzxcqxxfygptns`). Pre-apply audit: the live
+  `record_engine_telemetry` carried migration 104's 87 names; 156 was
+  checked locally to keep all 87 and add 18, and to cover every
+  non-deferred client catalogue event. Post-apply verification read-only:
+  - **156** all 18 new names present in the live function definition,
+    EXECUTE still granted to `authenticated`, ledger 20260904082129.
+  - **157** `cron.job` holds zero rows named `cascade-advance-due-users`
+    (job 3, `*/15 * * * *`, had been live); `cascade_advance_due_users()`
+    remains defined; ledger 20260904082135.
+  - **Applied to EU-Dublin production is now 001-048, 050-071, 073-154,
+    156-157.** 155 is PENDING on a client prerequisite (below). 049 HELD.
+    150 RETIRED.
+- **155 BLOCKED on a client fix (found 2026-09-04 during the batch
+  audit).** The new INSERT policy requires `sent_on` to equal the
+  database's UTC date. The deployed `partner-cheer` Edge Function stamps
+  UTC, but the app's own fallback insert (`src/lib/partners/service.js`,
+  `insertCheerDirectly`, used when the function call fails) stamps
+  `todayLocalKey()`, the LOCAL date. Around UTC midnight that fallback
+  would be rejected and `normaliseCheerInsertError` would map the RLS
+  rejection to "partner not active". The client fallback must stamp the
+  UTC date and that build must be in users' hands before 155 runs.
 - **132-136 APPLIED 2026-08-12** (founder order, Claude-run, project
   `sujrylzzxcqxxfygptns`, eu-west-1). Every object verified read-only
   after the apply:
@@ -384,6 +406,8 @@ themselves; add a row here whenever a migration is added.
 | 151 | `migrate_151_weight_bearing_hands.sql` | Gap-closure Phase C: eleventh demand column `weight_bearing_hands` (boolean, NULL = unknown) on `exercises` + `custom_exercises` - the push-up class loads extended wrists while reading grip-free, so wrist/hand restrictions were inexpressible. Movement metadata only, no user data. Until it runs, custom pushes carrying the field fail soft per the migrate_143 tolerated mode. | **YES - APPLIED 2026-08-21** (same batch; column verified on both tables). |
 | 152 | `migrate_152_capability_adaptation_mode.sql` | CC33 D112 R8 (section 25, audit T2-26): `capability_constraints.adaptation_mode` ('hold' \| 'propose'; NULL = propose) - the per-episode "just hold my plan" choice. Additive nullable; the push includes the field only when a pushed row carries it. | **YES - APPLIED 2026-08-28** (founder authorisation given as an explicit named confirmation of "Apply migrate_152 to the production database" in chat, recorded here as the phrase-gate equivalent; MCP apply; verified: column text/nullable with its CHECK present via information_schema). |
 | 155 | `migrate_155_partner_cheer_server_date.sql` | Replaces the partner-cheer INSERT policy so `sent_on` must be the database's UTC date. Closes arbitrary-date daily-rate bypass; deploy with the matching `partner-cheer` Edge Function change. | **PENDING - Daybreak Blue 2026-08-28; do not apply without explicit production authorization.** |
+| 156 | `migrate_156_activation_funnel_telemetry.sql` | Replaces `record_engine_telemetry` with the complete allow-list: migration 104's 87 names plus the 18 activation and programme funnel events the client emits (first_workout_started, first_weigh_in, checkin_started, first_checkin_completed, coach_result_viewed, coach_recommendation_accepted/declined, notification_permission_requested, setup_started, first_home_landed, plan_preview_shown/confirmed/dismissed, block_decision, library_plan_previewed, manual_plan_started, manual_plan_saved, plan_replaced). Create-or-replace, idempotent. Rollback: re-apply 104. | **YES - APPLIED 2026-09-04** (exact phrase; MCP; verified as above). |
+| 157 | `migrate_157_pause_cascade_cron.sql` | Unschedules the `cascade-advance-due-users` pg_cron job (migration 031) on the fully-free product; the function stays defined, nothing else touched. Rollback: one `cron.schedule` statement (see file header). | **YES - APPLIED 2026-09-04** (exact phrase; MCP; verified: zero matching cron rows, function still defined). |
 
 > Ledger gap noted 2026-08-20: `migrate_144_apple_review_password_reset.sql`
 > exists in this folder but has no row in this table (it predates CC26 and

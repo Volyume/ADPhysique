@@ -27,11 +27,14 @@
 -- (see Rollback) AND flip FULL_ACCESS_FOR_ALL in src/lib/proGate.js. Neither
 -- alone re-starts the cascade.
 --
--- Applied locally:  NOT APPLIED - awaits the founder's exact phrase "run
---                   against production" (per CLAUDE.md; cloud migrations are
---                   applied manually, never automatically).
--- Applied remotely: NOT APPLIED - awaits the founder's exact phrase "run
---                   against production".
+-- Applied locally:  N/A (pg_cron is cloud-only).
+-- Applied remotely: YES - APPLIED 2026-09-04 to EU-Dublin (project
+--                   sujrylzzxcqxxfygptns) on the founder's exact phrase
+--                   "run against production", Claude-run via MCP. Verified
+--                   read-only after apply: zero cron.job rows named
+--                   cascade-advance-due-users (job 3, */15 * * * *, was live
+--                   until then), cascade_advance_due_users() still defined,
+--                   ledger version 20260904082135.
 -- Safe to re-run:   YES. The unschedule is wrapped in an exception-swallowing
 --                   block, so running it when the job is already gone (or
 --                   when pg_cron is unavailable) is a no-op. Additive in the

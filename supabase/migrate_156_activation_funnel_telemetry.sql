@@ -101,11 +101,13 @@
 -- names plus the D139 addendum's eight), so 156 is the complete canonical
 -- allow-list and should be the last one applied.
 --
--- Applied locally:  NOT APPLIED - awaits the founder's exact phrase "run
---                   against production" (per CLAUDE.md; migrations are
---                   applied manually, never automatically).
--- Applied remotely: NOT APPLIED - awaits the founder's exact phrase "run
---                   against production".
+-- Applied locally:  N/A (cloud-only function; no local schema).
+-- Applied remotely: YES - APPLIED 2026-09-04 to EU-Dublin (project
+--                   sujrylzzxcqxxfygptns) on the founder's exact phrase
+--                   "run against production", Claude-run via MCP. Verified
+--                   read-only after apply: all 18 new names present in
+--                   pg_get_functiondef, EXECUTE granted to authenticated,
+--                   ledger version 20260904082129.
 -- Safe to re-run:   YES. CREATE OR REPLACE; no schema change, no data
 --                   migration, purely additive to the allow-list.
 -- Rollback:         re-apply migration 104 to drop the eighteen new names

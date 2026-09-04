@@ -12,8 +12,9 @@ are paying. Every change affects them. Work accordingly.
 > was REVERTED on the founder's device verdict — never re-propose it.
 > Cloud migrations are CLAUDE-RUN, gated on the founder's exact phrase
 > "run against production" per batch (`supabase/README`); applied through
-> `migrate_131`, with 132-135 written and awaiting the phrase. Only
-> **049** is HELD (059 is applied; its `meal_[0-9]+` CHECK is live).
+> `migrate_157` (2026-09-04) except **155**, which is BLOCKED on a client
+> prerequisite recorded in the README status block. Only **049** is HELD
+> (059 is applied; its `meal_[0-9]+` CHECK is live); 150 is RETIRED.
 > Decision delegation (D33) and the full
 > operating model are PERMANENT law — Section 4, D40 block. The decisions
 > register is `docs/ux-world-class-audit-2026-07-09/DECISIONS-2026-07-09.md`.
