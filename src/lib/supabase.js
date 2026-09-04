@@ -324,10 +324,49 @@ export async function getCurrentUser() {
 // The one redirect Volyume ever asks Supabase to send a user back to.
 const OAUTH_REDIRECT_URL = 'volyume://';
 
+/**
+ * D141 item 1 (2026-09-04): every sign-in exchange with Supabase is bounded.
+ *
+ * Every other network call in the app carries a timeout (food search 1.2s,
+ * USDA 1.5s, the sign-out push 20s); the auth exchanges did not, and the
+ * Supabase client sets no custom fetch timeout either. On a captive portal
+ * or a connection that accepts the socket and never answers, the sign-in
+ * button stayed disabled for as long as the OS kept the request open, with
+ * no toast and no way out short of killing the app. The bound matches the
+ * sign-out push. The rejection message is deliberately network-shaped
+ * ("timed out") so authErrorCopy.authErrorMessage maps it to the calm
+ * connectivity sentence rather than the generic fallback.
+ *
+ * Only the NETWORK exchanges are bounded, never a step the user is inside
+ * of (the Google account picker, the Apple sheet, the Play Services update
+ * dialogue): a slow person choosing an account is not a hung request.
+ *
+ * If the underlying request completes after the bound, Supabase still emits
+ * SIGNED_IN through onAuthStateChange and the app signs the user in as
+ * normal; the toast they saw was about the wait, not about a failure to
+ * sign in, and nothing is left half-done.
+ */
+export const AUTH_NETWORK_TIMEOUT_MS = 20000;
+export const AUTH_TIMEOUT_MESSAGE = 'Sign-in timed out. Check your connection and try again.';
+
+export function withAuthTimeout(promise, ms = AUTH_NETWORK_TIMEOUT_MS) {
+  let timer = null;
+  const timeout = new Promise((_resolve, reject) => {
+    timer = setTimeout(() => reject(new Error(AUTH_TIMEOUT_MESSAGE)), ms);
+  });
+  // The losing promise must never surface as an unhandled rejection.
+  Promise.resolve(promise).catch(() => {});
+  return Promise.race([promise, timeout]).finally(() => { if (timer) clearTimeout(timer); });
+}
+
 export async function signInWithEmail(email, password) {
   const c = getSupabaseClient();
   if (!c) return { data: null, error: { message: 'Cloud sign-in is not available right now.' } };
-  return c.auth.signInWithPassword({ email, password });
+  try {
+    return await withAuthTimeout(c.auth.signInWithPassword({ email, password }));
+  } catch (e) {
+    return { data: null, error: { message: e?.message ?? AUTH_TIMEOUT_MESSAGE } };
+  }
 }
 
 export async function signUpWithEmail(email, password) {
@@ -339,11 +378,16 @@ export async function signUpWithEmail(email, password) {
   // eslint-disable-next-line global-require
   const nonce = await require('./authCallbackState').beginAuthFlow('signup', email);
   if (!nonce) return { data: null, error: { message: 'Could not start a secure sign-up flow. Try again.' } };
-  const result = await c.auth.signUp({
-    email,
-    password,
-    options: { emailRedirectTo: `${OAUTH_REDIRECT_URL}auth-callback?state=${nonce}` },
-  });
+  let result;
+  try {
+    result = await withAuthTimeout(c.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: `${OAUTH_REDIRECT_URL}auth-callback?state=${nonce}` },
+    }));
+  } catch (e) {
+    result = { data: null, error: { message: e?.message ?? AUTH_TIMEOUT_MESSAGE } };
+  }
   if (result?.error) await require('./authCallbackState').clearAuthFlow();
   return result;
 }
@@ -480,7 +524,8 @@ export async function signInWithGoogle() {
     if (resp?.type === 'cancelled') return { cancelled: true };
     const idToken = resp?.data?.idToken ?? resp?.idToken ?? null;
     if (!idToken) return { error: { message: 'Google did not return a sign-in token.' } };
-    const { error } = await c.auth.signInWithIdToken({ provider: 'google', token: idToken });
+    // D141 item 1: the token exchange is the network step; bounded.
+    const { error } = await withAuthTimeout(c.auth.signInWithIdToken({ provider: 'google', token: idToken }));
     if (error) return { error };
     return { ok: true };
   } catch (e) {
@@ -548,7 +593,8 @@ export async function signInWithApple() {
     });
     const idToken = credential?.identityToken;
     if (!idToken) return { error: { message: 'Apple did not return a sign-in token.' } };
-    const { error } = await c.auth.signInWithIdToken({ provider: 'apple', token: idToken });
+    // D141 item 1: the token exchange is the network step; bounded.
+    const { error } = await withAuthTimeout(c.auth.signInWithIdToken({ provider: 'apple', token: idToken }));
     if (error) return { error };
     // Guideline 4: Authentication Services already supplies the user's name and
     // email on the FIRST authorisation (both are null on later sign-ins), so we
