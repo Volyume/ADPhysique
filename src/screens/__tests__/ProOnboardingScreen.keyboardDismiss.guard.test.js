@@ -35,13 +35,13 @@ describe('ProOnboardingScreen puts the keyboard away on its own', () => {
 
   test('the sex, height-unit and weight-unit selectors on the input step dismiss it', () => {
     expect(SRC).toContain('onChange={(v) => { Keyboard.dismiss(); setSex(v); }}');
-    expect(SRC).toContain('onPress={() => { Keyboard.dismiss(); setLocalHeightUnits(u.key); }}');
+    expect(SRC).toContain('onChange={(v) => { Keyboard.dismiss(); setLocalHeightUnits(v); }}');
     expect(SRC).toContain('onChange={(v) => { Keyboard.dismiss(); setLocalBWUnits(v); }}');
     expect(SRC).toContain('onChange={(v) => { Keyboard.dismiss(); setBfSource(v); }}');
   });
 
   test('every wizard scroll view carries the platform-split dismiss mode', () => {
-    const scrollViews = SRC.match(/<ScrollView contentContainerStyle=\{styles\.scroll\}[^>]*>/g) || [];
+    const scrollViews = SRC.match(/<ScrollView ref=\{scrollRef\} contentContainerStyle=\{styles\.scroll\}[^>]*>/g) || [];
     expect(scrollViews.length).toBeGreaterThanOrEqual(6);
     for (const sv of scrollViews) {
       expect(sv).toContain("keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}");

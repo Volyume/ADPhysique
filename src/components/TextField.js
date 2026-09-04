@@ -2,6 +2,7 @@ import { forwardRef, useState, useContext, useId } from 'react';
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, Keyboard, InputAccessoryView, Platform } from 'react-native';
 import { spacing, radius, withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
+import FieldError from './FieldError';
 import { BottomSheetTextInput } from '@gorhom/bottom-sheet';
 import { InsideBottomSheetContext } from './BottomSheet';
 import { touchTarget } from '../styles/layout';
@@ -58,6 +59,9 @@ const TextField = forwardRef(function TextField({
   trailing,
   containerStyle,
   labelStyle,
+  // D146: an inline error. A string renders the field's border in the error
+  // colour and a FieldError line beneath it; null/undefined renders nothing.
+  error,
   // Clamp the label to N lines. Default (undefined) keeps the label free to
   // wrap, which is right for full-width single-field prompts. Multi-column
   // rows (several fields side by side) pass 1 so a longer label can't wrap
@@ -141,6 +145,7 @@ const TextField = forwardRef(function TextField({
           },
           multiline && styles.fieldMultiline,
           focused && { borderColor: withAlpha(t.colors.primary, alpha.strong) },
+          error ? { borderColor: t.colors.error } : null,
           disabled && styles.disabled,
           fieldStyle,
         ]}
@@ -174,6 +179,7 @@ const TextField = forwardRef(function TextField({
         />
         {trailing ? <View style={styles.trailing}>{trailing}</View> : null}
       </View>
+      <FieldError message={error} />
       {/* A1: Done bar over the numeric keypad (iOS only; InputAccessoryView is
           a no-op on Android). Gives number-pad/decimal-pad fields a one-tap
           dismiss the OS keyboards do not provide, exactly as SetEntry.js.

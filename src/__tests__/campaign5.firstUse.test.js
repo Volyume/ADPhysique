@@ -276,8 +276,15 @@ describe('ACCOUNT: onboarding does not block on a display name (C5-P29-03 / C5-P
     expect(src).toMatch(/useState\(\s*\(\) => appleFirstName\(\{ sessionUser: user, storedProfile: userProfile \}\) \|\| ''/);
     // Step 2's canContinue gate (biological sex, weight, age, height) never
     // consults firstName, so the name can never disable Continue.
-    const step2 = src.match(/if \(step === 2\) \{[\s\S]{0,1400}/)?.[0] ?? '';
-    expect(step2).toMatch(/const canContinue =/);
+    // D146: the gate is validateStep2 (sex, age, height, weight); neither
+    // it nor the step-2 branch consults firstName.
+    const validator = src.match(/function validateStep2\(\) \{[\s\S]{0,900}?return errs;\s*\}/)?.[0] ?? '';
+    expect(validator).toMatch(/errs\.sex/);
+    expect(validator).not.toMatch(/firstName/);
+    // The branch's logic, up to its render: the name field itself is
+    // rendered further down and is not a gate.
+    const step2 = src.match(/if \(step === 2\) \{[\s\S]*?return \(/)?.[0] ?? '';
+    expect(step2).toMatch(/const errors2 = attempted2 \? validateStep2\(\) : \{\};/);
     expect(step2).not.toMatch(/firstName/);
     // An empty field must not write a blank over a stored name.
     expect(src).toMatch(/if \(firstName\.trim\(\)\) merged\.firstName = firstName\.trim\(\);/);
@@ -1234,10 +1241,15 @@ describe('DENSITY: the wizard explains each step once (C5-P36-01/02/03, D96)', (
     // presentation only, the same rationale C5-P1-09 recorded for Free.
     // Every SAFETY-bearing required field keeps its hint.
     for (const hint of [
-      'Complete your sex, age, height and body weight to continue.',
+      // D146 (2026-09-04): the generic under-button hints became per-box
+      // messages; the gates behind them are unchanged.
+      'Choose your biological sex.',
+      'Enter your body weight.',
+      'Choose your training experience.',
       // Training days joined the gate in 2026-08: the wizard no longer
-      // defaults anyone to four sessions, so the hint names it too.
-      'Choose your experience, training days and equipment to continue.',
+      // defaults anyone to four sessions, so it has a message too.
+      'Choose your training days.',
+      'Choose your equipment.',
       'Enter your best current estimate or a measured value.',
       'Be honest here. This sets how much volume your plan includes, so it can protect your recovery.',
     ]) {
@@ -1946,8 +1958,9 @@ describe('REVIEW A: the brand-new-user findings stay fixed (RA-1..RA-10, D96)', 
     expect(stripComments(src)).not.toMatch(/canContinue\s*=\s*!!firstName/);
     expect(src).toMatch(/First name \(optional\)/);
     expect(src).toMatch(/if \(firstName\.trim\(\)\) merged\.firstName = firstName\.trim\(\);/);
-    // The sex gate is untouched (founder 2026-07-01).
-    expect(src).toMatch(/\(sex === 'male' \|\| sex === 'female'\)/);
+    // The sex gate is untouched (founder 2026-07-01); D146 moved it into
+    // validateStep2 in its negative form.
+    expect(src).toMatch(/if \(sex !== 'male' && sex !== 'female'\) errs\.sex = /);
   });
 
   test('RA-5: the first session needs stand above Start training; the rest follow it', () => {

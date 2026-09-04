@@ -56,15 +56,19 @@ describe('ProOnboardingScreen premium polish guards', () => {
     expect(SOURCE).toMatch(/<Text style=\{\[styles\.outcomeChipText, live\.outcomeChipText\]\}>/);
     expect(SOURCE).not.toMatch(/outcomeChipText, live\.outcomeChipText\]\} numberOfLines/);
     expect(SOURCE).toMatch(/outcomeChipText: \{[^}]*flexShrink: 1/);
-    expect(SOURCE).toMatch(/heightImperialRow: \{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing\.md \}/);
-    expect(SOURCE).toMatch(/inputHalf: \{ flex: 1, minWidth: 140 \}/);
+    // D146 (2026-09-04): paired inputs share their row equally, whichever
+    // pair it is, so every box on the step is the same box.
+    expect(SOURCE).toMatch(/pairRow: \{ flexDirection: 'row', gap: spacing\.md, marginTop: spacing\.md \}/);
+    expect(SOURCE).toMatch(/pairHalf: \{ flex: 1 \}/);
     expect(SOURCE).toMatch(/notifCopy: \{ flex: 1, minWidth: 0 \}/);
     expect(SOURCE).toMatch(/hourChip: \{\s*minHeight: 48/);
   });
 
   test('final step title is clean and the missing-recovery gate is visible', () => {
     expect(SOURCE).toContain('title="Recovery and reminders"');
-    expect(SOURCE).toContain('Choose your recovery rating to finish setup.');
+    // D146: the gap is shown on the box itself and named under Continue.
+    expect(SOURCE).toContain("errs.recovery = 'Choose your recovery level.'");
+    expect(SOURCE).toContain('Still needed: your recovery level.');
   });
 
   test('plan-generation failure copy points to the current Today flow', () => {

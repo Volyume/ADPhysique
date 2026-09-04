@@ -5850,3 +5850,67 @@ was pushed. Terms of use is not linked because the app has no terms page
 of its own (the web site carries only a privacy page); flagged, not
 invented. The Train backdrop capture is deleted. Rendered as four
 sequential states beside the approved Welcome before landing.
+
+## D146 — The setup wizard points at what is missing (founder request, 2026-09-04)
+
+**Ask.** "Highlight things that are not filled in; when they get to the
+end and it is not filled in, bring it back or highlight; ensure all the
+boxes display the same; research how other apps do this; do they
+highlight the next one; make ours slicker."
+
+**What the wizard did.** Continue was greyed out until every required
+field passed, with one generic sentence under it ("Complete your sex,
+age, height and body weight to continue") that never said which box.
+The range checks fired as modal alerts. No field anywhere in the wizard
+had an inline error state. The late bounce-back from step 7 dropped the
+user on step 2 with an alert and no marked box. Step 2 mixed a
+hand-rolled 28dp unit toggle with the shared 44dp SegmentedControl,
+carried inert per-field style overrides on every TextField, and its two
+paired rows had different proportions (equal halves for ft/in, 2:3 for
+stone/lbs). Step 6 had a gate but no hint at all. Inventory with
+file:line evidence in the session record.
+
+**Research (published guidance, not opinion).** NN/g: errors belong next
+to the field; a summary alone forces the user to hunt; validate when a
+field is finished, never mid-keystroke, and do not steal focus while
+someone is typing. Material 3: an error state is the border in the error
+colour plus a single-line message that replaces the helper text, with an
+icon or word so it does not rely on colour alone; mark the minority
+(required or optional) once, not every field. The disabled-button
+literature: never grey the submit out silently; keep it enabled, validate
+on tap, scroll to the first error and say what is wrong. Premium fitness
+onboarding (the one-question-per-screen kind) makes "next" implicit; the
+multi-field kind chains focus with Next and marks gaps on submit. Nobody
+auto-highlights "the next empty box" before the user has tried: it nags.
+
+**Ruling.**
+1. Continue is never greyed out on a gated step. A tap with a gap marks
+   the step attempted, every missing box takes the error state with a
+   one-line calm message ("Choose your biological sex.", "Enter your age,
+   13 to 100."), the first gap is scrolled into view and, if it is a text
+   field, focused, a warning haptic fires once, and the line under
+   Continue names what is still needed ("Still needed: biological sex,
+   height."). Errors clear live as each box is filled. Before the first
+   attempt nothing is red.
+2. The gate itself is unchanged and stricter: one validator per step
+   (validateStep2/4/6/7) is both the display source and the block, and
+   advanceFromN returns on any gap before setStep. Biological sex still
+   blocks progression with no default and no tap-through; the guard
+   tests moved from "the button is disabled" to "the press never advances
+   past a missing sex", which also covers the late bounce-back (the
+   baseline step now arrives with its gaps already marked).
+3. One inline error line, `FieldError` (icon plus caption in the error
+   colour, announced politely), used by TextField, Dropdown and beside
+   SegmentedControl, each of which gained an `error` prop that colours
+   its border. Paired fields share one message.
+4. Step 2 is one control family: both unit pickers are the shared
+   SegmentedControl above their inputs, the hand-rolled toggle is
+   deleted, the inert per-field overrides are deleted, and paired inputs
+   share the row equally.
+5. Not done, on purpose: no "next field" spotlight before an attempt, no
+   asterisks (the optional boxes are already marked), no progress
+   counter. Focus chaining from the name field to age was added; the
+   numeric pairs already chain through the iOS Next bar.
+
+**Engine, ED-safety, consent, billing: untouched.** Step 3 (optional body
+fat) has no gate and gained no error state.

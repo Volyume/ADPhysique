@@ -3417,6 +3417,42 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## SETUP WIZARD POINTS AT WHAT IS MISSING (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D146.
+
+Continue never greys out; a tap with a gap marks the missing boxes,
+scrolls to and focuses the first, names the rest under the button. One
+control family on the baseline step. Guards:
+`ProOnboardingScreen.gaps.guard.test.js`; sex and height gate guards
+re-anchored to the validator.
+
+**Device checklist (Android, fresh account).**
+1. Baseline step, leave everything blank, tap Continue. Expected: a short
+   buzz; the sex control's border turns red with "Choose your biological
+   sex." under it; the page scrolls so the sex control is in view; the
+   line under Continue reads "Still needed: biological sex, age, height,
+   body weight."; the step does not advance.
+2. Choose a sex. Expected: its red clears at once; the line under
+   Continue drops "biological sex".
+3. Tap Continue again. Expected: the page scrolls to Age and the cursor
+   lands in it with the keyboard up; Age shows "Enter your age, 13 to
+   100." Type 200. Expected: still red (out of range). Type 30. Expected:
+   clears.
+4. Height with ft + in selected: both boxes are the same width and both
+   carry the red border with one message under the pair. Switch to cm:
+   one box, same message. The unit picker looks identical to the weight
+   unit picker below it.
+5. Fill everything and tap Continue. Expected: advances, no alert.
+6. Training step: tap Continue with nothing chosen. Expected: the
+   experience dropdown border turns red with its message, the session
+   and days tracks turn red with messages, equipment likewise, and the
+   line names all four. Choose each; each clears.
+7. Focus step: Continue with no focus chosen. Expected: the dropdown
+   marks and "Still needed: your focus." shows.
+8. Final step: Continue with no recovery level. Expected: the page
+   scrolls up to the recovery dropdown, marked, with its message.
+9. Larger text on: messages wrap under their box without overlapping.
+ED-safety: the ranges and floors are unchanged; the sex gate is unchanged.
+
 ## ONBOARDING KEYBOARD DISMISSES ON ITS OWN (2026-09-04) — COMPLETE, MERGED TO MAIN.
 
 Founder defect (Android walk): on the setup wizard the keyboard stayed up

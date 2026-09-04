@@ -61,18 +61,20 @@ describe('ProOnboarding refuses to progress without a valid height', () => {
   });
 
   test('advanceFrom2 blocks advancing on a missing or out-of-range height', () => {
-    // The guard: resolve the height, and if it is not valid, alert and return
-    // (no setStep). appAlert('Height' is unique to advanceFrom2.
+    // D146 (2026-09-04): the guard lives in validateStep2, which resolves the
+    // height through the shared helper and records the gap on the box; and
+    // advanceFrom2 returns on ANY gap before setStep(3). No alert, no
+    // tap-through.
     expect(src).toMatch(/const\s+enteredHeightCm\s*=\s*resolveHeightCm\(\s*localHeightUnits\s*,\s*heightCm\s*,\s*heightFt\s*,\s*heightIn\s*\)/);
-    expect(src).toMatch(/if\s*\(\s*!isValidHeightCm\(\s*enteredHeightCm\s*\)\s*\)\s*\{[\s\S]{0,160}?appAlert\(\s*'Height'/);
+    expect(src).toMatch(/if\s*\(\s*!isValidHeightCm\(\s*enteredHeightCm\s*\)\s*\)\s*errs\.height\s*=/);
+    expect(src).toMatch(/function advanceFrom2\(\) \{[\s\S]{0,700}?const errs = validateStep2\(\);\s*if \(Object\.keys\(errs\)\.length\) \{[\s\S]{0,600}?return;\s*\}\s*emitStepDone\(2\);\s*setStep\(3\);/);
   });
 
-  test('the step-2 continue gate requires a finite, in-range height', () => {
-    // canContinue must include the height requirement through the same resolver.
-    expect(src).toMatch(/const\s+step2HeightCm\s*=\s*resolveHeightCm\(\s*localHeightUnits\s*,\s*heightCm\s*,\s*heightFt\s*,\s*heightIn\s*\)/);
-    expect(src).toMatch(/canContinue\s*=[\s\S]{0,400}isValidHeightCm\(\s*step2HeightCm\s*\)/);
-    // And the button is genuinely disabled on that gate (shared with the sex gate).
-    expect(src).toMatch(/disabled=\{!canContinue\}/);
+  test('the step-2 gap display runs through the same validator', () => {
+    // The boxes are marked from validateStep2 after the first attempt, so the
+    // display and the gate can never drift.
+    expect(src).toMatch(/const errors2 = attempted2 \? validateStep2\(\) : \{\};/);
+    expect(src).toMatch(/error=\{errors2\.height \? ' ' : undefined\}/);
   });
 
   test('the submit path no longer falls back to 175 (stored height is the user entry)', () => {

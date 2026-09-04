@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors, fontSize, fontWeight, spacing, radius, type, withAlpha, alpha, fontFamily } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
 import InfoTooltip from './InfoTooltip';
+import FieldError from './FieldError';
 
 // Inline dropdown, expands in place, no modal needed. Shared by the Pro
 // onboarding wizard and the change-goal screen so both training-setup flows
@@ -12,7 +13,9 @@ import InfoTooltip from './InfoTooltip';
 // options: [{ value, label, sub? }]. onChange receives the chosen value.
 // tip: optional plain-English gloss (U-E-1) rendered as an InfoTooltip beside the
 // label; omitted by default so existing usages are unchanged.
-export default function Dropdown({ label, hint, value, options, onChange, placeholder = 'Choose…', tip }) {
+// error (D146): a string renders the trigger border in the error colour and
+// a FieldError line under the control.
+export default function Dropdown({ label, hint, value, options, onChange, placeholder = 'Choose…', tip, error }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
@@ -38,6 +41,7 @@ export default function Dropdown({ label, hint, value, options, onChange, placeh
           styles.dropdownTrigger, live.dropdownTrigger,
           value && [styles.dropdownTriggerFilled, live.dropdownTriggerFilled],
           open && [styles.dropdownTriggerOpen, live.dropdownTriggerOpen],
+          error && !open ? { borderColor: t.colors.error } : null,
         ]}
         onPress={() => setOpen(v => !v)}
         activeOpacity={0.8}
@@ -76,6 +80,7 @@ export default function Dropdown({ label, hint, value, options, onChange, placeh
           ))}
         </View>
       )}
+      <FieldError message={error} />
     </View>
   );
 }

@@ -348,8 +348,12 @@ describe('C16-FIT the resolver is wired into the surfaces that need it', () => {
 
   test('Pro onboarding refuses to advance without an explicit selection', () => {
     const s = src('screens/ProOnboardingScreen.js');
-    expect(s).toMatch(/!experience \|\| !sessionLengthMinutes \|\| !daysPerWeek \|\| !equipment/);
-    expect(s).toMatch(/canContinue = !!experience && !!sessionLengthMinutes && !!daysPerWeek && !!equipment/);
+    // D146 (2026-09-04): the four requirements live in validateStep4, each
+    // writing a gap the box displays; advanceFrom4 returns on any gap.
+    for (const k of ['experience', 'sessionLengthMinutes', 'daysPerWeek', 'equipment']) {
+      expect(s).toMatch(new RegExp(`function validateStep4\\(\\) \\{[\\s\\S]{0,600}?if \\(!${k}\\) errs\\.`));
+    }
+    expect(s).toMatch(/function advanceFrom4\(\) \{[\s\S]{0,900}?const errs = validateStep4\(\);\s*if \(Object\.keys\(errs\)\.length\) \{[\s\S]{0,300}?return;/);
   });
 
   test('both schedule surfaces offer two sessions a week', () => {

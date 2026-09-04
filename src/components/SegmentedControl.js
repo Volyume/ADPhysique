@@ -13,14 +13,16 @@ import useTheme from '../hooks/useTheme';
 // longer than the others (e.g. "Best estimate" beside BIA/Caliper/DEXA): the
 // segments then size to their content and share the slack, so the long label
 // keeps its room instead of truncating to "Best estim...".
-export default function SegmentedControl({ options, value, onChange, accessibilityLabel, equalWidth = true }) {
+// error (D146): true renders the track border in the error colour; the
+// message beneath is the caller's (FieldError), since the label and hint are.
+export default function SegmentedControl({ options, value, onChange, accessibilityLabel, equalWidth = true, error = false }) {
   // CP-10 stage 4 tail (theming, remaining components, 2026-07-10): live
   // theme (src/hooks/useTheme.js). See buildLiveStyles' header comment
   // (defined further down this file, after the frozen `styles` block).
   const t = useTheme();
   const live = buildLiveStyles(t);
   return (
-    <View style={[styles.row, live.row]} accessibilityRole="radiogroup" accessibilityLabel={accessibilityLabel}>
+    <View style={[styles.row, live.row, error ? { borderColor: t.colors.error } : null]} accessibilityRole="radiogroup" accessibilityLabel={accessibilityLabel}>
       {options.map((opt) => {
         const active = opt.value === value;
         return (

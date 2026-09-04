@@ -11,6 +11,8 @@ import SegmentedControl from '../components/SegmentedControl';
 import Chip from '../components/Chip';
 import Button from '../components/Button';
 import TextField from '../components/TextField';
+import FieldError from '../components/FieldError';
+import * as haptics from '../lib/haptics';
 import InfoTooltip from '../components/InfoTooltip';
 import { GLOSSARY } from '../lib/coachGlossary';
 import Dropdown from '../components/Dropdown';
@@ -380,6 +382,83 @@ export default function ProOnboardingScreen({ navigation }) {
   // affordance.
   const heightInchesRef = useRef(null);
   const bodyWeightLbsRef = useRef(null);
+  // D146 (founder, 2026-09-04): the wizard points at what is missing rather
+  // than greying the button out. Continue stays enabled; a tap with a gap
+  // marks the step "attempted", the missing boxes take the error state with
+  // a one-line message, the first of them is scrolled into view and focused
+  // where it is a text field, and the line under Continue names what is
+  // still needed. Errors clear live as each box is filled. Before the first
+  // attempt nothing is red: the labels mark the optional boxes, everything
+  // else is required.
+  const ageRef = useRef(null);
+  const heightFtRef = useRef(null);
+  const heightCmRef = useRef(null);
+  const bodyWeightStRef = useRef(null);
+  const bodyWeightRef = useRef(null);
+  const scrollRef = useRef(null);
+  // Field y positions inside the step, captured by onLayout: the group's own
+  // offset in the scroll content plus each section's offset in the group.
+  const fieldY = useRef({});
+  const [attempted2, setAttempted2] = useState(false);
+  const [attempted4, setAttempted4] = useState(false);
+  const [attempted6, setAttempted6] = useState(false);
+  const [attempted7, setAttempted7] = useState(false);
+
+  function markY(key) {
+    return (e) => { fieldY.current[key] = e.nativeEvent.layout.y; };
+  }
+  function scrollToField(groupKey, key) {
+    const y = (fieldY.current[groupKey] || 0) + (fieldY.current[key] || 0);
+    scrollRef.current?.scrollTo?.({ y: Math.max(0, y - spacing.md), animated: true });
+  }
+  // Shared by every gated step: mark attempted, tell the hand, bring the
+  // first gap into view, and put the cursor in it when it is a text field.
+  function surfaceGaps(errs, order, groupKey, focusRefs, setAttempted) {
+    setAttempted(true);
+    haptics.error();
+    const first = order.find((k) => errs[k]);
+    if (!first) return;
+    scrollToField(groupKey, first);
+    const ref = focusRefs?.[first];
+    if (ref?.current?.focus) setTimeout(() => ref.current?.focus?.(), 260);
+  }
+  const STEP2_LABELS = { sex: 'biological sex', age: 'age', height: 'height', weight: 'body weight' };
+  const STEP4_LABELS = { experience: 'training experience', sessionLength: 'session length', days: 'training days', equipment: 'equipment' };
+  function stillNeeded(errs, order, labels) {
+    const names = order.filter((k) => errs[k]).map((k) => labels[k]);
+    if (!names.length) return null;
+    return `Still needed: ${names.join(', ')}.`;
+  }
+  function validateStep2() {
+    const errs = {};
+    if (sex !== 'male' && sex !== 'female') errs.sex = 'Choose your biological sex.';
+    if (!age || isNaN(parseInt(age, 10)) || parseInt(age, 10) < 13 || parseInt(age, 10) > 100) errs.age = 'Enter your age, 13 to 100.';
+    const enteredHeightCm = resolveHeightCm(localHeightUnits, heightCm, heightFt, heightIn);
+    if (!isValidHeightCm(enteredHeightCm)) errs.height = 'Enter your height.';
+    const bwKg = localBWUnits === 'st'
+      ? stoneLbsToKg(bodyWeightSt, bodyWeightStLbs || '0')
+      : parseBodyWeightToKg(bodyWeight, localBWUnits);
+    if (!bwKg || isNaN(bwKg) || bwKg < 30 || bwKg > 300) errs.weight = 'Enter your body weight.';
+    return errs;
+  }
+  function validateStep4() {
+    const errs = {};
+    if (!experience) errs.experience = 'Choose your training experience.';
+    if (!sessionLengthMinutes) errs.sessionLength = 'Choose your usual session length.';
+    if (!daysPerWeek) errs.days = 'Choose your training days.';
+    if (!equipment) errs.equipment = 'Choose your equipment.';
+    return errs;
+  }
+  function validateStep6() {
+    const errs = {};
+    if (!trainingPhase) errs.phase = 'Choose what you are focused on.';
+    return errs;
+  }
+  function validateStep7() {
+    const errs = {};
+    if (!recoveryRating) errs.recovery = 'Choose your recovery level.';
+    return errs;
+  }
 
   // COMP-013: Reduce Motion skips the staged build sequence entirely (the button
   // spinner stays, exactly the old behaviour). Same flag ProSetupComplete reads.
@@ -927,40 +1006,16 @@ export default function ProOnboardingScreen({ navigation }) {
   // SetEntry does on submit and the Done bar does on iOS.
   function advanceFrom2() {
     Keyboard.dismiss();
-    // RA-4 (D96, Review A): the first name no longer gates the step. It is
-    // presentation only, no engine reads it, and the 'there' fallback covers
-    // every surface that greets by name - the rationale C5-P1-09 already
-    // recorded when the free path made it optional.
-    // Biological sex is REQUIRED (founder 2026-07-01): it sets the ED calorie
-    // floor and BMR, and must never be left to a silent default.
-    if (sex !== 'male' && sex !== 'female') {
-      appAlert('Biological sex', 'Please choose your biological sex. It sets your calorie and nutrition targets.');
-      return;
-    }
-    // Validate body weight, used downstream to compute calorie / protein
-    // targets and to seed the body-metrics log. A silent 80kg fallback
-    // would produce wrong macros, so refuse to advance until it's filled.
-    const bwKg = localBWUnits === 'st'
-      ? stoneLbsToKg(bodyWeightSt, bodyWeightStLbs || '0')
-      : parseBodyWeightToKg(bodyWeight, localBWUnits);
-    if (!bwKg || isNaN(bwKg) || bwKg < 30 || bwKg > 300) {
-      appAlert(
-        'Body weight',
-        'Enter your body weight so we can calculate your calorie and protein targets.',
-      );
-      return;
-    }
-    if (!age || isNaN(parseInt(age, 10)) || parseInt(age, 10) < 13 || parseInt(age, 10) > 100) {
-      appAlert('Age', 'Enter your age (13 to 100).');
-      return;
-    }
-    // Height is REQUIRED (ONBOARD-001): it feeds BMR and the calorie / FFM
-    // targets. No silent 175cm default, refuse to advance until a realistic
-    // height is entered in whichever unit the user is using. This matches the
-    // Continue button's canContinue exactly (both call the shared resolver).
-    const enteredHeightCm = resolveHeightCm(localHeightUnits, heightCm, heightFt, heightIn);
-    if (!isValidHeightCm(enteredHeightCm)) {
-      appAlert('Height', 'Enter your height so we can calculate your calorie targets.');
+    // Biological sex (and every required baseline field) blocks progression
+    // until explicitly chosen: no default, no tap-through. The gap is shown
+    // on the box itself, not in an alert.
+    const errs = validateStep2();
+    if (Object.keys(errs).length) {
+      surfaceGaps(errs, ['sex', 'age', 'height', 'weight'], 'group2', {
+        age: ageRef,
+        height: localHeightUnits === 'imperial' ? heightFtRef : heightCmRef,
+        weight: localBWUnits === 'st' ? bodyWeightStRef : bodyWeightRef,
+      }, setAttempted2);
       return;
     }
     emitStepDone(2);
@@ -986,8 +1041,9 @@ export default function ProOnboardingScreen({ navigation }) {
     // daysPerWeek is gated HERE, not defaulted above it. It drives the split,
     // the weekly volume, the calorie target and the whole schedule-fit
     // assessment, so a tap-through would be a guess dressed as an answer.
-    if (!experience || !sessionLengthMinutes || !daysPerWeek || !equipment) {
-      appAlert('Complete all fields', 'Please fill out your training setup to continue.');
+    const errs = validateStep4();
+    if (Object.keys(errs).length) {
+      surfaceGaps(errs, ['experience', 'sessionLength', 'days', 'equipment'], 'group4', null, setAttempted4);
       return;
     }
     emitStepDone(4);
@@ -1007,8 +1063,9 @@ export default function ProOnboardingScreen({ navigation }) {
 
   function advanceFrom6() {
     Keyboard.dismiss();
-    if (!trainingGoal || !trainingPhase) {
-      appAlert('Almost there', 'Choose what you are focused on to continue.');
+    const errs = validateStep6();
+    if (Object.keys(errs).length) {
+      surfaceGaps(errs, ['phase'], 'group6', null, setAttempted6);
       return;
     }
     // The "aggressive cuts" goal-lock interstitial was removed from
@@ -1256,8 +1313,9 @@ export default function ProOnboardingScreen({ navigation }) {
 
   async function advanceFrom7() {
     Keyboard.dismiss();
-    if (!recoveryRating) {
-      appAlert('Recovery rating', 'Please select your recovery level to continue.');
+    const errs7 = validateStep7();
+    if (Object.keys(errs7).length) {
+      surfaceGaps(errs7, ['recovery'], 'group7', null, setAttempted7);
       return;
     }
     // Schedule fit, checked ONCE, with every answer in hand. A schedule that
@@ -1327,6 +1385,7 @@ export default function ProOnboardingScreen({ navigation }) {
         endSequence();
         setBusy(false);
         submittingRef.current = false;
+        setAttempted2(true);
         setStep(2);
         appAlert(
           'Baseline needs checking',
@@ -1695,7 +1754,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-1" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Set up your account safely"
@@ -1733,28 +1792,17 @@ export default function ProOnboardingScreen({ navigation }) {
   // ── Step 2, Profile ─────────────────────────────────────────────────────────
 
   if (step === 2) {
-    // Gate the Continue button on every required field (same pattern as steps
-    // 4-6), so the step visibly REFUSES to advance until they are all valid.
-    // Biological sex is the critical one: it must be an explicit male/female
-    // choice, a null must never progress (and must never be silently defaulted
-    // downstream). Body weight and age are validated to their real ranges here
-    // so the button matches advanceFrom2 exactly (no enabled-but-then-alert gap).
-    const step2BwKg = localBWUnits === 'st'
-      ? stoneLbsToKg(bodyWeightSt, bodyWeightStLbs || '0')
-      : parseBodyWeightToKg(bodyWeight, localBWUnits);
-    const step2Age = parseInt(age, 10);
-    // ONBOARD-001: height is a required field too. Resolve it through the same
-    // shared helper advanceFrom2 uses so the button and the gate can never drift.
-    const step2HeightCm = resolveHeightCm(localHeightUnits, heightCm, heightFt, heightIn);
-    const canContinue =
-      (sex === 'male' || sex === 'female')
-      && !!step2BwKg && !Number.isNaN(step2BwKg) && step2BwKg >= 30 && step2BwKg <= 300
-      && !Number.isNaN(step2Age) && step2Age >= 13 && step2Age <= 100
-      && isValidHeightCm(step2HeightCm);
+    // D146: the step never greys Continue out. Every required field is
+    // validated by validateStep2 (biological sex first: an explicit
+    // male/female choice, a null never progresses and is never defaulted
+    // downstream), and after the first attempt the gaps are shown on the
+    // boxes themselves.
+    const errors2 = attempted2 ? validateStep2() : {};
+    const needed2 = stillNeeded(errors2, ['sex', 'age', 'height', 'weight'], STEP2_LABELS);
     return (
       <SafeAreaView key="step-2" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Set your starting baseline"
@@ -1771,6 +1819,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 is not required. The icon keeps the visual grouping; steps
                 with real multi-group structure keep their titles. No field,
                 gate, validation or safety hint is removed anywhere. */}
+            <View onLayout={markY('group2')}>
             <QuestionGroup icon="person-outline">
               {/* An Apple-authenticated athlete is not asked for a name.
                   Authentication Services supplied it at the button, half a
@@ -1789,22 +1838,21 @@ export default function ProOnboardingScreen({ navigation }) {
                 <Text style={[styles.fieldHint, live.fieldHint]}>Only used to greet you.</Text>
                 <TextField accessibilityLabel="First name, optional"
                   ref={nameRef}
-                  fieldStyle={styles.inputField}
-                  inputStyle={styles.input}
                   value={firstName}
                   onChangeText={setFirstName}
                   placeholder="Your name"
-                  placeholderTextColor={t.colors.textDisabled}
                   autoCapitalize="words"
                   autoCorrect={false}
                   autoComplete="off"
                   textContentType="none"
                   returnKeyType="next"
+                  onSubmitEditing={() => ageRef.current?.focus()}
+                  blurOnSubmit={false}
                 />
               </View>
               )}
 
-              <View style={styles.section}>
+              <View style={styles.section} onLayout={markY('sex')}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Biological sex</Text>
                 <Text style={[styles.fieldHint, live.fieldHint]}>Used by the calorie formula and safety floors. This stays private.</Text>
                 <SegmentedControl
@@ -1812,99 +1860,91 @@ export default function ProOnboardingScreen({ navigation }) {
                   value={sex}
                   onChange={(v) => { Keyboard.dismiss(); setSex(v); }}
                   accessibilityLabel="Biological sex"
+                  error={!!errors2.sex}
                 />
+                <FieldError message={errors2.sex} />
               </View>
 
-              <View style={styles.section}>
+              <View style={styles.section} onLayout={markY('age')}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Age</Text>
                 <Text style={[styles.fieldHint, live.fieldHint]}>Used with your height and weight to set your calorie targets.</Text>
                 <TextField accessibilityLabel="Age"
-                  fieldStyle={styles.inputField}
-                  inputStyle={styles.input}
+                  ref={ageRef}
                   value={age}
                   onChangeText={setAge}
                   placeholder="e.g. 28"
-                  placeholderTextColor={t.colors.textMuted}
                   keyboardType="number-pad"
                   maxLength={3}
                   autoComplete="off"
                   textContentType="none"
+                  error={errors2.age}
                 />
               </View>
 
-              <View style={styles.section}>
-                <View style={styles.fieldLabelRow}>
-                  <Text style={[styles.fieldLabel, live.fieldLabel, { marginBottom: 0 }]}>Height</Text>
-                  {/* UI-3: single-select controls carry radio semantics, matching
-                      the shared SegmentedControl. */}
-                  <View style={[styles.segmentRowSmall, live.segmentRowSmall]} accessibilityRole="radiogroup" accessibilityLabel="Height units">
-                    {[{ key: 'imperial', label: 'ft + in' }, { key: 'metric', label: 'cm' }].map(u => (
-                      <TouchableOpacity
-                        key={u.key}
-                        style={[styles.segmentSmall, localHeightUnits === u.key && [styles.segmentActive, live.segmentActive]]}
-                        onPress={() => { Keyboard.dismiss(); setLocalHeightUnits(u.key); }}
-                        accessibilityRole="radio"
-                        accessibilityState={{ selected: localHeightUnits === u.key }}
-                        accessibilityLabel={u.label}
-                      >
-                        <Text style={[styles.segmentTextSmall, live.segmentTextSmall, localHeightUnits === u.key && [styles.segmentTextActive, live.segmentTextActive]]}>
-                          {u.label}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                </View>
+              <View style={styles.section} onLayout={markY('height')}>
+                <Text style={[styles.fieldLabel, live.fieldLabel]}>Height</Text>
                 <Text style={[styles.fieldHint, live.fieldHint]}>Used with your weight and age to set your calorie targets.</Text>
+                {/* The unit picker is the same control as the weight one
+                    below, so the two read as one family (D146). */}
+                <SegmentedControl
+                  options={[{ label: 'ft + in', value: 'imperial' }, { label: 'cm', value: 'metric' }]}
+                  value={localHeightUnits}
+                  onChange={(v) => { Keyboard.dismiss(); setLocalHeightUnits(v); }}
+                  accessibilityLabel="Height units"
+                />
                 {localHeightUnits === 'imperial' ? (
-                  <View style={styles.heightImperialRow}>
-                    <View style={styles.inputHalf}>
+                  <View style={styles.pairRow}>
+                    <View style={styles.pairHalf}>
                       <TextField accessibilityLabel="Height feet"
-                        fieldStyle={styles.inputField}
-                        inputStyle={styles.input}
+                        ref={heightFtRef}
                         value={heightFt}
                         onChangeText={setHeightFt}
                         placeholder="5 ft"
-                        placeholderTextColor={t.colors.textDisabled}
                         keyboardType="number-pad"
                         maxLength={1}
                         autoComplete="off"
                         textContentType="none"
                         onAccessoryNext={() => heightInchesRef.current?.focus()}
+                        error={errors2.height ? ' ' : undefined}
                       />
                     </View>
-                    <View style={styles.inputHalf}>
+                    <View style={styles.pairHalf}>
                       <TextField accessibilityLabel="Height inches"
                         ref={heightInchesRef}
-                        fieldStyle={styles.inputField}
-                        inputStyle={styles.input}
                         value={heightIn}
                         onChangeText={setHeightIn}
                         placeholder="9 in"
-                        placeholderTextColor={t.colors.textDisabled}
                         keyboardType="number-pad"
                         maxLength={2}
                         autoComplete="off"
                         textContentType="none"
+                        error={errors2.height ? ' ' : undefined}
                       />
                     </View>
                   </View>
                 ) : (
-                  <TextField accessibilityLabel="Height in centimetres"
-                    fieldStyle={styles.inputField}
-                    inputStyle={styles.input}
-                    value={heightCm}
-                    onChangeText={setHeightCm}
-                    placeholder="e.g. 178 cm"
-                    placeholderTextColor={t.colors.textDisabled}
-                    keyboardType="decimal-pad"
-                    autoComplete="off"
-                    textContentType="none"
-                  />
+                  <View style={styles.pairRow}>
+                    <TextField accessibilityLabel="Height in centimetres"
+                      ref={heightCmRef}
+                      containerStyle={styles.pairFull}
+                      value={heightCm}
+                      onChangeText={setHeightCm}
+                      placeholder="e.g. 178 cm"
+                      keyboardType="decimal-pad"
+                      autoComplete="off"
+                      textContentType="none"
+                      error={errors2.height ? ' ' : undefined}
+                    />
+                  </View>
                 )}
+                <FieldError message={errors2.height} />
               </View>
 
-              <View style={styles.section}>
-                <Text style={[styles.fieldLabel, live.fieldLabel]}>Body weight units</Text>
+              <View style={styles.sectionLast} onLayout={markY('weight')}>
+                <Text style={[styles.fieldLabel, live.fieldLabel]}>Current body weight</Text>
+                <Text style={[styles.fieldHint, live.fieldHint]}>
+                  This sets your starting trend and first calorie target. Update it from Today once setup is complete.
+                </Text>
                 <SegmentedControl
                   options={[
                     { label: 'Stone+lbs', value: 'st' },
@@ -1915,72 +1955,65 @@ export default function ProOnboardingScreen({ navigation }) {
                   onChange={(v) => { Keyboard.dismiss(); setLocalBWUnits(v); }}
                   accessibilityLabel="Body weight units"
                 />
-              </View>
-
-              <View style={styles.sectionLast}>
-                <Text style={[styles.fieldLabel, live.fieldLabel]}>Current body weight</Text>
-                <Text style={[styles.fieldHint, live.fieldHint]}>
-                  This sets your starting trend and first calorie target. Update it from Today once setup is complete.
-                </Text>
                 {localBWUnits === 'st' ? (
-                  <View style={styles.heightImperialRow}>
-                    <View style={styles.inputStone}>
+                  <View style={styles.pairRow}>
+                    <View style={styles.pairHalf}>
                       <TextField accessibilityLabel="Current body weight in stones"
-                        fieldStyle={styles.inputField}
-                        inputStyle={styles.input}
+                        ref={bodyWeightStRef}
                         value={bodyWeightSt}
                         onChangeText={setBodyWeightSt}
                         placeholder="e.g. 12 st"
-                        placeholderTextColor={t.colors.textMuted}
                         keyboardType="number-pad"
                         maxLength={3}
                         autoComplete="off"
                         textContentType="none"
                         onAccessoryNext={() => bodyWeightLbsRef.current?.focus()}
+                        error={errors2.weight ? ' ' : undefined}
                       />
                     </View>
-                    <View style={styles.inputPounds}>
+                    <View style={styles.pairHalf}>
                       <TextField accessibilityLabel="Current body weight remaining pounds"
                         ref={bodyWeightLbsRef}
-                        fieldStyle={styles.inputField}
-                        inputStyle={styles.input}
                         value={bodyWeightStLbs}
                         onChangeText={setBodyWeightStLbs}
                         placeholder="e.g. 0 lbs"
-                        placeholderTextColor={t.colors.textMuted}
                         keyboardType="decimal-pad"
                         maxLength={4}
                         autoComplete="off"
                         textContentType="none"
+                        error={errors2.weight ? ' ' : undefined}
                       />
                     </View>
                   </View>
                 ) : (
-                  <TextField accessibilityLabel={`Current body weight in ${localBWUnits}`}
-                    fieldStyle={styles.inputField}
-                    inputStyle={styles.input}
-                    value={bodyWeight}
-                    onChangeText={setBodyWeight}
-                    placeholder={localBWUnits === 'kg' ? 'e.g. 80 kg' : 'e.g. 176 lbs'}
-                    placeholderTextColor={t.colors.textMuted}
-                    keyboardType="decimal-pad"
-                    autoComplete="off"
-                    textContentType="none"
-                  />
+                  <View style={styles.pairRow}>
+                    <TextField accessibilityLabel={`Current body weight in ${localBWUnits}`}
+                      ref={bodyWeightRef}
+                      containerStyle={styles.pairFull}
+                      value={bodyWeight}
+                      onChangeText={setBodyWeight}
+                      placeholder={localBWUnits === 'kg' ? 'e.g. 80 kg' : 'e.g. 176 lbs'}
+                      keyboardType="decimal-pad"
+                      autoComplete="off"
+                      textContentType="none"
+                      error={errors2.weight ? ' ' : undefined}
+                    />
+                  </View>
                 )}
+                <FieldError message={errors2.weight} />
               </View>
             </QuestionGroup>
+            </View>
 
-            {!canContinue ? (
-              <Text style={[styles.continueHint, live.continueHint]}>Complete your sex, age, height and body weight to continue.</Text>
+            {needed2 ? (
+              <Text style={[styles.continueHint, live.continueHint]}>{needed2}</Text>
             ) : null}
 
             <Button
               title="Continue"
               trailingIcon="arrow-forward"
-              style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-              onPress={canContinue ? advanceFrom2 : undefined}
-              disabled={!canContinue}
+              style={styles.primaryBtn}
+              onPress={advanceFrom2}
               textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               accessibilityLabel="Continue"
             />
@@ -2000,7 +2033,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-3" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Add your starting body composition"
@@ -2029,8 +2062,6 @@ export default function ProOnboardingScreen({ navigation }) {
                   Enter your best current estimate or a measured value. Leave it blank only if you genuinely do not know.
                 </Text>
                 <TextField
-                  fieldStyle={styles.inputField}
-                  inputStyle={styles.input}
                   value={bodyFat}
                   onChangeText={setBodyFat}
                   placeholder="e.g. 15"
@@ -2087,12 +2118,13 @@ export default function ProOnboardingScreen({ navigation }) {
   // ── Step 4, Training setup (logistics) ──────────────────────────────────────
 
   if (step === 4) {
-    const canContinue = !!experience && !!sessionLengthMinutes && !!daysPerWeek && !!equipment;
+    const errors4 = attempted4 ? validateStep4() : {};
+    const needed4 = stillNeeded(errors4, ['experience', 'sessionLength', 'days', 'equipment'], STEP4_LABELS);
 
     return (
       <SafeAreaView key="step-4" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Shape your training week"
@@ -2100,12 +2132,13 @@ export default function ProOnboardingScreen({ navigation }) {
               onBack={goBack}
             />
 
+            <View onLayout={markY('group4')}>
             <QuestionGroup
               icon="barbell-outline"
               // C5-P36-01 (D96): the header sub above is the single carrier.
               // RC-7 (D96, Review C): single-group step, so no group title.
             >
-              <View style={styles.section}>
+              <View style={styles.section} onLayout={markY('experience')}>
                 <Dropdown
                   label="Training experience"
                   hint="This sets your starting volume and how complex the exercises are."
@@ -2114,10 +2147,11 @@ export default function ProOnboardingScreen({ navigation }) {
                   options={EXPERIENCE_OPTIONS}
                   onChange={setExperience}
                   placeholder="Select your experience"
+                  error={errors4.experience}
                 />
               </View>
 
-              <View style={styles.section}>
+              <View style={styles.section} onLayout={markY('sessionLength')}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Session length</Text>
                 <Text style={[styles.fieldHint, live.fieldHint]}>Pick the time you can usually finish, including warm-ups.</Text>
                 <SegmentedControl
@@ -2125,10 +2159,12 @@ export default function ProOnboardingScreen({ navigation }) {
                   value={sessionLengthMinutes}
                   onChange={setSessionLengthMinutes}
                   accessibilityLabel="Session length"
+                  error={!!errors4.sessionLength}
                 />
+                <FieldError message={errors4.sessionLength} />
               </View>
 
-              <View style={styles.section}>
+              <View style={styles.section} onLayout={markY('days')}>
                 <Text style={[styles.fieldLabel, live.fieldLabel]}>Training days per week</Text>
                 <Text style={[styles.fieldHint, live.fieldHint]}>Choose the number of days you can repeat most weeks. Two is enough to train everything, so pick the honest number rather than the ambitious one.</Text>
                 <SegmentedControl
@@ -2136,10 +2172,12 @@ export default function ProOnboardingScreen({ navigation }) {
                   value={daysPerWeek}
                   onChange={setDaysPerWeek}
                   accessibilityLabel="Training days per week"
+                  error={!!errors4.days}
                 />
+                <FieldError message={errors4.days} />
               </View>
 
-              <View style={styles.sectionLast}>
+              <View style={styles.sectionLast} onLayout={markY('equipment')}>
                 <Dropdown
                   label="Equipment"
                   hint="Choose what you normally have access to, so swaps and exercise choices make sense."
@@ -2147,20 +2185,21 @@ export default function ProOnboardingScreen({ navigation }) {
                   options={EQUIPMENT_OPTIONS}
                   onChange={setEquipment}
                   placeholder="Select your equipment"
+                  error={errors4.equipment}
                 />
               </View>
             </QuestionGroup>
+            </View>
 
-            {!canContinue ? (
-              <Text style={[styles.continueHint, live.continueHint]}>Choose your experience, training days and equipment to continue.</Text>
+            {needed4 ? (
+              <Text style={[styles.continueHint, live.continueHint]}>{needed4}</Text>
             ) : null}
 
             <Button
               title="Continue"
               trailingIcon="arrow-forward"
-              style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-              onPress={canContinue ? advanceFrom4 : undefined}
-              disabled={!canContinue}
+              style={styles.primaryBtn}
+              onPress={advanceFrom4}
               textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               accessibilityLabel="Continue"
             />
@@ -2178,7 +2217,7 @@ export default function ProOnboardingScreen({ navigation }) {
   if (step === 5) {
     return (
       <SafeAreaView key="step-5" style={[styles.safe, live.safe]}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+        <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
           <ProOnboardingHeader
             step={step}
             title="Anything Volyume should build around?"
@@ -2221,7 +2260,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
   if (step === 6) {
     const goalOptions = PHYSIQUE_GOALS.map(g => ({ value: g.value, label: g.label, sub: g.subtitle }));
-    const canContinue = !!trainingGoal && !!trainingPhase;
+    const errors6 = attempted6 ? validateStep6() : {};
 
     // A3 (audit 04 §4): preview and final save share the canonical resolver.
     // The preview is read-only and never creates a revalidation marker.
@@ -2229,7 +2268,7 @@ export default function ProOnboardingScreen({ navigation }) {
     return (
       <SafeAreaView key="step-5-goal" style={[styles.safe, live.safe]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Set your training focus"
@@ -2247,7 +2286,7 @@ export default function ProOnboardingScreen({ navigation }) {
               // themselves, each of which is labelled optional.
               // RC-7 (D96, Review C): single-group step, so no group title.
             >
-              <View style={styles.section}>
+              <View style={styles.section} onLayout={markY('phase')}>
                 <Dropdown
                   label="What are you focused on right now?"
                   hint="This drives your calorie target and how your plan is built."
@@ -2256,6 +2295,7 @@ export default function ProOnboardingScreen({ navigation }) {
                   options={TRAINING_PHASES.map(p => ({ value: p.value, label: p.label, sub: p.detail }))}
                   onChange={setTrainingPhase}
                   placeholder="Choose your focus"
+                  error={errors6.phase}
                 />
                 {provisionalKcal ? (
                   <Text style={[styles.provisionalKcal, live.provisionalKcal]}>
@@ -2362,12 +2402,15 @@ export default function ProOnboardingScreen({ navigation }) {
               </View>
             </QuestionGroup>
 
+            {errors6.phase ? (
+              <Text style={[styles.continueHint, live.continueHint]}>Still needed: your focus.</Text>
+            ) : null}
+
             <Button
               title="Continue"
               trailingIcon="arrow-forward"
-              style={[styles.primaryBtn, !canContinue && styles.primaryBtnDisabled]}
-              onPress={canContinue ? advanceFrom6 : undefined}
-              disabled={!canContinue}
+              style={styles.primaryBtn}
+              onPress={advanceFrom6}
               textStyle={[styles.primaryBtnText, live.primaryBtnText]}
               accessibilityLabel="Continue"
             />
@@ -2380,7 +2423,7 @@ export default function ProOnboardingScreen({ navigation }) {
   // ── Step 7, Recovery & reminders ───────────────────────────────────────────
 
   if (step === 7) {
-    const canContinue = !!recoveryRating;
+    const errors7 = attempted7 ? validateStep7() : {};
 
     // ── Plan fit ────────────────────────────────────────────────────────────
     // Shown only when the athlete's schedule cannot carry the plan we would
@@ -2396,7 +2439,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
       return (
         <SafeAreaView key="step-6-fit" style={[styles.safe, live.safe]}>
-          <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+          <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
             <ProOnboardingHeader
               step={step}
               title="Plan fit"
@@ -2548,7 +2591,7 @@ export default function ProOnboardingScreen({ navigation }) {
 
     return (
       <SafeAreaView key="step-6" style={[styles.safe, live.safe]}>
-        <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
+        <ScrollView ref={scrollRef} contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'ios' ? 'interactive' : 'none'}>
           <ProOnboardingHeader
             step={step}
             title="Recovery and reminders"
@@ -2588,6 +2631,7 @@ export default function ProOnboardingScreen({ navigation }) {
                 clause is now deleted, so this is the only "volume" site on
                 the step and the tooltip anchors to its own field, as
                 everywhere else. */}
+            <View onLayout={markY('recovery')}>
             <Dropdown
               label="How's your recovery?"
               hint="Be honest here. This sets how much volume your plan includes, so it can protect your recovery."
@@ -2596,7 +2640,9 @@ export default function ProOnboardingScreen({ navigation }) {
               options={RECOVERY_OPTIONS}
               onChange={setRecoveryRating}
               placeholder="Select your recovery"
+              error={errors7.recovery}
             />
+            </View>
           </View>
 
           <View style={styles.section}>
@@ -2714,16 +2760,16 @@ export default function ProOnboardingScreen({ navigation }) {
             </View>
           </View>
 
-          {!canContinue ? (
-            <Text style={[styles.continueHint, live.continueHint]}>Choose your recovery rating to finish setup.</Text>
+          {errors7.recovery ? (
+            <Text style={[styles.continueHint, live.continueHint]}>Still needed: your recovery level.</Text>
           ) : null}
 
           <Button
             title="Continue"
             trailingIcon="arrow-forward"
-            style={[styles.primaryBtn, (!canContinue || busy || fitBusy) && styles.primaryBtnDisabled]}
-            onPress={canContinue && !busy && !fitBusy ? advanceFrom7 : undefined}
-            disabled={!canContinue || busy || fitBusy}
+            style={[styles.primaryBtn, (busy || fitBusy) && styles.primaryBtnDisabled]}
+            onPress={!busy && !fitBusy ? advanceFrom7 : undefined}
+            disabled={busy || fitBusy}
             loading={busy || fitBusy}
             textStyle={[styles.primaryBtnText, live.primaryBtnText]}
             accessibilityLabel="Continue"
@@ -2908,12 +2954,6 @@ const styles = StyleSheet.create({
   wpOptional: { color: colors.textMuted, fontFamily: fontFamily.regular, fontWeight: fontWeight.regular },
   wpHint: { ...type.captionTight, color: colors.textMuted, marginBottom: spacing.md },
   wpGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  inputField: { borderRadius: radius.md },
-  input: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    fontSize: fontSize.md,
-  },
   fieldWrap: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.surface, borderRadius: radius.md,
@@ -2930,30 +2970,11 @@ const styles = StyleSheet.create({
     top: 0, bottom: 0, justifyContent: 'center', paddingHorizontal: spacing.xs,
   },
 
-  heightImperialRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
-  inputHalf: { flex: 1, minWidth: 140 },
-  inputStone: { flex: 2, minWidth: 120 },
-  inputPounds: { flex: 3, minWidth: 120 },
-
-  fieldLabelRow: {
-    flexDirection: 'row', alignItems: 'center',
-    justifyContent: 'space-between', gap: spacing.sm, marginBottom: spacing.sm,
-  },
-  segmentRowSmall: {
-    flexDirection: 'row', backgroundColor: colors.surface,
-    borderRadius: radius.sm, borderWidth: 1, borderColor: colors.border, padding: spacing.xxs,
-    flexShrink: 0,
-  },
-  segmentSmall: {
-    paddingVertical: spacing.xs, paddingHorizontal: spacing.sm,
-    borderRadius: radius.sm - 2, alignItems: 'center',
-  },
-  segmentTextSmall: { fontSize: fontSize.xs, fontFamily: fontFamily.semibold, fontWeight: fontWeight.semibold, color: colors.textMuted },
-
-  // Shared by the compact height-units toggle (ft+in / cm). The full-width
-  // sex and body-weight-unit pickers now use the shared SegmentedControl.
-  segmentActive: { backgroundColor: colors.primaryFill },
-  segmentTextActive: { color: colors.onPrimary },
+  // D146: a unit picker sits above its inputs; paired inputs share the row
+  // equally, whichever pair it is, so every box on the step is the same box.
+  pairRow: { flexDirection: 'row', gap: spacing.md, marginTop: spacing.md },
+  pairHalf: { flex: 1 },
+  pairFull: { flex: 1 },
 
   // Notifications
   notifSection: {
@@ -3088,10 +3109,6 @@ function buildLiveStyles(t) {
     wpLabel: { ...t.type.captionStrong, color: t.colors.textMuted },
     wpOptional: { color: t.colors.textMuted },
     wpHint: { ...t.type.captionTight, color: t.colors.textMuted },
-    segmentRowSmall: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
-    segmentTextSmall: { fontSize: t.fontSize.xs, color: t.colors.textMuted },
-    segmentActive: { backgroundColor: t.colors.primaryFill },
-    segmentTextActive: { color: t.colors.onPrimary },
     notifSection: { backgroundColor: t.colors.surface, borderColor: t.colors.border },
     notifIconWrap: { backgroundColor: t.colors.primaryBg },
     notifTitle: { ...t.type.bodyStrong, color: t.colors.textPrimary },

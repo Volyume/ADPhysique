@@ -27,14 +27,21 @@ describe('ProOnboarding refuses to progress without a valid sex', () => {
     expect(src).toMatch(/if\s*\(\s*sex\s*!==\s*['"]male['"]\s*&&\s*sex\s*!==\s*['"]female['"]\s*\)/);
   });
 
-  test('the step-2 continue gate requires an explicit male/female choice', () => {
-    // canContinue for step 2 must include the sex requirement.
-    expect(src).toMatch(/canContinue\s*=[\s\S]{0,200}\(\s*sex\s*===\s*['"]male['"]\s*\|\|\s*sex\s*===\s*['"]female['"]\s*\)/);
+  test('the step-2 validator records a missing sex as a gap on the box', () => {
+    // D146 (2026-09-04): validateStep2 is the one gate; a null sex writes
+    // errs.sex, which marks the control and names it under Continue.
+    expect(src).toMatch(/function validateStep2\(\) \{[\s\S]{0,200}?if \(sex !== 'male' && sex !== 'female'\) errs\.sex = /);
+    expect(src).toMatch(/const errors2 = attempted2 \? validateStep2\(\) : \{\};/);
+    expect(src).toMatch(/error=\{!!errors2\.sex\}/);
   });
 
-  test('the step-2 Continue button is disabled until the gate passes', () => {
-    // The button must be genuinely disabled (not merely alert-on-tap).
-    expect(src).toMatch(/disabled=\{!canContinue\}/);
+  test('the step-2 Continue press never advances past a missing sex', () => {
+    // D146: Continue stays enabled so it can point at the gap, and the
+    // press returns before setStep(3) on any gap. Still no default, still
+    // no tap-through: the invariant moved from a greyed button to the
+    // validator, which is stricter (it also covers the late bounce-back).
+    expect(src).toMatch(/function advanceFrom2\(\) \{[\s\S]{0,700}?const errs = validateStep2\(\);\s*if \(Object\.keys\(errs\)\.length\) \{[\s\S]{0,600}?return;\s*\}\s*emitStepDone\(2\);\s*setStep\(3\);/);
+    expect(src).not.toMatch(/onPress=\{canContinue \? advanceFrom2/);
   });
 
   test('sex state has no default (starts null, never male)', () => {
