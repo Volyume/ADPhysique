@@ -1035,9 +1035,39 @@ export default function RootNavigator() {
   // sequence a cold launch would, rather than duplicating it. Resolves to
   // true/false rather than throwing - both bootstrap() and the retry button
   // need to keep going afterward regardless of outcome.
+  // D141 item 2 (2026-09-04): a database open that HANGS (as opposed to
+  // throwing) used to slip past this whole mechanism. The 8s auth latch
+  // below releases the splash on its own clock, so a stuck SecureStore key
+  // read or a locked SQLite file dropped the user into a normal navigator
+  // in which every screen's queries waited forever, with no error screen
+  // and no way out but killing the app. The open is now bounded: past
+  // DB_INIT_TIMEOUT_MS it is treated exactly like a thrown open (logged,
+  // dbInitFailed, "Try again"). initDatabase keeps its in-flight promise, so
+  // if the slow open does finish later the flag clears itself and the rest
+  // of this sequence runs; "Try again" on a still-hung open bounds again.
+  const DB_INIT_TIMEOUT_MS = 12000;
+  const lateDbInitRef = useRef(false);
   const attemptDbInit = useCallback(async () => {
     try {
-      await initDatabase();
+      const initPromise = initDatabase();
+      let timer = null;
+      const timedOut = new Promise((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(`initDatabase exceeded ${DB_INIT_TIMEOUT_MS}ms`)), DB_INIT_TIMEOUT_MS);
+      });
+      try {
+        await Promise.race([initPromise, timedOut]);
+      } catch (raceErr) {
+        if (timer) clearTimeout(timer);
+        // Only the timeout re-arms a late completion; a thrown open is a
+        // thrown open and is handled by the catch below as before.
+        if (/exceeded/.test(String(raceErr?.message)) && !lateDbInitRef.current) {
+          lateDbInitRef.current = true;
+          initPromise.then(() => { lateDbInitRef.current = false; return attemptDbInitRef.current?.(); })
+            .catch(() => { lateDbInitRef.current = false; });
+        }
+        throw raceErr;
+      }
+      if (timer) clearTimeout(timer);
       seedExercisesIfNeeded()
         .then(() => topUpNewExercisesIfNeeded())
         .then(() => backfillExerciseMetadataIfNeeded())
@@ -1089,6 +1119,10 @@ export default function RootNavigator() {
       return false;
     }
   }, []);
+  // The late-completion hook above needs the latest attemptDbInit without
+  // a self-reference inside useCallback.
+  const attemptDbInitRef = useRef(null);
+  attemptDbInitRef.current = attemptDbInit;
 
   const handleDbRetry = useCallback(async () => {
     setDbRetrying(true);
@@ -1387,6 +1421,20 @@ export default function RootNavigator() {
                 if (raw) {
                   restoreNotifications(JSON.parse(raw), session.user.id).catch(() => {});
                 }
+              } catch (_e) { /* best effort */ }
+              // D141 item 7 (2026-09-04): the habit-derived training schedule
+              // was refreshed ONLY when a workout finished, so anyone who
+              // stopped finishing workouts kept the days baked in at their
+              // last session for ever (the reminder is an OS-level weekly
+              // repeat and outlives the app). Re-derive it at every launch
+              // too. Self-guarding: with too little history it writes
+              // nothing, and scheduleTrainingReminders no-ops when the
+              // reminder is off or permission is absent.
+              try {
+                // eslint-disable-next-line global-require
+                require('../lib/notifications/trainingHabitSchedule')
+                  .refreshHabitDerivedTrainingSchedule(session.user.id)
+                  .catch(() => {});
               } catch (_e) { /* best effort */ }
               return;
             }
