@@ -103,6 +103,16 @@ jobs:
         # Codex audit 2026-05-26 F11.
         run: npm ci --legacy-peer-deps
 
+      # Incident 2026-09-04: builds 3559-3563 packaged expo-sqlite WITHOUT the
+      # SQLCipher codec although app.json and the generated gradle.properties
+      # both asked for it, so every fresh install aborted at "Couldn't open
+      # your data". The module's build script switches the codec on from a
+      # Gradle property that evaluated false in CI; this pins the switch on in
+      # the module's own build script, and the packaged-library gate after the
+      # build proves the codec is really there. See scripts/force-sqlcipher-android.cjs.
+      - name: Pin SQLCipher on in the expo-sqlite build script
+        run: node scripts/force-sqlcipher-android.cjs
+
       # This workflow is the artifact builder. Main CI owns Jest, lint,
       # type-checking, Expo Doctor, and dependency audit so a transient or
       # unrelated JS quality failure does not block branch APK/AAB delivery for
@@ -480,6 +490,8 @@ jobs:
           # the unqualified task name across every module.
           cd android && ./gradlew assembleRelease bundleRelease \
             --no-daemon --no-configuration-cache \
+            --init-script ../scripts/android-sqlcipher-diagnostic.init.gradle \
+            -Pexpo.sqlite.useSQLCipher=true \
             -PreactNativeArchitectures="$REACT_NATIVE_ARCHITECTURES" \
             -x lintVitalRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease \
             -PVOLYUME_UPLOAD_STORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD" \

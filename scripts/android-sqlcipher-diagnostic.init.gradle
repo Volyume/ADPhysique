@@ -1,0 +1,13 @@
+// Incident 2026-09-04: print, at configuration time, what the expo-sqlite
+// module actually resolved for SQLCipher, so the build log records the
+// answer instead of leaving it to be inferred from a phone.
+allprojects {
+  afterEvaluate { project ->
+    if (project.name == 'expo-sqlite') {
+      println "[sqlcipher-diagnostic] expo-sqlite USE_SQLCIPHER=${project.ext.has('USE_SQLCIPHER') ? project.ext.USE_SQLCIPHER : 'unset'} " +
+        "findProperty(expo.sqlite.useSQLCipher)=${project.findProperty('expo.sqlite.useSQLCipher')} " +
+        "rootProperty=${project.rootProject.findProperty('expo.sqlite.useSQLCipher')} " +
+        "projectDir=${project.projectDir}"
+    }
+  }
+}
