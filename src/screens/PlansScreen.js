@@ -1080,7 +1080,23 @@ export default function PlansScreen({ navigation }) {
           `"${routine.name}" will be removed.`,
           [
             { text: 'Cancel', style: 'cancel' },
-            { text: 'Delete', style: 'destructive', onPress: async () => { await softDeleteRoutine(routine.id); await loadData(); } },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              // D141 item 4: the sibling folder delete above logs and tells
+              // the user on failure; this one had no handling at all, so a
+              // thrown softDeleteRoutine was an unhandled rejection and the
+              // workout simply failed to disappear with nothing said.
+              onPress: async () => {
+                try {
+                  await softDeleteRoutine(routine.id);
+                  await loadData();
+                } catch (e) {
+                  logError('PlansScreen.handleDeleteRoutine', e, { userId: user?.id, routineId: routine?.id });
+                  toast.show("Couldn't delete that workout, try again", { variant: 'error' });
+                }
+              },
+            },
           ],
         ),
       },
