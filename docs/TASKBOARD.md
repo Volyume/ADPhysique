@@ -3417,6 +3417,23 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## VERSION 1.3.2 (2026-09-04) — ON MAIN `e9dd8b74`. Founder-side: create the 1.3.2 version in App Store Connect.
+
+App Store Connect refused iOS build 1.3.1 (61) with 90062/90186: the
+1.3.1 train is closed because 1.3.1 was approved, so every further iOS
+build needs a higher CFBundleShortVersionString. `expo.version` is the
+single source (app.json, mirrored in package.json and the lockfile root),
+so the bump to 1.3.2 covers iOS's short version and Android's versionName
+in one place. Build numbers are unaffected: EAS manages the iOS build
+number remotely (autoIncrement; 61 was the last), Android's versionCode is
+the workflow run number. `runtimeVersion` follows appVersion but the app
+ships no OTA updates, so nothing changes at runtime.
+
+**Founder-side.** In App Store Connect, add version 1.3.2 under the app
+(the "+" beside iOS App), then run the iOS build when you decide to; it
+will upload as 1.3.2 (62). Google Play needs nothing: the next Android
+build from main carries 1.3.2 by itself.
+
 ## PREMIUM FIRST LAUNCH: WELCOME + CREATE ACCOUNT (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D145.
 
 Branch `claude/fix-sqlcipher-fresh-install`. Founder spec delivered in
