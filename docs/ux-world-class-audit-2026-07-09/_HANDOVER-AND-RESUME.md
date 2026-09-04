@@ -1,6 +1,17 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-04 — BOUNDED TRAINING HORIZON + WELCOME-BACK NOTE (D142) ★
+
+Founder chose C on the D141 question. The training reminder is a bounded
+eight-week run of dated one-shots (capped at 28), and a new return_nudge
+category lays one calm push 21 days ahead, re-laid on every open, so it
+fires only after genuine absence. Contract: NOTIFICATIONS_LOCKED D142
+addendum; record: D142; board entry with the device checklist. Also this
+day: migrations 156 and 157 applied to production on the exact phrase;
+155 blocked on a client fix (README status block).
+
+===============================================================================
 ## ★ 2026-09-04 — TOP-TEN IMPROVEMENT PASS LANDED (D141) ★
 
 Three read-only audit lanes (first launch, retention, reliability), ten

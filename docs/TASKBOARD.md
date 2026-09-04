@@ -3417,6 +3417,38 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## BOUNDED TRAINING HORIZON + WELCOME-BACK NOTE (2026-09-04) — COMPLETE, MERGED TO MAIN. Founder decision D142.
+
+Branch `claude/volyume-coherence-pass-6s991m`. Founder answered the D141
+question "C". Contract: the D142 addendum in `docs/NOTIFICATIONS_LOCKED.md`;
+rulings: D142 in the decisions register.
+
+**Gates.** Lint clean, typecheck clean, full suite green (exact counts in
+the closure report). No migration, no new dependency, no native rebuild.
+
+**Device checklist (Android, EAS build from main).**
+1. Settings, Notifications and reminders: "Remind me to train" on with a
+   time. Train on two or three weekdays so a habit exists. Expected: the
+   reminders keep arriving on those days at the chosen time, exactly as
+   before (they are now dated one-shots, not a weekly repeat; nothing
+   visible changes for an active user).
+2. Developer check if possible: the scheduled notifications list holds
+   at most 28 training entries, the last about eight weeks out, ids like
+   `volyume_training_day_3_20261029`.
+3. Settings, Notifications and reminders, Getting started card: a new
+   "Welcome-back note" switch, on by default, with the helper text. Turn
+   it off and on: no crash, no toast.
+4. Cannot be walked in a day: with the switch on, an account with at
+   least one completed workout and an active plan, the note "Your plan is
+   still here" arrives at 10:00 local on the 21st day after the app was
+   last opened, once, and never while the app is being opened regularly.
+5. Calm mode on (or an open wellbeing flag): the note is never laid.
+   Turning calm mode off and reopening the app lays it again.
+6. Fresh account with no completed workout: no welcome-back note (the
+   getting-started nudge covers that window).
+ED-safety: the note is suppressed under an open ED flag and calm mode,
+both failing closed; no floors, thresholds, seeds or scoring touched.
+
 ## TOP-TEN IMPROVEMENT PASS, FIRST LAUNCH AND RETENTION (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D141.
 
 Branch `claude/volyume-coherence-pass-6s991m`. Founder order: rank the

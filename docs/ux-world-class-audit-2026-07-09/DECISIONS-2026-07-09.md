@@ -5577,3 +5577,41 @@ lost."), tier-blind, budgeted, off under calm mode or an open ED flag;
 
 **Engine, ED-safety, consent, billing: untouched.** No floors, thresholds,
 seeds, scoring, block state machine, consent gate or product ID changed.
+
+## D142 — Bounded training horizon and a welcome-back note (founder decision C, 2026-09-04)
+
+**Founder decision.** Asked at the D141 closure: for a user who stops
+opening the app, (A) bound the training reminder to a laid-ahead horizon,
+(B) add one calm return push after 21 days, (C) both, (D) leave it.
+Founder: **C**. The lead's recommendation was C: one honest invitation
+back, then silence rather than nagging.
+
+**As built.** Recorded in full as the D142 addendum to
+`docs/NOTIFICATIONS_LOCKED.md` (the locked notifications contract), which
+is the authority. In one paragraph: the training reminder is now a
+bounded run of dated one-shots (eight weeks, capped at 28 so iOS's
+64-pending ceiling holds), re-laid on every launch, foreground top-up and
+activation; and a new `return_nudge` category lays one push 21 days ahead
+at 10:00 local, re-laid on every open, so it fires exactly once and only
+after three weeks of genuine absence. Own toggle (default on), established
+users with a plan only, never under an open ED flag or calm mode (both
+fail closed), budgeted, routed to Home. Copy: "Your plan is still here /
+Whenever you are ready, your next session is waiting for you. Nothing has
+been lost."
+
+**Rulings on the way.**
+- The one-shot cap is 28, not "eight weeks unconditionally": iOS keeps the
+  soonest 64 pending notifications, and a seven-day habit at eight weeks
+  would have crowded the weigh-in horizon and the event pushes out. The
+  cap shortens the horizon for dense habits (four weeks at seven days a
+  week) and never touches the common three-to-four-day case.
+- The return note fires at 10:00 local rather than at the lay time of day:
+  the lay happens whenever the app was last opened, which is as likely to
+  be 23:40 as 10:00.
+- A six-hour re-lay throttle on foreground: moving a 21-day clock more
+  often than that buys nothing and costs reads on every tab switch. The
+  launch re-lay and the settings toggle force past it.
+- Calm mode gates the note even though it is not food or weight adjacent:
+  a person who has asked for calm has asked for fewer nudges, full stop.
+
+**Engine, ED-safety, consent, billing: untouched.**

@@ -55,7 +55,7 @@ and it does not resolve FR-5.
 | --- | --- | --- | --- |
 | Morning weigh-in (`morning_weight`) | Push | On (Pro) | Yes. Settings → Coaching reminders has a genuine on/off switch (restored under C14 — the earlier removal turned out to confuse the coaching input with the reminder). (reconciled Campaign 24, shipped-code citation: `CoachingRemindersScreen.js:473-481`, `:104-110`) |
 | Evening weigh-in backstop (`evening_weight`) | Push | On (Pro) | None of its own. It rides the morning weigh-in schedule and self-suppresses once the day's weight is logged and under an open ED flag. |
-| Training reminder (`training_reminder`) | Push | Off until enabled | Yes. Settings → Notifications and reminders → "Remind me to train", with a time picker. |
+| Training reminder (`training_reminder`) | Push | Off until enabled | Yes. Settings → Notifications and reminders → "Remind me to train", with a time picker. D142: laid as a bounded run of dated one-shots (about eight weeks), no longer an indefinite weekly repeat. |
 | Meal-log reminder (`meal_log_reminder`) | Push | Off (opt-in) | Yes. Settings → Notifications and reminders → Meal reminders, one switch per reminder. |
 | Year-of-lifts unlock (`year_of_lifts_unlock`) | Push | On | No dedicated control. Event push, budgeted. |
 | Monthly recap (`monthly_recap`) | Push | On | No dedicated control. Event push, budgeted. |
@@ -66,6 +66,7 @@ and it does not resolve FR-5.
 | Planned-meal confirm (`planned_meal_confirm`) | Push | On (Pro) | Yes. Settings → Coaching reminders → planned-meal reminders. |
 | Rest timer (`rest_timer`) | Push | On during a session | Not a scheduled push. A silent ongoing local notification presented directly during a workout; it ends with the set. |
 | Getting-started nudge (`activation_nudge`) | Push + in-app | On | Yes. Settings → Notifications and reminders → "Getting-started nudges". |
+| Welcome-back note (`return_nudge`) | Push | On | Yes. Settings → Notifications and reminders → "Welcome-back note". D142 addendum below. |
 
 Rows reading "No dedicated control" are a record of the live state, not a
 ruling that none is needed. Whether the unsubscribe principle at the top of
@@ -449,3 +450,68 @@ stalled_1 banner: You've made a start / A second session is what turns a first
 stalled_2 banner: You're nearly there / That's two done. A third is what makes
                   the habit stick.
 ```
+
+## ADDENDUM (SHIPPED) — bounded training horizon + welcome-back note (D142, 2026-09-04)
+
+**Founder decision.** Asked at the D141 closure how the training reminder
+should behave for a user who stops opening the app: A bounded horizon, B a
+calm return push after 21 days, C both, D leave it. Founder: **C**.
+
+**The problem this closes.** The training reminder was an OS-level WEEKLY
+REPEAT, so it was the only push that still reached a fully lapsed user,
+and it could not adapt without the app running (no background execution
+exists). A user gone for months kept receiving the days and plan name
+baked in at their last session, for ever; and there was no designed return
+path at all once billing-based win-back went dormant on the free product.
+
+**Part 1: bounded training horizon (`trainingReminders.js`).**
+- Laid as dated one-shot DATE triggers on the habit days across
+  `TRAINING_HORIZON_DAYS = 56` (eight weeks), capped at
+  `TRAINING_HORIZON_MAX_ONESHOTS = 28` so the run sits inside iOS's
+  64-pending ceiling alongside the weigh-in horizon (28) and the event
+  pushes. 28 covers eight weeks at three or four days a week and shortens
+  gracefully for denser habits.
+- Re-laid at launch (`restoreNotifications`), on the weekly foreground
+  top-up (`refreshWeighInHorizonIfStale` goes through the same restore),
+  on every foreground habit refresh (D17) and at plan activation. An
+  active user's experience is unchanged; a genuine return restores the
+  cadence at once; a user who never returns stops being pinged after the
+  horizon runs out.
+- Identifier `volyume_training_day_<jsDay>_<yyyymmdd>`; the group prefix is
+  unchanged so `cancelTrainingReminders` clears the whole run.
+- Same copy, same toggle, same time picker, same quiet-hours shift.
+
+**Part 2: the welcome-back note (`CATEGORY.RETURN_NUDGE`, `return_nudge`).**
+- **Mechanism.** Laid AHEAD for `RETURN_NUDGE_ABSENCE_DAYS = 21` days at
+  10:00 local (quiet hours shift it), and re-laid (cancel, then lay) on
+  every launch and on every foreground (self-throttled to once per six
+  hours). While the user keeps opening the app the fire date keeps moving
+  away and it never fires. It fires exactly once, only after three weeks
+  without the app being opened. Nothing chases it: the next lay happens
+  only when the app runs again.
+- **Gates, each fail-closed where a read can fail:** the user's toggle
+  (`returnNudgeEnabled`, default on); an established user only (at least
+  one completed workout AND an active plan; a brand-new user is the
+  getting-started nudge's domain and its window hard-stops on its own);
+  never under an open ED/wellbeing flag (unreadable flag = suppressed);
+  never under calm mode (unreadable wellbeing value = suppressed); the push
+  budget can refuse it; one fixed identifier so it can never stack.
+- **Channel:** push only. There is no in-app half: once the user is back,
+  the plan card says it all.
+- **Budget priority:** in `EVENT_PRIORITY` directly below `checkin_missed`
+  and above the lifecycle/recap pushes.
+- **Route:** Home (the session hero and "Start workout").
+- **Disable:** one-tap toggle in Settings → Notifications and reminders →
+  Getting started card → "Welcome-back note".
+- **Copy (voice: calm, no shame, no streaks):**
+  ```
+  Your plan is still here
+  Whenever you are ready, your next session is waiting for you. Nothing has been lost.
+  ```
+- **No migration, no new dependency, no native rebuild.** Reads the
+  existing `workouts` and `programmes` tables; telemetry rides the existing
+  `notification_sent/_tapped/_failed` events (counts and flags only).
+- Tests: `src/lib/notifications/__tests__/returnNudge.test.js`,
+  `NotificationSettingsScreen.returnNudge.guard.test.js`,
+  `notifications.trainingReminders.test.js` (horizon),
+  `trainingHabitSchedule.contract.test.js`, `campaign14.routingTruth`.
