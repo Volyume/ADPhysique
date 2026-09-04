@@ -20,6 +20,48 @@ const TRAINING_REMINDER_CHANNEL = 'training-reminders';
 // Identifier prefix used to tag all training reminder notifications so they
 // can be cancelled as a group without touching other scheduled notifications.
 const NOTIF_ID_PREFIX = 'volyume_training_day_';
+// D142 (founder decision C, 2026-09-04): the reminder used to be laid as an
+// OS-level WEEKLY REPEAT, i.e. indefinitely. Nothing in the app runs in the
+// background, so for a user who stopped opening the app it kept firing the
+// days and plan name baked in at their last session, for ever - the only
+// push that still reached them, and it could never adapt. Same restraint
+// as the weigh-in prompts (C8 Work 5): a bounded run of dated one-shots
+// covering about eight weeks, re-laid every time the app opens or a
+// workout finishes (restoreNotifications at launch, the weekly foreground
+// top-up, the habit-schedule refresh), so an active user's experience is
+// unchanged and a genuine return restores the cadence at once. Someone
+// who never comes back stops being pinged after the horizon runs out; the
+// one calm return nudge (scheduler.scheduleReturnNudge) covers that gap
+// deliberately instead of by accident.
+//
+// The one-shot count is capped so the run sits inside iOS's 64-pending
+// ceiling alongside the weigh-in horizon (28), the check-in, meal,
+// coach-ready, block-ready and nudge pushes: 28 covers eight weeks at
+// three or four days a week and shortens gracefully for denser habits.
+export const TRAINING_HORIZON_DAYS = 56;
+export const TRAINING_HORIZON_MAX_ONESHOTS = 28;
+
+/**
+ * Pure: the dated fire times for the habit days over the horizon, soonest
+ * first, never in the past, capped. Exported for the unit tests.
+ */
+export function trainingHorizonDates(days, hour, minute, nowMs = Date.now(), {
+  horizonDays = TRAINING_HORIZON_DAYS, max = TRAINING_HORIZON_MAX_ONESHOTS,
+} = {}) {
+  const out = [];
+  if (!Number.isFinite(hour) || !Number.isFinite(minute)) return out;
+  const wanted = new Set((Array.isArray(days) ? days : []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6));
+  if (wanted.size === 0) return out;
+  const now = new Date(nowMs);
+  for (let i = 0; i <= horizonDays && out.length < max; i += 1) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i, hour, minute, 0, 0);
+    if (!Number.isFinite(d.getTime())) continue;
+    if (!wanted.has(d.getDay())) continue;
+    if (d.getTime() <= nowMs) continue; // never schedule into the past
+    out.push(d);
+  }
+  return out;
+}
 
 // Longest total reminder body we allow. A warm, complete sentence may run a
 // little over the ~80-char copy target (the locked convention prefers warmth to
@@ -72,7 +114,7 @@ async function resolveActivePlanName() {
 
 // expo-notifications uses 1=Sunday … 7=Saturday for weekly calendar triggers.
 // JS Date uses 0=Sunday … 6=Saturday, so we add 1.
-function jsWeekdayToExpo(jsDay) {
+export function jsWeekdayToExpo(jsDay) {
   return jsDay + 1;
 }
 
@@ -206,10 +248,14 @@ export async function scheduleTrainingReminders(planNameArg) {
     if (!planName) planName = await resolveActivePlanName();
     const body = buildTrainingReminderBody(planName);
 
-    // 8. Schedule one weekly notification per training day
+    // 8. Schedule one dated one-shot per habit day across the bounded
+    // horizon (D142; see TRAINING_HORIZON_DAYS above). The identifier keeps
+    // the group prefix so cancelTrainingReminders still clears the run.
+    const fireDates = trainingHorizonDates(days, hour, minute);
     await Promise.all(
-      days.map((jsDay) => {
-        const identifier = `${NOTIF_ID_PREFIX}${jsDay}`;
+      fireDates.map((fireAt) => {
+        const ymd = `${fireAt.getFullYear()}${String(fireAt.getMonth() + 1).padStart(2, '0')}${String(fireAt.getDate()).padStart(2, '0')}`;
+        const identifier = `${NOTIF_ID_PREFIX}${fireAt.getDay()}_${ymd}`;
         return scheduleCheckedNotification({
           identifier,
           content: {
@@ -233,11 +279,8 @@ export async function scheduleTrainingReminders(planNameArg) {
             // without this the reminder posted with no channel and never showed
             // on Android 8+.
             channelId: TRAINING_REMINDER_CHANNEL,
-            type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-            weekday: jsWeekdayToExpo(jsDay),
-            hour,
-            minute,
-            repeats: true,
+            type: Notifications.SchedulableTriggerInputTypes.DATE,
+            date: fireAt,
           },
         }).catch(() => {});
       })

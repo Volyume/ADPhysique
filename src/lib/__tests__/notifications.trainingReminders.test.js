@@ -65,18 +65,44 @@ describe('scheduleTrainingReminders (D4)', () => {
     expect(mockSchedule).not.toHaveBeenCalled();
   });
 
-  test('enabled + permission granted: one weekly notif per day, JS day -> expo weekday + 1, default 08:00', async () => {
+  test('D142: enabled + permission granted: a bounded run of dated one-shots on the habit days at 08:00, never a repeat', async () => {
     store({
       [tr.REMINDER_PREF_KEY]: 'true',
       [tr.SCHEDULE_KEY]: JSON.stringify({ days: [0, 3] }), // Sunday, Wednesday
     });
     await tr.scheduleTrainingReminders();
-    expect(mockSchedule).toHaveBeenCalledTimes(2);
-    const weekdays = mockSchedule.mock.calls.map((c) => c[0].trigger.weekday).sort();
-    expect(weekdays).toEqual([1, 4]); // 0+1, 3+1
-    expect(mockSchedule.mock.calls[0][0].trigger.hour).toBe(8);
-    expect(mockSchedule.mock.calls[0][0].trigger.minute).toBe(0);
-    expect(mockSchedule.mock.calls[0][0].trigger.repeats).toBe(true);
+    // Eight weeks x two days = 16, inside the 28 cap.
+    expect(mockSchedule).toHaveBeenCalledTimes(16);
+    let prev = 0;
+    for (const [cfg] of mockSchedule.mock.calls) {
+      expect(cfg.trigger.type).toBe('date');
+      expect(cfg.trigger.repeats).toBeUndefined();
+      const d = new Date(cfg.trigger.date);
+      expect([0, 3]).toContain(d.getDay());
+      expect(d.getHours()).toBe(8);
+      expect(d.getMinutes()).toBe(0);
+      expect(d.getTime()).toBeGreaterThan(Date.now());
+      expect(d.getTime()).toBeGreaterThan(prev); // soonest first, no duplicates
+      prev = d.getTime();
+      expect(cfg.identifier).toMatch(/^volyume_training_day_[0-6]_\d{8}$/);
+    }
+    const last = new Date(mockSchedule.mock.calls.at(-1)[0].trigger.date);
+    expect(last.getTime() - Date.now()).toBeLessThanOrEqual(tr.TRAINING_HORIZON_DAYS * 86400000 + 86400000);
+  });
+
+  test('D142: trainingHorizonDates is pure, capped, and never in the past', () => {
+    const now = new Date(2026, 8, 4, 12, 0, 0, 0).getTime(); // a Friday, midday
+    const everyDay = tr.trainingHorizonDates([0, 1, 2, 3, 4, 5, 6], 8, 0, now);
+    expect(everyDay).toHaveLength(tr.TRAINING_HORIZON_MAX_ONESHOTS);
+    expect(everyDay[0].getTime()).toBeGreaterThan(now);
+    // Today's 08:00 has passed at midday, so the run starts tomorrow.
+    expect(everyDay[0].getDate()).toBe(5);
+    const three = tr.trainingHorizonDates([1, 3, 5], 8, 0, now);
+    expect(three.length).toBe(24); // eight weeks x three days
+    expect(three.every((d) => [1, 3, 5].includes(d.getDay()))).toBe(true);
+    expect(tr.trainingHorizonDates([], 8, 0, now)).toEqual([]);
+    expect(tr.trainingHorizonDates([1], NaN, 0, now)).toEqual([]);
+    expect(tr.trainingHorizonDates([1, 3, 5], 8, 0, now)).toEqual(three); // deterministic
   });
 
   test('enabled but permission not granted: schedules nothing', async () => {
@@ -173,7 +199,7 @@ describe('scheduleTrainingReminders names the active plan (C12)', () => {
   test('a DB read failure never blocks scheduling: falls back to the line', async () => {
     mockGetActivePlan.mockRejectedValue(new Error('db locked'));
     await tr.scheduleTrainingReminders();
-    expect(mockSchedule).toHaveBeenCalledTimes(1);
+    expect(mockSchedule.mock.calls.length).toBeGreaterThanOrEqual(1);
     expect(mockSchedule.mock.calls[0][0].content.body).toBe(
       'You\'ve got a session on for today. Enjoy it whenever it suits you.',
     );

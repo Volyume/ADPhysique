@@ -24,7 +24,7 @@ jest.mock('expo-notifications', () => ({
   getPermissionsAsync: (...a) => mockGetPerms(...a),
   setNotificationChannelAsync: (...a) => mockSetChannel(...a),
   AndroidImportance: { HIGH: 4, LOW: 2 },
-  SchedulableTriggerInputTypes: { WEEKLY: 'weekly' },
+  SchedulableTriggerInputTypes: { WEEKLY: 'weekly', DATE: 'date' },
 }));
 
 // In-memory AsyncStorage shared by the writer and the real reader -- the
@@ -95,11 +95,14 @@ test('writer -> real reader: one weekly notification per habit-derived weekday, 
   const stored = JSON.parse(mockMemStore.get(SCHEDULE_KEY));
   expect(stored).toEqual({ days: expectedDays });
 
-  // ...and the REAL (unmocked) reader consumed exactly that: one weekly
-  // trigger per derived weekday, JS weekday -> expo weekday (+1).
-  expect(mockSchedule).toHaveBeenCalledTimes(expectedDays.length);
-  const scheduledExpoWeekdays = mockSchedule.mock.calls.map((c) => c[0].trigger.weekday).sort((a, b) => a - b);
-  expect(scheduledExpoWeekdays).toEqual(expectedDays.map((d) => d + 1).sort((a, b) => a - b));
+  // ...and the REAL (unmocked) reader consumed exactly that. D142: the
+  // reminder is now a bounded run of dated one-shots (about eight weeks),
+  // so the contract is "every laid date falls on a derived weekday, and
+  // every derived weekday is laid" rather than one weekly repeat per day.
+  expect(mockSchedule.mock.calls.length).toBeGreaterThanOrEqual(expectedDays.length);
+  for (const [cfg] of mockSchedule.mock.calls) expect(cfg.trigger.type).toBe('date');
+  const laidWeekdays = [...new Set(mockSchedule.mock.calls.map((c) => new Date(c[0].trigger.date).getDay()))].sort((a, b) => a - b);
+  expect(laidWeekdays).toEqual(expectedDays);
 
   dateNowSpy.mockRestore();
 });
