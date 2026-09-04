@@ -3417,6 +3417,29 @@ and a few days of food logged).**
 ED-safety: floors, calm mode, planned/eaten filters and evidence
 untouched; no shaming copy added; usual chips follow the rings' gating.
 
+## FIRST SCREEN REBUILT, TAGLINE RETIRED (2026-09-04) — COMPLETE, MERGED TO MAIN. Record D144.
+
+Branch `claude/fix-sqlcipher-fresh-install`. Founder device verdict on
+build 3564: the two-fragment tagline is banned copy, the sizes were
+mismatched, the mocked example week looked bad. Ruling and rationale: D144.
+
+**Gates.** Lint clean, full suite green (exact counts in the closure
+report). No migration, no dependency, no native change: the next Android
+build from main carries it.
+
+**Device checklist (Android, next build from main, fresh install).**
+1. First screen: wordmark, "Your plan adjusts to what you log." on one or
+   two lines at a size clearly below the wordmark's weight, one sentence
+   under it, then Get started, the sign-in pill and the trust row at the
+   bottom. No card, no example numbers, no "Less thinking".
+2. Rotate or use a small phone: the layout scrolls rather than clipping.
+3. Settings, Display, larger text on: the two lines grow with the theme and
+   still fit above the actions.
+4. Sign in screen: the same sentence sits under the mark in small muted
+   text. Settings, About: the same sentence under the version.
+5. Cold launch splash: the same sentence fades in under the wordmark.
+ED-safety: copy only; nothing weight, food or notification adjacent.
+
 ## FRESH-INSTALL INCIDENT (2026-09-04) — FIXED ON MAIN `9a2e6cfe`, ANDROID BUILD 3564 GREEN. Record D143. FOUNDER: INSTALL AND CONFIRM.
 
 Branch `claude/fix-sqlcipher-fresh-install`. Every fresh install since

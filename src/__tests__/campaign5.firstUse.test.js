@@ -1268,12 +1268,21 @@ describe('HIERARCHY: two instructional sheets never stack (C5-P37-02, D96)', () 
 
 describe('VOCABULARY: the words are glossed where they are first met (C5-P34-*, D96)', () => {
   test('the coach gloss on the app\'s first screen actually renders (C5-P34-01)', () => {
-    const src = read('screens/WelcomeScreen.js');
-    // D137 (fully free product, 2026-09-03): the first screen shows an
-    // example week instead of bullets. The coach gloss now rides the
-    // example's Coach row, unconditionally, so it always renders.
-    expect(stripComments(src)).toContain('<InfoTooltip text={GLOSSARY.precisionCoaching}');
-    expect(src).toMatch(/Targets adjusted from your weigh-ins\. See why\./);
+    const src = stripComments(read('screens/WelcomeScreen.js'));
+    // Founder ruling 2026-09-04: the mocked example week (and its Coach row,
+    // which carried the gloss) left the first screen. The rule behind this
+    // pin is "gloss the term where it is first met": the first screen now
+    // uses no coaching vocabulary at all, so either the gloss renders there
+    // or the word never appears there. Both are checked so a future line
+    // that reintroduces the term cannot arrive without its gloss.
+    const usesTerm = /\bcoach(ing)?\b/i.test(src) || /Precision Coaching/.test(src);
+    if (usesTerm) {
+      expect(src).toContain('<InfoTooltip text={GLOSSARY.precisionCoaching}');
+    } else {
+      expect(src).not.toContain('GLOSSARY.precisionCoaching');
+    }
+    // And the two-fragment slogan stays gone from the first screen.
+    expect(src).not.toMatch(/Less thinking\. More lifting\./);
   });
 
   test('the record line is glossed on the surface a novice first meets it (C5-P34-02)', () => {

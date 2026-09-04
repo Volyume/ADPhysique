@@ -4,6 +4,7 @@ import { colors, fontSize, fontWeight, spacing, radius, type, letterSpacing, fon
 import useTheme from '../hooks/useTheme';
 import { useFeedback } from '../components/FeedbackSheet';
 import { SettingsPage, SettingRow, settingsStyles, useSettingsStyles } from '../components/SettingsPrimitives';
+import { TAGLINE } from '../lib/brand';
 
 // Help & about: FAQ, feedback, store rating, credits, and the build footer.
 //
@@ -149,7 +150,7 @@ export default function SettingsAboutScreen({ navigation }) {
               : Constants.expoConfig?.android?.versionCode})
           </Text>
         </TouchableOpacity>
-        <Text style={[styles.tagline, { ...t.type.caption, color: t.colors.textMuted }]}>Less thinking. More lifting.</Text>
+        <Text style={[styles.tagline, { ...t.type.caption, color: t.colors.textMuted }]}>{TAGLINE}</Text>
       </View>
     </SettingsPage>
   );

@@ -39,6 +39,7 @@ import { getSupabaseClient } from '../lib/supabase';
 // Campaign 24 Wave E: the pure boot-time auth presentation decision (the
 // startup auth-hydration flash fix — see the give-up branch in the render).
 import { classifyAuthBoot } from '../lib/authBootGate';
+import { TAGLINE } from '../lib/brand';
 import { initDatabase, cleanupOrphanRoutineExercises } from '../lib/database';
 import { seedExercisesIfNeeded, topUpNewExercisesIfNeeded, backfillExerciseMetadataIfNeeded, rederiveExerciseMetadataIfNeeded } from '../lib/seedExercises';
 import * as haptics from '../lib/haptics';
@@ -2210,7 +2211,7 @@ function SplashScreen() {
       <Animated.View style={[splashStyles.accent, { transform: [{ scaleX: accentScaleX }] }]} />
 
       <Animated.Text style={[splashStyles.tagline, { opacity: tagOpacity }]}>
-        Less thinking. More lifting.
+        {TAGLINE}
       </Animated.Text>
     </View>
   );

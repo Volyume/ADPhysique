@@ -5684,3 +5684,48 @@ this incident without permission and had to be cancelled. Recorded in
 CLAUDE.md Section 4.
 
 **Engine, ED-safety, consent, billing: untouched.**
+
+## D144 — First screen rebuilt: no slogan, no mock-up (founder device verdict, 2026-09-04)
+
+**Founder verdict, from a fresh install of build 3564.** "Stop this less
+thinking or AI clipped text in general, it is horrible"; "the landing page
+looks bad, totally mismatched sizes"; "why do we have that example week,
+it looks shit".
+
+**What was on the screen.** The D137 welcome: a 132px wordmark, the
+two-fragment tagline "Less thinking. More lifting." at h1 over two lines,
+a body promise, then a mocked "example week" card (a fake session with
+"Last session: 80 kg x 8", a fake coach line, a block shape) built from
+the app's own components, then the CTA. The tagline is exactly the
+clipped fragment CLAIMS-STANDARDS tell 2 bans ("Honest coaching. Every
+time.") and the voice contract's no-clipped-commands rule; the card put
+invented numbers on the app's first screen.
+
+**Ruling (D33, best for the person opening the app).**
+- The tagline is retired everywhere it rendered: splash, Welcome, sign-in,
+  About, the web page and the marketing fact base. One brand line now
+  lives in `src/lib/brand.js` (`TAGLINE`): "Your plan adjusts to what you
+  log." One plain sentence, true of the product. It is imported, never
+  retyped, so it cannot drift again.
+- The mock-up is removed, not restyled. A first screen should not carry
+  numbers nobody lifted. The screen is now: wordmark (200px, the hero),
+  headline at h2, one body sentence that says what the product does
+  ("Volyume builds your training and food targets around you, then checks
+  in each week and explains any change it suggests"), the CTA, the
+  sign-in link and the trust row. The hero takes the free height above
+  the actions so the composition holds on every phone.
+- Sizes: the headline steps down from h1 to h2 because the wordmark is
+  the hero; the promise stays body. Nothing hand-sized.
+- The coach gloss (C5-P34-01) rode the mock-up's Coach row. The first
+  screen no longer uses the coaching vocabulary, so there is nothing to
+  gloss there; the pin now enforces "gloss it if the word appears, and the
+  word does not appear", so the term cannot return unglossed.
+
+**Left as found, for the founder.** `src/lib/mesocycle.js` week labels
+("Build week. Push a little harder.", "Recovery week. Back off and
+recharge.") are the same clipped-command shape. They are engine strings;
+whether any surface renders them was not established in this pass.
+Question delivered in chat. The web page's hero sub-line still describes a
+Free/Pro split (pre-D137); flagged, not changed.
+
+**Engine, ED-safety, consent, billing: untouched.**

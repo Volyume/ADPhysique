@@ -1,6 +1,17 @@
 # UX world-class audit — handover and resume note
 
 ===============================================================================
+## ★ 2026-09-04 — FIRST SCREEN REBUILT, TAGLINE RETIRED (D144) ★
+
+Founder device verdict on build 3564: "Less thinking. More lifting." is the
+clipped slogan copy the voice rules ban; the welcome sizes were mismatched;
+the mocked example week looked bad. The tagline is retired everywhere
+(one constant, `src/lib/brand.js`: "Your plan adjusts to what you log."),
+the mock-up is gone, the welcome is wordmark, h2 headline, one sentence,
+CTA. Open founder question in chat: the mesocycle week labels ("Build
+week. Push a little harder.") have the same shape. Record: D144.
+
+===============================================================================
 ## ★ 2026-09-04 — FRESH-INSTALL INCIDENT FIXED (D143); FOUNDER CONFIRMATION PENDING ★
 
 Fresh installs since the 2026-09-03 morning build failed on both

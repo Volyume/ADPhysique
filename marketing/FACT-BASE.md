@@ -47,8 +47,10 @@ EU-Dublin data residency), it is calm and ED-aware by design (fixed calorie
 floors, no leaderboards, no shame), and it is privacy-first (encrypted on your
 device, no ads, nothing sold). Training is Free; nutrition and coaching are Pro.
 
-**In-app tagline (verified in code):** "Less thinking. More lifting."
-(`src/screens/YouScreen.js` About section, line 261.)
+**In-app tagline (verified in code):** "Your plan adjusts to what you log."
+(`src/lib/brand.js`, `TAGLINE`; rendered on the splash, Welcome, sign-in and
+About. Founder ruling 2026-09-04 retired "Less thinking. More lifting." as a
+two-fragment slogan under CLAIMS-STANDARDS tell 2; never reuse it.)
 
 **Alternative angle lines (all drawn only from real capabilities):**
 - No AI. Same inputs, same answer, and it tells you why.

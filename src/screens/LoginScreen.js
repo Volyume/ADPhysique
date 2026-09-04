@@ -10,6 +10,7 @@ import TextField from '../components/TextField';
 import Button from '../components/Button';
 import { signInWithGoogle, signInWithApple, signInWithEmail, signUpWithEmail, resetPassword } from '../lib/supabase';
 import { audit } from '../lib/observability';
+import { TAGLINE } from '../lib/brand';
 import { useToast } from '../components/Toast';
 import { authErrorMessage, isDuplicateSignup, AUTH_COPY } from '../lib/authErrorCopy';
 import { touchTarget } from '../styles/layout';
@@ -286,7 +287,7 @@ export default function LoginScreen({ navigation, route }) {
             <Text style={[styles.heading, live.heading]}>
               {emailMode === 'signup' ? 'Create your account' : 'Welcome back'}
             </Text>
-            <Text style={[styles.brandTagline, live.brandTagline]}>Less thinking. More lifting.</Text>
+            <Text style={[styles.brandTagline, live.brandTagline]}>{TAGLINE}</Text>
           </View>
 
           {/* Thin divider below brand */}
