@@ -5476,3 +5476,81 @@ kept, recovery-week dialogue now fires), `PlanPreviewSheet.test.js`
 (kept line replaces restart line), `planAutoGen.test.js` (default path
 unchanged, keep path, fallback), `PlanUpdateScreen.previewWiring.guard`
 (one rule on both sides, re-ruled at confirm).
+
+## D141 — Top-ten improvement pass, first launch and retention (founder order, 2026-09-04)
+
+**Founder order.** "With all you know about the app from all audits ...
+propose a top 10 improvements ranked based on the real code base as it is
+now. Not new features but improving what we have." Then: "Action all of
+these to the absolute best standard." Three read-only audit lanes
+(first launch, retention, reliability) produced the candidates; every
+ranked finding was verified in code by the lead before ranking.
+
+**The ten, as built.**
+
+1. **Sign-in cannot hang.** Google and Apple token exchange, email sign-in
+   and sign-up are raced against a 20 second bound (`withAuthTimeout`,
+   `src/lib/supabase.js`); the rejection is network-shaped so the existing
+   auth copy shows the calm connectivity sentence. Steps the user is inside
+   of (account picker, Apple sheet, Play Services dialogue) are not
+   bounded. A late completion still signs the user in through
+   onAuthStateChange; nothing is left half-done.
+2. **A hung database open reaches the failure screen.** `attemptDbInit`
+   races `initDatabase()` against 12 seconds (above the 8 second auth
+   latch) and handles a timeout exactly like a thrown open; a late
+   completion re-runs the attempt so the flag clears itself.
+3. **"Start with a plan" shows it is working.** EmptyState gains `busy`
+   (Button's own loading treatment); Today and Train hold it across the
+   preflight and dry run. Browse plans stays enabled (ruling: it never
+   conflicts with an in-flight preview).
+4. **Destructive actions never fail silently.** Discard workout deletes
+   first (bounded at 8 seconds), stops a running rest timer, and only then
+   ends the session and navigates; an already-gone row counts as
+   discarded; failure keeps the user on the screen with a toast. Diary
+   swipe-delete logs and tells the user. Delete saved workout on the
+   Train tab, which had no handling at all, now logs and tells the user
+   like its sibling folder delete.
+5. **The block-finished push is sent.** `scheduleBlockReadyForActiveBlock`
+   lays the already-built push at activation for 09:00 local on the day
+   the block finishes, re-lays it in `restoreNotifications`, never lays it
+   for a block already over or without a block, one fixed identifier.
+   Not laid on the keep-block path (D140): the block is unchanged.
+7. **The training reminder is refreshed at launch**, not only when a
+   workout finishes (`refreshHabitDerivedTrainingSchedule` after the
+   session-branch restore in RootNavigator). See the open question below
+   for the rest of the retention lane's finding.
+8. **Sync give-ups are visible.** `syncStatusLabel` states parked changes;
+   Settings › Your data shows the count with "Retry now";
+   `retryFailedOps` resets parked rows for the signed-in user, never
+   during a sign-out wipe, and flushes.
+10. **First-run polish.** One voice for the identical empty state ("your
+    coach builds one from your setup", per the locked actor-naming rule);
+    the setup-complete "Train your split" row is a plain view with honest
+    copy when there is no plan; the rebuild toast keyed off a field the
+    commit never returns is removed; orphaned first-set and warm-up hint
+    styles are removed rather than wired (no spec exists for the hint;
+    inventing coaching copy for a first set is a feature, not polish).
+
+**Defect found while building item 4 (recorded, fixed in scope).**
+`endWorkout()` clears the rest-timer store fields but is not one of the
+live-activity lifecycle sites, so a discard mid-rest left the iOS Live
+Activity counting down a deleted session until expiry or the next launch
+sweep. The discard helper now calls `stopRestTimer()` first when a rest is
+running.
+
+**Open founder question (retention lane, not built: it is a product
+fork on a locked notification category).** The training reminder is an
+OS-level weekly repeat, so it is the only push that still reaches a
+fully lapsed user, and it cannot adapt without the app running (no
+background fetch exists). Two designs, both changes to
+NOTIFICATIONS_LOCKED: (A) bound the reminder to a laid-ahead horizon
+(e.g. eight weeks of dated one-shots re-laid on every launch), so a user
+absent for months stops being pinged from a life they left; (B) keep the
+infinite repeat and add one calm return push laid at now + 21 days and
+re-laid on every launch, so it fires only after three weeks of genuine
+absence ("Your plan is still here whenever you're ready. Nothing has been
+lost."), tier-blind, budgeted, off under calm mode or an open ED flag;
+(C) both; (D) leave it. Delivered in chat.
+
+**Engine, ED-safety, consent, billing: untouched.** No floors, thresholds,
+seeds, scoring, block state machine, consent gate or product ID changed.
