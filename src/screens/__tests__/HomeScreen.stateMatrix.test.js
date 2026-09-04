@@ -654,7 +654,7 @@ describe('State matrix — S6: recovery week SCHEDULED', () => {
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    expect(REGION.todayLineText(tree)).toBe('It is your recovery week, so training is deliberately lighter. See what that means.');
+    expect(REGION.todayLineText(tree)).toBe('Recovery week. Training is deliberately lighter. What that means.');
     // RecoveryStateCard's OWN heading text must not ALSO appear unprompted
     // (it now only renders inside the tap-through detail sheet, closed by
     // default) — the structural recovery fact has exactly one voice here.
@@ -701,7 +701,7 @@ describe('State matrix — S8: deload suggested, data-driven only', () => {
     });
     const { tree, errors } = await mountHome({});
     expect(errors).toEqual([]);
-    expect(REGION.todayLineText(tree)).toBe('A recovery week is suggested. See why.');
+    expect(REGION.todayLineText(tree)).toBe('Recovery week suggested. See why.');
   });
 });
 

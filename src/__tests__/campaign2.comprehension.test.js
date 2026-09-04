@@ -39,7 +39,7 @@ describe('TRAINING comprehension', () => {
   });
 
   test('the recovery week says it is lighter ON PURPOSE and the gloss carries the why', () => {
-    expect(read('components/BlockShapeCard.js')).toMatch(/lighter on purpose/i);
+    expect(read('components/BlockShapeCard.js')).toMatch(/Lighter on purpose/);
     expect(GLOSSARY.deload).toMatch(/lighter planned week so you recover/i);
   });
 

@@ -4426,7 +4426,7 @@ export default function ActiveWorkoutScreen({ navigation, route }) {
                           {blockFinished
                             ? 'Holding at recovery-week volume until you choose your next block'
                             : (trainRecoveryDetail(recoveryState, recoveryDifferences)
-                              ?? 'This session is lighter on purpose so you recover fully, and no records are expected.')}
+                              ?? 'Lighter on purpose. Full recovery, no PRs.')}
                         </Text>
                       </View>
                     </View>

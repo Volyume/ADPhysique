@@ -3438,14 +3438,6 @@ build from main carries it.
 4. Sign in screen: the same sentence sits under the mark in small muted
    text. Settings, About: the same sentence under the version.
 5. Cold launch splash: the same sentence fades in under the wordmark.
-6. Home with an active block, tap the block chip: the line under the
-   week dots reads as sentences, for example "You are in week 3 of 5,
-   building. Your recovery week is in 2 weeks." In the recovery week:
-   "This is your recovery week. It is lighter on purpose..." and the Home
-   today line "It is your recovery week, so training is deliberately
-   lighter. See what that means."
-7. After the block's last week: "This block is finished. Your targets
-   hold at recovery-week volume until you choose what comes next."
 ED-safety: copy only; nothing weight, food or notification adjacent.
 
 ## FRESH-INSTALL INCIDENT (2026-09-04) — FIXED ON MAIN `9a2e6cfe`, ANDROID BUILD 3564 GREEN. Record D143. FOUNDER: INSTALL AND CONFIRM.

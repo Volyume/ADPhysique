@@ -154,9 +154,9 @@ describe('THE STATE ENDS BY THE LIFECYCLE, never by acknowledgement', () => {
 describe('WHAT IS DIFFERENT, and WHAT HAPPENS NEXT', () => {
   test('CASE 12 and 17: Train describes only prescription changes it was GIVEN', () => {
     const planned = resolveRecoveryState(block(BLOCK_DELOAD_WEEK));
-    expect(trainRecoveryDetail(planned)).toBe('This is your recovery week, so this session is lighter on purpose: you have finished the hard-training part of this block.');
+    expect(trainRecoveryDetail(planned)).toBe('Recovery week. This session is lighter on purpose, because you have finished the hard-training part of this block.');
     expect(trainRecoveryDetail(planned, ['fewer working sets', 'easier effort targets']))
-      .toBe('This is your recovery week, so this session is lighter on purpose: you have finished the hard-training part of this block. Fewer working sets and easier effort targets.');
+      .toBe('Recovery week. This session is lighter on purpose, because you have finished the hard-training part of this block. Fewer working sets and easier effort targets.');
     // No invented percentage, no volume multiplier, no MEV/MRV.
     expect(trainRecoveryDetail(planned, ['fewer working sets']))
       .not.toMatch(/%|multiplier|MEV|MRV|peak/i);
@@ -165,7 +165,7 @@ describe('WHAT IS DIFFERENT, and WHAT HAPPENS NEXT', () => {
   test('CASE 18: the adaptive Train line does not claim the block has finished', () => {
     const adaptive = resolveRecoveryState(block(3, { isDeload: true }));
     const line = trainRecoveryDetail(adaptive, ['fewer working sets']);
-    expect(line).toBe('This session is recovery-adjusted, lighter because your recent recovery has been harder. Fewer working sets.');
+    expect(line).toBe('Recovery-adjusted session. This one is lighter because your recent recovery has been harder. Fewer working sets.');
     expect(line).not.toMatch(/recovery week|finished the hard-training part/i);
   });
 

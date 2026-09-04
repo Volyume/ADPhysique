@@ -132,7 +132,7 @@ describe('CHAIN A + B: TRAIN, now a detail surface rather than the only one', ()
     // The defect: one title for two meanings, so a week-three athlete easing
     // off was told the hard part of their block had finished.
     expect(train).toMatch(/\? 'Recovery-adjusted session'\s*\n\s*: 'Recovery week'/);
-    expect(trainRecoveryDetail(ADAPTIVE, [])).toMatch(/^This session is recovery-adjusted/);
+    expect(trainRecoveryDetail(ADAPTIVE, [])).toMatch(/^Recovery-adjusted session\./);
     expect(trainRecoveryDetail(ADAPTIVE, [])).not.toMatch(/recovery week/i);
   });
 
