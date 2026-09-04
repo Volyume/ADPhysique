@@ -15,6 +15,7 @@ import { clearWorkoutHistory, buildWorkoutCSV } from '../lib/database';
 import { exportCoachReportPdf } from '../lib/coachReport';
 import { exportBackup, importBackup } from '../lib/dataBackup';
 import { getStatus as getSyncStatus, syncAll, deleteUserPref, setUserPref } from '../lib/sync';
+import { getQueueStats, retryFailedOps } from '../lib/syncQueue';
 import { formatLastSynced } from '../lib/syncStatusLabel';
 import { withAlpha, alpha } from '../styles/theme';
 import useTheme from '../hooks/useTheme';
@@ -45,16 +46,42 @@ export default function SettingsDataScreen({ navigation }) {
   const [syncingNow, setSyncingNow] = useState(false);
   const [refreshingFood, setRefreshingFood] = useState(false);
   const [buildingReport, setBuildingReport] = useState(false);
+  // Item 8 (D141): busy state for the "Retry now" action on ops that gave
+  // up after MAX_RETRIES.
+  const [retryingFailed, setRetryingFailed] = useState(false);
   // L05-SL1: mirrors the persisted flag so the row reflects the real state,
   // not just an intent. Defaults false (asks for a name) until read on focus.
   const [scanSkipName, setScanSkipName] = useState(false);
 
+  // Item 8 (D141): the runner's getStatus() snapshot only ever carried
+  // queue_depth (the live retry queue). Extending this one path - rather
+  // than adding a second fetch elsewhere - so the failed count (ops parked
+  // at MAX_RETRIES, syncQueue.getQueueStats) rides the same snapshot object
+  // formatLastSynced already reads.
+  const refreshSyncSnapshot = useCallback(async () => {
+    try {
+      const [status, stats] = await Promise.all([
+        getSyncStatus(),
+        getQueueStats(user?.id),
+      ]);
+      // stats.ok === false means the failed count is UNKNOWN, not zero (see
+      // getQueueStats) - keep whatever the row last showed rather than
+      // flashing it back to zero on a transient read failure.
+      setSyncSnapshot(prev => ({
+        ...status,
+        failed: stats?.ok !== false ? (stats?.failed ?? 0) : (prev?.failed ?? 0),
+      }));
+    } catch (_) {
+      getSyncStatus().then(setSyncSnapshot).catch(() => {});
+    }
+  }, [user?.id]);
+
   useFocusEffect(
     useCallback(() => {
-      getSyncStatus().then(setSyncSnapshot).catch(() => {});
+      refreshSyncSnapshot();
       AsyncStorage.getItem(SCAN_SKIP_NAME_KEY)
         .then(v => setScanSkipName(v === 'true')).catch(() => {});
-    }, []),
+    }, [refreshSyncSnapshot]),
   );
 
   // L05-SL1: the settings-side control for the flag ScanLabelScreen's "Skip
@@ -90,18 +117,53 @@ export default function SettingsDataScreen({ navigation }) {
         supabaseUserId = s?.user?.id ?? null;
       } catch (_) { /* offline / no session: push local, pull skips */ }
       await syncAll({ userId: supabaseUserId, localUserId: user?.id ?? null, triggeredBy: 'manual' });
-      const snap = await getSyncStatus();
-      setSyncSnapshot(snap);
+      await refreshSyncSnapshot();
+      const stats = await getQueueStats(user?.id);
       toast.show(
-        (snap?.queue_depth ?? 0) > 0 ? 'Backing up a few recent changes.' : 'Everything\'s backed up and safe.',
+        (stats?.pending ?? 0) > 0 ? 'Backing up a few recent changes.' : 'Everything\'s backed up and safe.',
         { variant: 'success' },
       );
     } catch (e) {
       logError('SettingsScreen.syncNow', e);
-      getSyncStatus().then(setSyncSnapshot).catch(() => {});
+      refreshSyncSnapshot();
       toast.show("Couldn't sync. It retries automatically.", { variant: 'error' });
     } finally {
       setSyncingNow(false);
+    }
+  }
+
+  // Item 8 (D141): un-park ops that hit MAX_RETRIES and flush them straight
+  // away rather than waiting for the next foreground/periodic trigger.
+  async function handleRetryFailedOps() {
+    if (!user?.id || retryingFailed) return;
+    haptics.selection();
+    setRetryingFailed(true);
+    try {
+      const result = await retryFailedOps(user.id);
+      if (!result?.ok) {
+        toast.show("Couldn't retry those changes, try again", { variant: 'error' });
+        return;
+      }
+      // The reset only makes the ops eligible for the drain again; push one
+      // now (best-effort - offline just leaves them queued for the next
+      // live trigger, which is already how every other queued op recovers).
+      try {
+        const sb = getSupabaseClient();
+        const { data: { session: s } = {} } = await sb.auth.getSession();
+        if (s?.user?.id) {
+          await syncAll({ userId: s.user.id, localUserId: user.id, triggeredBy: 'manual' });
+        }
+      } catch (_) { /* offline: retried ops stay queued for the next live trigger */ }
+      await refreshSyncSnapshot();
+      toast.show(
+        result.reset > 0 ? 'Retrying now.' : "Everything's already up to date.",
+        { variant: 'success' },
+      );
+    } catch (e) {
+      logError('SettingsDataScreen.retryFailedOps', e, { userId: user.id });
+      toast.show("Couldn't retry those changes, try again", { variant: 'error' });
+    } finally {
+      setRetryingFailed(false);
     }
   }
 
@@ -268,6 +330,15 @@ export default function SettingsDataScreen({ navigation }) {
           onPress={syncingNow ? null : handleSyncNow}
           showArrow={!syncingNow}
         />
+        {(syncSnapshot?.failed ?? 0) > 0 ? (
+          <SettingRow
+            icon="alert-circle-outline"
+            label={retryingFailed ? 'Retrying...' : 'Retry now'}
+            sub={`${syncSnapshot.failed} ${syncSnapshot.failed === 1 ? 'change' : 'changes'} couldn't sync`}
+            onPress={retryingFailed ? null : handleRetryFailedOps}
+            showArrow={!retryingFailed}
+          />
+        ) : null}
         <SettingRow
           icon="nutrition-outline"
           label={refreshingFood ? 'Refreshing...' : 'Refresh food library'}

@@ -1,7 +1,9 @@
 /**
  * Builds the quiet "last synced" line shown in Settings > Your data (A2-006).
  * Reads the sync runner's getStatus() snapshot ({ status, queue_depth,
- * last_run_at, last_error }).
+ * last_run_at, last_error }), plus an optional `failed` count merged in by
+ * the caller from syncQueue.getQueueStats() (item 8, D141) - ops that hit
+ * MAX_RETRIES and were parked rather than dropped.
  *
  * This deliberately does NOT surface a red "error" state.
  * PRODUCTION_READINESS_LOCKED.md section 1: the old header badge's transient
@@ -9,6 +11,11 @@
  * alarming and was removed by founder direction. The signal that actually
  * matters to the user is whether their own writes are backing up, so we
  * report the queue depth, not the pull status. Quiet, factual, no nag.
+ *
+ * A genuinely parked op is different from a transient error, though: it has
+ * given up retrying on its own, so silence would hide real data sitting
+ * unsynced. `failed` is stated plainly, in the same calm register as the
+ * queue-depth line, never as an alarm.
  */
 
 // Coarse "x ago" for a quiet status line. Floor everywhere so we never
@@ -29,13 +36,21 @@ export function formatRelativeTime(thenMs, nowMs) {
 export function formatLastSynced(snapshot, nowMs = Date.now()) {
   const lastRunAt = snapshot?.last_run_at ?? 0;
   const queueDepth = snapshot?.queue_depth ?? 0;
+  const failed = snapshot?.failed ?? 0;
   if (!lastRunAt) {
-    return 'Not synced yet.';
+    return failed > 0
+      ? `Not synced yet. ${failed} ${failed === 1 ? 'change' : 'changes'} couldn't sync.`
+      : 'Not synced yet.';
   }
   const rel = formatRelativeTime(lastRunAt, nowMs);
+  const parts = [`Last synced ${rel}.`];
   if (queueDepth > 0) {
     const noun = queueDepth === 1 ? 'change' : 'changes';
-    return `Last synced ${rel}. ${queueDepth} ${noun} waiting to upload.`;
+    parts.push(`${queueDepth} ${noun} waiting to upload.`);
   }
-  return `Last synced ${rel}.`;
+  if (failed > 0) {
+    const noun = failed === 1 ? 'change' : 'changes';
+    parts.push(`${failed} ${noun} couldn't sync.`);
+  }
+  return parts.join(' ');
 }

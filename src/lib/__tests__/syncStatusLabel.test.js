@@ -62,4 +62,29 @@ describe('formatLastSynced', () => {
     expect(out).toBe('Last synced just now.');
     expect(out).not.toMatch(/error/i);
   });
+
+  // Item 8 (D141): a parked (MAX_RETRIES-exhausted) op is stated plainly,
+  // in the same calm register as the queue-depth line - never hidden, never
+  // alarming.
+  test('parked/failed ops are stated plainly alongside a normal last-synced line', () => {
+    expect(formatLastSynced({ last_run_at: now - 120 * 1000, queue_depth: 0, failed: 1 }, now))
+      .toBe("Last synced 2 min ago. 1 change couldn't sync.");
+    expect(formatLastSynced({ last_run_at: now - 120 * 1000, queue_depth: 0, failed: 3 }, now))
+      .toBe("Last synced 2 min ago. 3 changes couldn't sync.");
+  });
+
+  test('a pending queue AND parked ops both surface, in order', () => {
+    expect(formatLastSynced({ last_run_at: now - 120 * 1000, queue_depth: 2, failed: 3 }, now))
+      .toBe("Last synced 2 min ago. 2 changes waiting to upload. 3 changes couldn't sync.");
+  });
+
+  test('never synced but something is parked still says so', () => {
+    expect(formatLastSynced({ last_run_at: 0, queue_depth: 0, failed: 2 }, now))
+      .toBe("Not synced yet. 2 changes couldn't sync.");
+  });
+
+  test('no failed field at all behaves exactly as before (back-compat)', () => {
+    expect(formatLastSynced({ last_run_at: now - 5000, queue_depth: 0 }, now))
+      .toBe('Last synced just now.');
+  });
 });

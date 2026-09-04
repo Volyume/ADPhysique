@@ -26,7 +26,8 @@ jest.mock('../errorLog', () => ({
 const mockSync = {};
 jest.mock('../sync', () => mockSync);
 
-const { drainSyncQueue } = require('../syncQueue');
+const { drainSyncQueue, retryFailedOps } = require('../syncQueue');
+const { setSignOutWiping } = require('../sync/signOutGuard');
 
 const CLIENT = {}; // any truthy supabase client
 const UID = 'user-1';
@@ -46,6 +47,7 @@ beforeEach(() => {
   // Reset the mocked sync surface each test.
   delete mockSync.syncBodyMetric;
   mockSync.bulkUploadLocalData = jest.fn(async () => {});
+  setSignOutWiping(false);
 });
 
 describe('drainSyncQueue body_metric fallback (B2)', () => {
@@ -158,5 +160,67 @@ describe('C6 S-5 (D97-23): offline never spends the delete retry budget', () => 
     expect(updates.length).toBe(1);
     expect(updates[0][0]).toMatch(/SET retries = \?/);
     expect(updates[0][1][0]).toBe(6); // parked at MAX_RETRIES
+  });
+});
+
+describe('item 8 (D141): retryFailedOps un-parks MAX_RETRIES ops', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    setSignOutWiping(false);
+  });
+
+  test('no userId is a safe no-op', async () => {
+    const res = await retryFailedOps(null);
+    expect(res).toEqual({ ok: false, reset: 0 });
+    expect(mockDb.getFirstAsync).not.toHaveBeenCalled();
+    expect(mockDb.runAsync).not.toHaveBeenCalled();
+  });
+
+  test('resets retries AND next_attempt_at, scoped to the user and the parked-only filter', async () => {
+    mockDb.getFirstAsync.mockResolvedValueOnce({ c: 2 });
+    const res = await retryFailedOps('u1');
+    expect(res).toEqual({ ok: true, reset: 2 });
+    expect(mockDb.getFirstAsync).toHaveBeenCalledWith(
+      expect.stringMatching(/retries >= \?/),
+      ['u1', 6],
+    );
+    expect(mockDb.runAsync).toHaveBeenCalledWith(
+      expect.stringMatching(/UPDATE pending_sync_ops SET retries = 0, next_attempt_at = \? WHERE user_id = \? AND retries >= \?/),
+      [expect.any(Number), 'u1', 6],
+    );
+  });
+
+  test('nothing parked is a no-op UPDATE-free success (idempotent)', async () => {
+    mockDb.getFirstAsync.mockResolvedValueOnce({ c: 0 });
+    const res = await retryFailedOps('u1');
+    expect(res).toEqual({ ok: true, reset: 0 });
+    expect(mockDb.runAsync).not.toHaveBeenCalled();
+  });
+
+  test('calling it twice in a row is idempotent: the second call sees nothing left to reset', async () => {
+    mockDb.getFirstAsync.mockResolvedValueOnce({ c: 2 });
+    const first = await retryFailedOps('u1');
+    expect(first.reset).toBe(2);
+    mockDb.getFirstAsync.mockResolvedValueOnce({ c: 0 }); // already reset below MAX_RETRIES
+    const second = await retryFailedOps('u1');
+    expect(second).toEqual({ ok: true, reset: 0 });
+  });
+
+  test('a db read failure is reported, not silently swallowed as success', async () => {
+    mockDb.getFirstAsync.mockRejectedValueOnce(new Error('disk full'));
+    const res = await retryFailedOps('u1');
+    expect(res).toEqual({ ok: false, reset: 0 });
+  });
+
+  test('never touches the table while a sign-out wipe is in flight (SYNC-3)', async () => {
+    setSignOutWiping(true);
+    try {
+      const res = await retryFailedOps('u1');
+      expect(res).toEqual({ ok: false, reset: 0, reason: 'sign_out_wiping' });
+      expect(mockDb.getFirstAsync).not.toHaveBeenCalled();
+      expect(mockDb.runAsync).not.toHaveBeenCalled();
+    } finally {
+      setSignOutWiping(false);
+    }
   });
 });

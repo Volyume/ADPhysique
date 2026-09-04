@@ -316,6 +316,63 @@ export async function getPendingDeleteOpCount(userId) {
 }
 
 /**
+ * Item 8 (D141): let the user un-park ops that gave up after MAX_RETRIES.
+ * The 365-day park (_scheduleRetry above) only stalls SCHEDULING - the row
+ * stays in the table with its last_error - so a since-fixable failure (a
+ * stale auth token, a CHECK constraint that has since relaxed) should be
+ * retryable the moment the user asks, not stuck for a year.
+ *
+ * Resets BOTH columns the drain's own SELECT filters on
+ * (`next_attempt_at <= now() AND retries < MAX_RETRIES`): next_attempt_at
+ * alone would leave the row invisible to the drain forever, since retries
+ * stays >= MAX_RETRIES.
+ *
+ * User-scoped: pending_sync_ops.user_id, matching every other query in this
+ * file, so this can only ever touch the signed-in caller's own rows.
+ *
+ * Idempotent: a second call with nothing newly parked matches zero rows
+ * (the first call already reset them below MAX_RETRIES) and is a no-op.
+ *
+ * Never touches the table while a sign-out wipe is in flight (SYNC-3,
+ * src/lib/sync/signOutGuard.js) - those rows are about to be deleted along
+ * with the rest of this user's local SQLite as part of that deliberate
+ * wipe, and resetting them mid-wipe would either race the DELETE or
+ * resurrect a row that sign-out is in the middle of dropping for good.
+ *
+ * @param {string} userId
+ * @returns {{ ok: boolean, reset: number, reason?: string }}
+ */
+export async function retryFailedOps(userId) {
+  if (!userId) return { ok: false, reset: 0 };
+  try {
+    // eslint-disable-next-line global-require
+    const { isSignOutWiping } = require('./sync/signOutGuard');
+    if (isSignOutWiping()) {
+      return { ok: false, reset: 0, reason: 'sign_out_wiping' };
+    }
+  } catch (_) { /* undetermined: proceed, the wipe itself is the hard stop */ }
+  try {
+    const d = await db();
+    const before = await d.getFirstAsync(
+      `SELECT COUNT(*) as c FROM pending_sync_ops WHERE user_id = ? AND retries >= ?`,
+      [userId, MAX_RETRIES],
+    );
+    const reset = before?.c ?? 0;
+    if (reset > 0) {
+      await d.runAsync(
+        `UPDATE pending_sync_ops SET retries = 0, next_attempt_at = ? WHERE user_id = ? AND retries >= ?`,
+        [Date.now(), userId, MAX_RETRIES],
+      );
+      logInfo('syncQueue.retryFailedOps', `reset ${reset} parked op(s) for retry`, { userId });
+    }
+    return { ok: true, reset };
+  } catch (e) {
+    logError('syncQueue.retryFailedOps', e, { userId });
+    return { ok: false, reset: 0 };
+  }
+}
+
+/**
  * Clear the queue for one user. Called when the user deletes their
  * account so we don't try to ship ops for a uid that no longer exists.
  */
